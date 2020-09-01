@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -152,7 +153,7 @@ func (p *Profile) writeProfile(runtimeViper *viper.Viper) error {
 	}
 
 	if err := runtimeViper.MergeInConfig(); err != nil {
-		return err
+		log.Println(err)
 	}
 
 	runtimeViper.SetConfigFile(profilesFile)
