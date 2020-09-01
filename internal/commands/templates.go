@@ -99,41 +99,6 @@ the login command with the --tenant and --region flag:
 	return ""
 }
 
-func getUsageTemplate() string {
-	return fmt.Sprintf(`%s{{if .Runnable}}
-  {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
-  {{.CommandPath}} <resource> <operation> [parameters...]{{end}}{{if gt (len .Aliases) 0}}
-
-%s
-  {{.NameAndAliases}}{{end}}{{if .HasExample}}
-
-%s
-{{.Example}}{{end}}{{if .HasAvailableSubCommands}}
-
-%s{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
-
-%s
-{{WrappedLocalFlagUsages . | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
-
-%s
-{{WrappedInheritedFlagUsages . | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
-
-%s{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
-  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
-
-Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
-`,
-		ansi.Faint("Usage:"),
-		ansi.Faint("Aliases:"),
-		ansi.Faint("Examples:"),
-		ansi.Faint("Available Resources:"),
-		ansi.Faint("Flags:"),
-		ansi.Faint("Global Flags:"),
-		ansi.Faint("Additional help topics:"),
-	)
-}
-
 func namespaceUsageTemplate() string {
 	return fmt.Sprintf(`%s{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}

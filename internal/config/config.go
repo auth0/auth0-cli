@@ -235,9 +235,13 @@ func isProfile(value interface{}) bool {
 
 // syncConfig merges a runtimeViper instance with the config file being used.
 func syncConfig(runtimeViper *viper.Viper) error {
-	runtimeViper.MergeInConfig()
+	if err := runtimeViper.MergeInConfig(); err != nil {
+		return err
+	}
+
 	profilesFile := viper.ConfigFileUsed()
 	runtimeViper.SetConfigFile(profilesFile)
+
 	// Ensure we preserve the config file type
 	runtimeViper.SetConfigType(filepath.Ext(profilesFile))
 
