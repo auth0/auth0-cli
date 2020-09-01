@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -151,7 +152,9 @@ func (p *Profile) writeProfile(runtimeViper *viper.Viper) error {
 		runtimeViper.Set(p.GetConfigField("device_name"), strings.TrimSpace(p.DeviceName))
 	}
 
-	runtimeViper.MergeInConfig()
+	if err := runtimeViper.MergeInConfig(); err != nil {
+		log.Println(err)
+	}
 
 	runtimeViper.SetConfigFile(profilesFile)
 
@@ -164,17 +167,4 @@ func (p *Profile) writeProfile(runtimeViper *viper.Viper) error {
 	}
 
 	return nil
-}
-
-func (p *Profile) safeRemove(v *viper.Viper, key string) *viper.Viper {
-	if v.IsSet(p.GetConfigField(key)) {
-		newViper, err := removeKey(v, p.GetConfigField(key))
-		if err == nil {
-			// I don't want to fail the entire login process on not being able to remove
-			// the old secret_key field so if there's no error
-			return newViper
-		}
-	}
-
-	return v
 }
