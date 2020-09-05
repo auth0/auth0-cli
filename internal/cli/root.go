@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/auth0/auth0-cli/internal/config"
@@ -47,7 +46,7 @@ func Execute() {
 	rootCmd.AddCommand(triggersCmd(cfg))
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		cfg.Renderer.Errorf(err.Error())
 		os.Exit(1)
 	}
 }

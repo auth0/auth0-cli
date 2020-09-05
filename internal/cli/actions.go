@@ -2,6 +2,9 @@ package cli
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/config"
@@ -17,13 +20,42 @@ func actionsCmd(cfg *config.Config) *cobra.Command {
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(initActionsCmd(cfg))
 	cmd.AddCommand(listActionsCmd(cfg))
+	cmd.AddCommand(showActionCmd(cfg))
 	cmd.AddCommand(createActionCmd(cfg))
 	cmd.AddCommand(renameActionCmd(cfg))
 	cmd.AddCommand(deleteActionCmd(cfg))
 	cmd.AddCommand(deployActionCmd(cfg))
 
 	return cmd
+}
+
+func initActionsCmd(cfg *config.Config) *cobra.Command {
+	var flags struct {
+		sync      bool
+		overwrite bool
+	}
+
+	cmd := &cobra.Command{
+		Use:   "init",
+		Short: "Initialize actions project structure.",
+		Long:  `Initialize actions project structure. Optionally sync your actions.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return initActions(cfg, flags.sync, flags.overwrite)
+		},
+	}
+
+	cmd.Flags().BoolVarP(&flags.sync,
+		"sync", "", false, "Sync actions code from the management API.",
+	)
+
+	cmd.Flags().BoolVarP(&flags.overwrite,
+		"overwrite", "", false, "Overwrite existing files.",
+	)
+
+	return cmd
+
 }
 
 func listActionsCmd(cfg *config.Config) *cobra.Command {
@@ -50,6 +82,42 @@ func listActionsCmd(cfg *config.Config) *cobra.Command {
 		"trigger", "t", "", "Only list actions within this trigger.",
 	)
 	mustRequireFlags(cmd, "trigger")
+
+	return cmd
+}
+
+func showActionCmd(cfg *config.Config) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "show <name>",
+		Args:  validators.ExactArgs("<name>"),
+		Short: "Show action information.",
+		Long:  "Show action information. Shows existing versions deployed.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name := args[0]
+
+			var (
+				action *management.Action
+				list   *management.ActionVersionList
+			)
+
+			err := ansi.Spinner("Fetching action", func() error {
+				var err error
+				if action, err = findActionByName(cfg, name); err != nil {
+					return err
+				}
+
+				list, err = cfg.API.ActionVersion.List(action.ID)
+				return err
+			})
+
+			if err != nil {
+				return err
+			}
+
+			cfg.Renderer.ActionInfo(action, list.Versions)
+			return nil
+		},
+	}
 
 	return cmd
 }
@@ -99,8 +167,13 @@ func createActionCmd(cfg *config.Config) *cobra.Command {
 }
 
 func deployActionCmd(cfg *config.Config) *cobra.Command {
+	var flags struct {
+		file string
+	}
+
 	cmd := &cobra.Command{
 		Use:   "deploy <name>",
+		Args:  validators.ExactArgs("<name>"),
 		Short: "Deploy an action.",
 		Long: `Deploy an action. This creates a new version.
 
@@ -111,10 +184,47 @@ The deploy lifecycle is as follows:
 3. Bind it to the associated trigger (if not already bound).
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("deploy called")
-			return nil
+			name := args[0]
+
+			if flags.file == "" {
+				f, relPath := defaultActionCodePath(cfg.Tenant, name)
+				if !fileExists(f) {
+					return fmt.Errorf("`%s` does not exist. Try `auth0 actions init --sync`", relPath)
+				}
+
+				flags.file = f
+			}
+
+			action, err := findActionByName(cfg, name)
+			if err != nil {
+				return err
+			}
+
+			code, err := ioutil.ReadFile(flags.file)
+			if err != nil {
+				return err
+			}
+
+			dependencies := []management.Dependency{
+				{Name: "lodash", Version: "v4.17.20"},
+			} // TODO
+			runtime := "node12" // TODO
+
+			version := &management.ActionVersion{
+				Code:         string(code),
+				Dependencies: dependencies,
+				Runtime:      runtime,
+			}
+
+			return ansi.Spinner("Deploying action: "+name, func() error {
+				return cfg.API.ActionVersion.Deploy(action.ID, version)
+			})
 		},
 	}
+
+	cmd.Flags().StringVarP(&flags.file,
+		"file", "f", "", "File which contains code to deploy.",
+	)
 
 	return cmd
 }
@@ -200,6 +310,46 @@ Note that all code artifacts will also be deleted.
 	return cmd
 }
 
+func initActions(cfg *config.Config, sync, overwrite bool) error {
+	// TODO(cyx): should allow lising all actions. for now just limiting to
+	// post-login
+	list, err := cfg.API.Action.List(management.WithTriggerID(management.TriggerID("post-login")))
+	if err != nil {
+		return err
+	}
+
+	for _, a := range list.Actions {
+		f, relPath := defaultActionCodePath(cfg.Tenant, a.Name)
+		if fileExists(f) && !overwrite {
+			cfg.Renderer.Warnf("skip: %s", relPath)
+			continue
+		}
+
+		if err := os.MkdirAll(path.Dir(f), 0755); err != nil {
+			return err
+		}
+
+		if err := ioutil.WriteFile(f, codeTemplateFor(a), 0644); err != nil {
+			return err
+		}
+		cfg.Renderer.Infof("%s initialized", relPath)
+
+		if sync {
+			panic("NOT IMPLEMENTED")
+		}
+	}
+
+	return nil
+}
+
+func codeTemplateFor(action *management.Action) []byte {
+	// TODO(cyx): need to find the right template based on supported trigger.
+	return []byte(`module.exports = function(user, context, cb) {
+    cb(null, user, context)
+}
+`)
+}
+
 func findActionByName(cfg *config.Config, name string) (*management.Action, error) {
 	// TODO(cyx): add a WithName and a filter by name in
 	// the management API. For now we're gonna use
@@ -220,4 +370,24 @@ func findActionByName(cfg *config.Config, name string) (*management.Action, erro
 	}
 
 	return nil, fmt.Errorf("Action with name `%s` not found.", name)
+}
+
+func defaultActionCodePath(tenant, name string) (fullPath, relativePath string) {
+	pwd, err := os.Getwd()
+	if err != nil {
+		// This is really exceptional behavior if we can't figure out
+		// the current working directory.
+		panic(err)
+	}
+
+	relativePath = path.Join(tenant, "actions", name, "code.js")
+	return path.Join(pwd, relativePath), relativePath
+}
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }
