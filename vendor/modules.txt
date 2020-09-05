@@ -1,99 +1,68 @@
-# github.com/BurntSushi/toml v0.3.1
+# github.com/PuerkitoBio/rehttp v1.0.0
+github.com/PuerkitoBio/rehttp
+# github.com/aybabtme/iocontrol v0.0.0-20150809002002-ad15bcfc95a0
 ## explicit
-github.com/BurntSushi/toml
+# github.com/benbjohnson/clock v1.0.3
+## explicit
 # github.com/briandowns/spinner v1.11.1
 ## explicit
 github.com/briandowns/spinner
+# github.com/cyx/auth0 v1.3.1-0.20200903063631-554acea20a54
+## explicit
+github.com/cyx/auth0
+github.com/cyx/auth0/internal/client
+github.com/cyx/auth0/internal/tag
+github.com/cyx/auth0/management
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
+# github.com/dustin/go-humanize v1.0.0
+## explicit
 # github.com/fatih/color v1.9.0
 ## explicit
 github.com/fatih/color
-# github.com/fsnotify/fsnotify v1.4.9
+# github.com/golang/protobuf v1.3.2
 ## explicit
-github.com/fsnotify/fsnotify
-# github.com/hashicorp/hcl v1.0.0
-github.com/hashicorp/hcl
-github.com/hashicorp/hcl/hcl/ast
-github.com/hashicorp/hcl/hcl/parser
-github.com/hashicorp/hcl/hcl/printer
-github.com/hashicorp/hcl/hcl/scanner
-github.com/hashicorp/hcl/hcl/strconv
-github.com/hashicorp/hcl/hcl/token
-github.com/hashicorp/hcl/json/parser
-github.com/hashicorp/hcl/json/scanner
-github.com/hashicorp/hcl/json/token
+github.com/golang/protobuf/proto
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
-# github.com/konsorten/go-windows-terminal-sequences v1.0.3
-github.com/konsorten/go-windows-terminal-sequences
 # github.com/logrusorgru/aurora v2.0.3+incompatible
 ## explicit
 github.com/logrusorgru/aurora
-# github.com/magiconair/properties v1.8.1
-github.com/magiconair/properties
 # github.com/mattn/go-colorable v0.1.6
 ## explicit
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.12
 github.com/mattn/go-isatty
-# github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
-## explicit
-github.com/mgutz/ansi
-# github.com/mitchellh/go-homedir v1.1.0
-## explicit
-github.com/mitchellh/go-homedir
-# github.com/mitchellh/mapstructure v1.3.0
-## explicit
-github.com/mitchellh/mapstructure
-# github.com/onsi/ginkgo v1.12.0
-## explicit
-# github.com/onsi/gomega v1.9.0
-## explicit
-# github.com/pelletier/go-toml v1.7.0
-## explicit
-github.com/pelletier/go-toml
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
-# github.com/sirupsen/logrus v1.6.0
-## explicit
-github.com/sirupsen/logrus
 # github.com/spf13/afero v1.2.2
 ## explicit
 github.com/spf13/afero
 github.com/spf13/afero/mem
-# github.com/spf13/cast v1.3.1
-## explicit
-github.com/spf13/cast
 # github.com/spf13/cobra v1.0.0
 ## explicit
 github.com/spf13/cobra
-# github.com/spf13/jwalterweatherman v1.1.0
-## explicit
-github.com/spf13/jwalterweatherman
 # github.com/spf13/pflag v1.0.5
 ## explicit
 github.com/spf13/pflag
-# github.com/spf13/viper v1.7.1
-## explicit
-github.com/spf13/viper
 # github.com/stretchr/testify v1.5.1
 ## explicit
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
-# github.com/subosito/gotenv v1.2.0
-github.com/subosito/gotenv
 # github.com/tidwall/pretty v1.0.2
 ## explicit
 github.com/tidwall/pretty
-# github.com/x-cray/logrus-prefixed-formatter v0.5.2
-## explicit
-github.com/x-cray/logrus-prefixed-formatter
 # golang.org/x/crypto v0.0.0-20200429183012-4b2356b1ed79
 ## explicit
 golang.org/x/crypto/ssh/terminal
 # golang.org/x/net v0.0.0-20200501053045-e0ff5e5a1de5
 ## explicit
+golang.org/x/net/context
+golang.org/x/net/context/ctxhttp
+# golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+golang.org/x/oauth2
+golang.org/x/oauth2/clientcredentials
+golang.org/x/oauth2/internal
 # golang.org/x/sys v0.0.0-20200501145240-bc7a7d42d5c3
 ## explicit
 golang.org/x/sys/internal/unsafeheader
@@ -102,10 +71,17 @@ golang.org/x/sys/windows
 # golang.org/x/text v0.3.2
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
+# google.golang.org/appengine v1.6.1
+## explicit
+google.golang.org/appengine/internal
+google.golang.org/appengine/internal/base
+google.golang.org/appengine/internal/datastore
+google.golang.org/appengine/internal/log
+google.golang.org/appengine/internal/remote_api
+google.golang.org/appengine/internal/urlfetch
+google.golang.org/appengine/urlfetch
 # gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
 ## explicit
-# gopkg.in/ini.v1 v1.55.0
-## explicit
-gopkg.in/ini.v1
 # gopkg.in/yaml.v2 v2.2.8
+## explicit
 gopkg.in/yaml.v2
