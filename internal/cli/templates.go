@@ -1,9 +1,7 @@
-package commands
+package cli
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -77,13 +75,14 @@ func WrappedNonRequestParamsFlagUsages(cmd *cobra.Command) string {
 //
 
 func getLogin(fs *afero.Fs, cfg *config.Config) string {
-	// We're checking against the path because we don't initialize the config
-	// at this point of execution.
-	path := cfg.GetConfigFolder(os.Getenv("XDG_CONFIG_HOME"))
-	file := filepath.Join(path, "config.toml")
+	// // We're checking against the path because we don't initialize the config
+	// // at this point of execution.
+	// path := cfg.GetConfigFolder(os.Getenv("XDG_CONFIG_HOME"))
+	// file := filepath.Join(path, "config.toml")
 
-	exists, _ := afero.Exists(*fs, file)
+	// exists, _ := afero.Exists(*fs, file)
 
+	exists := false
 	if !exists {
 		return `
 Before using the CLI, you'll need to login:

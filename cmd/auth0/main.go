@@ -1,7 +1,7 @@
 package main
 
-import "github.com/auth0/auth0-cli/internal/commands"
+import "github.com/auth0/auth0-cli/internal/cli"
 
 func main() {
-	commands.Execute()
+	cli.Execute()
 }
