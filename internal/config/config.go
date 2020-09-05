@@ -1,6 +1,113 @@
 package config
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
+	"sync"
+
+	"github.com/auth0/auth0-cli/internal/display"
+	"github.com/cyx/auth0/management"
+)
+
+type data struct {
+	DefaultTenant string            `json:"default_tenant"`
+	Tenants       map[string]tenant `json:"tenants"`
+}
+
+type tenant struct {
+	Domain string `json:"domain"`
+
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+
+	// TODO(cyx): This will be what we do with device flow.
+	BearerToken string `json:"bearer_token,omitempty"`
+}
+
+type Config struct {
+	Verbose bool
+	Tenant  string
+
+	initOnce sync.Once
+	path     string
+	data     data
+
+	API      *management.Management
+	Renderer *display.Renderer
+}
+
+func (c *Config) Init() error {
+
+	t, err := c.getTenant()
+	if err != nil {
+		return err
+	}
+
+	if t.BearerToken != "" {
+		c.API, err = management.New(t.Domain,
+			management.WithStaticToken(t.BearerToken),
+			management.WithDebug(c.Verbose))
+	} else {
+		c.API, err = management.New(t.Domain,
+			management.WithClientCredentials(t.ClientID, t.ClientSecret),
+			management.WithDebug(c.Verbose))
+	}
+
+	return err
+}
+
+func (c *Config) getTenant() (tenant, error) {
+	if err := c.init(); err != nil {
+		return tenant{}, err
+	}
+
+	t, ok := c.data.Tenants[c.Tenant]
+	if !ok {
+		return tenant{}, fmt.Errorf("Unable to find tenant: %s", c.Tenant)
+	}
+
+	return t, nil
+}
+
+func (c *Config) init() error {
+	var err error
+	c.initOnce.Do(func() {
+		if c.path == "" {
+			c.path = path.Join(os.Getenv("HOME"), ".config", "auth0", "config.json")
+		}
+
+		var buf []byte
+		if buf, err = ioutil.ReadFile(c.path); err != nil {
+			return
+		}
+
+		if err = json.Unmarshal(buf, &c.data); err != nil {
+			return
+		}
+
+		if c.Tenant == "" && c.data.DefaultTenant == "" {
+			err = fmt.Errorf("Not yet configured. Try `auth0 login`.")
+			return
+		}
+
+		if c.Tenant == "" {
+			c.Tenant = c.data.DefaultTenant
+		}
+
+		c.Renderer = &display.Renderer{
+			Tenant: c.Tenant,
+			Writer: os.Stdout,
+		}
+	})
+
+	return err
+}
+
+/*
+import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
@@ -72,7 +179,7 @@ func (c *Config) Init() {
 	if c.ProfilesFile != "" {
 		viper.SetConfigFile(c.ProfilesFile)
 	} else {
-		configFolder := c.GetConfigFolder(os.Getenv("XDG_CONFIG_HOME"))
+		configFolder := c.GetConfigFolder(oc.Getenv("XDG_CONFIG_HOME"))
 		configFile := filepath.Join(configFolder, "config.toml")
 		c.ProfilesFile = configFile
 		viper.SetConfigType("toml")
@@ -321,3 +428,4 @@ func deepSearch(m map[string]interface{}, path []string) map[string]interface{} 
 
 	return m
 }
+*/
