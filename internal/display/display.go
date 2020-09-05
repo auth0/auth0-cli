@@ -3,7 +3,9 @@ package display
 import (
 	"fmt"
 	"io"
+	"os"
 	"strings"
+	"sync"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/cyx/auth0/management"
@@ -14,19 +16,35 @@ type Renderer struct {
 	Tenant string
 
 	Writer io.Writer
+
+	initOnce sync.Once
+}
+
+func (r *Renderer) init() {
+	r.initOnce.Do(func() {
+		if r.Writer == nil {
+			r.Writer = os.Stdout
+		}
+	})
 }
 
 func (r *Renderer) Infof(format string, a ...interface{}) {
+	r.init()
+
 	fmt.Fprint(r.Writer, aurora.Green(" ▸    "))
 	fmt.Fprintf(r.Writer, format+"\n", a...)
 }
 
 func (r *Renderer) Warnf(format string, a ...interface{}) {
+	r.init()
+
 	fmt.Fprint(r.Writer, aurora.Yellow(" ▸    "))
 	fmt.Fprintf(r.Writer, format+"\n", a...)
 }
 
 func (r *Renderer) Errorf(format string, a ...interface{}) {
+	r.init()
+
 	fmt.Fprint(r.Writer, aurora.BrightRed(" ▸    "))
 	fmt.Fprintf(r.Writer, format+"\n", a...)
 }
