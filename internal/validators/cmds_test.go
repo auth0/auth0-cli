@@ -27,7 +27,7 @@ func TestExactArgs(t *testing.T) {
 	c := &cobra.Command{Use: "c"}
 	args := []string{"foo"}
 
-	result := ExactArgs(1)(c, args)
+	result := ExactArgs("<name>")(c, args)
 	require.Nil(t, result)
 }
 
@@ -35,14 +35,14 @@ func TestExactArgsTooMany(t *testing.T) {
 	c := &cobra.Command{Use: "c"}
 	args := []string{"foo", "bar"}
 
-	result := ExactArgs(1)(c, args)
-	require.EqualError(t, result, "`c` requires exactly 1 positional argument. See `c --help` for supported flags and usage")
+	result := ExactArgs("<name>")(c, args)
+	require.EqualError(t, result, "`c` requires <name>. See `c --help` for supported flags and usage")
 }
 
 func TestExactArgsTooManyMoreThan1(t *testing.T) {
 	c := &cobra.Command{Use: "c"}
 	args := []string{"foo", "bar", "baz"}
 
-	result := ExactArgs(2)(c, args)
-	require.EqualError(t, result, "`c` requires exactly 2 positional arguments. See `c --help` for supported flags and usage")
+	result := ExactArgs("<key>", "<value>")(c, args)
+	require.EqualError(t, result, "`c` requires <key> <value>. See `c --help` for supported flags and usage")
 }

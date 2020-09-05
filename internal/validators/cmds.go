@@ -3,6 +3,7 @@ package validators
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -22,24 +23,19 @@ func NoArgs(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// ExactArgs is a validator for commands to print an error when the number provided
-// is different than the arguments passed in
-func ExactArgs(num int) cobra.PositionalArgs {
+// ExactArgs is a validator for commands to print an error when number of
+// expected args are different from the number of passed args. The names passed
+// in to `expected` are used for the help message.
+func ExactArgs(expected ...string) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
-		argument := "positional argument"
-		if num != 1 {
-			argument = "positional arguments"
-		}
+		if len(args) != len(expected) {
+			errorMessage := fmt.Sprintf(
+				"`%s` requires %s. See `%s --help` for supported flags and usage",
+				cmd.CommandPath(),
+				strings.Join(expected, " "),
+				cmd.CommandPath(),
+			)
 
-		errorMessage := fmt.Sprintf(
-			"`%s` requires exactly %d %s. See `%s --help` for supported flags and usage",
-			cmd.CommandPath(),
-			num,
-			argument,
-			cmd.CommandPath(),
-		)
-
-		if len(args) != num {
 			return errors.New(errorMessage)
 		}
 		return nil
