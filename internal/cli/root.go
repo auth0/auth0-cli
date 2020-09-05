@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/auth0/auth0-cli/internal/config"
+	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -18,7 +19,9 @@ func Execute() {
 	// 1. env var (e.g. AUTH0_API_KEY)
 	// 2. global flag (e.g. --api-key)
 	// 3. JSON file (e.g. api_key = "..." in ~/.config/auth0/config.json)
-	cfg := &config.Config{}
+	cfg := &config.Config{
+		Renderer: &display.Renderer{},
+	}
 
 	rootCmd := &cobra.Command{
 		Use:           "auth0",
