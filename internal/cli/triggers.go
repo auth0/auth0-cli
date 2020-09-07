@@ -3,11 +3,10 @@ package cli
 import (
 	"fmt"
 
-	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/spf13/cobra"
 )
 
-func triggersCmd(cfg *config.Config) *cobra.Command {
+func triggersCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "triggers",
 		Short: "manage resources for triggers.",

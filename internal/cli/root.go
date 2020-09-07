@@ -3,7 +3,6 @@ package cli
 import (
 	"os"
 
-	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -19,8 +18,8 @@ func Execute() {
 	// 1. env var (e.g. AUTH0_API_KEY)
 	// 2. global flag (e.g. --api-key)
 	// 3. JSON file (e.g. api_key = "..." in ~/.config/auth0/config.json)
-	cfg := &config.Config{
-		Renderer: &display.Renderer{},
+	cli := &cli{
+		renderer: &display.Renderer{},
 	}
 
 	rootCmd := &cobra.Command{
@@ -28,28 +27,28 @@ func Execute() {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Short:         "Command-line tool to interact with Auth0.",
-		Long:          "Command-line tool to interact with Auth0.\n" + getLogin(&fs, cfg),
+		Long:          "Command-line tool to interact with Auth0.\n" + getLogin(&fs, cli),
 
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// Initialize everything once. Later callers can then
 			// freely assume that config is fully primed and ready
 			// to go.
-			return cfg.Init()
+			return cli.setup()
 		},
 	}
 
 	rootCmd.SetUsageTemplate(namespaceUsageTemplate())
-	rootCmd.PersistentFlags().StringVar(&cfg.Tenant,
+	rootCmd.PersistentFlags().StringVar(&cli.tenant,
 		"tenant", "", "Specific tenant to use")
 
-	rootCmd.PersistentFlags().BoolVar(&cfg.Verbose,
+	rootCmd.PersistentFlags().BoolVar(&cli.verbose,
 		"verbose", false, "Enable verbose mode.")
 
-	rootCmd.AddCommand(actionsCmd(cfg))
-	rootCmd.AddCommand(triggersCmd(cfg))
+	rootCmd.AddCommand(actionsCmd(cli))
+	rootCmd.AddCommand(triggersCmd(cli))
 
 	if err := rootCmd.Execute(); err != nil {
-		cfg.Renderer.Errorf(err.Error())
+		cli.renderer.Errorf(err.Error())
 		os.Exit(1)
 	}
 }

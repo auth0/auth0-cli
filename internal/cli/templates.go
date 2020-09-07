@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -74,7 +73,7 @@ func WrappedNonRequestParamsFlagUsages(cmd *cobra.Command) string {
 // Private functions
 //
 
-func getLogin(fs *afero.Fs, cfg *config.Config) string {
+func getLogin(fs *afero.Fs, cli *cli) string {
 	// // We're checking against the path because we don't initialize the config
 	// // at this point of execution.
 	// path := cfg.GetConfigFolder(os.Getenv("XDG_CONFIG_HOME"))

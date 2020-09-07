@@ -7,31 +7,30 @@ import (
 	"path"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/validators"
 	"github.com/cyx/auth0/management"
 	"github.com/spf13/cobra"
 )
 
-func actionsCmd(cfg *config.Config) *cobra.Command {
+func actionsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "actions",
 		Short: "manage resources for actions.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.AddCommand(initActionsCmd(cfg))
-	cmd.AddCommand(listActionsCmd(cfg))
-	cmd.AddCommand(showActionCmd(cfg))
-	cmd.AddCommand(createActionCmd(cfg))
-	cmd.AddCommand(renameActionCmd(cfg))
-	cmd.AddCommand(deleteActionCmd(cfg))
-	cmd.AddCommand(deployActionCmd(cfg))
+	cmd.AddCommand(initActionsCmd(cli))
+	cmd.AddCommand(listActionsCmd(cli))
+	cmd.AddCommand(showActionCmd(cli))
+	cmd.AddCommand(createActionCmd(cli))
+	cmd.AddCommand(renameActionCmd(cli))
+	cmd.AddCommand(deleteActionCmd(cli))
+	cmd.AddCommand(deployActionCmd(cli))
 
 	return cmd
 }
 
-func initActionsCmd(cfg *config.Config) *cobra.Command {
+func initActionsCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		sync      bool
 		overwrite bool
@@ -42,7 +41,7 @@ func initActionsCmd(cfg *config.Config) *cobra.Command {
 		Short: "Initialize actions project structure.",
 		Long:  `Initialize actions project structure. Optionally sync your actions.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return initActions(cfg, flags.sync, flags.overwrite)
+			return initActions(cli, flags.sync, flags.overwrite)
 		},
 	}
 
@@ -58,7 +57,7 @@ func initActionsCmd(cfg *config.Config) *cobra.Command {
 
 }
 
-func listActionsCmd(cfg *config.Config) *cobra.Command {
+func listActionsCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		trigger string
 	}
@@ -68,12 +67,12 @@ func listActionsCmd(cfg *config.Config) *cobra.Command {
 		Short: "List existing actions",
 		Long:  `List actions within a specific trigger.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			list, err := cfg.API.Action.List(management.WithTriggerID(management.TriggerID(flags.trigger)))
+			list, err := cli.api.Action.List(management.WithTriggerID(management.TriggerID(flags.trigger)))
 			if err != nil {
 				return err
 			}
 
-			cfg.Renderer.ActionList(list.Actions)
+			cli.renderer.ActionList(list.Actions)
 			return nil
 		},
 	}
@@ -86,7 +85,7 @@ func listActionsCmd(cfg *config.Config) *cobra.Command {
 	return cmd
 }
 
-func showActionCmd(cfg *config.Config) *cobra.Command {
+func showActionCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show <name>",
 		Args:  validators.ExactArgs("<name>"),
@@ -102,11 +101,11 @@ func showActionCmd(cfg *config.Config) *cobra.Command {
 
 			err := ansi.Spinner("Fetching action", func() error {
 				var err error
-				if action, err = findActionByName(cfg, name); err != nil {
+				if action, err = findActionByName(cli, name); err != nil {
 					return err
 				}
 
-				list, err = cfg.API.ActionVersion.List(action.ID)
+				list, err = cli.api.ActionVersion.List(action.ID)
 				return err
 			})
 
@@ -114,7 +113,7 @@ func showActionCmd(cfg *config.Config) *cobra.Command {
 				return err
 			}
 
-			cfg.Renderer.ActionInfo(action, list.Versions)
+			cli.renderer.ActionInfo(action, list.Versions)
 			return nil
 		},
 	}
@@ -122,7 +121,7 @@ func showActionCmd(cfg *config.Config) *cobra.Command {
 	return cmd
 }
 
-func createActionCmd(cfg *config.Config) *cobra.Command {
+func createActionCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		trigger string
 	}
@@ -151,7 +150,7 @@ func createActionCmd(cfg *config.Config) *cobra.Command {
 			}
 
 			err := ansi.Spinner("Creating action", func() error {
-				return cfg.API.Action.Create(action)
+				return cli.api.Action.Create(action)
 			})
 
 			if err != nil {
@@ -159,7 +158,7 @@ func createActionCmd(cfg *config.Config) *cobra.Command {
 			}
 
 			code := codeTemplateFor(action)
-			f, relPath := defaultActionCodePath(cfg.Tenant, action.Name)
+			f, relPath := defaultActionCodePath(cli.tenant, action.Name)
 
 			if err := os.MkdirAll(path.Dir(f), 0755); err != nil {
 				return err
@@ -169,8 +168,8 @@ func createActionCmd(cfg *config.Config) *cobra.Command {
 				return err
 			}
 
-			cfg.Renderer.Infof("A template was generated in %s", relPath)
-			cfg.Renderer.Infof("Use `auth0 deploy actions %s` to publish a new version.", action.Name)
+			cli.renderer.Infof("A template was generated in %s", relPath)
+			cli.renderer.Infof("Use `auth0 deploy actions %s` to publish a new version.", action.Name)
 
 			return nil
 		},
@@ -184,7 +183,7 @@ func createActionCmd(cfg *config.Config) *cobra.Command {
 	return cmd
 }
 
-func deployActionCmd(cfg *config.Config) *cobra.Command {
+func deployActionCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		file string
 	}
@@ -205,7 +204,7 @@ The deploy lifecycle is as follows:
 			name := args[0]
 
 			if flags.file == "" {
-				f, relPath := defaultActionCodePath(cfg.Tenant, name)
+				f, relPath := defaultActionCodePath(cli.tenant, name)
 				if !fileExists(f) {
 					return fmt.Errorf("`%s` does not exist. Try `auth0 actions init --sync`", relPath)
 				}
@@ -213,7 +212,7 @@ The deploy lifecycle is as follows:
 				flags.file = f
 			}
 
-			action, err := findActionByName(cfg, name)
+			action, err := findActionByName(cli, name)
 			if err != nil {
 				return err
 			}
@@ -235,7 +234,7 @@ The deploy lifecycle is as follows:
 			}
 
 			return ansi.Spinner("Deploying action: "+name, func() error {
-				return cfg.API.ActionVersion.Deploy(action.ID, version)
+				return cli.api.ActionVersion.Deploy(action.ID, version)
 			})
 		},
 	}
@@ -247,7 +246,7 @@ The deploy lifecycle is as follows:
 	return cmd
 }
 
-func renameActionCmd(cfg *config.Config) *cobra.Command {
+func renameActionCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		newname string
 	}
@@ -265,13 +264,13 @@ The following generated files will be moved:
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
-			action, err := findActionByName(cfg, name)
+			action, err := findActionByName(cli, name)
 			if err != nil {
 				return err
 			}
 
 			return ansi.Spinner("Renaming action", func() error {
-				return cfg.API.Action.Update(action.ID, &management.Action{Name: flags.newname})
+				return cli.api.Action.Update(action.ID, &management.Action{Name: flags.newname})
 			})
 		},
 	}
@@ -284,7 +283,7 @@ The following generated files will be moved:
 	return cmd
 }
 
-func deleteActionCmd(cfg *config.Config) *cobra.Command {
+func deleteActionCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		confirm string
 	}
@@ -309,13 +308,13 @@ Note that all code artifacts will also be deleted.
 				return fmt.Errorf("Confirmation required. Try running `auth0 actions delete %s --confirm %s`", name, name)
 			}
 
-			action, err := findActionByName(cfg, name)
+			action, err := findActionByName(cli, name)
 			if err != nil {
 				return err
 			}
 
 			return ansi.Spinner("Deleting action", func() error {
-				return cfg.API.Action.Delete(action.ID)
+				return cli.api.Action.Delete(action.ID)
 			})
 		},
 	}
@@ -328,18 +327,18 @@ Note that all code artifacts will also be deleted.
 	return cmd
 }
 
-func initActions(cfg *config.Config, sync, overwrite bool) error {
+func initActions(cli *cli, sync, overwrite bool) error {
 	// TODO(cyx): should allow lising all actions. for now just limiting to
 	// post-login
-	list, err := cfg.API.Action.List(management.WithTriggerID(management.TriggerID("post-login")))
+	list, err := cli.api.Action.List(management.WithTriggerID(management.TriggerID("post-login")))
 	if err != nil {
 		return err
 	}
 
 	for _, a := range list.Actions {
-		f, relPath := defaultActionCodePath(cfg.Tenant, a.Name)
+		f, relPath := defaultActionCodePath(cli.tenant, a.Name)
 		if fileExists(f) && !overwrite {
-			cfg.Renderer.Warnf("skip: %s", relPath)
+			cli.renderer.Warnf("skip: %s", relPath)
 			continue
 		}
 
@@ -350,7 +349,7 @@ func initActions(cfg *config.Config, sync, overwrite bool) error {
 		if err := ioutil.WriteFile(f, codeTemplateFor(a), 0644); err != nil {
 			return err
 		}
-		cfg.Renderer.Infof("%s initialized", relPath)
+		cli.renderer.Infof("%s initialized", relPath)
 
 		if sync {
 			panic("NOT IMPLEMENTED")
@@ -368,12 +367,12 @@ func codeTemplateFor(action *management.Action) []byte {
 `)
 }
 
-func findActionByName(cfg *config.Config, name string) (*management.Action, error) {
+func findActionByName(cli *cli, name string) (*management.Action, error) {
 	// TODO(cyx): add a WithName and a filter by name in
 	// the management API. For now we're gonna use
 	// post-login since that's all we're creating to test
 	// it out.
-	list, err := cfg.API.Action.List(management.WithTriggerID(management.TriggerID("post-login")))
+	list, err := cli.api.Action.List(management.WithTriggerID(management.TriggerID("post-login")))
 	if err != nil {
 		return nil, err
 	}
