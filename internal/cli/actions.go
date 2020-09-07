@@ -150,11 +150,29 @@ func createActionCmd(cfg *config.Config) *cobra.Command {
 				},
 			}
 
-			return ansi.Spinner("Creating action", func() error {
+			err := ansi.Spinner("Creating action", func() error {
 				return cfg.API.Action.Create(action)
 			})
 
-			// TODO: add some more help text here.
+			if err != nil {
+				return err
+			}
+
+			code := codeTemplateFor(action)
+			f, relPath := defaultActionCodePath(cfg.Tenant, action.Name)
+
+			if err := os.MkdirAll(path.Dir(f), 0755); err != nil {
+				return err
+			}
+
+			if err := ioutil.WriteFile(f, code, 0644); err != nil {
+				return err
+			}
+
+			cfg.Renderer.Infof("A template was generated in %s", relPath)
+			cfg.Renderer.Infof("Use `auth0 deploy actions %s` to publish a new version.", action.Name)
+
+			return nil
 		},
 	}
 
