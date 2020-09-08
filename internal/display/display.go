@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/cyx/auth0/management"
@@ -69,9 +70,7 @@ func (r *Renderer) ActionInfo(action *management.Action, versions []*management.
 
 	for _, v := range versions {
 		version := fmt.Sprintf("v%d", v.Number)
-
-		// TODO(cyx): fix dates
-		line := fmt.Sprintf("%-3s | %-10s | %-10s", version, v.Status, "a minute ago")
+		line := fmt.Sprintf("%-3s | %-10s | %-10s", version, v.Status, timeAgo(v.CreatedAt))
 		if n := len(line); n > maxLine {
 			maxLine = n
 		}
@@ -90,4 +89,35 @@ func (r *Renderer) ActionInfo(action *management.Action, versions []*management.
 
 func (r *Renderer) Heading(text ...string) {
 	fmt.Fprintf(r.Writer, "%s %s\n", ansi.Faint("==="), strings.Join(text, " "))
+}
+
+func timeAgo(ts time.Time) string {
+	const (
+		day   = time.Hour * 24
+		month = day * 30
+	)
+
+	v := time.Since(ts)
+	switch {
+	case v < 2*time.Minute:
+		return "a minute ago"
+
+	case v < time.Hour:
+		return fmt.Sprintf("%d minutes ago", v/time.Minute)
+
+	case v < 2*time.Hour:
+		return "an hour ago"
+
+	case v < day:
+		return fmt.Sprintf("%d hours ago", v/time.Hour)
+
+	case v < 2*day:
+		return "a day ago"
+
+	case v < month:
+		return fmt.Sprintf("%d days ago", v/day)
+
+	default:
+		return ts.Format("Jan 02 2006")
+	}
 }

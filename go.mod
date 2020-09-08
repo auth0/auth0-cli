@@ -6,7 +6,7 @@ require (
 	github.com/aybabtme/iocontrol v0.0.0-20150809002002-ad15bcfc95a0 // indirect
 	github.com/benbjohnson/clock v1.0.3 // indirect
 	github.com/briandowns/spinner v1.11.1
-	github.com/cyx/auth0 v1.3.1-0.20200903063631-554acea20a54
+	github.com/cyx/auth0 v1.3.1-0.20200908050259-71e4042405b9
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/golang/protobuf v1.3.2 // indirect

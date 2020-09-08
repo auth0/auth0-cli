@@ -10,8 +10,11 @@ type Action struct {
 	ID                string    `json:"id,omitempty"`
 	Name              string    `json:"name,omitempty"`
 	SupportedTriggers []Trigger `json:"supported_triggers,omitempty"`
+
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+
 	// TODO: add required configuration / secrets
-	// TODO: maybe add created_at / updated_at
 }
 
 type VersionStatus string
@@ -42,8 +45,10 @@ type ActionVersion struct {
 	Status       VersionStatus `json:"status,omitempty"`
 	Number       int           `json:"number,omitempty"`
 
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+
 	// TODO: maybe add errors?
-	// TODO: add timestamps?
 }
 
 type Dependency struct {

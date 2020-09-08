@@ -7,7 +7,7 @@ github.com/PuerkitoBio/rehttp
 # github.com/briandowns/spinner v1.11.1
 ## explicit
 github.com/briandowns/spinner
-# github.com/cyx/auth0 v1.3.1-0.20200903063631-554acea20a54
+# github.com/cyx/auth0 v1.3.1-0.20200908050259-71e4042405b9
 ## explicit
 github.com/cyx/auth0
 github.com/cyx/auth0/internal/client
