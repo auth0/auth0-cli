@@ -17,6 +17,19 @@ Stripe CLI, etc.
 2. Clone this repo (git clone git@github.com:auth0/auth0-cli
 3. `make test` - ensure everything works correctly. Should see things pass.
 
+## Adding a new command
+
+This part is not fully fleshed out yet, but here are the steps:
+
+1. Create a command (example: https://github.com/auth0/auth0-cli/blob/master/internal/cli/triggers.go)
+2. Add the command constructor to the root command: (e.g. somewhere here: https://github.com/auth0/auth0-cli/blob/master/internal/cli/root.go#L48)
+
+Test it out by doing:
+
+```
+go run ./cmd/auth0 <your command>
+```
+
 ## Adding a new go dependency
 
 If you have to add another go dependency, you can follow the steps:
