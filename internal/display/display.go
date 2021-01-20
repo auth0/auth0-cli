@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/cyx/auth0/management"
 	"github.com/logrusorgru/aurora"
 )
 
@@ -48,43 +47,6 @@ func (r *Renderer) Errorf(format string, a ...interface{}) {
 
 	fmt.Fprint(r.Writer, aurora.BrightRed(" ▸    "))
 	fmt.Fprintf(r.Writer, format+"\n", a...)
-}
-
-func (r *Renderer) ActionList(actions []*management.Action) {
-	r.Heading(ansi.Bold(r.Tenant), "actions")
-
-	for _, a := range actions {
-		fmt.Fprintf(r.Writer, "%s\n", a.Name)
-	}
-}
-
-func (r *Renderer) ActionInfo(action *management.Action, versions []*management.ActionVersion) {
-	fmt.Fprintln(r.Writer)
-	fmt.Fprintf(r.Writer, "%-7s : %s\n", "Name", action.Name)
-	fmt.Fprintf(r.Writer, "%-7s : %s\n", "Trigger", action.SupportedTriggers[0].ID)
-
-	var (
-		lines   []string
-		maxLine int
-	)
-
-	for _, v := range versions {
-		version := fmt.Sprintf("v%d", v.Number)
-		line := fmt.Sprintf("%-3s | %-10s | %-10s", version, v.Status, timeAgo(v.CreatedAt))
-		if n := len(line); n > maxLine {
-			maxLine = n
-		}
-		lines = append(lines, line)
-	}
-
-	fmt.Fprintln(r.Writer)
-	fmt.Fprintln(r.Writer, strings.Repeat("-", maxLine))
-
-	for _, l := range lines {
-		fmt.Fprintln(r.Writer, l)
-	}
-
-	fmt.Fprintln(r.Writer, strings.Repeat("-", maxLine))
 }
 
 func (r *Renderer) Heading(text ...string) {
