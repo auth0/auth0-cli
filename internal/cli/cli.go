@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/auth0/auth0-cli/internal/display"
-	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
 
@@ -104,12 +103,4 @@ func (c *cli) init() error {
 	})
 
 	return err
-}
-
-func mustRequireFlags(cmd *cobra.Command, flags ...string) {
-	for _, f := range flags {
-		if err := cmd.MarkFlagRequired(f); err != nil {
-			panic(err)
-		}
-	}
 }

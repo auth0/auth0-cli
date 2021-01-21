@@ -44,6 +44,8 @@ func Execute() {
 	rootCmd.PersistentFlags().BoolVar(&cli.verbose,
 		"verbose", false, "Enable verbose mode.")
 
+	rootCmd.AddCommand(clientsCmd(cli))
+
 	// TODO(cyx): backport this later on using latest auth0/v5.
 	// rootCmd.AddCommand(actionsCmd(cli))
 	// rootCmd.AddCommand(triggersCmd(cli))
