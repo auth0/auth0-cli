@@ -23,7 +23,7 @@ func listClientsCmd(cli *cli) *cobra.Command {
 		Long: `$ auth0 client list
 Lists your existing clients. To create one try:
 
-    $ auth0 client create
+    $ auth0 clients create
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			list, err := cli.api.Client.List()
