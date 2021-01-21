@@ -18,8 +18,5 @@ jobs:
     - name: Install golanglint-ci
       run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.23.6
 
-    - name: Lint
-      run: PATH=$(go env GOPATH)/bin:$PATH make lint
-
-    - name: Test
-      run: make test
+    - name: ci
+      run: PATH=$(go env GOPATH)/bin:$PATH make ci
