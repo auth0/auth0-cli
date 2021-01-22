@@ -6,21 +6,37 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
+type clientView struct {
+	Name     string
+	Type     string
+	ClientID string
+}
+
+func (v *clientView) AsTableHeader() []string {
+	return []string{"Name", "Type", "ClientID"}
+}
+
+func (v *clientView) AsTableRow() []string {
+	return []string{v.Name, v.Type, ansi.Faint(v.ClientID)}
+}
+
 func (r *Renderer) ClientList(clients []*management.Client) {
 	r.Heading(ansi.Bold(r.Tenant), "clients\n")
 
-	var rows [][]string
+	var res []View
 	for _, c := range clients {
 		if auth0.StringValue(c.Name) == deprecatedAppName {
 			continue
 		}
-		rows = append(rows, []string{
-			auth0.StringValue(c.Name),
-			appTypeFor(c.AppType),
-			ansi.Faint(auth0.StringValue(c.ClientID)),
+		res = append(res, &clientView{
+			Name:     auth0.StringValue(c.Name),
+			Type:     appTypeFor(c.AppType),
+			ClientID: auth0.StringValue(c.ClientID),
 		})
+
 	}
-	r.Table([]string{"Name", "Type", "ClientID"}, rows)
+
+	r.Results(res)
 }
 
 // TODO(cyx): determine if there's a better way to filter this out.

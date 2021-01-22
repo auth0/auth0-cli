@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 	"sync"
 
 	"github.com/auth0/auth0-cli/internal/display"
@@ -33,6 +34,7 @@ type cli struct {
 
 	verbose bool
 	tenant  string
+	format  string
 
 	initOnce sync.Once
 	path     string
@@ -96,9 +98,17 @@ func (c *cli) init() error {
 			c.tenant = c.data.DefaultTenant
 		}
 
+		format := strings.ToLower(c.format)
+		if format != "" && format != string(display.OutputFormatJSON) {
+			err = fmt.Errorf("Invalid format. Use `--format=json` or omit this option to use the default format.")
+			return
+		}
+
 		c.renderer = &display.Renderer{
-			Tenant: c.tenant,
-			Writer: os.Stdout,
+			Tenant:        c.tenant,
+			MessageWriter: os.Stderr,
+			ResultWriter:  os.Stdout,
+			Format:        display.OutputFormat(format),
 		}
 	})
 
