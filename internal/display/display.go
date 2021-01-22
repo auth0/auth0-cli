@@ -23,8 +23,13 @@ const (
 type Renderer struct {
 	Tenant string
 
-	Writer io.Writer
+	// MessageWriter receives the renderer messages (typically os.Stderr)
+	MessageWriter io.Writer
 
+	// ResultWriter writes the final result of the commands (typically os.Stdout which can be piped to other commands)
+	ResultWriter io.Writer
+
+	// Format indicates how the results are rendered. Default (empty) will write as table
 	Format OutputFormat
 
 	initOnce sync.Once
@@ -32,8 +37,11 @@ type Renderer struct {
 
 func (r *Renderer) init() {
 	r.initOnce.Do(func() {
-		if r.Writer == nil {
-			r.Writer = os.Stdout
+		if r.MessageWriter == nil {
+			r.MessageWriter = os.Stderr
+		}
+		if r.ResultWriter == nil {
+			r.ResultWriter = os.Stdout
 		}
 	})
 }
@@ -41,26 +49,26 @@ func (r *Renderer) init() {
 func (r *Renderer) Infof(format string, a ...interface{}) {
 	r.init()
 
-	fmt.Fprint(r.Writer, aurora.Green(" ▸    "))
-	fmt.Fprintf(r.Writer, format+"\n", a...)
+	fmt.Fprint(r.MessageWriter, aurora.Green(" ▸    "))
+	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
 func (r *Renderer) Warnf(format string, a ...interface{}) {
 	r.init()
 
-	fmt.Fprint(r.Writer, aurora.Yellow(" ▸    "))
-	fmt.Fprintf(r.Writer, format+"\n", a...)
+	fmt.Fprint(r.MessageWriter, aurora.Yellow(" ▸    "))
+	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
 func (r *Renderer) Errorf(format string, a ...interface{}) {
 	r.init()
 
-	fmt.Fprint(r.Writer, aurora.BrightRed(" ▸    "))
-	fmt.Fprintf(r.Writer, format+"\n", a...)
+	fmt.Fprint(r.MessageWriter, aurora.BrightRed(" ▸    "))
+	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
 func (r *Renderer) Heading(text ...string) {
-	fmt.Fprintf(r.Writer, "%s %s\n", ansi.Faint("==="), strings.Join(text, " "))
+	fmt.Fprintf(r.MessageWriter, "%s %s\n", ansi.Faint("==="), strings.Join(text, " "))
 }
 
 type View interface {
@@ -77,19 +85,19 @@ func (r *Renderer) Results(data []View) {
 				r.Errorf("couldn't marshal results as JSON: %v", err)
 				return
 			}
-			fmt.Fprint(r.Writer, string(b))
+			fmt.Fprint(r.ResultWriter, string(b))
 
 		default:
 			rows := make([][]string, len(data))
 			for i, d := range data {
 				rows[i] = d.AsTableRow()
 			}
-			r.table(data[0].AsTableHeader(), rows)
+			writeTable(r.ResultWriter, data[0].AsTableHeader(), rows)
 		}
 	}
 }
 
-func (r *Renderer) table(header []string, data [][]string) {
+func writeTable(w io.Writer, header []string, data [][]string) {
 	tableString := &strings.Builder{}
 	table := tablewriter.NewWriter(tableString)
 	table.SetHeader(header)
@@ -109,7 +117,7 @@ func (r *Renderer) table(header []string, data [][]string) {
 	}
 
 	table.Render()
-	fmt.Fprint(r.Writer, tableString.String())
+	fmt.Fprint(w, tableString.String())
 }
 
 func timeAgo(ts time.Time) string {

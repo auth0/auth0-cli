@@ -105,9 +105,10 @@ func (c *cli) init() error {
 		}
 
 		c.renderer = &display.Renderer{
-			Tenant: c.tenant,
-			Writer: os.Stdout,
-			Format: display.OutputFormat(format),
+			Tenant:        c.tenant,
+			MessageWriter: os.Stderr,
+			ResultWriter:  os.Stdout,
+			Format:        display.OutputFormat(format),
 		}
 	})
 

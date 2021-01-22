@@ -1,0 +1,14 @@
+=== jorgehack21 clients
+
+[
+    {
+        "Name": "Default App",
+        "Type": "generic",
+        "ClientID": "lD1UVQMVT2SFC4ccesQC1V3mbXjeGIKF"
+    },
+    {
+        "Name": "My App",
+        "Type": "machine to machine",
+        "ClientID": "W6SMb7pwBfSEfb4zZPWu1UgSvalHhvPh"
+    }
+]
