@@ -40,13 +40,17 @@ func Execute() {
 
 	rootCmd.SetUsageTemplate(namespaceUsageTemplate())
 	rootCmd.PersistentFlags().StringVar(&cli.tenant,
-		"tenant", "", "Specific tenant to use")
+		"tenant", "", "Specific tenant to use.")
 
 	rootCmd.PersistentFlags().BoolVar(&cli.verbose,
 		"verbose", false, "Enable verbose mode.")
 
+	rootCmd.PersistentFlags().StringVar(&cli.format,
+		"format", "", "Command output format. Options: json.")
+
 	rootCmd.AddCommand(loginCmd(cli))
 	rootCmd.AddCommand(clientsCmd(cli))
+	rootCmd.AddCommand(logsCmd(cli))
 
 	// TODO(cyx): backport this later on using latest auth0/v5.
 	// rootCmd.AddCommand(actionsCmd(cli))
