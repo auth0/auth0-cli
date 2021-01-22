@@ -1,6 +1,7 @@
 package display
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -13,10 +14,18 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
+type OutputFormat string
+
+const (
+	OutputFormatJSON OutputFormat = "json"
+)
+
 type Renderer struct {
 	Tenant string
 
 	Writer io.Writer
+
+	Format OutputFormat
 
 	initOnce sync.Once
 }
@@ -54,7 +63,33 @@ func (r *Renderer) Heading(text ...string) {
 	fmt.Fprintf(r.Writer, "%s %s\n", ansi.Faint("==="), strings.Join(text, " "))
 }
 
-func (r *Renderer) Table(header []string, data [][]string) {
+type View interface {
+	AsTableHeader() []string
+	AsTableRow() []string
+}
+
+func (r *Renderer) Results(data []View) {
+	if len(data) > 0 {
+		switch r.Format {
+		case OutputFormatJSON:
+			b, err := json.MarshalIndent(data, "", "    ")
+			if err != nil {
+				r.Errorf("couldn't marshal results as JSON: %v", err)
+				return
+			}
+			fmt.Fprint(r.Writer, string(b))
+
+		default:
+			rows := make([][]string, len(data))
+			for i, d := range data {
+				rows[i] = d.AsTableRow()
+			}
+			r.table(data[0].AsTableHeader(), rows)
+		}
+	}
+}
+
+func (r *Renderer) table(header []string, data [][]string) {
 	tableString := &strings.Builder{}
 	table := tablewriter.NewWriter(tableString)
 	table.SetHeader(header)
