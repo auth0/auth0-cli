@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"os"
 
 	"github.com/auth0/auth0-cli/internal/display"
@@ -47,6 +48,7 @@ func Execute() {
 	rootCmd.PersistentFlags().StringVar(&cli.format,
 		"format", "", "Command output format. Options: json.")
 
+	rootCmd.AddCommand(loginCmd(cli))
 	rootCmd.AddCommand(clientsCmd(cli))
 	rootCmd.AddCommand(logsCmd(cli))
 
@@ -54,7 +56,7 @@ func Execute() {
 	// rootCmd.AddCommand(actionsCmd(cli))
 	// rootCmd.AddCommand(triggersCmd(cli))
 
-	if err := rootCmd.Execute(); err != nil {
+	if err := rootCmd.ExecuteContext(context.TODO()); err != nil {
 		cli.renderer.Errorf(err.Error())
 		os.Exit(1)
 	}
