@@ -10,6 +10,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/logrusorgru/aurora"
+	"github.com/olekukonko/tablewriter"
 )
 
 type Renderer struct {
@@ -51,6 +52,29 @@ func (r *Renderer) Errorf(format string, a ...interface{}) {
 
 func (r *Renderer) Heading(text ...string) {
 	fmt.Fprintf(r.Writer, "%s %s\n", ansi.Faint("==="), strings.Join(text, " "))
+}
+
+func (r *Renderer) Table(header []string, data [][]string) {
+	tableString := &strings.Builder{}
+	table := tablewriter.NewWriter(tableString)
+	table.SetHeader(header)
+
+	table.SetAutoWrapText(false)
+	table.SetAutoFormatHeaders(true)
+	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetCenterSeparator("")
+	table.SetColumnSeparator("")
+	table.SetRowSeparator("")
+	table.SetHeaderLine(false)
+	table.SetBorder(false)
+
+	for _, v := range data {
+		table.Append(v)
+	}
+
+	table.Render()
+	fmt.Fprint(r.Writer, tableString.String())
 }
 
 func timeAgo(ts time.Time) string {
