@@ -164,11 +164,7 @@ func openURL(url string) error {
 
 func parseTenant(accessToken string) (string, error) {
 	parts := strings.Split(accessToken, ".")
-	v, err := base64.RawURLEncoding.DecodeString(parts[0])
-	if err != nil {
-		return "", err
-	}
-	v, err = base64.RawURLEncoding.DecodeString(parts[1])
+	v, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
 		return "", err
 	}
