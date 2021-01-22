@@ -33,6 +33,8 @@ const (
 	clientID           = "2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT"
 	deviceCodeEndpoint = "https://auth0.auth0.com/oauth/device/code"
 	oauthTokenEndpoint = "https://auth0.auth0.com/oauth/token"
+	// TODO(jfatta) extend the scope as we extend the CLI:
+	scope = "openid read:roles"
 	audiencePath       = "/api/v2/"
 )
 
@@ -75,7 +77,7 @@ func (a *Authenticator) Authenticate(ctx context.Context) (Result, error) {
 func (a *Authenticator) getDeviceCode(ctx context.Context) (*deviceCodeResponse, error) {
 	data := url.Values{
 		"client_id": {clientID},
-		"scope":     {"openid read:roles"},
+		"scope":     {scope},
 		"audience":  {"https://*.auth0.com/api/v2/"},
 	}
 	r, err := http.PostForm(deviceCodeEndpoint, data)
