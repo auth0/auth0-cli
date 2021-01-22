@@ -100,7 +100,7 @@ func (c *cli) init() error {
 
 		format := strings.ToLower(c.format)
 		if format != "" && format != string(display.OutputFormatJSON) {
-			err = fmt.Errorf("Invalid format. Use `--format=json` or ommit this option to use the default format.")
+			err = fmt.Errorf("Invalid format. Use `--format=json` or omit this option to use the default format.")
 			return
 		}
 
