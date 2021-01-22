@@ -29,8 +29,8 @@ $ ./auth0 --help
 
 This part is not fully fleshed out yet, but here are the steps:
 
-1. Create a command (example: https://github.com/auth0/auth0-cli/blob/master/internal/cli/triggers.go)
-2. Add the command constructor to the root command: (e.g. somewhere here: https://github.com/auth0/auth0-cli/blob/master/internal/cli/root.go#L48)
+1. Create a command (example: https://github.com/auth0/auth0-cli/blob/main/internal/cli/login.go)
+2. Add the command constructor to the root command: (e.g. somewhere here: https://github.com/auth0/auth0-cli/blob/main/internal/cli/root.go)
 
 Test it out by doing:
 
