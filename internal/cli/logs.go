@@ -26,16 +26,17 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 Tail your logs as they are happening.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			list, err := cli.api.Log.List(management.Parameter("sort", "date:-1"))
+			list, err := cli.api.Log.List(management.Parameter("sort", "date:1"))
 			if err != nil {
 				return err
 			}
-			var fromLogId = ""
+			fromLogId := ""
 			for {
 				if len(list) > 0 {
-					fromLogId = *list[len(list)-1].LogID
+					cli.renderer.LogList(list)
+					fromLogId = list[len(list)-1].GetLogID()
 				}
-				list, err := cli.api.Log.List(
+				list, err = cli.api.Log.List(
 					management.Parameter("from", fromLogId),
 					management.Parameter("take", "100"),
 				)
@@ -43,8 +44,10 @@ Tail your logs as they are happening.
 					return err
 				}
 
-				cli.renderer.LogList(list)
-				time.Sleep(1 * time.Second)
+				if len(list) < 90 {
+					// Not a lot is happening, sleep on it
+					time.Sleep(1 * time.Second)
+				}
 			}
 		},
 	}
