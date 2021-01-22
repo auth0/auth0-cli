@@ -74,7 +74,7 @@ func (r *Renderer) Table(header []string, data [][]string) {
 	}
 
 	table.Render()
-	fmt.Fprintf(r.Writer, tableString.String())
+	fmt.Fprint(r.Writer, tableString.String())
 }
 
 func timeAgo(ts time.Time) string {
