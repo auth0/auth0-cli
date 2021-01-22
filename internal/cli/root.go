@@ -45,6 +45,7 @@ func Execute() {
 		"verbose", false, "Enable verbose mode.")
 
 	rootCmd.AddCommand(clientsCmd(cli))
+	rootCmd.AddCommand(logsCmd(cli))
 
 	// TODO(cyx): backport this later on using latest auth0/v5.
 	// rootCmd.AddCommand(actionsCmd(cli))
