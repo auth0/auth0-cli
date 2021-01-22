@@ -11,12 +11,13 @@ func loginCmd(cli *cli) *cobra.Command {
 		Short: "authenticate the Auth0 CLI.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			a := &auth.Authenticator{}
-			_, err := a.Authenticate(cmd.Context())
+			res, err := a.Authenticate(cmd.Context())
 			if err != nil {
 				return err
 			}
 			// TODO(jfatta): update the configuration with the token, tenant, audience, etc
-			cli.renderer.Infof("successfully logged in.")
+			cli.renderer.Infof("Successfully logged in.")
+			cli.renderer.Infof("Tenant: %s", res.Tenant)
 			return nil
 		},
 	}

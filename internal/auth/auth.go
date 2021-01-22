@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"net/url"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -31,6 +33,7 @@ const (
 	clientID           = "2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT"
 	deviceCodeEndpoint = "https://auth0.auth0.com/oauth/device/code"
 	oauthTokenEndpoint = "https://auth0.auth0.com/oauth/token"
+	audiencePath       = "/api/v2/"
 )
 
 type Authenticator struct {
@@ -129,10 +132,14 @@ func (a *Authenticator) awaitResponse(ctx context.Context, dcr *deviceCodeRespon
 				return Result{}, errors.New(res.ErrorDescription)
 			}
 
-			// TODO(jfatta): parse tenant information from the access token (JWT)
+			t, err := parseTenant(res.AccessToken)
+			if err != nil {
+				return Result{}, fmt.Errorf("cannot parse tenant from the given access token: %w", err)
+			}
 			return Result{
 				AccessToken: res.AccessToken,
 				ExpiresIn:   res.ExpiresIn,
+				Tenant:      t,
 			}, nil
 		}
 	}
@@ -153,4 +160,33 @@ func openURL(url string) error {
 	}
 	args = append(args, url)
 	return exec.Command(cmd, args...).Start()
+}
+
+func parseTenant(accessToken string) (string, error) {
+	parts := strings.Split(accessToken, ".")
+	v, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil {
+		return "", err
+	}
+	v, err = base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return "", err
+	}
+	var payload struct {
+		AUDs []string `json:"aud"`
+	}
+	if err := json.Unmarshal([]byte(v), &payload); err != nil {
+		return "", err
+	}
+	for _, aud := range payload.AUDs {
+		u, err := url.Parse(aud)
+		if err != nil {
+			return "", err
+		}
+		if u.Path == audiencePath {
+			parts := strings.Split(u.Host, ".")
+			return parts[0], nil
+		}
+	}
+	return "", fmt.Errorf("audience not found for %s", audiencePath)
 }
