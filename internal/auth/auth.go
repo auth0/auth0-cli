@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os/exec"
-	"runtime"
 	"strings"
 	"time"
 )
@@ -29,13 +27,14 @@ import (
 //   --data grant_type=urn:ietf:params:oauth:grant-type:device_code \
 //   --data device_code=9GtgUcsGKzXkU-i70RN74baY \
 //   --data 'client_id=2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT'
+
 const (
 	clientID           = "2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT"
 	deviceCodeEndpoint = "https://auth0.auth0.com/oauth/device/code"
 	oauthTokenEndpoint = "https://auth0.auth0.com/oauth/token"
 	// TODO(jfatta) extend the scope as we extend the CLI:
-	scope = "openid read:roles"
-	audiencePath       = "/api/v2/"
+	scope        = "openid read:roles"
+	audiencePath = "/api/v2/"
 )
 
 type Authenticator struct {
@@ -47,7 +46,7 @@ type Result struct {
 	ExpiresIn   int64
 }
 
-type deviceCodeResponse struct {
+type State struct {
 	DeviceCode      string `json:"device_code"`
 	UserCode        string `json:"user_code"`
 	VerificationURI string `json:"verification_uri_complete"`
@@ -55,47 +54,20 @@ type deviceCodeResponse struct {
 	Interval        int    `json:"interval"`
 }
 
-func (d *deviceCodeResponse) IntervalDuration() time.Duration {
-	return time.Duration(d.Interval) * time.Second
+func (s *State) IntervalDuration() time.Duration {
+	return time.Duration(s.Interval) * time.Second
 }
 
-func (a *Authenticator) Authenticate(ctx context.Context) (Result, error) {
-	dcr, err := a.getDeviceCode(ctx)
+func (a *Authenticator) Start(ctx context.Context) (State, error) {
+	s, err := a.getDeviceCode(ctx)
 	if err != nil {
-		return Result{}, fmt.Errorf("cannot get device code: %w", err)
+		return State{}, fmt.Errorf("cannot get device code: %w", err)
 	}
-
-	fmt.Printf("Your pairing code is: %s\n", dcr.UserCode)
-	err = openURL(dcr.VerificationURI)
-	if err != nil {
-		return Result{}, fmt.Errorf("cannot open URL: %w", err)
-	}
-
-	return a.awaitResponse(ctx, dcr)
+	return s, nil
 }
 
-func (a *Authenticator) getDeviceCode(ctx context.Context) (*deviceCodeResponse, error) {
-	data := url.Values{
-		"client_id": {clientID},
-		"scope":     {scope},
-		"audience":  {"https://*.auth0.com/api/v2/"},
-	}
-	r, err := http.PostForm(deviceCodeEndpoint, data)
-	if err != nil {
-		return nil, fmt.Errorf("cannot get device code: %w", err)
-	}
-	defer r.Body.Close()
-	var res deviceCodeResponse
-	err = json.NewDecoder(r.Body).Decode(&res)
-	if err != nil {
-		return nil, fmt.Errorf("cannot decode response: %w", err)
-	}
-
-	return &res, nil
-}
-
-func (a *Authenticator) awaitResponse(ctx context.Context, dcr *deviceCodeResponse) (Result, error) {
-	t := time.NewTicker(dcr.IntervalDuration())
+func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
+	t := time.NewTicker(state.IntervalDuration())
 	for {
 		select {
 		case <-ctx.Done():
@@ -104,7 +76,7 @@ func (a *Authenticator) awaitResponse(ctx context.Context, dcr *deviceCodeRespon
 			data := url.Values{
 				"client_id":   {clientID},
 				"grant_type":  {"urn:ietf:params:oauth:grant-type:device_code"},
-				"device_code": {dcr.DeviceCode},
+				"device_code": {state.DeviceCode},
 			}
 			r, err := http.PostForm(oauthTokenEndpoint, data)
 			if err != nil {
@@ -147,21 +119,24 @@ func (a *Authenticator) awaitResponse(ctx context.Context, dcr *deviceCodeRespon
 	}
 }
 
-func openURL(url string) error {
-	var cmd string
-	var args []string
-
-	switch runtime.GOOS {
-	case "windows":
-		cmd = "cmd"
-		args = []string{"/c", "start"}
-	case "darwin":
-		cmd = "open"
-	default: // "linux", "freebsd", "openbsd", "netbsd"
-		cmd = "xdg-open"
+func (a *Authenticator) getDeviceCode(ctx context.Context) (State, error) {
+	data := url.Values{
+		"client_id": {clientID},
+		"scope":     {scope},
+		"audience":  {"https://*.auth0.com/api/v2/"},
 	}
-	args = append(args, url)
-	return exec.Command(cmd, args...).Start()
+	r, err := http.PostForm(deviceCodeEndpoint, data)
+	if err != nil {
+		return State{}, fmt.Errorf("cannot get device code: %w", err)
+	}
+	defer r.Body.Close()
+	var res State
+	err = json.NewDecoder(r.Body).Decode(&res)
+	if err != nil {
+		return State{}, fmt.Errorf("cannot decode response: %w", err)
+	}
+
+	return res, nil
 }
 
 func parseTenant(accessToken string) (string, error) {
