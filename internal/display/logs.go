@@ -22,7 +22,7 @@ func (r *Renderer) LogList(logs []*management.Log) {
 		}
 
 		fmt.Fprintf(
-			r.Writer,
+			r.ResultWriter,
 			"[%s] (%s) client_name=%q client_id=%q",
 			l.Date.Format(time.RFC3339),
 			logType,
@@ -35,7 +35,7 @@ func (r *Renderer) LogList(logs []*management.Log) {
 		userAgent, _ := reqMap["userAgent"].(string)
 		if userAgent != "" {
 			fmt.Fprintf(
-				r.Writer,
+				r.ResultWriter,
 				" user_agent=%q",
 				userAgent,
 			)
@@ -47,13 +47,13 @@ func (r *Renderer) LogList(logs []*management.Log) {
 		errType, _ := errMap["type"].(string)
 		if errType != "" || errMsg != "" {
 			fmt.Fprintf(
-				r.Writer,
+				r.ResultWriter,
 				" error_type=%q error_message=%q",
 				errType,
 				errMsg,
 			)
 		}
 
-		fmt.Fprint(r.Writer, "\n")
+		fmt.Fprint(r.ResultWriter, "\n")
 	}
 }
