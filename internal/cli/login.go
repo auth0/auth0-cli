@@ -24,7 +24,7 @@ func loginCmd(cli *cli) *cobra.Command {
 			a := &auth.Authenticator{}
 			state, err := a.Start(ctx)
 			if err != nil {
-				cli.renderer.Errorf("Could not start the authentication process: %v.", err)
+				return fmt.Errorf("could not start the authentication process: %w.", err)
 			}
 
 			cli.renderer.Infof("Your pairing code is: %s\n", ansi.Bold(state.UserCode))
@@ -38,6 +38,9 @@ func loginCmd(cli *cli) *cobra.Command {
 			}
 
 			res, err := a.Wait(ctx, state)
+			if err != nil {
+				return fmt.Errorf("login error: %w", err)
+			}
 
 			// TODO(jfatta): update the configuration with the token, tenant, audience, etc
 			cli.renderer.Infof("Successfully logged in.")
