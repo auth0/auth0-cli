@@ -61,7 +61,10 @@ func (a *Authenticator) Authenticate(ctx context.Context) (Result, error) {
 	}
 
 	fmt.Printf("Your pairing code is: %s\n", dcr.UserCode)
-	openURL(dcr.VerificationURI)
+	err = openURL(dcr.VerificationURI)
+	if err != nil {
+		return Result{}, fmt.Errorf("cannot open URL: %w", err)
+	}
 
 	return a.awaitResponse(ctx, dcr)
 }
