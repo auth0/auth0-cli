@@ -46,7 +46,7 @@ func loginCmd(cli *cli) *cobra.Command {
 			cli.renderer.Infof("Successfully logged in.")
 			cli.renderer.Infof("Tenant: %s", res.Tenant)
 
-			cli.setTenant(tenant{
+			return cli.setTenant(tenant{
 				Name:        res.Tenant,
 				Domain:      res.Domain,
 				AccessToken: res.AccessToken,
@@ -54,8 +54,6 @@ func loginCmd(cli *cli) *cobra.Command {
 					time.Duration(res.ExpiresIn) * time.Second,
 				),
 			})
-
-			return nil
 		},
 	}
 

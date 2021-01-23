@@ -28,7 +28,7 @@ type tenant struct {
 	Name        string    `json:"name"`
 	Domain      string    `json:"domain"`
 	AccessToken string    `json:"access_token,omitempty"`
-	ExpiresAt   time.Time `json:expires_at"`
+	ExpiresAt   time.Time `json:"expires_at"`
 }
 
 // cli provides all the foundational things for all the commands in the CLI,
@@ -63,7 +63,8 @@ type cli struct {
 // isLoggedIn encodes the domain logic for determining whether or not we're
 // logged in. This might check our config storage, or just in memory.
 func (c *cli) isLoggedIn() bool {
-	c.init()
+	// No need to check errors for initializing context.
+	_ = c.init()
 
 	return c.tenant != ""
 }
@@ -89,7 +90,7 @@ func (c *cli) setup() error {
 			management.WithDebug(c.verbose))
 	}
 
-	return nil
+	return err
 }
 
 // getTenant fetches the default tenant configured (or the tenant specified via
@@ -110,7 +111,9 @@ func (c *cli) getTenant() (tenant, error) {
 // setTenant assigns an existing, or new tenant. This is expected to be called
 // after a login has completed.
 func (c *cli) setTenant(ten tenant) error {
-	c.init()
+	// init will fail here with a `no tenant found` error if we're logging
+	// in for the first time and that's expected.
+	_ = c.init()
 
 	// If there's no existing DefaultTenant yet, might as well set the
 	// first successfully logged in tenant during onboarding.
@@ -128,7 +131,9 @@ func (c *cli) setTenant(ten tenant) error {
 
 	dir := filepath.Dir(c.path)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		os.MkdirAll(dir, 0700)
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			return err
+		}
 	}
 
 	buf, err := json.MarshalIndent(c.config, "", "    ")
