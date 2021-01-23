@@ -55,8 +55,17 @@ type cli struct {
 
 	// config state management.
 	initOnce sync.Once
+	errOnce  error
 	path     string
 	config   config
+}
+
+// isLoggedIn encodes the domain logic for determining whether or not we're
+// logged in. This might check our config storage, or just in memory.
+func (c *cli) isLoggedIn() bool {
+	c.init()
+
+	return c.tenant != ""
 }
 
 // setup will try to initialize the config context, as well as figure out if
@@ -65,7 +74,9 @@ type cli struct {
 // 1. A tenant is found.
 // 2. The tenant has an access token.
 func (c *cli) setup() error {
-	c.init()
+	if err := c.init(); err != nil {
+		return err
+	}
 
 	t, err := c.getTenant()
 	if err != nil {
@@ -133,11 +144,10 @@ func (c *cli) setTenant(ten tenant) error {
 }
 
 func (c *cli) init() error {
-	var err error
 	c.initOnce.Do(func() {
 		// Initialize the context -- e.g. the configuration
 		// information, tenants, etc.
-		if err = c.initContext(); err != nil {
+		if c.errOnce = c.initContext(); c.errOnce != nil {
 			return
 		}
 		c.renderer.Tenant = c.tenant
@@ -145,13 +155,15 @@ func (c *cli) init() error {
 		// Determine what the desired output format is.
 		format := strings.ToLower(c.format)
 		if format != "" && format != string(display.OutputFormatJSON) {
-			err = fmt.Errorf("Invalid format. Use `--format=json` or omit this option to use the default format.")
+			c.errOnce = fmt.Errorf("Invalid format. Use `--format=json` or omit this option to use the default format.")
 			return
 		}
 		c.renderer.Format = display.OutputFormat(format)
 	})
 
-	return err
+	// Once initialized, we'll keep returning the same err that was
+	// originally encountered.
+	return c.errOnce
 }
 
 func (c *cli) initContext() (err error) {
