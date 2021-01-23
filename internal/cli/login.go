@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
@@ -42,9 +43,18 @@ func loginCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("login error: %w", err)
 			}
 
-			// TODO(jfatta): update the configuration with the token, tenant, audience, etc
 			cli.renderer.Infof("Successfully logged in.")
 			cli.renderer.Infof("Tenant: %s", res.Tenant)
+
+			cli.setTenant(tenant{
+				Name:        res.Tenant,
+				Domain:      res.Domain,
+				AccessToken: res.AccessToken,
+				ExpiresAt: time.Now().Add(
+					time.Duration(res.ExpiresIn) * time.Second,
+				),
+			})
+
 			return nil
 		},
 	}

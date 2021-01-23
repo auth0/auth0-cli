@@ -31,6 +31,12 @@ func Execute() {
 		Long:          "Command-line tool to interact with Auth0.\n" + getLogin(&fs, cli),
 
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			// If the user is trying to login, no need to go
+			// through setup.
+			if cmd.Use == "login" {
+				return nil
+			}
+
 			// Initialize everything once. Later callers can then
 			// freely assume that config is fully primed and ready
 			// to go.
