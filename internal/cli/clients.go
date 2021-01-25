@@ -78,7 +78,7 @@ The application type can be:
 				AppType:     auth0.String(apiAppTypeFor(flags.appType)),
 			}
 
-			err := ansi.Spinner("Creating action", func() error {
+			err := ansi.Spinner("Creating client", func() error {
 				return cli.api.Client.Create(c)
 			})
 
