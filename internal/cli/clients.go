@@ -61,13 +61,13 @@ func clientsCreateCmd(cli *cli) *cobra.Command {
 		Short: "Create a new client (also know as application)",
 		Long: `Creates a new client (or application):
 
-auth0 clients create -n myapp -t spa
+auth0 clients create --name myapp --type [native|spa|regular|m2m]
 
-The application type can be:
-- native: Mobile, desktop, CLI and smart device apps running natively.
-- spa (single page application): A JavaScript front-end app that uses an API.
-- regular: Traditional web app using redirects.
-- m2m (machine to machine): CLIs, daemons or services running on your backend.
+- supported application type:
+	- native: mobile, desktop, CLI and smart device apps running natively.
+	- spa (single page application): a JavaScript front-end app that uses an API.
+	- regular: Traditional web app using redirects.
+	- m2m (machine to machine): CLIs, daemons or services running on your backend.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// TODO(jfatta): depending on the app type, other client properties might be mandatory
@@ -92,7 +92,7 @@ The application type can be:
 		},
 	}
 	cmd.Flags().StringVarP(&flags.name, "name", "n", "", "Name of the client.")
-	cmd.Flags().StringVarP(&flags.appType, "type", "t", "", "Type of the client.")
+	cmd.Flags().StringVarP(&flags.appType, "type", "t", "", "Type of the client: [native|spa|regular|m2m]")
 	cmd.Flags().StringVarP(&flags.description, "description", "d", "", "Description of the client.")
 	cmd.Flags().BoolVarP(&flags.reveal, "reveal", "r", false, "⚠️  Reveal the SECRET of the created client.")
 
