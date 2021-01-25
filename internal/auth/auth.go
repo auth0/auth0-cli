@@ -33,7 +33,7 @@ const (
 	deviceCodeEndpoint = "https://auth0.auth0.com/oauth/device/code"
 	oauthTokenEndpoint = "https://auth0.auth0.com/oauth/token"
 	// TODO(jfatta) extend the scope as we extend the CLI:
-	scope        = "openid create:actions create:clients create:connections create:hooks create:rules delete:actions delete:clients delete:connections delete:hooks delete:rules read:actions read:clients read:connections read:hooks read:logs read:rules update:actions update:clients update:connections update:hooks update:rules"
+	scope        = "openid create:actions create:clients create:resource_servers create:connections create:hooks create:rules delete:actions delete:clients delete:connections delete:hooks delete:rules read:actions read:clients read:resource_servers read:connections read:hooks read:logs read:rules update:actions update:clients update:connections update:hooks update:rules"
 	audiencePath = "/api/v2/"
 )
 
