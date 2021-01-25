@@ -85,7 +85,7 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "rule name")
 	// @TODO Take a look at this later
-	// cmd.MarkFlagRequired("rules")
+	// cmd.MarkFlagRequired("name")
 
 	return cmd
 }
@@ -131,10 +131,12 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "rule name")
 	// @TODO Take a look at this later
-	// cmd.MarkFlagRequired("rules")
+	// cmd.MarkFlagRequired("name")
 
 	return cmd
 }
+
+// @TODO move to rules package
 func getRules(cli *cli) (list *management.RuleList, err error) {
 	list, err = cli.api.Client.Rule.List()
 	return
