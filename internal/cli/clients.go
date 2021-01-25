@@ -2,6 +2,8 @@ package cli
 
 import (
 	"github.com/spf13/cobra"
+	"gopkg.in/auth0.v5"
+	"gopkg.in/auth0.v5/management"
 )
 
 func clientsCmd(cli *cli) *cobra.Command {
@@ -11,12 +13,13 @@ func clientsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.AddCommand(listClientsCmd(cli))
+	cmd.AddCommand(clientsListCmd(cli))
+	cmd.AddCommand(clientsCreateCmd(cli))
 
 	return cmd
 }
 
-func listClientsCmd(cli *cli) *cobra.Command {
+func clientsListCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Lists your existing clients",
@@ -37,4 +40,62 @@ Lists your existing clients. To create one try:
 	}
 
 	return cmd
+}
+
+func clientsCreateCmd(cli *cli) *cobra.Command {
+	var flags struct {
+		name        string
+		appType     string
+		description string
+	}
+	cmd := &cobra.Command{
+		Use:   "create",
+		Short: "Create a new client (also know as application)",
+		Long: `Creates a new Client (or Application):
+The application type can be:
+- native: Mobile, desktop, CLI and smart device apps running natively.
+- spa (single page application): A JavaScript front-end app that uses an API.
+- regular: Traditional web app using redirects.
+- m2m (machine to machine): CLIs, daemons or services running on your backend.
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// TODO(jfatta): depending on the app type, other client properties might be mandatory
+			// check: create app dashboard
+			c := &management.Client{
+				Name:        &flags.name,
+				Description: &flags.description,
+				AppType:     auth0.String(apiAppTypeFor(flags.appType)),
+			}
+			err := cli.api.Client.Create(c)
+			if err != nil {
+				return err
+			}
+			// TODO(jfatta) get created client from API, then pass that to the renderer
+			cli.renderer.ClientCreate(c)
+			return nil
+		},
+	}
+	cmd.Flags().StringVarP(&flags.name, "name", "n", "", "Name of the client.")
+	cmd.Flags().StringVarP(&flags.appType, "type", "t", "", "Type of the client.")
+	cmd.Flags().StringVarP(&flags.description, "description", "d", "", "Description of the client.")
+
+	mustRequireFlags(cmd, "name", "type")
+
+	return cmd
+}
+
+func apiAppTypeFor(v string) string {
+	switch v {
+	case "native":
+		return "native"
+	case "spa":
+		return "spa"
+	case "regular":
+		return "regular_web"
+	case "m2m":
+		return "non_interactive"
+
+	default:
+		return v
+	}
 }

@@ -39,6 +39,12 @@ func (r *Renderer) ClientList(clients []*management.Client) {
 	r.Results(res)
 }
 
+func (r *Renderer) ClientCreate(client *management.Client) {
+	r.Heading(ansi.Bold(r.Tenant), "created client\n")
+
+	// TODO(jfatta): render created client
+}
+
 // TODO(cyx): determine if there's a better way to filter this out.
 const deprecatedAppName = "All Applications"
 
