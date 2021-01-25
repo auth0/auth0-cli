@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/auth0/auth0-cli/internal/display"
+	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
 
@@ -30,6 +32,8 @@ type tenant struct {
 	AccessToken string    `json:"access_token,omitempty"`
 	ExpiresAt   time.Time `json:"expires_at"`
 }
+
+var errUnauthenticated = errors.New("Not yet configured. Try `auth0 login`.")
 
 // cli provides all the foundational things for all the commands in the CLI,
 // specifically:
@@ -84,7 +88,10 @@ func (c *cli) setup() error {
 		return err
 	}
 
-	if t.AccessToken != "" {
+	if t.AccessToken == "" {
+		return errUnauthenticated
+
+	} else if t.AccessToken != "" {
 		c.api, err = management.New(t.Domain,
 			management.WithStaticToken(t.AccessToken),
 			management.WithDebug(c.verbose))
@@ -157,14 +164,17 @@ func (c *cli) init() error {
 		}
 		c.renderer.Tenant = c.tenant
 
-		// Determine what the desired output format is.
-		format := strings.ToLower(c.format)
-		if format != "" && format != string(display.OutputFormatJSON) {
-			c.errOnce = fmt.Errorf("Invalid format. Use `--format=json` or omit this option to use the default format.")
-			return
-		}
-		c.renderer.Format = display.OutputFormat(format)
 	})
+
+	// Determine what the desired output format is.
+	//
+	// NOTE(cyx): Since this isn't expensive to do, we don't need to put it
+	// inside initOnce.
+	format := strings.ToLower(c.format)
+	if format != "" && format != string(display.OutputFormatJSON) {
+		return fmt.Errorf("Invalid format. Use `--format=json` or omit this option to use the default format.")
+	}
+	c.renderer.Format = display.OutputFormat(format)
 
 	// Once initialized, we'll keep returning the same err that was
 	// originally encountered.
@@ -177,7 +187,7 @@ func (c *cli) initContext() (err error) {
 	}
 
 	if _, err := os.Stat(c.path); os.IsNotExist(err) {
-		return fmt.Errorf("Not yet configured. Try `auth0 login`.")
+		return errUnauthenticated
 	}
 
 	var buf []byte
@@ -190,7 +200,7 @@ func (c *cli) initContext() (err error) {
 	}
 
 	if c.tenant == "" && c.config.DefaultTenant == "" {
-		return fmt.Errorf("Not yet configured. Try `auth0 login`.")
+		return errUnauthenticated
 	}
 
 	if c.tenant == "" {
@@ -198,4 +208,12 @@ func (c *cli) initContext() (err error) {
 	}
 
 	return nil
+}
+
+func mustRequireFlags(cmd *cobra.Command, flags ...string) {
+	for _, f := range flags {
+		if err := cmd.MarkFlagRequired(f); err != nil {
+			panic(err)
+		}
+	}
 }

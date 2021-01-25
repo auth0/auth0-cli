@@ -16,7 +16,7 @@ func Execute() {
 	// 2. global flag (e.g. --api-key)
 	// 3. JSON file (e.g. api_key = "..." in ~/.config/auth0/config.json)
 	cli := &cli{
-		renderer: &display.Renderer{},
+		renderer: display.NewRenderer(),
 	}
 
 	rootCmd := &cobra.Command{
@@ -52,8 +52,11 @@ func Execute() {
 
 	rootCmd.AddCommand(loginCmd(cli))
 	rootCmd.AddCommand(clientsCmd(cli))
+	rootCmd.AddCommand(apisCmd(cli))
 	rootCmd.AddCommand(logsCmd(cli))
+	rootCmd.AddCommand(actionsCmd(cli))
 	rootCmd.AddCommand(rulesCmd(cli))
+	rootCmd.AddCommand(connectionsCmd(cli))
 
 	// TODO(cyx): backport this later on using latest auth0/v5.
 	// rootCmd.AddCommand(actionsCmd(cli))
