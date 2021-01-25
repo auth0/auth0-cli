@@ -48,6 +48,7 @@ func getLatestLogs(cli *cli, n int) (result []*management.Log, err error) {
 func logsCmd(cli *cli) *cobra.Command {
 	var numberOfLogs int
 	var follow bool
+	var noColor bool
 	cmd := &cobra.Command{
 		Use:   "logs",
 		Short: "show the tenant logs",
@@ -62,7 +63,7 @@ Show the tenant logs.
 			}
 			if len(list) > 0 {
 				lastLogID = list[len(list)-1].GetLogID()
-				cli.renderer.LogList(list)
+				cli.renderer.LogList(list, noColor)
 			}
 			if follow {
 				for {
@@ -74,7 +75,7 @@ Show the tenant logs.
 						return err
 					}
 					if len(list) > 0 {
-						cli.renderer.LogList(list)
+						cli.renderer.LogList(list, noColor)
 						lastLogID = list[len(list)-1].GetLogID()
 					}
 					if len(list) < 90 {
@@ -89,6 +90,7 @@ Show the tenant logs.
 
 	cmd.Flags().IntVarP(&numberOfLogs, "num-entries", "n", 100, "the number of log entries to print")
 	cmd.Flags().BoolVarP(&follow, "follow", "f", false, "don't stop and wait for new logs to print as they happen")
+	cmd.Flags().BoolVarP(&noColor, "no-color", "", false, "turn off colored print")
 
 	return cmd
 }
