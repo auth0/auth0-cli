@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"strings"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5"
@@ -102,7 +104,7 @@ auth0 clients create --name myapp --type [native|spa|regular|m2m]
 }
 
 func apiAppTypeFor(v string) string {
-	switch v {
+	switch strings.ToLower(v) {
 	case "native":
 		return "native"
 	case "spa":
