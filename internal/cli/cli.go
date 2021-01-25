@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -30,6 +31,8 @@ type tenant struct {
 	AccessToken string    `json:"access_token,omitempty"`
 	ExpiresAt   time.Time `json:"expires_at"`
 }
+
+var errUnauthenticated = errors.New("Not yet configured. Try `auth0 login`.")
 
 // cli provides all the foundational things for all the commands in the CLI,
 // specifically:
@@ -84,7 +87,10 @@ func (c *cli) setup() error {
 		return err
 	}
 
-	if t.AccessToken != "" {
+	if t.AccessToken == "" {
+		return errUnauthenticated
+
+	} else if t.AccessToken != "" {
 		c.api, err = management.New(t.Domain,
 			management.WithStaticToken(t.AccessToken),
 			management.WithDebug(c.verbose))
@@ -177,7 +183,7 @@ func (c *cli) initContext() (err error) {
 	}
 
 	if _, err := os.Stat(c.path); os.IsNotExist(err) {
-		return fmt.Errorf("Not yet configured. Try `auth0 login`.")
+		return errUnauthenticated
 	}
 
 	var buf []byte
@@ -190,7 +196,7 @@ func (c *cli) initContext() (err error) {
 	}
 
 	if c.tenant == "" && c.config.DefaultTenant == "" {
-		return fmt.Errorf("Not yet configured. Try `auth0 login`.")
+		return errUnauthenticated
 	}
 
 	if c.tenant == "" {
