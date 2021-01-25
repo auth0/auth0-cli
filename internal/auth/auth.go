@@ -33,7 +33,7 @@ const (
 	deviceCodeEndpoint = "https://auth0.auth0.com/oauth/device/code"
 	oauthTokenEndpoint = "https://auth0.auth0.com/oauth/token"
 	// TODO(jfatta) extend the scope as we extend the CLI:
-	scope        = "openid read:roles"
+	scope        = "openid read:roles read:clients read:logs"
 	audiencePath = "/api/v2/"
 )
 
@@ -42,6 +42,7 @@ type Authenticator struct {
 
 type Result struct {
 	Tenant      string
+	Domain      string
 	AccessToken string
 	ExpiresIn   int64
 }
@@ -106,14 +107,15 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 				return Result{}, errors.New(res.ErrorDescription)
 			}
 
-			t, err := parseTenant(res.AccessToken)
+			ten, domain, err := parseTenant(res.AccessToken)
 			if err != nil {
 				return Result{}, fmt.Errorf("cannot parse tenant from the given access token: %w", err)
 			}
 			return Result{
 				AccessToken: res.AccessToken,
 				ExpiresIn:   res.ExpiresIn,
-				Tenant:      t,
+				Tenant:      ten,
+				Domain:      domain,
 			}, nil
 		}
 	}
@@ -139,27 +141,27 @@ func (a *Authenticator) getDeviceCode(ctx context.Context) (State, error) {
 	return res, nil
 }
 
-func parseTenant(accessToken string) (string, error) {
+func parseTenant(accessToken string) (tenant, domain string, err error) {
 	parts := strings.Split(accessToken, ".")
 	v, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	var payload struct {
 		AUDs []string `json:"aud"`
 	}
 	if err := json.Unmarshal([]byte(v), &payload); err != nil {
-		return "", err
+		return "", "", err
 	}
 	for _, aud := range payload.AUDs {
 		u, err := url.Parse(aud)
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 		if u.Path == audiencePath {
 			parts := strings.Split(u.Host, ".")
-			return parts[0], nil
+			return parts[0], u.Host, nil
 		}
 	}
-	return "", fmt.Errorf("audience not found for %s", audiencePath)
+	return "", "", fmt.Errorf("audience not found for %s", audiencePath)
 }

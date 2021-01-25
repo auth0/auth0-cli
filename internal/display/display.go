@@ -68,6 +68,8 @@ func (r *Renderer) Errorf(format string, a ...interface{}) {
 }
 
 func (r *Renderer) Heading(text ...string) {
+	r.init()
+
 	fmt.Fprintf(r.MessageWriter, "%s %s\n", ansi.Faint("==="), strings.Join(text, " "))
 }
 
@@ -77,6 +79,8 @@ type View interface {
 }
 
 func (r *Renderer) Results(data []View) {
+	r.init()
+
 	if len(data) > 0 {
 		switch r.Format {
 		case OutputFormatJSON:
