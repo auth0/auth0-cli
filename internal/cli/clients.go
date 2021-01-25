@@ -57,6 +57,7 @@ func clientsCreateCmd(cli *cli) *cobra.Command {
 		appType     string
 		description string
 		reveal      bool
+		callbacks   []string
 	}
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -78,6 +79,7 @@ auth0 clients create --name myapp --type [native|spa|regular|m2m]
 				Name:        &flags.name,
 				Description: &flags.description,
 				AppType:     auth0.String(apiAppTypeFor(flags.appType)),
+				Callbacks:   apiCallbacksFor(flags.callbacks),
 			}
 
 			err := ansi.Spinner("Creating client", func() error {
@@ -95,8 +97,9 @@ auth0 clients create --name myapp --type [native|spa|regular|m2m]
 	}
 	cmd.Flags().StringVarP(&flags.name, "name", "n", "", "Name of the client.")
 	cmd.Flags().StringVarP(&flags.appType, "type", "t", "", "Type of the client: [native|spa|regular|m2m]")
-	cmd.Flags().StringVarP(&flags.description, "description", "d", "", "Description of the client.")
+	cmd.Flags().StringVarP(&flags.description, "description", "d", "", "A free text description of the application. Max character count is 140.")
 	cmd.Flags().BoolVarP(&flags.reveal, "reveal", "r", false, "⚠️  Reveal the SECRET of the created client.")
+	cmd.Flags().StringSliceVarP(&flags.callbacks, "callbacks", "c", nil, "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native clients, all callbacks should use protocol https://.")
 
 	mustRequireFlags(cmd, "name", "type")
 
@@ -117,4 +120,13 @@ func apiAppTypeFor(v string) string {
 	default:
 		return v
 	}
+}
+
+func apiCallbacksFor(s []string) []interface{} {
+	res := make([]interface{}, len(s))
+	for i, v := range s {
+		res[i] = v
+	}
+	return res
+
 }
