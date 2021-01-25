@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5"
 	"gopkg.in/auth0.v5/management"
@@ -51,7 +52,10 @@ func clientsCreateCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new client (also know as application)",
-		Long: `Creates a new Client (or Application):
+		Long: `Creates a new client (or application):
+
+auth0 clients create -n myapp -t spa
+
 The application type can be:
 - native: Mobile, desktop, CLI and smart device apps running natively.
 - spa (single page application): A JavaScript front-end app that uses an API.
@@ -66,11 +70,15 @@ The application type can be:
 				Description: &flags.description,
 				AppType:     auth0.String(apiAppTypeFor(flags.appType)),
 			}
-			err := cli.api.Client.Create(c)
+
+			err := ansi.Spinner("Creating action", func() error {
+				return cli.api.Client.Create(c)
+			})
+
 			if err != nil {
 				return err
 			}
-			// TODO(jfatta) get created client from API, then pass that to the renderer
+			// note: c is populated with the rest of the client fields by the API during creation.
 			cli.renderer.ClientCreate(c)
 			return nil
 		},

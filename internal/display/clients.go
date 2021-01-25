@@ -40,9 +40,15 @@ func (r *Renderer) ClientList(clients []*management.Client) {
 }
 
 func (r *Renderer) ClientCreate(client *management.Client) {
-	r.Heading(ansi.Bold(r.Tenant), "created client\n")
+	r.Heading(ansi.Bold(r.Tenant), "client created\n")
 
-	// TODO(jfatta): render created client
+	v := &clientView{
+		Name:     auth0.StringValue(client.Name),
+		Type:     appTypeFor(client.AppType),
+		ClientID: auth0.StringValue(client.ClientID),
+	}
+
+	r.Results([]View{v})
 }
 
 // TODO(cyx): determine if there's a better way to filter this out.
