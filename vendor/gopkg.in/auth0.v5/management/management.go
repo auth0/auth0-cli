@@ -199,6 +199,7 @@ func New(domain string, options ...ManagementOption) (*Management, error) {
 		client.WithUserAgent(m.userAgent),
 		client.WithRateLimit())
 
+	m.Action = newActionManager(m)
 	m.Client = newClientManager(m)
 	m.ClientGrant = newClientGrantManager(m)
 	m.Connection = newConnectionManager(m)

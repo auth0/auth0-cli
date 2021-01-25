@@ -1,13 +1,14 @@
 package management
 
 import (
+	"net/http"
 	"time"
 )
 
 type Action struct {
-	ID                string    `json:"id,omitempty"`
-	Name              string    `json:"name,omitempty"`
-	SupportedTriggers []Trigger `json:"supported_triggers,omitempty"`
+	ID                *string    `json:"id,omitempty"`
+	Name              *string    `json:"name,omitempty"`
+	SupportedTriggers *[]Trigger `json:"supported_triggers,omitempty"`
 
 	CreatedAt *time.Time `json:"created_at,omitempty"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
@@ -75,6 +76,19 @@ type ActionManager struct {
 	*Management
 }
 
+func newActionManager(m *Management) *ActionManager {
+	return &ActionManager{m}
+}
+
+func applyActionsListDefaults(options []RequestOption) RequestOption {
+	return newRequestOption(func(r *http.Request) {
+		PerPage(50).apply(r)
+		for _, option := range options {
+			option.apply(r)
+		}
+	})
+}
+
 func (m *ActionManager) Create(a *Action) error {
 	return m.Request("POST", m.URI("actions", "actions"), a)
 }
@@ -88,7 +102,7 @@ func (m *ActionManager) Read(id string) (*Action, error) {
 func (m *ActionManager) Update(id string, a *Action) error {
 	// We'll get a 400 if we try to send the following parameters as part
 	// of the payload.
-	a.ID = ""
+	a.ID = nil
 	a.CreatedAt = nil
 	a.UpdatedAt = nil
 	return m.Request("PATCH", m.URI("actions", "actions", id), a)
@@ -105,7 +119,7 @@ func (m *ActionManager) Delete(id string, opts ...RequestOption) error {
 // }
 
 func (m *ActionManager) List(opts ...RequestOption) (c *ActionList, err error) {
-	err = m.Request("GET", m.URI("actions", "actions"), &c, applyListDefaults(opts))
+	err = m.Request("GET", m.URI("actions", "actions"), &c, applyActionsListDefaults(opts))
 	return
 }
 
@@ -133,7 +147,7 @@ func (m *ActionVersionManager) Delete(actionID, id string, opts ...RequestOption
 }
 
 func (m *ActionVersionManager) List(actionID string, opts ...RequestOption) (c *ActionVersionList, err error) {
-	err = m.Request("GET", m.URI("actions", "actions", actionID, "versions"), &c, applyListDefaults(opts))
+	err = m.Request("GET", m.URI("actions", "actions", actionID, "versions"), &c, applyActionsListDefaults(opts))
 	return
 }
 

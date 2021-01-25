@@ -19,5 +19,5 @@ require (
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
 
-// replace gopkg.in/auth0.v5 => ../auth0
-replace gopkg.in/auth0.v5 => github.com/turcottedanny/auth0 v1.3.1-0.20210125145849-a5a6c0556d7b
+replace gopkg.in/auth0.v5 => ../auth0
+// replace gopkg.in/auth0.v5 => github.com/turcottedanny/auth0 v1.3.1-0.20210125145849-a5a6c0556d7b
