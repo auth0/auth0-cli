@@ -22,7 +22,7 @@ func (v *clientView) AsTableHeader() []string {
 	if v.revealSecret {
 		return []string{"Name", "Type", "ClientID", "Client Secret", "Callbacks"}
 	}
-	return []string{"Name", "Type", "ClientID", "Callbacks"}
+	return []string{"Name", "Type", "Client ID", "Callbacks"}
 
 }
 
