@@ -28,7 +28,7 @@ func (r *Renderer) ApisList(apis []*management.ResourceServer) {
 	for _, api := range apis {
 		res = append(res, &apiView{
 			ID:         auth0.StringValue(api.ID),
-			Name:       appTypeFor(api.Name),
+			Name:       auth0.StringValue(api.Name),
 			Identifier: auth0.StringValue(api.Identifier),
 		})
 	}
