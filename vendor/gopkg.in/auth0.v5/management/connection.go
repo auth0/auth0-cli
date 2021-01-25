@@ -730,6 +730,9 @@ func (m *ConnectionManager) Delete(id string, opts ...RequestOption) (err error)
 // ReadByName retrieves a connection by its name. This is a helper method when a
 // connection id is not readily available.
 func (m *ConnectionManager) ReadByName(name string, opts ...RequestOption) (*Connection, error) {
+	if name == "" {
+		return nil, &managementError{400, "Bad Request", "Name cannot be empty"}
+	}
 	c, err := m.List(append(opts, Parameter("name", name))...)
 	if err != nil {
 		return nil, err

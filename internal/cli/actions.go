@@ -26,12 +26,12 @@ Lists your existing actions. To create one try:
     $ auth0 actions create
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			list, err := cli.api.Client.List()
+			list, err := cli.api.Action.List()
 			if err != nil {
 				return err
 			}
 
-			cli.renderer.ClientList(list.Clients)
+			cli.renderer.ActionList(list.Actions)
 			return nil
 		},
 	}
