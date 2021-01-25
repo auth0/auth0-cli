@@ -35,3 +35,15 @@ func (r *Renderer) ApisList(apis []*management.ResourceServer) {
 
 	r.Results(res)
 }
+
+func (r *Renderer) ApiCreate(api *management.ResourceServer) {
+	r.Heading(ansi.Bold(r.Tenant), "API created\n")
+
+	v := &apiView{
+		ID:         auth0.StringValue(api.ID),
+		Name:       auth0.StringValue(api.Name),
+		Identifier: auth0.StringValue(api.Identifier),
+	}
+
+	r.Results([]View{v})
+}
