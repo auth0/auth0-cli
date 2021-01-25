@@ -52,6 +52,7 @@ func Execute() {
 
 	rootCmd.AddCommand(loginCmd(cli))
 	rootCmd.AddCommand(clientsCmd(cli))
+	rootCmd.AddCommand(apisCmd(cli))
 	rootCmd.AddCommand(logsCmd(cli))
 	rootCmd.AddCommand(actionsCmd(cli))
 	rootCmd.AddCommand(rulesCmd(cli))
