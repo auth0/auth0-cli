@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"golang.org/x/crypto/ssh/terminal"
@@ -73,25 +72,13 @@ func WrappedNonRequestParamsFlagUsages(cmd *cobra.Command) string {
 // Private functions
 //
 
-func getLogin(fs *afero.Fs, cli *cli) string {
-	// // We're checking against the path because we don't initialize the config
-	// // at this point of execution.
-	// path := cfg.GetConfigFolder(os.Getenv("XDG_CONFIG_HOME"))
-	// file := filepath.Join(path, "config.toml")
-
-	// exists, _ := afero.Exists(*fs, file)
-
-	exists := false
-	if !exists {
-		return `
+func getLogin(cli *cli) string {
+	if !cli.isLoggedIn() {
+		return ansi.Italic(`
 Before using the CLI, you'll need to login:
 
   $ auth0 login
-
-If you're working with multiple tenants, you can run
-the login command with the --tenant and --region flag:
-
-  $ auth0 login --tenant travel0 --region us`
+`)
 	}
 
 	return ""
