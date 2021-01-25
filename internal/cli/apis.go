@@ -2,7 +2,6 @@ package cli
 
 import (
 	"github.com/spf13/cobra"
-	"gopkg.in/auth0.v5/management"
 )
 
 func apisCmd(cli *cli) *cobra.Command {
@@ -27,7 +26,7 @@ Lists your existing APIs. To create one try:
     $ auth0 apis create
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			list, err := cli.api.ResourceServer.List(management.IncludeTotals(false))
+			list, err := cli.api.ResourceServer.List()
 
 			if err != nil {
 				return err
