@@ -59,7 +59,7 @@ type Dependency struct {
 type Trigger struct {
 	ID      *TriggerID `json:"id"`
 	Version *string    `json:"version"`
-	URL     *string    `json:"url"`
+	URL     *string    `json:"url,omitempty"`
 }
 
 type ActionList struct {
