@@ -65,7 +65,7 @@ auth0 apis create --name myapi --identifier http://my-api
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			api := &management.ResourceServer{
-				Name:        &flags.name,
+				Name:       &flags.name,
 				Identifier: &flags.identifier,
 			}
 
