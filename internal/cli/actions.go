@@ -48,8 +48,8 @@ func createActionCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Creates a new action",
-		Long: `$ auth0 actions list
-Lists your existing actions. To create one try:
+		Long: `$ auth0 actions create
+Creates a new action:
 
     $ auth0 actions create my-action --trigger post-login
 `,
