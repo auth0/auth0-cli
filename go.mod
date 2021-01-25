@@ -3,10 +3,8 @@ module github.com/auth0/auth0-cli
 go 1.14
 
 require (
-	github.com/aybabtme/iocontrol v0.0.0-20150809002002-ad15bcfc95a0 // indirect
 	github.com/benbjohnson/clock v1.1.0 // indirect
 	github.com/briandowns/spinner v1.11.1
-	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/mattn/go-colorable v0.1.6 // indirect
@@ -23,4 +21,4 @@ require (
 )
 
 // replace gopkg.in/auth0.v5 => ../auth0
-replace gopkg.in/auth0.v5 => github.com/turcottedanny/auth0 v1.3.1-0.20210125161716-3aaf9db9686d
+replace gopkg.in/auth0.v5 => github.com/go-auth0/auth0 v1.3.1-0.20210125191543-690e086040a7
