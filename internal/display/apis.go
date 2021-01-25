@@ -17,7 +17,7 @@ func (v *apiView) AsTableHeader() []string {
 }
 
 func (v *apiView) AsTableRow() []string {
-	return []string{v.ID, v.Name, ansi.Faint(v.Identifier)}
+	return []string{ansi.Faint(v.ID), v.Name, v.Identifier}
 }
 
 func (r *Renderer) ApisList(apis []*management.ResourceServer) {
