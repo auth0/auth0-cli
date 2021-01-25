@@ -16,7 +16,7 @@ type actionView struct {
 }
 
 func (v *actionView) AsTableHeader() []string {
-	return []string{"ID", "Name", "Type", "CreatedAt"}
+	return []string{"ID", "Name", "Type", "Created At"}
 }
 
 func (v *actionView) AsTableRow() []string {
@@ -36,7 +36,7 @@ func (r *Renderer) ActionList(actions []*management.Action) {
 		res = append(res, &actionView{
 			ID:        auth0.StringValue(a.ID),
 			Name:      auth0.StringValue(a.Name),
-			CreatedAt: a.CreatedAt.String(),
+			CreatedAt: timeAgo(auth0.TimeValue(a.CreatedAt)),
 			Type:      strings.Join(triggers, ", "),
 			// Runtime: auth0.StringValue(a.Runtime),
 		})
