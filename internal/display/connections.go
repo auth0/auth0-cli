@@ -13,7 +13,7 @@ type connectionView struct {
 }
 
 func (v *connectionView) AsTableHeader() []string {
-	return []string{"Name", "Type", "ClientID"}
+	return []string{"Name", "Type", "Connection ID"}
 }
 
 func (v *connectionView) AsTableRow() []string {
