@@ -46,7 +46,7 @@ func listRulesCmd(cli *cli) *cobra.Command {
 func enableRuleCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "enable",
-		Short: "enable rule",
+		Short: "enable rule(s)",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if len(rules) == 0 {
 				return errors.New("No rules to process")
@@ -54,21 +54,33 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Printf("Got following rules:\n%s\n", rules)
+			// fmt.Printf("Got following rules (%d):\n%s\n", len(rules), rules)
 
-			enable := true
-			err := cli.api.Client.Rule.Update(rules[0], &management.Rule{Enabled: &enable})
+			// @TODO Cleanup error handling, some can pass some can fail
+			updateErrors := enableRules(rules, cli.api.Client.Rule)
+			if updateErrors != nil {
+				for _, err := range updateErrors {
+					fmt.Println(err)
+				}
+				return errors.New("Some rule updates failed")
+			}
+
+			// @TODO Only display modified rules
+			rules, err := cli.api.Client.Rule.List()
 
 			if err != nil {
 				return err
 			}
 
+			cli.renderer.RulesList(rules)
+
 			return nil
 		},
 	}
 
-	cmd.Flags().StringArrayVarP(&rules, "rules", "r", nil, "rule ids")
-	cmd.MarkFlagRequired("rules")
+	cmd.Flags().StringSliceVarP(&rules, "rules", "r", nil, "rule ids")
+	// @TODO Take a look at this later
+	// err := cmd.MarkFlagRequired("rules")
 
 	return cmd
 }
@@ -76,21 +88,78 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 func disableRuleCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "disable",
-		Short: "disable rule",
+		Short: "disable rule(s)",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Printf("in prerun, %d", len(rules))
 			if len(rules) == 0 {
-				fmt.Print("rules empty")
-				return errors.New("no rules to process")
+				return errors.New("No rules to process")
 			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// fmt.Printf("Got following rules (%d):\n%s\n", len(rules), rules)
+
+			// @TODO Cleanup error handling, some can pass some can fail
+			updateErrors := disableRules(rules, cli.api.Client.Rule)
+			if updateErrors != nil {
+				for _, err := range updateErrors {
+					fmt.Println(err)
+				}
+				return errors.New("Some rule updates failed")
+			}
+
+			// @TODO Only display modified rules
+			rules, err := cli.api.Client.Rule.List()
+
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.RulesList(rules)
+
 			return nil
 		},
 	}
 
-	cmd.Flags().StringArrayVarP(&rules, "rules", "r", nil, "rule ids")
+	cmd.Flags().StringSliceVarP(&rules, "rules", "r", nil, "rule ids")
+	// @TODO Take a look at this later
+	// err := cmd.MarkFlagRequired("rules")
 
 	return cmd
+}
+
+// @TODO refactor to rules package
+// @TODO can probably run these concurrently
+
+func enableRules(ruleIds []string, ruleManager *management.RuleManager) []error {
+	var updateErrors []error
+	enable := true
+	for _, ruleID := range ruleIds {
+		err := ruleManager.Update(ruleID, &management.Rule{Enabled: &enable})
+		if err != nil {
+			updateErrors = append(updateErrors, err)
+		}
+	}
+
+	if len(updateErrors) != 0 {
+		return updateErrors
+	}
+
+	return nil
+}
+
+func disableRules(ruleIds []string, ruleManager *management.RuleManager) []error {
+	var updateErrors []error
+	enable := false
+	for _, ruleID := range ruleIds {
+		err := ruleManager.Update(ruleID, &management.Rule{Enabled: &enable})
+		if err != nil {
+			updateErrors = append(updateErrors, err)
+		}
+	}
+
+	if len(updateErrors) != 0 {
+		return updateErrors
+	}
+
+	return nil
 }
