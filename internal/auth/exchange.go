@@ -27,7 +27,8 @@ func ExchangeCodeForToken(baseDomain, clientID, clientSecret, code, cbURL string
 		"redirect_uri":  {cbURL},
 	}
 
-	r, err := http.PostForm(fmt.Sprintf("https://%s/oauth/token", baseDomain), data)
+	u := url.URL{Scheme: "https", Host: baseDomain, Path: "/oauth/token"}
+	r, err := http.PostForm(u.String(), data)
 	if err != nil {
 		return nil, fmt.Errorf("unable to exchange code for token: %w", err)
 	}

@@ -155,7 +155,14 @@ func buildInitiateLoginURL(domain, clientID string) (string, error) {
 	q.Add("scope", cliLoginTestingScopes)
 	q.Add("redirect_uri", cliLoginTestingCallbackURL)
 
-	return fmt.Sprintf("https://%s%s?%s", domain, path, q.Encode()), nil
+	u := &url.URL{
+		Scheme:   "https",
+		Host:     domain,
+		Path:     path,
+		RawQuery: q.Encode(),
+	}
+
+	return u.String(), nil
 }
 
 // waitForBrowserCallback lauches a new HTTP server listening on

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -32,9 +33,9 @@ type UserInfo struct {
 
 // FetchUserInfo fetches and parses user information with the provided access token.
 func FetchUserInfo(baseDomain, token string) (*UserInfo, error) {
-	userInfoEndpoint := fmt.Sprintf("https://%s/userinfo", baseDomain)
+	endpoint := url.URL{Scheme: "https", Host: baseDomain, Path: "/userinfo"}
 
-	req, err := http.NewRequest("GET", userInfoEndpoint, nil)
+	req, err := http.NewRequest("GET", endpoint.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to exchange code for token: %w", err)
 	}
