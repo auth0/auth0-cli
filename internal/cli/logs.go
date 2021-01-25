@@ -1,9 +1,10 @@
 package cli
 
 import (
+	"time"
+
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
-	"time"
 )
 
 func logsCmd(cli *cli) *cobra.Command {

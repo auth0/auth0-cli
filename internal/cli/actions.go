@@ -1,7 +1,15 @@
 package cli
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"os"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
+
 	"github.com/spf13/cobra"
+	"gopkg.in/auth0.v5/management"
 )
 
 func actionsCmd(cli *cli) *cobra.Command {
@@ -12,6 +20,7 @@ func actionsCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listActionsCmd(cli))
+	cmd.AddCommand(testActionCmd(cli))
 
 	return cmd
 }
@@ -36,5 +45,48 @@ Lists your existing actions. To create one try:
 		},
 	}
 
+	return cmd
+}
+
+func testActionCmd(cli *cli) *cobra.Command {
+	var actionId string
+	var payloadFile string
+	var payload = make(management.Object)
+
+	cmd := &cobra.Command{
+		Use:   "test",
+		Short: "Test an action draft against a payload",
+		Long:  `$ auth0 actions test --id <actionid> --payload <payload.js>`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Open our jsonFile
+			jsonFile, err := os.Open(payloadFile)
+			// if we os.Open returns an error then handle it
+			if err != nil {
+				fmt.Println(err)
+			}
+			// defer the closing of our jsonFile so that we can parse it later on
+			defer jsonFile.Close()
+
+			byteValue, _ := ioutil.ReadAll(jsonFile)
+
+			json.Unmarshal([]byte(byteValue), &payload)
+
+			err = ansi.Spinner("Testing action", func() error {
+				return cli.api.ActionVersion.Test(actionId, "draft", payload)
+			})
+
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.ActionTest(payload)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&actionId, "actionid", "", "id of the action to test")
+	cmd.MarkFlagRequired("actionid")
+	cmd.Flags().StringVarP(&payloadFile, "payload", "p", "", "id of the action to test")
+	cmd.MarkFlagRequired("payload")
 	return cmd
 }

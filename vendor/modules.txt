@@ -24,15 +24,14 @@ github.com/mattn/go-colorable
 github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.7
 github.com/mattn/go-runewidth
+# github.com/mitchellh/mapstructure v1.1.2
+## explicit
+github.com/mitchellh/mapstructure
 # github.com/olekukonko/tablewriter v0.0.4
 ## explicit
 github.com/olekukonko/tablewriter
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
-# github.com/spf13/afero v1.2.2
-## explicit
-github.com/spf13/afero
-github.com/spf13/afero/mem
 # github.com/spf13/cobra v1.0.0
 ## explicit
 github.com/spf13/cobra
@@ -60,9 +59,6 @@ golang.org/x/oauth2/internal
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.3.3
-golang.org/x/text/transform
-golang.org/x/text/unicode/norm
 # google.golang.org/appengine v1.6.6
 google.golang.org/appengine/internal
 google.golang.org/appengine/internal/base
@@ -98,7 +94,7 @@ google.golang.org/protobuf/reflect/protoreflect
 google.golang.org/protobuf/reflect/protoregistry
 google.golang.org/protobuf/runtime/protoiface
 google.golang.org/protobuf/runtime/protoimpl
-# gopkg.in/auth0.v5 v5.8.0 => github.com/go-auth0/auth0 v1.3.1-0.20210125191543-690e086040a7
+# gopkg.in/auth0.v5 v5.8.0 => ../auth0
 ## explicit
 gopkg.in/auth0.v5
 gopkg.in/auth0.v5/internal/client
@@ -109,4 +105,4 @@ gopkg.in/auth0.v5/management
 # gopkg.in/yaml.v2 v2.2.8
 ## explicit
 gopkg.in/yaml.v2
-# gopkg.in/auth0.v5 => github.com/go-auth0/auth0 v1.3.1-0.20210125191543-690e086040a7
+# gopkg.in/auth0.v5 => ../auth0

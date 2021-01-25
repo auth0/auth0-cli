@@ -86,6 +86,9 @@ type Management struct {
 	// Action manages Auth0 actions
 	Action *ActionManager
 
+	// Action manages Auth0 actions versions
+	ActionVersion *ActionVersionManager
+
 	// Client manages Auth0 Client (also known as Application) resources.
 	Client *ClientManager
 
@@ -200,6 +203,7 @@ func New(domain string, options ...ManagementOption) (*Management, error) {
 		client.WithRateLimit())
 
 	m.Action = newActionManager(m)
+	m.ActionVersion = newActionVersionManager(m)
 	m.Client = newClientManager(m)
 	m.ClientGrant = newClientGrantManager(m)
 	m.Connection = newConnectionManager(m)

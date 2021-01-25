@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/mitchellh/mapstructure"
 	"gopkg.in/auth0.v5"
 	"gopkg.in/auth0.v5/management"
 )
@@ -21,6 +22,22 @@ func (v *actionView) AsTableHeader() []string {
 
 func (v *actionView) AsTableRow() []string {
 	return []string{v.ID, v.Name, v.Type, v.CreatedAt}
+}
+
+type resultView struct {
+	// {"logs":"Test danny from post login\n","stats":{"action_duration_ms":6,"boot_duration_ms":35,"network_duration_ms":4}}
+	Logs            string
+	ActionDuration  string
+	BootDuration    string
+	NetworkDuration string
+}
+
+func (v *resultView) AsTableHeader() []string {
+	return []string{"Logs", "Action Duration", "Boot Duration", "Network Duration"}
+}
+
+func (v *resultView) AsTableRow() []string {
+	return []string{v.Logs, v.ActionDuration, v.BootDuration, v.NetworkDuration}
 }
 
 func (r *Renderer) ActionList(actions []*management.Action) {
@@ -44,4 +61,23 @@ func (r *Renderer) ActionList(actions []*management.Action) {
 	}
 
 	r.Results(res)
+}
+
+func (r *Renderer) ActionTest(payload management.Object) {
+	r.Heading(ansi.Bold(r.Tenant), "Actions test\n")
+	// {"payload":{"logs":"Test danny from post login\n","stats":{"action_duration_ms":6,"boot_duration_ms":35,"network_duration_ms":4}}}
+	var result management.Result
+	err := mapstructure.Decode(payload["payload"], &result)
+	if err != nil {
+		return
+	}
+
+	v := &resultView{
+		Logs:            auth0.StringValue(result.ResponsePayload.Logs),
+		ActionDuration:  auth0.StringValue(result.ResponsePayload.ActionDuration),
+		BootDuration:    auth0.StringValue(result.ResponsePayload.BootDuration),
+		NetworkDuration: auth0.StringValue(result.ResponsePayload.NetworkDuration),
+	}
+
+	r.Results([]View{v})
 }

@@ -8,8 +8,8 @@ require (
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/mattn/go-colorable v0.1.6 // indirect
+	github.com/mitchellh/mapstructure v1.1.2
 	github.com/olekukonko/tablewriter v0.0.4
-	github.com/spf13/afero v1.2.2
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.5.1
@@ -20,5 +20,6 @@ require (
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
 
-// replace gopkg.in/auth0.v5 => ../auth0
-replace gopkg.in/auth0.v5 => github.com/go-auth0/auth0 v1.3.1-0.20210125191543-690e086040a7
+replace gopkg.in/auth0.v5 => ../auth0
+
+// replace gopkg.in/auth0.v5 => github.com/go-auth0/auth0 v1.3.1-0.20210125191543-690e086040a7

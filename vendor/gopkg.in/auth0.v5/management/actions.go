@@ -129,6 +129,10 @@ type ActionVersionManager struct {
 	*Management
 }
 
+func newActionVersionManager(m *Management) *ActionVersionManager {
+	return &ActionVersionManager{m}
+}
+
 func (m *ActionVersionManager) Create(actionID string, v *ActionVersion) error {
 	return m.Request("POST", m.URI("actions", "actions", actionID, "versions"), v)
 }
@@ -161,10 +165,20 @@ func (m *ActionVersionManager) Promote(actionID, id string) (*ActionVersion, err
 	return &v, err
 }
 
+type Payload struct {
+	Logs            *string `json:"logs"`
+	ActionDuration  *string `json:"stats.action_duration_ms"`
+	BootDuration    *string `json:"stats.boot_duration_ms"`
+	NetworkDuration *string `json:"stats.network_duration_ms"`
+}
+type Result struct {
+	ResponsePayload Payload `json:"payload"`
+}
+
 // TODO(cyx): consider how the `draft` test looks like. Will it just use
 // `draft` in place of the ID?
-func (m *ActionVersionManager) Test(actionID, id string, payload Object) (Object, error) {
+func (m *ActionVersionManager) Test(actionID, id string, payload Object) error {
 	v := Object{"payload": payload}
 	err := m.Request("POST", m.URI("actions", "actions", actionID, "versions", id, "test"), &v)
-	return v, err
+	return err
 }
