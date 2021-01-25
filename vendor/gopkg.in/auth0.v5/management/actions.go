@@ -177,8 +177,8 @@ type Result struct {
 
 // TODO(cyx): consider how the `draft` test looks like. Will it just use
 // `draft` in place of the ID?
-func (m *ActionVersionManager) Test(actionID, id string, payload Object) error {
+func (m *ActionVersionManager) Test(actionID, id string, payload Object) (Object, error) {
 	v := Object{"payload": payload}
 	err := m.Request("POST", m.URI("actions", "actions", actionID, "versions", id, "test"), &v)
-	return err
+	return v, err
 }

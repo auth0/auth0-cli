@@ -63,16 +63,20 @@ type View interface {
 	AsTableRow() []string
 }
 
+func (r *Renderer) JSONResult(data interface{}) {
+	b, err := json.MarshalIndent(data, "", "    ")
+	if err != nil {
+		r.Errorf("couldn't marshal results as JSON: %v", err)
+		return
+	}
+	fmt.Fprint(r.ResultWriter, string(b))
+}
+
 func (r *Renderer) Results(data []View) {
 	if len(data) > 0 {
 		switch r.Format {
 		case OutputFormatJSON:
-			b, err := json.MarshalIndent(data, "", "    ")
-			if err != nil {
-				r.Errorf("couldn't marshal results as JSON: %v", err)
-				return
-			}
-			fmt.Fprint(r.ResultWriter, string(b))
+			r.JSONResult(data)
 
 		default:
 			rows := make([][]string, len(data))

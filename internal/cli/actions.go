@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
-
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
@@ -71,15 +70,17 @@ func testActionCmd(cli *cli) *cobra.Command {
 
 			json.Unmarshal([]byte(byteValue), &payload)
 
+			var result management.Object
 			err = ansi.Spinner("Testing action", func() error {
-				return cli.api.ActionVersion.Test(actionId, "draft", payload)
+				result, err = cli.api.ActionVersion.Test(actionId, "draft", payload)
+				return err
 			})
 
 			if err != nil {
 				return err
 			}
 
-			cli.renderer.ActionTest(payload)
+			cli.renderer.ActionTest(result)
 			return nil
 		},
 	}
