@@ -46,7 +46,7 @@ func loginCmd(cli *cli) *cobra.Command {
 			cli.renderer.Infof("Successfully logged in.")
 			cli.renderer.Infof("Tenant: %s", res.Tenant)
 
-			return cli.setTenant(tenant{
+			return cli.addTenant(tenant{
 				Name:        res.Tenant,
 				Domain:      res.Domain,
 				AccessToken: res.AccessToken,

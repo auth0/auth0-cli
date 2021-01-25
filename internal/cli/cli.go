@@ -108,9 +108,9 @@ func (c *cli) getTenant() (tenant, error) {
 	return t, nil
 }
 
-// setTenant assigns an existing, or new tenant. This is expected to be called
+// addTenant assigns an existing, or new tenant. This is expected to be called
 // after a login has completed.
-func (c *cli) setTenant(ten tenant) error {
+func (c *cli) addTenant(ten tenant) error {
 	// init will fail here with a `no tenant found` error if we're logging
 	// in for the first time and that's expected.
 	_ = c.init()
