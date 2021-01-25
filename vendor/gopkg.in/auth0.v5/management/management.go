@@ -83,6 +83,9 @@ func WithClient(client *http.Client) ManagementOption {
 // Management API v2.
 //
 type Management struct {
+	// Action manages Auth0 actions
+	Action *ActionManager
+
 	// Client manages Auth0 Client (also known as Application) resources.
 	Client *ClientManager
 
@@ -196,6 +199,7 @@ func New(domain string, options ...ManagementOption) (*Management, error) {
 		client.WithUserAgent(m.userAgent),
 		client.WithRateLimit())
 
+	m.Action = newActionManager(m)
 	m.Client = newClientManager(m)
 	m.ClientGrant = newClientGrantManager(m)
 	m.Connection = newConnectionManager(m)

@@ -54,6 +54,7 @@ func Execute() {
 	rootCmd.AddCommand(clientsCmd(cli))
 	rootCmd.AddCommand(apisCmd(cli))
 	rootCmd.AddCommand(logsCmd(cli))
+	rootCmd.AddCommand(actionsCmd(cli))
 	rootCmd.AddCommand(rulesCmd(cli))
 
 	// TODO(cyx): backport this later on using latest auth0/v5.
