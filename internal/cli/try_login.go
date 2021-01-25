@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/open"
@@ -194,7 +195,10 @@ func waitForBrowserCallback() (string, error) {
 
 	select {
 	case code := <-codeCh:
-		err := s.Shutdown(context.Background())
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		err := s.Shutdown(ctx)
 		return code, err
 	case err := <-errCh:
 		return "", err
