@@ -3,6 +3,7 @@ package display
 import (
 	"fmt"
 	"sort"
+	"strconv"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"gopkg.in/auth0.v5/management"
@@ -11,7 +12,7 @@ import (
 type ruleView struct {
 	Name    string
 	Enabled bool
-	Id      string
+	ID      string
 	Order   int
 }
 
@@ -20,14 +21,7 @@ func (v *ruleView) AsTableHeader() []string {
 }
 
 func (v *ruleView) AsTableRow() []string {
-	return []string{v.Id, v.Name, isEnabled(v.Enabled), fmt.Sprintf("%d", v.Order)}
-}
-
-func isEnabled(value bool) string {
-	if value {
-		return "True"
-	}
-	return "False"
+	return []string{v.ID, v.Name, strconv.FormatBool(v.Enabled), fmt.Sprintf("%d", v.Order)}
 }
 
 func (r *Renderer) RulesList(ruleList *management.RuleList) {
@@ -42,7 +36,7 @@ func (r *Renderer) RulesList(ruleList *management.RuleList) {
 	for _, rule := range ruleList.Rules {
 		res = append(res, &ruleView{
 			Name:    *rule.Name,
-			Id:      *rule.ID,
+			ID:      *rule.ID,
 			Enabled: *rule.Enabled,
 			Order:   *rule.Order,
 		})
