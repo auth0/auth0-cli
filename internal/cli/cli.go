@@ -164,14 +164,17 @@ func (c *cli) init() error {
 		}
 		c.renderer.Tenant = c.tenant
 
-		// Determine what the desired output format is.
-		format := strings.ToLower(c.format)
-		if format != "" && format != string(display.OutputFormatJSON) {
-			c.errOnce = fmt.Errorf("Invalid format. Use `--format=json` or omit this option to use the default format.")
-			return
-		}
-		c.renderer.Format = display.OutputFormat(format)
 	})
+
+	// Determine what the desired output format is.
+	//
+	// NOTE(cyx): Since this isn't expensive to do, we don't need to put it
+	// inside initOnce.
+	format := strings.ToLower(c.format)
+	if format != "" && format != string(display.OutputFormatJSON) {
+		return fmt.Errorf("Invalid format. Use `--format=json` or omit this option to use the default format.")
+	}
+	c.renderer.Format = display.OutputFormat(format)
 
 	// Once initialized, we'll keep returning the same err that was
 	// originally encountered.
