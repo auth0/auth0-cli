@@ -58,7 +58,6 @@ func createRulesCmd(cli *cli) *cobra.Command {
 
 		auth0 rules create --name "My Rule" --script "function (user, context, callback) { console.log( 'Hello, world!' ); return callback(null, user, context); }"
 		`,
-		Args: cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			r := &management.Rule{
 				Name:    &flags.name,
@@ -80,12 +79,10 @@ func createRulesCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&name, "name", "n", "", "Name of this rule (required)")
-	cmd.Flags().StringVarP(&script, "script", "s", "", "Code to be executed when this rule runs (required)")
-	cmd.Flags().IntVarP(&order, "order", "o", 0, "Order that this rule should execute in relative to other rules. Lower-valued rules execute first.")
-	cmd.Flags().BoolVarP(&enabled, "enabled", "e", false, "Whether the rule is enabled (true), or disabled (false).")
-	cmd.MarkFlagRequired("name")
-	cmd.MarkFlagRequired("script")
+	cmd.Flags().StringVarP(&flags.name, "name", "n", "", "Name of this rule (required)")
+	cmd.Flags().StringVarP(&flags.script, "script", "s", "", "Code to be executed when this rule runs (required)")
+	cmd.Flags().IntVarP(&flags.order, "order", "o", 0, "Order that this rule should execute in relative to other rules. Lower-valued rules execute first.")
+	cmd.Flags().BoolVarP(&flags.enabled, "enabled", "e", false, "Whether the rule is enabled (true), or disabled (false).")
 
 	return cmd
 }
