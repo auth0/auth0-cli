@@ -30,7 +30,13 @@ Lists your existing clients. To create one try:
     $ auth0 clients create
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			list, err := cli.api.Client.List()
+			var list *management.ClientList
+			err := ansi.Spinner("Getting clients", func() error {
+				var err error
+				list, err = cli.api.Client.List()
+				return err
+			})
+
 			if err != nil {
 				return err
 			}
@@ -48,6 +54,7 @@ func clientsCreateCmd(cli *cli) *cobra.Command {
 		name        string
 		appType     string
 		description string
+		reveal      bool
 	}
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -78,14 +85,16 @@ The application type can be:
 			if err != nil {
 				return err
 			}
+
 			// note: c is populated with the rest of the client fields by the API during creation.
-			cli.renderer.ClientCreate(c)
+			cli.renderer.ClientCreate(c, flags.reveal)
 			return nil
 		},
 	}
 	cmd.Flags().StringVarP(&flags.name, "name", "n", "", "Name of the client.")
 	cmd.Flags().StringVarP(&flags.appType, "type", "t", "", "Type of the client.")
 	cmd.Flags().StringVarP(&flags.description, "description", "d", "", "Description of the client.")
+	cmd.Flags().BoolVarP(&flags.reveal, "reveal", "r", false, "⚠️  Reveal the SECRET of the created client.")
 
 	mustRequireFlags(cmd, "name", "type")
 
