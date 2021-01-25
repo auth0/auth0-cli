@@ -52,7 +52,7 @@ func createRulesCmd(cli *cli) *cobra.Command {
 		Short: "Create a new rule",
 		Long: `Create a new rule:
 
-		auth0 rules create --name "My Rule" --script "function (user, context, callback) { console.log( 'Hello, world!' ); return callback(null, user, context); }"
+    auth0 rules create --name "My Rule" --script "function (user, context, callback) { console.log( 'Hello, world!' ); return callback(null, user, context); }"
 		`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			r := &management.Rule{
