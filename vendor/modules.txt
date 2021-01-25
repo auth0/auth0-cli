@@ -1,10 +1,16 @@
 # github.com/PuerkitoBio/rehttp v1.0.0
 github.com/PuerkitoBio/rehttp
+# github.com/aybabtme/iocontrol v0.0.0-20150809002002-ad15bcfc95a0
+## explicit
+# github.com/benbjohnson/clock v1.1.0
+## explicit
 # github.com/briandowns/spinner v1.11.1
 ## explicit
 github.com/briandowns/spinner
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
+# github.com/dustin/go-humanize v1.0.0
+## explicit
 # github.com/fatih/color v1.9.0
 ## explicit
 github.com/fatih/color
@@ -96,7 +102,7 @@ google.golang.org/protobuf/reflect/protoreflect
 google.golang.org/protobuf/reflect/protoregistry
 google.golang.org/protobuf/runtime/protoiface
 google.golang.org/protobuf/runtime/protoimpl
-# gopkg.in/auth0.v5 v5.8.0 => github.com/turcottedanny/auth0 v1.3.1-0.20210125153138-738209e2e46e
+# gopkg.in/auth0.v5 v5.8.0 => github.com/turcottedanny/auth0 v1.3.1-0.20210125161716-3aaf9db9686d
 ## explicit
 gopkg.in/auth0.v5
 gopkg.in/auth0.v5/internal/client
@@ -107,4 +113,4 @@ gopkg.in/auth0.v5/management
 # gopkg.in/yaml.v2 v2.2.8
 ## explicit
 gopkg.in/yaml.v2
-# gopkg.in/auth0.v5 => github.com/turcottedanny/auth0 v1.3.1-0.20210125153138-738209e2e46e
+# gopkg.in/auth0.v5 => github.com/turcottedanny/auth0 v1.3.1-0.20210125161716-3aaf9db9686d

@@ -29,8 +29,10 @@ const (
 type TriggerID string
 
 const (
-	PostLogin         TriggerID = "post-login"
-	ClientCredentials TriggerID = "client-credentials"
+	PostLogin            TriggerID = "post-login"
+	ClientCredentials    TriggerID = "client-credentials"
+	PreUserRegistration  TriggerID = "pre-user-registration"
+	PostUserRegistration TriggerID = "post-user-registration"
 )
 
 type ActionVersion struct {
@@ -55,9 +57,9 @@ type Dependency struct {
 }
 
 type Trigger struct {
-	ID      TriggerID `json:"id"`
-	Version string    `json:"version"`
-	URL     string    `json:"url"`
+	ID      *TriggerID `json:"id"`
+	Version *string    `json:"version"`
+	URL     *string    `json:"url"`
 }
 
 type ActionList struct {
