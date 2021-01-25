@@ -16,7 +16,7 @@ func Execute() {
 	// 2. global flag (e.g. --api-key)
 	// 3. JSON file (e.g. api_key = "..." in ~/.config/auth0/config.json)
 	cli := &cli{
-		renderer: &display.Renderer{},
+		renderer: display.NewRenderer(),
 	}
 
 	rootCmd := &cobra.Command{
