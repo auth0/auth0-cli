@@ -222,6 +222,10 @@ github.com/tidwall/pretty v1.0.2/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhV
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/turcottedanny/auth0 v1.3.1-0.20210125145849-a5a6c0556d7b h1:pUBBBpHjHeO4Li8vtUylTAReh/t9899rFULZRiG1xls=
 github.com/turcottedanny/auth0 v1.3.1-0.20210125145849-a5a6c0556d7b/go.mod h1:jVm6ZyPgF3Y1XpY4SPMPQM9NtRl8o3o/e2OuezsX97E=
+github.com/turcottedanny/auth0 v1.3.1-0.20210125152726-ff8b7f037643 h1:G6US6wRA06GlYk6Y8PMP1+A8uD8R8IpPOqUYwrtQtkg=
+github.com/turcottedanny/auth0 v1.3.1-0.20210125152726-ff8b7f037643/go.mod h1:8z0Q+5B1XS+jEbp2GPGzIJd7nfJkJ74jZFEixmYfRhQ=
+github.com/turcottedanny/auth0 v1.3.1-0.20210125153138-738209e2e46e h1:QH3gmHc1gH7Eekz6fDXx+75YRU/fLE3MfnrNHxgwa2o=
+github.com/turcottedanny/auth0 v1.3.1-0.20210125153138-738209e2e46e/go.mod h1:ykikkGrZZrGKgwbdwA4Lgw5a03Vetq+zORg1v8pCVpY=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
@@ -483,6 +487,8 @@ google.golang.org/protobuf v1.24.0/go.mod h1:r/3tXBNzIEhYS9I1OUVjXDlt8tc493IdKGj
 google.golang.org/protobuf v1.25.0 h1:Ejskq+SyPohKW+1uil0JJMtmHCgJPJ/qWTxr8qp+R4c=
 google.golang.org/protobuf v1.25.0/go.mod h1:9JNX74DMeImyA3h4bdi1ymwjUzf21/xIlbajtzgsN7c=
 gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLkstjWtayDeSgw=
+gopkg.in/auth0.v5 v5.8.0 h1:JWZV4CGRrWQeztZFuW1LWxgUqet6zLiZelGv470CxzU=
+gopkg.in/auth0.v5 v5.8.0/go.mod h1:jVm6ZyPgF3Y1XpY4SPMPQM9NtRl8o3o/e2OuezsX97E=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 h1:YR8cESwS4TdDjEe65xsg0ogRM/Nc3DYOhEAlW+xobZo=
