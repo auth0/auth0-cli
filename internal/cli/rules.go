@@ -6,10 +6,6 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
-var name, script string
-var order int
-var enabled bool
-
 func rulesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "rules",
