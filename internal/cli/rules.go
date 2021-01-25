@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
@@ -49,10 +50,15 @@ func createRulesCmd(cli *cli) *cobra.Command {
 		order   int
 		enabled bool
 	}
+
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new rule",
-		Long:  "Create a new rule in your current tenant.",
+		Long: `Create a new rule:
+
+		auth0 rules create --name "My Rule" --script "function (user, context, callback) { console.log( 'Hello, world!' ); return callback(null, user, context); }"
+		`,
+		Args: cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			r := &management.Rule{
 				Name:    &flags.name,
@@ -61,7 +67,9 @@ func createRulesCmd(cli *cli) *cobra.Command {
 				Enabled: &flags.enabled,
 			}
 
-			err := cli.api.Client.Rule.Create(r)
+			err := ansi.Spinner("Creating rule", func() error {
+				return cli.api.Client.Rule.Create(r)
+			})
 
 			if err != nil {
 				return err
