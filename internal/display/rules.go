@@ -9,15 +9,18 @@ import (
 )
 
 type ruleView struct {
-	rule management.Rule
+	Name    string
+	Enabled bool
+	Id      string
+	Order   int
 }
 
 func (v *ruleView) AsTableHeader() []string {
-	return []string{"Id", "Name", "Status", "Order"}
+	return []string{"Id", "Name", "Enabled", "Order"}
 }
 
 func (v *ruleView) AsTableRow() []string {
-	return []string{*v.rule.ID, *v.rule.Name, isEnabled(*v.rule.Enabled), fmt.Sprintf("%d", *v.rule.Order)}
+	return []string{v.Id, v.Name, isEnabled(v.Enabled), fmt.Sprintf("%d", v.Order)}
 }
 
 func isEnabled(value bool) string {
@@ -38,7 +41,10 @@ func (r *Renderer) RulesList(ruleList *management.RuleList) {
 
 	for _, rule := range ruleList.Rules {
 		res = append(res, &ruleView{
-			rule: *rule,
+			Name:    *rule.Name,
+			Id:      *rule.ID,
+			Enabled: *rule.Enabled,
+			Order:   *rule.Order,
 		})
 	}
 
