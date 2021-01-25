@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -31,38 +30,26 @@ type Renderer struct {
 
 	// Format indicates how the results are rendered. Default (empty) will write as table
 	Format OutputFormat
-
-	initOnce sync.Once
 }
 
-func (r *Renderer) init() {
-	r.initOnce.Do(func() {
-		if r.MessageWriter == nil {
-			r.MessageWriter = os.Stderr
-		}
-		if r.ResultWriter == nil {
-			r.ResultWriter = os.Stdout
-		}
-	})
+func NewRenderer() *Renderer {
+	return &Renderer{
+		MessageWriter: os.Stderr,
+		ResultWriter:  os.Stdout,
+	}
 }
 
 func (r *Renderer) Infof(format string, a ...interface{}) {
-	r.init()
-
 	fmt.Fprint(r.MessageWriter, aurora.Green(" ▸    "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
 func (r *Renderer) Warnf(format string, a ...interface{}) {
-	r.init()
-
 	fmt.Fprint(r.MessageWriter, aurora.Yellow(" ▸    "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
 func (r *Renderer) Errorf(format string, a ...interface{}) {
-	r.init()
-
 	fmt.Fprint(r.MessageWriter, aurora.BrightRed(" ▸    "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }

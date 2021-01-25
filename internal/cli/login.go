@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
@@ -17,7 +18,7 @@ func loginCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			cli.renderer.Heading("✪ Welcome to the Auht0 CLI 🎊.")
+			cli.renderer.Heading("✪ Welcome to the Auth0 CLI 🎊.")
 			cli.renderer.Infof("To set it up, you will need to sign in to your Auth0 account and authorize the CLI to access the API.")
 			cli.renderer.Infof("If you don't have an account, please go to https://auth0.com/signup, otherwise continue in the browser.\n\n")
 
@@ -42,10 +43,17 @@ func loginCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("login error: %w", err)
 			}
 
-			// TODO(jfatta): update the configuration with the token, tenant, audience, etc
 			cli.renderer.Infof("Successfully logged in.")
 			cli.renderer.Infof("Tenant: %s", res.Tenant)
-			return nil
+
+			return cli.addTenant(tenant{
+				Name:        res.Tenant,
+				Domain:      res.Domain,
+				AccessToken: res.AccessToken,
+				ExpiresAt: time.Now().Add(
+					time.Duration(res.ExpiresIn) * time.Second,
+				),
+			})
 		},
 	}
 
