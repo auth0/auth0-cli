@@ -24,7 +24,7 @@ func (v *clientView) AsTableHeader() []string {
 
 func (v *clientView) AsTableRow() []string {
 	if v.revealSecret {
-		return []string{v.Name, v.Type, ansi.Faint(v.ClientID), v.ClientSecret}
+		return []string{v.Name, v.Type, ansi.Faint(v.ClientID), ansi.Italic(v.ClientSecret)}
 	}
 	return []string{v.Name, v.Type, ansi.Faint(v.ClientID)}
 
