@@ -106,8 +106,7 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 
 			rule := findRuleByName(name, data.Rules)
 			if rule != nil {
-				err := disableRule(rule, cli)
-				if err != nil {
+				if err := disableRule(rule, cli); err != nil {
 					return err
 				}
 			} else {
