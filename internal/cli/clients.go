@@ -96,7 +96,7 @@ auth0 clients create --name myapp --type [native|spa|regular|m2m]
 		},
 	}
 	cmd.Flags().StringVarP(&flags.name, "name", "n", "", "Name of the client.")
-	cmd.Flags().StringVarP(&flags.appType, "type", "t", "", "Type of the client: [native|spa|regular|m2m]")
+	cmd.Flags().StringVarP(&flags.appType, "type", "t", "", "Type of the client: native, spa, regular, or m2m.")
 	cmd.Flags().StringVarP(&flags.description, "description", "d", "", "A free text description of the application. Max character count is 140.")
 	cmd.Flags().BoolVarP(&flags.reveal, "reveal", "r", false, "⚠️  Reveal the SECRET of the created client.")
 	cmd.Flags().StringSliceVarP(&flags.callbacks, "callbacks", "c", nil, "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native clients, all callbacks should use protocol https://.")
