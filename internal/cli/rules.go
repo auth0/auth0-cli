@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -147,10 +148,10 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 
 func createRulesCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		name    string
-		script  string
-		order   int
-		enabled bool
+		Name    string
+		Script  string
+		Order   int
+		Enabled bool
 	}
 
 	cmd := &cobra.Command{
@@ -160,12 +161,31 @@ func createRulesCmd(cli *cli) *cobra.Command {
 
     auth0 rules create --name "My Rule" --script "function (user, context, callback) { console.log( 'Hello, world!' ); return callback(null, user, context); }"
 		`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			checkFlags(cmd)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if !hasFlags(cmd) {
+				name := prompt.TextInput(
+					"name", "Name:", 
+					"Name of the rule. You can change the rule name later in the rule settings.", 
+					"", 
+					true)
+
+				script := prompt.TextInput("script", "Script:", "Script of the rule.", "", true)
+				order := prompt.TextInput("order", "Order:", "Order of the rule.", "0", false)
+				enabled := prompt.BoolInput("enabled", "Enabled:", "Enable the rule.", false)
+
+				if err := prompt.Ask([]*survey.Question {name, script, order, enabled}, &flags); err != nil {
+					return err
+				}
+			}
+
 			r := &management.Rule{
-				Name:    &flags.name,
-				Script:  &flags.script,
-				Order:   &flags.order,
-				Enabled: &flags.enabled,
+				Name:    &flags.Name,
+				Script:  &flags.Script,
+				Order:   &flags.Order,
+				Enabled: &flags.Enabled,
 			}
 
 			err := ansi.Spinner("Creating rule", func() error {
@@ -176,22 +196,23 @@ func createRulesCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			cli.renderer.Infof("Your rule `%s` was successfully created.", flags.name)
+			cli.renderer.Infof("Your rule `%s` was successfully created.", flags.Name)
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.name, "name", "n", "", "Name of this rule (required)")
-	cmd.Flags().StringVarP(&flags.script, "script", "s", "", "Code to be executed when this rule runs (required)")
-	cmd.Flags().IntVarP(&flags.order, "order", "o", 0, "Order that this rule should execute in relative to other rules. Lower-valued rules execute first.")
-	cmd.Flags().BoolVarP(&flags.enabled, "enabled", "e", false, "Whether the rule is enabled (true), or disabled (false).")
+	cmd.Flags().StringVarP(&flags.Name, "name", "n", "", "Name of this rule (required)")
+	cmd.Flags().StringVarP(&flags.Script, "script", "s", "", "Code to be executed when this rule runs (required)")
+	cmd.Flags().IntVarP(&flags.Order, "order", "o", 0, "Order that this rule should execute in relative to other rules. Lower-valued rules execute first.")
+	cmd.Flags().BoolVarP(&flags.Enabled, "enabled", "e", false, "Whether the rule is enabled (true), or disabled (false).")
 	mustRequireFlags(cmd, "name", "script")
 	return cmd
 }
 
 func deleteRulesCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		id string
+		id    string
+		force bool
 	}
 
 	cmd := &cobra.Command{
@@ -199,14 +220,16 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 		Short: "Delete a rule",
 		Long: `Delete a rule:
 
-	auth0 rules delete --id "12345"`,
+	auth0 rules delete --id "12345" --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			r := &management.Rule{ID: &flags.id}
+			if !flags.force {
+				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
+					return nil
+				}
+			}
 
 			// TODO: Should add validation of rule
-			if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
-				return nil
-			}
+			r := &management.Rule{ID: &flags.id}
 
 			err := ansi.Spinner("Deleting rule", func() error {
 				return cli.api.Rule.Delete(*r.ID)
@@ -221,6 +244,7 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&flags.id, "id", "", "ID of the rule to delete (required)")
+	cmd.Flags().BoolVarP(&flags.force, "force", "f", false, "Do not ask for confirmation.")
 	mustRequireFlags(cmd, "id")
 
 	return cmd

@@ -72,8 +72,17 @@ auth0 apis create --name myapi --identifier http://my-api
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !hasFlags(cmd) {
-				name := prompt.TextInput("name", "Name:", "Name of the API. You can change the API name later in the API settings.", true)
-				identifier := prompt.TextInput("identifier", "Identifier:", "Identifier of the API. Cannot be changed once set.", true)
+				name := prompt.TextInput(
+					"name", "Name:", 
+					"Name of the API. You can change the API name later in the API settings.", 
+					"", 
+					true)
+
+				identifier := prompt.TextInput(
+					"identifier", "Identifier:", 
+					"Identifier of the API. Cannot be changed once set.", 
+					"", 
+					true)
 
 				if err := prompt.Ask([]*survey.Question {name, identifier}, &flags); err != nil {
 					return err
@@ -124,8 +133,8 @@ auth0 apis update --id id --name myapi
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !hasFlags(cmd) {
-				id := prompt.TextInput("id", "Id:", "Id of the API.", true)
-				name := prompt.TextInput("name", "Name:", "Name of the API.", true)
+				id := prompt.TextInput("id", "Id:", "Id of the API.", "", true)
+				name := prompt.TextInput("name", "Name:", "Name of the API.", "", true)
 
 				if err := prompt.Ask([]*survey.Question {id, name}, &flags); err != nil {
 					return err
@@ -189,6 +198,8 @@ auth0 apis delete --id id --force
 
 	cmd.Flags().StringVarP(&flags.id, "id", "i", "", "ID of the API.")
 	cmd.Flags().BoolVarP(&flags.force, "force", "f", false, "Do not ask for confirmation.")
+
+	mustRequireFlags(cmd, "id")
 
 	return cmd
 }
