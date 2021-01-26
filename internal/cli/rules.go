@@ -21,6 +21,7 @@ func rulesCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(disableRuleCmd(cli))
 	cmd.AddCommand(createRulesCmd(cli))
 	cmd.AddCommand(deleteRulesCmd(cli))
+	cmd.AddCommand(testRuleCmd(cli))
 
 	return cmd
 }
@@ -196,6 +197,24 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&flags.id, "id", "", "ID of the rule to delete (required)")
+
+	return cmd
+}
+
+func testRuleCmd(cli *cli) *cobra.Command {
+	var context, user, name, string
+	cmd := &cobra.Command{
+		Use:   "test",
+		Short: "test a rule",
+		Long:  `auth0 rules test --name hello-world`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&context, "context", "c", "", "used to set the context object")
+	cmd.Flags().StringVarP(&user, "user", "u", "", "used to set the user object")
+	cmd.Flags().StringVarP(&name, "name", "n", "", "rule name")
 
 	return cmd
 }
