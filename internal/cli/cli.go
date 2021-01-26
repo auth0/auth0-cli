@@ -182,6 +182,8 @@ func (c *cli) init() error {
 	}
 	c.renderer.Format = display.OutputFormat(format)
 
+	c.renderer.Tenant = c.tenant
+
 	// Once initialized, we'll keep returning the same err that was
 	// originally encountered.
 	return c.errOnce

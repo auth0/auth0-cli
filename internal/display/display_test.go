@@ -13,7 +13,7 @@ func TestTimeAgo(t *testing.T) {
 		ts   time.Time
 		want string
 	}{
-		{t0, "a minute ago"},
+		{t0, "0 seconds ago"},
 		{t0.Add(-2 * time.Minute), "2 minutes ago"},
 		{t0.Add(-119 * time.Minute), "an hour ago"},
 		{t0.Add(-3 * time.Hour), "3 hours ago"},

@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/jsanda/tablewriter"
 	"github.com/logrusorgru/aurora"
-	"github.com/olekukonko/tablewriter"
 )
 
 type OutputFormat string
@@ -63,7 +63,7 @@ type View interface {
 	AsTableRow() []string
 }
 
-func (r *Renderer) JSONResult(data interface{}) {
+func (r *Renderer) JSONResult(data interface{}, ch <-chan View) {
 	b, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
 		r.Errorf("couldn't marshal results as JSON: %v", err)
@@ -73,24 +73,27 @@ func (r *Renderer) JSONResult(data interface{}) {
 }
 
 func (r *Renderer) Results(data []View) {
+	r.Stream(data, nil)
+}
+
+func (r *Renderer) Stream(data []View, ch <-chan View) {
 	if len(data) > 0 {
 		switch r.Format {
 		case OutputFormatJSON:
-			r.JSONResult(data)
+			r.JSONResult(data, ch)
 
 		default:
 			rows := make([][]string, len(data))
 			for i, d := range data {
 				rows[i] = d.AsTableRow()
 			}
-			writeTable(r.ResultWriter, data[0].AsTableHeader(), rows)
+			writeTable(r.ResultWriter, data[0].AsTableHeader(), rows, ch)
 		}
 	}
 }
 
-func writeTable(w io.Writer, header []string, data [][]string) {
-	tableString := &strings.Builder{}
-	table := tablewriter.NewWriter(tableString)
+func writeTable(w io.Writer, header []string, data [][]string, ch <-chan View) {
+	table := tablewriter.NewWriter(w)
 	table.SetHeader(header)
 
 	table.SetAutoWrapText(false)
@@ -103,12 +106,31 @@ func writeTable(w io.Writer, header []string, data [][]string) {
 	table.SetHeaderLine(false)
 	table.SetBorder(false)
 
-	for _, v := range data {
-		table.Append(v)
+	if ch == nil {
+		for _, v := range data {
+			table.Append(v)
+		}
+		table.Render()
+		return
 	}
 
-	table.Render()
-	fmt.Fprint(w, tableString.String())
+	done := make(chan struct{})
+	strCh := make(chan []string)
+	go func() {
+		defer close(done)
+
+		for _, v := range data {
+			strCh <- v
+		}
+
+		for v := range ch {
+			strCh <- v.AsTableRow()
+		}
+	}()
+
+	go table.ContinuousRender(strCh)
+
+	<-done
 }
 
 func timeAgo(ts time.Time) string {
@@ -119,6 +141,9 @@ func timeAgo(ts time.Time) string {
 
 	v := time.Since(ts)
 	switch {
+	case v < time.Minute:
+		return fmt.Sprintf("%d seconds ago", v/time.Second)
+
 	case v < 2*time.Minute:
 		return "a minute ago"
 

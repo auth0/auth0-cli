@@ -5,51 +5,25 @@ import (
 	"sort"
 	"time"
 
-	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
 
-func getLatestLogs(cli *cli, n int) (result []*management.Log, err error) {
-	var list []*management.Log
+func getLatestLogs(cli *cli, n int) ([]*management.Log, error) {
 	page := 0
-	perPage := 100
-	var count int
-	if count = n; n > 1000 {
+	perPage := n
+
+	if perPage > 1000 {
 		// Pagination max out at 1000 entries in total
 		// https://auth0.com/docs/logs/retrieve-log-events-using-mgmt-api#limitations
-		count = 1000
-	}
-	if perPage > count {
-		perPage = count
+		perPage = 1000
 	}
 
-	err = ansi.Spinner("Getting logs", func() error {
-		for count > len(result) {
-			var err error
-			list, err = cli.api.Log.List(
-				management.Parameter("sort", "date:-1"),
-				management.Parameter("page", fmt.Sprintf("%d", page)),
-				management.Parameter("per_page", fmt.Sprintf("%d", perPage)),
-			)
-			if err != nil {
-				return err
-			}
-
-			sort.Slice(list, func(i, j int) bool {
-				return list[i].GetDate().Before(list[j].GetDate())
-			})
-			result = append(list, result...)
-			if len(list) < perPage {
-				// We've got all
-				break
-			}
-			page++
-		}
-		return err
-	})
-
-	return
+	return cli.api.Log.List(
+		management.Parameter("sort", "date:-1"),
+		management.Parameter("page", fmt.Sprintf("%d", page)),
+		management.Parameter("per_page", fmt.Sprintf("%d", perPage)),
+	)
 }
 
 func logsCmd(cli *cli) *cobra.Command {
@@ -68,29 +42,54 @@ Show the tenant logs.
 			if err != nil {
 				return err
 			}
+
+			// TODO(cyx): This is a hack for now to make the
+			// streaming work faster.
+			//
+			// Create a `set` to detect duplicates clientside.
+			set := make(map[string]struct{})
+			list = dedupLogs(list, set)
+
 			if len(list) > 0 {
 				lastLogID = list[len(list)-1].GetLogID()
-				cli.renderer.LogList(list, noColor)
 			}
+
+			var logsCh chan []*management.Log
 			if follow {
-				for {
-					list, err = cli.api.Log.List(
-						management.Parameter("from", lastLogID),
-						management.Parameter("take", "100"),
-					)
-					if err != nil {
-						return err
+				logsCh = make(chan []*management.Log)
+
+				go func() {
+					// This is pretty important and allows
+					// us to close / terminate the command.
+					defer close(logsCh)
+
+					for {
+						list, err = cli.api.Log.List(
+							management.Query(fmt.Sprintf("log_id:[%s TO *]", lastLogID)),
+							management.Parameter("page", "0"),
+							management.Parameter("per_page", "100"),
+							management.Parameter("sort", "date:-1"),
+						)
+						if err != nil {
+							cli.renderer.Errorf("Error: %v", err)
+							return
+						}
+
+						if len(list) > 0 {
+							logsCh <- dedupLogs(list, set)
+							lastLogID = list[len(list)-1].GetLogID()
+						}
+
+						if len(list) < 90 {
+							// Not a lot is happening, sleep on it
+							time.Sleep(1 * time.Second)
+						}
 					}
-					if len(list) > 0 {
-						cli.renderer.LogList(list, noColor)
-						lastLogID = list[len(list)-1].GetLogID()
-					}
-					if len(list) < 90 {
-						// Not a lot is happening, sleep on it
-						time.Sleep(1 * time.Second)
-					}
-				}
+
+				}()
 			}
+
+			cli.renderer.LogList(list, logsCh, noColor)
 			return nil
 		},
 	}
@@ -100,4 +99,22 @@ Show the tenant logs.
 	cmd.Flags().BoolVarP(&noColor, "no-color", "", false, "turn off colored print")
 
 	return cmd
+}
+
+func dedupLogs(list []*management.Log, set map[string]struct{}) []*management.Log {
+	res := make([]*management.Log, 0, len(list))
+
+	for _, l := range list {
+		if _, ok := set[l.GetID()]; !ok {
+			// It's not a duplicate, track it, and take it.
+			set[l.GetID()] = struct{}{}
+			res = append(res, l)
+		}
+	}
+
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].GetDate().Before(res[j].GetDate())
+	})
+
+	return res
 }
