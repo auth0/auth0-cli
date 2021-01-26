@@ -1,20 +1,24 @@
 package prompt
 
 import (
+	"os"
+
 	"github.com/AlecAivazis/survey/v2"
 )
 
-func Ask(inputs []*survey.Question, response interface{}, options ...survey.AskOpt) error {
-	return survey.Ask(inputs, response, options...)
+var stdErrWriter = survey.WithStdio(os.Stdin, os.Stderr, os.Stderr)
+
+func Ask(inputs []*survey.Question, response interface{}) error {
+	return survey.Ask(inputs, response, stdErrWriter)
 }
 
 func TextInput(name string, message string, required bool) *survey.Question {
 	input := &survey.Question{
-        Name:     name,
-        Prompt:   &survey.Input{Message: message},
+		Name:      name,
+		Prompt:    &survey.Input{Message: message},
 		Transform: survey.Title,
 	}
-	
+
 	if required {
 		input.Validate = survey.Required
 	}
@@ -28,7 +32,7 @@ func Confirm(message string) bool {
 		Message: message,
 	}
 
-	if err := survey.AskOne(prompt, &result); err != nil {
+	if err := survey.AskOne(prompt, &result, stdErrWriter); err != nil {
 		return false
 	}
 
