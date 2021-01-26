@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/spf13/cobra"
+	"gopkg.in/auth0.v5/management"
 )
 
 func connectionsCmd(cli *cli) *cobra.Command {
@@ -26,7 +28,13 @@ Lists your existing connections. To create one try:
     $ auth0 connections create
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			list, err := cli.api.Connection.List()
+			var list *management.ConnectionList
+			err := ansi.Spinner("Getting connections", func() error {
+				var err error
+				list, err = cli.api.Connection.List()
+				return err
+			})
+
 			if err != nil {
 				return err
 			}
