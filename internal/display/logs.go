@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	logTimeFormat = "2006-01-02T15:04:05+00:00"
 	notApplicable = "N/A"
 )
 
@@ -45,8 +44,6 @@ func (v *logView) getConnection() string {
 	} else {
 		return notApplicable
 	}
-
-	return notApplicable
 }
 
 func (v *logView) AsTableRow() []string {
