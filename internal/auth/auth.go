@@ -32,10 +32,19 @@ const (
 	clientID           = "2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT"
 	deviceCodeEndpoint = "https://auth0.auth0.com/oauth/device/code"
 	oauthTokenEndpoint = "https://auth0.auth0.com/oauth/token"
-	// TODO(jfatta) extend the scope as we extend the CLI:
-	scope        = "openid create:actions create:clients create:connections create:hooks create:rules delete:actions delete:clients delete:connections delete:hooks delete:rules read:actions read:clients read:connections read:hooks read:logs read:rules update:actions update:clients update:connections update:hooks update:rules"
-	audiencePath = "/api/v2/"
+	audiencePath       = "/api/v2/"
 )
+
+var requiredScopes = []string{
+	"openid",
+	"create:actions", "delete:actions", "read:actions", "update:actions",
+	"create:clients", "delete:clients", "read:clients", "update:clients",
+	"create:connections", "delete:connections", "read:connections", "update:connections",
+	"create:hooks", "delete:hooks", "read:hooks", "update:hooks",
+	"create:resource_servers", "delete:resource_servers", "read:resource_servers", "update:resource_servers",
+	"create:rules", "delete:rules", "read:rules", "update:rules",
+	"read:client_keys", "read:logs",
+}
 
 type Authenticator struct {
 }
@@ -124,7 +133,7 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 func (a *Authenticator) getDeviceCode(ctx context.Context) (State, error) {
 	data := url.Values{
 		"client_id": {clientID},
-		"scope":     {scope},
+		"scope":     {strings.Join(requiredScopes, " ")},
 		"audience":  {"https://*.auth0.com/api/v2/"},
 	}
 	r, err := http.PostForm(deviceCodeEndpoint, data)

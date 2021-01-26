@@ -66,3 +66,21 @@ func (r *Renderer) ActionTest(payload management.Object) {
 	r.Heading(ansi.Bold(r.Tenant), "Actions test result\n")
 	r.JSONResult(payload)
 }
+
+func (r *Renderer) ActionCreate(action *management.Action) {
+	r.Heading(ansi.Bold(r.Tenant), "action created\n")
+
+	var triggers = make([]string, 0, len(*action.SupportedTriggers))
+	for _, t := range *action.SupportedTriggers {
+		triggers = append(triggers, string(*t.ID))
+	}
+
+	v := &actionView{
+		ID:        auth0.StringValue(action.ID),
+		Name:      auth0.StringValue(action.Name),
+		CreatedAt: timeAgo(auth0.TimeValue(action.CreatedAt)),
+		Type:      strings.Join(triggers, ", "),
+	}
+
+	r.Results([]View{v})
+}

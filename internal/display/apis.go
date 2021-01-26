@@ -20,18 +20,32 @@ func (v *apiView) AsTableRow() []string {
 	return []string{ansi.Faint(v.ID), v.Name, v.Identifier}
 }
 
-func (r *Renderer) ApisList(apis []*management.ResourceServer) {
+func (r *Renderer) ApiList(apis []*management.ResourceServer) {
 	r.Heading(ansi.Bold(r.Tenant), "APIs\n")
 
 	var res []View
 
 	for _, api := range apis {
-		res = append(res, &apiView{
-			ID:         auth0.StringValue(api.ID),
-			Name:       auth0.StringValue(api.Name),
-			Identifier: auth0.StringValue(api.Identifier),
-		})
+		res = append(res, makeView(api))
 	}
 
 	r.Results(res)
+}
+
+func (r *Renderer) ApiCreate(api *management.ResourceServer) {
+	r.Heading(ansi.Bold(r.Tenant), "API created\n")
+	r.Results([]View{makeView(api)})
+}
+
+func (r *Renderer) ApiUpdate(api *management.ResourceServer) {
+	r.Heading(ansi.Bold(r.Tenant), "API updated\n")
+	r.Results([]View{makeView(api)})
+}
+
+func makeView(api *management.ResourceServer) *apiView {
+	return &apiView{
+		ID:         auth0.StringValue(api.ID),
+		Name:       auth0.StringValue(api.Name),
+		Identifier: auth0.StringValue(api.Identifier),
+	}
 }
