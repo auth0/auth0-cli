@@ -54,17 +54,12 @@ Lists your existing clients. To create one try:
 
 func clientsCreateCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		Name                            string
-		NameProvided                    bool
-		AppType                         string
-		AppTypeProvided                 bool
-		Description                     string
-		DescriptionProvided             bool
-		Reveal                          bool
-		Callbacks                       []string
-		CallbacksProvided               bool
-		TokenEndpointAuthMethod         string
-		TokenEndpointAuthMethodProvided bool
+		Name                    string
+		AppType                 string
+		Description             string
+		Reveal                  bool
+		Callbacks               []string
+		TokenEndpointAuthMethod string
 	}
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -80,10 +75,8 @@ auth0 clients create --name myapp --type [native|spa|regular|m2m]
 	- m2m (machine to machine): CLIs, daemons or services running on your backend.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			flags.NameProvided = cmd.Flags().Changed("name")
 			// todo(jfatta) on non-interactive the cmd should fail on missing mandatory args (name, type)
-
-			if !flags.NameProvided {
+			if !cmd.Flags().Changed("name") {
 				qs := []*survey.Question{
 					{
 						Name: "Name",
@@ -101,7 +94,7 @@ auth0 clients create --name myapp --type [native|spa|regular|m2m]
 				}
 			}
 
-			if !flags.AppTypeProvided {
+			if !cmd.Flags().Changed("type") {
 				qs := []*survey.Question{
 					{
 						Name: "AppType",
@@ -112,6 +105,22 @@ auth0 clients create --name myapp --type [native|spa|regular|m2m]
 								"\n- Regular Web Application: Traditional web app using redirects." +
 								"\n- Machine To Machine: CLIs, daemons or services running on your backend.",
 							Options: []string{"Native", "Single Page Web Application", "Regular Web Application", "Machine to Machine"},
+						},
+					},
+				}
+				err := survey.Ask(qs, &flags)
+				if err != nil {
+					return err
+				}
+			}
+
+			if !cmd.Flags().Changed("description") {
+				qs := []*survey.Question{
+					{
+						Name: "Description",
+						Prompt: &survey.Input{
+							Message: "Description:",
+							Help:    "A free text description of the application.",
 						},
 					},
 				}
