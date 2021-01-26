@@ -89,7 +89,7 @@ Show the tenant logs.
 	}
 
 	cmd.Flags().IntVarP(&numberOfLogs, "num-entries", "n", 100, "the number of log entries to print")
-	cmd.Flags().BoolVarP(&follow, "follow", "f", false, "don't stop and wait for new logs to print as they happen")
+	cmd.Flags().BoolVarP(&follow, "follow", "f", false, "Specify if the logs should be streamed.")
 	cmd.Flags().BoolVarP(&noColor, "no-color", "", false, "turn off colored print")
 
 	return cmd
