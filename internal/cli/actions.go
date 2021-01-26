@@ -245,7 +245,7 @@ func reorderTriggerCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			cli.renderer.ActionTriggersList(list.Bindings)
+			cli.renderer.ActionTriggersList(list)
 			return nil
 		},
 	}
