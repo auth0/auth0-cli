@@ -37,6 +37,7 @@ func triggersCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(showTriggerCmd(cli))
 	cmd.AddCommand(reorderTriggerCmd(cli))
+	cmd.AddCommand(createTriggerCmd(cli))
 
 	return cmd
 }
@@ -197,8 +198,7 @@ func showTriggerCmd(cli *cli) *cobra.Command {
 			triggerID := management.TriggerID(trigger)
 
 			var list *management.ActionBindingList
-			err := ansi.Spinner("Loading actions", func() error {
-				var err error
+			err := ansi.Spinner("Loading actions", func() (err error) {
 				list, err = cli.api.ActionBinding.List(triggerID)
 				return err
 			})
@@ -238,8 +238,14 @@ func reorderTriggerCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			err = ansi.Spinner("Loading actions", func() error {
-				return cli.api.ActionBinding.Update(triggerID, list)
+			err = ansi.Spinner("Reordoring actions", func() (err error) {
+				if _, err = cli.api.ActionBinding.Update(triggerID, list.Bindings); err != nil {
+					return err
+				}
+
+				list, err = cli.api.ActionBinding.List(triggerID)
+
+				return err
 			})
 
 			if err != nil {
@@ -253,6 +259,64 @@ func reorderTriggerCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().StringVarP(&trigger, "trigger", "t", string(management.PostLogin), "Trigger type for action.")
 	cmd.Flags().StringVarP(&bindingsFile, "file", "f", "", "File containing the bindings")
+
+	return cmd
+}
+
+func createTriggerCmd(cli *cli) *cobra.Command {
+	var trigger string
+	var actionId string
+
+	cmd := &cobra.Command{
+		Use:   "create",
+		Short: "Bind an action to a trigger",
+		Long:  `$ auth0 actions triggers create --trigger <post-login> --name <action_id>`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := validators.TriggerID(trigger); err != nil {
+				return err
+			}
+
+			triggerID := management.TriggerID(trigger)
+
+			var binding *management.ActionBinding
+			var list *management.ActionBindingList
+
+			err := ansi.Spinner("Adding action", func() (err error) {
+				var action *management.Action
+				if action, err = cli.api.Action.Read(actionId); err != nil {
+					return err
+				}
+
+				if binding, err = cli.api.ActionBinding.Create(triggerID, action); err != nil {
+					return err
+				}
+
+				if list, err = cli.api.ActionBinding.List(triggerID); err != nil {
+					return err
+				}
+
+				bindings := append(list.Bindings, binding)
+
+				if _, err = cli.api.ActionBinding.Update(triggerID, bindings); err != nil {
+					return err
+				}
+
+				list, err = cli.api.ActionBinding.List(triggerID)
+
+				return err
+			})
+
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.ActionTriggersList(list.Bindings)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&trigger, "trigger", "t", string(management.PostLogin), "Trigger type for action.")
+	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to to test")
 
 	return cmd
 }

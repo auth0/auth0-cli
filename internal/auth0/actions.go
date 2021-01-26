@@ -20,6 +20,7 @@ type ActionVersionAPI interface {
 }
 
 type ActionBindingAPI interface {
+	Create(triggerID management.TriggerID, action *management.Action) (ab *management.ActionBinding, err error)
 	List(triggerID management.TriggerID, opts ...management.RequestOption) (c *management.ActionBindingList, err error)
-	Update(triggerID management.TriggerID, v *management.ActionBindingList) error
+	Update(triggerID management.TriggerID, v []*management.ActionBinding) (list *management.ActionBindingList, err error)
 }
