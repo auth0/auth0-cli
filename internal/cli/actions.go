@@ -1,6 +1,11 @@
 package cli
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"os"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/validators"
@@ -16,6 +21,7 @@ func actionsCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listActionsCmd(cli))
+	cmd.AddCommand(testActionCmd(cli))
 	cmd.AddCommand(createActionCmd(cli))
 
 	return cmd
@@ -40,6 +46,60 @@ Lists your existing actions. To create one try:
 			return nil
 		},
 	}
+
+	return cmd
+}
+
+func testActionCmd(cli *cli) *cobra.Command {
+	var actionId string
+	var versionId string
+	var payloadFile string
+	var payload = make(management.Object)
+
+	cmd := &cobra.Command{
+		Use:   "test",
+		Short: "Test an action draft against a payload",
+		Long:  `$ auth0 actions test --name <actionid> --file <payload.json>`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Open our jsonFile
+			jsonFile, err := os.Open(payloadFile)
+			// if we os.Open returns an error then handle it
+			if err != nil {
+				return err
+			}
+			// defer the closing of our jsonFile so that we can parse it later on
+			defer jsonFile.Close()
+
+			byteValue, err := ioutil.ReadAll(jsonFile)
+			if err != nil {
+				return err
+			}
+
+			if err := json.Unmarshal([]byte(byteValue), &payload); err != nil {
+				return err
+			}
+
+			var result management.Object
+			err = ansi.Spinner(fmt.Sprintf("Testing action: %s, version: %s", actionId, versionId), func() error {
+				fmt.Println(payload)
+				result, err = cli.api.ActionVersion.Test(actionId, versionId, payload)
+				return err
+			})
+
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.ActionTest(result)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to to test")
+	cmd.Flags().StringVarP(&payloadFile, "file", "f", "", "File containing the payload for the test")
+	cmd.Flags().StringVarP(&versionId, "version", "v", "draft", "Version ID of the action to test")
+
+	mustRequireFlags(cmd, "name", "file")
 
 	return cmd
 }

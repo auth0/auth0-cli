@@ -46,6 +46,11 @@ func (r *Renderer) ActionList(actions []*management.Action) {
 	r.Results(res)
 }
 
+func (r *Renderer) ActionTest(payload management.Object) {
+	r.Heading(ansi.Bold(r.Tenant), "Actions test result\n")
+	r.JSONResult(payload)
+}
+
 func (r *Renderer) ActionCreate(action *management.Action) {
 	r.Heading(ansi.Bold(r.Tenant), "action created\n")
 

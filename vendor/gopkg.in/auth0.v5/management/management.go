@@ -86,6 +86,12 @@ type Management struct {
 	// Action manages Auth0 actions
 	Action *ActionManager
 
+	// Action manages Auth0 actions bindings
+	ActionBinding *ActionBindingManager
+
+	// Action manages Auth0 actions versions
+	ActionVersion *ActionVersionManager
+
 	// Client manages Auth0 Client (also known as Application) resources.
 	Client *ClientManager
 
@@ -200,6 +206,8 @@ func New(domain string, options ...ManagementOption) (*Management, error) {
 		client.WithRateLimit())
 
 	m.Action = newActionManager(m)
+	m.ActionBinding = newActionBindingManager(m)
+	m.ActionVersion = newActionVersionManager(m)
 	m.Client = newClientManager(m)
 	m.ClientGrant = newClientGrantManager(m)
 	m.Connection = newConnectionManager(m)
@@ -350,10 +358,10 @@ func (m *managementError) Status() int {
 // Specific implementations embed this struct, therefore its direct use is not
 // useful. Rather it has been made public in order to aid documentation.
 type List struct {
-	Start  int `json:"start"`
-	Limit  int `json:"limit"`
-	Length int `json:"length"`
-	Total  int `json:"total"`
+	Start  int `json:"start,omitempty"`
+	Limit  int `json:"limit,omitempty"`
+	Length int `json:"length,omitempty"`
+	Total  int `json:"total,omitempty"`
 }
 
 func (l List) HasNext() bool {
