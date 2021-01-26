@@ -56,7 +56,7 @@ func testActionCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "test",
 		Short: "Test an action draft against a payload",
-		Long:  `$ auth0 actions test --id <actionid> --payload <payload.js>`,
+		Long:  `$ auth0 actions test --name <actionid> --file <payload.json>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Open our jsonFile
 			jsonFile, err := os.Open(payloadFile)
@@ -90,7 +90,7 @@ func testActionCmd(cli *cli) *cobra.Command {
 	cmd.MarkFlagRequired("name")
 	cmd.Flags().StringVarP(&payloadFile, "file", "f", "", "File containing the payload for the test")
 	cmd.MarkFlagRequired("file")
-	cmd.Flags().StringVarP(&versionId, "versionid", "v", "draft", "Version ID of the action to test")
+	cmd.Flags().StringVarP(&versionId, "version", "v", "draft", "Version ID of the action to test")
 
 	return cmd
 }
