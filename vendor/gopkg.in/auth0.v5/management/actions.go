@@ -59,7 +59,7 @@ type Dependency struct {
 type Trigger struct {
 	ID      *TriggerID `json:"id"`
 	Version *string    `json:"version"`
-	URL     *string    `json:"url"`
+	URL     *string    `json:"url,omitempty"`
 }
 
 type ActionList struct {
@@ -163,16 +163,6 @@ func (m *ActionVersionManager) Promote(actionID, id string) (*ActionVersion, err
 	var v ActionVersion
 	err := m.Request("POST", m.URI("actions", "actions", actionID, "versions", id, "promote"), &v)
 	return &v, err
-}
-
-type Payload struct {
-	Logs            *string `json:"logs"`
-	ActionDuration  *string `json:"stats.action_duration_ms"`
-	BootDuration    *string `json:"stats.boot_duration_ms"`
-	NetworkDuration *string `json:"stats.network_duration_ms"`
-}
-type Result struct {
-	ResponsePayload Payload `json:"payload"`
 }
 
 // TODO(cyx): consider how the `draft` test looks like. Will it just use
