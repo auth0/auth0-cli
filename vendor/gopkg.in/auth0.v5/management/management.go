@@ -86,6 +86,9 @@ type Management struct {
 	// Action manages Auth0 actions
 	Action *ActionManager
 
+	// Action manages Auth0 actions bindings
+	ActionBinding *ActionBindingManager
+
 	// Action manages Auth0 actions versions
 	ActionVersion *ActionVersionManager
 
@@ -203,6 +206,7 @@ func New(domain string, options ...ManagementOption) (*Management, error) {
 		client.WithRateLimit())
 
 	m.Action = newActionManager(m)
+	m.ActionBinding = newActionBindingManager(m)
 	m.ActionVersion = newActionVersionManager(m)
 	m.Client = newClientManager(m)
 	m.ClientGrant = newClientGrantManager(m)

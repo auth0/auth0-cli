@@ -21,4 +21,4 @@ require (
 
 // replace gopkg.in/auth0.v5 => ../auth0
 
-replace gopkg.in/auth0.v5 => github.com/go-auth0/auth0 v1.3.1-0.20210126021204-5c077900678a
+replace gopkg.in/auth0.v5 => github.com/go-auth0/auth0 v1.3.1-0.20210126040506-611cd2af93bf
