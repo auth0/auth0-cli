@@ -295,7 +295,7 @@ func createTriggerCmd(cli *cli) *cobra.Command {
 					return err
 				}
 
-				var bindings []*management.ActionBinding = append(list.Bindings, binding)
+				bindings := append(list.Bindings, binding)
 
 				if _, err = cli.api.ActionBinding.Update(triggerID, bindings); err != nil {
 					return err
