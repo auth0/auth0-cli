@@ -65,15 +65,17 @@ func testActionCmd(cli *cli) *cobra.Command {
 			jsonFile, err := os.Open(payloadFile)
 			// if we os.Open returns an error then handle it
 			if err != nil {
-				fmt.Println(err)
+				return err
 			}
 			// defer the closing of our jsonFile so that we can parse it later on
 			defer jsonFile.Close()
 
-			byteValue, _ := ioutil.ReadAll(jsonFile)
-
-			err = json.Unmarshal([]byte(byteValue), &payload)
+			byteValue, err := ioutil.ReadAll(jsonFile)
 			if err != nil {
+				return err
+			}
+
+			if err := json.Unmarshal([]byte(byteValue), &payload); err != nil {
 				return err
 			}
 
