@@ -2,6 +2,7 @@ package ansi
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -21,7 +22,7 @@ func Spinner(text string, fn func() error) error {
 	go func() {
 		defer close(done)
 
-		s := spinner.New(spinner.CharSets[11], 100*time.Millisecond)
+		s := spinner.New(spinner.CharSets[11], 100*time.Millisecond, spinner.WithWriter(os.Stderr))
 		s.Prefix = text + spinnerTextEllipsis + " "
 		s.FinalMSG = s.Prefix + spinnerTextDone
 
