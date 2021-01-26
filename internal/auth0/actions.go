@@ -18,3 +18,7 @@ type ActionVersionAPI interface {
 	Delete(actionID string, id string, opts ...management.RequestOption) error
 	Test(actionID string, id string, payload management.Object) (management.Object, error)
 }
+
+type ActionBindingAPI interface {
+	List(triggerID management.TriggerID, opts ...management.RequestOption) (c *management.ActionBindingList, err error)
+}
