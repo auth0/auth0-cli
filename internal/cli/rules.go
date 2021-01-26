@@ -243,7 +243,7 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&flags.id, "id", "", "ID of the rule to delete (required)")
+	cmd.Flags().StringVarP(&flags.id, "id", "i", "", "ID of the rule to delete (required)")
 	cmd.Flags().BoolVarP(&flags.force, "force", "f", false, "Do not ask for confirmation.")
 	mustRequireFlags(cmd, "id")
 
