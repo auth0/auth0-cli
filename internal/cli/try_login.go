@@ -28,7 +28,6 @@ const (
 func tryLoginCmd(cli *cli) *cobra.Command {
 	var clientID string
 	var connectionName string
-	var reveal bool
 
 	cmd := &cobra.Command{
 		Use:   "try-login",
@@ -141,7 +140,7 @@ Launch a browser to try out your universal login box for the given client.
 			}
 
 			fmt.Fprint(cli.renderer.MessageWriter, "\n")
-			cli.renderer.TryLogin(userInfo, tokenResponse, reveal)
+			cli.renderer.TryLogin(userInfo, tokenResponse)
 			return nil
 		},
 	}
@@ -149,7 +148,6 @@ Launch a browser to try out your universal login box for the given client.
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.Flags().StringVarP(&clientID, "client-id", "c", "", "Client ID for which to test login.")
 	cmd.Flags().StringVarP(&connectionName, "connection", "", "", "Connection to test during login.")
-	cmd.Flags().BoolVarP(&reveal, "reveal", "r", false, "⚠️  Reveal tokens after successful login.")
 	return cmd
 }
 
