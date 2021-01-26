@@ -62,7 +62,7 @@ func (r *Renderer) ActionList(actions []*management.Action) {
 
 func (r *Renderer) ActionTest(payload management.Object) {
 	r.Heading(ansi.Bold(r.Tenant), "Actions test result\n")
-	r.JSONResult(payload)
+	r.JSONResult(payload, nil)
 }
 
 func (r *Renderer) ActionCreate(action *management.Action) {

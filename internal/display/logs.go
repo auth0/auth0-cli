@@ -84,11 +84,29 @@ func typeDescFor(l *management.Log, noColor bool) (typ, desc string) {
 	return typ, desc
 }
 
-func (r *Renderer) LogList(logs []*management.Log, noColor bool) {
+func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, noColor bool) {
+	r.Heading(ansi.Bold(r.Tenant), "logs\n")
+
 	var res []View
 	for _, l := range logs {
 		res = append(res, &logView{Log: l})
 	}
 
-	r.Results(res)
+	var viewChan chan View
+
+	if ch != nil {
+		viewChan = make(chan View)
+
+		go func() {
+			defer close(viewChan)
+
+			for list := range ch {
+				for _, l := range list {
+					viewChan <- &logView{Log: l}
+				}
+			}
+		}()
+	}
+
+	r.Stream(res, viewChan)
 }
