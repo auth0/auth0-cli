@@ -26,14 +26,8 @@ func isNotZero(v interface{}) bool {
 	return v != reflect.Zero(t).Interface()
 }
 
-func (r *Renderer) TryLogin(u *auth.UserInfo, t *auth.TokenResponse, reveal bool) {
+func (r *Renderer) TryLogin(u *auth.UserInfo, t *auth.TokenResponse) {
 	r.Heading(ansi.Bold(auth0.StringValue(u.Sub)), "/userinfo\n")
-
-	if !reveal {
-		t.AccessToken = "[REDACTED]"
-		t.RefreshToken = "[REDACTED]"
-		t.IDToken = "[REDACTED]"
-	}
 
 	switch r.Format {
 	case OutputFormatJSON:
@@ -103,23 +97,14 @@ func (r *Renderer) TryLogin(u *auth.UserInfo, t *auth.TokenResponse, reveal bool
 			rows = append(rows, []string{ansi.Faint("UpdatedAt"), auth0.TimeValue(u.UpdatedAt).Format(time.RFC3339)})
 		}
 		if isNotZero(t.AccessToken) {
-			if !reveal {
-				t.AccessToken = ansi.Faint(t.AccessToken)
-			}
 			rows = append(rows, []string{ansi.Faint("AccessToken"), t.AccessToken})
 		}
 		if isNotZero(t.RefreshToken) {
-			if !reveal {
-				t.RefreshToken = ansi.Faint(t.RefreshToken)
-			}
 			rows = append(rows, []string{ansi.Faint("RefreshToken"), t.RefreshToken})
 		}
 		// TODO: This is a long string and it messes up formatting when printed
 		// to the table, so need to come back to this one and fix it later.
 		// if isNotZero(t.IDToken) {
-		// if !reveal {
-		// 	t.IDToken = ansi.Faint(t.IDToken)
-		// }
 		// 	rows = append(rows, []string{ansi.Faint("IDToken"), t.IDToken})
 		// }
 		if isNotZero(t.TokenType) {
