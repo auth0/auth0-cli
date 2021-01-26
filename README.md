@@ -17,11 +17,11 @@ Stripe CLI, etc.
 1. Extract
 1. Move to `/usr/local/bin/auth0`
 1. Setup CLI commands completion for your terminal:
-	1. (**bash**) auth0 completion bash > /usr/local/etc/bash_completion.d/auth0
-	1. (**zsh**)  auth0 completion zsh > "${fpath[1]}/_auth0"
-	1. (**fish**) auth0 completion fish | source
+	-  (**bash**) auth0 completion bash > /usr/local/etc/bash_completion.d/auth0
+	-  (**zsh**)  auth0 completion zsh > "${fpath[1]}/_auth0"
+	- (**fish**) auth0 completion fish | source
 
-	> see full completion options: `auth0 completion -h`
+> see full completion options: `auth0 completion -h`
 
 ## Dev Setup instructions
 
