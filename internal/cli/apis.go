@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
@@ -55,8 +56,8 @@ Lists your existing APIs. To create one try:
 
 func createApiCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		name       string
-		identifier string
+		Name       string
+		Identifier string
 	}
 
 	cmd := &cobra.Command{
@@ -66,10 +67,22 @@ func createApiCmd(cli *cli) *cobra.Command {
 
 auth0 apis create --name myapi --identifier http://my-api
 `,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			checkFlags(cmd)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if !hasFlags(cmd) {
+				name := prompt.TextInput("name", "Name:", "Name of the API. You can change the API name later in the API settings.", true)
+				identifier := prompt.TextInput("identifier", "Identifier:", "Identifier of the API. Cannot be changed once set.", true)
+
+				if err := prompt.Ask([]*survey.Question {name, identifier}, &flags); err != nil {
+					return err
+				}
+			}
+
 			api := &management.ResourceServer{
-				Name:       &flags.name,
-				Identifier: &flags.identifier,
+				Name:       &flags.Name,
+				Identifier: &flags.Identifier,
 			}
 
 			err := ansi.Spinner("Creating API", func() error {
@@ -85,8 +98,8 @@ auth0 apis create --name myapi --identifier http://my-api
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.name, "name", "n", "", "Name of the API.")
-	cmd.Flags().StringVarP(&flags.identifier, "identifier", "i", "", "Identifier of the API.")
+	cmd.Flags().StringVarP(&flags.Name, "name", "n", "", "Name of the API.")
+	cmd.Flags().StringVarP(&flags.Identifier, "identifier", "i", "", "Identifier of the API.")
 
 	mustRequireFlags(cmd, "name", "identifier")
 
@@ -95,8 +108,8 @@ auth0 apis create --name myapi --identifier http://my-api
 
 func updateApiCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		id   string
-		name string
+		ID   string
+		Name string
 	}
 
 	cmd := &cobra.Command{
@@ -106,11 +119,23 @@ func updateApiCmd(cli *cli) *cobra.Command {
 
 auth0 apis update --id id --name myapi
 `,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			checkFlags(cmd)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			api := &management.ResourceServer{Name: &flags.name}
+			if !hasFlags(cmd) {
+				id := prompt.TextInput("id", "Id:", "Id of the API.", true)
+				name := prompt.TextInput("name", "Name:", "Name of the API.", true)
+
+				if err := prompt.Ask([]*survey.Question {id, name}, &flags); err != nil {
+					return err
+				}
+			}
+
+			api := &management.ResourceServer{Name: &flags.Name}
 
 			err := ansi.Spinner("Updating API", func() error {
-				return cli.api.ResourceServer.Update(flags.id, api)
+				return cli.api.ResourceServer.Update(flags.ID, api)
 			})
 
 			if err != nil {
@@ -122,8 +147,8 @@ auth0 apis update --id id --name myapi
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.id, "id", "i", "", "ID of the API.")
-	cmd.Flags().StringVarP(&flags.name, "name", "n", "", "Name of the API.")
+	cmd.Flags().StringVarP(&flags.ID, "id", "i", "", "ID of the API.")
+	cmd.Flags().StringVarP(&flags.Name, "name", "n", "", "Name of the API.")
 
 	mustRequireFlags(cmd, "id", "name")
 
@@ -132,7 +157,8 @@ auth0 apis update --id id --name myapi
 
 func deleteApiCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		id string
+		id    string
+		force bool
 	}
 
 	cmd := &cobra.Command{
@@ -140,13 +166,15 @@ func deleteApiCmd(cli *cli) *cobra.Command {
 		Short: "Delete an API",
 		Long: `Deletes an API:
 
-auth0 apis delete --id id
+auth0 apis delete --id id --force
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
-				return nil
+			if !flags.force {
+				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
+					return nil
+				}
 			}
-
+		
 			err := ansi.Spinner("Deleting API", func() error {
 				return cli.api.ResourceServer.Delete(flags.id)
 			})
@@ -160,8 +188,7 @@ auth0 apis delete --id id
 	}
 
 	cmd.Flags().StringVarP(&flags.id, "id", "i", "", "ID of the API.")
-
-	mustRequireFlags(cmd, "id")
+	cmd.Flags().BoolVarP(&flags.force, "force", "f", false, "Do not ask for confirmation.")
 
 	return cmd
 }

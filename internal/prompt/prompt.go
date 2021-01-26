@@ -12,10 +12,10 @@ func Ask(inputs []*survey.Question, response interface{}) error {
 	return survey.Ask(inputs, response, stdErrWriter)
 }
 
-func TextInput(name string, message string, required bool) *survey.Question {
+func TextInput(name string, message string, help string, required bool) *survey.Question {
 	input := &survey.Question{
 		Name:      name,
-		Prompt:    &survey.Input{Message: message},
+		Prompt:    &survey.Input{Message: message, Help: help},
 		Transform: survey.Title,
 	}
 
