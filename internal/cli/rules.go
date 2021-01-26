@@ -127,7 +127,7 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "rule name")
-	cmd.MarkPersistentFlagRequired("name")
+	mustRequireFlags(cmd, "name")
 
 	return cmd
 }
