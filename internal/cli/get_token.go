@@ -40,9 +40,19 @@ Fetch an access token for the given client and API.
 				return err
 			}
 
-			// TODO: We can check here if the client is an m2m client, and if so
+			// We can check here if the client is an m2m client, and if so
 			// initiate the client credentials flow instead to fetch a token,
 			// avoiding the browser and HTTP server shenanigans altogether.
+			if client.GetAppType() == "non_interactive" {
+				tokenResponse, err := runClientCredentialsFlow(cli, client, clientID, audience)
+				if err != nil {
+					return err
+				}
+
+				fmt.Fprint(cli.renderer.MessageWriter, "\n")
+				cli.renderer.GetToken(client, tokenResponse)
+				return nil
+			}
 
 			if proceed := runLoginFlowPreflightChecks(cli, client); !proceed {
 				return nil
