@@ -2,6 +2,7 @@ package cli
 
 import (
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
@@ -107,10 +108,9 @@ auth0 apis update --id id --name myapi
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			api := &management.ResourceServer{Name: &flags.name}
-			manager := cli.api.ResourceServer
 
 			err := ansi.Spinner("Updating API", func() error {
-				return manager.Update(flags.id, api)
+				return cli.api.ResourceServer.Update(flags.id, api)
 			})
 
 			if err != nil {
@@ -143,10 +143,12 @@ func deleteApiCmd(cli *cli) *cobra.Command {
 auth0 apis delete --id id
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			manager := cli.api.ResourceServer
+			if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
+				return nil
+			}
 
 			err := ansi.Spinner("Deleting API", func() error {
-				return manager.Delete(flags.id)
+				return cli.api.ResourceServer.Delete(flags.id)
 			})
 
 			if err != nil {
