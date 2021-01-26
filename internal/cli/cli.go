@@ -57,6 +57,7 @@ type cli struct {
 	verbose bool
 	tenant  string
 	format  string
+	force   bool
 
 	// config state management.
 	initOnce sync.Once
@@ -170,6 +171,8 @@ func (c *cli) init() error {
 		}
 		c.renderer.Tenant = c.tenant
 
+		cobra.EnableCommandSorting = false
+
 	})
 
 	// Determine what the desired output format is.
@@ -181,6 +184,8 @@ func (c *cli) init() error {
 		return fmt.Errorf("Invalid format. Use `--format=json` or omit this option to use the default format.")
 	}
 	c.renderer.Format = display.OutputFormat(format)
+
+	c.renderer.Tenant = c.tenant
 
 	// Once initialized, we'll keep returning the same err that was
 	// originally encountered.

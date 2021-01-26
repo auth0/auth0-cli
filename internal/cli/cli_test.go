@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/olekukonko/tablewriter"
+	"github.com/jsanda/tablewriter"
 )
 
 // TODO(cyx): think about whether we should extract this function in the

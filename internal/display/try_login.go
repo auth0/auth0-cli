@@ -115,6 +115,6 @@ func (r *Renderer) TryLogin(u *auth.UserInfo, t *auth.TokenResponse) {
 		}
 
 		tableHeader := []string{"Field", "Value"}
-		writeTable(r.ResultWriter, tableHeader, rows)
+		writeTable(r.ResultWriter, tableHeader, rows, nil)
 	}
 }
