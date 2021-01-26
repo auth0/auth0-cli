@@ -138,14 +138,12 @@ func getRules(cli *cli) (list *management.RuleList, err error) {
 }
 
 func findRuleByName(name string, rules []*management.Rule) *management.Rule {
-	var foundRule *management.Rule
-	for _, aRule := range rules {
-		if (*aRule.Name) == name {
-			foundRule = aRule
-			break
+	for _, r := range rules {
+		if auth0.StringValue(r.Name) == name {
+			return r
 		}
 	}
-	return foundRule
+	return nil
 }
 
 func enableRule(rule *management.Rule, cli *cli) error {
