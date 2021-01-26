@@ -72,6 +72,19 @@ type ActionVersionList struct {
 	Versions []*ActionVersion `json:"versions"`
 }
 
+type ActionBinding struct {
+	ID          *string    `json:"id"`
+	TriggerID   *TriggerID `json:"trigger_id,omitempty"`
+	Action      *Action    `json:"action,omitempty"`
+	CreatedAt   *time.Time `json:"created_at,omitempty"`
+	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
+	DisplayName *string    `json:"display_name,omitempty"`
+}
+type ActionBindingList struct {
+	List
+	Bindings []*ActionBinding `json:"bindings"`
+}
+
 type Object map[string]interface{}
 
 type ActionManager struct {
@@ -171,4 +184,21 @@ func (m *ActionVersionManager) Test(actionID, id string, payload Object) (Object
 	v := Object{"payload": payload}
 	err := m.Request("POST", m.URI("actions", "actions", actionID, "versions", id, "test"), &v)
 	return v, err
+}
+
+type ActionBindingManager struct {
+	*Management
+}
+
+func newActionBindingManager(m *Management) *ActionBindingManager {
+	return &ActionBindingManager{m}
+}
+
+func (m *ActionBindingManager) List(triggerID TriggerID, opts ...RequestOption) (c *ActionBindingList, err error) {
+	err = m.Request("GET", m.URI("actions", "triggers", string(triggerID), "bindings"), &c, applyActionsListDefaults(opts))
+	return
+}
+
+func (m *ActionBindingManager) Update(triggerID TriggerID, v *ActionBindingList) error {
+	return m.Request("PATCH", m.URI("actions", "triggers", string(triggerID), "bindings"), &v)
 }
