@@ -66,7 +66,7 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 					return err
 				}
 			} else {
-				return fmt.Errorf("No rule found with name: \"%s\"", name)
+				return fmt.Errorf("No rule found with name: %q", name)
 			}
 
 			// @TODO Only display modified rules
