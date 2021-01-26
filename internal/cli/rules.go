@@ -15,6 +15,7 @@ func rulesCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listRulesCmd(cli))
 	cmd.AddCommand(createRulesCmd(cli))
+	cmd.AddCommand(deleteRulesCmd(cli))
 
 	return cmd
 }
@@ -79,6 +80,40 @@ func createRulesCmd(cli *cli) *cobra.Command {
 	cmd.Flags().StringVarP(&flags.script, "script", "s", "", "Code to be executed when this rule runs (required)")
 	cmd.Flags().IntVarP(&flags.order, "order", "o", 0, "Order that this rule should execute in relative to other rules. Lower-valued rules execute first.")
 	cmd.Flags().BoolVarP(&flags.enabled, "enabled", "e", false, "Whether the rule is enabled (true), or disabled (false).")
+
+	return cmd
+}
+
+func deleteRulesCmd(cli *cli) *cobra.Command {
+	var flags struct {
+		id string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete a rule",
+		Long: `Delete a rule:
+
+	auth0 rules delete --id "12345"`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			r := &management.Rule{ID: &flags.id}
+			
+			// TODO: Should add validation of rule
+			// TODO: Would be nice to prompt user confirmation before proceeding with delete
+
+			err := ansi.Spinner("Deleting rule", func() error {
+				return cli.api.Client.Rule.Delete(*r.ID)
+			})
+
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&flags.id, "id", "i", "", "ID of the rule to delete (required)")
 
 	return cmd
 }
