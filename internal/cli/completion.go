@@ -55,13 +55,25 @@ PS> auth0 completion powershell > auth0.ps1
 		Run: func(cmd *cobra.Command, args []string) {
 			switch args[0] {
 			case "bash":
-				cmd.Root().GenBashCompletion(os.Stdout)
+				err := cmd.Root().GenBashCompletion(os.Stdout)
+				if err != nil {
+					cli.renderer.Errorf(err.Error())
+				}
 			case "zsh":
-				cmd.Root().GenZshCompletion(os.Stdout)
+				err := cmd.Root().GenZshCompletion(os.Stdout)
+				if err != nil {
+					cli.renderer.Errorf(err.Error())
+				}
 			case "fish":
-				cmd.Root().GenFishCompletion(os.Stdout, true)
+				err := cmd.Root().GenFishCompletion(os.Stdout, true)
+				if err != nil {
+					cli.renderer.Errorf(err.Error())
+				}
 			case "powershell":
-				cmd.Root().GenPowerShellCompletion(os.Stdout)
+				err := cmd.Root().GenPowerShellCompletion(os.Stdout)
+				if err != nil {
+					cli.renderer.Errorf(err.Error())
+				}
 			}
 		},
 	}
