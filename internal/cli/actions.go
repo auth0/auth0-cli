@@ -37,6 +37,7 @@ func triggersCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(showTriggerCmd(cli))
 	cmd.AddCommand(reorderTriggerCmd(cli))
+	cmd.AddCommand(createTriggerCmd(cli))
 
 	return cmd
 }
@@ -238,8 +239,10 @@ func reorderTriggerCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			err = ansi.Spinner("Loading actions", func() error {
-				return cli.api.ActionBinding.Update(triggerID, list)
+			err = ansi.Spinner("Loading actions", func() (err error) {
+				list, err = cli.api.ActionBinding.Update(triggerID, list.Bindings)
+
+				return err
 			})
 
 			if err != nil {
@@ -273,8 +276,26 @@ func createTriggerCmd(cli *cli) *cobra.Command {
 			triggerID := management.TriggerID(trigger)
 
 			var binding *management.ActionBinding
-			err := ansi.Spinner("Loading actions", func() (err error) {
-				binding, err = cli.api.ActionBinding.Create(triggerID, actionId)
+			var list *management.ActionBindingList
+
+			err := ansi.Spinner("Adding action", func() (err error) {
+				var action *management.Action
+				if action, err = cli.api.Action.Read(actionId); err != nil {
+					return err
+				}
+
+				if binding, err = cli.api.ActionBinding.Create(triggerID, action); err != nil {
+					return err
+				}
+
+				if list, err = cli.api.ActionBinding.List(triggerID); err != nil {
+					return err
+				}
+
+				var bindings []*management.ActionBinding = append(list.Bindings, binding)
+
+				list, err = cli.api.ActionBinding.Update(triggerID, bindings)
+
 				return err
 			})
 
@@ -282,7 +303,7 @@ func createTriggerCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			cli.renderer.ActionTriggersList([]*management.ActionBinding{binding})
+			cli.renderer.ActionTriggersList(list.Bindings)
 			return nil
 		},
 	}

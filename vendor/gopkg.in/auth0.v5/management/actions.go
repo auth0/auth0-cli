@@ -201,8 +201,8 @@ func (m *ActionBindingManager) List(triggerID TriggerID, opts ...RequestOption) 
 	return
 }
 
-func (m *ActionBindingManager) Create(triggerID TriggerID, actionID string) (ab *ActionBinding, err error) {
-	v := Object{"action_id": actionID}
+func (m *ActionBindingManager) Create(triggerID TriggerID, action *Action) (ab *ActionBinding, err error) {
+	v := Object{"action_id": action.ID, "display_name": action.Name}
 	if err = m.Request("POST", m.URI("actions", "triggers", string(triggerID), "bindings"), &v); err != nil {
 		return nil, err
 	}
@@ -214,6 +214,15 @@ func (m *ActionBindingManager) Create(triggerID TriggerID, actionID string) (ab 
 	return ab, nil
 }
 
-func (m *ActionBindingManager) Update(triggerID TriggerID, v *ActionBindingList) error {
-	return m.Request("PATCH", m.URI("actions", "triggers", string(triggerID), "bindings"), &v)
+func (m *ActionBindingManager) Update(triggerID TriggerID, bindings []*ActionBinding) (list *ActionBindingList, err error) {
+	v := Object{"bindings": bindings}
+	if err = m.Request("PATCH", m.URI("actions", "triggers", string(triggerID), "bindings"), &v); err != nil {
+		return nil, err
+	}
+
+	if err = mapstructure.Decode(v, &list); err != nil {
+		return nil, err
+	}
+
+	return list, nil
 }
