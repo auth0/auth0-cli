@@ -24,16 +24,17 @@ func (v *actionView) AsTableRow() []string {
 }
 
 type triggerView struct {
+	ID          string
 	ActionID    string
 	DisplayName string
 }
 
 func (v *triggerView) AsTableHeader() []string {
-	return []string{"Action ID", "Action Name"}
+	return []string{"ID", "Action ID", "Action Name"}
 }
 
 func (v *triggerView) AsTableRow() []string {
-	return []string{v.ActionID, v.DisplayName}
+	return []string{v.ID, v.ActionID, v.DisplayName}
 }
 
 func (r *Renderer) ActionList(actions []*management.Action) {
@@ -88,6 +89,7 @@ func (r *Renderer) ActionTriggersList(bindings []*management.ActionBinding) {
 	var res []View
 	for _, b := range bindings {
 		res = append(res, &triggerView{
+			ID:          auth0.StringValue(b.ID),
 			ActionID:    auth0.StringValue(b.Action.ID),
 			DisplayName: auth0.StringValue(b.DisplayName),
 		})
