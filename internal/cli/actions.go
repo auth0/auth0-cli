@@ -23,6 +23,8 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(listActionsCmd(cli))
 	cmd.AddCommand(testActionCmd(cli))
 	cmd.AddCommand(createActionCmd(cli))
+	cmd.AddCommand(promoteActionCmd(cli))
+	cmd.AddCommand(listActionVersionsCmd(cli))
 	cmd.AddCommand(triggersCmd(cli))
 
 	return cmd
@@ -127,6 +129,70 @@ func testActionCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+func promoteActionCmd(cli *cli) *cobra.Command {
+	var actionId string
+	var versionId string
+
+	cmd := &cobra.Command{
+		Use:   "promote",
+		Short: "Deploys the action version",
+		Long:  `$ auth0 actions promote --name <actionid> --version <versionid>`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var version *management.ActionVersion
+			err := ansi.Spinner(fmt.Sprintf("Promoting action: %s, version: %s", actionId, versionId), func() (err error) {
+				version, err = cli.api.ActionVersion.Promote(actionId, versionId)
+				return err
+			})
+
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.ActionVersion(version)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to to test")
+	cmd.Flags().StringVarP(&versionId, "version", "v", "draft", "Version ID of the action to test")
+
+	mustRequireFlags(cmd, "name")
+
+	return cmd
+}
+
+func listActionVersionsCmd(cli *cli) *cobra.Command {
+	var actionId string
+
+	cmd := &cobra.Command{
+		Use:   "versions",
+		Short: "Lists the action versions",
+		Long:  `$ auth0 actions versions --name <actionid>`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var list *management.ActionVersionList
+			err := ansi.Spinner(fmt.Sprintf("Loading versions for action: %s", actionId), func() (err error) {
+				list, err = cli.api.ActionVersion.List(actionId)
+				return err
+			})
+
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.ActionVersionList(list.Versions)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to show versions")
+
+	mustRequireFlags(cmd, "name")
+
+	return cmd
+}
+
 func createActionCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -173,12 +239,12 @@ Creates a new action:
 				return err
 			}
 
-			cli.renderer.ActionCreate(action)
+			cli.renderer.Action(action)
 			return nil
 		},
 	}
 
-	cmd.LocalFlags().StringP("trigger", "t", string(management.PostLogin), "Trigger type for action.")
+	cmd.Flags().StringP("trigger", "t", string(management.PostLogin), "Trigger type for action.")
 
 	return cmd
 }

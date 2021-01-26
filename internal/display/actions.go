@@ -37,6 +37,21 @@ func (v *triggerView) AsTableRow() []string {
 	return []string{v.ID, v.ActionID, v.DisplayName}
 }
 
+type actionVersionView struct {
+	ID        string
+	Status    string
+	Runtime   string
+	CreatedAt string
+}
+
+func (v *actionVersionView) AsTableHeader() []string {
+	return []string{"ID", "Status", "Runtime", "Created At"}
+}
+
+func (v *actionVersionView) AsTableRow() []string {
+	return []string{v.ID, v.Status, v.Runtime, v.CreatedAt}
+}
+
 func (r *Renderer) ActionList(actions []*management.Action) {
 	r.Heading(ansi.Bold(r.Tenant), "actions\n")
 
@@ -65,8 +80,8 @@ func (r *Renderer) ActionTest(payload management.Object) {
 	r.JSONResult(payload)
 }
 
-func (r *Renderer) ActionCreate(action *management.Action) {
-	r.Heading(ansi.Bold(r.Tenant), "action created\n")
+func (r *Renderer) Action(action *management.Action) {
+	r.Heading(ansi.Bold(r.Tenant), "action\n")
 
 	var triggers = make([]string, 0, len(*action.SupportedTriggers))
 	for _, t := range *action.SupportedTriggers {
@@ -94,6 +109,35 @@ func (r *Renderer) ActionTriggersList(bindings []*management.ActionBinding) {
 			DisplayName: auth0.StringValue(b.DisplayName),
 		})
 
+	}
+
+	r.Results(res)
+}
+
+func (r *Renderer) ActionVersion(version *management.ActionVersion) {
+	r.Heading(ansi.Bold(r.Tenant), "action version\n")
+
+	v := &actionVersionView{
+		ID:        auth0.StringValue(&version.ID),
+		Status:    string(version.Status),
+		Runtime:   auth0.StringValue(&version.Runtime),
+		CreatedAt: timeAgo(auth0.TimeValue(version.CreatedAt)),
+	}
+
+	r.Results([]View{v})
+}
+
+func (r *Renderer) ActionVersionList(list []*management.ActionVersion) {
+	r.Heading(ansi.Bold(r.Tenant), "action versions\n")
+
+	var res []View
+	for _, version := range list {
+		res = append(res, &actionVersionView{
+			ID:        auth0.StringValue(&version.ID),
+			Status:    string(version.Status),
+			Runtime:   auth0.StringValue(&version.Runtime),
+			CreatedAt: timeAgo(auth0.TimeValue(version.CreatedAt)),
+		})
 	}
 
 	r.Results(res)

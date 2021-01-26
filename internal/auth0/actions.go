@@ -16,7 +16,9 @@ type ActionVersionAPI interface {
 	Read(actionID string, id string) (*management.ActionVersion, error)
 	Update(id string, a *management.ActionVersion) error
 	Delete(actionID string, id string, opts ...management.RequestOption) error
+	List(actionID string, opts ...management.RequestOption) (c *management.ActionVersionList, err error)
 	Test(actionID string, id string, payload management.Object) (management.Object, error)
+	Promote(actionID string, id string) (*management.ActionVersion, error)
 }
 
 type ActionBindingAPI interface {
