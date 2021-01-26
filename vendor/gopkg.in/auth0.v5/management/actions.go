@@ -74,11 +74,11 @@ type ActionVersionList struct {
 
 type ActionBinding struct {
 	ID          *string    `json:"id"`
-	TriggerID   *TriggerID `json:"trigger_id,omitempty"`
-	Action      *Action    `json:"action,omitempty"`
+	TriggerID   *TriggerID `json:"trigger_id"`
+	Action      *Action    `json:"action"`
 	CreatedAt   *time.Time `json:"created_at,omitempty"`
 	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
-	DisplayName *string    `json:"display_name,omitempty"`
+	DisplayName *string    `json:"display_name"`
 }
 type ActionBindingList struct {
 	List
@@ -197,8 +197,4 @@ func newActionBindingManager(m *Management) *ActionBindingManager {
 func (m *ActionBindingManager) List(triggerID TriggerID, opts ...RequestOption) (c *ActionBindingList, err error) {
 	err = m.Request("GET", m.URI("actions", "triggers", string(triggerID), "bindings"), &c, applyActionsListDefaults(opts))
 	return
-}
-
-func (m *ActionBindingManager) Update(triggerID TriggerID, v *ActionBindingList) error {
-	return m.Request("PATCH", m.URI("actions", "triggers", string(triggerID), "bindings"), &v)
 }
