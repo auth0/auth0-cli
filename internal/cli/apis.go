@@ -15,6 +15,8 @@ func apisCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listApisCmd(cli))
 	cmd.AddCommand(createApiCmd(cli))
+	cmd.AddCommand(updateApiCmd(cli))
+	cmd.AddCommand(deleteApiCmd(cli))
 
 	return cmd
 }
@@ -42,7 +44,7 @@ Lists your existing APIs. To create one try:
 				return err
 			}
 
-			cli.renderer.ApisList(list.ResourceServers)
+			cli.renderer.ApiList(list.ResourceServers)
 			return nil
 		},
 	}
@@ -86,6 +88,78 @@ auth0 apis create --name myapi --identifier http://my-api
 	cmd.Flags().StringVarP(&flags.identifier, "identifier", "i", "", "Identifier of the API.")
 
 	mustRequireFlags(cmd, "name", "identifier")
+
+	return cmd
+}
+
+func updateApiCmd(cli *cli) *cobra.Command {
+	var flags struct {
+		id   string
+		name string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "update",
+		Short: "Update an API",
+		Long: `Updates an API:
+
+auth0 apis update --id id --name myapi
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			api := &management.ResourceServer{Name: &flags.name}
+			manager := &management.ResourceServerManager{Management: cli.api}
+
+			err := ansi.Spinner("Updating API", func() error {
+				return manager.Update(flags.id, api)
+			})
+
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.ApiUpdate(api)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&flags.id, "id", "i", "", "ID of the API.")
+	cmd.Flags().StringVarP(&flags.name, "name", "n", "", "Name of the API.")
+
+	mustRequireFlags(cmd, "id", "name")
+
+	return cmd
+}
+
+func deleteApiCmd(cli *cli) *cobra.Command {
+	var flags struct {
+		id string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete an API",
+		Long: `Deletes an API:
+
+auth0 apis delete --id id
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			manager := &management.ResourceServerManager{Management: cli.api}
+
+			err := ansi.Spinner("Deleting API", func() error {
+				return manager.Delete(flags.id)
+			})
+
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&flags.id, "id", "i", "", "ID of the API.")
+
+	mustRequireFlags(cmd, "id")
 
 	return cmd
 }
