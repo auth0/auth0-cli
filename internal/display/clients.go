@@ -9,6 +9,14 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
+const (
+	quickstartsNative     = "https://auth0.com/docs/quickstart/native"
+	quickstartsSPA        = "https://auth0.com/docs/quickstart/spa"
+	quickstartsRegularWeb = "https://auth0.com/docs/quickstart/webapp"
+	quickstartsM2M        = "https://auth0.com/docs/quickstart/backend"
+	quickstartsGeneric    = "https://auth0.com/docs/quickstarts"
+)
+
 type clientView struct {
 	Name         string
 	Type         string
@@ -79,6 +87,8 @@ func (r *Renderer) ClientCreate(client *management.Client, revealSecrets bool) {
 	}
 
 	r.Results([]View{v})
+
+	r.Infof("\nQuickstarts: %s", quickstartsURIFor(client.AppType))
 }
 
 // TODO(cyx): determine if there's a better way to filter this out.
@@ -103,6 +113,21 @@ func appTypeFor(v *string) string {
 
 	default:
 		return *v
+	}
+}
+
+func quickstartsURIFor(v *string) string {
+	switch {
+	case *v == "native":
+		return quickstartsNative
+	case *v == "spa":
+		return quickstartsSPA
+	case *v == "regular_web":
+		return quickstartsRegularWeb
+	case *v == "non_interactive":
+		return quickstartsM2M
+	default:
+		return quickstartsGeneric
 	}
 }
 
