@@ -185,6 +185,7 @@ func createRulesCmd(cli *cli) *cobra.Command {
 	cmd.Flags().StringVarP(&flags.script, "script", "s", "", "Code to be executed when this rule runs (required)")
 	cmd.Flags().IntVarP(&flags.order, "order", "o", 0, "Order that this rule should execute in relative to other rules. Lower-valued rules execute first.")
 	cmd.Flags().BoolVarP(&flags.enabled, "enabled", "e", false, "Whether the rule is enabled (true), or disabled (false).")
+	mustRequireFlags(cmd, "name", "script")
 	return cmd
 }
 
@@ -220,6 +221,7 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&flags.id, "id", "", "ID of the rule to delete (required)")
+	mustRequireFlags(cmd, "id")
 
 	return cmd
 }
