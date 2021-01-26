@@ -223,11 +223,11 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 		Long: `Delete a rule:
 
 	auth0 rules delete --id "12345" --force`,
-		PreRunE: func(cmd *cobra.Command, args []string) error {	
-			if flags.id != "" && flags.name != "" {	
-				return fmt.Errorf("TMI! 🤯 use either --name or --id")	
-			}	
-			return nil	
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if flags.id != "" && flags.name != "" {
+				return fmt.Errorf("TMI! 🤯 use either --name or --id")
+			}
+			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !flags.force {
