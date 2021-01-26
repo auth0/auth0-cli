@@ -9,11 +9,11 @@ require (
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/golang/mock v1.4.4
 	github.com/google/go-cmp v0.5.4
-	github.com/jsanda/tablewriter v0.0.1
+	github.com/jsanda/tablewriter v0.0.2-0.20190614032957-c4e45dc9c708
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/mattn/go-colorable v0.1.6 // indirect
-	github.com/mattn/go-runewidth v0.0.4 // indirect
-	github.com/olekukonko/tablewriter v0.0.1
+	github.com/mattn/go-runewidth v0.0.10 // indirect
+	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.5.1
