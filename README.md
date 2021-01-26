@@ -11,7 +11,19 @@ Stripe CLI, etc.
 - For actions, delivering a CLI experience would be far ideal than having
   developers write code in the browser.
 
-## Setup instructions
+## Install instructions
+### macOS
+1. Download the binaries: https://github.com/auth0/auth0-cli/releases/latest/auth0-cli_0.1.0_Darwin_x86_64.tar.gz
+1. Extract
+1. Move to `/usr/local/bin/auth0`
+1. Setup CLI commands completion for your terminal:
+	1. (**bash**) auth0 completion bash > /usr/local/etc/bash_completion.d/auth0
+	1. (**zsh**)  auth0 completion zsh > "${fpath[1]}/_auth0"
+	1. (**fish**) auth0 completion fish | source
+
+	> see full completion options: `auth0 completion -h`
+
+## Dev Setup instructions
 
 1. [Setup go](https://golang.org/doc/install)
 2. Clone this repo: `git clone git@github.com:auth0/auth0-cli`
