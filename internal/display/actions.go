@@ -38,18 +38,28 @@ func (v *triggerView) AsTableRow() []string {
 }
 
 type actionVersionView struct {
-	ID        string
-	Status    string
-	Runtime   string
-	CreatedAt string
+	ID         string
+	ActionID   string
+	ActionName string
+	Runtime    string
+	Status     string
+	CreatedAt  string
 }
 
 func (v *actionVersionView) AsTableHeader() []string {
-	return []string{"ID", "Status", "Runtime", "Created At"}
+	return []string{"ID", "Action ID", "Action Name", "Runtime", "Status", "Created At"}
 }
 
 func (v *actionVersionView) AsTableRow() []string {
-	return []string{v.ID, v.Status, v.Runtime, v.CreatedAt}
+	return []string{v.ID, v.ActionID, v.ActionName, v.Runtime, v.Status, v.CreatedAt}
+}
+
+func (v *actionVersionView) getID() string {
+	// TODO (iamjem): Is this right?
+	if v.ID == "" {
+		return "draft"
+	}
+	return v.ID
 }
 
 func (r *Renderer) ActionList(actions []*management.Action) {
@@ -80,19 +90,21 @@ func (r *Renderer) ActionTest(payload management.Object) {
 	r.JSONResult(payload, nil)
 }
 
-func (r *Renderer) Action(action *management.Action) {
-	r.Heading(ansi.Bold(r.Tenant), "action\n")
+func (r *Renderer) ActionCreate(action *management.Action, version *management.ActionVersion) {
+	r.Heading(ansi.Bold(r.Tenant), "action created\n")
 
 	var triggers = make([]string, 0, len(*action.SupportedTriggers))
 	for _, t := range *action.SupportedTriggers {
 		triggers = append(triggers, string(*t.ID))
 	}
 
-	v := &actionView{
-		ID:        auth0.StringValue(action.ID),
-		Name:      auth0.StringValue(action.Name),
-		CreatedAt: timeAgo(auth0.TimeValue(action.CreatedAt)),
-		Type:      strings.Join(triggers, ", "),
+	v := &actionVersionView{
+		ID:         version.ID,
+		ActionID:   auth0.StringValue(action.ID),
+		ActionName: auth0.StringValue(action.Name),
+		Runtime:    version.Runtime,
+		Status:     string(version.Status),
+		CreatedAt:  timeAgo(auth0.TimeValue(version.CreatedAt)),
 	}
 
 	r.Results([]View{v})

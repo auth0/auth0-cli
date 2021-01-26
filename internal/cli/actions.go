@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -256,27 +257,35 @@ func listActionVersionsCmd(cli *cli) *cobra.Command {
 }
 
 func createActionCmd(cli *cli) *cobra.Command {
+	var (
+		name          string
+		trigger       string
+		file          string
+		script        string
+		dependency    []string
+		createVersion bool
+	)
+
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Creates a new action",
 		Long: `$ auth0 actions create
 Creates a new action:
 
-    $ auth0 actions create my-action --trigger post-login
+    $ auth0 actions create --name my-action --trigger post-login --file action.js --dependency lodash@4.17.19  
 `,
-		Args: func(cmd *cobra.Command, args []string) error {
-			if err := validators.ExactArgs("name")(cmd, args); err != nil {
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := validators.TriggerID(trigger); err != nil {
 				return err
 			}
-			return nil
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			trigger, err := cmd.LocalFlags().GetString("trigger")
+
+			source, err := sourceFromFileOrScript(file, script)
 			if err != nil {
 				return err
 			}
 
-			if err := validators.TriggerID(trigger); err != nil {
+			dependencies, err := validators.Dependencies(dependency)
+			if err != nil {
 				return err
 			}
 
@@ -289,24 +298,59 @@ Creates a new action:
 			}
 
 			action := &management.Action{
-				Name:              auth0.String(args[0]),
+				Name:              auth0.String(name),
 				SupportedTriggers: &triggers,
 			}
 
+			version := &management.ActionVersion{
+				Code:         source,
+				Dependencies: dependencies,
+				Runtime:      "node12",
+			}
+
 			err = ansi.Spinner("Creating action", func() error {
-				return cli.api.Action.Create(action)
+				var err error
+
+				err = cli.api.Action.Create(action)
+				if err != nil {
+					return err
+				}
+
+				if createVersion {
+					err = cli.api.ActionVersion.Create(auth0.StringValue(action.ID), version)
+				} else {
+					err = cli.api.ActionVersion.UpsertDraft(auth0.StringValue(action.ID), version)
+				}
+
+				if err != nil {
+					return err
+				}
+
+				return nil
 			})
 
 			if err != nil {
 				return err
 			}
 
-			cli.renderer.Action(action)
+			cli.renderer.ActionCreate(action, version)
+
 			return nil
 		},
 	}
 
-	cmd.Flags().StringP("trigger", "t", string(management.PostLogin), "Trigger type for action.")
+	cmd.Flags().StringVarP(&name, "name", "n", "", "Unique name for the action.")
+	cmd.Flags().StringVarP(&trigger, "trigger", "t", string(management.PostLogin), "Trigger type for action.")
+	cmd.Flags().StringVarP(&file, "file", "f", "", "File containing the action source code.")
+	cmd.Flags().StringVarP(&script, "script", "s", "", "Raw source code for the action.")
+	cmd.Flags().StringSliceVarP(&dependency, "dependency", "d", nil, "Dependency for the source code (<name>@<semver>).")
+	// TODO: This name is kind of overloaded since it could also refer to the version of the trigger (though there's only v1's at this time)
+	cmd.Flags().BoolVarP(&createVersion, "version", "v", false, "Create an explicit action version from the source code instead of a draft.")
+
+	mustRequireFlags(cmd, "name")
+	if err := cmd.MarkFlagFilename("file"); err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -447,4 +491,31 @@ func createTriggerCmd(cli *cli) *cobra.Command {
 	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to to test")
 
 	return cmd
+}
+
+var errNoSource = errors.New("please provide source code via --file or --script")
+
+func sourceFromFileOrScript(file, script string) (string, error) {
+	if script != "" {
+		return script, nil
+	}
+
+	if file != "" {
+		f, err := os.Open(file)
+		if err != nil {
+			return "", err
+		}
+		defer f.Close()
+
+		contents, err := ioutil.ReadAll(f)
+		if err != nil {
+			return "", err
+		}
+
+		if len(contents) > 0 {
+			return string(contents), nil
+		}
+	}
+
+	return "", errNoSource
 }
