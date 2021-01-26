@@ -28,7 +28,9 @@ func Confirm(message string) bool {
 		Message: message,
 	}
 
-	survey.AskOne(prompt, &result)
+	if err := survey.AskOne(prompt, &result); err != nil {
+		return false
+	}
 
 	return result
 }
