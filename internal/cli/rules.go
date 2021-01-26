@@ -5,6 +5,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
@@ -31,7 +32,12 @@ func listRulesCmd(cli *cli) *cobra.Command {
 		Short: "Lists your rules",
 		Long:  `Lists the rules in your current tenant.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			rules, err := getRules(cli)
+			var rules *management.RuleList
+			err := ansi.Spinner("Getting rules", func() error {
+				var err error
+				rules, err = getRules(cli)
+				return err
+			})
 
 			if err != nil {
 				return err
@@ -49,21 +55,29 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 	var name string
 	cmd := &cobra.Command{
 		Use:   "enable",
-		Short: "enable rule(s)",
+		Short: "enable rule",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			data, err := getRules(cli)
-			if err != nil {
-				return err
-			}
-
-			rule := findRuleByName(name, data.Rules)
-			if rule != nil {
-				err := enableRule(rule, cli)
+			err := ansi.Spinner("Enabling rule", func() error {
+				var err error
+				data, err := getRules(cli)
 				if err != nil {
 					return err
 				}
-			} else {
-				return fmt.Errorf("No rule found with name: %q", name)
+
+				rule := findRuleByName(name, data.Rules)
+				if rule != nil {
+					err := enableRule(rule, cli)
+					if err != nil {
+						return err
+					}
+				} else {
+					return fmt.Errorf("No rule found with name: %q", name)
+				}
+				return nil
+			})
+
+			if err != nil {
+				return err
 			}
 
 			// @TODO Only display modified rules
@@ -90,18 +104,26 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 		Use:   "disable",
 		Short: "disable rule",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			data, err := getRules(cli)
-			if err != nil {
-				return err
-			}
-
-			rule := findRuleByName(name, data.Rules)
-			if rule != nil {
-				if err := disableRule(rule, cli); err != nil {
+			err := ansi.Spinner("Disabling rule", func() error {
+				var err error
+				data, err := getRules(cli)
+				if err != nil {
 					return err
 				}
-			} else {
-				return fmt.Errorf("No rule found with name: %q", name)
+
+				rule := findRuleByName(name, data.Rules)
+				if rule != nil {
+					if err := disableRule(rule, cli); err != nil {
+						return err
+					}
+				} else {
+					return fmt.Errorf("No rule found with name: %q", name)
+				}
+				return nil
+			})
+
+			if err != nil {
+				return err
 			}
 
 			// @TODO Only display modified rules
@@ -181,7 +203,9 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 			r := &management.Rule{ID: &flags.id}
 
 			// TODO: Should add validation of rule
-			// TODO: Would be nice to prompt user confirmation before proceeding with delete
+			if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
+				return nil
+			}
 
 			err := ansi.Spinner("Deleting rule", func() error {
 				return cli.api.Rule.Delete(*r.ID)
