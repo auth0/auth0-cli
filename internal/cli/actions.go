@@ -72,7 +72,10 @@ func testActionCmd(cli *cli) *cobra.Command {
 
 			byteValue, _ := ioutil.ReadAll(jsonFile)
 
-			json.Unmarshal([]byte(byteValue), &payload)
+			err = json.Unmarshal([]byte(byteValue), &payload)
+			if err != nil {
+				return err
+			}
 
 			var result management.Object
 			err = ansi.Spinner(fmt.Sprintf("Testing action: %s, version: %s", actionId, versionId), func() error {
@@ -90,10 +93,10 @@ func testActionCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to to test")
-	cmd.MarkFlagRequired("name")
 	cmd.Flags().StringVarP(&payloadFile, "file", "f", "", "File containing the payload for the test")
-	cmd.MarkFlagRequired("file")
 	cmd.Flags().StringVarP(&versionId, "version", "v", "draft", "Version ID of the action to test")
+
+	mustRequireFlags(cmd, "name", "file")
 
 	return cmd
 }

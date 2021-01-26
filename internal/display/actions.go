@@ -23,22 +23,6 @@ func (v *actionView) AsTableRow() []string {
 	return []string{v.ID, v.Name, v.Type, v.CreatedAt}
 }
 
-type resultView struct {
-	// {"logs":"Test danny from post login\n","stats":{"action_duration_ms":6,"boot_duration_ms":35,"network_duration_ms":4}}
-	Logs            string
-	ActionDuration  string
-	BootDuration    string
-	NetworkDuration string
-}
-
-func (v *resultView) AsTableHeader() []string {
-	return []string{"Logs", "Action Duration", "Boot Duration", "Network Duration"}
-}
-
-func (v *resultView) AsTableRow() []string {
-	return []string{v.Logs, v.ActionDuration, v.BootDuration, v.NetworkDuration}
-}
-
 func (r *Renderer) ActionList(actions []*management.Action) {
 	r.Heading(ansi.Bold(r.Tenant), "actions\n")
 
