@@ -215,7 +215,7 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 			re := regexp.MustCompile(ruleIDPattern)
 
 			if flags.id != "" {
-				if re.Match([]byte(flags.id)) == false {
+				if !re.Match([]byte(flags.id)) {
 					return fmt.Errorf("Rule with id %q does not match pattern %s", flags.id, ruleIDPattern)
 				}
 
