@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -212,6 +213,7 @@ func createRulesCmd(cli *cli) *cobra.Command {
 func deleteRulesCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		id    string
+		name  string
 		force bool
 	}
 
@@ -221,6 +223,12 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 		Long: `Delete a rule:
 
 	auth0 rules delete --id "12345" --force`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {	
+			if flags.id != "" && flags.name != "" {	
+				return fmt.Errorf("TMI! 🤯 use either --name or --id")	
+			}	
+			return nil	
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !flags.force {
 				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
@@ -229,7 +237,31 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 			}
 
 			// TODO: Should add validation of rule
-			r := &management.Rule{ID: &flags.id}
+			var r *management.Rule
+			ruleIDPattern := "^rul_[A-Za-z0-9]{16}$"	
+			re := regexp.MustCompile(ruleIDPattern)	
+
+			if flags.id != "" {	
+				if !re.Match([]byte(flags.id)) {	
+					return fmt.Errorf("Rule with id %q does not match pattern %s", flags.id, ruleIDPattern)	
+				}	
+
+				rule, err := cli.api.Rule.Read(flags.id)	
+				if err != nil {	
+					return err	
+				}	
+				r = rule	
+			} else {	
+				data, err := getRules(cli)	
+				if err != nil {	
+					return err	
+				}	
+				if rule := findRuleByName(flags.name, data.Rules); rule != nil {	
+					r = rule	
+				} else {	
+					return fmt.Errorf("No rule found with name: %q", flags.name)	
+				}	
+			}
 
 			err := ansi.Spinner("Deleting rule", func() error {
 				return cli.api.Rule.Delete(*r.ID)
@@ -244,8 +276,8 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&flags.id, "id", "i", "", "ID of the rule to delete (required)")
+	cmd.Flags().StringVarP(&flags.name, "name", "n", "", "Name of the rule to delete")
 	cmd.Flags().BoolVarP(&flags.force, "force", "f", false, "Do not ask for confirmation.")
-	mustRequireFlags(cmd, "id")
 
 	return cmd
 }
