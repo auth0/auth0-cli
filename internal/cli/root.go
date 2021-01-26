@@ -58,6 +58,11 @@ func Execute() {
 	rootCmd.AddCommand(rulesCmd(cli))
 	rootCmd.AddCommand(connectionsCmd(cli))
 	rootCmd.AddCommand(tryLoginCmd(cli))
+	rootCmd.AddCommand(completionCmd(cli))
+
+	// TODO(cyx): backport this later on using latest auth0/v5.
+	// rootCmd.AddCommand(actionsCmd(cli))
+	// rootCmd.AddCommand(triggersCmd(cli))
 
 	if err := rootCmd.ExecuteContext(context.TODO()); err != nil {
 		cli.renderer.Errorf(err.Error())
