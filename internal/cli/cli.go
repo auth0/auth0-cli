@@ -57,6 +57,7 @@ type cli struct {
 	verbose bool
 	tenant  string
 	format  string
+	force   bool
 
 	// config state management.
 	initOnce sync.Once

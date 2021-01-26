@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -191,7 +192,9 @@ func createRulesCmd(cli *cli) *cobra.Command {
 
 func deleteRulesCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		id string
+		id      string
+		name    string
+		confirm bool
 	}
 
 	cmd := &cobra.Command{
@@ -200,12 +203,44 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 		Long: `Delete a rule:
 
 	auth0 rules delete --id "12345"`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if flags.id != "" && flags.name != "" {
+				return fmt.Errorf("TMI! 🤯 use either --name or --id")
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			r := &management.Rule{ID: &flags.id}
+			var r *management.Rule
+			ruleIDPattern := "^rul_[A-Za-z0-9]{16}$"
+			re := regexp.MustCompile(ruleIDPattern)
 
-			// TODO: Should add validation of rule
-			if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
-				return nil
+			if flags.id != "" {
+				if re.Match([]byte(flags.id)) == false {
+					return fmt.Errorf("Rule with id %q does not match pattern %s", flags.id, ruleIDPattern)
+				}
+
+				rule, err := cli.api.Rule.Read(flags.id)
+				if err != nil {
+					return err
+				}
+				r = rule
+			} else {
+				data, err := getRules(cli)
+				if err != nil {
+					return err
+				}
+				if rule := findRuleByName(flags.name, data.Rules); rule != nil {
+					r = rule
+				} else {
+					return fmt.Errorf("No rule found with name: %q", flags.name)
+				}
+			}
+
+			if !cli.force {
+				// TODO: Should add validation of rule
+				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
+					return nil
+				}
 			}
 
 			err := ansi.Spinner("Deleting rule", func() error {
@@ -220,8 +255,8 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&flags.id, "id", "", "ID of the rule to delete (required)")
-	mustRequireFlags(cmd, "id")
+	cmd.Flags().StringVar(&flags.id, "id", "", "ID of the rule to delete")
+	cmd.Flags().StringVar(&flags.name, "name", "", "Name of the rule to delete")
 
 	return cmd
 }
