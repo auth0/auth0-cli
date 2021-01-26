@@ -5,6 +5,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
@@ -181,7 +182,9 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 			r := &management.Rule{ID: &flags.id}
 
 			// TODO: Should add validation of rule
-			// TODO: Would be nice to prompt user confirmation before proceeding with delete
+			if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
+				return nil
+			}
 
 			err := ansi.Spinner("Deleting rule", func() error {
 				return cli.api.Rule.Delete(*r.ID)

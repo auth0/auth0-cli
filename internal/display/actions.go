@@ -23,6 +23,20 @@ func (v *actionView) AsTableRow() []string {
 	return []string{v.ID, v.Name, v.Type, v.CreatedAt}
 }
 
+type triggerView struct {
+	ID          string
+	ActionID    string
+	DisplayName string
+}
+
+func (v *triggerView) AsTableHeader() []string {
+	return []string{"ID", "Action ID", "Action Name"}
+}
+
+func (v *triggerView) AsTableRow() []string {
+	return []string{v.ID, v.ActionID, v.DisplayName}
+}
+
 func (r *Renderer) ActionList(actions []*management.Action) {
 	r.Heading(ansi.Bold(r.Tenant), "actions\n")
 
@@ -46,6 +60,11 @@ func (r *Renderer) ActionList(actions []*management.Action) {
 	r.Results(res)
 }
 
+func (r *Renderer) ActionTest(payload management.Object) {
+	r.Heading(ansi.Bold(r.Tenant), "Actions test result\n")
+	r.JSONResult(payload)
+}
+
 func (r *Renderer) ActionCreate(action *management.Action) {
 	r.Heading(ansi.Bold(r.Tenant), "action created\n")
 
@@ -62,4 +81,20 @@ func (r *Renderer) ActionCreate(action *management.Action) {
 	}
 
 	r.Results([]View{v})
+}
+
+func (r *Renderer) ActionTriggersList(bindings []*management.ActionBinding) {
+	r.Heading(ansi.Bold(r.Tenant), "triggers\n")
+
+	var res []View
+	for _, b := range bindings {
+		res = append(res, &triggerView{
+			ID:          auth0.StringValue(b.ID),
+			ActionID:    auth0.StringValue(b.Action.ID),
+			DisplayName: auth0.StringValue(b.DisplayName),
+		})
+
+	}
+
+	r.Results(res)
 }
