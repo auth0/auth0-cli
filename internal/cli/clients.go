@@ -57,7 +57,6 @@ func clientsCreateCmd(cli *cli) *cobra.Command {
 		Name                    string
 		AppType                 string
 		Description             string
-		Reveal                  bool
 		Callbacks               []string
 		TokenEndpointAuthMethod string
 	}
@@ -147,14 +146,14 @@ auth0 clients create --name myapp --type [native|spa|regular|m2m]
 			}
 
 			// note: c is populated with the rest of the client fields by the API during creation.
-			cli.renderer.ClientCreate(c, flags.Reveal)
+			revealClientSecret := auth0.StringValue(c.AppType) != "native" && auth0.StringValue(c.AppType) != "spa"
+			cli.renderer.ClientCreate(c, revealClientSecret)
 			return nil
 		},
 	}
 	cmd.Flags().StringVarP(&flags.Name, "name", "n", "", "Name of the client.")
 	cmd.Flags().StringVarP(&flags.AppType, "type", "t", "", "Type of the client: [native|spa|regular|m2m]")
 	cmd.Flags().StringVarP(&flags.Description, "description", "d", "", "A free text description of the application. Max character count is 140.")
-	cmd.Flags().BoolVarP(&flags.Reveal, "reveal", "r", false, "⚠️  Reveal the SECRET of the created client.")
 	cmd.Flags().StringSliceVarP(&flags.Callbacks, "callbacks", "c", nil, "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native clients, all callbacks should use protocol https://.")
 
 	cmd.Flags().StringVar(&flags.TokenEndpointAuthMethod, "auth-method", "", "Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).")
