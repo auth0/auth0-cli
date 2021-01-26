@@ -34,7 +34,11 @@ func (v *logView) getConnection() string {
 	if ok && len(prompt) > 0 {
 		dict, ok := prompt[0].(map[string]interface{})
 		if ok {
-			return dict["connection"].(string)
+			v, ok := dict["connection"].(string)
+			if ok {
+				return v
+			}
+			return notApplicable
 		} else {
 			return notApplicable
 		}
