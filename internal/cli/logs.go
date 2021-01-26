@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
@@ -22,26 +23,33 @@ func getLatestLogs(cli *cli, n int) (result []*management.Log, err error) {
 	if perPage > count {
 		perPage = count
 	}
-	for count > len(result) {
-		list, err = cli.api.Log.List(
-			management.Parameter("sort", "date:-1"),
-			management.Parameter("page", fmt.Sprintf("%d", page)),
-			management.Parameter("per_page", fmt.Sprintf("%d", perPage)),
-		)
-		if err != nil {
-			return
-		}
 
-		sort.Slice(list, func(i, j int) bool {
-			return list[i].GetDate().Before(list[j].GetDate())
-		})
-		result = append(list, result...)
-		if len(list) < perPage {
-			// We've got all
-			break
+	err = ansi.Spinner("Getting logs", func() error {
+		for count > len(result) {
+			var err error
+			list, err = cli.api.Log.List(
+				management.Parameter("sort", "date:-1"),
+				management.Parameter("page", fmt.Sprintf("%d", page)),
+				management.Parameter("per_page", fmt.Sprintf("%d", perPage)),
+			)
+			if err != nil {
+				return err
+			}
+
+			sort.Slice(list, func(i, j int) bool {
+				return list[i].GetDate().Before(list[j].GetDate())
+			})
+			result = append(list, result...)
+			if len(list) < perPage {
+				// We've got all
+				break
+			}
+			page++
+
+			return nil
 		}
-		page++
-	}
+		return err
+	})
 
 	return
 }

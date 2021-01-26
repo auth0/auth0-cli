@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/open"
@@ -35,81 +36,90 @@ func tryLoginCmd(cli *cli) *cobra.Command {
 Launch a browser to try out your universal login box for the given client.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			tenant, err := cli.getTenant()
-			if err != nil {
-				return err
-			}
+			var userInfo *auth.UserInfo
+			var tokenResponse *auth.TokenResponse
 
-			// use the client ID as passed in by the user, or default to the
-			// "CLI Login Testing" client if none passed. This client is only
-			// used for testing login from the CLI and will be created if it
-			// does not exist.
-			if clientID == "" {
-				client, err := getOrCreateCLITesterClient(cli.api.Client)
+			err := ansi.Spinner("Trying login", func() error {
+				var err error
+				tenant, err := cli.getTenant()
 				if err != nil {
 					return err
 				}
-				clientID = client.GetClientID()
-			}
 
-			client, err := cli.api.Client.Read(clientID)
-			if err != nil {
-				return err
-			}
-
-			// check if the client's initiate_login_uri matches the one for our
-			// "CLI Login Testing" app. If so, then initiate the login via the
-			// `/authorize` endpoint, if not, open a browser at the client's
-			// configured URL. If none is specified, return an error to the
-			// caller explaining the problem.
-			if client.GetInitiateLoginURI() == "" {
-				return fmt.Errorf(
-					"client %s does not specify a URL with which to initiate login",
-					client.GetClientID(),
-				)
-			}
-
-			if client.GetInitiateLoginURI() != cliLoginTestingInitiateLoginURI {
-				if connectionName != "" {
-					cli.renderer.Warnf("Specific connections are not supported when using a non-default client, ignoring.")
-					cli.renderer.Warnf("You should ensure the connection you wish to test is enabled for the client you want to use in the Auth0 Dashboard.")
+				// use the client ID as passed in by the user, or default to the
+				// "CLI Login Testing" client if none passed. This client is only
+				// used for testing login from the CLI and will be created if it
+				// does not exist.
+				if clientID == "" {
+					client, err := getOrCreateCLITesterClient(cli.api.Client)
+					if err != nil {
+						return err
+					}
+					clientID = client.GetClientID()
 				}
-				return open.URL(client.GetInitiateLoginURI())
-			}
 
-			// Build a login URL and initiate login in a browser window.
-			loginURL, err := buildInitiateLoginURL(tenant.Domain, client.GetClientID(), connectionName)
-			if err != nil {
+				client, err := cli.api.Client.Read(clientID)
+				if err != nil {
+					return err
+				}
+
+				// check if the client's initiate_login_uri matches the one for our
+				// "CLI Login Testing" app. If so, then initiate the login via the
+				// `/authorize` endpoint, if not, open a browser at the client's
+				// configured URL. If none is specified, return an error to the
+				// caller explaining the problem.
+				if client.GetInitiateLoginURI() == "" {
+					return fmt.Errorf(
+						"client %s does not specify a URL with which to initiate login",
+						client.GetClientID(),
+					)
+				}
+
+				if client.GetInitiateLoginURI() != cliLoginTestingInitiateLoginURI {
+					if connectionName != "" {
+						cli.renderer.Warnf("Specific connections are not supported when using a non-default client, ignoring.")
+						cli.renderer.Warnf("You should ensure the connection you wish to test is enabled for the client you want to use in the Auth0 Dashboard.")
+					}
+					return open.URL(client.GetInitiateLoginURI())
+				}
+
+				// Build a login URL and initiate login in a browser window.
+				loginURL, err := buildInitiateLoginURL(tenant.Domain, client.GetClientID(), connectionName)
+				if err != nil {
+					return err
+				}
+
+				if err := open.URL(loginURL); err != nil {
+					return err
+				}
+
+				// launch a HTTP server to wait for the callback to capture the auth
+				// code.
+				authCode, err := waitForBrowserCallback()
+				if err != nil {
+					return err
+				}
+
+				// once the callback is received, exchange the code for an access
+				// token.
+				tokenResponse, err = auth.ExchangeCodeForToken(
+					tenant.Domain,
+					client.GetClientID(),
+					client.GetClientSecret(),
+					authCode,
+					cliLoginTestingCallbackURL,
+				)
+				if err != nil {
+					return fmt.Errorf("%w", err)
+				}
+
+				// Use the access token to fetch user information from the /userinfo
+				// endpoint.
+				userInfo, err = auth.FetchUserInfo(tenant.Domain, tokenResponse.AccessToken)
+
 				return err
-			}
+			})
 
-			if err := open.URL(loginURL); err != nil {
-				return err
-			}
-
-			// launch a HTTP server to wait for the callback to capture the auth
-			// code.
-			authCode, err := waitForBrowserCallback()
-			if err != nil {
-				return err
-			}
-
-			// once the callback is received, exchange the code for an access
-			// token.
-			tokenResponse, err := auth.ExchangeCodeForToken(
-				tenant.Domain,
-				client.GetClientID(),
-				client.GetClientSecret(),
-				authCode,
-				cliLoginTestingCallbackURL,
-			)
-			if err != nil {
-				return fmt.Errorf("%w", err)
-			}
-
-			// Use the access token to fetch user information from the /userinfo
-			// endpoint.
-			userInfo, err := auth.FetchUserInfo(tenant.Domain, tokenResponse.AccessToken)
 			if err != nil {
 				return err
 			}
