@@ -31,7 +31,7 @@ func tryLoginCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "try-login",
-		Short: "Try out your universal login box",
+		Short: "try out your universal login box.",
 		Long: `$ auth0 try-login
 Launch a browser to try out your universal login box for the given client.
 `,

@@ -171,6 +171,8 @@ func (c *cli) init() error {
 		}
 		c.renderer.Tenant = c.tenant
 
+		cobra.EnableCommandSorting = false
+
 	})
 
 	// Determine what the desired output format is.
