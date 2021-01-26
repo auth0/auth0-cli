@@ -23,6 +23,19 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(listActionsCmd(cli))
 	cmd.AddCommand(testActionCmd(cli))
 	cmd.AddCommand(createActionCmd(cli))
+	cmd.AddCommand(triggersCmd(cli))
+
+	return cmd
+}
+
+func triggersCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "triggers",
+		Short: "manage resources for actions triggers.",
+	}
+
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(showTriggerCmd(cli))
 
 	return cmd
 }
@@ -156,6 +169,41 @@ Creates a new action:
 	}
 
 	cmd.LocalFlags().StringP("trigger", "t", string(management.PostLogin), "Trigger type for action.")
+
+	return cmd
+}
+
+func showTriggerCmd(cli *cli) *cobra.Command {
+	var trigger string
+
+	cmd := &cobra.Command{
+		Use:   "show",
+		Short: "Show actions by trigger",
+		Long:  `$ auth0 actions triggers show --trigger post-login`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := validators.TriggerID(trigger); err != nil {
+				return err
+			}
+
+			triggerID := management.TriggerID(trigger)
+
+			var list *management.ActionBindingList
+			err := ansi.Spinner("Loading actions", func() error {
+				var err error
+				list, err = cli.api.ActionBinding.List(triggerID)
+				return err
+			})
+
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.ActionTriggersList(list.Bindings)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&trigger, "trigger", "t", string(management.PostLogin), "Trigger type for action.")
 
 	return cmd
 }
