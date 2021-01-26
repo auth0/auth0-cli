@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -47,12 +46,6 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "enable",
 		Short: "enable rule(s)",
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if name == "" {
-				return errors.New("No rules to process")
-			}
-			return nil
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			data, err := getRules(cli)
 			if err != nil {
@@ -92,12 +85,6 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "disable",
 		Short: "disable rule",
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if name == "" {
-				return errors.New("No rules to process")
-			}
-			return nil
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			data, err := getRules(cli)
 			if err != nil {
