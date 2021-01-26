@@ -43,7 +43,7 @@ var requiredScopes = []string{
 	"create:hooks", "delete:hooks", "read:hooks", "update:hooks",
 	"create:resource_servers", "delete:resource_servers", "read:resource_servers", "update:resource_servers",
 	"create:rules", "delete:rules", "read:rules", "update:rules",
-	"read:logs",
+	"read:client_keys", "read:logs",
 }
 
 type Authenticator struct {
