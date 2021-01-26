@@ -97,7 +97,7 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 	auth0 rules delete --id "12345"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			r := &management.Rule{ID: &flags.id}
-			
+
 			// TODO: Should add validation of rule
 			// TODO: Would be nice to prompt user confirmation before proceeding with delete
 
@@ -113,7 +113,7 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.id, "id", "i", "", "ID of the rule to delete (required)")
+	cmd.Flags().StringVar(&flags.id, "id", "", "ID of the rule to delete (required)")
 
 	return cmd
 }
