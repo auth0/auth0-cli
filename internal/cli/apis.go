@@ -18,6 +18,7 @@ func apisCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(createApiCmd(cli))
 	cmd.AddCommand(updateApiCmd(cli))
 	cmd.AddCommand(deleteApiCmd(cli))
+	cmd.AddCommand(getTokenApiCmd(cli))
 
 	return cmd
 }
@@ -162,6 +163,31 @@ auth0 apis delete --id id
 	cmd.Flags().StringVarP(&flags.id, "id", "i", "", "ID of the API.")
 
 	mustRequireFlags(cmd, "id")
+
+	return cmd
+}
+
+func getTokenApiCmd(cli *cli) *cobra.Command {
+	var flags struct {
+		id string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "get-token",
+		Short: "Get a user token",
+		Long: `Get a user token for an API:
+
+auth0 apis get-token --audience url
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&flags.id, "audience", "a", "", "Audience URL")
+
+	mustRequireFlags(cmd, "audience")
 
 	return cmd
 }
