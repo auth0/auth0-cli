@@ -86,6 +86,8 @@ github.com/go-auth0/auth0 v1.3.1-0.20210126044025-c2f94c36f593 h1:Ty0FV0S+59z1io
 github.com/go-auth0/auth0 v1.3.1-0.20210126044025-c2f94c36f593/go.mod h1:pbIRmwBulkHNKKsUGGvhyIOI2itMhz2OfwtPaFXBSSQ=
 github.com/go-auth0/auth0 v1.3.1-0.20210126164439-7451a183abbd h1:O1ZCQlPODGWJNDT0qH6SpGdFEcEBWz7dd/mHFw6Kh10=
 github.com/go-auth0/auth0 v1.3.1-0.20210126164439-7451a183abbd/go.mod h1:QQ9fgGj2Wpza15+Ho3mM6amMeKfhzHo2cixcOqdkoKk=
+github.com/go-auth0/auth0 v1.3.1-0.20210126214458-2807092480f8 h1:x5rbuD/ay7ieXnEynRnTA92qHbe6uMTxumOWfsCPiws=
+github.com/go-auth0/auth0 v1.3.1-0.20210126214458-2807092480f8/go.mod h1:QQ9fgGj2Wpza15+Ho3mM6amMeKfhzHo2cixcOqdkoKk=
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20191125211704-12ad95a8df72/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20200222043503-6f7a984d4dc4/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
