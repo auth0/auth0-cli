@@ -31,19 +31,12 @@ func actionsCmd(cli *cli) *cobra.Command {
 func triggersCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "triggers",
-<<<<<<< HEAD
-		Short: "manage resources for actions triggers.",
-=======
 		Short: "manage resources for action triggers.",
->>>>>>> main
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(showTriggerCmd(cli))
-<<<<<<< HEAD
 	cmd.AddCommand(reorderTriggerCmd(cli))
-=======
->>>>>>> main
 
 	return cmd
 }
