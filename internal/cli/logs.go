@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -64,12 +65,13 @@ Show the tenant logs.
 
 					for {
 						list, err = cli.api.Log.List(
-							management.Query(fmt.Sprintf("log_id:[* TO %s]", lastLogID)),
+							management.Query(fmt.Sprintf("log_id:[%s TO *]", lastLogID)),
 							management.Parameter("page", "0"),
-							management.Parameter("per_page", "1000"),
+							management.Parameter("per_page", "100"),
 							management.Parameter("sort", "date:-1"),
 						)
 						if err != nil {
+							cli.renderer.Errorf("Error: %v", err)
 							return
 						}
 
@@ -109,6 +111,10 @@ func dedupLogs(list []*management.Log, set map[string]struct{}) []*management.Lo
 			res = append(res, l)
 		}
 	}
+
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].GetDate().Before(res[j].GetDate())
+	})
 
 	return res
 }
