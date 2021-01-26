@@ -11,7 +11,7 @@ Stripe CLI, etc.
 - For actions, delivering a CLI experience would be far ideal than having
   developers write code in the browser.
 
-## Install instructions
+## Installation
 ### macOS
 1. Download the binaries: https://github.com/auth0/auth0-cli/releases/latest/auth0-cli_0.1.0_Darwin_x86_64.tar.gz
 1. Extract
