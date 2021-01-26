@@ -2,23 +2,23 @@ package display
 
 import (
 	"fmt"
+	"github.com/logrusorgru/aurora"
 	"strings"
 	"time"
 
-	"github.com/logrusorgru/aurora"
 	"gopkg.in/auth0.v5/management"
 )
 
-func (r *Renderer) LogList(logs []*management.Log) {
+func (r *Renderer) LogList(logs []*management.Log, noColor bool) {
 	for _, l := range logs {
-		// colorize the event type field based on whether it's a success or failure
-		var logType aurora.Value
-		if t := l.GetType(); strings.HasPrefix(t, "s") {
-			logType = aurora.Green(t)
-		} else if strings.HasPrefix(t, "f") {
-			logType = aurora.BrightRed(t)
-		} else {
-			logType = aurora.Reset(t)
+		logType := l.GetType()
+		if !noColor {
+			// colorize the event type field based on whether it's a success or failure
+			if strings.HasPrefix(logType, "s") {
+				logType = aurora.Green(logType).String()
+			} else if strings.HasPrefix(logType, "f") {
+				logType = aurora.BrightRed(logType).String()
+			}
 		}
 
 		fmt.Fprintf(
