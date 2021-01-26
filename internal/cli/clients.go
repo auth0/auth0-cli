@@ -53,11 +53,12 @@ Lists your existing clients. To create one try:
 
 func clientsCreateCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		name        string
-		appType     string
-		description string
-		reveal      bool
-		callbacks   []string
+		name                    string
+		appType                 string
+		description             string
+		reveal                  bool
+		callbacks               []string
+		tokenEndpointAuthMethod string
 	}
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -73,13 +74,13 @@ auth0 clients create --name myapp --type [native|spa|regular|m2m]
 	- m2m (machine to machine): CLIs, daemons or services running on your backend.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// TODO(jfatta): depending on the app type, other client properties might be mandatory
-			// check: create app dashboard
+
 			c := &management.Client{
-				Name:        &flags.name,
-				Description: &flags.description,
-				AppType:     auth0.String(apiAppTypeFor(flags.appType)),
-				Callbacks:   apiCallbacksFor(flags.callbacks),
+				Name:                    &flags.name,
+				Description:             &flags.description,
+				AppType:                 auth0.String(apiAppTypeFor(flags.appType)),
+				Callbacks:               apiCallbacksFor(flags.callbacks),
+				TokenEndpointAuthMethod: apiTokenEndpointAuthMethodFor(flags.tokenEndpointAuthMethod),
 			}
 
 			err := ansi.Spinner("Creating client", func() error {
@@ -101,6 +102,7 @@ auth0 clients create --name myapp --type [native|spa|regular|m2m]
 	cmd.Flags().BoolVarP(&flags.reveal, "reveal", "r", false, "⚠️  Reveal the SECRET of the created client.")
 	cmd.Flags().StringSliceVarP(&flags.callbacks, "callbacks", "c", nil, "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native clients, all callbacks should use protocol https://.")
 
+	cmd.Flags().StringVar(&flags.tokenEndpointAuthMethod, "auth-method", "", "Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).")
 	mustRequireFlags(cmd, "name", "type")
 
 	return cmd
@@ -129,4 +131,17 @@ func apiCallbacksFor(s []string) []interface{} {
 	}
 	return res
 
+}
+
+func apiTokenEndpointAuthMethodFor(v string) *string {
+	switch strings.ToLower(v) {
+	case "none":
+		return auth0.String("none")
+	case "post":
+		return auth0.String("client_secret_post")
+	case "basic":
+		return auth0.String("client_secret_basic")
+	default:
+		return nil
+	}
 }
