@@ -10,3 +10,11 @@ type ActionAPI interface {
 	Delete(id string, opts ...management.RequestOption) error
 	List(opts ...management.RequestOption) (c *management.ActionList, err error)
 }
+
+type ActionVersionAPI interface {
+	Create(actionID string, v *management.ActionVersion) error
+	Read(actionID string, id string) (*management.ActionVersion, error)
+	Update(id string, a *management.ActionVersion) error
+	Delete(actionID string, id string, opts ...management.RequestOption) error
+	Test(actionID string, id string, payload management.Object) (management.Object, error)
+}

@@ -9,6 +9,7 @@ import (
 // the interfaces instead of the concrete structs.
 type API struct {
 	Action         ActionAPI
+	ActionVersion  ActionVersionAPI
 	Client         ClientAPI
 	Connection     ConnectionAPI
 	Log            LogAPI
@@ -19,6 +20,7 @@ type API struct {
 func NewAPI(m *management.Management) *API {
 	return &API{
 		Action:         m.Action,
+		ActionVersion:  m.ActionVersion,
 		Client:         m.Client,
 		Connection:     m.Connection,
 		Log:            m.Log,

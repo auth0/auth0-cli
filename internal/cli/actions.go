@@ -81,7 +81,8 @@ func testActionCmd(cli *cli) *cobra.Command {
 
 			var result management.Object
 			err = ansi.Spinner(fmt.Sprintf("Testing action: %s, version: %s", actionId, versionId), func() error {
-				result, err = cli.api.ActionVersion.Test(actionId, "draft", payload)
+				fmt.Println(payload)
+				result, err = cli.api.ActionVersion.Test(actionId, versionId, payload)
 				return err
 			})
 
