@@ -1,5 +1,9 @@
 #!/usr/bin/env make
 
+generate:
+	go generate ./...
+.PHONY: generate
+
 test:
 	CGO_ENABLED=1 go test -race ./... -count 1
 .PHONY: test

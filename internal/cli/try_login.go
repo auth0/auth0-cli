@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/auth0/auth0-cli/internal/auth"
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/open"
 	"github.com/spf13/cobra"
-	"gopkg.in/auth0.v5"
 	"gopkg.in/auth0.v5/management"
 )
 
@@ -122,7 +122,7 @@ Launch a browser to try out your universal login box for the given client.
 // getOrCreateCLITesterClient uses the manage API to look for an existing client
 // named `cliLoginTestingClientName`, and if it doesn't find one creates it with
 // default settings.
-func getOrCreateCLITesterClient(clientManager *management.ClientManager) (*management.Client, error) {
+func getOrCreateCLITesterClient(clientManager auth0.ClientAPI) (*management.Client, error) {
 	clients, err := clientManager.List()
 	if err != nil {
 		return nil, err

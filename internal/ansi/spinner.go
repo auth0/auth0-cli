@@ -2,6 +2,7 @@ package ansi
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -21,7 +22,7 @@ func Spinner(text string, fn func() error) error {
 	go func() {
 		defer close(done)
 
-		s := spinner.New(spinner.CharSets[11], 100*time.Millisecond)
+		s := spinner.New(spinner.CharSets[11], 100*time.Millisecond, spinner.WithWriter(os.Stderr))
 		s.Prefix = text + spinnerTextEllipsis + " "
 		s.FinalMSG = s.Prefix + spinnerTextDone
 
@@ -34,6 +35,12 @@ func Spinner(text string, fn func() error) error {
 		if err != nil {
 			s.FinalMSG = s.Prefix + spinnerTextFailed
 		}
+
+		// FIXME(cyx): this is causing a race condition. The problem is
+		// with our dependency on briandowns/spinner. For now adding an
+		// artificial sleep removes the race condition.
+		time.Sleep(time.Microsecond)
+
 		s.Stop()
 	}()
 

@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/spf13/cobra"
-	"gopkg.in/auth0.v5"
 	"gopkg.in/auth0.v5/management"
 )
 
@@ -147,7 +147,7 @@ func createRulesCmd(cli *cli) *cobra.Command {
 			}
 
 			err := ansi.Spinner("Creating rule", func() error {
-				return cli.api.Client.Rule.Create(r)
+				return cli.api.Rule.Create(r)
 			})
 
 			if err != nil {
@@ -184,7 +184,7 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 			// TODO: Would be nice to prompt user confirmation before proceeding with delete
 
 			err := ansi.Spinner("Deleting rule", func() error {
-				return cli.api.Client.Rule.Delete(*r.ID)
+				return cli.api.Rule.Delete(*r.ID)
 			})
 
 			if err != nil {
@@ -202,7 +202,7 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 
 // @TODO move to rules package
 func getRules(cli *cli) (list *management.RuleList, err error) {
-	return cli.api.Client.Rule.List()
+	return cli.api.Rule.List()
 }
 
 func findRuleByName(name string, rules []*management.Rule) *management.Rule {
@@ -215,9 +215,9 @@ func findRuleByName(name string, rules []*management.Rule) *management.Rule {
 }
 
 func enableRule(rule *management.Rule, cli *cli) error {
-	return cli.api.Client.Rule.Update(rule.GetID(), &management.Rule{Enabled: auth0.Bool(true)})
+	return cli.api.Rule.Update(rule.GetID(), &management.Rule{Enabled: auth0.Bool(true)})
 }
 
 func disableRule(rule *management.Rule, cli *cli) error {
-	return cli.api.Client.Rule.Update(rule.GetID(), &management.Rule{Enabled: auth0.Bool(false)})
+	return cli.api.Rule.Update(rule.GetID(), &management.Rule{Enabled: auth0.Bool(false)})
 }
