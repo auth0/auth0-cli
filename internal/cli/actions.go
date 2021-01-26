@@ -49,6 +49,7 @@ Lists your existing actions. To create one try:
 
 func testActionCmd(cli *cli) *cobra.Command {
 	var actionId string
+	var versionId string
 	var payloadFile string
 	var payload = make(management.Object)
 
@@ -71,7 +72,7 @@ func testActionCmd(cli *cli) *cobra.Command {
 			json.Unmarshal([]byte(byteValue), &payload)
 
 			var result management.Object
-			err = ansi.Spinner("Testing action", func() error {
+			err = ansi.Spinner(fmt.Sprintf("Testing action: %s, version: %s", actionId, versionId), func() error {
 				result, err = cli.api.ActionVersion.Test(actionId, "draft", payload)
 				return err
 			})
@@ -85,9 +86,11 @@ func testActionCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&actionId, "actionid", "", "id of the action to test")
-	cmd.MarkFlagRequired("actionid")
-	cmd.Flags().StringVarP(&payloadFile, "payload", "p", "", "id of the action to test")
-	cmd.MarkFlagRequired("payload")
+	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to to test")
+	cmd.MarkFlagRequired("name")
+	cmd.Flags().StringVarP(&payloadFile, "file", "f", "", "File containing the payload for the test")
+	cmd.MarkFlagRequired("file")
+	cmd.Flags().StringVarP(&versionId, "versionid", "v", "draft", "Version ID of the action to test")
+
 	return cmd
 }
