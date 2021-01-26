@@ -256,3 +256,39 @@ func reorderTriggerCmd(cli *cli) *cobra.Command {
 
 	return cmd
 }
+
+func createTriggerCmd(cli *cli) *cobra.Command {
+	var trigger string
+	var actionId string
+
+	cmd := &cobra.Command{
+		Use:   "create",
+		Short: "Bind an action to a trigger",
+		Long:  `$ auth0 actions triggers create --trigger <post-login> --name <action_id>`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := validators.TriggerID(trigger); err != nil {
+				return err
+			}
+
+			triggerID := management.TriggerID(trigger)
+
+			var binding *management.ActionBinding
+			err := ansi.Spinner("Loading actions", func() (err error) {
+				binding, err = cli.api.ActionBinding.Create(triggerID, actionId)
+				return err
+			})
+
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.ActionTriggersList([]*management.ActionBinding{binding})
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&trigger, "trigger", "t", string(management.PostLogin), "Trigger type for action.")
+	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to to test")
+
+	return cmd
+}

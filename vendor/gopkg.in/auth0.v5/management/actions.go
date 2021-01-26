@@ -3,6 +3,8 @@ package management
 import (
 	"net/http"
 	"time"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 type Action struct {
@@ -197,6 +199,19 @@ func newActionBindingManager(m *Management) *ActionBindingManager {
 func (m *ActionBindingManager) List(triggerID TriggerID, opts ...RequestOption) (c *ActionBindingList, err error) {
 	err = m.Request("GET", m.URI("actions", "triggers", string(triggerID), "bindings"), &c, applyActionsListDefaults(opts))
 	return
+}
+
+func (m *ActionBindingManager) Create(triggerID TriggerID, actionID string) (ab *ActionBinding, err error) {
+	v := Object{"action_id": actionID}
+	if err = m.Request("POST", m.URI("actions", "triggers", string(triggerID), "bindings"), &v); err != nil {
+		return nil, err
+	}
+
+	if err = mapstructure.Decode(v, &ab); err != nil {
+		return nil, err
+	}
+
+	return ab, nil
 }
 
 func (m *ActionBindingManager) Update(triggerID TriggerID, v *ActionBindingList) error {

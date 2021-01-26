@@ -36,6 +36,8 @@ github.com/mattn/go-colorable
 github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.7
 github.com/mattn/go-runewidth
+# github.com/mitchellh/mapstructure v1.4.1
+github.com/mitchellh/mapstructure
 # github.com/olekukonko/tablewriter v0.0.4
 ## explicit
 github.com/olekukonko/tablewriter
@@ -120,7 +122,7 @@ google.golang.org/protobuf/reflect/protoreflect
 google.golang.org/protobuf/reflect/protoregistry
 google.golang.org/protobuf/runtime/protoiface
 google.golang.org/protobuf/runtime/protoimpl
-# gopkg.in/auth0.v5 v5.8.0 => github.com/go-auth0/auth0 v1.3.1-0.20210126044025-c2f94c36f593
+# gopkg.in/auth0.v5 v5.8.0 => github.com/go-auth0/auth0 v1.3.1-0.20210126151507-8ed3ec382cba
 ## explicit
 gopkg.in/auth0.v5
 gopkg.in/auth0.v5/internal/client
@@ -131,4 +133,4 @@ gopkg.in/auth0.v5/management
 # gopkg.in/yaml.v2 v2.2.8
 ## explicit
 gopkg.in/yaml.v2
-# gopkg.in/auth0.v5 => github.com/go-auth0/auth0 v1.3.1-0.20210126044025-c2f94c36f593
+# gopkg.in/auth0.v5 => github.com/go-auth0/auth0 v1.3.1-0.20210126151507-8ed3ec382cba
