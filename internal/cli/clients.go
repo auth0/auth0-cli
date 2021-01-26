@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -75,14 +76,18 @@ auth0 clients create --name myapp --type [native|spa|regular|m2m]
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// TODO(jfatta): depending on the app type, other client properties might be mandatory
 			// check: create app dashboard
+			appType, err := apiAppTypeFor(flags.appType)
+			if err != nil {
+				return err
+			}
 			c := &management.Client{
 				Name:        &flags.name,
 				Description: &flags.description,
-				AppType:     auth0.String(apiAppTypeFor(flags.appType)),
+				AppType:     auth0.String(appType),
 				Callbacks:   apiCallbacksFor(flags.callbacks),
 			}
 
-			err := ansi.Spinner("Creating client", func() error {
+			err = ansi.Spinner("Creating client", func() error {
 				return cli.api.Client.Create(c)
 			})
 
@@ -106,19 +111,19 @@ auth0 clients create --name myapp --type [native|spa|regular|m2m]
 	return cmd
 }
 
-func apiAppTypeFor(v string) string {
+func apiAppTypeFor(v string) (string, error) {
 	switch strings.ToLower(v) {
 	case "native":
-		return "native"
+		return "native", nil
 	case "spa":
-		return "spa"
+		return "spa", nil
 	case "regular":
-		return "regular_web"
+		return "regular_web", nil
 	case "m2m":
-		return "non_interactive"
+		return "non_interactive", nil
 
 	default:
-		return v
+		return "", errors.New("unknown type, expected: native, spa, regular, or m2m")
 	}
 }
 
