@@ -83,7 +83,7 @@ auth0 apis create --name myapi --identifier http://my-api
 			return nil
 		},
 	}
-	
+
 	cmd.Flags().StringVarP(&flags.name, "name", "n", "", "Name of the API.")
 	cmd.Flags().StringVarP(&flags.identifier, "identifier", "i", "", "Identifier of the API.")
 
@@ -107,7 +107,7 @@ auth0 apis update --id id --name myapi
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			api := &management.ResourceServer{Name: &flags.name}
-			manager := &management.ResourceServerManager{Management: cli.api}
+			manager := cli.api.ResourceServer
 
 			err := ansi.Spinner("Updating API", func() error {
 				return manager.Update(flags.id, api)
@@ -143,7 +143,7 @@ func deleteApiCmd(cli *cli) *cobra.Command {
 auth0 apis delete --id id
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			manager := &management.ResourceServerManager{Management: cli.api}
+			manager := cli.api.ResourceServer
 
 			err := ansi.Spinner("Deleting API", func() error {
 				return manager.Delete(flags.id)

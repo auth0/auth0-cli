@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"gopkg.in/auth0.v5"
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"gopkg.in/auth0.v5/management"
 )
 

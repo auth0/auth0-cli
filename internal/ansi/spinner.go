@@ -34,6 +34,12 @@ func Spinner(text string, fn func() error) error {
 		if err != nil {
 			s.FinalMSG = s.Prefix + spinnerTextFailed
 		}
+
+		// FIXME(cyx): this is causing a race condition. The problem is
+		// with our dependency on briandowns/spinner. For now adding an
+		// artificial sleep removes the race condition.
+		time.Sleep(time.Microsecond)
+
 		s.Stop()
 	}()
 

@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
@@ -49,7 +50,7 @@ var errUnauthenticated = errors.New("Not yet configured. Try `auth0 login`.")
 //
 type cli struct {
 	// core primitives exposed to command builders.
-	api      *management.Management
+	api      *auth0.API
 	renderer *display.Renderer
 
 	// set of flags which are user specified.
@@ -92,9 +93,14 @@ func (c *cli) setup() error {
 		return errUnauthenticated
 
 	} else if t.AccessToken != "" {
-		c.api, err = management.New(t.Domain,
+		m, err := management.New(t.Domain,
 			management.WithStaticToken(t.AccessToken),
 			management.WithDebug(c.verbose))
+		if err != nil {
+			return err
+		}
+
+		c.api = auth0.NewAPI(m)
 	}
 
 	return err
