@@ -2,10 +2,11 @@ package cli
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
-	"gopkg.in/auth0.v5/management"
 	"sort"
 	"time"
+
+	"github.com/spf13/cobra"
+	"gopkg.in/auth0.v5/management"
 )
 
 func getLatestLogs(cli *cli, n int) (result []*management.Log, err error) {

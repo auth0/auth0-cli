@@ -6,6 +6,8 @@ require (
 	github.com/benbjohnson/clock v1.1.0 // indirect
 	github.com/briandowns/spinner v1.11.1
 	github.com/fatih/color v1.9.0 // indirect
+	github.com/golang/mock v1.4.4
+	github.com/google/go-cmp v0.5.4
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/olekukonko/tablewriter v0.0.4

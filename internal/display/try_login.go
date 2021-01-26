@@ -9,7 +9,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
-	"gopkg.in/auth0.v5"
+	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
 type userInfoAndTokens struct {
