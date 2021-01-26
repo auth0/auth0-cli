@@ -73,19 +73,23 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 				} else {
 					return fmt.Errorf("No rule found with name: %q", name)
 				}
-
-				// @TODO Only display modified rules
-				rules, err := getRules(cli)
-
-				if err != nil {
-					return err
-				}
-
-				cli.renderer.RulesList(rules)
-
 				return nil
 			})
-			return err
+
+			if err != nil {
+				return err
+			}
+
+			// @TODO Only display modified rules
+			rules, err := getRules(cli)
+
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.RulesList(rules)
+
+			return nil
 		},
 	}
 
@@ -115,19 +119,23 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 				} else {
 					return fmt.Errorf("No rule found with name: %q", name)
 				}
-
-				// @TODO Only display modified rules
-				rules, err := getRules(cli)
-
-				if err != nil {
-					return err
-				}
-
-				cli.renderer.RulesList(rules)
-
 				return nil
 			})
-			return err
+
+			if err != nil {
+				return err
+			}
+
+			// @TODO Only display modified rules
+			rules, err := getRules(cli)
+
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.RulesList(rules)
+
+			return nil
 		},
 	}
 
