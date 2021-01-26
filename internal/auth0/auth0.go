@@ -10,6 +10,7 @@ import (
 type API struct {
 	Action         ActionAPI
 	ActionVersion  ActionVersionAPI
+	ActionBinding  ActionBindingAPI
 	Client         ClientAPI
 	Connection     ConnectionAPI
 	Log            LogAPI
@@ -21,6 +22,7 @@ func NewAPI(m *management.Management) *API {
 	return &API{
 		Action:         m.Action,
 		ActionVersion:  m.ActionVersion,
+		ActionBinding:  m.ActionBinding,
 		Client:         m.Client,
 		Connection:     m.Connection,
 		Log:            m.Log,
