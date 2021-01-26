@@ -9,8 +9,6 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
-var name string
-
 func rulesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "rules",
@@ -45,6 +43,7 @@ func listRulesCmd(cli *cli) *cobra.Command {
 }
 
 func enableRuleCmd(cli *cli) *cobra.Command {
+	var name string
 	cmd := &cobra.Command{
 		Use:   "enable",
 		Short: "enable rule(s)",
@@ -60,9 +59,9 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			ruleExists, ruleIdx := findRuleByName(name, data.Rules)
-			if ruleExists {
-				err := enableRule(data.Rules[ruleIdx], cli)
+			rule := findRuleByName(name, data.Rules)
+			if rule != nil {
+				err := enableRule(rule, cli)
 				if err != nil {
 					return err
 				}
@@ -84,13 +83,12 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "rule name")
-	// @TODO Take a look at this later
-	// cmd.MarkFlagRequired("name")
-
+	cmd.MarkPersistentFlagRequired("name")
 	return cmd
 }
 
 func disableRuleCmd(cli *cli) *cobra.Command {
+	var name string
 	cmd := &cobra.Command{
 		Use:   "disable",
 		Short: "disable rule",
@@ -106,9 +104,9 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			ruleExists, ruleIdx := findRuleByName(name, data.Rules)
-			if ruleExists {
-				err := disableRule(data.Rules[ruleIdx], cli)
+			rule := findRuleByName(name, data.Rules)
+			if rule != nil {
+				err := disableRule(rule, cli)
 				if err != nil {
 					return err
 				}
@@ -130,36 +128,31 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "rule name")
-	// @TODO Take a look at this later
-	// cmd.MarkFlagRequired("name")
+	cmd.MarkPersistentFlagRequired("name")
 
 	return cmd
 }
 
 // @TODO move to rules package
 func getRules(cli *cli) (list *management.RuleList, err error) {
-	list, err = cli.api.Client.Rule.List()
-	return
+	return cli.api.Client.Rule.List()
 }
 
-func findRuleByName(name string, rules []*management.Rule) (exists bool, idx int) {
-	exists = false
-	for i, aRule := range rules {
+func findRuleByName(name string, rules []*management.Rule) *management.Rule {
+	var foundRule *management.Rule
+	for _, aRule := range rules {
 		if (*aRule.Name) == name {
-			exists = true
-			idx = i
+			foundRule = aRule
 			break
 		}
 	}
-	return
+	return foundRule
 }
 
-func enableRule(rule *management.Rule, cli *cli) (err error) {
-	err = cli.api.Client.Rule.Update(rule.GetID(), &management.Rule{Enabled: auth0.Bool(true)})
-	return
+func enableRule(rule *management.Rule, cli *cli) error {
+	return cli.api.Client.Rule.Update(rule.GetID(), &management.Rule{Enabled: auth0.Bool(true)})
 }
 
-func disableRule(rule *management.Rule, cli *cli) (err error) {
-	err = cli.api.Client.Rule.Update(rule.GetID(), &management.Rule{Enabled: auth0.Bool(false)})
-	return
+func disableRule(rule *management.Rule, cli *cli) error {
+	return cli.api.Client.Rule.Update(rule.GetID(), &management.Rule{Enabled: auth0.Bool(false)})
 }
