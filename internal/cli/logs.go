@@ -45,8 +45,6 @@ func getLatestLogs(cli *cli, n int) (result []*management.Log, err error) {
 				break
 			}
 			page++
-
-			return nil
 		}
 		return err
 	})
