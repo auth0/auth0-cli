@@ -51,7 +51,7 @@ func (v *logView) AsTableRow() []string {
 
 	clientName := v.GetClientName()
 	if clientName == "" {
-		clientName = "N/A"
+		clientName = notApplicable
 	}
 
 	return []string{
