@@ -69,15 +69,17 @@ func readJsonFile(filePath string, out interface{}) error {
 	jsonFile, err := os.Open(filePath)
 	// if we os.Open returns an error then handle it
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 	// defer the closing of our jsonFile so that we can parse it later on
 	defer jsonFile.Close()
 
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-
-	err = json.Unmarshal([]byte(byteValue), &out)
+	byteValue, err := ioutil.ReadAll(jsonFile)
 	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal([]byte(byteValue), &out); err != nil {
 		return err
 	}
 
@@ -102,7 +104,6 @@ func testActionCmd(cli *cli) *cobra.Command {
 
 			var result management.Object
 			err = ansi.Spinner(fmt.Sprintf("Testing action: %s, version: %s", actionId, versionId), func() error {
-				fmt.Println(payload)
 				result, err = cli.api.ActionVersion.Test(actionId, versionId, payload)
 				return err
 			})
@@ -245,7 +246,7 @@ func reorderTriggerCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			cli.renderer.ActionTriggersList(list)
+			cli.renderer.ActionTriggersList(list.Bindings)
 			return nil
 		},
 	}
