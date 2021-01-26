@@ -358,10 +358,10 @@ func (m *managementError) Status() int {
 // Specific implementations embed this struct, therefore its direct use is not
 // useful. Rather it has been made public in order to aid documentation.
 type List struct {
-	Start  int `json:"start"`
-	Limit  int `json:"limit"`
-	Length int `json:"length"`
-	Total  int `json:"total"`
+	Start  int `json:"start,omitempty"`
+	Limit  int `json:"limit,omitempty"`
+	Length int `json:"length,omitempty"`
+	Total  int `json:"total,omitempty"`
 }
 
 func (l List) HasNext() bool {
