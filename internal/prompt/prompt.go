@@ -24,7 +24,6 @@ func TextInput(name string, message string, help string, value string, required 
 	input := &survey.Question{
 		Name:      name,
 		Prompt:    &survey.Input{Message: message, Help: help, Default: value},
-		Transform: survey.Title,
 	}
 
 	if required {
