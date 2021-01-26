@@ -198,8 +198,7 @@ func showTriggerCmd(cli *cli) *cobra.Command {
 			triggerID := management.TriggerID(trigger)
 
 			var list *management.ActionBindingList
-			err := ansi.Spinner("Loading actions", func() error {
-				var err error
+			err := ansi.Spinner("Loading actions", func() (err error) {
 				list, err = cli.api.ActionBinding.List(triggerID)
 				return err
 			})
@@ -239,8 +238,12 @@ func reorderTriggerCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			err = ansi.Spinner("Loading actions", func() (err error) {
-				list, err = cli.api.ActionBinding.Update(triggerID, list.Bindings)
+			err = ansi.Spinner("Reordoring actions", func() (err error) {
+				if _, err = cli.api.ActionBinding.Update(triggerID, list.Bindings); err != nil {
+					return err
+				}
+
+				list, err = cli.api.ActionBinding.List(triggerID)
 
 				return err
 			})
@@ -294,7 +297,11 @@ func createTriggerCmd(cli *cli) *cobra.Command {
 
 				var bindings []*management.ActionBinding = append(list.Bindings, binding)
 
-				list, err = cli.api.ActionBinding.Update(triggerID, bindings)
+				if _, err = cli.api.ActionBinding.Update(triggerID, bindings); err != nil {
+					return err
+				}
+
+				list, err = cli.api.ActionBinding.List(triggerID)
 
 				return err
 			})
