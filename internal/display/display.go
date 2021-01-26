@@ -141,6 +141,9 @@ func timeAgo(ts time.Time) string {
 
 	v := time.Since(ts)
 	switch {
+	case v < time.Minute:
+		return fmt.Sprintf("%d seconds ago", v/time.Second)
+
 	case v < 2*time.Minute:
 		return "a minute ago"
 
