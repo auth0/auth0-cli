@@ -64,9 +64,10 @@ Show the tenant logs.
 
 					for {
 						list, err = cli.api.Log.List(
-							management.Query(fmt.Sprintf("log_id:[%s TO *]", lastLogID)),
+							management.Query(fmt.Sprintf("log_id:[* TO %s]", lastLogID)),
+							management.Parameter("page", "0"),
+							management.Parameter("per_page", "100"),
 							management.Parameter("sort", "date:-1"),
-							management.Parameter("take", "100"),
 						)
 						if err != nil {
 							return

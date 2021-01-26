@@ -93,7 +93,6 @@ func (r *Renderer) Stream(data []View, ch <-chan View) {
 }
 
 func writeTable(w io.Writer, header []string, data [][]string, ch <-chan View) {
-	// tableString := &strings.Builder{}
 	table := tablewriter.NewWriter(w)
 	table.SetHeader(header)
 
@@ -129,9 +128,7 @@ func writeTable(w io.Writer, header []string, data [][]string, ch <-chan View) {
 		}
 	}()
 
-	go func() {
-		table.ContinuousRender(strCh)
-	}()
+	go table.ContinuousRender(strCh)
 
 	<-done
 }
