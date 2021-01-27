@@ -24,6 +24,15 @@ func askOne(prompt survey.Prompt, response interface{}) error {
 	return survey.AskOne(prompt, response, stdErrWriter, icons)
 }
 
+func SelectInput(name string, message string, options []string, defaultValue string) *survey.Question {
+	input := &survey.Question{
+		Name:   name,
+		Prompt: &survey.Select{Message: message, Options: options, Default: defaultValue},
+	}
+
+	return input
+}
+
 func TextInput(name string, message string, help string, value string, required bool) *survey.Question {
 	input := &survey.Question{
 		Name:   name,

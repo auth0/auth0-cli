@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -175,13 +176,35 @@ func downloadActionCmd(cli *cli) *cobra.Command {
 		Short: "Download the action version",
 		Long:  `$ auth0 actions download --name <actionid> --version <versionid | draft>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+
+			versions, err := cli.api.ActionVersion.List(actionId)
+			var options []string
+			options = append(options, "draft")
+
+			for _, v := range versions.Versions {
+				options = append(options, fmt.Sprint(v.Number))
+			}
+
+			var versionNumber string
+			prompt.AskOne(prompt.SelectInput("Actions version", "Choose a version to download", options, "draft"), &versionNumber)
+			if versionNumber == "draft" {
+				versionId = "draft"
+			} else {
+				i, err := strconv.Atoi(versionNumber)
+				if err != nil {
+					return err
+				}
+
+				versionId = versions.Versions[i-1].ID
+			}
+
 			cli.renderer.Infof("It will overwrite files in %s", path)
 			if confirmed := prompt.Confirm("Do you wish to proceed?"); !confirmed {
 				return nil
 			}
 
 			var version *management.ActionVersion
-			err := ansi.Spinner(fmt.Sprintf("Downloading action: %s, version: %s", actionId, versionId), func() (err error) {
+			err = ansi.Spinner(fmt.Sprintf("Downloading action: %s, version: %s", actionId, versionId), func() (err error) {
 				if version, err = cli.api.ActionVersion.Read(actionId, versionId); err != nil {
 					return err
 				}
