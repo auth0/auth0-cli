@@ -40,7 +40,7 @@ const (
 type ActionVersion struct {
 	ID           string        `json:"id,omitempty"`
 	Action       *Action       `json:"action,omitempty"`
-	Code         string        `json:"code"`
+	Code         string        `json:"code,omitempty"`
 	Dependencies []Dependency  `json:"dependencies,omitempty"`
 	Runtime      string        `json:"runtime,omitempty"`
 	Status       VersionStatus `json:"status,omitempty"`

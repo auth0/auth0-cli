@@ -201,7 +201,7 @@ func downloadActionCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			version.Code = "code.js"
+			version.Code = ""
 			metadata, err := json.MarshalIndent(version, "", "    ")
 			if err != nil {
 				return err
