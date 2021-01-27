@@ -142,6 +142,13 @@ func deployActionCmd(cli *cli) *cobra.Command {
 		Short: "Deploys the action version",
 		Long:  `$ auth0 actions deploy --name <actionid> --version <versionid>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if versionId == "" {
+				var err error
+				versionId, err = askVersion(cli, actionId)
+				if err != nil {
+					return err
+				}
+			}
 			var version *management.ActionVersion
 			err := ansi.Spinner(fmt.Sprintf("Deploying action: %s, version: %s", actionId, versionId), func() (err error) {
 				version, err = cli.api.ActionVersion.Deploy(actionId, versionId)
@@ -159,7 +166,7 @@ func deployActionCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to deploy")
-	cmd.Flags().StringVarP(&versionId, "version", "v", "draft", "Version ID of the action to deploy")
+	cmd.Flags().StringVarP(&versionId, "version", "v", "", "Version ID of the action to deploy")
 
 	mustRequireFlags(cmd, "name")
 
@@ -181,7 +188,7 @@ func askVersion(cli *cli, actionId string) (string, error) {
 	}
 
 	var versionNumber string
-	if err = prompt.AskOne(prompt.SelectInput("Actions version", "Choose a version to download", options, "draft"), &versionNumber); err != nil {
+	if err = prompt.AskOne(prompt.SelectInput("Actions version", "Choose a version", options, "draft"), &versionNumber); err != nil {
 		return "", err
 	}
 
