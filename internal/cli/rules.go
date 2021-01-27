@@ -489,8 +489,9 @@ func disableRule(rule *management.Rule, cli *cli) error {
 	return cli.api.Rule.Update(rule.GetID(), &management.Rule{Enabled: auth0.Bool(false)})
 }
 
-// TODO: Fix tildas when passing relative filepaths, e.g. ~/Downloads/example.js
 func parseFileByName(inputFile string) (string, error) {
+	inputFile = strings.Replace(inputFile, "~/", "../", -1)
+
 	f, err := ioutil.ReadFile(inputFile)
 
 	if err != nil {
