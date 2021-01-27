@@ -152,8 +152,7 @@ func (m *ActionVersionManager) Create(actionID string, v *ActionVersion) error {
 	return m.Request("POST", m.URI("actions", "actions", actionID, "versions"), v)
 }
 
-// TODO(cyx): This isn't implemented yet.
-func (m *ActionVersionManager) Update(actionID string, v *ActionVersion) error {
+func (m *ActionVersionManager) UpsertDraft(actionID string, v *ActionVersion) error {
 	return m.Request("PATCH", m.URI("actions", "actions", actionID, "versions", "draft"), v)
 }
 
@@ -174,9 +173,9 @@ func (m *ActionVersionManager) List(actionID string, opts ...RequestOption) (c *
 
 // TODO(cyx): might call this `activate` instead later. Still fleshing out the
 // name.
-func (m *ActionVersionManager) Promote(actionID, id string) (*ActionVersion, error) {
+func (m *ActionVersionManager) Deploy(actionID, id string) (*ActionVersion, error) {
 	var v ActionVersion
-	err := m.Request("POST", m.URI("actions", "actions", actionID, "versions", id, "promote"), &v)
+	err := m.Request("POST", m.URI("actions", "actions", actionID, "versions", id, "deploy"), &v)
 	return &v, err
 }
 
