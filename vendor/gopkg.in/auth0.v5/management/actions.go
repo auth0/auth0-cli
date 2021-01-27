@@ -41,7 +41,7 @@ type ActionVersion struct {
 	ID           string        `json:"id,omitempty"`
 	Action       *Action       `json:"action,omitempty"`
 	Code         string        `json:"code,omitempty"`
-	Dependencies []Dependency  `json:"dependencies,omitempty"`
+	Dependencies []Dependency  `json:"dependencies"`
 	Runtime      string        `json:"runtime,omitempty"`
 	Status       VersionStatus `json:"status,omitempty"`
 	Number       int           `json:"number,omitempty"`
@@ -154,6 +154,12 @@ func (m *ActionVersionManager) Create(actionID string, v *ActionVersion) error {
 
 func (m *ActionVersionManager) UpsertDraft(actionID string, v *ActionVersion) error {
 	return m.Request("PATCH", m.URI("actions", "actions", actionID, "versions", "draft"), v)
+}
+
+func (m *ActionVersionManager) ReadDraft(actionID string) (*ActionVersion, error) {
+	var v ActionVersion
+	err := m.Request("GET", m.URI("actions", "actions", actionID, "versions", "draft"), &v)
+	return &v, err
 }
 
 func (m *ActionVersionManager) Read(actionID, id string) (*ActionVersion, error) {
