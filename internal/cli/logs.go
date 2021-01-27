@@ -32,8 +32,8 @@ func logsCmd(cli *cli) *cobra.Command {
 	var noColor bool
 	cmd := &cobra.Command{
 		Use:   "logs",
-		Short: "show the tenant logs",
-		Long: `$ auth0 logs
+		Short: "Show the tenant logs",
+		Long: `auth0 logs
 Show the tenant logs.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
