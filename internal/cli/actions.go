@@ -177,25 +177,31 @@ func downloadActionCmd(cli *cli) *cobra.Command {
 		Long:  `$ auth0 actions download --name <actionid> --version <versionid | draft>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			versions, err := cli.api.ActionVersion.List(actionId)
-			var options []string
-			options = append(options, "draft")
-
-			for _, v := range versions.Versions {
-				options = append(options, fmt.Sprint(v.Number))
-			}
-
-			var versionNumber string
-			prompt.AskOne(prompt.SelectInput("Actions version", "Choose a version to download", options, "draft"), &versionNumber)
-			if versionNumber == "draft" {
-				versionId = "draft"
-			} else {
-				i, err := strconv.Atoi(versionNumber)
+			if versionId == "" {
+				versions, err := cli.api.ActionVersion.List(actionId)
 				if err != nil {
 					return err
 				}
 
-				versionId = versions.Versions[len(versions.Versions)-i].ID
+				var options []string
+				options = append(options, "draft")
+
+				for _, v := range versions.Versions {
+					options = append(options, fmt.Sprint(v.Number))
+				}
+
+				var versionNumber string
+				prompt.AskOne(prompt.SelectInput("Actions version", "Choose a version to download", options, "draft"), &versionNumber)
+				if versionNumber == "draft" {
+					versionId = "draft"
+				} else {
+					i, err := strconv.Atoi(versionNumber)
+					if err != nil {
+						return err
+					}
+
+					versionId = versions.Versions[len(versions.Versions)-i].ID
+				}
 			}
 
 			cli.renderer.Infof("It will overwrite files in %s", path)
@@ -204,7 +210,7 @@ func downloadActionCmd(cli *cli) *cobra.Command {
 			}
 
 			var version *management.ActionVersion
-			err = ansi.Spinner(fmt.Sprintf("Downloading action: %s, version: %s", actionId, versionId), func() (err error) {
+			err := ansi.Spinner(fmt.Sprintf("Downloading action: %s, version: %s", actionId, versionId), func() (err error) {
 				if version, err = cli.api.ActionVersion.Read(actionId, versionId); err != nil {
 					return err
 				}
@@ -240,7 +246,7 @@ func downloadActionCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to deploy")
-	cmd.Flags().StringVarP(&versionId, "version", "v", "draft", "Version ID of the action to deploy or draft, default: draft")
+	cmd.Flags().StringVarP(&versionId, "version", "v", "", "Version ID of the action to deploy or draft, default: draft")
 	cmd.Flags().StringVarP(&path, "path", "p", "./", "Path to save the action content")
 
 	mustRequireFlags(cmd, "name")
