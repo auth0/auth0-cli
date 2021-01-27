@@ -36,6 +36,7 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(listActionsCmd(cli))
 	cmd.AddCommand(testActionCmd(cli))
 	cmd.AddCommand(createActionCmd(cli))
+	cmd.AddCommand(updateActionCmd(cli))
 	cmd.AddCommand(deployActionCmd(cli))
 	cmd.AddCommand(downloadActionCmd(cli))
 	cmd.AddCommand(listActionVersionsCmd(cli))
@@ -399,7 +400,7 @@ Create a new action:
 				}
 			}
 
-			if shouldPrompt(cmd, actionFile) {
+			if shouldPrompt(cmd, actionFile) && shouldPrompt(cmd, actionScript) {
 				input := prompt.TextInput(actionFile, "Action File:", "File containing the action source code.", false)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
@@ -447,32 +448,12 @@ Create a new action:
 					return err
 				}
 
-				if flags.CreateVersion {
-					if err := cli.api.ActionVersion.Create(auth0.StringValue(action.ID), version); err != nil {
-						return err
-					}
-
-					// TODO(iamjem): this is a hack since the SDK won't decode 202 responses
-					list, err := cli.api.ActionVersion.List(auth0.StringValue(action.ID))
-					if err != nil {
-						return err
-					}
-
-					if len(list.Versions) > 0 {
-						version = list.Versions[0]
-					}
-				} else {
-					if err := cli.api.ActionVersion.UpsertDraft(auth0.StringValue(action.ID), version); err != nil {
-						return err
-					}
-
-					// TODO(iamjem): this is a hack since the SDK won't decode 202 responses
-					draft, err := cli.api.ActionVersion.ReadDraft(auth0.StringValue(action.ID))
-					if err != nil {
-						return err
-					}
-					version = draft
+				created, err := createActionVersion(cli.api, auth0.StringValue(action.ID), !flags.CreateVersion, version)
+				if err != nil {
+					return err
 				}
+
+				version = created
 
 				return nil
 			})
@@ -489,6 +470,83 @@ Create a new action:
 
 	cmd.Flags().StringVarP(&flags.Name, actionName, "n", "", "Action name to create.")
 	cmd.Flags().StringVarP(&flags.Trigger, actionTrigger, "t", string(management.PostLogin), "Trigger type for action.")
+	cmd.Flags().StringVarP(&flags.File, actionFile, "f", "", "File containing the action source code.")
+	cmd.Flags().StringVarP(&flags.Script, actionScript, "s", "", "Raw source code for the action.")
+	cmd.Flags().StringSliceVarP(&flags.Dependency, actionDependency, "d", nil, "Dependency for the source code (<name>@<semver>).")
+	// TODO: This name is kind of overloaded since it could also refer to the version of the trigger (though there's only v1's at this time)
+	cmd.Flags().BoolVarP(&flags.CreateVersion, actionVersion, "v", false, "Create an explicit action version from the source code instead of a draft.")
+
+	mustRequireFlags(cmd, actionName)
+	if err := cmd.MarkFlagFilename(actionFile); err != nil {
+		panic(err)
+	}
+
+	return cmd
+}
+
+func updateActionCmd(cli *cli) *cobra.Command {
+	var flags struct {
+		Name          string
+		File          string
+		Script        string
+		Dependency    []string
+		CreateVersion bool
+	}
+
+	cmd := &cobra.Command{
+		Use:   "update",
+		Short: "Updates an existing action",
+		Long: `$ auth0 actions update
+Updates an existing action:
+
+    $ auth0 actions update --name <actionid> --file action.js --dependency lodash@4.17.19  
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if shouldPrompt(cmd, actionFile) && shouldPrompt(cmd, actionScript) {
+				input := prompt.TextInput(actionFile, "Action File:", "File containing the action source code.", false)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
+			source, err := sourceFromFileOrScript(flags.File, flags.Script)
+			if err != nil {
+				return err
+			}
+
+			dependencies, err := validators.Dependencies(flags.Dependency)
+			if err != nil {
+				return err
+			}
+
+			version := &management.ActionVersion{
+				Code:         source,
+				Dependencies: dependencies,
+				Runtime:      "node12",
+			}
+
+			err = ansi.Spinner("Updating action", func() error {
+				created, err := createActionVersion(cli.api, flags.Name, !flags.CreateVersion, version)
+				if err != nil {
+					return err
+				}
+
+				version = created
+				return nil
+			})
+
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.ActionVersion(version)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&flags.Name, actionName, "n", "", "Action ID to update.")
 	cmd.Flags().StringVarP(&flags.File, actionFile, "f", "", "File containing the action source code.")
 	cmd.Flags().StringVarP(&flags.Script, actionScript, "s", "", "Raw source code for the action.")
 	cmd.Flags().StringSliceVarP(&flags.Dependency, actionDependency, "d", nil, "Dependency for the source code (<name>@<semver>).")
@@ -737,4 +795,36 @@ func sourceFromFileOrScript(file, script string) (string, error) {
 	}
 
 	return "", errNoSource
+}
+
+func createActionVersion(api *auth0.API, actionID string, draft bool, version *management.ActionVersion) (*management.ActionVersion, error) {
+	var v *management.ActionVersion
+	if draft {
+		if err := api.ActionVersion.UpsertDraft(actionID, version); err != nil {
+			return nil, err
+		}
+
+		// TODO(iamjem): this is a hack since the SDK won't decode 202 responses
+		draft, err := api.ActionVersion.ReadDraft(actionID)
+		if err != nil {
+			return nil, err
+		}
+		v = draft
+	} else {
+		if err := api.ActionVersion.Create(actionID, version); err != nil {
+			return nil, err
+		}
+
+		// TODO(iamjem): this is a hack since the SDK won't decode 202 responses
+		list, err := api.ActionVersion.List(actionID)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(list.Versions) > 0 {
+			v = list.Versions[0]
+		}
+	}
+
+	return v, nil
 }
