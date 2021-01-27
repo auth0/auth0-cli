@@ -16,7 +16,7 @@ const (
 func apisCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "apis",
-		Short:   "manage resources for APIs.",
+		Short:   "Manage resources for APIs",
 		Aliases: []string{"resource-servers"},
 	}
 
@@ -33,11 +33,11 @@ func apisCmd(cli *cli) *cobra.Command {
 func listApisCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "Lists your existing APIs",
-		Long: `$ auth0 apis list
+		Short: "List your existing APIs",
+		Long: `auth0 apis list
 Lists your existing APIs. To create one try:
 
-    $ auth0 apis create
+    auth0 apis create
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ResourceServerList
@@ -68,7 +68,7 @@ func showApiCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show",
 		Short: "Show an API",
-		Long: `Shows an API:
+		Long: `Show an API:
 
 auth0 apis show --id id
 `,
@@ -116,7 +116,7 @@ func createApiCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new API",
-		Long: `Creates a new API:
+		Long: `Create a new API:
 
 auth0 apis create --name myapi --identifier http://my-api
 `,
@@ -182,7 +182,7 @@ func updateApiCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update an API",
-		Long: `Updates an API:
+		Long: `Update an API:
 
 auth0 apis update --id id --name myapi
 `,
@@ -236,7 +236,7 @@ func deleteApiCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete an API",
-		Long: `Deletes an API:
+		Long: `Delete an API:
 
 auth0 apis delete --id id
 `,
