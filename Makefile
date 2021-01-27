@@ -5,7 +5,7 @@ generate:
 .PHONY: generate
 
 test:
-	CGO_ENABLED=1 go test -race ./... -count 1
+	CGO_ENABLED=1 go test -race -cover ./... -count 1
 .PHONY: test
 
 lint:
