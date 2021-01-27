@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/logrusorgru/aurora"
 
 	"gopkg.in/auth0.v5/management"
@@ -72,7 +73,7 @@ func typeDescFor(l *management.Log, noColor bool) (typ, desc string) {
 		desc = strings.TrimSuffix(chunks[1], ")")
 	}
 
-	desc = fmt.Sprintf("%s %s", desc, l.Description)
+	desc = fmt.Sprintf("%s %s", desc, auth0.StringValue(l.Description))
 
 	if !noColor {
 		// colorize the event type field based on whether it's a success or failure
