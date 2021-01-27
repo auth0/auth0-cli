@@ -11,7 +11,7 @@ import (
 func rolesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "roles",
-		Short: "manage resources for roles.",
+		Short: "Manage resources for roles",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -28,7 +28,7 @@ func rolesListCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List all roles",
-		Long: `$ auth0 roles list
+		Long: `auth0 roles list
 Retrieve filtered list of roles that can be assigned to users or groups
 
 `,
@@ -59,7 +59,7 @@ func rolesGetCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get a role",
-		Long: `$ auth0 roles get --role-id myRoleID
+		Long: `auth0 roles get --role-id myRoleID
 Get a role
 
 `,
@@ -109,7 +109,7 @@ func rolesDeleteCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete a role",
-		Long: `$ auth0 roles delete --role-id myRoleID
+		Long: `auth0 roles delete --role-id myRoleID
 Delete a role.
 
 `,
@@ -151,7 +151,7 @@ func rolesUpdateCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update a role",
-		Long: `$ auth0 roles update --role-id myRoleID --name myName --description myDescription
+		Long: `auth0 roles update --role-id myRoleID --name myName --description myDescription
 Update a role.
 
 `,
@@ -210,7 +210,7 @@ func rolesCreateCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a role",
-		Long: `$ auth0 roles create --name myName --description myDescription
+		Long: `auth0 roles create --name myName --description myDescription
 Create a new role.
 
 `,

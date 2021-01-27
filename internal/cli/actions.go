@@ -29,7 +29,7 @@ const (
 func actionsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "actions",
-		Short: "manage resources for actions.",
+		Short: "Manage resources for actions",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -47,7 +47,7 @@ func actionsCmd(cli *cli) *cobra.Command {
 func triggersCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "triggers",
-		Short: "manage resources for action triggers.",
+		Short: "Manage resources for action triggers",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -61,11 +61,11 @@ func triggersCmd(cli *cli) *cobra.Command {
 func listActionsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "Lists your existing actions",
-		Long: `$ auth0 actions list
-Lists your existing actions. To create one try:
+		Short: "List existing actions",
+		Long: `auth0 actions list
+List existing actions. To create one try:
 
-    $ auth0 actions create
+    auth0 actions create
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			list, err := cli.api.Action.List()
@@ -115,7 +115,7 @@ func testActionCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "test",
 		Short: "Test an action draft against a payload",
-		Long:  `$ auth0 actions test --id <actionid> --file <payload.json>`,
+		Long:  `auth0 actions test --id <actionid> --file <payload.json>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -180,8 +180,8 @@ func deployActionCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "deploy",
-		Short: "Deploys the action version",
-		Long:  `$ auth0 actions deploy --id <actionid> --version <versionid>`,
+		Short: "Deploy the action version",
+		Long:  `auth0 actions deploy --id <actionid> --version <versionid>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -235,7 +235,7 @@ func downloadActionCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "download",
 		Short: "Download the action version",
-		Long:  `$ auth0 actions download --id <actionid> --version <versionid | draft>`,
+		Long:  `auth0 actions download --id <actionid> --version <versionid | draft>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -320,8 +320,8 @@ func listActionVersionsCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "versions",
-		Short: "Lists the action versions",
-		Long:  `$ auth0 actions versions --id <actionid>`,
+		Short: "List the action versions",
+		Long:  `auth0 actions versions --id <actionid>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -368,11 +368,11 @@ func createActionCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create",
-		Short: "Creates a new action",
-		Long: `$ auth0 actions create
-Creates a new action:
+		Short: "Create a new action",
+		Long: `auth0 actions create
+Create a new action:
 
-    $ auth0 actions create --name my-action --trigger post-login --file action.js --dependency lodash@4.17.19
+    auth0 actions create --name my-action --trigger post-login --file action.js --dependency lodash@4.17.19
 `,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
@@ -511,7 +511,7 @@ func showTriggerCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show",
 		Short: "Show actions by trigger",
-		Long:  `$ auth0 actions triggers show --trigger post-login`,
+		Long:  `auth0 actions triggers show --trigger post-login`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -563,8 +563,8 @@ func reorderTriggerCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "reorder",
-		Short: "Reorders actions by trigger",
-		Long:  `$ auth0 actions triggers reorder --trigger <post-login> --file <bindings.json>`,
+		Short: "Reorder actions by trigger",
+		Long:  `auth0 actions triggers reorder --trigger <post-login> --file <bindings.json>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -637,7 +637,7 @@ func createTriggerCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Bind an action to a trigger",
-		Long:  `$ auth0 actions triggers create --trigger <post-login> --action <action_id>`,
+		Long:  `auth0 actions triggers create --trigger <post-login> --action <action_id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
