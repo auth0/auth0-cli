@@ -40,7 +40,7 @@ func quickstartDownloadCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "download",
-		Short: "Download a specific type and tech stack for quick starts.",
+		Short: "Download a specific type and tech stack for quick starts",
 		Long:  `$ auth0 quickstart download --type <type> --client-id <client-id> --stack <stack>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := cli.api.Client.Read(flags.ClientID)
