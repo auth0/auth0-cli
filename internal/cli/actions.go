@@ -523,7 +523,7 @@ Create a new action:
 
 func updateActionCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		Name          string
+		ID            string
 		File          string
 		Script        string
 		Dependency    []string
@@ -536,7 +536,7 @@ func updateActionCmd(cli *cli) *cobra.Command {
 		Long: `$ auth0 actions update
 Updates an existing action:
 
-    $ auth0 actions update --name <actionid> --file action.js --dependency lodash@4.17.19
+    $ auth0 actions update --id <actionid> --file action.js --dependency lodash@4.17.19
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if shouldPrompt(cmd, actionFile) && shouldPrompt(cmd, actionScript) {
@@ -564,7 +564,7 @@ Updates an existing action:
 			}
 
 			err = ansi.Spinner("Updating action", func() error {
-				created, err := createActionVersion(cli.api, flags.Name, !flags.CreateVersion, version)
+				created, err := createActionVersion(cli.api, flags.ID, !flags.CreateVersion, version)
 				if err != nil {
 					return err
 				}
@@ -583,7 +583,7 @@ Updates an existing action:
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.Name, actionName, "n", "", "Action ID to update.")
+	cmd.Flags().StringVarP(&flags.ID, actionName, "n", "", "Action ID to update.")
 	cmd.Flags().StringVarP(&flags.File, actionFile, "f", "", "File containing the action source code.")
 	cmd.Flags().StringVarP(&flags.Script, actionScript, "s", "", "Raw source code for the action.")
 	cmd.Flags().StringSliceVarP(&flags.Dependency, actionDependency, "d", nil, "Dependency for the source code (<name>@<semver>).")
