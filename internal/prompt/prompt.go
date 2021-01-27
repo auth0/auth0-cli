@@ -16,7 +16,11 @@ func Ask(inputs []*survey.Question, response interface{}) error {
 	return survey.Ask(inputs, response, stdErrWriter, icons)
 }
 
-func AskOne(prompt survey.Prompt, response interface{}) error {
+func AskOne(input *survey.Question, response interface{}) error {
+	return survey.Ask([]*survey.Question {input}, response, stdErrWriter, icons)
+}
+
+func askOne(prompt survey.Prompt, response interface{}) error {
 	return survey.AskOne(prompt, response, stdErrWriter, icons)
 }
 
@@ -53,7 +57,7 @@ func Confirm(message string) bool {
 		Message: message,
 	}
 
-	if err := AskOne(prompt, &result); err != nil {
+	if err := askOne(prompt, &result); err != nil {
 		return false
 	}
 

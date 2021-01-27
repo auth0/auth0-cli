@@ -12,9 +12,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"gopkg.in/auth0.v5/management"
 )
 
@@ -236,5 +238,21 @@ func mustRequireFlags(cmd *cobra.Command, flags ...string) {
 		if err := cmd.MarkFlagRequired(f); err != nil {
 			panic(err)
 		}
+	}
+}
+
+func canPrompt() bool {
+	return ansi.IsTerminal()
+}
+
+func shouldPrompt(cmd *cobra.Command, flag string) bool {
+	return ansi.IsTerminal() && !cmd.Flags().Changed(flag)
+}
+
+func prepareInteractivity(cmd *cobra.Command) {
+	if canPrompt() {
+		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+			cmd.Flags().SetAnnotation(flag.Name, cobra.BashCompOneRequiredFlag, []string{"false"})
+		})
 	}
 }

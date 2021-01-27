@@ -32,6 +32,11 @@ func (r *Renderer) ApiList(apis []*management.ResourceServer) {
 	r.Results(res)
 }
 
+func (r *Renderer) ApiShow(api *management.ResourceServer) {
+	r.Heading(ansi.Bold(r.Tenant), "API\n")
+	r.Results([]View{makeView(api)})
+}
+
 func (r *Renderer) ApiCreate(api *management.ResourceServer) {
 	r.Heading(ansi.Bold(r.Tenant), "API created\n")
 	r.Results([]View{makeView(api)})

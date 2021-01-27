@@ -35,7 +35,7 @@ func listRulesCmd(cli *cli) *cobra.Command {
 		Long:  `Lists the rules in your current tenant.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var rules *management.RuleList
-			err := ansi.Spinner("Getting rules", func() error {
+			err := ansi.Spinner("Loading rules", func() error {
 				var err error
 				rules, err = getRules(cli)
 				return err
