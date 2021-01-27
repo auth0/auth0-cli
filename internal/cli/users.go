@@ -4,8 +4,14 @@ import (
 	"errors"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
+)
+
+const (
+	userID    = "id"
+	userEmail = "email"
 )
 
 func usersCmd(cli *cli) *cobra.Command {
@@ -15,50 +21,59 @@ func usersCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.AddCommand(getusersCmd(cli))
+	cmd.AddCommand(showUserCmd(cli))
 
 	return cmd
 }
 
-func getusersCmd(cli *cli) *cobra.Command {
+func showUserCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		id     string
-		email  string
-		fields string
+		ID     string
+		Email  string
+		Fields string
 	}
 
 	cmd := &cobra.Command{
-		Use:   "get",
-		Short: "Get a user's details",
-		Long: `$ auth0 users get
+		Use:   "show",
+		Short: "Show a user's details",
+		Long: `$ auth0 users show --id id --email email
 Get a user
 `,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			userID, err := cmd.LocalFlags().GetString("id")
-			if err != nil {
-				return err
+			if shouldPrompt(cmd, userID) && flags.Email == "" {
+				input := prompt.TextInput(userID, "Id:", "ID of the user to show.", false)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
 			}
 
-			userEmail, err := cmd.LocalFlags().GetString("email")
-			if err != nil {
-				return err
+			if shouldPrompt(cmd, userEmail) && flags.ID == "" {
+				input := prompt.TextInput(userEmail, "Email:", "Email of the user to show.", false)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
 			}
 
-			if userID == "" && userEmail == "" {
+			if flags.ID == "" && flags.Email == "" {
 				return errors.New("User id or email flag must be specified")
 			}
 
-			if userID != "" && userEmail != "" {
+			if flags.ID != "" && flags.Email != "" {
 				return errors.New("User id and email flags cannot be combined")
 			}
 
 			var users []*management.User
 			var user *management.User
 
-			if userID != "" {
+			if flags.ID != "" {
 				err := ansi.Spinner("Getting user", func() error {
 					var err error
-					user, err = cli.api.User.Read(flags.id)
+					user, err = cli.api.User.Read(flags.ID)
 					return err
 				})
 
@@ -72,10 +87,10 @@ Get a user
 				return nil
 			}
 
-			if userEmail != "" {
+			if flags.Email != "" {
 				err := ansi.Spinner("Getting user(s)", func() error {
 					var err error
-					users, err = cli.api.User.ListByEmail(userEmail)
+					users, err = cli.api.User.ListByEmail(flags.Email)
 					return err
 				})
 
@@ -91,8 +106,8 @@ Get a user
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.id, "id", "i", "", "User ID of user to get.")
-	cmd.Flags().StringVarP(&flags.email, "email", "e", "", "Email of user to get.")
+	cmd.Flags().StringVarP(&flags.ID, userID, "i", "", "ID of the user to show.")
+	cmd.Flags().StringVarP(&flags.Email, userEmail, "e", "", "Email of the user to show.")
 
 	return cmd
 }
