@@ -2,7 +2,9 @@ package cli
 
 import (
 	"fmt"
+	"io/ioutil"
 	"regexp"
+	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -244,6 +246,16 @@ func createRulesCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			if strings.Contains(flags.Script, ".js") {
+				content, err := parseFileByName(flags.Script)
+
+				if err != nil {
+					return err
+				}
+
+				flags.Script = content
+			}
+
 			r := &management.Rule{
 				Name:    &flags.Name,
 				Script:  &flags.Script,
@@ -415,6 +427,16 @@ func updateRulesCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			if strings.Contains(flags.Script, ".js") {
+				content, err := parseFileByName(flags.Script)
+
+				if err != nil {
+					return err
+				}
+
+				flags.Script = content
+			}
+
 			r := &management.Rule{
 				Name:    &flags.Name,
 				Script:  &flags.Script,
@@ -465,4 +487,23 @@ func enableRule(rule *management.Rule, cli *cli) error {
 
 func disableRule(rule *management.Rule, cli *cli) error {
 	return cli.api.Rule.Update(rule.GetID(), &management.Rule{Enabled: auth0.Bool(false)})
+}
+
+// TODO: Fix tildas when passing relative filepaths, e.g. ~/Downloads/example.js
+func parseFileByName(inputFile string) (string, error) {
+	f, err := ioutil.ReadFile(inputFile)
+
+	if err != nil {
+		return "", fmt.Errorf("Error reading file: %s", err)
+	}
+
+	if err != nil {
+		return "", fmt.Errorf("Cannot parse file %s: %w", f, err)
+	}
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(f), nil
 }
