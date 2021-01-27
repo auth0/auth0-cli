@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -22,7 +23,10 @@ const (
 	cliLoginTestingCallbackAddr      string = "localhost:8484"
 	cliLoginTestingCallbackURL       string = "http://localhost:8484"
 	cliLoginTestingInitiateLoginURI  string = "https://cli.auth0.com"
-	cliLoginTestingScopes            string = "openid profile"
+)
+
+var (
+	cliLoginTestingScopes []string = []string{"openid", "profile"}
 )
 
 func tryLoginCmd(cli *cli) *cobra.Command {
@@ -37,7 +41,6 @@ Launch a browser to try out your universal login box for the given client.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var userInfo *auth.UserInfo
-			var tokenResponse *auth.TokenResponse
 
 			tenant, err := cli.getTenant()
 			if err != nil {
@@ -61,81 +64,31 @@ Launch a browser to try out your universal login box for the given client.
 				return err
 			}
 
-			cli.renderer.Infof("A browser window will open to begin this client's login flow.")
-			cli.renderer.Infof("Once login is complete, you can return to the CLI to view user profile information and tokens.\n")
-
-			// check if the chosen client includes our local callback URL in its
-			// allowed list. If not we'll need to add it (after asking the user
-			// for permission).
-			needsLocalCallbackURL := !checkForLocalCallbackURL(client)
-			if needsLocalCallbackURL {
-				cli.renderer.Warnf("The client you are using does not currently allow callbacks to localhost.")
-				cli.renderer.Warnf("To complete the login flow the CLI needs to redirect logins to a local server and record the result.\n")
-				cli.renderer.Warnf("The client will be modified to update the allowed callback URLs, we'll remove them when done.")
-				cli.renderer.Warnf("If you do not wish to modify the client, you can abort now.\n")
-			}
-
-			if confirmed := prompt.Confirm("Do you wish to proceed?"); !confirmed {
+			abort, needsLocalCallbackURL := runLoginFlowPreflightChecks(cli, client)
+			if abort {
 				return nil
 			}
-			fmt.Fprint(cli.renderer.MessageWriter, "\n")
 
-			err = ansi.Spinner("Waiting for login flow to complete", func() error {
-				if needsLocalCallbackURL {
-					if err := addLocalCallbackURLToClient(cli.api.Client, client); err != nil {
-						return err
-					}
-				}
+			tokenResponse, err := runLoginFlow(
+				cli,
+				tenant,
+				client,
+				connectionName,
+				needsLocalCallbackURL,
+				"",      // audience is only supported for get-token
+				"login", // force a login page when using try-login
+				cliLoginTestingScopes,
+			)
+			if err != nil {
+				return err
+			}
 
-				// Build a login URL and initiate login in a browser window.
-				loginURL, err := buildInitiateLoginURL(tenant.Domain, client.GetClientID(), connectionName)
-				if err != nil {
-					return err
-				}
-
-				if err := open.URL(loginURL); err != nil {
-					return err
-				}
-
-				// launch a HTTP server to wait for the callback to capture the auth
-				// code.
-				authCode, err := waitForBrowserCallback()
-				if err != nil {
-					return err
-				}
-
-				// once the callback is received, exchange the code for an access
-				// token.
-				tokenResponse, err = auth.ExchangeCodeForToken(
-					tenant.Domain,
-					client.GetClientID(),
-					client.GetClientSecret(),
-					authCode,
-					cliLoginTestingCallbackURL,
-				)
-				if err != nil {
-					return fmt.Errorf("%w", err)
-				}
-
+			if err := ansi.Spinner("Fetching user metadata", func() error {
 				// Use the access token to fetch user information from the /userinfo
 				// endpoint.
 				userInfo, err = auth.FetchUserInfo(tenant.Domain, tokenResponse.AccessToken)
-				if err != nil {
-					return err
-				}
-
-				// if we added the local callback URL to the client then we need to
-				// remove it when we're done
-				if needsLocalCallbackURL {
-					if err := removeLocalCallbackURLFromClient(cli.api.Client, client); err != nil {
-						return err
-					}
-				}
-
-				return nil
-			})
-
-			if err != nil {
+				return err
+			}); err != nil {
 				return err
 			}
 
@@ -149,6 +102,87 @@ Launch a browser to try out your universal login box for the given client.
 	cmd.Flags().StringVarP(&clientID, "client-id", "c", "", "Client ID for which to test login.")
 	cmd.Flags().StringVarP(&connectionName, "connection", "", "", "Connection to test during login.")
 	return cmd
+}
+
+// runLoginFlowPreflightChecks checks if we need to make any updates to the
+// client being tested, and asks the user to confirm whether to proceed.
+func runLoginFlowPreflightChecks(cli *cli, c *management.Client) (bool, bool) {
+	cli.renderer.Infof("A browser window will open to begin this client's login flow.")
+	cli.renderer.Infof("Once login is complete, you can return to the CLI to view user profile information and tokens.\n")
+
+	// check if the chosen client includes our local callback URL in its
+	// allowed list. If not we'll need to add it (after asking the user
+	// for permission).
+	needsLocalCallbackURL := !checkForLocalCallbackURL(c)
+	if needsLocalCallbackURL {
+		cli.renderer.Warnf("The client you are using does not currently allow callbacks to localhost.")
+		cli.renderer.Warnf("To complete the login flow the CLI needs to redirect logins to a local server and record the result.\n")
+		cli.renderer.Warnf("The client will be modified to update the allowed callback URLs, we'll remove them when done.")
+		cli.renderer.Warnf("If you do not wish to modify the client, you can abort now.\n")
+	}
+
+	if confirmed := prompt.Confirm("Do you wish to proceed?"); !confirmed {
+		return true, needsLocalCallbackURL
+	}
+	fmt.Fprint(cli.renderer.MessageWriter, "\n")
+
+	return false, needsLocalCallbackURL
+}
+
+// runLoginFlow initiates a full user-facing login flow, waits for a response
+// and returns the retrieved tokens to the caller when done.
+func runLoginFlow(cli *cli, t tenant, c *management.Client, connName string, needsLocalCallbackURL bool, audience, prompt string, scopes []string) (*auth.TokenResponse, error) {
+	var tokenResponse *auth.TokenResponse
+
+	err := ansi.Spinner("Waiting for login flow to complete", func() error {
+		if needsLocalCallbackURL {
+			if err := addLocalCallbackURLToClient(cli.api.Client, c); err != nil {
+				return err
+			}
+		}
+
+		// Build a login URL and initiate login in a browser window.
+		loginURL, err := buildInitiateLoginURL(t.Domain, c.GetClientID(), connName, audience, prompt, scopes)
+		if err != nil {
+			return err
+		}
+
+		if err := open.URL(loginURL); err != nil {
+			return err
+		}
+
+		// launch a HTTP server to wait for the callback to capture the auth
+		// code.
+		authCode, err := waitForBrowserCallback()
+		if err != nil {
+			return err
+		}
+
+		// once the callback is received, exchange the code for an access
+		// token.
+		tokenResponse, err = auth.ExchangeCodeForToken(
+			t.Domain,
+			c.GetClientID(),
+			c.GetClientSecret(),
+			authCode,
+			cliLoginTestingCallbackURL,
+		)
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
+
+		// if we added the local callback URL to the client then we need to
+		// remove it when we're done
+		if needsLocalCallbackURL {
+			if err := removeLocalCallbackURLFromClient(cli.api.Client, c); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	return tokenResponse, err
 }
 
 // getOrCreateCLITesterClient uses the manage API to look for an existing client
@@ -221,7 +255,7 @@ func removeLocalCallbackURLFromClient(clientManager auth0.ClientAPI, client *man
 	}
 
 	// can't update a client to have 0 callback URLs, so don't attempt it
-	if len(callbacks) == 1 {
+	if len(callbacks) == 0 {
 		return nil
 	}
 
@@ -234,18 +268,28 @@ func removeLocalCallbackURLFromClient(clientManager auth0.ClientAPI, client *man
 
 // buildInitiateLoginURL constructs a URL + query string that can be used to
 // initiate a login-flow from the CLI.
-func buildInitiateLoginURL(domain, clientID, connectionName string) (string, error) {
+func buildInitiateLoginURL(domain, clientID, connectionName, audience, prompt string, scopes []string) (string, error) {
 	var path string = "/authorize"
 
 	q := url.Values{}
 	q.Add("client_id", clientID)
 	q.Add("response_type", "code")
-	q.Add("prompt", "login")
-	q.Add("scope", cliLoginTestingScopes)
 	q.Add("redirect_uri", cliLoginTestingCallbackURL)
+
+	if prompt != "" {
+		q.Add("prompt", prompt)
+	}
 
 	if connectionName != "" {
 		q.Add("connection", connectionName)
+	}
+
+	if audience != "" {
+		q.Add("audience", audience)
+	}
+
+	if len(scopes) > 0 {
+		q.Add("scope", strings.Join(scopes, " "))
 	}
 
 	u := &url.URL{

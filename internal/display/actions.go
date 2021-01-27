@@ -38,18 +38,28 @@ func (v *triggerView) AsTableRow() []string {
 }
 
 type actionVersionView struct {
-	ID        string
-	Status    string
-	Runtime   string
-	CreatedAt string
+	ID         string
+	ActionID   string
+	ActionName string
+	Runtime    string
+	Status     string
+	CreatedAt  string
 }
 
 func (v *actionVersionView) AsTableHeader() []string {
-	return []string{"ID", "Status", "Runtime", "Created At"}
+	return []string{"ID", "Action ID", "Action Name", "Runtime", "Status", "Created At"}
 }
 
 func (v *actionVersionView) AsTableRow() []string {
-	return []string{v.ID, v.Status, v.Runtime, v.CreatedAt}
+	return []string{v.getID(), v.ActionID, v.ActionName, v.Runtime, v.Status, v.CreatedAt}
+}
+
+func (v *actionVersionView) getID() string {
+	// draft versions don't have a unique id
+	if v.ID == "" {
+		return "draft"
+	}
+	return v.ID
 }
 
 func (r *Renderer) ActionList(actions []*management.Action) {
@@ -118,10 +128,12 @@ func (r *Renderer) ActionVersion(version *management.ActionVersion) {
 	r.Heading(ansi.Bold(r.Tenant), "action version\n")
 
 	v := &actionVersionView{
-		ID:        auth0.StringValue(&version.ID),
-		Status:    string(version.Status),
-		Runtime:   auth0.StringValue(&version.Runtime),
-		CreatedAt: timeAgo(auth0.TimeValue(version.CreatedAt)),
+		ID:         version.ID,
+		ActionID:   auth0.StringValue(version.Action.ID),
+		ActionName: auth0.StringValue(version.Action.ID),
+		Runtime:    auth0.StringValue(&version.Runtime),
+		Status:     string(version.Status),
+		CreatedAt:  timeAgo(auth0.TimeValue(version.CreatedAt)),
 	}
 
 	r.Results([]View{v})
@@ -133,10 +145,12 @@ func (r *Renderer) ActionVersionList(list []*management.ActionVersion) {
 	var res []View
 	for _, version := range list {
 		res = append(res, &actionVersionView{
-			ID:        auth0.StringValue(&version.ID),
-			Status:    string(version.Status),
-			Runtime:   auth0.StringValue(&version.Runtime),
-			CreatedAt: timeAgo(auth0.TimeValue(version.CreatedAt)),
+			ID:         auth0.StringValue(&version.ID),
+			ActionID:   auth0.StringValue(version.Action.ID),
+			ActionName: auth0.StringValue(version.Action.Name),
+			Runtime:    auth0.StringValue(&version.Runtime),
+			Status:     string(version.Status),
+			CreatedAt:  timeAgo(auth0.TimeValue(version.CreatedAt)),
 		})
 	}
 

@@ -67,7 +67,7 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "enable",
-		Short: "Emable a rule",
+		Short: "Enable a rule",
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
