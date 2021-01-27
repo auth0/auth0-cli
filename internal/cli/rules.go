@@ -373,7 +373,7 @@ func updateRulesCmd(cli *cli) *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if shouldPrompt(cmd, ruleID) {
-				input := prompt.TextInput(ruleID, "Id:", "Id of the rule.", "", true)
+				input := prompt.TextInput(ruleID, "Id:", "Id of the rule.", true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
@@ -384,7 +384,6 @@ func updateRulesCmd(cli *cli) *cobra.Command {
 				input := prompt.TextInput(
 					"name", "Name:",
 					"Name of the rule. You can change the rule name later in the rule settings.",
-					"",
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
@@ -393,7 +392,7 @@ func updateRulesCmd(cli *cli) *cobra.Command {
 			}
 
 			if shouldPrompt(cmd, ruleScript) {
-				input := prompt.TextInput(ruleScript, "Script:", "Script of the rule.", "", true)
+				input := prompt.TextInput(ruleScript, "Script:", "Script of the rule.", true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
@@ -401,7 +400,7 @@ func updateRulesCmd(cli *cli) *cobra.Command {
 			}
 
 			if shouldPrompt(cmd, ruleOrder) {
-				input := prompt.TextInput(ruleOrder, "Order:", "Order of the rule.", "0", false)
+				input := prompt.TextInputDefault(ruleOrder, "Order:", "Order of the rule.", "0", false)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
