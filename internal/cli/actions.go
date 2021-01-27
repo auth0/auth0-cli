@@ -37,6 +37,7 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(testActionCmd(cli))
 	cmd.AddCommand(createActionCmd(cli))
 	cmd.AddCommand(updateActionCmd(cli))
+	cmd.AddCommand(deleteActionCmd(cli))
 	cmd.AddCommand(deployActionCmd(cli))
 	cmd.AddCommand(downloadActionCmd(cli))
 	cmd.AddCommand(listActionVersionsCmd(cli))
@@ -523,7 +524,7 @@ Create a new action:
 
 func updateActionCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		Name          string
+		ID            string
 		File          string
 		Script        string
 		Dependency    []string
@@ -536,7 +537,7 @@ func updateActionCmd(cli *cli) *cobra.Command {
 		Long: `$ auth0 actions update
 Updates an existing action:
 
-    $ auth0 actions update --name <actionid> --file action.js --dependency lodash@4.17.19
+    $ auth0 actions update --id <actionid> --file action.js --dependency lodash@4.17.19
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if shouldPrompt(cmd, actionFile) && shouldPrompt(cmd, actionScript) {
@@ -564,7 +565,7 @@ Updates an existing action:
 			}
 
 			err = ansi.Spinner("Updating action", func() error {
-				created, err := createActionVersion(cli.api, flags.Name, !flags.CreateVersion, version)
+				created, err := createActionVersion(cli.api, flags.ID, !flags.CreateVersion, version)
 				if err != nil {
 					return err
 				}
@@ -583,17 +584,61 @@ Updates an existing action:
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.Name, actionName, "n", "", "Action ID to update.")
+	cmd.Flags().StringVar(&flags.ID, actionID, "", "Action ID to update.")
 	cmd.Flags().StringVarP(&flags.File, actionFile, "f", "", "File containing the action source code.")
 	cmd.Flags().StringVarP(&flags.Script, actionScript, "s", "", "Raw source code for the action.")
 	cmd.Flags().StringSliceVarP(&flags.Dependency, actionDependency, "d", nil, "Dependency for the source code (<name>@<semver>).")
 	// TODO: This name is kind of overloaded since it could also refer to the version of the trigger (though there's only v1's at this time)
 	cmd.Flags().BoolVarP(&flags.CreateVersion, actionVersion, "v", false, "Create an explicit action version from the source code instead of a draft.")
 
-	mustRequireFlags(cmd, actionName)
+	mustRequireFlags(cmd, actionID)
 	if err := cmd.MarkFlagFilename(actionFile); err != nil {
 		panic(err)
 	}
+
+	return cmd
+}
+
+func deleteActionCmd(cli *cli) *cobra.Command {
+	var flags struct {
+		ID string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete an action",
+		Long: `$ Delete an action:
+
+    $ auth0 actions delete --id <actionid>`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if shouldPrompt(cmd, actionID) {
+				input := prompt.TextInput(actionID, "Id:", "Id of the action.", true)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
+			if !cli.force && canPrompt(cmd) {
+				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
+					return nil
+				}
+			}
+
+			err := ansi.Spinner("Deleting action", func() error {
+				return cli.api.Action.Delete(flags.ID)
+			})
+
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&flags.ID, actionID, "", "Action ID to delete.")
+	mustRequireFlags(cmd, actionID)
 
 	return cmd
 }
