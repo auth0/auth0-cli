@@ -59,6 +59,7 @@ func Execute() {
 	// order of the comamnds here matters
 	// so add new commands in a place that reflect its relevance or relation with other commands:
 	rootCmd.AddCommand(loginCmd(cli))
+	rootCmd.AddCommand(quickstartCmd(cli))
 	rootCmd.AddCommand(clientsCmd(cli))
 	rootCmd.AddCommand(apisCmd(cli))
 	rootCmd.AddCommand(tryLoginCmd(cli))

@@ -18,16 +18,30 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
-func clientsQuickstartCmd(cli *cli) *cobra.Command {
+func quickstartCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "quickstart",
+		Short:   "Quickstart support for getting bootstrapped",
+		Aliases: []string{"qs"},
+	}
+
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(quickstartDownloadCmd(cli))
+
+	return cmd
+}
+
+func quickstartDownloadCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		ClientID string
 		Type     string
+		Stack    string
 	}
 
 	cmd := &cobra.Command{
-		Use:   "quickstart",
-		Short: "Clients quickstart support for getting bootstrapped.",
-		Long:  `$ auth0 clients quickstart --type <type> --client-id <client-id>`,
+		Use:   "download",
+		Short: "Download a specific type and tech stack for quick starts",
+		Long:  `auth0 quickstart download --type <type> --client-id <client-id> --stack <stack>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := cli.api.Client.Read(flags.ClientID)
 			if err != nil {
@@ -47,7 +61,7 @@ func clientsQuickstartCmd(cli *cli) *cobra.Command {
 			}
 
 			err = ansi.Spinner("Downloading quickstart", func() error {
-				return downloadQuickStart(context.TODO(), cli, client, target)
+				return downloadQuickStart(context.TODO(), cli, client, flags.Stack, target)
 			})
 
 			if err != nil {
@@ -62,7 +76,8 @@ func clientsQuickstartCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.Flags().StringVar(&flags.ClientID, "client-id", "", "ID of the client.")
 	cmd.Flags().StringVarP(&flags.Type, "type", "t", "", "Type of the quickstart to download.")
-	mustRequireFlags(cmd, "client-id", "type")
+	cmd.Flags().StringVarP(&flags.Stack, "stack", "s", "", "Tech stack of the quickstart to use.")
+	mustRequireFlags(cmd, "client-id", "type", "stack")
 
 	return cmd
 }
@@ -74,7 +89,7 @@ const (
 	quickstartDefaultCallbackURL = `https://YOUR_APP/callback`
 )
 
-func downloadQuickStart(ctx context.Context, cli *cli, client *management.Client, target string) error {
+func downloadQuickStart(ctx context.Context, cli *cli, client *management.Client, target, stack string) error {
 	var payload struct {
 		Branch       string `json:"branch"`
 		Org          string `json:"org"`
