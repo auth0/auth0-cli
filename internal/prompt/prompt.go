@@ -24,7 +24,7 @@ func askOne(prompt survey.Prompt, response interface{}) error {
 	return survey.AskOne(prompt, response, stdErrWriter, icons)
 }
 
-func TextInput(name string, message string, help string, value string, required bool) *survey.Question {
+func TextInputDefault(name string, message string, help string, value string, required bool) *survey.Question {
 	input := &survey.Question{
 		Name:   name,
 		Prompt: &survey.Input{Message: message, Help: help, Default: value},
@@ -37,11 +37,28 @@ func TextInput(name string, message string, help string, value string, required 
 	return input
 }
 
+func TextInput(name string, message string, help string, required bool) *survey.Question {
+	return TextInputDefault(name, message, help, "", required)
+}
+
 func BoolInput(name string, message string, help string, required bool) *survey.Question {
 	input := &survey.Question{
 		Name:      name,
 		Prompt:    &survey.Confirm{Message: message, Help: help},
 		Transform: survey.Title,
+	}
+
+	if required {
+		input.Validate = survey.Required
+	}
+
+	return input
+}
+
+func SelectInput(name string, message string, help string, options []string, required bool) *survey.Question {
+	input := &survey.Question{
+		Name:   name,
+		Prompt: &survey.Select{Message: message, Help: help, Options: options},
 	}
 
 	if required {

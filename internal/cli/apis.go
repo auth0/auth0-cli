@@ -77,7 +77,7 @@ auth0 apis show --id id
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if shouldPrompt(cmd, apiID) {
-				input := prompt.TextInput(apiID, "Id:", "Id of the API.", "", true)
+				input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
@@ -128,7 +128,6 @@ auth0 apis create --name myapi --identifier http://my-api
 				input := prompt.TextInput(
 					apiName, "Name:",
 					"Name of the API. You can change the API name later in the API settings.",
-					"",
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
@@ -140,7 +139,6 @@ auth0 apis create --name myapi --identifier http://my-api
 				input := prompt.TextInput(
 					apiIdentifier, "Identifier:",
 					"Identifier of the API. Cannot be changed once set.",
-					"",
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
@@ -191,7 +189,7 @@ auth0 apis update --id id --name myapi
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if shouldPrompt(cmd, apiID) {
-				input := prompt.TextInput(apiID, "Id:", "Id of the API.", "", true)
+				input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
@@ -199,7 +197,7 @@ auth0 apis update --id id --name myapi
 			}
 
 			if shouldPrompt(cmd, apiName) {
-				input := prompt.TextInput(apiName, "Name:", "Name of the API.", "", true)
+				input := prompt.TextInput(apiName, "Name:", "Name of the API.", true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
@@ -245,7 +243,7 @@ auth0 apis delete --id id
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if shouldPrompt(cmd, apiID) {
-				input := prompt.TextInput(apiID, "Id:", "Id of the API.", "", true)
+				input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
