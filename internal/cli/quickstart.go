@@ -21,7 +21,7 @@ import (
 func quickstartCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "quickstart",
-		Short:   "quickstart support for getting bootstrapped.",
+		Short:   "Quickstart support for getting bootstrapped",
 		Aliases: []string{"qs"},
 	}
 
