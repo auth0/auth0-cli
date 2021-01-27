@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strconv"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -228,37 +227,40 @@ func deployActionCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+func renderVersionOptionText(v *management.ActionVersion) string {
+	deployed := ""
+
+	if v.Deployed {
+		deployed = "[DEPLOYED]"
+	}
+
+	return fmt.Sprintf("#%d %s %s", v.Number, v.ID, deployed)
+}
+
 func askVersion(cli *cli, actionId string) (string, error) {
-	var versionId string
+	// var versionId string
 	versions, err := cli.api.ActionVersion.List(actionId)
 	if err != nil {
 		return "", err
 	}
 
-	var options []string
-	options = append(options, "draft")
+	optChoices := make(map[string]string)
+	options := make([]string, 0)
+	options = append(options, "Draft")
+	optChoices["Draft"] = "draft"
 
 	for _, v := range versions.Versions {
-		options = append(options, fmt.Sprint(v.Number))
+		optText := renderVersionOptionText(v)
+		optChoices[optText] = v.ID
+		options = append(options, optText)
 	}
 
-	var versionNumber string
-	if err = prompt.AskOne(prompt.SelectInput("Actions version", "Choose a version", "Select the version number you want to choose for this action", options, true), &versionNumber); err != nil {
+	var versionLabel string
+	if err = prompt.AskOne(prompt.SelectInput("Actions version", "Choose a version", "Select the version number you want to choose for this action", options, true), &versionLabel); err != nil {
 		return "", err
 	}
 
-	if versionNumber == "draft" {
-		versionId = "draft"
-	} else {
-		i, err := strconv.Atoi(versionNumber)
-		if err != nil {
-			return "", err
-		}
-
-		versionId = versions.Versions[len(versions.Versions)-i].ID
-	}
-
-	return versionId, nil
+	return optChoices[versionLabel], nil
 }
 
 func downloadActionCmd(cli *cli) *cobra.Command {
