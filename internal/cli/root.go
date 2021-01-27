@@ -69,6 +69,7 @@ func Execute() {
 	rootCmd.AddCommand(rolesCmd(cli))
 	rootCmd.AddCommand(customDomainsCmd(cli))
 	rootCmd.AddCommand(getTokenCmd(cli))
+	rootCmd.AddCommand(usersCmd(cli))
 
 	// keep completion at the bottom:
 	rootCmd.AddCommand(completionCmd(cli))
