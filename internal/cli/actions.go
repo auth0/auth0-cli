@@ -195,7 +195,7 @@ func downloadActionCmd(cli *cli) *cobra.Command {
 					return err
 				}
 
-				versionId = versions.Versions[i-1].ID
+				versionId = versions.Versions[len(versions.Versions)-i].ID
 			}
 
 			cli.renderer.Infof("It will overwrite files in %s", path)
@@ -295,7 +295,7 @@ func createActionCmd(cli *cli) *cobra.Command {
 		Long: `$ auth0 actions create
 Creates a new action:
 
-    $ auth0 actions create --name my-action --trigger post-login --file action.js --dependency lodash@4.17.19  
+    $ auth0 actions create --name my-action --trigger post-login --file action.js --dependency lodash@4.17.19
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := validators.TriggerID(trigger); err != nil {
