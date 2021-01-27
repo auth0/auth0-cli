@@ -191,11 +191,11 @@ func downloadActionCmd(cli *cli) *cobra.Command {
 				return nil
 			})
 
-			cli.renderer.Infof("Code downloaded to %s/code.js", path)
-
 			if err != nil {
 				return err
 			}
+
+			cli.renderer.Infof("Code downloaded to %s/code.js", path)
 
 			if err := ioutil.WriteFile(path+"/code.js", []byte(version.Code), 0644); err != nil {
 				return err
