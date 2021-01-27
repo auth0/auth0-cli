@@ -89,22 +89,6 @@ Note: The custom domain will need to be verified before it will accept requests.
 				}
 			}
 
-			if !cmd.Flags().Changed("type") {
-				qs := []*survey.Question{
-					{
-						Name: "Type",
-						Prompt: &survey.Input{
-							Message: "Type:",
-							Help:    "Custom domain provisioning type. Must be auth0_managed_certs or self_managed_certs.",
-						},
-					},
-				}
-				err := survey.Ask(qs, &flags)
-				if err != nil {
-					return err
-				}
-			}
-
 			customDomain := &management.CustomDomain{
 				Domain:             auth0.String(flags.Domain),
 				Type:               auth0.String(flags.Type),
@@ -124,7 +108,7 @@ Note: The custom domain will need to be verified before it will accept requests.
 	}
 
 	cmd.Flags().StringVarP(&flags.Domain, "domain", "d", "", "Domain name.")
-	cmd.Flags().StringVarP(&flags.Type, "type", "t", "", "Custom domain provisioning type. Must be auth0_managed_certs or self_managed_certs.")
+	cmd.Flags().StringVarP(&flags.Type, "type", "t", "auth0_managed_certs", "Custom domain provisioning type. Must be auth0_managed_certs or self_managed_certs. Defaults to auth0_managed_certs")
 	cmd.Flags().StringVarP(&flags.VerificationMethod, "verification-method", "v", "txt", "Custom domain verification method. Must be txt.")
 
 	return cmd
