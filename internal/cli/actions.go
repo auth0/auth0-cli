@@ -309,10 +309,7 @@ Creates a new action:
 			}
 
 			err = ansi.Spinner("Creating action", func() error {
-				var err error
-
-				err = cli.api.Action.Create(action)
-				if err != nil {
+				if err := cli.api.Action.Create(action); err != nil {
 					return err
 				}
 
