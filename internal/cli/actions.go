@@ -181,7 +181,10 @@ func askVersion(cli *cli, actionId string) (string, error) {
 	}
 
 	var versionNumber string
-	prompt.AskOne(prompt.SelectInput("Actions version", "Choose a version to download", options, "draft"), &versionNumber)
+	if err = prompt.AskOne(prompt.SelectInput("Actions version", "Choose a version to download", options, "draft"), &versionNumber); err != nil {
+		return "", err
+	}
+
 	if versionNumber == "draft" {
 		versionId = "draft"
 	} else {
