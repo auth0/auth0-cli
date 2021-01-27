@@ -20,7 +20,6 @@ func clientsCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(clientsListCmd(cli))
 	cmd.AddCommand(clientsCreateCmd(cli))
-	cmd.AddCommand(clientsQuickstartCmd(cli))
 
 	return cmd
 }
