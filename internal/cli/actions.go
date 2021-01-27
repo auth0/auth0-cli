@@ -400,22 +400,14 @@ Creates a new action:
 			}
 
 			if shouldPrompt(cmd, actionFile) {
-				input := prompt.TextInput(actionFile, "File:", "File containing the action source code.", false)
+				input := prompt.TextInput(actionFile, "Action File:", "File containing the action source code.", false)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
 				}
 			}
 
-			if shouldPrompt(cmd, actionScript) {
-				input := prompt.TextInput(actionScript, "Script:", "Raw source code for the action.", false)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
-				}
-			}
-
-			// TODO: Add prompt for dependency and version
+			// TODO: Add prompt for script, dependency and version
 
 			if err := validators.TriggerID(flags.Trigger); err != nil {
 				return err
