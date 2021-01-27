@@ -12,9 +12,10 @@ import (
 
 func loginCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "login",
-		Short: "authenticate the Auth0 CLI.",
-		Long:  "sign in to your Auth0 account and authorize the CLI to access the API",
+		Use:     "login",
+		Short:   "authenticate the Auth0 CLI.",
+		Long:    "sign in to your Auth0 account and authorize the CLI to access the API",
+		Example: "auth0 login",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
