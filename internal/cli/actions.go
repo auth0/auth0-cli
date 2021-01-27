@@ -8,6 +8,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/auth0/auth0-cli/internal/validators"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
@@ -173,6 +174,11 @@ func downloadActionCmd(cli *cli) *cobra.Command {
 		Short: "Download the action version",
 		Long:  `$ auth0 actions download --name <actionid> --version <versionid | draft>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cli.renderer.Infof("It will overwrite files in %s", path)
+			if confirmed := prompt.Confirm("Do you wish to proceed?"); !confirmed {
+				return nil
+			}
+
 			var version *management.ActionVersion
 			err := ansi.Spinner(fmt.Sprintf("Downloading action: %s, version: %s", actionId, versionId), func() (err error) {
 				if version, err = cli.api.ActionVersion.Read(actionId, versionId); err != nil {
