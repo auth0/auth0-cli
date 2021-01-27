@@ -76,10 +76,7 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if shouldPrompt(cmd, ruleName) {
-				input := prompt.TextInput(
-					ruleName, "Name:",
-					"Name of the rule.",
-					true)
+				input := prompt.TextInput(ruleName, "Name:", "Name of the rule.", true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
@@ -141,10 +138,7 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if shouldPrompt(cmd, ruleName) {
-				input := prompt.TextInput(
-					ruleName, "Name:",
-					"Name of the rule.",
-					true)
+				input := prompt.TextInput(ruleName, "Name:", "Name of the rule.", true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
@@ -306,8 +300,16 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if shouldPrompt(cmd, ruleID) {
-				input := prompt.TextInput(ruleID, "Id:", "Id of the rule.", true)
+			if shouldPrompt(cmd, ruleID) && flags.Name == "" {
+				input := prompt.TextInput(ruleID, "Id:", "Id of the rule to delete.", false)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
+			if shouldPrompt(cmd, ruleName) && flags.ID == "" {
+				input := prompt.TextInput(ruleName, "Name:", "Name of the rule to delete.", false)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
@@ -358,8 +360,8 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.ID, ruleID, "i", "", "ID of the rule to delete (required)")
-	cmd.Flags().StringVarP(&flags.Name, ruleName, "n", "", "Name of the rule to delete")
+	cmd.Flags().StringVarP(&flags.ID, ruleID, "i", "", "ID of the rule to delete.")
+	cmd.Flags().StringVarP(&flags.Name, ruleName, "n", "", "Name of the rule to delete.")
 
 	return cmd
 }
