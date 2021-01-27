@@ -18,6 +18,7 @@ type API struct {
 	ResourceServer ResourceServerAPI
 	Role           RoleAPI
 	CustomDomain   CustomDomainAPI
+	User           UserAPI
 }
 
 func NewAPI(m *management.Management) *API {
@@ -32,6 +33,7 @@ func NewAPI(m *management.Management) *API {
 		Rule:           m.Rule,
 		Role:           m.Role,
 		CustomDomain:   m.CustomDomain,
+		User:           m.User,
 	}
 }
 

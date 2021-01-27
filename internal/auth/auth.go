@@ -46,6 +46,7 @@ var requiredScopes = []string{
 	"read:client_keys", "read:logs",
 	"create:roles", "delete:roles", "read:roles", "update:roles",
 	"create:custom_domains", "delete:custom_domains", "read:custom_domains", "update:custom_domains",
+	"read:users",
 }
 
 type Authenticator struct {
