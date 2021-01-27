@@ -317,13 +317,30 @@ Creates a new action:
 				}
 
 				if createVersion {
-					err = cli.api.ActionVersion.Create(auth0.StringValue(action.ID), version)
-				} else {
-					err = cli.api.ActionVersion.UpsertDraft(auth0.StringValue(action.ID), version)
-				}
+					if err := cli.api.ActionVersion.Create(auth0.StringValue(action.ID), version); err != nil {
+						return err
+					}
 
-				if err != nil {
-					return err
+					// TODO(iamjem): this is a hack since the SDK won't decode 202 responses
+					list, err := cli.api.ActionVersion.List(auth0.StringValue(action.ID))
+					if err != nil {
+						return err
+					}
+
+					if len(list.Versions) > 0 {
+						version = list.Versions[0]
+					}
+				} else {
+					if err := cli.api.ActionVersion.UpsertDraft(auth0.StringValue(action.ID), version); err != nil {
+						return err
+					}
+
+					// TODO(iamjem): this is a hack since the SDK won't decode 202 responses
+					draft, err := cli.api.ActionVersion.ReadDraft(auth0.StringValue(action.ID))
+					if err != nil {
+						return err
+					}
+					version = draft
 				}
 
 				return nil
@@ -333,9 +350,6 @@ Creates a new action:
 				return err
 			}
 
-			// currently the 202 response for a version/draft create does not get decoded, so we have to manually set
-			// this field to keep the renderer happy.
-			version.Action = action
 			cli.renderer.ActionVersion(version)
 
 			return nil

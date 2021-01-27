@@ -15,6 +15,7 @@ type ActionVersionAPI interface {
 	Create(actionID string, v *management.ActionVersion) error
 	Read(actionID string, id string) (*management.ActionVersion, error)
 	UpsertDraft(actionID string, v *management.ActionVersion) error
+	ReadDraft(actionID string) (*management.ActionVersion, error)
 	Delete(actionID string, id string, opts ...management.RequestOption) error
 	List(actionID string, opts ...management.RequestOption) (c *management.ActionVersionList, err error)
 	Test(actionID string, id string, payload management.Object) (management.Object, error)
