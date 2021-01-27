@@ -99,7 +99,7 @@ func testActionCmd(cli *cli) *cobra.Command {
 	var payload = make(management.Object)
 
 	cmd := &cobra.Command{
-		Use:   "test"
+		Use:   "test",
 		Short: "Test an action draft against a payload",
 		Long:  `auth0 actions test --name <actionid> --file <payload.json>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
