@@ -730,7 +730,7 @@ func bindActionCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "create",
+		Use:   "bind",
 		Short: "Bind an action to a flow",
 		Long:  `auth0 actions bind --trigger <post-login> --action <action_id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
