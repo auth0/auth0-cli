@@ -50,8 +50,8 @@ func Execute() {
 	rootCmd.PersistentFlags().StringVar(&cli.format,
 		"format", "", "Command output format. Options: json.")
 
-	rootCmd.PersistentFlags().BoolVarP(&cli.force,
-		"force", "f", false, "Skip confirmation.")
+	rootCmd.PersistentFlags().BoolVar(&cli.force,
+		"force", false, "Skip confirmation.")
 
 	rootCmd.AddCommand(loginCmd(cli))
 	rootCmd.AddCommand(clientsCmd(cli))
