@@ -21,7 +21,7 @@ func WaitForBrowserCallback(addr string) (string, error) {
 	errCh := make(chan error)
 
 	m := http.NewServeMux()
-	s := http.Server{Addr: addr, Handler: m}
+	s := &http.Server{Addr: addr, Handler: m}
 
 	m.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		cb := &callback{
