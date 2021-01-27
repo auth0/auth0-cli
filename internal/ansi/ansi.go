@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/logrusorgru/aurora"
+	"github.com/mattn/go-isatty"
 	"github.com/tidwall/pretty"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 var darkTerminalStyle = &pretty.Style{
@@ -100,17 +100,12 @@ func StrikeThrough(text string) string {
 	return color.Sprintf(color.StrikeThrough(text))
 }
 
-func isTerminal(w io.Writer) bool {
-	switch v := w.(type) {
-	case *os.File:
-		return terminal.IsTerminal(int(v.Fd()))
-	default:
-		return false
-	}
+func IsTerminal() bool {
+	return isatty.IsTerminal(os.Stdout.Fd())
 }
 
 func shouldUseColors(w io.Writer) bool {
-	useColors := ForceColors || isTerminal(w)
+	useColors := ForceColors || IsTerminal()
 
 	if EnvironmentOverrideColors {
 		force, ok := os.LookupEnv("CLICOLOR_FORCE")

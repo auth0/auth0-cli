@@ -12,6 +12,7 @@ require (
 	github.com/jsanda/tablewriter v0.0.2-0.20190614032957-c4e45dc9c708
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/mattn/go-colorable v0.1.6 // indirect
+	github.com/mattn/go-isatty v0.0.12
 	github.com/mattn/go-runewidth v0.0.10 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/spf13/cobra v1.0.0

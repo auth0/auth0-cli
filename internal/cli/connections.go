@@ -29,7 +29,7 @@ Lists your existing connections. To create one try:
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ConnectionList
-			err := ansi.Spinner("Getting connections", func() error {
+			err := ansi.Spinner("Loading connections", func() error {
 				var err error
 				list, err = cli.api.Connection.List()
 				return err

@@ -12,9 +12,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"gopkg.in/auth0.v5/management"
 )
 
@@ -58,6 +60,7 @@ type cli struct {
 	tenant  string
 	format  string
 	force   bool
+	noInput bool
 
 	// config state management.
 	initOnce sync.Once
@@ -221,20 +224,32 @@ func (c *cli) initContext() (err error) {
 	return nil
 }
 
-func hasFlags(cmd *cobra.Command) bool {
-	return cmd.Flags().NFlag() > 0
-}
-
-func checkFlags(cmd *cobra.Command) {
-	if (!hasFlags(cmd)) {
-		cmd.ResetFlags()
-	}
-}
-
 func mustRequireFlags(cmd *cobra.Command, flags ...string) {
 	for _, f := range flags {
 		if err := cmd.MarkFlagRequired(f); err != nil {
 			panic(err)
 		}
+	}
+}
+
+func canPrompt(cmd *cobra.Command) bool {
+	noInput, err := cmd.Root().Flags().GetBool("no-input")
+
+	if err != nil {
+		return false
+	}
+
+	return ansi.IsTerminal() && !noInput
+}
+
+func shouldPrompt(cmd *cobra.Command, flag string) bool {
+	return canPrompt(cmd) && !cmd.Flags().Changed(flag)
+}
+
+func prepareInteractivity(cmd *cobra.Command) {
+	if canPrompt(cmd) {
+		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+			_ = cmd.Flags().SetAnnotation(flag.Name, cobra.BashCompOneRequiredFlag, []string{"false"})
+		})
 	}
 }
