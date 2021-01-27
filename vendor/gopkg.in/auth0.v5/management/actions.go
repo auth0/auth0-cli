@@ -173,7 +173,7 @@ func (m *ActionVersionManager) List(actionID string, opts ...RequestOption) (c *
 
 // TODO(cyx): might call this `activate` instead later. Still fleshing out the
 // name.
-func (m *ActionVersionManager) Promote(actionID, id string) (*ActionVersion, error) {
+func (m *ActionVersionManager) Deploy(actionID, id string) (*ActionVersion, error) {
 	var v ActionVersion
 	err := m.Request("POST", m.URI("actions", "actions", actionID, "versions", id, "deploy"), &v)
 	return &v, err
