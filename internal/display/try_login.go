@@ -8,13 +8,13 @@ import (
 	"time"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/auth"
+	"github.com/auth0/auth0-cli/internal/auth/authutil"
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
 type userInfoAndTokens struct {
-	UserInfo *auth.UserInfo      `json:"user_info"`
-	Tokens   *auth.TokenResponse `json:"tokens"`
+	UserInfo *authutil.UserInfo      `json:"user_info"`
+	Tokens   *authutil.TokenResponse `json:"tokens"`
 }
 
 func isNotZero(v interface{}) bool {
@@ -26,7 +26,7 @@ func isNotZero(v interface{}) bool {
 	return v != reflect.Zero(t).Interface()
 }
 
-func (r *Renderer) TryLogin(u *auth.UserInfo, t *auth.TokenResponse) {
+func (r *Renderer) TryLogin(u *authutil.UserInfo, t *authutil.TokenResponse) {
 	r.Heading(ansi.Bold(auth0.StringValue(u.Sub)), "/userinfo\n")
 
 	switch r.Format {
