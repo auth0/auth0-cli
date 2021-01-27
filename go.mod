@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/AlecAivazis/survey/v2 v2.2.7
 	github.com/benbjohnson/clock v1.1.0 // indirect
-	github.com/briandowns/spinner v1.11.1
+	github.com/briandowns/spinner v1.12.0
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/golang/mock v1.4.4
 	github.com/google/go-cmp v0.5.4

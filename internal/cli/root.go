@@ -66,6 +66,7 @@ func Execute() {
 	rootCmd.AddCommand(connectionsCmd(cli))
 	rootCmd.AddCommand(completionCmd(cli))
 	rootCmd.AddCommand(rolesCmd(cli))
+	rootCmd.AddCommand(customDomainsCmd(cli))
 
 	// TODO(cyx): backport this later on using latest auth0/v5.
 	// rootCmd.AddCommand(actionsCmd(cli))
