@@ -35,8 +35,8 @@ func tryLoginCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "try-login",
-		Short: "try out your universal login box.",
-		Long: `$ auth0 try-login
+		Short: "Try out your universal login box",
+		Long: `auth0 try-login
 Launch a browser to try out your universal login box for the given client.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -99,7 +99,7 @@ Launch a browser to try out your universal login box for the given client.
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.Flags().StringVarP(&clientID, "client-id", "c", "", "Client ID for which to test login.")
+	cmd.Flags().StringVarP(&clientID, "client-id", "c", "", "Client Id for which to test login.")
 	cmd.Flags().StringVarP(&connectionName, "connection", "", "", "Connection to test during login.")
 	return cmd
 }

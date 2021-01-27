@@ -56,6 +56,8 @@ func Execute() {
 	rootCmd.PersistentFlags().BoolVar(&cli.noInput,
 		"no-input", false, "Disable interactivity.")
 
+	// order of the comamnds here matters
+	// so add new commands in a place that reflect its relevance or relation with other commands:
 	rootCmd.AddCommand(loginCmd(cli))
 	rootCmd.AddCommand(clientsCmd(cli))
 	rootCmd.AddCommand(apisCmd(cli))
@@ -64,10 +66,12 @@ func Execute() {
 	rootCmd.AddCommand(rulesCmd(cli))
 	rootCmd.AddCommand(actionsCmd(cli))
 	rootCmd.AddCommand(connectionsCmd(cli))
-	rootCmd.AddCommand(completionCmd(cli))
 	rootCmd.AddCommand(rolesCmd(cli))
 	rootCmd.AddCommand(customDomainsCmd(cli))
 	rootCmd.AddCommand(getTokenCmd(cli))
+
+	// keep completion at the bottom:
+	rootCmd.AddCommand(completionCmd(cli))
 
 	// TODO(cyx): backport this later on using latest auth0/v5.
 	// rootCmd.AddCommand(actionsCmd(cli))

@@ -11,7 +11,7 @@ import (
 func customDomainsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "custom-domains",
-		Short: "manage resources for custom-domains.",
+		Short: "Manage resources for custom-domains",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -27,11 +27,11 @@ func customDomainsCmd(cli *cli) *cobra.Command {
 func customDomainsListCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "Get custom domains configurations",
+		Short: "List custom domains configurations",
 		Long: `
 Retrieve details on custom domains.
 
-  $ auth0 custom-domains list
+  auth0 custom-domains list
 
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -68,7 +68,7 @@ Create a new custom domain.
 
 Note: The custom domain will need to be verified before it will accept requests.
 
-  $ auth0 custom-domain create --domain example.org --type auth0_managed_certs --type txt
+  auth0 custom-domain create --domain example.org --type auth0_managed_certs --type txt
 
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -124,7 +124,7 @@ func customDomainsDeleteCmd(cli *cli) *cobra.Command {
 		Long: `
 Delete a custom domain and stop serving requests for it.
 
-  $ auth0 custom-domains delete --custom-domain-id myCustomDomainID
+  auth0 custom-domains delete --custom-domain-id myCustomDomainID
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
@@ -165,7 +165,7 @@ func customDomainsGetCmd(cli *cli) *cobra.Command {
 		Long: `
 Retrieve a custom domain configuration and status.
 
-  $ auth0 custom-domain get --custom-domain-id myCustomDomainID
+  auth0 custom-domain get --custom-domain-id myCustomDomainID
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
@@ -225,7 +225,7 @@ Learn more about verifying custom domains that use Auth0 Managed certificates:
 Learn more about verifying custom domains that use Self Managed certificates:
   - https://auth0.com/docs/custom-domains/self-managed-certificates#step-2-verify-ownership
 
-  $ auth0 custom-domain verify --custom-domain-id myCustomDomainID
+  auth0 custom-domain verify --custom-domain-id myCustomDomainID
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 

@@ -22,7 +22,7 @@ const (
 func rulesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "rules",
-		Short: "manage rules for clients.",
+		Short: "Manage rules for clients",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -31,6 +31,7 @@ func rulesCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(disableRuleCmd(cli))
 	cmd.AddCommand(createRulesCmd(cli))
 	cmd.AddCommand(deleteRulesCmd(cli))
+	cmd.AddCommand(updateRulesCmd(cli))
 
 	return cmd
 }
@@ -38,8 +39,8 @@ func rulesCmd(cli *cli) *cobra.Command {
 func listRulesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "Lists your rules",
-		Long:  `Lists the rules in your current tenant.`,
+		Short: "List your rules",
+		Long:  `List the rules in your current tenant.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var rules *management.RuleList
 			err := ansi.Spinner("Loading rules", func() error {
@@ -67,7 +68,7 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "enable",
-		Short: "Emable a rule",
+		Short: "Enable a rule",
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -76,7 +77,6 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 				input := prompt.TextInput(
 					ruleName, "Name:",
 					"Name of the rule.",
-					"",
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
@@ -142,7 +142,6 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 				input := prompt.TextInput(
 					ruleName, "Name:",
 					"Name of the rule.",
-					"",
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
@@ -214,7 +213,6 @@ func createRulesCmd(cli *cli) *cobra.Command {
 				input := prompt.TextInput(
 					"name", "Name:",
 					"Name of the rule. You can change the rule name later in the rule settings.",
-					"",
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
@@ -223,7 +221,7 @@ func createRulesCmd(cli *cli) *cobra.Command {
 			}
 
 			if shouldPrompt(cmd, ruleScript) {
-				input := prompt.TextInput(ruleScript, "Script:", "Script of the rule.", "", true)
+				input := prompt.TextInput(ruleScript, "Script:", "Script of the rule.", true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
@@ -231,7 +229,7 @@ func createRulesCmd(cli *cli) *cobra.Command {
 			}
 
 			if shouldPrompt(cmd, ruleOrder) {
-				input := prompt.TextInput(ruleOrder, "Order:", "Order of the rule.", "0", false)
+				input := prompt.TextInputDefault(ruleOrder, "Order:", "Order of the rule.", "0", false)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
@@ -297,7 +295,7 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if shouldPrompt(cmd, ruleID) {
-				input := prompt.TextInput(ruleID, "Id:", "Id of the rule.", "", true)
+				input := prompt.TextInput(ruleID, "Id:", "Id of the rule.", true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
@@ -350,6 +348,99 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().StringVarP(&flags.ID, ruleID, "i", "", "ID of the rule to delete (required)")
 	cmd.Flags().StringVarP(&flags.Name, ruleName, "n", "", "Name of the rule to delete")
+
+	return cmd
+}
+
+func updateRulesCmd(cli *cli) *cobra.Command {
+	var flags struct {
+		ID      string
+		Name    string
+		Script  string
+		Order   int
+		Enabled bool
+	}
+
+	cmd := &cobra.Command{
+		Use:   "update",
+		Short: "update a rule",
+		Long: `Update a rule:
+
+    auth0 rules update --id "12345" --name "My Updated Rule" --script "function (user, context, callback) { console.log( 'Hello, world!' ); return callback(null, user, context); }" --order 1 --enabled true
+		`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if shouldPrompt(cmd, ruleID) {
+				input := prompt.TextInput(ruleID, "Id:", "Id of the rule.", true)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
+			if shouldPrompt(cmd, ruleName) {
+				input := prompt.TextInput(
+					"name", "Name:",
+					"Name of the rule. You can change the rule name later in the rule settings.",
+					true)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
+			if shouldPrompt(cmd, ruleScript) {
+				input := prompt.TextInput(ruleScript, "Script:", "Script of the rule.", true)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
+			if shouldPrompt(cmd, ruleOrder) {
+				input := prompt.TextInputDefault(ruleOrder, "Order:", "Order of the rule.", "0", false)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
+			if shouldPrompt(cmd, ruleEnabled) {
+				input := prompt.BoolInput(ruleEnabled, "Enabled:", "Enable the rule.", false)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
+			r := &management.Rule{
+				Name:    &flags.Name,
+				Script:  &flags.Script,
+				Order:   &flags.Order,
+				Enabled: &flags.Enabled,
+			}
+
+			err := ansi.Spinner("Updating rule", func() error {
+				return cli.api.Rule.Update(flags.ID, r)
+			})
+
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.Infof("Your rule `%s` was successfully updated.", flags.Name)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&flags.ID, ruleID, "i", "", "ID of the rule to update (required)")
+	cmd.Flags().StringVarP(&flags.Name, ruleName, "n", "", "Name of this rule")
+	cmd.Flags().StringVarP(&flags.Script, ruleScript, "s", "", "Code to be executed when this rule runs")
+	cmd.Flags().IntVarP(&flags.Order, ruleOrder, "o", 0, "Order that this rule should execute in relative to other rules. Lower-valued rules execute first.")
+	cmd.Flags().BoolVarP(&flags.Enabled, ruleEnabled, "e", false, "Whether the rule is enabled (true), or disabled (false).")
+	mustRequireFlags(cmd, ruleID)
 
 	return cmd
 }

@@ -16,7 +16,7 @@ const (
 func apisCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "apis",
-		Short:   "manage resources for APIs.",
+		Short:   "Manage resources for APIs",
 		Aliases: []string{"resource-servers"},
 	}
 
@@ -33,11 +33,11 @@ func apisCmd(cli *cli) *cobra.Command {
 func listApisCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "Lists your existing APIs",
-		Long: `$ auth0 apis list
+		Short: "List your existing APIs",
+		Long: `auth0 apis list
 Lists your existing APIs. To create one try:
 
-    $ auth0 apis create
+    auth0 apis create
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ResourceServerList
@@ -68,7 +68,7 @@ func showApiCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show",
 		Short: "Show an API",
-		Long: `Shows an API:
+		Long: `Show an API:
 
 auth0 apis show --id id
 `,
@@ -77,7 +77,7 @@ auth0 apis show --id id
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if shouldPrompt(cmd, apiID) {
-				input := prompt.TextInput(apiID, "Id:", "Id of the API.", "", true)
+				input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
@@ -116,7 +116,7 @@ func createApiCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new API",
-		Long: `Creates a new API:
+		Long: `Create a new API:
 
 auth0 apis create --name myapi --identifier http://my-api
 `,
@@ -128,7 +128,6 @@ auth0 apis create --name myapi --identifier http://my-api
 				input := prompt.TextInput(
 					apiName, "Name:",
 					"Name of the API. You can change the API name later in the API settings.",
-					"",
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
@@ -140,7 +139,6 @@ auth0 apis create --name myapi --identifier http://my-api
 				input := prompt.TextInput(
 					apiIdentifier, "Identifier:",
 					"Identifier of the API. Cannot be changed once set.",
-					"",
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
@@ -182,7 +180,7 @@ func updateApiCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update an API",
-		Long: `Updates an API:
+		Long: `Update an API:
 
 auth0 apis update --id id --name myapi
 `,
@@ -191,7 +189,7 @@ auth0 apis update --id id --name myapi
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if shouldPrompt(cmd, apiID) {
-				input := prompt.TextInput(apiID, "Id:", "Id of the API.", "", true)
+				input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
@@ -199,7 +197,7 @@ auth0 apis update --id id --name myapi
 			}
 
 			if shouldPrompt(cmd, apiName) {
-				input := prompt.TextInput(apiName, "Name:", "Name of the API.", "", true)
+				input := prompt.TextInput(apiName, "Name:", "Name of the API.", true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
@@ -236,7 +234,7 @@ func deleteApiCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete an API",
-		Long: `Deletes an API:
+		Long: `Delete an API:
 
 auth0 apis delete --id id
 `,
@@ -245,7 +243,7 @@ auth0 apis delete --id id
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if shouldPrompt(cmd, apiID) {
-				input := prompt.TextInput(apiID, "Id:", "Id of the API.", "", true)
+				input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
