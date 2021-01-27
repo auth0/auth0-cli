@@ -31,3 +31,10 @@ build-all-platforms:
 # Run all the tests and code checks
 ci: build-all-platforms test lint
 .PHONY: ci
+
+$(GOBIN)/mockgen:
+	@cd && GO111MODULE=on go get github.com/golang/mock/mockgen@v1.4.4
+
+.PHONY: mocks
+mocks: $(GOBIN)/mockgen
+	@go generate ./...
