@@ -42,6 +42,7 @@ type ActionVersion struct {
 	Action       *Action       `json:"action,omitempty"`
 	Code         string        `json:"code,omitempty"`
 	Dependencies []Dependency  `json:"dependencies"`
+	Deployed     bool          `json:"deployed,omitempty"`
 	Runtime      string        `json:"runtime,omitempty"`
 	Status       VersionStatus `json:"status,omitempty"`
 	Number       int           `json:"number,omitempty"`
