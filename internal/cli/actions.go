@@ -24,6 +24,7 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(testActionCmd(cli))
 	cmd.AddCommand(createActionCmd(cli))
 	cmd.AddCommand(deployActionCmd(cli))
+	cmd.AddCommand(downloadActionCmd(cli))
 	cmd.AddCommand(listActionVersionsCmd(cli))
 	cmd.AddCommand(triggersCmd(cli))
 
@@ -156,6 +157,61 @@ func deployActionCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to deploy")
 	cmd.Flags().StringVarP(&versionId, "version", "v", "draft", "Version ID of the action to deploy")
+
+	mustRequireFlags(cmd, "name")
+
+	return cmd
+}
+
+func downloadActionCmd(cli *cli) *cobra.Command {
+	var actionId string
+	var versionId string
+	var path string
+
+	cmd := &cobra.Command{
+		Use:   "download",
+		Short: "Download the action version",
+		Long:  `$ auth0 actions download --name <actionid> --version <versionid | draft>`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var version *management.ActionVersion
+			err := ansi.Spinner(fmt.Sprintf("Downloading action: %s, version: %s", actionId, versionId), func() (err error) {
+				if version, err = cli.api.ActionVersion.Read(actionId, versionId); err != nil {
+					return err
+				}
+
+				if version.ID == "" {
+					version.ID = "draft"
+				}
+				return nil
+			})
+
+			cli.renderer.Infof("Code downloaded to %s/code.js", path)
+
+			if err != nil {
+				return err
+			}
+
+			if err := ioutil.WriteFile(path+"/code.js", []byte(version.Code), 0644); err != nil {
+				return err
+			}
+
+			version.Code = "code.js"
+			metadata, err := json.MarshalIndent(version, "", "    ")
+			if err != nil {
+				return err
+			}
+
+			if err := ioutil.WriteFile(path+"/metadata.json", metadata, 0644); err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to deploy")
+	cmd.Flags().StringVarP(&versionId, "version", "v", "draft", "Version ID of the action to deploy or draft, default: draft")
+	cmd.Flags().StringVarP(&path, "path", "p", "./", "Path to save the action content")
 
 	mustRequireFlags(cmd, "name")
 
