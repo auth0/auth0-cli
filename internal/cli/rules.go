@@ -304,7 +304,7 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			if !cli.force && canPrompt() {
+			if !cli.force && canPrompt(cmd) {
 				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
 					return nil
 				}

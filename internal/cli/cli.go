@@ -60,6 +60,7 @@ type cli struct {
 	tenant  string
 	format  string
 	force   bool
+	noInput bool
 
 	// config state management.
 	initOnce sync.Once
@@ -231,16 +232,22 @@ func mustRequireFlags(cmd *cobra.Command, flags ...string) {
 	}
 }
 
-func canPrompt() bool {
-	return ansi.IsTerminal()
+func canPrompt(cmd *cobra.Command) bool {
+	noInput, err := cmd.Root().Flags().GetBool("no-input")
+
+	if err != nil {
+		return false
+	}
+
+	return ansi.IsTerminal() && !noInput
 }
 
 func shouldPrompt(cmd *cobra.Command, flag string) bool {
-	return canPrompt() && !cmd.Flags().Changed(flag)
+	return canPrompt(cmd) && !cmd.Flags().Changed(flag)
 }
 
 func prepareInteractivity(cmd *cobra.Command) {
-	if canPrompt() {
+	if canPrompt(cmd) {
 		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 			cmd.Flags().SetAnnotation(flag.Name, cobra.BashCompOneRequiredFlag, []string{"false"})
 		})

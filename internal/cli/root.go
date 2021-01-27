@@ -52,6 +52,9 @@ func Execute() {
 
 	rootCmd.PersistentFlags().BoolVar(&cli.force,
 		"force", false, "Skip confirmation.")
+	
+	rootCmd.PersistentFlags().BoolVar(&cli.noInput,
+		"no-input", false, "Disable interactivity.")
 
 	rootCmd.AddCommand(loginCmd(cli))
 	rootCmd.AddCommand(clientsCmd(cli))
