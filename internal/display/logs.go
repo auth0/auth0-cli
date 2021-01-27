@@ -1,6 +1,7 @@
 package display
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -70,6 +71,8 @@ func typeDescFor(l *management.Log, noColor bool) (typ, desc string) {
 	if len(chunks) == 2 {
 		desc = strings.TrimSuffix(chunks[1], ")")
 	}
+
+	desc = fmt.Sprintf("%s %s", desc, l.Description)
 
 	if !noColor {
 		// colorize the event type field based on whether it's a success or failure
