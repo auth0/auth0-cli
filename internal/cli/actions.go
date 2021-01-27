@@ -29,21 +29,22 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(deployActionCmd(cli))
 	cmd.AddCommand(downloadActionCmd(cli))
 	cmd.AddCommand(listActionVersionsCmd(cli))
-	cmd.AddCommand(triggersCmd(cli))
+	cmd.AddCommand(bindActionCmd(cli))
+
+	cmd.AddCommand(flowsCmd(cli))
 
 	return cmd
 }
 
-func triggersCmd(cli *cli) *cobra.Command {
+func flowsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "triggers",
-		Short: "manage resources for action triggers.",
+		Use:   "flows",
+		Short: "Manages action flows",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.AddCommand(showTriggerCmd(cli))
-	cmd.AddCommand(reorderTriggerCmd(cli))
-	cmd.AddCommand(createTriggerCmd(cli))
+	cmd.AddCommand(showFlowCmd(cli))
+	cmd.AddCommand(updateFlowCmd(cli))
 
 	return cmd
 }
@@ -419,13 +420,13 @@ Creates a new action:
 	return cmd
 }
 
-func showTriggerCmd(cli *cli) *cobra.Command {
+func showFlowCmd(cli *cli) *cobra.Command {
 	var trigger string
 
 	cmd := &cobra.Command{
 		Use:   "show",
-		Short: "Show actions by trigger",
-		Long:  `$ auth0 actions triggers show --trigger post-login`,
+		Short: "Shows actions by flow",
+		Long:  `$ auth0 actions flows --trigger post-login`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := validators.TriggerID(trigger); err != nil {
 				return err
@@ -453,14 +454,14 @@ func showTriggerCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func reorderTriggerCmd(cli *cli) *cobra.Command {
+func updateFlowCmd(cli *cli) *cobra.Command {
 	var trigger string
 	var bindingsFile string
 
 	cmd := &cobra.Command{
-		Use:   "reorder",
-		Short: "Reorders actions by trigger",
-		Long:  `$ auth0 actions triggers reorder --trigger <post-login> --file <bindings.json>`,
+		Use:   "update",
+		Short: "Updates actions by flow",
+		Long:  `$ auth0 actions flows update --trigger <post-login> --file <bindings.json>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := validators.TriggerID(trigger); err != nil {
 				return err
@@ -499,14 +500,14 @@ func reorderTriggerCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func createTriggerCmd(cli *cli) *cobra.Command {
+func bindActionCmd(cli *cli) *cobra.Command {
 	var trigger string
 	var actionId string
 
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Bind an action to a trigger",
-		Long:  `$ auth0 actions triggers create --trigger <post-login> --name <action_id>`,
+		Use:   "bind",
+		Short: "Bind an action to a flow",
+		Long:  `$ auth0 actions bind --trigger <post-login> --name <action_id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := validators.TriggerID(trigger); err != nil {
 				return err
