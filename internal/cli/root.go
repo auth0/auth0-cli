@@ -23,8 +23,8 @@ func Execute() {
 		Use:           "auth0",
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		Short:         "Command-line tool to interact with Auth0.",
-		Long:          "Command-line tool to interact with Auth0.\n" + getLogin(cli),
+		Short:         "Supercharge your development workflow.",
+		Long:          "Supercharge your development workflow.\n" + getLogin(cli),
 
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// If the user is trying to login, no need to go
