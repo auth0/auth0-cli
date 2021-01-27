@@ -400,7 +400,7 @@ Create a new action:
 				}
 			}
 
-			if shouldPrompt(cmd, actionFile) {
+			if shouldPrompt(cmd, actionFile) && shouldPrompt(cmd, actionScript) {
 				input := prompt.TextInput(actionFile, "Action File:", "File containing the action source code.", false)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
@@ -485,13 +485,13 @@ Create a new action:
 }
 
 func updateActionCmd(cli *cli) *cobra.Command {
-	var (
-		name          string
-		file          string
-		script        string
-		dependency    []string
-		createVersion bool
-	)
+	var flags struct {
+		Name          string
+		File          string
+		Script        string
+		Dependency    []string
+		CreateVersion bool
+	}
 
 	cmd := &cobra.Command{
 		Use:   "update",
@@ -502,12 +502,20 @@ Updates an existing action:
     $ auth0 actions update --name <actionid> --file action.js --dependency lodash@4.17.19  
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			source, err := sourceFromFileOrScript(file, script)
+			if shouldPrompt(cmd, actionFile) && shouldPrompt(cmd, actionScript) {
+				input := prompt.TextInput(actionFile, "Action File:", "File containing the action source code.", false)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
+			source, err := sourceFromFileOrScript(flags.File, flags.Script)
 			if err != nil {
 				return err
 			}
 
-			dependencies, err := validators.Dependencies(dependency)
+			dependencies, err := validators.Dependencies(flags.Dependency)
 			if err != nil {
 				return err
 			}
@@ -519,7 +527,7 @@ Updates an existing action:
 			}
 
 			err = ansi.Spinner("Updating action", func() error {
-				created, err := createActionVersion(cli.api, name, !createVersion, version)
+				created, err := createActionVersion(cli.api, flags.Name, !flags.CreateVersion, version)
 				if err != nil {
 					return err
 				}
@@ -538,15 +546,15 @@ Updates an existing action:
 		},
 	}
 
-	cmd.Flags().StringVarP(&name, "name", "n", "", "Action ID to update.")
-	cmd.Flags().StringVarP(&file, "file", "f", "", "File containing the action source code.")
-	cmd.Flags().StringVarP(&script, "script", "s", "", "Raw source code for the action.")
-	cmd.Flags().StringSliceVarP(&dependency, "dependency", "d", nil, "Dependency for the source code (<name>@<semver>).")
+	cmd.Flags().StringVarP(&flags.Name, actionName, "n", "", "Action ID to update.")
+	cmd.Flags().StringVarP(&flags.File, actionFile, "f", "", "File containing the action source code.")
+	cmd.Flags().StringVarP(&flags.Script, actionScript, "s", "", "Raw source code for the action.")
+	cmd.Flags().StringSliceVarP(&flags.Dependency, actionDependency, "d", nil, "Dependency for the source code (<name>@<semver>).")
 	// TODO: This name is kind of overloaded since it could also refer to the version of the trigger (though there's only v1's at this time)
-	cmd.Flags().BoolVarP(&createVersion, "version", "v", false, "Create an explicit action version from the source code instead of a draft.")
+	cmd.Flags().BoolVarP(&flags.CreateVersion, actionVersion, "v", false, "Create an explicit action version from the source code instead of a draft.")
 
-	mustRequireFlags(cmd, "name")
-	if err := cmd.MarkFlagFilename("file"); err != nil {
+	mustRequireFlags(cmd, actionName)
+	if err := cmd.MarkFlagFilename(actionFile); err != nil {
 		panic(err)
 	}
 

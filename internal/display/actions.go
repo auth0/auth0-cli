@@ -130,7 +130,7 @@ func (r *Renderer) ActionVersion(version *management.ActionVersion) {
 	v := &actionVersionView{
 		ID:         version.ID,
 		ActionID:   auth0.StringValue(version.Action.ID),
-		ActionName: auth0.StringValue(version.Action.ID),
+		ActionName: auth0.StringValue(version.Action.Name),
 		Runtime:    auth0.StringValue(&version.Runtime),
 		Status:     string(version.Status),
 		CreatedAt:  timeAgo(auth0.TimeValue(version.CreatedAt)),
