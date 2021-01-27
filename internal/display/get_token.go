@@ -6,12 +6,12 @@ import (
 	"strconv"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/auth"
+	"github.com/auth0/auth0-cli/internal/auth/authutil"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"gopkg.in/auth0.v5/management"
 )
 
-func (r *Renderer) GetToken(c *management.Client, t *auth.TokenResponse) {
+func (r *Renderer) GetToken(c *management.Client, t *authutil.TokenResponse) {
 	r.Heading(ansi.Bold(auth0.StringValue(c.Name)), "tokens\n")
 
 	switch r.Format {

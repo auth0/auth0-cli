@@ -44,8 +44,7 @@ Fetch an access token for the given client and API.
 			// initiate the client credentials flow instead to fetch a token,
 			// avoiding the browser and HTTP server shenanigans altogether.
 
-			abort, needsLocalCallbackURL := runLoginFlowPreflightChecks(cli, client)
-			if abort {
+			if proceed := runLoginFlowPreflightChecks(cli, client); !proceed {
 				return nil
 			}
 
@@ -54,7 +53,6 @@ Fetch an access token for the given client and API.
 				tenant,
 				client,
 				"", // specifying a connection is only supported for try-login
-				needsLocalCallbackURL,
 				audience,
 				"", // We don't want to force a prompt for get-token
 				scopes,
