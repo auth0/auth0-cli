@@ -36,6 +36,7 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(listActionsCmd(cli))
 	cmd.AddCommand(testActionCmd(cli))
 	cmd.AddCommand(createActionCmd(cli))
+	cmd.AddCommand(updateActionCmd(cli))
 	cmd.AddCommand(deployActionCmd(cli))
 	cmd.AddCommand(downloadActionCmd(cli))
 	cmd.AddCommand(listActionVersionsCmd(cli))
@@ -447,32 +448,12 @@ Create a new action:
 					return err
 				}
 
-				if flags.CreateVersion {
-					if err := cli.api.ActionVersion.Create(auth0.StringValue(action.ID), version); err != nil {
-						return err
-					}
-
-					// TODO(iamjem): this is a hack since the SDK won't decode 202 responses
-					list, err := cli.api.ActionVersion.List(auth0.StringValue(action.ID))
-					if err != nil {
-						return err
-					}
-
-					if len(list.Versions) > 0 {
-						version = list.Versions[0]
-					}
-				} else {
-					if err := cli.api.ActionVersion.UpsertDraft(auth0.StringValue(action.ID), version); err != nil {
-						return err
-					}
-
-					// TODO(iamjem): this is a hack since the SDK won't decode 202 responses
-					draft, err := cli.api.ActionVersion.ReadDraft(auth0.StringValue(action.ID))
-					if err != nil {
-						return err
-					}
-					version = draft
+				created, err := createActionVersion(cli.api, auth0.StringValue(action.ID), !flags.CreateVersion, version)
+				if err != nil {
+					return err
 				}
+
+				version = created
 
 				return nil
 			})
@@ -497,6 +478,75 @@ Create a new action:
 
 	mustRequireFlags(cmd, actionName)
 	if err := cmd.MarkFlagFilename(actionFile); err != nil {
+		panic(err)
+	}
+
+	return cmd
+}
+
+func updateActionCmd(cli *cli) *cobra.Command {
+	var (
+		name          string
+		file          string
+		script        string
+		dependency    []string
+		createVersion bool
+	)
+
+	cmd := &cobra.Command{
+		Use:   "update",
+		Short: "Updates an existing action",
+		Long: `$ auth0 actions update
+Updates an existing action:
+
+    $ auth0 actions update --name <actionid> --file action.js --dependency lodash@4.17.19  
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			source, err := sourceFromFileOrScript(file, script)
+			if err != nil {
+				return err
+			}
+
+			dependencies, err := validators.Dependencies(dependency)
+			if err != nil {
+				return err
+			}
+
+			version := &management.ActionVersion{
+				Code:         source,
+				Dependencies: dependencies,
+				Runtime:      "node12",
+			}
+
+			err = ansi.Spinner("Updating action", func() error {
+				created, err := createActionVersion(cli.api, name, !createVersion, version)
+				if err != nil {
+					return err
+				}
+
+				version = created
+				return nil
+			})
+
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.ActionVersion(version)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&name, "name", "n", "", "Action ID to update.")
+	cmd.Flags().StringVarP(&file, "file", "f", "", "File containing the action source code.")
+	cmd.Flags().StringVarP(&script, "script", "s", "", "Raw source code for the action.")
+	cmd.Flags().StringSliceVarP(&dependency, "dependency", "d", nil, "Dependency for the source code (<name>@<semver>).")
+	// TODO: This name is kind of overloaded since it could also refer to the version of the trigger (though there's only v1's at this time)
+	cmd.Flags().BoolVarP(&createVersion, "version", "v", false, "Create an explicit action version from the source code instead of a draft.")
+
+	mustRequireFlags(cmd, "name")
+	if err := cmd.MarkFlagFilename("file"); err != nil {
 		panic(err)
 	}
 
@@ -737,4 +787,36 @@ func sourceFromFileOrScript(file, script string) (string, error) {
 	}
 
 	return "", errNoSource
+}
+
+func createActionVersion(api *auth0.API, actionID string, draft bool, version *management.ActionVersion) (*management.ActionVersion, error) {
+	var v *management.ActionVersion
+	if draft {
+		if err := api.ActionVersion.UpsertDraft(actionID, version); err != nil {
+			return nil, err
+		}
+
+		// TODO(iamjem): this is a hack since the SDK won't decode 202 responses
+		draft, err := api.ActionVersion.ReadDraft(actionID)
+		if err != nil {
+			return nil, err
+		}
+		v = draft
+	} else {
+		if err := api.ActionVersion.Create(actionID, version); err != nil {
+			return nil, err
+		}
+
+		// TODO(iamjem): this is a hack since the SDK won't decode 202 responses
+		list, err := api.ActionVersion.List(actionID)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(list.Versions) > 0 {
+			v = list.Versions[0]
+		}
+	}
+
+	return v, nil
 }
