@@ -8,15 +8,15 @@ import (
 )
 
 const (
-	id = "id"
-	name = "name"
-	identifier = "identifier"
+	apiID         = "id"
+	apiName       = "name"
+	apiIdentifier = "identifier"
 )
 
 func apisCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "apis",
-		Short: "manage resources for APIs.",
+		Use:     "apis",
+		Short:   "manage resources for APIs.",
 		Aliases: []string{"resource-servers"},
 	}
 
@@ -62,7 +62,7 @@ Lists your existing APIs. To create one try:
 
 func showApiCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		ID   string
+		ID string
 	}
 
 	cmd := &cobra.Command{
@@ -72,12 +72,12 @@ func showApiCmd(cli *cli) *cobra.Command {
 
 auth0 apis show --id id
 `,
-        PreRun: func(cmd *cobra.Command, args []string) {
+		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if shouldPrompt(cmd, id) {
-				input := prompt.TextInput(id, "Id:", "Id of the API.", "", true)
+			if shouldPrompt(cmd, apiID) {
+				input := prompt.TextInput(apiID, "Id:", "Id of the API.", "", true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
@@ -101,8 +101,8 @@ auth0 apis show --id id
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.ID, id, "i", "", "ID of the API.")
-	mustRequireFlags(cmd, id)
+	cmd.Flags().StringVarP(&flags.ID, apiID, "i", "", "ID of the API.")
+	mustRequireFlags(cmd, apiID)
 
 	return cmd
 }
@@ -120,15 +120,15 @@ func createApiCmd(cli *cli) *cobra.Command {
 
 auth0 apis create --name myapi --identifier http://my-api
 `,
-        PreRun: func(cmd *cobra.Command, args []string) {
+		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if shouldPrompt(cmd, name) {
+			if shouldPrompt(cmd, apiName) {
 				input := prompt.TextInput(
-					name, "Name:", 
-					"Name of the API. You can change the API name later in the API settings.", 
-					"", 
+					apiName, "Name:",
+					"Name of the API. You can change the API name later in the API settings.",
+					"",
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
@@ -136,11 +136,11 @@ auth0 apis create --name myapi --identifier http://my-api
 				}
 			}
 
-			if shouldPrompt(cmd, identifier) {
+			if shouldPrompt(cmd, apiIdentifier) {
 				input := prompt.TextInput(
-					identifier, "Identifier:", 
-					"Identifier of the API. Cannot be changed once set.", 
-					"", 
+					apiIdentifier, "Identifier:",
+					"Identifier of the API. Cannot be changed once set.",
+					"",
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
@@ -166,9 +166,9 @@ auth0 apis create --name myapi --identifier http://my-api
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.Name, name, "n", "", "Name of the API.")
-	cmd.Flags().StringVarP(&flags.Identifier, identifier, "i", "", "Identifier of the API.")
-	mustRequireFlags(cmd, name, identifier)
+	cmd.Flags().StringVarP(&flags.Name, apiName, "n", "", "Name of the API.")
+	cmd.Flags().StringVarP(&flags.Identifier, apiIdentifier, "i", "", "Identifier of the API.")
+	mustRequireFlags(cmd, apiName, apiIdentifier)
 
 	return cmd
 }
@@ -186,20 +186,20 @@ func updateApiCmd(cli *cli) *cobra.Command {
 
 auth0 apis update --id id --name myapi
 `,
-        PreRun: func(cmd *cobra.Command, args []string) {
+		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if shouldPrompt(cmd, id) {
-				input := prompt.TextInput(id, "Id:", "Id of the API.", "", true)
+			if shouldPrompt(cmd, apiID) {
+				input := prompt.TextInput(apiID, "Id:", "Id of the API.", "", true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
 				}
 			}
 
-			if shouldPrompt(cmd, name) {
-				input := prompt.TextInput(name, "Name:", "Name of the API.", "", true)
+			if shouldPrompt(cmd, apiName) {
+				input := prompt.TextInput(apiName, "Name:", "Name of the API.", "", true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
@@ -221,17 +221,16 @@ auth0 apis update --id id --name myapi
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.ID, id, "i", "", "ID of the API.")
-	cmd.Flags().StringVarP(&flags.Name, name, "n", "", "Name of the API.")
-	mustRequireFlags(cmd, id, name)
+	cmd.Flags().StringVarP(&flags.ID, apiID, "i", "", "ID of the API.")
+	cmd.Flags().StringVarP(&flags.Name, apiName, "n", "", "Name of the API.")
+	mustRequireFlags(cmd, apiID, apiName)
 
 	return cmd
 }
 
 func deleteApiCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		ID    string
-		force bool
+		ID string
 	}
 
 	cmd := &cobra.Command{
@@ -239,26 +238,26 @@ func deleteApiCmd(cli *cli) *cobra.Command {
 		Short: "Delete an API",
 		Long: `Deletes an API:
 
-auth0 apis delete --id id --force
+auth0 apis delete --id id
 `,
-        PreRun: func(cmd *cobra.Command, args []string) {
+		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if shouldPrompt(cmd, id) {
-				input := prompt.TextInput(id, "Id:", "Id of the API.", "", true)
+			if shouldPrompt(cmd, apiID) {
+				input := prompt.TextInput(apiID, "Id:", "Id of the API.", "", true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
 				}
 			}
 
-			if !flags.force && canPrompt() {
+			if !cli.force && canPrompt() {
 				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
 					return nil
 				}
 			}
-		
+
 			err := ansi.Spinner("Deleting API", func() error {
 				return cli.api.ResourceServer.Delete(flags.ID)
 			})
@@ -271,9 +270,8 @@ auth0 apis delete --id id --force
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.ID, id, "i", "", "ID of the API.")
-	cmd.Flags().BoolVarP(&flags.force, "force", "f", false, "Do not ask for confirmation.")
-	mustRequireFlags(cmd, id)
+	cmd.Flags().StringVarP(&flags.ID, apiID, "i", "", "ID of the API.")
+	mustRequireFlags(cmd, apiID)
 
 	return cmd
 }

@@ -4,12 +4,19 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
+)
+
+const (
+	ruleID      = "id"
+	ruleName    = "name"
+	ruleScript  = "script"
+	ruleOrder   = "order"
+	ruleEnabled = "enabled"
 )
 
 func rulesCmd(cli *cli) *cobra.Command {
@@ -54,11 +61,29 @@ func listRulesCmd(cli *cli) *cobra.Command {
 }
 
 func enableRuleCmd(cli *cli) *cobra.Command {
-	var name string
+	var flags struct {
+		Name string
+	}
+
 	cmd := &cobra.Command{
 		Use:   "enable",
-		Short: "enable rule",
+		Short: "Emable a rule",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if shouldPrompt(cmd, ruleName) {
+				input := prompt.TextInput(
+					ruleName, "Name:",
+					"Name of the rule.",
+					"",
+					true)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
 			err := ansi.Spinner("Enabling rule", func() error {
 				var err error
 				data, err := getRules(cli)
@@ -66,14 +91,14 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 					return err
 				}
 
-				rule := findRuleByName(name, data.Rules)
+				rule := findRuleByName(flags.Name, data.Rules)
 				if rule != nil {
 					err := enableRule(rule, cli)
 					if err != nil {
 						return err
 					}
 				} else {
-					return fmt.Errorf("No rule found with name: %q", name)
+					return fmt.Errorf("No rule found with name: %q", flags.Name)
 				}
 				return nil
 			})
@@ -95,17 +120,36 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&name, "name", "n", "", "rule name")
-	mustRequireFlags(cmd, "name")
+	cmd.Flags().StringVarP(&flags.Name, ruleName, "n", "", "Name of the rule.")
+	mustRequireFlags(cmd, ruleName)
+
 	return cmd
 }
 
 func disableRuleCmd(cli *cli) *cobra.Command {
-	var name string
+	var flags struct {
+		Name string
+	}
+
 	cmd := &cobra.Command{
 		Use:   "disable",
-		Short: "disable rule",
+		Short: "Disable a rule",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if shouldPrompt(cmd, ruleName) {
+				input := prompt.TextInput(
+					ruleName, "Name:",
+					"Name of the rule.",
+					"",
+					true)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
 			err := ansi.Spinner("Disabling rule", func() error {
 				var err error
 				data, err := getRules(cli)
@@ -113,13 +157,13 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 					return err
 				}
 
-				rule := findRuleByName(name, data.Rules)
+				rule := findRuleByName(flags.Name, data.Rules)
 				if rule != nil {
 					if err := disableRule(rule, cli); err != nil {
 						return err
 					}
 				} else {
-					return fmt.Errorf("No rule found with name: %q", name)
+					return fmt.Errorf("No rule found with name: %q", flags.Name)
 				}
 				return nil
 			})
@@ -141,8 +185,8 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&name, "name", "n", "", "rule name")
-	mustRequireFlags(cmd, "name")
+	cmd.Flags().StringVarP(&flags.Name, ruleName, "n", "", "rule name")
+	mustRequireFlags(cmd, ruleName)
 
 	return cmd
 }
@@ -163,21 +207,41 @@ func createRulesCmd(cli *cli) *cobra.Command {
     auth0 rules create --name "My Rule" --script "function (user, context, callback) { console.log( 'Hello, world!' ); return callback(null, user, context); }"
 		`,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			checkFlags(cmd)
+			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if !hasFlags(cmd) {
-				name := prompt.TextInput(
-					"name", "Name:", 
-					"Name of the rule. You can change the rule name later in the rule settings.", 
-					"", 
+			if shouldPrompt(cmd, ruleName) {
+				input := prompt.TextInput(
+					"name", "Name:",
+					"Name of the rule. You can change the rule name later in the rule settings.",
+					"",
 					true)
 
-				script := prompt.TextInput("script", "Script:", "Script of the rule.", "", true)
-				order := prompt.TextInput("order", "Order:", "Order of the rule.", "0", false)
-				enabled := prompt.BoolInput("enabled", "Enabled:", "Enable the rule.", false)
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
 
-				if err := prompt.Ask([]*survey.Question {name, script, order, enabled}, &flags); err != nil {
+			if shouldPrompt(cmd, ruleScript) {
+				input := prompt.TextInput(ruleScript, "Script:", "Script of the rule.", "", true)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
+			if shouldPrompt(cmd, ruleOrder) {
+				input := prompt.TextInput(ruleOrder, "Order:", "Order of the rule.", "0", false)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
+			if shouldPrompt(cmd, ruleEnabled) {
+				input := prompt.BoolInput(ruleEnabled, "Enabled:", "Enable the rule.", false)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
 				}
 			}
@@ -202,19 +266,19 @@ func createRulesCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.Name, "name", "n", "", "Name of this rule (required)")
-	cmd.Flags().StringVarP(&flags.Script, "script", "s", "", "Code to be executed when this rule runs (required)")
-	cmd.Flags().IntVarP(&flags.Order, "order", "o", 0, "Order that this rule should execute in relative to other rules. Lower-valued rules execute first.")
-	cmd.Flags().BoolVarP(&flags.Enabled, "enabled", "e", false, "Whether the rule is enabled (true), or disabled (false).")
-	mustRequireFlags(cmd, "name", "script")
+	cmd.Flags().StringVarP(&flags.Name, ruleName, "n", "", "Name of this rule (required)")
+	cmd.Flags().StringVarP(&flags.Script, ruleScript, "s", "", "Code to be executed when this rule runs (required)")
+	cmd.Flags().IntVarP(&flags.Order, ruleOrder, "o", 0, "Order that this rule should execute in relative to other rules. Lower-valued rules execute first.")
+	cmd.Flags().BoolVarP(&flags.Enabled, ruleEnabled, "e", false, "Whether the rule is enabled (true), or disabled (false).")
+	mustRequireFlags(cmd, ruleName, ruleScript)
+
 	return cmd
 }
 
 func deleteRulesCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		id    string
-		name  string
-		force bool
+		ID   string
+		Name string
 	}
 
 	cmd := &cobra.Command{
@@ -222,45 +286,54 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 		Short: "Delete a rule",
 		Long: `Delete a rule:
 
-	auth0 rules delete --id "12345" --force`,
+	auth0 rules delete --id "12345"`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if flags.id != "" && flags.name != "" {
+			if flags.ID != "" && flags.Name != "" {
 				return fmt.Errorf("TMI! 🤯 use either --name or --id")
 			}
+
+			prepareInteractivity(cmd)
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if !flags.force {
+			if shouldPrompt(cmd, ruleID) {
+				input := prompt.TextInput(ruleID, "Id:", "Id of the rule.", "", true)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
+			if !cli.force && canPrompt() {
 				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
 					return nil
 				}
 			}
 
-			// TODO: Should add validation of rule
 			var r *management.Rule
-			ruleIDPattern := "^rul_[A-Za-z0-9]{16}$"	
-			re := regexp.MustCompile(ruleIDPattern)	
+			ruleIDPattern := "^rul_[A-Za-z0-9]{16}$"
+			re := regexp.MustCompile(ruleIDPattern)
 
-			if flags.id != "" {	
-				if !re.Match([]byte(flags.id)) {	
-					return fmt.Errorf("Rule with id %q does not match pattern %s", flags.id, ruleIDPattern)	
-				}	
+			if flags.ID != "" {
+				if !re.Match([]byte(flags.ID)) {
+					return fmt.Errorf("Rule with id %q does not match pattern %s", flags.ID, ruleIDPattern)
+				}
 
-				rule, err := cli.api.Rule.Read(flags.id)	
-				if err != nil {	
-					return err	
-				}	
-				r = rule	
-			} else {	
-				data, err := getRules(cli)	
-				if err != nil {	
-					return err	
-				}	
-				if rule := findRuleByName(flags.name, data.Rules); rule != nil {	
-					r = rule	
-				} else {	
-					return fmt.Errorf("No rule found with name: %q", flags.name)	
-				}	
+				rule, err := cli.api.Rule.Read(flags.ID)
+				if err != nil {
+					return err
+				}
+				r = rule
+			} else {
+				data, err := getRules(cli)
+				if err != nil {
+					return err
+				}
+				if rule := findRuleByName(flags.Name, data.Rules); rule != nil {
+					r = rule
+				} else {
+					return fmt.Errorf("No rule found with name: %q", flags.Name)
+				}
 			}
 
 			err := ansi.Spinner("Deleting rule", func() error {
@@ -275,9 +348,8 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.id, "id", "i", "", "ID of the rule to delete (required)")
-	cmd.Flags().StringVarP(&flags.name, "name", "n", "", "Name of the rule to delete")
-	cmd.Flags().BoolVarP(&flags.force, "force", "f", false, "Do not ask for confirmation.")
+	cmd.Flags().StringVarP(&flags.ID, ruleID, "i", "", "ID of the rule to delete (required)")
+	cmd.Flags().StringVarP(&flags.Name, ruleName, "n", "", "Name of the rule to delete")
 
 	return cmd
 }
