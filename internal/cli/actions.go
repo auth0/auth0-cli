@@ -23,7 +23,7 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(listActionsCmd(cli))
 	cmd.AddCommand(testActionCmd(cli))
 	cmd.AddCommand(createActionCmd(cli))
-	cmd.AddCommand(promoteActionCmd(cli))
+	cmd.AddCommand(deployActionCmd(cli))
 	cmd.AddCommand(listActionVersionsCmd(cli))
 	cmd.AddCommand(triggersCmd(cli))
 
@@ -129,18 +129,18 @@ func testActionCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func promoteActionCmd(cli *cli) *cobra.Command {
+func deployActionCmd(cli *cli) *cobra.Command {
 	var actionId string
 	var versionId string
 
 	cmd := &cobra.Command{
-		Use:   "promote",
+		Use:   "deploy",
 		Short: "Deploys the action version",
-		Long:  `$ auth0 actions promote --name <actionid> --version <versionid>`,
+		Long:  `$ auth0 actions deploy --name <actionid> --version <versionid>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var version *management.ActionVersion
-			err := ansi.Spinner(fmt.Sprintf("Promoting action: %s, version: %s", actionId, versionId), func() (err error) {
-				version, err = cli.api.ActionVersion.Promote(actionId, versionId)
+			err := ansi.Spinner(fmt.Sprintf("Deploying action: %s, version: %s", actionId, versionId), func() (err error) {
+				version, err = cli.api.ActionVersion.Deploy(actionId, versionId)
 				return err
 			})
 
@@ -154,8 +154,8 @@ func promoteActionCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to to test")
-	cmd.Flags().StringVarP(&versionId, "version", "v", "draft", "Version ID of the action to test")
+	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to deploy")
+	cmd.Flags().StringVarP(&versionId, "version", "v", "draft", "Version ID of the action to deploy")
 
 	mustRequireFlags(cmd, "name")
 
