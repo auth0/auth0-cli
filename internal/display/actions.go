@@ -51,11 +51,11 @@ func (v *actionVersionView) AsTableHeader() []string {
 }
 
 func (v *actionVersionView) AsTableRow() []string {
-	return []string{v.ID, v.ActionID, v.ActionName, v.Runtime, v.Status, v.CreatedAt}
+	return []string{v.getID(), v.ActionID, v.ActionName, v.Runtime, v.Status, v.CreatedAt}
 }
 
 func (v *actionVersionView) getID() string {
-	// TODO (iamjem): Is this right?
+	// draft versions don't have a unique id
 	if v.ID == "" {
 		return "draft"
 	}
@@ -92,12 +92,7 @@ func (r *Renderer) ActionTest(payload management.Object) {
 
 func (r *Renderer) ActionCreate(action *management.Action, version *management.ActionVersion) {
 	r.Heading(ansi.Bold(r.Tenant), "action created\n")
-
-	var triggers = make([]string, 0, len(*action.SupportedTriggers))
-	for _, t := range *action.SupportedTriggers {
-		triggers = append(triggers, string(*t.ID))
-	}
-
+	
 	v := &actionVersionView{
 		ID:         version.ID,
 		ActionID:   auth0.StringValue(action.ID),
