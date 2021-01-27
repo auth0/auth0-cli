@@ -249,7 +249,7 @@ func shouldPrompt(cmd *cobra.Command, flag string) bool {
 func prepareInteractivity(cmd *cobra.Command) {
 	if canPrompt(cmd) {
 		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-			cmd.Flags().SetAnnotation(flag.Name, cobra.BashCompOneRequiredFlag, []string{"false"})
+			_ = cmd.Flags().SetAnnotation(flag.Name, cobra.BashCompOneRequiredFlag, []string{"false"})
 		})
 	}
 }
