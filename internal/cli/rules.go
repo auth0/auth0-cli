@@ -39,8 +39,8 @@ func rulesCmd(cli *cli) *cobra.Command {
 func listRulesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List rules",
-		Long:  `List the rules in the current tenant`,
+		Short: "List your rules",
+		Long:  `List the rules in your current tenant.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var rules *management.RuleList
 			err := ansi.Spinner("Loading rules", func() error {
