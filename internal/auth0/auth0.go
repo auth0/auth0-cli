@@ -16,6 +16,7 @@ type API struct {
 	Log            LogAPI
 	Rule           RuleAPI
 	ResourceServer ResourceServerAPI
+	Role           RoleAPI
 }
 
 func NewAPI(m *management.Management) *API {
@@ -28,6 +29,7 @@ func NewAPI(m *management.Management) *API {
 		Log:            m.Log,
 		ResourceServer: m.ResourceServer,
 		Rule:           m.Rule,
+		Role:           m.Role,
 	}
 }
 
