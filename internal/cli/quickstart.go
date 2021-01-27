@@ -61,7 +61,7 @@ func quickstartDownloadCmd(cli *cli) *cobra.Command {
 			}
 
 			err = ansi.Spinner("Downloading quickstart", func() error {
-				return downloadQuickStart(context.TODO(), cli, client, flags.Stack, target)
+				return downloadQuickStart(context.TODO(), cli, client, target, flags.Stack)
 			})
 
 			if err != nil {
@@ -114,8 +114,8 @@ func downloadQuickStart(ctx context.Context, cli *cli, client *management.Client
 	// table -- which I don't know if there's a canonical place for that
 	// already.
 	payload.Branch = "master"
-	payload.Repo = "auth0-cordova-samples"
-	payload.Path = "01-Login"
+	payload.Repo = "auth0-golang-api-samples"
+	payload.Path = "01-Authorization-RS256"
 
 	// These appear to be largely constant and refers to the github
 	// username they're under.
