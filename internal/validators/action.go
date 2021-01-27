@@ -8,22 +8,22 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
+var ValidTriggerIDs = []string{
+	string(management.PostLogin),
+	string(management.ClientCredentials),
+	string(management.PreUserRegistration),
+	string(management.PostUserRegistration),
+}
+
 // TriggerID checks that the provided trigger is valid.
 func TriggerID(trigger string) error {
-	allTriggerIDs := []string{
-		string(management.PostLogin),
-		string(management.ClientCredentials),
-		string(management.PreUserRegistration),
-		string(management.PostUserRegistration),
-	}
-
-	for _, id := range allTriggerIDs {
+	for _, id := range ValidTriggerIDs {
 		if trigger == id {
 			return nil
 		}
 	}
 
-	return fmt.Errorf("%s is not a valid trigger type (%s)", trigger, strings.Join(allTriggerIDs, ", "))
+	return fmt.Errorf("%s is not a valid trigger type (%s)", trigger, strings.Join(ValidTriggerIDs, ", "))
 }
 
 var semverRe = regexp.MustCompile(`^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)

@@ -99,7 +99,7 @@ Launch a browser to try out your universal login box for the given client.
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.Flags().StringVarP(&clientID, "client-id", "c", "", "Client ID for which to test login.")
+	cmd.Flags().StringVarP(&clientID, "client-id", "c", "", "Client Id for which to test login.")
 	cmd.Flags().StringVarP(&connectionName, "connection", "", "", "Connection to test during login.")
 	return cmd
 }
