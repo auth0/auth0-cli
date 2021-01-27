@@ -255,7 +255,7 @@ func removeLocalCallbackURLFromClient(clientManager auth0.ClientAPI, client *man
 	}
 
 	// can't update a client to have 0 callback URLs, so don't attempt it
-	if len(callbacks) == 1 {
+	if len(callbacks) == 0 {
 		return nil
 	}
 
