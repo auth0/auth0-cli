@@ -40,21 +40,22 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(deployActionCmd(cli))
 	cmd.AddCommand(downloadActionCmd(cli))
 	cmd.AddCommand(listActionVersionsCmd(cli))
-	cmd.AddCommand(triggersCmd(cli))
+	cmd.AddCommand(bindActionCmd(cli))
+
+	cmd.AddCommand(flowsCmd(cli))
 
 	return cmd
 }
 
-func triggersCmd(cli *cli) *cobra.Command {
+func flowsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "triggers",
-		Short: "Manage resources for action triggers",
+		Use:   "flows",
+		Short: "Manages resources for action flows",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.AddCommand(showTriggerCmd(cli))
-	cmd.AddCommand(reorderTriggerCmd(cli))
-	cmd.AddCommand(createTriggerCmd(cli))
+	cmd.AddCommand(showFlowCmd(cli))
+	cmd.AddCommand(updateFlowCmd(cli))
 
 	return cmd
 }
@@ -196,11 +197,11 @@ func deployActionCmd(cli *cli) *cobra.Command {
 			}
 
 			if shouldPrompt(cmd, actionVersion) {
-				input := prompt.TextInputDefault(actionVersion, "Version Id:", "Version ID of the action to deploy. Default: draft", "draft", false)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
+				version, err := askVersion(cli, flags.ID)
+				if err != nil {
 					return err
 				}
+				flags.Version = version
 			}
 
 			var version *management.ActionVersion
@@ -224,6 +225,42 @@ func deployActionCmd(cli *cli) *cobra.Command {
 	mustRequireFlags(cmd, actionID)
 
 	return cmd
+}
+
+func renderVersionOptionText(v *management.ActionVersion) string {
+	deployed := ""
+
+	if v.Deployed {
+		deployed = "[DEPLOYED]"
+	}
+
+	return fmt.Sprintf("#%d %s %s", v.Number, v.ID, deployed)
+}
+
+func askVersion(cli *cli, actionId string) (string, error) {
+	// var versionId string
+	versions, err := cli.api.ActionVersion.List(actionId)
+	if err != nil {
+		return "", err
+	}
+
+	optChoices := make(map[string]string)
+	options := make([]string, 0)
+	options = append(options, "Draft")
+	optChoices["Draft"] = "draft"
+
+	for _, v := range versions.Versions {
+		optText := renderVersionOptionText(v)
+		optChoices[optText] = v.ID
+		options = append(options, optText)
+	}
+
+	var versionLabel string
+	if err = prompt.AskOne(prompt.SelectInput("Actions version", "Choose a version", "Select the version number you want to choose for this action", options, true), &versionLabel); err != nil {
+		return "", err
+	}
+
+	return optChoices[versionLabel], nil
 }
 
 func downloadActionCmd(cli *cli) *cobra.Command {
@@ -250,11 +287,11 @@ func downloadActionCmd(cli *cli) *cobra.Command {
 			}
 
 			if shouldPrompt(cmd, actionVersion) {
-				input := prompt.TextInputDefault(actionVersion, "Version Id:", "Version ID of the action to deploy or draft. Default: draft", "draft", false)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
+				version, err := askVersion(cli, flags.ID)
+				if err != nil {
 					return err
 				}
+				flags.Version = version
 			}
 
 			if shouldPrompt(cmd, actionPath) {
@@ -307,7 +344,7 @@ func downloadActionCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&flags.ID, actionID, "i", "", "Action ID to download.")
-	cmd.Flags().StringVarP(&flags.Version, actionVersion, "v", "draft", "Version ID of the action to deploy or draft. Default: draft")
+	cmd.Flags().StringVarP(&flags.Version, actionVersion, "v", "", "Version ID of the action to deploy or draft. Default: draft")
 	cmd.Flags().StringVarP(&flags.Path, actionPath, "p", "./", "Path to save the action content.")
 	mustRequireFlags(cmd, actionID)
 
@@ -499,7 +536,7 @@ func updateActionCmd(cli *cli) *cobra.Command {
 		Long: `$ auth0 actions update
 Updates an existing action:
 
-    $ auth0 actions update --name <actionid> --file action.js --dependency lodash@4.17.19  
+    $ auth0 actions update --name <actionid> --file action.js --dependency lodash@4.17.19
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if shouldPrompt(cmd, actionFile) && shouldPrompt(cmd, actionScript) {
@@ -561,15 +598,15 @@ Updates an existing action:
 	return cmd
 }
 
-func showTriggerCmd(cli *cli) *cobra.Command {
+func showFlowCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		Trigger string
 	}
 
 	cmd := &cobra.Command{
 		Use:   "show",
-		Short: "Show actions by trigger",
-		Long:  `auth0 actions triggers show --trigger post-login`,
+		Short: "Shows actions by flow",
+		Long:  `auth0 actions flows --trigger post-login`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -613,16 +650,16 @@ func showTriggerCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func reorderTriggerCmd(cli *cli) *cobra.Command {
+func updateFlowCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		File    string
 		Trigger string
 	}
 
 	cmd := &cobra.Command{
-		Use:   "reorder",
-		Short: "Reorder actions by trigger",
-		Long:  `auth0 actions triggers reorder --trigger <post-login> --file <bindings.json>`,
+		Use:   "update",
+		Short: "Update actions by flow",
+		Long:  `auth0 actions flows update --trigger <post-login> --file <bindings.json>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -660,7 +697,7 @@ func reorderTriggerCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			err = ansi.Spinner("Reordering actions", func() (err error) {
+			err = ansi.Spinner("Updating actions", func() (err error) {
 				if _, err = cli.api.ActionBinding.Update(triggerID, list.Bindings); err != nil {
 					return err
 				}
@@ -686,16 +723,16 @@ func reorderTriggerCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func createTriggerCmd(cli *cli) *cobra.Command {
+func bindActionCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		Action  string
 		Trigger string
 	}
 
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Bind an action to a trigger",
-		Long:  `auth0 actions triggers create --trigger <post-login> --action <action_id>`,
+		Use:   "bind",
+		Short: "Bind an action to a flow",
+		Long:  `auth0 actions bind --trigger <post-login> --action <action_id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},

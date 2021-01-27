@@ -1,6 +1,7 @@
 package display
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -38,20 +39,22 @@ func (v *triggerView) AsTableRow() []string {
 }
 
 type actionVersionView struct {
+	Number     string
 	ID         string
 	ActionID   string
 	ActionName string
 	Runtime    string
 	Status     string
+	Deployed   string
 	CreatedAt  string
 }
 
 func (v *actionVersionView) AsTableHeader() []string {
-	return []string{"ID", "Action ID", "Action Name", "Runtime", "Status", "Created At"}
+	return []string{"Number", "ID", "Action ID", "Action Name", "Runtime", "Status", "Created At", "Deployed"}
 }
 
 func (v *actionVersionView) AsTableRow() []string {
-	return []string{v.getID(), v.ActionID, v.ActionName, v.Runtime, v.Status, v.CreatedAt}
+	return []string{v.Number, v.getID(), v.ActionID, v.ActionName, v.Runtime, v.Status, v.CreatedAt, v.Deployed}
 }
 
 func (v *actionVersionView) getID() string {
@@ -124,17 +127,28 @@ func (r *Renderer) ActionTriggersList(bindings []*management.ActionBinding) {
 	r.Results(res)
 }
 
-func (r *Renderer) ActionVersion(version *management.ActionVersion) {
-	r.Heading(ansi.Bold(r.Tenant), "action version\n")
+func ActionVersionView(version *management.ActionVersion) *actionVersionView {
+	deployed := ""
+	if version.Deployed {
+		deployed = "✓"
+	}
 
-	v := &actionVersionView{
+	return &actionVersionView{
+		Number:     fmt.Sprint(version.Number),
 		ID:         version.ID,
 		ActionID:   auth0.StringValue(version.Action.ID),
 		ActionName: auth0.StringValue(version.Action.Name),
 		Runtime:    auth0.StringValue(&version.Runtime),
 		Status:     string(version.Status),
+		Deployed:   deployed,
 		CreatedAt:  timeAgo(auth0.TimeValue(version.CreatedAt)),
 	}
+}
+
+func (r *Renderer) ActionVersion(version *management.ActionVersion) {
+	r.Heading(ansi.Bold(r.Tenant), "action version\n")
+
+	v := ActionVersionView(version)
 
 	r.Results([]View{v})
 }
@@ -144,14 +158,7 @@ func (r *Renderer) ActionVersionList(list []*management.ActionVersion) {
 
 	var res []View
 	for _, version := range list {
-		res = append(res, &actionVersionView{
-			ID:         auth0.StringValue(&version.ID),
-			ActionID:   auth0.StringValue(version.Action.ID),
-			ActionName: auth0.StringValue(version.Action.Name),
-			Runtime:    auth0.StringValue(&version.Runtime),
-			Status:     string(version.Status),
-			CreatedAt:  timeAgo(auth0.TimeValue(version.CreatedAt)),
-		})
+		res = append(res, ActionVersionView(version))
 	}
 
 	r.Results(res)
