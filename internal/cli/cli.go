@@ -221,6 +221,16 @@ func (c *cli) initContext() (err error) {
 	return nil
 }
 
+func hasFlags(cmd *cobra.Command) bool {
+	return cmd.Flags().NFlag() > 0
+}
+
+func checkFlags(cmd *cobra.Command) {
+	if (!hasFlags(cmd)) {
+		cmd.ResetFlags()
+	}
+}
+
 func mustRequireFlags(cmd *cobra.Command, flags ...string) {
 	for _, f := range flags {
 		if err := cmd.MarkFlagRequired(f); err != nil {
