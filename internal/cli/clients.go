@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -19,6 +20,7 @@ func clientsCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(clientsListCmd(cli))
 	cmd.AddCommand(clientsCreateCmd(cli))
+	cmd.AddCommand(clientsQuickstartCmd(cli))
 
 	return cmd
 }
@@ -197,4 +199,12 @@ func apiTokenEndpointAuthMethodFor(v string) *string {
 	default:
 		return nil
 	}
+}
+
+func callbacksFor(s []interface{}) []string {
+	res := make([]string, len(s))
+	for i, v := range s {
+		res[i] = fmt.Sprintf("%s", v)
+	}
+	return res
 }
