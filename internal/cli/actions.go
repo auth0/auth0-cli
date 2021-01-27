@@ -49,9 +49,9 @@ func triggersCmd(cli *cli) *cobra.Command {
 func listActionsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List your existing actions",
+		Short: "List existing actions",
 		Long: `auth0 actions list
-Lists your existing actions. To create one try:
+List existing actions. To create one try:
 
     auth0 actions create
 `,
