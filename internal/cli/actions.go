@@ -166,6 +166,36 @@ func deployActionCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+func askVersion(cli *cli, actionId string) (string, error) {
+	var versionId string
+	versions, err := cli.api.ActionVersion.List(actionId)
+	if err != nil {
+		return "", err
+	}
+
+	var options []string
+	options = append(options, "draft")
+
+	for _, v := range versions.Versions {
+		options = append(options, fmt.Sprint(v.Number))
+	}
+
+	var versionNumber string
+	prompt.AskOne(prompt.SelectInput("Actions version", "Choose a version to download", options, "draft"), &versionNumber)
+	if versionNumber == "draft" {
+		versionId = "draft"
+	} else {
+		i, err := strconv.Atoi(versionNumber)
+		if err != nil {
+			return "", err
+		}
+
+		versionId = versions.Versions[len(versions.Versions)-i].ID
+	}
+
+	return versionId, nil
+}
+
 func downloadActionCmd(cli *cli) *cobra.Command {
 	var actionId string
 	var versionId string
@@ -178,29 +208,10 @@ func downloadActionCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if versionId == "" {
-				versions, err := cli.api.ActionVersion.List(actionId)
+				var err error
+				versionId, err = askVersion(cli, actionId)
 				if err != nil {
 					return err
-				}
-
-				var options []string
-				options = append(options, "draft")
-
-				for _, v := range versions.Versions {
-					options = append(options, fmt.Sprint(v.Number))
-				}
-
-				var versionNumber string
-				prompt.AskOne(prompt.SelectInput("Actions version", "Choose a version to download", options, "draft"), &versionNumber)
-				if versionNumber == "draft" {
-					versionId = "draft"
-				} else {
-					i, err := strconv.Atoi(versionNumber)
-					if err != nil {
-						return err
-					}
-
-					versionId = versions.Versions[len(versions.Versions)-i].ID
 				}
 			}
 
