@@ -92,7 +92,7 @@ func (r *Renderer) ActionTest(payload management.Object) {
 
 func (r *Renderer) ActionCreate(action *management.Action, version *management.ActionVersion) {
 	r.Heading(ansi.Bold(r.Tenant), "action created\n")
-	
+
 	v := &actionVersionView{
 		ID:         version.ID,
 		ActionID:   auth0.StringValue(action.ID),
@@ -140,10 +140,12 @@ func (r *Renderer) ActionVersionList(list []*management.ActionVersion) {
 	var res []View
 	for _, version := range list {
 		res = append(res, &actionVersionView{
-			ID:        auth0.StringValue(&version.ID),
-			Status:    string(version.Status),
-			Runtime:   auth0.StringValue(&version.Runtime),
-			CreatedAt: timeAgo(auth0.TimeValue(version.CreatedAt)),
+			ID:         auth0.StringValue(&version.ID),
+			ActionID:   auth0.StringValue(version.Action.ID),
+			ActionName: auth0.StringValue(version.Action.Name),
+			Runtime:    auth0.StringValue(&version.Runtime),
+			Status:     string(version.Status),
+			CreatedAt:  timeAgo(auth0.TimeValue(version.CreatedAt)),
 		})
 	}
 
