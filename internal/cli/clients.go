@@ -13,7 +13,7 @@ import (
 func clientsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "clients",
-		Short: "manage resources for clients.",
+		Short: "Manage resources for clients",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -26,11 +26,11 @@ func clientsCmd(cli *cli) *cobra.Command {
 func clientsListCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "Lists your existing clients",
-		Long: `$ auth0 client list
+		Short: "List your existing clients",
+		Long: `auth0 client list
 Lists your existing clients. To create one try:
 
-    $ auth0 clients create
+    auth0 clients create
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ClientList
@@ -63,16 +63,12 @@ func clientsCreateCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new client (also know as application)",
-		Long: `Creates a new client (or application):
+		Long: `Create a new client (or application):
 
 auth0 clients create --name myapp --type [native|spa|regular|m2m]
 
 - supported application type:
-	- native: mobile, desktop, CLI and smart device apps running natively.
-	- spa (single page application): a JavaScript front-end app that uses an API.
-	- regular: Traditional web app using redirects.
-	- m2m (machine to machine): CLIs, daemons or services running on your backend.
-`,
+	`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// todo(jfatta) on non-interactive the cmd should fail on missing mandatory args (name, type)
 			if !cmd.Flags().Changed("name") {
@@ -152,7 +148,11 @@ auth0 clients create --name myapp --type [native|spa|regular|m2m]
 		},
 	}
 	cmd.Flags().StringVarP(&flags.Name, "name", "n", "", "Name of the client.")
-	cmd.Flags().StringVarP(&flags.AppType, "type", "t", "", "Type of the client: native, spa, regular, or m2m.")
+	cmd.Flags().StringVarP(&flags.AppType, "type", "t", "", "Type of the client:\n"+
+		"- native: mobile, desktop, CLI and smart device apps running natively.\n"+
+		"- spa (single page application): a JavaScript front-end app that uses an API.\n"+
+		"- regular: Traditional web app using redirects.\n"+
+		"- m2m (machine to machine): CLIs, daemons or services running on your backend.")
 	cmd.Flags().StringVarP(&flags.Description, "description", "d", "", "A free text description of the application. Max character count is 140.")
 	cmd.Flags().StringSliceVarP(&flags.Callbacks, "callbacks", "c", nil, "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native clients, all callbacks should use protocol https://.")
 

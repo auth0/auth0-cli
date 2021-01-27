@@ -17,7 +17,7 @@ import (
 func actionsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "actions",
-		Short: "manage resources for actions.",
+		Short: "Manage resources for actions",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -35,7 +35,7 @@ func actionsCmd(cli *cli) *cobra.Command {
 func triggersCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "triggers",
-		Short: "manage resources for action triggers.",
+		Short: "Manage resources for action triggers",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -49,11 +49,11 @@ func triggersCmd(cli *cli) *cobra.Command {
 func listActionsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "Lists your existing actions",
-		Long: `$ auth0 actions list
+		Short: "List your existing actions",
+		Long: `auth0 actions list
 Lists your existing actions. To create one try:
 
-    $ auth0 actions create
+    auth0 actions create
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			list, err := cli.api.Action.List()
@@ -100,7 +100,7 @@ func testActionCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "test",
 		Short: "Test an action draft against a payload",
-		Long:  `$ auth0 actions test --name <actionid> --file <payload.json>`,
+		Long:  `auth0 actions test --name <actionid> --file <payload.json>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := readJsonFile(payloadFile, &payload)
 			if err != nil {
@@ -122,7 +122,7 @@ func testActionCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to to test")
+	cmd.Flags().StringVarP(&actionId, "name", "n", "", "Action ID to to test")
 	cmd.Flags().StringVarP(&payloadFile, "file", "f", "", "File containing the payload for the test")
 	cmd.Flags().StringVarP(&versionId, "version", "v", "draft", "Version ID of the action to test")
 
@@ -137,8 +137,8 @@ func deployActionCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "deploy",
-		Short: "Deploys the action version",
-		Long:  `$ auth0 actions deploy --name <actionid> --version <versionid>`,
+		Short: "Deploy the action version",
+		Long:  `auth0 actions deploy --name <actionid> --version <versionid>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var version *management.ActionVersion
 			err := ansi.Spinner(fmt.Sprintf("Deploying action: %s, version: %s", actionId, versionId), func() (err error) {
@@ -156,7 +156,7 @@ func deployActionCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to deploy")
+	cmd.Flags().StringVarP(&actionId, "name", "n", "", "Action ID to deploy")
 	cmd.Flags().StringVarP(&versionId, "version", "v", "draft", "Version ID of the action to deploy")
 
 	mustRequireFlags(cmd, "name")
@@ -172,7 +172,7 @@ func downloadActionCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "download",
 		Short: "Download the action version",
-		Long:  `$ auth0 actions download --name <actionid> --version <versionid | draft>`,
+		Long:  `auth0 actions download --name <actionid> --version <versionid | draft>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cli.renderer.Infof("It will overwrite files in %s", path)
 			if confirmed := prompt.Confirm("Do you wish to proceed?"); !confirmed {
@@ -215,7 +215,7 @@ func downloadActionCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to deploy")
+	cmd.Flags().StringVarP(&actionId, "name", "n", "", "Action ID to deploy")
 	cmd.Flags().StringVarP(&versionId, "version", "v", "draft", "Version ID of the action to deploy or draft, default: draft")
 	cmd.Flags().StringVarP(&path, "path", "p", "./", "Path to save the action content")
 
@@ -229,8 +229,8 @@ func listActionVersionsCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "versions",
-		Short: "Lists the action versions",
-		Long:  `$ auth0 actions versions --name <actionid>`,
+		Short: "List the action versions",
+		Long:  `auth0 actions versions --name <actionid>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ActionVersionList
 			err := ansi.Spinner(fmt.Sprintf("Loading versions for action: %s", actionId), func() (err error) {
@@ -248,7 +248,7 @@ func listActionVersionsCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to show versions")
+	cmd.Flags().StringVarP(&actionId, "name", "n", "", "Action ID to show versions")
 
 	mustRequireFlags(cmd, "name")
 
@@ -258,11 +258,11 @@ func listActionVersionsCmd(cli *cli) *cobra.Command {
 func createActionCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
-		Short: "Creates a new action",
-		Long: `$ auth0 actions create
-Creates a new action:
+		Short: "Create a new action",
+		Long: `auth0 actions create
+Create a new action:
 
-    $ auth0 actions create my-action --trigger post-login
+    auth0 actions create my-action --trigger post-login
 `,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if err := validators.ExactArgs("name")(cmd, args); err != nil {
@@ -317,7 +317,7 @@ func showTriggerCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show",
 		Short: "Show actions by trigger",
-		Long:  `$ auth0 actions triggers show --trigger post-login`,
+		Long:  `auth0 actions triggers show --trigger post-login`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := validators.TriggerID(trigger); err != nil {
 				return err
@@ -351,8 +351,8 @@ func reorderTriggerCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "reorder",
-		Short: "Reorders actions by trigger",
-		Long:  `$ auth0 actions triggers reorder --trigger <post-login> --file <bindings.json>`,
+		Short: "Reorder actions by trigger",
+		Long:  `auth0 actions triggers reorder --trigger <post-login> --file <bindings.json>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := validators.TriggerID(trigger); err != nil {
 				return err
@@ -398,7 +398,7 @@ func createTriggerCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Bind an action to a trigger",
-		Long:  `$ auth0 actions triggers create --trigger <post-login> --name <action_id>`,
+		Long:  `auth0 actions triggers create --trigger <post-login> --name <action_id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := validators.TriggerID(trigger); err != nil {
 				return err
@@ -444,7 +444,7 @@ func createTriggerCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&trigger, "trigger", "t", string(management.PostLogin), "Trigger type for action.")
-	cmd.Flags().StringVar(&actionId, "name", "", "Action ID to to test")
+	cmd.Flags().StringVarP(&actionId, "name", "n", "", "Action ID to to test")
 
 	return cmd
 }
