@@ -37,6 +37,7 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(testActionCmd(cli))
 	cmd.AddCommand(createActionCmd(cli))
 	cmd.AddCommand(updateActionCmd(cli))
+	cmd.AddCommand(deleteActionCmd(cli))
 	cmd.AddCommand(deployActionCmd(cli))
 	cmd.AddCommand(downloadActionCmd(cli))
 	cmd.AddCommand(listActionVersionsCmd(cli))
@@ -583,17 +584,61 @@ Updates an existing action:
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.ID, actionName, "n", "", "Action ID to update.")
+	cmd.Flags().StringVar(&flags.ID, actionID, "", "Action ID to update.")
 	cmd.Flags().StringVarP(&flags.File, actionFile, "f", "", "File containing the action source code.")
 	cmd.Flags().StringVarP(&flags.Script, actionScript, "s", "", "Raw source code for the action.")
 	cmd.Flags().StringSliceVarP(&flags.Dependency, actionDependency, "d", nil, "Dependency for the source code (<name>@<semver>).")
 	// TODO: This name is kind of overloaded since it could also refer to the version of the trigger (though there's only v1's at this time)
 	cmd.Flags().BoolVarP(&flags.CreateVersion, actionVersion, "v", false, "Create an explicit action version from the source code instead of a draft.")
 
-	mustRequireFlags(cmd, actionName)
+	mustRequireFlags(cmd, actionID)
 	if err := cmd.MarkFlagFilename(actionFile); err != nil {
 		panic(err)
 	}
+
+	return cmd
+}
+
+func deleteActionCmd(cli *cli) *cobra.Command {
+	var flags struct {
+		ID string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete an action",
+		Long: `$ Delete an action:
+
+    $ auth0 actions delete --id <actionid>`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if shouldPrompt(cmd, actionID) {
+				input := prompt.TextInput(actionID, "Id:", "Id of the action.", true)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
+			if !cli.force && canPrompt(cmd) {
+				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
+					return nil
+				}
+			}
+
+			err := ansi.Spinner("Deleting action", func() error {
+				return cli.api.Action.Delete(flags.ID)
+			})
+
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&flags.ID, actionID, "", "Action ID to delete.")
+	mustRequireFlags(cmd, actionID)
 
 	return cmd
 }
