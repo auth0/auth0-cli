@@ -52,7 +52,7 @@ func Execute() {
 
 	rootCmd.PersistentFlags().BoolVar(&cli.force,
 		"force", false, "Skip confirmation.")
-	
+
 	rootCmd.PersistentFlags().BoolVar(&cli.noInput,
 		"no-input", false, "Disable interactivity.")
 
@@ -67,6 +67,7 @@ func Execute() {
 	rootCmd.AddCommand(completionCmd(cli))
 	rootCmd.AddCommand(rolesCmd(cli))
 	rootCmd.AddCommand(customDomainsCmd(cli))
+	rootCmd.AddCommand(getTokenCmd(cli))
 
 	// TODO(cyx): backport this later on using latest auth0/v5.
 	// rootCmd.AddCommand(actionsCmd(cli))
