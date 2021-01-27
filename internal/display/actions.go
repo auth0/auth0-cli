@@ -90,16 +90,19 @@ func (r *Renderer) ActionTest(payload management.Object) {
 	r.JSONResult(payload, nil)
 }
 
-func (r *Renderer) ActionCreate(action *management.Action, version *management.ActionVersion) {
-	r.Heading(ansi.Bold(r.Tenant), "action created\n")
+func (r *Renderer) Action(action *management.Action) {
+	r.Heading(ansi.Bold(r.Tenant), "action\n")
 
-	v := &actionVersionView{
-		ID:         version.ID,
-		ActionID:   auth0.StringValue(action.ID),
-		ActionName: auth0.StringValue(action.Name),
-		Runtime:    version.Runtime,
-		Status:     string(version.Status),
-		CreatedAt:  timeAgo(auth0.TimeValue(version.CreatedAt)),
+	var triggers = make([]string, 0, len(*action.SupportedTriggers))
+	for _, t := range *action.SupportedTriggers {
+		triggers = append(triggers, string(*t.ID))
+	}
+
+	v := &actionView{
+		ID:        auth0.StringValue(action.ID),
+		Name:      auth0.StringValue(action.Name),
+		CreatedAt: timeAgo(auth0.TimeValue(action.CreatedAt)),
+		Type:      strings.Join(triggers, ", "),
 	}
 
 	r.Results([]View{v})
@@ -125,10 +128,12 @@ func (r *Renderer) ActionVersion(version *management.ActionVersion) {
 	r.Heading(ansi.Bold(r.Tenant), "action version\n")
 
 	v := &actionVersionView{
-		ID:        auth0.StringValue(&version.ID),
-		Status:    string(version.Status),
-		Runtime:   auth0.StringValue(&version.Runtime),
-		CreatedAt: timeAgo(auth0.TimeValue(version.CreatedAt)),
+		ID:         version.ID,
+		ActionID:   auth0.StringValue(version.Action.ID),
+		ActionName: auth0.StringValue(version.Action.ID),
+		Runtime:    auth0.StringValue(&version.Runtime),
+		Status:     string(version.Status),
+		CreatedAt:  timeAgo(auth0.TimeValue(version.CreatedAt)),
 	}
 
 	r.Results([]View{v})

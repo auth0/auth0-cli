@@ -333,7 +333,10 @@ Creates a new action:
 				return err
 			}
 
-			cli.renderer.ActionCreate(action, version)
+			// currently the 202 response for a version/draft create does not get decoded, so we have to manually set
+			// this field to keep the renderer happy.
+			version.Action = action
+			cli.renderer.ActionVersion(version)
 
 			return nil
 		},
