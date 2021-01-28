@@ -8,32 +8,34 @@ import (
 // API mimics `management.Management`s general interface, except it refers to
 // the interfaces instead of the concrete structs.
 type API struct {
-	Action         ActionAPI
-	ActionVersion  ActionVersionAPI
-	ActionBinding  ActionBindingAPI
-	Client         ClientAPI
-	Connection     ConnectionAPI
-	Log            LogAPI
-	Rule           RuleAPI
-	ResourceServer ResourceServerAPI
-	Role           RoleAPI
-	CustomDomain   CustomDomainAPI
-	User           UserAPI
+	Action          ActionAPI
+	ActionVersion   ActionVersionAPI
+	ActionExecution ActionExecutionAPI
+	ActionBinding   ActionBindingAPI
+	Client          ClientAPI
+	Connection      ConnectionAPI
+	Log             LogAPI
+	Rule            RuleAPI
+	ResourceServer  ResourceServerAPI
+	Role            RoleAPI
+	CustomDomain    CustomDomainAPI
+	User            UserAPI
 }
 
 func NewAPI(m *management.Management) *API {
 	return &API{
-		Action:         m.Action,
-		ActionVersion:  m.ActionVersion,
-		ActionBinding:  m.ActionBinding,
-		Client:         m.Client,
-		Connection:     m.Connection,
-		Log:            m.Log,
-		ResourceServer: m.ResourceServer,
-		Rule:           m.Rule,
-		Role:           m.Role,
-		CustomDomain:   m.CustomDomain,
-		User:           m.User,
+		Action:          m.Action,
+		ActionVersion:   m.ActionVersion,
+		ActionExecution: m.ActionExecution,
+		ActionBinding:   m.ActionBinding,
+		Client:          m.Client,
+		Connection:      m.Connection,
+		Log:             m.Log,
+		ResourceServer:  m.ResourceServer,
+		Rule:            m.Rule,
+		Role:            m.Role,
+		CustomDomain:    m.CustomDomain,
+		User:            m.User,
 	}
 }
 

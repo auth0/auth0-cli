@@ -78,6 +78,7 @@ type Log struct {
 	// The IP of the log event source
 	IP *string `json:"ip"`
 
+	Description  *string                `json:"description"`
 	LocationInfo map[string]interface{} `json:"location_info"`
 	Details      map[string]interface{} `json:"details"`
 

@@ -27,3 +27,7 @@ type ActionBindingAPI interface {
 	List(triggerID management.TriggerID, opts ...management.RequestOption) (c *management.ActionBindingList, err error)
 	Update(triggerID management.TriggerID, v []*management.ActionBinding) (list *management.ActionBindingList, err error)
 }
+
+type ActionExecutionAPI interface {
+	Read(id string) (*management.ActionExecution, error)
+}
