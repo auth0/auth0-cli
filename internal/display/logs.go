@@ -12,7 +12,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var (
+const (
 	notApplicable = "N/A"
 )
 
@@ -79,7 +79,7 @@ func (v *logView) AsTableRow() []string {
 
 	clientName := v.GetClientName()
 	if clientName == "" {
-		clientName = notApplicable
+		clientName = ansi.Faint(notApplicable)
 	}
 
 	conn := v.getConnection()
