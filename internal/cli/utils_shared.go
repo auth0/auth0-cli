@@ -33,11 +33,6 @@ func runClientCredentialsFlow(cli *cli, c *management.Client, clientID string, a
 
 	url := "https://" + tenant.Domain + "/oauth/token"
 
-	cli.renderer.Infof("Domain:   " + tenant.Domain)
-	cli.renderer.Infof("ClientID: " + clientID)
-	cli.renderer.Infof("Type:     Machine to Machine")
-	fmt.Println()
-
 	client_secret := c.GetClientSecret()
 
 	// TODO: Check if the audience is valid, and suggest a different client if it is wrong.
