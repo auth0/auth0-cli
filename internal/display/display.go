@@ -63,7 +63,7 @@ type View interface {
 	AsTableRow() []string
 }
 
-func (r *Renderer) JSONResult(data interface{}, ch <-chan View) {
+func (r *Renderer) JSONResult(data interface{}) {
 	b, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
 		r.Errorf("couldn't marshal results as JSON: %v", err)
@@ -73,31 +73,65 @@ func (r *Renderer) JSONResult(data interface{}, ch <-chan View) {
 }
 
 func (r *Renderer) Results(data []View) {
-	r.Stream(data, nil)
-}
-
-func (r *Renderer) Stream(data []View, ch <-chan View) {
 	if len(data) > 0 {
 		switch r.Format {
 		case OutputFormatJSON:
-			r.JSONResult(data, ch)
+			r.JSONResult(data)
 
 		default:
 			rows := make([][]string, 0, len(data))
 			for _, d := range data {
 				rows = append(rows, d.AsTableRow())
-
-				if extras := extractExtras(d); extras != nil {
-					rows = append(rows, extras)
-				}
-
 			}
-			writeTable(r.ResultWriter, data[0].AsTableHeader(), rows, ch)
+			writeTable(r.ResultWriter, data[0].AsTableHeader(), rows)
 		}
+	}
+
+}
+
+func (r *Renderer) Stream(data []View, ch <-chan View) {
+	w := r.ResultWriter
+
+	displayRow := func(row []string) {
+		fmtStr := strings.Repeat("%s    ", len(row))
+		fprintfStr(w, fmtStr, row...)
+		fmt.Fprintln(w)
+	}
+
+	displayView := func(v View) {
+		row := v.AsTableRow()
+		displayRow(row)
+
+		if extras := extractExtras(v); extras != nil {
+			fmt.Fprintln(w)
+			displayRow(extras)
+			fmt.Fprintln(w)
+		}
+	}
+
+	for _, v := range data {
+		displayView(v)
+	}
+
+	if ch == nil {
+		return
+	}
+
+	for v := range ch {
+		displayView(v)
 	}
 }
 
-func writeTable(w io.Writer, header []string, data [][]string, ch <-chan View) {
+func fprintfStr(w io.Writer, fmtStr string, argsStr ...string) {
+	var args []interface{}
+	for _, a := range argsStr {
+		args = append(args, a)
+	}
+
+	fmt.Fprintf(w, fmtStr, args...)
+}
+
+func writeTable(w io.Writer, header []string, data [][]string) {
 	table := tablewriter.NewWriter(w)
 	table.SetHeader(header)
 
@@ -111,35 +145,10 @@ func writeTable(w io.Writer, header []string, data [][]string, ch <-chan View) {
 	table.SetHeaderLine(false)
 	table.SetBorder(false)
 
-	if ch == nil {
-		for _, v := range data {
-			table.Append(v)
-		}
-		table.Render()
-		return
+	for _, v := range data {
+		table.Append(v)
 	}
-
-	done := make(chan struct{})
-	strCh := make(chan []string)
-	go func() {
-		defer close(done)
-
-		for _, v := range data {
-			strCh <- v
-		}
-
-		for v := range ch {
-			strCh <- v.AsTableRow()
-
-			if extras := extractExtras(v); extras != nil {
-				strCh <- extras
-			}
-		}
-	}()
-
-	go table.ContinuousRender(strCh)
-
-	<-done
+	table.Render()
 }
 
 func timeAgo(ts time.Time) string {
@@ -182,4 +191,31 @@ func extractExtras(v View) []string {
 	}
 
 	return nil
+}
+
+func truncate(str string, maxLen int) string {
+	str = strings.Trim(str, " ")
+
+	if len(str) < maxLen {
+		missing := maxLen - len([]rune(str))
+
+		return str + strings.Repeat(" ", missing)
+	}
+
+	return str[:maxLen-3] + "..."
+}
+
+func indent(text, indent string) string {
+	if text[len(text)-1:] == "\n" {
+		result := ""
+		for _, j := range strings.Split(text[:len(text)-1], "\n") {
+			result += indent + j + "\n"
+		}
+		return result
+	}
+	result := ""
+	for _, j := range strings.Split(strings.TrimRight(text, "\n"), "\n") {
+		result += indent + j + "\n"
+	}
+	return result[:len(result)-1]
 }

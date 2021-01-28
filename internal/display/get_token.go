@@ -44,6 +44,6 @@ func (r *Renderer) GetToken(c *management.Client, t *authutil.TokenResponse) {
 		}
 
 		tableHeader := []string{"Field", "Value"}
-		writeTable(r.ResultWriter, tableHeader, rows, nil)
+		writeTable(r.ResultWriter, tableHeader, rows)
 	}
 }

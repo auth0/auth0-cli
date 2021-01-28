@@ -9,15 +9,18 @@ import (
 	"github.com/logrusorgru/aurora"
 
 	"gopkg.in/auth0.v5/management"
+	"gopkg.in/yaml.v2"
 )
 
 var (
-	notApplicable = ansi.Faint("N/A")
+	notApplicable = "N/A"
 )
 
 var _ View = &logView{}
 
 type logView struct {
+	silent  bool
+	noColor bool
 	*management.Log
 
 	ActionExecutionAPI auth0.ActionExecutionAPI
@@ -72,40 +75,55 @@ func (v *logView) getConnection() string {
 }
 
 func (v *logView) AsTableRow() []string {
-	typ, desc := typeDescFor(v.Log, false)
+	typ, desc := v.typeDesc()
 
 	clientName := v.GetClientName()
 	if clientName == "" {
 		clientName = notApplicable
 	}
 
+	conn := v.getConnection()
+	if conn == notApplicable {
+		conn = ansi.Faint(truncate(conn, 30))
+	} else {
+		conn = truncate(conn, 30)
+	}
+
 	return []string{
 		typ,
-		desc,
-		ansi.Faint(timeAgo(v.GetDate())),
-		v.getConnection(),
+		truncate(desc, 50),
+		ansi.Faint(truncate(timeAgo(v.GetDate()), 20)),
+		conn,
 		clientName,
 	}
 }
 
 func (v *logView) Extras() []string {
-	if strings.HasPrefix(v.GetType(), "f") == false {
+	if v.silent {
 		return nil
 	}
 
+	// NOTE(cyx): For now we only want to return full log information when
+	// it's an error.
+	if v.category() != logCategoryFailure {
+		return nil
+	}
+
+	raw, _ := yaml.Marshal(v.Log)
+	fallback := []string{ansi.Faint(indent(string(raw), "\t"))}
+
 	id := v.getActionExecutionID()
 	if id == "" {
-		return nil
+		return fallback
 	}
 
 	exec, err := v.ActionExecutionAPI.Read(id)
 	if err != nil {
-		return nil
+		return fallback
 	}
 
-	res := []string{ansi.Bold("\tAction Executions:")}
+	res := []string{ansi.Bold("\t=== ACTION EXECUTIONS:")}
 	for _, r := range exec.Results {
-
 		if r.Response.Error == nil {
 			res = append(res, ansi.Faint(fmt.Sprintf("\t✓ Action %s logs", auth0.StringValue(r.ActionName))))
 		} else {
@@ -119,36 +137,69 @@ func (v *logView) Extras() []string {
 	return []string{strings.Join(res, "\n")}
 }
 
-func typeDescFor(l *management.Log, noColor bool) (typ, desc string) {
-	chunks := strings.Split(l.TypeName(), "(")
+type logCategory int
+
+const (
+	logCategorySuccess logCategory = iota
+	logCategoryWarning
+	logCategoryFailure
+	logCategoryUnknown
+)
+
+func (v *logView) category() logCategory {
+	if strings.HasPrefix(v.GetType(), "s") {
+		return logCategorySuccess
+
+	} else if strings.HasPrefix(v.GetType(), "w") {
+		return logCategoryWarning
+
+	} else if strings.HasPrefix(v.GetType(), "f") {
+		return logCategoryFailure
+	}
+
+	return logCategoryUnknown
+}
+
+func (v *logView) typeDesc() (typ, desc string) {
+	chunks := strings.Split(v.TypeName(), "(")
+
+	// NOTE(cyx): Some logs don't have a typ at all -- for those we'll
+	// provide some indicator that it's empty so it's not as surprising.
 	typ = chunks[0]
+	if typ == "" {
+		typ = "..."
+	}
+
+	typ = truncate(chunks[0], 30)
 
 	if len(chunks) == 2 {
 		desc = strings.TrimSuffix(chunks[1], ")")
 	}
 
-	desc = fmt.Sprintf("%s %s", desc, auth0.StringValue(l.Description))
+	desc = fmt.Sprintf("%s %s", desc, auth0.StringValue(v.Description))
 
-	if !noColor {
-		// colorize the event type field based on whether it's a success or failure
-		if strings.HasPrefix(l.GetType(), "s") {
+	if !v.noColor {
+		switch v.category() {
+		case logCategorySuccess:
 			typ = aurora.Green(typ).String()
-		} else if strings.HasPrefix(l.GetType(), "f") {
+		case logCategoryFailure:
 			typ = aurora.BrightRed(typ).String()
-		} else if strings.HasPrefix(l.GetType(), "w") {
+		case logCategoryWarning:
 			typ = aurora.BrightYellow(typ).String()
+		default:
+			typ = ansi.Faint(typ)
 		}
 	}
 
 	return typ, desc
 }
 
-func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, api auth0.ActionExecutionAPI, noColor bool) {
+func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, api auth0.ActionExecutionAPI, noColor, silent bool) {
 	r.Heading(ansi.Bold(r.Tenant), "logs\n")
 
 	var res []View
 	for _, l := range logs {
-		res = append(res, &logView{Log: l, ActionExecutionAPI: api})
+		res = append(res, &logView{Log: l, ActionExecutionAPI: api, silent: silent, noColor: noColor})
 	}
 
 	var viewChan chan View
@@ -161,7 +212,7 @@ func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, 
 
 			for list := range ch {
 				for _, l := range list {
-					viewChan <- &logView{Log: l, ActionExecutionAPI: api}
+					viewChan <- &logView{Log: l, ActionExecutionAPI: api, silent: silent, noColor: noColor}
 				}
 			}
 		}()
