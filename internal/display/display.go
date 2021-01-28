@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/jsanda/tablewriter"
 	"github.com/logrusorgru/aurora"
+	"github.com/olekukonko/tablewriter"
 )
 
 type OutputFormat string
