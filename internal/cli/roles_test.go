@@ -8,6 +8,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"gopkg.in/auth0.v5/management"
 )
 
@@ -16,7 +17,7 @@ func TestRolesCmd(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := auth0.NewMockRoleAPI(ctrl)
-		m.EXPECT().List().MaxTimes(1).Return(&management.RoleList{List: management.List{}, Roles: []*management.Role{&management.Role{ID: auth0.String("testID"), Name: auth0.String("testName"), Description: auth0.String("testDescription")}}}, nil)
+		m.EXPECT().List().MaxTimes(1).Return(&management.RoleList{List: management.List{}, Roles: []*management.Role{&management.Role{ID: auth0.String("testRoleID"), Name: auth0.String("testName"), Description: auth0.String("testDescription")}}}, nil)
 		stdout := &bytes.Buffer{}
 		cli := &cli{
 			renderer: &display.Renderer{
@@ -36,7 +37,7 @@ func TestRolesCmd(t *testing.T) {
 		expectTable(t, stdout.String(),
 			[]string{"NAME", "ROLE ID", "DESCRIPTION"},
 			[][]string{
-				{"testName", "testID", "testDescription"},
+				{"testName", "testRoleID", "testDescription"},
 			},
 		)
 	})
@@ -45,7 +46,7 @@ func TestRolesCmd(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := auth0.NewMockRoleAPI(ctrl)
-		m.EXPECT().Read(gomock.AssignableToTypeOf("")).MaxTimes(1).Return(&management.Role{ID: auth0.String("testID"), Name: auth0.String("testName"), Description: auth0.String("testDescription")}, nil)
+		m.EXPECT().Read(gomock.AssignableToTypeOf("")).MaxTimes(1).Return(&management.Role{ID: auth0.String("testRoleID"), Name: auth0.String("testName"), Description: auth0.String("testDescription")}, nil)
 		stdout := &bytes.Buffer{}
 		cli := &cli{
 			renderer: &display.Renderer{
@@ -57,7 +58,7 @@ func TestRolesCmd(t *testing.T) {
 		}
 
 		cmd := rolesGetCmd(cli)
-		cmd.SetArgs([]string{"--role-id=testID"})
+		cmd.SetArgs([]string{"--role-id=testRoleID"})
 
 		if err := cmd.Execute(); err != nil {
 			t.Fatal(err)
@@ -66,7 +67,7 @@ func TestRolesCmd(t *testing.T) {
 		expectTable(t, stdout.String(),
 			[]string{"NAME", "ROLE ID", "DESCRIPTION"},
 			[][]string{
-				{"testName", "testID", "testDescription"},
+				{"testName", "testRoleID", "testDescription"},
 			},
 		)
 	})
@@ -87,7 +88,7 @@ func TestRolesCmd(t *testing.T) {
 		}
 
 		cmd := rolesDeleteCmd(cli)
-		cmd.SetArgs([]string{"--role-id=testID"})
+		cmd.SetArgs([]string{"--role-id=testRoleID"})
 
 		if err := cmd.Execute(); err != nil {
 			t.Fatal(err)
@@ -110,7 +111,7 @@ func TestRolesCmd(t *testing.T) {
 		}
 
 		cmd := rolesUpdateCmd(cli)
-		cmd.SetArgs([]string{"--role-id=testID", "--name=testName", "--description=testDescription"})
+		cmd.SetArgs([]string{"--role-id=testRoleID", "--name=testName", "--description=testDescription"})
 
 		if err := cmd.Execute(); err != nil {
 			t.Fatal(err)
@@ -152,5 +153,100 @@ func TestRolesCmd(t *testing.T) {
 				{"testName", "", "testDescription"},
 			},
 		)
+	})
+
+	t.Run("GetPermissions", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		m := auth0.NewMockRoleAPI(ctrl)
+		permissions := []*management.Permission{
+			&management.Permission{Name: auth0.String("testName"), ResourceServerIdentifier: auth0.String("testResourceServerIdentifier"), ResourceServerName: auth0.String("testResourceServerName"), Description: auth0.String("testDescription")},
+		}
+		m.EXPECT().Permissions(gomock.AssignableToTypeOf(""), gomock.Any()).MaxTimes(1).Return(&management.PermissionList{List: management.List{}, Permissions: permissions}, nil)
+		stdout := &bytes.Buffer{}
+		cli := &cli{
+			renderer: &display.Renderer{
+				MessageWriter: ioutil.Discard,
+				ResultWriter:  stdout,
+				Format:        display.OutputFormat("table"),
+			},
+			api: &auth0.API{Role: m},
+		}
+
+		cmd := rolesGetPermissionsCmd(cli)
+		cmd.SetArgs([]string{"--role-id=testRoleID"})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatal(err)
+		}
+
+		expectTable(t, stdout.String(),
+			[]string{"PERMISSION NAME", "RESOURCE SERVICE IDENTIFIER", "RESOURCE SERVER NAME", "DESCRIPTION"},
+			[][]string{
+				{"testName", "testResourceServerIdentifier", "testResourceServerName", "testDescription"},
+			},
+		)
+	})
+
+	t.Run("AssociatePermissions", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		m := auth0.NewMockRoleAPI(ctrl)
+
+		m.EXPECT().AssociatePermissions(gomock.AssignableToTypeOf(""), gomock.AssignableToTypeOf([]*management.Permission{})).MaxTimes(1).DoAndReturn(func(roleID string, permissions []*management.Permission) error {
+			p := permissions[0]
+			assert.Equal(t, "testRoleID", roleID)
+			assert.Equal(t, "testPermissionName", p.GetName())
+			assert.Equal(t, "testResourceServerIdentifier", p.GetResourceServerIdentifier())
+			return nil
+		})
+
+		m.EXPECT().Permissions(gomock.AssignableToTypeOf(""), gomock.Any()).MaxTimes(1).Return(&management.PermissionList{List: management.List{}, Permissions: nil}, nil)
+		stdout := &bytes.Buffer{}
+		cli := &cli{
+			renderer: &display.Renderer{
+				MessageWriter: ioutil.Discard,
+				ResultWriter:  stdout,
+				Format:        display.OutputFormat("table"),
+			},
+			api: &auth0.API{Role: m},
+		}
+
+		cmd := rolesAssociatePermissionsCmd(cli)
+		cmd.SetArgs([]string{"--role-id=testRoleID", `--permissions=[{"permission_name": "testPermissionName", "resource_server_identifier": "testResourceServerIdentifier"}]`})
+		if err := cmd.Execute(); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("RemovePermissions", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		m := auth0.NewMockRoleAPI(ctrl)
+
+		m.EXPECT().RemovePermissions(gomock.AssignableToTypeOf(""), gomock.AssignableToTypeOf([]*management.Permission{})).MaxTimes(1).DoAndReturn(func(roleID string, permissions []*management.Permission) error {
+			p := permissions[0]
+			assert.Equal(t, "testRoleID", roleID)
+			assert.Equal(t, "testPermissionName", p.GetName())
+			assert.Equal(t, "testResourceServerIdentifier", p.GetResourceServerIdentifier())
+			return nil
+		})
+
+		m.EXPECT().Permissions(gomock.AssignableToTypeOf(""), gomock.Any()).MaxTimes(1).Return(&management.PermissionList{List: management.List{}, Permissions: nil}, nil)
+		stdout := &bytes.Buffer{}
+		cli := &cli{
+			renderer: &display.Renderer{
+				MessageWriter: ioutil.Discard,
+				ResultWriter:  stdout,
+				Format:        display.OutputFormat("table"),
+			},
+			api: &auth0.API{Role: m},
+		}
+
+		cmd := rolesRemovePermissionsCmd(cli)
+		cmd.SetArgs([]string{"--role-id=testRoleID", `--permissions=[{"permission_name": "testPermissionName", "resource_server_identifier": "testResourceServerIdentifier"}]`})
+		if err := cmd.Execute(); err != nil {
+			t.Fatal(err)
+		}
 	})
 }

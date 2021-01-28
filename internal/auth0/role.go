@@ -19,4 +19,27 @@ type RoleAPI interface {
 
 	// Delete a role.
 	Delete(id string, opts ...management.RequestOption) (err error)
+
+	RolePermissionsAPI
+
+	RoleUsersAPI
+}
+
+type RolePermissionsAPI interface {
+	// Permissions retrieves all permissions granted by a role.
+	Permissions(id string, opts ...management.RequestOption) (pl *management.PermissionList, err error)
+
+	// RemovePermissions removes permissions associated to a role.
+	RemovePermissions(id string, permissions []*management.Permission, opts ...management.RequestOption) (err error)
+
+	// AssociatePermissions associates permissions to a role.
+	AssociatePermissions(id string, permissions []*management.Permission, opts ...management.RequestOption) (err error)
+}
+
+type RoleUsersAPI interface {
+	// Users retrieves all users associated with a role.
+	Users(id string, opts ...management.RequestOption) (ul *management.UserList, err error)
+
+	// AssignUsers assigns users to a role.
+	AssignUsers(id string, users []*management.User, opts ...management.RequestOption) (err error)
 }
