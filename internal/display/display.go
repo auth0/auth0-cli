@@ -86,7 +86,6 @@ func (r *Renderer) Results(data []View) {
 			writeTable(r.ResultWriter, data[0].AsTableHeader(), rows)
 		}
 	}
-
 }
 
 func (r *Renderer) Stream(data []View, ch <-chan View) {
