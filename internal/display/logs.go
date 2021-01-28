@@ -14,7 +14,14 @@ import (
 
 const (
 	notApplicable = "N/A"
+
+	logCategorySuccess logCategory = iota
+	logCategoryWarning
+	logCategoryFailure
+	logCategoryUnknown
 )
+
+type logCategory int
 
 var _ View = &logView{}
 
@@ -136,15 +143,6 @@ func (v *logView) Extras() []string {
 
 	return []string{strings.Join(res, "\n")}
 }
-
-type logCategory int
-
-const (
-	logCategorySuccess logCategory = iota
-	logCategoryWarning
-	logCategoryFailure
-	logCategoryUnknown
-)
 
 func (v *logView) category() logCategory {
 	if strings.HasPrefix(v.GetType(), "s") {
