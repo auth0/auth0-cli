@@ -1,7 +1,6 @@
 # Auth0 CLI
 
-`auth0` is the command line to supercharge your
-development workflow. 
+`auth0` is the command line to supercharge your development workflow. 
 
 Build, test, and manage your integration with Auth0 directly from your terminal.
 
