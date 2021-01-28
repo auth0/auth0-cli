@@ -12,6 +12,7 @@ import (
 	"gopkg.in/auth0.v5/management"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 const (
@@ -26,23 +27,26 @@ var (
 	cliLoginTestingScopes []string = []string{"openid", "profile"}
 )
 
-func BuildOauthTokenURL(domain, clientID, clientSecret, audience string) string {
+func BuildOauthTokenURL(domain string) string {
 	var path string = "/oauth/token"
 
+	u := &url.URL{
+		Scheme: "https",
+		Host:   domain,
+		Path:   path,
+	}
+
+	return u.String()
+}
+
+func BuildOauthTokenParams(clientID, clientSecret, audience string) *strings.Reader {
 	q := url.Values{}
 	q.Add("grant_type", "client_credentials")
 	q.Add("client_id", clientID)
 	q.Add("client_secret", clientSecret)
 	q.Add("audience", audience)
 
-	u := &url.URL{
-		Scheme:   "https",
-		Host:     domain,
-		Path:     path,
-		RawQuery: q.Encode(),
-	}
-
-	return u.String()
+	return strings.NewReader(q.Encode())
 }
 
 // runClientCredentialsFlow runs an M2M client credentials flow without opening a browser
@@ -50,12 +54,17 @@ func runClientCredentialsFlow(cli *cli, c *management.Client, clientID string, a
 
 	var tokenResponse *authutil.TokenResponse
 
-	tokenURL := BuildOauthTokenURL(tenant.Domain, clientID, c.GetClientSecret(), audience)
+	cli.renderer.Infof(audience)
+
+	tokenURL := BuildOauthTokenURL(tenant.Domain)
+	payload := BuildOauthTokenParams(clientID, c.GetClientSecret(), audience)
+
+	cli.renderer.Infof("url : %s", tokenURL)
 
 	// TODO: Check if the audience is valid, and suggest a different client if it is wrong.
 
 	err := ansi.Spinner("Waiting for token", func() error {
-		req, _ := http.NewRequest("POST", tokenURL, nil)
+		req, _ := http.NewRequest("POST", tokenURL, payload)
 
 		req.Header.Add("content-type", "application/x-www-form-urlencoded")
 
