@@ -4,7 +4,7 @@ development workflow.
 
 Build, test, and manage your integration with Auth0 directly from your terminal.
 
-
+![demo](./demo.gif)
 
 
 ## Installation
