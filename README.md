@@ -1,15 +1,11 @@
-# auth0-cli
+# Auth0 CLI
+`auth0` is the command line to supercharge your
+development workflow. 
 
-## What?
+Build, test, and manage your integration with Auth0 directly from your terminal.
 
-The goal is to build a fully fleshed out product, similar to the Heroku CLI,
-Stripe CLI, etc.
 
-## Why now?
 
-- It would also allow MVP products to be shipped faster.
-- For actions, delivering a CLI experience would be far ideal than having
-  developers write code in the browser.
 
 ## Installation
 ### macOS
