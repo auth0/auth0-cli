@@ -24,3 +24,8 @@ Build, test, and manage your integration with Auth0 directly from your terminal.
 ## Contributing
 
 Please check the [contributing guidelines](CONTRIBUTING.md).
+
+
+## Author 
+
+[Auth0](https://auth0.com)
