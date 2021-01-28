@@ -12,7 +12,6 @@ import (
 	"gopkg.in/auth0.v5/management"
 	"net/http"
 	"net/url"
-	"strings"
 )
 
 const (
@@ -39,14 +38,14 @@ func BuildOauthTokenURL(domain string) string {
 	return u.String()
 }
 
-func BuildOauthTokenParams(clientID, clientSecret, audience string) *strings.Reader {
-	q := url.Values{}
-	q.Add("grant_type", "client_credentials")
-	q.Add("client_id", clientID)
-	q.Add("client_secret", clientSecret)
-	q.Add("audience", audience)
-
-	return strings.NewReader(q.Encode())
+func BuildOauthTokenParams(clientID, clientSecret, audience string) url.Values {
+	q := url.Values{
+		"audience":      {audience},
+		"client_id":     {clientID},
+		"client_secret": {clientSecret},
+		"grant_type":    {"client_credentials"},
+	}
+	return q
 }
 
 // runClientCredentialsFlow runs an M2M client credentials flow without opening a browser
@@ -54,21 +53,13 @@ func runClientCredentialsFlow(cli *cli, c *management.Client, clientID string, a
 
 	var tokenResponse *authutil.TokenResponse
 
-	cli.renderer.Infof(audience)
-
 	tokenURL := BuildOauthTokenURL(tenant.Domain)
 	payload := BuildOauthTokenParams(clientID, c.GetClientSecret(), audience)
-
-	cli.renderer.Infof("url : %s", tokenURL)
 
 	// TODO: Check if the audience is valid, and suggest a different client if it is wrong.
 
 	err := ansi.Spinner("Waiting for token", func() error {
-		req, _ := http.NewRequest("POST", tokenURL, payload)
-
-		req.Header.Add("content-type", "application/x-www-form-urlencoded")
-
-		res, err := http.DefaultClient.Do(req)
+		res, err := http.PostForm(tokenURL, payload)
 		if err != nil {
 			return err
 		}
