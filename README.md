@@ -1,4 +1,5 @@
 # Auth0 CLI
+
 `auth0` is the command line to supercharge your
 development workflow. 
 
@@ -8,6 +9,7 @@ Build, test, and manage your integration with Auth0 directly from your terminal.
 
 
 ## Installation
+
 ### macOS
 1. Download the binaries from: https://github.com/auth0/auth0-cli/releases/latest/
 1. Extract
@@ -18,3 +20,7 @@ Build, test, and manage your integration with Auth0 directly from your terminal.
 	- (**fish**)  `auth0 completion fish | source`
 
 > see more completion options: `auth0 completion -h`
+
+## Contributing
+
+Please check the [contributing guidelines][contributing].
