@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"io/ioutil"
+	"os/user"
 	"regexp"
 	"strings"
 
@@ -491,8 +492,9 @@ func disableRule(rule *management.Rule, cli *cli) error {
 	return cli.api.Rule.Update(rule.GetID(), &management.Rule{Enabled: auth0.Bool(false)})
 }
 
-// TODO: Fix tildas when passing relative filepaths, e.g. ~/Downloads/example.js
 func parseFileByName(inputFile string) (string, error) {
+	usr, _ := user.Current()
+	inputFile = strings.Replace(inputFile, "~/", usr.HomeDir+"/", -1)
 	f, err := ioutil.ReadFile(inputFile)
 
 	if err != nil {

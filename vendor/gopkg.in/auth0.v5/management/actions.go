@@ -18,6 +18,31 @@ type Action struct {
 	// TODO: add required configuration / secrets
 }
 
+type ActionExecutionResultResponse struct {
+	Error map[string]string `json:"error,omitempty"`
+	Logs  *string           `json:"logs,omitempty"`
+	Stats map[string]int64  `json:"stats,omitempty"`
+}
+
+type ActionExecutionResult struct {
+	ActionName *string                       `json:"action_name,omitempty"`
+	BindingID  *string                       `json:"binding_id,omitempty"`
+	VersionID  *string                       `json:"version_id,omitempty"`
+	Error      map[string]string             `json:"error,omitempty"`
+	Response   ActionExecutionResultResponse `json:"response,omitempty"`
+
+	StartedAt *time.Time `json:"started_at,omitempty"`
+	EndedAt   *time.Time `json:"ended_at,omitempty"`
+}
+type ActionExecution struct {
+	ID        *string                  `json:"id"`
+	TriggerID TriggerID                `json:"trigger_id"`
+	Status    *string                  `json:"status"`
+	CreatedAt *time.Time               `json:"created_at"`
+	UpdatedAt *time.Time               `json:"updated_at"`
+	Results   []*ActionExecutionResult `json:"results"`
+}
+
 type VersionStatus string
 
 const (
@@ -139,6 +164,20 @@ func (m *ActionManager) Delete(id string, opts ...RequestOption) error {
 func (m *ActionManager) List(opts ...RequestOption) (c *ActionList, err error) {
 	err = m.Request("GET", m.URI("actions", "actions"), &c, applyActionsListDefaults(opts))
 	return
+}
+
+type ActionExecutionManager struct {
+	*Management
+}
+
+func newActionExecutionManager(m *Management) *ActionExecutionManager {
+	return &ActionExecutionManager{m}
+}
+
+func (m *ActionExecutionManager) Read(id string) (*ActionExecution, error) {
+	var execution ActionExecution
+	err := m.Request("GET", m.URI("actions", "executions", id), &execution)
+	return &execution, err
 }
 
 type ActionVersionManager struct {

@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/auth0/auth0-cli/internal/auth0/actions"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
@@ -27,9 +28,13 @@ func getLatestLogs(cli *cli, n int) ([]*management.Log, error) {
 }
 
 func logsCmd(cli *cli) *cobra.Command {
-	var numberOfLogs int
-	var follow bool
-	var noColor bool
+	var flags struct {
+		Num     int
+		Follow  bool
+		NoColor bool
+		Silent  bool
+	}
+
 	cmd := &cobra.Command{
 		Use:   "logs",
 		Short: "Show the tenant logs",
@@ -38,7 +43,7 @@ Show the tenant logs.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			lastLogID := ""
-			list, err := getLatestLogs(cli, numberOfLogs)
+			list, err := getLatestLogs(cli, flags.Num)
 			if err != nil {
 				return err
 			}
@@ -55,7 +60,7 @@ Show the tenant logs.
 			}
 
 			var logsCh chan []*management.Log
-			if follow {
+			if flags.Follow {
 				logsCh = make(chan []*management.Log)
 
 				go func() {
@@ -89,14 +94,23 @@ Show the tenant logs.
 				}()
 			}
 
-			cli.renderer.LogList(list, logsCh, noColor)
+			// We create an execution API decorator which provides
+			// a leaky bucket implementation for Read. This
+			// protects us from being rate limited since we
+			// potentially have an N+1 querying situation.
+			actionExecutionAPI := actions.NewSampledExecutionAPI(
+				cli.api.ActionExecution, time.Second,
+			)
+
+			cli.renderer.LogList(list, logsCh, actionExecutionAPI, flags.NoColor, flags.Silent)
 			return nil
 		},
 	}
 
-	cmd.Flags().IntVarP(&numberOfLogs, "num-entries", "n", 100, "the number of log entries to print")
-	cmd.Flags().BoolVarP(&follow, "follow", "f", false, "Specify if the logs should be streamed.")
-	cmd.Flags().BoolVarP(&noColor, "no-color", "", false, "turn off colored print")
+	cmd.Flags().IntVarP(&flags.Num, "num-entries", "n", 100, "the number of log entries to print")
+	cmd.Flags().BoolVarP(&flags.Follow, "follow", "f", false, "Specify if the logs should be streamed")
+	cmd.Flags().BoolVar(&flags.NoColor, "no-color", false, "turn off colored print")
+	cmd.Flags().BoolVarP(&flags.Silent, "silent", "s", false, "do not display extended raw data")
 
 	return cmd
 }
