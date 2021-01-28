@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"strings"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
@@ -11,6 +13,7 @@ const (
 	apiID         = "id"
 	apiName       = "name"
 	apiIdentifier = "identifier"
+	apiScopes     = "scopes"
 )
 
 func apisCmd(cli *cli) *cobra.Command {
@@ -26,6 +29,19 @@ func apisCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(createApiCmd(cli))
 	cmd.AddCommand(updateApiCmd(cli))
 	cmd.AddCommand(deleteApiCmd(cli))
+	cmd.AddCommand(scopesCmd(cli))
+
+	return cmd
+}
+
+func scopesCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "scopes",
+		Short: "Manage resources for API scopes",
+	}
+
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(listScopesCmd(cli))
 
 	return cmd
 }
@@ -111,6 +127,7 @@ func createApiCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		Name       string
 		Identifier string
+		Scopes     string
 	}
 
 	cmd := &cobra.Command{
@@ -146,9 +163,21 @@ auth0 apis create --name myapi --identifier http://my-api
 				}
 			}
 
+			if shouldPrompt(cmd, apiScopes) {
+				input := prompt.TextInput(apiScopes, "Scopes:", "Space-separated list of scopes.", false)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
 			api := &management.ResourceServer{
 				Name:       &flags.Name,
 				Identifier: &flags.Identifier,
+			}
+
+			if flags.Scopes != "" {
+				api.Scopes = getScopes(flags.Scopes)
 			}
 
 			err := ansi.Spinner("Creating API", func() error {
@@ -166,6 +195,7 @@ auth0 apis create --name myapi --identifier http://my-api
 
 	cmd.Flags().StringVarP(&flags.Name, apiName, "n", "", "Name of the API.")
 	cmd.Flags().StringVarP(&flags.Identifier, apiIdentifier, "i", "", "Identifier of the API.")
+	cmd.Flags().StringVarP(&flags.Scopes, apiScopes, "s", "", "Space-separated list of scopes.")
 	mustRequireFlags(cmd, apiName, apiIdentifier)
 
 	return cmd
@@ -173,8 +203,9 @@ auth0 apis create --name myapi --identifier http://my-api
 
 func updateApiCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		ID   string
-		Name string
+		ID     string
+		Name   string
+		Scopes string
 	}
 
 	cmd := &cobra.Command{
@@ -204,7 +235,19 @@ auth0 apis update --id id --name myapi
 				}
 			}
 
+			if shouldPrompt(cmd, apiScopes) {
+				input := prompt.TextInput(apiScopes, "Scopes:", "Space-separated list of scopes.", false)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
 			api := &management.ResourceServer{Name: &flags.Name}
+
+			if flags.Scopes != "" {
+				api.Scopes = getScopes(flags.Scopes)
+			}
 
 			err := ansi.Spinner("Updating API", func() error {
 				return cli.api.ResourceServer.Update(flags.ID, api)
@@ -221,6 +264,7 @@ auth0 apis update --id id --name myapi
 
 	cmd.Flags().StringVarP(&flags.ID, apiID, "i", "", "ID of the API.")
 	cmd.Flags().StringVarP(&flags.Name, apiName, "n", "", "Name of the API.")
+	cmd.Flags().StringVarP(&flags.Scopes, apiScopes, "s", "", "Space-separated list of scopes.")
 	mustRequireFlags(cmd, apiID, apiName)
 
 	return cmd
@@ -272,4 +316,63 @@ auth0 apis delete --id id
 	mustRequireFlags(cmd, apiID)
 
 	return cmd
+}
+
+func listScopesCmd(cli *cli) *cobra.Command {
+	var flags struct {
+		ID string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List the scopes of an API",
+		Long: `List the scopes of an API:
+
+auth0 apis scopes list --id id
+`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if shouldPrompt(cmd, apiID) {
+				input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
+			api := &management.ResourceServer{ID: &flags.ID}
+
+			err := ansi.Spinner("Loading scopes", func() error {
+				var err error
+				api, err = cli.api.ResourceServer.Read(flags.ID)
+				return err
+			})
+
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.ScopesList(api.GetName(), api.Scopes)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&flags.ID, apiID, "i", "", "ID of the API.")
+	mustRequireFlags(cmd, apiID)
+
+	return cmd
+}
+
+func getScopes(scopes string) []*management.ResourceServerScope {
+	list := strings.Fields(scopes)
+	models := []*management.ResourceServerScope{}
+
+	for _, scope := range list {
+		value := scope
+		models = append(models, &management.ResourceServerScope{Value: &value})
+	}
+
+	return models
 }
