@@ -27,14 +27,9 @@ var (
 )
 
 // runClientCredentialsFlow runs an M2M client credentials flow without opening a browser
-func runClientCredentialsFlow(cli *cli, c *management.Client, clientID string, audience string) (*authutil.TokenResponse, error) {
+func runClientCredentialsFlow(cli *cli, c *management.Client, clientID string, audience string, tenant tenant) (*authutil.TokenResponse, error) {
 
 	var tokenResponse *authutil.TokenResponse
-
-	tenant, err := cli.getTenant()
-	if err != nil {
-		return tokenResponse, err
-	}
 
 	url := "https://" + tenant.Domain + "/oauth/token"
 
@@ -49,7 +44,7 @@ func runClientCredentialsFlow(cli *cli, c *management.Client, clientID string, a
 
 	payload := strings.NewReader("grant_type=client_credentials&client_id=" + clientID + "&client_secret=" + client_secret + "&audience=" + audience)
 
-	err = ansi.Spinner("Waiting for token", func() error {
+	err := ansi.Spinner("Waiting for token", func() error {
 		req, _ := http.NewRequest("POST", url, payload)
 
 		req.Header.Add("content-type", "application/x-www-form-urlencoded")

@@ -44,7 +44,7 @@ Fetch an access token for the given client and API.
 			// initiate the client credentials flow instead to fetch a token,
 			// avoiding the browser and HTTP server shenanigans altogether.
 			if client.GetAppType() == "non_interactive" {
-				tokenResponse, err := runClientCredentialsFlow(cli, client, clientID, audience)
+				tokenResponse, err := runClientCredentialsFlow(cli, client, clientID, audience, tenant)
 				if err != nil {
 					return err
 				}
