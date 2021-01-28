@@ -8,6 +8,8 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
+// NewSampledExecutionAPI creates a decorated ActionExecutionAPI which
+// implements a leaky bucket based on the given interval.
 func NewSampledExecutionAPI(api auth0.ActionExecutionAPI, interval time.Duration) auth0.ActionExecutionAPI {
 	return &sampledExecutionAPI{
 		api:      api,
@@ -25,8 +27,11 @@ type sampledExecutionAPI struct {
 	timer    *time.Timer
 }
 
+// errRateLimited is returned whenever the leaky bucket isn't ready to drip.
 var errRateLimited = errors.New("actions: rate limited")
 
+// Read checks if the leaky bucket is ready to drip: if not, then an
+// errRateLimited is returned.
 func (a *sampledExecutionAPI) Read(id string) (*management.ActionExecution, error) {
 	select {
 	case <-a.timer.C:
