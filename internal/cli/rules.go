@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"io/ioutil"
+	"os/user"
 	"regexp"
 	"strings"
 
@@ -490,8 +491,8 @@ func disableRule(rule *management.Rule, cli *cli) error {
 }
 
 func parseFileByName(inputFile string) (string, error) {
-	inputFile = strings.Replace(inputFile, "~/", "../", -1)
-
+	usr, _ := user.Current()
+	inputFile = strings.Replace(inputFile, "~/", usr.HomeDir+"/", -1)
 	f, err := ioutil.ReadFile(inputFile)
 
 	if err != nil {
