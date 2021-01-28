@@ -1,7 +1,6 @@
 package display
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -26,7 +25,6 @@ type logView struct {
 
 func (v *logView) AsTableHeader() []string {
 	return []string{"Type", "Description", "Date", "Connection", "Client"}
-
 }
 
 func (v *logView) getActionExecutionID() string {
@@ -91,6 +89,10 @@ func (v *logView) AsTableRow() []string {
 }
 
 func (v *logView) Extras() []string {
+	if strings.HasPrefix(v.GetType(), "f") == false {
+		return nil
+	}
+
 	id := v.getActionExecutionID()
 	if id == "" {
 		return nil
@@ -101,12 +103,17 @@ func (v *logView) Extras() []string {
 		return nil
 	}
 
-	buf, err := json.MarshalIndent(exec, "", "    ")
-	if err != nil {
-		return nil
+	res := []string{"\tAction executions:\n"}
+	for _, r := range exec.Results {
+		res = append(res, ansi.Bold(fmt.Sprintf("\tAction %s logs", auth0.StringValue(r.ActionName))))
+		res = append(res, "\t"+auth0.StringValue(r.Response.Logs))
+
+		if r.Response.Error != nil {
+			res = append(res, "\t"+aurora.BrightRed(r.Response.Error["stack"]).String()+"\n")
+		}
 	}
 
-	return []string{ansi.Faint("Actions:\n" + string(buf))}
+	return []string{ansi.Faint(strings.Join(res, "\n"))}
 }
 
 func typeDescFor(l *management.Log, noColor bool) (typ, desc string) {
