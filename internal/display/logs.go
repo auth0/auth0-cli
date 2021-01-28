@@ -103,17 +103,20 @@ func (v *logView) Extras() []string {
 		return nil
 	}
 
-	res := []string{"\tAction executions:\n"}
+	res := []string{ansi.Bold("\tAction Executions:")}
 	for _, r := range exec.Results {
-		res = append(res, ansi.Bold(fmt.Sprintf("\tAction %s logs", auth0.StringValue(r.ActionName))))
-		res = append(res, "\t"+auth0.StringValue(r.Response.Logs))
 
-		if r.Response.Error != nil {
-			res = append(res, "\t"+aurora.BrightRed(r.Response.Error["stack"]).String()+"\n")
+		if r.Response.Error == nil {
+			res = append(res, ansi.Faint(fmt.Sprintf("\t✓ Action %s logs", auth0.StringValue(r.ActionName))))
+		} else {
+			stack := strings.ReplaceAll(r.Response.Error["stack"], "\n", "\n\t\t")
+			logs := strings.ReplaceAll(auth0.StringValue(r.Response.Logs), "\n", "\n\t\t")
+			message := fmt.Sprintf("\t✘ Action %s\n\t\t%s\n\t\t%s\n", auth0.StringValue(r.ActionName), logs, stack)
+			res = append(res, aurora.BrightRed(message).String())
 		}
 	}
 
-	return []string{ansi.Faint(strings.Join(res, "\n"))}
+	return []string{strings.Join(res, "\n")}
 }
 
 func typeDescFor(l *management.Log, noColor bool) (typ, desc string) {
