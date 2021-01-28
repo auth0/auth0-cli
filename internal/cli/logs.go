@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/auth0/auth0-cli/internal/auth0/actions"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
@@ -89,7 +90,15 @@ Show the tenant logs.
 				}()
 			}
 
-			cli.renderer.LogList(list, logsCh, noColor)
+			// We create an execution API decorator which provides
+			// a leaky bucket implementation for Read. This
+			// protects us from being rate limited since we
+			// potentially have an N+1 querying situation.
+			actionExecutionAPI := actions.NewSampledExecutionAPI(
+				cli.api.ActionExecution, time.Second,
+			)
+
+			cli.renderer.LogList(list, logsCh, actionExecutionAPI, noColor)
 			return nil
 		},
 	}

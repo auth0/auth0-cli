@@ -21,7 +21,7 @@ type Action struct {
 type ActionExecutionResultResponse struct {
 	Error map[string]string `json:"error,omitempty"`
 	Logs  *string           `json:"logs,omitempty"`
-	Stats map[string]string `json:"stats,omitempty"`
+	Stats map[string]int64  `json:"stats,omitempty"`
 }
 
 type ActionExecutionResult struct {

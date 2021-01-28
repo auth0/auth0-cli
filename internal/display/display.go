@@ -83,9 +83,14 @@ func (r *Renderer) Stream(data []View, ch <-chan View) {
 			r.JSONResult(data, ch)
 
 		default:
-			rows := make([][]string, len(data))
-			for i, d := range data {
-				rows[i] = d.AsTableRow()
+			rows := make([][]string, 0, len(data))
+			for _, d := range data {
+				rows = append(rows, d.AsTableRow())
+
+				if extras := extractExtras(d); extras != nil {
+					rows = append(rows, extras)
+				}
+
 			}
 			writeTable(r.ResultWriter, data[0].AsTableHeader(), rows, ch)
 		}
@@ -125,6 +130,10 @@ func writeTable(w io.Writer, header []string, data [][]string, ch <-chan View) {
 
 		for v := range ch {
 			strCh <- v.AsTableRow()
+
+			if extras := extractExtras(v); extras != nil {
+				strCh <- extras
+			}
 		}
 	}()
 
@@ -165,4 +174,12 @@ func timeAgo(ts time.Time) string {
 	default:
 		return ts.Format("Jan 02 2006")
 	}
+}
+
+func extractExtras(v View) []string {
+	if e, ok := v.(interface{ Extras() []string }); ok {
+		return e.Extras()
+	}
+
+	return nil
 }
