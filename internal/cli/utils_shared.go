@@ -3,12 +3,15 @@ package cli
 import (
 	"fmt"
 
+	"encoding/json"
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/open"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"gopkg.in/auth0.v5/management"
+	"net/http"
+	"net/url"
 )
 
 const (
@@ -22,6 +25,55 @@ const (
 var (
 	cliLoginTestingScopes []string = []string{"openid", "profile"}
 )
+
+func BuildOauthTokenURL(domain string) string {
+	var path string = "/oauth/token"
+
+	u := &url.URL{
+		Scheme: "https",
+		Host:   domain,
+		Path:   path,
+	}
+
+	return u.String()
+}
+
+func BuildOauthTokenParams(clientID, clientSecret, audience string) url.Values {
+	q := url.Values{
+		"audience":      {audience},
+		"client_id":     {clientID},
+		"client_secret": {clientSecret},
+		"grant_type":    {"client_credentials"},
+	}
+	return q
+}
+
+// runClientCredentialsFlow runs an M2M client credentials flow without opening a browser
+func runClientCredentialsFlow(cli *cli, c *management.Client, clientID string, audience string, tenant tenant) (*authutil.TokenResponse, error) {
+
+	var tokenResponse *authutil.TokenResponse
+
+	tokenURL := BuildOauthTokenURL(tenant.Domain)
+	payload := BuildOauthTokenParams(clientID, c.GetClientSecret(), audience)
+
+	// TODO: Check if the audience is valid, and suggest a different client if it is wrong.
+
+	err := ansi.Spinner("Waiting for token", func() error {
+		res, err := http.PostForm(tokenURL, payload)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+
+		err = json.NewDecoder(res.Body).Decode(&tokenResponse)
+		if err != nil {
+			return fmt.Errorf("cannot decode response: %w", err)
+		}
+		return nil
+	})
+
+	return tokenResponse, err
+}
 
 // runLoginFlowPreflightChecks checks if we need to make any updates to the
 // client being tested in order to log in successfully. If so, it asks the user
