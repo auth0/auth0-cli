@@ -43,3 +43,19 @@ type RoleUsersAPI interface {
 	// AssignUsers assigns users to a role.
 	AssignUsers(id string, users []*management.User, opts ...management.RequestOption) (err error)
 }
+
+// GetRoleIDs returns a slice of role id strings.
+func GetRoleIDs(r RoleAPI) ([]string, error) {
+	roleIDs := []string{}
+
+	list, err := r.List()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, i := range list.Roles {
+		roleIDs = append(roleIDs, *i.ID)
+	}
+
+	return roleIDs, nil
+}

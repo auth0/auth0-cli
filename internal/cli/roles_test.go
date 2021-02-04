@@ -35,9 +35,9 @@ func TestRolesCmd(t *testing.T) {
 		}
 
 		expectTable(t, stdout.String(),
-			[]string{"NAME", "ROLE ID", "DESCRIPTION"},
+			[]string{"ROLE ID", "NAME", "DESCRIPTION"},
 			[][]string{
-				{"testName", "testRoleID", "testDescription"},
+				{"testRoleID", "testName", "testDescription"},
 			},
 		)
 	})
@@ -65,9 +65,9 @@ func TestRolesCmd(t *testing.T) {
 		}
 
 		expectTable(t, stdout.String(),
-			[]string{"NAME", "ROLE ID", "DESCRIPTION"},
+			[]string{"ROLE ID", "NAME", "DESCRIPTION"},
 			[][]string{
-				{"testName", "testRoleID", "testDescription"},
+				{"testRoleID", "testName", "testDescription"},
 			},
 		)
 	})
@@ -118,9 +118,9 @@ func TestRolesCmd(t *testing.T) {
 		}
 
 		expectTable(t, stdout.String(),
-			[]string{"NAME", "ROLE ID", "DESCRIPTION"},
+			[]string{"ROLE ID", "NAME", "DESCRIPTION"},
 			[][]string{
-				{"testName", "", "testDescription"},
+				{"", "testName", "testDescription"},
 			},
 		)
 	})
@@ -148,9 +148,9 @@ func TestRolesCmd(t *testing.T) {
 		}
 
 		expectTable(t, stdout.String(),
-			[]string{"NAME", "ROLE ID", "DESCRIPTION"},
+			[]string{"ROLE ID", "NAME", "DESCRIPTION"},
 			[][]string{
-				{"testName", "", "testDescription"},
+				{"", "testName", "testDescription"},
 			},
 		)
 	})
@@ -181,9 +181,9 @@ func TestRolesCmd(t *testing.T) {
 		}
 
 		expectTable(t, stdout.String(),
-			[]string{"PERMISSION NAME", "RESOURCE SERVICE IDENTIFIER", "RESOURCE SERVER NAME", "DESCRIPTION"},
+			[]string{"ROLE ID", "PERMISSION NAME", "DESCRIPTION", "RESOURCE SERVICE IDENTIFIER", "RESOURCE SERVER NAME"},
 			[][]string{
-				{"testName", "testResourceServerIdentifier", "testResourceServerName", "testDescription"},
+				{"testRoleID", "testName", "testDescription", "testResourceServerIdentifier", "testResourceServerName"},
 			},
 		)
 	})
@@ -193,11 +193,12 @@ func TestRolesCmd(t *testing.T) {
 		defer ctrl.Finish()
 		m := auth0.NewMockRoleAPI(ctrl)
 
-		m.EXPECT().AssociatePermissions(gomock.AssignableToTypeOf(""), gomock.AssignableToTypeOf([]*management.Permission{})).MaxTimes(1).DoAndReturn(func(roleID string, permissions []*management.Permission) error {
-			p := permissions[0]
-			assert.Equal(t, "testRoleID", roleID)
-			assert.Equal(t, "testPermissionName", p.GetName())
-			assert.Equal(t, "testResourceServerIdentifier", p.GetResourceServerIdentifier())
+		m.EXPECT().AssociatePermissions(gomock.AssignableToTypeOf(""), gomock.AssignableToTypeOf([]*management.Permission{})).MaxTimes(1).DoAndReturn(func(r string, p []*management.Permission) error {
+			assert.Equal(t, "testRoleID", r)
+			assert.Equal(t, "testPermissionName1", p[0].GetName())
+			assert.Equal(t, "testResourceServerIdentifier1", p[0].GetResourceServerIdentifier())
+			assert.Equal(t, "testPermissionName2", p[1].GetName())
+			assert.Equal(t, "testResourceServerIdentifier2", p[1].GetResourceServerIdentifier())
 			return nil
 		})
 
@@ -213,7 +214,7 @@ func TestRolesCmd(t *testing.T) {
 		}
 
 		cmd := rolesAssociatePermissionsCmd(cli)
-		cmd.SetArgs([]string{"--role-id=testRoleID", `--permissions=[{"permission_name": "testPermissionName", "resource_server_identifier": "testResourceServerIdentifier"}]`})
+		cmd.SetArgs([]string{"--role-id=testRoleID", "--permission-name=testPermissionName1", "--resource-server-identifier=testResourceServerIdentifier1", "--permission-name=testPermissionName2", "--resource-server-identifier=testResourceServerIdentifier2"})
 		if err := cmd.Execute(); err != nil {
 			t.Fatal(err)
 		}
@@ -224,11 +225,12 @@ func TestRolesCmd(t *testing.T) {
 		defer ctrl.Finish()
 		m := auth0.NewMockRoleAPI(ctrl)
 
-		m.EXPECT().RemovePermissions(gomock.AssignableToTypeOf(""), gomock.AssignableToTypeOf([]*management.Permission{})).MaxTimes(1).DoAndReturn(func(roleID string, permissions []*management.Permission) error {
-			p := permissions[0]
-			assert.Equal(t, "testRoleID", roleID)
-			assert.Equal(t, "testPermissionName", p.GetName())
-			assert.Equal(t, "testResourceServerIdentifier", p.GetResourceServerIdentifier())
+		m.EXPECT().RemovePermissions(gomock.AssignableToTypeOf(""), gomock.AssignableToTypeOf([]*management.Permission{})).MaxTimes(1).DoAndReturn(func(r string, p []*management.Permission) error {
+			assert.Equal(t, "testRoleID", r)
+			assert.Equal(t, "testPermissionName1", p[0].GetName())
+			assert.Equal(t, "testResourceServerIdentifier1", p[0].GetResourceServerIdentifier())
+			assert.Equal(t, "testPermissionName2", p[1].GetName())
+			assert.Equal(t, "testResourceServerIdentifier2", p[1].GetResourceServerIdentifier())
 			return nil
 		})
 
@@ -244,7 +246,7 @@ func TestRolesCmd(t *testing.T) {
 		}
 
 		cmd := rolesRemovePermissionsCmd(cli)
-		cmd.SetArgs([]string{"--role-id=testRoleID", `--permissions=[{"permission_name": "testPermissionName", "resource_server_identifier": "testResourceServerIdentifier"}]`})
+		cmd.SetArgs([]string{"--role-id=testRoleID", "--permission-name=testPermissionName1", "--resource-server-identifier=testResourceServerIdentifier1", "--permission-name=testPermissionName2", "--resource-server-identifier=testResourceServerIdentifier2"})
 		if err := cmd.Execute(); err != nil {
 			t.Fatal(err)
 		}

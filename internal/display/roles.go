@@ -13,6 +13,7 @@ type roleView struct {
 }
 
 type permissionView struct {
+	RoleID                   string
 	Name                     string
 	ResourceServerIdentifier string
 	ResourceServerName       string
@@ -20,19 +21,19 @@ type permissionView struct {
 }
 
 func (v *roleView) AsTableHeader() []string {
-	return []string{"Name", "Role ID", "Description"}
+	return []string{"Role ID", "Name", "Description"}
 }
 
 func (v *roleView) AsTableRow() []string {
-	return []string{v.Name, v.ID, v.Description}
+	return []string{v.ID, v.Name, v.Description}
 }
 
 func (v *permissionView) AsTableHeader() []string {
-	return []string{"Permission Name", "Resource Service Identifier", "Resource Server Name", "Description"}
+	return []string{"Role ID", "Permission Name", "Description", "Resource Service Identifier", "Resource Server Name"}
 }
 
 func (v *permissionView) AsTableRow() []string {
-	return []string{v.Name, v.ResourceServerIdentifier, v.ResourceServerName, v.Description}
+	return []string{v.RoleID, v.Name, v.Description, v.ResourceServerIdentifier, v.ResourceServerName}
 }
 
 func (r *Renderer) RoleList(roles []*management.Role) {
@@ -76,11 +77,12 @@ func (r *Renderer) RoleCreate(role *management.Role) {
 	}})
 }
 
-func (r *Renderer) RoleGetPermissions(permissions []*management.Permission) {
-	r.Heading(ansi.Bold(r.Tenant), "permissions\n")
+func (r *Renderer) RoleGetPermissions(roleID string, permissions []*management.Permission) {
+	r.Heading(ansi.Bold(r.Tenant), "role permissions\n")
 	var res []View
 	for _, p := range permissions {
 		res = append(res, &permissionView{
+			RoleID:                   roleID,
 			ResourceServerIdentifier: auth0.StringValue(p.ResourceServerIdentifier),
 			ResourceServerName:       auth0.StringValue(p.ResourceServerName),
 			Name:                     auth0.StringValue(p.Name),

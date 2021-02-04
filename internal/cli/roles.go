@@ -1,8 +1,9 @@
 package cli
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -16,7 +17,6 @@ func rolesCmd(cli *cli) *cobra.Command {
 		Use:   "roles",
 		Short: "Manage resources for roles",
 	}
-
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(rolesListCmd(cli))
 	cmd.AddCommand(rolesGetCmd(cli))
@@ -72,17 +72,23 @@ Get a role
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if !cmd.Flags().Changed("role-id") {
-				qs := []*survey.Question{
-					{
-						Name: "RoleID",
-						Prompt: &survey.Input{
-							Message: "RoleID:",
-							Help:    "ID of the role to get.",
-						},
-					},
-				}
-				err := survey.Ask(qs, &flags)
+				roleIDs, err := auth0.GetRoleIDs(cli.api.Role)
 				if err != nil {
+					return err
+				}
+				if roleIDs == nil {
+					return errors.New("No roles found.")
+				}
+
+				prompt := &survey.Select{
+					Message: "Choose a role:",
+					Options: roleIDs,
+					Filter: func(filter, opt string, _ int) bool {
+						return strings.Contains(opt, filter)
+					},
+					Help: "ID of the role to get.",
+				}
+				if err = survey.AskOne(prompt, &flags); err != nil {
 					return err
 				}
 			}
@@ -122,17 +128,23 @@ Delete a role.
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if !cmd.Flags().Changed("role-id") {
-				qs := []*survey.Question{
-					{
-						Name: "RoleID",
-						Prompt: &survey.Input{
-							Message: "RoleID:",
-							Help:    "ID of the role to delete.",
-						},
-					},
-				}
-				err := survey.Ask(qs, &flags)
+				roleIDs, err := auth0.GetRoleIDs(cli.api.Role)
 				if err != nil {
+					return err
+				}
+				if roleIDs == nil {
+					return errors.New("No roles found.")
+				}
+
+				prompt := &survey.Select{
+					Message: "Choose a role:",
+					Options: roleIDs,
+					Filter: func(filter, opt string, _ int) bool {
+						return strings.Contains(opt, filter)
+					},
+					Help: "ID of the role to delete.",
+				}
+				if err = survey.AskOne(prompt, &flags); err != nil {
 					return err
 				}
 			}
@@ -164,17 +176,23 @@ Update a role.
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if !cmd.Flags().Changed("role-id") {
-				qs := []*survey.Question{
-					{
-						Name: "RoleID",
-						Prompt: &survey.Input{
-							Message: "RoleID:",
-							Help:    "ID of the role to update.",
-						},
-					},
-				}
-				err := survey.Ask(qs, &flags)
+				roleIDs, err := auth0.GetRoleIDs(cli.api.Role)
 				if err != nil {
+					return err
+				}
+				if roleIDs == nil {
+					return errors.New("No roles found.")
+				}
+
+				prompt := &survey.Select{
+					Message: "Choose a role:",
+					Options: roleIDs,
+					Filter: func(filter, opt string, _ int) bool {
+						return strings.Contains(opt, filter)
+					},
+					Help: "ID of the role to delete.",
+				}
+				if err = survey.AskOne(prompt, &flags); err != nil {
 					return err
 				}
 			}
@@ -277,6 +295,106 @@ Create a new role.
 	return cmd
 }
 
+func rolesRemovePermissionsCmd(cli *cli) *cobra.Command {
+	flags := rolePermissionFlags{}
+
+	cmd := &cobra.Command{
+		Use:   "remove-permissions",
+		Short: "Remove permissions from a role",
+		Long: `auth0 roles remove-permissions --role-id myRoleID --permission-name "read:resource" --resource-server-identifier "https://api.example.com/role" --permission-name "update:resource" --resource-server-identifier "https://api.example.com/role"
+Remove permissions associated with a role.
+
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			if !cmd.Flags().Changed("role-id") {
+				roleIDs, err := auth0.GetRoleIDs(cli.api.Role)
+				if err != nil {
+					return err
+				}
+				if roleIDs == nil {
+					return errors.New("No roles found.")
+				}
+
+				prompt := &survey.Select{
+					Message: "Choose a role:",
+					Options: roleIDs,
+					Filter: func(filter, opt string, _ int) bool {
+						return strings.Contains(opt, filter)
+					},
+					Help: "ID of the role to remove permissions from.",
+				}
+				if err = survey.AskOne(prompt, &flags); err != nil {
+					return err
+				}
+			}
+
+			if !cmd.Flags().Changed("permission-name") {
+				qs := []*survey.Question{
+					{
+						Name: "permissionName",
+						Prompt: &survey.Input{
+							Message: "Permission Name:",
+							Help:    "Permission name.",
+						},
+					},
+				}
+				if err := survey.Ask(qs, &flags); err != nil {
+					return err
+				}
+			}
+
+			if !cmd.Flags().Changed("resource-server-identifier") {
+				qs := []*survey.Question{
+					{
+						Name: "resourceServerIdentifier",
+						Prompt: &survey.Input{
+							Message: "Resource Server Identifier:",
+							Help:    "Resource Server Identifier.",
+						},
+					},
+				}
+				err := survey.Ask(qs, &flags)
+				if err != nil {
+					return err
+				}
+			}
+
+			permissions := []*management.Permission{}
+			for i, p := range flags.permissionNames {
+				resourceServerIdentifier := flags.resourceServerIdentifiers[i]
+				permission := &management.Permission{
+					Name:                     auth0.String(p),
+					ResourceServerIdentifier: auth0.String(resourceServerIdentifier),
+				}
+				permissions = append(permissions, permission)
+			}
+
+			err := ansi.Spinner("Removing permissions from role", func() error {
+				return cli.api.Role.RemovePermissions(flags.roleID, permissions)
+			})
+			if err != nil {
+				return err
+			}
+
+			var permissionList *management.PermissionList
+			permissionList, err = cli.api.Role.Permissions(flags.roleID)
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.RoleGetPermissions(flags.roleID, permissionList.Permissions)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&flags.roleID, "role-id", "i", "", "ID of the role to remove permissions from")
+	cmd.Flags().StringSliceVarP(&flags.permissionNames, "permission-name", "", []string{}, "Permission name to remove.")
+	cmd.Flags().StringSliceVarP(&flags.resourceServerIdentifiers, "resource-server-identifier", "", []string{}, "Resource server identifier to remove.")
+
+	return cmd
+}
+
 func rolesGetPermissionsCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		RoleID        string
@@ -284,6 +402,7 @@ func rolesGetPermissionsCmd(cli *cli) *cobra.Command {
 		Page          int
 		IncludeTotals bool
 	}
+
 	cmd := &cobra.Command{
 		Use:   "get-permissions",
 		Short: "Get permissions granted by role",
@@ -294,16 +413,24 @@ Retrieve list of permissions granted by a role.
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if !cmd.Flags().Changed("role-id") {
-				qs := []*survey.Question{
-					{
-						Name: "RoleID",
-						Prompt: &survey.Input{
-							Message: "RoleID:",
-							Help:    "ID of the role to list granted permissions.",
-						},
-					},
+				roleIDs, err := auth0.GetRoleIDs(cli.api.Role)
+				if err != nil {
+					return err
 				}
-				err := survey.Ask(qs, &flags)
+				if roleIDs == nil {
+					return errors.New("No roles found.")
+				}
+
+				err = survey.AskOne(
+					&survey.Select{
+						Message: "Choose a role:",
+						Options: roleIDs,
+						Filter: func(filter, opt string, _ int) bool {
+							return strings.Contains(opt, filter)
+						},
+						Help: "ID of the role to list granted permissions.",
+					},
+					&flags.RoleID)
 				if err != nil {
 					return err
 				}
@@ -333,7 +460,7 @@ Retrieve list of permissions granted by a role.
 				return err
 			}
 
-			cli.renderer.RoleGetPermissions(permissionList.Permissions)
+			cli.renderer.RoleGetPermissions(flags.RoleID, permissionList.Permissions)
 			return nil
 		},
 	}
@@ -347,26 +474,61 @@ Retrieve list of permissions granted by a role.
 }
 
 func rolesAssociatePermissionsCmd(cli *cli) *cobra.Command {
-	var flags struct {
-		RoleID      string
-		Permissions string
-	}
+	flags := rolePermissionFlags{}
+
 	cmd := &cobra.Command{
 		Use:   "associate-permissions",
 		Short: "Associate permissions with a role",
-		Long: `auth0 roles associate-permissions --role-id myRoleID --permissions '[{"permission_name": "read:resource", "resource_server_identifier": "https://api.example.com/role"}]'
+		Long: `auth0 roles associate-permissions --role-id myRoleID --permission-name "read:resource" --resource-server-identifier "https://api.example.com/role" --permission-name "update:resource" --resource-server-identifier "https://api.example.com/role"
 Associate permissions with a role.
 
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if !cmd.Flags().Changed("role-id") {
+				roleIDs, err := auth0.GetRoleIDs(cli.api.Role)
+				if err != nil {
+					return err
+				}
+				if roleIDs == nil {
+					return errors.New("No roles found.")
+				}
+
+				prompt := &survey.Select{
+					Message: "Choose a role:",
+					Options: roleIDs,
+					Filter: func(filter, opt string, _ int) bool {
+						return strings.Contains(opt, filter)
+					},
+					Help: "ID of the role to add permissions to.",
+				}
+				if err = survey.AskOne(prompt, &flags); err != nil {
+					return err
+				}
+			}
+
+			if !cmd.Flags().Changed("permission-name") {
 				qs := []*survey.Question{
 					{
-						Name: "RoleID",
+						Name: "permissionName",
 						Prompt: &survey.Input{
-							Message: "RoleID:",
-							Help:    "ID of the role to list granted permissions.",
+							Message: "Permission Name:",
+							Help:    "Permission name.",
+						},
+					},
+				}
+				if err := survey.Ask(qs, &flags); err != nil {
+					return err
+				}
+			}
+
+			if !cmd.Flags().Changed("resource-server-identifier") {
+				qs := []*survey.Question{
+					{
+						Name: "resourceServerIdentifier",
+						Prompt: &survey.Input{
+							Message: "Resource Server Identifier:",
+							Help:    "Resource Server Identifier.",
 						},
 					},
 				}
@@ -376,122 +538,61 @@ Associate permissions with a role.
 				}
 			}
 
-			if !cmd.Flags().Changed("permissions") {
-				qs := []*survey.Question{
-					{
-						Name: "Permissions",
-						Prompt: &survey.Input{
-							Message: "Permissions:",
-							Help:    "Array of resource_server_identifier, permission_name pairs.",
-						},
-					},
-				}
-				err := survey.Ask(qs, &flags)
-				if err != nil {
-					return err
-				}
+			if len(flags.permissionNames) != len(flags.resourceServerIdentifiers) {
+				return errors.New("Permission names dont match resource server identifiers")
 			}
 
-			var permissions []*management.Permission
-			if err := json.Unmarshal([]byte(flags.Permissions), &permissions); err != nil {
-				return fmt.Errorf("Failed to parse permissions string: %s", flags.Permissions)
+			permissions := []*management.Permission{}
+			for i, p := range flags.permissionNames {
+				resourceServerIdentifier := flags.resourceServerIdentifiers[i]
+				permission := &management.Permission{
+					Name:                     auth0.String(p),
+					ResourceServerIdentifier: auth0.String(resourceServerIdentifier),
+				}
+				permissions = append(permissions, permission)
 			}
 
 			err := ansi.Spinner("Associating permissions with role", func() error {
-				return cli.api.Role.AssociatePermissions(flags.RoleID, permissions)
+				return cli.api.Role.AssociatePermissions(flags.roleID, permissions)
 			})
 			if err != nil {
 				return err
 			}
 
 			var permissionList *management.PermissionList
-			permissionList, err = cli.api.Role.Permissions(flags.RoleID)
+			permissionList, err = cli.api.Role.Permissions(flags.roleID)
 			if err != nil {
 				return err
 			}
 
-			cli.renderer.RoleGetPermissions(permissionList.Permissions)
+			cli.renderer.RoleGetPermissions(flags.roleID, permissionList.Permissions)
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.RoleID, "role-id", "i", "", "ID of the role to list granted permissions.")
-	cmd.Flags().StringVarP(&flags.Permissions, "permissions", "p", "", "array of resource_server_identifier, permission_name pairs.")
+	cmd.Flags().StringVarP(&flags.roleID, "role-id", "i", "", "ID of the role to list granted permissions.")
+	cmd.Flags().StringSliceVarP(&flags.permissionNames, "permission-name", "", []string{}, "Permission name.")
+	cmd.Flags().StringSliceVarP(&flags.resourceServerIdentifiers, "resource-server-identifier", "", []string{}, "Resource server identifier.")
 
 	return cmd
 }
 
-func rolesRemovePermissionsCmd(cli *cli) *cobra.Command {
-	var flags struct {
-		RoleID      string
-		Permissions string
+type rolePermissionFlags struct {
+	roleID                    string
+	permissionNames           []string
+	resourceServerIdentifiers []string
+}
+
+func (f *rolePermissionFlags) WriteAnswer(name string, value interface{}) error {
+	switch name {
+	case "roleID":
+		f.roleID = value.(string)
+	case "permissionName":
+		f.permissionNames = append(f.permissionNames, value.(string))
+	case "resourceServerIdentifier":
+		f.resourceServerIdentifiers = append(f.resourceServerIdentifiers, value.(string))
+	default:
+		return errors.New(fmt.Sprintf("Unsupported name: %s", name))
 	}
-	cmd := &cobra.Command{
-		Use:   "remove-permissions",
-		Short: "Remove permissions from a role",
-		Long: `auth0 roles remove-permissions --role-id myRoleID --permissions '[{"permission_name": "read:resource", "resource_server_identifier": "https://api.example.com/role"}]'
-Remove permissions associated with a role.
-
-`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-
-			if !cmd.Flags().Changed("role-id") {
-				qs := []*survey.Question{
-					{
-						Name: "RoleID",
-						Prompt: &survey.Input{
-							Message: "RoleID:",
-							Help:    "ID of the role to remove permissions from.",
-						},
-					},
-				}
-				err := survey.Ask(qs, &flags)
-				if err != nil {
-					return err
-				}
-			}
-
-			if !cmd.Flags().Changed("permissions") {
-				qs := []*survey.Question{
-					{
-						Name: "Permissions",
-						Prompt: &survey.Input{
-							Message: "Permissions:",
-							Help:    "Array of resource_server_identifier, permission_name pairs.",
-						},
-					},
-				}
-				err := survey.Ask(qs, &flags)
-				if err != nil {
-					return err
-				}
-			}
-
-			var permissions []*management.Permission
-			if err := json.Unmarshal([]byte(flags.Permissions), &permissions); err != nil {
-				return fmt.Errorf("Failed to parse permissions string: %s", flags.Permissions)
-			}
-
-			err := ansi.Spinner("Removing permissions from role", func() error {
-				return cli.api.Role.RemovePermissions(flags.RoleID, permissions)
-			})
-			if err != nil {
-				return err
-			}
-
-			var permissionList *management.PermissionList
-			permissionList, err = cli.api.Role.Permissions(flags.RoleID)
-			if err != nil {
-				return err
-			}
-
-			cli.renderer.RoleGetPermissions(permissionList.Permissions)
-			return nil
-		},
-	}
-
-	cmd.Flags().StringVarP(&flags.RoleID, "role-id", "i", "", "ID of the role to list granted permissions.")
-	cmd.Flags().StringVarP(&flags.Permissions, "permissions", "p", "", "array of resource_server_identifier, permission_name pairs.")
-
-	return cmd
+	return nil
 }
