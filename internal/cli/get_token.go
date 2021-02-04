@@ -13,8 +13,8 @@ func getTokenCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "get-token",
-		Short: "fetch a token for the given client and API.",
-		Long: `$ auth0 get-token
+		Short: "Fetch a token for the given client and API",
+		Long: `auth0 get-token
 Fetch an access token for the given client and API.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {

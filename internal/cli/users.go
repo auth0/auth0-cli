@@ -17,7 +17,7 @@ const (
 func usersCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "users",
-		Short: "manage users.",
+		Short: "Manage users",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
