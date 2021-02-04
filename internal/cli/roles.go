@@ -190,7 +190,7 @@ Update a role.
 					Filter: func(filter, opt string, _ int) bool {
 						return strings.Contains(opt, filter)
 					},
-					Help: "ID of the role to delete.",
+					Help: "ID of the role to update.",
 				}
 				if err = survey.AskOne(prompt, &flags); err != nil {
 					return err
@@ -239,35 +239,17 @@ Create a new role.
 
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			if !cmd.Flags().Changed("name") {
 				qs := []*survey.Question{
 					{
-						Name: "Name",
+						Name: "name",
 						Prompt: &survey.Input{
 							Message: "Name:",
 							Help:    "Name of the role.",
 						},
 					},
 				}
-				err := survey.Ask(qs, &flags)
-				if err != nil {
-					return err
-				}
-			}
-
-			if !cmd.Flags().Changed("description") {
-				qs := []*survey.Question{
-					{
-						Name: "Description",
-						Prompt: &survey.Input{
-							Message: "Description:",
-							Help:    "Description of the role.",
-						},
-					},
-				}
-				err := survey.Ask(qs, &flags)
-				if err != nil {
+				if err := survey.Ask(qs, &flags); err != nil {
 					return err
 				}
 			}
@@ -335,7 +317,7 @@ Remove permissions associated with a role.
 						Name: "permissionName",
 						Prompt: &survey.Input{
 							Message: "Permission Name:",
-							Help:    "Permission name.",
+							Help:    "Permission name to remove.",
 						},
 					},
 				}
@@ -350,7 +332,7 @@ Remove permissions associated with a role.
 						Name: "resourceServerIdentifier",
 						Prompt: &survey.Input{
 							Message: "Resource Server Identifier:",
-							Help:    "Resource Server Identifier.",
+							Help:    "Resource server identifier to remove.",
 						},
 					},
 				}
