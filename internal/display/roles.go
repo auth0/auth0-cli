@@ -7,17 +7,17 @@ import (
 )
 
 type roleView struct {
-	Name        string
-	ID          string
-	Description string
+	Name        string `json:"name,omitempty"`
+	ID          string `json:"id,omitempty"`
+	Description string `json:"description,omitempty"`
 }
 
 type permissionView struct {
-	RoleID                   string
-	Name                     string
-	ResourceServerIdentifier string
-	ResourceServerName       string
-	Description              string
+	RoleID                   string `json:"id,omitempty"`
+	Name                     string `json:"name,omitempty"`
+	ResourceServerIdentifier string `json:"resource_server_identifier,omitempty"`
+	ResourceServerName       string `json:"resource_server_name,omitempty"`
+	Description              string `json:"description,omitempty"`
 }
 
 func (v *roleView) AsTableHeader() []string {
