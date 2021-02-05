@@ -20,6 +20,10 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
+const (
+	userAgent = "Auth0 CLI"
+)
+
 // config defines the exact set of tenants, access tokens, which only exists
 // for a particular user's machine.
 type config struct {
@@ -99,7 +103,8 @@ func (c *cli) setup() error {
 	} else if t.AccessToken != "" {
 		m, err := management.New(t.Domain,
 			management.WithStaticToken(t.AccessToken),
-			management.WithDebug(c.verbose))
+			management.WithDebug(c.verbose),
+			management.WithUserAgent(userAgent))
 		if err != nil {
 			return err
 		}
