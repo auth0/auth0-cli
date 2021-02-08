@@ -2,7 +2,11 @@
 
 package auth0
 
-import "gopkg.in/auth0.v5/management"
+import (
+	"fmt"
+
+	"gopkg.in/auth0.v5/management"
+)
 
 type RoleAPI interface {
 	// Create a new role.
@@ -54,7 +58,7 @@ func GetRoleIDs(r RoleAPI) ([]string, error) {
 	}
 
 	for _, i := range list.Roles {
-		roleIDs = append(roleIDs, *i.ID)
+		roleIDs = append(roleIDs, fmt.Sprintf("%s\t%s", *i.ID, *i.Name))
 	}
 
 	return roleIDs, nil

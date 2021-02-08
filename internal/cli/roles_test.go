@@ -76,7 +76,7 @@ func TestRolesCmd(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := auth0.NewMockRoleAPI(ctrl)
-		m.EXPECT().Delete(gomock.AssignableToTypeOf("")).MaxTimes(1).Return(nil)
+		m.EXPECT().Delete(gomock.AssignableToTypeOf("")).MaxTimes(2).Return(nil)
 		stdout := &bytes.Buffer{}
 		cli := &cli{
 			renderer: &display.Renderer{
@@ -88,7 +88,7 @@ func TestRolesCmd(t *testing.T) {
 		}
 
 		cmd := rolesDeleteCmd(cli)
-		cmd.SetArgs([]string{"--role-id=testRoleID"})
+		cmd.SetArgs([]string{"testRoleID1,testRoleID2"})
 
 		if err := cmd.Execute(); err != nil {
 			t.Fatal(err)

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -11,6 +12,29 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
+
+type roleFlags struct {
+	roleID                    string
+	roleIDs                   []string
+	permissionNames           []string
+	resourceServerIdentifiers []string
+}
+
+func (f *roleFlags) WriteAnswer(name string, value interface{}) error {
+	switch name {
+	case "roleID":
+		f.roleID = value.(string)
+	case "roleIDs":
+		f.roleIDs = append(f.roleIDs, value.(string))
+	case "permissionName":
+		f.permissionNames = append(f.permissionNames, value.(string))
+	case "resourceServerIdentifier":
+		f.resourceServerIdentifiers = append(f.resourceServerIdentifiers, value.(string))
+	default:
+		return errors.New(fmt.Sprintf("Unsupported name: %s", name))
+	}
+	return nil
+}
 
 func rolesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
@@ -70,7 +94,6 @@ Get a role
 
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			if !cmd.Flags().Changed("role-id") {
 				roleIDs, err := auth0.GetRoleIDs(cli.api.Role)
 				if err != nil {
@@ -115,20 +138,28 @@ Get a role
 }
 
 func rolesDeleteCmd(cli *cli) *cobra.Command {
-	var flags struct {
-		RoleID string
-	}
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete a role",
-		Long: `auth0 roles delete --role-id myRoleID
+		Long: `auth0 roles delete --role-ids myRoleID1,myRoleID2
 Delete a role.
 
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if !cmd.Flags().Changed("role-id") {
-				roleIDs, err := auth0.GetRoleIDs(cli.api.Role)
+			roleIDs := []string{}
+
+			if len(args) > 1 {
+				return errors.New("incorrect args")
+			}
+
+			if len(args) == 1 {
+				roleIDs = strings.Split(args[0], ",")
+			}
+
+			__roleIDs := []string{}
+			if len(roleIDs) == 0 {
+				_roleIDs, err := auth0.GetRoleIDs(cli.api.Role)
 				if err != nil {
 					return err
 				}
@@ -136,26 +167,50 @@ Delete a role.
 					return errors.New("No roles found.")
 				}
 
-				prompt := &survey.Select{
-					Message: "Choose a role:",
-					Options: roleIDs,
-					Filter: func(filter, opt string, _ int) bool {
-						return strings.Contains(opt, filter)
-					},
-					Help: "ID of the role to delete.",
+				prompt := &survey.MultiSelect{
+					Message: "Choose roles:",
+					Options: _roleIDs,
+					Help:    "IDs of the roles to delete.",
 				}
-				if err = survey.AskOne(prompt, &flags); err != nil {
+				if err = survey.AskOne(prompt, &__roleIDs); err != nil {
 					return err
 				}
 			}
 
-			return ansi.Spinner("Deleting role", func() error {
-				return cli.api.Role.Delete(flags.RoleID)
-			})
+			for _, i := range __roleIDs {
+				s := strings.Fields(i)
+				roleIDs = append(roleIDs, s[0])
+			}
+
+			type result struct {
+				roleID string
+				err    error
+			}
+
+			ch := make(chan *result, 5)
+			timer := time.NewTimer(30 * time.Second)
+
+			go func() {
+				for _, id := range roleIDs {
+					ch <- &result{roleID: id, err: cli.api.Role.Delete(id)}
+				}
+				close(ch)
+			}()
+
+			for i := 1; i <= len(roleIDs); i++ {
+				select {
+				case res := <-ch:
+					if res.err != nil {
+						timer.Stop()
+						return errors.New(fmt.Sprintf("Failed to delete role: %s, %s", res.roleID, res.err))
+					}
+				case <-timer.C:
+					return errors.New("Failed to delete roles")
+				}
+			}
+			return nil
 		},
 	}
-
-	cmd.Flags().StringVarP(&flags.RoleID, "role-id", "i", "", "ID of the role to delete.")
 
 	return cmd
 }
@@ -174,7 +229,6 @@ Update a role.
 
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			if !cmd.Flags().Changed("role-id") {
 				roleIDs, err := auth0.GetRoleIDs(cli.api.Role)
 				if err != nil {
@@ -278,7 +332,7 @@ Create a new role.
 }
 
 func rolesRemovePermissionsCmd(cli *cli) *cobra.Command {
-	flags := rolePermissionFlags{}
+	flags := roleFlags{}
 
 	cmd := &cobra.Command{
 		Use:   "remove-permissions",
@@ -456,7 +510,7 @@ Retrieve list of permissions granted by a role.
 }
 
 func rolesAssociatePermissionsCmd(cli *cli) *cobra.Command {
-	flags := rolePermissionFlags{}
+	flags := roleFlags{}
 
 	cmd := &cobra.Command{
 		Use:   "associate-permissions",
@@ -557,24 +611,4 @@ Associate permissions with a role.
 	cmd.Flags().StringSliceVarP(&flags.resourceServerIdentifiers, "resource-server-identifier", "", []string{}, "Resource server identifier.")
 
 	return cmd
-}
-
-type rolePermissionFlags struct {
-	roleID                    string
-	permissionNames           []string
-	resourceServerIdentifiers []string
-}
-
-func (f *rolePermissionFlags) WriteAnswer(name string, value interface{}) error {
-	switch name {
-	case "roleID":
-		f.roleID = value.(string)
-	case "permissionName":
-		f.permissionNames = append(f.permissionNames, value.(string))
-	case "resourceServerIdentifier":
-		f.resourceServerIdentifiers = append(f.resourceServerIdentifiers, value.(string))
-	default:
-		return errors.New(fmt.Sprintf("Unsupported name: %s", name))
-	}
-	return nil
 }
