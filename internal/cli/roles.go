@@ -31,7 +31,7 @@ func (f *roleFlags) WriteAnswer(name string, value interface{}) error {
 	case "resourceServerIdentifier":
 		f.resourceServerIdentifiers = append(f.resourceServerIdentifiers, value.(string))
 	default:
-		return errors.New(fmt.Sprintf("Unsupported name: %s", name))
+		return fmt.Errorf("Unsupported name: %s", name)
 	}
 	return nil
 }
@@ -183,8 +183,8 @@ Delete a role.
 			}
 
 			type result struct {
-				roleID string
-				err    error
+				id  string
+				err error
 			}
 
 			ch := make(chan *result, 5)
@@ -192,7 +192,7 @@ Delete a role.
 
 			go func() {
 				for _, id := range roleIDs {
-					ch <- &result{roleID: id, err: cli.api.Role.Delete(id)}
+					ch <- &result{id: id, err: cli.api.Role.Delete(id)}
 				}
 				close(ch)
 			}()
@@ -202,7 +202,7 @@ Delete a role.
 				case res := <-ch:
 					if res.err != nil {
 						timer.Stop()
-						return errors.New(fmt.Sprintf("Failed to delete role: %s, %s", res.roleID, res.err))
+						return fmt.Errorf("Failed to delete role: %s, %s", res.id, res.err)
 					}
 				case <-timer.C:
 					return errors.New("Failed to delete roles")
