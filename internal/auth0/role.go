@@ -48,8 +48,8 @@ type RoleUsersAPI interface {
 	AssignUsers(id string, users []*management.User, opts ...management.RequestOption) (err error)
 }
 
-// GetRoleIDs returns a slice of role id strings.
-func GetRoleIDs(r RoleAPI) ([]string, error) {
+// GetRoles returns a slice of role id and name strings.
+func GetRoles(r RoleAPI) ([]string, error) {
 	roleIDs := []string{}
 
 	list, err := r.List()

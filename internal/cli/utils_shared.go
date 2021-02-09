@@ -4,14 +4,15 @@ import (
 	"fmt"
 
 	"encoding/json"
+	"net/http"
+	"net/url"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/open"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"gopkg.in/auth0.v5/management"
-	"net/http"
-	"net/url"
 )
 
 const (

@@ -7,14 +7,19 @@ import (
 )
 
 type roleView struct {
-	Name        string `json:"name,omitempty"`
-	ID          string `json:"id,omitempty"`
+	Name        string `json:"name"`
+	ID          string `json:"id"`
 	Description string `json:"description,omitempty"`
 }
 
+type roleSingleView struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
 type permissionView struct {
-	RoleID                   string `json:"id,omitempty"`
-	Name                     string `json:"name,omitempty"`
+	RoleID                   string `json:"id"`
+	Name                     string `json:"name"`
 	ResourceServerIdentifier string `json:"resource_server_identifier,omitempty"`
 	ResourceServerName       string `json:"resource_server_name,omitempty"`
 	Description              string `json:"description,omitempty"`
@@ -26,6 +31,14 @@ func (v *roleView) AsTableHeader() []string {
 
 func (v *roleView) AsTableRow() []string {
 	return []string{v.ID, v.Name, v.Description}
+}
+
+func (v *roleSingleView) AsTableHeader() []string {
+	return []string{}
+}
+
+func (v *roleSingleView) AsTableRow() []string {
+	return []string{v.Name, v.Value}
 }
 
 func (v *permissionView) AsTableHeader() []string {
@@ -52,11 +65,14 @@ func (r *Renderer) RoleList(roles []*management.Role) {
 
 func (r *Renderer) RoleGet(role *management.Role) {
 	r.Heading(ansi.Bold(r.Tenant), "role\n")
-	r.Results([]View{&roleView{
-		Name:        auth0.StringValue(role.Name),
-		ID:          auth0.StringValue(role.ID),
-		Description: auth0.StringValue(role.Description),
-	}})
+	views := []View{
+		&roleSingleView{Name: "ROLE ID", Value: auth0.StringValue(role.ID)},
+		&roleSingleView{Name: "NAME", Value: auth0.StringValue(role.Name)},
+	}
+	if auth0.StringValue(role.Description) != "" {
+		views = append(views, &roleSingleView{Name: "DESCRIPTION", Value: auth0.StringValue(role.Description)})
+	}
+	r.Results(views)
 }
 
 func (r *Renderer) RoleUpdate(role *management.Role) {
