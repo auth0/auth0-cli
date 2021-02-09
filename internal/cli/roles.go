@@ -125,25 +125,26 @@ Get one or more roles.
 			}
 
 			ch := make(chan *result, 5)
-			timer := time.NewTimer(30 * time.Second)
+			defer close(ch)
 
 			for _, id := range roleIDs {
-				go func() {
+				go func(id string) {
 					role, err := cli.api.Role.Read(id)
 					ch <- &result{id: id, role: role, err: err}
-				}()
+				}(id)
 			}
-			close(ch)
 
 			roles := []*management.Role{}
+			failed := map[string]error{}
 
+			timer := time.NewTimer(30 * time.Second)
 			err := ansi.Spinner("Getting roles", func() error {
 				for i := 1; i <= len(roleIDs); i++ {
 					select {
 					case res := <-ch:
 						if res.err != nil {
-							timer.Stop()
-							return fmt.Errorf("Failed to get role: %s, %s", res.id, res.err)
+							failed[res.id] = res.err
+							continue
 						}
 						roles = append(roles, res.role)
 					case <-timer.C:
@@ -153,6 +154,14 @@ Get one or more roles.
 				return nil
 			})
 			if err != nil {
+				return err
+			}
+
+			if len(failed) != 0 {
+				err := errors.New("Failed to get roles:")
+				for k, v := range failed {
+					err = fmt.Errorf("%w\n\n      - ROLE ID: %s\n        ERROR: %s", err, k, v)
+				}
 				return err
 			}
 
@@ -212,26 +221,38 @@ Delete one or more roles.
 			}
 
 			ch := make(chan *result, 5)
-			timer := time.NewTimer(30 * time.Second)
+			defer close(ch)
 
 			for _, id := range roleIDs {
-				go func() {
+				go func(id string) {
 					ch <- &result{id: id, err: cli.api.Role.Delete(id)}
-				}()
+				}(id)
 			}
-			close(ch)
 
+			failed := map[string]error{}
+
+			timer := time.NewTimer(30 * time.Second)
 			for i := 1; i <= len(roleIDs); i++ {
 				select {
 				case res := <-ch:
 					if res.err != nil {
-						timer.Stop()
-						return fmt.Errorf("Failed to delete role: %s, %s", res.id, res.err)
+						if res.err != nil {
+							failed[res.id] = res.err
+						}
 					}
 				case <-timer.C:
 					return errors.New("Failed to delete roles")
 				}
 			}
+
+			if len(failed) != 0 {
+				err := errors.New("Failed to delete roles:")
+				for k, v := range failed {
+					err = fmt.Errorf("%w\n\n      - ROLE ID: %s\n        ERROR: %s", err, k, v)
+				}
+				return err
+			}
+
 			return nil
 		},
 	}
