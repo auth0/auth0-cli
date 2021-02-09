@@ -83,56 +83,88 @@ Retrieve filtered list of roles that can be assigned to users or groups
 }
 
 func rolesGetCmd(cli *cli) *cobra.Command {
-	var flags struct {
-		RoleID string
-	}
 	cmd := &cobra.Command{
 		Use:   "get",
-		Short: "Get a role",
-		Long: `auth0 roles get --role-id myRoleID
-Get a role
+		Short: "Get roles",
+		Long: `auth0 roles get myRoleID1 myRoleID2
+Get one or more roles.
 
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if !cmd.Flags().Changed("role-id") {
-				roleIDs, err := auth0.GetRoleIDs(cli.api.Role)
+			roleIDs := args
+
+			if len(roleIDs) == 0 {
+				resp := []string{}
+				opts, err := auth0.GetRoles(cli.api.Role)
 				if err != nil {
 					return err
 				}
-				if roleIDs == nil {
+				if opts == nil {
 					return errors.New("No roles found.")
 				}
 
 				prompt := &survey.Select{
 					Message: "Choose a role:",
-					Options: roleIDs,
-					Filter: func(filter, opt string, _ int) bool {
-						return strings.Contains(opt, filter)
-					},
-					Help: "ID of the role to get.",
+					Options: opts,
+					Help:    "IDs of the roles to get.",
 				}
-				if err = survey.AskOne(prompt, &flags); err != nil {
+				if err = survey.AskOne(prompt, &resp); err != nil {
 					return err
+				}
+
+				for _, i := range resp {
+					s := strings.Fields(i)
+					roleIDs = append(roleIDs, s[0])
 				}
 			}
 
-			var role *management.Role
-			err := ansi.Spinner("Getting role", func() error {
-				var err error
-				role, err = cli.api.Role.Read(flags.RoleID)
-				return err
-			})
+			type result struct {
+				id   string
+				role *management.Role
+				err  error
+			}
 
+			ch := make(chan *result, 5)
+			timer := time.NewTimer(30 * time.Second)
+
+			for _, id := range roleIDs {
+				go func() {
+					role, err := cli.api.Role.Read(id)
+					ch <- &result{id: id, role: role, err: err}
+				}()
+			}
+			close(ch)
+
+			roles := []*management.Role{}
+
+			err := ansi.Spinner("Getting roles", func() error {
+				for i := 1; i <= len(roleIDs); i++ {
+					select {
+					case res := <-ch:
+						if res.err != nil {
+							timer.Stop()
+							return fmt.Errorf("Failed to get role: %s, %s", res.id, res.err)
+						}
+						roles = append(roles, res.role)
+					case <-timer.C:
+						return errors.New("failed to get roles")
+					}
+				}
+				return nil
+			})
 			if err != nil {
 				return err
 			}
 
-			cli.renderer.RoleGet(role)
+			switch i := len(roles); {
+			case i > 1:
+				cli.renderer.RoleList(roles)
+			default:
+				cli.renderer.RoleGet(roles[0])
+			}
 			return nil
 		},
 	}
-
-	cmd.Flags().StringVarP(&flags.RoleID, "role-id", "i", "", "ID of the role to get.")
 
 	return cmd
 }
@@ -140,46 +172,38 @@ Get a role
 func rolesDeleteCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
-		Short: "Delete a role",
-		Long: `auth0 roles delete --role-ids myRoleID1,myRoleID2
-Delete a role.
+		Short: "Delete roles",
+		Long: `auth0 roles delete myRoleID1 myRoleID2
+Delete one or more roles.
 
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			roleIDs := []string{}
+			roleIDs := args
 
-			if len(args) > 1 {
-				return errors.New("incorrect args")
-			}
-
-			if len(args) == 1 {
-				roleIDs = strings.Split(args[0], ",")
-			}
-
-			__roleIDs := []string{}
 			if len(roleIDs) == 0 {
-				_roleIDs, err := auth0.GetRoleIDs(cli.api.Role)
+				resp := []string{}
+				opts, err := auth0.GetRoles(cli.api.Role)
 				if err != nil {
 					return err
 				}
-				if roleIDs == nil {
+				if opts == nil {
 					return errors.New("No roles found.")
 				}
 
 				prompt := &survey.MultiSelect{
 					Message: "Choose roles:",
-					Options: _roleIDs,
+					Options: opts,
 					Help:    "IDs of the roles to delete.",
 				}
-				if err = survey.AskOne(prompt, &__roleIDs); err != nil {
+				if err = survey.AskOne(prompt, &resp); err != nil {
 					return err
 				}
-			}
 
-			for _, i := range __roleIDs {
-				s := strings.Fields(i)
-				roleIDs = append(roleIDs, s[0])
+				for _, i := range resp {
+					s := strings.Fields(i)
+					roleIDs = append(roleIDs, s[0])
+				}
 			}
 
 			type result struct {
@@ -190,12 +214,12 @@ Delete a role.
 			ch := make(chan *result, 5)
 			timer := time.NewTimer(30 * time.Second)
 
-			go func() {
-				for _, id := range roleIDs {
+			for _, id := range roleIDs {
+				go func() {
 					ch <- &result{id: id, err: cli.api.Role.Delete(id)}
-				}
-				close(ch)
-			}()
+				}()
+			}
+			close(ch)
 
 			for i := 1; i <= len(roleIDs); i++ {
 				select {
@@ -230,7 +254,7 @@ Update a role.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !cmd.Flags().Changed("role-id") {
-				roleIDs, err := auth0.GetRoleIDs(cli.api.Role)
+				roleIDs, err := auth0.GetRoles(cli.api.Role)
 				if err != nil {
 					return err
 				}
@@ -344,7 +368,7 @@ Remove permissions associated with a role.
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if !cmd.Flags().Changed("role-id") {
-				roleIDs, err := auth0.GetRoleIDs(cli.api.Role)
+				roleIDs, err := auth0.GetRoles(cli.api.Role)
 				if err != nil {
 					return err
 				}
@@ -449,7 +473,7 @@ Retrieve list of permissions granted by a role.
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if !cmd.Flags().Changed("role-id") {
-				roleIDs, err := auth0.GetRoleIDs(cli.api.Role)
+				roleIDs, err := auth0.GetRoles(cli.api.Role)
 				if err != nil {
 					return err
 				}
@@ -522,7 +546,7 @@ Associate permissions with a role.
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if !cmd.Flags().Changed("role-id") {
-				roleIDs, err := auth0.GetRoleIDs(cli.api.Role)
+				roleIDs, err := auth0.GetRoles(cli.api.Role)
 				if err != nil {
 					return err
 				}
