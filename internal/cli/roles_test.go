@@ -42,34 +42,56 @@ func TestRolesCmd(t *testing.T) {
 		)
 	})
 
-	t.Run("Get", func(t *testing.T) {
+	t.Run("Get Many Roles", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := auth0.NewMockRoleAPI(ctrl)
-		m.EXPECT().Read(gomock.AssignableToTypeOf("")).MaxTimes(1).Return(&management.Role{ID: auth0.String("testRoleID"), Name: auth0.String("testName"), Description: auth0.String("testDescription")}, nil)
+		m.EXPECT().Read(gomock.AssignableToTypeOf("")).MaxTimes(2).DoAndReturn(func(id string) (*management.Role, error) {
+			return &management.Role{ID: auth0.String(id), Name: auth0.String("testName"), Description: auth0.String("testDescription")}, nil
+		})
 		stdout := &bytes.Buffer{}
 		cli := &cli{
 			renderer: &display.Renderer{
 				MessageWriter: ioutil.Discard,
 				ResultWriter:  stdout,
-				Format:        display.OutputFormat("table"),
+				Format:        display.OutputFormat("json"),
 			},
 			api: &auth0.API{Role: m},
 		}
 
 		cmd := rolesGetCmd(cli)
-		cmd.SetArgs([]string{"--role-id=testRoleID"})
+		cmd.SetArgs([]string{"testRoleID1", "testRoleID2"})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("Get a Single Role", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		m := auth0.NewMockRoleAPI(ctrl)
+		m.EXPECT().Read(gomock.AssignableToTypeOf("")).MaxTimes(1).DoAndReturn(func(id string) (*management.Role, error) {
+			return &management.Role{ID: auth0.String(id), Name: auth0.String("testName"), Description: auth0.String("testDescription")}, nil
+		})
+		stdout := &bytes.Buffer{}
+		cli := &cli{
+			renderer: &display.Renderer{
+				MessageWriter: ioutil.Discard,
+				ResultWriter:  stdout,
+				Format:        display.OutputFormat("json"),
+			},
+			api: &auth0.API{Role: m},
+		}
+
+		cmd := rolesGetCmd(cli)
+		cmd.SetArgs([]string{"testRoleID1"})
 
 		if err := cmd.Execute(); err != nil {
 			t.Fatal(err)
 		}
 
-		expectTable(t, stdout.String(),
-			[]string{"ROLE ID", "NAME", "DESCRIPTION"},
-			[][]string{
-				{"testRoleID", "testName", "testDescription"},
-			},
-		)
+		assert.JSONEq(t, `[{"name": "ROLE ID", "value": "testRoleID1"},{"name": "NAME", "value": "testName"},{"name": "DESCRIPTION", "value": "testDescription"}]`, stdout.String())
 	})
 
 	t.Run("Delete", func(t *testing.T) {
@@ -88,7 +110,7 @@ func TestRolesCmd(t *testing.T) {
 		}
 
 		cmd := rolesDeleteCmd(cli)
-		cmd.SetArgs([]string{"testRoleID1,testRoleID2"})
+		cmd.SetArgs([]string{"testRoleID1 testRoleID2"})
 
 		if err := cmd.Execute(); err != nil {
 			t.Fatal(err)

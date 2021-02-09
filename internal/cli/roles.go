@@ -148,7 +148,7 @@ Get one or more roles.
 						}
 						roles = append(roles, res.role)
 					case <-timer.C:
-						return errors.New("failed to get roles")
+						return errors.New("Failed to get roles")
 					}
 				}
 				return nil
