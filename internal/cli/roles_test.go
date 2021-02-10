@@ -177,12 +177,12 @@ func TestRolesCmd(t *testing.T) {
 		)
 	})
 
-	t.Run("GetPermissions", func(t *testing.T) {
+	t.Run("Get a Single Role's Permissions", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := auth0.NewMockRoleAPI(ctrl)
 		permissions := []*management.Permission{
-			&management.Permission{Name: auth0.String("testName"), ResourceServerIdentifier: auth0.String("testResourceServerIdentifier"), ResourceServerName: auth0.String("testResourceServerName"), Description: auth0.String("testDescription")},
+			&management.Permission{Name: auth0.String("testName"), ResourceServerIdentifier: auth0.String("testResourceServerIdentifier")},
 		}
 		m.EXPECT().Permissions(gomock.AssignableToTypeOf(""), gomock.Any()).MaxTimes(1).Return(&management.PermissionList{List: management.List{}, Permissions: permissions}, nil)
 		stdout := &bytes.Buffer{}
@@ -190,24 +190,19 @@ func TestRolesCmd(t *testing.T) {
 			renderer: &display.Renderer{
 				MessageWriter: ioutil.Discard,
 				ResultWriter:  stdout,
-				Format:        display.OutputFormat("table"),
+				Format:        display.OutputFormat("json"),
 			},
 			api: &auth0.API{Role: m},
 		}
 
 		cmd := rolesGetPermissionsCmd(cli)
-		cmd.SetArgs([]string{"--role-id=testRoleID"})
+		cmd.SetArgs([]string{"testRoleID1"})
 
 		if err := cmd.Execute(); err != nil {
 			t.Fatal(err)
 		}
 
-		expectTable(t, stdout.String(),
-			[]string{"ROLE ID", "PERMISSION NAME", "DESCRIPTION", "RESOURCE SERVICE IDENTIFIER", "RESOURCE SERVER NAME"},
-			[][]string{
-				{"testRoleID", "testName", "testDescription", "testResourceServerIdentifier", "testResourceServerName"},
-			},
-		)
+		assert.JSONEq(t, `[{"name": "ROLE ID", "value": "testRoleID1"},{"name": "NAME", "value": "testName"},{"name": "RESOURCE SERVER IDENTIFIER", "value": "testResourceServerIdentifier"}]`, stdout.String())
 	})
 
 	t.Run("AssociatePermissions", func(t *testing.T) {

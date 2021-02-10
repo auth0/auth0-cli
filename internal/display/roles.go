@@ -17,12 +17,15 @@ type roleSingleView struct {
 	Value string `json:"value"`
 }
 
-type permissionView struct {
+type rolePermissionView struct {
 	RoleID                   string `json:"id"`
 	Name                     string `json:"name"`
 	ResourceServerIdentifier string `json:"resource_server_identifier,omitempty"`
-	ResourceServerName       string `json:"resource_server_name,omitempty"`
-	Description              string `json:"description,omitempty"`
+}
+
+type rolePermissionSingleView struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }
 
 func (v *roleView) AsTableHeader() []string {
@@ -41,38 +44,45 @@ func (v *roleSingleView) AsTableRow() []string {
 	return []string{v.Name, v.Value}
 }
 
-func (v *permissionView) AsTableHeader() []string {
-	return []string{"Role ID", "Permission Name", "Description", "Resource Service Identifier", "Resource Server Name"}
+func (v *rolePermissionView) AsTableHeader() []string {
+	return []string{"Role ID", "Permission Name", "Resource Service Identifier"}
 }
 
-func (v *permissionView) AsTableRow() []string {
-	return []string{v.RoleID, v.Name, v.Description, v.ResourceServerIdentifier, v.ResourceServerName}
+func (v *rolePermissionView) AsTableRow() []string {
+	return []string{v.RoleID, v.Name, v.ResourceServerIdentifier}
+}
+
+func (v *rolePermissionSingleView) AsTableHeader() []string {
+	return []string{}
+}
+
+func (v *rolePermissionSingleView) AsTableRow() []string {
+	return []string{v.Name, v.Value}
 }
 
 func (r *Renderer) RoleList(roles []*management.Role) {
 	r.Heading(ansi.Bold(r.Tenant), "roles\n")
-	var res []View
+	var v []View
 	for _, r := range roles {
-		res = append(res, &roleView{
+		v = append(v, &roleView{
 			Name:        auth0.StringValue(r.Name),
 			ID:          auth0.StringValue(r.ID),
 			Description: auth0.StringValue(r.Description),
 		})
 	}
-
-	r.Results(res)
+	r.Results(v)
 }
 
 func (r *Renderer) RoleGet(role *management.Role) {
 	r.Heading(ansi.Bold(r.Tenant), "role\n")
-	views := []View{
+	v := []View{
 		&roleSingleView{Name: "ROLE ID", Value: auth0.StringValue(role.ID)},
 		&roleSingleView{Name: "NAME", Value: auth0.StringValue(role.Name)},
 	}
 	if auth0.StringValue(role.Description) != "" {
-		views = append(views, &roleSingleView{Name: "DESCRIPTION", Value: auth0.StringValue(role.Description)})
+		v = append(v, &roleSingleView{Name: "DESCRIPTION", Value: auth0.StringValue(role.Description)})
 	}
-	r.Results(views)
+	r.Results(v)
 }
 
 func (r *Renderer) RoleUpdate(role *management.Role) {
@@ -93,18 +103,28 @@ func (r *Renderer) RoleCreate(role *management.Role) {
 	}})
 }
 
-func (r *Renderer) RoleGetPermissions(roleID string, permissions []*management.Permission) {
+func (r *Renderer) RolePermissionsList(rolesPermissions map[string][]*management.Permission) {
 	r.Heading(ansi.Bold(r.Tenant), "role permissions\n")
-	var res []View
-	for _, p := range permissions {
-		res = append(res, &permissionView{
-			RoleID:                   roleID,
-			ResourceServerIdentifier: auth0.StringValue(p.ResourceServerIdentifier),
-			ResourceServerName:       auth0.StringValue(p.ResourceServerName),
-			Name:                     auth0.StringValue(p.Name),
-			Description:              auth0.StringValue(p.Description),
-		})
+	var v []View
+	for roleID, permissions := range rolesPermissions {
+		for _, permission := range permissions {
+			v = append(v, &rolePermissionView{
+				RoleID:                   roleID,
+				Name:                     auth0.StringValue(permission.Name),
+				ResourceServerIdentifier: auth0.StringValue(permission.ResourceServerIdentifier),
+			})
+		}
 	}
+	r.Results(v)
+}
 
-	r.Results(res)
+func (r *Renderer) RolePermissionsGet(roleID string, permissions []*management.Permission) {
+	r.Heading(ansi.Bold(r.Tenant), "role permissions\n")
+	v := []View{
+		&rolePermissionSingleView{Name: "ROLE ID", Value: roleID},
+	}
+	for _, p := range permissions {
+		v = append(v, &rolePermissionSingleView{Name: "NAME", Value: auth0.StringValue(p.Name)}, &rolePermissionSingleView{Name: "RESOURCE SERVER IDENTIFIER", Value: auth0.StringValue(p.ResourceServerIdentifier)})
+	}
+	r.Results(v)
 }

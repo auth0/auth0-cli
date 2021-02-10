@@ -104,7 +104,7 @@ Get one or more roles.
 				}
 
 				prompt := &survey.Select{
-					Message: "Choose a role:",
+					Message: "Choose roles:",
 					Options: opts,
 					Help:    "IDs of the roles to get.",
 				}
@@ -286,10 +286,7 @@ Update a role.
 				prompt := &survey.Select{
 					Message: "Choose a role:",
 					Options: roleIDs,
-					Filter: func(filter, opt string, _ int) bool {
-						return strings.Contains(opt, filter)
-					},
-					Help: "ID of the role to update.",
+					Help:    "ID of the role to update.",
 				}
 				if err = survey.AskOne(prompt, &flags); err != nil {
 					return err
@@ -400,10 +397,7 @@ Remove permissions associated with a role.
 				prompt := &survey.Select{
 					Message: "Choose a role:",
 					Options: roleIDs,
-					Filter: func(filter, opt string, _ int) bool {
-						return strings.Contains(opt, filter)
-					},
-					Help: "ID of the role to remove permissions from.",
+					Help:    "ID of the role to remove permissions from.",
 				}
 				if err = survey.AskOne(prompt, &flags); err != nil {
 					return err
@@ -458,13 +452,15 @@ Remove permissions associated with a role.
 				return err
 			}
 
-			var permissionList *management.PermissionList
-			permissionList, err = cli.api.Role.Permissions(flags.roleID)
-			if err != nil {
-				return err
-			}
+			/*
+				var permissionList *management.PermissionList
+				permissionList, err = cli.api.Role.Permissions(flags.roleID)
+				if err != nil {
+					return err
+				}
+			*/
 
-			cli.renderer.RoleGetPermissions(flags.roleID, permissionList.Permissions)
+			// cli.renderer.RoleGetPermissions(flags.roleID, permissionList.Permissions)
 			return nil
 		},
 	}
@@ -477,79 +473,100 @@ Remove permissions associated with a role.
 }
 
 func rolesGetPermissionsCmd(cli *cli) *cobra.Command {
-	var flags struct {
-		RoleID        string
-		PerPage       int
-		Page          int
-		IncludeTotals bool
-	}
-
 	cmd := &cobra.Command{
 		Use:   "get-permissions",
-		Short: "Get permissions granted by role",
-		Long: `auth0 roles get-permissions --role-id myRoleID
-Retrieve list of permissions granted by a role.
+		Short: "Get permissions granted for roles",
+		Long: `auth0 roles get-permissions myRoleID1 myRoleID2
+Retrieve list of permissions granted for roles.
 
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			roleIDs := args
 
-			if !cmd.Flags().Changed("role-id") {
-				roleIDs, err := auth0.GetRoles(cli.api.Role)
+			if len(roleIDs) == 0 {
+				resp := []string{}
+				opts, err := auth0.GetRoles(cli.api.Role)
 				if err != nil {
 					return err
 				}
-				if roleIDs == nil {
+				if opts == nil {
 					return errors.New("No roles found.")
 				}
 
-				err = survey.AskOne(
-					&survey.Select{
-						Message: "Choose a role:",
-						Options: roleIDs,
-						Filter: func(filter, opt string, _ int) bool {
-							return strings.Contains(opt, filter)
-						},
-						Help: "ID of the role to list granted permissions.",
-					},
-					&flags.RoleID)
-				if err != nil {
+				prompt := &survey.MultiSelect{
+					Message: "Choose roles:",
+					Options: opts,
+					Help:    "IDs of the roles to list granted permissions.",
+				}
+				if err = survey.AskOne(prompt, &resp); err != nil {
 					return err
+				}
+
+				for _, i := range resp {
+					s := strings.Fields(i)
+					roleIDs = append(roleIDs, s[0])
 				}
 			}
 
-			opts := []management.RequestOption{}
-			if cmd.Flags().Changed("per-page") {
-				opts = append(opts, management.Page(flags.PerPage))
+			type result struct {
+				id             string
+				permissionList *management.PermissionList
+				err            error
 			}
 
-			if cmd.Flags().Changed("page") {
-				opts = append(opts, management.Page(flags.Page))
+			ch := make(chan *result, 5)
+			defer close(ch)
+
+			for _, id := range roleIDs {
+				go func(id string) {
+					permissionList, err := cli.api.Role.Permissions(id)
+					ch <- &result{id: id, permissionList: permissionList, err: err}
+				}(id)
 			}
 
-			if cmd.Flags().Changed("include-totals") {
-				opts = append(opts, management.IncludeTotals(flags.IncludeTotals))
-			}
+			rolePermissions := map[string][]*management.Permission{}
+			failed := map[string]error{}
 
-			var permissionList *management.PermissionList
-			err := ansi.Spinner("Getting permissions granted by role", func() error {
-				var err error
-				permissionList, err = cli.api.Role.Permissions(flags.RoleID, opts...)
-				return err
+			timer := time.NewTimer(30 * time.Second)
+			err := ansi.Spinner("Getting role permissions", func() error {
+				for i := 1; i <= len(roleIDs); i++ {
+					select {
+					case res := <-ch:
+						if res.err != nil {
+							failed[res.id] = res.err
+							continue
+						}
+						rolePermissions[res.id] = res.permissionList.Permissions
+					case <-timer.C:
+						return errors.New("Failed to get role permissions")
+					}
+				}
+				return nil
 			})
-
 			if err != nil {
 				return err
 			}
 
-			cli.renderer.RoleGetPermissions(flags.RoleID, permissionList.Permissions)
+			if len(failed) != 0 {
+				err := errors.New("Failed to get role permissions:")
+				for k, v := range failed {
+					err = fmt.Errorf("%w\n\n      - ROLE ID: %s\n        ERROR: %s", err, k, v)
+				}
+				return err
+			}
+
+			switch i := len(rolePermissions); {
+			case i > 1:
+				cli.renderer.RolePermissionsList(rolePermissions)
+			default:
+				roleID := roleIDs[0]
+				rolePermission, _ := rolePermissions[roleID]
+				cli.renderer.RolePermissionsGet(roleID, rolePermission)
+			}
+
 			return nil
 		},
 	}
-
-	cmd.Flags().StringVarP(&flags.RoleID, "role-id", "i", "", "ID of the role to list granted permissions.")
-	cmd.Flags().IntVarP(&flags.PerPage, "per-page", "", 50, "Number of results per page. Defaults to 50.")
-	cmd.Flags().IntVarP(&flags.Page, "page", "", 0, "Page index of the results to return. First page is 0.")
-	cmd.Flags().BoolVarP(&flags.IncludeTotals, "include-totals", "", false, "Return results inside an object that contains the total result count (true) or as a direct array of results (false, default).")
 
 	return cmd
 }
@@ -578,10 +595,7 @@ Associate permissions with a role.
 				prompt := &survey.Select{
 					Message: "Choose a role:",
 					Options: roleIDs,
-					Filter: func(filter, opt string, _ int) bool {
-						return strings.Contains(opt, filter)
-					},
-					Help: "ID of the role to add permissions to.",
+					Help:    "ID of the role to add permissions to.",
 				}
 				if err = survey.AskOne(prompt, &flags); err != nil {
 					return err
@@ -640,13 +654,15 @@ Associate permissions with a role.
 				return err
 			}
 
-			var permissionList *management.PermissionList
-			permissionList, err = cli.api.Role.Permissions(flags.roleID)
-			if err != nil {
-				return err
-			}
+			/*
+				var permissionList *management.PermissionList
+				permissionList, err = cli.api.Role.Permissions(flags.roleID)
+				if err != nil {
+					return err
+				}
+			*/
 
-			cli.renderer.RoleGetPermissions(flags.roleID, permissionList.Permissions)
+			// cli.renderer.RoleGetPermissions(flags.roleID, permissionList.Permissions)
 			return nil
 		},
 	}
