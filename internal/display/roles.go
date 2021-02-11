@@ -19,7 +19,7 @@ type roleSingleView struct {
 
 type rolePermissionView struct {
 	RoleID                   string `json:"id"`
-	Name                     string `json:"name"`
+	Name                     string `json:"permission_name"`
 	ResourceServerIdentifier string `json:"resource_server_identifier,omitempty"`
 }
 
@@ -124,7 +124,7 @@ func (r *Renderer) RolePermissionsGet(roleID string, permissions []*management.P
 		&rolePermissionSingleView{Name: "ROLE ID", Value: roleID},
 	}
 	for _, p := range permissions {
-		v = append(v, &rolePermissionSingleView{Name: "NAME", Value: auth0.StringValue(p.Name)}, &rolePermissionSingleView{Name: "RESOURCE SERVER IDENTIFIER", Value: auth0.StringValue(p.ResourceServerIdentifier)})
+		v = append(v, &rolePermissionSingleView{Name: "PERMISSION NAME", Value: auth0.StringValue(p.Name)}, &rolePermissionSingleView{Name: "RESOURCE SERVER IDENTIFIER", Value: auth0.StringValue(p.ResourceServerIdentifier)})
 	}
 	r.Results(v)
 }

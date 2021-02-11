@@ -1,6 +1,8 @@
 package auth0
 
 import (
+	"time"
+
 	"gopkg.in/auth0.v5"
 	"gopkg.in/auth0.v5/management"
 )
@@ -53,3 +55,6 @@ var (
 	Time         = auth0.Time
 	TimeValue    = auth0.TimeValue
 )
+
+const DEFAULT_TIMER_DURATION time.Duration = 30 * time.Second
+const DEFAULT_CHANNEL_BUFFER_LENGTH int = 5
