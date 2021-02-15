@@ -45,7 +45,7 @@ func (v *roleSingleView) AsTableRow() []string {
 }
 
 func (v *rolePermissionView) AsTableHeader() []string {
-	return []string{"Role ID", "Permission Name", "Resource Service Identifier"}
+	return []string{"Role ID", "Permission Name", "Resource Server Identifier"}
 }
 
 func (v *rolePermissionView) AsTableRow() []string {
