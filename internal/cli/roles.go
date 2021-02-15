@@ -535,7 +535,7 @@ Retrieve list of permissions granted for roles.
 				cli.renderer.RolePermissionsList(rolePermissions)
 			default:
 				roleID := roleIDs[0]
-				rolePermission, _ := rolePermissions[roleID]
+				rolePermission := rolePermissions[roleID]
 				cli.renderer.RolePermissionsGet(roleID, rolePermission)
 			}
 
@@ -694,7 +694,7 @@ Associate permissions with a role.
 				cli.renderer.RolePermissionsList(rolePermissions)
 			default:
 				roleID := roleIDs[0]
-				rolePermission, _ := rolePermissions[roleID]
+				rolePermission := rolePermissions[roleID]
 				cli.renderer.RolePermissionsGet(roleID, rolePermission)
 			}
 			return nil

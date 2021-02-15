@@ -2,6 +2,8 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"testing"
 
@@ -46,7 +48,7 @@ func TestRolesCmd(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := auth0.NewMockRoleAPI(ctrl)
-		m.EXPECT().Read(gomock.AssignableToTypeOf("")).MaxTimes(2).DoAndReturn(func(id string) (*management.Role, error) {
+		m.EXPECT().Read(gomock.AssignableToTypeOf("")).Times(2).DoAndReturn(func(id string) (*management.Role, error) {
 			return &management.Role{ID: auth0.String(id), Name: auth0.String("testName"), Description: auth0.String("testDescription")}, nil
 		})
 		stdout := &bytes.Buffer{}
@@ -65,13 +67,25 @@ func TestRolesCmd(t *testing.T) {
 		if err := cmd.Execute(); err != nil {
 			t.Fatal(err)
 		}
+
+		type result struct {
+			ID          string `json:"id"`
+			Name        string `json:"name"`
+			Description string `json:"description"`
+		}
+		results := make([]result, 2)
+		if err := json.Unmarshal(stdout.Bytes(), &results); err != nil {
+			t.Fatal(err)
+		}
+		assert.Contains(t, results, result{"testRoleID1", "testName", "testDescription"})
+		assert.Contains(t, results, result{"testRoleID2", "testName", "testDescription"})
 	})
 
 	t.Run("Get a Single Role", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := auth0.NewMockRoleAPI(ctrl)
-		m.EXPECT().Read(gomock.AssignableToTypeOf("")).MaxTimes(1).DoAndReturn(func(id string) (*management.Role, error) {
+		m.EXPECT().Read(gomock.AssignableToTypeOf("")).Times(1).DoAndReturn(func(id string) (*management.Role, error) {
 			return &management.Role{ID: auth0.String(id), Name: auth0.String("testName"), Description: auth0.String("testDescription")}, nil
 		})
 		stdout := &bytes.Buffer{}
@@ -91,7 +105,17 @@ func TestRolesCmd(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		assert.JSONEq(t, `[{"name": "ROLE ID", "value": "testRoleID1"},{"name": "NAME", "value": "testName"},{"name": "DESCRIPTION", "value": "testDescription"}]`, stdout.String())
+		type result struct {
+			Name  string `json:"name"`
+			Value string `json:"value"`
+		}
+		results := make([]result, 3)
+		if err := json.Unmarshal(stdout.Bytes(), &results); err != nil {
+			t.Fatal(err)
+		}
+		assert.Contains(t, results, result{"ROLE ID", "testRoleID1"})
+		assert.Contains(t, results, result{"NAME", "testName"})
+		assert.Contains(t, results, result{"DESCRIPTION", "testDescription"})
 	})
 
 	t.Run("Delete", func(t *testing.T) {
@@ -209,17 +233,18 @@ func TestRolesCmd(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := auth0.NewMockRoleAPI(ctrl)
+		permissionName := "testPermissionName"
+		resourceServerIdentifier := "testResourceServerIdentifier"
 
-		m.EXPECT().AssociatePermissions(gomock.AssignableToTypeOf(""), gomock.AssignableToTypeOf([]*management.Permission{})).MaxTimes(1).DoAndReturn(func(r string, p []*management.Permission) error {
-			assert.Equal(t, "testRoleID", r)
-			assert.Equal(t, "testPermissionName1", p[0].GetName())
-			assert.Equal(t, "testResourceServerIdentifier1", p[0].GetResourceServerIdentifier())
-			assert.Equal(t, "testPermissionName2", p[1].GetName())
-			assert.Equal(t, "testResourceServerIdentifier2", p[1].GetResourceServerIdentifier())
-			return nil
-		})
+		permissions := []*management.Permission{
+			&management.Permission{
+				Name:                     auth0.String(permissionName),
+				ResourceServerIdentifier: auth0.String(resourceServerIdentifier),
+			},
+		}
+		m.EXPECT().AssociatePermissions(gomock.AssignableToTypeOf(""), gomock.AssignableToTypeOf([]*management.Permission{})).Times(1).Return(nil)
+		m.EXPECT().Permissions(gomock.AssignableToTypeOf(""), gomock.Any()).Times(1).Return(&management.PermissionList{List: management.List{}, Permissions: permissions}, nil)
 
-		m.EXPECT().Permissions(gomock.AssignableToTypeOf(""), gomock.Any()).MaxTimes(1).Return(&management.PermissionList{List: management.List{}, Permissions: nil}, nil)
 		stdout := &bytes.Buffer{}
 		cli := &cli{
 			renderer: &display.Renderer{
@@ -231,10 +256,11 @@ func TestRolesCmd(t *testing.T) {
 		}
 
 		cmd := rolesAssociatePermissionsCmd(cli)
-		cmd.SetArgs([]string{"testRoleID", "--permission-name=testPermissionName1", "--resource-server-identifier=testResourceServerIdentifier1", "--permission-name=testPermissionName2", "--resource-server-identifier=testResourceServerIdentifier2"})
+		cmd.SetArgs([]string{"testRoleID", fmt.Sprintf("--permission-name=%s", permissionName), fmt.Sprintf("--resource-server-identifier=%s", resourceServerIdentifier)})
 		if err := cmd.Execute(); err != nil {
 			t.Fatal(err)
 		}
+		assert.JSONEq(t, `[{"name": "ROLE ID", "value": "testRoleID"},{"name": "PERMISSION NAME", "value": "testPermissionName"},{"name": "RESOURCE SERVER IDENTIFIER", "value": "testResourceServerIdentifier"}]`, stdout.String())
 
 	})
 
