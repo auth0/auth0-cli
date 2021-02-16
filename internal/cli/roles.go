@@ -27,6 +27,8 @@ func rolesCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(rolesGetPermissionsCmd(cli))
 	cmd.AddCommand(rolesAssociatePermissionsCmd(cli))
 	cmd.AddCommand(rolesRemovePermissionsCmd(cli))
+	cmd.AddCommand(rolesGetUsersCmd(cli))
+	cmd.AddCommand(rolesAssignUsersCmd(cli))
 
 	return cmd
 }
@@ -72,7 +74,7 @@ Get one or more roles.
 
 			if len(roleIDs) == 0 {
 				resp := []string{}
-				opts, err := auth0.GetRoles(cli.api.Role)
+				opts, err := auth0.GetRolesForMultiSelect(cli.api.Role)
 				if err != nil {
 					return err
 				}
@@ -101,7 +103,7 @@ Get one or more roles.
 				err  error
 			}
 
-			ch := make(chan *result, 5)
+			ch := make(chan *result, auth0.DEFAULT_CHANNEL_BUFFER_LENGTH)
 			defer close(ch)
 
 			for _, id := range roleIDs {
@@ -114,7 +116,7 @@ Get one or more roles.
 			roles := []*management.Role{}
 			failed := map[string]error{}
 
-			timer := time.NewTimer(30 * time.Second)
+			timer := time.NewTimer(auth0.DEFAULT_TIMER_DURATION)
 			err := ansi.Spinner("Getting roles", func() error {
 				for range roleIDs {
 					select {
@@ -169,7 +171,7 @@ Delete one or more roles.
 
 			if len(roleIDs) == 0 {
 				resp := []string{}
-				opts, err := auth0.GetRoles(cli.api.Role)
+				opts, err := auth0.GetRolesForMultiSelect(cli.api.Role)
 				if err != nil {
 					return err
 				}
@@ -197,7 +199,7 @@ Delete one or more roles.
 				err error
 			}
 
-			ch := make(chan *result, 5)
+			ch := make(chan *result, auth0.DEFAULT_CHANNEL_BUFFER_LENGTH)
 			defer close(ch)
 
 			for _, id := range roleIDs {
@@ -208,7 +210,7 @@ Delete one or more roles.
 
 			failed := map[string]error{}
 
-			timer := time.NewTimer(30 * time.Second)
+			timer := time.NewTimer(auth0.DEFAULT_TIMER_DURATION)
 			for range roleIDs {
 				select {
 				case res := <-ch:
@@ -252,7 +254,7 @@ Update a role.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !cmd.Flags().Changed("role-id") {
-				roleIDs, err := auth0.GetRoles(cli.api.Role)
+				roleIDs, err := auth0.GetRolesForMultiSelect(cli.api.Role)
 				if err != nil {
 					return err
 				}
@@ -363,7 +365,7 @@ Remove permissions associated with a role.
 			roleIDs := args
 
 			if len(roleIDs) == 0 {
-				opts, err := auth0.GetRoles(cli.api.Role)
+				opts, err := auth0.GetRolesForMultiSelect(cli.api.Role)
 				if err != nil {
 					return err
 				}
@@ -421,9 +423,15 @@ Remove permissions associated with a role.
 				return errors.New("Permission names dont match resource server identifiers")
 			}
 
+			type resultPermissions struct {
+				permissionList *management.PermissionList
+				err            error
+			}
+
 			type result struct {
-				id  string
-				err error
+				id          string
+				err         error
+				permissions *resultPermissions
 			}
 
 			ch := make(chan *result, auth0.DEFAULT_CHANNEL_BUFFER_LENGTH)
@@ -440,10 +448,15 @@ Remove permissions associated with a role.
 					permissions = append(permissions, permission)
 				}
 				go func(id string, permissions []*management.Permission) {
-					ch <- &result{id: id, err: cli.api.Role.RemovePermissions(id, permissions)}
+					res := &result{id: id, err: cli.api.Role.RemovePermissions(id, permissions)}
+					rp := &resultPermissions{}
+					rp.permissionList, rp.err = cli.api.Role.Permissions(id)
+					res.permissions = rp
+					ch <- res
 				}(id, permissions)
 			}
 
+			rolePermissions := map[string][]*management.Permission{}
 			failed := map[string]error{}
 
 			timer := time.NewTimer(auth0.DEFAULT_TIMER_DURATION)
@@ -455,6 +468,12 @@ Remove permissions associated with a role.
 							failed[res.id] = res.err
 							continue
 						}
+						p := res.permissions
+						if p.err != nil {
+							failed[res.id] = p.err
+							continue
+						}
+						rolePermissions[res.id] = p.permissionList.Permissions
 					case <-timer.C:
 						return errors.New("Failed to remove role permissions")
 					}
@@ -473,6 +492,14 @@ Remove permissions associated with a role.
 				return err
 			}
 
+			switch i := len(rolePermissions); {
+			case i > 1:
+				cli.renderer.RolePermissionsList(rolePermissions)
+			default:
+				roleID := roleIDs[0]
+				rolePermission := rolePermissions[roleID]
+				cli.renderer.RolePermissionsGet(roleID, rolePermission)
+			}
 			return nil
 		},
 	}
@@ -496,7 +523,7 @@ Retrieve list of permissions granted for roles.
 
 			if len(roleIDs) == 0 {
 				resp := []string{}
-				opts, err := auth0.GetRoles(cli.api.Role)
+				opts, err := auth0.GetRolesForMultiSelect(cli.api.Role)
 				if err != nil {
 					return err
 				}
@@ -525,7 +552,7 @@ Retrieve list of permissions granted for roles.
 				err            error
 			}
 
-			ch := make(chan *result, 5)
+			ch := make(chan *result, auth0.DEFAULT_CHANNEL_BUFFER_LENGTH)
 			defer close(ch)
 
 			for _, id := range roleIDs {
@@ -538,7 +565,7 @@ Retrieve list of permissions granted for roles.
 			rolePermissions := map[string][]*management.Permission{}
 			failed := map[string]error{}
 
-			timer := time.NewTimer(30 * time.Second)
+			timer := time.NewTimer(auth0.DEFAULT_TIMER_DURATION)
 			err := ansi.Spinner("Getting role permissions", func() error {
 				for range roleIDs {
 					select {
@@ -586,7 +613,7 @@ func rolesAssociatePermissionsCmd(cli *cli) *cobra.Command {
 	flags := rolePermissionFlags{}
 	cmd := &cobra.Command{
 		Use:   "associate-permissions",
-		Short: "Associate permissions with a role",
+		Short: "Associate permissions with roles",
 		Long: `auth0 roles associate-permissions myRoleID1 myRoleID2 --permission-name "read:resource" --resource-server-identifier "https://api.example.com/role" --permission-name "update:resource" --resource-server-identifier "https://api.example.com/role"
 Associate permissions with a role.
 
@@ -595,7 +622,7 @@ Associate permissions with a role.
 			roleIDs := args
 
 			if len(roleIDs) == 0 {
-				opts, err := auth0.GetRoles(cli.api.Role)
+				opts, err := auth0.GetRolesForMultiSelect(cli.api.Role)
 				if err != nil {
 					return err
 				}
@@ -661,7 +688,7 @@ Associate permissions with a role.
 			type result struct {
 				id          string
 				err         error
-				permissions resultPermissions
+				permissions *resultPermissions
 			}
 
 			ch := make(chan *result, auth0.DEFAULT_CHANNEL_BUFFER_LENGTH)
@@ -678,11 +705,10 @@ Associate permissions with a role.
 					permissions = append(permissions, permission)
 				}
 				go func(id string, permissions []*management.Permission) {
-					res := &result{id: id}
-					res.err = cli.api.Role.AssociatePermissions(id, permissions)
-					p := resultPermissions{}
-					p.permissionList, p.err = cli.api.Role.Permissions(id)
-					res.permissions = p
+					res := &result{id: id, err: cli.api.Role.AssociatePermissions(id, permissions)}
+					rp := &resultPermissions{}
+					rp.permissionList, rp.err = cli.api.Role.Permissions(id)
+					res.permissions = rp
 					ch <- res
 				}(id, permissions)
 			}
@@ -741,6 +767,173 @@ Associate permissions with a role.
 	return cmd
 }
 
+func rolesGetUsersCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "get-users",
+		Short: "Get users associated with roles",
+		Long: `auth0 roles get-users myRoleID1 myRoleID2
+Retrieve users associated with roles.
+
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			roleIDs := args
+
+			if len(roleIDs) == 0 {
+				resp := []string{}
+				opts, err := auth0.GetRolesForMultiSelect(cli.api.Role)
+				if err != nil {
+					return err
+				}
+				if opts == nil {
+					return errors.New("No roles found.")
+				}
+
+				prompt := &survey.MultiSelect{
+					Message: "Choose roles:",
+					Options: opts,
+					Help:    "IDs of the roles to associated users for.",
+				}
+				if err = survey.AskOne(prompt, &resp); err != nil {
+					return err
+				}
+
+				for _, i := range resp {
+					s := strings.Fields(i)
+					roleIDs = append(roleIDs, s[0])
+				}
+			}
+
+			type result struct {
+				id       string
+				userList *management.UserList
+				err      error
+			}
+
+			ch := make(chan *result, auth0.DEFAULT_CHANNEL_BUFFER_LENGTH)
+			defer close(ch)
+
+			for _, id := range roleIDs {
+				go func(id string) {
+					userList, err := cli.api.Role.Users(id)
+					ch <- &result{id: id, userList: userList, err: err}
+				}(id)
+			}
+
+			roleUsers := map[string][]*management.User{}
+			failed := map[string]error{}
+
+			timer := time.NewTimer(auth0.DEFAULT_TIMER_DURATION)
+			err := ansi.Spinner("Getting role users", func() error {
+				for range roleIDs {
+					select {
+					case res := <-ch:
+						if res.err != nil {
+							failed[res.id] = res.err
+							continue
+						}
+						roleUsers[res.id] = res.userList.Users
+					case <-timer.C:
+						return errors.New("Failed to get role permissions")
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+
+			if len(failed) != 0 {
+				err := errors.New("Failed to get role users:")
+				for k, v := range failed {
+					err = fmt.Errorf("%w\n\n      - ROLE ID: %s\n        ERROR: %s", err, k, v)
+				}
+				return err
+			}
+
+			switch i := len(roleUsers); {
+			case i > 1:
+				cli.renderer.RoleUsersList(roleUsers)
+			default:
+				roleID := roleIDs[0]
+				roleUser := roleUsers[roleID]
+				cli.renderer.RoleUsersGet(roleID, roleUser)
+			}
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func rolesAssignUsersCmd(cli *cli) *cobra.Command {
+	flags := roleUserFlags{}
+	cmd := &cobra.Command{
+		Use:   "assign-users",
+		Short: "Assign users to roles",
+		Long: `auth0 roles assign-users myRoleID1 myRoleID2 --user-id myUserID1 --user-id myUserID2
+Assign users to roles
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			roleIDs := args
+
+			if len(roleIDs) == 0 {
+				opts, err := auth0.GetRolesForMultiSelect(cli.api.Role)
+				if err != nil {
+					return err
+				}
+				if opts == nil {
+					return errors.New("No roles found.")
+				}
+
+				prompt := &survey.MultiSelect{
+					Message: "Choose roles:",
+					Options: opts,
+					Help:    "ID of the roles to assign users to.",
+				}
+				resp := []string{}
+				if err = survey.AskOne(prompt, &resp); err != nil {
+					return err
+				}
+
+				for _, i := range resp {
+					s := strings.Fields(i)
+					roleIDs = append(roleIDs, s[0])
+				}
+			}
+
+			if len(flags.userIDs) == 0 {
+				opts, err := auth0.GetUsersForMultiSelect(cli.api.User)
+				if err != nil {
+					return err
+				}
+				if opts == nil {
+					return errors.New("No users found.")
+				}
+
+				prompt := &survey.MultiSelect{
+					Message: "Choose users:",
+					Options: opts,
+					Help:    "ID of the users to assign to roles.",
+				}
+				resp := []string{}
+				if err = survey.AskOne(prompt, &resp); err != nil {
+					return err
+				}
+
+				for _, i := range resp {
+					s := strings.Fields(i)
+					flags.userIDs = append(flags.userIDs, s[0])
+				}
+			}
+
+			return nil
+		},
+	}
+	cmd.Flags().StringSliceVarP(&flags.userIDs, "user-id", "", []string{}, "User ID.")
+	return cmd
+}
+
 type rolePermissionFlags struct {
 	permissionNames           []string
 	resourceServerIdentifiers []string
@@ -752,6 +945,20 @@ func (f *rolePermissionFlags) WriteAnswer(name string, value interface{}) error 
 		f.permissionNames = append(f.permissionNames, value.(string))
 	case "resourceServerIdentifier":
 		f.resourceServerIdentifiers = append(f.resourceServerIdentifiers, value.(string))
+	default:
+		return fmt.Errorf("Unsupported name: %s", name)
+	}
+	return nil
+}
+
+type roleUserFlags struct {
+	userIDs []string
+}
+
+func (f *roleUserFlags) WriteAnswer(name string, value interface{}) error {
+	switch name {
+	case "userID":
+		f.userIDs = append(f.userIDs, value.(string))
 	default:
 		return fmt.Errorf("Unsupported name: %s", name)
 	}

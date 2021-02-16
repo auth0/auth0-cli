@@ -48,9 +48,9 @@ type RoleUsersAPI interface {
 	AssignUsers(id string, users []*management.User, opts ...management.RequestOption) (err error)
 }
 
-// GetRoles returns a slice of role id and name strings.
-func GetRoles(r RoleAPI) ([]string, error) {
-	roleIDs := []string{}
+// GetRolesForMultiSelect returns a slice of role id and name strings which can be passed into survey.MultiSelect.
+func GetRolesForMultiSelect(r RoleAPI) ([]string, error) {
+	roles := []string{}
 
 	list, err := r.List()
 	if err != nil {
@@ -58,8 +58,8 @@ func GetRoles(r RoleAPI) ([]string, error) {
 	}
 
 	for _, i := range list.Roles {
-		roleIDs = append(roleIDs, fmt.Sprintf("%s\t%s", *i.ID, *i.Name))
+		roles = append(roles, fmt.Sprintf("%s\t%s", *i.ID, *i.Name))
 	}
 
-	return roleIDs, nil
+	return roles, nil
 }

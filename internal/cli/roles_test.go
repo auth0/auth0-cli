@@ -122,7 +122,7 @@ func TestRolesCmd(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := auth0.NewMockRoleAPI(ctrl)
-		m.EXPECT().Delete(gomock.AssignableToTypeOf("")).MaxTimes(2).Return(nil)
+		m.EXPECT().Delete(gomock.AssignableToTypeOf("")).Times(2).Return(nil)
 		stdout := &bytes.Buffer{}
 		cli := &cli{
 			renderer: &display.Renderer{
@@ -134,7 +134,7 @@ func TestRolesCmd(t *testing.T) {
 		}
 
 		cmd := rolesDeleteCmd(cli)
-		cmd.SetArgs([]string{"testRoleID1 testRoleID2"})
+		cmd.SetArgs([]string{"testRoleID1", "testRoleID2"})
 
 		if err := cmd.Execute(); err != nil {
 			t.Fatal(err)
@@ -233,15 +233,16 @@ func TestRolesCmd(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := auth0.NewMockRoleAPI(ctrl)
+
 		permissionName := "testPermissionName"
 		resourceServerIdentifier := "testResourceServerIdentifier"
-
 		permissions := []*management.Permission{
 			&management.Permission{
 				Name:                     auth0.String(permissionName),
 				ResourceServerIdentifier: auth0.String(resourceServerIdentifier),
 			},
 		}
+
 		m.EXPECT().AssociatePermissions(gomock.AssignableToTypeOf(""), gomock.AssignableToTypeOf([]*management.Permission{})).Times(1).Return(nil)
 		m.EXPECT().Permissions(gomock.AssignableToTypeOf(""), gomock.Any()).Times(1).Return(&management.PermissionList{List: management.List{}, Permissions: permissions}, nil)
 
@@ -264,37 +265,49 @@ func TestRolesCmd(t *testing.T) {
 
 	})
 
-	/*
-		t.Run("RemovePermissions", func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			m := auth0.NewMockRoleAPI(ctrl)
+	t.Run("RemovePermissions", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		m := auth0.NewMockRoleAPI(ctrl)
 
-			m.EXPECT().RemovePermissions(gomock.AssignableToTypeOf(""), gomock.AssignableToTypeOf([]*management.Permission{})).MaxTimes(1).DoAndReturn(func(r string, p []*management.Permission) error {
-				assert.Equal(t, "testRoleID", r)
-				assert.Equal(t, "testPermissionName1", p[0].GetName())
-				assert.Equal(t, "testResourceServerIdentifier1", p[0].GetResourceServerIdentifier())
-				assert.Equal(t, "testPermissionName2", p[1].GetName())
-				assert.Equal(t, "testResourceServerIdentifier2", p[1].GetResourceServerIdentifier())
-				return nil
-			})
+		permissionName := "testPermissionName"
+		resourceServerIdentifier := "testResourceServerIdentifier"
+		permissions := []*management.Permission{
+			&management.Permission{
+				Name:                     auth0.String(permissionName),
+				ResourceServerIdentifier: auth0.String(resourceServerIdentifier),
+			},
+		}
 
-			m.EXPECT().Permissions(gomock.AssignableToTypeOf(""), gomock.Any()).MaxTimes(1).Return(&management.PermissionList{List: management.List{}, Permissions: nil}, nil)
-			stdout := &bytes.Buffer{}
-			cli := &cli{
-				renderer: &display.Renderer{
-					MessageWriter: ioutil.Discard,
-					ResultWriter:  stdout,
-					Format:        display.OutputFormat("table"),
-				},
-				api: &auth0.API{Role: m},
-			}
+		m.EXPECT().RemovePermissions(gomock.AssignableToTypeOf(""), gomock.AssignableToTypeOf([]*management.Permission{})).Times(2).Return(nil)
+		m.EXPECT().Permissions(gomock.AssignableToTypeOf(""), gomock.Any()).Times(2).Return(&management.PermissionList{List: management.List{}, Permissions: permissions}, nil)
 
-			cmd := rolesRemovePermissionsCmd(cli)
-			cmd.SetArgs([]string{"--role-id=testRoleID", "--permission-name=testPermissionName1", "--resource-server-identifier=testResourceServerIdentifier1", "--permission-name=testPermissionName2", "--resource-server-identifier=testResourceServerIdentifier2"})
-			if err := cmd.Execute(); err != nil {
-				t.Fatal(err)
-			}
-		})
-	*/
+		stdout := &bytes.Buffer{}
+		cli := &cli{
+			renderer: &display.Renderer{
+				MessageWriter: ioutil.Discard,
+				ResultWriter:  stdout,
+				Format:        display.OutputFormat("json"),
+			},
+			api: &auth0.API{Role: m},
+		}
+
+		cmd := rolesRemovePermissionsCmd(cli)
+		cmd.SetArgs([]string{"testRoleID1", "testRoleID2", "--permission-name=testPermissionName1", "--resource-server-identifier=testResourceServerIdentifier1"})
+		if err := cmd.Execute(); err != nil {
+			t.Fatal(err)
+		}
+
+		type result struct {
+			ID                       string `json:"id"`
+			PermissionName           string `json:"permission_name"`
+			ResourceServerIdentifier string `json:"resource_server_identifier"`
+		}
+		results := make([]result, 2)
+		if err := json.Unmarshal(stdout.Bytes(), &results); err != nil {
+			t.Fatal(err)
+		}
+		assert.Contains(t, results, result{ID: "testRoleID1", PermissionName: permissionName, ResourceServerIdentifier: resourceServerIdentifier})
+		assert.Contains(t, results, result{ID: "testRoleID2", PermissionName: permissionName, ResourceServerIdentifier: resourceServerIdentifier})
+	})
 }
