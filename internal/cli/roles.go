@@ -927,10 +927,89 @@ Assign users to roles
 				}
 			}
 
+			type resultUsers struct {
+				userList *management.UserList
+				err      error
+			}
+
+			type result struct {
+				id    string
+				err   error
+				users *resultUsers
+			}
+
+			ch := make(chan *result, auth0.DEFAULT_CHANNEL_BUFFER_LENGTH)
+			defer close(ch)
+
+			for _, id := range roleIDs {
+				users := []*management.User{}
+				for _, userID := range flags.userIDs {
+					users = append(users, &management.User{ID: auth0.String(userID)})
+				}
+				go func(id string, users []*management.User) {
+					res := &result{id: id, err: cli.api.Role.AssignUsers(id, users)}
+					ru := &resultUsers{}
+					ru.userList, ru.err = cli.api.Role.Users(id)
+					res.users = ru
+					ch <- res
+				}(id, users)
+			}
+
+			roleUsers := map[string][]*management.User{}
+			failed := map[string]error{}
+
+			timer := time.NewTimer(auth0.DEFAULT_TIMER_DURATION)
+			err := ansi.Spinner("Assigning users with roles.", func() error {
+				for range roleIDs {
+					select {
+					case res := <-ch:
+						if res.err != nil {
+							failed[res.id] = res.err
+							continue
+						}
+						u := res.users
+						if u.err != nil {
+							failed[res.id] = u.err
+							continue
+						}
+						roleUsers[res.id] = u.userList.Users
+					case <-timer.C:
+						return errors.New("Failed to assign users to roles")
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+
+			if len(failed) != 0 {
+				err := errors.New("Failed to assign users to roles")
+				for k, v := range failed {
+					err = fmt.Errorf("%w\n\n      - ROLE ID: %s\n        ERROR: %s", err, k, v)
+				}
+				return err
+			}
+
+			switch i := len(roleUsers); {
+			case i > 1:
+				cli.renderer.RoleUsersList(roleUsers)
+			default:
+				roleID := roleIDs[0]
+				switch roleUser := len(roleUsers[roleID]); {
+				case roleUser > 1:
+					cli.renderer.RoleUsersList(roleUsers)
+				default:
+					cli.renderer.RoleUsersGet(roleID, roleUsers[roleID])
+				}
+			}
+
 			return nil
 		},
 	}
+
 	cmd.Flags().StringSliceVarP(&flags.userIDs, "user-id", "", []string{}, "User ID.")
+
 	return cmd
 }
 

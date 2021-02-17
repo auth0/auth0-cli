@@ -24,9 +24,9 @@ type rolePermissionView struct {
 }
 
 type roleUserView struct {
-	ID       string `json:"id"`
-	UserID   string `json:"user_id"`
-	UserName string `json:"username,omitempty"`
+	ID        string `json:"id"`
+	UserID    string `json:"user_id"`
+	UserEmail string `json:"email,omitempty"`
 }
 
 type roleUserSingleView struct {
@@ -72,11 +72,11 @@ func (v *rolePermissionSingleView) AsTableRow() []string {
 }
 
 func (v *roleUserView) AsTableHeader() []string {
-	return []string{"Role ID", "Role Name", "User ID", "Username"}
+	return []string{"Role ID", "User ID", "User Email"}
 }
 
 func (v *roleUserView) AsTableRow() []string {
-	return []string{v.ID, v.UserID, v.UserName}
+	return []string{v.ID, v.UserID, v.UserEmail}
 }
 
 func (v *roleUserSingleView) AsTableHeader() []string {
@@ -165,9 +165,9 @@ func (r *Renderer) RoleUsersList(rolesUsers map[string][]*management.User) {
 	for roleID, users := range rolesUsers {
 		for _, user := range users {
 			v = append(v, &roleUserView{
-				ID:       roleID,
-				UserID:   auth0.StringValue(user.ID),
-				UserName: auth0.StringValue(user.Name),
+				ID:        roleID,
+				UserID:    auth0.StringValue(user.ID),
+				UserEmail: auth0.StringValue(user.Email),
 			})
 		}
 	}
@@ -182,7 +182,7 @@ func (r *Renderer) RoleUsersGet(roleID string, users []*management.User) {
 	for _, u := range users {
 		v = append(v,
 			&roleUserSingleView{Name: "USER ID", Value: auth0.StringValue(u.ID)},
-			&roleUserSingleView{Name: "USERNAME", Value: auth0.StringValue(u.Name)},
+			&roleUserSingleView{Name: "USER EMAIL", Value: auth0.StringValue(u.Email)},
 		)
 	}
 	r.Results(v)
