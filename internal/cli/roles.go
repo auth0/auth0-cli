@@ -497,8 +497,12 @@ Remove permissions associated with a role.
 				cli.renderer.RolePermissionsList(rolePermissions)
 			default:
 				roleID := roleIDs[0]
-				rolePermission := rolePermissions[roleID]
-				cli.renderer.RolePermissionsGet(roleID, rolePermission)
+				switch ii := len(rolePermissions[roleID]); {
+				case ii > 1:
+					cli.renderer.RolePermissionsList(rolePermissions)
+				default:
+					cli.renderer.RolePermissionsGet(roleID, rolePermissions[roleID])
+				}
 			}
 			return nil
 		},
@@ -598,8 +602,12 @@ Retrieve list of permissions granted for roles.
 				cli.renderer.RolePermissionsList(rolePermissions)
 			default:
 				roleID := roleIDs[0]
-				rolePermission := rolePermissions[roleID]
-				cli.renderer.RolePermissionsGet(roleID, rolePermission)
+				switch ii := len(rolePermissions[roleID]); {
+				case ii > 1:
+					cli.renderer.RolePermissionsList(rolePermissions)
+				default:
+					cli.renderer.RolePermissionsGet(roleID, rolePermissions[roleID])
+				}
 			}
 
 			return nil
@@ -754,9 +762,14 @@ Associate permissions with a role.
 				cli.renderer.RolePermissionsList(rolePermissions)
 			default:
 				roleID := roleIDs[0]
-				rolePermission := rolePermissions[roleID]
-				cli.renderer.RolePermissionsGet(roleID, rolePermission)
+				switch ii := len(rolePermissions[roleID]); {
+				case ii > 1:
+					cli.renderer.RolePermissionsList(rolePermissions)
+				default:
+					cli.renderer.RolePermissionsGet(roleID, rolePermissions[roleID])
+				}
 			}
+
 			return nil
 		},
 	}
@@ -855,8 +868,12 @@ Retrieve users associated with roles.
 				cli.renderer.RoleUsersList(roleUsers)
 			default:
 				roleID := roleIDs[0]
-				roleUser := roleUsers[roleID]
-				cli.renderer.RoleUsersGet(roleID, roleUser)
+				switch ii := len(roleUsers[roleID]); {
+				case ii > 1:
+					cli.renderer.RoleUsersList(roleUsers)
+				default:
+					cli.renderer.RoleUsersGet(roleID, roleUsers[roleID])
+				}
 			}
 
 			return nil
@@ -996,8 +1013,8 @@ Assign users to roles
 				cli.renderer.RoleUsersList(roleUsers)
 			default:
 				roleID := roleIDs[0]
-				switch roleUser := len(roleUsers[roleID]); {
-				case roleUser > 1:
+				switch ii := len(roleUsers[roleID]); {
+				case ii > 1:
 					cli.renderer.RoleUsersList(roleUsers)
 				default:
 					cli.renderer.RoleUsersGet(roleID, roleUsers[roleID])
