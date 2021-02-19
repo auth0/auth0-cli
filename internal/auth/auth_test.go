@@ -7,8 +7,6 @@ func TestRequiredScopes(t *testing.T) {
 		crudResources := []string{
 			"actions",
 			"clients",
-			"connections",
-			"hooks",
 			"resource_servers",
 			"rules",
 		}
