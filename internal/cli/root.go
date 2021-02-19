@@ -66,7 +66,6 @@ func Execute() {
 	rootCmd.AddCommand(logsCmd(cli))
 	rootCmd.AddCommand(actionsCmd(cli))
 	rootCmd.AddCommand(connectionsCmd(cli))
-	rootCmd.AddCommand(rolesCmd(cli))
 	rootCmd.AddCommand(customDomainsCmd(cli))
 	rootCmd.AddCommand(getTokenCmd(cli))
 
