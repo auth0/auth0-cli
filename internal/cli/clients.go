@@ -11,24 +11,25 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
-func clientsCmd(cli *cli) *cobra.Command {
+func appsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "apps",
 		Short: "Manage resources for apps",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.AddCommand(clientsListCmd(cli))
-	cmd.AddCommand(clientsCreateCmd(cli))
+	cmd.AddCommand(appsListCmd(cli))
+	cmd.AddCommand(appsCreateCmd(cli))
+	cmd.AddCommand(appsDeleteCmd(cli))
 
 	return cmd
 }
 
-func clientsListCmd(cli *cli) *cobra.Command {
+func appsListCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List your existing apps",
-		Long: `auth0 client list
+		Long: `auth0 app list
 Lists your existing apps. To create one try:
 
     auth0 apps create
@@ -53,7 +54,53 @@ Lists your existing apps. To create one try:
 	return cmd
 }
 
-func clientsCreateCmd(cli *cli) *cobra.Command {
+func appsDeleteCmd(cli *cli) *cobra.Command {
+	var flags struct {
+		AppID string
+	}
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete an existing app",
+		Long: `auth0 apps delete --name appName
+
+auth0 apps delete --app-id myapp
+
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			if !cmd.Flags().Changed("app-id") {
+				qs := []*survey.Question{
+					{
+						Name: "AppID",
+						Prompt: &survey.Input{
+							Message: "AppID:",
+							Default: "My App",
+							Help:    "ID of the application to delete.",
+						},
+					},
+				}
+
+				err := survey.Ask(qs, &flags)
+				if err != nil {
+					return err
+				}
+			}
+			c := &management.Client{
+				ClientID: &flags.AppID,
+			}
+
+			return ansi.Spinner("Deleting application", func() error {
+				return cli.api.Client.Delete(*c.ClientID)
+			})
+		},
+	}
+
+	cmd.Flags().StringVarP(&flags.AppID, "app-id", "i", "", "app-id of the app.")
+
+	return cmd
+}
+
+func appsCreateCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		Name                    string
 		AppType                 string
@@ -63,8 +110,8 @@ func clientsCreateCmd(cli *cli) *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:   "create",
-		Short: "Create a new client (also know as application)",
-		Long: `Create a new client (or application):
+		Short: "Create a new application",
+		Long: `Create a new application:
 
 auth0 apps create --name myapp --type [native|spa|regular|m2m]
 
@@ -155,7 +202,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 		"- regular: Traditional web app using redirects.\n"+
 		"- m2m (machine to machine): CLIs, daemons or services running on your backend.")
 	cmd.Flags().StringVarP(&flags.Description, "description", "d", "", "A free text description of the application. Max character count is 140.")
-	cmd.Flags().StringSliceVarP(&flags.Callbacks, "callbacks", "c", nil, "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native clients, all callbacks should use protocol https://.")
+	cmd.Flags().StringSliceVarP(&flags.Callbacks, "callbacks", "c", nil, "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.")
 
 	cmd.Flags().StringVar(&flags.TokenEndpointAuthMethod, "auth-method", "", "Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).")
 
