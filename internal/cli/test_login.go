@@ -52,8 +52,8 @@ Launch a browser to try out your universal login box for the given client.
 				tenant,
 				client,
 				connectionName,
-				"",      // audience is only supported for get-token
-				"login", // force a login page when using try-login
+				"",      // audience is only supported for test token command
+				"login", // force a login page when using test login command
 				cliLoginTestingScopes,
 			)
 			if err != nil {

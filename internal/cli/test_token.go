@@ -68,9 +68,9 @@ Fetch an access token for the given client and API.
 				cli,
 				tenant,
 				client,
-				"", // specifying a connection is only supported for try-login
+				"", // specifying a connection is only supported for test login command
 				audience,
-				"", // We don't want to force a prompt for get-token
+				"", // We don't want to force a prompt for test token command
 				scopes,
 			)
 			if err != nil {
