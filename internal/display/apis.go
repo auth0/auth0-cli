@@ -2,6 +2,7 @@ package display
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -13,6 +14,8 @@ type apiView struct {
 	Name       string
 	Identifier string
 	Scopes     int
+
+	raw interface{}
 }
 
 func (v *apiView) AsTableHeader() []string {
@@ -21,6 +24,19 @@ func (v *apiView) AsTableHeader() []string {
 
 func (v *apiView) AsTableRow() []string {
 	return []string{ansi.Faint(v.ID), v.Name, v.Identifier, fmt.Sprint(v.Scopes)}
+}
+
+func (v *apiView) KeyValues() [][]string {
+	return [][]string{
+		[]string{"ID", v.ID},
+		[]string{"NAME", v.Name},
+		[]string{"IDENTIFIER", v.Identifier},
+		[]string{"SCOPES", strconv.Itoa(v.Scopes)},
+	}
+}
+
+func (v *apiView) Object() interface{} {
+	return v.raw
 }
 
 func (r *Renderer) ApiList(apis []*management.ResourceServer) {
@@ -37,7 +53,7 @@ func (r *Renderer) ApiList(apis []*management.ResourceServer) {
 
 func (r *Renderer) ApiShow(api *management.ResourceServer) {
 	r.Heading(ansi.Bold(r.Tenant), "API\n")
-	r.Results([]View{makeApiView(api)})
+	r.Result(makeApiView(api))
 }
 
 func (r *Renderer) ApiCreate(api *management.ResourceServer) {
@@ -58,6 +74,8 @@ func makeApiView(api *management.ResourceServer) *apiView {
 		Name:       auth0.StringValue(api.Name),
 		Identifier: auth0.StringValue(api.Identifier),
 		Scopes:     auth0.IntValue(&scopes),
+
+		raw: api,
 	}
 }
 

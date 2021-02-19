@@ -88,6 +88,28 @@ func (r *Renderer) Results(data []View) {
 	}
 }
 
+func (r *Renderer) Result(data View) {
+	switch r.Format {
+	case OutputFormatJSON:
+		// TODO(cyx): we're type asserting on the fly to prevent too
+		// many changes in other places. In the future we should
+		// enforce `Object` on all `View` types.
+		if v, ok := data.(interface{ Object() interface{} }); ok {
+			r.JSONResult(v.Object())
+		} else {
+			r.JSONResult(data)
+		}
+
+	default:
+		// TODO(cyx): we're type asserting on the fly to prevent too
+		// many changes in other places. In the future we should
+		// enforce `KeyValues` on all `View` types.
+		if v, ok := data.(interface{ KeyValues() [][]string }); ok {
+			writeTable(r.ResultWriter, nil, v.KeyValues())
+		}
+	}
+}
+
 func (r *Renderer) Stream(data []View, ch <-chan View) {
 	w := r.ResultWriter
 
