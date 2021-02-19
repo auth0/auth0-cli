@@ -39,14 +39,9 @@ var requiredScopes = []string{
 	"openid",
 	"create:actions", "delete:actions", "read:actions", "update:actions",
 	"create:clients", "delete:clients", "read:clients", "update:clients",
-	"create:connections", "delete:connections", "read:connections", "update:connections",
-	"create:hooks", "delete:hooks", "read:hooks", "update:hooks",
 	"create:resource_servers", "delete:resource_servers", "read:resource_servers", "update:resource_servers",
 	"create:rules", "delete:rules", "read:rules", "update:rules",
 	"read:client_keys", "read:logs",
-	"create:roles", "delete:roles", "read:roles", "update:roles",
-	"create:custom_domains", "delete:custom_domains", "read:custom_domains", "update:custom_domains",
-	"read:users",
 }
 
 type Authenticator struct {
