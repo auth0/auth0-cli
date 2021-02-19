@@ -13,7 +13,6 @@ type API struct {
 	ActionExecution ActionExecutionAPI
 	ActionBinding   ActionBindingAPI
 	Client          ClientAPI
-	Connection      ConnectionAPI
 	Log             LogAPI
 	ResourceServer  ResourceServerAPI
 }
@@ -25,7 +24,6 @@ func NewAPI(m *management.Management) *API {
 		ActionExecution: m.ActionExecution,
 		ActionBinding:   m.ActionBinding,
 		Client:          m.Client,
-		Connection:      m.Connection,
 		Log:             m.Log,
 		ResourceServer:  m.ResourceServer,
 	}
