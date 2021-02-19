@@ -13,8 +13,8 @@ import (
 
 func clientsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "clients",
-		Short: "Manage resources for clients",
+		Use:   "apps",
+		Short: "Manage resources for apps",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -27,15 +27,15 @@ func clientsCmd(cli *cli) *cobra.Command {
 func clientsListCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List your existing clients",
+		Short: "List your existing apps",
 		Long: `auth0 client list
-Lists your existing clients. To create one try:
+Lists your existing apps. To create one try:
 
-    auth0 clients create
+    auth0 apps create
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ClientList
-			err := ansi.Spinner("Loading clients", func() error {
+			err := ansi.Spinner("Loading apps", func() error {
 				var err error
 				list, err = cli.api.Client.List()
 				return err
@@ -66,7 +66,7 @@ func clientsCreateCmd(cli *cli) *cobra.Command {
 		Short: "Create a new client (also know as application)",
 		Long: `Create a new client (or application):
 
-auth0 clients create --name myapp --type [native|spa|regular|m2m]
+auth0 apps create --name myapp --type [native|spa|regular|m2m]
 
 - supported application type:
 	`,
