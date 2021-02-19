@@ -6,15 +6,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func getTokenCmd(cli *cli) *cobra.Command {
+func testTokenCmd(cli *cli) *cobra.Command {
 	var clientID string
 	var audience string
 	var scopes []string
 
 	cmd := &cobra.Command{
-		Use:   "get-token",
+		Use:   "test token",
 		Short: "Fetch a token for the given client and API",
-		Long: `auth0 get-token
+		Long: `auth0 test token
 Fetch an access token for the given client and API.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {

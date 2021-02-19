@@ -62,10 +62,10 @@ func Execute() {
 	rootCmd.AddCommand(quickstartCmd(cli))
 	rootCmd.AddCommand(clientsCmd(cli))
 	rootCmd.AddCommand(apisCmd(cli))
-	rootCmd.AddCommand(tryLoginCmd(cli))
+	rootCmd.AddCommand(testLoginCmd(cli))
 	rootCmd.AddCommand(logsCmd(cli))
 	rootCmd.AddCommand(actionsCmd(cli))
-	rootCmd.AddCommand(getTokenCmd(cli))
+	rootCmd.AddCommand(testTokenCmd(cli))
 
 	// keep completion at the bottom:
 	rootCmd.AddCommand(completionCmd(cli))
