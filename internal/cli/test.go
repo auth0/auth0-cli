@@ -15,8 +15,6 @@ func testCmd(cli *cli) *cobra.Command {
 	var scopes []string
 	var prompt string
 
-	fmt.Println("id:", clientID, "conn:", connectionName, "audience:", audience, "scopes:", scopes, "prompt:", prompt)
-
 	cmd := &cobra.Command{
 		Use:       "test [login|token]",
 		Short:     "",
@@ -74,8 +72,6 @@ func testCmd(cli *cli) *cobra.Command {
 
 				connectionName = ""
 			}
-
-			fmt.Println("id:", clientID, "conn:", connectionName, "audience:", audience, "scopes:", scopes, "prompt:", prompt)
 
 			if proceed := runLoginFlowPreflightChecks(cli, client); !proceed {
 				return nil
