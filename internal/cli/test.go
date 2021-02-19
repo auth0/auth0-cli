@@ -46,7 +46,8 @@ func testCmd(cli *cli) *cobra.Command {
 
 			switch args[0] {
 			case "login":
-				prompt = "login"
+				audience = ""    // audience is only supported for get-token
+				prompt = "login" // force a login page when using try-login
 				scopes = cliLoginTestingScopes
 
 			case "token":
@@ -82,9 +83,9 @@ func testCmd(cli *cli) *cobra.Command {
 				tenant,
 				client,
 				connectionName,
-				audience, // audience is only supported for get-token
-				prompt,   // force a login page when using try-login
-				cliLoginTestingScopes,
+				audience,
+				prompt,
+				scopes,
 			)
 			if err != nil {
 				return err
