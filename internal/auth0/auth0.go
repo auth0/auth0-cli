@@ -13,13 +13,8 @@ type API struct {
 	ActionExecution ActionExecutionAPI
 	ActionBinding   ActionBindingAPI
 	Client          ClientAPI
-	Connection      ConnectionAPI
 	Log             LogAPI
-	Rule            RuleAPI
 	ResourceServer  ResourceServerAPI
-	Role            RoleAPI
-	CustomDomain    CustomDomainAPI
-	User            UserAPI
 }
 
 func NewAPI(m *management.Management) *API {
@@ -29,13 +24,8 @@ func NewAPI(m *management.Management) *API {
 		ActionExecution: m.ActionExecution,
 		ActionBinding:   m.ActionBinding,
 		Client:          m.Client,
-		Connection:      m.Connection,
 		Log:             m.Log,
 		ResourceServer:  m.ResourceServer,
-		Rule:            m.Rule,
-		Role:            m.Role,
-		CustomDomain:    m.CustomDomain,
-		User:            m.User,
 	}
 }
 

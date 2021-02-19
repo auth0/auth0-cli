@@ -8,7 +8,6 @@ func TestRequiredScopes(t *testing.T) {
 			"actions",
 			"clients",
 			"resource_servers",
-			"rules",
 		}
 		crudPrefixes := []string{"create:", "delete:", "read:", "update:"}
 
