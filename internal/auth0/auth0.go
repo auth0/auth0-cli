@@ -15,11 +15,9 @@ type API struct {
 	Client          ClientAPI
 	Connection      ConnectionAPI
 	Log             LogAPI
-	Rule            RuleAPI
 	ResourceServer  ResourceServerAPI
 	Role            RoleAPI
 	CustomDomain    CustomDomainAPI
-	User            UserAPI
 }
 
 func NewAPI(m *management.Management) *API {
@@ -32,10 +30,8 @@ func NewAPI(m *management.Management) *API {
 		Connection:      m.Connection,
 		Log:             m.Log,
 		ResourceServer:  m.ResourceServer,
-		Rule:            m.Rule,
 		Role:            m.Role,
 		CustomDomain:    m.CustomDomain,
-		User:            m.User,
 	}
 }
 
