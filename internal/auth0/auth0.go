@@ -16,7 +16,6 @@ type API struct {
 	Connection      ConnectionAPI
 	Log             LogAPI
 	ResourceServer  ResourceServerAPI
-	CustomDomain    CustomDomainAPI
 }
 
 func NewAPI(m *management.Management) *API {
@@ -29,7 +28,6 @@ func NewAPI(m *management.Management) *API {
 		Connection:      m.Connection,
 		Log:             m.Log,
 		ResourceServer:  m.ResourceServer,
-		CustomDomain:    m.CustomDomain,
 	}
 }
 
