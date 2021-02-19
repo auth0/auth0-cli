@@ -10,9 +10,10 @@ import (
 // WaitForBrowserCallback lauches a new HTTP server listening on the provided
 // address and waits for a request. Once received, the code is extracted from
 // the query string (if any), and returned it to the caller.
-func WaitForBrowserCallback(addr string) (string, error) {
+func WaitForBrowserCallback(addr string) (code string, state string, err error) {
 	type callback struct {
 		code           string
+		state          string
 		err            string
 		errDescription string
 	}
@@ -26,6 +27,7 @@ func WaitForBrowserCallback(addr string) (string, error) {
 	m.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		cb := &callback{
 			code:           r.URL.Query().Get("code"),
+			state:          r.URL.Query().Get("state"),
 			err:            r.URL.Query().Get("error"),
 			errDescription: r.URL.Query().Get("error_description"),
 		}
@@ -55,8 +57,8 @@ func WaitForBrowserCallback(addr string) (string, error) {
 		if cb.err != "" {
 			err = fmt.Errorf("%s: %s", cb.err, cb.errDescription)
 		}
-		return cb.code, err
+		return cb.code, cb.state, err
 	case err := <-errCh:
-		return "", err
+		return "", "", err
 	}
 }

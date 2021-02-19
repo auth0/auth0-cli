@@ -1,17 +1,20 @@
 package cli
 
 import (
+	"crypto/rand"
 	"fmt"
 
+	"encoding/base64"
 	"encoding/json"
+	"net/http"
+	"net/url"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/open"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"gopkg.in/auth0.v5/management"
-	"net/http"
-	"net/url"
 )
 
 const (
@@ -20,6 +23,7 @@ const (
 	cliLoginTestingCallbackAddr      string = "localhost:8484"
 	cliLoginTestingCallbackURL       string = "http://localhost:8484"
 	cliLoginTestingInitiateLoginURI  string = "https://cli.auth0.com"
+	cliLoginTestingStateSize         int    = 64
 )
 
 var (
@@ -111,8 +115,13 @@ func runLoginFlow(cli *cli, t tenant, c *management.Client, connName, audience, 
 			return err
 		}
 
+		state, err := generateState(cliLoginTestingStateSize)
+		if err != nil {
+			return err
+		}
+
 		// Build a login URL and initiate login in a browser window.
-		loginURL, err := authutil.BuildLoginURL(t.Domain, c.GetClientID(), cliLoginTestingCallbackURL, connName, audience, prompt, scopes)
+		loginURL, err := authutil.BuildLoginURL(t.Domain, c.GetClientID(), cliLoginTestingCallbackURL, state, connName, audience, prompt, scopes)
 		if err != nil {
 			return err
 		}
@@ -123,9 +132,13 @@ func runLoginFlow(cli *cli, t tenant, c *management.Client, connName, audience, 
 
 		// launch a HTTP server to wait for the callback to capture the auth
 		// code.
-		authCode, err := authutil.WaitForBrowserCallback(cliLoginTestingCallbackAddr)
+		authCode, authState, err := authutil.WaitForBrowserCallback(cliLoginTestingCallbackAddr)
 		if err != nil {
 			return err
+		}
+
+		if state != authState {
+			return fmt.Errorf("unexpected auth state")
 		}
 
 		// once the callback is received, exchange the code for an access
@@ -234,4 +247,16 @@ func removeLocalCallbackURLFromClient(clientManager auth0.ClientAPI, client *man
 	}
 	return clientManager.Update(client.GetClientID(), updatedClient)
 
+}
+
+// generate state parameter value used to mitigate CSRF attacks
+// more: https://auth0.com/docs/protocols/state-parameters
+func generateState(size int) (string, error) {
+	b := make([]byte, size)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+
+	return base64.URLEncoding.EncodeToString(b), nil
 }

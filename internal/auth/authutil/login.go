@@ -7,13 +7,14 @@ import (
 
 // BuildLoginURL constructs a URL + query string that can be used to
 // initiate a user-facing login-flow from the CLI.
-func BuildLoginURL(domain, clientID, callbackURL, connectionName, audience, prompt string, scopes []string) (string, error) {
+func BuildLoginURL(domain, clientID, callbackURL, state, connectionName, audience, prompt string, scopes []string) (string, error) {
 	var path string = "/authorize"
 
 	q := url.Values{}
 	q.Add("client_id", clientID)
 	q.Add("response_type", "code")
 	q.Add("redirect_uri", callbackURL)
+	q.Add("state", state)
 
 	if prompt != "" {
 		q.Add("prompt", prompt)
