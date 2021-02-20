@@ -65,8 +65,8 @@ Launch a browser to try out your universal login box for the given client.
 				tenant,
 				client,
 				connectionName,
-				"",      // audience is only supported for test token command
-				"login", // force a login page when using test login command
+				"",      // audience is only supported for the test token command
+				"login", // force a login page when using the test login command
 				cliLoginTestingScopes,
 			)
 			if err != nil {
@@ -156,9 +156,9 @@ Fetch an access token for the given client and API.
 				cli,
 				tenant,
 				client,
-				"", // specifying a connection is only supported for test login command
+				"", // specifying a connection is only supported for the test login command
 				audience,
-				"", // We don't want to force a prompt for test token command
+				"", // We don't want to force a prompt for the test token command
 				scopes,
 			)
 			if err != nil {
