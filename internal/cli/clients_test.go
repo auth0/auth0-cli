@@ -42,7 +42,7 @@ func TestClientsListCmd(t *testing.T) {
 		api: &auth0.API{Client: clientAPI},
 	}
 
-	cmd := clientsListCmd(cli)
+	cmd := appsListCmd(cli)
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
