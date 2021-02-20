@@ -26,9 +26,9 @@ func testLoginCmd(cli *cli) *cobra.Command {
 	var connectionName string
 
 	cmd := &cobra.Command{
-		Use:   "login-box",
+		Use:   "login",
 		Short: "Try out your universal login box",
-		Long: `auth0 test login-box
+		Long: `auth0 test login
 Launch a browser to try out your universal login box for the given client.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {

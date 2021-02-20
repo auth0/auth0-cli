@@ -29,7 +29,7 @@ func Execute() {
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// If the user is trying to login, no need to go
 			// through setup.
-			if cmd.Use == "login" {
+			if cmd.Use == "login" && cmd.Parent().Use == "auth0" {
 				return nil
 			}
 
