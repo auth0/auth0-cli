@@ -29,7 +29,7 @@ func appsListCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List your existing apps",
-		Long: `auth0 app list
+		Long: `auth0 apps list
 Lists your existing apps. To create one try:
 
     auth0 apps create
