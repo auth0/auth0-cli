@@ -52,7 +52,7 @@ var errUnauthenticated = errors.New("Not yet configured. Try `auth0 login`.")
 //
 // 1. --format
 // 2. --tenant
-// 3. --verbose
+// 3. --debug
 //
 type cli struct {
 	// core primitives exposed to command builders.
@@ -60,7 +60,7 @@ type cli struct {
 	renderer *display.Renderer
 
 	// set of flags which are user specified.
-	verbose bool
+	debug   bool
 	tenant  string
 	format  string
 	force   bool
@@ -103,7 +103,7 @@ func (c *cli) setup() error {
 	} else if t.AccessToken != "" {
 		m, err := management.New(t.Domain,
 			management.WithStaticToken(t.AccessToken),
-			management.WithDebug(c.verbose),
+			management.WithDebug(c.debug),
 			management.WithUserAgent(userAgent))
 		if err != nil {
 			return err
