@@ -44,8 +44,8 @@ func Execute() {
 	rootCmd.PersistentFlags().StringVar(&cli.tenant,
 		"tenant", cli.config.DefaultTenant, "Specific tenant to use.")
 
-	rootCmd.PersistentFlags().BoolVar(&cli.verbose,
-		"verbose", false, "Enable verbose mode.")
+	rootCmd.PersistentFlags().BoolVar(&cli.debug,
+		"debug", false, "Enable debug mode.")
 
 	rootCmd.PersistentFlags().StringVar(&cli.format,
 		"format", "", "Command output format. Options: json.")
