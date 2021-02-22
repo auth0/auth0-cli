@@ -18,20 +18,20 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
-func quickstartCmd(cli *cli) *cobra.Command {
+func quickstartsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "quickstart",
+		Use:     "quickstarts",
 		Short:   "Quickstart support for getting bootstrapped",
 		Aliases: []string{"qs"},
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.AddCommand(quickstartDownloadCmd(cli))
+	cmd.AddCommand(downloadQuickstart(cli))
 
 	return cmd
 }
 
-func quickstartDownloadCmd(cli *cli) *cobra.Command {
+func downloadQuickstart(cli *cli) *cobra.Command {
 	var flags struct {
 		ClientID string
 		Type     string
@@ -41,7 +41,7 @@ func quickstartDownloadCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "download",
 		Short: "Download a specific type and tech stack for quick starts",
-		Long:  `auth0 quickstart download --type <type> --client-id <client-id> --stack <stack>`,
+		Long:  `auth0 quickstarts download --type <type> --client-id <client-id> --stack <stack>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := cli.api.Client.Read(flags.ClientID)
 			if err != nil {
