@@ -20,18 +20,18 @@ import (
 
 func quickstartCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "quickstart",
+		Use:     "quickstarts",
 		Short:   "Quickstart support for getting bootstrapped",
 		Aliases: []string{"qs"},
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.AddCommand(quickstartDownloadCmd(cli))
+	cmd.AddCommand(downloadQuickstart(cli))
 
 	return cmd
 }
 
-func quickstartDownloadCmd(cli *cli) *cobra.Command {
+func downloadQuickstart(cli *cli) *cobra.Command {
 	var flags struct {
 		ClientID string
 		Type     string
