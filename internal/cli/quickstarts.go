@@ -18,7 +18,7 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
-func quickstartCmd(cli *cli) *cobra.Command {
+func quickstartsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "quickstarts",
 		Short:   "Quickstart support for getting bootstrapped",
