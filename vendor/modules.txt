@@ -14,6 +14,8 @@ github.com/andybalholm/brotli
 github.com/briandowns/spinner
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
+# github.com/decred/dcrd/dcrec/secp256k1/v3 v3.0.0
+github.com/decred/dcrd/dcrec/secp256k1/v3
 # github.com/dsnet/compress v0.0.1
 github.com/dsnet/compress
 github.com/dsnet/compress/bzip2
@@ -24,6 +26,8 @@ github.com/dsnet/compress/internal/prefix
 # github.com/fatih/color v1.10.0
 ## explicit
 github.com/fatih/color
+# github.com/goccy/go-json v0.4.7
+github.com/goccy/go-json
 # github.com/golang/mock v1.4.4
 ## explicit
 github.com/golang/mock/gomock
@@ -54,6 +58,30 @@ github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/klauspost/pgzip v1.2.4
 github.com/klauspost/pgzip
+# github.com/lestrrat-go/backoff/v2 v2.0.7
+github.com/lestrrat-go/backoff/v2
+# github.com/lestrrat-go/httpcc v1.0.0
+github.com/lestrrat-go/httpcc
+# github.com/lestrrat-go/iter v1.0.0
+github.com/lestrrat-go/iter/arrayiter
+github.com/lestrrat-go/iter/mapiter
+# github.com/lestrrat-go/jwx v1.1.3
+## explicit
+github.com/lestrrat-go/jwx/internal/base64
+github.com/lestrrat-go/jwx/internal/blackmagic
+github.com/lestrrat-go/jwx/internal/ecutil
+github.com/lestrrat-go/jwx/internal/iter
+github.com/lestrrat-go/jwx/internal/json
+github.com/lestrrat-go/jwx/internal/keyconv
+github.com/lestrrat-go/jwx/internal/pool
+github.com/lestrrat-go/jwx/jwa
+github.com/lestrrat-go/jwx/jwk
+github.com/lestrrat-go/jwx/jws
+github.com/lestrrat-go/jwx/jwt
+github.com/lestrrat-go/jwx/jwt/internal/types
+github.com/lestrrat-go/jwx/x25519
+# github.com/lestrrat-go/option v1.0.0
+github.com/lestrrat-go/option
 # github.com/logrusorgru/aurora v2.0.3+incompatible
 ## explicit
 github.com/logrusorgru/aurora
@@ -83,6 +111,8 @@ github.com/pierrec/lz4/v4/internal/lz4block
 github.com/pierrec/lz4/v4/internal/lz4errors
 github.com/pierrec/lz4/v4/internal/lz4stream
 github.com/pierrec/lz4/v4/internal/xxh32
+# github.com/pkg/errors v0.9.1
+github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
 # github.com/rivo/uniseg v0.2.0
@@ -94,7 +124,7 @@ github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.5
 ## explicit
 github.com/spf13/pflag
-# github.com/stretchr/testify v1.5.1
+# github.com/stretchr/testify v1.6.1
 ## explicit
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
@@ -108,12 +138,15 @@ github.com/ulikunitz/xz/internal/xlog
 github.com/ulikunitz/xz/lzma
 # github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 github.com/xi2/xz
-# golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+# golang.org/x/crypto v0.0.0-20201217014255-9d1352758620
 ## explicit
+golang.org/x/crypto/curve25519
+golang.org/x/crypto/ed25519
+golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/mod v0.3.0
+# golang.org/x/mod v0.4.1
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20200822124328-c89045814202
+# golang.org/x/net v0.0.0-20201021035429-f5854403a974
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 # golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
@@ -123,12 +156,15 @@ golang.org/x/oauth2/internal
 # golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
 ## explicit
 golang.org/x/sys/internal/unsafeheader
+golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
+# golang.org/x/term v0.0.0-20201117132131-f5c789dd3221
+golang.org/x/term
 # golang.org/x/text v0.3.3
 golang.org/x/text/transform
 golang.org/x/text/width
-# golang.org/x/tools v0.0.0-20200825202427-b303f430e36d
+# golang.org/x/tools v0.0.0-20210114065538-d78b04bdf963
 golang.org/x/tools/go/gcexportdata
 golang.org/x/tools/go/internal/gcimporter
 golang.org/x/tools/go/internal/packagesdriver
@@ -189,4 +225,6 @@ gopkg.in/auth0.v5/management
 # gopkg.in/yaml.v2 v2.2.8
 ## explicit
 gopkg.in/yaml.v2
+# gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+gopkg.in/yaml.v3
 # gopkg.in/auth0.v5 => github.com/go-auth0/auth0 v1.3.1-0.20210128024326-898cafab69ba
