@@ -19,10 +19,11 @@ func tenantsCmd(cli *cli) *cobra.Command {
 
 func useTenantCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "use",
-		Short: "Set the active tenant",
-		Long:  `auth0 tenants use <tenant>`,
-		Args:  cobra.MaximumNArgs(1),
+		Use:     "use",
+		Aliases: []string{"select"},
+		Short:   "Set the active tenant",
+		Long:    `auth0 tenants use <tenant>`,
+		Args:    cobra.MaximumNArgs(1),
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
