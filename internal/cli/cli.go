@@ -130,6 +130,20 @@ func (c *cli) getTenant() (tenant, error) {
 	return t, nil
 }
 
+// listTenants fetches all of the configured tenants
+func (c *cli) listTenants() ([]tenant, error) {
+	if err := c.init(); err != nil {
+		return []tenant{}, err
+	}
+
+	tenants := make([]tenant, 0, len(c.config.Tenants))
+	for _, t := range c.config.Tenants {
+		tenants = append(tenants, t)
+	}
+
+	return tenants, nil
+}
+
 // addTenant assigns an existing, or new tenant. This is expected to be called
 // after a login has completed.
 func (c *cli) addTenant(ten tenant) error {
@@ -151,6 +165,14 @@ func (c *cli) addTenant(ten tenant) error {
 
 	c.config.Tenants[ten.Name] = ten
 
+	if err := c.persistConfig(); err != nil {
+		return fmt.Errorf("persisting config: %w", err)
+	}
+
+	return nil
+}
+
+func (c *cli) persistConfig() error {
 	dir := filepath.Dir(c.path)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		if err := os.MkdirAll(dir, 0700); err != nil {
@@ -166,7 +188,6 @@ func (c *cli) addTenant(ten tenant) error {
 	if err := ioutil.WriteFile(c.path, buf, 0600); err != nil {
 		return err
 	}
-
 	return nil
 }
 
