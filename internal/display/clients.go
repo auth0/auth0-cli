@@ -53,6 +53,41 @@ func (v *clientView) AsTableRow() []string {
 
 }
 
+// listClientView is a slimmed down view of a client for displaying
+// larger numbers of clients
+type listClientView struct {
+	Name         string
+	Type         string
+	ClientID     string
+	ClientSecret string
+	revealSecret bool
+}
+
+func (v *listClientView) AsTableHeader() []string {
+	if v.revealSecret {
+		return []string{"Name", "Type", "ClientID", "Client Secret"}
+	}
+	return []string{"Name", "Type", "Client ID"}
+
+}
+
+func (v *listClientView) AsTableRow() []string {
+	if v.revealSecret {
+		return []string{
+			v.Name,
+			v.Type,
+			ansi.Faint(v.ClientID),
+			ansi.Italic(v.ClientSecret),
+		}
+	}
+	return []string{
+		v.Name,
+		v.Type,
+		ansi.Faint(v.ClientID),
+	}
+
+}
+
 func (r *Renderer) ClientList(clients []*management.Client) {
 	r.Heading(ansi.Bold(r.Tenant), "clients\n")
 	var res []View
@@ -60,12 +95,11 @@ func (r *Renderer) ClientList(clients []*management.Client) {
 		if auth0.StringValue(c.Name) == deprecatedAppName {
 			continue
 		}
-		res = append(res, &clientView{
+		res = append(res, &listClientView{
 			Name:         auth0.StringValue(c.Name),
 			Type:         appTypeFor(c.AppType),
 			ClientID:     auth0.StringValue(c.ClientID),
 			ClientSecret: auth0.StringValue(c.ClientSecret),
-			Callbacks:    callbacksFor(c.Callbacks),
 		})
 	}
 
