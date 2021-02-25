@@ -109,8 +109,6 @@ func (r *Renderer) ClientList(clients []*management.Client) {
 func (r *Renderer) ClientCreate(client *management.Client, revealSecrets bool) {
 	r.Heading(ansi.Bold(r.Tenant), "client created\n")
 
-	// note(jfatta): list and create uses the same view for now,
-	// eventually we might want to show different columns for each command:
 	v := &clientView{
 		revealSecret: revealSecrets,
 		Name:         auth0.StringValue(client.Name),
