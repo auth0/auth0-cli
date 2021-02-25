@@ -165,7 +165,9 @@ func (c *cli) addTenant(ten tenant) error {
 
 	c.config.Tenants[ten.Name] = ten
 
-	c.persistConfig()
+	if err := c.persistConfig(); err != nil {
+		return fmt.Errorf("persisting config: %w", err)
+	}
 
 	return nil
 }

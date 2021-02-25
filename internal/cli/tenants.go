@@ -54,7 +54,9 @@ func useTenantCmd(cli *cli) *cobra.Command {
 			}
 
 			cli.config.DefaultTenant = selectedTenant
-			cli.persistConfig()
+			if err := cli.persistConfig(); err != nil {
+				return fmt.Errorf("persisting config: %w", err)
+			}
 			return nil
 		},
 	}
