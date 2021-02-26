@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -46,7 +47,7 @@ Launch a browser to try out your universal login box for the given client.
 			if clientID == "" {
 				client, err := getOrCreateCLITesterClient(cli.api.Client)
 				if err != nil {
-					return fmt.Errorf("Unable to test the login box; please check your internet connection and verify you haven't reached your apps limit")
+					return errors.New("Unable to test the login box; please check your internet connection and verify you haven't reached your apps limit")
 				}
 				clientID = client.GetClientID()
 			}
@@ -118,7 +119,7 @@ Fetch an access token for the given client and API.
 			if clientID == "" {
 				client, err := getOrCreateCLITesterClient(cli.api.Client)
 				if err != nil {
-					return fmt.Errorf("Unable to fetch a token; please check your internet connection and verify you haven't reached your apps limit")
+					return errors.New("Unable to fetch a token; please check your internet connection and verify you haven't reached your apps limit")
 				}
 				clientID = client.GetClientID()
 			}
