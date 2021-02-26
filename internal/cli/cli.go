@@ -91,7 +91,7 @@ func (c *cli) isLoggedIn() bool {
 	}
 
 	// Check if token is valid.
-	if err = jwt.Validate(t); err != nil {
+	if err = jwt.Validate(t, jwt.WithIssuer("https://auth0.auth0.com/")); err != nil {
 		return false
 	}
 
