@@ -17,7 +17,7 @@ const (
 	quickstartsGeneric    = "https://auth0.com/docs/quickstarts"
 )
 
-type clientView struct {
+type applicationView struct {
 	Name         string
 	Type         string
 	ClientID     string
@@ -26,7 +26,7 @@ type clientView struct {
 	revealSecret bool
 }
 
-func (v *clientView) AsTableHeader() []string {
+func (v *applicationView) AsTableHeader() []string {
 	if v.revealSecret {
 		return []string{"Name", "Type", "ClientID", "Client Secret", "Callbacks"}
 	}
@@ -34,7 +34,7 @@ func (v *clientView) AsTableHeader() []string {
 
 }
 
-func (v *clientView) AsTableRow() []string {
+func (v *applicationView) AsTableRow() []string {
 	if v.revealSecret {
 		return []string{
 			v.Name,
@@ -108,7 +108,7 @@ func (r *Renderer) ApplicationList(clients []*management.Client) {
 func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bool) {
 	r.Heading(ansi.Bold(r.Tenant), "application created\n")
 
-	v := &clientView{
+	v := &applicationView{
 		revealSecret: revealSecrets,
 		Name:         auth0.StringValue(client.Name),
 		Type:         appTypeFor(client.AppType),
@@ -125,7 +125,7 @@ func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bo
 func (r *Renderer) ApplicationUpdate(client *management.Client, revealSecrets bool) {
 	r.Heading(ansi.Bold(r.Tenant), "application updated\n")
 
-	v := &clientView{
+	v := &applicationView{
 		revealSecret: revealSecrets,
 		Name:         auth0.StringValue(client.Name),
 		Type:         appTypeFor(client.AppType),
