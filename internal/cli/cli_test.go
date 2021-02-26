@@ -2,12 +2,17 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
+	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/google/go-cmp/cmp"
 	"github.com/olekukonko/tablewriter"
+	"github.com/stretchr/testify/assert"
 )
 
 // TODO(cyx): think about whether we should extract this function in the
@@ -40,5 +45,45 @@ func expectTable(t testing.TB, got string, header []string, data [][]string) {
 
 	if got != want {
 		t.Fatal(cmp.Diff(want, got))
+	}
+}
+
+func TestIsLoggedIn(t *testing.T) {
+	tests := []struct {
+		defaultTenant string
+		tenants       map[string]tenant
+		want          bool
+		desc          string
+	}{
+		{"", map[string]tenant{}, false, "no tenants"},
+		{"t0", map[string]tenant{}, false, "tenant is set but no tenants map"},
+		{"t0", map[string]tenant{"t0": tenant{}}, false, "tenants map set but invalid token"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			tmpFile, err := ioutil.TempFile(os.TempDir(), "isLoggedIn-")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.Remove(tmpFile.Name())
+
+			type Config struct {
+				DefaultTenant string            `json:"default_tenant"`
+				Tenants       map[string]tenant `json:"tenants"`
+			}
+
+			b, err := json.Marshal(&Config{test.defaultTenant, test.tenants})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if err = ioutil.WriteFile(tmpFile.Name(), b, 0400); err != nil {
+				t.Fatal(err)
+			}
+
+			c := cli{renderer: display.NewRenderer(), path: tmpFile.Name()}
+			assert.Equal(t, test.want, c.isLoggedIn())
+		})
 	}
 }
