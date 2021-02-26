@@ -28,6 +28,7 @@ func appsCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listAppsCmd(cli))
 	cmd.AddCommand(createAppCmd(cli))
+	cmd.AddCommand(updateAppCmd(cli))
 	cmd.AddCommand(deleteAppCmd(cli))
 
 	return cmd
@@ -54,7 +55,7 @@ Lists your existing applications. To create one try:
 				return err
 			}
 
-			cli.renderer.ClientList(list.Clients)
+			cli.renderer.ApplicationList(list.Clients)
 			return nil
 		},
 	}
@@ -120,6 +121,9 @@ func createAppCmd(cli *cli) *cobra.Command {
 
 auth0 apps create --name myapp --type [native|spa|regular|m2m]
 `,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if shouldPrompt(cmd, appName) {
 				input := prompt.TextInput(
@@ -149,17 +153,14 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 			}
 
 			if shouldPrompt(cmd, appDescription) {
-				input := prompt.TextInput(
-					appDescription, "Description:",
-					"Description of the application.",
-					false)
+				input := prompt.TextInput(appDescription, "Description:", "Description of the application.", false)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
 				}
 			}
 
-			c := &management.Client{
+			a := &management.Client{
 				Name:                    &flags.Name,
 				Description:             &flags.Description,
 				AppType:                 auth0.String(apiTypeFor(flags.Type)),
@@ -168,7 +169,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 			}
 
 			err := ansi.Spinner("Creating application", func() error {
-				return cli.api.Client.Create(c)
+				return cli.api.Client.Create(a)
 			})
 
 			if err != nil {
@@ -176,8 +177,8 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 			}
 
 			// note: c is populated with the rest of the client fields by the API during creation.
-			revealClientSecret := auth0.StringValue(c.AppType) != "native" && auth0.StringValue(c.AppType) != "spa"
-			cli.renderer.ClientCreate(c, revealClientSecret)
+			revealClientSecret := auth0.StringValue(a.AppType) != "native" && auth0.StringValue(a.AppType) != "spa"
+			cli.renderer.ApplicationCreate(a, revealClientSecret)
 
 			return nil
 		},
@@ -193,6 +194,106 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 	cmd.Flags().StringSliceVarP(&flags.Callbacks, "callbacks", "c", nil, "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.")
 	cmd.Flags().StringVar(&flags.AuthMethod, "auth-method", "", "Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).")
 	mustRequireFlags(cmd, appName, appType)
+
+	return cmd
+}
+
+func updateAppCmd(cli *cli) *cobra.Command {
+	var flags struct {
+		ID          string
+		Name        string
+		Type        string
+		Description string
+		Callbacks   []string
+		AuthMethod  string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "create",
+		Short: "Update a new application",
+		Long: `Update a new application:
+
+auth0 apps update --id id --name myapp --type [native|spa|regular|m2m]
+`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if shouldPrompt(cmd, appID) {
+				input := prompt.TextInput(appID, "Id:", "Id of the application.", true)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
+			if shouldPrompt(cmd, appName) {
+				input := prompt.TextInput(appName, "Name:", "Name of the application", true)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
+			if shouldPrompt(cmd, appType) {
+				input := prompt.SelectInput(
+					appType,
+					"Type:",
+					"\n- Native: Mobile, desktop, CLI and smart device apps running natively."+
+						"\n- Single Page Web Application: A JavaScript front-end app that uses an API."+
+						"\n- Regular Web Application: Traditional web app using redirects."+
+						"\n- Machine To Machine: CLIs, daemons or services running on your backend.",
+					[]string{"Native", "Single Page Web Application", "Regular Web Application", "Machine to Machine"},
+					true)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
+			if shouldPrompt(cmd, appDescription) {
+				input := prompt.TextInput(appDescription, "Description:", "Description of the application.", false)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
+					return err
+				}
+			}
+
+			a := &management.Client{
+				Name:                    &flags.Name,
+				Description:             &flags.Description,
+				AppType:                 auth0.String(apiTypeFor(flags.Type)),
+				Callbacks:               apiCallbacksFor(flags.Callbacks),
+				TokenEndpointAuthMethod: apiAuthMethodFor(flags.AuthMethod),
+			}
+
+			err := ansi.Spinner("Updating application", func() error {
+				return cli.api.Client.Update(flags.ID, c)
+			})
+
+			if err != nil {
+				return err
+			}
+
+			// note: c is populated with the rest of the client fields by the API during creation.
+			revealClientSecret := auth0.StringValue(a.AppType) != "native" && auth0.StringValue(a.AppType) != "spa"
+			cli.renderer.ApplicationUpdate(a, revealClientSecret)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&flags.ID, appID, "i", "", "ID of the application.")
+	cmd.Flags().StringVarP(&flags.Name, "name", "n", "", "Name of the application.")
+	cmd.Flags().StringVarP(&flags.Type, "type", "t", "", "Type of application:\n"+
+		"- native: mobile, desktop, CLI and smart device apps running natively.\n"+
+		"- spa (single page application): a JavaScript front-end app that uses an API.\n"+
+		"- regular: Traditional web app using redirects.\n"+
+		"- m2m (machine to machine): CLIs, daemons or services running on your backend.")
+	cmd.Flags().StringVarP(&flags.Description, "description", "d", "", "Description of the application. Max character count is 140.")
+	cmd.Flags().StringSliceVarP(&flags.Callbacks, "callbacks", "c", nil, "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.")
+	cmd.Flags().StringVar(&flags.AuthMethod, "auth-method", "", "Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).")
+	mustRequireFlags(cmd, appID)
 
 	return cmd
 }

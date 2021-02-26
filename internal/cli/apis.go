@@ -265,7 +265,7 @@ auth0 apis update --id id --name myapi
 	cmd.Flags().StringVarP(&flags.ID, apiID, "i", "", "ID of the API.")
 	cmd.Flags().StringVarP(&flags.Name, apiName, "n", "", "Name of the API.")
 	cmd.Flags().StringVarP(&flags.Scopes, apiScopes, "s", "", "Space-separated list of scopes.")
-	mustRequireFlags(cmd, apiID, apiName)
+	mustRequireFlags(cmd, apiID)
 
 	return cmd
 }
