@@ -49,9 +49,9 @@ func TestClientsListCmd(t *testing.T) {
 	}
 
 	expectTable(t, stdout.String(),
-		[]string{"NAME", "TYPE", "CLIENT ID", "CALLBACKS"},
+		[]string{"NAME", "TYPE", "CLIENT ID"},
 		[][]string{
-			{"some-name", "generic", "some-id", "http://localhost"},
+			{"some-name", "generic", "some-id"},
 		},
 	)
 }
