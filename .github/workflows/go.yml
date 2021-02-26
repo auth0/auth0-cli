@@ -16,7 +16,7 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Install golanglint-ci
-      run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.23.6
+      run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.37.1
 
     - name: ci
       run: PATH=$(go env GOPATH)/bin:$PATH make ci
