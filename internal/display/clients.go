@@ -53,8 +53,8 @@ func (v *clientView) AsTableRow() []string {
 
 }
 
-func (r *Renderer) ClientList(clients []*management.Client) {
-	r.Heading(ansi.Bold(r.Tenant), "clients\n")
+func (r *Renderer) ApplicationList(clients []*management.Client) {
+	r.Heading(ansi.Bold(r.Tenant), "applications\n")
 	var res []View
 	for _, c := range clients {
 		if auth0.StringValue(c.Name) == deprecatedAppName {
@@ -72,8 +72,8 @@ func (r *Renderer) ClientList(clients []*management.Client) {
 	r.Results(res)
 }
 
-func (r *Renderer) ClientCreate(client *management.Client, revealSecrets bool) {
-	r.Heading(ansi.Bold(r.Tenant), "client created\n")
+func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bool) {
+	r.Heading(ansi.Bold(r.Tenant), "application created\n")
 
 	// note(jfatta): list and create uses the same view for now,
 	// eventually we might want to show different columns for each command:
@@ -89,6 +89,21 @@ func (r *Renderer) ClientCreate(client *management.Client, revealSecrets bool) {
 	r.Results([]View{v})
 
 	r.Infof("\nQuickstarts: %s", quickstartsURIFor(client.AppType))
+}
+
+func (r *Renderer) ApplicationUpdate(client *management.Client, revealSecrets bool) {
+	r.Heading(ansi.Bold(r.Tenant), "application updated\n")
+
+	v := &clientView{
+		revealSecret: revealSecrets,
+		Name:         auth0.StringValue(client.Name),
+		Type:         appTypeFor(client.AppType),
+		ClientID:     auth0.StringValue(client.ClientID),
+		ClientSecret: auth0.StringValue(client.ClientSecret),
+		Callbacks:    callbacksFor(client.Callbacks),
+	}
+
+	r.Results([]View{v})
 }
 
 // TODO(cyx): determine if there's a better way to filter this out.
