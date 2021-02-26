@@ -209,7 +209,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "create",
+		Use:   "update",
 		Short: "Update a new application",
 		Long: `Update a new application:
 
