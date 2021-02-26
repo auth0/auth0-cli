@@ -268,7 +268,7 @@ auth0 apps update --id id --name myapp --type [native|spa|regular|m2m]
 			}
 
 			err := ansi.Spinner("Updating application", func() error {
-				return cli.api.Client.Update(flags.ID, c)
+				return cli.api.Client.Update(flags.ID, a)
 			})
 
 			if err != nil {
