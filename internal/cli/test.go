@@ -46,14 +46,14 @@ Launch a browser to try out your universal login box for the given client.
 			if clientID == "" {
 				client, err := getOrCreateCLITesterClient(cli.api.Client)
 				if err != nil {
-					return err
+					return fmt.Errorf("Unable to test the login box; please check your internet connection and verify you haven't reached your apps limit")
 				}
 				clientID = client.GetClientID()
 			}
 
 			client, err := cli.api.Client.Read(clientID)
 			if err != nil {
-				return err
+				return fmt.Errorf("Unable to find client %s; if you specified a client, please verify it exists, otherwise re-run the command", clientID)
 			}
 
 			if proceed := runLoginFlowPreflightChecks(cli, client); !proceed {
@@ -70,7 +70,7 @@ Launch a browser to try out your universal login box for the given client.
 				cliLoginTestingScopes,
 			)
 			if err != nil {
-				return err
+				return fmt.Errorf("An unexpected error occurred while logging in to client %s: %e", clientID, err)
 			}
 
 			if err := ansi.Spinner("Fetching user metadata", func() error {
@@ -79,7 +79,7 @@ Launch a browser to try out your universal login box for the given client.
 				userInfo, err = authutil.FetchUserInfo(tenant.Domain, tokenResponse.AccessToken)
 				return err
 			}); err != nil {
-				return err
+				return fmt.Errorf("An unexpected error occurred: %e", err)
 			}
 
 			fmt.Fprint(cli.renderer.MessageWriter, "\n")
@@ -118,14 +118,14 @@ Fetch an access token for the given client and API.
 			if clientID == "" {
 				client, err := getOrCreateCLITesterClient(cli.api.Client)
 				if err != nil {
-					return err
+					return fmt.Errorf("Unable to fetch a token; please check your internet connection and verify you haven't reached your apps limit")
 				}
 				clientID = client.GetClientID()
 			}
 
 			client, err := cli.api.Client.Read(clientID)
 			if err != nil {
-				return err
+				return fmt.Errorf("Unable to find client %s; if you specified a client, please verify it exists, otherwise re-run the command", clientID)
 			}
 
 			appType := client.GetAppType()
@@ -140,7 +140,7 @@ Fetch an access token for the given client and API.
 			if appType == "non_interactive" {
 				tokenResponse, err := runClientCredentialsFlow(cli, client, clientID, audience, tenant)
 				if err != nil {
-					return err
+					return fmt.Errorf("An unexpected error occurred while logging in to machine-to-machine client %s: %e", clientID, err)
 				}
 
 				fmt.Fprint(cli.renderer.MessageWriter, "\n")
@@ -162,7 +162,7 @@ Fetch an access token for the given client and API.
 				scopes,
 			)
 			if err != nil {
-				return err
+				return fmt.Errorf("An unexpected error occurred when logging in to client %s: %e", clientID, err)
 			}
 
 			fmt.Fprint(cli.renderer.MessageWriter, "\n")
