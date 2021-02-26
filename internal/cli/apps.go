@@ -11,10 +11,18 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
+const (
+	appID          = "id"
+	appName        = "name"
+	appType        = "type"
+	appDescription = "description"
+)
+
 func appsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "apps",
-		Short: "Manage resources for apps",
+		Use:     "apps",
+		Short:   "Manage resources for applications",
+		Aliases: []string{"clients"},
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -28,15 +36,15 @@ func appsCmd(cli *cli) *cobra.Command {
 func appsListCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List your existing apps",
+		Short: "List your applications",
 		Long: `auth0 apps list
-Lists your existing apps. To create one try:
+Lists your existing applications. To create one try:
 
     auth0 apps create
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ClientList
-			err := ansi.Spinner("Loading apps", func() error {
+			err := ansi.Spinner("Loading applications", func() error {
 				var err error
 				list, err = cli.api.Client.List()
 				return err
@@ -60,15 +68,14 @@ func appsDeleteCmd(cli *cli) *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:   "delete",
-		Short: "Delete an existing app",
-		Long: `auth0 apps delete --name appName
+		Short: "Delete an application",
+		Long: `Delete an application:
 
-auth0 apps delete --app-id myapp
-
+auth0 apps delete --id id
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if !cmd.Flags().Changed("app-id") {
+			if !cmd.Flags().Changed("id") {
 				qs := []*survey.Question{
 					{
 						Name: "AppID",
@@ -95,7 +102,7 @@ auth0 apps delete --app-id myapp
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.AppID, "app-id", "i", "", "app-id of the app.")
+	cmd.Flags().StringVarP(&flags.AppID, "id", "i", "", "Id of the app.")
 
 	return cmd
 }
