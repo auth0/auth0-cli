@@ -37,7 +37,7 @@ func Execute() {
 			// Initialize everything once. Later callers can then
 			// freely assume that config is fully primed and ready
 			// to go.
-			return cli.setup()
+			return cli.setup(cmd.Context())
 		},
 	}
 

@@ -144,7 +144,7 @@ auth0 apis create --name myapi --identifier http://my-api
 			if shouldPrompt(cmd, apiName) {
 				input := prompt.TextInput(
 					apiName, "Name:",
-					"Name of the API. You can change the API name later in the API settings.",
+					"Name of the API. You can change the name later in the API settings.",
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
@@ -265,7 +265,7 @@ auth0 apis update --id id --name myapi
 	cmd.Flags().StringVarP(&flags.ID, apiID, "i", "", "ID of the API.")
 	cmd.Flags().StringVarP(&flags.Name, apiName, "n", "", "Name of the API.")
 	cmd.Flags().StringVarP(&flags.Scopes, apiScopes, "s", "", "Space-separated list of scopes.")
-	mustRequireFlags(cmd, apiID, apiName)
+	mustRequireFlags(cmd, apiID)
 
 	return cmd
 }
@@ -300,15 +300,9 @@ auth0 apis delete --id id
 				}
 			}
 
-			err := ansi.Spinner("Deleting API", func() error {
+			return ansi.Spinner("Deleting API", func() error {
 				return cli.api.ResourceServer.Delete(flags.ID)
 			})
-
-			if err != nil {
-				return err
-			}
-
-			return nil
 		},
 	}
 

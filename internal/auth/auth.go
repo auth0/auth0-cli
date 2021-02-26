@@ -12,22 +12,6 @@ import (
 	"time"
 )
 
-// 1st request
-// curl --request POST \
-//   --url 'https://auth0.auth0.com/oauth/device/code' \
-//   --header 'content-type: application/x-www-form-urlencoded' \
-//   --data 'client_id=2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT' \
-//   --data 'scope=openid read:roles' \
-//   --data audience=https://\*.auth0.com/api/v2/
-
-// polling request
-// curl --request POST \
-//   --url 'https://auth0.auth0.com/oauth/token' \
-//   --header 'content-type: application/x-www-form-urlencoded' \
-//   --data grant_type=urn:ietf:params:oauth:grant-type:device_code \
-//   --data device_code=9GtgUcsGKzXkU-i70RN74baY \
-//   --data 'client_id=2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT'
-
 const (
 	clientID           = "2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT"
 	deviceCodeEndpoint = "https://auth0.auth0.com/oauth/device/code"
@@ -65,6 +49,9 @@ func (s *State) IntervalDuration() time.Duration {
 	return time.Duration(s.Interval) * time.Second
 }
 
+// Start kicks-off the device authentication flow
+// by requesting a device code from Auth0,
+// The returned state contains the URI for the next step of the flow.
 func (a *Authenticator) Start(ctx context.Context) (State, error) {
 	s, err := a.getDeviceCode(ctx)
 	if err != nil {
@@ -73,6 +60,7 @@ func (a *Authenticator) Start(ctx context.Context) (State, error) {
 	return s, nil
 }
 
+// Wait waits until the user is logged in on the browser.
 func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 	t := time.NewTicker(state.IntervalDuration())
 	for {

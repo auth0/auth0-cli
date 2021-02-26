@@ -53,9 +53,9 @@ func (v *clientView) AsTableRow() []string {
 
 }
 
-// listClientView is a slimmed down view of a client for displaying
-// larger numbers of clients
-type listClientView struct {
+// applicationListView is a slimmed down view of a client for displaying
+// larger numbers of applications
+type applicationListView struct {
 	Name         string
 	Type         string
 	ClientID     string
@@ -63,7 +63,7 @@ type listClientView struct {
 	revealSecret bool
 }
 
-func (v *listClientView) AsTableHeader() []string {
+func (v *applicationListView) AsTableHeader() []string {
 	if v.revealSecret {
 		return []string{"Name", "Type", "ClientID", "Client Secret"}
 	}
@@ -71,7 +71,7 @@ func (v *listClientView) AsTableHeader() []string {
 
 }
 
-func (v *listClientView) AsTableRow() []string {
+func (v *applicationListView) AsTableRow() []string {
 	if v.revealSecret {
 		return []string{
 			v.Name,
@@ -85,17 +85,16 @@ func (v *listClientView) AsTableRow() []string {
 		v.Type,
 		ansi.Faint(v.ClientID),
 	}
-
 }
 
-func (r *Renderer) ClientList(clients []*management.Client) {
-	r.Heading(ansi.Bold(r.Tenant), "clients\n")
+func (r *Renderer) ApplicationList(clients []*management.Client) {
+	r.Heading(ansi.Bold(r.Tenant), "applications\n")
 	var res []View
 	for _, c := range clients {
 		if auth0.StringValue(c.Name) == deprecatedAppName {
 			continue
 		}
-		res = append(res, &listClientView{
+		res = append(res, &applicationListView{
 			Name:         auth0.StringValue(c.Name),
 			Type:         appTypeFor(c.AppType),
 			ClientID:     auth0.StringValue(c.ClientID),
@@ -106,8 +105,8 @@ func (r *Renderer) ClientList(clients []*management.Client) {
 	r.Results(res)
 }
 
-func (r *Renderer) ClientCreate(client *management.Client, revealSecrets bool) {
-	r.Heading(ansi.Bold(r.Tenant), "client created\n")
+func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bool) {
+	r.Heading(ansi.Bold(r.Tenant), "application created\n")
 
 	v := &clientView{
 		revealSecret: revealSecrets,
@@ -121,6 +120,21 @@ func (r *Renderer) ClientCreate(client *management.Client, revealSecrets bool) {
 	r.Results([]View{v})
 
 	r.Infof("\nQuickstarts: %s", quickstartsURIFor(client.AppType))
+}
+
+func (r *Renderer) ApplicationUpdate(client *management.Client, revealSecrets bool) {
+	r.Heading(ansi.Bold(r.Tenant), "application updated\n")
+
+	v := &clientView{
+		revealSecret: revealSecrets,
+		Name:         auth0.StringValue(client.Name),
+		Type:         appTypeFor(client.AppType),
+		ClientID:     auth0.StringValue(client.ClientID),
+		ClientSecret: auth0.StringValue(client.ClientSecret),
+		Callbacks:    callbacksFor(client.Callbacks),
+	}
+
+	r.Results([]View{v})
 }
 
 // TODO(cyx): determine if there's a better way to filter this out.

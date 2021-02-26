@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,7 +22,8 @@ import (
 )
 
 const (
-	userAgent = "Auth0 CLI"
+	userAgent               = "Auth0 CLI"
+	accessTokenExpThreshold = 5 * time.Minute
 )
 
 // config defines the exact set of tenants, access tokens, which only exists
@@ -87,7 +89,7 @@ func (c *cli) isLoggedIn() bool {
 //
 // 1. A tenant is found.
 // 2. The tenant has an access token.
-func (c *cli) setup() error {
+func (c *cli) setup(ctx context.Context) error {
 	if err := c.init(); err != nil {
 		return err
 	}
@@ -100,7 +102,19 @@ func (c *cli) setup() error {
 	if t.AccessToken == "" {
 		return errUnauthenticated
 
-	} else if t.AccessToken != "" {
+	}
+
+	// check if the stored access token is expired:
+	if isExpired(t.ExpiresAt, accessTokenExpThreshold) {
+		// ask and guide the user through the login process:
+		err := RunLogin(ctx, c, true)
+		if err != nil {
+			return err
+		}
+	}
+
+	// continue with the command setup:
+	if t.AccessToken != "" {
 		m, err := management.New(t.Domain,
 			management.WithStaticToken(t.AccessToken),
 			management.WithDebug(c.debug),
@@ -113,6 +127,11 @@ func (c *cli) setup() error {
 	}
 
 	return err
+}
+
+// isExpired is true if now() + a threshold is after the given date
+func isExpired(t time.Time, threshold time.Duration) bool {
+	return time.Now().Add(threshold).After(t)
 }
 
 // getTenant fetches the default tenant configured (or the tenant specified via
@@ -201,7 +220,6 @@ func (c *cli) init() error {
 		c.renderer.Tenant = c.tenant
 
 		cobra.EnableCommandSorting = false
-
 	})
 
 	// Determine what the desired output format is.
