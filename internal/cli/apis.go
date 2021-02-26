@@ -300,15 +300,9 @@ auth0 apis delete --id id
 				}
 			}
 
-			err := ansi.Spinner("Deleting API", func() error {
+			return ansi.Spinner("Deleting API", func() error {
 				return cli.api.ResourceServer.Delete(flags.ID)
 			})
-
-			if err != nil {
-				return err
-			}
-
-			return nil
 		},
 	}
 

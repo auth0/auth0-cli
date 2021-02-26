@@ -7,6 +7,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
@@ -28,7 +29,7 @@ func appsCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(appsListCmd(cli))
 	cmd.AddCommand(appsCreateCmd(cli))
-	cmd.AddCommand(appsDeleteCmd(cli))
+	cmd.AddCommand(deleteAppCmd(cli))
 
 	return cmd
 }
@@ -62,10 +63,11 @@ Lists your existing applications. To create one try:
 	return cmd
 }
 
-func appsDeleteCmd(cli *cli) *cobra.Command {
+func deleteAppCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		AppID string
+		ID string
 	}
+
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete an application",
@@ -73,36 +75,32 @@ func appsDeleteCmd(cli *cli) *cobra.Command {
 
 auth0 apps delete --id id
 `,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if shouldPrompt(cmd, appID) {
+				input := prompt.TextInput(appID, "Id:", "Id of the application.", true)
 
-			if !cmd.Flags().Changed("id") {
-				qs := []*survey.Question{
-					{
-						Name: "AppID",
-						Prompt: &survey.Input{
-							Message: "AppID:",
-							Default: "My App",
-							Help:    "ID of the application to delete.",
-						},
-					},
-				}
-
-				err := survey.Ask(qs, &flags)
-				if err != nil {
+				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
 				}
 			}
-			c := &management.Client{
-				ClientID: &flags.AppID,
+
+			if !cli.force && canPrompt(cmd) {
+				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
+					return nil
+				}
 			}
 
 			return ansi.Spinner("Deleting application", func() error {
-				return cli.api.Client.Delete(*c.ClientID)
+				return cli.api.Client.Delete(flags.ID)
 			})
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.AppID, "id", "i", "", "Id of the app.")
+	cmd.Flags().StringVarP(&flags.ID, appID, "i", "", "ID of the application.")
+	mustRequireFlags(cmd, appID)
 
 	return cmd
 }
