@@ -144,7 +144,7 @@ auth0 apis create --name myapi --identifier http://my-api
 			if shouldPrompt(cmd, apiName) {
 				input := prompt.TextInput(
 					apiName, "Name:",
-					"Name of the API. You can change the API name later in the API settings.",
+					"Name of the API. You can change the name later in the API settings.",
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {

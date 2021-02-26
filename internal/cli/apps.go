@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -27,14 +26,14 @@ func appsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.AddCommand(appsListCmd(cli))
-	cmd.AddCommand(appsCreateCmd(cli))
+	cmd.AddCommand(listAppsCmd(cli))
+	cmd.AddCommand(createAppCmd(cli))
 	cmd.AddCommand(deleteAppCmd(cli))
 
 	return cmd
 }
 
-func appsListCmd(cli *cli) *cobra.Command {
+func listAppsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List your applications",
@@ -105,75 +104,57 @@ auth0 apps delete --id id
 	return cmd
 }
 
-func appsCreateCmd(cli *cli) *cobra.Command {
+func createAppCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		Name                    string
-		AppType                 string
-		Description             string
-		Callbacks               []string
-		TokenEndpointAuthMethod string
+		Name        string
+		Type        string
+		Description string
+		Callbacks   []string
+		AuthMethod  string
 	}
+
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new application",
 		Long: `Create a new application:
 
 auth0 apps create --name myapp --type [native|spa|regular|m2m]
-
-- supported application type:
-	`,
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// todo(jfatta) on non-interactive the cmd should fail on missing mandatory args (name, type)
-			if !cmd.Flags().Changed("name") {
-				qs := []*survey.Question{
-					{
-						Name: "Name",
-						Prompt: &survey.Input{
-							Message: "Name:",
-							Default: "My App",
-							Help:    "Name of the client (also known as application). You can change the application name later in the application settings.",
-						},
-					},
-				}
+			if shouldPrompt(cmd, appName) {
+				input := prompt.TextInput(
+					appName, "Name:",
+					"Name of the application. You can change the name later in the application settings.",
+					true)
 
-				err := survey.Ask(qs, &flags)
-				if err != nil {
+				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
 				}
 			}
 
-			if !cmd.Flags().Changed("type") {
-				qs := []*survey.Question{
-					{
-						Name: "AppType",
-						Prompt: &survey.Select{
-							Message: "Type:",
-							Help: "\n- Native: Mobile, desktop, CLI and smart device apps running natively." +
-								"\n- Single Page Web Application: A JavaScript front-end app that uses an API." +
-								"\n- Regular Web Application: Traditional web app using redirects." +
-								"\n- Machine To Machine: CLIs, daemons or services running on your backend.",
-							Options: []string{"Native", "Single Page Web Application", "Regular Web Application", "Machine to Machine"},
-						},
-					},
-				}
-				err := survey.Ask(qs, &flags)
-				if err != nil {
+			if shouldPrompt(cmd, appType) {
+				input := prompt.SelectInput(
+					appType,
+					"Type:",
+					"\n- Native: Mobile, desktop, CLI and smart device apps running natively."+
+						"\n- Single Page Web Application: A JavaScript front-end app that uses an API."+
+						"\n- Regular Web Application: Traditional web app using redirects."+
+						"\n- Machine To Machine: CLIs, daemons or services running on your backend.",
+					[]string{"Native", "Single Page Web Application", "Regular Web Application", "Machine to Machine"},
+					true)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
 				}
 			}
 
-			if !cmd.Flags().Changed("description") {
-				qs := []*survey.Question{
-					{
-						Name: "Description",
-						Prompt: &survey.Input{
-							Message: "Description:",
-							Help:    "A free text description of the application.",
-						},
-					},
-				}
-				err := survey.Ask(qs, &flags)
-				if err != nil {
+			if shouldPrompt(cmd, appDescription) {
+				input := prompt.TextInput(
+					appDescription, "Description:",
+					"Description of the application.",
+					false)
+
+				if err := prompt.AskOne(input, &flags); err != nil {
 					return err
 				}
 			}
@@ -181,12 +162,12 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 			c := &management.Client{
 				Name:                    &flags.Name,
 				Description:             &flags.Description,
-				AppType:                 auth0.String(apiAppTypeFor(flags.AppType)),
+				AppType:                 auth0.String(apiTypeFor(flags.Type)),
 				Callbacks:               apiCallbacksFor(flags.Callbacks),
-				TokenEndpointAuthMethod: apiTokenEndpointAuthMethodFor(flags.TokenEndpointAuthMethod),
+				TokenEndpointAuthMethod: apiAuthMethodFor(flags.AuthMethod),
 			}
 
-			err := ansi.Spinner("Creating client", func() error {
+			err := ansi.Spinner("Creating application", func() error {
 				return cli.api.Client.Create(c)
 			})
 
@@ -197,24 +178,26 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 			// note: c is populated with the rest of the client fields by the API during creation.
 			revealClientSecret := auth0.StringValue(c.AppType) != "native" && auth0.StringValue(c.AppType) != "spa"
 			cli.renderer.ClientCreate(c, revealClientSecret)
+
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&flags.Name, "name", "n", "", "Name of the client.")
-	cmd.Flags().StringVarP(&flags.AppType, "type", "t", "", "Type of the client:\n"+
+
+	cmd.Flags().StringVarP(&flags.Name, "name", "n", "", "Name of the application.")
+	cmd.Flags().StringVarP(&flags.Type, "type", "t", "", "Type of application:\n"+
 		"- native: mobile, desktop, CLI and smart device apps running natively.\n"+
 		"- spa (single page application): a JavaScript front-end app that uses an API.\n"+
 		"- regular: Traditional web app using redirects.\n"+
 		"- m2m (machine to machine): CLIs, daemons or services running on your backend.")
-	cmd.Flags().StringVarP(&flags.Description, "description", "d", "", "A free text description of the application. Max character count is 140.")
+	cmd.Flags().StringVarP(&flags.Description, "description", "d", "", "Description of the application. Max character count is 140.")
 	cmd.Flags().StringSliceVarP(&flags.Callbacks, "callbacks", "c", nil, "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.")
-
-	cmd.Flags().StringVar(&flags.TokenEndpointAuthMethod, "auth-method", "", "Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).")
+	cmd.Flags().StringVar(&flags.AuthMethod, "auth-method", "", "Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).")
+	mustRequireFlags(cmd, appName, appType)
 
 	return cmd
 }
 
-func apiAppTypeFor(v string) string {
+func apiTypeFor(v string) string {
 	switch strings.ToLower(v) {
 	case "native":
 		return "native"
@@ -236,10 +219,9 @@ func apiCallbacksFor(s []string) []interface{} {
 		res[i] = v
 	}
 	return res
-
 }
 
-func apiTokenEndpointAuthMethodFor(v string) *string {
+func apiAuthMethodFor(v string) *string {
 	switch strings.ToLower(v) {
 	case "none":
 		return auth0.String("none")
