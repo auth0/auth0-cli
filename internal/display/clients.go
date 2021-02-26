@@ -62,7 +62,7 @@ func (r *Renderer) ApplicationList(clients []*management.Client) {
 		}
 		res = append(res, &clientView{
 			Name:         auth0.StringValue(c.Name),
-			Type:         typeFor(c.AppType),
+			Type:         appTypeFor(c.AppType),
 			ClientID:     auth0.StringValue(c.ClientID),
 			ClientSecret: auth0.StringValue(c.ClientSecret),
 			Callbacks:    callbacksFor(c.Callbacks),
@@ -80,7 +80,7 @@ func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bo
 	v := &clientView{
 		revealSecret: revealSecrets,
 		Name:         auth0.StringValue(client.Name),
-		Type:         typeFor(client.AppType),
+		Type:         appTypeFor(client.AppType),
 		ClientID:     auth0.StringValue(client.ClientID),
 		ClientSecret: auth0.StringValue(client.ClientSecret),
 		Callbacks:    callbacksFor(client.Callbacks),
@@ -97,7 +97,7 @@ func (r *Renderer) ApplicationUpdate(client *management.Client, revealSecrets bo
 	v := &clientView{
 		revealSecret: revealSecrets,
 		Name:         auth0.StringValue(client.Name),
-		Type:         typeFor(client.AppType),
+		Type:         appTypeFor(client.AppType),
 		ClientID:     auth0.StringValue(client.ClientID),
 		ClientSecret: auth0.StringValue(client.ClientSecret),
 		Callbacks:    callbacksFor(client.Callbacks),
@@ -109,7 +109,7 @@ func (r *Renderer) ApplicationUpdate(client *management.Client, revealSecrets bo
 // TODO(cyx): determine if there's a better way to filter this out.
 const deprecatedAppName = "All Applications"
 
-func typeFor(v *string) string {
+func appTypeFor(v *string) string {
 	switch {
 	case v == nil:
 		return "generic"
