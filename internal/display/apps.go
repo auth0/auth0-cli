@@ -31,7 +31,6 @@ func (v *applicationView) AsTableHeader() []string {
 		return []string{"Name", "Type", "ClientID", "Client Secret", "Callbacks"}
 	}
 	return []string{"Name", "Type", "Client ID", "Callbacks"}
-
 }
 
 func (v *applicationView) AsTableRow() []string {
