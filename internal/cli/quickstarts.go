@@ -164,8 +164,6 @@ func downloadQuickStart(ctx context.Context, cli *cli, client *management.Client
 	payload.Repo = q.Repo
 	payload.Path = q.Samples[0]
 
-	fmt.Printf("%+v\n", payload)
-
 	// These appear to be largely constant and refers to the github
 	// username they're under.
 	payload.Org = quickstartOrg
