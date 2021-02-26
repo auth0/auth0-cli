@@ -23,7 +23,7 @@ import (
 
 const (
 	userAgent               = "Auth0 CLI"
-	accessTokenExpThreshold = 5 // minutes
+	accessTokenExpThreshold = 5 * time.Minute
 )
 
 // config defines the exact set of tenants, access tokens, which only exists
@@ -129,9 +129,9 @@ func (c *cli) setup(ctx context.Context) error {
 	return err
 }
 
-// isExpired is true if now() + a threshold in minutes is after the given date
+// isExpired is true if now() + a threshold is after the given date
 func isExpired(t time.Time, threshold time.Duration) bool {
-	return time.Now().Add(time.Minute * threshold).After(t)
+	return time.Now().Add(threshold).After(t)
 }
 
 // getTenant fetches the default tenant configured (or the tenant specified via
