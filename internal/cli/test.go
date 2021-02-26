@@ -70,7 +70,7 @@ Launch a browser to try out your universal login box for the given client.
 				cliLoginTestingScopes,
 			)
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred while logging in to client %s: %e", clientID, err)
+				return fmt.Errorf("An unexpected error occurred while logging in to client %s: %w", clientID, err)
 			}
 
 			if err := ansi.Spinner("Fetching user metadata", func() error {
@@ -79,7 +79,7 @@ Launch a browser to try out your universal login box for the given client.
 				userInfo, err = authutil.FetchUserInfo(tenant.Domain, tokenResponse.AccessToken)
 				return err
 			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred: %e", err)
+				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
 
 			fmt.Fprint(cli.renderer.MessageWriter, "\n")
@@ -140,7 +140,7 @@ Fetch an access token for the given client and API.
 			if appType == "non_interactive" {
 				tokenResponse, err := runClientCredentialsFlow(cli, client, clientID, audience, tenant)
 				if err != nil {
-					return fmt.Errorf("An unexpected error occurred while logging in to machine-to-machine client %s: %e", clientID, err)
+					return fmt.Errorf("An unexpected error occurred while logging in to machine-to-machine client %s: %w", clientID, err)
 				}
 
 				fmt.Fprint(cli.renderer.MessageWriter, "\n")
@@ -162,7 +162,7 @@ Fetch an access token for the given client and API.
 				scopes,
 			)
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred when logging in to client %s: %e", clientID, err)
+				return fmt.Errorf("An unexpected error occurred when logging in to client %s: %w", clientID, err)
 			}
 
 			fmt.Fprint(cli.renderer.MessageWriter, "\n")
