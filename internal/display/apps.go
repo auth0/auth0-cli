@@ -49,7 +49,6 @@ func (v *applicationView) AsTableRow() []string {
 		ansi.Faint(v.ClientID),
 		strings.Join(v.Callbacks, ", "),
 	}
-
 }
 
 // applicationListView is a slimmed down view of a client for displaying
@@ -102,6 +101,21 @@ func (r *Renderer) ApplicationList(clients []*management.Client) {
 	}
 
 	r.Results(res)
+}
+
+func (r *Renderer) ApplicationShow(client *management.Client, revealSecrets bool) {
+	r.Heading(ansi.Bold(r.Tenant), "application\n")
+
+	v := &applicationView{
+		revealSecret: revealSecrets,
+		Name:         auth0.StringValue(client.Name),
+		Type:         appTypeFor(client.AppType),
+		ClientID:     auth0.StringValue(client.ClientID),
+		ClientSecret: auth0.StringValue(client.ClientSecret),
+		Callbacks:    callbacksFor(client.Callbacks),
+	}
+
+	r.Results([]View{v})
 }
 
 func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bool) {
