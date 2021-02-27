@@ -30,6 +30,14 @@ var (
 		}
 		return
 	}()
+	quickstartTypes = func() []string {
+		keys := make([]string, 0, len(quickstartsByType))
+		for k := range quickstartsByType {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		return keys
+	}()
 )
 
 type quickstart struct {
@@ -70,11 +78,11 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 				return err
 			}
 
-			var selectedType = flags.Type
-			var selectedStack = flags.Stack
+			selectedType := flags.Type
+			selectedStack := flags.Stack
 
 			if selectedType == "" {
-				input := prompt.SelectInput("type", "Quickstart Type:", "Type of quickstart to download", quickstartTypes(), true)
+				input := prompt.SelectInput("type", "Quickstart Type:", "Type of quickstart to download", quickstartTypes, true)
 				if err := prompt.AskOne(input, &selectedType); err != nil {
 					return err
 				}
@@ -254,15 +262,6 @@ func getQuickstart(typ, stack string) (quickstart, error) {
 		}
 	}
 	return quickstart{}, fmt.Errorf("quickstart not found for %s/%s", typ, stack)
-}
-
-func quickstartTypes() []string {
-	keys := make([]string, 0, len(quickstartsByType))
-	for k := range quickstartsByType {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }
 
 func quickstartStacksFromType(t string) ([]string, error) {
