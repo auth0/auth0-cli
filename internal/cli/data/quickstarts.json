@@ -1,0 +1,364 @@
+{
+   "backend": [
+     {
+       "name": "ASP.NET Core Web API",
+       "samples": [
+         "Quickstart/01-Authorization"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-aspnetcore-webapi-samples"
+     },
+     {
+       "name": "ASP.NET Core Web API v2.1",
+       "samples": [
+         "Quickstart/01-Authorization"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-aspnetcore-webapi-samples",
+       "branch": "netcore2.1"
+     },
+     {
+       "name": "Django API",
+       "samples": [
+         "01-Authorization"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-django-api"
+     },
+     {
+       "name": "Go",
+       "samples": [
+         "01-Authorization-RS256"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-golang-api-samples"
+     },
+     {
+       "name": "Spring Security 4 Java API",
+       "samples": [
+         "01-Authorization"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-spring-security-api-sample"
+     },
+     {
+       "name": "Spring Security 5 Java API",
+       "samples": [
+         "01-Authorization-MVC"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-spring-security5-api-sample"
+     },
+     {
+       "name": "Laravel API",
+       "samples": [
+         "01-Authorization-RS256"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-laravel-api-samples"
+     },
+     {
+       "name": "Node (Express) API",
+       "samples": [
+         "01-Authorization-RS256"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-express-api-samples"
+     },
+     {
+       "name": "PHP API",
+       "samples": [
+         "01-Authorization-RS256"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-php-api-samples"
+     },
+     {
+       "name": "Python API",
+       "samples": [
+         "00-Starter-Seed"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-python-api-samples"
+     },
+     {
+       "name": "Ruby On Rails API",
+       "samples": [
+         "01-Authentication-RS256"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-rubyonrails-api-samples"
+     },
+     {
+       "name": "ASP.NET Web API (OWIN)",
+       "samples": [
+         "Quickstart/01-Authorization"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-aspnet-owin-webapi-samples"
+     }
+   ],
+   "native": [
+     {
+       "name": "Android",
+       "samples": [
+         "00-Login-Kt"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-android-sample"
+     },
+     {
+       "name": "Android - Facebook Login",
+       "samples": [
+         "00-login-facebook"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-android-native-social-sample"
+     },
+     {
+       "name": "Cordova",
+       "samples": [
+         "01-Login"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-cordova-samples"
+     },
+     {
+       "name": "Ionic 4",
+       "samples": [
+         "01-Login"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-ionic4-samples"
+     },
+     {
+       "name": "iOS Swift",
+       "samples": [
+         "00-Login",
+         "03-User-Sessions",
+         "04-Calling-APIs",
+         "05-5uthorization",
+         "07-Linking-Accounts",
+         "08-Credentials-TouchID"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-ios-swift-sample"
+     },
+     {
+       "name": "iOS Swift - Facebook Login",
+       "samples": [
+         "00-login-facebook"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-ios-swift-native-social-samples"
+     },
+     {
+       "name": "iOS Swift - Sign In With Apple",
+       "samples": [
+         "00-login-siwa"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-ios-swift-native-social-samples"
+     },
+     {
+       "name": "React Native",
+       "samples": [
+         "00-Login"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-react-native-sample"
+     },
+     {
+       "name": "Windows Universal App C#",
+       "samples": [
+         "Quickstart/00-Starter-Seed"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-uwp-oidc-samples"
+     },
+     {
+       "name": "WPF / Winforms",
+       "samples": [
+         "Quickstart/00-Starter-Seed"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-WinFormsWPF-oidc-samples"
+     },
+     {
+       "name": "Xamarin",
+       "samples": [
+         "Quickstart/01-Login"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-xamarin-oidc-samples"
+     }
+   ],
+   "spa": [
+     {
+       "name": "Angular",
+       "samples": [
+         "Sample-01"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-angular-samples"
+     },
+     {
+       "name": "React",
+       "samples": [
+         "Sample-01"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-react-samples"
+     },
+     {
+       "name": "JavaScript",
+       "samples": [
+         "01-Login",
+         "02-Calling-an-API"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-javascript-samples"
+     },
+     {
+       "name": "Vue",
+       "samples": [
+         "01-Login",
+         "02-Calling-an-API"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-vue-samples"
+     }
+   ],
+   "webapp": [
+     {
+       "name": "ASP.NET Core",
+       "samples": [
+         "Quickstart/01-Login",
+         "Quickstart/01-User-Profile",
+         "Quickstart/01-Authorization"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-aspnetcore-mvc-samples"
+     },
+     {
+       "name": "ASP.NET Core v2.1",
+       "samples": [
+         "Quickstart/01-Login",
+         "Quickstart/01-User-Profile",
+         "Quickstart/01-Authorization"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-aspnetcore-mvc-samples",
+       "branch": "netcore2.1"
+     },
+     {
+       "name": "ASP.NET (OWIN)",
+       "samples": [
+         "Quickstart/01-Login",
+         "Quickstart/01-User-Profile",
+         "Quickstart/01-Authorization"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-aspnet-owin-mvc-samples"
+     },
+     {
+       "name": "Django",
+       "samples": [
+         "01-Login"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-django-web-app"
+     },
+     {
+       "name": "Express",
+       "samples": [
+         "01-Login"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-express-webapp-sample"
+     },
+     {
+       "name": "Go",
+       "samples": [
+         "01-Login"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-golang-web-app"
+     },
+     {
+       "name": "Java",
+       "samples": [
+         "01-Login"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-servlet-sample"
+     },
+     {
+       "name": "Java EE",
+       "samples": [
+         "01-Login"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-java-ee-sample"
+     },
+     {
+       "name": "Java Spring Boot",
+       "samples": [
+         "01-Login"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-spring-boot-login-samples"
+     },
+     {
+       "name": "PHP (Laravel)",
+       "samples": [
+         "01-Login"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-laravel-php-web-app"
+     },
+     {
+       "name": "Next.js",
+       "samples": [
+         "Sample-01"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-nextjs-samples",
+       "branch": "main"
+     },
+     {
+       "name": "Node.js",
+       "samples": [
+         "01-Login"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-nodejs-webapp-sample"
+     },
+     {
+       "name": "PHP",
+       "samples": [
+         "00-Starter-Seed"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-php-web-app"
+     },
+     {
+       "name": "Python",
+       "samples": [
+         "01-Login"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-python-web-app"
+     },
+     {
+       "name": "Ruby On Rails",
+       "samples": [
+         "01-Login",
+         "02-Session-Handling",
+         "03-User-Profile"
+       ],
+       "org": "auth0-samples",
+       "repo": "auth0-rubyonrails-sample"
+     }
+   ]
+ }
