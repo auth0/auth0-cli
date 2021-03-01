@@ -174,8 +174,8 @@ func createAppCmd(cli *cli) *cobra.Command {
 		AllowedLogoutURLs []string
 		AuthMethod        string
 		Grants            []string
-		OIDCConformant    bool
 	}
+	var oidcConformant = true
 
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -233,7 +233,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 				AllowedLogoutURLs:       apiURLsFor(flags.AllowedLogoutURLs),
 				TokenEndpointAuthMethod: apiAuthMethodFor(flags.AuthMethod),
 				GrantTypes:              apiGrantsFor(flags.Grants),
-				OIDCConformant:          &flags.OIDCConformant,
+				OIDCConformant:          &oidcConformant,
 			}
 
 			err := ansi.Spinner("Creating application", func() error {
@@ -244,7 +244,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 				return err
 			}
 
-			// note: c is populated with the rest of the client fields by the API during creation.
+			// note: a is populated with the rest of the client fields by the API during creation.
 			revealClientSecret := auth0.StringValue(a.AppType) != "native" && auth0.StringValue(a.AppType) != "spa"
 			cli.renderer.ApplicationCreate(a, revealClientSecret)
 
@@ -265,7 +265,6 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 	cmd.Flags().StringSliceVarP(&flags.AllowedLogoutURLs, "logout-urls", "l", nil, "Comma-separated list of URLs that are valid to redirect to after logout from Auth0. Wildcards are allowed for subdomains.")
 	cmd.Flags().StringVarP(&flags.AuthMethod, "auth-method", "a", "", "Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).")
 	cmd.Flags().StringSliceVarP(&flags.Grants, "grants", "g", nil, "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.")
-	cmd.Flags().BoolVarP(&flags.OIDCConformant, "oidc", "O", true, "Whether this client conforms to strict OIDC specifications (true) or uses legacy features (false).")
 	mustRequireFlags(cmd, appName, appType)
 
 	return cmd
@@ -283,7 +282,6 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		AllowedLogoutURLs []string
 		AuthMethod        string
 		Grants            []string
-		OIDCConformant    bool
 	}
 
 	cmd := &cobra.Command{
@@ -354,7 +352,6 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				AllowedLogoutURLs:       apiURLsFor(inputs.AllowedLogoutURLs),
 				TokenEndpointAuthMethod: apiAuthMethodFor(inputs.AuthMethod),
 				GrantTypes:              apiGrantsFor(inputs.Grants),
-				OIDCConformant:          &inputs.OIDCConformant,
 			}
 
 			err := ansi.Spinner("Updating application", func() error {
@@ -365,7 +362,7 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				return err
 			}
 
-			// note: c is populated with the rest of the client fields by the API during creation.
+			// note: a is populated with the rest of the client fields by the API during creation.
 			revealClientSecret := auth0.StringValue(a.AppType) != "native" && auth0.StringValue(a.AppType) != "spa"
 			cli.renderer.ApplicationUpdate(a, revealClientSecret)
 
@@ -386,7 +383,6 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 	cmd.Flags().StringSliceVarP(&inputs.AllowedLogoutURLs, "logout-urls", "l", nil, "Comma-separated list of URLs that are valid to redirect to after logout from Auth0. Wildcards are allowed for subdomains.")
 	cmd.Flags().StringVarP(&inputs.AuthMethod, "auth-method", "a", "", "Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).")
 	cmd.Flags().StringSliceVarP(&inputs.Grants, "grants", "g", nil, "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.")
-	cmd.Flags().BoolVarP(&inputs.OIDCConformant, "oidc", "O", true, "Whether this client conforms to strict OIDC specifications (true) or uses legacy features (false).")
 
 	return cmd
 }
