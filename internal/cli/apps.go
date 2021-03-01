@@ -227,13 +227,18 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 				Name:                    &flags.Name,
 				Description:             &flags.Description,
 				AppType:                 auth0.String(apiTypeFor(flags.Type)),
-				Callbacks:               apiURLsFor(flags.Callbacks),
-				AllowedOrigins:          apiURLsFor(flags.AllowedOrigins),
-				WebOrigins:              apiURLsFor(flags.AllowedWebOrigins),
-				AllowedLogoutURLs:       apiURLsFor(flags.AllowedLogoutURLs),
+				Callbacks:               stringToInterfaceSlice(flags.Callbacks),
+				AllowedOrigins:          stringToInterfaceSlice(flags.AllowedOrigins),
+				WebOrigins:              stringToInterfaceSlice(flags.AllowedWebOrigins),
+				AllowedLogoutURLs:       stringToInterfaceSlice(flags.AllowedLogoutURLs),
 				TokenEndpointAuthMethod: apiAuthMethodFor(flags.AuthMethod),
-				GrantTypes:              apiGrantsFor(flags.Grants),
 				OIDCConformant:          &oidcConformant,
+			}
+
+			if (len(flags.Grants) == 0) {
+				a.GrantTypes = apiDefaultGrantsFor(flags.Type)
+			} else {
+				a.GrantTypes = apiGrantsFor(flags.Grants)
 			}
 
 			err := ansi.Spinner("Creating application", func() error {
@@ -346,10 +351,10 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				Name:                    &inputs.Name,
 				Description:             &inputs.Description,
 				AppType:                 auth0.String(apiTypeFor(inputs.Type)),
-				Callbacks:               apiURLsFor(inputs.Callbacks),
-				AllowedOrigins:          apiURLsFor(inputs.AllowedOrigins),
-				WebOrigins:              apiURLsFor(inputs.AllowedWebOrigins),
-				AllowedLogoutURLs:       apiURLsFor(inputs.AllowedLogoutURLs),
+				Callbacks:               stringToInterfaceSlice(inputs.Callbacks),
+				AllowedOrigins:          stringToInterfaceSlice(inputs.AllowedOrigins),
+				WebOrigins:              stringToInterfaceSlice(inputs.AllowedWebOrigins),
+				AllowedLogoutURLs:       stringToInterfaceSlice(inputs.AllowedLogoutURLs),
 				TokenEndpointAuthMethod: apiAuthMethodFor(inputs.AuthMethod),
 				GrantTypes:              apiGrantsFor(inputs.Grants),
 			}
@@ -403,14 +408,6 @@ func apiTypeFor(v string) string {
 	}
 }
 
-func apiURLsFor(s []string) []interface{} {
-	res := make([]interface{}, len(s))
-	for i, v := range s {
-		res[i] = v
-	}
-	return res
-}
-
 func apiAuthMethodFor(v string) *string {
 	switch strings.ToLower(v) {
 	case "none":
@@ -456,10 +453,33 @@ func apiGrantsFor(s []string) []interface{} {
 	return res
 }
 
+func apiDefaultGrantsFor(t string) []interface{} {
+	switch strings.ToLower(t) {
+		case "native":
+			return stringToInterfaceSlice([]string{"implicit", "authorization-code", "refresh-token"})
+		case "spa", "single page web application":
+			return stringToInterfaceSlice([]string{"implicit", "authorization-code", "refresh-token"})
+		case "regular", "regular web application":
+			return stringToInterfaceSlice([]string{"implicit", "authorization-code", "refresh-token", "client-credentials"})
+		case "m2m", "machine to machine":
+			return stringToInterfaceSlice([]string{"client-credentials"})
+		default:
+			return nil
+	}
+}
+
 func urlsFor(s []interface{}) []string {
 	res := make([]string, len(s))
 	for i, v := range s {
 		res[i] = fmt.Sprintf("%s", v)
 	}
 	return res
+}
+
+func stringToInterfaceSlice(s []string) []interface{} {
+	var result []interface{} = make([]interface{}, len(s))
+	for i, d := range s {
+		result[i] = d
+	}
+	return result
 }

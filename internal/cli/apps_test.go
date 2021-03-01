@@ -25,7 +25,7 @@ func TestClientsListCmd(t *testing.T) {
 				{
 					Name:      auth0.String("some-name"),
 					ClientID:  auth0.String("some-id"),
-					Callbacks: apiURLsFor([]string{"http://localhost"}),
+					Callbacks: stringToInterfaceSlice([]string{"http://localhost"}),
 				},
 			},
 		}, nil)
