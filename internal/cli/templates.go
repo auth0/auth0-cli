@@ -7,7 +7,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 //
@@ -157,7 +157,7 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 func getTerminalWidth() int {
 	var width int
 
-	width, _, err := terminal.GetSize(0)
+	width, _, err := term.GetSize(0)
 	if err != nil {
 		width = 80
 	}
