@@ -454,15 +454,15 @@ func apiGrantsFor(s []string) []interface{} {
 }
 
 func apiDefaultGrantsFor(t string) []interface{} {
-	switch strings.ToLower(t) {
+	switch apiTypeFor(strings.ToLower(t)) {
 		case "native":
-			return stringToInterfaceSlice([]string{"implicit", "authorization-code", "refresh-token"})
-		case "spa", "single page web application":
-			return stringToInterfaceSlice([]string{"implicit", "authorization-code", "refresh-token"})
-		case "regular", "regular web application":
-			return stringToInterfaceSlice([]string{"implicit", "authorization-code", "refresh-token", "client-credentials"})
-		case "m2m", "machine to machine":
-			return stringToInterfaceSlice([]string{"client-credentials"})
+			return stringToInterfaceSlice([]string{"implicit", "authorization_code", "refresh_token"})
+		case "spa":
+			return stringToInterfaceSlice([]string{"implicit", "authorization_code", "refresh_token"})
+		case "regular_web":
+			return stringToInterfaceSlice([]string{"implicit", "authorization_code", "refresh_token", "client_credentials"})
+		case "non_interactive":
+			return stringToInterfaceSlice([]string{"client_credentials"})
 		default:
 			return nil
 	}
