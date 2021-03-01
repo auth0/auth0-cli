@@ -42,16 +42,16 @@ func TestClientsListCmd(t *testing.T) {
 		api: &auth0.API{Client: clientAPI},
 	}
 
-	cmd := appsListCmd(cli)
+	cmd := listAppsCmd(cli)
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
 	}
 
 	expectTable(t, stdout.String(),
-		[]string{"NAME", "TYPE", "CLIENT ID", "CALLBACKS"},
+		[]string{"NAME", "TYPE", "CLIENT ID"},
 		[][]string{
-			{"some-name", "generic", "some-id", "http://localhost"},
+			{"some-name", "generic", "some-id"},
 		},
 	)
 }

@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,12 +12,41 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"sort"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
+
+var (
+	//go:embed data/quickstarts.json
+	qsBuf             []byte
+	quickstartsByType = func() (qs map[string][]quickstart) {
+		if err := json.Unmarshal(qsBuf, &qs); err != nil {
+			panic(err)
+		}
+		return
+	}()
+	quickstartTypes = func() []string {
+		keys := make([]string, 0, len(quickstartsByType))
+		for k := range quickstartsByType {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		return keys
+	}()
+)
+
+type quickstart struct {
+	Name    string   `json:"name"`
+	Samples []string `json:"samples"`
+	Org     string   `json:"org"`
+	Repo    string   `json:"repo"`
+	Branch  string   `json:"branch,omitempty"`
+}
 
 func quickstartsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
@@ -48,6 +78,26 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 				return err
 			}
 
+			selectedType := flags.Type
+			selectedStack := flags.Stack
+
+			if selectedType == "" {
+				input := prompt.SelectInput("type", "Quickstart Type:", "Type of quickstart to download", quickstartTypes, true)
+				if err := prompt.AskOne(input, &selectedType); err != nil {
+					return err
+				}
+			}
+			if selectedStack == "" {
+				stacks, err := quickstartStacksFromType(selectedType)
+				if err != nil {
+					return err
+				}
+				input := prompt.SelectInput("stack", "Quickstart Stack:", "Tech/Language to use for quickstart", stacks, true)
+				if err := prompt.AskOne(input, &selectedStack); err != nil {
+					return err
+				}
+			}
+
 			target, exists, err := quickstartPathFor(client)
 			if err != nil {
 				return err
@@ -60,8 +110,13 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 				return nil
 			}
 
+			q, err := getQuickstart(selectedType, selectedStack)
+			if err != nil {
+				return err
+			}
+
 			err = ansi.Spinner("Downloading quickstart", func() error {
-				return downloadQuickStart(context.TODO(), cli, client, flags.Stack, target)
+				return downloadQuickStart(context.TODO(), cli, client, target, q)
 			})
 
 			if err != nil {
@@ -77,7 +132,7 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 	cmd.Flags().StringVar(&flags.ClientID, "client-id", "", "ID of the client.")
 	cmd.Flags().StringVarP(&flags.Type, "type", "t", "", "Type of the quickstart to download.")
 	cmd.Flags().StringVarP(&flags.Stack, "stack", "s", "", "Tech stack of the quickstart to use.")
-	mustRequireFlags(cmd, "client-id", "type", "stack")
+	mustRequireFlags(cmd, "client-id")
 
 	return cmd
 }
@@ -89,7 +144,7 @@ const (
 	quickstartDefaultCallbackURL = `https://YOUR_APP/callback`
 )
 
-func downloadQuickStart(ctx context.Context, cli *cli, client *management.Client, target, stack string) error {
+func downloadQuickStart(ctx context.Context, cli *cli, client *management.Client, target string, q quickstart) error {
 	var payload struct {
 		Branch       string `json:"branch"`
 		Org          string `json:"org"`
@@ -110,12 +165,12 @@ func downloadQuickStart(ctx context.Context, cli *cli, client *management.Client
 	payload.Tenant = ten.Name
 	payload.Domain = ten.Domain
 
-	// FIXME(cyx): these are hard coded. We can followup with a lookup
-	// table -- which I don't know if there's a canonical place for that
-	// already.
-	payload.Branch = "master"
-	payload.Repo = "auth0-cordova-samples"
-	payload.Path = "01-Login"
+	// FIXME(copland): Default to first item from list of samples.
+	// Eventually we should add a forced survey for user to select one if
+	// there are multiple.
+	payload.Branch = q.Branch
+	payload.Repo = q.Repo
+	payload.Path = q.Samples[0]
 
 	// These appear to be largely constant and refers to the github
 	// username they're under.
@@ -194,4 +249,29 @@ func quickstartPathFor(client *management.Client) (p string, exists bool, err er
 	}
 
 	return target, exists, nil
+}
+
+func getQuickstart(typ, stack string) (quickstart, error) {
+	quickstarts, ok := quickstartsByType[typ]
+	if !ok {
+		return quickstart{}, fmt.Errorf("unknown quickstart type %s", typ)
+	}
+	for _, q := range quickstarts {
+		if q.Name == stack {
+			return q, nil
+		}
+	}
+	return quickstart{}, fmt.Errorf("quickstart not found for %s/%s", typ, stack)
+}
+
+func quickstartStacksFromType(t string) ([]string, error) {
+	_, ok := quickstartsByType[t]
+	if !ok {
+		return nil, fmt.Errorf("unknown quickstart type %s", t)
+	}
+	stacks := make([]string, 0, len(quickstartsByType[t]))
+	for _, s := range quickstartsByType[t] {
+		stacks = append(stacks, s.Name)
+	}
+	return stacks, nil
 }

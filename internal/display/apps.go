@@ -17,7 +17,7 @@ const (
 	quickstartsGeneric    = "https://auth0.com/docs/quickstarts"
 )
 
-type clientView struct {
+type applicationView struct {
 	Name         string
 	Type         string
 	ClientID     string
@@ -26,15 +26,14 @@ type clientView struct {
 	revealSecret bool
 }
 
-func (v *clientView) AsTableHeader() []string {
+func (v *applicationView) AsTableHeader() []string {
 	if v.revealSecret {
 		return []string{"Name", "Type", "ClientID", "Client Secret", "Callbacks"}
 	}
 	return []string{"Name", "Type", "Client ID", "Callbacks"}
-
 }
 
-func (v *clientView) AsTableRow() []string {
+func (v *applicationView) AsTableRow() []string {
 	if v.revealSecret {
 		return []string{
 			v.Name,
@@ -50,34 +49,79 @@ func (v *clientView) AsTableRow() []string {
 		ansi.Faint(v.ClientID),
 		strings.Join(v.Callbacks, ", "),
 	}
+}
+
+// applicationListView is a slimmed down view of a client for displaying
+// larger numbers of applications
+type applicationListView struct {
+	Name         string
+	Type         string
+	ClientID     string
+	ClientSecret string
+	revealSecret bool
+}
+
+func (v *applicationListView) AsTableHeader() []string {
+	if v.revealSecret {
+		return []string{"Name", "Type", "ClientID", "Client Secret"}
+	}
+	return []string{"Name", "Type", "Client ID"}
 
 }
 
-func (r *Renderer) ClientList(clients []*management.Client) {
-	r.Heading(ansi.Bold(r.Tenant), "clients\n")
+func (v *applicationListView) AsTableRow() []string {
+	if v.revealSecret {
+		return []string{
+			v.Name,
+			v.Type,
+			ansi.Faint(v.ClientID),
+			ansi.Italic(v.ClientSecret),
+		}
+	}
+	return []string{
+		v.Name,
+		v.Type,
+		ansi.Faint(v.ClientID),
+	}
+}
+
+func (r *Renderer) ApplicationList(clients []*management.Client) {
+	r.Heading(ansi.Bold(r.Tenant), "applications\n")
 	var res []View
 	for _, c := range clients {
 		if auth0.StringValue(c.Name) == deprecatedAppName {
 			continue
 		}
-		res = append(res, &clientView{
+		res = append(res, &applicationListView{
 			Name:         auth0.StringValue(c.Name),
 			Type:         appTypeFor(c.AppType),
 			ClientID:     auth0.StringValue(c.ClientID),
 			ClientSecret: auth0.StringValue(c.ClientSecret),
-			Callbacks:    callbacksFor(c.Callbacks),
 		})
 	}
 
 	r.Results(res)
 }
 
-func (r *Renderer) ClientCreate(client *management.Client, revealSecrets bool) {
-	r.Heading(ansi.Bold(r.Tenant), "client created\n")
+func (r *Renderer) ApplicationShow(client *management.Client, revealSecrets bool) {
+	r.Heading(ansi.Bold(r.Tenant), "application\n")
 
-	// note(jfatta): list and create uses the same view for now,
-	// eventually we might want to show different columns for each command:
-	v := &clientView{
+	v := &applicationView{
+		revealSecret: revealSecrets,
+		Name:         auth0.StringValue(client.Name),
+		Type:         appTypeFor(client.AppType),
+		ClientID:     auth0.StringValue(client.ClientID),
+		ClientSecret: auth0.StringValue(client.ClientSecret),
+		Callbacks:    callbacksFor(client.Callbacks),
+	}
+
+	r.Results([]View{v})
+}
+
+func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bool) {
+	r.Heading(ansi.Bold(r.Tenant), "application created\n")
+
+	v := &applicationView{
 		revealSecret: revealSecrets,
 		Name:         auth0.StringValue(client.Name),
 		Type:         appTypeFor(client.AppType),
@@ -89,6 +133,21 @@ func (r *Renderer) ClientCreate(client *management.Client, revealSecrets bool) {
 	r.Results([]View{v})
 
 	r.Infof("\nQuickstarts: %s", quickstartsURIFor(client.AppType))
+}
+
+func (r *Renderer) ApplicationUpdate(client *management.Client, revealSecrets bool) {
+	r.Heading(ansi.Bold(r.Tenant), "application updated\n")
+
+	v := &applicationView{
+		revealSecret: revealSecrets,
+		Name:         auth0.StringValue(client.Name),
+		Type:         appTypeFor(client.AppType),
+		ClientID:     auth0.StringValue(client.ClientID),
+		ClientSecret: auth0.StringValue(client.ClientSecret),
+		Callbacks:    callbacksFor(client.Callbacks),
+	}
+
+	r.Results([]View{v})
 }
 
 // TODO(cyx): determine if there's a better way to filter this out.
