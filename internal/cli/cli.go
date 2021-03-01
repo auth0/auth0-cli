@@ -16,6 +16,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/display"
+	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"gopkg.in/auth0.v5/management"
@@ -81,7 +82,23 @@ func (c *cli) isLoggedIn() bool {
 	// No need to check errors for initializing context.
 	_ = c.init()
 
-	return c.tenant != ""
+	if c.tenant == "" {
+		return false
+	}
+
+	// Parse the access token for the tenant.
+	t, err := jwt.ParseString(c.config.Tenants[c.tenant].AccessToken)
+	if err != nil {
+		return false
+	}
+
+	// Check if token is valid.
+	if err = jwt.Validate(t, jwt.WithIssuer("https://auth0.auth0.com/")); err != nil {
+		return false
+	}
+
+	return true
+
 }
 
 // setup will try to initialize the config context, as well as figure out if
