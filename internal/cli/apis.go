@@ -118,7 +118,7 @@ auth0 apis show <id>
 			})
 
 			if err != nil {
-				return fmt.Errorf("Unable to find an API with id %s: %w", inputs.ID, err)
+				return fmt.Errorf("Unable to get an API with id %s: %w", inputs.ID, err)
 			}
 
 			cli.renderer.ApiShow(api)
@@ -267,7 +267,7 @@ auth0 apis update <id> --name myapi
 			})
 
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred while updating the API with id %s: %w", inputs.ID, err)
+				return fmt.Errorf("An unexpected error occurred while trying to update an API with id %s: %w", inputs.ID, err)
 			}
 
 			cli.renderer.ApiUpdate(api)
@@ -371,7 +371,7 @@ auth0 apis scopes list <id>
 			})
 
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred while getting scopes for the API with id %s: %w", inputs.ID, err)
+				return fmt.Errorf("An unexpected error occurred while getting scopes for an API with id %s: %w", inputs.ID, err)
 			}
 
 			cli.renderer.ScopesList(api.GetName(), api.Scopes)
