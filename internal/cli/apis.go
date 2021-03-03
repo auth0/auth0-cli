@@ -2,6 +2,7 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -66,7 +67,7 @@ Lists your existing APIs. To create one try:
 			})
 
 			if err != nil {
-				return err
+				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
 
 			cli.renderer.ApiList(list.ResourceServers)
@@ -99,10 +100,10 @@ auth0 apis show <id>
 					input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
-						return err
+						return fmt.Errorf("An unexpected error occurred: %w", err)
 					}
 				} else {
-					return errors.New("missing API id")
+					return errors.New("Please include an API id")
 				}
 			} else {
 				inputs.ID = args[0]
@@ -117,7 +118,7 @@ auth0 apis show <id>
 			})
 
 			if err != nil {
-				return err
+				return fmt.Errorf("Unable to get an API with id %s: %w", inputs.ID, err)
 			}
 
 			cli.renderer.ApiShow(api)
@@ -153,7 +154,7 @@ auth0 apis create --name myapi --identifier http://my-api
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
@@ -164,7 +165,7 @@ auth0 apis create --name myapi --identifier http://my-api
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
@@ -172,7 +173,7 @@ auth0 apis create --name myapi --identifier http://my-api
 				input := prompt.TextInput(apiScopes, "Scopes:", "Space-separated list of scopes.", false)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
@@ -190,7 +191,7 @@ auth0 apis create --name myapi --identifier http://my-api
 			})
 
 			if err != nil {
-				return err
+				return fmt.Errorf("An unexpected error occurred while attempting to create an API with name %s and identifier %s : %w", flags.Name, flags.Identifier, err)
 			}
 
 			cli.renderer.ApiCreate(api)
@@ -230,10 +231,10 @@ auth0 apis update <id> --name myapi
 					input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
-						return err
+						return fmt.Errorf("An unexpected error occurred: %w", err)
 					}
 				} else {
-					return errors.New("missing API id")
+					return errors.New("Please include an API id")
 				}
 			} else {
 				inputs.ID = args[0]
@@ -243,7 +244,7 @@ auth0 apis update <id> --name myapi
 				input := prompt.TextInput(apiName, "Name:", "Name of the API.", true)
 
 				if err := prompt.AskOne(input, &inputs); err != nil {
-					return err
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
@@ -251,7 +252,7 @@ auth0 apis update <id> --name myapi
 				input := prompt.TextInput(apiScopes, "Scopes:", "Space-separated list of scopes.", false)
 
 				if err := prompt.AskOne(input, &inputs); err != nil {
-					return err
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
@@ -266,7 +267,7 @@ auth0 apis update <id> --name myapi
 			})
 
 			if err != nil {
-				return err
+				return fmt.Errorf("An unexpected error occurred while trying to update an API with id %s: %w", inputs.ID, err)
 			}
 
 			cli.renderer.ApiUpdate(api)
@@ -302,10 +303,10 @@ auth0 apis delete <id>
 					input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
-						return err
+						return fmt.Errorf("An unexpected error occurred: %w", err)
 					}
 				} else {
-					return errors.New("missing API id")
+					return errors.New("Please include an API id")
 				}
 			} else {
 				inputs.ID = args[0]
@@ -318,7 +319,11 @@ auth0 apis delete <id>
 			}
 
 			return ansi.Spinner("Deleting API", func() error {
-				return cli.api.ResourceServer.Delete(inputs.ID)
+				err := cli.api.ResourceServer.Delete(inputs.ID)
+				if err != nil {
+					return fmt.Errorf("An unexpected error occurred while attempting to delete an API with id %s: %w", inputs.ID, err)
+				}
+				return nil
 			})
 		},
 	}
@@ -348,10 +353,10 @@ auth0 apis scopes list <id>
 					input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
-						return err
+						return fmt.Errorf("An unexpected error occurred: %w", err)
 					}
 				} else {
-					return errors.New("missing API id")
+					return errors.New("Please include an API id")
 				}
 			} else {
 				inputs.ID = args[0]
@@ -366,7 +371,7 @@ auth0 apis scopes list <id>
 			})
 
 			if err != nil {
-				return err
+				return fmt.Errorf("An unexpected error occurred while getting scopes for an API with id %s: %w", inputs.ID, err)
 			}
 
 			cli.renderer.ScopesList(api.GetName(), api.Scopes)
