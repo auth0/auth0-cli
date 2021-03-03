@@ -54,7 +54,7 @@ Lists your existing applications. To create one try:
 			})
 
 			if err != nil {
-				return fmt.Errorf("unexpected error occurred: %w", err)
+				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
 
 			cli.renderer.ApplicationList(list.Clients)
@@ -87,7 +87,7 @@ auth0 apps show <id>
 					input := prompt.TextInput(appID, "Id:", "Id of the application.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
-						return fmt.Errorf("an unexpected error occurred: %w", err)
+						return fmt.Errorf("An unexpected error occurred: %w", err)
 					}
 				} else {
 					return errors.New("Please provide an application id")
@@ -139,7 +139,7 @@ auth0 apps delete <id>
 					input := prompt.TextInput(appID, "Id:", "Id of the application.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
-						return fmt.Errorf("an unexpected error occurred: %w", err)
+						return fmt.Errorf("An unexpected error occurred: %w", err)
 					}
 				} else {
 					return errors.New("Please provide an application id")
@@ -190,7 +190,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
-					return fmt.Errorf("an unexpected error occurred: %w", err)
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
@@ -206,7 +206,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
-					return fmt.Errorf("an unexpected error occurred: %w", err)
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
@@ -214,7 +214,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 				input := prompt.TextInput(appDescription, "Description:", "Description of the application.", false)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
-					return fmt.Errorf("an unexpected error occurred: %w", err)
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
@@ -231,7 +231,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 			})
 
 			if err != nil {
-				return fmt.Errorf("unable to create application %w", err)
+				return fmt.Errorf("Unable to create application %w", err)
 			}
 
 			// note: c is populated with the rest of the client fields by the API during creation.
@@ -283,7 +283,7 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 					input := prompt.TextInput(appID, "Id:", "Id of the application.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
-						return fmt.Errorf("an unexpected error occurred: %w", err)
+						return fmt.Errorf("An unexpected error occurred: %w", err)
 					}
 				} else {
 					return errors.New("Please provide an application id")
@@ -296,7 +296,7 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				input := prompt.TextInput(appName, "Name:", "Name of the application", true)
 
 				if err := prompt.AskOne(input, &inputs); err != nil {
-					return fmt.Errorf("an unexpected error occurred: %w", err)
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
@@ -337,7 +337,7 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 			})
 
 			if err != nil {
-				return fmt.Errorf("unable to update application %v %v", inputs.ID, err)
+				return fmt.Errorf("Unable to update application %v %v", inputs.ID, err)
 			}
 
 			// note: c is populated with the rest of the client fields by the API during creation.
