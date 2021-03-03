@@ -105,7 +105,7 @@ auth0 apps show <id>
 			})
 
 			if err != nil {
-				return fmt.Errorf("Unable to load application. The ID %w specified doesn't exist", inputs.ID)
+				return fmt.Errorf("Unable to load application. The ID %v specified doesn't exist", inputs.ID)
 			}
 
 			revealClientSecret := auth0.StringValue(a.AppType) != "native" && auth0.StringValue(a.AppType) != "spa"
