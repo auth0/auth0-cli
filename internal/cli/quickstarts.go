@@ -13,7 +13,6 @@ import (
 	"os"
 	"path"
 	"regexp"
-	"sort"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -30,14 +29,6 @@ var (
 			panic(err)
 		}
 		return
-	}()
-	quickstartTypes = func() []string {
-		keys := make([]string, 0, len(quickstartsByType))
-		for k := range quickstartsByType {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		return keys
 	}()
 )
 
