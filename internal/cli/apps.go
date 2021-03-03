@@ -105,7 +105,7 @@ auth0 apps show <id>
 			})
 
 			if err != nil {
-				return fmt.Errorf("Unable to load application. The ID %v specified doesn't exist", inputs.ID)
+				return fmt.Errorf("Unable to load application. The id %v specified doesn't exist", inputs.ID)
 			}
 
 			revealClientSecret := auth0.StringValue(a.AppType) != "native" && auth0.StringValue(a.AppType) != "spa"
@@ -231,7 +231,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 			})
 
 			if err != nil {
-				return fmt.Errorf("Unable to create application %w", err)
+				return fmt.Errorf("Unable to create application: %w", err)
 			}
 
 			// note: c is populated with the rest of the client fields by the API during creation.
@@ -337,7 +337,7 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 			})
 
 			if err != nil {
-				return fmt.Errorf("Unable to update application %v %v", inputs.ID, err)
+				return fmt.Errorf("Unable to update application %v: %v", inputs.ID, err)
 			}
 
 			// note: c is populated with the rest of the client fields by the API during creation.
