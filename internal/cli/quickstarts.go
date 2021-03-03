@@ -5,6 +5,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -70,29 +71,38 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "download",
-		Short: "Download a specific type and tech stack for quick starts",
+		Short: "Download a quickstart sample app for a specific tech stack",
 		Long:  `auth0 quickstarts download --type <type> --client-id <client-id> --stack <stack>`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client, err := cli.api.Client.Read(flags.ClientID)
+			if !shouldPrompt(cmd, "client-id") {
+				return errors.New("This command can only be run on interactive mode")
+			}
+
+			selectedClientID := flags.ClientID
+
+			if selectedClientID == "" {
+				input := prompt.TextInput("client-id", "Client Id:", "Client Id of an Auth0 application.", true)
+				if err := prompt.AskOne(input, &selectedClientID); err != nil {
+					return err
+				}
+			}
+
+			client, err := cli.api.Client.Read(selectedClientID)
 			if err != nil {
 				return err
 			}
 
-			selectedType := flags.Type
 			selectedStack := flags.Stack
 
-			if selectedType == "" {
-				input := prompt.SelectInput("type", "Quickstart Type:", "Type of quickstart to download", quickstartTypes, true)
-				if err := prompt.AskOne(input, &selectedType); err != nil {
-					return err
-				}
-			}
 			if selectedStack == "" {
-				stacks, err := quickstartStacksFromType(selectedType)
+				stacks, err := quickstartStacksFromType(client.GetAppType())
 				if err != nil {
 					return err
 				}
-				input := prompt.SelectInput("stack", "Quickstart Stack:", "Tech/Language to use for quickstart", stacks, true)
+				input := prompt.SelectInput("stack", "Stack:", "Tech/Language of the quickstart sample to download", stacks, true)
 				if err := prompt.AskOne(input, &selectedStack); err != nil {
 					return err
 				}
@@ -103,19 +113,18 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if exists {
-				// TODO(cyx): prompt for a warning to force overwrite.
-				// For now, we're just exiting to simplify this first stab.
-				cli.renderer.Warnf("WARNING: %s already exists. Run with --force to overwrite", target)
-				return nil
+			if exists && !cli.force {
+				if confirmed := prompt.Confirm(fmt.Sprintf("WARNING: %s already exists. Are you sure you want to proceed?", target)); !confirmed {
+					return nil
+				}
 			}
 
-			q, err := getQuickstart(selectedType, selectedStack)
+			q, err := getQuickstart(client.GetAppType(), selectedStack)
 			if err != nil {
 				return err
 			}
 
-			err = ansi.Spinner("Downloading quickstart", func() error {
+			err = ansi.Spinner("Downloading quickstart sample", func() error {
 				return downloadQuickStart(context.TODO(), cli, client, target, q)
 			})
 
@@ -123,15 +132,14 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 				return err
 			}
 
-			cli.renderer.Infof("Quickstart sucessfully downloaded at %s", target)
+			cli.renderer.Infof("Quickstart sample sucessfully downloaded at %s", target)
 			return nil
 		},
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.Flags().StringVar(&flags.ClientID, "client-id", "", "ID of the client.")
-	cmd.Flags().StringVarP(&flags.Type, "type", "t", "", "Type of the quickstart to download.")
-	cmd.Flags().StringVarP(&flags.Stack, "stack", "s", "", "Tech stack of the quickstart to use.")
+	cmd.Flags().StringVarP(&flags.ClientID, "client-id", "c", "", "Client Id of an Auth0 application.")
+	cmd.Flags().StringVarP(&flags.Stack, "stack", "s", "", "Tech/Language of the quickstart sample to download.")
 	mustRequireFlags(cmd, "client-id")
 
 	return cmd
@@ -218,6 +226,10 @@ func downloadQuickStart(ctx context.Context, cli *cli, client *management.Client
 		return err
 	}
 	defer os.Remove(tmpfile.Name())
+
+	if err := os.RemoveAll(target); err != nil {
+		return err
+	}
 
 	if err := archiver.Unarchive(tmpfile.Name(), target); err != nil {
 		return err
