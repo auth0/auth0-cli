@@ -18,8 +18,10 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
+	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.6.1
 	github.com/tidwall/pretty v1.0.2
+	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
 	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c // indirect
 	golang.org/x/term v0.0.0-20201117132131-f5c789dd3221
 	gopkg.in/auth0.v5 v5.8.0
