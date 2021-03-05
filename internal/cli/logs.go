@@ -57,6 +57,9 @@ Show the tenant logs.
 
 			if len(list) > 0 {
 				lastLogID = list[len(list)-1].GetLogID()
+			} else {
+				cli.renderer.Infof("No logs found for tenant %s; to generate logs, run commands like `auth0 test login` or `auth0 test token`", cli.tenant)
+				return nil
 			}
 
 			var logsCh chan []*management.Log
