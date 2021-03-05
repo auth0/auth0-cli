@@ -5,7 +5,6 @@ go 1.16
 require (
 	github.com/AlecAivazis/survey/v2 v2.2.8
 	github.com/andybalholm/brotli v1.0.1 // indirect
-	github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6 // indirect
 	github.com/benbjohnson/clock v1.1.0 // indirect
 	github.com/briandowns/spinner v1.12.0
 	github.com/fatih/color v1.10.0 // indirect
@@ -25,12 +24,9 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/objx v0.3.0 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/pretty v1.1.0
-	github.com/ugorji/go v1.1.4 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
-	github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77 // indirect
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
 	golang.org/x/sys v0.0.0-20210305023407-0d6cb8bd5a4b // indirect
 	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d
