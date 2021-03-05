@@ -127,7 +127,7 @@ auth0 actions test <id> --file payload.json`,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, actionID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(actionID, "Id:", "Action Id to test.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
@@ -201,7 +201,7 @@ auth0 actions deploy <id> --version version-id`,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, actionID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(actionID, "Id:", "Action Id to deploy.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
@@ -298,7 +298,7 @@ auth0 actions download <id> --version <version-id | draft>`,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, actionID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(actionID, "Id:", "Action Id to download.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
@@ -391,7 +391,7 @@ auth0 actions versions <id>`,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, actionID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(actionID, "Id:", "Action Id to show versions.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
@@ -567,9 +567,12 @@ func updateActionCmd(cli *cli) *cobra.Command {
 
 $ auth0 actions update <id> --file action.js --dependency lodash@4.17.19
 `,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, actionID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(actionID, "Id:", "Id of the action.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
@@ -651,9 +654,12 @@ func deleteActionCmd(cli *cli) *cobra.Command {
 		Long: `Delete an action:
 
 $ auth0 actions delete <id>`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, actionID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(actionID, "Id:", "Id of the action.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
@@ -704,7 +710,7 @@ auth0 actions flows show <trigger>`,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, actionTrigger) {
+				if canPrompt(cmd) {
 					input := prompt.SelectInput(
 						actionTrigger,
 						"Trigger:",
@@ -764,7 +770,7 @@ auth0 actions flows update <trigger> --file bindings.json`,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, actionTrigger) {
+				if canPrompt(cmd) {
 					input := prompt.SelectInput(
 						actionTrigger,
 						"Trigger:",
@@ -845,7 +851,7 @@ auth0 actions bind <id> --trigger post-login`,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, actionID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(actionID, "Action Id:", "Action Id to bind.", false)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {

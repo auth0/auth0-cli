@@ -307,6 +307,18 @@ func shouldPrompt(cmd *cobra.Command, flag string) bool {
 	return canPrompt(cmd) && !cmd.Flags().Changed(flag)
 }
 
+func shouldPromptWhenFlagless(cmd *cobra.Command, flag string) bool {
+	isSet := false
+
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		if (f.Changed) {
+			isSet = true
+		}
+	})
+
+	return canPrompt(cmd) && !isSet
+}
+
 func prepareInteractivity(cmd *cobra.Command) {
 	if canPrompt(cmd) {
 		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
