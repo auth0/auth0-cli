@@ -1,8 +1,8 @@
-# Auth0 CLI
+# Auth0 CLI (Experimental)
 
 `auth0` is the command line to supercharge your development workflow. 
 
-> Note: This CLI is currently in an experimental state and support is best effort. It has not had a complete security review, and we do not recommend using it to interact with production tenants.
+> Note: This CLI is currently in an experimental state and is not supported by Auth0. It has not had a complete security review, and we do not recommend using it to interact with production tenants.
 
 Build, test, and manage your integration with **[Auth0](http://auth0.com/)** directly from your **terminal**.
 
