@@ -34,6 +34,11 @@ func Execute() {
 				return nil
 			}
 
+			// Selecting tenants shouldn't really trigger a login.
+			if cmd.Use == "use" && cmd.Parent().Use == "tenants" {
+				return nil
+			}
+
 			// Initialize everything once. Later callers can then
 			// freely assume that config is fully primed and ready
 			// to go.
