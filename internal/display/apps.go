@@ -24,6 +24,8 @@ type applicationView struct {
 	ClientSecret string
 	Callbacks    []string
 	revealSecret bool
+
+	raw interface{}
 }
 
 func (v *applicationView) AsTableHeader() []string {
@@ -49,6 +51,32 @@ func (v *applicationView) AsTableRow() []string {
 		ansi.Faint(v.ClientID),
 		strings.Join(v.Callbacks, ", "),
 	}
+}
+
+func (v *applicationView) KeyValues() [][]string {
+	callbacks := strings.Join(v.Callbacks, ", ")
+
+	if v.revealSecret {
+		return [][]string{
+			[]string{"NAME", v.Name},
+			[]string{"TYPE", v.Type},
+			[]string{"CLIENT ID", ansi.Faint(v.ClientID)},
+			[]string{"CLIENT SECRET", ansi.Italic(v.ClientSecret)},
+			[]string{"CALLBACKS", callbacks},
+		}
+
+	}
+
+	return [][]string{
+		[]string{"NAME", v.Name},
+		[]string{"TYPE", v.Type},
+		[]string{"CLIENT ID", ansi.Faint(v.ClientID)},
+		[]string{"CALLBACKS", callbacks},
+	}
+}
+
+func (v *applicationView) Object() interface{} {
+	return v.raw
 }
 
 // applicationListView is a slimmed down view of a client for displaying
@@ -113,9 +141,10 @@ func (r *Renderer) ApplicationShow(client *management.Client, revealSecrets bool
 		ClientID:     auth0.StringValue(client.ClientID),
 		ClientSecret: auth0.StringValue(client.ClientSecret),
 		Callbacks:    callbacksFor(client.Callbacks),
+		raw:          client,
 	}
 
-	r.Results([]View{v})
+	r.Result(v)
 }
 
 func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bool) {
@@ -128,6 +157,7 @@ func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bo
 		ClientID:     auth0.StringValue(client.ClientID),
 		ClientSecret: auth0.StringValue(client.ClientSecret),
 		Callbacks:    callbacksFor(client.Callbacks),
+		raw:          client,
 	}
 
 	r.Results([]View{v})
@@ -145,6 +175,7 @@ func (r *Renderer) ApplicationUpdate(client *management.Client, revealSecrets bo
 		ClientID:     auth0.StringValue(client.ClientID),
 		ClientSecret: auth0.StringValue(client.ClientSecret),
 		Callbacks:    callbacksFor(client.Callbacks),
+		raw:          client,
 	}
 
 	r.Results([]View{v})
