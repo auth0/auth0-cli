@@ -257,7 +257,7 @@ func getQuickstart(t, stack string) (quickstart, error) {
 	qsType := quickstartsTypeFor(t)
 	quickstarts, ok := quickstartsByType[qsType]
 	if !ok {
-		return quickstart{}, fmt.Errorf("Unknown quickstart type %s", qsType)
+		return quickstart{}, fmt.Errorf("Unknown quickstart type: %s", qsType)
 	}
 	for _, q := range quickstarts {
 		if q.Name == stack {
@@ -271,7 +271,7 @@ func quickstartStacksFromType(t string) ([]string, error) {
 	qsType := quickstartsTypeFor(t)
 	_, ok := quickstartsByType[qsType]
 	if !ok {
-		return nil, fmt.Errorf("Unknown quickstart type %s", qsType)
+		return nil, fmt.Errorf("Unknown quickstart type: %s", qsType)
 	}
 	stacks := make([]string, 0, len(quickstartsByType[qsType]))
 	for _, s := range quickstartsByType[qsType] {
