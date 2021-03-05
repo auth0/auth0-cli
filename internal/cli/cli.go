@@ -310,7 +310,7 @@ func shouldPrompt(cmd *cobra.Command, flag string) bool {
 func shouldPromptWhenFlagless(cmd *cobra.Command, flag string) bool {
 	isSet := false
 
-	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
 		if (f.Changed) {
 			isSet = true
 		}
