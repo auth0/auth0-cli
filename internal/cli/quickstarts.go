@@ -179,7 +179,7 @@ func downloadQuickStart(ctx context.Context, cli *cli, client *management.Client
 
 	// Callback URL, if not set, will just take the default one.
 	payload.CallbackURL = quickstartDefaultCallbackURL
-	if list := callbacksFor(client.Callbacks); len(list) > 0 {
+	if list := urlsFor(client.Callbacks); len(list) > 0 {
 		payload.CallbackURL = list[0]
 	}
 
