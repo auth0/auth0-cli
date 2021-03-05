@@ -45,7 +45,7 @@ Show the tenant logs.
 			lastLogID := ""
 			list, err := getLatestLogs(cli, flags.Num)
 			if err != nil {
-				return err
+				return fmt.Errorf("An unexpected error occurred while getting logs: %v", err)
 			}
 
 			// TODO(cyx): This is a hack for now to make the
@@ -76,7 +76,7 @@ Show the tenant logs.
 							management.Parameter("sort", "date:-1"),
 						)
 						if err != nil {
-							cli.renderer.Errorf("Error: %v", err)
+							cli.renderer.Errorf("An unexpected error occurred while getting logs: %v", err)
 							return
 						}
 
