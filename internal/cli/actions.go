@@ -119,7 +119,7 @@ func testActionCmd(cli *cli) *cobra.Command {
 		Use:   "test",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Test an action draft against a payload",
-		Long:  `Test an action draft against a payload:
+		Long: `Test an action draft against a payload:
 
 auth0 actions test <id> --file payload.json`,
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -193,8 +193,8 @@ func deployActionCmd(cli *cli) *cobra.Command {
 		Use:   "deploy",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Deploy the action version",
-		Long:  `Deploy the action version:
-	
+		Long: `Deploy the action version:
+
 auth0 actions deploy <id> --version version-id`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
@@ -290,7 +290,7 @@ func downloadActionCmd(cli *cli) *cobra.Command {
 		Use:   "download",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Download an action",
-		Long:  `Download an action:
+		Long: `Download an action:
 	
 auth0 actions download <id> --version <version-id | draft>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -383,7 +383,7 @@ func listActionVersionsCmd(cli *cli) *cobra.Command {
 		Use:   "versions",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "List the action versions",
-		Long:  `List the action versions:
+		Long: `List the action versions:
 
 auth0 actions versions <id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -756,7 +756,7 @@ func updateFlowCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update actions by flow",
-		Long:  `Update actions by flow:
+		Long: `Update actions by flow:
 
 auth0 actions flows update <trigger> --file bindings.json`,
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -837,7 +837,7 @@ func bindActionCmd(cli *cli) *cobra.Command {
 		Use:   "bind",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Bind an action to a flow",
-		Long:  `Bind an action to a flow:
+		Long: `Bind an action to a flow:
 
 auth0 actions bind <id> --trigger post-login`,
 		PreRun: func(cmd *cobra.Command, args []string) {
