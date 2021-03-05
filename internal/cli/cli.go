@@ -123,6 +123,8 @@ func (c *cli) setup(ctx context.Context) error {
 
 	// check if the stored access token is expired:
 	if isExpired(t.ExpiresAt, accessTokenExpThreshold) {
+		// use the refresh token to get a new access token:
+		// TODO
 		// ask and guide the user through the login process:
 		err := RunLogin(ctx, c, true)
 		if err != nil {

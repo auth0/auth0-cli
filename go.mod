@@ -27,6 +27,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/pretty v1.1.0
 	github.com/ulikunitz/xz v0.5.10 // indirect
+	github.com/zalando/go-keyring v0.1.1
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
 	golang.org/x/sys v0.0.0-20210305023407-0d6cb8bd5a4b // indirect
 	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d

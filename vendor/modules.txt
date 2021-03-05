@@ -13,6 +13,8 @@ github.com/andybalholm/brotli
 # github.com/briandowns/spinner v1.12.0
 ## explicit
 github.com/briandowns/spinner
+# github.com/danieljoos/wincred v1.1.0
+github.com/danieljoos/wincred
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
 # github.com/decred/dcrd/dcrec/secp256k1/v3 v3.0.0
@@ -29,6 +31,8 @@ github.com/dsnet/compress/internal/prefix
 github.com/fatih/color
 # github.com/goccy/go-json v0.4.7
 github.com/goccy/go-json
+# github.com/godbus/dbus/v5 v5.0.3
+github.com/godbus/dbus/v5
 # github.com/golang/mock v1.5.0
 ## explicit
 github.com/golang/mock/gomock
@@ -145,6 +149,10 @@ github.com/ulikunitz/xz/internal/xlog
 github.com/ulikunitz/xz/lzma
 # github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 github.com/xi2/xz
+# github.com/zalando/go-keyring v0.1.1
+## explicit
+github.com/zalando/go-keyring
+github.com/zalando/go-keyring/secret_service
 # golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 ## explicit
 golang.org/x/crypto/curve25519
