@@ -253,27 +253,44 @@ func quickstartPathFor(client *management.Client) (p string, exists bool, err er
 	return target, exists, nil
 }
 
-func getQuickstart(typ, stack string) (quickstart, error) {
-	quickstarts, ok := quickstartsByType[typ]
+func getQuickstart(t, stack string) (quickstart, error) {
+	qsType := quickstartsTypeFor(t)
+	quickstarts, ok := quickstartsByType[qsType]
 	if !ok {
-		return quickstart{}, fmt.Errorf("Unknown quickstart type %s", typ)
+		return quickstart{}, fmt.Errorf("Unknown quickstart type %s", qsType)
 	}
 	for _, q := range quickstarts {
 		if q.Name == stack {
 			return q, nil
 		}
 	}
-	return quickstart{}, fmt.Errorf("Quickstart not found for %s/%s", typ, stack)
+	return quickstart{}, fmt.Errorf("Quickstart not found for %s/%s", qsType, stack)
 }
 
 func quickstartStacksFromType(t string) ([]string, error) {
-	_, ok := quickstartsByType[t]
+	qsType := quickstartsTypeFor(t)
+	_, ok := quickstartsByType[qsType]
 	if !ok {
-		return nil, fmt.Errorf("Unknown quickstart type %s", t)
+		return nil, fmt.Errorf("Unknown quickstart type %s", qsType)
 	}
-	stacks := make([]string, 0, len(quickstartsByType[t]))
-	for _, s := range quickstartsByType[t] {
+	stacks := make([]string, 0, len(quickstartsByType[qsType]))
+	for _, s := range quickstartsByType[qsType] {
 		stacks = append(stacks, s.Name)
 	}
 	return stacks, nil
+}
+
+func quickstartsTypeFor(v string) string {
+	switch {
+	case v == "native":
+		return "native"
+	case v == "spa":
+		return "spa"
+	case v == "regular_web":
+		return "webapp"
+	case v == "non_interactive":
+		return "backend"
+	default:
+		return "generic"
+	}
 }
