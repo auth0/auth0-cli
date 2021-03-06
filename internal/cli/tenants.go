@@ -57,6 +57,7 @@ func useTenantCmd(cli *cli) *cobra.Command {
 			if err := cli.persistConfig(); err != nil {
 				return fmt.Errorf("An error occurred while setting the default tenant: %w", err)
 			}
+			cli.renderer.Infof("Default tenant switched to: %s", selectedTenant)
 			return nil
 		},
 	}
