@@ -138,17 +138,17 @@ func (c *cli) setup(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-		}
+		} else {
+			// persist the updated tenant with renewed access token
+			t.AccessToken = res.AccessToken
+			t.ExpiresAt = time.Now().Add(
+				time.Duration(res.ExpiresIn) * time.Second,
+			)
 
-		// persist the updated tenant with renewed access token
-		t.AccessToken = res.AccessToken
-		t.ExpiresAt = time.Now().Add(
-			time.Duration(res.ExpiresIn) * time.Second,
-		)
-
-		err = c.addTenant(t)
-		if err != nil {
-			return err
+			err = c.addTenant(t)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
