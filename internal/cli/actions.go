@@ -127,14 +127,14 @@ auth0 actions test <id> --file payload.json`,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, actionID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(actionID, "Id:", "Action Id to test.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
 						return err
 					}
 				} else {
-					return errors.New("missing action id")
+					return errors.New("Please provide an action Id")
 				}
 			} else {
 				inputs.ID = args[0]
@@ -201,14 +201,14 @@ auth0 actions deploy <id> --version version-id`,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, actionID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(actionID, "Id:", "Action Id to deploy.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
 						return err
 					}
 				} else {
-					return errors.New("missing action id")
+					return errors.New("Please provide an action Id")
 				}
 			} else {
 				inputs.ID = args[0]
@@ -298,14 +298,14 @@ auth0 actions download <id> --version <version-id | draft>`,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, actionID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(actionID, "Id:", "Action Id to download.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
 						return err
 					}
 				} else {
-					return errors.New("missing action id")
+					return errors.New("Please provide an action Id")
 				}
 			} else {
 				inputs.ID = args[0]
@@ -391,14 +391,14 @@ auth0 actions versions <id>`,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, actionID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(actionID, "Id:", "Action Id to show versions.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
 						return err
 					}
 				} else {
-					return errors.New("missing action id")
+					return errors.New("Please provide an action Id")
 				}
 			} else {
 				inputs.ID = args[0]
@@ -567,22 +567,25 @@ func updateActionCmd(cli *cli) *cobra.Command {
 
 $ auth0 actions update <id> --file action.js --dependency lodash@4.17.19
 `,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, actionID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(actionID, "Id:", "Id of the action.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
 						return err
 					}
 				} else {
-					return errors.New("missing action id")
+					return errors.New("Please provide an action Id")
 				}
 			} else {
 				inputs.ID = args[0]
 			}
 
-			if shouldPrompt(cmd, actionFile) && shouldPrompt(cmd, actionScript) {
+			if shouldPromptWhenFlagless(cmd, actionFile) && shouldPrompt(cmd, actionScript) {
 				input := prompt.TextInput(actionFile, "Action File:", "File containing the action source code.", false)
 
 				if err := prompt.AskOne(input, &inputs); err != nil {
@@ -633,7 +636,7 @@ $ auth0 actions update <id> --file action.js --dependency lodash@4.17.19
 	cmd.Flags().BoolVarP(&inputs.CreateVersion, actionVersion, "v", false, "Create an explicit action version from the source code instead of a draft.")
 
 	if err := cmd.MarkFlagFilename(actionFile); err != nil {
-		panic(err)
+		fmt.Println(fmt.Errorf("An unexpected error occurred: %w", err))
 	}
 
 	return cmd
@@ -651,16 +654,19 @@ func deleteActionCmd(cli *cli) *cobra.Command {
 		Long: `Delete an action:
 
 $ auth0 actions delete <id>`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, actionID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(actionID, "Id:", "Id of the action.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
 						return err
 					}
 				} else {
-					return errors.New("missing action id")
+					return errors.New("Please provide an action Id")
 				}
 			} else {
 				inputs.ID = args[0]
@@ -704,7 +710,7 @@ auth0 actions flows show <trigger>`,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, actionTrigger) {
+				if canPrompt(cmd) {
 					input := prompt.SelectInput(
 						actionTrigger,
 						"Trigger:",
@@ -716,7 +722,7 @@ auth0 actions flows show <trigger>`,
 						return err
 					}
 				} else {
-					return errors.New("missing action trigger")
+					return errors.New("Please provide an action trigger")
 				}
 			} else {
 				inputs.Trigger = args[0]
@@ -764,7 +770,7 @@ auth0 actions flows update <trigger> --file bindings.json`,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, actionTrigger) {
+				if canPrompt(cmd) {
 					input := prompt.SelectInput(
 						actionTrigger,
 						"Trigger:",
@@ -776,13 +782,13 @@ auth0 actions flows update <trigger> --file bindings.json`,
 						return err
 					}
 				} else {
-					return errors.New("missing action trigger")
+					return errors.New("Please provide an action trigger")
 				}
 			} else {
 				inputs.Trigger = args[0]
 			}
 
-			if shouldPrompt(cmd, actionFile) {
+			if shouldPromptWhenFlagless(cmd, actionFile) {
 				input := prompt.TextInput(actionFile, "File:", "File containing the bindings.", true)
 
 				if err := prompt.AskOne(input, &inputs); err != nil {
@@ -845,14 +851,14 @@ auth0 actions bind <id> --trigger post-login`,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, actionID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(actionID, "Action Id:", "Action Id to bind.", false)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
 						return err
 					}
 				} else {
-					return errors.New("missing action id")
+					return errors.New("Please provide an action Id")
 				}
 			} else {
 				inputs.ID = args[0]

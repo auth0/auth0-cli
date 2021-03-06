@@ -83,14 +83,14 @@ auth0 apps show <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, appID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(appID, "Id:", "Id of the application.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
 						return fmt.Errorf("An unexpected error occurred: %w", err)
 					}
 				} else {
-					return errors.New("Please provide an application id")
+					return errors.New("Please provide an application Id")
 				}
 			} else {
 				inputs.ID = args[0]
@@ -105,7 +105,7 @@ auth0 apps show <id>
 			})
 
 			if err != nil {
-				return fmt.Errorf("Unable to load application. The id %v specified doesn't exist", inputs.ID)
+				return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
 			}
 
 			revealClientSecret := auth0.StringValue(a.AppType) != "native" && auth0.StringValue(a.AppType) != "spa"
@@ -135,14 +135,14 @@ auth0 apps delete <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, appID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(appID, "Id:", "Id of the application.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
 						return fmt.Errorf("An unexpected error occurred: %w", err)
 					}
 				} else {
-					return errors.New("Please provide an application id")
+					return errors.New("Please provide an application Id")
 				}
 			} else {
 				inputs.ID = args[0]
@@ -235,7 +235,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 				OIDCConformant:          &oidcConformant,
 			}
 
-			if (len(flags.Grants) == 0) {
+			if len(flags.Grants) == 0 {
 				a.GrantTypes = apiDefaultGrantsFor(flags.Type)
 			} else {
 				a.GrantTypes = apiGrantsFor(flags.Grants)
@@ -282,6 +282,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		Type              string
 		Description       string
 		Callbacks         []string
+		CallbacksString   string
 		AllowedOrigins    []string
 		AllowedWebOrigins []string
 		AllowedLogoutURLs []string
@@ -302,20 +303,20 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, appID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(appID, "Id:", "Id of the application.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
 						return fmt.Errorf("An unexpected error occurred: %w", err)
 					}
 				} else {
-					return errors.New("Please provide an application id")
+					return errors.New("Please provide an application Id")
 				}
 			} else {
 				inputs.ID = args[0]
 			}
 
-			if shouldPrompt(cmd, appName) {
+			if shouldPromptWhenFlagless(cmd, appName) {
 				input := prompt.TextInput(appName, "Name:", "Name of the application", true)
 
 				if err := prompt.AskOne(input, &inputs); err != nil {
@@ -323,7 +324,7 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				}
 			}
 
-			if shouldPrompt(cmd, appType) {
+			if shouldPromptWhenFlagless(cmd, appType) {
 				input := prompt.SelectInput(
 					appType,
 					"Type:",
@@ -339,7 +340,7 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				}
 			}
 
-			if shouldPrompt(cmd, appDescription) {
+			if shouldPromptWhenFlagless(cmd, appDescription) {
 				input := prompt.TextInput(appDescription, "Description:", "Description of the application.", false)
 
 				if err := prompt.AskOne(input, &inputs); err != nil {
@@ -347,19 +348,81 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				}
 			}
 
-			a := &management.Client{
-				Name:                    &inputs.Name,
-				Description:             &inputs.Description,
-				AppType:                 auth0.String(apiTypeFor(inputs.Type)),
-				Callbacks:               stringToInterfaceSlice(inputs.Callbacks),
-				AllowedOrigins:          stringToInterfaceSlice(inputs.AllowedOrigins),
-				WebOrigins:              stringToInterfaceSlice(inputs.AllowedWebOrigins),
-				AllowedLogoutURLs:       stringToInterfaceSlice(inputs.AllowedLogoutURLs),
-				TokenEndpointAuthMethod: apiAuthMethodFor(inputs.AuthMethod),
-				GrantTypes:              apiGrantsFor(inputs.Grants),
+			if shouldPromptWhenFlagless(cmd, "CallbacksString") {
+				input := prompt.TextInput("CallbacksString", "Callback URLs:", "Callback URLs of the application, comma-separated.", false)
+
+				if err := prompt.AskOne(input, &inputs); err != nil {
+					return fmt.Errorf("An unexpected error occurred: %w", err)
+				}
 			}
 
+			a := &management.Client{}
+
 			err := ansi.Spinner("Updating application", func() error {
+				current, err := cli.api.Client.Read(inputs.ID)
+
+				if err != nil {
+					return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
+				}
+
+				if len(inputs.Name) == 0 {
+					a.Name = current.Name
+				} else {
+					a.Name = &inputs.Name
+				}
+
+				if len(inputs.Description) == 0 {
+					a.Description = current.Description
+				} else {
+					a.Description = &inputs.Description
+				}
+
+				if len(inputs.Type) == 0 {
+					a.AppType = current.AppType
+				} else {
+					a.AppType = auth0.String(apiTypeFor(inputs.Type))
+				}
+
+				if len(inputs.Callbacks) == 0 {
+					if len(inputs.CallbacksString) == 0 {
+						a.Callbacks = current.Callbacks
+					} else {
+						a.Callbacks = stringToInterfaceSlice(commaSeparatedStringToSlice(inputs.CallbacksString))
+					}
+				} else {
+					a.Callbacks = stringToInterfaceSlice(inputs.Callbacks)
+				}
+
+				if len(inputs.AllowedOrigins) == 0 {
+					a.AllowedOrigins = current.AllowedOrigins
+				} else {
+					a.AllowedOrigins = stringToInterfaceSlice(inputs.AllowedOrigins)
+				}
+
+				if len(inputs.AllowedWebOrigins) == 0 {
+					a.WebOrigins = current.WebOrigins
+				} else {
+					a.WebOrigins = stringToInterfaceSlice(inputs.AllowedWebOrigins)
+				}
+
+				if len(inputs.AllowedLogoutURLs) == 0 {
+					a.AllowedLogoutURLs = current.AllowedLogoutURLs
+				} else {
+					a.AllowedLogoutURLs = stringToInterfaceSlice(inputs.AllowedLogoutURLs)
+				}
+
+				if len(inputs.AuthMethod) == 0 {
+					a.TokenEndpointAuthMethod = current.TokenEndpointAuthMethod
+				} else {
+					a.TokenEndpointAuthMethod = apiAuthMethodFor(inputs.AuthMethod)
+				}
+
+				if len(inputs.Grants) == 0 {
+					a.GrantTypes = current.GrantTypes
+				} else {
+					a.GrantTypes = apiGrantsFor(inputs.Grants)
+				}
+
 				return cli.api.Client.Update(inputs.ID, a)
 			})
 
@@ -367,7 +430,6 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				return fmt.Errorf("Unable to update application %v: %v", inputs.ID, err)
 			}
 
-			// note: a is populated with the rest of the client fields by the API during creation.
 			revealClientSecret := auth0.StringValue(a.AppType) != "native" && auth0.StringValue(a.AppType) != "spa"
 			cli.renderer.ApplicationUpdate(a, revealClientSecret)
 
@@ -455,16 +517,16 @@ func apiGrantsFor(s []string) []interface{} {
 
 func apiDefaultGrantsFor(t string) []interface{} {
 	switch apiTypeFor(strings.ToLower(t)) {
-		case "native":
-			return stringToInterfaceSlice([]string{"implicit", "authorization_code", "refresh_token"})
-		case "spa":
-			return stringToInterfaceSlice([]string{"implicit", "authorization_code", "refresh_token"})
-		case "regular_web":
-			return stringToInterfaceSlice([]string{"implicit", "authorization_code", "refresh_token", "client_credentials"})
-		case "non_interactive":
-			return stringToInterfaceSlice([]string{"client_credentials"})
-		default:
-			return nil
+	case "native":
+		return stringToInterfaceSlice([]string{"implicit", "authorization_code", "refresh_token"})
+	case "spa":
+		return stringToInterfaceSlice([]string{"implicit", "authorization_code", "refresh_token"})
+	case "regular_web":
+		return stringToInterfaceSlice([]string{"implicit", "authorization_code", "refresh_token", "client_credentials"})
+	case "non_interactive":
+		return stringToInterfaceSlice([]string{"client_credentials"})
+	default:
+		return nil
 	}
 }
 
@@ -474,6 +536,10 @@ func urlsFor(s []interface{}) []string {
 		res[i] = fmt.Sprintf("%s", v)
 	}
 	return res
+}
+
+func commaSeparatedStringToSlice(s string) []string {
+	return strings.Split(strings.Join(strings.Fields(s), ""), ",")
 }
 
 func stringToInterfaceSlice(s []string) []interface{} {
