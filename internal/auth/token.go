@@ -10,10 +10,6 @@ import (
 	"net/url"
 )
 
-const (
-	tokenEndpoint = "oauth/token"
-)
-
 type TokenResponse struct {
 	AccessToken string `json:"access_token"`
 	IDToken     string `json:"id_token"`
@@ -26,6 +22,8 @@ type TokenRetriever struct {
 	Client  *http.Client
 }
 
+// Refresh gets a new access token from the provided refresh token,
+// The request is used the default client_id and endpoint for device authentication.
 func (t *TokenRetriever) Refresh(ctx context.Context, tenant string) (TokenResponse, error) {
 	// get stored refresh token:
 	refreshToken, err := t.Secrets.Get(secretsNamespace, tenant)
@@ -35,7 +33,6 @@ func (t *TokenRetriever) Refresh(ctx context.Context, tenant string) (TokenRespo
 	if refreshToken == "" {
 		return TokenResponse{}, errors.New("cannot use the stored refresh token: the token is empty")
 	}
-
 	// get access token:
 	r, err := t.Client.PostForm(oauthTokenEndpoint, url.Values{
 		"grant_type":    {"refresh_token"},
@@ -47,7 +44,6 @@ func (t *TokenRetriever) Refresh(ctx context.Context, tenant string) (TokenRespo
 	}
 
 	defer r.Body.Close()
-
 	if r.StatusCode != http.StatusOK {
 		b, _ := ioutil.ReadAll(r.Body)
 		bodyStr := string(b)
