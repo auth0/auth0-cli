@@ -66,9 +66,9 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 		Name:        res.Tenant,
 		Domain:      res.Domain,
 		AccessToken: res.AccessToken,
+		ClientID:    res.ClientID,
 		ExpiresAt: time.Now().Add(
 			time.Duration(res.ExpiresIn) * time.Second,
 		),
 	})
-
 }

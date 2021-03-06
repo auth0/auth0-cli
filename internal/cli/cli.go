@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/lestrrat-go/jwx/jwt"
@@ -39,6 +41,7 @@ type config struct {
 type tenant struct {
 	Name        string    `json:"name"`
 	Domain      string    `json:"domain"`
+	ClientID    string    `json:"client_id"`
 	AccessToken string    `json:"access_token,omitempty"`
 	ExpiresAt   time.Time `json:"expires_at"`
 }
@@ -118,15 +121,34 @@ func (c *cli) setup(ctx context.Context) error {
 
 	if t.AccessToken == "" {
 		return errUnauthenticated
-
 	}
 
 	// check if the stored access token is expired:
 	if isExpired(t.ExpiresAt, accessTokenExpThreshold) {
 		// use the refresh token to get a new access token:
-		// TODO
-		// ask and guide the user through the login process:
-		err := RunLogin(ctx, c, true)
+		tr := &auth.TokenRetriever{
+			Secrets: &auth.Keyring{},
+			Client:  http.DefaultClient,
+		}
+
+		res, err := tr.Refresh(ctx, t.Domain, t.ClientID, t.Name)
+		if err != nil {
+			// ask and guide the user through the login process:
+			c.renderer.Errorf("failed to renew access token, %s", err)
+			err = RunLogin(ctx, c, true)
+			if err != nil {
+				return err
+			}
+		}
+
+		// persist the updated tenant with renewed access token
+		t.AccessToken = res.AccessToken
+		t.ExpiresAt = time.Now().Add(
+			time.Duration(res.ExpiresIn) * time.Second,
+		)
+
+		fmt.Println("saving at: " + t.AccessToken)
+		err = c.addTenant(t)
 		if err != nil {
 			return err
 		}
