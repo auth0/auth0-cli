@@ -39,6 +39,10 @@ func NewRenderer() *Renderer {
 	}
 }
 
+func (r *Renderer) Newline() {
+	fmt.Fprintln(r.MessageWriter)
+}
+
 func (r *Renderer) Infof(format string, a ...interface{}) {
 	fmt.Fprint(r.MessageWriter, aurora.Green(" ▸    "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
@@ -105,7 +109,17 @@ func (r *Renderer) Result(data View) {
 		// many changes in other places. In the future we should
 		// enforce `KeyValues` on all `View` types.
 		if v, ok := data.(interface{ KeyValues() [][]string }); ok {
-			writeTable(r.ResultWriter, nil, v.KeyValues())
+			var kvs [][]string
+			for _, pair := range v.KeyValues() {
+				k := pair[0]
+				v := pair[1]
+
+				// NOTE(cyx): We can either nuke it or annotate with `<none>`. For now we're choosing to nuke it.
+				if v != "" {
+					kvs = append(kvs, []string{k, v})
+				}
+			}
+			writeTable(r.ResultWriter, nil, kvs)
 		}
 	}
 }

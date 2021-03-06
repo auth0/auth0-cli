@@ -216,7 +216,14 @@ func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bo
 
 	r.Result(v)
 
-	r.Infof("\nQuickstarts: %s", quickstartsURIFor(client.AppType))
+	r.Newline()
+	r.Infof("Quickstarts: %s", quickstartsURIFor(client.AppType))
+
+	// TODO(cyx): possibly guard this with a --no-hint flag.
+	r.Infof("%s: You might wanna try `auth0 test login --client-id %s`",
+		ansi.Faint("Hint"),
+		client.GetClientID(),
+	)
 }
 
 func (r *Renderer) ApplicationUpdate(client *management.Client, revealSecrets bool) {
