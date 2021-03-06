@@ -45,7 +45,6 @@ type Authenticator struct {
 type Result struct {
 	Tenant      string
 	Domain      string
-	ClientID    string
 	AccessToken string
 	ExpiresIn   int64
 }
@@ -115,7 +114,7 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 				return Result{}, errors.New(res.ErrorDescription)
 			}
 
-			ten, domain, clientID, err := parseTenant(res.AccessToken)
+			ten, domain, err := parseTenant(res.AccessToken)
 			if err != nil {
 				return Result{}, fmt.Errorf("cannot parse tenant from the given access token: %w", err)
 			}
@@ -131,7 +130,6 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 				ExpiresIn:   res.ExpiresIn,
 				Tenant:      ten,
 				Domain:      domain,
-				ClientID:    clientID,
 			}, nil
 		}
 	}
@@ -157,33 +155,29 @@ func (a *Authenticator) getDeviceCode(ctx context.Context) (State, error) {
 	return res, nil
 }
 
-func parseTenant(accessToken string) (tenant, domain, clientID string, err error) {
-	// TODO(jfatta): parse and validate properly. Decide which of the available go-pakages.
+func parseTenant(accessToken string) (tenant, domain string, err error) {
 	parts := strings.Split(accessToken, ".")
 	v, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
 	var payload struct {
 		AUDs []string `json:"aud"`
 		AZP  string   `json:"azp"`
 	}
 	if err := json.Unmarshal([]byte(v), &payload); err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
-
-	// https://auth0.com/docs/tokens
-	clientID = payload.AZP
 
 	for _, aud := range payload.AUDs {
 		u, err := url.Parse(aud)
 		if err != nil {
-			return "", "", "", err
+			return "", "", err
 		}
 		if u.Path == audiencePath {
 			parts := strings.Split(u.Host, ".")
-			return parts[0], u.Host, clientID, nil
+			return parts[0], u.Host, nil
 		}
 	}
-	return "", "", "", fmt.Errorf("audience not found for %s", audiencePath)
+	return "", "", fmt.Errorf("audience not found for %s", audiencePath)
 }

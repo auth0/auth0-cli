@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"path"
 )
 
 const (
@@ -27,7 +26,7 @@ type TokenRetriever struct {
 	Client  *http.Client
 }
 
-func (t *TokenRetriever) Refresh(ctx context.Context, appDomain string, tenant string) (TokenResponse, error) {
+func (t *TokenRetriever) Refresh(ctx context.Context, tenant string) (TokenResponse, error) {
 	// get stored refresh token:
 	refreshToken, err := t.Secrets.Get(secretsNamespace, tenant)
 	if err != nil {
@@ -37,18 +36,8 @@ func (t *TokenRetriever) Refresh(ctx context.Context, appDomain string, tenant s
 		return TokenResponse{}, errors.New("cannot use the stored refresh token: the token is empty")
 	}
 
-	u, err := url.Parse(appDomain)
-	u.Scheme = "https"
-	u.Path = path.Join(u.Path, tokenEndpoint)
-	if err != nil {
-		return TokenResponse{}, fmt.Errorf("invalid application domain URL: %w", err)
-	}
-
 	// get access token:
-	fmt.Println(">>>> RT: " + refreshToken)
-	fmt.Println(">>>> URL: " + u.String())
-	fmt.Println(">>>> CLIENT ID: " + clientID)
-	r, err := t.Client.PostForm(u.String(), url.Values{
+	r, err := t.Client.PostForm(oauthTokenEndpoint, url.Values{
 		"grant_type":    {"refresh_token"},
 		"client_id":     {clientID},
 		"refresh_token": {refreshToken},

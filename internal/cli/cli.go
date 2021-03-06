@@ -131,7 +131,7 @@ func (c *cli) setup(ctx context.Context) error {
 			Client:  http.DefaultClient,
 		}
 
-		res, err := tr.Refresh(ctx, t.Domain, t.Name)
+		res, err := tr.Refresh(ctx, t.Name)
 		if err != nil {
 			// ask and guide the user through the login process:
 			c.renderer.Errorf("failed to renew access token, %s", err)
@@ -147,7 +147,6 @@ func (c *cli) setup(ctx context.Context) error {
 			time.Duration(res.ExpiresIn) * time.Second,
 		)
 
-		fmt.Println("saving at: " + t.AccessToken)
 		err = c.addTenant(t)
 		if err != nil {
 			return err
