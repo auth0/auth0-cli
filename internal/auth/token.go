@@ -27,7 +27,7 @@ type TokenRetriever struct {
 	Client  *http.Client
 }
 
-func (t *TokenRetriever) Refresh(ctx context.Context, appDomain string, clientID string, tenant string) (TokenResponse, error) {
+func (t *TokenRetriever) Refresh(ctx context.Context, appDomain string, tenant string) (TokenResponse, error) {
 	// get stored refresh token:
 	refreshToken, err := t.Secrets.Get(secretsNamespace, tenant)
 	if err != nil {
@@ -45,6 +45,9 @@ func (t *TokenRetriever) Refresh(ctx context.Context, appDomain string, clientID
 	}
 
 	// get access token:
+	fmt.Println(">>>> RT: " + refreshToken)
+	fmt.Println(">>>> URL: " + u.String())
+	fmt.Println(">>>> CLIENT ID: " + clientID)
 	r, err := t.Client.PostForm(u.String(), url.Values{
 		"grant_type":    {"refresh_token"},
 		"client_id":     {clientID},
