@@ -32,7 +32,7 @@ func useTenantCmd(cli *cli) *cobra.Command {
 			if len(args) == 0 {
 				tens, err := cli.listTenants()
 				if err != nil {
-					return fmt.Errorf("unable to load tenants from config")
+					return fmt.Errorf("Unable to load tenants due to an unexpected error: %w", err)
 				}
 
 				tenNames := make([]string, len(tens))
@@ -42,22 +42,22 @@ func useTenantCmd(cli *cli) *cobra.Command {
 
 				input := prompt.SelectInput("tenant", "Tenant:", "Tenant to activate", tenNames, true)
 				if err := prompt.AskOne(input, &selectedTenant); err != nil {
-					return err
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			} else {
 				requestedTenant := args[0]
 				t, ok := cli.config.Tenants[requestedTenant]
 				if !ok {
-					return fmt.Errorf("Unable to find tenant in config: %s", requestedTenant)
-
+					return fmt.Errorf("Unable to find tenant %s; run `auth0 tenants use` to see your configured tenants or run `auth0 login` to configure a new tenant", requestedTenant)
 				}
 				selectedTenant = t.Name
 			}
 
 			cli.config.DefaultTenant = selectedTenant
 			if err := cli.persistConfig(); err != nil {
-				return fmt.Errorf("persisting config: %w", err)
+				return fmt.Errorf("An error occurred while setting the default tenant: %w", err)
 			}
+			cli.renderer.Infof("Default tenant switched to: %s", selectedTenant)
 			return nil
 		},
 	}

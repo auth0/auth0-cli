@@ -195,6 +195,10 @@ func (v *logView) typeDesc() (typ, desc string) {
 func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, api auth0.ActionExecutionAPI, noColor, silent bool) {
 	r.Heading(ansi.Bold(r.Tenant), "logs\n")
 
+	if len(logs) < 1 {
+		r.Infof("No logs found; to generate logs, run a test command like `auth0 test login` or `auth0 test token`")
+	}
+
 	var res []View
 	for _, l := range logs {
 		res = append(res, &logView{Log: l, ActionExecutionAPI: api, silent: silent, noColor: noColor})

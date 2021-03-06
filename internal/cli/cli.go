@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -14,8 +15,10 @@ import (
 	"time"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/display"
+	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"gopkg.in/auth0.v5/management"
@@ -81,7 +84,23 @@ func (c *cli) isLoggedIn() bool {
 	// No need to check errors for initializing context.
 	_ = c.init()
 
-	return c.tenant != ""
+	if c.tenant == "" {
+		return false
+	}
+
+	// Parse the access token for the tenant.
+	t, err := jwt.ParseString(c.config.Tenants[c.tenant].AccessToken)
+	if err != nil {
+		return false
+	}
+
+	// Check if token is valid.
+	if err = jwt.Validate(t, jwt.WithIssuer("https://auth0.auth0.com/")); err != nil {
+		return false
+	}
+
+	return true
+
 }
 
 // setup will try to initialize the config context, as well as figure out if
@@ -101,15 +120,35 @@ func (c *cli) setup(ctx context.Context) error {
 
 	if t.AccessToken == "" {
 		return errUnauthenticated
-
 	}
 
 	// check if the stored access token is expired:
 	if isExpired(t.ExpiresAt, accessTokenExpThreshold) {
-		// ask and guide the user through the login process:
-		err := RunLogin(ctx, c, true)
+		// use the refresh token to get a new access token:
+		tr := &auth.TokenRetriever{
+			Secrets: &auth.Keyring{},
+			Client:  http.DefaultClient,
+		}
+
+		res, err := tr.Refresh(ctx, t.Name)
 		if err != nil {
-			return err
+			// ask and guide the user through the login process:
+			c.renderer.Errorf("failed to renew access token, %s", err)
+			err = RunLogin(ctx, c, true)
+			if err != nil {
+				return err
+			}
+		} else {
+			// persist the updated tenant with renewed access token
+			t.AccessToken = res.AccessToken
+			t.ExpiresAt = time.Now().Add(
+				time.Duration(res.ExpiresIn) * time.Second,
+			)
+
+			err = c.addTenant(t)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -117,7 +156,6 @@ func (c *cli) setup(ctx context.Context) error {
 	if t.AccessToken != "" {
 		m, err := management.New(t.Domain,
 			management.WithStaticToken(t.AccessToken),
-			management.WithDebug(c.debug),
 			management.WithUserAgent(userAgent))
 		if err != nil {
 			return err
@@ -186,6 +224,47 @@ func (c *cli) addTenant(ten tenant) error {
 
 	if err := c.persistConfig(); err != nil {
 		return fmt.Errorf("persisting config: %w", err)
+	}
+
+	return nil
+}
+
+func (c *cli) removeTenant(ten string) error {
+	// init will fail here with a `no tenant found` error if we're logging
+	// in for the first time and that's expected.
+	_ = c.init()
+
+	// If we're dealing with an empty file, we'll need to initialize this
+	// map.
+	if c.config.Tenants == nil {
+		c.config.Tenants = map[string]tenant{}
+	}
+
+	delete(c.config.Tenants, ten)
+
+	// If the default tenant is being removed, we'll pick the first tenant
+	// that's not the one being removed, and make that the new default.
+	if c.config.DefaultTenant == ten {
+		if len(c.config.Tenants) == 0 {
+			c.config.DefaultTenant = ""
+		} else {
+		Loop:
+			for t := range c.config.Tenants {
+				if t != ten {
+					c.config.DefaultTenant = t
+					break Loop
+				}
+			}
+		}
+	}
+
+	if err := c.persistConfig(); err != nil {
+		return fmt.Errorf("Unexpected error persisting config: %w", err)
+	}
+
+	tr := &auth.TokenRetriever{Secrets: &auth.Keyring{}}
+	if err := tr.Delete(ten); err != nil {
+		return fmt.Errorf("Unexpected error clearing tenant information: %w", err)
 	}
 
 	return nil
@@ -288,6 +367,18 @@ func canPrompt(cmd *cobra.Command) bool {
 
 func shouldPrompt(cmd *cobra.Command, flag string) bool {
 	return canPrompt(cmd) && !cmd.Flags().Changed(flag)
+}
+
+func shouldPromptWhenFlagless(cmd *cobra.Command, flag string) bool {
+	isSet := false
+
+	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+		if f.Changed {
+			isSet = true
+		}
+	})
+
+	return canPrompt(cmd) && !isSet
 }
 
 func prepareInteractivity(cmd *cobra.Command) {

@@ -28,7 +28,7 @@ func (v *apiView) AsTableRow() []string {
 
 func (v *apiView) KeyValues() [][]string {
 	return [][]string{
-		[]string{"ID", v.ID},
+		[]string{"ID", ansi.Faint(v.ID)},
 		[]string{"NAME", v.Name},
 		[]string{"IDENTIFIER", v.Identifier},
 		[]string{"SCOPES", strconv.Itoa(v.Scopes)},
@@ -58,12 +58,12 @@ func (r *Renderer) ApiShow(api *management.ResourceServer) {
 
 func (r *Renderer) ApiCreate(api *management.ResourceServer) {
 	r.Heading(ansi.Bold(r.Tenant), "API created\n")
-	r.Results([]View{makeApiView(api)})
+	r.Result(makeApiView(api))
 }
 
 func (r *Renderer) ApiUpdate(api *management.ResourceServer) {
 	r.Heading(ansi.Bold(r.Tenant), "API updated\n")
-	r.Results([]View{makeApiView(api)})
+	r.Result(makeApiView(api))
 }
 
 func makeApiView(api *management.ResourceServer) *apiView {

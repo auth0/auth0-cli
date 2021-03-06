@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -49,7 +51,7 @@ func scopesCmd(cli *cli) *cobra.Command {
 func listApisCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List your existing APIs",
+		Short: "List your APIs",
 		Long: `auth0 apis list
 Lists your existing APIs. To create one try:
 
@@ -65,7 +67,7 @@ Lists your existing APIs. To create one try:
 			})
 
 			if err != nil {
-				return err
+				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
 
 			cli.renderer.ApiList(list.ResourceServers)
@@ -77,48 +79,52 @@ Lists your existing APIs. To create one try:
 }
 
 func showApiCmd(cli *cli) *cobra.Command {
-	var flags struct {
+	var inputs struct {
 		ID string
 	}
 
 	cmd := &cobra.Command{
 		Use:   "show",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an API",
 		Long: `Show an API:
 
-auth0 apis show --id id
+auth0 apis show <id>
 `,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if shouldPrompt(cmd, apiID) {
-				input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
+			if len(args) == 0 {
+				if canPrompt(cmd) {
+					input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
 
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
+					if err := prompt.AskOne(input, &inputs); err != nil {
+						return fmt.Errorf("An unexpected error occurred: %w", err)
+					}
+				} else {
+					return errors.New("Please include an API Id")
 				}
+			} else {
+				inputs.ID = args[0]
 			}
 
-			api := &management.ResourceServer{ID: &flags.ID}
+			api := &management.ResourceServer{ID: &inputs.ID}
 
 			err := ansi.Spinner("Loading API", func() error {
 				var err error
-				api, err = cli.api.ResourceServer.Read(flags.ID)
+				api, err = cli.api.ResourceServer.Read(inputs.ID)
 				return err
 			})
 
 			if err != nil {
-				return err
+				return fmt.Errorf("Unable to get an API with Id %s: %w", inputs.ID, err)
 			}
 
 			cli.renderer.ApiShow(api)
 			return nil
 		},
 	}
-
-	cmd.Flags().StringVarP(&flags.ID, apiID, "i", "", "ID of the API.")
-	mustRequireFlags(cmd, apiID)
 
 	return cmd
 }
@@ -148,7 +154,7 @@ auth0 apis create --name myapi --identifier http://my-api
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
@@ -159,7 +165,7 @@ auth0 apis create --name myapi --identifier http://my-api
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
@@ -167,7 +173,7 @@ auth0 apis create --name myapi --identifier http://my-api
 				input := prompt.TextInput(apiScopes, "Scopes:", "Space-separated list of scopes.", false)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
@@ -177,7 +183,7 @@ auth0 apis create --name myapi --identifier http://my-api
 			}
 
 			if flags.Scopes != "" {
-				api.Scopes = getScopes(flags.Scopes)
+				api.Scopes = apiScopesFor(flags.Scopes)
 			}
 
 			err := ansi.Spinner("Creating API", func() error {
@@ -185,7 +191,7 @@ auth0 apis create --name myapi --identifier http://my-api
 			})
 
 			if err != nil {
-				return err
+				return fmt.Errorf("An unexpected error occurred while attempting to create an API with name %s and identifier %s : %w", flags.Name, flags.Identifier, err)
 			}
 
 			cli.renderer.ApiCreate(api)
@@ -202,7 +208,7 @@ auth0 apis create --name myapi --identifier http://my-api
 }
 
 func updateApiCmd(cli *cli) *cobra.Command {
-	var flags struct {
+	var inputs struct {
 		ID     string
 		Name   string
 		Scopes string
@@ -210,51 +216,72 @@ func updateApiCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "update",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an API",
 		Long: `Update an API:
 
-auth0 apis update --id id --name myapi
+auth0 apis update <id> --name myapi
 `,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if shouldPrompt(cmd, apiID) {
-				input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
+			if len(args) == 0 {
+				if canPrompt(cmd) {
+					input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
 
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
+					if err := prompt.AskOne(input, &inputs); err != nil {
+						return fmt.Errorf("An unexpected error occurred: %w", err)
+					}
+				} else {
+					return errors.New("Please include an API Id")
 				}
+			} else {
+				inputs.ID = args[0]
 			}
 
-			if shouldPrompt(cmd, apiName) {
+			if shouldPromptWhenFlagless(cmd, apiName) {
 				input := prompt.TextInput(apiName, "Name:", "Name of the API.", true)
 
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
+				if err := prompt.AskOne(input, &inputs); err != nil {
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
-			if shouldPrompt(cmd, apiScopes) {
+			if shouldPromptWhenFlagless(cmd, apiScopes) {
 				input := prompt.TextInput(apiScopes, "Scopes:", "Space-separated list of scopes.", false)
 
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
+				if err := prompt.AskOne(input, &inputs); err != nil {
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
-			api := &management.ResourceServer{Name: &flags.Name}
-
-			if flags.Scopes != "" {
-				api.Scopes = getScopes(flags.Scopes)
-			}
+			api := &management.ResourceServer{}
 
 			err := ansi.Spinner("Updating API", func() error {
-				return cli.api.ResourceServer.Update(flags.ID, api)
+				current, err := cli.api.ResourceServer.Read(inputs.ID)
+
+				if err != nil {
+					return fmt.Errorf("Unable to load API. The Id %v specified doesn't exist", inputs.ID)
+				}
+
+				if len(inputs.Name) == 0 {
+					api.Name = current.Name
+				} else {
+					api.Name = &inputs.Name
+				}
+
+				if len(inputs.Scopes) == 0 {
+					api.Scopes = current.Scopes
+				} else {
+					api.Scopes = apiScopesFor(inputs.Scopes)
+				}
+
+				return cli.api.ResourceServer.Update(inputs.ID, api)
 			})
 
 			if err != nil {
-				return err
+				return fmt.Errorf("An unexpected error occurred while trying to update an API with Id %s: %w", inputs.ID, err)
 			}
 
 			cli.renderer.ApiUpdate(api)
@@ -262,36 +289,41 @@ auth0 apis update --id id --name myapi
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.ID, apiID, "i", "", "ID of the API.")
-	cmd.Flags().StringVarP(&flags.Name, apiName, "n", "", "Name of the API.")
-	cmd.Flags().StringVarP(&flags.Scopes, apiScopes, "s", "", "Space-separated list of scopes.")
-	mustRequireFlags(cmd, apiID)
+	cmd.Flags().StringVarP(&inputs.Name, apiName, "n", "", "Name of the API.")
+	cmd.Flags().StringVarP(&inputs.Scopes, apiScopes, "s", "", "Space-separated list of scopes.")
 
 	return cmd
 }
 
 func deleteApiCmd(cli *cli) *cobra.Command {
-	var flags struct {
+	var inputs struct {
 		ID string
 	}
 
 	cmd := &cobra.Command{
 		Use:   "delete",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete an API",
 		Long: `Delete an API:
 
-auth0 apis delete --id id
+auth0 apis delete <id>
 `,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if shouldPrompt(cmd, apiID) {
-				input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
+			if len(args) == 0 {
+				if canPrompt(cmd) {
+					input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
 
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
+					if err := prompt.AskOne(input, &inputs); err != nil {
+						return fmt.Errorf("An unexpected error occurred: %w", err)
+					}
+				} else {
+					return errors.New("Please include an API Id")
 				}
+			} else {
+				inputs.ID = args[0]
 			}
 
 			if !cli.force && canPrompt(cmd) {
@@ -301,51 +333,59 @@ auth0 apis delete --id id
 			}
 
 			return ansi.Spinner("Deleting API", func() error {
-				return cli.api.ResourceServer.Delete(flags.ID)
+				err := cli.api.ResourceServer.Delete(inputs.ID)
+				if err != nil {
+					return fmt.Errorf("An unexpected error occurred while attempting to delete an API with Id %s: %w", inputs.ID, err)
+				}
+				return nil
 			})
 		},
 	}
-
-	cmd.Flags().StringVarP(&flags.ID, apiID, "i", "", "ID of the API.")
-	mustRequireFlags(cmd, apiID)
 
 	return cmd
 }
 
 func listScopesCmd(cli *cli) *cobra.Command {
-	var flags struct {
+	var inputs struct {
 		ID string
 	}
 
 	cmd := &cobra.Command{
 		Use:   "list",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "List the scopes of an API",
 		Long: `List the scopes of an API:
 
-auth0 apis scopes list --id id
+auth0 apis scopes list <id>
 `,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if shouldPrompt(cmd, apiID) {
-				input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
+			if len(args) == 0 {
+				if canPrompt(cmd) {
+					input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
 
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
+					if err := prompt.AskOne(input, &inputs); err != nil {
+						return fmt.Errorf("An unexpected error occurred: %w", err)
+					}
+				} else {
+					return errors.New("Please include an API Id")
 				}
+			} else {
+				inputs.ID = args[0]
 			}
 
-			api := &management.ResourceServer{ID: &flags.ID}
+			api := &management.ResourceServer{ID: &inputs.ID}
 
 			err := ansi.Spinner("Loading scopes", func() error {
 				var err error
-				api, err = cli.api.ResourceServer.Read(flags.ID)
+				api, err = cli.api.ResourceServer.Read(inputs.ID)
 				return err
 			})
 
 			if err != nil {
-				return err
+				return fmt.Errorf("An unexpected error occurred while getting scopes for an API with Id %s: %w", inputs.ID, err)
 			}
 
 			cli.renderer.ScopesList(api.GetName(), api.Scopes)
@@ -353,13 +393,10 @@ auth0 apis scopes list --id id
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.ID, apiID, "i", "", "ID of the API.")
-	mustRequireFlags(cmd, apiID)
-
 	return cmd
 }
 
-func getScopes(scopes string) []*management.ResourceServerScope {
+func apiScopesFor(scopes string) []*management.ResourceServerScope {
 	list := strings.Fields(scopes)
 	models := []*management.ResourceServerScope{}
 

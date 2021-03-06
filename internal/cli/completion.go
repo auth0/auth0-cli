@@ -57,22 +57,22 @@ PS> auth0 completion powershell > auth0.ps1
 			case "bash":
 				err := cmd.Root().GenBashCompletion(os.Stdout)
 				if err != nil {
-					cli.renderer.Errorf(err.Error())
+					cli.renderer.Errorf("An unexpected error occurred while setting up completion: %v", err.Error())
 				}
 			case "zsh":
 				err := cmd.Root().GenZshCompletion(os.Stdout)
 				if err != nil {
-					cli.renderer.Errorf(err.Error())
+					cli.renderer.Errorf("An unexpected error occurred while setting up completion: %v", err.Error())
 				}
 			case "fish":
 				err := cmd.Root().GenFishCompletion(os.Stdout, true)
 				if err != nil {
-					cli.renderer.Errorf(err.Error())
+					cli.renderer.Errorf("An unexpected error occurred while setting up completion: %v", err.Error())
 				}
 			case "powershell":
 				err := cmd.Root().GenPowerShellCompletion(os.Stdout)
 				if err != nil {
-					cli.renderer.Errorf(err.Error())
+					cli.renderer.Errorf("An unexpected error occurred while setting up completion: %v", err.Error())
 				}
 			}
 		},
