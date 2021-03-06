@@ -41,7 +41,6 @@ type config struct {
 type tenant struct {
 	Name        string    `json:"name"`
 	Domain      string    `json:"domain"`
-	ClientID    string    `json:"client_id"`
 	AccessToken string    `json:"access_token,omitempty"`
 	ExpiresAt   time.Time `json:"expires_at"`
 }
