@@ -31,6 +31,7 @@ changelog:
       - "^test:"
 brews:
   -
+    name: auth0
     tap:
       owner: auth0
       name: homebrew-auth0-cli
