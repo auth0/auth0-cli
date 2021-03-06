@@ -259,7 +259,12 @@ func (c *cli) removeTenant(ten string) error {
 	}
 
 	if err := c.persistConfig(); err != nil {
-		return fmt.Errorf("persisting config: %w", err)
+		return fmt.Errorf("Unexpected error persisting config: %w", err)
+	}
+
+	tr := &auth.TokenRetriever{Secrets: &auth.Keyring{}}
+	if err := tr.Delete(ten); err != nil {
+		return fmt.Errorf("Unexpected error clearing tenant information: %w", err)
 	}
 
 	return nil
