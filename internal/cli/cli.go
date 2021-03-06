@@ -134,7 +134,6 @@ func (c *cli) setup(ctx context.Context) error {
 	if t.AccessToken != "" {
 		m, err := management.New(t.Domain,
 			management.WithStaticToken(t.AccessToken),
-			management.WithDebug(c.debug),
 			management.WithUserAgent(userAgent))
 		if err != nil {
 			return err
@@ -311,7 +310,7 @@ func shouldPromptWhenFlagless(cmd *cobra.Command, flag string) bool {
 	isSet := false
 
 	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
-		if (f.Changed) {
+		if f.Changed {
 			isSet = true
 		}
 	})
