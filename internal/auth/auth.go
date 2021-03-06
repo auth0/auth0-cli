@@ -163,7 +163,6 @@ func parseTenant(accessToken string) (tenant, domain string, err error) {
 	}
 	var payload struct {
 		AUDs []string `json:"aud"`
-		AZP  string   `json:"azp"`
 	}
 	if err := json.Unmarshal([]byte(v), &payload); err != nil {
 		return "", "", err
