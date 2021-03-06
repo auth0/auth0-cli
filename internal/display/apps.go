@@ -18,21 +18,50 @@ const (
 )
 
 type applicationView struct {
-	Name         string
-	Type         string
-	ClientID     string
-	ClientSecret string
-	Callbacks    []string
-	revealSecret bool
+	Name              string
+	Description       string
+	Type              string
+	ClientID          string
+	ClientSecret      string
+	Callbacks         []string
+	AllowedOrigins    []string
+	AllowedWebOrigins []string
+	AllowedLogoutURLs []string
+	AuthMethod        string
+	Grants            []string
+	revealSecret      bool
 
 	raw interface{}
 }
 
 func (v *applicationView) AsTableHeader() []string {
 	if v.revealSecret {
-		return []string{"Name", "Type", "ClientID", "Client Secret", "Callbacks"}
+		return []string{
+			"ClientID",
+			"Description",
+			"Name",
+			"Type",
+			"Client Secret",
+			"Callbacks",
+			"Allowed Origins",
+			"Allowed Web Origins",
+			"Allowed Logout URLs",
+			"Token Endpoint Auth",
+			"Grants",
+		}
 	}
-	return []string{"Name", "Type", "Client ID", "Callbacks"}
+	return []string{
+		"Client ID",
+		"Description",
+		"Name",
+		"Type",
+		"Callbacks",
+		"Allowed Origins",
+		"Allowed Web Origins",
+		"Allowed Logout URLs",
+		"Token Endpoint Auth",
+		"Grants",
+	}
 }
 
 func (v *applicationView) AsTableRow() []string {
@@ -55,23 +84,37 @@ func (v *applicationView) AsTableRow() []string {
 
 func (v *applicationView) KeyValues() [][]string {
 	callbacks := strings.Join(v.Callbacks, ", ")
+	allowedOrigins := strings.Join(v.AllowedOrigins, ", ")
+	allowedWebOrigins := strings.Join(v.AllowedWebOrigins, ", ")
+	allowedLogoutURLs := strings.Join(v.AllowedLogoutURLs, ", ")
+	grants := strings.Join(v.Grants, ", ")
 
 	if v.revealSecret {
 		return [][]string{
-			[]string{"NAME", v.Name},
-			[]string{"TYPE", v.Type},
 			[]string{"CLIENT ID", ansi.Faint(v.ClientID)},
+			[]string{"NAME", v.Name},
+			[]string{"DESCRIPTION", v.Description},
+			[]string{"TYPE", v.Type},
 			[]string{"CLIENT SECRET", ansi.Italic(v.ClientSecret)},
 			[]string{"CALLBACKS", callbacks},
+			[]string{"ALLOWED WEB ORIGINS", allowedWebOrigins},
+			[]string{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
+			[]string{"TOKEN ENDPOINT AUTH", v.AuthMethod},
+			[]string{"GRANTS", grants},
 		}
-
 	}
 
 	return [][]string{
-		[]string{"NAME", v.Name},
-		[]string{"TYPE", v.Type},
 		[]string{"CLIENT ID", ansi.Faint(v.ClientID)},
+		[]string{"NAME", v.Name},
+		[]string{"DESCRIPTION", v.Description},
+		[]string{"TYPE", v.Type},
 		[]string{"CALLBACKS", callbacks},
+		[]string{"ALLOWED ORIGINS", allowedOrigins},
+		[]string{"ALLOWED WEB ORIGINS", allowedWebOrigins},
+		[]string{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
+		[]string{"TOKEN ENDPOINT AUTH", v.AuthMethod},
+		[]string{"GRANTS", grants},
 	}
 }
 
@@ -91,10 +134,9 @@ type applicationListView struct {
 
 func (v *applicationListView) AsTableHeader() []string {
 	if v.revealSecret {
-		return []string{"Name", "Type", "ClientID", "Client Secret"}
+		return []string{"ClientID", "Name", "Type", "Client Secret"}
 	}
-	return []string{"Name", "Type", "Client ID"}
-
+	return []string{"Client ID", "Name", "Type"}
 }
 
 func (v *applicationListView) AsTableRow() []string {
@@ -135,13 +177,19 @@ func (r *Renderer) ApplicationShow(client *management.Client, revealSecrets bool
 	r.Heading(ansi.Bold(r.Tenant), "application\n")
 
 	v := &applicationView{
-		revealSecret: revealSecrets,
-		Name:         auth0.StringValue(client.Name),
-		Type:         appTypeFor(client.AppType),
-		ClientID:     auth0.StringValue(client.ClientID),
-		ClientSecret: auth0.StringValue(client.ClientSecret),
-		Callbacks:    callbacksFor(client.Callbacks),
-		raw:          client,
+		revealSecret:      revealSecrets,
+		Name:              auth0.StringValue(client.Name),
+		Description:       auth0.StringValue(client.Description),
+		Type:              appTypeFor(client.AppType),
+		ClientID:          auth0.StringValue(client.ClientID),
+		ClientSecret:      auth0.StringValue(client.ClientSecret),
+		Callbacks:         interfaceSliceToString(client.Callbacks),
+		AllowedOrigins:    interfaceSliceToString(client.AllowedOrigins),
+		AllowedWebOrigins: interfaceSliceToString(client.WebOrigins),
+		AllowedLogoutURLs: interfaceSliceToString(client.AllowedLogoutURLs),
+		AuthMethod:        auth0.StringValue(client.TokenEndpointAuthMethod),
+		Grants:            interfaceSliceToString(client.GrantTypes),
+		raw:               client,
 	}
 
 	r.Result(v)
@@ -151,16 +199,22 @@ func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bo
 	r.Heading(ansi.Bold(r.Tenant), "application created\n")
 
 	v := &applicationView{
-		revealSecret: revealSecrets,
-		Name:         auth0.StringValue(client.Name),
-		Type:         appTypeFor(client.AppType),
-		ClientID:     auth0.StringValue(client.ClientID),
-		ClientSecret: auth0.StringValue(client.ClientSecret),
-		Callbacks:    callbacksFor(client.Callbacks),
-		raw:          client,
+		revealSecret:      revealSecrets,
+		Name:              auth0.StringValue(client.Name),
+		Description:       auth0.StringValue(client.Description),
+		Type:              appTypeFor(client.AppType),
+		ClientID:          auth0.StringValue(client.ClientID),
+		ClientSecret:      auth0.StringValue(client.ClientSecret),
+		Callbacks:         interfaceSliceToString(client.Callbacks),
+		AllowedOrigins:    interfaceSliceToString(client.AllowedOrigins),
+		AllowedWebOrigins: interfaceSliceToString(client.WebOrigins),
+		AllowedLogoutURLs: interfaceSliceToString(client.AllowedLogoutURLs),
+		AuthMethod:        auth0.StringValue(client.TokenEndpointAuthMethod),
+		Grants:            interfaceSliceToString(client.GrantTypes),
+		raw:               client,
 	}
 
-	r.Results([]View{v})
+	r.Result(v)
 
 	r.Infof("\nQuickstarts: %s", quickstartsURIFor(client.AppType))
 }
@@ -169,16 +223,22 @@ func (r *Renderer) ApplicationUpdate(client *management.Client, revealSecrets bo
 	r.Heading(ansi.Bold(r.Tenant), "application updated\n")
 
 	v := &applicationView{
-		revealSecret: revealSecrets,
-		Name:         auth0.StringValue(client.Name),
-		Type:         appTypeFor(client.AppType),
-		ClientID:     auth0.StringValue(client.ClientID),
-		ClientSecret: auth0.StringValue(client.ClientSecret),
-		Callbacks:    callbacksFor(client.Callbacks),
-		raw:          client,
+		revealSecret:      revealSecrets,
+		Name:              auth0.StringValue(client.Name),
+		Description:       auth0.StringValue(client.Description),
+		Type:              appTypeFor(client.AppType),
+		ClientID:          auth0.StringValue(client.ClientID),
+		ClientSecret:      auth0.StringValue(client.ClientSecret),
+		Callbacks:         interfaceSliceToString(client.Callbacks),
+		AllowedOrigins:    interfaceSliceToString(client.AllowedOrigins),
+		AllowedWebOrigins: interfaceSliceToString(client.WebOrigins),
+		AllowedLogoutURLs: interfaceSliceToString(client.AllowedLogoutURLs),
+		AuthMethod:        auth0.StringValue(client.TokenEndpointAuthMethod),
+		Grants:            interfaceSliceToString(client.GrantTypes),
+		raw:               client,
 	}
 
-	r.Results([]View{v})
+	r.Result(v)
 }
 
 // TODO(cyx): determine if there's a better way to filter this out.
@@ -221,7 +281,7 @@ func quickstartsURIFor(v *string) string {
 	}
 }
 
-func callbacksFor(s []interface{}) []string {
+func interfaceSliceToString(s []interface{}) []string {
 	res := make([]string, len(s))
 	for i, v := range s {
 		res[i] = fmt.Sprintf("%s", v)
