@@ -17,7 +17,6 @@ const (
 	appName        = "name"
 	appType        = "type"
 	appDescription = "description"
-	appCallback    = "callbacks"
 )
 
 func appsCmd(cli *cli) *cobra.Command {
@@ -91,7 +90,7 @@ auth0 apps show <id>
 						return fmt.Errorf("An unexpected error occurred: %w", err)
 					}
 				} else {
-					return errors.New("Please provide an application id")
+					return errors.New("Please provide an application Id")
 				}
 			} else {
 				inputs.ID = args[0]
@@ -106,7 +105,7 @@ auth0 apps show <id>
 			})
 
 			if err != nil {
-				return fmt.Errorf("Unable to load application. The id %v specified doesn't exist", inputs.ID)
+				return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
 			}
 
 			revealClientSecret := auth0.StringValue(a.AppType) != "native" && auth0.StringValue(a.AppType) != "spa"
@@ -143,7 +142,7 @@ auth0 apps delete <id>
 						return fmt.Errorf("An unexpected error occurred: %w", err)
 					}
 				} else {
-					return errors.New("Please provide an application id")
+					return errors.New("Please provide an application Id")
 				}
 			} else {
 				inputs.ID = args[0]
@@ -311,7 +310,7 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 						return fmt.Errorf("An unexpected error occurred: %w", err)
 					}
 				} else {
-					return errors.New("Please provide an application id")
+					return errors.New("Please provide an application Id")
 				}
 			} else {
 				inputs.ID = args[0]
@@ -359,11 +358,11 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 
 			a := &management.Client{}
 
-			updateErr := ansi.Spinner("Updating application", func() error {
-				current, readErr := cli.api.Client.Read(inputs.ID)
+			err := ansi.Spinner("Updating application", func() error {
+				current, err := cli.api.Client.Read(inputs.ID)
 
-				if readErr != nil {
-					return fmt.Errorf("Unable to load application. The id %v specified doesn't exist", inputs.ID)
+				if err != nil {
+					return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
 				}
 
 				if len(inputs.Name) == 0 {
@@ -427,8 +426,8 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				return cli.api.Client.Update(inputs.ID, a)
 			})
 
-			if updateErr != nil {
-				return fmt.Errorf("Unable to update application %v: %v", inputs.ID, updateErr)
+			if err != nil {
+				return fmt.Errorf("Unable to update application %v: %v", inputs.ID, err)
 			}
 
 			revealClientSecret := auth0.StringValue(a.AppType) != "native" && auth0.StringValue(a.AppType) != "spa"
