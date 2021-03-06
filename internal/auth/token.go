@@ -22,6 +22,11 @@ type TokenRetriever struct {
 	Client  *http.Client
 }
 
+// Delete deletes the given tenant from the secrets storage.
+func (t *TokenRetriever) Delete(tenant string) error {
+	return t.Secrets.Delete(secretsNamespace, tenant)
+}
+
 // Refresh gets a new access token from the provided refresh token,
 // The request is used the default client_id and endpoint for device authentication.
 func (t *TokenRetriever) Refresh(ctx context.Context, tenant string) (TokenResponse, error) {

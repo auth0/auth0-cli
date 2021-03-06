@@ -229,6 +229,47 @@ func (c *cli) addTenant(ten tenant) error {
 	return nil
 }
 
+func (c *cli) removeTenant(ten string) error {
+	// init will fail here with a `no tenant found` error if we're logging
+	// in for the first time and that's expected.
+	_ = c.init()
+
+	// If we're dealing with an empty file, we'll need to initialize this
+	// map.
+	if c.config.Tenants == nil {
+		c.config.Tenants = map[string]tenant{}
+	}
+
+	delete(c.config.Tenants, ten)
+
+	// If the default tenant is being removed, we'll pick the first tenant
+	// that's not the one being removed, and make that the new default.
+	if c.config.DefaultTenant == ten {
+		if len(c.config.Tenants) == 0 {
+			c.config.DefaultTenant = ""
+		} else {
+		Loop:
+			for t := range c.config.Tenants {
+				if t != ten {
+					c.config.DefaultTenant = t
+					break Loop
+				}
+			}
+		}
+	}
+
+	if err := c.persistConfig(); err != nil {
+		return fmt.Errorf("Unexpected error persisting config: %w", err)
+	}
+
+	tr := &auth.TokenRetriever{Secrets: &auth.Keyring{}}
+	if err := tr.Delete(ten); err != nil {
+		return fmt.Errorf("Unexpected error clearing tenant information: %w", err)
+	}
+
+	return nil
+}
+
 func (c *cli) persistConfig() error {
 	dir := filepath.Dir(c.path)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {

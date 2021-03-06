@@ -36,6 +36,8 @@ type SecretStore interface {
 	Set(namespace, key, value string) error
 	// Get gets the secret
 	Get(namespace, key string) (string, error)
+	// Delete removes the secret
+	Delete(namespace, key string) error
 }
 
 type Authenticator struct {

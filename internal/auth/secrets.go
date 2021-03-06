@@ -13,3 +13,8 @@ func (k *Keyring) Set(namespace, key, value string) error {
 func (k *Keyring) Get(namespace, key string) (string, error) {
 	return keyring.Get(namespace, key)
 }
+
+// Delete deletes a value for the given namespace and key.
+func (k *Keyring) Delete(namespace, key string) error {
+	return keyring.Delete(namespace, key)
+}
