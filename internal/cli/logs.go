@@ -32,7 +32,6 @@ func logsCmd(cli *cli) *cobra.Command {
 		Num     int
 		Follow  bool
 		NoColor bool
-		Silent  bool
 	}
 
 	cmd := &cobra.Command{
@@ -102,7 +101,7 @@ Show the tenant logs.
 				cli.api.ActionExecution, time.Second,
 			)
 
-			cli.renderer.LogList(list, logsCh, actionExecutionAPI, flags.NoColor, flags.Silent)
+			cli.renderer.LogList(list, logsCh, actionExecutionAPI, flags.NoColor, !cli.debug)
 			return nil
 		},
 	}
@@ -110,7 +109,6 @@ Show the tenant logs.
 	cmd.Flags().IntVarP(&flags.Num, "num-entries", "n", 100, "the number of log entries to print")
 	cmd.Flags().BoolVarP(&flags.Follow, "follow", "f", false, "Specify if the logs should be streamed")
 	cmd.Flags().BoolVar(&flags.NoColor, "no-color", false, "turn off colored print")
-	cmd.Flags().BoolVarP(&flags.Silent, "silent", "s", false, "do not display extended raw data")
 
 	return cmd
 }
