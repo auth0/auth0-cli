@@ -240,19 +240,23 @@ func (c *cli) removeTenant(ten string) error {
 		c.config.Tenants = map[string]tenant{}
 	}
 
+	delete(c.config.Tenants, ten)
+
 	// If the default tenant is being removed, we'll pick the first tenant
 	// that's not the one being removed, and make that the new default.
 	if c.config.DefaultTenant == ten {
-	Loop:
-		for t := range c.config.Tenants {
-			if t != ten {
-				c.config.DefaultTenant = t
-				break Loop
+		if len(c.config.Tenants) == 0 {
+			c.config.DefaultTenant = ""
+		} else {
+		Loop:
+			for t := range c.config.Tenants {
+				if t != ten {
+					c.config.DefaultTenant = t
+					break Loop
+				}
 			}
 		}
 	}
-
-	delete(c.config.Tenants, ten)
 
 	if err := c.persistConfig(); err != nil {
 		return fmt.Errorf("persisting config: %w", err)
