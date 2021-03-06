@@ -101,7 +101,7 @@ Show the tenant logs.
 				cli.api.ActionExecution, time.Second,
 			)
 
-			cli.renderer.LogList(list, logsCh, actionExecutionAPI, flags.NoColor, cli.debug == false)
+			cli.renderer.LogList(list, logsCh, actionExecutionAPI, flags.NoColor, !cli.debug)
 			return nil
 		},
 	}
