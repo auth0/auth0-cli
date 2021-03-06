@@ -36,7 +36,7 @@ auth0 [command] --help
 ### Onboarding Journey
 
 Following these instructions will give you a sense of what's possible with the
-auth0 cli. To start, you will have to login:
+auth0 CLI. To start, you will have to login:
 
 #### Login
 
