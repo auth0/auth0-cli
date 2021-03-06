@@ -34,6 +34,12 @@ func Execute() {
 				return nil
 			}
 
+			// If the user is trying to logout, session information
+			// isn't important as well.
+			if cmd.Use == "logout" && cmd.Parent().Use == "auth0" {
+				return nil
+			}
+
 			// Selecting tenants shouldn't really trigger a login.
 			if cmd.Use == "use" && cmd.Parent().Use == "tenants" {
 				return nil
@@ -72,6 +78,7 @@ func Execute() {
 	rootCmd.AddCommand(testCmd(cli))
 	rootCmd.AddCommand(logsCmd(cli))
 	rootCmd.AddCommand(actionsCmd(cli))
+	rootCmd.AddCommand(logoutCmd(cli))
 
 	// keep completion at the bottom:
 	rootCmd.AddCommand(completionCmd(cli))
