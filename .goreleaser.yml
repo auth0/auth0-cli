@@ -43,8 +43,8 @@ brews:
     install: |
       bin.install "auth0"
       rm Dir["#{bin}/{auth0-completion.bash,auth0-completion.zsh}"]
-      system bin/"auth0", "completion", "--shell", "bash"
-      system bin/"auth0", "completion", "--shell", "zsh"
+      system bin/"auth0", "completion", "bash"
+      system bin/"auth0", "completion", "zsh"
       bash_completion.install "auth0-completion.bash"
       zsh_completion.install "auth0-completion.zsh"
       (zsh_completion/"_auth0").write <<~EOS
