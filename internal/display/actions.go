@@ -14,6 +14,7 @@ type actionView struct {
 	Name      string
 	CreatedAt string
 	Type      string
+	raw       interface{}
 }
 
 func (v *actionView) AsTableHeader() []string {
@@ -21,7 +22,20 @@ func (v *actionView) AsTableHeader() []string {
 }
 
 func (v *actionView) AsTableRow() []string {
-	return []string{v.ID, v.Name, v.Type, v.CreatedAt}
+	return []string{ansi.Faint(v.ID), v.Name, v.Type, v.CreatedAt}
+}
+
+func (v *actionView) KeyValues() [][]string {
+	return [][]string{
+		[]string{"ID", ansi.Faint(v.ID)},
+		[]string{"NAME", v.Name},
+		[]string{"TYPE", v.Type},
+		[]string{"CREATED AT", v.CreatedAt},
+	}
+}
+
+func (v *actionView) Object() interface{} {
+	return v.raw
 }
 
 type triggerView struct {
@@ -35,7 +49,7 @@ func (v *triggerView) AsTableHeader() []string {
 }
 
 func (v *triggerView) AsTableRow() []string {
-	return []string{v.ID, v.ActionID, v.DisplayName}
+	return []string{ansi.Faint(v.ID), v.ActionID, v.DisplayName}
 }
 
 type actionVersionView struct {
@@ -47,6 +61,8 @@ type actionVersionView struct {
 	Status     string
 	Deployed   string
 	CreatedAt  string
+
+	raw interface{}
 }
 
 func (v *actionVersionView) AsTableHeader() []string {
@@ -54,7 +70,24 @@ func (v *actionVersionView) AsTableHeader() []string {
 }
 
 func (v *actionVersionView) AsTableRow() []string {
-	return []string{v.Number, v.getID(), v.ActionID, v.ActionName, v.Runtime, v.Status, v.CreatedAt, v.Deployed}
+	return []string{v.Number, ansi.Faint(v.getID()), v.ActionID, v.ActionName, v.Runtime, v.Status, v.CreatedAt, v.Deployed}
+}
+
+func (v *actionVersionView) KeyValues() [][]string {
+	return [][]string{
+		[]string{"Number", v.Number},
+		[]string{"ID", ansi.Faint(v.getID())},
+		[]string{"ActionID", v.ActionID},
+		[]string{"ActionName", v.ActionName},
+		[]string{"RUNTIME", v.ActionName},
+		[]string{"STATUS", v.Status},
+		[]string{"CREATED AT", v.CreatedAt},
+		[]string{"DEPLOYED", v.Deployed},
+	}
+}
+
+func (v *actionVersionView) Object() interface{} {
+	return v.raw
 }
 
 func (v *actionVersionView) getID() string {
@@ -78,9 +111,9 @@ func (r *Renderer) ActionList(actions []*management.Action) {
 		res = append(res, &actionView{
 			ID:        auth0.StringValue(a.ID),
 			Name:      auth0.StringValue(a.Name),
-			CreatedAt: timeAgo(auth0.TimeValue(a.CreatedAt)),
 			Type:      strings.Join(triggers, ", "),
-			// Runtime: auth0.StringValue(a.Runtime),
+			CreatedAt: timeAgo(auth0.TimeValue(a.CreatedAt)),
+			raw:       a,
 		})
 
 	}
@@ -106,9 +139,10 @@ func (r *Renderer) Action(action *management.Action) {
 		Name:      auth0.StringValue(action.Name),
 		CreatedAt: timeAgo(auth0.TimeValue(action.CreatedAt)),
 		Type:      strings.Join(triggers, ", "),
+		raw:       action,
 	}
 
-	r.Results([]View{v})
+	r.Result(v)
 }
 
 func (r *Renderer) ActionTriggersList(bindings []*management.ActionBinding) {
@@ -142,6 +176,7 @@ func ActionVersionView(version *management.ActionVersion) *actionVersionView {
 		Status:     string(version.Status),
 		Deployed:   deployed,
 		CreatedAt:  timeAgo(auth0.TimeValue(version.CreatedAt)),
+		raw:        version,
 	}
 }
 
@@ -150,7 +185,7 @@ func (r *Renderer) ActionVersion(version *management.ActionVersion) {
 
 	v := ActionVersionView(version)
 
-	r.Results([]View{v})
+	r.Result(v)
 }
 
 func (r *Renderer) ActionVersionList(list []*management.ActionVersion) {

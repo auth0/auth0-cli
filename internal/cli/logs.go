@@ -32,7 +32,6 @@ func logsCmd(cli *cli) *cobra.Command {
 		Num     int
 		Follow  bool
 		NoColor bool
-		Silent  bool
 	}
 
 	cmd := &cobra.Command{
@@ -45,7 +44,7 @@ Show the tenant logs.
 			lastLogID := ""
 			list, err := getLatestLogs(cli, flags.Num)
 			if err != nil {
-				return err
+				return fmt.Errorf("An unexpected error occurred while getting logs: %v", err)
 			}
 
 			// TODO(cyx): This is a hack for now to make the
@@ -60,7 +59,7 @@ Show the tenant logs.
 			}
 
 			var logsCh chan []*management.Log
-			if flags.Follow {
+			if flags.Follow && lastLogID != "" {
 				logsCh = make(chan []*management.Log)
 
 				go func() {
@@ -76,7 +75,7 @@ Show the tenant logs.
 							management.Parameter("sort", "date:-1"),
 						)
 						if err != nil {
-							cli.renderer.Errorf("Error: %v", err)
+							cli.renderer.Errorf("An unexpected error occurred while getting logs: %v", err)
 							return
 						}
 
@@ -102,7 +101,7 @@ Show the tenant logs.
 				cli.api.ActionExecution, time.Second,
 			)
 
-			cli.renderer.LogList(list, logsCh, actionExecutionAPI, flags.NoColor, flags.Silent)
+			cli.renderer.LogList(list, logsCh, actionExecutionAPI, flags.NoColor, !cli.debug)
 			return nil
 		},
 	}
@@ -110,7 +109,6 @@ Show the tenant logs.
 	cmd.Flags().IntVarP(&flags.Num, "num-entries", "n", 100, "the number of log entries to print")
 	cmd.Flags().BoolVarP(&flags.Follow, "follow", "f", false, "Specify if the logs should be streamed")
 	cmd.Flags().BoolVar(&flags.NoColor, "no-color", false, "turn off colored print")
-	cmd.Flags().BoolVarP(&flags.Silent, "silent", "s", false, "do not display extended raw data")
 
 	return cmd
 }

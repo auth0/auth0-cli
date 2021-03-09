@@ -31,14 +31,14 @@ func loginCmd(cli *cli) *cobra.Command {
 // this will only affect the messages.
 func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 	if expired {
-		cli.renderer.Warnf("Your session expired. Please sign in to re-authorize the CLI.")
+		cli.renderer.Warnf("Please sign in to re-authorize the CLI.")
 	} else {
 		cli.renderer.Heading("✪ Welcome to the Auth0 CLI 🎊.")
 		cli.renderer.Infof("To set it up, you will need to sign in to your Auth0 account and authorize the CLI to access the API.")
 		cli.renderer.Infof("If you don't have an account, please go to https://auth0.com/signup, otherwise continue in the browser.\n\n")
 	}
 
-	a := &auth.Authenticator{}
+	a := &auth.Authenticator{Secrets: &auth.Keyring{}}
 	state, err := a.Start(ctx)
 	if err != nil {
 		return fmt.Errorf("could not start the authentication process: %w.", err)
@@ -70,5 +70,4 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 			time.Duration(res.ExpiresIn) * time.Second,
 		),
 	})
-
 }

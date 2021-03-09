@@ -54,7 +54,7 @@ Lists your existing applications. To create one try:
 			})
 
 			if err != nil {
-				return err
+				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
 
 			cli.renderer.ApplicationList(list.Clients)
@@ -83,14 +83,14 @@ auth0 apps show <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, appID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(appID, "Id:", "Id of the application.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
-						return err
+						return fmt.Errorf("An unexpected error occurred: %w", err)
 					}
 				} else {
-					return errors.New("missing application id")
+					return errors.New("Please provide an application Id")
 				}
 			} else {
 				inputs.ID = args[0]
@@ -105,7 +105,7 @@ auth0 apps show <id>
 			})
 
 			if err != nil {
-				return err
+				return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
 			}
 
 			revealClientSecret := auth0.StringValue(a.AppType) != "native" && auth0.StringValue(a.AppType) != "spa"
@@ -135,14 +135,14 @@ auth0 apps delete <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, appID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(appID, "Id:", "Id of the application.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
-						return err
+						return fmt.Errorf("An unexpected error occurred: %w", err)
 					}
 				} else {
-					return errors.New("missing application id")
+					return errors.New("Please provide an application Id")
 				}
 			} else {
 				inputs.ID = args[0]
@@ -165,12 +165,17 @@ auth0 apps delete <id>
 
 func createAppCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		Name        string
-		Type        string
-		Description string
-		Callbacks   []string
-		AuthMethod  string
+		Name              string
+		Type              string
+		Description       string
+		Callbacks         []string
+		AllowedOrigins    []string
+		AllowedWebOrigins []string
+		AllowedLogoutURLs []string
+		AuthMethod        string
+		Grants            []string
 	}
+	var oidcConformant = true
 
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -190,7 +195,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
@@ -206,7 +211,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 					true)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
@@ -214,7 +219,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 				input := prompt.TextInput(appDescription, "Description:", "Description of the application.", false)
 
 				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
@@ -222,8 +227,18 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 				Name:                    &flags.Name,
 				Description:             &flags.Description,
 				AppType:                 auth0.String(apiTypeFor(flags.Type)),
-				Callbacks:               apiCallbacksFor(flags.Callbacks),
+				Callbacks:               stringToInterfaceSlice(flags.Callbacks),
+				AllowedOrigins:          stringToInterfaceSlice(flags.AllowedOrigins),
+				WebOrigins:              stringToInterfaceSlice(flags.AllowedWebOrigins),
+				AllowedLogoutURLs:       stringToInterfaceSlice(flags.AllowedLogoutURLs),
 				TokenEndpointAuthMethod: apiAuthMethodFor(flags.AuthMethod),
+				OIDCConformant:          &oidcConformant,
+			}
+
+			if len(flags.Grants) == 0 {
+				a.GrantTypes = apiDefaultGrantsFor(flags.Type)
+			} else {
+				a.GrantTypes = apiGrantsFor(flags.Grants)
 			}
 
 			err := ansi.Spinner("Creating application", func() error {
@@ -231,10 +246,10 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 			})
 
 			if err != nil {
-				return err
+				return fmt.Errorf("Unable to create application: %w", err)
 			}
 
-			// note: c is populated with the rest of the client fields by the API during creation.
+			// note: a is populated with the rest of the client fields by the API during creation.
 			revealClientSecret := auth0.StringValue(a.AppType) != "native" && auth0.StringValue(a.AppType) != "spa"
 			cli.renderer.ApplicationCreate(a, revealClientSecret)
 
@@ -250,7 +265,11 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 		"- m2m (machine to machine): CLIs, daemons or services running on your backend.")
 	cmd.Flags().StringVarP(&flags.Description, "description", "d", "", "Description of the application. Max character count is 140.")
 	cmd.Flags().StringSliceVarP(&flags.Callbacks, "callbacks", "c", nil, "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.")
-	cmd.Flags().StringVar(&flags.AuthMethod, "auth-method", "", "Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).")
+	cmd.Flags().StringSliceVarP(&flags.AllowedOrigins, "origins", "o", nil, "Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.")
+	cmd.Flags().StringSliceVarP(&flags.AllowedWebOrigins, "web-origins", "w", nil, "Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode.")
+	cmd.Flags().StringSliceVarP(&flags.AllowedLogoutURLs, "logout-urls", "l", nil, "Comma-separated list of URLs that are valid to redirect to after logout from Auth0. Wildcards are allowed for subdomains.")
+	cmd.Flags().StringVarP(&flags.AuthMethod, "auth-method", "a", "", "Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).")
+	cmd.Flags().StringSliceVarP(&flags.Grants, "grants", "g", nil, "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.")
 	mustRequireFlags(cmd, appName, appType)
 
 	return cmd
@@ -258,12 +277,17 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 
 func updateAppCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID          string
-		Name        string
-		Type        string
-		Description string
-		Callbacks   []string
-		AuthMethod  string
+		ID                string
+		Name              string
+		Type              string
+		Description       string
+		Callbacks         []string
+		CallbacksString   string
+		AllowedOrigins    []string
+		AllowedWebOrigins []string
+		AllowedLogoutURLs []string
+		AuthMethod        string
+		Grants            []string
 	}
 
 	cmd := &cobra.Command{
@@ -279,28 +303,28 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if shouldPrompt(cmd, appID) {
+				if canPrompt(cmd) {
 					input := prompt.TextInput(appID, "Id:", "Id of the application.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
-						return err
+						return fmt.Errorf("An unexpected error occurred: %w", err)
 					}
 				} else {
-					return errors.New("missing application id")
+					return errors.New("Please provide an application Id")
 				}
 			} else {
 				inputs.ID = args[0]
 			}
 
-			if shouldPrompt(cmd, appName) {
+			if shouldPromptWhenFlagless(cmd, appName) {
 				input := prompt.TextInput(appName, "Name:", "Name of the application", true)
 
 				if err := prompt.AskOne(input, &inputs); err != nil {
-					return err
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
-			if shouldPrompt(cmd, appType) {
+			if shouldPromptWhenFlagless(cmd, appType) {
 				input := prompt.SelectInput(
 					appType,
 					"Type:",
@@ -312,35 +336,100 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 					true)
 
 				if err := prompt.AskOne(input, &inputs); err != nil {
-					return err
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
-			if shouldPrompt(cmd, appDescription) {
+			if shouldPromptWhenFlagless(cmd, appDescription) {
 				input := prompt.TextInput(appDescription, "Description:", "Description of the application.", false)
 
 				if err := prompt.AskOne(input, &inputs); err != nil {
-					return err
+					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
 			}
 
-			a := &management.Client{
-				Name:                    &inputs.Name,
-				Description:             &inputs.Description,
-				AppType:                 auth0.String(apiTypeFor(inputs.Type)),
-				Callbacks:               apiCallbacksFor(inputs.Callbacks),
-				TokenEndpointAuthMethod: apiAuthMethodFor(inputs.AuthMethod),
+			if shouldPromptWhenFlagless(cmd, "CallbacksString") {
+				input := prompt.TextInput("CallbacksString", "Callback URLs:", "Callback URLs of the application, comma-separated.", false)
+
+				if err := prompt.AskOne(input, &inputs); err != nil {
+					return fmt.Errorf("An unexpected error occurred: %w", err)
+				}
 			}
 
+			a := &management.Client{}
+
 			err := ansi.Spinner("Updating application", func() error {
+				current, err := cli.api.Client.Read(inputs.ID)
+
+				if err != nil {
+					return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
+				}
+
+				if len(inputs.Name) == 0 {
+					a.Name = current.Name
+				} else {
+					a.Name = &inputs.Name
+				}
+
+				if len(inputs.Description) == 0 {
+					a.Description = current.Description
+				} else {
+					a.Description = &inputs.Description
+				}
+
+				if len(inputs.Type) == 0 {
+					a.AppType = current.AppType
+				} else {
+					a.AppType = auth0.String(apiTypeFor(inputs.Type))
+				}
+
+				if len(inputs.Callbacks) == 0 {
+					if len(inputs.CallbacksString) == 0 {
+						a.Callbacks = current.Callbacks
+					} else {
+						a.Callbacks = stringToInterfaceSlice(commaSeparatedStringToSlice(inputs.CallbacksString))
+					}
+				} else {
+					a.Callbacks = stringToInterfaceSlice(inputs.Callbacks)
+				}
+
+				if len(inputs.AllowedOrigins) == 0 {
+					a.AllowedOrigins = current.AllowedOrigins
+				} else {
+					a.AllowedOrigins = stringToInterfaceSlice(inputs.AllowedOrigins)
+				}
+
+				if len(inputs.AllowedWebOrigins) == 0 {
+					a.WebOrigins = current.WebOrigins
+				} else {
+					a.WebOrigins = stringToInterfaceSlice(inputs.AllowedWebOrigins)
+				}
+
+				if len(inputs.AllowedLogoutURLs) == 0 {
+					a.AllowedLogoutURLs = current.AllowedLogoutURLs
+				} else {
+					a.AllowedLogoutURLs = stringToInterfaceSlice(inputs.AllowedLogoutURLs)
+				}
+
+				if len(inputs.AuthMethod) == 0 {
+					a.TokenEndpointAuthMethod = current.TokenEndpointAuthMethod
+				} else {
+					a.TokenEndpointAuthMethod = apiAuthMethodFor(inputs.AuthMethod)
+				}
+
+				if len(inputs.Grants) == 0 {
+					a.GrantTypes = current.GrantTypes
+				} else {
+					a.GrantTypes = apiGrantsFor(inputs.Grants)
+				}
+
 				return cli.api.Client.Update(inputs.ID, a)
 			})
 
 			if err != nil {
-				return err
+				return fmt.Errorf("Unable to update application %v: %v", inputs.ID, err)
 			}
 
-			// note: c is populated with the rest of the client fields by the API during creation.
 			revealClientSecret := auth0.StringValue(a.AppType) != "native" && auth0.StringValue(a.AppType) != "spa"
 			cli.renderer.ApplicationUpdate(a, revealClientSecret)
 
@@ -356,7 +445,11 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 		"- m2m (machine to machine): CLIs, daemons or services running on your backend.")
 	cmd.Flags().StringVarP(&inputs.Description, "description", "d", "", "Description of the application. Max character count is 140.")
 	cmd.Flags().StringSliceVarP(&inputs.Callbacks, "callbacks", "c", nil, "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.")
-	cmd.Flags().StringVar(&inputs.AuthMethod, "auth-method", "", "Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).")
+	cmd.Flags().StringSliceVarP(&inputs.AllowedOrigins, "origins", "o", nil, "Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.")
+	cmd.Flags().StringSliceVarP(&inputs.AllowedWebOrigins, "web-origins", "w", nil, "Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode.")
+	cmd.Flags().StringSliceVarP(&inputs.AllowedLogoutURLs, "logout-urls", "l", nil, "Comma-separated list of URLs that are valid to redirect to after logout from Auth0. Wildcards are allowed for subdomains.")
+	cmd.Flags().StringVarP(&inputs.AuthMethod, "auth-method", "a", "", "Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).")
+	cmd.Flags().StringSliceVarP(&inputs.Grants, "grants", "g", nil, "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.")
 
 	return cmd
 }
@@ -377,14 +470,6 @@ func apiTypeFor(v string) string {
 	}
 }
 
-func apiCallbacksFor(s []string) []interface{} {
-	res := make([]interface{}, len(s))
-	for i, v := range s {
-		res[i] = v
-	}
-	return res
-}
-
 func apiAuthMethodFor(v string) *string {
 	switch strings.ToLower(v) {
 	case "none":
@@ -398,10 +483,69 @@ func apiAuthMethodFor(v string) *string {
 	}
 }
 
-func callbacksFor(s []interface{}) []string {
+func apiGrantsFor(s []string) []interface{} {
+	res := make([]interface{}, len(s))
+
+	for i, v := range s {
+		switch strings.ToLower(v) {
+		case "authorization-code", "code":
+			res[i] = auth0.String("authorization_code")
+		case "implicit":
+			res[i] = auth0.String("implicit")
+		case "refresh-token":
+			res[i] = auth0.String("refresh_token")
+		case "client-credentials", "credentials":
+			res[i] = auth0.String("client_credentials")
+		case "password":
+			res[i] = auth0.String("password")
+		case "password-realm":
+			res[i] = auth0.String("http://auth0.com/oauth/grant-type/password-realm")
+		case "mfa-oob":
+			res[i] = auth0.String("http://auth0.com/oauth/grant-type/mfa-oob")
+		case "mfa-otp":
+			res[i] = auth0.String("http://auth0.com/oauth/grant-type/mfa-otp")
+		case "mfa-recovery-code":
+			res[i] = auth0.String("http://auth0.com/oauth/grant-type/mfa-recovery-code")
+		case "device-code":
+			res[i] = auth0.String("urn:ietf:params:oauth:grant-type:device_code")
+		default:
+		}
+	}
+
+	return res
+}
+
+func apiDefaultGrantsFor(t string) []interface{} {
+	switch apiTypeFor(strings.ToLower(t)) {
+	case "native":
+		return stringToInterfaceSlice([]string{"implicit", "authorization_code", "refresh_token"})
+	case "spa":
+		return stringToInterfaceSlice([]string{"implicit", "authorization_code", "refresh_token"})
+	case "regular_web":
+		return stringToInterfaceSlice([]string{"implicit", "authorization_code", "refresh_token", "client_credentials"})
+	case "non_interactive":
+		return stringToInterfaceSlice([]string{"client_credentials"})
+	default:
+		return nil
+	}
+}
+
+func urlsFor(s []interface{}) []string {
 	res := make([]string, len(s))
 	for i, v := range s {
 		res[i] = fmt.Sprintf("%s", v)
 	}
 	return res
+}
+
+func commaSeparatedStringToSlice(s string) []string {
+	return strings.Split(strings.Join(strings.Fields(s), ""), ",")
+}
+
+func stringToInterfaceSlice(s []string) []interface{} {
+	var result []interface{} = make([]interface{}, len(s))
+	for i, d := range s {
+		result[i] = d
+	}
+	return result
 }

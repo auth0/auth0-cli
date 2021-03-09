@@ -25,7 +25,7 @@ func TestClientsListCmd(t *testing.T) {
 				{
 					Name:      auth0.String("some-name"),
 					ClientID:  auth0.String("some-id"),
-					Callbacks: apiCallbacksFor([]string{"http://localhost"}),
+					Callbacks: stringToInterfaceSlice([]string{"http://localhost"}),
 				},
 			},
 		}, nil)
@@ -49,7 +49,7 @@ func TestClientsListCmd(t *testing.T) {
 	}
 
 	expectTable(t, stdout.String(),
-		[]string{"NAME", "TYPE", "CLIENT ID"},
+		[]string{"CLIENT ID", "NAME", "TYPE"},
 		[][]string{
 			{"some-name", "generic", "some-id"},
 		},
