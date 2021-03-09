@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/build-info"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/spf13/cobra"
 )
@@ -26,6 +27,7 @@ func Execute() {
 		SilenceErrors: true,
 		Short:         "Supercharge your development workflow.",
 		Long:          "Supercharge your development workflow.\n" + getLogin(cli),
+		Version:       buildinfo.Version,
 
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// If the user is trying to login, no need to go

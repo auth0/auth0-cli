@@ -8,8 +8,7 @@ BUILDINFOPKG := $(PKG)/internal/build-info
 ## setup variables for build-info
 BUILDUSER := $(shell whoami)
 BUILDTIME := $(shell date -u '+%Y-%m-%d %H:%M:%S')
-VERSION := $(GITCOMMIT)
-#BUILDVERSION := $(shell git describe --exact-match --abbrev=0)
+VERSION := $(shell git describe --abbrev=0)
 GITCOMMIT := $(shell git rev-parse --short HEAD)
 
 GITUNTRACKEDCHANGES := $(shell git status --porcelain --untracked-files=no)
@@ -23,7 +22,6 @@ CTIMEVAR = -X '$(BUILDINFOPKG).Version=$(VERSION)' \
 					 -X '$(BUILDINFOPKG).Branch=$(GITBRANCH)' \
 					 -X '$(BUILDINFOPKG).BuildUser=$(BUILDUSER)' \
 					 -X '$(BUILDINFOPKG).BuildDate=$(BUILDTIME)'
-
 
 generate:
 	go generate ./...
@@ -39,7 +37,7 @@ lint:
 
 # Build for the native platform
 build:
-	go build -o auth0 cmd/auth0/main.go
+	go build -ldflags "$(CTIMEVAR)" -o auth0 cmd/auth0/main.go
 .PHONY: build
 
 # Build for the native platform
@@ -48,9 +46,9 @@ build:
 
 # Build a beta version of stripe for all supported platforms
 build-all-platforms:
-	env GOOS=darwin go build -o auth0-darwin cmd/auth0/main.go
-	env GOOS=linux go build -o auth0-linux cmd/auth0/main.go
-	env GOOS=windows go build -o auth0-windows.exe cmd/auth0/main.go
+	env GOOS=darwin go build -ldflags "$(CTIMEVAR)" -o auth0-darwin cmd/auth0/main.go
+	env GOOS=linux go build -ldflags "$(CTIMEVAR)" -o auth0-linux cmd/auth0/main.go
+	env GOOS=windows go build -ldflags "$(CTIMEVAR)" -o auth0-windows.exe cmd/auth0/main.go
 .PHONY: build-all-platforms
 
 # Run all the tests and code checks
