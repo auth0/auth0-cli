@@ -44,7 +44,7 @@ build:
 build:
 .PHONY: build
 
-# Build a beta version of stripe for all supported platforms
+# Build a beta version of auth0-cli for all supported platforms
 build-all-platforms:
 	env GOOS=darwin go build -ldflags "$(CTIMEVAR)" -o auth0-darwin cmd/auth0/main.go
 	env GOOS=linux go build -ldflags "$(CTIMEVAR)" -o auth0-linux cmd/auth0/main.go
