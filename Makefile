@@ -6,7 +6,9 @@ generate:
 
 integration:
 	go build -o auth0-cli-config-generator pkg/auth0-cli-config-generator/main.go
-	# commander test commander.yaml
+	./auth0-cli-config-generator --name integration
+	rm -f ./auth0-cli-config-generator
+	commander test commander.yaml
 
 test:
 	CGO_ENABLED=1 go test -race ./... -count 1
