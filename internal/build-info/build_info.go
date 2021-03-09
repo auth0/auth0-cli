@@ -1,6 +1,7 @@
 package buildinfo
 
 import (
+	"fmt"
 	"runtime"
 )
 
@@ -37,4 +38,8 @@ func NewBuildInfo(version, branch, buildDate, buildUser, goVersion, revision str
 		GoVersion: goVersion,
 		Revision:  revision,
 	}
+}
+
+func GetVersionWithCommit() string {
+	return fmt.Sprintf("%v %v", Version, Revision)
 }
