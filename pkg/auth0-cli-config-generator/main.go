@@ -124,15 +124,15 @@ func main() {
 
 	flags := cmd.Flags()
 	flags.String("filepath", path.Join(os.Getenv("HOME"), ".config", "auth0", "config.json"), "Filepath")
-	viper.BindPFlag("FILEPATH", flags.Lookup("filepath"))
+	_ = viper.BindPFlag("FILEPATH", flags.Lookup("filepath"))
 	flags.String("name", "", "")
-	viper.BindPFlag("NAME", flags.Lookup("name"))
+	_ = viper.BindPFlag("NAME", flags.Lookup("name"))
 	flags.String("client-id", "", "")
-	viper.BindPFlag("CLIENT_ID", flags.Lookup("client-id"))
+	_ = viper.BindPFlag("CLIENT_ID", flags.Lookup("client-id"))
 	flags.String("client-secret", "", "")
-	viper.BindPFlag("CLIENT_SECRET", flags.Lookup("client-secret"))
+	_ = viper.BindPFlag("CLIENT_SECRET", flags.Lookup("client-secret"))
 	flags.String("domain", "", "")
-	viper.BindPFlag("DOMAIN", flags.Lookup("domain"))
+	_ = viper.BindPFlag("DOMAIN", flags.Lookup("domain"))
 
-	cmd.Execute()
+	_ = cmd.Execute()
 }
