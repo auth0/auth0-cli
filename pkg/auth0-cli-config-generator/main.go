@@ -4,63 +4,102 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/url"
+	"os"
+	"path"
+	"path/filepath"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2/clientcredentials"
 )
 
-type config struct {
-	domain        string
-	client_id     string
-	client_secret string
+type params struct {
+	filePath     string
+	name         string
+	domain       string
+	clientID     string
+	clientSecret string
 }
 
-func (c config) validate() error {
-	if c.domain == "" {
+func (p params) validate() error {
+	if p.name == "" {
+		return fmt.Errorf("Missing name")
+	}
+
+	if p.domain == "" {
 		return fmt.Errorf("Missing domain")
 	}
 
-	u, err := url.Parse(c.domain)
+	u, err := url.Parse(p.domain)
 	if err != nil {
-		return fmt.Errorf("Failed to parse domain: %s", c.domain)
+		return fmt.Errorf("Failed to parse domain: %s", p.domain)
 	}
 
 	if u.Scheme != "" {
-		return fmt.Errorf("Domain cant include a scheme: %s", c.domain)
+		return fmt.Errorf("Domain cant include a scheme: %s", p.domain)
 	}
 
-	if c.client_id == "" {
+	if p.clientID == "" {
 		return fmt.Errorf("Missing client-id")
 	}
 
-	if c.client_secret == "" {
+	if p.clientSecret == "" {
 		return fmt.Errorf("Missing client-secret")
 	}
 	return nil
+}
+
+type config struct {
+	DefaultTenant string            `json:"default_tenant"`
+	Tenants       map[string]tenant `json:"tenants"`
+}
+
+type tenant struct {
+	Name        string    `json:"name"`
+	Domain      string    `json:"domain"`
+	AccessToken string    `json:"access_token,omitempty"`
+	ExpiresAt   time.Time `json:"expires_at"`
+}
+
+func persistConfig(filePath string, c config) error {
+	dir := filepath.Dir(filePath)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			return err
+		}
+	}
+
+	buf, err := json.MarshalIndent(c, "", "    ")
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(filePath, buf, 0600)
 }
 
 func main() {
 	var cmd = &cobra.Command{
 		Use: "auth0-cli-config-generator",
 		RunE: func(command *cobra.Command, args []string) error {
-
-			cfg := config{viper.GetString("DOMAIN"), viper.GetString("CLIENT_ID"), viper.GetString("CLIENT_SECRET")}
-			if err := cfg.validate(); err != nil {
+			p := params{viper.GetString("FILEPATH"), viper.GetString("NAME"), viper.GetString("DOMAIN"), viper.GetString("CLIENT_ID"), viper.GetString("CLIENT_SECRET")}
+			if err := p.validate(); err != nil {
 				return err
 			}
 
-			u, err := url.Parse(cfg.domain)
+			u, err := url.Parse(p.domain)
 			if err != nil {
 				return err
 			}
 			u.Scheme = "https"
 
 			c := &clientcredentials.Config{
-				ClientID:       cfg.client_id,
-				ClientSecret:   cfg.client_secret,
+				ClientID:       p.clientID,
+				ClientSecret:   p.clientSecret,
 				TokenURL:       u.String() + "/oauth/token",
 				EndpointParams: url.Values{"audience": {u.String() + "/api/v2/"}},
 			}
@@ -70,7 +109,12 @@ func main() {
 				return err
 			}
 
-			fmt.Printf("DEBUG:%#v\n", token.AccessToken)
+			t := tenant{p.name, p.domain, token.AccessToken, token.Expiry}
+
+			cfg := config{p.name, map[string]tenant{p.name: t}}
+			if err := persistConfig(p.filePath, cfg); err != nil {
+				return err
+			}
 
 			return nil
 		},
@@ -79,6 +123,10 @@ func main() {
 	viper.AutomaticEnv()
 
 	flags := cmd.Flags()
+	flags.String("filepath", path.Join(os.Getenv("HOME"), ".config", "auth0", "config.json"), "Filepath")
+	viper.BindPFlag("FILEPATH", flags.Lookup("filepath"))
+	flags.String("name", "", "")
+	viper.BindPFlag("NAME", flags.Lookup("name"))
 	flags.String("client-id", "", "")
 	viper.BindPFlag("CLIENT_ID", flags.Lookup("client-id"))
 	flags.String("client-secret", "", "")
