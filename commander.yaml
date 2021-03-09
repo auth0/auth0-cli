@@ -1,0 +1,9 @@
+config:
+  inherit-env: true
+
+tests:
+  auth0 apis list:
+    exit-code: 0
+
+  auth0 logs --no-color --num-entries 1 --silent:
+    exit-code: 0
