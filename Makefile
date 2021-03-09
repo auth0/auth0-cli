@@ -1,5 +1,30 @@
 #!/usr/bin/env make
 
+# setup variables
+NAME := auth0-cli
+PKG := github.com/auth0/$(NAME)
+BUILDINFOPKG := $(PKG)/internal/build-info
+
+## setup variables for build-info
+BUILDUSER := $(shell whoami)
+BUILDTIME := $(shell date -u '+%Y-%m-%d %H:%M:%S')
+VERSION := $(GITCOMMIT)
+#BUILDVERSION := $(shell git describe --exact-match --abbrev=0)
+GITCOMMIT := $(shell git rev-parse --short HEAD)
+
+GITUNTRACKEDCHANGES := $(shell git status --porcelain --untracked-files=no)
+ifneq ($(GITUNTRACKEDCHANGES),)
+	GITCOMMIT := $(GITCOMMIT)-dirty
+endif
+
+GITBRANCH ?= $(shell git rev-parse --verify --abbrev-ref HEAD)
+CTIMEVAR = -X '$(BUILDINFOPKG).Version=$(VERSION)' \
+					 -X '$(BUILDINFOPKG).Revision=$(GITCOMMIT)' \
+					 -X '$(BUILDINFOPKG).Branch=$(GITBRANCH)' \
+					 -X '$(BUILDINFOPKG).BuildUser=$(BUILDUSER)' \
+					 -X '$(BUILDINFOPKG).BuildDate=$(BUILDTIME)'
+
+
 generate:
 	go generate ./...
 .PHONY: generate
