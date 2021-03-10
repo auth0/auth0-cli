@@ -19,36 +19,36 @@ import (
 
 type params struct {
 	filePath     string
-	name         string
-	domain       string
+	clientName   string
+	clientDomain string
 	clientID     string
 	clientSecret string
 }
 
 func (p params) validate() error {
-	if p.name == "" {
-		return fmt.Errorf("Missing name")
+	if p.clientName == "" {
+		return fmt.Errorf("Missing client name")
 	}
 
-	if p.domain == "" {
-		return fmt.Errorf("Missing domain")
+	if p.clientDomain == "" {
+		return fmt.Errorf("Missing client domain")
 	}
 
-	u, err := url.Parse(p.domain)
+	u, err := url.Parse(p.clientDomain)
 	if err != nil {
-		return fmt.Errorf("Failed to parse domain: %s", p.domain)
+		return fmt.Errorf("Failed to parse client domain: %s", p.clientDomain)
 	}
 
 	if u.Scheme != "" {
-		return fmt.Errorf("Domain cant include a scheme: %s", p.domain)
+		return fmt.Errorf("Client domain cant include a scheme: %s", p.clientDomain)
 	}
 
 	if p.clientID == "" {
-		return fmt.Errorf("Missing client-id")
+		return fmt.Errorf("Missing client id")
 	}
 
 	if p.clientSecret == "" {
-		return fmt.Errorf("Missing client-secret")
+		return fmt.Errorf("Missing client secret")
 	}
 	return nil
 }
@@ -121,21 +121,27 @@ func main() {
 	var cmd = &cobra.Command{
 		Use: "auth0-cli-config-generator",
 		RunE: func(command *cobra.Command, args []string) error {
+			reuseConfig := viper.GetBool("REUSE_CONFIG")
+			filePath := viper.GetString("FILEPATH")
+			clientName := viper.GetString("CLIENT_NAME")
+			clientDomain := viper.GetString("CLIENT_DOMAIN")
+			clientID := viper.GetString("CLIENT_ID")
+			clientSecret := viper.GetString("CLIENT_SECRET")
 
-			if viper.GetBool("REUSE_CONFIG") {
-				if !isLoggedIn(viper.GetString("FILEPATH")) {
-					return fmt.Errorf("Config file is not valid: %s", viper.GetString("FILEPATH"))
+			if reuseConfig {
+				if !isLoggedIn(filePath) {
+					return fmt.Errorf("Config file is not valid: %s", filePath)
 				}
 				fmt.Println("Reusing valid config file")
 				return nil
 			}
 
-			p := params{viper.GetString("FILEPATH"), viper.GetString("NAME"), viper.GetString("DOMAIN"), viper.GetString("CLIENT_ID"), viper.GetString("CLIENT_SECRET")}
+			p := params{filePath, clientName, clientDomain, clientID, clientSecret}
 			if err := p.validate(); err != nil {
 				return err
 			}
 
-			u, err := url.Parse("https://" + p.domain)
+			u, err := url.Parse("https://" + p.clientDomain)
 			if err != nil {
 				return err
 			}
@@ -152,9 +158,9 @@ func main() {
 				return err
 			}
 
-			t := tenant{p.name, p.domain, token.AccessToken, token.Expiry}
+			t := tenant{p.clientName, p.clientDomain, token.AccessToken, token.Expiry}
 
-			cfg := config{p.name, map[string]tenant{p.name: t}}
+			cfg := config{p.clientName, map[string]tenant{p.clientName: t}}
 			if err := persistConfig(p.filePath, cfg); err != nil {
 				return err
 			}
@@ -168,8 +174,8 @@ func main() {
 	flags := cmd.Flags()
 	flags.String("filepath", path.Join(os.Getenv("HOME"), ".config", "auth0", "config.json"), "Filepath")
 	_ = viper.BindPFlag("FILEPATH", flags.Lookup("filepath"))
-	flags.String("name", "", "")
-	_ = viper.BindPFlag("NAME", flags.Lookup("name"))
+	flags.String("client-name", "", "")
+	_ = viper.BindPFlag("CLIENT_NAME", flags.Lookup("client-name"))
 	flags.String("client-id", "", "")
 	_ = viper.BindPFlag("CLIENT_ID", flags.Lookup("client-id"))
 	flags.String("client-secret", "", "")
