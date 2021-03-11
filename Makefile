@@ -27,11 +27,17 @@ generate:
 	go generate ./...
 .PHONY: generate
 
-integration:
+auth0-cli-config-generator:
 	go build -o auth0-cli-config-generator pkg/auth0-cli-config-generator/main.go
-	./auth0-cli-config-generator
-	rm -f ./auth0-cli-config-generator
+
+integration: auth0-cli-config-generator
+	@./auth0-cli-config-generator
 	commander test commander.yaml
+.PHONY: integration
+
+clean:
+	rm -f auth0 auth0-cli-config-generator
+.PHONY: clean
 
 test:
 	CGO_ENABLED=1 go test -race ./... -count 1
