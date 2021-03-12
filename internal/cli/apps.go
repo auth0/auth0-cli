@@ -176,6 +176,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 		Grants            []string
 	}
 	var oidcConformant = true
+	var algorithm = "RS256"
 
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -233,6 +234,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 				AllowedLogoutURLs:       stringToInterfaceSlice(flags.AllowedLogoutURLs),
 				TokenEndpointAuthMethod: apiAuthMethodFor(flags.AuthMethod),
 				OIDCConformant:          &oidcConformant,
+				JWTConfiguration:        &management.ClientJWTConfiguration{Algorithm: &algorithm},
 			}
 
 			if len(flags.Grants) == 0 {
