@@ -31,6 +31,9 @@ func TestSecrets(t *testing.T) {
 
 		kr := &Keyring{}
 		v, err := kr.Get("mynamespace", "foo")
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		if got, want := v, "bar"; got != want {
 			t.Fatalf("wanted error: %v, got: %v", want, got)
