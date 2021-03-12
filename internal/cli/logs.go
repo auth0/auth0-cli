@@ -26,7 +26,7 @@ func getLatestLogs(cli *cli, n int, clientID string) ([]*management.Log, error) 
 		management.Parameter("per_page", fmt.Sprintf("%d", perPage))}
 
 	if clientID != "" {
-		queryParams = append(queryParams, management.Query(fmt.Sprintf(`client_id:"%s"`, ClientID)))
+		queryParams = append(queryParams, management.Query(fmt.Sprintf(`client_id:"%s"`, clientID)))
 	}
 
 	return cli.api.Log.List(queryParams...)
