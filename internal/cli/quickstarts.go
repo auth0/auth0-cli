@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -30,6 +31,15 @@ var (
 		}
 		return
 	}()
+)
+
+// QuickStart app types and defaults
+const (
+	QSNative    = "native"
+	QSSpa       = "spa"
+	QSWebApp    = "webapp"
+	QSBackend   = "backend"
+	_defaultURL = "http://localhost:3000"
 )
 
 type quickstart struct {
@@ -112,7 +122,8 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 
 			q, err := getQuickstart(client.GetAppType(), selectedStack)
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred with the specified stack %v: %v", selectedStack, err)	}
+				return fmt.Errorf("An unexpected error occurred with the specified stack %v: %v", selectedStack, err)
+			}
 
 			err = ansi.Spinner("Downloading quickstart sample", func() error {
 				return downloadQuickStart(context.TODO(), cli, client, target, q)
@@ -123,6 +134,11 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 			}
 
 			cli.renderer.Infof("Quickstart sample sucessfully downloaded at %s", target)
+
+			qsType := quickstartsTypeFor(client.GetAppType())
+			if err := promptDefaultURLs(context.TODO(), cli, client, qsType); err != nil {
+				return err
+			}
 			return nil
 		},
 	}
@@ -283,14 +299,51 @@ func quickstartStacksFromType(t string) ([]string, error) {
 func quickstartsTypeFor(v string) string {
 	switch {
 	case v == "native":
-		return "native"
+		return QSNative
 	case v == "spa":
-		return "spa"
+		return QSSpa
 	case v == "regular_web":
-		return "webapp"
+		return QSWebApp
 	case v == "non_interactive":
-		return "backend"
+		return QSBackend
 	default:
 		return "generic"
 	}
+}
+
+func promptDefaultURLs(ctx context.Context, cli *cli, client *management.Client, qsType string) error {
+	if !strings.EqualFold(qsType, QSSpa) && !strings.EqualFold(qsType, QSWebApp) {
+		return nil
+	}
+
+	a := &management.Client{
+		Callbacks:         client.Callbacks,
+		WebOrigins:        client.WebOrigins,
+		AllowedLogoutURLs: client.AllowedLogoutURLs,
+	}
+	shouldUpdate := false
+	if confirmed := prompt.Confirm(fmt.Sprintf("Do you want to add this URL to the list of allowed callback URLs: %s", _defaultURL)); confirmed {
+		a.Callbacks = append(a.Callbacks, _defaultURL)
+		shouldUpdate = true
+	}
+	if confirmed := prompt.Confirm(fmt.Sprintf("Do you want to add this URL to the list of allowed logout URLs: %s", _defaultURL)); confirmed {
+		a.AllowedLogoutURLs = append(a.AllowedLogoutURLs, _defaultURL)
+		shouldUpdate = true
+	}
+	if strings.EqualFold(qsType, QSSpa) {
+		if confirmed := prompt.Confirm(fmt.Sprintf("Do you want to add this URL to the list of allowed web origins: %s", _defaultURL)); confirmed {
+			a.WebOrigins = append(a.WebOrigins, _defaultURL)
+			shouldUpdate = true
+		}
+	}
+	if shouldUpdate {
+		err := ansi.Spinner("Updating application", func() error {
+			return cli.api.Client.Update(client.GetClientID(), a)
+		})
+		if err != nil {
+			return err
+		}
+		cli.renderer.Infof("Application successfully updated")
+	}
+	return nil
 }
