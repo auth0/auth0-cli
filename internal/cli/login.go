@@ -8,6 +8,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/open"
+	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 )
 
@@ -62,7 +63,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 	cli.renderer.Infof("Successfully logged in.")
 	cli.renderer.Infof("Tenant: %s\n", res.Tenant)
 
-	return cli.addTenant(tenant{
+	err = cli.addTenant(tenant{
 		Name:        res.Tenant,
 		Domain:      res.Domain,
 		AccessToken: res.AccessToken,
@@ -70,4 +71,20 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 			time.Duration(res.ExpiresIn) * time.Second,
 		),
 	})
+	if err != nil {
+		return fmt.Errorf("Unexpected error adding tenant to config: %w", err)
+	}
+
+	if cli.config.DefaultTenant != res.Tenant {
+		promptText := fmt.Sprintf("Change the default tenant to %s?", res.Tenant)
+		if confirmed := prompt.Confirm(promptText); !confirmed {
+			return nil
+		}
+		cli.config.DefaultTenant = res.Tenant
+		if err := cli.persistConfig(); err != nil {
+			return fmt.Errorf("An error occurred while setting the default tenant: %w", err)
+		}
+	}
+
+	return nil
 }
