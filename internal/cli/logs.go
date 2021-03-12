@@ -10,7 +10,7 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
-func getLatestLogs(cli *cli, n int, ClientID string) ([]*management.Log, error) {
+func getLatestLogs(cli *cli, n int, clientID string) ([]*management.Log, error) {
 	page := 0
 	perPage := n
 
