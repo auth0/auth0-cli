@@ -76,7 +76,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 	}
 
 	if cli.config.DefaultTenant != res.Tenant {
-		promptText := fmt.Sprintf("Change the default tenant to %s?", res.Tenant)
+		promptText := fmt.Sprintf("Your default tenant is %s. Do you want to change it to %s?", cli.config.DefaultTenant, res.Tenant)
 		if confirmed := prompt.Confirm(promptText); !confirmed {
 			return nil
 		}
