@@ -25,7 +25,6 @@ var (
 		DefaultValue:  "",
 		Help:          "Name of the application.",
 		IsRequired:    true,
-		IsInteractive: true,
 	}
 	appDescription = Flag{
 		Name:          "Description",
@@ -34,7 +33,6 @@ var (
 		DefaultValue:  "",
 		Help:          "Description of the application. Max character count is 140.",
 		IsRequired:    false,
-		IsInteractive: true,
 	}
 	appAuthMethod = Flag{
 		Name:          "Auth Method",
@@ -43,7 +41,6 @@ var (
 		DefaultValue:  "",
 		Help:          "Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).",
 		IsRequired:    false,
-		IsInteractive: false,
 	}
 )
 

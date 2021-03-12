@@ -14,7 +14,6 @@ type Flag struct {
 	DefaultValue  string
 	Help          string
 	IsRequired    bool
-	IsInteractive bool
 }
 
 func (f *Flag) Ask(cmd *cobra.Command, value interface{}) error {
@@ -38,7 +37,7 @@ func ask(cmd *cobra.Command, f *Flag, value interface{}, isUpdate bool) error {
 		shouldAsk = shouldPrompt(cmd, f.LongForm)
 	}
 
-	if f.IsInteractive && shouldAsk {
+	if shouldAsk {
 		input := prompt.TextInput("", fmt.Sprintf("%s:", f.Name), f.Help, f.IsRequired)
 
 		if err := prompt.AskOne(input, value); err != nil {
