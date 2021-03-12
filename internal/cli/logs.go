@@ -10,7 +10,7 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
-func getLatestLogs(cli *cli, n int) ([]*management.Log, error) {
+func getLatestLogs(cli *cli, n int, ClientID string) ([]*management.Log, error) {
 	page := 0
 	perPage := n
 
@@ -20,18 +20,24 @@ func getLatestLogs(cli *cli, n int) ([]*management.Log, error) {
 		perPage = 1000
 	}
 
-	return cli.api.Log.List(
+	queryParams := []management.RequestOption{
 		management.Parameter("sort", "date:-1"),
 		management.Parameter("page", fmt.Sprintf("%d", page)),
-		management.Parameter("per_page", fmt.Sprintf("%d", perPage)),
-	)
+		management.Parameter("per_page", fmt.Sprintf("%d", perPage))}
+
+	if ClientID != "" {
+		queryParams = append(queryParams, management.Query(fmt.Sprintf(`client_id:"%s"`, ClientID)))
+	}
+
+	return cli.api.Log.List(queryParams...)
 }
 
 func logsCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		Num     int
-		Follow  bool
-		NoColor bool
+		Num      int
+		Follow   bool
+		NoColor  bool
+		ClientID string
 	}
 
 	cmd := &cobra.Command{
@@ -42,7 +48,7 @@ Show the tenant logs.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			lastLogID := ""
-			list, err := getLatestLogs(cli, flags.Num)
+			list, err := getLatestLogs(cli, flags.Num, flags.ClientID)
 			if err != nil {
 				return fmt.Errorf("An unexpected error occurred while getting logs: %v", err)
 			}
@@ -68,12 +74,18 @@ Show the tenant logs.
 					defer close(logsCh)
 
 					for {
-						list, err = cli.api.Log.List(
+						queryParams := []management.RequestOption{
 							management.Query(fmt.Sprintf("log_id:[%s TO *]", lastLogID)),
 							management.Parameter("page", "0"),
 							management.Parameter("per_page", "100"),
 							management.Parameter("sort", "date:-1"),
-						)
+						}
+
+						if flags.ClientID != "" {
+							queryParams = append(queryParams, management.Query(fmt.Sprintf(`client_id:"%s"`, flags.ClientID)))
+						}
+
+						list, err = cli.api.Log.List(queryParams...)
 						if err != nil {
 							cli.renderer.Errorf("An unexpected error occurred while getting logs: %v", err)
 							return
@@ -109,6 +121,7 @@ Show the tenant logs.
 	cmd.Flags().IntVarP(&flags.Num, "num-entries", "n", 100, "the number of log entries to print")
 	cmd.Flags().BoolVarP(&flags.Follow, "follow", "f", false, "Specify if the logs should be streamed")
 	cmd.Flags().BoolVar(&flags.NoColor, "no-color", false, "turn off colored print")
+	cmd.Flags().StringVarP(&flags.ClientID, "client-id", "c", "", "client ID to display logs for")
 
 	return cmd
 }
