@@ -20,12 +20,16 @@ func (f *Flag) Ask(cmd *cobra.Command, value interface{}) error {
 	return ask(cmd, f, value, false)
 }
 
-func (f *Flag) AskUpdate(cmd *cobra.Command, value interface{}) error {
+func (f *Flag) AskU(cmd *cobra.Command, value interface{}) error {
 	return ask(cmd, f, value, true)
 }
 
 func (f *Flag) RegisterString(cmd *cobra.Command, value *string) {
-	cmd.Flags().StringVarP(value, f.LongForm, f.ShortForm, f.DefaultValue, f.Help)
+	registerString(cmd, f, value, false)
+}
+
+func (f *Flag) RegisterStringU(cmd *cobra.Command, value *string) {
+	registerString(cmd, f, value, true)
 }
 
 func ask(cmd *cobra.Command, f *Flag, value interface{}, isUpdate bool) error {
@@ -43,6 +47,22 @@ func ask(cmd *cobra.Command, f *Flag, value interface{}, isUpdate bool) error {
 		if err := prompt.AskOne(input, value); err != nil {
 			return fmt.Errorf("An unexpected error occurred: %w", err)
 		}
+	}
+
+	return nil
+}
+
+func registerString(cmd *cobra.Command, f *Flag, value *string, isUpdate bool) {
+	cmd.Flags().StringVarP(value, f.LongForm, f.ShortForm, f.DefaultValue, f.Help)
+
+	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
+		panic(fmt.Errorf("An unexpected error occurred: %w", err)) // TODO: Handle
+	}
+}
+
+func markFlagRequired(cmd *cobra.Command, f *Flag, isUpdate bool) error {
+	if f.IsRequired && !isUpdate {
+		return cmd.MarkFlagRequired(f.LongForm)
 	}
 
 	return nil
