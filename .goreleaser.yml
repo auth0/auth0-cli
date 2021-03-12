@@ -1,15 +1,20 @@
 # Documentation at http://goreleaser.com
 builds:
-  - main: ./cmd/auth0
-    env:
-      - CGO_ENABLED=0
-    goarch:
-      - amd64
-    goos:
-      - darwin
-      - linux
-      - windows
-    binary: auth0
+- main: ./cmd/auth0
+  env:
+  - CGO_ENABLED=0
+  goarch:
+  - amd64
+  goos:
+  - darwin
+  - linux
+  - windows
+  binary: auth0
+  ldflags:
+      - -X github.com/auth0/auth0-cli/internal/buildinfo.Version={{.Version}}
+      - -X github.com/auth0/auth0-cli/internal/buildinfo.Revision={{.Commit}}
+      - -X github.com/auth0/auth0-cli/internal/buildinfo.BuildUser=goreleaser'
+      - -X github.com/auth0/auth0-cli/internal/buildinfo.BuildDate={{.Date}}'
 archives:
   - replacements:
       darwin: Darwin

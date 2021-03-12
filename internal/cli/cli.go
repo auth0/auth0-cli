@@ -17,6 +17,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/spf13/cobra"
@@ -156,7 +157,7 @@ func (c *cli) setup(ctx context.Context) error {
 	if t.AccessToken != "" {
 		m, err := management.New(t.Domain,
 			management.WithStaticToken(t.AccessToken),
-			management.WithUserAgent(userAgent))
+			management.WithUserAgent(fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v"))))
 		if err != nil {
 			return err
 		}
