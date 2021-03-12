@@ -207,7 +207,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 		Short: "Create a new application",
 		Long: `Create a new application:
 
-auth0 apps create --Name myapp --type [native|spa|regular|m2m]
+auth0 apps create --name myapp --type [native|spa|regular|m2m]
 `,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
@@ -310,7 +310,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		Short: "Update an application",
 		Long: `Update an application:
 
-auth0 apps update <id> --Name myapp --type [native|spa|regular|m2m]
+auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 `,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
