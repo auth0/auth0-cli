@@ -10,31 +10,31 @@ import (
 	reflect "reflect"
 )
 
-// MockActionsAPI is a mock of ActionsAPI interface
-type MockActionsAPI struct {
+// MockActionAPI is a mock of ActionAPI interface
+type MockActionAPI struct {
 	ctrl     *gomock.Controller
-	recorder *MockActionsAPIMockRecorder
+	recorder *MockActionAPIMockRecorder
 }
 
-// MockActionsAPIMockRecorder is the mock recorder for MockActionsAPI
-type MockActionsAPIMockRecorder struct {
-	mock *MockActionsAPI
+// MockActionAPIMockRecorder is the mock recorder for MockActionAPI
+type MockActionAPIMockRecorder struct {
+	mock *MockActionAPI
 }
 
-// NewMockActionsAPI creates a new mock instance
-func NewMockActionsAPI(ctrl *gomock.Controller) *MockActionsAPI {
-	mock := &MockActionsAPI{ctrl: ctrl}
-	mock.recorder = &MockActionsAPIMockRecorder{mock}
+// NewMockActionAPI creates a new mock instance
+func NewMockActionAPI(ctrl *gomock.Controller) *MockActionAPI {
+	mock := &MockActionAPI{ctrl: ctrl}
+	mock.recorder = &MockActionAPIMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockActionsAPI) EXPECT() *MockActionsAPIMockRecorder {
+func (m *MockActionAPI) EXPECT() *MockActionAPIMockRecorder {
 	return m.recorder
 }
 
 // Create mocks base method
-func (m *MockActionsAPI) Create(a *management.Action) error {
+func (m *MockActionAPI) Create(a *management.Action) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", a)
 	ret0, _ := ret[0].(error)
@@ -42,13 +42,13 @@ func (m *MockActionsAPI) Create(a *management.Action) error {
 }
 
 // Create indicates an expected call of Create
-func (mr *MockActionsAPIMockRecorder) Create(a interface{}) *gomock.Call {
+func (mr *MockActionAPIMockRecorder) Create(a interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockActionsAPI)(nil).Create), a)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockActionAPI)(nil).Create), a)
 }
 
 // Read mocks base method
-func (m *MockActionsAPI) Read(id string) (*management.Action, error) {
+func (m *MockActionAPI) Read(id string) (*management.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Read", id)
 	ret0, _ := ret[0].(*management.Action)
@@ -57,13 +57,13 @@ func (m *MockActionsAPI) Read(id string) (*management.Action, error) {
 }
 
 // Read indicates an expected call of Read
-func (mr *MockActionsAPIMockRecorder) Read(id interface{}) *gomock.Call {
+func (mr *MockActionAPIMockRecorder) Read(id interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockActionsAPI)(nil).Read), id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockActionAPI)(nil).Read), id)
 }
 
 // Update mocks base method
-func (m *MockActionsAPI) Update(id string, a *management.Action) error {
+func (m *MockActionAPI) Update(id string, a *management.Action) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", id, a)
 	ret0, _ := ret[0].(error)
@@ -71,13 +71,13 @@ func (m *MockActionsAPI) Update(id string, a *management.Action) error {
 }
 
 // Update indicates an expected call of Update
-func (mr *MockActionsAPIMockRecorder) Update(id, a interface{}) *gomock.Call {
+func (mr *MockActionAPIMockRecorder) Update(id, a interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockActionsAPI)(nil).Update), id, a)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockActionAPI)(nil).Update), id, a)
 }
 
 // Delete mocks base method
-func (m *MockActionsAPI) Delete(id string, opts ...management.RequestOption) error {
+func (m *MockActionAPI) Delete(id string, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{id}
 	for _, a := range opts {
@@ -89,14 +89,14 @@ func (m *MockActionsAPI) Delete(id string, opts ...management.RequestOption) err
 }
 
 // Delete indicates an expected call of Delete
-func (mr *MockActionsAPIMockRecorder) Delete(id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockActionAPIMockRecorder) Delete(id interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{id}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockActionsAPI)(nil).Delete), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockActionAPI)(nil).Delete), varargs...)
 }
 
 // List mocks base method
-func (m *MockActionsAPI) List(opts ...management.RequestOption) (*management.ActionList, error) {
+func (m *MockActionAPI) List(opts ...management.RequestOption) (*management.ActionList, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{}
 	for _, a := range opts {
@@ -109,7 +109,268 @@ func (m *MockActionsAPI) List(opts ...management.RequestOption) (*management.Act
 }
 
 // List indicates an expected call of List
-func (mr *MockActionsAPIMockRecorder) List(opts ...interface{}) *gomock.Call {
+func (mr *MockActionAPIMockRecorder) List(opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockActionsAPI)(nil).List), opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockActionAPI)(nil).List), opts...)
+}
+
+// MockActionVersionAPI is a mock of ActionVersionAPI interface
+type MockActionVersionAPI struct {
+	ctrl     *gomock.Controller
+	recorder *MockActionVersionAPIMockRecorder
+}
+
+// MockActionVersionAPIMockRecorder is the mock recorder for MockActionVersionAPI
+type MockActionVersionAPIMockRecorder struct {
+	mock *MockActionVersionAPI
+}
+
+// NewMockActionVersionAPI creates a new mock instance
+func NewMockActionVersionAPI(ctrl *gomock.Controller) *MockActionVersionAPI {
+	mock := &MockActionVersionAPI{ctrl: ctrl}
+	mock.recorder = &MockActionVersionAPIMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockActionVersionAPI) EXPECT() *MockActionVersionAPIMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method
+func (m *MockActionVersionAPI) Create(actionID string, v *management.ActionVersion) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", actionID, v)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Create indicates an expected call of Create
+func (mr *MockActionVersionAPIMockRecorder) Create(actionID, v interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockActionVersionAPI)(nil).Create), actionID, v)
+}
+
+// Read mocks base method
+func (m *MockActionVersionAPI) Read(actionID, id string) (*management.ActionVersion, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Read", actionID, id)
+	ret0, _ := ret[0].(*management.ActionVersion)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Read indicates an expected call of Read
+func (mr *MockActionVersionAPIMockRecorder) Read(actionID, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockActionVersionAPI)(nil).Read), actionID, id)
+}
+
+// UpsertDraft mocks base method
+func (m *MockActionVersionAPI) UpsertDraft(actionID string, v *management.ActionVersion) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpsertDraft", actionID, v)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpsertDraft indicates an expected call of UpsertDraft
+func (mr *MockActionVersionAPIMockRecorder) UpsertDraft(actionID, v interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertDraft", reflect.TypeOf((*MockActionVersionAPI)(nil).UpsertDraft), actionID, v)
+}
+
+// ReadDraft mocks base method
+func (m *MockActionVersionAPI) ReadDraft(actionID string) (*management.ActionVersion, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadDraft", actionID)
+	ret0, _ := ret[0].(*management.ActionVersion)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadDraft indicates an expected call of ReadDraft
+func (mr *MockActionVersionAPIMockRecorder) ReadDraft(actionID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadDraft", reflect.TypeOf((*MockActionVersionAPI)(nil).ReadDraft), actionID)
+}
+
+// Delete mocks base method
+func (m *MockActionVersionAPI) Delete(actionID, id string, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{actionID, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Delete", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete
+func (mr *MockActionVersionAPIMockRecorder) Delete(actionID, id interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{actionID, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockActionVersionAPI)(nil).Delete), varargs...)
+}
+
+// List mocks base method
+func (m *MockActionVersionAPI) List(actionID string, opts ...management.RequestOption) (*management.ActionVersionList, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{actionID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "List", varargs...)
+	ret0, _ := ret[0].(*management.ActionVersionList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List
+func (mr *MockActionVersionAPIMockRecorder) List(actionID interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{actionID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockActionVersionAPI)(nil).List), varargs...)
+}
+
+// Test mocks base method
+func (m *MockActionVersionAPI) Test(actionID, id string, payload management.Object) (management.Object, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Test", actionID, id, payload)
+	ret0, _ := ret[0].(management.Object)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Test indicates an expected call of Test
+func (mr *MockActionVersionAPIMockRecorder) Test(actionID, id, payload interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Test", reflect.TypeOf((*MockActionVersionAPI)(nil).Test), actionID, id, payload)
+}
+
+// Deploy mocks base method
+func (m *MockActionVersionAPI) Deploy(actionID, id string) (*management.ActionVersion, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Deploy", actionID, id)
+	ret0, _ := ret[0].(*management.ActionVersion)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Deploy indicates an expected call of Deploy
+func (mr *MockActionVersionAPIMockRecorder) Deploy(actionID, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockActionVersionAPI)(nil).Deploy), actionID, id)
+}
+
+// MockActionBindingAPI is a mock of ActionBindingAPI interface
+type MockActionBindingAPI struct {
+	ctrl     *gomock.Controller
+	recorder *MockActionBindingAPIMockRecorder
+}
+
+// MockActionBindingAPIMockRecorder is the mock recorder for MockActionBindingAPI
+type MockActionBindingAPIMockRecorder struct {
+	mock *MockActionBindingAPI
+}
+
+// NewMockActionBindingAPI creates a new mock instance
+func NewMockActionBindingAPI(ctrl *gomock.Controller) *MockActionBindingAPI {
+	mock := &MockActionBindingAPI{ctrl: ctrl}
+	mock.recorder = &MockActionBindingAPIMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockActionBindingAPI) EXPECT() *MockActionBindingAPIMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method
+func (m *MockActionBindingAPI) Create(triggerID management.TriggerID, action *management.Action) (*management.ActionBinding, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", triggerID, action)
+	ret0, _ := ret[0].(*management.ActionBinding)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create
+func (mr *MockActionBindingAPIMockRecorder) Create(triggerID, action interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockActionBindingAPI)(nil).Create), triggerID, action)
+}
+
+// List mocks base method
+func (m *MockActionBindingAPI) List(triggerID management.TriggerID, opts ...management.RequestOption) (*management.ActionBindingList, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{triggerID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "List", varargs...)
+	ret0, _ := ret[0].(*management.ActionBindingList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List
+func (mr *MockActionBindingAPIMockRecorder) List(triggerID interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{triggerID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockActionBindingAPI)(nil).List), varargs...)
+}
+
+// Update mocks base method
+func (m *MockActionBindingAPI) Update(triggerID management.TriggerID, v []*management.ActionBinding) (*management.ActionBindingList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", triggerID, v)
+	ret0, _ := ret[0].(*management.ActionBindingList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Update indicates an expected call of Update
+func (mr *MockActionBindingAPIMockRecorder) Update(triggerID, v interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockActionBindingAPI)(nil).Update), triggerID, v)
+}
+
+// MockActionExecutionAPI is a mock of ActionExecutionAPI interface
+type MockActionExecutionAPI struct {
+	ctrl     *gomock.Controller
+	recorder *MockActionExecutionAPIMockRecorder
+}
+
+// MockActionExecutionAPIMockRecorder is the mock recorder for MockActionExecutionAPI
+type MockActionExecutionAPIMockRecorder struct {
+	mock *MockActionExecutionAPI
+}
+
+// NewMockActionExecutionAPI creates a new mock instance
+func NewMockActionExecutionAPI(ctrl *gomock.Controller) *MockActionExecutionAPI {
+	mock := &MockActionExecutionAPI{ctrl: ctrl}
+	mock.recorder = &MockActionExecutionAPIMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockActionExecutionAPI) EXPECT() *MockActionExecutionAPIMockRecorder {
+	return m.recorder
+}
+
+// Read mocks base method
+func (m *MockActionExecutionAPI) Read(id string) (*management.ActionExecution, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Read", id)
+	ret0, _ := ret[0].(*management.ActionExecution)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Read indicates an expected call of Read
+func (mr *MockActionExecutionAPIMockRecorder) Read(id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockActionExecutionAPI)(nil).Read), id)
 }
