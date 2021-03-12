@@ -113,11 +113,7 @@ func (r *Renderer) Result(data View) {
 			for _, pair := range v.KeyValues() {
 				k := pair[0]
 				v := pair[1]
-
-				// NOTE(cyx): We can either nuke it or annotate with `<none>`. For now we're choosing to nuke it.
-				if v != "" {
-					kvs = append(kvs, []string{k, v})
-				}
+				kvs = append(kvs, []string{k, v})
 			}
 			writeTable(r.ResultWriter, nil, kvs)
 		}

@@ -109,7 +109,7 @@ auth0 apps show <id>
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if canPrompt(cmd) {
-					input := prompt.TextInput(appID, "Id:", "Id of the application.", true)
+					input := prompt.TextInput(appID, "Client Id:", "Id of the application.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
 						return fmt.Errorf("An unexpected error occurred: %w", err)
@@ -161,7 +161,7 @@ auth0 apps delete <id>
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if canPrompt(cmd) {
-					input := prompt.TextInput(appID, "Id:", "Id of the application.", true)
+					input := prompt.TextInput(appID, "Client Id:", "Id of the application.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
 						return fmt.Errorf("An unexpected error occurred: %w", err)
@@ -318,7 +318,7 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if canPrompt(cmd) {
-					input := prompt.TextInput(appID, "Id:", "Id of the application.", true)
+					input := prompt.TextInput(appID, "Client Id:", "Id of the application.", true)
 
 					if err := prompt.AskOne(input, &inputs); err != nil {
 						return fmt.Errorf("An unexpected error occurred: %w", err)

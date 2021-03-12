@@ -2,11 +2,12 @@ package cli
 
 import (
 	"context"
+	"os"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/build-info"
+	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 // Execute is the primary entrypoint of the CLI app.
