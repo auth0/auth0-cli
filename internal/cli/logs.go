@@ -34,21 +34,30 @@ func getLatestLogs(cli *cli, n int, ClientID string) ([]*management.Log, error) 
 
 func logsCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		Num      int
-		Follow   bool
-		NoColor  bool
+		Num     int
+		Follow  bool
+		NoColor bool
+	}
+
+	var inputs struct {
 		ClientID string
 	}
 
 	cmd := &cobra.Command{
-		Use:   "logs",
+		Use:   "logs [client-id]",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Show the tenant logs",
-		Long: `auth0 logs
-Show the tenant logs.
+		Long: `Show the tenant logs:
+ 
+auth0 logs [client-id]
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			inputs.ClientID = ""
+			if len(args) == 1 {
+				inputs.ClientID = args[0]
+			}
 			lastLogID := ""
-			list, err := getLatestLogs(cli, flags.Num, flags.ClientID)
+			list, err := getLatestLogs(cli, flags.Num, inputs.ClientID)
 			if err != nil {
 				return fmt.Errorf("An unexpected error occurred while getting logs: %v", err)
 			}
@@ -81,8 +90,8 @@ Show the tenant logs.
 							management.Parameter("sort", "date:-1"),
 						}
 
-						if flags.ClientID != "" {
-							queryParams = append(queryParams, management.Query(fmt.Sprintf(`client_id:"%s"`, flags.ClientID)))
+						if inputs.ClientID != "" {
+							queryParams = append(queryParams, management.Query(fmt.Sprintf(`client_id:"%s"`, inputs.ClientID)))
 						}
 
 						list, err = cli.api.Log.List(queryParams...)
@@ -121,7 +130,6 @@ Show the tenant logs.
 	cmd.Flags().IntVarP(&flags.Num, "num-entries", "n", 100, "the number of log entries to print")
 	cmd.Flags().BoolVarP(&flags.Follow, "follow", "f", false, "Specify if the logs should be streamed")
 	cmd.Flags().BoolVar(&flags.NoColor, "no-color", false, "turn off colored print")
-	cmd.Flags().StringVarP(&flags.ClientID, "client-id", "c", "", "client ID to display logs for")
 
 	return cmd
 }
