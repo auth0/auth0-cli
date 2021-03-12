@@ -7,7 +7,7 @@ import (
 )
 
 func TestSecrets(t *testing.T) {
-	t.Run("fails: not found", func(t *testing.T) {
+	t.Run("fail: not found", func(t *testing.T) {
 		// init underlying keychain manager
 		keyring.MockInit()
 
@@ -19,7 +19,7 @@ func TestSecrets(t *testing.T) {
 		}
 	})
 
-	t.Run("succeeds: get secret", func(t *testing.T) {
+	t.Run("succeed: get secret", func(t *testing.T) {
 		// init underlying keychain manager
 		keyring.MockInit()
 
@@ -40,7 +40,7 @@ func TestSecrets(t *testing.T) {
 		}
 	})
 
-	t.Run("succeds: set secret", func(t *testing.T) {
+	t.Run("succeed: set secret", func(t *testing.T) {
 		// init underlying keychain manager
 		keyring.MockInit()
 
