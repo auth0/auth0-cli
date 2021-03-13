@@ -13,9 +13,26 @@ import (
 
 const (
 	apiID         = "id"
-	apiName       = "name"
-	apiIdentifier = "identifier"
 	apiScopes     = "scopes"
+)
+
+var (
+	apiName = Flag{
+		Name:          "Name",
+		LongForm:      "name",
+		ShortForm:     "n",
+		DefaultValue:  "",
+		Help:          "Name of the API.",
+		IsRequired:    true,
+	}
+	apiIdentifier = Flag{
+		Name:          "Identifier",
+		LongForm:      "identifier",
+		ShortForm:     "i",
+		DefaultValue:  "",
+		Help:          "Identifier of the API. Cannot be changed once set.",
+		IsRequired:    true,
+	}
 )
 
 func apisCmd(cli *cli) *cobra.Command {
@@ -147,26 +164,12 @@ auth0 apis create --name myapi --identifier http://my-api
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if shouldPrompt(cmd, apiName) {
-				input := prompt.TextInput(
-					apiName, "Name:",
-					"Name of the API. You can change the name later in the API settings.",
-					true)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return fmt.Errorf("An unexpected error occurred: %w", err)
-				}
+			if err := apiName.Ask(cmd, &flags.Name); err != nil {
+				return err
 			}
 
-			if shouldPrompt(cmd, apiIdentifier) {
-				input := prompt.TextInput(
-					apiIdentifier, "Identifier:",
-					"Identifier of the API. Cannot be changed once set.",
-					true)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return fmt.Errorf("An unexpected error occurred: %w", err)
-				}
+			if err := apiIdentifier.Ask(cmd, &flags.Identifier); err != nil {
+				return err
 			}
 
 			if shouldPrompt(cmd, apiScopes) {
@@ -199,10 +202,9 @@ auth0 apis create --name myapi --identifier http://my-api
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.Name, apiName, "n", "", "Name of the API.")
-	cmd.Flags().StringVarP(&flags.Identifier, apiIdentifier, "i", "", "Identifier of the API.")
+	apiName.RegisterString(cmd, &flags.Name)
+	apiIdentifier.RegisterString(cmd, &flags.Identifier)
 	cmd.Flags().StringVarP(&flags.Scopes, apiScopes, "s", "", "Space-separated list of scopes.")
-	mustRequireFlags(cmd, apiName, apiIdentifier)
 
 	return cmd
 }
@@ -240,12 +242,8 @@ auth0 apis update <id> --name myapi
 				inputs.ID = args[0]
 			}
 
-			if shouldPromptWhenFlagless(cmd, apiName) {
-				input := prompt.TextInput(apiName, "Name:", "Name of the API.", true)
-
-				if err := prompt.AskOne(input, &inputs); err != nil {
-					return fmt.Errorf("An unexpected error occurred: %w", err)
-				}
+			if err := apiName.AskU(cmd, &inputs.Name); err != nil {
+				return err
 			}
 
 			if shouldPromptWhenFlagless(cmd, apiScopes) {
@@ -289,7 +287,7 @@ auth0 apis update <id> --name myapi
 		},
 	}
 
-	cmd.Flags().StringVarP(&inputs.Name, apiName, "n", "", "Name of the API.")
+	apiName.RegisterStringU(cmd, &inputs.Name)
 	cmd.Flags().StringVarP(&inputs.Scopes, apiScopes, "s", "", "Space-separated list of scopes.")
 
 	return cmd
