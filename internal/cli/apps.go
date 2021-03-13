@@ -13,10 +13,35 @@ import (
 )
 
 const (
-	appID          = "id"
-	appName        = "name"
-	appType        = "type"
-	appDescription = "description"
+	appID   = "id"
+	appType = "type"
+)
+
+var (
+	appName = Flag{
+		Name:          "Name",
+		LongForm:      "name",
+		ShortForm:     "n",
+		DefaultValue:  "",
+		Help:          "Name of the application.",
+		IsRequired:    true,
+	}
+	appDescription = Flag{
+		Name:          "Description",
+		LongForm:      "description",
+		ShortForm:     "d",
+		DefaultValue:  "",
+		Help:          "Description of the application. Max character count is 140.",
+		IsRequired:    false,
+	}
+	appAuthMethod = Flag{
+		Name:          "Auth Method",
+		LongForm:      "auth-method",
+		ShortForm:     "a",
+		DefaultValue:  "",
+		Help:          "Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).",
+		IsRequired:    false,
+	}
 )
 
 func appsCmd(cli *cli) *cobra.Command {
@@ -188,15 +213,8 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if shouldPrompt(cmd, appName) {
-				input := prompt.TextInput(
-					appName, "Name:",
-					"Name of the application. You can change the name later in the application settings.",
-					true)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return fmt.Errorf("An unexpected error occurred: %w", err)
-				}
+			if err := appName.Ask(cmd, &flags.Name); err != nil {
+				return err
 			}
 
 			if shouldPrompt(cmd, appType) {
@@ -215,12 +233,8 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 				}
 			}
 
-			if shouldPrompt(cmd, appDescription) {
-				input := prompt.TextInput(appDescription, "Description:", "Description of the application.", false)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return fmt.Errorf("An unexpected error occurred: %w", err)
-				}
+			if err := appDescription.Ask(cmd, &flags.Description); err != nil {
+				return err
 			}
 
 			a := &management.Client{
@@ -257,20 +271,20 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.Name, "name", "n", "", "Name of the application.")
+	appName.RegisterString(cmd, &flags.Name)
 	cmd.Flags().StringVarP(&flags.Type, "type", "t", "", "Type of application:\n"+
 		"- native: mobile, desktop, CLI and smart device apps running natively.\n"+
 		"- spa (single page application): a JavaScript front-end app that uses an API.\n"+
 		"- regular: Traditional web app using redirects.\n"+
 		"- m2m (machine to machine): CLIs, daemons or services running on your backend.")
-	cmd.Flags().StringVarP(&flags.Description, "description", "d", "", "Description of the application. Max character count is 140.")
+	appDescription.RegisterString(cmd, &flags.Description)
 	cmd.Flags().StringSliceVarP(&flags.Callbacks, "callbacks", "c", nil, "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.")
 	cmd.Flags().StringSliceVarP(&flags.AllowedOrigins, "origins", "o", nil, "Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.")
 	cmd.Flags().StringSliceVarP(&flags.AllowedWebOrigins, "web-origins", "w", nil, "Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode.")
 	cmd.Flags().StringSliceVarP(&flags.AllowedLogoutURLs, "logout-urls", "l", nil, "Comma-separated list of URLs that are valid to redirect to after logout from Auth0. Wildcards are allowed for subdomains.")
-	cmd.Flags().StringVarP(&flags.AuthMethod, "auth-method", "a", "", "Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).")
+	appAuthMethod.RegisterString(cmd, &flags.AuthMethod)
 	cmd.Flags().StringSliceVarP(&flags.Grants, "grants", "g", nil, "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.")
-	mustRequireFlags(cmd, appName, appType)
+	mustRequireFlags(cmd, appType)
 
 	return cmd
 }
@@ -316,12 +330,8 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				inputs.ID = args[0]
 			}
 
-			if shouldPromptWhenFlagless(cmd, appName) {
-				input := prompt.TextInput(appName, "Name:", "Name of the application", true)
-
-				if err := prompt.AskOne(input, &inputs); err != nil {
-					return fmt.Errorf("An unexpected error occurred: %w", err)
-				}
+			if err := appName.AskU(cmd, &inputs.Name); err != nil {
+				return err
 			}
 
 			if shouldPromptWhenFlagless(cmd, appType) {
@@ -340,12 +350,8 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				}
 			}
 
-			if shouldPromptWhenFlagless(cmd, appDescription) {
-				input := prompt.TextInput(appDescription, "Description:", "Description of the application.", false)
-
-				if err := prompt.AskOne(input, &inputs); err != nil {
-					return fmt.Errorf("An unexpected error occurred: %w", err)
-				}
+			if err := appDescription.AskU(cmd, &inputs.Description); err != nil {
+				return err
 			}
 
 			if shouldPromptWhenFlagless(cmd, "CallbacksString") {
@@ -437,18 +443,18 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 		},
 	}
 
-	cmd.Flags().StringVarP(&inputs.Name, "name", "n", "", "Name of the application.")
+	appName.RegisterStringU(cmd, &inputs.Name)
 	cmd.Flags().StringVarP(&inputs.Type, "type", "t", "", "Type of application:\n"+
 		"- native: mobile, desktop, CLI and smart device apps running natively.\n"+
 		"- spa (single page application): a JavaScript front-end app that uses an API.\n"+
 		"- regular: Traditional web app using redirects.\n"+
 		"- m2m (machine to machine): CLIs, daemons or services running on your backend.")
-	cmd.Flags().StringVarP(&inputs.Description, "description", "d", "", "Description of the application. Max character count is 140.")
+	appDescription.RegisterStringU(cmd, &inputs.Description)
 	cmd.Flags().StringSliceVarP(&inputs.Callbacks, "callbacks", "c", nil, "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.")
 	cmd.Flags().StringSliceVarP(&inputs.AllowedOrigins, "origins", "o", nil, "Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.")
 	cmd.Flags().StringSliceVarP(&inputs.AllowedWebOrigins, "web-origins", "w", nil, "Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode.")
 	cmd.Flags().StringSliceVarP(&inputs.AllowedLogoutURLs, "logout-urls", "l", nil, "Comma-separated list of URLs that are valid to redirect to after logout from Auth0. Wildcards are allowed for subdomains.")
-	cmd.Flags().StringVarP(&inputs.AuthMethod, "auth-method", "a", "", "Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).")
+	appAuthMethod.RegisterStringU(cmd, &inputs.AuthMethod)
 	cmd.Flags().StringSliceVarP(&inputs.Grants, "grants", "g", nil, "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.")
 
 	return cmd
