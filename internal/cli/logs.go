@@ -10,7 +10,7 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
-func getLatestLogs(cli *cli, n int) ([]*management.Log, error) {
+func getLatestLogs(cli *cli, n int, clientID string) ([]*management.Log, error) {
 	page := 0
 	perPage := n
 
@@ -20,11 +20,16 @@ func getLatestLogs(cli *cli, n int) ([]*management.Log, error) {
 		perPage = 1000
 	}
 
-	return cli.api.Log.List(
+	queryParams := []management.RequestOption{
 		management.Parameter("sort", "date:-1"),
 		management.Parameter("page", fmt.Sprintf("%d", page)),
-		management.Parameter("per_page", fmt.Sprintf("%d", perPage)),
-	)
+		management.Parameter("per_page", fmt.Sprintf("%d", perPage))}
+
+	if clientID != "" {
+		queryParams = append(queryParams, management.Query(fmt.Sprintf(`client_id:"%s"`, clientID)))
+	}
+
+	return cli.api.Log.List(queryParams...)
 }
 
 func logsCmd(cli *cli) *cobra.Command {
@@ -34,15 +39,25 @@ func logsCmd(cli *cli) *cobra.Command {
 		NoColor bool
 	}
 
+	var inputs struct {
+		ClientID string
+	}
+
 	cmd := &cobra.Command{
-		Use:   "logs",
+		Use:   "logs [client-id]",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Show the tenant logs",
-		Long: `auth0 logs
-Show the tenant logs.
+		Long: `Show the tenant logs:
+ 
+auth0 logs [client-id]
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			inputs.ClientID = ""
+			if len(args) == 1 {
+				inputs.ClientID = args[0]
+			}
 			lastLogID := ""
-			list, err := getLatestLogs(cli, flags.Num)
+			list, err := getLatestLogs(cli, flags.Num, inputs.ClientID)
 			if err != nil {
 				return fmt.Errorf("An unexpected error occurred while getting logs: %v", err)
 			}
@@ -68,12 +83,18 @@ Show the tenant logs.
 					defer close(logsCh)
 
 					for {
-						list, err = cli.api.Log.List(
+						queryParams := []management.RequestOption{
 							management.Query(fmt.Sprintf("log_id:[%s TO *]", lastLogID)),
 							management.Parameter("page", "0"),
 							management.Parameter("per_page", "100"),
 							management.Parameter("sort", "date:-1"),
-						)
+						}
+
+						if inputs.ClientID != "" {
+							queryParams = append(queryParams, management.Query(fmt.Sprintf(`client_id:"%s"`, inputs.ClientID)))
+						}
+
+						list, err = cli.api.Log.List(queryParams...)
 						if err != nil {
 							cli.renderer.Errorf("An unexpected error occurred while getting logs: %v", err)
 							return
