@@ -4,6 +4,7 @@
 NAME := auth0-cli
 PKG := github.com/auth0/$(NAME)
 BUILDINFOPKG := $(PKG)/internal/build-info
+GOBIN ?= $(shell go env GOPATH)/bin
 
 ## setup variables for build-info
 BUILDUSER := $(shell whoami)
@@ -26,18 +27,6 @@ CTIMEVAR = -X '$(BUILDINFOPKG).Version=$(VERSION)' \
 generate:
 	go generate ./...
 .PHONY: generate
-
-auth0-cli-config-generator:
-	go build -o auth0-cli-config-generator pkg/auth0-cli-config-generator/main.go
-
-integration: auth0-cli-config-generator
-	@./auth0-cli-config-generator
-	commander test commander.yaml
-.PHONY: integration
-
-clean:
-	rm -f auth0 auth0-cli-config-generator
-.PHONY: clean
 
 test:
 	CGO_ENABLED=1 go test -race ./... -count 1
@@ -72,4 +61,19 @@ $(GOBIN)/mockgen:
 
 .PHONY: mocks
 mocks: $(GOBIN)/mockgen
-	@go generate ./...
+	go generate ./...
+
+$(GOBIN)/commander:
+	cd && go get github.com/commander-cli/commander/cmd/commander
+
+$(GOBIN)/auth0-cli-config-generator:
+	go install ./pkg/auth0-cli-config-generator
+
+integration: $(GOBIN)/auth0-cli-config-generator $(GOBIN)/commander
+	auth0-cli-config-generator && commander test commander.yaml
+.PHONY: integration
+
+clean:
+	rm -f auth0 auth0-cli-config-generator
+.PHONY: clean
+

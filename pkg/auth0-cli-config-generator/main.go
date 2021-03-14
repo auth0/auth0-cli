@@ -1,3 +1,6 @@
+// auth0-cli-config-generator: A command that generates a valid config file that can be used with auth0-cli.
+//
+// Currently this command is only used to generator a config using environment variables which is then used for integration tests.
 package main
 
 import (
@@ -90,14 +93,14 @@ func isLoggedIn(filePath string) bool {
 		return false
 	}
 
-	if err = jwt.Validate(t, jwt.WithIssuer("https://auth0.auth0.com/")); err != nil {
+	if err = jwt.Validate(t); err != nil {
 		return false
 	}
 
 	return true
 }
 
-func persistConfig(filePath string, c config) error {
+func persistConfig(filePath string, c config, overwrite bool) error {
 	dir := filepath.Dir(filePath)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		if err := os.MkdirAll(dir, 0700); err != nil {
@@ -110,6 +113,10 @@ func persistConfig(filePath string, c config) error {
 		return err
 	}
 
+	if _, err := os.Stat(filePath); err == nil && !overwrite {
+		return fmt.Errorf("Not overwriting existing config file: %s", filePath)
+	}
+
 	if err = ioutil.WriteFile(filePath, buf, 0600); err != nil {
 		return err
 	}
@@ -119,9 +126,12 @@ func persistConfig(filePath string, c config) error {
 
 func main() {
 	var cmd = &cobra.Command{
-		Use: "auth0-cli-config-generator",
+		Use:           "auth0-cli-config-generator",
+		SilenceErrors: true,
+		SilenceUsage:  true,
 		RunE: func(command *cobra.Command, args []string) error {
 			reuseConfig := viper.GetBool("REUSE_CONFIG")
+			overwrite := viper.GetBool("OVERWRITE")
 			filePath := viper.GetString("FILEPATH")
 			clientName := viper.GetString("CLIENT_NAME")
 			clientDomain := viper.GetString("CLIENT_DOMAIN")
@@ -132,7 +142,7 @@ func main() {
 				if !isLoggedIn(filePath) {
 					return fmt.Errorf("Config file is not valid: %s", filePath)
 				}
-				fmt.Println("Reusing valid config file")
+				fmt.Printf("Reusing valid config file: %s\n", filePath)
 				return nil
 			}
 
@@ -161,9 +171,10 @@ func main() {
 			t := tenant{p.clientName, p.clientDomain, token.AccessToken, token.Expiry}
 
 			cfg := config{p.clientName, map[string]tenant{p.clientName: t}}
-			if err := persistConfig(p.filePath, cfg); err != nil {
+			if err := persistConfig(p.filePath, cfg, overwrite); err != nil {
 				return err
 			}
+			fmt.Printf("Config file generated: %s\n", filePath)
 
 			return nil
 		},
@@ -184,6 +195,11 @@ func main() {
 	_ = viper.BindPFlag("DOMAIN", flags.Lookup("domain"))
 	flags.Bool("reuse-config", true, "Reuse an existing config if found")
 	_ = viper.BindPFlag("REUSE_CONFIG", flags.Lookup("reuse-config"))
+	flags.Bool("clobber", false, "Overwrite an existing config")
+	_ = viper.BindPFlag("CLOBBER", flags.Lookup("clobber"))
 
-	_ = cmd.Execute()
+	if err := cmd.Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, fmt.Sprintf("%s\n", err))
+		os.Exit(1)
+	}
 }
