@@ -64,7 +64,7 @@ mocks: $(GOBIN)/mockgen
 	go generate ./...
 
 $(GOBIN)/commander:
-	cd && go get github.com/commander-cli/commander/cmd/commander
+	cd && GO111MODULE=auto go get github.com/commander-cli/commander/cmd/commander
 
 $(GOBIN)/auth0-cli-config-generator:
 	go install ./pkg/auth0-cli-config-generator
@@ -72,8 +72,3 @@ $(GOBIN)/auth0-cli-config-generator:
 integration: $(GOBIN)/auth0-cli-config-generator $(GOBIN)/commander
 	auth0-cli-config-generator && commander test commander.yaml
 .PHONY: integration
-
-clean:
-	rm -f auth0 auth0-cli-config-generator
-.PHONY: clean
-

@@ -191,15 +191,15 @@ func main() {
 	_ = viper.BindPFlag("CLIENT_ID", flags.Lookup("client-id"))
 	flags.String("client-secret", "", "Client secret to use to generate token which is set within config")
 	_ = viper.BindPFlag("CLIENT_SECRET", flags.Lookup("client-secret"))
-	flags.String("domain", "", "Client domain to use to generate token which is set within config")
-	_ = viper.BindPFlag("DOMAIN", flags.Lookup("domain"))
+	flags.String("client-domain", "", "Client domain to use to generate token which is set within config")
+	_ = viper.BindPFlag("CLIENT_DOMAIN", flags.Lookup("client-domain"))
 	flags.Bool("reuse-config", true, "Reuse an existing config if found")
 	_ = viper.BindPFlag("REUSE_CONFIG", flags.Lookup("reuse-config"))
-	flags.Bool("clobber", false, "Overwrite an existing config")
-	_ = viper.BindPFlag("CLOBBER", flags.Lookup("clobber"))
+	flags.Bool("overwrite", false, "Overwrite an existing config")
+	_ = viper.BindPFlag("OVERWRITE", flags.Lookup("overwrite"))
 
 	if err := cmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, fmt.Sprintf("%s\n", err))
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
