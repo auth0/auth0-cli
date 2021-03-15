@@ -312,7 +312,7 @@ func quickstartsTypeFor(v string) string {
 }
 
 // promptDefaultURLs checks whether the application is SPA or WebApp and
-// whether the app has already default quickstart url to allowed url lists.
+// whether the app has already added the default quickstart url to allowed url lists.
 // If not, it prompts the user to add the default url and updates the application
 // if they accept.
 func promptDefaultURLs(ctx context.Context, cli *cli, client *management.Client, qsType string) error {
