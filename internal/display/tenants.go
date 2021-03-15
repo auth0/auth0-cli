@@ -1,7 +1,5 @@
 package display
 
-//import "gopkg.in/auth0.v5"
-
 type tenantView struct {
 	Name 		string
 }
