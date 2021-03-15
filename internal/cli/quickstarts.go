@@ -35,10 +35,10 @@ var (
 
 // QuickStart app types and defaults
 const (
-	QSNative    = "native"
-	QSSpa       = "spa"
-	QSWebApp    = "webapp"
-	QSBackend   = "backend"
+	qsNative    = "native"
+	qsSpa       = "spa"
+	qsWebApp    = "webapp"
+	qsBackend   = "backend"
 	_defaultURL = "http://localhost:3000"
 )
 
@@ -299,13 +299,13 @@ func quickstartStacksFromType(t string) ([]string, error) {
 func quickstartsTypeFor(v string) string {
 	switch {
 	case v == "native":
-		return QSNative
+		return qsNative
 	case v == "spa":
-		return QSSpa
+		return qsSpa
 	case v == "regular_web":
-		return QSWebApp
+		return qsWebApp
 	case v == "non_interactive":
-		return QSBackend
+		return qsBackend
 	default:
 		return "generic"
 	}
@@ -316,7 +316,7 @@ func quickstartsTypeFor(v string) string {
 // If not, it prompts the user to add the default url and updates the application
 // if they accept.
 func promptDefaultURLs(ctx context.Context, cli *cli, client *management.Client, qsType string) error {
-	if !strings.EqualFold(qsType, QSSpa) && !strings.EqualFold(qsType, QSWebApp) {
+	if !strings.EqualFold(qsType, qsSpa) && !strings.EqualFold(qsType, qsWebApp) {
 		return nil
 	}
 	if containsStr(client.Callbacks, _defaultURL) || containsStr(client.AllowedLogoutURLs, _defaultURL) {
@@ -332,7 +332,7 @@ func promptDefaultURLs(ctx context.Context, cli *cli, client *management.Client,
 	if confirmed := prompt.Confirm(formatURLPrompt(qsType)); confirmed {
 		a.Callbacks = append(a.Callbacks, _defaultURL)
 		a.AllowedLogoutURLs = append(a.AllowedLogoutURLs, _defaultURL)
-		if strings.EqualFold(qsType, QSSpa) {
+		if strings.EqualFold(qsType, qsSpa) {
 			a.WebOrigins = append(a.WebOrigins, _defaultURL)
 		}
 		shouldUpdate = true
@@ -354,7 +354,7 @@ func promptDefaultURLs(ctx context.Context, cli *cli, client *management.Client,
 func formatURLPrompt(qsType string) string {
 	var p strings.Builder
 	p.WriteString("\nQuickstarts use localhost, do you want to add %s to the list of allowed callback URLs")
-	if strings.EqualFold(qsType, QSSpa) {
+	if strings.EqualFold(qsType, qsSpa) {
 		p.WriteString(", logout URLs, and web origins?")
 	} else {
 		p.WriteString(" and logout URLs?")
