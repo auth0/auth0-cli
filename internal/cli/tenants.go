@@ -2,9 +2,9 @@ package cli
 
 import (
 	"fmt"
-	"github.com/olekukonko/tablewriter"
 	"os"
 
+	"github.com/olekukonko/tablewriter"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 )
@@ -39,8 +39,8 @@ func listTenantCmd(cli *cli) *cobra.Command {
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetHeader([]string{"Available tenants"})
 			for _, val := range tenNames {
-				b := []string{val}
-				table.Append(b)
+				res := []string{val}
+				table.Append(res)
 			}
 
 			table.Render()
