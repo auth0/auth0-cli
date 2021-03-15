@@ -332,7 +332,9 @@ func promptDefaultURLs(ctx context.Context, cli *cli, client *management.Client,
 	if confirmed := prompt.Confirm(formatURLPrompt(qsType)); confirmed {
 		a.Callbacks = append(a.Callbacks, _defaultURL)
 		a.AllowedLogoutURLs = append(a.AllowedLogoutURLs, _defaultURL)
-		a.WebOrigins = append(a.WebOrigins, _defaultURL)
+		if strings.EqualFold(qsType, QSSpa) {
+			a.WebOrigins = append(a.WebOrigins, _defaultURL)
+		}
 		shouldUpdate = true
 	}
 	if shouldUpdate {
