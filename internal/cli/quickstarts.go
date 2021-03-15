@@ -311,8 +311,15 @@ func quickstartsTypeFor(v string) string {
 	}
 }
 
+// promptDefaultURLs checks whether the application is SPA or WebApp and
+// whether the app has already default quickstart url to allowed url lists.
+// If not, it prompts the user to add the default url and updates the application
+// if they accept.
 func promptDefaultURLs(ctx context.Context, cli *cli, client *management.Client, qsType string) error {
 	if !strings.EqualFold(qsType, QSSpa) && !strings.EqualFold(qsType, QSWebApp) {
+		return nil
+	}
+	if containsStr(client.Callbacks, _defaultURL) || containsStr(client.AllowedLogoutURLs, _defaultURL) {
 		return nil
 	}
 
@@ -322,19 +329,11 @@ func promptDefaultURLs(ctx context.Context, cli *cli, client *management.Client,
 		AllowedLogoutURLs: client.AllowedLogoutURLs,
 	}
 	shouldUpdate := false
-	if confirmed := prompt.Confirm(fmt.Sprintf("Do you want to add this URL to the list of allowed callback URLs: %s", _defaultURL)); confirmed {
+	if confirmed := prompt.Confirm(formatURLPrompt(qsType)); confirmed {
 		a.Callbacks = append(a.Callbacks, _defaultURL)
-		shouldUpdate = true
-	}
-	if confirmed := prompt.Confirm(fmt.Sprintf("Do you want to add this URL to the list of allowed logout URLs: %s", _defaultURL)); confirmed {
 		a.AllowedLogoutURLs = append(a.AllowedLogoutURLs, _defaultURL)
+		a.WebOrigins = append(a.WebOrigins, _defaultURL)
 		shouldUpdate = true
-	}
-	if strings.EqualFold(qsType, QSSpa) {
-		if confirmed := prompt.Confirm(fmt.Sprintf("Do you want to add this URL to the list of allowed web origins: %s", _defaultURL)); confirmed {
-			a.WebOrigins = append(a.WebOrigins, _defaultURL)
-			shouldUpdate = true
-		}
 	}
 	if shouldUpdate {
 		err := ansi.Spinner("Updating application", func() error {
@@ -346,4 +345,17 @@ func promptDefaultURLs(ctx context.Context, cli *cli, client *management.Client,
 		cli.renderer.Infof("Application successfully updated")
 	}
 	return nil
+}
+
+// formatURLPrompt creates the correct prompt based on app type for
+// asking the user if they would like to add default urls.
+func formatURLPrompt(qsType string) string {
+	var p strings.Builder
+	p.WriteString("\nQuickstarts use localhost, do you want to add %s to the list of allowed callback URLs")
+	if strings.EqualFold(qsType, QSSpa) {
+		p.WriteString(", logout URLs, and web origins?")
+	} else {
+		p.WriteString(" and logout URLs?")
+	}
+	return fmt.Sprintf(p.String(), _defaultURL)
 }
