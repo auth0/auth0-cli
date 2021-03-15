@@ -2,9 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
-
-	"github.com/olekukonko/tablewriter"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 )
@@ -25,25 +22,19 @@ func listTenantCmd(cli *cli) *cobra.Command {
 		Use: "list",
 		Short: "List your tenants",
 		Long: `auth0 tenants list`,
+		Aliases: []string{"ls"},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			listTenant, err := cli.listTenants()
+			tens, err := cli.listTenants()
 			if err != nil {
 				return fmt.Errorf("Unable to load tenants due to an unexpected error: %w", err)
 			}
 
-			tenNames := make([]string, len(listTenant))
-			for i, t := range listTenant {
+			tenNames := make([]string, len(tens))
+			for i, t := range tens {
 				tenNames[i] = t.Name
 			}
 
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Available tenants"})
-			for _, val := range tenNames {
-				res := []string{val}
-				table.Append(res)
-			}
-
-			table.Render()
+			cli.renderer.ShowTenants(tenNames)
 			return nil
 		},
 	}
