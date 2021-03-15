@@ -142,16 +142,16 @@ func (v *applicationListView) AsTableHeader() []string {
 func (v *applicationListView) AsTableRow() []string {
 	if v.revealSecret {
 		return []string{
+			ansi.Faint(v.ClientID),
 			v.Name,
 			v.Type,
-			ansi.Faint(v.ClientID),
 			ansi.Italic(v.ClientSecret),
 		}
 	}
 	return []string{
+		ansi.Faint(v.ClientID),
 		v.Name,
 		v.Type,
-		ansi.Faint(v.ClientID),
 	}
 }
 
