@@ -177,7 +177,11 @@ auth0 logs tail [client-id]
 	return cmd
 }
 
+<<<<<<< HEAD
 func getLatestLogs(cli *cli, n int, clientID string) ([]*management.Log, error) {
+=======
+func getLatestLogs(cli *cli, n int, ClientID string) ([]*management.Log, error) {
+>>>>>>> f8e44643c1b29a31a80077bf1b122944f6f45a1b
 	page := 0
 	perPage := n
 
@@ -192,8 +196,13 @@ func getLatestLogs(cli *cli, n int, clientID string) ([]*management.Log, error) 
 		management.Parameter("page", fmt.Sprintf("%d", page)),
 		management.Parameter("per_page", fmt.Sprintf("%d", perPage))}
 
+<<<<<<< HEAD
 	if clientID != "" {
 		queryParams = append(queryParams, management.Query(fmt.Sprintf(`client_id:"%s"`, clientID)))
+=======
+	if ClientID != "" {
+		queryParams = append(queryParams, management.Query(fmt.Sprintf(`client_id:"%s"`, ClientID)))
+>>>>>>> f8e44643c1b29a31a80077bf1b122944f6f45a1b
 	}
 
 	return cli.api.Log.List(queryParams...)
