@@ -120,6 +120,7 @@ Lists your existing applications. To create one try:
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ClientList
+
 			err := ansi.Spinner("Loading applications", func() error {
 				var err error
 				list, err = cli.api.Client.List()
