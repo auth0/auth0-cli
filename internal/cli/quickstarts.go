@@ -328,16 +328,14 @@ func promptDefaultURLs(ctx context.Context, cli *cli, client *management.Client,
 		WebOrigins:        client.WebOrigins,
 		AllowedLogoutURLs: client.AllowedLogoutURLs,
 	}
-	shouldUpdate := false
+
 	if confirmed := prompt.Confirm(formatURLPrompt(qsType)); confirmed {
 		a.Callbacks = append(a.Callbacks, _defaultURL)
 		a.AllowedLogoutURLs = append(a.AllowedLogoutURLs, _defaultURL)
 		if strings.EqualFold(qsType, qsSpa) {
 			a.WebOrigins = append(a.WebOrigins, _defaultURL)
 		}
-		shouldUpdate = true
-	}
-	if shouldUpdate {
+
 		err := ansi.Spinner("Updating application", func() error {
 			return cli.api.Client.Update(client.GetClientID(), a)
 		})
