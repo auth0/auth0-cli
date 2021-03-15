@@ -213,9 +213,9 @@ auth0 apis create --name myapi --identifier http://my-api
 
 func updateApiCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID     string
-		Name   string
-		Scopes []string
+		ID           string
+		Name         string
+		Scopes       []string
 		ScopesString string
 	}
 
