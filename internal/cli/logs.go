@@ -10,39 +10,44 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
-func getLatestLogs(cli *cli, n int) ([]*management.Log, error) {
-	page := 0
-	perPage := n
-
-	if perPage > 1000 {
-		// Pagination max out at 1000 entries in total
-		// https://auth0.com/docs/logs/retrieve-log-events-using-mgmt-api#limitations
-		perPage = 1000
+func logsCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "logs",
+		Short: "View tenant logs",
 	}
 
-	return cli.api.Log.List(
-		management.Parameter("sort", "date:-1"),
-		management.Parameter("page", fmt.Sprintf("%d", page)),
-		management.Parameter("per_page", fmt.Sprintf("%d", perPage)),
-	)
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(listLogsCmd(cli))
+	cmd.AddCommand(tailLogsCmd(cli))
+
+	return cmd
 }
 
-func logsCmd(cli *cli) *cobra.Command {
+func listLogsCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		Num     int
-		Follow  bool
 		NoColor bool
 	}
 
+	var inputs struct {
+		ClientID string
+	}
+
 	cmd := &cobra.Command{
-		Use:   "logs",
+		Use:   "list [client-id]",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Show the tenant logs",
-		Long: `auth0 logs
-Show the tenant logs.
+		Long: `Show the tenant logs:
+ 
+auth0 logs list [client-id]
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			lastLogID := ""
-			list, err := getLatestLogs(cli, flags.Num)
+			inputs.ClientID = ""
+			if len(args) == 1 {
+				inputs.ClientID = args[0]
+			}
+
+			list, err := getLatestLogs(cli, flags.Num, inputs.ClientID)
 			if err != nil {
 				return fmt.Errorf("An unexpected error occurred while getting logs: %v", err)
 			}
@@ -51,47 +56,10 @@ Show the tenant logs.
 			// streaming work faster.
 			//
 			// Create a `set` to detect duplicates clientside.
-			set := make(map[string]struct{})
-			list = dedupLogs(list, set)
-
-			if len(list) > 0 {
-				lastLogID = list[len(list)-1].GetLogID()
-			}
+			// set := make(map[string]struct{})
+			// list = dedupLogs(list, set)
 
 			var logsCh chan []*management.Log
-			if flags.Follow && lastLogID != "" {
-				logsCh = make(chan []*management.Log)
-
-				go func() {
-					// This is pretty important and allows
-					// us to close / terminate the command.
-					defer close(logsCh)
-
-					for {
-						list, err = cli.api.Log.List(
-							management.Query(fmt.Sprintf("log_id:[%s TO *]", lastLogID)),
-							management.Parameter("page", "0"),
-							management.Parameter("per_page", "100"),
-							management.Parameter("sort", "date:-1"),
-						)
-						if err != nil {
-							cli.renderer.Errorf("An unexpected error occurred while getting logs: %v", err)
-							return
-						}
-
-						if len(list) > 0 {
-							logsCh <- dedupLogs(list, set)
-							lastLogID = list[len(list)-1].GetLogID()
-						}
-
-						if len(list) < 90 {
-							// Not a lot is happening, sleep on it
-							time.Sleep(1 * time.Second)
-						}
-					}
-
-				}()
-			}
 
 			// We create an execution API decorator which provides
 			// a leaky bucket implementation for Read. This
@@ -107,10 +75,128 @@ Show the tenant logs.
 	}
 
 	cmd.Flags().IntVarP(&flags.Num, "num-entries", "n", 100, "the number of log entries to print")
-	cmd.Flags().BoolVarP(&flags.Follow, "follow", "f", false, "Specify if the logs should be streamed")
 	cmd.Flags().BoolVar(&flags.NoColor, "no-color", false, "turn off colored print")
 
 	return cmd
+}
+
+func tailLogsCmd(cli *cli) *cobra.Command {
+	var flags struct {
+		Num     int
+		NoColor bool
+	}
+
+	var inputs struct {
+		ClientID string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "tail [client-id]",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Tail the tenant logs",
+		Long: `Tail the tenant logs:
+ 
+auth0 logs tail [client-id]
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			inputs.ClientID = ""
+			if len(args) == 1 {
+				inputs.ClientID = args[0]
+			}
+			lastLogID := ""
+			list, err := getLatestLogs(cli, flags.Num, inputs.ClientID)
+			if err != nil {
+				return fmt.Errorf("An unexpected error occurred while getting logs: %v", err)
+			}
+
+			// TODO(cyx): This is a hack for now to make the
+			// streaming work faster.
+			//
+			// Create a `set` to detect duplicates clientside.
+			set := make(map[string]struct{})
+			list = dedupLogs(list, set)
+
+			if len(list) > 0 {
+				lastLogID = list[len(list)-1].GetLogID()
+			}
+
+			logsCh := make(chan []*management.Log)
+
+			go func() {
+				// This is pretty important and allows
+				// us to close / terminate the command.
+				defer close(logsCh)
+
+				for {
+					queryParams := []management.RequestOption{
+						management.Query(fmt.Sprintf("log_id:[%s TO *]", lastLogID)),
+						management.Parameter("page", "0"),
+						management.Parameter("per_page", "100"),
+						management.Parameter("sort", "date:-1"),
+					}
+
+					if inputs.ClientID != "" {
+						queryParams = append(queryParams, management.Query(fmt.Sprintf(`client_id:"%s"`, inputs.ClientID)))
+					}
+
+					list, err = cli.api.Log.List(queryParams...)
+					if err != nil {
+						cli.renderer.Errorf("An unexpected error occurred while getting logs: %v", err)
+						return
+					}
+
+					if len(list) > 0 {
+						logsCh <- dedupLogs(list, set)
+						lastLogID = list[len(list)-1].GetLogID()
+					}
+
+					if len(list) < 90 {
+						// Not a lot is happening, sleep on it
+						time.Sleep(1 * time.Second)
+					}
+				}
+
+			}()
+
+			// We create an execution API decorator which provides
+			// a leaky bucket implementation for Read. This
+			// protects us from being rate limited since we
+			// potentially have an N+1 querying situation.
+			actionExecutionAPI := actions.NewSampledExecutionAPI(
+				cli.api.ActionExecution, time.Second,
+			)
+
+			cli.renderer.LogList(list, logsCh, actionExecutionAPI, flags.NoColor, !cli.debug)
+			return nil
+		},
+	}
+
+	cmd.Flags().IntVarP(&flags.Num, "num-entries", "n", 100, "the number of log entries to print")
+	cmd.Flags().BoolVar(&flags.NoColor, "no-color", false, "turn off colored print")
+
+	return cmd
+}
+
+func getLatestLogs(cli *cli, n int, clientID string) ([]*management.Log, error) {
+	page := 0
+	perPage := n
+
+	if perPage > 1000 {
+		// Pagination max out at 1000 entries in total
+		// https://auth0.com/docs/logs/retrieve-log-events-using-mgmt-api#limitations
+		perPage = 1000
+	}
+
+	queryParams := []management.RequestOption{
+		management.Parameter("sort", "date:-1"),
+		management.Parameter("page", fmt.Sprintf("%d", page)),
+		management.Parameter("per_page", fmt.Sprintf("%d", perPage))}
+
+	if clientID != "" {
+		queryParams = append(queryParams, management.Query(fmt.Sprintf(`client_id:"%s"`, clientID)))
+	}
+
+	return cli.api.Log.List(queryParams...)
 }
 
 func dedupLogs(list []*management.Log, set map[string]struct{}) []*management.Log {

@@ -3,7 +3,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -12,10 +11,31 @@ import (
 )
 
 const (
-	apiID         = "id"
-	apiName       = "name"
-	apiIdentifier = "identifier"
-	apiScopes     = "scopes"
+	apiID = "id"
+)
+
+var (
+	apiName = Flag{
+		Name:       "Name",
+		LongForm:   "name",
+		ShortForm:  "n",
+		Help:       "Name of the API.",
+		IsRequired: true,
+	}
+	apiIdentifier = Flag{
+		Name:       "Identifier",
+		LongForm:   "identifier",
+		ShortForm:  "i",
+		Help:       "Identifier of the API. Cannot be changed once set.",
+		IsRequired: true,
+	}
+	apiScopes = Flag{
+		Name:       "Scopes",
+		LongForm:   "scopes",
+		ShortForm:  "s",
+		Help:       "Comma-separated list of scopes.",
+		IsRequired: true,
+	}
 )
 
 func apisCmd(cli *cli) *cobra.Command {
@@ -118,7 +138,7 @@ auth0 apis show <id>
 			})
 
 			if err != nil {
-				return fmt.Errorf("Unable to get an API with Id %s: %w", inputs.ID, err)
+				return fmt.Errorf("Unable to get an API with Id '%s': %w", inputs.ID, err)
 			}
 
 			cli.renderer.ApiShow(api)
@@ -130,10 +150,11 @@ auth0 apis show <id>
 }
 
 func createApiCmd(cli *cli) *cobra.Command {
-	var flags struct {
-		Name       string
-		Identifier string
-		Scopes     string
+	var inputs struct {
+		Name         string
+		Identifier   string
+		Scopes       []string
+		ScopesString string
 	}
 
 	cmd := &cobra.Command{
@@ -147,43 +168,27 @@ auth0 apis create --name myapi --identifier http://my-api
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if shouldPrompt(cmd, apiName) {
-				input := prompt.TextInput(
-					apiName, "Name:",
-					"Name of the API. You can change the name later in the API settings.",
-					true)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return fmt.Errorf("An unexpected error occurred: %w", err)
-				}
+			if err := apiName.Ask(cmd, &inputs.Name); err != nil {
+				return err
 			}
 
-			if shouldPrompt(cmd, apiIdentifier) {
-				input := prompt.TextInput(
-					apiIdentifier, "Identifier:",
-					"Identifier of the API. Cannot be changed once set.",
-					true)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return fmt.Errorf("An unexpected error occurred: %w", err)
-				}
+			if err := apiIdentifier.Ask(cmd, &inputs.Identifier); err != nil {
+				return err
 			}
 
-			if shouldPrompt(cmd, apiScopes) {
-				input := prompt.TextInput(apiScopes, "Scopes:", "Space-separated list of scopes.", false)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return fmt.Errorf("An unexpected error occurred: %w", err)
-				}
+			if err := apiScopes.Ask(cmd, &inputs.ScopesString); err != nil {
+				return err
 			}
 
 			api := &management.ResourceServer{
-				Name:       &flags.Name,
-				Identifier: &flags.Identifier,
+				Name:       &inputs.Name,
+				Identifier: &inputs.Identifier,
 			}
 
-			if flags.Scopes != "" {
-				api.Scopes = apiScopesFor(flags.Scopes)
+			if len(inputs.ScopesString) > 0 {
+				api.Scopes = apiScopesFor(commaSeparatedStringToSlice(inputs.ScopesString))
+			} else if len(inputs.Scopes) > 0 {
+				api.Scopes = apiScopesFor(inputs.Scopes)
 			}
 
 			err := ansi.Spinner("Creating API", func() error {
@@ -191,7 +196,7 @@ auth0 apis create --name myapi --identifier http://my-api
 			})
 
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred while attempting to create an API with name %s and identifier %s : %w", flags.Name, flags.Identifier, err)
+				return fmt.Errorf("An unexpected error occurred while attempting to create an API with name '%s' and identifier '%s': %w", inputs.Name, inputs.Identifier, err)
 			}
 
 			cli.renderer.ApiCreate(api)
@@ -199,19 +204,19 @@ auth0 apis create --name myapi --identifier http://my-api
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.Name, apiName, "n", "", "Name of the API.")
-	cmd.Flags().StringVarP(&flags.Identifier, apiIdentifier, "i", "", "Identifier of the API.")
-	cmd.Flags().StringVarP(&flags.Scopes, apiScopes, "s", "", "Space-separated list of scopes.")
-	mustRequireFlags(cmd, apiName, apiIdentifier)
+	apiName.RegisterString(cmd, &inputs.Name, "")
+	apiIdentifier.RegisterString(cmd, &inputs.Identifier, "")
+	apiScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
 
 	return cmd
 }
 
 func updateApiCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID     string
-		Name   string
-		Scopes string
+		ID           string
+		Name         string
+		Scopes       []string
+		ScopesString string
 	}
 
 	cmd := &cobra.Command{
@@ -240,20 +245,12 @@ auth0 apis update <id> --name myapi
 				inputs.ID = args[0]
 			}
 
-			if shouldPromptWhenFlagless(cmd, apiName) {
-				input := prompt.TextInput(apiName, "Name:", "Name of the API.", true)
-
-				if err := prompt.AskOne(input, &inputs); err != nil {
-					return fmt.Errorf("An unexpected error occurred: %w", err)
-				}
+			if err := apiName.AskU(cmd, &inputs.Name); err != nil {
+				return err
 			}
 
-			if shouldPromptWhenFlagless(cmd, apiScopes) {
-				input := prompt.TextInput(apiScopes, "Scopes:", "Space-separated list of scopes.", false)
-
-				if err := prompt.AskOne(input, &inputs); err != nil {
-					return fmt.Errorf("An unexpected error occurred: %w", err)
-				}
+			if err := apiScopes.AskU(cmd, &inputs.ScopesString); err != nil {
+				return err
 			}
 
 			api := &management.ResourceServer{}
@@ -272,7 +269,11 @@ auth0 apis update <id> --name myapi
 				}
 
 				if len(inputs.Scopes) == 0 {
-					api.Scopes = current.Scopes
+					if len(inputs.ScopesString) == 0 {
+						api.Scopes = current.Scopes
+					} else {
+						api.Scopes = apiScopesFor(commaSeparatedStringToSlice(inputs.ScopesString))
+					}
 				} else {
 					api.Scopes = apiScopesFor(inputs.Scopes)
 				}
@@ -281,7 +282,7 @@ auth0 apis update <id> --name myapi
 			})
 
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred while trying to update an API with Id %s: %w", inputs.ID, err)
+				return fmt.Errorf("An unexpected error occurred while trying to update an API with Id '%s': %w", inputs.ID, err)
 			}
 
 			cli.renderer.ApiUpdate(api)
@@ -289,8 +290,8 @@ auth0 apis update <id> --name myapi
 		},
 	}
 
-	cmd.Flags().StringVarP(&inputs.Name, apiName, "n", "", "Name of the API.")
-	cmd.Flags().StringVarP(&inputs.Scopes, apiScopes, "s", "", "Space-separated list of scopes.")
+	apiName.RegisterStringU(cmd, &inputs.Name, "")
+	apiScopes.RegisterStringSliceU(cmd, &inputs.Scopes, nil)
 
 	return cmd
 }
@@ -335,7 +336,7 @@ auth0 apis delete <id>
 			return ansi.Spinner("Deleting API", func() error {
 				err := cli.api.ResourceServer.Delete(inputs.ID)
 				if err != nil {
-					return fmt.Errorf("An unexpected error occurred while attempting to delete an API with Id %s: %w", inputs.ID, err)
+					return fmt.Errorf("An unexpected error occurred while attempting to delete an API with Id '%s': %w", inputs.ID, err)
 				}
 				return nil
 			})
@@ -385,7 +386,7 @@ auth0 apis scopes list <id>
 			})
 
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred while getting scopes for an API with Id %s: %w", inputs.ID, err)
+				return fmt.Errorf("An unexpected error occurred while getting scopes for an API with Id '%s': %w", inputs.ID, err)
 			}
 
 			cli.renderer.ScopesList(api.GetName(), api.Scopes)
@@ -396,11 +397,10 @@ auth0 apis scopes list <id>
 	return cmd
 }
 
-func apiScopesFor(scopes string) []*management.ResourceServerScope {
-	list := strings.Fields(scopes)
+func apiScopesFor(scopes []string) []*management.ResourceServerScope {
 	models := []*management.ResourceServerScope{}
 
-	for _, scope := range list {
+	for _, scope := range scopes {
 		value := scope
 		models = append(models, &management.ResourceServerScope{Value: &value})
 	}

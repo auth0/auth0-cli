@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -30,6 +31,15 @@ var (
 		}
 		return
 	}()
+)
+
+// QuickStart app types and defaults
+const (
+	qsNative    = "native"
+	qsSpa       = "spa"
+	qsWebApp    = "webapp"
+	qsBackend   = "backend"
+	_defaultURL = "http://localhost:3000"
 )
 
 type quickstart struct {
@@ -112,7 +122,8 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 
 			q, err := getQuickstart(client.GetAppType(), selectedStack)
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred with the specified stack %v: %v", selectedStack, err)	}
+				return fmt.Errorf("An unexpected error occurred with the specified stack %v: %v", selectedStack, err)
+			}
 
 			err = ansi.Spinner("Downloading quickstart sample", func() error {
 				return downloadQuickStart(context.TODO(), cli, client, target, q)
@@ -123,6 +134,11 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 			}
 
 			cli.renderer.Infof("Quickstart sample sucessfully downloaded at %s", target)
+
+			qsType := quickstartsTypeFor(client.GetAppType())
+			if err := promptDefaultURLs(cmd.Context(), cli, client, qsType); err != nil {
+				return err
+			}
 			return nil
 		},
 	}
@@ -283,14 +299,63 @@ func quickstartStacksFromType(t string) ([]string, error) {
 func quickstartsTypeFor(v string) string {
 	switch {
 	case v == "native":
-		return "native"
+		return qsNative
 	case v == "spa":
-		return "spa"
+		return qsSpa
 	case v == "regular_web":
-		return "webapp"
+		return qsWebApp
 	case v == "non_interactive":
-		return "backend"
+		return qsBackend
 	default:
 		return "generic"
 	}
+}
+
+// promptDefaultURLs checks whether the application is SPA or WebApp and
+// whether the app has already added the default quickstart url to allowed url lists.
+// If not, it prompts the user to add the default url and updates the application
+// if they accept.
+func promptDefaultURLs(ctx context.Context, cli *cli, client *management.Client, qsType string) error {
+	if !strings.EqualFold(qsType, qsSpa) && !strings.EqualFold(qsType, qsWebApp) {
+		return nil
+	}
+	if containsStr(client.Callbacks, _defaultURL) || containsStr(client.AllowedLogoutURLs, _defaultURL) {
+		return nil
+	}
+
+	a := &management.Client{
+		Callbacks:         client.Callbacks,
+		WebOrigins:        client.WebOrigins,
+		AllowedLogoutURLs: client.AllowedLogoutURLs,
+	}
+
+	if confirmed := prompt.Confirm(formatURLPrompt(qsType)); confirmed {
+		a.Callbacks = append(a.Callbacks, _defaultURL)
+		a.AllowedLogoutURLs = append(a.AllowedLogoutURLs, _defaultURL)
+		if strings.EqualFold(qsType, qsSpa) {
+			a.WebOrigins = append(a.WebOrigins, _defaultURL)
+		}
+
+		err := ansi.Spinner("Updating application", func() error {
+			return cli.api.Client.Update(client.GetClientID(), a)
+		})
+		if err != nil {
+			return err
+		}
+		cli.renderer.Infof("Application successfully updated")
+	}
+	return nil
+}
+
+// formatURLPrompt creates the correct prompt based on app type for
+// asking the user if they would like to add default urls.
+func formatURLPrompt(qsType string) string {
+	var p strings.Builder
+	p.WriteString("\nQuickstarts use localhost, do you want to add %s to the list of allowed callback URLs")
+	if strings.EqualFold(qsType, qsSpa) {
+		p.WriteString(", logout URLs, and web origins?")
+	} else {
+		p.WriteString(" and logout URLs?")
+	}
+	return fmt.Sprintf(p.String(), _defaultURL)
 }

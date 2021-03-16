@@ -97,6 +97,7 @@ func (v *applicationView) KeyValues() [][]string {
 			[]string{"TYPE", v.Type},
 			[]string{"CLIENT SECRET", ansi.Italic(v.ClientSecret)},
 			[]string{"CALLBACKS", callbacks},
+			[]string{"ALLOWED ORIGINS", allowedOrigins},
 			[]string{"ALLOWED WEB ORIGINS", allowedWebOrigins},
 			[]string{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
 			[]string{"TOKEN ENDPOINT AUTH", v.AuthMethod},
@@ -142,16 +143,16 @@ func (v *applicationListView) AsTableHeader() []string {
 func (v *applicationListView) AsTableRow() []string {
 	if v.revealSecret {
 		return []string{
+			ansi.Faint(v.ClientID),
 			v.Name,
 			v.Type,
-			ansi.Faint(v.ClientID),
 			ansi.Italic(v.ClientSecret),
 		}
 	}
 	return []string{
+		ansi.Faint(v.ClientID),
 		v.Name,
 		v.Type,
-		ansi.Faint(v.ClientID),
 	}
 }
 
