@@ -136,7 +136,7 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 			cli.renderer.Infof("Quickstart sample sucessfully downloaded at %s", target)
 
 			qsType := quickstartsTypeFor(client.GetAppType())
-			if err := promptDefaultURLs(context.TODO(), cli, client, qsType); err != nil {
+			if err := promptDefaultURLs(cmd.Context(), cli, client, qsType); err != nil {
 				return err
 			}
 			return nil
