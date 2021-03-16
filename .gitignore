@@ -26,5 +26,3 @@ tags
 .vscode
 .DS_Store
 
-# integration test helper
-auth0-cli-config-generator

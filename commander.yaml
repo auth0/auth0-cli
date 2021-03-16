@@ -5,5 +5,14 @@ tests:
   auth0 apis list:
     exit-code: 0
 
+  auth0 apps list:
+    exit-code: 0
+
   auth0 logs:
+    exit-code: 0
+
+  auth0 actions list:
+    exit-code: 0
+
+  auth0 completion bash:
     exit-code: 0

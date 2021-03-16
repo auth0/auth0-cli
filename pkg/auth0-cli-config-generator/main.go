@@ -127,6 +127,7 @@ func persistConfig(filePath string, c config, overwrite bool) error {
 func main() {
 	var cmd = &cobra.Command{
 		Use:           "auth0-cli-config-generator",
+		Short:         "A tool that generates valid auth0-cli config files",
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(command *cobra.Command, args []string) error {
