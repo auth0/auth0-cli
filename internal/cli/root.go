@@ -47,6 +47,11 @@ func Execute() {
 				return nil
 			}
 
+			// Getting the CLI completion script shouldn't trigger a login.
+			if cmd.Use == "completion" && cmd.Parent().Use == "auth0" {
+				return nil
+			}
+
 			// Initialize everything once. Later callers can then
 			// freely assume that config is fully primed and ready
 			// to go.
