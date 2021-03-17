@@ -8,56 +8,95 @@ import (
 )
 
 type Flag struct {
-	Name          string
-	LongForm      string
-	ShortForm     string
-	DefaultValue  string
-	Help          string
-	IsRequired    bool
+	Name       string
+	LongForm   string
+	ShortForm  string
+	Help       string
+	IsRequired bool
 }
 
 func (f *Flag) Ask(cmd *cobra.Command, value interface{}) error {
-	return ask(cmd, f, value, false)
+	return askInput(cmd, f, value, false)
 }
 
 func (f *Flag) AskU(cmd *cobra.Command, value interface{}) error {
-	return ask(cmd, f, value, true)
+	return askInput(cmd, f, value, true)
 }
 
-func (f *Flag) RegisterString(cmd *cobra.Command, value *string) {
-	registerString(cmd, f, value, false)
+func (f *Flag) Select(cmd *cobra.Command, value interface{}, options []string) error {
+	return selectInput(cmd, f, value, options, false)
 }
 
-func (f *Flag) RegisterStringU(cmd *cobra.Command, value *string) {
-	registerString(cmd, f, value, true)
+func (f *Flag) SelectU(cmd *cobra.Command, value interface{}, options []string) error {
+	return selectInput(cmd, f, value, options, true)
 }
 
-func ask(cmd *cobra.Command, f *Flag, value interface{}, isUpdate bool) error {
-	var shouldAsk bool
+func (f *Flag) RegisterString(cmd *cobra.Command, value *string, defaultValue string) {
+	registerString(cmd, f, value, defaultValue, false)
+}
 
-	if isUpdate {
-		shouldAsk = shouldPromptWhenFlagless(cmd, f.LongForm)
-	} else {
-		shouldAsk = shouldPrompt(cmd, f.LongForm)
-	}
+func (f *Flag) RegisterStringU(cmd *cobra.Command, value *string, defaultValue string) {
+	registerString(cmd, f, value, defaultValue, true)
+}
 
-	if shouldAsk {
-		input := prompt.TextInput("", fmt.Sprintf("%s:", f.Name), f.Help, f.IsRequired)
+func (f *Flag) RegisterStringSlice(cmd *cobra.Command, value *[]string, defaultValue []string) {
+	registerStringSlice(cmd, f, value, defaultValue, false)
+}
+
+func (f *Flag) RegisterStringSliceU(cmd *cobra.Command, value *[]string, defaultValue []string) {
+	registerStringSlice(cmd, f, value, defaultValue, true)
+}
+
+func (f *Flag) label() string {
+	return fmt.Sprintf("%s:", f.Name)
+}
+
+func askInput(cmd *cobra.Command, f *Flag, value interface{}, isUpdate bool) error {
+	if shouldAsk(cmd, f, isUpdate) {
+		input := prompt.TextInput("", f.label(), f.Help, f.IsRequired)
 
 		if err := prompt.AskOne(input, value); err != nil {
-			return fmt.Errorf("An unexpected error occurred: %w", err)
+			return unexpectedError(err)
 		}
 	}
 
 	return nil
 }
 
-func registerString(cmd *cobra.Command, f *Flag, value *string, isUpdate bool) {
-	cmd.Flags().StringVarP(value, f.LongForm, f.ShortForm, f.DefaultValue, f.Help)
+func selectInput(cmd *cobra.Command, f *Flag, value interface{}, options []string, isUpdate bool) error {
+	if shouldAsk(cmd, f, isUpdate) {
+		input := prompt.SelectInput("", f.label(), f.Help, options, f.IsRequired)
+
+		if err := prompt.AskOne(input, value); err != nil {
+			return unexpectedError(err)
+		}
+	}
+
+	return nil
+}
+
+func registerString(cmd *cobra.Command, f *Flag, value *string, defaultValue string, isUpdate bool) {
+	cmd.Flags().StringVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
 
 	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
-		panic(fmt.Errorf("An unexpected error occurred: %w", err)) // TODO: Handle
+		panic(unexpectedError(err)) // TODO: Handle
 	}
+}
+
+func registerStringSlice(cmd *cobra.Command, f *Flag, value *[]string, defaultValue []string, isUpdate bool) {
+	cmd.Flags().StringSliceVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
+
+	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
+		panic(unexpectedError(err)) // TODO: Handle
+	}
+}
+
+func shouldAsk(cmd *cobra.Command, f *Flag, isUpdate bool) bool {
+	if isUpdate {
+		return shouldPromptWhenFlagless(cmd, f.LongForm)
+	}
+
+	return shouldPrompt(cmd, f.LongForm)
 }
 
 func markFlagRequired(cmd *cobra.Command, f *Flag, isUpdate bool) error {
@@ -66,4 +105,8 @@ func markFlagRequired(cmd *cobra.Command, f *Flag, isUpdate bool) error {
 	}
 
 	return nil
+}
+
+func unexpectedError(err error) error {
+	return fmt.Errorf("An unexpected error occurred: %w", err)
 }

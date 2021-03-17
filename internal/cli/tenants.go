@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 )
@@ -14,8 +13,34 @@ func tenantsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.AddCommand(useTenantCmd(cli))
+	cmd.AddCommand(listTenantCmd(cli))
 	return cmd
 }
+
+func listTenantCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use: "list",
+		Short: "List your tenants",
+		Long: `auth0 tenants list`,
+		Aliases: []string{"ls"},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			tens, err := cli.listTenants()
+			if err != nil {
+				return fmt.Errorf("Unable to load tenants due to an unexpected error: %w", err)
+			}
+
+			tenNames := make([]string, len(tens))
+			for i, t := range tens {
+				tenNames[i] = t.Name
+			}
+
+			cli.renderer.ShowTenants(tenNames)
+			return nil
+		},
+	}
+	return cmd
+}
+
 
 func useTenantCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{

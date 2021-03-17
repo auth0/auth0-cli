@@ -260,3 +260,13 @@ func generateState(size int) (string, error) {
 
 	return base64.RawURLEncoding.EncodeToString(b), nil
 }
+
+// check if slice contains a string
+func containsStr(s []interface{}, u string) bool {
+	for _, a := range s {
+		if a == u {
+			return true
+		}
+	}
+	return false
+}
