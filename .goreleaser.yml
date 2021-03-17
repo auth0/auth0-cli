@@ -16,21 +16,39 @@ builds:
       - -X github.com/auth0/auth0-cli/internal/buildinfo.BuildUser=goreleaser'
       - -X github.com/auth0/auth0-cli/internal/buildinfo.BuildDate={{.Date}}'
 archives:
-- replacements:
-    darwin: Darwin
-    linux: Linux
-    windows: Windows
-    386: i386
-    amd64: x86_64
-  files:
-  - none*
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
+    files:
+      - none*
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 snapshot:
   name_template: "{{ .Tag }}-SNAPSHOT-{{.ShortCommit}}"
 changelog:
   sort: asc
   filters:
     exclude:
-    - '^docs:'
-    - '^test:'
+      - "^docs:"
+      - "^test:"
+brews:
+  -
+    name: auth0
+    tap:
+      owner: auth0
+      name: homebrew-auth0-cli
+    commit_author:
+      name: auth0
+      email: support@auth0.com
+    homepage: https://cli.auth0.com
+    description: Supercharge your developer workflow.
+    install: |
+        bin.install "auth0"
+
+        (bash_completion/"auth0").write `#{bin}/auth0 completion bash`
+        (fish_completion/"auth0.fish").write `#{bin}/auth0 completion fish`
+        (zsh_completion/"_auth0").write `#{bin}/auth0 completion zsh`
+    caveats: "Thanks for installing Auth0 CLI"
