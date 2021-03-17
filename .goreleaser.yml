@@ -44,7 +44,7 @@ brews:
       name: auth0
       email: support@auth0.com
     homepage: https://cli.auth0.com
-    description: Auth0 CLI
+    description: Supercharge your developer workflow.
     install: |
         bin.install "auth0"
 
