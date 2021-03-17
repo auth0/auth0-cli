@@ -8,9 +8,11 @@ import (
 
 func completionCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "completion [bash|zsh|fish|powershell]",
+		Use:   "completion",
 		Short: "Setup autocomplete features for this CLI on your terminal",
-		Long: `To load completions:
+		Long: `completion [bash|zsh|fish|powershell]
+
+To load completions:
 
 Bash:
 
