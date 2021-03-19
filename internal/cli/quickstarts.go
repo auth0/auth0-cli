@@ -50,10 +50,11 @@ var (
 	}
 
 	qsStack = Flag{
-		Name:      "Stack",
-		LongForm:  "stack",
-		ShortForm: "s",
-		Help:      "Tech/Language of the quickstart sample to download.",
+		Name:       "Stack",
+		LongForm:   "stack",
+		ShortForm:  "s",
+		Help:       "Tech/Language of the quickstart sample to download.",
+		IsRequired: true,
 	}
 )
 
