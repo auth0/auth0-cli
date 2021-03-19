@@ -47,6 +47,22 @@ func (f *Flag) RegisterStringSliceU(cmd *cobra.Command, value *[]string, default
 	registerStringSlice(cmd, f, value, defaultValue, true)
 }
 
+func (f *Flag) RegisterInt(cmd *cobra.Command, value *int, defaultValue int) {
+	registerInt(cmd, f, value, defaultValue, false)
+}
+
+func (f *Flag) RegisterBool(cmd *cobra.Command, value *bool, defaultValue bool) {
+	registerBool(cmd, f, value, defaultValue, false)
+}
+
+func (f *Flag) RegisterBoolU(cmd *cobra.Command, value *bool, defaultValue bool) {
+	registerBool(cmd, f, value, defaultValue, true)
+}
+
+func (f *Flag) RegisterIntU(cmd *cobra.Command, value *int, defaultValue int) {
+	registerInt(cmd, f, value, defaultValue, true)
+}
+
 func (f *Flag) label() string {
 	return fmt.Sprintf("%s:", f.Name)
 }
@@ -85,6 +101,22 @@ func registerString(cmd *cobra.Command, f *Flag, value *string, defaultValue str
 
 func registerStringSlice(cmd *cobra.Command, f *Flag, value *[]string, defaultValue []string, isUpdate bool) {
 	cmd.Flags().StringSliceVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
+
+	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
+		panic(unexpectedError(err)) // TODO: Handle
+	}
+}
+
+func registerInt(cmd *cobra.Command, f *Flag, value *int, defaultValue int, isUpdate bool) {
+	cmd.Flags().IntVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
+
+	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
+		panic(unexpectedError(err)) // TODO: Handle
+	}
+}
+
+func registerBool(cmd *cobra.Command, f *Flag, value *bool, defaultValue bool, isUpdate bool) {
+	cmd.Flags().BoolVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
 
 	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
 		panic(unexpectedError(err)) // TODO: Handle

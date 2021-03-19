@@ -10,6 +10,28 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
+var (
+	logsClientID = Flag{
+		Name:      "Client ID",
+		LongForm:  "client-id",
+		ShortForm: "c",
+		Help:      "Client Id of an Auth0 application to filter the logs.",
+	}
+
+	logsNum = Flag{
+		Name:      "Num",
+		LongForm:  "num",
+		ShortForm: "n",
+		Help:      "Number of log entries to show.",
+	}
+
+	logsNoColor = Flag{
+		Name:     "NoColor",
+		LongForm: "no-color",
+		Help:     "Disable colored log output.",
+	}
+)
+
 func logsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "logs",
@@ -24,30 +46,26 @@ func logsCmd(cli *cli) *cobra.Command {
 }
 
 func listLogsCmd(cli *cli) *cobra.Command {
-	var flags struct {
-		Num     int
-		NoColor bool
-	}
-
 	var inputs struct {
 		ClientID string
+		Num      int
+		NoColor  bool
 	}
 
 	cmd := &cobra.Command{
-		Use:   "list [client-id]",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Show the tenant logs",
-		Long: `Show the tenant logs:
- 
-auth0 logs list [client-id]
-`,
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Show the application logs",
+		Long:    "Show the tenant logs allowing to filter by Client Id.",
+		Example: `auth0 logs list
+auth0 logs list --client-id <id>
+auth0 logs ls -n 100`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			inputs.ClientID = ""
-			if len(args) == 1 {
-				inputs.ClientID = args[0]
-			}
-
-			list, err := getLatestLogs(cli, flags.Num, inputs.ClientID)
+			list, err := getLatestLogs(cli, inputs.Num, inputs.ClientID)
 			if err != nil {
 				return fmt.Errorf("An unexpected error occurred while getting logs: %v", err)
 			}
@@ -69,42 +87,38 @@ auth0 logs list [client-id]
 				cli.api.ActionExecution, time.Second,
 			)
 
-			cli.renderer.LogList(list, logsCh, actionExecutionAPI, flags.NoColor, !cli.debug)
+			cli.renderer.LogList(list, logsCh, actionExecutionAPI, inputs.NoColor, !cli.debug)
 			return nil
 		},
 	}
 
-	cmd.Flags().IntVarP(&flags.Num, "num-entries", "n", 100, "the number of log entries to print")
-	cmd.Flags().BoolVar(&flags.NoColor, "no-color", false, "turn off colored print")
-
+	logsClientID.RegisterString(cmd, &inputs.ClientID, "")
+	logsNum.RegisterInt(cmd, &inputs.Num, 100)
+	logsNoColor.RegisterBool(cmd, &inputs.NoColor, false)
 	return cmd
 }
 
 func tailLogsCmd(cli *cli) *cobra.Command {
-	var flags struct {
-		Num     int
-		NoColor bool
-	}
-
 	var inputs struct {
 		ClientID string
+		Num      int
+		NoColor  bool
 	}
 
 	cmd := &cobra.Command{
-		Use:   "tail [client-id]",
+		Use:   "tail",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Tail the tenant logs",
-		Long: `Tail the tenant logs:
- 
-auth0 logs tail [client-id]
-`,
+		Long:  "Tail the tenant logs allowing to filter by Client ID",
+		Example: `auth0 logs tail
+auth0 logs tail --client-id <id>
+auth0 logs tail -n 100`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			inputs.ClientID = ""
-			if len(args) == 1 {
-				inputs.ClientID = args[0]
-			}
 			lastLogID := ""
-			list, err := getLatestLogs(cli, flags.Num, inputs.ClientID)
+			list, err := getLatestLogs(cli, inputs.Num, inputs.ClientID)
 			if err != nil {
 				return fmt.Errorf("An unexpected error occurred while getting logs: %v", err)
 			}
@@ -166,14 +180,14 @@ auth0 logs tail [client-id]
 				cli.api.ActionExecution, time.Second,
 			)
 
-			cli.renderer.LogList(list, logsCh, actionExecutionAPI, flags.NoColor, !cli.debug)
+			cli.renderer.LogList(list, logsCh, actionExecutionAPI, inputs.NoColor, !cli.debug)
 			return nil
 		},
 	}
 
-	cmd.Flags().IntVarP(&flags.Num, "num-entries", "n", 100, "the number of log entries to print")
-	cmd.Flags().BoolVar(&flags.NoColor, "no-color", false, "turn off colored print")
-
+	logsClientID.RegisterString(cmd, &inputs.ClientID, "")
+	logsNum.RegisterInt(cmd, &inputs.Num, 100)
+	logsNoColor.RegisterBool(cmd, &inputs.NoColor, false)
 	return cmd
 }
 
