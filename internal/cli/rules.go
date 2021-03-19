@@ -8,6 +8,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
@@ -243,13 +244,21 @@ auth0 rules create --name "My Rule" --template [empty-rule]"
 				return err
 			}
 
+			script, err := prompt.CaptureInputViaEditor(
+				ruleTemplateMappings[flags.Template],
+				flags.Name+".*.js",
+			)
+			if err != nil {
+				return fmt.Errorf("Failed to capture input from the editor: %w", err)
+			}
+
 			rule := &management.Rule{
 				Name:    &flags.Name,
-				Script:  auth0.String(ruleTemplateMappings[flags.Template]),
+				Script:  auth0.String(script),
 				Enabled: &flags.Enabled,
 			}
 
-			err := ansi.Spinner("Creating rule", func() error {
+			err = ansi.Spinner("Creating rule", func() error {
 				return cli.api.Rule.Create(rule)
 			})
 
