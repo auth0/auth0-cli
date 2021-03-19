@@ -53,7 +53,7 @@ var (
 		Name:      "Stack",
 		LongForm:  "stack",
 		ShortForm: "s",
-		Help:      "Tech/Language of the quickstart sample to download",
+		Help:      "Tech/Language of the quickstart sample to download.",
 	}
 )
 
