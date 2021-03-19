@@ -284,7 +284,7 @@ func getQuickstart(t, stack string) (quickstart, error) {
 		return quickstart{}, fmt.Errorf("Unknown quickstart type: %s", qsType)
 	}
 	for _, q := range quickstarts {
-		if q.Name == stack {
+		if strings.EqualFold(q.Name, stack) {
 			return q, nil
 		}
 	}
