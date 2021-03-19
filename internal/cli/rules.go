@@ -2,9 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os/user"
-	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -19,12 +16,19 @@ const (
 )
 
 var (
-	ruleName = Flag{
+	ruleNameRequired = Flag{
 		Name:       "Name",
 		LongForm:   "name",
 		ShortForm:  "n",
 		Help:       "Name of the rule.",
 		IsRequired: true,
+	}
+
+	ruleName = Flag{
+		Name:      "Name",
+		LongForm:  "name",
+		ShortForm: "n",
+		Help:      "Name of the rule.",
 	}
 
 	ruleTemplate = Flag{
@@ -56,11 +60,9 @@ func rulesCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listRulesCmd(cli))
-	// cmd.AddCommand(enableRuleCmd(cli))
-	// cmd.AddCommand(disableRuleCmd(cli))
 	cmd.AddCommand(createRuleCmd(cli))
-	// cmd.AddCommand(deleteRuleCmd(cli))
-	// cmd.AddCommand(updateRuleCmd(cli))
+	cmd.AddCommand(deleteRuleCmd(cli))
+	cmd.AddCommand(updateRuleCmd(cli))
 
 	return cmd
 }
@@ -71,7 +73,7 @@ func listRulesCmd(cli *cli) *cobra.Command {
 		Short: "List your rules",
 		Long:  `List the rules in your current tenant.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var rules *management.RuleList
+			var rules []*management.Rule
 			err := ansi.Spinner("Loading rules", func() error {
 				var err error
 				rules, err = getRules(cli)
@@ -222,7 +224,6 @@ func createRuleCmd(cli *cli) *cobra.Command {
 		Name     string
 		Template string
 		Enabled  bool
-		// Order   int
 	}
 
 	cmd := &cobra.Command{
@@ -236,7 +237,7 @@ auth0 rules create --name "My Rule" --template [empty-rule]"
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := ruleName.Ask(cmd, &flags.Name); err != nil {
+			if err := ruleNameRequired.Ask(cmd, &flags.Name); err != nil {
 				return err
 			}
 
@@ -244,6 +245,9 @@ auth0 rules create --name "My Rule" --template [empty-rule]"
 				return err
 			}
 
+			// TODO(cyx): we can re-think this once we have
+			// `--stdin` based commands. For now we don't have
+			// those yet, so keeping this simple.
 			script, err := prompt.CaptureInputViaEditor(
 				ruleTemplateMappings[flags.Template],
 				flags.Name+".*.js",
@@ -271,18 +275,16 @@ auth0 rules create --name "My Rule" --template [empty-rule]"
 		},
 	}
 
-	ruleName.RegisterString(cmd, &flags.Name, "")
+	ruleNameRequired.RegisterString(cmd, &flags.Name, "")
 	ruleTemplate.RegisterString(cmd, &flags.Template, "")
 	ruleEnabled.RegisterBool(cmd, &flags.Enabled, true)
 
 	return cmd
 }
 
-/*
 func deleteRuleCmd(cli *cli) *cobra.Command {
-	var flags struct {
-		ID   string
-		Name string
+	var inputs struct {
+		ID string
 	}
 
 	cmd := &cobra.Command{
@@ -290,66 +292,28 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 		Short: "Delete a rule",
 		Long: `Delete a rule:
 
-	auth0 rules delete --id "12345"`,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if flags.ID != "" && flags.Name != "" {
-				return fmt.Errorf("TMI! 🤯 use either --name or --id")
-			}
-
+auth0 rules delete rul_d2VSaGlyaW5n`,
+		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
-			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if shouldPrompt(cmd, ruleID) && flags.Name == "" {
-				input := prompt.TextInput(ruleID, "Id:", "Id of the rule to delete.", false)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
+			if len(args) > 0 {
+				inputs.ID = args[0]
+			} else {
+				var err error
+				inputs.ID, err = promptForRuleViaDropdown(cli, cmd)
+				if err != nil {
 					return err
 				}
-			}
 
-			if shouldPrompt(cmd, ruleName) && flags.ID == "" {
-				input := prompt.TextInput(ruleName, "Name:", "Name of the rule to delete.", false)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
-				}
-			}
-
-			if !cli.force && canPrompt(cmd) {
-				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
+				if inputs.ID == "" {
+					cli.renderer.Infof("There are currently no rules.")
 					return nil
 				}
 			}
 
-			var r *management.Rule
-			ruleIDPattern := "^rul_[A-Za-z0-9]{16}$"
-			re := regexp.MustCompile(ruleIDPattern)
-
-			if flags.ID != "" {
-				if !re.Match([]byte(flags.ID)) {
-					return fmt.Errorf("Rule with id %q does not match pattern %s", flags.ID, ruleIDPattern)
-				}
-
-				rule, err := cli.api.Rule.Read(flags.ID)
-				if err != nil {
-					return err
-				}
-				r = rule
-			} else {
-				data, err := getRules(cli)
-				if err != nil {
-					return err
-				}
-				if rule := findRuleByName(flags.Name, data.Rules); rule != nil {
-					r = rule
-				} else {
-					return fmt.Errorf("No rule found with name: %q", flags.Name)
-				}
-			}
-
 			err := ansi.Spinner("Deleting rule", func() error {
-				return cli.api.Rule.Delete(*r.ID)
+				return cli.api.Rule.Delete(inputs.ID)
 			})
 
 			if err != nil {
@@ -360,20 +324,16 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.ID, ruleID, "i", "", "ID of the rule to delete.")
-	cmd.Flags().StringVarP(&flags.Name, ruleName, "n", "", "Name of the rule to delete.")
-
 	return cmd
 }
-*/
 
-/*
 func updateRuleCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID string
+	}
+
 	var flags struct {
-		ID      string
 		Name    string
-		Script  string
-		Order   int
 		Enabled bool
 	}
 
@@ -382,74 +342,63 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 		Short: "update a rule",
 		Long: `Update a rule:
 
-    auth0 rules update --id "12345" --name "My Updated Rule" --script "function (user, context, callback) { console.log( 'Hello, world!' ); return callback(null, user, context); }" --order 1 --enabled true
+auth0 rules update --id  rul_d2VSaGlyaW5n --name "My Updated Rule" --enabled=false
 		`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if shouldPrompt(cmd, ruleID) {
-				input := prompt.TextInput(ruleID, "Id:", "Id of the rule.", true)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
-				}
-			}
-
-			if shouldPrompt(cmd, ruleName) {
-				input := prompt.TextInput(
-					"name", "Name:",
-					"Name of the rule. You can change the rule name later in the rule settings.",
-					true)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
-				}
-			}
-
-			if shouldPrompt(cmd, ruleScript) {
-				input := prompt.TextInput(ruleScript, "Script:", "Script of the rule.", true)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
-				}
-			}
-
-			if shouldPrompt(cmd, ruleOrder) {
-				input := prompt.TextInputDefault(ruleOrder, "Order:", "Order of the rule.", "0", false)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
-				}
-			}
-
-			if shouldPrompt(cmd, ruleEnabled) {
-				input := prompt.BoolInput(ruleEnabled, "Enabled:", "Enable the rule.", false)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
-				}
-			}
-
-			if strings.Contains(flags.Script, ".js") {
-				content, err := parseFileByName(flags.Script)
-
+			if len(args) > 0 {
+				inputs.ID = args[0]
+			} else {
+				var err error
+				inputs.ID, err = promptForRuleViaDropdown(cli, cmd)
 				if err != nil {
 					return err
 				}
 
-				flags.Script = content
+				if inputs.ID == "" {
+					cli.renderer.Infof("There are currently no rules.")
+					return nil
+				}
 			}
 
-			r := &management.Rule{
-				Name:    &flags.Name,
-				Script:  &flags.Script,
-				Order:   &flags.Order,
-				Enabled: &flags.Enabled,
+			if err := ruleName.AskU(cmd, &flags.Name); err != nil {
+				return err
 			}
 
-			err := ansi.Spinner("Updating rule", func() error {
-				return cli.api.Rule.Update(flags.ID, r)
+			var rule *management.Rule
+			err := ansi.Spinner("Fetching rule", func() error {
+				var err error
+				rule, err = cli.api.Rule.Read(inputs.ID)
+				return err
+			})
+			if err != nil {
+				return fmt.Errorf("Failed to fetch rule with ID: %s %v", inputs.ID, err)
+			}
+
+			// TODO(cyx): we can re-think this once we have
+			// `--stdin` based commands. For now we don't have
+			// those yet, so keeping this simple.
+			script, err := prompt.CaptureInputViaEditor(
+				rule.GetScript(),
+				rule.GetName()+".*.js",
+			)
+			if err != nil {
+				return fmt.Errorf("Failed to capture input from the editor: %w", err)
+			}
+
+			// Since name is optional, no need to specify what they chose.
+			if flags.Name == "" {
+				flags.Name = rule.GetName()
+			}
+
+			err = ansi.Spinner("Updating rule", func() error {
+				return cli.api.Rule.Update(inputs.ID, &management.Rule{
+					Name:    &flags.Name,
+					Script:  &script,
+					Enabled: &flags.Enabled,
+				})
 			})
 
 			if err != nil {
@@ -461,55 +410,47 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.ID, ruleID, "i", "", "ID of the rule to update (required)")
-	cmd.Flags().StringVarP(&flags.Name, ruleName, "n", "", "Name of this rule")
-	cmd.Flags().StringVarP(&flags.Script, ruleScript, "s", "", "Code to be executed when this rule runs")
-	cmd.Flags().IntVarP(&flags.Order, ruleOrder, "o", 0, "Order that this rule should execute in relative to other rules. Lower-valued rules execute first.")
-	cmd.Flags().BoolVarP(&flags.Enabled, ruleEnabled, "e", false, "Whether the rule is enabled (true), or disabled (false).")
-	mustRequireFlags(cmd, ruleID)
+	ruleName.RegisterStringU(cmd, &flags.Name, "")
+	ruleEnabled.RegisterBool(cmd, &flags.Enabled, true)
 
 	return cmd
 }
-*/
 
 // @TODO move to rules package
-func getRules(cli *cli) (list *management.RuleList, err error) {
-	return cli.api.Rule.List()
-}
-
-func findRuleByName(name string, rules []*management.Rule) *management.Rule {
-	for _, r := range rules {
-		if auth0.StringValue(r.Name) == name {
-			return r
-		}
-	}
-	return nil
-}
-
-func enableRule(rule *management.Rule, cli *cli) error {
-	return cli.api.Rule.Update(rule.GetID(), &management.Rule{Enabled: auth0.Bool(true)})
-}
-
-func disableRule(rule *management.Rule, cli *cli) error {
-	return cli.api.Rule.Update(rule.GetID(), &management.Rule{Enabled: auth0.Bool(false)})
-}
-
-func parseFileByName(inputFile string) (string, error) {
-	usr, _ := user.Current()
-	inputFile = strings.Replace(inputFile, "~/", usr.HomeDir+"/", -1)
-	f, err := ioutil.ReadFile(inputFile)
-
+func getRules(cli *cli) ([]*management.Rule, error) {
+	list, err := cli.api.Rule.List()
 	if err != nil {
-		return "", fmt.Errorf("Error reading file: %s", err)
+		return nil, err
 	}
+	return list.Rules, nil
+}
 
-	if err != nil {
-		return "", fmt.Errorf("Cannot parse file %s: %w", f, err)
-	}
+func promptForRuleViaDropdown(cli *cli, cmd *cobra.Command) (id string, err error) {
+	dropdown := Flag{Name: "Rule"}
 
-	if err != nil {
+	var rules []*management.Rule
+
+	// == Start experimental dropdown for names => id.
+	//    TODO(cyx): Consider extracting this
+	//    pattern once we've done more of it.
+	err = ansi.Spinner("Fetching your rules", func() error {
+		rules, err = getRules(cli)
+		return err
+	})
+
+	if err != nil || len(rules) == 0 {
 		return "", err
 	}
 
-	return string(f), nil
+	mapping := map[string]string{}
+	for _, r := range rules {
+		mapping[r.GetName()] = r.GetID()
+	}
+
+	var name string
+	if err := dropdown.Select(cmd, &name, flagOptionsFromMapping(mapping)); err != nil {
+		return "", err
+	}
+
+	return mapping[name], nil
 }

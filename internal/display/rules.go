@@ -40,16 +40,16 @@ func (v *ruleView) Object() interface{} {
 	return v.raw
 }
 
-func (r *Renderer) RulesList(ruleList *management.RuleList) {
+func (r *Renderer) RulesList(rules []*management.Rule) {
 	r.Heading(ansi.Bold(r.Tenant), "rules\n")
 	var res []View
 
 	//@TODO Provide sort options via flags
-	sort.Slice(ruleList.Rules, func(i, j int) bool {
-		return ruleList.Rules[i].GetOrder() < ruleList.Rules[j].GetOrder()
+	sort.Slice(rules, func(i, j int) bool {
+		return rules[i].GetOrder() < rules[j].GetOrder()
 	})
 
-	for _, rule := range ruleList.Rules {
+	for _, rule := range rules {
 		res = append(res, &ruleView{
 			Name:    *rule.Name,
 			ID:      *rule.ID,
