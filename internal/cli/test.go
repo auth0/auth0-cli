@@ -137,7 +137,7 @@ func testTokenCmd(cli *cli) *cobra.Command {
 		Use:   "token",
 		Short: "Fetch a token for the given client and API",
 		Long: `Fetch an access token for the given client.
-If --client-id is not provided, the default client "CLI Login Testing" will be used (and created if not exists.
+If --client-id is not provided, the default client "CLI Login Testing" will be used (and created if not exists).
 Additionally, you can also specify the --audience and --scope to use.`,
 		Example: `auth0 test token
 auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>`,
