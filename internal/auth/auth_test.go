@@ -5,7 +5,6 @@ import "testing"
 func TestRequiredScopes(t *testing.T) {
 	t.Run("verify CRUD", func(t *testing.T) {
 		crudResources := []string{
-			"actions",
 			"clients",
 			"resource_servers",
 		}
