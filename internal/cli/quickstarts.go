@@ -41,7 +41,7 @@ var (
 		return
 	}()
 
-	clientID = Flag{
+	qsClientID = Flag{
 		Name:       "Client ID",
 		LongForm:   "client-id",
 		ShortForm:  "c",
@@ -49,7 +49,7 @@ var (
 		IsRequired: true,
 	}
 
-	stack = Flag{
+	qsStack = Flag{
 		Name:      "Stack",
 		LongForm:  "stack",
 		ShortForm: "s",
@@ -96,7 +96,7 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 				return errors.New("This command can only be run on interactive mode")
 			}
 
-			if err := clientID.Ask(cmd, &inputs.ClientID); err != nil {
+			if err := qsClientID.Ask(cmd, &inputs.ClientID); err != nil {
 				return err
 			}
 
@@ -112,7 +112,7 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 					return fmt.Errorf("An unexpected error occurred: %v", err)
 				}
 				// ask for input using the valid types only:
-				if err := stack.Select(cmd, &inputs.Stack, stacks); err != nil {
+				if err := qsStack.Select(cmd, &inputs.Stack, stacks); err != nil {
 					return err
 				}
 			}
@@ -153,8 +153,8 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 
-	clientID.RegisterString(cmd, &inputs.ClientID, "")
-	stack.RegisterString(cmd, &inputs.Stack, "")
+	qsClientID.RegisterString(cmd, &inputs.ClientID, "")
+	qsStack.RegisterString(cmd, &inputs.Stack, "")
 	return cmd
 }
 
