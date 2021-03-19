@@ -238,7 +238,7 @@ auth0 apps delete <id>
 }
 
 func createAppCmd(cli *cli) *cobra.Command {
-	var flags struct {
+	var inputs struct {
 		Name              string
 		Type              string
 		Description       string
@@ -263,35 +263,35 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := appName.Ask(cmd, &flags.Name); err != nil {
+			if err := appName.Ask(cmd, &inputs.Name); err != nil {
 				return err
 			}
 
-			if err := appType.Select(cmd, &flags.Type, appTypeOptions); err != nil {
+			if err := appType.Select(cmd, &inputs.Type, appTypeOptions); err != nil {
 				return err
 			}
 
-			if err := appDescription.Ask(cmd, &flags.Description); err != nil {
+			if err := appDescription.Ask(cmd, &inputs.Description); err != nil {
 				return err
 			}
 
 			a := &management.Client{
-				Name:                    &flags.Name,
-				Description:             &flags.Description,
-				AppType:                 auth0.String(apiTypeFor(flags.Type)),
-				Callbacks:               stringToInterfaceSlice(flags.Callbacks),
-				AllowedOrigins:          stringToInterfaceSlice(flags.AllowedOrigins),
-				WebOrigins:              stringToInterfaceSlice(flags.AllowedWebOrigins),
-				AllowedLogoutURLs:       stringToInterfaceSlice(flags.AllowedLogoutURLs),
-				TokenEndpointAuthMethod: apiAuthMethodFor(flags.AuthMethod),
+				Name:                    &inputs.Name,
+				Description:             &inputs.Description,
+				AppType:                 auth0.String(apiTypeFor(inputs.Type)),
+				Callbacks:               stringToInterfaceSlice(inputs.Callbacks),
+				AllowedOrigins:          stringToInterfaceSlice(inputs.AllowedOrigins),
+				WebOrigins:              stringToInterfaceSlice(inputs.AllowedWebOrigins),
+				AllowedLogoutURLs:       stringToInterfaceSlice(inputs.AllowedLogoutURLs),
+				TokenEndpointAuthMethod: apiAuthMethodFor(inputs.AuthMethod),
 				OIDCConformant:          &oidcConformant,
 				JWTConfiguration:        &management.ClientJWTConfiguration{Algorithm: &algorithm},
 			}
 
-			if len(flags.Grants) == 0 {
-				a.GrantTypes = apiDefaultGrantsFor(flags.Type)
+			if len(inputs.Grants) == 0 {
+				a.GrantTypes = apiDefaultGrantsFor(inputs.Type)
 			} else {
-				a.GrantTypes = apiGrantsFor(flags.Grants)
+				a.GrantTypes = apiGrantsFor(inputs.Grants)
 			}
 
 			err := ansi.Spinner("Creating application", func() error {
@@ -310,15 +310,15 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 		},
 	}
 
-	appName.RegisterString(cmd, &flags.Name, "")
-	appType.RegisterString(cmd, &flags.Type, "")
-	appDescription.RegisterString(cmd, &flags.Description, "")
-	appCallbacks.RegisterStringSlice(cmd, &flags.Callbacks, nil)
-	appOrigins.RegisterStringSlice(cmd, &flags.AllowedOrigins, nil)
-	appWebOrigins.RegisterStringSlice(cmd, &flags.AllowedWebOrigins, nil)
-	appLogoutURLs.RegisterStringSlice(cmd, &flags.AllowedLogoutURLs, nil)
-	appAuthMethod.RegisterString(cmd, &flags.AuthMethod, "")
-	appGrants.RegisterStringSlice(cmd, &flags.Grants, nil)
+	appName.RegisterString(cmd, &inputs.Name, "")
+	appType.RegisterString(cmd, &inputs.Type, "")
+	appDescription.RegisterString(cmd, &inputs.Description, "")
+	appCallbacks.RegisterStringSlice(cmd, &inputs.Callbacks, nil)
+	appOrigins.RegisterStringSlice(cmd, &inputs.AllowedOrigins, nil)
+	appWebOrigins.RegisterStringSlice(cmd, &inputs.AllowedWebOrigins, nil)
+	appLogoutURLs.RegisterStringSlice(cmd, &inputs.AllowedLogoutURLs, nil)
+	appAuthMethod.RegisterString(cmd, &inputs.AuthMethod, "")
+	appGrants.RegisterStringSlice(cmd, &inputs.Grants, nil)
 
 	return cmd
 }

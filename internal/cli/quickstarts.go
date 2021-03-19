@@ -22,6 +22,15 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
+// QuickStart app types and defaults
+const (
+	qsNative    = "native"
+	qsSpa       = "spa"
+	qsWebApp    = "webapp"
+	qsBackend   = "backend"
+	_defaultURL = "http://localhost:3000"
+)
+
 var (
 	//go:embed data/quickstarts.json
 	qsBuf             []byte
@@ -31,15 +40,22 @@ var (
 		}
 		return
 	}()
-)
 
-// QuickStart app types and defaults
-const (
-	qsNative    = "native"
-	qsSpa       = "spa"
-	qsWebApp    = "webapp"
-	qsBackend   = "backend"
-	_defaultURL = "http://localhost:3000"
+	qsClientID = Flag{
+		Name:       "Client ID",
+		LongForm:   "client-id",
+		ShortForm:  "c",
+		Help:       "Client Id of an Auth0 application.",
+		IsRequired: true,
+	}
+
+	qsStack = Flag{
+		Name:       "Stack",
+		LongForm:   "stack",
+		ShortForm:  "s",
+		Help:       "Tech/Language of the quickstart sample to download.",
+		IsRequired: true,
+	}
 )
 
 type quickstart struct {
@@ -64,16 +80,15 @@ func quickstartsCmd(cli *cli) *cobra.Command {
 }
 
 func downloadQuickstart(cli *cli) *cobra.Command {
-	var flags struct {
+	var inputs struct {
 		ClientID string
-		Type     string
 		Stack    string
 	}
 
 	cmd := &cobra.Command{
 		Use:   "download",
 		Short: "Download a quickstart sample app for a specific tech stack",
-		Long:  `auth0 quickstarts download --type <type> --client-id <client-id> --stack <stack>`,
+		Long:  `auth0 quickstarts download --client-id <client-id> --stack <stack>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -82,30 +97,24 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 				return errors.New("This command can only be run on interactive mode")
 			}
 
-			selectedClientID := flags.ClientID
-
-			if selectedClientID == "" {
-				input := prompt.TextInput("client-id", "Client Id:", "Client Id of an Auth0 application.", true)
-				if err := prompt.AskOne(input, &selectedClientID); err != nil {
-					return fmt.Errorf("An unexpected error occurred: %v", err)
-				}
+			if err := qsClientID.Ask(cmd, &inputs.ClientID); err != nil {
+				return err
 			}
 
-			client, err := cli.api.Client.Read(selectedClientID)
+			client, err := cli.api.Client.Read(inputs.ClientID)
 			if err != nil {
 				return fmt.Errorf("An unexpected error occurred, please verify your client id: %v", err.Error())
 			}
 
-			selectedStack := flags.Stack
-
-			if selectedStack == "" {
+			if inputs.Stack == "" {
+				// get the valid types for this App:
 				stacks, err := quickstartStacksFromType(client.GetAppType())
 				if err != nil {
 					return fmt.Errorf("An unexpected error occurred: %v", err)
 				}
-				input := prompt.SelectInput("stack", "Stack:", "Tech/Language of the quickstart sample to download", stacks, true)
-				if err := prompt.AskOne(input, &selectedStack); err != nil {
-					return fmt.Errorf("An unexpected error occurred: %v", err)
+				// ask for input using the valid types only:
+				if err := qsStack.Select(cmd, &inputs.Stack, stacks); err != nil {
+					return err
 				}
 			}
 
@@ -120,13 +129,13 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 				}
 			}
 
-			q, err := getQuickstart(client.GetAppType(), selectedStack)
+			q, err := getQuickstart(client.GetAppType(), inputs.Stack)
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred with the specified stack %v: %v", selectedStack, err)
+				return fmt.Errorf("An unexpected error occurred with the specified stack %v: %v", inputs.Stack, err)
 			}
 
 			err = ansi.Spinner("Downloading quickstart sample", func() error {
-				return downloadQuickStart(context.TODO(), cli, client, target, q)
+				return downloadQuickStart(cmd.Context(), cli, client, target, q)
 			})
 
 			if err != nil {
@@ -144,10 +153,9 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.Flags().StringVarP(&flags.ClientID, "client-id", "c", "", "Client Id of an Auth0 application.")
-	cmd.Flags().StringVarP(&flags.Stack, "stack", "s", "", "Tech/Language of the quickstart sample to download.")
-	mustRequireFlags(cmd, "client-id")
 
+	qsClientID.RegisterString(cmd, &inputs.ClientID, "")
+	qsStack.RegisterString(cmd, &inputs.Stack, "")
 	return cmd
 }
 
