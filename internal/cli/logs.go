@@ -19,8 +19,8 @@ var (
 	}
 
 	logsNum = Flag{
-		Name:      "Num",
-		LongForm:  "num",
+		Name:      "Number of Entries",
+		LongForm:  "number",
 		ShortForm: "n",
 		Help:      "Number of log entries to show.",
 	}
