@@ -10,11 +10,6 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
-const (
-	ruleID     = "id"
-	ruleScript = "script"
-)
-
 var (
 	ruleNameRequired = Flag{
 		Name:       "Name",
