@@ -43,7 +43,7 @@ var (
 
 	clientID = Flag{
 		Name:       "ClientID",
-		LongForm:   "client ID",
+		LongForm:   "client-id",
 		ShortForm:  "c",
 		Help:       "Client Id of an Auth0 application.",
 		IsRequired: true,
