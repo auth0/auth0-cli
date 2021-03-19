@@ -33,7 +33,7 @@ var (
 		Help:      "Template to use for the rule.",
 	}
 
-	ruleTemplateOptions = flagOptionsForMapping(ruleTemplateMappings)
+	ruleTemplateOptions = flagOptionsFromMapping(ruleTemplateMappings)
 
 	ruleEnabled = Flag{
 		Name:      "Enabled",
