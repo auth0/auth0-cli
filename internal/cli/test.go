@@ -8,6 +8,35 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	testClientID = Flag{
+		Name:      "Client ID",
+		LongForm:  "client-id",
+		ShortForm: "c",
+		Help:      "Client Id of an Auth0 application.",
+	}
+
+	testConnection = Flag{
+		Name:     "Connection",
+		LongForm: "connection",
+		Help:     "Connection to test during login.",
+	}
+
+	testAudience = Flag{
+		Name:      "Audience",
+		LongForm:  "audience",
+		ShortForm: "a",
+		Help:      "The unique identifier of the target Audience you want to access.",
+	}
+
+	testScopes = Flag{
+		Name:      "Scopes",
+		LongForm:  "scopes",
+		ShortForm: "s",
+		Help:      "The list of scope you want to use to generate the token.",
+	}
+)
+
 func testCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "test",
@@ -22,18 +51,21 @@ func testCmd(cli *cli) *cobra.Command {
 }
 
 func testLoginCmd(cli *cli) *cobra.Command {
-	var clientID string
-	var connectionName string
+	var inputs struct {
+		ClientID       string
+		ConnectionName string
+	}
 
 	cmd := &cobra.Command{
 		Use:   "login",
 		Short: "Try out your universal login box",
-		Long: `auth0 test login
-Launch a browser to try out your universal login box for the given client.
-`,
+		Long: `Launch a browser to try out your universal login box.
+If --client-id is not provided, the default client "CLI Login Testing" will be used (and created if not exists.)`,
+		Example: `auth0 test login
+auth0 test login --client-id <id>
+auth0 test login -c <id> --connection <connection>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var userInfo *authutil.UserInfo
-
 			tenant, err := cli.getTenant()
 			if err != nil {
 				return err
@@ -43,17 +75,17 @@ Launch a browser to try out your universal login box for the given client.
 			// "CLI Login Testing" client if none passed. This client is only
 			// used for testing login from the CLI and will be created if it
 			// does not exist.
-			if clientID == "" {
+			if inputs.ClientID == "" {
 				client, err := getOrCreateCLITesterClient(cli.api.Client)
 				if err != nil {
 					return fmt.Errorf("Unable to create an app for testing the login box: %w", err)
 				}
-				clientID = client.GetClientID()
+				inputs.ClientID = client.GetClientID()
 			}
 
-			client, err := cli.api.Client.Read(clientID)
+			client, err := cli.api.Client.Read(inputs.ClientID)
 			if err != nil {
-				return fmt.Errorf("Unable to find client %s; if you specified a client, please verify it exists, otherwise re-run the command", clientID)
+				return fmt.Errorf("Unable to find client %s; if you specified a client, please verify it exists, otherwise re-run the command", inputs.ClientID)
 			}
 
 			if proceed := runLoginFlowPreflightChecks(cli, client); !proceed {
@@ -64,13 +96,13 @@ Launch a browser to try out your universal login box for the given client.
 				cli,
 				tenant,
 				client,
-				connectionName,
+				inputs.ConnectionName,
 				"",      // audience is only supported for the test token command
 				"login", // force a login page when using the test login command
 				cliLoginTestingScopes,
 			)
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred while logging in to client %s: %w", clientID, err)
+				return fmt.Errorf("An unexpected error occurred while logging in to client %s: %w", inputs.ClientID, err)
 			}
 
 			if err := ansi.Spinner("Fetching user metadata", func() error {
@@ -89,22 +121,26 @@ Launch a browser to try out your universal login box for the given client.
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.Flags().StringVarP(&clientID, "client-id", "c", "", "Client Id for which to test login.")
-	cmd.Flags().StringVarP(&connectionName, "connection", "", "", "Connection to test during login.")
+	testClientID.RegisterString(cmd, &inputs.ClientID, "")
+	testConnection.RegisterString(cmd, &inputs.ConnectionName, "")
 	return cmd
 }
 
 func testTokenCmd(cli *cli) *cobra.Command {
-	var clientID string
-	var audience string
-	var scopes []string
+	var inputs struct {
+		ClientID string
+		Audience string
+		Scopes   []string
+	}
 
 	cmd := &cobra.Command{
 		Use:   "token",
 		Short: "Fetch a token for the given client and API",
-		Long: `auth0 test token
-Fetch an access token for the given client and API.
-`,
+		Long: `Fetch an access token for the given client.
+If --client-id is not provided, the default client "CLI Login Testing" will be used (and created if not exists.
+Additionally, you can also specify the --audience and --scope to use.`,
+		Example: `auth0 test token
+auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tenant, err := cli.getTenant()
 			if err != nil {
@@ -115,32 +151,32 @@ Fetch an access token for the given client and API.
 			// "CLI Login Testing" client if none passed. This client is only
 			// used for testing login from the CLI and will be created if it
 			// does not exist.
-			if clientID == "" {
+			if inputs.ClientID == "" {
 				client, err := getOrCreateCLITesterClient(cli.api.Client)
 				if err != nil {
 					return fmt.Errorf("Unable to create an app to test getting a token: %w", err)
 				}
-				clientID = client.GetClientID()
+				inputs.ClientID = client.GetClientID()
 			}
 
-			client, err := cli.api.Client.Read(clientID)
+			client, err := cli.api.Client.Read(inputs.ClientID)
 			if err != nil {
-				return fmt.Errorf("Unable to find client %s; if you specified a client, please verify it exists, otherwise re-run the command", clientID)
+				return fmt.Errorf("Unable to find client %s; if you specified a client, please verify it exists, otherwise re-run the command", inputs.ClientID)
 			}
 
 			appType := client.GetAppType()
 
 			cli.renderer.Infof("Domain:   " + tenant.Domain)
-			cli.renderer.Infof("ClientID: " + clientID)
+			cli.renderer.Infof("ClientID: " + inputs.ClientID)
 			cli.renderer.Infof("Type:     " + appType + "\n")
 
 			// We can check here if the client is an m2m client, and if so
 			// initiate the client credentials flow instead to fetch a token,
 			// avoiding the browser and HTTP server shenanigans altogether.
 			if appType == "non_interactive" {
-				tokenResponse, err := runClientCredentialsFlow(cli, client, clientID, audience, tenant)
+				tokenResponse, err := runClientCredentialsFlow(cli, client, inputs.ClientID, inputs.Audience, tenant)
 				if err != nil {
-					return fmt.Errorf("An unexpected error occurred while logging in to machine-to-machine client %s: %w", clientID, err)
+					return fmt.Errorf("An unexpected error occurred while logging in to machine-to-machine client %s: %w", inputs.ClientID, err)
 				}
 
 				fmt.Fprint(cli.renderer.MessageWriter, "\n")
@@ -157,12 +193,12 @@ Fetch an access token for the given client and API.
 				tenant,
 				client,
 				"", // specifying a connection is only supported for the test login command
-				audience,
+				inputs.Audience,
 				"", // We don't want to force a prompt for the test token command
-				scopes,
+				inputs.Scopes,
 			)
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred when logging in to client %s: %w", clientID, err)
+				return fmt.Errorf("An unexpected error occurred when logging in to client %s: %w", inputs.ClientID, err)
 			}
 
 			fmt.Fprint(cli.renderer.MessageWriter, "\n")
@@ -172,8 +208,8 @@ Fetch an access token for the given client and API.
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.Flags().StringVarP(&clientID, "client-id", "c", "", "Client ID for which to fetch a token.")
-	cmd.Flags().StringVarP(&audience, "audience", "a", "", "The unique identifier of the target API you want to access.")
-	cmd.Flags().StringSliceVarP(&scopes, "scope", "s", []string{}, "Client ID for which to test login.")
+	testClientID.RegisterString(cmd, &inputs.ClientID, "")
+	testAudience.RegisterString(cmd, &inputs.Audience, "")
+	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
 	return cmd
 }
