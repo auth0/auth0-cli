@@ -27,7 +27,7 @@ var (
 
 	logsNoColor = Flag{
 		Name:     "Disable Color",
-		LongForm: "no-color",
+		LongForm: "disable-color",
 		Help:     "Disable colored log output.",
 	}
 )
