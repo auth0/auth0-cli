@@ -14,6 +14,9 @@ type ruleView struct {
 	Enabled bool
 	ID      string
 	Order   int
+	Script  string
+
+	raw interface{}
 }
 
 func (v *ruleView) AsTableHeader() []string {
@@ -22,6 +25,19 @@ func (v *ruleView) AsTableHeader() []string {
 
 func (v *ruleView) AsTableRow() []string {
 	return []string{v.ID, v.Name, strconv.FormatBool(v.Enabled), fmt.Sprintf("%d", v.Order)}
+}
+
+func (v *ruleView) KeyValues() [][]string {
+	return [][]string{
+		[]string{"NAME", v.Name},
+		[]string{"ID", v.ID},
+		[]string{"ENABLED", strconv.FormatBool(v.Enabled)},
+		[]string{"SCRIPT", v.Script},
+	}
+}
+
+func (v *ruleView) Object() interface{} {
+	return v.raw
 }
 
 func (r *Renderer) RulesList(ruleList *management.RuleList) {
@@ -44,4 +60,32 @@ func (r *Renderer) RulesList(ruleList *management.RuleList) {
 
 	r.Results(res)
 
+}
+
+func (r *Renderer) RulesCreate(rule *management.Rule) {
+	r.Heading(ansi.Bold(r.Tenant), "rule created\n")
+
+	v := &ruleView{
+		Name:    rule.GetName(),
+		ID:      rule.GetID(),
+		Enabled: rule.GetEnabled(),
+		Order:   rule.GetOrder(),
+		Script:  rule.GetScript(),
+
+		raw: rule,
+	}
+
+	r.Result(v)
+
+	r.Newline()
+
+	// TODO(cyx): possibly guard this with a --no-hint flag.
+	r.Infof("%s: To edit this rule, do `auth0 rules update %s`",
+		ansi.Faint("Hint"),
+		rule.GetID(),
+	)
+
+	r.Infof("%s: You might wanna try `auth0 test login",
+		ansi.Faint("Hint"),
+	)
 }

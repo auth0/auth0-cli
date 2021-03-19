@@ -4,22 +4,47 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os/user"
-	"regexp"
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
-	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
 
 const (
-	ruleID      = "id"
-	ruleName    = "name"
-	ruleScript  = "script"
-	ruleOrder   = "order"
-	ruleEnabled = "enabled"
+	ruleID     = "id"
+	ruleScript = "script"
+)
+
+var (
+	ruleName = Flag{
+		Name:       "Name",
+		LongForm:   "name",
+		ShortForm:  "n",
+		Help:       "Name of the rule.",
+		IsRequired: true,
+	}
+
+	ruleTemplate = Flag{
+		Name:      "Template",
+		LongForm:  "template",
+		ShortForm: "t",
+		Help:      "Template to use for the rule.",
+	}
+
+	ruleTemplateOptions = flagOptionsForMapping(ruleTemplateMappings)
+
+	ruleEnabled = Flag{
+		Name:      "Enabled",
+		LongForm:  "enabled",
+		ShortForm: "e",
+		Help:      "Enable (or disable) a rule.",
+	}
+
+	ruleTemplateMappings = map[string]string{
+		"Empty Rule": ruleTemplateEmptyRule,
+	}
 )
 
 func rulesCmd(cli *cli) *cobra.Command {
@@ -30,11 +55,11 @@ func rulesCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listRulesCmd(cli))
-	cmd.AddCommand(enableRuleCmd(cli))
-	cmd.AddCommand(disableRuleCmd(cli))
-	cmd.AddCommand(createRulesCmd(cli))
-	cmd.AddCommand(deleteRulesCmd(cli))
-	cmd.AddCommand(updateRulesCmd(cli))
+	// cmd.AddCommand(enableRuleCmd(cli))
+	// cmd.AddCommand(disableRuleCmd(cli))
+	cmd.AddCommand(createRuleCmd(cli))
+	// cmd.AddCommand(deleteRuleCmd(cli))
+	// cmd.AddCommand(updateRuleCmd(cli))
 
 	return cmd
 }
@@ -64,6 +89,7 @@ func listRulesCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+/*
 func enableRuleCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		Name string
@@ -125,7 +151,9 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 
 	return cmd
 }
+*/
 
+/*
 func disableRuleCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		Name string
@@ -186,13 +214,14 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 
 	return cmd
 }
+*/
 
-func createRulesCmd(cli *cli) *cobra.Command {
+func createRuleCmd(cli *cli) *cobra.Command {
 	var flags struct {
-		Name    string
-		Script  string
-		Order   int
-		Enabled bool
+		Name     string
+		Template string
+		Enabled  bool
+		// Order   int
 	}
 
 	cmd := &cobra.Command{
@@ -200,87 +229,48 @@ func createRulesCmd(cli *cli) *cobra.Command {
 		Short: "Create a new rule",
 		Long: `Create a new rule:
 
-    auth0 rules create --name "My Rule" --script "function (user, context, callback) { console.log( 'Hello, world!' ); return callback(null, user, context); }"
+auth0 rules create --name "My Rule" --template [empty-rule]"
 		`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if shouldPrompt(cmd, ruleName) {
-				input := prompt.TextInput(
-					"name", "Name:",
-					"Name of the rule. You can change the rule name later in the rule settings.",
-					true)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
-				}
+			if err := ruleName.Ask(cmd, &flags.Name); err != nil {
+				return err
 			}
 
-			if shouldPrompt(cmd, ruleScript) {
-				input := prompt.TextInput(ruleScript, "Script:", "Script of the rule.", true)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
-				}
+			if err := ruleTemplate.Select(cmd, &flags.Template, ruleTemplateOptions); err != nil {
+				return err
 			}
 
-			if shouldPrompt(cmd, ruleOrder) {
-				input := prompt.TextInputDefault(ruleOrder, "Order:", "Order of the rule.", "0", false)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
-				}
-			}
-
-			if shouldPrompt(cmd, ruleEnabled) {
-				input := prompt.BoolInput(ruleEnabled, "Enabled:", "Enable the rule.", false)
-
-				if err := prompt.AskOne(input, &flags); err != nil {
-					return err
-				}
-			}
-
-			if strings.Contains(flags.Script, ".js") {
-				content, err := parseFileByName(flags.Script)
-
-				if err != nil {
-					return err
-				}
-
-				flags.Script = content
-			}
-
-			r := &management.Rule{
+			rule := &management.Rule{
 				Name:    &flags.Name,
-				Script:  &flags.Script,
-				Order:   &flags.Order,
+				Script:  auth0.String(ruleTemplateMappings[flags.Template]),
 				Enabled: &flags.Enabled,
 			}
 
 			err := ansi.Spinner("Creating rule", func() error {
-				return cli.api.Rule.Create(r)
+				return cli.api.Rule.Create(rule)
 			})
 
 			if err != nil {
-				return err
+				return fmt.Errorf("Unable to create rule: %w", err)
 			}
 
-			cli.renderer.Infof("Your rule `%s` was successfully created.", flags.Name)
+			cli.renderer.RulesCreate(rule)
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.Name, ruleName, "n", "", "Name of this rule (required)")
-	cmd.Flags().StringVarP(&flags.Script, ruleScript, "s", "", "Code to be executed when this rule runs (required)")
-	cmd.Flags().IntVarP(&flags.Order, ruleOrder, "o", 0, "Order that this rule should execute in relative to other rules. Lower-valued rules execute first.")
-	cmd.Flags().BoolVarP(&flags.Enabled, ruleEnabled, "e", false, "Whether the rule is enabled (true), or disabled (false).")
-	mustRequireFlags(cmd, ruleName, ruleScript)
+	ruleName.RegisterString(cmd, &flags.Name, "")
+	ruleTemplate.RegisterString(cmd, &flags.Template, "")
+	ruleEnabled.RegisterBool(cmd, &flags.Enabled, true)
 
 	return cmd
 }
 
-func deleteRulesCmd(cli *cli) *cobra.Command {
+/*
+func deleteRuleCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		ID   string
 		Name string
@@ -366,8 +356,10 @@ func deleteRulesCmd(cli *cli) *cobra.Command {
 
 	return cmd
 }
+*/
 
-func updateRulesCmd(cli *cli) *cobra.Command {
+/*
+func updateRuleCmd(cli *cli) *cobra.Command {
 	var flags struct {
 		ID      string
 		Name    string
@@ -469,6 +461,7 @@ func updateRulesCmd(cli *cli) *cobra.Command {
 
 	return cmd
 }
+*/
 
 // @TODO move to rules package
 func getRules(cli *cli) (list *management.RuleList, err error) {

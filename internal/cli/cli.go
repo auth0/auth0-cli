@@ -381,3 +381,11 @@ func prepareInteractivity(cmd *cobra.Command) {
 		})
 	}
 }
+
+func flagOptionsForMapping(mapping map[string]string) []string {
+	result := make([]string, 0, len(mapping))
+	for k := range mapping {
+		result = append(result, k)
+	}
+	return result
+}

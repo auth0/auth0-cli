@@ -78,12 +78,18 @@ func (f *Flag) RegisterBoolU(cmd *cobra.Command, value *bool, defaultValue bool)
 	registerBool(cmd, f, value, defaultValue, true)
 }
 
+// LOOK
 func askFlag(cmd *cobra.Command, f *Flag, value interface{}, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
 		return ask(cmd, f, value, isUpdate)
 	}
 
 	return nil
+}
+
+// LOOK
+func (f *Flag) label() string {
+	return fmt.Sprintf("%s:", f.Name)
 }
 
 func selectFlag(cmd *cobra.Command, f *Flag, value interface{}, options []string, isUpdate bool) error {

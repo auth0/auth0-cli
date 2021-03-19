@@ -80,6 +80,7 @@ func Execute() {
 	rootCmd.AddCommand(loginCmd(cli))
 	rootCmd.AddCommand(tenantsCmd(cli))
 	rootCmd.AddCommand(appsCmd(cli))
+	rootCmd.AddCommand(rulesCmd(cli))
 	rootCmd.AddCommand(quickstartsCmd(cli))
 	rootCmd.AddCommand(apisCmd(cli))
 	rootCmd.AddCommand(testCmd(cli))
