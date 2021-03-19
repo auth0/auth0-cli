@@ -29,8 +29,8 @@ require (
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/zalando/go-keyring v0.1.1
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
-	golang.org/x/sys v0.0.0-20210305023407-0d6cb8bd5a4b // indirect
-	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d
+	golang.org/x/sys v0.0.0-20210319071255-635bc2c9138d // indirect
+	golang.org/x/term v0.0.0-20210317153231-de623e64d2a6
 	golang.org/x/text v0.3.5 // indirect
 	gopkg.in/auth0.v5 v5.11.0
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
