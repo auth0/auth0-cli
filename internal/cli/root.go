@@ -84,7 +84,6 @@ func Execute() {
 	rootCmd.AddCommand(apisCmd(cli))
 	rootCmd.AddCommand(testCmd(cli))
 	rootCmd.AddCommand(logsCmd(cli))
-	rootCmd.AddCommand(actionsCmd(cli))
 	rootCmd.AddCommand(logoutCmd(cli))
 
 	// keep completion at the bottom:
