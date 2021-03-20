@@ -121,7 +121,7 @@ Lists your existing applications. To create one try:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ClientList
 
-			err := ansi.Spinner("Loading applications", func() error {
+			err := ansi.Waiting(func() error {
 				var err error
 				list, err = cli.api.Client.List()
 				return err
@@ -166,7 +166,7 @@ auth0 apps show <id>
 
 			a := &management.Client{ClientID: &inputs.ID}
 
-			err := ansi.Spinner("Loading application", func() error {
+			err := ansi.Waiting(func() error {
 				var err error
 				a, err = cli.api.Client.Read(inputs.ID)
 				return err
@@ -282,7 +282,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 				a.GrantTypes = apiGrantsFor(inputs.Grants)
 			}
 
-			err := ansi.Spinner("Creating application", func() error {
+			err := ansi.Waiting(func() error {
 				return cli.api.Client.Create(a)
 			})
 
@@ -364,7 +364,7 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 
 			a := &management.Client{}
 
-			err := ansi.Spinner("Updating application", func() error {
+			err := ansi.Waiting(func() error {
 				current, err := cli.api.Client.Read(inputs.ID)
 
 				if err != nil {
