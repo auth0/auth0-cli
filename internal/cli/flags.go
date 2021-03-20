@@ -30,6 +30,12 @@ func (f Flag) GetIsRequired() bool {
 	return f.IsRequired
 }
 
+func (f *Flag) Required() *Flag {
+	clone := *f
+	clone.IsRequired = true
+	return &clone
+}
+
 func (f *Flag) Ask(cmd *cobra.Command, value interface{}) error {
 	return askFlag(cmd, f, value, false)
 }
