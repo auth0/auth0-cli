@@ -149,6 +149,18 @@ func registerBool(cmd *cobra.Command, f *Flag, value *bool, defaultValue bool, i
 	}
 }
 
+func shouldAsk(cmd *cobra.Command, f *Flag, isUpdate bool) bool {
+	if isUpdate {
+		if !f.IsRequired {
+			return false
+		}
+
+		return shouldPromptWhenFlagless(cmd, f.LongForm)
+	}
+
+	return shouldPrompt(cmd, f.LongForm)
+}
+
 func markFlagRequired(cmd *cobra.Command, f *Flag, isUpdate bool) error {
 	if f.IsRequired && !isUpdate {
 		return cmd.MarkFlagRequired(f.LongForm)
