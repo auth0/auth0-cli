@@ -12,10 +12,11 @@ import (
 
 var (
 	ruleName = Flag{
-		Name:      "Name",
-		LongForm:  "name",
-		ShortForm: "n",
-		Help:      "Name of the rule.",
+		Name:       "Name",
+		LongForm:   "name",
+		ShortForm:  "n",
+		Help:       "Name of the rule.",
+		IsRequired: true,
 	}
 
 	ruleTemplate = Flag{
@@ -105,7 +106,7 @@ auth0 rules create --name "My Rule" --template [empty-rule]"
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := ruleName.Required().Ask(cmd, &inputs.Name); err != nil {
+			if err := ruleName.Ask(cmd, &inputs.Name); err != nil {
 				return err
 			}
 
@@ -143,7 +144,7 @@ auth0 rules create --name "My Rule" --template [empty-rule]"
 		},
 	}
 
-	ruleName.Required().RegisterString(cmd, &inputs.Name, "")
+	ruleName.RegisterString(cmd, &inputs.Name, "")
 	ruleTemplate.RegisterString(cmd, &inputs.Template, "")
 	ruleEnabled.RegisterBool(cmd, &inputs.Enabled, true)
 
