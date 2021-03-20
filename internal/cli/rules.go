@@ -280,10 +280,6 @@ auth0 rules update --id  rul_d2VSaGlyaW5n --name "My Updated Rule" --enabled=fal
 				}
 			}
 
-			if err := ruleName.AskU(cmd, &inputs.Name); err != nil {
-				return err
-			}
-
 			var rule *management.Rule
 			err := ansi.Waiting(func() error {
 				var err error
@@ -292,6 +288,10 @@ auth0 rules update --id  rul_d2VSaGlyaW5n --name "My Updated Rule" --enabled=fal
 			})
 			if err != nil {
 				return fmt.Errorf("Failed to fetch rule with ID: %s %v", inputs.ID, err)
+			}
+
+			if err := ruleName.AskU(cmd, &inputs.Name); err != nil {
+				return err
 			}
 
 			// TODO(cyx): we can re-think this once we have
