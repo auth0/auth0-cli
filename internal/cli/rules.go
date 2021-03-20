@@ -66,7 +66,7 @@ func listRulesCmd(cli *cli) *cobra.Command {
 		Long:  `List the rules in your current tenant.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var rules []*management.Rule
-			err := ansi.Spinner("Loading rules", func() error {
+			err := ansi.Waiting(func() error {
 				ruleList, err := cli.api.Rule.List()
 				if err != nil {
 					return err
@@ -130,7 +130,7 @@ auth0 rules create --name "My Rule" --template [empty-rule]"
 				Enabled: &inputs.Enabled,
 			}
 
-			err = ansi.Spinner("Creating rule", func() error {
+			err = ansi.Waiting(func() error {
 				return cli.api.Rule.Create(rule)
 			})
 
@@ -184,7 +184,7 @@ auth0 rules show <id>
 
 			var rule *management.Rule
 
-			err := ansi.Spinner("Loading rule", func() error {
+			err := ansi.Waiting(func() error {
 				var err error
 				rule, err = cli.api.Rule.Read(inputs.ID)
 				return err
@@ -285,7 +285,7 @@ auth0 rules update --id  rul_d2VSaGlyaW5n --name "My Updated Rule" --enabled=fal
 			}
 
 			var rule *management.Rule
-			err := ansi.Spinner("Fetching rule", func() error {
+			err := ansi.Waiting(func() error {
 				var err error
 				rule, err = cli.api.Rule.Read(inputs.ID)
 				return err
@@ -319,7 +319,7 @@ auth0 rules update --id  rul_d2VSaGlyaW5n --name "My Updated Rule" --enabled=fal
 				Enabled: &inputs.Enabled,
 			}
 
-			err = ansi.Spinner("Updating rule", func() error {
+			err = ansi.Waiting(func() error {
 				return cli.api.Rule.Update(inputs.ID, rule)
 			})
 
@@ -346,7 +346,7 @@ func promptForRuleViaDropdown(cli *cli, cmd *cobra.Command) (id string, err erro
 	// == Start experimental dropdown for names => id.
 	//    TODO(cyx): Consider extracting this
 	//    pattern once we've done more of it.
-	err = ansi.Spinner("Fetching your rules", func() error {
+	err = ansi.Waiting(func() error {
 		list, err := cli.api.Rule.List()
 		if err != nil {
 			return err
