@@ -7,14 +7,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type CommandInput interface {
+type commandInput interface {
 	GetName() string
 	GetLabel() string
 	GetHelp() string
 	GetIsRequired() bool
 }
 
-func ask(cmd *cobra.Command, i CommandInput, value interface{}, isUpdate bool) error {
+func ask(cmd *cobra.Command, i commandInput, value interface{}, isUpdate bool) error {
 	isRequired := !isUpdate && i.GetIsRequired()
 	input := prompt.TextInput("", i.GetLabel(), i.GetHelp(), isRequired)
 
@@ -25,7 +25,7 @@ func ask(cmd *cobra.Command, i CommandInput, value interface{}, isUpdate bool) e
 	return nil
 }
 
-func _select(cmd *cobra.Command, i CommandInput, value interface{}, options []string, isUpdate bool) error {
+func _select(cmd *cobra.Command, i commandInput, value interface{}, options []string, isUpdate bool) error {
 	isRequired := !isUpdate && i.GetIsRequired()
 	input := prompt.SelectInput("", i.GetLabel(), i.GetHelp(), options, isRequired)
 

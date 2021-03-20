@@ -32,7 +32,7 @@ func (a *Argument) Ask(cmd *cobra.Command, value interface{}) error {
 	return askArgument(cmd, a, value)
 }
 
-func askArgument(cmd *cobra.Command, i CommandInput, value interface{}) error {
+func askArgument(cmd *cobra.Command, i commandInput, value interface{}) error {
 	if canPrompt(cmd) {
 		return ask(cmd, i, value, true)
 	} else {
