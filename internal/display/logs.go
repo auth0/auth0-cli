@@ -37,28 +37,6 @@ func (v *logView) AsTableHeader() []string {
 	return []string{"Type", "Description", "Date", "Connection", "Client"}
 }
 
-func (v *logView) getActionExecutionID() string {
-	if v.Details["actions"] == nil {
-		return ""
-	}
-
-	actions, ok := v.Details["actions"].(map[string]interface{})
-	if ok && actions["executions"] != nil {
-		execs, ok := actions["executions"].([]interface{})
-		if ok {
-			v, ok := execs[0].(string)
-			if ok {
-				return v
-			}
-			return ""
-		} else {
-			return ""
-		}
-	} else {
-		return ""
-	}
-}
-
 func (v *logView) getConnection() string {
 	if v.Details["prompts"] == nil {
 		return notApplicable
@@ -117,31 +95,7 @@ func (v *logView) Extras() []string {
 	}
 
 	raw, _ := yaml.Marshal(v.Log)
-	fallback := []string{ansi.Faint(indent(string(raw), "\t"))}
-
-	id := v.getActionExecutionID()
-	if id == "" {
-		return fallback
-	}
-
-	exec, err := v.ActionExecutionAPI.Read(id)
-	if err != nil {
-		return fallback
-	}
-
-	res := []string{ansi.Bold("\t=== ACTION EXECUTIONS:")}
-	for _, r := range exec.Results {
-		if r.Response.Error == nil {
-			res = append(res, ansi.Faint(fmt.Sprintf("\t✓ Action %s logs", auth0.StringValue(r.ActionName))))
-		} else {
-			stack := strings.ReplaceAll(r.Response.Error["stack"], "\n", "\n\t\t")
-			logs := strings.ReplaceAll(auth0.StringValue(r.Response.Logs), "\n", "\n\t\t")
-			message := fmt.Sprintf("\t✘ Action %s\n\t\t%s\n\t\t%s\n", auth0.StringValue(r.ActionName), logs, stack)
-			res = append(res, aurora.BrightRed(message).String())
-		}
-	}
-
-	return []string{strings.Join(res, "\n")}
+	return []string{ansi.Faint(indent(string(raw), "\t"))}
 }
 
 func (v *logView) category() logCategory {
