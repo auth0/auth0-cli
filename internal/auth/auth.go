@@ -27,6 +27,7 @@ var requiredScopes = []string{
 	"offline_access", // <-- to get a refresh token.
 	"create:clients", "delete:clients", "read:clients", "update:clients",
 	"create:resource_servers", "delete:resource_servers", "read:resource_servers", "update:resource_servers",
+	"create:rules", "delete:rules", "read:rules", "update:rules",
 	"read:client_keys", "read:logs",
 }
 

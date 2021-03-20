@@ -49,11 +49,12 @@ var (
 		IsRequired: false,
 	}
 	appCallbacks = Flag{
-		Name:       "Callback URLs",
-		LongForm:   "callbacks",
-		ShortForm:  "c",
-		Help:       "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.",
-		IsRequired: false,
+		Name:         "Callback URLs",
+		LongForm:     "callbacks",
+		ShortForm:    "c",
+		Help:         "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.",
+		IsRequired:   false,
+		AlwaysPrompt: true,
 	}
 	appOrigins = Flag{
 		Name:       "Allowed Origin URLs",
