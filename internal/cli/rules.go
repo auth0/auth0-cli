@@ -170,6 +170,8 @@ auth0 rules show <id>
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
+				// TODO(cyx): Consider making a primitive for
+				// Argument to ask using a provided func.
 				var err error
 				inputs.ID, err = promptForRuleViaDropdown(cli, cmd)
 				if err != nil {
@@ -220,6 +222,8 @@ auth0 rules delete rul_d2VSaGlyaW5n`,
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
+				// TODO(cyx): Consider making a primitive for
+				// Argument to ask using a provided func.
 				var err error
 				inputs.ID, err = promptForRuleViaDropdown(cli, cmd)
 				if err != nil {
@@ -268,6 +272,8 @@ auth0 rules update --id  rul_d2VSaGlyaW5n --name "My Updated Rule" --enabled=fal
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
+				// TODO(cyx): Consider making a primitive for
+				// Argument to ask using a provided func.
 				var err error
 				inputs.ID, err = promptForRuleViaDropdown(cli, cmd)
 				if err != nil {
