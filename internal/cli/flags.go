@@ -87,7 +87,6 @@ func (f *Flag) RegisterBoolU(cmd *cobra.Command, value *bool, defaultValue bool)
 	registerBool(cmd, f, value, defaultValue, true)
 }
 
-// LOOK
 func askFlag(cmd *cobra.Command, f *Flag, value interface{}, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
 		return ask(cmd, f, value, isUpdate)
@@ -96,25 +95,12 @@ func askFlag(cmd *cobra.Command, f *Flag, value interface{}, isUpdate bool) erro
 	return nil
 }
 
-// LOOK
-func (f *Flag) label() string {
-	return fmt.Sprintf("%s:", f.Name)
-}
-
 func selectFlag(cmd *cobra.Command, f *Flag, value interface{}, options []string, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
 		return _select(cmd, f, value, options, isUpdate)
 	}
 
 	return nil
-}
-
-func shouldAsk(cmd *cobra.Command, f *Flag, isUpdate bool) bool {
-	if isUpdate {
-		return shouldPromptWhenFlagless(cmd, f.LongForm)
-	}
-
-	return shouldPrompt(cmd, f.LongForm)
 }
 
 func registerString(cmd *cobra.Command, f *Flag, value *string, defaultValue string, isUpdate bool) {
