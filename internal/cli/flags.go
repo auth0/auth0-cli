@@ -7,11 +7,12 @@ import (
 )
 
 type Flag struct {
-	Name       string
-	LongForm   string
-	ShortForm  string
-	Help       string
-	IsRequired bool
+	Name         string
+	LongForm     string
+	ShortForm    string
+	Help         string
+	IsRequired   bool
+	AlwaysPrompt bool
 }
 
 func (f Flag) GetName() string {
@@ -94,14 +95,6 @@ func selectFlag(cmd *cobra.Command, f *Flag, value interface{}, options []string
 	return nil
 }
 
-func shouldAsk(cmd *cobra.Command, f *Flag, isUpdate bool) bool {
-	if isUpdate {
-		return shouldPromptWhenFlagless(cmd, f.LongForm)
-	}
-
-	return shouldPrompt(cmd, f.LongForm)
-}
-
 func registerString(cmd *cobra.Command, f *Flag, value *string, defaultValue string, isUpdate bool) {
 	cmd.Flags().StringVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
 
@@ -132,6 +125,18 @@ func registerBool(cmd *cobra.Command, f *Flag, value *bool, defaultValue bool, i
 	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
 		panic(unexpectedError(err)) // TODO: Handle
 	}
+}
+
+func shouldAsk(cmd *cobra.Command, f *Flag, isUpdate bool) bool {
+	if isUpdate {
+		if !f.AlwaysPrompt {
+			return false
+		}
+
+		return shouldPromptWhenFlagless(cmd, f.LongForm)
+	}
+
+	return shouldPrompt(cmd, f.LongForm)
 }
 
 func markFlagRequired(cmd *cobra.Command, f *Flag, isUpdate bool) error {
