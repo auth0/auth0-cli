@@ -62,21 +62,9 @@ func (r *Renderer) RulesList(rules []*management.Rule) {
 
 }
 
-func (r *Renderer) RulesCreate(rule *management.Rule) {
+func (r *Renderer) RuleCreate(rule *management.Rule) {
 	r.Heading(ansi.Bold(r.Tenant), "rule created\n")
-
-	v := &ruleView{
-		Name:    rule.GetName(),
-		ID:      rule.GetID(),
-		Enabled: rule.GetEnabled(),
-		Order:   rule.GetOrder(),
-		Script:  rule.GetScript(),
-
-		raw: rule,
-	}
-
-	r.Result(v)
-
+	r.Result(makeRuleView(rule))
 	r.Newline()
 
 	// TODO(cyx): possibly guard this with a --no-hint flag.
@@ -88,4 +76,26 @@ func (r *Renderer) RulesCreate(rule *management.Rule) {
 	r.Infof("%s: You might wanna try `auth0 test login",
 		ansi.Faint("Hint"),
 	)
+}
+
+func (r *Renderer) RuleUpdate(rule *management.Rule) {
+	r.Heading(ansi.Bold(r.Tenant), "rule updated\n")
+	r.Result(makeRuleView(rule))
+}
+
+func (r *Renderer) RuleShow(rule *management.Rule) {
+	r.Heading(ansi.Bold(r.Tenant), "rule\n")
+	r.Result(makeRuleView(rule))
+}
+
+func makeRuleView(rule *management.Rule) *ruleView {
+	return &ruleView{
+		Name:    rule.GetName(),
+		ID:      rule.GetID(),
+		Enabled: rule.GetEnabled(),
+		Order:   rule.GetOrder(),
+		Script:  rule.GetScript(),
+
+		raw: rule,
+	}
 }

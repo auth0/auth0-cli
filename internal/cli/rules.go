@@ -43,7 +43,11 @@ var (
 	}
 
 	ruleTemplateMappings = map[string]string{
-		"Empty Rule": ruleTemplateEmptyRule,
+		"Empty rule":                ruleTemplateEmptyRule,
+		"Add email to access token": ruleTemplateAddEmailToAccessToken,
+		"Check last password reset": ruleTemplateCheckLastPasswordReset,
+		"IP address allow list":     ruleTemplateIPAddressAllowList,
+		"IP address deny list":      ruleTemplateIPAddressDenyList,
 	}
 )
 
@@ -56,8 +60,9 @@ func rulesCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listRulesCmd(cli))
 	cmd.AddCommand(createRuleCmd(cli))
-	cmd.AddCommand(deleteRuleCmd(cli))
+	cmd.AddCommand(showRuleCmd(cli))
 	cmd.AddCommand(updateRuleCmd(cli))
+	cmd.AddCommand(deleteRuleCmd(cli))
 
 	return cmd
 }
@@ -141,7 +146,7 @@ auth0 rules create --name "My Rule" --template [empty-rule]"
 				return fmt.Errorf("Unable to create rule: %w", err)
 			}
 
-			cli.renderer.RulesCreate(rule)
+			cli.renderer.RuleCreate(rule)
 			return nil
 		},
 	}
@@ -149,6 +154,58 @@ auth0 rules create --name "My Rule" --template [empty-rule]"
 	ruleNameRequired.RegisterString(cmd, &inputs.Name, "")
 	ruleTemplate.RegisterString(cmd, &inputs.Template, "")
 	ruleEnabled.RegisterBool(cmd, &inputs.Enabled, true)
+
+	return cmd
+}
+
+func showRuleCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "show",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Show a rule",
+		Long: `Show a rule:
+
+auth0 rules show <id>
+`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				inputs.ID = args[0]
+			} else {
+				var err error
+				inputs.ID, err = promptForRuleViaDropdown(cli, cmd)
+				if err != nil {
+					return err
+				}
+
+				if inputs.ID == "" {
+					cli.renderer.Infof("There are currently no rules.")
+					return nil
+				}
+			}
+
+			var rule *management.Rule
+
+			err := ansi.Spinner("Loading rule", func() error {
+				var err error
+				rule, err = cli.api.Rule.Read(inputs.ID)
+				return err
+			})
+
+			if err != nil {
+				return fmt.Errorf("Unable to load rule. The ID %v specified doesn't exist", inputs.ID)
+			}
+
+			cli.renderer.RuleShow(rule)
+			return nil
+		},
+	}
 
 	return cmd
 }
@@ -261,19 +318,24 @@ auth0 rules update --id  rul_d2VSaGlyaW5n --name "My Updated Rule" --enabled=fal
 				inputs.Name = rule.GetName()
 			}
 
+			// Prepare rule payload for update. This will also be
+			// re-hydrated by the SDK, which we'll use below during
+			// display.
+			rule = &management.Rule{
+				Name:    &inputs.Name,
+				Script:  &script,
+				Enabled: &inputs.Enabled,
+			}
+
 			err = ansi.Spinner("Updating rule", func() error {
-				return cli.api.Rule.Update(inputs.ID, &management.Rule{
-					Name:    &inputs.Name,
-					Script:  &script,
-					Enabled: &inputs.Enabled,
-				})
+				return cli.api.Rule.Update(inputs.ID, rule)
 			})
 
 			if err != nil {
 				return err
 			}
 
-			cli.renderer.Infof("Your rule `%s` was successfully updated.", inputs.Name)
+			cli.renderer.RuleUpdate(rule)
 			return nil
 		},
 	}
