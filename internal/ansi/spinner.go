@@ -21,8 +21,8 @@ func Waiting(fn func() error) error {
 
 func Spinner(text string, fn func() error) error {
 	initialMsg := text + spinnerTextEllipsis + " "
-	doneMsg := initialMsg + spinnerTextDone
-	failMsg := initialMsg + spinnerTextFailed
+	doneMsg := initialMsg + spinnerTextDone + "\n"
+	failMsg := initialMsg + spinnerTextFailed + "\n"
 
 	return loading(initialMsg, doneMsg, failMsg, fn)
 }
