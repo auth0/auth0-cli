@@ -30,6 +30,9 @@ func (f Flag) GetIsRequired() bool {
 	return f.IsRequired
 }
 
+// Required clones an existing flag and assigns `IsRequired` to true. This is
+// useful when there are flags with several different use cases -- e.g. create
+// requiring the flag, but update not requiring it.
 func (f *Flag) Required() *Flag {
 	clone := *f
 	clone.IsRequired = true
