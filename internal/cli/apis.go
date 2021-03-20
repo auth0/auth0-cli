@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -10,11 +9,12 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
-const (
-	apiID = "id"
-)
-
 var (
+	apiID = Argument{
+		Name:       "Id",
+		Help:       "Id of the API.",
+		IsRequired: true,
+	}
 	apiName = Flag{
 		Name:       "Name",
 		LongForm:   "name",
@@ -116,14 +116,8 @@ auth0 apis show <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if canPrompt(cmd) {
-					input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
-
-					if err := prompt.AskOne(input, &inputs); err != nil {
-						return fmt.Errorf("An unexpected error occurred: %w", err)
-					}
-				} else {
-					return errors.New("Please include an API Id")
+				if err := apiID.Ask(cmd, &inputs.ID); err != nil {
+					return err
 				}
 			} else {
 				inputs.ID = args[0]
@@ -234,14 +228,8 @@ auth0 apis update <id> --name myapi
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if canPrompt(cmd) {
-					input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
-
-					if err := prompt.AskOne(input, &inputs); err != nil {
-						return fmt.Errorf("An unexpected error occurred: %w", err)
-					}
-				} else {
-					return errors.New("Please include an API Id")
+				if err := apiID.Ask(cmd, &inputs.ID); err != nil {
+					return err
 				}
 			} else {
 				inputs.ID = args[0]
@@ -316,14 +304,8 @@ auth0 apis delete <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if canPrompt(cmd) {
-					input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
-
-					if err := prompt.AskOne(input, &inputs); err != nil {
-						return fmt.Errorf("An unexpected error occurred: %w", err)
-					}
-				} else {
-					return errors.New("Please include an API Id")
+				if err := apiID.Ask(cmd, &inputs.ID); err != nil {
+					return err
 				}
 			} else {
 				inputs.ID = args[0]
@@ -366,14 +348,8 @@ auth0 apis scopes list <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if canPrompt(cmd) {
-					input := prompt.TextInput(apiID, "Id:", "Id of the API.", true)
-
-					if err := prompt.AskOne(input, &inputs); err != nil {
-						return fmt.Errorf("An unexpected error occurred: %w", err)
-					}
-				} else {
-					return errors.New("Please include an API Id")
+				if err := apiID.Ask(cmd, &inputs.ID); err != nil {
+					return err
 				}
 			} else {
 				inputs.ID = args[0]
