@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 
-	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 )
 
@@ -15,20 +14,36 @@ type Flag struct {
 	IsRequired bool
 }
 
+func (f Flag) GetName() string {
+	return f.Name
+}
+
+func (f Flag) GetLabel() string {
+	return inputLabel(f.Name)
+}
+
+func (f Flag) GetHelp() string {
+	return f.Help
+}
+
+func (f Flag) GetIsInputRequired() bool {
+	return f.IsRequired
+}
+
 func (f *Flag) Ask(cmd *cobra.Command, value interface{}) error {
-	return askInput(cmd, f, value, false)
+	return askFlag(cmd, f, value, false)
 }
 
 func (f *Flag) AskU(cmd *cobra.Command, value interface{}) error {
-	return askInput(cmd, f, value, true)
+	return askFlag(cmd, f, value, true)
 }
 
 func (f *Flag) Select(cmd *cobra.Command, value interface{}, options []string) error {
-	return selectInput(cmd, f, value, options, false)
+	return selectFlag(cmd, f, value, options, false)
 }
 
 func (f *Flag) SelectU(cmd *cobra.Command, value interface{}, options []string) error {
-	return selectInput(cmd, f, value, options, true)
+	return selectFlag(cmd, f, value, options, true)
 }
 
 func (f *Flag) RegisterString(cmd *cobra.Command, value *string, defaultValue string) {
@@ -51,6 +66,10 @@ func (f *Flag) RegisterInt(cmd *cobra.Command, value *int, defaultValue int) {
 	registerInt(cmd, f, value, defaultValue, false)
 }
 
+func (f *Flag) RegisterIntU(cmd *cobra.Command, value *int, defaultValue int) {
+	registerInt(cmd, f, value, defaultValue, true)
+}
+
 func (f *Flag) RegisterBool(cmd *cobra.Command, value *bool, defaultValue bool) {
 	registerBool(cmd, f, value, defaultValue, false)
 }
@@ -59,36 +78,28 @@ func (f *Flag) RegisterBoolU(cmd *cobra.Command, value *bool, defaultValue bool)
 	registerBool(cmd, f, value, defaultValue, true)
 }
 
-func (f *Flag) RegisterIntU(cmd *cobra.Command, value *int, defaultValue int) {
-	registerInt(cmd, f, value, defaultValue, true)
-}
-
-func (f *Flag) label() string {
-	return fmt.Sprintf("%s:", f.Name)
-}
-
-func askInput(cmd *cobra.Command, f *Flag, value interface{}, isUpdate bool) error {
+func askFlag(cmd *cobra.Command, f *Flag, value interface{}, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
-		input := prompt.TextInput("", f.label(), f.Help, f.IsRequired)
-
-		if err := prompt.AskOne(input, value); err != nil {
-			return unexpectedError(err)
-		}
+		return ask(cmd, f, value, isUpdate)
 	}
 
 	return nil
 }
 
-func selectInput(cmd *cobra.Command, f *Flag, value interface{}, options []string, isUpdate bool) error {
+func selectFlag(cmd *cobra.Command, f *Flag, value interface{}, options []string, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
-		input := prompt.SelectInput("", f.label(), f.Help, options, f.IsRequired)
-
-		if err := prompt.AskOne(input, value); err != nil {
-			return unexpectedError(err)
-		}
+		_select(cmd, f, value, options, isUpdate)
 	}
 
 	return nil
+}
+
+func shouldAsk(cmd *cobra.Command, f *Flag, isUpdate bool) bool {
+	if isUpdate {
+		return shouldPromptWhenFlagless(cmd, f.LongForm)
+	}
+
+	return shouldPrompt(cmd, f.LongForm)
 }
 
 func registerString(cmd *cobra.Command, f *Flag, value *string, defaultValue string, isUpdate bool) {
@@ -121,14 +132,6 @@ func registerBool(cmd *cobra.Command, f *Flag, value *bool, defaultValue bool, i
 	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
 		panic(unexpectedError(err)) // TODO: Handle
 	}
-}
-
-func shouldAsk(cmd *cobra.Command, f *Flag, isUpdate bool) bool {
-	if isUpdate {
-		return shouldPromptWhenFlagless(cmd, f.LongForm)
-	}
-
-	return shouldPrompt(cmd, f.LongForm)
 }
 
 func markFlagRequired(cmd *cobra.Command, f *Flag, isUpdate bool) error {
