@@ -7,11 +7,12 @@ import (
 )
 
 type Flag struct {
-	Name       string
-	LongForm   string
-	ShortForm  string
-	Help       string
-	IsRequired bool
+	Name         string
+	LongForm     string
+	ShortForm    string
+	Help         string
+	IsRequired   bool
+	AlwaysPrompt bool
 }
 
 func (f Flag) GetName() string {
@@ -28,15 +29,6 @@ func (f Flag) GetHelp() string {
 
 func (f Flag) GetIsRequired() bool {
 	return f.IsRequired
-}
-
-// Required clones an existing flag and assigns `IsRequired` to true. This is
-// useful when there are flags with several different use cases -- e.g. create
-// requiring the flag, but update not requiring it.
-func (f *Flag) Required() *Flag {
-	clone := *f
-	clone.IsRequired = true
-	return &clone
 }
 
 func (f *Flag) Ask(cmd *cobra.Command, value interface{}) error {
@@ -137,7 +129,7 @@ func registerBool(cmd *cobra.Command, f *Flag, value *bool, defaultValue bool, i
 
 func shouldAsk(cmd *cobra.Command, f *Flag, isUpdate bool) bool {
 	if isUpdate {
-		if !f.IsRequired {
+		if !f.AlwaysPrompt {
 			return false
 		}
 
