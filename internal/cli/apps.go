@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -12,11 +11,12 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
-const (
-	appID = "id"
-)
-
 var (
+	appID = Argument{
+		Name:       "Client ID",
+		Help:       "Id of the application.",
+		IsRequired: true,
+	}
 	appName = Flag{
 		Name:       "Name",
 		LongForm:   "name",
@@ -157,14 +157,8 @@ auth0 apps show <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if canPrompt(cmd) {
-					input := prompt.TextInput(appID, "Client Id:", "Id of the application.", true)
-
-					if err := prompt.AskOne(input, &inputs); err != nil {
-						return fmt.Errorf("An unexpected error occurred: %w", err)
-					}
-				} else {
-					return errors.New("Please provide an application Id")
+				if err := appID.Ask(cmd, &inputs.ID); err != nil {
+					return err
 				}
 			} else {
 				inputs.ID = args[0]
@@ -209,14 +203,8 @@ auth0 apps delete <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if canPrompt(cmd) {
-					input := prompt.TextInput(appID, "Client Id:", "Id of the application.", true)
-
-					if err := prompt.AskOne(input, &inputs); err != nil {
-						return fmt.Errorf("An unexpected error occurred: %w", err)
-					}
-				} else {
-					return errors.New("Please provide an application Id")
+				if err := appID.Ask(cmd, &inputs.ID); err != nil {
+					return err
 				}
 			} else {
 				inputs.ID = args[0]
@@ -351,14 +339,8 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if canPrompt(cmd) {
-					input := prompt.TextInput(appID, "Client Id:", "Id of the application.", true)
-
-					if err := prompt.AskOne(input, &inputs); err != nil {
-						return fmt.Errorf("An unexpected error occurred: %w", err)
-					}
-				} else {
-					return errors.New("Please provide an application Id")
+				if err := appID.Ask(cmd, &inputs.ID); err != nil {
+					return err
 				}
 			} else {
 				inputs.ID = args[0]
