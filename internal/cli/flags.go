@@ -88,7 +88,7 @@ func askFlag(cmd *cobra.Command, f *Flag, value interface{}, isUpdate bool) erro
 
 func selectFlag(cmd *cobra.Command, f *Flag, value interface{}, options []string, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
-		_select(cmd, f, value, options, isUpdate)
+		return _select(cmd, f, value, options, isUpdate)
 	}
 
 	return nil
