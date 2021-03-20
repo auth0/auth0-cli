@@ -26,7 +26,7 @@ func (f Flag) GetHelp() string {
 	return f.Help
 }
 
-func (f Flag) GetIsInputRequired() bool {
+func (f Flag) GetIsRequired() bool {
 	return f.IsRequired
 }
 

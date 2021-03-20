@@ -11,11 +11,11 @@ type CommandInput interface {
 	GetName() string
 	GetLabel() string
 	GetHelp() string
-	GetIsInputRequired() bool
+	GetIsRequired() bool
 }
 
 func ask(cmd *cobra.Command, i CommandInput, value interface{}, isUpdate bool) error {
-	isRequired := !isUpdate && i.GetIsInputRequired()
+	isRequired := !isUpdate && i.GetIsRequired()
 	input := prompt.TextInput("", i.GetLabel(), i.GetHelp(), isRequired)
 
 	if err := prompt.AskOne(input, value); err != nil {
@@ -26,7 +26,7 @@ func ask(cmd *cobra.Command, i CommandInput, value interface{}, isUpdate bool) e
 }
 
 func _select(cmd *cobra.Command, i CommandInput, value interface{}, options []string, isUpdate bool) error {
-	isRequired := !isUpdate && i.GetIsInputRequired()
+	isRequired := !isUpdate && i.GetIsRequired()
 	input := prompt.SelectInput("", i.GetLabel(), i.GetHelp(), options, isRequired)
 
 	if err := prompt.AskOne(input, value); err != nil {

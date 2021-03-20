@@ -24,7 +24,7 @@ func (a Argument) GetHelp() string {
 	return a.Help
 }
 
-func (a Argument) GetIsInputRequired() bool {
+func (a Argument) GetIsRequired() bool {
 	return a.IsRequired
 }
 
