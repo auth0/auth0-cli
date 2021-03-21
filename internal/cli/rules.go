@@ -261,7 +261,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "update",
-		Short: "update a rule",
+		Short: "Update a rule",
 		Long: `Update a rule:
 
 auth0 rules update --id  rul_d2VSaGlyaW5n --name "My Updated Rule" --enabled=false

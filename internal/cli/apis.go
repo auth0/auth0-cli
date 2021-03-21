@@ -13,7 +13,6 @@ var (
 	apiID = Argument{
 		Name:       "Id",
 		Help:       "Id of the API.",
-		IsRequired: true,
 	}
 	apiName = Flag{
 		Name:       "Name",
@@ -148,7 +147,6 @@ func createApiCmd(cli *cli) *cobra.Command {
 		Name         string
 		Identifier   string
 		Scopes       []string
-		ScopesString string
 	}
 
 	cmd := &cobra.Command{
@@ -170,7 +168,7 @@ auth0 apis create --name myapi --identifier http://my-api
 				return err
 			}
 
-			if err := apiScopes.Ask(cmd, &inputs.ScopesString); err != nil {
+			if err := apiScopes.AskMany(cmd, &inputs.Scopes); err != nil {
 				return err
 			}
 
@@ -179,9 +177,7 @@ auth0 apis create --name myapi --identifier http://my-api
 				Identifier: &inputs.Identifier,
 			}
 
-			if len(inputs.ScopesString) > 0 {
-				api.Scopes = apiScopesFor(commaSeparatedStringToSlice(inputs.ScopesString))
-			} else if len(inputs.Scopes) > 0 {
+			if len(inputs.Scopes) > 0 {
 				api.Scopes = apiScopesFor(inputs.Scopes)
 			}
 
@@ -210,7 +206,6 @@ func updateApiCmd(cli *cli) *cobra.Command {
 		ID           string
 		Name         string
 		Scopes       []string
-		ScopesString string
 	}
 
 	cmd := &cobra.Command{
@@ -237,7 +232,7 @@ auth0 apis update <id> --name myapi
 				return err
 			}
 
-			if err := apiScopes.AskU(cmd, &inputs.ScopesString); err != nil {
+			if err := apiScopes.AskManyU(cmd, &inputs.Scopes); err != nil {
 				return err
 			}
 
@@ -257,12 +252,8 @@ auth0 apis update <id> --name myapi
 				}
 
 				if len(inputs.Scopes) == 0 {
-					if len(inputs.ScopesString) == 0 {
-						api.Scopes = current.Scopes
-					} else {
-						api.Scopes = apiScopesFor(commaSeparatedStringToSlice(inputs.ScopesString))
-					}
-				} else {
+					api.Scopes = current.Scopes
+				} else {					
 					api.Scopes = apiScopesFor(inputs.Scopes)
 				}
 

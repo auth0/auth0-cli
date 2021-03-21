@@ -9,7 +9,6 @@ import (
 type Argument struct {
 	Name       string
 	Help       string
-	IsRequired bool
 }
 
 func (a Argument) GetName() string {
@@ -25,7 +24,7 @@ func (a Argument) GetHelp() string {
 }
 
 func (a Argument) GetIsRequired() bool {
-	return a.IsRequired
+	return true
 }
 
 func (a *Argument) Ask(cmd *cobra.Command, value interface{}) error {

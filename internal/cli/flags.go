@@ -39,6 +39,14 @@ func (f *Flag) AskU(cmd *cobra.Command, value interface{}) error {
 	return askFlag(cmd, f, value, true)
 }
 
+func (f *Flag) AskMany(cmd *cobra.Command, value interface{}) error {
+	return askManyFlag(cmd, f, value, false)
+}
+
+func (f *Flag) AskManyU(cmd *cobra.Command, value interface{}) error {
+	return askManyFlag(cmd, f, value, true)
+}
+
 func (f *Flag) Select(cmd *cobra.Command, value interface{}, options []string) error {
 	return selectFlag(cmd, f, value, options, false)
 }
@@ -87,6 +95,20 @@ func askFlag(cmd *cobra.Command, f *Flag, value interface{}, isUpdate bool) erro
 	return nil
 }
 
+func askManyFlag(cmd *cobra.Command, f *Flag, value interface{}, isUpdate bool) error {
+	var strInput struct {
+		value string
+	}
+
+	if err := askFlag(cmd, f, &strInput.value, isUpdate); err != nil {
+		return err
+	}
+
+	*value.(*[]string) = commaSeparatedStringToSlice(strInput.value)
+
+	return nil
+}
+
 func selectFlag(cmd *cobra.Command, f *Flag, value interface{}, options []string, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
 		return _select(cmd, f, value, options, isUpdate)
@@ -129,7 +151,7 @@ func registerBool(cmd *cobra.Command, f *Flag, value *bool, defaultValue bool, i
 
 func shouldAsk(cmd *cobra.Command, f *Flag, isUpdate bool) bool {
 	if isUpdate {
-		if !f.AlwaysPrompt {
+		if  !f.IsRequired && !f.AlwaysPrompt {
 			return false
 		}
 

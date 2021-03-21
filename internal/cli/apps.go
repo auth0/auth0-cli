@@ -15,7 +15,6 @@ var (
 	appID = Argument{
 		Name:       "Client ID",
 		Help:       "Id of the application.",
-		IsRequired: true,
 	}
 	appName = Flag{
 		Name:       "Name",
@@ -319,7 +318,6 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		Type              string
 		Description       string
 		Callbacks         []string
-		CallbacksString   string
 		AllowedOrigins    []string
 		AllowedWebOrigins []string
 		AllowedLogoutURLs []string
@@ -359,7 +357,7 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				return err
 			}
 
-			if err := appCallbacks.AskU(cmd, &inputs.CallbacksString); err != nil {
+			if err := appCallbacks.AskManyU(cmd, &inputs.Callbacks); err != nil {
 				return err
 			}
 
@@ -391,11 +389,7 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				}
 
 				if len(inputs.Callbacks) == 0 {
-					if len(inputs.CallbacksString) == 0 {
-						a.Callbacks = current.Callbacks
-					} else {
-						a.Callbacks = stringToInterfaceSlice(commaSeparatedStringToSlice(inputs.CallbacksString))
-					}
+					a.Callbacks = current.Callbacks
 				} else {
 					a.Callbacks = stringToInterfaceSlice(inputs.Callbacks)
 				}
@@ -542,7 +536,11 @@ func urlsFor(s []interface{}) []string {
 }
 
 func commaSeparatedStringToSlice(s string) []string {
-	return strings.Split(strings.Join(strings.Fields(s), ""), ",")
+	joined := strings.Join(strings.Fields(s), "")
+	if len(joined) > 0 {
+		return strings.Split(joined, ",")
+	}
+	return []string{}
 }
 
 func stringToInterfaceSlice(s []string) []interface{} {
