@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path"
@@ -72,7 +71,7 @@ func isLoggedIn(filePath string) bool {
 	var c config
 	var buf []byte
 	var err error
-	if buf, err = ioutil.ReadFile(filePath); err != nil {
+	if buf, err = os.ReadFile(filePath); err != nil {
 		return false
 	}
 
@@ -117,7 +116,7 @@ func persistConfig(filePath string, c config, overwrite bool) error {
 		return fmt.Errorf("Not overwriting existing config file: %s", filePath)
 	}
 
-	if err = ioutil.WriteFile(filePath, buf, 0600); err != nil {
+	if err = os.WriteFile(filePath, buf, 0600); err != nil {
 		return err
 	}
 
