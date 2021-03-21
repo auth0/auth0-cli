@@ -15,6 +15,7 @@ type API struct {
 	Client          ClientAPI
 	Log             LogAPI
 	ResourceServer  ResourceServerAPI
+	Rule            RuleAPI
 }
 
 func NewAPI(m *management.Management) *API {
@@ -26,6 +27,7 @@ func NewAPI(m *management.Management) *API {
 		Client:          m.Client,
 		Log:             m.Log,
 		ResourceServer:  m.ResourceServer,
+		Rule:            m.Rule,
 	}
 }
 

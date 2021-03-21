@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -12,11 +11,12 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
-const (
-	appID = "id"
-)
-
 var (
+	appID = Argument{
+		Name:       "Client ID",
+		Help:       "Id of the application.",
+		IsRequired: true,
+	}
 	appName = Flag{
 		Name:       "Name",
 		LongForm:   "name",
@@ -49,11 +49,12 @@ var (
 		IsRequired: false,
 	}
 	appCallbacks = Flag{
-		Name:       "Callback URLs",
-		LongForm:   "callbacks",
-		ShortForm:  "c",
-		Help:       "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.",
-		IsRequired: false,
+		Name:         "Callback URLs",
+		LongForm:     "callbacks",
+		ShortForm:    "c",
+		Help:         "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.",
+		IsRequired:   false,
+		AlwaysPrompt: true,
 	}
 	appOrigins = Flag{
 		Name:       "Allowed Origin URLs",
@@ -121,7 +122,7 @@ Lists your existing applications. To create one try:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ClientList
 
-			err := ansi.Spinner("Loading applications", func() error {
+			err := ansi.Waiting(func() error {
 				var err error
 				list, err = cli.api.Client.List()
 				return err
@@ -157,14 +158,8 @@ auth0 apps show <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if canPrompt(cmd) {
-					input := prompt.TextInput(appID, "Client Id:", "Id of the application.", true)
-
-					if err := prompt.AskOne(input, &inputs); err != nil {
-						return fmt.Errorf("An unexpected error occurred: %w", err)
-					}
-				} else {
-					return errors.New("Please provide an application Id")
+				if err := appID.Ask(cmd, &inputs.ID); err != nil {
+					return err
 				}
 			} else {
 				inputs.ID = args[0]
@@ -172,7 +167,7 @@ auth0 apps show <id>
 
 			a := &management.Client{ClientID: &inputs.ID}
 
-			err := ansi.Spinner("Loading application", func() error {
+			err := ansi.Waiting(func() error {
 				var err error
 				a, err = cli.api.Client.Read(inputs.ID)
 				return err
@@ -209,14 +204,8 @@ auth0 apps delete <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if canPrompt(cmd) {
-					input := prompt.TextInput(appID, "Client Id:", "Id of the application.", true)
-
-					if err := prompt.AskOne(input, &inputs); err != nil {
-						return fmt.Errorf("An unexpected error occurred: %w", err)
-					}
-				} else {
-					return errors.New("Please provide an application Id")
+				if err := appID.Ask(cmd, &inputs.ID); err != nil {
+					return err
 				}
 			} else {
 				inputs.ID = args[0]
@@ -294,7 +283,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 				a.GrantTypes = apiGrantsFor(inputs.Grants)
 			}
 
-			err := ansi.Spinner("Creating application", func() error {
+			err := ansi.Waiting(func() error {
 				return cli.api.Client.Create(a)
 			})
 
@@ -351,14 +340,8 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if canPrompt(cmd) {
-					input := prompt.TextInput(appID, "Client Id:", "Id of the application.", true)
-
-					if err := prompt.AskOne(input, &inputs); err != nil {
-						return fmt.Errorf("An unexpected error occurred: %w", err)
-					}
-				} else {
-					return errors.New("Please provide an application Id")
+				if err := appID.Ask(cmd, &inputs.ID); err != nil {
+					return err
 				}
 			} else {
 				inputs.ID = args[0]
@@ -382,7 +365,7 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 
 			a := &management.Client{}
 
-			err := ansi.Spinner("Updating application", func() error {
+			err := ansi.Waiting(func() error {
 				current, err := cli.api.Client.Read(inputs.ID)
 
 				if err != nil {

@@ -348,14 +348,6 @@ func (c *cli) initContext() (err error) {
 	return nil
 }
 
-func mustRequireFlags(cmd *cobra.Command, flags ...string) {
-	for _, f := range flags {
-		if err := cmd.MarkFlagRequired(f); err != nil {
-			panic(err)
-		}
-	}
-}
-
 func canPrompt(cmd *cobra.Command) bool {
 	noInput, err := cmd.Root().Flags().GetBool("no-input")
 
@@ -388,4 +380,12 @@ func prepareInteractivity(cmd *cobra.Command) {
 			_ = cmd.Flags().SetAnnotation(flag.Name, cobra.BashCompOneRequiredFlag, []string{"false"})
 		})
 	}
+}
+
+func flagOptionsFromMapping(mapping map[string]string) []string {
+	result := make([]string, 0, len(mapping))
+	for k := range mapping {
+		result = append(result, k)
+	}
+	return result
 }
