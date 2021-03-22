@@ -628,22 +628,18 @@ func apiDefaultGrantsFor(t string) []interface{} {
 }
 
 func typeFor(s *string) *string {
-	var ret string
-
 	switch apiTypeFor(strings.ToLower(auth0.StringValue(s))) {
 	case appTypeNative:
-		ret = "Native"
+		return auth0.String("Native")
 	case appTypeSPA:
-		ret = "Single Page Web Application"
+		return auth0.String("Single Page Web Application")
 	case appTypeRegularWeb:
-		ret = "Regular Web Application"
+		return auth0.String("Regular Web Application")
 	case appTypeNonInteractive:
-		ret = "Machine to Machine"
+		return auth0.String("Machine to Machine")
 	default:
 		return nil
 	}
-
-	return &ret
 }
 
 func urlsFor(s []interface{}) []string {
