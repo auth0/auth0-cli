@@ -283,7 +283,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 					defaultValue = "http://localhost:3000"
 				}
 
-				if err := appCallbacks.AskManyU(cmd, &inputs.Callbacks, &defaultValue); err != nil {
+				if err := appCallbacks.AskMany(cmd, &inputs.Callbacks, &defaultValue); err != nil {
 					return err
 				}
 			}
@@ -296,7 +296,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 					defaultValue = "http://localhost:3000"
 				}
 
-				if err := appLogoutURLs.AskManyU(cmd, &inputs.AllowedLogoutURLs, &defaultValue); err != nil {
+				if err := appLogoutURLs.AskMany(cmd, &inputs.AllowedLogoutURLs, &defaultValue); err != nil {
 					return err
 				}
 			}
@@ -305,7 +305,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 			if appIsSPA {
 				defaultValue := "http://localhost:3000"
 
-				if err := appWebOrigins.AskManyU(cmd, &inputs.AllowedWebOrigins, &defaultValue); err != nil {
+				if err := appWebOrigins.AskMany(cmd, &inputs.AllowedWebOrigins, &defaultValue); err != nil {
 					return err
 				}
 			}
