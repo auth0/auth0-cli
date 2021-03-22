@@ -27,7 +27,7 @@ func logoutCmd(cli *cli) *cobra.Command {
 					tenNames[i] = t.Name
 				}
 
-				input := prompt.SelectInput("tenant", "Tenant:", "Tenant to activate", tenNames, true)
+				input := prompt.SelectInput("tenant", "Tenant:", "Tenant to activate", tenNames, "", true)
 				if err := prompt.AskOne(input, &selectedTenant); err != nil {
 					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}

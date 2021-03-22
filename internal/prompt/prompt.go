@@ -24,10 +24,10 @@ func askOne(prompt survey.Prompt, response interface{}) error {
 	return survey.AskOne(prompt, response, stdErrWriter, icons)
 }
 
-func TextInputDefault(name string, message string, help string, value string, required bool) *survey.Question {
+func TextInput(name string, message string, help string, defaultValue string, required bool) *survey.Question {
 	input := &survey.Question{
 		Name:   name,
-		Prompt: &survey.Input{Message: message, Help: help, Default: value},
+		Prompt: &survey.Input{Message: message, Help: help, Default: defaultValue},
 	}
 
 	if required {
@@ -35,10 +35,6 @@ func TextInputDefault(name string, message string, help string, value string, re
 	}
 
 	return input
-}
-
-func TextInput(name string, message string, help string, required bool) *survey.Question {
-	return TextInputDefault(name, message, help, "", required)
 }
 
 func BoolInput(name string, message string, help string, required bool) *survey.Question {
@@ -55,13 +51,13 @@ func BoolInput(name string, message string, help string, required bool) *survey.
 	return input
 }
 
-func SelectInput(name string, message string, help string, options []string, required bool) *survey.Question {
+func SelectInput(name string, message string, help string, options []string, defaultValue string, required bool) *survey.Question {
 	// force options "page" size to full,
 	// since there's not visual clue about extra options.
 	pageSize := len(options)
 	input := &survey.Question{
 		Name:   name,
-		Prompt: &survey.Select{Message: message, Help: help, Options: options, PageSize: pageSize},
+		Prompt: &survey.Select{Message: message, Help: help, Options: options, PageSize: pageSize, Default: defaultValue},
 	}
 
 	if required {

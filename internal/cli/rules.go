@@ -47,7 +47,7 @@ var (
 func rulesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "rules",
-		Short: "Manage rules for clients",
+		Short: "Manage resources for rules",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -106,11 +106,11 @@ auth0 rules create --name "My Rule" --template [empty-rule]"
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := ruleName.Ask(cmd, &inputs.Name); err != nil {
+			if err := ruleName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
 
-			if err := ruleTemplate.Select(cmd, &inputs.Template, ruleTemplateOptions); err != nil {
+			if err := ruleTemplate.Select(cmd, &inputs.Template, ruleTemplateOptions, nil); err != nil {
 				return err
 			}
 
@@ -261,7 +261,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "update",
-		Short: "update a rule",
+		Short: "Update a rule",
 		Long: `Update a rule:
 
 auth0 rules update --id  rul_d2VSaGlyaW5n --name "My Updated Rule" --enabled=false
@@ -297,7 +297,7 @@ auth0 rules update --id  rul_d2VSaGlyaW5n --name "My Updated Rule" --enabled=fal
 				return fmt.Errorf("Failed to fetch rule with ID: %s %v", inputs.ID, err)
 			}
 
-			if err := ruleName.AskU(cmd, &inputs.Name); err != nil {
+			if err := ruleName.AskU(cmd, &inputs.Name, rule.Name); err != nil {
 				return err
 			}
 
@@ -372,7 +372,7 @@ func promptForRuleViaDropdown(cli *cli, cmd *cobra.Command) (id string, err erro
 	}
 
 	var name string
-	if err := dropdown.Select(cmd, &name, flagOptionsFromMapping(mapping)); err != nil {
+	if err := dropdown.Select(cmd, &name, flagOptionsFromMapping(mapping), nil); err != nil {
 		return "", err
 	}
 

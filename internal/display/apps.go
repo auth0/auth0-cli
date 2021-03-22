@@ -97,9 +97,9 @@ func (v *applicationView) KeyValues() [][]string {
 			[]string{"TYPE", v.Type},
 			[]string{"CLIENT SECRET", ansi.Italic(v.ClientSecret)},
 			[]string{"CALLBACKS", callbacks},
+			[]string{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
 			[]string{"ALLOWED ORIGINS", allowedOrigins},
 			[]string{"ALLOWED WEB ORIGINS", allowedWebOrigins},
-			[]string{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
 			[]string{"TOKEN ENDPOINT AUTH", v.AuthMethod},
 			[]string{"GRANTS", grants},
 		}
@@ -111,9 +111,9 @@ func (v *applicationView) KeyValues() [][]string {
 		[]string{"DESCRIPTION", v.Description},
 		[]string{"TYPE", v.Type},
 		[]string{"CALLBACKS", callbacks},
+		[]string{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
 		[]string{"ALLOWED ORIGINS", allowedOrigins},
 		[]string{"ALLOWED WEB ORIGINS", allowedWebOrigins},
-		[]string{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
 		[]string{"TOKEN ENDPOINT AUTH", v.AuthMethod},
 		[]string{"GRANTS", grants},
 	}
