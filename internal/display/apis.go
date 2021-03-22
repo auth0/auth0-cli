@@ -42,6 +42,36 @@ func (v *apiView) Object() interface{} {
 	return v.raw
 }
 
+type apiTableView struct {
+	ID         string
+	Name       string
+	Identifier string
+	Scopes     int
+
+	raw interface{}
+}
+
+func (v *apiTableView) AsTableHeader() []string {
+	return []string{"ID", "Name", "Identifier", "Scopes"}
+}
+
+func (v *apiTableView) AsTableRow() []string {
+	return []string{ansi.Faint(v.ID), v.Name, v.Identifier, fmt.Sprint(v.Scopes)}
+}
+
+func (v *apiTableView) KeyValues() [][]string {
+	return [][]string{
+		{"ID", ansi.Faint(v.ID)},
+		{"NAME", v.Name},
+		{"IDENTIFIER", v.Identifier},
+		{"SCOPES", strconv.Itoa(v.Scopes)},
+	}
+}
+
+func (v *apiTableView) Object() interface{} {
+	return v.raw
+}
+
 func (r *Renderer) ApiList(apis []*management.ResourceServer) {
 	r.Heading(ansi.Bold(r.Tenant), "APIs\n")
 
@@ -81,14 +111,14 @@ func makeApiView(api *management.ResourceServer) *apiView {
 	}
 }
 
-func makeApiTableView(api *management.ResourceServer) *apiView {
-	scopes := strconv.Itoa(len(api.Scopes))
+func makeApiTableView(api *management.ResourceServer) *apiTableView {
+	scopes := len(api.Scopes)
 
-	return &apiView{
+	return &apiTableView{
 		ID:         auth0.StringValue(api.ID),
 		Name:       auth0.StringValue(api.Name),
 		Identifier: auth0.StringValue(api.Identifier),
-		Scopes:     auth0.StringValue(&scopes),
+		Scopes:     auth0.IntValue(&scopes),
 
 		raw: api,
 	}
