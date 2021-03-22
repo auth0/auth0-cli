@@ -47,7 +47,7 @@ var (
 func rulesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "rules",
-		Short: "Manage rules for clients",
+		Short: "Manage resources for rules",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
