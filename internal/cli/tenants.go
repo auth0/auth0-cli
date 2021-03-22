@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 )
@@ -19,9 +20,9 @@ func tenantsCmd(cli *cli) *cobra.Command {
 
 func listTenantCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "list",
-		Short: "List your tenants",
-		Long: `auth0 tenants list`,
+		Use:     "list",
+		Short:   "List your tenants",
+		Long:    `auth0 tenants list`,
 		Aliases: []string{"ls"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tens, err := cli.listTenants()
@@ -40,7 +41,6 @@ func listTenantCmd(cli *cli) *cobra.Command {
 	}
 	return cmd
 }
-
 
 func useTenantCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
@@ -65,7 +65,7 @@ func useTenantCmd(cli *cli) *cobra.Command {
 					tenNames[i] = t.Name
 				}
 
-				input := prompt.SelectInput("tenant", "Tenant:", "Tenant to activate", tenNames, true)
+				input := prompt.SelectInput("tenant", "Tenant:", "Tenant to activate", tenNames, "", true)
 				if err := prompt.AskOne(input, &selectedTenant); err != nil {
 					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}

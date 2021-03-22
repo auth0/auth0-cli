@@ -7,8 +7,8 @@ import (
 )
 
 type Argument struct {
-	Name       string
-	Help       string
+	Name string
+	Help string
 }
 
 func (a Argument) GetName() string {
@@ -33,7 +33,7 @@ func (a *Argument) Ask(cmd *cobra.Command, value interface{}) error {
 
 func askArgument(cmd *cobra.Command, i commandInput, value interface{}) error {
 	if canPrompt(cmd) {
-		return ask(cmd, i, value, true)
+		return ask(cmd, i, value, nil, true)
 	} else {
 		return fmt.Errorf("Missing a required argument: %s", i.GetName())
 	}

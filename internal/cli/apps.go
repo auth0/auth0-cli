@@ -11,10 +11,17 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
+const (
+	appTypeNative         = "native"
+	appTypeSPA            = "spa"
+	appTypeRegularWeb     = "regular_web"
+	appTypeNonInteractive = "non_interactive"
+)
+
 var (
 	appID = Argument{
-		Name:       "Client ID",
-		Help:       "Id of the application.",
+		Name: "Client ID",
+		Help: "Id of the application.",
 	}
 	appName = Flag{
 		Name:       "Name",
@@ -63,18 +70,20 @@ var (
 		IsRequired: false,
 	}
 	appWebOrigins = Flag{
-		Name:       "Allowed Web Origin URLs",
-		LongForm:   "web-origins",
-		ShortForm:  "w",
-		Help:       "Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode.",
-		IsRequired: false,
+		Name:         "Allowed Web Origin URLs",
+		LongForm:     "web-origins",
+		ShortForm:    "w",
+		Help:         "Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode.",
+		IsRequired:   false,
+		AlwaysPrompt: true,
 	}
 	appLogoutURLs = Flag{
-		Name:       "Allowed Logout URLs",
-		LongForm:   "logout-urls",
-		ShortForm:  "l",
-		Help:       "Comma-separated list of URLs that are valid to redirect to after logout from Auth0. Wildcards are allowed for subdomains.",
-		IsRequired: false,
+		Name:         "Allowed Logout URLs",
+		LongForm:     "logout-urls",
+		ShortForm:    "l",
+		Help:         "Comma-separated list of URLs that are valid to redirect to after logout from Auth0. Wildcards are allowed for subdomains.",
+		IsRequired:   false,
+		AlwaysPrompt: true,
 	}
 	appAuthMethod = Flag{
 		Name:       "Auth Method",
@@ -121,13 +130,11 @@ Lists your existing applications. To create one try:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ClientList
 
-			err := ansi.Waiting(func() error {
+			if err := ansi.Waiting(func() error {
 				var err error
 				list, err = cli.api.Client.List()
 				return err
-			})
-
-			if err != nil {
+			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
 
@@ -166,13 +173,11 @@ auth0 apps show <id>
 
 			a := &management.Client{ClientID: &inputs.ID}
 
-			err := ansi.Waiting(func() error {
+			if err := ansi.Waiting(func() error {
 				var err error
 				a, err = cli.api.Client.Read(inputs.ID)
 				return err
-			})
-
-			if err != nil {
+			}); err != nil {
 				return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
 			}
 
@@ -251,18 +256,61 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := appName.Ask(cmd, &inputs.Name); err != nil {
+			// Prompt for app neme
+			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
 
-			if err := appType.Select(cmd, &inputs.Type, appTypeOptions); err != nil {
+			// Prompt for app type
+			if err := appType.Select(cmd, &inputs.Type, appTypeOptions, nil); err != nil {
 				return err
 			}
 
-			if err := appDescription.Ask(cmd, &inputs.Description); err != nil {
+			// Prompt for app description
+			if err := appDescription.Ask(cmd, &inputs.Description, nil); err != nil {
 				return err
 			}
 
+			appIsM2M := inputs.Type == appTypeNonInteractive
+			appIsNative := inputs.Type == appTypeNative
+			appIsSPA := inputs.Type == appTypeSPA
+
+			// Prompt for callback URLs if app is not m2m
+			if !appIsM2M {
+				var defaultValue string
+
+				if !appIsNative {
+					defaultValue = "http://localhost:3000"
+				}
+
+				if err := appCallbacks.AskManyU(cmd, &inputs.Callbacks, &defaultValue); err != nil {
+					return err
+				}
+			}
+
+			// Prompt for logout URLs if app is not m2m
+			if !appIsM2M {
+				var defaultValue string
+
+				if !appIsNative {
+					defaultValue = "http://localhost:3000"
+				}
+
+				if err := appLogoutURLs.AskManyU(cmd, &inputs.AllowedLogoutURLs, &defaultValue); err != nil {
+					return err
+				}
+			}
+
+			// Prompt for allowed web origins URLs if app is SPA
+			if appIsSPA {
+				defaultValue := "http://localhost:3000"
+
+				if err := appWebOrigins.AskManyU(cmd, &inputs.AllowedWebOrigins, &defaultValue); err != nil {
+					return err
+				}
+			}
+
+			// Load values into a fresh app instance
 			a := &management.Client{
 				Name:                    &inputs.Name,
 				Description:             &inputs.Description,
@@ -276,20 +324,21 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 				JWTConfiguration:        &management.ClientJWTConfiguration{Algorithm: &algorithm},
 			}
 
+			// Set grants
 			if len(inputs.Grants) == 0 {
 				a.GrantTypes = apiDefaultGrantsFor(inputs.Type)
 			} else {
 				a.GrantTypes = apiGrantsFor(inputs.Grants)
 			}
 
-			err := ansi.Waiting(func() error {
+			// Create app
+			if err := ansi.Waiting(func() error {
 				return cli.api.Client.Create(a)
-			})
-
-			if err != nil {
+			}); err != nil {
 				return fmt.Errorf("Unable to create application: %w", err)
 			}
 
+			// Render result
 			// note: a is populated with the rest of the client fields by the API during creation.
 			revealClientSecret := auth0.StringValue(a.AppType) != "native" && auth0.StringValue(a.AppType) != "spa"
 			cli.renderer.ApplicationCreate(a, revealClientSecret)
@@ -337,6 +386,9 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var current *management.Client
+
+			// Get app id
 			if len(args) == 0 {
 				if err := appID.Ask(cmd, &inputs.ID); err != nil {
 					return err
@@ -345,93 +397,142 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				inputs.ID = args[0]
 			}
 
-			if err := appName.AskU(cmd, &inputs.Name); err != nil {
+			// Load app by id
+			if err := ansi.Waiting(func() error {
+				var err error
+				current, err = cli.api.Client.Read(inputs.ID)
+				return err
+			}); err != nil {
+				return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
+			}
+
+			// Prompt for app neme
+			if err := appName.AskU(cmd, &inputs.Name, current.Name); err != nil {
 				return err
 			}
 
-			if err := appType.SelectU(cmd, &inputs.Type, appTypeOptions); err != nil {
+			// Prompt for app type
+			if err := appType.SelectU(cmd, &inputs.Type, appTypeOptions, typeFor(current.AppType)); err != nil {
 				return err
 			}
 
-			if err := appDescription.AskU(cmd, &inputs.Description); err != nil {
-				return err
+			appIsM2M := auth0.StringValue(current.AppType) == appTypeNonInteractive
+			appIsNative := auth0.StringValue(current.AppType) == appTypeNative
+			appIsSPA := auth0.StringValue(current.AppType) == appTypeSPA
+
+			// Prompt for callback URLs if app is not m2m
+			if !appIsM2M {
+				var defaultValue string
+
+				if !appIsNative {
+					defaultValue = "http://localhost:3000"
+				}
+
+				if len(current.Callbacks) > 0 {
+					defaultValue = stringSliceToCommaSeparatedString(interfaceToStringSlice(current.Callbacks))
+				}
+
+				if err := appCallbacks.AskManyU(cmd, &inputs.Callbacks, &defaultValue); err != nil {
+					return err
+				}
 			}
 
-			if err := appCallbacks.AskManyU(cmd, &inputs.Callbacks); err != nil {
-				return err
+			// Prompt for logout URLs if app is not m2m
+			if !appIsM2M {
+				var defaultValue string
+
+				if !appIsNative {
+					defaultValue = "http://localhost:3000"
+				}
+
+				if len(current.AllowedLogoutURLs) > 0 {
+					defaultValue = stringSliceToCommaSeparatedString(interfaceToStringSlice(current.AllowedLogoutURLs))
+				}
+
+				if err := appLogoutURLs.AskManyU(cmd, &inputs.AllowedLogoutURLs, &defaultValue); err != nil {
+					return err
+				}
 			}
 
+			// Prompt for allowed web origins URLs if app is SPA
+			if appIsSPA {
+				defaultValue := "http://localhost:3000"
+
+				if len(current.WebOrigins) > 0 {
+					defaultValue = stringSliceToCommaSeparatedString(interfaceToStringSlice(current.WebOrigins))
+				}
+
+				if err := appWebOrigins.AskManyU(cmd, &inputs.AllowedWebOrigins, &defaultValue); err != nil {
+					return err
+				}
+			}
+
+			// Load updated values into a fresh app instance
 			a := &management.Client{}
 
-			err := ansi.Waiting(func() error {
-				current, err := cli.api.Client.Read(inputs.ID)
+			if len(inputs.Name) == 0 {
+				a.Name = current.Name
+			} else {
+				a.Name = &inputs.Name
+			}
 
-				if err != nil {
-					return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
-				}
+			if len(inputs.Description) == 0 {
+				a.Description = current.Description
+			} else {
+				a.Description = &inputs.Description
+			}
 
-				if len(inputs.Name) == 0 {
-					a.Name = current.Name
-				} else {
-					a.Name = &inputs.Name
-				}
+			if len(inputs.Type) == 0 {
+				a.AppType = current.AppType
+			} else {
+				a.AppType = auth0.String(apiTypeFor(inputs.Type))
+			}
 
-				if len(inputs.Description) == 0 {
-					a.Description = current.Description
-				} else {
-					a.Description = &inputs.Description
-				}
+			if len(inputs.Callbacks) == 0 {
+				a.Callbacks = current.Callbacks
+			} else {
+				a.Callbacks = stringToInterfaceSlice(inputs.Callbacks)
+			}
 
-				if len(inputs.Type) == 0 {
-					a.AppType = current.AppType
-				} else {
-					a.AppType = auth0.String(apiTypeFor(inputs.Type))
-				}
+			if len(inputs.AllowedOrigins) == 0 {
+				a.AllowedOrigins = current.AllowedOrigins
+			} else {
+				a.AllowedOrigins = stringToInterfaceSlice(inputs.AllowedOrigins)
+			}
 
-				if len(inputs.Callbacks) == 0 {
-					a.Callbacks = current.Callbacks
-				} else {
-					a.Callbacks = stringToInterfaceSlice(inputs.Callbacks)
-				}
+			if len(inputs.AllowedWebOrigins) == 0 {
+				a.WebOrigins = current.WebOrigins
+			} else {
+				a.WebOrigins = stringToInterfaceSlice(inputs.AllowedWebOrigins)
+			}
 
-				if len(inputs.AllowedOrigins) == 0 {
-					a.AllowedOrigins = current.AllowedOrigins
-				} else {
-					a.AllowedOrigins = stringToInterfaceSlice(inputs.AllowedOrigins)
-				}
+			if len(inputs.AllowedLogoutURLs) == 0 {
+				a.AllowedLogoutURLs = current.AllowedLogoutURLs
+			} else {
+				a.AllowedLogoutURLs = stringToInterfaceSlice(inputs.AllowedLogoutURLs)
+			}
 
-				if len(inputs.AllowedWebOrigins) == 0 {
-					a.WebOrigins = current.WebOrigins
-				} else {
-					a.WebOrigins = stringToInterfaceSlice(inputs.AllowedWebOrigins)
-				}
+			if len(inputs.AuthMethod) == 0 {
+				a.TokenEndpointAuthMethod = current.TokenEndpointAuthMethod
+			} else {
+				a.TokenEndpointAuthMethod = apiAuthMethodFor(inputs.AuthMethod)
+			}
 
-				if len(inputs.AllowedLogoutURLs) == 0 {
-					a.AllowedLogoutURLs = current.AllowedLogoutURLs
-				} else {
-					a.AllowedLogoutURLs = stringToInterfaceSlice(inputs.AllowedLogoutURLs)
-				}
+			if len(inputs.Grants) == 0 {
+				a.GrantTypes = current.GrantTypes
+			} else {
+				a.GrantTypes = apiGrantsFor(inputs.Grants)
+			}
 
-				if len(inputs.AuthMethod) == 0 {
-					a.TokenEndpointAuthMethod = current.TokenEndpointAuthMethod
-				} else {
-					a.TokenEndpointAuthMethod = apiAuthMethodFor(inputs.AuthMethod)
-				}
-
-				if len(inputs.Grants) == 0 {
-					a.GrantTypes = current.GrantTypes
-				} else {
-					a.GrantTypes = apiGrantsFor(inputs.Grants)
-				}
-
+			// Update app
+			if err := ansi.Waiting(func() error {
 				return cli.api.Client.Update(inputs.ID, a)
-			})
-
-			if err != nil {
+			}); err != nil {
 				return fmt.Errorf("Unable to update application %v: %v", inputs.ID, err)
 			}
 
-			revealClientSecret := auth0.StringValue(a.AppType) != "native" && auth0.StringValue(a.AppType) != "spa"
+			// Render result
+			revealClientSecret := auth0.StringValue(a.AppType) != appTypeNative && auth0.StringValue(a.AppType) != appTypeSPA
 			cli.renderer.ApplicationUpdate(a, revealClientSecret)
 
 			return nil
@@ -454,14 +555,13 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 func apiTypeFor(v string) string {
 	switch strings.ToLower(v) {
 	case "native":
-		return "native"
+		return appTypeNative
 	case "spa", "single page web application":
-		return "spa"
+		return appTypeSPA
 	case "regular", "regular web application":
-		return "regular_web"
+		return appTypeRegularWeb
 	case "m2m", "machine to machine":
-		return "non_interactive"
-
+		return appTypeNonInteractive
 	default:
 		return v
 	}
@@ -514,17 +614,36 @@ func apiGrantsFor(s []string) []interface{} {
 
 func apiDefaultGrantsFor(t string) []interface{} {
 	switch apiTypeFor(strings.ToLower(t)) {
-	case "native":
+	case appTypeNative:
 		return stringToInterfaceSlice([]string{"implicit", "authorization_code", "refresh_token"})
-	case "spa":
+	case appTypeSPA:
 		return stringToInterfaceSlice([]string{"implicit", "authorization_code", "refresh_token"})
-	case "regular_web":
+	case appTypeRegularWeb:
 		return stringToInterfaceSlice([]string{"implicit", "authorization_code", "refresh_token", "client_credentials"})
-	case "non_interactive":
+	case appTypeNonInteractive:
 		return stringToInterfaceSlice([]string{"client_credentials"})
 	default:
 		return nil
 	}
+}
+
+func typeFor(s *string) *string {
+	var ret string
+
+	switch apiTypeFor(strings.ToLower(auth0.StringValue(s))) {
+	case appTypeNative:
+		ret = "Native"
+	case appTypeSPA:
+		ret = "Single Page Web Application"
+	case appTypeRegularWeb:
+		ret = "Regular Web Application"
+	case appTypeNonInteractive:
+		ret = "Machine to Machine"
+	default:
+		return nil
+	}
+
+	return &ret
 }
 
 func urlsFor(s []interface{}) []string {
@@ -543,10 +662,24 @@ func commaSeparatedStringToSlice(s string) []string {
 	return []string{}
 }
 
+func stringSliceToCommaSeparatedString(s []string) string {
+	return strings.Join(s, ", ")
+}
+
 func stringToInterfaceSlice(s []string) []interface{} {
 	var result []interface{} = make([]interface{}, len(s))
 	for i, d := range s {
 		result[i] = d
+	}
+	return result
+}
+
+func interfaceToStringSlice(s []interface{}) []string {
+	var result []string = make([]string, len(s))
+	for i, d := range s {
+		if val, ok := d.(string); ok {
+			result[i] = val
+		}
 	}
 	return result
 }
