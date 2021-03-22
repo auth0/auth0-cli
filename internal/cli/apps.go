@@ -416,9 +416,9 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				return err
 			}
 
-			appIsM2M := auth0.StringValue(current.AppType) == appTypeNonInteractive
-			appIsNative := auth0.StringValue(current.AppType) == appTypeNative
-			appIsSPA := auth0.StringValue(current.AppType) == appTypeSPA
+			appIsM2M := inputs.Type == appTypeNonInteractive
+			appIsNative := inputs.Type == appTypeNative
+			appIsSPA := inputs.Type == appTypeSPA
 
 			// Prompt for callback URLs if app is not m2m
 			if !appIsM2M {
