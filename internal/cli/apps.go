@@ -261,13 +261,13 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 				return err
 			}
 
-			// Prompt for app type
-			if err := appType.Select(cmd, &inputs.Type, appTypeOptions, nil); err != nil {
+			// Prompt for app description
+			if err := appDescription.Ask(cmd, &inputs.Description, nil); err != nil {
 				return err
 			}
 
-			// Prompt for app description
-			if err := appDescription.Ask(cmd, &inputs.Description, nil); err != nil {
+			// Prompt for app type
+			if err := appType.Select(cmd, &inputs.Type, appTypeOptions, nil); err != nil {
 				return err
 			}
 
