@@ -3,7 +3,6 @@ package display
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -57,15 +56,6 @@ func (v *apiTableView) AsTableHeader() []string {
 
 func (v *apiTableView) AsTableRow() []string {
 	return []string{ansi.Faint(v.ID), v.Name, v.Identifier, fmt.Sprint(v.Scopes)}
-}
-
-func (v *apiTableView) KeyValues() [][]string {
-	return [][]string{
-		{"ID", ansi.Faint(v.ID)},
-		{"NAME", v.Name},
-		{"IDENTIFIER", v.Identifier},
-		{"SCOPES", strconv.Itoa(v.Scopes)},
-	}
 }
 
 func (v *apiTableView) Object() interface{} {
