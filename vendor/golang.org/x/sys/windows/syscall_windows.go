@@ -185,7 +185,6 @@ func NewCallbackCDecl(fn interface{}) uintptr {
 //sys	ConnectNamedPipe(pipe Handle, overlapped *Overlapped) (err error)
 //sys	GetNamedPipeInfo(pipe Handle, flags *uint32, outSize *uint32, inSize *uint32, maxInstances *uint32) (err error)
 //sys	GetNamedPipeHandleState(pipe Handle, state *uint32, curInstances *uint32, maxCollectionCount *uint32, collectDataTimeout *uint32, userName *uint16, maxUserNameSize uint32) (err error) = GetNamedPipeHandleStateW
-//sys	SetNamedPipeHandleState(pipe Handle, state *uint32, maxCollectionCount *uint32, collectDataTimeout *uint32) (err error) = SetNamedPipeHandleState
 //sys	ReadFile(handle Handle, buf []byte, done *uint32, overlapped *Overlapped) (err error)
 //sys	WriteFile(handle Handle, buf []byte, done *uint32, overlapped *Overlapped) (err error)
 //sys	GetOverlappedResult(handle Handle, overlapped *Overlapped, done *uint32, wait bool) (err error)
@@ -264,7 +263,7 @@ func NewCallbackCDecl(fn interface{}) uintptr {
 //sys	GetLongPathName(path *uint16, buf *uint16, buflen uint32) (n uint32, err error) = kernel32.GetLongPathNameW
 //sys	GetShortPathName(longpath *uint16, shortpath *uint16, buflen uint32) (n uint32, err error) = kernel32.GetShortPathNameW
 //sys	GetFinalPathNameByHandle(file Handle, filePath *uint16, filePathSize uint32, flags uint32) (n uint32, err error) = kernel32.GetFinalPathNameByHandleW
-//sys	CreateFileMapping(fhandle Handle, sa *SecurityAttributes, prot uint32, maxSizeHigh uint32, maxSizeLow uint32, name *uint16) (handle Handle, err error) [failretval == 0 || e1 == ERROR_ALREADY_EXISTS] = kernel32.CreateFileMappingW
+//sys	CreateFileMapping(fhandle Handle, sa *SecurityAttributes, prot uint32, maxSizeHigh uint32, maxSizeLow uint32, name *uint16) (handle Handle, err error) = kernel32.CreateFileMappingW
 //sys	MapViewOfFile(handle Handle, access uint32, offsetHigh uint32, offsetLow uint32, length uintptr) (addr uintptr, err error)
 //sys	UnmapViewOfFile(addr uintptr) (err error)
 //sys	FlushViewOfFile(addr uintptr, length uintptr) (err error)
@@ -325,14 +324,14 @@ func NewCallbackCDecl(fn interface{}) uintptr {
 //sys	CreateSymbolicLink(symlinkfilename *uint16, targetfilename *uint16, flags uint32) (err error) [failretval&0xff==0] = CreateSymbolicLinkW
 //sys	CreateHardLink(filename *uint16, existingfilename *uint16, reserved uintptr) (err error) [failretval&0xff==0] = CreateHardLinkW
 //sys	GetCurrentThreadId() (id uint32)
-//sys	CreateEvent(eventAttrs *SecurityAttributes, manualReset uint32, initialState uint32, name *uint16) (handle Handle, err error) [failretval == 0 || e1 == ERROR_ALREADY_EXISTS] = kernel32.CreateEventW
-//sys	CreateEventEx(eventAttrs *SecurityAttributes, name *uint16, flags uint32, desiredAccess uint32) (handle Handle, err error) [failretval == 0 || e1 == ERROR_ALREADY_EXISTS] = kernel32.CreateEventExW
+//sys	CreateEvent(eventAttrs *SecurityAttributes, manualReset uint32, initialState uint32, name *uint16) (handle Handle, err error) = kernel32.CreateEventW
+//sys	CreateEventEx(eventAttrs *SecurityAttributes, name *uint16, flags uint32, desiredAccess uint32) (handle Handle, err error) = kernel32.CreateEventExW
 //sys	OpenEvent(desiredAccess uint32, inheritHandle bool, name *uint16) (handle Handle, err error) = kernel32.OpenEventW
 //sys	SetEvent(event Handle) (err error) = kernel32.SetEvent
 //sys	ResetEvent(event Handle) (err error) = kernel32.ResetEvent
 //sys	PulseEvent(event Handle) (err error) = kernel32.PulseEvent
-//sys	CreateMutex(mutexAttrs *SecurityAttributes, initialOwner bool, name *uint16) (handle Handle, err error) [failretval == 0 || e1 == ERROR_ALREADY_EXISTS] = kernel32.CreateMutexW
-//sys	CreateMutexEx(mutexAttrs *SecurityAttributes, name *uint16, flags uint32, desiredAccess uint32) (handle Handle, err error) [failretval == 0 || e1 == ERROR_ALREADY_EXISTS] = kernel32.CreateMutexExW
+//sys	CreateMutex(mutexAttrs *SecurityAttributes, initialOwner bool, name *uint16) (handle Handle, err error) = kernel32.CreateMutexW
+//sys	CreateMutexEx(mutexAttrs *SecurityAttributes, name *uint16, flags uint32, desiredAccess uint32) (handle Handle, err error) = kernel32.CreateMutexExW
 //sys	OpenMutex(desiredAccess uint32, inheritHandle bool, name *uint16) (handle Handle, err error) = kernel32.OpenMutexW
 //sys	ReleaseMutex(mutex Handle) (err error) = kernel32.ReleaseMutex
 //sys	SleepEx(milliseconds uint32, alertable bool) (ret uint32) = kernel32.SleepEx
@@ -347,7 +346,6 @@ func NewCallbackCDecl(fn interface{}) uintptr {
 //sys	SetInformationJobObject(job Handle, JobObjectInformationClass uint32, JobObjectInformation uintptr, JobObjectInformationLength uint32) (ret int, err error)
 //sys	GenerateConsoleCtrlEvent(ctrlEvent uint32, processGroupID uint32) (err error)
 //sys	GetProcessId(process Handle) (id uint32, err error)
-//sys	QueryFullProcessImageName(proc Handle, flags uint32, exeName *uint16, size *uint32) (err error) = kernel32.QueryFullProcessImageNameW
 //sys	OpenThread(desiredAccess uint32, inheritHandle bool, threadId uint32) (handle Handle, err error)
 //sys	SetProcessPriorityBoost(process Handle, disable bool) (err error) = kernel32.SetProcessPriorityBoost
 //sys	GetProcessWorkingSetSizeEx(hProcess Handle, lpMinimumWorkingSetSize *uintptr, lpMaximumWorkingSetSize *uintptr, flags *uint32)
@@ -403,12 +401,11 @@ func NewCallbackCDecl(fn interface{}) uintptr {
 //sys	rtlGetVersion(info *OsVersionInfoEx) (ntstatus error) = ntdll.RtlGetVersion
 //sys	rtlGetNtVersionNumbers(majorVersion *uint32, minorVersion *uint32, buildNumber *uint32) = ntdll.RtlGetNtVersionNumbers
 //sys	RtlGetCurrentPeb() (peb *PEB) = ntdll.RtlGetCurrentPeb
-//sys	RtlInitUnicodeString(destinationString *NTUnicodeString, sourceString *uint16) = ntdll.RtlInitUnicodeString
-//sys	RtlInitString(destinationString *NTString, sourceString *byte) = ntdll.RtlInitString
+//sys	RtlInitUnicodeString(destinationString *UNICODE_STRING, sourceString *uint16) = ntdll.RtlInitUnicodeString
 //sys	NtCreateFile(handle *Handle, access uint32, oa *OBJECT_ATTRIBUTES, iosb *IO_STATUS_BLOCK, allocationSize *int64, attributes uint32, share uint32, disposition uint32, options uint32, eabuffer uintptr, ealength uint32) (ntstatus error) = ntdll.NtCreateFile
 //sys	NtCreateNamedPipeFile(pipe *Handle, access uint32, oa *OBJECT_ATTRIBUTES, iosb *IO_STATUS_BLOCK, share uint32, disposition uint32, options uint32, typ uint32, readMode uint32, completionMode uint32, maxInstances uint32, inboundQuota uint32, outputQuota uint32, timeout *int64) (ntstatus error) = ntdll.NtCreateNamedPipeFile
-//sys	RtlDosPathNameToNtPathName(dosName *uint16, ntName *NTUnicodeString, ntFileNamePart *uint16, relativeName *RTL_RELATIVE_NAME) (ntstatus error) = ntdll.RtlDosPathNameToNtPathName_U_WithStatus
-//sys	RtlDosPathNameToRelativeNtPathName(dosName *uint16, ntName *NTUnicodeString, ntFileNamePart *uint16, relativeName *RTL_RELATIVE_NAME) (ntstatus error) = ntdll.RtlDosPathNameToRelativeNtPathName_U_WithStatus
+//sys	RtlDosPathNameToNtPathName(dosName *uint16, ntName *UNICODE_STRING, ntFileNamePart *uint16, relativeName *RTL_RELATIVE_NAME) (ntstatus error) = ntdll.RtlDosPathNameToNtPathName_U_WithStatus
+//sys	RtlDosPathNameToRelativeNtPathName(dosName *uint16, ntName *UNICODE_STRING, ntFileNamePart *uint16, relativeName *RTL_RELATIVE_NAME) (ntstatus error) = ntdll.RtlDosPathNameToRelativeNtPathName_U_WithStatus
 //sys	RtlDefaultNpAcl(acl **ACL) (ntstatus error) = ntdll.RtlDefaultNpAcl
 //sys	NtQueryInformationProcess(proc Handle, procInfoClass int32, procInfo unsafe.Pointer, procInfoLen uint32, retLen *uint32) (ntstatus error) = ntdll.NtQueryInformationProcess
 //sys	NtSetInformationProcess(proc Handle, procInfoClass int32, procInfo unsafe.Pointer, procInfoLen uint32) (ntstatus error) = ntdll.NtSetInformationProcess
@@ -1562,12 +1559,12 @@ func (s NTStatus) Error() string {
 	return string(utf16.Decode(b[:n]))
 }
 
-// NewNTUnicodeString returns a new NTUnicodeString structure for use with native
-// NT APIs that work over the NTUnicodeString type. Note that most Windows APIs
-// do not use NTUnicodeString, and instead UTF16PtrFromString should be used for
+// NewUnicodeString returns a new UNICODE_STRING structure for use with native
+// NT APIs that work over the UNICODE_STRING type. Note that most Windows APIs
+// do not use UNICODE_STRING, and instead UTF16PtrFromString should be used for
 // the more common *uint16 string type.
-func NewNTUnicodeString(s string) (*NTUnicodeString, error) {
-	var u NTUnicodeString
+func NewUnicodeString(s string) (*UNICODE_STRING, error) {
+	var u UNICODE_STRING
 	s16, err := UTF16PtrFromString(s)
 	if err != nil {
 		return nil, err
@@ -1576,8 +1573,8 @@ func NewNTUnicodeString(s string) (*NTUnicodeString, error) {
 	return &u, nil
 }
 
-// Slice returns a uint16 slice that aliases the data in the NTUnicodeString.
-func (s *NTUnicodeString) Slice() []uint16 {
+// Slice returns a uint16 slice that aliases the data in the UNICODE_STRING.
+func (s *UNICODE_STRING) Slice() []uint16 {
 	var slice []uint16
 	hdr := (*unsafeheader.Slice)(unsafe.Pointer(&slice))
 	hdr.Data = unsafe.Pointer(s.Buffer)
@@ -1586,36 +1583,8 @@ func (s *NTUnicodeString) Slice() []uint16 {
 	return slice
 }
 
-func (s *NTUnicodeString) String() string {
+func (s *UNICODE_STRING) String() string {
 	return UTF16ToString(s.Slice())
-}
-
-// NewNTString returns a new NTString structure for use with native
-// NT APIs that work over the NTString type. Note that most Windows APIs
-// do not use NTString, and instead UTF16PtrFromString should be used for
-// the more common *uint16 string type.
-func NewNTString(s string) (*NTString, error) {
-	var nts NTString
-	s8, err := BytePtrFromString(s)
-	if err != nil {
-		return nil, err
-	}
-	RtlInitString(&nts, s8)
-	return &nts, nil
-}
-
-// Slice returns a byte slice that aliases the data in the NTString.
-func (s *NTString) Slice() []byte {
-	var slice []byte
-	hdr := (*unsafeheader.Slice)(unsafe.Pointer(&slice))
-	hdr.Data = unsafe.Pointer(s.Buffer)
-	hdr.Len = int(s.Length)
-	hdr.Cap = int(s.MaximumLength)
-	return slice
-}
-
-func (s *NTString) String() string {
-	return ByteSliceToString(s.Slice())
 }
 
 // FindResource resolves a resource of the given name and resource type.
