@@ -1,0 +1,21 @@
+config:
+  inherit-env: true
+
+tests:
+  auth0 apis list:
+    exit-code: 0
+
+  auth0 apps list:
+    exit-code: 0
+
+  auth0 logs list:
+    exit-code: 0
+
+  auth0 tenants list:
+    exit-code: 0
+
+  auth0 rules list:
+    exit-code: 0
+
+  auth0 completion bash:
+    exit-code: 0
