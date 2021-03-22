@@ -16,6 +16,7 @@ const (
 	appTypeSPA            = "spa"
 	appTypeRegularWeb     = "regular_web"
 	appTypeNonInteractive = "non_interactive"
+	appDefaultURL         = "http://localhost:3000"
 )
 
 var (
@@ -280,7 +281,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 				var defaultValue string
 
 				if !appIsNative {
-					defaultValue = "http://localhost:3000"
+					defaultValue = appDefaultURL
 				}
 
 				if err := appCallbacks.AskMany(cmd, &inputs.Callbacks, &defaultValue); err != nil {
@@ -293,7 +294,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 				var defaultValue string
 
 				if !appIsNative {
-					defaultValue = "http://localhost:3000"
+					defaultValue = appDefaultURL
 				}
 
 				if err := appLogoutURLs.AskMany(cmd, &inputs.AllowedLogoutURLs, &defaultValue); err != nil {
@@ -303,7 +304,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 
 			// Prompt for allowed web origins URLs if app is SPA
 			if appIsSPA {
-				defaultValue := "http://localhost:3000"
+				defaultValue := appDefaultURL
 
 				if err := appWebOrigins.AskMany(cmd, &inputs.AllowedWebOrigins, &defaultValue); err != nil {
 					return err
@@ -425,7 +426,7 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				var defaultValue string
 
 				if !appIsNative {
-					defaultValue = "http://localhost:3000"
+					defaultValue = appDefaultURL
 				}
 
 				if len(current.Callbacks) > 0 {
@@ -442,7 +443,7 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				var defaultValue string
 
 				if !appIsNative {
-					defaultValue = "http://localhost:3000"
+					defaultValue = appDefaultURL
 				}
 
 				if len(current.AllowedLogoutURLs) > 0 {
@@ -456,7 +457,7 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 
 			// Prompt for allowed web origins URLs if app is SPA
 			if appIsSPA {
-				defaultValue := "http://localhost:3000"
+				defaultValue := appDefaultURL
 
 				if len(current.WebOrigins) > 0 {
 					defaultValue = stringSliceToCommaSeparatedString(interfaceToStringSlice(current.WebOrigins))
