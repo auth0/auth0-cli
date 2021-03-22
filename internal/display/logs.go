@@ -147,10 +147,14 @@ func (v *logView) typeDesc() (typ, desc string) {
 }
 
 func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, api auth0.ActionExecutionAPI, noColor, silent bool) {
-	r.Heading(ansi.Bold(r.Tenant), "logs\n")
+	resource := "logs"
 
-	if len(logs) < 1 {
-		r.Infof("No logs found; to generate logs, run a test command like `auth0 test login` or `auth0 test token`")
+	r.Heading(resource)
+
+	if len(logs) == 0 {
+		r.EmptyState(resource)
+		r.Infof("To generate logs, run a test command like 'auth0 test login' or 'auth0 test token'")
+		return
 	}
 
 	var res []View

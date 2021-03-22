@@ -40,7 +40,15 @@ func (v *apiView) Object() interface{} {
 }
 
 func (r *Renderer) ApiList(apis []*management.ResourceServer) {
-	r.Heading(ansi.Bold(r.Tenant), "APIs\n")
+	resource := "APIs"
+
+	r.Heading(resource)
+
+	if len(apis) == 0 {
+		r.EmptyState(resource)
+		r.Infof("Use 'auth0 apis create' to add one")
+		return
+	}
 
 	results := []View{}
 
@@ -52,17 +60,17 @@ func (r *Renderer) ApiList(apis []*management.ResourceServer) {
 }
 
 func (r *Renderer) ApiShow(api *management.ResourceServer) {
-	r.Heading(ansi.Bold(r.Tenant), "API\n")
+	r.Heading("API")
 	r.Result(makeApiView(api))
 }
 
 func (r *Renderer) ApiCreate(api *management.ResourceServer) {
-	r.Heading(ansi.Bold(r.Tenant), "API created\n")
+	r.Heading("API created")
 	r.Result(makeApiView(api))
 }
 
 func (r *Renderer) ApiUpdate(api *management.ResourceServer) {
-	r.Heading(ansi.Bold(r.Tenant), "API updated\n")
+	r.Heading("API updated")
 	r.Result(makeApiView(api))
 }
 
@@ -93,7 +101,14 @@ func (v *scopeView) AsTableRow() []string {
 }
 
 func (r *Renderer) ScopesList(api string, scopes []*management.ResourceServerScope) {
-	r.Heading(ansi.Bold(r.Tenant), fmt.Sprintf("Scopes of %s\n", ansi.Bold(api)))
+	resource := "scopes"
+
+	r.Heading(fmt.Sprintf("%s of %s", resource, ansi.Bold(api)))
+
+	if len(scopes) == 0 {
+		r.EmptyState(resource)
+		return
+	}
 
 	results := []View{}
 

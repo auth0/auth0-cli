@@ -25,7 +25,7 @@ func isNotZero(v interface{}) bool {
 }
 
 func (r *Renderer) TryLogin(u *authutil.UserInfo, t *authutil.TokenResponse) {
-	r.Heading(ansi.Bold(r.Tenant), "/userinfo\n")
+	r.Heading("/userinfo")
 
 	out := &userInfoAndTokens{UserInfo: u, Tokens: t}
 	b, err := json.MarshalIndent(out, "", "    ")
