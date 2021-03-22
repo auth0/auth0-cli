@@ -256,7 +256,7 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Prompt for app neme
+			// Prompt for app name
 			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
@@ -406,7 +406,7 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
 			}
 
-			// Prompt for app neme
+			// Prompt for app name
 			if err := appName.AskU(cmd, &inputs.Name, current.Name); err != nil {
 				return err
 			}
