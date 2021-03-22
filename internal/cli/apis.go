@@ -46,8 +46,8 @@ func apisCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listApisCmd(cli))
-	cmd.AddCommand(showApiCmd(cli))
 	cmd.AddCommand(createApiCmd(cli))
+	cmd.AddCommand(showApiCmd(cli))
 	cmd.AddCommand(updateApiCmd(cli))
 	cmd.AddCommand(deleteApiCmd(cli))
 	cmd.AddCommand(scopesCmd(cli))

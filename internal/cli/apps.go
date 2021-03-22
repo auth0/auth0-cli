@@ -111,8 +111,8 @@ func appsCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listAppsCmd(cli))
-	cmd.AddCommand(showAppCmd(cli))
 	cmd.AddCommand(createAppCmd(cli))
+	cmd.AddCommand(showAppCmd(cli))
 	cmd.AddCommand(updateAppCmd(cli))
 	cmd.AddCommand(deleteAppCmd(cli))
 
