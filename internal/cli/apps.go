@@ -271,9 +271,9 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 				return err
 			}
 
-			appIsM2M := inputs.Type == appTypeNonInteractive
-			appIsNative := inputs.Type == appTypeNative
-			appIsSPA := inputs.Type == appTypeSPA
+			appIsM2M := apiTypeFor(inputs.Type) == appTypeNonInteractive
+			appIsNative := apiTypeFor(inputs.Type) == appTypeNative
+			appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
 
 			// Prompt for callback URLs if app is not m2m
 			if !appIsM2M {
@@ -416,9 +416,9 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				return err
 			}
 
-			appIsM2M := inputs.Type == appTypeNonInteractive
-			appIsNative := inputs.Type == appTypeNative
-			appIsSPA := inputs.Type == appTypeSPA
+			appIsM2M := apiTypeFor(inputs.Type) == appTypeNonInteractive
+			appIsNative := apiTypeFor(inputs.Type) == appTypeNative
+			appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
 
 			// Prompt for callback URLs if app is not m2m
 			if !appIsM2M {
