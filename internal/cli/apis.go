@@ -137,7 +137,7 @@ auth0 apis show <id>
 
 			cli.renderer.ApiShow(api)
 			cli.renderer.Newline()
-			cli.renderer.Infof("To see the full scope list, run %s", ansi.Faint("apis scopes list <api-id>"))
+			cli.renderer.Infof("Scopes may be truncated. To see the full list, run %s", ansi.Faint(fmt.Sprintf("apis scopes list %s", inputs.ID)))
 			return nil
 		},
 	}
