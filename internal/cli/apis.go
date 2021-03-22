@@ -11,9 +11,8 @@ import (
 
 var (
 	apiID = Argument{
-		Name:       "Id",
-		Help:       "Id of the API.",
-		IsRequired: true,
+		Name: "Id",
+		Help: "Id of the API.",
 	}
 	apiName = Flag{
 		Name:       "Name",
@@ -47,8 +46,8 @@ func apisCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listApisCmd(cli))
-	cmd.AddCommand(showApiCmd(cli))
 	cmd.AddCommand(createApiCmd(cli))
+	cmd.AddCommand(showApiCmd(cli))
 	cmd.AddCommand(updateApiCmd(cli))
 	cmd.AddCommand(deleteApiCmd(cli))
 	cmd.AddCommand(scopesCmd(cli))
@@ -80,13 +79,11 @@ Lists your existing APIs. To create one try:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ResourceServerList
 
-			err := ansi.Spinner("Loading APIs", func() error {
+			if err := ansi.Waiting(func() error {
 				var err error
 				list, err = cli.api.ResourceServer.List()
 				return err
-			})
-
-			if err != nil {
+			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
 
@@ -125,13 +122,11 @@ auth0 apis show <id>
 
 			api := &management.ResourceServer{ID: &inputs.ID}
 
-			err := ansi.Spinner("Loading API", func() error {
+			if err := ansi.Waiting(func() error {
 				var err error
 				api, err = cli.api.ResourceServer.Read(inputs.ID)
 				return err
-			})
-
-			if err != nil {
+			}); err != nil {
 				return fmt.Errorf("Unable to get an API with Id '%s': %w", inputs.ID, err)
 			}
 
@@ -147,10 +142,9 @@ auth0 apis show <id>
 
 func createApiCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Name         string
-		Identifier   string
-		Scopes       []string
-		ScopesString string
+		Name       string
+		Identifier string
+		Scopes     []string
 	}
 
 	cmd := &cobra.Command{
@@ -164,15 +158,15 @@ auth0 apis create --name myapi --identifier http://my-api
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := apiName.Ask(cmd, &inputs.Name); err != nil {
+			if err := apiName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
 
-			if err := apiIdentifier.Ask(cmd, &inputs.Identifier); err != nil {
+			if err := apiIdentifier.Ask(cmd, &inputs.Identifier, nil); err != nil {
 				return err
 			}
 
-			if err := apiScopes.Ask(cmd, &inputs.ScopesString); err != nil {
+			if err := apiScopes.AskMany(cmd, &inputs.Scopes, nil); err != nil {
 				return err
 			}
 
@@ -181,17 +175,13 @@ auth0 apis create --name myapi --identifier http://my-api
 				Identifier: &inputs.Identifier,
 			}
 
-			if len(inputs.ScopesString) > 0 {
-				api.Scopes = apiScopesFor(commaSeparatedStringToSlice(inputs.ScopesString))
-			} else if len(inputs.Scopes) > 0 {
+			if len(inputs.Scopes) > 0 {
 				api.Scopes = apiScopesFor(inputs.Scopes)
 			}
 
-			err := ansi.Spinner("Creating API", func() error {
+			if err := ansi.Waiting(func() error {
 				return cli.api.ResourceServer.Create(api)
-			})
-
-			if err != nil {
+			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred while attempting to create an API with name '%s' and identifier '%s': %w", inputs.Name, inputs.Identifier, err)
 			}
 
@@ -209,10 +199,9 @@ auth0 apis create --name myapi --identifier http://my-api
 
 func updateApiCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID           string
-		Name         string
-		Scopes       []string
-		ScopesString string
+		ID     string
+		Name   string
+		Scopes []string
 	}
 
 	cmd := &cobra.Command{
@@ -227,6 +216,8 @@ auth0 apis update <id> --name myapi
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var current *management.ResourceServer
+
 			if len(args) == 0 {
 				if err := apiID.Ask(cmd, &inputs.ID); err != nil {
 					return err
@@ -235,43 +226,39 @@ auth0 apis update <id> --name myapi
 				inputs.ID = args[0]
 			}
 
-			if err := apiName.AskU(cmd, &inputs.Name); err != nil {
+			if err := ansi.Waiting(func() error {
+				var err error
+				current, err = cli.api.ResourceServer.Read(inputs.ID)
+				return err
+			}); err != nil {
+				return fmt.Errorf("Unable to load API. The Id %v specified doesn't exist", inputs.ID)
+			}
+
+			if err := apiName.AskU(cmd, &inputs.Name, current.Name); err != nil {
 				return err
 			}
 
-			if err := apiScopes.AskU(cmd, &inputs.ScopesString); err != nil {
+			if err := apiScopes.AskManyU(cmd, &inputs.Scopes, nil); err != nil {
 				return err
 			}
 
 			api := &management.ResourceServer{}
 
-			err := ansi.Spinner("Updating API", func() error {
-				current, err := cli.api.ResourceServer.Read(inputs.ID)
+			if len(inputs.Name) == 0 {
+				api.Name = current.Name
+			} else {
+				api.Name = &inputs.Name
+			}
 
-				if err != nil {
-					return fmt.Errorf("Unable to load API. The Id %v specified doesn't exist", inputs.ID)
-				}
+			if len(inputs.Scopes) == 0 {
+				api.Scopes = current.Scopes
+			} else {
+				api.Scopes = apiScopesFor(inputs.Scopes)
+			}
 
-				if len(inputs.Name) == 0 {
-					api.Name = current.Name
-				} else {
-					api.Name = &inputs.Name
-				}
-
-				if len(inputs.Scopes) == 0 {
-					if len(inputs.ScopesString) == 0 {
-						api.Scopes = current.Scopes
-					} else {
-						api.Scopes = apiScopesFor(commaSeparatedStringToSlice(inputs.ScopesString))
-					}
-				} else {
-					api.Scopes = apiScopesFor(inputs.Scopes)
-				}
-
+			if err := ansi.Waiting(func() error {
 				return cli.api.ResourceServer.Update(inputs.ID, api)
-			})
-
-			if err != nil {
+			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred while trying to update an API with Id '%s': %w", inputs.ID, err)
 			}
 
@@ -357,13 +344,11 @@ auth0 apis scopes list <id>
 
 			api := &management.ResourceServer{ID: &inputs.ID}
 
-			err := ansi.Spinner("Loading scopes", func() error {
+			if err := ansi.Waiting(func() error {
 				var err error
 				api, err = cli.api.ResourceServer.Read(inputs.ID)
 				return err
-			})
-
-			if err != nil {
+			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred while getting scopes for an API with Id '%s': %w", inputs.ID, err)
 			}
 

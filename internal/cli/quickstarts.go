@@ -97,7 +97,7 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 				return errors.New("This command can only be run on interactive mode")
 			}
 
-			if err := qsClientID.Ask(cmd, &inputs.ClientID); err != nil {
+			if err := qsClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
 				return err
 			}
 
@@ -113,7 +113,7 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 					return fmt.Errorf("An unexpected error occurred: %v", err)
 				}
 				// ask for input using the valid types only:
-				if err := qsStack.Select(cmd, &inputs.Stack, stacks); err != nil {
+				if err := qsStack.Select(cmd, &inputs.Stack, stacks, nil); err != nil {
 					return err
 				}
 			}

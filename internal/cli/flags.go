@@ -7,11 +7,12 @@ import (
 )
 
 type Flag struct {
-	Name       string
-	LongForm   string
-	ShortForm  string
-	Help       string
-	IsRequired bool
+	Name         string
+	LongForm     string
+	ShortForm    string
+	Help         string
+	IsRequired   bool
+	AlwaysPrompt bool
 }
 
 func (f Flag) GetName() string {
@@ -30,20 +31,28 @@ func (f Flag) GetIsRequired() bool {
 	return f.IsRequired
 }
 
-func (f *Flag) Ask(cmd *cobra.Command, value interface{}) error {
-	return askFlag(cmd, f, value, false)
+func (f *Flag) Ask(cmd *cobra.Command, value interface{}, defaultValue *string) error {
+	return askFlag(cmd, f, value, defaultValue, false)
 }
 
-func (f *Flag) AskU(cmd *cobra.Command, value interface{}) error {
-	return askFlag(cmd, f, value, true)
+func (f *Flag) AskU(cmd *cobra.Command, value interface{}, defaultValue *string) error {
+	return askFlag(cmd, f, value, defaultValue, true)
 }
 
-func (f *Flag) Select(cmd *cobra.Command, value interface{}, options []string) error {
-	return selectFlag(cmd, f, value, options, false)
+func (f *Flag) AskMany(cmd *cobra.Command, value interface{}, defaultValue *string) error {
+	return askManyFlag(cmd, f, value, defaultValue, false)
 }
 
-func (f *Flag) SelectU(cmd *cobra.Command, value interface{}, options []string) error {
-	return selectFlag(cmd, f, value, options, true)
+func (f *Flag) AskManyU(cmd *cobra.Command, value interface{}, defaultValue *string) error {
+	return askManyFlag(cmd, f, value, defaultValue, true)
+}
+
+func (f *Flag) Select(cmd *cobra.Command, value interface{}, options []string, defaultValue *string) error {
+	return selectFlag(cmd, f, value, options, defaultValue, false)
+}
+
+func (f *Flag) SelectU(cmd *cobra.Command, value interface{}, options []string, defaultValue *string) error {
+	return selectFlag(cmd, f, value, options, defaultValue, true)
 }
 
 func (f *Flag) RegisterString(cmd *cobra.Command, value *string, defaultValue string) {
@@ -78,28 +87,34 @@ func (f *Flag) RegisterBoolU(cmd *cobra.Command, value *bool, defaultValue bool)
 	registerBool(cmd, f, value, defaultValue, true)
 }
 
-func askFlag(cmd *cobra.Command, f *Flag, value interface{}, isUpdate bool) error {
+func askFlag(cmd *cobra.Command, f *Flag, value interface{}, defaultValue *string, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
-		return ask(cmd, f, value, isUpdate)
+		return ask(cmd, f, value, defaultValue, isUpdate)
 	}
 
 	return nil
 }
 
-func selectFlag(cmd *cobra.Command, f *Flag, value interface{}, options []string, isUpdate bool) error {
-	if shouldAsk(cmd, f, isUpdate) {
-		return _select(cmd, f, value, options, isUpdate)
+func askManyFlag(cmd *cobra.Command, f *Flag, value interface{}, defaultValue *string, isUpdate bool) error {
+	var strInput struct {
+		value string
 	}
+
+	if err := askFlag(cmd, f, &strInput.value, defaultValue, isUpdate); err != nil {
+		return err
+	}
+
+	*value.(*[]string) = commaSeparatedStringToSlice(strInput.value)
 
 	return nil
 }
 
-func shouldAsk(cmd *cobra.Command, f *Flag, isUpdate bool) bool {
-	if isUpdate {
-		return shouldPromptWhenFlagless(cmd, f.LongForm)
+func selectFlag(cmd *cobra.Command, f *Flag, value interface{}, options []string, defaultValue *string, isUpdate bool) error {
+	if shouldAsk(cmd, f, isUpdate) {
+		return _select(cmd, f, value, options, defaultValue, isUpdate)
 	}
 
-	return shouldPrompt(cmd, f.LongForm)
+	return nil
 }
 
 func registerString(cmd *cobra.Command, f *Flag, value *string, defaultValue string, isUpdate bool) {
@@ -132,6 +147,18 @@ func registerBool(cmd *cobra.Command, f *Flag, value *bool, defaultValue bool, i
 	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
 		panic(unexpectedError(err)) // TODO: Handle
 	}
+}
+
+func shouldAsk(cmd *cobra.Command, f *Flag, isUpdate bool) bool {
+	if isUpdate {
+		if !f.IsRequired && !f.AlwaysPrompt {
+			return false
+		}
+
+		return shouldPromptWhenFlagless(cmd, f.LongForm)
+	}
+
+	return shouldPrompt(cmd, f.LongForm)
 }
 
 func markFlagRequired(cmd *cobra.Command, f *Flag, isUpdate bool) error {
