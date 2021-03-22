@@ -3,6 +3,7 @@ package display
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -47,7 +48,7 @@ func (r *Renderer) ApiList(apis []*management.ResourceServer) {
 	results := []View{}
 
 	for _, api := range apis {
-		results = append(results, makeApiView(api))
+		results = append(results, makeApiTableView(api))
 	}
 
 	r.Results(results)
@@ -75,6 +76,19 @@ func makeApiView(api *management.ResourceServer) *apiView {
 		Name:       auth0.StringValue(api.Name),
 		Identifier: auth0.StringValue(api.Identifier),
 		Scopes:     auth0.StringValue(truncateScopes(api.Scopes)),
+
+		raw: api,
+	}
+}
+
+func makeApiTableView(api *management.ResourceServer) *apiView {
+	scopes := strconv.Itoa(len(api.Scopes))
+
+	return &apiView{
+		ID:         auth0.StringValue(api.ID),
+		Name:       auth0.StringValue(api.Name),
+		Identifier: auth0.StringValue(api.Identifier),
+		Scopes:     auth0.StringValue(&scopes),
 
 		raw: api,
 	}
