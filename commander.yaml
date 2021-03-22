@@ -8,10 +8,13 @@ tests:
   auth0 apps list:
     exit-code: 0
 
-  auth0 logs:
+  auth0 logs list:
     exit-code: 0
 
-  auth0 actions list:
+  auth0 tenants list:
+    exit-code: 0
+
+  auth0 rules list:
     exit-code: 0
 
   auth0 completion bash:
