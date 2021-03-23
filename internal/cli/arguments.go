@@ -36,7 +36,7 @@ func (a *Argument) Ask(cmd *cobra.Command, value interface{}) error {
 
 type pickerOptionsFunc func() (pickerOptions, error)
 
-func (a *Argument) Picker(cmd *cobra.Command, result *string, fn pickerOptionsFunc) error {
+func (a *Argument) Pick(cmd *cobra.Command, result *string, fn pickerOptionsFunc) error {
 	var opts pickerOptions
 	err := ansi.Waiting(func() error {
 		var err error

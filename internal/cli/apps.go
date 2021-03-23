@@ -166,7 +166,7 @@ auth0 apps show <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := appID.Picker(cmd, &inputs.ID, cli.appPickerOptions)
+				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
 				if err != nil {
 					return err
 				}
@@ -217,7 +217,7 @@ auth0 apps delete <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := appID.Picker(cmd, &inputs.ID, cli.appPickerOptions)
+				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
 				if err != nil {
 					return err
 				}
@@ -405,7 +405,7 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 			var current *management.Client
 
 			if len(args) == 0 {
-				err := appID.Picker(cmd, &inputs.ID, cli.appPickerOptions)
+				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
 				if err != nil {
 					return err
 				}

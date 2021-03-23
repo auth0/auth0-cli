@@ -175,7 +175,7 @@ auth0 rules show <id>
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
-				err := ruleID.Picker(cmd, &inputs.ID, cli.rulePickerOptions)
+				err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
 				if err != nil {
 					return err
 				}
@@ -224,7 +224,7 @@ auth0 rules delete <rule-id>`,
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
-				err := ruleID.Picker(cmd, &inputs.ID, cli.rulePickerOptions)
+				err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
 				if err != nil {
 					return err
 				}
@@ -271,7 +271,7 @@ auth0 rules update --id <rule-id> --name "My Updated Rule" --enabled=false
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
-				err := ruleID.Picker(cmd, &inputs.ID, cli.rulePickerOptions)
+				err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
 				if err != nil {
 					return err
 				}

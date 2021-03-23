@@ -114,7 +114,7 @@ auth0 apis show <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := apiID.Picker(cmd, &inputs.ID, cli.apiPickerOptions)
+				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
 				if err != nil {
 					return err
 				}
@@ -225,7 +225,7 @@ auth0 apis update <id> --name myapi
 			var current *management.ResourceServer
 
 			if len(args) == 0 {
-				err := apiID.Picker(cmd, &inputs.ID, cli.apiPickerOptions)
+				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
 				if err != nil {
 					return err
 				}
@@ -304,7 +304,7 @@ auth0 apis delete <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := apiID.Picker(cmd, &inputs.ID, cli.apiPickerOptions)
+				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
 				if err != nil {
 					return err
 				}
@@ -355,7 +355,7 @@ auth0 apis scopes list <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := apiID.Picker(cmd, &inputs.ID, cli.apiPickerOptions)
+				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
 				if err != nil {
 					return err
 				}
