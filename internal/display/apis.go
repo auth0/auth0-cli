@@ -3,7 +3,6 @@ package display
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -76,29 +75,37 @@ func (r *Renderer) ApiList(apis []*management.ResourceServer) {
 
 func (r *Renderer) ApiShow(api *management.ResourceServer) {
 	r.Heading(ansi.Bold(r.Tenant), "API\n")
-	r.Result(makeApiView(api))
+	view, scopesTruncated := makeApiView(api)
+	r.Result(view)
+	if scopesTruncated {
+		r.Newline()
+		r.Infof("Scopes truncated for display. To see the full list, run %s", ansi.Faint(fmt.Sprintf("apis scopes list %s", *api.ID)))
+	}
 }
 
 func (r *Renderer) ApiCreate(api *management.ResourceServer) {
 	r.Heading(ansi.Bold(r.Tenant), "API created\n")
-	r.Result(makeApiView(api))
+	view, _ := makeApiView(api)
+	r.Result(view)
 }
 
 func (r *Renderer) ApiUpdate(api *management.ResourceServer) {
 	r.Heading(ansi.Bold(r.Tenant), "API updated\n")
-	r.Result(makeApiView(api))
+	view, _ := makeApiView(api)
+	r.Result(view)
 }
 
-func makeApiView(api *management.ResourceServer) *apiView {
-
-	return &apiView{
+func makeApiView(api *management.ResourceServer) (*apiView, bool) {
+	scopes, scopesTruncated := getScopes(api.Scopes)
+	view := &apiView{
 		ID:         auth0.StringValue(api.ID),
 		Name:       auth0.StringValue(api.Name),
 		Identifier: auth0.StringValue(api.Identifier),
-		Scopes:     auth0.StringValue(truncateScopes(api.Scopes)),
+		Scopes:     auth0.StringValue(scopes),
 
 		raw: api,
 	}
+	return view, scopesTruncated
 }
 
 func makeApiTableView(api *management.ResourceServer) *apiTableView {
@@ -146,34 +153,35 @@ func makeScopeView(scope *management.ResourceServerScope) *scopeView {
 	}
 }
 
-func truncateScopes(scopes []*management.ResourceServerScope) *string {
-	ellipsis := "..."
+func getScopes(scopes []*management.ResourceServerScope) (*string, bool) {
 	padding := 16 // the longest apiView key plus two spaces before and after in the label column
-	width, _, err := term.GetSize(int(os.Stdin.Fd()))
+	terminalWidth, _, err := term.GetSize(int(os.Stdin.Fd()))
 	if err != nil {
-		width = 80
+		terminalWidth = 80
 	}
 
-	var results []string
-	charactersNeeded := width - len(ellipsis) - padding
+	var scopesForDisplay string
+	truncated := false
+	maxCharacters := terminalWidth - padding
 
-	for _, scope := range scopes {
-		runeScope := []rune(*scope.Value)
+	for i, scope := range scopes {
+		scopeValue := *scope.Value
+		runeScope := []rune(scopeValue)
 		characterLength := len(runeScope)
-		if charactersNeeded < characterLength {
+		spacer := " "
+
+		// no spacer prepended for first value
+		if i == 0 {
+			spacer = ""
+		}
+
+		if characterLength <= maxCharacters-len(scopesForDisplay) {
+			scopesForDisplay += fmt.Sprintf("%s%s", spacer, scopeValue)
+		} else {
+			truncated = true
 			break
 		}
-		charactersNeeded -= characterLength + 1 // add one for the space between them
-		results = append(results, *scope.Value)
 	}
 
-	var truncatedScopes string
-
-	if len(results) == 0 {
-		truncatedScopes = "n/a"
-	} else {
-		truncatedScopes = fmt.Sprintf("%s...", strings.NewReplacer("[", "", "]", "").Replace(fmt.Sprintf("%v", results)))
-	}
-
-	return &truncatedScopes
+	return &scopesForDisplay, truncated
 }
