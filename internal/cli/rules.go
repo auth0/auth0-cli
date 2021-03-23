@@ -216,7 +216,7 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 		Short: "Delete a rule",
 		Long: `Delete a rule:
 
-auth0 rules delete rul_d2VSaGlyaW5n`,
+auth0 rules delete <rule-id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -262,7 +262,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 		Short: "Update a rule",
 		Long: `Update a rule:
 
-auth0 rules update --id  rul_d2VSaGlyaW5n --name "My Updated Rule" --enabled=false
+auth0 rules update --id <rule-id> --name "My Updated Rule" --enabled=false
 		`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
