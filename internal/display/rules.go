@@ -41,7 +41,16 @@ func (v *ruleView) Object() interface{} {
 }
 
 func (r *Renderer) RulesList(rules []*management.Rule) {
-	r.Heading(ansi.Bold(r.Tenant), "rules\n")
+	resource := "rules"
+
+	r.Heading(resource)
+
+	if len(rules) == 0 {
+		r.EmptyState(resource)
+		r.Infof("Use 'auth0 rules create' to add one")
+		return
+	}
+
 	var res []View
 
 	//@TODO Provide sort options via flags
@@ -63,28 +72,28 @@ func (r *Renderer) RulesList(rules []*management.Rule) {
 }
 
 func (r *Renderer) RuleCreate(rule *management.Rule) {
-	r.Heading(ansi.Bold(r.Tenant), "rule created\n")
+	r.Heading("rule created")
 	r.Result(makeRuleView(rule))
 	r.Newline()
 
 	// TODO(cyx): possibly guard this with a --no-hint flag.
-	r.Infof("%s: To edit this rule, do `auth0 rules update %s`",
-		ansi.Faint("Hint"),
+	r.Infof("%s To edit this rule, do 'auth0 rules update %s'",
+		ansi.Faint("Hint:"),
 		rule.GetID(),
 	)
 
-	r.Infof("%s: You might wanna try `auth0 test login",
-		ansi.Faint("Hint"),
+	r.Infof("%s You might wanna try 'auth0 test login'",
+		ansi.Faint("Hint:"),
 	)
 }
 
 func (r *Renderer) RuleUpdate(rule *management.Rule) {
-	r.Heading(ansi.Bold(r.Tenant), "rule updated\n")
+	r.Heading("rule updated")
 	r.Result(makeRuleView(rule))
 }
 
 func (r *Renderer) RuleShow(rule *management.Rule) {
-	r.Heading(ansi.Bold(r.Tenant), "rule\n")
+	r.Heading("rule")
 	r.Result(makeRuleView(rule))
 }
 

@@ -157,7 +157,16 @@ func (v *applicationListView) AsTableRow() []string {
 }
 
 func (r *Renderer) ApplicationList(clients []*management.Client) {
-	r.Heading(ansi.Bold(r.Tenant), "applications\n")
+	resource := "applications"
+
+	r.Heading(resource)
+
+	if len(clients) == 0 {
+		r.EmptyState(resource)
+		r.Infof("Use 'auth0 apps create' to add one")
+		return
+	}
+
 	var res []View
 	for _, c := range clients {
 		if auth0.StringValue(c.Name) == deprecatedAppName {
@@ -175,7 +184,7 @@ func (r *Renderer) ApplicationList(clients []*management.Client) {
 }
 
 func (r *Renderer) ApplicationShow(client *management.Client, revealSecrets bool) {
-	r.Heading(ansi.Bold(r.Tenant), "application\n")
+	r.Heading("application")
 
 	v := &applicationView{
 		revealSecret:      revealSecrets,
@@ -197,7 +206,7 @@ func (r *Renderer) ApplicationShow(client *management.Client, revealSecrets bool
 }
 
 func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bool) {
-	r.Heading(ansi.Bold(r.Tenant), "application created\n")
+	r.Heading("application created")
 
 	v := &applicationView{
 		revealSecret:      revealSecrets,
@@ -221,14 +230,14 @@ func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bo
 	r.Infof("Quickstarts: %s", quickstartsURIFor(client.AppType))
 
 	// TODO(cyx): possibly guard this with a --no-hint flag.
-	r.Infof("%s: You might wanna try `auth0 test login --client-id %s`",
-		ansi.Faint("Hint"),
+	r.Infof("%s You might want to try 'auth0 test login --client-id %s'",
+		ansi.Faint("Hint:"),
 		client.GetClientID(),
 	)
 }
 
 func (r *Renderer) ApplicationUpdate(client *management.Client, revealSecrets bool) {
-	r.Heading(ansi.Bold(r.Tenant), "application updated\n")
+	r.Heading("application updated")
 
 	v := &applicationView{
 		revealSecret:      revealSecrets,
