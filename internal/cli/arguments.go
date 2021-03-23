@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 )
 
@@ -46,15 +48,25 @@ func (a *Argument) Picker(cmd *cobra.Command, result *string, fn pickerOptionsFu
 		return err
 	}
 
-	// TODO(cyx): Fix this up. For now everything depends on `flag`.
-	f := Flag{Name: a.Name}
 	defaultLabel := opts.defaultLabel()
 	var val string
-	if err := selectFlag(cmd, &f, &val, opts.labels(), &defaultLabel, false); err != nil {
+	if err := selectArgument(cmd, a, &val, opts.labels(), &defaultLabel); err != nil {
 		return err
 	}
 
 	*result = opts.getValue(val)
+	return nil
+}
+
+func selectArgument(cmd *cobra.Command, a *Argument, value interface{}, options []string, defaultValue *string) error {
+	if canPrompt(cmd) {
+		input := prompt.SelectInput("", a.GetLabel(), a.GetHelp(), options, auth0.StringValue(defaultValue), true)
+
+		if err := prompt.AskOne(input, value); err != nil {
+			return handleInputError(err)
+		}
+	}
+
 	return nil
 }
 
