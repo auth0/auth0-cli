@@ -13,6 +13,8 @@ func (v *tenantView) AsTableRow() []string {
 }
 
 func (r *Renderer) ShowTenants(data []string) {
+	r.Heading()
+
 	var results []View
 	for _, item := range data {
 		results = append(results, &tenantView{

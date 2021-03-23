@@ -34,7 +34,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 	if expired {
 		cli.renderer.Warnf("Please sign in to re-authorize the CLI.")
 	} else {
-		cli.renderer.Heading("✪ Welcome to the Auth0 CLI 🎊.")
+		cli.renderer.Infof("✪ Welcome to the Auth0 CLI 🎊.")
 		cli.renderer.Infof("To set it up, you will need to sign in to your Auth0 account and authorize the CLI to access the API.")
 		cli.renderer.Infof("If you don't have an account, please go to https://auth0.com/signup, otherwise continue in the browser.\n\n")
 	}
