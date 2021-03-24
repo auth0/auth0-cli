@@ -30,6 +30,13 @@ func ask(cmd *cobra.Command, i commandInput, value interface{}, defaultValue *st
 
 func _select(cmd *cobra.Command, i commandInput, value interface{}, options []string, defaultValue *string, isUpdate bool) error {
 	isRequired := !isUpdate && i.GetIsRequired()
+
+	// If there is no provided default value, we'll use the first option in
+	// the selector by default.
+	if defaultValue == nil && len(options) > 0 {
+		defaultValue = &(options[0])
+	}
+
 	input := prompt.SelectInput("", i.GetLabel(), i.GetHelp(), options, auth0.StringValue(defaultValue), isRequired)
 
 	if err := prompt.AskOne(input, value); err != nil {
