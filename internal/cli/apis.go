@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -113,7 +114,8 @@ auth0 apis show <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if err := apiID.Ask(cmd, &inputs.ID); err != nil {
+				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
+				if err != nil {
 					return err
 				}
 			} else {
@@ -217,7 +219,8 @@ auth0 apis update <id> --name myapi
 			var current *management.ResourceServer
 
 			if len(args) == 0 {
-				if err := apiID.Ask(cmd, &inputs.ID); err != nil {
+				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
+				if err != nil {
 					return err
 				}
 			} else {
@@ -289,7 +292,8 @@ auth0 apis delete <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if err := apiID.Ask(cmd, &inputs.ID); err != nil {
+				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
+				if err != nil {
 					return err
 				}
 			} else {
@@ -333,7 +337,8 @@ auth0 apis scopes list <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if err := apiID.Ask(cmd, &inputs.ID); err != nil {
+				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
+				if err != nil {
 					return err
 				}
 			} else {
@@ -367,4 +372,26 @@ func apiScopesFor(scopes []string) []*management.ResourceServerScope {
 	}
 
 	return models
+}
+
+func (c *cli) apiPickerOptions() (pickerOptions, error) {
+	list, err := c.api.ResourceServer.List()
+	if err != nil {
+		return nil, err
+	}
+
+	// NOTE: because client names are not unique, we'll just number these
+	// labels.
+	var opts pickerOptions
+	for _, r := range list.ResourceServers {
+		label := fmt.Sprintf("%s %s", r.GetName(), ansi.Faint("("+r.GetIdentifier()+")"))
+
+		opts = append(opts, pickerOption{value: r.GetID(), label: label})
+	}
+
+	if len(opts) == 0 {
+		return nil, errors.New("There are currently no applications.")
+	}
+
+	return opts, nil
 }

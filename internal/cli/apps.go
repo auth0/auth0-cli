@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -165,7 +166,8 @@ auth0 apps show <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if err := appID.Ask(cmd, &inputs.ID); err != nil {
+				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
+				if err != nil {
 					return err
 				}
 			} else {
@@ -209,7 +211,8 @@ auth0 apps delete <id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if err := appID.Ask(cmd, &inputs.ID); err != nil {
+				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
+				if err != nil {
 					return err
 				}
 			} else {
@@ -389,9 +392,9 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Client
 
-			// Get app id
 			if len(args) == 0 {
-				if err := appID.Ask(cmd, &inputs.ID); err != nil {
+				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
+				if err != nil {
 					return err
 				}
 			} else {
@@ -679,4 +682,27 @@ func interfaceToStringSlice(s []interface{}) []string {
 		}
 	}
 	return result
+}
+
+func (c *cli) appPickerOptions() (pickerOptions, error) {
+	list, err := c.api.Client.List()
+	if err != nil {
+		return nil, err
+	}
+
+	// NOTE: because client names are not unique, we'll just number these
+	// labels.
+	var opts pickerOptions
+	for _, c := range list.Clients {
+		value := c.GetClientID()
+		label := fmt.Sprintf("%s %s", c.GetName(), ansi.Faint("("+value+")"))
+
+		opts = append(opts, pickerOption{value: value, label: label})
+	}
+
+	if len(opts) == 0 {
+		return nil, errors.New("There are currently no applications.")
+	}
+
+	return opts, nil
 }

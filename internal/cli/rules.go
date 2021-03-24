@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -11,6 +12,11 @@ import (
 )
 
 var (
+	ruleID = Argument{
+		Name: "Rule ID",
+		Help: "Id of the rule.",
+	}
+
 	ruleName = Flag{
 		Name:       "Name",
 		LongForm:   "name",
@@ -26,8 +32,6 @@ var (
 		Help:      "Template to use for the rule.",
 	}
 
-	ruleTemplateOptions = flagOptionsFromMapping(ruleTemplateMappings)
-
 	ruleEnabled = Flag{
 		Name:      "Enabled",
 		LongForm:  "enabled",
@@ -35,12 +39,12 @@ var (
 		Help:      "Enable (or disable) a rule.",
 	}
 
-	ruleTemplateMappings = map[string]string{
-		"Empty rule":                ruleTemplateEmptyRule,
-		"Add email to access token": ruleTemplateAddEmailToAccessToken,
-		"Check last password reset": ruleTemplateCheckLastPasswordReset,
-		"IP address allow list":     ruleTemplateIPAddressAllowList,
-		"IP address deny list":      ruleTemplateIPAddressDenyList,
+	ruleTemplateOptions = pickerOptions{
+		{"Empty rule", ruleTemplateEmptyRule},
+		{"Add email to access token", ruleTemplateAddEmailToAccessToken},
+		{"Check last password reset", ruleTemplateCheckLastPasswordReset},
+		{"IP address allow list", ruleTemplateIPAddressAllowList},
+		{"IP address deny list", ruleTemplateIPAddressDenyList},
 	}
 )
 
@@ -110,7 +114,7 @@ auth0 rules create --name "My Rule" --template [empty-rule]"
 				return err
 			}
 
-			if err := ruleTemplate.Select(cmd, &inputs.Template, ruleTemplateOptions, nil); err != nil {
+			if err := ruleTemplate.Select(cmd, &inputs.Template, ruleTemplateOptions.labels(), nil); err != nil {
 				return err
 			}
 
@@ -118,7 +122,7 @@ auth0 rules create --name "My Rule" --template [empty-rule]"
 			// `--stdin` based commands. For now we don't have
 			// those yet, so keeping this simple.
 			script, err := prompt.CaptureInputViaEditor(
-				ruleTemplateMappings[inputs.Template],
+				ruleTemplateOptions.getValue(inputs.Template),
 				inputs.Name+".*.js",
 			)
 			if err != nil {
@@ -171,17 +175,9 @@ auth0 rules show <id>
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
-				// TODO(cyx): Consider making a primitive for
-				// Argument to ask using a provided func.
-				var err error
-				inputs.ID, err = promptForRuleViaDropdown(cli, cmd)
+				err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
 				if err != nil {
 					return err
-				}
-
-				if inputs.ID == "" {
-					cli.renderer.Infof("There are currently no rules.")
-					return nil
 				}
 			}
 
@@ -215,7 +211,7 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 		Short: "Delete a rule",
 		Long: `Delete a rule:
 
-auth0 rules delete rul_d2VSaGlyaW5n`,
+auth0 rules delete <rule-id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -223,17 +219,9 @@ auth0 rules delete rul_d2VSaGlyaW5n`,
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
-				// TODO(cyx): Consider making a primitive for
-				// Argument to ask using a provided func.
-				var err error
-				inputs.ID, err = promptForRuleViaDropdown(cli, cmd)
+				err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
 				if err != nil {
 					return err
-				}
-
-				if inputs.ID == "" {
-					cli.renderer.Infof("There are currently no rules.")
-					return nil
 				}
 			}
 
@@ -264,7 +252,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 		Short: "Update a rule",
 		Long: `Update a rule:
 
-auth0 rules update --id  rul_d2VSaGlyaW5n --name "My Updated Rule" --enabled=false
+auth0 rules update <rule-id> --name "My Updated Rule" --enabled=false
 		`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
@@ -273,17 +261,9 @@ auth0 rules update --id  rul_d2VSaGlyaW5n --name "My Updated Rule" --enabled=fal
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
-				// TODO(cyx): Consider making a primitive for
-				// Argument to ask using a provided func.
-				var err error
-				inputs.ID, err = promptForRuleViaDropdown(cli, cmd)
+				err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
 				if err != nil {
 					return err
-				}
-
-				if inputs.ID == "" {
-					cli.renderer.Infof("There are currently no rules.")
-					return nil
 				}
 			}
 
@@ -345,36 +325,20 @@ auth0 rules update --id  rul_d2VSaGlyaW5n --name "My Updated Rule" --enabled=fal
 	return cmd
 }
 
-func promptForRuleViaDropdown(cli *cli, cmd *cobra.Command) (id string, err error) {
-	dropdown := Flag{Name: "Rule"}
-
-	var rules []*management.Rule
-
-	// == Start experimental dropdown for names => id.
-	//    TODO(cyx): Consider extracting this
-	//    pattern once we've done more of it.
-	err = ansi.Waiting(func() error {
-		list, err := cli.api.Rule.List()
-		if err != nil {
-			return err
-		}
-		rules = list.Rules
-		return nil
-	})
-
-	if err != nil || len(rules) == 0 {
-		return "", err
+func (c *cli) rulePickerOptions() (pickerOptions, error) {
+	list, err := c.api.Rule.List()
+	if err != nil {
+		return nil, err
 	}
 
-	mapping := map[string]string{}
-	for _, r := range rules {
-		mapping[r.GetName()] = r.GetID()
+	var opts pickerOptions
+	for _, r := range list.Rules {
+		opts = append(opts, pickerOption{value: r.GetID(), label: r.GetName()})
 	}
 
-	var name string
-	if err := dropdown.Select(cmd, &name, flagOptionsFromMapping(mapping), nil); err != nil {
-		return "", err
+	if len(opts) == 0 {
+		return nil, errors.New("There are currently no rules.")
 	}
 
-	return mapping[name], nil
+	return opts, nil
 }
