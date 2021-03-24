@@ -59,7 +59,12 @@ func (r *Renderer) Errorf(format string, a ...interface{}) {
 }
 
 func (r *Renderer) Heading(text ...string) {
-	fmt.Fprintf(r.MessageWriter, "\n%s %s\n", ansi.Faint("==="), strings.Join(text, " "))
+	heading := fmt.Sprintf("%s %s\n", ansi.Bold(r.Tenant), strings.Join(text, " "))
+	fmt.Fprintf(r.MessageWriter, "\n%s %s\n", ansi.Faint("==="), heading)
+}
+
+func (r *Renderer) EmptyState(resource string) {
+	fmt.Fprintf(r.MessageWriter, "No %s available.\n", resource)
 }
 
 type View interface {

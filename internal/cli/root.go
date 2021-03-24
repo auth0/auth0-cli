@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 
-	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/spf13/cobra"
@@ -95,11 +94,7 @@ func Execute() {
 	// rootCmd.AddCommand(triggersCmd(cli))
 
 	if err := rootCmd.ExecuteContext(context.TODO()); err != nil {
-		header := []string{"error\n"}
-		if cli.tenant != "" {
-			header = append([]string{ansi.Bold(cli.tenant)}, header...)
-		}
-		cli.renderer.Heading(header...)
+		cli.renderer.Heading("error")
 		cli.renderer.Errorf(err.Error())
 		os.Exit(1)
 	}

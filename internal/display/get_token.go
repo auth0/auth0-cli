@@ -12,7 +12,7 @@ import (
 )
 
 func (r *Renderer) GetToken(c *management.Client, t *authutil.TokenResponse) {
-	r.Heading(ansi.Bold(auth0.StringValue(c.Name)), "tokens\n")
+	r.Heading(fmt.Sprintf("tokens for %s", auth0.StringValue(c.Name)))
 
 	switch r.Format {
 	case OutputFormatJSON:
