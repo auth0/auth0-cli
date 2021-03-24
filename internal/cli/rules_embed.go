@@ -19,4 +19,7 @@ var (
 
 	//go:embed data/rule-template-ip-address-deny-list.js
 	ruleTemplateIPAddressDenyList string
+
+	//go:embed data/rule-template-simple-domain-allow-list.js
+	ruleTemplateSimpleDomainAllowList string
 )

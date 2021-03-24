@@ -43,6 +43,7 @@ var (
 		{"Empty rule", ruleTemplateEmptyRule},
 		{"Add email to access token", ruleTemplateAddEmailToAccessToken},
 		{"Check last password reset", ruleTemplateCheckLastPasswordReset},
+		{"Simple domain allow list", ruleTemplateSimpleDomainAllowList},
 		{"IP address allow list", ruleTemplateIPAddressAllowList},
 		{"IP address deny list", ruleTemplateIPAddressDenyList},
 	}
