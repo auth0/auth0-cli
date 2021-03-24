@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"net/url"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -122,11 +123,11 @@ auth0 apis show <id>
 				inputs.ID = args[0]
 			}
 
-			api := &management.ResourceServer{ID: &inputs.ID}
+			var api *management.ResourceServer
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				api, err = cli.api.ResourceServer.Read(inputs.ID)
+				api, err = cli.api.ResourceServer.Read(url.PathEscape(inputs.ID))
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to get an API with Id '%s': %w", inputs.ID, err)
@@ -229,7 +230,7 @@ auth0 apis update <id> --name myapi
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				current, err = cli.api.ResourceServer.Read(inputs.ID)
+				current, err = cli.api.ResourceServer.Read(url.PathEscape(inputs.ID))
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to load API. The Id %v specified doesn't exist", inputs.ID)
@@ -258,7 +259,7 @@ auth0 apis update <id> --name myapi
 			}
 
 			if err := ansi.Waiting(func() error {
-				return cli.api.ResourceServer.Update(inputs.ID, api)
+				return cli.api.ResourceServer.Update(current.GetID(), api)
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred while trying to update an API with Id '%s': %w", inputs.ID, err)
 			}
@@ -307,7 +308,7 @@ auth0 apis delete <id>
 			}
 
 			return ansi.Spinner("Deleting API", func() error {
-				err := cli.api.ResourceServer.Delete(inputs.ID)
+				err := cli.api.ResourceServer.Delete(url.PathEscape(inputs.ID))
 				if err != nil {
 					return fmt.Errorf("An unexpected error occurred while attempting to delete an API with Id '%s': %w", inputs.ID, err)
 				}
