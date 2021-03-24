@@ -3,6 +3,7 @@ package display
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -154,6 +155,8 @@ func makeScopeView(scope *management.ResourceServerScope) *scopeView {
 }
 
 func getScopes(scopes []*management.ResourceServerScope) (*string, bool) {
+	ellipsis := "..."
+	separator := " "
 	padding := 16 // the longest apiView key plus two spaces before and after in the label column
 	terminalWidth, _, err := term.GetSize(int(os.Stdin.Fd()))
 	if err != nil {
@@ -161,27 +164,29 @@ func getScopes(scopes []*management.ResourceServerScope) (*string, bool) {
 	}
 
 	var scopesForDisplay string
-	truncated := false
 	maxCharacters := terminalWidth - padding
 
 	for i, scope := range scopes {
-		scopeValue := *scope.Value
-		runeScope := []rune(scopeValue)
-		characterLength := len(runeScope)
-		spacer := " "
+		prepend := separator
 
-		// no spacer prepended for first value
+		// no separator prepended for first value
 		if i == 0 {
-			spacer = ""
+			prepend = ""
 		}
-
-		if characterLength <= maxCharacters-len(scopesForDisplay) {
-			scopesForDisplay += fmt.Sprintf("%s%s", spacer, scopeValue)
-		} else {
-			truncated = true
-			break
-		}
+		scopesForDisplay += fmt.Sprintf("%s%s", prepend, *scope.Value)
 	}
 
-	return &scopesForDisplay, truncated
+	if len(scopesForDisplay) <= maxCharacters {
+		return &scopesForDisplay, false
+	}
+
+	truncationIndex := maxCharacters - len(ellipsis)
+	lastSeparator := strings.LastIndex(string(scopesForDisplay[:truncationIndex]), separator)
+	if lastSeparator != -1 {
+		truncationIndex = lastSeparator
+	}
+
+	scopesForDisplay = fmt.Sprintf("%s%s", string(scopesForDisplay[:truncationIndex]), ellipsis)
+
+	return &scopesForDisplay, true
 }
