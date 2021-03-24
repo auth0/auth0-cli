@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/auth0"
-	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 )
 
@@ -60,11 +58,7 @@ func (a *Argument) Pick(cmd *cobra.Command, result *string, fn pickerOptionsFunc
 
 func selectArgument(cmd *cobra.Command, a *Argument, value interface{}, options []string, defaultValue *string) error {
 	if canPrompt(cmd) {
-		input := prompt.SelectInput("", a.GetLabel(), a.GetHelp(), options, auth0.StringValue(defaultValue), true)
-
-		if err := prompt.AskOne(input, value); err != nil {
-			return handleInputError(err)
-		}
+		return _select(cmd, a, value, options, defaultValue, false)
 	}
 
 	return nil
