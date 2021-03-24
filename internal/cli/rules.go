@@ -179,11 +179,6 @@ auth0 rules show <id>
 				if err != nil {
 					return err
 				}
-
-				if inputs.ID == "" {
-					cli.renderer.Infof("There are currently no rules.")
-					return nil
-				}
 			}
 
 			var rule *management.Rule
@@ -228,11 +223,6 @@ auth0 rules delete <rule-id>`,
 				if err != nil {
 					return err
 				}
-
-				if inputs.ID == "" {
-					cli.renderer.Infof("There are currently no rules.")
-					return nil
-				}
 			}
 
 			err := ansi.Spinner("Deleting rule", func() error {
@@ -274,11 +264,6 @@ auth0 rules update <rule-id> --name "My Updated Rule" --enabled=false
 				err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
 				if err != nil {
 					return err
-				}
-
-				if inputs.ID == "" {
-					cli.renderer.Infof("There are currently no rules.")
-					return nil
 				}
 			}
 

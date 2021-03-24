@@ -170,12 +170,6 @@ auth0 apps show <id>
 				if err != nil {
 					return err
 				}
-
-				if inputs.ID == "" {
-					cli.renderer.Infof("There are currently no apps.")
-					return nil
-				}
-
 			} else {
 				inputs.ID = args[0]
 			}
@@ -221,12 +215,6 @@ auth0 apps delete <id>
 				if err != nil {
 					return err
 				}
-
-				if inputs.ID == "" {
-					cli.renderer.Infof("There are currently no apps.")
-					return nil
-				}
-
 			} else {
 				inputs.ID = args[0]
 			}
@@ -409,12 +397,6 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				if err != nil {
 					return err
 				}
-
-				if inputs.ID == "" {
-					cli.renderer.Infof("There are currently no apps.")
-					return nil
-				}
-
 			} else {
 				inputs.ID = args[0]
 			}

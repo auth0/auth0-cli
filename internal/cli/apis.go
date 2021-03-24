@@ -118,12 +118,6 @@ auth0 apis show <id>
 				if err != nil {
 					return err
 				}
-
-				if inputs.ID == "" {
-					cli.renderer.Infof("There are currently no APIs.")
-					return nil
-				}
-
 			} else {
 				inputs.ID = args[0]
 			}
@@ -229,12 +223,6 @@ auth0 apis update <id> --name myapi
 				if err != nil {
 					return err
 				}
-
-				if inputs.ID == "" {
-					cli.renderer.Infof("There are currently no APIs.")
-					return nil
-				}
-
 			} else {
 				inputs.ID = args[0]
 			}
@@ -308,12 +296,6 @@ auth0 apis delete <id>
 				if err != nil {
 					return err
 				}
-
-				if inputs.ID == "" {
-					cli.renderer.Infof("There are currently no APIs.")
-					return nil
-				}
-
 			} else {
 				inputs.ID = args[0]
 			}
@@ -359,12 +341,6 @@ auth0 apis scopes list <id>
 				if err != nil {
 					return err
 				}
-
-				if inputs.ID == "" {
-					cli.renderer.Infof("There are currently no APIs.")
-					return nil
-				}
-
 			} else {
 				inputs.ID = args[0]
 			}
