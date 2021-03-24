@@ -61,13 +61,13 @@ func selectArgument(cmd *cobra.Command, a *Argument, value interface{}, options 
 		return _select(cmd, a, value, options, defaultValue, false)
 	}
 
-	return nil
+	return fmt.Errorf("Missing a required argument: %s", a.GetName())
 }
 
 func askArgument(cmd *cobra.Command, i commandInput, value interface{}) error {
 	if canPrompt(cmd) {
 		return ask(cmd, i, value, nil, true)
-	} else {
-		return fmt.Errorf("Missing a required argument: %s", i.GetName())
 	}
+
+	return fmt.Errorf("Missing a required argument: %s", i.GetName())
 }
