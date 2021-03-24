@@ -262,7 +262,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 		Short: "Update a rule",
 		Long: `Update a rule:
 
-auth0 rules update --id <rule-id> --name "My Updated Rule" --enabled=false
+auth0 rules update <rule-id> --name "My Updated Rule" --enabled=false
 		`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
