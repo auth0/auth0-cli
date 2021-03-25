@@ -37,7 +37,7 @@ auth0 [command] --help
 ### Onboarding Journey
 
 Following these instructions will give you a sense of what's possible with the
-auth0 CLI. To start, you will have to login:
+Auth0 CLI. To start, you will have to login:
 
 #### Login
 
@@ -85,7 +85,7 @@ dashboard, you'll be able to test logging in using a specific application.
 If you have the client ID, you may specify it via the `--client-id` flag,
 otherwise a prompt will be presented:
 
-```
+```bash
 auth0 test login
 ```
 
@@ -95,7 +95,7 @@ Once you have a few logins in place, you might wanna tail your logs. This is
 done by running the following command:
 
 ```bash
-auth0 logs -f
+auth0 logs tail
 ```
 
 After running that, one might see the following output:
@@ -108,7 +108,7 @@ If there are errors encountered, such as the following example, you may run it
 with the `--debug` flag as follows:
 
 ```bash
-auth0 logs -f --debug
+auth0 logs tail --debug
 ```
 
 The full raw data will be displayed below every error:
