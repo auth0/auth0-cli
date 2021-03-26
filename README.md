@@ -23,7 +23,7 @@ brew install auth0/auth0-cli/auth0
 
 1. Download the _Darwin_ binaries from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
 1. Extract
-1. Move `auth0` to `/usr/local/bin/auth0`, e.g.: `mv ~/Desktop/auth0 /usr/local/bin`
+1. Run `./auth0`
 1. Setup CLI commands completion for your terminal:
 	-  (**bash**) `auth0 completion bash > /usr/local/etc/bash_completion.d/auth0`
 	-  (**zsh**)  `auth0 completion zsh > "${fpath[1]}/_auth0"`
