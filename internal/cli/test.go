@@ -65,7 +65,9 @@ If --client-id is not provided, the default client "CLI Login Testing" will be u
 auth0 test login --client-id <id>
 auth0 test login -c <id> --connection <connection>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			const commandKey = "test_login"
 			var userInfo *authutil.UserInfo
+
 			tenant, err := cli.getTenant()
 			if err != nil {
 				return err
@@ -116,6 +118,21 @@ auth0 test login -c <id> --connection <connection>`,
 
 			fmt.Fprint(cli.renderer.MessageWriter, "\n")
 			cli.renderer.TryLogin(userInfo, tokenResponse)
+
+			isFirstRun, err := cli.isFirstCommandRun(inputs.ClientID, commandKey)
+			if err != nil {
+				return err
+			}
+
+			if isFirstRun {
+				cli.renderer.Infof("%s Login flow is working! Next, try downloading and running a Quickstart: 'auth0 quickstarts download %s'", 
+				ansi.Faint("Hint:"), inputs.ClientID)
+
+				if err := cli.setFirstCommandRun(inputs.ClientID, commandKey); err != nil {
+					return err
+				}
+			}
+
 			return nil
 		},
 	}

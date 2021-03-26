@@ -40,10 +40,15 @@ type config struct {
 // tenant is the cli's concept of an auth0 tenant. The fields are tailor fit
 // specifically for interacting with the management API.
 type tenant struct {
-	Name        string    `json:"name"`
-	Domain      string    `json:"domain"`
-	AccessToken string    `json:"access_token,omitempty"`
-	ExpiresAt   time.Time `json:"expires_at"`
+	Name        string         `json:"name"`
+	Domain      string         `json:"domain"`
+	AccessToken string         `json:"access_token,omitempty"`
+	ExpiresAt   time.Time      `json:"expires_at"`
+	Apps        map[string]app `json:"apps"`
+}
+
+type app struct {
+	FirstRuns map[string]bool `json:"first_runs"`
 }
 
 var errUnauthenticated = errors.New("Not yet configured. Try `auth0 login`.")
@@ -224,7 +229,7 @@ func (c *cli) addTenant(ten tenant) error {
 	c.config.Tenants[ten.Name] = ten
 
 	if err := c.persistConfig(); err != nil {
-		return fmt.Errorf("persisting config: %w", err)
+		return fmt.Errorf("Unexpected error persisting config: %w", err)
 	}
 
 	return nil
@@ -266,6 +271,52 @@ func (c *cli) removeTenant(ten string) error {
 	tr := &auth.TokenRetriever{Secrets: &auth.Keyring{}}
 	if err := tr.Delete(ten); err != nil {
 		return fmt.Errorf("Unexpected error clearing tenant information: %w", err)
+	}
+
+	return nil
+}
+
+func (c *cli) isFirstCommandRun(clientID string, command string) (bool, error) {
+	tenant, err := c.getTenant()
+
+	if err != nil {
+		return false, err
+	}
+
+	if a, found := tenant.Apps[clientID]; found {
+		if a.FirstRuns[command] {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
+func (c *cli) setFirstCommandRun(clientID string, command string) error {
+	tenant, err := c.getTenant()
+
+	if err != nil {
+		return err
+	}
+
+	if a, found := tenant.Apps[clientID]; found {
+		if a.FirstRuns == nil {
+			a.FirstRuns = map[string]bool{}
+		}
+		a.FirstRuns[command] = true
+		tenant.Apps[clientID] = a
+	} else {
+		tenant.Apps[clientID] = app{
+			FirstRuns: map[string]bool{
+				command: true,
+			},
+		}
+	}
+
+	c.config.Tenants[tenant.Name] = tenant
+
+	if err := c.persistConfig(); err != nil {
+		return fmt.Errorf("Unexpected error persisting config: %w", err)
 	}
 
 	return nil
