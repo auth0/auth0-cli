@@ -21,7 +21,7 @@ brew install auth0/auth0-cli/auth0
 
 #### Manually
 
-1. Download the _Darwin_ binaries from: https://github.com/auth0/auth0-cli/releases/latest/
+1. Download the _Darwin_ binaries from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
 1. Extract
 1. Move `auth0` to `/usr/local/bin/auth0`, e.g.: `mv ~/Desktop/auth0 /usr/local/bin`
 1. Setup CLI commands completion for your terminal:
@@ -35,9 +35,17 @@ brew install auth0/auth0-cli/auth0
 
 #### Manually
 
-1. Download the _Windows_ binaries from: https://github.com/auth0/auth0-cli/releases/latest/
+1. Download the _Windows_ binaries from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
 1. Extract
 1. Run `auth0.exe`
+
+### Linux
+
+#### Manually
+
+1. Download the _Linux_ binaries from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
+1. Extract `$  tar -xf auth0-cli_{dowloaded version here}_Linux_x86_64.tar.gz`
+1. Run `./auth0` 
 
 ## Usage
 
