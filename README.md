@@ -46,6 +46,9 @@ brew install auth0/auth0-cli/auth0
 1. Download the _Linux_ binaries from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
 1. Extract `$  tar -xf auth0-cli_{dowloaded version here}_Linux_x86_64.tar.gz`
 1. Run `./auth0` 
+1. Setup CLI commands completion for your terminal:
+	-  `sudo ./auth0 completion bash > /etc/bash_completion.d/auth0`
+> see more completion options: `auth0 completion -h` 
 
 ## Usage
 
