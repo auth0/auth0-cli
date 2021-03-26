@@ -1,6 +1,8 @@
 package auth
 
-import "github.com/zalando/go-keyring"
+import (
+	"github.com/zalando/go-keyring"
+)
 
 type Keyring struct{}
 

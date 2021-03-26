@@ -39,7 +39,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 		cli.renderer.Infof("If you don't have an account, please go to https://auth0.com/signup, otherwise continue in the browser.\n\n")
 	}
 
-	a := &auth.Authenticator{Secrets: &auth.Keyring{}}
+	a := &auth.Authenticator{}
 	state, err := a.Start(ctx)
 	if err != nil {
 		return fmt.Errorf("could not start the authentication process: %w.", err)
@@ -62,6 +62,14 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 
 	cli.renderer.Infof("Successfully logged in.")
 	cli.renderer.Infof("Tenant: %s\n", res.Tenant)
+
+	// store the refresh token
+	secretsStore := &auth.Keyring{}
+	err = secretsStore.Set(auth.SecretsNamespace, res.Tenant, res.RefreshToken)
+	if err != nil {
+		// log the error but move on
+		cli.renderer.Warnf("Could not store the refresh token locally, please expect to login again once your access token expired: %s.", err.Error())
+	}
 
 	err = cli.addTenant(tenant{
 		Name:        res.Tenant,
