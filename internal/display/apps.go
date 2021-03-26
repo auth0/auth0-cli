@@ -15,6 +15,10 @@ const (
 	quickstartsRegularWeb = "https://auth0.com/docs/quickstart/webapp"
 	quickstartsM2M        = "https://auth0.com/docs/quickstart/backend"
 	quickstartsGeneric    = "https://auth0.com/docs/quickstarts"
+	friendlyM2M           = "machine to machine"
+	friendlyNative        = "native"
+	friendlySpa           = "single page application"
+	friendlyReg           = "regular web application"
 )
 
 type applicationView struct {
@@ -267,16 +271,16 @@ func appTypeFor(v *string) string {
 		return "generic"
 
 	case *v == "non_interactive":
-		return "machine to machine"
+		return friendlyM2M
 
 	case *v == "native":
-		return "native"
+		return friendlyNative
 
 	case *v == "spa":
-		return "single page application"
+		return friendlySpa
 
 	case *v == "regular_web":
-		return "regular web application"
+		return friendlyReg
 
 	default:
 		return *v
@@ -308,18 +312,14 @@ func interfaceSliceToString(s []interface{}) []string {
 
 func applyColor(a string) string {
 	switch {
-	case a == "machine to machine":
+	case a == friendlyM2M:
 		return ansi.Green(a)
-
-	case a == "native":
+	case a == friendlyNative:
 		return ansi.Cyan(a)
-
-	case a == "single page application":
+	case a == friendlySpa:
 		return ansi.Blue(a)
-
-	case a == "regular web application":
+	case a == friendlyReg:
 		return ansi.Magenta(a)
-
 	default:
 		return a
 	}
