@@ -68,7 +68,7 @@ func (v *applicationView) AsTableRow() []string {
 	if v.revealSecret {
 		return []string{
 			v.Name,
-			v.Type,
+			applyColor(v.Type),
 			ansi.Faint(v.ClientID),
 			ansi.Italic(v.ClientSecret),
 			strings.Join(v.Callbacks, ", "),
@@ -76,7 +76,7 @@ func (v *applicationView) AsTableRow() []string {
 	}
 	return []string{
 		v.Name,
-		v.Type,
+		applyColor(v.Type),
 		ansi.Faint(v.ClientID),
 		strings.Join(v.Callbacks, ", "),
 	}
@@ -94,7 +94,7 @@ func (v *applicationView) KeyValues() [][]string {
 			[]string{"CLIENT ID", ansi.Faint(v.ClientID)},
 			[]string{"NAME", v.Name},
 			[]string{"DESCRIPTION", v.Description},
-			[]string{"TYPE", v.Type},
+			[]string{"TYPE", applyColor(v.Type)},
 			[]string{"CLIENT SECRET", ansi.Italic(v.ClientSecret)},
 			[]string{"CALLBACKS", callbacks},
 			[]string{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
@@ -109,7 +109,7 @@ func (v *applicationView) KeyValues() [][]string {
 		[]string{"CLIENT ID", ansi.Faint(v.ClientID)},
 		[]string{"NAME", v.Name},
 		[]string{"DESCRIPTION", v.Description},
-		[]string{"TYPE", v.Type},
+		[]string{"TYPE", applyColor(v.Type)},
 		[]string{"CALLBACKS", callbacks},
 		[]string{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
 		[]string{"ALLOWED ORIGINS", allowedOrigins},
@@ -145,14 +145,14 @@ func (v *applicationListView) AsTableRow() []string {
 		return []string{
 			ansi.Faint(v.ClientID),
 			v.Name,
-			v.Type,
+			applyColor(v.Type),
 			ansi.Italic(v.ClientSecret),
 		}
 	}
 	return []string{
 		ansi.Faint(v.ClientID),
 		v.Name,
-		v.Type,
+		applyColor(v.Type),
 	}
 }
 
@@ -304,4 +304,23 @@ func interfaceSliceToString(s []interface{}) []string {
 		res[i] = fmt.Sprintf("%s", v)
 	}
 	return res
+}
+
+func applyColor(a string) string {
+	switch {
+	case a == "machine to machine":
+		return ansi.Green(a)
+
+	case a == "native":
+		return ansi.Cyan(a)
+
+	case a == "single page application":
+		return ansi.Blue(a)
+
+	case a == "regular web application":
+		return ansi.Magenta(a)
+
+	default:
+		return a
+	}
 }
