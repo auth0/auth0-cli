@@ -24,14 +24,14 @@ type TokenRetriever struct {
 
 // Delete deletes the given tenant from the secrets storage.
 func (t *TokenRetriever) Delete(tenant string) error {
-	return t.Secrets.Delete(secretsNamespace, tenant)
+	return t.Secrets.Delete(SecretsNamespace, tenant)
 }
 
 // Refresh gets a new access token from the provided refresh token,
 // The request is used the default client_id and endpoint for device authentication.
 func (t *TokenRetriever) Refresh(ctx context.Context, tenant string) (TokenResponse, error) {
 	// get stored refresh token:
-	refreshToken, err := t.Secrets.Get(secretsNamespace, tenant)
+	refreshToken, err := t.Secrets.Get(SecretsNamespace, tenant)
 	if err != nil {
 		return TokenResponse{}, fmt.Errorf("cannot get the stored refresh token: %w", err)
 	}
