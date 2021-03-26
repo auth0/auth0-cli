@@ -13,6 +13,14 @@ Build, test, and manage your integration with **[Auth0](http://auth0.com/)** dir
 
 ### macOS
 
+#### Homebrew
+
+```
+brew install auth0/auth0-cli/auth0
+```
+
+#### Manually
+
 1. Download the binaries from: https://github.com/auth0/auth0-cli/releases/latest/
 1. Extract
 1. Move `auth0` to `/usr/local/bin/auth0`, e.g.: `mv ~/Desktop/auth0 /usr/local/bin`
