@@ -96,7 +96,7 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 			}
 
 			if len(args) == 0 {
-				err := appID.Pick(cmd, &inputs.ClientID, cli.appPickerOptions)
+				err := qsClientID.Pick(cmd, &inputs.ClientID, cli.appPickerOptions)
 				if err != nil {
 					return err
 				}
