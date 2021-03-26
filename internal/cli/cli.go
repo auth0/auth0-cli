@@ -348,14 +348,6 @@ func (c *cli) initContext() (err error) {
 	return nil
 }
 
-func mustRequireFlags(cmd *cobra.Command, flags ...string) {
-	for _, f := range flags {
-		if err := cmd.MarkFlagRequired(f); err != nil {
-			panic(err)
-		}
-	}
-}
-
 func canPrompt(cmd *cobra.Command) bool {
 	noInput, err := cmd.Root().Flags().GetBool("no-input")
 

@@ -4,6 +4,7 @@
 NAME := auth0-cli
 PKG := github.com/auth0/$(NAME)
 BUILDINFOPKG := $(PKG)/internal/build-info
+GOBIN ?= $(shell go env GOPATH)/bin
 
 ## setup variables for build-info
 BUILDUSER := $(shell whoami)
@@ -60,4 +61,14 @@ $(GOBIN)/mockgen:
 
 .PHONY: mocks
 mocks: $(GOBIN)/mockgen
-	@go generate ./...
+	go generate ./...
+
+$(GOBIN)/commander:
+	cd && GO111MODULE=auto go get github.com/commander-cli/commander/cmd/commander
+
+$(GOBIN)/auth0-cli-config-generator:
+	go install ./pkg/auth0-cli-config-generator
+
+integration: $(GOBIN)/auth0-cli-config-generator $(GOBIN)/commander
+	auth0-cli-config-generator && commander test commander.yaml
+.PHONY: integration
