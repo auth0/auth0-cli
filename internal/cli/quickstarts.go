@@ -98,15 +98,15 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if !canPrompt(cmd) {
+				return errors.New("This command can only be run on interactive mode")
+			}
+
 			if inputs.ClientID == "" {
 				err := qsIDArg.Pick(cmd, &inputs.ClientID, cli.appPickerOptions)
 				if err != nil {
 					return err
 				}
-			}
-
-			if !canPrompt(cmd) {
-				return errors.New("This command can only be run on interactive mode")
 			}
 
 			client, err := cli.api.Client.Read(inputs.ClientID)
