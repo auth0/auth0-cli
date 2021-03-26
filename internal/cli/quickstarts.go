@@ -41,12 +41,9 @@ var (
 		return
 	}()
 
-	qsClientID = Flag{
-		Name:       "Client ID",
-		LongForm:   "client-id",
-		ShortForm:  "c",
-		Help:       "Client Id of an Auth0 application.",
-		IsRequired: true,
+	qsClientID = Argument{
+		Name: "Client ID",
+		Help: "Client Id of an Auth0 application.",
 	}
 
 	qsStack = Flag{
@@ -87,8 +84,9 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "download",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Download a quickstart sample app for a specific tech stack",
-		Long:  `auth0 quickstarts download --client-id <client-id> --stack <stack>`,
+		Long:  `auth0 quickstarts download --stack <stack>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -97,8 +95,13 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 				return errors.New("This command can only be run on interactive mode")
 			}
 
-			if err := qsClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
-				return err
+			if len(args) == 0 {
+				err := qsClientID.Pick(cmd, &inputs.ClientID, cli.appPickerOptions)
+				if err != nil {
+					return err
+				}
+			} else {
+				inputs.ClientID = args[0]
 			}
 
 			client, err := cli.api.Client.Read(inputs.ClientID)
@@ -154,7 +157,6 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 
-	qsClientID.RegisterString(cmd, &inputs.ClientID, "")
 	qsStack.RegisterString(cmd, &inputs.Stack, "")
 	return cmd
 }
