@@ -44,7 +44,7 @@ type tenant struct {
 	Domain      string         `json:"domain"`
 	AccessToken string         `json:"access_token,omitempty"`
 	ExpiresAt   time.Time      `json:"expires_at"`
-	Apps        map[string]app `json:"apps"`
+	Apps        map[string]app `json:"apps,omitempty"`
 }
 
 type app struct {
