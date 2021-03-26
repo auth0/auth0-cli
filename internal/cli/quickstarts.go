@@ -91,7 +91,7 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := appID.Pick(cmd, &inputs.ClientID, cli.appPickerOptions)
+				err := qsClientID.Pick(cmd, &inputs.ClientID, cli.appPickerOptions)
 				if err != nil {
 					return err
 				}
