@@ -19,7 +19,8 @@ const (
 	oauthTokenEndpoint = "https://auth0.auth0.com/oauth/token"
 	audiencePath       = "/api/v2/"
 
-	secretsNamespace = "auth0-cli"
+	// namespace used to set/get values from the keychain
+	SecretsNamespace = "auth0-cli"
 )
 
 var requiredScopes = []string{
@@ -31,25 +32,22 @@ var requiredScopes = []string{
 	"read:client_keys", "read:logs",
 }
 
-// SecretStore provides secure storage for sensitive data
+// SecretStore provides access to stored sensitive data.
 type SecretStore interface {
-	// Set sets the secret
-	Set(namespace, key, value string) error
 	// Get gets the secret
 	Get(namespace, key string) (string, error)
 	// Delete removes the secret
 	Delete(namespace, key string) error
 }
 
-type Authenticator struct {
-	Secrets SecretStore
-}
+type Authenticator struct{}
 
 type Result struct {
-	Tenant      string
-	Domain      string
-	AccessToken string
-	ExpiresIn   int64
+	Tenant       string
+	Domain       string
+	RefreshToken string
+	AccessToken  string
+	ExpiresIn    int64
 }
 
 type State struct {
@@ -122,17 +120,12 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 				return Result{}, fmt.Errorf("cannot parse tenant from the given access token: %w", err)
 			}
 
-			// store the refresh token
-			err = a.Secrets.Set(secretsNamespace, ten, res.RefreshToken)
-			if err != nil {
-				return Result{}, fmt.Errorf("cannot store refresh token: %w", err)
-			}
-
 			return Result{
-				AccessToken: res.AccessToken,
-				ExpiresIn:   res.ExpiresIn,
-				Tenant:      ten,
-				Domain:      domain,
+				RefreshToken: res.RefreshToken,
+				AccessToken:  res.AccessToken,
+				ExpiresIn:    res.ExpiresIn,
+				Tenant:       ten,
+				Domain:       domain,
 			}, nil
 		}
 	}

@@ -32,20 +32,6 @@ func (m *MockSecretStore) EXPECT() *MockSecretStoreMockRecorder {
 	return m.recorder
 }
 
-// Set mocks base method
-func (m *MockSecretStore) Set(namespace, key, value string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Set", namespace, key, value)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Set indicates an expected call of Set
-func (mr *MockSecretStoreMockRecorder) Set(namespace, key, value interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*MockSecretStore)(nil).Set), namespace, key, value)
-}
-
 // Get mocks base method
 func (m *MockSecretStore) Get(namespace, key string) (string, error) {
 	m.ctrl.T.Helper()
