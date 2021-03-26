@@ -229,7 +229,7 @@ func (c *cli) addTenant(ten tenant) error {
 	c.config.Tenants[ten.Name] = ten
 
 	if err := c.persistConfig(); err != nil {
-		return fmt.Errorf("Unexpected error persisting config: %w", err)
+		return fmt.Errorf("unexpected error persisting config: %w", err)
 	}
 
 	return nil
