@@ -32,19 +32,15 @@ var requiredScopes = []string{
 	"read:client_keys", "read:logs",
 }
 
-// SecretStore provides secure storage for sensitive data
+// SecretStore provides access to stored sensitive data.
 type SecretStore interface {
-	// Set sets the secret
-	Set(namespace, key, value string) error
 	// Get gets the secret
 	Get(namespace, key string) (string, error)
 	// Delete removes the secret
 	Delete(namespace, key string) error
 }
 
-type Authenticator struct {
-	Secrets SecretStore
-}
+type Authenticator struct{}
 
 type Result struct {
 	Tenant       string
