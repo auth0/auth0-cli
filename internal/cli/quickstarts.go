@@ -41,9 +41,17 @@ var (
 		return
 	}()
 
-	qsClientID = Argument{
+	qsIDArg = Argument{
 		Name: "Client ID",
 		Help: "Client Id of an Auth0 application.",
+	}
+
+	qsClientID = Flag{
+		Name:       "Client ID",
+		LongForm:   "client-id",
+		ShortForm:  "c",
+		Help:       "Client Id of an Auth0 application.",
+		IsRequired: true,
 	}
 
 	qsStack = Flag{
@@ -90,13 +98,11 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				err := qsClientID.Pick(cmd, &inputs.ClientID, cli.appPickerOptions)
+			if inputs.ClientID == "" {
+				err := qsIDArg.Pick(cmd, &inputs.ClientID, cli.appPickerOptions)
 				if err != nil {
 					return err
 				}
-			} else {
-				inputs.ClientID = args[0]
 			}
 
 			if !canPrompt(cmd) {
@@ -156,6 +162,7 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 
+	qsClientID.RegisterString(cmd, &inputs.ClientID, "")
 	qsStack.RegisterString(cmd, &inputs.Stack, "")
 	return cmd
 }
