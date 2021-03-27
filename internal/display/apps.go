@@ -238,7 +238,7 @@ func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bo
 		ansi.Faint("Hint:"),
 		client.GetClientID(),
 	)
-	r.Infof("%s You might wanna try 'auth0 quickstarts download --client-id %s'",
+	r.Infof("%s You might wanna try 'auth0 quickstarts download %s'",
 		ansi.Faint("Hint:"),
 		client.GetClientID(),
 	)
