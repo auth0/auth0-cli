@@ -168,7 +168,7 @@ func (r *Renderer) Markdown(document string) {
 		return
 	}
 
-	fmt.Fprintf(r.MessageWriter, output)
+	fmt.Fprint(r.MessageWriter, output)
 }
 
 func fprintfStr(w io.Writer, fmtStr string, argsStr ...string) {
