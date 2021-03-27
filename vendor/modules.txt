@@ -74,6 +74,11 @@ github.com/dsnet/compress/internal/prefix
 github.com/fatih/color
 # github.com/fsnotify/fsnotify v1.4.7
 github.com/fsnotify/fsnotify
+# github.com/getsentry/sentry-go v0.10.0
+## explicit
+github.com/getsentry/sentry-go
+github.com/getsentry/sentry-go/internal/crypto/randutil
+github.com/getsentry/sentry-go/internal/debug
 # github.com/goccy/go-json v0.4.7
 github.com/goccy/go-json
 # github.com/godbus/dbus/v5 v5.0.3
@@ -340,7 +345,7 @@ gopkg.in/auth0.v5/internal/tag
 gopkg.in/auth0.v5/management
 # gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
 ## explicit
-# gopkg.in/ini.v1 v1.51.0
+# gopkg.in/ini.v1 v1.51.1
 gopkg.in/ini.v1
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit
