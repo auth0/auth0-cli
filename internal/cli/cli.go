@@ -190,6 +190,10 @@ func (c *cli) getTenant() (tenant, error) {
 		return tenant{}, fmt.Errorf("Unable to find tenant: %s", c.tenant)
 	}
 
+	if t.Apps == nil {
+		t.Apps = map[string]app{}
+	}
+
 	return t, nil
 }
 
