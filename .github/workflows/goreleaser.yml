@@ -19,6 +19,13 @@ jobs:
         with:
           go-version: 1.16
 
+      - name: Prepare instrumentation
+        run: |
+          echo -n "$SENTRY_DSN" >> $GITHUB_WORKSPACE/internal/instrumentation/sentry_dsn
+        shell: bash
+        env:
+          SENTRY_DSN : ${{secrets.SENTRY_DSN}}
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2.4.1
         with:
