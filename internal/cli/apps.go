@@ -70,6 +70,7 @@ var (
 		ShortForm:  "o",
 		Help:       "Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.",
 		IsRequired: false,
+		AlwaysPrompt: true,
 	}
 	appWebOrigins = Flag{
 		Name:         "Allowed Web Origin URLs",
@@ -305,6 +306,15 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 				}
 			}
 
+			// Prompt for allowed origins URLs if app is SPA
+			if appIsSPA {
+				defaultValue := appDefaultURL
+
+				if err := appOrigins.AskMany(cmd, &inputs.AllowedOrigins, &defaultValue); err != nil {
+					return err
+				}
+			}
+
 			// Prompt for allowed web origins URLs if app is SPA
 			if appIsSPA {
 				defaultValue := appDefaultURL
@@ -454,6 +464,19 @@ auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
 				}
 
 				if err := appLogoutURLs.AskManyU(cmd, &inputs.AllowedLogoutURLs, &defaultValue); err != nil {
+					return err
+				}
+			}
+
+			// Prompt for allowed origins URLs if app is SPA
+			if appIsSPA {
+				defaultValue := appDefaultURL
+
+				if len(current.AllowedOrigins) > 0 {
+					defaultValue = stringSliceToCommaSeparatedString(interfaceToStringSlice(current.AllowedOrigins))
+				}
+
+				if err := appOrigins.AskManyU(cmd, &inputs.AllowedOrigins, &defaultValue); err != nil {
 					return err
 				}
 			}
