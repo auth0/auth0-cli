@@ -2,10 +2,12 @@ package cli
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
+	"github.com/auth0/auth0-cli/internal/instrumentation"
 	"github.com/spf13/cobra"
 )
 
@@ -93,9 +95,18 @@ func Execute() {
 	// rootCmd.AddCommand(actionsCmd(cli))
 	// rootCmd.AddCommand(triggersCmd(cli))
 
+	defer func() {
+		if v := recover(); v != nil {
+			err := fmt.Errorf("panic: %v", v)
+			instrumentation.ReportException(err)
+		}
+	}()
+
 	if err := rootCmd.ExecuteContext(context.TODO()); err != nil {
 		cli.renderer.Heading("error")
 		cli.renderer.Errorf(err.Error())
+
+		instrumentation.ReportException(err)
 		os.Exit(1)
 	}
 }

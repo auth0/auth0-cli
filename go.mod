@@ -9,6 +9,7 @@ require (
 	github.com/briandowns/spinner v1.12.0
 	github.com/charmbracelet/glamour v0.2.0
 	github.com/fatih/color v1.10.0 // indirect
+	github.com/getsentry/sentry-go v0.10.0
 	github.com/golang/mock v1.5.0
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/go-cmp v0.5.5
