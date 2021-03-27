@@ -15,6 +15,10 @@ const (
 	quickstartsRegularWeb = "https://auth0.com/docs/quickstart/webapp"
 	quickstartsM2M        = "https://auth0.com/docs/quickstart/backend"
 	quickstartsGeneric    = "https://auth0.com/docs/quickstarts"
+	friendlyM2M           = "machine to machine"
+	friendlyNative        = "native"
+	friendlySpa           = "single page application"
+	friendlyReg           = "regular web application"
 )
 
 type applicationView struct {
@@ -68,7 +72,7 @@ func (v *applicationView) AsTableRow() []string {
 	if v.revealSecret {
 		return []string{
 			v.Name,
-			v.Type,
+			applyColor(v.Type),
 			ansi.Faint(v.ClientID),
 			ansi.Italic(v.ClientSecret),
 			strings.Join(v.Callbacks, ", "),
@@ -76,7 +80,7 @@ func (v *applicationView) AsTableRow() []string {
 	}
 	return []string{
 		v.Name,
-		v.Type,
+		applyColor(v.Type),
 		ansi.Faint(v.ClientID),
 		strings.Join(v.Callbacks, ", "),
 	}
@@ -94,7 +98,7 @@ func (v *applicationView) KeyValues() [][]string {
 			[]string{"CLIENT ID", ansi.Faint(v.ClientID)},
 			[]string{"NAME", v.Name},
 			[]string{"DESCRIPTION", v.Description},
-			[]string{"TYPE", v.Type},
+			[]string{"TYPE", applyColor(v.Type)},
 			[]string{"CLIENT SECRET", ansi.Italic(v.ClientSecret)},
 			[]string{"CALLBACKS", callbacks},
 			[]string{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
@@ -109,7 +113,7 @@ func (v *applicationView) KeyValues() [][]string {
 		[]string{"CLIENT ID", ansi.Faint(v.ClientID)},
 		[]string{"NAME", v.Name},
 		[]string{"DESCRIPTION", v.Description},
-		[]string{"TYPE", v.Type},
+		[]string{"TYPE", applyColor(v.Type)},
 		[]string{"CALLBACKS", callbacks},
 		[]string{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
 		[]string{"ALLOWED ORIGINS", allowedOrigins},
@@ -145,14 +149,14 @@ func (v *applicationListView) AsTableRow() []string {
 		return []string{
 			ansi.Faint(v.ClientID),
 			v.Name,
-			v.Type,
+			applyColor(v.Type),
 			ansi.Italic(v.ClientSecret),
 		}
 	}
 	return []string{
 		ansi.Faint(v.ClientID),
 		v.Name,
-		v.Type,
+		applyColor(v.Type),
 	}
 }
 
@@ -267,16 +271,16 @@ func appTypeFor(v *string) string {
 		return "generic"
 
 	case *v == "non_interactive":
-		return "machine to machine"
+		return friendlyM2M
 
 	case *v == "native":
-		return "native"
+		return friendlyNative
 
 	case *v == "spa":
-		return "single page application"
+		return friendlySpa
 
 	case *v == "regular_web":
-		return "regular web application"
+		return friendlyReg
 
 	default:
 		return *v
@@ -304,4 +308,19 @@ func interfaceSliceToString(s []interface{}) []string {
 		res[i] = fmt.Sprintf("%s", v)
 	}
 	return res
+}
+
+func applyColor(a string) string {
+	switch {
+	case a == friendlyM2M:
+		return ansi.Green(a)
+	case a == friendlyNative:
+		return ansi.Cyan(a)
+	case a == friendlySpa:
+		return ansi.Blue(a)
+	case a == friendlyReg:
+		return ansi.Magenta(a)
+	default:
+		return a
+	}
 }

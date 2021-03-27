@@ -82,6 +82,42 @@ func Italic(text string) string {
 	return color.Sprintf(color.Italic(text))
 }
 
+// Red returns text colored red
+func Red(text string) string {
+	color := Color(os.Stdout)
+	return color.Sprintf(color.Red(text))
+}
+
+// Green returns text colored green
+func Green(text string) string {
+	color := Color(os.Stdout)
+	return color.Sprintf(color.Green(text))
+}
+
+// Yellow returns text colored yellow
+func Yellow(text string) string {
+	color := Color(os.Stdout)
+	return color.Sprintf(color.Yellow(text))
+}
+
+// Blue returns text colored blue
+func Blue(text string) string {
+	color := Color(os.Stdout)
+	return color.Sprintf(color.Blue(text))
+}
+
+// Magenta returns text colored magenta
+func Magenta(text string) string {
+	color := Color(os.Stdout)
+	return color.Sprintf(color.Magenta(text))
+}
+
+// Cyan returns text colored cyan
+func Cyan(text string) string {
+	color := Color(os.Stdout)
+	return color.Sprintf(color.BrightCyan(text))
+}
+
 // Linkify returns an ANSI escape sequence with an hyperlink, if the writer
 // supports colors.
 func Linkify(text, url string, w io.Writer) string {
