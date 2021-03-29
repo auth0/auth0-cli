@@ -21,7 +21,7 @@ jobs:
 
       - name: Prepare instrumentation
         run: |
-          echo -n "$SENTRY_DSN" >> $GITHUB_WORKSPACE/internal/instrumentation/sentry_dsn
+          echo -n "$SENTRY_DSN" >> $GITHUB_WORKSPACE/internal/instrumentation/sentrydsn.txt
         shell: bash
         env:
           SENTRY_DSN : ${{secrets.SENTRY_DSN}}
