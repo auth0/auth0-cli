@@ -55,7 +55,7 @@ To release a new version:
    - `$ git fetch`
    -  `$ git tags`
 3. create the **new** tag for the new release. For example, if the latest tag is `v0.1.1`, you should create `v.0.1.1`:
-   - `git tag v0.1.1`
+   - `$ git tag v0.1.2`
 4. push the new tag: 
    - `$ git push origin v0.1.2`
 
