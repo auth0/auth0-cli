@@ -59,5 +59,5 @@ To release a new version:
 4. push the new tag: 
    - `$ git push origin v0.1.2`
 
-The rest of the process will take place in the github action: https://github.com/auth0/auth0-cli/actions/workflows/goreleaser.yml
+The rest of the process will take place in the github action: https://github.com/auth0/auth0-cli/actions/workflows/goreleaser.yml.
 Once the workflow finished, a new release will be available for the create tag.
