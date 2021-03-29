@@ -11,11 +11,11 @@ builds:
   - windows
   binary: auth0
   ldflags:
-      - -X github.com/auth0/auth0-cli/internal/buildinfo.Version={{.Version}}
-      - -X github.com/auth0/auth0-cli/internal/buildinfo.Revision={{.Commit}}
-      - -X github.com/auth0/auth0-cli/internal/buildinfo.BuildUser=goreleaser'
-      - -X github.com/auth0/auth0-cli/internal/buildinfo.BuildDate={{.Date}}'
-      - -X github.com/auth0/auth0-cli/internal/instrumentation.SentryDSN={{.Env.SENTRY_DSN}}
+      - -X 'github.com/auth0/auth0-cli/internal/buildinfo.Version={{.Version}}'
+      - -X 'github.com/auth0/auth0-cli/internal/buildinfo.Revision={{.Commit}}'
+      - -X 'github.com/auth0/auth0-cli/internal/buildinfo.BuildUser=goreleaser'
+      - -X 'github.com/auth0/auth0-cli/internal/buildinfo.BuildDate={{.Date}}'
+      - -X 'github.com/auth0/auth0-cli/internal/instrumentation.SentryDSN={{.Env.SENTRY_DSN}}'
 archives:
   - replacements:
       darwin: Darwin
