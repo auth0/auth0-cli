@@ -53,7 +53,7 @@ To release a new version:
    - `$ git pull origin main`
 2. check the latest tag: 
    - `$ git fetch`
-   -  `$git tags`
+   -  `$ git tags`
 3. create the **new** tag for the new release. For example, if the latest tag is `v0.1.1`, you should create `v.0.1.1`:
    - `git tag v0.1.1`
 4. push the new tag: 
@@ -61,4 +61,3 @@ To release a new version:
 
 The rest of the process will take place in the github action: https://github.com/auth0/auth0-cli/actions/workflows/goreleaser.yml
 Once the workflow finished, a new release will be available for the create tag.
-
