@@ -28,14 +28,11 @@ generate:
 	go generate ./...
 .PHONY: generate
 
-setup:
-	@touch ./internal/instrumentation/sentrydsn.txt
-
-test: setup
+test:
 	CGO_ENABLED=1 go test -race ./... -count 1
 .PHONY: test
 
-lint: setup
+lint:
 	golangci-lint run -v --timeout=5m
 .PHONY: lint
 
@@ -56,7 +53,7 @@ build-all-platforms:
 .PHONY: build-all-platforms
 
 # Run all the tests and code checks
-ci: setup build-all-platforms test lint
+ci: build-all-platforms test lint
 .PHONY: ci
 
 $(GOBIN)/mockgen:
