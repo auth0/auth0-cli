@@ -1,5 +1,6 @@
 # project artifacts
 /auth0
+/internal/instrumentation/sentrydsn.txt
 
 # Swap
 [._]*.s[a-v][a-z]
