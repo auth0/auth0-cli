@@ -135,7 +135,7 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 			}
 
 			if exists && !cli.force {
-				if confirmed := prompt.Confirm(fmt.Sprintf("WARNING: %s already exists. Are you sure you want to proceed?", target)); !confirmed {
+				if confirmed := prompt.Confirm(fmt.Sprintf("WARNING: %s already exists.\n Are you sure you want to proceed?", target)); !confirmed {
 					return nil
 				}
 			}
@@ -346,44 +346,6 @@ func quickstartsTypeFor(v string) string {
 	}
 }
 
-// promptDefaultURLs checks whether the application is SPA or WebApp and
-// whether the app has already added the default quickstart url to allowed url lists.
-// If not, it prompts the user to add the default url and updates the application
-// if they accept.
-func promptDefaultURLs(cli *cli, client *management.Client, qsType string, qsStack string) error {
-	defaultURL := defaultURLFor(qsStack)
-
-	if !strings.EqualFold(qsType, qsSpa) && !strings.EqualFold(qsType, qsWebApp) {
-		return nil
-	}
-	if containsStr(client.Callbacks, defaultURL) || containsStr(client.AllowedLogoutURLs, defaultURL) {
-		return nil
-	}
-
-	a := &management.Client{
-		Callbacks:         client.Callbacks,
-		WebOrigins:        client.WebOrigins,
-		AllowedLogoutURLs: client.AllowedLogoutURLs,
-	}
-
-	if confirmed := prompt.Confirm(formatURLPrompt(qsType, defaultURL)); confirmed {
-		a.Callbacks = append(a.Callbacks, defaultURL)
-		a.AllowedLogoutURLs = append(a.AllowedLogoutURLs, defaultURL)
-		if strings.EqualFold(qsType, qsSpa) {
-			a.WebOrigins = append(a.WebOrigins, defaultURL)
-		}
-
-		err := ansi.Waiting(func() error {
-			return cli.api.Client.Update(client.GetClientID(), a)
-		})
-		if err != nil {
-			return err
-		}
-		cli.renderer.Infof("Application successfully updated")
-	}
-	return nil
-}
-
 func loadQuickstartSampleReadme(samplePath string) (string, error) {
 	data, err := ioutil.ReadFile(path.Join(samplePath, "README.md"))
 	if err != nil {
@@ -407,17 +369,81 @@ func relativeQuickstartSamplePath(samplePath string) (string, error) {
 	return relativePath, nil
 }
 
-// formatURLPrompt creates the correct prompt based on app type for
-// asking the user if they would like to add default urls.
-func formatURLPrompt(qsType string, url string) string {
-	var p strings.Builder
-	p.WriteString("\nQuickstarts use localhost, do you want to add %s to the list of allowed callback URLs")
-	if strings.EqualFold(qsType, qsSpa) {
-		p.WriteString(", logout URLs, and web origins?")
-	} else {
-		p.WriteString(" and logout URLs?")
+// promptDefaultURLs checks whether the application is SPA or WebApp and
+// whether the app has already added the default quickstart url to allowed url lists.
+// If not, it prompts the user to add the default url and updates the application
+// if they accept.
+func promptDefaultURLs(cli *cli, client *management.Client, qsType string, qsStack string) error {
+	defaultURL := defaultURLFor(qsStack)
+	defaultCallbackURL := defaultCallbackURLFor(qsStack)
+
+	if !strings.EqualFold(qsType, qsSpa) && !strings.EqualFold(qsType, qsWebApp) {
+		return nil
 	}
-	return fmt.Sprintf(p.String(), url)
+
+	a := &management.Client{
+		Callbacks:         client.Callbacks,
+		AllowedLogoutURLs: client.AllowedLogoutURLs,
+		AllowedOrigins:    client.AllowedOrigins,
+		WebOrigins:        client.WebOrigins,
+	}
+
+	if !containsStr(client.Callbacks, defaultCallbackURL) {
+		a.Callbacks = append(a.Callbacks, defaultCallbackURL)
+	}
+
+	if !containsStr(client.AllowedLogoutURLs, defaultURL) {
+		a.AllowedLogoutURLs = append(a.AllowedLogoutURLs, defaultURL)
+	}
+
+	if strings.EqualFold(qsType, qsSpa) {
+		if !containsStr(client.AllowedOrigins, defaultURL) {
+			a.AllowedOrigins = append(a.AllowedOrigins, defaultURL)
+		}
+
+		if !containsStr(client.WebOrigins, defaultURL) {
+			a.WebOrigins = append(a.WebOrigins, defaultURL)
+		}
+	}
+
+	callbackURLChanged := len(client.Callbacks) != len(a.Callbacks)
+	otherURLsChanged := len(client.AllowedLogoutURLs) != len(a.AllowedLogoutURLs) ||
+		len(client.AllowedOrigins) != len(a.AllowedOrigins) ||
+		len(client.WebOrigins) != len(a.WebOrigins)
+
+	if !callbackURLChanged && !otherURLsChanged {
+		return nil
+	}
+
+	if confirmed := prompt.Confirm(urlPromptFor(qsType, qsStack)); confirmed {
+		err := ansi.Waiting(func() error {
+			return cli.api.Client.Update(client.GetClientID(), a)
+		})
+		if err != nil {
+			return err
+		}
+		cli.renderer.Infof("Application successfully updated")
+	}
+	return nil
+}
+
+// urlPromptFor creates the correct prompt based on app type for
+// asking the user if they would like to add default urls.
+func urlPromptFor(qsType string, qsStack string) string {
+	var p strings.Builder
+	p.WriteString("Quickstarts use localhost, do you want to add %s to the list\n of allowed callback URLs")
+	switch strings.ToLower(qsStack) {
+	case "next.js": // See https://github.com/auth0/auth0-cli/issues/200
+		p.WriteString(" and %s to the list of allowed logout URLs?")
+		return fmt.Sprintf(p.String(), defaultCallbackURLFor(qsStack), defaultURLFor(qsStack))
+	default:
+		if strings.EqualFold(qsType, qsSpa) {
+			p.WriteString(", logout URLs, origins and web origins?")
+		} else {
+			p.WriteString(" and logout URLs?")
+		}
+	}
+	return fmt.Sprintf(p.String(), defaultURLFor(qsStack))
 }
 
 func defaultURLFor(s string) string {
@@ -426,6 +452,15 @@ func defaultURLFor(s string) string {
 		return defaultURL(qsDefaultURL, 4200)
 	default:
 		return defaultURL(qsDefaultURL, qspDefaultPort)
+	}
+}
+
+func defaultCallbackURLFor(s string) string {
+	switch strings.ToLower(s) {
+	case "next.js": // See https://github.com/auth0/auth0-cli/issues/200
+		return fmt.Sprintf("%s/api/auth/callback", defaultURLFor(s))
+	default:
+		return defaultURLFor(s)
 	}
 }
 
