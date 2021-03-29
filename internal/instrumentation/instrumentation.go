@@ -7,17 +7,16 @@ import (
 	"github.com/getsentry/sentry-go"
 )
 
-//go:embed sentrydsn.txt
-var sentryDSN string
+var SentryDSN string
 
 // ReportException is designed to be called once as the CLI exits. We're
 // purposefully initializing a client all the time given this context.
 func ReportException(err error) {
-	if sentryDSN == "" {
+	if SentryDSN == "" {
 		return
 	}
 
-	if err := sentry.Init(sentry.ClientOptions{Dsn: sentryDSN}); err != nil {
+	if err := sentry.Init(sentry.ClientOptions{Dsn: SentryDSN}); err != nil {
 		return
 	}
 
