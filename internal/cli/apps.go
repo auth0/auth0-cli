@@ -32,6 +32,13 @@ var (
 		Help:       "Name of the application.",
 		IsRequired: true,
 	}
+	appNone = Flag{
+		Name:      "None",
+		LongForm:  "none",
+		ShortForm: "n",
+		Help:      "Specify none of your apps",
+	}
+
 	appType = Flag{
 		Name:      "Type",
 		LongForm:  "type",
@@ -65,11 +72,11 @@ var (
 		AlwaysPrompt: true,
 	}
 	appOrigins = Flag{
-		Name:       "Allowed Origin URLs",
-		LongForm:   "origins",
-		ShortForm:  "o",
-		Help:       "Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.",
-		IsRequired: false,
+		Name:         "Allowed Origin URLs",
+		LongForm:     "origins",
+		ShortForm:    "o",
+		Help:         "Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.",
+		IsRequired:   false,
 		AlwaysPrompt: true,
 	}
 	appWebOrigins = Flag{
@@ -117,7 +124,57 @@ func appsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(showAppCmd(cli))
 	cmd.AddCommand(updateAppCmd(cli))
 	cmd.AddCommand(deleteAppCmd(cli))
+	cmd.AddCommand(useAppCmd(cli))
 
+	return cmd
+}
+
+func useAppCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID   string
+		None bool
+	}
+
+	cmd := &cobra.Command{
+		Use:   "use",
+		Short: "Choose a default application",
+		Long: `auth0 apps use <client-id>
+Specify your preferred application for interaction with the Auth0 CLI
+`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
+
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.None {
+				inputs.ID = ""
+			} else {
+				if len(args) == 0 {
+					err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
+					if err != nil {
+						return err
+					}
+				} else {
+					inputs.ID = args[0]
+				}
+			}
+
+			if err := cli.setDefaultAppID(inputs.ID); err != nil {
+				return err
+			}
+
+			if inputs.ID == "" {
+				cli.renderer.Infof("Successfully removed the default application")
+			} else {
+				cli.renderer.Infof("Successfully set the default application to %s", ansi.Faint(inputs.ID))
+				cli.renderer.Infof("%s You might wanna try 'auth0 quickstarts download %s'", ansi.Faint("Hint:"), inputs.ID)
+			}
+
+			return nil
+		},
+	}
+
+	appNone.RegisterBool(cmd, &inputs.None, false)
 	return cmd
 }
 
@@ -350,6 +407,10 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 				return cli.api.Client.Create(a)
 			}); err != nil {
 				return fmt.Errorf("Unable to create application: %w", err)
+			}
+
+			if err := cli.setDefaultAppID(a.GetClientID()); err != nil {
+				return err
 			}
 
 			// Render result
@@ -713,19 +774,40 @@ func (c *cli) appPickerOptions() (pickerOptions, error) {
 		return nil, err
 	}
 
-	// NOTE: because client names are not unique, we'll just number these
-	// labels.
-	var opts pickerOptions
-	for _, c := range list.Clients {
-		value := c.GetClientID()
-		label := fmt.Sprintf("%s %s", c.GetName(), ansi.Faint("("+value+")"))
-
-		opts = append(opts, pickerOption{value: value, label: label})
+	tenant, err := c.getTenant()
+	if err != nil {
+		return nil, err
 	}
 
-	if len(opts) == 0 {
+	// NOTE(cyx): To keep the contract for this simple, we'll rely on the
+	// implicit knowledge that the default value for the picker is the
+	// first option. With that in mind, we'll use the state in
+	// tenant.DefaultAppID to determine which should be chosen as the
+	// default.
+	var (
+		priorityOpts, opts pickerOptions
+	)
+	for _, c := range list.Clients {
+		// empty type means the default client that we shouldn't display.
+		if c.GetAppType() == "" {
+			continue
+		}
+
+		value := c.GetClientID()
+		label := fmt.Sprintf("%s %s", c.GetName(), ansi.Faint("("+value+")"))
+		opt := pickerOption{value: value, label: label}
+
+		// check if this is currently the default application.
+		if tenant.DefaultAppID == c.GetClientID() {
+			priorityOpts = append(priorityOpts, opt)
+		} else {
+			opts = append(opts, opt)
+		}
+	}
+
+	if len(opts)+len(priorityOpts) == 0 {
 		return nil, errors.New("There are currently no applications.")
 	}
 
-	return opts, nil
+	return append(priorityOpts, opts...), nil
 }

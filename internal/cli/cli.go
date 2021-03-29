@@ -40,11 +40,12 @@ type config struct {
 // tenant is the cli's concept of an auth0 tenant. The fields are tailor fit
 // specifically for interacting with the management API.
 type tenant struct {
-	Name        string         `json:"name"`
-	Domain      string         `json:"domain"`
-	AccessToken string         `json:"access_token,omitempty"`
-	ExpiresAt   time.Time      `json:"expires_at"`
-	Apps        map[string]app `json:"apps,omitempty"`
+	Name         string         `json:"name"`
+	Domain       string         `json:"domain"`
+	AccessToken  string         `json:"access_token,omitempty"`
+	ExpiresAt    time.Time      `json:"expires_at"`
+	Apps         map[string]app `json:"apps,omitempty"`
+	DefaultAppID string         `json:"default_app_id,omitempty"`
 }
 
 type app struct {
@@ -296,9 +297,24 @@ func (c *cli) isFirstCommandRun(clientID string, command string) (bool, error) {
 	return true, nil
 }
 
+func (c *cli) setDefaultAppID(id string) error {
+	tenant, err := c.getTenant()
+	if err != nil {
+		return err
+	}
+
+	tenant.DefaultAppID = id
+
+	c.config.Tenants[tenant.Name] = tenant
+	if err := c.persistConfig(); err != nil {
+		return fmt.Errorf("Unexpected error persisting config: %w", err)
+	}
+
+	return nil
+}
+
 func (c *cli) setFirstCommandRun(clientID string, command string) error {
 	tenant, err := c.getTenant()
-
 	if err != nil {
 		return err
 	}
