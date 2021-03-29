@@ -5,6 +5,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - name: Setup repo
+      run: |
+        touch $GITHUB_WORKSPACE/internal/instrumentation/sentrydsn.txt
     - name: Run Snyk to check for vulnerabilities
       uses: snyk/actions/golang@master
       env:
