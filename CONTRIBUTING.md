@@ -53,7 +53,7 @@ To release a new version:
    - `$ git pull origin main`
 2. check the latest tag: 
    - `$ git fetch`
-   -  `$ git tags`
+   - `$ git tags`
 3. create the **new** tag for the new release. For example, if the latest tag is `v0.1.1` and you want to release a patch version, you should create `v0.1.2`:
    - `$ git tag v0.1.2`
 4. push the new tag: 
