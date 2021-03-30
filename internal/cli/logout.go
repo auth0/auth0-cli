@@ -41,7 +41,7 @@ func logoutCmd(cli *cli) *cobra.Command {
 				requestedTenant := args[0]
 				t, ok := cli.config.Tenants[requestedTenant]
 				if !ok {
-					return fmt.Errorf("Unable to find tenant %s; run `auth0 tenants use` to see your configured tenants or run `auth0 login` to configure a new tenant", requestedTenant)
+					return fmt.Errorf("Unable to find tenant %s; run 'auth0 tenants use' to see your configured tenants or run 'auth0 login' to configure a new tenant", requestedTenant)
 				}
 				selectedTenant = t.Name
 			}
