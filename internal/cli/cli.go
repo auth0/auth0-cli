@@ -188,7 +188,7 @@ func (c *cli) getTenant() (tenant, error) {
 
 	t, ok := c.config.Tenants[c.tenant]
 	if !ok {
-		return tenant{}, fmt.Errorf("Unable to find tenant: %s", c.tenant)
+		return tenant{}, fmt.Errorf("Unable to find tenant: %s; run `auth0 tenants use` to see your configured tenants or run `auth0 login` to configure a new tenant", c.tenant)
 	}
 
 	if t.Apps == nil {
