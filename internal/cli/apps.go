@@ -383,16 +383,22 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 
 			// Load values into a fresh app instance
 			a := &management.Client{
-				Name:                    &inputs.Name,
-				Description:             &inputs.Description,
-				AppType:                 auth0.String(apiTypeFor(inputs.Type)),
-				Callbacks:               stringToInterfaceSlice(inputs.Callbacks),
-				AllowedOrigins:          stringToInterfaceSlice(inputs.AllowedOrigins),
-				WebOrigins:              stringToInterfaceSlice(inputs.AllowedWebOrigins),
-				AllowedLogoutURLs:       stringToInterfaceSlice(inputs.AllowedLogoutURLs),
-				TokenEndpointAuthMethod: apiAuthMethodFor(inputs.AuthMethod),
-				OIDCConformant:          &oidcConformant,
-				JWTConfiguration:        &management.ClientJWTConfiguration{Algorithm: &algorithm},
+				Name:              &inputs.Name,
+				Description:       &inputs.Description,
+				AppType:           auth0.String(apiTypeFor(inputs.Type)),
+				Callbacks:         stringToInterfaceSlice(inputs.Callbacks),
+				AllowedOrigins:    stringToInterfaceSlice(inputs.AllowedOrigins),
+				WebOrigins:        stringToInterfaceSlice(inputs.AllowedWebOrigins),
+				AllowedLogoutURLs: stringToInterfaceSlice(inputs.AllowedLogoutURLs),
+				OIDCConformant:    &oidcConformant,
+				JWTConfiguration:  &management.ClientJWTConfiguration{Algorithm: &algorithm},
+			}
+
+			// Set token endpoint auth method
+			if len(inputs.AuthMethod) == 0 {
+				a.TokenEndpointAuthMethod = apiDefaultAuthMethodFor(inputs.Type)
+			} else {
+				a.TokenEndpointAuthMethod = apiAuthMethodFor(inputs.AuthMethod)
 			}
 
 			// Set grants
@@ -663,6 +669,17 @@ func apiAuthMethodFor(v string) *string {
 		return auth0.String("client_secret_post")
 	case "basic":
 		return auth0.String("client_secret_basic")
+	default:
+		return nil
+	}
+}
+
+func apiDefaultAuthMethodFor(t string) *string {
+	switch apiTypeFor(strings.ToLower(t)) {
+	case appTypeNative:
+		fallthrough
+	case appTypeSPA:
+		return auth0.String("none")
 	default:
 		return nil
 	}
