@@ -46,10 +46,3 @@ func (r *Renderer) UserBlocksList(userBlocks []*management.UserBlock) {
 	r.Results(res)
 
 }
-
-func makeUserBlockView(userBlock *management.UserBlock) *userBlockView {
-	return &userBlockView{
-		Identifier: userBlock.GetIdentifier(),
-		IP:         userBlock.GetIP(),
-	}
-}

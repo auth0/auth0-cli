@@ -9,13 +9,6 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
-var (
-	userID = Argument{
-		Name: "userID",
-		Help: "ID of the user.",
-	}
-)
-
 func usersCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "users",
@@ -47,8 +40,8 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "List user blocks",
-		Long: `List user blocks:
+		Short: "List brute-force protection blocks for a given user",
+		Long: `List brute-force protection blocks for a given user:
 
 auth0 users blocks list <User ID>
 `,
@@ -90,8 +83,8 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Delete user blocks",
-		Long: `Delete user blocks:
+		Short: "Delete brute-force protection blocks for a given user",
+		Long: `Delete brute-force protection blocks for a given user:
 
 auth0 users blocks delete <User ID>
 `,
