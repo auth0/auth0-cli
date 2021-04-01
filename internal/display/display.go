@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/charmbracelet/glamour"
 	"github.com/logrusorgru/aurora"
 	"github.com/olekukonko/tablewriter"
 )
@@ -156,6 +157,18 @@ func (r *Renderer) Stream(data []View, ch <-chan View) {
 	for v := range ch {
 		displayView(v)
 	}
+}
+
+func (r *Renderer) Markdown(document string) {
+	g, _ := glamour.NewTermRenderer(glamour.WithAutoStyle())
+	output, err := g.Render(document)
+
+	if err != nil {
+		r.Errorf("couldn't render Markdown: %v", err)
+		return
+	}
+
+	fmt.Fprint(r.MessageWriter, output)
 }
 
 func fprintfStr(w io.Writer, fmtStr string, argsStr ...string) {

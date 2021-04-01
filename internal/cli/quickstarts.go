@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -24,11 +25,12 @@ import (
 
 // QuickStart app types and defaults
 const (
-	qsNative    = "native"
-	qsSpa       = "spa"
-	qsWebApp    = "webapp"
-	qsBackend   = "backend"
-	_defaultURL = "http://localhost:3000"
+	qsNative       = "native"
+	qsSpa          = "spa"
+	qsWebApp       = "webapp"
+	qsBackend      = "backend"
+	qsDefaultURL   = "http://localhost"
+	qspDefaultPort = 3000
 )
 
 var (
@@ -41,12 +43,9 @@ var (
 		return
 	}()
 
-	qsClientID = Flag{
-		Name:       "Client ID",
-		LongForm:   "client-id",
-		ShortForm:  "c",
-		Help:       "Client Id of an Auth0 application.",
-		IsRequired: true,
+	qsClientID = Argument{
+		Name: "Client ID",
+		Help: "Client Id of an Auth0 application.",
 	}
 
 	qsStack = Flag{
@@ -87,8 +86,9 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "download",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Download a quickstart sample app for a specific tech stack",
-		Long:  `auth0 quickstarts download --client-id <client-id> --stack <stack>`,
+		Long:  `auth0 quickstarts download --stack <stack>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -97,13 +97,24 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 				return errors.New("This command can only be run on interactive mode")
 			}
 
-			if err := qsClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
-				return err
+			if len(args) == 0 {
+				err := qsClientID.Pick(cmd, &inputs.ClientID, cli.appPickerOptions)
+				if err != nil {
+					return err
+				}
+			} else {
+				inputs.ClientID = args[0]
 			}
 
-			client, err := cli.api.Client.Read(inputs.ClientID)
+			var client *management.Client
+			err := ansi.Waiting(func() error {
+				var err error
+				client, err = cli.api.Client.Read(inputs.ClientID)
+				return err
+			})
+
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred, please verify your client id: %v", err.Error())
+				return fmt.Errorf("An unexpected error occurred, please verify your Client Id: %v", err.Error())
 			}
 
 			if inputs.Stack == "" {
@@ -124,7 +135,7 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 			}
 
 			if exists && !cli.force {
-				if confirmed := prompt.Confirm(fmt.Sprintf("WARNING: %s already exists. Are you sure you want to proceed?", target)); !confirmed {
+				if confirmed := prompt.Confirm(fmt.Sprintf("WARNING: %s already exists.\n Are you sure you want to proceed?", target)); !confirmed {
 					return nil
 				}
 			}
@@ -134,7 +145,7 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 				return fmt.Errorf("An unexpected error occurred with the specified stack %v: %v", inputs.Stack, err)
 			}
 
-			err = ansi.Spinner("Downloading quickstart sample", func() error {
+			err = ansi.Waiting(func() error {
 				return downloadQuickStart(cmd.Context(), cli, client, target, q)
 			})
 
@@ -145,16 +156,32 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 			cli.renderer.Infof("Quickstart sample sucessfully downloaded at %s", target)
 
 			qsType := quickstartsTypeFor(client.GetAppType())
-			if err := promptDefaultURLs(cmd.Context(), cli, client, qsType); err != nil {
+			if err := promptDefaultURLs(cli, client, qsType, inputs.Stack); err != nil {
 				return err
 			}
+
+			qsSamplePath := path.Join(target, q.Samples[0])
+			readme, err := loadQuickstartSampleReadme(qsSamplePath) // Some QS have non-markdown READMEs (eg auth0-python uses rst)
+
+			if err == nil {
+				cli.renderer.Markdown(readme)
+			} else {
+				cli.renderer.Infof("%s You might wanna check out the Quickstart sample README", ansi.Faint("Hint:"))
+			}
+
+			relativeQSSamplePath, err := relativeQuickstartSamplePath(qsSamplePath)
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.Infof("%s Start with 'cd %s'", ansi.Faint("Hint:"), relativeQSSamplePath)
+
 			return nil
 		},
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 
-	qsClientID.RegisterString(cmd, &inputs.ClientID, "")
 	qsStack.RegisterString(cmd, &inputs.Stack, "")
 	return cmd
 }
@@ -208,18 +235,18 @@ func downloadQuickStart(ctx context.Context, cli *cli, client *management.Client
 
 	buf := &bytes.Buffer{}
 	if err := json.NewEncoder(buf).Encode(payload); err != nil {
-		return fmt.Errorf("An unexpected error occurred: %v", err.Error())
+		return unexpectedError(err)
 	}
 
 	req, err := http.NewRequest("POST", quickstartEndpoint, buf)
 	if err != nil {
-		return fmt.Errorf("An unexpected error occurred: %v", err)
+		return unexpectedError(err)
 	}
 	req.Header.Set("Content-Type", quickstartContentType)
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("An unexpected error occurred: %v", err)
+		return unexpectedError(err)
 	}
 
 	if res.StatusCode != http.StatusOK {
@@ -228,25 +255,25 @@ func downloadQuickStart(ctx context.Context, cli *cli, client *management.Client
 
 	tmpfile, err := ioutil.TempFile("", "auth0-quickstart*.zip")
 	if err != nil {
-		return fmt.Errorf("An unexpected error occurred: %v", err)
+		return unexpectedError(err)
 	}
 
 	_, err = io.Copy(tmpfile, res.Body)
 	if err != nil {
-		return fmt.Errorf("An unexpected error occurred: %v", err)
+		return unexpectedError(err)
 	}
 
 	if err := tmpfile.Close(); err != nil {
-		return fmt.Errorf("An unexpected error occurred: %v", err)
+		return unexpectedError(err)
 	}
 	defer os.Remove(tmpfile.Name())
 
 	if err := os.RemoveAll(target); err != nil {
-		return fmt.Errorf("An unexpected error occurred: %v", err)
+		return unexpectedError(err)
 	}
 
 	if err := archiver.Unarchive(tmpfile.Name(), target); err != nil {
-		return fmt.Errorf("An unexpected error occurred: %v", err)
+		return unexpectedError(err)
 	}
 
 	return nil
@@ -319,32 +346,77 @@ func quickstartsTypeFor(v string) string {
 	}
 }
 
+func loadQuickstartSampleReadme(samplePath string) (string, error) {
+	data, err := ioutil.ReadFile(path.Join(samplePath, "README.md"))
+	if err != nil {
+		return "", unexpectedError(err)
+	}
+
+	return string(data), nil
+}
+
+func relativeQuickstartSamplePath(samplePath string) (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", unexpectedError(err)
+	}
+
+	relativePath, err := filepath.Rel(dir, samplePath)
+	if err != nil {
+		return "", unexpectedError(err)
+	}
+
+	return relativePath, nil
+}
+
 // promptDefaultURLs checks whether the application is SPA or WebApp and
 // whether the app has already added the default quickstart url to allowed url lists.
 // If not, it prompts the user to add the default url and updates the application
 // if they accept.
-func promptDefaultURLs(ctx context.Context, cli *cli, client *management.Client, qsType string) error {
+func promptDefaultURLs(cli *cli, client *management.Client, qsType string, qsStack string) error {
+	defaultURL := defaultURLFor(qsStack)
+	defaultCallbackURL := defaultCallbackURLFor(qsStack)
+
 	if !strings.EqualFold(qsType, qsSpa) && !strings.EqualFold(qsType, qsWebApp) {
-		return nil
-	}
-	if containsStr(client.Callbacks, _defaultURL) || containsStr(client.AllowedLogoutURLs, _defaultURL) {
 		return nil
 	}
 
 	a := &management.Client{
 		Callbacks:         client.Callbacks,
-		WebOrigins:        client.WebOrigins,
 		AllowedLogoutURLs: client.AllowedLogoutURLs,
+		AllowedOrigins:    client.AllowedOrigins,
+		WebOrigins:        client.WebOrigins,
 	}
 
-	if confirmed := prompt.Confirm(formatURLPrompt(qsType)); confirmed {
-		a.Callbacks = append(a.Callbacks, _defaultURL)
-		a.AllowedLogoutURLs = append(a.AllowedLogoutURLs, _defaultURL)
-		if strings.EqualFold(qsType, qsSpa) {
-			a.WebOrigins = append(a.WebOrigins, _defaultURL)
+	if !containsStr(client.Callbacks, defaultCallbackURL) {
+		a.Callbacks = append(a.Callbacks, defaultCallbackURL)
+	}
+
+	if !containsStr(client.AllowedLogoutURLs, defaultURL) {
+		a.AllowedLogoutURLs = append(a.AllowedLogoutURLs, defaultURL)
+	}
+
+	if strings.EqualFold(qsType, qsSpa) {
+		if !containsStr(client.AllowedOrigins, defaultURL) {
+			a.AllowedOrigins = append(a.AllowedOrigins, defaultURL)
 		}
 
-		err := ansi.Spinner("Updating application", func() error {
+		if !containsStr(client.WebOrigins, defaultURL) {
+			a.WebOrigins = append(a.WebOrigins, defaultURL)
+		}
+	}
+
+	callbackURLChanged := len(client.Callbacks) != len(a.Callbacks)
+	otherURLsChanged := len(client.AllowedLogoutURLs) != len(a.AllowedLogoutURLs) ||
+		len(client.AllowedOrigins) != len(a.AllowedOrigins) ||
+		len(client.WebOrigins) != len(a.WebOrigins)
+
+	if !callbackURLChanged && !otherURLsChanged {
+		return nil
+	}
+
+	if confirmed := prompt.Confirm(urlPromptFor(qsType, qsStack)); confirmed {
+		err := ansi.Waiting(func() error {
 			return cli.api.Client.Update(client.GetClientID(), a)
 		})
 		if err != nil {
@@ -355,15 +427,43 @@ func promptDefaultURLs(ctx context.Context, cli *cli, client *management.Client,
 	return nil
 }
 
-// formatURLPrompt creates the correct prompt based on app type for
+// urlPromptFor creates the correct prompt based on app type for
 // asking the user if they would like to add default urls.
-func formatURLPrompt(qsType string) string {
+func urlPromptFor(qsType string, qsStack string) string {
 	var p strings.Builder
-	p.WriteString("\nQuickstarts use localhost, do you want to add %s to the list of allowed callback URLs")
-	if strings.EqualFold(qsType, qsSpa) {
-		p.WriteString(", logout URLs, and web origins?")
-	} else {
-		p.WriteString(" and logout URLs?")
+	p.WriteString("Quickstarts use localhost, do you want to add %s to the list\n of allowed callback URLs")
+	switch strings.ToLower(qsStack) {
+	case "next.js": // See https://github.com/auth0/auth0-cli/issues/200
+		p.WriteString(" and %s to the list of allowed logout URLs?")
+		return fmt.Sprintf(p.String(), defaultCallbackURLFor(qsStack), defaultURLFor(qsStack))
+	default:
+		if strings.EqualFold(qsType, qsSpa) {
+			p.WriteString(", logout URLs, origins and web origins?")
+		} else {
+			p.WriteString(" and logout URLs?")
+		}
 	}
-	return fmt.Sprintf(p.String(), _defaultURL)
+	return fmt.Sprintf(p.String(), defaultURLFor(qsStack))
+}
+
+func defaultURLFor(s string) string {
+	switch strings.ToLower(s) {
+	case "angular": // See https://github.com/auth0-samples/auth0-angular-samples/issues/225#issuecomment-806448893
+		return defaultURL(qsDefaultURL, 4200)
+	default:
+		return defaultURL(qsDefaultURL, qspDefaultPort)
+	}
+}
+
+func defaultCallbackURLFor(s string) string {
+	switch strings.ToLower(s) {
+	case "next.js": // See https://github.com/auth0/auth0-cli/issues/200
+		return fmt.Sprintf("%s/api/auth/callback", defaultURLFor(s))
+	default:
+		return defaultURLFor(s)
+	}
+}
+
+func defaultURL(url string, port int) string {
+	return fmt.Sprintf("%s:%d", url, port)
 }
