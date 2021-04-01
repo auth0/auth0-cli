@@ -25,13 +25,12 @@ func (v *userBlockView) KeyValues() [][]string {
 }
 
 func (r *Renderer) UserBlocksList(userBlocks []*management.UserBlock) {
-	resource := "userBlocks"
+	resource := "user blocks"
 
 	r.Heading(resource)
 
 	if len(userBlocks) == 0 {
 		r.EmptyState(resource)
-		r.Infof("No blocks for user.")
 		return
 	}
 

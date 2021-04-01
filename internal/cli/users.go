@@ -11,56 +11,67 @@ import (
 
 var (
 	userID = Argument{
-		Name: "user_id",
-		Help: "user_id of the user.",
+		Name: "userID",
+		Help: "ID of the user.",
 	}
 )
 
+func usersCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "users",
+		Short: "Manage resources for users",
+	}
+
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(userBlocksCmd(cli))
+	return cmd
+}
+
 func userBlocksCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "user-blocks",
+		Use:   "blocks",
 		Short: "Manage brute-force protection user blocks.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.AddCommand(listUserBlocksByUserIdCmd(cli))
-	cmd.AddCommand(deleteUserBlocksByUserIdCmd(cli))
+	cmd.AddCommand(listUserBlocksCmd(cli))
+	cmd.AddCommand(deleteUserBlocksCmd(cli))
 	return cmd
 }
 
-func listUserBlocksByUserIdCmd(cli *cli) *cobra.Command {
+func listUserBlocksCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		user_id string
+		userID string
 	}
 
 	cmd := &cobra.Command{
-		Use:   "listByUserId",
+		Use:   "list",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "List user-blocks by user_id",
-		Long: `List user-blocks by user_id:
+		Short: "List user blocks",
+		Long: `List user blocks:
 
-auth0 user-blocks listByUserId <user_id>
+auth0 users blocks list <User ID>
 `,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				inputs.user_id = args[0]
+				inputs.userID = args[0]
 			} else {
-				return errors.New("user_id is required.")
+				return errors.New("User ID is required.")
 			}
 
 			var userBlocks []*management.UserBlock
 
 			err := ansi.Waiting(func() error {
 				var err error
-				userBlocks, err = cli.api.User.Blocks(inputs.user_id)
+				userBlocks, err = cli.api.User.Blocks(inputs.userID)
 				return err
 			})
 
 			if err != nil {
-				return fmt.Errorf("Unable to load user blocks %v, error: %w", inputs.user_id, err)
+				return fmt.Errorf("Unable to load user blocks %v, error: %w", inputs.userID, err)
 			}
 
 			cli.renderer.UserBlocksList(userBlocks)
@@ -71,31 +82,31 @@ auth0 user-blocks listByUserId <user_id>
 	return cmd
 }
 
-func deleteUserBlocksByUserIdCmd(cli *cli) *cobra.Command {
+func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		user_id string
+		userID string
 	}
 
 	cmd := &cobra.Command{
-		Use:   "deleteByUserId",
+		Use:   "delete",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Delete all user-blocks by user_id",
-		Long: `Delete all user-blocks by user_id:
+		Short: "Delete user blocks",
+		Long: `Delete user blocks:
 
-auth0 user-blocks deleteByUserId <user_id>
+auth0 users blocks delete <User ID>
 `,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				inputs.user_id = args[0]
+				inputs.userID = args[0]
 			} else {
-				return errors.New("user_id is required.")
+				return errors.New("User ID is required.")
 			}
 
 			err := ansi.Spinner("Deleting blocks for user...", func() error {
-				return cli.api.User.Unblock(inputs.user_id)
+				return cli.api.User.Unblock(inputs.userID)
 			})
 
 			if err != nil {
