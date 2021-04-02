@@ -12,6 +12,9 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
+// errNoApps signifies no applications exist in a tenant
+var errNoApps = errors.New("there are currently no applications")
+
 const (
 	appTypeNative         = "native"
 	appTypeSPA            = "spa"
@@ -819,7 +822,7 @@ func (c *cli) appPickerOptions() (pickerOptions, error) {
 	}
 
 	if len(opts)+len(priorityOpts) == 0 {
-		return nil, errors.New("There are currently no applications.")
+		return nil, errNoApps
 	}
 
 	return append(priorityOpts, opts...), nil
