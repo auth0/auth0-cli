@@ -85,20 +85,29 @@ A screen similar to the following will be presented after successful app creatio
 
 ```bash
 $ auth0 apps create
- Name: my awesome app
+ Name: My Awesome App
+ Description: Test app
  Type: Regular Web Application
- Description: dev tester
-Creating application... done
+ Callback URLs: http://localhost:3000
+ Allowed Logout URLs: http://localhost:3000
 
 === travel0 application created
 
-  NAME           my awesome app
-  TYPE           regular web application
-  CLIENT ID      vXAtoaFdhlmtWjpIrjb9AUnrGEAOH2MM
-  CLIENT SECRET  QXV0aDAgaXMgaGlyaW5nISBhdXRoMC5jb20vY2FyZWVycyAK
+  CLIENT ID            wmVzrZkGhKgglMRMvpauORCulBkQ5qeI                                  
+  NAME                 My Awesome App                                                       
+  DESCRIPTION          Test app
+  TYPE                 regular web application                                           
+  CLIENT SECRET        kaS2NR5nk2PcGuITQ8JoKnpVnc5ky1TuKgsb6iTA08ec8XqizqkDupKhEIcsFiNM  
+  CALLBACKS            http://localhost:3000                                             
+  ALLOWED LOGOUT URLS  http://localhost:3000                                             
+  ALLOWED ORIGINS                                                                        
+  ALLOWED WEB ORIGINS                                                                    
+  TOKEN ENDPOINT AUTH                                                                    
+  GRANTS               implicit, authorization_code, refresh_token, client_credentials   
 
  ▸    Quickstarts: https://auth0.com/docs/quickstart/webapp
- ▸    Hint: You might wanna try 'auth0 test login vXAtoaFdhlmtWjpIrjb9AUnrGEAOH2MM'
+ ▸    Hint: Test this app's login box with 'auth0 test login wmVzrZkGhKgglMRMvpauORCulBkQ5qeI'
+ ▸    Hint: You might wanna try 'auth0 quickstarts download wmVzrZkGhKgglMRMvpauORCulBkQ5qeI'
 ```
 
 As you might observe, the next thing to do would likely be to try logging in
