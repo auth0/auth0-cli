@@ -33,7 +33,15 @@ var (
 		Name:      "Audience",
 		LongForm:  "audience",
 		ShortForm: "a",
-		Help:      "The unique identifier of the target Audience you want to access.",
+		Help:      "The unique identifier of the target API you want to access.",
+	}
+
+	testAudienceRequired = Flag{
+		Name:       testAudience.Name,
+		LongForm:   testAudience.LongForm,
+		ShortForm:  testAudience.ShortForm,
+		Help:       testAudience.Help,
+		IsRequired: true,
 	}
 
 	testScopes = Flag{
@@ -179,7 +187,7 @@ func testTokenCmd(cli *cli) *cobra.Command {
 		Short: "Fetch a token for the given client and API",
 		Long: `Fetch an access token for the given client.
 If --client-id is not provided, the default client "CLI Login Testing" will be used (and created if not exists).
-Additionally, you can also specify the --audience and --scope to use.`,
+Specify the API you want this token for with --audience (API Identifer). Additionally, you can also specify the --scope to use.`,
 		Example: `auth0 test token
 auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -250,7 +258,7 @@ auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	testClientID.RegisterString(cmd, &inputs.ClientID, "")
-	testAudience.RegisterString(cmd, &inputs.Audience, "")
+	testAudienceRequired.RegisterString(cmd, &inputs.Audience, "")
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
 	return cmd
 }
