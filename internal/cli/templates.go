@@ -87,7 +87,7 @@ Before using the CLI, you'll need to login:
 func namespaceUsageTemplate() string {
 	return fmt.Sprintf(`%s{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
-  {{.CommandPath}} <resource> <operation> [parameters...]{{end}}{{if gt (len .Aliases) 0}}
+  {{.CommandPath}} <resource> <operation> [parameters...] [flags]{{end}}{{if gt (len .Aliases) 0}}
 
 %s
   {{.NameAndAliases}}{{end}}{{if .HasExample}}
@@ -122,7 +122,7 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 func resourceUsageTemplate() string {
 	return fmt.Sprintf(`%s{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
-  {{.CommandPath}} <operation> [parameters...]{{end}}{{if gt (len .Aliases) 0}}
+  {{.CommandPath}} <operation> [parameters...] [flags]{{end}}{{if gt (len .Aliases) 0}}
 
 %s
   {{.NameAndAliases}}{{end}}{{if .HasExample}}
