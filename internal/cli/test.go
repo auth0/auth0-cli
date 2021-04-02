@@ -74,13 +74,12 @@ func testLoginCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "login",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Try out your universal login box",
-		Long: `Launch a browser to try out your universal login box.
-If --client-id is not provided, the default client "CLI Login Testing" will be used (and created if not exists.)`,
+		Long:  `Launch a browser to try out your universal login box.`,
 		Example: `auth0 test login
-auth0 test login --client-id <id>
-auth0 test login -c <id> --connection <connection>`,
-		Args: cobra.MaximumNArgs(1),
+auth0 test login <client-id>
+auth0 test login <client-id> --connection <connection>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			const commandKey = "test_login"
 			var userInfo *authutil.UserInfo
@@ -184,6 +183,7 @@ func testTokenCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "token",
+		Args:  cobra.NoArgs,
 		Short: "Fetch a token for the given client and API",
 		Long: `Fetch an access token for the given client.
 If --client-id is not provided, the default client "CLI Login Testing" will be used (and created if not exists).
