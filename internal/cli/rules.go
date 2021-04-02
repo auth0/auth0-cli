@@ -6,7 +6,6 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
-	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
@@ -37,6 +36,14 @@ var (
 		LongForm:  "enabled",
 		ShortForm: "e",
 		Help:      "Enable (or disable) a rule.",
+	}
+
+	ruleScript = Flag{
+		Name:       "Script",
+		LongForm:   "script",
+		ShortForm:  "s",
+		Help:       "Script contents for the rule.",
+		IsRequired: true,
 	}
 
 	ruleTemplateOptions = pickerOptions{
@@ -100,6 +107,7 @@ func createRuleCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Name     string
 		Template string
+		Script   string
 		Enabled  bool
 	}
 
@@ -126,12 +134,12 @@ auth0 rules create -n "My Rule" -t "Empty rule" --enabled=false`,
 			// TODO(cyx): we can re-think this once we have
 			// `--stdin` based commands. For now we don't have
 			// those yet, so keeping this simple.
-			script, err := prompt.CaptureInputViaEditor(
+			err := ruleScript.EditorPrompt(
+				cmd,
+				&inputs.Script,
 				ruleTemplateOptions.getValue(inputs.Template),
 				inputs.Name+".*.js",
-				func() {
-					cli.renderer.Infof("%s once you close the editor, the rule will be saved. To cancel, CTRL+C.", ansi.Faint("Hint:"))
-				},
+				cli.ruleEditorHint,
 			)
 			if err != nil {
 				return fmt.Errorf("Failed to capture input from the editor: %w", err)
@@ -139,7 +147,7 @@ auth0 rules create -n "My Rule" -t "Empty rule" --enabled=false`,
 
 			rule := &management.Rule{
 				Name:    &inputs.Name,
-				Script:  auth0.String(script),
+				Script:  auth0.String(inputs.Script),
 				Enabled: &inputs.Enabled,
 			}
 
@@ -251,6 +259,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ID      string
 		Name    string
+		Script  string
 		Enabled bool
 	}
 
@@ -291,12 +300,12 @@ auth0 rules update <rule-id> -n "My Updated Rule" --enabled=false`,
 			// TODO(cyx): we can re-think this once we have
 			// `--stdin` based commands. For now we don't have
 			// those yet, so keeping this simple.
-			script, err := prompt.CaptureInputViaEditor(
+			err = ruleScript.EditorPromptU(
+				cmd,
+				&inputs.Script,
 				rule.GetScript(),
 				rule.GetName()+".*.js",
-				func() {
-					cli.renderer.Infof("%s once you close the editor, the rule will be saved. To cancel, CTRL+C.", ansi.Faint("Hint:"))
-				},
+				cli.ruleEditorHint,
 			)
 			if err != nil {
 				return fmt.Errorf("Failed to capture input from the editor: %w", err)
@@ -312,7 +321,7 @@ auth0 rules update <rule-id> -n "My Updated Rule" --enabled=false`,
 			// display.
 			rule = &management.Rule{
 				Name:    &inputs.Name,
-				Script:  &script,
+				Script:  &inputs.Script,
 				Enabled: &inputs.Enabled,
 			}
 
@@ -351,4 +360,8 @@ func (c *cli) rulePickerOptions() (pickerOptions, error) {
 	}
 
 	return opts, nil
+}
+
+func (c *cli) ruleEditorHint() {
+	c.renderer.Infof("%s once you close the editor, the rule will be saved. To cancel, CTRL+C.", ansi.Faint("Hint:"))
 }
