@@ -67,10 +67,10 @@ func rulesCmd(cli *cli) *cobra.Command {
 
 func listRulesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list",
+		Use:     "list",
 		Aliases: []string{"ls"},
-		Short: "List your rules",
-		Long:  `List the rules in your current tenant.`,
+		Short:   "List your rules",
+		Long:    `List the rules in your current tenant.`,
 		Example: `auth0 rules list
 auth0 rules ls`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -106,9 +106,9 @@ func createRuleCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new rule",
-		Long: `Create a new rule:`,
-		Example: `auth0 rules create 
-auth0 rules create --name "My Rule" 
+		Long:  `Create a new rule:`,
+		Example: `auth0 rules create
+auth0 rules create --name "My Rule"
 auth0 rules create -n "My Rule" --template "Empty rule"
 auth0 rules create -n "My Rule" -t "Empty rule" --enabled=false`,
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -129,6 +129,9 @@ auth0 rules create -n "My Rule" -t "Empty rule" --enabled=false`,
 			script, err := prompt.CaptureInputViaEditor(
 				ruleTemplateOptions.getValue(inputs.Template),
 				inputs.Name+".*.js",
+				func() {
+					cli.renderer.Infof("%s once you close the editor, the rule will be saved. To cancel, CTRL+C.", ansi.Faint("Hint:"))
+				},
 			)
 			if err != nil {
 				return fmt.Errorf("Failed to capture input from the editor: %w", err)
@@ -169,7 +172,7 @@ func showRuleCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show a rule",
-		Long: `Show a rule:`,
+		Long:  `Show a rule:`,
 		Example: `auth0 rules show 
 auth0 rules show <id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -213,7 +216,7 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete a rule",
-		Long: `Delete a rule`,
+		Long:  `Delete a rule`,
 		Example: `auth0 rules delete 
 auth0 rules delete <rule-id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -254,7 +257,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update a rule",
-		Long: `Update a rule`,
+		Long:  `Update a rule`,
 		Example: `auth0 rules update <rule-id> 
 auth0 rules update <rule-id> --name "My Updated Rule"
 auth0 rules update <rule-id> -n "My Updated Rule" --enabled=false`,
@@ -291,6 +294,9 @@ auth0 rules update <rule-id> -n "My Updated Rule" --enabled=false`,
 			script, err := prompt.CaptureInputViaEditor(
 				rule.GetScript(),
 				rule.GetName()+".*.js",
+				func() {
+					cli.renderer.Infof("%s once you close the editor, the rule will be saved. To cancel, CTRL+C.", ansi.Faint("Hint:"))
+				},
 			)
 			if err != nil {
 				return fmt.Errorf("Failed to capture input from the editor: %w", err)
