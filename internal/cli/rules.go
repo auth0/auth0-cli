@@ -69,6 +69,7 @@ func listRulesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
+		Args:    cobra.NoArgs,
 		Short:   "List your rules",
 		Long:    `List the rules in your current tenant.`,
 		Example: `auth0 rules list
@@ -105,6 +106,7 @@ func createRuleCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create",
+		Args:  cobra.NoArgs,
 		Short: "Create a new rule",
 		Long:  `Create a new rule:`,
 		Example: `auth0 rules create
@@ -215,6 +217,7 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "delete",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete a rule",
 		Long:  `Delete a rule`,
 		Example: `auth0 rules delete 
@@ -256,6 +259,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "update",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a rule",
 		Long:  `Update a rule`,
 		Example: `auth0 rules update <rule-id> 

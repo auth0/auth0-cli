@@ -22,9 +22,10 @@ func tenantsCmd(cli *cli) *cobra.Command {
 func listTenantCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
+		Aliases: []string{"ls"},
+		Args:    cobra.NoArgs,
 		Short:   "List your tenants",
 		Long:    `auth0 tenants list`,
-		Aliases: []string{"ls"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tens, err := cli.listTenants()
 			if err != nil {
@@ -45,11 +46,10 @@ func listTenantCmd(cli *cli) *cobra.Command {
 
 func useTenantCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "use",
-		Aliases: []string{"select"},
-		Short:   "Set the active tenant",
-		Long:    `auth0 tenants use <tenant>`,
-		Args:    cobra.MaximumNArgs(1),
+		Use:   "use",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Set the active tenant",
+		Long:  `auth0 tenants use <tenant>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
