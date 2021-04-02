@@ -156,11 +156,13 @@ func runLoginFlow(cli *cli, t tenant, c *management.Client, connName, audience, 
 
 		// if we added the local callback URL to the client then we need to
 		// remove it when we're done
-		if callbackAdded {
-			if err := removeLocalCallbackURLFromClient(cli.api.Client, c); err != nil {
-				return err
+		defer func() {
+			if callbackAdded {
+				if err := removeLocalCallbackURLFromClient(cli.api.Client, c); err != nil { // TODO: Make it a warning
+					cli.renderer.Errorf("Unable to remove callback URL '%s' from client: %s", cliLoginTestingCallbackURL, err)
+				}
 			}
-		}
+		}()
 
 		return nil
 	})
