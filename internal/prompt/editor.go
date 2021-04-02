@@ -1,67 +1,69 @@
 package prompt
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
+	"runtime"
+
+	"github.com/kballard/go-shellquote"
 )
 
-const defaultEditor = "vim"
+const (
+	defaultEditor = "vim"
+)
 
-var defaultEditorPrompt = &editorPrompt{defaultEditor: defaultEditor}
+var (
+	bom        = []byte{0xef, 0xbb, 0xbf}
+	cliEditors = []string{"emacs", "micro", "nano", "nvim", "vi", "vim", "nvim"}
+)
+
+var defaultEditorPrompt = &editorPrompt{cmd: getDefaultEditor()}
 
 // CaptureInputViaEditor is the high level function to use in this package in
 // order to capture input from an editor.
 //
 // The arguments have been tailored for our use of strings mostly in the rest
 // of the CLI even though internally we're using []byte.
-func CaptureInputViaEditor(contents, pattern string) (result string, err error) {
-	v, err := defaultEditorPrompt.captureInput([]byte(contents), pattern)
+func CaptureInputViaEditor(contents, pattern string, infoFn func()) (result string, err error) {
+	v, err := defaultEditorPrompt.captureInput([]byte(contents), pattern, infoFn)
 	return string(v), err
 }
 
 type editorPrompt struct {
-	defaultEditor string
-}
-
-// GetPreferredEditorFromEnvironment returns the user's editor as defined by the
-// `$EDITOR` environment variable, or the `defaultEditor` if it is not set.
-func (p *editorPrompt) getPreferredEditor() string {
-	editor := os.Getenv("EDITOR")
-
-	if editor == "" {
-		return p.defaultEditor
-	}
-
-	return editor
-}
-
-func (p *editorPrompt) resolveEditorArguments(executable string, filename string) []string {
-	args := []string{filename}
-
-	if strings.Contains(executable, "Visual Studio Code.app") {
-		args = append([]string{"--wait"}, args...)
-	}
-
-	// TODO(cyx): add other common editors
-
-	return args
+	cmd string
 }
 
 // openFile opens filename in the preferred text editor, resolving the
 // arguments with editor specific logic.
-func (p *editorPrompt) openFile(filename string) error {
-	// Get the full executable path for the editor.
-	executable, err := exec.LookPath(p.getPreferredEditor())
+func (p *editorPrompt) openFile(filename string, infoFn func()) error {
+	args, err := shellquote.Split(p.cmd)
+	if err != nil {
+		return err
+	}
+	args = append(args, filename)
+
+	isCLIEditor := false
+	for _, e := range cliEditors {
+		if e == args[0] {
+			isCLIEditor = true
+		}
+	}
+
+	editorExe, err := exec.LookPath(args[0])
 	if err != nil {
 		return err
 	}
 
-	cmd := exec.Command(executable, p.resolveEditorArguments(executable, filename)...)
+	cmd := exec.Command(editorExe, args[1:]...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+
+	if !isCLIEditor && infoFn != nil {
+		infoFn()
+	}
 
 	return cmd.Run()
 }
@@ -72,7 +74,7 @@ func (p *editorPrompt) openFile(filename string) error {
 //
 // If given default contents, it will write that to the file before popping
 // open the editor.
-func (p *editorPrompt) captureInput(contents []byte, pattern string) ([]byte, error) {
+func (p *editorPrompt) captureInput(contents []byte, pattern string, infoFn func()) ([]byte, error) {
 	file, err := os.CreateTemp(os.TempDir(), pattern)
 	if err != nil {
 		return []byte{}, err
@@ -80,27 +82,54 @@ func (p *editorPrompt) captureInput(contents []byte, pattern string) ([]byte, er
 
 	filename := file.Name()
 
+	// Defer removal of the temporary file in case any of the next steps fail.
+	defer os.Remove(filename)
+
+	// write utf8 BOM header
+	// The reason why we do this is because notepad.exe on Windows determines the
+	// encoding of an "empty" text file by the locale, for example, GBK in China,
+	// while golang string only handles utf8 well. However, a text file with utf8
+	// BOM header is not considered "empty" on Windows, and the encoding will then
+	// be determined utf8 by notepad.exe, instead of GBK or other encodings.
+	if _, err := file.Write(bom); err != nil {
+		return nil, err
+	}
+
 	if len(contents) > 0 {
-		if err := os.WriteFile(filename, contents, 0644); err != nil {
+		if _, err := file.Write(contents); err != nil {
 			return nil, fmt.Errorf("Failed to write to file: %w", err)
 		}
 	}
-
-	// Defer removal of the temporary file in case any of the next steps fail.
-	defer os.Remove(filename)
 
 	if err = file.Close(); err != nil {
 		return nil, err
 	}
 
-	if err = p.openFile(filename); err != nil {
+	if err = p.openFile(filename, infoFn); err != nil {
 		return nil, err
 	}
 
-	bytes, err := os.ReadFile(filename)
+	raw, err := os.ReadFile(filename)
 	if err != nil {
 		return []byte{}, err
 	}
 
-	return bytes, nil
+	// strip BOM header
+	return bytes.TrimPrefix(raw, bom), nil
+}
+
+// getDefaultEditor is taken from https://github.com/cli/cli/blob/trunk/pkg/surveyext/editor_manual.go
+// and tries to infer the editor from different heuristics.
+func getDefaultEditor() string {
+	if runtime.GOOS == "windows" {
+		return "notepad"
+	} else if g := os.Getenv("GIT_EDITOR"); g != "" {
+		return g
+	} else if v := os.Getenv("VISUAL"); v != "" {
+		return v
+	} else if e := os.Getenv("EDITOR"); e != "" {
+		return e
+	}
+
+	return defaultEditor
 }
