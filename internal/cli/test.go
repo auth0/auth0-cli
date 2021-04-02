@@ -86,7 +86,7 @@ auth0 test login -c <id> --connection <connection>`,
 			if len(args) == 0 {
 				err := testClientIDArg.Pick(cmd, &inputs.ClientID, cli.appPickerOptions)
 				if err != nil {
-					if err != ErrNoApps {
+					if err != errNoApps {
 						return err
 					}
 					cli.renderer.Infof("No applications to select from, we will create a default test application " +
@@ -108,9 +108,10 @@ auth0 test login -c <id> --connection <connection>`,
 				inputs.ClientID = args[0]
 			}
 
+			defer cleanupTempApplication(isTempClient, cli, inputs.ClientID)
+
 			client, err := cli.api.Client.Read(inputs.ClientID)
 			if err != nil {
-				cleanupTempApplication(isTempClient, cli, inputs.ClientID)
 				return fmt.Errorf("Unable to find client %s; if you specified a client, please verify it exists, otherwise re-run the command", inputs.ClientID)
 			}
 
@@ -128,7 +129,6 @@ auth0 test login -c <id> --connection <connection>`,
 				cliLoginTestingScopes,
 			)
 			if err != nil {
-				cleanupTempApplication(isTempClient, cli, inputs.ClientID)
 				return fmt.Errorf("An unexpected error occurred while logging in to client %s: %w", inputs.ClientID, err)
 			}
 
@@ -138,7 +138,6 @@ auth0 test login -c <id> --connection <connection>`,
 				userInfo, err = authutil.FetchUserInfo(tenant.Domain, tokenResponse.AccessToken)
 				return err
 			}); err != nil {
-				cleanupTempApplication(isTempClient, cli, inputs.ClientID)
 				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
 
@@ -147,7 +146,6 @@ auth0 test login -c <id> --connection <connection>`,
 
 			isFirstRun, err := cli.isFirstCommandRun(inputs.ClientID, commandKey)
 			if err != nil {
-				cleanupTempApplication(isTempClient, cli, inputs.ClientID)
 				return err
 			}
 
@@ -156,11 +154,9 @@ auth0 test login -c <id> --connection <connection>`,
 					ansi.Faint("Hint:"), inputs.ClientID)
 
 				if err := cli.setFirstCommandRun(inputs.ClientID, commandKey); err != nil {
-					cleanupTempApplication(isTempClient, cli, inputs.ClientID)
 					return err
 				}
 			}
-			cleanupTempApplication(isTempClient, cli, inputs.ClientID)
 			return nil
 		},
 	}
