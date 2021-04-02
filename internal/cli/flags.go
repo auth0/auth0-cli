@@ -3,6 +3,8 @@ package cli
 import (
 	"fmt"
 
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 )
 
@@ -53,6 +55,56 @@ func (f *Flag) Select(cmd *cobra.Command, value interface{}, options []string, d
 
 func (f *Flag) SelectU(cmd *cobra.Command, value interface{}, options []string, defaultValue *string) error {
 	return selectFlag(cmd, f, value, options, defaultValue, true)
+}
+
+func (f *Flag) EditorPrompt(cmd *cobra.Command, value *string, initialValue, filename string, infoFn func()) error {
+	out, err := prompt.CaptureInputViaEditor(
+		initialValue,
+		filename,
+		infoFn,
+	)
+	if err != nil {
+		return err
+	}
+
+	*value = out
+	return nil
+}
+
+func (f *Flag) EditorPromptU(cmd *cobra.Command, value *string, initialValue, filename string, infoFn func()) error {
+	response := map[string]interface{}{}
+
+	questions := []*survey.Question{
+		{
+			Name: f.Name,
+			Prompt: &prompt.Editor{
+				BlankAllowed: true,
+				Editor: &survey.Editor{
+					Help:          f.Help,
+					Message:       f.Name,
+					FileName:      filename,
+					Default:       initialValue,
+					HideDefault:   true,
+					AppendDefault: true,
+				},
+			},
+		},
+	}
+
+	if err := survey.Ask(questions, &response); err != nil {
+		return err
+	}
+
+	// Since we have BlankAllowed=true, an empty answer means we'll use the
+	// initialValue provided since this path is for the Update path.
+	answer, ok := response[f.Name].(string)
+	if ok && answer != "" {
+		*value = answer
+	} else {
+		*value = initialValue
+	}
+
+	return nil
 }
 
 func (f *Flag) RegisterString(cmd *cobra.Command, value *string, defaultValue string) {
@@ -152,7 +204,6 @@ func shouldAsk(cmd *cobra.Command, f *Flag, isUpdate bool) bool {
 		if !f.IsRequired && !f.AlwaysPrompt {
 			return false
 		}
-
 		return shouldPromptWhenFlagless(cmd, f.LongForm)
 	}
 
