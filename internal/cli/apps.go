@@ -674,9 +674,7 @@ func apiAuthMethodFor(v string) *string {
 
 func apiDefaultAuthMethodFor(t string) *string {
 	switch apiTypeFor(strings.ToLower(t)) {
-	case appTypeNative:
-		fallthrough
-	case appTypeSPA:
+	case appTypeNative, appTypeSPA:
 		return auth0.String("none")
 	default:
 		return nil
