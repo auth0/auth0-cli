@@ -107,7 +107,7 @@ func createRuleCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Short: "Create a new rule",
 		Long: `Create a new rule:`,
-		Example:`auth0 rules create 
+		Example: `auth0 rules create 
 auth0 rules create --name "My Rule" 
 auth0 rules create -n "My Rule" --template "Empty rule"
 auth0 rules create -n "My Rule" -t "Empty rule" --enabled=false`,
@@ -255,7 +255,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Short: "Update a rule",
 		Long: `Update a rule`,
-		Example:`auth0 rules update <rule-id> 
+		Example: `auth0 rules update <rule-id> 
 auth0 rules update <rule-id> --name "My Updated Rule"
 auth0 rules update <rule-id> -n "My Updated Rule" --enabled=false`,
 		PreRun: func(cmd *cobra.Command, args []string) {
