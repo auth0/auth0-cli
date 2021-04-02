@@ -5,10 +5,17 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/spf13/cobra"
+	"gopkg.in/auth0.v5/management"
 )
 
 var (
+	testClientIDArg = Argument{
+		Name: "Client ID",
+		Help: "Client Id of an Auth0 application.",
+	}
+
 	testClientID = Flag{
 		Name:      "Client ID",
 		LongForm:  "client-id",
@@ -65,29 +72,45 @@ If --client-id is not provided, the default client "CLI Login Testing" will be u
 		Example: `auth0 test login
 auth0 test login --client-id <id>
 auth0 test login -c <id> --connection <connection>`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			const commandKey = "test_login"
 			var userInfo *authutil.UserInfo
+			isTempClient := false
 
 			tenant, err := cli.getTenant()
 			if err != nil {
 				return err
 			}
 
-			// use the client ID as passed in by the user, or default to the
-			// "CLI Login Testing" client if none passed. This client is only
-			// used for testing login from the CLI and will be created if it
-			// does not exist.
-			if inputs.ClientID == "" {
-				client, err := getOrCreateCLITesterClient(cli.api.Client)
+			if len(args) == 0 {
+				err := testClientIDArg.Pick(cmd, &inputs.ClientID, cli.appPickerOptions)
 				if err != nil {
-					return fmt.Errorf("Unable to create an app for testing the login box: %w", err)
+					if err != ErrNoApps {
+						return err
+					}
+					cli.renderer.Infof("No applications to select from, we will create a default test application " +
+						"for you and remove it once the test is complete.")
+					client := &management.Client{
+						Name:             auth0.String(cliLoginTestingClientName),
+						Description:      auth0.String(cliLoginTestingClientDescription),
+						Callbacks:        []interface{}{cliLoginTestingCallbackURL},
+						InitiateLoginURI: auth0.String(cliLoginTestingInitiateLoginURI),
+					}
+					if err := cli.api.Client.Create(client); err != nil {
+						return fmt.Errorf("Unable to create an app for testing the login box: %w", err)
+					}
+					inputs.ClientID = client.GetClientID()
+					isTempClient = true
+					cli.renderer.Infof("Default test application successfully created\n")
 				}
-				inputs.ClientID = client.GetClientID()
+			} else {
+				inputs.ClientID = args[0]
 			}
 
 			client, err := cli.api.Client.Read(inputs.ClientID)
 			if err != nil {
+				cleanupTempApplication(isTempClient, cli, inputs.ClientID)
 				return fmt.Errorf("Unable to find client %s; if you specified a client, please verify it exists, otherwise re-run the command", inputs.ClientID)
 			}
 
@@ -105,6 +128,7 @@ auth0 test login -c <id> --connection <connection>`,
 				cliLoginTestingScopes,
 			)
 			if err != nil {
+				cleanupTempApplication(isTempClient, cli, inputs.ClientID)
 				return fmt.Errorf("An unexpected error occurred while logging in to client %s: %w", inputs.ClientID, err)
 			}
 
@@ -114,6 +138,7 @@ auth0 test login -c <id> --connection <connection>`,
 				userInfo, err = authutil.FetchUserInfo(tenant.Domain, tokenResponse.AccessToken)
 				return err
 			}); err != nil {
+				cleanupTempApplication(isTempClient, cli, inputs.ClientID)
 				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
 
@@ -122,6 +147,7 @@ auth0 test login -c <id> --connection <connection>`,
 
 			isFirstRun, err := cli.isFirstCommandRun(inputs.ClientID, commandKey)
 			if err != nil {
+				cleanupTempApplication(isTempClient, cli, inputs.ClientID)
 				return err
 			}
 
@@ -130,16 +156,16 @@ auth0 test login -c <id> --connection <connection>`,
 					ansi.Faint("Hint:"), inputs.ClientID)
 
 				if err := cli.setFirstCommandRun(inputs.ClientID, commandKey); err != nil {
+					cleanupTempApplication(isTempClient, cli, inputs.ClientID)
 					return err
 				}
 			}
-
+			cleanupTempApplication(isTempClient, cli, inputs.ClientID)
 			return nil
 		},
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	testClientID.RegisterString(cmd, &inputs.ClientID, "")
 	testAudience.RegisterString(cmd, &inputs.Audience, "")
 	testConnection.RegisterString(cmd, &inputs.ConnectionName, "")
 	return cmd
@@ -231,4 +257,15 @@ auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
 	testAudience.RegisterString(cmd, &inputs.Audience, "")
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
 	return cmd
+}
+
+// cleanupTempApplication will delete the specified application if it is marked
+// as a temporary application. It will log success or failure to the user.
+func cleanupTempApplication(isTemp bool, cli *cli, id string) {
+	if isTemp {
+		if err := cli.api.Client.Delete(id); err != nil {
+			cli.renderer.Errorf("unable to remove the default test application", err.Error())
+		}
+		cli.renderer.Infof("Default test application removed")
+	}
 }
