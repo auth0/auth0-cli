@@ -21,7 +21,7 @@ func logoutCmd(cli *cli) *cobra.Command {
 			if len(args) == 0 {
 				tens, err := cli.listTenants()
 				if err != nil {
-					return fmt.Errorf("Unable to load tenants due to an unexpected error: %w", err)
+					return err // This error is already formatted for display
 				}
 
 				if len(tens) == 0 {
