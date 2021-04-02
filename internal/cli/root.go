@@ -53,6 +53,11 @@ func Execute() {
 				return nil
 			}
 
+			// Getting help shouldn't trigger a login.
+			if cmd.CalledAs() == "help" && cmd.Parent().Use == "auth0" {
+				return nil
+			}
+
 			// Initialize everything once. Later callers can then
 			// freely assume that config is fully primed and ready
 			// to go.
