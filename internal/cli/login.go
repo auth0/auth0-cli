@@ -69,7 +69,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 	err = secretsStore.Set(auth.SecretsNamespace, res.Tenant, res.RefreshToken)
 	if err != nil {
 		// log the error but move on
-		cli.renderer.Warnf("Could not store the refresh token locally, please expect to login again once your access token expired: %s.", err.Error())
+		cli.renderer.Warnf("Could not store the refresh token locally, please expect to login again once your access token expired. See https://github.com/auth0/auth0-cli/blob/main/KNOWN-ISSUES.md.")
 	}
 
 	err = cli.addTenant(tenant{
