@@ -39,9 +39,8 @@ var (
 		Name:      "None",
 		LongForm:  "none",
 		ShortForm: "n",
-		Help:      "Specify none of your apps",
+		Help:      "Specify none of your apps.",
 	}
-
 	appType = Flag{
 		Name:      "Type",
 		LongForm:  "type",
