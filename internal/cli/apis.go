@@ -72,12 +72,14 @@ func scopesCmd(cli *cli) *cobra.Command {
 func listApisCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
+		Aliases: []string{"ls"},
 		Short: "List your APIs",
 		Long: `auth0 apis list
 Lists your existing APIs. To create one try:
-
     auth0 apis create
 `,
+		Example: `auth0 apis list
+auth0 apis ls`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ResourceServerList
 
@@ -106,10 +108,9 @@ func showApiCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an API",
-		Long: `Show an API:
-
-auth0 apis show <id>
-`,
+		Long: `Show an API:`,
+		Example: `auth0 apis show 
+auth0 apis show <id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -151,9 +152,10 @@ func createApiCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new API",
-		Long: `Create a new API:
-
-auth0 apis create --name myapi --identifier http://my-api
+		Long: `Create a new API`,
+		Example: `auth0 apis create 
+auth0 apis create --name myapi 
+auth0 apis create -n myapi --identifier http://my-api
 `,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
@@ -209,10 +211,10 @@ func updateApiCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an API",
-		Long: `Update an API:
-
-auth0 apis update <id> --name myapi
-`,
+		Long: `Update an API:`,
+		Example: `auth0 apis update 
+auth0 apis update <id> 
+auth0 apis update <id> --name myapi`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -284,10 +286,9 @@ func deleteApiCmd(cli *cli) *cobra.Command {
 		Use:   "delete",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete an API",
-		Long: `Delete an API:
-
-auth0 apis delete <id>
-`,
+		Long: `Delete an API:`,
+		Example: `auth0 apis delete 
+auth0 apis delete <id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -327,12 +328,12 @@ func listScopesCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "list",
+		Aliases: []string{"ls"},
 		Args:  cobra.MaximumNArgs(1),
 		Short: "List the scopes of an API",
-		Long: `List the scopes of an API:
-
-auth0 apis scopes list <id>
-`,
+		Long: `List the scopes of an API`,
+		Example: `auth0 apis scopes list 
+auth0 apis scopes ls <id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
