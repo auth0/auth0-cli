@@ -42,7 +42,7 @@ var (
 		Name:       "Script",
 		LongForm:   "script",
 		ShortForm:  "s",
-		Help:       "Script contents for the rule",
+		Help:       "Script contents for the rule.",
 		IsRequired: true,
 	}
 
