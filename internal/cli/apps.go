@@ -137,10 +137,9 @@ func useAppCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "use",
-		Short: "Choose a default application",
-		Long: `auth0 apps use <client-id>
-Specify your preferred application for interaction with the Auth0 CLI
-`,
+		Short: "Choose a default application for the Auth0 CLI",
+		Long: `Specify your preferred application for interaction with the Auth0 CLI`,
+		Example: `auth0 apps use <client-id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -181,12 +180,12 @@ Specify your preferred application for interaction with the Auth0 CLI
 func listAppsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
+		Aliases: []string{"ls"},
 		Short: "List your applications",
-		Long: `auth0 apps list
-Lists your existing applications. To create one try:
-
-    auth0 apps create
-`,
+		Long: `Lists your existing applications. To create one try:
+auth0 apps create`,
+    	Example: `auth0 apps list
+auth0 apps ls`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ClientList
 
@@ -215,10 +214,9 @@ func showAppCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an application",
-		Long: `Show an application:
-
-auth0 apps show <id>
-`,
+		Long: `Show an application:`,
+		Example: `auth0 apps show 
+auth0 apps show <id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -260,10 +258,9 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 		Use:   "delete",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete an application",
-		Long: `Delete an application:
-
-auth0 apps delete <id>
-`,
+		Long: `Delete an application:`,
+		Example: `auth0 apps delete 
+auth0 apps delete <id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -310,10 +307,11 @@ func createAppCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new application",
-		Long: `Create a new application:
-
-auth0 apps create --name myapp --type [native|spa|regular|m2m]
-`,
+		Long: `Create a new application:`,
+		Example: `auth0 apps create 
+auth0 apps create --name myapp 
+auth0 apps create -n myapp --type [native|spa|regular|m2m]
+auth0 apps create -n myapp -t [native|spa|regular|m2m] -- description <description>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -383,16 +381,22 @@ auth0 apps create --name myapp --type [native|spa|regular|m2m]
 
 			// Load values into a fresh app instance
 			a := &management.Client{
-				Name:                    &inputs.Name,
-				Description:             &inputs.Description,
-				AppType:                 auth0.String(apiTypeFor(inputs.Type)),
-				Callbacks:               stringToInterfaceSlice(inputs.Callbacks),
-				AllowedOrigins:          stringToInterfaceSlice(inputs.AllowedOrigins),
-				WebOrigins:              stringToInterfaceSlice(inputs.AllowedWebOrigins),
-				AllowedLogoutURLs:       stringToInterfaceSlice(inputs.AllowedLogoutURLs),
-				TokenEndpointAuthMethod: apiAuthMethodFor(inputs.AuthMethod),
-				OIDCConformant:          &oidcConformant,
-				JWTConfiguration:        &management.ClientJWTConfiguration{Algorithm: &algorithm},
+				Name:              &inputs.Name,
+				Description:       &inputs.Description,
+				AppType:           auth0.String(apiTypeFor(inputs.Type)),
+				Callbacks:         stringToInterfaceSlice(inputs.Callbacks),
+				AllowedOrigins:    stringToInterfaceSlice(inputs.AllowedOrigins),
+				WebOrigins:        stringToInterfaceSlice(inputs.AllowedWebOrigins),
+				AllowedLogoutURLs: stringToInterfaceSlice(inputs.AllowedLogoutURLs),
+				OIDCConformant:    &oidcConformant,
+				JWTConfiguration:  &management.ClientJWTConfiguration{Algorithm: &algorithm},
+			}
+
+			// Set token endpoint auth method
+			if len(inputs.AuthMethod) == 0 {
+				a.TokenEndpointAuthMethod = apiDefaultAuthMethodFor(inputs.Type)
+			} else {
+				a.TokenEndpointAuthMethod = apiAuthMethodFor(inputs.AuthMethod)
 			}
 
 			// Set grants
@@ -453,10 +457,10 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an application",
-		Long: `Update an application:
-
-auth0 apps update <id> --name myapp --type [native|spa|regular|m2m]
-`,
+		Long: `Update an application`,
+		Example: `auth0 apps update <id> 
+auth0 apps update <id> --name myapp 
+auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -663,6 +667,15 @@ func apiAuthMethodFor(v string) *string {
 		return auth0.String("client_secret_post")
 	case "basic":
 		return auth0.String("client_secret_basic")
+	default:
+		return nil
+	}
+}
+
+func apiDefaultAuthMethodFor(t string) *string {
+	switch apiTypeFor(strings.ToLower(t)) {
+	case appTypeNative, appTypeSPA:
+		return auth0.String("none")
 	default:
 		return nil
 	}

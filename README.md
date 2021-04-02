@@ -98,7 +98,7 @@ Creating application... done
   CLIENT SECRET  QXV0aDAgaXMgaGlyaW5nISBhdXRoMC5jb20vY2FyZWVycyAK
 
  ▸    Quickstarts: https://auth0.com/docs/quickstart/webapp
- ▸    Hint: You might wanna try `auth0 test login --client-id vXAtoaFdhlmtWjpIrjb9AUnrGEAOH2MM`
+ ▸    Hint: You might wanna try 'auth0 test login --client-id vXAtoaFdhlmtWjpIrjb9AUnrGEAOH2MM'
 ```
 
 As you might observe, the next thing to do would likely be to try logging in
