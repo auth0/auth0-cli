@@ -52,7 +52,7 @@ type app struct {
 	FirstRuns map[string]bool `json:"first_runs"`
 }
 
-var errUnauthenticated = errors.New("Not logged in. Try `auth0 login`.")
+var errUnauthenticated = errors.New("Not logged in. Try 'auth0 login'.")
 
 // cli provides all the foundational things for all the commands in the CLI,
 // specifically:
