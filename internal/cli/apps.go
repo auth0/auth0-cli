@@ -140,7 +140,7 @@ func useAppCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "use",
-		Short: "Choose a default application",
+		Short: "Choose a default application for the Auth0 CLI",
 		Long: `Specify your preferred application for interaction with the Auth0 CLI`,
 		Example: `auth0 apps use <client-id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
