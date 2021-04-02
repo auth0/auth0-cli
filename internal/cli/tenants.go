@@ -13,6 +13,7 @@ func tenantsCmd(cli *cli) *cobra.Command {
 		Short: "Manage configured tenants",
 	}
 
+	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(useTenantCmd(cli))
 	cmd.AddCommand(listTenantCmd(cli))
 	return cmd
