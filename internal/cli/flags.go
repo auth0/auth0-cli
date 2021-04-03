@@ -49,6 +49,14 @@ func (f *Flag) AskManyU(cmd *cobra.Command, value interface{}, defaultValue *str
 	return askManyFlag(cmd, f, value, defaultValue, true)
 }
 
+func (f *Flag) AskBool(cmd *cobra.Command, value *bool, defaultValue *bool) {
+	askBoolFlag(cmd, f, value, defaultValue, false)
+}
+
+func (f *Flag) AskBoolU(cmd *cobra.Command, value *bool, defaultValue *bool) {
+	askBoolFlag(cmd, f, value, defaultValue, true)
+}
+
 func (f *Flag) Select(cmd *cobra.Command, value interface{}, options []string, defaultValue *string) error {
 	return selectFlag(cmd, f, value, options, defaultValue, false)
 }
@@ -91,7 +99,7 @@ func (f *Flag) EditorPromptU(cmd *cobra.Command, value *string, initialValue, fi
 		},
 	}
 
-	if err := survey.Ask(questions, &response); err != nil {
+	if err := survey.Ask(questions, &response, prompt.Icons); err != nil {
 		return err
 	}
 
@@ -157,6 +165,12 @@ func askManyFlag(cmd *cobra.Command, f *Flag, value interface{}, defaultValue *s
 	*value.(*[]string) = commaSeparatedStringToSlice(strInput)
 
 	return nil
+}
+
+func askBoolFlag(cmd *cobra.Command, f *Flag, value *bool, defaultValue *bool, isUpdate bool) {
+	if shouldAsk(cmd, f, isUpdate) {
+		askBool(cmd, f, value, defaultValue)
+	}
 }
 
 func selectFlag(cmd *cobra.Command, f *Flag, value interface{}, options []string, defaultValue *string, isUpdate bool) error {

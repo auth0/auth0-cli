@@ -28,6 +28,11 @@ func ask(cmd *cobra.Command, i commandInput, value interface{}, defaultValue *st
 	return nil
 }
 
+func askBool(cmd *cobra.Command, i commandInput, value *bool, defaultValue *bool) {
+	result := prompt.ConfirmDefault(i.GetLabel(), auth0.BoolValue(defaultValue))
+	*value = result
+}
+
 func _select(cmd *cobra.Command, i commandInput, value interface{}, options []string, defaultValue *string, isUpdate bool) error {
 	isRequired := !isUpdate && i.GetIsRequired()
 
