@@ -32,10 +32,11 @@ var (
 	}
 
 	ruleEnabled = Flag{
-		Name:      "Enabled",
-		LongForm:  "enabled",
-		ShortForm: "e",
-		Help:      "Enable (or disable) a rule.",
+		Name:         "Enabled",
+		LongForm:     "enabled",
+		ShortForm:    "e",
+		Help:         "Enable (or disable) a rule.",
+		AlwaysPrompt: true,
 	}
 
 	ruleScript = Flag{
@@ -300,6 +301,8 @@ auth0 rules update <rule-id> -n "My Updated Rule" --enabled=false`,
 			if err := ruleName.AskU(cmd, &inputs.Name, rule.Name); err != nil {
 				return err
 			}
+
+			ruleEnabled.AskBoolU(cmd, &inputs.Enabled, rule.Enabled)
 
 			// TODO(cyx): we can re-think this once we have
 			// `--stdin` based commands. For now we don't have
