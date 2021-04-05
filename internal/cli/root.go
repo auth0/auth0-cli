@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/instrumentation"
@@ -106,6 +107,11 @@ func Execute() {
 			instrumentation.ReportException(err)
 		}
 	}()
+
+	// platform specific terminal initialization:
+	// this should run for all commands,
+	// for most of the architechtures there's no requirements:
+	ansi.InitConsole()
 
 	if err := rootCmd.ExecuteContext(context.TODO()); err != nil {
 		cli.renderer.Heading("error")
