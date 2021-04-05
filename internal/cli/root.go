@@ -110,7 +110,7 @@ func Execute() {
 
 	// platform specific terminal initialization:
 	// this should run for all commands,
-	// for most of the architechtures there's no requirements:
+	// for most of the architectures there's no requirements:
 	ansi.InitConsole()
 
 	if err := rootCmd.ExecuteContext(context.TODO()); err != nil {
