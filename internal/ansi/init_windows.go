@@ -4,7 +4,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// IinitConsole configures the standard output and error streams
+// InitConsole configures the standard output and error streams
 // on Windows systems. This is necessary to enable colored and ANSI output.
 // This is the Windows implementation of ansi/init.go.
 func InitConsole() {
