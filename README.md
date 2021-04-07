@@ -21,7 +21,7 @@ brew install auth0/auth0-cli/auth0
 
 #### Manually
 
-1. Download the _Darwin_ binaries from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
+1. Download the _Darwin_ binary from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
 1. Extract
 1. Run `./auth0`
 1. Setup CLI commands completion for your terminal:
@@ -35,7 +35,7 @@ brew install auth0/auth0-cli/auth0
 
 #### Manually
 
-1. Download the _Windows_ binaries from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
+1. Download the _Windows_ binary from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
 1. Extract
 1. Run `auth0.exe`
 
@@ -43,7 +43,7 @@ brew install auth0/auth0-cli/auth0
 
 #### Manually
 
-1. Download the _Linux_ binaries from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
+1. Download the _Linux_ binary from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
 1. Extract `$  tar -xf auth0-cli_{dowloaded version here}_Linux_x86_64.tar.gz`
 1. Run `./auth0` 
 1. Setup CLI commands completion for your terminal:
@@ -118,7 +118,7 @@ using the client ID.
 Whether or not you've created the application using the CLI or the management
 dashboard, you'll be able to test logging in using a specific application.
 
-If you have the client ID, you may specify it via the `--client-id` flag,
+If you have the client ID, you may pass it as an argument, 
 otherwise a prompt will be presented:
 
 ```bash
