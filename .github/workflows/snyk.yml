@@ -2,6 +2,7 @@ name: Snyk
 on: [pull_request]
 jobs:
   security:
+    if: github.repository_owner == 'auth0'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
