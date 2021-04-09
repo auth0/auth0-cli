@@ -316,6 +316,7 @@ auth0 apis delete <id>`,
 				list, err = cli.api.ResourceServer.Read(url.PathEscape(inputs.ID))
 				return err
 			})
+			_ = list
 
 			if err != nil {
 				return fmt.Errorf("Unable to delete API. The specified Id: %v  doesn't exist", inputs.ID)
