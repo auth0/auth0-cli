@@ -117,6 +117,7 @@ func appsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "apps",
 		Short:   "Manage resources for applications",
+		Long:    "Manage resources for applications.",
 		Aliases: []string{"clients"},
 	}
 
@@ -141,8 +142,8 @@ func useAppCmd(cli *cli) *cobra.Command {
 		Use:     "use",
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Choose a default application for the Auth0 CLI",
-		Long:    `Specify your preferred application for interaction with the Auth0 CLI`,
-		Example: `auth0 apps use <client-id>`,
+		Long:    "Specify your preferred application for interaction with the Auth0 CLI.",
+		Example: "auth0 apps use <client-id>",
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -186,7 +187,7 @@ func listAppsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your applications",
-		Long: `Lists your existing applications. To create one try:
+		Long: `List your existing applications. To create one try:
 auth0 apps create`,
 		Example: `auth0 apps list
 auth0 apps ls`,
@@ -218,7 +219,7 @@ func showAppCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an application",
-		Long:  `Show an application:`,
+		Long:  "Show an application.",
 		Example: `auth0 apps show 
 auth0 apps show <id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -262,7 +263,7 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 		Use:   "delete",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete an application",
-		Long:  `Delete an application:`,
+		Long:  "Delete an application.",
 		Example: `auth0 apps delete 
 auth0 apps delete <id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -318,7 +319,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new application",
-		Long:  `Create a new application:`,
+		Long:  "Create a new application.",
 		Example: `auth0 apps create 
 auth0 apps create --name myapp 
 auth0 apps create -n myapp --type [native|spa|regular|m2m]
@@ -468,7 +469,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an application",
-		Long:  `Update an application`,
+		Long:  "Update an application.",
 		Example: `auth0 apps update <id> 
 auth0 apps update <id> --name myapp 
 auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
