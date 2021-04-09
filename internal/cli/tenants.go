@@ -11,6 +11,7 @@ func tenantsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tenants",
 		Short: "Manage configured tenants",
+		Long:  "Manage configured tenants.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -25,7 +26,8 @@ func listTenantCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your tenants",
-		Long:    `auth0 tenants list`,
+		Long:    "List your tenants.",
+		Example: "auth0 tenants list",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tens, err := cli.listTenants()
 			if err != nil {
@@ -34,7 +36,7 @@ func listTenantCmd(cli *cli) *cobra.Command {
 
 			tenNames := make([]string, len(tens))
 			for i, t := range tens {
-				tenNames[i] = t.Name
+				tenNames[i] = t.Domain
 			}
 
 			cli.renderer.ShowTenants(tenNames)
@@ -46,10 +48,11 @@ func listTenantCmd(cli *cli) *cobra.Command {
 
 func useTenantCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "use",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Set the active tenant",
-		Long:  `auth0 tenants use <tenant>`,
+		Use:     "use",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Set the active tenant",
+		Long:    "Set the active tenant.",
+		Example: "auth0 tenants use <tenant>",
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -63,12 +66,12 @@ func useTenantCmd(cli *cli) *cobra.Command {
 
 				tenNames := make([]string, len(tens))
 				for i, t := range tens {
-					tenNames[i] = t.Name
+					tenNames[i] = t.Domain
 				}
 
-				input := prompt.SelectInput("tenant", "Tenant:", "Tenant to activate", tenNames, "", true)
+				input := prompt.SelectInput("tenant", "Tenant:", "Tenant to activate", tenNames, tenNames[0], true)
 				if err := prompt.AskOne(input, &selectedTenant); err != nil {
-					return fmt.Errorf("An unexpected error occurred: %w", err)
+					return handleInputError(err)
 				}
 			} else {
 				requestedTenant := args[0]
@@ -76,7 +79,7 @@ func useTenantCmd(cli *cli) *cobra.Command {
 				if !ok {
 					return fmt.Errorf("Unable to find tenant %s; run 'auth0 tenants use' to see your configured tenants or run 'auth0 login' to configure a new tenant", requestedTenant)
 				}
-				selectedTenant = t.Name
+				selectedTenant = t.Domain
 			}
 
 			cli.config.DefaultTenant = selectedTenant

@@ -62,6 +62,7 @@ func rulesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "rules",
 		Short: "Manage resources for rules",
+		Long:  "Manage resources for rules.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -80,7 +81,8 @@ func listRulesCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your rules",
-		Long:    `List the rules in your current tenant.`,
+		Long: `List your existing rules. To create one try:
+auth0 rules create`,
 		Example: `auth0 rules list
 auth0 rules ls`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -118,7 +120,7 @@ func createRuleCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new rule",
-		Long:  `Create a new rule:`,
+		Long:  "Create a new rule.",
 		Example: `auth0 rules create
 auth0 rules create --name "My Rule"
 auth0 rules create -n "My Rule" --template "Empty rule"
@@ -184,7 +186,7 @@ func showRuleCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show a rule",
-		Long:  `Show a rule:`,
+		Long:  "Show a rule.",
 		Example: `auth0 rules show 
 auth0 rules show <id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -229,7 +231,7 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 		Use:   "delete",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete a rule",
-		Long:  `Delete a rule`,
+		Long:  "Delete a rule.",
 		Example: `auth0 rules delete 
 auth0 rules delete <rule-id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -278,7 +280,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a rule",
-		Long:  `Update a rule`,
+		Long:  "Update a rule.",
 		Example: `auth0 rules update <rule-id> 
 auth0 rules update <rule-id> --name "My Updated Rule"
 auth0 rules update <rule-id> -n "My Updated Rule" --enabled=false`,

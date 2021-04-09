@@ -137,7 +137,7 @@ func (c *cli) setup(ctx context.Context) error {
 			Client:  http.DefaultClient,
 		}
 
-		res, err := tr.Refresh(ctx, t.Name)
+		res, err := tr.Refresh(ctx, t.Domain)
 		if err != nil {
 			// ask and guide the user through the login process:
 			c.renderer.Errorf("failed to renew access token, %s", err)
@@ -222,7 +222,7 @@ func (c *cli) addTenant(ten tenant) error {
 	// If there's no existing DefaultTenant yet, might as well set the
 	// first successfully logged in tenant during onboarding.
 	if c.config.DefaultTenant == "" {
-		c.config.DefaultTenant = ten.Name
+		c.config.DefaultTenant = ten.Domain
 	}
 
 	// If we're dealing with an empty file, we'll need to initialize this
@@ -231,7 +231,7 @@ func (c *cli) addTenant(ten tenant) error {
 		c.config.Tenants = map[string]tenant{}
 	}
 
-	c.config.Tenants[ten.Name] = ten
+	c.config.Tenants[ten.Domain] = ten
 
 	if err := c.persistConfig(); err != nil {
 		return fmt.Errorf("unexpected error persisting config: %w", err)
@@ -305,7 +305,7 @@ func (c *cli) setDefaultAppID(id string) error {
 
 	tenant.DefaultAppID = id
 
-	c.config.Tenants[tenant.Name] = tenant
+	c.config.Tenants[tenant.Domain] = tenant
 	if err := c.persistConfig(); err != nil {
 		return fmt.Errorf("Unexpected error persisting config: %w", err)
 	}
@@ -333,7 +333,7 @@ func (c *cli) setFirstCommandRun(clientID string, command string) error {
 		}
 	}
 
-	c.config.Tenants[tenant.Name] = tenant
+	c.config.Tenants[tenant.Domain] = tenant
 
 	if err := c.persistConfig(); err != nil {
 		return fmt.Errorf("Unexpected error persisting config: %w", err)

@@ -207,7 +207,7 @@ func hasLocalCallbackURL(client *management.Client) bool {
 	return false
 }
 
-// adds the localhost callback URL to a given client
+// adds the localhost callback URL to a given application
 func addLocalCallbackURLToClient(clientManager auth0.ClientAPI, client *management.Client) (bool, error) {
 	for _, rawCallbackURL := range client.Callbacks {
 		callbackURL := rawCallbackURL.(string)
