@@ -2,7 +2,8 @@ name: Snyk
 on: [pull_request]
 jobs:
   security:
-    if: github.repository_owner == 'auth0'
+    # skip running this action if the PR is coming from a fork:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
