@@ -55,7 +55,8 @@ var (
 func testCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "test",
-		Short: "Try your universal login box or get a token",
+		Short: "Try your Universal Login box or get a token",
+		Long:  "Try your Universal Login box or get a token.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -75,8 +76,8 @@ func testLoginCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "login",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Try out your universal login box",
-		Long:  `Launch a browser to try out your universal login box.`,
+		Short: "Try out your Universal Login box",
+		Long:  "Launch a browser to try out your Universal Login box.",
 		Example: `auth0 test login
 auth0 test login <client-id>
 auth0 test login <client-id> --connection <connection>`,
@@ -184,8 +185,8 @@ func testTokenCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "token",
 		Args:  cobra.NoArgs,
-		Short: "Fetch a token for the given client and API",
-		Long: `Fetch an access token for the given client.
+		Short: "Fetch a token for the given application and API",
+		Long: `Fetch an access token for the given application.
 If --client-id is not provided, the default client "CLI Login Testing" will be used (and created if not exists).
 Specify the API you want this token for with --audience (API Identifer). Additionally, you can also specify the --scope to use.`,
 		Example: `auth0 test token

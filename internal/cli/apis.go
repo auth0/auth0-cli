@@ -43,6 +43,7 @@ func apisCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "apis",
 		Short:   "Manage resources for APIs",
+		Long:    "Manage resources for APIs.",
 		Aliases: []string{"resource-servers"},
 	}
 
@@ -61,6 +62,7 @@ func scopesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "scopes",
 		Short: "Manage resources for API scopes",
+		Long:  "Manage resources for API scopes.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -75,10 +77,8 @@ func listApisCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your APIs",
-		Long: `auth0 apis list
-Lists your existing APIs. To create one try:
-    auth0 apis create
-`,
+		Long: `List your existing APIs. To create one try:
+auth0 apis create`,
 		Example: `auth0 apis list
 auth0 apis ls`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -109,7 +109,7 @@ func showApiCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an API",
-		Long:  `Show an API:`,
+		Long:  "Show an API.",
 		Example: `auth0 apis show 
 auth0 apis show <id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -154,11 +154,10 @@ func createApiCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new API",
-		Long:  `Create a new API`,
+		Long:  "Create a new API.",
 		Example: `auth0 apis create 
 auth0 apis create --name myapi 
-auth0 apis create -n myapi --identifier http://my-api
-`,
+auth0 apis create -n myapi --identifier http://my-api`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -213,7 +212,7 @@ func updateApiCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an API",
-		Long:  `Update an API:`,
+		Long:  "Update an API.",
 		Example: `auth0 apis update 
 auth0 apis update <id> 
 auth0 apis update <id> --name myapi`,
@@ -288,7 +287,7 @@ func deleteApiCmd(cli *cli) *cobra.Command {
 		Use:   "delete",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete an API",
-		Long:  `Delete an API:`,
+		Long:  "Delete an API.",
 		Example: `auth0 apis delete 
 auth0 apis delete <id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -311,11 +310,13 @@ auth0 apis delete <id>`,
 			}
 
 			return ansi.Spinner("Deleting API", func() error {
-				err := cli.api.ResourceServer.Delete(url.PathEscape(inputs.ID))
+				_, err := cli.api.ResourceServer.Read(url.PathEscape(inputs.ID))
+
 				if err != nil {
-					return fmt.Errorf("An unexpected error occurred while attempting to delete an API with Id '%s': %w", inputs.ID, err)
+					return fmt.Errorf("Unable to delete API. The specified Id: %v doesn't exist", inputs.ID)
 				}
-				return nil
+
+				return cli.api.ResourceServer.Delete(url.PathEscape(inputs.ID))
 			})
 		},
 	}
@@ -333,7 +334,7 @@ func listScopesCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "List the scopes of an API",
-		Long:    `List the scopes of an API`,
+		Long:    "List the scopes of an API.",
 		Example: `auth0 apis scopes list 
 auth0 apis scopes ls <id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
