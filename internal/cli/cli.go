@@ -137,7 +137,7 @@ func (c *cli) setup(ctx context.Context) error {
 			Client:  http.DefaultClient,
 		}
 
-		res, err := tr.Refresh(ctx, t.Name)
+		res, err := tr.Refresh(ctx, t.Domain)
 		if err != nil {
 			// ask and guide the user through the login process:
 			c.renderer.Errorf("failed to renew access token, %s", err)
