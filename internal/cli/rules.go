@@ -6,6 +6,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
@@ -243,6 +244,12 @@ auth0 rules delete <rule-id>`,
 				err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
 				if err != nil {
 					return err
+				}
+			}
+
+			if !cli.force && canPrompt(cmd) {
+				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
+					return nil
 				}
 			}
 
