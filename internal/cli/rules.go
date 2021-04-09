@@ -244,15 +244,20 @@ auth0 rules delete <rule-id>`,
 				}
 			}
 
-			err := ansi.Spinner("Deleting rule", func() error {
-				return cli.api.Rule.Delete(inputs.ID)
+			var rule *management.Rule
+			err := ansi.Waiting(func() error {
+				var err error
+				rule, err = cli.api.Rule.Read(inputs.ID)
+				return err
 			})
 
 			if err != nil {
-				return err
+				return fmt.Errorf("Unable to delete rule. The specified Id: %v  doesn't exist", inputs.ID)
+			} else {
+				return ansi.Spinner("Deleting rule", func() error {
+					return cli.api.Rule.Delete(inputs.ID)
+				})
 			}
-
-			return nil
 		},
 	}
 
