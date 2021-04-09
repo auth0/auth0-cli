@@ -285,7 +285,13 @@ auth0 apps delete <id>`,
 				}
 			}
 
-			return ansi.Spinner("Deleting application", func() error {
+			return ansi.Spinner("Deleting Application", func() error {
+				_, err := cli.api.Client.Read(inputs.ID)
+
+				if err != nil {
+					return fmt.Errorf("Unable to delete application. The specified Id: %v doesn't exist", inputs.ID)
+				}
+
 				return cli.api.Client.Delete(inputs.ID)
 			})
 		},

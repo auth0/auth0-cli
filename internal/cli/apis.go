@@ -310,11 +310,13 @@ auth0 apis delete <id>`,
 			}
 
 			return ansi.Spinner("Deleting API", func() error {
-				err := cli.api.ResourceServer.Delete(url.PathEscape(inputs.ID))
+				_, err := cli.api.ResourceServer.Read(url.PathEscape(inputs.ID))
+
 				if err != nil {
-					return fmt.Errorf("An unexpected error occurred while attempting to delete an API with Id '%s': %w", inputs.ID, err)
+					return fmt.Errorf("Unable to delete API. The specified Id: %v doesn't exist", inputs.ID)
 				}
-				return nil
+
+				return cli.api.ResourceServer.Delete(url.PathEscape(inputs.ID))
 			})
 		},
 	}
