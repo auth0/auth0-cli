@@ -11,6 +11,7 @@ func tenantsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tenants",
 		Short: "Manage configured tenants",
+		Long:  "Manage configured tenants.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -25,7 +26,8 @@ func listTenantCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your tenants",
-		Long:    `auth0 tenants list`,
+		Long:    "List your tenants.",
+		Example: "auth0 tenants list",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tens, err := cli.listTenants()
 			if err != nil {
@@ -46,10 +48,11 @@ func listTenantCmd(cli *cli) *cobra.Command {
 
 func useTenantCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "use",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Set the active tenant",
-		Long:  `auth0 tenants use <tenant>`,
+		Use:     "use",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Set the active tenant",
+		Long:    "Set the active tenant.",
+		Example: "auth0 tenants use <tenant>",
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},

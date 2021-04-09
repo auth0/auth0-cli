@@ -36,6 +36,7 @@ func logsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "logs",
 		Short: "View tenant logs",
+		Long:  "View tenant logs.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -109,7 +110,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 		Use:   "tail",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Tail the tenant logs",
-		Long:  "Tail the tenant logs allowing to filter by Client ID",
+		Long:  "Tail the tenant logs allowing to filter by Client ID.",
 		Example: `auth0 logs tail
 auth0 logs tail --client-id <id>
 auth0 logs tail -n 100`,

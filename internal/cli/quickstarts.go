@@ -69,6 +69,7 @@ func quickstartsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "quickstarts",
 		Short:   "Quickstart support for getting bootstrapped",
+		Long:    "Quickstart support for getting bootstrapped.",
 		Aliases: []string{"qs"},
 	}
 
@@ -85,10 +86,11 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "download",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Download a quickstart sample app for a specific tech stack",
-		Long:  `auth0 quickstarts download --stack <stack>`,
+		Use:     "download",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Download a quickstart sample app for a specific tech stack",
+		Long:    "Download a quickstart sample app for a specific tech stack.",
+		Example: "auth0 quickstarts download --stack <stack>",
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
