@@ -59,6 +59,7 @@ brews:
         (zsh_completion/"_auth0").write `#{bin}/auth0 completion zsh`
     caveats: "Thanks for installing the Auth0 CLI"
 scoop:
+    name: auth0
     bucket:
       owner: auth0
       name: scoop-auth0-cli
