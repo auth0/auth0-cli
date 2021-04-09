@@ -24,7 +24,7 @@ func (v *ruleView) AsTableHeader() []string {
 }
 
 func (v *ruleView) AsTableRow() []string {
-	return []string{v.ID, v.Name, strconv.FormatBool(v.Enabled), fmt.Sprintf("%d", v.Order)}
+	return []string{ansi.Faint(v.ID), v.Name, strconv.FormatBool(v.Enabled), fmt.Sprintf("%d", v.Order)}
 }
 
 func (v *ruleView) KeyValues() [][]string {
