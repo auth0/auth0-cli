@@ -34,7 +34,7 @@ func listTenantCmd(cli *cli) *cobra.Command {
 
 			tenNames := make([]string, len(tens))
 			for i, t := range tens {
-				tenNames[i] = t.Name
+				tenNames[i] = t.Domain
 			}
 
 			cli.renderer.ShowTenants(tenNames)
@@ -63,10 +63,10 @@ func useTenantCmd(cli *cli) *cobra.Command {
 
 				tenNames := make([]string, len(tens))
 				for i, t := range tens {
-					tenNames[i] = t.Name
+					tenNames[i] = t.Domain
 				}
 
-				input := prompt.SelectInput("tenant", "Tenant:", "Tenant to activate", tenNames, "", true)
+				input := prompt.SelectInput("tenant", "Tenant:", "Tenant to activate", tenNames, tenNames[0], true)
 				if err := prompt.AskOne(input, &selectedTenant); err != nil {
 					return fmt.Errorf("An unexpected error occurred: %w", err)
 				}
@@ -76,7 +76,7 @@ func useTenantCmd(cli *cli) *cobra.Command {
 				if !ok {
 					return fmt.Errorf("Unable to find tenant %s; run 'auth0 tenants use' to see your configured tenants or run 'auth0 login' to configure a new tenant", requestedTenant)
 				}
-				selectedTenant = t.Name
+				selectedTenant = t.Domain
 			}
 
 			cli.config.DefaultTenant = selectedTenant
