@@ -91,7 +91,7 @@ $ auth0 apps create
  Callback URLs: http://localhost:3000
  Allowed Logout URLs: http://localhost:3000
 
-=== travel0 application created
+=== travel0.auth0.com application created
 
   CLIENT ID            wmVzrZkGhKgglMRMvpauORCulBkQ5qeI                                  
   NAME                 My Awesome App                                                       
