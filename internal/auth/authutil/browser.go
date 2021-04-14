@@ -2,6 +2,7 @@ package authutil
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net/http"
 	"time"
@@ -33,9 +34,13 @@ func WaitForBrowserCallback(addr string) (code string, state string, err error) 
 		}
 
 		if cb.code == "" {
-			_, _ = w.Write([]byte("<p>&#10060; Unable to extract code from request, please try authenticating again.</p>"))
+			_, _ = w.Write([]byte(resultPage("Login Failed",
+				"Unable to extract code from request, please try authenticating again.",
+				"error-denied")))
 		} else {
-			_, _ = w.Write([]byte("<p>&#128075; You can close the window and go back to the CLI to see the user info and tokens.</p>"))
+			_, _ = w.Write([]byte(resultPage("Login Successful",
+				"You can close the window and go back to the CLI to see the user info and tokens.",
+				"success-lock")))
 		}
 
 		cbCh <- cb
@@ -61,4 +66,11 @@ func WaitForBrowserCallback(addr string) (code string, state string, err error) 
 	case err := <-errCh:
 		return "", "", err
 	}
+}
+
+//go:embed data/result-page.html
+var resultHTML string
+
+func resultPage(title string, message string, iconClass string) string {
+	return fmt.Sprintf(resultHTML, iconClass, title, message)
 }
