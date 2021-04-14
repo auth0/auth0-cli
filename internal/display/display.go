@@ -65,7 +65,7 @@ func (r *Renderer) Heading(text ...string) {
 }
 
 func (r *Renderer) EmptyState(resource string) {
-	fmt.Fprintf(r.MessageWriter, "No %s available.\n", resource)
+	fmt.Fprintf(r.MessageWriter, "No %s available.\n\n", resource)
 }
 
 type View interface {
