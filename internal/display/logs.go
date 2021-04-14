@@ -122,7 +122,7 @@ func (v *logView) typeDesc() (typ, desc string) {
 		typ = "..."
 	}
 
-	typ = truncate(chunks[0], 20)
+	typ = truncate(chunks[0], 25)
 
 	if len(chunks) == 2 {
 		desc = strings.TrimSuffix(chunks[1], ")")
