@@ -76,8 +76,8 @@ func (v *logView) AsTableRow() []string {
 
 	return []string{
 		typ,
-		truncate(desc, 25),
-		ansi.Faint(truncate(timeAgo(v.GetDate()), 18)),
+		truncate(desc, 30),
+		ansi.Faint(truncate(timeAgo(v.GetDate()), 14)),
 		conn,
 		clientName,
 	}
