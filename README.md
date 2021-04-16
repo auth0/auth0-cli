@@ -34,7 +34,7 @@ With the Auth0 CLI, you can:
 
 ### macOS
 
-#### Homebrew
+#### [Homebrew](https://brew.sh/)
 
 ```bash
 brew install auth0/auth0-cli/auth0
@@ -54,7 +54,7 @@ brew install auth0/auth0-cli/auth0
 
 ### Windows
 
-#### Scoop
+#### [Scoop](https://scoop.sh/)
 
 ```bash
 scoop bucket add auth0 https://github.com/auth0/scoop-auth0-cli.git
