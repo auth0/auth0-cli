@@ -4,10 +4,31 @@
 
 > Note: This CLI is currently in an experimental state and is not supported by Auth0. It has not had a complete security review, and we do not recommend using it to interact with production tenants.
 
-Build, test, and manage your integration with **[Auth0](http://auth0.com/)** directly from your **terminal**.
+Build, test, troubleshoot and manage your integration with **[Auth0](http://auth0.com/)** directly from your **terminal**.
 
 ![demo](./demo.gif)
 
+## Features
+
+### 🧪 Test the login flow at any time
+
+You can easily test out the Universal Login box of your Auth0 application by running `auth0 test login`. This initiates a login flow in your browser. Once you complete the process, the Auth0 CLI will display your profile information and credentials.
+
+### ⚡️ Get up and running quickly
+
+You can also download a QuickStart sample application that’s already configured for your Auth0 application with `auth0 quickstarts download`. Just install the dependencies, and the sample application will be ready to run. Use it as an example integration to help set up Auth0 in your own application.
+
+### 🔍 Find issues faster
+
+If you encounter difficulties setting up your integration, use the Auth0 CLI to tail your tenant’s logs for a smoother troubleshooting experience. `auth0 logs tail` will let you inspect the authentication events as they happen. You can easily filter the events from a single Auth0 application with `--client-id <client-id>` and use `--debug` to get the raw error details.
+
+### 🔁 Simplify repetitive tasks
+
+With the Auth0 CLI, you can:
+
+- Manage your Auth0 applications, rules, and APIs right from the terminal.
+- Create, update and delete resources interactively.
+- List all your resources or inspect them individually.
 
 ## Installation
 
@@ -15,7 +36,7 @@ Build, test, and manage your integration with **[Auth0](http://auth0.com/)** dir
 
 #### Homebrew
 
-```
+```bash
 brew install auth0/auth0-cli/auth0
 ```
 
@@ -32,6 +53,13 @@ brew install auth0/auth0-cli/auth0
 > see more completion options: `auth0 completion -h`
 
 ### Windows
+
+#### Scoop
+
+```bash
+scoop bucket add auth0 https://github.com/auth0/scoop-auth0-cli.git
+scoop install auth0
+```
 
 #### Manually
 
