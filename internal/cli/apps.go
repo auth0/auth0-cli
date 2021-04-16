@@ -683,14 +683,12 @@ func openAppCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			cfg := cli.config
-			manageUrl := formatManageURL(cfg, inputs.ID)
+			manageUrl := formatManageURL(cli.config, inputs.ID)
 			if manageUrl == "" {
 				cli.renderer.Warnf("Unable to formate the correct URL, please ensure you have run auth0 login and try again.")
 				return nil
 			}
-			err := open.URL(manageUrl)
-			if err != nil {
+			if err := open.URL(manageUrl); err != nil {
 				cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s.", manageUrl)
 			}
 			return nil
