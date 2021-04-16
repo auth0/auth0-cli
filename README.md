@@ -27,7 +27,7 @@ If you encounter difficulties setting up your integration, use the Auth0 CLI to 
 With the Auth0 CLI, you can:
 
 - Manage your Auth0 applications, rules, and APIs right from the terminal.
-- Create, update and delete resources interactively.
+- Create, update, and delete resources interactively.
 - List all your resources or inspect them individually.
 
 ## Installation
