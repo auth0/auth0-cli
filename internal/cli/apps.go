@@ -7,6 +7,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/open"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
@@ -21,6 +22,7 @@ const (
 	appTypeRegularWeb     = "regular_web"
 	appTypeNonInteractive = "non_interactive"
 	appDefaultURL         = "http://localhost:3000"
+	manageDomain          = "https://manage.auth0.com"
 )
 
 var (
@@ -128,6 +130,7 @@ func appsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(showAppCmd(cli))
 	cmd.AddCommand(updateAppCmd(cli))
 	cmd.AddCommand(deleteAppCmd(cli))
+	cmd.AddCommand(openAppCmd(cli))
 
 	return cmd
 }
@@ -654,6 +657,69 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 	appGrants.RegisterStringSliceU(cmd, &inputs.Grants, nil)
 
 	return cmd
+}
+
+func openAppCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID string
+	}
+
+	cmd := &cobra.Command{
+		Use:     "open",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Open application settings page in Auth0 Manage",
+		Long:    "Open application settings page in Auth0 Manage.",
+		Example: `auth0 apps open <id>`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
+				if err != nil {
+					return err
+				}
+			} else {
+				inputs.ID = args[0]
+			}
+
+			cfg := cli.config
+			manageUrl := formatManageURL(cfg, inputs.ID)
+			if manageUrl == "" {
+				cli.renderer.Warnf("Unable to formate the correct URL, please ensure you have run auth0 login and try again.")
+				return nil
+			}
+			err := open.URL(manageUrl)
+			if err != nil {
+				cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s.", manageUrl)
+			}
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func formatManageURL(cfg config, id string) string {
+	if cfg.DefaultTenant == "" || id == "" {
+		return ""
+	}
+	// ex: dev-tti06f6y.us.auth0.com
+	s := strings.Split(cfg.DefaultTenant, ".")
+	if len(s) < 4 {
+		return ""
+	}
+	region := s[len(s)-3]
+	tenant := cfg.Tenants[cfg.DefaultTenant].Name
+	if tenant == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s/dashboard/%s/%s/applications/%s/settings",
+		manageDomain,
+		region,
+		tenant,
+		id,
+	)
 }
 
 func apiTypeFor(v string) string {
