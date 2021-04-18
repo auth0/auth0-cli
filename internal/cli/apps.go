@@ -7,7 +7,6 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
-	"github.com/auth0/auth0-cli/internal/open"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
@@ -22,7 +21,6 @@ const (
 	appTypeRegularWeb     = "regular_web"
 	appTypeNonInteractive = "non_interactive"
 	appDefaultURL         = "http://localhost:3000"
-	manageDomain          = "https://manage.auth0.com"
 )
 
 var (
@@ -669,7 +667,7 @@ func openAppCmd(cli *cli) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Open application settings page in Auth0 Manage",
 		Long:    "Open application settings page in Auth0 Manage.",
-		Example: `auth0 apps open <id>`,
+		Example: "auth0 apps open <id>",
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -683,14 +681,7 @@ func openAppCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			manageUrl := formatManageURL(cli.config, inputs.ID)
-			if manageUrl == "" {
-				cli.renderer.Warnf("Unable to format the correct URL, please ensure you have run auth0 login and try again.")
-				return nil
-			}
-			if err := open.URL(manageUrl); err != nil {
-				cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s.", manageUrl)
-			}
+			openManageURL(cli, cli.config.DefaultTenant, formatAppSettingsPath(inputs.ID))
 			return nil
 		},
 	}
@@ -698,26 +689,11 @@ func openAppCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func formatManageURL(cfg config, id string) string {
-	if cfg.DefaultTenant == "" || id == "" {
+func formatAppSettingsPath(id string) string {
+	if len(id) == 0 {
 		return ""
 	}
-	// ex: dev-tti06f6y.us.auth0.com
-	s := strings.Split(cfg.DefaultTenant, ".")
-	if len(s) < 4 {
-		return ""
-	}
-	region := s[len(s)-3]
-	tenant := cfg.Tenants[cfg.DefaultTenant].Name
-	if tenant == "" {
-		return ""
-	}
-	return fmt.Sprintf("%s/dashboard/%s/%s/applications/%s/settings",
-		manageDomain,
-		region,
-		tenant,
-		id,
-	)
+	return fmt.Sprintf("applications/%s/settings", id)
 }
 
 func apiTypeFor(v string) string {
