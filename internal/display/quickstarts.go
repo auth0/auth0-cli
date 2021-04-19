@@ -7,6 +7,10 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
+const (
+	qsBaseURL = "https://auth0.com/docs/quickstart"
+)
+
 type quickstartView struct {
 	Stack   string
 	AppType string
@@ -38,7 +42,7 @@ func (r *Renderer) QuickstartList(qs map[string][]auth0.Quickstart) {
 			results = append(results, &quickstartView{
 					Stack: item.Name,
 					AppType: applyColor(qsAppTypeFor(key)),
-					URL: fmt.Sprintf("https://auth0.com/docs/quickstart/%s/%s", key, item.Path),
+					URL: fmt.Sprintf("%s/%s/%s", qsBaseURL, key, item.Path),
 				})
 		}
 	}
@@ -49,13 +53,13 @@ func (r *Renderer) QuickstartList(qs map[string][]auth0.Quickstart) {
 func qsAppTypeFor(s string) string {
 	switch s {
 	case "native":
-		return "Native"
+		return friendlyNative
 	case "spa":
-		return "Single Page Web Application"
+		return friendlySpa
 	case "webapp":
-		return "Regular Web Application"
+		return friendlyReg
 	case "backend":
-		return "Machine to Machine"
+		return friendlyM2M
 	default:
 		return ""
 	}
