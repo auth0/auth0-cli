@@ -27,7 +27,7 @@ func (r *Renderer) QuickstartList(qs map[string][]auth0.Quickstart) {
 	var results []View
 	keys := make([]string, 0, len(qs))
 
-	for key, _ := range qs {
+	for key := range qs {
 		keys = append(keys, key)
 	}
 
