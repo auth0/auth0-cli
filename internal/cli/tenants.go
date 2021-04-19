@@ -144,7 +144,7 @@ func (c *cli) tenantPickerOptions() (pickerOptions, error) {
 		return nil, fmt.Errorf("Unable to load tenants due to an unexpected error: %w", err)
 	}
 
-    var priorityOpts, opts pickerOptions
+	var priorityOpts, opts pickerOptions
 
 	for _, t := range tens {
 		opt := pickerOption{value: t.Domain, label: t.Domain}
