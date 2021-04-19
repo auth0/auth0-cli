@@ -113,7 +113,7 @@ func showApiCmd(cli *cli) *cobra.Command {
 		Short: "Show an API",
 		Long:  "Show an API.",
 		Example: `auth0 apis show 
-auth0 apis show <id>`,
+auth0 apis show <id|audience>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -216,8 +216,8 @@ func updateApiCmd(cli *cli) *cobra.Command {
 		Short: "Update an API",
 		Long:  "Update an API.",
 		Example: `auth0 apis update 
-auth0 apis update <id> 
-auth0 apis update <id> --name myapi`,
+auth0 apis update <id|audience> 
+auth0 apis update <id|audience> --name myapi`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -291,7 +291,7 @@ func deleteApiCmd(cli *cli) *cobra.Command {
 		Short: "Delete an API",
 		Long:  "Delete an API.",
 		Example: `auth0 apis delete 
-auth0 apis delete <id>`,
+auth0 apis delete <id|audience>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -336,7 +336,8 @@ func openApiCmd(cli *cli) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Open API settings page in Auth0 Manage",
 		Long:    "Open API settings page in Auth0 Manage.",
-		Example: "auth0 apis open <id>",
+		Example: `auth0 apis open
+auth0 apis open <id|audience>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -351,6 +352,11 @@ func openApiCmd(cli *cli) *cobra.Command {
 			}
 
 			// Heuristics to determine if this a valid ID, or an audience value
+			// Audiences are usually URLs, but not necessarily. Whereas IDs have a length of 24
+			// So here if the value is not a URL, we then check if has the length of an ID
+			// If the length check fails, we know it's a non-URL audience value
+			// This will fail for non-URL audience values with the same length as the ID
+			// But it should cover the vast majority of users
 			if _, err := url.ParseRequestURI(inputs.ID); err == nil || len(inputs.ID) != 24 {
 				if err := ansi.Waiting(func() error {
 					api, err := cli.api.ResourceServer.Read(url.PathEscape(inputs.ID))
@@ -384,7 +390,7 @@ func listScopesCmd(cli *cli) *cobra.Command {
 		Short:   "List the scopes of an API",
 		Long:    "List the scopes of an API.",
 		Example: `auth0 apis scopes list 
-auth0 apis scopes ls <id>`,
+auth0 apis scopes ls <id|audience>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -402,7 +408,7 @@ auth0 apis scopes ls <id>`,
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				api, err = cli.api.ResourceServer.Read(inputs.ID)
+				api, err = cli.api.ResourceServer.Read(url.PathEscape(inputs.ID))
 				return err
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred while getting scopes for an API with Id '%s': %w", inputs.ID, err)
