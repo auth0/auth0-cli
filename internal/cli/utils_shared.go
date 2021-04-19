@@ -3,6 +3,7 @@ package cli
 import (
 	"crypto/rand"
 	"fmt"
+	"strings"
 
 	"encoding/base64"
 	"encoding/json"
@@ -24,6 +25,7 @@ const (
 	cliLoginTestingCallbackURL       string = "http://localhost:8484"
 	cliLoginTestingInitiateLoginURI  string = "https://cli.auth0.com"
 	cliLoginTestingStateSize         int    = 64
+	manageURL                        string = "https://manage.auth0.com"
 )
 
 var (
@@ -271,4 +273,44 @@ func containsStr(s []interface{}, u string) bool {
 		}
 	}
 	return false
+}
+
+func openManageURL(cli *cli, tenant string, path string) {
+	manageTenantURL := formatManageTenantURL(tenant, cli.config)
+	if len(manageTenantURL) == 0 || len(path) == 0 {
+		cli.renderer.Warnf("Unable to format the correct URL, please ensure you have run 'auth0 login' and try again.")
+		return
+	}
+	if err := open.URL(fmt.Sprintf("%s%s", manageTenantURL, path)); err != nil {
+		cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s.", manageTenantURL)
+	}
+}
+
+func formatManageTenantURL(tenant string, cfg config) string {
+	if len(tenant) == 0 {
+		return ""
+	}
+	// ex: dev-tti06f6y.us.auth0.com
+	s := strings.Split(tenant, ".")
+
+	if len(s) < 3 {
+		return ""
+	}
+
+	var region string
+	if len(s) == 3 { // It's a PUS1 tenant, ex: dev-tti06f6y.auth0.com
+		region = "us"
+	} else {
+		region = s[len(s)-3]
+	}
+
+	tenantName := cfg.Tenants[tenant].Name
+	if len(tenantName) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%s/dashboard/%s/%s/",
+		manageURL,
+		region,
+		tenantName,
+	)
 }
