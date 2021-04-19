@@ -39,7 +39,7 @@ func listTenantCmd(cli *cli) *cobra.Command {
 				tenNames[i] = t.Domain
 			}
 
-			cli.renderer.ShowTenants(tenNames)
+			cli.renderer.TenantList(tenNames)
 			return nil
 		},
 	}
