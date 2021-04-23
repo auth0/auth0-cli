@@ -14,10 +14,11 @@ import (
 )
 
 const (
-	clientID           = "2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT"
-	deviceCodeEndpoint = "https://auth0.auth0.com/oauth/device/code"
-	oauthTokenEndpoint = "https://auth0.auth0.com/oauth/token"
-	audiencePath       = "/api/v2/"
+	clientID               = "2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT"
+	deviceCodeEndpoint     = "https://auth0.auth0.com/oauth/device/code"
+	oauthTokenEndpoint     = "https://auth0.auth0.com/oauth/token"
+	audiencePath           = "/api/v2/"
+	waitThresholdInSeconds = 3
 
 	// namespace used to set/get values from the keychain
 	SecretsNamespace = "auth0-cli"
@@ -62,7 +63,7 @@ type State struct {
 }
 
 func (s *State) IntervalDuration() time.Duration {
-	return time.Duration(s.Interval) * time.Second
+	return time.Duration(s.Interval+waitThresholdInSeconds) * time.Second
 }
 
 // Start kicks-off the device authentication flow
