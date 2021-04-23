@@ -9,12 +9,9 @@ import (
 )
 
 var (
-	userID = Flag{
-		Name:       "User ID",
-		Help:       "Id of the user.",
-		LongForm:   "user-id",
-		ShortForm:  "u",
-		IsRequired: true,
+	userID = Argument{
+		Name: "User ID",
+		Help: "Id of the user.",
 	}
 )
 
@@ -59,7 +56,7 @@ auth0 users blocks list <user-id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if err := userID.Ask(cmd, &inputs.userID, nil); err != nil {
+				if err := userID.Ask(cmd, &inputs.userID); err != nil {
 					return err
 				}
 			} else {
@@ -104,7 +101,7 @@ auth0 users unblock <user-id>
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if err := userID.Ask(cmd, &inputs.userID, nil); err != nil {
+				if err := userID.Ask(cmd, &inputs.userID); err != nil {
 					return err
 				}
 			} else {
