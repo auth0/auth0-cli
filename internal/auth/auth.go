@@ -30,7 +30,7 @@ var requiredScopes = []string{
 	"create:clients", "delete:clients", "read:clients", "update:clients",
 	"create:resource_servers", "delete:resource_servers", "read:resource_servers", "update:resource_servers",
 	"create:rules", "delete:rules", "read:rules", "update:rules",
-	"read:client_keys", "read:logs",
+	"read:client_keys", "read:logs", "read:users", "update:users",
 }
 
 // RequiredScopes returns the scopes used for login.
