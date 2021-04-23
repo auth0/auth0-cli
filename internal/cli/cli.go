@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -43,6 +44,7 @@ type tenant struct {
 	Name         string         `json:"name"`
 	Domain       string         `json:"domain"`
 	AccessToken  string         `json:"access_token,omitempty"`
+	Scopes       []string       `json:"scopes,omitempty"`
 	ExpiresAt    time.Time      `json:"expires_at"`
 	Apps         map[string]app `json:"apps,omitempty"`
 	DefaultAppID string         `json:"default_app_id,omitempty"`
@@ -129,8 +131,15 @@ func (c *cli) setup(ctx context.Context) error {
 		return errUnauthenticated
 	}
 
-	// check if the stored access token is expired:
-	if isExpired(t.ExpiresAt, accessTokenExpThreshold) {
+	if scopesChanged(t) {
+		// required scopes changed,
+		// a new token is required
+		err = RunLogin(ctx, c, true)
+		if err != nil {
+			return err
+		}
+	} else if isExpired(t.ExpiresAt, accessTokenExpThreshold) {
+		// check if the stored access token is expired:
 		// use the refresh token to get a new access token:
 		tr := &auth.TokenRetriever{
 			Secrets: &auth.Keyring{},
@@ -177,6 +186,32 @@ func (c *cli) setup(ctx context.Context) error {
 // isExpired is true if now() + a threshold is after the given date
 func isExpired(t time.Time, threshold time.Duration) bool {
 	return time.Now().Add(threshold).After(t)
+}
+
+// scopesChanged compare the tenant scopes
+// with the currently required scopes.
+func scopesChanged(t tenant) bool {
+	want := auth.RequiredScopes()
+	got := t.Scopes
+
+	sort.Strings(want)
+	sort.Strings(got)
+
+	if (want == nil) != (got == nil) {
+		return true
+	}
+
+	if len(want) != len(got) {
+		return true
+	}
+
+	for i := range t.Scopes {
+		if want[i] != got[i] {
+			return true
+		}
+	}
+
+	return false
 }
 
 // getTenant fetches the default tenant configured (or the tenant specified via
