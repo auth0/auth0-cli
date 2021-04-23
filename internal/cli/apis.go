@@ -44,7 +44,6 @@ var (
 		LongForm:   "token-expiration",
 		ShortForm:  "e",
 		Help:       "The amount of time in seconds that the token will be valid after being issued",
-		IsRequired: false,
 	}
 	apiAllowOfflineAccess = Flag{
 		Name:       "Offline Access",
