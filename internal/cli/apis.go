@@ -176,7 +176,8 @@ func createApiCmd(cli *cli) *cobra.Command {
 		Example: `auth0 apis create 
 auth0 apis create --name myapi
 auth0 apis create -n myapi --identifier http://my-api
-auth0 apis create -n myapi -i http://my-api --offline-access=true --token-expiration 6100`,
+auth0 apis create -n myapi --token-expiration 6100
+auth0 apis create -n myapi -t 6100 --offline-access=true`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
