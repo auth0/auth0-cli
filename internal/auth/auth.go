@@ -32,6 +32,9 @@ var requiredScopes = []string{
 	"read:client_keys", "read:logs",
 }
 
+// RequiredScopes returns the scopes used for login.
+func RequiredScopes() []string { return requiredScopes }
+
 // SecretStore provides access to stored sensitive data.
 type SecretStore interface {
 	// Get gets the secret

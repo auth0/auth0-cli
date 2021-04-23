@@ -79,6 +79,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 		ExpiresAt: time.Now().Add(
 			time.Duration(res.ExpiresIn) * time.Second,
 		),
+		Scopes: auth.RequiredScopes(),
 	})
 	if err != nil {
 		return fmt.Errorf("Unexpected error adding tenant to config: %w", err)
