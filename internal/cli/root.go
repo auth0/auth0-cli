@@ -86,7 +86,7 @@ func Execute() {
 	// so add new commands in a place that reflect its relevance or relation with other commands:
 	rootCmd.AddCommand(loginCmd(cli))
 	rootCmd.AddCommand(tenantsCmd(cli))
-        rootCmd.AddCommand(usersCmd(cli))
+	rootCmd.AddCommand(usersCmd(cli))
 	rootCmd.AddCommand(appsCmd(cli))
 	rootCmd.AddCommand(rulesCmd(cli))
 	rootCmd.AddCommand(apisCmd(cli))
