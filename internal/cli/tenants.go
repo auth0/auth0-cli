@@ -7,6 +7,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	tenantDomain = Argument{
+		Name: "Tenant",
+		Help: "Tenant to select",
+	}
+)
+
 func tenantsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tenants",
@@ -17,6 +24,7 @@ func tenantsCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(useTenantCmd(cli))
 	cmd.AddCommand(listTenantCmd(cli))
+	cmd.AddCommand(openTenantCmd(cli))
 	return cmd
 }
 
@@ -39,7 +47,7 @@ func listTenantCmd(cli *cli) *cobra.Command {
 				tenNames[i] = t.Domain
 			}
 
-			cli.renderer.ShowTenants(tenNames)
+			cli.renderer.TenantList(tenNames)
 			return nil
 		},
 	}
@@ -92,4 +100,66 @@ func useTenantCmd(cli *cli) *cobra.Command {
 	}
 
 	return cmd
+}
+
+func openTenantCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		Domain string
+	}
+
+	cmd := &cobra.Command{
+		Use:     "open",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Open tenant settings page in Auth0 Manage",
+		Long:    "Open tenant settings page in Auth0 Manage.",
+		Example: "auth0 tenants open <tenant>",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				err := tenantDomain.Pick(cmd, &inputs.Domain, cli.tenantPickerOptions)
+				if err != nil {
+					return err
+				}
+			} else {
+				inputs.Domain = args[0]
+
+				if _, ok := cli.config.Tenants[inputs.Domain]; !ok {
+					return fmt.Errorf("Unable to find tenant %s; run 'auth0 login' to configure a new tenant", inputs.Domain)
+				}
+			}
+
+			openManageURL(cli, inputs.Domain, "tenant/general")
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func (c *cli) tenantPickerOptions() (pickerOptions, error) {
+	tens, err := c.listTenants()
+	if err != nil {
+		return nil, fmt.Errorf("Unable to load tenants due to an unexpected error: %w", err)
+	}
+
+	var priorityOpts, opts pickerOptions
+
+	for _, t := range tens {
+		opt := pickerOption{value: t.Domain, label: t.Domain}
+
+		// check if this is currently the default tenant.
+		if t.Domain == c.config.DefaultTenant {
+			priorityOpts = append(priorityOpts, opt)
+		} else {
+			opts = append(opts, opt)
+		}
+	}
+
+	if len(opts)+len(priorityOpts) == 0 {
+		return nil, errNoApps
+	}
+
+	return append(priorityOpts, opts...), nil
 }

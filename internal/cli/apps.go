@@ -128,6 +128,7 @@ func appsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(showAppCmd(cli))
 	cmd.AddCommand(updateAppCmd(cli))
 	cmd.AddCommand(deleteAppCmd(cli))
+	cmd.AddCommand(openAppCmd(cli))
 
 	return cmd
 }
@@ -654,6 +655,45 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 	appGrants.RegisterStringSliceU(cmd, &inputs.Grants, nil)
 
 	return cmd
+}
+
+func openAppCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID string
+	}
+
+	cmd := &cobra.Command{
+		Use:     "open",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Open application settings page in Auth0 Manage",
+		Long:    "Open application settings page in Auth0 Manage.",
+		Example: "auth0 apps open <id>",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
+				if err != nil {
+					return err
+				}
+			} else {
+				inputs.ID = args[0]
+			}
+
+			openManageURL(cli, cli.config.DefaultTenant, formatAppSettingsPath(inputs.ID))
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func formatAppSettingsPath(id string) string {
+	if len(id) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("applications/%s/settings", id)
 }
 
 func apiTypeFor(v string) string {
