@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -224,8 +225,8 @@ auth0 apis create -n myapi -i http://my-api --offline-access=true --token-expira
 	apiName.RegisterString(cmd, &inputs.Name, "")
 	apiIdentifier.RegisterString(cmd, &inputs.Identifier, "")
 	apiScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
-	apiAllowOfflineAccess.RegisterBool(cmd, &inputs.AllowOfflineAccess, true)
-	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 0)
+	apiAllowOfflineAccess.RegisterBool(cmd, &inputs.AllowOfflineAccess, false)
+	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 86400)
 
 	return cmd
 }
@@ -303,6 +304,18 @@ auth0 apis create -n myapi -t 6100 --offline-access=true`,
 				api.Scopes = apiScopesFor(inputs.Scopes)
 			}
 
+			if len(strconv.Itoa(inputs.TokenLifetime)) == 0 {
+				api.TokenLifetime = current.TokenLifetime
+			} else {
+				api.TokenLifetime = &inputs.TokenLifetime
+			}
+
+			if len(strconv.FormatBool(inputs.AllowOfflineAccess)) == 0 {
+				api.AllowOfflineAccess = current.AllowOfflineAccess
+			} else {
+				api.AllowOfflineAccess = &inputs.AllowOfflineAccess
+			}
+
 			if err := ansi.Waiting(func() error {
 				return cli.api.ResourceServer.Update(current.GetID(), api)
 			}); err != nil {
@@ -316,8 +329,8 @@ auth0 apis create -n myapi -t 6100 --offline-access=true`,
 
 	apiName.RegisterStringU(cmd, &inputs.Name, "")
 	apiScopes.RegisterStringSliceU(cmd, &inputs.Scopes, nil)
-	apiAllowOfflineAccess.RegisterBool(cmd, &inputs.AllowOfflineAccess, false)
-	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 86400)
+	apiAllowOfflineAccess.RegisterBoolU(cmd, &inputs.AllowOfflineAccess, true)
+	apiTokenLifetime.RegisterIntU(cmd, &inputs.TokenLifetime, 86400)
 
 	return cmd
 }
