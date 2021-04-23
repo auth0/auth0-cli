@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/instrumentation"
@@ -53,6 +54,11 @@ func Execute() {
 				return nil
 			}
 
+			// Getting help shouldn't trigger a login.
+			if cmd.CalledAs() == "help" && cmd.Parent().Use == "auth0" {
+				return nil
+			}
+
 			// Initialize everything once. Later callers can then
 			// freely assume that config is fully primed and ready
 			// to go.
@@ -80,11 +86,11 @@ func Execute() {
 	// so add new commands in a place that reflect its relevance or relation with other commands:
 	rootCmd.AddCommand(loginCmd(cli))
 	rootCmd.AddCommand(tenantsCmd(cli))
+  rootCmd.AddCommand(usersCmd(cli))
 	rootCmd.AddCommand(appsCmd(cli))
 	rootCmd.AddCommand(rulesCmd(cli))
-	rootCmd.AddCommand(quickstartsCmd(cli))
 	rootCmd.AddCommand(apisCmd(cli))
-	rootCmd.AddCommand(usersCmd(cli))
+	rootCmd.AddCommand(quickstartsCmd(cli))
 	rootCmd.AddCommand(testCmd(cli))
 	rootCmd.AddCommand(logsCmd(cli))
 	rootCmd.AddCommand(logoutCmd(cli))
@@ -102,6 +108,11 @@ func Execute() {
 			instrumentation.ReportException(err)
 		}
 	}()
+
+	// platform specific terminal initialization:
+	// this should run for all commands,
+	// for most of the architectures there's no requirements:
+	ansi.InitConsole()
 
 	if err := rootCmd.ExecuteContext(context.TODO()); err != nil {
 		cli.renderer.Heading("error")

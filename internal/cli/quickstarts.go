@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
@@ -33,10 +34,17 @@ const (
 	qspDefaultPort = 3000
 )
 
+const (
+	quickstartEndpoint           = `https://auth0.com/docs/package/v2`
+	quickstartContentType        = `application/json`
+	quickstartOrg                = "auth0-samples"
+	quickstartDefaultCallbackURL = `https://YOUR_APP/callback`
+)
+
 var (
 	//go:embed data/quickstarts.json
 	qsBuf             []byte
-	quickstartsByType = func() (qs map[string][]quickstart) {
+	quickstartsByType = func() (qs map[string][]auth0.Quickstart) {
 		if err := json.Unmarshal(qsBuf, &qs); err != nil {
 			panic(err)
 		}
@@ -57,38 +65,53 @@ var (
 	}
 )
 
-type quickstart struct {
-	Name    string   `json:"name"`
-	Samples []string `json:"samples"`
-	Org     string   `json:"org"`
-	Repo    string   `json:"repo"`
-	Branch  string   `json:"branch,omitempty"`
-}
-
 func quickstartsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "quickstarts",
 		Short:   "Quickstart support for getting bootstrapped",
+		Long:    "Quickstart support for getting bootstrapped.",
 		Aliases: []string{"qs"},
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.AddCommand(downloadQuickstart(cli))
+	cmd.AddCommand(listQuickstartsCmd(cli))
+	cmd.AddCommand(downloadQuickstartCmd(cli))
 
 	return cmd
 }
 
-func downloadQuickstart(cli *cli) *cobra.Command {
+func listQuickstartsCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Args:    cobra.NoArgs,
+		Short:   "List the available Quickstarts",
+		Long:    "List the available Quickstarts.",
+		Example: `auth0 quickstarts list
+auth0 quickstarts ls
+auth0 qs list
+auth0 qs ls`,
+		Run: func(cmd *cobra.Command, args []string) {
+			cli.renderer.QuickstartList(quickstartsByType)
+		},
+	}
+
+	return cmd
+}
+
+func downloadQuickstartCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ClientID string
 		Stack    string
 	}
 
 	cmd := &cobra.Command{
-		Use:   "download",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Download a quickstart sample app for a specific tech stack",
-		Long:  `auth0 quickstarts download --stack <stack>`,
+		Use:     "download",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Download a Quickstart sample app for a specific tech stack",
+		Long:    "Download a Quickstart sample app for a specific tech stack.",
+		Example: `auth0 quickstarts download --stack <stack>
+auth0 qs download --stack <stack>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -186,14 +209,7 @@ func downloadQuickstart(cli *cli) *cobra.Command {
 	return cmd
 }
 
-const (
-	quickstartEndpoint           = `https://auth0.com/docs/package/v2`
-	quickstartContentType        = `application/json`
-	quickstartOrg                = "auth0-samples"
-	quickstartDefaultCallbackURL = `https://YOUR_APP/callback`
-)
-
-func downloadQuickStart(ctx context.Context, cli *cli, client *management.Client, target string, q quickstart) error {
+func downloadQuickStart(ctx context.Context, cli *cli, client *management.Client, target string, q auth0.Quickstart) error {
 	var payload struct {
 		Branch       string `json:"branch"`
 		Org          string `json:"org"`
@@ -304,18 +320,18 @@ func quickstartPathFor(client *management.Client) (p string, exists bool, err er
 	return target, exists, nil
 }
 
-func getQuickstart(t, stack string) (quickstart, error) {
+func getQuickstart(t, stack string) (auth0.Quickstart, error) {
 	qsType := quickstartsTypeFor(t)
 	quickstarts, ok := quickstartsByType[qsType]
 	if !ok {
-		return quickstart{}, fmt.Errorf("Unknown quickstart type: %s", qsType)
+		return auth0.Quickstart{}, fmt.Errorf("Unknown quickstart type: %s", qsType)
 	}
 	for _, q := range quickstarts {
 		if strings.EqualFold(q.Name, stack) {
 			return q, nil
 		}
 	}
-	return quickstart{}, fmt.Errorf("Quickstart not found for %s/%s", qsType, stack)
+	return auth0.Quickstart{}, fmt.Errorf("Quickstart not found for %s/%s", qsType, stack)
 }
 
 func quickstartStacksFromType(t string) ([]string, error) {

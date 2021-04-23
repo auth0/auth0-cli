@@ -15,8 +15,9 @@ import (
 func loginCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "login",
+		Args:  cobra.NoArgs,
 		Short: "Authenticate the Auth0 CLI",
-		Long:  "sign in to your Auth0 account and authorize the CLI to access the API",
+		Long:  "Sign in to your Auth0 account and authorize the CLI to access the Management API.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			return RunLogin(ctx, cli, false)
@@ -61,14 +62,14 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 	}
 
 	cli.renderer.Infof("Successfully logged in.")
-	cli.renderer.Infof("Tenant: %s\n", res.Tenant)
+	cli.renderer.Infof("Tenant: %s\n", res.Domain)
 
 	// store the refresh token
 	secretsStore := &auth.Keyring{}
-	err = secretsStore.Set(auth.SecretsNamespace, res.Tenant, res.RefreshToken)
+	err = secretsStore.Set(auth.SecretsNamespace, res.Domain, res.RefreshToken)
 	if err != nil {
 		// log the error but move on
-		cli.renderer.Warnf("Could not store the refresh token locally, please expect to login again once your access token expired: %s.", err.Error())
+		cli.renderer.Warnf("Could not store the refresh token locally, please expect to login again once your access token expired. See https://github.com/auth0/auth0-cli/blob/main/KNOWN-ISSUES.md.")
 	}
 
 	err = cli.addTenant(tenant{
@@ -78,17 +79,18 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 		ExpiresAt: time.Now().Add(
 			time.Duration(res.ExpiresIn) * time.Second,
 		),
+		Scopes: auth.RequiredScopes(),
 	})
 	if err != nil {
 		return fmt.Errorf("Unexpected error adding tenant to config: %w", err)
 	}
 
-	if cli.config.DefaultTenant != res.Tenant {
-		promptText := fmt.Sprintf("Your default tenant is %s. Do you want to change it to %s?", cli.config.DefaultTenant, res.Tenant)
+	if cli.config.DefaultTenant != res.Domain {
+		promptText := fmt.Sprintf("Your default tenant is %s. Do you want to change it to %s?", cli.config.DefaultTenant, res.Domain)
 		if confirmed := prompt.Confirm(promptText); !confirmed {
 			return nil
 		}
-		cli.config.DefaultTenant = res.Tenant
+		cli.config.DefaultTenant = res.Domain
 		if err := cli.persistConfig(); err != nil {
 			return fmt.Errorf("An error occurred while setting the default tenant: %w", err)
 		}

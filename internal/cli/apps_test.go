@@ -11,7 +11,7 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
-func TestClientsListCmd(t *testing.T) {
+func TestAppsListCmd(t *testing.T) {
 	// Step 1: Setup our client mock for this test. We only care about
 	// Clients so no need to bootstrap other bits.
 	ctrl := gomock.NewController(t)
@@ -19,7 +19,7 @@ func TestClientsListCmd(t *testing.T) {
 
 	clientAPI := auth0.NewMockClientAPI(ctrl)
 	clientAPI.EXPECT().
-		List().
+		List(gomock.Any()).
 		Return(&management.ClientList{
 			Clients: []*management.Client{
 				{
@@ -51,7 +51,7 @@ func TestClientsListCmd(t *testing.T) {
 	expectTable(t, stdout.String(),
 		[]string{"CLIENT ID", "NAME", "TYPE"},
 		[][]string{
-			{"some-id", "some-name", "generic"},
+			{"some-id", "some-name", "Generic"},
 		},
 	)
 }

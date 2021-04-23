@@ -17,7 +17,7 @@ type TokenResponse struct {
 	ExpiresIn    int64  `json:"expires_in,omitempty"`
 }
 
-// ExchangeCodeForToken fetches an access token for the given client using the provided code.
+// ExchangeCodeForToken fetches an access token for the given application using the provided code.
 func ExchangeCodeForToken(baseDomain, clientID, clientSecret, code, cbURL string) (*TokenResponse, error) {
 	data := url.Values{
 		"grant_type":    {"authorization_code"},

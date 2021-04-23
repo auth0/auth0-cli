@@ -3,6 +3,7 @@ package cli
 import (
 	"crypto/rand"
 	"fmt"
+	"strings"
 
 	"encoding/base64"
 	"encoding/json"
@@ -24,6 +25,7 @@ const (
 	cliLoginTestingCallbackURL       string = "http://localhost:8484"
 	cliLoginTestingInitiateLoginURI  string = "https://cli.auth0.com"
 	cliLoginTestingStateSize         int    = 64
+	manageURL                        string = "https://manage.auth0.com"
 )
 
 var (
@@ -156,11 +158,13 @@ func runLoginFlow(cli *cli, t tenant, c *management.Client, connName, audience, 
 
 		// if we added the local callback URL to the client then we need to
 		// remove it when we're done
-		if callbackAdded {
-			if err := removeLocalCallbackURLFromClient(cli.api.Client, c); err != nil {
-				return err
+		defer func() {
+			if callbackAdded {
+				if err := removeLocalCallbackURLFromClient(cli.api.Client, c); err != nil { // TODO: Make it a warning
+					cli.renderer.Errorf("Unable to remove callback URL '%s' from client: %s", cliLoginTestingCallbackURL, err)
+				}
 			}
-		}
+		}()
 
 		return nil
 	})
@@ -205,7 +209,7 @@ func hasLocalCallbackURL(client *management.Client) bool {
 	return false
 }
 
-// adds the localhost callback URL to a given client
+// adds the localhost callback URL to a given application
 func addLocalCallbackURLToClient(clientManager auth0.ClientAPI, client *management.Client) (bool, error) {
 	for _, rawCallbackURL := range client.Callbacks {
 		callbackURL := rawCallbackURL.(string)
@@ -269,4 +273,44 @@ func containsStr(s []interface{}, u string) bool {
 		}
 	}
 	return false
+}
+
+func openManageURL(cli *cli, tenant string, path string) {
+	manageTenantURL := formatManageTenantURL(tenant, cli.config)
+	if len(manageTenantURL) == 0 || len(path) == 0 {
+		cli.renderer.Warnf("Unable to format the correct URL, please ensure you have run 'auth0 login' and try again.")
+		return
+	}
+	if err := open.URL(fmt.Sprintf("%s%s", manageTenantURL, path)); err != nil {
+		cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s.", manageTenantURL)
+	}
+}
+
+func formatManageTenantURL(tenant string, cfg config) string {
+	if len(tenant) == 0 {
+		return ""
+	}
+	// ex: dev-tti06f6y.us.auth0.com
+	s := strings.Split(tenant, ".")
+
+	if len(s) < 3 {
+		return ""
+	}
+
+	var region string
+	if len(s) == 3 { // It's a PUS1 tenant, ex: dev-tti06f6y.auth0.com
+		region = "us"
+	} else {
+		region = s[len(s)-3]
+	}
+
+	tenantName := cfg.Tenants[tenant].Name
+	if len(tenantName) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%s/dashboard/%s/%s/",
+		manageURL,
+		region,
+		tenantName,
+	)
 }

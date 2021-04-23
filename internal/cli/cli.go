@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -43,6 +44,7 @@ type tenant struct {
 	Name         string         `json:"name"`
 	Domain       string         `json:"domain"`
 	AccessToken  string         `json:"access_token,omitempty"`
+	Scopes       []string       `json:"scopes,omitempty"`
 	ExpiresAt    time.Time      `json:"expires_at"`
 	Apps         map[string]app `json:"apps,omitempty"`
 	DefaultAppID string         `json:"default_app_id,omitempty"`
@@ -52,7 +54,7 @@ type app struct {
 	FirstRuns map[string]bool `json:"first_runs"`
 }
 
-var errUnauthenticated = errors.New("Not yet configured. Try `auth0 login`.")
+var errUnauthenticated = errors.New("Not logged in. Try 'auth0 login'.")
 
 // cli provides all the foundational things for all the commands in the CLI,
 // specifically:
@@ -129,15 +131,22 @@ func (c *cli) setup(ctx context.Context) error {
 		return errUnauthenticated
 	}
 
-	// check if the stored access token is expired:
-	if isExpired(t.ExpiresAt, accessTokenExpThreshold) {
+	if scopesChanged(t) {
+		// required scopes changed,
+		// a new token is required
+		err = RunLogin(ctx, c, true)
+		if err != nil {
+			return err
+		}
+	} else if isExpired(t.ExpiresAt, accessTokenExpThreshold) {
+		// check if the stored access token is expired:
 		// use the refresh token to get a new access token:
 		tr := &auth.TokenRetriever{
 			Secrets: &auth.Keyring{},
 			Client:  http.DefaultClient,
 		}
 
-		res, err := tr.Refresh(ctx, t.Name)
+		res, err := tr.Refresh(ctx, t.Domain)
 		if err != nil {
 			// ask and guide the user through the login process:
 			c.renderer.Errorf("failed to renew access token, %s", err)
@@ -177,6 +186,32 @@ func (c *cli) setup(ctx context.Context) error {
 // isExpired is true if now() + a threshold is after the given date
 func isExpired(t time.Time, threshold time.Duration) bool {
 	return time.Now().Add(threshold).After(t)
+}
+
+// scopesChanged compare the tenant scopes
+// with the currently required scopes.
+func scopesChanged(t tenant) bool {
+	want := auth.RequiredScopes()
+	got := t.Scopes
+
+	sort.Strings(want)
+	sort.Strings(got)
+
+	if (want == nil) != (got == nil) {
+		return true
+	}
+
+	if len(want) != len(got) {
+		return true
+	}
+
+	for i := range t.Scopes {
+		if want[i] != got[i] {
+			return true
+		}
+	}
+
+	return false
 }
 
 // getTenant fetches the default tenant configured (or the tenant specified via
@@ -222,7 +257,7 @@ func (c *cli) addTenant(ten tenant) error {
 	// If there's no existing DefaultTenant yet, might as well set the
 	// first successfully logged in tenant during onboarding.
 	if c.config.DefaultTenant == "" {
-		c.config.DefaultTenant = ten.Name
+		c.config.DefaultTenant = ten.Domain
 	}
 
 	// If we're dealing with an empty file, we'll need to initialize this
@@ -231,7 +266,7 @@ func (c *cli) addTenant(ten tenant) error {
 		c.config.Tenants = map[string]tenant{}
 	}
 
-	c.config.Tenants[ten.Name] = ten
+	c.config.Tenants[ten.Domain] = ten
 
 	if err := c.persistConfig(); err != nil {
 		return fmt.Errorf("unexpected error persisting config: %w", err)
@@ -305,7 +340,7 @@ func (c *cli) setDefaultAppID(id string) error {
 
 	tenant.DefaultAppID = id
 
-	c.config.Tenants[tenant.Name] = tenant
+	c.config.Tenants[tenant.Domain] = tenant
 	if err := c.persistConfig(); err != nil {
 		return fmt.Errorf("Unexpected error persisting config: %w", err)
 	}
@@ -333,7 +368,7 @@ func (c *cli) setFirstCommandRun(clientID string, command string) error {
 		}
 	}
 
-	c.config.Tenants[tenant.Name] = tenant
+	c.config.Tenants[tenant.Domain] = tenant
 
 	if err := c.persistConfig(); err != nil {
 		return fmt.Errorf("Unexpected error persisting config: %w", err)

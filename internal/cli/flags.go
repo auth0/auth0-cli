@@ -3,6 +3,8 @@ package cli
 import (
 	"fmt"
 
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 )
 
@@ -47,12 +49,70 @@ func (f *Flag) AskManyU(cmd *cobra.Command, value interface{}, defaultValue *str
 	return askManyFlag(cmd, f, value, defaultValue, true)
 }
 
+func (f *Flag) AskBool(cmd *cobra.Command, value *bool, defaultValue *bool) {
+	askBoolFlag(cmd, f, value, defaultValue, false)
+}
+
+func (f *Flag) AskBoolU(cmd *cobra.Command, value *bool, defaultValue *bool) {
+	askBoolFlag(cmd, f, value, defaultValue, true)
+}
+
 func (f *Flag) Select(cmd *cobra.Command, value interface{}, options []string, defaultValue *string) error {
 	return selectFlag(cmd, f, value, options, defaultValue, false)
 }
 
 func (f *Flag) SelectU(cmd *cobra.Command, value interface{}, options []string, defaultValue *string) error {
 	return selectFlag(cmd, f, value, options, defaultValue, true)
+}
+
+func (f *Flag) EditorPrompt(cmd *cobra.Command, value *string, initialValue, filename string, infoFn func()) error {
+	out, err := prompt.CaptureInputViaEditor(
+		initialValue,
+		filename,
+		infoFn,
+	)
+	if err != nil {
+		return err
+	}
+
+	*value = out
+	return nil
+}
+
+func (f *Flag) EditorPromptU(cmd *cobra.Command, value *string, initialValue, filename string, infoFn func()) error {
+	response := map[string]interface{}{}
+
+	questions := []*survey.Question{
+		{
+			Name: f.Name,
+			Prompt: &prompt.Editor{
+				BlankAllowed: true,
+				Editor: &survey.Editor{
+					Help:          f.Help,
+					Message:       f.Name,
+					FileName:      filename,
+					Default:       initialValue,
+					HideDefault:   true,
+					AppendDefault: true,
+				},
+			},
+		},
+	}
+
+	if err := survey.Ask(questions, &response, prompt.Icons); err != nil {
+		return err
+	}
+
+	// Since we have BlankAllowed=true, an empty answer means we'll use the
+	// initialValue provided since this path is for the Update path.
+	answer, ok := response[f.Name].(string)
+	if ok && answer != "" {
+		*value = answer
+	} else {
+		*value = initialValue
+	}
+
+	return nil
 }
 
 func (f *Flag) RegisterString(cmd *cobra.Command, value *string, defaultValue string) {
@@ -107,6 +167,12 @@ func askManyFlag(cmd *cobra.Command, f *Flag, value interface{}, defaultValue *s
 	return nil
 }
 
+func askBoolFlag(cmd *cobra.Command, f *Flag, value *bool, defaultValue *bool, isUpdate bool) {
+	if shouldAsk(cmd, f, isUpdate) {
+		askBool(cmd, f, value, defaultValue)
+	}
+}
+
 func selectFlag(cmd *cobra.Command, f *Flag, value interface{}, options []string, defaultValue *string, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
 		return _select(cmd, f, value, options, defaultValue, isUpdate)
@@ -152,7 +218,6 @@ func shouldAsk(cmd *cobra.Command, f *Flag, isUpdate bool) bool {
 		if !f.IsRequired && !f.AlwaysPrompt {
 			return false
 		}
-
 		return shouldPromptWhenFlagless(cmd, f.LongForm)
 	}
 

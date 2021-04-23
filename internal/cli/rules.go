@@ -33,10 +33,19 @@ var (
 	}
 
 	ruleEnabled = Flag{
-		Name:      "Enabled",
-		LongForm:  "enabled",
-		ShortForm: "e",
-		Help:      "Enable (or disable) a rule.",
+		Name:         "Enabled",
+		LongForm:     "enabled",
+		ShortForm:    "e",
+		Help:         "Enable (or disable) a rule.",
+		AlwaysPrompt: true,
+	}
+
+	ruleScript = Flag{
+		Name:       "Script",
+		LongForm:   "script",
+		ShortForm:  "s",
+		Help:       "Script contents for the rule.",
+		IsRequired: true,
 	}
 
 	ruleTemplateOptions = pickerOptions{
@@ -53,6 +62,7 @@ func rulesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "rules",
 		Short: "Manage resources for rules",
+		Long:  "Manage resources for rules.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -61,15 +71,22 @@ func rulesCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(showRuleCmd(cli))
 	cmd.AddCommand(updateRuleCmd(cli))
 	cmd.AddCommand(deleteRuleCmd(cli))
+	cmd.AddCommand(enableRuleCmd(cli))
+	cmd.AddCommand(disableRuleCmd(cli))
 
 	return cmd
 }
 
 func listRulesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list",
-		Short: "List your rules",
-		Long:  `List the rules in your current tenant.`,
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Args:    cobra.NoArgs,
+		Short:   "List your rules",
+		Long: `List your existing rules. To create one try:
+auth0 rules create`,
+		Example: `auth0 rules list
+auth0 rules ls`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var rules []*management.Rule
 			err := ansi.Waiting(func() error {
@@ -97,16 +114,19 @@ func createRuleCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Name     string
 		Template string
+		Script   string
 		Enabled  bool
 	}
 
 	cmd := &cobra.Command{
 		Use:   "create",
+		Args:  cobra.NoArgs,
 		Short: "Create a new rule",
-		Long: `Create a new rule:
-
-auth0 rules create --name "My Rule" --template [empty-rule]"
-		`,
+		Long:  "Create a new rule.",
+		Example: `auth0 rules create
+auth0 rules create --name "My Rule"
+auth0 rules create -n "My Rule" --template "Empty rule"
+auth0 rules create -n "My Rule" -t "Empty rule" --enabled=false`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -122,9 +142,12 @@ auth0 rules create --name "My Rule" --template [empty-rule]"
 			// TODO(cyx): we can re-think this once we have
 			// `--stdin` based commands. For now we don't have
 			// those yet, so keeping this simple.
-			script, err := prompt.CaptureInputViaEditor(
+			err := ruleScript.EditorPrompt(
+				cmd,
+				&inputs.Script,
 				ruleTemplateOptions.getValue(inputs.Template),
 				inputs.Name+".*.js",
+				cli.ruleEditorHint,
 			)
 			if err != nil {
 				return fmt.Errorf("Failed to capture input from the editor: %w", err)
@@ -132,7 +155,7 @@ auth0 rules create --name "My Rule" --template [empty-rule]"
 
 			rule := &management.Rule{
 				Name:    &inputs.Name,
-				Script:  auth0.String(script),
+				Script:  auth0.String(inputs.Script),
 				Enabled: &inputs.Enabled,
 			}
 
@@ -165,10 +188,9 @@ func showRuleCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show a rule",
-		Long: `Show a rule:
-
-auth0 rules show <id>
-`,
+		Long:  "Show a rule.",
+		Example: `auth0 rules show 
+auth0 rules show <id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -209,9 +231,10 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "delete",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete a rule",
-		Long: `Delete a rule:
-
+		Long:  "Delete a rule.",
+		Example: `auth0 rules delete 
 auth0 rules delete <rule-id>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
@@ -226,15 +249,21 @@ auth0 rules delete <rule-id>`,
 				}
 			}
 
-			err := ansi.Spinner("Deleting rule", func() error {
-				return cli.api.Rule.Delete(inputs.ID)
-			})
-
-			if err != nil {
-				return err
+			if !cli.force && canPrompt(cmd) {
+				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
+					return nil
+				}
 			}
 
-			return nil
+			return ansi.Spinner("Deleting Rule", func() error {
+				_, err := cli.api.Rule.Read(inputs.ID)
+
+				if err != nil {
+					return fmt.Errorf("Unable to delete application. The specified Id: %v doesn't exist", inputs.ID)
+				}
+
+				return cli.api.Rule.Delete(inputs.ID)
+			})
 		},
 	}
 
@@ -245,16 +274,18 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ID      string
 		Name    string
+		Script  string
 		Enabled bool
 	}
 
 	cmd := &cobra.Command{
 		Use:   "update",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a rule",
-		Long: `Update a rule:
-
-auth0 rules update <rule-id> --name "My Updated Rule" --enabled=false
-		`,
+		Long:  "Update a rule.",
+		Example: `auth0 rules update <rule-id> 
+auth0 rules update <rule-id> --name "My Updated Rule"
+auth0 rules update <rule-id> -n "My Updated Rule" --enabled=false`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -282,12 +313,17 @@ auth0 rules update <rule-id> --name "My Updated Rule" --enabled=false
 				return err
 			}
 
+			ruleEnabled.AskBoolU(cmd, &inputs.Enabled, rule.Enabled)
+
 			// TODO(cyx): we can re-think this once we have
 			// `--stdin` based commands. For now we don't have
 			// those yet, so keeping this simple.
-			script, err := prompt.CaptureInputViaEditor(
+			err = ruleScript.EditorPromptU(
+				cmd,
+				&inputs.Script,
 				rule.GetScript(),
 				rule.GetName()+".*.js",
+				cli.ruleEditorHint,
 			)
 			if err != nil {
 				return fmt.Errorf("Failed to capture input from the editor: %w", err)
@@ -303,7 +339,7 @@ auth0 rules update <rule-id> --name "My Updated Rule" --enabled=false
 			// display.
 			rule = &management.Rule{
 				Name:    &inputs.Name,
-				Script:  &script,
+				Script:  &inputs.Script,
 				Enabled: &inputs.Enabled,
 			}
 
@@ -326,6 +362,116 @@ auth0 rules update <rule-id> --name "My Updated Rule" --enabled=false
 	return cmd
 }
 
+func enableRuleCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID      string
+		Enabled bool
+	}
+
+	cmd := &cobra.Command{
+		Use:   "enable",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Enable a rule",
+		Long:  "Enable a rule.",
+		Example: `auth0 rules enable <rule-id>`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				inputs.ID = args[0]
+			} else {
+				err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
+				if err != nil {
+					return err
+				}
+			}
+
+			var rule *management.Rule
+			err := ansi.Waiting(func() error {
+				var err error
+				rule, err = cli.api.Rule.Read(inputs.ID)
+				return err
+			})
+			if err != nil {
+				return fmt.Errorf("Failed to fetch rule with ID: %s %v", inputs.ID, err)
+			}
+
+			rule = &management.Rule{
+				Enabled: auth0.Bool(true),
+			}
+
+			err = ansi.Waiting(func() error {
+				return cli.api.Rule.Update(inputs.ID, rule)
+			})
+
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.RuleEnable(rule)
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func disableRuleCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID      string
+		Enabled bool
+	}
+
+	cmd := &cobra.Command{
+		Use:   "disable",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Disable a rule",
+		Long:  "Disable a rule.",
+		Example: `auth0 rules disable <rule-id>`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				inputs.ID = args[0]
+			} else {
+				err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
+				if err != nil {
+					return err
+				}
+			}
+
+			var rule *management.Rule
+			err := ansi.Waiting(func() error {
+				var err error
+				rule, err = cli.api.Rule.Read(inputs.ID)
+				return err
+			})
+			if err != nil {
+				return fmt.Errorf("Failed to fetch rule with ID: %s %v", inputs.ID, err)
+			}
+
+			rule = &management.Rule{
+				Enabled: auth0.Bool(false),
+			}
+
+			err = ansi.Waiting(func() error {
+				return cli.api.Rule.Update(inputs.ID, rule)
+			})
+
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.RuleDisable(rule)
+			return nil
+		},
+	}
+
+	return cmd
+}
+
 func (c *cli) rulePickerOptions() (pickerOptions, error) {
 	list, err := c.api.Rule.List()
 	if err != nil {
@@ -342,4 +488,8 @@ func (c *cli) rulePickerOptions() (pickerOptions, error) {
 	}
 
 	return opts, nil
+}
+
+func (c *cli) ruleEditorHint() {
+	c.renderer.Infof("%s once you close the editor, the rule will be saved. To cancel, CTRL+C.", ansi.Faint("Hint:"))
 }

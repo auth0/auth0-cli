@@ -7,23 +7,35 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	tenantDomain = Argument{
+		Name: "Tenant",
+		Help: "Tenant to select",
+	}
+)
+
 func tenantsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tenants",
 		Short: "Manage configured tenants",
+		Long:  "Manage configured tenants.",
 	}
 
+	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(useTenantCmd(cli))
 	cmd.AddCommand(listTenantCmd(cli))
+	cmd.AddCommand(openTenantCmd(cli))
 	return cmd
 }
 
 func listTenantCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
-		Short:   "List your tenants",
-		Long:    `auth0 tenants list`,
 		Aliases: []string{"ls"},
+		Args:    cobra.NoArgs,
+		Short:   "List your tenants",
+		Long:    "List your tenants.",
+		Example: "auth0 tenants list",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tens, err := cli.listTenants()
 			if err != nil {
@@ -32,10 +44,10 @@ func listTenantCmd(cli *cli) *cobra.Command {
 
 			tenNames := make([]string, len(tens))
 			for i, t := range tens {
-				tenNames[i] = t.Name
+				tenNames[i] = t.Domain
 			}
 
-			cli.renderer.ShowTenants(tenNames)
+			cli.renderer.TenantList(tenNames)
 			return nil
 		},
 	}
@@ -45,10 +57,10 @@ func listTenantCmd(cli *cli) *cobra.Command {
 func useTenantCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "use",
-		Aliases: []string{"select"},
-		Short:   "Set the active tenant",
-		Long:    `auth0 tenants use <tenant>`,
 		Args:    cobra.MaximumNArgs(1),
+		Short:   "Set the active tenant",
+		Long:    "Set the active tenant.",
+		Example: "auth0 tenants use <tenant>",
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -62,12 +74,12 @@ func useTenantCmd(cli *cli) *cobra.Command {
 
 				tenNames := make([]string, len(tens))
 				for i, t := range tens {
-					tenNames[i] = t.Name
+					tenNames[i] = t.Domain
 				}
 
-				input := prompt.SelectInput("tenant", "Tenant:", "Tenant to activate", tenNames, "", true)
+				input := prompt.SelectInput("tenant", "Tenant:", "Tenant to activate", tenNames, tenNames[0], true)
 				if err := prompt.AskOne(input, &selectedTenant); err != nil {
-					return fmt.Errorf("An unexpected error occurred: %w", err)
+					return handleInputError(err)
 				}
 			} else {
 				requestedTenant := args[0]
@@ -75,7 +87,7 @@ func useTenantCmd(cli *cli) *cobra.Command {
 				if !ok {
 					return fmt.Errorf("Unable to find tenant %s; run 'auth0 tenants use' to see your configured tenants or run 'auth0 login' to configure a new tenant", requestedTenant)
 				}
-				selectedTenant = t.Name
+				selectedTenant = t.Domain
 			}
 
 			cli.config.DefaultTenant = selectedTenant
@@ -88,4 +100,66 @@ func useTenantCmd(cli *cli) *cobra.Command {
 	}
 
 	return cmd
+}
+
+func openTenantCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		Domain string
+	}
+
+	cmd := &cobra.Command{
+		Use:     "open",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Open tenant settings page in Auth0 Manage",
+		Long:    "Open tenant settings page in Auth0 Manage.",
+		Example: "auth0 tenants open <tenant>",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			prepareInteractivity(cmd)
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				err := tenantDomain.Pick(cmd, &inputs.Domain, cli.tenantPickerOptions)
+				if err != nil {
+					return err
+				}
+			} else {
+				inputs.Domain = args[0]
+
+				if _, ok := cli.config.Tenants[inputs.Domain]; !ok {
+					return fmt.Errorf("Unable to find tenant %s; run 'auth0 login' to configure a new tenant", inputs.Domain)
+				}
+			}
+
+			openManageURL(cli, inputs.Domain, "tenant/general")
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func (c *cli) tenantPickerOptions() (pickerOptions, error) {
+	tens, err := c.listTenants()
+	if err != nil {
+		return nil, fmt.Errorf("Unable to load tenants due to an unexpected error: %w", err)
+	}
+
+	var priorityOpts, opts pickerOptions
+
+	for _, t := range tens {
+		opt := pickerOption{value: t.Domain, label: t.Domain}
+
+		// check if this is currently the default tenant.
+		if t.Domain == c.config.DefaultTenant {
+			priorityOpts = append(priorityOpts, opt)
+		} else {
+			opts = append(opts, opt)
+		}
+	}
+
+	if len(opts)+len(priorityOpts) == 0 {
+		return nil, errNoApps
+	}
+
+	return append(priorityOpts, opts...), nil
 }

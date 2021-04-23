@@ -8,20 +8,20 @@ import (
 
 var stdErrWriter = survey.WithStdio(os.Stdin, os.Stderr, os.Stderr)
 
-var icons = survey.WithIcons(func(icons *survey.IconSet) {
+var Icons = survey.WithIcons(func(icons *survey.IconSet) {
 	icons.Question.Text = ""
 })
 
 func Ask(inputs []*survey.Question, response interface{}) error {
-	return survey.Ask(inputs, response, stdErrWriter, icons)
+	return survey.Ask(inputs, response, stdErrWriter, Icons)
 }
 
 func AskOne(input *survey.Question, response interface{}) error {
-	return survey.Ask([]*survey.Question{input}, response, stdErrWriter, icons)
+	return survey.Ask([]*survey.Question{input}, response, stdErrWriter, Icons)
 }
 
 func askOne(prompt survey.Prompt, response interface{}) error {
-	return survey.AskOne(prompt, response, stdErrWriter, icons)
+	return survey.AskOne(prompt, response, stdErrWriter, Icons)
 }
 
 func TextInput(name string, message string, help string, defaultValue string, required bool) *survey.Question {
@@ -37,10 +37,10 @@ func TextInput(name string, message string, help string, defaultValue string, re
 	return input
 }
 
-func BoolInput(name string, message string, help string, required bool) *survey.Question {
+func BoolInput(name string, message string, help string, defaultValue bool, required bool) *survey.Question {
 	input := &survey.Question{
 		Name:      name,
-		Prompt:    &survey.Confirm{Message: message, Help: help},
+		Prompt:    &survey.Confirm{Message: message, Help: help, Default: defaultValue},
 		Transform: survey.Title,
 	}
 
@@ -75,6 +75,20 @@ func Confirm(message string) bool {
 
 	if err := askOne(prompt, &result); err != nil {
 		return false
+	}
+
+	return result
+}
+
+func ConfirmDefault(message string, defaultValue bool) bool {
+	result := false
+	prompt := &survey.Confirm{
+		Message: message,
+		Default: defaultValue,
+	}
+
+	if err := askOne(prompt, &result); err != nil {
+		return defaultValue
 	}
 
 	return result

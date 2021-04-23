@@ -24,7 +24,7 @@ func (v *ruleView) AsTableHeader() []string {
 }
 
 func (v *ruleView) AsTableRow() []string {
-	return []string{v.ID, v.Name, strconv.FormatBool(v.Enabled), fmt.Sprintf("%d", v.Order)}
+	return []string{ansi.Faint(v.ID), v.Name, strconv.FormatBool(v.Enabled), fmt.Sprintf("%d", v.Order)}
 }
 
 func (v *ruleView) KeyValues() [][]string {
@@ -94,6 +94,16 @@ func (r *Renderer) RuleUpdate(rule *management.Rule) {
 
 func (r *Renderer) RuleShow(rule *management.Rule) {
 	r.Heading("rule")
+	r.Result(makeRuleView(rule))
+}
+
+func (r *Renderer) RuleEnable(rule *management.Rule) {
+	r.Heading("rule enabled")
+	r.Result(makeRuleView(rule))
+}
+
+func (r *Renderer) RuleDisable(rule *management.Rule) {
+	r.Heading("rule disabled")
 	r.Result(makeRuleView(rule))
 }
 

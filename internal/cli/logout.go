@@ -10,10 +10,11 @@ import (
 
 func logoutCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "logout",
-		Short: "Logout of a tenant's session",
-		Long:  `auth0 logout <tenant>`,
-		Args:  cobra.MaximumNArgs(1),
+		Use:     "logout",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Log out of a tenant's session",
+		Long:    "Log out of a tenant's session.",
+		Example: "auth0 logout <tenant>",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// NOTE(cyx): This was mostly copy/pasted from tenants
 			// use command. Consider refactoring.
@@ -21,7 +22,7 @@ func logoutCmd(cli *cli) *cobra.Command {
 			if len(args) == 0 {
 				tens, err := cli.listTenants()
 				if err != nil {
-					return fmt.Errorf("Unable to load tenants due to an unexpected error: %w", err)
+					return err // This error is already formatted for display
 				}
 
 				if len(tens) == 0 {
@@ -30,12 +31,12 @@ func logoutCmd(cli *cli) *cobra.Command {
 
 				tenNames := make([]string, len(tens))
 				for i, t := range tens {
-					tenNames[i] = t.Name
+					tenNames[i] = t.Domain
 				}
 
 				input := prompt.SelectInput("tenant", "Tenant:", "Tenant to logout", tenNames, tenNames[0], true)
 				if err := prompt.AskOne(input, &selectedTenant); err != nil {
-					return fmt.Errorf("An unexpected error occurred: %w", err)
+					return handleInputError(err)
 				}
 			} else {
 				requestedTenant := args[0]
@@ -43,7 +44,7 @@ func logoutCmd(cli *cli) *cobra.Command {
 				if !ok {
 					return fmt.Errorf("Unable to find tenant %s; run 'auth0 tenants use' to see your configured tenants or run 'auth0 login' to configure a new tenant", requestedTenant)
 				}
-				selectedTenant = t.Name
+				selectedTenant = t.Domain
 			}
 
 			if err := cli.removeTenant(selectedTenant); err != nil {

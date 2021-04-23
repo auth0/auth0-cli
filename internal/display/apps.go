@@ -15,10 +15,10 @@ const (
 	quickstartsRegularWeb = "https://auth0.com/docs/quickstart/webapp"
 	quickstartsM2M        = "https://auth0.com/docs/quickstart/backend"
 	quickstartsGeneric    = "https://auth0.com/docs/quickstarts"
-	friendlyM2M           = "machine to machine"
-	friendlyNative        = "native"
-	friendlySpa           = "single page application"
-	friendlyReg           = "regular web application"
+	friendlyM2M           = "Machine to Machine"
+	friendlyNative        = "Native"
+	friendlySpa           = "Single Page Web Application"
+	friendlyReg           = "Regular Web Application"
 )
 
 type applicationView struct {
@@ -234,7 +234,7 @@ func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bo
 	r.Infof("Quickstarts: %s", quickstartsURIFor(client.AppType))
 
 	// TODO(cyx): possibly guard this with a --no-hint flag.
-	r.Infof("%s You might wanna try 'auth0 test login --client-id %s'",
+	r.Infof("%s Test this app's login box with 'auth0 test login %s'",
 		ansi.Faint("Hint:"),
 		client.GetClientID(),
 	)
@@ -272,7 +272,7 @@ const deprecatedAppName = "All Applications"
 func appTypeFor(v *string) string {
 	switch {
 	case v == nil:
-		return "generic"
+		return "Generic"
 
 	case *v == "non_interactive":
 		return friendlyM2M

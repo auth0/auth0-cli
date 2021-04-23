@@ -69,15 +69,15 @@ func (v *logView) AsTableRow() []string {
 
 	conn := v.getConnection()
 	if conn == notApplicable {
-		conn = ansi.Faint(truncate(conn, 30))
+		conn = ansi.Faint(truncate(conn, 25))
 	} else {
-		conn = truncate(conn, 30)
+		conn = truncate(conn, 25)
 	}
 
 	return []string{
 		typ,
 		truncate(desc, 50),
-		ansi.Faint(truncate(timeAgo(v.GetDate()), 20)),
+		ansi.Faint(truncate(timeAgo(v.GetDate()), 17)),
 		conn,
 		clientName,
 	}
@@ -122,7 +122,7 @@ func (v *logView) typeDesc() (typ, desc string) {
 		typ = "..."
 	}
 
-	typ = truncate(chunks[0], 30)
+	typ = truncate(chunks[0], 22)
 
 	if len(chunks) == 2 {
 		desc = strings.TrimSuffix(chunks[1], ")")

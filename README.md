@@ -4,24 +4,45 @@
 
 > Note: This CLI is currently in an experimental state and is not supported by Auth0. It has not had a complete security review, and we do not recommend using it to interact with production tenants.
 
-Build, test, and manage your integration with **[Auth0](http://auth0.com/)** directly from your **terminal**.
+Build, test, troubleshoot and manage your integration with **[Auth0](http://auth0.com/)** directly from your **terminal**.
 
 ![demo](./demo.gif)
 
+## Features
+
+### 🧪 Test the login flow at any time
+
+You can easily test out the Universal Login box of your Auth0 application by running `auth0 test login`. This initiates a login flow in your browser. Once you complete the process, the Auth0 CLI will display your profile information and credentials.
+
+### ⚡️ Get up and running quickly
+
+You can also download a QuickStart sample application that’s already configured for your Auth0 application with `auth0 quickstarts download`. Just install the dependencies, and the sample application will be ready to run. Use it as an example integration to help set up Auth0 in your own application.
+
+### 🔍 Find issues faster
+
+If you encounter difficulties setting up your integration, use the Auth0 CLI to tail your tenant’s logs for a smoother troubleshooting experience. `auth0 logs tail` will let you inspect the authentication events as they happen. You can easily filter the events from a single Auth0 application with `--client-id <client-id>` and use `--debug` to get the raw error details.
+
+### 🔁 Simplify repetitive tasks
+
+With the Auth0 CLI, you can:
+
+- Manage your Auth0 applications, rules, and APIs right from the terminal.
+- Create, update, and delete resources interactively.
+- List all your resources or inspect them individually.
 
 ## Installation
 
 ### macOS
 
-#### Homebrew
+#### [Homebrew](https://brew.sh/)
 
-```
+```bash
 brew install auth0/auth0-cli/auth0
 ```
 
 #### Manually
 
-1. Download the _Darwin_ binaries from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
+1. Download the _Darwin_ binary from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
 1. Extract
 1. Run `./auth0`
 1. Setup CLI commands completion for your terminal:
@@ -33,9 +54,16 @@ brew install auth0/auth0-cli/auth0
 
 ### Windows
 
+#### [Scoop](https://scoop.sh/)
+
+```bash
+scoop bucket add auth0 https://github.com/auth0/scoop-auth0-cli.git
+scoop install auth0
+```
+
 #### Manually
 
-1. Download the _Windows_ binaries from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
+1. Download the _Windows_ binary from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
 1. Extract
 1. Run `auth0.exe`
 
@@ -43,7 +71,7 @@ brew install auth0/auth0-cli/auth0
 
 #### Manually
 
-1. Download the _Linux_ binaries from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
+1. Download the _Linux_ binary from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
 1. Extract `$  tar -xf auth0-cli_{dowloaded version here}_Linux_x86_64.tar.gz`
 1. Run `./auth0` 
 1. Setup CLI commands completion for your terminal:
@@ -85,20 +113,29 @@ A screen similar to the following will be presented after successful app creatio
 
 ```bash
 $ auth0 apps create
- Name: my awesome app
+ Name: My Awesome App
+ Description: Test app
  Type: Regular Web Application
- Description: dev tester
-Creating application... done
+ Callback URLs: http://localhost:3000
+ Allowed Logout URLs: http://localhost:3000
 
-=== travel0 application created
+=== travel0.auth0.com application created
 
-  NAME           my awesome app
-  TYPE           regular web application
-  CLIENT ID      vXAtoaFdhlmtWjpIrjb9AUnrGEAOH2MM
-  CLIENT SECRET  QXV0aDAgaXMgaGlyaW5nISBhdXRoMC5jb20vY2FyZWVycyAK
+  CLIENT ID            wmVzrZkGhKgglMRMvpauORCulBkQ5qeI                                  
+  NAME                 My Awesome App                                                       
+  DESCRIPTION          Test app
+  TYPE                 regular web application                                           
+  CLIENT SECRET        kaS2NR5nk2PcGuITQ8JoKnpVnc5ky1TuKgsb6iTA08ec8XqizqkDupKhEIcsFiNM  
+  CALLBACKS            http://localhost:3000                                             
+  ALLOWED LOGOUT URLS  http://localhost:3000                                             
+  ALLOWED ORIGINS                                                                        
+  ALLOWED WEB ORIGINS                                                                    
+  TOKEN ENDPOINT AUTH                                                                    
+  GRANTS               implicit, authorization_code, refresh_token, client_credentials   
 
  ▸    Quickstarts: https://auth0.com/docs/quickstart/webapp
- ▸    Hint: You might wanna try `auth0 test login --client-id vXAtoaFdhlmtWjpIrjb9AUnrGEAOH2MM`
+ ▸    Hint: Test this app's login box with 'auth0 test login wmVzrZkGhKgglMRMvpauORCulBkQ5qeI'
+ ▸    Hint: You might wanna try 'auth0 quickstarts download wmVzrZkGhKgglMRMvpauORCulBkQ5qeI'
 ```
 
 As you might observe, the next thing to do would likely be to try logging in
@@ -109,7 +146,7 @@ using the client ID.
 Whether or not you've created the application using the CLI or the management
 dashboard, you'll be able to test logging in using a specific application.
 
-If you have the client ID, you may specify it via the `--client-id` flag,
+If you have the client ID, you may pass it as an argument, 
 otherwise a prompt will be presented:
 
 ```bash

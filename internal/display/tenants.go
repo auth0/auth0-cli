@@ -1,7 +1,7 @@
 package display
 
 type tenantView struct {
-	Name 		string
+	Name string
 }
 
 func (v *tenantView) AsTableHeader() []string {
@@ -12,7 +12,7 @@ func (v *tenantView) AsTableRow() []string {
 	return []string{v.Name}
 }
 
-func (r *Renderer) ShowTenants(data []string) {
+func (r *Renderer) TenantList(data []string) {
 	r.Heading()
 
 	var results []View
