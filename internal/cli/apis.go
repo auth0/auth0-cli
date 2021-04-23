@@ -174,8 +174,9 @@ func createApiCmd(cli *cli) *cobra.Command {
 		Short: "Create a new API",
 		Long:  "Create a new API.",
 		Example: `auth0 apis create 
-auth0 apis create --name myapi 
-auth0 apis create -n myapi --identifier http://my-api`,
+auth0 apis create --name myapi
+auth0 apis create -n myapi --identifier http://my-api
+auth0 apis create -n myapi -i http://my-api --offline-access=true --token-expiration 6100 `,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -234,6 +235,8 @@ func updateApiCmd(cli *cli) *cobra.Command {
 		ID     string
 		Name   string
 		Scopes []string
+		TokenLifetime int
+		AllowOfflineAccess bool
 	}
 
 	cmd := &cobra.Command{
@@ -243,7 +246,9 @@ func updateApiCmd(cli *cli) *cobra.Command {
 		Long:  "Update an API.",
 		Example: `auth0 apis update 
 auth0 apis update <id|audience> 
-auth0 apis update <id|audience> --name myapi`,
+auth0 apis update <id|audience> --name myapi
+auth0 apis create -n myapi --token-expiration 6100
+auth0 apis create -n myapi -t 6100 --offline-access=true `,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -275,7 +280,16 @@ auth0 apis update <id|audience> --name myapi`,
 				return err
 			}
 
-			api := &management.ResourceServer{}
+			if err := apiTokenLifetime.Ask(cmd, &inputs.TokenLifetime, nil); err != nil {
+				return err
+			}
+
+			apiAllowOfflineAccess.AskBool(cmd, &inputs.AllowOfflineAccess, nil)
+
+			api := &management.ResourceServer{
+				AllowOfflineAccess: &inputs.AllowOfflineAccess,
+				TokenLifetime: &inputs.TokenLifetime,
+			}
 
 			if len(inputs.Name) == 0 {
 				api.Name = current.Name
@@ -302,6 +316,8 @@ auth0 apis update <id|audience> --name myapi`,
 
 	apiName.RegisterStringU(cmd, &inputs.Name, "")
 	apiScopes.RegisterStringSliceU(cmd, &inputs.Scopes, nil)
+	apiAllowOfflineAccess.RegisterBool(cmd, &inputs.AllowOfflineAccess, true)
+	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 0)
 
 	return cmd
 }
