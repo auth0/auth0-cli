@@ -97,6 +97,16 @@ func (r *Renderer) RuleShow(rule *management.Rule) {
 	r.Result(makeRuleView(rule))
 }
 
+func (r *Renderer) RuleEnable(rule *management.Rule) {
+	r.Heading("rule enabled")
+	r.Result(makeRuleView(rule))
+}
+
+func (r *Renderer) RuleDisable(rule *management.Rule) {
+	r.Heading("rule disabled")
+	r.Result(makeRuleView(rule))
+}
+
 func makeRuleView(rule *management.Rule) *ruleView {
 	return &ruleView{
 		Name:    rule.GetName(),
