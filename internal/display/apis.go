@@ -24,7 +24,7 @@ type apiView struct {
 }
 
 func (v *apiView) AsTableHeader() []string {
-	return []string{"ID", "Name", "Identifier", "Scopes", "TokenLifetime", "AllowOfflineAccess"}
+	return []string{"ID", "Name", "Identifier", "Scopes", "Token Lifetime", "Allow Offline Access"}
 }
 
 func (v *apiView) AsTableRow() []string {

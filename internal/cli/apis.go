@@ -39,17 +39,17 @@ var (
 		IsRequired: true,
 	}
 	apiTokenLifetime = Flag{
-		Name:       "Token-Expiration",
+		Name:       "Token Expiration",
 		LongForm:   "token-expiration",
-		ShortForm:  "t",
+		ShortForm:  "e",
 		Help:       "The amount of time in seconds that the token will be valid after being issued",
-		IsRequired: true,
+		IsRequired: false,
 	}
 	apiAllowOfflineAccess = Flag{
-		Name:       "Offline-Access",
+		Name:       "Offline Access",
 		LongForm:   "offline-access",
 		ShortForm:  "o",
-		Help:       "Allows issuance of refresh tokens for this entity",
+		Help:       "Allows issuance of refresh tokens for this API",
 		AlwaysPrompt: true,
 	}
 )
@@ -176,7 +176,7 @@ func createApiCmd(cli *cli) *cobra.Command {
 		Example: `auth0 apis create 
 auth0 apis create --name myapi
 auth0 apis create -n myapi --identifier http://my-api
-auth0 apis create -n myapi -i http://my-api --offline-access=true --token-expiration 6100 `,
+auth0 apis create -n myapi -i http://my-api --offline-access=true --token-expiration 6100`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -248,7 +248,7 @@ func updateApiCmd(cli *cli) *cobra.Command {
 auth0 apis update <id|audience> 
 auth0 apis update <id|audience> --name myapi
 auth0 apis create -n myapi --token-expiration 6100
-auth0 apis create -n myapi -t 6100 --offline-access=true `,
+auth0 apis create -n myapi -t 6100 --offline-access=true`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -280,11 +280,11 @@ auth0 apis create -n myapi -t 6100 --offline-access=true `,
 				return err
 			}
 
-			if err := apiTokenLifetime.Ask(cmd, &inputs.TokenLifetime, nil); err != nil {
+			if err := apiTokenLifetime.AskU(cmd, &inputs.TokenLifetime, nil); err != nil {
 				return err
 			}
 
-			apiAllowOfflineAccess.AskBool(cmd, &inputs.AllowOfflineAccess, nil)
+			apiAllowOfflineAccess.AskBoolU(cmd, &inputs.AllowOfflineAccess, nil)
 
 			api := &management.ResourceServer{
 				AllowOfflineAccess: &inputs.AllowOfflineAccess,
@@ -316,8 +316,8 @@ auth0 apis create -n myapi -t 6100 --offline-access=true `,
 
 	apiName.RegisterStringU(cmd, &inputs.Name, "")
 	apiScopes.RegisterStringSliceU(cmd, &inputs.Scopes, nil)
-	apiAllowOfflineAccess.RegisterBool(cmd, &inputs.AllowOfflineAccess, true)
-	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 0)
+	apiAllowOfflineAccess.RegisterBool(cmd, &inputs.AllowOfflineAccess, false)
+	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 86400)
 
 	return cmd
 }
