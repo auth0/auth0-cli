@@ -3,6 +3,7 @@ package display
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -16,16 +17,18 @@ type apiView struct {
 	Name       string
 	Identifier string
 	Scopes     string
+	TokenLifetime int
+	AllowOfflineAccess bool
 
 	raw interface{}
 }
 
 func (v *apiView) AsTableHeader() []string {
-	return []string{"ID", "Name", "Identifier", "Scopes"}
+	return []string{"ID", "Name", "Identifier", "Scopes", "TokenLifetime", "AllowOfflineAccess"}
 }
 
 func (v *apiView) AsTableRow() []string {
-	return []string{ansi.Faint(v.ID), v.Name, v.Identifier, fmt.Sprint(v.Scopes)}
+	return []string{ansi.Faint(v.ID), v.Name, v.Identifier, fmt.Sprint(v.Scopes), fmt.Sprintf("%d", v.TokenLifetime), strconv.FormatBool(v.AllowOfflineAccess)}
 }
 
 func (v *apiView) KeyValues() [][]string {
@@ -34,6 +37,8 @@ func (v *apiView) KeyValues() [][]string {
 		{"NAME", v.Name},
 		{"IDENTIFIER", v.Identifier},
 		{"SCOPES", v.Scopes},
+		{"TOKENLIFETIME", fmt.Sprintf("%d", v.TokenLifetime)},
+		{"OFFLINEACCESS", strconv.FormatBool(v.AllowOfflineAccess)},
 	}
 }
 
@@ -46,16 +51,18 @@ type apiTableView struct {
 	Name       string
 	Identifier string
 	Scopes     int
+	TokenLifetime int
+	AllowOfflineAccess bool
 
 	raw interface{}
 }
 
 func (v *apiTableView) AsTableHeader() []string {
-	return []string{"ID", "Name", "Identifier", "Scopes"}
+	return []string{"ID", "Name", "Identifier", "Scopes", "TokenLifetime", "AllowOfflineAccess"}
 }
 
 func (v *apiTableView) AsTableRow() []string {
-	return []string{ansi.Faint(v.ID), v.Name, v.Identifier, fmt.Sprint(v.Scopes)}
+	return []string{ansi.Faint(v.ID), v.Name, v.Identifier, fmt.Sprint(v.Scopes), fmt.Sprintf("%d", v.TokenLifetime), strconv.FormatBool(v.AllowOfflineAccess)}
 }
 
 func (v *apiTableView) Object() interface{} {
@@ -111,6 +118,8 @@ func makeApiView(api *management.ResourceServer) (*apiView, bool) {
 		Name:       auth0.StringValue(api.Name),
 		Identifier: auth0.StringValue(api.Identifier),
 		Scopes:     auth0.StringValue(scopes),
+		TokenLifetime: auth0.IntValue(api.TokenLifetime),
+		AllowOfflineAccess: auth0.BoolValue(api.AllowOfflineAccess),
 
 		raw: api,
 	}
@@ -125,6 +134,8 @@ func makeApiTableView(api *management.ResourceServer) *apiTableView {
 		Name:       auth0.StringValue(api.Name),
 		Identifier: auth0.StringValue(api.Identifier),
 		Scopes:     auth0.IntValue(&scopes),
+		TokenLifetime: auth0.IntValue(api.TokenLifetime),
+		AllowOfflineAccess: auth0.BoolValue(api.AllowOfflineAccess),
 
 		raw: api,
 	}

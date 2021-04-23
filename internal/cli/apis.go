@@ -38,6 +38,20 @@ var (
 		Help:       "Comma-separated list of scopes.",
 		IsRequired: true,
 	}
+	apiTokenLifetime = Flag{
+		Name:       "Token-Expiration",
+		LongForm:   "token-expiration",
+		ShortForm:  "t",
+		Help:       "The amount of time in seconds that the token will be valid after being issued",
+		IsRequired: true,
+	}
+	apiAllowOfflineAccess = Flag{
+		Name:       "Offline-Access",
+		LongForm:   "offline-access",
+		ShortForm:  "o",
+		Help:       "Allows issuance of refresh tokens for this entity",
+		AlwaysPrompt: true,
+	}
 )
 
 func apisCmd(cli *cli) *cobra.Command {
@@ -150,6 +164,8 @@ func createApiCmd(cli *cli) *cobra.Command {
 		Name       string
 		Identifier string
 		Scopes     []string
+		TokenLifetime int
+		AllowOfflineAccess bool
 	}
 
 	cmd := &cobra.Command{
@@ -176,9 +192,17 @@ auth0 apis create -n myapi --identifier http://my-api`,
 				return err
 			}
 
+			if err := apiTokenLifetime.Ask(cmd, &inputs.TokenLifetime, nil); err != nil {
+				return err
+			}
+
+			apiAllowOfflineAccess.AskBool(cmd, &inputs.AllowOfflineAccess, nil)
+
 			api := &management.ResourceServer{
 				Name:       &inputs.Name,
 				Identifier: &inputs.Identifier,
+				AllowOfflineAccess: &inputs.AllowOfflineAccess,
+				TokenLifetime: &inputs.TokenLifetime,
 			}
 
 			if len(inputs.Scopes) > 0 {
@@ -199,6 +223,8 @@ auth0 apis create -n myapi --identifier http://my-api`,
 	apiName.RegisterString(cmd, &inputs.Name, "")
 	apiIdentifier.RegisterString(cmd, &inputs.Identifier, "")
 	apiScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
+	apiAllowOfflineAccess.RegisterBool(cmd, &inputs.AllowOfflineAccess, true)
+	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 0)
 
 	return cmd
 }
