@@ -1,12 +1,21 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
+)
+
+var (
+	userID = Flag{
+		Name:       "User ID",
+		Help:       "Id of the user.",
+		LongForm:   "user-id",
+		ShortForm:  "u",
+		IsRequired: true,
+	}
 )
 
 func usersCmd(cli *cli) *cobra.Command {
@@ -17,6 +26,7 @@ func usersCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(userBlocksCmd(cli))
+	cmd.AddCommand(deleteUserBlocksCmd(cli))
 	return cmd
 }
 
@@ -28,7 +38,6 @@ func userBlocksCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listUserBlocksCmd(cli))
-	cmd.AddCommand(deleteUserBlocksCmd(cli))
 	return cmd
 }
 
@@ -43,16 +52,18 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 		Short: "List brute-force protection blocks for a given user",
 		Long: `List brute-force protection blocks for a given user:
 
-auth0 users blocks list <User ID>
+auth0 users blocks list <user-id>
 `,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				inputs.userID = args[0]
+			if len(args) == 0 {
+				if err := userID.Ask(cmd, &inputs.userID, nil); err != nil {
+					return err
+				}
 			} else {
-				return errors.New("User ID is required.")
+				inputs.userID = args[0]
 			}
 
 			var userBlocks []*management.UserBlock
@@ -81,21 +92,23 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete",
+		Use:   "unblock",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete brute-force protection blocks for a given user",
 		Long: `Delete brute-force protection blocks for a given user:
 
-auth0 users blocks delete <User ID>
+auth0 users unblock <user-id>
 `,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				inputs.userID = args[0]
+			if len(args) == 0 {
+				if err := userID.Ask(cmd, &inputs.userID, nil); err != nil {
+					return err
+				}
 			} else {
-				return errors.New("User ID is required.")
+				inputs.userID = args[0]
 			}
 
 			err := ansi.Spinner("Deleting blocks for user...", func() error {
