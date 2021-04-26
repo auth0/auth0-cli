@@ -70,5 +70,5 @@ $(GOBIN)/auth0-cli-config-generator:
 	go install ./pkg/auth0-cli-config-generator
 
 integration: $(GOBIN)/auth0-cli-config-generator $(GOBIN)/commander
-	env GOOS=linux go build cmd/auth0/main.go && auth0-cli-config-generator && commander test commander.yaml
+	env GOOS=linux go build cmd/auth0/main.go && auth0-cli-config-generator && commander test commander.yaml --verbose
 .PHONY: integration
