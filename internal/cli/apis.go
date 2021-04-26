@@ -177,7 +177,7 @@ func createApiCmd(cli *cli) *cobra.Command {
 auth0 apis create --name myapi
 auth0 apis create -n myapi --identifier http://my-api
 auth0 apis create -n myapi --token-expiration 6100
-auth0 apis create -n myapi -t 6100 --offline-access=true`,
+auth0 apis create -n myapi -e 6100 --offline-access=true`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
@@ -249,7 +249,7 @@ func updateApiCmd(cli *cli) *cobra.Command {
 auth0 apis update <id|audience> 
 auth0 apis update <id|audience> --name myapi
 auth0 apis update -n myapi --token-expiration 6100
-auth0 apis update -n myapi -t 6100 --offline-access=true`,
+auth0 apis update -n myapi -e 6100 --offline-access=true`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
