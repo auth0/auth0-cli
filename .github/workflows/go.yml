@@ -26,7 +26,7 @@ jobs:
     - name: integration
       # skip running this action if the PR is coming from a fork:
       if: github.event.pull_request.head.repo.full_name == github.repository
-      run: PATH=$(go env GOPATH)/bin:$PATH go build && make integration
+      run: PATH=$(go env GOPATH)/bin:$PATH make integration
       env:
           AUTH0_CLI_CLIENT_NAME: ${{ secrets.AUTH0_CLI_CLIENT_NAME }}
           AUTH0_CLI_CLIENT_DOMAIN: ${{ secrets.AUTH0_CLI_CLIENT_DOMAIN }}
