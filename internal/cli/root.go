@@ -59,6 +59,8 @@ func Execute() {
 				return nil
 			}
 
+			ansi.DisableColors = cli.noColor
+
 			// Initialize everything once. Later callers can then
 			// freely assume that config is fully primed and ready
 			// to go.
@@ -82,6 +84,8 @@ func Execute() {
 	rootCmd.PersistentFlags().BoolVar(&cli.noInput,
 		"no-input", false, "Disable interactivity.")
 
+	rootCmd.PersistentFlags().BoolVar(&cli.noColor,
+		"no-color", false, "Disable colors.")	
 	// order of the comamnds here matters
 	// so add new commands in a place that reflect its relevance or relation with other commands:
 	rootCmd.AddCommand(loginCmd(cli))
