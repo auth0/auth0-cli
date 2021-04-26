@@ -1,6 +1,5 @@
 config:
   inherit-env: true
-  dir: /dist/auth0-cli_linux_amd64/auth0
 
 tests:
   auth0 apis list:

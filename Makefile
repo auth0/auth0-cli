@@ -70,5 +70,5 @@ $(GOBIN)/auth0-cli-config-generator:
 	go install ./pkg/auth0-cli-config-generator
 
 integration: $(GOBIN)/auth0-cli-config-generator $(GOBIN)/commander
-	auth0-cli-config-generator && commander test commander.yaml
+	build-all-platforms && auth0-cli-config-generator && commander test commander.yaml
 .PHONY: integration
