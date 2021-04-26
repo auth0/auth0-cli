@@ -24,12 +24,6 @@ var (
 		ShortForm: "n",
 		Help:      "Number of log entries to show.",
 	}
-
-	logsNoColor = Flag{
-		Name:     "Disable Color",
-		LongForm: "no-color",
-		Help:     "Disable colored log output.",
-	}
 )
 
 func logsCmd(cli *cli) *cobra.Command {
@@ -50,7 +44,6 @@ func listLogsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ClientID string
 		Num      int
-		NoColor  bool
 	}
 
 	cmd := &cobra.Command{
@@ -88,14 +81,13 @@ auth0 logs ls -n 100`,
 				cli.api.ActionExecution, time.Second,
 			)
 
-			cli.renderer.LogList(list, logsCh, actionExecutionAPI, inputs.NoColor, !cli.debug)
+			cli.renderer.LogList(list, logsCh, actionExecutionAPI, !cli.debug)
 			return nil
 		},
 	}
 
 	logsClientID.RegisterString(cmd, &inputs.ClientID, "")
 	logsNum.RegisterInt(cmd, &inputs.Num, 100)
-	logsNoColor.RegisterBool(cmd, &inputs.NoColor, false)
 	return cmd
 }
 
@@ -103,7 +95,6 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ClientID string
 		Num      int
-		NoColor  bool
 	}
 
 	cmd := &cobra.Command{
@@ -181,14 +172,13 @@ auth0 logs tail -n 100`,
 				cli.api.ActionExecution, time.Second,
 			)
 
-			cli.renderer.LogList(list, logsCh, actionExecutionAPI, inputs.NoColor, !cli.debug)
+			cli.renderer.LogList(list, logsCh, actionExecutionAPI, !cli.debug)
 			return nil
 		},
 	}
 
 	logsClientID.RegisterString(cmd, &inputs.ClientID, "")
 	logsNum.RegisterInt(cmd, &inputs.Num, 100)
-	logsNoColor.RegisterBool(cmd, &inputs.NoColor, false)
 	return cmd
 }
 
