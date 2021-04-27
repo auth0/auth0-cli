@@ -12,7 +12,6 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/open"
 	"github.com/guiguan/caster"
-	"github.com/phayes/freeport"
 	"github.com/rjeczalik/notify"
 )
 
@@ -36,16 +35,11 @@ func PreviewCustomTemplate(ctx context.Context, templateData TemplateData) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	address := "localhost"
-	port, err := freeport.GetFreePort()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return
 	}
-
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", address, port))
-	if err != nil {
-		return
-	}
+	address := listener.Addr().String()
 
 	requestTimeout := 10 * time.Minute
 	server := &http.Server{
@@ -61,7 +55,7 @@ func PreviewCustomTemplate(ctx context.Context, templateData TemplateData) {
 		}
 	}()
 
-	err = open.URL(fmt.Sprintf("http://%s:%d/data/storybook/?path=/story/universal-login--prompts", address, port))
+	err = open.URL(fmt.Sprintf("http://%s/data/storybook/?path=/story/universal-login--prompts", address))
 	if err != nil {
 		return
 	}

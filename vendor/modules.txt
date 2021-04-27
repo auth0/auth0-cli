@@ -196,9 +196,6 @@ github.com/nwaples/rardecode
 github.com/olekukonko/tablewriter
 # github.com/pelletier/go-toml v1.2.0
 github.com/pelletier/go-toml
-# github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
-## explicit
-github.com/phayes/freeport
 # github.com/pierrec/lz4/v4 v4.1.3
 ## explicit
 github.com/pierrec/lz4/v4
