@@ -6,7 +6,6 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
-	"github.com/logrusorgru/aurora"
 
 	"gopkg.in/auth0.v5/management"
 	"gopkg.in/yaml.v2"
@@ -26,8 +25,7 @@ type logCategory int
 var _ View = &logView{}
 
 type logView struct {
-	silent  bool
-	noColor bool
+	silent bool
 	*management.Log
 
 	ActionExecutionAPI auth0.ActionExecutionAPI
@@ -130,23 +128,21 @@ func (v *logView) typeDesc() (typ, desc string) {
 
 	desc = fmt.Sprintf("%s %s", desc, auth0.StringValue(v.Description))
 
-	if !v.noColor {
-		switch v.category() {
-		case logCategorySuccess:
-			typ = aurora.Green(typ).String()
-		case logCategoryFailure:
-			typ = aurora.BrightRed(typ).String()
-		case logCategoryWarning:
-			typ = aurora.BrightYellow(typ).String()
-		default:
-			typ = ansi.Faint(typ)
-		}
+	switch v.category() {
+	case logCategorySuccess:
+		typ = ansi.Green(typ)
+	case logCategoryFailure:
+		typ = ansi.BrightRed(typ)
+	case logCategoryWarning:
+		typ = ansi.BrightYellow(typ)
+	default:
+		typ = ansi.Faint(typ)
 	}
 
 	return typ, desc
 }
 
-func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, api auth0.ActionExecutionAPI, noColor, silent bool) {
+func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, api auth0.ActionExecutionAPI, silent bool) {
 	resource := "logs"
 
 	r.Heading(resource)
@@ -159,7 +155,7 @@ func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, 
 
 	var res []View
 	for _, l := range logs {
-		res = append(res, &logView{Log: l, ActionExecutionAPI: api, silent: silent, noColor: noColor})
+		res = append(res, &logView{Log: l, ActionExecutionAPI: api, silent: silent})
 	}
 
 	var viewChan chan View
@@ -172,7 +168,7 @@ func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, 
 
 			for list := range ch {
 				for _, l := range list {
-					viewChan <- &logView{Log: l, ActionExecutionAPI: api, silent: silent, noColor: noColor}
+					viewChan <- &logView{Log: l, ActionExecutionAPI: api, silent: silent}
 				}
 			}
 		}()

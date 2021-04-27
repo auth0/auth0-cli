@@ -88,6 +88,12 @@ func Red(text string) string {
 	return color.Sprintf(color.Red(text))
 }
 
+// BrightRed returns text colored bright red
+func BrightRed(text string) string {
+	color := Color(os.Stdout)
+	return color.Sprintf(color.BrightRed(text))
+}
+
 // Green returns text colored green
 func Green(text string) string {
 	color := Color(os.Stdout)
@@ -98,6 +104,12 @@ func Green(text string) string {
 func Yellow(text string) string {
 	color := Color(os.Stdout)
 	return color.Sprintf(color.Yellow(text))
+}
+
+// BrightYellow returns text colored bright yellow
+func BrightYellow(text string) string {
+	color := Color(os.Stdout)
+	return color.Sprintf(color.BrightYellow(text))
 }
 
 // Blue returns text colored blue
