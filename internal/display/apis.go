@@ -3,6 +3,7 @@ package display
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -12,20 +13,22 @@ import (
 )
 
 type apiView struct {
-	ID         string
-	Name       string
-	Identifier string
-	Scopes     string
+	ID            string
+	Name          string
+	Identifier    string
+	Scopes        string
+	TokenLifetime int
+	OfflineAccess bool
 
 	raw interface{}
 }
 
 func (v *apiView) AsTableHeader() []string {
-	return []string{"ID", "Name", "Identifier", "Scopes"}
+	return []string{}
 }
 
 func (v *apiView) AsTableRow() []string {
-	return []string{ansi.Faint(v.ID), v.Name, v.Identifier, fmt.Sprint(v.Scopes)}
+	return []string{}
 }
 
 func (v *apiView) KeyValues() [][]string {
@@ -34,6 +37,8 @@ func (v *apiView) KeyValues() [][]string {
 		{"NAME", v.Name},
 		{"IDENTIFIER", v.Identifier},
 		{"SCOPES", v.Scopes},
+		{"TOKEN LIFETIME", strconv.Itoa(v.TokenLifetime)},
+		{"ALLOW OFFLINE ACCESS", strconv.FormatBool(v.OfflineAccess)},
 	}
 }
 
@@ -107,10 +112,12 @@ func (r *Renderer) ApiUpdate(api *management.ResourceServer) {
 func makeApiView(api *management.ResourceServer) (*apiView, bool) {
 	scopes, scopesTruncated := getScopes(api.Scopes)
 	view := &apiView{
-		ID:         auth0.StringValue(api.ID),
-		Name:       auth0.StringValue(api.Name),
-		Identifier: auth0.StringValue(api.Identifier),
-		Scopes:     auth0.StringValue(scopes),
+		ID:            auth0.StringValue(api.ID),
+		Name:          auth0.StringValue(api.Name),
+		Identifier:    auth0.StringValue(api.Identifier),
+		Scopes:        auth0.StringValue(scopes),
+		TokenLifetime: auth0.IntValue(api.TokenLifetime),
+		OfflineAccess: auth0.BoolValue(api.AllowOfflineAccess),
 
 		raw: api,
 	}
@@ -172,7 +179,7 @@ func makeScopeView(scope *management.ResourceServerScope) *scopeView {
 func getScopes(scopes []*management.ResourceServerScope) (*string, bool) {
 	ellipsis := "..."
 	separator := " "
-	padding := 16 // the longest apiView key plus two spaces before and after in the label column
+	padding := 22 // the longest apiView key plus two spaces before and after in the label column
 	terminalWidth, _, err := term.GetSize(int(os.Stdin.Fd()))
 	if err != nil {
 		terminalWidth = 80
