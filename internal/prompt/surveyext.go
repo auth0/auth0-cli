@@ -112,7 +112,7 @@ func (e *Editor) prompt(initialValue string, config *survey.PromptConfig) (inter
 		continue
 	}
 
-	text, err := CaptureInputViaEditor(initialValue, e.FileName, nil)
+	text, err := CaptureInputViaEditor(initialValue, e.FileName, nil, nil)
 	if err != nil {
 		return "", err
 	}

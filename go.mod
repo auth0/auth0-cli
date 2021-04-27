@@ -13,6 +13,7 @@ require (
 	github.com/golang/mock v1.5.0
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/go-cmp v0.5.5
+	github.com/guiguan/caster v0.0.0-20191104051807-3736c4464f38
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/klauspost/compress v1.11.9 // indirect
 	github.com/klauspost/pgzip v1.2.5 // indirect
@@ -23,8 +24,10 @@ require (
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/mholt/archiver/v3 v3.5.0
 	github.com/olekukonko/tablewriter v0.0.5
+	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
 	github.com/pierrec/lz4/v4 v4.1.3 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/rjeczalik/notify v0.9.2
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.0
