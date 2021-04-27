@@ -4,15 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
-	"path/filepath"
 	"text/template"
 	"time"
 
 	"github.com/auth0/auth0-cli/internal/open"
+	"github.com/fsnotify/fsnotify"
 	"github.com/guiguan/caster"
-	"github.com/rjeczalik/notify"
 )
 
 type Client struct {
@@ -119,26 +119,40 @@ func buildRoutes(ctx context.Context, requestTimeout time.Duration, templateData
 func broadcastCustomTemplateChanges(ctx context.Context, filename string) *caster.Caster {
 	publisher := caster.New(ctx)
 
-	dir, file := filepath.Split(filename)
-	c := make(chan notify.EventInfo)
-	if err := notify.Watch(dir, c, notify.Write); err != nil {
-		return publisher
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	go func() {
-		for eventInfo := range c {
-			if filepath.Base(eventInfo.Path()) == file {
-				publisher.Pub(true)
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+				if event.Op&fsnotify.Write == fsnotify.Write {
+					publisher.Pub(true)
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+				log.Fatal(err)
 			}
 		}
 	}()
 
-	// release resources when the file is closed or the input is cancelled
 	go func() {
 		<-ctx.Done()
-		notify.Stop(c)
-		close(c)
+		watcher.Close()
+		publisher.Close()
 	}()
+
+	err = watcher.Add(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	return publisher
 }
