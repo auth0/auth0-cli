@@ -10,7 +10,7 @@ var (
 	templatePreviewAssets embed.FS
 
 	//go:embed data/tenant-data.js
-	tenantDataAsset embed.FS
+	tenantDataAsset string
 
 	//go:embed data/default-template.liquid
 	defaultTemplate string

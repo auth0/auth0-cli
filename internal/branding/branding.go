@@ -107,7 +107,7 @@ func buildRoutes(ctx context.Context, requestTimeout time.Duration, templateData
 			a, _ := json.Marshal(v)
 			return string(a)
 		},
-	}).ParseFS(tenantDataAsset, "data/tenant-data.js"))
+	}).Parse(tenantDataAsset))
 
 	router.HandleFunc("/dynamic/tenant-data", func(w http.ResponseWriter, r *http.Request) {
 		err := jstmpl.Execute(w, templateData)
