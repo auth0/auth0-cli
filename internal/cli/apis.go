@@ -284,8 +284,8 @@ auth0 apis update -n myapi -e 6100 --offline-access=true`,
 				return err
 			}
 
-			currentTokenLifetime := auth0.String(strconv.Itoa(auth0.IntValue(current.TokenLifetime)))
-			if err := apiTokenLifetime.AskU(cmd, &inputs.TokenLifetime, currentTokenLifetime); err != nil {
+			currentTokenLifetime := strconv.Itoa(auth0.IntValue(current.TokenLifetime))
+			if err := apiTokenLifetime.AskU(cmd, &inputs.TokenLifetime, &currentTokenLifetime); err != nil {
 				return err
 			}
 
