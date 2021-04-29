@@ -71,4 +71,10 @@ $(GOBIN)/auth0-cli-config-generator:
 
 integration: $(GOBIN)/auth0-cli-config-generator $(GOBIN)/commander
 	auth0-cli-config-generator && commander test commander.yaml
+	$(MAKE) integration-cleanup
 .PHONY: integration
+
+# Delete all test apps created during integration testing
+.PHONY: integration-cleanup
+integration-cleanup:
+	./integration/test-cleanup.sh
