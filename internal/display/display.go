@@ -10,7 +10,6 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/charmbracelet/glamour"
-	"github.com/logrusorgru/aurora"
 	"github.com/olekukonko/tablewriter"
 )
 
@@ -45,17 +44,17 @@ func (r *Renderer) Newline() {
 }
 
 func (r *Renderer) Infof(format string, a ...interface{}) {
-	fmt.Fprint(r.MessageWriter, aurora.Green(" ▸    "))
+	fmt.Fprint(r.MessageWriter, ansi.Green(" ▸    "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
 func (r *Renderer) Warnf(format string, a ...interface{}) {
-	fmt.Fprint(r.MessageWriter, aurora.Yellow(" ▸    "))
+	fmt.Fprint(r.MessageWriter, ansi.Yellow(" ▸    "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
 func (r *Renderer) Errorf(format string, a ...interface{}) {
-	fmt.Fprint(r.MessageWriter, aurora.BrightRed(" ▸    "))
+	fmt.Fprint(r.MessageWriter, ansi.BrightRed(" ▸    "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 

@@ -111,6 +111,12 @@ var (
 		Help:       "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.",
 		IsRequired: false,
 	}
+	exludedFields = []string{
+		// woraround for issue when ocassionally
+		// (probably legacy apps) arrive at the SDK
+		// with a `lifetime_in_seconds` value as string instead of int:
+		"jwt_configuration.lifetime_in_seconds",
+	}
 )
 
 func appsCmd(cli *cli) *cobra.Command {
@@ -197,7 +203,7 @@ auth0 apps ls`,
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				list, err = cli.api.Client.List()
+				list, err = cli.api.Client.List(management.ExcludeFields(exludedFields...))
 				return err
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
