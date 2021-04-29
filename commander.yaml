@@ -2,20 +2,147 @@ config:
   inherit-env: true
 
 tests:
-  auth0 apis list:
+  # auth0 apis list:
+  #   exit-code: 0
+
+  # auth0 apps list:
+  #   exit-code: 0
+
+  # -c, --callbacks strings     After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure
+  #                             to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.
+  # -g, --grants strings        List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.
+  # -l, --logout-urls strings   Comma-separated list of URLs that are valid to redirect to after logout from Auth0. Wildcards are allowed for subdomains.
+  # -o, --origins strings       Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if
+  #                             necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.
+  # -w, --web-origins strings   Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode.
+  
+  # Test 'apps create' --type flag
+  apps create type native and check name:
+    command: auth0 apps create -n nativeapp1 -t native --description NativeApp1
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME                 nativeapp1                                                           
+        - DESCRIPTION          NativeApp1                                                           
+        - TYPE                 Native   
+
+  apps create type spa:
+    command: auth0 apps create -n spaapp1 -t spa --description SpaApp1
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME                 spaapp1                                                           
+        - DESCRIPTION          SpaApp1                                                           
+        - TYPE                 Single Page Web Application   
+
+  apps create type regular:
+    command: auth0 apps create -n regapp1 -t regular --description RegApp1
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME                 regapp1                                                           
+        - DESCRIPTION          RegApp1                                                           
+        - TYPE                 Regular   
+
+  apps create type m2m:
+    command: auth0 apps create -n m2mapp1 -t m2m --description M2mApp1
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME                 m2mapp1                                                           
+        - DESCRIPTION          M2mApp1                                                           
+        - TYPE                 Machine to Machine   
+
+  # Test 'apps create' --auth-method flag
+  apps create type spa auth method none:
+    command: auth0 apps create -n spaapp2 -t spa --description SpaApp2 -a None
+    stdout:
+      contains:
+        - TOKEN ENDPOINT AUTH  none
     exit-code: 0
 
-  auth0 apps list:
+  apps create type m2m auth method none fails:
+    command: auth0 apps create -n m2mapp2 -t m2m --description M2mApp2 -a None
+    exit-code: 1
+
+  apps create type regular auth method post:
+    command: auth0 apps create -n regapp2 -t regular --description RegApp2 -a Post
+    stdout:
+      contains:
+        - TOKEN ENDPOINT AUTH  client_secret_post
     exit-code: 0
 
-  auth0 logs list:
+  apps create type regular auth method basic:
+    command: auth0 apps create -n regapp3 -t regular --description RegApp3 -a Basic
+    stdout:
+      contains:
+        - TOKEN ENDPOINT AUTH  client_secret_basic
+    exit-code: 0
+  
+  # Test 'apps create' --callbacks flag
+  apps create type m2m callbacks:
+    command: auth0 apps create -n m2mapp3 -t m2m --description M2mApp3 -c https://example.com
+    stdout:
+      contains:
+        - CALLBACKS            https://example.com
+    exit-code: 0
+  
+  # Test 'apps create' --grants flag
+  apps create type m2m grants:
+    command: auth0 apps create -n regapp4 -t regular --description RegApp4 -g credentials, password
+    stdout:
+      contains:
+        - GRANTS               credentials, password
     exit-code: 0
 
-  auth0 tenants list:
+  # Test 'apps show'
+  apps create test app: # create an app and capture a client id
+    command: ./integration/get-client-id.sh
     exit-code: 0
 
-  auth0 rules list:
+  apps show:
+    command: auth0 apps show $(cat ./integration/apps/client-id) # depends on "apps create test app" test
     exit-code: 0
 
-  auth0 completion bash:
-    exit-code: 0
+  # -a, --auth-method string    Defines the requested authentication method for the token endpoint. Possible values
+  #                             are 'None' (public application without a client secret), 'Post' (application uses HTTP
+  #                             POST parameters) or 'Basic' (application uses HTTP Basic).
+  # -c, --callbacks strings     After the user authenticates we will only call back to any of these URLs. You can
+  #                             specify multiple valid URLs by comma-separating them (typically to handle different
+  #                             environments like QA or testing). Make sure to specify the protocol (https://)
+  #                             otherwise the callback may fail in some cases. With the exception of custom URI
+  #                             schemes for native apps, all callbacks should use protocol https://.
+  # -d, --description string    Description of the application. Max character count is 140.
+  # -g, --grants strings        List of grant types supported for this application. Can include code, implicit,
+  #                             refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp,
+  #                             mfa-recovery-code, and device-code.
+  # -l, --logout-urls strings   Comma-separated list of URLs that are valid to redirect to after logout from Auth0.
+  #                             Wildcards are allowed for subdomains.
+  # -n, --name string           Name of the application.
+  # -o, --origins strings       Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API
+  #                             (typically used with CORS). By default, all your callback URLs will be allowed. This
+  #                             field allows you to enter other origins if necessary. You can also use wildcards at
+  #                             the subdomain level (e.g., https://*.contoso.com). Query strings and hash information
+  #                             are not taken into account when validating these URLs.
+  # -t, --type string           Type of application:
+  #                             - native: mobile, desktop, CLI and smart device apps running natively.
+  #                             - spa (single page application): a JavaScript front-end app that uses an API.
+  #                             - regular: Traditional web app using redirects.
+  #                             - m2m (machine to machine): CLIs, daemons or services running on your backend.
+  # -w, --web-origins strings   Comma-separated list of allowed origins for use with Cross-Origin Authentication,
+  #                             Device Flow, and web message response mode.
+  
+  # auth0 apps update:
+  #   exit-code: 0
+
+  # auth0 logs list:
+  #   exit-code: 0
+
+  # auth0 tenants list:
+  #   exit-code: 0
+
+  # auth0 rules list:
+  #   exit-code: 0
+
+  # auth0 completion bash:
+  #   exit-code: 0
