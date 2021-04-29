@@ -33,6 +33,10 @@ func (f Flag) GetIsRequired() bool {
 	return f.IsRequired
 }
 
+func (f *Flag) IsSet(cmd *cobra.Command) bool {
+	return cmd.Flags().Changed(f.LongForm)
+}
+
 func (f *Flag) Ask(cmd *cobra.Command, value interface{}, defaultValue *string) error {
 	return askFlag(cmd, f, value, defaultValue, false)
 }
