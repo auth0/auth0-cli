@@ -3,6 +3,7 @@ package branding
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -86,24 +87,23 @@ func buildRoutes(ctx context.Context, requestTimeout time.Duration, data Templat
 	// Long polling waiting for file changes
 	broadcaster := broadcastCustomTemplateChanges(ctx, data.Filename)
 	router.HandleFunc("/dynamic/events", func(w http.ResponseWriter, r *http.Request) {
-		changes, _ := broadcaster.Sub(r.Context(), 1)
+		ctx := r.Context()
+
+		changes, _ := broadcaster.Sub(ctx, 1)
 		defer broadcaster.Unsub(changes)
 
-		var err error
-		select {
-		case <-r.Context().Done():
-			w.WriteHeader(http.StatusGone)
-			_, err = w.Write([]byte("410 - Gone"))
-		case <-time.After(requestTimeout):
-			w.WriteHeader(http.StatusRequestTimeout)
-			_, err = w.Write([]byte("408 - Request Timeout"))
-		case <-changes:
-			w.WriteHeader(http.StatusOK)
-			_, err = w.Write([]byte("200 - OK"))
+		writeStatus := func(w http.ResponseWriter, code int) {
+			msg := fmt.Sprintf("%d - %s", code, http.StatusText(http.StatusGone))
+			http.Error(w, msg, code)
 		}
 
-		if err != nil {
-			http.Error(w, err.Error(), 500)
+		select {
+		case <-ctx.Done():
+			writeStatus(w, http.StatusGone)
+		case <-time.After(requestTimeout):
+			writeStatus(w, http.StatusRequestTimeout)
+		case <-changes:
+			writeStatus(w, http.StatusOK)
 		}
 	})
 
