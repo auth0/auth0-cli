@@ -45,7 +45,7 @@ func templateCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "templates",
 		Short: "Manage custom page templates",
-		Long:  "Manage custom page templates.",
+		Long:  "Manage custom page templates. This requires at least one custom domain to be configured for the tenant.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
