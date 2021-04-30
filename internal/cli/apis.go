@@ -289,7 +289,7 @@ auth0 apis update -n myapi -e 6100 --offline-access=true`,
 				return err
 			}
 
-			if !cmd.Flags().Changed(apiOfflineAccess.LongForm) {
+			if !apiOfflineAccess.IsSet(cmd) {
 				inputs.AllowOfflineAccess = auth0.BoolValue(current.AllowOfflineAccess)
 			}
 
