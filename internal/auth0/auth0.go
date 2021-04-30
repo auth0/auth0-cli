@@ -12,10 +12,12 @@ type API struct {
 	ActionVersion   ActionVersionAPI
 	ActionExecution ActionExecutionAPI
 	ActionBinding   ActionBindingAPI
+	Branding        BrandingAPI
 	Client          ClientAPI
 	Log             LogAPI
 	ResourceServer  ResourceServerAPI
 	Rule            RuleAPI
+	Tenant          TenantAPI
 	User            UserAPI
 }
 
@@ -25,10 +27,12 @@ func NewAPI(m *management.Management) *API {
 		ActionVersion:   m.ActionVersion,
 		ActionExecution: m.ActionExecution,
 		ActionBinding:   m.ActionBinding,
+		Branding:        m.Branding,
 		Client:          m.Client,
 		Log:             m.Log,
 		ResourceServer:  m.ResourceServer,
 		Rule:            m.Rule,
+		Tenant:          m.Tenant,
 		User:            m.User,
 	}
 }
