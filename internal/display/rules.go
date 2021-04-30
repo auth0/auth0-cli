@@ -30,8 +30,9 @@ func (v *ruleView) AsTableRow() []string {
 func (v *ruleView) KeyValues() [][]string {
 	return [][]string{
 		[]string{"NAME", v.Name},
-		[]string{"ID", v.ID},
+		[]string{"ID", ansi.Faint(v.ID)},
 		[]string{"ENABLED", strconv.FormatBool(v.Enabled)},
+		[]string{"ORDER", strconv.Itoa(v.Order)},
 		[]string{"SCRIPT", v.Script},
 	}
 }

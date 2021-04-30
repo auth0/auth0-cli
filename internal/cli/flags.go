@@ -53,12 +53,12 @@ func (f *Flag) AskManyU(cmd *cobra.Command, value interface{}, defaultValue *str
 	return askManyFlag(cmd, f, value, defaultValue, true)
 }
 
-func (f *Flag) AskBool(cmd *cobra.Command, value *bool, defaultValue *bool) {
-	askBoolFlag(cmd, f, value, defaultValue, false)
+func (f *Flag) AskBool(cmd *cobra.Command, value *bool, defaultValue *bool) error {
+	return askBoolFlag(cmd, f, value, defaultValue, false)
 }
 
-func (f *Flag) AskBoolU(cmd *cobra.Command, value *bool, defaultValue *bool) {
-	askBoolFlag(cmd, f, value, defaultValue, true)
+func (f *Flag) AskBoolU(cmd *cobra.Command, value *bool, defaultValue *bool) error {
+	return askBoolFlag(cmd, f, value, defaultValue, true)
 }
 
 func (f *Flag) Select(cmd *cobra.Command, value interface{}, options []string, defaultValue *string) error {
@@ -171,10 +171,14 @@ func askManyFlag(cmd *cobra.Command, f *Flag, value interface{}, defaultValue *s
 	return nil
 }
 
-func askBoolFlag(cmd *cobra.Command, f *Flag, value *bool, defaultValue *bool, isUpdate bool) {
+func askBoolFlag(cmd *cobra.Command, f *Flag, value *bool, defaultValue *bool, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
-		askBool(cmd, f, value, defaultValue)
+		if err := askBool(cmd, f, value, defaultValue); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 func selectFlag(cmd *cobra.Command, f *Flag, value interface{}, options []string, defaultValue *string, isUpdate bool) error {

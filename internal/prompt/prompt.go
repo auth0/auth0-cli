@@ -24,6 +24,32 @@ func askOne(prompt survey.Prompt, response interface{}) error {
 	return survey.AskOne(prompt, response, stdErrWriter, Icons)
 }
 
+func AskBool(message string, value *bool, defaultValue bool) error {
+	prompt := &survey.Confirm{
+		Message: message,
+		Default: defaultValue,
+	}
+
+	if err := askOne(prompt, value); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func Confirm(message string) bool {
+	result := false
+	prompt := &survey.Confirm{
+		Message: message,
+	}
+
+	if err := askOne(prompt, &result); err != nil {
+		return false
+	}
+
+	return result
+}
+
 func TextInput(name string, message string, help string, defaultValue string, required bool) *survey.Question {
 	input := &survey.Question{
 		Name:   name,
@@ -65,31 +91,4 @@ func SelectInput(name string, message string, help string, options []string, def
 	}
 
 	return input
-}
-
-func Confirm(message string) bool {
-	result := false
-	prompt := &survey.Confirm{
-		Message: message,
-	}
-
-	if err := askOne(prompt, &result); err != nil {
-		return false
-	}
-
-	return result
-}
-
-func ConfirmDefault(message string, defaultValue bool) bool {
-	result := false
-	prompt := &survey.Confirm{
-		Message: message,
-		Default: defaultValue,
-	}
-
-	if err := askOne(prompt, &result); err != nil {
-		return defaultValue
-	}
-
-	return result
 }
