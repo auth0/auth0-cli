@@ -35,8 +35,6 @@ type editorPrompt struct {
 	cmd string
 }
 
-type NotifyFileCreated func(file *os.File)
-
 // openFile opens filename in the preferred text editor, resolving the
 // arguments with editor specific logic.
 func (p *editorPrompt) openFile(filename string, infoFn func()) error {
