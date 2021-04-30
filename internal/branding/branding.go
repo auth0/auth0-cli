@@ -55,7 +55,16 @@ func PreviewCustomTemplate(ctx context.Context, data TemplateData) {
 		}
 	}()
 
-	err = open.URL(fmt.Sprintf("http://%s/data/storybook/?path=/story/universal-login--prompts", address))
+	u := &url.URL{
+		Scheme: "http",
+		Host:   listener.Addr().String(),
+		Path:   "/data/storybook/",
+		RawQuery: (url.Values{
+			"path": []string{"/story/universal-login--prompts"},
+		}).Encode(),
+	}
+
+	err = open.URL(u.String())
 	if err != nil {
 		return
 	}
