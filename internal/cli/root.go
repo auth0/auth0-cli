@@ -115,7 +115,7 @@ func Execute() {
 		}
 	}()
 
-	// Handle interupts
+	// Handle interrupts
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)
 
