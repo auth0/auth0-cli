@@ -3,12 +3,13 @@ package cli
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/branding"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
+	"gopkg.in/auth0.v5"
 	"gopkg.in/auth0.v5/management"
 )
 
@@ -89,7 +90,7 @@ func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
 			var templateData *branding.TemplateData
 			err := ansi.Waiting(func() error {
 				var err error
-				templateData, err = cli.obtainCustomTemplateData()
+				templateData, err = cli.obtainCustomTemplateData(cmd.Context())
 				return err
 			})
 			if err != nil {
@@ -164,72 +165,64 @@ func (cli *cli) customTemplateEditorPromptWithPreview(cmd *cobra.Command, body *
 	)
 }
 
-func (cli *cli) obtainCustomTemplateData() (*branding.TemplateData, error) {
-	wg := &sync.WaitGroup{}
+const (
+	defaultPrimaryColor    = "#0059d6"
+	defaultBackgroundColor = "#000000"
+	defaultLogoURL         = "https://cdn.auth0.com/manhattan/versions/1.2921.0/assets/badge.png"
+)
 
-	errors := make(chan error)
-	var clients *management.ClientList
-	var brandingInfo *management.Branding
-	var template *management.BrandingUniversalLogin
-	var tenant *management.Tenant
+func (cli *cli) obtainCustomTemplateData(ctx context.Context) (*branding.TemplateData, error) {
+	g, ctx := errgroup.WithContext(ctx)
 
-	wg.Add(4)
-	go func() {
+	var (
+		clients      *management.ClientList
+		brandingInfo *management.Branding
+		template     *management.BrandingUniversalLogin
+		tenant       *management.Tenant
+	)
+
+	g.Go(func() error {
 		var err error
 		clients, err = cli.api.Client.List()
-		if err != nil {
-			errors <- err
-		}
-		wg.Done()
-	}()
+		return err
+	})
 
-	go func() {
+	g.Go(func() error {
 		var err error
 		brandingInfo, err = cli.api.Branding.Read()
 		if err != nil {
-			errors <- err
+			return err
 		}
-		defaultPrimaryColor := "#0059d6"
-		defaultBackgroundColor := "#000000"
-		defaultLogoURL := "https://cdn.auth0.com/manhattan/versions/1.2921.0/assets/badge.png"
+
 		if brandingInfo.GetColors() == nil {
 			brandingInfo.Colors = &management.BrandingColors{
-				Primary:        &defaultPrimaryColor,
-				PageBackground: &defaultBackgroundColor,
+				Primary:        auth0.String(defaultPrimaryColor),
+				PageBackground: auth0.String(defaultBackgroundColor),
 			}
 		}
 		if brandingInfo.LogoURL == nil {
-			brandingInfo.LogoURL = &defaultLogoURL
+			brandingInfo.LogoURL = auth0.String(defaultLogoURL)
 		}
-		wg.Done()
-	}()
 
-	go func() {
+		return nil
+	})
+
+	g.Go(func() error {
 		var err error
 		template, err = cli.api.Branding.UniversalLogin()
 		if err != nil {
-			template = &management.BrandingUniversalLogin{
-				Body: nil,
-			}
+			template = &management.BrandingUniversalLogin{Body: nil}
 		}
-		wg.Done()
-	}()
+		return err
+	})
 
-	go func() {
+	g.Go(func() error {
 		var err error
 		tenant, err = cli.api.Tenant.Read()
-		if err != nil {
-			errors <- err
-		}
-		wg.Done()
-	}()
+		return err
+	})
 
-	go func() {
-		wg.Wait()
-		close(errors)
-	}()
-
-	for err := range errors {
+	if err := g.Wait(); err != nil {
 		return nil, err
 	}
 
@@ -241,13 +234,12 @@ func (cli *cli) obtainCustomTemplateData() (*branding.TemplateData, error) {
 		Body:            template.GetBody(),
 	}
 
-	templateData.Clients = make([]branding.Client, len(clients.Clients))
-	for i, client := range clients.Clients {
-		templateData.Clients[i] = branding.Client{
+	for _, client := range clients.Clients {
+		templateData.Clients = append(templateData.Clients, branding.Client{
 			ID:      client.GetClientID(),
 			Name:    client.GetName(),
 			LogoURL: client.GetLogoURI(),
-		}
+		})
 	}
 
 	return templateData, nil
