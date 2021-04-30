@@ -16,6 +16,9 @@ import (
 	"github.com/guiguan/caster"
 )
 
+// Client is a minimal representation of an auth0 Client as defined in the
+// management API. This is used within the branding machinery to populate the
+// tenant data.
 type Client struct {
 	ID      string `json:"id"`
 	Name    string `json:"name"`
