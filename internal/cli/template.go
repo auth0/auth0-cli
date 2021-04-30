@@ -189,7 +189,7 @@ func (cli *cli) obtainCustomTemplateData(ctx context.Context) (*branding.Templat
 
 	g.Go(func() error {
 		var err error
-		brandingInfo, err = cli.api.Branding.Read()
+		brandingInfo, err = cli.api.Branding.Read(management.Context(ctx))
 		if err != nil {
 			return err
 		}
@@ -209,7 +209,7 @@ func (cli *cli) obtainCustomTemplateData(ctx context.Context) (*branding.Templat
 
 	g.Go(func() error {
 		var err error
-		template, err = cli.api.Branding.UniversalLogin()
+		template, err = cli.api.Branding.UniversalLogin(management.Context(ctx))
 		if err != nil {
 			template = &management.BrandingUniversalLogin{Body: nil}
 		}
@@ -218,7 +218,7 @@ func (cli *cli) obtainCustomTemplateData(ctx context.Context) (*branding.Templat
 
 	g.Go(func() error {
 		var err error
-		tenant, err = cli.api.Tenant.Read()
+		tenant, err = cli.api.Tenant.Read(management.Context(ctx))
 		return err
 	})
 
