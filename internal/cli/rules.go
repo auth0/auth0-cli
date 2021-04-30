@@ -313,7 +313,13 @@ auth0 rules update <rule-id> -n "My Updated Rule" --enabled=false`,
 				return err
 			}
 
-			ruleEnabled.AskBoolU(cmd, &inputs.Enabled, rule.Enabled)
+			if !cmd.Flags().Changed(ruleEnabled.LongForm) {
+				inputs.Enabled = auth0.BoolValue(rule.Enabled)
+			}
+
+			if err := ruleEnabled.AskBoolU(cmd, &inputs.Enabled, rule.Enabled); err != nil {
+				return err
+			}
 
 			// TODO(cyx): we can re-think this once we have
 			// `--stdin` based commands. For now we don't have

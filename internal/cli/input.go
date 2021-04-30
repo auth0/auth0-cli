@@ -28,9 +28,12 @@ func ask(cmd *cobra.Command, i commandInput, value interface{}, defaultValue *st
 	return nil
 }
 
-func askBool(cmd *cobra.Command, i commandInput, value *bool, defaultValue *bool) {
-	result := prompt.ConfirmDefault(i.GetLabel(), auth0.BoolValue(defaultValue))
-	*value = result
+func askBool(cmd *cobra.Command, i commandInput, value *bool, defaultValue *bool) error {
+	if err := prompt.AskBool(i.GetLabel(), value, auth0.BoolValue(defaultValue)); err != nil {
+		return handleInputError(err)
+	}
+
+	return nil
 }
 
 func _select(cmd *cobra.Command, i commandInput, value interface{}, options []string, defaultValue *string, isUpdate bool) error {
