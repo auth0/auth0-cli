@@ -115,25 +115,31 @@ func Execute() {
 		}
 	}()
 
-	// Handle interrupts
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt)
-
-	go func() {
-		<-c
-		os.Exit(0)
-	}()
-
 	// platform specific terminal initialization:
 	// this should run for all commands,
 	// for most of the architectures there's no requirements:
 	ansi.InitConsole()
 
-	if err := rootCmd.ExecuteContext(context.TODO()); err != nil {
+	if err := rootCmd.ExecuteContext(contextWithSignal(os.Interrupt)); err != nil {
 		cli.renderer.Heading("error")
 		cli.renderer.Errorf(err.Error())
 
 		instrumentation.ReportException(err)
 		os.Exit(1)
 	}
+}
+
+func contextWithSignal(sigs ...os.Signal) context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, sigs...)
+
+	go func() {
+		<-ch
+		defer cancel()
+		os.Exit(0)
+	}()
+
+	return ctx
 }

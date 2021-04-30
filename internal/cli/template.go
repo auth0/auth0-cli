@@ -183,7 +183,7 @@ func (cli *cli) obtainCustomTemplateData(ctx context.Context) (*branding.Templat
 
 	g.Go(func() error {
 		var err error
-		clients, err = cli.api.Client.List()
+		clients, err = cli.api.Client.List(management.Context(ctx))
 		return err
 	})
 
