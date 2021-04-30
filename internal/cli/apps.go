@@ -151,10 +151,6 @@ func useAppCmd(cli *cli) *cobra.Command {
 		Short:   "Choose a default application for the Auth0 CLI",
 		Long:    "Specify your preferred application for interaction with the Auth0 CLI.",
 		Example: "auth0 apps use <client-id>",
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
-
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.None {
 				inputs.ID = ""
@@ -229,9 +225,6 @@ func showAppCmd(cli *cli) *cobra.Command {
 		Long:  "Show an application.",
 		Example: `auth0 apps show 
 auth0 apps show <id>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
@@ -273,9 +266,6 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 		Long:  "Delete an application.",
 		Example: `auth0 apps delete 
 auth0 apps delete <id>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
@@ -331,9 +321,6 @@ func createAppCmd(cli *cli) *cobra.Command {
 auth0 apps create --name myapp 
 auth0 apps create -n myapp --type [native|spa|regular|m2m]
 auth0 apps create -n myapp -t [native|spa|regular|m2m] -- description <description>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Prompt for app name
 			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -480,9 +467,6 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		Example: `auth0 apps update <id> 
 auth0 apps update <id> --name myapp 
 auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Client
 
@@ -674,9 +658,6 @@ func openAppCmd(cli *cli) *cobra.Command {
 		Short:   "Open application settings page in Auth0 Manage",
 		Long:    "Open application settings page in Auth0 Manage.",
 		Example: "auth0 apps open <id>",
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)

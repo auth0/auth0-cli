@@ -62,6 +62,8 @@ func Execute() {
 
 			ansi.DisableColors = cli.noColor
 
+			prepareInteractivity(cmd)
+
 			// Initialize everything once. Later callers can then
 			// freely assume that config is fully primed and ready
 			// to go.
