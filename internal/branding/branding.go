@@ -156,15 +156,3 @@ func broadcastCustomTemplateChanges(ctx context.Context, filename string) *caste
 
 	return publisher
 }
-
-func DefaultTemplate() string {
-	return defaultTemplate
-}
-
-func FooterTemplate() string {
-	return footerTemplate
-}
-
-func ImageTemplate() string {
-	return imageTemplate
-}

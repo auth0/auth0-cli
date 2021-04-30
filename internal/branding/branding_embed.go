@@ -13,11 +13,11 @@ var (
 	tenantDataAsset string
 
 	//go:embed data/default-template.liquid
-	defaultTemplate string
+	DefaultTemplate string
 
 	//go:embed data/footer-template.liquid
-	footerTemplate string
+	FooterTemplate string
 
 	//go:embed data/image-template.liquid
-	imageTemplate string
+	ImageTemplate string
 )

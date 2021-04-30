@@ -22,9 +22,9 @@ var (
 	}
 
 	customTemplateOptions = pickerOptions{
-		{"Basic", branding.DefaultTemplate()},
-		{"Login box + image", branding.ImageTemplate()},
-		{"Page footers", branding.FooterTemplate()},
+		{"Basic", branding.DefaultTemplate},
+		{"Login box + image", branding.ImageTemplate},
+		{"Page footers", branding.FooterTemplate},
 	}
 )
 
