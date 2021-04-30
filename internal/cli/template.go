@@ -183,7 +183,7 @@ func (cli *cli) obtainCustomTemplateData(ctx context.Context) (*branding.Templat
 
 	g.Go(func() error {
 		var err error
-		clients, err = cli.api.Client.List(management.ExcludeFields(clientExcludedList...))
+		clients, err = cli.api.Client.List(management.Context(ctx), management.ExcludeFields(clientExcludedList...))
 		return err
 	})
 
