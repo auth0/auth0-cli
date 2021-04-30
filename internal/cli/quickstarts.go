@@ -106,10 +106,10 @@ func downloadQuickstartCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "download",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Download a Quickstart sample app for a specific tech stack",
-		Long:    "Download a Quickstart sample app for a specific tech stack.",
+		Use:   "download",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Download a Quickstart sample app for a specific tech stack",
+		Long:  "Download a Quickstart sample app for a specific tech stack.",
 		Example: `auth0 quickstarts download --stack <stack>
 auth0 qs download --stack <stack>`,
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -132,7 +132,7 @@ auth0 qs download --stack <stack>`,
 			var client *management.Client
 			err := ansi.Waiting(func() error {
 				var err error
-				client, err = cli.api.Client.Read(inputs.ClientID)
+				client, err = cli.api.Client.Read(inputs.ClientID, management.ExcludeFields(clientExcludedList...))
 				return err
 			})
 
