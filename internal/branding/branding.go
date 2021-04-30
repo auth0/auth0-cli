@@ -16,9 +16,9 @@ import (
 )
 
 type Client struct {
-	Id      string `json:"id"`
+	ID      string `json:"id"`
 	Name    string `json:"name"`
-	LogoUrl string `json:"logo_url,omitempty"`
+	LogoURL string `json:"logo_url,omitempty"`
 }
 
 type TemplateData struct {

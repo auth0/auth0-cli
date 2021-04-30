@@ -241,9 +241,9 @@ func (cli *cli) obtainCustomTemplateData() (*branding.TemplateData, error) {
 	templateData.Clients = make([]branding.Client, len(clients.Clients))
 	for i, client := range clients.Clients {
 		templateData.Clients[i] = branding.Client{
-			Id:      client.GetClientID(),
+			ID:      client.GetClientID(),
 			Name:    client.GetName(),
-			LogoUrl: client.GetLogoURI(),
+			LogoURL: client.GetLogoURI(),
 		}
 	}
 
