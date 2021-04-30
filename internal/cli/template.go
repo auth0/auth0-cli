@@ -191,7 +191,7 @@ func (cli *cli) obtainCustomTemplateData(ctx context.Context) (*branding.Templat
 		var err error
 		brandingInfo, err = cli.api.Branding.Read(management.Context(ctx))
 		if err != nil {
-			return err
+			brandingInfo = &management.Branding{}
 		}
 
 		if brandingInfo.GetColors() == nil {
