@@ -313,7 +313,7 @@ auth0 rules update <rule-id> -n "My Updated Rule" --enabled=false`,
 				return err
 			}
 
-			if !cmd.Flags().Changed(ruleEnabled.LongForm) {
+			if !ruleEnabled.IsSet(cmd) {
 				inputs.Enabled = auth0.BoolValue(rule.Enabled)
 			}
 
