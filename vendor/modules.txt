@@ -44,7 +44,7 @@ github.com/alecthomas/chroma/styles
 github.com/andybalholm/brotli
 # github.com/benbjohnson/clock v1.1.0
 ## explicit
-# github.com/briandowns/spinner v1.12.0
+# github.com/briandowns/spinner v1.12.1-0.20210421154440-eac1b899fcf1
 ## explicit
 github.com/briandowns/spinner
 # github.com/charmbracelet/glamour v0.2.0
@@ -282,7 +282,7 @@ golang.org/x/oauth2/internal
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20210305023407-0d6cb8bd5a4b
+# golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
 ## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9

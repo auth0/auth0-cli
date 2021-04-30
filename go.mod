@@ -6,7 +6,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.2.8
 	github.com/andybalholm/brotli v1.0.1 // indirect
 	github.com/benbjohnson/clock v1.1.0 // indirect
-	github.com/briandowns/spinner v1.12.0
+	github.com/briandowns/spinner v1.12.1-0.20210421154440-eac1b899fcf1
 	github.com/charmbracelet/glamour v0.2.0
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
@@ -37,7 +37,7 @@ require (
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210305023407-0d6cb8bd5a4b
+	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
 	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d
 	golang.org/x/text v0.3.5 // indirect
 	gopkg.in/auth0.v5 v5.11.0
