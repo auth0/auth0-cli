@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
@@ -111,6 +112,15 @@ func Execute() {
 			err := fmt.Errorf("panic: %v", v)
 			instrumentation.ReportException(err)
 		}
+	}()
+
+	// Handle interupts
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt)
+
+	go func() {
+		<-c
+		os.Exit(0)
 	}()
 
 	// platform specific terminal initialization:
