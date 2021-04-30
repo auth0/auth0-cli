@@ -111,6 +111,12 @@ var (
 		Help:       "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.",
 		IsRequired: false,
 	}
+	exludedFields = []string{
+		// woraround for issue when ocassionally
+		// (probably legacy apps) arrive at the SDK
+		// with a `lifetime_in_seconds` value as string instead of int:
+		"jwt_configuration.lifetime_in_seconds",
+	}
 )
 
 func appsCmd(cli *cli) *cobra.Command {
@@ -197,7 +203,7 @@ auth0 apps ls`,
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				list, err = cli.api.Client.List()
+				list, err = cli.api.Client.List(management.ExcludeFields(exludedFields...))
 				return err
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
@@ -739,25 +745,25 @@ func apiGrantsFor(s []string) []interface{} {
 	for i, v := range s {
 		switch strings.ToLower(v) {
 		case "authorization-code", "code":
-			res[i] = auth0.String("authorization_code")
+			res[i] = "authorization_code"
 		case "implicit":
-			res[i] = auth0.String("implicit")
+			res[i] = "implicit"
 		case "refresh-token":
-			res[i] = auth0.String("refresh_token")
+			res[i] = "refresh_token"
 		case "client-credentials", "credentials":
-			res[i] = auth0.String("client_credentials")
+			res[i] = "client_credentials"
 		case "password":
-			res[i] = auth0.String("password")
+			res[i] = "password"
 		case "password-realm":
-			res[i] = auth0.String("http://auth0.com/oauth/grant-type/password-realm")
+			res[i] = "http://auth0.com/oauth/grant-type/password-realm"
 		case "mfa-oob":
-			res[i] = auth0.String("http://auth0.com/oauth/grant-type/mfa-oob")
+			res[i] = "http://auth0.com/oauth/grant-type/mfa-oob"
 		case "mfa-otp":
-			res[i] = auth0.String("http://auth0.com/oauth/grant-type/mfa-otp")
+			res[i] = "http://auth0.com/oauth/grant-type/mfa-otp"
 		case "mfa-recovery-code":
-			res[i] = auth0.String("http://auth0.com/oauth/grant-type/mfa-recovery-code")
+			res[i] = "http://auth0.com/oauth/grant-type/mfa-recovery-code"
 		case "device-code":
-			res[i] = auth0.String("urn:ietf:params:oauth:grant-type:device_code")
+			res[i] = "urn:ietf:params:oauth:grant-type:device_code"
 		default:
 		}
 	}
