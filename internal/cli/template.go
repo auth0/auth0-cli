@@ -18,7 +18,7 @@ var (
 		Name:       "Template",
 		LongForm:   "template",
 		ShortForm:  "t",
-		Help:       "Custom page template for new universal login.",
+		Help:       "Custom page template for Universal Login.",
 		IsRequired: true,
 	}
 
@@ -43,9 +43,9 @@ func brandingCmd(cli *cli) *cobra.Command {
 
 func templateCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "template",
-		Short: "Manage custom page template",
-		Long:  "Manage custom page template.",
+		Use:   "templates",
+		Short: "Manage custom page templates",
+		Long:  "Manage custom page templates.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -58,9 +58,9 @@ func showBrandingTemplateCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "show",
 		Args:    cobra.NoArgs,
-		Short:   "Display the custom template for universal login",
-		Long:    "Display the custom template for universal login.",
-		Example: "auth0 branding template show",
+		Short:   "Display the custom template for Universal Login",
+		Long:    "Display the custom template for Universal Login.",
+		Example: "auth0 branding templates show",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			template, err := cli.api.Branding.UniversalLogin()
 			if err != nil {
@@ -80,9 +80,9 @@ func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "update",
 		Args:    cobra.NoArgs,
-		Short:   "Update the custom template for universal login",
-		Long:    "Update the custom template for universal login.",
-		Example: `auth0 branding template update`,
+		Short:   "Update the custom template for Universal Login",
+		Long:    "Update the custom template for Universal Login.",
+		Example: "auth0 branding templates update",
 		PreRun: func(cmd *cobra.Command, args []string) {
 			prepareInteractivity(cmd)
 		},
