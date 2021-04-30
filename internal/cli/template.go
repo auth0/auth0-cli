@@ -112,7 +112,12 @@ func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("Failed to capture input from the editor: %w", err)
 			}
 
-			if confirmed := prompt.ConfirmDefault("Do you want to save the template?", true); !confirmed {
+			var confirmed bool
+			if err := prompt.AskBool("Do you want to save the template?", &confirmed, true); err != nil {
+				return fmt.Errorf("Failed to capture prompt input: %w", err)
+			}
+
+			if !confirmed {
 				return nil
 			}
 
