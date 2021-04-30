@@ -821,7 +821,7 @@ func interfaceToStringSlice(s []interface{}) []string {
 }
 
 func (c *cli) appPickerOptions() (pickerOptions, error) {
-	list, err := c.api.Client.List()
+	list, err := c.api.Client.List(management.ExcludeFields(clientExcludedList...))
 	if err != nil {
 		return nil, err
 	}
