@@ -79,6 +79,7 @@ type cli struct {
 	format  string
 	force   bool
 	noInput bool
+	noColor bool
 
 	// config state management.
 	initOnce sync.Once
