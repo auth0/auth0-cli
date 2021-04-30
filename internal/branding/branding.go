@@ -25,6 +25,9 @@ type Client struct {
 	LogoURL string `json:"logo_url,omitempty"`
 }
 
+// TemplateData contains all the variables we project onto our embedded go
+// template. These variables largely resemble the same ones in the auth0
+// branding template.
 type TemplateData struct {
 	Filename        string
 	Clients         []Client
