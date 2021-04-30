@@ -148,7 +148,10 @@ func (cli *cli) customTemplateEditorPromptWithPreview(cmd *cobra.Command, body *
 
 	onFileCreated := func(filename string) {
 		templateData.Filename = filename
-		branding.PreviewCustomTemplate(ctx, templateData)
+
+		if err := branding.PreviewCustomTemplate(ctx, templateData); err != nil {
+			cli.renderer.Errorf("Unexpected error while previewing custom template: %w", err)
+		}
 	}
 
 	return templateBody.EditorPromptW(

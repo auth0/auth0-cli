@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -39,19 +38,25 @@ type TemplateData struct {
 	Body            string
 }
 
-func PreviewCustomTemplate(ctx context.Context, data TemplateData) {
+func PreviewCustomTemplate(ctx context.Context, data TemplateData) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		return
+		return err
 	}
 	defer listener.Close()
 
+	// Long polling waiting for file changes
+	broadcaster, err := broadcastCustomTemplateChanges(ctx, data.Filename)
+	if err != nil {
+		return err
+	}
+
 	requestTimeout := 10 * time.Minute
 	server := &http.Server{
-		Handler:      buildRoutes(ctx, requestTimeout, data),
+		Handler:      buildRoutes(ctx, requestTimeout, data, broadcaster),
 		ReadTimeout:  requestTimeout + 1*time.Minute,
 		WriteTimeout: requestTimeout + 1*time.Minute,
 	}
@@ -72,20 +77,18 @@ func PreviewCustomTemplate(ctx context.Context, data TemplateData) {
 		}).Encode(),
 	}
 
-	err = open.URL(u.String())
-	if err != nil {
-		return
+	if err := open.URL(u.String()); err != nil {
+		return err
 	}
 
 	// Wait until the file is closed or input is cancelled
 	<-ctx.Done()
+	return nil
 }
 
-func buildRoutes(ctx context.Context, requestTimeout time.Duration, data TemplateData) *http.ServeMux {
+func buildRoutes(ctx context.Context, requestTimeout time.Duration, data TemplateData, broadcaster *caster.Caster) *http.ServeMux {
 	router := http.NewServeMux()
 
-	// Long polling waiting for file changes
-	broadcaster := broadcastCustomTemplateChanges(ctx, data.Filename)
 	router.HandleFunc("/dynamic/events", func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -132,12 +135,12 @@ func buildRoutes(ctx context.Context, requestTimeout time.Duration, data Templat
 	return router
 }
 
-func broadcastCustomTemplateChanges(ctx context.Context, filename string) *caster.Caster {
+func broadcastCustomTemplateChanges(ctx context.Context, filename string) (*caster.Caster, error) {
 	publisher := caster.New(ctx)
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	go func() {
@@ -149,11 +152,10 @@ func broadcastCustomTemplateChanges(ctx context.Context, filename string) *caste
 				}
 				publisher.Pub(true)
 
-			case err, ok := <-watcher.Errors:
+			case _, ok := <-watcher.Errors:
 				if !ok {
 					return
 				}
-				log.Fatalf("watcher error: %v", err)
 			}
 		}
 	}()
@@ -164,10 +166,9 @@ func broadcastCustomTemplateChanges(ctx context.Context, filename string) *caste
 		publisher.Close()
 	}()
 
-	err = watcher.Add(filepath.Dir(filename))
-	if err != nil {
-		log.Fatalf("watcher add: %v", err)
+	if err := watcher.Add(filepath.Dir(filename)); err != nil {
+		return nil, err
 	}
 
-	return publisher
+	return publisher, nil
 }
