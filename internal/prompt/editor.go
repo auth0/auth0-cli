@@ -75,7 +75,13 @@ func (p *editorPrompt) openFile(filename string, infoFn func()) error {
 // If given default contents, it will write that to the file before popping
 // open the editor.
 func (p *editorPrompt) captureInput(contents []byte, pattern string, infoFn func(), fileCreatedFn func(string)) ([]byte, error) {
-	file, err := os.CreateTemp(os.TempDir(), pattern)
+	dir, err := os.MkdirTemp("", pattern)
+	if err != nil {
+		return []byte{}, err
+	}
+	defer os.Remove(dir)
+
+	file, err := os.CreateTemp(dir, pattern)
 	if err != nil {
 		return []byte{}, err
 	}

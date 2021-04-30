@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"text/template"
 	"time"
 
@@ -136,18 +137,17 @@ func broadcastCustomTemplateChanges(ctx context.Context, filename string) *caste
 	go func() {
 		for {
 			select {
-			case event, ok := <-watcher.Events:
+			case _, ok := <-watcher.Events:
 				if !ok {
 					return
 				}
-				if event.Op&fsnotify.Write == fsnotify.Write {
-					publisher.Pub(true)
-				}
+				publisher.Pub(true)
+
 			case err, ok := <-watcher.Errors:
 				if !ok {
 					return
 				}
-				log.Fatal(err)
+				log.Fatalf("watcher error: %v", err)
 			}
 		}
 	}()
@@ -158,9 +158,9 @@ func broadcastCustomTemplateChanges(ctx context.Context, filename string) *caste
 		publisher.Close()
 	}()
 
-	err = watcher.Add(filename)
+	err = watcher.Add(filepath.Dir(filename))
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("watcher add: %v", err)
 	}
 
 	return publisher
