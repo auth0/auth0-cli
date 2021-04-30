@@ -3,10 +3,10 @@ package branding
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"text/template"
 	"time"
 
@@ -39,7 +39,7 @@ func PreviewCustomTemplate(ctx context.Context, data TemplateData) {
 	if err != nil {
 		return
 	}
-	address := listener.Addr().String()
+	defer listener.Close()
 
 	requestTimeout := 10 * time.Minute
 	server := &http.Server{
