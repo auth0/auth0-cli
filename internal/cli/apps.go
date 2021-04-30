@@ -111,7 +111,7 @@ var (
 		Help:       "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.",
 		IsRequired: false,
 	}
-	exludedFields = []string{
+	clientExcludedList = []string{
 		// woraround for issue when ocassionally
 		// (probably legacy apps) arrive at the SDK
 		// with a `lifetime_in_seconds` value as string instead of int:
@@ -203,7 +203,7 @@ auth0 apps ls`,
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				list, err = cli.api.Client.List(management.ExcludeFields(exludedFields...))
+				list, err = cli.api.Client.List(management.ExcludeFields(clientExcludedList...))
 				return err
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
@@ -246,7 +246,7 @@ auth0 apps show <id>`,
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				a, err = cli.api.Client.Read(inputs.ID)
+				a, err = cli.api.Client.Read(inputs.ID, management.ExcludeFields(clientExcludedList...))
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
@@ -293,7 +293,7 @@ auth0 apps delete <id>`,
 			}
 
 			return ansi.Spinner("Deleting Application", func() error {
-				_, err := cli.api.Client.Read(inputs.ID)
+				_, err := cli.api.Client.Read(inputs.ID, management.ExcludeFields(clientExcludedList...))
 
 				if err != nil {
 					return fmt.Errorf("Unable to delete application. The specified Id: %v doesn't exist", inputs.ID)
@@ -498,7 +498,7 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 			// Load app by id
 			if err := ansi.Waiting(func() error {
 				var err error
-				current, err = cli.api.Client.Read(inputs.ID)
+				current, err = cli.api.Client.Read(inputs.ID, management.ExcludeFields(clientExcludedList...))
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
