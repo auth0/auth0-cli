@@ -87,7 +87,7 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 		Use:     "unblock",
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Delete brute-force protection blocks for a given user",
-		Long:    "Delete brute-force protection blocks for a given user",
+		Long:    "Delete brute-force protection blocks for a given user.",
 		Example: "auth0 users unblock <user-id>",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
