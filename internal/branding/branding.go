@@ -31,7 +31,7 @@ type TemplateData struct {
 	Body            string
 }
 
-func PreviewCustomTemplate(ctx context.Context, templateData TemplateData) {
+func PreviewCustomTemplate(ctx context.Context, data TemplateData) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -43,7 +43,7 @@ func PreviewCustomTemplate(ctx context.Context, templateData TemplateData) {
 
 	requestTimeout := 10 * time.Minute
 	server := &http.Server{
-		Handler:      buildRoutes(ctx, requestTimeout, templateData),
+		Handler:      buildRoutes(ctx, requestTimeout, data),
 		ReadTimeout:  requestTimeout + 1*time.Minute,
 		WriteTimeout: requestTimeout + 1*time.Minute,
 	}
@@ -64,11 +64,11 @@ func PreviewCustomTemplate(ctx context.Context, templateData TemplateData) {
 	<-ctx.Done()
 }
 
-func buildRoutes(ctx context.Context, requestTimeout time.Duration, templateData TemplateData) *http.ServeMux {
+func buildRoutes(ctx context.Context, requestTimeout time.Duration, data TemplateData) *http.ServeMux {
 	router := http.NewServeMux()
 
 	// Long polling waiting for file changes
-	broadcaster := broadcastCustomTemplateChanges(ctx, templateData.Filename)
+	broadcaster := broadcastCustomTemplateChanges(ctx, data.Filename)
 	router.HandleFunc("/dynamic/events", func(w http.ResponseWriter, r *http.Request) {
 		changes, _ := broadcaster.Sub(r.Context(), 1)
 		defer broadcaster.Unsub(changes)
@@ -93,7 +93,7 @@ func buildRoutes(ctx context.Context, requestTimeout time.Duration, templateData
 
 	// The template file
 	router.HandleFunc("/dynamic/template", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, templateData.Filename)
+		http.ServeFile(w, r, data.Filename)
 	})
 
 	jstmpl := template.Must(template.New("tenant-data.js").Funcs(template.FuncMap{
@@ -104,7 +104,7 @@ func buildRoutes(ctx context.Context, requestTimeout time.Duration, templateData
 	}).Parse(tenantDataAsset))
 
 	router.HandleFunc("/dynamic/tenant-data", func(w http.ResponseWriter, r *http.Request) {
-		err := jstmpl.Execute(w, templateData)
+		err := jstmpl.Execute(w, data)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 		}
