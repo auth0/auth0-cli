@@ -213,7 +213,8 @@ func (cli *cli) obtainCustomTemplateData(ctx context.Context) (*branding.Templat
 		if err != nil {
 			template = &management.BrandingUniversalLogin{Body: nil}
 		}
-		return err
+
+		return nil
 	})
 
 	g.Go(func() error {
