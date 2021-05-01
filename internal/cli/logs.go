@@ -55,9 +55,6 @@ func listLogsCmd(cli *cli) *cobra.Command {
 		Example: `auth0 logs list
 auth0 logs list --client-id <id>
 auth0 logs ls -n 100`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			list, err := getLatestLogs(cli, inputs.Num, inputs.ClientID)
 			if err != nil {
@@ -105,9 +102,6 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 		Example: `auth0 logs tail
 auth0 logs tail --client-id <id>
 auth0 logs tail -n 100`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			lastLogID := ""
 			list, err := getLatestLogs(cli, inputs.Num, inputs.ClientID)

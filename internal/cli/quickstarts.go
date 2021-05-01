@@ -112,9 +112,6 @@ func downloadQuickstartCmd(cli *cli) *cobra.Command {
 		Long:  "Download a Quickstart sample app for a specific tech stack.",
 		Example: `auth0 quickstarts download --stack <stack>
 auth0 qs download --stack <stack>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !canPrompt(cmd) {
 				return errors.New("This command can only be run on interactive mode")

@@ -83,9 +83,6 @@ func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
 		Short:   "Update the custom template for Universal Login",
 		Long:    "Update the custom template for Universal Login.",
 		Example: "auth0 branding templates update",
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var templateData *branding.TemplateData
 			err := ansi.Waiting(func() error {
