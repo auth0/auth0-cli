@@ -1,6 +1,6 @@
 # project artifacts
 /auth0
-integration/apps/*
+integration/client-id
 
 # Swap
 [._]*.s[a-v][a-z]
