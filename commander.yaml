@@ -2,23 +2,36 @@ config:
   inherit-env: true
 
 tests:
-  # auth0 apis list:
-  #   exit-code: 0
+  auth0 apis list:
+    exit-code: 0
 
-  # auth0 apps list:
-  #   exit-code: 0
+  auth0 apps list:
+    exit-code: 0
 
-  # -c, --callbacks strings     After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure
-  #                             to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.
-  # -g, --grants strings        List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.
-  # -l, --logout-urls strings   Comma-separated list of URLs that are valid to redirect to after logout from Auth0. Wildcards are allowed for subdomains.
-  # -o, --origins strings       Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if
-  #                             necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.
-  # -w, --web-origins strings   Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode.
+  auth0 logs list:
+    exit-code: 0
+
+  auth0 tenants list:
+    exit-code: 0
+
+  auth0 rules list:
+    exit-code: 0
+
+  auth0 completion bash:
+    exit-code: 0
   
   # Test 'apps create' --type flag
-  apps create type native and check name:
-    command: auth0 apps create -n nativeapp1 -t native --description NativeApp1
+  apps create type native and check data:
+    command: auth0 apps create --name nativeapp1 --type native --description NativeApp1 --format json
+    exit-code: 0
+    stdout:
+      json:
+        name: nativeapp1
+        description: NativeApp1
+        app_type: native
+
+  apps create type native and check output:
+    command: auth0 apps create --name nativeapp1 --type native --description NativeApp1
     exit-code: 0
     stdout:
       contains:
@@ -27,72 +40,121 @@ tests:
         - TYPE                 Native   
 
   apps create type spa:
-    command: auth0 apps create -n spaapp1 -t spa --description SpaApp1
+    command: auth0 apps create --name spaapp1 --type spa --description SpaApp1 --format json
     exit-code: 0
     stdout:
-      contains:
-        - NAME                 spaapp1                                                           
-        - DESCRIPTION          SpaApp1                                                           
-        - TYPE                 Single Page Web Application   
+      json:
+        name: spaapp1
+        description: SpaApp1
+        app_type: spa
 
   apps create type regular:
-    command: auth0 apps create -n regapp1 -t regular --description RegApp1
+    command: auth0 apps create --name regapp1 --type regular --description RegApp1 --format json
     exit-code: 0
     stdout:
-      contains:
-        - NAME                 regapp1                                                           
-        - DESCRIPTION          RegApp1                                                           
-        - TYPE                 Regular   
+      json:
+        name: regapp1
+        description: RegApp1
+        app_type: regular_web
 
   apps create type m2m:
-    command: auth0 apps create -n m2mapp1 -t m2m --description M2mApp1
+    command: auth0 apps create --name m2mapp1 --type m2m --description M2mApp1 --format json
     exit-code: 0
     stdout:
-      contains:
-        - NAME                 m2mapp1                                                           
-        - DESCRIPTION          M2mApp1                                                           
-        - TYPE                 Machine to Machine   
+      json:
+        name: m2mapp1
+        description: M2mApp1
+        app_type: non_interactive
 
   # Test 'apps create' --auth-method flag
   apps create type spa auth method none:
-    command: auth0 apps create -n spaapp2 -t spa --description SpaApp2 -a None
+    command: auth0 apps create --name spaapp2 --type spa --description SpaApp2 --auth-method None --format json
     stdout:
-      contains:
-        - TOKEN ENDPOINT AUTH  none
+      json:
+        token_endpoint_auth_method: none
     exit-code: 0
 
   apps create type m2m auth method none fails:
-    command: auth0 apps create -n m2mapp2 -t m2m --description M2mApp2 -a None
+    command: auth0 apps create --name m2mapp2 --type m2m --description M2mApp2 --auth-method None
     exit-code: 1
 
   apps create type regular auth method post:
-    command: auth0 apps create -n regapp2 -t regular --description RegApp2 -a Post
+    command: auth0 apps create --name regapp2 --type regular --description RegApp2 --auth-method Post --format json
     stdout:
-      contains:
-        - TOKEN ENDPOINT AUTH  client_secret_post
+      json:
+        token_endpoint_auth_method: client_secret_post
     exit-code: 0
 
   apps create type regular auth method basic:
-    command: auth0 apps create -n regapp3 -t regular --description RegApp3 -a Basic
+    command: auth0 apps create --name regapp3 --type regular --description RegApp3 --auth-method Basic --format json
     stdout:
-      contains:
-        - TOKEN ENDPOINT AUTH  client_secret_basic
+      json:
+        token_endpoint_auth_method: client_secret_basic
     exit-code: 0
   
   # Test 'apps create' --callbacks flag
   apps create type m2m callbacks:
-    command: auth0 apps create -n m2mapp3 -t m2m --description M2mApp3 -c https://example.com
+    command: auth0 apps create --name m2mapp3 --type m2m --description M2mApp3 --callbacks https://example.com
     stdout:
       contains:
         - CALLBACKS            https://example.com
     exit-code: 0
+
+  apps create type regular callbacks list:
+    command: auth0 apps create --name regapp4 --type regular --description RegApp4 --callbacks https://example.com,https://google.com --format json
+    stdout:
+      json:
+        callbacks: "[https://example.com https://google.com]"
+    exit-code: 0
   
   # Test 'apps create' --grants flag
-  apps create type m2m grants:
-    command: auth0 apps create -n regapp4 -t regular --description RegApp4 -g credentials, password
+  apps create type regular grants:
+    command: auth0 apps create --name regapp4 --type regular --description RegApp4 --grants credentials,password
     stdout:
       contains:
-        - GRANTS               credentials, password
+        - GRANTS               client_credentials, password
+    exit-code: 0
+
+  apps create type spa grants:
+    command: auth0 apps create --name spaapp3 --type spa --description SpaApp3 --grants refresh-token --format json
+    stdout:
+      json:
+        grant_types: "[refresh_token]"
+    exit-code: 0
+
+  apps create type native grants:
+    command: auth0 apps create --name nativeapp2 --type native --description NativeApp2 --grants refresh-token,code  --format json
+    stdout:
+      json:
+        grant_types: "[refresh_token authorization_code]"
+    exit-code: 0
+
+  apps create type m2m grants fails:
+    command: auth0 apps create --name m2mapp4 --type m2m --description M2mApp4 --grants credentials,device-code
+    exit-code: 1
+
+  # Test 'apps create' --logout-urls flag
+  apps create type regular logout urls:
+    command: auth0 apps create --name regapp --type native --description RegularApp --logout-urls https://*.example.com/logout,https://example.com/logout --format json
+    stdout:
+      json:
+        allowed_logout_urls: "[https://*.example.com/logout https://example.com/logout]"
+    exit-code: 0
+
+  # Test 'apps create' --origins flag
+  apps create type regular origins:
+    command: auth0 apps create --name regapp --type native --description RegularApp --origins https://*.example.com,https://example.com  --format json
+    stdout:
+      json:
+        allowed_origins: "[https://*.example.com https://example.com]"
+    exit-code: 0
+
+  # Test 'apps create' --web-origins flag
+  apps create type native web origins:
+    command: auth0 apps create --name spaapp4 --type native --description SpaApp4 --web-origins https://example.com  --format json
+    stdout:
+      json:
+        web_origins: "[https://example.com]"
     exit-code: 0
 
   # Test 'apps show'
@@ -100,49 +162,92 @@ tests:
     command: ./integration/get-client-id.sh
     exit-code: 0
 
-  apps show:
-    command: auth0 apps show $(cat ./integration/apps/client-id) # depends on "apps create test app" test
+  apps show json:
+    command: auth0 apps show $(cat ./integration/client-id) --format json # depends on "apps create test app" test
+    stdout:
+      json:
+        name: newapp
+        description: NewApp
+        app_type: native
     exit-code: 0
 
-  # -a, --auth-method string    Defines the requested authentication method for the token endpoint. Possible values
-  #                             are 'None' (public application without a client secret), 'Post' (application uses HTTP
-  #                             POST parameters) or 'Basic' (application uses HTTP Basic).
-  # -c, --callbacks strings     After the user authenticates we will only call back to any of these URLs. You can
-  #                             specify multiple valid URLs by comma-separating them (typically to handle different
-  #                             environments like QA or testing). Make sure to specify the protocol (https://)
-  #                             otherwise the callback may fail in some cases. With the exception of custom URI
-  #                             schemes for native apps, all callbacks should use protocol https://.
-  # -d, --description string    Description of the application. Max character count is 140.
-  # -g, --grants strings        List of grant types supported for this application. Can include code, implicit,
-  #                             refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp,
-  #                             mfa-recovery-code, and device-code.
-  # -l, --logout-urls strings   Comma-separated list of URLs that are valid to redirect to after logout from Auth0.
-  #                             Wildcards are allowed for subdomains.
-  # -n, --name string           Name of the application.
-  # -o, --origins strings       Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API
-  #                             (typically used with CORS). By default, all your callback URLs will be allowed. This
-  #                             field allows you to enter other origins if necessary. You can also use wildcards at
-  #                             the subdomain level (e.g., https://*.contoso.com). Query strings and hash information
-  #                             are not taken into account when validating these URLs.
-  # -t, --type string           Type of application:
-  #                             - native: mobile, desktop, CLI and smart device apps running natively.
-  #                             - spa (single page application): a JavaScript front-end app that uses an API.
-  #                             - regular: Traditional web app using redirects.
-  #                             - m2m (machine to machine): CLIs, daemons or services running on your backend.
-  # -w, --web-origins strings   Comma-separated list of allowed origins for use with Cross-Origin Authentication,
-  #                             Device Flow, and web message response mode.
+  apps show:
+    command: auth0 apps show $(cat ./integration/client-id) # depends on "apps create test app" test
+    stdout:
+      contains:
+        - NAME                 newapp
+        - DESCRIPTION          NewApp
+        - TYPE                 Native
+    exit-code: 0
+
+  # Test 'apps update'; all tests depend on "apps create test app" test
+  apps update auth method:
+    command: auth0 apps update $(cat ./integration/client-id) --auth-method Basic --format json
+    stdout:
+      json:
+        token_endpoint_auth_method: client_secret_basic
+    exit-code: 0
+
+  apps update callbacks:
+    command: auth0 apps update $(cat ./integration/client-id) --callbacks https://example.com --format json
+    stdout:
+      json:
+        callbacks: "[https://example.com]"
+    exit-code: 0
   
-  # auth0 apps update:
-  #   exit-code: 0
+  apps update description:
+    command: auth0 apps update $(cat ./integration/client-id) --description "A better description" --format json
+    stdout:
+      json:
+        description: A better description
+    exit-code: 0
 
-  # auth0 logs list:
-  #   exit-code: 0
+  apps update grants:
+    command: auth0 apps update $(cat ./integration/client-id) --grants code --format json
+    stdout:
+      json:
+        grant_types: "[authorization_code]"
+    exit-code: 0
 
-  # auth0 tenants list:
-  #   exit-code: 0
+  apps update logout urls:
+    command: auth0 apps update $(cat ./integration/client-id) --logout-urls https://example.com --format json
+    stdout:
+      json:
+        allowed_logout_urls: "[https://example.com]"
+    exit-code: 0
 
-  # auth0 rules list:
-  #   exit-code: 0
+  apps update name:
+    command: auth0 apps update $(cat ./integration/client-id) --name betterAppName --format json
+    stdout:
+      json:
+        name: betterAppName
+    exit-code: 0
 
-  # auth0 completion bash:
-  #   exit-code: 0
+  apps update origins:
+    command: auth0 apps update $(cat ./integration/client-id) --origins https://example.com --format json
+    stdout:
+      json:
+        web_origins: "[https://example.com]"
+    exit-code: 0
+
+  apps update type:
+    command: auth0 apps update $(cat ./integration/client-id) --type spa --format json
+    stdout:
+      json:
+        app_type: spa
+    exit-code: 0
+
+  apps update web origins:
+    command: auth0 apps update $(cat ./integration/client-id) --web-origins https://example.com --format json
+    stdout:
+      json:
+        web_origins: "[https://example.com]"
+    exit-code: 0
+
+  apps update multiple updates:
+    command: auth0 apps update $(cat ./integration/client-id) --web-origins https://examples.com --type native --format json
+    stdout:
+      json:
+        app_type: native
+        web_origins: "[https://examples.com]"
+    exit-code: 0
