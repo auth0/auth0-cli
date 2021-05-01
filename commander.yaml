@@ -227,7 +227,7 @@ tests:
     command: auth0 apps update $(cat ./integration/client-id) --origins https://example.com --format json
     stdout:
       json:
-        web_origins: "[https://example.com]"
+        allowed_origins: "[https://example.com]"
     exit-code: 0
 
   apps update type:
