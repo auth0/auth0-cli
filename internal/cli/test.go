@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -50,6 +51,20 @@ var (
 		ShortForm: "s",
 		Help:      "The list of scope you want to use to generate the token.",
 	}
+
+	testDomainArg = Argument{
+		Name: "Custom Domain",
+		Help: "One of your custom domains.",
+	}
+
+	testDomain = Flag{
+		Name:      "Custom Domain",
+		LongForm:  "domain",
+		ShortForm: "d",
+		Help:      "One of your custom domains.",
+	}
+
+	errNoCustomDomains = errors.New("there are currently no custom domains")
 )
 
 func testCmd(cli *cli) *cobra.Command {
@@ -71,6 +86,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 		ClientID       string
 		Audience       string
 		ConnectionName string
+		CustomDomain   string
 	}
 
 	cmd := &cobra.Command{
@@ -123,6 +139,13 @@ auth0 test login <client-id> --connection <connection>`,
 				return fmt.Errorf("Unable to find client %s; if you specified a client, please verify it exists, otherwise re-run the command", inputs.ClientID)
 			}
 
+			if inputs.CustomDomain == "" {
+				err = testDomainArg.Pick(cmd, &inputs.CustomDomain, cli.customDomainPickerOptions)
+				if err != nil && err != errNoCustomDomains {
+					return err
+				}
+			}
+
 			if proceed := runLoginFlowPreflightChecks(cli, client); !proceed {
 				return nil
 			}
@@ -135,6 +158,7 @@ auth0 test login <client-id> --connection <connection>`,
 				inputs.Audience, // audience is only supported for the test token command
 				"login",         // force a login page when using the test login command
 				cliLoginTestingScopes,
+				inputs.CustomDomain,
 			)
 			if err != nil {
 				return fmt.Errorf("An unexpected error occurred while logging in to client %s: %w", inputs.ClientID, err)
@@ -172,6 +196,7 @@ auth0 test login <client-id> --connection <connection>`,
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	testAudience.RegisterString(cmd, &inputs.Audience, "")
 	testConnection.RegisterString(cmd, &inputs.ConnectionName, "")
+	testDomain.RegisterString(cmd, &inputs.CustomDomain, "")
 	return cmd
 }
 
@@ -246,6 +271,7 @@ auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
 				inputs.Audience,
 				"", // We don't want to force a prompt for the test token command
 				inputs.Scopes,
+				"",
 			)
 			if err != nil {
 				return fmt.Errorf("An unexpected error occurred when logging in to client %s: %w", inputs.ClientID, err)
@@ -273,4 +299,41 @@ func cleanupTempApplication(isTemp bool, cli *cli, id string) {
 		}
 		cli.renderer.Infof("Default test application removed")
 	}
+}
+
+func (c *cli) customDomainPickerOptions() (pickerOptions, error) {
+	var opts pickerOptions
+
+	domains, err := c.api.CustomDomain.List()
+	if err != nil {
+		errStatus := err.(management.Error)
+		// 403 is a valid response for free tenants that don't have
+		// custom domains enabled
+		if errStatus != nil && errStatus.Status() == 403 {
+			return nil, errNoCustomDomains
+		}
+
+		return nil, err
+	}
+
+	tenant, err := c.getTenant()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, d := range domains {
+		if d.GetStatus() != "ready" {
+			continue
+		}
+
+		opts = append(opts, pickerOption{value: d.GetDomain(), label: d.GetDomain()})
+	}
+
+	if len(opts) == 0 {
+		return nil, errNoCustomDomains
+	}
+
+	opts = append(opts, pickerOption{value: "", label: fmt.Sprintf("none (use %s)", tenant.Domain)})
+
+	return opts, nil
 }
