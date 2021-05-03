@@ -61,9 +61,6 @@ func useTenantCmd(cli *cli) *cobra.Command {
 		Short:   "Set the active tenant",
 		Long:    "Set the active tenant.",
 		Example: "auth0 tenants use <tenant>",
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var selectedTenant string
 			if len(args) == 0 {
@@ -113,9 +110,6 @@ func openTenantCmd(cli *cli) *cobra.Command {
 		Short:   "Open tenant settings page in Auth0 Manage",
 		Long:    "Open tenant settings page in Auth0 Manage.",
 		Example: "auth0 tenants open <tenant>",
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := tenantDomain.Pick(cmd, &inputs.Domain, cli.tenantPickerOptions)

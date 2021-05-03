@@ -37,6 +37,7 @@ func loading(initialMsg, doneMsg, failMsg string, fn func() error) error {
 		s.Prefix = initialMsg
 		s.FinalMSG = doneMsg
 		s.HideCursor = true
+		s.Writer = os.Stderr
 
 		if err := s.Color(spinnerColor); err != nil {
 			panic(err)

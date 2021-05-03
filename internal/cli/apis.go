@@ -129,9 +129,6 @@ func showApiCmd(cli *cli) *cobra.Command {
 		Long:  "Show an API.",
 		Example: `auth0 apis show 
 auth0 apis show <id|audience>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
@@ -179,9 +176,6 @@ auth0 apis create --name myapi
 auth0 apis create -n myapi --identifier http://my-api
 auth0 apis create -n myapi --token-expiration 6100
 auth0 apis create -n myapi -e 6100 --offline-access=true`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := apiName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -253,9 +247,6 @@ auth0 apis update <id|audience>
 auth0 apis update <id|audience> --name myapi
 auth0 apis update -n myapi --token-expiration 6100
 auth0 apis update -n myapi -e 6100 --offline-access=true`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.ResourceServer
 
@@ -350,9 +341,6 @@ func deleteApiCmd(cli *cli) *cobra.Command {
 		Long:  "Delete an API.",
 		Example: `auth0 apis delete 
 auth0 apis delete <id|audience>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
@@ -396,9 +384,6 @@ func openApiCmd(cli *cli) *cobra.Command {
 		Long:  "Open API settings page in Auth0 Manage.",
 		Example: `auth0 apis open
 auth0 apis open <id|audience>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
@@ -449,9 +434,6 @@ func listScopesCmd(cli *cli) *cobra.Command {
 		Long:    "List the scopes of an API.",
 		Example: `auth0 apis scopes list 
 auth0 apis scopes ls <id|audience>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)

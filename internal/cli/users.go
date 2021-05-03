@@ -422,16 +422,11 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "list",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "List brute-force protection blocks for a given user",
-		Long: `List brute-force protection blocks for a given user:
-
-auth0 users blocks list <user-id>
-`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
+		Use:     "list",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "List brute-force protection blocks for a given user",
+		Long:    "List brute-force protection blocks for a given user.",
+		Example: "auth0 users blocks list <user-id>",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.userID); err != nil {
@@ -467,16 +462,11 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "unblock",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Delete brute-force protection blocks for a given user",
-		Long: `Delete brute-force protection blocks for a given user:
-
-auth0 users unblock <user-id>
-`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
+		Use:     "unblock",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Remove brute-force protection blocks for a given user",
+		Long:    "Remove brute-force protection blocks for a given user.",
+		Example: "auth0 users unblock <user-id>",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.userID); err != nil {
