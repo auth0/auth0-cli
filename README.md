@@ -2,7 +2,7 @@
 
 `auth0` is the command line to supercharge your development workflow. 
 
-> Note: This CLI is currently in an experimental state and is not supported by Auth0. It has not had a complete security review, and we do not recommend using it to interact with production tenants.
+> Note: This CLI is an experimental release, and is built on a best-efforts basis by some Auth0 developers in available innovation time. It is open source licensed and free to use, and is not covered by any Auth0 Terms of Service or Agreements. If you have issues with this CLI you can engage with the project's developer community through the repository GitHub Issue list, or contribute fixes and enhancements of your own via Pull Request.
 
 Build, test, troubleshoot and manage your integration with **[Auth0](http://auth0.com/)** directly from your **terminal**.
 
