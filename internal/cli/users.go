@@ -128,14 +128,15 @@ auth0 users create -n "John Doe" --email john@example.com`,
 			prepareInteractivity(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Prompt for user's name
-			if err := userName.Ask(cmd, &inputs.Name, nil); err != nil {
-				return err
-			}
 
 			// Select from the available connection types
 			// Users API currently support  database connections
 			if err := userConnection.Select(cmd, &inputs.Connection, cli.connectionPickerOptions(), nil); err != nil {
+				return err
+			}
+
+			// Prompt for user's name
+			if err := userName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
 
@@ -553,7 +554,9 @@ func (c *cli) getConnReqUsername(s string) *bool {
 	res := fmt.Sprintln(conn.Options)
 
 	opts := Options{}
-	json.Unmarshal([]byte(res), &opts)
+	if err := json.Unmarshal([]byte(res), &opts); err != nil {
+		panic(err)
+	}
 
 	return auth0.Bool(opts.RequiresUsername)
 }
