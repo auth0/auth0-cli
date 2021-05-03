@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -35,8 +36,22 @@ var (
 		Name:       "Scopes",
 		LongForm:   "scopes",
 		ShortForm:  "s",
-		Help:       "Comma-separated list of scopes.",
+		Help:       "Comma-separated list of scopes (permissions).",
 		IsRequired: true,
+	}
+	apiTokenLifetime = Flag{
+		Name:         "Token Lifetime",
+		LongForm:     "token-lifetime",
+		ShortForm:    "l",
+		Help:         "The amount of time in seconds that the token will be valid after being issued. Default value is 86400 seconds (1 day).",
+		AlwaysPrompt: true,
+	}
+	apiOfflineAccess = Flag{
+		Name:         "Allow Offline Access",
+		LongForm:     "offline-access",
+		ShortForm:    "o",
+		Help:         "Whether Refresh Tokens can be issued for this API (true) or not (false).",
+		AlwaysPrompt: true,
 	}
 )
 
@@ -114,9 +129,6 @@ func showApiCmd(cli *cli) *cobra.Command {
 		Long:  "Show an API.",
 		Example: `auth0 apis show 
 auth0 apis show <id|audience>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
@@ -147,9 +159,11 @@ auth0 apis show <id|audience>`,
 
 func createApiCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Name       string
-		Identifier string
-		Scopes     []string
+		Name               string
+		Identifier         string
+		Scopes             []string
+		TokenLifetime      int
+		AllowOfflineAccess bool
 	}
 
 	cmd := &cobra.Command{
@@ -158,11 +172,10 @@ func createApiCmd(cli *cli) *cobra.Command {
 		Short: "Create a new API",
 		Long:  "Create a new API.",
 		Example: `auth0 apis create 
-auth0 apis create --name myapi 
-auth0 apis create -n myapi --identifier http://my-api`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
+auth0 apis create --name myapi
+auth0 apis create -n myapi --identifier http://my-api
+auth0 apis create -n myapi --token-expiration 6100
+auth0 apis create -n myapi -e 6100 --offline-access=true`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := apiName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -176,9 +189,19 @@ auth0 apis create -n myapi --identifier http://my-api`,
 				return err
 			}
 
+			if err := apiTokenLifetime.Ask(cmd, &inputs.TokenLifetime, auth0.String("86400")); err != nil {
+				return err
+			}
+
+			if err :=apiOfflineAccess.AskBool(cmd, &inputs.AllowOfflineAccess, nil); err != nil {
+				return err
+			}
+
 			api := &management.ResourceServer{
-				Name:       &inputs.Name,
-				Identifier: &inputs.Identifier,
+				Name:               &inputs.Name,
+				Identifier:         &inputs.Identifier,
+				AllowOfflineAccess: &inputs.AllowOfflineAccess,
+				TokenLifetime:      &inputs.TokenLifetime,
 			}
 
 			if len(inputs.Scopes) > 0 {
@@ -199,15 +222,19 @@ auth0 apis create -n myapi --identifier http://my-api`,
 	apiName.RegisterString(cmd, &inputs.Name, "")
 	apiIdentifier.RegisterString(cmd, &inputs.Identifier, "")
 	apiScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
+	apiOfflineAccess.RegisterBool(cmd, &inputs.AllowOfflineAccess, false)
+	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 0)
 
 	return cmd
 }
 
 func updateApiCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID     string
-		Name   string
-		Scopes []string
+		ID                     string
+		Name                   string
+		Scopes                 []string
+		TokenLifetime          int
+		AllowOfflineAccess     bool
 	}
 
 	cmd := &cobra.Command{
@@ -217,10 +244,9 @@ func updateApiCmd(cli *cli) *cobra.Command {
 		Long:  "Update an API.",
 		Example: `auth0 apis update 
 auth0 apis update <id|audience> 
-auth0 apis update <id|audience> --name myapi`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
+auth0 apis update <id|audience> --name myapi
+auth0 apis update -n myapi --token-expiration 6100
+auth0 apis update -n myapi -e 6100 --offline-access=true`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.ResourceServer
 
@@ -249,7 +275,22 @@ auth0 apis update <id|audience> --name myapi`,
 				return err
 			}
 
-			api := &management.ResourceServer{}
+			currentTokenLifetime := strconv.Itoa(auth0.IntValue(current.TokenLifetime))
+			if err := apiTokenLifetime.AskU(cmd, &inputs.TokenLifetime, &currentTokenLifetime); err != nil {
+				return err
+			}
+
+			if !apiOfflineAccess.IsSet(cmd) {
+				inputs.AllowOfflineAccess = auth0.BoolValue(current.AllowOfflineAccess)
+			}
+
+			if err := apiOfflineAccess.AskBoolU(cmd, &inputs.AllowOfflineAccess, current.AllowOfflineAccess); err != nil {
+				return err
+			}
+
+			api := &management.ResourceServer{
+				AllowOfflineAccess: &inputs.AllowOfflineAccess,
+			}
 
 			if len(inputs.Name) == 0 {
 				api.Name = current.Name
@@ -261,6 +302,12 @@ auth0 apis update <id|audience> --name myapi`,
 				api.Scopes = current.Scopes
 			} else {
 				api.Scopes = apiScopesFor(inputs.Scopes)
+			}
+
+			if inputs.TokenLifetime == 0 {
+				api.TokenLifetime = current.TokenLifetime
+			} else {
+				api.TokenLifetime = &inputs.TokenLifetime
 			}
 
 			if err := ansi.Waiting(func() error {
@@ -276,6 +323,8 @@ auth0 apis update <id|audience> --name myapi`,
 
 	apiName.RegisterStringU(cmd, &inputs.Name, "")
 	apiScopes.RegisterStringSliceU(cmd, &inputs.Scopes, nil)
+	apiOfflineAccess.RegisterBoolU(cmd, &inputs.AllowOfflineAccess, false)
+	apiTokenLifetime.RegisterIntU(cmd, &inputs.TokenLifetime, 0)
 
 	return cmd
 }
@@ -292,9 +341,6 @@ func deleteApiCmd(cli *cli) *cobra.Command {
 		Long:  "Delete an API.",
 		Example: `auth0 apis delete 
 auth0 apis delete <id|audience>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
@@ -332,15 +378,12 @@ func openApiCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "open",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Open API settings page in Auth0 Manage",
-		Long:    "Open API settings page in Auth0 Manage.",
+		Use:   "open",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Open API settings page in Auth0 Manage",
+		Long:  "Open API settings page in Auth0 Manage.",
 		Example: `auth0 apis open
 auth0 apis open <id|audience>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
@@ -391,9 +434,6 @@ func listScopesCmd(cli *cli) *cobra.Command {
 		Long:    "List the scopes of an API.",
 		Example: `auth0 apis scopes list 
 auth0 apis scopes ls <id|audience>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)

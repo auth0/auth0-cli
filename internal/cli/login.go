@@ -35,9 +35,8 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 	if expired {
 		cli.renderer.Warnf("Please sign in to re-authorize the CLI.")
 	} else {
-		cli.renderer.Infof("✪ Welcome to the Auth0 CLI 🎊.")
-		cli.renderer.Infof("To set it up, you will need to sign in to your Auth0 account and authorize the CLI to access the API.")
-		cli.renderer.Infof("If you don't have an account, please go to https://auth0.com/signup, otherwise continue in the browser.\n\n")
+		fmt.Print("✪ Welcome to the Auth0 CLI 🎊\n\n")
+		fmt.Print("If you don't have an account, please go to https://auth0.com/signup\n\n")
 	}
 
 	a := &auth.Authenticator{}
@@ -46,21 +45,26 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 		return fmt.Errorf("could not start the authentication process: %w.", err)
 	}
 
-	cli.renderer.Infof("Your pairing code is: %s\n", ansi.Bold(state.UserCode))
-	cli.renderer.Infof("This pairing code verifies your authentication with Auth0.")
-	cli.renderer.Infof("Press Enter to open the browser (^C to quit)")
+	fmt.Printf("Your Device Confirmation code is: %s\n\n", ansi.Bold(state.UserCode))
+	cli.renderer.Infof("%s to open the browser to log in or %s to quit...", ansi.Green("Press Enter"), ansi.Red("^C"))
 	fmt.Scanln()
-
 	err = open.URL(state.VerificationURI)
+
 	if err != nil {
 		cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s.", state.VerificationURI)
 	}
 
-	res, err := a.Wait(ctx, state)
+	var res auth.Result
+	err = ansi.Spinner("Waiting for login to complete in browser", func() error {
+		res, err = a.Wait(ctx, state)
+		return err
+	})
+
 	if err != nil {
 		return fmt.Errorf("login error: %w", err)
 	}
 
+	fmt.Print("\n")
 	cli.renderer.Infof("Successfully logged in.")
 	cli.renderer.Infof("Tenant: %s\n", res.Domain)
 

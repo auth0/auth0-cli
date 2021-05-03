@@ -111,7 +111,7 @@ var (
 		Help:       "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.",
 		IsRequired: false,
 	}
-	exludedFields = []string{
+	clientExcludedList = []string{
 		// woraround for issue when ocassionally
 		// (probably legacy apps) arrive at the SDK
 		// with a `lifetime_in_seconds` value as string instead of int:
@@ -151,10 +151,6 @@ func useAppCmd(cli *cli) *cobra.Command {
 		Short:   "Choose a default application for the Auth0 CLI",
 		Long:    "Specify your preferred application for interaction with the Auth0 CLI.",
 		Example: "auth0 apps use <client-id>",
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
-
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.None {
 				inputs.ID = ""
@@ -203,7 +199,7 @@ auth0 apps ls`,
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				list, err = cli.api.Client.List(management.ExcludeFields(exludedFields...))
+				list, err = cli.api.Client.List(management.ExcludeFields(clientExcludedList...))
 				return err
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
@@ -229,9 +225,6 @@ func showAppCmd(cli *cli) *cobra.Command {
 		Long:  "Show an application.",
 		Example: `auth0 apps show 
 auth0 apps show <id>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
@@ -246,7 +239,7 @@ auth0 apps show <id>`,
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				a, err = cli.api.Client.Read(inputs.ID)
+				a, err = cli.api.Client.Read(inputs.ID, management.ExcludeFields(clientExcludedList...))
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
@@ -273,9 +266,6 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 		Long:  "Delete an application.",
 		Example: `auth0 apps delete 
 auth0 apps delete <id>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
@@ -293,7 +283,7 @@ auth0 apps delete <id>`,
 			}
 
 			return ansi.Spinner("Deleting Application", func() error {
-				_, err := cli.api.Client.Read(inputs.ID)
+				_, err := cli.api.Client.Read(inputs.ID, management.ExcludeFields(clientExcludedList...))
 
 				if err != nil {
 					return fmt.Errorf("Unable to delete application. The specified Id: %v doesn't exist", inputs.ID)
@@ -331,9 +321,6 @@ func createAppCmd(cli *cli) *cobra.Command {
 auth0 apps create --name myapp 
 auth0 apps create -n myapp --type [native|spa|regular|m2m]
 auth0 apps create -n myapp -t [native|spa|regular|m2m] -- description <description>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Prompt for app name
 			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -355,7 +342,7 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] -- description <descripti
 			appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
 
 			// Prompt for callback URLs if app is not m2m
-			if !appIsM2M {
+			if !appIsM2M && !appCallbacks.IsSet(cmd) {
 				var defaultValue string
 
 				if !appIsNative {
@@ -368,7 +355,7 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] -- description <descripti
 			}
 
 			// Prompt for logout URLs if app is not m2m
-			if !appIsM2M {
+			if !appIsM2M && !appLogoutURLs.IsSet(cmd) {
 				var defaultValue string
 
 				if !appIsNative {
@@ -381,7 +368,7 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] -- description <descripti
 			}
 
 			// Prompt for allowed origins URLs if app is SPA
-			if appIsSPA {
+			if appIsSPA && !appOrigins.IsSet(cmd) {
 				defaultValue := appDefaultURL
 
 				if err := appOrigins.AskMany(cmd, &inputs.AllowedOrigins, &defaultValue); err != nil {
@@ -390,7 +377,7 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] -- description <descripti
 			}
 
 			// Prompt for allowed web origins URLs if app is SPA
-			if appIsSPA {
+			if appIsSPA && !appWebOrigins.IsSet(cmd) {
 				defaultValue := appDefaultURL
 
 				if err := appWebOrigins.AskMany(cmd, &inputs.AllowedWebOrigins, &defaultValue); err != nil {
@@ -480,9 +467,6 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		Example: `auth0 apps update <id> 
 auth0 apps update <id> --name myapp 
 auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Client
 
@@ -498,7 +482,7 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 			// Load app by id
 			if err := ansi.Waiting(func() error {
 				var err error
-				current, err = cli.api.Client.Read(inputs.ID)
+				current, err = cli.api.Client.Read(inputs.ID, management.ExcludeFields(clientExcludedList...))
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
@@ -519,7 +503,7 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 			appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
 
 			// Prompt for callback URLs if app is not m2m
-			if !appIsM2M {
+			if !appIsM2M && !appCallbacks.IsSet(cmd) {
 				var defaultValue string
 
 				if !appIsNative {
@@ -536,7 +520,7 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 			}
 
 			// Prompt for logout URLs if app is not m2m
-			if !appIsM2M {
+			if !appIsM2M && !appLogoutURLs.IsSet(cmd) {
 				var defaultValue string
 
 				if !appIsNative {
@@ -553,7 +537,7 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 			}
 
 			// Prompt for allowed origins URLs if app is SPA
-			if appIsSPA {
+			if appIsSPA && !appOrigins.IsSet(cmd) {
 				defaultValue := appDefaultURL
 
 				if len(current.AllowedOrigins) > 0 {
@@ -566,7 +550,7 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 			}
 
 			// Prompt for allowed web origins URLs if app is SPA
-			if appIsSPA {
+			if appIsSPA && !appWebOrigins.IsSet(cmd) {
 				defaultValue := appDefaultURL
 
 				if len(current.WebOrigins) > 0 {
@@ -674,9 +658,6 @@ func openAppCmd(cli *cli) *cobra.Command {
 		Short:   "Open application settings page in Auth0 Manage",
 		Long:    "Open application settings page in Auth0 Manage.",
 		Example: "auth0 apps open <id>",
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
@@ -745,25 +726,25 @@ func apiGrantsFor(s []string) []interface{} {
 	for i, v := range s {
 		switch strings.ToLower(v) {
 		case "authorization-code", "code":
-			res[i] = auth0.String("authorization_code")
+			res[i] = "authorization_code"
 		case "implicit":
-			res[i] = auth0.String("implicit")
+			res[i] = "implicit"
 		case "refresh-token":
-			res[i] = auth0.String("refresh_token")
+			res[i] = "refresh_token"
 		case "client-credentials", "credentials":
-			res[i] = auth0.String("client_credentials")
+			res[i] = "client_credentials"
 		case "password":
-			res[i] = auth0.String("password")
+			res[i] = "password"
 		case "password-realm":
-			res[i] = auth0.String("http://auth0.com/oauth/grant-type/password-realm")
+			res[i] = "http://auth0.com/oauth/grant-type/password-realm"
 		case "mfa-oob":
-			res[i] = auth0.String("http://auth0.com/oauth/grant-type/mfa-oob")
+			res[i] = "http://auth0.com/oauth/grant-type/mfa-oob"
 		case "mfa-otp":
-			res[i] = auth0.String("http://auth0.com/oauth/grant-type/mfa-otp")
+			res[i] = "http://auth0.com/oauth/grant-type/mfa-otp"
 		case "mfa-recovery-code":
-			res[i] = auth0.String("http://auth0.com/oauth/grant-type/mfa-recovery-code")
+			res[i] = "http://auth0.com/oauth/grant-type/mfa-recovery-code"
 		case "device-code":
-			res[i] = auth0.String("urn:ietf:params:oauth:grant-type:device_code")
+			res[i] = "urn:ietf:params:oauth:grant-type:device_code"
 		default:
 		}
 	}
@@ -840,7 +821,7 @@ func interfaceToStringSlice(s []interface{}) []string {
 }
 
 func (c *cli) appPickerOptions() (pickerOptions, error) {
-	list, err := c.api.Client.List()
+	list, err := c.api.Client.List(management.ExcludeFields(clientExcludedList...))
 	if err != nil {
 		return nil, err
 	}
