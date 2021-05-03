@@ -38,7 +38,7 @@ lint:
 
 # Build for the native platform
 build:
-	go build -ldflags "$(CTIMEVAR)" -o auth0 cmd/auth0/main.go
+	go build -ldflags "$(CTIMEVAR)" -o $(GOBIN)/auth0 cmd/auth0/main.go
 .PHONY: build
 
 # Build a beta version of auth0-cli for all supported platforms
