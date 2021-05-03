@@ -41,10 +41,6 @@ build:
 	go build -ldflags "$(CTIMEVAR)" -o auth0 cmd/auth0/main.go
 .PHONY: build
 
-# Build for the native platform
-build:
-.PHONY: build
-
 # Build a beta version of auth0-cli for all supported platforms
 build-all-platforms:
 	env GOOS=darwin go build -ldflags "$(CTIMEVAR)" -o auth0-darwin cmd/auth0/main.go
@@ -69,6 +65,6 @@ $(GOBIN)/commander:
 $(GOBIN)/auth0-cli-config-generator:
 	go install ./pkg/auth0-cli-config-generator
 
-integration: $(GOBIN)/auth0-cli-config-generator $(GOBIN)/commander
-	build && auth0-cli-config-generator && commander test commander.yaml --verbose
+integration: build $(GOBIN)/auth0-cli-config-generator $(GOBIN)/commander
+	auth0-cli-config-generator && commander test commander.yaml --verbose
 .PHONY: integration
