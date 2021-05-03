@@ -12,18 +12,18 @@ type UserAPI interface {
 	// provided credentials.
 	Unblock(id string, opts ...management.RequestOption) error
 
-	// Create a new user
+	// Create a new user.
 	Create(u *management.User, opts ...management.RequestOption) (err error)
 
-	// Read user details for a given user
+	// Read user details for a given user.
 	Read(id string, opts ...management.RequestOption) (u *management.User, err error)
 
-	// Update user
+	// Update user.
 	Update(id string, u *management.User, opts ...management.RequestOption) (err error)
 
-	// Delete a user
+	// Delete a user.
 	Delete(id string, opts ...management.RequestOption) (err error)
 
-	// List all users
+	// List all users.
 	List(opts ...management.RequestOption) (ul *management.UserList, err error)
 }

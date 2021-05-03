@@ -17,6 +17,7 @@ type API struct {
 	ResourceServer  ResourceServerAPI
 	Rule            RuleAPI
 	User            UserAPI
+	Connection		ConnectionAPI
 }
 
 func NewAPI(m *management.Management) *API {
@@ -30,6 +31,7 @@ func NewAPI(m *management.Management) *API {
 		ResourceServer:  m.ResourceServer,
 		Rule:            m.Rule,
 		User:            m.User,
+		Connection:		 m.Connection,
 	}
 }
 
