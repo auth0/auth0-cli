@@ -24,7 +24,6 @@ var (
 		ShortForm:  	"c",
 		Help:       	"Name of the connection this user should be created in.",
 		IsRequired: 	true,
-		AlwaysPrompt:	false,
 	}
 	userEmail = Flag{
 		Name:       	"Email",
@@ -550,4 +549,3 @@ func (c *cli) getConnReqUsername(s string) *bool {
 
 	return auth0.Bool(opts.RequiresUsername)
 }
-
