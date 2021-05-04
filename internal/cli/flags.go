@@ -74,6 +74,22 @@ func (f *Flag) EditorPrompt(cmd *cobra.Command, value *string, initialValue, fil
 		initialValue,
 		filename,
 		infoFn,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	*value = out
+	return nil
+}
+
+func (f *Flag) EditorPromptW(cmd *cobra.Command, value *string, initialValue, filename string, infoFn func(), tempFileCreatedFn func(string)) error {
+	out, err := prompt.CaptureInputViaEditor(
+		initialValue,
+		filename,
+		infoFn,
+		tempFileCreatedFn,
 	)
 	if err != nil {
 		return err

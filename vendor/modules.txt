@@ -44,7 +44,7 @@ github.com/alecthomas/chroma/styles
 github.com/andybalholm/brotli
 # github.com/benbjohnson/clock v1.1.0
 ## explicit
-# github.com/briandowns/spinner v1.12.0
+# github.com/briandowns/spinner v1.12.1-0.20210421154440-eac1b899fcf1
 ## explicit
 github.com/briandowns/spinner
 # github.com/charmbracelet/glamour v0.2.0
@@ -73,6 +73,7 @@ github.com/dsnet/compress/internal/prefix
 ## explicit
 github.com/fatih/color
 # github.com/fsnotify/fsnotify v1.4.7
+## explicit
 github.com/fsnotify/fsnotify
 # github.com/getsentry/sentry-go v0.10.0
 ## explicit
@@ -102,6 +103,9 @@ github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
 # github.com/google/goterm v0.0.0-20190703233501-fc88cf888a3f
 github.com/google/goterm/term
+# github.com/guiguan/caster v0.0.0-20191104051807-3736c4464f38
+## explicit
+github.com/guiguan/caster
 # github.com/hashicorp/hcl v1.0.0
 github.com/hashicorp/hcl
 github.com/hashicorp/hcl/hcl/ast
@@ -275,7 +279,10 @@ golang.org/x/net/html/atom
 golang.org/x/oauth2
 golang.org/x/oauth2/clientcredentials
 golang.org/x/oauth2/internal
-# golang.org/x/sys v0.0.0-20210305023407-0d6cb8bd5a4b
+# golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+## explicit
+golang.org/x/sync/errgroup
+# golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
 ## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9

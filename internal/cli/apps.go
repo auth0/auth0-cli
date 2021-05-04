@@ -111,7 +111,7 @@ var (
 		Help:       "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.",
 		IsRequired: false,
 	}
-	exludedFields = []string{
+	clientExcludedList = []string{
 		// woraround for issue when ocassionally
 		// (probably legacy apps) arrive at the SDK
 		// with a `lifetime_in_seconds` value as string instead of int:
@@ -151,10 +151,6 @@ func useAppCmd(cli *cli) *cobra.Command {
 		Short:   "Choose a default application for the Auth0 CLI",
 		Long:    "Specify your preferred application for interaction with the Auth0 CLI.",
 		Example: "auth0 apps use <client-id>",
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
-
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.None {
 				inputs.ID = ""
@@ -203,7 +199,7 @@ auth0 apps ls`,
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				list, err = cli.api.Client.List(management.ExcludeFields(exludedFields...))
+				list, err = cli.api.Client.List(management.ExcludeFields(clientExcludedList...))
 				return err
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
@@ -229,9 +225,6 @@ func showAppCmd(cli *cli) *cobra.Command {
 		Long:  "Show an application.",
 		Example: `auth0 apps show 
 auth0 apps show <id>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
@@ -246,7 +239,7 @@ auth0 apps show <id>`,
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				a, err = cli.api.Client.Read(inputs.ID)
+				a, err = cli.api.Client.Read(inputs.ID, management.ExcludeFields(clientExcludedList...))
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
@@ -273,9 +266,6 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 		Long:  "Delete an application.",
 		Example: `auth0 apps delete 
 auth0 apps delete <id>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
@@ -293,7 +283,7 @@ auth0 apps delete <id>`,
 			}
 
 			return ansi.Spinner("Deleting Application", func() error {
-				_, err := cli.api.Client.Read(inputs.ID)
+				_, err := cli.api.Client.Read(inputs.ID, management.ExcludeFields(clientExcludedList...))
 
 				if err != nil {
 					return fmt.Errorf("Unable to delete application. The specified Id: %v doesn't exist", inputs.ID)
@@ -331,9 +321,6 @@ func createAppCmd(cli *cli) *cobra.Command {
 auth0 apps create --name myapp 
 auth0 apps create -n myapp --type [native|spa|regular|m2m]
 auth0 apps create -n myapp -t [native|spa|regular|m2m] -- description <description>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Prompt for app name
 			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -480,9 +467,6 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		Example: `auth0 apps update <id> 
 auth0 apps update <id> --name myapp 
 auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Client
 
@@ -498,7 +482,7 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 			// Load app by id
 			if err := ansi.Waiting(func() error {
 				var err error
-				current, err = cli.api.Client.Read(inputs.ID)
+				current, err = cli.api.Client.Read(inputs.ID, management.ExcludeFields(clientExcludedList...))
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
@@ -674,9 +658,6 @@ func openAppCmd(cli *cli) *cobra.Command {
 		Short:   "Open application settings page in Auth0 Manage",
 		Long:    "Open application settings page in Auth0 Manage.",
 		Example: "auth0 apps open <id>",
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
@@ -840,7 +821,7 @@ func interfaceToStringSlice(s []interface{}) []string {
 }
 
 func (c *cli) appPickerOptions() (pickerOptions, error) {
-	list, err := c.api.Client.List()
+	list, err := c.api.Client.List(management.ExcludeFields(clientExcludedList...))
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
@@ -61,6 +62,8 @@ func Execute() {
 
 			ansi.DisableColors = cli.noColor
 
+			prepareInteractivity(cmd)
+
 			// Initialize everything once. Later callers can then
 			// freely assume that config is fully primed and ready
 			// to go.
@@ -98,6 +101,7 @@ func Execute() {
 	rootCmd.AddCommand(testCmd(cli))
 	rootCmd.AddCommand(logsCmd(cli))
 	rootCmd.AddCommand(logoutCmd(cli))
+	rootCmd.AddCommand(brandingCmd(cli))
 
 	// keep completion at the bottom:
 	rootCmd.AddCommand(completionCmd(cli))
@@ -118,11 +122,26 @@ func Execute() {
 	// for most of the architectures there's no requirements:
 	ansi.InitConsole()
 
-	if err := rootCmd.ExecuteContext(context.TODO()); err != nil {
+	if err := rootCmd.ExecuteContext(contextWithSignal(os.Interrupt)); err != nil {
 		cli.renderer.Heading("error")
 		cli.renderer.Errorf(err.Error())
 
 		instrumentation.ReportException(err)
 		os.Exit(1)
 	}
+}
+
+func contextWithSignal(sigs ...os.Signal) context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, sigs...)
+
+	go func() {
+		<-ch
+		defer cancel()
+		os.Exit(0)
+	}()
+
+	return ctx
 }

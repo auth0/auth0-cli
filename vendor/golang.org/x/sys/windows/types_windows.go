@@ -1020,6 +1020,7 @@ const (
 
 	// cf. http://support.microsoft.com/default.aspx?scid=kb;en-us;257460
 
+	IP_HDRINCL         = 0x2
 	IP_TOS             = 0x3
 	IP_TTL             = 0x4
 	IP_MULTICAST_IF    = 0x9
@@ -1027,6 +1028,7 @@ const (
 	IP_MULTICAST_LOOP  = 0xb
 	IP_ADD_MEMBERSHIP  = 0xc
 	IP_DROP_MEMBERSHIP = 0xd
+	IP_PKTINFO         = 0x13
 
 	IPV6_V6ONLY         = 0x1b
 	IPV6_UNICAST_HOPS   = 0x4
@@ -1035,6 +1037,7 @@ const (
 	IPV6_MULTICAST_LOOP = 0xb
 	IPV6_JOIN_GROUP     = 0xc
 	IPV6_LEAVE_GROUP    = 0xd
+	IPV6_PKTINFO        = 0x13
 
 	MSG_OOB       = 0x1
 	MSG_PEEK      = 0x2
@@ -2277,10 +2280,18 @@ type CommTimeouts struct {
 	WriteTotalTimeoutConstant   uint32
 }
 
-type UNICODE_STRING struct {
+// NTUnicodeString is a UTF-16 string for NT native APIs, corresponding to UNICODE_STRING.
+type NTUnicodeString struct {
 	Length        uint16
 	MaximumLength uint16
 	Buffer        *uint16
+}
+
+// NTString is an ANSI string for NT native APIs, corresponding to STRING.
+type NTString struct {
+	Length        uint16
+	MaximumLength uint16
+	Buffer        *byte
 }
 
 type LIST_ENTRY struct {
@@ -2294,7 +2305,7 @@ type LDR_DATA_TABLE_ENTRY struct {
 	reserved2          [2]uintptr
 	DllBase            uintptr
 	reserved3          [2]uintptr
-	FullDllName        UNICODE_STRING
+	FullDllName        NTUnicodeString
 	reserved4          [8]byte
 	reserved5          [3]uintptr
 	reserved6          uintptr
@@ -2307,6 +2318,51 @@ type PEB_LDR_DATA struct {
 	InMemoryOrderModuleList LIST_ENTRY
 }
 
+type CURDIR struct {
+	DosPath NTUnicodeString
+	Handle  Handle
+}
+
+type RTL_DRIVE_LETTER_CURDIR struct {
+	Flags     uint16
+	Length    uint16
+	TimeStamp uint32
+	DosPath   NTString
+}
+
+type RTL_USER_PROCESS_PARAMETERS struct {
+	MaximumLength, Length uint32
+
+	Flags, DebugFlags uint32
+
+	ConsoleHandle                                Handle
+	ConsoleFlags                                 uint32
+	StandardInput, StandardOutput, StandardError Handle
+
+	CurrentDirectory CURDIR
+	DllPath          NTUnicodeString
+	ImagePathName    NTUnicodeString
+	CommandLine      NTUnicodeString
+	Environment      unsafe.Pointer
+
+	StartingX, StartingY, CountX, CountY, CountCharsX, CountCharsY, FillAttribute uint32
+
+	WindowFlags, ShowWindowFlags                     uint32
+	WindowTitle, DesktopInfo, ShellInfo, RuntimeData NTUnicodeString
+	CurrentDirectories                               [32]RTL_DRIVE_LETTER_CURDIR
+
+	EnvironmentSize, EnvironmentVersion uintptr
+
+	PackageDependencyData unsafe.Pointer
+	ProcessGroupId        uint32
+	LoaderThreads         uint32
+
+	RedirectionDllName               NTUnicodeString
+	HeapPartitionName                NTUnicodeString
+	DefaultThreadpoolCpuSetMasks     uintptr
+	DefaultThreadpoolCpuSetMaskCount uint32
+}
+
 type PEB struct {
 	reserved1              [2]byte
 	BeingDebugged          byte
@@ -2314,7 +2370,7 @@ type PEB struct {
 	reserved3              uintptr
 	ImageBaseAddress       uintptr
 	Ldr                    *PEB_LDR_DATA
-	ProcessParameters      uintptr
+	ProcessParameters      *RTL_USER_PROCESS_PARAMETERS
 	reserved4              [3]uintptr
 	AtlThunkSListPtr       uintptr
 	reserved5              uintptr
@@ -2333,7 +2389,7 @@ type PEB struct {
 type OBJECT_ATTRIBUTES struct {
 	Length             uint32
 	RootDirectory      Handle
-	ObjectName         *UNICODE_STRING
+	ObjectName         *NTUnicodeString
 	Attributes         uint32
 	SecurityDescriptor *SECURITY_DESCRIPTOR
 	SecurityQoS        *SECURITY_QUALITY_OF_SERVICE
@@ -2365,7 +2421,7 @@ type RTLP_CURDIR_REF struct {
 }
 
 type RTL_RELATIVE_NAME struct {
-	RelativeName        UNICODE_STRING
+	RelativeName        NTUnicodeString
 	ContainingDirectory Handle
 	CurDirRef           *RTLP_CURDIR_REF
 }
@@ -2470,7 +2526,7 @@ const (
 	ProcessHandleTracing
 	ProcessIoPriority
 	ProcessExecuteFlags
-	ProcessResourceManagement
+	ProcessTlsInformation
 	ProcessCookie
 	ProcessImageInformation
 	ProcessCycleTime
@@ -2545,8 +2601,8 @@ type PROCESS_BASIC_INFORMATION struct {
 	PebBaseAddress               *PEB
 	AffinityMask                 uintptr
 	BasePriority                 int32
-	UniqueProcessId              Handle
-	InheritedFromUniqueProcessId Handle
+	UniqueProcessId              uintptr
+	InheritedFromUniqueProcessId uintptr
 }
 
 // Constants for LocalAlloc flags.
@@ -2713,3 +2769,6 @@ const (
 	COINIT_DISABLE_OLE1DDE   = 0x4
 	COINIT_SPEED_OVER_MEMORY = 0x8
 )
+
+// Flag for QueryFullProcessImageName.
+const PROCESS_NAME_NATIVE = 1

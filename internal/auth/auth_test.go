@@ -25,6 +25,9 @@ func TestRequiredScopes(t *testing.T) {
 	t.Run("verify special scopes", func(t *testing.T) {
 		list := []string{
 			"read:client_keys", "read:logs",
+			"read:users", "update:users",
+			"read:branding", "update:branding",
+			"read:client_keys", "read:logs", "read:tenant_settings",
 		}
 
 		for _, v := range list {
