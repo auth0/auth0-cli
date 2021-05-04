@@ -206,7 +206,6 @@ auth0 users create -n "John Doe" --e john@example.com --connection "Username-Pas
 					Password:   &inputs.Password,
 				}
 			}
-
 			// Create app
 			if err := ansi.Waiting(func() error {
 				return cli.api.User.Create(a)
@@ -346,7 +345,6 @@ auth0 users update -n John Doe --email john.doe@gmail.com`,
 			}); err != nil {
 				return fmt.Errorf("Unable to load user. The Id %v specified doesn't exist", inputs.ID)
 			}
-
 			// using getUserConnection to get connection name from user Identities
 			// just using current.connection will return empty
 			conn := stringSliceToCommaSeparatedString(cli.getUserConnection(current))
