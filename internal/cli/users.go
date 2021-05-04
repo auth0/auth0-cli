@@ -524,12 +524,7 @@ func (c *cli) getUserConnection(users *management.User) []string {
 	return res
 }
 
-// Since the option field is ignored with `json:"-"` in Connections
 // This is a workaround to get the requires_username field nested inside Options field
-type Options struct {
-	RequiresUsername bool `json:"requires_username"`
-}
-
 func (c *cli) getConnReqUsername(s string) *bool {
 	conn, err := c.api.Connection.ReadByName(s)
 	if err != nil {
@@ -537,10 +532,10 @@ func (c *cli) getConnReqUsername(s string) *bool {
 	}
 	res := fmt.Sprintln(conn.Options)
 
-	opts := Options{}
+	opts := &management.ConnectionOptions{}
 	if err := json.Unmarshal([]byte(res), &opts); err != nil {
 		fmt.Println(err)
 	}
 
-	return auth0.Bool(opts.RequiresUsername)
+	return opts.RequiresUsername
 }
