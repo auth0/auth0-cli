@@ -26,8 +26,8 @@ var defaultEditorPrompt = &editorPrompt{cmd: getDefaultEditor()}
 //
 // The arguments have been tailored for our use of strings mostly in the rest
 // of the CLI even though internally we're using []byte.
-func CaptureInputViaEditor(contents, pattern string, infoFn func()) (result string, err error) {
-	v, err := defaultEditorPrompt.captureInput([]byte(contents), pattern, infoFn)
+func CaptureInputViaEditor(contents, pattern string, infoFn func(), fileCreatedFn func(string)) (result string, err error) {
+	v, err := defaultEditorPrompt.captureInput([]byte(contents), pattern, infoFn, fileCreatedFn)
 	return string(v), err
 }
 
@@ -74,13 +74,23 @@ func (p *editorPrompt) openFile(filename string, infoFn func()) error {
 //
 // If given default contents, it will write that to the file before popping
 // open the editor.
-func (p *editorPrompt) captureInput(contents []byte, pattern string, infoFn func()) ([]byte, error) {
-	file, err := os.CreateTemp(os.TempDir(), pattern)
+func (p *editorPrompt) captureInput(contents []byte, pattern string, infoFn func(), fileCreatedFn func(string)) ([]byte, error) {
+	dir, err := os.MkdirTemp("", pattern)
+	if err != nil {
+		return []byte{}, err
+	}
+	defer os.Remove(dir)
+
+	file, err := os.CreateTemp(dir, pattern)
 	if err != nil {
 		return []byte{}, err
 	}
 
 	filename := file.Name()
+
+	if fileCreatedFn != nil {
+		go fileCreatedFn(filename)
+	}
 
 	// Defer removal of the temporary file in case any of the next steps fail.
 	defer os.Remove(filename)

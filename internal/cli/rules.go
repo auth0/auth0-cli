@@ -127,9 +127,6 @@ func createRuleCmd(cli *cli) *cobra.Command {
 auth0 rules create --name "My Rule"
 auth0 rules create -n "My Rule" --template "Empty rule"
 auth0 rules create -n "My Rule" -t "Empty rule" --enabled=false`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := ruleName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -191,9 +188,6 @@ func showRuleCmd(cli *cli) *cobra.Command {
 		Long:  "Show a rule.",
 		Example: `auth0 rules show 
 auth0 rules show <id>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -236,9 +230,6 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 		Long:  "Delete a rule.",
 		Example: `auth0 rules delete 
 auth0 rules delete <rule-id>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -286,9 +277,6 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 		Example: `auth0 rules update <rule-id> 
 auth0 rules update <rule-id> --name "My Updated Rule"
 auth0 rules update <rule-id> -n "My Updated Rule" --enabled=false`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -380,9 +368,6 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 		Short: "Enable a rule",
 		Long:  "Enable a rule.",
 		Example: `auth0 rules enable <rule-id>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -435,9 +420,6 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 		Short: "Disable a rule",
 		Long:  "Disable a rule.",
 		Example: `auth0 rules disable <rule-id>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
