@@ -22,71 +22,71 @@ tests:
   
   # Test 'apps create' --type flag
   apps create type native and check data:
-    command: auth0 apps create --name nativeapp1 --type native --description NativeApp1 --format json
+    command: auth0 apps create --name integration-test-nativeapp1 --type native --description NativeApp1 --format json
     exit-code: 0
     stdout:
       json:
-        name: nativeapp1
+        name: integration-test-nativeapp1
         description: NativeApp1
         app_type: native
 
   apps create type native and check output:
-    command: auth0 apps create --name nativeapp1 --type native --description NativeApp1
+    command: auth0 apps create --name integration-test-nativeapp1 --type native --description NativeApp1
     exit-code: 0
     stdout:
       contains:
-        - NAME                 nativeapp1                                                           
-        - DESCRIPTION          NativeApp1                                                           
-        - TYPE                 Native   
+        - NAME                 integration-test-nativeapp1
+        - DESCRIPTION          NativeApp1
+        - TYPE                 Native
 
   apps create type spa:
-    command: auth0 apps create --name spaapp1 --type spa --description SpaApp1 --format json
+    command: auth0 apps create --name integration-test-spaapp1 --type spa --description SpaApp1 --format json
     exit-code: 0
     stdout:
       json:
-        name: spaapp1
+        name: integration-test-spaapp1
         description: SpaApp1
         app_type: spa
 
   apps create type regular:
-    command: auth0 apps create --name regapp1 --type regular --description RegApp1 --format json
+    command: auth0 apps create --name integration-test-regapp1 --type regular --description RegApp1 --format json
     exit-code: 0
     stdout:
       json:
-        name: regapp1
+        name: integration-test-regapp1
         description: RegApp1
         app_type: regular_web
 
   apps create type m2m:
-    command: auth0 apps create --name m2mapp1 --type m2m --description M2mApp1 --format json
+    command: auth0 apps create --name integration-test-m2mapp1 --type m2m --description M2mApp1 --format json
     exit-code: 0
     stdout:
       json:
-        name: m2mapp1
+        name: integration-test-m2mapp1
         description: M2mApp1
         app_type: non_interactive
 
   # Test 'apps create' --auth-method flag
   apps create type spa auth method none:
-    command: auth0 apps create --name spaapp2 --type spa --description SpaApp2 --auth-method None --format json
+    command: auth0 apps create --name integration-test-spaapp2 --type spa --description SpaApp2 --auth-method None --format json
     stdout:
       json:
         token_endpoint_auth_method: none
     exit-code: 0
 
   apps create type m2m auth method none fails:
-    command: auth0 apps create --name m2mapp2 --type m2m --description M2mApp2 --auth-method None
+    command: auth0 apps create --name integration-test-m2mapp2 --type m2m --description M2mApp2 --auth-method None
     exit-code: 1
 
   apps create type regular auth method post:
-    command: auth0 apps create --name regapp2 --type regular --description RegApp2 --auth-method Post --format json
+    command: auth0 apps create --name integration-test-regapp2 --type regular --description RegApp2 --auth-method Post --format json
     stdout:
       json:
         token_endpoint_auth_method: client_secret_post
     exit-code: 0
 
   apps create type regular auth method basic:
-    command: auth0 apps create --name regapp3 --type regular --description RegApp3 --auth-method Basic --format json
+    command: auth0 apps create --name integration-test-regapp3 --type regular --description RegApp3 --auth-method Basic --format json
     stdout:
       json:
         token_endpoint_auth_method: client_secret_basic
@@ -94,14 +94,14 @@ tests:
   
   # Test 'apps create' --callbacks flag
   apps create type m2m callbacks:
-    command: auth0 apps create --name m2mapp3 --type m2m --description M2mApp3 --callbacks https://example.com
+    command: auth0 apps create --name integration-test-m2mapp3 --type m2m --description M2mApp3 --callbacks https://example.com
     stdout:
       contains:
         - CALLBACKS            https://example.com
     exit-code: 0
 
   apps create type regular callbacks list:
-    command: auth0 apps create --name regapp4 --type regular --description RegApp4 --callbacks https://example.com,https://google.com --format json
+    command: auth0 apps create --name integration-test-regapp4 --type regular --description RegApp4 --callbacks https://example.com,https://google.com --format json
     stdout:
       json:
         callbacks: "[https://example.com https://google.com]"
@@ -109,33 +109,33 @@ tests:
   
   # Test 'apps create' --grants flag
   apps create type regular grants:
-    command: auth0 apps create --name regapp4 --type regular --description RegApp4 --grants credentials,password
+    command: auth0 apps create --name integration-test-regapp5 --type regular --description RegApp4 --grants credentials,password
     stdout:
       contains:
         - GRANTS               client_credentials, password
     exit-code: 0
 
   apps create type spa grants:
-    command: auth0 apps create --name spaapp3 --type spa --description SpaApp3 --grants refresh-token --format json
+    command: auth0 apps create --name integration-test-spaapp3 --type spa --description SpaApp3 --grants refresh-token --format json
     stdout:
       json:
         grant_types: "[refresh_token]"
     exit-code: 0
 
   apps create type native grants:
-    command: auth0 apps create --name nativeapp2 --type native --description NativeApp2 --grants refresh-token,code  --format json
+    command: auth0 apps create --name integration-test-nativeapp2 --type native --description NativeApp2 --grants refresh-token,code  --format json
     stdout:
       json:
         grant_types: "[refresh_token authorization_code]"
     exit-code: 0
 
   apps create type m2m grants fails:
-    command: auth0 apps create --name m2mapp4 --type m2m --description M2mApp4 --grants credentials,device-code
+    command: auth0 apps create --name integration-test-m2mapp4 --type m2m --description M2mApp4 --grants credentials,device-code
     exit-code: 1
 
   # Test 'apps create' --logout-urls flag
   apps create type regular logout urls:
-    command: auth0 apps create --name regapp --type native --description RegularApp --logout-urls https://*.example.com/logout,https://example.com/logout --format json
+    command: auth0 apps create --name integration-test-regapp6 --type native --description RegularApp --logout-urls https://*.example.com/logout,https://example.com/logout --format json
     stdout:
       json:
         allowed_logout_urls: "[https://*.example.com/logout https://example.com/logout]"
@@ -143,7 +143,7 @@ tests:
 
   # Test 'apps create' --origins flag
   apps create type regular origins:
-    command: auth0 apps create --name regapp --type native --description RegularApp --origins https://*.example.com,https://example.com  --format json
+    command: auth0 apps create --name integration-test-regapp7 --type native --description RegularApp --origins https://*.example.com,https://example.com  --format json
     stdout:
       json:
         allowed_origins: "[https://*.example.com https://example.com]"
@@ -151,7 +151,7 @@ tests:
 
   # Test 'apps create' --web-origins flag
   apps create type native web origins:
-    command: auth0 apps create --name spaapp4 --type native --description SpaApp4 --web-origins https://example.com  --format json
+    command: auth0 apps create --name integration-test-spaapp4 --type native --description SpaApp4 --web-origins https://example.com  --format json
     stdout:
       json:
         web_origins: "[https://example.com]"
@@ -166,7 +166,7 @@ tests:
     command: auth0 apps show $(cat ./integration/client-id) --format json # depends on "apps create test app" test
     stdout:
       json:
-        name: newapp
+        name: integration-test-newapp
         description: NewApp
         app_type: native
     exit-code: 0
@@ -175,7 +175,7 @@ tests:
     command: auth0 apps show $(cat ./integration/client-id) # depends on "apps create test app" test
     stdout:
       contains:
-        - NAME                 newapp
+        - NAME                 integration-test-newapp
         - DESCRIPTION          NewApp
         - TYPE                 Native
     exit-code: 0
@@ -217,10 +217,10 @@ tests:
     exit-code: 0
 
   apps update name:
-    command: auth0 apps update $(cat ./integration/client-id) --name betterAppName --format json
+    command: auth0 apps update $(cat ./integration/client-id) --name integration-test-betterAppName --format json
     stdout:
       json:
-        name: betterAppName
+        name: integration-test-betterAppName
     exit-code: 0
 
   apps update origins:

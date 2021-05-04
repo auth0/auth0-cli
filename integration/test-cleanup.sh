@@ -10,7 +10,7 @@ for app in $( echo "${apps}" | jq -r '.[] | @base64' ); do
     clientid=$(_jq '.ClientID')
     name=$(_jq '.Name')
 
-    if [[ $name != "Default App" ]]
+    if [[ $name = integration-test-* ]]
     then
         echo deleting "$name"
         $( auth0 apps delete "$clientid")
