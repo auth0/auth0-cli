@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -27,6 +28,8 @@ var (
 		{"Login box + image", branding.ImageTemplate},
 		{"Page footers", branding.FooterTemplate},
 	}
+
+	errNotAllowed = errors.New("This feature requires at least one custom domain to be configured for the tenant.")
 )
 
 func brandingCmd(cli *cli) *cobra.Command {
@@ -177,6 +180,28 @@ func (cli *cli) obtainCustomTemplateData(ctx context.Context) (*branding.Templat
 		template     *management.BrandingUniversalLogin
 		tenant       *management.Tenant
 	)
+
+	g.Go(func() error {
+		var err error
+		domains, err := cli.api.CustomDomain.List()
+		if err != nil {
+			errStatus := err.(management.Error)
+			// 403 is a valid response for free tenants that don't have
+			// custom domains enabled
+			if errStatus != nil && errStatus.Status() == 403 {
+				return errNotAllowed
+			}
+
+			return err
+		}
+
+		for _, domain := range domains {
+			if domain.GetStatus() == "ready" {
+				return nil
+			}
+		}
+		return errNotAllowed
+	})
 
 	g.Go(func() error {
 		var err error
