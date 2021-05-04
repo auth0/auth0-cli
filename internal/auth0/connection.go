@@ -23,6 +23,4 @@ type ConnectionAPI interface {
 
 	// List all connections.
 	List(opts ...management.RequestOption) (ul *management.ConnectionList, err error)
-
-
 }

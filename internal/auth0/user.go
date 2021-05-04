@@ -26,4 +26,7 @@ type UserAPI interface {
 
 	// List all users.
 	List(opts ...management.RequestOption) (ul *management.UserList, err error)
+
+	// Search for users
+	Search(opts ...management.RequestOption) (us *management.UserList, err error)
 }

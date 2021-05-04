@@ -2,9 +2,7 @@ package cli
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -12,51 +10,57 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
-
 var (
 	userID = Argument{
 		Name: "User ID",
 		Help: "Id of the user.",
 	}
 	userConnection = Flag{
-		Name:       	"Connection",
-		LongForm:   	"connection",
-		ShortForm:  	"c",
-		Help:       	"Name of the connection this user should be created in.",
-		IsRequired: 	true,
-		AlwaysPrompt:	false,
+		Name:       "Connection",
+		LongForm:   "connection",
+		ShortForm:  "c",
+		Help:       "Name of the connection this user should be created in.",
+		IsRequired: true,
 	}
 	userEmail = Flag{
-		Name:       	"Email",
-		LongForm:   	"email",
-		ShortForm:  	"e",
-		Help:       	"The user's email.",
-		IsRequired: 	true,
-		AlwaysPrompt: 	false,
+		Name:       "Email",
+		LongForm:   "email",
+		ShortForm:  "e",
+		Help:       "The user's email.",
+		IsRequired: true,
 	}
 	userPassword = Flag{
-		Name:       	"Password",
-		LongForm:   	"password",
-		ShortForm:  	"p",
-		Help:       	"Initial password for this user (mandatory for non-SMS connections)",
-		IsRequired: 	true,
-		AlwaysPrompt: 	false,
+		Name:       "Password",
+		LongForm:   "password",
+		ShortForm:  "p",
+		Help:       "Initial password for this user (mandatory for non-SMS connections).",
+		IsRequired: true,
 	}
 	userUsername = Flag{
-		Name:       	"Username",
-		LongForm:   	"username",
-		ShortForm:  	"u",
-		Help:       	"The user's username. Only valid if the connection requires a username.",
-		IsRequired: 	false,
-		AlwaysPrompt: 	false,
+		Name:      "Username",
+		LongForm:  "username",
+		ShortForm: "u",
+		Help:      "The user's username. Only valid if the connection requires a username.",
 	}
 	userName = Flag{
-		Name:       	"Name",
-		LongForm:   	"name",
-		ShortForm:  	"n",
-		Help:       	"The user's full name.",
-		IsRequired: 	true,
-		AlwaysPrompt: 	false,
+		Name:         "Name",
+		LongForm:     "name",
+		ShortForm:    "n",
+		Help:         "The user's full name.",
+		IsRequired:   true,
+		AlwaysPrompt: true,
+	}
+	userQuery = Flag{
+		Name:      "Query",
+		LongForm:  "query",
+		ShortForm: "q",
+		Help:      "Query in Lucene query string syntax. See https://auth0.com/docs/users/user-search/user-search-query-syntax for more details.",
+	}
+	userSort = Flag{
+		Name:      "Sort",
+		LongForm:  "sort",
+		ShortForm: "s",
+		Help:      "Field to sort by. Use 'field:order' where 'order' is '1' for ascending and '-1' for descending. e.g. 'created_at:1'.",
 	}
 )
 
@@ -67,7 +71,7 @@ func usersCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.AddCommand(listUsersCmd(cli))
+	cmd.AddCommand(searchUsersCmd(cli))
 	cmd.AddCommand(createUserCmd(cli))
 	cmd.AddCommand(showUserCmd(cli))
 	cmd.AddCommand(deleteUserCmd(cli))
@@ -78,57 +82,82 @@ func usersCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func listUsersCmd(cli *cli) *cobra.Command {
+func searchUsersCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		query string
+		sort  string
+	}
+
 	cmd := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"ls"},
-		Args:    cobra.NoArgs,
-		Short:   "List your users.",
-		Long: `List your existing users. To create one try:
+		Use:   "search",
+		Args:  cobra.NoArgs,
+		Short: "search for users",
+		Long: `search for users. To create one try:
 auth0 users create`,
-		Example: `auth0 users list
-auth0 users ls`,
+		Example: `auth0 users search
+auth0 users search --query id
+auth0 users search -q name --sort "name:1"
+auth0 users search -q name -s "name:1"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var list *management.UserList
+
+			if err := userQuery.Ask(cmd, &inputs.query, nil); err != nil {
+				return err
+			}
+
+			if err := userSort.Ask(cmd, &inputs.sort, nil); err != nil {
+				return err
+			}
+
+			search := &management.UserList{}
+
+			var queryParams []management.RequestOption
+
+			if len(inputs.sort) == 0 {
+				queryParams = append(queryParams, management.Query(auth0.StringValue(&inputs.query)))
+			} else {
+				queryParams = append(queryParams,
+					management.Query(auth0.StringValue(&inputs.query)),
+					management.Parameter("sort", auth0.StringValue(&inputs.sort)),
+				)
+			}
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				list, err = cli.api.User.List()
+				search, err = cli.api.User.Search(queryParams...)
 				return err
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
 
-			cli.renderer.UserList(list.Users)
+			cli.renderer.UserSearch(search.Users)
 			return nil
 		},
 	}
+	userQuery.RegisterString(cmd, &inputs.query, "")
+	userSort.RegisterString(cmd, &inputs.sort, "")
 
 	return cmd
 }
 
 func createUserCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Connection 	string
-		Email		string
-		Password	string
-		Username	string
-		Name		string
+		Connection string
+		Email      string
+		Password   string
+		Username   string
+		Name       string
 	}
 
 	cmd := &cobra.Command{
 		Use:   "create",
 		Args:  cobra.NoArgs,
-		Short: "Create a new user.",
-		Long:  "Create a new user.",
+		Short: "Create a new user",
+		Long:  "Create a new user",
 		Example: `auth0 users create 
 auth0 users create --name "John Doe" 
-auth0 users create -n "John Doe" --email john@example.com`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
+auth0 users create -n "John Doe" --email john@example.com
+auth0 users create -n "John Doe" --e john@example.com --connection "Username-Password-Authentication"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			// Select from the available connection types
 			// Users API currently support  database connections
 			if err := userConnection.Select(cmd, &inputs.Connection, cli.connectionPickerOptions(), nil); err != nil {
@@ -145,10 +174,8 @@ auth0 users create -n "John Doe" --email john@example.com`,
 				return err
 			}
 
-			// Prompt for user password
-			if err := userPassword.Ask(cmd, &inputs.Password, nil); err != nil {
-				return err
-			}
+			////Prompt for user password
+			inputs.Password = prompt.Password(inputs.Password)
 
 			// The getConnReqUsername returns the value for the requires_username field for the selected connection
 			// The result will be used to determine whether to prompt for username
@@ -165,21 +192,20 @@ auth0 users create -n "John Doe" --email john@example.com`,
 					return err
 				}
 				a = &management.User{
-					Connection:    &inputs.Connection,
-					Email:         &inputs.Email,
-					Name:          &inputs.Name,
-					Username:      &inputs.Username,
-					Password:      &inputs.Password,
+					Connection: &inputs.Connection,
+					Email:      &inputs.Email,
+					Name:       &inputs.Name,
+					Username:   &inputs.Username,
+					Password:   &inputs.Password,
 				}
 			} else {
 				a = &management.User{
-					Connection:    &inputs.Connection,
-					Email:         &inputs.Email,
-					Name:          &inputs.Name,
-					Password:      &inputs.Password,
+					Connection: &inputs.Connection,
+					Email:      &inputs.Email,
+					Name:       &inputs.Name,
+					Password:   &inputs.Password,
 				}
 			}
-
 
 			// Create app
 			if err := ansi.Waiting(func() error {
@@ -211,17 +237,13 @@ func showUserCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Show an existing user.",
-		Long:  "Show an existing user.",
+		Short: "Show an existing user",
+		Long:  "Show an existing user",
 		Example: `auth0 users show 
 auth0 users show <id>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := userID.Pick(cmd, &inputs.ID, cli.userPickerOptions)
-				if err != nil {
+				if err := userID.Ask(cmd, &inputs.ID); err != nil {
 					return err
 				}
 			} else {
@@ -229,12 +251,13 @@ auth0 users show <id>`,
 			}
 
 			a := &management.User{ID: &inputs.ID}
+
 			if err := ansi.Waiting(func() error {
 				var err error
 				a, err = cli.api.User.Read(inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load users. The Id %v specified doesn't exist", inputs.ID)
+				return fmt.Errorf("Unable to load user. The Id %v specified doesn't exist", inputs.ID)
 			}
 
 			cli.renderer.UserShow(a)
@@ -253,17 +276,13 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Delete a User",
-		Long:  "Delete a User.",
+		Short: "Delete a user",
+		Long:  "Delete a user",
 		Example: `auth0 users delete 
-auth0 users delete <user_id>`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
+auth0 users delete <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := userID.Pick(cmd, &inputs.ID, cli.userPickerOptions)
-				if err != nil {
+				if err := userID.Ask(cmd, &inputs.ID); err != nil {
 					return err
 				}
 			} else {
@@ -276,11 +295,11 @@ auth0 users delete <user_id>`,
 				}
 			}
 
-			return ansi.Spinner("Deleting User", func() error {
+			return ansi.Spinner("Deleting user", func() error {
 				_, err := cli.api.User.Read(inputs.ID)
 
 				if err != nil {
-					return fmt.Errorf("Unable to delete User. The specified Id: %v doesn't exist", inputs.ID)
+					return fmt.Errorf("Unable to delete user. The specified Id: %v doesn't exist", inputs.ID)
 				}
 
 				return cli.api.User.Delete(inputs.ID)
@@ -293,59 +312,53 @@ auth0 users delete <user_id>`,
 
 func updateUserCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID 			string
-		Email		string
-		Password	string
-		Name		string
-		Connection	string
+		ID         string
+		Email      string
+		Password   string
+		Name       string
+		Connection string
 	}
 
 	cmd := &cobra.Command{
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Update a User",
-		Long:  "Update a User.",
+		Short: "Update a user",
+		Long:  "Update a user",
 		Example: `auth0 users update 
 auth0 users update <id> 
 auth0 users update <id> --name John Doe
 auth0 users update -n John Doe --email john.doe@gmail.com`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var current *management.User
-
 			if len(args) == 0 {
-				err := userID.Pick(cmd, &inputs.ID, cli.userPickerOptions)
-				if err != nil {
+				if err := userID.Ask(cmd, &inputs.ID); err != nil {
 					return err
 				}
 			} else {
 				inputs.ID = args[0]
 			}
 
+			var current *management.User
+
 			if err := ansi.Waiting(func() error {
 				var err error
 				current, err = cli.api.User.Read(inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load User. The Id %v specified doesn't exist", inputs.ID)
+				return fmt.Errorf("Unable to load user. The Id %v specified doesn't exist", inputs.ID)
 			}
-
 
 			// using getUserConnection to get connection name from user Identities
 			// just using current.connection will return empty
 			conn := stringSliceToCommaSeparatedString(cli.getUserConnection(current))
 			current.Connection = auth0.String(conn)
 
-			if err := userConnection.AskU(cmd, &inputs.Connection,  current.Connection); err != nil {
+			if err := userConnection.AskU(cmd, &inputs.Connection, current.Connection); err != nil {
 				return err
 			}
 
 			if err := userName.AskU(cmd, &inputs.Name, current.Name); err != nil {
 				return err
 			}
-
 
 			if err := userEmail.AskU(cmd, &inputs.Email, current.Email); err != nil {
 				return err
@@ -389,14 +402,13 @@ auth0 users update -n John Doe --email john.doe@gmail.com`,
 			if err := ansi.Waiting(func() error {
 				return cli.api.User.Update(current.GetID(), user)
 			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred while trying to update an User with Id '%s': %w", inputs.ID, err)
+				return fmt.Errorf("An unexpected error occurred while trying to update an user with Id '%s': %w", inputs.ID, err)
 			}
 
 			cli.renderer.UserUpdate(user)
 			return nil
 		},
 	}
-
 	userName.RegisterStringU(cmd, &inputs.Name, "")
 	userConnection.RegisterStringU(cmd, &inputs.Connection, "")
 	userPassword.RegisterStringU(cmd, &inputs.Password, "")
@@ -429,9 +441,6 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 
 auth0 users blocks list <user-id>
 `,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.userID); err != nil {
@@ -474,9 +483,6 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 
 auth0 users unblock <user-id>
 `,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			prepareInteractivity(cmd)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.userID); err != nil {
@@ -501,32 +507,13 @@ auth0 users unblock <user-id>
 	return cmd
 }
 
-func (c *cli) userPickerOptions() (pickerOptions, error) {
-	list, err := c.api.User.List()
-	if err != nil {
-		return nil, err
-	}
-
-
-	var opts pickerOptions
-	for _, r := range list.Users {
-		label := fmt.Sprintf("%s %s", r.GetName(), ansi.Faint("("+r.GetID()+")"))
-
-		opts = append(opts, pickerOption{value: r.GetID(), label: label})
-	}
-
-	if len(opts) == 0 {
-		return nil, errors.New("There are currently no users.")
-	}
-
-	return opts, nil
-}
-
 func (c *cli) connectionPickerOptions() []string {
-	var list *management.ConnectionList
-
 	var res []string
-	list, _ = c.api.Connection.List()
+
+	list, err := c.api.Connection.List()
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	for _, conn := range list.Connections {
 		res = append(res, conn.GetName())
@@ -534,30 +521,32 @@ func (c *cli) connectionPickerOptions() []string {
 	return res
 }
 
-func (c *cli)getUserConnection(users *management.User) []string {
+func (c *cli) getUserConnection(users *management.User) []string {
 	var res []string
-	for _, i := range users.Identities{
+	for _, i := range users.Identities {
 		res = append(res, fmt.Sprintf("%v", auth0.StringValue(i.Connection)))
 
 	}
 	return res
 }
+
 // Since the option field is ignored with `json:"-"` in Connections
 // This is a workaround to get the requires_username field nested inside Options field
 type Options struct {
-	RequiresUsername     bool   `json:"requires_username"`
+	RequiresUsername bool `json:"requires_username"`
 }
 
 func (c *cli) getConnReqUsername(s string) *bool {
-	var conn *management.Connection
-	conn, _ = c.api.Connection.ReadByName(s)
+	conn, err := c.api.Connection.ReadByName(s)
+	if err != nil {
+		fmt.Println(err)
+	}
 	res := fmt.Sprintln(conn.Options)
 
 	opts := Options{}
 	if err := json.Unmarshal([]byte(res), &opts); err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 
 	return auth0.Bool(opts.RequiresUsername)
 }
-
