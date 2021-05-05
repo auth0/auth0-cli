@@ -508,10 +508,10 @@ func (c *cli) connectionPickerOptions() []string {
 	if err != nil {
 		fmt.Println(err)
 	}
-
 	for _, conn := range list.Connections {
 		res = append(res, conn.GetName())
 	}
+
 	return res
 }
 
@@ -521,6 +521,7 @@ func (c *cli) getUserConnection(users *management.User) []string {
 		res = append(res, fmt.Sprintf("%v", auth0.StringValue(i.Connection)))
 
 	}
+
 	return res
 }
 
