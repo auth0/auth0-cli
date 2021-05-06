@@ -11,7 +11,9 @@ make integration
 
 `make integration` will then use [commander](https://github.com/commander-cli/commander) to run tests defined in [commander.yaml](./commander.yaml)
 
-To run intergration tests as part of a CI pipeline, several environment variables need to be exported first. When these variables are set, `auth0-cli-config-generator` will generate a valid auth0-cli config file being retrieving a token for the client, removing the need to run `auth0 login`:
+The apps created during integration tests will be cleaned afterwards by the script `integration/test-cleanup.sh`. Apps with the prefix `integration-test-` will be deleted.
+
+To run integration tests as part of a CI pipeline, several environment variables need to be exported first. When these variables are set, `auth0-cli-config-generator` will generate a valid auth0-cli config file being retrieving a token for the client, removing the need to run `auth0 login`:
 ```bash
 export AUTH0_CLI_CLIENT_NAME="integration" \
     AUTH0_CLI_CLIENT_DOMAIN="example-test-domain.au.auth0.com" \
