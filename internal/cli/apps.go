@@ -416,7 +416,7 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <descriptio
 			if err := ansi.Waiting(func() error {
 				return cli.api.Client.Create(a)
 			}); err != nil {
-				return fmt.Errorf("Unable to create application: %w", err)
+				return fmt.Errorf("Unable to create application: %v", err)
 			}
 
 			if err := cli.setDefaultAppID(a.GetClientID()); err != nil {

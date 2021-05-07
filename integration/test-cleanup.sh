@@ -9,7 +9,8 @@ for app in $( echo "${apps}" | jq -r '.[] | @base64' ); do
 
     clientid=$(_jq '.ClientID')
     name=$(_jq '.Name')
-
+		# TODO(jfatta): should remove only those 
+		# created during the same test session
     if [[ $name = integration-test-* ]]
     then
         echo deleting "$name"

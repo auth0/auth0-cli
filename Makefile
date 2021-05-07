@@ -38,11 +38,7 @@ lint:
 
 # Build for the native platform
 build:
-	go build -ldflags "$(CTIMEVAR)" -o auth0 cmd/auth0/main.go
-.PHONY: build
-
-# Build for the native platform
-build:
+	go build -ldflags "$(CTIMEVAR)" -o $(GOBIN)/auth0 cmd/auth0/main.go
 .PHONY: build
 
 # Build a beta version of auth0-cli for all supported platforms
@@ -78,5 +74,9 @@ integration-cleanup:
 	./integration/test-cleanup.sh
 .PHONY: integration-cleanup
 
-integration: $(GOBIN)/auth0-cli-config-generator $(GOBIN)/commander run-integration integration-cleanup
+integration: build $(GOBIN)/auth0-cli-config-generator $(GOBIN)/commander 
+	$(MAKE) run-integration; \
+	ret=$$?; \
+	$(MAKE) integration-cleanup; \
+	exit $$ret
 .PHONY: integration
