@@ -65,6 +65,14 @@ $(GOBIN)/commander:
 $(GOBIN)/auth0-cli-config-generator:
 	go install ./pkg/auth0-cli-config-generator
 
-integration: build $(GOBIN)/auth0-cli-config-generator $(GOBIN)/commander
+run-integration:
 	auth0-cli-config-generator && commander test commander.yaml --verbose
+.PHONY: run-integration
+
+# Delete all test apps created during integration testing
+integration-cleanup:
+	./integration/test-cleanup.sh
+.PHONY: integration-cleanup
+
+integration: $(GOBIN)/auth0-cli-config-generator $(GOBIN)/commander run-integration integration-cleanup
 .PHONY: integration

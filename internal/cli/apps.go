@@ -320,7 +320,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 		Example: `auth0 apps create 
 auth0 apps create --name myapp 
 auth0 apps create -n myapp --type [native|spa|regular|m2m]
-auth0 apps create -n myapp -t [native|spa|regular|m2m] -- description <description>`,
+auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <description>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Prompt for app name
 			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
