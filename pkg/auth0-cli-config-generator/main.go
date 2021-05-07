@@ -21,7 +21,6 @@ import (
 
 type params struct {
 	filePath     string
-	clientName   string
 	clientDomain string
 	clientID     string
 	clientSecret string
@@ -35,14 +34,10 @@ var requiredScopes = []string{
 	"create:rules", "delete:rules", "read:rules", "update:rules",
 	"read:users", "update:users",
 	"read:branding", "update:branding",
-	"read:client_keys", "read:logs", "read:tenant_settings",
+	"read:client_keys", "read:logs", "read:tenant_settings", "read:custom_domains",
 }
 
 func (p params) validate() error {
-	if p.clientName == "" {
-		return fmt.Errorf("Missing client name")
-	}
-
 	if p.clientDomain == "" {
 		return fmt.Errorf("Missing client domain")
 	}
@@ -145,7 +140,6 @@ func main() {
 			reuseConfig := viper.GetBool("REUSE_CONFIG")
 			overwrite := viper.GetBool("OVERWRITE")
 			filePath := viper.GetString("FILEPATH")
-			clientName := viper.GetString("CLIENT_NAME")
 			clientDomain := viper.GetString("CLIENT_DOMAIN")
 			clientID := viper.GetString("CLIENT_ID")
 			clientSecret := viper.GetString("CLIENT_SECRET")
@@ -158,7 +152,7 @@ func main() {
 				return nil
 			}
 
-			p := params{filePath, clientName, clientDomain, clientID, clientSecret}
+			p := params{filePath, clientDomain, clientID, clientSecret}
 			if err := p.validate(); err != nil {
 				return err
 			}
@@ -181,14 +175,17 @@ func main() {
 			}
 
 			t := tenant{
-				Name:        p.clientName,
+				Name:        p.clientDomain,
 				Domain:      p.clientDomain,
 				AccessToken: token.AccessToken,
 				ExpiresAt:   token.Expiry,
 				Scopes:      requiredScopes,
 			}
 
-			cfg := config{p.clientName, map[string]tenant{p.clientName: t}}
+			cfg := config{
+				DefaultTenant: p.clientDomain,
+				Tenants:       map[string]tenant{p.clientDomain: t},
+			}
 			if err := persistConfig(p.filePath, cfg, overwrite); err != nil {
 				return err
 			}
@@ -203,8 +200,6 @@ func main() {
 	flags := cmd.Flags()
 	flags.String("filepath", path.Join(os.Getenv("HOME"), ".config", "auth0", "config.json"), "Filepath for the auth0 cli config")
 	_ = viper.BindPFlag("FILEPATH", flags.Lookup("filepath"))
-	flags.String("client-name", "", "Client name to set within config")
-	_ = viper.BindPFlag("CLIENT_NAME", flags.Lookup("client-name"))
 	flags.String("client-id", "", "Client ID to set within config")
 	_ = viper.BindPFlag("CLIENT_ID", flags.Lookup("client-id"))
 	flags.String("client-secret", "", "Client secret to use to generate token which is set within config")
