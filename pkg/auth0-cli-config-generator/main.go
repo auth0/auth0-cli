@@ -27,6 +27,17 @@ type params struct {
 	clientSecret string
 }
 
+var requiredScopes = []string{
+	"openid",
+	"offline_access", // <-- to get a refresh token.
+	"create:clients", "delete:clients", "read:clients", "update:clients",
+	"create:resource_servers", "delete:resource_servers", "read:resource_servers", "update:resource_servers",
+	"create:rules", "delete:rules", "read:rules", "update:rules",
+	"read:users", "update:users",
+	"read:branding", "update:branding",
+	"read:client_keys", "read:logs", "read:tenant_settings",
+}
+
 func (p params) validate() error {
 	if p.clientName == "" {
 		return fmt.Errorf("Missing client name")
@@ -65,6 +76,7 @@ type tenant struct {
 	Domain      string    `json:"domain"`
 	AccessToken string    `json:"access_token,omitempty"`
 	ExpiresAt   time.Time `json:"expires_at"`
+	Scopes      []string  `json:"scopes,omitempty"`
 }
 
 func isLoggedIn(filePath string) bool {
@@ -168,7 +180,13 @@ func main() {
 				return err
 			}
 
-			t := tenant{p.clientName, p.clientDomain, token.AccessToken, token.Expiry}
+			t := tenant{
+				Name:        p.clientName,
+				Domain:      p.clientDomain,
+				AccessToken: token.AccessToken,
+				ExpiresAt:   token.Expiry,
+				Scopes:      requiredScopes,
+			}
 
 			cfg := config{p.clientName, map[string]tenant{p.clientName: t}}
 			if err := persistConfig(p.filePath, cfg, overwrite); err != nil {
