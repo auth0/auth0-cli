@@ -26,7 +26,7 @@ tests:
     exit-code: 0
     stdout:
       json:
-        name: integration-test-nativeapp2
+        name: integration-test-nativeapp1
         description: NativeApp1
         app_type: native
 
