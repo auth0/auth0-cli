@@ -66,7 +66,7 @@ $(GOBIN)/auth0-cli-config-generator:
 	go install ./pkg/auth0-cli-config-generator
 
 run-integration:
-	auth0-cli-config-generator && commander test commander.yaml --verbose
+	auth0-cli-config-generator && commander test commander.yaml
 .PHONY: run-integration
 
 # Delete all test apps created during integration testing
