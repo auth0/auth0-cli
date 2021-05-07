@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/lestrrat-go/jwx/jwt"
@@ -27,8 +28,8 @@ type params struct {
 }
 
 var requiredScopes = []string{
-	"openid",
-	"offline_access", // <-- to get a refresh token.
+	//	"openid",
+	//	"offline_access", // <-- to get a refresh token.
 	"create:clients", "delete:clients", "read:clients", "update:clients",
 	"create:resource_servers", "delete:resource_servers", "read:resource_servers", "update:resource_servers",
 	"create:rules", "delete:rules", "read:rules", "update:rules",
@@ -163,10 +164,14 @@ func main() {
 			}
 
 			c := &clientcredentials.Config{
-				ClientID:       p.clientID,
-				ClientSecret:   p.clientSecret,
-				TokenURL:       u.String() + "/oauth/token",
-				EndpointParams: url.Values{"audience": {u.String() + "/api/v2/"}},
+				ClientID:     p.clientID,
+				ClientSecret: p.clientSecret,
+				TokenURL:     u.String() + "/oauth/token",
+				EndpointParams: url.Values{
+					"client_id": {p.clientID},
+					"scope":     {strings.Join(requiredScopes, " ")},
+					"audience":  {u.String() + "/api/v2/"},
+				},
 			}
 
 			token, err := c.Token(context.Background())
@@ -179,7 +184,7 @@ func main() {
 				Domain:      p.clientDomain,
 				AccessToken: token.AccessToken,
 				ExpiresAt:   token.Expiry,
-				Scopes:      requiredScopes,
+				Scopes:      append([]string{"openid", "offline_access"}, requiredScopes...),
 			}
 
 			cfg := config{
