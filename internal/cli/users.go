@@ -51,10 +51,11 @@ var (
 		AlwaysPrompt: true,
 	}
 	userQuery = Flag{
-		Name:      "Query",
-		LongForm:  "query",
-		ShortForm: "q",
-		Help:      "Query in Lucene query string syntax. See https://auth0.com/docs/users/user-search/user-search-query-syntax for more details.",
+		Name:       "Query",
+		LongForm:   "query",
+		ShortForm:  "q",
+		Help:       "Query in Lucene query string syntax. See https://auth0.com/docs/users/user-search/user-search-query-syntax for more details.",
+		IsRequired: true,
 	}
 	userSort = Flag{
 		Name:      "Sort",
@@ -91,20 +92,15 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "search",
 		Args:  cobra.NoArgs,
-		Short: "search for users",
-		Long: `search for users. To create one try:
+		Short: "Search for users",
+		Long: `Search for users. To create one try:
 auth0 users create`,
 		Example: `auth0 users search
 auth0 users search --query id
 auth0 users search -q name --sort "name:1"
 auth0 users search -q name -s "name:1"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			if err := userQuery.Ask(cmd, &inputs.query, nil); err != nil {
-				return err
-			}
-
-			if err := userSort.Ask(cmd, &inputs.sort, nil); err != nil {
 				return err
 			}
 
@@ -133,6 +129,7 @@ auth0 users search -q name -s "name:1"`,
 			return nil
 		},
 	}
+
 	userQuery.RegisterString(cmd, &inputs.query, "")
 	userSort.RegisterString(cmd, &inputs.sort, "")
 
@@ -152,7 +149,7 @@ func createUserCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new user",
-		Long:  "Create a new user",
+		Long:  "Create a new user.",
 		Example: `auth0 users create 
 auth0 users create --name "John Doe" 
 auth0 users create -n "John Doe" --email john@example.com
@@ -175,36 +172,31 @@ auth0 users create -n "John Doe" --e john@example.com --connection "Username-Pas
 			}
 
 			////Prompt for user password
-			inputs.Password = prompt.Password(inputs.Password)
+			var err error
+			if inputs.Password, err = prompt.Password(inputs.Password); err != nil {
+				return err
+			}
 
 			// The getConnReqUsername returns the value for the requires_username field for the selected connection
 			// The result will be used to determine whether to prompt for username
 			conn := cli.getConnReqUsername(auth0.StringValue(&inputs.Connection))
 			requireUsername := auth0.BoolValue(conn)
 
-			var a *management.User
-
 			// Prompt for username if the requireUsername is set to true
 			// Load values including the username's field into a fresh users instance
 			// Else block loads values without username for connections with requireUsername set to false
+			a := &management.User{
+				Connection: &inputs.Connection,
+				Email:      &inputs.Email,
+				Name:       &inputs.Name,
+				Password:   &inputs.Password,
+			}
+
 			if requireUsername {
 				if err := userUsername.Ask(cmd, &inputs.Username, nil); err != nil {
 					return err
 				}
-				a = &management.User{
-					Connection: &inputs.Connection,
-					Email:      &inputs.Email,
-					Name:       &inputs.Name,
-					Username:   &inputs.Username,
-					Password:   &inputs.Password,
-				}
-			} else {
-				a = &management.User{
-					Connection: &inputs.Connection,
-					Email:      &inputs.Email,
-					Name:       &inputs.Name,
-					Password:   &inputs.Password,
-				}
+				a.Username = &inputs.Username
 			}
 			// Create app
 			if err := ansi.Waiting(func() error {
@@ -214,7 +206,7 @@ auth0 users create -n "John Doe" --e john@example.com --connection "Username-Pas
 			}
 
 			// Render Result
-			cli.renderer.UserCreate(a)
+			cli.renderer.UserCreate(a, requireUsername)
 
 			return nil
 		},
@@ -237,7 +229,7 @@ func showUserCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an existing user",
-		Long:  "Show an existing user",
+		Long:  "Show an existing user.",
 		Example: `auth0 users show 
 auth0 users show <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -259,7 +251,12 @@ auth0 users show <id>`,
 				return fmt.Errorf("Unable to load user. The Id %v specified doesn't exist", inputs.ID)
 			}
 
-			cli.renderer.UserShow(a)
+			conn := stringSliceToCommaSeparatedString(cli.getUserConnection(a))
+			a.Connection = auth0.String(conn)
+			con := cli.getConnReqUsername(auth0.StringValue(a.Connection))
+			requireUsername := auth0.BoolValue(con)
+
+			cli.renderer.UserShow(a, requireUsername)
 			return nil
 		},
 	}
@@ -276,7 +273,7 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 		Use:   "delete",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete a user",
-		Long:  "Delete a user",
+		Long:  "Delete a user.",
 		Example: `auth0 users delete 
 auth0 users delete <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -322,7 +319,7 @@ func updateUserCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a user",
-		Long:  "Update a user",
+		Long:  "Update a user.",
 		Example: `auth0 users update 
 auth0 users update <id> 
 auth0 users update <id> --name John Doe
@@ -403,10 +400,14 @@ auth0 users update -n John Doe --email john.doe@gmail.com`,
 				return fmt.Errorf("An unexpected error occurred while trying to update an user with Id '%s': %w", inputs.ID, err)
 			}
 
-			cli.renderer.UserUpdate(user)
+			con := cli.getConnReqUsername(auth0.StringValue(&inputs.Connection))
+			requireUsername := auth0.BoolValue(con)
+
+			cli.renderer.UserUpdate(user, requireUsername)
 			return nil
 		},
 	}
+
 	userName.RegisterStringU(cmd, &inputs.Name, "")
 	userConnection.RegisterStringU(cmd, &inputs.Connection, "")
 	userPassword.RegisterStringU(cmd, &inputs.Password, "")

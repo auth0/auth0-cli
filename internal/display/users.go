@@ -10,12 +10,22 @@ import (
 )
 
 type userView struct {
-	UserID     string
-	Email      string
-	Connection string
+	UserID          string
+	Email           string
+	Connection      string
+	Username        string
+	RequireUsername bool
 }
 
 func (v *userView) AsTableHeader() []string {
+	if v.RequireUsername {
+		return []string{
+			"UserID",
+			"Email",
+			"Connection",
+			"Username",
+		}
+	}
 	return []string{
 		"UserID",
 		"Email",
@@ -24,6 +34,14 @@ func (v *userView) AsTableHeader() []string {
 }
 
 func (v *userView) AsTableRow() []string {
+	if v.RequireUsername {
+		return []string{
+			ansi.Faint(v.UserID),
+			v.Email,
+			v.Connection,
+			v.Username,
+		}
+	}
 	return []string{
 		ansi.Faint(v.UserID),
 		v.Email,
@@ -32,6 +50,14 @@ func (v *userView) AsTableRow() []string {
 }
 
 func (v *userView) KeyValues() [][]string {
+	if v.RequireUsername {
+		return [][]string{
+			[]string{"USERID", ansi.Faint(v.UserID)},
+			[]string{"EMAIL", v.Email},
+			[]string{"CONNECTION", v.Connection},
+			[]string{"USERNAME", v.Username},
+		}
+	}
 	return [][]string{
 		[]string{"USERID", ansi.Faint(v.UserID)},
 		[]string{"EMAIL", v.Email},
@@ -54,50 +80,55 @@ func (r *Renderer) UserSearch(users []*management.User) {
 	for _, c := range users {
 		conn := getUserConnection(c)
 		res = append(res, &userView{
-			UserID:     ansi.Faint(auth0.StringValue(c.ID)),
-			Email:      auth0.StringValue(c.Email),
-			Connection: stringSliceToCommaSeparatedString(conn),
+			UserID:          ansi.Faint(auth0.StringValue(c.ID)),
+			Email:           auth0.StringValue(c.Email),
+			Connection:      stringSliceToCommaSeparatedString(conn),
+			Username:        auth0.StringValue(c.Username),
 		})
 	}
 
 	r.Results(res)
 }
 
-func (r *Renderer) UserShow(users *management.User) {
+func (r *Renderer) UserShow(users *management.User, requireUsername bool) {
 	r.Heading("user")
 
 	conn := getUserConnection(users)
-
 	v := &userView{
-		UserID:     ansi.Faint(auth0.StringValue(users.ID)),
-		Email:      auth0.StringValue(users.Email),
-		Connection: stringSliceToCommaSeparatedString(conn),
+		RequireUsername: requireUsername,
+		UserID:          ansi.Faint(auth0.StringValue(users.ID)),
+		Email:           auth0.StringValue(users.Email),
+		Connection:      stringSliceToCommaSeparatedString(conn),
+		Username:        auth0.StringValue(users.Username),
 	}
 
 	r.Result(v)
 }
 
-func (r *Renderer) UserCreate(users *management.User) {
+func (r *Renderer) UserCreate(users *management.User, requireUsername bool) {
 	r.Heading("user created")
 
 	v := &userView{
-		UserID:     ansi.Faint(auth0.StringValue(users.ID)),
-		Email:      auth0.StringValue(users.Email),
-		Connection: auth0.StringValue(users.Connection),
+		RequireUsername: requireUsername,
+		UserID:          ansi.Faint(auth0.StringValue(users.ID)),
+		Email:           auth0.StringValue(users.Email),
+		Connection:      auth0.StringValue(users.Connection),
+		Username:		 auth0.StringValue(users.Username),
 	}
 
 	r.Result(v)
 }
 
-func (r *Renderer) UserUpdate(users *management.User) {
+func (r *Renderer) UserUpdate(users *management.User, requireUsername bool) {
 	r.Heading("user updated")
 
 	conn := getUserConnection(users)
-
 	v := &userView{
-		UserID:     auth0.StringValue(users.ID),
-		Email:      auth0.StringValue(users.Email),
-		Connection: stringSliceToCommaSeparatedString(conn),
+		RequireUsername: requireUsername,
+		UserID:          auth0.StringValue(users.ID),
+		Email:           auth0.StringValue(users.Email),
+		Connection:      stringSliceToCommaSeparatedString(conn),
+		Username:		auth0.StringValue(users.Username),
 	}
 
 	r.Result(v)

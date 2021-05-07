@@ -94,7 +94,7 @@ func SelectInput(name string, message string, help string, options []string, def
 	return input
 }
 
-func Password(inputs string) string {
+func Password(inputs string) (string, error) {
 	prompt := &survey.Password{
 		Message: "Password:",
 	}
@@ -103,5 +103,5 @@ func Password(inputs string) string {
 		fmt.Println(err)
 	}
 
-	return inputs
+	return inputs, nil
 }
