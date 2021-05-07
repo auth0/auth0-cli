@@ -8,6 +8,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
+	"net/url"
 )
 
 var (
@@ -77,6 +78,7 @@ func usersCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(showUserCmd(cli))
 	cmd.AddCommand(deleteUserCmd(cli))
 	cmd.AddCommand(updateUserCmd(cli))
+	cmd.AddCommand(openUserCmd(cli))
 	cmd.AddCommand(userBlocksCmd(cli))
 	cmd.AddCommand(deleteUserBlocksCmd(cli))
 
@@ -416,6 +418,35 @@ auth0 users update -n John Doe --email john.doe@gmail.com`,
 	return cmd
 }
 
+func openUserCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "open",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Open user details page in Auth0 Manage",
+		Long:  "Open user details page in Auth0 Manage.",
+		Example: `auth0 users open <id>
+auth0 users open "auth0|xxxxxxxxxx"`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				if err := userID.Ask(cmd, &inputs.ID); err != nil {
+					return err
+				}
+			} else {
+				inputs.ID = args[0]
+			}
+
+			openManageURL(cli, cli.config.DefaultTenant, formatUserDetailsPath(url.PathEscape(inputs.ID)))
+			return nil
+		},
+	}
+
+	return cmd
+}
+
 func userBlocksCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "blocks",
@@ -500,6 +531,13 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 	}
 
 	return cmd
+}
+
+func formatUserDetailsPath(id string) string {
+	if len(id) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("users/%s", id)
 }
 
 func (c *cli) connectionPickerOptions() []string {

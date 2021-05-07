@@ -80,10 +80,10 @@ func (r *Renderer) UserSearch(users []*management.User) {
 	for _, c := range users {
 		conn := getUserConnection(c)
 		res = append(res, &userView{
-			UserID:          ansi.Faint(auth0.StringValue(c.ID)),
-			Email:           auth0.StringValue(c.Email),
-			Connection:      stringSliceToCommaSeparatedString(conn),
-			Username:        auth0.StringValue(c.Username),
+			UserID:     ansi.Faint(auth0.StringValue(c.ID)),
+			Email:      auth0.StringValue(c.Email),
+			Connection: stringSliceToCommaSeparatedString(conn),
+			Username:   auth0.StringValue(c.Username),
 		})
 	}
 
@@ -113,7 +113,7 @@ func (r *Renderer) UserCreate(users *management.User, requireUsername bool) {
 		UserID:          ansi.Faint(auth0.StringValue(users.ID)),
 		Email:           auth0.StringValue(users.Email),
 		Connection:      auth0.StringValue(users.Connection),
-		Username:		 auth0.StringValue(users.Username),
+		Username:        auth0.StringValue(users.Username),
 	}
 
 	r.Result(v)
@@ -128,7 +128,7 @@ func (r *Renderer) UserUpdate(users *management.User, requireUsername bool) {
 		UserID:          auth0.StringValue(users.ID),
 		Email:           auth0.StringValue(users.Email),
 		Connection:      stringSliceToCommaSeparatedString(conn),
-		Username:		auth0.StringValue(users.Username),
+		Username:        auth0.StringValue(users.Username),
 	}
 
 	r.Result(v)
