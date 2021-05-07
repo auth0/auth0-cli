@@ -74,5 +74,8 @@ integration-cleanup:
 	./integration/test-cleanup.sh
 .PHONY: integration-cleanup
 
-integration: build $(GOBIN)/auth0-cli-config-generator $(GOBIN)/commander run-integration integration-cleanup
+integration: build $(GOBIN)/auth0-cli-config-generator $(GOBIN)/commander 
+	run-integration; ret=$$; \
+	integration-cleanup; \
+	exit $$ret
 .PHONY: integration
