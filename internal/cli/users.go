@@ -253,10 +253,13 @@ auth0 users show <id>`,
 				return fmt.Errorf("Unable to load user. The Id %v specified doesn't exist", inputs.ID)
 			}
 
+			// get current connection
 			conn := stringSliceToCommaSeparatedString(cli.getUserConnection(a))
 			a.Connection = auth0.String(conn)
-			con := cli.getConnReqUsername(auth0.StringValue(a.Connection))
-			requireUsername := auth0.BoolValue(con)
+
+			// parse the connection name to get the requireUsername status
+			u := cli.getConnReqUsername(auth0.StringValue(a.Connection))
+			requireUsername := auth0.BoolValue(u)
 
 			cli.renderer.UserShow(a, requireUsername)
 			return nil
