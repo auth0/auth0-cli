@@ -4,6 +4,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/briandowns/spinner"
 )
 
@@ -40,7 +41,7 @@ func loading(initialMsg, doneMsg, failMsg string, fn func() error) error {
 		s.Writer = os.Stderr
 
 		if err := s.Color(spinnerColor); err != nil {
-			panic(err)
+			panic(auth0.Error(err, "failed setting spinner color"))
 		}
 
 		s.Start()
