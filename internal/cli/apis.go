@@ -224,8 +224,8 @@ auth0 apis create -n myapi -e 6100 --offline-access=true`,
 	apiName.RegisterString(cmd, &inputs.Name, "")
 	apiIdentifier.RegisterString(cmd, &inputs.Identifier, "")
 	apiScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
-	apiOfflineAccess.RegisterBool(cmd, &inputs.AllowOfflineAccess, false)
-	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 86400)
+	apiOfflineAccess.RegisterBool(cmd, &inputs.AllowOfflineAccess, false) // Needs default because it has Always Prompt set to true
+	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 86400) // Needs default because it has Always Prompt set to true
 
 	return cmd
 }
