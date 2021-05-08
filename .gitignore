@@ -1,6 +1,6 @@
 # project artifacts
 /auth0
-integration/client-id
+/integration/identifiers
 
 # Swap
 [._]*.s[a-v][a-z]
@@ -26,4 +26,3 @@ tags
 # misc
 .vscode
 .DS_Store
-

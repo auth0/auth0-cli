@@ -22,71 +22,71 @@ tests:
   
   # Test 'apps create' --type flag
   apps create type native and check data:
-    command: auth0 apps create --name integration-test-nativeapp1 --type native --description NativeApp1 --format json
+    command: auth0 apps create --name integration-test-app-nativeapp1 --type native --description NativeApp1 --format json
     exit-code: 0
     stdout:
       json:
-        name: integration-test-nativeapp1
+        name: integration-test-app-nativeapp1
         description: NativeApp1
         app_type: native
 
   apps create type native and check output:
-    command: auth0 apps create --name integration-test-nativeapp1 --type native --description NativeApp1
+    command: auth0 apps create --name integration-test-app-nativeapp1 --type native --description NativeApp1
     exit-code: 0
     stdout:
       contains:
-        - NAME                 integration-test-nativeapp1
+        - NAME                 integration-test-app-nativeapp1
         - DESCRIPTION          NativeApp1
         - TYPE                 Native
 
   apps create type spa:
-    command: auth0 apps create --name integration-test-spaapp1 --type spa --description SpaApp1 --format json
+    command: auth0 apps create --name integration-test-app-spaapp1 --type spa --description SpaApp1 --format json
     exit-code: 0
     stdout:
       json:
-        name: integration-test-spaapp1
+        name: integration-test-app-spaapp1
         description: SpaApp1
         app_type: spa
 
   apps create type regular:
-    command: auth0 apps create --name integration-test-regapp1 --type regular --description RegApp1 --format json
+    command: auth0 apps create --name integration-test-app-regapp1 --type regular --description RegApp1 --format json
     exit-code: 0
     stdout:
       json:
-        name: integration-test-regapp1
+        name: integration-test-app-regapp1
         description: RegApp1
         app_type: regular_web
 
   apps create type m2m:
-    command: auth0 apps create --name integration-test-m2mapp1 --type m2m --description M2mApp1 --format json
+    command: auth0 apps create --name integration-test-app-m2mapp1 --type m2m --description M2mApp1 --format json
     exit-code: 0
     stdout:
       json:
-        name: integration-test-m2mapp1
+        name: integration-test-app-m2mapp1
         description: M2mApp1
         app_type: non_interactive
 
   # Test 'apps create' --auth-method flag
   apps create type spa auth method none:
-    command: auth0 apps create --name integration-test-spaapp2 --type spa --description SpaApp2 --auth-method None --format json
+    command: auth0 apps create --name integration-test-app-spaapp2 --type spa --description SpaApp2 --auth-method None --format json
     stdout:
       json:
         token_endpoint_auth_method: none
     exit-code: 0
 
   apps create type m2m auth method none fails:
-    command: auth0 apps create --name integration-test-m2mapp2 --type m2m --description M2mApp2 --auth-method None
+    command: auth0 apps create --name integration-test-app-m2mapp2 --type m2m --description M2mApp2 --auth-method None
     exit-code: 1
 
   apps create type regular auth method post:
-    command: auth0 apps create --name integration-test-regapp2 --type regular --description RegApp2 --auth-method Post --format json
+    command: auth0 apps create --name integration-test-app-regapp2 --type regular --description RegApp2 --auth-method Post --format json
     stdout:
       json:
         token_endpoint_auth_method: client_secret_post
     exit-code: 0
 
   apps create type regular auth method basic:
-    command: auth0 apps create --name integration-test-regapp3 --type regular --description RegApp3 --auth-method Basic --format json
+    command: auth0 apps create --name integration-test-app-regapp3 --type regular --description RegApp3 --auth-method Basic --format json
     stdout:
       json:
         token_endpoint_auth_method: client_secret_basic
@@ -94,14 +94,14 @@ tests:
   
   # Test 'apps create' --callbacks flag
   apps create type m2m callbacks:
-    command: auth0 apps create --name integration-test-m2mapp3 --type m2m --description M2mApp3 --callbacks https://example.com
+    command: auth0 apps create --name integration-test-app-m2mapp3 --type m2m --description M2mApp3 --callbacks https://example.com
     stdout:
       contains:
         - CALLBACKS            https://example.com
     exit-code: 0
 
   apps create type regular callbacks list:
-    command: auth0 apps create --name integration-test-regapp4 --type regular --description RegApp4 --callbacks https://example.com,https://google.com --format json
+    command: auth0 apps create --name integration-test-app-regapp4 --type regular --description RegApp4 --callbacks https://example.com,https://google.com --format json
     stdout:
       json:
         callbacks: "[https://example.com https://google.com]"
@@ -109,33 +109,33 @@ tests:
   
   # Test 'apps create' --grants flag
   apps create type regular grants:
-    command: auth0 apps create --name integration-test-regapp5 --type regular --description RegApp4 --grants credentials,password
+    command: auth0 apps create --name integration-test-app-regapp5 --type regular --description RegApp4 --grants credentials,password
     stdout:
       contains:
         - GRANTS               client_credentials, password
     exit-code: 0
 
   apps create type spa grants:
-    command: auth0 apps create --name integration-test-spaapp3 --type spa --description SpaApp3 --grants refresh-token --format json
+    command: auth0 apps create --name integration-test-app-spaapp3 --type spa --description SpaApp3 --grants refresh-token --format json
     stdout:
       json:
         grant_types: "[refresh_token]"
     exit-code: 0
 
   apps create type native grants:
-    command: auth0 apps create --name integration-test-nativeapp2 --type native --description NativeApp2 --grants refresh-token,code  --format json
+    command: auth0 apps create --name integration-test-app-nativeapp2 --type native --description NativeApp2 --grants refresh-token,code  --format json
     stdout:
       json:
         grant_types: "[refresh_token authorization_code]"
     exit-code: 0
 
   apps create type m2m grants fails:
-    command: auth0 apps create --name integration-test-m2mapp4 --type m2m --description M2mApp4 --grants credentials,device-code
+    command: auth0 apps create --name integration-test-app-m2mapp4 --type m2m --description M2mApp4 --grants credentials,device-code
     exit-code: 1
 
   # Test 'apps create' --logout-urls flag
   apps create type regular logout urls:
-    command: auth0 apps create --name integration-test-regapp6 --type native --description RegularApp --logout-urls https://*.example.com/logout,https://example.com/logout --format json
+    command: auth0 apps create --name integration-test-app-regapp6 --type native --description RegularApp --logout-urls https://*.example.com/logout,https://example.com/logout --format json
     stdout:
       json:
         allowed_logout_urls: "[https://*.example.com/logout https://example.com/logout]"
@@ -143,7 +143,7 @@ tests:
 
   # Test 'apps create' --origins flag
   apps create type regular origins:
-    command: auth0 apps create --name integration-test-regapp7 --type native --description RegularApp --origins https://*.example.com,https://example.com  --format json
+    command: auth0 apps create --name integration-test-app-regapp7 --type native --description RegularApp --origins https://*.example.com,https://example.com  --format json
     stdout:
       json:
         allowed_origins: "[https://*.example.com https://example.com]"
@@ -151,103 +151,226 @@ tests:
 
   # Test 'apps create' --web-origins flag
   apps create type native web origins:
-    command: auth0 apps create --name integration-test-spaapp4 --type native --description SpaApp4 --web-origins https://example.com  --format json
+    command: auth0 apps create --name integration-test-app-spaapp4 --type native --description SpaApp4 --web-origins https://example.com  --format json
     stdout:
       json:
         web_origins: "[https://example.com]"
     exit-code: 0
 
   # Test 'apps show'
-  apps create test app: # create an app and capture a client id
-    command: ./integration/get-client-id.sh
+  apps create test app: # create an app and capture its client id
+    command: ./integration/get-app-id.sh
     exit-code: 0
 
   apps show json:
-    command: auth0 apps show $(cat ./integration/client-id) --format json # depends on "apps create test app" test
+    command: auth0 apps show $(cat ./integration/identifiers/app-id) --format json # depends on "apps create test app" test
     stdout:
       json:
-        name: integration-test-newapp
+        name: integration-test-app-newapp
         description: NewApp
         app_type: native
     exit-code: 0
 
   apps show:
-    command: auth0 apps show $(cat ./integration/client-id) # depends on "apps create test app" test
+    command: auth0 apps show $(cat ./integration/identifiers/app-id) # depends on "apps create test app" test
     stdout:
       contains:
-        - NAME                 integration-test-newapp
+        - NAME                 integration-test-app-newapp
         - DESCRIPTION          NewApp
         - TYPE                 Native
     exit-code: 0
 
   # Test 'apps update'; all tests depend on "apps create test app" test
   apps update auth method:
-    command: auth0 apps update $(cat ./integration/client-id) --auth-method Basic --format json
+    command: auth0 apps update $(cat ./integration/identifiers/app-id) --auth-method Basic --format json
     stdout:
       json:
         token_endpoint_auth_method: client_secret_basic
     exit-code: 0
 
   apps update callbacks:
-    command: auth0 apps update $(cat ./integration/client-id) --callbacks https://example.com --format json
+    command: auth0 apps update $(cat ./integration/identifiers/app-id) --callbacks https://example.com --format json
     stdout:
       json:
         callbacks: "[https://example.com]"
     exit-code: 0
   
   apps update description:
-    command: auth0 apps update $(cat ./integration/client-id) --description "A better description" --format json
+    command: auth0 apps update $(cat ./integration/identifiers/app-id) --description "A better description" --format json
     stdout:
       json:
         description: A better description
     exit-code: 0
 
   apps update grants:
-    command: auth0 apps update $(cat ./integration/client-id) --grants code --format json
+    command: auth0 apps update $(cat ./integration/identifiers/app-id) --grants code --format json
     stdout:
       json:
         grant_types: "[authorization_code]"
     exit-code: 0
 
   apps update logout urls:
-    command: auth0 apps update $(cat ./integration/client-id) --logout-urls https://example.com --format json
+    command: auth0 apps update $(cat ./integration/identifiers/app-id) --logout-urls https://example.com --format json
     stdout:
       json:
         allowed_logout_urls: "[https://example.com]"
     exit-code: 0
 
   apps update name:
-    command: auth0 apps update $(cat ./integration/client-id) --name integration-test-betterAppName --format json
+    command: auth0 apps update $(cat ./integration/identifiers/app-id) --name integration-test-app-betterAppName --format json
     stdout:
       json:
-        name: integration-test-betterAppName
+        name: integration-test-app-betterAppName
     exit-code: 0
 
   apps update origins:
-    command: auth0 apps update $(cat ./integration/client-id) --origins https://example.com --format json
+    command: auth0 apps update $(cat ./integration/identifiers/app-id) --origins https://example.com --format json
     stdout:
       json:
         allowed_origins: "[https://example.com]"
     exit-code: 0
 
   apps update type:
-    command: auth0 apps update $(cat ./integration/client-id) --type spa --format json
+    command: auth0 apps update $(cat ./integration/identifiers/app-id) --type spa --format json
     stdout:
       json:
         app_type: spa
     exit-code: 0
 
   apps update web origins:
-    command: auth0 apps update $(cat ./integration/client-id) --web-origins https://example.com --format json
+    command: auth0 apps update $(cat ./integration/identifiers/app-id) --web-origins https://example.com --format json
     stdout:
       json:
         web_origins: "[https://example.com]"
     exit-code: 0
 
   apps update multiple updates:
-    command: auth0 apps update $(cat ./integration/client-id) --web-origins https://examples.com --type native --format json
+    command: auth0 apps update $(cat ./integration/identifiers/app-id) --web-origins https://examples.com --type native --format json
     stdout:
       json:
         app_type: native
         web_origins: "[https://examples.com]"
+    exit-code: 0
+
+  # Test 'apis create'
+  apis create and check data:
+    command: auth0 apis create --name integration-test-api-def1 --identifier http://integration-test-api-def1 --scopes read:todos,write:todos --format json
+    exit-code: 0
+    stdout:
+      json:
+        name: integration-test-api-def1
+        identifier: http://integration-test-api-def1
+        scopes: "[map[value:read:todos] map[value:write:todos]]"
+        token_lifetime: "86400"
+        allow_offline_access: "false"
+
+  apis create and check output:
+    command: auth0 apis create --name integration-test-api-def2 --identifier http://integration-test-api-def2 --scopes read:todos,write:todos
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME                  integration-test-api-def2
+        - IDENTIFIER            http://integration-test-api-def2
+        - SCOPES                read:todos write:todos
+        - TOKEN LIFETIME        86400
+        - ALLOW OFFLINE ACCESS  false
+
+  # Test 'apis create' --token-lifetime flag
+  apis create token lifetime 1000 and check data:
+    command: auth0 apis create --name integration-test-api-toklif1 --identifier http://integration-test-api-toklif1 --scopes read:todos --token-lifetime 1000 --format json
+    exit-code: 0
+    stdout:
+      json:
+        token_lifetime: "1000"
+
+  apis create token lifetime 1000 and check output:
+    command: auth0 apis create --name integration-test-api-toklif2 --identifier http://integration-test-api-toklif2 --scopes read:todos --token-lifetime 1000
+    exit-code: 0
+    stdout:
+      contains:
+        - TOKEN LIFETIME        1000
+
+  # Test 'apis create' --offline-access flag
+  apis create offline access true and check data:
+    command: auth0 apis create --name integration-test-api-offacc1 --identifier http://integration-test-api-offacc1 --scopes read:todos --offline-access --format json
+    exit-code: 0
+    stdout:
+      json:
+        allow_offline_access: "true"
+
+  apis create offline access true and check output:
+    command: auth0 apis create --name integration-test-api-offacc2 --identifier http://integration-test-api-offacc2 --scopes read:todos --offline-access
+    exit-code: 0
+    stdout:
+      contains:
+        - ALLOW OFFLINE ACCESS  true
+
+  apis create offline access false and check data:
+    command: auth0 apis create --name integration-test-api-offacc3 --identifier http://integration-test-api-offacc3 --scopes read:todos --offline-access=false --format json
+    exit-code: 0
+    stdout:
+      json:
+        allow_offline_access: "false"
+
+  # Test 'apps show'
+  apis create test api: # create an api and capture its id
+    command: ./integration/get-api-id.sh
+    exit-code: 0
+
+  apis show json:
+    command: auth0 apis show $(cat ./integration/identifiers/api-id) --format json # depends on "apps create test app" test
+    stdout:
+      json:
+        name: integration-test-api-newapi
+        identifier: http://integration-test-api-newapi
+        scopes: "[map[value:read:todos]]"
+        token_lifetime: "86400"
+        allow_offline_access: "false"
+    exit-code: 0
+
+  apis show:
+    command: auth0 apis show $(cat ./integration/identifiers/api-id) # depends on "apps create test app" test
+    stdout:
+      contains:
+        - NAME                  integration-test-api-newapi         
+        - IDENTIFIER            http://integration-test-api-newapi  
+        - SCOPES                read:todos                          
+        - TOKEN LIFETIME        86400                               
+        - ALLOW OFFLINE ACCESS  false
+    exit-code: 0
+
+  # Test 'apis update'; all tests depend on "apis create test api" test
+  apis update name:
+    command: auth0 apis update $(cat ./integration/identifiers/api-id) --name integration-test-api-betterApiName --format json
+    stdout:
+      json:
+        name: integration-test-api-betterApiName
+    exit-code: 0
+
+  apis update scopes:
+    command: auth0 apis update $(cat ./integration/identifiers/api-id) --scopes read:todos,write:todos --format json
+    stdout:
+      json:
+        scopes: "[map[value:read:todos] map[value:write:todos]]"
+    exit-code: 0
+
+  apis update token lifetime:
+    command: auth0 apis update $(cat ./integration/identifiers/api-id) --token-lifetime 1000 --format json
+    stdout:
+      json:
+        token_lifetime: "1000"
+    exit-code: 0
+
+  apis update offline access true:
+    command: auth0 apis update $(cat ./integration/identifiers/api-id) --offline-access --format json
+    stdout:
+      json:
+        allow_offline_access: "true"
+    exit-code: 0
+
+  apis update offline access false:
+    command: auth0 apis update $(cat ./integration/identifiers/api-id) --offline-access=false --format json
+    stdout:
+      json:
+        allow_offline_access: "false"
     exit-code: 0

@@ -185,8 +185,10 @@ auth0 apis create -n myapi -e 6100 --offline-access=true`,
 				return err
 			}
 
-			if err := apiScopes.AskMany(cmd, &inputs.Scopes, nil); err != nil {
-				return err
+			if !apiScopes.IsSet(cmd) {
+				if err := apiScopes.AskMany(cmd, &inputs.Scopes, nil); err != nil {
+					return err
+				}
 			}
 
 			if err := apiTokenLifetime.Ask(cmd, &inputs.TokenLifetime, auth0.String("86400")); err != nil {
@@ -223,7 +225,7 @@ auth0 apis create -n myapi -e 6100 --offline-access=true`,
 	apiIdentifier.RegisterString(cmd, &inputs.Identifier, "")
 	apiScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
 	apiOfflineAccess.RegisterBool(cmd, &inputs.AllowOfflineAccess, false)
-	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 0)
+	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 86400)
 
 	return cmd
 }
@@ -271,8 +273,10 @@ auth0 apis update -n myapi -e 6100 --offline-access=true`,
 				return err
 			}
 
-			if err := apiScopes.AskManyU(cmd, &inputs.Scopes, nil); err != nil {
-				return err
+			if !apiScopes.IsSet(cmd) {
+				if err := apiScopes.AskManyU(cmd, &inputs.Scopes, nil); err != nil {
+					return err
+				}
 			}
 
 			currentTokenLifetime := strconv.Itoa(auth0.IntValue(current.TokenLifetime))
