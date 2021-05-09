@@ -191,7 +191,8 @@ auth0 apis create -n myapi -e 6100 --offline-access=true`,
 				}
 			}
 
-			if err := apiTokenLifetime.Ask(cmd, &inputs.TokenLifetime, auth0.String("86400")); err != nil {
+			defaultTokenLifetime := strconv.Itoa(apiDefaultTokenLifetime())
+			if err := apiTokenLifetime.Ask(cmd, &inputs.TokenLifetime, &defaultTokenLifetime); err != nil {
 				return err
 			}
 
@@ -210,6 +211,13 @@ auth0 apis create -n myapi -e 6100 --offline-access=true`,
 				api.Scopes = apiScopesFor(inputs.Scopes)
 			}
 
+			// Set token lifetime
+			if inputs.TokenLifetime <= 0 {
+				api.TokenLifetime = auth0.Int(apiDefaultTokenLifetime())
+			} else {
+				api.TokenLifetime = auth0.Int(inputs.TokenLifetime)
+			}
+
 			if err := ansi.Waiting(func() error {
 				return cli.api.ResourceServer.Create(api)
 			}); err != nil {
@@ -224,8 +232,8 @@ auth0 apis create -n myapi -e 6100 --offline-access=true`,
 	apiName.RegisterString(cmd, &inputs.Name, "")
 	apiIdentifier.RegisterString(cmd, &inputs.Identifier, "")
 	apiScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
-	apiOfflineAccess.RegisterBool(cmd, &inputs.AllowOfflineAccess, false) // Needs default because it's not required
-	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 86400) // Needs default because it's not required
+	apiOfflineAccess.RegisterBool(cmd, &inputs.AllowOfflineAccess, false)
+	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 0)
 
 	return cmd
 }
@@ -482,6 +490,10 @@ func apiScopesFor(scopes []string) []*management.ResourceServerScope {
 	}
 
 	return models
+}
+
+func apiDefaultTokenLifetime() int {
+	return 86400
 }
 
 func (c *cli) apiPickerOptions() (pickerOptions, error) {
