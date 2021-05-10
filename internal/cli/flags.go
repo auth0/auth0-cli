@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
