@@ -1,7 +1,6 @@
 package prompt
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -94,14 +93,15 @@ func SelectInput(name string, message string, help string, options []string, def
 	return input
 }
 
-func Password(inputs string) (string, error) {
-	prompt := &survey.Password{
-		Message: "Password:",
+func Password(name string, message string, help string, defaultValue string, required bool) *survey.Question {
+	input := &survey.Question{
+		Name:   name,
+		Prompt: &survey.Password{Message: message},
 	}
 
-	if err := askOne(prompt, &inputs); err != nil {
-		fmt.Println(err)
+	if required {
+		input.Validate = survey.Required
 	}
 
-	return inputs, nil
+	return input
 }

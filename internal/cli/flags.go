@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
@@ -135,6 +134,14 @@ func (f *Flag) EditorPromptU(cmd *cobra.Command, value *string, initialValue, fi
 	return nil
 }
 
+func (f *Flag) AskPassword(cmd *cobra.Command, value *string, defaultValue *string) error {
+	return askPasswordFlag(cmd, f, value, defaultValue, false)
+}
+
+func (f *Flag) AskPasswordU(cmd *cobra.Command, value *string, defaultValue *string) error {
+	return askPasswordFlag(cmd, f, value, defaultValue, true)
+}
+
 func (f *Flag) RegisterString(cmd *cobra.Command, value *string, defaultValue string) {
 	registerString(cmd, f, value, defaultValue, false)
 }
@@ -200,6 +207,16 @@ func askBoolFlag(cmd *cobra.Command, f *Flag, value *bool, defaultValue *bool, i
 func selectFlag(cmd *cobra.Command, f *Flag, value interface{}, options []string, defaultValue *string, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
 		return _select(cmd, f, value, options, defaultValue, isUpdate)
+	}
+
+	return nil
+}
+
+func askPasswordFlag(cmd *cobra.Command, f *Flag, value *string, defaultValue *string, isUpdate bool) error {
+	if shouldAsk(cmd, f, isUpdate) {
+		if err := askPassword(cmd, f, value, defaultValue, isUpdate); err != nil {
+			return err
+		}
 	}
 
 	return nil

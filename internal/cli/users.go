@@ -174,8 +174,7 @@ auth0 users create -n "John Doe" --e john@example.com --connection "Username-Pas
 			}
 
 			////Prompt for user password
-			var err error
-			if inputs.Password, err = prompt.Password(inputs.Password); err != nil {
+			if err := userPassword.AskPassword(cmd, &inputs.Password, nil); err != nil {
 				return err
 			}
 
@@ -364,7 +363,7 @@ auth0 users update -n John Doe --email john.doe@gmail.com`,
 				return err
 			}
 
-			if err := userPassword.AskU(cmd, &inputs.Password, current.Password); err != nil {
+			if err := userPassword.AskPasswordU(cmd, &inputs.Password, current.Password); err != nil {
 				return err
 			}
 
