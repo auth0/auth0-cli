@@ -93,7 +93,7 @@ func SelectInput(name string, message string, help string, options []string, def
 	return input
 }
 
-func Password(name string, message string, help string, defaultValue string, required bool) *survey.Question {
+func Password(name string, message string, defaultValue string, required bool) *survey.Question {
 	input := &survey.Question{
 		Name:   name,
 		Prompt: &survey.Password{Message: message},

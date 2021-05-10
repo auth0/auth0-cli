@@ -38,7 +38,7 @@ func askBool(cmd *cobra.Command, i commandInput, value *bool, defaultValue *bool
 
 func askPassword(cmd *cobra.Command, i commandInput, value interface{}, defaultValue *string, isUpdate bool) error {
 	isRequired := !isUpdate && i.GetIsRequired()
-	input := prompt.Password("", i.GetLabel(), i.GetHelp(), auth0.StringValue(defaultValue), isRequired)
+	input := prompt.Password("", i.GetLabel(), auth0.StringValue(defaultValue), isRequired)
 
 	if err := prompt.AskOne(input, value); err != nil {
 		return handleInputError(err)
