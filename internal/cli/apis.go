@@ -185,11 +185,14 @@ auth0 apis create -n myapi -e 6100 --offline-access=true`,
 				return err
 			}
 
-			if err := apiScopes.AskMany(cmd, &inputs.Scopes, nil); err != nil {
-				return err
+			if !apiScopes.IsSet(cmd) {
+				if err := apiScopes.AskMany(cmd, &inputs.Scopes, nil); err != nil {
+					return err
+				}
 			}
 
-			if err := apiTokenLifetime.Ask(cmd, &inputs.TokenLifetime, auth0.String("86400")); err != nil {
+			defaultTokenLifetime := strconv.Itoa(apiDefaultTokenLifetime())
+			if err := apiTokenLifetime.Ask(cmd, &inputs.TokenLifetime, &defaultTokenLifetime); err != nil {
 				return err
 			}
 
@@ -206,6 +209,13 @@ auth0 apis create -n myapi -e 6100 --offline-access=true`,
 
 			if len(inputs.Scopes) > 0 {
 				api.Scopes = apiScopesFor(inputs.Scopes)
+			}
+
+			// Set token lifetime
+			if inputs.TokenLifetime <= 0 {
+				api.TokenLifetime = auth0.Int(apiDefaultTokenLifetime())
+			} else {
+				api.TokenLifetime = auth0.Int(inputs.TokenLifetime)
 			}
 
 			if err := ansi.Waiting(func() error {
@@ -271,8 +281,10 @@ auth0 apis update -n myapi -e 6100 --offline-access=true`,
 				return err
 			}
 
-			if err := apiScopes.AskManyU(cmd, &inputs.Scopes, nil); err != nil {
-				return err
+			if !apiScopes.IsSet(cmd) {
+				if err := apiScopes.AskManyU(cmd, &inputs.Scopes, nil); err != nil {
+					return err
+				}
 			}
 
 			currentTokenLifetime := strconv.Itoa(auth0.IntValue(current.TokenLifetime))
@@ -478,6 +490,10 @@ func apiScopesFor(scopes []string) []*management.ResourceServerScope {
 	}
 
 	return models
+}
+
+func apiDefaultTokenLifetime() int {
+	return 86400
 }
 
 func (c *cli) apiPickerOptions() (pickerOptions, error) {
