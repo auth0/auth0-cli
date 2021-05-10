@@ -46,7 +46,7 @@ var (
 	qsBuf             []byte
 	quickstartsByType = func() (qs map[string][]auth0.Quickstart) {
 		if err := json.Unmarshal(qsBuf, &qs); err != nil {
-			panic(err)
+			panic(auth0.Error(err, "failed to unmarshal data/quickstarts.json"))
 		}
 		return
 	}()
