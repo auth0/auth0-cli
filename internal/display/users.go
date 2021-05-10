@@ -18,14 +18,6 @@ type userView struct {
 }
 
 func (v *userView) AsTableHeader() []string {
-	if v.RequireUsername {
-		return []string{
-			"UserID",
-			"Email",
-			"Connection",
-			"Username",
-		}
-	}
 	return []string{
 		"UserID",
 		"Email",
@@ -34,14 +26,6 @@ func (v *userView) AsTableHeader() []string {
 }
 
 func (v *userView) AsTableRow() []string {
-	if v.RequireUsername {
-		return []string{
-			ansi.Faint(v.UserID),
-			v.Email,
-			v.Connection,
-			v.Username,
-		}
-	}
 	return []string{
 		ansi.Faint(v.UserID),
 		v.Email,
@@ -52,14 +36,14 @@ func (v *userView) AsTableRow() []string {
 func (v *userView) KeyValues() [][]string {
 	if v.RequireUsername {
 		return [][]string{
-			[]string{"USERID", ansi.Faint(v.UserID)},
+			[]string{"ID", ansi.Faint(v.UserID)},
 			[]string{"EMAIL", v.Email},
 			[]string{"CONNECTION", v.Connection},
 			[]string{"USERNAME", v.Username},
 		}
 	}
 	return [][]string{
-		[]string{"USERID", ansi.Faint(v.UserID)},
+		[]string{"ID", ansi.Faint(v.UserID)},
 		[]string{"EMAIL", v.Email},
 		[]string{"CONNECTION", v.Connection},
 	}

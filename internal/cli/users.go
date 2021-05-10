@@ -327,7 +327,7 @@ func updateUserCmd(cli *cli) *cobra.Command {
 		Example: `auth0 users update 
 auth0 users update <id> 
 auth0 users update <id> --name John Doe
-auth0 users update -n John Doe --email john.doe@gmail.com`,
+auth0 users update -n John Doe --email john.doe@example.com`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.ID); err != nil {
