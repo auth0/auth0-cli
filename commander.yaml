@@ -318,7 +318,7 @@ tests:
     exit-code: 0
 
   apis show json:
-    command: auth0 apis show $(cat ./integration/identifiers/api-id) --format json # depends on "apps create test app" test
+    command: auth0 apis show $(cat ./integration/identifiers/api-id) --format json # depends on "apis create test app" test
     stdout:
       json:
         name: integration-test-api-newapi
@@ -329,7 +329,7 @@ tests:
     exit-code: 0
 
   apis show:
-    command: auth0 apis show $(cat ./integration/identifiers/api-id) # depends on "apps create test app" test
+    command: auth0 apis show $(cat ./integration/identifiers/api-id) # depends on "apis create test app" test
     stdout:
       contains:
         - NAME                  integration-test-api-newapi         
