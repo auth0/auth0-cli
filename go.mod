@@ -26,6 +26,7 @@ require (
 	github.com/mholt/archiver/v3 v3.5.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pierrec/lz4/v4 v4.1.3 // indirect
+	github.com/pkg/errors v0.9.1
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
