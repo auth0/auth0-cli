@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 )
@@ -209,7 +210,7 @@ func registerString(cmd *cobra.Command, f *Flag, value *string, defaultValue str
 	cmd.Flags().StringVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
 
 	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
-		panic(unexpectedError(err)) // TODO: Handle
+		panic(auth0.Error(err, "failed to register string flag"))
 	}
 }
 
@@ -217,7 +218,7 @@ func registerStringSlice(cmd *cobra.Command, f *Flag, value *[]string, defaultVa
 	cmd.Flags().StringSliceVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
 
 	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
-		panic(unexpectedError(err)) // TODO: Handle
+		panic(auth0.Error(err, "failed to register string slice flag"))
 	}
 }
 
@@ -225,7 +226,7 @@ func registerInt(cmd *cobra.Command, f *Flag, value *int, defaultValue int, isUp
 	cmd.Flags().IntVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
 
 	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
-		panic(unexpectedError(err)) // TODO: Handle
+		panic(auth0.Error(err, "failed to register int flag"))
 	}
 }
 
@@ -233,7 +234,7 @@ func registerBool(cmd *cobra.Command, f *Flag, value *bool, defaultValue bool, i
 	cmd.Flags().BoolVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
 
 	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
-		panic(unexpectedError(err)) // TODO: Handle
+		panic(auth0.Error(err, "failed to register bool flag"))
 	}
 }
 
