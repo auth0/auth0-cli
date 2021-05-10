@@ -253,7 +253,7 @@ auth0 users show <id>`,
 				return fmt.Errorf("Unable to load user. The Id %v specified doesn't exist", inputs.ID)
 			}
 
-			// get current connection
+			// get the current connection
 			conn := stringSliceToCommaSeparatedString(cli.getUserConnection(a))
 			a.Connection = auth0.String(conn)
 
