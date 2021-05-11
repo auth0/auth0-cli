@@ -186,7 +186,6 @@ auth0 users create -n "John Doe" --e john@example.com --connection "Username-Pas
 
 			// Prompt for username if the requireUsername is set to true
 			// Load values including the username's field into a fresh users instance
-			// Else block loads values without username for connections with requireUsername set to false
 			a := &management.User{
 				Connection: &inputs.Connection,
 				Email:      &inputs.Email,
