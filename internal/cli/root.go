@@ -31,8 +31,10 @@ func Execute() {
 		Short:         "Supercharge your development workflow.",
 		Long:          "Supercharge your development workflow.\n" + getLogin(cli),
 		Version:       buildinfo.GetVersionWithCommit(),
-
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			ansi.DisableColors = cli.noColor
+			prepareInteractivity(cmd)
+
 			// If the user is trying to login, no need to go
 			// through setup.
 			if cmd.Use == "login" && cmd.Parent().Use == "auth0" {
@@ -59,10 +61,6 @@ func Execute() {
 			if cmd.CalledAs() == "help" && cmd.Parent().Use == "auth0" {
 				return nil
 			}
-
-			ansi.DisableColors = cli.noColor
-
-			prepareInteractivity(cmd)
 
 			// Initialize everything once. Later callers can then
 			// freely assume that config is fully primed and ready
