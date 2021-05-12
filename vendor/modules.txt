@@ -346,7 +346,7 @@ google.golang.org/protobuf/reflect/protoreflect
 google.golang.org/protobuf/reflect/protoregistry
 google.golang.org/protobuf/runtime/protoiface
 google.golang.org/protobuf/runtime/protoimpl
-# gopkg.in/auth0.v5 v5.11.0 => github.com/go-auth0/auth0 v1.3.1-0.20210128024326-898cafab69ba
+# gopkg.in/auth0.v5 v5.17.0 => github.com/go-auth0/auth0 v1.3.1-0.20210128024326-898cafab69ba
 ## explicit
 gopkg.in/auth0.v5
 gopkg.in/auth0.v5/internal/client
