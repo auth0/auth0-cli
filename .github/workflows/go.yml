@@ -1,9 +1,8 @@
 name: Go
 on: [push, pull_request]
 jobs:
-
-  lint:
-    name: Lint
+  unit:
+    name: Unit Test
     runs-on: ubuntu-latest
     # We want to run on external PRs, but not on our own internal PRs as they'll be run
     # by the push to the branch.
@@ -24,21 +23,6 @@ jobs:
 
     - name: lint
       run: PATH=$(go env GOPATH)/bin:$PATH make lint
-
-  unit:
-    name: Unit Test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-
-    steps:
-    - name: Set up Go 1.16
-      uses: actions/setup-go@v1
-      with:
-        go-version: 1.16
-      id: go
-
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v2
 
     - name: run unit tests
       run: PATH=$(go env GOPATH)/bin:$PATH make test
