@@ -77,7 +77,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) (tenant, error) {
 		cli.renderer.Warnf("Could not store the refresh token locally, please expect to login again once your access token expired. See https://github.com/auth0/auth0-cli/blob/main/KNOWN-ISSUES.md.")
 	}
 
-	err = cli.addTenant(tenant{
+	t := tenant{
 		Name:        res.Tenant,
 		Domain:      res.Domain,
 		AccessToken: res.AccessToken,
@@ -85,7 +85,8 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) (tenant, error) {
 			time.Duration(res.ExpiresIn) * time.Second,
 		),
 		Scopes: auth.RequiredScopes(),
-	})
+	}
+	err = cli.addTenant(t)
 	if err != nil {
 		return tenant{}, fmt.Errorf("Unexpected error adding tenant to config: %w", err)
 	}
@@ -101,5 +102,5 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) (tenant, error) {
 		}
 	}
 
-	return tenant{}, nil
+	return t, nil
 }
