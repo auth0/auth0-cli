@@ -36,6 +36,17 @@ func askBool(cmd *cobra.Command, i commandInput, value *bool, defaultValue *bool
 	return nil
 }
 
+func askPassword(cmd *cobra.Command, i commandInput, value interface{}, defaultValue *string, isUpdate bool) error {
+	isRequired := !isUpdate && i.GetIsRequired()
+	input := prompt.Password("", i.GetLabel(), auth0.StringValue(defaultValue), isRequired)
+
+	if err := prompt.AskOne(input, value); err != nil {
+		return handleInputError(err)
+	}
+
+	return nil
+}
+
 func _select(cmd *cobra.Command, i commandInput, value interface{}, options []string, defaultValue *string, isUpdate bool) error {
 	isRequired := !isUpdate && i.GetIsRequired()
 

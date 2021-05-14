@@ -20,6 +20,7 @@ type API struct {
 	Rule            RuleAPI
 	Tenant          TenantAPI
 	User            UserAPI
+	Connection      ConnectionAPI
 }
 
 func NewAPI(m *management.Management) *API {
@@ -36,6 +37,7 @@ func NewAPI(m *management.Management) *API {
 		Rule:            m.Rule,
 		Tenant:          m.Tenant,
 		User:            m.User,
+		Connection:      m.Connection,
 	}
 }
 
