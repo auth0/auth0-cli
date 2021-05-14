@@ -142,13 +142,15 @@ func main() {
 				return err
 			}
 
+			// integration test client doesn't have openid or offline_access scopes granted
+			scopesForTest := requiredScopes[2:]
 			c := &clientcredentials.Config{
 				ClientID:     p.clientID,
 				ClientSecret: p.clientSecret,
 				TokenURL:     u.String() + "/oauth/token",
 				EndpointParams: url.Values{
 					"client_id": {p.clientID},
-					"scope":     {strings.Join(requiredScopes, " ")},
+					"scope":     {strings.Join(scopesForTest, " ")},
 					"audience":  {u.String() + "/api/v2/"},
 				},
 			}
