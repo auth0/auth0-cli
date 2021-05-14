@@ -20,7 +20,8 @@ func loginCmd(cli *cli) *cobra.Command {
 		Long:  "Sign in to your Auth0 account and authorize the CLI to access the Management API.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			return RunLogin(ctx, cli, false)
+			_, err := RunLogin(ctx, cli, false)
+			return err
 		},
 	}
 
@@ -31,7 +32,7 @@ func loginCmd(cli *cli) *cobra.Command {
 // by showing the login instructions, opening the browser.
 // Use `expired` to run the login from other commands setup:
 // this will only affect the messages.
-func RunLogin(ctx context.Context, cli *cli, expired bool) error {
+func RunLogin(ctx context.Context, cli *cli, expired bool) (tenant, error) {
 	if expired {
 		cli.renderer.Warnf("Please sign in to re-authorize the CLI.")
 	} else {
@@ -42,7 +43,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 	a := &auth.Authenticator{}
 	state, err := a.Start(ctx)
 	if err != nil {
-		return fmt.Errorf("could not start the authentication process: %w.", err)
+		return tenant{}, fmt.Errorf("could not start the authentication process: %w.", err)
 	}
 
 	fmt.Printf("Your Device Confirmation code is: %s\n\n", ansi.Bold(state.UserCode))
@@ -61,7 +62,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("login error: %w", err)
+		return tenant{}, fmt.Errorf("login error: %w", err)
 	}
 
 	fmt.Print("\n")
@@ -76,7 +77,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 		cli.renderer.Warnf("Could not store the refresh token locally, please expect to login again once your access token expired. See https://github.com/auth0/auth0-cli/blob/main/KNOWN-ISSUES.md.")
 	}
 
-	err = cli.addTenant(tenant{
+	t := tenant{
 		Name:        res.Tenant,
 		Domain:      res.Domain,
 		AccessToken: res.AccessToken,
@@ -84,21 +85,22 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) error {
 			time.Duration(res.ExpiresIn) * time.Second,
 		),
 		Scopes: auth.RequiredScopes(),
-	})
+	}
+	err = cli.addTenant(t)
 	if err != nil {
-		return fmt.Errorf("Unexpected error adding tenant to config: %w", err)
+		return tenant{}, fmt.Errorf("Unexpected error adding tenant to config: %w", err)
 	}
 
 	if cli.config.DefaultTenant != res.Domain {
 		promptText := fmt.Sprintf("Your default tenant is %s. Do you want to change it to %s?", cli.config.DefaultTenant, res.Domain)
 		if confirmed := prompt.Confirm(promptText); !confirmed {
-			return nil
+			return tenant{}, nil
 		}
 		cli.config.DefaultTenant = res.Domain
 		if err := cli.persistConfig(); err != nil {
-			return fmt.Errorf("An error occurred while setting the default tenant: %w", err)
+			return tenant{}, fmt.Errorf("An error occurred while setting the default tenant: %w", err)
 		}
 	}
 
-	return nil
+	return t, nil
 }
