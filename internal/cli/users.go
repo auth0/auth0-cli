@@ -400,7 +400,7 @@ auth0 users update -n John Doe --email john.doe@example.com`,
 				return fmt.Errorf("An unexpected error occurred while trying to update an user with Id '%s': %w", inputs.ID, err)
 			}
 
-			con := cli.getConnReqUsername(auth0.StringValue(&inputs.Connection))
+			con := cli.getConnReqUsername(auth0.StringValue(user.Connection))
 			requireUsername := auth0.BoolValue(con)
 
 			cli.renderer.UserUpdate(user, requireUsername)
