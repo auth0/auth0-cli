@@ -70,9 +70,8 @@ var errUnauthenticated = errors.New("Not logged in. Try 'auth0 login'.")
 //
 type cli struct {
 	// core primitives exposed to command builders.
-	api          *auth0.API
-	renderer     *display.Renderer
-	activeTenant *tenant
+	api      *auth0.API
+	renderer *display.Renderer
 	// set of flags which are user specified.
 	debug   bool
 	tenant  string
