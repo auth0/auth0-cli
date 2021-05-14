@@ -31,7 +31,7 @@ jobs:
     name: Integration Test
     runs-on: ubuntu-latest
     # skip running this action if the PR is coming from a fork:
-    if: github.event_name == 'push' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event.pull_request.head.repo.full_name == github.repository
 
     steps:
     - name: Set up Go 1.16
