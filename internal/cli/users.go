@@ -351,10 +351,6 @@ auth0 users update -n John Doe --email john.doe@example.com`,
 			conn := stringSliceToCommaSeparatedString(cli.getUserConnection(current))
 			current.Connection = auth0.String(conn)
 
-			if err := userConnection.AskU(cmd, &inputs.Connection, current.Connection); err != nil {
-				return err
-			}
-
 			if err := userName.AskU(cmd, &inputs.Name, current.Name); err != nil {
 				return err
 			}
