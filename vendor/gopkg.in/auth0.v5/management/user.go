@@ -37,6 +37,15 @@ type User struct {
 	// The user's nickname
 	Nickname *string `json:"nickname,omitempty"`
 
+	// The screen name, handle, or alias that this user identifies themselves with
+	ScreenName *string `json:"screen_name,omitempty"`
+
+	// The user-defined UTF-8 string describing their account
+	Description *string `json:"description,omitempty"`
+
+	// The user-defined location for this account’s profile
+	Location *string `json:"location,omitempty"`
+
 	// The user's password (mandatory for non SMS connections)
 	Password *string `json:"password,omitempty"`
 
@@ -84,6 +93,9 @@ type User struct {
 	// The user's picture url
 	Picture *string `json:"picture,omitempty"`
 
+	// A URL provided by the user in association with their profile
+	URL *string `json:"url,omitempty"`
+
 	// True if the user is blocked from the application, false if the user is enabled
 	Blocked *bool `json:"blocked,omitempty"`
 
@@ -98,7 +110,6 @@ type User struct {
 //
 // We have to use a custom one due to possible inconsistencies in value types.
 func (u *User) UnmarshalJSON(b []byte) error {
-
 	type user User
 	type userAlias struct {
 		*user
@@ -130,8 +141,8 @@ func (u *User) UnmarshalJSON(b []byte) error {
 
 	return nil
 }
-func (u *User) MarshalJSON() ([]byte, error) {
 
+func (u *User) MarshalJSON() ([]byte, error) {
 	type user User
 	type userAlias struct {
 		*user
@@ -161,12 +172,13 @@ type UserIdentityLink struct {
 }
 
 type UserIdentity struct {
-	Connection   *string `json:"connection,omitempty"`
-	UserID       *string `json:"-"`
-	Provider     *string `json:"provider,omitempty"`
-	IsSocial     *bool   `json:"isSocial,omitempty"`
-	AccessToken  *string `json:"access_token,omitempty"`
-	RefreshToken *string `json:"refresh_token,omitempty"`
+	Connection        *string `json:"connection,omitempty"`
+	UserID            *string `json:"-"`
+	Provider          *string `json:"provider,omitempty"`
+	IsSocial          *bool   `json:"isSocial,omitempty"`
+	AccessToken       *string `json:"access_token,omitempty"`
+	AccessTokenSecret *string `json:"access_token_secret,omitempty"`
+	RefreshToken      *string `json:"refresh_token,omitempty"`
 }
 
 // UnmarshalJSON is a custom deserializer for the UserIdentity type.
@@ -176,7 +188,6 @@ type UserIdentity struct {
 //
 // See https://community.auth0.com/t/users-user-id-returns-inconsistent-type-for-identities-user-id/39236
 func (i *UserIdentity) UnmarshalJSON(b []byte) error {
-
 	type userIdentity UserIdentity
 	type userIdentityAlias struct {
 		*userIdentity
@@ -207,7 +218,6 @@ func (i *UserIdentity) UnmarshalJSON(b []byte) error {
 }
 
 func (i *UserIdentity) MarshalJSON() ([]byte, error) {
-
 	type userIdentity UserIdentity
 	type userIdentityAlias struct {
 		*userIdentity
@@ -229,6 +239,32 @@ type userBlock struct {
 type UserBlock struct {
 	Identifier *string `json:"identifier,omitempty"`
 	IP         *string `json:"ip,omitempty"`
+}
+
+type UserRecoveryCode struct {
+	RecoveryCode *string `json:"recovery_code,omitempty"`
+}
+
+// UserEnrollment contains information about the Guardian enrollments for the user
+type UserEnrollment struct {
+	// Authentication method for this enrollment. Can be `authentication`, `guardian`, or `sms`.
+	AuthMethod *string `json:"auth_method,omitempty"`
+	// Start date and time of this enrollment.
+	EnrolledAt *time.Time `json:"enrolled_at,omitempty"`
+	// ID of this enrollment.
+	ID *string `json:"id,omitempty"`
+	// Device identifier (usually phone identifier) of this enrollment.
+	Identifier *string `json:"identifier,omitempty"`
+	// Last authentication date and time of this enrollment.
+	LastAuth *time.Time `json:"last_auth,omitempty"`
+	// Name of enrollment (usually phone number).
+	Name *string `json:"name,omitempty"`
+	// Phone number for this enrollment.
+	PhoneNumber *string `json:"phone_number,omitempty"`
+	// Status of this enrollment. Can be `pending` or `confirmed`.
+	Status *string `json:"status,omitempty"`
+	// Type of enrollment.
+	Type *string `json:"type,omitempty"`
 }
 
 // UserList is an envelope struct which is used when calling List() or Search()
@@ -393,7 +429,8 @@ func (m *UserManager) RemovePermissions(id string, permissions []*Permission, op
 	return m.Request("DELETE", m.URI("users", id, "permissions"), &p, opts...)
 }
 
-// Blocks retrieves a list of blocked IP addresses of a particular user.
+// Blocks retrieves a list of blocked IP addresses of a particular user using the
+// user ID.
 //
 // See: https://auth0.com/docs/api/management/v2#!/User_Blocks/get_user_blocks_by_id
 func (m *UserManager) Blocks(id string, opts ...RequestOption) ([]*UserBlock, error) {
@@ -402,14 +439,68 @@ func (m *UserManager) Blocks(id string, opts ...RequestOption) ([]*UserBlock, er
 	return b.BlockedFor, err
 }
 
+// Blocks retrieves a list of blocked IP addresses of a particular user using
+// any of the user identifiers: username, phone number or email.
+//
+// See: https://auth0.com/docs/api/management/v2#!/User_Blocks/get_user_blocks
+func (m *UserManager) BlocksByIdentifier(identifier string, opts ...RequestOption) ([]*UserBlock, error) {
+	b := new(userBlock)
+	opts = append(opts, Parameter("identifier", identifier))
+	err := m.Request("GET", m.URI("user-blocks"), &b, opts...)
+	return b.BlockedFor, err
+}
+
 // Unblock a user that was blocked due to an excessive amount of incorrectly
-// provided credentials.
+// provided credentials using the user ID.
 //
 // Note: This endpoint does not unblock users that were blocked by admins.
 //
 // See: https://auth0.com/docs/api/management/v2#!/User_Blocks/delete_user_blocks_by_id
 func (m *UserManager) Unblock(id string, opts ...RequestOption) error {
 	return m.Request("DELETE", m.URI("user-blocks", id), nil, opts...)
+}
+
+// Unblock a user that was blocked due to an excessive amount of incorrectly
+// provided credentials using any of the user identifiers: username, phone number or email.
+//
+// Note: This endpoint does not unblock users that were blocked by admins.
+//
+// See: https://auth0.com/docs/api/management/v2#!/User_Blocks/delete_user_blocks
+func (m *UserManager) UnblockByIdentifier(identifier string, opts ...RequestOption) error {
+	opts = append(opts, Parameter("identifier", identifier))
+	return m.Request("DELETE", m.URI("user-blocks"), nil, opts...)
+}
+
+// Enrollments retrieves all Guardian enrollments for a user.
+//
+// See: https://auth0.com/docs/api/management/v2#!/Users/get_enrollments
+func (m *UserManager) Enrollments(id string, opts ...RequestOption) (enrolls []*UserEnrollment, err error) {
+	err = m.Request("GET", m.URI("users", id, "enrollments"), &enrolls, opts...)
+	return
+}
+
+// RegenerateRecoveryCode removes the current multi-factor authentication recovery code and generate a new one.
+//
+// See: https://auth0.com/docs/api/management/v2#!/Users/post_recovery_code_regeneration
+func (m *UserManager) RegenerateRecoveryCode(id string, opts ...RequestOption) (*UserRecoveryCode, error) {
+	r := new(UserRecoveryCode)
+	err := m.Request("POST", m.URI("users", id, "recovery-code-regeneration"), &r, opts...)
+	return r, err
+}
+
+// InvalidateRememberBrowser invalidates all remembered browsers across all authentication factors for a user.
+//
+// See: https://auth0.com/docs/api/management/v2#!/Users/post_invalidate_remember_browser
+func (m *UserManager) InvalidateRememberBrowser(id string, opts ...RequestOption) error {
+	uri := m.URI(
+		"users",
+		id,
+		"multifactor",
+		"actions",
+		"invalidate-remember-browser",
+	)
+	err := m.Request("POST", uri, nil, opts...)
+	return err
 }
 
 // Link links two user accounts together forming a primary and secondary relationship.

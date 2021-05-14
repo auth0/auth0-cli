@@ -17,6 +17,11 @@ type Grant struct {
 	Scope []interface{} `json:"scope,omitempty"`
 }
 
+type GrantList struct {
+	List
+	Grants []*Grant `json:"grants"`
+}
+
 type GrantManager struct {
 	*Management
 }
@@ -28,8 +33,8 @@ func newGrantManager(m *Management) *GrantManager {
 // List the grants associated with your account.
 //
 // See: https://auth0.com/docs/api/management/v2#!/Grants/get_grants
-func (m *GrantManager) List(opts ...RequestOption) (g []*Grant, err error) {
-	err = m.Request("GET", m.URI("grants"), &g, opts...)
+func (m *GrantManager) List(opts ...RequestOption) (g *GrantList, err error) {
+	err = m.Request("GET", m.URI("grants"), &g, applyListDefaults(opts))
 	return
 }
 
