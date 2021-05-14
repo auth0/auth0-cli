@@ -75,13 +75,13 @@ func expectTable(t testing.TB, got string, header []string, data [][]string) {
 func TestIsLoggedIn(t *testing.T) {
 	tests := []struct {
 		defaultTenant string
-		tenants       map[string]tenant
+		tenants       map[string]Tenant
 		want          bool
 		desc          string
 	}{
-		{"", map[string]tenant{}, false, "no tenants"},
-		{"t0", map[string]tenant{}, false, "tenant is set but no tenants map"},
-		{"t0", map[string]tenant{"t0": tenant{}}, false, "tenants map set but invalid token"},
+		{"", map[string]Tenant{}, false, "no tenants"},
+		{"t0", map[string]Tenant{}, false, "tenant is set but no tenants map"},
+		{"t0", map[string]Tenant{"t0": Tenant{}}, false, "tenants map set but invalid token"},
 	}
 
 	for _, test := range tests {
@@ -94,7 +94,7 @@ func TestIsLoggedIn(t *testing.T) {
 
 			type Config struct {
 				DefaultTenant string            `json:"default_tenant"`
-				Tenants       map[string]tenant `json:"tenants"`
+				Tenants       map[string]Tenant `json:"tenants"`
 			}
 
 			b, err := json.Marshal(&Config{test.defaultTenant, test.tenants})

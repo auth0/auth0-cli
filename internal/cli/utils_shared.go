@@ -55,7 +55,7 @@ func BuildOauthTokenParams(clientID, clientSecret, audience string) url.Values {
 }
 
 // runClientCredentialsFlow runs an M2M client credentials flow without opening a browser
-func runClientCredentialsFlow(cli *cli, c *management.Client, clientID string, audience string, tenant tenant) (*authutil.TokenResponse, error) {
+func runClientCredentialsFlow(cli *cli, c *management.Client, clientID string, audience string, tenant Tenant) (*authutil.TokenResponse, error) {
 
 	var tokenResponse *authutil.TokenResponse
 
@@ -108,7 +108,7 @@ func runLoginFlowPreflightChecks(cli *cli, c *management.Client) (abort bool) {
 
 // runLoginFlow initiates a full user-facing login flow, waits for a response
 // and returns the retrieved tokens to the caller when done.
-func runLoginFlow(cli *cli, t tenant, c *management.Client, connName, audience, prompt string, scopes []string, customDomain string) (*authutil.TokenResponse, error) {
+func runLoginFlow(cli *cli, t Tenant, c *management.Client, connName, audience, prompt string, scopes []string, customDomain string) (*authutil.TokenResponse, error) {
 	var tokenResponse *authutil.TokenResponse
 
 	err := ansi.Spinner("Waiting for login flow to complete", func() error {
@@ -291,7 +291,7 @@ func openManageURL(cli *cli, tenant string, path string) {
 	}
 }
 
-func formatManageTenantURL(tenant string, cfg config) string {
+func formatManageTenantURL(tenant string, cfg Config) string {
 	if len(tenant) == 0 {
 		return ""
 	}

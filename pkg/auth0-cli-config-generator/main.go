@@ -12,8 +12,9 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
+	"github.com/auth0/auth0-cli/internal/auth"
+	"github.com/auth0/auth0-cli/internal/cli"
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -27,17 +28,7 @@ type params struct {
 	clientSecret string
 }
 
-var requiredScopes = []string{
-	//	"openid",
-	//	"offline_access", // <-- to get a refresh token.
-	"create:clients", "delete:clients", "read:clients", "update:clients",
-	"create:resource_servers", "delete:resource_servers", "read:resource_servers", "update:resource_servers",
-	"create:rules", "delete:rules", "read:rules", "update:rules",
-	"read:client_keys", "read:logs", "read:connections", "update:connections",
-	"create:users", "delete:users", "read:users", "update:users",
-	"read:branding", "update:branding",
-	"read:client_keys", "read:logs", "read:tenant_settings", "read:custom_domains",
-}
+var requiredScopes = auth.RequiredScopes()
 
 func (p params) validate() error {
 	if p.clientDomain == "" {
@@ -63,21 +54,8 @@ func (p params) validate() error {
 	return nil
 }
 
-type config struct {
-	DefaultTenant string            `json:"default_tenant"`
-	Tenants       map[string]tenant `json:"tenants"`
-}
-
-type tenant struct {
-	Name        string    `json:"name"`
-	Domain      string    `json:"domain"`
-	AccessToken string    `json:"access_token,omitempty"`
-	ExpiresAt   time.Time `json:"expires_at"`
-	Scopes      []string  `json:"scopes,omitempty"`
-}
-
 func isLoggedIn(filePath string) bool {
-	var c config
+	var c cli.Config
 	var buf []byte
 	var err error
 	if buf, err = os.ReadFile(filePath); err != nil {
@@ -108,7 +86,7 @@ func isLoggedIn(filePath string) bool {
 	return true
 }
 
-func persistConfig(filePath string, c config, overwrite bool) error {
+func persistConfig(filePath string, c cli.Config, overwrite bool) error {
 	dir := filepath.Dir(filePath)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		if err := os.MkdirAll(dir, 0700); err != nil {
@@ -180,17 +158,17 @@ func main() {
 				return err
 			}
 
-			t := tenant{
+			t := cli.Tenant{
 				Name:        p.clientDomain,
 				Domain:      p.clientDomain,
 				AccessToken: token.AccessToken,
 				ExpiresAt:   token.Expiry,
-				Scopes:      append([]string{"openid", "offline_access"}, requiredScopes...),
+				Scopes:      requiredScopes,
 			}
 
-			cfg := config{
+			cfg := cli.Config{
 				DefaultTenant: p.clientDomain,
-				Tenants:       map[string]tenant{p.clientDomain: t},
+				Tenants:       map[string]cli.Tenant{p.clientDomain: t},
 			}
 			if err := persistConfig(p.filePath, cfg, overwrite); err != nil {
 				return err
