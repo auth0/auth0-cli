@@ -111,12 +111,6 @@ var (
 		Help:       "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.",
 		IsRequired: false,
 	}
-	clientExcludedList = []string{
-		// woraround for issue when ocassionally
-		// (probably legacy apps) arrive at the SDK
-		// with a `lifetime_in_seconds` value as string instead of int:
-		"jwt_configuration.lifetime_in_seconds",
-	}
 )
 
 func appsCmd(cli *cli) *cobra.Command {
@@ -199,7 +193,7 @@ auth0 apps ls`,
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				list, err = cli.api.Client.List(management.ExcludeFields(clientExcludedList...))
+				list, err = cli.api.Client.List()
 				return err
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
@@ -239,7 +233,7 @@ auth0 apps show <id>`,
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				a, err = cli.api.Client.Read(inputs.ID, management.ExcludeFields(clientExcludedList...))
+				a, err = cli.api.Client.Read(inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
@@ -283,7 +277,7 @@ auth0 apps delete <id>`,
 			}
 
 			return ansi.Spinner("Deleting Application", func() error {
-				_, err := cli.api.Client.Read(inputs.ID, management.ExcludeFields(clientExcludedList...))
+				_, err := cli.api.Client.Read(inputs.ID)
 
 				if err != nil {
 					return fmt.Errorf("Unable to delete application. The specified Id: %v doesn't exist", inputs.ID)
@@ -482,7 +476,7 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 			// Load app by id
 			if err := ansi.Waiting(func() error {
 				var err error
-				current, err = cli.api.Client.Read(inputs.ID, management.ExcludeFields(clientExcludedList...))
+				current, err = cli.api.Client.Read(inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
@@ -821,7 +815,7 @@ func interfaceToStringSlice(s []interface{}) []string {
 }
 
 func (c *cli) appPickerOptions() (pickerOptions, error) {
-	list, err := c.api.Client.List(management.ExcludeFields(clientExcludedList...))
+	list, err := c.api.Client.List()
 	if err != nil {
 		return nil, err
 	}
