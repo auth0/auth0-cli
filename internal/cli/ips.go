@@ -41,7 +41,9 @@ func checkIPCmd(cli *cli) *cobra.Command {
 		Example: "auth0 ips check <ip>",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				ipAddress.Ask(cmd, &inputs.IP)
+				if err := ipAddress.Ask(cmd, &inputs.IP); err != nil {
+					return err
+				}
 			} else {
 				inputs.IP = args[0]
 			}
@@ -84,7 +86,9 @@ func unblockIPCmd(cli *cli) *cobra.Command {
 		Example: "auth0 ips unblock <ip>",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				ipAddress.Ask(cmd, &inputs.IP)
+				if err := ipAddress.Ask(cmd, &inputs.IP); err != nil {
+					return err
+				}
 			} else {
 				inputs.IP = args[0]
 			}
