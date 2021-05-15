@@ -30,6 +30,7 @@ func TestRequiredScopes(t *testing.T) {
 			"read:connections", "update:connections",
 			"read:custom_domains",
 			"read:client_keys", "read:logs", "read:tenant_settings",
+			"read:anomaly_blocks", "delete:anomaly_blocks",
 		}
 
 		for _, v := range list {
