@@ -27,8 +27,6 @@ var _ View = &logView{}
 type logView struct {
 	silent bool
 	*management.Log
-
-	ActionExecutionAPI auth0.ActionExecutionAPI
 }
 
 func (v *logView) AsTableHeader() []string {
@@ -142,7 +140,7 @@ func (v *logView) typeDesc() (typ, desc string) {
 	return typ, desc
 }
 
-func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, api auth0.ActionExecutionAPI, silent bool) {
+func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, silent bool) {
 	resource := "logs"
 
 	r.Heading(resource)
@@ -155,7 +153,7 @@ func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, 
 
 	var res []View
 	for _, l := range logs {
-		res = append(res, &logView{Log: l, ActionExecutionAPI: api, silent: silent})
+		res = append(res, &logView{Log: l, silent: silent})
 	}
 
 	var viewChan chan View
@@ -168,7 +166,7 @@ func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, 
 
 			for list := range ch {
 				for _, l := range list {
-					viewChan <- &logView{Log: l, ActionExecutionAPI: api, silent: silent}
+					viewChan <- &logView{Log: l, silent: silent}
 				}
 			}
 		}()

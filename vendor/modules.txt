@@ -181,7 +181,7 @@ github.com/mgutz/ansi
 github.com/mholt/archiver/v3
 # github.com/microcosm-cc/bluemonday v1.0.2
 github.com/microcosm-cc/bluemonday
-# github.com/mitchellh/mapstructure v1.4.1
+# github.com/mitchellh/mapstructure v1.1.2
 github.com/mitchellh/mapstructure
 # github.com/muesli/reflow v0.1.0
 github.com/muesli/reflow/ansi
@@ -346,7 +346,7 @@ google.golang.org/protobuf/reflect/protoreflect
 google.golang.org/protobuf/reflect/protoregistry
 google.golang.org/protobuf/runtime/protoiface
 google.golang.org/protobuf/runtime/protoimpl
-# gopkg.in/auth0.v5 v5.17.0 => github.com/go-auth0/auth0 v1.3.1-0.20210128024326-898cafab69ba
+# gopkg.in/auth0.v5 v5.17.0
 ## explicit
 gopkg.in/auth0.v5
 gopkg.in/auth0.v5/internal/client
@@ -362,4 +362,3 @@ gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 ## explicit
 gopkg.in/yaml.v3
-# gopkg.in/auth0.v5 => github.com/go-auth0/auth0 v1.3.1-0.20210128024326-898cafab69ba
