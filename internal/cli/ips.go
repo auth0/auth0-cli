@@ -10,16 +10,15 @@ import (
 var (
 	ipAddress = Argument{
 		Name: "IP",
-		Help: "IP address to check",
+		Help: "IP address to check.",
 	}
 )
 
 func ipsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "ips",
-		Short:   "Manage blocked IP addresses",
-		Long:    "Manage blocked IP addresses.",
-		Aliases: []string{"ip"},
+		Use:   "ips",
+		Short: "Manage blocked IP addresses",
+		Long:  "Manage blocked IP addresses.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -37,7 +36,7 @@ func checkIPCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "check",
 		Args:    cobra.MaximumNArgs(1),
-		Short:   "Check IP address.",
+		Short:   "Check IP address",
 		Long:    "Check whether a given IP address is blocked.",
 		Example: "auth0 ips check <ip>",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -56,6 +55,8 @@ func checkIPCmd(cli *cli) *cobra.Command {
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
+
+			cli.renderer.Heading("IP")
 
 			if isBlocked {
 				cli.renderer.Infof("The IP %s is blocked", inputs.IP)
@@ -78,8 +79,8 @@ func unblockIPCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "unblock",
 		Args:    cobra.MaximumNArgs(1),
-		Short:   "Unblock IP address.",
-		Long:    "Unblock IP address which is currently blocked.",
+		Short:   "Unblock IP address",
+		Long:    "Unblock an IP address which is currently blocked.",
 		Example: "auth0 ips unblock <ip>",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -94,6 +95,7 @@ func unblockIPCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
 
+			cli.renderer.Heading("IP")
 			cli.renderer.Infof("The IP %s was unblocked", inputs.IP)
 			return nil
 		},
