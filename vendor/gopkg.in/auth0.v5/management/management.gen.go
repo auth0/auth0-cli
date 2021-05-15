@@ -402,6 +402,30 @@ func (c *ClientRefreshToken) GetExpirationType() string {
 	return *c.ExpirationType
 }
 
+// GetIdleTokenLifetime returns the IdleTokenLifetime field if it's non-nil, zero value otherwise.
+func (c *ClientRefreshToken) GetIdleTokenLifetime() int {
+	if c == nil || c.IdleTokenLifetime == nil {
+		return 0
+	}
+	return *c.IdleTokenLifetime
+}
+
+// GetInfiniteIdleTokenLifetime returns the InfiniteIdleTokenLifetime field if it's non-nil, zero value otherwise.
+func (c *ClientRefreshToken) GetInfiniteIdleTokenLifetime() bool {
+	if c == nil || c.InfiniteIdleTokenLifetime == nil {
+		return false
+	}
+	return *c.InfiniteIdleTokenLifetime
+}
+
+// GetInfiniteTokenLifetime returns the InfiniteTokenLifetime field if it's non-nil, zero value otherwise.
+func (c *ClientRefreshToken) GetInfiniteTokenLifetime() bool {
+	if c == nil || c.InfiniteTokenLifetime == nil {
+		return false
+	}
+	return *c.InfiniteTokenLifetime
+}
+
 // GetLeeway returns the Leeway field if it's non-nil, zero value otherwise.
 func (c *ClientRefreshToken) GetLeeway() int {
 	if c == nil || c.Leeway == nil {
@@ -471,6 +495,14 @@ func (c *Connection) GetName() string {
 	return *c.Name
 }
 
+// GetProvisioningTicketUrl returns the ProvisioningTicketUrl field if it's non-nil, zero value otherwise.
+func (c *Connection) GetProvisioningTicketUrl() string {
+	if c == nil || c.ProvisioningTicketUrl == nil {
+		return ""
+	}
+	return *c.ProvisioningTicketUrl
+}
+
 // GetStrategy returns the Strategy field if it's non-nil, zero value otherwise.
 func (c *Connection) GetStrategy() string {
 	if c == nil || c.Strategy == nil {
@@ -521,6 +553,14 @@ func (c *ConnectionOptions) GetImportMode() bool {
 	return *c.ImportMode
 }
 
+// GetNonPersistentAttrs returns the NonPersistentAttrs field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptions) GetNonPersistentAttrs() []string {
+	if c == nil || c.NonPersistentAttrs == nil {
+		return nil
+	}
+	return *c.NonPersistentAttrs
+}
+
 // GetPasswordPolicy returns the PasswordPolicy field if it's non-nil, zero value otherwise.
 func (c *ConnectionOptions) GetPasswordPolicy() string {
 	if c == nil || c.PasswordPolicy == nil {
@@ -535,6 +575,14 @@ func (c *ConnectionOptions) GetRequiresUsername() bool {
 		return false
 	}
 	return *c.RequiresUsername
+}
+
+// GetSetUserAttributes returns the SetUserAttributes field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptions) GetSetUserAttributes() string {
+	if c == nil || c.SetUserAttributes == nil {
+		return ""
+	}
+	return *c.SetUserAttributes
 }
 
 // GetStrategyVersion returns the StrategyVersion field if it's non-nil, zero value otherwise.
@@ -590,6 +638,14 @@ func (c *ConnectionOptionsAD) GetLogoURL() string {
 	return *c.LogoURL
 }
 
+// GetNonPersistentAttrs returns the NonPersistentAttrs field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsAD) GetNonPersistentAttrs() []string {
+	if c == nil || c.NonPersistentAttrs == nil {
+		return nil
+	}
+	return *c.NonPersistentAttrs
+}
+
 // GetSetUserAttributes returns the SetUserAttributes field if it's non-nil, zero value otherwise.
 func (c *ConnectionOptionsAD) GetSetUserAttributes() string {
 	if c == nil || c.SetUserAttributes == nil {
@@ -633,6 +689,14 @@ func (c *ConnectionOptionsADFS) GetLogoURL() string {
 		return ""
 	}
 	return *c.LogoURL
+}
+
+// GetNonPersistentAttrs returns the NonPersistentAttrs field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsADFS) GetNonPersistentAttrs() []string {
+	if c == nil || c.NonPersistentAttrs == nil {
+		return nil
+	}
+	return *c.NonPersistentAttrs
 }
 
 // GetSetUserAttributes returns the SetUserAttributes field if it's non-nil, zero value otherwise.
@@ -696,12 +760,28 @@ func (c *ConnectionOptionsApple) GetName() bool {
 	return *c.Name
 }
 
+// GetNonPersistentAttrs returns the NonPersistentAttrs field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsApple) GetNonPersistentAttrs() []string {
+	if c == nil || c.NonPersistentAttrs == nil {
+		return nil
+	}
+	return *c.NonPersistentAttrs
+}
+
 // GetScope returns the Scope field if it's non-nil, zero value otherwise.
 func (c *ConnectionOptionsApple) GetScope() string {
 	if c == nil || c.Scope == nil {
 		return ""
 	}
 	return *c.Scope
+}
+
+// GetSetUserAttributes returns the SetUserAttributes field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsApple) GetSetUserAttributes() string {
+	if c == nil || c.SetUserAttributes == nil {
+		return ""
+	}
+	return *c.SetUserAttributes
 }
 
 // GetTeamID returns the TeamID field if it's non-nil, zero value otherwise.
@@ -845,12 +925,36 @@ func (c *ConnectionOptionsAzureAD) GetNestedGroups() bool {
 	return *c.NestedGroups
 }
 
+// GetNonPersistentAttrs returns the NonPersistentAttrs field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsAzureAD) GetNonPersistentAttrs() []string {
+	if c == nil || c.NonPersistentAttrs == nil {
+		return nil
+	}
+	return *c.NonPersistentAttrs
+}
+
+// GetSetUserAttributes returns the SetUserAttributes field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsAzureAD) GetSetUserAttributes() string {
+	if c == nil || c.SetUserAttributes == nil {
+		return ""
+	}
+	return *c.SetUserAttributes
+}
+
 // GetTenantDomain returns the TenantDomain field if it's non-nil, zero value otherwise.
 func (c *ConnectionOptionsAzureAD) GetTenantDomain() string {
 	if c == nil || c.TenantDomain == nil {
 		return ""
 	}
 	return *c.TenantDomain
+}
+
+// GetTrustEmailVerified returns the TrustEmailVerified field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsAzureAD) GetTrustEmailVerified() string {
+	if c == nil || c.TrustEmailVerified == nil {
+		return ""
+	}
+	return *c.TrustEmailVerified
 }
 
 // GetUseCommonEndpoint returns the UseCommonEndpoint field if it's non-nil, zero value otherwise.
@@ -922,12 +1026,28 @@ func (c *ConnectionOptionsEmail) GetName() string {
 	return *c.Name
 }
 
+// GetNonPersistentAttrs returns the NonPersistentAttrs field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsEmail) GetNonPersistentAttrs() []string {
+	if c == nil || c.NonPersistentAttrs == nil {
+		return nil
+	}
+	return *c.NonPersistentAttrs
+}
+
 // GetOTP returns the OTP field.
 func (c *ConnectionOptionsEmail) GetOTP() *ConnectionOptionsOTP {
 	if c == nil {
 		return nil
 	}
 	return c.OTP
+}
+
+// GetSetUserAttributes returns the SetUserAttributes field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsEmail) GetSetUserAttributes() string {
+	if c == nil || c.SetUserAttributes == nil {
+		return ""
+	}
+	return *c.SetUserAttributes
 }
 
 // String returns a string representation of ConnectionOptionsEmail.
@@ -1058,6 +1178,14 @@ func (c *ConnectionOptionsFacebook) GetManagePages() bool {
 		return false
 	}
 	return *c.ManagePages
+}
+
+// GetNonPersistentAttrs returns the NonPersistentAttrs field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsFacebook) GetNonPersistentAttrs() []string {
+	if c == nil || c.NonPersistentAttrs == nil {
+		return nil
+	}
+	return *c.NonPersistentAttrs
 }
 
 // GetPagesManageCTA returns the PagesManageCTA field if it's non-nil, zero value otherwise.
@@ -1194,6 +1322,14 @@ func (c *ConnectionOptionsFacebook) GetScope() string {
 		return ""
 	}
 	return *c.Scope
+}
+
+// GetSetUserAttributes returns the SetUserAttributes field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsFacebook) GetSetUserAttributes() string {
+	if c == nil || c.SetUserAttributes == nil {
+		return ""
+	}
+	return *c.SetUserAttributes
 }
 
 // GetUserAgeRange returns the UserAgeRange field if it's non-nil, zero value otherwise.
@@ -1401,6 +1537,14 @@ func (c *ConnectionOptionsGitHub) GetGist() bool {
 	return *c.Gist
 }
 
+// GetNonPersistentAttrs returns the NonPersistentAttrs field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsGitHub) GetNonPersistentAttrs() []string {
+	if c == nil || c.NonPersistentAttrs == nil {
+		return nil
+	}
+	return *c.NonPersistentAttrs
+}
+
 // GetNotifications returns the Notifications field if it's non-nil, zero value otherwise.
 func (c *ConnectionOptionsGitHub) GetNotifications() bool {
 	if c == nil || c.Notifications == nil {
@@ -1515,6 +1659,115 @@ func (c *ConnectionOptionsGitHub) GetWriteRepoHook() bool {
 
 // String returns a string representation of ConnectionOptionsGitHub.
 func (c *ConnectionOptionsGitHub) String() string {
+	return Stringify(c)
+}
+
+// GetAdmin returns the Admin field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsGoogleApps) GetAdmin() bool {
+	if c == nil || c.Admin == nil {
+		return false
+	}
+	return *c.Admin
+}
+
+// GetAgreedTerms returns the AgreedTerms field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsGoogleApps) GetAgreedTerms() bool {
+	if c == nil || c.AgreedTerms == nil {
+		return false
+	}
+	return *c.AgreedTerms
+}
+
+// GetBasicProfile returns the BasicProfile field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsGoogleApps) GetBasicProfile() bool {
+	if c == nil || c.BasicProfile == nil {
+		return false
+	}
+	return *c.BasicProfile
+}
+
+// GetClientID returns the ClientID field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsGoogleApps) GetClientID() string {
+	if c == nil || c.ClientID == nil {
+		return ""
+	}
+	return *c.ClientID
+}
+
+// GetClientSecret returns the ClientSecret field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsGoogleApps) GetClientSecret() string {
+	if c == nil || c.ClientSecret == nil {
+		return ""
+	}
+	return *c.ClientSecret
+}
+
+// GetDomain returns the Domain field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsGoogleApps) GetDomain() string {
+	if c == nil || c.Domain == nil {
+		return ""
+	}
+	return *c.Domain
+}
+
+// GetEnableUsersAPI returns the EnableUsersAPI field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsGoogleApps) GetEnableUsersAPI() bool {
+	if c == nil || c.EnableUsersAPI == nil {
+		return false
+	}
+	return *c.EnableUsersAPI
+}
+
+// GetExtendedProfile returns the ExtendedProfile field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsGoogleApps) GetExtendedProfile() bool {
+	if c == nil || c.ExtendedProfile == nil {
+		return false
+	}
+	return *c.ExtendedProfile
+}
+
+// GetGroups returns the Groups field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsGoogleApps) GetGroups() bool {
+	if c == nil || c.Groups == nil {
+		return false
+	}
+	return *c.Groups
+}
+
+// GetIsSuspended returns the IsSuspended field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsGoogleApps) GetIsSuspended() bool {
+	if c == nil || c.IsSuspended == nil {
+		return false
+	}
+	return *c.IsSuspended
+}
+
+// GetLogoURL returns the LogoURL field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsGoogleApps) GetLogoURL() string {
+	if c == nil || c.LogoURL == nil {
+		return ""
+	}
+	return *c.LogoURL
+}
+
+// GetNonPersistentAttrs returns the NonPersistentAttrs field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsGoogleApps) GetNonPersistentAttrs() []string {
+	if c == nil || c.NonPersistentAttrs == nil {
+		return nil
+	}
+	return *c.NonPersistentAttrs
+}
+
+// GetSetUserAttributes returns the SetUserAttributes field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsGoogleApps) GetSetUserAttributes() string {
+	if c == nil || c.SetUserAttributes == nil {
+		return ""
+	}
+	return *c.SetUserAttributes
+}
+
+// String returns a string representation of ConnectionOptionsGoogleApps.
+func (c *ConnectionOptionsGoogleApps) String() string {
 	return Stringify(c)
 }
 
@@ -1702,6 +1955,14 @@ func (c *ConnectionOptionsGoogleOAuth2) GetModerator() bool {
 	return *c.Moderator
 }
 
+// GetNonPersistentAttrs returns the NonPersistentAttrs field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsGoogleOAuth2) GetNonPersistentAttrs() []string {
+	if c == nil || c.NonPersistentAttrs == nil {
+		return nil
+	}
+	return *c.NonPersistentAttrs
+}
+
 // GetOrkut returns the Orkut field if it's non-nil, zero value otherwise.
 func (c *ConnectionOptionsGoogleOAuth2) GetOrkut() bool {
 	if c == nil || c.Orkut == nil {
@@ -1724,6 +1985,14 @@ func (c *ConnectionOptionsGoogleOAuth2) GetProfile() bool {
 		return false
 	}
 	return *c.Profile
+}
+
+// GetSetUserAttributes returns the SetUserAttributes field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsGoogleOAuth2) GetSetUserAttributes() string {
+	if c == nil || c.SetUserAttributes == nil {
+		return ""
+	}
+	return *c.SetUserAttributes
 }
 
 // GetSites returns the Sites field if it's non-nil, zero value otherwise.
@@ -1811,6 +2080,14 @@ func (c *ConnectionOptionsLinkedin) GetEmail() bool {
 	return *c.Email
 }
 
+// GetNonPersistentAttrs returns the NonPersistentAttrs field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsLinkedin) GetNonPersistentAttrs() []string {
+	if c == nil || c.NonPersistentAttrs == nil {
+		return nil
+	}
+	return *c.NonPersistentAttrs
+}
+
 // GetProfile returns the Profile field if it's non-nil, zero value otherwise.
 func (c *ConnectionOptionsLinkedin) GetProfile() bool {
 	if c == nil || c.Profile == nil {
@@ -1864,12 +2141,28 @@ func (c *ConnectionOptionsOAuth2) GetClientSecret() string {
 	return *c.ClientSecret
 }
 
+// GetNonPersistentAttrs returns the NonPersistentAttrs field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsOAuth2) GetNonPersistentAttrs() []string {
+	if c == nil || c.NonPersistentAttrs == nil {
+		return nil
+	}
+	return *c.NonPersistentAttrs
+}
+
 // GetScope returns the Scope field if it's non-nil, zero value otherwise.
 func (c *ConnectionOptionsOAuth2) GetScope() string {
 	if c == nil || c.Scope == nil {
 		return ""
 	}
 	return *c.Scope
+}
+
+// GetSetUserAttributes returns the SetUserAttributes field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsOAuth2) GetSetUserAttributes() string {
+	if c == nil || c.SetUserAttributes == nil {
+		return ""
+	}
+	return *c.SetUserAttributes
 }
 
 // GetTokenURL returns the TokenURL field if it's non-nil, zero value otherwise.
@@ -1941,12 +2234,28 @@ func (c *ConnectionOptionsOIDC) GetLogoURL() string {
 	return *c.LogoURL
 }
 
+// GetNonPersistentAttrs returns the NonPersistentAttrs field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsOIDC) GetNonPersistentAttrs() []string {
+	if c == nil || c.NonPersistentAttrs == nil {
+		return nil
+	}
+	return *c.NonPersistentAttrs
+}
+
 // GetScope returns the Scope field if it's non-nil, zero value otherwise.
 func (c *ConnectionOptionsOIDC) GetScope() string {
 	if c == nil || c.Scope == nil {
 		return ""
 	}
 	return *c.Scope
+}
+
+// GetSetUserAttributes returns the SetUserAttributes field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsOIDC) GetSetUserAttributes() string {
+	if c == nil || c.SetUserAttributes == nil {
+		return ""
+	}
+	return *c.SetUserAttributes
 }
 
 // GetTenantDomain returns the TenantDomain field if it's non-nil, zero value otherwise.
@@ -2031,6 +2340,14 @@ func (c *ConnectionOptionsSalesforce) GetCommunityBaseURL() string {
 	return *c.CommunityBaseURL
 }
 
+// GetNonPersistentAttrs returns the NonPersistentAttrs field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsSalesforce) GetNonPersistentAttrs() []string {
+	if c == nil || c.NonPersistentAttrs == nil {
+		return nil
+	}
+	return *c.NonPersistentAttrs
+}
+
 // GetProfile returns the Profile field if it's non-nil, zero value otherwise.
 func (c *ConnectionOptionsSalesforce) GetProfile() bool {
 	if c == nil || c.Profile == nil {
@@ -2076,6 +2393,14 @@ func (c *ConnectionOptionsSAML) GetDigestAglorithm() string {
 	return *c.DigestAglorithm
 }
 
+// GetEntityID returns the EntityID field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsSAML) GetEntityID() string {
+	if c == nil || c.EntityID == nil {
+		return ""
+	}
+	return *c.EntityID
+}
+
 // GetExpires returns the Expires field if it's non-nil, zero value otherwise.
 func (c *ConnectionOptionsSAML) GetExpires() string {
 	if c == nil || c.Expires == nil {
@@ -2114,6 +2439,14 @@ func (c *ConnectionOptionsSAML) GetMetadataXML() string {
 		return ""
 	}
 	return *c.MetadataXML
+}
+
+// GetNonPersistentAttrs returns the NonPersistentAttrs field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsSAML) GetNonPersistentAttrs() []string {
+	if c == nil || c.NonPersistentAttrs == nil {
+		return nil
+	}
+	return *c.NonPersistentAttrs
 }
 
 // GetProtocolBinding returns the ProtocolBinding field if it's non-nil, zero value otherwise.
@@ -2231,6 +2564,22 @@ func (c *ConnectionOptionsSAMLIdpInitiated) GetEnabled() bool {
 		return false
 	}
 	return *c.Enabled
+}
+
+// GetNonPersistentAttrs returns the NonPersistentAttrs field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsSAMLIdpInitiated) GetNonPersistentAttrs() []string {
+	if c == nil || c.NonPersistentAttrs == nil {
+		return nil
+	}
+	return *c.NonPersistentAttrs
+}
+
+// GetSetUserAttributes returns the SetUserAttributes field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsSAMLIdpInitiated) GetSetUserAttributes() string {
+	if c == nil || c.SetUserAttributes == nil {
+		return ""
+	}
+	return *c.SetUserAttributes
 }
 
 // String returns a string representation of ConnectionOptionsSAMLIdpInitiated.
@@ -2435,6 +2784,14 @@ func (c *ConnectionOptionsWindowsLive) GetFilesUpdate() bool {
 	return *c.FilesUpdate
 }
 
+// GetNonPersistentAttrs returns the NonPersistentAttrs field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsWindowsLive) GetNonPersistentAttrs() []string {
+	if c == nil || c.NonPersistentAttrs == nil {
+		return nil
+	}
+	return *c.NonPersistentAttrs
+}
+
 // GetNotes returns the Notes field if it's non-nil, zero value otherwise.
 func (c *ConnectionOptionsWindowsLive) GetNotes() bool {
 	if c == nil || c.Notes == nil {
@@ -2533,6 +2890,11 @@ func (c *ConnectionOptionsWindowsLive) GetUserUpdate() bool {
 
 // String returns a string representation of ConnectionOptionsWindowsLive.
 func (c *ConnectionOptionsWindowsLive) String() string {
+	return Stringify(c)
+}
+
+// String returns a string representation of CreateEnrollmentTicket.
+func (c *CreateEnrollmentTicket) String() string {
 	return Stringify(c)
 }
 
@@ -2846,6 +3208,72 @@ func (e *EmailTemplate) String() string {
 	return Stringify(e)
 }
 
+// GetEnrolledAt returns the EnrolledAt field if it's non-nil, zero value otherwise.
+func (e *Enrollment) GetEnrolledAt() time.Time {
+	if e == nil || e.EnrolledAt == nil {
+		return time.Time{}
+	}
+	return *e.EnrolledAt
+}
+
+// GetID returns the ID field if it's non-nil, zero value otherwise.
+func (e *Enrollment) GetID() string {
+	if e == nil || e.ID == nil {
+		return ""
+	}
+	return *e.ID
+}
+
+// GetIdentifier returns the Identifier field if it's non-nil, zero value otherwise.
+func (e *Enrollment) GetIdentifier() string {
+	if e == nil || e.Identifier == nil {
+		return ""
+	}
+	return *e.Identifier
+}
+
+// GetLastAuth returns the LastAuth field if it's non-nil, zero value otherwise.
+func (e *Enrollment) GetLastAuth() time.Time {
+	if e == nil || e.LastAuth == nil {
+		return time.Time{}
+	}
+	return *e.LastAuth
+}
+
+// GetName returns the Name field if it's non-nil, zero value otherwise.
+func (e *Enrollment) GetName() string {
+	if e == nil || e.Name == nil {
+		return ""
+	}
+	return *e.Name
+}
+
+// GetPhoneNumber returns the PhoneNumber field if it's non-nil, zero value otherwise.
+func (e *Enrollment) GetPhoneNumber() string {
+	if e == nil || e.PhoneNumber == nil {
+		return ""
+	}
+	return *e.PhoneNumber
+}
+
+// GetStatus returns the Status field if it's non-nil, zero value otherwise.
+func (e *Enrollment) GetStatus() string {
+	if e == nil || e.Status == nil {
+		return ""
+	}
+	return *e.Status
+}
+
+// String returns a string representation of Enrollment.
+func (e *Enrollment) String() string {
+	return Stringify(e)
+}
+
+// String returns a string representation of EnrollmentTicket.
+func (e *EnrollmentTicket) String() string {
+	return Stringify(e)
+}
+
 // GetAudience returns the Audience field if it's non-nil, zero value otherwise.
 func (g *Grant) GetAudience() string {
 	if g == nil || g.Audience == nil {
@@ -2880,6 +3308,11 @@ func (g *Grant) GetUserID() string {
 
 // String returns a string representation of Grant.
 func (g *Grant) String() string {
+	return Stringify(g)
+}
+
+// String returns a string representation of GrantList.
+func (g *GrantList) String() string {
 	return Stringify(g)
 }
 
@@ -3085,6 +3518,14 @@ func (l *Log) GetDate() time.Time {
 		return time.Time{}
 	}
 	return *l.Date
+}
+
+// GetDescription returns the Description field if it's non-nil, zero value otherwise.
+func (l *Log) GetDescription() string {
+	if l == nil || l.Description == nil {
+		return ""
+	}
+	return *l.Description
 }
 
 // GetID returns the ID field if it's non-nil, zero value otherwise.
@@ -3387,6 +3828,24 @@ func (m *MultiFactorOTP) String() string {
 	return Stringify(m)
 }
 
+// String returns a string representation of MultiFactorPhone.
+func (m *MultiFactorPhone) String() string {
+	return Stringify(m)
+}
+
+// GetProvider returns the Provider field if it's non-nil, zero value otherwise.
+func (m *MultiFactorProvider) GetProvider() string {
+	if m == nil || m.Provider == nil {
+		return ""
+	}
+	return *m.Provider
+}
+
+// String returns a string representation of MultiFactorProvider.
+func (m *MultiFactorProvider) String() string {
+	return Stringify(m)
+}
+
 // GetAccessKeyID returns the AccessKeyID field if it's non-nil, zero value otherwise.
 func (m *MultiFactorProviderAmazonSNS) GetAccessKeyID() string {
 	if m == nil || m.AccessKeyID == nil {
@@ -3540,6 +3999,27 @@ func (p *Permission) String() string {
 // String returns a string representation of PermissionList.
 func (p *PermissionList) String() string {
 	return Stringify(p)
+}
+
+// GetMessageTypes returns the MessageTypes field if it's non-nil, zero value otherwise.
+func (p *PhoneMessageTypes) GetMessageTypes() []string {
+	if p == nil || p.MessageTypes == nil {
+		return nil
+	}
+	return *p.MessageTypes
+}
+
+// String returns a string representation of PhoneMessageTypes.
+func (p *PhoneMessageTypes) String() string {
+	return Stringify(p)
+}
+
+// GetIdentifierFirst returns the IdentifierFirst field if it's non-nil, zero value otherwise.
+func (p *Prompt) GetIdentifierFirst() bool {
+	if p == nil || p.IdentifierFirst == nil {
+		return false
+	}
+	return *p.IdentifierFirst
 }
 
 // String returns a string representation of Prompt.
@@ -3777,6 +4257,107 @@ func (r *RuleConfig) String() string {
 // String returns a string representation of RuleList.
 func (r *RuleList) String() string {
 	return Stringify(r)
+}
+
+// GetCert returns the Cert field if it's non-nil, zero value otherwise.
+func (s *SigningKey) GetCert() string {
+	if s == nil || s.Cert == nil {
+		return ""
+	}
+	return *s.Cert
+}
+
+// GetCurrent returns the Current field if it's non-nil, zero value otherwise.
+func (s *SigningKey) GetCurrent() bool {
+	if s == nil || s.Current == nil {
+		return false
+	}
+	return *s.Current
+}
+
+// GetCurrentSince returns the CurrentSince field if it's non-nil, zero value otherwise.
+func (s *SigningKey) GetCurrentSince() time.Time {
+	if s == nil || s.CurrentSince == nil {
+		return time.Time{}
+	}
+	return *s.CurrentSince
+}
+
+// GetCurrentUntil returns the CurrentUntil field if it's non-nil, zero value otherwise.
+func (s *SigningKey) GetCurrentUntil() time.Time {
+	if s == nil || s.CurrentUntil == nil {
+		return time.Time{}
+	}
+	return *s.CurrentUntil
+}
+
+// GetFingerprint returns the Fingerprint field if it's non-nil, zero value otherwise.
+func (s *SigningKey) GetFingerprint() string {
+	if s == nil || s.Fingerprint == nil {
+		return ""
+	}
+	return *s.Fingerprint
+}
+
+// GetKID returns the KID field if it's non-nil, zero value otherwise.
+func (s *SigningKey) GetKID() string {
+	if s == nil || s.KID == nil {
+		return ""
+	}
+	return *s.KID
+}
+
+// GetNext returns the Next field if it's non-nil, zero value otherwise.
+func (s *SigningKey) GetNext() bool {
+	if s == nil || s.Next == nil {
+		return false
+	}
+	return *s.Next
+}
+
+// GetPKCS7 returns the PKCS7 field if it's non-nil, zero value otherwise.
+func (s *SigningKey) GetPKCS7() string {
+	if s == nil || s.PKCS7 == nil {
+		return ""
+	}
+	return *s.PKCS7
+}
+
+// GetPrevious returns the Previous field if it's non-nil, zero value otherwise.
+func (s *SigningKey) GetPrevious() bool {
+	if s == nil || s.Previous == nil {
+		return false
+	}
+	return *s.Previous
+}
+
+// GetRevoked returns the Revoked field if it's non-nil, zero value otherwise.
+func (s *SigningKey) GetRevoked() bool {
+	if s == nil || s.Revoked == nil {
+		return false
+	}
+	return *s.Revoked
+}
+
+// GetRevokedAt returns the RevokedAt field if it's non-nil, zero value otherwise.
+func (s *SigningKey) GetRevokedAt() time.Time {
+	if s == nil || s.RevokedAt == nil {
+		return time.Time{}
+	}
+	return *s.RevokedAt
+}
+
+// GetThumbprint returns the Thumbprint field if it's non-nil, zero value otherwise.
+func (s *SigningKey) GetThumbprint() string {
+	if s == nil || s.Thumbprint == nil {
+		return ""
+	}
+	return *s.Thumbprint
+}
+
+// String returns a string representation of SigningKey.
+func (s *SigningKey) String() string {
+	return Stringify(s)
 }
 
 // GetChangePassword returns the ChangePassword field.
@@ -4142,6 +4723,14 @@ func (t *TenantUniversalLoginColors) GetPageBackground() string {
 	return *t.PageBackground
 }
 
+// GetPageBackgroundGradient returns the PageBackgroundGradient field.
+func (t *TenantUniversalLoginColors) GetPageBackgroundGradient() *BrandingPageBackgroundGradient {
+	if t == nil {
+		return nil
+	}
+	return t.PageBackgroundGradient
+}
+
 // GetPrimary returns the Primary field if it's non-nil, zero value otherwise.
 func (t *TenantUniversalLoginColors) GetPrimary() string {
 	if t == nil || t.Primary == nil {
@@ -4171,20 +4760,20 @@ func (t *Ticket) GetEmail() string {
 	return *t.Email
 }
 
-// GetMarkEmailAsVerified returns the MarkEmailAsVerified field if it's non-nil, zero value otherwise.
-func (t *Ticket) GetMarkEmailAsVerified() bool {
-	if t == nil || t.MarkEmailAsVerified == nil {
-		return false
-	}
-	return *t.MarkEmailAsVerified
-}
-
 // GetIncludeEmailInRedirect returns the IncludeEmailInRedirect field if it's non-nil, zero value otherwise.
 func (t *Ticket) GetIncludeEmailInRedirect() bool {
 	if t == nil || t.IncludeEmailInRedirect == nil {
 		return false
 	}
 	return *t.IncludeEmailInRedirect
+}
+
+// GetMarkEmailAsVerified returns the MarkEmailAsVerified field if it's non-nil, zero value otherwise.
+func (t *Ticket) GetMarkEmailAsVerified() bool {
+	if t == nil || t.MarkEmailAsVerified == nil {
+		return false
+	}
+	return *t.MarkEmailAsVerified
 }
 
 // GetResultURL returns the ResultURL field if it's non-nil, zero value otherwise.
@@ -4248,6 +4837,14 @@ func (u *User) GetCreatedAt() time.Time {
 	return *u.CreatedAt
 }
 
+// GetDescription returns the Description field if it's non-nil, zero value otherwise.
+func (u *User) GetDescription() string {
+	if u == nil || u.Description == nil {
+		return ""
+	}
+	return *u.Description
+}
+
 // GetEmail returns the Email field if it's non-nil, zero value otherwise.
 func (u *User) GetEmail() string {
 	if u == nil || u.Email == nil {
@@ -4302,6 +4899,14 @@ func (u *User) GetLastLogin() time.Time {
 		return time.Time{}
 	}
 	return *u.LastLogin
+}
+
+// GetLocation returns the Location field if it's non-nil, zero value otherwise.
+func (u *User) GetLocation() string {
+	if u == nil || u.Location == nil {
+		return ""
+	}
+	return *u.Location
 }
 
 // GetLoginsCount returns the LoginsCount field if it's non-nil, zero value otherwise.
@@ -4360,12 +4965,28 @@ func (u *User) GetPicture() string {
 	return *u.Picture
 }
 
+// GetScreenName returns the ScreenName field if it's non-nil, zero value otherwise.
+func (u *User) GetScreenName() string {
+	if u == nil || u.ScreenName == nil {
+		return ""
+	}
+	return *u.ScreenName
+}
+
 // GetUpdatedAt returns the UpdatedAt field if it's non-nil, zero value otherwise.
 func (u *User) GetUpdatedAt() time.Time {
 	if u == nil || u.UpdatedAt == nil {
 		return time.Time{}
 	}
 	return *u.UpdatedAt
+}
+
+// GetURL returns the URL field if it's non-nil, zero value otherwise.
+func (u *User) GetURL() string {
+	if u == nil || u.URL == nil {
+		return ""
+	}
+	return *u.URL
 }
 
 // GetUsername returns the Username field if it's non-nil, zero value otherwise.
@@ -4410,12 +5031,97 @@ func (u *UserBlock) String() string {
 	return Stringify(u)
 }
 
+// GetAuthMethod returns the AuthMethod field if it's non-nil, zero value otherwise.
+func (u *UserEnrollment) GetAuthMethod() string {
+	if u == nil || u.AuthMethod == nil {
+		return ""
+	}
+	return *u.AuthMethod
+}
+
+// GetEnrolledAt returns the EnrolledAt field if it's non-nil, zero value otherwise.
+func (u *UserEnrollment) GetEnrolledAt() time.Time {
+	if u == nil || u.EnrolledAt == nil {
+		return time.Time{}
+	}
+	return *u.EnrolledAt
+}
+
+// GetID returns the ID field if it's non-nil, zero value otherwise.
+func (u *UserEnrollment) GetID() string {
+	if u == nil || u.ID == nil {
+		return ""
+	}
+	return *u.ID
+}
+
+// GetIdentifier returns the Identifier field if it's non-nil, zero value otherwise.
+func (u *UserEnrollment) GetIdentifier() string {
+	if u == nil || u.Identifier == nil {
+		return ""
+	}
+	return *u.Identifier
+}
+
+// GetLastAuth returns the LastAuth field if it's non-nil, zero value otherwise.
+func (u *UserEnrollment) GetLastAuth() time.Time {
+	if u == nil || u.LastAuth == nil {
+		return time.Time{}
+	}
+	return *u.LastAuth
+}
+
+// GetName returns the Name field if it's non-nil, zero value otherwise.
+func (u *UserEnrollment) GetName() string {
+	if u == nil || u.Name == nil {
+		return ""
+	}
+	return *u.Name
+}
+
+// GetPhoneNumber returns the PhoneNumber field if it's non-nil, zero value otherwise.
+func (u *UserEnrollment) GetPhoneNumber() string {
+	if u == nil || u.PhoneNumber == nil {
+		return ""
+	}
+	return *u.PhoneNumber
+}
+
+// GetStatus returns the Status field if it's non-nil, zero value otherwise.
+func (u *UserEnrollment) GetStatus() string {
+	if u == nil || u.Status == nil {
+		return ""
+	}
+	return *u.Status
+}
+
+// GetType returns the Type field if it's non-nil, zero value otherwise.
+func (u *UserEnrollment) GetType() string {
+	if u == nil || u.Type == nil {
+		return ""
+	}
+	return *u.Type
+}
+
+// String returns a string representation of UserEnrollment.
+func (u *UserEnrollment) String() string {
+	return Stringify(u)
+}
+
 // GetAccessToken returns the AccessToken field if it's non-nil, zero value otherwise.
 func (u *UserIdentity) GetAccessToken() string {
 	if u == nil || u.AccessToken == nil {
 		return ""
 	}
 	return *u.AccessToken
+}
+
+// GetAccessTokenSecret returns the AccessTokenSecret field if it's non-nil, zero value otherwise.
+func (u *UserIdentity) GetAccessTokenSecret() string {
+	if u == nil || u.AccessTokenSecret == nil {
+		return ""
+	}
+	return *u.AccessTokenSecret
 }
 
 // GetConnection returns the Connection field if it's non-nil, zero value otherwise.
@@ -4442,6 +5148,14 @@ func (u *UserIdentity) GetProvider() string {
 	return *u.Provider
 }
 
+// GetRefreshToken returns the RefreshToken field if it's non-nil, zero value otherwise.
+func (u *UserIdentity) GetRefreshToken() string {
+	if u == nil || u.RefreshToken == nil {
+		return ""
+	}
+	return *u.RefreshToken
+}
+
 // GetUserID returns the UserID field if it's non-nil, zero value otherwise.
 func (u *UserIdentity) GetUserID() string {
 	if u == nil || u.UserID == nil {
@@ -4455,7 +5169,57 @@ func (u *UserIdentity) String() string {
 	return Stringify(u)
 }
 
+// GetConnectionID returns the ConnectionID field if it's non-nil, zero value otherwise.
+func (u *UserIdentityLink) GetConnectionID() string {
+	if u == nil || u.ConnectionID == nil {
+		return ""
+	}
+	return *u.ConnectionID
+}
+
+// GetLinkWith returns the LinkWith field if it's non-nil, zero value otherwise.
+func (u *UserIdentityLink) GetLinkWith() string {
+	if u == nil || u.LinkWith == nil {
+		return ""
+	}
+	return *u.LinkWith
+}
+
+// GetProvider returns the Provider field if it's non-nil, zero value otherwise.
+func (u *UserIdentityLink) GetProvider() string {
+	if u == nil || u.Provider == nil {
+		return ""
+	}
+	return *u.Provider
+}
+
+// GetUserID returns the UserID field if it's non-nil, zero value otherwise.
+func (u *UserIdentityLink) GetUserID() string {
+	if u == nil || u.UserID == nil {
+		return ""
+	}
+	return *u.UserID
+}
+
+// String returns a string representation of UserIdentityLink.
+func (u *UserIdentityLink) String() string {
+	return Stringify(u)
+}
+
 // String returns a string representation of UserList.
 func (u *UserList) String() string {
+	return Stringify(u)
+}
+
+// GetRecoveryCode returns the RecoveryCode field if it's non-nil, zero value otherwise.
+func (u *UserRecoveryCode) GetRecoveryCode() string {
+	if u == nil || u.RecoveryCode == nil {
+		return ""
+	}
+	return *u.RecoveryCode
+}
+
+// String returns a string representation of UserRecoveryCode.
+func (u *UserRecoveryCode) String() string {
 	return Stringify(u)
 }
