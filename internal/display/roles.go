@@ -6,19 +6,19 @@ import (
 )
 
 type roleView struct {
-	Name        string
 	ID          string
+	Name        string
 	Description string
 }
 
 func (v *roleView) AsTableHeader() []string {
-	return []string{"Name", "Role ID", "Description"}
+	return []string{"Role ID", "Name", "Description"}
 }
 
 func (v *roleView) AsTableRow() []string {
 	return []string{
-		v.Name,
 		ansi.Faint(v.ID),
+		v.Name,
 		v.Description,
 	}
 }
