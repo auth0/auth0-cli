@@ -11,13 +11,13 @@ var SentryDSN string
 
 // ReportException is designed to be called once as the CLI exits. We're
 // purposefully initializing a client all the time given this context.
-func ReportException(err error) {
+func ReportException(err error) bool {
 	if SentryDSN == "" {
-		return
+		return false
 	}
 
 	if err := sentry.Init(sentry.ClientOptions{Dsn: SentryDSN}); err != nil {
-		return
+		return false
 	}
 
 	// Flush buffered events before the program terminates.
@@ -25,4 +25,5 @@ func ReportException(err error) {
 
 	// Allow up to 2s to flush, otherwise quit.
 	sentry.Flush(2 * time.Second)
+	return true
 }

@@ -83,18 +83,6 @@ func WithClient(client *http.Client) ManagementOption {
 // Management API v2.
 //
 type Management struct {
-	// Action manages Auth0 actions
-	Action *ActionManager
-
-	// Action manages Auth0 actions bindings
-	ActionBinding *ActionBindingManager
-
-	// Action manages Auth0 actions executions
-	ActionExecution *ActionExecutionManager
-
-	// Action manages Auth0 actions versions
-	ActionVersion *ActionVersionManager
-
 	// Client manages Auth0 Client (also known as Application) resources.
 	Client *ClientManager
 
@@ -165,6 +153,12 @@ type Management struct {
 	// Blacklist manages the auth0 blacklists
 	Blacklist *BlacklistManager
 
+	// SigningKey manages Auth0 Application Signing Keys.
+	SigningKey *SigningKeyManager
+
+	// Anomaly manages the IP blocks
+	Anomaly *AnomalyManager
+
 	url         *url.URL
 	basePath    string
 	userAgent   string
@@ -208,10 +202,6 @@ func New(domain string, options ...ManagementOption) (*Management, error) {
 		client.WithUserAgent(m.userAgent),
 		client.WithRateLimit())
 
-	m.Action = newActionManager(m)
-	m.ActionBinding = newActionBindingManager(m)
-	m.ActionExecution = newActionExecutionManager(m)
-	m.ActionVersion = newActionVersionManager(m)
 	m.Client = newClientManager(m)
 	m.ClientGrant = newClientGrantManager(m)
 	m.Connection = newConnectionManager(m)
@@ -235,6 +225,8 @@ func New(domain string, options ...ManagementOption) (*Management, error) {
 	m.Guardian = newGuardianManager(m)
 	m.Prompt = newPromptManager(m)
 	m.Blacklist = newBlacklistManager(m)
+	m.SigningKey = newSigningKeyManager(m)
+	m.Anomaly = newAnomalyManager(m)
 
 	return m, nil
 }
@@ -362,10 +354,10 @@ func (m *managementError) Status() int {
 // Specific implementations embed this struct, therefore its direct use is not
 // useful. Rather it has been made public in order to aid documentation.
 type List struct {
-	Start  int `json:"start,omitempty"`
-	Limit  int `json:"limit,omitempty"`
-	Length int `json:"length,omitempty"`
-	Total  int `json:"total,omitempty"`
+	Start  int `json:"start"`
+	Limit  int `json:"limit"`
+	Length int `json:"length"`
+	Total  int `json:"total"`
 }
 
 func (l List) HasNext() bool {

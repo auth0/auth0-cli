@@ -7,7 +7,9 @@ func TestRequiredScopes(t *testing.T) {
 		crudResources := []string{
 			"clients",
 			"resource_servers",
+			"roles",
 			"rules",
+			"users",
 		}
 		crudPrefixes := []string{"create:", "delete:", "read:", "update:"}
 
@@ -24,10 +26,11 @@ func TestRequiredScopes(t *testing.T) {
 
 	t.Run("verify special scopes", func(t *testing.T) {
 		list := []string{
-			"read:client_keys", "read:logs",
-			"read:users", "update:users",
 			"read:branding", "update:branding",
+			"read:connections", "update:connections",
+			"read:custom_domains",
 			"read:client_keys", "read:logs", "read:tenant_settings",
+			"read:anomaly_blocks", "delete:anomaly_blocks",
 		}
 
 		for _, v := range list {

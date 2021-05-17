@@ -48,10 +48,6 @@ build-all-platforms:
 	env GOOS=windows go build -ldflags "$(CTIMEVAR)" -o auth0-windows.exe cmd/auth0/main.go
 .PHONY: build-all-platforms
 
-# Run all the tests and code checks
-ci: build-all-platforms test lint
-.PHONY: ci
-
 $(GOBIN)/mockgen:
 	@cd && GO111MODULE=on go get github.com/golang/mock/mockgen@v1.4.4
 

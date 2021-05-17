@@ -134,7 +134,7 @@ auth0 test login <client-id> --connection <connection>`,
 
 			defer cleanupTempApplication(isTempClient, cli, inputs.ClientID)
 
-			client, err := cli.api.Client.Read(inputs.ClientID, management.ExcludeFields(clientExcludedList...))
+			client, err := cli.api.Client.Read(inputs.ClientID)
 			if err != nil {
 				return fmt.Errorf("Unable to find client %s; if you specified a client, please verify it exists, otherwise re-run the command", inputs.ClientID)
 			}
@@ -234,7 +234,7 @@ auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
 				inputs.ClientID = client.GetClientID()
 			}
 
-			client, err := cli.api.Client.Read(inputs.ClientID, management.ExcludeFields(clientExcludedList...))
+			client, err := cli.api.Client.Read(inputs.ClientID)
 			if err != nil {
 				return fmt.Errorf("Unable to find client %s; if you specified a client, please verify it exists, otherwise re-run the command", inputs.ClientID)
 			}

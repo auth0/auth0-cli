@@ -106,6 +106,8 @@ func Execute() {
 	rootCmd.AddCommand(logsCmd(cli))
 	rootCmd.AddCommand(logoutCmd(cli))
 	rootCmd.AddCommand(brandingCmd(cli))
+	rootCmd.AddCommand(rolesCmd(cli))
+	rootCmd.AddCommand(ipsCmd(cli))
 
 	// keep completion at the bottom:
 	rootCmd.AddCommand(completionCmd(cli))
@@ -117,7 +119,15 @@ func Execute() {
 	defer func() {
 		if v := recover(); v != nil {
 			err := fmt.Errorf("panic: %v", v)
-			instrumentation.ReportException(err)
+
+			// If we're in development mode, we should throw the
+			// panic for so we have less surprises. For
+			// non-developers, we'll swallow the panics.
+			if instrumentation.ReportException(err) {
+				fmt.Println(panicMessage)
+			} else {
+				panic(v)
+			}
 		}
 	}()
 
@@ -149,3 +159,10 @@ func contextWithSignal(sigs ...os.Signal) context.Context {
 
 	return ctx
 }
+
+const panicMessage = `
+!!     Uh oh. Something went wrong.
+!!     If this problem keeps happening feel free to report an issue at
+!!
+!!     https://github.com/auth0/auth0-cli/issues/new/choose
+`

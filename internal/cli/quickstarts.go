@@ -129,7 +129,7 @@ auth0 qs download --stack <stack>`,
 			var client *management.Client
 			err := ansi.Waiting(func() error {
 				var err error
-				client, err = cli.api.Client.Read(inputs.ClientID, management.ExcludeFields(clientExcludedList...))
+				client, err = cli.api.Client.Read(inputs.ClientID)
 				return err
 			})
 

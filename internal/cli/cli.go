@@ -72,7 +72,6 @@ type cli struct {
 	// core primitives exposed to command builders.
 	api      *auth0.API
 	renderer *display.Renderer
-
 	// set of flags which are user specified.
 	debug   bool
 	tenant  string
@@ -123,21 +122,36 @@ func (c *cli) setup(ctx context.Context) error {
 		return err
 	}
 
-	t, err := c.getTenant()
+	t, err := c.prepareTenant(ctx)
 	if err != nil {
 		return err
 	}
 
-	if t.AccessToken == "" {
-		return errUnauthenticated
+	m, err := management.New(t.Domain,
+		management.WithStaticToken(t.AccessToken),
+		management.WithUserAgent(fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v"))))
+	if err != nil {
+		return err
 	}
 
-	if scopesChanged(t) {
-		// required scopes changed,
-		// a new token is required
-		err = RunLogin(ctx, c, true)
+	c.api = auth0.NewAPI(m)
+	return nil
+}
+
+// prepareTenant loads the tenant, refreshing its token if necessary.
+// The tenant access token needs a refresh if:
+// 1. the tenant scopes are different than the currently required scopes.
+// 2. the access token is expired.
+func (c *cli) prepareTenant(ctx context.Context) (tenant, error) {
+	t, err := c.getTenant()
+	if err != nil {
+		return tenant{}, err
+	}
+
+	if t.AccessToken == "" || scopesChanged(t) {
+		t, err = RunLogin(ctx, c, true)
 		if err != nil {
-			return err
+			return tenant{}, err
 		}
 	} else if isExpired(t.ExpiresAt, accessTokenExpThreshold) {
 		// check if the stored access token is expired:
@@ -151,9 +165,9 @@ func (c *cli) setup(ctx context.Context) error {
 		if err != nil {
 			// ask and guide the user through the login process:
 			c.renderer.Errorf("failed to renew access token, %s", err)
-			err = RunLogin(ctx, c, true)
+			t, err = RunLogin(ctx, c, true)
 			if err != nil {
-				return err
+				return tenant{}, err
 			}
 		} else {
 			// persist the updated tenant with renewed access token
@@ -164,24 +178,12 @@ func (c *cli) setup(ctx context.Context) error {
 
 			err = c.addTenant(t)
 			if err != nil {
-				return err
+				return tenant{}, err
 			}
 		}
 	}
 
-	// continue with the command setup:
-	if t.AccessToken != "" {
-		m, err := management.New(t.Domain,
-			management.WithStaticToken(t.AccessToken),
-			management.WithUserAgent(fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v"))))
-		if err != nil {
-			return err
-		}
-
-		c.api = auth0.NewAPI(m)
-	}
-
-	return err
+	return t, nil
 }
 
 // isExpired is true if now() + a threshold is after the given date

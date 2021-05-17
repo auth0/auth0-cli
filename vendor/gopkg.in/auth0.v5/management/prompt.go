@@ -3,6 +3,9 @@ package management
 type Prompt struct {
 	// Which login experience to use. Can be `new` or `classic`.
 	UniversalLoginExperience string `json:"universal_login_experience,omitempty"`
+
+	// IdentifierFirst determines if the login screen prompts for just the identifier, identifier and password first.
+	IdentifierFirst *bool `json:"identifier_first,omitempty"`
 }
 
 type PromptManager struct {

@@ -1,5 +1,13 @@
 package management
 
+import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+
+	"gopkg.in/auth0.v5"
+)
+
 type Client struct {
 	// The name of the client
 	Name *string `json:"name,omitempty"`
@@ -88,7 +96,7 @@ type Client struct {
 
 type ClientJWTConfiguration struct {
 	// The amount of seconds the JWT will be valid (affects exp claim)
-	LifetimeInSeconds *int `json:"lifetime_in_seconds,omitempty"`
+	LifetimeInSeconds *int `json:"-"`
 
 	// True if the client secret is base64 encoded, false otherwise. Defaults to
 	// true
@@ -195,4 +203,57 @@ func (m *ClientManager) RotateSecret(id string, opts ...RequestOption) (c *Clien
 // See: https://auth0.com/docs/api/management/v2#!/Clients/delete_clients_by_id
 func (m *ClientManager) Delete(id string, opts ...RequestOption) error {
 	return m.Request("DELETE", m.URI("clients", id), nil, opts...)
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+//
+// It is required to handle the json field lifetime_in_seconds, which can either
+// be an int, or a string in older tenants.
+func (jc *ClientJWTConfiguration) UnmarshalJSON(b []byte) error {
+	type clientJWTConfiguration ClientJWTConfiguration
+	type clientJWTConfigurationWrapper struct {
+		*clientJWTConfiguration
+		RawLifetimeInSeconds interface{} `json:"lifetime_in_seconds,omitempty"`
+	}
+
+	alias := &clientJWTConfigurationWrapper{(*clientJWTConfiguration)(jc), nil}
+
+	err := json.Unmarshal(b, alias)
+	if err != nil {
+		return err
+	}
+
+	unexpectedTypeError := fmt.Errorf("unexpected type for field lifetime_in_seconds")
+
+	if alias.RawLifetimeInSeconds != nil {
+		switch rawLifetimeInSeconds := alias.RawLifetimeInSeconds.(type) {
+		case float64:
+			jc.LifetimeInSeconds = auth0.Int(int(rawLifetimeInSeconds))
+		case string:
+			value, err := strconv.Atoi(rawLifetimeInSeconds)
+			if err != nil {
+				return unexpectedTypeError
+			}
+			jc.LifetimeInSeconds = &value
+		default:
+			return unexpectedTypeError
+		}
+	}
+
+	return nil
+}
+
+func (jc *ClientJWTConfiguration) MarshalJSON() ([]byte, error) {
+	type clientJWTConfiguration ClientJWTConfiguration
+	type clientJWTConfigurationWrapper struct {
+		*clientJWTConfiguration
+		RawLifetimeInSeconds interface{} `json:"lifetime_in_seconds,omitempty"`
+	}
+
+	alias := &clientJWTConfigurationWrapper{(*clientJWTConfiguration)(jc), nil}
+	if jc.LifetimeInSeconds != nil {
+		alias.RawLifetimeInSeconds = jc.LifetimeInSeconds
+	}
+
+	return json.Marshal(alias)
 }

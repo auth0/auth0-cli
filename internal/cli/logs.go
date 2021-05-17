@@ -5,7 +5,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/auth0/auth0-cli/internal/auth0/actions"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
@@ -61,24 +60,8 @@ auth0 logs ls -n 100`,
 				return fmt.Errorf("An unexpected error occurred while getting logs: %v", err)
 			}
 
-			// TODO(cyx): This is a hack for now to make the
-			// streaming work faster.
-			//
-			// Create a `set` to detect duplicates clientside.
-			// set := make(map[string]struct{})
-			// list = dedupLogs(list, set)
-
 			var logsCh chan []*management.Log
-
-			// We create an execution API decorator which provides
-			// a leaky bucket implementation for Read. This
-			// protects us from being rate limited since we
-			// potentially have an N+1 querying situation.
-			actionExecutionAPI := actions.NewSampledExecutionAPI(
-				cli.api.ActionExecution, time.Second,
-			)
-
-			cli.renderer.LogList(list, logsCh, actionExecutionAPI, !cli.debug)
+			cli.renderer.LogList(list, logsCh, !cli.debug)
 			return nil
 		},
 	}
@@ -158,15 +141,7 @@ auth0 logs tail -n 100`,
 
 			}()
 
-			// We create an execution API decorator which provides
-			// a leaky bucket implementation for Read. This
-			// protects us from being rate limited since we
-			// potentially have an N+1 querying situation.
-			actionExecutionAPI := actions.NewSampledExecutionAPI(
-				cli.api.ActionExecution, time.Second,
-			)
-
-			cli.renderer.LogList(list, logsCh, actionExecutionAPI, !cli.debug)
+			cli.renderer.LogList(list, logsCh, !cli.debug)
 			return nil
 		},
 	}
