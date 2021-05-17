@@ -62,6 +62,11 @@ func Execute() {
 				return nil
 			}
 
+			// config init shouldn't trigger a login.
+			if cmd.CalledAs() == "init" && cmd.Parent().Use == "config" {
+				return nil
+			}
+
 			// Initialize everything once. Later callers can then
 			// freely assume that config is fully primed and ready
 			// to go.
@@ -86,10 +91,11 @@ func Execute() {
 		"no-input", false, "Disable interactivity.")
 
 	rootCmd.PersistentFlags().BoolVar(&cli.noColor,
-		"no-color", false, "Disable colors.")	
+		"no-color", false, "Disable colors.")
 	// order of the comamnds here matters
 	// so add new commands in a place that reflect its relevance or relation with other commands:
 	rootCmd.AddCommand(loginCmd(cli))
+	rootCmd.AddCommand(configCmd(cli))
 	rootCmd.AddCommand(tenantsCmd(cli))
 	rootCmd.AddCommand(usersCmd(cli))
 	rootCmd.AddCommand(appsCmd(cli))

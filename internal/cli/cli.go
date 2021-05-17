@@ -33,14 +33,14 @@ const (
 
 // config defines the exact set of tenants, access tokens, which only exists
 // for a particular user's machine.
-type Config struct {
+type config struct {
 	DefaultTenant string            `json:"default_tenant"`
-	Tenants       map[string]Tenant `json:"tenants"`
+	Tenants       map[string]tenant `json:"tenants"`
 }
 
 // tenant is the cli's concept of an auth0 tenant. The fields are tailor fit
 // specifically for interacting with the management API.
-type Tenant struct {
+type tenant struct {
 	Name         string         `json:"name"`
 	Domain       string         `json:"domain"`
 	AccessToken  string         `json:"access_token,omitempty"`
@@ -85,7 +85,7 @@ type cli struct {
 	initOnce sync.Once
 	errOnce  error
 	path     string
-	config   Config
+	config   config
 }
 
 // isLoggedIn encodes the domain logic for determining whether or not we're
@@ -191,7 +191,7 @@ func isExpired(t time.Time, threshold time.Duration) bool {
 
 // scopesChanged compare the tenant scopes
 // with the currently required scopes.
-func scopesChanged(t Tenant) bool {
+func scopesChanged(t tenant) bool {
 	want := auth.RequiredScopes()
 	got := t.Scopes
 
@@ -217,14 +217,14 @@ func scopesChanged(t Tenant) bool {
 
 // getTenant fetches the default tenant configured (or the tenant specified via
 // the --tenant flag).
-func (c *cli) getTenant() (Tenant, error) {
+func (c *cli) getTenant() (tenant, error) {
 	if err := c.init(); err != nil {
-		return Tenant{}, err
+		return tenant{}, err
 	}
 
 	t, ok := c.config.Tenants[c.tenant]
 	if !ok {
-		return Tenant{}, fmt.Errorf("Unable to find tenant: %s; run 'auth0 tenants use' to see your configured tenants or run 'auth0 login' to configure a new tenant", c.tenant)
+		return tenant{}, fmt.Errorf("Unable to find tenant: %s; run 'auth0 tenants use' to see your configured tenants or run 'auth0 login' to configure a new tenant", c.tenant)
 	}
 
 	if t.Apps == nil {
@@ -235,12 +235,12 @@ func (c *cli) getTenant() (Tenant, error) {
 }
 
 // listTenants fetches all of the configured tenants
-func (c *cli) listTenants() ([]Tenant, error) {
+func (c *cli) listTenants() ([]tenant, error) {
 	if err := c.init(); err != nil {
-		return []Tenant{}, err
+		return []tenant{}, err
 	}
 
-	tenants := make([]Tenant, 0, len(c.config.Tenants))
+	tenants := make([]tenant, 0, len(c.config.Tenants))
 	for _, t := range c.config.Tenants {
 		tenants = append(tenants, t)
 	}
@@ -250,7 +250,7 @@ func (c *cli) listTenants() ([]Tenant, error) {
 
 // addTenant assigns an existing, or new tenant. This is expected to be called
 // after a login has completed.
-func (c *cli) addTenant(ten Tenant) error {
+func (c *cli) addTenant(ten tenant) error {
 	// init will fail here with a `no tenant found` error if we're logging
 	// in for the first time and that's expected.
 	_ = c.init()
@@ -264,7 +264,7 @@ func (c *cli) addTenant(ten Tenant) error {
 	// If we're dealing with an empty file, we'll need to initialize this
 	// map.
 	if c.config.Tenants == nil {
-		c.config.Tenants = map[string]Tenant{}
+		c.config.Tenants = map[string]tenant{}
 	}
 
 	c.config.Tenants[ten.Domain] = ten
@@ -284,7 +284,7 @@ func (c *cli) removeTenant(ten string) error {
 	// If we're dealing with an empty file, we'll need to initialize this
 	// map.
 	if c.config.Tenants == nil {
-		c.config.Tenants = map[string]Tenant{}
+		c.config.Tenants = map[string]tenant{}
 	}
 
 	delete(c.config.Tenants, ten)
@@ -453,6 +453,14 @@ func (c *cli) initContext() (err error) {
 	}
 
 	return nil
+}
+
+func (c *cli) setPath(p string) {
+	if p == "" {
+		c.path = path.Join(os.Getenv("HOME"), ".config", "auth0", "config.json")
+		return
+	}
+	c.path = p
 }
 
 func canPrompt(cmd *cobra.Command) bool {

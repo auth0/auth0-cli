@@ -1,25 +1,20 @@
-// auth0-cli-config-generator: A command that generates a valid config file that can be used with auth0-cli.
-//
-// Currently this command is only used to generator a config using environment variables which is then used for integration tests.
-package main
+package cli
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/auth"
-	"github.com/auth0/auth0-cli/internal/cli"
-	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2/clientcredentials"
 )
+
+var requiredScopes = auth.RequiredScopes()
 
 type params struct {
 	filePath     string
@@ -27,8 +22,6 @@ type params struct {
 	clientID     string
 	clientSecret string
 }
-
-var requiredScopes = auth.RequiredScopes()
 
 func (p params) validate() error {
 	if p.clientDomain == "" {
@@ -54,84 +47,30 @@ func (p params) validate() error {
 	return nil
 }
 
-func isLoggedIn(filePath string) bool {
-	var c cli.Config
-	var buf []byte
-	var err error
-	if buf, err = os.ReadFile(filePath); err != nil {
-		return false
+func configCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "config",
+		Short: "Manage auth0-cli config",
+		Long:  "Manage auth0-cli config",
 	}
 
-	if err := json.Unmarshal(buf, &c); err != nil {
-		return false
-	}
-
-	if c.Tenants == nil {
-		return false
-	}
-
-	if c.DefaultTenant == "" {
-		return false
-	}
-
-	t, err := jwt.ParseString(c.Tenants[c.DefaultTenant].AccessToken)
-	if err != nil {
-		return false
-	}
-
-	if err = jwt.Validate(t); err != nil {
-		return false
-	}
-
-	return true
+	cmd.AddCommand(initCmd(cli))
+	return cmd
 }
 
-func persistConfig(filePath string, c cli.Config, overwrite bool) error {
-	dir := filepath.Dir(filePath)
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if err := os.MkdirAll(dir, 0700); err != nil {
-			return err
-		}
-	}
-
-	buf, err := json.MarshalIndent(c, "", "    ")
-	if err != nil {
-		return err
-	}
-
-	if _, err := os.Stat(filePath); err == nil && !overwrite {
-		return fmt.Errorf("Not overwriting existing config file: %s", filePath)
-	}
-
-	if err = os.WriteFile(filePath, buf, 0600); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func main() {
+func initCmd(cli *cli) *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:           "auth0-cli-config-generator",
-		Short:         "A tool that generates valid auth0-cli config files",
+		Use:           "init",
+		Short:         "initialize valid cli config from environment variables",
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(command *cobra.Command, args []string) error {
-			reuseConfig := viper.GetBool("REUSE_CONFIG")
-			overwrite := viper.GetBool("OVERWRITE")
 			filePath := viper.GetString("FILEPATH")
 			clientDomain := viper.GetString("CLIENT_DOMAIN")
 			clientID := viper.GetString("CLIENT_ID")
 			clientSecret := viper.GetString("CLIENT_SECRET")
 
-			if reuseConfig {
-				if !isLoggedIn(filePath) {
-					return fmt.Errorf("Config file is not valid: %s", filePath)
-				}
-				fmt.Printf("Reusing valid config file: %s\n", filePath)
-				return nil
-			}
-
+			cli.setPath(filePath)
 			p := params{filePath, clientDomain, clientID, clientSecret}
 			if err := p.validate(); err != nil {
 				return err
@@ -160,7 +99,7 @@ func main() {
 				return err
 			}
 
-			t := cli.Tenant{
+			t := tenant{
 				Name:        p.clientDomain,
 				Domain:      p.clientDomain,
 				AccessToken: token.AccessToken,
@@ -168,15 +107,9 @@ func main() {
 				Scopes:      requiredScopes,
 			}
 
-			cfg := cli.Config{
-				DefaultTenant: p.clientDomain,
-				Tenants:       map[string]cli.Tenant{p.clientDomain: t},
+			if err := cli.addTenant(t); err != nil {
+				return fmt.Errorf("Unexpected error adding tenant to config: %w", err)
 			}
-			if err := persistConfig(p.filePath, cfg, overwrite); err != nil {
-				return err
-			}
-			fmt.Printf("Config file generated: %s\n", filePath)
-
 			return nil
 		},
 	}
@@ -192,13 +125,10 @@ func main() {
 	_ = viper.BindPFlag("CLIENT_SECRET", flags.Lookup("client-secret"))
 	flags.String("client-domain", "", "Client domain to use to generate token which is set within config")
 	_ = viper.BindPFlag("CLIENT_DOMAIN", flags.Lookup("client-domain"))
-	flags.Bool("reuse-config", true, "Reuse an existing config if found")
-	_ = viper.BindPFlag("REUSE_CONFIG", flags.Lookup("reuse-config"))
-	flags.Bool("overwrite", false, "Overwrite an existing config")
-	_ = viper.BindPFlag("OVERWRITE", flags.Lookup("overwrite"))
 
 	if err := cmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	return cmd
 }
