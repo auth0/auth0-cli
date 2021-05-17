@@ -59,11 +59,9 @@ func configCmd(cli *cli) *cobra.Command {
 }
 
 func initCmd(cli *cli) *cobra.Command {
-	var cmd = &cobra.Command{
-		Use:           "init",
-		Short:         "initialize valid cli config from environment variables",
-		SilenceErrors: true,
-		SilenceUsage:  true,
+	cmd := &cobra.Command{
+		Use:   "init",
+		Short: "initialize valid cli config from environment variables",
 		RunE: func(command *cobra.Command, args []string) error {
 			filePath := viper.GetString("FILEPATH")
 			clientDomain := viper.GetString("CLIENT_DOMAIN")
@@ -126,9 +124,5 @@ func initCmd(cli *cli) *cobra.Command {
 	flags.String("client-domain", "", "Client domain to use to generate token which is set within config")
 	_ = viper.BindPFlag("CLIENT_DOMAIN", flags.Lookup("client-domain"))
 
-	if err := cmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
 	return cmd
 }
