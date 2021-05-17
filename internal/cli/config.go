@@ -16,6 +16,15 @@ import (
 
 var requiredScopes = auth.RequiredScopes()
 
+var desiredInputs = `Config init is intended for non-interactive use, 
+ensure the following env variables are set: 
+
+AUTH0_CLI_CLIENT_DOMAIN 
+AUTH0_CLI_CLIENT_ID
+AUTH0_CLI_CLIENT_SECRET
+
+Interactive logins should use "auth0 login" instead.`
+
 type params struct {
 	filePath     string
 	clientDomain string
@@ -25,7 +34,7 @@ type params struct {
 
 func (p params) validate() error {
 	if p.clientDomain == "" {
-		return fmt.Errorf("Missing client domain")
+		return fmt.Errorf("Missing client domain.\n%s", desiredInputs)
 	}
 
 	u, err := url.Parse(p.clientDomain)
@@ -38,11 +47,11 @@ func (p params) validate() error {
 	}
 
 	if p.clientID == "" {
-		return fmt.Errorf("Missing client id")
+		return fmt.Errorf("Missing client id.\n%s", desiredInputs)
 	}
 
 	if p.clientSecret == "" {
-		return fmt.Errorf("Missing client secret")
+		return fmt.Errorf("Missing client secret.\n%s", desiredInputs)
 	}
 	return nil
 }
