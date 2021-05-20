@@ -45,12 +45,10 @@ for user in $( echo "${users}" | jq -r '.[] | @base64' ); do
     }
 
     userid=$(_jq '.UserID')
-    name=$(_jq '.Name')
-		# TODO(jfatta): should remove only those
 		# created during the same test session
-    if [[ $name = integration-test-user-* ]]
+    if [[ integration-* ]]
     then
-        echo deleting "$name"
+        echo deleting "$userid"
         $( auth0 users delete "$userid")
     fi
 done

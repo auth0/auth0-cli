@@ -8,6 +8,9 @@ tests:
   auth0 apps list:
     exit-code: 0
 
+  auth0 users search -q "integration-*":
+    exit-code: 0
+
   auth0 logs list:
     exit-code: 0
 
@@ -377,44 +380,20 @@ tests:
 
   # Test 'users create'
   users create and check data:
-    command: users create -n integration-test-user -c Username-Password-Authentication -e testuser@example.com -p testUser12 --format json --no-input
+    command: auth0 users create --name integration-test-user-new --connection Username-Password-Authentication --email testuser@example.com --password testUser12 --format json --no-input
     exit-code: 0
     stdout:
       json:
-        name: integration-test-user
-        connection: Username-Password-Authentication
-        email: testuser@example.com
+        Email:      "testuser@example.com"
+        Connection: "Username-Password-Authentication"
 
   users create and check output:
-    command: users create -n integration-test-user -c Username-Password-Authentication -e testuser@example.com -p testUser12 --format json --no-input
+    command: auth0 users create --name integration-test-user-new2 --connection Username-Password-Authentication --email testuser2@example.com --password testUser12  --no-input
     exit-code: 0
     stdout:
       contains:
-        - NAME        integration-test-user
+        - EMAIL       testuser2@example.com
         - CONNECTION  Username-Password-Authentication
-        - EMAIL       testuser@example.com
-
-  # Test 'users create' --username flag
-  users create username and check data:
-    command: users create -n integration-test-user -c Username-Password-Authentication -e testuser@example.com -p testUser12 -u tuser --format json --no-input
-    exit-code: 0
-    stdout:
-      json:
-        name: integration-test-user
-        email: testuser@example.com
-        connection: Username-Password-Authentication
-        username: tuser
-
-
-  users create username and check output:
-    command: users create -n integration-test-user -c Username-Password-Authentication -e testuser@example.com -p testUser12 --format json --no-input
-    exit-code: 0
-    stdout:
-      contains:
-        - NAME        integration-test-user
-        - EMAIL       testuser@example.com
-        - CONNECTION  Username-Password-Authentication
-        - USERNAME    tuser
 
   # Test 'users show'
   users create test user:
@@ -422,34 +401,32 @@ tests:
     exit-code: 0
 
   users show json:
-    command: autho users show $(cat ./integration/identifiers/user-id) --format json
+    command: auth0 users show $(cat ./integration/identifiers/user-id) --format json
     stdout:
       json:
-        name: integration-test-user
-        email: testuser@example.com
-        connection: Username-Password-Authentication
+        Email:      "newuser@example.com"
+        Connection: "Username-Password-Authentication"
     exit-code: 0
 
   users show:
     command: auth0 users show $(cat ./integration/identifiers/user-id)
     stdout:
       contains:
-        - NAME        integration-test-newuser
         - EMAIL       newuser@example.com
         - CONNECTION  Username-Password-Authentication
     exit-code: 0
 
   # Test 'users update'
-  users update name:
-    command: auth0 users update $(cat ./integration/identifiers/user-id) --name integration-test-betterUserName --format json
+  users update email:
+    command: auth0 users update $(cat ./integration/identifiers/user-id)  --email betteruser@example.com  --format json --no-input
     stdout:
       json:
-        name: integration-test-betterUserName
+        Email: betteruser@example.com
     exit-code: 0
 
-  users update email:
-    command: auth0 users update $(cat ./integration/identifiers/user-id) --email betteruser@example.com
+  users update name:
+    command: auth0 users update $(cat ./integration/identifiers/user-id)  --name integration-test-user-bettername  --format json --no-input
     stdout:
       json:
-        email: betteruser@example.com
+        Email: betteruser@example.com # Name is not being displayed, hence using email
     exit-code: 0
