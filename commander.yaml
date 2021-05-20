@@ -8,9 +8,6 @@ tests:
   auth0 apps list:
     exit-code: 0
 
-  auth0 users search -q "integration-*":
-    exit-code: 0
-
   auth0 logs list:
     exit-code: 0
 
@@ -21,6 +18,9 @@ tests:
     exit-code: 0
 
   auth0 completion bash:
+    exit-code: 0
+
+  auth0 users search -q "*":
     exit-code: 0
   
   # Test 'apps create' --type flag
