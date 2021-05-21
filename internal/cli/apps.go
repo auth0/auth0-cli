@@ -186,7 +186,9 @@ func useAppCmd(cli *cli) *cobra.Command {
 }
 
 func listAppsCmd(cli *cli) *cobra.Command {
-	var inputs struct{ Reveal bool }
+	var inputs struct{
+		Reveal bool
+	}
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
