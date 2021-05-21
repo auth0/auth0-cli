@@ -116,7 +116,6 @@ var (
 		LongForm:   "reveal",
 		ShortForm:  "r",
 		Help:       "Display the Client Secret as part of the command output.",
-		IsRequired: false,
 	}
 )
 
