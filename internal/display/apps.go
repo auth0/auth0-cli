@@ -95,31 +95,31 @@ func (v *applicationView) KeyValues() [][]string {
 
 	if v.revealSecret {
 		return [][]string{
-			[]string{"CLIENT ID", ansi.Faint(v.ClientID)},
-			[]string{"NAME", v.Name},
-			[]string{"DESCRIPTION", v.Description},
-			[]string{"TYPE", applyColor(v.Type)},
-			[]string{"CLIENT SECRET", ansi.Italic(v.ClientSecret)},
-			[]string{"CALLBACKS", callbacks},
-			[]string{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
-			[]string{"ALLOWED ORIGINS", allowedOrigins},
-			[]string{"ALLOWED WEB ORIGINS", allowedWebOrigins},
-			[]string{"TOKEN ENDPOINT AUTH", v.AuthMethod},
-			[]string{"GRANTS", grants},
+			{"CLIENT ID", ansi.Faint(v.ClientID)},
+			{"NAME", v.Name},
+			{"DESCRIPTION", v.Description},
+			{"TYPE", applyColor(v.Type)},
+			{"CLIENT SECRET", ansi.Italic(v.ClientSecret)},
+			{"CALLBACKS", callbacks},
+			{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
+			{"ALLOWED ORIGINS", allowedOrigins},
+			{"ALLOWED WEB ORIGINS", allowedWebOrigins},
+			{"TOKEN ENDPOINT AUTH", v.AuthMethod},
+			{"GRANTS", grants},
 		}
 	}
 
 	return [][]string{
-		[]string{"CLIENT ID", ansi.Faint(v.ClientID)},
-		[]string{"NAME", v.Name},
-		[]string{"DESCRIPTION", v.Description},
-		[]string{"TYPE", applyColor(v.Type)},
-		[]string{"CALLBACKS", callbacks},
-		[]string{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
-		[]string{"ALLOWED ORIGINS", allowedOrigins},
-		[]string{"ALLOWED WEB ORIGINS", allowedWebOrigins},
-		[]string{"TOKEN ENDPOINT AUTH", v.AuthMethod},
-		[]string{"GRANTS", grants},
+		{"CLIENT ID", ansi.Faint(v.ClientID)},
+		{"NAME", v.Name},
+		{"DESCRIPTION", v.Description},
+		{"TYPE", applyColor(v.Type)},
+		{"CALLBACKS", callbacks},
+		{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
+		{"ALLOWED ORIGINS", allowedOrigins},
+		{"ALLOWED WEB ORIGINS", allowedWebOrigins},
+		{"TOKEN ENDPOINT AUTH", v.AuthMethod},
+		{"GRANTS", grants},
 	}
 }
 

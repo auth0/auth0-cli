@@ -19,8 +19,8 @@ func (v *userBlockView) AsTableRow() []string {
 
 func (v *userBlockView) KeyValues() [][]string {
 	return [][]string{
-		[]string{"Identifier", v.Identifier},
-		[]string{"IP", v.IP},
+		{"Identifier", v.Identifier},
+		{"IP", v.IP},
 	}
 }
 

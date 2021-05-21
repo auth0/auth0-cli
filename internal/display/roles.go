@@ -25,9 +25,9 @@ func (v *roleView) AsTableRow() []string {
 
 func (v *roleView) KeyValues() [][]string {
 	return [][]string{
-		[]string{"ID", ansi.Faint(v.ID)},
-		[]string{"NAME", v.Name},
-		[]string{"DESCRIPTION", v.Description},
+		{"ID", ansi.Faint(v.ID)},
+		{"NAME", v.Name},
+		{"DESCRIPTION", v.Description},
 	}
 }
 
