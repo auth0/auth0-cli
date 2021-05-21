@@ -133,7 +133,7 @@ type applicationListView struct {
 	Name         string
 	Type         string
 	ClientID     string
-	ClientSecret string
+	ClientSecret string `json:"ClientSecret,omitempty"`
 	revealSecret bool
 }
 
@@ -176,12 +176,19 @@ func (r *Renderer) ApplicationList(clients []*management.Client, revealSecrets b
 		if auth0.StringValue(c.Name) == deprecatedAppName {
 			continue
 		}
+
+		// in case of format=JSON:
+		clientSecret := ""
+		if revealSecrets {
+			clientSecret = auth0.StringValue(c.ClientSecret)
+		}
+
 		res = append(res, &applicationListView{
 			revealSecret: revealSecrets,
 			Name:         auth0.StringValue(c.Name),
 			Type:         appTypeFor(c.AppType),
 			ClientID:     auth0.StringValue(c.ClientID),
-			ClientSecret: auth0.StringValue(c.ClientSecret),
+			ClientSecret: clientSecret,
 		})
 	}
 
