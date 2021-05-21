@@ -139,7 +139,7 @@ type applicationListView struct {
 
 func (v *applicationListView) AsTableHeader() []string {
 	if v.revealSecret {
-		return []string{"ClientID", "Name", "Type", "Client Secret"}
+		return []string{"Client ID", "Name", "Type", "Client Secret"}
 	}
 	return []string{"Client ID", "Name", "Type"}
 }
@@ -160,7 +160,7 @@ func (v *applicationListView) AsTableRow() []string {
 	}
 }
 
-func (r *Renderer) ApplicationList(clients []*management.Client) {
+func (r *Renderer) ApplicationList(clients []*management.Client, revealSecrets bool) {
 	resource := "applications"
 
 	r.Heading(resource)
@@ -177,6 +177,7 @@ func (r *Renderer) ApplicationList(clients []*management.Client) {
 			continue
 		}
 		res = append(res, &applicationListView{
+			revealSecret: revealSecrets,
 			Name:         auth0.StringValue(c.Name),
 			Type:         appTypeFor(c.AppType),
 			ClientID:     auth0.StringValue(c.ClientID),
@@ -189,6 +190,10 @@ func (r *Renderer) ApplicationList(clients []*management.Client) {
 
 func (r *Renderer) ApplicationShow(client *management.Client, revealSecrets bool) {
 	r.Heading("application")
+
+	if !revealSecrets {
+		client.ClientSecret = auth0.String("")
+	}
 
 	v := &applicationView{
 		revealSecret:      revealSecrets,
@@ -211,6 +216,10 @@ func (r *Renderer) ApplicationShow(client *management.Client, revealSecrets bool
 
 func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bool) {
 	r.Heading("application created")
+
+	if !revealSecrets {
+		client.ClientSecret = auth0.String("")
+	}
 
 	v := &applicationView{
 		revealSecret:      revealSecrets,
@@ -246,6 +255,10 @@ func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bo
 
 func (r *Renderer) ApplicationUpdate(client *management.Client, revealSecrets bool) {
 	r.Heading("application updated")
+
+	if !revealSecrets {
+		client.ClientSecret = auth0.String("")
+	}
 
 	v := &applicationView{
 		revealSecret:      revealSecrets,

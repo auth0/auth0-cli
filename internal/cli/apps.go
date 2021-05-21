@@ -111,6 +111,13 @@ var (
 		Help:       "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.",
 		IsRequired: false,
 	}
+	reveal = Flag{
+		Name:       "Reveal",
+		LongForm:   "reveal",
+		ShortForm:  "r",
+		Help:       "Display the Client Secret as part of the command output.",
+		IsRequired: false,
+	}
 )
 
 func appsCmd(cli *cli) *cobra.Command {
@@ -179,6 +186,7 @@ func useAppCmd(cli *cli) *cobra.Command {
 }
 
 func listAppsCmd(cli *cli) *cobra.Command {
+	var inputs struct{ Reveal bool }
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
@@ -189,6 +197,7 @@ auth0 apps create`,
 		Example: `auth0 apps list
 auth0 apps ls`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+
 			var list *management.ClientList
 
 			if err := ansi.Waiting(func() error {
@@ -199,17 +208,20 @@ auth0 apps ls`,
 				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
 
-			cli.renderer.ApplicationList(list.Clients)
+			cli.renderer.ApplicationList(list.Clients, inputs.Reveal)
 			return nil
 		},
 	}
+
+	reveal.RegisterBool(cmd, &inputs.Reveal, false)
 
 	return cmd
 }
 
 func showAppCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID string
+		ID     string
+		Reveal bool
 	}
 
 	cmd := &cobra.Command{
@@ -239,11 +251,12 @@ auth0 apps show <id>`,
 				return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
 			}
 
-			revealClientSecret := auth0.StringValue(a.AppType) != "native" && auth0.StringValue(a.AppType) != "spa"
-			cli.renderer.ApplicationShow(a, revealClientSecret)
+			cli.renderer.ApplicationShow(a, inputs.Reveal)
 			return nil
 		},
 	}
+
+	reveal.RegisterBool(cmd, &inputs.Reveal, false)
 
 	return cmd
 }
@@ -302,6 +315,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 		AllowedLogoutURLs []string
 		AuthMethod        string
 		Grants            []string
+		Reveal            bool
 	}
 	var oidcConformant = true
 	var algorithm = "RS256"
@@ -418,9 +432,7 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <descriptio
 			}
 
 			// Render result
-			// note: a is populated with the rest of the client fields by the API during creation.
-			revealClientSecret := auth0.StringValue(a.AppType) != "native" && auth0.StringValue(a.AppType) != "spa"
-			cli.renderer.ApplicationCreate(a, revealClientSecret)
+			cli.renderer.ApplicationCreate(a, inputs.Reveal)
 
 			return nil
 		},
@@ -435,6 +447,7 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <descriptio
 	appLogoutURLs.RegisterStringSlice(cmd, &inputs.AllowedLogoutURLs, nil)
 	appAuthMethod.RegisterString(cmd, &inputs.AuthMethod, "")
 	appGrants.RegisterStringSlice(cmd, &inputs.Grants, nil)
+	reveal.RegisterBool(cmd, &inputs.Reveal, false)
 
 	return cmd
 }
@@ -451,6 +464,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		AllowedLogoutURLs []string
 		AuthMethod        string
 		Grants            []string
+		Reveal            bool
 	}
 
 	cmd := &cobra.Command{
@@ -621,8 +635,7 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 			}
 
 			// Render result
-			revealClientSecret := auth0.StringValue(a.AppType) != appTypeNative && auth0.StringValue(a.AppType) != appTypeSPA
-			cli.renderer.ApplicationUpdate(a, revealClientSecret)
+			cli.renderer.ApplicationUpdate(a, inputs.Reveal)
 
 			return nil
 		},
@@ -637,7 +650,7 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 	appLogoutURLs.RegisterStringSliceU(cmd, &inputs.AllowedLogoutURLs, nil)
 	appAuthMethod.RegisterStringU(cmd, &inputs.AuthMethod, "")
 	appGrants.RegisterStringSliceU(cmd, &inputs.Grants, nil)
-
+	reveal.RegisterBool(cmd, &inputs.Reveal, false)
 	return cmd
 }
 
