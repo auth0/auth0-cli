@@ -36,16 +36,16 @@ func (v *userView) AsTableRow() []string {
 func (v *userView) KeyValues() [][]string {
 	if v.RequireUsername {
 		return [][]string{
-			[]string{"ID", ansi.Faint(v.UserID)},
-			[]string{"EMAIL", v.Email},
-			[]string{"CONNECTION", v.Connection},
-			[]string{"USERNAME", v.Username},
+			{"ID", ansi.Faint(v.UserID)},
+			{"EMAIL", v.Email},
+			{"CONNECTION", v.Connection},
+			{"USERNAME", v.Username},
 		}
 	}
 	return [][]string{
-		[]string{"ID", ansi.Faint(v.UserID)},
-		[]string{"EMAIL", v.Email},
-		[]string{"CONNECTION", v.Connection},
+		{"ID", ansi.Faint(v.UserID)},
+		{"EMAIL", v.Email},
+		{"CONNECTION", v.Connection},
 	}
 }
 
