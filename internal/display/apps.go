@@ -124,7 +124,7 @@ func (v *applicationView) KeyValues() [][]string {
 }
 
 func (v *applicationView) Object() interface{} {
-	return v.raw
+	return safeRaw(v.raw.(*management.Client), v.revealSecret)
 }
 
 // applicationListView is a slimmed down view of a client for displaying
@@ -197,10 +197,6 @@ func (r *Renderer) ApplicationList(clients []*management.Client, revealSecrets b
 
 func (r *Renderer) ApplicationShow(client *management.Client, revealSecrets bool) {
 	r.Heading("application")
-
-	if !revealSecrets {
-		client.ClientSecret = auth0.String("")
-	}
 
 	v := &applicationView{
 		revealSecret:      revealSecrets,
@@ -347,4 +343,14 @@ func applyColor(a string) string {
 	default:
 		return a
 	}
+}
+
+func safeRaw(c *management.Client, revealSecrets bool) *management.Client {
+	if revealSecrets {
+		return c
+	}
+
+	c.ClientSecret = nil
+	c.SigningKeys = nil
+	return c
 }
