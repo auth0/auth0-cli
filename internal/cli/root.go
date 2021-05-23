@@ -144,7 +144,9 @@ func Execute() {
 		os.Exit(1)
 	}
 
-	ctx, _ := context.WithTimeout(cli.context, 3 * time.Second)
+	ctx, cancel := context.WithTimeout(cli.context, 3 * time.Second)
+	// defers are executed in LIFO order
+	defer cancel()
 	defer cli.tracker.Wait(ctx)
 }
 
