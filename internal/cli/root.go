@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"time"
 
+	"github.com/auth0/auth0-cli/internal/analytics"
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
@@ -22,6 +24,8 @@ func Execute() {
 	// 3. JSON file (e.g. api_key = "..." in ~/.config/auth0/config.json)
 	cli := &cli{
 		renderer: display.NewRenderer(),
+		tracker:  analytics.NewTracker(),
+		context:  cliContext(),
 	}
 
 	rootCmd := &cobra.Command{
@@ -61,6 +65,8 @@ func Execute() {
 			if cmd.CalledAs() == "help" && cmd.Parent().Use == "auth0" {
 				return nil
 			}
+
+			defer cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
 
 			// Initialize everything once. Later callers can then
 			// freely assume that config is fully primed and ready
@@ -130,20 +136,23 @@ func Execute() {
 	// for most of the architectures there's no requirements:
 	ansi.InitConsole()
 
-	if err := rootCmd.ExecuteContext(contextWithSignal(os.Interrupt)); err != nil {
+	if err := rootCmd.ExecuteContext(cli.context); err != nil {
 		cli.renderer.Heading("error")
 		cli.renderer.Errorf(err.Error())
 
 		instrumentation.ReportException(err)
 		os.Exit(1)
 	}
+
+	ctx, _ := context.WithTimeout(cli.context, 3 * time.Second)
+	defer cli.tracker.Wait(ctx)
 }
 
-func contextWithSignal(sigs ...os.Signal) context.Context {
+func cliContext() context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, sigs...)
+	signal.Notify(ch, os.Interrupt)
 
 	go func() {
 		<-ch

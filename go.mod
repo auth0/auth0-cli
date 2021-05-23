@@ -14,6 +14,7 @@ require (
 	github.com/golang/mock v1.5.0
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/go-cmp v0.5.5
+	github.com/google/uuid v1.2.0
 	github.com/guiguan/caster v0.0.0-20191104051807-3736c4464f38
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/klauspost/compress v1.11.9 // indirect
