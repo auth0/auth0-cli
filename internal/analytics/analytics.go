@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"runtime"
 	"strings"
 	"sync"
@@ -67,8 +68,7 @@ func (t *Tracker) Wait(ctx context.Context) {
 }
 
 func (t *Tracker) track(eventName string, id string) {
-	// Do not track debug builds
-	if buildinfo.Version == "" {
+	if !shouldTrack() {
 		return
 	}
 
@@ -137,6 +137,14 @@ func generateEventName(command string, action string) string {
 	}
 
 	return eventNamePrefix
+}
+
+func shouldTrack() bool {
+	if os.Getenv("AUTH0_CLI_ANALYTICS") == "false" || buildinfo.Version == "" { // Do not track debug builds
+		return false
+	}
+
+	return true
 }
 
 func timestamp() int64 {
