@@ -60,8 +60,8 @@ func (t *Tracker) Wait(ctx context.Context) {
 	}()
 
 	select {
-	case <-ch:
-		return // waitgroup is done
+	case <-ch: // waitgroup is done
+		return
 	case <-ctx.Done():
 		return
 	}
