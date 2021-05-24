@@ -147,7 +147,7 @@ func Execute() {
 	ctx, cancel := context.WithTimeout(cli.context, 3 * time.Second)
 	// defers are executed in LIFO order
 	defer cancel()
-	defer cli.tracker.Wait(ctx)
+	defer cli.tracker.Wait(ctx) // No event should be tracked after this has run, or it will panic e.g. in earlier deferred functions
 }
 
 func cliContext() context.Context {
