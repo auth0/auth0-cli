@@ -15,11 +15,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/auth0/auth0-cli/internal/analytics"
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
+	"github.com/google/uuid"
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -34,6 +36,7 @@ const (
 // config defines the exact set of tenants, access tokens, which only exists
 // for a particular user's machine.
 type config struct {
+	InstallID     string            `json:"install_id,omitempty"`
 	DefaultTenant string            `json:"default_tenant"`
 	Tenants       map[string]tenant `json:"tenants"`
 }
@@ -72,6 +75,8 @@ type cli struct {
 	// core primitives exposed to command builders.
 	api      *auth0.API
 	renderer *display.Renderer
+	tracker  *analytics.Tracker
+	context  context.Context
 	// set of flags which are user specified.
 	debug   bool
 	tenant  string
@@ -373,8 +378,18 @@ func (c *cli) setFirstCommandRun(clientID string, command string) error {
 
 	c.config.Tenants[tenant.Domain] = tenant
 
-	if err := c.persistConfig(); err != nil {
-		return fmt.Errorf("Unexpected error persisting config: %w", err)
+	return nil
+}
+
+func checkInstallID(c *cli) error {
+	if c.config.InstallID == "" {
+		c.config.InstallID = uuid.NewString()
+
+		if err := c.persistConfig(); err != nil {
+			return fmt.Errorf("unexpected error persisting config: %w", err)
+		}
+
+		c.tracker.TrackFirstLogin(c.config.InstallID)
 	}
 
 	return nil

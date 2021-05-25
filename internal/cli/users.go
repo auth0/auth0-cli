@@ -71,6 +71,7 @@ func usersCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "users",
 		Short: "Manage resources for users",
+		Long: "Manage resources for users.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -448,7 +449,8 @@ auth0 users open "auth0|xxxxxxxxxx"`,
 func userBlocksCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "blocks",
-		Short: "Manage brute-force protection user blocks.",
+		Short: "Manage brute-force protection user blocks",
+		Long: "Manage brute-force protection user blocks.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
