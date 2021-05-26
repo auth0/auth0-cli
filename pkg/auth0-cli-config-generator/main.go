@@ -32,11 +32,14 @@ var requiredScopes = []string{
 	//	"offline_access", // <-- to get a refresh token.
 	"create:clients", "delete:clients", "read:clients", "update:clients",
 	"create:resource_servers", "delete:resource_servers", "read:resource_servers", "update:resource_servers",
+	"create:roles", "delete:roles", "read:roles", "update:roles",
 	"create:rules", "delete:rules", "read:rules", "update:rules",
-	"read:client_keys", "read:logs", "read:connections", "update:connections",
 	"create:users", "delete:users", "read:users", "update:users",
 	"read:branding", "update:branding",
+	"read:connections", "update:connections",
 	"read:client_keys", "read:logs", "read:tenant_settings", "read:custom_domains",
+	"read:anomaly_blocks", "delete:anomaly_blocks",
+	"create:log_streams", "delete:log_streams", "read:log_streams", "update:log_streams",
 }
 
 func (p params) validate() error {

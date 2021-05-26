@@ -35,6 +35,7 @@ func logsCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listLogsCmd(cli))
 	cmd.AddCommand(tailLogsCmd(cli))
+	cmd.AddCommand(logStreamsCmd(cli))
 
 	return cmd
 }
