@@ -746,20 +746,6 @@ func formatLogStreamSettingsPath(id string) string {
 	return fmt.Sprintf("log-streams/%s/settings", id)
 }
 
-func (c *cli) logTypePickerOptions() []string {
-	var res []string
-
-	list, err := c.api.LogStream.List()
-	if err != nil {
-		fmt.Println(err)
-	}
-	for _, ls := range list {
-		res = append(res, ls.GetType())
-	}
-
-	return res
-}
-
 func (c *cli) logStreamPickerOptions() (pickerOptions, error) {
 	list, err := c.api.LogStream.List()
 	if err != nil {
