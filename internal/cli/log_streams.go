@@ -19,13 +19,10 @@ const (
 	logStreamTypeDatadog           = "datadog"
 	logStreamTypeSplunk            = "splunk"
 	logStreamTypeSumo              = "sumo"
-	contentFormatJsonLines 			= "JSON Lines"
-	contentFormatJsonArray 			= "JSON Array"
-	contentFormatJsonObject 			= "JSON Object"
 )
 
 var (
-	ID = Argument{
+	logsID = Argument{
 		Name: "Log stream ID",
 		Help: "Log stream ID",
 	}
@@ -59,19 +56,14 @@ var (
 	httpContentType = Flag{
 		Name:         "Http Content Type",
 		LongForm:     "http-type",
-		Help:         "HTTP Content-Type header.",
+		Help:         "HTTP Content-Type header. Possible values: application/json.",
 		AlwaysPrompt: true,
 	}
 	httpContentFormat = Flag{
 		Name:         "Http Content Format",
 		LongForm:     "http-format",
-		Help:         "HTTP Content-Format header.",
+		Help:         "HTTP Content-Format header. Possible values: JSONLINES, JSONARRAY, JSONOBJECT.",
 		AlwaysPrompt: true,
-	}
-	contentFormatOptions = []string{
-		"JSONARRAY",
-		"JSONLINES",
-		"JSONOBJECT",
 	}
 	httpAuthorization = Flag{
 		Name:         "Http Authorization",
@@ -168,6 +160,8 @@ func logStreamsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(createLogStreamCmd(cli))
 	cmd.AddCommand(updateLogStreamCmd(cli))
 	cmd.AddCommand(deleteLogStreamCmd(cli))
+	cmd.AddCommand(openLogStreamsCmd(cli))
+
 	return cmd
 }
 
@@ -215,7 +209,7 @@ func showLogStreamCmd(cli *cli) *cobra.Command {
 auth0 logs streams show <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := ID.Ask(cmd, &inputs.ID)
+				err := logsID.Ask(cmd, &inputs.ID)
 				if err != nil {
 					return err
 				}
@@ -270,14 +264,16 @@ func createLogStreamCmd(cli *cli) *cobra.Command {
 		Long:  "Create a new log stream.",
 		Example: `auth0 logs streams create
 auth0 logs streams create --name mylogstream
-auth0 logs streams create -n mylogstream --type "http"`,
+auth0 logs streams create -n mylogstream -t http --http-type application/json --http-format JSONLINES --http-auth 1343434
+auth0 logs streams create -n mydatadog -t datadog --datadog-key 9999999 --datadog-id us
+auth0 logs streams create -n myeventbridge -t eventbridge --eventbridge-id 999999999999 --eventbridge-region us-east-1`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Prompt for logstream name
+			// Prompt for log stream name
 			if err := logStreamName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
 
-			// Prompt for logstream type
+			// Prompt for log stream type
 			if err := logStreamType.Select(cmd, &inputs.Type, typeOptions, nil); err != nil {
 				return err
 			}
@@ -289,12 +285,13 @@ auth0 logs streams create -n mylogstream --type "http"`,
 			logIsEventbridge := logsTypeFor(inputs.Type) == logStreamTypeAmazonEventBridge
 			logIsEventgrid := logsTypeFor(inputs.Type) == logStreamTypeAzureEventGrid
 
-			// Load values into a fresh logstream instance
+			// Load values into a fresh log stream instance
 			ls := &management.LogStream{
 				Name: &inputs.Name,
-				Type: &inputs.Type,
+				Type: auth0.String(logsTypeFor(inputs.Type)),
 			}
 
+			// Prompt for http sink details if type is http
 			if logIsHttp {
 				if err := httpEndpoint.Ask(cmd, &inputs.HttpEndpoint, nil); err != nil {
 					return err
@@ -302,24 +299,25 @@ auth0 logs streams create -n mylogstream --type "http"`,
 				if err := httpContentType.Ask(cmd, &inputs.HttpContentType, nil); err != nil {
 					return err
 				}
-				if err := httpContentFormat.Select(cmd, &inputs.httpContentFormat, contentFormatOptions, nil); err != nil {
+				if err := httpContentFormat.Ask(cmd, &inputs.httpContentFormat, nil); err != nil {
 					return err
 				}
 				if err := httpAuthorization.Ask(cmd, &inputs.HttpAuthorization, nil); err != nil {
 					return err
 				}
-				if err := httpCustomHeaders.Ask(cmd, &inputs.HttpCustomHeaders, nil); err != nil {
-					return err
-				}
+				//if err := httpCustomHeaders.Ask(cmd, &inputs.HttpCustomHeaders, nil); err != nil {
+				//	return err
+				//}
 				ls.Sink = &management.LogStreamSinkHTTP{
 					Authorization: &inputs.HttpAuthorization,
 					ContentType:   &inputs.HttpContentType,
 					ContentFormat: &inputs.httpContentFormat,
 					Endpoint:      &inputs.HttpEndpoint,
-					CustomHeaders: stringToInterfaceSlice(inputs.HttpCustomHeaders),
+					//CustomHeaders: stringToInterfaceSlice(inputs.HttpCustomHeaders),
 				}
 			}
 
+			// Prompt for splunk sink details if log stream type is splunk
 			if logIsSplunk {
 				if err := splunkDomain.Ask(cmd, &inputs.SplunkDomain, nil); err != nil {
 					return err
@@ -341,6 +339,7 @@ auth0 logs streams create -n mylogstream --type "http"`,
 				}
 			}
 
+			// Prompt for sumo sink details if log stream type is sumo
 			if logIsSumo {
 				if err := sumoLogicSource.Ask(cmd, &inputs.SumoLogicSource, nil); err != nil {
 					return err
@@ -350,6 +349,7 @@ auth0 logs streams create -n mylogstream --type "http"`,
 				}
 			}
 
+			// Prompt for datadog sink details if log stream type is datadog
 			if logIsDatadog {
 				if err := datadogApiKey.Ask(cmd, &inputs.DatadogAPIKey, nil); err != nil {
 					return err
@@ -363,6 +363,7 @@ auth0 logs streams create -n mylogstream --type "http"`,
 				}
 			}
 
+			// Prompt for eventbridge sink details if log stream type is eventbridge
 			if logIsEventbridge {
 				if err := awsAccountID.Ask(cmd, &inputs.AwsAccountID, nil); err != nil {
 					return err
@@ -376,6 +377,7 @@ auth0 logs streams create -n mylogstream --type "http"`,
 				}
 			}
 
+			// Prompt for eventgrid sink details if log stream type is eventgrid
 			if logIsEventgrid {
 				if err := azureSubscriptionID.Ask(cmd, &inputs.AzureSubscriptionID, nil); err != nil {
 					return err
@@ -412,7 +414,7 @@ auth0 logs streams create -n mylogstream --type "http"`,
 	httpContentType.RegisterString(cmd, &inputs.HttpContentType, "")
 	httpContentFormat.RegisterString(cmd, &inputs.httpContentFormat, "")
 	httpAuthorization.RegisterString(cmd, &inputs.HttpAuthorization, "")
-	httpCustomHeaders.RegisterStringSlice(cmd, &inputs.HttpCustomHeaders, nil)
+	//httpCustomHeaders.RegisterStringSlice(cmd, &inputs.HttpCustomHeaders, nil)
 	splunkDomain.RegisterString(cmd, &inputs.SplunkDomain, "")
 	splunkToken.RegisterString(cmd, &inputs.SplunkToken, "")
 	splunkPort.RegisterString(cmd, &inputs.SplunkPort, "")
@@ -431,37 +433,39 @@ auth0 logs streams create -n mylogstream --type "http"`,
 
 func updateLogStreamCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID                  string
-		Name                string
-		Type                string
-		//Status              string
-		HttpEndpoint        string
-		HttpContentType     string
-		httpContentFormat   string
-		HttpAuthorization   string
-		HttpCustomHeaders   []string
-		SplunkDomain        string
-		SplunkToken         string
-		SplunkPort          string
-		SplunkVerifyTLS     bool
-		SumoLogicSource     string
-		DatadogAPIKey       string
-		DatadogRegion       string
+		ID                string
+		Name              string
+		Type              string
+		HttpEndpoint      string
+		HttpContentType   string
+		httpContentFormat string
+		HttpAuthorization string
+		HttpCustomHeaders []string
+		SplunkDomain      string
+		SplunkToken       string
+		SplunkPort        string
+		SplunkVerifyTLS   bool
+		SumoLogicSource   string
+		DatadogAPIKey     string
+		DatadogRegion     string
 	}
 
 	cmd := &cobra.Command{
 		Use:   "update",
-		Args:  cobra.NoArgs,
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a new log stream",
 		Long:  "Update a new log stream.",
 		Example: `auth0 logs streams update
-auth0 logs streams update --name mylogstream
-auth0 logs streams update -n mylogstream --type "http"`,
+auth0 logs streams update <id> --name mylogstream
+auth0 logs streams update  <id> -n mylogstream --type http
+auth0 logs streams update  <id> -n mylogstream -t http --http-type application/json --http-format JSONLINES
+auth0 logs streams update  <id> -n mydatadog -t datadog --datadog-key 9999999 --datadog-id us
+auth0 logs streams update  <id> -n myeventbridge -t eventbridge`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.LogStream
 
 			if len(args) == 0 {
-				err := ID.Pick(cmd, &inputs.ID, cli.logStreamPickerOptions)
+				err := logsID.Pick(cmd, &inputs.ID, cli.logStreamPickerOptions)
 				if err != nil {
 					return err
 				}
@@ -469,6 +473,7 @@ auth0 logs streams update -n mylogstream --type "http"`,
 				inputs.ID = args[0]
 			}
 
+			// Load log stream by id
 			if err := ansi.Waiting(func() error {
 				var err error
 				current, err = cli.api.LogStream.Read(inputs.ID)
@@ -477,7 +482,7 @@ auth0 logs streams update -n mylogstream --type "http"`,
 				return fmt.Errorf("Unable to load logstreams. The Id %v specified doesn't exist", inputs.ID)
 			}
 
-			// Prompt for logstream name
+			// Prompt for log stream name
 			if err := logStreamName.AskU(cmd, &inputs.Name, current.Name); err != nil {
 				return err
 			}
@@ -487,11 +492,12 @@ auth0 logs streams update -n mylogstream --type "http"`,
 			logIsSumo := auth0.StringValue(current.Type) == logStreamTypeSumo
 			logIsDatadog := auth0.StringValue(current.Type) == logStreamTypeDatadog
 
-			// Load values into a fresh logstream instance
+			// Load values into a fresh log stream instance
 			ls := &management.LogStream{
 				Status: current.Status,
 			}
 
+			// Prompt for datadog sink details if log stream type is datadog
 			if logIsDatadog {
 				s := &management.LogStreamSinkDatadog{}
 
@@ -520,6 +526,7 @@ auth0 logs streams update -n mylogstream --type "http"`,
 				}
 			}
 
+			// Prompt for sumo sink details if log stream type is sumo
 			if logIsSumo {
 				s := &management.LogStreamSinkSumo{}
 
@@ -539,6 +546,7 @@ auth0 logs streams update -n mylogstream --type "http"`,
 				}
 			}
 
+			// Prompt for splunk sink details if log stream type is splunk
 			if logIsSplunk {
 				s := &management.LogStreamSinkSplunk{}
 
@@ -581,6 +589,7 @@ auth0 logs streams update -n mylogstream --type "http"`,
 				}
 			}
 
+			// Prompt for http sink details if type is http
 			if logIsHttp {
 				s := &management.LogStreamSinkHTTP{}
 
@@ -591,11 +600,10 @@ auth0 logs streams update -n mylogstream --type "http"`,
 				if err := httpEndpoint.AskU(cmd, &inputs.HttpEndpoint, s.Endpoint); err != nil {
 					return err
 				}
-
 				if err := httpContentType.AskU(cmd, &inputs.HttpContentType, s.ContentType); err != nil {
 					return err
 				}
-				if err := httpContentFormat.SelectU(cmd, &inputs.httpContentFormat, contentFormatOptions, s.ContentFormat); err != nil {
+				if err := httpContentFormat.AskU(cmd, &inputs.httpContentFormat, s.ContentFormat); err != nil {
 					return err
 				}
 				if err := httpAuthorization.AskU(cmd, &inputs.HttpAuthorization, s.Authorization); err != nil {
@@ -636,7 +644,7 @@ auth0 logs streams update -n mylogstream --type "http"`,
 				return fmt.Errorf("Unable to update log stream: %v", err)
 			}
 
-			//// Render log stream creation specific view
+			// Render log stream update specific view
 			cli.renderer.LogStreamUpdate(ls)
 			return nil
 		},
@@ -673,7 +681,7 @@ func deleteLogStreamCmd(cli *cli) *cobra.Command {
 auth0 logs streams delete <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := ID.Pick(cmd, &inputs.ID, cli.logStreamPickerOptions)
+				err := logsID.Pick(cmd, &inputs.ID, cli.logStreamPickerOptions)
 				if err != nil {
 					return err
 				}
@@ -691,7 +699,7 @@ auth0 logs streams delete <id>`,
 				_, err := cli.api.LogStream.Read(inputs.ID)
 
 				if err != nil {
-					return fmt.Errorf("Unable to delete log strean. The specified Id: %v doesn't exist", inputs.ID)
+					return fmt.Errorf("Unable to delete log stream. The specified Id: %v doesn't exist", inputs.ID)
 				}
 
 				return cli.api.LogStream.Delete(inputs.ID)
@@ -700,6 +708,42 @@ auth0 logs streams delete <id>`,
 	}
 
 	return cmd
+}
+
+func openLogStreamsCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID string
+	}
+
+	cmd := &cobra.Command{
+		Use:     "open",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Open log stream settings page in Auth0 Manage",
+		Long:    "Open log stream settings page in Auth0 Manage.",
+		Example: "auth0 logs streams open <id>",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				err := logsID.Pick(cmd, &inputs.ID, cli.logStreamPickerOptions)
+				if err != nil {
+					return err
+				}
+			} else {
+				inputs.ID = args[0]
+			}
+
+			openManageURL(cli, cli.config.DefaultTenant, formatLogStreamSettingsPath(inputs.ID))
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func formatLogStreamSettingsPath(id string) string {
+	if len(id) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("log-streams/%s/settings", id)
 }
 
 func (c *cli) logTypePickerOptions() []string {
