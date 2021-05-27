@@ -49,9 +49,10 @@ var (
 		"Sumo",
 	}
 	httpEndpoint = Flag{
-		Name:     "Http Endpoint",
-		LongForm: "http-endpoint",
-		Help:     "HTTP endpoint.",
+		Name:       "Http Endpoint",
+		LongForm:   "http-endpoint",
+		Help:       "HTTP endpoint.",
+		IsRequired: true,
 	}
 	httpContentType = Flag{
 		Name:         "Http Content Type",
@@ -71,36 +72,35 @@ var (
 		Help:         "HTTP Authorization header.",
 		AlwaysPrompt: true,
 	}
-	httpCustomHeaders = Flag{
-		Name:         "Http Custom Headers",
-		LongForm:     "http-header",
-		Help:         "Custom HTTP headers.",
-		AlwaysPrompt: true,
-	}
 	awsAccountID = Flag{
-		Name:     "AWS Account ID",
-		LongForm: "eventbridge-id",
-		Help:     "Id of the AWS account.",
+		Name:       "AWS Account ID",
+		LongForm:   "eventbridge-id",
+		Help:       "Id of the AWS account.",
+		IsRequired: true,
 	}
 	awsRegion = Flag{
-		Name:     "AWS Region",
-		LongForm: "eventbridge-region",
-		Help:     "The region in which eventbridge will be created.",
+		Name:       "AWS Region",
+		LongForm:   "eventbridge-region",
+		Help:       "The region in which eventbridge will be created.",
+		IsRequired: true,
 	}
 	azureSubscriptionID = Flag{
-		Name:     "Azure Subscription ID",
-		LongForm: "eventgrid-id",
-		Help:     "Id of the Azure subscription.",
+		Name:       "Azure Subscription ID",
+		LongForm:   "eventgrid-id",
+		Help:       "Id of the Azure subscription.",
+		IsRequired: true,
 	}
 	azureRegion = Flag{
-		Name:     "Azure Region",
-		LongForm: "eventgrid-region",
-		Help:     "The region in which the Azure subscription is hosted.",
+		Name:       "Azure Region",
+		LongForm:   "eventgrid-region",
+		Help:       "The region in which the Azure subscription is hosted.",
+		IsRequired: true,
 	}
 	azureResourceGroup = Flag{
-		Name:     "Azure Resource Group",
-		LongForm: "eventgrid-group",
-		Help:     "The name of the Azure resource group.",
+		Name:       "Azure Resource Group",
+		LongForm:   "eventgrid-group",
+		Help:       "The name of the Azure resource group.",
+		IsRequired: true,
 	}
 	datadogRegion = Flag{
 		Name:     "Datadog Region",
@@ -128,16 +128,14 @@ var (
 		IsRequired: true,
 	}
 	splunkPort = Flag{
-		Name:       "Splunk Port",
-		LongForm:   "splunk-port",
-		Help:       "The port of the HTTP event collector.",
-		IsRequired: true,
+		Name:     "Splunk Port",
+		LongForm: "splunk-port",
+		Help:     "The port of the HTTP event collector.",
 	}
 	splunkVerifyTLS = Flag{
-		Name:       "Splunk Verify TLS",
-		LongForm:   "splunk-secure",
-		Help:       "This should be set to 'false' when using self-signed certificates.",
-		IsRequired: true,
+		Name:     "Splunk Verify TLS",
+		LongForm: "splunk-secure",
+		Help:     "This should be set to 'false' when using self-signed certificates.",
 	}
 	sumoLogicSource = Flag{
 		Name:       "Sumo Logic Source",
@@ -242,7 +240,6 @@ func createLogStreamCmd(cli *cli) *cobra.Command {
 		HttpContentType     string
 		httpContentFormat   string
 		HttpAuthorization   string
-		HttpCustomHeaders   []string
 		SplunkDomain        string
 		SplunkToken         string
 		SplunkPort          string
@@ -263,10 +260,10 @@ func createLogStreamCmd(cli *cli) *cobra.Command {
 		Short: "Create a new log stream",
 		Long:  "Create a new log stream.",
 		Example: `auth0 logs streams create
-auth0 logs streams create --name mylogstream
 auth0 logs streams create -n mylogstream -t http --http-type application/json --http-format JSONLINES --http-auth 1343434
 auth0 logs streams create -n mydatadog -t datadog --datadog-key 9999999 --datadog-id us
-auth0 logs streams create -n myeventbridge -t eventbridge --eventbridge-id 999999999999 --eventbridge-region us-east-1`,
+auth0 logs streams create -n myeventbridge -t eventbridge --eventbridge-id 999999999999 --eventbridge-region us-east-1
+auth0 logs streams create -n test-splunk -t splunk --splunk-domain demo.splunk.com --splunk-token 12a34ab5-c6d7-8901-23ef-456b7c89d0c1 --splunk-port 8080 --splunk-secure=true`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Prompt for log stream name
 			if err := logStreamName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -296,24 +293,24 @@ auth0 logs streams create -n myeventbridge -t eventbridge --eventbridge-id 99999
 				if err := httpEndpoint.Ask(cmd, &inputs.HttpEndpoint, nil); err != nil {
 					return err
 				}
+
 				if err := httpContentType.Ask(cmd, &inputs.HttpContentType, nil); err != nil {
 					return err
 				}
+
 				if err := httpContentFormat.Ask(cmd, &inputs.httpContentFormat, nil); err != nil {
 					return err
 				}
+
 				if err := httpAuthorization.Ask(cmd, &inputs.HttpAuthorization, nil); err != nil {
 					return err
 				}
-				//if err := httpCustomHeaders.Ask(cmd, &inputs.HttpCustomHeaders, nil); err != nil {
-				//	return err
-				//}
+
 				ls.Sink = &management.LogStreamSinkHTTP{
 					Authorization: &inputs.HttpAuthorization,
 					ContentType:   &inputs.HttpContentType,
 					ContentFormat: &inputs.httpContentFormat,
 					Endpoint:      &inputs.HttpEndpoint,
-					//CustomHeaders: stringToInterfaceSlice(inputs.HttpCustomHeaders),
 				}
 			}
 
@@ -322,15 +319,19 @@ auth0 logs streams create -n myeventbridge -t eventbridge --eventbridge-id 99999
 				if err := splunkDomain.Ask(cmd, &inputs.SplunkDomain, nil); err != nil {
 					return err
 				}
+
 				if err := splunkToken.Ask(cmd, &inputs.SplunkToken, nil); err != nil {
 					return err
 				}
+
 				if err := splunkPort.Ask(cmd, &inputs.SplunkPort, nil); err != nil {
 					return err
 				}
+
 				if err := splunkVerifyTLS.AskBool(cmd, &inputs.SplunkVerifyTLS, nil); err != nil {
 					return err
 				}
+
 				ls.Sink = &management.LogStreamSinkSplunk{
 					Domain: &inputs.SplunkDomain,
 					Token:  &inputs.SplunkToken,
@@ -344,6 +345,7 @@ auth0 logs streams create -n myeventbridge -t eventbridge --eventbridge-id 99999
 				if err := sumoLogicSource.Ask(cmd, &inputs.SumoLogicSource, nil); err != nil {
 					return err
 				}
+
 				ls.Sink = &management.LogStreamSinkSumo{
 					SourceAddress: &inputs.SumoLogicSource,
 				}
@@ -354,9 +356,11 @@ auth0 logs streams create -n myeventbridge -t eventbridge --eventbridge-id 99999
 				if err := datadogApiKey.Ask(cmd, &inputs.DatadogAPIKey, nil); err != nil {
 					return err
 				}
+
 				if err := datadogRegion.Ask(cmd, &inputs.DatadogRegion, nil); err != nil {
 					return err
 				}
+
 				ls.Sink = &management.LogStreamSinkDatadog{
 					Region: &inputs.DatadogRegion,
 					APIKey: &inputs.DatadogAPIKey,
@@ -368,9 +372,11 @@ auth0 logs streams create -n myeventbridge -t eventbridge --eventbridge-id 99999
 				if err := awsAccountID.Ask(cmd, &inputs.AwsAccountID, nil); err != nil {
 					return err
 				}
+
 				if err := awsRegion.Ask(cmd, &inputs.AwsRegion, nil); err != nil {
 					return err
 				}
+
 				ls.Sink = &management.LogStreamSinkAmazonEventBridge{
 					AccountID: &inputs.AwsAccountID,
 					Region:    &inputs.AwsRegion,
@@ -382,12 +388,15 @@ auth0 logs streams create -n myeventbridge -t eventbridge --eventbridge-id 99999
 				if err := azureSubscriptionID.Ask(cmd, &inputs.AzureSubscriptionID, nil); err != nil {
 					return err
 				}
+
 				if err := azureRegion.Ask(cmd, &inputs.AzureRegion, nil); err != nil {
 					return err
 				}
+
 				if err := azureResourceGroup.Ask(cmd, &inputs.AzureResourceGroup, nil); err != nil {
 					return err
 				}
+
 				ls.Sink = &management.LogStreamSinkAzureEventGrid{
 					SubscriptionID: &inputs.AzureSubscriptionID,
 					ResourceGroup:  &inputs.AzureResourceGroup,
@@ -414,7 +423,6 @@ auth0 logs streams create -n myeventbridge -t eventbridge --eventbridge-id 99999
 	httpContentType.RegisterString(cmd, &inputs.HttpContentType, "")
 	httpContentFormat.RegisterString(cmd, &inputs.httpContentFormat, "")
 	httpAuthorization.RegisterString(cmd, &inputs.HttpAuthorization, "")
-	httpCustomHeaders.RegisterStringSlice(cmd, &inputs.HttpCustomHeaders, nil)
 	splunkDomain.RegisterString(cmd, &inputs.SplunkDomain, "")
 	splunkToken.RegisterString(cmd, &inputs.SplunkToken, "")
 	splunkPort.RegisterString(cmd, &inputs.SplunkPort, "")
@@ -457,10 +465,10 @@ func updateLogStreamCmd(cli *cli) *cobra.Command {
 		Long:  "Update a new log stream.",
 		Example: `auth0 logs streams update
 auth0 logs streams update <id> --name mylogstream
-auth0 logs streams update  <id> -n mylogstream --type http
-auth0 logs streams update  <id> -n mylogstream -t http --http-type application/json --http-format JSONLINES
-auth0 logs streams update  <id> -n mydatadog -t datadog --datadog-key 9999999 --datadog-id us
-auth0 logs streams update  <id> -n myeventbridge -t eventbridge`,
+auth0 logs streams update <id> -n mylogstream --type http
+auth0 logs streams update <id> -n mylogstream -t http --http-type application/json --http-format JSONLINES
+auth0 logs streams update <id> -n mydatadog -t datadog --datadog-key 9999999 --datadog-id us
+auth0 logs streams update <id> -n myeventbridge -t eventbridge`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.LogStream
 
@@ -509,6 +517,7 @@ auth0 logs streams update  <id> -n myeventbridge -t eventbridge`,
 				if err := datadogApiKey.AskU(cmd, &inputs.DatadogAPIKey, s.APIKey); err != nil {
 					return err
 				}
+
 				if err := datadogRegion.AskU(cmd, &inputs.DatadogRegion, s.Region); err != nil {
 					return err
 				}
@@ -516,6 +525,7 @@ auth0 logs streams update  <id> -n myeventbridge -t eventbridge`,
 				if len(inputs.DatadogAPIKey) > 0 {
 					s.APIKey = &inputs.DatadogAPIKey
 				}
+
 				if len(inputs.DatadogRegion) > 0 {
 					s.Region = &inputs.DatadogRegion
 				}
@@ -534,6 +544,7 @@ auth0 logs streams update  <id> -n myeventbridge -t eventbridge`,
 				if err := json.Unmarshal([]byte(res), s); err != nil {
 					fmt.Println(err)
 				}
+
 				if err := sumoLogicSource.AskU(cmd, &inputs.SumoLogicSource, s.SourceAddress); err != nil {
 					return err
 				}
@@ -541,6 +552,7 @@ auth0 logs streams update  <id> -n myeventbridge -t eventbridge`,
 				if len(inputs.SumoLogicSource) > 0 {
 					s.SourceAddress = &inputs.SumoLogicSource
 				}
+
 				ls.Sink = &management.LogStreamSinkSumo{
 					SourceAddress: s.SourceAddress,
 				}
@@ -558,12 +570,15 @@ auth0 logs streams update  <id> -n myeventbridge -t eventbridge`,
 				if err := splunkDomain.AskU(cmd, &inputs.SplunkDomain, s.Domain); err != nil {
 					return err
 				}
+
 				if err := splunkToken.AskU(cmd, &inputs.SplunkToken, s.Token); err != nil {
 					return err
 				}
+
 				if err := splunkPort.AskU(cmd, &inputs.SplunkPort, s.Port); err != nil {
 					return err
 				}
+
 				if err := splunkVerifyTLS.AskBoolU(cmd, &inputs.SplunkVerifyTLS, s.Secure); err != nil {
 					return err
 				}
@@ -571,12 +586,15 @@ auth0 logs streams update  <id> -n myeventbridge -t eventbridge`,
 				if len(inputs.SplunkDomain) > 0 {
 					s.Domain = &inputs.SplunkDomain
 				}
+
 				if len(inputs.SplunkToken) > 0 {
 					s.Token = &inputs.SplunkToken
 				}
+
 				if len(inputs.SplunkPort) > 0 {
 					s.Port = &inputs.SplunkPort
 				}
+
 				if !splunkVerifyTLS.IsSet(cmd) {
 					s.Secure = auth0.Bool(inputs.SplunkVerifyTLS)
 				}
@@ -597,15 +615,19 @@ auth0 logs streams update  <id> -n myeventbridge -t eventbridge`,
 				if err := json.Unmarshal([]byte(res), s); err != nil {
 					fmt.Println(err)
 				}
+
 				if err := httpEndpoint.AskU(cmd, &inputs.HttpEndpoint, s.Endpoint); err != nil {
 					return err
 				}
+
 				if err := httpContentType.AskU(cmd, &inputs.HttpContentType, s.ContentType); err != nil {
 					return err
 				}
+
 				if err := httpContentFormat.AskU(cmd, &inputs.httpContentFormat, s.ContentFormat); err != nil {
 					return err
 				}
+
 				if err := httpAuthorization.AskU(cmd, &inputs.HttpAuthorization, s.Authorization); err != nil {
 					return err
 				}
@@ -613,12 +635,15 @@ auth0 logs streams update  <id> -n myeventbridge -t eventbridge`,
 				if len(inputs.HttpEndpoint) > 0 {
 					s.Endpoint = &inputs.HttpEndpoint
 				}
+
 				if len(inputs.HttpContentType) > 0 {
 					s.ContentType = &inputs.HttpContentType
 				}
+
 				if len(inputs.httpContentFormat) > 0 {
 					s.ContentFormat = &inputs.httpContentFormat
 				}
+
 				if len(inputs.HttpAuthorization) > 0 {
 					s.Authorization = &inputs.HttpAuthorization
 				}
