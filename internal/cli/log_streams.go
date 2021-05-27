@@ -414,7 +414,7 @@ auth0 logs streams create -n myeventbridge -t eventbridge --eventbridge-id 99999
 	httpContentType.RegisterString(cmd, &inputs.HttpContentType, "")
 	httpContentFormat.RegisterString(cmd, &inputs.httpContentFormat, "")
 	httpAuthorization.RegisterString(cmd, &inputs.HttpAuthorization, "")
-	//httpCustomHeaders.RegisterStringSlice(cmd, &inputs.HttpCustomHeaders, nil)
+	httpCustomHeaders.RegisterStringSlice(cmd, &inputs.HttpCustomHeaders, nil)
 	splunkDomain.RegisterString(cmd, &inputs.SplunkDomain, "")
 	splunkToken.RegisterString(cmd, &inputs.SplunkToken, "")
 	splunkPort.RegisterString(cmd, &inputs.SplunkPort, "")
