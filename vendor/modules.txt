@@ -103,6 +103,9 @@ github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
 # github.com/google/goterm v0.0.0-20190703233501-fc88cf888a3f
 github.com/google/goterm/term
+# github.com/google/uuid v1.2.0
+## explicit
+github.com/google/uuid
 # github.com/guiguan/caster v0.0.0-20191104051807-3736c4464f38
 ## explicit
 github.com/guiguan/caster

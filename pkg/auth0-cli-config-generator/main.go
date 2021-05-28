@@ -28,8 +28,8 @@ type params struct {
 }
 
 var requiredScopes = []string{
-	//	"openid",
-	//	"offline_access", // <-- to get a refresh token.
+	//"openid",
+	//"offline_access", // <-- to get a refresh token.
 	"create:clients", "delete:clients", "read:clients", "update:clients",
 	"create:resource_servers", "delete:resource_servers", "read:resource_servers", "update:resource_servers",
 	"create:roles", "delete:roles", "read:roles", "update:roles",
