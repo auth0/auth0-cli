@@ -461,8 +461,8 @@ func updateLogStreamCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Update a new log stream",
-		Long:  "Update a new log stream.",
+		Short: "Update a log stream",
+		Long:  "Update a log stream.",
 		Example: `auth0 logs streams update
 auth0 logs streams update <id> --name mylogstream
 auth0 logs streams update <id> -n mylogstream --type http
