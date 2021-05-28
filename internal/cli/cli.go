@@ -51,6 +51,9 @@ type tenant struct {
 	ExpiresAt    time.Time      `json:"expires_at"`
 	Apps         map[string]app `json:"apps,omitempty"`
 	DefaultAppID string         `json:"default_app_id,omitempty"`
+
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
 }
 
 type app struct {
@@ -132,9 +135,23 @@ func (c *cli) setup(ctx context.Context) error {
 		return err
 	}
 
-	m, err := management.New(t.Domain,
-		management.WithStaticToken(t.AccessToken),
-		management.WithUserAgent(fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v"))))
+	var (
+		m  *management.Management
+		ua = fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v"))
+	)
+
+	if t.ClientID != "" && t.ClientSecret != "" {
+		m, err = management.New(t.Domain,
+			management.WithClientCredentials(t.ClientID, t.ClientSecret),
+			management.WithUserAgent(ua),
+		)
+	} else {
+		m, err = management.New(t.Domain,
+			management.WithStaticToken(t.AccessToken),
+			management.WithUserAgent(ua),
+		)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -153,6 +170,10 @@ func (c *cli) prepareTenant(ctx context.Context) (tenant, error) {
 		return tenant{}, err
 	}
 
+	if t.ClientID != "" && t.ClientSecret != "" {
+		return t, nil
+	}
+
 	if t.AccessToken == "" || scopesChanged(t) {
 		t, err = RunLogin(ctx, c, true)
 		if err != nil {
@@ -167,6 +188,9 @@ func (c *cli) prepareTenant(ctx context.Context) (tenant, error) {
 			Client:        http.DefaultClient,
 		}
 
+		// NOTE(cyx): this code will have to be adapted to instead
+		// maybe take the clientID/secret as additional params, or
+		// something similar.
 		res, err := tr.Refresh(ctx, t.Domain)
 		if err != nil {
 			// ask and guide the user through the login process:
