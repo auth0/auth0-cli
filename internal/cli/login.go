@@ -43,7 +43,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) (tenant, error) {
 	a := &auth.Authenticator{}
 	state, err := a.Start(ctx)
 	if err != nil {
-		return tenant{}, fmt.Errorf("could not start the authentication process: %w.", err)
+		return tenant{}, fmt.Errorf("Could not start the authentication process: %w.", err)
 	}
 
 	fmt.Printf("Your Device Confirmation code is: %s\n\n", ansi.Bold(state.UserCode))
@@ -88,7 +88,11 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) (tenant, error) {
 	}
 	err = cli.addTenant(t)
 	if err != nil {
-		return tenant{}, fmt.Errorf("Unexpected error adding tenant to config: %w", err)
+		return tenant{}, fmt.Errorf("Could not add tenant to config: %w", err)
+	}
+
+	if err := checkInstallID(cli); err != nil {
+		return tenant{}, fmt.Errorf("Could not update config: %w", err)
 	}
 
 	if cli.config.DefaultTenant != res.Domain {
@@ -98,7 +102,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) (tenant, error) {
 		}
 		cli.config.DefaultTenant = res.Domain
 		if err := cli.persistConfig(); err != nil {
-			return tenant{}, fmt.Errorf("An error occurred while setting the default tenant: %w", err)
+			cli.renderer.Warnf("Could not set the default tenant, please try 'auth0 tenants use %s': %w", res.Domain, err)
 		}
 	}
 

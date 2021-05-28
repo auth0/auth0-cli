@@ -35,3 +35,20 @@ for api in $( echo "${apis}" | jq -r '.[] | @base64' ); do
         $( auth0 apis delete "$id")
     fi
 done
+
+# using the search command since users have no list command
+users=$( auth0 users search -q "*"  --format json --no-input )
+
+for user in $( echo "${users}" | jq -r '.[] | @base64' ); do
+    _jq() {
+     echo "${user}" | base64 --decode | jq -r "${1}"
+    }
+
+    userid=$(_jq '.UserID')
+		# created during the same test session
+    if [[ integration-* ]]
+    then
+        echo deleting "$userid"
+        $( auth0 users delete "$userid")
+    fi
+done

@@ -205,10 +205,23 @@ Failed Login	hello	7 minutes ago	N/A	my awesome app
 	userid: auth0|QXV0aDAgaXMgaGlyaW5nISBhdXRoMC5jb20vY2FyZWVycyAK
 ```
 
+## Anonymous Analytics
+
+By default, the CLI tracks some anonymous usage events. This helps us understand how the CLI is being used, so we can continue to improve it. You can opt-out by setting the environment variable `AUTH0_CLI_ANALYTICS` to `false`.
+
+### Data sent
+
+Every event tracked sends the following data along with the event name:
+
+- The CLI version.
+- The OS name: as determined by the value of `GOOS`, e.g. `windows`.
+- The processor architecture: as determined by the value of `GOARCH`, e.g. `amd64`.
+- The install ID: an anonymous UUID that is stored in the CLI's config file.
+- A timestamp.
+
 ## Contributing
 
 Please check the [contributing guidelines](CONTRIBUTING.md).
-
 
 ## Author
 
