@@ -238,7 +238,7 @@ func createLogStreamCmd(cli *cli) *cobra.Command {
 		Type                string
 		HttpEndpoint        string
 		HttpContentType     string
-		httpContentFormat   string
+		HttpContentFormat   string
 		HttpAuthorization   string
 		SplunkDomain        string
 		SplunkToken         string
@@ -298,7 +298,7 @@ auth0 logs streams create -n test-splunk -t splunk --splunk-domain demo.splunk.c
 					return err
 				}
 
-				if err := httpContentFormat.Ask(cmd, &inputs.httpContentFormat, nil); err != nil {
+				if err := httpContentFormat.Ask(cmd, &inputs.HttpContentFormat, nil); err != nil {
 					return err
 				}
 
@@ -309,7 +309,7 @@ auth0 logs streams create -n test-splunk -t splunk --splunk-domain demo.splunk.c
 				ls.Sink = &management.LogStreamSinkHTTP{
 					Authorization: &inputs.HttpAuthorization,
 					ContentType:   &inputs.HttpContentType,
-					ContentFormat: &inputs.httpContentFormat,
+					ContentFormat: &inputs.HttpContentFormat,
 					Endpoint:      &inputs.HttpEndpoint,
 				}
 			}
@@ -421,7 +421,7 @@ auth0 logs streams create -n test-splunk -t splunk --splunk-domain demo.splunk.c
 	logStreamType.RegisterString(cmd, &inputs.Type, "")
 	httpEndpoint.RegisterString(cmd, &inputs.HttpEndpoint, "")
 	httpContentType.RegisterString(cmd, &inputs.HttpContentType, "")
-	httpContentFormat.RegisterString(cmd, &inputs.httpContentFormat, "")
+	httpContentFormat.RegisterString(cmd, &inputs.HttpContentFormat, "")
 	httpAuthorization.RegisterString(cmd, &inputs.HttpAuthorization, "")
 	splunkDomain.RegisterString(cmd, &inputs.SplunkDomain, "")
 	splunkToken.RegisterString(cmd, &inputs.SplunkToken, "")
@@ -446,7 +446,7 @@ func updateLogStreamCmd(cli *cli) *cobra.Command {
 		Type              string
 		HttpEndpoint      string
 		HttpContentType   string
-		httpContentFormat string
+		HttpContentFormat string
 		HttpAuthorization string
 		HttpCustomHeaders []string
 		SplunkDomain      string
@@ -624,7 +624,7 @@ auth0 logs streams update <id> -n myeventbridge -t eventbridge`,
 					return err
 				}
 
-				if err := httpContentFormat.AskU(cmd, &inputs.httpContentFormat, s.ContentFormat); err != nil {
+				if err := httpContentFormat.AskU(cmd, &inputs.HttpContentFormat, s.ContentFormat); err != nil {
 					return err
 				}
 
@@ -640,8 +640,8 @@ auth0 logs streams update <id> -n myeventbridge -t eventbridge`,
 					s.ContentType = &inputs.HttpContentType
 				}
 
-				if len(inputs.httpContentFormat) > 0 {
-					s.ContentFormat = &inputs.httpContentFormat
+				if len(inputs.HttpContentFormat) > 0 {
+					s.ContentFormat = &inputs.HttpContentFormat
 				}
 
 				if len(inputs.HttpAuthorization) > 0 {
@@ -679,7 +679,7 @@ auth0 logs streams update <id> -n myeventbridge -t eventbridge`,
 	logStreamType.RegisterStringU(cmd, &inputs.Type, "")
 	httpEndpoint.RegisterStringU(cmd, &inputs.HttpEndpoint, "")
 	httpContentType.RegisterStringU(cmd, &inputs.HttpContentType, "")
-	httpContentFormat.RegisterStringU(cmd, &inputs.httpContentFormat, "")
+	httpContentFormat.RegisterStringU(cmd, &inputs.HttpContentFormat, "")
 	httpAuthorization.RegisterStringU(cmd, &inputs.HttpAuthorization, "")
 	splunkDomain.RegisterStringU(cmd, &inputs.SplunkDomain, "")
 	splunkToken.RegisterStringU(cmd, &inputs.SplunkToken, "")
