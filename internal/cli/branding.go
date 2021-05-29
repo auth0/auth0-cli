@@ -81,6 +81,7 @@ func brandingCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(showBrandingCmd(cli))
+	cmd.AddCommand(updateBrandingCmd(cli))
 	cmd.AddCommand(templateCmd(cli))
 	return cmd
 }
@@ -121,6 +122,111 @@ func showBrandingCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
+
+	return cmd
+}
+
+func updateBrandingCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		AccentColor     string
+		BackgroundColor string
+		LogoURL         string
+		FaviconURL      string
+		CustomFontURL   string
+	}
+
+	cmd := &cobra.Command{
+		Use:     "update",
+		Args:    cobra.NoArgs,
+		Short:   "Update the custom branding settings for Universal Login",
+		Long:    "Update the custom branding settings for Universal Login.",
+		Example: `auth0 branding update
+auth0 branding update --accent '#B24592' --background '#F2DDEC' 
+auth0 branding update -a '#B24592' -b '#F2DDEC --logo 'https://example.com/logo.png`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var current *management.Branding
+
+			if err := ansi.Waiting(func() error {
+				var err error
+				current, err = cli.api.Branding.Read()
+				return err
+			}); err != nil {
+				return fmt.Errorf("Unable to load branding settings due to an unexpected error: %w", err)
+			}
+
+			// Prompt for accent color
+			if err := brandingAccent.AskU(cmd, &inputs.AccentColor, auth0.String(current.GetColors().GetPrimary())); err != nil {
+				return err
+			}
+
+			// Prompt for background color
+			if err := brandingBackground.AskU(cmd, &inputs.BackgroundColor, auth0.String(current.GetColors().GetPageBackground())); err != nil {
+				return err
+			}
+
+			// Load updated values into a fresh branding instance
+			b := &management.Branding{}
+
+			if b.Colors == nil {
+				b.Colors = &management.BrandingColors{}
+			}
+
+			if len(inputs.AccentColor) == 0 {
+				b.Colors.Primary = current.GetColors().Primary
+			} else {
+				b.Colors.Primary = &inputs.AccentColor
+			}
+
+			if len(inputs.BackgroundColor) == 0 {
+				b.Colors.PageBackground = current.GetColors().PageBackground
+			} else {
+				b.Colors.PageBackground = &inputs.BackgroundColor
+			}
+
+			if len(inputs.LogoURL) == 0 {
+				b.LogoURL = current.LogoURL
+			} else {
+				b.LogoURL = &inputs.LogoURL
+			}
+
+			if len(inputs.FaviconURL) == 0 {
+				b.FaviconURL = current.FaviconURL
+			} else {
+				b.FaviconURL = &inputs.FaviconURL
+			}
+
+			// API2 will produce an error if we send an empty font struct
+			if b.Font == nil && inputs.CustomFontURL != "" {
+				b.Font = &management.BrandingFont{URL: &inputs.CustomFontURL}
+			}
+
+			if b.Font != nil {
+				if len(inputs.CustomFontURL) == 0 {
+					b.Font.URL = current.Font.URL
+				} else {
+					b.Font.URL = &inputs.CustomFontURL
+				}
+			}
+
+			// Update branding
+			if err := ansi.Waiting(func() error {
+				return cli.api.Branding.Update(b)
+			}); err != nil {
+				return fmt.Errorf("Unable to update branding settings: %v", err)
+			}
+
+			// Render result
+			cli.renderer.BrandingUpdate(b)
+
+			return nil
+		},
+	}
+
+	brandingAccent.RegisterStringU(cmd, &inputs.AccentColor, "#0059d6")
+	brandingBackground.RegisterStringU(cmd, &inputs.BackgroundColor, "#000000")
+	brandingLogo.RegisterStringU(cmd, &inputs.LogoURL, "")
+	brandingFavicon.RegisterStringU(cmd, &inputs.FaviconURL, "")
+	brandingFont.RegisterStringU(cmd, &inputs.CustomFontURL, "")
 
 	return cmd
 }

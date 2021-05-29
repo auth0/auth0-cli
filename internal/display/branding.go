@@ -32,14 +32,20 @@ func (v *brandingView) KeyValues() [][]string {
 
 func (r *Renderer) BrandingShow(data *management.Branding) {
 	r.Heading("branding")
+	r.Result(makeBrandingView(data))
+}
 
-	branding := &brandingView{
+func (r *Renderer) BrandingUpdate(data *management.Branding) {
+	r.Heading("branding updated")
+	r.Result(makeBrandingView(data))
+}
+
+func makeBrandingView(data *management.Branding) *brandingView {
+	return &brandingView{
 		AccentColor: data.GetColors().GetPrimary(),
 		BackgroundColor: data.GetColors().GetPageBackground(),
 		LogoURL: data.GetLogoURL(),
 		FaviconURL: data.GetFaviconURL(),
 		CustomFontURL: data.GetFont().GetURL(),
 	}
-
-	r.Result(branding)
 }
