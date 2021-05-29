@@ -222,8 +222,8 @@ auth0 branding update -a '#B24592' -b '#F2DDEC --logo 'https://example.com/logo.
 		},
 	}
 
-	brandingAccent.RegisterStringU(cmd, &inputs.AccentColor, "#0059d6")
-	brandingBackground.RegisterStringU(cmd, &inputs.BackgroundColor, "#000000")
+	brandingAccent.RegisterStringU(cmd, &inputs.AccentColor, "")
+	brandingBackground.RegisterStringU(cmd, &inputs.BackgroundColor, "")
 	brandingLogo.RegisterStringU(cmd, &inputs.LogoURL, "")
 	brandingFavicon.RegisterStringU(cmd, &inputs.FaviconURL, "")
 	brandingFont.RegisterStringU(cmd, &inputs.CustomFontURL, "")
