@@ -23,6 +23,46 @@ var (
 		IsRequired: true,
 	}
 
+	brandingAccent = Flag{
+		Name:         "Accent Color",
+		LongForm:     "accent",
+		ShortForm:    "a",
+		Help:         "Accent color.",
+		AlwaysPrompt: true,
+	}
+
+	brandingBackground = Flag{
+		Name:         "Background Color",
+		LongForm:     "background",
+		ShortForm:    "b",
+		Help:         "Page background color",
+		AlwaysPrompt: true,
+	}
+
+	brandingLogo = Flag{
+		Name:         "Logo URL",
+		LongForm:     "logo",
+		ShortForm:    "l",
+		Help:         "URL for the logo. Must use HTTPS.",
+		AlwaysPrompt: true,
+	}
+
+	brandingFavicon = Flag{
+		Name:         "Favicon URL",
+		LongForm:     "favicon",
+		ShortForm:    "f",
+		Help:         "URL for the favicon. Must use HTTPS.",
+		AlwaysPrompt: true,
+	}
+
+	brandingFont = Flag{
+		Name:         "Custom Font URL",
+		LongForm:     "font",
+		ShortForm:    "c",
+		Help:         "URL for the custom font. The URL must point to a font file and not a stylesheet. Must use HTTPS.",
+		AlwaysPrompt: true,
+	}
+
 	customTemplateOptions = pickerOptions{
 		{"Basic", branding.DefaultTemplate},
 		{"Login box + image", branding.ImageTemplate},
@@ -40,6 +80,7 @@ func brandingCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(showBrandingCmd(cli))
 	cmd.AddCommand(templateCmd(cli))
 	return cmd
 }
@@ -57,6 +98,33 @@ func templateCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+func showBrandingCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "show",
+		Args:    cobra.NoArgs,
+		Short:   "Display the custom branding settings for Universal Login",
+		Long:    "Display the custom branding settings for Universal Login.",
+		Example: "auth0 branding show",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var branding *management.Branding // Load app by id
+
+			if err := ansi.Waiting(func() error {
+				var err error
+				branding, err = cli.api.Branding.Read()
+				return err
+			}); err != nil {
+				return fmt.Errorf("Unable to load branding settings due to an unexpected error: %w", err)
+			}
+
+			cli.renderer.BrandingShow(branding)
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
 func showBrandingTemplateCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "show",
@@ -65,11 +133,17 @@ func showBrandingTemplateCmd(cli *cli) *cobra.Command {
 		Long:    "Display the custom template for Universal Login.",
 		Example: "auth0 branding templates show",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			template, err := cli.api.Branding.UniversalLogin()
-			if err != nil {
-				return fmt.Errorf("Unable to load tenants due to an unexpected error: %w", err)
+			var template *management.BrandingUniversalLogin // Load app by id
+
+			if err := ansi.Waiting(func() error {
+				var err error
+				template, err = cli.api.Branding.UniversalLogin()
+				return err
+			}); err != nil {
+				return fmt.Errorf("Unable to load the Universal Login template due to an unexpected error: %w", err)
 			}
 
+			cli.renderer.Heading("template")
 			fmt.Println(*template.Body)
 
 			return nil
