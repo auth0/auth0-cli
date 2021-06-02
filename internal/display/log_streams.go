@@ -10,7 +10,6 @@ type logStreamView struct {
 	Name   string
 	Type   string
 	Status string
-	//Sink   interface{}
 }
 
 func (v *logStreamView) AsTableHeader() []string {
@@ -23,7 +22,6 @@ func (v *logStreamView) AsTableRow() []string {
 		v.Name,
 		v.Type,
 		v.Status,
-		//fmt.Sprintln(v.Sink),
 	}
 }
 
@@ -33,7 +31,6 @@ func (v *logStreamView) KeyValues() [][]string {
 		[]string{"NAME", v.Name},
 		[]string{"TYPE", v.Type},
 		[]string{"STATUS", v.Status},
-		//[]string{"SINK", fmt.Sprintln(v.Sink)},
 	}
 }
 
@@ -82,6 +79,5 @@ func (r *Renderer) logStreamResult(logs *management.LogStream) {
 		Name:   logs.GetName(),
 		Type:   logs.GetType(),
 		Status: logs.GetStatus(),
-		//Sink: logs.Sink,
 	})
 }

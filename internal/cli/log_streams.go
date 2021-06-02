@@ -42,32 +42,32 @@ var (
 	}
 	typeOptions = []string{
 		"Http",
-		"Eventbridge",
-		"Eventgrid",
-		"Datadog",
+		"EventBridge",
+		"EventGrid",
+		"DataDog",
 		"Splunk",
 		"Sumo",
 	}
 	httpEndpoint = Flag{
-		Name:       "Http Endpoint",
+		Name:       "HTTP Endpoint",
 		LongForm:   "http-endpoint",
 		Help:       "HTTP endpoint.",
 		IsRequired: true,
 	}
 	httpContentType = Flag{
-		Name:         "Http Content Type",
+		Name:         "HTTP Content Type",
 		LongForm:     "http-type",
 		Help:         "HTTP Content-Type header. Possible values: application/json.",
 		AlwaysPrompt: true,
 	}
 	httpContentFormat = Flag{
-		Name:         "Http Content Format",
+		Name:         "HTTP Content Format",
 		LongForm:     "http-format",
 		Help:         "HTTP Content-Format header. Possible values: JSONLINES, JSONARRAY, JSONOBJECT.",
 		AlwaysPrompt: true,
 	}
 	httpAuthorization = Flag{
-		Name:         "Http Authorization",
+		Name:         "HTTP Authorization",
 		LongForm:     "http-auth",
 		Help:         "HTTP Authorization header.",
 		AlwaysPrompt: true,
