@@ -41,7 +41,7 @@ var (
 		IsRequired: true,
 	}
 	typeOptions = []string{
-		"Http",
+		"HTTP",
 		"EventBridge",
 		"EventGrid",
 		"DataDog",
