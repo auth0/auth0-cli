@@ -14,6 +14,7 @@ type API struct {
 	Connection     ConnectionAPI
 	CustomDomain   CustomDomainAPI
 	Log            LogAPI
+	LogStream      LogStreamAPI
 	ResourceServer ResourceServerAPI
 	Role           RoleAPI
 	Rule           RuleAPI
@@ -28,6 +29,7 @@ func NewAPI(m *management.Management) *API {
 		Client:         m.Client,
 		CustomDomain:   m.CustomDomain,
 		Log:            m.Log,
+		LogStream:      m.LogStream,
 		ResourceServer: m.ResourceServer,
 		Role:           m.Role,
 		Rule:           m.Rule,

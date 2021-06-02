@@ -39,6 +39,7 @@ var requiredScopes = []string{
 	"read:connections", "update:connections",
 	"read:client_keys", "read:logs", "read:tenant_settings", "read:custom_domains",
 	"read:anomaly_blocks", "delete:anomaly_blocks",
+	"create:log_streams", "delete:log_streams", "read:log_streams", "update:log_streams",
 }
 
 func (p params) validate() error {
