@@ -487,7 +487,7 @@ auth0 logs streams update <id> -n myeventbridge -t eventbridge`,
 				current, err = cli.api.LogStream.Read(inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load logstreams. The Id %v specified doesn't exist", inputs.ID)
+				return fmt.Errorf("Unable to load logstream. The Id %v specified doesn't exist", inputs.ID)
 			}
 
 			// Prompt for log stream name
