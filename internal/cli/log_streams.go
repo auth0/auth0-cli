@@ -201,8 +201,8 @@ func showLogStreamCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Show a log stream by id",
-		Long:  "Show an application.",
+		Short: "Show a log stream by Id",
+		Long:  "Show a log stream by Id.",
 		Example: `auth0 logs streams show
 auth0 logs streams show <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -222,7 +222,7 @@ auth0 logs streams show <id>`,
 				a, err = cli.api.LogStream.Read(inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load application. The Id %v specified doesn't exist", inputs.ID)
+				return fmt.Errorf("Unable to load log stream. The Id %v specified doesn't exist", inputs.ID)
 			}
 			cli.renderer.LogStreamShow(a)
 			return nil
