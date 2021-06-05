@@ -89,6 +89,21 @@ auth0 [command]
 auth0 [command] --help
 ```
 
+* [auth0 apis](docs/auth0_apis.md)	 - Manage resources for APIs
+* [auth0 apps](docs/auth0_apps.md)	 - Manage resources for applications
+* [auth0 branding](docs/auth0_branding.md)	 - Manage branding options
+* [auth0 completion](docs/auth0_completion.md)	 - Setup autocomplete features for this CLI on your terminal
+* [auth0 ips](docs/auth0_ips.md)	 - Manage blocked IP addresses
+* [auth0 login](docs/auth0_login.md)	 - Authenticate the Auth0 CLI
+* [auth0 logout](docs/auth0_logout.md)	 - Log out of a tenant's session
+* [auth0 logs](docs/auth0_logs.md)	 - View tenant logs
+* [auth0 quickstarts](docs/auth0_quickstarts.md)	 - Quickstart support for getting bootstrapped
+* [auth0 roles](docs/auth0_roles.md)	 - Manage resources for roles
+* [auth0 rules](docs/auth0_rules.md)	 - Manage resources for rules
+* [auth0 tenants](docs/auth0_tenants.md)	 - Manage configured tenants
+* [auth0 test](docs/auth0_test.md)	 - Try your Universal Login box or get a token
+* [auth0 users](docs/auth0_users.md)	 - Manage resources for users
+
 ### Onboarding Journey
 
 Following these instructions will give you a sense of what's possible with the
