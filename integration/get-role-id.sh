@@ -1,6 +1,6 @@
 #! /bin/bash
 
-user=$( auth0 roles create -n integration-test-role-newRole -d integration-test-role --format json --no-input )
+role=$( auth0 roles create -n integration-test-role-newRole -d integration-test-role --format json --no-input )
 
 mkdir -p ./integration/identifiers
-echo "$user" | jq -r '.["ID"]' > ./integration/identifiers/role-id
+echo "$role" | jq -r '.["ID"]' > ./integration/identifiers/role-id
