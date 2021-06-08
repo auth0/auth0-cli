@@ -246,8 +246,8 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Delete an role",
-		Long:  "Delete an role.",
+		Short: "Delete a role",
+		Long:  "Delete a role.",
 		Example: `auth0 roles delete
 auth0 roles delete <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
