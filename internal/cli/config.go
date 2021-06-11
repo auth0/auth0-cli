@@ -14,8 +14,6 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 )
 
-var requiredScopes = auth.RequiredScopesMin()
-
 var desiredInputs = `Config init is intended for non-interactive use, 
 ensure the following env variables are set: 
 
@@ -94,7 +92,7 @@ func initCmd(cli *cli) *cobra.Command {
 				TokenURL:     u.String() + "/oauth/token",
 				EndpointParams: url.Values{
 					"client_id": {p.clientID},
-					"scope":     {strings.Join(requiredScopes, " ")},
+					"scope":     {strings.Join(auth.RequiredScopesMin(), " ")},
 					"audience":  {u.String() + "/api/v2/"},
 				},
 			}
