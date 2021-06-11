@@ -75,11 +75,12 @@ github.com/fatih/color
 # github.com/fsnotify/fsnotify v1.4.7
 ## explicit
 github.com/fsnotify/fsnotify
-# github.com/getsentry/sentry-go v0.10.0
+# github.com/getsentry/sentry-go v0.11.0
 ## explicit
 github.com/getsentry/sentry-go
 github.com/getsentry/sentry-go/internal/crypto/randutil
 github.com/getsentry/sentry-go/internal/debug
+github.com/getsentry/sentry-go/internal/ratelimit
 # github.com/goccy/go-json v0.4.7
 github.com/goccy/go-json
 # github.com/godbus/dbus/v5 v5.0.3
@@ -103,6 +104,9 @@ github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
 # github.com/google/goterm v0.0.0-20190703233501-fc88cf888a3f
 github.com/google/goterm/term
+# github.com/google/uuid v1.2.0
+## explicit
+github.com/google/uuid
 # github.com/guiguan/caster v0.0.0-20191104051807-3736c4464f38
 ## explicit
 github.com/guiguan/caster

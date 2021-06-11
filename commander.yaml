@@ -14,6 +14,9 @@ tests:
   auth0 tenants list:
     exit-code: 0
 
+  auth0 roles list:
+    exit-code: 0
+
   auth0 rules list:
     exit-code: 0
 
@@ -373,4 +376,110 @@ tests:
     stdout:
       json:
         allow_offline_access: "false"
+    exit-code: 0
+
+  # Test 'users create'
+  users create and check data:
+    command: auth0 users create --name integration-test-user-new --connection Username-Password-Authentication --email testuser@example.com --password testUser12 --format json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        Email:      "testuser@example.com"
+        Connection: "Username-Password-Authentication"
+
+  users create and check output:
+    command: auth0 users create --name integration-test-user-new2 --connection Username-Password-Authentication --email testuser2@example.com --password testUser12  --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - EMAIL       testuser2@example.com
+        - CONNECTION  Username-Password-Authentication
+
+  # Test 'users show'
+  users create test user:
+    command: ./integration/get-user-id.sh
+    exit-code: 0
+
+  users show json:
+    command: auth0 users show $(cat ./integration/identifiers/user-id) --format json
+    stdout:
+      json:
+        Email:      "newuser@example.com"
+        Connection: "Username-Password-Authentication"
+    exit-code: 0
+
+  users show:
+    command: auth0 users show $(cat ./integration/identifiers/user-id)
+    stdout:
+      contains:
+        - EMAIL       newuser@example.com
+        - CONNECTION  Username-Password-Authentication
+    exit-code: 0
+
+  # Test 'users update'
+  users update email:
+    command: auth0 users update $(cat ./integration/identifiers/user-id)  --email betteruser@example.com  --format json --no-input
+    stdout:
+      json:
+        Email: betteruser@example.com
+    exit-code: 0
+
+  users update name:
+    command: auth0 users update $(cat ./integration/identifiers/user-id)  --name integration-test-user-bettername  --format json --no-input
+    stdout:
+      json:
+        Email: betteruser@example.com # Name is not being displayed, hence using email
+    exit-code: 0
+
+    # Test 'roles create'
+  roles create and check data:
+    command: auth0 roles create --name integration-test-role-new1 --description testRole --format json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        Name:         integration-test-role-new1
+        Description:  testRole
+
+  roles create and check output:
+    command: auth0 roles create --name integration-test-role-new2 --description testRole2 --no-input
+    stdout:
+      contains:
+        - NAME         integration-test-role-new2
+        - DESCRIPTION  testRole2
+    exit-code: 0
+
+  # Test 'roles show'
+  roles create test role:
+    command: ./integration/get-role-id.sh
+    exit-code: 0
+
+  roles show json:
+    command: auth0 roles show $(cat ./integration/identifiers/role-id) --format json
+    stdout:
+      json:
+        Name:        integration-test-role-newRole
+        Description: integration-test-role
+    exit-code: 0
+
+  roles show:
+    command: auth0 roles show $(cat ./integration/identifiers/role-id)
+    stdout:
+      contains:
+        - NAME         integration-test-role-newRole
+        - DESCRIPTION  integration-test-role
+    exit-code: 0
+
+  # Test 'roles update'
+  roles update name:
+    command: auth0 roles update $(cat ./integration/identifiers/role-id) --name integration-test-role-betterName --format json
+    stdout:
+      json:
+        Name: integration-test-role-betterName
+    exit-code: 0
+
+  roles update description:
+    command: auth0 roles update $(cat ./integration/identifiers/role-id) --description betterDescription --format json
+    stdout:
+      json:
+        Description: betterDescription
     exit-code: 0

@@ -95,36 +95,36 @@ func (v *applicationView) KeyValues() [][]string {
 
 	if v.revealSecret {
 		return [][]string{
-			[]string{"CLIENT ID", ansi.Faint(v.ClientID)},
-			[]string{"NAME", v.Name},
-			[]string{"DESCRIPTION", v.Description},
-			[]string{"TYPE", applyColor(v.Type)},
-			[]string{"CLIENT SECRET", ansi.Italic(v.ClientSecret)},
-			[]string{"CALLBACKS", callbacks},
-			[]string{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
-			[]string{"ALLOWED ORIGINS", allowedOrigins},
-			[]string{"ALLOWED WEB ORIGINS", allowedWebOrigins},
-			[]string{"TOKEN ENDPOINT AUTH", v.AuthMethod},
-			[]string{"GRANTS", grants},
+			{"CLIENT ID", ansi.Faint(v.ClientID)},
+			{"NAME", v.Name},
+			{"DESCRIPTION", v.Description},
+			{"TYPE", applyColor(v.Type)},
+			{"CLIENT SECRET", ansi.Italic(v.ClientSecret)},
+			{"CALLBACKS", callbacks},
+			{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
+			{"ALLOWED ORIGINS", allowedOrigins},
+			{"ALLOWED WEB ORIGINS", allowedWebOrigins},
+			{"TOKEN ENDPOINT AUTH", v.AuthMethod},
+			{"GRANTS", grants},
 		}
 	}
 
 	return [][]string{
-		[]string{"CLIENT ID", ansi.Faint(v.ClientID)},
-		[]string{"NAME", v.Name},
-		[]string{"DESCRIPTION", v.Description},
-		[]string{"TYPE", applyColor(v.Type)},
-		[]string{"CALLBACKS", callbacks},
-		[]string{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
-		[]string{"ALLOWED ORIGINS", allowedOrigins},
-		[]string{"ALLOWED WEB ORIGINS", allowedWebOrigins},
-		[]string{"TOKEN ENDPOINT AUTH", v.AuthMethod},
-		[]string{"GRANTS", grants},
+		{"CLIENT ID", ansi.Faint(v.ClientID)},
+		{"NAME", v.Name},
+		{"DESCRIPTION", v.Description},
+		{"TYPE", applyColor(v.Type)},
+		{"CALLBACKS", callbacks},
+		{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
+		{"ALLOWED ORIGINS", allowedOrigins},
+		{"ALLOWED WEB ORIGINS", allowedWebOrigins},
+		{"TOKEN ENDPOINT AUTH", v.AuthMethod},
+		{"GRANTS", grants},
 	}
 }
 
 func (v *applicationView) Object() interface{} {
-	return v.raw
+	return safeRaw(v.raw.(*management.Client), v.revealSecret)
 }
 
 // applicationListView is a slimmed down view of a client for displaying
@@ -133,13 +133,13 @@ type applicationListView struct {
 	Name         string
 	Type         string
 	ClientID     string
-	ClientSecret string
+	ClientSecret string `json:"ClientSecret,omitempty"`
 	revealSecret bool
 }
 
 func (v *applicationListView) AsTableHeader() []string {
 	if v.revealSecret {
-		return []string{"ClientID", "Name", "Type", "Client Secret"}
+		return []string{"Client ID", "Name", "Type", "Client Secret"}
 	}
 	return []string{"Client ID", "Name", "Type"}
 }
@@ -160,7 +160,7 @@ func (v *applicationListView) AsTableRow() []string {
 	}
 }
 
-func (r *Renderer) ApplicationList(clients []*management.Client) {
+func (r *Renderer) ApplicationList(clients []*management.Client, revealSecrets bool) {
 	resource := "applications"
 
 	r.Heading(resource)
@@ -176,11 +176,19 @@ func (r *Renderer) ApplicationList(clients []*management.Client) {
 		if auth0.StringValue(c.Name) == deprecatedAppName {
 			continue
 		}
+
+		// in case of format=JSON:
+		clientSecret := ""
+		if revealSecrets {
+			clientSecret = auth0.StringValue(c.ClientSecret)
+		}
+
 		res = append(res, &applicationListView{
+			revealSecret: revealSecrets,
 			Name:         auth0.StringValue(c.Name),
 			Type:         appTypeFor(c.AppType),
 			ClientID:     auth0.StringValue(c.ClientID),
-			ClientSecret: auth0.StringValue(c.ClientSecret),
+			ClientSecret: clientSecret,
 		})
 	}
 
@@ -211,6 +219,10 @@ func (r *Renderer) ApplicationShow(client *management.Client, revealSecrets bool
 
 func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bool) {
 	r.Heading("application created")
+
+	if !revealSecrets {
+		client.ClientSecret = auth0.String("")
+	}
 
 	v := &applicationView{
 		revealSecret:      revealSecrets,
@@ -246,6 +258,10 @@ func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bo
 
 func (r *Renderer) ApplicationUpdate(client *management.Client, revealSecrets bool) {
 	r.Heading("application updated")
+
+	if !revealSecrets {
+		client.ClientSecret = auth0.String("")
+	}
 
 	v := &applicationView{
 		revealSecret:      revealSecrets,
@@ -327,4 +343,14 @@ func applyColor(a string) string {
 	default:
 		return a
 	}
+}
+
+func safeRaw(c *management.Client, revealSecrets bool) *management.Client {
+	if revealSecrets {
+		return c
+	}
+
+	c.ClientSecret = nil
+	c.SigningKeys = nil
+	return c
 }

@@ -49,7 +49,7 @@ var (
 		Name:      "Scopes",
 		LongForm:  "scopes",
 		ShortForm: "s",
-		Help:      "The list of scope you want to use to generate the token.",
+		Help:      "The list of scopes you want to use.",
 	}
 
 	testDomainArg = Argument{
@@ -85,6 +85,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ClientID       string
 		Audience       string
+		Scopes         []string
 		ConnectionName string
 		CustomDomain   string
 	}
@@ -157,7 +158,7 @@ auth0 test login <client-id> --connection <connection>`,
 				inputs.ConnectionName,
 				inputs.Audience, // audience is only supported for the test token command
 				"login",         // force a login page when using the test login command
-				cliLoginTestingScopes,
+				inputs.Scopes,
 				inputs.CustomDomain,
 			)
 			if err != nil {
@@ -195,6 +196,7 @@ auth0 test login <client-id> --connection <connection>`,
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	testAudience.RegisterString(cmd, &inputs.Audience, "")
+	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, cliLoginTestingScopes)
 	testConnection.RegisterString(cmd, &inputs.ConnectionName, "")
 	testDomain.RegisterString(cmd, &inputs.CustomDomain, "")
 	return cmd

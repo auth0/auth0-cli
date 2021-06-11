@@ -89,6 +89,21 @@ auth0 [command]
 auth0 [command] --help
 ```
 
+* [auth0 apis](docs/auth0_apis.md)	 - Manage resources for APIs
+* [auth0 apps](docs/auth0_apps.md)	 - Manage resources for applications
+* [auth0 branding](docs/auth0_branding.md)	 - Manage branding options
+* [auth0 completion](docs/auth0_completion.md)	 - Setup autocomplete features for this CLI on your terminal
+* [auth0 ips](docs/auth0_ips.md)	 - Manage blocked IP addresses
+* [auth0 login](docs/auth0_login.md)	 - Authenticate the Auth0 CLI
+* [auth0 logout](docs/auth0_logout.md)	 - Log out of a tenant's session
+* [auth0 logs](docs/auth0_logs.md)	 - View tenant logs
+* [auth0 quickstarts](docs/auth0_quickstarts.md)	 - Quickstart support for getting bootstrapped
+* [auth0 roles](docs/auth0_roles.md)	 - Manage resources for roles
+* [auth0 rules](docs/auth0_rules.md)	 - Manage resources for rules
+* [auth0 tenants](docs/auth0_tenants.md)	 - Manage configured tenants
+* [auth0 test](docs/auth0_test.md)	 - Try your Universal Login box or get a token
+* [auth0 users](docs/auth0_users.md)	 - Manage resources for users
+
 ### Onboarding Journey
 
 Following these instructions will give you a sense of what's possible with the
@@ -205,10 +220,23 @@ Failed Login	hello	7 minutes ago	N/A	my awesome app
 	userid: auth0|QXV0aDAgaXMgaGlyaW5nISBhdXRoMC5jb20vY2FyZWVycyAK
 ```
 
+## Anonymous Analytics
+
+By default, the CLI tracks some anonymous usage events. This helps us understand how the CLI is being used, so we can continue to improve it. You can opt-out by setting the environment variable `AUTH0_CLI_ANALYTICS` to `false`.
+
+### Data sent
+
+Every event tracked sends the following data along with the event name:
+
+- The CLI version.
+- The OS name: as determined by the value of `GOOS`, e.g. `windows`.
+- The processor architecture: as determined by the value of `GOARCH`, e.g. `amd64`.
+- The install ID: an anonymous UUID that is stored in the CLI's config file.
+- A timestamp.
+
 ## Contributing
 
 Please check the [contributing guidelines](CONTRIBUTING.md).
-
 
 ## Author
 
