@@ -14,7 +14,7 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 )
 
-var requiredScopes = auth.RequiredScopes()
+var requiredScopes = auth.RequiredScopesMin()
 
 var desiredInputs = `Config init is intended for non-interactive use, 
 ensure the following env variables are set: 
@@ -34,24 +34,24 @@ type params struct {
 
 func (p params) validate() error {
 	if p.clientDomain == "" {
-		return fmt.Errorf("Missing client domain.\n%s", desiredInputs)
+		return fmt.Errorf("missing client domain:\n%s", desiredInputs)
 	}
 
 	u, err := url.Parse(p.clientDomain)
 	if err != nil {
-		return fmt.Errorf("Failed to parse client domain: %s", p.clientDomain)
+		return fmt.Errorf("failed to parse client domain: %s", p.clientDomain)
 	}
 
 	if u.Scheme != "" {
-		return fmt.Errorf("Client domain cant include a scheme: %s", p.clientDomain)
+		return fmt.Errorf("client domain cant include a scheme: %s", p.clientDomain)
 	}
 
 	if p.clientID == "" {
-		return fmt.Errorf("Missing client id.\n%s", desiredInputs)
+		return fmt.Errorf("missing client id:\n%s", desiredInputs)
 	}
 
 	if p.clientSecret == "" {
-		return fmt.Errorf("Missing client secret.\n%s", desiredInputs)
+		return fmt.Errorf("missing client secret:\n%s", desiredInputs)
 	}
 	return nil
 }
@@ -70,7 +70,7 @@ func configCmd(cli *cli) *cobra.Command {
 func initCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "initialize valid cli config from environment variables",
+		Short: "configure the CLI from environment variables",
 		RunE: func(command *cobra.Command, args []string) error {
 			filePath := viper.GetString("FILEPATH")
 			clientDomain := viper.GetString("CLIENT_DOMAIN")
@@ -88,15 +88,13 @@ func initCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			// integration test client doesn't have openid or offline_access scopes granted
-			scopesForTest := requiredScopes[2:]
 			c := &clientcredentials.Config{
 				ClientID:     p.clientID,
 				ClientSecret: p.clientSecret,
 				TokenURL:     u.String() + "/oauth/token",
 				EndpointParams: url.Values{
 					"client_id": {p.clientID},
-					"scope":     {strings.Join(scopesForTest, " ")},
+					"scope":     {strings.Join(requiredScopes, " ")},
 					"audience":  {u.String() + "/api/v2/"},
 				},
 			}
@@ -111,11 +109,11 @@ func initCmd(cli *cli) *cobra.Command {
 				Domain:      p.clientDomain,
 				AccessToken: token.AccessToken,
 				ExpiresAt:   token.Expiry,
-				Scopes:      requiredScopes,
+				Scopes:      auth.RequiredScopes(),
 			}
 
 			if err := cli.addTenant(t); err != nil {
-				return fmt.Errorf("Unexpected error adding tenant to config: %w", err)
+				return fmt.Errorf("unexpected error adding tenant to config: %w", err)
 			}
 			return nil
 		},
