@@ -20,7 +20,7 @@ type ruleView struct {
 }
 
 func (v *ruleView) AsTableHeader() []string {
-	return []string{"Id", "Name", "Enabled", "Order"}
+	return []string{"ID", "Name", "Enabled", "Order"}
 }
 
 func (v *ruleView) AsTableRow() []string {

@@ -37,7 +37,8 @@ var requiredScopes = []string{
 	"create:users", "delete:users", "read:users", "update:users",
 	"read:branding", "update:branding",
 	"read:connections", "update:connections",
-	"read:client_keys", "read:logs", "read:tenant_settings", "read:custom_domains",
+	"read:client_keys", "read:logs", "read:tenant_settings", 
+	"read:custom_domains", "create:custom_domains", "delete:custom_domains",
 	"read:anomaly_blocks", "delete:anomaly_blocks",
 	"create:log_streams", "delete:log_streams", "read:log_streams", "update:log_streams",
 }
