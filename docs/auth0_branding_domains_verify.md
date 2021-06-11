@@ -1,11 +1,22 @@
-## auth0 branding
+## auth0 branding domains verify
 
-Manage branding options.
+Verify a custom domain.
+
+```
+auth0 branding domains verify [flags]
+```
+
+### Examples
+
+```
+auth0 branding domains verify 
+auth0 branding domains verify <id>
+```
 
 ### Flags
 
 ```
-  -h, --help   help for branding
+  -h, --help   help for verify
 ```
 
 ### Flags inherited from parent commands
@@ -21,8 +32,4 @@ Manage branding options.
 
 ### SEE ALSO
 
-* [auth0](auth0.md)	 - Supercharge your development workflow.
 * [auth0 branding domains](auth0_branding_domains.md)	 - Manage custom domains
-* [auth0 branding show](auth0_branding_show.md)	 - Display the custom branding settings for Universal Login
-* [auth0 branding templates](auth0_branding_templates.md)	 - Manage custom page templates
-* [auth0 branding update](auth0_branding_update.md)	 - Update the custom branding settings for Universal Login

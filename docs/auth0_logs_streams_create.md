@@ -30,7 +30,7 @@ auth0 logs streams create -n test-splunk -t splunk --splunk-domain demo.splunk.c
   -h, --help                        help for create
       --http-auth string            HTTP Authorization header.
       --http-endpoint string        HTTP endpoint.
-      --http-format string          HTTP Content-Format header. Possible values: JSONLINES, JSONARRAY, JSONOBJECT.
+      --http-format string          HTTP Content-Format header. Possible values: jsonlines, jsonarray, jsonobject.
       --http-type string            HTTP Content-Type header. Possible values: application/json.
   -n, --name string                 Name of the log stream.
       --splunk-domain string        The domain name of the splunk instance.

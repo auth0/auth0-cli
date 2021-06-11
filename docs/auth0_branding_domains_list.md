@@ -1,11 +1,23 @@
-## auth0 branding
+## auth0 branding domains list
 
-Manage branding options.
+List your existing custom domains. To create one try:
+auth0 branding domains create
+
+```
+auth0 branding domains list [flags]
+```
+
+### Examples
+
+```
+auth0 branding domains list
+auth0 branding domains ls
+```
 
 ### Flags
 
 ```
-  -h, --help   help for branding
+  -h, --help   help for list
 ```
 
 ### Flags inherited from parent commands
@@ -21,8 +33,4 @@ Manage branding options.
 
 ### SEE ALSO
 
-* [auth0](auth0.md)	 - Supercharge your development workflow.
 * [auth0 branding domains](auth0_branding_domains.md)	 - Manage custom domains
-* [auth0 branding show](auth0_branding_show.md)	 - Display the custom branding settings for Universal Login
-* [auth0 branding templates](auth0_branding_templates.md)	 - Manage custom page templates
-* [auth0 branding update](auth0_branding_update.md)	 - Update the custom branding settings for Universal Login
