@@ -56,9 +56,10 @@ func (p params) validate() error {
 
 func configCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "config",
-		Short: "Manage auth0-cli config",
-		Long:  "Manage auth0-cli config",
+		Use:    "config",
+		Short:  "Manage auth0-cli config",
+		Long:   "Manage auth0-cli config",
+		Hidden: true,
 	}
 
 	cmd.AddCommand(initCmd(cli))
