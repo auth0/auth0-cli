@@ -215,7 +215,7 @@ auth0 branding domains delete <id>`,
 				_, err := cli.api.CustomDomain.Read(url.PathEscape(inputs.ID))
 
 				if err != nil {
-					return fmt.Errorf("Unable to delete custom domain. The specified Id: %v doesn't exist", inputs.ID)
+					return fmt.Errorf("Unable to delete custom domain: %w", err)
 				}
 
 				return cli.api.CustomDomain.Delete(url.PathEscape(inputs.ID))

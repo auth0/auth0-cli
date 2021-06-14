@@ -724,7 +724,7 @@ auth0 logs streams delete <id>`,
 				_, err := cli.api.LogStream.Read(inputs.ID)
 
 				if err != nil {
-					return fmt.Errorf("Unable to delete log stream. The specified Id: %v doesn't exist", inputs.ID)
+					return fmt.Errorf("Unable to delete log stream: %w", err)
 				}
 
 				return cli.api.LogStream.Delete(inputs.ID)

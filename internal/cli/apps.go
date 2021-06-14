@@ -294,7 +294,7 @@ auth0 apps delete <id>`,
 				_, err := cli.api.Client.Read(inputs.ID)
 
 				if err != nil {
-					return fmt.Errorf("Unable to delete application. The specified Id: %v doesn't exist", inputs.ID)
+					return fmt.Errorf("Unable to delete application: %w", err)
 				}
 
 				return cli.api.Client.Delete(inputs.ID)

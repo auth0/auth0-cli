@@ -270,7 +270,7 @@ auth0 roles delete <id>`,
 				_, err := cli.api.Role.Read(inputs.ID)
 
 				if err != nil {
-					return fmt.Errorf("Unable to delete role. The specified Id: %v doesn't exist", inputs.ID)
+					return fmt.Errorf("Unable to delete role: %w", err)
 				}
 
 				return cli.api.Role.Delete(inputs.ID)
