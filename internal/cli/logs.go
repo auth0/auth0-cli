@@ -10,11 +10,11 @@ import (
 )
 
 var (
-	logsClientID = Flag{
-		Name:      "Client ID",
-		LongForm:  "client-id",
-		ShortForm: "c",
-		Help:      "Client Id of an Auth0 application to filter the logs.",
+	logsFilter = Flag{
+		Name:      "Filter",
+		LongForm:  "filter",
+		ShortForm: "f",
+		Help:      "Filter in Lucene query syntax. See https://auth0.com/docs/logs/log-search-query-syntax for more details.",
 	}
 
 	logsNum = Flag{
@@ -42,7 +42,7 @@ func logsCmd(cli *cli) *cobra.Command {
 
 func listLogsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ClientID string
+		Filter string
 		Num      int
 	}
 
@@ -51,12 +51,17 @@ func listLogsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Show the application logs",
-		Long:    "Show the tenant logs allowing to filter by Client Id.",
+		Long:    "Show the tenant logs allowing to filter using Lucene query syntax.",
 		Example: `auth0 logs list
-auth0 logs list --client-id <id>
+auth0 logs list --filter "client_id:<client-id>"
+auth0 logs list --filter "client_name:<client-name>"
+auth0 logs list --filter "user_id:<user-id>"
+auth0 logs list --filter "user_name:<user-name>"
+auth0 logs list --filter "ip:<ip>"
+auth0 logs list --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
 auth0 logs ls -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			list, err := getLatestLogs(cli, inputs.Num, inputs.ClientID)
+			list, err := getLatestLogs(cli, inputs.Num, inputs.Filter)
 			if err != nil {
 				return fmt.Errorf("An unexpected error occurred while getting logs: %v", err)
 			}
@@ -67,14 +72,14 @@ auth0 logs ls -n 100`,
 		},
 	}
 
-	logsClientID.RegisterString(cmd, &inputs.ClientID, "")
+	logsFilter.RegisterString(cmd, &inputs.Filter, "")
 	logsNum.RegisterInt(cmd, &inputs.Num, 100)
 	return cmd
 }
 
 func tailLogsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ClientID string
+		Filter string
 		Num      int
 	}
 
@@ -82,13 +87,18 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 		Use:   "tail",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Tail the tenant logs",
-		Long:  "Tail the tenant logs allowing to filter by Client ID.",
+		Long:  "Tail the tenant logs allowing to filter using Lucene query syntax.",
 		Example: `auth0 logs tail
-auth0 logs tail --client-id <id>
+auth0 logs tail --filter "client_id:<client-id>"
+auth0 logs tail --filter "client_name:<client-name>"
+auth0 logs tail --filter "user_id:<user-id>"
+auth0 logs tail --filter "user_name:<user-name>"
+auth0 logs tail --filter "ip:<ip>"
+auth0 logs tail --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
 auth0 logs tail -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			lastLogID := ""
-			list, err := getLatestLogs(cli, inputs.Num, inputs.ClientID)
+			list, err := getLatestLogs(cli, inputs.Num, inputs.Filter)
 			if err != nil {
 				return fmt.Errorf("An unexpected error occurred while getting logs: %v", err)
 			}
@@ -119,8 +129,8 @@ auth0 logs tail -n 100`,
 						management.Parameter("sort", "date:-1"),
 					}
 
-					if inputs.ClientID != "" {
-						queryParams = append(queryParams, management.Query(fmt.Sprintf(`client_id:"%s"`, inputs.ClientID)))
+					if inputs.Filter != "" {
+						queryParams = append(queryParams, management.Query(inputs.Filter))
 					}
 
 					list, err = cli.api.Log.List(queryParams...)
@@ -147,12 +157,12 @@ auth0 logs tail -n 100`,
 		},
 	}
 
-	logsClientID.RegisterString(cmd, &inputs.ClientID, "")
+	logsFilter.RegisterString(cmd, &inputs.Filter, "")
 	logsNum.RegisterInt(cmd, &inputs.Num, 100)
 	return cmd
 }
 
-func getLatestLogs(cli *cli, n int, clientID string) ([]*management.Log, error) {
+func getLatestLogs(cli *cli, n int, filter string) ([]*management.Log, error) {
 	page := 0
 	perPage := n
 
@@ -167,8 +177,8 @@ func getLatestLogs(cli *cli, n int, clientID string) ([]*management.Log, error) 
 		management.Parameter("page", fmt.Sprintf("%d", page)),
 		management.Parameter("per_page", fmt.Sprintf("%d", perPage))}
 
-	if clientID != "" {
-		queryParams = append(queryParams, management.Query(fmt.Sprintf(`client_id:"%s"`, clientID)))
+	if filter != "" {
+		queryParams = append(queryParams, management.Query(filter))
 	}
 
 	return cli.api.Log.List(queryParams...)

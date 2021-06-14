@@ -20,7 +20,7 @@ auth0 users search -q name -s "name:1"
 
 ```
   -h, --help           help for search
-  -q, --query string   Query in Lucene query string syntax. See https://auth0.com/docs/users/user-search/user-search-query-syntax for more details.
+  -q, --query string   Query in Lucene query syntax. See https://auth0.com/docs/users/user-search/user-search-query-syntax for more details.
   -s, --sort string    Field to sort by. Use 'field:order' where 'order' is '1' for ascending and '-1' for descending. e.g. 'created_at:1'.
 ```
 
