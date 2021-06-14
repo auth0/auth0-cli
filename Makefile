@@ -58,11 +58,8 @@ mocks: $(GOBIN)/mockgen
 $(GOBIN)/commander:
 	cd && GO111MODULE=auto go get github.com/commander-cli/commander/cmd/commander
 
-$(GOBIN)/auth0-cli-config-generator:
-	go install ./pkg/auth0-cli-config-generator
-
 run-integration:
-	auth0-cli-config-generator && commander test commander.yaml
+	auth0 config init && commander test commander.yaml
 .PHONY: run-integration
 
 # Delete all test apps created during integration testing
@@ -70,7 +67,7 @@ integration-cleanup:
 	./integration/test-cleanup.sh
 .PHONY: integration-cleanup
 
-integration: build $(GOBIN)/auth0-cli-config-generator $(GOBIN)/commander 
+integration: build $(GOBIN)/commander 
 	$(MAKE) run-integration; \
 	ret=$$?; \
 	$(MAKE) integration-cleanup; \

@@ -66,6 +66,11 @@ func Execute() {
 				return nil
 			}
 
+			// config init shouldn't trigger a login.
+			if cmd.CalledAs() == "init" && cmd.Parent().Use == "config" {
+				return nil
+			}
+
 			defer cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
 
 			// Initialize everything once. Later callers can then
@@ -96,6 +101,7 @@ func Execute() {
 	// order of the comamnds here matters
 	// so add new commands in a place that reflect its relevance or relation with other commands:
 	rootCmd.AddCommand(loginCmd(cli))
+	rootCmd.AddCommand(configCmd(cli))
 	rootCmd.AddCommand(tenantsCmd(cli))
 	rootCmd.AddCommand(usersCmd(cli))
 	rootCmd.AddCommand(appsCmd(cli))
@@ -144,7 +150,7 @@ func Execute() {
 		os.Exit(1)
 	}
 
-	ctx, cancel := context.WithTimeout(cli.context, 3 * time.Second)
+	ctx, cancel := context.WithTimeout(cli.context, 3*time.Second)
 	// defers are executed in LIFO order
 	defer cancel()
 	defer cli.tracker.Wait(ctx) // No event should be tracked after this has run, or it will panic e.g. in earlier deferred functions
