@@ -25,7 +25,6 @@ func Execute() {
 	cli := &cli{
 		renderer: display.NewRenderer(),
 		tracker:  analytics.NewTracker(),
-		context:  cliContext(),
 	}
 
 	rootCmd := &cobra.Command{
@@ -44,6 +43,14 @@ func Execute() {
 			if cmd.Use == "login" && cmd.Parent().Use == "auth0" {
 				return nil
 			}
+
+			// We're tracking the login command in its Run method
+			// so we'll only add this defer if the command is not login
+			defer func() {
+				if cli.isLoggedIn() {
+					cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
+				}
+			}()
 
 			// If the user is trying to logout, session information
 			// isn't important as well.
@@ -70,8 +77,6 @@ func Execute() {
 			if cmd.CalledAs() == "init" && cmd.Parent().Use == "config" {
 				return nil
 			}
-
-			defer cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
 
 			// Initialize everything once. Later callers can then
 			// freely assume that config is fully primed and ready
@@ -142,7 +147,8 @@ func Execute() {
 	// for most of the architectures there's no requirements:
 	ansi.InitConsole()
 
-	if err := rootCmd.ExecuteContext(cli.context); err != nil {
+	cancelCtx :=  contextWithCancel()
+	if err := rootCmd.ExecuteContext(cancelCtx); err != nil {
 		cli.renderer.Heading("error")
 		cli.renderer.Errorf(err.Error())
 
@@ -150,13 +156,13 @@ func Execute() {
 		os.Exit(1)
 	}
 
-	ctx, cancel := context.WithTimeout(cli.context, 3*time.Second)
+	timeoutCtx, cancel := context.WithTimeout(cancelCtx, 3*time.Second)
 	// defers are executed in LIFO order
 	defer cancel()
-	defer cli.tracker.Wait(ctx) // No event should be tracked after this has run, or it will panic e.g. in earlier deferred functions
+	defer cli.tracker.Wait(timeoutCtx) // No event should be tracked after this has run, or it will panic e.g. in earlier deferred functions
 }
 
-func cliContext() context.Context {
+func contextWithCancel() context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	ch := make(chan os.Signal, 1)

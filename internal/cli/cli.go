@@ -76,7 +76,6 @@ type cli struct {
 	api      *auth0.API
 	renderer *display.Renderer
 	tracker  *analytics.Tracker
-	context  context.Context
 	// set of flags which are user specified.
 	debug   bool
 	tenant  string

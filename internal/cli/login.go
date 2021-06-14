@@ -21,6 +21,9 @@ func loginCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			_, err := RunLogin(ctx, cli, false)
+			if err == nil {
+				cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
+			}
 			return err
 		},
 	}
