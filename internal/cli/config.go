@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"os"
-	"path"
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/auth"
@@ -69,7 +67,7 @@ func configCmd(cli *cli) *cobra.Command {
 func initCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "configure the CLI from environment variables",
+		Short: "Configure the CLI from environment variables",
 		RunE: func(command *cobra.Command, args []string) error {
 			filePath := viper.GetString("FILEPATH")
 			clientDomain := viper.GetString("CLIENT_DOMAIN")
@@ -121,7 +119,7 @@ func initCmd(cli *cli) *cobra.Command {
 	viper.AutomaticEnv()
 
 	flags := cmd.Flags()
-	flags.String("filepath", path.Join(os.Getenv("HOME"), ".config", "auth0", "config.json"), "Filepath for the auth0 cli config")
+	flags.String("filepath", defaultConfigPath(), "Filepath for the auth0 cli config")
 	_ = viper.BindPFlag("FILEPATH", flags.Lookup("filepath"))
 	flags.String("client-id", "", "Client ID to set within config")
 	_ = viper.BindPFlag("CLIENT_ID", flags.Lookup("client-id"))
