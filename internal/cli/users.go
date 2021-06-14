@@ -56,7 +56,7 @@ var (
 		Name:       "Query",
 		LongForm:   "query",
 		ShortForm:  "q",
-		Help:       "Query in Lucene query string syntax. See https://auth0.com/docs/users/user-search/user-search-query-syntax for more details.",
+		Help:       "Query in Lucene query syntax. See https://auth0.com/docs/users/user-search/user-search-query-syntax for more details.",
 		IsRequired: true,
 	}
 	userSort = Flag{
