@@ -445,7 +445,7 @@ func (c *cli) init() error {
 
 func (c *cli) initContext() (err error) {
 	if c.path == "" {
-		c.path = path.Join(os.Getenv("HOME"), ".config", "auth0", "config.json")
+		c.path = defaultConfigPath()
 	}
 
 	if _, err := os.Stat(c.path); os.IsNotExist(err) {
@@ -470,6 +470,18 @@ func (c *cli) initContext() (err error) {
 	}
 
 	return nil
+}
+
+func defaultConfigPath() string {
+	return path.Join(os.Getenv("HOME"), ".config", "auth0", "config.json")
+}
+
+func (c *cli) setPath(p string) {
+	if p == "" {
+		c.path = defaultConfigPath()
+		return
+	}
+	c.path = p
 }
 
 func canPrompt(cmd *cobra.Command) bool {
