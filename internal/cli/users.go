@@ -300,7 +300,7 @@ auth0 users delete <id>`,
 				_, err := cli.api.User.Read(inputs.ID)
 
 				if err != nil {
-					return fmt.Errorf("Unable to delete user. The specified Id: %v doesn't exist", inputs.ID)
+					return fmt.Errorf("Unable to delete user: %w", err)
 				}
 
 				return cli.api.User.Delete(inputs.ID)

@@ -26,7 +26,7 @@ auth0 logs streams update <id> -n myeventbridge -t eventbridge
   -h, --help                   help for update
       --http-auth string       HTTP Authorization header.
       --http-endpoint string   HTTP endpoint.
-      --http-format string     HTTP Content-Format header. Possible values: JSONLINES, JSONARRAY, JSONOBJECT.
+      --http-format string     HTTP Content-Format header. Possible values: jsonlines, jsonarray, jsonobject.
       --http-type string       HTTP Content-Type header. Possible values: application/json.
   -n, --name string            Name of the log stream.
       --splunk-domain string   The domain name of the splunk instance.

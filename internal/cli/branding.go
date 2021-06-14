@@ -83,6 +83,7 @@ func brandingCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(showBrandingCmd(cli))
 	cmd.AddCommand(updateBrandingCmd(cli))
 	cmd.AddCommand(templateCmd(cli))
+	cmd.AddCommand(customDomainsCmd(cli))
 	return cmd
 }
 

@@ -250,7 +250,7 @@ auth0 rules delete <rule-id>`,
 				_, err := cli.api.Rule.Read(inputs.ID)
 
 				if err != nil {
-					return fmt.Errorf("Unable to delete application. The specified Id: %v doesn't exist", inputs.ID)
+					return fmt.Errorf("Unable to delete rule: %w", err)
 				}
 
 				return cli.api.Rule.Delete(inputs.ID)

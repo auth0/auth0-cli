@@ -12,7 +12,7 @@ type roleView struct {
 }
 
 func (v *roleView) AsTableHeader() []string {
-	return []string{"Role ID", "Name", "Description"}
+	return []string{"ID", "Name", "Description"}
 }
 
 func (v *roleView) AsTableRow() []string {

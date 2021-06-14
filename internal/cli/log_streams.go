@@ -63,7 +63,7 @@ var (
 	httpContentFormat = Flag{
 		Name:         "HTTP Content Format",
 		LongForm:     "http-format",
-		Help:         "HTTP Content-Format header. Possible values: JSONLINES, JSONARRAY, JSONOBJECT.",
+		Help:         "HTTP Content-Format header. Possible values: jsonlines, jsonarray, jsonobject.",
 		AlwaysPrompt: true,
 	}
 	httpAuthorization = Flag{
@@ -309,7 +309,7 @@ auth0 logs streams create -n test-splunk -t splunk --splunk-domain demo.splunk.c
 				ls.Sink = &management.LogStreamSinkHTTP{
 					Authorization: &inputs.HttpAuthorization,
 					ContentType:   &inputs.HttpContentType,
-					ContentFormat: &inputs.HttpContentFormat,
+					ContentFormat: apiHTTPContentFormatFor(inputs.HttpContentFormat),
 					Endpoint:      &inputs.HttpEndpoint,
 				}
 			}
@@ -641,7 +641,7 @@ auth0 logs streams update <id> -n myeventbridge -t eventbridge`,
 				}
 
 				if len(inputs.HttpContentFormat) > 0 {
-					s.ContentFormat = &inputs.HttpContentFormat
+					s.ContentFormat = apiHTTPContentFormatFor(inputs.HttpContentFormat)
 				}
 
 				if len(inputs.HttpAuthorization) > 0 {
@@ -724,7 +724,7 @@ auth0 logs streams delete <id>`,
 				_, err := cli.api.LogStream.Read(inputs.ID)
 
 				if err != nil {
-					return fmt.Errorf("Unable to delete log stream. The specified Id: %v doesn't exist", inputs.ID)
+					return fmt.Errorf("Unable to delete log stream: %w", err)
 				}
 
 				return cli.api.LogStream.Delete(inputs.ID)
@@ -790,6 +790,10 @@ func (c *cli) logStreamPickerOptions() (pickerOptions, error) {
 	}
 
 	return opts, nil
+}
+
+func apiHTTPContentFormatFor(v string) *string {
+	return auth0.String(strings.ToUpper(v))
 }
 
 func logsTypeFor(v string) string {
