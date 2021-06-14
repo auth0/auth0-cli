@@ -20,7 +20,7 @@ You can also download a QuickStart sample application that’s already configure
 
 ### 🔍 Find issues faster
 
-If you encounter difficulties setting up your integration, use the Auth0 CLI to tail your tenant’s logs for a smoother troubleshooting experience. `auth0 logs tail` will let you inspect the authentication events as they happen. You can easily filter the events from a single Auth0 application with `--client-id <client-id>` and use `--debug` to get the raw error details.
+If you encounter difficulties setting up your integration, use the Auth0 CLI to tail your tenant’s logs for a smoother troubleshooting experience. `auth0 logs tail` will let you inspect the authentication events as they happen. You can easily filter the events from a single Auth0 application with `--filter "client_id:<client-id>"` and use `--debug` to get the raw error details.
 
 ### 🔁 Simplify repetitive tasks
 

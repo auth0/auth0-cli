@@ -1,6 +1,6 @@
 ## auth0 logs list
 
-Show the tenant logs allowing to filter by Client Id.
+Show the tenant logs allowing to filter using Lucene query syntax.
 
 ```
 auth0 logs list [flags]
@@ -10,16 +10,21 @@ auth0 logs list [flags]
 
 ```
 auth0 logs list
-auth0 logs list --client-id <id>
+auth0 logs list --filter "client_id:<client-id>"
+auth0 logs list --filter "client_name:<client-name>"
+auth0 logs list --filter "user_id:<user-id>"
+auth0 logs list --filter "user_name:<user-name>"
+auth0 logs list --filter "ip:<ip>"
+auth0 logs list --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
 auth0 logs ls -n 100
 ```
 
 ### Flags
 
 ```
-  -c, --client-id string   Client Id of an Auth0 application to filter the logs.
-  -h, --help               help for list
-  -n, --number int         Number of log entries to show. (default 100)
+  -f, --filter string   Filter in Lucene query syntax. See https://auth0.com/docs/logs/log-search-query-syntax for more details.
+  -h, --help            help for list
+  -n, --number int      Number of log entries to show. (default 100)
 ```
 
 ### Flags inherited from parent commands
