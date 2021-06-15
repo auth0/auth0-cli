@@ -233,7 +233,7 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
 		Long:  "Update a custom domain.",
 		Example: `auth0 branding domains update
 auth0 branding domains update <id> --policy compatible
-auth0 branding domains update <id> -p compatible --ip-header "X-Connecting-IP"`,
+auth0 branding domains update <id> -p compatible --ip-header "cf-connecting-ip"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.CustomDomain
 
