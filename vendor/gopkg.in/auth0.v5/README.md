@@ -77,7 +77,7 @@ The following Auth0 resources are supported:
 - [x] [Jobs](https://auth0.com/docs/api/management/v2#!/Jobs/get_jobs_by_id)
 - [x] [Stats](https://auth0.com/docs/api/management/v2#!/Stats/get_active_users)
 - [x] [Tenants](https://auth0.com/docs/api/management/v2#!/Tenants/get_settings)
-- [ ] [Anomaly](https://auth0.com/docs/api/management/v2#!/Anomaly/get_ips_by_id)
+- [X] [Anomaly](https://auth0.com/docs/api/management/v2#!/Anomaly/get_ips_by_id)
 - [x] [Tickets](https://auth0.com/docs/api/management/v2#!/Tickets/post_email_verification)
 - [x] [Signing Keys](https://auth0.com/docs/api/management/v2#!/Keys/get_signing_keys)
 

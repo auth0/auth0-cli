@@ -42,8 +42,10 @@ require (
 	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
 	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d
 	golang.org/x/text v0.3.5 // indirect
-	gopkg.in/auth0.v5 v5.17.0
+	gopkg.in/auth0.v5 v5.18.0
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
+
+replace gopkg.in/auth0.v5 => github.com/go-auth0/auth0 v1.3.1-0.20210615225247-8be98bbd9fc2

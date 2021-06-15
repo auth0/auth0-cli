@@ -159,6 +159,9 @@ type Management struct {
 	// Anomaly manages the IP blocks
 	Anomaly *AnomalyManager
 
+	// Actions manages Actions extensibility
+	Action *ActionManager
+
 	url         *url.URL
 	basePath    string
 	userAgent   string
@@ -227,6 +230,7 @@ func New(domain string, options ...ManagementOption) (*Management, error) {
 	m.Blacklist = newBlacklistManager(m)
 	m.SigningKey = newSigningKeyManager(m)
 	m.Anomaly = newAnomalyManager(m)
+	m.Action = newActionManager(m)
 
 	return m, nil
 }

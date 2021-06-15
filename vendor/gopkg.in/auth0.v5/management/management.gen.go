@@ -6,6 +6,449 @@ import (
 	"time"
 )
 
+// GetBuiltAt returns the BuiltAt field if it's non-nil, zero value otherwise.
+func (a *Action) GetBuiltAt() time.Time {
+	if a == nil || a.BuiltAt == nil {
+		return time.Time{}
+	}
+	return *a.BuiltAt
+}
+
+// GetCode returns the Code field if it's non-nil, zero value otherwise.
+func (a *Action) GetCode() string {
+	if a == nil || a.Code == nil {
+		return ""
+	}
+	return *a.Code
+}
+
+// GetCreatedAt returns the CreatedAt field if it's non-nil, zero value otherwise.
+func (a *Action) GetCreatedAt() time.Time {
+	if a == nil || a.CreatedAt == nil {
+		return time.Time{}
+	}
+	return *a.CreatedAt
+}
+
+// GetDeployedVersion returns the DeployedVersion field.
+func (a *Action) GetDeployedVersion() *ActionVersion {
+	if a == nil {
+		return nil
+	}
+	return a.DeployedVersion
+}
+
+// GetID returns the ID field if it's non-nil, zero value otherwise.
+func (a *Action) GetID() string {
+	if a == nil || a.ID == nil {
+		return ""
+	}
+	return *a.ID
+}
+
+// GetName returns the Name field if it's non-nil, zero value otherwise.
+func (a *Action) GetName() string {
+	if a == nil || a.Name == nil {
+		return ""
+	}
+	return *a.Name
+}
+
+// GetStatus returns the Status field if it's non-nil, zero value otherwise.
+func (a *Action) GetStatus() string {
+	if a == nil || a.Status == nil {
+		return ""
+	}
+	return *a.Status
+}
+
+// GetUpdatedAt returns the UpdatedAt field if it's non-nil, zero value otherwise.
+func (a *Action) GetUpdatedAt() time.Time {
+	if a == nil || a.UpdatedAt == nil {
+		return time.Time{}
+	}
+	return *a.UpdatedAt
+}
+
+// String returns a string representation of Action.
+func (a *Action) String() string {
+	return Stringify(a)
+}
+
+// GetAction returns the Action field.
+func (a *ActionBinding) GetAction() *Action {
+	if a == nil {
+		return nil
+	}
+	return a.Action
+}
+
+// GetCreatedAt returns the CreatedAt field if it's non-nil, zero value otherwise.
+func (a *ActionBinding) GetCreatedAt() time.Time {
+	if a == nil || a.CreatedAt == nil {
+		return time.Time{}
+	}
+	return *a.CreatedAt
+}
+
+// GetDisplayName returns the DisplayName field if it's non-nil, zero value otherwise.
+func (a *ActionBinding) GetDisplayName() string {
+	if a == nil || a.DisplayName == nil {
+		return ""
+	}
+	return *a.DisplayName
+}
+
+// GetID returns the ID field if it's non-nil, zero value otherwise.
+func (a *ActionBinding) GetID() string {
+	if a == nil || a.ID == nil {
+		return ""
+	}
+	return *a.ID
+}
+
+// GetRef returns the Ref field.
+func (a *ActionBinding) GetRef() *ActionBindingReference {
+	if a == nil {
+		return nil
+	}
+	return a.Ref
+}
+
+// GetTriggerID returns the TriggerID field if it's non-nil, zero value otherwise.
+func (a *ActionBinding) GetTriggerID() string {
+	if a == nil || a.TriggerID == nil {
+		return ""
+	}
+	return *a.TriggerID
+}
+
+// GetUpdatedAt returns the UpdatedAt field if it's non-nil, zero value otherwise.
+func (a *ActionBinding) GetUpdatedAt() time.Time {
+	if a == nil || a.UpdatedAt == nil {
+		return time.Time{}
+	}
+	return *a.UpdatedAt
+}
+
+// String returns a string representation of ActionBinding.
+func (a *ActionBinding) String() string {
+	return Stringify(a)
+}
+
+// String returns a string representation of ActionBindingList.
+func (a *ActionBindingList) String() string {
+	return Stringify(a)
+}
+
+// GetType returns the Type field if it's non-nil, zero value otherwise.
+func (a *ActionBindingReference) GetType() string {
+	if a == nil || a.Type == nil {
+		return ""
+	}
+	return *a.Type
+}
+
+// GetValue returns the Value field if it's non-nil, zero value otherwise.
+func (a *ActionBindingReference) GetValue() string {
+	if a == nil || a.Value == nil {
+		return ""
+	}
+	return *a.Value
+}
+
+// String returns a string representation of ActionBindingReference.
+func (a *ActionBindingReference) String() string {
+	return Stringify(a)
+}
+
+// GetName returns the Name field if it's non-nil, zero value otherwise.
+func (a *ActionDependency) GetName() string {
+	if a == nil || a.Name == nil {
+		return ""
+	}
+	return *a.Name
+}
+
+// GetRegistryURL returns the RegistryURL field if it's non-nil, zero value otherwise.
+func (a *ActionDependency) GetRegistryURL() string {
+	if a == nil || a.RegistryURL == nil {
+		return ""
+	}
+	return *a.RegistryURL
+}
+
+// GetVersion returns the Version field if it's non-nil, zero value otherwise.
+func (a *ActionDependency) GetVersion() string {
+	if a == nil || a.Version == nil {
+		return ""
+	}
+	return *a.Version
+}
+
+// String returns a string representation of ActionDependency.
+func (a *ActionDependency) String() string {
+	return Stringify(a)
+}
+
+// GetCreatedAt returns the CreatedAt field if it's non-nil, zero value otherwise.
+func (a *ActionExecution) GetCreatedAt() time.Time {
+	if a == nil || a.CreatedAt == nil {
+		return time.Time{}
+	}
+	return *a.CreatedAt
+}
+
+// GetID returns the ID field if it's non-nil, zero value otherwise.
+func (a *ActionExecution) GetID() string {
+	if a == nil || a.ID == nil {
+		return ""
+	}
+	return *a.ID
+}
+
+// GetStatus returns the Status field if it's non-nil, zero value otherwise.
+func (a *ActionExecution) GetStatus() string {
+	if a == nil || a.Status == nil {
+		return ""
+	}
+	return *a.Status
+}
+
+// GetTriggerID returns the TriggerID field if it's non-nil, zero value otherwise.
+func (a *ActionExecution) GetTriggerID() string {
+	if a == nil || a.TriggerID == nil {
+		return ""
+	}
+	return *a.TriggerID
+}
+
+// GetUpdatedAt returns the UpdatedAt field if it's non-nil, zero value otherwise.
+func (a *ActionExecution) GetUpdatedAt() time.Time {
+	if a == nil || a.UpdatedAt == nil {
+		return time.Time{}
+	}
+	return *a.UpdatedAt
+}
+
+// String returns a string representation of ActionExecution.
+func (a *ActionExecution) String() string {
+	return Stringify(a)
+}
+
+// GetActionName returns the ActionName field if it's non-nil, zero value otherwise.
+func (a *ActionExecutionResult) GetActionName() string {
+	if a == nil || a.ActionName == nil {
+		return ""
+	}
+	return *a.ActionName
+}
+
+// GetEndedAt returns the EndedAt field if it's non-nil, zero value otherwise.
+func (a *ActionExecutionResult) GetEndedAt() time.Time {
+	if a == nil || a.EndedAt == nil {
+		return time.Time{}
+	}
+	return *a.EndedAt
+}
+
+// GetError returns the Error field if it's non-nil, zero value otherwise.
+func (a *ActionExecutionResult) GetError() map[string]string {
+	if a == nil || a.Error == nil {
+		return map[string]string{}
+	}
+	return *a.Error
+}
+
+// GetStartedAt returns the StartedAt field if it's non-nil, zero value otherwise.
+func (a *ActionExecutionResult) GetStartedAt() time.Time {
+	if a == nil || a.StartedAt == nil {
+		return time.Time{}
+	}
+	return *a.StartedAt
+}
+
+// String returns a string representation of ActionExecutionResult.
+func (a *ActionExecutionResult) String() string {
+	return Stringify(a)
+}
+
+// String returns a string representation of ActionList.
+func (a *ActionList) String() string {
+	return Stringify(a)
+}
+
+// GetName returns the Name field if it's non-nil, zero value otherwise.
+func (a *ActionSecret) GetName() string {
+	if a == nil || a.Name == nil {
+		return ""
+	}
+	return *a.Name
+}
+
+// GetUpdatedAt returns the UpdatedAt field if it's non-nil, zero value otherwise.
+func (a *ActionSecret) GetUpdatedAt() time.Time {
+	if a == nil || a.UpdatedAt == nil {
+		return time.Time{}
+	}
+	return *a.UpdatedAt
+}
+
+// GetValue returns the Value field if it's non-nil, zero value otherwise.
+func (a *ActionSecret) GetValue() string {
+	if a == nil || a.Value == nil {
+		return ""
+	}
+	return *a.Value
+}
+
+// String returns a string representation of ActionSecret.
+func (a *ActionSecret) String() string {
+	return Stringify(a)
+}
+
+// GetPayload returns the Payload field.
+func (a *ActionTestRequest) GetPayload() *ActionTestPayload {
+	if a == nil {
+		return nil
+	}
+	return a.Payload
+}
+
+// String returns a string representation of ActionTestRequest.
+func (a *ActionTestRequest) String() string {
+	return Stringify(a)
+}
+
+// GetID returns the ID field if it's non-nil, zero value otherwise.
+func (a *ActionTrigger) GetID() string {
+	if a == nil || a.ID == nil {
+		return ""
+	}
+	return *a.ID
+}
+
+// GetStatus returns the Status field if it's non-nil, zero value otherwise.
+func (a *ActionTrigger) GetStatus() string {
+	if a == nil || a.Status == nil {
+		return ""
+	}
+	return *a.Status
+}
+
+// GetVersion returns the Version field if it's non-nil, zero value otherwise.
+func (a *ActionTrigger) GetVersion() string {
+	if a == nil || a.Version == nil {
+		return ""
+	}
+	return *a.Version
+}
+
+// String returns a string representation of ActionTrigger.
+func (a *ActionTrigger) String() string {
+	return Stringify(a)
+}
+
+// String returns a string representation of ActionTriggerList.
+func (a *ActionTriggerList) String() string {
+	return Stringify(a)
+}
+
+// GetAction returns the Action field.
+func (a *ActionVersion) GetAction() *Action {
+	if a == nil {
+		return nil
+	}
+	return a.Action
+}
+
+// GetBuiltAt returns the BuiltAt field if it's non-nil, zero value otherwise.
+func (a *ActionVersion) GetBuiltAt() time.Time {
+	if a == nil || a.BuiltAt == nil {
+		return time.Time{}
+	}
+	return *a.BuiltAt
+}
+
+// GetCode returns the Code field if it's non-nil, zero value otherwise.
+func (a *ActionVersion) GetCode() string {
+	if a == nil || a.Code == nil {
+		return ""
+	}
+	return *a.Code
+}
+
+// GetCreatedAt returns the CreatedAt field if it's non-nil, zero value otherwise.
+func (a *ActionVersion) GetCreatedAt() time.Time {
+	if a == nil || a.CreatedAt == nil {
+		return time.Time{}
+	}
+	return *a.CreatedAt
+}
+
+// GetID returns the ID field if it's non-nil, zero value otherwise.
+func (a *ActionVersion) GetID() string {
+	if a == nil || a.ID == nil {
+		return ""
+	}
+	return *a.ID
+}
+
+// GetStatus returns the Status field if it's non-nil, zero value otherwise.
+func (a *ActionVersion) GetStatus() string {
+	if a == nil || a.Status == nil {
+		return ""
+	}
+	return *a.Status
+}
+
+// GetUpdatedAt returns the UpdatedAt field if it's non-nil, zero value otherwise.
+func (a *ActionVersion) GetUpdatedAt() time.Time {
+	if a == nil || a.UpdatedAt == nil {
+		return time.Time{}
+	}
+	return *a.UpdatedAt
+}
+
+// String returns a string representation of ActionVersion.
+func (a *ActionVersion) String() string {
+	return Stringify(a)
+}
+
+// GetID returns the ID field if it's non-nil, zero value otherwise.
+func (a *ActionVersionError) GetID() string {
+	if a == nil || a.ID == nil {
+		return ""
+	}
+	return *a.ID
+}
+
+// GetMessage returns the Message field if it's non-nil, zero value otherwise.
+func (a *ActionVersionError) GetMessage() string {
+	if a == nil || a.Message == nil {
+		return ""
+	}
+	return *a.Message
+}
+
+// GetUrl returns the Url field if it's non-nil, zero value otherwise.
+func (a *ActionVersionError) GetUrl() string {
+	if a == nil || a.Url == nil {
+		return ""
+	}
+	return *a.Url
+}
+
+// String returns a string representation of ActionVersionError.
+func (a *ActionVersionError) String() string {
+	return Stringify(a)
+}
+
+// String returns a string representation of ActionVersionList.
+func (a *ActionVersionList) String() string {
+	return Stringify(a)
+}
+
 // String returns a string representation of BlacklistToken.
 func (b *BlacklistToken) String() string {
 	return Stringify(b)
@@ -2898,6 +3341,14 @@ func (c *CreateEnrollmentTicket) String() string {
 	return Stringify(c)
 }
 
+// GetCustomClientIPHeader returns the CustomClientIPHeader field if it's non-nil, zero value otherwise.
+func (c *CustomDomain) GetCustomClientIPHeader() string {
+	if c == nil || c.CustomClientIPHeader == nil {
+		return ""
+	}
+	return *c.CustomClientIPHeader
+}
+
 // GetDomain returns the Domain field if it's non-nil, zero value otherwise.
 func (c *CustomDomain) GetDomain() string {
 	if c == nil || c.Domain == nil {
@@ -2928,6 +3379,14 @@ func (c *CustomDomain) GetStatus() string {
 		return ""
 	}
 	return *c.Status
+}
+
+// GetTLSPolicy returns the TLSPolicy field if it's non-nil, zero value otherwise.
+func (c *CustomDomain) GetTLSPolicy() string {
+	if c == nil || c.TLSPolicy == nil {
+		return ""
+	}
+	return *c.TLSPolicy
 }
 
 // GetType returns the Type field if it's non-nil, zero value otherwise.

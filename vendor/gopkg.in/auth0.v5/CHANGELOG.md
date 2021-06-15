@@ -1,7 +1,17 @@
+# v5.18.0
+
+* `management.Actions`: Support for Auth0 ([Actions](https://auth0.com/docs/actions)) ([#219](https://github.com/go-auth0/auth0/pull/219))
+
+## v5.17.0
+
+* `management.AnomalyManager`: Support for `CheckIP` and `UnblockIP` ([#214](https://github.com/go-auth0/auth0/pull/214))
+
 ## v5.16.0
+
 * `management.Connection`: Add support for Google Apps enterprise connection ([#212](https://github.com/go-auth0/auth0/pull/212))
 
 ## v5.15.0
+
 * `management.Guardian`: Fixed minor bug when unmarshalling Policy string array ([#211](https://github.com/go-auth0/auth0/pull/211))
 
 NOTES:
@@ -9,9 +19,11 @@ NOTES:
 * Added support for .env config file support ([#210](https://github.com/go-auth0/auth0/pull/210))
 
 ## v5.14.1
+
 * `management.Connection`: Add support for Auth0 SAML connection entityId option ([#209](https://github.com/go-auth0/auth0/pull/209))
 
 ## v5.14.0
+
 * `management.SigningKey`: Add support for listing, reading, rotating and revoking an Auth0 Tenant's signing key ([#191](https://github.com/go-auth0/auth0/pull/191))
 * `management.Grant`: Support pagination response when listing Grants ([#205](https://github.com/go-auth0/auth0/pull/205))
 * `management.Guardian`: Support to create a MFA enrollment ticket ([#207](https://github.com/go-auth0/auth0/pull/207))
@@ -19,9 +31,11 @@ NOTES:
 * `management.Connection`: Support deny list (non persistent attributes) of attributes Auth0 stores per connection object ([#203](https://github.com/go-auth0/auth0/pull/203))
 
 ## v5.13.0
+
 * `management.ConnectionOptionsOIDC`: Add `SetUserAttributes` to OIDC Strategy
 
 ## v5.12.0
+
 * `management.Connection`: Change Metadata property to be string map ([#160](https://github.com/go-auth0/auth0/pull/160))
 * `management.Connection`: Add Auth0 managed `ProvisioningTicketUrl to root connection object ([#201](https://github.com/go-auth0/auth0/pull/201))
 * `management.ConnectionOptions`: Adds missing AzureAD connection `TrustEmailVerified` option ([#198](https://github.com/go-auth0/auth0/pull/198))
@@ -34,12 +48,15 @@ NOTES:
 * `management.UserIdentity`: Add MFA Enrollments for a User ([#157](https://github.com/go-auth0/auth0/pull/157))
 
 ## v5.11.0
+
 * `management.ConnectionOptions`: Adds SetUserAttributes to ConnectionOptions to connections ([#194](https://github.com/go-auth0/auth0/pull/194))
 
 ## v5.10.0
+
 * `management.ConnectionOptions`: Adds set_user_root_attributes to more connections ([#192](https://github.com/go-auth0/auth0/pull/192))
 
 ## v5.9.0 
+
 * `management.ConnectionManager`: Return nil when ConnectionManager.ReadByName() name field is empty ([#186](https://github.com/go-auth0/auth0/pull/186))
 
 ## v5.8.0
