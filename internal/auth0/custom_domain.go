@@ -10,6 +10,9 @@ type CustomDomainAPI interface {
 	// Read retrieves a custom domain by its id.
 	Read(id string, opts ...management.RequestOption) (c *management.CustomDomain, err error)
 
+	// Update a custom domain.
+	Update(id string, c *management.CustomDomain, opts ...management.RequestOption) (err error)
+
 	// Delete a custom domain.
 	Delete(id string, opts ...management.RequestOption) (err error)
 
