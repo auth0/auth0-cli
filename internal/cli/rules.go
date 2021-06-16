@@ -207,7 +207,7 @@ auth0 rules show <id>`,
 			})
 
 			if err != nil {
-				return fmt.Errorf("Unable to load rule. The ID %v specified doesn't exist", inputs.ID)
+				return fmt.Errorf("Unable to load rule: %w", err)
 			}
 
 			cli.renderer.RuleShow(rule)

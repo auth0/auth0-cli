@@ -274,7 +274,7 @@ auth0 apis update -n myapi -e 6100 --offline-access=true`,
 				current, err = cli.api.ResourceServer.Read(url.PathEscape(inputs.ID))
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load API. The Id %v specified doesn't exist", inputs.ID)
+				return fmt.Errorf("Unable to load API: %w", err)
 			}
 
 			if err := apiName.AskU(cmd, &inputs.Name, current.Name); err != nil {

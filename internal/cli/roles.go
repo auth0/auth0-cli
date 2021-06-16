@@ -110,7 +110,7 @@ auth0 roles show <id>`,
 				r, err = cli.api.Role.Read(inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load role. The Id %v specified doesn't exist", inputs.ID)
+				return fmt.Errorf("Unable to load role: %w", err)
 			}
 
 			cli.renderer.RoleShow(r)

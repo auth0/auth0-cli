@@ -13,8 +13,10 @@ import (
 
 const (
 	customDomainProvisioningTypeAuth0 = "auth0_managed_certs"
-	customDomainProvisioningTypeSelf = "self_managed_certs"
+	customDomainProvisioningTypeSelf  = "self_managed_certs"
 	customDomainVerificationMethodTxt = "txt"
+	customDomainTLSPolicyRecommended  = "recommended"
+	customDomainTLSPolicyCompatible   = "compatible"
 )
 
 var (
@@ -32,10 +34,10 @@ var (
 	}
 
 	customDomainType = Flag{
-		Name:       "Provisioning Type",
-		LongForm:   "type",
-		ShortForm:  "t",
-		Help:       "Custom domain provisioning type. Must be 'auth0' for Auth0-managed certs or 'self' for self-managed certs.",
+		Name:      "Provisioning Type",
+		LongForm:  "type",
+		ShortForm: "t",
+		Help:      "Custom domain provisioning type. Must be 'auth0' for Auth0-managed certs or 'self' for self-managed certs.",
 	}
 
 	customDomainVerification = Flag{
@@ -43,6 +45,27 @@ var (
 		LongForm:  "verification",
 		ShortForm: "v",
 		Help:      "Custom domain verification method. Must be 'txt'.",
+	}
+
+	customDomainPolicy = Flag{
+		Name:         "TLS Policy",
+		LongForm:     "policy",
+		ShortForm:    "p",
+		Help:         "The TLS version policy. Can be either 'compatible' or 'recommended'.",
+		AlwaysPrompt: true,
+	}
+
+	customDomainIPHeader = Flag{
+		Name:         "Custom Client IP Header",
+		LongForm:     "ip-header",
+		ShortForm:    "i",
+		Help:         "The HTTP header to fetch the client's IP address.",
+		AlwaysPrompt: true,
+	}
+
+	customDomainPolicyOptions = []string{
+		customDomainTLSPolicyRecommended,
+		customDomainTLSPolicyCompatible,
 	}
 )
 
@@ -57,6 +80,7 @@ func customDomainsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(listCustomDomainsCmd(cli))
 	cmd.AddCommand(showCustomDomainCmd(cli))
 	cmd.AddCommand(createCustomDomainCmd(cli))
+	cmd.AddCommand(updateCustomDomainCmd(cli))
 	cmd.AddCommand(deleteCustomDomainCmd(cli))
 	cmd.AddCommand(verifyCustomDomainCmd(cli))
 
@@ -134,9 +158,11 @@ auth0 branding domains show <id>`,
 
 func createCustomDomainCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Domain             string
-		Type               string
-		VerificationMethod string
+		Domain               string
+		Type                 string
+		VerificationMethod   string
+		TLSPolicy            string
+		CustomClientIPHeader string
 	}
 
 	cmd := &cobra.Command{
@@ -155,14 +181,22 @@ auth0 branding domains create <id>`,
 				Domain: &inputs.Domain,
 			}
 
-			if len(inputs.Type) > 0 {
+			if inputs.Type != "" {
 				customDomain.Type = apiProvisioningTypeFor(inputs.Type)
 			} else {
 				customDomain.Type = auth0.String(customDomainProvisioningTypeAuth0)
 			}
 
-			if len(inputs.VerificationMethod) > 0 {
+			if inputs.VerificationMethod != "" {
 				customDomain.VerificationMethod = apiVerificationMethodFor(inputs.VerificationMethod)
+			}
+
+			if inputs.TLSPolicy != "" {
+				customDomain.TLSPolicy = apiTLSPolicyFor(inputs.TLSPolicy)
+			}
+
+			if inputs.CustomClientIPHeader != "" {
+				customDomain.CustomClientIPHeader = &inputs.CustomClientIPHeader
 			}
 
 			if err := ansi.Waiting(func() error {
@@ -176,9 +210,89 @@ auth0 branding domains create <id>`,
 		},
 	}
 
-	customDomainDomain.RegisterStringU(cmd, &inputs.Domain, "")
-	customDomainType.RegisterStringU(cmd, &inputs.Type, "")
-	customDomainVerification.RegisterStringU(cmd, &inputs.VerificationMethod, "")
+	customDomainDomain.RegisterString(cmd, &inputs.Domain, "")
+	customDomainType.RegisterString(cmd, &inputs.Type, "")
+	customDomainVerification.RegisterString(cmd, &inputs.VerificationMethod, "")
+	customDomainPolicy.RegisterString(cmd, &inputs.TLSPolicy, "")
+	customDomainIPHeader.RegisterString(cmd, &inputs.CustomClientIPHeader, "")
+
+	return cmd
+}
+
+func updateCustomDomainCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID                   string
+		TLSPolicy            string
+		CustomClientIPHeader string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "update",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Update a custom domain",
+		Long:  "Update a custom domain.",
+		Example: `auth0 branding domains update
+auth0 branding domains update <id> --policy compatible
+auth0 branding domains update <id> -p compatible --ip-header "cf-connecting-ip"`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var current *management.CustomDomain
+
+			if len(args) == 0 {
+				err := customDomainID.Pick(cmd, &inputs.ID, cli.customDomainsPickerOptions)
+				if err != nil {
+					return err
+				}
+			} else {
+				inputs.ID = args[0]
+			}
+
+			// Load custom domain by id
+			if err := ansi.Waiting(func() error {
+				var err error
+				current, err = cli.api.CustomDomain.Read(inputs.ID)
+				return err
+			}); err != nil {
+				return fmt.Errorf("Unable to load custom domain: %w", err)
+			}
+
+			// Prompt for TLS policy
+			if err := customDomainPolicy.SelectU(cmd, &inputs.TLSPolicy, customDomainPolicyOptions, current.TLSPolicy); err != nil {
+				return err
+			}
+
+			// Prompt for custom domain custom client IP header
+			if err := customDomainIPHeader.AskU(cmd, &inputs.CustomClientIPHeader, current.CustomClientIPHeader); err != nil {
+				return err
+			}
+
+			// Start with an empty custom domain object. We'll conditionally
+			// hydrate it based on the provided parameters since
+			// we'll do PATCH semantics.
+			c := &management.CustomDomain{}
+
+			if inputs.TLSPolicy != "" {
+				c.TLSPolicy = apiTLSPolicyFor(inputs.TLSPolicy)
+			}
+
+			if inputs.CustomClientIPHeader != "" {
+				c.CustomClientIPHeader = &inputs.CustomClientIPHeader
+			}
+
+			// Update custom domain
+			if err := ansi.Waiting(func() error {
+				return cli.api.CustomDomain.Update(inputs.ID, c)
+			}); err != nil {
+				return fmt.Errorf("Unable to update custom domain: %v", err)
+			}
+
+			// Render custom domain update specific view
+			cli.renderer.CustomDomainUpdate(c)
+			return nil
+		},
+	}
+
+	customDomainPolicy.RegisterStringU(cmd, &inputs.TLSPolicy, "")
+	customDomainIPHeader.RegisterStringU(cmd, &inputs.CustomClientIPHeader, "")
 
 	return cmd
 }
@@ -281,6 +395,17 @@ func apiVerificationMethodFor(v string) *string {
 	switch v {
 	case "txt":
 		return auth0.String(customDomainVerificationMethodTxt)
+	default:
+		return auth0.String(v)
+	}
+}
+
+func apiTLSPolicyFor(v string) *string {
+	switch v {
+	case "recommended":
+		return auth0.String(customDomainTLSPolicyRecommended)
+	case "compatible":
+		return auth0.String(customDomainTLSPolicyCompatible)
 	default:
 		return auth0.String(v)
 	}

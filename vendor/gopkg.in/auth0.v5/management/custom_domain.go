@@ -24,6 +24,12 @@ type CustomDomain struct {
 	VerificationMethod *string `json:"verification_method,omitempty"`
 
 	Verification *CustomDomainVerification `json:"verification,omitempty"`
+
+	// The TLS version policy. Can be either "compatible" or "recommended".
+	TLSPolicy *string `json:"tls_policy,omitempty"`
+
+	// The HTTP header to fetch the client's IP address
+	CustomClientIPHeader *string `json:"custom_client_ip_header,omitempty"`
 }
 
 type CustomDomainVerification struct {
@@ -48,6 +54,13 @@ func newCustomDomainManager(m *Management) *CustomDomainManager {
 // See: https://auth0.com/docs/api/management/v2#!/Custom_Domains/post_custom_domains
 func (m *CustomDomainManager) Create(c *CustomDomain, opts ...RequestOption) (err error) {
 	return m.Request("POST", m.URI("custom-domains"), c, opts...)
+}
+
+// Update a custom domain.
+//
+// See: https://auth0.com/docs/api/management/v2#!/Custom_Domains/patch_custom_domains_by_id
+func (m *CustomDomainManager) Update(id string, c *CustomDomain, opts ...RequestOption) (err error) {
+	return m.Request("PATCH", m.URI("custom-domains", id), c, opts...)
 }
 
 // Retrieve a custom domain configuration and status.

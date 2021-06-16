@@ -8,12 +8,14 @@ import (
 )
 
 type customDomainView struct {
-	ID                 string
-	Domain             string
-	Status             string
-	Primary            bool
-	ProvisioningType   string
-	VerificationMethod string
+	ID                   string
+	Domain               string
+	Status               string
+	Primary              bool
+	ProvisioningType     string
+	VerificationMethod   string
+	TLSPolicy            string
+	CustomClientIPHeader string
 }
 
 func (v *customDomainView) AsTableHeader() []string {
@@ -36,6 +38,8 @@ func (v *customDomainView) KeyValues() [][]string {
 		{"PRIMARY", strconv.FormatBool(v.Primary)},
 		{"PROVISIONING TYPE", v.ProvisioningType},
 		{"VERIFICATION METHOD", v.VerificationMethod},
+		{"TLS POLICY", v.TLSPolicy},
+		{"CUSTOM CLIENT IP HEADER", v.CustomClientIPHeader},
 	}
 }
 
@@ -72,19 +76,26 @@ func (r *Renderer) CustomDomainCreate(customDomain *management.CustomDomain) {
 	r.customDomainResult(customDomain)
 }
 
+func (r *Renderer) CustomDomainUpdate(customDomain *management.CustomDomain) {
+	r.Heading("custom domain updated")
+	r.customDomainResult(customDomain)
+}
+
 func (r *Renderer) customDomainResult(customDomain *management.CustomDomain) {
 	r.Result(&customDomainView{
-		ID:                 ansi.Faint(customDomain.GetID()),
-		Domain:             customDomain.GetDomain(),
-		Status:             customDomainStatusColor(customDomain.GetStatus()),
-		Primary:            customDomain.GetPrimary(),
-		ProvisioningType:   customDomain.GetType(),
-		VerificationMethod: customDomain.GetVerificationMethod(),
+		ID:                   ansi.Faint(customDomain.GetID()),
+		Domain:               customDomain.GetDomain(),
+		Status:               customDomainStatusColor(customDomain.GetStatus()),
+		Primary:              customDomain.GetPrimary(),
+		ProvisioningType:     customDomain.GetType(),
+		VerificationMethod:   customDomain.GetVerificationMethod(),
+		TLSPolicy:            customDomain.GetTLSPolicy(),
+		CustomClientIPHeader: customDomain.GetCustomClientIPHeader(),
 	})
 }
 
 func customDomainStatusColor(v string) string {
-	switch(v) {
+	switch v {
 	case "disabled":
 		return ansi.Red(v)
 	case "pending", "pending_verification":

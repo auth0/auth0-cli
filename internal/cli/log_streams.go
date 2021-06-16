@@ -222,7 +222,7 @@ auth0 logs streams show <id>`,
 				a, err = cli.api.LogStream.Read(inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load log stream. The Id %v specified doesn't exist", inputs.ID)
+				return fmt.Errorf("Unable to load log stream: %w", err)
 			}
 			cli.renderer.LogStreamShow(a)
 			return nil
@@ -487,7 +487,7 @@ auth0 logs streams update <id> -n myeventbridge -t eventbridge`,
 				current, err = cli.api.LogStream.Read(inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load logstream. The Id %v specified doesn't exist", inputs.ID)
+				return fmt.Errorf("Unable to load logstream: %w", err)
 			}
 
 			// Prompt for log stream name

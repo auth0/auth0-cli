@@ -250,7 +250,7 @@ auth0 users show <id>`,
 				a, err = cli.api.User.Read(inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load user. The Id %v specified doesn't exist", inputs.ID)
+				return fmt.Errorf("Unable to load user: %w", err)
 			}
 
 			// get the current connection
@@ -345,7 +345,7 @@ auth0 users update -n John Doe --email john.doe@example.com`,
 				current, err = cli.api.User.Read(inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load user. The Id %v specified doesn't exist", inputs.ID)
+				return fmt.Errorf("Unable to load user: %w", err)
 			}
 			// using getUserConnection to get connection name from user Identities
 			// just using current.connection will return empty
