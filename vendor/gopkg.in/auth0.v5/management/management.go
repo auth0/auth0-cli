@@ -162,6 +162,9 @@ type Management struct {
 	// Actions manages Actions extensibility
 	Action *ActionManager
 
+	// Organization manages Auth0 Organizations.
+	Organization *OrganizationManager
+
 	url         *url.URL
 	basePath    string
 	userAgent   string
@@ -231,6 +234,7 @@ func New(domain string, options ...ManagementOption) (*Management, error) {
 	m.SigningKey = newSigningKeyManager(m)
 	m.Anomaly = newAnomalyManager(m)
 	m.Action = newActionManager(m)
+	m.Organization = newOrganizationManager(m)
 
 	return m, nil
 }

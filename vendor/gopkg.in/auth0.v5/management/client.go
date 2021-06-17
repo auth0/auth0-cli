@@ -92,6 +92,9 @@ type Client struct {
 
 	NativeSocialLogin *ClientNativeSocialLogin `json:"native_social_login,omitempty"`
 	RefreshToken      *ClientRefreshToken      `json:"refresh_token,omitempty"`
+
+	OrganizationUsage           *string `json:"organization_usage,omitempty"`
+	OrganizationRequireBehavior *string `json:"organization_require_behavior,omitempty"`
 }
 
 type ClientJWTConfiguration struct {

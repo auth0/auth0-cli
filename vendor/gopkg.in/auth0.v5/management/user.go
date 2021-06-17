@@ -531,3 +531,11 @@ func (m *UserManager) Link(id string, il *UserIdentityLink, opts ...RequestOptio
 
 	return uIDs, nil
 }
+
+// List user's organizations
+//
+// See: https://auth0.com/docs/api/management/v2#!/Users/get_organizations
+func (m *UserManager) Organizations(id string, opts ...RequestOption) (p *OrganizationList, err error) {
+	err = m.Request("GET", m.URI("users", id, "organizations"), &p, applyListDefaults(opts))
+	return
+}
