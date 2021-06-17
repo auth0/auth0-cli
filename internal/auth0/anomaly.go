@@ -1,3 +1,5 @@
+//go:generate mockgen -source=anomaly.go -destination=anomaly_mock.go -package=auth0
+
 package auth0
 
 import "gopkg.in/auth0.v5/management"
