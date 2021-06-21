@@ -12,13 +12,6 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
-const (
-	actionVersion = "version"
-	actionFile    = "file"
-	actionScript  = "script"
-	actionPath    = "path"
-)
-
 var (
 	actionID = Argument{
 		Name: "Id",
