@@ -5,9 +5,6 @@ tests:
   auth0 apis list:
     exit-code: 0
 
-  auth0 apis scopes list:
-    exit-code: 0
-
   auth0 apps list:
     exit-code: 0
 
@@ -355,6 +352,10 @@ tests:
         - SCOPES                read:todos                          
         - TOKEN LIFETIME        86400                               
         - ALLOW OFFLINE ACCESS  ✗
+    exit-code: 0
+
+  apis scopes list:
+    command: auth0 apis scopes list $(cat ./integration/identifiers/api-id) # depends on "apis create test app" test
     exit-code: 0
 
   # Test 'apis update'; all tests depend on "apis create test api" test
