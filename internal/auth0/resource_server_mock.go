@@ -5,36 +5,35 @@
 package auth0
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	management "gopkg.in/auth0.v5/management"
+	reflect "reflect"
 )
 
-// MockResourceServerAPI is a mock of ResourceServerAPI interface.
+// MockResourceServerAPI is a mock of ResourceServerAPI interface
 type MockResourceServerAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockResourceServerAPIMockRecorder
 }
 
-// MockResourceServerAPIMockRecorder is the mock recorder for MockResourceServerAPI.
+// MockResourceServerAPIMockRecorder is the mock recorder for MockResourceServerAPI
 type MockResourceServerAPIMockRecorder struct {
 	mock *MockResourceServerAPI
 }
 
-// NewMockResourceServerAPI creates a new mock instance.
+// NewMockResourceServerAPI creates a new mock instance
 func NewMockResourceServerAPI(ctrl *gomock.Controller) *MockResourceServerAPI {
 	mock := &MockResourceServerAPI{ctrl: ctrl}
 	mock.recorder = &MockResourceServerAPIMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use.
+// EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockResourceServerAPI) EXPECT() *MockResourceServerAPIMockRecorder {
 	return m.recorder
 }
 
-// Create mocks base method.
+// Create mocks base method
 func (m *MockResourceServerAPI) Create(rs *management.ResourceServer, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{rs}
@@ -46,52 +45,14 @@ func (m *MockResourceServerAPI) Create(rs *management.ResourceServer, opts ...ma
 	return ret0
 }
 
-// Create indicates an expected call of Create.
+// Create indicates an expected call of Create
 func (mr *MockResourceServerAPIMockRecorder) Create(rs interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{rs}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockResourceServerAPI)(nil).Create), varargs...)
 }
 
-// Delete mocks base method.
-func (m *MockResourceServerAPI) Delete(id string, opts ...management.RequestOption) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{id}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Delete", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Delete indicates an expected call of Delete.
-func (mr *MockResourceServerAPIMockRecorder) Delete(id interface{}, opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{id}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockResourceServerAPI)(nil).Delete), varargs...)
-}
-
-// List mocks base method.
-func (m *MockResourceServerAPI) List(opts ...management.RequestOption) (*management.ResourceServerList, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "List", varargs...)
-	ret0, _ := ret[0].(*management.ResourceServerList)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// List indicates an expected call of List.
-func (mr *MockResourceServerAPIMockRecorder) List(opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockResourceServerAPI)(nil).List), opts...)
-}
-
-// Read mocks base method.
+// Read mocks base method
 func (m *MockResourceServerAPI) Read(id string, opts ...management.RequestOption) (*management.ResourceServer, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{id}
@@ -104,33 +65,14 @@ func (m *MockResourceServerAPI) Read(id string, opts ...management.RequestOption
 	return ret0, ret1
 }
 
-// Read indicates an expected call of Read.
+// Read indicates an expected call of Read
 func (mr *MockResourceServerAPIMockRecorder) Read(id interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockResourceServerAPI)(nil).Read), varargs...)
 }
 
-// Stream mocks base method.
-func (m *MockResourceServerAPI) Stream(fn func(*management.ResourceServer), opts ...management.RequestOption) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{fn}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Stream", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Stream indicates an expected call of Stream.
-func (mr *MockResourceServerAPIMockRecorder) Stream(fn interface{}, opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{fn}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stream", reflect.TypeOf((*MockResourceServerAPI)(nil).Stream), varargs...)
-}
-
-// Update mocks base method.
+// Update mocks base method
 func (m *MockResourceServerAPI) Update(id string, rs *management.ResourceServer, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{id, rs}
@@ -142,9 +84,66 @@ func (m *MockResourceServerAPI) Update(id string, rs *management.ResourceServer,
 	return ret0
 }
 
-// Update indicates an expected call of Update.
+// Update indicates an expected call of Update
 func (mr *MockResourceServerAPIMockRecorder) Update(id, rs interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{id, rs}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockResourceServerAPI)(nil).Update), varargs...)
+}
+
+// Delete mocks base method
+func (m *MockResourceServerAPI) Delete(id string, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Delete", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete
+func (mr *MockResourceServerAPIMockRecorder) Delete(id interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockResourceServerAPI)(nil).Delete), varargs...)
+}
+
+// List mocks base method
+func (m *MockResourceServerAPI) List(opts ...management.RequestOption) (*management.ResourceServerList, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "List", varargs...)
+	ret0, _ := ret[0].(*management.ResourceServerList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List
+func (mr *MockResourceServerAPIMockRecorder) List(opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockResourceServerAPI)(nil).List), opts...)
+}
+
+// Stream mocks base method
+func (m *MockResourceServerAPI) Stream(fn func(*management.ResourceServer), opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{fn}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Stream", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Stream indicates an expected call of Stream
+func (mr *MockResourceServerAPIMockRecorder) Stream(fn interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{fn}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stream", reflect.TypeOf((*MockResourceServerAPI)(nil).Stream), varargs...)
 }
