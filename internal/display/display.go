@@ -272,10 +272,10 @@ func indent(text, indent string) string {
 func isOutputPiped() bool {
 	fi, err := os.Stdout.Stat()
 	if err != nil {
-        panic(auth0.Error(err, "failed to get the FileInfo struct of stdout"))
-    }
+		panic(auth0.Error(err, "failed to get the FileInfo struct of stdout"))
+	}
 
-    if (fi.Mode() & os.ModeCharDevice) == 0 {
+	if (fi.Mode() & os.ModeCharDevice) == 0 {
 		return true
 	}
 
