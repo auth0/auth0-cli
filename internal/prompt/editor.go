@@ -16,7 +16,7 @@ const (
 
 var (
 	bom        = []byte{0xef, 0xbb, 0xbf}
-	cliEditors = []string{"emacs", "micro", "nano", "nvim", "vi", "vim", "nvim"}
+	cliEditors = []string{"emacs", "micro", "nano", "vi", "vim", "nvim"}
 )
 
 var defaultEditorPrompt = &editorPrompt{cmd: getDefaultEditor()}

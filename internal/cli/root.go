@@ -119,6 +119,7 @@ func Execute() {
 	rootCmd.AddCommand(brandingCmd(cli))
 	rootCmd.AddCommand(rolesCmd(cli))
 	rootCmd.AddCommand(ipsCmd(cli))
+	rootCmd.AddCommand(actionsCmd(cli))
 
 	// keep completion at the bottom:
 	rootCmd.AddCommand(completionCmd(cli))

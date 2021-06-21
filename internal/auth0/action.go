@@ -29,4 +29,9 @@ type ActionAPI interface {
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Actions/get_actions
 	List(opts ...management.RequestOption) (c *management.ActionList, err error)
+
+	// ListTriggers available.
+	//
+	// https://auth0.com/docs/api/management/v2/#!/Actions/get_triggers
+	ListTriggers(opts ...management.RequestOption) (l *management.ActionTriggerList, err error)
 }

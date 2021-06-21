@@ -91,6 +91,25 @@ func (mr *MockActionAPIMockRecorder) List(opts ...interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockActionAPI)(nil).List), opts...)
 }
 
+// ListTriggers mocks base method.
+func (m *MockActionAPI) ListTriggers(opts ...management.RequestOption) (*management.ActionTriggerList, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListTriggers", varargs...)
+	ret0, _ := ret[0].(*management.ActionTriggerList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListTriggers indicates an expected call of ListTriggers.
+func (mr *MockActionAPIMockRecorder) ListTriggers(opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTriggers", reflect.TypeOf((*MockActionAPI)(nil).ListTriggers), opts...)
+}
+
 // Read mocks base method.
 func (m *MockActionAPI) Read(id string, opts ...management.RequestOption) (*management.Action, error) {
 	m.ctrl.T.Helper()
