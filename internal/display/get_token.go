@@ -12,7 +12,7 @@ import (
 
 func (r *Renderer) GetToken(c *management.Client, t *authutil.TokenResponse) {
 	// pass the access token to the pipe and exit
-    if isOutputPiped() {
+	if isOutputPiped() {
 		fmt.Fprint(r.ResultWriter, t.AccessToken)
 		return
 	}
