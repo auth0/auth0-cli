@@ -255,8 +255,6 @@ auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
 				if err != nil {
 					return fmt.Errorf("An unexpected error occurred while logging in to machine-to-machine client %s: %w", inputs.ClientID, err)
 				}
-
-				fmt.Fprint(cli.renderer.MessageWriter, "\n")
 				cli.renderer.GetToken(client, tokenResponse)
 				return nil
 			}
@@ -278,8 +276,6 @@ auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
 			if err != nil {
 				return fmt.Errorf("An unexpected error occurred when logging in to client %s: %w", inputs.ClientID, err)
 			}
-
-			fmt.Fprint(cli.renderer.MessageWriter, "\n")
 			cli.renderer.GetToken(client, tokenResponse)
 			return nil
 		},
