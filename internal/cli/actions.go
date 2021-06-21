@@ -36,7 +36,7 @@ var (
 
 	actionCode = Flag{
 		Name:       "Code",
-		LongForm:   "scode",
+		LongForm:   "code",
 		ShortForm:  "c",
 		Help:       "Code content for the action.",
 		IsRequired: true,
