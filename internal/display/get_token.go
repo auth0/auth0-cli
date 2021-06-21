@@ -3,7 +3,6 @@ package display
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
@@ -12,13 +11,8 @@ import (
 )
 
 func (r *Renderer) GetToken(c *management.Client, t *authutil.TokenResponse) {
-	fi, err := os.Stdout.Stat()
-	if err != nil {
-        panic(auth0.Error(err, "failed to get the FileInfo struct of stdout"))
-    }
-
 	// pass the access token to the pipe and exit
-    if (fi.Mode() & os.ModeCharDevice) == 0 {
+    if isOutputPiped() {
 		fmt.Fprint(r.ResultWriter, t.AccessToken)
 		return
 	}
