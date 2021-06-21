@@ -234,7 +234,7 @@ auth0 actions create --n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=va
 
 func updateActionCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID string
+		ID           string
 		Name         string
 		Trigger      string
 		Code         string
@@ -315,14 +315,14 @@ auth0 actions update <id> --n myaction -t post-login -d "lodash=4.0.0" -s "API_K
 			// re-hydrated by the SDK, which we'll use below during
 			// display.
 			action := &management.Action{
-				Name:    &inputs.Name,
+				Name: &inputs.Name,
 				SupportedTriggers: []management.ActionTrigger{
 					{
 						ID:      &inputs.Trigger,
 						Version: &unprexifedVersion,
 					},
 				},
-				Code:         &inputs.Code,
+				Code: &inputs.Code,
 			}
 
 			if len(inputs.Dependencies) == 0 {
