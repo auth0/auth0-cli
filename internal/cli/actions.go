@@ -177,7 +177,7 @@ auth0 actions create --n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=va
 				return err
 			}
 
-			err, triggers, version := latestActionTriggers(cli)
+			triggers, version, err := latestActionTriggers(cli)
 			if err != nil {
 				return err
 			}
@@ -276,7 +276,7 @@ auth0 actions update <id> --n myaction -t post-login -d "lodash=4.0.0" -s "API_K
 				return err
 			}
 
-			err, triggers, version := latestActionTriggers(cli)
+			triggers, version, err := latestActionTriggers(cli)
 			if err != nil {
 				return err
 			}
@@ -311,7 +311,7 @@ auth0 actions update <id> --n myaction -t post-login -d "lodash=4.0.0" -s "API_K
 
 			unprexifedVersion := strings.TrimPrefix(version, "v")
 
-			// Prepare rule payload for update. This will also be
+			// Prepare action payload for update. This will also be
 			// re-hydrated by the SDK, which we'll use below during
 			// display.
 			action := &management.Action{
@@ -435,8 +435,6 @@ func (c *cli) actionPickerOptions() (pickerOptions, error) {
 		return nil, err
 	}
 
-	// NOTE: because action names are not unique, we'll just number these
-	// labels.
 	var opts pickerOptions
 	for _, r := range list.Actions {
 		label := fmt.Sprintf("%s %s", r.GetName(), ansi.Faint("("+r.GetID()+")"))
@@ -482,7 +480,7 @@ func filterActionTriggersByVersion(list []*management.ActionTrigger, version str
 	return res
 }
 
-func latestActionTriggers(cli *cli) (error, []string, string) {
+func latestActionTriggers(cli *cli) ([]string, string, error) {
 	var triggers []*management.ActionTrigger
 	if err := ansi.Waiting(func() error {
 		list, err := cli.api.Action.ListTriggers()
@@ -492,7 +490,7 @@ func latestActionTriggers(cli *cli) (error, []string, string) {
 		triggers = list.Triggers
 		return nil
 	}); err != nil {
-		return err, nil, ""
+		return nil, "", err
 	}
 
 	latestTriggerVersion := latestActionTriggerVersion(triggers)
@@ -502,7 +500,7 @@ func latestActionTriggers(cli *cli) (error, []string, string) {
 	for _, t := range triggers {
 		triggerIds = append(triggerIds, t.GetID())
 	}
-	return nil, triggerIds, latestTriggerVersion
+	return triggerIds, latestTriggerVersion, nil
 }
 
 func actionTemplate(key string) string {
