@@ -392,8 +392,8 @@ func openApiCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "open",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Open API settings page in Auth0 Manage",
-		Long:  "Open API settings page in Auth0 Manage.",
+		Short: "Open API settings page in the Auth0 Dashboard",
+		Long:  "Open API settings page in the Auth0 Dashboard.",
 		Example: `auth0 apis open
 auth0 apis open <id|audience>`,
 		RunE: func(cmd *cobra.Command, args []string) error {

@@ -38,6 +38,7 @@ var requiredScopes = []string{
 	"read:custom_domains", "create:custom_domains", "update:custom_domains", "delete:custom_domains",
 	"read:anomaly_blocks", "delete:anomaly_blocks",
 	"create:log_streams", "delete:log_streams", "read:log_streams", "update:log_streams",
+	"create:actions", "delete:actions", "read:actions", "update:actions",
 }
 
 // RequiredScopes returns the scopes used for login.

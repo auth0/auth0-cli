@@ -11,7 +11,7 @@ import (
 
 type ruleView struct {
 	Name    string
-	Enabled bool
+	Enabled string
 	ID      string
 	Order   int
 	Script  string
@@ -24,14 +24,14 @@ func (v *ruleView) AsTableHeader() []string {
 }
 
 func (v *ruleView) AsTableRow() []string {
-	return []string{ansi.Faint(v.ID), v.Name, strconv.FormatBool(v.Enabled), fmt.Sprintf("%d", v.Order)}
+	return []string{ansi.Faint(v.ID), v.Name, v.Enabled, fmt.Sprintf("%d", v.Order)}
 }
 
 func (v *ruleView) KeyValues() [][]string {
 	return [][]string{
 		{"NAME", v.Name},
 		{"ID", ansi.Faint(v.ID)},
-		{"ENABLED", strconv.FormatBool(v.Enabled)},
+		{"ENABLED", v.Enabled},
 		{"ORDER", strconv.Itoa(v.Order)},
 		{"SCRIPT", v.Script},
 	}
@@ -61,10 +61,10 @@ func (r *Renderer) RulesList(rules []*management.Rule) {
 
 	for _, rule := range rules {
 		res = append(res, &ruleView{
-			Name:    *rule.Name,
-			ID:      *rule.ID,
-			Enabled: *rule.Enabled,
-			Order:   *rule.Order,
+			Name:    rule.GetName(),
+			ID:      rule.GetID(),
+			Enabled: boolean(rule.GetEnabled()),
+			Order:   rule.GetOrder(),
 		})
 	}
 
@@ -112,7 +112,7 @@ func makeRuleView(rule *management.Rule) *ruleView {
 	return &ruleView{
 		Name:    rule.GetName(),
 		ID:      rule.GetID(),
-		Enabled: rule.GetEnabled(),
+		Enabled: boolean(rule.GetEnabled()),
 		Order:   rule.GetOrder(),
 		Script:  rule.GetScript(),
 

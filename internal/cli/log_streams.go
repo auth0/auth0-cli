@@ -743,8 +743,8 @@ func openLogStreamsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "open",
 		Args:    cobra.MaximumNArgs(1),
-		Short:   "Open log stream settings page in Auth0 Manage",
-		Long:    "Open log stream settings page in Auth0 Manage.",
+		Short:   "Open log stream settings page in the Auth0 Dashboard",
+		Long:    "Open log stream settings page in the Auth0 Dashboard.",
 		Example: "auth0 logs streams open <id>",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {

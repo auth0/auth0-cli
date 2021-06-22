@@ -107,8 +107,8 @@ func openTenantCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "open",
 		Args:    cobra.MaximumNArgs(1),
-		Short:   "Open tenant settings page in Auth0 Manage",
-		Long:    "Open tenant settings page in Auth0 Manage.",
+		Short:   "Open tenant settings page in the Auth0 Dashboard",
+		Long:    "Open tenant settings page in the Auth0 Dashboard.",
 		Example: "auth0 tenants open <tenant>",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {

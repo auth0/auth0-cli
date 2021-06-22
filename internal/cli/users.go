@@ -425,8 +425,8 @@ func openUserCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "open",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Open user details page in Auth0 Manage",
-		Long:  "Open user details page in Auth0 Manage.",
+		Short: "Open user details page in the Auth0 Dashboard",
+		Long:  "Open user details page in the Auth0 Dashboard.",
 		Example: `auth0 users open <id>
 auth0 users open "auth0|xxxxxxxxxx"`,
 		RunE: func(cmd *cobra.Command, args []string) error {

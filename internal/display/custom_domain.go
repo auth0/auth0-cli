@@ -1,8 +1,6 @@
 package display
 
 import (
-	"strconv"
-
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"gopkg.in/auth0.v5/management"
 )
@@ -11,7 +9,7 @@ type customDomainView struct {
 	ID                   string
 	Domain               string
 	Status               string
-	Primary              bool
+	Primary              string
 	ProvisioningType     string
 	VerificationMethod   string
 	TLSPolicy            string
@@ -35,7 +33,7 @@ func (v *customDomainView) KeyValues() [][]string {
 		{"ID", ansi.Faint(v.ID)},
 		{"DOMAIN", v.Domain},
 		{"STATUS", v.Status},
-		{"PRIMARY", strconv.FormatBool(v.Primary)},
+		{"PRIMARY", v.Primary},
 		{"PROVISIONING TYPE", v.ProvisioningType},
 		{"VERIFICATION METHOD", v.VerificationMethod},
 		{"TLS POLICY", v.TLSPolicy},
@@ -86,7 +84,7 @@ func (r *Renderer) customDomainResult(customDomain *management.CustomDomain) {
 		ID:                   ansi.Faint(customDomain.GetID()),
 		Domain:               customDomain.GetDomain(),
 		Status:               customDomainStatusColor(customDomain.GetStatus()),
-		Primary:              customDomain.GetPrimary(),
+		Primary:              boolean(customDomain.GetPrimary()),
 		ProvisioningType:     customDomain.GetType(),
 		VerificationMethod:   customDomain.GetVerificationMethod(),
 		TLSPolicy:            customDomain.GetTLSPolicy(),

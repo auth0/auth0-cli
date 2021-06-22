@@ -160,6 +160,14 @@ func (f *Flag) RegisterStringSliceU(cmd *cobra.Command, value *[]string, default
 	registerStringSlice(cmd, f, value, defaultValue, true)
 }
 
+func (f *Flag) RegisterStringMap(cmd *cobra.Command, value *map[string]string, defaultValue map[string]string) {
+	registerStringMap(cmd, f, value, defaultValue, false)
+}
+
+func (f *Flag) RegisterStringMapU(cmd *cobra.Command, value *map[string]string, defaultValue map[string]string) {
+	registerStringMap(cmd, f, value, defaultValue, true)
+}
+
 func (f *Flag) RegisterInt(cmd *cobra.Command, value *int, defaultValue int) {
 	registerInt(cmd, f, value, defaultValue, false)
 }
@@ -237,6 +245,14 @@ func registerStringSlice(cmd *cobra.Command, f *Flag, value *[]string, defaultVa
 
 	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
 		panic(auth0.Error(err, "failed to register string slice flag"))
+	}
+}
+
+func registerStringMap(cmd *cobra.Command, f *Flag, value *map[string]string, defaultValue map[string]string, isUpdate bool) {
+	cmd.Flags().StringToStringVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
+
+	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
+		panic(auth0.Error(err, "failed to register string map flag"))
 	}
 }
 
