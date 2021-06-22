@@ -267,3 +267,10 @@ func indent(text, indent string) string {
 	}
 	return result[:len(result)-1]
 }
+
+func boolean(v bool) string {
+	if v {
+		return ansi.Green("✓")
+	}
+	return ansi.Red("✗")
+}

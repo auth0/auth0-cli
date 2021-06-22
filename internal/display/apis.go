@@ -18,7 +18,7 @@ type apiView struct {
 	Identifier    string
 	Scopes        string
 	TokenLifetime int
-	OfflineAccess bool
+	OfflineAccess string
 
 	raw interface{}
 }
@@ -38,7 +38,7 @@ func (v *apiView) KeyValues() [][]string {
 		{"IDENTIFIER", v.Identifier},
 		{"SCOPES", v.Scopes},
 		{"TOKEN LIFETIME", strconv.Itoa(v.TokenLifetime)},
-		{"ALLOW OFFLINE ACCESS", strconv.FormatBool(v.OfflineAccess)},
+		{"ALLOW OFFLINE ACCESS", v.OfflineAccess},
 	}
 }
 
@@ -112,12 +112,12 @@ func (r *Renderer) ApiUpdate(api *management.ResourceServer) {
 func makeApiView(api *management.ResourceServer) (*apiView, bool) {
 	scopes, scopesTruncated := getScopes(api.Scopes)
 	view := &apiView{
-		ID:            auth0.StringValue(api.ID),
-		Name:          auth0.StringValue(api.Name),
-		Identifier:    auth0.StringValue(api.Identifier),
-		Scopes:        auth0.StringValue(scopes),
-		TokenLifetime: auth0.IntValue(api.TokenLifetime),
-		OfflineAccess: auth0.BoolValue(api.AllowOfflineAccess),
+		ID:            ansi.Faint(api.GetID()),
+		Name:          api.GetName(),
+		Identifier:    api.GetIdentifier(),
+		Scopes:        scopes,
+		TokenLifetime: api.GetTokenLifetime(),
+		OfflineAccess: boolean(api.GetAllowOfflineAccess()),
 
 		raw: api,
 	}
@@ -128,10 +128,10 @@ func makeApiTableView(api *management.ResourceServer) *apiTableView {
 	scopes := len(api.Scopes)
 
 	return &apiTableView{
-		ID:         auth0.StringValue(api.ID),
-		Name:       auth0.StringValue(api.Name),
-		Identifier: auth0.StringValue(api.Identifier),
-		Scopes:     auth0.IntValue(&scopes),
+		ID:         ansi.Faint(api.GetID()),
+		Name:       api.GetName(),
+		Identifier: api.GetIdentifier(),
+		Scopes:     scopes,
 
 		raw: api,
 	}
@@ -176,7 +176,7 @@ func makeScopeView(scope *management.ResourceServerScope) *scopeView {
 	}
 }
 
-func getScopes(scopes []*management.ResourceServerScope) (*string, bool) {
+func getScopes(scopes []*management.ResourceServerScope) (string, bool) {
 	ellipsis := "..."
 	separator := " "
 	padding := 22 // the longest apiView key plus two spaces before and after in the label column
@@ -199,7 +199,7 @@ func getScopes(scopes []*management.ResourceServerScope) (*string, bool) {
 	}
 
 	if len(scopesForDisplay) <= maxCharacters {
-		return &scopesForDisplay, false
+		return scopesForDisplay, false
 	}
 
 	truncationIndex := maxCharacters - len(ellipsis)
@@ -210,5 +210,5 @@ func getScopes(scopes []*management.ResourceServerScope) (*string, bool) {
 
 	scopesForDisplay = fmt.Sprintf("%s%s", string(scopesForDisplay[:truncationIndex]), ellipsis)
 
-	return &scopesForDisplay, true
+	return scopesForDisplay, true
 }

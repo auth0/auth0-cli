@@ -11,6 +11,9 @@ tests:
   auth0 logs list:
     exit-code: 0
 
+  auth0 logs streams list:
+    exit-code: 0
+
   auth0 tenants list:
     exit-code: 0
 
@@ -18,6 +21,15 @@ tests:
     exit-code: 0
 
   auth0 rules list:
+    exit-code: 0
+
+  auth0 actions list:
+    exit-code: 0
+
+  auth0 branding domains list:
+    exit-code: 0
+
+  auth0 quickstarts list:
     exit-code: 0
 
   auth0 completion bash:
@@ -276,7 +288,7 @@ tests:
         - IDENTIFIER            http://integration-test-api-def2
         - SCOPES                read:todos write:todos
         - TOKEN LIFETIME        86400
-        - ALLOW OFFLINE ACCESS  false
+        - ALLOW OFFLINE ACCESS  ✗
 
   # Test 'apis create' --token-lifetime flag
   apis create token lifetime 1000 and check data:
@@ -306,7 +318,7 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - ALLOW OFFLINE ACCESS  true
+        - ALLOW OFFLINE ACCESS  ✓
 
   apis create offline access false and check data:
     command: auth0 apis create --name integration-test-api-offacc3 --identifier http://integration-test-api-offacc3 --scopes read:todos --offline-access=false --format json
@@ -339,7 +351,11 @@ tests:
         - IDENTIFIER            http://integration-test-api-newapi  
         - SCOPES                read:todos                          
         - TOKEN LIFETIME        86400                               
-        - ALLOW OFFLINE ACCESS  false
+        - ALLOW OFFLINE ACCESS  ✗
+    exit-code: 0
+
+  apis scopes list:
+    command: auth0 apis scopes list $(cat ./integration/identifiers/api-id) # depends on "apis create test app" test
     exit-code: 0
 
   # Test 'apis update'; all tests depend on "apis create test api" test

@@ -229,7 +229,7 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 		Short: "Delete a rule",
 		Long:  "Delete a rule.",
 		Example: `auth0 rules delete 
-auth0 rules delete <rule-id>`,
+auth0 rules delete <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -274,9 +274,9 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a rule",
 		Long:  "Update a rule.",
-		Example: `auth0 rules update <rule-id> 
-auth0 rules update <rule-id> --name "My Updated Rule"
-auth0 rules update <rule-id> -n "My Updated Rule" --enabled=false`,
+		Example: `auth0 rules update <id> 
+auth0 rules update <id> --name "My Updated Rule"
+auth0 rules update <id> -n "My Updated Rule" --enabled=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -367,7 +367,7 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Enable a rule",
 		Long:  "Enable a rule.",
-		Example: `auth0 rules enable <rule-id>`,
+		Example: `auth0 rules enable <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -419,7 +419,7 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Disable a rule",
 		Long:  "Disable a rule.",
-		Example: `auth0 rules disable <rule-id>`,
+		Example: `auth0 rules disable <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]

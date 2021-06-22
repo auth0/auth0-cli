@@ -727,6 +727,22 @@ func (c *Client) GetOIDCConformant() bool {
 	return *c.OIDCConformant
 }
 
+// GetOrganizationRequireBehavior returns the OrganizationRequireBehavior field if it's non-nil, zero value otherwise.
+func (c *Client) GetOrganizationRequireBehavior() string {
+	if c == nil || c.OrganizationRequireBehavior == nil {
+		return ""
+	}
+	return *c.OrganizationRequireBehavior
+}
+
+// GetOrganizationUsage returns the OrganizationUsage field if it's non-nil, zero value otherwise.
+func (c *Client) GetOrganizationUsage() string {
+	if c == nil || c.OrganizationUsage == nil {
+		return ""
+	}
+	return *c.OrganizationUsage
+}
+
 // GetRefreshToken returns the RefreshToken field.
 func (c *Client) GetRefreshToken() *ClientRefreshToken {
 	if c == nil {
@@ -4416,6 +4432,324 @@ func (m *MultiFactorSMSTemplate) GetVerificationMessage() string {
 // String returns a string representation of MultiFactorSMSTemplate.
 func (m *MultiFactorSMSTemplate) String() string {
 	return Stringify(m)
+}
+
+// GetBranding returns the Branding field.
+func (o *Organization) GetBranding() *OrganizationBranding {
+	if o == nil {
+		return nil
+	}
+	return o.Branding
+}
+
+// GetDisplayName returns the DisplayName field if it's non-nil, zero value otherwise.
+func (o *Organization) GetDisplayName() string {
+	if o == nil || o.DisplayName == nil {
+		return ""
+	}
+	return *o.DisplayName
+}
+
+// GetID returns the ID field if it's non-nil, zero value otherwise.
+func (o *Organization) GetID() string {
+	if o == nil || o.ID == nil {
+		return ""
+	}
+	return *o.ID
+}
+
+// GetName returns the Name field if it's non-nil, zero value otherwise.
+func (o *Organization) GetName() string {
+	if o == nil || o.Name == nil {
+		return ""
+	}
+	return *o.Name
+}
+
+// String returns a string representation of Organization.
+func (o *Organization) String() string {
+	return Stringify(o)
+}
+
+// GetLogoUrl returns the LogoUrl field if it's non-nil, zero value otherwise.
+func (o *OrganizationBranding) GetLogoUrl() string {
+	if o == nil || o.LogoUrl == nil {
+		return ""
+	}
+	return *o.LogoUrl
+}
+
+// String returns a string representation of OrganizationBranding.
+func (o *OrganizationBranding) String() string {
+	return Stringify(o)
+}
+
+// GetAssignMembershipOnLogin returns the AssignMembershipOnLogin field if it's non-nil, zero value otherwise.
+func (o *OrganizationConnection) GetAssignMembershipOnLogin() bool {
+	if o == nil || o.AssignMembershipOnLogin == nil {
+		return false
+	}
+	return *o.AssignMembershipOnLogin
+}
+
+// GetConnection returns the Connection field.
+func (o *OrganizationConnection) GetConnection() *OrganizationConnectionDetails {
+	if o == nil {
+		return nil
+	}
+	return o.Connection
+}
+
+// GetConnectionID returns the ConnectionID field if it's non-nil, zero value otherwise.
+func (o *OrganizationConnection) GetConnectionID() string {
+	if o == nil || o.ConnectionID == nil {
+		return ""
+	}
+	return *o.ConnectionID
+}
+
+// String returns a string representation of OrganizationConnection.
+func (o *OrganizationConnection) String() string {
+	return Stringify(o)
+}
+
+// GetName returns the Name field if it's non-nil, zero value otherwise.
+func (o *OrganizationConnectionDetails) GetName() string {
+	if o == nil || o.Name == nil {
+		return ""
+	}
+	return *o.Name
+}
+
+// GetStrategy returns the Strategy field if it's non-nil, zero value otherwise.
+func (o *OrganizationConnectionDetails) GetStrategy() string {
+	if o == nil || o.Strategy == nil {
+		return ""
+	}
+	return *o.Strategy
+}
+
+// String returns a string representation of OrganizationConnectionDetails.
+func (o *OrganizationConnectionDetails) String() string {
+	return Stringify(o)
+}
+
+// String returns a string representation of OrganizationConnectionList.
+func (o *OrganizationConnectionList) String() string {
+	return Stringify(o)
+}
+
+// GetClientID returns the ClientID field if it's non-nil, zero value otherwise.
+func (o *OrganizationInvitation) GetClientID() string {
+	if o == nil || o.ClientID == nil {
+		return ""
+	}
+	return *o.ClientID
+}
+
+// GetConnectionID returns the ConnectionID field if it's non-nil, zero value otherwise.
+func (o *OrganizationInvitation) GetConnectionID() string {
+	if o == nil || o.ConnectionID == nil {
+		return ""
+	}
+	return *o.ConnectionID
+}
+
+// GetCreatedAt returns the CreatedAt field if it's non-nil, zero value otherwise.
+func (o *OrganizationInvitation) GetCreatedAt() string {
+	if o == nil || o.CreatedAt == nil {
+		return ""
+	}
+	return *o.CreatedAt
+}
+
+// GetExpiresAt returns the ExpiresAt field if it's non-nil, zero value otherwise.
+func (o *OrganizationInvitation) GetExpiresAt() string {
+	if o == nil || o.ExpiresAt == nil {
+		return ""
+	}
+	return *o.ExpiresAt
+}
+
+// GetID returns the ID field if it's non-nil, zero value otherwise.
+func (o *OrganizationInvitation) GetID() string {
+	if o == nil || o.ID == nil {
+		return ""
+	}
+	return *o.ID
+}
+
+// GetInvitationUrl returns the InvitationUrl field if it's non-nil, zero value otherwise.
+func (o *OrganizationInvitation) GetInvitationUrl() string {
+	if o == nil || o.InvitationUrl == nil {
+		return ""
+	}
+	return *o.InvitationUrl
+}
+
+// GetInvitee returns the Invitee field.
+func (o *OrganizationInvitation) GetInvitee() *OrganizationInvitationInvitee {
+	if o == nil {
+		return nil
+	}
+	return o.Invitee
+}
+
+// GetInviter returns the Inviter field.
+func (o *OrganizationInvitation) GetInviter() *OrganizationInvitationInviter {
+	if o == nil {
+		return nil
+	}
+	return o.Inviter
+}
+
+// GetOrganizationID returns the OrganizationID field if it's non-nil, zero value otherwise.
+func (o *OrganizationInvitation) GetOrganizationID() string {
+	if o == nil || o.OrganizationID == nil {
+		return ""
+	}
+	return *o.OrganizationID
+}
+
+// GetSendInvitationEmail returns the SendInvitationEmail field if it's non-nil, zero value otherwise.
+func (o *OrganizationInvitation) GetSendInvitationEmail() bool {
+	if o == nil || o.SendInvitationEmail == nil {
+		return false
+	}
+	return *o.SendInvitationEmail
+}
+
+// GetTicketID returns the TicketID field if it's non-nil, zero value otherwise.
+func (o *OrganizationInvitation) GetTicketID() string {
+	if o == nil || o.TicketID == nil {
+		return ""
+	}
+	return *o.TicketID
+}
+
+// GetTTLSec returns the TTLSec field if it's non-nil, zero value otherwise.
+func (o *OrganizationInvitation) GetTTLSec() int {
+	if o == nil || o.TTLSec == nil {
+		return 0
+	}
+	return *o.TTLSec
+}
+
+// String returns a string representation of OrganizationInvitation.
+func (o *OrganizationInvitation) String() string {
+	return Stringify(o)
+}
+
+// GetEmail returns the Email field if it's non-nil, zero value otherwise.
+func (o *OrganizationInvitationInvitee) GetEmail() string {
+	if o == nil || o.Email == nil {
+		return ""
+	}
+	return *o.Email
+}
+
+// String returns a string representation of OrganizationInvitationInvitee.
+func (o *OrganizationInvitationInvitee) String() string {
+	return Stringify(o)
+}
+
+// GetName returns the Name field if it's non-nil, zero value otherwise.
+func (o *OrganizationInvitationInviter) GetName() string {
+	if o == nil || o.Name == nil {
+		return ""
+	}
+	return *o.Name
+}
+
+// String returns a string representation of OrganizationInvitationInviter.
+func (o *OrganizationInvitationInviter) String() string {
+	return Stringify(o)
+}
+
+// String returns a string representation of OrganizationInvitationList.
+func (o *OrganizationInvitationList) String() string {
+	return Stringify(o)
+}
+
+// String returns a string representation of OrganizationList.
+func (o *OrganizationList) String() string {
+	return Stringify(o)
+}
+
+// GetEmail returns the Email field if it's non-nil, zero value otherwise.
+func (o *OrganizationMember) GetEmail() string {
+	if o == nil || o.Email == nil {
+		return ""
+	}
+	return *o.Email
+}
+
+// GetName returns the Name field if it's non-nil, zero value otherwise.
+func (o *OrganizationMember) GetName() string {
+	if o == nil || o.Name == nil {
+		return ""
+	}
+	return *o.Name
+}
+
+// GetPicture returns the Picture field if it's non-nil, zero value otherwise.
+func (o *OrganizationMember) GetPicture() string {
+	if o == nil || o.Picture == nil {
+		return ""
+	}
+	return *o.Picture
+}
+
+// GetUserID returns the UserID field if it's non-nil, zero value otherwise.
+func (o *OrganizationMember) GetUserID() string {
+	if o == nil || o.UserID == nil {
+		return ""
+	}
+	return *o.UserID
+}
+
+// String returns a string representation of OrganizationMember.
+func (o *OrganizationMember) String() string {
+	return Stringify(o)
+}
+
+// String returns a string representation of OrganizationMemberList.
+func (o *OrganizationMemberList) String() string {
+	return Stringify(o)
+}
+
+// GetDescription returns the Description field if it's non-nil, zero value otherwise.
+func (o *OrganizationMemberRole) GetDescription() string {
+	if o == nil || o.Description == nil {
+		return ""
+	}
+	return *o.Description
+}
+
+// GetID returns the ID field if it's non-nil, zero value otherwise.
+func (o *OrganizationMemberRole) GetID() string {
+	if o == nil || o.ID == nil {
+		return ""
+	}
+	return *o.ID
+}
+
+// GetName returns the Name field if it's non-nil, zero value otherwise.
+func (o *OrganizationMemberRole) GetName() string {
+	if o == nil || o.Name == nil {
+		return ""
+	}
+	return *o.Name
+}
+
+// String returns a string representation of OrganizationMemberRole.
+func (o *OrganizationMemberRole) String() string {
+	return Stringify(o)
+}
+
+// String returns a string representation of OrganizationMemberRoleList.
+func (o *OrganizationMemberRoleList) String() string {
+	return Stringify(o)
 }
 
 // GetDescription returns the Description field if it's non-nil, zero value otherwise.

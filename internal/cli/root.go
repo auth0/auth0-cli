@@ -106,19 +106,20 @@ func Execute() {
 	// order of the comamnds here matters
 	// so add new commands in a place that reflect its relevance or relation with other commands:
 	rootCmd.AddCommand(loginCmd(cli))
+	rootCmd.AddCommand(logoutCmd(cli))
 	rootCmd.AddCommand(configCmd(cli))
 	rootCmd.AddCommand(tenantsCmd(cli))
-	rootCmd.AddCommand(usersCmd(cli))
 	rootCmd.AddCommand(appsCmd(cli))
+	rootCmd.AddCommand(usersCmd(cli))
 	rootCmd.AddCommand(rulesCmd(cli))
+	rootCmd.AddCommand(actionsCmd(cli))
 	rootCmd.AddCommand(apisCmd(cli))
+	rootCmd.AddCommand(rolesCmd(cli))
+	rootCmd.AddCommand(brandingCmd(cli))
+	rootCmd.AddCommand(ipsCmd(cli))
 	rootCmd.AddCommand(quickstartsCmd(cli))
 	rootCmd.AddCommand(testCmd(cli))
 	rootCmd.AddCommand(logsCmd(cli))
-	rootCmd.AddCommand(logoutCmd(cli))
-	rootCmd.AddCommand(brandingCmd(cli))
-	rootCmd.AddCommand(rolesCmd(cli))
-	rootCmd.AddCommand(ipsCmd(cli))
 
 	// keep completion at the bottom:
 	rootCmd.AddCommand(completionCmd(cli))
