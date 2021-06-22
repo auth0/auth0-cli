@@ -281,7 +281,12 @@ auth0 actions update <id> --n myaction -t post-login -d "lodash=4.0.0" -s "API_K
 				return err
 			}
 
-			if err := actionTrigger.SelectU(cmd, &inputs.Trigger, triggers, nil); err != nil {
+			var currentTriggerId = ""
+			if len(current.SupportedTriggers) > 0 {
+				currentTriggerId = current.SupportedTriggers[0].GetID()
+			}
+
+			if err := actionTrigger.SelectU(cmd, &inputs.Trigger, triggers, &currentTriggerId); err != nil {
 				return err
 			}
 
@@ -305,8 +310,8 @@ auth0 actions update <id> --n myaction -t post-login -d "lodash=4.0.0" -s "API_K
 				inputs.Name = current.GetName()
 			}
 
-			if inputs.Trigger == "" && len(current.SupportedTriggers) > 0 {
-				inputs.Trigger = current.SupportedTriggers[0].GetID()
+			if inputs.Trigger == "" && currentTriggerId != "" {
+				inputs.Trigger = currentTriggerId
 			}
 
 			unprexifedVersion := strings.TrimPrefix(version, "v")
