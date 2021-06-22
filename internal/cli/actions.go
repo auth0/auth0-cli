@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -314,8 +313,6 @@ auth0 actions update <id> --n myaction -t post-login -d "lodash=4.0.0" -s "API_K
 				inputs.Trigger = currentTriggerId
 			}
 
-			unprexifedVersion := strings.TrimPrefix(version, "v")
-
 			// Prepare action payload for update. This will also be
 			// re-hydrated by the SDK, which we'll use below during
 			// display.
@@ -324,7 +321,7 @@ auth0 actions update <id> --n myaction -t post-login -d "lodash=4.0.0" -s "API_K
 				SupportedTriggers: []management.ActionTrigger{
 					{
 						ID:      &inputs.Trigger,
-						Version: &unprexifedVersion,
+						Version: &version,
 					},
 				},
 				Code: &inputs.Code,
