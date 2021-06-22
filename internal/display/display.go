@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/charmbracelet/glamour"
 	"github.com/olekukonko/tablewriter"
 )
@@ -273,4 +274,17 @@ func boolean(v bool) string {
 		return ansi.Green("✓")
 	}
 	return ansi.Red("✗")
+}
+
+func isOutputPiped() bool {
+	fi, err := os.Stdout.Stat()
+	if err != nil {
+		panic(auth0.Error(err, "failed to get the FileInfo struct of stdout"))
+	}
+
+	if (fi.Mode() & os.ModeCharDevice) == 0 {
+		return true
+	}
+
+	return false
 }
