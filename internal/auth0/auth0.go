@@ -16,6 +16,7 @@ type API struct {
 	CustomDomain   CustomDomainAPI
 	Log            LogAPI
 	LogStream      LogStreamAPI
+	Organization   OrganizationAPI
 	ResourceServer ResourceServerAPI
 	Role           RoleAPI
 	Rule           RuleAPI
@@ -29,15 +30,16 @@ func NewAPI(m *management.Management) *API {
 		Anomaly:        m.Anomaly,
 		Branding:       m.Branding,
 		Client:         m.Client,
+		Connection:     m.Connection,
 		CustomDomain:   m.CustomDomain,
 		Log:            m.Log,
 		LogStream:      m.LogStream,
+		Organization:   m.Organization,
 		ResourceServer: m.ResourceServer,
 		Role:           m.Role,
 		Rule:           m.Rule,
 		Tenant:         m.Tenant,
 		User:           m.User,
-		Connection:     m.Connection,
 	}
 }
 
