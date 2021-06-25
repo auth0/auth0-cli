@@ -7,7 +7,7 @@ import (
 
 func main() {
 	var cfg struct {
-		Path string `env:"AUTH0_CLI_DOCS_PATH,default=./docs/commands/"`
+		Path string `env:"AUTH0_CLI_DOCS_PATH,default=./docs/"`
 	}
 	if err := envdecode.StrictDecode(&cfg); err != nil {
 		panic(err)

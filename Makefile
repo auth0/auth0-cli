@@ -73,3 +73,7 @@ integration: build $(GOBIN)/commander
 	$(MAKE) integration-cleanup; \
 	exit $$ret
 .PHONY: integration
+
+build-doc:
+	go run ./cmd/build_doc
+.PHONY: build-doc
