@@ -9,20 +9,22 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
 
 const (
-	clientID               = "2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT"
-	deviceCodeEndpoint     = "https://auth0.auth0.com/oauth/device/code"
-	oauthTokenEndpoint     = "https://auth0.auth0.com/oauth/token"
 	audiencePath           = "/api/v2/"
 	waitThresholdInSeconds = 3
-
 	// namespace used to set/get values from the keychain
 	SecretsNamespace = "auth0-cli"
 )
+
+var clientID = getEnv("CLIENT_ID", "2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT")
+var baseDomain = getEnv("BASE_DOMAIN", "auth0.auth0.com")
+var deviceCodeEndpoint = fmt.Sprintf("https://%s/oauth/device/code", baseDomain)
+var oauthTokenEndpoint = fmt.Sprintf("https://%s/oauth/token", baseDomain)
 
 var requiredScopes = []string{
 	"openid",
@@ -34,7 +36,7 @@ var requiredScopes = []string{
 	"create:users", "delete:users", "read:users", "update:users",
 	"read:branding", "update:branding",
 	"read:connections", "update:connections",
-	"read:client_keys", "read:logs", "read:tenant_settings", 
+	"read:client_keys", "read:logs", "read:tenant_settings",
 	"read:custom_domains", "create:custom_domains", "update:custom_domains", "delete:custom_domains",
 	"read:anomaly_blocks", "delete:anomaly_blocks",
 	"create:log_streams", "delete:log_streams", "read:log_streams", "update:log_streams",
@@ -158,7 +160,7 @@ func (a *Authenticator) getDeviceCode(ctx context.Context) (State, error) {
 	data := url.Values{
 		"client_id": {clientID},
 		"scope":     {strings.Join(requiredScopes, " ")},
-		"audience":  {"https://*.auth0.com/api/v2/"},
+		"audience":  {getEnv("AUDIENCE", "https://*.auth0.com/api/v2/")},
 	}
 	r, err := http.PostForm(deviceCodeEndpoint, data)
 	if err != nil {
@@ -198,4 +200,12 @@ func parseTenant(accessToken string) (tenant, domain string, err error) {
 		}
 	}
 	return "", "", fmt.Errorf("audience not found for %s", audiencePath)
+}
+
+// getEnv returns an env variable if exists, otherwise uses the fallback
+func getEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
 }
