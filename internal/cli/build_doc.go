@@ -11,7 +11,9 @@ func BuildDoc(path string) error {
 	cli := &cli{}
 
 	rootCmd := &cobra.Command{
-		Use: "index",
+		Use:               "auth0",
+		Short:             rootShort,
+		DisableAutoGenTag: true,
 	}
 
 	rootCmd.SetUsageTemplate(namespaceUsageTemplate())
@@ -22,16 +24,25 @@ func BuildDoc(path string) error {
 		path,
 		func(fileName string) string {
 			// prepend to the generated markdown
-			if strings.HasSuffix(fileName, "index.md") {
-				return "---\nlayout: home\n----"
+			if strings.HasSuffix(fileName, "auth0.md") {
+				return `---
+layout: home
+---
+`
 			}
 
-			return "---\nlayout: default\n----"
-
+			return `---
+layout: default
+---
+`
 		},
-		func(s string) string {
+		func(fileName string) string {
 			// return same value, we're not changing the internal link
-			return s
+			if strings.HasSuffix(fileName, "auth0.md") {
+				return "/auth0-cli/"
+			}
+
+			return fileName
 		})
 
 	if err != nil {

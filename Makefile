@@ -75,5 +75,13 @@ integration: build $(GOBIN)/commander
 .PHONY: integration
 
 build-doc:
+	rm ./docs/auth0_*.md
 	go run ./cmd/build_doc
+	mv ./docs/auth0.md ./docs/index.md
 .PHONY: build-doc
+
+# Start the doc site locally for testing purposes only
+# requires https://jekyllrb.com/docs/installation/
+start-doc: build-doc 
+	@cd docs && bundle exec jekyll serve
+.PHONY: start-doc
