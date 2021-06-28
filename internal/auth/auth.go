@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 )
@@ -209,12 +208,4 @@ func parseTenant(accessToken string) (tenant, domain string, err error) {
 		}
 	}
 	return "", "", fmt.Errorf("audience not found for %s", audiencePath)
-}
-
-// getEnv returns an env variable if exists, otherwise uses the fallback
-func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return fallback
 }
