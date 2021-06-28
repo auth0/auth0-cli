@@ -1,6 +1,6 @@
 # Auth0 CLI (Experimental)
 
-`auth0` is the command line to supercharge your development workflow.
+`auth0` is the command line to supercharge your development workflow. 
 
 > Note: This CLI is an experimental release, and is built on a best-efforts basis by some Auth0 developers in their available innovation time. It is open-source licensed and free to use, and is not covered by any Auth0 Terms of Service or Agreements. If you have issues with this CLI you can engage with the project's developer community through the repository GitHub Issues list, or contribute fixes and enhancements of your own via a Pull Request.
 
@@ -46,9 +46,9 @@ brew install auth0/auth0-cli/auth0
 1. Extract
 1. Run `./auth0`
 1. Setup CLI commands completion for your terminal:
-   - (**bash**) `auth0 completion bash > /usr/local/etc/bash_completion.d/auth0`
-   - (**zsh**) `auth0 completion zsh > "${fpath[1]}/_auth0"`
-   - (**fish**) `auth0 completion fish | source`
+	-  (**bash**) `auth0 completion bash > /usr/local/etc/bash_completion.d/auth0`
+	-  (**zsh**)  `auth0 completion zsh > "${fpath[1]}/_auth0"`
+	- (**fish**)  `auth0 completion fish | source`
 
 > see more completion options: `auth0 completion -h`
 
@@ -72,10 +72,11 @@ scoop install auth0
 #### Manually
 
 1. Download the _Linux_ binary from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
-1. Extract `$ tar -xf auth0-cli_{dowloaded version here}_Linux_x86_64.tar.gz`
-1. Run `./auth0`
-1. Setup CLI commands completion for your terminal: - `sudo ./auth0 completion bash > /etc/bash_completion.d/auth0`
-   > see more completion options: `auth0 completion -h`
+1. Extract `$  tar -xf auth0-cli_{dowloaded version here}_Linux_x86_64.tar.gz`
+1. Run `./auth0` 
+1. Setup CLI commands completion for your terminal:
+	-  `sudo ./auth0 completion bash > /etc/bash_completion.d/auth0`
+> see more completion options: `auth0 completion -h` 
 
 ## Usage
 
@@ -88,20 +89,20 @@ auth0 [command]
 auth0 [command] --help
 ```
 
-- [auth0 apis](docs/auth0_apis.md) - Manage resources for APIs
-- [auth0 apps](docs/auth0_apps.md) - Manage resources for applications
-- [auth0 branding](docs/auth0_branding.md) - Manage branding options
-- [auth0 completion](docs/auth0_completion.md) - Setup autocomplete features for this CLI on your terminal
-- [auth0 ips](docs/auth0_ips.md) - Manage blocked IP addresses
-- [auth0 login](docs/auth0_login.md) - Authenticate the Auth0 CLI
-- [auth0 logout](docs/auth0_logout.md) - Log out of a tenant's session
-- [auth0 logs](docs/auth0_logs.md) - View tenant logs
-- [auth0 quickstarts](docs/auth0_quickstarts.md) - Quickstart support for getting bootstrapped
-- [auth0 roles](docs/auth0_roles.md) - Manage resources for roles
-- [auth0 rules](docs/auth0_rules.md) - Manage resources for rules
-- [auth0 tenants](docs/auth0_tenants.md) - Manage configured tenants
-- [auth0 test](docs/auth0_test.md) - Try your Universal Login box or get a token
-- [auth0 users](docs/auth0_users.md) - Manage resources for users
+* [auth0 apis](docs/auth0_apis.md)	 - Manage resources for APIs
+* [auth0 apps](docs/auth0_apps.md)	 - Manage resources for applications
+* [auth0 branding](docs/auth0_branding.md)	 - Manage branding options
+* [auth0 completion](docs/auth0_completion.md)	 - Setup autocomplete features for this CLI on your terminal
+* [auth0 ips](docs/auth0_ips.md)	 - Manage blocked IP addresses
+* [auth0 login](docs/auth0_login.md)	 - Authenticate the Auth0 CLI
+* [auth0 logout](docs/auth0_logout.md)	 - Log out of a tenant's session
+* [auth0 logs](docs/auth0_logs.md)	 - View tenant logs
+* [auth0 quickstarts](docs/auth0_quickstarts.md)	 - Quickstart support for getting bootstrapped
+* [auth0 roles](docs/auth0_roles.md)	 - Manage resources for roles
+* [auth0 rules](docs/auth0_rules.md)	 - Manage resources for rules
+* [auth0 tenants](docs/auth0_tenants.md)	 - Manage configured tenants
+* [auth0 test](docs/auth0_test.md)	 - Try your Universal Login box or get a token
+* [auth0 users](docs/auth0_users.md)	 - Manage resources for users
 
 ### Onboarding Journey
 
@@ -135,17 +136,17 @@ $ auth0 apps create
 
 === travel0.auth0.com application created
 
-  CLIENT ID            wmVzrZkGhKgglMRMvpauORCulBkQ5qeI
-  NAME                 My Awesome App
+  CLIENT ID            wmVzrZkGhKgglMRMvpauORCulBkQ5qeI                                  
+  NAME                 My Awesome App                                                       
   DESCRIPTION          Test app
-  TYPE                 regular web application
-  CLIENT SECRET        kaS2NR5nk2PcGuITQ8JoKnpVnc5ky1TuKgsb6iTA08ec8XqizqkDupKhEIcsFiNM
-  CALLBACKS            http://localhost:3000
-  ALLOWED LOGOUT URLS  http://localhost:3000
-  ALLOWED ORIGINS
-  ALLOWED WEB ORIGINS
-  TOKEN ENDPOINT AUTH
-  GRANTS               implicit, authorization_code, refresh_token, client_credentials
+  TYPE                 regular web application                                           
+  CLIENT SECRET        kaS2NR5nk2PcGuITQ8JoKnpVnc5ky1TuKgsb6iTA08ec8XqizqkDupKhEIcsFiNM  
+  CALLBACKS            http://localhost:3000                                             
+  ALLOWED LOGOUT URLS  http://localhost:3000                                             
+  ALLOWED ORIGINS                                                                        
+  ALLOWED WEB ORIGINS                                                                    
+  TOKEN ENDPOINT AUTH                                                                    
+  GRANTS               implicit, authorization_code, refresh_token, client_credentials   
 
  ▸    Quickstarts: https://auth0.com/docs/quickstart/webapp
  ▸    Hint: Test this app's login box with 'auth0 test login wmVzrZkGhKgglMRMvpauORCulBkQ5qeI'
@@ -160,7 +161,7 @@ using the client ID.
 Whether or not you've created the application using the CLI or the management
 dashboard, you'll be able to test logging in using a specific application.
 
-If you have the client ID, you may pass it as an argument,
+If you have the client ID, you may pass it as an argument, 
 otherwise a prompt will be presented:
 
 ```bash
