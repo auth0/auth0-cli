@@ -46,8 +46,9 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 		client := &http.Client{Transport: transport}
 
 		tr := &TokenRetriever{
-			Secrets: secretsMock,
-			Client:  client,
+			Authenticator: NewAuthenticaor("https://*.auth0.com/api/v2/", "2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT", "https://auth0.auth0.com/oauth/device/code", "https://auth0.auth0.com/oauth/token"),
+			Secrets:       secretsMock,
+			Client:        client,
 		}
 
 		got, err := tr.Refresh(context.Background(), "mytenant")
