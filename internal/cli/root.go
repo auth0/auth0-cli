@@ -22,7 +22,7 @@ var authCfg struct {
 	Audience           string `env:"AUTH0_AUDIENCE,default=https://*.auth0.com/api/v2/"`
 	ClientID           string `env:"AUTH0_CLIENT_ID,default=2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT"`
 	DeviceCodeEndpoint string `env:"AUTH0_DEVICE_CODE_ENDPOINT,default=https://auth0.auth0.com/oauth/device/code"`
-	OAuthTokenEndpoint string `env:"AUTH0_OAUTH_TOKEN_ENDPOINT,default=https://auth0.auth0.com/oauth/token"`
+	OauthTokenEndpoint string `env:"AUTH0_OAUTH_TOKEN_ENDPOINT,default=https://auth0.auth0.com/oauth/token"`
 }
 
 // Execute is the primary entrypoint of the CLI app.
@@ -49,7 +49,12 @@ func Execute() {
 				return fmt.Errorf("could not decode env: %w", err)
 			}
 
-			cli.authenticator = auth.NewAuthenticaor(authCfg.Audience, authCfg.ClientID, authCfg.DeviceCodeEndpoint, authCfg.OAuthTokenEndpoint)
+			cli.authenticator = &auth.Authenticator{
+				Audience:           authCfg.Audience,
+				ClientID:           authCfg.ClientID,
+				DeviceCodeEndpoint: authCfg.DeviceCodeEndpoint,
+				OauthTokenEndpoint: authCfg.OauthTokenEndpoint,
+			}
 			ansi.DisableColors = cli.noColor
 			prepareInteractivity(cmd)
 

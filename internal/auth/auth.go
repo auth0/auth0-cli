@@ -38,10 +38,10 @@ var requiredScopes = []string{
 }
 
 type Authenticator struct {
-	audience           string
-	clientID           string
-	deviceCodeEndpoint string
-	oauthTokenEndpoint string
+	Audience           string
+	ClientID           string
+	DeviceCodeEndpoint string
+	OauthTokenEndpoint string
 }
 
 // SecretStore provides access to stored sensitive data.
@@ -66,15 +66,6 @@ type State struct {
 	VerificationURI string `json:"verification_uri_complete"`
 	ExpiresIn       int    `json:"expires_in"`
 	Interval        int    `json:"interval"`
-}
-
-func NewAuthenticaor(audience, id, deviceCodeUrl, tokenUrl string) Authenticator {
-	return Authenticator{
-		audience:           audience,
-		clientID:           id,
-		deviceCodeEndpoint: deviceCodeUrl,
-		oauthTokenEndpoint: tokenUrl,
-	}
 }
 
 // RequiredScopes returns the scopes used for login.
@@ -115,11 +106,11 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 			return Result{}, ctx.Err()
 		case <-t.C:
 			data := url.Values{
-				"client_id":   {a.clientID},
+				"client_id":   {a.ClientID},
 				"grant_type":  {"urn:ietf:params:oauth:grant-type:device_code"},
 				"device_code": {state.DeviceCode},
 			}
-			r, err := http.PostForm(a.oauthTokenEndpoint, data)
+			r, err := http.PostForm(a.OauthTokenEndpoint, data)
 			if err != nil {
 				return Result{}, fmt.Errorf("cannot get device code: %w", err)
 			}
@@ -166,11 +157,11 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 
 func (a *Authenticator) getDeviceCode(ctx context.Context) (State, error) {
 	data := url.Values{
-		"client_id": {a.clientID},
+		"client_id": {a.ClientID},
 		"scope":     {strings.Join(requiredScopes, " ")},
-		"audience":  {a.audience},
+		"audience":  {a.Audience},
 	}
-	r, err := http.PostForm(a.deviceCodeEndpoint, data)
+	r, err := http.PostForm(a.DeviceCodeEndpoint, data)
 	if err != nil {
 		return State{}, fmt.Errorf("cannot get device code: %w", err)
 	}
