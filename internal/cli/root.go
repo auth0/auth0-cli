@@ -9,11 +9,21 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/analytics"
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/instrumentation"
+	"github.com/joeshaw/envdecode"
 	"github.com/spf13/cobra"
 )
+
+// authCfg defines the configurable auth context the cli will run in.
+var authCfg struct {
+	Audience           string `env:"AUTH0_AUDIENCE,default=https://*.auth0.com/api/v2/"`
+	ClientID           string `env:"AUTH0_CLIENT_ID,default=2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT"`
+	DeviceCodeEndpoint string `env:"AUTH0_DEVICE_CODE_ENDPOINT,default=https://auth0.auth0.com/oauth/device/code"`
+	OAuthTokenEndpoint string `env:"AUTH0_OAUTH_TOKEN_ENDPOINT,default=https://auth0.auth0.com/oauth/token"`
+}
 
 // Execute is the primary entrypoint of the CLI app.
 func Execute() {
@@ -35,6 +45,11 @@ func Execute() {
 		Long:          "Supercharge your development workflow.\n" + getLogin(cli),
 		Version:       buildinfo.GetVersionWithCommit(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if err := envdecode.StrictDecode(&authCfg); err != nil {
+				return fmt.Errorf("could not decode env: %w", err)
+			}
+
+			cli.authenticator = auth.NewAuthenticaor(authCfg.Audience, authCfg.ClientID, authCfg.DeviceCodeEndpoint, authCfg.OAuthTokenEndpoint)
 			ansi.DisableColors = cli.noColor
 			prepareInteractivity(cmd)
 
@@ -148,7 +163,7 @@ func Execute() {
 	// for most of the architectures there's no requirements:
 	ansi.InitConsole()
 
-	cancelCtx :=  contextWithCancel()
+	cancelCtx := contextWithCancel()
 	if err := rootCmd.ExecuteContext(cancelCtx); err != nil {
 		cli.renderer.Heading("error")
 		cli.renderer.Errorf(err.Error())

@@ -21,11 +21,6 @@ const (
 	SecretsNamespace = "auth0-cli"
 )
 
-var clientID = getEnv("CLIENT_ID", "2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT")
-var baseDomain = getEnv("BASE_DOMAIN", "auth0.auth0.com")
-var deviceCodeEndpoint = fmt.Sprintf("https://%s/oauth/device/code", baseDomain)
-var oauthTokenEndpoint = fmt.Sprintf("https://%s/oauth/token", baseDomain)
-
 var requiredScopes = []string{
 	"openid",
 	"offline_access", // <-- to get a refresh token.
@@ -43,18 +38,11 @@ var requiredScopes = []string{
 	"create:actions", "delete:actions", "read:actions", "update:actions",
 }
 
-// RequiredScopes returns the scopes used for login.
-func RequiredScopes() []string { return requiredScopes }
-
-// RequiredScopesMin returns minimum scopes used for login in integration tests.
-func RequiredScopesMin() []string {
-	min := []string{}
-	for _, s := range requiredScopes {
-		if s != "offline_access" && s != "openid" {
-			min = append(min, s)
-		}
-	}
-	return min
+type Authenticator struct {
+	audience           string
+	clientID           string
+	deviceCodeEndpoint string
+	oauthTokenEndpoint string
 }
 
 // SecretStore provides access to stored sensitive data.
@@ -64,8 +52,6 @@ type SecretStore interface {
 	// Delete removes the secret
 	Delete(namespace, key string) error
 }
-
-type Authenticator struct{}
 
 type Result struct {
 	Tenant       string
@@ -81,6 +67,29 @@ type State struct {
 	VerificationURI string `json:"verification_uri_complete"`
 	ExpiresIn       int    `json:"expires_in"`
 	Interval        int    `json:"interval"`
+}
+
+func NewAuthenticaor(audience, id, deviceCodeUrl, tokenUrl string) Authenticator {
+	return Authenticator{
+		audience:           audience,
+		clientID:           id,
+		deviceCodeEndpoint: deviceCodeUrl,
+		oauthTokenEndpoint: tokenUrl,
+	}
+}
+
+// RequiredScopes returns the scopes used for login.
+func RequiredScopes() []string { return requiredScopes }
+
+// RequiredScopesMin returns minimum scopes used for login in integration tests.
+func RequiredScopesMin() []string {
+	min := []string{}
+	for _, s := range requiredScopes {
+		if s != "offline_access" && s != "openid" {
+			min = append(min, s)
+		}
+	}
+	return min
 }
 
 func (s *State) IntervalDuration() time.Duration {
@@ -107,11 +116,11 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 			return Result{}, ctx.Err()
 		case <-t.C:
 			data := url.Values{
-				"client_id":   {clientID},
+				"client_id":   {a.clientID},
 				"grant_type":  {"urn:ietf:params:oauth:grant-type:device_code"},
 				"device_code": {state.DeviceCode},
 			}
-			r, err := http.PostForm(oauthTokenEndpoint, data)
+			r, err := http.PostForm(a.oauthTokenEndpoint, data)
 			if err != nil {
 				return Result{}, fmt.Errorf("cannot get device code: %w", err)
 			}
@@ -158,11 +167,11 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 
 func (a *Authenticator) getDeviceCode(ctx context.Context) (State, error) {
 	data := url.Values{
-		"client_id": {clientID},
+		"client_id": {a.clientID},
 		"scope":     {strings.Join(requiredScopes, " ")},
-		"audience":  {getEnv("AUDIENCE", "https://*.auth0.com/api/v2/")},
+		"audience":  {a.audience},
 	}
-	r, err := http.PostForm(deviceCodeEndpoint, data)
+	r, err := http.PostForm(a.deviceCodeEndpoint, data)
 	if err != nil {
 		return State{}, fmt.Errorf("cannot get device code: %w", err)
 	}
