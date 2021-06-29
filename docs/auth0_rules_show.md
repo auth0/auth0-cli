@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 rules show
+
+Show a rule
+
+### Synopsis
 
 Show a rule.
 
@@ -13,13 +20,13 @@ auth0 rules show
 auth0 rules show <id>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for show
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -33,3 +40,4 @@ auth0 rules show <id>
 ### SEE ALSO
 
 * [auth0 rules](auth0_rules.md)	 - Manage resources for rules
+

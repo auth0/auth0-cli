@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 branding show
+
+Display the custom branding settings for Universal Login
+
+### Synopsis
 
 Display the custom branding settings for Universal Login.
 
@@ -12,13 +19,13 @@ auth0 branding show [flags]
 auth0 branding show
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for show
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -32,3 +39,4 @@ auth0 branding show
 ### SEE ALSO
 
 * [auth0 branding](auth0_branding.md)	 - Manage branding options
+

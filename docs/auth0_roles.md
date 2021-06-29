@@ -1,14 +1,21 @@
+---
+layout: default
+---
 ## auth0 roles
+
+Manage resources for roles
+
+### Synopsis
 
 Manage resources for roles.
 
-### Flags
+### Options
 
 ```
   -h, --help   help for roles
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -21,9 +28,10 @@ Manage resources for roles.
 
 ### SEE ALSO
 
-* [auth0](auth0.md)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
 * [auth0 roles create](auth0_roles_create.md)	 - Create a new role
 * [auth0 roles delete](auth0_roles_delete.md)	 - Delete a role
 * [auth0 roles list](auth0_roles_list.md)	 - List your roles
 * [auth0 roles show](auth0_roles_show.md)	 - Show a role
 * [auth0 roles update](auth0_roles_update.md)	 - Update a role
+

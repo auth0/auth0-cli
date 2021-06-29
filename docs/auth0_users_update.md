@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 users update
+
+Update a user
+
+### Synopsis
 
 Update a user.
 
@@ -15,7 +22,7 @@ auth0 users update <id> --name John Doe
 auth0 users update -n John Doe --email john.doe@example.com
 ```
 
-### Flags
+### Options
 
 ```
   -c, --connection string   Name of the connection this user should be created in.
@@ -25,7 +32,7 @@ auth0 users update -n John Doe --email john.doe@example.com
   -p, --password string     Initial password for this user (mandatory for non-SMS connections).
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -39,3 +46,4 @@ auth0 users update -n John Doe --email john.doe@example.com
 ### SEE ALSO
 
 * [auth0 users](auth0_users.md)	 - Manage resources for users
+

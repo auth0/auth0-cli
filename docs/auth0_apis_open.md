@@ -1,6 +1,13 @@
+---
+layout: default
+---
 ## auth0 apis open
 
-Open API settings page in Auth0 Manage.
+Open API settings page in the Auth0 Dashboard
+
+### Synopsis
+
+Open API settings page in the Auth0 Dashboard.
 
 ```
 auth0 apis open [flags]
@@ -13,13 +20,13 @@ auth0 apis open
 auth0 apis open <id|audience>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for open
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -33,3 +40,4 @@ auth0 apis open <id|audience>
 ### SEE ALSO
 
 * [auth0 apis](auth0_apis.md)	 - Manage resources for APIs
+

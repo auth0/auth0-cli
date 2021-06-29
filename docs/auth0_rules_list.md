@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 rules list
+
+List your rules
+
+### Synopsis
 
 List your existing rules. To create one try:
 auth0 rules create
@@ -14,13 +21,13 @@ auth0 rules list
 auth0 rules ls
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for list
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -34,3 +41,4 @@ auth0 rules ls
 ### SEE ALSO
 
 * [auth0 rules](auth0_rules.md)	 - Manage resources for rules
+

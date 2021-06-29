@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 branding domains list
+
+List your custom domains
+
+### Synopsis
 
 List your existing custom domains. To create one try:
 auth0 branding domains create
@@ -14,13 +21,13 @@ auth0 branding domains list
 auth0 branding domains ls
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for list
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -34,3 +41,4 @@ auth0 branding domains ls
 ### SEE ALSO
 
 * [auth0 branding domains](auth0_branding_domains.md)	 - Manage custom domains
+

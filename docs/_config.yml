@@ -1,0 +1,17 @@
+# Jekyll configuration file
+# see: https://jekyllrb.com/docs/configuration/
+
+title: Auth0 CLI
+description: >-
+  auth0 is the command line to supercharge your development workflow.
+baseurl: "/auth0-cli"
+url: "" # the base hostname & protocol for your site, e.g. http://example.com
+twitter_username: auth0
+github_username:  auth0
+
+# Build settings
+theme: minima
+
+header_pages:
+  - about.markdown
+

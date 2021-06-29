@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 tenants list
+
+List your tenants
+
+### Synopsis
 
 List your tenants.
 
@@ -12,13 +19,13 @@ auth0 tenants list [flags]
 auth0 tenants list
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for list
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -32,3 +39,4 @@ auth0 tenants list
 ### SEE ALSO
 
 * [auth0 tenants](auth0_tenants.md)	 - Manage configured tenants
+

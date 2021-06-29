@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 roles show
+
+Show a role
+
+### Synopsis
 
 Show a role.
 
@@ -13,13 +20,13 @@ auth0 roles show
 auth0 roles show <id>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for show
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -33,3 +40,4 @@ auth0 roles show <id>
 ### SEE ALSO
 
 * [auth0 roles](auth0_roles.md)	 - Manage resources for roles
+

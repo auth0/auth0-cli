@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 apis scopes list
+
+List the scopes of an API
+
+### Synopsis
 
 List the scopes of an API.
 
@@ -13,13 +20,13 @@ auth0 apis scopes list
 auth0 apis scopes ls <id|audience>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for list
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -33,3 +40,4 @@ auth0 apis scopes ls <id|audience>
 ### SEE ALSO
 
 * [auth0 apis scopes](auth0_apis_scopes.md)	 - Manage resources for API scopes
+

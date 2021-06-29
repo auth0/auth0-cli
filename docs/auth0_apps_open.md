@@ -1,6 +1,13 @@
+---
+layout: default
+---
 ## auth0 apps open
 
-Open application settings page in Auth0 Manage.
+Open application settings page in the Auth0 Dashboard
+
+### Synopsis
+
+Open application settings page in the Auth0 Dashboard.
 
 ```
 auth0 apps open [flags]
@@ -12,13 +19,13 @@ auth0 apps open [flags]
 auth0 apps open <id>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for open
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -32,3 +39,4 @@ auth0 apps open <id>
 ### SEE ALSO
 
 * [auth0 apps](auth0_apps.md)	 - Manage resources for applications
+
