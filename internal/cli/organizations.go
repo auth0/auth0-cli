@@ -160,7 +160,7 @@ func createOrganizationCmd(cli *cli) *cobra.Command {
 		Example: `auth0 orgs create 
 auth0 orgs create --name myorganization
 auth0 orgs create --n myorganization --display "My Organization"
-auth0 orgs create --n myorganization -f "My Organization" -l "https://example.com/logo.png" -c "primary=000000"
+auth0 orgs create --n myorganization -f "My Organization" -l "https://example.com/logo.png" -c "primary=#000000"
 auth0 orgs create --n myorganization -f "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := organizationName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -227,7 +227,7 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 		Example: `auth0 orgs update <id> 
 auth0 orgs update <id> --name myorganization
 auth0 orgs update <id> --n myorganization --display "My Organization"
-auth0 orgs update <id> --n myorganization -f "My Organization" -l "https://example.com/logo.png" -c "primary=000000"
+auth0 orgs update <id> --n myorganization -f "My Organization" -l "https://example.com/logo.png" -c "primary=#000000"
 auth0 orgs update <id> --n myorganization -f "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
