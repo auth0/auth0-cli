@@ -1,14 +1,21 @@
+---
+layout: default
+---
 ## auth0 users
+
+Manage resources for users
+
+### Synopsis
 
 Manage resources for users.
 
-### Flags
+### Options
 
 ```
   -h, --help   help for users
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -21,12 +28,13 @@ Manage resources for users.
 
 ### SEE ALSO
 
-* [auth0](auth0.md)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
 * [auth0 users blocks](auth0_users_blocks.md)	 - Manage brute-force protection user blocks
 * [auth0 users create](auth0_users_create.md)	 - Create a new user
 * [auth0 users delete](auth0_users_delete.md)	 - Delete a user
-* [auth0 users open](auth0_users_open.md)	 - Open user details page in Auth0 Manage
+* [auth0 users open](auth0_users_open.md)	 - Open user details page in the Auth0 Dashboard
 * [auth0 users search](auth0_users_search.md)	 - Search for users
 * [auth0 users show](auth0_users_show.md)	 - Show an existing user
 * [auth0 users unblock](auth0_users_unblock.md)	 - Remove brute-force protection blocks for a given user
 * [auth0 users update](auth0_users_update.md)	 - Update a user
+

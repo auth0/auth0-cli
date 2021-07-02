@@ -1,6 +1,13 @@
+---
+layout: default
+---
 ## auth0 tenants open
 
-Open tenant settings page in Auth0 Manage.
+Open tenant settings page in the Auth0 Dashboard
+
+### Synopsis
+
+Open tenant settings page in the Auth0 Dashboard.
 
 ```
 auth0 tenants open [flags]
@@ -12,13 +19,13 @@ auth0 tenants open [flags]
 auth0 tenants open <tenant>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for open
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -32,3 +39,4 @@ auth0 tenants open <tenant>
 ### SEE ALSO
 
 * [auth0 tenants](auth0_tenants.md)	 - Manage configured tenants
+

@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 login
+
+Authenticate the Auth0 CLI
+
+### Synopsis
 
 Sign in to your Auth0 account and authorize the CLI to access the Management API.
 
@@ -6,13 +13,13 @@ Sign in to your Auth0 account and authorize the CLI to access the Management API
 auth0 login [flags]
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for login
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -25,4 +32,5 @@ auth0 login [flags]
 
 ### SEE ALSO
 
-* [auth0](auth0.md)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
+

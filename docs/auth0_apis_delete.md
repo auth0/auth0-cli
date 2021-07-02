@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 apis delete
+
+Delete an API
+
+### Synopsis
 
 Delete an API.
 
@@ -13,13 +20,13 @@ auth0 apis delete
 auth0 apis delete <id|audience>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for delete
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -33,3 +40,4 @@ auth0 apis delete <id|audience>
 ### SEE ALSO
 
 * [auth0 apis](auth0_apis.md)	 - Manage resources for APIs
+

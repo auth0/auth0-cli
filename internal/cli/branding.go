@@ -84,6 +84,7 @@ func brandingCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(updateBrandingCmd(cli))
 	cmd.AddCommand(templateCmd(cli))
 	cmd.AddCommand(customDomainsCmd(cli))
+	cmd.AddCommand(emailTemplateCmd(cli))
 	return cmd
 }
 
@@ -99,6 +100,20 @@ func templateCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(updateBrandingTemplateCmd(cli))
 	return cmd
 }
+
+func emailTemplateCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "emails",
+		Short: "Manage custom email templates",
+		Long:  "Manage custom email templates. This requires a custom email provider to be configured for the tenant.",
+	}
+
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(showEmailTemplateCmd(cli))
+	cmd.AddCommand(updateEmailTemplateCmd(cli))
+	return cmd
+}
+
 
 func showBrandingCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
@@ -137,10 +152,10 @@ func updateBrandingCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "update",
-		Args:    cobra.NoArgs,
-		Short:   "Update the custom branding settings for Universal Login",
-		Long:    "Update the custom branding settings for Universal Login.",
+		Use:   "update",
+		Args:  cobra.NoArgs,
+		Short: "Update the custom branding settings for Universal Login",
+		Long:  "Update the custom branding settings for Universal Login.",
 		Example: `auth0 branding update
 auth0 branding update --accent '#B24592' --background '#F2DDEC' 
 auth0 branding update -a '#B24592' -b '#F2DDEC --logo 'https://example.com/logo.png`,

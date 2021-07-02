@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 users delete
+
+Delete a user
+
+### Synopsis
 
 Delete a user.
 
@@ -13,13 +20,13 @@ auth0 users delete
 auth0 users delete <id>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for delete
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -33,3 +40,4 @@ auth0 users delete <id>
 ### SEE ALSO
 
 * [auth0 users](auth0_users.md)	 - Manage resources for users
+

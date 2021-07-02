@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 roles list
+
+List your roles
+
+### Synopsis
 
 List your existing roles. To create one try:
 auth0 roles create
@@ -14,13 +21,13 @@ auth0 roles list
 auth0 roles ls
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for list
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -34,3 +41,4 @@ auth0 roles ls
 ### SEE ALSO
 
 * [auth0 roles](auth0_roles.md)	 - Manage resources for roles
+

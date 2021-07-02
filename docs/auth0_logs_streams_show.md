@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 logs streams show
+
+Show a log stream by Id
+
+### Synopsis
 
 Show a log stream by Id.
 
@@ -13,13 +20,13 @@ auth0 logs streams show
 auth0 logs streams show <id>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for show
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -33,3 +40,4 @@ auth0 logs streams show <id>
 ### SEE ALSO
 
 * [auth0 logs streams](auth0_logs_streams.md)	 - Manage resources for log streams
+

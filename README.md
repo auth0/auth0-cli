@@ -37,7 +37,7 @@ With the Auth0 CLI, you can:
 #### [Homebrew](https://brew.sh/)
 
 ```bash
-brew install auth0/auth0-cli/auth0
+ brew tap auth0/auth0-cli && brew install auth0
 ```
 
 #### Manually

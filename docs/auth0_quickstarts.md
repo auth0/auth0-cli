@@ -1,14 +1,21 @@
+---
+layout: default
+---
 ## auth0 quickstarts
+
+Quickstart support for getting bootstrapped
+
+### Synopsis
 
 Quickstart support for getting bootstrapped.
 
-### Flags
+### Options
 
 ```
   -h, --help   help for quickstarts
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -21,6 +28,7 @@ Quickstart support for getting bootstrapped.
 
 ### SEE ALSO
 
-* [auth0](auth0.md)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
 * [auth0 quickstarts download](auth0_quickstarts_download.md)	 - Download a Quickstart sample app for a specific tech stack
 * [auth0 quickstarts list](auth0_quickstarts_list.md)	 - List the available Quickstarts
+

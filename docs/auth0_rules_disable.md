@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 rules disable
+
+Disable a rule
+
+### Synopsis
 
 Disable a rule.
 
@@ -9,16 +16,16 @@ auth0 rules disable [flags]
 ### Examples
 
 ```
-auth0 rules disable <rule-id>
+auth0 rules disable <id>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for disable
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -32,3 +39,4 @@ auth0 rules disable <rule-id>
 ### SEE ALSO
 
 * [auth0 rules](auth0_rules.md)	 - Manage resources for rules
+

@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 apps list
+
+List your applications
+
+### Synopsis
 
 List your existing applications. To create one try:
 auth0 apps create
@@ -14,14 +21,14 @@ auth0 apps list
 auth0 apps ls
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help     help for list
   -r, --reveal   Display the Client Secret as part of the command output.
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -35,3 +42,4 @@ auth0 apps ls
 ### SEE ALSO
 
 * [auth0 apps](auth0_apps.md)	 - Manage resources for applications
+

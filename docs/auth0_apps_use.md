@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 apps use
+
+Choose a default application for the Auth0 CLI
+
+### Synopsis
 
 Specify your preferred application for interaction with the Auth0 CLI.
 
@@ -12,14 +19,14 @@ auth0 apps use [flags]
 auth0 apps use <client-id>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for use
   -n, --none   Specify none of your apps.
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -33,3 +40,4 @@ auth0 apps use <client-id>
 ### SEE ALSO
 
 * [auth0 apps](auth0_apps.md)	 - Manage resources for applications
+

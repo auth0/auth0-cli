@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 logs streams create
+
+Create a new log stream
+
+### Synopsis
 
 Create a new log stream.
 
@@ -16,7 +23,7 @@ auth0 logs streams create -n myeventbridge -t eventbridge --eventbridge-id 99999
 auth0 logs streams create -n test-splunk -t splunk --splunk-domain demo.splunk.com --splunk-token 12a34ab5-c6d7-8901-23ef-456b7c89d0c1 --splunk-port 8080 --splunk-secure=true
 ```
 
-### Flags
+### Options
 
 ```
       --datadog-id string           The region in which datadog dashboard is created.
@@ -41,7 +48,7 @@ auth0 logs streams create -n test-splunk -t splunk --splunk-domain demo.splunk.c
   -t, --type string                 Type of the log stream. Possible values: http, eventbridge, eventgrid, datadog, splunk, sumo.
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -55,3 +62,4 @@ auth0 logs streams create -n test-splunk -t splunk --splunk-domain demo.splunk.c
 ### SEE ALSO
 
 * [auth0 logs streams](auth0_logs_streams.md)	 - Manage resources for log streams
+

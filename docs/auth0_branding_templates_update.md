@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 branding templates update
+
+Update the custom template for Universal Login
+
+### Synopsis
 
 Update the custom template for Universal Login.
 
@@ -12,13 +19,13 @@ auth0 branding templates update [flags]
 auth0 branding templates update
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for update
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -32,3 +39,4 @@ auth0 branding templates update
 ### SEE ALSO
 
 * [auth0 branding templates](auth0_branding_templates.md)	 - Manage custom page templates
+

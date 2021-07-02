@@ -17,6 +17,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const rootShort = "Supercharge your development workflow."
+
 // authCfg defines the configurable auth context the cli will run in.
 var authCfg struct {
 	Audience           string `env:"AUTH0_AUDIENCE,default=https://*.auth0.com/api/v2/"`
@@ -37,112 +39,11 @@ func Execute() {
 		tracker:  analytics.NewTracker(),
 	}
 
-	rootCmd := &cobra.Command{
-		Use:           "auth0",
-		SilenceUsage:  true,
-		SilenceErrors: true,
-		Short:         "Supercharge your development workflow.",
-		Long:          "Supercharge your development workflow.\n" + getLogin(cli),
-		Version:       buildinfo.GetVersionWithCommit(),
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if err := envdecode.StrictDecode(&authCfg); err != nil {
-				return fmt.Errorf("could not decode env: %w", err)
-			}
-
-			cli.authenticator = &auth.Authenticator{
-				Audience:           authCfg.Audience,
-				ClientID:           authCfg.ClientID,
-				DeviceCodeEndpoint: authCfg.DeviceCodeEndpoint,
-				OauthTokenEndpoint: authCfg.OauthTokenEndpoint,
-			}
-			ansi.DisableColors = cli.noColor
-			prepareInteractivity(cmd)
-
-			// If the user is trying to login, no need to go
-			// through setup.
-			if cmd.Use == "login" && cmd.Parent().Use == "auth0" {
-				return nil
-			}
-
-			// We're tracking the login command in its Run method
-			// so we'll only add this defer if the command is not login
-			defer func() {
-				if cli.isLoggedIn() {
-					cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
-				}
-			}()
-
-			// If the user is trying to logout, session information
-			// isn't important as well.
-			if cmd.Use == "logout" && cmd.Parent().Use == "auth0" {
-				return nil
-			}
-
-			// Selecting tenants shouldn't really trigger a login.
-			if cmd.Use == "use" && cmd.Parent().Use == "tenants" {
-				return nil
-			}
-
-			// Getting the CLI completion script shouldn't trigger a login.
-			if cmd.Use == "completion" && cmd.Parent().Use == "auth0" {
-				return nil
-			}
-
-			// Getting help shouldn't trigger a login.
-			if cmd.CalledAs() == "help" && cmd.Parent().Use == "auth0" {
-				return nil
-			}
-
-			// config init shouldn't trigger a login.
-			if cmd.CalledAs() == "init" && cmd.Parent().Use == "config" {
-				return nil
-			}
-
-			// Initialize everything once. Later callers can then
-			// freely assume that config is fully primed and ready
-			// to go.
-			return cli.setup(cmd.Context())
-		},
-	}
+	rootCmd := buildRootCmd(cli)
 
 	rootCmd.SetUsageTemplate(namespaceUsageTemplate())
-	rootCmd.PersistentFlags().StringVar(&cli.tenant,
-		"tenant", cli.config.DefaultTenant, "Specific tenant to use.")
-
-	rootCmd.PersistentFlags().BoolVar(&cli.debug,
-		"debug", false, "Enable debug mode.")
-
-	rootCmd.PersistentFlags().StringVar(&cli.format,
-		"format", "", "Command output format. Options: json.")
-
-	rootCmd.PersistentFlags().BoolVar(&cli.force,
-		"force", false, "Skip confirmation.")
-
-	rootCmd.PersistentFlags().BoolVar(&cli.noInput,
-		"no-input", false, "Disable interactivity.")
-
-	rootCmd.PersistentFlags().BoolVar(&cli.noColor,
-		"no-color", false, "Disable colors.")
-	// order of the comamnds here matters
-	// so add new commands in a place that reflect its relevance or relation with other commands:
-	rootCmd.AddCommand(loginCmd(cli))
-	rootCmd.AddCommand(logoutCmd(cli))
-	rootCmd.AddCommand(configCmd(cli))
-	rootCmd.AddCommand(tenantsCmd(cli))
-	rootCmd.AddCommand(appsCmd(cli))
-	rootCmd.AddCommand(usersCmd(cli))
-	rootCmd.AddCommand(rulesCmd(cli))
-	rootCmd.AddCommand(actionsCmd(cli))
-	rootCmd.AddCommand(apisCmd(cli))
-	rootCmd.AddCommand(rolesCmd(cli))
-	rootCmd.AddCommand(brandingCmd(cli))
-	rootCmd.AddCommand(ipsCmd(cli))
-	rootCmd.AddCommand(quickstartsCmd(cli))
-	rootCmd.AddCommand(testCmd(cli))
-	rootCmd.AddCommand(logsCmd(cli))
-
-	// keep completion at the bottom:
-	rootCmd.AddCommand(completionCmd(cli))
+	addPersistentFlags(rootCmd, cli)
+	addSubcommands(rootCmd, cli)
 
 	// TODO(cyx): backport this later on using latest auth0/v5.
 	// rootCmd.AddCommand(actionsCmd(cli))
@@ -181,6 +82,123 @@ func Execute() {
 	// defers are executed in LIFO order
 	defer cancel()
 	defer cli.tracker.Wait(timeoutCtx) // No event should be tracked after this has run, or it will panic e.g. in earlier deferred functions
+}
+
+func buildRootCmd(cli *cli) *cobra.Command {
+	rootCmd := &cobra.Command{
+		Use:           "auth0",
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		Short:         rootShort,
+		Long:          rootShort + "\n" + getLogin(cli),
+		Version:       buildinfo.GetVersionWithCommit(),
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if err := envdecode.StrictDecode(&authCfg); err != nil {
+				return fmt.Errorf("could not decode env: %w", err)
+			}
+
+			cli.authenticator = &auth.Authenticator{
+				Audience:           authCfg.Audience,
+				ClientID:           authCfg.ClientID,
+				DeviceCodeEndpoint: authCfg.DeviceCodeEndpoint,
+				OauthTokenEndpoint: authCfg.OauthTokenEndpoint,
+			}
+			ansi.DisableColors = cli.noColor
+			prepareInteractivity(cmd)
+
+			// If the user is trying to login, no need to go
+			// through setup.
+			if cmd.Use == "login" && cmd.Parent().Use == "auth0" {
+				return nil
+			}
+
+			// We're tracking the login command in its Run method
+			// so we'll only add this defer if the command is not login
+			defer func() {
+				if cli.tracker != nil && cli.isLoggedIn() {
+					cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
+				}
+			}()
+
+			// If the user is trying to logout, session information
+			// isn't important as well.
+			if cmd.Use == "logout" && cmd.Parent().Use == "auth0" {
+				return nil
+			}
+
+			// Selecting tenants shouldn't really trigger a login.
+			if cmd.Use == "use" && cmd.Parent().Use == "tenants" {
+				return nil
+			}
+
+			// Getting the CLI completion script shouldn't trigger a login.
+			if cmd.Use == "completion" && cmd.Parent().Use == "auth0" {
+				return nil
+			}
+
+			// Getting help shouldn't trigger a login.
+			if cmd.CalledAs() == "help" && cmd.Parent().Use == "auth0" {
+				return nil
+			}
+
+			// config init shouldn't trigger a login.
+			if cmd.CalledAs() == "init" && cmd.Parent().Use == "config" {
+				return nil
+			}
+
+			// Initialize everything once. Later callers can then
+			// freely assume that config is fully primed and ready
+			// to go.
+			return cli.setup(cmd.Context())
+		},
+	}
+
+	return rootCmd
+}
+
+func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
+	rootCmd.PersistentFlags().StringVar(&cli.tenant,
+		"tenant", cli.config.DefaultTenant, "Specific tenant to use.")
+
+	rootCmd.PersistentFlags().BoolVar(&cli.debug,
+		"debug", false, "Enable debug mode.")
+
+	rootCmd.PersistentFlags().StringVar(&cli.format,
+		"format", "", "Command output format. Options: json.")
+
+	rootCmd.PersistentFlags().BoolVar(&cli.force,
+		"force", false, "Skip confirmation.")
+
+	rootCmd.PersistentFlags().BoolVar(&cli.noInput,
+		"no-input", false, "Disable interactivity.")
+
+	rootCmd.PersistentFlags().BoolVar(&cli.noColor,
+		"no-color", false, "Disable colors.")
+
+}
+
+func addSubcommands(rootCmd *cobra.Command, cli *cli) {
+	// order of the comamnds here matters
+	// so add new commands in a place that reflect its relevance or relation with other commands:
+	rootCmd.AddCommand(loginCmd(cli))
+	rootCmd.AddCommand(logoutCmd(cli))
+	rootCmd.AddCommand(configCmd(cli))
+	rootCmd.AddCommand(tenantsCmd(cli))
+	rootCmd.AddCommand(appsCmd(cli))
+	rootCmd.AddCommand(usersCmd(cli))
+	rootCmd.AddCommand(rulesCmd(cli))
+	rootCmd.AddCommand(actionsCmd(cli))
+	rootCmd.AddCommand(apisCmd(cli))
+	rootCmd.AddCommand(rolesCmd(cli))
+	rootCmd.AddCommand(brandingCmd(cli))
+	rootCmd.AddCommand(ipsCmd(cli))
+	rootCmd.AddCommand(quickstartsCmd(cli))
+	rootCmd.AddCommand(testCmd(cli))
+	rootCmd.AddCommand(logsCmd(cli))
+
+	// keep completion at the bottom:
+	rootCmd.AddCommand(completionCmd(cli))
+
 }
 
 func contextWithCancel() context.Context {

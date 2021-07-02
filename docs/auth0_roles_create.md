@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 roles create
+
+Create a new role
+
+### Synopsis
 
 Create a new role.
 
@@ -14,7 +21,7 @@ auth0 roles create --name myrole
 auth0 roles create -n myrole --description "awesome role"
 ```
 
-### Flags
+### Options
 
 ```
   -d, --description string   Description of the role.
@@ -22,7 +29,7 @@ auth0 roles create -n myrole --description "awesome role"
   -n, --name string          Name of the role.
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -36,3 +43,4 @@ auth0 roles create -n myrole --description "awesome role"
 ### SEE ALSO
 
 * [auth0 roles](auth0_roles.md)	 - Manage resources for roles
+
