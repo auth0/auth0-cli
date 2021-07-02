@@ -222,7 +222,7 @@ Failed Login	hello	7 minutes ago	N/A	my awesome app
 
 ## Customization
 
-The authenticator the CLI uses defaults to the default Auth0 cloud offering of `auth0.auth0.com`. This can be customized for personalized cloud offerings by setting the following env variables:
+The authenticator of the CLI defaults to the default Auth0 cloud `auth0.auth0.com`. This can be customized for personalized cloud offerings by setting the following env variables:
 
 ```
 	AUTH0_AUDIENCE - The audience of the Auth0 Management API (System API) to use.
