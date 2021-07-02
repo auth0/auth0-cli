@@ -11,6 +11,11 @@ import (
 	"gopkg.in/auth0.v5/management"
 )
 
+const (
+	apiOrganizationColorPrimary        = "primary"
+	apiOrganizationColorPageBackground = "page_background"
+)
+
 var (
 	organizationID = Argument{
 		Name: "Id",
@@ -40,11 +45,18 @@ var (
 		Help:      "URL of the logo to be displayed on the login page.",
 	}
 
-	organizationColor = Flag{
-		Name:      "Color",
-		LongForm:  "color",
-		ShortForm: "c",
-		Help:      "Color used to customize the login pages.",
+	organizationAccent = Flag{
+		Name:      "Accent Color",
+		LongForm:  "accent",
+		ShortForm: "a",
+		Help:      "Accent color used to customize the login pages.",
+	}
+
+	organizationBackground = Flag{
+		Name:      "Background Color",
+		LongForm:  "background",
+		ShortForm: "b",
+		Help:      "Background color used to customize the login pages.",
 	}
 
 	organizationMetadata = Flag{
@@ -145,11 +157,12 @@ auth0 orgs show <id>`,
 
 func createOrganizationCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Name        string
-		DisplayName string
-		LogoURL     string
-		Colors      map[string]string
-		Metadata    map[string]string
+		Name            string
+		DisplayName     string
+		LogoURL         string
+		AccentColor    string
+		BackgroundColor string
+		Metadata        map[string]string
 	}
 
 	cmd := &cobra.Command{
@@ -160,8 +173,8 @@ func createOrganizationCmd(cli *cli) *cobra.Command {
 		Example: `auth0 orgs create 
 auth0 orgs create --name myorganization
 auth0 orgs create --n myorganization --display "My Organization"
-auth0 orgs create --n myorganization -f "My Organization" -l "https://example.com/logo.png" -c "primary=#000000"
-auth0 orgs create --n myorganization -f "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
+auth0 orgs create --n myorganization -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
+auth0 orgs create --n myorganization -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := organizationName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -171,31 +184,44 @@ auth0 orgs create --n myorganization -f "My Organization" -m "KEY=value" -m "OTH
 				return err
 			}
 
-			organization := &management.Organization{
+			o := &management.Organization{
 				Name:        &inputs.Name,
 				DisplayName: &inputs.DisplayName,
 				Metadata:    apiOrganizationMetadataFor(inputs.Metadata),
 			}
 
-			if inputs.LogoURL != "" || len(inputs.Colors) > 0 {
-				organization.Branding = &management.OrganizationBranding{}
+			isLogoURLSet := len(inputs.LogoURL) > 0
+			isAccentColorSet := len(inputs.AccentColor) > 0
+			isBackgroundColorSet := len(inputs.BackgroundColor) > 0
+			isAnyColorSet := isAccentColorSet || isBackgroundColorSet
 
-				if inputs.LogoURL != "" {
-					organization.Branding.LogoUrl = &inputs.LogoURL
+			if isLogoURLSet || isAnyColorSet {
+				o.Branding = &management.OrganizationBranding{}
+
+				if isLogoURLSet {
+					o.Branding.LogoUrl = &inputs.LogoURL
 				}
 
-				if len(inputs.Colors) > 0 {
-					organization.Branding.Colors = inputs.Colors
+				if isAnyColorSet {
+					o.Branding.Colors = map[string]string{}
+
+					if isAccentColorSet {
+						o.Branding.Colors[apiOrganizationColorPrimary] = inputs.AccentColor
+					}
+					
+					if isBackgroundColorSet {
+						o.Branding.Colors[apiOrganizationColorPageBackground] = inputs.BackgroundColor
+					}
 				}
 			}
 
 			if err := ansi.Waiting(func() error {
-				return cli.api.Organization.Create(organization)
+				return cli.api.Organization.Create(o)
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred while attempting to create an organization with name '%s': %w", inputs.Name, err)
 			}
 
-			cli.renderer.OrganizationCreate(organization)
+			cli.renderer.OrganizationCreate(o)
 			return nil
 		},
 	}
@@ -203,7 +229,8 @@ auth0 orgs create --n myorganization -f "My Organization" -m "KEY=value" -m "OTH
 	organizationName.RegisterString(cmd, &inputs.Name, "")
 	organizationDisplay.RegisterString(cmd, &inputs.DisplayName, "")
 	organizationLogo.RegisterString(cmd, &inputs.LogoURL, "")
-	organizationColor.RegisterStringMap(cmd, &inputs.Colors, nil)
+	organizationAccent.RegisterString(cmd, &inputs.AccentColor, "")
+	organizationBackground.RegisterString(cmd, &inputs.BackgroundColor, "")
 	organizationMetadata.RegisterStringMap(cmd, &inputs.Metadata, nil)
 
 	return cmd
@@ -211,12 +238,12 @@ auth0 orgs create --n myorganization -f "My Organization" -m "KEY=value" -m "OTH
 
 func updateOrganizationCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID          string
-		Name        string
-		DisplayName string
-		LogoURL     string
-		Colors      map[string]string
-		Metadata    map[string]string
+		ID              string
+		DisplayName     string
+		LogoURL         string
+		AccentColor    string
+		BackgroundColor string
+		Metadata        map[string]string
 	}
 
 	cmd := &cobra.Command{
@@ -225,10 +252,9 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 		Short: "Update an organization",
 		Long:  "Update an organization.",
 		Example: `auth0 orgs update <id> 
-auth0 orgs update <id> --name myorganization
-auth0 orgs update <id> --n myorganization --display "My Organization"
-auth0 orgs update <id> --n myorganization -f "My Organization" -l "https://example.com/logo.png" -c "primary=#000000"
-auth0 orgs update <id> --n myorganization -f "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
+auth0 orgs update <id> --display "My Organization"
+auth0 orgs update <id> -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
+auth0 orgs update <id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -249,16 +275,8 @@ auth0 orgs update <id> --n myorganization -f "My Organization" -m "KEY=value" -m
 				return fmt.Errorf("Failed to fetch organization with ID: %s %v", inputs.ID, err)
 			}
 
-			if err := organizationName.AskU(cmd, &inputs.Name, current.Name); err != nil {
-				return err
-			}
-
 			if err := organizationDisplay.AskU(cmd, &inputs.DisplayName, current.DisplayName); err != nil {
 				return err
-			}
-
-			if inputs.Name == "" {
-				inputs.Name = current.GetName()
 			}
 
 			if inputs.DisplayName == "" {
@@ -268,51 +286,65 @@ auth0 orgs update <id> --n myorganization -f "My Organization" -m "KEY=value" -m
 			// Prepare organization payload for update. This will also be
 			// re-hydrated by the SDK, which we'll use below during
 			// display.
-			organization := &management.Organization{
-				Name:        &inputs.Name,
+			o := &management.Organization{
+				ID:          current.ID,
 				DisplayName: &inputs.DisplayName,
-				Metadata:    apiOrganizationMetadataFor(inputs.Metadata),
 			}
 
-			if inputs.LogoURL != "" || len(inputs.Colors) > 0 {
-				if organization.GetBranding() == nil {
-					organization.Branding = &management.OrganizationBranding{}
-				}
+			isLogoURLSet := len(inputs.LogoURL) > 0
+			isAccentColorSet := len(inputs.AccentColor) > 0
+			isBackgroundColorSet := len(inputs.BackgroundColor) > 0
+			currentHasBranding := current.Branding != nil
+			currentHasColors := currentHasBranding && current.Branding.Colors != nil
+			needToAddColors := isAccentColorSet || isBackgroundColorSet || currentHasColors
 
-				if len(inputs.LogoURL) == 0 {
-					organization.Branding.LogoUrl = current.GetBranding().LogoUrl
-				} else {
-					organization.Branding.LogoUrl = &inputs.LogoURL
-				}
+			if isLogoURLSet || needToAddColors {
+				o.Branding = &management.OrganizationBranding{}
 
-				if len(inputs.Colors) == 0 {
-					organization.Branding.Colors = current.GetBranding().Colors
-				} else {
-					organization.Branding.Colors = inputs.Colors
+				if isLogoURLSet {
+					o.Branding.LogoUrl = &inputs.LogoURL
+				} else if currentHasBranding {
+					o.Branding.LogoUrl = current.Branding.LogoUrl
+				}
+	
+				if needToAddColors {
+					o.Branding.Colors = map[string]string{}
+
+					if isAccentColorSet {
+						o.Branding.Colors[apiOrganizationColorPrimary] = inputs.AccentColor
+					} else if currentHasColors && len(current.Branding.Colors[apiOrganizationColorPrimary]) > 0 {
+						o.Branding.Colors[apiOrganizationColorPrimary] = current.Branding.Colors[apiOrganizationColorPrimary]
+					}
+
+					if isBackgroundColorSet {
+						o.Branding.Colors[apiOrganizationColorPageBackground] = inputs.BackgroundColor
+					} else if currentHasColors && len(current.Branding.Colors[apiOrganizationColorPageBackground]) > 0 {
+						o.Branding.Colors[apiOrganizationColorPageBackground] = current.Branding.Colors[apiOrganizationColorPageBackground]
+					}
 				}
 			}
 
 			if len(inputs.Metadata) == 0 {
-				organization.Metadata = current.Metadata
+				o.Metadata = current.Metadata
 			} else {
-				organization.Metadata = apiOrganizationMetadataFor(inputs.Metadata)
+				o.Metadata = apiOrganizationMetadataFor(inputs.Metadata)
 			}
 
 			if err = ansi.Waiting(func() error {
-				return cli.api.Organization.Update(organization)
+				return cli.api.Organization.Update(o)
 			}); err != nil {
 				return err
 			}
 
-			cli.renderer.OrganizationUpdate(current)
+			cli.renderer.OrganizationUpdate(o)
 			return nil
 		},
 	}
 
-	organizationName.RegisterStringU(cmd, &inputs.Name, "")
 	organizationDisplay.RegisterStringU(cmd, &inputs.DisplayName, "")
 	organizationLogo.RegisterStringU(cmd, &inputs.LogoURL, "")
-	organizationColor.RegisterStringMapU(cmd, &inputs.Colors, nil)
+	organizationAccent.RegisterStringU(cmd, &inputs.AccentColor, "")
+	organizationBackground.RegisterStringU(cmd, &inputs.BackgroundColor, "")
 	organizationMetadata.RegisterStringMapU(cmd, &inputs.Metadata, nil)
 
 	return cmd
