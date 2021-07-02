@@ -49,7 +49,7 @@ brews:
       name: auth0
       email: support@auth0.com
     homepage: https://auth0.github.io/auth0-cli
-    description: Auth0 command-line tool to supercharge your developer workflow.
+    description: Auth0 command-line tool to supercharge your developer workflow
     license: MIT
     skip_upload: auto
     install: |
@@ -69,7 +69,7 @@ scoop:
       email: support@auth0.com
     commit_msg_template: "Scoop manifest update for {{ .ProjectName }} version {{ .Tag }}"
     homepage: https://auth0.github.io/auth0-cli
-    description: Auth0 command-line tool to supercharge your developer workflow.
+    description: Auth0 command-line tool to supercharge your developer workflow
     license: MIT
     skip_upload: auto
     post_install: ["Write-Host 'Thanks for installing the Auth0 CLI'"]
