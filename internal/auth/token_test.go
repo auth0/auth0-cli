@@ -46,7 +46,7 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 		client := &http.Client{Transport: transport}
 
 		tr := &TokenRetriever{
-			Authenticator: &Authenticator{"https://*.auth0.com/api/v2/", "2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT", "https://auth0.auth0.com/oauth/device/code", "https://auth0.auth0.com/oauth/token"},
+			Authenticator: &Authenticator{"https://test.com/api/v2/", "client-id", "https://test.com/oauth/device/code", "https://test.com/token"},
 			Secrets:       secretsMock,
 			Client:        client,
 		}
@@ -73,13 +73,13 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if want, got := "https://auth0.auth0.com/oauth/token", req.URL.String(); want != got {
+		if want, got := "https://test.com/token", req.URL.String(); want != got {
 			t.Fatalf("wanted request URL: %v, got: %v", want, got)
 		}
 		if want, got := "refresh_token", req.Form["grant_type"][0]; want != got {
 			t.Fatalf("wanted grant_type: %v, got: %v", want, got)
 		}
-		if want, got := "2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT", req.Form["client_id"][0]; want != got {
+		if want, got := "client-id", req.Form["client_id"][0]; want != got {
 			t.Fatalf("wanted grant_type: %v, got: %v", want, got)
 		}
 		if want, got := "refresh-token-here", req.Form["refresh_token"][0]; want != got {
