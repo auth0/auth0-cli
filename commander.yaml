@@ -26,6 +26,9 @@ tests:
   auth0 actions list:
     exit-code: 0
 
+  auth0 orgs list:
+    exit-code: 0
+
   auth0 branding domains list:
     exit-code: 0
 
@@ -34,7 +37,7 @@ tests:
 
   auth0 completion bash:
     exit-code: 0
-  
+
   # Test 'apps create' --type flag
   apps create type native and check data:
     command: auth0 apps create --name integration-test-app-nativeapp1 --type native --description NativeApp1 --format json
@@ -106,7 +109,7 @@ tests:
       json:
         token_endpoint_auth_method: client_secret_basic
     exit-code: 0
-  
+
   # Test 'apps create' --callbacks flag
   apps create type m2m callbacks:
     command: auth0 apps create --name integration-test-app-m2mapp3 --type m2m --description M2mApp3 --callbacks https://example.com
@@ -121,7 +124,7 @@ tests:
       json:
         callbacks: "[https://example.com https://google.com]"
     exit-code: 0
-  
+
   # Test 'apps create' --grants flag
   apps create type regular grants:
     command: auth0 apps create --name integration-test-app-regapp5 --type regular --description RegApp4 --grants credentials,password
@@ -209,7 +212,7 @@ tests:
       json:
         callbacks: "[https://example.com]"
     exit-code: 0
-  
+
   apps update description:
     command: auth0 apps update $(cat ./integration/identifiers/app-id) --description "A better description" --format json
     stdout:
@@ -347,10 +350,10 @@ tests:
     command: auth0 apis show $(cat ./integration/identifiers/api-id) # depends on "apis create test app" test
     stdout:
       contains:
-        - NAME                  integration-test-api-newapi         
-        - IDENTIFIER            http://integration-test-api-newapi  
-        - SCOPES                read:todos                          
-        - TOKEN LIFETIME        86400                               
+        - NAME                  integration-test-api-newapi
+        - IDENTIFIER            http://integration-test-api-newapi
+        - SCOPES                read:todos
+        - TOKEN LIFETIME        86400
         - ALLOW OFFLINE ACCESS  ✗
     exit-code: 0
 
@@ -400,7 +403,7 @@ tests:
     exit-code: 0
     stdout:
       json:
-        Email:      "testuser@example.com"
+        Email: "testuser@example.com"
         Connection: "Username-Password-Authentication"
 
   users create and check output:
@@ -420,7 +423,7 @@ tests:
     command: auth0 users show $(cat ./integration/identifiers/user-id) --format json
     stdout:
       json:
-        Email:      "newuser@example.com"
+        Email: "newuser@example.com"
         Connection: "Username-Password-Authentication"
     exit-code: 0
 
@@ -453,8 +456,8 @@ tests:
     exit-code: 0
     stdout:
       json:
-        Name:         integration-test-role-new1
-        Description:  testRole
+        Name: integration-test-role-new1
+        Description: testRole
 
   roles create and check output:
     command: auth0 roles create --name integration-test-role-new2 --description testRole2 --no-input
@@ -473,7 +476,7 @@ tests:
     command: auth0 roles show $(cat ./integration/identifiers/role-id) --format json
     stdout:
       json:
-        Name:        integration-test-role-newRole
+        Name: integration-test-role-newRole
         Description: integration-test-role
     exit-code: 0
 
