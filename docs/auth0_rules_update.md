@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 rules update
+
+Update a rule
+
+### Synopsis
 
 Update a rule.
 
@@ -9,12 +16,12 @@ auth0 rules update [flags]
 ### Examples
 
 ```
-auth0 rules update <rule-id> 
-auth0 rules update <rule-id> --name "My Updated Rule"
-auth0 rules update <rule-id> -n "My Updated Rule" --enabled=false
+auth0 rules update <id> 
+auth0 rules update <id> --name "My Updated Rule"
+auth0 rules update <id> -n "My Updated Rule" --enabled=false
 ```
 
-### Flags
+### Options
 
 ```
   -e, --enabled       Enable (or disable) a rule. (default true)
@@ -22,7 +29,7 @@ auth0 rules update <rule-id> -n "My Updated Rule" --enabled=false
   -n, --name string   Name of the rule.
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -36,3 +43,4 @@ auth0 rules update <rule-id> -n "My Updated Rule" --enabled=false
 ### SEE ALSO
 
 * [auth0 rules](auth0_rules.md)	 - Manage resources for rules
+

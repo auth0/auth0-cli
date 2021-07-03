@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 users create
+
+Create a new user
+
+### Synopsis
 
 Create a new user.
 
@@ -15,7 +22,7 @@ auth0 users create -n "John Doe" --email john@example.com
 auth0 users create -n "John Doe" --e john@example.com --connection "Username-Password-Authentication"
 ```
 
-### Flags
+### Options
 
 ```
   -c, --connection string   Name of the connection this user should be created in.
@@ -26,7 +33,7 @@ auth0 users create -n "John Doe" --e john@example.com --connection "Username-Pas
   -u, --username string     The user's username. Only valid if the connection requires a username.
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -40,3 +47,4 @@ auth0 users create -n "John Doe" --e john@example.com --connection "Username-Pas
 ### SEE ALSO
 
 * [auth0 users](auth0_users.md)	 - Manage resources for users
+

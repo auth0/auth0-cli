@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 apps create
+
+Create a new application
+
+### Synopsis
 
 Create a new application.
 
@@ -15,7 +22,7 @@ auth0 apps create -n myapp --type [native|spa|regular|m2m]
 auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <description>
 ```
 
-### Flags
+### Options
 
 ```
   -a, --auth-method string    Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).
@@ -35,7 +42,7 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <descriptio
   -w, --web-origins strings   Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode.
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -49,3 +56,4 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <descriptio
 ### SEE ALSO
 
 * [auth0 apps](auth0_apps.md)	 - Manage resources for applications
+

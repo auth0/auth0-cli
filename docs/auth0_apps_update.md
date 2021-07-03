@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 apps update
+
+Update an application
+
+### Synopsis
 
 Update an application.
 
@@ -14,7 +21,7 @@ auth0 apps update <id> --name myapp
 auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]
 ```
 
-### Flags
+### Options
 
 ```
   -a, --auth-method string    Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).
@@ -34,7 +41,7 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]
   -w, --web-origins strings   Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode.
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -48,3 +55,4 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]
 ### SEE ALSO
 
 * [auth0 apps](auth0_apps.md)	 - Manage resources for applications
+

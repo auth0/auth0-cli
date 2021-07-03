@@ -15,6 +15,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const rootShort = "Supercharge your development workflow."
+
 // Execute is the primary entrypoint of the CLI app.
 func Execute() {
 	// cfg contains tenant related information, e.g. `travel0-dev`,
@@ -27,12 +29,58 @@ func Execute() {
 		tracker:  analytics.NewTracker(),
 	}
 
+	rootCmd := buildRootCmd(cli)
+
+	rootCmd.SetUsageTemplate(namespaceUsageTemplate())
+	addPersistentFlags(rootCmd, cli)
+	addSubcommands(rootCmd, cli)
+
+	// TODO(cyx): backport this later on using latest auth0/v5.
+	// rootCmd.AddCommand(actionsCmd(cli))
+	// rootCmd.AddCommand(triggersCmd(cli))
+
+	defer func() {
+		if v := recover(); v != nil {
+			err := fmt.Errorf("panic: %v", v)
+
+			// If we're in development mode, we should throw the
+			// panic for so we have less surprises. For
+			// non-developers, we'll swallow the panics.
+			if instrumentation.ReportException(err) {
+				fmt.Println(panicMessage)
+			} else {
+				panic(v)
+			}
+		}
+	}()
+
+	// platform specific terminal initialization:
+	// this should run for all commands,
+	// for most of the architectures there's no requirements:
+	ansi.InitConsole()
+
+	cancelCtx := contextWithCancel()
+	if err := rootCmd.ExecuteContext(cancelCtx); err != nil {
+		cli.renderer.Heading("error")
+		cli.renderer.Errorf(err.Error())
+
+		instrumentation.ReportException(err)
+		os.Exit(1)
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(cancelCtx, 3*time.Second)
+	// defers are executed in LIFO order
+	defer cancel()
+	defer cli.tracker.Wait(timeoutCtx) // No event should be tracked after this has run, or it will panic e.g. in earlier deferred functions
+}
+
+func buildRootCmd(cli *cli) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:           "auth0",
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		Short:         "Supercharge your development workflow.",
-		Long:          "Supercharge your development workflow.\n" + getLogin(cli),
+		Short:         rootShort,
+		Long:          rootShort + "\n" + getLogin(cli),
 		Version:       buildinfo.GetVersionWithCommit(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			ansi.DisableColors = cli.noColor
@@ -47,7 +95,7 @@ func Execute() {
 			// We're tracking the login command in its Run method
 			// so we'll only add this defer if the command is not login
 			defer func() {
-				if cli.isLoggedIn() {
+				if cli.tracker != nil && cli.isLoggedIn() {
 					cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
 				}
 			}()
@@ -85,7 +133,10 @@ func Execute() {
 		},
 	}
 
-	rootCmd.SetUsageTemplate(namespaceUsageTemplate())
+	return rootCmd
+}
+
+func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.PersistentFlags().StringVar(&cli.tenant,
 		"tenant", cli.config.DefaultTenant, "Specific tenant to use.")
 
@@ -103,6 +154,10 @@ func Execute() {
 
 	rootCmd.PersistentFlags().BoolVar(&cli.noColor,
 		"no-color", false, "Disable colors.")
+
+}
+
+func addSubcommands(rootCmd *cobra.Command, cli *cli) {
 	// order of the comamnds here matters
 	// so add new commands in a place that reflect its relevance or relation with other commands:
 	rootCmd.AddCommand(loginCmd(cli))
@@ -125,43 +180,6 @@ func Execute() {
 	// keep completion at the bottom:
 	rootCmd.AddCommand(completionCmd(cli))
 
-	// TODO(cyx): backport this later on using latest auth0/v5.
-	// rootCmd.AddCommand(actionsCmd(cli))
-	// rootCmd.AddCommand(triggersCmd(cli))
-
-	defer func() {
-		if v := recover(); v != nil {
-			err := fmt.Errorf("panic: %v", v)
-
-			// If we're in development mode, we should throw the
-			// panic for so we have less surprises. For
-			// non-developers, we'll swallow the panics.
-			if instrumentation.ReportException(err) {
-				fmt.Println(panicMessage)
-			} else {
-				panic(v)
-			}
-		}
-	}()
-
-	// platform specific terminal initialization:
-	// this should run for all commands,
-	// for most of the architectures there's no requirements:
-	ansi.InitConsole()
-
-	cancelCtx :=  contextWithCancel()
-	if err := rootCmd.ExecuteContext(cancelCtx); err != nil {
-		cli.renderer.Heading("error")
-		cli.renderer.Errorf(err.Error())
-
-		instrumentation.ReportException(err)
-		os.Exit(1)
-	}
-
-	timeoutCtx, cancel := context.WithTimeout(cancelCtx, 3*time.Second)
-	// defers are executed in LIFO order
-	defer cancel()
-	defer cli.tracker.Wait(timeoutCtx) // No event should be tracked after this has run, or it will panic e.g. in earlier deferred functions
 }
 
 func contextWithCancel() context.Context {

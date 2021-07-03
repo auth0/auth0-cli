@@ -1,14 +1,21 @@
+---
+layout: default
+---
 ## auth0 logs
+
+View tenant logs
+
+### Synopsis
 
 View tenant logs.
 
-### Flags
+### Options
 
 ```
   -h, --help   help for logs
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -21,7 +28,8 @@ View tenant logs.
 
 ### SEE ALSO
 
-* [auth0](auth0.md)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
 * [auth0 logs list](auth0_logs_list.md)	 - Show the application logs
 * [auth0 logs streams](auth0_logs_streams.md)	 - Manage resources for log streams
 * [auth0 logs tail](auth0_logs_tail.md)	 - Tail the tenant logs
+

@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 logs streams list
+
+List all log streams
+
+### Synopsis
 
 List your existing log streams. To create one try:
 auth0 logs streams create
@@ -14,13 +21,13 @@ auth0 logs streams list
 auth0 logs streams ls
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for list
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -34,3 +41,4 @@ auth0 logs streams ls
 ### SEE ALSO
 
 * [auth0 logs streams](auth0_logs_streams.md)	 - Manage resources for log streams
+

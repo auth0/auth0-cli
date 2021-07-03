@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 logs streams delete
+
+Delete a log stream
+
+### Synopsis
 
 Delete a log stream.
 
@@ -13,13 +20,13 @@ auth0 logs streams delete
 auth0 logs streams delete <id>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for delete
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -33,3 +40,4 @@ auth0 logs streams delete <id>
 ### SEE ALSO
 
 * [auth0 logs streams](auth0_logs_streams.md)	 - Manage resources for log streams
+

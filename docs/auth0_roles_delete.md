@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 roles delete
+
+Delete a role
+
+### Synopsis
 
 Delete a role.
 
@@ -13,13 +20,13 @@ auth0 roles delete
 auth0 roles delete <id>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for delete
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -33,3 +40,4 @@ auth0 roles delete <id>
 ### SEE ALSO
 
 * [auth0 roles](auth0_roles.md)	 - Manage resources for roles
+

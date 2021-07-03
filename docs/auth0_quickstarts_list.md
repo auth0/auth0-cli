@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 quickstarts list
+
+List the available Quickstarts
+
+### Synopsis
 
 List the available Quickstarts.
 
@@ -15,13 +22,13 @@ auth0 qs list
 auth0 qs ls
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for list
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -35,3 +42,4 @@ auth0 qs ls
 ### SEE ALSO
 
 * [auth0 quickstarts](auth0_quickstarts.md)	 - Quickstart support for getting bootstrapped
+

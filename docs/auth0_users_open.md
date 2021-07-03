@@ -1,6 +1,13 @@
+---
+layout: default
+---
 ## auth0 users open
 
-Open user details page in Auth0 Manage.
+Open user details page in the Auth0 Dashboard
+
+### Synopsis
+
+Open user details page in the Auth0 Dashboard.
 
 ```
 auth0 users open [flags]
@@ -13,13 +20,13 @@ auth0 users open <id>
 auth0 users open "auth0|xxxxxxxxxx"
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for open
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -33,3 +40,4 @@ auth0 users open "auth0|xxxxxxxxxx"
 ### SEE ALSO
 
 * [auth0 users](auth0_users.md)	 - Manage resources for users
+

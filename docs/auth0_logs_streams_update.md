@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 logs streams update
+
+Update a log stream
+
+### Synopsis
 
 Update a log stream.
 
@@ -17,7 +24,7 @@ auth0 logs streams update <id> -n mydatadog -t datadog --datadog-key 9999999 --d
 auth0 logs streams update <id> -n myeventbridge -t eventbridge
 ```
 
-### Flags
+### Options
 
 ```
       --datadog-id string      The region in which datadog dashboard is created.
@@ -37,7 +44,7 @@ auth0 logs streams update <id> -n myeventbridge -t eventbridge
   -t, --type string            Type of the log stream. Possible values: http, eventbridge, eventgrid, datadog, splunk, sumo.
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -51,3 +58,4 @@ auth0 logs streams update <id> -n myeventbridge -t eventbridge
 ### SEE ALSO
 
 * [auth0 logs streams](auth0_logs_streams.md)	 - Manage resources for log streams
+

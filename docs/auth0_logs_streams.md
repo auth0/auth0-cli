@@ -1,14 +1,21 @@
+---
+layout: default
+---
 ## auth0 logs streams
+
+Manage resources for log streams
+
+### Synopsis
 
 manage resources for log streams.
 
-### Flags
+### Options
 
 ```
   -h, --help   help for streams
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -25,6 +32,7 @@ manage resources for log streams.
 * [auth0 logs streams create](auth0_logs_streams_create.md)	 - Create a new log stream
 * [auth0 logs streams delete](auth0_logs_streams_delete.md)	 - Delete a log stream
 * [auth0 logs streams list](auth0_logs_streams_list.md)	 - List all log streams
-* [auth0 logs streams open](auth0_logs_streams_open.md)	 - Open log stream settings page in Auth0 Manage
+* [auth0 logs streams open](auth0_logs_streams_open.md)	 - Open log stream settings page in the Auth0 Dashboard
 * [auth0 logs streams show](auth0_logs_streams_show.md)	 - Show a log stream by Id
 * [auth0 logs streams update](auth0_logs_streams_update.md)	 - Update a log stream
+

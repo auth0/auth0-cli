@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 rules delete
+
+Delete a rule
+
+### Synopsis
 
 Delete a rule.
 
@@ -10,16 +17,16 @@ auth0 rules delete [flags]
 
 ```
 auth0 rules delete 
-auth0 rules delete <rule-id>
+auth0 rules delete <id>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for delete
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -33,3 +40,4 @@ auth0 rules delete <rule-id>
 ### SEE ALSO
 
 * [auth0 rules](auth0_rules.md)	 - Manage resources for rules
+

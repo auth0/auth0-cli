@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 completion
+
+Setup autocomplete features for this CLI on your terminal
+
+### Synopsis
 
 completion [bash|zsh|fish|powershell]
 
@@ -46,13 +53,13 @@ PS> auth0 completion powershell > auth0.ps1
 auth0 completion
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for completion
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -65,4 +72,5 @@ auth0 completion
 
 ### SEE ALSO
 
-* [auth0](auth0.md)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
+

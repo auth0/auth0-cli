@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 apps delete
+
+Delete an application
+
+### Synopsis
 
 Delete an application.
 
@@ -13,13 +20,13 @@ auth0 apps delete
 auth0 apps delete <id>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for delete
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -33,3 +40,4 @@ auth0 apps delete <id>
 ### SEE ALSO
 
 * [auth0 apps](auth0_apps.md)	 - Manage resources for applications
+
