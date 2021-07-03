@@ -1,6 +1,13 @@
+---
+layout: default
+---
 ## auth0 logs streams open
 
-Open log stream settings page in Auth0 Manage.
+Open log stream settings page in the Auth0 Dashboard
+
+### Synopsis
+
+Open log stream settings page in the Auth0 Dashboard.
 
 ```
 auth0 logs streams open [flags]
@@ -12,13 +19,13 @@ auth0 logs streams open [flags]
 auth0 logs streams open <id>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for open
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -32,3 +39,4 @@ auth0 logs streams open <id>
 ### SEE ALSO
 
 * [auth0 logs streams](auth0_logs_streams.md)	 - Manage resources for log streams
+

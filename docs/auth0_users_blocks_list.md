@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 users blocks list
+
+List brute-force protection blocks for a given user
+
+### Synopsis
 
 List brute-force protection blocks for a given user.
 
@@ -12,13 +19,13 @@ auth0 users blocks list [flags]
 auth0 users blocks list <user-id>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for list
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -32,3 +39,4 @@ auth0 users blocks list <user-id>
 ### SEE ALSO
 
 * [auth0 users blocks](auth0_users_blocks.md)	 - Manage brute-force protection user blocks
+

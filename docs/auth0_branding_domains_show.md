@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 branding domains show
+
+Show a custom domain
+
+### Synopsis
 
 Show a custom domain.
 
@@ -13,13 +20,13 @@ auth0 branding domains show
 auth0 branding domains show <id>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for show
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -33,3 +40,4 @@ auth0 branding domains show <id>
 ### SEE ALSO
 
 * [auth0 branding domains](auth0_branding_domains.md)	 - Manage custom domains
+

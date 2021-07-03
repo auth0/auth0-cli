@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 apis create
+
+Create a new API
+
+### Synopsis
 
 Create a new API.
 
@@ -16,7 +23,7 @@ auth0 apis create -n myapi --token-expiration 6100
 auth0 apis create -n myapi -e 6100 --offline-access=true
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help                 help for create
@@ -27,7 +34,7 @@ auth0 apis create -n myapi -e 6100 --offline-access=true
   -l, --token-lifetime int   The amount of time in seconds that the token will be valid after being issued. Default value is 86400 seconds (1 day).
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -41,3 +48,4 @@ auth0 apis create -n myapi -e 6100 --offline-access=true
 ### SEE ALSO
 
 * [auth0 apis](auth0_apis.md)	 - Manage resources for APIs
+

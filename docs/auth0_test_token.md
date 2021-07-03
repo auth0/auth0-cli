@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 test token
+
+Fetch a token for the given application and API
+
+### Synopsis
 
 Fetch an access token for the given application.
 If --client-id is not provided, the default client "CLI Login Testing" will be used (and created if not exists).
@@ -15,7 +22,7 @@ auth0 test token
 auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
 ```
 
-### Flags
+### Options
 
 ```
   -a, --audience string    The unique identifier of the target API you want to access.
@@ -24,7 +31,7 @@ auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
   -s, --scopes strings     The list of scopes you want to use.
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -38,3 +45,4 @@ auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
 ### SEE ALSO
 
 * [auth0 test](auth0_test.md)	 - Try your Universal Login box or get a token
+

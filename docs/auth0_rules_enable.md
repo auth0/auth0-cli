@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 rules enable
+
+Enable a rule
+
+### Synopsis
 
 Enable a rule.
 
@@ -9,16 +16,16 @@ auth0 rules enable [flags]
 ### Examples
 
 ```
-auth0 rules enable <rule-id>
+auth0 rules enable <id>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for enable
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -32,3 +39,4 @@ auth0 rules enable <rule-id>
 ### SEE ALSO
 
 * [auth0 rules](auth0_rules.md)	 - Manage resources for rules
+

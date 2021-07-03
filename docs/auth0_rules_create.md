@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 rules create
+
+Create a new rule
+
+### Synopsis
 
 Create a new rule.
 
@@ -15,7 +22,7 @@ auth0 rules create -n "My Rule" --template "Empty rule"
 auth0 rules create -n "My Rule" -t "Empty rule" --enabled=false
 ```
 
-### Flags
+### Options
 
 ```
   -e, --enabled           Enable (or disable) a rule. (default true)
@@ -24,7 +31,7 @@ auth0 rules create -n "My Rule" -t "Empty rule" --enabled=false
   -t, --template string   Template to use for the rule.
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -38,3 +45,4 @@ auth0 rules create -n "My Rule" -t "Empty rule" --enabled=false
 ### SEE ALSO
 
 * [auth0 rules](auth0_rules.md)	 - Manage resources for rules
+

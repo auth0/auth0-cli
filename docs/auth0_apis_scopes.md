@@ -1,14 +1,21 @@
+---
+layout: default
+---
 ## auth0 apis scopes
+
+Manage resources for API scopes
+
+### Synopsis
 
 Manage resources for API scopes.
 
-### Flags
+### Options
 
 ```
   -h, --help   help for scopes
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -23,3 +30,4 @@ Manage resources for API scopes.
 
 * [auth0 apis](auth0_apis.md)	 - Manage resources for APIs
 * [auth0 apis scopes list](auth0_apis_scopes_list.md)	 - List the scopes of an API
+

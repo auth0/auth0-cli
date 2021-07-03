@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 ips check
+
+Check IP address
+
+### Synopsis
 
 Check whether a given IP address is blocked.
 
@@ -12,13 +19,13 @@ auth0 ips check [flags]
 auth0 ips check <ip>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for check
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -32,3 +39,4 @@ auth0 ips check <ip>
 ### SEE ALSO
 
 * [auth0 ips](auth0_ips.md)	 - Manage blocked IP addresses
+

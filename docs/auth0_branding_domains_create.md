@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 branding domains create
+
+Create a custom domain
+
+### Synopsis
 
 Create a custom domain.
 
@@ -13,16 +20,18 @@ auth0 branding domains create
 auth0 branding domains create <id>
 ```
 
-### Flags
+### Options
 
 ```
   -d, --domain string         Domain name.
   -h, --help                  help for create
+  -i, --ip-header string      The HTTP header to fetch the client's IP address.
+  -p, --policy string         The TLS version policy. Can be either 'compatible' or 'recommended'.
   -t, --type string           Custom domain provisioning type. Must be 'auth0' for Auth0-managed certs or 'self' for self-managed certs.
   -v, --verification string   Custom domain verification method. Must be 'txt'.
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -36,3 +45,4 @@ auth0 branding domains create <id>
 ### SEE ALSO
 
 * [auth0 branding domains](auth0_branding_domains.md)	 - Manage custom domains
+

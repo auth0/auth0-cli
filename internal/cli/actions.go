@@ -295,7 +295,7 @@ auth0 actions update <id> --n myaction -t post-login -d "lodash=4.0.0" -s "API_K
 			if err := actionCode.EditorPromptU(
 				cmd,
 				&inputs.Code,
-				actionTemplate(inputs.Trigger),
+				current.GetCode(),
 				inputs.Name+".*.js",
 				cli.actionEditorHint,
 			); err != nil {

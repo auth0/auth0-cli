@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 apis list
+
+List your APIs
+
+### Synopsis
 
 List your existing APIs. To create one try:
 auth0 apis create
@@ -14,13 +21,13 @@ auth0 apis list
 auth0 apis ls
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for list
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -34,3 +41,4 @@ auth0 apis ls
 ### SEE ALSO
 
 * [auth0 apis](auth0_apis.md)	 - Manage resources for APIs
+

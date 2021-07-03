@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 users unblock
+
+Remove brute-force protection blocks for a given user
+
+### Synopsis
 
 Remove brute-force protection blocks for a given user.
 
@@ -12,13 +19,13 @@ auth0 users unblock [flags]
 auth0 users unblock <user-id>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for unblock
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -32,3 +39,4 @@ auth0 users unblock <user-id>
 ### SEE ALSO
 
 * [auth0 users](auth0_users.md)	 - Manage resources for users
+

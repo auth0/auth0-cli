@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 tenants use
+
+Set the active tenant
+
+### Synopsis
 
 Set the active tenant.
 
@@ -12,13 +19,13 @@ auth0 tenants use [flags]
 auth0 tenants use <tenant>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for use
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -32,3 +39,4 @@ auth0 tenants use <tenant>
 ### SEE ALSO
 
 * [auth0 tenants](auth0_tenants.md)	 - Manage configured tenants
+

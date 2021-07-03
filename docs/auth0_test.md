@@ -1,14 +1,21 @@
+---
+layout: default
+---
 ## auth0 test
+
+Try your Universal Login box or get a token
+
+### Synopsis
 
 Try your Universal Login box or get a token.
 
-### Flags
+### Options
 
 ```
   -h, --help   help for test
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -21,6 +28,7 @@ Try your Universal Login box or get a token.
 
 ### SEE ALSO
 
-* [auth0](auth0.md)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
 * [auth0 test login](auth0_test_login.md)	 - Try out your Universal Login box
 * [auth0 test token](auth0_test_token.md)	 - Fetch a token for the given application and API
+

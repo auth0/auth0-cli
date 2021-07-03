@@ -1,4 +1,11 @@
+---
+layout: default
+---
 ## auth0 logout
+
+Log out of a tenant's session
+
+### Synopsis
 
 Log out of a tenant's session.
 
@@ -12,13 +19,13 @@ auth0 logout [flags]
 auth0 logout <tenant>
 ```
 
-### Flags
+### Options
 
 ```
   -h, --help   help for logout
 ```
 
-### Flags inherited from parent commands
+### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
@@ -31,4 +38,5 @@ auth0 logout <tenant>
 
 ### SEE ALSO
 
-* [auth0](auth0.md)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
+
