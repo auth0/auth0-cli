@@ -73,9 +73,10 @@ var errUnauthenticated = errors.New("Not logged in. Try 'auth0 login'.")
 //
 type cli struct {
 	// core primitives exposed to command builders.
-	api      *auth0.API
-	renderer *display.Renderer
-	tracker  *analytics.Tracker
+	api           *auth0.API
+	authenticator *auth.Authenticator
+	renderer      *display.Renderer
+	tracker       *analytics.Tracker
 	// set of flags which are user specified.
 	debug   bool
 	tenant  string
@@ -161,8 +162,9 @@ func (c *cli) prepareTenant(ctx context.Context) (tenant, error) {
 		// check if the stored access token is expired:
 		// use the refresh token to get a new access token:
 		tr := &auth.TokenRetriever{
-			Secrets: &auth.Keyring{},
-			Client:  http.DefaultClient,
+			Authenticator: c.authenticator,
+			Secrets:       &auth.Keyring{},
+			Client:        http.DefaultClient,
 		}
 
 		res, err := tr.Refresh(ctx, t.Domain)
