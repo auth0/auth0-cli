@@ -26,6 +26,9 @@ tests:
   auth0 actions list:
     exit-code: 0
 
+  auth0 orgs list:
+    exit-code: 0
+
   auth0 branding domains list:
     exit-code: 0
 

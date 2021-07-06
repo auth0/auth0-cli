@@ -18,8 +18,9 @@ type TokenResponse struct {
 }
 
 type TokenRetriever struct {
-	Secrets SecretStore
-	Client  *http.Client
+	Authenticator *Authenticator
+	Secrets       SecretStore
+	Client        *http.Client
 }
 
 // Delete deletes the given tenant from the secrets storage.
@@ -39,9 +40,9 @@ func (t *TokenRetriever) Refresh(ctx context.Context, tenant string) (TokenRespo
 		return TokenResponse{}, errors.New("cannot use the stored refresh token: the token is empty")
 	}
 	// get access token:
-	r, err := t.Client.PostForm(oauthTokenEndpoint, url.Values{
+	r, err := t.Client.PostForm(t.Authenticator.OauthTokenEndpoint, url.Values{
 		"grant_type":    {"refresh_token"},
-		"client_id":     {clientID},
+		"client_id":     {t.Authenticator.ClientID},
 		"refresh_token": {refreshToken},
 	})
 	if err != nil {

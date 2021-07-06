@@ -220,6 +220,17 @@ Failed Login	hello	7 minutes ago	N/A	my awesome app
 	userid: auth0|QXV0aDAgaXMgaGlyaW5nISBhdXRoMC5jb20vY2FyZWVycyAK
 ```
 
+## Customization
+
+The authenticator of the CLI defaults to the default Auth0 cloud `auth0.auth0.com`. This can be customized for personalized cloud offerings by setting the following env variables:
+
+```
+	AUTH0_AUDIENCE - The audience of the Auth0 Management API (System API) to use.
+	AUTH0_CLIENT_ID - Client ID  of an application configured with the Device Code grant type.
+	AUTH0_DEVICE_CODE_ENDPOINT - Device Authorization URL
+	AUTH0_OAUTH_TOKEN_ENDPOINT - OAuth Token URL
+```
+
 ## Anonymous Analytics
 
 By default, the CLI tracks some anonymous usage events. This helps us understand how the CLI is being used, so we can continue to improve it. You can opt-out by setting the environment variable `AUTH0_CLI_ANALYTICS` to `false`.

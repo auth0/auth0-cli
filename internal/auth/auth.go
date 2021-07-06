@@ -14,12 +14,8 @@ import (
 )
 
 const (
-	clientID               = "2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT"
-	deviceCodeEndpoint     = "https://auth0.auth0.com/oauth/device/code"
-	oauthTokenEndpoint     = "https://auth0.auth0.com/oauth/token"
 	audiencePath           = "/api/v2/"
 	waitThresholdInSeconds = 3
-
 	// namespace used to set/get values from the keychain
 	SecretsNamespace = "auth0-cli"
 )
@@ -35,25 +31,19 @@ var requiredScopes = []string{
 	"read:branding", "update:branding",
 	"read:email_templates", "update:email_templates",
 	"read:connections", "update:connections",
-	"read:client_keys", "read:logs", "read:tenant_settings", 
+	"read:client_keys", "read:logs", "read:tenant_settings",
 	"read:custom_domains", "create:custom_domains", "update:custom_domains", "delete:custom_domains",
 	"read:anomaly_blocks", "delete:anomaly_blocks",
 	"create:log_streams", "delete:log_streams", "read:log_streams", "update:log_streams",
 	"create:actions", "delete:actions", "read:actions", "update:actions",
+	"create:organizations", "delete:organizations", "read:organizations", "update:organizations",
 }
 
-// RequiredScopes returns the scopes used for login.
-func RequiredScopes() []string { return requiredScopes }
-
-// RequiredScopesMin returns minimum scopes used for login in integration tests.
-func RequiredScopesMin() []string {
-	min := []string{}
-	for _, s := range requiredScopes {
-		if s != "offline_access" && s != "openid" {
-			min = append(min, s)
-		}
-	}
-	return min
+type Authenticator struct {
+	Audience           string
+	ClientID           string
+	DeviceCodeEndpoint string
+	OauthTokenEndpoint string
 }
 
 // SecretStore provides access to stored sensitive data.
@@ -63,8 +53,6 @@ type SecretStore interface {
 	// Delete removes the secret
 	Delete(namespace, key string) error
 }
-
-type Authenticator struct{}
 
 type Result struct {
 	Tenant       string
@@ -80,6 +68,20 @@ type State struct {
 	VerificationURI string `json:"verification_uri_complete"`
 	ExpiresIn       int    `json:"expires_in"`
 	Interval        int    `json:"interval"`
+}
+
+// RequiredScopes returns the scopes used for login.
+func RequiredScopes() []string { return requiredScopes }
+
+// RequiredScopesMin returns minimum scopes used for login in integration tests.
+func RequiredScopesMin() []string {
+	min := []string{}
+	for _, s := range requiredScopes {
+		if s != "offline_access" && s != "openid" {
+			min = append(min, s)
+		}
+	}
+	return min
 }
 
 func (s *State) IntervalDuration() time.Duration {
@@ -106,11 +108,11 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 			return Result{}, ctx.Err()
 		case <-t.C:
 			data := url.Values{
-				"client_id":   {clientID},
+				"client_id":   {a.ClientID},
 				"grant_type":  {"urn:ietf:params:oauth:grant-type:device_code"},
 				"device_code": {state.DeviceCode},
 			}
-			r, err := http.PostForm(oauthTokenEndpoint, data)
+			r, err := http.PostForm(a.OauthTokenEndpoint, data)
 			if err != nil {
 				return Result{}, fmt.Errorf("cannot get device code: %w", err)
 			}
@@ -157,11 +159,11 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 
 func (a *Authenticator) getDeviceCode(ctx context.Context) (State, error) {
 	data := url.Values{
-		"client_id": {clientID},
+		"client_id": {a.ClientID},
 		"scope":     {strings.Join(requiredScopes, " ")},
-		"audience":  {"https://*.auth0.com/api/v2/"},
+		"audience":  {a.Audience},
 	}
-	r, err := http.PostForm(deviceCodeEndpoint, data)
+	r, err := http.PostForm(a.DeviceCodeEndpoint, data)
 	if err != nil {
 		return State{}, fmt.Errorf("cannot get device code: %w", err)
 	}
