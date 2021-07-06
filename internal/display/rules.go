@@ -60,12 +60,7 @@ func (r *Renderer) RulesList(rules []*management.Rule) {
 	})
 
 	for _, rule := range rules {
-		res = append(res, &ruleView{
-			Name:    rule.GetName(),
-			ID:      rule.GetID(),
-			Enabled: boolean(rule.GetEnabled()),
-			Order:   rule.GetOrder(),
-		})
+		res = append(res, makeRuleView(rule))
 	}
 
 	r.Results(res)
