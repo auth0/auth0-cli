@@ -30,6 +30,7 @@ Manage branding options.
 
 * [auth0](/auth0-cli/)	 - Supercharge your development workflow.
 * [auth0 branding domains](auth0_branding_domains.md)	 - Manage custom domains
+* [auth0 branding emails](auth0_branding_emails.md)	 - Manage custom email templates
 * [auth0 branding show](auth0_branding_show.md)	 - Display the custom branding settings for Universal Login
 * [auth0 branding templates](auth0_branding_templates.md)	 - Manage custom page templates
 * [auth0 branding update](auth0_branding_update.md)	 - Update the custom branding settings for Universal Login

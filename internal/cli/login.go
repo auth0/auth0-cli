@@ -43,8 +43,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) (tenant, error) {
 		fmt.Print("If you don't have an account, please go to https://auth0.com/signup\n\n")
 	}
 
-	a := &auth.Authenticator{}
-	state, err := a.Start(ctx)
+	state, err := cli.authenticator.Start(ctx)
 	if err != nil {
 		return tenant{}, fmt.Errorf("Could not start the authentication process: %w.", err)
 	}
@@ -60,7 +59,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) (tenant, error) {
 
 	var res auth.Result
 	err = ansi.Spinner("Waiting for login to complete in browser", func() error {
-		res, err = a.Wait(ctx, state)
+		res, err = cli.authenticator.Wait(ctx, state)
 		return err
 	})
 
