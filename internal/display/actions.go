@@ -71,14 +71,7 @@ func (r *Renderer) ActionList(actions []*management.Action) {
 			isDeployed = a.GetDeployedVersion().Deployed
 		}
 
-		res = append(res, &actionView{
-			ID:       a.GetID(),
-			Name:     a.GetName(),
-			Type:     strings.Join(triggers, ", "),
-			Status:   actionStatus(a.GetStatus()),
-			Deployed: boolean(isDeployed),
-			raw:      a,
-		})
+		res = append(res, makeActionView(a))
 	}
 
 	r.Results(res)
