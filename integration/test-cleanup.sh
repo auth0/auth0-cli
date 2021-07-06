@@ -7,8 +7,8 @@ for app in $( echo "${apps}" | jq -r '.[] | @base64' ); do
      echo "${app}" | base64 --decode | jq -r "${1}"
     }
 
-    clientid=$(_jq '.ClientID')
-    name=$(_jq '.Name')
+    clientid=$(_jq '.client_id')
+    name=$(_jq '.name')
 		# TODO(jfatta): should remove only those 
 		# created during the same test session
     if [[ $name = integration-test-app-* ]]
@@ -25,8 +25,8 @@ for api in $( echo "${apis}" | jq -r '.[] | @base64' ); do
      echo "${api}" | base64 --decode | jq -r "${1}"
     }
 
-    id=$(_jq '.ID')
-    name=$(_jq '.Name')
+    id=$(_jq '.id')
+    name=$(_jq '.name')
 		# TODO(jfatta): should remove only those 
 		# created during the same test session
     if [[ $name = integration-test-api-* ]]
@@ -44,7 +44,7 @@ for user in $( echo "${users}" | jq -r '.[] | @base64' ); do
      echo "${user}" | base64 --decode | jq -r "${1}"
     }
 
-    userid=$(_jq '.UserID')
+    userid=$(_jq '.user_id')
 		# created during the same test session
     if [[ integration-* ]]
     then
@@ -60,8 +60,8 @@ for role in $( echo "${roles}" | jq -r '.[] | @base64' ); do
      echo "${role}" | base64 --decode | jq -r "${1}"
     }
 
-    id=$(_jq '.ID')
-    name=$(_jq '.Name')
+    id=$(_jq '.id')
+    name=$(_jq '.name')
 		# TODO(jfatta): should remove only those
 		# created during the same test session
     if [[ $name = integration-test-role-* ]]

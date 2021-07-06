@@ -10,6 +10,7 @@ type brandingView struct {
 	LogoURL         string
 	FaviconURL      string
 	CustomFontURL   string
+	raw             interface{}
 }
 
 func (v *brandingView) AsTableHeader() []string {
@@ -30,6 +31,10 @@ func (v *brandingView) KeyValues() [][]string {
 	}
 }
 
+func (v *brandingView) Object() interface{} {
+	return v.raw
+}
+
 func (r *Renderer) BrandingShow(data *management.Branding) {
 	r.Heading("branding")
 	r.Result(makeBrandingView(data))
@@ -42,10 +47,11 @@ func (r *Renderer) BrandingUpdate(data *management.Branding) {
 
 func makeBrandingView(data *management.Branding) *brandingView {
 	return &brandingView{
-		AccentColor: data.GetColors().GetPrimary(),
+		AccentColor:     data.GetColors().GetPrimary(),
 		BackgroundColor: data.GetColors().GetPageBackground(),
-		LogoURL: data.GetLogoURL(),
-		FaviconURL: data.GetFaviconURL(),
-		CustomFontURL: data.GetFont().GetURL(),
+		LogoURL:         data.GetLogoURL(),
+		FaviconURL:      data.GetFaviconURL(),
+		CustomFontURL:   data.GetFont().GetURL(),
+		raw:             data,
 	}
 }
