@@ -1,5 +1,3 @@
-//go:generate mockgen -source=organization.go -destination=organization_mock.go -package=auth0
-
 package auth0
 
 import "gopkg.in/auth0.v5/management"

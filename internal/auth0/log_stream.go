@@ -1,5 +1,3 @@
-//go:generate mockgen -source=log_stream.go -destination=log_stream_mock.go -package=auth0
-
 package auth0
 
 import "gopkg.in/auth0.v5/management"
