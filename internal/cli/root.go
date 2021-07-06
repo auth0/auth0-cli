@@ -190,6 +190,7 @@ func addSubcommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(actionsCmd(cli))
 	rootCmd.AddCommand(apisCmd(cli))
 	rootCmd.AddCommand(rolesCmd(cli))
+	rootCmd.AddCommand(organizationsCmd(cli))
 	rootCmd.AddCommand(brandingCmd(cli))
 	rootCmd.AddCommand(ipsCmd(cli))
 	rootCmd.AddCommand(quickstartsCmd(cli))

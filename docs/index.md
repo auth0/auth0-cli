@@ -28,6 +28,7 @@ Supercharge your development workflow.
 * [auth0 login](auth0_login.md)	 - Authenticate the Auth0 CLI
 * [auth0 logout](auth0_logout.md)	 - Log out of a tenant's session
 * [auth0 logs](auth0_logs.md)	 - View tenant logs
+* [auth0 orgs](auth0_orgs.md)	 - Manage resources for organizations
 * [auth0 quickstarts](auth0_quickstarts.md)	 - Quickstart support for getting bootstrapped
 * [auth0 roles](auth0_roles.md)	 - Manage resources for roles
 * [auth0 rules](auth0_rules.md)	 - Manage resources for rules
