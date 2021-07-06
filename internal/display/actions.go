@@ -61,16 +61,6 @@ func (r *Renderer) ActionList(actions []*management.Action) {
 
 	var res []View
 	for _, a := range actions {
-		var triggers = make([]string, 0, len(a.SupportedTriggers))
-		for _, t := range a.SupportedTriggers {
-			triggers = append(triggers, string(*t.ID))
-		}
-
-		isDeployed := false
-		if a.GetDeployedVersion() != nil {
-			isDeployed = a.GetDeployedVersion().Deployed
-		}
-
 		res = append(res, makeActionView(a))
 	}
 
