@@ -56,12 +56,7 @@ func (r *Renderer) OrganizationList(organizations []*management.Organization) {
 
 	var res []View
 	for _, o := range organizations {
-		res = append(res, &organizationView{
-			ID:          o.GetID(),
-			Name:        o.GetName(),
-			DisplayName: o.GetDisplayName(),
-			raw:         o,
-		})
+		res = append(res, makeOrganizationView(o, r.MessageWriter))
 	}
 
 	r.Results(res)
