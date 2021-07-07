@@ -74,11 +74,11 @@ func actionsCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listActionsCmd(cli))
-	cmd.AddCommand(showActionCmd(cli))
 	cmd.AddCommand(createActionCmd(cli))
+	cmd.AddCommand(showActionCmd(cli))
+	cmd.AddCommand(updateActionCmd(cli))
 	cmd.AddCommand(deleteActionCmd(cli))
 	cmd.AddCommand(openActionCmd(cli))
-	cmd.AddCommand(updateActionCmd(cli))
 
 	return cmd
 }
@@ -172,7 +172,7 @@ auth0 actions create --n myaction --trigger post-login
 auth0 actions create --n myaction -t post-login -d "lodash=4.0.0" -d "uuid=8.0.0"
 auth0 actions create --n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=value" -s "SECRET=value`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := apiName.Ask(cmd, &inputs.Name, nil); err != nil {
+			if err := actionName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
 
