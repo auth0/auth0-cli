@@ -17,8 +17,8 @@ auth0 branding update [flags]
 
 ```
 auth0 branding update
-auth0 branding update --accent '#B24592' --background '#F2DDEC' 
-auth0 branding update -a '#B24592' -b '#F2DDEC --logo 'https://example.com/logo.png
+auth0 branding update --accent "#FF4F40" --background "#2A2E35" 
+auth0 branding update -a "#FF4F40" -b "#2A2E35" --logo "https://example.com/logo.png"
 ```
 
 ### Options
