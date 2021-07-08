@@ -89,20 +89,22 @@ auth0 [command]
 auth0 [command] --help
 ```
 
-* [auth0 apis](docs/auth0_apis.md)	 - Manage resources for APIs
-* [auth0 apps](docs/auth0_apps.md)	 - Manage resources for applications
-* [auth0 branding](docs/auth0_branding.md)	 - Manage branding options
-* [auth0 completion](docs/auth0_completion.md)	 - Setup autocomplete features for this CLI on your terminal
-* [auth0 ips](docs/auth0_ips.md)	 - Manage blocked IP addresses
-* [auth0 login](docs/auth0_login.md)	 - Authenticate the Auth0 CLI
-* [auth0 logout](docs/auth0_logout.md)	 - Log out of a tenant's session
-* [auth0 logs](docs/auth0_logs.md)	 - View tenant logs
-* [auth0 quickstarts](docs/auth0_quickstarts.md)	 - Quickstart support for getting bootstrapped
-* [auth0 roles](docs/auth0_roles.md)	 - Manage resources for roles
-* [auth0 rules](docs/auth0_rules.md)	 - Manage resources for rules
-* [auth0 tenants](docs/auth0_tenants.md)	 - Manage configured tenants
-* [auth0 test](docs/auth0_test.md)	 - Try your Universal Login box or get a token
-* [auth0 users](docs/auth0_users.md)	 - Manage resources for users
+* [auth0 actions](https://auth0.github.io/auth0-cli/auth0_actions.html)	 - Manage resources for actions
+* [auth0 apis](https://auth0.github.io/auth0-cli/auth0_apis.html)	 - Manage resources for APIs
+* [auth0 apps](https://auth0.github.io/auth0-cli/auth0_apps.html)	 - Manage resources for applications
+* [auth0 branding](https://auth0.github.io/auth0-cli/auth0_branding.html)	 - Manage branding options
+* [auth0 completion](https://auth0.github.io/auth0-cli/auth0_completion.html)	 - Setup autocomplete features for this CLI on your terminal
+* [auth0 ips](https://auth0.github.io/auth0-cli/auth0_ips.html)	 - Manage blocked IP addresses
+* [auth0 login](https://auth0.github.io/auth0-cli/auth0_login.html)	 - Authenticate the Auth0 CLI
+* [auth0 logout](https://auth0.github.io/auth0-cli/auth0_logout.html)	 - Log out of a tenant's session
+* [auth0 logs](https://auth0.github.io/auth0-cli/auth0_logs.html)	 - View tenant logs
+* [auth0 orgs](https://auth0.github.io/auth0-cli/auth0_orgs.html)	 - Manage resources for organizations
+* [auth0 quickstarts](https://auth0.github.io/auth0-cli/auth0_quickstarts.html)	 - Quickstart support for getting bootstrapped
+* [auth0 roles](https://auth0.github.io/auth0-cli/auth0_roles.html)	 - Manage resources for roles
+* [auth0 rules](https://auth0.github.io/auth0-cli/auth0_rules.html)	 - Manage resources for rules
+* [auth0 tenants](https://auth0.github.io/auth0-cli/auth0_tenants.html)	 - Manage configured tenants
+* [auth0 test](https://auth0.github.io/auth0-cli/auth0_test.html)	 - Try your Universal Login box or get a token
+* [auth0 users](https://auth0.github.io/auth0-cli/auth0_users.html)	 - Manage resources for users
 
 ### Onboarding Journey
 
