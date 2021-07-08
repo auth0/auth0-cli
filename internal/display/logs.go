@@ -27,6 +27,7 @@ var _ View = &logView{}
 type logView struct {
 	silent bool
 	*management.Log
+	raw interface{}
 }
 
 func (v *logView) AsTableHeader() []string {
@@ -77,6 +78,10 @@ func (v *logView) AsTableRow() []string {
 		conn,
 		clientName,
 	}
+}
+
+func (v *logView) Object() interface{} {
+	return v.raw
 }
 
 func (v *logView) Extras() []string {
@@ -153,7 +158,7 @@ func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, 
 
 	var res []View
 	for _, l := range logs {
-		res = append(res, &logView{Log: l, silent: silent})
+		res = append(res, &logView{Log: l, silent: silent, raw: l})
 	}
 
 	var viewChan chan View
@@ -166,7 +171,7 @@ func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, 
 
 			for list := range ch {
 				for _, l := range list {
-					viewChan <- &logView{Log: l, silent: silent}
+					viewChan <- &logView{Log: l, silent: silent, raw: l}
 				}
 			}
 		}()

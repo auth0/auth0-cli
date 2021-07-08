@@ -140,6 +140,7 @@ func makeApiTableView(api *management.ResourceServer) *apiTableView {
 type scopeView struct {
 	Scope       string
 	Description string
+	raw         interface{}
 }
 
 func (v *scopeView) AsTableHeader() []string {
@@ -148,6 +149,10 @@ func (v *scopeView) AsTableHeader() []string {
 
 func (v *scopeView) AsTableRow() []string {
 	return []string{v.Scope, v.Description}
+}
+
+func (v *scopeView) Object() interface{} {
+	return v.raw
 }
 
 func (r *Renderer) ScopesList(api string, scopes []*management.ResourceServerScope) {
@@ -173,6 +178,7 @@ func makeScopeView(scope *management.ResourceServerScope) *scopeView {
 	return &scopeView{
 		Scope:       auth0.StringValue(scope.Value),
 		Description: auth0.StringValue(scope.Description),
+		raw:         scope,
 	}
 }
 

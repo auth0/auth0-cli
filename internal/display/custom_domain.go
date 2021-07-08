@@ -14,6 +14,7 @@ type customDomainView struct {
 	VerificationMethod   string
 	TLSPolicy            string
 	CustomClientIPHeader string
+	raw                  interface{}
 }
 
 func (v *customDomainView) AsTableHeader() []string {
@@ -41,6 +42,10 @@ func (v *customDomainView) KeyValues() [][]string {
 	}
 }
 
+func (v *customDomainView) Object() interface{} {
+	return v.raw
+}
+
 func (r *Renderer) CustomDomainList(customDomains []*management.CustomDomain) {
 	resource := "custom domains"
 
@@ -54,11 +59,7 @@ func (r *Renderer) CustomDomainList(customDomains []*management.CustomDomain) {
 
 	var res []View
 	for _, customDomain := range customDomains {
-		res = append(res, &customDomainView{
-			ID:     customDomain.GetID(),
-			Domain: customDomain.GetDomain(),
-			Status: customDomainStatusColor(customDomain.GetStatus()),
-		})
+		res = append(res, makeCustomDomainView(customDomain))
 	}
 
 	r.Results(res)
@@ -66,21 +67,21 @@ func (r *Renderer) CustomDomainList(customDomains []*management.CustomDomain) {
 
 func (r *Renderer) CustomDomainShow(customDomain *management.CustomDomain) {
 	r.Heading("custom domain")
-	r.customDomainResult(customDomain)
+	r.Result(makeCustomDomainView(customDomain))
 }
 
 func (r *Renderer) CustomDomainCreate(customDomain *management.CustomDomain) {
 	r.Heading("custom domain created")
-	r.customDomainResult(customDomain)
+	r.Result(makeCustomDomainView(customDomain))
 }
 
 func (r *Renderer) CustomDomainUpdate(customDomain *management.CustomDomain) {
 	r.Heading("custom domain updated")
-	r.customDomainResult(customDomain)
+	r.Result(makeCustomDomainView(customDomain))
 }
 
-func (r *Renderer) customDomainResult(customDomain *management.CustomDomain) {
-	r.Result(&customDomainView{
+func makeCustomDomainView(customDomain *management.CustomDomain) *customDomainView {
+	return &customDomainView{
 		ID:                   ansi.Faint(customDomain.GetID()),
 		Domain:               customDomain.GetDomain(),
 		Status:               customDomainStatusColor(customDomain.GetStatus()),
@@ -89,7 +90,8 @@ func (r *Renderer) customDomainResult(customDomain *management.CustomDomain) {
 		VerificationMethod:   customDomain.GetVerificationMethod(),
 		TLSPolicy:            customDomain.GetTLSPolicy(),
 		CustomClientIPHeader: customDomain.GetCustomClientIPHeader(),
-	})
+		raw:                  customDomain,
+	}
 }
 
 func customDomainStatusColor(v string) string {

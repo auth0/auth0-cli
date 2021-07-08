@@ -40,49 +40,24 @@ type applicationView struct {
 
 func (v *applicationView) AsTableHeader() []string {
 	if v.revealSecret {
-		return []string{
-			"ClientID",
-			"Description",
-			"Name",
-			"Type",
-			"Client Secret",
-			"Callbacks",
-			"Allowed Origins",
-			"Allowed Web Origins",
-			"Allowed Logout URLs",
-			"Token Endpoint Auth",
-			"Grants",
-		}
+		return []string{"Client ID", "Name", "Type", "Client Secret"}
 	}
-	return []string{
-		"Client ID",
-		"Description",
-		"Name",
-		"Type",
-		"Callbacks",
-		"Allowed Origins",
-		"Allowed Web Origins",
-		"Allowed Logout URLs",
-		"Token Endpoint Auth",
-		"Grants",
-	}
+	return []string{"Client ID", "Name", "Type"}
 }
 
 func (v *applicationView) AsTableRow() []string {
 	if v.revealSecret {
 		return []string{
+			ansi.Faint(v.ClientID),
 			v.Name,
 			applyColor(v.Type),
-			ansi.Faint(v.ClientID),
 			ansi.Italic(v.ClientSecret),
-			strings.Join(v.Callbacks, ", "),
 		}
 	}
 	return []string{
+		ansi.Faint(v.ClientID),
 		v.Name,
 		applyColor(v.Type),
-		ansi.Faint(v.ClientID),
-		strings.Join(v.Callbacks, ", "),
 	}
 }
 
@@ -127,39 +102,6 @@ func (v *applicationView) Object() interface{} {
 	return safeRaw(v.raw.(*management.Client), v.revealSecret)
 }
 
-// applicationListView is a slimmed down view of a client for displaying
-// larger numbers of applications
-type applicationListView struct {
-	Name         string
-	Type         string
-	ClientID     string
-	ClientSecret string `json:"ClientSecret,omitempty"`
-	revealSecret bool
-}
-
-func (v *applicationListView) AsTableHeader() []string {
-	if v.revealSecret {
-		return []string{"Client ID", "Name", "Type", "Client Secret"}
-	}
-	return []string{"Client ID", "Name", "Type"}
-}
-
-func (v *applicationListView) AsTableRow() []string {
-	if v.revealSecret {
-		return []string{
-			ansi.Faint(v.ClientID),
-			v.Name,
-			applyColor(v.Type),
-			ansi.Italic(v.ClientSecret),
-		}
-	}
-	return []string{
-		ansi.Faint(v.ClientID),
-		v.Name,
-		applyColor(v.Type),
-	}
-}
-
 func (r *Renderer) ApplicationList(clients []*management.Client, revealSecrets bool) {
 	resource := "applications"
 
@@ -177,19 +119,11 @@ func (r *Renderer) ApplicationList(clients []*management.Client, revealSecrets b
 			continue
 		}
 
-		// in case of format=JSON:
-		clientSecret := ""
-		if revealSecrets {
-			clientSecret = auth0.StringValue(c.ClientSecret)
+		if !revealSecrets {
+			c.ClientSecret = auth0.String("")
 		}
 
-		res = append(res, &applicationListView{
-			revealSecret: revealSecrets,
-			Name:         auth0.StringValue(c.Name),
-			Type:         appTypeFor(c.AppType),
-			ClientID:     auth0.StringValue(c.ClientID),
-			ClientSecret: clientSecret,
-		})
+		res = append(res, makeApplicationView(c, revealSecrets))
 	}
 
 	r.Results(res)
@@ -197,24 +131,7 @@ func (r *Renderer) ApplicationList(clients []*management.Client, revealSecrets b
 
 func (r *Renderer) ApplicationShow(client *management.Client, revealSecrets bool) {
 	r.Heading("application")
-
-	v := &applicationView{
-		revealSecret:      revealSecrets,
-		Name:              auth0.StringValue(client.Name),
-		Description:       auth0.StringValue(client.Description),
-		Type:              appTypeFor(client.AppType),
-		ClientID:          auth0.StringValue(client.ClientID),
-		ClientSecret:      auth0.StringValue(client.ClientSecret),
-		Callbacks:         interfaceSliceToString(client.Callbacks),
-		AllowedOrigins:    interfaceSliceToString(client.AllowedOrigins),
-		AllowedWebOrigins: interfaceSliceToString(client.WebOrigins),
-		AllowedLogoutURLs: interfaceSliceToString(client.AllowedLogoutURLs),
-		AuthMethod:        auth0.StringValue(client.TokenEndpointAuthMethod),
-		Grants:            interfaceSliceToString(client.GrantTypes),
-		raw:               client,
-	}
-
-	r.Result(v)
+	r.Result(makeApplicationView(client, revealSecrets))
 }
 
 func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bool) {
@@ -224,24 +141,7 @@ func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bo
 		client.ClientSecret = auth0.String("")
 	}
 
-	v := &applicationView{
-		revealSecret:      revealSecrets,
-		Name:              auth0.StringValue(client.Name),
-		Description:       auth0.StringValue(client.Description),
-		Type:              appTypeFor(client.AppType),
-		ClientID:          auth0.StringValue(client.ClientID),
-		ClientSecret:      auth0.StringValue(client.ClientSecret),
-		Callbacks:         interfaceSliceToString(client.Callbacks),
-		AllowedOrigins:    interfaceSliceToString(client.AllowedOrigins),
-		AllowedWebOrigins: interfaceSliceToString(client.WebOrigins),
-		AllowedLogoutURLs: interfaceSliceToString(client.AllowedLogoutURLs),
-		AuthMethod:        auth0.StringValue(client.TokenEndpointAuthMethod),
-		Grants:            interfaceSliceToString(client.GrantTypes),
-		raw:               client,
-	}
-
-	r.Result(v)
-
+	r.Result(makeApplicationView(client, revealSecrets))
 	r.Newline()
 	r.Infof("Quickstarts: %s", quickstartsURIFor(client.AppType))
 
@@ -263,7 +163,11 @@ func (r *Renderer) ApplicationUpdate(client *management.Client, revealSecrets bo
 		client.ClientSecret = auth0.String("")
 	}
 
-	v := &applicationView{
+	r.Result(makeApplicationView(client, revealSecrets))
+}
+
+func makeApplicationView(client *management.Client, revealSecrets bool) *applicationView {
+	return &applicationView{
 		revealSecret:      revealSecrets,
 		Name:              auth0.StringValue(client.Name),
 		Description:       auth0.StringValue(client.Description),
@@ -278,8 +182,6 @@ func (r *Renderer) ApplicationUpdate(client *management.Client, revealSecrets bo
 		Grants:            interfaceSliceToString(client.GrantTypes),
 		raw:               client,
 	}
-
-	r.Result(v)
 }
 
 // TODO(cyx): determine if there's a better way to filter this out.
