@@ -184,7 +184,7 @@ auth0 branding emails update welcome`,
 			// TODO(cyx): we can re-think this once we have
 			// `--stdin` based commands. For now we don't have
 			// those yet, so keeping this simple.
-			if err := emailTemplateBody.EditorPromptU(
+			if err := emailTemplateBody.OpenEditorU(
 				cmd,
 				&inputs.Body,
 				current.GetBody(),

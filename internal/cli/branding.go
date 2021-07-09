@@ -353,7 +353,7 @@ func (cli *cli) customTemplateEditorPromptWithPreview(cmd *cobra.Command, body *
 		}
 	}
 
-	return templateBody.EditorPromptW(
+	return templateBody.OpenEditorW(
 		cmd,
 		body,
 		templateData.Body,
