@@ -9,6 +9,7 @@ type roleView struct {
 	ID          string
 	Name        string
 	Description string
+	raw         interface{}
 }
 
 func (v *roleView) AsTableHeader() []string {
@@ -31,6 +32,10 @@ func (v *roleView) KeyValues() [][]string {
 	}
 }
 
+func (v *roleView) Object() interface{} {
+	return v.raw
+}
+
 func (r *Renderer) RoleList(roles []*management.Role) {
 	resource := "roles"
 
@@ -44,11 +49,7 @@ func (r *Renderer) RoleList(roles []*management.Role) {
 
 	var res []View
 	for _, role := range roles {
-		res = append(res, &roleView{
-			Name:        role.GetName(),
-			ID:          role.GetID(),
-			Description: role.GetDescription(),
-		})
+		res = append(res, makeRoleView(role))
 	}
 
 	r.Results(res)
@@ -56,23 +57,24 @@ func (r *Renderer) RoleList(roles []*management.Role) {
 
 func (r *Renderer) RoleShow(role *management.Role) {
 	r.Heading("role")
-	r.roleResult(role)
+	r.Result(makeRoleView(role))
 }
 
 func (r *Renderer) RoleCreate(role *management.Role) {
 	r.Heading("role created")
-	r.roleResult(role)
+	r.Result(makeRoleView(role))
 }
 
 func (r *Renderer) RoleUpdate(role *management.Role) {
 	r.Heading("role updated")
-	r.roleResult(role)
+	r.Result(makeRoleView(role))
 }
 
-func (r *Renderer) roleResult(role *management.Role) {
-	r.Result(&roleView{
+func makeRoleView(role *management.Role) *roleView {
+	return &roleView{
 		Name:        role.GetName(),
 		ID:          ansi.Faint(role.GetID()),
 		Description: role.GetDescription(),
-	})
+		raw:         role,
+	}
 }

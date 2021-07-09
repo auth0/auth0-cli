@@ -15,6 +15,7 @@ type quickstartView struct {
 	Stack   string
 	AppType string
 	URL     string
+	raw     interface{}
 }
 
 func (v *quickstartView) AsTableHeader() []string {
@@ -23,6 +24,10 @@ func (v *quickstartView) AsTableHeader() []string {
 
 func (v *quickstartView) AsTableRow() []string {
 	return []string{v.Stack, applyColor(v.AppType), v.URL}
+}
+
+func (v *quickstartView) Object() interface{} {
+	return v.raw
 }
 
 func (r *Renderer) QuickstartList(qs map[string][]auth0.Quickstart) {
@@ -40,10 +45,11 @@ func (r *Renderer) QuickstartList(qs map[string][]auth0.Quickstart) {
 	for _, key := range keys {
 		for _, item := range qs[key] {
 			results = append(results, &quickstartView{
-					Stack: item.Name,
-					AppType: applyColor(qsAppTypeFor(key)),
-					URL: fmt.Sprintf("%s/%s/%s", qsBaseURL, key, item.Path),
-				})
+				Stack:   item.Name,
+				AppType: applyColor(qsAppTypeFor(key)),
+				URL:     fmt.Sprintf("%s/%s/%s", qsBaseURL, key, item.Path),
+				raw:     item,
+			})
 		}
 	}
 

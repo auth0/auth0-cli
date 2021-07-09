@@ -7,6 +7,7 @@ import (
 type userBlockView struct {
 	Identifier string
 	IP         string
+	raw        interface{}
 }
 
 func (v *userBlockView) AsTableHeader() []string {
@@ -22,6 +23,10 @@ func (v *userBlockView) KeyValues() [][]string {
 		{"Identifier", v.Identifier},
 		{"IP", v.IP},
 	}
+}
+
+func (v *userBlockView) Object() interface{} {
+	return v.raw
 }
 
 func (r *Renderer) UserBlocksList(userBlocks []*management.UserBlock) {
@@ -40,6 +45,7 @@ func (r *Renderer) UserBlocksList(userBlocks []*management.UserBlock) {
 		res = append(res, &userBlockView{
 			Identifier: *userBlock.Identifier,
 			IP:         *userBlock.IP,
+			raw:        userBlock,
 		})
 	}
 
