@@ -140,7 +140,7 @@ func askManyFlag(cmd *cobra.Command, f *Flag, value interface{}, defaultValue *s
 	if shouldAsk(cmd, f, isUpdate) {
 		var strInput string
 
-		if err := ask(cmd, f, value, defaultValue, isUpdate); err != nil {
+		if err := ask(cmd, f, &strInput, defaultValue, isUpdate); err != nil {
 			return err
 		}
 
