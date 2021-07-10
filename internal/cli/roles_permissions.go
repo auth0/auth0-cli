@@ -30,15 +30,14 @@ var (
 
 func rolePermissionsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "permissions",
-		Short:   "Manage permissions within the role resource",
-		Long:    "Manage permissions within the role resource.",
-		Aliases: []string{"permission"},
+		Use:   "permissions",
+		Short: "Manage permissions within the role resource",
+		Long:  "Manage permissions within the role resource.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listRolePermissionsCmd(cli))
-	cmd.AddCommand(associateRolePermissionsCmd(cli))
+	cmd.AddCommand(addRolePermissionsCmd(cli))
 	cmd.AddCommand(removeRolePermissionsCmd(cli))
 
 	return cmd
@@ -55,7 +54,7 @@ func listRolePermissionsCmd(cli *cli) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "List permissions defined within a role",
 		Long: `List existing permissions defined in a role. To add a permission try:
-auth0 roles permissions associate <role-id>`,
+auth0 roles permissions add <role-id>`,
 		Example: `auth0 roles permissions list <role-id>
 auth0 roles permissions ls`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -86,7 +85,7 @@ auth0 roles permissions ls`,
 	return cmd
 }
 
-func associateRolePermissionsCmd(cli *cli) *cobra.Command {
+func addRolePermissionsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ID            string
 		APIIdentifier string
@@ -94,15 +93,14 @@ func associateRolePermissionsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "associate",
-		Aliases: []string{"assoc"},
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Associate a permission to a role",
-		Long: `Associate an existing permission defined in one of your APIs.
+		Use:   "add",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Add a permission to a role",
+		Long: `Add an existing permission defined in one of your APIs.
 To add a permission try:
 
-    auth0 roles permissions associate <role-id> -p <permission-name>`,
-		Example: `auth0 roles permissions associate <role-id> -p <permission-name>
+    auth0 roles permissions add <role-id> -p <permission-name>`,
+		Example: `auth0 roles permissions add <role-id> -p <permission-name>
 auth0 roles permissions assoc`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
