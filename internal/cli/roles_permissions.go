@@ -248,7 +248,10 @@ func (c *cli) pickRolePermissions(id string, permissions *[]string) (*management
 		Message: "Permissions",
 		Options: options,
 	}
-	survey.AskOne(p, permissions)
+
+	if err := survey.AskOne(p, permissions); err != nil {
+		return nil, err
+	}
 
 	return rs, nil
 }
