@@ -7,6 +7,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/spf13/cobra"
+	"gopkg.in/auth0.v5"
 	"gopkg.in/auth0.v5/management"
 )
 
@@ -131,6 +132,12 @@ auth0 roles permissions assoc`,
 				return err
 			}
 
+			role, err := cli.api.Role.Read(inputs.ID)
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.RolePermissionAdd(role, rs, inputs.Permissions)
 			return nil
 		},
 	}
@@ -187,6 +194,12 @@ auth0 roles permissions rm`,
 				return err
 			}
 
+			role, err := cli.api.Role.Read(inputs.ID)
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.RolePermissionRemove(role, rs, inputs.Permissions)
 			return nil
 		},
 	}
@@ -231,11 +244,11 @@ func (c *cli) pickRolePermissions(id string, permissions *[]string) (*management
 		options = append(options, s.GetValue())
 	}
 
-	prompt := &survey.MultiSelect{
+	p := &survey.MultiSelect{
 		Message: "Permissions",
 		Options: options,
 	}
-	survey.AskOne(prompt, permissions)
+	survey.AskOne(p, permissions)
 
 	return rs, nil
 }
@@ -244,8 +257,8 @@ func makePermissions(id string, permissions []string) []*management.Permission {
 	var result []*management.Permission
 	for _, p := range permissions {
 		result = append(result, &management.Permission{
-			ResourceServerIdentifier: &id,
-			Name:                     &p,
+			ResourceServerIdentifier: auth0.String(id),
+			Name:                     auth0.String(p),
 		})
 	}
 	return result

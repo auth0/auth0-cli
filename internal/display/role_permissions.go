@@ -1,6 +1,8 @@
 package display
 
 import (
+	"strings"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"gopkg.in/auth0.v5/management"
 )
@@ -64,27 +66,14 @@ func (r *Renderer) RolePermissionList(perms []*management.Permission) {
 	r.Results(res)
 }
 
-/*
-func (r *Renderer) RoleShow(role *management.Role) {
-	r.Heading("role")
-	r.roleResult(role)
+func (r *Renderer) RolePermissionAdd(role *management.Role, rs *management.ResourceServer, perms []string) {
+	r.Heading("role permissions added")
+
+	r.Infof("Added permissions %s (%s) to role %s.", ansi.Green(strings.Join(perms, ", ")), ansi.Faint(rs.GetIdentifier()), ansi.Green(role.GetName()))
 }
 
-func (r *Renderer) RoleCreate(role *management.Role) {
-	r.Heading("role created")
-	r.roleResult(role)
-}
+func (r *Renderer) RolePermissionRemove(role *management.Role, rs *management.ResourceServer, perms []string) {
+	r.Heading("role permissions removed")
 
-func (r *Renderer) RoleUpdate(role *management.Role) {
-	r.Heading("role updated")
-	r.roleResult(role)
+	r.Infof("Removed permissions %s (%s) from role %s.", ansi.Green(strings.Join(perms, ", ")), ansi.Faint(rs.GetIdentifier()), ansi.Green(role.GetName()))
 }
-
-func (r *Renderer) roleResult(role *management.Role) {
-	r.Result(&roleView{
-		Name:        role.GetName(),
-		ID:          ansi.Faint(role.GetID()),
-		Description: role.GetDescription(),
-	})
-}
-*/
