@@ -205,6 +205,10 @@ auth0 branding emails update welcome`,
 				return err
 			}
 
+			if inputs.Body == "" {
+				inputs.Body = current.GetBody()
+			}
+
 			if inputs.From == "" {
 				inputs.From = current.GetFrom()
 			}

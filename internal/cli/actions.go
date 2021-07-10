@@ -313,6 +313,10 @@ auth0 actions update <id> --n myaction -t post-login -d "lodash=4.0.0" -s "API_K
 				inputs.Trigger = currentTriggerId
 			}
 
+			if inputs.Code == "" {
+				inputs.Code = current.GetCode()
+			}
+
 			// Prepare action payload for update. This will also be
 			// re-hydrated by the SDK, which we'll use below during
 			// display.
