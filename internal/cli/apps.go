@@ -351,7 +351,7 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <descriptio
 			appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
 
 			// Prompt for callback URLs if app is not m2m
-			if !appIsM2M {
+			if !appIsM2M && !appCallbacks.IsSet(cmd) {
 				var defaultValue string
 
 				if !appIsNative {
@@ -364,7 +364,7 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <descriptio
 			}
 
 			// Prompt for logout URLs if app is not m2m
-			if !appIsM2M {
+			if !appIsM2M && !appLogoutURLs.IsSet(cmd) {
 				var defaultValue string
 
 				if !appIsNative {
@@ -377,7 +377,7 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <descriptio
 			}
 
 			// Prompt for allowed origins URLs if app is SPA
-			if appIsSPA {
+			if appIsSPA && !appOrigins.IsSet(cmd) {
 				defaultValue := appDefaultURL
 
 				if err := appOrigins.AskMany(cmd, &inputs.AllowedOrigins, &defaultValue); err != nil {
@@ -386,7 +386,7 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <descriptio
 			}
 
 			// Prompt for allowed web origins URLs if app is SPA
-			if appIsSPA {
+			if appIsSPA && !appWebOrigins.IsSet(cmd) {
 				defaultValue := appDefaultURL
 
 				if err := appWebOrigins.AskMany(cmd, &inputs.AllowedWebOrigins, &defaultValue); err != nil {
@@ -512,7 +512,7 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 			appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
 
 			// Prompt for callback URLs if app is not m2m
-			if !appIsM2M {
+			if !appIsM2M && !appCallbacks.IsSet(cmd) {
 				var defaultValue string
 
 				if !appIsNative {
@@ -529,7 +529,7 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 			}
 
 			// Prompt for logout URLs if app is not m2m
-			if !appIsM2M {
+			if !appIsM2M && !appLogoutURLs.IsSet(cmd) {
 				var defaultValue string
 
 				if !appIsNative {
@@ -546,7 +546,7 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 			}
 
 			// Prompt for allowed origins URLs if app is SPA
-			if appIsSPA {
+			if appIsSPA && !appOrigins.IsSet(cmd) {
 				defaultValue := appDefaultURL
 
 				if len(current.AllowedOrigins) > 0 {
@@ -559,7 +559,7 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 			}
 
 			// Prompt for allowed web origins URLs if app is SPA
-			if appIsSPA {
+			if appIsSPA && !appWebOrigins.IsSet(cmd) {
 				defaultValue := appDefaultURL
 
 				if len(current.WebOrigins) > 0 {

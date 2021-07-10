@@ -137,15 +137,13 @@ func askFlag(cmd *cobra.Command, f *Flag, value interface{}, defaultValue *strin
 }
 
 func askManyFlag(cmd *cobra.Command, f *Flag, value interface{}, defaultValue *string, isUpdate bool) error {
-	if shouldAsk(cmd, f, isUpdate) {
-		var strInput string
+	var strInput string
 
-		if err := ask(cmd, f, &strInput, defaultValue, isUpdate); err != nil {
-			return err
-		}
-
-		*value.(*[]string) = commaSeparatedStringToSlice(strInput)
+	if err := askFlag(cmd, f, &strInput, defaultValue, isUpdate); err != nil {
+		return err
 	}
+
+	*value.(*[]string) = commaSeparatedStringToSlice(strInput)
 
 	return nil
 }
