@@ -48,7 +48,7 @@ func (r *Renderer) RolePermissionList(perms []*management.Permission) {
 
 	if len(perms) == 0 {
 		r.EmptyState(resource)
-		r.Infof("Use 'auth0 roles permissions associate' to add one")
+		r.Infof("Use 'auth0 roles permissions add' to add one")
 		return
 	}
 
