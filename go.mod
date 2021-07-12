@@ -36,13 +36,14 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/pretty v1.1.0
 	github.com/ulikunitz/xz v0.5.10 // indirect
+	github.com/yuin/goldmark v1.4.0 // indirect
 	github.com/zalando/go-keyring v0.1.1
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
+	golang.org/x/sys v0.0.0-20210510120138-977fb7262007
 	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d
-	golang.org/x/text v0.3.5 // indirect
+	golang.org/x/tools/gopls v0.7.0 // indirect
 	gopkg.in/auth0.v5 v5.19.1
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.4.0
