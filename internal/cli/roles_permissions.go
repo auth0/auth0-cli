@@ -102,7 +102,7 @@ To add a permission try:
 
     auth0 roles permissions add <role-id> -p <permission-name>`,
 		Example: `auth0 roles permissions add <role-id> -p <permission-name>
-auth0 roles permissions assoc`,
+auth0 roles permissions add`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
