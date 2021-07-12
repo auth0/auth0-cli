@@ -48,6 +48,7 @@ func rolesCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(createRoleCmd(cli))
 	cmd.AddCommand(updateRoleCmd(cli))
 	cmd.AddCommand(deleteRoleCmd(cli))
+	cmd.AddCommand(rolePermissionsCmd(cli))
 
 	return cmd
 }
