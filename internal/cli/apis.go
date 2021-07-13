@@ -196,7 +196,7 @@ auth0 apis create -n myapi -e 6100 --offline-access=true`,
 				return err
 			}
 
-			if err :=apiOfflineAccess.AskBool(cmd, &inputs.AllowOfflineAccess, nil); err != nil {
+			if err := apiOfflineAccess.AskBool(cmd, &inputs.AllowOfflineAccess, nil); err != nil {
 				return err
 			}
 
@@ -240,11 +240,11 @@ auth0 apis create -n myapi -e 6100 --offline-access=true`,
 
 func updateApiCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID                     string
-		Name                   string
-		Scopes                 []string
-		TokenLifetime          int
-		AllowOfflineAccess     bool
+		ID                 string
+		Name               string
+		Scopes             []string
+		TokenLifetime      int
+		AllowOfflineAccess bool
 	}
 
 	cmd := &cobra.Command{
@@ -497,6 +497,12 @@ func apiDefaultTokenLifetime() int {
 }
 
 func (c *cli) apiPickerOptions() (pickerOptions, error) {
+	return c.filteredAPIPickerOptions(func(r *management.ResourceServer) bool {
+		return true
+	})
+}
+
+func (c *cli) filteredAPIPickerOptions(include func(r *management.ResourceServer) bool) (pickerOptions, error) {
 	list, err := c.api.ResourceServer.List()
 	if err != nil {
 		return nil, err
@@ -506,6 +512,9 @@ func (c *cli) apiPickerOptions() (pickerOptions, error) {
 	// labels.
 	var opts pickerOptions
 	for _, r := range list.ResourceServers {
+		if !include(r) {
+			continue
+		}
 		label := fmt.Sprintf("%s %s", r.GetName(), ansi.Faint("("+r.GetIdentifier()+")"))
 
 		opts = append(opts, pickerOption{value: r.GetID(), label: label})
