@@ -2,8 +2,10 @@ package cli
 
 import (
 	"fmt"
-
-	"github.com/auth0/auth0-cli/internal/auth0"
+  
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/auth0/auth0-cli/internal/ansi"
+  "github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/spf13/cobra"
 )
 
@@ -66,6 +68,28 @@ func (f *Flag) Select(cmd *cobra.Command, value interface{}, options []string, d
 
 func (f *Flag) SelectU(cmd *cobra.Command, value interface{}, options []string, defaultValue *string) error {
 	return selectFlag(cmd, f, value, options, defaultValue, true)
+}
+
+func (f *Flag) Pick(cmd *cobra.Command, result *string, fn pickerOptionsFunc) error {
+	var opts pickerOptions
+	err := ansi.Waiting(func() error {
+		var err error
+		opts, err = fn()
+		return err
+	})
+
+	if err != nil {
+		return err
+	}
+
+	defaultLabel := opts.defaultLabel()
+	var val string
+	if err := selectFlag(cmd, f, &val, opts.labels(), &defaultLabel, false); err != nil {
+		return err
+	}
+
+	*result = opts.getValue(val)
+	return nil
 }
 
 func (f *Flag) OpenEditor(cmd *cobra.Command, value *string, defaultValue, filename string, infoFn func()) error {
