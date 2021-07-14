@@ -21,7 +21,7 @@ var (
 		Name:       "Connection",
 		LongForm:   "connection",
 		ShortForm:  "c",
-		Help:       "Name of the connection this user should be created in.",
+		Help:       "Name of the connection this user should be created in. Social connections are not supported.",
 		IsRequired: true,
 	}
 	userEmail = Flag{

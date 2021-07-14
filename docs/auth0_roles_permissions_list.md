@@ -1,18 +1,30 @@
 ---
 layout: default
 ---
-## auth0 roles
+## auth0 roles permissions list
 
-Manage resources for roles
+List permissions defined within a role
 
 ### Synopsis
 
-Manage resources for roles.
+List existing permissions defined in a role. To add a permission try:
+auth0 roles permissions add <role-id>
+
+```
+auth0 roles permissions list [flags]
+```
+
+### Examples
+
+```
+auth0 roles permissions list <role-id>
+auth0 roles permissions ls
+```
 
 ### Options
 
 ```
-  -h, --help   help for roles
+  -h, --help   help for list
 ```
 
 ### Options inherited from parent commands
@@ -28,11 +40,5 @@ Manage resources for roles.
 
 ### SEE ALSO
 
-* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
-* [auth0 roles create](auth0_roles_create.md)	 - Create a new role
-* [auth0 roles delete](auth0_roles_delete.md)	 - Delete a role
-* [auth0 roles list](auth0_roles_list.md)	 - List your roles
 * [auth0 roles permissions](auth0_roles_permissions.md)	 - Manage permissions within the role resource
-* [auth0 roles show](auth0_roles_show.md)	 - Show a role
-* [auth0 roles update](auth0_roles_update.md)	 - Update a role
 
