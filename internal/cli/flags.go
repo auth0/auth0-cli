@@ -2,10 +2,9 @@ package cli
 
 import (
 	"fmt"
-  
-	"github.com/AlecAivazis/survey/v2"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
-  "github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/spf13/cobra"
 )
 
