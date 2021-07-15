@@ -25,7 +25,7 @@ auth0 users create -n "John Doe" --e john@example.com --connection "Username-Pas
 ### Options
 
 ```
-  -c, --connection string   Name of the connection this user should be created in. Social connections are not supported.
+  -c, --connection string   Name of the database connection this user should be created in.
   -e, --email string        The user's email.
   -h, --help                help for create
   -n, --name string         The user's full name.
