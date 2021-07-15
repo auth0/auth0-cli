@@ -25,7 +25,7 @@ auth0 users update -n John Doe --email john.doe@example.com
 ### Options
 
 ```
-  -c, --connection string   Name of the connection this user should be created in. Social connections are not supported.
+  -c, --connection string   Name of the database connection this user should be created in.
   -e, --email string        The user's email.
   -h, --help                help for update
   -n, --name string         The user's full name.
