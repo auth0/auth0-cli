@@ -17,11 +17,12 @@ var (
 		Name: "User ID",
 		Help: "Id of the user.",
 	}
+
 	userConnection = Flag{
 		Name:       "Connection",
 		LongForm:   "connection",
 		ShortForm:  "c",
-		Help:       "Name of the connection this user should be created in.",
+		Help:       "Name of the database connection this user should be created in.",
 		IsRequired: true,
 	}
 	userEmail = Flag{
@@ -548,7 +549,9 @@ func (c *cli) connectionPickerOptions() []string {
 		fmt.Println(err)
 	}
 	for _, conn := range list.Connections {
-		res = append(res, conn.GetName())
+		if conn.GetStrategy() == "auth0" {
+			res = append(res, conn.GetName())
+		}
 	}
 
 	return res
