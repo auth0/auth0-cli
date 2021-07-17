@@ -139,7 +139,7 @@ auth0 rules create -n "My Rule" -t "Empty rule" --enabled=false`,
 			// TODO(cyx): we can re-think this once we have
 			// `--stdin` based commands. For now we don't have
 			// those yet, so keeping this simple.
-			err := ruleScript.EditorPrompt(
+			err := ruleScript.OpenEditor(
 				cmd,
 				&inputs.Script,
 				ruleTemplateOptions.getValue(inputs.Template),
@@ -312,7 +312,7 @@ auth0 rules update <id> -n "My Updated Rule" --enabled=false`,
 			// TODO(cyx): we can re-think this once we have
 			// `--stdin` based commands. For now we don't have
 			// those yet, so keeping this simple.
-			err = ruleScript.EditorPromptU(
+			err = ruleScript.OpenEditorU(
 				cmd,
 				&inputs.Script,
 				rule.GetScript(),
@@ -326,6 +326,10 @@ auth0 rules update <id> -n "My Updated Rule" --enabled=false`,
 			// Since name is optional, no need to specify what they chose.
 			if inputs.Name == "" {
 				inputs.Name = rule.GetName()
+			}
+
+			if inputs.Script == "" {
+				inputs.Script = rule.GetScript()
 			}
 
 			// Prepare rule payload for update. This will also be
