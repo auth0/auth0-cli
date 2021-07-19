@@ -185,10 +185,8 @@ auth0 apis create -n myapi -e 6100 --offline-access=true`,
 				return err
 			}
 
-			if !apiScopes.IsSet(cmd) {
-				if err := apiScopes.AskMany(cmd, &inputs.Scopes, nil); err != nil {
-					return err
-				}
+			if err := apiScopes.AskMany(cmd, &inputs.Scopes, nil); err != nil {
+				return err
 			}
 
 			defaultTokenLifetime := strconv.Itoa(apiDefaultTokenLifetime())
@@ -281,10 +279,8 @@ auth0 apis update -n myapi -e 6100 --offline-access=true`,
 				return err
 			}
 
-			if !apiScopes.IsSet(cmd) {
-				if err := apiScopes.AskManyU(cmd, &inputs.Scopes, nil); err != nil {
-					return err
-				}
+			if err := apiScopes.AskManyU(cmd, &inputs.Scopes, nil); err != nil {
+				return err
 			}
 
 			currentTokenLifetime := strconv.Itoa(auth0.IntValue(current.TokenLifetime))
