@@ -18,7 +18,7 @@ type commandInput interface {
 }
 
 func ask(cmd *cobra.Command, i commandInput, value interface{}, defaultValue *string, isUpdate bool) error {
-	isRequired := !isUpdate && i.GetIsRequired()
+	isRequired := isInputRequired(i, isUpdate)
 	input := prompt.TextInput("", i.GetLabel(), i.GetHelp(), auth0.StringValue(defaultValue), isRequired)
 
 	if err := prompt.AskOne(input, value); err != nil {
@@ -37,8 +37,8 @@ func askBool(cmd *cobra.Command, i commandInput, value *bool, defaultValue *bool
 }
 
 func askPassword(cmd *cobra.Command, i commandInput, value interface{}, defaultValue *string, isUpdate bool) error {
-	isRequired := !isUpdate && i.GetIsRequired()
-	input := prompt.Password("", i.GetLabel(), auth0.StringValue(defaultValue), isRequired)
+	isRequired := isInputRequired(i, isUpdate)
+	input := prompt.PasswordInput("", i.GetLabel(), auth0.StringValue(defaultValue), isRequired)
 
 	if err := prompt.AskOne(input, value); err != nil {
 		return handleInputError(err)
@@ -48,7 +48,7 @@ func askPassword(cmd *cobra.Command, i commandInput, value interface{}, defaultV
 }
 
 func _select(cmd *cobra.Command, i commandInput, value interface{}, options []string, defaultValue *string, isUpdate bool) error {
-	isRequired := !isUpdate && i.GetIsRequired()
+	isRequired := isInputRequired(i, isUpdate)
 
 	// If there is no provided default value, we'll use the first option in
 	// the selector by default.
@@ -65,8 +65,50 @@ func _select(cmd *cobra.Command, i commandInput, value interface{}, options []st
 	return nil
 }
 
+func openCreateEditor(cmd *cobra.Command, i commandInput, value *string, defaultValue string, filename string, infoFn func(), tempFileFn func(string)) error {
+	out, err := prompt.CaptureInputViaEditor(
+		defaultValue,
+		filename,
+		infoFn,
+		tempFileFn,
+	)
+
+	if err != nil {
+		return handleInputError(err)
+	}
+
+	*value = out
+
+	return nil
+}
+
+func openUpdateEditor(cmd *cobra.Command, i commandInput, value *string, defaultValue string, filename string) error {
+	isRequired := isInputRequired(i, true)
+	response := map[string]interface{}{}
+	input := prompt.EditorInput(i.GetName(), i.GetLabel(), i.GetHelp(), filename, defaultValue, isRequired)
+
+	if err := prompt.AskOne(input, &response); err != nil {
+		return handleInputError(err)
+	}
+
+	// Since we have BlankAllowed=true, an empty answer means we'll use the
+	// initialValue provided since this path is for the Update path.
+	answer, ok := response[i.GetName()].(string)
+	if ok && answer != "" {
+		*value = answer
+	} else {
+		*value = defaultValue
+	}
+
+	return nil
+}
+
 func inputLabel(name string) string {
 	return fmt.Sprintf("%s:", name)
+}
+
+func isInputRequired(i commandInput, isUpdate bool) bool {
+	return !isUpdate && i.GetIsRequired()
 }
 
 func handleInputError(err error) error {

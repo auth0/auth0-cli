@@ -3,10 +3,8 @@ package cli
 import (
 	"fmt"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
-	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 )
 
@@ -93,70 +91,16 @@ func (f *Flag) Pick(cmd *cobra.Command, result *string, fn pickerOptionsFunc) er
 	return nil
 }
 
-func (f *Flag) EditorPrompt(cmd *cobra.Command, value *string, initialValue, filename string, infoFn func()) error {
-	out, err := prompt.CaptureInputViaEditor(
-		initialValue,
-		filename,
-		infoFn,
-		nil,
-	)
-	if err != nil {
-		return err
-	}
-
-	*value = out
-	return nil
+func (f *Flag) OpenEditor(cmd *cobra.Command, value *string, defaultValue, filename string, infoFn func()) error {
+	return openEditorFlag(cmd, f, value, defaultValue, filename, infoFn, nil, false)
 }
 
-func (f *Flag) EditorPromptW(cmd *cobra.Command, value *string, initialValue, filename string, infoFn func(), tempFileCreatedFn func(string)) error {
-	out, err := prompt.CaptureInputViaEditor(
-		initialValue,
-		filename,
-		infoFn,
-		tempFileCreatedFn,
-	)
-	if err != nil {
-		return err
-	}
-
-	*value = out
-	return nil
+func (f *Flag) OpenEditorW(cmd *cobra.Command, value *string, defaultValue, filename string, infoFn func(), tempFileFn func(string)) error {
+	return openEditorFlag(cmd, f, value, defaultValue, filename, infoFn, tempFileFn, false)
 }
 
-func (f *Flag) EditorPromptU(cmd *cobra.Command, value *string, initialValue, filename string, infoFn func()) error {
-	response := map[string]interface{}{}
-
-	questions := []*survey.Question{
-		{
-			Name: f.Name,
-			Prompt: &prompt.Editor{
-				BlankAllowed: true,
-				Editor: &survey.Editor{
-					Help:          f.Help,
-					Message:       f.Name,
-					FileName:      filename,
-					Default:       initialValue,
-					HideDefault:   true,
-					AppendDefault: true,
-				},
-			},
-		},
-	}
-
-	if err := survey.Ask(questions, &response, prompt.Icons); err != nil {
-		return err
-	}
-
-	// Since we have BlankAllowed=true, an empty answer means we'll use the
-	// initialValue provided since this path is for the Update path.
-	answer, ok := response[f.Name].(string)
-	if ok && answer != "" {
-		*value = answer
-	} else {
-		*value = initialValue
-	}
-
-	return nil
+func (f *Flag) OpenEditorU(cmd *cobra.Command, value *string, defaultValue string, filename string, infoFn func()) error {
+	return openEditorFlag(cmd, f, value, defaultValue, filename, nil, nil, true)
 }
 
 func (f *Flag) AskPassword(cmd *cobra.Command, value *string, defaultValue *string) error {
@@ -251,6 +195,18 @@ func askPasswordFlag(cmd *cobra.Command, f *Flag, value *string, defaultValue *s
 	if shouldAsk(cmd, f, isUpdate) {
 		if err := askPassword(cmd, f, value, defaultValue, isUpdate); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func openEditorFlag(cmd *cobra.Command, f *Flag, value *string, defaultValue string, filename string, infoFn func(), tempFileFn func(string), isUpdate bool) error {
+	if shouldAsk(cmd, f, false) { // Always open the editor on update
+		if isUpdate {
+			return openUpdateEditor(cmd, f, value, defaultValue, filename)
+		} else {
+			return openCreateEditor(cmd, f, value, defaultValue, filename, infoFn, tempFileFn)
 		}
 	}
 

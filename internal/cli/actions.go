@@ -188,7 +188,7 @@ auth0 actions create --n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=va
 			// TODO(cyx): we can re-think this once we have
 			// `--stdin` based commands. For now we don't have
 			// those yet, so keeping this simple.
-			if err := actionCode.EditorPrompt(
+			if err := actionCode.OpenEditor(
 				cmd,
 				&inputs.Code,
 				actionTemplate(inputs.Trigger),
@@ -292,7 +292,7 @@ auth0 actions update <id> --n myaction -t post-login -d "lodash=4.0.0" -s "API_K
 			// TODO(cyx): we can re-think this once we have
 			// `--stdin` based commands. For now we don't have
 			// those yet, so keeping this simple.
-			if err := actionCode.EditorPromptU(
+			if err := actionCode.OpenEditorU(
 				cmd,
 				&inputs.Code,
 				current.GetCode(),
@@ -311,6 +311,10 @@ auth0 actions update <id> --n myaction -t post-login -d "lodash=4.0.0" -s "API_K
 
 			if inputs.Trigger == "" && currentTriggerId != "" {
 				inputs.Trigger = currentTriggerId
+			}
+
+			if inputs.Code == "" {
+				inputs.Code = current.GetCode()
 			}
 
 			// Prepare action payload for update. This will also be
