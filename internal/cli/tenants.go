@@ -161,7 +161,7 @@ func addTenantCmd(cli *cli) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Add a tenant with client credentials",
 		Long:    "Add a tenant with client credentials.",
-		Example: "auth0 tenants add <tenant> --client-id=<id> --client-secret=<secret>",
+		Example: "auth0 tenants add <tenant> --client-id <id> --client-secret <secret>",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := tenantDomain.Pick(cmd, &inputs.Domain, cli.tenantPickerOptions)
