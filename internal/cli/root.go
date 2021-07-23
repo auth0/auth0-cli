@@ -127,7 +127,7 @@ func buildRootCmd(cli *cli) *cobra.Command {
 			}
 
 			// Selecting tenants shouldn't really trigger a login.
-			if cmd.Use == "use" && cmd.Parent().Use == "tenants" {
+			if cmd.Parent().Use == "tenants" && (cmd.Use == "use" || cmd.Use == "add") {
 				return nil
 			}
 
