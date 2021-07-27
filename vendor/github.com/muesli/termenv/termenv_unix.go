@@ -3,19 +3,32 @@
 package termenv
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
-	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 func colorProfile() Profile {
+	term := os.Getenv("TERM")
 	colorTerm := os.Getenv("COLORTERM")
-	if colorTerm == "truecolor" {
-		return TrueColor
+
+	switch strings.ToLower(colorTerm) {
+	case "24bit":
+		fallthrough
+	case "truecolor":
+		if term == "screen" || !strings.HasPrefix(term, "screen") {
+			// enable TrueColor in tmux, but not for old-school screen
+			return TrueColor
+		}
+	case "yes":
+		fallthrough
+	case "true":
+		return ANSI256
 	}
 
-	term := os.Getenv("TERM")
 	if strings.Contains(term, "256color") {
 		return ANSI256
 	}
@@ -70,42 +83,136 @@ func backgroundColor() Color {
 	return ANSIColor(0)
 }
 
-func readWithTimeout(f *os.File) (string, bool) {
-	var readfds syscall.FdSet
-	fd := f.Fd()
-	readfds.Bits[fd/64] |= 1 << (fd % 64)
-
-	// Use select to attempt to read from os.Stdout for 100 ms
-	err := sysSelect(int(fd)+1,
-		&readfds,
-		&syscall.Timeval{Usec: 100000})
-
+func readNextByte(f *os.File) (byte, error) {
+	var b [1]byte
+	n, err := f.Read(b[:])
 	if err != nil {
-		// log.Printf("select(read error): %v", err)
-		return "", false
-	}
-	if readfds.Bits[fd/64]&(1<<(fd%64)) == 0 {
-		// log.Print("select(read timeout)")
-		return "", false
+		return 0, err
 	}
 
-	// n > 0 => is readable
-	var data []byte
-	b := make([]byte, 1)
-	for {
-		_, err := f.Read(b)
+	if n == 0 {
+		panic("read returned no data")
+	}
+
+	return b[0], nil
+}
+
+// readNextResponse reads either an OSC response or a cursor position response:
+//  * OSC response: "\x1b]11;rgb:1111/1111/1111\x1b\\"
+//  * cursor position response: "\x1b[42;1R"
+func readNextResponse(fd *os.File) (response string, isOSC bool, err error) {
+	start, err := readNextByte(fd)
+	if err != nil {
+		return "", false, err
+	}
+
+	// if we encounter a backslash, this is a left-over from the previous OSC
+	// response, which can be terminated by an optional backslash
+	if start == '\\' {
+		start, err = readNextByte(fd)
 		if err != nil {
-			// log.Printf("read(%d): %v %d", fd, err, n)
-			return "", false
+			return "", false, err
 		}
-		// log.Printf("read %d bytes from stdout: %s %d\n", n, data, data[len(data)-1])
+	}
 
-		data = append(data, b[0])
-		if b[0] == '\a' || (b[0] == '\\' && len(data) > 2) {
+	// first byte must be ESC
+	if start != '\033' {
+		return "", false, ErrStatusReport
+	}
+
+	response += string(start)
+
+	// next byte is either '[' (cursor position response) or ']' (OSC response)
+	tpe, err := readNextByte(fd)
+	if err != nil {
+		return "", false, err
+	}
+
+	response += string(tpe)
+
+	var oscResponse bool
+	switch tpe {
+	case '[':
+		oscResponse = false
+	case ']':
+		oscResponse = true
+	default:
+		return "", false, ErrStatusReport
+	}
+
+	for {
+		b, err := readNextByte(os.Stdout)
+		if err != nil {
+			return "", false, err
+		}
+
+		response += string(b)
+
+		if oscResponse {
+			// OSC can be terminated by BEL (\a) or ST (ESC)
+			if b == '\a' || strings.HasSuffix(response, "\033") {
+				return response, true, nil
+			}
+		} else {
+			// cursor position response is terminated by 'R'
+			if b == 'R' {
+				return response, false, nil
+			}
+		}
+
+		// both responses have less than 25 bytes, so if we read more, that's an error
+		if len(response) > 25 {
 			break
 		}
 	}
 
-	// fmt.Printf("read %d bytes from stdout: %s\n", n, data)
-	return string(data), true
+	return "", false, ErrStatusReport
+}
+
+func termStatusReport(sequence int) (string, error) {
+	// screen/tmux can't support OSC, because they can be connected to multiple
+	// terminals concurrently.
+	term := os.Getenv("TERM")
+	if strings.HasPrefix(term, "screen") {
+		return "", ErrStatusReport
+	}
+
+	t, err := unix.IoctlGetTermios(unix.Stdout, tcgetattr)
+	if err != nil {
+		return "", ErrStatusReport
+	}
+	defer unix.IoctlSetTermios(unix.Stdout, tcsetattr, t)
+
+	noecho := *t
+	noecho.Lflag = noecho.Lflag &^ unix.ECHO
+	noecho.Lflag = noecho.Lflag &^ unix.ICANON
+	if err := unix.IoctlSetTermios(unix.Stdout, tcsetattr, &noecho); err != nil {
+		return "", ErrStatusReport
+	}
+
+	// first, send OSC query, which is ignored by terminal which do not support it
+	fmt.Printf("\033]%d;?\033\\", sequence)
+
+	// then, query cursor position, should be supported by all terminals
+	fmt.Printf("\033[6n")
+
+	// read the next response
+	res, isOSC, err := readNextResponse(os.Stdout)
+	if err != nil {
+		return "", err
+	}
+
+	// if this is not OSC response, then the terminal does not support it
+	if !isOSC {
+		return "", ErrStatusReport
+	}
+
+	// read the cursor query response next and discard the result
+	_, _, err = readNextResponse(os.Stdout)
+	if err != nil {
+		return "", err
+	}
+
+	// fmt.Println("Rcvd", res[1:])
+	return res, nil
 }

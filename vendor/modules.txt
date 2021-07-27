@@ -1,11 +1,11 @@
-# github.com/AlecAivazis/survey/v2 v2.2.8
+# github.com/AlecAivazis/survey/v2 v2.2.15
 ## explicit
 github.com/AlecAivazis/survey/v2
 github.com/AlecAivazis/survey/v2/core
 github.com/AlecAivazis/survey/v2/terminal
 # github.com/PuerkitoBio/rehttp v1.0.0
 github.com/PuerkitoBio/rehttp
-# github.com/alecthomas/chroma v0.7.3
+# github.com/alecthomas/chroma v0.8.2
 github.com/alecthomas/chroma
 github.com/alecthomas/chroma/formatters
 github.com/alecthomas/chroma/formatters/html
@@ -37,17 +37,21 @@ github.com/alecthomas/chroma/lexers/v
 github.com/alecthomas/chroma/lexers/w
 github.com/alecthomas/chroma/lexers/x
 github.com/alecthomas/chroma/lexers/y
+github.com/alecthomas/chroma/lexers/z
 github.com/alecthomas/chroma/quick
 github.com/alecthomas/chroma/styles
 # github.com/andybalholm/brotli v1.0.1
 ## explicit
 github.com/andybalholm/brotli
+# github.com/aymerick/douceur v0.2.0
+github.com/aymerick/douceur/css
+github.com/aymerick/douceur/parser
 # github.com/benbjohnson/clock v1.1.0
 ## explicit
-# github.com/briandowns/spinner v1.12.1-0.20210421154440-eac1b899fcf1
+# github.com/briandowns/spinner v1.16.0
 ## explicit
 github.com/briandowns/spinner
-# github.com/charmbracelet/glamour v0.2.0
+# github.com/charmbracelet/glamour v0.3.0
 ## explicit
 github.com/charmbracelet/glamour
 github.com/charmbracelet/glamour/ansi
@@ -74,7 +78,7 @@ github.com/dsnet/compress/internal/prefix
 # github.com/fatih/color v1.10.0
 ## explicit
 github.com/fatih/color
-# github.com/fsnotify/fsnotify v1.4.7
+# github.com/fsnotify/fsnotify v1.4.9
 ## explicit
 github.com/fsnotify/fsnotify
 # github.com/getsentry/sentry-go v0.11.0
@@ -83,32 +87,40 @@ github.com/getsentry/sentry-go
 github.com/getsentry/sentry-go/internal/crypto/randutil
 github.com/getsentry/sentry-go/internal/debug
 github.com/getsentry/sentry-go/internal/ratelimit
-# github.com/goccy/go-json v0.4.7
+# github.com/goccy/go-json v0.7.4
 github.com/goccy/go-json
-# github.com/godbus/dbus/v5 v5.0.3
+github.com/goccy/go-json/internal/decoder
+github.com/goccy/go-json/internal/encoder
+github.com/goccy/go-json/internal/encoder/vm
+github.com/goccy/go-json/internal/encoder/vm_color
+github.com/goccy/go-json/internal/encoder/vm_color_indent
+github.com/goccy/go-json/internal/encoder/vm_indent
+github.com/goccy/go-json/internal/errors
+github.com/goccy/go-json/internal/runtime
+# github.com/godbus/dbus/v5 v5.0.4
 github.com/godbus/dbus/v5
-# github.com/golang/mock v1.5.0
+# github.com/golang/mock v1.6.0
 ## explicit
 github.com/golang/mock/gomock
 github.com/golang/mock/mockgen
 github.com/golang/mock/mockgen/model
-# github.com/golang/protobuf v1.4.2
+# github.com/golang/protobuf v1.5.2
 github.com/golang/protobuf/proto
 # github.com/golang/snappy v0.0.3
 ## explicit
 github.com/golang/snappy
-# github.com/google/go-cmp v0.5.5
+# github.com/google/go-cmp v0.5.6
 ## explicit
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/goterm v0.0.0-20190703233501-fc88cf888a3f
-github.com/google/goterm/term
-# github.com/google/uuid v1.2.0
+# github.com/google/uuid v1.3.0
 ## explicit
 github.com/google/uuid
+# github.com/gorilla/css v1.0.0
+github.com/gorilla/css/scanner
 # github.com/guiguan/caster v0.0.0-20191104051807-3736c4464f38
 ## explicit
 github.com/guiguan/caster
@@ -145,21 +157,30 @@ github.com/klauspost/compress/zstd/internal/xxhash
 github.com/klauspost/pgzip
 # github.com/lestrrat-go/backoff/v2 v2.0.7
 github.com/lestrrat-go/backoff/v2
+# github.com/lestrrat-go/blackmagic v1.0.0
+github.com/lestrrat-go/blackmagic
 # github.com/lestrrat-go/httpcc v1.0.0
 github.com/lestrrat-go/httpcc
-# github.com/lestrrat-go/iter v1.0.0
+# github.com/lestrrat-go/iter v1.0.1
 github.com/lestrrat-go/iter/arrayiter
 github.com/lestrrat-go/iter/mapiter
-# github.com/lestrrat-go/jwx v1.1.4
+# github.com/lestrrat-go/jwx v1.2.4
 ## explicit
+github.com/lestrrat-go/jwx
 github.com/lestrrat-go/jwx/internal/base64
-github.com/lestrrat-go/jwx/internal/blackmagic
 github.com/lestrrat-go/jwx/internal/ecutil
 github.com/lestrrat-go/jwx/internal/iter
 github.com/lestrrat-go/jwx/internal/json
 github.com/lestrrat-go/jwx/internal/keyconv
 github.com/lestrrat-go/jwx/internal/pool
 github.com/lestrrat-go/jwx/jwa
+github.com/lestrrat-go/jwx/jwe
+github.com/lestrrat-go/jwx/jwe/internal/aescbc
+github.com/lestrrat-go/jwx/jwe/internal/cipher
+github.com/lestrrat-go/jwx/jwe/internal/concatkdf
+github.com/lestrrat-go/jwx/jwe/internal/content_crypt
+github.com/lestrrat-go/jwx/jwe/internal/keyenc
+github.com/lestrrat-go/jwx/jwe/internal/keygen
 github.com/lestrrat-go/jwx/jwk
 github.com/lestrrat-go/jwx/jws
 github.com/lestrrat-go/jwx/jwt
@@ -167,20 +188,21 @@ github.com/lestrrat-go/jwx/jwt/internal/types
 github.com/lestrrat-go/jwx/x25519
 # github.com/lestrrat-go/option v1.0.0
 github.com/lestrrat-go/option
+# github.com/lestrrat-go/pdebug/v3 v3.0.1
+github.com/lestrrat-go/pdebug/v3
 # github.com/logrusorgru/aurora v2.0.3+incompatible
 ## explicit
 github.com/logrusorgru/aurora
-# github.com/lucasb-eyer/go-colorful v1.0.3
+# github.com/lucasb-eyer/go-colorful v1.2.0
 github.com/lucasb-eyer/go-colorful
-# github.com/magiconair/properties v1.8.1
+# github.com/magiconair/properties v1.8.5
 github.com/magiconair/properties
 # github.com/mattn/go-colorable v0.1.8
 github.com/mattn/go-colorable
-# github.com/mattn/go-isatty v0.0.12
+# github.com/mattn/go-isatty v0.0.13
 ## explicit
 github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.10
-## explicit
 github.com/mattn/go-runewidth
 # github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d
 ## explicit
@@ -188,23 +210,23 @@ github.com/mgutz/ansi
 # github.com/mholt/archiver/v3 v3.5.0
 ## explicit
 github.com/mholt/archiver/v3
-# github.com/microcosm-cc/bluemonday v1.0.2
+# github.com/microcosm-cc/bluemonday v1.0.6
 github.com/microcosm-cc/bluemonday
-# github.com/mitchellh/mapstructure v1.1.2
+# github.com/mitchellh/mapstructure v1.4.1
 github.com/mitchellh/mapstructure
-# github.com/muesli/reflow v0.1.0
+# github.com/muesli/reflow v0.2.0
 github.com/muesli/reflow/ansi
 github.com/muesli/reflow/indent
 github.com/muesli/reflow/padding
 github.com/muesli/reflow/wordwrap
-# github.com/muesli/termenv v0.6.0
+# github.com/muesli/termenv v0.8.1
 github.com/muesli/termenv
 # github.com/nwaples/rardecode v1.1.0
 github.com/nwaples/rardecode
 # github.com/olekukonko/tablewriter v0.0.5
 ## explicit
 github.com/olekukonko/tablewriter
-# github.com/pelletier/go-toml v1.2.0
+# github.com/pelletier/go-toml v1.9.3
 github.com/pelletier/go-toml
 # github.com/pierrec/lz4/v4 v4.1.3
 ## explicit
@@ -225,21 +247,21 @@ github.com/rivo/uniseg
 github.com/russross/blackfriday/v2
 # github.com/shurcooL/sanitized_anchor_name v1.0.0
 github.com/shurcooL/sanitized_anchor_name
-# github.com/spf13/afero v1.1.2
+# github.com/spf13/afero v1.6.0
 github.com/spf13/afero
 github.com/spf13/afero/mem
-# github.com/spf13/cast v1.3.0
+# github.com/spf13/cast v1.3.1
 github.com/spf13/cast
 # github.com/spf13/cobra v1.1.3
 ## explicit
 github.com/spf13/cobra
 github.com/spf13/cobra/doc
-# github.com/spf13/jwalterweatherman v1.0.0
+# github.com/spf13/jwalterweatherman v1.1.0
 github.com/spf13/jwalterweatherman
 # github.com/spf13/pflag v1.0.5
 ## explicit
 github.com/spf13/pflag
-# github.com/spf13/viper v1.7.0
+# github.com/spf13/viper v1.8.1
 ## explicit
 github.com/spf13/viper
 # github.com/stretchr/testify v1.7.0
@@ -248,7 +270,7 @@ github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
 # github.com/subosito/gotenv v1.2.0
 github.com/subosito/gotenv
-# github.com/tidwall/pretty v1.1.0
+# github.com/tidwall/pretty v1.2.0
 ## explicit
 github.com/tidwall/pretty
 # github.com/ulikunitz/xz v0.5.10
@@ -259,7 +281,7 @@ github.com/ulikunitz/xz/internal/xlog
 github.com/ulikunitz/xz/lzma
 # github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 github.com/xi2/xz
-# github.com/yuin/goldmark v1.2.1
+# github.com/yuin/goldmark v1.3.5
 github.com/yuin/goldmark
 github.com/yuin/goldmark/ast
 github.com/yuin/goldmark/extension
@@ -269,6 +291,10 @@ github.com/yuin/goldmark/renderer
 github.com/yuin/goldmark/renderer/html
 github.com/yuin/goldmark/text
 github.com/yuin/goldmark/util
+# github.com/yuin/goldmark-emoji v1.0.1
+github.com/yuin/goldmark-emoji
+github.com/yuin/goldmark-emoji/ast
+github.com/yuin/goldmark-emoji/definition
 # github.com/zalando/go-keyring v0.1.1
 ## explicit
 github.com/zalando/go-keyring
@@ -278,18 +304,18 @@ github.com/zalando/go-keyring/secret_service
 golang.org/x/crypto/curve25519
 golang.org/x/crypto/ed25519
 golang.org/x/crypto/ed25519/internal/edwards25519
-golang.org/x/crypto/ssh/terminal
-# golang.org/x/mod v0.4.1
+golang.org/x/crypto/pbkdf2
+# golang.org/x/mod v0.4.2
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/modfile
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20201021035429-f5854403a974
+# golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/html
 golang.org/x/net/html/atom
-# golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
+# golang.org/x/oauth2 v0.0.0-20210628180205-a41e5a781914
 ## explicit
 golang.org/x/oauth2
 golang.org/x/oauth2/clientcredentials
@@ -297,21 +323,21 @@ golang.org/x/oauth2/internal
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
+# golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
 ## explicit
+golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d
+# golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
 ## explicit
 golang.org/x/term
 # golang.org/x/text v0.3.5
-## explicit
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
-# golang.org/x/tools v0.0.0-20210114065538-d78b04bdf963
+# golang.org/x/tools v0.1.2
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/imports
 golang.org/x/tools/internal/event
@@ -325,7 +351,7 @@ golang.org/x/tools/internal/imports
 # golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# google.golang.org/appengine v1.6.6
+# google.golang.org/appengine v1.6.7
 google.golang.org/appengine/internal
 google.golang.org/appengine/internal/base
 google.golang.org/appengine/internal/datastore
@@ -333,7 +359,7 @@ google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/protobuf v1.25.0
+# google.golang.org/protobuf v1.26.0
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
 google.golang.org/protobuf/internal/descfmt
@@ -344,22 +370,23 @@ google.golang.org/protobuf/internal/encoding/messageset
 google.golang.org/protobuf/internal/encoding/tag
 google.golang.org/protobuf/internal/encoding/text
 google.golang.org/protobuf/internal/errors
-google.golang.org/protobuf/internal/fieldsort
 google.golang.org/protobuf/internal/filedesc
 google.golang.org/protobuf/internal/filetype
 google.golang.org/protobuf/internal/flags
 google.golang.org/protobuf/internal/genid
 google.golang.org/protobuf/internal/impl
-google.golang.org/protobuf/internal/mapsort
+google.golang.org/protobuf/internal/order
 google.golang.org/protobuf/internal/pragma
 google.golang.org/protobuf/internal/set
 google.golang.org/protobuf/internal/strs
 google.golang.org/protobuf/internal/version
 google.golang.org/protobuf/proto
+google.golang.org/protobuf/reflect/protodesc
 google.golang.org/protobuf/reflect/protoreflect
 google.golang.org/protobuf/reflect/protoregistry
 google.golang.org/protobuf/runtime/protoiface
 google.golang.org/protobuf/runtime/protoimpl
+google.golang.org/protobuf/types/descriptorpb
 # gopkg.in/auth0.v5 v5.19.1
 ## explicit
 gopkg.in/auth0.v5
@@ -368,11 +395,10 @@ gopkg.in/auth0.v5/internal/tag
 gopkg.in/auth0.v5/management
 # gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
 ## explicit
-# gopkg.in/ini.v1 v1.51.1
+# gopkg.in/ini.v1 v1.62.0
 gopkg.in/ini.v1
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
-## explicit
 gopkg.in/yaml.v3

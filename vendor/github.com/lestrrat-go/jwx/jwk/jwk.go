@@ -14,6 +14,7 @@ import (
 	"encoding/pem"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 
 	"github.com/lestrrat-go/backoff/v2"
@@ -25,6 +26,13 @@ import (
 )
 
 var registry = json.NewRegistry()
+
+func bigIntToBytes(n *big.Int) ([]byte, error) {
+	if n == nil {
+		return nil, errors.New(`invalid *big.Int value`)
+	}
+	return n.Bytes(), nil
+}
 
 // New creates a jwk.Key from the given key (RSA/ECDSA/symmetric keys).
 //
@@ -226,6 +234,7 @@ func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http
 	var httpcl HTTPClient = http.DefaultClient
 	bo := backoff.Null()
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identHTTPClient{}:
 			httpcl = option.Value().(HTTPClient)
@@ -323,6 +332,12 @@ func parsePEMEncodedRawKey(src []byte) (interface{}, []byte, error) {
 			return nil, nil, errors.Wrap(err, `failed to parse PKCS8 private key`)
 		}
 		return key, rest, nil
+	case "CERTIFICATE":
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, `failed to parse certificate`)
+		}
+		return cert.PublicKey, rest, nil
 	default:
 		return nil, nil, errors.Errorf(`invalid PEM block type %s`, block.Type)
 	}
@@ -335,13 +350,29 @@ func parsePEMEncodedRawKey(src []byte) (interface{}, []byte, error) {
 // Given a WithPEM(true) option, this function assumes that the given input
 // is PEM encoded ASN.1 DER format key.
 //
-// Note that a successful parsing does NOT necessarily guarantee a valid key.
+// Note that a successful parsing of any type of key does NOT necessarily
+// guarantee a valid key. For example, no checks against expiration dates
+// are performed for certificate expiration, no checks against missing
+// parameters are performed, etc.
 func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	var parsePEM bool
+	var localReg *json.Registry
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPEM{}:
 			parsePEM = option.Value().(bool)
+		case identLocalRegistry{}:
+			// in reality you can only pass either withLocalRegistry or
+			// WithTypedField, but since withLocalRegistry is used only by us,
+			// we skip checking
+			localReg = option.Value().(*json.Registry)
+		case identTypedField{}:
+			pair := option.Value().(typedFieldPair)
+			if localReg == nil {
+				localReg = json.NewRegistry()
+			}
+			localReg.Register(pair.Name, pair.Value)
 		}
 	}
 
@@ -388,6 +419,16 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 		return nil, errors.Errorf(`invalid key type from JSON (%s)`, hint.Kty)
 	}
 
+	if localReg != nil {
+		dcKey, ok := key.(KeyWithDecodeCtx)
+		if !ok {
+			return nil, errors.Errorf(`typed field was requested, but the key (%T) does not support DecodeCtx`, key)
+		}
+		dc := json.NewDecodeCtx(localReg)
+		dcKey.SetDecodeCtx(dc)
+		defer func() { dcKey.SetDecodeCtx(nil) }()
+	}
+
 	if err := json.Unmarshal(data, key); err != nil {
 		return nil, errors.Wrapf(err, `failed to unmarshal JSON into key (%T)`, key)
 	}
@@ -401,23 +442,33 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 // call `json.Unmarshal` against an empty set created by `jwk.NewSet()`
 // to parse a JSON buffer into a `jwk.Set`.
 //
-// If you know for sure that you have a single key, you could also
-// use `jwk.ParseKey()`.
-//
 // This method exists because many times the user does not know before hand
 // if a JWK(s) resource at a remote location contains a single JWK key or
 // a JWK set, and `jwk.Parse()` can handle either case, returning a JWK Set
 // even if the data only contains a single JWK key
+//
+// If you are looking for more information on how JWKs are parsed, or if
+// you know for sure that you have a single key, please see the documentation
+// for `jwk.ParseKey()`.
 func Parse(src []byte, options ...ParseOption) (Set, error) {
 	var parsePEM bool
+	var localReg *json.Registry
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPEM{}:
 			parsePEM = option.Value().(bool)
+		case identTypedField{}:
+			pair := option.Value().(typedFieldPair)
+			if localReg == nil {
+				localReg = json.NewRegistry()
+			}
+			localReg.Register(pair.Name, pair.Value)
 		}
 	}
 
 	s := NewSet()
+
 	if parsePEM {
 		src = bytes.TrimSpace(src)
 		for len(src) > 0 {
@@ -433,6 +484,16 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 			src = bytes.TrimSpace(rest)
 		}
 		return s, nil
+	}
+
+	if localReg != nil {
+		dcKs, ok := s.(KeyWithDecodeCtx)
+		if !ok {
+			return nil, errors.Errorf(`typed field was requested, but the key set (%T) does not support DecodeCtx`, s)
+		}
+		dc := json.NewDecodeCtx(localReg)
+		dcKs.SetDecodeCtx(dc)
+		defer func() { dcKs.SetDecodeCtx(nil) }()
 	}
 
 	if err := json.Unmarshal(src, s); err != nil {
@@ -468,6 +529,7 @@ func AssignKeyID(key Key, options ...Option) error {
 
 	hash := crypto.SHA256
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identThumbprintHash{}:
 			hash = option.Value().(crypto.Hash)

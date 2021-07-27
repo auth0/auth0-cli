@@ -16,26 +16,50 @@ color conversions.
 
 ![Example output](https://github.com/muesli/termenv/raw/master/examples/hello-world/hello-world.png)
 
+## Features
+
+- RGB/TrueColor support
+- Detects the supported color range of your terminal
+- Automatically converts colors to the best matching, available colors
+- Terminal theme (light/dark) detection
+- Chainable syntax
+- Nested styles
+
 ## Installation
 
 ```bash
 go get github.com/muesli/termenv
 ```
 
-## Query Terminal Status
+## Query Terminal Support
+
+`termenv` can query the terminal it is running in, so you can safely use
+advanced features, like RGB colors. `ColorProfile` returns the color profile
+supported by the terminal:
 
 ```go
-// returns supported color profile: Ascii, ANSI, ANSI256, or TrueColor
-termenv.ColorProfile()
+profile := termenv.ColorProfile()
+```
 
-// returns default foreground color
-termenv.ForegroundColor()
+This returns one of the supported color profiles:
 
-// returns default background color
-termenv.BackgroundColor()
+- `termenv.Ascii` - no ANSI support detected, ASCII only
+- `termenv.ANSI` - 16 color ANSI support
+- `termenv.ANSI256` - Extended 256 color ANSI support
+- `termenv.TrueColor` - RGB/TrueColor support
 
-// returns whether terminal uses a dark-ish background
-termenv.HasDarkBackground()
+You can also query the terminal for its color scheme, so you know whether your
+app is running in a light- or dark-themed environment:
+
+```go
+// Returns terminal's foreground color
+color := termenv.ForegroundColor()
+
+// Returns terminal's background color
+color := termenv.BackgroundColor()
+
+// Returns whether terminal uses a dark-ish background
+darkTheme := termenv.HasDarkBackground()
 ```
 
 ## Colors
@@ -47,41 +71,49 @@ to the best matching available color in the desired profile:
 `TrueColor` => `ANSI 256 Colors` => `ANSI 16 Colors` => `Ascii`
 
 ```go
-out := termenv.String("Hello World")
+s := termenv.String("Hello World")
 
-// retrieve color profile supported by terminal
+// Retrieve color profile supported by terminal
 p := termenv.ColorProfile()
 
-// supports hex values
-// will automatically degrade colors on terminals not supporting RGB
-out = out.Foreground(p.Color("#abcdef"))
+// Supports hex values
+// Will automatically degrade colors on terminals not supporting RGB
+s.Foreground(p.Color("#abcdef"))
 // but also supports ANSI colors (0-255)
-out = out.Background(p.Color("69"))
+s.Background(p.Color("69"))
+// ...or the color.Color interface
+s.Foreground(p.FromColor(color.RGBA{255, 128, 0, 255}))
 
-fmt.Println(out)
+// Combine fore- & background colors
+s.Foreground(p.Color("#ffffff")).Background(p.Color("#0000ff"))
+
+// Supports the fmt.Stringer interface
+fmt.Println(s)
 ```
 
 ## Styles
 
+You can use a chainable syntax to compose your own styles:
+
 ```go
-out := termenv.String("foobar")
+s := termenv.String("foobar")
 
-// text styles
-out.Bold()
-out.Faint()
-out.Italic()
-out.CrossOut()
-out.Underline()
-out.Overline()
+// Text styles
+s.Bold()
+s.Faint()
+s.Italic()
+s.CrossOut()
+s.Underline()
+s.Overline()
 
-// reverse swaps current fore- & background colors
-out.Reverse()
+// Reverse swaps current fore- & background colors
+s.Reverse()
 
-// blinking text
-out.Blink()
+// Blinking text
+s.Blink()
 
-// combine multiple options
-out.Bold().Underline()
+// Combine multiple options
+s.Bold().Underline()
 ```
 
 ## Template Helpers
@@ -103,11 +135,11 @@ bg := `{{ Background "#0000ff" "Blue Background" }}`
 wrap := `{{ Bold (Underline "Hello World") }}`
 
 // parse and render
-tpl = tpl.Parse(bold)
+tpl, err = tpl.Parse(bold)
 
 var buf bytes.Buffer
 tpl.Execute(&buf, nil)
-fmt.Println(buf)
+fmt.Println(&buf)
 ```
 
 Other available helper functions are: `Faint`, `Italic`, `CrossOut`,
@@ -137,11 +169,23 @@ termenv.HideCursor()
 // Show the cursor
 termenv.ShowCursor()
 
+// Save the cursor position
+termenv.SaveCursorPosition()
+
+// Restore a saved cursor position
+termenv.RestoreCursorPosition()
+
 // Move the cursor up a given number of lines
 termenv.CursorUp(n)
 
 // Move the cursor down a given number of lines
 termenv.CursorDown(n)
+
+// Move the cursor up a given number of lines
+termenv.CursorForward(n)
+
+// Move the cursor backwards a given number of cells
+termenv.CursorBack(n)
 
 // Move the cursor down a given number of lines and place it at the beginning
 // of the line
@@ -156,6 +200,51 @@ termenv.ClearLine()
 
 // Clear a given number of lines
 termenv.ClearLines(n)
+
+// Set the scrolling region of the terminal
+termenv.ChangeScrollingRegion(top, bottom)
+
+// Insert the given number of lines at the top of the scrollable region, pushing
+// lines below down
+termenv.InsertLines(n)
+
+// Delete the given number of lines, pulling any lines in the scrollable region
+// below up
+termenv.DeleteLines(n)
+```
+
+## Mouse
+
+```go
+// Enable X10 mouse mode, only button press events are sent
+termenv.EnableMousePress()
+
+// Disable X10 mouse mode
+termenv.DisableMousePress()
+
+// Enable Mouse Tracking mode
+termenv.EnableMouse()
+
+// Disable Mouse Tracking mode
+termenv.DisableMouse()
+
+// Enable Hilite Mouse Tracking mode
+termenv.EnableMouseHilite()
+
+// Disable Hilite Mouse Tracking mode
+termenv.DisableMouseHilite()
+
+// Enable Cell Motion Mouse Tracking mode
+termenv.EnableMouseCellMotion()
+
+// Disable Cell Motion Mouse Tracking mode
+termenv.DisableMouseCellMotion()
+
+// Enable All Motion Mouse mode
+termenv.EnableMouseAllMotion()
+
+// Disable All Motion Mouse mode
+termenv.DisableMouseAllMotion()
 ```
 
 ## Color Chart
@@ -166,8 +255,9 @@ You can find the source code used to create this chart in `termenv`'s examples.
 
 ## Related Projects
 
-Check out [Glow](https://github.com/charmbracelet/glow), a markdown renderer for
-the command-line, which uses `termenv`.
+- [reflow](https://github.com/muesli/reflow) - ANSI-aware text operations
+- [Glow](https://github.com/charmbracelet/glow) - a markdown renderer for
+the command-line, which uses `termenv`
 
 ## License
 

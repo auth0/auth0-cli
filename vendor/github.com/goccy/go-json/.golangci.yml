@@ -17,6 +17,7 @@ linters:
     - exhaustive
     - exhaustivestruct
     - errorlint
+    - forbidigo
     - funlen
     - gci
     - gochecknoglobals
@@ -62,6 +63,10 @@ issues:
     - path: rtype.go
       linters:
         - golint
+        - stylecheck
+    - path: error.go
+      linters:
+        - staticcheck
 
   # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
   max-issues-per-linter: 0

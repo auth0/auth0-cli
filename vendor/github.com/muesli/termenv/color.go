@@ -3,6 +3,7 @@ package termenv
 import (
 	"errors"
 	"fmt"
+	"image/color"
 	"math"
 	"strconv"
 	"strings"
@@ -25,13 +26,13 @@ type Color interface {
 
 type NoColor struct{}
 
-// ANSIColor is a color (0-15) as defined by the ANSI Standard
+// ANSIColor is a color (0-15) as defined by the ANSI Standard.
 type ANSIColor int
 
-// ANSI256Color is a color (16-255) as defined by the ANSI Standard
+// ANSI256Color is a color (16-255) as defined by the ANSI Standard.
 type ANSI256Color int
 
-// RGBColor is a hex-encoded color, e.g. "#abcdef"
+// RGBColor is a hex-encoded color, e.g. "#abcdef".
 type RGBColor string
 
 func ConvertToRGB(c Color) colorful.Color {
@@ -106,6 +107,11 @@ func (p Profile) Color(s string) Color {
 	return p.Convert(c)
 }
 
+func (p Profile) FromColor(c color.Color) Color {
+	col, _ := colorful.MakeColor(c)
+	return p.Color(col.Hex())
+}
+
 func (c NoColor) Sequence(bg bool) string {
 	return ""
 }
@@ -147,9 +153,21 @@ func (c RGBColor) Sequence(bg bool) string {
 }
 
 func xTermColor(s string) (RGBColor, error) {
-	if len(s) != 24 {
+	if len(s) < 24 || len(s) > 25 {
 		return RGBColor(""), ErrInvalidColor
 	}
+
+	switch {
+	case strings.HasSuffix(s, "\a"):
+		s = strings.TrimSuffix(s, "\a")
+	case strings.HasSuffix(s, "\033"):
+		s = strings.TrimSuffix(s, "\033")
+	case strings.HasSuffix(s, "\033\\"):
+		s = strings.TrimSuffix(s, "\033\\")
+	default:
+		return RGBColor(""), ErrInvalidColor
+	}
+
 	s = s[4:]
 
 	prefix := ";rgb:"
@@ -157,7 +175,6 @@ func xTermColor(s string) (RGBColor, error) {
 		return RGBColor(""), ErrInvalidColor
 	}
 	s = strings.TrimPrefix(s, prefix)
-	s = strings.TrimSuffix(s, "\a")
 
 	h := strings.Split(s, "/")
 	hex := fmt.Sprintf("#%s%s%s", h[0][:2], h[1][:2], h[2][:2])

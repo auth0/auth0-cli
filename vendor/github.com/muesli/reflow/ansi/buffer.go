@@ -11,11 +11,16 @@ type Buffer struct {
 	bytes.Buffer
 }
 
-// PrintableRuneCount returns the amount of printable runes in the buffer.
-func (w Buffer) PrintableRuneCount() int {
+// PrintableRuneWidth returns the width of all printable runes in the buffer.
+func (w Buffer) PrintableRuneWidth() int {
+	return PrintableRuneWidth(w.String())
+}
+
+func PrintableRuneWidth(s string) int {
 	var n int
 	var ansi bool
-	for _, c := range w.String() {
+
+	for _, c := range s {
 		if c == '\x1B' {
 			// ANSI escape sequence
 			ansi = true
