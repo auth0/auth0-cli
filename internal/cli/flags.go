@@ -261,7 +261,7 @@ func shouldAsk(cmd *cobra.Command, f *Flag, isUpdate bool) bool {
 		return shouldPromptWhenFlagless(cmd, f.LongForm)
 	}
 
-	return shouldPrompt(cmd, f.LongForm)
+	return shouldPrompt(cmd, f)
 }
 
 func markFlagRequired(cmd *cobra.Command, f *Flag, isUpdate bool) error {

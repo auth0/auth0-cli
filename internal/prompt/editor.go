@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"runtime"
 
+	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/kballard/go-shellquote"
 )
 
@@ -57,9 +58,9 @@ func (p *editorPrompt) openFile(filename string, infoFn func()) error {
 	}
 
 	cmd := exec.Command(editorExe, args[1:]...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdin = iostream.Input
+	cmd.Stdout = iostream.Output
+	cmd.Stderr = iostream.Messages
 
 	if !isCLIEditor && infoFn != nil {
 		infoFn()

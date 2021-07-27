@@ -2,12 +2,12 @@ package display
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/iostream"
 	"golang.org/x/term"
 	"gopkg.in/auth0.v5/management"
 )
@@ -186,7 +186,7 @@ func getScopes(scopes []*management.ResourceServerScope) (string, bool) {
 	ellipsis := "..."
 	separator := " "
 	padding := 22 // the longest apiView key plus two spaces before and after in the label column
-	terminalWidth, _, err := term.GetSize(int(os.Stdin.Fd()))
+	terminalWidth, _, err := term.GetSize(int(iostream.Input.Fd()))
 	if err != nil {
 		terminalWidth = 80
 	}

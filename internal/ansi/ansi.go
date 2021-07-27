@@ -2,11 +2,10 @@ package ansi
 
 import (
 	"fmt"
-	"io"
 	"os"
 
+	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/logrusorgru/aurora"
-	"github.com/mattn/go-isatty"
 	"github.com/tidwall/pretty"
 )
 
@@ -29,22 +28,23 @@ var DisableColors = false
 // `CLICOLOR_FORCE`. Cf. https://bixense.com/clicolors/
 var EnvironmentOverrideColors = true
 
+var color = Color()
+
 // Bold returns bolded text if the writer supports colors
 func Bold(text string) string {
-	color := Color(os.Stdout)
 	return color.Sprintf(color.Bold(text))
 }
 
 // Color returns an aurora.Aurora instance with colors enabled or disabled
 // depending on whether the writer supports colors.
-func Color(w io.Writer) aurora.Aurora {
-	return aurora.NewAurora(shouldUseColors(w))
+func Color() aurora.Aurora {
+	return aurora.NewAurora(shouldUseColors())
 }
 
 // ColorizeJSON returns a colorized version of the input JSON, if the writer
 // supports colors.
-func ColorizeJSON(json string, darkStyle bool, w io.Writer) string {
-	if !shouldUseColors(w) {
+func ColorizeJSON(json string, darkStyle bool) string {
+	if !shouldUseColors() {
 		return json
 	}
 
@@ -58,8 +58,6 @@ func ColorizeJSON(json string, darkStyle bool, w io.Writer) string {
 
 // ColorizeStatus returns a colorized number for HTTP status code
 func ColorizeStatus(status int) aurora.Value {
-	color := Color(os.Stdout)
-
 	switch {
 	case status >= 500:
 		return color.Red(status).Bold()
@@ -72,68 +70,58 @@ func ColorizeStatus(status int) aurora.Value {
 
 // Faint returns slightly offset color text if the writer supports it
 func Faint(text string) string {
-	color := Color(os.Stdout)
 	return color.Sprintf(color.Faint(text))
 }
 
 // Italic returns italicized text if the writer supports it.
 func Italic(text string) string {
-	color := Color(os.Stdout)
 	return color.Sprintf(color.Italic(text))
 }
 
 // Red returns text colored red
 func Red(text string) string {
-	color := Color(os.Stdout)
 	return color.Sprintf(color.Red(text))
 }
 
 // BrightRed returns text colored bright red
 func BrightRed(text string) string {
-	color := Color(os.Stdout)
 	return color.Sprintf(color.BrightRed(text))
 }
 
 // Green returns text colored green
 func Green(text string) string {
-	color := Color(os.Stdout)
 	return color.Sprintf(color.Green(text))
 }
 
 // Yellow returns text colored yellow
 func Yellow(text string) string {
-	color := Color(os.Stdout)
 	return color.Sprintf(color.Yellow(text))
 }
 
 // BrightYellow returns text colored bright yellow
 func BrightYellow(text string) string {
-	color := Color(os.Stdout)
 	return color.Sprintf(color.BrightYellow(text))
 }
 
 // Blue returns text colored blue
 func Blue(text string) string {
-	color := Color(os.Stdout)
 	return color.Sprintf(color.Blue(text))
 }
 
 // Magenta returns text colored magenta
 func Magenta(text string) string {
-	color := Color(os.Stdout)
 	return color.Sprintf(color.Magenta(text))
 }
 
 // Cyan returns text colored cyan
 func Cyan(text string) string {
-	color := Color(os.Stdout)
 	return color.Sprintf(color.BrightCyan(text))
 }
 
 // Linkify returns an ANSI escape sequence with an hyperlink, if the writer
 // supports colors.
-func Linkify(text, url string, w io.Writer) string {
-	if !shouldUseColors(w) {
+func Linkify(text, url string) string {
+	if !shouldUseColors() {
 		return text
 	}
 
@@ -144,16 +132,11 @@ func Linkify(text, url string, w io.Writer) string {
 
 // StrikeThrough returns struck though text if the writer supports colors
 func StrikeThrough(text string) string {
-	color := Color(os.Stdout)
 	return color.Sprintf(color.StrikeThrough(text))
 }
 
-func IsTerminal() bool {
-	return isatty.IsTerminal(os.Stdout.Fd())
-}
-
-func shouldUseColors(w io.Writer) bool {
-	useColors := ForceColors || IsTerminal()
+func shouldUseColors() bool {
+	useColors := ForceColors || iostream.IsOutputTerminal()
 
 	if EnvironmentOverrideColors {
 		force, ok := os.LookupEnv("CLICOLOR_FORCE")

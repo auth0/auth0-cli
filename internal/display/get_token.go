@@ -11,12 +11,6 @@ import (
 )
 
 func (r *Renderer) GetToken(c *management.Client, t *authutil.TokenResponse) {
-	// pass the access token to the pipe and exit
-	if isOutputPiped() {
-		fmt.Fprint(r.ResultWriter, t.AccessToken)
-		return
-	}
-
 	fmt.Fprint(r.ResultWriter, "\n")
 	r.Heading(fmt.Sprintf("token for %s", auth0.StringValue(c.Name)))
 
