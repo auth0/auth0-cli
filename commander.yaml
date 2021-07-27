@@ -506,13 +506,13 @@ tests:
   # Test 'rules create'
   rules create and check data:
     command: cat ./integration/fixtures/create-rule.json | jq '.[0]' | auth0 rules create --format json
-    exit-code: 0
     stdout:
       json:
         name: integration-test-rule-new1
         enabled: "true"
         order: "1"
         script: "function(user, context, cb) {\n  cb(null, user, context);\n}\n"
+    exit-code: 0
 
   rules create and check output:
     command: cat ./integration/fixtures/create-rule.json | jq '.[1]' | auth0 rules create
@@ -522,8 +522,6 @@ tests:
         - ENABLED  ✗
         - ORDER    2
         - SCRIPT   function(user, context, cb) {  
-                     cb(null, user, context);     
-                   }
     exit-code: 0
 
   # Test 'rules show'
