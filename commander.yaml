@@ -505,7 +505,7 @@ tests:
 
   # Test 'rules create'
   rules create and check data:
-    command: cat integration/fixtures/create-rule.json | jq '.[0]' | auth0 rules create --format json
+    command: cat ./integration/fixtures/create-rule.json | jq '.[0]' | auth0 rules create --format json
     exit-code: 0
     stdout:
       json:
@@ -514,7 +514,7 @@ tests:
         order: "1"
 
   rules create and check output:
-    command: cat integration/fixtures/create-rule.json | jq '.[1]' | auth0 rules create
+    command: cat ./integration/fixtures/create-rule.json | jq '.[1]' | auth0 rules create
     stdout:
       contains:
         - NAME     integration-test-rule-new2
@@ -533,7 +533,7 @@ tests:
       json:
         name: integration-test-rule-newRule
         enabled: "false"
-        order: "1"
+        order: "3"
     exit-code: 0
 
   rules show:
@@ -542,12 +542,12 @@ tests:
       contains:
         - NAME     integration-test-rule-newRule
         - ENABLED  ✓
-        - ORDER    1
+        - ORDER    3
     exit-code: 0
 
   # Test 'rules update'
   rules update:
-    command: cat integration/fixtures/update-rule.json | auth0 rules update --format json
+    command: cat ./integration/fixtures/update-rule.json | auth0 rules update --format json
     stdout:
       json:
         name: integration-test-rule-betterName
