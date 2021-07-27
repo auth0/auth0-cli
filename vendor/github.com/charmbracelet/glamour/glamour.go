@@ -9,6 +9,7 @@ import (
 
 	"github.com/muesli/termenv"
 	"github.com/yuin/goldmark"
+	emoji "github.com/yuin/goldmark-emoji"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer"
@@ -135,20 +136,17 @@ func WithEnvironmentConfig() TermRendererOption {
 // standard style.
 func WithStylePath(stylePath string) TermRendererOption {
 	return func(tr *TermRenderer) error {
-		jsonBytes, err := ioutil.ReadFile(stylePath)
-		switch {
-		case err == nil:
-			return json.Unmarshal(jsonBytes, &tr.ansiOptions.Styles)
-		case os.IsNotExist(err):
-			styles, err := getDefaultStyle(stylePath)
+		styles, err := getDefaultStyle(stylePath)
+		if err != nil {
+			jsonBytes, err := ioutil.ReadFile(stylePath)
 			if err != nil {
 				return err
 			}
-			tr.ansiOptions.Styles = *styles
-			return nil
-		default:
-			return err
+
+			return json.Unmarshal(jsonBytes, &tr.ansiOptions.Styles)
 		}
+		tr.ansiOptions.Styles = *styles
+		return nil
 	}
 }
 
@@ -183,6 +181,14 @@ func WithStylesFromJSONFile(filename string) TermRendererOption {
 func WithWordWrap(wordWrap int) TermRendererOption {
 	return func(tr *TermRenderer) error {
 		tr.ansiOptions.WordWrap = wordWrap
+		return nil
+	}
+}
+
+// WithEmoji sets a TermRenderer's emoji rendering.
+func WithEmoji() TermRendererOption {
+	return func(tr *TermRenderer) error {
+		emoji.New().Extend(tr.md)
 		return nil
 	}
 }
