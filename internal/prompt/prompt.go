@@ -1,12 +1,11 @@
 package prompt
 
 import (
-	"os"
-
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/auth0/auth0-cli/internal/iostream"
 )
 
-var stdErrWriter = survey.WithStdio(os.Stdin, os.Stderr, os.Stderr)
+var stdErrWriter = survey.WithStdio(iostream.Input, iostream.Messages, iostream.Messages)
 
 var Icons = survey.WithIcons(func(icons *survey.IconSet) {
 	icons.Question.Text = ""

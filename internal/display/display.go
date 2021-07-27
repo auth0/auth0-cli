@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/charmbracelet/glamour"
 	"github.com/olekukonko/tablewriter"
 )
@@ -41,9 +40,13 @@ type View interface {
 
 func NewRenderer() *Renderer {
 	return &Renderer{
-		MessageWriter: os.Stderr,
-		ResultWriter:  os.Stdout,
+		MessageWriter: iostream.Messages,
+		ResultWriter:  iostream.Output,
 	}
+}
+
+func (r *Renderer) Output(message string) {
+	fmt.Fprint(r.ResultWriter, message)
 }
 
 func (r *Renderer) Newline() {
@@ -80,7 +83,7 @@ func (r *Renderer) JSONResult(data interface{}) {
 		r.Errorf("couldn't marshal results as JSON: %v", err)
 		return
 	}
-	fmt.Fprint(r.ResultWriter, string(b))
+	r.Output(string(b))
 }
 
 func (r *Renderer) Results(data []View) {
@@ -272,17 +275,4 @@ func boolean(v bool) string {
 		return ansi.Green("✓")
 	}
 	return ansi.Red("✗")
-}
-
-func isOutputPiped() bool {
-	fi, err := os.Stdout.Stat()
-	if err != nil {
-		panic(auth0.Error(err, "failed to get the FileInfo struct of stdout"))
-	}
-
-	if (fi.Mode() & os.ModeCharDevice) == 0 {
-		return true
-	}
-
-	return false
 }
