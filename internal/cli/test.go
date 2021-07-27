@@ -7,6 +7,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
@@ -52,7 +53,7 @@ var (
 		Help:      "The list of scopes you want to use.",
 	}
 
-	testDomainArg = Argument{
+	testDomainArg = Flag{
 		Name: "Custom Domain",
 		Help: "One of your custom domains.",
 	}
@@ -140,11 +141,9 @@ auth0 test login <client-id> --connection <connection>`,
 				return fmt.Errorf("Unable to find client %s; if you specified a client, please verify it exists, otherwise re-run the command", inputs.ClientID)
 			}
 
-			if inputs.CustomDomain == "" {
-				err = testDomainArg.Pick(cmd, &inputs.CustomDomain, cli.customDomainPickerOptions)
-				if err != nil && err != errNoCustomDomains {
-					return err
-				}
+			err = testDomainArg.Pick(cmd, &inputs.CustomDomain, cli.customDomainPickerOptions)
+			if err != nil && err != errNoCustomDomains {
+				return err
 			}
 
 			if proceed := runLoginFlowPreflightChecks(cli, client); !proceed {
@@ -255,7 +254,11 @@ auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
 				if err != nil {
 					return fmt.Errorf("An unexpected error occurred while logging in to machine-to-machine client %s: %w", inputs.ClientID, err)
 				}
-				cli.renderer.GetToken(client, tokenResponse)
+				if iostream.IsOutputTerminal() {
+					cli.renderer.GetToken(client, tokenResponse)
+				} else {
+					cli.renderer.Output(tokenResponse.AccessToken)
+				}
 				return nil
 			}
 
@@ -276,7 +279,11 @@ auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
 			if err != nil {
 				return fmt.Errorf("An unexpected error occurred when logging in to client %s: %w", inputs.ClientID, err)
 			}
-			cli.renderer.GetToken(client, tokenResponse)
+			if iostream.IsOutputTerminal() {
+				cli.renderer.GetToken(client, tokenResponse)
+			} else {
+				cli.renderer.Output(tokenResponse.AccessToken)
+			}
 			return nil
 		},
 	}

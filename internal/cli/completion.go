@@ -1,8 +1,7 @@
 package cli
 
 import (
-	"os"
-
+	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/spf13/cobra"
 )
 
@@ -57,22 +56,22 @@ PS> auth0 completion powershell > auth0.ps1
 		Run: func(cmd *cobra.Command, args []string) {
 			switch args[0] {
 			case "bash":
-				err := cmd.Root().GenBashCompletion(os.Stdout)
+				err := cmd.Root().GenBashCompletion(iostream.Output)
 				if err != nil {
 					cli.renderer.Errorf("An unexpected error occurred while setting up completion: %v", err.Error())
 				}
 			case "zsh":
-				err := cmd.Root().GenZshCompletion(os.Stdout)
+				err := cmd.Root().GenZshCompletion(iostream.Output)
 				if err != nil {
 					cli.renderer.Errorf("An unexpected error occurred while setting up completion: %v", err.Error())
 				}
 			case "fish":
-				err := cmd.Root().GenFishCompletion(os.Stdout, true)
+				err := cmd.Root().GenFishCompletion(iostream.Output, true)
 				if err != nil {
 					cli.renderer.Errorf("An unexpected error occurred while setting up completion: %v", err.Error())
 				}
 			case "powershell":
-				err := cmd.Root().GenPowerShellCompletion(os.Stdout)
+				err := cmd.Root().GenPowerShellCompletion(iostream.Output)
 				if err != nil {
 					cli.renderer.Errorf("An unexpected error occurred while setting up completion: %v", err.Error())
 				}

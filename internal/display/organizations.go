@@ -104,7 +104,7 @@ func makeOrganizationView(organization *management.Organization, w io.Writer) *o
 		LogoURL:         organization.GetBranding().GetLogoUrl(),
 		AccentColor:     accentColor,
 		BackgroundColor: backgroundColor,
-		Metadata:        ansi.ColorizeJSON(metadata, false, w),
+		Metadata:        ansi.ColorizeJSON(metadata, false),
 		raw:             organization,
 	}
 }

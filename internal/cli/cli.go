@@ -16,11 +16,11 @@ import (
 	"time"
 
 	"github.com/auth0/auth0-cli/internal/analytics"
-	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
+	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/google/uuid"
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/spf13/cobra"
@@ -516,11 +516,11 @@ func canPrompt(cmd *cobra.Command) bool {
 		return false
 	}
 
-	return ansi.IsTerminal() && !noInput
+	return iostream.IsInputTerminal() && iostream.IsOutputTerminal() && !noInput
 }
 
-func shouldPrompt(cmd *cobra.Command, flag string) bool {
-	return canPrompt(cmd) && !cmd.Flags().Changed(flag)
+func shouldPrompt(cmd *cobra.Command, flag *Flag) bool {
+	return canPrompt(cmd) && !flag.IsSet(cmd)
 }
 
 func shouldPromptWhenFlagless(cmd *cobra.Command, flag string) bool {
@@ -536,7 +536,7 @@ func shouldPromptWhenFlagless(cmd *cobra.Command, flag string) bool {
 }
 
 func prepareInteractivity(cmd *cobra.Command) {
-	if canPrompt(cmd) {
+	if canPrompt(cmd) || !iostream.IsInputTerminal() {
 		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 			_ = cmd.Flags().SetAnnotation(flag.Name, cobra.BashCompOneRequiredFlag, []string{"false"})
 		})

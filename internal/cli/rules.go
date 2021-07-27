@@ -1,11 +1,13 @@
 package cli
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
@@ -128,35 +130,42 @@ auth0 rules create --name "My Rule"
 auth0 rules create -n "My Rule" --template "Empty rule"
 auth0 rules create -n "My Rule" -t "Empty rule" --enabled=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := ruleName.Ask(cmd, &inputs.Name, nil); err != nil {
-				return err
+			rule := &management.Rule{}
+			pipedInput := iostream.PipedInput()
+
+			if len(pipedInput) > 0 {
+				err := json.Unmarshal(pipedInput, rule)
+				if err != nil {
+					return fmt.Errorf("Invalid JSON input: %w", err)
+				}
+			} else {
+				if err := ruleName.Ask(cmd, &inputs.Name, nil); err != nil {
+					return err
+				}
+
+				if err := ruleTemplate.Select(cmd, &inputs.Template, ruleTemplateOptions.labels(), nil); err != nil {
+					return err
+				}
+
+				err := ruleScript.OpenEditor(
+					cmd,
+					&inputs.Script,
+					ruleTemplateOptions.getValue(inputs.Template),
+					inputs.Name+".*.js",
+					cli.ruleEditorHint,
+				)
+				if err != nil {
+					return fmt.Errorf("Failed to capture input from the editor: %w", err)
+				}
+
+				rule = &management.Rule{
+					Name:    &inputs.Name,
+					Script:  auth0.String(inputs.Script),
+					Enabled: &inputs.Enabled,
+				}
 			}
 
-			if err := ruleTemplate.Select(cmd, &inputs.Template, ruleTemplateOptions.labels(), nil); err != nil {
-				return err
-			}
-
-			// TODO(cyx): we can re-think this once we have
-			// `--stdin` based commands. For now we don't have
-			// those yet, so keeping this simple.
-			err := ruleScript.OpenEditor(
-				cmd,
-				&inputs.Script,
-				ruleTemplateOptions.getValue(inputs.Template),
-				inputs.Name+".*.js",
-				cli.ruleEditorHint,
-			)
-			if err != nil {
-				return fmt.Errorf("Failed to capture input from the editor: %w", err)
-			}
-
-			rule := &management.Rule{
-				Name:    &inputs.Name,
-				Script:  auth0.String(inputs.Script),
-				Enabled: &inputs.Enabled,
-			}
-
-			err = ansi.Waiting(func() error {
+			err := ansi.Waiting(func() error {
 				return cli.api.Rule.Create(rule)
 			})
 
@@ -278,70 +287,79 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 auth0 rules update <id> --name "My Updated Rule"
 auth0 rules update <id> -n "My Updated Rule" --enabled=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				inputs.ID = args[0]
-			} else {
-				err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
+			rule := &management.Rule{}
+			pipedInput := iostream.PipedInput()
+
+			if len(pipedInput) > 0 {
+				err := json.Unmarshal(pipedInput, rule)
 				if err != nil {
+					return fmt.Errorf("Invalid JSON input: %w", err)
+				}
+
+				inputs.ID = rule.GetID()
+				rule.ID = nil
+			} else {
+				if len(args) > 0 {
+					inputs.ID = args[0]
+				} else {
+					err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
+					if err != nil {
+						return err
+					}
+				}
+
+				err := ansi.Waiting(func() error {
+					var err error
+					rule, err = cli.api.Rule.Read(inputs.ID)
 					return err
+				})
+				if err != nil {
+					return fmt.Errorf("Failed to fetch rule with ID: %s %v", inputs.ID, err)
+				}
+
+				if err := ruleName.AskU(cmd, &inputs.Name, rule.Name); err != nil {
+					return err
+				}
+
+				if !ruleEnabled.IsSet(cmd) {
+					inputs.Enabled = auth0.BoolValue(rule.Enabled)
+				}
+
+				if err := ruleEnabled.AskBoolU(cmd, &inputs.Enabled, rule.Enabled); err != nil {
+					return err
+				}
+
+				err = ruleScript.OpenEditorU(
+					cmd,
+					&inputs.Script,
+					rule.GetScript(),
+					rule.GetName()+".*.js",
+					cli.ruleEditorHint,
+				)
+				if err != nil {
+					return fmt.Errorf("Failed to capture input from the editor: %w", err)
+				}
+
+				// Since name is optional, no need to specify what they chose.
+				if inputs.Name == "" {
+					inputs.Name = rule.GetName()
+				}
+
+				if inputs.Script == "" {
+					inputs.Script = rule.GetScript()
+				}
+
+				// Prepare rule payload for update. This will also be
+				// re-hydrated by the SDK, which we'll use below during
+				// display.
+				rule = &management.Rule{
+					Name:    &inputs.Name,
+					Script:  &inputs.Script,
+					Enabled: &inputs.Enabled,
 				}
 			}
 
-			var rule *management.Rule
 			err := ansi.Waiting(func() error {
-				var err error
-				rule, err = cli.api.Rule.Read(inputs.ID)
-				return err
-			})
-			if err != nil {
-				return fmt.Errorf("Failed to fetch rule with ID: %s %v", inputs.ID, err)
-			}
-
-			if err := ruleName.AskU(cmd, &inputs.Name, rule.Name); err != nil {
-				return err
-			}
-
-			if !ruleEnabled.IsSet(cmd) {
-				inputs.Enabled = auth0.BoolValue(rule.Enabled)
-			}
-
-			if err := ruleEnabled.AskBoolU(cmd, &inputs.Enabled, rule.Enabled); err != nil {
-				return err
-			}
-
-			// TODO(cyx): we can re-think this once we have
-			// `--stdin` based commands. For now we don't have
-			// those yet, so keeping this simple.
-			err = ruleScript.OpenEditorU(
-				cmd,
-				&inputs.Script,
-				rule.GetScript(),
-				rule.GetName()+".*.js",
-				cli.ruleEditorHint,
-			)
-			if err != nil {
-				return fmt.Errorf("Failed to capture input from the editor: %w", err)
-			}
-
-			// Since name is optional, no need to specify what they chose.
-			if inputs.Name == "" {
-				inputs.Name = rule.GetName()
-			}
-
-			if inputs.Script == "" {
-				inputs.Script = rule.GetScript()
-			}
-
-			// Prepare rule payload for update. This will also be
-			// re-hydrated by the SDK, which we'll use below during
-			// display.
-			rule = &management.Rule{
-				Name:    &inputs.Name,
-				Script:  &inputs.Script,
-				Enabled: &inputs.Enabled,
-			}
-
-			err = ansi.Waiting(func() error {
 				return cli.api.Rule.Update(inputs.ID, rule)
 			})
 

@@ -3,7 +3,6 @@ package display
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"reflect"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -39,6 +38,6 @@ func (r *Renderer) TryLogin(u *authutil.UserInfo, t *authutil.TokenResponse) {
 	case OutputFormatJSON:
 		fmt.Fprint(r.ResultWriter, jsonStr)
 	default:
-		fmt.Fprintln(r.ResultWriter, ansi.ColorizeJSON(jsonStr, false, os.Stdout))
+		fmt.Fprintln(r.ResultWriter, ansi.ColorizeJSON(jsonStr, false))
 	}
 }
