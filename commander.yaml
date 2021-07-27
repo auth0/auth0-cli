@@ -532,8 +532,8 @@ tests:
     stdout:
       json:
         name: integration-test-rule-newRule
-        enabled: integration-test-rule
-        order: "3"
+        enabled: "false"
+        order: "1"
     exit-code: 0
 
   rules show:
@@ -541,8 +541,8 @@ tests:
     stdout:
       contains:
         - NAME     integration-test-rule-newRule
-        - ENABLED  integration-test-rule
-        - ORDER    3
+        - ENABLED  ✓
+        - ORDER    1
     exit-code: 0
 
   # Test 'rules update'
@@ -568,5 +568,4 @@ tests:
     stdout:
       json:
         enabled: "false"
-        description: betterDescription
     exit-code: 0
