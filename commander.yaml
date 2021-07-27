@@ -512,14 +512,18 @@ tests:
         name: integration-test-rule-new1
         enabled: "true"
         order: "1"
+        script: "function(user, context, cb) {\n  cb(null, user, context);\n}\n"
 
   rules create and check output:
     command: cat ./integration/fixtures/create-rule.json | jq '.[1]' | auth0 rules create
     stdout:
       contains:
         - NAME     integration-test-rule-new2
-        - ENABLED  false
+        - ENABLED  ✗
         - ORDER    2
+        - SCRIPT   function(user, context, cb) {  
+                     cb(null, user, context);     
+                   }
     exit-code: 0
 
   # Test 'rules show'
