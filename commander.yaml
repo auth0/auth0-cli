@@ -534,7 +534,7 @@ tests:
     stdout:
       json:
         name: integration-test-rule-newRule
-        enabled: "false"
+        enabled: "true"
         order: "3"
     exit-code: 0
 
