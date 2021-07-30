@@ -70,3 +70,21 @@ for role in $( echo "${roles}" | jq -r '.[] | @base64' ); do
         $( auth0 roles delete "$id")
     fi
 done
+
+rules=$( auth0 rules list --format json --no-input )
+
+for rule in $( echo "${rules}" | jq -r '.[] | @base64' ); do
+    _jq() {
+     echo "${rule}" | base64 --decode | jq -r "${1}"
+    }
+
+    id=$(_jq '.id')
+    name=$(_jq '.name')
+		# TODO(jfatta): should remove only those
+		# created during the same test session
+    if [[ $name = integration-test-rule-* ]]
+    then
+        echo deleting "$name"
+        $( auth0 rules delete "$id")
+    fi
+done

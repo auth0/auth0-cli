@@ -502,3 +502,72 @@ tests:
       json:
         description: betterDescription
     exit-code: 0
+
+  # Test 'rules create'
+  rules create and check data:
+    command: cat ./integration/fixtures/create-rule.json | jq '.[0]' | auth0 rules create --format json
+    stdout:
+      json:
+        name: integration-test-rule-new1
+        enabled: "true"
+        order: "1"
+        script: "function(user, context, cb) {\n  cb(null, user, context);\n}\n"
+    exit-code: 0
+
+  rules create and check output:
+    command: cat ./integration/fixtures/create-rule.json | jq '.[1]' | auth0 rules create
+    stdout:
+      contains:
+        - NAME     integration-test-rule-new2
+        - ENABLED  ✗
+        - ORDER    2
+        - SCRIPT   function(user, context, cb) {  
+    exit-code: 0
+
+  # Test 'rules show'
+  rules create test rule:
+    command: ./integration/get-rule-id.sh
+    exit-code: 0
+
+  rules show json:
+    command: auth0 rules show $(cat ./integration/identifiers/rule-id) --format json
+    stdout:
+      json:
+        name: integration-test-rule-newRule
+        enabled: "true"
+        order: "3"
+    exit-code: 0
+
+  rules show:
+    command: auth0 rules show $(cat ./integration/identifiers/rule-id)
+    stdout:
+      contains:
+        - NAME     integration-test-rule-newRule
+        - ENABLED  ✓
+        - ORDER    3
+    exit-code: 0
+
+  # Test 'rules update'
+  rules update:
+    command: cat ./integration/fixtures/update-rule.json | auth0 rules update --format json
+    stdout:
+      json:
+        name: integration-test-rule-betterName
+        enabled: "false"
+    exit-code: 0
+
+  # Test 'rules enable'
+  rules enable:
+    command: auth0 rules enable $(cat ./integration/identifiers/rule-id) --format json
+    stdout:
+      json:
+        enabled: "true"
+    exit-code: 0
+
+  # Test 'rules disable'
+  rules disable:
+    command: auth0 rules disable $(cat ./integration/identifiers/rule-id) --format json
+    stdout:
+      json:
+        enabled: "false"
+    exit-code: 0
