@@ -53,24 +53,6 @@ for user in $( echo "${users}" | jq -r '.[] | @base64' ); do
     fi
 done
 
-roles=$( auth0 roles list --format json --no-input )
-
-for role in $( echo "${roles}" | jq -r '.[] | @base64' ); do
-    _jq() {
-     echo "${role}" | base64 --decode | jq -r "${1}"
-    }
-
-    id=$(_jq '.id')
-    name=$(_jq '.name')
-		# TODO(jfatta): should remove only those
-		# created during the same test session
-    if [[ $name = integration-test-role-* ]]
-    then
-        echo deleting "$name"
-        $( auth0 roles delete "$id")
-    fi
-done
-
 rules=$( auth0 rules list --format json --no-input )
 
 for rules in $( echo "${rules}" | jq -r '.[] | @base64' ); do
@@ -86,5 +68,23 @@ for rules in $( echo "${rules}" | jq -r '.[] | @base64' ); do
     then
         echo deleting "$name"
         $( auth0 rules delete "$id")
+    fi
+done
+
+roles=$( auth0 roles list --format json --no-input )
+
+for role in $( echo "${roles}" | jq -r '.[] | @base64' ); do
+    _jq() {
+     echo "${role}" | base64 --decode | jq -r "${1}"
+    }
+
+    id=$(_jq '.id')
+    name=$(_jq '.name')
+		# TODO(jfatta): should remove only those
+		# created during the same test session
+    if [[ $name = integration-test-role-* ]]
+    then
+        echo deleting "$name"
+        $( auth0 roles delete "$id")
     fi
 done
