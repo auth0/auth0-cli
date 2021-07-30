@@ -68,6 +68,14 @@ func WrappedNonRequestParamsFlagUsages(cmd *cobra.Command) string {
 	return nonRequestParamsFlags.FlagUsagesWrapped(getTerminalWidth())
 }
 
+// WrappedAliases returns a formatted string containing the command aliases if defined, otherwise an empty string.
+func WrappedAliases(cmd *cobra.Command) string {
+	if len(cmd.Aliases) > 0 {
+		return ansi.Faint(ansi.Italic(fmt.Sprintf("[%s]", strings.Join(cmd.Aliases, ", "))))
+	}
+	return ""
+}
+
 //
 // Private functions
 //
@@ -96,7 +104,7 @@ func namespaceUsageTemplate() string {
 {{.Example}}{{end}}{{if .HasAvailableSubCommands}}
 
 %s{{range .Commands}}{{if (.IsAvailableCommand)}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+  {{rpad .Name .NamePadding }} {{.Short}} {{WrappedAliases .}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
 
 %s
 {{WrappedLocalFlagUsages . | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
@@ -131,7 +139,7 @@ func resourceUsageTemplate() string {
 {{.Example}}{{end}}{{if .HasAvailableSubCommands}}
 
 %s{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+  {{rpad .Name .NamePadding }} {{.Short}} {{WrappedAliases .}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
 
 %s
 {{WrappedLocalFlagUsages . | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
@@ -170,4 +178,5 @@ func init() {
 	cobra.AddTemplateFunc("WrappedLocalFlagUsages", WrappedLocalFlagUsages)
 	cobra.AddTemplateFunc("WrappedRequestParamsFlagUsages", WrappedRequestParamsFlagUsages)
 	cobra.AddTemplateFunc("WrappedNonRequestParamsFlagUsages", WrappedNonRequestParamsFlagUsages)
+	cobra.AddTemplateFunc("WrappedAliases", WrappedAliases)
 }
