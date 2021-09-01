@@ -11,9 +11,9 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/auth0/auth0-cli/internal/open"
 	"github.com/fsnotify/fsnotify"
 	"github.com/guiguan/caster"
+	"github.com/pkg/browser"
 )
 
 // Client is a minimal representation of an auth0 Client as defined in the
@@ -77,7 +77,7 @@ func PreviewCustomTemplate(ctx context.Context, data TemplateData) error {
 		}).Encode(),
 	}
 
-	if err := open.URL(u.String()); err != nil {
+	if err := browser.OpenURL(u.String()); err != nil {
 		return err
 	}
 
