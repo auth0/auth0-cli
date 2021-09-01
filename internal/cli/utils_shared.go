@@ -13,9 +13,9 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
 	"github.com/auth0/auth0-cli/internal/auth0"
-	"github.com/auth0/auth0-cli/internal/open"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"gopkg.in/auth0.v5/management"
+	"github.com/pkg/browser"
 )
 
 const (
@@ -133,7 +133,7 @@ func runLoginFlow(cli *cli, t tenant, c *management.Client, connName, audience, 
 			return err
 		}
 
-		if err := open.URL(loginURL); err != nil {
+		if err := browser.OpenURL(loginURL); err != nil {
 			return err
 		}
 
@@ -286,7 +286,7 @@ func openManageURL(cli *cli, tenant string, path string) {
 		cli.renderer.Warnf("Unable to format the correct URL, please ensure you have run 'auth0 login' and try again.")
 		return
 	}
-	if err := open.URL(fmt.Sprintf("%s%s", manageTenantURL, path)); err != nil {
+	if err := browser.OpenURL(fmt.Sprintf("%s%s", manageTenantURL, path)); err != nil {
 		cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s.", manageTenantURL)
 	}
 }

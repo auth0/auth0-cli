@@ -7,9 +7,9 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
-	"github.com/auth0/auth0-cli/internal/open"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
+	"github.com/pkg/browser"
 )
 
 func loginCmd(cli *cli) *cobra.Command {
@@ -51,7 +51,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) (tenant, error) {
 	fmt.Printf("Your Device Confirmation code is: %s\n\n", ansi.Bold(state.UserCode))
 	cli.renderer.Infof("%s to open the browser to log in or %s to quit...", ansi.Green("Press Enter"), ansi.Red("^C"))
 	fmt.Scanln()
-	err = open.URL(state.VerificationURI)
+	err = browser.OpenURL(state.VerificationURI)
 
 	if err != nil {
 		cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s.", state.VerificationURI)
