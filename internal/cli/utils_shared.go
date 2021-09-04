@@ -14,8 +14,8 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
-	"gopkg.in/auth0.v5/management"
 	"github.com/pkg/browser"
+	"gopkg.in/auth0.v5/management"
 )
 
 const (
@@ -98,9 +98,12 @@ func runLoginFlowPreflightChecks(cli *cli, c *management.Client) (abort bool) {
 		cli.renderer.Warnf("If you do not wish to modify the client, you can abort now.\n")
 	}
 
-	if confirmed := prompt.Confirm("Do you wish to proceed?"); !confirmed {
-		return false
+	if !cli.force {
+		if confirmed := prompt.Confirm("Do you wish to proceed?"); !confirmed {
+			return false
+		}
 	}
+
 	fmt.Fprint(cli.renderer.MessageWriter, "\n")
 
 	return true
