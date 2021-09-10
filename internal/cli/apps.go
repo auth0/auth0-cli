@@ -21,6 +21,7 @@ const (
 	appTypeRegularWeb     = "regular_web"
 	appTypeNonInteractive = "non_interactive"
 	appDefaultURL         = "http://localhost:3000"
+	defaultPageSize       = 50
 )
 
 var (
@@ -112,10 +113,16 @@ var (
 		IsRequired: false,
 	}
 	reveal = Flag{
-		Name:       "Reveal",
-		LongForm:   "reveal",
-		ShortForm:  "r",
-		Help:       "Display the Client Secret as part of the command output.",
+		Name:      "Reveal",
+		LongForm:  "reveal",
+		ShortForm: "r",
+		Help:      "Display the Client Secret as part of the command output.",
+	}
+	number = Flag{
+		Name:      "Number",
+		LongForm:  "number",
+		ShortForm: "n",
+		Help:      "Number of apps to retrieve",
 	}
 )
 
@@ -185,9 +192,11 @@ func useAppCmd(cli *cli) *cobra.Command {
 }
 
 func listAppsCmd(cli *cli) *cobra.Command {
-	var inputs struct{
+	var inputs struct {
 		Reveal bool
+		Number int
 	}
+
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
@@ -196,25 +205,50 @@ func listAppsCmd(cli *cli) *cobra.Command {
 		Long: `List your existing applications. To create one try:
 auth0 apps create`,
 		Example: `auth0 apps list
-auth0 apps ls`,
+auth0 apps ls
+auth0 apps ls -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			var list *management.ClientList
-
+			var list []*management.Client
 			if err := ansi.Waiting(func() error {
-				var err error
-				list, err = cli.api.Client.List()
-				return err
+				pageSize := defaultPageSize
+				page := 0
+				for {
+					if inputs.Number > 0 {
+						// determine page size to avoid getting unwanted elements
+						want := inputs.Number - int(len(list))
+						if want == 0 {
+							return nil
+						}
+						if want < defaultPageSize {
+							pageSize = want
+						} else {
+							pageSize = defaultPageSize
+						}
+					}
+					res, err := cli.api.Client.List(
+						management.Context(cmd.Context()),
+						management.PerPage(pageSize),
+						management.Page(page))
+					if err != nil {
+						return err
+					}
+					page++
+					list = append(list, res.Clients...)
+					if len(list) == inputs.Number || !res.List.HasNext() {
+						return nil
+					}
+				}
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
 
-			cli.renderer.ApplicationList(list.Clients, inputs.Reveal)
+			cli.renderer.ApplicationList(list, inputs.Reveal)
 			return nil
 		},
 	}
 
 	reveal.RegisterBool(cmd, &inputs.Reveal, false)
+	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
 }
