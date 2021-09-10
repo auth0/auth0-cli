@@ -105,7 +105,7 @@ func (v *applicationView) Object() interface{} {
 func (r *Renderer) ApplicationList(clients []*management.Client, revealSecrets bool) {
 	resource := "applications"
 
-	r.Heading(resource)
+	r.Heading(fmt.Sprintf("%s (%v)", resource, len(clients)))
 
 	if len(clients) == 0 {
 		r.EmptyState(resource)
