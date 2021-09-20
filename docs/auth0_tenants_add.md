@@ -1,33 +1,28 @@
 ---
 layout: default
 ---
-## auth0 apps list
+## auth0 tenants add
 
-List your applications
+Add a tenant with client credentials
 
 ### Synopsis
 
-List your existing applications. To create one try:
-auth0 apps create
+Add a tenant with client credentials.
 
 ```
-auth0 apps list [flags]
+auth0 tenants add [flags]
 ```
 
 ### Examples
 
 ```
-auth0 apps list
-auth0 apps ls
-auth0 apps ls -n 100
+auth0 tenants add <tenant> --client-id <id> --client-secret <secret>
 ```
 
 ### Options
 
 ```
-  -h, --help         help for list
-  -n, --number int   Number of apps to retrieve (default 50)
-  -r, --reveal       Display the Client Secret as part of the command output.
+  -h, --help   help for add
 ```
 
 ### Options inherited from parent commands
@@ -43,5 +38,5 @@ auth0 apps ls -n 100
 
 ### SEE ALSO
 
-* [auth0 apps](auth0_apps.md)	 - Manage resources for applications
+* [auth0 tenants](auth0_tenants.md)	 - Manage configured tenants
 
