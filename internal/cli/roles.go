@@ -39,7 +39,6 @@ func rolesCmd(cli *cli) *cobra.Command {
 		Use:     "roles",
 		Short:   "Manage resources for roles",
 		Long:    "Manage resources for roles.",
-		Aliases: []string{"role"},
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
