@@ -70,25 +70,11 @@ func (f *Flag) SelectU(cmd *cobra.Command, value interface{}, options []string, 
 }
 
 func (f *Flag) Pick(cmd *cobra.Command, result *string, fn pickerOptionsFunc) error {
-	var opts pickerOptions
-	err := ansi.Waiting(func() error {
-		var err error
-		opts, err = fn()
-		return err
-	})
+	return pickFlag(cmd, f, result, fn, false)
+}
 
-	if err != nil {
-		return err
-	}
-
-	defaultLabel := opts.defaultLabel()
-	var val string
-	if err := selectFlag(cmd, f, &val, opts.labels(), &defaultLabel, false); err != nil {
-		return err
-	}
-
-	*result = opts.getValue(val)
-	return nil
+func (f *Flag) PickU(cmd *cobra.Command, result *string, fn pickerOptionsFunc) error {
+	return pickFlag(cmd, f, result, fn, true)
 }
 
 func (f *Flag) OpenEditor(cmd *cobra.Command, value *string, defaultValue, filename string, infoFn func()) error {
@@ -186,6 +172,31 @@ func askBoolFlag(cmd *cobra.Command, f *Flag, value *bool, defaultValue *bool, i
 func selectFlag(cmd *cobra.Command, f *Flag, value interface{}, options []string, defaultValue *string, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
 		return _select(cmd, f, value, options, defaultValue, isUpdate)
+	}
+
+	return nil
+}
+
+func pickFlag(cmd *cobra.Command, f *Flag, result *string, fn pickerOptionsFunc, isUpdate bool) error {
+	if shouldAsk(cmd, f, isUpdate) {
+		var opts pickerOptions
+		err := ansi.Waiting(func() error {
+			var err error
+			opts, err = fn()
+			return err
+		})
+
+		if err != nil {
+			return err
+		}
+
+		defaultLabel := opts.defaultLabel()
+		var val string
+		if err := selectFlag(cmd, f, &val, opts.labels(), &defaultLabel, isUpdate); err != nil {
+			return err
+		}
+
+		*result = opts.getValue(val)
 	}
 
 	return nil

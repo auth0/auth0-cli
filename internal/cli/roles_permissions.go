@@ -118,10 +118,13 @@ auth0 roles permissions add`,
 			}
 
 			var rs *management.ResourceServer
+			rs, err := cli.api.ResourceServer.Read(url.PathEscape(inputs.APIIdentifier))
+			if err != nil {
+				return err
+			}
 
 			if len(inputs.Permissions) == 0 {
-				var err error
-				rs, err = cli.pickRolePermissions(inputs.APIIdentifier, &inputs.Permissions)
+				err := cli.pickRolePermissions(rs.Scopes, &inputs.Permissions)
 				if err != nil {
 					return err
 				}
@@ -180,10 +183,13 @@ auth0 roles permissions rm`,
 			}
 
 			var rs *management.ResourceServer
+			rs, err := cli.api.ResourceServer.Read(url.PathEscape(inputs.APIIdentifier))
+			if err != nil {
+				return err
+			}
 
 			if len(inputs.Permissions) == 0 {
-				var err error
-				rs, err = cli.pickRolePermissions(inputs.APIIdentifier, &inputs.Permissions)
+				err := cli.pickRolePermissions( rs.Scopes, &inputs.Permissions)
 				if err != nil {
 					return err
 				}
@@ -230,17 +236,11 @@ func (c *cli) apiPickerOptionsWithoutAuth0() (pickerOptions, error) {
 	})
 }
 
-func (c *cli) pickRolePermissions(id string, permissions *[]string) (*management.ResourceServer, error) {
+func (c *cli) pickRolePermissions(apiScopes []*management.ResourceServerScope, permissions *[]string) error {
 	// NOTE(cyx): We're inlining this for now since we have no generic
 	// usecase for this particular picker type yet.
-	var err error
-	rs, err := c.api.ResourceServer.Read(id)
-	if err != nil {
-		return nil, err
-	}
-
 	var options []string
-	for _, s := range rs.Scopes {
+	for _, s := range apiScopes {
 		options = append(options, s.GetValue())
 	}
 
@@ -250,10 +250,10 @@ func (c *cli) pickRolePermissions(id string, permissions *[]string) (*management
 	}
 
 	if err := survey.AskOne(p, permissions); err != nil {
-		return nil, err
+		return err
 	}
 
-	return rs, nil
+	return nil
 }
 
 func makePermissions(id string, permissions []string) []*management.Permission {
