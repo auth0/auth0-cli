@@ -69,7 +69,11 @@ func (m *RoleManager) Update(id string, r *Role, opts ...RequestOption) (err err
 //
 // See: https://auth0.com/docs/api/management/v2#!/Roles/delete_roles_by_id
 func (m *RoleManager) Delete(id string, opts ...RequestOption) (err error) {
-	return m.Request("DELETE", m.URI("roles", id), nil, opts...)
+	// Deleting a role results in a 200 status code instead of 204 which
+	// triggers decoding of the response payload.
+	//
+	// In order to avoid Unmarshal(nil) errors, we pass an empty &Role{}.
+	return m.Request("DELETE", m.URI("roles", id), &Role{}, opts...)
 }
 
 // List all roles that can be assigned to users or groups.

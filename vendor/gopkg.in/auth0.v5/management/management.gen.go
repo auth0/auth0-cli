@@ -2225,6 +2225,14 @@ func (c *ConnectionOptionsGoogleApps) GetSetUserAttributes() string {
 	return *c.SetUserAttributes
 }
 
+// GetTenantDomain returns the TenantDomain field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsGoogleApps) GetTenantDomain() string {
+	if c == nil || c.TenantDomain == nil {
+		return ""
+	}
+	return *c.TenantDomain
+}
+
 // String returns a string representation of ConnectionOptionsGoogleApps.
 func (c *ConnectionOptionsGoogleApps) String() string {
 	return Stringify(c)
@@ -4431,6 +4439,16 @@ func (m *MultiFactorSMSTemplate) GetVerificationMessage() string {
 
 // String returns a string representation of MultiFactorSMSTemplate.
 func (m *MultiFactorSMSTemplate) String() string {
+	return Stringify(m)
+}
+
+// String returns a string representation of MultiFactorWebAuthnPlatform.
+func (m *MultiFactorWebAuthnPlatform) String() string {
+	return Stringify(m)
+}
+
+// String returns a string representation of MultiFactorWebAuthnRoaming.
+func (m *MultiFactorWebAuthnRoaming) String() string {
 	return Stringify(m)
 }
 

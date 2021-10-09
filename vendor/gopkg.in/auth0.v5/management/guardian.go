@@ -98,6 +98,8 @@ func newGuardianManager(m *Management) *GuardianManager {
 			&MultiFactorEmail{m},
 			&MultiFactorDUO{m},
 			&MultiFactorOTP{m},
+			&MultiFactorWebAuthnRoaming{m},
+			&MultiFactorWebAuthnPlatform{m},
 		},
 	}
 }
@@ -166,12 +168,14 @@ func (m *EnrollmentManager) Delete(id string, opts ...RequestOption) (err error)
 
 type MultiFactorManager struct {
 	*Management
-	Phone *MultiFactorPhone
-	SMS   *MultiFactorSMS
-	Push  *MultiFactorPush
-	Email *MultiFactorEmail
-	DUO   *MultiFactorDUO
-	OTP   *MultiFactorOTP
+	Phone            *MultiFactorPhone
+	SMS              *MultiFactorSMS
+	Push             *MultiFactorPush
+	Email            *MultiFactorEmail
+	DUO              *MultiFactorDUO
+	OTP              *MultiFactorOTP
+	WebAuthnRoaming  *MultiFactorWebAuthnRoaming
+	WebAuthnPlatform *MultiFactorWebAuthnPlatform
 }
 
 // Retrieves all factors.
@@ -326,6 +330,28 @@ type MultiFactorDUO struct{ *Management }
 // See: https://auth0.com/docs/api/management/v2#!/Guardian/put_factors_by_name
 func (m *MultiFactorDUO) Enable(enabled bool, opts ...RequestOption) error {
 	return m.Request("PUT", m.URI("guardian", "factors", "duo"), &MultiFactor{
+		Enabled: &enabled,
+	}, opts...)
+}
+
+type MultiFactorWebAuthnRoaming struct{ *Management }
+
+// Enable enables or disables WebAuthn Roaming Multi-factor Authentication.
+//
+// See: https://auth0.com/docs/api/management/v2#!/Guardian/put_factors_by_name
+func (m *MultiFactorWebAuthnRoaming) Enable(enabled bool, opts ...RequestOption) error {
+	return m.Request("PUT", m.URI("guardian", "factors", "webauthn-roaming"), &MultiFactor{
+		Enabled: &enabled,
+	}, opts...)
+}
+
+type MultiFactorWebAuthnPlatform struct{ *Management }
+
+// Enable enables or disables WebAuthn Platform Multi-factor Authentication.
+//
+// See: https://auth0.com/docs/api/management/v2#!/Guardian/put_factors_by_name
+func (m *MultiFactorWebAuthnPlatform) Enable(enabled bool, opts ...RequestOption) error {
+	return m.Request("PUT", m.URI("guardian", "factors", "webauthn-roaming"), &MultiFactor{
 		Enabled: &enabled,
 	}, opts...)
 }

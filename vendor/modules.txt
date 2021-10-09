@@ -390,7 +390,7 @@ google.golang.org/protobuf/reflect/protoregistry
 google.golang.org/protobuf/runtime/protoiface
 google.golang.org/protobuf/runtime/protoimpl
 google.golang.org/protobuf/types/descriptorpb
-# gopkg.in/auth0.v5 v5.19.1
+# gopkg.in/auth0.v5 v5.19.1 => github.com/go-auth0/auth0 v1.3.1-0.20211008194804-338ed74eeada
 ## explicit
 gopkg.in/auth0.v5
 gopkg.in/auth0.v5/internal/client
@@ -405,3 +405,4 @@ gopkg.in/ini.v1
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 gopkg.in/yaml.v3
+# gopkg.in/auth0.v5 => github.com/go-auth0/auth0 v1.3.1-0.20211008194804-338ed74eeada

@@ -17,8 +17,8 @@ The Auth0 Management API is meant to be used by back-end servers or trusted part
 
 ```go
 import (
-	gopkg.in/auth0.v5
-	gopkg.in/auth0.v5/management
+	"gopkg.in/auth0.v5"
+	"gopkg.in/auth0.v5/management"
 )
 ```
 

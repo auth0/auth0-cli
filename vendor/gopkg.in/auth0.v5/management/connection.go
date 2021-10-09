@@ -711,6 +711,7 @@ type ConnectionOptionsGoogleApps struct {
 	ClientID     *string `json:"client_id,omitempty"`
 	ClientSecret *string `json:"client_secret,omitempty"`
 	Domain       *string `json:"domain,omitempty"`
+	TenantDomain *string `json:"tenant_domain,omitempty"`
 
 	EnableUsersAPI  *bool `json:"api_enable_users,omitempty"`
 	BasicProfile    *bool `json:"basic_profile,omitempty" scope:"basic_profile"`
@@ -725,6 +726,14 @@ type ConnectionOptionsGoogleApps struct {
 
 	DomainAliases []interface{} `json:"domain_aliases,omitempty"`
 	LogoURL       *string       `json:"icon_url,omitempty"`
+}
+
+func (c *ConnectionOptionsGoogleApps) Scopes() []string {
+	return tag.Scopes(c)
+}
+
+func (c *ConnectionOptionsGoogleApps) SetScopes(enable bool, scopes ...string) {
+	tag.SetScopes(c, enable, scopes...)
 }
 
 type ConnectionManager struct {
