@@ -47,4 +47,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-replace gopkg.in/auth0.v5 => github.com/go-auth0/auth0 v1.3.1-0.20211008194804-338ed74eeada
+replace gopkg.in/auth0.v5 => github.com/go-auth0/auth0 v1.3.1-0.20211015053228-efc8aea5a7d7

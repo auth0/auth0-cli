@@ -975,6 +975,51 @@ func (c *Connection) String() string {
 	return Stringify(c)
 }
 
+// GetAudience returns the Audience field if it's non-nil, zero value otherwise.
+func (c *ConnectionGatewayAuthentication) GetAudience() string {
+	if c == nil || c.Audience == nil {
+		return ""
+	}
+	return *c.Audience
+}
+
+// GetMethod returns the Method field if it's non-nil, zero value otherwise.
+func (c *ConnectionGatewayAuthentication) GetMethod() string {
+	if c == nil || c.Method == nil {
+		return ""
+	}
+	return *c.Method
+}
+
+// GetSecret returns the Secret field if it's non-nil, zero value otherwise.
+func (c *ConnectionGatewayAuthentication) GetSecret() string {
+	if c == nil || c.Secret == nil {
+		return ""
+	}
+	return *c.Secret
+}
+
+// GetSecretBase64Encoded returns the SecretBase64Encoded field if it's non-nil, zero value otherwise.
+func (c *ConnectionGatewayAuthentication) GetSecretBase64Encoded() bool {
+	if c == nil || c.SecretBase64Encoded == nil {
+		return false
+	}
+	return *c.SecretBase64Encoded
+}
+
+// GetSubject returns the Subject field if it's non-nil, zero value otherwise.
+func (c *ConnectionGatewayAuthentication) GetSubject() string {
+	if c == nil || c.Subject == nil {
+		return ""
+	}
+	return *c.Subject
+}
+
+// String returns a string representation of ConnectionGatewayAuthentication.
+func (c *ConnectionGatewayAuthentication) String() string {
+	return Stringify(c)
+}
+
 // String returns a string representation of ConnectionList.
 func (c *ConnectionList) String() string {
 	return Stringify(c)
@@ -2964,6 +3009,14 @@ func (c *ConnectionOptionsSAML) GetSigningCert() string {
 	return *c.SigningCert
 }
 
+// GetSigningKey returns the SigningKey field.
+func (c *ConnectionOptionsSAML) GetSigningKey() *ConnectionOptionsSAMLSigningKey {
+	if c == nil {
+		return nil
+	}
+	return c.SigningKey
+}
+
 // GetSignOutEndpoint returns the SignOutEndpoint field if it's non-nil, zero value otherwise.
 func (c *ConnectionOptionsSAML) GetSignOutEndpoint() string {
 	if c == nil || c.SignOutEndpoint == nil {
@@ -3054,6 +3107,27 @@ func (c *ConnectionOptionsSAMLIdpInitiated) String() string {
 	return Stringify(c)
 }
 
+// GetCert returns the Cert field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsSAMLSigningKey) GetCert() string {
+	if c == nil || c.Cert == nil {
+		return ""
+	}
+	return *c.Cert
+}
+
+// GetKey returns the Key field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsSAMLSigningKey) GetKey() string {
+	if c == nil || c.Key == nil {
+		return ""
+	}
+	return *c.Key
+}
+
+// String returns a string representation of ConnectionOptionsSAMLSigningKey.
+func (c *ConnectionOptionsSAMLSigningKey) String() string {
+	return Stringify(c)
+}
+
 // GetBruteForceProtection returns the BruteForceProtection field if it's non-nil, zero value otherwise.
 func (c *ConnectionOptionsSMS) GetBruteForceProtection() bool {
 	if c == nil || c.BruteForceProtection == nil {
@@ -3070,12 +3144,36 @@ func (c *ConnectionOptionsSMS) GetDisableSignup() bool {
 	return *c.DisableSignup
 }
 
+// GetForwardRequestInfo returns the ForwardRequestInfo field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsSMS) GetForwardRequestInfo() bool {
+	if c == nil || c.ForwardRequestInfo == nil {
+		return false
+	}
+	return *c.ForwardRequestInfo
+}
+
 // GetFrom returns the From field if it's non-nil, zero value otherwise.
 func (c *ConnectionOptionsSMS) GetFrom() string {
 	if c == nil || c.From == nil {
 		return ""
 	}
 	return *c.From
+}
+
+// GetGatewayAuthentication returns the GatewayAuthentication field.
+func (c *ConnectionOptionsSMS) GetGatewayAuthentication() *ConnectionGatewayAuthentication {
+	if c == nil {
+		return nil
+	}
+	return c.GatewayAuthentication
+}
+
+// GetGatewayUrl returns the GatewayUrl field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsSMS) GetGatewayUrl() string {
+	if c == nil || c.GatewayUrl == nil {
+		return ""
+	}
+	return *c.GatewayUrl
 }
 
 // GetMessagingServiceSID returns the MessagingServiceSID field if it's non-nil, zero value otherwise.
@@ -3100,6 +3198,14 @@ func (c *ConnectionOptionsSMS) GetOTP() *ConnectionOptionsOTP {
 		return nil
 	}
 	return c.OTP
+}
+
+// GetProvider returns the Provider field if it's non-nil, zero value otherwise.
+func (c *ConnectionOptionsSMS) GetProvider() string {
+	if c == nil || c.Provider == nil {
+		return ""
+	}
+	return *c.Provider
 }
 
 // GetSyntax returns the Syntax field if it's non-nil, zero value otherwise.
