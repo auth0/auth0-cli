@@ -73,7 +73,7 @@
     {
       "name": "PHP API",
       "path": "php",
-      "samples": [""],
+      "samples": ["app"],
       "org": "auth0-samples",
       "repo": "auth0-php-api-samples",
       "branch": "main"
@@ -403,7 +403,7 @@
     {
       "name": "PHP",
       "path": "php",
-      "samples": [""],
+      "samples": ["app"],
       "org": "auth0-samples",
       "repo": "auth0-php-web-app",
       "branch": "main"
