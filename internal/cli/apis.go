@@ -37,7 +37,7 @@ var (
 		LongForm:   "scopes",
 		ShortForm:  "s",
 		Help:       "Comma-separated list of scopes (permissions).",
-		IsRequired: true,
+		AlwaysPrompt: true,
 	}
 	apiTokenLifetime = Flag{
 		Name:         "Token Lifetime",
