@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/iostream"
@@ -11,8 +13,9 @@ import (
 )
 
 const (
-	textDocsKey = "__doc__"
-	textDocsURL = "https://auth0.com/docs/brand-and-customize/text-customization-new-universal-login/prompt-"
+	textDocsKey         = "__doc__"
+	textDocsURL         = "https://auth0.com/docs/brand-and-customize/text-customization-new-universal-login"
+	textLocalesURL      = "https://auth0-ulp.herokuapp.com/static/locales"
 	textLanguageDefault = "en"
 )
 
@@ -95,23 +98,32 @@ auth0 branding texts update <prompt> -l es`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			inputs.Body = string(iostream.PipedInput())
 			prompt := args[0]
-			var currentBody map[string]interface{}
+			fileName := fmt.Sprintf("%s.%s.json", prompt, inputs.Language)
+			currentBody := make(map[string]interface{})
+			currentBody[textDocsKey] = fmt.Sprintf("%s/prompt-%s", textDocsURL, prompt)
 
 			if err := ansi.Waiting(func() error {
-				var err error
-				currentBody, err = cli.api.Prompt.CustomText(prompt, inputs.Language)
-				return err
+				customTranslations, err := cli.api.Prompt.CustomText(prompt, inputs.Language)
+				if err != nil {
+					return err
+				}
+
+				defaultTranslations := downloadBrandingTextLocale(fileName)
+				for k, v := range defaultTranslations {
+					currentBody[k] = v
+				}
+				for k, v := range customTranslations {
+					currentBody[k] = v
+				}
+				return nil
 			}); err != nil {
 				return fmt.Errorf("Unable to load custom text for prompt %s and language %s: %w", prompt, inputs.Language, err)
 			}
-
-			currentBody[textDocsKey] = textDocsURL + prompt
 
 			currentBodyStr, err := marshalBrandingTextBody(currentBody)
 			if err != nil {
 				return err
 			}
-			fileName := fmt.Sprintf("%s.%s.json", prompt, inputs.Language)
 
 			if err := ruleScript.OpenEditor(
 				cmd,
@@ -164,4 +176,26 @@ func marshalBrandingTextBody(b map[string]interface{}) (string, error) {
 		return "", fmt.Errorf("Failed to format the custom texts JSON: %w", err)
 	}
 	return buf.String(), nil
+}
+
+func downloadBrandingTextLocale(filename string) map[string]interface{} {
+	url := fmt.Sprintf("%s/%s", textLocalesURL, filename)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil
+		}
+		var result map[string]interface{}
+		if err := json.Unmarshal(body, &result); err != nil {
+			return nil
+		}
+		return result
+	}
+	return nil
 }
