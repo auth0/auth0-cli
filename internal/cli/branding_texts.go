@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/iostream"
@@ -100,19 +101,18 @@ auth0 branding texts update <prompt> -l es`,
 			prompt := args[0]
 			fileName := fmt.Sprintf("%s.%s.json", prompt, inputs.Language)
 			currentBody := make(map[string]interface{})
-			currentBody[textDocsKey] = fmt.Sprintf("%s/prompt-%s", textDocsURL, prompt)
+			currentBody[textDocsKey] = brandingTextDocsURL(prompt)
 
 			if err := ansi.Waiting(func() error {
+				defaultTranslations := downloadBrandingTextLocale(fileName)
+
 				customTranslations, err := cli.api.Prompt.CustomText(prompt, inputs.Language)
 				if err != nil {
 					return err
 				}
 
-				defaultTranslations := downloadBrandingTextLocale(fileName)
-				for k, v := range defaultTranslations {
-					currentBody[k] = v
-				}
-				for k, v := range customTranslations {
+				currentBodyTranslations := mergeBrandingTextLocales(defaultTranslations, customTranslations)
+				for k, v := range currentBodyTranslations {
 					currentBody[k] = v
 				}
 				return nil
@@ -165,6 +165,10 @@ func (c *cli) promptTextEditorHint() {
 	c.renderer.Infof("%s once you close the editor, the custom text will be saved. To cancel, CTRL+C.", ansi.Faint("Hint:"))
 }
 
+func brandingTextDocsURL(p string) string {
+	return fmt.Sprintf("%s/prompt-%s", textDocsURL, p)
+}
+
 func marshalBrandingTextBody(b map[string]interface{}) (string, error) {
 	bodyBytes, err := json.Marshal(b)
 	if err != nil {
@@ -198,4 +202,38 @@ func downloadBrandingTextLocale(filename string) map[string]interface{} {
 		return result
 	}
 	return nil
+}
+
+func mergeBrandingTextLocales(d map[string]interface{}, c map[string]interface{}) map[string]map[string]interface{} {
+	result := make(map[string]map[string]interface{})
+
+	for p, pv := range d {
+		if translations, ok := pv.(map[string]interface{}); ok {
+			for k, v := range translations {
+				if !strings.HasPrefix(k, "error") && !strings.HasPrefix(k, "devKeys") {
+					if _, ok := result[p]; !ok {
+						result[p] = make(map[string]interface{})
+					}
+					if _, ok := result[p][k]; !ok {
+						result[p][k] = make(map[string]interface{})
+					}
+					result[p][k] = v
+				}
+			}
+		}
+	}
+	for p, pv := range c {
+		if translations, ok := pv.(map[string]interface{}); ok {
+			for k, v := range translations {
+				if _, ok := result[p]; !ok {
+					result[p] = make(map[string]interface{})
+				}
+				if _, ok := result[p][k]; !ok {
+					result[p][k] = make(map[string]interface{})
+				}
+				result[p][k] = v
+			}
+		}
+	}
+	return result
 }
