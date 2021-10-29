@@ -73,12 +73,10 @@
     {
       "name": "PHP API",
       "path": "php",
-      "samples": [
-        "01-Authenticate-RS256"
-      ],
+      "samples": ["app"],
       "org": "auth0-samples",
       "repo": "auth0-php-api-samples",
-      "branch": "master"
+      "branch": "main"
     },
     {
       "name": "Python API",
@@ -405,12 +403,10 @@
     {
       "name": "PHP",
       "path": "php",
-      "samples": [
-        "00-Starter-Seed"
-      ],
+      "samples": ["app"],
       "org": "auth0-samples",
       "repo": "auth0-php-web-app",
-      "branch": "master"
+      "branch": "main"
     },
     {
       "name": "PHP (Laravel)",

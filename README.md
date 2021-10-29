@@ -233,6 +233,12 @@ The authenticator of the CLI defaults to the default Auth0 cloud `auth0.auth0.co
 	AUTH0_OAUTH_TOKEN_ENDPOINT - OAuth Token URL
 ```
 
+To change the text editor used for editing templates, rules, and actions, set the environment variable `EDITOR`:
+
+`export EDITOR="code -w"`
+
+`export EDITOR="nano"`
+
 ## Anonymous Analytics
 
 By default, the CLI tracks some anonymous usage events. This helps us understand how the CLI is being used, so we can continue to improve it. You can opt-out by setting the environment variable `AUTH0_CLI_ANALYTICS` to `false`.
