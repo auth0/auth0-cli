@@ -1,3 +1,5 @@
+//go:generate mockgen -source=branding_prompt.go -destination=branding_prompt_mock.go -package=auth0
+
 package auth0
 
 import "gopkg.in/auth0.v5/management"
