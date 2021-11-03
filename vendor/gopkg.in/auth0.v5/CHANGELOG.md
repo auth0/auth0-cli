@@ -1,6 +1,6 @@
-# v5.19.1
+# v5.19.2
 
-* Update README.md to reflect Actions and Organizations support.
+* `management.RoleManager`: `Delete` would result in an `json.Unmarshal(nil)` error ([#232](https://github.com/go-auth0/auth0/pull/232))
 
 # v5.19.0
 

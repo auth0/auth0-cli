@@ -437,6 +437,14 @@ type ConnectionOptionsOTP struct {
 	Length   *int `json:"length,omitempty"`
 }
 
+type ConnectionGatewayAuthentication struct {
+	Method              *string `json:"method,omitempty"`
+	Subject             *string `json:"subject,omitempty"`
+	Audience            *string `json:"audience,omitempty"`
+	Secret              *string `json:"secret,omitempty"`
+	SecretBase64Encoded *bool   `json:"secret_base64_encoded,omitempty"`
+}
+
 type ConnectionOptionsSMS struct {
 	Name     *string `json:"name,omitempty"`
 	From     *string `json:"from,omitempty"`
@@ -447,9 +455,14 @@ type ConnectionOptionsSMS struct {
 
 	AuthParams map[string]string `json:"authParams,omitempty"`
 
-	TwilioSID           *string `json:"twilio_sid"`
-	TwilioToken         *string `json:"twilio_token"`
-	MessagingServiceSID *string `json:"messaging_service_sid"`
+	TwilioSID           *string `json:"twilio_sid,omitempty"`
+	TwilioToken         *string `json:"twilio_token,omitempty"`
+	MessagingServiceSID *string `json:"messaging_service_sid,omitempty"`
+
+	Provider              *string                          `json:"provider,omitempty"`
+	GatewayUrl            *string                          `json:"gateway_url,omitempty"`
+	GatewayAuthentication *ConnectionGatewayAuthentication `json:"gateway_authentication,omitempty"`
+	ForwardRequestInfo    *bool                            `json:"forward_request_info,omitempty"`
 
 	DisableSignup        *bool `json:"disable_signup,omitempty"`
 	BruteForceProtection *bool `json:"brute_force_protection,omitempty"`
@@ -674,6 +687,7 @@ type ConnectionOptionsSAML struct {
 	Debug              *bool                              `json:"debug,omitempty"`
 	Expires            *string                            `json:"expires,omitempty"`
 	IdpInitiated       *ConnectionOptionsSAMLIdpInitiated `json:"idpinitiated,omitempty"`
+	SigningKey         *ConnectionOptionsSAMLSigningKey   `json:"signing_key,omitempty"`
 	SigningCert        *string                            `json:"signingCert,omitempty"`
 	Thumbprints        []interface{}                      `json:"thumbprints,omitempty"`
 	ProtocolBinding    *string                            `json:"protocolBinding,omitempty"`
@@ -707,10 +721,16 @@ type ConnectionOptionsSAMLIdpInitiated struct {
 	NonPersistentAttrs *[]string `json:"non_persistent_attrs,omitempty"`
 }
 
+type ConnectionOptionsSAMLSigningKey struct {
+	Key  *string `json:"key,omitempty"`
+	Cert *string `json:"cert,omitempty"`
+}
+
 type ConnectionOptionsGoogleApps struct {
 	ClientID     *string `json:"client_id,omitempty"`
 	ClientSecret *string `json:"client_secret,omitempty"`
 	Domain       *string `json:"domain,omitempty"`
+	TenantDomain *string `json:"tenant_domain,omitempty"`
 
 	EnableUsersAPI  *bool `json:"api_enable_users,omitempty"`
 	BasicProfile    *bool `json:"basic_profile,omitempty" scope:"basic_profile"`
@@ -725,6 +745,14 @@ type ConnectionOptionsGoogleApps struct {
 
 	DomainAliases []interface{} `json:"domain_aliases,omitempty"`
 	LogoURL       *string       `json:"icon_url,omitempty"`
+}
+
+func (c *ConnectionOptionsGoogleApps) Scopes() []string {
+	return tag.Scopes(c)
+}
+
+func (c *ConnectionOptionsGoogleApps) SetScopes(enable bool, scopes ...string) {
+	tag.SetScopes(c, enable, scopes...)
 }
 
 type ConnectionManager struct {

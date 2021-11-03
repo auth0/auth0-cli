@@ -46,3 +46,5 @@ require (
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 )
+
+replace gopkg.in/auth0.v5 => github.com/go-auth0/auth0 v1.3.1-0.20211015053228-efc8aea5a7d7
