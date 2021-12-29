@@ -82,6 +82,7 @@ func organizationsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(updateOrganizationCmd(cli))
 	cmd.AddCommand(deleteOrganizationCmd(cli))
 	cmd.AddCommand(openOrganizationCmd(cli))
+	cmd.AddCommand(membersOrganizationCmd(cli))
 
 	return cmd
 }
@@ -415,6 +416,46 @@ func openOrganizationCmd(cli *cli) *cobra.Command {
 			}
 
 			openManageURL(cli, cli.config.DefaultTenant, formatOrganizationDetailsPath(url.PathEscape(inputs.ID)))
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func membersOrganizationCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "members",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "List members of an organization",
+		Long:  "List members of an organization.",
+		Example: `auth0 orgs members 
+auth0 orgs members <id>`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
+				if err != nil {
+					return err
+				}
+			} else {
+				inputs.ID = args[0]
+			}
+
+			var members *management.OrganizationMemberList
+
+			if err := ansi.Waiting(func() error {
+				var err error
+				members, err = cli.api.Organization.Members(url.PathEscape(inputs.ID))
+				return err
+			}); err != nil {
+				return fmt.Errorf("Unable to get an organization with Id '%s': %w", inputs.ID, err)
+			}
+
+			cli.renderer.MembersList(members.Members)
 			return nil
 		},
 	}
