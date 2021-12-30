@@ -52,10 +52,10 @@ func (r *Renderer) MembersList(members []management.OrganizationMember) {
 func makeMembersView(member *management.OrganizationMember, w io.Writer) *membersView {
 
 	return &membersView{
-		ID:              member.GetUserID(),
-		Name:            member.GetName(),
-		Email:           member.GetEmail(),
-		PictureURL:      member.GetPicture(),
-		raw:             member,
+		ID:         member.GetUserID(),
+		Name:       member.GetName(),
+		Email:      member.GetEmail(),
+		PictureURL: member.GetPicture(),
+		raw:        member,
 	}
 }

@@ -161,7 +161,7 @@ func createOrganizationCmd(cli *cli) *cobra.Command {
 		Name            string
 		DisplayName     string
 		LogoURL         string
-		AccentColor    string
+		AccentColor     string
 		BackgroundColor string
 		Metadata        map[string]string
 	}
@@ -209,7 +209,7 @@ auth0 orgs create --n myorganization -d "My Organization" -m "KEY=value" -m "OTH
 					if isAccentColorSet {
 						o.Branding.Colors[apiOrganizationColorPrimary] = inputs.AccentColor
 					}
-					
+
 					if isBackgroundColorSet {
 						o.Branding.Colors[apiOrganizationColorPageBackground] = inputs.BackgroundColor
 					}
@@ -242,7 +242,7 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 		ID              string
 		DisplayName     string
 		LogoURL         string
-		AccentColor    string
+		AccentColor     string
 		BackgroundColor string
 		Metadata        map[string]string
 	}
@@ -307,7 +307,7 @@ auth0 orgs update <id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_v
 				} else if currentHasBranding {
 					o.Branding.LogoUrl = current.Branding.LogoUrl
 				}
-	
+
 				if needToAddColors {
 					o.Branding.Colors = map[string]string{}
 
@@ -425,7 +425,8 @@ func openOrganizationCmd(cli *cli) *cobra.Command {
 
 func membersOrganizationCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID string
+		ID     string
+		Number int
 	}
 
 	cmd := &cobra.Command{
@@ -445,17 +446,43 @@ auth0 orgs members <id>`,
 				inputs.ID = args[0]
 			}
 
-			var members *management.OrganizationMemberList
-
+			var list []management.OrganizationMember
 			if err := ansi.Waiting(func() error {
-				var err error
-				members, err = cli.api.Organization.Members(url.PathEscape(inputs.ID))
-				return err
+				pageSize := defaultPageSize
+				page := 0
+				for {
+					if inputs.Number > 0 {
+						// determine page size to avoid getting unwanted elements
+						want := inputs.Number - int(len(list))
+						if want == 0 {
+							return nil
+						}
+						if want < defaultPageSize {
+							pageSize = want
+						} else {
+							pageSize = defaultPageSize
+						}
+					}
+					members, err := cli.api.Organization.Members(
+						url.PathEscape(inputs.ID),
+						management.Context(cmd.Context()),
+						management.PerPage(pageSize),
+						management.Page(page))
+					if err != nil {
+						return err
+					}
+					page++
+					list = append(list, members.Members...)
+					if len(list) == inputs.Number || !members.List.HasNext() {
+						return nil
+					}
+				}
+
 			}); err != nil {
-				return fmt.Errorf("Unable to get an organization with Id '%s': %w", inputs.ID, err)
+				return fmt.Errorf("Unable to list members of an organization with Id '%s': %w", inputs.ID, err)
 			}
 
-			cli.renderer.MembersList(members.Members)
+			cli.renderer.MembersList(list)
 			return nil
 		},
 	}
