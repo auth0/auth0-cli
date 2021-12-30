@@ -84,6 +84,7 @@ func organizationsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(deleteOrganizationCmd(cli))
 	cmd.AddCommand(openOrganizationCmd(cli))
 	cmd.AddCommand(membersOrganizationCmd(cli))
+	cmd.AddCommand(rolesOrganizationCmd(cli))
 
 	return cmd
 }
@@ -461,29 +462,66 @@ auth0 orgs members ls <id>`,
 				inputs.ID = args[0]
 			}
 
-			list, err := getWithPagination(
-				cmd.Context(),
-				inputs.Number,
-				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, apiErr error) {
-					members, apiErr := cli.api.Organization.Members(url.PathEscape(inputs.ID), opts...)
-					if apiErr != nil {
-						return nil, false, apiErr
-					}
-					var output []interface{}
-					for _, member := range members.Members {
-						output = append(output, member)
-					}
-					return output, members.HasNext(), nil
-				})
-
+			members, err := cli.getOrgMembers(cmd.Context(), inputs.ID, inputs.Number)
 			if err != nil {
-				return fmt.Errorf("Unable to list members of an organization with Id '%s': %w", inputs.ID, err)
+				return err
 			}
-			var typedList []management.OrganizationMember
-			for _, item := range list {
-				typedList = append(typedList, item.(management.OrganizationMember))
+			cli.renderer.MembersList(members)
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func rolesOrganizationCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID     string
+		Number int
+	}
+
+	cmd := &cobra.Command{
+		Use:   "roles",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "List roles of an organization",
+		Long:  "List roles assigned to members of an organization.",
+		Example: `auth0 orgs roles 
+auth0 orgs roles <id>`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
+				if err != nil {
+					return err
+				}
+			} else {
+				inputs.ID = args[0]
 			}
-			cli.renderer.MembersList(typedList)
+
+			members, err := cli.getOrgMembers(cmd.Context(), inputs.ID, inputs.Number)
+			if err != nil {
+				return err
+			}
+
+			roleMap := make(map[string]management.OrganizationMemberRole)
+			for _, member := range members {
+				userID := member.GetUserID()
+				roleList, err := cli.api.Organization.MemberRoles(inputs.ID, userID)
+				if err != nil {
+					return err
+				}
+				for _, role := range roleList.Roles {
+					roleID := role.GetID()
+					if _, exists := roleMap[roleID]; !exists {
+						roleMap[roleID] = role
+					}
+				}
+			}
+			// convert management.OrganizationMemberRole to management.Role
+			var roles []*management.Role
+			for _, role := range roleMap {
+				roles = append(roles, &management.Role{ID: role.ID, Name: role.Name, Description: role.Description})
+			}
+			cli.renderer.RoleList(roles)
 			return nil
 		},
 	}
@@ -569,4 +607,34 @@ func getWithPagination(
 		return nil, err
 	}
 	return list, nil
+}
+
+func (c *cli) getOrgMembers(
+	context context.Context,
+	orgID string,
+	number int,
+) ([]management.OrganizationMember, error) {
+	list, err := getWithPagination(
+		context,
+		number,
+		func(opts ...management.RequestOption) (result []interface{}, hasNext bool, apiErr error) {
+			members, apiErr := c.api.Organization.Members(url.PathEscape(orgID), opts...)
+			if apiErr != nil {
+				return nil, false, apiErr
+			}
+			var output []interface{}
+			for _, member := range members.Members {
+				output = append(output, member)
+			}
+			return output, members.HasNext(), nil
+		})
+
+	if err != nil {
+		return nil, fmt.Errorf("Unable to list members of an organization with Id '%s': %w", orgID, err)
+	}
+	var typedList []management.OrganizationMember
+	for _, item := range list {
+		typedList = append(typedList, item.(management.OrganizationMember))
+	}
+	return typedList, nil
 }
