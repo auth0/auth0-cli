@@ -208,41 +208,28 @@ auth0 apps create`,
 auth0 apps ls
 auth0 apps ls -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var list []*management.Client
-			if err := ansi.Waiting(func() error {
-				pageSize := defaultPageSize
-				page := 0
-				for {
-					if inputs.Number > 0 {
-						// determine page size to avoid getting unwanted elements
-						want := inputs.Number - int(len(list))
-						if want == 0 {
-							return nil
-						}
-						if want < defaultPageSize {
-							pageSize = want
-						} else {
-							pageSize = defaultPageSize
-						}
+			list, err := getWithPagination(
+				cmd.Context(),
+				inputs.Number,
+				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
+					res, apiErr := cli.api.Client.List(opts...)
+					if apiErr != nil {
+						return nil, false, apiErr
 					}
-					res, err := cli.api.Client.List(
-						management.Context(cmd.Context()),
-						management.PerPage(pageSize),
-						management.Page(page))
-					if err != nil {
-						return err
+					var output []interface{}
+					for _, client := range res.Clients {
+						output = append(output, client)
 					}
-					page++
-					list = append(list, res.Clients...)
-					if len(list) == inputs.Number || !res.List.HasNext() {
-						return nil
-					}
-				}
-			}); err != nil {
+					return output, res.HasNext(), nil
+				})
+			if err != nil {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
-
-			cli.renderer.ApplicationList(list, inputs.Reveal)
+			var typedList []*management.Client
+			for _, item := range list {
+				typedList = append(typedList, item.(*management.Client))
+			}
+			cli.renderer.ApplicationList(typedList, inputs.Reveal)
 			return nil
 		},
 	}

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -446,43 +447,29 @@ auth0 orgs members <id>`,
 				inputs.ID = args[0]
 			}
 
-			var list []management.OrganizationMember
-			if err := ansi.Waiting(func() error {
-				pageSize := defaultPageSize
-				page := 0
-				for {
-					if inputs.Number > 0 {
-						// determine page size to avoid getting unwanted elements
-						want := inputs.Number - int(len(list))
-						if want == 0 {
-							return nil
-						}
-						if want < defaultPageSize {
-							pageSize = want
-						} else {
-							pageSize = defaultPageSize
-						}
+			list, err := getWithPagination(
+				cmd.Context(),
+				inputs.Number,
+				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, apiErr error) {
+					members, apiErr := cli.api.Organization.Members(url.PathEscape(inputs.ID), opts...)
+					if apiErr != nil {
+						return nil, false, apiErr
 					}
-					members, err := cli.api.Organization.Members(
-						url.PathEscape(inputs.ID),
-						management.Context(cmd.Context()),
-						management.PerPage(pageSize),
-						management.Page(page))
-					if err != nil {
-						return err
+					var output []interface{}
+					for _, member := range members.Members {
+						output = append(output, member)
 					}
-					page++
-					list = append(list, members.Members...)
-					if len(list) == inputs.Number || !members.List.HasNext() {
-						return nil
-					}
-				}
+					return output, members.HasNext(), nil
+				})
 
-			}); err != nil {
+			if err != nil {
 				return fmt.Errorf("Unable to list members of an organization with Id '%s': %w", inputs.ID, err)
 			}
-
-			cli.renderer.MembersList(list)
+			var typedList []management.OrganizationMember
+			for _, item := range list {
+				typedList = append(typedList, item.(management.OrganizationMember))
+			}
+			cli.renderer.MembersList(typedList)
 			return nil
 		},
 	}
@@ -525,4 +512,47 @@ func apiOrganizationMetadataFor(metadata map[string]string) map[string]interface
 		res[key] = value
 	}
 	return res
+}
+
+func getWithPagination(
+	context context.Context,
+	limit int,
+	api func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error),
+) ([]interface{}, error) {
+
+	var list []interface{}
+	if err := ansi.Waiting(func() error {
+		pageSize := defaultPageSize
+		page := 0
+		for {
+			if limit > 0 {
+				// determine page size to avoid getting unwanted elements
+				want := limit - int(len(list))
+				if want == 0 {
+					return nil
+				}
+				if want < defaultPageSize {
+					pageSize = want
+				} else {
+					pageSize = defaultPageSize
+				}
+			}
+			res, hasNext, err := api(
+				management.Context(context),
+				management.PerPage(pageSize),
+				management.Page(page))
+			if err != nil {
+				return err
+			}
+			page++
+			list = append(list, res...)
+			if len(list) == limit || !hasNext {
+				return nil
+			}
+		}
+
+	}); err != nil {
+		return nil, err
+	}
+	return list, nil
 }
