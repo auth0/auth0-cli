@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"sort"
+	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -466,6 +468,7 @@ auth0 orgs members ls <id>`,
 			if err != nil {
 				return err
 			}
+			sortMembers(members)
 			cli.renderer.MembersList(members)
 			return nil
 		},
@@ -535,6 +538,9 @@ auth0 orgs roles ls <id>`,
 			for _, role := range roleMap {
 				roles = append(roles, &management.Role{ID: role.ID, Name: role.Name, Description: role.Description})
 			}
+			sort.Slice(roles, func(i, j int) bool {
+				return roles[i].GetName() < roles[j].GetName()
+			})
 			cli.renderer.RoleList(roles)
 			return nil
 		},
@@ -587,6 +593,7 @@ auth0 orgs roles members <org id> <role id>`,
 					}
 				}
 			}
+			sortMembers(roleMembers)
 			cli.renderer.MembersList(roleMembers)
 			return nil
 		},
@@ -702,4 +709,10 @@ func (c *cli) getOrgMembers(
 		typedList = append(typedList, item.(management.OrganizationMember))
 	}
 	return typedList, nil
+}
+
+func sortMembers(members []management.OrganizationMember) {
+	sort.Slice(members, func(i, j int) bool {
+		return strings.ToLower(members[i].GetName()) < strings.ToLower(members[j].GetName())
+	})
 }
