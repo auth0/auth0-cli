@@ -69,6 +69,12 @@ scoop install auth0
 
 ### Linux
 
+#### [Homebrew](https://brew.sh/)
+
+```bash
+ brew tap auth0/auth0-cli && brew install auth0
+```
+
 #### Manually
 
 1. Download the _Linux_ binary from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
