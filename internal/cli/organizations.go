@@ -475,18 +475,32 @@ auth0 orgs members ls <id>`,
 }
 
 func rolesOrganizationCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "roles",
+		Short: "Manage roles of an organization",
+		Long:  "Manage roles of an organization.",
+	}
+
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(listRolesOrganizationCmd(cli))
+
+	return cmd
+}
+
+func listRolesOrganizationCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ID     string
 		Number int
 	}
 
 	cmd := &cobra.Command{
-		Use:   "roles",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "List roles of an organization",
-		Long:  "List roles assigned to members of an organization.",
-		Example: `auth0 orgs roles 
-auth0 orgs roles <id>`,
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "List roles of an organization",
+		Long:    "List roles assigned to members of an organization.",
+		Example: `auth0 orgs roles list
+auth0 orgs roles ls <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
