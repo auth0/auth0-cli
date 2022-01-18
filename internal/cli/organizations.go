@@ -425,18 +425,32 @@ func openOrganizationCmd(cli *cli) *cobra.Command {
 }
 
 func membersOrganizationCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "members",
+		Short: "Manage members of an organization",
+		Long:  "Manage members of an organization.",
+	}
+
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(listMembersOrganizationCmd(cli))
+
+	return cmd
+}
+
+func listMembersOrganizationCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ID     string
 		Number int
 	}
 
 	cmd := &cobra.Command{
-		Use:   "members",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "List members of an organization",
-		Long:  "List members of an organization.",
-		Example: `auth0 orgs members 
-auth0 orgs members <id>`,
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "List members of an organization",
+		Long:    "List members of an organization.",
+		Example: `auth0 orgs members list
+auth0 orgs members ls <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
