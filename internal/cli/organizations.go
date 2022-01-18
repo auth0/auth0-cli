@@ -539,7 +539,7 @@ auth0 orgs roles ls <id>`,
 				roles = append(roles, &management.Role{ID: role.ID, Name: role.Name, Description: role.Description})
 			}
 			sort.Slice(roles, func(i, j int) bool {
-				return roles[i].GetName() < roles[j].GetName()
+				return strings.ToLower(roles[i].GetName()) < strings.ToLower(roles[j].GetName())
 			})
 			cli.renderer.RoleList(roles)
 			return nil
