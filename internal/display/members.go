@@ -27,8 +27,8 @@ func (v *membersView) KeyValues() [][]string {
 	return [][]string{
 		{"ID", ansi.Faint(v.ID)},
 		{"NAME", v.Name},
-		{"Email", v.Email},
-		{"Picture URL", v.PictureURL},
+		{"EMAIL", v.Email},
+		{"PICTURE URL", v.PictureURL},
 	}
 }
 
