@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -82,6 +83,7 @@ func organizationsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(updateOrganizationCmd(cli))
 	cmd.AddCommand(deleteOrganizationCmd(cli))
 	cmd.AddCommand(openOrganizationCmd(cli))
+	cmd.AddCommand(membersOrganizationCmd(cli))
 
 	return cmd
 }
@@ -160,7 +162,7 @@ func createOrganizationCmd(cli *cli) *cobra.Command {
 		Name            string
 		DisplayName     string
 		LogoURL         string
-		AccentColor    string
+		AccentColor     string
 		BackgroundColor string
 		Metadata        map[string]string
 	}
@@ -208,7 +210,7 @@ auth0 orgs create --n myorganization -d "My Organization" -m "KEY=value" -m "OTH
 					if isAccentColorSet {
 						o.Branding.Colors[apiOrganizationColorPrimary] = inputs.AccentColor
 					}
-					
+
 					if isBackgroundColorSet {
 						o.Branding.Colors[apiOrganizationColorPageBackground] = inputs.BackgroundColor
 					}
@@ -241,7 +243,7 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 		ID              string
 		DisplayName     string
 		LogoURL         string
-		AccentColor    string
+		AccentColor     string
 		BackgroundColor string
 		Metadata        map[string]string
 	}
@@ -306,7 +308,7 @@ auth0 orgs update <id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_v
 				} else if currentHasBranding {
 					o.Branding.LogoUrl = current.Branding.LogoUrl
 				}
-	
+
 				if needToAddColors {
 					o.Branding.Colors = map[string]string{}
 
@@ -422,6 +424,73 @@ func openOrganizationCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+func membersOrganizationCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "members",
+		Short: "Manage members of an organization",
+		Long:  "Manage members of an organization.",
+	}
+
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(listMembersOrganizationCmd(cli))
+
+	return cmd
+}
+
+func listMembersOrganizationCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID     string
+		Number int
+	}
+
+	cmd := &cobra.Command{
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "List members of an organization",
+		Long:    "List members of an organization.",
+		Example: `auth0 orgs members list
+auth0 orgs members ls <id>`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
+				if err != nil {
+					return err
+				}
+			} else {
+				inputs.ID = args[0]
+			}
+
+			list, err := getWithPagination(
+				cmd.Context(),
+				inputs.Number,
+				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, apiErr error) {
+					members, apiErr := cli.api.Organization.Members(url.PathEscape(inputs.ID), opts...)
+					if apiErr != nil {
+						return nil, false, apiErr
+					}
+					var output []interface{}
+					for _, member := range members.Members {
+						output = append(output, member)
+					}
+					return output, members.HasNext(), nil
+				})
+
+			if err != nil {
+				return fmt.Errorf("Unable to list members of an organization with Id '%s': %w", inputs.ID, err)
+			}
+			var typedList []management.OrganizationMember
+			for _, item := range list {
+				typedList = append(typedList, item.(management.OrganizationMember))
+			}
+			cli.renderer.MembersList(typedList)
+			return nil
+		},
+	}
+
+	return cmd
+}
+
 func (c *cli) organizationPickerOptions() (pickerOptions, error) {
 	list, err := c.api.Organization.List()
 	if err != nil {
@@ -457,4 +526,47 @@ func apiOrganizationMetadataFor(metadata map[string]string) map[string]interface
 		res[key] = value
 	}
 	return res
+}
+
+func getWithPagination(
+	context context.Context,
+	limit int,
+	api func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error),
+) ([]interface{}, error) {
+
+	var list []interface{}
+	if err := ansi.Waiting(func() error {
+		pageSize := defaultPageSize
+		page := 0
+		for {
+			if limit > 0 {
+				// determine page size to avoid getting unwanted elements
+				want := limit - int(len(list))
+				if want == 0 {
+					return nil
+				}
+				if want < defaultPageSize {
+					pageSize = want
+				} else {
+					pageSize = defaultPageSize
+				}
+			}
+			res, hasNext, err := api(
+				management.Context(context),
+				management.PerPage(pageSize),
+				management.Page(page))
+			if err != nil {
+				return err
+			}
+			page++
+			list = append(list, res...)
+			if len(list) == limit || !hasNext {
+				return nil
+			}
+		}
+
+	}); err != nil {
+		return nil, err
+	}
+	return list, nil
 }

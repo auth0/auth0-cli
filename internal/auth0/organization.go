@@ -27,4 +27,9 @@ type OrganizationAPI interface {
 	//
 	// See: https://auth0.com/docs/api/management/v2/#!/Organizations/get_organizations
 	List(opts ...management.RequestOption) (c *management.OrganizationList, err error)
+
+	// List members of an organization
+	//
+	// See: https://auth0.com/docs/api/management/v2#!/Organizations/get_members
+	Members(id string, opts ...management.RequestOption) (o *management.OrganizationMemberList, err error)
 }
