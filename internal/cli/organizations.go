@@ -470,7 +470,6 @@ auth0 orgs members ls <id>`,
 			return nil
 		},
 	}
-
 	return cmd
 }
 
@@ -483,6 +482,7 @@ func rolesOrganizationCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listRolesOrganizationCmd(cli))
+	cmd.AddCommand(membersRolesOrganizationCmd(cli))
 
 	return cmd
 }
@@ -539,7 +539,58 @@ auth0 orgs roles ls <id>`,
 			return nil
 		},
 	}
+	return cmd
+}
 
+func membersRolesOrganizationCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		OrgID  string
+		RoleID string
+		Number int
+	}
+
+	cmd := &cobra.Command{
+		Use:   "members",
+		Args:  cobra.RangeArgs(1, 2),
+		Short: "List organization members for a role",
+		Long:  "List organization members that have a given role assigned to them.",
+		Example: `auth0 orgs roles members
+auth0 orgs roles members <org id> <role id>`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 1 {
+				err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions)
+				if err != nil {
+					return err
+				}
+				inputs.RoleID = args[0]
+			} else {
+				inputs.OrgID = args[0]
+				inputs.RoleID = args[1]
+			}
+
+			members, err := cli.getOrgMembers(cmd.Context(), inputs.OrgID, inputs.Number)
+			if err != nil {
+				return err
+			}
+
+			var roleMembers []management.OrganizationMember
+			for _, member := range members {
+				userID := member.GetUserID()
+				roleList, err := cli.api.Organization.MemberRoles(inputs.OrgID, userID)
+				if err != nil {
+					return err
+				}
+				for _, role := range roleList.Roles {
+					roleID := role.GetID()
+					if roleID == inputs.RoleID {
+						roleMembers = append(roleMembers, member)
+					}
+				}
+			}
+			cli.renderer.MembersList(roleMembers)
+			return nil
+		},
+	}
 	return cmd
 }
 
