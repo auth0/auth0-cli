@@ -8,8 +8,8 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/prompt"
-	"github.com/spf13/cobra"
 	"github.com/pkg/browser"
+	"github.com/spf13/cobra"
 )
 
 func loginCmd(cli *cli) *cobra.Command {
@@ -27,6 +27,11 @@ func loginCmd(cli *cli) *cobra.Command {
 			return err
 		},
 	}
+
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		cmd.Flags().MarkHidden("tenant")
+		cmd.Parent().HelpFunc()(cmd, args)
+	})
 
 	return cmd
 }
