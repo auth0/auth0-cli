@@ -6,9 +6,9 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.2.15
 	github.com/andybalholm/brotli v1.0.1 // indirect
 	github.com/benbjohnson/clock v1.1.0 // indirect
-	github.com/briandowns/spinner v1.16.0
+	github.com/briandowns/spinner v1.18.0
 	github.com/charmbracelet/glamour v0.3.0
-	github.com/fatih/color v1.10.0 // indirect
+	github.com/fatih/color v1.13.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/getsentry/sentry-go v0.11.0
 	github.com/golang/mock v1.6.0
@@ -22,7 +22,8 @@ require (
 	github.com/klauspost/pgzip v1.2.5 // indirect
 	github.com/lestrrat-go/jwx v1.2.4
 	github.com/logrusorgru/aurora v2.0.3+incompatible
-	github.com/mattn/go-isatty v0.0.13
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-isatty v0.0.14
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/mholt/archiver/v3 v3.5.0
 	github.com/olekukonko/tablewriter v0.0.5
@@ -40,7 +41,7 @@ require (
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
 	golang.org/x/oauth2 v0.0.0-20210628180205-a41e5a781914
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
+	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
 	gopkg.in/auth0.v5 v5.19.1
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect

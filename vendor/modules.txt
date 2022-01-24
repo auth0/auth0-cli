@@ -48,7 +48,7 @@ github.com/aymerick/douceur/css
 github.com/aymerick/douceur/parser
 # github.com/benbjohnson/clock v1.1.0
 ## explicit
-# github.com/briandowns/spinner v1.16.0
+# github.com/briandowns/spinner v1.18.0
 ## explicit
 github.com/briandowns/spinner
 # github.com/charmbracelet/glamour v0.3.0
@@ -75,7 +75,7 @@ github.com/dsnet/compress/bzip2/internal/sais
 github.com/dsnet/compress/internal
 github.com/dsnet/compress/internal/errors
 github.com/dsnet/compress/internal/prefix
-# github.com/fatih/color v1.10.0
+# github.com/fatih/color v1.13.0
 ## explicit
 github.com/fatih/color
 # github.com/fsnotify/fsnotify v1.4.9
@@ -197,9 +197,10 @@ github.com/logrusorgru/aurora
 github.com/lucasb-eyer/go-colorful
 # github.com/magiconair/properties v1.8.5
 github.com/magiconair/properties
-# github.com/mattn/go-colorable v0.1.8
+# github.com/mattn/go-colorable v0.1.12
+## explicit
 github.com/mattn/go-colorable
-# github.com/mattn/go-isatty v0.0.13
+# github.com/mattn/go-isatty v0.0.14
 ## explicit
 github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.10
@@ -326,7 +327,7 @@ golang.org/x/oauth2/internal
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
+# golang.org/x/sys v0.0.0-20220114195835-da31bd327af9
 ## explicit
 golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader
