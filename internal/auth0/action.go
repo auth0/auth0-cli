@@ -32,4 +32,9 @@ type ActionAPI interface {
 	//
 	// https://auth0.com/docs/api/management/v2/#!/Actions/get_triggers
 	ListTriggers(opts ...management.RequestOption) (l *management.ActionTriggerList, err error)
+
+	// Deploy an action.
+	//
+	// See: https://auth0.com/docs/api/management/v2/#!/Actions/post_deploy_action
+	Deploy(id string, opts ...management.RequestOption) (v *management.ActionVersion, err error)
 }
