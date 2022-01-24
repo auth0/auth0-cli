@@ -87,6 +87,11 @@ func (r *Renderer) ActionUpdate(action *management.Action) {
 	r.Result(makeActionView(action))
 }
 
+func (r *Renderer) ActionDeploy(action *management.Action) {
+	r.Heading("action deployed")
+	r.Result(makeActionView(action))
+}
+
 func makeActionView(action *management.Action) *actionView {
 	var triggers = make([]string, 0, len(action.SupportedTriggers))
 	for _, t := range action.SupportedTriggers {
@@ -98,9 +103,13 @@ func makeActionView(action *management.Action) *actionView {
 	lastDeployed := ""
 
 	if action.GetDeployedVersion() != nil {
-		isDeployed = action.GetDeployedVersion().Deployed
-		deployedVersionNumber = strconv.Itoa(action.GetDeployedVersion().Number)
-		lastDeployed = timeAgo(action.GetBuiltAt())
+		deployedVersion := action.GetDeployedVersion()
+		isDeployed = deployedVersion.Deployed
+		deployedVersionNumber = strconv.Itoa(deployedVersion.Number)
+
+		if deployedVersion.BuiltAt != nil {
+			lastDeployed = timeAgo(deployedVersion.GetBuiltAt())
+		}
 	}
 
 	return &actionView{
