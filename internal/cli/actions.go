@@ -78,6 +78,7 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(showActionCmd(cli))
 	cmd.AddCommand(updateActionCmd(cli))
 	cmd.AddCommand(deleteActionCmd(cli))
+	cmd.AddCommand(deployActionCmd(cli))
 	cmd.AddCommand(openActionCmd(cli))
 
 	return cmd
@@ -138,7 +139,7 @@ auth0 actions show <id>`,
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				action, err = cli.api.Action.Read(url.PathEscape(inputs.ID))
+				action, err = cli.api.Action.Read(inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to get an action with Id '%s': %w", inputs.ID, err)
@@ -392,14 +393,59 @@ auth0 actions delete <id>`,
 			}
 
 			return ansi.Spinner("Deleting action", func() error {
-				_, err := cli.api.Action.Read(url.PathEscape(inputs.ID))
+				_, err := cli.api.Action.Read(inputs.ID)
 
 				if err != nil {
 					return fmt.Errorf("Unable to delete action: %w", err)
 				}
 
-				return cli.api.Action.Delete(url.PathEscape(inputs.ID))
+				return cli.api.Action.Delete(inputs.ID)
 			})
+		},
+	}
+
+	return cmd
+}
+
+func deployActionCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "deploy",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Deploy an action",
+		Long:  "Deploy an action.",
+		Example: `auth0 actions deploy 
+auth0 actions deploy <id>`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)
+				if err != nil {
+					return err
+				}
+			} else {
+				inputs.ID = args[0]
+			}
+
+			var action *management.Action
+
+			if err := ansi.Waiting(func() error {
+				var err error
+				if _, err = cli.api.Action.Deploy(inputs.ID); err != nil {
+					return fmt.Errorf("Unable to deploy an action with Id '%s': %w", inputs.ID, err)
+				}
+				if action, err = cli.api.Action.Read(inputs.ID); err != nil {
+					return fmt.Errorf("Unable to get deployed action with Id '%s': %w", inputs.ID, err)
+				}
+				return nil
+			}); err != nil {
+				return err
+			}
+
+			cli.renderer.ActionDeploy(action)
+			return nil
 		},
 	}
 

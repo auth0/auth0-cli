@@ -8,8 +8,8 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/prompt"
-	"github.com/spf13/cobra"
 	"github.com/pkg/browser"
+	"github.com/spf13/cobra"
 )
 
 func loginCmd(cli *cli) *cobra.Command {
@@ -27,6 +27,11 @@ func loginCmd(cli *cli) *cobra.Command {
 			return err
 		},
 	}
+
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		_ = cmd.Flags().MarkHidden("tenant")
+		cmd.Parent().HelpFunc()(cmd, args)
+	})
 
 	return cmd
 }
@@ -49,12 +54,17 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) (tenant, error) {
 	}
 
 	fmt.Printf("Your Device Confirmation code is: %s\n\n", ansi.Bold(state.UserCode))
-	cli.renderer.Infof("%s to open the browser to log in or %s to quit...", ansi.Green("Press Enter"), ansi.Red("^C"))
-	fmt.Scanln()
-	err = browser.OpenURL(state.VerificationURI)
 
-	if err != nil {
-		cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s.", state.VerificationURI)
+	if cli.noInput {
+		cli.renderer.Infof("Open the following URL in a browser: %s\n", ansi.Green(state.VerificationURI))
+	} else {
+		cli.renderer.Infof("%s to open the browser to log in or %s to quit...", ansi.Green("Press Enter"), ansi.Red("^C"))
+		fmt.Scanln()
+		err = browser.OpenURL(state.VerificationURI)
+
+		if err != nil {
+			cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s.", state.VerificationURI)
+		}
 	}
 
 	var res auth.Result
