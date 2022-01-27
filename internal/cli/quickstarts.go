@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -16,12 +15,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/auth0"
-	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
 // QuickStart app types and defaults
@@ -160,13 +160,13 @@ auth0 qs download --stack <stack>`,
 				}
 			}
 
-			q, err := getQuickstart(client.GetAppType(), inputs.Stack)
+			quickstart, err := getQuickstart(client.GetAppType(), inputs.Stack)
 			if err != nil {
 				return fmt.Errorf("An unexpected error occurred with the specified stack %v: %v", inputs.Stack, err)
 			}
 
 			err = ansi.Waiting(func() error {
-				return downloadQuickStart(cmd.Context(), cli, client, target, q)
+				return downloadQuickStart(cmd.Context(), client, target, quickstart)
 			})
 
 			if err != nil {
@@ -180,7 +180,7 @@ auth0 qs download --stack <stack>`,
 				return err
 			}
 
-			qsSamplePath := path.Join(target, q.Samples[0])
+			qsSamplePath := path.Join(target, quickstart.Samples[0])
 			readme, err := loadQuickstartSampleReadme(qsSamplePath) // Some QS have non-markdown READMEs (eg auth0-python uses rst)
 
 			if err == nil {
@@ -206,86 +206,65 @@ auth0 qs download --stack <stack>`,
 	return cmd
 }
 
-func downloadQuickStart(ctx context.Context, cli *cli, client *management.Client, target string, q auth0.Quickstart) error {
-	var payload struct {
-		Branch       string `json:"branch"`
-		Org          string `json:"org"`
-		Repo         string `json:"repo"`
-		Path         string `json:"path"`
-		ClientID     string `json:"client_id"`
-		ClientSecret string `json:"client_secret"`
-		CallbackURL  string `json:"callback_url"`
-		Domain       string `json:"domain"`
-		Tenant       string `json:"tenant"`
-	}
-
-	ten, err := cli.getTenant()
+func downloadQuickStart(ctx context.Context, client *management.Client, target string, q auth0.Quickstart) error {
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, quickstartEndpoint, nil)
 	if err != nil {
-		return fmt.Errorf("Unable to get tenant: %v", err)
+		return unexpectedError(err)
 	}
 
-	payload.Tenant = ten.Name
-	payload.Domain = ten.Domain
+	params := request.URL.Query()
 
 	// FIXME(copland): Default to first item from list of samples.
-	// Eventually we should add a forced survey for user to select one if
-	// there are multiple.
-	payload.Branch = q.Branch
-	payload.Repo = q.Repo
-	payload.Path = q.Samples[0]
+	// Eventually we should add a forced survey for
+	// user to select one if there are multiple.
+	params.Add("branch", q.Branch)
+	params.Add("repo", q.Repo)
+	params.Add("path", q.Samples[0])
 
-	// These appear to be largely constant and refers to the github
-	// username they're under.
-	payload.Org = quickstartOrg
-	payload.ClientID = client.GetClientID()
-	payload.ClientSecret = client.GetClientSecret()
+	// These appear to be largely constant and refers
+	// to the GitHub username they're under.
+	params.Add("org", quickstartOrg)
+	params.Add("client_id", client.GetClientID())
 
-	// Callback URL, if not set, will just take the default one.
-	payload.CallbackURL = quickstartDefaultCallbackURL
+	// Callback URL, if not set, it will just take the default one.
+	callbackURL := quickstartDefaultCallbackURL
 	if list := urlsFor(client.Callbacks); len(list) > 0 {
-		payload.CallbackURL = list[0]
+		callbackURL = list[0]
 	}
+	params.Add("callback_url", callbackURL)
 
-	buf := &bytes.Buffer{}
-	if err := json.NewEncoder(buf).Encode(payload); err != nil {
-		return unexpectedError(err)
-	}
+	request.URL.RawQuery = params.Encode()
+	request.Header.Set("Content-Type", quickstartContentType)
 
-	req, err := http.NewRequest("POST", quickstartEndpoint, buf)
-	if err != nil {
-		return unexpectedError(err)
-	}
-	req.Header.Set("Content-Type", quickstartContentType)
-
-	res, err := http.DefaultClient.Do(req)
+	response, err := http.DefaultClient.Do(request)
 	if err != nil {
 		return unexpectedError(err)
 	}
 
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("Expected status %d, got %d", http.StatusOK, res.StatusCode)
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("Expected status %d, got %d", http.StatusOK, response.StatusCode)
 	}
 
-	tmpfile, err := ioutil.TempFile("", "auth0-quickstart*.zip")
+	tmpFile, err := ioutil.TempFile("", "auth0-quickstart*.zip")
 	if err != nil {
 		return unexpectedError(err)
 	}
 
-	_, err = io.Copy(tmpfile, res.Body)
+	_, err = io.Copy(tmpFile, response.Body)
 	if err != nil {
 		return unexpectedError(err)
 	}
 
-	if err := tmpfile.Close(); err != nil {
+	if err := tmpFile.Close(); err != nil {
 		return unexpectedError(err)
 	}
-	defer os.Remove(tmpfile.Name())
+	defer os.Remove(tmpFile.Name())
 
 	if err := os.RemoveAll(target); err != nil {
 		return unexpectedError(err)
 	}
 
-	if err := archiver.Unarchive(tmpfile.Name(), target); err != nil {
+	if err := archiver.Unarchive(tmpFile.Name(), target); err != nil {
 		return unexpectedError(err)
 	}
 
