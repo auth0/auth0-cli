@@ -41,7 +41,7 @@
       "branch": "master"
     },
     {
-      "name": "Go",
+      "name": "Go API",
       "path": "golang",
       "samples": [
         "01-Authorization-RS256"
@@ -73,7 +73,9 @@
     {
       "name": "PHP API",
       "path": "php",
-      "samples": ["app"],
+      "samples": [
+        "app"
+      ],
       "org": "auth0-samples",
       "repo": "auth0-php-api-samples",
       "branch": "main"
@@ -99,17 +101,7 @@
       "branch": "master"
     },
     {
-      "name": "Spring Security 4 Java API",
-      "path": "java-spring-security",
-      "samples": [
-        "01-Authorization"
-      ],
-      "org": "auth0-samples",
-      "repo": "auth0-spring-security-api-sample",
-      "branch": "master"
-    },
-    {
-      "name": "Spring Security 5 Java API",
+      "name": "Spring Boot API",
       "path": "java-spring-security5",
       "samples": [
         "01-Authorization-MVC"
@@ -151,14 +143,34 @@
       "branch": "master"
     },
     {
-      "name": "Ionic 4",
-      "path": "ionic4",
+      "name": "Ionic & Capacitor (Angular)",
+      "path": "ionic-angular",
       "samples": [
-        "01-Login"
+        "angular"
       ],
       "org": "auth0-samples",
-      "repo": "auth0-ionic4-samples",
-      "branch": "master"
+      "repo": "auth0-ionic-samples",
+      "branch": "main"
+    },
+    {
+      "name": "Ionic & Capacitor (React)",
+      "path": "ionic-react",
+      "samples": [
+        "react"
+      ],
+      "org": "auth0-samples",
+      "repo": "auth0-ionic-samples",
+      "branch": "main"
+    },
+    {
+      "name": "iOS / macOS",
+      "path": "swift-beta",
+      "samples": [
+        "Sample-01"
+      ],
+      "org": "auth0-samples",
+      "repo": "auth0-ios-swift-sample",
+      "branch": "beta"
     },
     {
       "name": "iOS Swift",
@@ -217,7 +229,9 @@
       "org": "auth0-samples",
       "repo": "auth0-uwp-oidc-samples",
       "branch": "master"
-    },
+    }
+  ],
+  "spa": [
     {
       "name": "WPF / Winforms",
       "path": "wpf-winforms",
@@ -297,12 +311,10 @@
       "branch": "master"
     },
     {
-      "name": "ASP.NET Core",
+      "name": "ASP.NET Core MVC",
       "path": "aspnet-core",
       "samples": [
-        "Quickstart/01-Login",
-        "Quickstart/02-User-Profile",
-        "Quickstart/03-Authorization"
+        "Quickstart/Sample"
       ],
       "org": "auth0-samples",
       "repo": "auth0-aspnetcore-mvc-samples",
@@ -391,19 +403,11 @@
       "branch": "main"
     },
     {
-      "name": "Node.js",
-      "path": "nodejs",
-      "samples": [
-        "01-Login"
-      ],
-      "org": "auth0-samples",
-      "repo": "auth0-nodejs-webapp-sample",
-      "branch": "master"
-    },
-    {
       "name": "PHP",
       "path": "php",
-      "samples": ["app"],
+      "samples": [
+        "app"
+      ],
       "org": "auth0-samples",
       "repo": "auth0-php-web-app",
       "branch": "main"
