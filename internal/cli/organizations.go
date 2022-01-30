@@ -68,6 +68,14 @@ var (
 		ShortForm: "m",
 		Help:      "Metadata associated with the organization (max 255 chars). Maximum of 10 metadata properties allowed.",
 	}
+
+	roleIdentifier = Flag{
+		Name:       "Role",
+		LongForm:   "role-id",
+		ShortForm:  "r",
+		Help:       "Role Identifier.",
+		IsRequired: true,
+	}
 )
 
 func organizationsCmd(cli *cli) *cobra.Command {
@@ -576,21 +584,19 @@ func listMembersRolesOrganizationCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "list",
-		Args:  cobra.RangeArgs(1, 2),
+		Args:  cobra.MaximumNArgs(1),
 		Short: "List organization members for a role",
 		Long:  "List organization members that have a given role assigned to them.",
 		Example: `auth0 orgs roles members list
-auth0 orgs roles members list <org id> <role id>`,
+auth0 orgs roles members list <org id> --role-id role`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 1 {
+			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions)
 				if err != nil {
 					return err
 				}
-				inputs.RoleID = args[0]
 			} else {
 				inputs.OrgID = args[0]
-				inputs.RoleID = args[1]
 			}
 
 			members, err := cli.getOrgMembersWithSpinner(cmd.Context(), inputs.OrgID, inputs.Number)
@@ -617,6 +623,7 @@ auth0 orgs roles members list <org id> <role id>`,
 			return nil
 		},
 	}
+	roleIdentifier.RegisterString(cmd, &inputs.RoleID, "")
 	return cmd
 }
 
