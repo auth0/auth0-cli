@@ -464,7 +464,7 @@ auth0 orgs members ls <id>`,
 				inputs.ID = args[0]
 			}
 
-			members, err := cli.getOrgMembers(cmd.Context(), inputs.ID, inputs.Number)
+			members, err := cli.getOrgMembersWithSpinner(cmd.Context(), inputs.ID, inputs.Number)
 			if err != nil {
 				return err
 			}
@@ -492,7 +492,7 @@ func rolesOrganizationCmd(cli *cli) *cobra.Command {
 
 func listRolesOrganizationCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID     string
+		OrgID  string
 		Number int
 	}
 
@@ -506,32 +506,38 @@ func listRolesOrganizationCmd(cli *cli) *cobra.Command {
 auth0 orgs roles ls <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
+				err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions)
 				if err != nil {
 					return err
 				}
 			} else {
-				inputs.ID = args[0]
+				inputs.OrgID = args[0]
 			}
 
-			members, err := cli.getOrgMembers(cmd.Context(), inputs.ID, inputs.Number)
+			members, err := cli.getOrgMembersWithSpinner(cmd.Context(), inputs.OrgID, inputs.Number)
 			if err != nil {
 				return err
 			}
 
 			roleMap := make(map[string]management.OrganizationMemberRole)
-			for _, member := range members {
-				userID := member.GetUserID()
-				roleList, err := cli.api.Organization.MemberRoles(inputs.ID, userID)
-				if err != nil {
-					return err
-				}
-				for _, role := range roleList.Roles {
-					roleID := role.GetID()
-					if _, exists := roleMap[roleID]; !exists {
-						roleMap[roleID] = role
+			err = ansi.Spinner("Getting roles for each member", func() error {
+				for _, member := range members {
+					userID := member.GetUserID()
+					roleList, errInner := cli.api.Organization.MemberRoles(inputs.OrgID, userID)
+					if errInner != nil {
+						return errInner
+					}
+					for _, role := range roleList.Roles {
+						roleID := role.GetID()
+						if _, exists := roleMap[roleID]; !exists {
+							roleMap[roleID] = role
+						}
 					}
 				}
+				return nil
+			})
+			if err != nil {
+				return err
 			}
 			// convert management.OrganizationMemberRole to management.Role
 			var roles []*management.Role
@@ -549,6 +555,19 @@ auth0 orgs roles ls <id>`,
 }
 
 func membersRolesOrganizationCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "members",
+		Short: "Manage roles of organization members",
+		Long:  "Manage roles assigned to members of an organization.",
+	}
+
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(listMembersRolesOrganizationCmd(cli))
+
+	return cmd
+}
+
+func listMembersRolesOrganizationCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		OrgID  string
 		RoleID string
@@ -556,12 +575,12 @@ func membersRolesOrganizationCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "members",
+		Use:   "list",
 		Args:  cobra.RangeArgs(1, 2),
 		Short: "List organization members for a role",
 		Long:  "List organization members that have a given role assigned to them.",
-		Example: `auth0 orgs roles members
-auth0 orgs roles members <org id> <role id>`,
+		Example: `auth0 orgs roles members list
+auth0 orgs roles members list <org id> <role id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 1 {
 				err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions)
@@ -574,7 +593,7 @@ auth0 orgs roles members <org id> <role id>`,
 				inputs.RoleID = args[1]
 			}
 
-			members, err := cli.getOrgMembers(cmd.Context(), inputs.OrgID, inputs.Number)
+			members, err := cli.getOrgMembersWithSpinner(cmd.Context(), inputs.OrgID, inputs.Number)
 			if err != nil {
 				return err
 			}
@@ -601,8 +620,8 @@ auth0 orgs roles members <org id> <role id>`,
 	return cmd
 }
 
-func (c *cli) organizationPickerOptions() (pickerOptions, error) {
-	list, err := c.api.Organization.List()
+func (cli *cli) organizationPickerOptions() (pickerOptions, error) {
+	list, err := cli.api.Organization.List()
 	if err != nil {
 		return nil, err
 	}
@@ -681,7 +700,7 @@ func getWithPagination(
 	return list, nil
 }
 
-func (c *cli) getOrgMembers(
+func (cli *cli) getOrgMembers(
 	context context.Context,
 	orgID string,
 	number int,
@@ -690,7 +709,7 @@ func (c *cli) getOrgMembers(
 		context,
 		number,
 		func(opts ...management.RequestOption) (result []interface{}, hasNext bool, apiErr error) {
-			members, apiErr := c.api.Organization.Members(url.PathEscape(orgID), opts...)
+			members, apiErr := cli.api.Organization.Members(url.PathEscape(orgID), opts...)
 			if apiErr != nil {
 				return nil, false, apiErr
 			}
@@ -715,4 +734,15 @@ func sortMembers(members []management.OrganizationMember) {
 	sort.Slice(members, func(i, j int) bool {
 		return strings.ToLower(members[i].GetName()) < strings.ToLower(members[j].GetName())
 	})
+}
+
+func (cli *cli) getOrgMembersWithSpinner(context context.Context, orgID string, number int,
+) ([]management.OrganizationMember, error) {
+	var members []management.OrganizationMember
+	err := ansi.Spinner("Getting members of organization", func() error {
+		var errInner error
+		members, errInner = cli.getOrgMembers(context, orgID, number)
+		return errInner
+	})
+	return members, err
 }
