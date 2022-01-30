@@ -33,7 +33,7 @@ type OrganizationAPI interface {
 	// See: https://auth0.com/docs/api/management/v2#!/Organizations/get_members
 	Members(id string, opts ...management.RequestOption) (o *management.OrganizationMemberList, err error)
 
-	// List roles assigned to a member of an organization
+	// MemberRoles lists roles assigned to a member of an organization
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Organizations/get_organization_member_roles
 	MemberRoles(id string, userID string, opts ...management.RequestOption) (r *management.OrganizationMemberRoleList, err error)
