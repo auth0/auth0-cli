@@ -1,0 +1,13 @@
+[
+    {
+      "email": "john.doe@contoso.com",
+      "email_verified": false,
+      "app_metadata": {
+          "roles": ["admin"],
+          "plan": "premium"
+      },
+      "user_metadata": {
+          "theme": "light"
+      }
+    }
+  ]

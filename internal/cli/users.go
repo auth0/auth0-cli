@@ -8,6 +8,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
+	"github.com/auth0/auth0-cli/internal/users"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
@@ -66,13 +67,32 @@ var (
 		ShortForm: "s",
 		Help:      "Field to sort by. Use 'field:order' where 'order' is '1' for ascending and '-1' for descending. e.g. 'created_at:1'.",
 	}
+	userImportExample = Flag{
+		Name:       "Example",
+		LongForm:   "Example",
+		ShortForm:  "x",
+		Help:       "Json that contains an example of a user import schema.",
+		IsRequired: false,
+	}
+	userUpsert = Flag{
+		Name:       "Upsert",
+		LongForm:   "upsert",
+		ShortForm:  "u",
+		Help:       "When set to false, pre-existing users that match on email address, user ID, or username will fail. When set to true, pre-existing users that match on any of these fields will be updated, but only with upsertable attributes.",
+		IsRequired: false,
+	}
+	userImportOptions = pickerOptions{
+		{"Basic", users.BasicExample},
+		{"Custom Password Hash", users.CustomPasswordHashExample},
+		{"MFA Factors", users.MFAFactors},
+	}
 )
 
 func usersCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "users",
 		Short: "Manage resources for users",
-		Long: "Manage resources for users.",
+		Long:  "Manage resources for users.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -84,6 +104,7 @@ func usersCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(openUserCmd(cli))
 	cmd.AddCommand(userBlocksCmd(cli))
 	cmd.AddCommand(deleteUserBlocksCmd(cli))
+	cmd.AddCommand(importUsersCmd(cli))
 
 	return cmd
 }
@@ -451,7 +472,7 @@ func userBlocksCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "blocks",
 		Short: "Manage brute-force protection user blocks",
-		Long: "Manage brute-force protection user blocks.",
+		Long:  "Manage brute-force protection user blocks.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -530,6 +551,60 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
+
+	return cmd
+}
+
+func importUsersCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		Connection   string
+		ConnectionId string
+		Upsert       bool
+	}
+	cmd := &cobra.Command{
+		Use:   "import",
+		Args:  cobra.NoArgs,
+		Short: "Import users from schema",
+		Long: `Import users from schema. Issues a Create Import Users Job. 
+The file size limit for a bulk import is 500KB. You will need to start multiple imports if your data exceeds this size.`,
+		Example: `auth0 users import --connection "Username-Password-Authentication"
+auth0 users import -c "Username-Password-Authentication" --upsert true`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Select from the available connection types
+			// Users API currently support database connections
+			if err := userConnection.Select(cmd, &inputs.Connection, cli.connectionPickerOptions(), nil); err != nil {
+				return err
+			}
+			conn, err := cli.api.Connection.ReadByName(inputs.Connection)
+			inputs.ConnectionId = *conn.ID
+
+			exampleBody := ""
+			if err = userImportExample.Select(cmd, &exampleBody, userImportOptions.labels(), nil); err != nil {
+				return err
+			}
+
+			// Convert json to map
+			jsonstr := userImportOptions.getValue(exampleBody)
+			var jsonmap []map[string]interface{}
+			json.Unmarshal([]byte(jsonstr), &jsonmap)
+
+			err = ansi.Waiting(func() error {
+				return cli.api.Jobs.ImportUsers(&management.Job{
+					ConnectionID: &inputs.ConnectionId,
+					Users:        jsonmap,
+					Upsert:       &inputs.Upsert,
+				})
+			})
+
+			cli.renderer.Heading("User(s) imported")
+			fmt.Println(jsonstr)
+
+			return nil
+		},
+	}
+
+	userConnection.RegisterString(cmd, &inputs.Connection, "")
+	userUpsert.RegisterBool(cmd, &inputs.Upsert, false)
 
 	return cmd
 }
