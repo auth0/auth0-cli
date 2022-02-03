@@ -575,6 +575,7 @@ auth0 users import -c "Username-Password-Authentication" --upsert true`,
 			if err := userConnection.Select(cmd, &inputs.Connection, cli.connectionPickerOptions(), nil); err != nil {
 				return err
 			}
+
 			conn, err := cli.api.Connection.ReadByName(inputs.Connection)
 			inputs.ConnectionId = *conn.ID
 
