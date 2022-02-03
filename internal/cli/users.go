@@ -576,6 +576,7 @@ auth0 users import -c "Username-Password-Authentication" --upsert true`,
 				return err
 			}
 
+			// Get Connection ID
 			conn, err := cli.api.Connection.ReadByName(inputs.Connection)
 			inputs.ConnectionId = *conn.ID
 
