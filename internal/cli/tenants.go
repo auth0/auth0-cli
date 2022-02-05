@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -166,7 +167,13 @@ func addTenantCmd(cli *cli) *cobra.Command {
 			if len(args) == 0 {
 				err := tenantDomain.Pick(cmd, &inputs.Domain, cli.tenantPickerOptions)
 				if err != nil {
-					return err
+					if !errors.Is(err, errUnauthenticated) {
+						return err
+					}
+
+					if err := tenantDomain.Ask(cmd, &inputs.Domain); err != nil {
+						return err
+					}
 				}
 			} else {
 				inputs.Domain = args[0]
