@@ -611,18 +611,24 @@ auth0 orgs roles members list <org id> --role-id role`,
 			}
 
 			var roleMembers []management.OrganizationMember
-			for _, member := range members {
-				userID := member.GetUserID()
-				roleList, err := cli.api.Organization.MemberRoles(inputs.OrgID, userID)
-				if err != nil {
-					return err
-				}
-				for _, role := range roleList.Roles {
-					roleID := role.GetID()
-					if roleID == inputs.RoleID {
-						roleMembers = append(roleMembers, member)
+			errSpinner := ansi.Spinner("Getting roles assigned to organization members", func() error {
+				for _, member := range members {
+					userID := member.GetUserID()
+					roleList, err := cli.api.Organization.MemberRoles(inputs.OrgID, userID)
+					if err != nil {
+						return err
+					}
+					for _, role := range roleList.Roles {
+						roleID := role.GetID()
+						if roleID == inputs.RoleID {
+							roleMembers = append(roleMembers, member)
+						}
 					}
 				}
+				return nil
+			})
+			if errSpinner != nil {
+				return errSpinner
 			}
 			sortMembers(roleMembers)
 			cli.renderer.MembersList(roleMembers)
