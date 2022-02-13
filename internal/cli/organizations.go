@@ -595,6 +595,12 @@ auth0 orgs roles members list <org id> --role-id role`,
 				if err != nil {
 					return err
 				}
+				if inputs.RoleID == "" {
+					err = roleID.Pick(cmd, &inputs.RoleID, cli.rolePickerOptions)
+					if err != nil {
+						return err
+					}
+				}
 			} else {
 				inputs.OrgID = args[0]
 			}
