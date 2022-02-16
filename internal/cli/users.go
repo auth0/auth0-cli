@@ -67,14 +67,28 @@ var (
 		ShortForm: "s",
 		Help:      "Field to sort by. Use 'field:order' where 'order' is '1' for ascending and '-1' for descending. e.g. 'created_at:1'.",
 	}
-	userImportExample = Flag{
-		Name:       "Example",
-		LongForm:   "Example",
-		ShortForm:  "x",
-		Help:       "Json that contains an example of a user import schema.",
+	userImportTemplate = Flag{
+		Name:       "Template",
+		LongForm:   "template",
+		ShortForm:  "t",
+		Help:       "Name of json example to be used.",
 		IsRequired: false,
 	}
-	userUpsert = Flag{
+	userImportTemplateBody = Flag{
+		Name:       "Template Body",
+		LongForm:   "template-body",
+		ShortForm:  "b",
+		Help:       "Json template body that contains an array of user(s) to be imported.",
+		IsRequired: false,
+	}
+	userEmailResults = Flag{
+		Name:       "Email Completion Results",
+		LongForm:   "email-results",
+		ShortForm:  "r",
+		Help:       "When true, sends a completion email to all tenant owners when the job is finished. The default is true, so you must explicitly set this parameter to false if you do not want emails sent.",
+		IsRequired: false,
+	}
+	userImportUpsert = Flag{
 		Name:       "Upsert",
 		LongForm:   "upsert",
 		ShortForm:  "u",
@@ -82,9 +96,10 @@ var (
 		IsRequired: false,
 	}
 	userImportOptions = pickerOptions{
-		{"Basic", users.BasicExample},
-		{"Custom Password Hash", users.CustomPasswordHashExample},
-		{"MFA Factors", users.MFAFactors},
+		{"Empty", users.EmptyExample},
+		{"Basic Example", users.BasicExample},
+		{"Custom Password Hash Example", users.CustomPasswordHashExample},
+		{"MFA Factors Example", users.MFAFactors},
 	}
 )
 
@@ -557,9 +572,12 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 
 func importUsersCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Connection   string
-		ConnectionId string
-		Upsert       bool
+		Connection          string
+		ConnectionId        string
+		Template            string
+		TemplateBody        string
+		Upsert              bool
+		SendCompletionEmail bool
 	}
 	cmd := &cobra.Command{
 		Use:   "import",
@@ -567,9 +585,13 @@ func importUsersCmd(cli *cli) *cobra.Command {
 		Short: "Import users from schema",
 		Long: `Import users from schema. Issues a Create Import Users Job. 
 The file size limit for a bulk import is 500KB. You will need to start multiple imports if your data exceeds this size.`,
-		Example: `auth0 users import --connection "Username-Password-Authentication"
-auth0 users import -c "Username-Password-Authentication" --upsert true`,
+		Example: `auth0 users import
+auth0 users import --connection "Username-Password-Authentication"
+auth0 users import -c "Username-Password-Authentication" --template "Empty"
+auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert
+auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert --email-results=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+
 			// Select from the available connection types
 			// Users API currently support database connections
 			if err := userConnection.Select(cmd, &inputs.Connection, cli.connectionPickerOptions(), nil); err != nil {
@@ -580,33 +602,54 @@ auth0 users import -c "Username-Password-Authentication" --upsert true`,
 			conn, err := cli.api.Connection.ReadByName(inputs.Connection)
 			inputs.ConnectionId = *conn.ID
 
-			exampleBody := ""
-			if err = userImportExample.Select(cmd, &exampleBody, userImportOptions.labels(), nil); err != nil {
+			// Present user with template options
+			if err = userImportTemplate.Select(cmd, &inputs.Template, userImportOptions.labels(), nil); err != nil {
 				return err
 			}
 
-			// Convert json to map
-			jsonstr := userImportOptions.getValue(exampleBody)
+			// Only open editor if wanting to edit the "Empty" template
+			if inputs.Template == "Empty" {
+				err = userImportTemplateBody.OpenEditor(
+					cmd,
+					&inputs.TemplateBody,
+					userImportOptions.getValue(inputs.Template),
+					inputs.Template+".*.json",
+					cli.userImportEditorHint,
+				)
+				if err != nil {
+					return fmt.Errorf("Failed to capture input from the editor: %w", err)
+				}
+			}
+
+			// Convert json array to map
+			jsonstr := userImportOptions.getValue(inputs.Template)
 			var jsonmap []map[string]interface{}
 			json.Unmarshal([]byte(jsonstr), &jsonmap)
 
 			err = ansi.Waiting(func() error {
 				return cli.api.Jobs.ImportUsers(&management.Job{
-					ConnectionID: &inputs.ConnectionId,
-					Users:        jsonmap,
-					Upsert:       &inputs.Upsert,
+					ConnectionID:        &inputs.ConnectionId,
+					Users:               jsonmap,
+					Upsert:              &inputs.Upsert,
+					SendCompletionEmail: &inputs.SendCompletionEmail,
 				})
 			})
 
-			cli.renderer.Heading("User(s) imported")
+			cli.renderer.Heading("Importing user(s)")
 			fmt.Println(jsonstr)
+
+			if inputs.SendCompletionEmail == true {
+				cli.renderer.Infof("Results of your newly created user import job will be sent to your email.")
+			}
 
 			return nil
 		},
 	}
 
 	userConnection.RegisterString(cmd, &inputs.Connection, "")
-	userUpsert.RegisterBool(cmd, &inputs.Upsert, false)
+	userImportTemplate.RegisterString(cmd, &inputs.Template, "")
+	userEmailResults.RegisterBool(cmd, &inputs.SendCompletionEmail, true)
+	userImportUpsert.RegisterBool(cmd, &inputs.Upsert, false)
 
 	return cmd
 }
@@ -658,4 +701,8 @@ func (c *cli) getConnReqUsername(s string) *bool {
 	}
 
 	return opts.RequiresUsername
+}
+
+func (c *cli) userImportEditorHint() {
+	c.renderer.Infof("%s once you close the editor, the user(s) will be imported. To cancel, CTRL+C.", ansi.Faint("Hint:"))
 }

@@ -5,6 +5,9 @@ import (
 )
 
 var (
+	//go:embed data/empty-example.json
+	EmptyExample string
+
 	//go:embed data/basic-example.json
 	BasicExample string
 
