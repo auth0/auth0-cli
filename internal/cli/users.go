@@ -599,34 +599,41 @@ auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --up
 			}
 
 			// Get Connection ID
-			conn, err := cli.api.Connection.ReadByName(inputs.Connection)
-			inputs.ConnectionId = *conn.ID
+			conn, connErr := cli.api.Connection.ReadByName(inputs.Connection)
+			if connErr != nil {
+				return fmt.Errorf("Connection does not exist: %w", connErr)
+			} else {
+				inputs.ConnectionId = *conn.ID
+			}
 
 			// Present user with template options
-			if err = userImportTemplate.Select(cmd, &inputs.Template, userImportOptions.labels(), nil); err != nil {
-				return err
+			if templateErr := userImportTemplate.Select(cmd, &inputs.Template, userImportOptions.labels(), nil); templateErr != nil {
+				return templateErr
 			}
 
 			// Only open editor if wanting to edit the "Empty" template
 			if inputs.Template == "Empty" {
-				err = userImportTemplateBody.OpenEditor(
+				editorErr := userImportTemplateBody.OpenEditor(
 					cmd,
 					&inputs.TemplateBody,
 					userImportOptions.getValue(inputs.Template),
 					inputs.Template+".*.json",
 					cli.userImportEditorHint,
 				)
-				if err != nil {
-					return fmt.Errorf("Failed to capture input from the editor: %w", err)
+				if editorErr != nil {
+					return fmt.Errorf("Failed to capture input from the editor: %w", editorErr)
 				}
 			}
 
 			// Convert json array to map
 			jsonstr := userImportOptions.getValue(inputs.Template)
 			var jsonmap []map[string]interface{}
-			json.Unmarshal([]byte(jsonstr), &jsonmap)
+			jsonErr := json.Unmarshal([]byte(jsonstr), &jsonmap)
+			if jsonErr != nil {
+				return fmt.Errorf("Invalid JSON input: %w", jsonErr)
+			}
 
-			err = ansi.Waiting(func() error {
+			err := ansi.Waiting(func() error {
 				return cli.api.Jobs.ImportUsers(&management.Job{
 					ConnectionID:        &inputs.ConnectionId,
 					Users:               jsonmap,
@@ -634,11 +641,14 @@ auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --up
 					SendCompletionEmail: &inputs.SendCompletionEmail,
 				})
 			})
+			if err != nil {
+				return err
+			}
 
 			cli.renderer.Heading("Importing user(s)")
 			fmt.Println(jsonstr)
 
-			if inputs.SendCompletionEmail == true {
+			if inputs.SendCompletionEmail {
 				cli.renderer.Infof("Results of your newly created user import job will be sent to your email.")
 			}
 
