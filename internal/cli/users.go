@@ -623,7 +623,7 @@ auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --up
 			}
 
 			var confirmed bool
-			if confirmedErr := prompt.AskBool("Do you want to import the user(s)?", &confirmed, true); confirmedErr != nil {
+			if confirmedErr := prompt.AskBool("Do you want to import these user(s)?", &confirmed, true); confirmedErr != nil {
 				return fmt.Errorf("Failed to capture prompt input: %w", confirmedErr)
 			}
 
