@@ -611,18 +611,24 @@ auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --up
 				return templateErr
 			}
 
-			// Only open editor if wanting to edit the "Empty" template
-			if inputs.Template == "Empty" {
-				editorErr := userImportTemplateBody.OpenEditor(
-					cmd,
-					&inputs.TemplateBody,
-					userImportOptions.getValue(inputs.Template),
-					inputs.Template+".*.json",
-					cli.userImportEditorHint,
-				)
-				if editorErr != nil {
-					return fmt.Errorf("Failed to capture input from the editor: %w", editorErr)
-				}
+			editorErr := userImportTemplateBody.OpenEditor(
+				cmd,
+				&inputs.TemplateBody,
+				userImportOptions.getValue(inputs.Template),
+				inputs.Template+".*.json",
+				cli.userImportEditorHint,
+			)
+			if editorErr != nil {
+				return fmt.Errorf("Failed to capture input from the editor: %w", editorErr)
+			}
+
+			var confirmed bool
+			if confirmedErr := prompt.AskBool("Do you want to import the user(s)?", &confirmed, true); confirmedErr != nil {
+				return fmt.Errorf("Failed to capture prompt input: %w", confirmedErr)
+			}
+
+			if !confirmed {
+				return nil
 			}
 
 			// Convert json array to map
