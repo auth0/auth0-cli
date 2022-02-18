@@ -587,7 +587,7 @@ func importUsersCmd(cli *cli) *cobra.Command {
 The file size limit for a bulk import is 500KB. You will need to start multiple imports if your data exceeds this size.`,
 		Example: `auth0 users import
 auth0 users import --connection "Username-Password-Authentication"
-auth0 users import -c "Username-Password-Authentication" --template "Empty"
+auth0 users import -c "Username-Password-Authentication" --template "Basic Example"
 auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert
 auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert --email-results=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -651,11 +651,11 @@ auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --up
 				return err
 			}
 
-			cli.renderer.Heading("Importing user(s)")
+			cli.renderer.Heading("Starting user import job...")
 			fmt.Println(jsonstr)
 
 			if inputs.SendCompletionEmail {
-				cli.renderer.Infof("Results of your newly created user import job will be sent to your email.")
+				cli.renderer.Infof("Results of your user import job will be sent to your email.")
 			}
 
 			return nil
