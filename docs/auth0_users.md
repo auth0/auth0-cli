@@ -37,4 +37,5 @@ Manage resources for users.
 * [auth0 users show](auth0_users_show.md)	 - Show an existing user
 * [auth0 users unblock](auth0_users_unblock.md)	 - Remove brute-force protection blocks for a given user
 * [auth0 users update](auth0_users_update.md)	 - Update a user
+* [auth0 users import](auth0_users_import.md)	 - Import users
 
