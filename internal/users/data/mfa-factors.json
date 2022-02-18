@@ -1,0 +1,52 @@
+[
+    {
+        "email": "antoinette@contoso.com",
+        "mfa_factors": [
+            {
+                "totp": {
+                    "secret": "2PRXZWZAYYDAWCD"
+                }
+            },
+            {
+                "phone": {
+                    "value": "+15551112233"
+                }
+            },
+            {
+                "email": {
+                    "value": "antoinette@antoinette.biz"
+                }
+            }
+        ]
+    },
+    {
+        "email": "mary@contoso.com",
+        "mfa_factors": [
+            {
+                "totp": {
+                    "secret": "JTF18P5973P1KCZN"
+                }
+            }
+        ]
+    },
+    {
+        "email": "velma@contoso.com",
+        "mfa_factors": [
+            {
+                "phone": {
+                    "value": "+15551234567"
+                }
+            }
+        ]
+    },
+    {
+        "email": "edward@contoso.com",
+        "mfa_factors": [
+            {
+                "email": {
+                    "value": "edward@edward.biz"
+                }
+            }
+        ]
+    }
+]

@@ -8,6 +8,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
+	"github.com/auth0/auth0-cli/internal/users"
 	"github.com/spf13/cobra"
 	"gopkg.in/auth0.v5/management"
 )
@@ -66,13 +67,47 @@ var (
 		ShortForm: "s",
 		Help:      "Field to sort by. Use 'field:order' where 'order' is '1' for ascending and '-1' for descending. e.g. 'created_at:1'.",
 	}
+	userImportTemplate = Flag{
+		Name:       "Template",
+		LongForm:   "template",
+		ShortForm:  "t",
+		Help:       "Name of JSON example to be used.",
+		IsRequired: false,
+	}
+	userImportTemplateBody = Flag{
+		Name:       "Template Body",
+		LongForm:   "template-body",
+		ShortForm:  "b",
+		Help:       "JSON template body that contains an array of user(s) to be imported.",
+		IsRequired: false,
+	}
+	userEmailResults = Flag{
+		Name:       "Email Completion Results",
+		LongForm:   "email-results",
+		ShortForm:  "r",
+		Help:       "When true, sends a completion email to all tenant owners when the job is finished. The default is true, so you must explicitly set this parameter to false if you do not want emails sent.",
+		IsRequired: false,
+	}
+	userImportUpsert = Flag{
+		Name:       "Upsert",
+		LongForm:   "upsert",
+		ShortForm:  "u",
+		Help:       "When set to false, pre-existing users that match on email address, user ID, or username will fail. When set to true, pre-existing users that match on any of these fields will be updated, but only with upsertable attributes.",
+		IsRequired: false,
+	}
+	userImportOptions = pickerOptions{
+		{"Empty", users.EmptyExample},
+		{"Basic Example", users.BasicExample},
+		{"Custom Password Hash Example", users.CustomPasswordHashExample},
+		{"MFA Factors Example", users.MFAFactors},
+	}
 )
 
 func usersCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "users",
 		Short: "Manage resources for users",
-		Long: "Manage resources for users.",
+		Long:  "Manage resources for users.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -84,6 +119,7 @@ func usersCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(openUserCmd(cli))
 	cmd.AddCommand(userBlocksCmd(cli))
 	cmd.AddCommand(deleteUserBlocksCmd(cli))
+	cmd.AddCommand(importUsersCmd(cli))
 
 	return cmd
 }
@@ -451,7 +487,7 @@ func userBlocksCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "blocks",
 		Short: "Manage brute-force protection user blocks",
-		Long: "Manage brute-force protection user blocks.",
+		Long:  "Manage brute-force protection user blocks.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -534,6 +570,106 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+func importUsersCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		Connection          string
+		ConnectionId        string
+		Template            string
+		TemplateBody        string
+		Upsert              bool
+		SendCompletionEmail bool
+	}
+	cmd := &cobra.Command{
+		Use:   "import",
+		Args:  cobra.NoArgs,
+		Short: "Import users from schema",
+		Long: `Import users from schema. Issues a Create Import Users Job. 
+The file size limit for a bulk import is 500KB. You will need to start multiple imports if your data exceeds this size.`,
+		Example: `auth0 users import
+auth0 users import --connection "Username-Password-Authentication"
+auth0 users import -c "Username-Password-Authentication" --template "Basic Example"
+auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=true
+auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=true --email-results=false`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			// Select from the available connection types
+			// Users API currently support database connections
+			if err := userConnection.Select(cmd, &inputs.Connection, cli.connectionPickerOptions(), nil); err != nil {
+				return err
+			}
+
+			// Get Connection ID
+			conn, connErr := cli.api.Connection.ReadByName(inputs.Connection)
+			if connErr != nil {
+				return fmt.Errorf("Connection does not exist: %w", connErr)
+			} else {
+				inputs.ConnectionId = *conn.ID
+			}
+
+			// Present user with template options
+			if templateErr := userImportTemplate.Select(cmd, &inputs.Template, userImportOptions.labels(), nil); templateErr != nil {
+				return templateErr
+			}
+
+			editorErr := userImportTemplateBody.OpenEditor(
+				cmd,
+				&inputs.TemplateBody,
+				userImportOptions.getValue(inputs.Template),
+				inputs.Template+".*.json",
+				cli.userImportEditorHint,
+			)
+			if editorErr != nil {
+				return fmt.Errorf("Failed to capture input from the editor: %w", editorErr)
+			}
+
+			var confirmed bool
+			if confirmedErr := prompt.AskBool("Do you want to import these user(s)?", &confirmed, true); confirmedErr != nil {
+				return fmt.Errorf("Failed to capture prompt input: %w", confirmedErr)
+			}
+
+			if !confirmed {
+				return nil
+			}
+
+			// Convert json array to map
+			jsonstr := userImportOptions.getValue(inputs.Template)
+			var jsonmap []map[string]interface{}
+			jsonErr := json.Unmarshal([]byte(jsonstr), &jsonmap)
+			if jsonErr != nil {
+				return fmt.Errorf("Invalid JSON input: %w", jsonErr)
+			}
+
+			err := ansi.Waiting(func() error {
+				return cli.api.Jobs.ImportUsers(&management.Job{
+					ConnectionID:        &inputs.ConnectionId,
+					Users:               jsonmap,
+					Upsert:              &inputs.Upsert,
+					SendCompletionEmail: &inputs.SendCompletionEmail,
+				})
+			})
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.Heading("Starting user import job...")
+			fmt.Println(jsonstr)
+
+			if inputs.SendCompletionEmail {
+				cli.renderer.Infof("Results of your user import job will be sent to your email.")
+			}
+
+			return nil
+		},
+	}
+
+	userConnection.RegisterString(cmd, &inputs.Connection, "")
+	userImportTemplate.RegisterString(cmd, &inputs.Template, "")
+	userEmailResults.RegisterBool(cmd, &inputs.SendCompletionEmail, true)
+	userImportUpsert.RegisterBool(cmd, &inputs.Upsert, false)
+
+	return cmd
+}
+
 func formatUserDetailsPath(id string) string {
 	if len(id) == 0 {
 		return ""
@@ -581,4 +717,8 @@ func (c *cli) getConnReqUsername(s string) *bool {
 	}
 
 	return opts.RequiresUsername
+}
+
+func (c *cli) userImportEditorHint() {
+	c.renderer.Infof("%s once you close the editor, the user(s) will be imported. To cancel, CTRL+C.", ansi.Faint("Hint:"))
 }
