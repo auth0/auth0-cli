@@ -526,35 +526,11 @@ auth0 orgs roles ls <id>`,
 			if err != nil {
 				return err
 			}
-
-			roleMap := make(map[string]management.OrganizationMemberRole)
-			err = ansi.Spinner("Getting roles for each member", func() error {
-				for _, member := range members {
-					userID := member.GetUserID()
-					roleList, errInner := cli.api.Organization.MemberRoles(inputs.OrgID, userID)
-					if errInner != nil {
-						return errInner
-					}
-					for _, role := range roleList.Roles {
-						roleID := role.GetID()
-						if _, exists := roleMap[roleID]; !exists {
-							roleMap[roleID] = role
-						}
-					}
-				}
-				return nil
-			})
+			roleMap, err := cli.getOrgMemberRolesWithSpinner(inputs.OrgID, members)
 			if err != nil {
 				return err
 			}
-			// convert management.OrganizationMemberRole to management.Role
-			var roles []*management.Role
-			for _, role := range roleMap {
-				roles = append(roles, &management.Role{ID: role.ID, Name: role.Name, Description: role.Description})
-			}
-			sort.Slice(roles, func(i, j int) bool {
-				return strings.ToLower(roles[i].GetName()) < strings.ToLower(roles[j].GetName())
-			})
+			roles := cli.convertOrgRolesToManagementRoles(roleMap)
 			cli.renderer.RoleList(roles)
 			return nil
 		},
@@ -610,25 +586,9 @@ auth0 orgs roles members list <org id> --role-id role`,
 				return err
 			}
 
-			var roleMembers []management.OrganizationMember
-			errSpinner := ansi.Spinner("Getting roles assigned to organization members", func() error {
-				for _, member := range members {
-					userID := member.GetUserID()
-					roleList, err := cli.api.Organization.MemberRoles(inputs.OrgID, userID)
-					if err != nil {
-						return err
-					}
-					for _, role := range roleList.Roles {
-						roleID := role.GetID()
-						if roleID == inputs.RoleID {
-							roleMembers = append(roleMembers, member)
-						}
-					}
-				}
-				return nil
-			})
-			if errSpinner != nil {
-				return errSpinner
+			roleMembers, err := cli.getOrgRoleMembersWithSpinner(inputs.OrgID, inputs.RoleID, members)
+			if err != nil {
+				return err
 			}
 			sortMembers(roleMembers)
 			cli.renderer.MembersList(roleMembers)
@@ -764,4 +724,60 @@ func (cli *cli) getOrgMembersWithSpinner(context context.Context, orgID string, 
 		return errInner
 	})
 	return members, err
+}
+
+func (cli *cli) getOrgMemberRolesWithSpinner(orgID string, members []management.OrganizationMember,
+) (map[string]management.OrganizationMemberRole, error) {
+	roleMap := make(map[string]management.OrganizationMemberRole)
+	err := ansi.Spinner("Getting roles for each member", func() error {
+		for _, member := range members {
+			userID := member.GetUserID()
+			roleList, errInner := cli.api.Organization.MemberRoles(orgID, userID)
+			if errInner != nil {
+				return errInner
+			}
+			for _, role := range roleList.Roles {
+				roleID := role.GetID()
+				if _, exists := roleMap[roleID]; !exists {
+					roleMap[roleID] = role
+				}
+			}
+		}
+		return nil
+	})
+	return roleMap, err
+}
+
+func (cli *cli) convertOrgRolesToManagementRoles(roleMap map[string]management.OrganizationMemberRole,
+) []*management.Role {
+	var roles []*management.Role
+	for _, role := range roleMap {
+		roles = append(roles, &management.Role{ID: role.ID, Name: role.Name, Description: role.Description})
+	}
+	sort.Slice(roles, func(i, j int) bool {
+		return strings.ToLower(roles[i].GetName()) < strings.ToLower(roles[j].GetName())
+	})
+	return roles
+}
+
+func (cli *cli) getOrgRoleMembersWithSpinner(orgID string, roleID string, members []management.OrganizationMember,
+) ([]management.OrganizationMember, error) {
+	var roleMembers []management.OrganizationMember
+	errSpinner := ansi.Spinner("Getting roles assigned to organization members", func() error {
+		for _, member := range members {
+			userID := member.GetUserID()
+			roleList, err := cli.api.Organization.MemberRoles(orgID, userID)
+			if err != nil {
+				return err
+			}
+			for _, role := range roleList.Roles {
+				id := role.GetID()
+				if id == roleID {
+					roleMembers = append(roleMembers, member)
+				}
+			}
+		}
+		return nil
+	})
+	return roleMembers, errSpinner
 }
