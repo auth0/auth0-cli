@@ -10,7 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/auth0/auth0-cli/internal/users"
 	"github.com/spf13/cobra"
-	"gopkg.in/auth0.v5/management"
+	"github.com/auth0/go-auth0/management"
 )
 
 var (
@@ -212,7 +212,7 @@ auth0 users create -n "John Doe" --e john@example.com --connection "Username-Pas
 				return err
 			}
 
-			////Prompt for user password
+			// //Prompt for user password
 			if err := userPassword.AskPassword(cmd, &inputs.Password, nil); err != nil {
 				return err
 			}
@@ -402,9 +402,9 @@ auth0 users update -n John Doe --email john.doe@example.com`,
 			}
 
 			// username cannot be updated for database connections
-			//if err := userUsername.AskU(cmd, &inputs.Username, current.Username); err != nil {
+			// if err := userUsername.AskU(cmd, &inputs.Username, current.Username); err != nil {
 			//	return err
-			//}
+			// }
 
 			user := &management.User{}
 

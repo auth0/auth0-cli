@@ -9,8 +9,8 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
-	"gopkg.in/auth0.v5"
-	"gopkg.in/auth0.v5/management"
+	"github.com/auth0/go-auth0"
+	"github.com/auth0/go-auth0/management"
 )
 
 var (
@@ -33,10 +33,10 @@ var (
 		IsRequired: true,
 	}
 	apiScopes = Flag{
-		Name:       "Scopes",
-		LongForm:   "scopes",
-		ShortForm:  "s",
-		Help:       "Comma-separated list of scopes (permissions).",
+		Name:         "Scopes",
+		LongForm:     "scopes",
+		ShortForm:    "s",
+		Help:         "Comma-separated list of scopes (permissions).",
 		AlwaysPrompt: true,
 	}
 	apiTokenLifetime = Flag{

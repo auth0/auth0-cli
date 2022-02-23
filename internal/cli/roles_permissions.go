@@ -7,8 +7,8 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/spf13/cobra"
-	"gopkg.in/auth0.v5"
-	"gopkg.in/auth0.v5/management"
+	"github.com/auth0/go-auth0"
+	"github.com/auth0/go-auth0/management"
 )
 
 var (
@@ -189,7 +189,7 @@ auth0 roles permissions rm`,
 			}
 
 			if len(inputs.Permissions) == 0 {
-				err := cli.pickRolePermissions( rs.Scopes, &inputs.Permissions)
+				err := cli.pickRolePermissions(rs.Scopes, &inputs.Permissions)
 				if err != nil {
 					return err
 				}

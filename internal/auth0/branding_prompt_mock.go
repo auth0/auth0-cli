@@ -7,8 +7,8 @@ package auth0
 import (
 	reflect "reflect"
 
+	management "github.com/auth0/go-auth0/management"
 	gomock "github.com/golang/mock/gomock"
-	management "gopkg.in/auth0.v5/management"
 )
 
 // MockPromptAPI is a mock of PromptAPI interface.

@@ -10,8 +10,8 @@ import (
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
-	"gopkg.in/auth0.v5"
-	"gopkg.in/auth0.v5/management"
+	"github.com/auth0/go-auth0"
+	"github.com/auth0/go-auth0/management"
 )
 
 var (
@@ -93,7 +93,7 @@ func templateCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "templates",
 		Short: "Manage custom page templates",
-		Long:  `Manage custom [page templates](https://auth0.com/docs/universal-login/new-experience/universal-login-page-templates). This requires a custom domain to be configured for the tenant.
+		Long: `Manage custom [page templates](https://auth0.com/docs/universal-login/new-experience/universal-login-page-templates). This requires a custom domain to be configured for the tenant.
 
 This command will open two windows:
 
