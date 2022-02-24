@@ -17,7 +17,7 @@ import (
 
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
-	"gopkg.in/auth0.v5/management"
+	"github.com/auth0/go-auth0/management"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"

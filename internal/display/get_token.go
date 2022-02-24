@@ -7,7 +7,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
 	"github.com/auth0/auth0-cli/internal/auth0"
-	"gopkg.in/auth0.v5/management"
+	"github.com/auth0/go-auth0/management"
 )
 
 func (r *Renderer) GetToken(c *management.Client, t *authutil.TokenResponse) {

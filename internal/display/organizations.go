@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"io"
 
+	"github.com/auth0/go-auth0/management"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"gopkg.in/auth0.v5/management"
 )
 
 type organizationView struct {
@@ -82,12 +83,12 @@ func makeOrganizationView(organization *management.Organization, w io.Writer) *o
 	backgroundColor := ""
 
 	if organization.Branding != nil && organization.Branding.Colors != nil {
-		if len(organization.Branding.Colors["primary"]) > 0 {
-			accentColor = organization.Branding.Colors["primary"]
+		if len(organization.Branding.Colors["primary"].(string)) > 0 {
+			accentColor = organization.Branding.Colors["primary"].(string)
 		}
 
-		if len(organization.Branding.Colors["page_background"]) > 0 {
-			backgroundColor = organization.Branding.Colors["page_background"]
+		if len(organization.Branding.Colors["page_background"].(string)) > 0 {
+			backgroundColor = organization.Branding.Colors["page_background"].(string)
 		}
 	}
 
@@ -101,7 +102,7 @@ func makeOrganizationView(organization *management.Organization, w io.Writer) *o
 		ID:              organization.GetID(),
 		Name:            organization.GetName(),
 		DisplayName:     organization.GetDisplayName(),
-		LogoURL:         organization.GetBranding().GetLogoUrl(),
+		LogoURL:         organization.GetBranding().GetLogoURL(),
 		AccentColor:     accentColor,
 		BackgroundColor: backgroundColor,
 		Metadata:        ansi.ColorizeJSON(metadata, false),

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"gopkg.in/auth0.v5/management"
+	"github.com/auth0/go-auth0/management"
 )
 
 var (
@@ -43,7 +43,7 @@ func logsCmd(cli *cli) *cobra.Command {
 func listLogsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Filter string
-		Num      int
+		Num    int
 	}
 
 	cmd := &cobra.Command{
@@ -80,7 +80,7 @@ auth0 logs ls -n 100`,
 func tailLogsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Filter string
-		Num      int
+		Num    int
 	}
 
 	cmd := &cobra.Command{

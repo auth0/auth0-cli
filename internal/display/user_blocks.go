@@ -1,7 +1,7 @@
 package display
 
 import (
-	"gopkg.in/auth0.v5/management"
+	"github.com/auth0/go-auth0/management"
 )
 
 type userBlockView struct {

@@ -1,8 +1,8 @@
 package auth0
 
 import (
-	"gopkg.in/auth0.v5"
-	"gopkg.in/auth0.v5/management"
+	"github.com/auth0/go-auth0"
+	"github.com/auth0/go-auth0/management"
 )
 
 // API mimics `management.Management`s general interface, except it refers to

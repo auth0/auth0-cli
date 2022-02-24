@@ -1,6 +1,6 @@
 package auth0
 
-import "gopkg.in/auth0.v5/management"
+import "github.com/auth0/go-auth0/management"
 
 type ActionAPI interface {
 	// Create a new action.
@@ -8,7 +8,7 @@ type ActionAPI interface {
 	// See: https://auth0.com/docs/api/management/v2#!/Actions/post_action
 	Create(a *management.Action, opts ...management.RequestOption) error
 
-	// Retrieve action details.
+	// Read action details.
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Actions/get_action
 	Read(id string, opts ...management.RequestOption) (*management.Action, error)
@@ -28,10 +28,10 @@ type ActionAPI interface {
 	// See: https://auth0.com/docs/api/management/v2#!/Actions/get_actions
 	List(opts ...management.RequestOption) (c *management.ActionList, err error)
 
-	// ListTriggers available.
+	// Triggers available.
 	//
 	// https://auth0.com/docs/api/management/v2/#!/Actions/get_triggers
-	ListTriggers(opts ...management.RequestOption) (l *management.ActionTriggerList, err error)
+	Triggers(opts ...management.RequestOption) (l *management.ActionTriggerList, err error)
 
 	// Deploy an action.
 	//

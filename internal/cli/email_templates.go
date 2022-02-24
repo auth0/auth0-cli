@@ -5,8 +5,8 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/spf13/cobra"
-	"gopkg.in/auth0.v5"
-	"gopkg.in/auth0.v5/management"
+	"github.com/auth0/go-auth0"
+	"github.com/auth0/go-auth0/management"
 )
 
 const (
@@ -86,7 +86,7 @@ var (
 		{"Verification Email (using Link)", emailTemplateVerifyLink},
 		{"Verification Email (using Code)", emailTemplateVerifyCode},
 		{"Change Password", emailTemplateChangePassword},
-		{"Welcome Email", emailTemplateWelcome, },
+		{"Welcome Email", emailTemplateWelcome},
 		{"Blocked Account Email", emailTemplateBlockedAccount},
 		{"Password Breach Alert", emailTemplatePasswordBreach},
 		{"Enroll in Multifactor Authentication", emailTemplateMFAEnrollment},
@@ -223,10 +223,10 @@ auth0 branding emails update welcome`,
 			// display.
 			emailTemplate := &management.EmailTemplate{
 				Template: &template,
-				Body: &inputs.Body,
-				From: &inputs.From,
-				Subject: &inputs.Subject,
-				Enabled: &inputs.Enabled,
+				Body:     &inputs.Body,
+				From:     &inputs.From,
+				Subject:  &inputs.Subject,
+				Enabled:  &inputs.Enabled,
 			}
 
 			if inputs.ResultURL == "" {
