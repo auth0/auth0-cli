@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
-	"github.com/spf13/cobra"
-	"gopkg.in/auth0.v5/management"
 )
 
 var (
@@ -201,7 +202,7 @@ auth0 actions create --n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=va
 
 			action := &management.Action{
 				Name: &inputs.Name,
-				SupportedTriggers: []management.ActionTrigger{
+				SupportedTriggers: []*management.ActionTrigger{
 					{
 						ID:      &inputs.Trigger,
 						Version: &version,
@@ -323,7 +324,7 @@ auth0 actions update <id> --n myaction -t post-login -d "lodash=4.0.0" -s "API_K
 			// display.
 			action := &management.Action{
 				Name: &inputs.Name,
-				SupportedTriggers: []management.ActionTrigger{
+				SupportedTriggers: []*management.ActionTrigger{
 					{
 						ID:      &inputs.Trigger,
 						Version: &version,
@@ -535,7 +536,7 @@ func filterActionTriggersByVersion(list []*management.ActionTrigger, version str
 func latestActionTriggers(cli *cli) ([]string, string, error) {
 	var triggers []*management.ActionTrigger
 	if err := ansi.Waiting(func() error {
-		list, err := cli.api.Action.ListTriggers()
+		list, err := cli.api.Action.Triggers()
 		if err != nil {
 			return err
 		}
@@ -563,12 +564,12 @@ func actionTemplate(key string) string {
 	return actionTemplateEmpty
 }
 
-func apiActionDependenciesFor(dependencies map[string]string) []management.ActionDependency {
-	var res []management.ActionDependency
+func apiActionDependenciesFor(dependencies map[string]string) []*management.ActionDependency {
+	var res []*management.ActionDependency
 	for k, v := range dependencies {
 		key := k
 		value := v
-		res = append(res, management.ActionDependency{
+		res = append(res, &management.ActionDependency{
 			Name:    &key,
 			Version: &value,
 		})
@@ -576,12 +577,12 @@ func apiActionDependenciesFor(dependencies map[string]string) []management.Actio
 	return res
 }
 
-func apiActionSecretsFor(secrets map[string]string) []management.ActionSecret {
-	var res []management.ActionSecret
+func apiActionSecretsFor(secrets map[string]string) []*management.ActionSecret {
+	var res []*management.ActionSecret
 	for k, v := range secrets {
 		key := k
 		value := v
-		res = append(res, management.ActionSecret{
+		res = append(res, &management.ActionSecret{
 			Name:  &key,
 			Value: &value,
 		})

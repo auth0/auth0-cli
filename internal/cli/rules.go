@@ -10,7 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
-	"gopkg.in/auth0.v5/management"
+	"github.com/auth0/go-auth0/management"
 )
 
 var (
@@ -385,10 +385,10 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "enable",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Enable a rule",
-		Long:  "Enable a rule.",
+		Use:     "enable",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Enable a rule",
+		Long:    "Enable a rule.",
 		Example: `auth0 rules enable <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
@@ -437,10 +437,10 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "disable",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Disable a rule",
-		Long:  "Disable a rule.",
+		Use:     "disable",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Disable a rule",
+		Long:    "Disable a rule.",
 		Example: `auth0 rules disable <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {

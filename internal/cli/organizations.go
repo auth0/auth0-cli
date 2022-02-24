@@ -8,10 +8,11 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
-	"github.com/spf13/cobra"
-	"gopkg.in/auth0.v5/management"
 )
 
 const (
@@ -212,11 +213,11 @@ auth0 orgs create --n myorganization -d "My Organization" -m "KEY=value" -m "OTH
 				o.Branding = &management.OrganizationBranding{}
 
 				if isLogoURLSet {
-					o.Branding.LogoUrl = &inputs.LogoURL
+					o.Branding.LogoURL = &inputs.LogoURL
 				}
 
 				if isAnyColorSet {
-					o.Branding.Colors = map[string]string{}
+					o.Branding.Colors = map[string]interface{}{}
 
 					if isAccentColorSet {
 						o.Branding.Colors[apiOrganizationColorPrimary] = inputs.AccentColor
@@ -315,23 +316,23 @@ auth0 orgs update <id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_v
 				o.Branding = &management.OrganizationBranding{}
 
 				if isLogoURLSet {
-					o.Branding.LogoUrl = &inputs.LogoURL
+					o.Branding.LogoURL = &inputs.LogoURL
 				} else if currentHasBranding {
-					o.Branding.LogoUrl = current.Branding.LogoUrl
+					o.Branding.LogoURL = current.Branding.LogoURL
 				}
 
 				if needToAddColors {
-					o.Branding.Colors = map[string]string{}
+					o.Branding.Colors = map[string]interface{}{}
 
 					if isAccentColorSet {
 						o.Branding.Colors[apiOrganizationColorPrimary] = inputs.AccentColor
-					} else if currentHasColors && len(current.Branding.Colors[apiOrganizationColorPrimary]) > 0 {
+					} else if currentHasColors && len(current.Branding.Colors[apiOrganizationColorPrimary].(string)) > 0 {
 						o.Branding.Colors[apiOrganizationColorPrimary] = current.Branding.Colors[apiOrganizationColorPrimary]
 					}
 
 					if isBackgroundColorSet {
 						o.Branding.Colors[apiOrganizationColorPageBackground] = inputs.BackgroundColor
-					} else if currentHasColors && len(current.Branding.Colors[apiOrganizationColorPageBackground]) > 0 {
+					} else if currentHasColors && len(current.Branding.Colors[apiOrganizationColorPageBackground].(string)) > 0 {
 						o.Branding.Colors[apiOrganizationColorPageBackground] = current.Branding.Colors[apiOrganizationColorPageBackground]
 					}
 				}
@@ -344,7 +345,7 @@ auth0 orgs update <id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_v
 			}
 
 			if err = ansi.Waiting(func() error {
-				return cli.api.Organization.Update(o)
+				return cli.api.Organization.Update(inputs.ID, o)
 			}); err != nil {
 				return err
 			}

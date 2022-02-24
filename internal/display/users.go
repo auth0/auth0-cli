@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"gopkg.in/auth0.v5"
-	"gopkg.in/auth0.v5/management"
+	"github.com/auth0/go-auth0"
+	"github.com/auth0/go-auth0/management"
 )
 
 type userView struct {

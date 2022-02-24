@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"gopkg.in/auth0.v5/management"
+	"github.com/auth0/go-auth0/management"
 )
 
 type ruleView struct {
@@ -54,7 +54,7 @@ func (r *Renderer) RulesList(rules []*management.Rule) {
 
 	var res []View
 
-	//@TODO Provide sort options via flags
+	// @TODO Provide sort options via flags
 	sort.Slice(rules, func(i, j int) bool {
 		return rules[i].GetOrder() < rules[j].GetOrder()
 	})
