@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 
+	"github.com/auth0/auth0-cli/internal/cli/importcmd"
 	"github.com/spf13/cobra"
 )
 
@@ -47,6 +48,7 @@ func importCmd(cli *cli) *cobra.Command {
 
 			// The command logic goes here
 
+			config, error := importcmd.GetConfig(inputs.Config)
 			// config, error := getConfig(inputs.Config)
 			// yaml, error := getYaml(inputs.Input, config)
 			// appChanges, error := processApps(cli, yaml, config)
