@@ -58,11 +58,11 @@ func importCmd(cli *cli) *cobra.Command {
 			// return nil
 
 			// YAML file getYAML()
-			// Take: yalm file path, config file path
+			// Take: YAML file path, config value
 			// Do: parse the YAML into a struct instance and perform the replacements, according to the config
 			// Return: YAML with replacements
 
-			// Config files getConfig()
+			// Config file getConfig()
 			// Take: config file path
 			// Do: parse the JSON into a struct instance 
 			// Return: config value
