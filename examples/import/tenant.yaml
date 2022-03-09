@@ -1,0 +1,56 @@
+# Auth0-CLI Tenant YAML Configuration
+
+clients:
+  - name: "##EXAMPLE_CLIENT## (Backend)"
+    app_type: non_interactive
+  - name: "##EXAMPLE_CLIENT## (SPA)"
+    app_type: spa
+    allowed_logout_urls:
+      - "##EXAMPLE_CLIENT_BASE_URL##"
+      - "##EXAMPLE_CLIENT_BASE_URL##/logout"
+    callbacks:
+      - "##EXAMPLE_CLIENT_BASE_URL##"
+      - "##EXAMPLE_CLIENT_BASE_URL##/callback"
+    web_origins:
+      - "##EXAMPLE_CLIENT_BASE_URL##"
+
+resourceServers:
+  - name: "##EXAMPLE_API## (RS256)"
+    identifier: example-api-rs256
+    allow_offline_access: true
+    enforce_policies: false
+    scopes:
+      - value: example:scope1
+        description: An example scope.
+    signing_alg: RS256
+    skip_consent_for_verifiable_first_party_clients: true
+    token_dialect: access_token_authz
+    token_lifetime: 86400
+    token_lifetime_for_web: 7200
+  - name: "##EXAMPLE_API## (HS256)"
+    identifier: example-api-hs256
+    allow_offline_access: false
+    enforce_policies: true
+    scopes:
+      - value: example:scope2
+        description: Another example scope.
+    signing_alg: HS256
+    signing_secret: siIfPACvAarnlebOyznrMKxWBUzATCfs
+    skip_consent_for_verifiable_first_party_clients: true
+    token_dialect: access_token_authz
+    token_lifetime: 86400
+    token_lifetime_for_web: 7200
+
+roles:
+  - name: Admin
+    description: App Admin
+    permissions:
+      - permission_name: "update:account"
+        resource_server_identifier: "https://##ENV##.myapp.com/api/v1"
+      - permission_name: "read:account"
+        resource_server_identifier: "https://##ENV##.myapp.com/api/v1"
+  - name: User
+    description: App User
+    permissions:
+      - permission_name: "read:account"
+        resource_server_identifier: "https://##ENV##.myapp.com/api/v1"

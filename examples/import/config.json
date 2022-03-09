@@ -1,0 +1,9 @@
+{
+  "AUTH0_DOMAIN": "<YOUR_TENANT>.auth0.com",
+  "AUTH0_KEYWORD_REPLACE_MAPPINGS": {
+    "EXAMPLE_API": "Example API",
+    "EXAMPLE_CLIENT": "Example Client",
+    "EXAMPLE_CLIENT_BASE_URL": "http://localhost:3000/",
+    "ENV": "DEV"
+  }
+}
