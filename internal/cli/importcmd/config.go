@@ -8,7 +8,7 @@ import (
 type Config struct {
 	Auth0Domain                 string                 `json:"AUTH0_DOMAIN"`
 	Auth0KeywordReplaceMappings map[string]interface{} `json:"AUTH0_KEYWORD_REPLACE_MAPPINGS"`
-	Auth0AllowDelete            string                 `json:"AUTH0_ALLOW_DELETE"`
+	Auth0AllowDelete            bool                   `json:"AUTH0_ALLOW_DELETE"`
 }
 
 func GetConfig(path string) (*Config, error) {
