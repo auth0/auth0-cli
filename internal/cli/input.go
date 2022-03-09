@@ -6,8 +6,8 @@ import (
 
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/auth0/auth0-cli/internal/prompt"
-	"github.com/spf13/cobra"
 	"github.com/auth0/go-auth0"
+	"github.com/spf13/cobra"
 )
 
 type commandInput interface {
