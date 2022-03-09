@@ -37,7 +37,7 @@ tests:
 
   auth0 completion bash:
     exit-code: 0
-  
+
   # Test 'apps create' --type flag
   apps create type native and check data:
     command: auth0 apps create --name integration-test-app-nativeapp1 --type native --description NativeApp1 --format json
@@ -109,7 +109,7 @@ tests:
       json:
         token_endpoint_auth_method: client_secret_basic
     exit-code: 0
-  
+
   # Test 'apps create' --callbacks flag
   apps create type m2m callbacks:
     command: auth0 apps create --name integration-test-app-m2mapp3 --type m2m --description M2mApp3 --callbacks https://example.com
@@ -124,7 +124,7 @@ tests:
       json:
         callbacks: "[https://example.com https://google.com]"
     exit-code: 0
-  
+
   # Test 'apps create' --grants flag
   apps create type regular grants:
     command: auth0 apps create --name integration-test-app-regapp5 --type regular --description RegApp4 --grants credentials,password
@@ -212,7 +212,7 @@ tests:
       json:
         callbacks: "[https://example.com]"
     exit-code: 0
-  
+
   apps update description:
     command: auth0 apps update $(cat ./integration/identifiers/app-id) --description "A better description" --format json
     stdout:
@@ -350,10 +350,10 @@ tests:
     command: auth0 apis show $(cat ./integration/identifiers/api-id) # depends on "apis create test app" test
     stdout:
       contains:
-        - NAME                  integration-test-api-newapi         
-        - IDENTIFIER            http://integration-test-api-newapi  
-        - SCOPES                read:todos                          
-        - TOKEN LIFETIME        86400                               
+        - NAME                  integration-test-api-newapi
+        - IDENTIFIER            http://integration-test-api-newapi
+        - SCOPES                read:todos
+        - TOKEN LIFETIME        86400
         - ALLOW OFFLINE ACCESS  ✗
     exit-code: 0
 
@@ -521,7 +521,7 @@ tests:
         - NAME     integration-test-rule-new2
         - ENABLED  ✗
         - ORDER    2
-        - SCRIPT   function(user, context, cb) {  
+        - SCRIPT   function(user, context, cb) {
     exit-code: 0
 
   # Test 'rules show'
@@ -570,4 +570,72 @@ tests:
     stdout:
       json:
         enabled: "false"
+    exit-code: 0
+
+  attack protection show breached password detection:
+    command: auth0 attack-protection breached-password-detection show
+    stdout:
+      contains:
+        - ENABLED
+        - SHIELDS
+        - ADMIN_NOTIFICATION_FREQUENCY
+        - METHOD
+    exit-code: 0
+
+  attack protection show brute force protection:
+    command: auth0 attack-protection brute-force-protection show
+    stdout:
+      contains:
+        - ENABLED
+        - SHIELDS
+        - ALLOW_LIST
+        - MODE
+        - MAX_ATTEMPTS
+    exit-code: 0
+
+  attack protection show suspicious ip throttling:
+    command: auth0 attack-protection suspicious-ip-throttling show
+    stdout:
+      contains:
+        - ENABLED
+        - SHIELDS
+        - ALLOW_LIST
+        - STAGE_PRE_LOGIN_MAX_ATTEMPTS
+        - STAGE_PRE_LOGIN_RATE
+        - STAGE_PRE_USER_REGISTRATION_MAX_ATTEMPTS
+        - STAGE_PRE_USER_REGISTRATION_RATE
+    exit-code: 0
+
+  attack protection update breached password detection:
+    command: auth0 attack-protection breached-password-detection update --enabled
+    stdout:
+      contains:
+        - ENABLED
+        - SHIELDS
+        - ADMIN_NOTIFICATION_FREQUENCY
+        - METHOD
+    exit-code: 0
+
+  attack protection update brute force protection:
+    command: auth0 attack-protection brute-force-protection update --enabled
+    stdout:
+      contains:
+        - ENABLED
+        - SHIELDS
+        - ALLOW_LIST
+        - MODE
+        - MAX_ATTEMPTS
+    exit-code: 0
+
+  attack protection update suspicious ip throttling:
+    command: auth0 attack-protection suspicious-ip-throttling update --enabled
+    stdout:
+      contains:
+        - ENABLED
+        - SHIELDS
+        - ALLOW_LIST
+        - STAGE_PRE_LOGIN_MAX_ATTEMPTS
+        - STAGE_PRE_LOGIN_RATE
+        - STAGE_PRE_USER_REGISTRATION_MAX_ATTEMPTS
+        - STAGE_PRE_USER_REGISTRATION_RATE
     exit-code: 0

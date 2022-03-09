@@ -16,7 +16,7 @@ import (
 const (
 	audiencePath           = "/api/v2/"
 	waitThresholdInSeconds = 3
-	// namespace used to set/get values from the keychain
+	// SecretsNamespace is the namespace used to set/get values from the keychain.
 	SecretsNamespace = "auth0-cli"
 )
 
@@ -38,6 +38,7 @@ var requiredScopes = []string{
 	"create:actions", "delete:actions", "read:actions", "update:actions",
 	"create:organizations", "delete:organizations", "read:organizations", "update:organizations", "read:organization_members", "read:organization_member_roles",
 	"read:prompts", "update:prompts",
+	"read:attack_protection", "update:attack_protection",
 }
 
 type Authenticator struct {
