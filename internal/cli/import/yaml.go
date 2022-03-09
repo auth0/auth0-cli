@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+
+	"gopkg.in/yaml.v2"
 )
 
 // Put here the logic for parsing the yaml file
@@ -41,7 +43,16 @@ type TenantConfig struct {
 	} `yaml:"roles"`
 }
 
-func (t *TenantConfig) getYAML(yaml string, config string) *TenantConfig {
+func (t *TenantConfig) getYAML(yamlData string, config string) *TenantConfig {
+	type StructA struct {
+		A string `yaml:"a"`
+	}
+	var a StructA
+
+	err := yaml.Unmarshal([]byte(yamlData), &a)
+	if err != nil {
+		log.Fatalf("cannot unmarshal data: %v", err)
+	}
 
 	// Unmarshall yaml
 
