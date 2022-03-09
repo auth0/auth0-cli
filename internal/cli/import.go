@@ -26,13 +26,13 @@ var (
 func importCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Config string
-		Input string
+		Input  string
 	}
 
 	cmd := &cobra.Command{
-		Use:   "import",
-		Short: "Import tenant resources and settings from a YAML file.",
-		Long:  "Import tenant resources and settings from a YAML file. YAML files produced by the Auth0 Deploy CLI are supported.",
+		Use:     "import",
+		Short:   "Import tenant resources and settings from a YAML file.",
+		Long:    "Import tenant resources and settings from a YAML file. YAML files produced by the Auth0 Deploy CLI are supported.",
 		Example: "auth0 import --config config.json --input tenant.yaml",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Ask for the config file path if the flag was not set
@@ -46,7 +46,7 @@ func importCmd(cli *cli) *cobra.Command {
 			}
 
 			// The command logic goes here
-			
+
 			// config, error := getConfig(inputs.Config)
 			// yaml, error := getYaml(inputs.Input, config)
 			// appChanges, error := processApps(cli, yaml, config)
@@ -62,9 +62,11 @@ func importCmd(cli *cli) *cobra.Command {
 			// Do: parse the YAML into a struct instance and perform the replacements, according to the config
 			// Return: YAML with replacements
 
+			//yaml := getYAML(&inputs.Input, &inputs.Config)
+
 			// Config file getConfig()
 			// Take: config file path
-			// Do: parse the JSON into a struct instance 
+			// Do: parse the JSON into a struct instance
 			// Return: config value
 
 			fmt.Printf("Config file: %s\n", inputs.Config)
