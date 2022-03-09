@@ -46,6 +46,26 @@ func importCmd(cli *cli) *cobra.Command {
 			}
 
 			// The command logic goes here
+			
+			// config, error := getConfig(&inputs.Config)
+			// yaml, error := getYaml(&inputs.Input, &config)
+			// appChanges, error := processApps(cli, yaml, config)
+			// {additions, changes, deletions}
+			// apiChanges, error := processApis(cli, yaml, config)
+			// roleChanges, error := processRoles(cli, yaml, config)
+			// additions, changes, deletions := calculateChanges(appChanges, apiChanges, roleChanges)
+			// display.Import( additions, changes, deletions)
+			// return nil
+
+			// YAML file getYAML()
+			// Take: yalm file path, config file path
+			// Do: parse the YAML into a struct intance and perform the replacements, according to the config
+			// Return: YAML with replacements
+
+			// Config files getConfig()
+			// Take: config file path
+			// Do: parse the JSON into a struct intance 
+			// Return: config value
 
 			fmt.Printf("Config file: %s\n", inputs.Config)
 			fmt.Printf("Input file: %s\n", inputs.Input)
