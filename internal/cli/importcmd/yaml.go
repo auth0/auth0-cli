@@ -1,9 +1,9 @@
 package importcmd
 
 import (
-	"encoding/json"
+	"fmt"
 	"io/ioutil"
-	"log"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -43,44 +43,77 @@ type TenantConfig struct {
 	} `yaml:"roles"`
 }
 
-func (t *TenantConfig) getYAML(yamlData string, config string) *TenantConfig {
-	type StructA struct {
-		A string `yaml:"a"`
-	}
-	var a StructA
+func ParseYAML(yamlPath string, config *Config) (*TenantConfig, error) {
 
-	err := yaml.Unmarshal([]byte(yamlData), &a)
+	yamlData, err := ioutil.ReadFile(yamlPath)
 	if err != nil {
-		log.Fatalf("cannot unmarshal data: %v", err)
+		return nil, fmt.Errorf("error reading yaml file: %v ", err)
 	}
 
-	// Unmarshall yaml
+	t := &TenantConfig{}
 
-	// yamlFile, err := ioutil.ReadFile(yaml)
-	// if err != nil {
-	// 	log.Printf("error reading yaml #%v ", err)
-	// }
-
-	// // err = yaml.Unmarshal(yamlFile, t)
-	// // if err != nil {
-	// // 	log.Fatalf("Unmarshal yaml file: %v", err)
-	// // }
-
-	// Unmarshall config json
-
-	configFile, err := ioutil.ReadFile(config)
+	err = yaml.Unmarshal(yamlData, t)
 	if err != nil {
-		log.Printf("error reading config json #%v ", err)
+		return nil, fmt.Errorf("error Unmarshaling yaml: %v ", err)
 	}
 
-	c := &Config{}
-
-	err = json.Unmarshal(configFile, c)
-	if err != nil {
-		log.Fatalf("Unmarshal config file: %v", err)
+	for key, replacement := range config.Auth0KeywordReplaceMappings {
+		t.replaceClientConfig(key, replacement)
+		t.replaceResourceServersConfig(key, replacement)
+		t.replaceRolesConfig(key, replacement)
 	}
 
-	// need to replace updated values from the specified keys in the config file
-	// into the UnMarshal'd yaml struct
-	return t
+	return t, nil
+}
+
+func (t *TenantConfig) replaceClientConfig(key string, replacement interface{}) {
+	for i, client := range t.Clients {
+
+		if strings.ContainsAny(client.Name, key) {
+			str := strings.ReplaceAll(client.Name, fmt.Sprintf("##%s##", key), replacement.(string))
+			t.Clients[i].Name = str
+
+		}
+
+		for j, url := range client.AllowedLogoutUrls {
+			if strings.ContainsAny(url, key) {
+				str := strings.ReplaceAll(url, fmt.Sprintf("##%s##", key), replacement.(string))
+				t.Clients[i].AllowedLogoutUrls[j] = str
+			}
+		}
+
+		for j, url := range client.Callbacks {
+			if strings.ContainsAny(url, key) {
+				str := strings.ReplaceAll(url, fmt.Sprintf("##%s##", key), replacement.(string))
+				t.Clients[i].Callbacks[j] = str
+			}
+		}
+
+		for j, url := range client.WebOrigins {
+			if strings.ContainsAny(url, key) {
+				str := strings.ReplaceAll(url, fmt.Sprintf("##%s##", key), replacement.(string))
+				t.Clients[i].WebOrigins[j] = str
+			}
+		}
+	}
+}
+
+func (t *TenantConfig) replaceResourceServersConfig(key string, replacement interface{}) {
+	for i, rs := range t.ResourceServers {
+		if strings.ContainsAny(rs.Name, key) {
+			str := strings.ReplaceAll(rs.Name, fmt.Sprintf("##%s##", key), replacement.(string))
+			t.ResourceServers[i].Name = str
+		}
+	}
+}
+
+func (t *TenantConfig) replaceRolesConfig(key string, replacement interface{}) {
+	for i, r := range t.Roles {
+		for j, p := range r.Permissions {
+			if strings.ContainsAny(p.ResourceServerIdentifier, key) {
+				str := strings.ReplaceAll(p.ResourceServerIdentifier, fmt.Sprintf("##%s##", key), replacement.(string))
+				t.Roles[i].Permissions[j].ResourceServerIdentifier = str
+			}
+		}
+	}
 }
