@@ -48,14 +48,14 @@ func ParseYAML(yamlPath string, config *Config) (*TenantConfig, error) {
 
 	yamlData, err := ioutil.ReadFile(yamlPath)
 	if err != nil {
-		log.Printf("error reading yaml #%v ", err)
+		log.Fatalf("error reading yaml #%v ", err)
 	}
 
 	t := &TenantConfig{}
 
 	err = yaml.Unmarshal(yamlData, t)
 	if err != nil {
-		log.Fatalf("Unmarshal yaml file: %v ", err)
+		log.Fatalf("error Unmarshaling yaml file: %v ", err)
 	}
 
 	for key, replacement := range config.Auth0KeywordReplaceMappings {
