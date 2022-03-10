@@ -1,10 +1,12 @@
 package importcmd
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"strings"
 
+	"github.com/hashicorp/go-multierror"
 	"gopkg.in/yaml.v2"
 )
 
@@ -55,6 +57,10 @@ func ParseYAML(yamlPath string, config *Config) (*TenantConfig, error) {
 	err = yaml.Unmarshal(yamlData, t)
 	if err != nil {
 		return nil, fmt.Errorf("error Unmarshaling yaml: %v ", err)
+	}
+
+	if err = t.CheckForDuplicateNames(); err != nil {
+		return nil, err
 	}
 
 	for key, replacement := range config.Auth0KeywordReplaceMappings {
@@ -116,4 +122,41 @@ func (t *TenantConfig) replaceRolesConfig(key string, replacement interface{}) {
 			}
 		}
 	}
+}
+
+func (t *TenantConfig) CheckForDuplicateNames() error {
+	var result *multierror.Error
+
+	clientNames := make(map[string]bool)
+
+	for _, c := range t.Clients {
+
+		if clientNames[c.Name] {
+			errMsg := fmt.Sprintf("found duplicate name in client: %s", c.Name)
+			result = multierror.Append(result, errors.New(errMsg))
+		}
+
+		clientNames[c.Name] = true
+	}
+
+	resourceServerNames := make(map[string]bool)
+	for _, rs := range t.ResourceServers {
+
+		if resourceServerNames[rs.Name] {
+			errMsg := fmt.Sprintf("found duplicate name in resourceServer: %s", rs.Name)
+			result = multierror.Append(result, errors.New(errMsg))
+		}
+		resourceServerNames[rs.Name] = true
+	}
+
+	roleNames := make(map[string]bool)
+	for _, r := range t.Roles {
+		if roleNames[r.Name] {
+			errMsg := fmt.Sprintf("found duplicate name in resourceServer: %s", r.Name)
+			result = multierror.Append(result, errors.New(errMsg))
+		}
+		roleNames[r.Name] = true
+	}
+
+	return result.ErrorOrNil()
 }
