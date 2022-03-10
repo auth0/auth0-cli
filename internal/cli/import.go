@@ -1,8 +1,11 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/auth0/auth0-cli/internal/cli/importcmd"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -62,8 +65,10 @@ func importCmd(cli *cli) *cobra.Command {
 			// Do: parse the YAML into a struct instance and perform the replacements, according to the config
 			// Return: YAML with replacements
 
-			importcmd.GetYAML(inputs.Input, config)
-			//fmt.Println(y)
+			yamlData := importcmd.ParseYAML(inputs.Input, config)
+
+			j, _ := yaml.Marshal(&yamlData)
+			fmt.Printf("yamlData is: \n%+v", string(j))
 
 			// Config file getConfig()
 			// Take: config file path

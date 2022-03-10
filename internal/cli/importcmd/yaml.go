@@ -44,7 +44,7 @@ type TenantConfig struct {
 	} `yaml:"roles"`
 }
 
-func GetYAML(yamlPath string, config *Config) {
+func ParseYAML(yamlPath string, config *Config) *TenantConfig {
 
 	yamlData, err := ioutil.ReadFile(yamlPath)
 	if err != nil {
@@ -59,29 +59,62 @@ func GetYAML(yamlPath string, config *Config) {
 	}
 
 	for key, replacement := range config.Auth0KeywordReplaceMappings {
+		t.replaceClientConfig(key, replacement)
+		t.replaceResourceServersConfig(key, replacement)
+		t.replaceRolesConfig(key, replacement)
+	}
 
-		replacementInYAML := fmt.Sprintf("##%s##", key)
+	return t
+}
 
-		fmt.Printf("key is: %s\n", key)
-		fmt.Printf("replacement is: %s\n", replacement)
+func (t *TenantConfig) replaceClientConfig(key string, replacement interface{}) {
+	for i, client := range t.Clients {
 
-		for i, client := range t.Clients {
+		if strings.ContainsAny(client.Name, key) {
+			str := strings.ReplaceAll(client.Name, fmt.Sprintf("##%s##", key), replacement.(string))
+			t.Clients[i].Name = str
 
-			if strings.ContainsAny(client.Name, replacementInYAML) {
-				fmt.Printf("client.Name is: %s\n", client.Name)
-				t.Clients[i].Name = replacement.(string)
-				fmt.Printf("client.Name changed is: %s\n", client.Name)
+		}
+
+		for j, url := range client.AllowedLogoutUrls {
+			if strings.ContainsAny(url, key) {
+				str := strings.ReplaceAll(url, fmt.Sprintf("##%s##", key), replacement.(string))
+				t.Clients[i].AllowedLogoutUrls[j] = str
 			}
+		}
 
-			for j, url := range client.AllowedLogoutUrls {
-				if strings.ContainsAny(url, replacementInYAML) {
-					t.Clients[i].AllowedLogoutUrls[j] = replacement.(string)
-				}
+		for j, url := range client.Callbacks {
+			if strings.ContainsAny(url, key) {
+				str := strings.ReplaceAll(url, fmt.Sprintf("##%s##", key), replacement.(string))
+				t.Clients[i].Callbacks[j] = str
+			}
+		}
+
+		for j, url := range client.WebOrigins {
+			if strings.ContainsAny(url, key) {
+				str := strings.ReplaceAll(url, fmt.Sprintf("##%s##", key), replacement.(string))
+				t.Clients[i].WebOrigins[j] = str
 			}
 		}
 	}
+}
 
-	j, _ := yaml.Marshal(&t)
-	fmt.Printf("The yaml is:\n%+v", string(j))
+func (t *TenantConfig) replaceResourceServersConfig(key string, replacement interface{}) {
+	for i, rs := range t.ResourceServers {
+		if strings.ContainsAny(rs.Name, key) {
+			str := strings.ReplaceAll(rs.Name, fmt.Sprintf("##%s##", key), replacement.(string))
+			t.ResourceServers[i].Name = str
+		}
+	}
+}
 
+func (t *TenantConfig) replaceRolesConfig(key string, replacement interface{}) {
+	for i, r := range t.Roles {
+		for j, p := range r.Permissions {
+			if strings.ContainsAny(p.ResourceServerIdentifier, key) {
+				str := strings.ReplaceAll(p.ResourceServerIdentifier, fmt.Sprintf("##%s##", key), replacement.(string))
+				t.Roles[i].Permissions[j].ResourceServerIdentifier = str
+			}
+		}
+	}
 }
