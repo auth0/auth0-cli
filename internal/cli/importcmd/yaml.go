@@ -3,7 +3,6 @@ package importcmd
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"strings"
 
 	"gopkg.in/yaml.v2"
@@ -48,14 +47,14 @@ func ParseYAML(yamlPath string, config *Config) (*TenantConfig, error) {
 
 	yamlData, err := ioutil.ReadFile(yamlPath)
 	if err != nil {
-		log.Fatalf("error reading yaml #%v ", err)
+		return nil, fmt.Errorf("error reading yaml file: %v ", err)
 	}
 
 	t := &TenantConfig{}
 
 	err = yaml.Unmarshal(yamlData, t)
 	if err != nil {
-		log.Fatalf("error Unmarshaling yaml file: %v ", err)
+		return nil, fmt.Errorf("error Unmarshaling yaml: %v ", err)
 	}
 
 	for key, replacement := range config.Auth0KeywordReplaceMappings {
