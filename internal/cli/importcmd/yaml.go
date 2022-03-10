@@ -44,7 +44,7 @@ type TenantConfig struct {
 	} `yaml:"roles"`
 }
 
-func ParseYAML(yamlPath string, config *Config) *TenantConfig {
+func ParseYAML(yamlPath string, config *Config) (*TenantConfig, error) {
 
 	yamlData, err := ioutil.ReadFile(yamlPath)
 	if err != nil {
@@ -64,7 +64,7 @@ func ParseYAML(yamlPath string, config *Config) *TenantConfig {
 		t.replaceRolesConfig(key, replacement)
 	}
 
-	return t
+	return t, nil
 }
 
 func (t *TenantConfig) replaceClientConfig(key string, replacement interface{}) {

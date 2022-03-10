@@ -49,7 +49,10 @@ func importCmd(cli *cli) *cobra.Command {
 
 			// The command logic goes here
 
-			config, _ := importcmd.GetConfig(inputs.Config)
+			config, err := importcmd.GetConfig(inputs.Config)
+			if err != nil {
+				return err
+			}
 			// config, error := getConfig(inputs.Config)
 			// yaml, error := getYaml(inputs.Input, config)
 			// appChanges, error := processApps(cli, yaml, config)
@@ -65,7 +68,10 @@ func importCmd(cli *cli) *cobra.Command {
 			// Do: parse the YAML into a struct instance and perform the replacements, according to the config
 			// Return: YAML with replacements
 
-			yamlData := importcmd.ParseYAML(inputs.Input, config)
+			yamlData, err := importcmd.ParseYAML(inputs.Input, config)
+			if err != nil {
+				return err
+			}
 
 			j, _ := yaml.Marshal(&yamlData)
 			fmt.Printf("yamlData is: \n%+v", string(j))
