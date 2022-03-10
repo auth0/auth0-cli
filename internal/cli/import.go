@@ -75,8 +75,8 @@ func importCmd(cli *cli) *cobra.Command {
 			// Do: parse the JSON into a struct instance
 			// Return: config value
 
-			//fmt.Printf("Config file: %s\n", inputs.Config)
-			//fmt.Printf("Input file: %s\n", inputs.Input)
+			fmt.Printf("Config file: %s\n", inputs.Config)
+			fmt.Printf("Input file: %s\n", inputs.Input)
 
 			return nil
 		},
