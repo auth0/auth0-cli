@@ -1,9 +1,10 @@
 package importcmd
 
 import (
-	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -43,44 +44,44 @@ type TenantConfig struct {
 	} `yaml:"roles"`
 }
 
-func (t *TenantConfig) getYAML(yamlData string, config string) *TenantConfig {
-	type StructA struct {
-		A string `yaml:"a"`
-	}
-	var a StructA
+func GetYAML(yamlPath string, config *Config) {
 
-	err := yaml.Unmarshal([]byte(yamlData), &a)
+	yamlData, err := ioutil.ReadFile(yamlPath)
 	if err != nil {
-		log.Fatalf("cannot unmarshal data: %v", err)
+		log.Printf("error reading yaml #%v ", err)
 	}
 
-	// Unmarshall yaml
+	t := &TenantConfig{}
 
-	// yamlFile, err := ioutil.ReadFile(yaml)
-	// if err != nil {
-	// 	log.Printf("error reading yaml #%v ", err)
-	// }
-
-	// // err = yaml.Unmarshal(yamlFile, t)
-	// // if err != nil {
-	// // 	log.Fatalf("Unmarshal yaml file: %v", err)
-	// // }
-
-	// Unmarshall config json
-
-	configFile, err := ioutil.ReadFile(config)
+	err = yaml.Unmarshal(yamlData, t)
 	if err != nil {
-		log.Printf("error reading config json #%v ", err)
+		log.Fatalf("Unmarshal yaml file: %v ", err)
 	}
 
-	c := &Config{}
+	for key, replacement := range config.Auth0KeywordReplaceMappings {
 
-	err = json.Unmarshal(configFile, c)
-	if err != nil {
-		log.Fatalf("Unmarshal config file: %v", err)
+		replacementInYAML := fmt.Sprintf("##%s##", key)
+
+		fmt.Printf("key is: %s\n", key)
+		fmt.Printf("replacement is: %s\n", replacement)
+
+		for i, client := range t.Clients {
+
+			if strings.ContainsAny(client.Name, replacementInYAML) {
+				fmt.Printf("client.Name is: %s\n", client.Name)
+				t.Clients[i].Name = replacement.(string)
+				fmt.Printf("client.Name changed is: %s\n", client.Name)
+			}
+
+			for j, url := range client.AllowedLogoutUrls {
+				if strings.ContainsAny(url, replacementInYAML) {
+					t.Clients[i].AllowedLogoutUrls[j] = replacement.(string)
+				}
+			}
+		}
 	}
 
-	// need to replace updated values from the specified keys in the config file
-	// into the UnMarshal'd yaml struct
-	return t
+	j, _ := yaml.Marshal(&t)
+	fmt.Printf("The yaml is:\n%+v", string(j))
+
 }

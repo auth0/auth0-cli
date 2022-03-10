@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/auth0/auth0-cli/internal/cli/importcmd"
 	"github.com/spf13/cobra"
 )
@@ -48,7 +46,7 @@ func importCmd(cli *cli) *cobra.Command {
 
 			// The command logic goes here
 
-			config, error := importcmd.GetConfig(inputs.Config)
+			config, _ := importcmd.GetConfig(inputs.Config)
 			// config, error := getConfig(inputs.Config)
 			// yaml, error := getYaml(inputs.Input, config)
 			// appChanges, error := processApps(cli, yaml, config)
@@ -64,15 +62,16 @@ func importCmd(cli *cli) *cobra.Command {
 			// Do: parse the YAML into a struct instance and perform the replacements, according to the config
 			// Return: YAML with replacements
 
-			//yaml := getYAML(&inputs.Input, &inputs.Config)
+			importcmd.GetYAML(inputs.Input, config)
+			//fmt.Println(y)
 
 			// Config file getConfig()
 			// Take: config file path
 			// Do: parse the JSON into a struct instance
 			// Return: config value
 
-			fmt.Printf("Config file: %s\n", inputs.Config)
-			fmt.Printf("Input file: %s\n", inputs.Input)
+			//fmt.Printf("Config file: %s\n", inputs.Config)
+			//fmt.Printf("Input file: %s\n", inputs.Input)
 
 			return nil
 		},
