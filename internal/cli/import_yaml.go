@@ -30,7 +30,7 @@ type TenantConfig struct {
 		SSODisabled                    bool     `yaml:"sso_disabled,omitempty"`
 	} `yaml:"clients,omitempty"`
 	ResourceServers []struct {
-		Name               string `yaml:"name"`
+		Name               string `yaml:"name,omitempty"`
 		Identifier         string `yaml:"identifier"`
 		AllowOfflineAccess bool   `yaml:"allow_offline_access,omitempty"`
 		EnforcePolicies    bool   `yaml:"enforce_policies,omitempty"`
