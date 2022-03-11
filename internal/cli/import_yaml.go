@@ -14,7 +14,7 @@ import (
 type TenantConfig struct {
 	Clients []struct {
 		Name                           string   `yaml:"name"`
-		AppType                        string   `yaml:"app_type"`
+		AppType                        string   `yaml:"app_type,omitempty"`
 		Description                    string   `yaml:"description,omitempty"`
 		TokenEndpointAuthMethod        string   `yaml:"token_endpoint_auth_method,omitempty"`
 		AllowedLogoutURLs              []string `yaml:"allowed_logout_urls,omitempty"`
