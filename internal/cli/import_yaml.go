@@ -47,7 +47,7 @@ type TenantConfig struct {
 	} `yaml:"resourceServers,omitempty"`
 	Roles []struct {
 		Name        string `yaml:"name"`
-		Description string `yaml:"description"`
+		Description string `yaml:"description,omitempty"`
 		Permissions []struct {
 			PermissionName           string `yaml:"permission_name"`
 			ResourceServerIdentifier string `yaml:"resource_server_identifier"`
