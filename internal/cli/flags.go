@@ -3,9 +3,10 @@ package cli
 import (
 	"fmt"
 
+	"github.com/spf13/cobra"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
-	"github.com/spf13/cobra"
 )
 
 type Flag struct {
@@ -59,6 +60,14 @@ func (f *Flag) AskBool(cmd *cobra.Command, value *bool, defaultValue *bool) erro
 
 func (f *Flag) AskBoolU(cmd *cobra.Command, value *bool, defaultValue *bool) error {
 	return askBoolFlag(cmd, f, value, defaultValue, true)
+}
+
+func (f *Flag) AskInt(cmd *cobra.Command, value *int, defaultValue *string) error {
+	return askIntFlag(cmd, f, value, defaultValue, false)
+}
+
+func (f *Flag) AskIntU(cmd *cobra.Command, value *int, defaultValue *string) error {
+	return askIntFlag(cmd, f, value, defaultValue, true)
 }
 
 func (f *Flag) Select(cmd *cobra.Command, value interface{}, options []string, defaultValue *string) error {
@@ -166,6 +175,13 @@ func askBoolFlag(cmd *cobra.Command, f *Flag, value *bool, defaultValue *bool, i
 		}
 	}
 
+	return nil
+}
+
+func askIntFlag(cmd *cobra.Command, f *Flag, value *int, defaultValue *string, isUpdate bool) error {
+	if shouldAsk(cmd, f, isUpdate) {
+		return askInt(cmd, f, value, defaultValue, isUpdate)
+	}
 	return nil
 }
 

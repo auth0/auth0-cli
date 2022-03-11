@@ -38,7 +38,7 @@ var requiredScopes = []string{
 	"create:actions", "delete:actions", "read:actions", "update:actions",
 	"create:organizations", "delete:organizations", "read:organizations", "update:organizations", "read:organization_members", "read:organization_member_roles",
 	"read:prompts", "update:prompts",
-	"read:attack_protection",
+	"read:attack_protection", "update:attack_protection",
 }
 
 type Authenticator struct {

@@ -5,9 +5,10 @@ import (
 	"os"
 
 	"github.com/AlecAivazis/survey/v2/terminal"
-	"github.com/auth0/auth0-cli/internal/prompt"
-	"github.com/spf13/cobra"
 	"github.com/auth0/go-auth0"
+	"github.com/spf13/cobra"
+
+	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
 type commandInput interface {
@@ -30,6 +31,17 @@ func ask(cmd *cobra.Command, i commandInput, value interface{}, defaultValue *st
 
 func askBool(cmd *cobra.Command, i commandInput, value *bool, defaultValue *bool) error {
 	if err := prompt.AskBool(i.GetLabel(), value, auth0.BoolValue(defaultValue)); err != nil {
+		return handleInputError(err)
+	}
+
+	return nil
+}
+
+func askInt(cmd *cobra.Command, i commandInput, value *int, defaultValue *string, isUpdate bool) error {
+	isRequired := isInputRequired(i, isUpdate)
+	input := prompt.TextInput(i.GetName(), i.GetLabel(), i.GetHelp(), auth0.StringValue(defaultValue), isRequired)
+
+	if err := prompt.AskOne(input, value); err != nil {
 		return handleInputError(err)
 	}
 
