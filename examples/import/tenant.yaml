@@ -3,6 +3,7 @@
 clients:
   - name: "##EXAMPLE_CLIENT## (Backend)"
     app_type: non_interactive
+    oidc_conformant: true
   - name: "##EXAMPLE_CLIENT## (SPA)"
     app_type: spa
     allowed_logout_urls:
@@ -13,6 +14,7 @@ clients:
       - "##EXAMPLE_CLIENT_BASE_URL##/callback"
     web_origins:
       - "##EXAMPLE_CLIENT_BASE_URL##"
+    oidc_conformant: true
 
 resourceServers:
   - name: "##EXAMPLE_API## (RS256)"

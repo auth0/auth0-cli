@@ -1,24 +1,23 @@
-package importcmd
+package cli
 
 import (
 	"encoding/json"
 	"io/ioutil"
 )
 
-type Config struct {
-	Auth0Domain                 string                 `json:"AUTH0_DOMAIN"`
+type ImportConfig struct {
 	Auth0KeywordReplaceMappings map[string]interface{} `json:"AUTH0_KEYWORD_REPLACE_MAPPINGS"`
-	Auth0AllowDelete            bool                   `json:"AUTH0_ALLOW_DELETE"`
+	Auth0AllowDelete            bool                   `json:"AUTH0_ALLOW_DELETE,omitempty"`
 }
 
-func GetConfig(path string) (*Config, error) {
+func GetConfig(path string) (*ImportConfig, error) {
 	file, error := ioutil.ReadFile(path)
 
 	if error != nil {
 		return nil, error
 	}
 
-	c := &Config{}
+	c := &ImportConfig{}
 	error = json.Unmarshal([]byte(file), &c)
 
 	if error != nil {

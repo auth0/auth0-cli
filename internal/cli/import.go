@@ -1,11 +1,8 @@
 package cli
 
 import (
-	"fmt"
-
-	"github.com/auth0/auth0-cli/internal/cli/importcmd"
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -47,42 +44,32 @@ func importCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			// The command logic goes here
-
-			config, err := importcmd.GetConfig(inputs.Config)
-			if err != nil {
-				return err
-			}
-			// config, error := getConfig(inputs.Config)
-			// yaml, error := getYaml(inputs.Input, config)
-			// appChanges, error := processApps(cli, yaml, config)
-			// {additions, changes, deletions}
-			// apiChanges, error := processApis(cli, yaml, config)
-			// roleChanges, error := processRoles(cli, yaml, config)
-			// additions, changes, deletions := calculateChanges(appChanges, apiChanges, roleChanges)
-			// display.Import(additions, changes, deletions)
-			// return nil
-
-			// YAML file getYAML()
-			// Take: YAML file path, config value
-			// Do: parse the YAML into a struct instance and perform the replacements, according to the config
-			// Return: YAML with replacements
-
-			yamlData, err := importcmd.ParseYAML(inputs.Input, config)
+			config, err := GetConfig(inputs.Config)
 			if err != nil {
 				return err
 			}
 
-			j, _ := yaml.Marshal(&yamlData)
-			fmt.Printf("yamlData is: \n%+v", string(j))
+			yamlData, err := ParseYAML(inputs.Input, config)
+			if err != nil {
+				return err
+			}
 
-			// Config file getConfig()
-			// Take: config file path
-			// Do: parse the JSON into a struct instance
-			// Return: config value
+			appsResult, err := ImportApps(cmd.Context(), cli, config, yamlData)
+			if err != nil {
+				return err
+			}
 
-			fmt.Printf("Config file: %s\n", inputs.Config)
-			fmt.Printf("Input file: %s\n", inputs.Input)
+			apisResult, err := ImportAPIs(cmd.Context(), cli, config, yamlData)
+			if err != nil {
+				return err
+			}
+
+			rolesResult, err := ImportRoles(cmd.Context(), cli, config, yamlData)
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.Import([]*auth0.ImportChanges{appsResult, apisResult, rolesResult})
 
 			return nil
 		},

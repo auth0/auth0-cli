@@ -1,5 +1,4 @@
 {
-  "AUTH0_DOMAIN": "<YOUR_TENANT>.auth0.com",
   "AUTH0_ALLOW_DELETE": true,
   "AUTH0_KEYWORD_REPLACE_MAPPINGS": {
     "EXAMPLE_API": "Example API",
