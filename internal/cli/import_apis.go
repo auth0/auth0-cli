@@ -311,7 +311,7 @@ func ImportAPIs(ctx context.Context, cli *cli, config *ImportConfig, yaml *Tenan
 	// 5. Execute creates, updates and deletes
 	createsSlice := apisMapToSlice(createsMap)
 	updatesSlice := apisMapToSlice(updatesMap)
-    deletesSlice := apisMapToSlice(deletesMap)
+	deletesSlice := apisMapToSlice(deletesMap)
 
 	err = processAPIOperations(cli, createsSlice, updatesSlice, deletesSlice)
 	if err != nil {
