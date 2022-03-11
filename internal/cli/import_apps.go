@@ -274,7 +274,7 @@ func diffApp(config *ImportConfig, existingApp *App, newApp *App) *App { // exis
 func appToJSON(app *App) string {
 	printableApp := App{
 		Name: app.Name,
-		ClientSecret: app.ClientID,
+		ClientID: app.ClientID,
 	}
 	json, err := json.Marshal(printableApp)
 	if err != nil {
