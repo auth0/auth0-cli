@@ -7,14 +7,15 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/joeshaw/envdecode"
+	"github.com/spf13/cobra"
+
 	"github.com/auth0/auth0-cli/internal/analytics"
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/instrumentation"
-	"github.com/joeshaw/envdecode"
-	"github.com/spf13/cobra"
 )
 
 const rootShort = "Supercharge your development workflow."
@@ -178,8 +179,9 @@ func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
 }
 
 func addSubcommands(rootCmd *cobra.Command, cli *cli) {
-	// order of the comamnds here matters
-	// so add new commands in a place that reflect its relevance or relation with other commands:
+	// The order of the commands here matters.
+	// Add new commands in a place that reflect its
+	// relevance or relation with other commands:
 	rootCmd.AddCommand(loginCmd(cli))
 	rootCmd.AddCommand(logoutCmd(cli))
 	rootCmd.AddCommand(configCmd(cli))
@@ -194,12 +196,12 @@ func addSubcommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(brandingCmd(cli))
 	rootCmd.AddCommand(ipsCmd(cli))
 	rootCmd.AddCommand(quickstartsCmd(cli))
+	rootCmd.AddCommand(attackProtectionCmd(cli))
 	rootCmd.AddCommand(testCmd(cli))
 	rootCmd.AddCommand(logsCmd(cli))
 
 	// keep completion at the bottom:
 	rootCmd.AddCommand(completionCmd(cli))
-
 }
 
 func contextWithCancel() context.Context {
