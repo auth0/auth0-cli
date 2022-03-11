@@ -211,7 +211,7 @@ func (t *TenantConfig) CheckForDuplicateNames() error {
 	roleNames := make(map[string]bool)
 	for _, r := range t.Roles {
 		if roleNames[r.Name] {
-			errMsg := fmt.Sprintf("found duplicate name in resourceServer: %s", r.Name)
+			errMsg := fmt.Sprintf("found duplicate name in role: %s", r.Name)
 			result = multierror.Append(result, errors.New(errMsg))
 		}
 		roleNames[r.Name] = true
