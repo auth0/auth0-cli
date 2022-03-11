@@ -195,6 +195,12 @@ func updateSuspiciousIPThrottlingCmdRun(
 		}
 		sit.AllowList = &inputs.AllowList
 
+		// Return early if stage is missing.
+		if sit.Stage == nil {
+			cli.renderer.SuspiciousIPThrottlingUpdate(sit)
+			return nil
+		}
+
 		defaultPreLoginMaxAttempts := strconv.Itoa(sit.Stage.PreLogin.GetMaxAttempts())
 		if err := sitFlags.StagePreLoginMaxAttempts.AskIntU(
 			cmd,

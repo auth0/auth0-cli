@@ -188,15 +188,24 @@ func (r *Renderer) SuspiciousIPThrottlingUpdate(sit *management.SuspiciousIPThro
 }
 
 func makeSuspiciousIPThrottlingView(sit *management.SuspiciousIPThrottling) *suspiciousIPThrottlingView {
-	return &suspiciousIPThrottlingView{
-		Enabled:                             boolean(sit.GetEnabled()),
-		Shields:                             sit.GetShields(),
-		AllowList:                           sit.GetAllowList(),
-		StagePreLoginMaxAttempts:            sit.Stage.PreLogin.GetMaxAttempts(),
-		StagePreLoginRate:                   sit.Stage.PreLogin.GetRate(),
-		StagePreUserRegistrationMaxAttempts: sit.Stage.PreUserRegistration.GetMaxAttempts(),
-		StagePreUserRegistrationRate:        sit.Stage.PreUserRegistration.GetRate(),
+	view := &suspiciousIPThrottlingView{
+		Enabled:   boolean(sit.GetEnabled()),
+		Shields:   sit.GetShields(),
+		AllowList: sit.GetAllowList(),
 
 		raw: sit,
 	}
+
+	if sit.Stage != nil {
+		if sit.Stage.PreLogin != nil {
+			view.StagePreLoginMaxAttempts = sit.Stage.PreLogin.GetMaxAttempts()
+			view.StagePreLoginRate = sit.Stage.PreLogin.GetRate()
+		}
+		if sit.Stage.PreUserRegistration != nil {
+			view.StagePreUserRegistrationMaxAttempts = sit.Stage.PreUserRegistration.GetMaxAttempts()
+			view.StagePreUserRegistrationRate = sit.Stage.PreUserRegistration.GetRate()
+		}
+	}
+
+	return view
 }
