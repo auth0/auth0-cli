@@ -367,7 +367,7 @@ func ImportApps(ctx context.Context, cli *cli, config *ImportConfig, yaml *Tenan
 	// 5. Execute creates, updates and deletes
 	createsSlice := appsMapToSlice(createsMap)
 	updatesSlice := appsMapToSlice(updatesMap)
-    deletesSlice := appsMapToSlice(deletesMap)
+	deletesSlice := appsMapToSlice(deletesMap)
 
 	err = processAppOperations(cli, createsSlice, updatesSlice, deletesSlice)
 	if err != nil {

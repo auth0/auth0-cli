@@ -203,7 +203,7 @@ func ImportRoles(ctx context.Context, cli *cli, config *ImportConfig, yaml *Tena
 	// 5. Execute creates, updates and deletes
 	createsSlice := rolesMapToSlice(createsMap)
 	updatesSlice := rolesMapToSlice(updatesMap)
-    deletesSlice := rolesMapToSlice(deletesMap)
+	deletesSlice := rolesMapToSlice(deletesMap)
 
 	err = processRoleOperations(cli, createsSlice, updatesSlice, deletesSlice)
 	if err != nil {
