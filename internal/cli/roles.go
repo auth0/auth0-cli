@@ -7,7 +7,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
-	"gopkg.in/auth0.v5/management"
+	"github.com/auth0/go-auth0/management"
 )
 
 // errNoRoles signifies no roles exist in a tenant
@@ -36,9 +36,9 @@ var (
 
 func rolesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "roles",
-		Short:   "Manage resources for roles",
-		Long:    "Manage resources for roles.",
+		Use:   "roles",
+		Short: "Manage resources for roles",
+		Long:  "Manage resources for roles.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())

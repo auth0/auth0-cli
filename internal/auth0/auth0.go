@@ -1,51 +1,53 @@
 package auth0
 
 import (
-	"gopkg.in/auth0.v5"
-	"gopkg.in/auth0.v5/management"
+	"github.com/auth0/go-auth0"
+	"github.com/auth0/go-auth0/management"
 )
 
 // API mimics `management.Management`s general interface, except it refers to
 // the interfaces instead of the concrete structs.
 type API struct {
-	Action         ActionAPI
-	Anomaly        AnomalyAPI
-	Branding       BrandingAPI
-	Client         ClientAPI
-	Connection     ConnectionAPI
-	CustomDomain   CustomDomainAPI
-	EmailTemplate  EmailTemplateAPI
-	Log            LogAPI
-	LogStream      LogStreamAPI
-	Organization   OrganizationAPI
-	Prompt         PromptAPI
-	ResourceServer ResourceServerAPI
-	Role           RoleAPI
-	Rule           RuleAPI
-	Tenant         TenantAPI
-	User           UserAPI
-	Jobs           JobsAPI
+	Action           ActionAPI
+	Anomaly          AnomalyAPI
+	AttackProtection AttackProtectionAPI
+	Branding         BrandingAPI
+	Client           ClientAPI
+	Connection       ConnectionAPI
+	CustomDomain     CustomDomainAPI
+	EmailTemplate    EmailTemplateAPI
+	Log              LogAPI
+	LogStream        LogStreamAPI
+	Organization     OrganizationAPI
+	Prompt           PromptAPI
+	ResourceServer   ResourceServerAPI
+	Role             RoleAPI
+	Rule             RuleAPI
+	Tenant           TenantAPI
+	User             UserAPI
+	Jobs             JobsAPI
 }
 
 func NewAPI(m *management.Management) *API {
 	return &API{
-		Action:         m.Action,
-		Anomaly:        m.Anomaly,
-		Branding:       m.Branding,
-		Client:         m.Client,
-		Connection:     m.Connection,
-		CustomDomain:   m.CustomDomain,
-		EmailTemplate:  m.EmailTemplate,
-		Log:            m.Log,
-		LogStream:      m.LogStream,
-		Organization:   m.Organization,
-		Prompt:         m.Prompt,
-		ResourceServer: m.ResourceServer,
-		Role:           m.Role,
-		Rule:           m.Rule,
-		Tenant:         m.Tenant,
-		User:           m.User,
-		Jobs:           m.Job,
+		Action:           m.Action,
+		Anomaly:          m.Anomaly,
+		AttackProtection: m.AttackProtection,
+		Branding:         m.Branding,
+		Client:           m.Client,
+		Connection:       m.Connection,
+		CustomDomain:     m.CustomDomain,
+		EmailTemplate:    m.EmailTemplate,
+		Log:              m.Log,
+		LogStream:        m.LogStream,
+		Organization:     m.Organization,
+		Prompt:           m.Prompt,
+		ResourceServer:   m.ResourceServer,
+		Role:             m.Role,
+		Rule:             m.Rule,
+		Tenant:           m.Tenant,
+		User:             m.User,
+		Jobs:             m.Job,
 	}
 }
 

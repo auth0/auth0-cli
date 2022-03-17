@@ -27,3 +27,6 @@ tags
 .vscode
 .DS_Store
 .idea
+
+# Vendor
+vendor

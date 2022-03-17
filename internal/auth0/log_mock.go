@@ -5,55 +5,36 @@
 package auth0
 
 import (
-	gomock "github.com/golang/mock/gomock"
-	management "gopkg.in/auth0.v5/management"
 	reflect "reflect"
+
+	management "github.com/auth0/go-auth0/management"
+	gomock "github.com/golang/mock/gomock"
 )
 
-// MockLogAPI is a mock of LogAPI interface
+// MockLogAPI is a mock of LogAPI interface.
 type MockLogAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockLogAPIMockRecorder
 }
 
-// MockLogAPIMockRecorder is the mock recorder for MockLogAPI
+// MockLogAPIMockRecorder is the mock recorder for MockLogAPI.
 type MockLogAPIMockRecorder struct {
 	mock *MockLogAPI
 }
 
-// NewMockLogAPI creates a new mock instance
+// NewMockLogAPI creates a new mock instance.
 func NewMockLogAPI(ctrl *gomock.Controller) *MockLogAPI {
 	mock := &MockLogAPI{ctrl: ctrl}
 	mock.recorder = &MockLogAPIMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockLogAPI) EXPECT() *MockLogAPIMockRecorder {
 	return m.recorder
 }
 
-// Read mocks base method
-func (m *MockLogAPI) Read(id string, opts ...management.RequestOption) (*management.Log, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{id}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Read", varargs...)
-	ret0, _ := ret[0].(*management.Log)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Read indicates an expected call of Read
-func (mr *MockLogAPIMockRecorder) Read(id interface{}, opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{id}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockLogAPI)(nil).Read), varargs...)
-}
-
-// List mocks base method
+// List mocks base method.
 func (m *MockLogAPI) List(opts ...management.RequestOption) ([]*management.Log, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{}
@@ -66,13 +47,33 @@ func (m *MockLogAPI) List(opts ...management.RequestOption) ([]*management.Log, 
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockLogAPIMockRecorder) List(opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockLogAPI)(nil).List), opts...)
 }
 
-// Search mocks base method
+// Read mocks base method.
+func (m *MockLogAPI) Read(id string, opts ...management.RequestOption) (*management.Log, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Read", varargs...)
+	ret0, _ := ret[0].(*management.Log)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Read indicates an expected call of Read.
+func (mr *MockLogAPIMockRecorder) Read(id interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockLogAPI)(nil).Read), varargs...)
+}
+
+// Search mocks base method.
 func (m *MockLogAPI) Search(opts ...management.RequestOption) ([]*management.Log, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{}
@@ -85,7 +86,7 @@ func (m *MockLogAPI) Search(opts ...management.RequestOption) ([]*management.Log
 	return ret0, ret1
 }
 
-// Search indicates an expected call of Search
+// Search indicates an expected call of Search.
 func (mr *MockLogAPIMockRecorder) Search(opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Search", reflect.TypeOf((*MockLogAPI)(nil).Search), opts...)

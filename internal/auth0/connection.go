@@ -1,6 +1,6 @@
 package auth0
 
-import "gopkg.in/auth0.v5/management"
+import "github.com/auth0/go-auth0/management"
 
 type ConnectionAPI interface {
 
