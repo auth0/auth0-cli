@@ -9,8 +9,8 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/auth0/auth0-cli/internal/users"
-	"github.com/spf13/cobra"
 	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -632,7 +632,7 @@ auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --up
 			}
 
 			// Convert json array to map
-			jsonstr := userImportOptions.getValue(inputs.Template)
+			jsonstr := inputs.TemplateBody
 			var jsonmap []map[string]interface{}
 			jsonErr := json.Unmarshal([]byte(jsonstr), &jsonmap)
 			if jsonErr != nil {
