@@ -3,63 +3,49 @@ module github.com/auth0/auth0-cli
 go 1.16
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.3.4
-	github.com/auth0/go-auth0 v0.6.3
-	github.com/briandowns/spinner v1.18.1
+	github.com/AlecAivazis/survey/v2 v2.2.15
+	github.com/auth0/go-auth0 v0.6.1
+	github.com/briandowns/spinner v1.18.0
 	github.com/charmbracelet/glamour v0.5.0
-	github.com/fsnotify/fsnotify v1.5.4
-	github.com/getsentry/sentry-go v0.13.0
+	github.com/fsnotify/fsnotify v1.4.9
+	github.com/getsentry/sentry-go v0.11.0
 	github.com/golang/mock v1.6.0
-	github.com/google/go-cmp v0.5.8
+	github.com/google/go-cmp v0.5.6
 	github.com/google/uuid v1.3.0
 	github.com/guiguan/caster v0.0.0-20191104051807-3736c4464f38
 	github.com/joeshaw/envdecode v0.0.0-20200121155833-099f1fc765bd
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/lestrrat-go/jwx v1.2.25
+	github.com/lestrrat-go/jwx v1.2.4
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/mattn/go-isatty v0.0.14
-	github.com/mholt/archiver/v3 v3.5.1
+	github.com/mholt/archiver/v3 v3.5.0
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
+	github.com/pkg/browser v0.0.0-20210706143420-7d21f8c997e2
 	github.com/pkg/errors v0.9.1
-	github.com/spf13/cobra v1.4.0
+	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.11.0
-	github.com/stretchr/testify v1.7.1
+	github.com/spf13/viper v1.8.1
+	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/pretty v1.2.0
-	github.com/zalando/go-keyring v0.2.1
-	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5
-	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
-	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a
-	golang.org/x/term v0.0.0-20220411215600-e5f449aeb171
+	github.com/zalando/go-keyring v0.1.1
+	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/sys v0.0.0-20220503163025-988cb79eb6c6
+	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
 	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
-	github.com/andybalholm/brotli v1.0.4 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
-	github.com/danieljoos/wincred v1.1.2 // indirect
-	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
-	github.com/godbus/dbus/v5 v5.1.0 // indirect
-	github.com/golang/snappy v0.0.4 // indirect
-	github.com/klauspost/compress v1.15.4 // indirect
-	github.com/lestrrat-go/blackmagic v1.0.1 // indirect
-	github.com/lestrrat-go/iter v1.0.2 // indirect
+	github.com/andybalholm/brotli v1.0.1 // indirect
+	github.com/fatih/color v1.13.0 // indirect
+	github.com/golang/snappy v0.0.3 // indirect
+	github.com/klauspost/compress v1.11.9 // indirect
+	github.com/klauspost/pgzip v1.2.5 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
-	github.com/microcosm-cc/bluemonday v1.0.18 // indirect
-	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/muesli/termenv v0.11.0 // indirect
-	github.com/nwaples/rardecode v1.1.3 // indirect
-	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
-	github.com/pierrec/lz4/v4 v4.1.14 // indirect
-	github.com/spf13/cast v1.5.0 // indirect
-	github.com/subosito/gotenv v1.3.0 // indirect
+	github.com/pierrec/lz4/v4 v4.1.3 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
-	github.com/yuin/goldmark v1.4.12 // indirect
-	golang.org/x/crypto v0.0.0-20220518034528-6f7dac969898 // indirect
-	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2 // indirect
 	golang.org/x/tools v0.1.10 // indirect
-	golang.org/x/xerrors v0.0.0-20220517211312-f3a8303e98df // indirect
-	gopkg.in/yaml.v3 v3.0.0 // indirect
+	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
+	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )
