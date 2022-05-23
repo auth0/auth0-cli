@@ -18,7 +18,7 @@ require (
 	github.com/lestrrat-go/jwx v1.2.25
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/mattn/go-isatty v0.0.14
-	github.com/mholt/archiver/v3 v3.5.0
+	github.com/mholt/archiver/v3 v3.5.1
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pkg/browser v0.0.0-20210706143420-7d21f8c997e2
 	github.com/pkg/errors v0.9.1
@@ -36,9 +36,7 @@ require (
 )
 
 require (
-	github.com/andybalholm/brotli v1.0.1 // indirect
 	github.com/klauspost/compress v1.11.9 // indirect
-	github.com/klauspost/pgzip v1.2.5 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/pierrec/lz4/v4 v4.1.3 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
