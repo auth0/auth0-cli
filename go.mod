@@ -8,7 +8,7 @@ require (
 	github.com/briandowns/spinner v1.18.1
 	github.com/charmbracelet/glamour v0.5.0
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/getsentry/sentry-go v0.11.0
+	github.com/getsentry/sentry-go v0.13.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.6
 	github.com/google/uuid v1.3.0
@@ -45,6 +45,5 @@ require (
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/pierrec/lz4/v4 v4.1.3 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
-	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )
