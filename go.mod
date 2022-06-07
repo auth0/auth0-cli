@@ -25,7 +25,7 @@ require (
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.12.0
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.7.2
 	github.com/tidwall/pretty v1.2.0
 	github.com/zalando/go-keyring v0.1.1
 	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5
@@ -40,5 +40,4 @@ require (
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/pierrec/lz4/v4 v4.1.3 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
-	golang.org/x/text v0.3.7
 )
