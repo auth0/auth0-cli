@@ -6,8 +6,8 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
-	"github.com/spf13/cobra"
 	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
 )
 
 // errNoRoles signifies no roles exist in a tenant
@@ -53,6 +53,10 @@ func rolesCmd(cli *cli) *cobra.Command {
 }
 
 func listRolesCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		Number int
+	}
+
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
@@ -61,22 +65,36 @@ func listRolesCmd(cli *cli) *cobra.Command {
 		Long: `List your existing roles. To create one try:
 auth0 roles create`,
 		Example: `auth0 roles list
-auth0 roles ls`,
+auth0 roles ls
+auth0 roles ls -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var list *management.RoleList
-
-			if err := ansi.Waiting(func() error {
-				var err error
-				list, err = cli.api.Role.List()
-				return err
-			}); err != nil {
+			list, err := getWithPagination(
+				cmd.Context(),
+				inputs.Number,
+				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
+					res, apiErr := cli.api.Role.List(opts...)
+					if apiErr != nil {
+						return nil, false, apiErr
+					}
+					var output []interface{}
+					for _, role := range res.Roles {
+						output = append(output, role)
+					}
+					return output, res.HasNext(), nil
+				})
+			if err != nil {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
-
-			cli.renderer.RoleList(list.Roles)
+			var typedList []*management.Role
+			for _, item := range list {
+				typedList = append(typedList, item.(*management.Role))
+			}
+			cli.renderer.RoleList(typedList)
 			return nil
 		},
 	}
+
+	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
 }
