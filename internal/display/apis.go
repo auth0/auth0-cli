@@ -5,11 +5,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/auth0/go-auth0/management"
+	"golang.org/x/term"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/iostream"
-	"golang.org/x/term"
-	"github.com/auth0/go-auth0/management"
 )
 
 type apiView struct {
@@ -71,6 +72,7 @@ func (r *Renderer) ApiList(apis []*management.ResourceServer) {
 	resource := "APIs"
 
 	r.Heading(resource)
+	r.Heading(fmt.Sprintf("%s (%d)", resource, len(apis)))
 
 	if len(apis) == 0 {
 		r.EmptyState(resource)
