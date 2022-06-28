@@ -3,8 +3,9 @@ package display
 import (
 	"fmt"
 
-	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/go-auth0/management"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
 )
 
 type roleView struct {
@@ -41,7 +42,7 @@ func (v *roleView) Object() interface{} {
 func (r *Renderer) RoleList(roles []*management.Role) {
 	resource := "roles"
 
-	r.Heading(fmt.Sprintf("%s (%v)", resource, len(roles)))
+	r.Heading(fmt.Sprintf("%s (%d)", resource, len(roles)))
 
 	if len(roles) == 0 {
 		r.EmptyState(resource)

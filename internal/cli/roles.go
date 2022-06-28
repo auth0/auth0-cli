@@ -4,10 +4,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
 // errNoRoles signifies no roles exist in a tenant
@@ -72,24 +73,29 @@ auth0 roles ls -n 100`,
 				cmd.Context(),
 				inputs.Number,
 				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
-					res, apiErr := cli.api.Role.List(opts...)
-					if apiErr != nil {
-						return nil, false, apiErr
+					roleList, err := cli.api.Role.List(opts...)
+					if err != nil {
+						return nil, false, err
 					}
-					var output []interface{}
-					for _, role := range res.Roles {
-						output = append(output, role)
+
+					for _, role := range roleList.Roles {
+						result = append(result, role)
 					}
-					return output, res.HasNext(), nil
-				})
+
+					return result, roleList.HasNext(), nil
+				},
+			)
 			if err != nil {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
-			var typedList []*management.Role
+
+			var roles []*management.Role
 			for _, item := range list {
-				typedList = append(typedList, item.(*management.Role))
+				roles = append(roles, item.(*management.Role))
 			}
-			cli.renderer.RoleList(typedList)
+
+			cli.renderer.RoleList(roles)
+
 			return nil
 		},
 	}
