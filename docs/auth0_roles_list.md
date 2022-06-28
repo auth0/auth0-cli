@@ -19,6 +19,7 @@ auth0 roles list [flags]
 ```
 auth0 roles list
 auth0 roles ls
+auth0 roles ls -n 100
 ```
 
 ### Options
