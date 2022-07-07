@@ -12,8 +12,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/spf13/cobra"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
+	"github.com/auth0/auth0-cli/internal/buildinfo"
 )
 
 const (
@@ -125,7 +128,7 @@ func generateEventName(command string, action string) string {
 	commands := strings.Split(command, " ")
 
 	for i := range commands {
-		commands[i] = strings.Title(commands[i])
+		commands[i] = cases.Title(language.English).String(commands[i])
 	}
 
 	if len(commands) == 1 { // the root command
