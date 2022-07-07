@@ -6,11 +6,12 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/prompt"
-	"github.com/spf13/cobra"
 	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
 var (
@@ -89,6 +90,10 @@ func scopesCmd(cli *cli) *cobra.Command {
 }
 
 func listApisCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		Number int
+	}
+
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
@@ -97,22 +102,41 @@ func listApisCmd(cli *cli) *cobra.Command {
 		Long: `List your existing APIs. To create one try:
 auth0 apis create`,
 		Example: `auth0 apis list
-auth0 apis ls`,
+auth0 apis ls
+auth0 apis ls -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var list *management.ResourceServerList
+			list, err := getWithPagination(
+				cmd.Context(),
+				inputs.Number,
+				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
+					apiList, err := cli.api.ResourceServer.List(opts...)
+					if err != nil {
+						return nil, false, err
+					}
 
-			if err := ansi.Waiting(func() error {
-				var err error
-				list, err = cli.api.ResourceServer.List()
-				return err
-			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred: %w", err)
+					for _, api := range apiList.ResourceServers {
+						result = append(result, api)
+					}
+
+					return result, apiList.HasNext(), nil
+				},
+			)
+			if err != nil {
+				return fmt.Errorf("An unexpected error occurred while listing apis: %w", err)
 			}
 
-			cli.renderer.ApiList(list.ResourceServers)
+			var apis []*management.ResourceServer
+			for _, item := range list {
+				apis = append(apis, item.(*management.ResourceServer))
+			}
+
+			cli.renderer.ApiList(apis)
+
 			return nil
 		},
 	}
+
+	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
 }
