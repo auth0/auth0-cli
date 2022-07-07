@@ -58,7 +58,7 @@ func Execute() {
 			// panic for so we have less surprises. For
 			// non-developers, we'll swallow the panics.
 			if instrumentation.ReportException(err) {
-				fmt.Println(panicMessage)
+				fmt.Print(panicMessage)
 			} else {
 				panic(v)
 			}
