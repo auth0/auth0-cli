@@ -9,20 +9,23 @@ jobs:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
 
     steps:
-      - name: Set up Go 1.16
-        uses: actions/setup-go@v1
+      - name: Set up Go 1.18
+        uses: actions/setup-go@v3
         with:
-          go-version: 1.16
+          go-version: 1.18
         id: go
 
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
-
-      - name: Install golanglint-ci
-        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.37.1
+        uses: actions/checkout@v3
 
       - name: lint
-        run: PATH=$(go env GOPATH)/bin:$PATH make lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.46.2
+          # Some linters are disabled because of go1.18.
+          # We can track the evolution of go1.18 support at
+          # https://github.com/golangci/golangci-lint/issues/2649.
+          args: --go 1.17 -v --allow-parallel-runners
 
       - name: run unit tests
         run: PATH=$(go env GOPATH)/bin:$PATH make test
@@ -34,14 +37,14 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
 
     steps:
-      - name: Set up Go 1.16
-        uses: actions/setup-go@v1
+      - name: Set up Go 1.18
+        uses: actions/setup-go@v3
         with:
-          go-version: 1.16
+          go-version: 1.18
         id: go
 
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: run integration tests
         shell: bash
@@ -62,17 +65,14 @@ jobs:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
 
     steps:
-      - name: Set up Go 1.16
-        uses: actions/setup-go@v1
+      - name: Set up Go 1.18
+        uses: actions/setup-go@v3
         with:
-          go-version: 1.16
+          go-version: 1.18
         id: go
 
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
-
-      - name: Install golanglint-ci
-        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.37.1
+        uses: actions/checkout@v3
 
       - name: ci
         run: PATH=$(go env GOPATH)/bin:$PATH make build-all-platforms
