@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.5
-	github.com/auth0/go-auth0 v0.8.0
+	github.com/auth0/go-auth0 v0.9.0
 	github.com/briandowns/spinner v1.18.1
 	github.com/charmbracelet/glamour v0.5.0
 	github.com/fsnotify/fsnotify v1.5.4
