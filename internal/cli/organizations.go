@@ -198,10 +198,11 @@ auth0 orgs create --n myorganization -d "My Organization" -m "KEY=value" -m "OTH
 				return err
 			}
 
+			orgMetadata := apiOrganizationMetadataFor(inputs.Metadata)
 			o := &management.Organization{
 				Name:        &inputs.Name,
 				DisplayName: &inputs.DisplayName,
-				Metadata:    apiOrganizationMetadataFor(inputs.Metadata),
+				Metadata:    &orgMetadata,
 			}
 
 			isLogoURLSet := len(inputs.LogoURL) > 0
@@ -341,7 +342,8 @@ auth0 orgs update <id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_v
 			if len(inputs.Metadata) == 0 {
 				o.Metadata = current.Metadata
 			} else {
-				o.Metadata = apiOrganizationMetadataFor(inputs.Metadata)
+				orgMetadata := apiOrganizationMetadataFor(inputs.Metadata)
+				o.Metadata = &orgMetadata
 			}
 
 			if err = ansi.Waiting(func() error {
