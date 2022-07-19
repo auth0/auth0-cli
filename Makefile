@@ -67,7 +67,7 @@ integration-cleanup:
 	./integration/test-cleanup.sh
 .PHONY: integration-cleanup
 
-integration: build $(GOBIN)/commander 
+integration: build $(GOBIN)/commander
 	$(MAKE) run-integration; \
 	ret=$$?; \
 	$(MAKE) integration-cleanup; \
@@ -82,6 +82,6 @@ build-doc:
 
 # Start the doc site locally for testing purposes only
 # requires https://jekyllrb.com/docs/installation/
-start-doc: build-doc 
+start-doc: build-doc
 	@cd docs && bundle exec jekyll serve
 .PHONY: start-doc
