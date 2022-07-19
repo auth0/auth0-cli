@@ -116,52 +116,38 @@ auth0 orgs create`,
 auth0 orgs ls
 auth0 orgs ls -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			orgs, err := cli.getOrgsWithSpinner(cmd.Context(), inputs.Number)
+			list, err := getWithPagination(
+				cmd.Context(),
+				inputs.Number,
+				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
+					res, err := cli.api.Organization.List(opts...)
+					if err != nil {
+						return nil, false, err
+					}
+
+					for _, item := range res.Organizations {
+						result = append(result, item)
+					}
+
+					return result, res.HasNext(), nil
+				},
+			)
 			if err != nil {
-				return err
+				return fmt.Errorf("An unexpected error occurred: %w", err)
+			}
+
+			var orgs []*management.Organization
+			for _, item := range list {
+				orgs = append(orgs, item.(*management.Organization))
 			}
 
 			cli.renderer.OrganizationList(orgs)
+
 			return nil
 		},
 	}
 	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 	return cmd
-}
-
-func (cli *cli) getOrgsWithSpinner(context context.Context, number int) ([]management.Organization, error) {
-	var orgs []management.Organization
-	err := ansi.Spinner("Getting organizations", func() error {
-		var errInner error
-		orgs, errInner = cli.getOrgs(context, number)
-		return errInner
-	})
-	return orgs, err
-}
-
-func (cli *cli) getOrgs(context context.Context, number int) ([]management.Organization, error) {
-	list, err := getWithPagination(
-		context,
-		number,
-		func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
-			orgs, apiErr := cli.api.Organization.List(opts...)
-			if apiErr != nil {
-				return nil, false, apiErr
-			}
-			var output []interface{}
-			for _, org := range orgs.Organizations {
-				output = append(output, *org)
-			}
-			return output, orgs.HasNext(), nil
-		})
-	if err != nil {
-		return nil, fmt.Errorf("Unable to list organizations: %w", err)
-	}
-	var typedList []management.Organization
-	for _, item := range list {
-		typedList = append(typedList, item.(management.Organization))
-	}
-	return typedList, nil
 }
 
 func showOrganizationCmd(cli *cli) *cobra.Command {

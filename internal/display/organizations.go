@@ -44,7 +44,7 @@ func (v *organizationView) Object() interface{} {
 	return v.raw
 }
 
-func (r *Renderer) OrganizationList(organizations []management.Organization) {
+func (r *Renderer) OrganizationList(organizations []*management.Organization) {
 	resource := "organizations"
 
 	r.Heading(resource)
@@ -57,7 +57,7 @@ func (r *Renderer) OrganizationList(organizations []management.Organization) {
 
 	var res []View
 	for _, o := range organizations {
-		res = append(res, makeOrganizationView(&o, r.MessageWriter))
+		res = append(res, makeOrganizationView(o, r.MessageWriter))
 	}
 
 	r.Results(res)
