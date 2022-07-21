@@ -101,6 +101,10 @@ func organizationsCmd(cli *cli) *cobra.Command {
 }
 
 func listOrganizationsCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		Number int
+	}
+
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
@@ -109,23 +113,40 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
 		Long: `List your existing organizations. To create one try:
 auth0 orgs create`,
 		Example: `auth0 orgs list
-auth0 orgs ls`,
+auth0 orgs ls
+auth0 orgs ls -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var list *management.OrganizationList
+			list, err := getWithPagination(
+				cmd.Context(),
+				inputs.Number,
+				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
+					res, err := cli.api.Organization.List(opts...)
+					if err != nil {
+						return nil, false, err
+					}
 
-			if err := ansi.Waiting(func() error {
-				var err error
-				list, err = cli.api.Organization.List()
-				return err
-			}); err != nil {
+					for _, item := range res.Organizations {
+						result = append(result, item)
+					}
+
+					return result, res.HasNext(), nil
+				},
+			)
+			if err != nil {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
 
-			cli.renderer.OrganizationList(list.Organizations)
+			var orgs []*management.Organization
+			for _, item := range list {
+				orgs = append(orgs, item.(*management.Organization))
+			}
+
+			cli.renderer.OrganizationList(orgs)
+
 			return nil
 		},
 	}
-
+	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 	return cmd
 }
 
@@ -139,7 +160,7 @@ func showOrganizationCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an organization",
 		Long:  "Show an organization.",
-		Example: `auth0 orgs show 
+		Example: `auth0 orgs show
 auth0 orgs show <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -184,7 +205,7 @@ func createOrganizationCmd(cli *cli) *cobra.Command {
 		Args:  cobra.NoArgs,
 		Short: "Create a new organization",
 		Long:  "Create a new organization.",
-		Example: `auth0 orgs create 
+		Example: `auth0 orgs create
 auth0 orgs create --name myorganization
 auth0 orgs create --n myorganization --display "My Organization"
 auth0 orgs create --n myorganization -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
@@ -266,7 +287,7 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an organization",
 		Long:  "Update an organization.",
-		Example: `auth0 orgs update <id> 
+		Example: `auth0 orgs update <id>
 auth0 orgs update <id> --display "My Organization"
 auth0 orgs update <id> -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
 auth0 orgs update <id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
@@ -376,7 +397,7 @@ func deleteOrganizationCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete an organization",
 		Long:  "Delete an organization.",
-		Example: `auth0 orgs delete 
+		Example: `auth0 orgs delete
 auth0 orgs delete <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -484,6 +505,7 @@ auth0 orgs members ls <id>`,
 			return nil
 		},
 	}
+	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 	return cmd
 }
 
@@ -538,6 +560,7 @@ auth0 orgs roles ls <id>`,
 			return nil
 		},
 	}
+	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 	return cmd
 }
 
@@ -599,6 +622,7 @@ auth0 orgs roles members list <org id> --role-id role`,
 		},
 	}
 	roleIdentifier.RegisterString(cmd, &inputs.RoleID, "")
+	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 	return cmd
 }
 
