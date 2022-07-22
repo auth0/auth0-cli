@@ -43,12 +43,18 @@ func loginCmd(cli *cli) *cobra.Command {
 // by showing the login instructions, opening the browser.
 // Use `expired` to run the login from other commands setup:
 // this will only affect the messages.
-func RunLogin(ctx context.Context, cli *cli, expired bool) (tenant, error) {
+func RunLogin(ctx context.Context, cli *cli, expired bool) (Tenant, error) {
+	message := fmt.Sprintf(
+		"%s\n\n%s\n\n",
+		"✪ Welcome to the Auth0 CLI 🎊",
+		"If you don't have an account, please go to https://auth0.com/signup.",
+	)
+
 	if expired {
-		cli.renderer.Warnf("Please sign in to re-authorize the CLI.")
+		message = "Please sign in to re-authorize the CLI."
+		cli.renderer.Warnf(message)
 	} else {
-		fmt.Print("✪ Welcome to the Auth0 CLI 🎊\n\n")
-		fmt.Print("If you don't have an account, please go to https://auth0.com/signup\n\n")
+		cli.renderer.Output(message)
 	}
 
 	state, err := cli.authenticator.Start(ctx)
@@ -56,70 +62,84 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) (tenant, error) {
 		return Tenant{}, fmt.Errorf("Could not start the authentication process: %w.", err)
 	}
 
-	fmt.Printf("Your Device Confirmation code is: %s\n\n", ansi.Bold(state.UserCode))
+	message = fmt.Sprintf("Your device confirmation code is: %s\n\n", ansi.Bold(state.UserCode))
+	cli.renderer.Output(message)
 
 	if cli.noInput {
-		cli.renderer.Infof("Open the following URL in a browser: %s\n", ansi.Green(state.VerificationURI))
+		message = "Open the following URL in a browser: %s\n"
+		cli.renderer.Infof(message, ansi.Green(state.VerificationURI))
 	} else {
-		cli.renderer.Infof("%s to open the browser to log in or %s to quit...", ansi.Green("Press Enter"), ansi.Red("^C"))
-		fmt.Scanln()
-		err = browser.OpenURL(state.VerificationURI)
+		message = "%s to open the browser to log in or %s to quit..."
+		cli.renderer.Infof(message, ansi.Green("Press Enter"), ansi.Red("^C"))
 
-		if err != nil {
-			cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s.", state.VerificationURI)
+		if _, err = fmt.Scanln(); err != nil {
+			return Tenant{}, err
+		}
+
+		if err = browser.OpenURL(state.VerificationURI); err != nil {
+			message = "Couldn't open the URL, please do it manually: %s."
+			cli.renderer.Warnf(message, state.VerificationURI)
 		}
 	}
 
-	var res auth.Result
-	err = ansi.Spinner("Waiting for login to complete in browser", func() error {
-		res, err = cli.authenticator.Wait(ctx, state)
+	var result auth.Result
+	err = ansi.Spinner("Waiting for the login to complete in the browser", func() error {
+		result, err = cli.authenticator.Wait(ctx, state)
 		return err
 	})
-
 	if err != nil {
 		return Tenant{}, fmt.Errorf("login error: %w", err)
 	}
 
-	fmt.Print("\n")
+	cli.renderer.Newline()
 	cli.renderer.Infof("Successfully logged in.")
-	cli.renderer.Infof("Tenant: %s\n", res.Domain)
+	cli.renderer.Infof("Tenant: %s", result.Domain)
+	cli.renderer.Newline()
 
-	// store the refresh token
+	// Store the refresh token.
 	secretsStore := &auth.Keyring{}
-	err = secretsStore.Set(auth.SecretsNamespace, res.Domain, res.RefreshToken)
+	err = secretsStore.Set(auth.SecretsNamespace, result.Domain, result.RefreshToken)
 	if err != nil {
-		// log the error but move on
-		cli.renderer.Warnf("Could not store the refresh token locally, please expect to login again once your access token expired. See https://github.com/auth0/auth0-cli/blob/main/KNOWN-ISSUES.md.")
+		message = "Could not store the refresh token locally, " +
+			"please expect to login again once your access token expired. See %s."
+		cli.renderer.Warnf(message, "https://github.com/auth0/auth0-cli/blob/main/KNOWN-ISSUES.md")
 	}
 
-	t := tenant{
-		Name:        res.Tenant,
-		Domain:      res.Domain,
-		AccessToken: res.AccessToken,
+	tenant := Tenant{
+		Name:        result.Tenant,
+		Domain:      result.Domain,
+		AccessToken: result.AccessToken,
 		ExpiresAt: time.Now().Add(
-			time.Duration(res.ExpiresIn) * time.Second,
+			time.Duration(result.ExpiresIn) * time.Second,
 		),
 		Scopes: auth.RequiredScopes(),
 	}
-	err = cli.addTenant(t)
+
+	err = cli.addTenant(tenant)
 	if err != nil {
-		return tenant{}, fmt.Errorf("Could not add tenant to config: %w", err)
+		return Tenant{}, fmt.Errorf("Failed to add the tenant to the config: %w", err)
 	}
 
 	if err := checkInstallID(cli); err != nil {
-		return tenant{}, fmt.Errorf("Could not update config: %w", err)
+		return Tenant{}, fmt.Errorf("Failed to update the config: %w", err)
 	}
 
-	if cli.config.DefaultTenant != res.Domain {
-		promptText := fmt.Sprintf("Your default tenant is %s. Do you want to change it to %s?", cli.config.DefaultTenant, res.Domain)
-		if confirmed := prompt.Confirm(promptText); !confirmed {
-			return tenant{}, nil
+	if cli.config.DefaultTenant != result.Domain {
+		message = fmt.Sprintf(
+			"Your default tenant is %s. Do you want to change it to %s?",
+			cli.config.DefaultTenant,
+			result.Domain,
+		)
+		if confirmed := prompt.Confirm(message); !confirmed {
+			return Tenant{}, nil
 		}
-		cli.config.DefaultTenant = res.Domain
+
+		cli.config.DefaultTenant = result.Domain
 		if err := cli.persistConfig(); err != nil {
-			cli.renderer.Warnf("Could not set the default tenant, please try 'auth0 tenants use %s': %w", res.Domain, err)
+			message = "Failed to set the default tenant, please try 'auth0 tenants use %s' instead: %w"
+			cli.renderer.Warnf(message, result.Domain, err)
 		}
 	}
 
-	return t, nil
+	return tenant, nil
 }

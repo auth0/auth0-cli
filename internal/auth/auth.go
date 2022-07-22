@@ -90,15 +90,16 @@ func (s *State) IntervalDuration() time.Duration {
 	return time.Duration(s.Interval+waitThresholdInSeconds) * time.Second
 }
 
-// Start kicks-off the device authentication flow
-// by requesting a device code from Auth0,
-// The returned state contains the URI for the next step of the flow.
+// Start kicks-off the device authentication flow by requesting
+// a device code from Auth0. The returned state contains the
+// URI for the next step of the flow.
 func (a *Authenticator) Start(ctx context.Context) (State, error) {
-	s, err := a.getDeviceCode(ctx)
+	state, err := a.getDeviceCode(ctx)
 	if err != nil {
 		return State{}, fmt.Errorf("cannot get device code: %w", err)
 	}
-	return s, nil
+
+	return state, nil
 }
 
 // Wait waits until the user is logged in on the browser.
