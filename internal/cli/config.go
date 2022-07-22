@@ -6,10 +6,11 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2/clientcredentials"
+
+	"github.com/auth0/auth0-cli/internal/auth"
 )
 
 var desiredInputs = `Config init is intended for non-interactive use, 
@@ -101,7 +102,7 @@ func initCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			t := tenant{
+			t := Tenant{
 				Name:        p.clientDomain,
 				Domain:      p.clientDomain,
 				AccessToken: token.AccessToken,

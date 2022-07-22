@@ -15,17 +15,18 @@ import (
 	"sync"
 	"time"
 
+	"github.com/auth0/go-auth0/management"
+	"github.com/google/uuid"
+	"github.com/lestrrat-go/jwx/jwt"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+
 	"github.com/auth0/auth0-cli/internal/analytics"
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/iostream"
-	"github.com/google/uuid"
-	"github.com/lestrrat-go/jwx/jwt"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"github.com/auth0/go-auth0/management"
 )
 
 const (
@@ -38,12 +39,13 @@ const (
 type config struct {
 	InstallID     string            `json:"install_id,omitempty"`
 	DefaultTenant string            `json:"default_tenant"`
-	Tenants       map[string]tenant `json:"tenants"`
+	Tenants       map[string]Tenant `json:"tenants"`
 }
 
-// tenant is the cli's concept of an auth0 tenant. The fields are tailor fit
-// specifically for interacting with the management API.
-type tenant struct {
+// Tenant is the cli's concept of an auth0 tenant.
+// The fields are tailor fit specifically for
+// interacting with the management API.
+type Tenant struct {
 	Name         string         `json:"name"`
 	Domain       string         `json:"domain"`
 	AccessToken  string         `json:"access_token,omitempty"`
@@ -51,9 +53,8 @@ type tenant struct {
 	ExpiresAt    time.Time      `json:"expires_at"`
 	Apps         map[string]app `json:"apps,omitempty"`
 	DefaultAppID string         `json:"default_app_id,omitempty"`
-
-	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
+	ClientID     string         `json:"client_id"`
+	ClientSecret string         `json:"client_secret"`
 }
 
 type app struct {
@@ -164,10 +165,10 @@ func (c *cli) setup(ctx context.Context) error {
 // The tenant access token needs a refresh if:
 // 1. the tenant scopes are different than the currently required scopes.
 // 2. the access token is expired.
-func (c *cli) prepareTenant(ctx context.Context) (tenant, error) {
+func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 	t, err := c.getTenant()
 	if err != nil {
-		return tenant{}, err
+		return Tenant{}, err
 	}
 
 	if t.ClientID != "" && t.ClientSecret != "" {
@@ -177,7 +178,7 @@ func (c *cli) prepareTenant(ctx context.Context) (tenant, error) {
 	if t.AccessToken == "" || scopesChanged(t) {
 		t, err = RunLogin(ctx, c, true)
 		if err != nil {
-			return tenant{}, err
+			return Tenant{}, err
 		}
 	} else if isExpired(t.ExpiresAt, accessTokenExpThreshold) {
 		// check if the stored access token is expired:
@@ -197,7 +198,7 @@ func (c *cli) prepareTenant(ctx context.Context) (tenant, error) {
 			c.renderer.Errorf("failed to renew access token, %s", err)
 			t, err = RunLogin(ctx, c, true)
 			if err != nil {
-				return tenant{}, err
+				return Tenant{}, err
 			}
 		} else {
 			// persist the updated tenant with renewed access token
@@ -208,7 +209,7 @@ func (c *cli) prepareTenant(ctx context.Context) (tenant, error) {
 
 			err = c.addTenant(t)
 			if err != nil {
-				return tenant{}, err
+				return Tenant{}, err
 			}
 		}
 	}
@@ -223,7 +224,7 @@ func isExpired(t time.Time, threshold time.Duration) bool {
 
 // scopesChanged compare the tenant scopes
 // with the currently required scopes.
-func scopesChanged(t tenant) bool {
+func scopesChanged(t Tenant) bool {
 	want := auth.RequiredScopes()
 	got := t.Scopes
 
@@ -249,14 +250,14 @@ func scopesChanged(t tenant) bool {
 
 // getTenant fetches the default tenant configured (or the tenant specified via
 // the --tenant flag).
-func (c *cli) getTenant() (tenant, error) {
+func (c *cli) getTenant() (Tenant, error) {
 	if err := c.init(); err != nil {
-		return tenant{}, err
+		return Tenant{}, err
 	}
 
 	t, ok := c.config.Tenants[c.tenant]
 	if !ok {
-		return tenant{}, fmt.Errorf("Unable to find tenant: %s; run 'auth0 tenants use' to see your configured tenants or run 'auth0 login' to configure a new tenant", c.tenant)
+		return Tenant{}, fmt.Errorf("Unable to find tenant: %s; run 'auth0 tenants use' to see your configured tenants or run 'auth0 login' to configure a new tenant", c.tenant)
 	}
 
 	if t.Apps == nil {
@@ -267,12 +268,12 @@ func (c *cli) getTenant() (tenant, error) {
 }
 
 // listTenants fetches all of the configured tenants
-func (c *cli) listTenants() ([]tenant, error) {
+func (c *cli) listTenants() ([]Tenant, error) {
 	if err := c.init(); err != nil {
-		return []tenant{}, err
+		return []Tenant{}, err
 	}
 
-	tenants := make([]tenant, 0, len(c.config.Tenants))
+	tenants := make([]Tenant, 0, len(c.config.Tenants))
 	for _, t := range c.config.Tenants {
 		tenants = append(tenants, t)
 	}
@@ -282,7 +283,7 @@ func (c *cli) listTenants() ([]tenant, error) {
 
 // addTenant assigns an existing, or new tenant. This is expected to be called
 // after a login has completed.
-func (c *cli) addTenant(ten tenant) error {
+func (c *cli) addTenant(ten Tenant) error {
 	// init will fail here with a `no tenant found` error if we're logging
 	// in for the first time and that's expected.
 	_ = c.init()
@@ -296,7 +297,7 @@ func (c *cli) addTenant(ten tenant) error {
 	// If we're dealing with an empty file, we'll need to initialize this
 	// map.
 	if c.config.Tenants == nil {
-		c.config.Tenants = map[string]tenant{}
+		c.config.Tenants = map[string]Tenant{}
 	}
 
 	c.config.Tenants[ten.Domain] = ten
@@ -316,7 +317,7 @@ func (c *cli) removeTenant(ten string) error {
 	// If we're dealing with an empty file, we'll need to initialize this
 	// map.
 	if c.config.Tenants == nil {
-		c.config.Tenants = map[string]tenant{}
+		c.config.Tenants = map[string]Tenant{}
 	}
 
 	delete(c.config.Tenants, ten)

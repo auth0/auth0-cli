@@ -53,7 +53,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) (tenant, error) {
 
 	state, err := cli.authenticator.Start(ctx)
 	if err != nil {
-		return tenant{}, fmt.Errorf("Could not start the authentication process: %w.", err)
+		return Tenant{}, fmt.Errorf("Could not start the authentication process: %w.", err)
 	}
 
 	fmt.Printf("Your Device Confirmation code is: %s\n\n", ansi.Bold(state.UserCode))
@@ -77,7 +77,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) (tenant, error) {
 	})
 
 	if err != nil {
-		return tenant{}, fmt.Errorf("login error: %w", err)
+		return Tenant{}, fmt.Errorf("login error: %w", err)
 	}
 
 	fmt.Print("\n")
