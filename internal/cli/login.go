@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/browser"
+	"github.com/spf13/cobra"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/prompt"
-	"github.com/pkg/browser"
-	"github.com/spf13/cobra"
 )
 
 func loginCmd(cli *cli) *cobra.Command {
@@ -20,11 +21,13 @@ func loginCmd(cli *cli) *cobra.Command {
 		Long:  "Sign in to your Auth0 account and authorize the CLI to access the Management API.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			_, err := RunLogin(ctx, cli, false)
-			if err == nil {
-				cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
+			if _, err := RunLogin(ctx, cli, false); err != nil {
+				return err
 			}
-			return err
+
+			cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
+
+			return nil
 		},
 	}
 
