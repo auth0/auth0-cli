@@ -47,7 +47,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) (Tenant, error) {
 	message := fmt.Sprintf(
 		"%s\n\n%s\n\n",
 		"✪ Welcome to the Auth0 CLI 🎊",
-		"If you don't have an account, please go to https://auth0.com/signup.",
+		"If you don't have an account, please create one here: https://auth0.com/signup.",
 	)
 
 	if expired {
@@ -59,7 +59,7 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) (Tenant, error) {
 
 	state, err := cli.authenticator.Start(ctx)
 	if err != nil {
-		return Tenant{}, fmt.Errorf("Could not start the authentication process: %w.", err)
+		return Tenant{}, fmt.Errorf("Failed to start the authentication process: %w.", err)
 	}
 
 	message = fmt.Sprintf("Your device confirmation code is: %s\n\n", ansi.Bold(state.UserCode))
