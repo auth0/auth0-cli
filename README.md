@@ -8,6 +8,20 @@ Build, test, troubleshoot and manage your integration with **[Auth0](http://auth
 
 ![demo](./demo.gif)
 
+-------------------------------------
+
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Customization](#customization)
+- [Anonymous Analytics](#anonymous-analytics)
+- [Contributing](#contributing)
+- [Author](#author)
+
+-------------------------------------
+
 ## Features
 
 ### 🧪 Test the login flow at any time
@@ -98,6 +112,7 @@ auth0 [command] --help
 * [auth0 actions](https://auth0.github.io/auth0-cli/auth0_actions.html)	 - Manage resources for actions
 * [auth0 apis](https://auth0.github.io/auth0-cli/auth0_apis.html)	 - Manage resources for APIs
 * [auth0 apps](https://auth0.github.io/auth0-cli/auth0_apps.html)	 - Manage resources for applications
+* [auth0 attack-protection](https://auth0.github.io/auth0-cli/auth0_attack_protection.html)	 - Manage attack protection settings
 * [auth0 branding](https://auth0.github.io/auth0-cli/auth0_branding.html)	 - Manage branding options
 * [auth0 completion](https://auth0.github.io/auth0-cli/auth0_completion.html)	 - Setup autocomplete features for this CLI on your terminal
 * [auth0 ips](https://auth0.github.io/auth0-cli/auth0_ips.html)	 - Manage blocked IP addresses
@@ -115,11 +130,29 @@ auth0 [command] --help
 ### Onboarding Journey
 
 Following these instructions will give you a sense of what's possible with the
-Auth0 CLI. To start, you will have to login:
+Auth0 CLI. To start, you will have to log in:
 
 #### Login
 
+To log in to the Auth0 public cloud `auth0.auth0.com` simply run:
+
 ```bash
+auth0 login
+```
+
+To log in to an Auth0 private cloud please ensure you have a native application type created
+with the Device Code grant type enabled and set the following env variables:
+
+- `AUTH0_AUDIENCE` - The audience of the Auth0 Management API (System API) to use.
+- `AUTH0_CLIENT_ID` - Client ID of a native application configured with the **Device Code** grant type.
+- `AUTH0_DEVICE_CODE_ENDPOINT` - Device Authorization URL, you can find this under **Advanced Settings -> Endpoints**.
+- `AUTH0_OAUTH_TOKEN_ENDPOINT` - OAuth Token URL, you can find this under **Advanced Settings -> Endpoints**.
+
+```bash
+AUTH0_AUDIENCE="https://my_org.example.com/api/v2/" \
+AUTH0_DEVICE_CODE_ENDPOINT="https://my_org.example.com/oauth/device/code" \
+AUTH0_OAUTH_TOKEN_ENDPOINT="https://my_org.example.com/oauth/token" \
+AUTH0_CLIENT_ID="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
 auth0 login
 ```
 
@@ -230,16 +263,8 @@ Failed Login	hello	7 minutes ago	N/A	my awesome app
 
 ## Customization
 
-The authenticator of the CLI defaults to the default Auth0 cloud `auth0.auth0.com`. This can be customized for personalized cloud offerings by setting the following env variables:
-
-```
-	AUTH0_AUDIENCE - The audience of the Auth0 Management API (System API) to use.
-	AUTH0_CLIENT_ID - Client ID  of an application configured with the Device Code grant type.
-	AUTH0_DEVICE_CODE_ENDPOINT - Device Authorization URL
-	AUTH0_OAUTH_TOKEN_ENDPOINT - OAuth Token URL
-```
-
-To change the text editor used for editing templates, rules, and actions, set the environment variable `EDITOR`:
+To change the text editor used for editing templates, rules, and actions,
+set the environment variable `EDITOR` to your preferred editor:
 
 `export EDITOR="code -w"`
 
