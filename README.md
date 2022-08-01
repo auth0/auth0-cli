@@ -149,10 +149,10 @@ with the Device Code grant type enabled and set the following env variables:
 - `AUTH0_OAUTH_TOKEN_ENDPOINT` - OAuth Token URL, you can find this under **Advanced Settings -> Endpoints**.
 
 ```bash
-AUTH0_AUDIENCE="https://my_org.example.com/api/v2/" \
-AUTH0_DEVICE_CODE_ENDPOINT="https://my_org.example.com/oauth/device/code" \
-AUTH0_OAUTH_TOKEN_ENDPOINT="https://my_org.example.com/oauth/token" \
-AUTH0_CLIENT_ID="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+AUTH0_AUDIENCE="https://my-org.example.com/api/v2/" \
+AUTH0_DEVICE_CODE_ENDPOINT="https://my-org.example.com/oauth/device/code" \
+AUTH0_OAUTH_TOKEN_ENDPOINT="https://my-org.example.com/oauth/token" \
+AUTH0_CLIENT_ID="xxxxxxxxxxxxxxxx" \
 auth0 login
 ```
 
