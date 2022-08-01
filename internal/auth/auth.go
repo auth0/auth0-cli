@@ -7,10 +7,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/joeshaw/envdecode"
 )
 
 const (
@@ -41,11 +44,12 @@ var requiredScopes = []string{
 	"read:attack_protection", "update:attack_protection",
 }
 
+// Authenticator is used to facilitate the login process.
 type Authenticator struct {
-	Audience           string
-	ClientID           string
-	DeviceCodeEndpoint string
-	OauthTokenEndpoint string
+	Audience           string `env:"AUTH0_AUDIENCE,default=https://*.auth0.com/api/v2/"`
+	ClientID           string `env:"AUTH0_CLIENT_ID,default=2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT"`
+	DeviceCodeEndpoint string `env:"AUTH0_DEVICE_CODE_ENDPOINT,default=https://auth0.auth0.com/oauth/device/code"`
+	OauthTokenEndpoint string `env:"AUTH0_OAUTH_TOKEN_ENDPOINT,default=https://auth0.auth0.com/oauth/token"`
 }
 
 // SecretStore provides access to stored sensitive data.
@@ -73,11 +77,13 @@ type State struct {
 }
 
 // RequiredScopes returns the scopes used for login.
-func RequiredScopes() []string { return requiredScopes }
+func RequiredScopes() []string {
+	return requiredScopes
+}
 
 // RequiredScopesMin returns minimum scopes used for login in integration tests.
 func RequiredScopesMin() []string {
-	min := []string{}
+	var min []string
 	for _, s := range requiredScopes {
 		if s != "offline_access" && s != "openid" {
 			min = append(min, s)
@@ -90,15 +96,28 @@ func (s *State) IntervalDuration() time.Duration {
 	return time.Duration(s.Interval+waitThresholdInSeconds) * time.Second
 }
 
-// Start kicks-off the device authentication flow
-// by requesting a device code from Auth0,
-// The returned state contains the URI for the next step of the flow.
-func (a *Authenticator) Start(ctx context.Context) (State, error) {
-	s, err := a.getDeviceCode(ctx)
-	if err != nil {
-		return State{}, fmt.Errorf("cannot get device code: %w", err)
+// New returns a new instance of Authenticator
+// after decoding its parameters from env vars.
+func New() (*Authenticator, error) {
+	authenticator := Authenticator{}
+
+	if err := envdecode.StrictDecode(&authenticator); err != nil {
+		return nil, fmt.Errorf("failed to decode env vars for authenticator: %w", err)
 	}
-	return s, nil
+
+	return &authenticator, nil
+}
+
+// Start kicks-off the device authentication flow by requesting
+// a device code from Auth0. The returned state contains the
+// URI for the next step of the flow.
+func (a *Authenticator) Start(ctx context.Context) (State, error) {
+	state, err := a.getDeviceCode(ctx)
+	if err != nil {
+		return State{}, fmt.Errorf("failed to get the device code: %w", err)
+	}
+
+	return state, nil
 }
 
 // Wait waits until the user is logged in on the browser.
@@ -110,9 +129,9 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 			return Result{}, ctx.Err()
 		case <-t.C:
 			data := url.Values{
-				"client_id":   {a.ClientID},
-				"grant_type":  {"urn:ietf:params:oauth:grant-type:device_code"},
-				"device_code": {state.DeviceCode},
+				"client_id":   []string{a.ClientID},
+				"grant_type":  []string{"urn:ietf:params:oauth:grant-type:device_code"},
+				"device_code": []string{state.DeviceCode},
 			}
 			r, err := http.PostForm(a.OauthTokenEndpoint, data)
 			if err != nil {
@@ -161,22 +180,48 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 
 func (a *Authenticator) getDeviceCode(ctx context.Context) (State, error) {
 	data := url.Values{
-		"client_id": {a.ClientID},
-		"scope":     {strings.Join(requiredScopes, " ")},
-		"audience":  {a.Audience},
-	}
-	r, err := http.PostForm(a.DeviceCodeEndpoint, data)
-	if err != nil {
-		return State{}, fmt.Errorf("cannot get device code: %w", err)
-	}
-	defer r.Body.Close()
-	var res State
-	err = json.NewDecoder(r.Body).Decode(&res)
-	if err != nil {
-		return State{}, fmt.Errorf("cannot decode response: %w", err)
+		"client_id": []string{a.ClientID},
+		"scope":     []string{strings.Join(requiredScopes, " ")},
+		"audience":  []string{a.Audience},
 	}
 
-	return res, nil
+	request, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		a.DeviceCodeEndpoint,
+		strings.NewReader(data.Encode()),
+	)
+	if err != nil {
+		return State{}, fmt.Errorf("failed to create the request: %w", err)
+	}
+
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return State{}, fmt.Errorf("failed to send the request: %w", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusBadRequest {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
+			return State{}, fmt.Errorf(
+				"received a %d response and failed to read the response",
+				response.StatusCode,
+			)
+		}
+
+		return State{}, fmt.Errorf("received a %d response: %s", response.StatusCode, bodyBytes)
+	}
+
+	var state State
+	err = json.NewDecoder(response.Body).Decode(&state)
+	if err != nil {
+		return State{}, fmt.Errorf("failed to decode the response: %w", err)
+	}
+
+	return state, nil
 }
 
 func parseTenant(accessToken string) (tenant, domain string, err error) {
@@ -188,7 +233,7 @@ func parseTenant(accessToken string) (tenant, domain string, err error) {
 	var payload struct {
 		AUDs []string `json:"aud"`
 	}
-	if err := json.Unmarshal([]byte(v), &payload); err != nil {
+	if err := json.Unmarshal(v, &payload); err != nil {
 		return "", "", err
 	}
 

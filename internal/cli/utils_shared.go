@@ -2,20 +2,20 @@ package cli
 
 import (
 	"crypto/rand"
-	"fmt"
-	"strings"
-
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
+
+	"github.com/auth0/go-auth0/management"
+	"github.com/pkg/browser"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
-	"github.com/pkg/browser"
-	"github.com/auth0/go-auth0/management"
 )
 
 const (
@@ -55,7 +55,7 @@ func BuildOauthTokenParams(clientID, clientSecret, audience string) url.Values {
 }
 
 // runClientCredentialsFlow runs an M2M client credentials flow without opening a browser
-func runClientCredentialsFlow(cli *cli, c *management.Client, clientID string, audience string, tenant tenant) (*authutil.TokenResponse, error) {
+func runClientCredentialsFlow(cli *cli, c *management.Client, clientID string, audience string, tenant Tenant) (*authutil.TokenResponse, error) {
 
 	var tokenResponse *authutil.TokenResponse
 
@@ -111,7 +111,7 @@ func runLoginFlowPreflightChecks(cli *cli, c *management.Client) (abort bool) {
 
 // runLoginFlow initiates a full user-facing login flow, waits for a response
 // and returns the retrieved tokens to the caller when done.
-func runLoginFlow(cli *cli, t tenant, c *management.Client, connName, audience, prompt string, scopes []string, customDomain string) (*authutil.TokenResponse, error) {
+func runLoginFlow(cli *cli, t Tenant, c *management.Client, connName, audience, prompt string, scopes []string, customDomain string) (*authutil.TokenResponse, error) {
 	var tokenResponse *authutil.TokenResponse
 
 	err := ansi.Spinner("Waiting for login flow to complete", func() error {

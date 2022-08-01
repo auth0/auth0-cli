@@ -4,8 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
+
+	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
 var (
@@ -187,7 +188,7 @@ func addTenantCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			t := tenant{
+			t := Tenant{
 				Domain:       inputs.Domain,
 				ClientID:     inputs.ClientID,
 				ClientSecret: inputs.ClientSecret,

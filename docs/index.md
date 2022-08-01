@@ -22,6 +22,7 @@ Supercharge your development workflow.
 * [auth0 actions](auth0_actions.md)	 - Manage resources for actions
 * [auth0 apis](auth0_apis.md)	 - Manage resources for APIs
 * [auth0 apps](auth0_apps.md)	 - Manage resources for applications
+* [auth0 attack-protection](auth0_attack_protection.md)	 - Manage attack protection settings
 * [auth0 branding](auth0_branding.md)	 - Manage branding options
 * [auth0 completion](auth0_completion.md)	 - Setup autocomplete features for this CLI on your terminal
 * [auth0 ips](auth0_ips.md)	 - Manage blocked IP addresses
@@ -35,4 +36,3 @@ Supercharge your development workflow.
 * [auth0 tenants](auth0_tenants.md)	 - Manage configured tenants
 * [auth0 test](auth0_test.md)	 - Try your Universal Login box or get a token
 * [auth0 users](auth0_users.md)	 - Manage resources for users
-
