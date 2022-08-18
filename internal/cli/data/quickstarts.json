@@ -251,9 +251,7 @@
       "org": "auth0-samples",
       "repo": "auth0-xamarin-oidc-samples",
       "branch": "master"
-    }
-  ],
-  "spa": [
+    },
     {
       "name": "Angular",
       "path": "angular",
