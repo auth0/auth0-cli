@@ -18,9 +18,9 @@ auth0 actions create [flags]
 ```
 auth0 actions create 
 auth0 actions create --name myaction
-auth0 actions create --n myaction --trigger post-login
-auth0 actions create --n myaction -t post-login -d "lodash=4.0.0" -d "uuid=8.0.0"
-auth0 actions create --n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=value" -s "SECRET=value
+auth0 actions create -n myaction --trigger post-login
+auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -d "uuid=8.0.0"
+auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=value" -s "SECRET=value
 ```
 
 ### Options
