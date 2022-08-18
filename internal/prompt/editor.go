@@ -132,14 +132,14 @@ func (p *editorPrompt) captureInput(contents []byte, pattern string, infoFn func
 // getDefaultEditor is taken from https://github.com/cli/cli/blob/trunk/pkg/surveyext/editor_manual.go
 // and tries to infer the editor from different heuristics.
 func getDefaultEditor() string {
-	if runtime.GOOS == "windows" {
-		return "notepad"
-	} else if g := os.Getenv("GIT_EDITOR"); g != "" {
+	if g := os.Getenv("GIT_EDITOR"); g != "" {
 		return g
 	} else if v := os.Getenv("VISUAL"); v != "" {
 		return v
 	} else if e := os.Getenv("EDITOR"); e != "" {
 		return e
+	} else if runtime.GOOS == "windows" {
+		return "notepad"
 	}
 
 	return defaultEditor
