@@ -194,7 +194,7 @@ func createUserCmd(cli *cli) *cobra.Command {
 		Example: `auth0 users create 
 auth0 users create --name "John Doe" 
 auth0 users create -n "John Doe" --email john@example.com
-auth0 users create -n "John Doe" --e john@example.com --connection "Username-Password-Authentication"`,
+auth0 users create -n "John Doe" -e john@example.com --connection "Username-Password-Authentication"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Select from the available connection types
 			// Users API currently support  database connections

@@ -19,7 +19,7 @@ auth0 users create [flags]
 auth0 users create 
 auth0 users create --name "John Doe" 
 auth0 users create -n "John Doe" --email john@example.com
-auth0 users create -n "John Doe" --e john@example.com --connection "Username-Password-Authentication"
+auth0 users create -n "John Doe" -e john@example.com --connection "Username-Password-Authentication"
 ```
 
 ### Options

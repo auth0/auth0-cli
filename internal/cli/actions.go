@@ -170,9 +170,9 @@ func createActionCmd(cli *cli) *cobra.Command {
 		Long:  "Create a new action.",
 		Example: `auth0 actions create 
 auth0 actions create --name myaction
-auth0 actions create --n myaction --trigger post-login
-auth0 actions create --n myaction -t post-login -d "lodash=4.0.0" -d "uuid=8.0.0"
-auth0 actions create --n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=value" -s "SECRET=value`,
+auth0 actions create -n myaction --trigger post-login
+auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -d "uuid=8.0.0"
+auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=value" -s "SECRET=value`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := actionName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -250,9 +250,9 @@ func updateActionCmd(cli *cli) *cobra.Command {
 		Long:  "Update an action.",
 		Example: `auth0 actions update <id> 
 auth0 actions update <id> --name myaction
-auth0 actions update <id> --n myaction --trigger post-login
-auth0 actions update <id> --n myaction -t post-login -d "lodash=4.0.0" -d "uuid=8.0.0"
-auth0 actions update <id> --n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=value" -s "SECRET=value`,
+auth0 actions update <id> -n myaction --trigger post-login
+auth0 actions update <id> -n myaction -t post-login -d "lodash=4.0.0" -d "uuid=8.0.0"
+auth0 actions update <id> -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=value" -s "SECRET=value`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
