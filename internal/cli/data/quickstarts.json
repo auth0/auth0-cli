@@ -54,7 +54,7 @@
       "name": "Laravel API",
       "path": "laravel",
       "samples": [
-        "01-Authorization-RS256"
+        "app"
       ],
       "org": "auth0-samples",
       "repo": "auth0-laravel-api-samples",
@@ -143,6 +143,16 @@
       "branch": "master"
     },
     {
+      "name": "Flutter",
+      "path": "flutter",
+      "samples": [
+        "sample"
+      ],
+      "org": "auth0-samples",
+      "repo": "auth0-flutter-samples",
+      "branch": "main"
+    },
+    {
       "name": "Ionic & Capacitor (Angular)",
       "path": "ionic-angular",
       "samples": [
@@ -164,50 +174,12 @@
     },
     {
       "name": "iOS / macOS",
-      "path": "swift-beta",
+      "path": "ios-swift",
       "samples": [
         "Sample-01"
       ],
       "org": "auth0-samples",
       "repo": "auth0-ios-swift-sample",
-      "branch": "beta"
-    },
-    {
-      "name": "iOS Swift",
-      "path": "ios-swift",
-      "samples": [
-        "00-Login",
-        "01-Embedded-Login",
-        "01-Login",
-        "02-Custom-Login-Form",
-        "03-User-Sessions",
-        "04-Calling-APIs",
-        "05-Authorization",
-        "07-Linking-Accounts",
-        "08-Credentials-TouchID"
-      ],
-      "org": "auth0-samples",
-      "repo": "auth0-ios-swift-sample",
-      "branch": "master"
-    },
-    {
-      "name": "iOS Swift - Facebook Login",
-      "path": "ios-swift-facebook-login",
-      "samples": [
-        "00-login-facebook"
-      ],
-      "org": "auth0-samples",
-      "repo": "auth0-ios-swift-native-social-samples",
-      "branch": "master"
-    },
-    {
-      "name": "iOS Swift - Sign In With Apple",
-      "path": "ios-swift-siwa",
-      "samples": [
-        "00-login-siwa"
-      ],
-      "org": "auth0-samples",
-      "repo": "auth0-ios-swift-native-social-samples",
       "branch": "master"
     },
     {
@@ -229,9 +201,7 @@
       "org": "auth0-samples",
       "repo": "auth0-uwp-oidc-samples",
       "branch": "master"
-    }
-  ],
-  "spa": [
+    },
     {
       "name": "WPF / Winforms",
       "path": "wpf-winforms",
@@ -336,7 +306,8 @@
       "name": "Django",
       "path": "django",
       "samples": [
-        "01-Login"
+        "01-Login",
+        "Quickstart/Sample"
       ],
       "org": "auth0-samples",
       "repo": "auth0-django-web-app",
@@ -393,6 +364,16 @@
       "branch": "master"
     },
     {
+      "name": "Laravel",
+      "path": "laravel",
+      "samples": [
+        "app"
+      ],
+      "org": "auth0-samples",
+      "repo": "auth0-laravel-php-web-app",
+      "branch": "master"
+    },
+    {
       "name": "Next.js",
       "path": "nextjs",
       "samples": [
@@ -411,16 +392,6 @@
       "org": "auth0-samples",
       "repo": "auth0-php-web-app",
       "branch": "main"
-    },
-    {
-      "name": "PHP (Laravel)",
-      "path": "laravel",
-      "samples": [
-        "01-Login"
-      ],
-      "org": "auth0-samples",
-      "repo": "auth0-laravel-php-web-app",
-      "branch": "master"
     },
     {
       "name": "Python",
