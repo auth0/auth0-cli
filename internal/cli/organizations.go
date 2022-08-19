@@ -207,9 +207,9 @@ func createOrganizationCmd(cli *cli) *cobra.Command {
 		Long:  "Create a new organization.",
 		Example: `auth0 orgs create
 auth0 orgs create --name myorganization
-auth0 orgs create --n myorganization --display "My Organization"
-auth0 orgs create --n myorganization -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
-auth0 orgs create --n myorganization -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
+auth0 orgs create -n myorganization --display "My Organization"
+auth0 orgs create -n myorganization -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
+auth0 orgs create -n myorganization -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := organizationName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
