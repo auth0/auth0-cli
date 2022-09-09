@@ -10,7 +10,7 @@ require (
 	github.com/fsnotify/fsnotify v1.5.4
 	github.com/getsentry/sentry-go v0.13.0
 	github.com/golang/mock v1.6.0
-	github.com/google/go-cmp v0.5.8
+	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
 	github.com/guiguan/caster v0.0.0-20191104051807-3736c4464f38
 	github.com/joeshaw/envdecode v0.0.0-20200121155833-099f1fc765bd
