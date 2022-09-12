@@ -3,7 +3,7 @@ module github.com/auth0/auth0-cli
 go 1.18
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.3.5
+	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/auth0/go-auth0 v0.10.1
 	github.com/briandowns/spinner v1.19.0
 	github.com/charmbracelet/glamour v0.5.0
