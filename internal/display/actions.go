@@ -4,8 +4,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/go-auth0/management"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
 )
 
 type actionView struct {
@@ -94,8 +95,8 @@ func (r *Renderer) ActionDeploy(action *management.Action) {
 
 func makeActionView(action *management.Action) *actionView {
 	var triggers = make([]string, 0, len(action.SupportedTriggers))
-	for _, t := range action.SupportedTriggers {
-		triggers = append(triggers, string(*t.ID))
+	for _, trigger := range action.SupportedTriggers {
+		triggers = append(triggers, trigger.GetID())
 	}
 
 	isDeployed := false

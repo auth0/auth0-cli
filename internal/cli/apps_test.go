@@ -5,10 +5,11 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/auth0/go-auth0/management"
+	"github.com/golang/mock/gomock"
+
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/display"
-	"github.com/golang/mock/gomock"
-	"github.com/auth0/go-auth0/management"
 )
 
 func TestAppsListCmd(t *testing.T) {
@@ -57,7 +58,7 @@ func TestAppsListCmd(t *testing.T) {
 						{
 							Name:         auth0.String("some-name"),
 							ClientID:     auth0.String("some-id"),
-							Callbacks:    stringToInterfaceSlice([]string{"http://localhost"}),
+							Callbacks:    &[]string{"http://localhost"},
 							ClientSecret: auth0.String("secret-here"),
 						},
 					},

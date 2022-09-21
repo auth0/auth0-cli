@@ -4,12 +4,13 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/iostream"
-	"github.com/spf13/cobra"
-	"github.com/auth0/go-auth0/management"
 )
 
 var (
@@ -120,7 +121,7 @@ auth0 test login <client-id> --connection <connection>`,
 					client := &management.Client{
 						Name:             auth0.String(cliLoginTestingClientName),
 						Description:      auth0.String(cliLoginTestingClientDescription),
-						Callbacks:        []interface{}{cliLoginTestingCallbackURL},
+						Callbacks:        &[]string{cliLoginTestingCallbackURL},
 						InitiateLoginURI: auth0.String(cliLoginTestingInitiateLoginURI),
 					}
 					if err := cli.api.Client.Create(client); err != nil {

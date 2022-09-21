@@ -28,12 +28,10 @@ const (
 	manageURL                        string = "https://manage.auth0.com"
 )
 
-var (
-	cliLoginTestingScopes []string = []string{"openid", "profile"}
-)
+var cliLoginTestingScopes = []string{"openid", "profile"}
 
 func BuildOauthTokenURL(domain string) string {
-	var path string = "/oauth/token"
+	var path = "/oauth/token"
 
 	u := &url.URL{
 		Scheme: "https",
@@ -55,7 +53,7 @@ func BuildOauthTokenParams(clientID, clientSecret, audience string) url.Values {
 }
 
 // runClientCredentialsFlow runs an M2M client credentials flow without opening a browser
-func runClientCredentialsFlow(cli *cli, c *management.Client, clientID string, audience string, tenant Tenant) (*authutil.TokenResponse, error) {
+func runClientCredentialsFlow(_ *cli, c *management.Client, clientID string, audience string, tenant Tenant) (*authutil.TokenResponse, error) {
 
 	var tokenResponse *authutil.TokenResponse
 
@@ -199,7 +197,7 @@ func getOrCreateCLITesterClient(clientManager auth0.ClientAPI) (*management.Clie
 	client := &management.Client{
 		Name:             auth0.String(cliLoginTestingClientName),
 		Description:      auth0.String(cliLoginTestingClientDescription),
-		Callbacks:        []interface{}{cliLoginTestingCallbackURL},
+		Callbacks:        &[]string{cliLoginTestingCallbackURL},
 		InitiateLoginURI: auth0.String(cliLoginTestingInitiateLoginURI),
 	}
 	return client, clientManager.Create(client)
@@ -207,8 +205,7 @@ func getOrCreateCLITesterClient(clientManager auth0.ClientAPI) (*management.Clie
 
 // check if a client is already configured with our local callback URL
 func hasLocalCallbackURL(client *management.Client) bool {
-	for _, rawCallbackURL := range client.Callbacks {
-		callbackURL := rawCallbackURL.(string)
+	for _, callbackURL := range client.GetCallbacks() {
 		if callbackURL == cliLoginTestingCallbackURL {
 			return true
 		}
@@ -219,15 +216,15 @@ func hasLocalCallbackURL(client *management.Client) bool {
 
 // adds the localhost callback URL to a given application
 func addLocalCallbackURLToClient(clientManager auth0.ClientAPI, client *management.Client) (bool, error) {
-	for _, rawCallbackURL := range client.Callbacks {
-		callbackURL := rawCallbackURL.(string)
+	for _, callbackURL := range client.GetCallbacks() {
 		if callbackURL == cliLoginTestingCallbackURL {
 			return false, nil
 		}
 	}
 
+	callbacks := append(client.GetCallbacks(), cliLoginTestingCallbackURL)
 	updatedClient := &management.Client{
-		Callbacks: append(client.Callbacks, cliLoginTestingCallbackURL),
+		Callbacks: &callbacks,
 	}
 	// reflect the changes in the original client instance so when we check it
 	// later it has the proper values in Callbacks
@@ -236,16 +233,15 @@ func addLocalCallbackURLToClient(clientManager auth0.ClientAPI, client *manageme
 }
 
 func removeLocalCallbackURLFromClient(clientManager auth0.ClientAPI, client *management.Client) error {
-	callbacks := []interface{}{}
-	for _, rawCallbackURL := range client.Callbacks {
-		callbackURL := rawCallbackURL.(string)
+	callbacks := make([]string, 0)
+	for _, callbackURL := range client.GetCallbacks() {
 		if callbackURL != cliLoginTestingCallbackURL {
 			callbacks = append(callbacks, callbackURL)
 		}
 	}
 
 	// no callback URLs to remove, so don't attempt to do so
-	if len(client.Callbacks) == len(callbacks) {
+	if len(client.GetCallbacks()) == len(callbacks) {
 		return nil
 	}
 
@@ -255,7 +251,7 @@ func removeLocalCallbackURLFromClient(clientManager auth0.ClientAPI, client *man
 	}
 
 	updatedClient := &management.Client{
-		Callbacks: callbacks,
+		Callbacks: &callbacks,
 	}
 	return clientManager.Update(client.GetClientID(), updatedClient)
 
@@ -274,7 +270,7 @@ func generateState(size int) (string, error) {
 }
 
 // check if slice contains a string
-func containsStr(s []interface{}, u string) bool {
+func containsStr(s []string, u string) bool {
 	for _, a := range s {
 		if a == u {
 			return true

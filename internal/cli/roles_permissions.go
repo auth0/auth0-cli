@@ -5,10 +5,11 @@ import (
 	"net/url"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/spf13/cobra"
 	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
 )
 
 var (
@@ -124,7 +125,7 @@ auth0 roles permissions add`,
 			}
 
 			if len(inputs.Permissions) == 0 {
-				err := cli.pickRolePermissions(rs.Scopes, &inputs.Permissions)
+				err := cli.pickRolePermissions(rs.GetScopes(), &inputs.Permissions)
 				if err != nil {
 					return err
 				}
@@ -189,7 +190,7 @@ auth0 roles permissions rm`,
 			}
 
 			if len(inputs.Permissions) == 0 {
-				err := cli.pickRolePermissions(rs.Scopes, &inputs.Permissions)
+				err := cli.pickRolePermissions(rs.GetScopes(), &inputs.Permissions)
 				if err != nil {
 					return err
 				}
@@ -236,7 +237,7 @@ func (c *cli) apiPickerOptionsWithoutAuth0() (pickerOptions, error) {
 	})
 }
 
-func (c *cli) pickRolePermissions(apiScopes []*management.ResourceServerScope, permissions *[]string) error {
+func (c *cli) pickRolePermissions(apiScopes []management.ResourceServerScope, permissions *[]string) error {
 	// NOTE(cyx): We're inlining this for now since we have no generic
 	// usecase for this particular picker type yet.
 	var options []string
