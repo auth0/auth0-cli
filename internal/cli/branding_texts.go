@@ -1,10 +1,8 @@
 package cli
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -16,8 +14,8 @@ import (
 
 const (
 	textDocsKey         = "__doc__"
-	textDocsURL         = "https://auth0.com/docs/brand-and-customize/text-customization-new-universal-login"
-	textLocalesURL      = "https://auth0-ulp.herokuapp.com/static/locales"
+	textDocsURL         = "https://auth0.com/docs/customize/universal-login-pages/customize-login-text-prompts"
+	textLocalesURL      = "https://cdn.auth0.com/ulp/react-components/development/languages/%s/prompts.json"
 	textLanguageDefault = "en"
 )
 
@@ -29,10 +27,20 @@ var (
 		Help:       "Language of the custom text.",
 		IsRequired: true,
 	}
+
+	textBody = Flag{
+		Name:       "Text",
+		LongForm:   "text",
+		ShortForm:  "t",
+		Help:       "Text contents for the branding.",
+		IsRequired: true,
+	}
 )
 
 type brandingTextsInputs struct {
+	Prompt   string
 	Language string
+	Body     string
 }
 
 func textsCmd(cli *cli) *cobra.Command {
@@ -68,18 +76,37 @@ auth0 branding texts show <prompt> -l es`,
 	return cmd
 }
 
+func updateBrandingTextCmd(cli *cli) *cobra.Command {
+	var inputs brandingTextsInputs
+
+	cmd := &cobra.Command{
+		Use:   "update",
+		Args:  cobra.ExactArgs(1),
+		Short: "Update the custom texts for a prompt",
+		Long:  "Update the custom texts for a prompt.",
+		Example: `
+auth0 branding texts update <prompt> --language es
+auth0 branding texts update <prompt> -l es`,
+		RunE: updateBrandingText(cli, &inputs),
+	}
+
+	textLanguage.RegisterString(cmd, &inputs.Language, textLanguageDefault)
+
+	return cmd
+}
+
 func showBrandingTexts(cli *cli, inputs *brandingTextsInputs) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		var prompt = args[0]
-		var brandingText map[string]interface{}
+		inputs.Prompt = args[0]
+		brandingText := make(map[string]interface{})
 
 		if err := ansi.Waiting(func() (err error) {
-			brandingText, err = cli.api.Prompt.CustomText(prompt, inputs.Language)
+			brandingText, err = cli.api.Prompt.CustomText(inputs.Prompt, inputs.Language)
 			return err
 		}); err != nil {
 			return fmt.Errorf(
-				"unable to load custom text for prompt %s and language %s: %w",
-				prompt,
+				"unable to fetch custom text for prompt %s and language %s: %w",
+				inputs.Prompt,
 				inputs.Language,
 				err,
 			)
@@ -90,164 +117,190 @@ func showBrandingTexts(cli *cli, inputs *brandingTextsInputs) func(cmd *cobra.Co
 			return fmt.Errorf("failed to serialize the prompt custom text to JSON: %w", err)
 		}
 
-		cli.renderer.BrandingTextShow(string(brandingTextJSON), prompt, inputs.Language)
+		cli.renderer.BrandingTextShow(string(brandingTextJSON), inputs.Prompt, inputs.Language)
 
 		return nil
 	}
 }
 
-func updateBrandingTextCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		Language string
-		Body     string
-	}
+func updateBrandingText(cli *cli, inputs *brandingTextsInputs) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		inputs.Prompt = args[0]
+		inputs.Body = string(iostream.PipedInput())
 
-	cmd := &cobra.Command{
-		Use:   "update",
-		Args:  cobra.ExactArgs(1),
-		Short: "Update the custom texts for a prompt",
-		Long:  "Update the custom texts for a prompt.",
-		Example: `
-auth0 branding texts update <prompt> --language es
-auth0 branding texts update <prompt> -l es`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			inputs.Body = string(iostream.PipedInput())
-			prompt := args[0]
-			fileName := fmt.Sprintf("%s.%s.json", prompt, inputs.Language)
-			currentBody := make(map[string]interface{})
-			currentBody[textDocsKey] = brandingTextDocsURL(prompt)
-
-			if err := ansi.Waiting(func() error {
-				defaultTranslations := downloadBrandingTextLocale(fileName)
-
-				customTranslations, err := cli.api.Prompt.CustomText(prompt, inputs.Language)
-				if err != nil {
-					return err
-				}
-
-				currentBodyTranslations := mergeBrandingTextLocales(defaultTranslations, customTranslations)
-				for k, v := range currentBodyTranslations {
-					currentBody[k] = v
-				}
-				return nil
-			}); err != nil {
-				return fmt.Errorf("Unable to load custom text for prompt %s and language %s: %w", prompt, inputs.Language, err)
-			}
-
-			currentBodyStr, err := marshalBrandingTextBody(currentBody)
-			if err != nil {
-				return err
-			}
-
-			if err := ruleScript.OpenEditor(
-				cmd,
-				&inputs.Body,
-				currentBodyStr,
-				fileName,
-				cli.promptTextEditorHint,
-			); err != nil {
-				return fmt.Errorf("Failed to capture input from the editor: %w", err)
-			}
-
-			var body map[string]interface{}
-			if err := json.Unmarshal([]byte(inputs.Body), &body); err != nil {
-				return err
-			}
-
-			delete(body, textDocsKey)
-
-			if err := ansi.Waiting(func() error {
-				return cli.api.Prompt.SetCustomText(prompt, inputs.Language, body)
-			}); err != nil {
-				return fmt.Errorf("Unable to set custom text for prompt %s and language %s: %w", prompt, inputs.Language, err)
-			}
-
-			bodyStr, err := marshalBrandingTextBody(body)
-			if err != nil {
-				return err
-			}
-			cli.renderer.BrandingTextUpdate(bodyStr)
-			return nil
-		},
-	}
-
-	textLanguage.RegisterString(cmd, &inputs.Language, textLanguageDefault)
-	return cmd
-}
-
-func (c *cli) promptTextEditorHint() {
-	c.renderer.Infof("%s once you close the editor, the custom text will be saved. To cancel, CTRL+C.", ansi.Faint("Hint:"))
-}
-
-func brandingTextDocsURL(p string) string {
-	return fmt.Sprintf("%s/prompt-%s", textDocsURL, p)
-}
-
-func marshalBrandingTextBody(b map[string]interface{}) (string, error) {
-	bodyBytes, err := json.Marshal(b)
-	if err != nil {
-		return "", fmt.Errorf("Failed to serialize the custom texts to JSON: %w", err)
-	}
-
-	var buf bytes.Buffer
-	if err := json.Indent(&buf, []byte(bodyBytes), "", "    "); err != nil {
-		return "", fmt.Errorf("Failed to format the custom texts JSON: %w", err)
-	}
-	return buf.String(), nil
-}
-
-func downloadBrandingTextLocale(filename string) map[string]interface{} {
-	url := fmt.Sprintf("%s/%s", textLocalesURL, filename)
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK {
-		body, err := ioutil.ReadAll(resp.Body)
+		brandingTextToEdit, err := fetchBrandingTextContentToEdit(cli, inputs)
 		if err != nil {
-			return nil
+			return fmt.Errorf("failed to fetch branding text content to edit: %w", err)
 		}
-		var result map[string]interface{}
-		if err := json.Unmarshal(body, &result); err != nil {
-			return nil
+
+		editedBrandingText, err := fetchEditedBrandingTextContent(cmd, cli, inputs, brandingTextToEdit)
+		if err != nil {
+			return fmt.Errorf("failed to fetch edited branding text content: %w", err)
 		}
-		return result
+
+		if err := ansi.Waiting(func() error {
+			return cli.api.Prompt.SetCustomText(inputs.Prompt, inputs.Language, editedBrandingText)
+		}); err != nil {
+			return fmt.Errorf(
+				"unable to set custom text for prompt %s and language %s: %w",
+				inputs.Prompt,
+				inputs.Language,
+				err,
+			)
+		}
+
+		editedBrandingTextJSON, err := json.MarshalIndent(editedBrandingText, "", "    ")
+		if err != nil {
+			return fmt.Errorf("failed to serialize the prompt custom text to JSON: %w", err)
+		}
+
+		cli.renderer.BrandingTextUpdate(string(editedBrandingTextJSON), inputs.Prompt, inputs.Language)
+
+		return nil
 	}
+}
+
+func fetchBrandingTextContentToEdit(cli *cli, inputs *brandingTextsInputs) (string, error) {
+	contentToEdit := map[string]interface{}{textDocsKey: textDocsURL}
+
+	if err := ansi.Waiting(func() error {
+		defaultTranslations := downloadDefaultBrandingTextTranslations(inputs.Prompt, inputs.Language)
+
+		customTranslations, err := cli.api.Prompt.CustomText(inputs.Prompt, inputs.Language)
+		if err != nil {
+			return err
+		}
+
+		brandingTextTranslations := mergeBrandingTextTranslations(defaultTranslations, customTranslations)
+
+		for key, text := range brandingTextTranslations {
+			contentToEdit[key] = text
+		}
+
+		return nil
+	}); err != nil {
+		return "", fmt.Errorf(
+			"unable to load custom text for prompt %s and language %s: %w",
+			inputs.Prompt,
+			inputs.Language,
+			err,
+		)
+	}
+
+	contentToEditJSON, err := json.MarshalIndent(contentToEdit, "", "    ")
+	if err != nil {
+		return "", fmt.Errorf("failed to serialize the prompt custom text to JSON: %w", err)
+	}
+
+	return string(contentToEditJSON), nil
+}
+
+// downloadDefaultBrandingTextTranslations will download all the prompt's possible
+// screen values. In case of encountering any errors it will simply ignore them
+// and let the user define by hand all the values for the screen.
+func downloadDefaultBrandingTextTranslations(prompt, language string) map[string]interface{} {
+	url := fmt.Sprintf(textLocalesURL, language)
+
+	response, err := http.Get(url)
+	if err != nil {
+		return nil
+	}
+
+	defer response.Body.Close()
+
+	if response.StatusCode == http.StatusOK {
+		var allPrompts []map[string]interface{}
+		if err := json.NewDecoder(response.Body).Decode(&allPrompts); err != nil {
+			return nil
+		}
+
+		selectedPrompt := allPrompts[0][prompt].(map[string]interface{})
+
+		return selectedPrompt
+	}
+
 	return nil
 }
 
-func mergeBrandingTextLocales(d map[string]interface{}, c map[string]interface{}) map[string]map[string]interface{} {
-	result := make(map[string]map[string]interface{})
+func mergeBrandingTextTranslations(
+	defaultTranslations map[string]interface{},
+	customTranslations map[string]interface{},
+) map[string]map[string]interface{} {
+	mergedTranslations := make(map[string]map[string]interface{})
 
-	for p, pv := range d {
-		if translations, ok := pv.(map[string]interface{}); ok {
-			for k, v := range translations {
-				if !strings.HasPrefix(k, "error") && !strings.HasPrefix(k, "devKeys") {
-					if _, ok := result[p]; !ok {
-						result[p] = make(map[string]interface{})
-					}
-					if _, ok := result[p][k]; !ok {
-						result[p][k] = make(map[string]interface{})
-					}
-					result[p][k] = v
-				}
+	for screen, keyTextMap := range defaultTranslations {
+		translations, ok := keyTextMap.(map[string]interface{})
+		if !ok {
+			break
+		}
+
+		for key, text := range translations {
+			if strings.HasPrefix(key, "error") || strings.HasPrefix(key, "devKeys") {
+				continue
 			}
+
+			if _, ok := mergedTranslations[screen]; !ok {
+				mergedTranslations[screen] = make(map[string]interface{})
+			}
+
+			if _, ok := mergedTranslations[screen][key]; !ok {
+				mergedTranslations[screen][key] = make(map[string]interface{})
+			}
+
+			mergedTranslations[screen][key] = text
 		}
 	}
-	for p, pv := range c {
-		if translations, ok := pv.(map[string]interface{}); ok {
-			for k, v := range translations {
-				if _, ok := result[p]; !ok {
-					result[p] = make(map[string]interface{})
-				}
-				if _, ok := result[p][k]; !ok {
-					result[p][k] = make(map[string]interface{})
-				}
-				result[p][k] = v
+
+	for screen, keyTextMap := range customTranslations {
+		translations, ok := keyTextMap.(map[string]interface{})
+		if !ok {
+			break
+		}
+
+		for key, text := range translations {
+			if _, ok := mergedTranslations[screen]; !ok {
+				mergedTranslations[screen] = make(map[string]interface{})
 			}
+
+			if _, ok := mergedTranslations[screen][key]; !ok {
+				mergedTranslations[screen][key] = make(map[string]interface{})
+			}
+
+			mergedTranslations[screen][key] = text
 		}
 	}
-	return result
+
+	return mergedTranslations
+}
+
+func fetchEditedBrandingTextContent(
+	cmd *cobra.Command,
+	cli *cli,
+	inputs *brandingTextsInputs,
+	brandingTextToEdit string,
+) (map[string]interface{}, error) {
+	tempFileName := fmt.Sprintf("%s-prompt-%s.json", inputs.Prompt, inputs.Language)
+
+	err := textBody.OpenEditor(cmd, &inputs.Body, brandingTextToEdit, tempFileName, updateBrandingTextHint(cli))
+	if err != nil {
+		return nil, fmt.Errorf("failed to capture input from the editor: %w", err)
+	}
+
+	var editedBrandingText map[string]interface{}
+	if err := json.Unmarshal([]byte(inputs.Body), &editedBrandingText); err != nil {
+		return nil, err
+	}
+
+	delete(editedBrandingText, textDocsKey)
+
+	return editedBrandingText, nil
+}
+
+func updateBrandingTextHint(cli *cli) func() {
+	return func() {
+		cli.renderer.Infof(
+			"%s once you close the editor, the custom text will be saved. To cancel, CTRL+C.",
+			ansi.Faint("Hint:"),
+		)
+	}
 }
