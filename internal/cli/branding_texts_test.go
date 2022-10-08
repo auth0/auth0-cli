@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -76,7 +75,7 @@ func TestBrandingTextsShowCmd(t *testing.T) {
 
 			if test.returnedError != nil {
 				expectedErrorMessage := fmt.Errorf(
-					"unable to load custom text for prompt %s and language %s: %w",
+					"unable to fetch custom text for prompt %s and language %s: %w",
 					test.inputPrompt,
 					test.inputLanguage,
 					test.returnedError,
@@ -88,53 +87,6 @@ func TestBrandingTextsShowCmd(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.Equal(t, test.expectedOutput, actualOutput.String())
-		})
-	}
-}
-
-func TestBrandingTextsUpdateCmd(t *testing.T) {
-	t.Skip("broken needs fixing")
-
-	tests := []struct {
-		name         string
-		assertOutput func(t testing.TB, out string)
-		args         []string
-	}{
-		{
-			name: "happy path",
-			assertOutput: func(t testing.TB, out string) {
-				assert.Equal(t, "{}", out)
-			},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			brandingTextsAPI := auth0.NewMockPromptAPI(ctrl)
-			brandingTextsAPI.EXPECT().
-				SetCustomText(gomock.Any(), gomock.Any(), gomock.Any()).
-				Return(make(map[string]interface{}))
-
-			stdout := &bytes.Buffer{}
-			cli := &cli{
-				renderer: &display.Renderer{
-					MessageWriter: ioutil.Discard,
-					ResultWriter:  stdout,
-				},
-				api: &auth0.API{Prompt: brandingTextsAPI},
-			}
-
-			cmd := updateBrandingTextCmd(cli)
-			cmd.SetArgs(test.args)
-
-			if err := cmd.Execute(); err != nil {
-				t.Fatal(err)
-			}
-
-			test.assertOutput(t, stdout.String())
 		})
 	}
 }
