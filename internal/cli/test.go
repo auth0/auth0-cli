@@ -251,7 +251,7 @@ auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
 			// initiate the client credentials flow instead to fetch a token,
 			// avoiding the browser and HTTP server shenanigans altogether.
 			if appType == "non_interactive" {
-				tokenResponse, err := runClientCredentialsFlow(cli, client, inputs.ClientID, inputs.Audience, tenant)
+				tokenResponse, err := runClientCredentialsFlow(client, inputs.ClientID, inputs.Audience, tenant)
 				if err != nil {
 					return fmt.Errorf("An unexpected error occurred while logging in to machine-to-machine client %s: %w", inputs.ClientID, err)
 				}

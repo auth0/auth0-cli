@@ -52,13 +52,18 @@ func BuildOauthTokenParams(clientID, clientSecret, audience string) url.Values {
 	return q
 }
 
-// runClientCredentialsFlow runs an M2M client credentials flow without opening a browser
-func runClientCredentialsFlow(_ *cli, c *management.Client, clientID string, audience string, tenant Tenant) (*authutil.TokenResponse, error) {
-
+// runClientCredentialsFlow runs an M2M client
+// credentials flow without opening a browser.
+func runClientCredentialsFlow(
+	apiClient *management.Client,
+	clientID string,
+	audience string,
+	tenant Tenant,
+) (*authutil.TokenResponse, error) {
 	var tokenResponse *authutil.TokenResponse
 
 	tokenURL := BuildOauthTokenURL(tenant.Domain)
-	payload := BuildOauthTokenParams(clientID, c.GetClientSecret(), audience)
+	payload := BuildOauthTokenParams(clientID, apiClient.GetClientSecret(), audience)
 
 	// TODO: Check if the audience is valid, and suggest a different client if it is wrong.
 

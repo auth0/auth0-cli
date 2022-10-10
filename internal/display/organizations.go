@@ -2,7 +2,6 @@ package display
 
 import (
 	"encoding/json"
-	"io"
 
 	"github.com/auth0/go-auth0/management"
 
@@ -57,7 +56,7 @@ func (r *Renderer) OrganizationList(organizations []*management.Organization) {
 
 	var res []View
 	for _, o := range organizations {
-		res = append(res, makeOrganizationView(o, r.MessageWriter))
+		res = append(res, makeOrganizationView(o))
 	}
 
 	r.Results(res)
@@ -65,20 +64,20 @@ func (r *Renderer) OrganizationList(organizations []*management.Organization) {
 
 func (r *Renderer) OrganizationShow(organization *management.Organization) {
 	r.Heading("organization")
-	r.Result(makeOrganizationView(organization, r.MessageWriter))
+	r.Result(makeOrganizationView(organization))
 }
 
 func (r *Renderer) OrganizationCreate(organization *management.Organization) {
 	r.Heading("organization created")
-	r.Result(makeOrganizationView(organization, r.MessageWriter))
+	r.Result(makeOrganizationView(organization))
 }
 
 func (r *Renderer) OrganizationUpdate(organization *management.Organization) {
 	r.Heading("organization updated")
-	r.Result(makeOrganizationView(organization, r.MessageWriter))
+	r.Result(makeOrganizationView(organization))
 }
 
-func makeOrganizationView(organization *management.Organization, _ io.Writer) *organizationView {
+func makeOrganizationView(organization *management.Organization) *organizationView {
 	accentColor := ""
 	backgroundColor := ""
 
