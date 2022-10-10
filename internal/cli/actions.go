@@ -202,15 +202,15 @@ auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=val
 
 			action := &management.Action{
 				Name: &inputs.Name,
-				SupportedTriggers: []*management.ActionTrigger{
+				SupportedTriggers: []management.ActionTrigger{
 					{
 						ID:      &inputs.Trigger,
 						Version: &version,
 					},
 				},
 				Code:         &inputs.Code,
-				Dependencies: apiActionDependenciesFor(inputs.Dependencies),
-				Secrets:      apiActionSecretsFor(inputs.Secrets),
+				Dependencies: inputDependenciesToActionDependencies(inputs.Dependencies),
+				Secrets:      inputSecretsToActionSecrets(inputs.Secrets),
 			}
 
 			if err := ansi.Waiting(func() error {
@@ -324,7 +324,7 @@ auth0 actions update <id> -n myaction -t post-login -d "lodash=4.0.0" -s "API_KE
 			// display.
 			action := &management.Action{
 				Name: &inputs.Name,
-				SupportedTriggers: []*management.ActionTrigger{
+				SupportedTriggers: []management.ActionTrigger{
 					{
 						ID:      &inputs.Trigger,
 						Version: &version,
@@ -336,13 +336,13 @@ auth0 actions update <id> -n myaction -t post-login -d "lodash=4.0.0" -s "API_KE
 			if len(inputs.Dependencies) == 0 {
 				action.Dependencies = current.Dependencies
 			} else {
-				action.Dependencies = apiActionDependenciesFor(inputs.Dependencies)
+				action.Dependencies = inputDependenciesToActionDependencies(inputs.Dependencies)
 			}
 
 			if len(inputs.Secrets) == 0 {
 				action.Secrets = current.Secrets
 			} else {
-				action.Secrets = apiActionSecretsFor(inputs.Secrets)
+				action.Secrets = inputSecretsToActionSecrets(inputs.Secrets)
 			}
 
 			if err = ansi.Waiting(func() error {
@@ -564,28 +564,28 @@ func actionTemplate(key string) string {
 	return actionTemplateEmpty
 }
 
-func apiActionDependenciesFor(dependencies map[string]string) []*management.ActionDependency {
-	var res []*management.ActionDependency
-	for k, v := range dependencies {
-		key := k
-		value := v
-		res = append(res, &management.ActionDependency{
-			Name:    &key,
-			Version: &value,
+func inputDependenciesToActionDependencies(dependencies map[string]string) *[]management.ActionDependency {
+	actionDependencyList := make([]management.ActionDependency, 0)
+
+	for name, version := range dependencies {
+		actionDependencyList = append(actionDependencyList, management.ActionDependency{
+			Name:    &name,
+			Version: &version,
 		})
 	}
-	return res
+
+	return &actionDependencyList
 }
 
-func apiActionSecretsFor(secrets map[string]string) []*management.ActionSecret {
-	var res []*management.ActionSecret
-	for k, v := range secrets {
-		key := k
-		value := v
-		res = append(res, &management.ActionSecret{
-			Name:  &key,
+func inputSecretsToActionSecrets(secrets map[string]string) *[]management.ActionSecret {
+	actionSecrets := make([]management.ActionSecret, 0)
+
+	for name, value := range secrets {
+		actionSecrets = append(actionSecrets, management.ActionSecret{
+			Name:  &name,
 			Value: &value,
 		})
 	}
-	return res
+
+	return &actionSecrets
 }

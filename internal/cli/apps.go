@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
-	"github.com/spf13/cobra"
-	"github.com/auth0/go-auth0/management"
 )
 
 // errNoApps signifies no applications exist in a tenant
@@ -420,10 +421,10 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <descriptio
 				Name:              &inputs.Name,
 				Description:       &inputs.Description,
 				AppType:           auth0.String(apiTypeFor(inputs.Type)),
-				Callbacks:         stringToInterfaceSlice(inputs.Callbacks),
-				AllowedOrigins:    stringToInterfaceSlice(inputs.AllowedOrigins),
-				WebOrigins:        stringToInterfaceSlice(inputs.AllowedWebOrigins),
-				AllowedLogoutURLs: stringToInterfaceSlice(inputs.AllowedLogoutURLs),
+				Callbacks:         stringSliceToPtr(inputs.Callbacks),
+				AllowedOrigins:    stringSliceToPtr(inputs.AllowedOrigins),
+				WebOrigins:        stringSliceToPtr(inputs.AllowedWebOrigins),
+				AllowedLogoutURLs: stringSliceToPtr(inputs.AllowedLogoutURLs),
 				OIDCConformant:    &oidcConformant,
 				JWTConfiguration:  &management.ClientJWTConfiguration{Algorithm: &algorithm},
 			}
@@ -540,8 +541,8 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 					defaultValue = appDefaultURL
 				}
 
-				if len(current.Callbacks) > 0 {
-					defaultValue = stringSliceToCommaSeparatedString(interfaceToStringSlice(current.Callbacks))
+				if len(current.GetCallbacks()) > 0 {
+					defaultValue = stringSliceToCommaSeparatedString(current.GetCallbacks())
 				}
 
 				if err := appCallbacks.AskManyU(cmd, &inputs.Callbacks, &defaultValue); err != nil {
@@ -557,8 +558,8 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 					defaultValue = appDefaultURL
 				}
 
-				if len(current.AllowedLogoutURLs) > 0 {
-					defaultValue = stringSliceToCommaSeparatedString(interfaceToStringSlice(current.AllowedLogoutURLs))
+				if len(current.GetAllowedLogoutURLs()) > 0 {
+					defaultValue = stringSliceToCommaSeparatedString(current.GetAllowedLogoutURLs())
 				}
 
 				if err := appLogoutURLs.AskManyU(cmd, &inputs.AllowedLogoutURLs, &defaultValue); err != nil {
@@ -570,8 +571,8 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 			if appIsSPA {
 				defaultValue := appDefaultURL
 
-				if len(current.AllowedOrigins) > 0 {
-					defaultValue = stringSliceToCommaSeparatedString(interfaceToStringSlice(current.AllowedOrigins))
+				if len(current.GetAllowedOrigins()) > 0 {
+					defaultValue = stringSliceToCommaSeparatedString(current.GetAllowedOrigins())
 				}
 
 				if err := appOrigins.AskManyU(cmd, &inputs.AllowedOrigins, &defaultValue); err != nil {
@@ -583,8 +584,8 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 			if appIsSPA {
 				defaultValue := appDefaultURL
 
-				if len(current.WebOrigins) > 0 {
-					defaultValue = stringSliceToCommaSeparatedString(interfaceToStringSlice(current.WebOrigins))
+				if len(current.GetWebOrigins()) > 0 {
+					defaultValue = stringSliceToCommaSeparatedString(current.GetWebOrigins())
 				}
 
 				if err := appWebOrigins.AskManyU(cmd, &inputs.AllowedWebOrigins, &defaultValue); err != nil {
@@ -616,25 +617,25 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 			if len(inputs.Callbacks) == 0 {
 				a.Callbacks = current.Callbacks
 			} else {
-				a.Callbacks = stringToInterfaceSlice(inputs.Callbacks)
+				a.Callbacks = &inputs.Callbacks
 			}
 
 			if len(inputs.AllowedOrigins) == 0 {
 				a.AllowedOrigins = current.AllowedOrigins
 			} else {
-				a.AllowedOrigins = stringToInterfaceSlice(inputs.AllowedOrigins)
+				a.AllowedOrigins = &inputs.AllowedOrigins
 			}
 
 			if len(inputs.AllowedWebOrigins) == 0 {
 				a.WebOrigins = current.WebOrigins
 			} else {
-				a.WebOrigins = stringToInterfaceSlice(inputs.AllowedWebOrigins)
+				a.WebOrigins = &inputs.AllowedWebOrigins
 			}
 
 			if len(inputs.AllowedLogoutURLs) == 0 {
 				a.AllowedLogoutURLs = current.AllowedLogoutURLs
 			} else {
-				a.AllowedLogoutURLs = stringToInterfaceSlice(inputs.AllowedLogoutURLs)
+				a.AllowedLogoutURLs = &inputs.AllowedLogoutURLs
 			}
 
 			if len(inputs.AuthMethod) == 0 {
@@ -749,8 +750,8 @@ func apiDefaultAuthMethodFor(t string) *string {
 	}
 }
 
-func apiGrantsFor(s []string) []interface{} {
-	res := make([]interface{}, len(s))
+func apiGrantsFor(s []string) *[]string {
+	res := make([]string, len(s))
 
 	for i, v := range s {
 		switch strings.ToLower(v) {
@@ -778,19 +779,19 @@ func apiGrantsFor(s []string) []interface{} {
 		}
 	}
 
-	return res
+	return &res
 }
 
-func apiDefaultGrantsFor(t string) []interface{} {
+func apiDefaultGrantsFor(t string) *[]string {
 	switch apiTypeFor(strings.ToLower(t)) {
 	case appTypeNative:
-		return stringToInterfaceSlice([]string{"implicit", "authorization_code", "refresh_token"})
+		return &[]string{"implicit", "authorization_code", "refresh_token"}
 	case appTypeSPA:
-		return stringToInterfaceSlice([]string{"implicit", "authorization_code", "refresh_token"})
+		return &[]string{"implicit", "authorization_code", "refresh_token"}
 	case appTypeRegularWeb:
-		return stringToInterfaceSlice([]string{"implicit", "authorization_code", "refresh_token", "client_credentials"})
+		return &[]string{"implicit", "authorization_code", "refresh_token", "client_credentials"}
 	case appTypeNonInteractive:
-		return stringToInterfaceSlice([]string{"client_credentials"})
+		return &[]string{"client_credentials"}
 	default:
 		return nil
 	}
@@ -811,14 +812,6 @@ func typeFor(s *string) *string {
 	}
 }
 
-func urlsFor(s []interface{}) []string {
-	res := make([]string, len(s))
-	for i, v := range s {
-		res[i] = fmt.Sprintf("%s", v)
-	}
-	return res
-}
-
 func commaSeparatedStringToSlice(s string) []string {
 	joined := strings.Join(strings.Fields(s), "")
 	if len(joined) > 0 {
@@ -831,22 +824,11 @@ func stringSliceToCommaSeparatedString(s []string) string {
 	return strings.Join(s, ", ")
 }
 
-func stringToInterfaceSlice(s []string) []interface{} {
-	var result []interface{} = make([]interface{}, len(s))
-	for i, d := range s {
-		result[i] = d
+func stringSliceToPtr(s []string) *[]string {
+	if s == nil {
+		return nil
 	}
-	return result
-}
-
-func interfaceToStringSlice(s []interface{}) []string {
-	var result []string = make([]string, len(s))
-	for i, d := range s {
-		if val, ok := d.(string); ok {
-			result[i] = val
-		}
-	}
-	return result
+	return &s
 }
 
 func (c *cli) appPickerOptions() (pickerOptions, error) {

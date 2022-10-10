@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
-	github.com/auth0/go-auth0 v0.10.1
+	github.com/auth0/go-auth0 v0.11.0
 	github.com/briandowns/spinner v1.19.0
 	github.com/charmbracelet/glamour v0.5.0
 	github.com/fsnotify/fsnotify v1.5.4
@@ -86,7 +86,7 @@ require (
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/yuin/goldmark v1.4.4 // indirect
 	github.com/yuin/goldmark-emoji v1.0.1 // indirect
-	golang.org/x/crypto v0.0.0-20220926161630-eccd6366d1be // indirect
+	golang.org/x/crypto v0.0.0-20221005025214-4161e89ecf1b // indirect
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/net v0.0.0-20221002022538-bcab6841153b // indirect
 	golang.org/x/tools v0.1.1 // indirect

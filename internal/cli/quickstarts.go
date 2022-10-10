@@ -15,9 +15,9 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/auth0/go-auth0/management"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
-	"github.com/auth0/go-auth0/management"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -228,7 +228,7 @@ func downloadQuickStart(ctx context.Context, client *management.Client, target s
 
 	// Callback URL, if not set, it will just take the default one.
 	callbackURL := quickstartDefaultCallbackURL
-	if list := urlsFor(client.Callbacks); len(list) > 0 {
+	if list := client.GetCallbacks(); len(list) > 0 {
 		callbackURL = list[0]
 	}
 	params.Add("callback_url", callbackURL)
@@ -380,28 +380,32 @@ func promptDefaultURLs(cli *cli, client *management.Client, qsType string, qsSta
 		WebOrigins:        client.WebOrigins,
 	}
 
-	if !containsStr(client.Callbacks, defaultCallbackURL) {
-		a.Callbacks = append(a.Callbacks, defaultCallbackURL)
+	if !containsStr(client.GetCallbacks(), defaultCallbackURL) {
+		callbacks := append(client.GetCallbacks(), defaultCallbackURL)
+		a.Callbacks = &callbacks
 	}
 
-	if !containsStr(client.AllowedLogoutURLs, defaultURL) {
-		a.AllowedLogoutURLs = append(a.AllowedLogoutURLs, defaultURL)
+	if !containsStr(client.GetAllowedLogoutURLs(), defaultURL) {
+		allowedLogoutURLs := append(a.GetAllowedLogoutURLs(), defaultURL)
+		a.AllowedLogoutURLs = &allowedLogoutURLs
 	}
 
 	if strings.EqualFold(qsType, qsSpa) {
-		if !containsStr(client.AllowedOrigins, defaultURL) {
-			a.AllowedOrigins = append(a.AllowedOrigins, defaultURL)
+		if !containsStr(client.GetAllowedOrigins(), defaultURL) {
+			allowedOrigins := append(a.GetAllowedOrigins(), defaultURL)
+			a.AllowedOrigins = &allowedOrigins
 		}
 
-		if !containsStr(client.WebOrigins, defaultURL) {
-			a.WebOrigins = append(a.WebOrigins, defaultURL)
+		if !containsStr(client.GetWebOrigins(), defaultURL) {
+			webOrigins := append(a.GetWebOrigins(), defaultURL)
+			a.WebOrigins = &webOrigins
 		}
 	}
 
-	callbackURLChanged := len(client.Callbacks) != len(a.Callbacks)
-	otherURLsChanged := len(client.AllowedLogoutURLs) != len(a.AllowedLogoutURLs) ||
-		len(client.AllowedOrigins) != len(a.AllowedOrigins) ||
-		len(client.WebOrigins) != len(a.WebOrigins)
+	callbackURLChanged := len(client.GetCallbacks()) != len(a.GetCallbacks())
+	otherURLsChanged := len(client.GetAllowedLogoutURLs()) != len(a.GetAllowedLogoutURLs()) ||
+		len(client.GetAllowedOrigins()) != len(a.GetAllowedOrigins()) ||
+		len(client.GetWebOrigins()) != len(a.GetWebOrigins())
 
 	if !callbackURLChanged && !otherURLsChanged {
 		return nil
