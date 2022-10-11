@@ -5,13 +5,14 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/auth0/go-auth0"
+	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/branding"
 	"github.com/auth0/auth0-cli/internal/prompt"
-	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
-	"github.com/auth0/go-auth0"
-	"github.com/auth0/go-auth0/management"
 )
 
 var (
@@ -69,7 +70,7 @@ var (
 		{"Page footers", branding.FooterTemplate},
 	}
 
-	errNotAllowed = errors.New("This feature requires at least one custom domain to be configured for the tenant.")
+	errNotAllowed = errors.New("this feature requires at least one custom domain to be configured for the tenant")
 )
 
 func brandingCmd(cli *cli) *cobra.Command {
@@ -138,17 +139,17 @@ func showBrandingCmd(cli *cli) *cobra.Command {
 		Long:    "Display the custom branding settings for Universal Login.",
 		Example: "auth0 branding show",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var branding *management.Branding // Load app by id
+			var myBranding *management.Branding // Load app by id
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				branding, err = cli.api.Branding.Read()
+				myBranding, err = cli.api.Branding.Read()
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load branding settings due to an unexpected error: %w", err)
+				return fmt.Errorf("unable to load branding settings due to an unexpected error: %w", err)
 			}
 
-			cli.renderer.BrandingShow(branding)
+			cli.renderer.BrandingShow(myBranding)
 
 			return nil
 		},
@@ -182,7 +183,7 @@ auth0 branding update -a "#FF4F40" -b "#2A2E35" --logo "https://example.com/logo
 				current, err = cli.api.Branding.Read()
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load branding settings due to an unexpected error: %w", err)
+				return fmt.Errorf("unable to load branding settings due to an unexpected error: %w", err)
 			}
 
 			// Prompt for accent color
@@ -246,7 +247,7 @@ auth0 branding update -a "#FF4F40" -b "#2A2E35" --logo "https://example.com/logo
 			if err := ansi.Waiting(func() error {
 				return cli.api.Branding.Update(b)
 			}); err != nil {
-				return fmt.Errorf("Unable to update branding settings: %v", err)
+				return fmt.Errorf("unable to update branding settings: %v", err)
 			}
 
 			// Render result
@@ -280,7 +281,7 @@ func showBrandingTemplateCmd(cli *cli) *cobra.Command {
 				template, err = cli.api.Branding.UniversalLogin()
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load the Universal Login template due to an unexpected error: %w", err)
+				return fmt.Errorf("unable to load the Universal Login template due to an unexpected error: %w", err)
 			}
 
 			cli.renderer.Heading("template")
@@ -324,12 +325,12 @@ func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
 				*templateData,
 			)
 			if err != nil {
-				return fmt.Errorf("Failed to capture input from the editor: %w", err)
+				return fmt.Errorf("failed to capture input from the editor: %w", err)
 			}
 
 			var confirmed bool
 			if err := prompt.AskBool("Do you want to save the template?", &confirmed, true); err != nil {
-				return fmt.Errorf("Failed to capture prompt input: %w", err)
+				return fmt.Errorf("failed to capture prompt input: %w", err)
 			}
 
 			if !confirmed {
