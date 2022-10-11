@@ -3,12 +3,13 @@ package auth
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 
-	"github.com/auth0/auth0-cli/internal/auth/mock"
 	"github.com/golang/mock/gomock"
+
+	"github.com/auth0/auth0-cli/internal/auth/mock"
 )
 
 // HTTPTransport implements an http.RoundTripper for testing purposes only.
@@ -34,7 +35,7 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 		transport := &testTransport{
 			withResponse: &http.Response{
 				StatusCode: http.StatusOK,
-				Body: ioutil.NopCloser(bytes.NewReader([]byte(`{
+				Body: io.NopCloser(bytes.NewReader([]byte(`{
 						"access_token": "access-token-here",
 						"id_token": "id-token-here",
 						"token_type": "token-type-here",

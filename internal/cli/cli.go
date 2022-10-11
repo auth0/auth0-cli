@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -74,7 +73,6 @@ var errUnauthenticated = errors.New("Not logged in. Try 'auth0 login'.")
 // 1. --format
 // 2. --tenant
 // 3. --debug
-//
 type cli struct {
 	// core primitives exposed to command builders.
 	api           *auth0.API
@@ -434,7 +432,7 @@ func (c *cli) persistConfig() error {
 		return err
 	}
 
-	if err := ioutil.WriteFile(c.path, buf, 0600); err != nil {
+	if err := os.WriteFile(c.path, buf, 0600); err != nil {
 		return err
 	}
 	return nil
@@ -479,7 +477,7 @@ func (c *cli) initContext() (err error) {
 	}
 
 	var buf []byte
-	if buf, err = ioutil.ReadFile(c.path); err != nil {
+	if buf, err = os.ReadFile(c.path); err != nil {
 		return err
 	}
 

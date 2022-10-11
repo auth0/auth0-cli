@@ -2,7 +2,7 @@ package cli
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
@@ -70,7 +70,7 @@ func TestAppsListCmd(t *testing.T) {
 			// renderer and api.
 			cli := &cli{
 				renderer: &display.Renderer{
-					MessageWriter: ioutil.Discard,
+					MessageWriter: io.Discard,
 					ResultWriter:  stdout,
 				},
 				api: &auth0.API{Client: clientAPI},

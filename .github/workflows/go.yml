@@ -9,10 +9,10 @@ jobs:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
 
     steps:
-      - name: Set up Go 1.18
+      - name: Set up Go 1.19
         uses: actions/setup-go@v3
         with:
-          go-version: 1.18
+          go-version: 1.19
         id: go
 
       - name: Check out code into the Go module directory
@@ -21,11 +21,8 @@ jobs:
       - name: lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.46.2
-          # Some linters are disabled because of go1.18.
-          # We can track the evolution of go1.18 support at
-          # https://github.com/golangci/golangci-lint/issues/2649.
-          args: --go 1.17 -v --allow-parallel-runners
+          version: v1.50.0
+          args: -v --allow-parallel-runners
 
       - name: run unit tests
         run: PATH=$(go env GOPATH)/bin:$PATH make test
@@ -37,10 +34,10 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
 
     steps:
-      - name: Set up Go 1.18
+      - name: Set up Go 1.19
         uses: actions/setup-go@v3
         with:
-          go-version: 1.18
+          go-version: 1.19
         id: go
 
       - name: Check out code into the Go module directory
@@ -65,10 +62,10 @@ jobs:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
 
     steps:
-      - name: Set up Go 1.18
+      - name: Set up Go 1.19
         uses: actions/setup-go@v3
         with:
-          go-version: 1.18
+          go-version: 1.19
         id: go
 
       - name: Check out code into the Go module directory

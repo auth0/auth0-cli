@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -245,7 +244,7 @@ func downloadQuickStart(ctx context.Context, client *management.Client, target s
 		return fmt.Errorf("Expected status %d, got %d", http.StatusOK, response.StatusCode)
 	}
 
-	tmpFile, err := ioutil.TempFile("", "auth0-quickstart*.zip")
+	tmpFile, err := os.CreateTemp("", "auth0-quickstart*.zip")
 	if err != nil {
 		return unexpectedError(err)
 	}
@@ -339,7 +338,7 @@ func quickstartsTypeFor(v string) string {
 }
 
 func loadQuickstartSampleReadme(samplePath string) (string, error) {
-	data, err := ioutil.ReadFile(path.Join(samplePath, "README.md"))
+	data, err := os.ReadFile(path.Join(samplePath, "README.md"))
 	if err != nil {
 		return "", unexpectedError(err)
 	}

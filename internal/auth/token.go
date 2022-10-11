@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 )
@@ -51,7 +51,7 @@ func (t *TokenRetriever) Refresh(ctx context.Context, tenant string) (TokenRespo
 
 	defer r.Body.Close()
 	if r.StatusCode != http.StatusOK {
-		b, _ := ioutil.ReadAll(r.Body)
+		b, _ := io.ReadAll(r.Body)
 		bodyStr := string(b)
 		return TokenResponse{}, fmt.Errorf("cannot get a new access token from the refresh token: %s", bodyStr)
 	}
