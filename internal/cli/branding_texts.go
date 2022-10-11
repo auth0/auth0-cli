@@ -8,9 +8,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/iostream"
-	"github.com/spf13/cobra"
 )
 
 const (
@@ -30,11 +31,15 @@ var (
 	}
 )
 
+type brandingTextsInputs struct {
+	Language string
+}
+
 func textsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "texts",
-		Short: "Manage custom texts for prompts",
-		Long:  "Manage custom texts for prompts.",
+		Short: "Manage custom text for prompts",
+		Long:  "Manage custom text for prompts.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -45,9 +50,7 @@ func textsCmd(cli *cli) *cobra.Command {
 }
 
 func showBrandingTextCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		Language string
-	}
+	var inputs brandingTextsInputs
 
 	cmd := &cobra.Command{
 		Use:   "show",
@@ -57,29 +60,40 @@ func showBrandingTextCmd(cli *cli) *cobra.Command {
 		Example: `
 auth0 branding texts show <prompt> --language es
 auth0 branding texts show <prompt> -l es`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			prompt := args[0]
-			var body map[string]interface{}
-
-			if err := ansi.Waiting(func() error {
-				var err error
-				body, err = cli.api.Prompt.CustomText(prompt, inputs.Language)
-				return err
-			}); err != nil {
-				return fmt.Errorf("Unable to load custom text for prompt %s and language %s: %w", prompt, inputs.Language, err)
-			}
-
-			bodyStr, err := marshalBrandingTextBody(body)
-			if err != nil {
-				return err
-			}
-			cli.renderer.BrandingTextShow(bodyStr)
-			return nil
-		},
+		RunE: showBrandingTexts(cli, &inputs),
 	}
 
 	textLanguage.RegisterString(cmd, &inputs.Language, textLanguageDefault)
+
 	return cmd
+}
+
+func showBrandingTexts(cli *cli, inputs *brandingTextsInputs) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		var prompt = args[0]
+		var brandingText map[string]interface{}
+
+		if err := ansi.Waiting(func() (err error) {
+			brandingText, err = cli.api.Prompt.CustomText(prompt, inputs.Language)
+			return err
+		}); err != nil {
+			return fmt.Errorf(
+				"unable to load custom text for prompt %s and language %s: %w",
+				prompt,
+				inputs.Language,
+				err,
+			)
+		}
+
+		brandingTextJSON, err := json.MarshalIndent(brandingText, "", "    ")
+		if err != nil {
+			return fmt.Errorf("failed to serialize the prompt custom text to JSON: %w", err)
+		}
+
+		cli.renderer.BrandingTextShow(string(brandingTextJSON), prompt, inputs.Language)
+
+		return nil
+	}
 }
 
 func updateBrandingTextCmd(cli *cli) *cobra.Command {
