@@ -7,12 +7,25 @@ import (
 )
 
 func (r *Renderer) BrandingTextShow(brandingTextJSON, prompt, language string) {
-	r.Heading(fmt.Sprintf("custom text for prompt (%s) and language (%s)", ansi.Bold(prompt), ansi.Bold(language)))
+	r.Heading(
+		fmt.Sprintf(
+			"custom text for prompt (%s) and language (%s)",
+			ansi.Bold(prompt),
+			ansi.Bold(language),
+		),
+	)
 	r.Output(ansi.ColorizeJSON(brandingTextJSON, false))
 	r.Newline()
 }
 
-func (r *Renderer) BrandingTextUpdate(b string) {
-	r.Heading("custom texts updated")
-	r.Output(ansi.ColorizeJSON(b, false))
+func (r *Renderer) BrandingTextUpdate(brandingTextJSON string, prompt, language string) {
+	r.Heading(
+		fmt.Sprintf(
+			"custom text for prompt (%s) and language (%s) updated",
+			ansi.Bold(prompt),
+			ansi.Bold(language),
+		),
+	)
+	r.Output(ansi.ColorizeJSON(brandingTextJSON, false))
+	r.Newline()
 }
