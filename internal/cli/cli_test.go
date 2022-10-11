@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -87,7 +86,7 @@ func TestIsLoggedIn(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			tmpFile, err := ioutil.TempFile(os.TempDir(), "isLoggedIn-")
+			tmpFile, err := os.CreateTemp(os.TempDir(), "isLoggedIn-")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -103,7 +102,7 @@ func TestIsLoggedIn(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if err = ioutil.WriteFile(tmpFile.Name(), b, 0400); err != nil {
+			if err = os.WriteFile(tmpFile.Name(), b, 0400); err != nil {
 				t.Fatal(err)
 			}
 
