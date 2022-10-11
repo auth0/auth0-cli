@@ -219,11 +219,10 @@ auth0 orgs create -n myorganization -d "My Organization" -m "KEY=value" -m "OTHE
 				return err
 			}
 
-			orgMetadata := apiOrganizationMetadataFor(inputs.Metadata)
 			o := &management.Organization{
 				Name:        &inputs.Name,
 				DisplayName: &inputs.DisplayName,
-				Metadata:    &orgMetadata,
+				Metadata:    &inputs.Metadata,
 			}
 
 			isLogoURLSet := len(inputs.LogoURL) > 0
@@ -239,15 +238,17 @@ auth0 orgs create -n myorganization -d "My Organization" -m "KEY=value" -m "OTHE
 				}
 
 				if isAnyColorSet {
-					o.Branding.Colors = map[string]interface{}{}
+					colors := make(map[string]string)
 
 					if isAccentColorSet {
-						o.Branding.Colors[apiOrganizationColorPrimary] = inputs.AccentColor
+						colors[apiOrganizationColorPrimary] = inputs.AccentColor
 					}
 
 					if isBackgroundColorSet {
-						o.Branding.Colors[apiOrganizationColorPageBackground] = inputs.BackgroundColor
+						colors[apiOrganizationColorPageBackground] = inputs.BackgroundColor
 					}
+
+					o.Branding.Colors = &colors
 				}
 			}
 
@@ -344,27 +345,28 @@ auth0 orgs update <id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_v
 				}
 
 				if needToAddColors {
-					o.Branding.Colors = map[string]interface{}{}
+					colors := make(map[string]string)
 
 					if isAccentColorSet {
-						o.Branding.Colors[apiOrganizationColorPrimary] = inputs.AccentColor
-					} else if currentHasColors && len(current.Branding.Colors[apiOrganizationColorPrimary].(string)) > 0 {
-						o.Branding.Colors[apiOrganizationColorPrimary] = current.Branding.Colors[apiOrganizationColorPrimary]
+						colors[apiOrganizationColorPrimary] = inputs.AccentColor
+					} else if currentHasColors && len(current.Branding.GetColors()[apiOrganizationColorPrimary]) > 0 {
+						colors[apiOrganizationColorPrimary] = current.Branding.GetColors()[apiOrganizationColorPrimary]
 					}
 
 					if isBackgroundColorSet {
-						o.Branding.Colors[apiOrganizationColorPageBackground] = inputs.BackgroundColor
-					} else if currentHasColors && len(current.Branding.Colors[apiOrganizationColorPageBackground].(string)) > 0 {
-						o.Branding.Colors[apiOrganizationColorPageBackground] = current.Branding.Colors[apiOrganizationColorPageBackground]
+						colors[apiOrganizationColorPageBackground] = inputs.BackgroundColor
+					} else if currentHasColors && len(current.Branding.GetColors()[apiOrganizationColorPageBackground]) > 0 {
+						colors[apiOrganizationColorPageBackground] = current.Branding.GetColors()[apiOrganizationColorPageBackground]
 					}
+
+					o.Branding.Colors = &colors
 				}
 			}
 
 			if len(inputs.Metadata) == 0 {
 				o.Metadata = current.Metadata
 			} else {
-				orgMetadata := apiOrganizationMetadataFor(inputs.Metadata)
-				o.Metadata = &orgMetadata
+				o.Metadata = &inputs.Metadata
 			}
 
 			if err = ansi.Waiting(func() error {
@@ -651,16 +653,6 @@ func formatOrganizationDetailsPath(id string) string {
 		return ""
 	}
 	return fmt.Sprintf("organizations/%s/overview", id)
-}
-
-func apiOrganizationMetadataFor(metadata map[string]string) map[string]interface{} {
-	res := make(map[string]interface{})
-	for k, v := range metadata {
-		key := k
-		value := v
-		res[key] = value
-	}
-	return res
 }
 
 func getWithPagination(

@@ -2,7 +2,6 @@ package display
 
 import (
 	"encoding/json"
-	"io"
 
 	"github.com/auth0/go-auth0/management"
 
@@ -57,7 +56,7 @@ func (r *Renderer) OrganizationList(organizations []*management.Organization) {
 
 	var res []View
 	for _, o := range organizations {
-		res = append(res, makeOrganizationView(o, r.MessageWriter))
+		res = append(res, makeOrganizationView(o))
 	}
 
 	r.Results(res)
@@ -65,30 +64,30 @@ func (r *Renderer) OrganizationList(organizations []*management.Organization) {
 
 func (r *Renderer) OrganizationShow(organization *management.Organization) {
 	r.Heading("organization")
-	r.Result(makeOrganizationView(organization, r.MessageWriter))
+	r.Result(makeOrganizationView(organization))
 }
 
 func (r *Renderer) OrganizationCreate(organization *management.Organization) {
 	r.Heading("organization created")
-	r.Result(makeOrganizationView(organization, r.MessageWriter))
+	r.Result(makeOrganizationView(organization))
 }
 
 func (r *Renderer) OrganizationUpdate(organization *management.Organization) {
 	r.Heading("organization updated")
-	r.Result(makeOrganizationView(organization, r.MessageWriter))
+	r.Result(makeOrganizationView(organization))
 }
 
-func makeOrganizationView(organization *management.Organization, w io.Writer) *organizationView {
+func makeOrganizationView(organization *management.Organization) *organizationView {
 	accentColor := ""
 	backgroundColor := ""
 
 	if organization.Branding != nil && organization.Branding.Colors != nil {
-		if len(organization.Branding.Colors["primary"].(string)) > 0 {
-			accentColor = organization.Branding.Colors["primary"].(string)
+		if len(organization.Branding.GetColors()["primary"]) > 0 {
+			accentColor = organization.Branding.GetColors()["primary"]
 		}
 
-		if len(organization.Branding.Colors["page_background"].(string)) > 0 {
-			backgroundColor = organization.Branding.Colors["page_background"].(string)
+		if len(organization.Branding.GetColors()["page_background"]) > 0 {
+			backgroundColor = organization.Branding.GetColors()["page_background"]
 		}
 	}
 

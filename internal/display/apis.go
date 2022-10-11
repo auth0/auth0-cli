@@ -9,7 +9,6 @@ import (
 	"golang.org/x/term"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/iostream"
 )
 
@@ -112,7 +111,7 @@ func (r *Renderer) ApiUpdate(api *management.ResourceServer) {
 }
 
 func makeApiView(api *management.ResourceServer) (*apiView, bool) {
-	scopes, scopesTruncated := getScopes(api.Scopes)
+	scopes, scopesTruncated := getScopes(api.GetScopes())
 	view := &apiView{
 		ID:            ansi.Faint(api.GetID()),
 		Name:          api.GetName(),
@@ -127,7 +126,7 @@ func makeApiView(api *management.ResourceServer) (*apiView, bool) {
 }
 
 func makeApiTableView(api *management.ResourceServer) *apiTableView {
-	scopes := len(api.Scopes)
+	scopes := len(api.GetScopes())
 
 	return &apiTableView{
 		ID:         ansi.Faint(api.GetID()),
@@ -157,7 +156,7 @@ func (v *scopeView) Object() interface{} {
 	return v.raw
 }
 
-func (r *Renderer) ScopesList(api string, scopes []*management.ResourceServerScope) {
+func (r *Renderer) ScopesList(api string, scopes []management.ResourceServerScope) {
 	resource := "scopes"
 
 	r.Heading(fmt.Sprintf("%s of %s", resource, ansi.Bold(api)))
@@ -167,8 +166,7 @@ func (r *Renderer) ScopesList(api string, scopes []*management.ResourceServerSco
 		return
 	}
 
-	results := []View{}
-
+	var results []View
 	for _, scope := range scopes {
 		results = append(results, makeScopeView(scope))
 	}
@@ -176,15 +174,15 @@ func (r *Renderer) ScopesList(api string, scopes []*management.ResourceServerSco
 	r.Results(results)
 }
 
-func makeScopeView(scope *management.ResourceServerScope) *scopeView {
+func makeScopeView(scope management.ResourceServerScope) *scopeView {
 	return &scopeView{
-		Scope:       auth0.StringValue(scope.Value),
-		Description: auth0.StringValue(scope.Description),
+		Scope:       scope.GetValue(),
+		Description: scope.GetDescription(),
 		raw:         scope,
 	}
 }
 
-func getScopes(scopes []*management.ResourceServerScope) (string, bool) {
+func getScopes(scopes []management.ResourceServerScope) (string, bool) {
 	ellipsis := "..."
 	separator := " "
 	padding := 22 // the longest apiView key plus two spaces before and after in the label column
@@ -203,7 +201,7 @@ func getScopes(scopes []*management.ResourceServerScope) (string, bool) {
 		if i == 0 {
 			prepend = ""
 		}
-		scopesForDisplay += fmt.Sprintf("%s%s", prepend, *scope.Value)
+		scopesForDisplay += fmt.Sprintf("%s%s", prepend, scope.GetValue())
 	}
 
 	if len(scopesForDisplay) <= maxCharacters {
@@ -211,12 +209,12 @@ func getScopes(scopes []*management.ResourceServerScope) (string, bool) {
 	}
 
 	truncationIndex := maxCharacters - len(ellipsis)
-	lastSeparator := strings.LastIndex(string(scopesForDisplay[:truncationIndex]), separator)
+	lastSeparator := strings.LastIndex(scopesForDisplay[:truncationIndex], separator)
 	if lastSeparator != -1 {
 		truncationIndex = lastSeparator
 	}
 
-	scopesForDisplay = fmt.Sprintf("%s%s", string(scopesForDisplay[:truncationIndex]), ellipsis)
+	scopesForDisplay = fmt.Sprintf("%s%s", scopesForDisplay[:truncationIndex], ellipsis)
 
 	return scopesForDisplay, true
 }

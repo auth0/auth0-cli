@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/auth0/go-auth0/management"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
-	"github.com/auth0/go-auth0/management"
 )
 
 const (
@@ -143,7 +144,7 @@ func (r *Renderer) ApplicationCreate(client *management.Client, revealSecrets bo
 
 	r.Result(makeApplicationView(client, revealSecrets))
 	r.Newline()
-	r.Infof("Quickstarts: %s", quickstartsURIFor(client.AppType))
+	r.Infof("Quickstarts: %s", quickstartsURIFor(client.GetAppType()))
 
 	// TODO(cyx): possibly guard this with a --no-hint flag.
 	r.Infof("%s Test this app's login box with 'auth0 test login %s'",
@@ -169,17 +170,17 @@ func (r *Renderer) ApplicationUpdate(client *management.Client, revealSecrets bo
 func makeApplicationView(client *management.Client, revealSecrets bool) *applicationView {
 	return &applicationView{
 		revealSecret:      revealSecrets,
-		Name:              auth0.StringValue(client.Name),
-		Description:       auth0.StringValue(client.Description),
-		Type:              appTypeFor(client.AppType),
-		ClientID:          auth0.StringValue(client.ClientID),
-		ClientSecret:      auth0.StringValue(client.ClientSecret),
-		Callbacks:         interfaceSliceToString(client.Callbacks),
-		AllowedOrigins:    interfaceSliceToString(client.AllowedOrigins),
-		AllowedWebOrigins: interfaceSliceToString(client.WebOrigins),
-		AllowedLogoutURLs: interfaceSliceToString(client.AllowedLogoutURLs),
-		AuthMethod:        auth0.StringValue(client.TokenEndpointAuthMethod),
-		Grants:            interfaceSliceToString(client.GrantTypes),
+		Name:              client.GetName(),
+		Description:       client.GetDescription(),
+		Type:              appTypeFor(client.GetAppType()),
+		ClientID:          client.GetClientID(),
+		ClientSecret:      client.GetClientSecret(),
+		Callbacks:         client.GetCallbacks(),
+		AllowedOrigins:    client.GetAllowedOrigins(),
+		AllowedWebOrigins: client.GetWebOrigins(),
+		AllowedLogoutURLs: client.GetAllowedLogoutURLs(),
+		AuthMethod:        client.GetTokenEndpointAuthMethod(),
+		Grants:            client.GetGrantTypes(),
 		raw:               client,
 	}
 }
@@ -187,49 +188,36 @@ func makeApplicationView(client *management.Client, revealSecrets bool) *applica
 // TODO(cyx): determine if there's a better way to filter this out.
 const deprecatedAppName = "All Applications"
 
-func appTypeFor(v *string) string {
+func appTypeFor(appType string) string {
 	switch {
-	case v == nil:
+	case appType == "":
 		return "Generic"
-
-	case *v == "non_interactive":
+	case appType == "non_interactive":
 		return friendlyM2M
-
-	case *v == "native":
+	case appType == "native":
 		return friendlyNative
-
-	case *v == "spa":
+	case appType == "spa":
 		return friendlySpa
-
-	case *v == "regular_web":
+	case appType == "regular_web":
 		return friendlyReg
-
 	default:
-		return *v
+		return appType
 	}
 }
 
-func quickstartsURIFor(v *string) string {
+func quickstartsURIFor(appType string) string {
 	switch {
-	case *v == "native":
+	case appType == "native":
 		return quickstartsNative
-	case *v == "spa":
+	case appType == "spa":
 		return quickstartsSPA
-	case *v == "regular_web":
+	case appType == "regular_web":
 		return quickstartsRegularWeb
-	case *v == "non_interactive":
+	case appType == "non_interactive":
 		return quickstartsM2M
 	default:
 		return quickstartsGeneric
 	}
-}
-
-func interfaceSliceToString(s []interface{}) []string {
-	res := make([]string, len(s))
-	for i, v := range s {
-		res[i] = fmt.Sprintf("%s", v)
-	}
-	return res
 }
 
 func applyColor(a string) string {

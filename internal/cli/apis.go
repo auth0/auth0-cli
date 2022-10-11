@@ -486,7 +486,7 @@ auth0 apis scopes ls <id|audience>`,
 				return fmt.Errorf("An unexpected error occurred while getting scopes for an API with Id '%s': %w", inputs.ID, err)
 			}
 
-			cli.renderer.ScopesList(api.GetName(), api.Scopes)
+			cli.renderer.ScopesList(api.GetName(), api.GetScopes())
 			return nil
 		},
 	}
@@ -501,15 +501,15 @@ func formatApiSettingsPath(id string) string {
 	return fmt.Sprintf("apis/%s/settings", id)
 }
 
-func apiScopesFor(scopes []string) []*management.ResourceServerScope {
-	models := []*management.ResourceServerScope{}
+func apiScopesFor(scopes []string) *[]management.ResourceServerScope {
+	models := make([]management.ResourceServerScope, 0)
 
 	for _, scope := range scopes {
 		value := scope
-		models = append(models, &management.ResourceServerScope{Value: &value})
+		models = append(models, management.ResourceServerScope{Value: &value})
 	}
 
-	return models
+	return &models
 }
 
 func apiDefaultTokenLifetime() int {
