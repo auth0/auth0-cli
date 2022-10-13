@@ -7,7 +7,7 @@ require (
 	github.com/auth0/go-auth0 v0.11.0
 	github.com/briandowns/spinner v1.19.0
 	github.com/charmbracelet/glamour v0.5.0
-	github.com/fsnotify/fsnotify v1.5.4
+	github.com/fsnotify/fsnotify v1.6.0
 	github.com/getsentry/sentry-go v0.14.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.9
