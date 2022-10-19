@@ -49,8 +49,8 @@ github.com/alecthomas/chroma v0.10.0/go.mod h1:jtJATyUxlIORhUOFNA9NZDWGAQ8wpxQQq
 github.com/andybalholm/brotli v1.0.1/go.mod h1:loMXtMfwqflxFJPmdbJO0a3KNoPuLBgiu3qAvBg8x/Y=
 github.com/andybalholm/brotli v1.0.4 h1:V7DdXeJtZscaqfNuAdSRuRFzuiKlHSC/Zh3zl9qY3JY=
 github.com/andybalholm/brotli v1.0.4/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
-github.com/auth0/go-auth0 v0.11.0 h1:mxqbDMe91wjX3hvtPU/T7BdJqjgNQUJ02ZaROm/WRKA=
-github.com/auth0/go-auth0 v0.11.0/go.mod h1:XtmeQ7vZzyss3AAaLXMpupn28Y1Xj/DCt1IGEJRZ2gY=
+github.com/auth0/go-auth0 v0.12.0 h1:ssMGNrK3Nq9s8kduBRyZX7vCXKp5VckFjY4v2G7EBjs=
+github.com/auth0/go-auth0 v0.12.0/go.mod h1:XtmeQ7vZzyss3AAaLXMpupn28Y1Xj/DCt1IGEJRZ2gY=
 github.com/aybabtme/iocontrol v0.0.0-20150809002002-ad15bcfc95a0 h1:0NmehRCgyk5rljDQLKUO+cRJCnduDyn11+zGZIc9Z48=
 github.com/aybabtme/iocontrol v0.0.0-20150809002002-ad15bcfc95a0/go.mod h1:6L7zgvqo0idzI7IO8de6ZC051AfXb5ipkIJ7bIA2tGA=
 github.com/aymerick/douceur v0.2.0 h1:Mv+mAeH1Q+n9Fr+oyamOlAkUNPWPlA8PPGR0QAaYuPk=
