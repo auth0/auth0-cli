@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
-	github.com/auth0/go-auth0 v0.11.0
+	github.com/auth0/go-auth0 v0.12.0
 	github.com/briandowns/spinner v1.19.0
 	github.com/charmbracelet/glamour v0.5.0
 	github.com/fsnotify/fsnotify v1.6.0
@@ -32,7 +32,7 @@ require (
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
-	golang.org/x/text v0.3.8
+	golang.org/x/text v0.4.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
