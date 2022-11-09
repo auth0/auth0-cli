@@ -59,7 +59,7 @@ $(GO_BIN)/golangci-lint:
 
 $(GO_BIN)/commander:
 	${call print, "Installing commander"}
-	@go install -v github.com/commander-cli/commander/cmd/commander@latest
+	@go install -v github.com/commander-cli/commander/v2/cmd/commander@latest
 
 $(GO_BIN)/auth0:
 	@$(MAKE) install
