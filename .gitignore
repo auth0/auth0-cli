@@ -1,4 +1,4 @@
-# project artifacts
+# Project artifacts
 /auth0
 /integration/identifiers
 
@@ -23,10 +23,13 @@ tags
 [._]*.un~
 
 
-# misc
+# Misc
 .vscode
 .DS_Store
 .idea
 
 # Vendor
 vendor
+
+# Binary output folder
+out/

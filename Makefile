@@ -1,87 +1,139 @@
-#!/usr/bin/env make
+#-----------------------------------------------------------------------------------------------------------------------
+# Variables (https://www.gnu.org/software/make/manual/html_node/Using-Variables.html#Using-Variables)
+#-----------------------------------------------------------------------------------------------------------------------
+.DEFAULT_GOAL := help
 
-# setup variables
 NAME := auth0-cli
-PKG := github.com/auth0/$(NAME)
-BUILDINFOPKG := $(PKG)/internal/build-info
-GOBIN ?= $(shell go env GOPATH)/bin
+GO_PKG := github.com/auth0/$(NAME)
+GO_BIN ?= $(shell go env GOPATH)/bin
+GO_PACKAGES := $(shell go list ./... | grep -v vendor)
 
-## setup variables for build-info
-BUILDUSER := $(shell whoami)
-BUILDTIME := $(shell date -u '+%Y-%m-%d %H:%M:%S')
-VERSION := $(shell git describe --abbrev=0)
-GITCOMMIT := $(shell git rev-parse --short HEAD)
-
-GITUNTRACKEDCHANGES := $(shell git status --porcelain --untracked-files=no)
-ifneq ($(GITUNTRACKEDCHANGES),)
-	GITCOMMIT := $(GITCOMMIT)-dirty
+## Configuration for build-info
+BUILD_DIR ?= $(CURDIR)/out
+BUILD_INFO_PKG := $(GO_PKG)/internal/buildinfo
+BUILD_USER := $(shell whoami)
+BUILD_TIME := $(shell date -u '+%Y-%m-%d %H:%M:%S')
+GIT_COMMIT := $(shell git rev-parse --short HEAD)
+GIT_UNTRACKED_CHANGES := $(shell git status --porcelain --untracked-files=no)
+ifneq ($(GIT_UNTRACKED_CHANGES),)
+	GITCOMMIT := $(GIT_COMMIT)-dirty
 endif
+GIT_BRANCH ?= $(shell git rev-parse --verify --abbrev-ref HEAD)
+GO_LINKER_FLAGS = -X '$(BUILD_INFO_PKG).Version=dev' \
+					 -X '$(BUILD_INFO_PKG).Revision=$(GIT_COMMIT)' \
+					 -X '$(BUILD_INFO_PKG).Branch=$(GIT_BRANCH)' \
+					 -X '$(BUILD_INFO_PKG).BuildUser=$(BUILD_USER)' \
+					 -X '$(BUILD_INFO_PKG).BuildDate=$(BUILD_TIME)'
 
-GITBRANCH ?= $(shell git rev-parse --verify --abbrev-ref HEAD)
-CTIMEVAR = -X '$(BUILDINFOPKG).Version=$(VERSION)' \
-					 -X '$(BUILDINFOPKG).Revision=$(GITCOMMIT)' \
-					 -X '$(BUILDINFOPKG).Branch=$(GITBRANCH)' \
-					 -X '$(BUILDINFOPKG).BuildUser=$(BUILDUSER)' \
-					 -X '$(BUILDINFOPKG).BuildDate=$(BUILDTIME)'
+# Colors for the printf
+RESET = $(shell tput sgr0)
+COLOR_WHITE = $(shell tput setaf 7)
+COLOR_BLUE = $(shell tput setaf 4)
+COLOR_YELLOW = $(shell tput setaf 3)
+TEXT_INVERSE = $(shell tput smso)
 
-generate:
-	go generate ./...
-.PHONY: generate
+#-----------------------------------------------------------------------------------------------------------------------
+# Rules (https://www.gnu.org/software/make/manual/html_node/Rule-Introduction.html#Rule-Introduction)
+#-----------------------------------------------------------------------------------------------------------------------
+.PHONY: help
 
-test:
-	CGO_ENABLED=1 go test -race ./... -count 1
-.PHONY: test
+help: ## Show this help
+	@egrep -h '\s##\s' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-lint:
-	golangci-lint run -v --timeout=5m
+#-----------------------------------------------------------------------------------------------------------------------
+# Dependencies
+#-----------------------------------------------------------------------------------------------------------------------
+.PHONY: deps
+
+deps: ## Download dependencies
+	${call print, "Downloading dependencies"}
+	@go mod vendor -v
+
+$(GO_BIN)/mockgen:
+	${call print, "Installing mockgen"}
+	@go install -v github.com/golang/mock/mockgen@v1.4.4
+
+$(GO_BIN)/golangci-lint:
+	${call print, "Installing golangci-lint"}
+	@go install -v github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+$(GO_BIN)/commander:
+	${call print, "Installing commander"}
+	@go install -v github.com/commander-cli/commander/v2/cmd/commander@latest
+
+$(GO_BIN)/auth0:
+	@$(MAKE) install
+
+#-----------------------------------------------------------------------------------------------------------------------
+# Documentation
+#-----------------------------------------------------------------------------------------------------------------------
+.PHONY: docs-build docs-start docs-clean
+
+docs-build: docs-clean ## Build the documentation
+	@go run ./cmd/build_doc
+	@mv ./docs/auth0.md ./docs/index.md
+	@cd docs && bundle install
+
+docs-start: ## Start the doc site locally for testing purposes
+	@cd docs && bundle exec jekyll serve
+
+docs-clean: ## Remove the documentation
+	@rm ./docs/auth0_*.md
+
+#-----------------------------------------------------------------------------------------------------------------------
+# Building & Installing
+#-----------------------------------------------------------------------------------------------------------------------
+.PHONY: build build-all install
+
+build: ## Build the cli binary for the native platform
+	${call print, "Building the cli binary"}
+	go build -v -ldflags "$(GO_LINKER_FLAGS)" -o "${BUILD_DIR}/auth0" cmd/auth0/main.go
+
+build-all-platforms: ## Build a dev version of the cli binary for all supported platforms
+	for os in darwin linux windows; \
+	do env GOOS=$$os go build -ldflags "$(GO_LINKER_FLAGS)" -o "${BUILD_DIR}/auth0-$${os}" cmd/auth0/main.go; \
+	done
+
+install: ## Install the cli binary for the native platform
+	${call print, "Installing the cli binary"}
+	@$(MAKE) build BUILD_DIR="$(GO_BIN)"
+
+#-----------------------------------------------------------------------------------------------------------------------
+# Checks
+#-----------------------------------------------------------------------------------------------------------------------
 .PHONY: lint
 
-# Build for the native platform
-build:
-	go build -ldflags "$(CTIMEVAR)" -o $(GOBIN)/auth0 cmd/auth0/main.go
-.PHONY: build
+lint: $(GO_BIN)/golangci-lint ## Run go linter checks
+	${call print, "Running golangci-lint over project"}
+	@golangci-lint run -v --timeout=5m ./...
 
-# Build a beta version of auth0-cli for all supported platforms
-build-all-platforms:
-	env GOOS=darwin go build -ldflags "$(CTIMEVAR)" -o auth0-darwin cmd/auth0/main.go
-	env GOOS=linux go build -ldflags "$(CTIMEVAR)" -o auth0-linux cmd/auth0/main.go
-	env GOOS=windows go build -ldflags "$(CTIMEVAR)" -o auth0-windows.exe cmd/auth0/main.go
-.PHONY: build-all-platforms
+#-----------------------------------------------------------------------------------------------------------------------
+# Testing
+#-----------------------------------------------------------------------------------------------------------------------
+.PHONY: test-unit test-integration test-mocks
 
-$(GOBIN)/mockgen:
-	@cd && GO111MODULE=on go get github.com/golang/mock/mockgen@v1.4.4
+test-unit: ## Run unit tests
+	${call print, "Running unit tests"}
+	@go test -race ${GO_PACKAGES} -count 1
 
-.PHONY: mocks
-mocks: $(GOBIN)/mockgen
-	go generate ./...
+test-integration: $(GO_BIN)/auth0 $(GO_BIN)/commander ## Run integration tests
+	${call print, "Running integration tests"}
+	auth0 config init && commander test commander.yaml; \
+	exit_code=$$?; \
+	bash ./integration/test-cleanup.sh; \
+	exit $$exit_code
 
-$(GOBIN)/commander:
-	cd && GO111MODULE=auto go get github.com/commander-cli/commander/cmd/commander
+test-mocks: $(GO_BIN)/mockgen ## Generate testing mocks using mockgen
+	${call print, "Generating test mocks"}
+	@go generate -v ./...
 
-run-integration:
-	auth0 config init && commander test commander.yaml
-.PHONY: run-integration
+#-----------------------------------------------------------------------------------------------------------------------
+# Helpers
+#-----------------------------------------------------------------------------------------------------------------------
+define print
+	@printf "${TEXT_INVERSE}${COLOR_WHITE} :: ${COLOR_BLUE} %-75s ${COLOR_WHITE} ${RESET}\n" $(1)
+endef
 
-# Delete all test apps created during integration testing
-integration-cleanup:
-	./integration/test-cleanup.sh
-.PHONY: integration-cleanup
-
-integration: build $(GOBIN)/commander
-	$(MAKE) run-integration; \
-	ret=$$?; \
-	$(MAKE) integration-cleanup; \
-	exit $$ret
-.PHONY: integration
-
-build-doc:
-	rm ./docs/auth0_*.md
-	go run ./cmd/build_doc
-	mv ./docs/auth0.md ./docs/index.md
-.PHONY: build-doc
-
-# Start the doc site locally for testing purposes only
-# requires https://jekyllrb.com/docs/installation/
-start-doc: build-doc
-	@cd docs && bundle exec jekyll serve
-.PHONY: start-doc
+define print_warning
+	@printf "${TEXT_INVERSE}${COLOR_WHITE} ! ${COLOR_YELLOW} %-75s ${COLOR_WHITE} ${RESET}\n" $(1)
+endef

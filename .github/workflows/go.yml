@@ -9,23 +9,22 @@ jobs:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
 
     steps:
-      - name: Set up Go 1.19
+      - name: Set up Go
         uses: actions/setup-go@v3
         with:
           go-version: 1.19
-        id: go
 
-      - name: Check out code into the Go module directory
+      - name: Check out the code
         uses: actions/checkout@v3
 
-      - name: lint
+      - name: Check for linting errors
         uses: golangci/golangci-lint-action@v3
         with:
           version: v1.50.0
           args: -v --allow-parallel-runners
 
-      - name: run unit tests
-        run: PATH=$(go env GOPATH)/bin:$PATH make test
+      - name: Run unit tests
+        run: make test-unit
 
   integration:
     name: Integration Test
@@ -34,18 +33,17 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
 
     steps:
-      - name: Set up Go 1.19
+      - name: Set up Go
         uses: actions/setup-go@v3
         with:
           go-version: 1.19
-        id: go
 
-      - name: Check out code into the Go module directory
+      - name: Check out the code
         uses: actions/checkout@v3
 
-      - name: run integration tests
+      - name: Run integration tests
         shell: bash
-        run: PATH=$(go env GOPATH)/bin:$PATH make integration
+        run: make test-integration
         env:
           AUTH0_CLI_CLIENT_NAME: ${{ secrets.AUTH0_CLI_CLIENT_NAME }}
           AUTH0_CLI_CLIENT_DOMAIN: ${{ secrets.AUTH0_CLI_CLIENT_DOMAIN }}
@@ -62,14 +60,13 @@ jobs:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
 
     steps:
-      - name: Set up Go 1.19
+      - name: Set up Go
         uses: actions/setup-go@v3
         with:
           go-version: 1.19
-        id: go
 
-      - name: Check out code into the Go module directory
+      - name: Check out the code
         uses: actions/checkout@v3
 
-      - name: ci
-        run: PATH=$(go env GOPATH)/bin:$PATH make build-all-platforms
+      - name: Ensure binaries can be built for all platforms
+        run: make build-all-platforms
