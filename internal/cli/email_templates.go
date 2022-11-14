@@ -3,10 +3,11 @@ package cli
 import (
 	"fmt"
 
-	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/spf13/cobra"
 	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
 )
 
 const (

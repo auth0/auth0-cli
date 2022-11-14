@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
 )
 
 type userView struct {
@@ -103,7 +104,6 @@ func getUserConnection(users *management.User) []string {
 	var res []string
 	for _, i := range users.Identities {
 		res = append(res, fmt.Sprintf("%v", auth0.StringValue(i.Connection)))
-
 	}
 	return res
 }

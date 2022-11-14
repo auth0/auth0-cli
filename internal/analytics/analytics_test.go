@@ -64,7 +64,7 @@ func TestNewEvent(t *testing.T) {
 	t.Run("creates a new event instance", func(t *testing.T) {
 		event := newEvent("event", "id")
 		// Assert that the interval between the event timestamp and now is within 1 second
-		assert.WithinDuration(t, time.Now(), time.Unix(0, event.Timestamp * int64(1000000)), 1 * time.Second)
+		assert.WithinDuration(t, time.Now(), time.Unix(0, event.Timestamp*int64(1000000)), 1*time.Second)
 		assert.Equal(t, event.App, appID)
 		assert.Equal(t, event.Event, "event")
 		assert.Equal(t, event.ID, "id")

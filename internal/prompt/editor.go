@@ -7,8 +7,9 @@ import (
 	"os/exec"
 	"runtime"
 
-	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/kballard/go-shellquote"
+
+	"github.com/auth0/auth0-cli/internal/iostream"
 )
 
 const (

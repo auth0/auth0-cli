@@ -4,8 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/spf13/cobra"
+
+	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
 func logoutCmd(cli *cli) *cobra.Command {

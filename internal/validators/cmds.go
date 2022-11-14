@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NoArgs is a validator for commands to print an error when an argument is provided
+// NoArgs is a validator for commands to print an error when an argument is provided.
 func NoArgs(cmd *cobra.Command, args []string) error {
 	errorMessage := fmt.Sprintf(
 		"`%s` does not take any positional arguments. See `%s --help` for supported flags and usage",
@@ -43,7 +43,7 @@ func ExactArgs(expected ...string) cobra.PositionalArgs {
 }
 
 // MaximumNArgs is a validator for commands to print an error when the provided
-// args are greater than the maximum amount
+// args are greater than the maximum amount.
 func MaximumNArgs(num int) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
 		argument := "positional argument"

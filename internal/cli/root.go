@@ -162,7 +162,6 @@ func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
 
 	rootCmd.PersistentFlags().BoolVar(&cli.noColor,
 		"no-color", false, "Disable colors.")
-
 }
 
 func addSubcommands(rootCmd *cobra.Command, cli *cli) {

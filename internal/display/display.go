@@ -7,10 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/charmbracelet/glamour"
 	"github.com/olekukonko/tablewriter"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/iostream"
 )
 
 const (

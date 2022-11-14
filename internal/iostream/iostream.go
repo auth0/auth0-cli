@@ -5,13 +5,14 @@ import (
 	"io"
 	"os"
 
-	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/mattn/go-isatty"
+
+	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
 var (
-	Input = os.Stdin
-	Output = os.Stdout
+	Input    = os.Stdin
+	Output   = os.Stdout
 	Messages = os.Stderr
 )
 
