@@ -19,12 +19,14 @@ auth0 apis list [flags]
 ```
 auth0 apis list
 auth0 apis ls
+auth0 apis ls -n 100
 ```
 
 ### Options
 
 ```
-  -h, --help   help for list
+  -h, --help         help for list
+  -n, --number int   Number of apps to retrieve (default 50)
 ```
 
 ### Options inherited from parent commands

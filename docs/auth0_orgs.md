@@ -34,6 +34,7 @@ Manage resources for organizations.
 * [auth0 orgs list](auth0_orgs_list.md)	 - List your organizations
 * [auth0 orgs members](auth0_orgs_members.md)	 - Manage members of an organization
 * [auth0 orgs open](auth0_orgs_open.md)	 - Open organization settings page in the Auth0 Dashboard
+* [auth0 orgs roles](auth0_orgs_roles.md)	 - Manage roles of an organization
 * [auth0 orgs show](auth0_orgs_show.md)	 - Show an organization
 * [auth0 orgs update](auth0_orgs_update.md)	 - Update an organization
 

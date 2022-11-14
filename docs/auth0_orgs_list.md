@@ -19,12 +19,14 @@ auth0 orgs list [flags]
 ```
 auth0 orgs list
 auth0 orgs ls
+auth0 orgs ls -n 100
 ```
 
 ### Options
 
 ```
-  -h, --help   help for list
+  -h, --help         help for list
+  -n, --number int   Number of apps to retrieve (default 50)
 ```
 
 ### Options inherited from parent commands

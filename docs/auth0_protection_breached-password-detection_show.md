@@ -1,7 +1,7 @@
 ---
 layout: default
 ---
-## auth0 attack-protection breached-password-detection show
+## auth0 protection breached-password-detection show
 
 Show breached password detection settings
 
@@ -10,19 +10,19 @@ Show breached password detection settings
 Show breached password detection settings.
 
 ```
-auth0 attack-protection breached-password-detection show [flags]
+auth0 protection breached-password-detection show [flags]
 ```
 
 ### Examples
 
 ```
-auth0 attack-protection breached-password-detection show
+auth0 protection breached-password-detection show
 ```
 
 ### Options
 
 ```
-  -h, --help     help for show
+  -h, --help   help for show
 ```
 
 ### Options inherited from parent commands
@@ -38,5 +38,5 @@ auth0 attack-protection breached-password-detection show
 
 ### SEE ALSO
 
-* [auth0 attack-protection](auth0_attack_protection.md)	 - Manage attack protection settings
-* [auth0 attack-protection breached-password-detection](auth0_attack_protection_breached_password_detection.md)	 - Manage breached password detection settings
+* [auth0 protection breached-password-detection](auth0_protection_breached-password-detection.md)	 - Manage breached password detection settings
+

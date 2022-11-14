@@ -1,23 +1,30 @@
 ---
 layout: default
 ---
-## auth0 orgs members
+## auth0 orgs roles list
 
 List roles of an organization
 
 ### Synopsis
 
-List roles of an organization.
+List roles assigned to members of an organization.
 
-### Examples:
+```
+auth0 orgs roles list [flags]
+```
 
+### Examples
+
+```
 auth0 orgs roles list
 auth0 orgs roles ls <id>
+```
 
 ### Options
 
 ```
-  -h, --help   help for members
+  -h, --help         help for list
+  -n, --number int   Number of apps to retrieve (default 50)
 ```
 
 ### Options inherited from parent commands

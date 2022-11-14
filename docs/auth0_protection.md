@@ -1,7 +1,7 @@
 ---
 layout: default
 ---
-## auth0 attack-protection
+## auth0 protection
 
 Manage resources for attack protection
 
@@ -12,7 +12,7 @@ Manage resources for attack protection.
 ### Options
 
 ```
-  -h, --help   help for attack-protection
+  -h, --help   help for protection
 ```
 
 ### Options inherited from parent commands
@@ -29,6 +29,7 @@ Manage resources for attack protection.
 ### SEE ALSO
 
 * [auth0](/auth0-cli/)	 - Supercharge your development workflow.
-* [auth0 attack-protection breached-password-detection](auth0_attack_protection_breached_password_detection.md)	 - Manage breached password detection settings
-* [auth0 attack-protection brute-force-protection](auth0_attack_protection_brute_force_protection.md)	 - Manage brute force protection settings
-* [auth0 attack-protection suspicious-ip-throttling](auth0_attack_protection_suspicious_ip_throttling.md)	 - Manage suspicious ip throttling settings
+* [auth0 protection breached-password-detection](auth0_protection_breached-password-detection.md)	 - Manage breached password detection settings
+* [auth0 protection brute-force-protection](auth0_protection_brute-force-protection.md)	 - Manage brute force protection settings
+* [auth0 protection suspicious-ip-throttling](auth0_protection_suspicious-ip-throttling.md)	 - Manage suspicious ip throttling settings
+

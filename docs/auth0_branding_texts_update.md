@@ -41,5 +41,5 @@ auth0 branding texts update <prompt> -l es
 
 ### SEE ALSO
 
-* [auth0 branding texts](auth0_branding_texts.md)	 - Manage custom texts for prompts
+* [auth0 branding texts](auth0_branding_texts.md)	 - Manage custom text for prompts
 
