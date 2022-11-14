@@ -102,10 +102,8 @@ func (v *logView) Extras() []string {
 func (v *logView) category() logCategory {
 	if strings.HasPrefix(v.GetType(), "s") {
 		return logCategorySuccess
-
 	} else if strings.HasPrefix(v.GetType(), "w") {
 		return logCategoryWarning
-
 	} else if strings.HasPrefix(v.GetType(), "f") {
 		return logCategoryFailure
 	}

@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/auth0/auth0-cli/internal/cli"
 	"github.com/joeshaw/envdecode"
+
+	"github.com/auth0/auth0-cli/internal/cli"
 )
 
 func main() {

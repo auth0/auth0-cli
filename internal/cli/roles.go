@@ -11,7 +11,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
-// errNoRoles signifies no roles exist in a tenant
+// errNoRoles signifies no roles exist in a tenant.
 var errNoRoles = errors.New("there are currently no roles")
 
 var (

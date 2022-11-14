@@ -3,8 +3,9 @@ package display
 import (
 	"io"
 
-	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/go-auth0/management"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
 )
 
 type membersView struct {
@@ -50,7 +51,6 @@ func (r *Renderer) MembersList(members []management.OrganizationMember) {
 }
 
 func makeMembersView(member *management.OrganizationMember, w io.Writer) *membersView {
-
 	return &membersView{
 		ID:         member.GetUserID(),
 		Name:       member.GetName(),

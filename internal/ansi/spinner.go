@@ -3,9 +3,10 @@ package ansi
 import (
 	"time"
 
+	"github.com/briandowns/spinner"
+
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/iostream"
-	"github.com/briandowns/spinner"
 )
 
 const (

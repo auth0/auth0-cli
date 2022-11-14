@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/auth0/auth0-cli/internal/users"
-	"github.com/auth0/go-auth0/management"
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -591,7 +592,6 @@ auth0 users import -c "Username-Password-Authentication" --template "Basic Examp
 auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=true
 auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=true --email-results=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			// Select from the available connection types
 			// Users API currently support database connections
 			if err := userConnection.Select(cmd, &inputs.Connection, cli.connectionPickerOptions(), nil); err != nil {
@@ -697,13 +697,12 @@ func (c *cli) getUserConnection(users *management.User) []string {
 	var res []string
 	for _, i := range users.Identities {
 		res = append(res, fmt.Sprintf("%v", auth0.StringValue(i.Connection)))
-
 	}
 
 	return res
 }
 
-// This is a workaround to get the requires_username field nested inside Options field
+// This is a workaround to get the requires_username field nested inside Options field.
 func (c *cli) getConnReqUsername(s string) *bool {
 	conn, err := c.api.Connection.ReadByName(s)
 	if err != nil {

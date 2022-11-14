@@ -23,7 +23,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
-// QuickStart app types and defaults
+// QuickStart app types and defaults.
 const (
 	qsNative       = "native"
 	qsSpa          = "spa"

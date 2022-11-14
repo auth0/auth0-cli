@@ -660,7 +660,6 @@ func getWithPagination(
 	limit int,
 	api func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error),
 ) ([]interface{}, error) {
-
 	var list []interface{}
 	if err := ansi.Waiting(func() error {
 		pageSize := defaultPageSize
@@ -668,7 +667,7 @@ func getWithPagination(
 		for {
 			if limit > 0 {
 				// determine page size to avoid getting unwanted elements
-				want := limit - int(len(list))
+				want := limit - len(list)
 				if want == 0 {
 					return nil
 				}
@@ -691,7 +690,6 @@ func getWithPagination(
 				return nil
 			}
 		}
-
 	}); err != nil {
 		return nil, err
 	}

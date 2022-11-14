@@ -1,0 +1,44 @@
+run:
+  go: "1.19"
+  timeout: 5m
+  allow-parallel-runners: true
+
+linters:
+  disable-all: true
+  # We are commenting a couple of them,
+  # so we can fix them one at a time
+  # as the effort is non-trivial.
+  enable:
+    - unused
+    - gofmt
+    - staticcheck
+    - revive
+    - godot
+    - whitespace
+    - goimports
+    - gosimple
+#    - errcheck
+    - unconvert
+#    - gocritic
+#    - gosec
+#    - gocyclo
+
+linters-settings:
+  gofmt:
+    simplify: true
+  staticcheck:
+    checks: [ "all" ]
+  godot:
+    scope: declarations
+    capital: true
+  goimports:
+    local-prefixes: "github.com/auth0/auth0-cli"
+  revive:
+    rules:
+      - name: package-comments
+        severity: warning
+        disabled: true
+
+issues:
+  exclude-use-default: false
+  fix: true
