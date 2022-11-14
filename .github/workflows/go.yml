@@ -17,6 +17,9 @@ jobs:
       - name: Check out the code
         uses: actions/checkout@v3
 
+      - name: Check for go vulnerabilities
+        run: make check-vuln
+
       - name: Check for linting errors
         uses: golangci/golangci-lint-action@v3
         with:

@@ -57,6 +57,10 @@ $(GO_BIN)/golangci-lint:
 	${call print, "Installing golangci-lint"}
 	@go install -v github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
+$(GO_BIN)/govulncheck:
+	${call print, "Installing go vulnerability checker"}
+	@go install golang.org/x/vuln/cmd/govulncheck@latest
+
 $(GO_BIN)/commander:
 	${call print, "Installing commander"}
 	@go install -v github.com/commander-cli/commander/v2/cmd/commander@latest
@@ -106,6 +110,10 @@ install: ## Install the cli binary for the native platform
 lint: $(GO_BIN)/golangci-lint ## Run go linter checks
 	${call print, "Running golangci-lint over project"}
 	@golangci-lint run -v --timeout=5m ./...
+
+check-vuln: $(GO_BIN)/govulncheck ## Check go vulnerabilities
+	${call print, "Running govulncheck over project"}
+	@govulncheck -v ./...
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Testing
