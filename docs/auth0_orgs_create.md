@@ -16,7 +16,7 @@ auth0 orgs create [flags]
 ### Examples
 
 ```
-auth0 orgs create 
+auth0 orgs create
 auth0 orgs create --name myorganization
 auth0 orgs create -n myorganization --display "My Organization"
 auth0 orgs create -n myorganization -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"

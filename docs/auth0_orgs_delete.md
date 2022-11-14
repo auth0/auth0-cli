@@ -16,7 +16,7 @@ auth0 orgs delete [flags]
 ### Examples
 
 ```
-auth0 orgs delete 
+auth0 orgs delete
 auth0 orgs delete <id>
 ```
 

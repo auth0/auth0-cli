@@ -1,7 +1,7 @@
 ---
 layout: default
 ---
-## auth0 attack-protection brute-force-protection show
+## auth0 protection brute-force-protection show
 
 Show brute force protection settings
 
@@ -10,19 +10,19 @@ Show brute force protection settings
 Show brute force protection settings.
 
 ```
-auth0 attack-protection brute-force-protection show [flags]
+auth0 protection brute-force-protection show [flags]
 ```
 
 ### Examples
 
 ```
-auth0 attack-protection brute-force-protection show
+auth0 protection brute-force-protection show
 ```
 
 ### Options
 
 ```
-  -h, --help     help for show
+  -h, --help   help for show
 ```
 
 ### Options inherited from parent commands
@@ -38,5 +38,5 @@ auth0 attack-protection brute-force-protection show
 
 ### SEE ALSO
 
-* [auth0 attack-protection](auth0_attack_protection.md)	 - Manage attack protection settings
-* [auth0 attack-protection brute-force-protection](auth0_attack_protection_brute_force_protection.md)	 - Manage brute force protection settings
+* [auth0 protection brute-force-protection](auth0_protection_brute-force-protection.md)	 - Manage brute force protection settings
+

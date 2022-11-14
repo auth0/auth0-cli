@@ -23,7 +23,8 @@ auth0 orgs members ls <id>
 ### Options
 
 ```
-  -h, --help   help for list
+  -h, --help         help for list
+  -n, --number int   Number of apps to retrieve (default 50)
 ```
 
 ### Options inherited from parent commands

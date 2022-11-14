@@ -1,13 +1,13 @@
 ---
 layout: default
 ---
-## auth0 orgs members
+## auth0 orgs roles members
 
 Manage roles of organization members
 
 ### Synopsis
 
-Manage roles of organization members.
+Manage roles assigned to members of an organization.
 
 ### Options
 

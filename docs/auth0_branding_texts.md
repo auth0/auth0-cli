@@ -3,11 +3,11 @@ layout: default
 ---
 ## auth0 branding texts
 
-Manage custom texts for prompts
+Manage custom text for prompts
 
 ### Synopsis
 
-Manage custom texts for prompts.
+Manage custom text for prompts.
 
 ### Options
 

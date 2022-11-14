@@ -25,7 +25,8 @@ auth0 roles ls -n 100
 ### Options
 
 ```
-  -h, --help   help for list
+  -h, --help         help for list
+  -n, --number int   Number of apps to retrieve (default 50)
 ```
 
 ### Options inherited from parent commands

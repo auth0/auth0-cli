@@ -16,7 +16,7 @@ auth0 orgs show [flags]
 ### Examples
 
 ```
-auth0 orgs show 
+auth0 orgs show
 auth0 orgs show <id>
 ```
 
