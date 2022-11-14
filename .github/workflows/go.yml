@@ -23,8 +23,8 @@ jobs:
       - name: Check for linting errors
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.50.0
-          args: -v --allow-parallel-runners
+          version: latest
+          args: -v -c .golangci.yml
 
       - name: Run unit tests
         run: make test-unit

@@ -87,7 +87,7 @@ docs-clean: ## Remove the documentation
 #-----------------------------------------------------------------------------------------------------------------------
 # Building & Installing
 #-----------------------------------------------------------------------------------------------------------------------
-.PHONY: build build-all install
+.PHONY: build build-all-platforms install
 
 build: ## Build the cli binary for the native platform
 	${call print, "Building the cli binary"}
@@ -109,7 +109,7 @@ install: ## Install the cli binary for the native platform
 
 lint: $(GO_BIN)/golangci-lint ## Run go linter checks
 	${call print, "Running golangci-lint over project"}
-	@golangci-lint run -v --timeout=5m ./...
+	@golangci-lint run -v -c .golangci.yml ./...
 
 check-vuln: $(GO_BIN)/govulncheck ## Check go vulnerabilities
 	${call print, "Running govulncheck over project"}
