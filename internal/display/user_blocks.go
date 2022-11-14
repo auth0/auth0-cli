@@ -50,5 +50,4 @@ func (r *Renderer) UserBlocksList(userBlocks []*management.UserBlock) {
 	}
 
 	r.Results(res)
-
 }

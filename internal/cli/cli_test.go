@@ -81,7 +81,7 @@ func TestIsLoggedIn(t *testing.T) {
 	}{
 		{"", map[string]Tenant{}, false, "no tenants"},
 		{"t0", map[string]Tenant{}, false, "tenant is set but no tenants map"},
-		{"t0", map[string]Tenant{"t0": Tenant{}}, false, "tenants map set but invalid token"},
+		{"t0", map[string]Tenant{"t0": {}}, false, "tenants map set but invalid token"},
 	}
 
 	for _, test := range tests {

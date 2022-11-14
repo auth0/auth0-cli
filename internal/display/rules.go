@@ -5,8 +5,9 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/go-auth0/management"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
 )
 
 type ruleView struct {
@@ -64,7 +65,6 @@ func (r *Renderer) RulesList(rules []*management.Rule) {
 	}
 
 	r.Results(res)
-
 }
 
 func (r *Renderer) RuleCreate(rule *management.Rule) {

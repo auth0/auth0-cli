@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/logrusorgru/aurora"
 	"github.com/tidwall/pretty"
+
+	"github.com/auth0/auth0-cli/internal/iostream"
 )
 
 var darkTerminalStyle = &pretty.Style{
@@ -30,7 +31,7 @@ var EnvironmentOverrideColors = true
 
 var color = Color()
 
-// Bold returns bolded text if the writer supports colors
+// Bold returns bolded text if the writer supports colors.
 func Bold(text string) string {
 	return color.Sprintf(color.Bold(text))
 }
@@ -56,7 +57,7 @@ func ColorizeJSON(json string, darkStyle bool) string {
 	return string(pretty.Color([]byte(json), style))
 }
 
-// ColorizeStatus returns a colorized number for HTTP status code
+// ColorizeStatus returns a colorized number for HTTP status code.
 func ColorizeStatus(status int) aurora.Value {
 	switch {
 	case status >= 500:
@@ -68,7 +69,7 @@ func ColorizeStatus(status int) aurora.Value {
 	}
 }
 
-// Faint returns slightly offset color text if the writer supports it
+// Faint returns slightly offset color text if the writer supports it.
 func Faint(text string) string {
 	return color.Sprintf(color.Faint(text))
 }
@@ -78,42 +79,42 @@ func Italic(text string) string {
 	return color.Sprintf(color.Italic(text))
 }
 
-// Red returns text colored red
+// Red returns text colored red.
 func Red(text string) string {
 	return color.Sprintf(color.Red(text))
 }
 
-// BrightRed returns text colored bright red
+// BrightRed returns text colored bright red.
 func BrightRed(text string) string {
 	return color.Sprintf(color.BrightRed(text))
 }
 
-// Green returns text colored green
+// Green returns text colored green.
 func Green(text string) string {
 	return color.Sprintf(color.Green(text))
 }
 
-// Yellow returns text colored yellow
+// Yellow returns text colored yellow.
 func Yellow(text string) string {
 	return color.Sprintf(color.Yellow(text))
 }
 
-// BrightYellow returns text colored bright yellow
+// BrightYellow returns text colored bright yellow.
 func BrightYellow(text string) string {
 	return color.Sprintf(color.BrightYellow(text))
 }
 
-// Blue returns text colored blue
+// Blue returns text colored blue.
 func Blue(text string) string {
 	return color.Sprintf(color.Blue(text))
 }
 
-// Magenta returns text colored magenta
+// Magenta returns text colored magenta.
 func Magenta(text string) string {
 	return color.Sprintf(color.Magenta(text))
 }
 
-// Cyan returns text colored cyan
+// Cyan returns text colored cyan.
 func Cyan(text string) string {
 	return color.Sprintf(color.BrightCyan(text))
 }
@@ -130,7 +131,7 @@ func Linkify(text, url string) string {
 	return fmt.Sprintf("\x1b]8;;%s\x1b\\%s\x1b]8;;\x1b\\", url, text)
 }
 
-// StrikeThrough returns struck though text if the writer supports colors
+// StrikeThrough returns struck though text if the writer supports colors.
 func StrikeThrough(text string) string {
 	return color.Sprintf(color.StrikeThrough(text))
 }

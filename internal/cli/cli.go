@@ -72,7 +72,7 @@ var errUnauthenticated = errors.New("Not logged in. Try 'auth0 login'.")
 //
 // 1. --format
 // 2. --tenant
-// 3. --debug
+// 3. --debug.
 type cli struct {
 	// core primitives exposed to command builders.
 	api           *auth0.API
@@ -116,7 +116,6 @@ func (c *cli) isLoggedIn() bool {
 	}
 
 	return true
-
 }
 
 // setup will try to initialize the config context, as well as figure out if
@@ -161,8 +160,8 @@ func (c *cli) setup(ctx context.Context) error {
 
 // prepareTenant loads the tenant, refreshing its token if necessary.
 // The tenant access token needs a refresh if:
-// 1. the tenant scopes are different than the currently required scopes.
-// 2. the access token is expired.
+// 1. The tenant scopes are different than the currently required scopes.
+// 2. The access token is expired.
 func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 	t, err := c.getTenant()
 	if err != nil {
@@ -215,7 +214,7 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 	return t, nil
 }
 
-// isExpired is true if now() + a threshold is after the given date
+// isExpired is true if now() + a threshold is after the given date.
 func isExpired(t time.Time, threshold time.Duration) bool {
 	return time.Now().Add(threshold).After(t)
 }
@@ -265,7 +264,7 @@ func (c *cli) getTenant() (Tenant, error) {
 	return t, nil
 }
 
-// listTenants fetches all of the configured tenants
+// listTenants fetches all of the configured tenants.
 func (c *cli) listTenants() ([]Tenant, error) {
 	if err := c.init(); err != nil {
 		return []Tenant{}, err

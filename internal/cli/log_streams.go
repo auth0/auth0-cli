@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
-	"github.com/spf13/cobra"
-	"github.com/auth0/go-auth0/management"
 )
 
 const (
@@ -815,7 +816,7 @@ func logsTypeFor(v string) string {
 	}
 }
 
-// getLogStreamSink
+// getLogStreamSink.
 func (c *cli) getLogStreamSink(ID string) string {
 	conn, err := c.api.LogStream.Read(ID)
 	if err != nil {

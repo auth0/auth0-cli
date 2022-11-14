@@ -208,7 +208,7 @@ func getOrCreateCLITesterClient(clientManager auth0.ClientAPI) (*management.Clie
 	return client, clientManager.Create(client)
 }
 
-// check if a client is already configured with our local callback URL
+// check if a client is already configured with our local callback URL.
 func hasLocalCallbackURL(client *management.Client) bool {
 	for _, callbackURL := range client.GetCallbacks() {
 		if callbackURL == cliLoginTestingCallbackURL {
@@ -219,7 +219,7 @@ func hasLocalCallbackURL(client *management.Client) bool {
 	return false
 }
 
-// adds the localhost callback URL to a given application
+// adds the localhost callback URL to a given application.
 func addLocalCallbackURLToClient(clientManager auth0.ClientAPI, client *management.Client) (bool, error) {
 	for _, callbackURL := range client.GetCallbacks() {
 		if callbackURL == cliLoginTestingCallbackURL {
@@ -259,7 +259,6 @@ func removeLocalCallbackURLFromClient(clientManager auth0.ClientAPI, client *man
 		Callbacks: &callbacks,
 	}
 	return clientManager.Update(client.GetClientID(), updatedClient)
-
 }
 
 // generate state parameter value used to mitigate CSRF attacks
@@ -274,7 +273,7 @@ func generateState(size int) (string, error) {
 	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
-// check if slice contains a string
+// check if slice contains a string.
 func containsStr(s []string, u string) bool {
 	for _, a := range s {
 		if a == u {

@@ -7,7 +7,7 @@ import (
 	"github.com/AlecAivazis/survey/v2/terminal"
 )
 
-// EXTENDED to enable different prompting behavior
+// EXTENDED to enable different prompting behavior.
 type Editor struct {
 	*survey.Editor
 	EditorCommand string
@@ -22,7 +22,7 @@ func (e *Editor) editorCommand() string {
 	return e.EditorCommand
 }
 
-// EXTENDED to change prompt text
+// EXTENDED to change prompt text.
 var EditorQuestionTemplate = `
 {{- if .ShowHelp }}{{- color .Config.Icons.Help.Format }}{{ .Config.Icons.Help.Text }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
 {{- color .Config.Icons.Question.Format }}{{ .Config.Icons.Question.Text }} {{color "reset"}}
@@ -35,7 +35,7 @@ var EditorQuestionTemplate = `
 	{{- color "cyan"}}[(e) to launch {{ .EditorCommand }}{{- if .BlankAllowed }}, enter to skip{{ end }}] {{color "reset"}}
 {{- end}}`
 
-// EXTENDED to pass editor name (to use in prompt)
+// EXTENDED to pass editor name (to use in prompt).
 type EditorTemplateData struct {
 	survey.Editor
 	EditorCommand string
@@ -46,7 +46,7 @@ type EditorTemplateData struct {
 	Config        *survey.PromptConfig
 }
 
-// EXTENDED to augment prompt text and keypress handling
+// EXTENDED to augment prompt text and keypress handling.
 func (e *Editor) prompt(initialValue string, config *survey.PromptConfig) (interface{}, error) {
 	err := e.Render(
 		EditorQuestionTemplate,

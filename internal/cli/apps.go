@@ -13,7 +13,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
-// errNoApps signifies no applications exist in a tenant
+// errNoApps signifies no applications exist in a tenant.
 var errNoApps = errors.New("there are currently no applications")
 
 const (

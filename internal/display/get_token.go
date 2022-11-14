@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/auth0/go-auth0/management"
+
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
 	"github.com/auth0/auth0-cli/internal/auth0"
-	"github.com/auth0/go-auth0/management"
 )
 
 func (r *Renderer) GetToken(c *management.Client, t *authutil.TokenResponse) {

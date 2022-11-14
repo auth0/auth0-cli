@@ -5,8 +5,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/spf13/cobra"
 	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -149,7 +149,6 @@ auth0 logs tail -n 100`,
 						time.Sleep(1 * time.Second)
 					}
 				}
-
 			}()
 
 			cli.renderer.LogList(list, logsCh, !cli.debug)

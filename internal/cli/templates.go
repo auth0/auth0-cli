@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"golang.org/x/term"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
 )
 
 //
