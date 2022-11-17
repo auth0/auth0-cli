@@ -19,7 +19,7 @@ linters:
     - gosimple
 #    - errcheck
     - unconvert
-#    - gocritic
+    - gocritic
 #    - gosec
 #    - gocyclo
 
