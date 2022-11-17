@@ -100,15 +100,16 @@ func (v *logView) Extras() []string {
 }
 
 func (v *logView) category() logCategory {
-	if strings.HasPrefix(v.GetType(), "s") {
+	switch logType := v.GetType(); {
+	case strings.HasPrefix(logType, "s"):
 		return logCategorySuccess
-	} else if strings.HasPrefix(v.GetType(), "w") {
+	case strings.HasPrefix(logType, "w"):
 		return logCategoryWarning
-	} else if strings.HasPrefix(v.GetType(), "f") {
+	case strings.HasPrefix(logType, "f"):
 		return logCategoryFailure
+	default:
+		return logCategoryUnknown
 	}
-
-	return logCategoryUnknown
 }
 
 func (v *logView) typeDesc() (typ, desc string) {

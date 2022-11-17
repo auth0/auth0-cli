@@ -817,8 +817,8 @@ func logsTypeFor(v string) string {
 }
 
 // getLogStreamSink.
-func (c *cli) getLogStreamSink(ID string) string {
-	conn, err := c.api.LogStream.Read(ID)
+func (c *cli) getLogStreamSink(id string) string {
+	conn, err := c.api.LogStream.Read(id)
 	if err != nil {
 		fmt.Println(err)
 	}

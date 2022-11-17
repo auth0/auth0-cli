@@ -126,20 +126,20 @@ func generateRunEventName(command string) string {
 
 func generateEventName(command string, action string) string {
 	commands := strings.Split(command, " ")
-
 	for i := range commands {
 		commands[i] = cases.Title(language.English).String(commands[i])
 	}
 
-	if len(commands) == 1 { // the root command
+	switch length := len(commands); {
+	case length == 1: // the root command
 		return fmt.Sprintf("%s - %s - %s", eventNamePrefix, commands[0], action)
-	} else if len(commands) == 2 { // a top-level command e.g. auth0 apps
+	case length == 2: // a top-level command e.g. auth0 apps
 		return fmt.Sprintf("%s - %s - %s - %s", eventNamePrefix, commands[0], commands[1], action)
-	} else if len(commands) >= 3 {
+	case length >= 3:
 		return fmt.Sprintf("%s - %s - %s - %s", eventNamePrefix, commands[1], strings.Join(commands[2:], " "), action)
+	default:
+		return eventNamePrefix
 	}
-
-	return eventNamePrefix
 }
 
 func shouldTrack() bool {

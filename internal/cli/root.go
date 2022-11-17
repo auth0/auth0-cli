@@ -67,7 +67,7 @@ func Execute() {
 		cli.renderer.Errorf(err.Error())
 
 		instrumentation.ReportException(err)
-		os.Exit(1)
+		os.Exit(1) // nolint:gocritic
 	}
 
 	timeoutCtx, cancel := context.WithTimeout(cancelCtx, 3*time.Second)
