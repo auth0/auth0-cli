@@ -126,8 +126,9 @@ test-unit: ## Run unit tests
 	${call print, "Running unit tests"}
 	@go test -race ${GO_PACKAGES} -count 1
 
-test-integration: $(GO_BIN)/auth0 $(GO_BIN)/commander ## Run integration tests. To run a specific test pass the FILTER var. Usage: `make test-integration FILTER="attack-protection"`
+test-integration: $(GO_BIN)/commander ## Run integration tests. To run a specific test pass the FILTER var. Usage: `make test-integration FILTER="attack protection"`
 	${call print, "Running integration tests"}
+	@$(MAKE) install # ensure fresh install prior to running test
 	auth0 config init && commander test commander.yaml --filter "$(FILTER)"; \
 	exit_code=$$?; \
 	bash ./integration/test-cleanup.sh; \
