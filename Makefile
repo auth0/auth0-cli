@@ -51,7 +51,7 @@ deps: ## Download dependencies
 
 $(GO_BIN)/mockgen:
 	${call print, "Installing mockgen"}
-	@go install -v github.com/golang/mock/mockgen@v1.4.4
+	@go install -v github.com/golang/mock/mockgen@latest
 
 $(GO_BIN)/golangci-lint:
 	${call print, "Installing golangci-lint"}
