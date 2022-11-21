@@ -177,11 +177,11 @@ tests:
 
   # Test 'apps show'
   apps create test app: # create an app and capture its client id
-    command: ./integration/get-app-id.sh
+    command: ./test/integration/scripts/get-app-id.sh
     exit-code: 0
 
   apps show json:
-    command: auth0 apps show $(cat ./integration/identifiers/app-id) --format json # depends on "apps create test app" test
+    command: auth0 apps show $(cat ./test/integration/identifiers/app-id) --format json # depends on "apps create test app" test
     stdout:
       json:
         name: integration-test-app-newapp
@@ -190,7 +190,7 @@ tests:
     exit-code: 0
 
   apps show:
-    command: auth0 apps show $(cat ./integration/identifiers/app-id) # depends on "apps create test app" test
+    command: auth0 apps show $(cat ./test/integration/identifiers/app-id) # depends on "apps create test app" test
     stdout:
       contains:
         - NAME                 integration-test-app-newapp
@@ -200,70 +200,70 @@ tests:
 
   # Test 'apps update'; all tests depend on "apps create test app" test
   apps update auth method:
-    command: auth0 apps update $(cat ./integration/identifiers/app-id) --auth-method Basic --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --auth-method Basic --format json
     stdout:
       json:
         token_endpoint_auth_method: client_secret_basic
     exit-code: 0
 
   apps update callbacks:
-    command: auth0 apps update $(cat ./integration/identifiers/app-id) --callbacks https://example.com --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --callbacks https://example.com --format json
     stdout:
       json:
         callbacks: "[https://example.com]"
     exit-code: 0
   
   apps update description:
-    command: auth0 apps update $(cat ./integration/identifiers/app-id) --description "A better description" --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --description "A better description" --format json
     stdout:
       json:
         description: A better description
     exit-code: 0
 
   apps update grants:
-    command: auth0 apps update $(cat ./integration/identifiers/app-id) --grants code --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --grants code --format json
     stdout:
       json:
         grant_types: "[authorization_code]"
     exit-code: 0
 
   apps update logout urls:
-    command: auth0 apps update $(cat ./integration/identifiers/app-id) --logout-urls https://example.com --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --logout-urls https://example.com --format json
     stdout:
       json:
         allowed_logout_urls: "[https://example.com]"
     exit-code: 0
 
   apps update name:
-    command: auth0 apps update $(cat ./integration/identifiers/app-id) --name integration-test-app-betterAppName --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --name integration-test-app-betterAppName --format json
     stdout:
       json:
         name: integration-test-app-betterAppName
     exit-code: 0
 
   apps update origins:
-    command: auth0 apps update $(cat ./integration/identifiers/app-id) --origins https://example.com --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --origins https://example.com --format json
     stdout:
       json:
         allowed_origins: "[https://example.com]"
     exit-code: 0
 
   apps update type:
-    command: auth0 apps update $(cat ./integration/identifiers/app-id) --type spa --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --type spa --format json
     stdout:
       json:
         app_type: spa
     exit-code: 0
 
   apps update web origins:
-    command: auth0 apps update $(cat ./integration/identifiers/app-id) --web-origins https://example.com --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --web-origins https://example.com --format json
     stdout:
       json:
         web_origins: "[https://example.com]"
     exit-code: 0
 
   apps update multiple updates:
-    command: auth0 apps update $(cat ./integration/identifiers/app-id) --web-origins https://examples.com --type native --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --web-origins https://examples.com --type native --format json
     stdout:
       json:
         app_type: native
@@ -332,11 +332,11 @@ tests:
 
   # Test 'apps show'
   apis create test api: # create an api and capture its id
-    command: ./integration/get-api-id.sh
+    command: ./test/integration/scripts/get-api-id.sh
     exit-code: 0
 
   apis show json:
-    command: auth0 apis show $(cat ./integration/identifiers/api-id) --format json # depends on "apis create test app" test
+    command: auth0 apis show $(cat ./test/integration/identifiers/api-id) --format json # depends on "apis create test app" test
     stdout:
       json:
         name: integration-test-api-newapi
@@ -347,7 +347,7 @@ tests:
     exit-code: 0
 
   apis show:
-    command: auth0 apis show $(cat ./integration/identifiers/api-id) # depends on "apis create test app" test
+    command: auth0 apis show $(cat ./test/integration/identifiers/api-id) # depends on "apis create test app" test
     stdout:
       contains:
         - NAME                  integration-test-api-newapi         
@@ -358,40 +358,40 @@ tests:
     exit-code: 0
 
   apis scopes list:
-    command: auth0 apis scopes list $(cat ./integration/identifiers/api-id) # depends on "apis create test app" test
+    command: auth0 apis scopes list $(cat ./test/integration/identifiers/api-id) # depends on "apis create test app" test
     exit-code: 0
 
   # Test 'apis update'; all tests depend on "apis create test api" test
   apis update name:
-    command: auth0 apis update $(cat ./integration/identifiers/api-id) --name integration-test-api-betterApiName --format json
+    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --name integration-test-api-betterApiName --format json
     stdout:
       json:
         name: integration-test-api-betterApiName
     exit-code: 0
 
   apis update scopes:
-    command: auth0 apis update $(cat ./integration/identifiers/api-id) --scopes read:todos,write:todos --format json
+    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --scopes read:todos,write:todos --format json
     stdout:
       json:
         scopes: "[map[value:read:todos] map[value:write:todos]]"
     exit-code: 0
 
   apis update token lifetime:
-    command: auth0 apis update $(cat ./integration/identifiers/api-id) --token-lifetime 1000 --format json
+    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --token-lifetime 1000 --format json
     stdout:
       json:
         token_lifetime: "1000"
     exit-code: 0
 
   apis update offline access true:
-    command: auth0 apis update $(cat ./integration/identifiers/api-id) --offline-access --format json
+    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --offline-access --format json
     stdout:
       json:
         allow_offline_access: "true"
     exit-code: 0
 
   apis update offline access false:
-    command: auth0 apis update $(cat ./integration/identifiers/api-id) --offline-access=false --format json
+    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --offline-access=false --format json
     stdout:
       json:
         allow_offline_access: "false"
@@ -416,11 +416,11 @@ tests:
 
   # Test 'users show'
   users create test user:
-    command: ./integration/get-user-id.sh
+    command: ./test/integration/scripts/get-user-id.sh
     exit-code: 0
 
   users show json:
-    command: auth0 users show $(cat ./integration/identifiers/user-id) --format json
+    command: auth0 users show $(cat ./test/integration/identifiers/user-id) --format json
     stdout:
       json:
         email:      "newuser@example.com"
@@ -428,7 +428,7 @@ tests:
     exit-code: 0
 
   users show:
-    command: auth0 users show $(cat ./integration/identifiers/user-id)
+    command: auth0 users show $(cat ./test/integration/identifiers/user-id)
     stdout:
       contains:
         - EMAIL       newuser@example.com
@@ -437,14 +437,14 @@ tests:
 
   # Test 'users update'
   users update email:
-    command: auth0 users update $(cat ./integration/identifiers/user-id)  --email betteruser@example.com  --format json --no-input
+    command: auth0 users update $(cat ./test/integration/identifiers/user-id)  --email betteruser@example.com  --format json --no-input
     stdout:
       json:
         email: betteruser@example.com
     exit-code: 0
 
   users update name:
-    command: auth0 users update $(cat ./integration/identifiers/user-id)  --name integration-test-user-bettername  --format json --no-input
+    command: auth0 users update $(cat ./test/integration/identifiers/user-id)  --name integration-test-user-bettername  --format json --no-input
     stdout:
       json:
         email: betteruser@example.com # Name is not being displayed, hence using email
@@ -469,11 +469,11 @@ tests:
 
   # Test 'roles show'
   roles create test role:
-    command: ./integration/get-role-id.sh
+    command: ./test/integration/scripts/get-role-id.sh
     exit-code: 0
 
   roles show json:
-    command: auth0 roles show $(cat ./integration/identifiers/role-id) --format json
+    command: auth0 roles show $(cat ./test/integration/identifiers/role-id) --format json
     stdout:
       json:
         name:        integration-test-role-newRole
@@ -481,7 +481,7 @@ tests:
     exit-code: 0
 
   roles show:
-    command: auth0 roles show $(cat ./integration/identifiers/role-id)
+    command: auth0 roles show $(cat ./test/integration/identifiers/role-id)
     stdout:
       contains:
         - NAME         integration-test-role-newRole
@@ -490,14 +490,14 @@ tests:
 
   # Test 'roles update'
   roles update name:
-    command: auth0 roles update $(cat ./integration/identifiers/role-id) --name integration-test-role-betterName --format json
+    command: auth0 roles update $(cat ./test/integration/identifiers/role-id) --name integration-test-role-betterName --format json
     stdout:
       json:
         name: integration-test-role-betterName
     exit-code: 0
 
   roles update description:
-    command: auth0 roles update $(cat ./integration/identifiers/role-id) --description betterDescription --format json
+    command: auth0 roles update $(cat ./test/integration/identifiers/role-id) --description betterDescription --format json
     stdout:
       json:
         description: betterDescription
@@ -505,7 +505,7 @@ tests:
 
   # Test 'rules create'
   rules create and check data:
-    command: cat ./integration/fixtures/create-rule.json | jq '.[0]' | auth0 rules create --format json
+    command: cat ./test/integration/fixtures/create-rule.json | jq '.[0]' | auth0 rules create --format json
     stdout:
       json:
         name: integration-test-rule-new1
@@ -515,7 +515,7 @@ tests:
     exit-code: 0
 
   rules create and check output:
-    command: cat ./integration/fixtures/create-rule.json | jq '.[1]' | auth0 rules create
+    command: cat ./test/integration/fixtures/create-rule.json | jq '.[1]' | auth0 rules create
     stdout:
       contains:
         - NAME     integration-test-rule-new2
@@ -526,11 +526,11 @@ tests:
 
   # Test 'rules show'
   rules create test rule:
-    command: ./integration/get-rule-id.sh
+    command: ./test/integration/scripts/get-rule-id.sh
     exit-code: 0
 
   rules show json:
-    command: auth0 rules show $(cat ./integration/identifiers/rule-id) --format json
+    command: auth0 rules show $(cat ./test/integration/identifiers/rule-id) --format json
     stdout:
       json:
         name: integration-test-rule-newRule
@@ -539,7 +539,7 @@ tests:
     exit-code: 0
 
   rules show:
-    command: auth0 rules show $(cat ./integration/identifiers/rule-id)
+    command: auth0 rules show $(cat ./test/integration/identifiers/rule-id)
     stdout:
       contains:
         - NAME     integration-test-rule-newRule
@@ -549,7 +549,7 @@ tests:
 
   # Test 'rules update'
   rules update:
-    command: cat ./integration/fixtures/update-rule.json | auth0 rules update --format json
+    command: cat ./test/integration/fixtures/update-rule.json | auth0 rules update --format json
     stdout:
       json:
         name: integration-test-rule-betterName
@@ -558,7 +558,7 @@ tests:
 
   # Test 'rules enable'
   rules enable:
-    command: auth0 rules enable $(cat ./integration/identifiers/rule-id) --format json
+    command: auth0 rules enable $(cat ./test/integration/identifiers/rule-id) --format json
     stdout:
       json:
         enabled: "true"
@@ -566,7 +566,7 @@ tests:
 
   # Test 'rules disable'
   rules disable:
-    command: auth0 rules disable $(cat ./integration/identifiers/rule-id) --format json
+    command: auth0 rules disable $(cat ./test/integration/identifiers/rule-id) --format json
     stdout:
       json:
         enabled: "false"

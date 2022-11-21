@@ -1,6 +1,6 @@
 # Project artifacts
 /auth0
-/integration/identifiers
+/test/integration/identifiers
 
 # Swap
 [._]*.s[a-v][a-z]
