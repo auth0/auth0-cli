@@ -20,6 +20,7 @@ Supercharge your development workflow.
 ### SEE ALSO
 
 * [auth0 actions](auth0_actions.md)	 - Manage resources for actions
+* [auth0 api](auth0_api.md)	 - Makes an authenticated HTTP request to the Auth0 Management API
 * [auth0 apis](auth0_apis.md)	 - Manage resources for APIs
 * [auth0 apps](auth0_apps.md)	 - Manage resources for applications
 * [auth0 branding](auth0_branding.md)	 - Manage branding options
