@@ -68,9 +68,9 @@ The method argument is optional, and when you don’t specify it, the command de
 			"Auth0 Management API Docs:\n", apiDocsURL,
 			"Available Methods:\n", strings.Join(apiValidMethods, ", "),
 		),
-		Example: `auth0 api "/organizations?include_totals=true"
-auth0 api get "/organizations?include_totals=true"
-auth0 api clients --data "{\"name\":\"apiTest\"}"
+		Example: `auth0 api "/stats/daily?from=20221101&to=20221118"
+auth0 api get "/tenants/settings"
+auth0 api clients --data "{\"name\":\"ssoTest\",\"app_type\":\"sso_integration\"}"
 `,
 		RunE: apiCmdRun(cli, &inputs),
 	}
