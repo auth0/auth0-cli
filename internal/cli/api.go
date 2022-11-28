@@ -27,12 +27,12 @@ var apiFlags = apiCmdFlags{
 	},
 }
 
-var apiValidMethods = map[string]bool{
-	"GET":    true,
-	"POST":   true,
-	"PUT":    true,
-	"PATCH":  true,
-	"DELETE": true,
+var apiValidMethods = []string{
+	http.MethodGet,
+	http.MethodPost,
+	http.MethodPut,
+	http.MethodPatch,
+	http.MethodDelete,
 }
 
 type (
@@ -60,14 +60,13 @@ func apiCmd(cli *cli) *cobra.Command {
 		Long: fmt.Sprintf(
 			`Makes an authenticated HTTP request to the Auth0 Management API and prints the response as JSON.
 
-The method argument is optional, and when you don’t specify it, the command defaults to GET for requests without data
-and POST for requests with data.
+The method argument is optional, and when you don’t specify it, the command defaults to GET for requests without data and POST for requests with data.
 
 %s  %s
 
 %s  %s`,
 			"Auth0 Management API Docs:\n", apiDocsURL,
-			"Available Methods:\n", "GET, POST, PUT, PATCH, DELETE",
+			"Available Methods:\n", strings.Join(apiValidMethods, ", "),
 		),
 		Example: `auth0 api "/organizations?include_totals=true"
 auth0 api get "/organizations?include_totals=true"
@@ -141,13 +140,18 @@ func (i *apiCmdInputs) fromArgs(args []string, domain string) error {
 }
 
 func (i *apiCmdInputs) validateAndSetMethod() error {
-	if _, ok := apiValidMethods[i.RawMethod]; !ok {
-		return fmt.Errorf("invalid method given: %s, accepting only GET, POST, PUT, PATCH and DELETE", i.RawMethod)
+	for _, validMethod := range apiValidMethods {
+		if i.RawMethod == validMethod {
+			i.Method = i.RawMethod
+			return nil
+		}
 	}
 
-	i.Method = i.RawMethod
-
-	return nil
+	return fmt.Errorf(
+		"invalid method given: %s, accepting only %s",
+		i.RawMethod,
+		strings.Join(apiValidMethods, ", "),
+	)
 }
 
 func (i *apiCmdInputs) validateAndSetData() error {
