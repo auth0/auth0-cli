@@ -9,8 +9,7 @@ Makes an authenticated HTTP request to the Auth0 Management API
 
 Makes an authenticated HTTP request to the Auth0 Management API and prints the response as JSON.
 
-The method argument is optional, and when you don’t specify it, the command defaults to GET for requests without data
-and POST for requests with data.
+The method argument is optional, and when you don’t specify it, the command defaults to GET for requests without data and POST for requests with data.
 
 Auth0 Management API Docs:
   https://auth0.com/docs/api/management/v2
@@ -25,9 +24,9 @@ auth0 api <method> <uri> [flags]
 ### Examples
 
 ```
-auth0 api "/organizations?include_totals=true"
-auth0 api get "/organizations?include_totals=true"
-auth0 api clients --data "{\"name\":\"apiTest\"}"
+auth0 api "/stats/daily?from=20221101&to=20221118"
+auth0 api get "/tenants/settings"
+auth0 api clients --data "{\"name\":\"ssoTest\",\"app_type\":\"sso_integration\"}"
 
 ```
 
