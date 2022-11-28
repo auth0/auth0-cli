@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/buildinfo"
 )
 
 const apiDocsURL = "https://auth0.com/docs/api/management/v2"
@@ -101,6 +102,7 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 			bearerToken := cli.config.Tenants[cli.tenant].AccessToken
 			request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", bearerToken))
 			request.Header.Set("Content-Type", "application/json")
+			request.Header.Set("User-Agent", fmt.Sprintf("%s/%s", userAgent, strings.TrimPrefix(buildinfo.Version, "v")))
 
 			response, err = http.DefaultClient.Do(request)
 			return err
