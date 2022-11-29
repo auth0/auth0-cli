@@ -129,6 +129,10 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 			request.Header.Set("Content-Type", "application/json")
 			request.Header.Set("User-Agent", fmt.Sprintf("%s/%s", userAgent, strings.TrimPrefix(buildinfo.Version, "v")))
 
+			if cli.debug {
+				cli.renderer.Infof("[%s]: %s", request.Method, request.URL.String())
+			}
+
 			response, err = http.DefaultClient.Do(request)
 			return err
 		}); err != nil {
@@ -142,6 +146,9 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 		}
 
 		if len(rawBodyJSON) == 0 {
+			if cli.debug {
+				cli.renderer.Infof("Response body is empty.")
+			}
 			return nil
 		}
 
