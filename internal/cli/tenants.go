@@ -180,8 +180,6 @@ func addTenantCmd(cli *cli) *cobra.Command {
 				inputs.Domain = args[0]
 			}
 
-			fmt.Println(inputs)
-
 			if err := tenantClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
 				return err
 			}
