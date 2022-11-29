@@ -87,6 +87,11 @@ auth0 api clients --data "{\"name\":\"ssoTest\",\"app_type\":\"sso_integration\"
 		RunE: apiCmdRun(cli, &inputs),
 	}
 
+	cmd.SetHelpFunc(func(command *cobra.Command, strings []string) {
+		command.Flags().MarkHidden("format")
+		command.Parent().HelpFunc()(command, strings)
+	})
+
 	apiFlags.Data.RegisterString(cmd, &inputs.RawData, "")
 	apiFlags.QueryParams.RegisterStringMap(cmd, &inputs.RawQueryParams, nil)
 

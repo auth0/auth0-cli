@@ -24,7 +24,7 @@ auth0 api <method> <uri> [flags]
 ### Examples
 
 ```
-auth0 api "/stats/daily?from=20221101&to=20221118"
+auth0 api "/stats/daily" -q "from=20221101" -q "to=20221118"
 auth0 api get "/tenants/settings"
 auth0 api clients --data "{\"name\":\"ssoTest\",\"app_type\":\"sso_integration\"}"
 
@@ -33,8 +33,9 @@ auth0 api clients --data "{\"name\":\"ssoTest\",\"app_type\":\"sso_integration\"
 ### Options
 
 ```
-  -d, --data string   JSON data payload to send with the request.
-  -h, --help          help for api
+  -d, --data string            JSON data payload to send with the request.
+  -h, --help                   help for api
+  -q, --query stringToString   Query params to send with the request. (default [])
 ```
 
 ### Options inherited from parent commands
