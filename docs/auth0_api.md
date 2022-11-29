@@ -18,7 +18,7 @@ Available Methods:
   get, post, put, patch, delete
 
 ```
-auth0 api <method> <uri> [flags]
+auth0 api <method> <url-path> [flags]
 ```
 
 ### Examples
@@ -27,13 +27,13 @@ auth0 api <method> <uri> [flags]
 auth0 api "stats/daily" -q "from=20221101" -q "to=20221118"
 auth0 api get "tenants/settings"
 auth0 api clients --data "{\"name\":\"ssoTest\",\"app_type\":\"sso_integration\"}"
-
+cat data.json | auth0 api post clients
 ```
 
 ### Options
 
 ```
-  -d, --data string            JSON data payload to send with the request.
+  -d, --data string            JSON data payload to send with the request. Data can be piped in as well instead of using this flag.
   -h, --help                   help for api
   -q, --query stringToString   Query params to send with the request. (default [])
 ```

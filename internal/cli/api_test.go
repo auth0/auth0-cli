@@ -25,14 +25,14 @@ func TestAPICmdInputs_FromArgs(t *testing.T) {
 		},
 		{
 			name:           "it can correctly parse input arguments and data flag",
-			givenArgs:      []string{"post", "/clients"},
+			givenArgs:      []string{"post", "clients"},
 			givenDataFlag:  `{"name":"genericTest"}`,
 			expectedMethod: http.MethodPost,
 			expectedURL:    "https://" + testDomain + "/api/v2/clients",
 		},
 		{
 			name:           "it can correctly parse input arguments when get method is missing",
-			givenArgs:      []string{"/tenants/settings"},
+			givenArgs:      []string{"tenants/settings"},
 			expectedMethod: http.MethodGet,
 			expectedURL:    "https://" + testDomain + "/api/v2/tenants/settings",
 		},
@@ -50,7 +50,7 @@ func TestAPICmdInputs_FromArgs(t *testing.T) {
 		},
 		{
 			name:          "it fails to parse input arguments when data is not a valid JSON",
-			givenArgs:     []string{"patch", "/clients"},
+			givenArgs:     []string{"patch", "clients"},
 			givenDataFlag: "{",
 			expectedError: "invalid json data given: {",
 		},

@@ -25,7 +25,7 @@ var apiFlags = apiCmdFlags{
 		Name:         "RawData",
 		LongForm:     "data",
 		ShortForm:    "d",
-		Help:         "JSON data payload to send with the request.",
+		Help:         "JSON data payload to send with the request. Data can be piped in as well instead of using this flag.",
 		IsRequired:   false,
 		AlwaysPrompt: false,
 	},
@@ -72,7 +72,7 @@ func apiCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "api <method> <uri>",
+		Use:   "api <method> <url-path>",
 		Args:  cobra.RangeArgs(1, 2),
 		Short: "Makes an authenticated HTTP request to the Auth0 Management API",
 		Long: fmt.Sprintf(
@@ -89,7 +89,7 @@ The method argument is optional, and when you don’t specify it, the command de
 		Example: `auth0 api "stats/daily" -q "from=20221101" -q "to=20221118"
 auth0 api get "tenants/settings"
 auth0 api clients --data "{\"name\":\"ssoTest\",\"app_type\":\"sso_integration\"}"
-`,
+cat data.json | auth0 api post clients`,
 		RunE: apiCmdRun(cli, &inputs),
 	}
 
@@ -212,7 +212,7 @@ func (i *apiCmdInputs) validateAndSetData() error {
 	if len(pipedRawData) > 0 && len(i.RawData) > 0 {
 		i.renderer.Warnf(
 			"JSON data was passed using both the flag and as piped input. " +
-				"The command will use only the data from the flag.",
+				"The Auth0 CLI will use only the data from the flag.",
 		)
 	}
 
@@ -226,7 +226,7 @@ func (i *apiCmdInputs) validateAndSetData() error {
 }
 
 func (i *apiCmdInputs) validateAndSetEndpoint(domain string) error {
-	endpoint, err := url.Parse("https://" + domain + "/api/v2/" + strings.Trim(i.RawURI, "/"))
+	endpoint, err := url.Parse(fmt.Sprintf("https://%s/api/v2/%s", domain, strings.Trim(i.RawURI, "/")))
 	if err != nil {
 		return fmt.Errorf("invalid uri given: %w", err)
 	}
