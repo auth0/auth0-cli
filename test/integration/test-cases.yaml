@@ -660,3 +660,7 @@ tests:
       json:
         idle_session_lifetime: "72"
     exit-code: 0
+
+  api patch tenant settings with wrong json:
+    command: auth0 api patch "tenants/settings" --data "{\"idle_session_lifetime:72}"
+    exit-code: 1
