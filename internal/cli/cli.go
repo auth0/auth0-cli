@@ -499,14 +499,6 @@ func defaultConfigPath() string {
 	return path.Join(os.Getenv("HOME"), ".config", "auth0", "config.json")
 }
 
-func (c *cli) setPath(p string) {
-	if p == "" {
-		c.path = defaultConfigPath()
-		return
-	}
-	c.path = p
-}
-
 func canPrompt(cmd *cobra.Command) bool {
 	noInput, err := cmd.Root().Flags().GetBool("no-input")
 
