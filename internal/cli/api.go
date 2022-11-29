@@ -14,6 +14,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/iostream"
+	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
 const apiDocsURL = "https://auth0.com/docs/api/management/v2"
@@ -104,6 +105,13 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 			return fmt.Errorf("failed to parse command inputs: %w", err)
 		}
 
+		if inputs.Method == http.MethodDelete && !cli.force && canPrompt(cmd) {
+			message := "Are you sure you want to proceed? Deleting is a destructive action."
+			if confirmed := prompt.Confirm(message); !confirmed {
+				return nil
+			}
+		}
+
 		var response *http.Response
 		if err := ansi.Waiting(func() error {
 			request, err := http.NewRequestWithContext(
@@ -131,6 +139,10 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 		rawBodyJSON, err := io.ReadAll(response.Body)
 		if err != nil {
 			return err
+		}
+
+		if len(rawBodyJSON) == 0 {
+			return nil
 		}
 
 		var prettyJSON bytes.Buffer
@@ -185,7 +197,7 @@ func (i *apiCmdInputs) validateAndSetData() error {
 		data = pipedRawData
 	}
 
-	if data != nil && !json.Valid(data) {
+	if len(data) > 0 && !json.Valid(data) {
 		return fmt.Errorf("invalid json data given: %s", data)
 	}
 
