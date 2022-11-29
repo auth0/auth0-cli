@@ -13,6 +13,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
+	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
@@ -53,6 +54,8 @@ type (
 	}
 
 	apiCmdInputs struct {
+		renderer *display.Renderer
+
 		RawMethod      string
 		RawURI         string
 		RawData        string
@@ -64,7 +67,9 @@ type (
 )
 
 func apiCmd(cli *cli) *cobra.Command {
-	var inputs apiCmdInputs
+	inputs := apiCmdInputs{
+		renderer: cli.renderer,
+	}
 
 	cmd := &cobra.Command{
 		Use:   "api <method> <uri>",
@@ -200,8 +205,15 @@ func (i *apiCmdInputs) validateAndSetData() error {
 	}
 
 	pipedRawData := iostream.PipedInput()
-	if pipedRawData != nil && data == nil {
+	if len(pipedRawData) > 0 && data == nil {
 		data = pipedRawData
+	}
+
+	if len(pipedRawData) > 0 && len(i.RawData) > 0 {
+		i.renderer.Warnf(
+			"JSON data was passed using both the flag and as piped input. " +
+				"The command will use only the data from the flag.",
+		)
 	}
 
 	if len(data) > 0 && !json.Valid(data) {
