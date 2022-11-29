@@ -15,7 +15,7 @@ Auth0 Management API Docs:
   https://auth0.com/docs/api/management/v2
 
 Available Methods:
-  GET, POST, PUT, PATCH, DELETE
+  get, post, put, patch, delete
 
 ```
 auth0 api <method> <uri> [flags]

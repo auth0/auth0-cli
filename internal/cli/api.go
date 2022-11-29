@@ -79,7 +79,7 @@ The method argument is optional, and when you don’t specify it, the command de
 
 %s  %s`,
 			"Auth0 Management API Docs:\n", apiDocsURL,
-			"Available Methods:\n", strings.Join(apiValidMethods, ", "),
+			"Available Methods:\n", strings.ToLower(strings.Join(apiValidMethods, ", ")),
 		),
 		Example: `auth0 api "/stats/daily" -q "from=20221101" -q "to=20221118"
 auth0 api get "/tenants/settings"
