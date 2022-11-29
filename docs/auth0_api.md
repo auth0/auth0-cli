@@ -24,8 +24,8 @@ auth0 api <method> <uri> [flags]
 ### Examples
 
 ```
-auth0 api "/stats/daily" -q "from=20221101" -q "to=20221118"
-auth0 api get "/tenants/settings"
+auth0 api "stats/daily" -q "from=20221101" -q "to=20221118"
+auth0 api get "tenants/settings"
 auth0 api clients --data "{\"name\":\"ssoTest\",\"app_type\":\"sso_integration\"}"
 
 ```
