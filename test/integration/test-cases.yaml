@@ -639,3 +639,28 @@ tests:
         - STAGE_PRE_USER_REGISTRATION_MAX_ATTEMPTS
         - STAGE_PRE_USER_REGISTRATION_RATE
     exit-code: 0
+
+  api get tenant settings:
+    command: auth0 api get "tenants/settings"
+    stdout:
+      json:
+        enabled_locales.#: "1"
+    exit-code: 0
+
+  api patch tenant settings with piped data:
+    command: cat ./test/integration/fixtures/update-tenant-settings.json | auth0 api patch "tenants/settings"
+    stdout:
+      json:
+        idle_session_lifetime: "73"
+    exit-code: 0
+
+  api patch tenant settings:
+    command: auth0 api patch "tenants/settings" --data "{\"idle_session_lifetime\":72}"
+    stdout:
+      json:
+        idle_session_lifetime: "72"
+    exit-code: 0
+
+  api patch tenant settings with wrong json:
+    command: auth0 api patch "tenants/settings" --data "{\"idle_session_lifetime:72}"
+    exit-code: 1
