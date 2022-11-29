@@ -13,6 +13,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
+	"github.com/auth0/auth0-cli/internal/iostream"
 )
 
 const apiDocsURL = "https://auth0.com/docs/api/management/v2"
@@ -168,11 +169,22 @@ func (i *apiCmdInputs) validateAndSetMethod() error {
 }
 
 func (i *apiCmdInputs) validateAndSetData() error {
-	if i.RawData != "" && !json.Valid([]byte(i.RawData)) {
-		return fmt.Errorf("invalid json data given: %+v", i.RawData)
+	var data []byte
+
+	if i.RawData != "" {
+		data = []byte(i.RawData)
 	}
 
-	i.Data = bytes.NewReader([]byte(i.RawData))
+	pipedRawData := iostream.PipedInput()
+	if pipedRawData != nil && data == nil {
+		data = pipedRawData
+	}
+
+	if data != nil && !json.Valid(data) {
+		return fmt.Errorf("invalid json data given: %s", data)
+	}
+
+	i.Data = bytes.NewReader(data)
 
 	return nil
 }
