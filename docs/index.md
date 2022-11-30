@@ -9,7 +9,6 @@ Supercharge your development workflow.
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
   -h, --help            help for auth0
       --json            Output in json format.
       --no-color        Disable colors.

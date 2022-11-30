@@ -154,9 +154,6 @@ func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.PersistentFlags().BoolVar(&cli.json,
 		"json", false, "Output in json format.")
 
-	rootCmd.PersistentFlags().BoolVar(&cli.force,
-		"force", false, "Skip confirmation.")
-
 	rootCmd.PersistentFlags().BoolVar(&cli.noInput,
 		"no-input", false, "Disable interactivity.")
 
