@@ -32,9 +32,10 @@ var (
 
 func rolePermissionsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "permissions",
-		Short: "Manage permissions within the role resource",
-		Long:  "Manage permissions within the role resource.",
+		Use:     "permissions",
+		Short:   "Manage permissions within the role resource",
+		Long:    "Manage permissions within the role resource.",
+		Aliases: []string{"perms"},
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
