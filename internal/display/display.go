@@ -88,22 +88,23 @@ func (r *Renderer) JSONResult(data interface{}) {
 }
 
 func (r *Renderer) Results(data []View) {
-	if len(data) > 0 {
-		switch r.Format {
-		case OutputFormatJSON:
-			var list []interface{}
-			for _, item := range data {
-				list = append(list, item.Object())
-			}
-			r.JSONResult(list)
+	if len(data) == 0 {
+		return
+	}
 
-		default:
-			rows := make([][]string, 0, len(data))
-			for _, d := range data {
-				rows = append(rows, d.AsTableRow())
-			}
-			writeTable(r.ResultWriter, data[0].AsTableHeader(), rows)
+	switch r.Format {
+	case OutputFormatJSON:
+		var list []interface{}
+		for _, item := range data {
+			list = append(list, item.Object())
 		}
+		r.JSONResult(list)
+	default:
+		rows := make([][]string, 0, len(data))
+		for _, d := range data {
+			rows = append(rows, d.AsTableRow())
+		}
+		writeTable(r.ResultWriter, data[0].AsTableHeader(), rows)
 	}
 }
 
@@ -111,7 +112,6 @@ func (r *Renderer) Result(data View) {
 	switch r.Format {
 	case OutputFormatJSON:
 		r.JSONResult(data.Object())
-
 	default:
 		// TODO(cyx): we're type asserting on the fly to prevent too
 		// many changes in other places. In the future we should

@@ -70,7 +70,7 @@ var errUnauthenticated = errors.New("Not logged in. Try 'auth0 login'.")
 //
 // In addition, it stores a reference to all the flags passed, e.g.:
 //
-// 1. --format
+// 1. --json
 // 2. --tenant
 // 3. --debug.
 type cli struct {
@@ -82,7 +82,7 @@ type cli struct {
 	// set of flags which are user specified.
 	debug   bool
 	tenant  string
-	format  string
+	json    bool
 	force   bool
 	noInput bool
 	noColor bool
@@ -439,30 +439,23 @@ func (c *cli) persistConfig() error {
 
 func (c *cli) init() error {
 	c.initOnce.Do(func() {
-		// Initialize the context -- e.g. the configuration
-		// information, tenants, etc.
 		if c.errOnce = c.initContext(); c.errOnce != nil {
 			return
 		}
+
 		c.renderer.Tenant = c.tenant
 
 		cobra.EnableCommandSorting = false
 	})
 
-	// Determine what the desired output format is.
-	//
-	// NOTE(cyx): Since this isn't expensive to do, we don't need to put it
-	// inside initOnce.
-	format := strings.ToLower(c.format)
-	if format != "" && format != string(display.OutputFormatJSON) {
-		return fmt.Errorf("Invalid format. Use `--format=json` or omit this option to use the default format.")
+	if c.json {
+		c.renderer.Format = display.OutputFormatJSON
 	}
-	c.renderer.Format = display.OutputFormat(format)
 
 	c.renderer.Tenant = c.tenant
 
-	// Once initialized, we'll keep returning the same err that was
-	// originally encountered.
+	// Once initialized, we'll keep returning the
+	// same err that was originally encountered.
 	return c.errOnce
 }
 

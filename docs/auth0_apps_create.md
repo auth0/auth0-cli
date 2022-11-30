@@ -47,7 +47,7 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <descriptio
 ```
       --debug           Enable debug mode.
       --force           Skip confirmation.
-      --format string   Command output format. Options: json.
+      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

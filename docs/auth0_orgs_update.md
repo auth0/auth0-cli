@@ -38,7 +38,7 @@ auth0 orgs update <id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_v
 ```
       --debug           Enable debug mode.
       --force           Skip confirmation.
-      --format string   Command output format. Options: json.
+      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
