@@ -36,7 +36,6 @@ auth0 users update -n John Doe --email john.doe@example.com
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
       --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.

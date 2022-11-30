@@ -30,7 +30,6 @@ auth0 apps use <client-id>
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
       --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.

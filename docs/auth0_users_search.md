@@ -35,7 +35,6 @@ auth0 users search -q name -s "name:1"
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
       --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.

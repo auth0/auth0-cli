@@ -38,7 +38,6 @@ auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=val
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
       --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.

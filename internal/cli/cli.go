@@ -74,12 +74,13 @@ var errUnauthenticated = errors.New("Not logged in. Try 'auth0 login'.")
 // 2. --tenant
 // 3. --debug.
 type cli struct {
-	// core primitives exposed to command builders.
+	// Core primitives exposed to command builders.
 	api           *auth0.API
 	authenticator *auth.Authenticator
 	renderer      *display.Renderer
 	tracker       *analytics.Tracker
-	// set of flags which are user specified.
+
+	// Set of flags which are user specified.
 	debug   bool
 	tenant  string
 	json    bool
@@ -87,7 +88,7 @@ type cli struct {
 	noInput bool
 	noColor bool
 
-	// config state management.
+	// Config state management.
 	initOnce sync.Once
 	errOnce  error
 	path     string

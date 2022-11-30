@@ -33,7 +33,6 @@ auth0 roles update <id> -n myrole --description "awesome role"
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
       --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.

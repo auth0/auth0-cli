@@ -35,7 +35,6 @@ auth0 rules create -n "My Rule" -t "Empty rule" --enabled=false
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
       --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.

@@ -37,7 +37,6 @@ auth0 users create -n "John Doe" -e john@example.com --connection "Username-Pass
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
       --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.

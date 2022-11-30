@@ -45,7 +45,6 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
       --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.

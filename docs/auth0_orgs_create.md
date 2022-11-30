@@ -39,7 +39,6 @@ auth0 orgs create -n myorganization -d "My Organization" -m "KEY=value" -m "OTHE
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
       --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.

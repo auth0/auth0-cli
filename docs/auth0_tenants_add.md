@@ -29,7 +29,6 @@ auth0 tenants add <tenant> --client-id <id> --client-secret <secret>
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
       --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.

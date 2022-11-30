@@ -30,7 +30,6 @@ auth0 apis scopes ls <id|audience>
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
       --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.

@@ -23,6 +23,7 @@ auth0 qs download --stack <stack>
 ### Options
 
 ```
+      --force          Skip confirmation.
   -h, --help           help for download
   -s, --stack string   Tech/Language of the quickstart sample to download.
 ```
@@ -31,7 +32,6 @@ auth0 qs download --stack <stack>
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
       --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.

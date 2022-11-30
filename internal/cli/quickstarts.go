@@ -201,7 +201,10 @@ auth0 qs download --stack <stack>`,
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
+
 	qsStack.RegisterString(cmd, &inputs.Stack, "")
+
 	return cmd
 }
 
