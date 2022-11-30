@@ -37,7 +37,7 @@ auth0 branding emails update welcome
 ```
       --debug           Enable debug mode.
       --force           Skip confirmation.
-      --format string   Command output format. Options: json.
+      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

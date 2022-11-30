@@ -94,7 +94,7 @@ cat data.json | auth0 api post clients`,
 	}
 
 	cmd.SetHelpFunc(func(command *cobra.Command, strings []string) {
-		command.Flags().MarkHidden("format")
+		command.Flags().MarkHidden("json")
 		command.Parent().HelpFunc()(command, strings)
 	})
 
