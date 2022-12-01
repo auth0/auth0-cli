@@ -183,7 +183,6 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 			}
 
 			t := Tenant{
-				Name:        t.Domain,
 				Domain:      t.Domain,
 				AccessToken: token.AccessToken,
 				ExpiresAt:   token.ExpiresAt,
