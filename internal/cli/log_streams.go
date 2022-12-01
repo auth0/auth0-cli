@@ -733,6 +733,11 @@ auth0 logs streams delete <id>`,
 		},
 	}
 
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		_ = cmd.Flags().MarkHidden("json")
+		cmd.Parent().HelpFunc()(cmd, args)
+	})
+
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 
 	return cmd
@@ -763,6 +768,11 @@ func openLogStreamsCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		_ = cmd.Flags().MarkHidden("json")
+		cmd.Parent().HelpFunc()(cmd, args)
+	})
 
 	return cmd
 }
