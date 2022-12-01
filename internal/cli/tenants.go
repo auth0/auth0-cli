@@ -178,7 +178,7 @@ func addTenantCmd(cli *cli) *cobra.Command {
 					}
 				}
 			} else {
-				inputs.Domain = args[0]
+				 = args[0]
 			}
 
 			if err := tenantClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
@@ -200,7 +200,6 @@ func addTenantCmd(cli *cli) *cobra.Command {
 			}
 
 			t := Tenant{
-				Name:         inputs.Domain,
 				Domain:       inputs.Domain,
 				AccessToken:  token.AccessToken,
 				ExpiresAt:    token.ExpiresAt,
