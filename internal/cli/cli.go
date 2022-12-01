@@ -214,7 +214,6 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 			return t, nil
 		}
 
-		// persist the updated tenant with renewed access token
 		t.AccessToken = res.AccessToken
 		t.ExpiresAt = time.Now().Add(
 			time.Duration(res.ExpiresIn) * time.Second,
