@@ -178,7 +178,7 @@ func addTenantCmd(cli *cli) *cobra.Command {
 					}
 				}
 			} else {
-				 = args[0]
+				inputs.Domain = args[0]
 			}
 
 			if err := tenantClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
