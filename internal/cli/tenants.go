@@ -115,6 +115,11 @@ func useTenantCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		_ = cmd.Flags().MarkHidden("json")
+		cmd.Parent().HelpFunc()(cmd, args)
+	})
+
 	return cmd
 }
 
@@ -147,6 +152,11 @@ func openTenantCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		_ = cmd.Flags().MarkHidden("json")
+		cmd.Parent().HelpFunc()(cmd, args)
+	})
 
 	return cmd
 }

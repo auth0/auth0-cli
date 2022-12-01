@@ -33,6 +33,7 @@ func loginCmd(cli *cli) *cobra.Command {
 
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		_ = cmd.Flags().MarkHidden("tenant")
+		_ = cmd.Flags().MarkHidden("json")
 		cmd.Parent().HelpFunc()(cmd, args)
 	})
 

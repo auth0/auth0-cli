@@ -188,7 +188,13 @@ func useAppCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		_ = cmd.Flags().MarkHidden("json")
+		cmd.Parent().HelpFunc()(cmd, args)
+	})
+
 	appNone.RegisterBool(cmd, &inputs.None, false)
+
 	return cmd
 }
 
@@ -323,6 +329,11 @@ auth0 apps delete <id>`,
 			})
 		},
 	}
+
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		_ = cmd.Flags().MarkHidden("json")
+		cmd.Parent().HelpFunc()(cmd, args)
+	})
 
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 
@@ -704,6 +715,11 @@ func openAppCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		_ = cmd.Flags().MarkHidden("json")
+		cmd.Parent().HelpFunc()(cmd, args)
+	})
 
 	return cmd
 }
