@@ -138,17 +138,10 @@ func (c *cli) setup(ctx context.Context) error {
 		ua = fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v"))
 	)
 
-	if t.ClientID != "" && t.ClientSecret != "" {
-		m, err = management.New(t.Domain,
-			management.WithClientCredentials(t.ClientID, t.ClientSecret),
-			management.WithUserAgent(ua),
-		)
-	} else {
-		m, err = management.New(t.Domain,
-			management.WithStaticToken(t.AccessToken),
-			management.WithUserAgent(ua),
-		)
-	}
+	m, err = management.New(t.Domain,
+		management.WithStaticToken(t.AccessToken),
+		management.WithUserAgent(ua),
+	)
 
 	if err != nil {
 		return err
@@ -168,27 +161,48 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 		return Tenant{}, err
 	}
 
-	if t.ClientID != "" && t.ClientSecret != "" {
-		return t, nil
-	}
-
 	if t.AccessToken == "" || scopesChanged(t) {
 		t, err = RunLogin(ctx, c, true)
 		if err != nil {
 			return Tenant{}, err
 		}
-	} else if isExpired(t.ExpiresAt, accessTokenExpThreshold) {
-		// check if the stored access token is expired:
-		// use the refresh token to get a new access token:
+		return t, nil
+	}
+
+	if isExpired(t.ExpiresAt, accessTokenExpThreshold) {
+		// regenerate access token for client credential auth'd tenants
+		if t.ClientID != "" && t.ClientSecret != "" {
+			token, err := auth.GetAccessTokenFromClientCreds(auth.ClientCredentials{
+				ClientID:     t.ClientID,
+				ClientSecret: t.ClientSecret,
+				Domain:       t.Domain,
+			})
+
+			if err != nil {
+				return t, err
+			}
+
+			t := Tenant{
+				Name:        t.Domain,
+				Domain:      t.Domain,
+				AccessToken: token.AccessToken,
+				ExpiresAt:   token.ExpiresAt,
+				Scopes:      auth.RequiredScopes(),
+			}
+
+			if err := c.addTenant(t); err != nil {
+				return t, fmt.Errorf("unexpected error adding tenant to config: %w", err)
+			}
+			return t, nil
+		}
+
+		// regenerate access token for device auth'd tenants
 		tr := &auth.TokenRetriever{
 			Authenticator: c.authenticator,
 			Secrets:       &auth.Keyring{},
 			Client:        http.DefaultClient,
 		}
 
-		// NOTE(cyx): this code will have to be adapted to instead
-		// maybe take the clientID/secret as additional params, or
-		// something similar.
 		res, err := tr.Refresh(ctx, t.Domain)
 		if err != nil {
 			// ask and guide the user through the login process:
@@ -197,18 +211,20 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 			if err != nil {
 				return Tenant{}, err
 			}
-		} else {
-			// persist the updated tenant with renewed access token
-			t.AccessToken = res.AccessToken
-			t.ExpiresAt = time.Now().Add(
-				time.Duration(res.ExpiresIn) * time.Second,
-			)
-
-			err = c.addTenant(t)
-			if err != nil {
-				return Tenant{}, err
-			}
+			return t, nil
 		}
+
+		// persist the updated tenant with renewed access token
+		t.AccessToken = res.AccessToken
+		t.ExpiresAt = time.Now().Add(
+			time.Duration(res.ExpiresIn) * time.Second,
+		)
+
+		err = c.addTenant(t)
+		if err != nil {
+			return Tenant{}, err
+		}
+
 	}
 
 	return t, nil

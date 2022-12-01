@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/joeshaw/envdecode"
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 const (
@@ -65,7 +66,7 @@ type Result struct {
 	Domain       string
 	RefreshToken string
 	AccessToken  string
-	ExpiresIn    int64
+	ExpiresAt    time.Time
 }
 
 type State struct {
@@ -167,10 +168,14 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 				return Result{}, fmt.Errorf("cannot parse tenant from the given access token: %w", err)
 			}
 
+			expiresAt := time.Now().Add(
+				time.Duration(res.ExpiresIn) * time.Second,
+			)
+
 			return Result{
 				RefreshToken: res.RefreshToken,
 				AccessToken:  res.AccessToken,
-				ExpiresIn:    res.ExpiresIn,
+				ExpiresAt:    expiresAt,
 				Tenant:       ten,
 				Domain:       domain,
 			}, nil
@@ -248,4 +253,40 @@ func parseTenant(accessToken string) (tenant, domain string, err error) {
 		}
 	}
 	return "", "", fmt.Errorf("audience not found for %s", audiencePath)
+}
+
+// ClientCredentials encapsulates all data to facilitate access token creation with client credentials (client ID and client secret)
+type ClientCredentials struct {
+	ClientID     string
+	ClientSecret string
+	Domain       string
+}
+
+// GetAccessTokenFromClientCreds generates an access token from client credentials
+func GetAccessTokenFromClientCreds(args ClientCredentials) (Result, error) {
+	u, err := url.Parse("https://" + args.Domain)
+	if err != nil {
+		return Result{}, err
+	}
+
+	credsConfig := &clientcredentials.Config{
+		ClientID:     args.ClientID,
+		ClientSecret: args.ClientSecret,
+		TokenURL:     u.String() + "/oauth/token",
+		EndpointParams: url.Values{
+			"client_id": {args.ClientID},
+			"scope":     {strings.Join(RequiredScopesMin(), " ")},
+			"audience":  {u.String() + "/api/v2/"},
+		},
+	}
+
+	resp, err := credsConfig.Token(context.Background())
+	if err != nil {
+		return Result{}, err
+	}
+
+	return Result{
+		AccessToken: resp.AccessToken,
+		ExpiresAt:   resp.Expiry,
+	}, nil
 }

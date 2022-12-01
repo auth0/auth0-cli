@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -188,10 +189,28 @@ func addTenantCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			t := Tenant{
-				Domain:       inputs.Domain,
+			token, err := auth.GetAccessTokenFromClientCreds(auth.ClientCredentials{
 				ClientID:     inputs.ClientID,
 				ClientSecret: inputs.ClientSecret,
+				Domain:       inputs.Domain,
+			})
+
+			if err != nil {
+				return err
+			}
+
+			t := Tenant{
+				Name:         inputs.Domain,
+				Domain:       inputs.Domain,
+				AccessToken:  token.AccessToken,
+				ExpiresAt:    token.ExpiresAt,
+				Scopes:       auth.RequiredScopes(),
+				ClientID:     inputs.ClientID,
+				ClientSecret: inputs.ClientSecret,
+			}
+
+			if err := cli.addTenant(t); err != nil {
+				return fmt.Errorf("unexpected error when attempting to save tenant data: %w. ", err)
 			}
 
 			if err := cli.addTenant(t); err != nil {
@@ -202,6 +221,9 @@ func addTenantCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
+
+	tenantClientID.RegisterString(cmd, &inputs.ClientID, "")
+	tenantClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
 
 	return cmd
 }
