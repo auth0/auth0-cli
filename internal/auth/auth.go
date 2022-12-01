@@ -168,16 +168,14 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 				return Result{}, fmt.Errorf("cannot parse tenant from the given access token: %w", err)
 			}
 
-			expiresAt := time.Now().Add(
-				time.Duration(res.ExpiresIn) * time.Second,
-			)
-
 			return Result{
 				RefreshToken: res.RefreshToken,
 				AccessToken:  res.AccessToken,
-				ExpiresAt:    expiresAt,
-				Tenant:       ten,
-				Domain:       domain,
+				ExpiresAt: time.Now().Add(
+					time.Duration(res.ExpiresIn) * time.Second,
+				),
+				Tenant: ten,
+				Domain: domain,
 			}, nil
 		}
 	}
