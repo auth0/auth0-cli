@@ -16,27 +16,35 @@ import (
 	"github.com/auth0/auth0-cli/internal/display"
 )
 
-func TestIsExpired(t *testing.T) {
-	t.Run("is expired", func(t *testing.T) {
-		d := time.Date(2021, 01, 01, 10, 30, 30, 0, time.UTC)
-		if want, got := true, isExpired(d, 1*time.Minute); want != got {
-			t.Fatalf("wanted: %v, got %v", want, got)
-		}
-	})
+func TestTenant_HasExpiredToken(t *testing.T) {
+	var testCases = []struct {
+		name                     string
+		givenTime                time.Time
+		expectedTokenToBeExpired bool
+	}{
+		{
+			name:                     "is expired",
+			givenTime:                time.Date(2021, 01, 01, 10, 30, 30, 0, time.UTC),
+			expectedTokenToBeExpired: true,
+		},
+		{
+			name:                     "expired because of the threshold",
+			givenTime:                time.Now().Add(-2 * time.Minute),
+			expectedTokenToBeExpired: true,
+		},
+		{
+			name:                     "is not expired",
+			givenTime:                time.Now().Add(10 * time.Minute),
+			expectedTokenToBeExpired: false,
+		},
+	}
 
-	t.Run("expired because of the threshold", func(t *testing.T) {
-		d := time.Now().Add(-2 * time.Minute)
-		if want, got := true, isExpired(d, 5*time.Minute); want != got {
-			t.Fatalf("wanted: %v, got %v", want, got)
-		}
-	})
-
-	t.Run("is not expired", func(t *testing.T) {
-		d := time.Now().Add(10 * time.Minute)
-		if want, got := false, isExpired(d, 5*time.Minute); want != got {
-			t.Fatalf("wanted: %v, got %v", want, got)
-		}
-	})
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			tenant := Tenant{ExpiresAt: testCase.givenTime}
+			assert.Equal(t, testCase.expectedTokenToBeExpired, tenant.HasExpiredToken())
+		})
+	}
 }
 
 // TODO(cyx): think about whether we should extract this function in the
