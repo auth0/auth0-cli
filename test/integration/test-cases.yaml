@@ -29,7 +29,7 @@ tests:
   auth0 orgs list:
     exit-code: 0
 
-  auth0 branding domains list:
+  auth0 domains list:
     exit-code: 0
 
   auth0 quickstarts list:

@@ -95,9 +95,9 @@ func listCustomDomainsCmd(cli *cli) *cobra.Command {
 		Args:    cobra.NoArgs,
 		Short:   "List your custom domains",
 		Long: `List your existing custom domains. To create one try:
-auth0 branding domains create`,
-		Example: `auth0 branding domains list
-auth0 branding domains ls`,
+auth0 domains create`,
+		Example: `auth0 domains list
+auth0 domains ls`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list []*management.CustomDomain
 
@@ -127,8 +127,8 @@ func showCustomDomainCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show a custom domain",
 		Long:  "Show a custom domain.",
-		Example: `auth0 branding domains show 
-auth0 branding domains show <id>`,
+		Example: `auth0 domains show 
+auth0 domains show <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := customDomainID.Pick(cmd, &inputs.ID, cli.customDomainsPickerOptions)
@@ -171,8 +171,8 @@ func createCustomDomainCmd(cli *cli) *cobra.Command {
 		Args:  cobra.NoArgs,
 		Short: "Create a custom domain",
 		Long:  "Create a custom domain.",
-		Example: `auth0 branding domains create 
-auth0 branding domains create <id>`,
+		Example: `auth0 domains create 
+auth0 domains create <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := customDomainDomain.Ask(cmd, &inputs.Domain, nil); err != nil {
 				return err
@@ -232,9 +232,9 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a custom domain",
 		Long:  "Update a custom domain.",
-		Example: `auth0 branding domains update
-auth0 branding domains update <id> --policy compatible
-auth0 branding domains update <id> -p compatible --ip-header "cf-connecting-ip"`,
+		Example: `auth0 domains update
+auth0 domains update <id> --policy compatible
+auth0 domains update <id> -p compatible --ip-header "cf-connecting-ip"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.CustomDomain
 
@@ -308,8 +308,8 @@ func deleteCustomDomainCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete a custom domain",
 		Long:  "Delete a custom domain.",
-		Example: `auth0 branding domains delete 
-auth0 branding domains delete <id>`,
+		Example: `auth0 domains delete 
+auth0 domains delete <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := customDomainID.Pick(cmd, &inputs.ID, cli.customDomainsPickerOptions)
@@ -358,8 +358,8 @@ func verifyCustomDomainCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Verify a custom domain",
 		Long:  "Verify a custom domain.",
-		Example: `auth0 branding domains verify 
-auth0 branding domains verify <id>`,
+		Example: `auth0 domains verify 
+auth0 domains verify <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := customDomainID.Pick(cmd, &inputs.ID, cli.customDomainsPickerOptions)
