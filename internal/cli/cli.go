@@ -95,6 +95,54 @@ type cli struct {
 	config   config
 }
 
+func (t *Tenant) authenticatedWithClientCredentials() bool {
+	return t.ClientID != "" && t.ClientSecret != ""
+}
+
+func (t *Tenant) authenticatedWithDeviceCodeFlow() bool {
+	return t.ClientID == "" && t.ClientSecret == ""
+}
+
+func (t *Tenant) hasExpiredToken() bool {
+	return time.Now().Add(accessTokenExpThreshold).After(t.ExpiresAt)
+}
+
+func (t *Tenant) regenerateAccessToken(ctx context.Context, c *cli) error {
+	if t.authenticatedWithClientCredentials() {
+		token, err := auth.GetAccessTokenFromClientCreds(auth.ClientCredentials{
+			ClientID:     t.ClientID,
+			ClientSecret: t.ClientSecret,
+			Domain:       t.Domain,
+		})
+		if err != nil {
+			return err
+		}
+
+		t.AccessToken = token.AccessToken
+		t.ExpiresAt = token.ExpiresAt
+	}
+
+	if t.authenticatedWithDeviceCodeFlow() {
+		tokenRetriever := &auth.TokenRetriever{
+			Authenticator: c.authenticator,
+			Secrets:       &auth.Keyring{},
+			Client:        http.DefaultClient,
+		}
+
+		tokenResponse, err := tokenRetriever.Refresh(ctx, t.Domain)
+		if err != nil {
+			return err
+		}
+
+		t.AccessToken = tokenResponse.AccessToken
+		t.ExpiresAt = time.Now().Add(
+			time.Duration(tokenResponse.ExpiresIn) * time.Second,
+		)
+	}
+
+	return nil
+}
+
 // isLoggedIn encodes the domain logic for determining whether or not we're
 // logged in. This might check our config storage, or just in memory.
 func (c *cli) isLoggedIn() bool {
@@ -134,28 +182,18 @@ func (c *cli) setup(ctx context.Context) error {
 		return err
 	}
 
-	var (
-		m  *management.Management
-		ua = fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v"))
+	userAgent := fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v"))
+
+	api, err := management.New(
+		t.Domain,
+		management.WithStaticToken(t.AccessToken),
+		management.WithUserAgent(userAgent),
 	)
-
-	if t.ClientID != "" && t.ClientSecret != "" {
-		m, err = management.New(t.Domain,
-			management.WithClientCredentials(t.ClientID, t.ClientSecret),
-			management.WithUserAgent(ua),
-		)
-	} else {
-		m, err = management.New(t.Domain,
-			management.WithStaticToken(t.AccessToken),
-			management.WithUserAgent(ua),
-		)
-	}
-
 	if err != nil {
 		return err
 	}
 
-	c.api = auth0.NewAPI(m)
+	c.api = auth0.NewAPI(api)
 	return nil
 }
 
@@ -169,55 +207,25 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 		return Tenant{}, err
 	}
 
-	if t.ClientID != "" && t.ClientSecret != "" {
+	if t.AccessToken == "" || (scopesChanged(t) && t.authenticatedWithDeviceCodeFlow()) {
+		return RunLogin(ctx, c, true)
+	}
+
+	if !t.hasExpiredToken() {
 		return t, nil
 	}
 
-	if t.AccessToken == "" || scopesChanged(t) {
-		t, err = RunLogin(ctx, c, true)
-		if err != nil {
-			return Tenant{}, err
-		}
-	} else if isExpired(t.ExpiresAt, accessTokenExpThreshold) {
-		// check if the stored access token is expired:
-		// use the refresh token to get a new access token:
-		tr := &auth.TokenRetriever{
-			Authenticator: c.authenticator,
-			Secrets:       &auth.Keyring{},
-			Client:        http.DefaultClient,
-		}
+	if err := t.regenerateAccessToken(ctx, c); err != nil {
+		// Ask and guide the user through the login process.
+		c.renderer.Errorf("failed to renew access token, %s", err)
+		return RunLogin(ctx, c, true)
+	}
 
-		// NOTE(cyx): this code will have to be adapted to instead
-		// maybe take the clientID/secret as additional params, or
-		// something similar.
-		res, err := tr.Refresh(ctx, t.Domain)
-		if err != nil {
-			// ask and guide the user through the login process:
-			c.renderer.Errorf("failed to renew access token, %s", err)
-			t, err = RunLogin(ctx, c, true)
-			if err != nil {
-				return Tenant{}, err
-			}
-		} else {
-			// persist the updated tenant with renewed access token
-			t.AccessToken = res.AccessToken
-			t.ExpiresAt = time.Now().Add(
-				time.Duration(res.ExpiresIn) * time.Second,
-			)
-
-			err = c.addTenant(t)
-			if err != nil {
-				return Tenant{}, err
-			}
-		}
+	if err := c.addTenant(t); err != nil {
+		return Tenant{}, fmt.Errorf("unexpected error adding tenant to config: %w", err)
 	}
 
 	return t, nil
-}
-
-// isExpired is true if now() + a threshold is after the given date.
-func isExpired(t time.Time, threshold time.Duration) bool {
-	return time.Now().Add(threshold).After(t)
 }
 
 // scopesChanged compare the tenant scopes
