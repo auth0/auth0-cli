@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -110,10 +109,8 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) (Tenant, error) {
 		Name:        result.Tenant,
 		Domain:      result.Domain,
 		AccessToken: result.AccessToken,
-		ExpiresAt: time.Now().Add(
-			time.Duration(result.ExpiresIn) * time.Second,
-		),
-		Scopes: auth.RequiredScopes(),
+		ExpiresAt:   result.ExpiresAt,
+		Scopes:      auth.RequiredScopes(),
 	}
 
 	err = cli.addTenant(tenant)
