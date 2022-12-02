@@ -94,6 +94,14 @@ type cli struct {
 	config   config
 }
 
+func (t *Tenant) AuthenticatedWithClientCredentials() bool {
+	return t.ClientID != "" && t.ClientSecret != ""
+}
+
+func (t *Tenant) AuthenticatedWithDeviceCodeFlow() bool {
+	return t.ClientID == "" && t.ClientSecret == ""
+}
+
 // isLoggedIn encodes the domain logic for determining whether or not we're
 // logged in. This might check our config storage, or just in memory.
 func (c *cli) isLoggedIn() bool {
@@ -161,17 +169,13 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 		return Tenant{}, err
 	}
 
-	if t.AccessToken == "" || scopesChanged(t) {
-		t, err = RunLogin(ctx, c, true)
-		if err != nil {
-			return Tenant{}, err
-		}
-		return t, nil
+	if t.AccessToken == "" || (scopesChanged(t) && t.AuthenticatedWithDeviceCodeFlow()) {
+		return RunLogin(ctx, c, true)
 	}
 
 	if isExpired(t.ExpiresAt, accessTokenExpThreshold) {
 		// regenerate access token for client credential auth'd tenants
-		if t.ClientID != "" && t.ClientSecret != "" {
+		if t.AuthenticatedWithClientCredentials() {
 			token, err := auth.GetAccessTokenFromClientCreds(auth.ClientCredentials{
 				ClientID:     t.ClientID,
 				ClientSecret: t.ClientSecret,

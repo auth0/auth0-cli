@@ -202,7 +202,6 @@ func addTenantCmd(cli *cli) *cobra.Command {
 				Domain:       inputs.Domain,
 				AccessToken:  token.AccessToken,
 				ExpiresAt:    token.ExpiresAt,
-				Scopes:       auth.RequiredScopes(),
 				ClientID:     inputs.ClientID,
 				ClientSecret: inputs.ClientSecret,
 			}
