@@ -84,8 +84,8 @@ func brandingCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(showBrandingCmd(cli))
 	cmd.AddCommand(updateBrandingCmd(cli))
 	cmd.AddCommand(templateCmd(cli))
-	cmd.AddCommand(emailTemplateCmd(cli))
 	cmd.AddCommand(textsCmd(cli))
+
 	return cmd
 }
 
@@ -119,7 +119,7 @@ Once you close the window, you’ll be asked if you want to save the template. I
 
 func emailTemplateCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "emails",
+		Use:   "templates",
 		Short: "Manage custom email templates",
 		Long:  "Manage custom email templates. This requires a custom email provider to be configured for the tenant.",
 	}
