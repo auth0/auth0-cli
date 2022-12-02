@@ -195,10 +195,14 @@ auth0 test login <client-id> --connection <connection>`,
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
+
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
+
 	testAudience.RegisterString(cmd, &inputs.Audience, "")
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, cliLoginTestingScopes)
 	testConnection.RegisterString(cmd, &inputs.ConnectionName, "")
 	testDomain.RegisterString(cmd, &inputs.CustomDomain, "")
+
 	return cmd
 }
 
@@ -290,9 +294,13 @@ auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
+
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
+
 	testClientID.RegisterString(cmd, &inputs.ClientID, "")
 	testAudienceRequired.RegisterString(cmd, &inputs.Audience, "")
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
+
 	return cmd
 }
 

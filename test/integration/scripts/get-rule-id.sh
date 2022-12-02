@@ -1,7 +1,7 @@
 #! /bin/bash
 
 json='{"name":"integration-test-rule-newRule","script":"function(user, context, cb) {\n  cb(null, user, context);\n}\n","enabled":false}'
-rule=$( echo "$json" | auth0 rules create --format json )
+rule=$( echo "$json" | auth0 rules create --json )
 
 mkdir -p ./test/integration/identifiers
 echo "$rule" | jq -r '.["id"]' > ./test/integration/identifiers/rule-id

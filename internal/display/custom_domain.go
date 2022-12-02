@@ -54,7 +54,7 @@ func (r *Renderer) CustomDomainList(customDomains []*management.CustomDomain) {
 
 	if len(customDomains) == 0 {
 		r.EmptyState(resource)
-		r.Infof("Use 'auth0 branding domains create' to add one")
+		r.Infof("Use 'auth0 domains create' to add one")
 		return
 	}
 

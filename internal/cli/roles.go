@@ -302,6 +302,13 @@ auth0 roles delete <id>`,
 		},
 	}
 
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		_ = cmd.Flags().MarkHidden("json")
+		cmd.Parent().HelpFunc()(cmd, args)
+	})
+
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
+
 	return cmd
 }
 

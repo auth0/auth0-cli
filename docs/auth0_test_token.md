@@ -27,6 +27,7 @@ auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
 ```
   -a, --audience string    The unique identifier of the target API you want to access.
   -c, --client-id string   Client Id of an Auth0 application.
+      --force              Skip confirmation.
   -h, --help               help for token
   -s, --scopes strings     The list of scopes you want to use.
 ```
@@ -35,8 +36,7 @@ auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
-      --format string   Command output format. Options: json.
+      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

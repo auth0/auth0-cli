@@ -346,6 +346,13 @@ auth0 users delete <id>`,
 		},
 	}
 
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		_ = cmd.Flags().MarkHidden("json")
+		cmd.Parent().HelpFunc()(cmd, args)
+	})
+
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
+
 	return cmd
 }
 
@@ -481,6 +488,11 @@ auth0 users open "auth0|xxxxxxxxxx"`,
 		},
 	}
 
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		_ = cmd.Flags().MarkHidden("json")
+		cmd.Parent().HelpFunc()(cmd, args)
+	})
+
 	return cmd
 }
 
@@ -567,6 +579,11 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		_ = cmd.Flags().MarkHidden("json")
+		cmd.Parent().HelpFunc()(cmd, args)
+	})
 
 	return cmd
 }

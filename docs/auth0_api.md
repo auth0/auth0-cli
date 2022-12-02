@@ -34,6 +34,7 @@ cat data.json | auth0 api post clients
 
 ```
   -d, --data string            JSON data payload to send with the request. Data can be piped in as well instead of using this flag.
+      --force                  Skip confirmation when using the delete method.
   -h, --help                   help for api
   -q, --query stringToString   Query params to send with the request. (default [])
 ```
@@ -42,8 +43,7 @@ cat data.json | auth0 api post clients
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
-      --format string   Command output format. Options: json.
+      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

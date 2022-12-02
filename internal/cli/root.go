@@ -151,11 +151,8 @@ func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.PersistentFlags().BoolVar(&cli.debug,
 		"debug", false, "Enable debug mode.")
 
-	rootCmd.PersistentFlags().StringVar(&cli.format,
-		"format", "", "Command output format. Options: json.")
-
-	rootCmd.PersistentFlags().BoolVar(&cli.force,
-		"force", false, "Skip confirmation.")
+	rootCmd.PersistentFlags().BoolVar(&cli.json,
+		"json", false, "Output in json format.")
 
 	rootCmd.PersistentFlags().BoolVar(&cli.noInput,
 		"no-input", false, "Disable interactivity.")
@@ -179,6 +176,8 @@ func addSubcommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(rolesCmd(cli))
 	rootCmd.AddCommand(organizationsCmd(cli))
 	rootCmd.AddCommand(brandingCmd(cli))
+	rootCmd.AddCommand(emailCmd(cli))
+	rootCmd.AddCommand(customDomainsCmd(cli))
 	rootCmd.AddCommand(ipsCmd(cli))
 	rootCmd.AddCommand(quickstartsCmd(cli))
 	rootCmd.AddCommand(attackProtectionCmd(cli))
