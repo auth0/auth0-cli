@@ -194,7 +194,6 @@ func addTenantCmd(cli *cli) *cobra.Command {
 				ClientSecret: inputs.ClientSecret,
 				Domain:       inputs.Domain,
 			})
-
 			if err != nil {
 				return err
 			}
@@ -209,11 +208,7 @@ func addTenantCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := cli.addTenant(t); err != nil {
-				return fmt.Errorf("unexpected error when attempting to save tenant data: %w. ", err)
-			}
-
-			if err := cli.addTenant(t); err != nil {
-				return err
+				return fmt.Errorf("unexpected error when attempting to save tenant data: %w", err)
 			}
 
 			cli.renderer.Infof("Tenant added successfully: %s", t.Domain)
