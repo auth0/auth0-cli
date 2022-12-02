@@ -42,7 +42,7 @@ func TestTenant_HasExpiredToken(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			tenant := Tenant{ExpiresAt: testCase.givenTime}
-			assert.Equal(t, testCase.expectedTokenToBeExpired, tenant.HasExpiredToken())
+			assert.Equal(t, testCase.expectedTokenToBeExpired, tenant.hasExpiredToken())
 		})
 	}
 }

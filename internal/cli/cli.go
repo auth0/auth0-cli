@@ -94,16 +94,52 @@ type cli struct {
 	config   config
 }
 
-func (t *Tenant) AuthenticatedWithClientCredentials() bool {
+func (t *Tenant) authenticatedWithClientCredentials() bool {
 	return t.ClientID != "" && t.ClientSecret != ""
 }
 
-func (t *Tenant) AuthenticatedWithDeviceCodeFlow() bool {
+func (t *Tenant) authenticatedWithDeviceCodeFlow() bool {
 	return t.ClientID == "" && t.ClientSecret == ""
 }
 
-func (t *Tenant) HasExpiredToken() bool {
+func (t *Tenant) hasExpiredToken() bool {
 	return time.Now().Add(accessTokenExpThreshold).After(t.ExpiresAt)
+}
+
+func (t *Tenant) regenerateAccessToken(ctx context.Context, c *cli) error {
+	if t.authenticatedWithClientCredentials() {
+		token, err := auth.GetAccessTokenFromClientCreds(auth.ClientCredentials{
+			ClientID:     t.ClientID,
+			ClientSecret: t.ClientSecret,
+			Domain:       t.Domain,
+		})
+		if err != nil {
+			return err
+		}
+
+		t.AccessToken = token.AccessToken
+		t.ExpiresAt = token.ExpiresAt
+	}
+
+	if t.authenticatedWithDeviceCodeFlow() {
+		tokenRetriever := &auth.TokenRetriever{
+			Authenticator: c.authenticator,
+			Secrets:       &auth.Keyring{},
+			Client:        http.DefaultClient,
+		}
+
+		tokenResponse, err := tokenRetriever.Refresh(ctx, t.Domain)
+		if err != nil {
+			return err
+		}
+
+		t.AccessToken = tokenResponse.AccessToken
+		t.ExpiresAt = time.Now().Add(
+			time.Duration(tokenResponse.ExpiresIn) * time.Second,
+		)
+	}
+
+	return nil
 }
 
 // isLoggedIn encodes the domain logic for determining whether or not we're
@@ -173,64 +209,22 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 		return Tenant{}, err
 	}
 
-	if t.AccessToken == "" || (scopesChanged(t) && t.AuthenticatedWithDeviceCodeFlow()) {
+	if t.AccessToken == "" || (scopesChanged(t) && t.authenticatedWithDeviceCodeFlow()) {
 		return RunLogin(ctx, c, true)
 	}
 
-	if !t.HasExpiredToken() {
+	if !t.hasExpiredToken() {
 		return t, nil
 	}
 
-	// regenerate access token for client credential auth'd tenants
-	if t.AuthenticatedWithClientCredentials() {
-		token, err := auth.GetAccessTokenFromClientCreds(auth.ClientCredentials{
-			ClientID:     t.ClientID,
-			ClientSecret: t.ClientSecret,
-			Domain:       t.Domain,
-		})
-
-		if err != nil {
-			return t, err
-		}
-
-		t := Tenant{
-			Domain:      t.Domain,
-			AccessToken: token.AccessToken,
-			ExpiresAt:   token.ExpiresAt,
-			Scopes:      auth.RequiredScopes(),
-		}
-
-		if err := c.addTenant(t); err != nil {
-			return t, fmt.Errorf("unexpected error adding tenant to config: %w", err)
-		}
-		return t, nil
-	}
-
-	// regenerate access token for device auth'd tenants
-	tr := &auth.TokenRetriever{
-		Authenticator: c.authenticator,
-		Secrets:       &auth.Keyring{},
-		Client:        http.DefaultClient,
-	}
-
-	res, err := tr.Refresh(ctx, t.Domain)
-	if err != nil {
-		// ask and guide the user through the login process:
+	if err := t.regenerateAccessToken(ctx, c); err != nil {
+		// Ask and guide the user through the login process.
 		c.renderer.Errorf("failed to renew access token, %s", err)
-		t, err = RunLogin(ctx, c, true)
-		if err != nil {
-			return Tenant{}, err
-		}
-		return t, nil
+		return RunLogin(ctx, c, true)
 	}
 
-	t.AccessToken = res.AccessToken
-	t.ExpiresAt = time.Now().Add(
-		time.Duration(res.ExpiresIn) * time.Second,
-	)
-
-	if err = c.addTenant(t); err != nil {
-		return Tenant{}, err
+	if err := c.addTenant(t); err != nil {
+		return Tenant{}, fmt.Errorf("unexpected error adding tenant to config: %w", err)
 	}
 
 	return t, nil
