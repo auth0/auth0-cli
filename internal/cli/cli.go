@@ -181,21 +181,18 @@ func (c *cli) setup(ctx context.Context) error {
 		return err
 	}
 
-	var (
-		m  *management.Management
-		ua = fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v"))
-	)
+	userAgent := fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v"))
 
-	m, err = management.New(t.Domain,
+	api, err := management.New(
+		t.Domain,
 		management.WithStaticToken(t.AccessToken),
-		management.WithUserAgent(ua),
+		management.WithUserAgent(userAgent),
 	)
-
 	if err != nil {
 		return err
 	}
 
-	c.api = auth0.NewAPI(m)
+	c.api = auth0.NewAPI(api)
 	return nil
 }
 
