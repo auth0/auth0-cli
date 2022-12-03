@@ -1,7 +1,7 @@
 ---
 layout: default
 ---
-## auth0 branding domains create
+## auth0 domains create
 
 Create a custom domain
 
@@ -10,14 +10,14 @@ Create a custom domain
 Create a custom domain.
 
 ```
-auth0 branding domains create [flags]
+auth0 domains create [flags]
 ```
 
 ### Examples
 
 ```
-auth0 branding domains create 
-auth0 branding domains create <id>
+auth0 domains create 
+auth0 domains create <id>
 ```
 
 ### Options
@@ -43,5 +43,5 @@ auth0 branding domains create <id>
 
 ### SEE ALSO
 
-* [auth0 branding domains](auth0_branding_domains.md)	 - Manage custom domains
+* [auth0 domains](auth0_domains.md)	 - Manage custom domains
 

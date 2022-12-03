@@ -1,29 +1,30 @@
 ---
 layout: default
 ---
-## auth0 branding domains verify
+## auth0 domains list
 
-Verify a custom domain
+List your custom domains
 
 ### Synopsis
 
-Verify a custom domain.
+List your existing custom domains. To create one try:
+auth0 domains create
 
 ```
-auth0 branding domains verify [flags]
+auth0 domains list [flags]
 ```
 
 ### Examples
 
 ```
-auth0 branding domains verify 
-auth0 branding domains verify <id>
+auth0 domains list
+auth0 domains ls
 ```
 
 ### Options
 
 ```
-  -h, --help   help for verify
+  -h, --help   help for list
 ```
 
 ### Options inherited from parent commands
@@ -38,5 +39,5 @@ auth0 branding domains verify <id>
 
 ### SEE ALSO
 
-* [auth0 branding domains](auth0_branding_domains.md)	 - Manage custom domains
+* [auth0 domains](auth0_domains.md)	 - Manage custom domains
 

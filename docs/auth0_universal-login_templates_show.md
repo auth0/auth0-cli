@@ -1,30 +1,28 @@
 ---
 layout: default
 ---
-## auth0 branding domains list
+## auth0 universal-login templates show
 
-List your custom domains
+Display the custom template for Universal Login
 
 ### Synopsis
 
-List your existing custom domains. To create one try:
-auth0 branding domains create
+Display the custom template for Universal Login.
 
 ```
-auth0 branding domains list [flags]
+auth0 universal-login templates show [flags]
 ```
 
 ### Examples
 
 ```
-auth0 branding domains list
-auth0 branding domains ls
+auth0 universal-login templates show
 ```
 
 ### Options
 
 ```
-  -h, --help   help for list
+  -h, --help   help for show
 ```
 
 ### Options inherited from parent commands
@@ -39,5 +37,5 @@ auth0 branding domains ls
 
 ### SEE ALSO
 
-* [auth0 branding domains](auth0_branding_domains.md)	 - Manage custom domains
+* [auth0 universal-login templates](auth0_universal-login_templates.md)	 - Manage custom Universal Login templates
 

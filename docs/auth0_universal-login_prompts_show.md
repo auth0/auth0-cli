@@ -1,24 +1,24 @@
 ---
 layout: default
 ---
-## auth0 branding texts show
+## auth0 universal-login prompts show
 
-Show the custom texts for a prompt
+Show the custom text for a prompt
 
 ### Synopsis
 
-Show the custom texts for a prompt.
+Show the custom text for a prompt.
 
 ```
-auth0 branding texts show [flags]
+auth0 universal-login prompts show [flags]
 ```
 
 ### Examples
 
 ```
 
-auth0 branding texts show <prompt> --language es
-auth0 branding texts show <prompt> -l es
+auth0 universal-login prompts show <prompt> --language es
+auth0 universal-login prompts show <prompt> -l es
 ```
 
 ### Options
@@ -40,5 +40,5 @@ auth0 branding texts show <prompt> -l es
 
 ### SEE ALSO
 
-* [auth0 branding texts](auth0_branding_texts.md)	 - Manage custom text for prompts
+* [auth0 universal-login prompts](auth0_universal-login_prompts.md)	 - Manage custom text for prompts
 

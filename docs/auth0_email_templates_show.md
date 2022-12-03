@@ -1,28 +1,29 @@
 ---
 layout: default
 ---
-## auth0 branding templates update
+## auth0 email templates show
 
-Update the custom template for Universal Login
+Show an email template
 
 ### Synopsis
 
-Update the custom template for Universal Login.
+Show an email template.
 
 ```
-auth0 branding templates update [flags]
+auth0 email templates show [flags]
 ```
 
 ### Examples
 
 ```
-auth0 branding templates update
+auth0 email templates show <template>
+auth0 email templates show welcome
 ```
 
 ### Options
 
 ```
-  -h, --help   help for update
+  -h, --help   help for show
 ```
 
 ### Options inherited from parent commands
@@ -37,5 +38,5 @@ auth0 branding templates update
 
 ### SEE ALSO
 
-* [auth0 branding templates](auth0_branding_templates.md)	 - Manage custom page templates
+* [auth0 email templates](auth0_email_templates.md)	 - Manage custom email templates
 

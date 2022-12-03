@@ -1,7 +1,7 @@
 ---
 layout: default
 ---
-## auth0 branding show
+## auth0 universal-login show
 
 Display the custom branding settings for Universal Login
 
@@ -10,13 +10,13 @@ Display the custom branding settings for Universal Login
 Display the custom branding settings for Universal Login.
 
 ```
-auth0 branding show [flags]
+auth0 universal-login show [flags]
 ```
 
 ### Examples
 
 ```
-auth0 branding show
+auth0 universal-login show
 ```
 
 ### Options
@@ -37,5 +37,5 @@ auth0 branding show
 
 ### SEE ALSO
 
-* [auth0 branding](auth0_branding.md)	 - Manage branding options
+* [auth0 universal-login](auth0_universal-login.md)	 - Manage the Universal Login experience
 

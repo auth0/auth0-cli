@@ -1,7 +1,7 @@
 ---
 layout: default
 ---
-## auth0 branding domains delete
+## auth0 domains delete
 
 Delete a custom domain
 
@@ -10,14 +10,14 @@ Delete a custom domain
 Delete a custom domain.
 
 ```
-auth0 branding domains delete [flags]
+auth0 domains delete [flags]
 ```
 
 ### Examples
 
 ```
-auth0 branding domains delete 
-auth0 branding domains delete <id>
+auth0 domains delete 
+auth0 domains delete <id>
 ```
 
 ### Options
@@ -39,5 +39,5 @@ auth0 branding domains delete <id>
 
 ### SEE ALSO
 
-* [auth0 branding domains](auth0_branding_domains.md)	 - Manage custom domains
+* [auth0 domains](auth0_domains.md)	 - Manage custom domains
 

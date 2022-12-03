@@ -1,28 +1,29 @@
 ---
 layout: default
 ---
-## auth0 branding templates show
+## auth0 domains verify
 
-Display the custom template for Universal Login
+Verify a custom domain
 
 ### Synopsis
 
-Display the custom template for Universal Login.
+Verify a custom domain.
 
 ```
-auth0 branding templates show [flags]
+auth0 domains verify [flags]
 ```
 
 ### Examples
 
 ```
-auth0 branding templates show
+auth0 domains verify 
+auth0 domains verify <id>
 ```
 
 ### Options
 
 ```
-  -h, --help   help for show
+  -h, --help   help for verify
 ```
 
 ### Options inherited from parent commands
@@ -37,5 +38,5 @@ auth0 branding templates show
 
 ### SEE ALSO
 
-* [auth0 branding templates](auth0_branding_templates.md)	 - Manage custom page templates
+* [auth0 domains](auth0_domains.md)	 - Manage custom domains
 

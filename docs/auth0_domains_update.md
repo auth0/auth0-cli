@@ -1,7 +1,7 @@
 ---
 layout: default
 ---
-## auth0 branding domains update
+## auth0 domains update
 
 Update a custom domain
 
@@ -10,15 +10,15 @@ Update a custom domain
 Update a custom domain.
 
 ```
-auth0 branding domains update [flags]
+auth0 domains update [flags]
 ```
 
 ### Examples
 
 ```
-auth0 branding domains update
-auth0 branding domains update <id> --policy compatible
-auth0 branding domains update <id> -p compatible --ip-header "cf-connecting-ip"
+auth0 domains update
+auth0 domains update <id> --policy compatible
+auth0 domains update <id> -p compatible --ip-header "cf-connecting-ip"
 ```
 
 ### Options
@@ -41,5 +41,5 @@ auth0 branding domains update <id> -p compatible --ip-header "cf-connecting-ip"
 
 ### SEE ALSO
 
-* [auth0 branding domains](auth0_branding_domains.md)	 - Manage custom domains
+* [auth0 domains](auth0_domains.md)	 - Manage custom domains
 
