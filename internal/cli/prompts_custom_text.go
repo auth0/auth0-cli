@@ -37,38 +37,40 @@ var (
 	}
 )
 
-type brandingTextsInputs struct {
+type promptsTextInput struct {
 	Prompt   string
 	Language string
 	Body     string
 }
 
-func textsCmd(cli *cli) *cobra.Command {
+func universalLoginPromptsTextCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "texts",
-		Short: "Manage custom text for prompts",
-		Long:  "Manage custom text for prompts.",
+		Use:     "prompts",
+		Short:   "Manage custom text for prompts",
+		Long:    fmt.Sprintf("Manage custom [text for prompts](%s).", textDocsURL),
+		Aliases: []string{"texts"},
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.AddCommand(showBrandingTextCmd(cli))
-	cmd.AddCommand(updateBrandingTextCmd(cli))
+
+	cmd.AddCommand(showPromptsTextCmd(cli))
+	cmd.AddCommand(updatePromptsTextCmd(cli))
 
 	return cmd
 }
 
-func showBrandingTextCmd(cli *cli) *cobra.Command {
-	var inputs brandingTextsInputs
+func showPromptsTextCmd(cli *cli) *cobra.Command {
+	var inputs promptsTextInput
 
 	cmd := &cobra.Command{
 		Use:   "show",
 		Args:  cobra.ExactArgs(1),
-		Short: "Show the custom texts for a prompt",
-		Long:  "Show the custom texts for a prompt.",
+		Short: "Show the custom text for a prompt",
+		Long:  "Show the custom text for a prompt.",
 		Example: `
-auth0 branding texts show <prompt> --language es
-auth0 branding texts show <prompt> -l es`,
-		RunE: showBrandingTexts(cli, &inputs),
+auth0 universal-login prompts show <prompt> --language es
+auth0 universal-login prompts show <prompt> -l es`,
+		RunE: showPromptsText(cli, &inputs),
 	}
 
 	textLanguage.RegisterString(cmd, &inputs.Language, textLanguageDefault)
@@ -76,17 +78,17 @@ auth0 branding texts show <prompt> -l es`,
 	return cmd
 }
 
-func updateBrandingTextCmd(cli *cli) *cobra.Command {
-	var inputs brandingTextsInputs
+func updatePromptsTextCmd(cli *cli) *cobra.Command {
+	var inputs promptsTextInput
 
 	cmd := &cobra.Command{
 		Use:   "update",
 		Args:  cobra.ExactArgs(1),
-		Short: "Update the custom texts for a prompt",
-		Long:  "Update the custom texts for a prompt.",
+		Short: "Update the custom text for a prompt",
+		Long:  "Update the custom text for a prompt.",
 		Example: `
-auth0 branding texts update <prompt> --language es
-auth0 branding texts update <prompt> -l es`,
+auth0 universal-login prompts update <prompt> --language es
+auth0 universal-login prompts update <prompt> -l es`,
 		RunE: updateBrandingText(cli, &inputs),
 	}
 
@@ -95,7 +97,7 @@ auth0 branding texts update <prompt> -l es`,
 	return cmd
 }
 
-func showBrandingTexts(cli *cli, inputs *brandingTextsInputs) func(cmd *cobra.Command, args []string) error {
+func showPromptsText(cli *cli, inputs *promptsTextInput) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		inputs.Prompt = args[0]
 		brandingText := make(map[string]interface{})
@@ -123,7 +125,7 @@ func showBrandingTexts(cli *cli, inputs *brandingTextsInputs) func(cmd *cobra.Co
 	}
 }
 
-func updateBrandingText(cli *cli, inputs *brandingTextsInputs) func(cmd *cobra.Command, args []string) error {
+func updateBrandingText(cli *cli, inputs *promptsTextInput) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		inputs.Prompt = args[0]
 		inputs.Body = string(iostream.PipedInput())
@@ -160,7 +162,7 @@ func updateBrandingText(cli *cli, inputs *brandingTextsInputs) func(cmd *cobra.C
 	}
 }
 
-func fetchBrandingTextContentToEdit(cli *cli, inputs *brandingTextsInputs) (string, error) {
+func fetchBrandingTextContentToEdit(cli *cli, inputs *promptsTextInput) (string, error) {
 	contentToEdit := map[string]interface{}{textDocsKey: textDocsURL}
 
 	if err := ansi.Waiting(func() error {
@@ -276,7 +278,7 @@ func mergeBrandingTextTranslations(
 func fetchEditedBrandingTextContent(
 	cmd *cobra.Command,
 	cli *cli,
-	inputs *brandingTextsInputs,
+	inputs *promptsTextInput,
 	brandingTextToEdit string,
 ) (map[string]interface{}, error) {
 	tempFileName := fmt.Sprintf("%s-prompt-%s.json", inputs.Prompt, inputs.Language)
