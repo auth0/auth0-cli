@@ -68,7 +68,7 @@ func TestBrandingTextsShowCmd(t *testing.T) {
 				api: &auth0.API{Prompt: brandingTextsAPI},
 			}
 
-			cmd := showBrandingTextCmd(cli)
+			cmd := showPromptsTextCmd(cli)
 			cmd.SetArgs([]string{test.inputPrompt, "--language=" + test.inputLanguage})
 
 			err := cmd.Execute()
