@@ -1,7 +1,7 @@
 ---
 layout: default
 ---
-## auth0 branding update
+## auth0 universal-login update
 
 Update the custom branding settings for Universal Login
 
@@ -10,15 +10,15 @@ Update the custom branding settings for Universal Login
 Update the custom branding settings for Universal Login.
 
 ```
-auth0 branding update [flags]
+auth0 universal-login update [flags]
 ```
 
 ### Examples
 
 ```
-auth0 branding update
-auth0 branding update --accent "#FF4F40" --background "#2A2E35" 
-auth0 branding update -a "#FF4F40" -b "#2A2E35" --logo "https://example.com/logo.png"
+auth0 universal-login update
+auth0 universal-login update --accent "#FF4F40" --background "#2A2E35" 
+auth0 universal-login update -a "#FF4F40" -b "#2A2E35" --logo "https://example.com/logo.png"
 ```
 
 ### Options
@@ -44,5 +44,5 @@ auth0 branding update -a "#FF4F40" -b "#2A2E35" --logo "https://example.com/logo
 
 ### SEE ALSO
 
-* [auth0 branding](auth0_branding.md)	 - Manage branding options
+* [auth0 universal-login](auth0_universal-login.md)	 - Manage the Universal Login experience
 

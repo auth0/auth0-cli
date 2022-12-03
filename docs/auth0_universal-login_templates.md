@@ -1,9 +1,9 @@
 ---
 layout: default
 ---
-## auth0 branding templates
+## auth0 universal-login templates
 
-Manage custom page templates
+Manage custom Universal Login templates
 
 ### Synopsis
 
@@ -42,7 +42,7 @@ Once you close the window, you’ll be asked if you want to save the template. I
 
 ### SEE ALSO
 
-* [auth0 branding](auth0_branding.md)	 - Manage branding options
-* [auth0 branding templates show](auth0_branding_templates_show.md)	 - Display the custom template for Universal Login
-* [auth0 branding templates update](auth0_branding_templates_update.md)	 - Update the custom template for Universal Login
+* [auth0 universal-login](auth0_universal-login.md)	 - Manage the Universal Login experience
+* [auth0 universal-login templates show](auth0_universal-login_templates_show.md)	 - Display the custom template for Universal Login
+* [auth0 universal-login templates update](auth0_universal-login_templates_update.md)	 - Update the custom template for Universal Login
 

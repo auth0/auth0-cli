@@ -1,7 +1,7 @@
 ---
 layout: default
 ---
-## auth0 branding emails
+## auth0 email templates
 
 Manage custom email templates
 
@@ -12,7 +12,7 @@ Manage custom email templates. This requires a custom email provider to be confi
 ### Options
 
 ```
-  -h, --help   help for emails
+  -h, --help   help for templates
 ```
 
 ### Options inherited from parent commands
@@ -27,7 +27,7 @@ Manage custom email templates. This requires a custom email provider to be confi
 
 ### SEE ALSO
 
-* [auth0 branding](auth0_branding.md)	 - Manage branding options
-* [auth0 branding emails show](auth0_branding_emails_show.md)	 - Show an email template
-* [auth0 branding emails update](auth0_branding_emails_update.md)	 - Update an email template
+* [auth0 email](auth0_email.md)	 - Manage email settings
+* [auth0 email templates show](auth0_email_templates_show.md)	 - Show an email template
+* [auth0 email templates update](auth0_email_templates_update.md)	 - Update an email template
 

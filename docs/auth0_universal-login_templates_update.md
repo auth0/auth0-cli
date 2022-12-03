@@ -1,29 +1,28 @@
 ---
 layout: default
 ---
-## auth0 branding domains show
+## auth0 universal-login templates update
 
-Show a custom domain
+Update the custom template for Universal Login
 
 ### Synopsis
 
-Show a custom domain.
+Update the custom template for Universal Login.
 
 ```
-auth0 branding domains show [flags]
+auth0 universal-login templates update [flags]
 ```
 
 ### Examples
 
 ```
-auth0 branding domains show 
-auth0 branding domains show <id>
+auth0 universal-login templates update
 ```
 
 ### Options
 
 ```
-  -h, --help   help for show
+  -h, --help   help for update
 ```
 
 ### Options inherited from parent commands
@@ -38,5 +37,5 @@ auth0 branding domains show <id>
 
 ### SEE ALSO
 
-* [auth0 branding domains](auth0_branding_domains.md)	 - Manage custom domains
+* [auth0 universal-login templates](auth0_universal-login_templates.md)	 - Manage custom Universal Login templates
 

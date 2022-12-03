@@ -1,7 +1,7 @@
 ---
 layout: default
 ---
-## auth0 branding emails update
+## auth0 email templates update
 
 Update an email template
 
@@ -10,14 +10,14 @@ Update an email template
 Update an email template.
 
 ```
-auth0 branding emails update [flags]
+auth0 email templates update [flags]
 ```
 
 ### Examples
 
 ```
-auth0 branding emails update <template>
-auth0 branding emails update welcome
+auth0 email templates update <template>
+auth0 email templates update welcome
 ```
 
 ### Options
@@ -44,5 +44,5 @@ auth0 branding emails update welcome
 
 ### SEE ALSO
 
-* [auth0 branding emails](auth0_branding_emails.md)	 - Manage custom email templates
+* [auth0 email templates](auth0_email_templates.md)	 - Manage custom email templates
 

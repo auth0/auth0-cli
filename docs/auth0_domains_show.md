@@ -1,23 +1,23 @@
 ---
 layout: default
 ---
-## auth0 branding emails show
+## auth0 domains show
 
-Show an email template
+Show a custom domain
 
 ### Synopsis
 
-Show an email template.
+Show a custom domain.
 
 ```
-auth0 branding emails show [flags]
+auth0 domains show [flags]
 ```
 
 ### Examples
 
 ```
-auth0 branding emails show <template>
-auth0 branding emails show welcome
+auth0 domains show 
+auth0 domains show <id>
 ```
 
 ### Options
@@ -38,5 +38,5 @@ auth0 branding emails show welcome
 
 ### SEE ALSO
 
-* [auth0 branding emails](auth0_branding_emails.md)	 - Manage custom email templates
+* [auth0 domains](auth0_domains.md)	 - Manage custom domains
 

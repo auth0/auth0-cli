@@ -1,24 +1,24 @@
 ---
 layout: default
 ---
-## auth0 branding texts update
+## auth0 universal-login prompts update
 
-Update the custom texts for a prompt
+Update the custom text for a prompt
 
 ### Synopsis
 
-Update the custom texts for a prompt.
+Update the custom text for a prompt.
 
 ```
-auth0 branding texts update [flags]
+auth0 universal-login prompts update [flags]
 ```
 
 ### Examples
 
 ```
 
-auth0 branding texts update <prompt> --language es
-auth0 branding texts update <prompt> -l es
+auth0 universal-login prompts update <prompt> --language es
+auth0 universal-login prompts update <prompt> -l es
 ```
 
 ### Options
@@ -40,5 +40,5 @@ auth0 branding texts update <prompt> -l es
 
 ### SEE ALSO
 
-* [auth0 branding texts](auth0_branding_texts.md)	 - Manage custom text for prompts
+* [auth0 universal-login prompts](auth0_universal-login_prompts.md)	 - Manage custom text for prompts
 
