@@ -167,7 +167,6 @@ func addSubcommands(rootCmd *cobra.Command, cli *cli) {
 	// relevance or relation with other commands:
 	rootCmd.AddCommand(loginCmd(cli))
 	rootCmd.AddCommand(logoutCmd(cli))
-	rootCmd.AddCommand(configCmd(cli))
 	rootCmd.AddCommand(tenantsCmd(cli))
 	rootCmd.AddCommand(appsCmd(cli))
 	rootCmd.AddCommand(usersCmd(cli))
