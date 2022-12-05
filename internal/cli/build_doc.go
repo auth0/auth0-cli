@@ -10,8 +10,6 @@ import (
 func BuildDoc() error {
 	cli := &cli{}
 
-	docsPath := "./docs/"
-
 	rootCmd := &cobra.Command{
 		Use:               "auth0",
 		Short:             rootShort,
@@ -21,6 +19,8 @@ func BuildDoc() error {
 	rootCmd.SetUsageTemplate(namespaceUsageTemplate())
 	addPersistentFlags(rootCmd, cli)
 	addSubcommands(rootCmd, cli)
+
+	docsPath := "./docs/"
 
 	err := doc.GenMarkdownTreeCustom(rootCmd,
 		docsPath,
