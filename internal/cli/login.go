@@ -12,23 +12,67 @@ import (
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
+var (
+	loginAsMachine = Flag{
+		Name:       "Login as machine",
+		LongForm:   "as-machine",
+		Help:       "Initiates authentication as a machine via client credentials (client ID, client secret)",
+		IsRequired: false,
+	}
+	loginTenantDomain = Flag{
+		Name:       "Tenant Domain",
+		LongForm:   "domain",
+		Help:       "Specifies tenant domain when authenticating via client credentials (client ID, client secret)",
+		IsRequired: false,
+	}
+)
+
+type LoginInputs struct {
+	LoginAsMachine bool
+	Domain         string
+	ClientID       string
+	ClientSecret   string
+}
+
 func loginCmd(cli *cli) *cobra.Command {
+	var inputs LoginInputs
+
 	cmd := &cobra.Command{
 		Use:   "login",
 		Args:  cobra.NoArgs,
 		Short: "Authenticate the Auth0 CLI",
-		Long:  "Sign in to your Auth0 account and authorize the CLI to access the Management API.",
+		Long:  "Authenticates the Auth0 CLI either as a user using personal credentials or as a machine using client credentials (client ID/secret).",
+		Example: `
+		auth0 login
+		auth0 login --as-machine
+		auth0 login --as-machine --domain <TENANT_DOMAIN> --client-id <CLIENT_ID> --client-secret <CLIENT_SECRET>
+		`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			if _, err := RunLogin(ctx, cli, false); err != nil {
-				return err
+
+			shouldLoginAsMachine := inputs.LoginAsMachine || inputs.ClientID != "" || inputs.ClientSecret != "" || inputs.Domain != ""
+
+			if shouldLoginAsMachine {
+				if err := RunLoginAsMachine(ctx, inputs, cli, cmd); err != nil {
+					return err
+				}
+			} else {
+				if _, err := RunLoginAsUser(ctx, cli, false); err != nil {
+					return err
+				}
 			}
 
+			cli.renderer.Infof("Successfully authenticated to %s", inputs.Domain)
 			cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
 
 			return nil
 		},
 	}
+
+	loginAsMachine.RegisterBool(cmd, &inputs.LoginAsMachine, false)
+	loginTenantDomain.RegisterString(cmd, &inputs.Domain, "")
+	tenantClientID.RegisterString(cmd, &inputs.ClientID, "")
+	tenantClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
 
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		_ = cmd.Flags().MarkHidden("tenant")
@@ -39,11 +83,11 @@ func loginCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-// RunLogin runs the login flow guiding the user through the process
+// RunLoginAsUser runs the login flow guiding the user through the process
 // by showing the login instructions, opening the browser.
 // Use `expired` to run the login from other commands setup:
 // this will only affect the messages.
-func RunLogin(ctx context.Context, cli *cli, expired bool) (Tenant, error) {
+func RunLoginAsUser(ctx context.Context, cli *cli, expired bool) (Tenant, error) {
 	message := fmt.Sprintf(
 		"%s\n\n%s\n\n",
 		"✪ Welcome to the Auth0 CLI 🎊",
@@ -140,4 +184,42 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) (Tenant, error) {
 	}
 
 	return tenant, nil
+}
+
+// RunLoginAsUser facilitates the authentication process using client credentials (client ID, client secret)
+func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *cobra.Command) error {
+	if err := loginTenantDomain.Ask(cmd, &inputs.Domain, nil); err != nil {
+		return err
+	}
+
+	if err := tenantClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
+		return err
+	}
+
+	if err := tenantClientSecret.AskPassword(cmd, &inputs.ClientSecret, nil); err != nil {
+		return err
+	}
+
+	token, err := auth.GetAccessTokenFromClientCreds(auth.ClientCredentials{
+		ClientID:     inputs.ClientID,
+		ClientSecret: inputs.ClientSecret,
+		Domain:       inputs.Domain,
+	})
+	if err != nil {
+		return err
+	}
+
+	t := Tenant{
+		Domain:       inputs.Domain,
+		AccessToken:  token.AccessToken,
+		ExpiresAt:    token.ExpiresAt,
+		ClientID:     inputs.ClientID,
+		ClientSecret: inputs.ClientSecret,
+	}
+
+	if err := cli.addTenant(t); err != nil {
+		return fmt.Errorf("unexpected error when attempting to save tenant data: %w", err)
+	}
+
+	return nil
 }
