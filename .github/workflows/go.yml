@@ -58,8 +58,6 @@ jobs:
           AUTH0_CLI_CLIENT_DOMAIN: ${{ secrets.AUTH0_CLI_CLIENT_DOMAIN }}
           AUTH0_CLI_CLIENT_ID: ${{ secrets.AUTH0_CLI_CLIENT_ID }}
           AUTH0_CLI_CLIENT_SECRET: ${{ secrets.AUTH0_CLI_CLIENT_SECRET }}
-          AUTH0_CLI_REUSE_CONFIG: ${{ secrets.AUTH0_CLI_REUSE_CONFIG }}
-          AUTH0_CLI_OVERWRITE: ${{ secrets.AUTH0_CLI_OVERWRITE }}
 
   build:
     name: Build
