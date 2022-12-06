@@ -186,7 +186,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, expired bool) (Tenant, error)
 	return tenant, nil
 }
 
-// RunLoginAsUser facilitates the authentication process using client credentials (client ID, client secret)
+// RunLoginAsMachine facilitates the authentication process using client credentials (client ID, client secret)
 func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *cobra.Command) error {
 	if err := loginTenantDomain.Ask(cmd, &inputs.Domain, nil); err != nil {
 		return err
