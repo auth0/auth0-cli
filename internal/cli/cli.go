@@ -217,13 +217,13 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 	}
 
 	if err := t.regenerateAccessToken(ctx, c); err != nil {
-		// Ask and guide the user through the login process.
-		if t.authenticatedWithDeviceCodeFlow() {
-			c.renderer.Warnf("Failed to renew access token. Please sign in to re-authenticate the CLI.")
-			return RunLoginAsUser(ctx, c)
+		if t.authenticatedWithClientCredentials() {
+			return t, fmt.Errorf("Failed to renew access token. This may occur if the designated application has been deleted or client secret has been rotated. Please re-authenticate by running `auth0 login --as-machine`")
 		}
 
-		return t, fmt.Errorf("Failed to renew access token. This may occur if the designated application has been deleted or client secret has been rotated. Please re-authenticate by running `auth0 login --as-machine`")
+		c.renderer.Warnf("Failed to renew access token. Please sign in to re-authenticate the CLI.")
+		return RunLoginAsUser(ctx, c)
+
 	}
 
 	if err := c.addTenant(t); err != nil {

@@ -66,11 +66,12 @@ auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <cl
 					return err
 				}
 			} else {
-				cli.renderer.Output(fmt.Sprintf(
+				welcomeMessage := fmt.Sprintf(
 					"%s\n\n%s\n\n",
 					"✪ Welcome to the Auth0 CLI 🎊",
 					"If you don't have an account, please create one here: https://auth0.com/signup.",
-				))
+				)
+				cli.renderer.Output(welcomeMessage)
 				if _, err := RunLoginAsUser(ctx, cli); err != nil {
 					return err
 				}
