@@ -71,6 +71,7 @@ auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <cl
 				}
 			}
 
+			cli.renderer.Infof("Successfully authenticated to %s", inputs.Domain)
 			cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
 
 			return nil
