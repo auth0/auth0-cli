@@ -32,10 +32,12 @@ func (t *TokenRetriever) Delete(tenant string) error {
 // The request is used the default client_id and endpoint for device authentication.
 func (t *TokenRetriever) Refresh(ctx context.Context, tenant string) (TokenResponse, error) {
 	// get stored refresh token:
-	refreshToken, err := t.Secrets.Get(SecretsNamespace, tenant)
-	if err != nil {
-		return TokenResponse{}, fmt.Errorf("cannot get the stored refresh token: %w", err)
-	}
+	// refreshToken, err := t.Secrets.Get(SecretsNamespace, tenant)
+	// if err != nil {
+	// 	return TokenResponse{}, fmt.Errorf("cannot get the stored refresh token: %w", err)
+	// }
+
+	refreshToken := "fadsfasdf"
 	if refreshToken == "" {
 		return TokenResponse{}, errors.New("cannot use the stored refresh token: the token is empty")
 	}
