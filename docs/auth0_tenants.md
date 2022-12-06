@@ -28,7 +28,6 @@ Manage configured tenants.
 ### SEE ALSO
 
 * [auth0](/auth0-cli/)	 - Supercharge your development workflow.
-* [auth0 tenants add](auth0_tenants_add.md)	 - Add a tenant with client credentials
 * [auth0 tenants list](auth0_tenants_list.md)	 - List your tenants
 * [auth0 tenants open](auth0_tenants_open.md)	 - Open tenant settings page in the Auth0 Dashboard
 * [auth0 tenants use](auth0_tenants_use.md)	 - Set the active tenant

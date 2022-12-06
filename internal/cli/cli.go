@@ -208,7 +208,7 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 	}
 
 	if t.AccessToken == "" || (scopesChanged(t) && t.authenticatedWithDeviceCodeFlow()) {
-		return RunLogin(ctx, c, true)
+		return RunLoginAsUser(ctx, c, true)
 	}
 
 	if !t.hasExpiredToken() {
@@ -218,7 +218,7 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 	if err := t.regenerateAccessToken(ctx, c); err != nil {
 		// Ask and guide the user through the login process.
 		c.renderer.Errorf("failed to renew access token, %s", err)
-		return RunLogin(ctx, c, true)
+		return RunLoginAsUser(ctx, c, true)
 	}
 
 	if err := c.addTenant(t); err != nil {
