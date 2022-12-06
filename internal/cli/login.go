@@ -57,7 +57,12 @@ func loginCmd(cli *cli) *cobra.Command {
 					return err
 				}
 			} else {
-				if _, err := RunLoginAsUser(ctx, cli, false); err != nil {
+				cli.renderer.Output(fmt.Sprintf(
+					"%s\n\n%s\n\n",
+					"✪ Welcome to the Auth0 CLI 🎊",
+					"If you don't have an account, please create one here: https://auth0.com/signup.",
+				))
+				if _, err := RunLoginAsUser(ctx, cli); err != nil {
 					return err
 				}
 			}
@@ -85,28 +90,13 @@ func loginCmd(cli *cli) *cobra.Command {
 
 // RunLoginAsUser runs the login flow guiding the user through the process
 // by showing the login instructions, opening the browser.
-// Use `expired` to run the login from other commands setup:
-// this will only affect the messages.
-func RunLoginAsUser(ctx context.Context, cli *cli, expired bool) (Tenant, error) {
-	message := fmt.Sprintf(
-		"%s\n\n%s\n\n",
-		"✪ Welcome to the Auth0 CLI 🎊",
-		"If you don't have an account, please create one here: https://auth0.com/signup.",
-	)
-
-	if expired {
-		message = "Please sign in to re-authorize the CLI."
-		cli.renderer.Warnf(message)
-	} else {
-		cli.renderer.Output(message)
-	}
-
+func RunLoginAsUser(ctx context.Context, cli *cli) (Tenant, error) {
 	state, err := cli.authenticator.Start(ctx)
 	if err != nil {
 		return Tenant{}, fmt.Errorf("Failed to start the authentication process: %w.", err)
 	}
 
-	message = fmt.Sprintf("Your device confirmation code is: %s\n\n", ansi.Bold(state.UserCode))
+	message := fmt.Sprintf("Your device confirmation code is: %s\n\n", ansi.Bold(state.UserCode))
 	cli.renderer.Output(message)
 
 	if cli.noInput {
@@ -186,7 +176,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, expired bool) (Tenant, error)
 	return tenant, nil
 }
 
-// RunLoginAsUser facilitates the authentication process using client credentials (client ID, client secret)
+// RunLoginAsMachine facilitates the authentication process using client credentials (client ID, client secret)
 func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *cobra.Command) error {
 	if err := loginTenantDomain.Ask(cmd, &inputs.Domain, nil); err != nil {
 		return err
