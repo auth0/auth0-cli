@@ -14,24 +14,27 @@ import (
 
 var (
 	loginTenantDomain = Flag{
-		Name:       "Tenant Domain",
-		LongForm:   "domain",
-		Help:       "Specifies tenant domain when authenticating via client credentials (client ID, client secret)",
-		IsRequired: false,
+		Name:         "Tenant Domain",
+		LongForm:     "domain",
+		Help:         "Specifies tenant domain when authenticating via client credentials (client ID, client secret)",
+		IsRequired:   false,
+		AlwaysPrompt: true,
 	}
 
 	loginClientID = Flag{
-		Name:       "Client ID",
-		LongForm:   "client-id",
-		Help:       "Client ID of the application.",
-		IsRequired: true,
+		Name:         "Client ID",
+		LongForm:     "client-id",
+		Help:         "Client ID of the application.",
+		IsRequired:   true,
+		AlwaysPrompt: true,
 	}
 
 	loginClientSecret = Flag{
-		Name:       "Client Secret",
-		LongForm:   "client-secret",
-		Help:       "Client Secret of the application.",
-		IsRequired: true,
+		Name:         "Client Secret",
+		LongForm:     "client-secret",
+		Help:         "Client Secret of the application.",
+		IsRequired:   true,
+		AlwaysPrompt: true,
 	}
 )
 
@@ -78,10 +81,12 @@ func loginCmd(cli *cli) *cobra.Command {
 	loginTenantDomain.RegisterString(cmd, &inputs.Domain, "")
 	loginClientID.RegisterString(cmd, &inputs.ClientID, "")
 	loginClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
+	cmd.MarkFlagsRequiredTogether("client-id", "client-secret", "domain")
 
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		_ = cmd.Flags().MarkHidden("tenant")
 		_ = cmd.Flags().MarkHidden("json")
+		_ = cmd.Flags().MarkHidden("no-input")
 		cmd.Parent().HelpFunc()(cmd, args)
 	})
 
