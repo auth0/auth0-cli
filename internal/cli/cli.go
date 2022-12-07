@@ -208,7 +208,7 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 	}
 
 	if scopesChanged(t) && t.authenticatedWithDeviceCodeFlow() {
-		c.renderer.Warnf("Required scopes have changed. Please sign in to re-authorize the CLI.")
+		c.renderer.Warnf("Required scopes have changed. Please log in to re-authorize the CLI.")
 		return RunLoginAsUser(ctx, c)
 	}
 
