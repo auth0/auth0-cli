@@ -19,6 +19,20 @@ var (
 		Help:       "Specifies tenant domain when authenticating via client credentials (client ID, client secret)",
 		IsRequired: false,
 	}
+
+	loginClientID = Flag{
+		Name:       "Client ID",
+		LongForm:   "client-id",
+		Help:       "Client ID of the application.",
+		IsRequired: true,
+	}
+
+	loginClientSecret = Flag{
+		Name:       "Client Secret",
+		LongForm:   "client-secret",
+		Help:       "Client Secret of the application.",
+		IsRequired: true,
+	}
 )
 
 type LoginInputs struct {
@@ -62,8 +76,8 @@ func loginCmd(cli *cli) *cobra.Command {
 	}
 
 	loginTenantDomain.RegisterString(cmd, &inputs.Domain, "")
-	tenantClientID.RegisterString(cmd, &inputs.ClientID, "")
-	tenantClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
+	loginClientID.RegisterString(cmd, &inputs.ClientID, "")
+	loginClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
 
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		_ = cmd.Flags().MarkHidden("tenant")
@@ -183,11 +197,11 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 		return err
 	}
 
-	if err := tenantClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
+	if err := loginClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
 		return err
 	}
 
-	if err := tenantClientSecret.AskPassword(cmd, &inputs.ClientSecret, nil); err != nil {
+	if err := loginClientSecret.AskPassword(cmd, &inputs.ClientSecret, nil); err != nil {
 		return err
 	}
 
