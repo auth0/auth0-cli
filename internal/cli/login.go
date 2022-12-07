@@ -13,12 +13,6 @@ import (
 )
 
 var (
-	loginAsMachine = Flag{
-		Name:       "Login as machine",
-		LongForm:   "as-machine",
-		Help:       "Initiates authentication as a machine via client credentials (client ID, client secret)",
-		IsRequired: false,
-	}
 	loginTenantDomain = Flag{
 		Name:       "Tenant Domain",
 		LongForm:   "domain",
@@ -28,10 +22,9 @@ var (
 )
 
 type LoginInputs struct {
-	LoginAsMachine bool
-	Domain         string
-	ClientID       string
-	ClientSecret   string
+	Domain       string
+	ClientID     string
+	ClientSecret string
 }
 
 func loginCmd(cli *cli) *cobra.Command {
@@ -44,13 +37,12 @@ func loginCmd(cli *cli) *cobra.Command {
 		Long:  "Authenticates the Auth0 CLI either as a user using personal credentials or as a machine using client credentials (client ID/secret).",
 		Example: `
 		auth0 login
-		auth0 login --as-machine
-		auth0 login --as-machine --domain <TENANT_DOMAIN> --client-id <CLIENT_ID> --client-secret <CLIENT_SECRET>
+		auth0 login --domain <TENANT_DOMAIN> --client-id <CLIENT_ID> --client-secret <CLIENT_SECRET>
 		`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			shouldLoginAsMachine := inputs.LoginAsMachine || inputs.ClientID != "" || inputs.ClientSecret != "" || inputs.Domain != ""
+			shouldLoginAsMachine := inputs.ClientID != "" || inputs.ClientSecret != "" || inputs.Domain != ""
 
 			if shouldLoginAsMachine {
 				if err := RunLoginAsMachine(ctx, inputs, cli, cmd); err != nil {
@@ -69,7 +61,6 @@ func loginCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	loginAsMachine.RegisterBool(cmd, &inputs.LoginAsMachine, false)
 	loginTenantDomain.RegisterString(cmd, &inputs.Domain, "")
 	tenantClientID.RegisterString(cmd, &inputs.ClientID, "")
 	tenantClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
