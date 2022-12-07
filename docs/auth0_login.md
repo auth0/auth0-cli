@@ -18,15 +18,13 @@ auth0 login [flags]
 ```
 
 		auth0 login
-		auth0 login --as-machine
-		auth0 login --as-machine --domain <TENANT_DOMAIN> --client-id <CLIENT_ID> --client-secret <CLIENT_SECRET>
+		auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>
 		
 ```
 
 ### Options
 
 ```
-      --as-machine             Initiates authentication as a machine via client credentials (client ID, client secret)
   -i, --client-id string       Client ID of the application.
   -s, --client-secret string   Client Secret of the application.
       --domain string          Specifies tenant domain when authenticating via client credentials (client ID, client secret)

@@ -13,25 +13,35 @@ import (
 )
 
 var (
-	loginAsMachine = Flag{
-		Name:       "Login as machine",
-		LongForm:   "as-machine",
-		Help:       "Initiates authentication as a machine via client credentials (client ID, client secret)",
-		IsRequired: false,
-	}
 	loginTenantDomain = Flag{
-		Name:       "Tenant Domain",
-		LongForm:   "domain",
-		Help:       "Specifies tenant domain when authenticating via client credentials (client ID, client secret)",
-		IsRequired: false,
+		Name:         "Tenant Domain",
+		LongForm:     "domain",
+		Help:         "Specifies tenant domain when authenticating via client credentials (client ID, client secret)",
+		IsRequired:   false,
+		AlwaysPrompt: true,
+	}
+
+	loginClientID = Flag{
+		Name:         "Client ID",
+		LongForm:     "client-id",
+		Help:         "Client ID of the application.",
+		IsRequired:   true,
+		AlwaysPrompt: true,
+	}
+
+	loginClientSecret = Flag{
+		Name:         "Client Secret",
+		LongForm:     "client-secret",
+		Help:         "Client Secret of the application.",
+		IsRequired:   true,
+		AlwaysPrompt: true,
 	}
 )
 
 type LoginInputs struct {
-	LoginAsMachine bool
-	Domain         string
-	ClientID       string
-	ClientSecret   string
+	Domain       string
+	ClientID     string
+	ClientSecret string
 }
 
 func loginCmd(cli *cli) *cobra.Command {
@@ -44,13 +54,12 @@ func loginCmd(cli *cli) *cobra.Command {
 		Long:  "Authenticates the Auth0 CLI either as a user using personal credentials or as a machine using client credentials (client ID/secret).",
 		Example: `
 		auth0 login
-		auth0 login --as-machine
-		auth0 login --as-machine --domain <TENANT_DOMAIN> --client-id <CLIENT_ID> --client-secret <CLIENT_SECRET>
+		auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>
 		`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			shouldLoginAsMachine := inputs.LoginAsMachine || inputs.ClientID != "" || inputs.ClientSecret != "" || inputs.Domain != ""
+			shouldLoginAsMachine := inputs.ClientID != "" || inputs.ClientSecret != "" || inputs.Domain != ""
 
 			if shouldLoginAsMachine {
 				if err := RunLoginAsMachine(ctx, inputs, cli, cmd); err != nil {
@@ -75,14 +84,15 @@ func loginCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	loginAsMachine.RegisterBool(cmd, &inputs.LoginAsMachine, false)
 	loginTenantDomain.RegisterString(cmd, &inputs.Domain, "")
-	tenantClientID.RegisterString(cmd, &inputs.ClientID, "")
-	tenantClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
+	loginClientID.RegisterString(cmd, &inputs.ClientID, "")
+	loginClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
+	cmd.MarkFlagsRequiredTogether("client-id", "client-secret", "domain")
 
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		_ = cmd.Flags().MarkHidden("tenant")
 		_ = cmd.Flags().MarkHidden("json")
+		_ = cmd.Flags().MarkHidden("no-input")
 		cmd.Parent().HelpFunc()(cmd, args)
 	})
 
@@ -183,11 +193,11 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 		return err
 	}
 
-	if err := tenantClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
+	if err := loginClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
 		return err
 	}
 
-	if err := tenantClientSecret.AskPassword(cmd, &inputs.ClientSecret, nil); err != nil {
+	if err := loginClientSecret.AskPassword(cmd, &inputs.ClientSecret, nil); err != nil {
 		return err
 	}
 

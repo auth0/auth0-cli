@@ -8,29 +8,6 @@ import (
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
-var (
-	tenantDomain = Argument{
-		Name: "Tenant",
-		Help: "Tenant to select",
-	}
-
-	tenantClientID = Flag{
-		Name:       "Client ID",
-		LongForm:   "client-id",
-		ShortForm:  "i",
-		Help:       "Client ID of the application.",
-		IsRequired: true,
-	}
-
-	tenantClientSecret = Flag{
-		Name:       "Client Secret",
-		LongForm:   "client-secret",
-		ShortForm:  "s",
-		Help:       "Client Secret of the application.",
-		IsRequired: true,
-	}
-)
-
 func tenantsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tenants",
@@ -124,6 +101,11 @@ func useTenantCmd(cli *cli) *cobra.Command {
 func openTenantCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Domain string
+	}
+
+	var tenantDomain = Argument{
+		Name: "Tenant",
+		Help: "Tenant to select",
 	}
 
 	cmd := &cobra.Command{
