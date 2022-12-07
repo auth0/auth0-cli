@@ -37,7 +37,7 @@ func loginCmd(cli *cli) *cobra.Command {
 		Long:  "Authenticates the Auth0 CLI either as a user using personal credentials or as a machine using client credentials (client ID/secret).",
 		Example: `
 		auth0 login
-		auth0 login --domain <TENANT_DOMAIN> --client-id <CLIENT_ID> --client-secret <CLIENT_SECRET>
+		auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>
 		`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()

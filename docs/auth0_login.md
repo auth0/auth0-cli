@@ -18,7 +18,7 @@ auth0 login [flags]
 ```
 
 		auth0 login
-		auth0 login --domain <TENANT_DOMAIN> --client-id <CLIENT_ID> --client-secret <CLIENT_SECRET>
+		auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>
 		
 ```
 
