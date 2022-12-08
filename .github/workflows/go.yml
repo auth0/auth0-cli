@@ -21,7 +21,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: $GO_VERSION
+          go-version: ${{env.GO_VERSION}}
 
       - name: Check out the code
         uses: actions/checkout@v3
@@ -48,7 +48,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: $GO_VERSION
+          go-version: ${{env.GO_VERSION}}
 
       - name: Check out the code
         uses: actions/checkout@v3
@@ -73,7 +73,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: $GO_VERSION
+          go-version: ${{env.GO_VERSION}}
 
       - name: Check out the code
         uses: actions/checkout@v3
