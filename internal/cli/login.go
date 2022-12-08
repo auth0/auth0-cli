@@ -14,27 +14,31 @@ import (
 
 var (
 	loginTenantDomain = Flag{
-		Name:         "Tenant Domain",
-		LongForm:     "domain",
-		Help:         "Specifies tenant domain when authenticating via client credentials (client ID, client secret)",
-		IsRequired:   false,
-		AlwaysPrompt: true,
+		Name:       "Tenant Domain",
+		LongForm:   "domain",
+		Help:       "Specifies tenant domain when authenticating via client credentials (client ID, client secret)",
+		IsRequired: false,
 	}
 
 	loginClientID = Flag{
-		Name:         "Client ID",
-		LongForm:     "client-id",
-		Help:         "Client ID of the application.",
-		IsRequired:   true,
-		AlwaysPrompt: true,
+		Name:       "Client ID",
+		LongForm:   "client-id",
+		Help:       "Client ID of the application.",
+		IsRequired: false,
 	}
 
 	loginClientSecret = Flag{
-		Name:         "Client Secret",
-		LongForm:     "client-secret",
-		Help:         "Client Secret of the application.",
-		IsRequired:   true,
-		AlwaysPrompt: true,
+		Name:       "Client Secret",
+		LongForm:   "client-secret",
+		Help:       "Client Secret of the application.",
+		IsRequired: false,
+	}
+
+	loginAsUser = Flag{
+		Name:       "Login as user",
+		LongForm:   "as-user",
+		Help:       "Initializes login as a user via device code flow.",
+		IsRequired: false,
 	}
 )
 
@@ -42,6 +46,7 @@ type LoginInputs struct {
 	Domain       string
 	ClientID     string
 	ClientSecret string
+	LoginAsUser  bool
 }
 
 func loginCmd(cli *cli) *cobra.Command {
@@ -55,24 +60,52 @@ func loginCmd(cli *cli) *cobra.Command {
 		Example: `
 		auth0 login
 		auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>
+		auth0 login --as-user
 		`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			shouldLoginAsMachine := inputs.ClientID != "" || inputs.ClientSecret != "" || inputs.Domain != ""
+			skipToMachineLogin := inputs.ClientID != "" || inputs.ClientSecret != "" || inputs.Domain != ""
+			skipToUserLogin := inputs.LoginAsUser
 
-			if shouldLoginAsMachine {
-				if err := RunLoginAsMachine(ctx, inputs, cli, cmd); err != nil {
+			shouldPrompt := !skipToMachineLogin && !skipToUserLogin
+
+			var selectedType string
+
+			interactivePromptOptions := struct {
+				User    string
+				Machine string
+			}{
+				User:    "As a user",
+				Machine: "As a machine",
+			}
+
+			if shouldPrompt {
+				cli.renderer.Output(fmt.Sprintf("%s\n\n%s\n%s\n\n%s\n%s\n%s\n%s\n\n",
+					ansi.Bold("✪ Welcome to the Auth0 CLI 🎊"),
+					"An Auth0 tenant is required to operate this CLI.",
+					"To create one, visit: https://auth0.com/signup.",
+					"You may authenticate to your tenant either as a user with personal",
+					"credentials or as a machine via client credentials. For more",
+					"information about authenticating the CLI to your tenant, visit",
+					"the docs: https://auth0.github.io/auth0-cli/auth0_login.html",
+				))
+
+				input := prompt.SelectInput("auth-type", "How would you like to authenticate?", "Authenticating as a user is recommended if performing ad-hoc operations or working locally.\nAlternatively, authenticating as a machine is recommended for automated workflows (ex:CI).\n",
+					[]string{interactivePromptOptions.User, interactivePromptOptions.Machine}, interactivePromptOptions.User, shouldPrompt)
+				if err := prompt.AskOne(input, &selectedType); err != nil {
+					return handleInputError(err)
+				}
+			}
+
+			shouldLoginAsUser := skipToUserLogin || selectedType == interactivePromptOptions.User
+
+			if shouldLoginAsUser {
+				if _, err := RunLoginAsUser(ctx, cli); err != nil {
 					return err
 				}
 			} else {
-				welcomeMessage := fmt.Sprintf(
-					"%s\n\n%s\n\n",
-					"✪ Welcome to the Auth0 CLI 🎊",
-					"If you don't have an account, please create one here: https://auth0.com/signup.",
-				)
-				cli.renderer.Output(welcomeMessage)
-				if _, err := RunLoginAsUser(ctx, cli); err != nil {
+				if err := RunLoginAsMachine(ctx, inputs, cli, cmd); err != nil {
 					return err
 				}
 			}
@@ -88,6 +121,7 @@ func loginCmd(cli *cli) *cobra.Command {
 	loginClientID.RegisterString(cmd, &inputs.ClientID, "")
 	loginClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
 	cmd.MarkFlagsRequiredTogether("client-id", "client-secret", "domain")
+	loginAsUser.RegisterBool(cmd, &inputs.LoginAsUser, false)
 
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		_ = cmd.Flags().MarkHidden("tenant")
@@ -107,7 +141,10 @@ func RunLoginAsUser(ctx context.Context, cli *cli) (Tenant, error) {
 		return Tenant{}, fmt.Errorf("Failed to start the authentication process: %w.", err)
 	}
 
-	message := fmt.Sprintf("Your device confirmation code is: %s\n\n", ansi.Bold(state.UserCode))
+	message := fmt.Sprintf("\n%s\n%s%s\n\n",
+		"A browser window needs to be opened to complete authentication.",
+		"Note you device confirmation code: ",
+		ansi.Bold(state.UserCode))
 	cli.renderer.Output(message)
 
 	if cli.noInput {
