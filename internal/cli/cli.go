@@ -208,7 +208,7 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 	}
 
 	if scopesChanged(t) && t.authenticatedWithDeviceCodeFlow() {
-		c.renderer.Warnf("Required scopes have changed. Please sign in to re-authorize the CLI.")
+		c.renderer.Warnf("Required scopes have changed. Please log in to re-authorize the CLI.")
 		return RunLoginAsUser(ctx, c)
 	}
 
@@ -221,7 +221,7 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 			return t, fmt.Errorf("Failed to renew access token. This may occur if the designated application has been deleted or client secret has been rotated. Please re-authenticate by running `auth0 login --as-machine`")
 		}
 
-		c.renderer.Warnf("Failed to renew access token. Please sign in to re-authenticate the CLI.")
+		c.renderer.Warnf("Failed to renew access token. Please log in to re-authorize the CLI.")
 		return RunLoginAsUser(ctx, c)
 
 	}
