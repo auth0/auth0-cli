@@ -4,6 +4,9 @@ on:
   pull_request:
   push:
 
+env:
+  GO_VERSION: 1.19.4
+
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
@@ -20,7 +23,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.19.3
+          go-version: ${{env.GO_VERSION}}
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v3
