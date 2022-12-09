@@ -36,24 +36,15 @@ var (
 		IsRequired:   false,
 		AlwaysPrompt: false,
 	}
-  
-  loginAsUser = Flag{
-		Name:         "Login as user",
-		LongForm:     "as-user",
-		Help:         "Initializes login as a user via device code flow.",
-		IsRequired:   false,
-    AlwaysPrompt: false,
-  }
 )
 
 type LoginInputs struct {
 	Domain       string
 	ClientID     string
 	ClientSecret string
-  LoginAsUser  bool
 }
 
-func (i *LoginInputs) shouldLoginAsMachine() bool {
+func (i *LoginInputs) isLoggingInAsAMachine() bool {
 	return i.ClientID != "" || i.ClientSecret != "" || i.Domain != ""
 }
 
@@ -64,50 +55,47 @@ func loginCmd(cli *cli) *cobra.Command {
 		Use:   "login",
 		Args:  cobra.NoArgs,
 		Short: "Authenticate the Auth0 CLI",
-		Long:  "Authenticates the Auth0 CLI either as a user using personal credentials or as a machine using client credentials (client ID/secret).",
-		Example: `
-		auth0 login
-		auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>
-		auth0 login --as-user
-		`,
+		Long:  "Authenticates the Auth0 CLI either as a user using personal credentials or as a machine using client credentials.",
+		Example: `auth0 login
+auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
+			var selectedLoginType string
+			const loginAsUser, loginAsMachine = "As a user", "As a machine"
 
-			skipToMachineLogin := inputs.ClientID != "" || inputs.ClientSecret != "" || inputs.Domain != ""
-			skipToUserLogin := inputs.LoginAsUser
-
-			shouldPrompt := !skipToMachineLogin && !skipToUserLogin
-
-			var selectedType string
-
-			interactivePromptOptions := struct {
-				User    string
-				Machine string
-			}{
-				User:    "As a user",
-				Machine: "As a machine",
-			}
-
+			// We want to prompt if we don't pass the following flags:
+			// --no-input, --client-id, --client-secret, --domain.
+			// Because then the prompt is unnecessary as we know the login type.
+			shouldPrompt := !inputs.isLoggingInAsAMachine() && !cli.noInput
 			if shouldPrompt {
-				cli.renderer.Output(fmt.Sprintf("%s\n\n%s\n%s\n\n%s\n%s\n%s\n%s\n\n",
-					ansi.Bold("✪ Welcome to the Auth0 CLI 🎊"),
-					"An Auth0 tenant is required to operate this CLI.",
-					"To create one, visit: https://auth0.com/signup.",
-					"You may authenticate to your tenant either as a user with personal",
-					"credentials or as a machine via client credentials. For more",
-					"information about authenticating the CLI to your tenant, visit",
-					"the docs: https://auth0.github.io/auth0-cli/auth0_login.html",
-				))
+				cli.renderer.Output(
+					fmt.Sprintf(
+						"%s\n\n%s\n%s\n\n%s\n%s\n%s\n%s\n\n",
+						ansi.Bold("✪ Welcome to the Auth0 CLI 🎊"),
+						"An Auth0 tenant is required to operate this CLI.",
+						"To create one, visit: https://auth0.com/signup.",
+						"You may authenticate to your tenant either as a user with personal",
+						"credentials or as a machine via client credentials. For more",
+						"information about authenticating the CLI to your tenant, visit",
+						"the docs: https://auth0.github.io/auth0-cli/auth0_login.html",
+					),
+				)
 
-				input := prompt.SelectInput("auth-type", "How would you like to authenticate?", "Authenticating as a user is recommended if performing ad-hoc operations or working locally.\nAlternatively, authenticating as a machine is recommended for automated workflows (ex:CI).\n",
-					[]string{interactivePromptOptions.User, interactivePromptOptions.Machine}, interactivePromptOptions.User, shouldPrompt)
-				if err := prompt.AskOne(input, &selectedType); err != nil {
+				label := "How would you like to authenticate?"
+				help := fmt.Sprintf(
+					"%s\n%s\n",
+					"Authenticating as a user is recommended if performing ad-hoc operations or working locally.",
+					"Alternatively, authenticating as a machine is recommended for automated workflows (ex:CI).",
+				)
+				input := prompt.SelectInput("", label, help, []string{loginAsUser, loginAsMachine}, loginAsUser, shouldPrompt)
+				if err := prompt.AskOne(input, &selectedLoginType); err != nil {
 					return handleInputError(err)
 				}
 			}
 
-			shouldLoginAsUser := skipToUserLogin || selectedType == interactivePromptOptions.User
+			ctx := cmd.Context()
 
+			// Allows to skip to user login if --no-input flag is passed.
+			shouldLoginAsUser := (cli.noInput && !inputs.isLoggingInAsAMachine()) || selectedLoginType == loginAsUser
 			if shouldLoginAsUser {
 				if _, err := RunLoginAsUser(ctx, cli); err != nil {
 					return err
@@ -118,7 +106,6 @@ func loginCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			cli.renderer.Infof("Successfully authenticated to %s", inputs.Domain)
 			cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
 
 			return nil
@@ -129,7 +116,6 @@ func loginCmd(cli *cli) *cobra.Command {
 	loginClientID.RegisterString(cmd, &inputs.ClientID, "")
 	loginClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
 	cmd.MarkFlagsRequiredTogether("client-id", "client-secret", "domain")
-	loginAsUser.RegisterBool(cmd, &inputs.LoginAsUser, false)
 
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		_ = cmd.Flags().MarkHidden("tenant")
@@ -150,7 +136,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli) (Tenant, error) {
 
 	message := fmt.Sprintf("\n%s\n%s%s\n\n",
 		"A browser window needs to be opened to complete authentication.",
-		"Note you device confirmation code: ",
+		"Note your device confirmation code: ",
 		ansi.Bold(state.UserCode))
 	cli.renderer.Output(message)
 
