@@ -66,7 +66,13 @@ auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <cl
 					return err
 				}
 			} else {
-				if _, err := RunLoginAsUser(ctx, cli, false); err != nil {
+				welcomeMessage := fmt.Sprintf(
+					"%s\n\n%s\n\n",
+					"✪ Welcome to the Auth0 CLI 🎊",
+					"If you don't have an account, please create one here: https://auth0.com/signup.",
+				)
+				cli.renderer.Output(welcomeMessage)
+				if _, err := RunLoginAsUser(ctx, cli); err != nil {
 					return err
 				}
 			}
@@ -85,7 +91,6 @@ auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <cl
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		_ = cmd.Flags().MarkHidden("tenant")
 		_ = cmd.Flags().MarkHidden("json")
-		_ = cmd.Flags().MarkHidden("no-input")
 		cmd.Parent().HelpFunc()(cmd, args)
 	})
 
@@ -94,28 +99,13 @@ auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <cl
 
 // RunLoginAsUser runs the login flow guiding the user through the process
 // by showing the login instructions, opening the browser.
-// Use `expired` to run the login from other commands setup:
-// this will only affect the messages.
-func RunLoginAsUser(ctx context.Context, cli *cli, expired bool) (Tenant, error) {
-	message := fmt.Sprintf(
-		"%s\n\n%s\n\n",
-		"✪ Welcome to the Auth0 CLI 🎊",
-		"If you don't have an account, please create one here: https://auth0.com/signup.",
-	)
-
-	if expired {
-		message = "Please sign in to re-authorize the CLI."
-		cli.renderer.Warnf(message)
-	} else {
-		cli.renderer.Output(message)
-	}
-
+func RunLoginAsUser(ctx context.Context, cli *cli) (Tenant, error) {
 	state, err := cli.authenticator.Start(ctx)
 	if err != nil {
 		return Tenant{}, fmt.Errorf("Failed to start the authentication process: %w.", err)
 	}
 
-	message = fmt.Sprintf("Your device confirmation code is: %s\n\n", ansi.Bold(state.UserCode))
+	message := fmt.Sprintf("Your device confirmation code is: %s\n\n", ansi.Bold(state.UserCode))
 	cli.renderer.Output(message)
 
 	if cli.noInput {
@@ -209,13 +199,18 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 		return err
 	}
 
-	token, err := auth.GetAccessTokenFromClientCreds(auth.ClientCredentials{
-		ClientID:     inputs.ClientID,
-		ClientSecret: inputs.ClientSecret,
-		Domain:       inputs.Domain,
-	})
+	token, err := auth.GetAccessTokenFromClientCreds(
+		ctx,
+		auth.ClientCredentials{
+			ClientID:     inputs.ClientID,
+			ClientSecret: inputs.ClientSecret,
+			Domain:       inputs.Domain,
+		},
+	)
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"failed to fetch access token using client credentials. \n\n"+
+				"Ensure that the provided client-id, client-secret and domain are correct. \n\nerror: %w\n", err)
 	}
 
 	t := Tenant{
