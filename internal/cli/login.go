@@ -16,25 +16,25 @@ var (
 	loginTenantDomain = Flag{
 		Name:         "Tenant Domain",
 		LongForm:     "domain",
-		Help:         "Specifies tenant domain when authenticating via client credentials (client ID, client secret)",
+		Help:         "Tenant domain of the application when authenticating via client credentials.",
 		IsRequired:   false,
-		AlwaysPrompt: true,
+		AlwaysPrompt: false,
 	}
 
 	loginClientID = Flag{
 		Name:         "Client ID",
 		LongForm:     "client-id",
-		Help:         "Client ID of the application.",
-		IsRequired:   true,
-		AlwaysPrompt: true,
+		Help:         "Client ID of the application when authenticating via client credentials.",
+		IsRequired:   false,
+		AlwaysPrompt: false,
 	}
 
 	loginClientSecret = Flag{
 		Name:         "Client Secret",
 		LongForm:     "client-secret",
-		Help:         "Client Secret of the application.",
-		IsRequired:   true,
-		AlwaysPrompt: true,
+		Help:         "Client secret of the application when authenticating via client credentials.",
+		IsRequired:   false,
+		AlwaysPrompt: false,
 	}
 )
 
@@ -44,6 +44,10 @@ type LoginInputs struct {
 	ClientSecret string
 }
 
+func (i *LoginInputs) shouldLoginAsMachine() bool {
+	return i.ClientID != "" || i.ClientSecret != "" || i.Domain != ""
+}
+
 func loginCmd(cli *cli) *cobra.Command {
 	var inputs LoginInputs
 
@@ -51,17 +55,13 @@ func loginCmd(cli *cli) *cobra.Command {
 		Use:   "login",
 		Args:  cobra.NoArgs,
 		Short: "Authenticate the Auth0 CLI",
-		Long:  "Authenticates the Auth0 CLI either as a user using personal credentials or as a machine using client credentials (client ID/secret).",
-		Example: `
-		auth0 login
-		auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>
-		`,
+		Long:  "Authenticates the Auth0 CLI either as a user using personal credentials or as a machine using client credentials.",
+		Example: `auth0 login
+auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			shouldLoginAsMachine := inputs.ClientID != "" || inputs.ClientSecret != "" || inputs.Domain != ""
-
-			if shouldLoginAsMachine {
+			if inputs.shouldLoginAsMachine() {
 				if err := RunLoginAsMachine(ctx, inputs, cli, cmd); err != nil {
 					return err
 				}
@@ -71,7 +71,6 @@ func loginCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			cli.renderer.Infof("Successfully authenticated to %s", inputs.Domain)
 			cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
 
 			return nil
@@ -229,6 +228,14 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 
 	if err := cli.addTenant(t); err != nil {
 		return fmt.Errorf("unexpected error when attempting to save tenant data: %w", err)
+	}
+
+	cli.renderer.Newline()
+	cli.renderer.Infof("Successfully logged in.")
+	cli.renderer.Infof("Tenant: %s", inputs.Domain)
+
+	if err := checkInstallID(cli); err != nil {
+		return fmt.Errorf("failed to update the config: %w", err)
 	}
 
 	return nil
