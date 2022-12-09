@@ -44,7 +44,7 @@ type LoginInputs struct {
 	ClientSecret string
 }
 
-func (i *LoginInputs) shouldLoginAsMachine() bool {
+func (i *LoginInputs) isLoggingInAsAMachine() bool {
 	return i.ClientID != "" || i.ClientSecret != "" || i.Domain != ""
 }
 
@@ -59,20 +59,49 @@ func loginCmd(cli *cli) *cobra.Command {
 		Example: `auth0 login
 auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var selectedLoginType string
+			const loginAsUser, loginAsMachine = "As a user", "As a machine"
+
+			// We want to prompt if we don't pass the following flags:
+			// --no-input, --client-id, --client-secret, --domain.
+			// Because then the prompt is unnecessary as we know the login type.
+			shouldPrompt := !inputs.isLoggingInAsAMachine() && !cli.noInput
+			if shouldPrompt {
+				cli.renderer.Output(
+					fmt.Sprintf(
+						"%s\n\n%s\n%s\n\n%s\n%s\n%s\n%s\n\n",
+						ansi.Bold("✪ Welcome to the Auth0 CLI 🎊"),
+						"An Auth0 tenant is required to operate this CLI.",
+						"To create one, visit: https://auth0.com/signup.",
+						"You may authenticate to your tenant either as a user with personal",
+						"credentials or as a machine via client credentials. For more",
+						"information about authenticating the CLI to your tenant, visit",
+						"the docs: https://auth0.github.io/auth0-cli/auth0_login.html",
+					),
+				)
+
+				label := "How would you like to authenticate?"
+				help := fmt.Sprintf(
+					"%s\n%s\n",
+					"Authenticating as a user is recommended if performing ad-hoc operations or working locally.",
+					"Alternatively, authenticating as a machine is recommended for automated workflows (ex:CI).",
+				)
+				input := prompt.SelectInput("", label, help, []string{loginAsUser, loginAsMachine}, loginAsUser, shouldPrompt)
+				if err := prompt.AskOne(input, &selectedLoginType); err != nil {
+					return handleInputError(err)
+				}
+			}
+
 			ctx := cmd.Context()
 
-			if inputs.shouldLoginAsMachine() {
-				if err := RunLoginAsMachine(ctx, inputs, cli, cmd); err != nil {
+			// Allows to skip to user login if --no-input flag is passed.
+			shouldLoginAsUser := (cli.noInput && !inputs.isLoggingInAsAMachine()) || selectedLoginType == loginAsUser
+			if shouldLoginAsUser {
+				if _, err := RunLoginAsUser(ctx, cli); err != nil {
 					return err
 				}
 			} else {
-				welcomeMessage := fmt.Sprintf(
-					"%s\n\n%s\n\n",
-					"✪ Welcome to the Auth0 CLI 🎊",
-					"If you don't have an account, please create one here: https://auth0.com/signup.",
-				)
-				cli.renderer.Output(welcomeMessage)
-				if _, err := RunLoginAsUser(ctx, cli); err != nil {
+				if err := RunLoginAsMachine(ctx, inputs, cli, cmd); err != nil {
 					return err
 				}
 			}
@@ -105,7 +134,10 @@ func RunLoginAsUser(ctx context.Context, cli *cli) (Tenant, error) {
 		return Tenant{}, fmt.Errorf("Failed to start the authentication process: %w.", err)
 	}
 
-	message := fmt.Sprintf("Your device confirmation code is: %s\n\n", ansi.Bold(state.UserCode))
+	message := fmt.Sprintf("\n%s\n%s%s\n\n",
+		"A browser window needs to be opened to complete authentication.",
+		"Note your device confirmation code: ",
+		ansi.Bold(state.UserCode))
 	cli.renderer.Output(message)
 
 	if cli.noInput {
