@@ -2,11 +2,6 @@ config:
   inherit-env: true
 
 tests:
-  login as machine:
-    command: auth0 logout $AUTH0_CLI_CLIENT_DOMAIN; auth0 login --client-id $AUTH0_CLI_CLIENT_ID --client-secret $AUTH0_CLI_CLIENT_SECRET --domain $AUTH0_CLI_CLIENT_DOMAIN
-    stderr: "Successfully authenticated to"
-    exit-code: 0
-
   auth0 apis list:
     exit-code: 0
 
