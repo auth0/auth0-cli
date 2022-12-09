@@ -1,36 +1,11 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
 
-	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/prompt"
-)
-
-var (
-	tenantDomain = Argument{
-		Name: "Tenant",
-		Help: "Tenant to select",
-	}
-
-	tenantClientID = Flag{
-		Name:       "Client ID",
-		LongForm:   "client-id",
-		ShortForm:  "i",
-		Help:       "Client ID of the application.",
-		IsRequired: true,
-	}
-
-	tenantClientSecret = Flag{
-		Name:       "Client Secret",
-		LongForm:   "client-secret",
-		ShortForm:  "s",
-		Help:       "Client Secret of the application.",
-		IsRequired: true,
-	}
 )
 
 func tenantsCmd(cli *cli) *cobra.Command {
@@ -44,7 +19,6 @@ func tenantsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(useTenantCmd(cli))
 	cmd.AddCommand(listTenantCmd(cli))
 	cmd.AddCommand(openTenantCmd(cli))
-	cmd.AddCommand(addTenantCmd(cli))
 	return cmd
 }
 
@@ -129,6 +103,11 @@ func openTenantCmd(cli *cli) *cobra.Command {
 		Domain string
 	}
 
+	var tenantDomain = Argument{
+		Name: "Tenant",
+		Help: "Tenant to select",
+	}
+
 	cmd := &cobra.Command{
 		Use:     "open",
 		Args:    cobra.MaximumNArgs(1),
@@ -158,75 +137,6 @@ func openTenantCmd(cli *cli) *cobra.Command {
 		_ = cmd.Flags().MarkHidden("json")
 		cmd.Parent().HelpFunc()(cmd, args)
 	})
-
-	return cmd
-}
-
-func addTenantCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		Domain       string
-		ClientID     string
-		ClientSecret string
-	}
-
-	cmd := &cobra.Command{
-		Use:     "add",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Add a tenant with client credentials",
-		Long:    "Add a tenant with client credentials.",
-		Example: "auth0 tenants add <tenant> --client-id <id> --client-secret <secret>",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				err := tenantDomain.Pick(cmd, &inputs.Domain, cli.tenantPickerOptions)
-				if err != nil {
-					if !errors.Is(err, errUnauthenticated) {
-						return err
-					}
-
-					if err := tenantDomain.Ask(cmd, &inputs.Domain); err != nil {
-						return err
-					}
-				}
-			} else {
-				inputs.Domain = args[0]
-			}
-
-			if err := tenantClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
-				return err
-			}
-
-			if err := tenantClientSecret.Ask(cmd, &inputs.ClientSecret, nil); err != nil {
-				return err
-			}
-
-			token, err := auth.GetAccessTokenFromClientCreds(auth.ClientCredentials{
-				ClientID:     inputs.ClientID,
-				ClientSecret: inputs.ClientSecret,
-				Domain:       inputs.Domain,
-			})
-			if err != nil {
-				return err
-			}
-
-			t := Tenant{
-				Domain:       inputs.Domain,
-				AccessToken:  token.AccessToken,
-				ExpiresAt:    token.ExpiresAt,
-				ClientID:     inputs.ClientID,
-				ClientSecret: inputs.ClientSecret,
-			}
-
-			if err := cli.addTenant(t); err != nil {
-				return fmt.Errorf("unexpected error when attempting to save tenant data: %w", err)
-			}
-
-			cli.renderer.Infof("Tenant added successfully: %s", t.Domain)
-			return nil
-		},
-	}
-
-	tenantClientID.RegisterString(cmd, &inputs.ClientID, "")
-	tenantClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
 
 	return cmd
 }
