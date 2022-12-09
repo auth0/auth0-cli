@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/auth0/auth0-cli/internal/analytics"
+	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
@@ -109,11 +110,14 @@ func (t *Tenant) hasExpiredToken() bool {
 
 func (t *Tenant) regenerateAccessToken(ctx context.Context, c *cli) error {
 	if t.authenticatedWithClientCredentials() {
-		token, err := auth.GetAccessTokenFromClientCreds(auth.ClientCredentials{
-			ClientID:     t.ClientID,
-			ClientSecret: t.ClientSecret,
-			Domain:       t.Domain,
-		})
+		token, err := auth.GetAccessTokenFromClientCreds(
+			ctx,
+			auth.ClientCredentials{
+				ClientID:     t.ClientID,
+				ClientSecret: t.ClientSecret,
+				Domain:       t.Domain,
+			},
+		)
 		if err != nil {
 			return err
 		}
@@ -208,7 +212,7 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 	}
 
 	if scopesChanged(t) && t.authenticatedWithDeviceCodeFlow() {
-		c.renderer.Warnf("Required scopes have changed. Please log in to re-authorize the CLI.")
+		c.renderer.Warnf("Required scopes have changed. Please log in to re-authorize the CLI.\n")
 		return RunLoginAsUser(ctx, c)
 	}
 
@@ -218,12 +222,17 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 
 	if err := t.regenerateAccessToken(ctx, c); err != nil {
 		if t.authenticatedWithClientCredentials() {
-			return t, fmt.Errorf("Failed to renew access token. This may occur if the designated application has been deleted or client secret has been rotated. Please re-authenticate by running `auth0 login --as-machine`")
+			return t, fmt.Errorf(
+				"failed to fetch access token using client credentials.\n\n"+
+					"This may occur if the designated application has been deleted or the client secret has been rotated.\n\n"+
+					"Please re-authenticate by running: %s",
+				ansi.Bold("auth0 login --domain <tenant-domain --client-id <client-id> --client-secret <client-secret>"),
+			)
 		}
 
-		c.renderer.Warnf("Failed to renew access token. Please log in to re-authorize the CLI.")
-		return RunLoginAsUser(ctx, c)
+		c.renderer.Warnf("Failed to renew access token. Please log in to re-authorize the CLI.\n")
 
+		return RunLoginAsUser(ctx, c)
 	}
 
 	if err := c.addTenant(t); err != nil {

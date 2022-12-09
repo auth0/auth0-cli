@@ -77,7 +77,6 @@ auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <cl
 				}
 			}
 
-			cli.renderer.Infof("Successfully authenticated to %s", inputs.Domain)
 			cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
 
 			return nil
@@ -92,7 +91,6 @@ auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <cl
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		_ = cmd.Flags().MarkHidden("tenant")
 		_ = cmd.Flags().MarkHidden("json")
-		_ = cmd.Flags().MarkHidden("no-input")
 		cmd.Parent().HelpFunc()(cmd, args)
 	})
 
@@ -201,13 +199,18 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 		return err
 	}
 
-	token, err := auth.GetAccessTokenFromClientCreds(auth.ClientCredentials{
-		ClientID:     inputs.ClientID,
-		ClientSecret: inputs.ClientSecret,
-		Domain:       inputs.Domain,
-	})
+	token, err := auth.GetAccessTokenFromClientCreds(
+		ctx,
+		auth.ClientCredentials{
+			ClientID:     inputs.ClientID,
+			ClientSecret: inputs.ClientSecret,
+			Domain:       inputs.Domain,
+		},
+	)
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"failed to fetch access token using client credentials. \n\n"+
+				"Ensure that the provided client-id, client-secret and domain are correct. \n\nerror: %w\n", err)
 	}
 
 	t := Tenant{
