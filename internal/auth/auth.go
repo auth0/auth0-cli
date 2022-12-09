@@ -288,7 +288,7 @@ type ClientCredentials struct {
 }
 
 // GetAccessTokenFromClientCreds generates an access token from client credentials
-func GetAccessTokenFromClientCreds(args ClientCredentials) (Result, error) {
+func GetAccessTokenFromClientCreds(ctx context.Context, args ClientCredentials) (Result, error) {
 	u, err := url.Parse("https://" + args.Domain)
 	if err != nil {
 		return Result{}, err
@@ -305,7 +305,7 @@ func GetAccessTokenFromClientCreds(args ClientCredentials) (Result, error) {
 		},
 	}
 
-	resp, err := credsConfig.Token(context.Background())
+	resp, err := credsConfig.Token(ctx)
 	if err != nil {
 		return Result{}, err
 	}

@@ -14,39 +14,47 @@ import (
 
 var (
 	loginTenantDomain = Flag{
-		Name:       "Tenant Domain",
-		LongForm:   "domain",
-		Help:       "Specifies tenant domain when authenticating via client credentials (client ID, client secret)",
-		IsRequired: false,
+		Name:         "Tenant Domain",
+		LongForm:     "domain",
+		Help:         "Tenant domain of the application when authenticating via client credentials.",
+		IsRequired:   false,
+		AlwaysPrompt: false,
 	}
 
 	loginClientID = Flag{
-		Name:       "Client ID",
-		LongForm:   "client-id",
-		Help:       "Client ID of the application.",
-		IsRequired: false,
+		Name:         "Client ID",
+		LongForm:     "client-id",
+		Help:         "Client ID of the application when authenticating via client credentials.",
+		IsRequired:   false,
+		AlwaysPrompt: false,
 	}
 
 	loginClientSecret = Flag{
-		Name:       "Client Secret",
-		LongForm:   "client-secret",
-		Help:       "Client Secret of the application.",
-		IsRequired: false,
+		Name:         "Client Secret",
+		LongForm:     "client-secret",
+		Help:         "Client secret of the application when authenticating via client credentials.",
+		IsRequired:   false,
+		AlwaysPrompt: false,
 	}
-
-	loginAsUser = Flag{
-		Name:       "Login as user",
-		LongForm:   "as-user",
-		Help:       "Initializes login as a user via device code flow.",
-		IsRequired: false,
-	}
+  
+  loginAsUser = Flag{
+		Name:         "Login as user",
+		LongForm:     "as-user",
+		Help:         "Initializes login as a user via device code flow.",
+		IsRequired:   false,
+    AlwaysPrompt: false,
+  }
 )
 
 type LoginInputs struct {
 	Domain       string
 	ClientID     string
 	ClientSecret string
-	LoginAsUser  bool
+  LoginAsUser  bool
+}
+
+func (i *LoginInputs) shouldLoginAsMachine() bool {
+	return i.ClientID != "" || i.ClientSecret != "" || i.Domain != ""
 }
 
 func loginCmd(cli *cli) *cobra.Command {
@@ -126,7 +134,6 @@ func loginCmd(cli *cli) *cobra.Command {
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		_ = cmd.Flags().MarkHidden("tenant")
 		_ = cmd.Flags().MarkHidden("json")
-		_ = cmd.Flags().MarkHidden("no-input")
 		cmd.Parent().HelpFunc()(cmd, args)
 	})
 
@@ -238,13 +245,18 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 		return err
 	}
 
-	token, err := auth.GetAccessTokenFromClientCreds(auth.ClientCredentials{
-		ClientID:     inputs.ClientID,
-		ClientSecret: inputs.ClientSecret,
-		Domain:       inputs.Domain,
-	})
+	token, err := auth.GetAccessTokenFromClientCreds(
+		ctx,
+		auth.ClientCredentials{
+			ClientID:     inputs.ClientID,
+			ClientSecret: inputs.ClientSecret,
+			Domain:       inputs.Domain,
+		},
+	)
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"failed to fetch access token using client credentials. \n\n"+
+				"Ensure that the provided client-id, client-secret and domain are correct. \n\nerror: %w\n", err)
 	}
 
 	t := Tenant{
@@ -257,6 +269,14 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 
 	if err := cli.addTenant(t); err != nil {
 		return fmt.Errorf("unexpected error when attempting to save tenant data: %w", err)
+	}
+
+	cli.renderer.Newline()
+	cli.renderer.Infof("Successfully logged in.")
+	cli.renderer.Infof("Tenant: %s", inputs.Domain)
+
+	if err := checkInstallID(cli); err != nil {
+		return fmt.Errorf("failed to update the config: %w", err)
 	}
 
 	return nil
