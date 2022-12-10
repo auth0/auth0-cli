@@ -109,7 +109,7 @@ auth0 qs download --stack <stack>`,
 
 func listQuickstarts(cli *cli) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		quickstarts, err := auth0.GetQuickstarts()
+		quickstarts, err := auth0.GetQuickstarts(cmd.Context())
 		if err != nil {
 			return err
 		}
@@ -370,7 +370,11 @@ func (i *qsInputs) fromArgs(cmd *cobra.Command, args []string, cli *cli) error {
 	i.Client = client
 	i.QsTypeForClient = quickstartsTypeFor(client.GetAppType())
 
-	quickstarts, err := auth0.GetQuickstarts()
+	var quickstarts auth0.Quickstarts
+	err = ansi.Waiting(func() error {
+		quickstarts, err = auth0.GetQuickstarts(cmd.Context())
+		return err
+	})
 	if err != nil {
 		return err
 	}

@@ -92,8 +92,13 @@ func (q Quickstart) Download(ctx context.Context, downloadPath string, client *m
 	return archiver.Unarchive(tmpFile.Name(), downloadPath)
 }
 
-func GetQuickstarts() (Quickstarts, error) {
-	response, err := http.Get(quickstartsMetaURL)
+func GetQuickstarts(ctx context.Context) (Quickstarts, error) {
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, quickstartsMetaURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := http.DefaultClient.Do(request)
 	if err != nil {
 		return nil, err
 	}
