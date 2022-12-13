@@ -517,7 +517,6 @@ func defaultConfigPath() string {
 
 func canPrompt(cmd *cobra.Command) bool {
 	noInput, err := cmd.Root().Flags().GetBool("no-input")
-
 	if err != nil {
 		return false
 	}
