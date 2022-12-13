@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra/doc"
 )
 
-func BuildDoc(path string) error {
+func BuildDoc() error {
 	cli := &cli{}
 
 	rootCmd := &cobra.Command{
@@ -20,8 +20,10 @@ func BuildDoc(path string) error {
 	addPersistentFlags(rootCmd, cli)
 	addSubcommands(rootCmd, cli)
 
+	docsPath := "./docs/"
+
 	err := doc.GenMarkdownTreeCustom(rootCmd,
-		path,
+		docsPath,
 		func(fileName string) string {
 			// prepend to the generated markdown
 			if strings.HasSuffix(fileName, "auth0.md") {

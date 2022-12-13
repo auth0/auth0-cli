@@ -12,16 +12,98 @@ import (
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
+var (
+	loginTenantDomain = Flag{
+		Name:         "Tenant Domain",
+		LongForm:     "domain",
+		Help:         "Tenant domain of the application when authenticating via client credentials.",
+		IsRequired:   false,
+		AlwaysPrompt: false,
+	}
+
+	loginClientID = Flag{
+		Name:         "Client ID",
+		LongForm:     "client-id",
+		Help:         "Client ID of the application when authenticating via client credentials.",
+		IsRequired:   false,
+		AlwaysPrompt: false,
+	}
+
+	loginClientSecret = Flag{
+		Name:         "Client Secret",
+		LongForm:     "client-secret",
+		Help:         "Client secret of the application when authenticating via client credentials.",
+		IsRequired:   false,
+		AlwaysPrompt: false,
+	}
+)
+
+type LoginInputs struct {
+	Domain       string
+	ClientID     string
+	ClientSecret string
+}
+
+func (i *LoginInputs) isLoggingInAsAMachine() bool {
+	return i.ClientID != "" || i.ClientSecret != "" || i.Domain != ""
+}
+
 func loginCmd(cli *cli) *cobra.Command {
+	var inputs LoginInputs
+
 	cmd := &cobra.Command{
 		Use:   "login",
 		Args:  cobra.NoArgs,
 		Short: "Authenticate the Auth0 CLI",
-		Long:  "Sign in to your Auth0 account and authorize the CLI to access the Management API.",
+		Long:  "Authenticates the Auth0 CLI either as a user using personal credentials or as a machine using client credentials.",
+		Example: `auth0 login
+auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var selectedLoginType string
+			const loginAsUser, loginAsMachine = "As a user", "As a machine"
+
+			// We want to prompt if we don't pass the following flags:
+			// --no-input, --client-id, --client-secret, --domain.
+			// Because then the prompt is unnecessary as we know the login type.
+			shouldPrompt := !inputs.isLoggingInAsAMachine() && !cli.noInput
+			if shouldPrompt {
+				cli.renderer.Output(
+					fmt.Sprintf(
+						"%s\n\n%s\n%s\n\n%s\n%s\n%s\n%s\n\n",
+						ansi.Bold("✪ Welcome to the Auth0 CLI 🎊"),
+						"An Auth0 tenant is required to operate this CLI.",
+						"To create one, visit: https://auth0.com/signup.",
+						"You may authenticate to your tenant either as a user with personal",
+						"credentials or as a machine via client credentials. For more",
+						"information about authenticating the CLI to your tenant, visit",
+						"the docs: https://auth0.github.io/auth0-cli/auth0_login.html",
+					),
+				)
+
+				label := "How would you like to authenticate?"
+				help := fmt.Sprintf(
+					"%s\n%s\n",
+					"Authenticating as a user is recommended if performing ad-hoc operations or working locally.",
+					"Alternatively, authenticating as a machine is recommended for automated workflows (ex:CI).",
+				)
+				input := prompt.SelectInput("", label, help, []string{loginAsUser, loginAsMachine}, loginAsUser, shouldPrompt)
+				if err := prompt.AskOne(input, &selectedLoginType); err != nil {
+					return handleInputError(err)
+				}
+			}
+
 			ctx := cmd.Context()
-			if _, err := RunLogin(ctx, cli, false); err != nil {
-				return err
+
+			// Allows to skip to user login if --no-input flag is passed.
+			shouldLoginAsUser := (cli.noInput && !inputs.isLoggingInAsAMachine()) || selectedLoginType == loginAsUser
+			if shouldLoginAsUser {
+				if _, err := RunLoginAsUser(ctx, cli); err != nil {
+					return err
+				}
+			} else {
+				if err := RunLoginAsMachine(ctx, inputs, cli, cmd); err != nil {
+					return err
+				}
 			}
 
 			cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
@@ -29,6 +111,11 @@ func loginCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
+
+	loginTenantDomain.RegisterString(cmd, &inputs.Domain, "")
+	loginClientID.RegisterString(cmd, &inputs.ClientID, "")
+	loginClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
+	cmd.MarkFlagsRequiredTogether("client-id", "client-secret", "domain")
 
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		_ = cmd.Flags().MarkHidden("tenant")
@@ -39,30 +126,18 @@ func loginCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-// RunLogin runs the login flow guiding the user through the process
+// RunLoginAsUser runs the login flow guiding the user through the process
 // by showing the login instructions, opening the browser.
-// Use `expired` to run the login from other commands setup:
-// this will only affect the messages.
-func RunLogin(ctx context.Context, cli *cli, expired bool) (Tenant, error) {
-	message := fmt.Sprintf(
-		"%s\n\n%s\n\n",
-		"✪ Welcome to the Auth0 CLI 🎊",
-		"If you don't have an account, please create one here: https://auth0.com/signup.",
-	)
-
-	if expired {
-		message = "Please sign in to re-authorize the CLI."
-		cli.renderer.Warnf(message)
-	} else {
-		cli.renderer.Output(message)
-	}
-
+func RunLoginAsUser(ctx context.Context, cli *cli) (Tenant, error) {
 	state, err := cli.authenticator.Start(ctx)
 	if err != nil {
 		return Tenant{}, fmt.Errorf("Failed to start the authentication process: %w.", err)
 	}
 
-	message = fmt.Sprintf("Your device confirmation code is: %s\n\n", ansi.Bold(state.UserCode))
+	message := fmt.Sprintf("\n%s\n%s%s\n\n",
+		"A browser window needs to be opened to complete authentication.",
+		"Note your device confirmation code: ",
+		ansi.Bold(state.UserCode))
 	cli.renderer.Output(message)
 
 	if cli.noInput {
@@ -140,4 +215,55 @@ func RunLogin(ctx context.Context, cli *cli, expired bool) (Tenant, error) {
 	}
 
 	return tenant, nil
+}
+
+// RunLoginAsMachine facilitates the authentication process using client credentials (client ID, client secret)
+func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *cobra.Command) error {
+	if err := loginTenantDomain.Ask(cmd, &inputs.Domain, nil); err != nil {
+		return err
+	}
+
+	if err := loginClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
+		return err
+	}
+
+	if err := loginClientSecret.AskPassword(cmd, &inputs.ClientSecret, nil); err != nil {
+		return err
+	}
+
+	token, err := auth.GetAccessTokenFromClientCreds(
+		ctx,
+		auth.ClientCredentials{
+			ClientID:     inputs.ClientID,
+			ClientSecret: inputs.ClientSecret,
+			Domain:       inputs.Domain,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to fetch access token using client credentials. \n\n"+
+				"Ensure that the provided client-id, client-secret and domain are correct. \n\nerror: %w\n", err)
+	}
+
+	t := Tenant{
+		Domain:       inputs.Domain,
+		AccessToken:  token.AccessToken,
+		ExpiresAt:    token.ExpiresAt,
+		ClientID:     inputs.ClientID,
+		ClientSecret: inputs.ClientSecret,
+	}
+
+	if err := cli.addTenant(t); err != nil {
+		return fmt.Errorf("unexpected error when attempting to save tenant data: %w", err)
+	}
+
+	cli.renderer.Newline()
+	cli.renderer.Infof("Successfully logged in.")
+	cli.renderer.Infof("Tenant: %s", inputs.Domain)
+
+	if err := checkInstallID(cli); err != nil {
+		return fmt.Errorf("failed to update the config: %w", err)
+	}
+
+	return nil
 }
