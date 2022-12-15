@@ -287,7 +287,7 @@ func isInsufficientScopeError(r *http.Response) (bool, string) {
 	}
 
 	missingScopes := strings.Split(body.Message, "Insufficient scope, expected any of: ")[1]
-	recommendedScopesToAdd := strings.Split(missingScopes, ",")
+	recommendedScopeToAdd := strings.Split(missingScopes, ",")
 
-	return true, recommendedScopesToAdd[0]
+	return true, recommendedScopeToAdd[0]
 }

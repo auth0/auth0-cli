@@ -129,7 +129,7 @@ auth0 login --scopes "read:client_grants,create:client_grants"`,
 	loginTenantDomain.RegisterString(cmd, &inputs.Domain, "")
 	loginClientID.RegisterString(cmd, &inputs.ClientID, "")
 	loginClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
-	additionalScopes.RegisterStringSlice(cmd, &inputs.AdditionalScopes, []string{})
+	additionalScopes.RegisterStringSlice(cmd, &inputs.AdditionalScopes, nil)
 	cmd.MarkFlagsRequiredTogether("client-id", "client-secret", "domain")
 	cmd.MarkFlagsMutuallyExclusive("client-id", "scopes")
 
