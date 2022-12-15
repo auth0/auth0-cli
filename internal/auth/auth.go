@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joeshaw/envdecode"
 	"golang.org/x/oauth2/clientcredentials"
 )
 
@@ -47,10 +46,10 @@ var requiredScopes = []string{
 
 // Authenticator is used to facilitate the login process.
 type Authenticator struct {
-	Audience           string `env:"AUTH0_AUDIENCE,default=https://*.auth0.com/api/v2/"`
-	ClientID           string `env:"AUTH0_CLIENT_ID,default=2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT"`
-	DeviceCodeEndpoint string `env:"AUTH0_DEVICE_CODE_ENDPOINT,default=https://auth0.auth0.com/oauth/device/code"`
-	OauthTokenEndpoint string `env:"AUTH0_OAUTH_TOKEN_ENDPOINT,default=https://auth0.auth0.com/oauth/token"`
+	Audience           string
+	ClientID           string
+	DeviceCodeEndpoint string
+	OauthTokenEndpoint string
 }
 
 // SecretStore provides access to stored sensitive data.
@@ -97,16 +96,14 @@ func (s *State) IntervalDuration() time.Duration {
 	return time.Duration(s.Interval+waitThresholdInSeconds) * time.Second
 }
 
-// New returns a new instance of Authenticator
-// after decoding its parameters from env vars.
-func New() (*Authenticator, error) {
-	authenticator := Authenticator{}
-
-	if err := envdecode.StrictDecode(&authenticator); err != nil {
-		return nil, fmt.Errorf("failed to decode env vars for authenticator: %w", err)
+// New returns a new instance of Authenticator using Auth0 Public Cloud default values
+func New() *Authenticator {
+	return &Authenticator{
+		Audience:           "https://*.auth0.com/api/v2/",
+		ClientID:           "2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT",
+		DeviceCodeEndpoint: "https://auth0.auth0.com/oauth/device/code",
+		OauthTokenEndpoint: "https://auth0.auth0.com/oauth/token",
 	}
-
-	return &authenticator, nil
 }
 
 // Wait waits until the user is logged in on the browser.
