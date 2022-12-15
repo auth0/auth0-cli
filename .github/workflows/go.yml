@@ -26,6 +26,9 @@ jobs:
       - name: Check out the code
         uses: actions/checkout@v3
 
+      - name: Check that docs were generated
+        run: make check-docs
+
       - name: Check for go vulnerabilities
         run: make check-vuln
 

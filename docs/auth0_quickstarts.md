@@ -7,7 +7,7 @@ Quickstart support for getting bootstrapped
 
 ### Synopsis
 
-Quickstart support for getting bootstrapped.
+Step-by-step guides to quickly integrate Auth0 into your application.
 
 ### Options
 
