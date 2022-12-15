@@ -145,8 +145,7 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 			doesLackScopes, whichScope := isInsufficientScopeError(response)
 
 			if doesLackScopes {
-				cli.renderer.Errorf("request failed because access token lacks scope: %s.", whichScope)
-				cli.renderer.Errorf("If authenticated via client credentials, add this scope to the designated client. If authenticated as a user, request this scope during login by running `auth0 login --scopes %s`.", whichScope)
+				cli.renderer.Errorf("request failed because access token lacks scope: %s.\n If authenticated via client credentials, add this scope to the designated client. If authenticated as a user, request this scope during login by running `auth0 login --scopes %s`.", whichScope, whichScope)
 				return err
 			}
 
