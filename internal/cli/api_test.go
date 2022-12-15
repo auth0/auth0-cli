@@ -155,7 +155,7 @@ func TestAPICmd_IsInsufficientScopeError(t *testing.T) {
 				StatusCode: testCase.inputStatusCode,
 			}
 
-			actualRespBool, actualScope := isInsufficientScopeError(input)
+			actualRespBool, actualScope := isInsufficientScopeError(&input)
 
 			assert.Equal(t, testCase.expectedResult, actualRespBool)
 			assert.Equal(t, testCase.expectedScope, actualScope)

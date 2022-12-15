@@ -76,8 +76,6 @@ auth0 login --scopes "read:client_grants,create:client_grants"`,
 			var selectedLoginType string
 			const loginAsUser, loginAsMachine = "As a user", "As a machine"
 
-			cli.renderer.Infof("%+v", inputs.AdditionalScopes, len(inputs.AdditionalScopes))
-
 			// We want to prompt if we don't pass the following flags:
 			// --no-input, --scopes, --client-id, --client-secret, --domain.
 			// Because then the prompt is unnecessary as we know the login type.
