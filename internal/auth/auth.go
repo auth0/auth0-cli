@@ -29,7 +29,7 @@ var requiredScopes = []string{
 	"offline_access", // This is used to retrieve a refresh token.
 	"create:clients", "read:clients", "update:clients", "delete:clients",
 	"read:client_keys",
-	// "create:client_grants", "read:client_grants", "update:client_grants", "delete:client_grants",
+	"create:client_grants", "read:client_grants", "update:client_grants", "delete:client_grants",
 	"create:resource_servers", "read:resource_servers", "update:resource_servers", "delete:resource_servers",
 	"create:connections", "read:connections", "update:connections", "delete:connections",
 	"create:users", "read:users", "update:users", "delete:users",
@@ -135,15 +135,6 @@ func New() (*Authenticator, error) {
 
 	return &authenticator, nil
 }
-
-// func (a *Authenticator) Start(ctx context.Context, additionalScopes []string) (State, error) {
-// 	state, err := a.getDeviceCode(ctx)
-// 	if err != nil {
-// 		return State{}, fmt.Errorf("failed to get the device code: %w", err)
-// 	}
-
-// 	return state, nil
-// }
 
 // Wait waits until the user is logged in on the browser.
 func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
