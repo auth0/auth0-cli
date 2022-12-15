@@ -2,7 +2,7 @@ package cli
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 
@@ -149,9 +149,8 @@ func TestAPICmd_IsInsufficientScopeError(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-
 			input := http.Response{
-				Body:       ioutil.NopCloser(bytes.NewReader([]byte(testCase.inputResponseBody))),
+				Body:       io.NopCloser(bytes.NewReader([]byte(testCase.inputResponseBody))),
 				StatusCode: testCase.inputStatusCode,
 			}
 

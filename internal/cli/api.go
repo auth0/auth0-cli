@@ -267,7 +267,6 @@ func (i *apiCmdInputs) parseRaw(args []string) {
 }
 
 func isInsufficientScopeError(r *http.Response) (bool, string) {
-
 	if r.StatusCode != 403 {
 		return false, ""
 	}

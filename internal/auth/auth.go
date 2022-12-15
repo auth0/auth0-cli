@@ -96,7 +96,7 @@ func (s *State) IntervalDuration() time.Duration {
 	return time.Duration(s.Interval+waitThresholdInSeconds) * time.Second
 }
 
-// New returns a new instance of Authenticator using Auth0 Public Cloud default values
+// New returns a new instance of Authenticator using Auth0 Public Cloud default values.
 func New() *Authenticator {
 	return &Authenticator{
 		Audience:           "https://*.auth0.com/api/v2/",
@@ -171,12 +171,9 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 // URI for the next step of the flow.
 func (a *Authenticator) GetDeviceCode(ctx context.Context, additionalScopes []string) (State, error) {
 	state, err := func() (State, error) {
-
-		scopesToRequest := append(requiredScopes, additionalScopes...)
-
 		data := url.Values{
 			"client_id": []string{a.ClientID},
-			"scope":     []string{strings.Join(scopesToRequest, " ")},
+			"scope":     []string{strings.Join(append(requiredScopes, additionalScopes...), " ")},
 			"audience":  []string{a.Audience},
 		}
 
@@ -219,7 +216,7 @@ func (a *Authenticator) GetDeviceCode(ctx context.Context, additionalScopes []st
 		return state, nil
 	}()
 	if err != nil {
-		fmt.Errorf("failed to get the device code: %w", err)
+		return State{}, fmt.Errorf("failed to get the device code: %w", err)
 	}
 	return state, nil
 }
@@ -250,14 +247,14 @@ func parseTenant(accessToken string) (tenant, domain string, err error) {
 	return "", "", fmt.Errorf("audience not found for %s", audiencePath)
 }
 
-// ClientCredentials encapsulates all data to facilitate access token creation with client credentials (client ID and client secret)
+// ClientCredentials encapsulates all data to facilitate access token creation with client credentials (client ID and client secret).
 type ClientCredentials struct {
 	ClientID     string
 	ClientSecret string
 	Domain       string
 }
 
-// GetAccessTokenFromClientCreds generates an access token from client credentials
+// GetAccessTokenFromClientCreds generates an access token from client credentials.
 func GetAccessTokenFromClientCreds(ctx context.Context, args ClientCredentials) (Result, error) {
 	u, err := url.Parse("https://" + args.Domain)
 	if err != nil {
