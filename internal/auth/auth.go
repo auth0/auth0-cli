@@ -29,7 +29,7 @@ var requiredScopes = []string{
 	"offline_access", // This is used to retrieve a refresh token.
 	"create:clients", "read:clients", "update:clients", "delete:clients",
 	"read:client_keys",
-	"create:client_grants", "read:client_grants", "update:client_grants", "delete:client_grants",
+	// "create:client_grants", "read:client_grants", "update:client_grants", "delete:client_grants",
 	"create:resource_servers", "read:resource_servers", "update:resource_servers", "delete:resource_servers",
 	"create:connections", "read:connections", "update:connections", "delete:connections",
 	"create:users", "read:users", "update:users", "delete:users",
@@ -136,17 +136,14 @@ func New() (*Authenticator, error) {
 	return &authenticator, nil
 }
 
-// Start kicks-off the device authentication flow by requesting
-// a device code from Auth0. The returned state contains the
-// URI for the next step of the flow.
-func (a *Authenticator) Start(ctx context.Context) (State, error) {
-	state, err := a.getDeviceCode(ctx)
-	if err != nil {
-		return State{}, fmt.Errorf("failed to get the device code: %w", err)
-	}
+// func (a *Authenticator) Start(ctx context.Context, additionalScopes []string) (State, error) {
+// 	state, err := a.getDeviceCode(ctx)
+// 	if err != nil {
+// 		return State{}, fmt.Errorf("failed to get the device code: %w", err)
+// 	}
 
-	return state, nil
-}
+// 	return state, nil
+// }
 
 // Wait waits until the user is logged in on the browser.
 func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
@@ -208,49 +205,61 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 	}
 }
 
-func (a *Authenticator) getDeviceCode(ctx context.Context) (State, error) {
-	data := url.Values{
-		"client_id": []string{a.ClientID},
-		"scope":     []string{strings.Join(requiredScopes, " ")},
-		"audience":  []string{a.Audience},
-	}
+// GetDeviceCode kicks-off the device authentication flow by requesting
+// a device code from Auth0. The returned state contains the
+// URI for the next step of the flow.
+func (a *Authenticator) GetDeviceCode(ctx context.Context, additionalScopes []string) (State, error) {
+	state, err := func() (State, error) {
 
-	request, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodPost,
-		a.DeviceCodeEndpoint,
-		strings.NewReader(data.Encode()),
-	)
-	if err != nil {
-		return State{}, fmt.Errorf("failed to create the request: %w", err)
-	}
+		scopesToRequest := append(requiredScopes, additionalScopes...)
 
-	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		return State{}, fmt.Errorf("failed to send the request: %w", err)
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusBadRequest {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
-			return State{}, fmt.Errorf(
-				"received a %d response and failed to read the response",
-				response.StatusCode,
-			)
+		data := url.Values{
+			"client_id": []string{a.ClientID},
+			"scope":     []string{strings.Join(scopesToRequest, " ")},
+			"audience":  []string{a.Audience},
 		}
 
-		return State{}, fmt.Errorf("received a %d response: %s", response.StatusCode, bodyBytes)
-	}
+		request, err := http.NewRequestWithContext(
+			ctx,
+			http.MethodPost,
+			a.DeviceCodeEndpoint,
+			strings.NewReader(data.Encode()),
+		)
+		if err != nil {
+			return State{}, fmt.Errorf("failed to create the request: %w, ", err)
+		}
 
-	var state State
-	err = json.NewDecoder(response.Body).Decode(&state)
+		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		response, err := http.DefaultClient.Do(request)
+		if err != nil {
+			return State{}, fmt.Errorf("failed to send the request: %w", err)
+		}
+		defer response.Body.Close()
+
+		if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusBadRequest {
+			bodyBytes, err := io.ReadAll(response.Body)
+			if err != nil {
+				return State{}, fmt.Errorf(
+					"received a %d response and failed to read the response",
+					response.StatusCode,
+				)
+			}
+
+			return State{}, fmt.Errorf("received a %d response: %s", response.StatusCode, bodyBytes)
+		}
+
+		var state State
+		err = json.NewDecoder(response.Body).Decode(&state)
+		if err != nil {
+			return State{}, fmt.Errorf("failed to decode the response: %w", err)
+		}
+
+		return state, nil
+	}()
 	if err != nil {
-		return State{}, fmt.Errorf("failed to decode the response: %w", err)
+		fmt.Errorf("failed to get the device code: %w", err)
 	}
-
 	return state, nil
 }
 

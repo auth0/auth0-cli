@@ -141,6 +141,16 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 			}
 
 			response, err = http.DefaultClient.Do(request)
+
+			doesLackScopes, whichScope := isInsufficientScopeError(response)
+
+			if doesLackScopes {
+				cli.renderer.Errorf("request failed because access token lacks the %s scope. If authenticated via client credentials, add this scope to the designated client. If authenticated as a user, include this scope during login by running `auth0 login --scopes %s`.", whichScope)
+				return err
+			}
+
+			cli.renderer.Infof("%+v", response, response.StatusCode)
+
 			return err
 		}); err != nil {
 			return fmt.Errorf("failed to send request: %w", err)
@@ -256,4 +266,31 @@ func (i *apiCmdInputs) parseRaw(args []string) {
 	}
 
 	i.RawURI = args[lenArgs-1]
+}
+
+func isInsufficientScopeError(r *http.Response) (bool, string) {
+
+	if r.StatusCode != 403 {
+		return false, ""
+	}
+
+	type ErrorBody struct {
+		ErrorCode string `json:"errorCode"`
+		Message   string `json:"message"`
+	}
+
+	var body ErrorBody
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		return false, ""
+	}
+
+	if body.ErrorCode != "insufficient_scope" {
+		return false, ""
+	}
+
+	missingScopes := strings.Split(body.Message, "Insufficient scope, expected any of: ")[1]
+	recommendedScopesToAdd := strings.Split(missingScopes, ",")
+
+	return true, recommendedScopesToAdd[0]
 }

@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"bytes"
+	"io/ioutil"
 	"net/http"
 	"testing"
 
@@ -82,6 +84,81 @@ func TestAPICmdInputs_FromArgs(t *testing.T) {
 
 			assert.Equal(t, testCase.expectedMethod, actualInputs.Method)
 			assert.Equal(t, testCase.expectedURL, actualInputs.URL.String())
+		})
+	}
+}
+
+func TestAPICmd_IsInsufficientScopeError(t *testing.T) {
+	var testCases = []struct {
+		name              string
+		inputStatusCode   int
+		inputResponseBody string
+		expectedResult    bool
+		expectedScope     string
+	}{
+		{
+			name:            "it does not detect 404 error",
+			inputStatusCode: 404,
+			inputResponseBody: `{
+				"statusCode": 404,
+				"error": "Not Found",
+				"message": "Not Found"
+			}`,
+			expectedResult: false,
+			expectedScope:  "",
+		},
+		{
+			name:            "it does not detect a 200 HTTP response",
+			inputStatusCode: 200,
+			inputResponseBody: `{
+				"allowed_logout_urls": [],
+				"change_password": {
+				  "enabled": true,
+				  "html": "<html>LOL</html>"
+				},
+				"default_audience": "",
+			}`,
+			expectedResult: false,
+			expectedScope:  "",
+		},
+		{
+			name:            "it correctly detects an insufficient scope error",
+			inputStatusCode: 403,
+			inputResponseBody: `{
+				"statusCode": 403,
+				"error": "Forbidden",
+				"message": "Insufficient scope, expected any of: create:client_grants",
+				"errorCode": "insufficient_scope"
+			  }`,
+			expectedResult: true,
+			expectedScope:  "create:client_grants",
+		},
+		{
+			name:            "it correctly detects an insufficient scope error with multiple scope suggestions",
+			inputStatusCode: 403,
+			inputResponseBody: `{
+				"statusCode": 403,
+				"error": "Forbidden",
+				"message": "Insufficient scope, expected any of: read:clients, read:client_summary",
+				"errorCode": "insufficient_scope"
+			  }`,
+			expectedResult: true,
+			expectedScope:  "read:clients",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+
+			input := http.Response{
+				Body:       ioutil.NopCloser(bytes.NewReader([]byte(testCase.inputResponseBody))),
+				StatusCode: testCase.inputStatusCode,
+			}
+
+			actualRespBool, actualScope := isInsufficientScopeError(input)
+
+			assert.Equal(t, testCase.expectedResult, actualRespBool)
+			assert.Equal(t, testCase.expectedScope, actualScope)
 		})
 	}
 }
