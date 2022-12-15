@@ -71,9 +71,9 @@ $(GO_BIN)/auth0:
 #-----------------------------------------------------------------------------------------------------------------------
 # Documentation
 #-----------------------------------------------------------------------------------------------------------------------
-.PHONY: docs-build docs-start docs-clean
+.PHONY: docs docs-start docs-clean
 
-docs-build: docs-clean ## Build the documentation
+docs: docs-clean ## Build the documentation
 	@go run ./cmd/build_doc
 	@mv ./docs/auth0.md ./docs/index.md
 	@cd docs && bundle install
@@ -82,7 +82,7 @@ docs-start: ## Start the doc site locally for testing purposes
 	@cd docs && bundle exec jekyll serve
 
 docs-clean: ## Remove the documentation
-	@rm ./docs/auth0_*.md
+	@rm -f ./docs/auth0_*.md
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Building & Installing
@@ -114,6 +114,18 @@ lint: $(GO_BIN)/golangci-lint ## Run go linter checks
 check-vuln: $(GO_BIN)/govulncheck ## Check go vulnerabilities
 	${call print, "Running govulncheck over project"}
 	@govulncheck -v ./...
+
+check-docs: ## Check that documentation was generated correctly
+	${call print, "Checking that documentation was generated correctly"}
+	@$(MAKE) docs
+	@if [ -n "$$(git status --porcelain)" ]; \
+	then \
+		echo "Rebuilding the documentation resulted in changed files:"; \
+		echo "$$(git diff)"; \
+		echo "Please run \`make docs\` to regenerate docs."; \
+		exit 1; \
+	fi
+	@echo "Documentation is generated correctly."
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Testing
