@@ -21,11 +21,6 @@ const rootShort = "Supercharge your development workflow."
 
 // Execute is the primary entrypoint of the CLI app.
 func Execute() {
-	// cfg contains tenant related information, e.g. `travel0-dev`,
-	// `travel0-prod`. some of its information can be sourced via:
-	// 1. env var (e.g. AUTH0_API_KEY)
-	// 2. global flag (e.g. --api-key)
-	// 3. JSON file (e.g. api_key = "..." in ~/.config/auth0/config.json)
 	cli := &cli{
 		renderer: display.NewRenderer(),
 		tracker:  analytics.NewTracker(),
@@ -85,11 +80,7 @@ func buildRootCmd(cli *cli) *cobra.Command {
 		Long:          rootShort + "\n" + getLogin(cli),
 		Version:       buildinfo.GetVersionWithCommit(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			var err error
-			cli.authenticator, err = auth.New()
-			if err != nil {
-				return err
-			}
+			cli.authenticator = auth.New()
 
 			ansi.DisableColors = cli.noColor
 			prepareInteractivity(cmd)
