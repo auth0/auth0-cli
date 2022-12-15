@@ -28,7 +28,7 @@ auth0 login --scopes "read:client_grants,create:client_grants"
       --client-secret string   Client secret of the application when authenticating via client credentials.
       --domain string          Tenant domain of the application when authenticating via client credentials.
   -h, --help                   help for login
-      --scopes api             Scopes to request in addition to required defaults when authenticating via device code flow. Primarily useful when using api command to execute arbitrary Management API requests.
+      --scopes strings         Additional scopes to request when authenticating via device code flow. By default, only scopes for first-class functions are requested. Primarily useful when using the api command to execute arbitrary Management API requests.
 ```
 
 ### Options inherited from parent commands

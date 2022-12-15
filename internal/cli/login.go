@@ -37,10 +37,10 @@ var (
 		AlwaysPrompt: false,
 	}
 
-	additionalScopes = Flag{
+	loginAdditionalScopes = Flag{
 		Name:         "Additional Scopes",
 		LongForm:     "scopes",
-		Help:         "Scopes to request in addition to required defaults when authenticating via device code flow. Primarily useful when using `api` command to execute arbitrary Management API requests.",
+		Help:         "Additional scopes to request when authenticating via device code flow. By default, only scopes for first-class functions are requested. Primarily useful when using the api command to execute arbitrary Management API requests.",
 		IsRequired:   false,
 		AlwaysPrompt: false,
 	}
@@ -129,7 +129,7 @@ auth0 login --scopes "read:client_grants,create:client_grants"`,
 	loginTenantDomain.RegisterString(cmd, &inputs.Domain, "")
 	loginClientID.RegisterString(cmd, &inputs.ClientID, "")
 	loginClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
-	additionalScopes.RegisterStringSlice(cmd, &inputs.AdditionalScopes, nil)
+	loginAdditionalScopes.RegisterStringSlice(cmd, &inputs.AdditionalScopes, []string{})
 	cmd.MarkFlagsRequiredTogether("client-id", "client-secret", "domain")
 	cmd.MarkFlagsMutuallyExclusive("client-id", "scopes")
 
