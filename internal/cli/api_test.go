@@ -134,7 +134,7 @@ func TestAPICmd_IsInsufficientScopeError(t *testing.T) {
 			expectedScope:  "create:client_grants",
 		},
 		{
-			name:            "it correctly detects an insufficient scope error with multiple scope suggestions",
+			name:            "it correctly detects an insufficient scope error with multiple scope",
 			inputStatusCode: 403,
 			inputResponseBody: `{
 				"statusCode": 403,

@@ -213,7 +213,7 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 
 	if scopesChanged(t) && t.authenticatedWithDeviceCodeFlow() {
 		c.renderer.Warnf("Required scopes have changed. Please log in to re-authorize the CLI.\n")
-		return RunLoginAsUser(ctx, c)
+		return RunLoginAsUser(ctx, c, []string{})
 	}
 
 	if t.AccessToken != "" && !t.hasExpiredToken() {
@@ -232,7 +232,7 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 
 		c.renderer.Warnf("Failed to renew access token. Please log in to re-authorize the CLI.\n")
 
-		return RunLoginAsUser(ctx, c)
+		return RunLoginAsUser(ctx, c, []string{})
 	}
 
 	if err := c.addTenant(t); err != nil {

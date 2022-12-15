@@ -36,16 +36,29 @@ var (
 		IsRequired:   false,
 		AlwaysPrompt: false,
 	}
+
+	additionalScopes = Flag{
+		Name:         "Additional Scopes",
+		LongForm:     "scopes",
+		Help:         "Scopes to request in addition to required defaults when authenticating via device code flow. Primarily useful when using `api` command to execute arbitrary Management API requests.",
+		IsRequired:   false,
+		AlwaysPrompt: false,
+	}
 )
 
 type LoginInputs struct {
-	Domain       string
-	ClientID     string
-	ClientSecret string
+	Domain           string
+	ClientID         string
+	ClientSecret     string
+	AdditionalScopes []string
 }
 
 func (i *LoginInputs) isLoggingInAsAMachine() bool {
 	return i.ClientID != "" || i.ClientSecret != "" || i.Domain != ""
+}
+
+func (i *LoginInputs) isLoggingInWithAdditionalScopes() bool {
+	return len(i.AdditionalScopes) > 0
 }
 
 func loginCmd(cli *cli) *cobra.Command {
@@ -57,15 +70,18 @@ func loginCmd(cli *cli) *cobra.Command {
 		Short: "Authenticate the Auth0 CLI",
 		Long:  "Authenticates the Auth0 CLI either as a user using personal credentials or as a machine using client credentials.",
 		Example: `auth0 login
-auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>`,
+auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>
+auth0 login --scopes "read:client_grants,create:client_grants"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var selectedLoginType string
 			const loginAsUser, loginAsMachine = "As a user", "As a machine"
 
+			cli.renderer.Infof("%+v", inputs.AdditionalScopes, len(inputs.AdditionalScopes))
+
 			// We want to prompt if we don't pass the following flags:
-			// --no-input, --client-id, --client-secret, --domain.
+			// --no-input, --scopes, --client-id, --client-secret, --domain.
 			// Because then the prompt is unnecessary as we know the login type.
-			shouldPrompt := !inputs.isLoggingInAsAMachine() && !cli.noInput
+			shouldPrompt := !inputs.isLoggingInAsAMachine() && !cli.noInput && !inputs.isLoggingInWithAdditionalScopes()
 			if shouldPrompt {
 				cli.renderer.Output(
 					fmt.Sprintf(
@@ -94,10 +110,10 @@ auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <cl
 
 			ctx := cmd.Context()
 
-			// Allows to skip to user login if --no-input flag is passed.
-			shouldLoginAsUser := (cli.noInput && !inputs.isLoggingInAsAMachine()) || selectedLoginType == loginAsUser
+			// Allows to skip to user login if either the --no-input or --scopes flag is passed.
+			shouldLoginAsUser := (cli.noInput && !inputs.isLoggingInAsAMachine()) || inputs.isLoggingInWithAdditionalScopes() || selectedLoginType == loginAsUser
 			if shouldLoginAsUser {
-				if _, err := RunLoginAsUser(ctx, cli); err != nil {
+				if _, err := RunLoginAsUser(ctx, cli, inputs.AdditionalScopes); err != nil {
 					return err
 				}
 			} else {
@@ -115,7 +131,9 @@ auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <cl
 	loginTenantDomain.RegisterString(cmd, &inputs.Domain, "")
 	loginClientID.RegisterString(cmd, &inputs.ClientID, "")
 	loginClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
+	additionalScopes.RegisterStringSlice(cmd, &inputs.AdditionalScopes, []string{})
 	cmd.MarkFlagsRequiredTogether("client-id", "client-secret", "domain")
+	cmd.MarkFlagsMutuallyExclusive("client-id", "scopes")
 
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		_ = cmd.Flags().MarkHidden("tenant")
@@ -128,8 +146,8 @@ auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <cl
 
 // RunLoginAsUser runs the login flow guiding the user through the process
 // by showing the login instructions, opening the browser.
-func RunLoginAsUser(ctx context.Context, cli *cli) (Tenant, error) {
-	state, err := cli.authenticator.Start(ctx)
+func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (Tenant, error) {
+	state, err := cli.authenticator.GetDeviceCode(ctx, additionalScopes)
 	if err != nil {
 		return Tenant{}, fmt.Errorf("Failed to start the authentication process: %w.", err)
 	}
