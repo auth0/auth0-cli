@@ -51,8 +51,8 @@ github.com/alessio/shellescape v1.4.1/go.mod h1:PZAiSCk0LJaZkiCSkPv8qIobYglO3FPp
 github.com/andybalholm/brotli v1.0.1/go.mod h1:loMXtMfwqflxFJPmdbJO0a3KNoPuLBgiu3qAvBg8x/Y=
 github.com/andybalholm/brotli v1.0.4 h1:V7DdXeJtZscaqfNuAdSRuRFzuiKlHSC/Zh3zl9qY3JY=
 github.com/andybalholm/brotli v1.0.4/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
-github.com/auth0/go-auth0 v0.13.0 h1:0HHEHwfZnpb3xmZOkZEHeqwJ85k3yTN2wCNJobNvLh4=
-github.com/auth0/go-auth0 v0.13.0/go.mod h1:FOHI93YSRdyWcgecep+6YFNZ0v0FsAaMbnSVzTWdMHI=
+github.com/auth0/go-auth0 v0.13.1 h1:BAVy+0UFfUgHqt4hG5bLFjQG9eJ58FLFFSRz5+eo9sA=
+github.com/auth0/go-auth0 v0.13.1/go.mod h1:FOHI93YSRdyWcgecep+6YFNZ0v0FsAaMbnSVzTWdMHI=
 github.com/aybabtme/iocontrol v0.0.0-20150809002002-ad15bcfc95a0 h1:0NmehRCgyk5rljDQLKUO+cRJCnduDyn11+zGZIc9Z48=
 github.com/aybabtme/iocontrol v0.0.0-20150809002002-ad15bcfc95a0/go.mod h1:6L7zgvqo0idzI7IO8de6ZC051AfXb5ipkIJ7bIA2tGA=
 github.com/aymanbagabas/go-osc52 v1.0.3 h1:DTwqENW7X9arYimJrPeGZcV0ln14sGMt3pHZspWD+Mg=
