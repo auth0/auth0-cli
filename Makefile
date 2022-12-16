@@ -76,10 +76,9 @@ $(GO_BIN)/auth0:
 docs: docs-clean ## Build the documentation
 	@go run ./cmd/build_doc
 	@mv ./docs/auth0.md ./docs/index.md
-	@cd docs && bundle install
 
 docs-start: ## Start the doc site locally for testing purposes
-	@cd docs && bundle exec jekyll serve
+	@cd docs && bundle install && bundle exec jekyll serve
 
 docs-clean: ## Remove the documentation
 	@rm -f ./docs/auth0_*.md
