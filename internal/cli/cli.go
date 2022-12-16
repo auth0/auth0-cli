@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -106,6 +105,27 @@ func (t *Tenant) authenticatedWithDeviceCodeFlow() bool {
 
 func (t *Tenant) hasExpiredToken() bool {
 	return time.Now().Add(accessTokenExpThreshold).After(t.ExpiresAt)
+}
+
+func (t *Tenant) additionalRequestedScopes() []string {
+	additionallyRequestedScopes := make([]string, 0)
+
+	for _, scope := range t.Scopes {
+		found := false
+
+		for _, defaultScope := range auth.RequiredScopes() {
+			if scope == defaultScope {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			additionallyRequestedScopes = append(additionallyRequestedScopes, scope)
+		}
+	}
+
+	return additionallyRequestedScopes
 }
 
 func (t *Tenant) regenerateAccessToken(ctx context.Context, c *cli) error {
@@ -211,9 +231,9 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 		return Tenant{}, err
 	}
 
-	if scopesChanged(t) && t.authenticatedWithDeviceCodeFlow() {
+	if !hasAllRequiredScopes(t) && t.authenticatedWithDeviceCodeFlow() {
 		c.renderer.Warnf("Required scopes have changed. Please log in to re-authorize the CLI.\n")
-		return RunLoginAsUser(ctx, c, []string{})
+		return RunLoginAsUser(ctx, c, t.additionalRequestedScopes())
 	}
 
 	if t.AccessToken != "" && !t.hasExpiredToken() {
@@ -232,7 +252,7 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 
 		c.renderer.Warnf("Failed to renew access token. Please log in to re-authorize the CLI.\n")
 
-		return RunLoginAsUser(ctx, c, []string{})
+		return RunLoginAsUser(ctx, c, t.additionalRequestedScopes())
 	}
 
 	if err := c.addTenant(t); err != nil {
@@ -242,30 +262,16 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 	return t, nil
 }
 
-// scopesChanged compare the tenant scopes
+// hasAllRequiredScopes compare the tenant scopes
 // with the currently required scopes.
-func scopesChanged(t Tenant) bool {
-	want := auth.RequiredScopes()
-	got := t.Scopes
-
-	sort.Strings(want)
-	sort.Strings(got)
-
-	if (want == nil) != (got == nil) {
-		return true
-	}
-
-	if len(want) != len(got) {
-		return true
-	}
-
-	for i := range t.Scopes {
-		if want[i] != got[i] {
-			return true
+func hasAllRequiredScopes(t Tenant) bool {
+	for _, requiredScope := range auth.RequiredScopes() {
+		if !containsStr(t.Scopes, requiredScope) {
+			return false
 		}
 	}
 
-	return false
+	return true
 }
 
 // getTenant fetches the default tenant configured (or the tenant specified via

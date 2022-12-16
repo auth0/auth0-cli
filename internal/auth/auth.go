@@ -170,54 +170,47 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 // a device code from Auth0. The returned state contains the
 // URI for the next step of the flow.
 func (a *Authenticator) GetDeviceCode(ctx context.Context, additionalScopes []string) (State, error) {
-	state, err := func() (State, error) {
-		data := url.Values{
-			"client_id": []string{a.ClientID},
-			"scope":     []string{strings.Join(append(requiredScopes, additionalScopes...), " ")},
-			"audience":  []string{a.Audience},
-		}
-
-		request, err := http.NewRequestWithContext(
-			ctx,
-			http.MethodPost,
-			a.DeviceCodeEndpoint,
-			strings.NewReader(data.Encode()),
-		)
-		if err != nil {
-			return State{}, fmt.Errorf("failed to create the request: %w, ", err)
-		}
-
-		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-		response, err := http.DefaultClient.Do(request)
-		if err != nil {
-			return State{}, fmt.Errorf("failed to send the request: %w", err)
-		}
-		defer response.Body.Close()
-
-		if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusBadRequest {
-			bodyBytes, err := io.ReadAll(response.Body)
-			if err != nil {
-				return State{}, fmt.Errorf(
-					"received a %d response and failed to read the response",
-					response.StatusCode,
-				)
-			}
-
-			return State{}, fmt.Errorf("received a %d response: %s", response.StatusCode, bodyBytes)
-		}
-
-		var state State
-		err = json.NewDecoder(response.Body).Decode(&state)
-		if err != nil {
-			return State{}, fmt.Errorf("failed to decode the response: %w", err)
-		}
-
-		return state, nil
-	}()
-	if err != nil {
-		return State{}, fmt.Errorf("failed to get the device code: %w", err)
+	data := url.Values{
+		"client_id": []string{a.ClientID},
+		"scope":     []string{strings.Join(append(requiredScopes, additionalScopes...), " ")},
+		"audience":  []string{a.Audience},
 	}
+
+	request, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		a.DeviceCodeEndpoint,
+		strings.NewReader(data.Encode()),
+	)
+	if err != nil {
+		return State{}, fmt.Errorf("failed to create the request: %w, ", err)
+	}
+
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return State{}, fmt.Errorf("failed to send the request: %w", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
+			return State{}, fmt.Errorf(
+				"received a %d response and failed to read the response",
+				response.StatusCode,
+			)
+		}
+
+		return State{}, fmt.Errorf("received a %d response: %s", response.StatusCode, bodyBytes)
+	}
+
+	var state State
+	if err = json.NewDecoder(response.Body).Decode(&state); err != nil {
+		return State{}, fmt.Errorf("failed to decode the response: %w", err)
+	}
+
 	return state, nil
 }
 
