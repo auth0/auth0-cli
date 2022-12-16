@@ -183,7 +183,7 @@ func (a *Authenticator) GetDeviceCode(ctx context.Context, additionalScopes []st
 		strings.NewReader(data.Encode()),
 	)
 	if err != nil {
-		return State{}, fmt.Errorf("failed to create the request: %w, ", err)
+		return State{}, fmt.Errorf("failed to create the request: %w", err)
 	}
 
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
