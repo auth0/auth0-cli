@@ -93,8 +93,7 @@ func TestAPICmd_IsInsufficientScopeError(t *testing.T) {
 		name              string
 		inputStatusCode   int
 		inputResponseBody string
-		expectedResult    bool
-		expectedScope     string
+		expectedError     string
 	}{
 		{
 			name:            "it does not detect 404 error",
@@ -104,8 +103,7 @@ func TestAPICmd_IsInsufficientScopeError(t *testing.T) {
 				"error": "Not Found",
 				"message": "Not Found"
 			}`,
-			expectedResult: false,
-			expectedScope:  "",
+			expectedError: "",
 		},
 		{
 			name:            "it does not detect a 200 HTTP response",
@@ -118,8 +116,7 @@ func TestAPICmd_IsInsufficientScopeError(t *testing.T) {
 				},
 				"default_audience": "",
 			}`,
-			expectedResult: false,
-			expectedScope:  "",
+			expectedError: "",
 		},
 		{
 			name:            "it correctly detects an insufficient scope error",
@@ -130,8 +127,7 @@ func TestAPICmd_IsInsufficientScopeError(t *testing.T) {
 				"message": "Insufficient scope, expected any of: create:client_grants",
 				"errorCode": "insufficient_scope"
 			  }`,
-			expectedResult: true,
-			expectedScope:  "create:client_grants",
+			expectedError: "request failed because access token lacks scope: create:client_grants.\n If authenticated via client credentials, add this scope to the designated client. If authenticated as a user, request this scope during login by running `auth0 login --scopes create:client_grants`.",
 		},
 		{
 			name:            "it correctly detects an insufficient scope error with multiple scope",
@@ -142,8 +138,7 @@ func TestAPICmd_IsInsufficientScopeError(t *testing.T) {
 				"message": "Insufficient scope, expected any of: read:clients, read:client_summary",
 				"errorCode": "insufficient_scope"
 			  }`,
-			expectedResult: true,
-			expectedScope:  "read:clients",
+			expectedError: "request failed because access token lacks scope: read:clients.\n If authenticated via client credentials, add this scope to the designated client. If authenticated as a user, request this scope during login by running `auth0 login --scopes read:clients`.",
 		},
 	}
 
@@ -154,10 +149,12 @@ func TestAPICmd_IsInsufficientScopeError(t *testing.T) {
 				StatusCode: testCase.inputStatusCode,
 			}
 
-			actualRespBool, actualScope := isInsufficientScopeError(&input)
-
-			assert.Equal(t, testCase.expectedResult, actualRespBool)
-			assert.Equal(t, testCase.expectedScope, actualScope)
+			err := isInsufficientScopeError(&input)
+			if testCase.expectedError == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, testCase.expectedError)
+			}
 		})
 	}
 }

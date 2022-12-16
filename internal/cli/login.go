@@ -112,7 +112,7 @@ auth0 login --scopes "read:client_grants,create:client_grants"`,
 			shouldLoginAsUser := (cli.noInput && !inputs.isLoggingInAsAMachine()) || inputs.isLoggingInWithAdditionalScopes() || selectedLoginType == loginAsUser
 			if shouldLoginAsUser {
 				if _, err := RunLoginAsUser(ctx, cli, inputs.AdditionalScopes); err != nil {
-					return err
+					return fmt.Errorf("failed to start the authentication process: %w", err)
 				}
 			} else {
 				if err := RunLoginAsMachine(ctx, inputs, cli, cmd); err != nil {
@@ -147,7 +147,7 @@ auth0 login --scopes "read:client_grants,create:client_grants"`,
 func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (Tenant, error) {
 	state, err := cli.authenticator.GetDeviceCode(ctx, additionalScopes)
 	if err != nil {
-		return Tenant{}, fmt.Errorf("Failed to start the authentication process: %w.", err)
+		return Tenant{}, fmt.Errorf("failed to get the device code: %w", err)
 	}
 
 	message := fmt.Sprintf("\n%s\n%s%s\n\n",
@@ -201,7 +201,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (T
 		Domain:      result.Domain,
 		AccessToken: result.AccessToken,
 		ExpiresAt:   result.ExpiresAt,
-		Scopes:      auth.RequiredScopes(),
+		Scopes:      append(auth.RequiredScopes(), additionalScopes...),
 	}
 
 	err = cli.addTenant(tenant)
