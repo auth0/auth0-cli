@@ -13,6 +13,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/display"
 )
 
@@ -116,6 +117,32 @@ func TestIsLoggedIn(t *testing.T) {
 
 			c := cli{renderer: display.NewRenderer(), path: tmpFile.Name()}
 			assert.Equal(t, test.want, c.isLoggedIn())
+		})
+	}
+}
+
+func TestTenant_AdditionalRequestedScopes(t *testing.T) {
+	var testCases = []struct {
+		name           string
+		givenScopes    []string
+		expectedScopes []string
+	}{
+		{
+			name:           "it can correctly distinguish additionally requested scopes",
+			givenScopes:    append(auth.RequiredScopes(), "read:stats", "read:client_grants"),
+			expectedScopes: []string{"read:stats", "read:client_grants"},
+		},
+		{
+			name:           "it returns an empty string slice if no additional requested scopes were given",
+			givenScopes:    auth.RequiredScopes(),
+			expectedScopes: []string{},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			tenant := Tenant{Scopes: testCase.givenScopes}
+			assert.Equal(t, testCase.expectedScopes, tenant.additionalRequestedScopes())
 		})
 	}
 }

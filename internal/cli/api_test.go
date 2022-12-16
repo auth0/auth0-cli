@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"bytes"
+	"io"
 	"net/http"
 	"testing"
 
@@ -82,6 +84,77 @@ func TestAPICmdInputs_FromArgs(t *testing.T) {
 
 			assert.Equal(t, testCase.expectedMethod, actualInputs.Method)
 			assert.Equal(t, testCase.expectedURL, actualInputs.URL.String())
+		})
+	}
+}
+
+func TestAPICmd_IsInsufficientScopeError(t *testing.T) {
+	var testCases = []struct {
+		name              string
+		inputStatusCode   int
+		inputResponseBody string
+		expectedError     string
+	}{
+		{
+			name:            "it does not detect 404 error",
+			inputStatusCode: 404,
+			inputResponseBody: `{
+				"statusCode": 404,
+				"error": "Not Found",
+				"message": "Not Found"
+			}`,
+			expectedError: "",
+		},
+		{
+			name:            "it does not detect a 200 HTTP response",
+			inputStatusCode: 200,
+			inputResponseBody: `{
+				"allowed_logout_urls": [],
+				"change_password": {
+				  "enabled": true,
+				  "html": "<html>LOL</html>"
+				},
+				"default_audience": "",
+			}`,
+			expectedError: "",
+		},
+		{
+			name:            "it correctly detects an insufficient scope error",
+			inputStatusCode: 403,
+			inputResponseBody: `{
+				"statusCode": 403,
+				"error": "Forbidden",
+				"message": "Insufficient scope, expected any of: create:client_grants",
+				"errorCode": "insufficient_scope"
+			  }`,
+			expectedError: "request failed because access token lacks scope: create:client_grants.\n If authenticated via client credentials, add this scope to the designated client. If authenticated as a user, request this scope during login by running `auth0 login --scopes create:client_grants`.",
+		},
+		{
+			name:            "it correctly detects an insufficient scope error with multiple scope",
+			inputStatusCode: 403,
+			inputResponseBody: `{
+				"statusCode": 403,
+				"error": "Forbidden",
+				"message": "Insufficient scope, expected any of: read:clients, read:client_summary",
+				"errorCode": "insufficient_scope"
+			  }`,
+			expectedError: "request failed because access token lacks scope: read:clients.\n If authenticated via client credentials, add this scope to the designated client. If authenticated as a user, request this scope during login by running `auth0 login --scopes read:clients`.",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			input := http.Response{
+				Body:       io.NopCloser(bytes.NewReader([]byte(testCase.inputResponseBody))),
+				StatusCode: testCase.inputStatusCode,
+			}
+
+			err := isInsufficientScopeError(&input)
+			if testCase.expectedError == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, testCase.expectedError)
+			}
 		})
 	}
 }

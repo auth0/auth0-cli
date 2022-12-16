@@ -147,6 +147,10 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 		}
 		defer response.Body.Close()
 
+		if err := isInsufficientScopeError(response); err != nil {
+			return err
+		}
+
 		rawBodyJSON, err := io.ReadAll(response.Body)
 		if err != nil {
 			return err
@@ -256,4 +260,35 @@ func (i *apiCmdInputs) parseRaw(args []string) {
 	}
 
 	i.RawURI = args[lenArgs-1]
+}
+
+func isInsufficientScopeError(r *http.Response) error {
+	if r.StatusCode != 403 {
+		return nil
+	}
+
+	type ErrorBody struct {
+		ErrorCode string `json:"errorCode"`
+		Message   string `json:"message"`
+	}
+
+	var body ErrorBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		return nil
+	}
+
+	if body.ErrorCode != "insufficient_scope" {
+		return nil
+	}
+
+	missingScopes := strings.Split(body.Message, "Insufficient scope, expected any of: ")[1]
+	recommendedScopeToAdd := strings.Split(missingScopes, ",")[0]
+
+	return fmt.Errorf(
+		"request failed because access token lacks scope: %s.\n "+
+			"If authenticated via client credentials, add this scope to the designated client. "+
+			"If authenticated as a user, request this scope during login by running `auth0 login --scopes %s`.",
+		recommendedScopeToAdd,
+		recommendedScopeToAdd,
+	)
 }
