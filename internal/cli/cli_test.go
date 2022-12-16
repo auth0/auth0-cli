@@ -134,7 +134,7 @@ func TestTenant_AdditionalRequestedScopes(t *testing.T) {
 		},
 		{
 			name:           "it returns an empty string slice if no additional requested scopes were given",
-			givenScopes:    append(auth.RequiredScopes()),
+			givenScopes:    auth.RequiredScopes(),
 			expectedScopes: []string{},
 		},
 	}
