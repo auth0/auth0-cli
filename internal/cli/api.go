@@ -93,11 +93,6 @@ cat data.json | auth0 api post clients`,
 		RunE: apiCmdRun(cli, &inputs),
 	}
 
-	cmd.SetHelpFunc(func(command *cobra.Command, strings []string) {
-		command.Flags().MarkHidden("json")
-		command.Parent().HelpFunc()(command, strings)
-	})
-
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation when using the delete method.")
 
 	apiFlags.Data.RegisterString(cmd, &inputs.RawData, "")

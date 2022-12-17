@@ -138,6 +138,8 @@ auth0 apis ls -n 100`,
 
 	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -177,6 +179,8 @@ auth0 apis show <id|audience>`,
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -256,6 +260,8 @@ auth0 apis create -n myapi -e 6100 --offline-access=true`,
 	apiScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
 	apiOfflineAccess.RegisterBool(cmd, &inputs.AllowOfflineAccess, false)
 	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 0)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -358,6 +364,8 @@ auth0 apis update -n myapi -e 6100 --offline-access=true`,
 	apiOfflineAccess.RegisterBoolU(cmd, &inputs.AllowOfflineAccess, false)
 	apiTokenLifetime.RegisterIntU(cmd, &inputs.TokenLifetime, 0)
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -400,11 +408,6 @@ auth0 apis delete <id|audience>`,
 			})
 		},
 	}
-
-	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		_ = cmd.Flags().MarkHidden("json")
-		cmd.Parent().HelpFunc()(cmd, args)
-	})
 
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 
@@ -457,11 +460,6 @@ auth0 apis open <id|audience>`,
 		},
 	}
 
-	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		_ = cmd.Flags().MarkHidden("json")
-		cmd.Parent().HelpFunc()(cmd, args)
-	})
-
 	return cmd
 }
 
@@ -502,6 +500,8 @@ auth0 apis scopes ls <id|audience>`,
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }

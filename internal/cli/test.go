@@ -197,6 +197,7 @@ auth0 test login <client-id> --connection <connection>`,
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	testAudience.RegisterString(cmd, &inputs.Audience, "")
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, cliLoginTestingScopes)
@@ -296,6 +297,7 @@ auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	testClientID.RegisterString(cmd, &inputs.ClientID, "")
 	testAudienceRequired.RegisterString(cmd, &inputs.Audience, "")

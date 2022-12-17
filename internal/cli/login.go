@@ -135,7 +135,6 @@ auth0 login --scopes "read:client_grants,create:client_grants"`,
 
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		_ = cmd.Flags().MarkHidden("tenant")
-		_ = cmd.Flags().MarkHidden("json")
 		cmd.Parent().HelpFunc()(cmd, args)
 	})
 

@@ -143,6 +143,8 @@ func showUniversalLoginCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -251,6 +253,8 @@ auth0 universal-login update -a "#FF4F40" -b "#2A2E35" --logo "https://example.c
 	brandingFavicon.RegisterStringU(cmd, &inputs.FaviconURL, "")
 	brandingFont.RegisterStringU(cmd, &inputs.CustomFontURL, "")
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -273,11 +277,13 @@ func showBrandingTemplateCmd(cli *cli) *cobra.Command {
 			}
 
 			cli.renderer.Heading("template")
-			fmt.Println(*template.Body)
+			fmt.Println(template.GetBody())
 
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }

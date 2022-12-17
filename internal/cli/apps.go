@@ -188,11 +188,6 @@ func useAppCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		_ = cmd.Flags().MarkHidden("json")
-		cmd.Parent().HelpFunc()(cmd, args)
-	})
-
 	appNone.RegisterBool(cmd, &inputs.None, false)
 
 	return cmd
@@ -244,6 +239,8 @@ auth0 apps ls -n 100`,
 	reveal.RegisterBool(cmd, &inputs.Reveal, false)
 	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -287,6 +284,8 @@ auth0 apps show <id>`,
 
 	reveal.RegisterBool(cmd, &inputs.Reveal, false)
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -329,11 +328,6 @@ auth0 apps delete <id>`,
 			})
 		},
 	}
-
-	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		_ = cmd.Flags().MarkHidden("json")
-		cmd.Parent().HelpFunc()(cmd, args)
-	})
 
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 
@@ -484,6 +478,8 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <descriptio
 	appAuthMethod.RegisterString(cmd, &inputs.AuthMethod, "")
 	appGrants.RegisterStringSlice(cmd, &inputs.Grants, nil)
 	reveal.RegisterBool(cmd, &inputs.Reveal, false)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -687,6 +683,9 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 	appAuthMethod.RegisterStringU(cmd, &inputs.AuthMethod, "")
 	appGrants.RegisterStringSliceU(cmd, &inputs.Grants, nil)
 	reveal.RegisterBool(cmd, &inputs.Reveal, false)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -715,11 +714,6 @@ func openAppCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
-
-	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		_ = cmd.Flags().MarkHidden("json")
-		cmd.Parent().HelpFunc()(cmd, args)
-	})
 
 	return cmd
 }

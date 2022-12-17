@@ -190,6 +190,8 @@ auth0 logs streams ls`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -229,6 +231,8 @@ auth0 logs streams show <id>`,
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -436,6 +440,8 @@ auth0 logs streams create -n test-splunk -t splunk --splunk-domain demo.splunk.c
 	azureSubscriptionID.RegisterString(cmd, &inputs.AzureSubscriptionID, "")
 	azureRegion.RegisterString(cmd, &inputs.AzureRegion, "")
 	azureResourceGroup.RegisterString(cmd, &inputs.AzureResourceGroup, "")
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -690,6 +696,8 @@ auth0 logs streams update <id> -n myeventbridge -t eventbridge`,
 	datadogApiKey.RegisterStringU(cmd, &inputs.DatadogAPIKey, "")
 	datadogRegion.RegisterStringU(cmd, &inputs.DatadogRegion, "")
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -733,11 +741,6 @@ auth0 logs streams delete <id>`,
 		},
 	}
 
-	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		_ = cmd.Flags().MarkHidden("json")
-		cmd.Parent().HelpFunc()(cmd, args)
-	})
-
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 
 	return cmd
@@ -768,11 +771,6 @@ func openLogStreamsCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
-
-	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		_ = cmd.Flags().MarkHidden("json")
-		cmd.Parent().HelpFunc()(cmd, args)
-	})
 
 	return cmd
 }
