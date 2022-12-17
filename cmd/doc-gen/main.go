@@ -1,12 +1,13 @@
 package main
 
 import (
+	"log"
+
 	"github.com/auth0/auth0-cli/internal/cli"
 )
 
 func main() {
-	err := cli.BuildDoc()
-	if err != nil {
-		panic(err)
+	if err := cli.GenerateDocs(); err != nil {
+		log.Fatal(err)
 	}
 }
