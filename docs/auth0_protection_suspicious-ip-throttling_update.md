@@ -25,6 +25,7 @@ auth0 protection suspicious-ip-throttling update
   -l, --allowlist strings           List of trusted IP addresses that will not have attack protection enforced against them. Comma-separated.
   -e, --enabled                     Enable (or disable) suspicious ip throttling.
   -h, --help                        help for update
+      --json                        Output in json format.
       --pre-login-max int           Configuration options that apply before every login attempt. Total number of attempts allowed per day. (default 1)
       --pre-login-rate int          Configuration options that apply before every login attempt. Interval of time, given in milliseconds, at which new attempts are granted. (default 34560)
       --pre-registration-max int    Configuration options that apply before every user registration attempt. Total number of attempts allowed. (default 1)
@@ -36,7 +37,6 @@ auth0 protection suspicious-ip-throttling update
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

@@ -10,7 +10,6 @@ Supercharge your development workflow.
 ```
       --debug           Enable debug mode.
   -h, --help            help for auth0
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

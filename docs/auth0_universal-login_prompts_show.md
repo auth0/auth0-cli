@@ -32,7 +32,6 @@ auth0 universal-login prompts show <prompt> -l es
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

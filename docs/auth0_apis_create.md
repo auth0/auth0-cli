@@ -28,6 +28,7 @@ auth0 apis create -n myapi -e 6100 --offline-access=true
 ```
   -h, --help                 help for create
   -i, --identifier string    Identifier of the API. Cannot be changed once set.
+      --json                 Output in json format.
   -n, --name string          Name of the API.
   -o, --offline-access       Whether Refresh Tokens can be issued for this API (true) or not (false).
   -s, --scopes strings       Comma-separated list of scopes (permissions).
@@ -38,7 +39,6 @@ auth0 apis create -n myapi -e 6100 --offline-access=true
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

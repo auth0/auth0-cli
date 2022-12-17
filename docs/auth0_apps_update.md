@@ -29,6 +29,7 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]
   -d, --description string    Description of the application. Max character count is 140.
   -g, --grants strings        List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.
   -h, --help                  help for update
+      --json                  Output in json format.
   -l, --logout-urls strings   Comma-separated list of URLs that are valid to redirect to after logout from Auth0. Wildcards are allowed for subdomains.
   -n, --name string           Name of the application.
   -o, --origins strings       Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.
@@ -45,7 +46,6 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

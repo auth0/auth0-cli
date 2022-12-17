@@ -27,6 +27,7 @@ auth0 email templates update welcome
   -e, --enabled          Whether the template is enabled (true) or disabled (false). (default true)
   -f, --from string      Sender's 'from' email address.
   -h, --help             help for update
+      --json             Output in json format.
   -l, --lifetime int     Lifetime in seconds that the link within the email will be valid for.
   -s, --subject string   Subject line of the email.
   -u, --url string       URL to redirect the user to after a successful action.
@@ -36,7 +37,6 @@ auth0 email templates update welcome
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

@@ -28,6 +28,7 @@ auth0 users update -n John Doe --email john.doe@example.com
   -c, --connection string   Name of the database connection this user should be created in.
   -e, --email string        The user's email.
   -h, --help                help for update
+      --json                Output in json format.
   -n, --name string         The user's full name.
   -p, --password string     Initial password for this user (mandatory for non-SMS connections).
 ```
@@ -36,7 +37,6 @@ auth0 users update -n John Doe --email john.doe@example.com
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

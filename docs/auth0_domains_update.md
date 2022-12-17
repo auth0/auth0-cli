@@ -26,6 +26,7 @@ auth0 domains update <id> -p compatible --ip-header "cf-connecting-ip"
 ```
   -h, --help               help for update
   -i, --ip-header string   The HTTP header to fetch the client's IP address.
+      --json               Output in json format.
   -p, --policy string      The TLS version policy. Can be either 'compatible' or 'recommended'.
 ```
 
@@ -33,7 +34,6 @@ auth0 domains update <id> -p compatible --ip-header "cf-connecting-ip"
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

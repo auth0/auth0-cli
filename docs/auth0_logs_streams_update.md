@@ -35,6 +35,7 @@ auth0 logs streams update <id> -n myeventbridge -t eventbridge
       --http-endpoint string   HTTP endpoint.
       --http-format string     HTTP Content-Format header. Possible values: jsonlines, jsonarray, jsonobject.
       --http-type string       HTTP Content-Type header. Possible values: application/json.
+      --json                   Output in json format.
   -n, --name string            Name of the log stream.
       --splunk-domain string   The domain name of the splunk instance.
       --splunk-port string     The port of the HTTP event collector.
@@ -48,7 +49,6 @@ auth0 logs streams update <id> -n myeventbridge -t eventbridge
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

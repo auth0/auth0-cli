@@ -24,6 +24,7 @@ auth0 orgs members ls <id>
 
 ```
   -h, --help         help for list
+      --json         Output in json format.
   -n, --number int   Number of apps to retrieve (default 50)
 ```
 
@@ -31,7 +32,6 @@ auth0 orgs members ls <id>
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

@@ -27,6 +27,7 @@ auth0 users search -q name -s "name:1"
 
 ```
   -h, --help           help for search
+      --json           Output in json format.
   -q, --query string   Query in Lucene query syntax. See https://auth0.com/docs/users/user-search/user-search-query-syntax for more details.
   -s, --sort string    Field to sort by. Use 'field:order' where 'order' is '1' for ascending and '-1' for descending. e.g. 'created_at:1'.
 ```
@@ -35,7 +36,6 @@ auth0 users search -q name -s "name:1"
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

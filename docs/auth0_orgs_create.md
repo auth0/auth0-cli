@@ -30,6 +30,7 @@ auth0 orgs create -n myorganization -d "My Organization" -m "KEY=value" -m "OTHE
   -b, --background string         Background color used to customize the login pages.
   -d, --display string            Friendly name of the organization.
   -h, --help                      help for create
+      --json                      Output in json format.
   -l, --logo string               URL of the logo to be displayed on the login page.
   -m, --metadata stringToString   Metadata associated with the organization (max 255 chars). Maximum of 10 metadata properties allowed. (default [])
   -n, --name string               Name of the organization.
@@ -39,7 +40,6 @@ auth0 orgs create -n myorganization -d "My Organization" -m "KEY=value" -m "OTHE
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
