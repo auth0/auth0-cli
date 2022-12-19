@@ -1,7 +1,7 @@
 <div align="center">
   <h1>Auth0 CLI</h1>
 
-[![Release](https://img.shields.io/github/v/release/auth0/auth0-cli?include_prereleases&style=flat-square)](https://github.com/auth0/auth0-cli/releases) [![Build Status](https://img.shields.io/github/actions/workflow/status/auth0/auth0-cli/go.yml?branch=v1)](https://github.com/auth0/auth0-cli/actions?query=branch%3Amain) [![Go Report Card](https://goreportcard.com/badge/github.com/auth0/auth0-cli?style=flat-square)](https://goreportcard.com/report/github.com/auth0/auth0-cli) [![License](https://img.shields.io/github/license/auth0/auth0-cli.svg?style=flat-square)](https://github.com/auth0/auth0-cli/blob/main/LICENSE)
+[![Release](https://img.shields.io/github/v/release/auth0/auth0-cli?include_prereleases&style=flat-square)](https://github.com/auth0/auth0-cli/releases) [![Build Status](https://img.shields.io/github/actions/workflow/status/auth0/auth0-cli/go.yml?branch=main)](https://github.com/auth0/auth0-cli/actions?query=branch%3Amain) [![Go Report Card](https://goreportcard.com/badge/github.com/auth0/auth0-cli?style=flat-square)](https://goreportcard.com/report/github.com/auth0/auth0-cli) [![License](https://img.shields.io/github/license/auth0/auth0-cli.svg?style=flat-square)](https://github.com/auth0/auth0-cli/blob/main/LICENSE)
 
 </div>
 
@@ -56,7 +56,7 @@ Install via [cURL](https://curl.se/):
 
 ```bash
 # Binary will be downloaded to "./auth0".
-curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/v1/install.sh | sh -s -- -b .
+curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | sh -s -- -b .
 ```
 
 ### Manual
