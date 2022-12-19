@@ -76,13 +76,16 @@ func apiCmd(cli *cli) *cobra.Command {
 		Args:  cobra.RangeArgs(1, 2),
 		Short: "Makes an authenticated HTTP request to the Auth0 Management API",
 		Long: fmt.Sprintf(
-			`Makes an authenticated HTTP request to the Auth0 Management API and prints the response as JSON.
+			`Makes an authenticated HTTP request to the Auth0 Management API and returns the response as JSON.
 
-The method argument is optional, and when you don’t specify it, the command defaults to GET for requests without data and POST for requests with data.
+Method argument is optional, defaults to GET for requests without data and POST for requests with data.
+
+%s
 
 %s  %s
 
 %s  %s`,
+			"Additional scopes may need to be requested during authentication step via the `--scopes` flag. Ex: `auth0 login --scopes read:client_grants`.",
 			"Auth0 Management API Docs:\n", apiDocsURL,
 			"Available Methods:\n", strings.ToLower(strings.Join(apiValidMethods, ", ")),
 		),
