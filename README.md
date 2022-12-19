@@ -46,10 +46,9 @@ With the Auth0 CLI, you can:
 
 ## Installation
 
-
 ### macOS
 
-#### [Homebrew](https://brew.sh/)
+Install via [Homebrew](https://brew.sh/):
 
 ```bash
  brew tap auth0/auth0-cli && brew install auth0
@@ -57,7 +56,7 @@ With the Auth0 CLI, you can:
 
 ### Windows
 
-#### [Scoop](https://scoop.sh/)
+Install via [Scoop](https://scoop.sh/):
 
 ```bash
 scoop bucket add auth0 https://github.com/auth0/scoop-auth0-cli.git
@@ -66,14 +65,9 @@ scoop install auth0
 
 ### Linux
 
-This can also be run on any platform that has [cURL](https://curl.se/) installed.
+Install via [cURL](https://curl.se/):
 
 ```bash
-# Binary will be downloaded to "$(go env GOPATH)/bin/auth0".
-curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/v1/install.sh | sh -s -- -b $(go env GOPATH)/bin
-
-# Or
-
 # Binary will be downloaded to "./auth0".
 curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/v1/install.sh | sh -s -- -b .
 ```
@@ -84,21 +78,19 @@ curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/v1/install.sh | sh 
 2. Extract the archive
    - **macOS**: `$ tar -xf auth0-cli_{version}_Darwin_{architecture}.tar.gz`
    - **Linux**: `$ tar -xf auth0-cli_{version}_Linux_{architecture}.tar.gz`
-   - **Windows**: Extract `auth0-cli_{version}_Darwin_{architecture}.zip` using your preferred method of choice
+   - **Windows**: Extract `auth0-cli_{version}_Windows_{architecture}.zip` using your preferred method of choice
 3. Run `./auth0`
-4. **_Optional for macOS / Linux_** - Setup CLI commands completion for your terminal:
-   - (**bash**) `auth0 completion bash > /usr/local/etc/bash_completion.d/auth0`
-   - (**zsh**) `auth0 completion zsh > "${fpath[1]}/_auth0"`
-   - (**fish**) `auth0 completion fish | source`
 
-> see more completion options by running the following command: `auth0 completion -h`
+> **Note**
+> Autocompletion instructions for supported platforms available by running `auth0 completion -h`
 
-### Go users
+### Go
+
+Install via [Go](https://go.dev/):
 
 ```bash
 go install github.com/auth0/auth0-cli/cmd/auth0@latest
 ```
-
 
 ## Usage
 
