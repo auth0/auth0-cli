@@ -12,7 +12,7 @@ Build, manage and test your [Auth0](http://auth0.com/) integrations from the com
 ## Highlights
 
 - **🧪 Test your universal login flow:** Emulate your end users' login experience by running `auth0 test login`.
-- **🔍 Troubleshoot in real-time:** Inspect the events of your Auth0 integration as they happen with the `auth0 logs tail` command
+- **🔍 Troubleshoot in real-time:** Inspect the events of your Auth0 integration as they happen with the `auth0 logs tail` command.
 - **🔁 Simplify repetitive tasks:** Create, update, list and delete your Auth0 resources directly from the terminal.
 
 ## Table of Contents
