@@ -5,21 +5,15 @@
 
 </div>
 
-# Auth0 CLI
-
 Build, manage and test your [Auth0](http://auth0.com/) integrations from the command line.
 
 ![demo](./demo.gif)
-
----
 
 ## Highlights
 
 - **🧪 Test your universal login flow:** Emulate your end users' login experience by running `auth0 test login`.
 - **🔍 Troubleshoot in real-time:** Inspect the events of your Auth0 integration as they happen with the `auth0 logs tail` command
 - **🔁 Simplify repetitive tasks:** Create, update, list and delete your Auth0 resources directly from the terminal.
-
----
 
 ## Table of Contents
 
@@ -28,8 +22,6 @@ Build, manage and test your [Auth0](http://auth0.com/) integrations from the com
 - [Available Commands](#available-commands)
 - [Customization](#customization)
 - [Anonymous Analytics](#anonymous-analytics)
-
----
 
 ## Installation
 
