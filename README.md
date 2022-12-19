@@ -92,6 +92,22 @@ Install via [Go](https://go.dev/):
 go install github.com/auth0/auth0-cli/cmd/auth0@latest
 ```
 
+## Authentication
+
+Authenticating to your tenant is required for most functions of the CLI. It can be initiated by running:
+
+```bash
+auth0 login
+```
+
+There are two ways to authenticate:
+
+- **As a user** - Recommended when invoking on a personal machine or other interactive environment. Facilitated by [device authorization](https://auth0.com/docs/get-started/authentication-and-authorization-flow/device-authorization-flow) flow.
+- **As a machine** - Recommended when running on a server or non-interactive environments (ex: CI). Facilitated by [client credentials](https://auth0.com/docs/get-started/authentication-and-authorization-flow/client-credentials-flow) flow. Flags available for bypassing interactive shell.
+
+> **Warning**
+> Authenticating as a user is not supported for **private cloud** tenants. Instead, those users should authenticate with client credentials.
+
 ## Usage
 
 After installation, you should have the `auth0` command available:
@@ -121,23 +137,7 @@ auth0 [command] --help
 - [auth0 test](https://auth0.github.io/auth0-cli/auth0_test.html) - Try your Universal Login box or get a token
 - [auth0 users](https://auth0.github.io/auth0-cli/auth0_users.html) - Manage resources for users
 
-### Onboarding Journey
-
-Following these instructions will give you a sense of what's possible with the
-Auth0 CLI. To start, you will have to log in:
-
-#### Login
-
-To log in, run:
-
-```bash
-auth0 login
-```
-
-> **Warning**
-> Authenticating as a user via `auth0 login` is not supported for **private cloud** tenants. Instead, those users should authenticate with client credentials via `auth0 tenants add`.
-
-#### Creating your application
+### Creating an application
 
 If you haven't created an application yet, you may do so by running the
 following command:
@@ -178,7 +178,7 @@ $ auth0 apps create
 As you might observe, the next thing to do would likely be to try logging in
 using the client ID.
 
-#### Testing the login flow
+### Test the login flow
 
 Whether or not you've created the application using the CLI or the management
 dashboard, you'll be able to test logging in using a specific application.
@@ -190,9 +190,9 @@ otherwise a prompt will be presented:
 auth0 test login
 ```
 
-#### Tailing your logs
+### Tail your logs
 
-Once you have a few logins in place, you might wanna tail your logs. This is
+Once you have a few logins in place, you might want to tail your logs. This is
 done by running the following command:
 
 ```bash
