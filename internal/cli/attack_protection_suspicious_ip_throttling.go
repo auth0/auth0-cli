@@ -104,7 +104,7 @@ func suspiciousIPThrottlingCmd(cli *cli) *cobra.Command {
 }
 
 func showSuspiciousIPThrottlingCmd(cli *cli) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:     "show",
 		Args:    cobra.NoArgs,
 		Short:   "Show suspicious ip throttling settings",
@@ -112,6 +112,10 @@ func showSuspiciousIPThrottlingCmd(cli *cli) *cobra.Command {
 		Example: `auth0 protection suspicious-ip-throttling show`,
 		RunE:    showSuspiciousIPThrottlingCmdRun(cli),
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
+	return cmd
 }
 
 func updateSuspiciousIPThrottlingCmd(cli *cli) *cobra.Command {
@@ -133,6 +137,8 @@ func updateSuspiciousIPThrottlingCmd(cli *cli) *cobra.Command {
 	sitFlags.StagePreLoginRate.RegisterIntU(cmd, &inputs.StagePreLoginRate, 34560)
 	sitFlags.StagePreUserRegistrationMaxAttempts.RegisterIntU(cmd, &inputs.StagePreUserRegistrationMaxAttempts, 1)
 	sitFlags.StagePreUserRegistrationRate.RegisterIntU(cmd, &inputs.StagePreUserRegistrationRate, 1200)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }

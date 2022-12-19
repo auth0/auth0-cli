@@ -75,7 +75,7 @@ func breachedPasswordDetectionCmd(cli *cli) *cobra.Command {
 }
 
 func showBreachedPasswordDetectionCmd(cli *cli) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:     "show",
 		Args:    cobra.NoArgs,
 		Short:   "Show breached password detection settings",
@@ -83,6 +83,10 @@ func showBreachedPasswordDetectionCmd(cli *cli) *cobra.Command {
 		Example: `auth0 protection breached-password-detection show`,
 		RunE:    showBreachedPasswordDetectionCmdRun(cli),
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
+	return cmd
 }
 
 func updateBreachedPasswordDetectionCmd(cli *cli) *cobra.Command {
@@ -101,6 +105,8 @@ func updateBreachedPasswordDetectionCmd(cli *cli) *cobra.Command {
 	bpdFlags.Shields.RegisterStringSliceU(cmd, &inputs.Shields, []string{})
 	bpdFlags.AdminNotificationFrequency.RegisterStringSliceU(cmd, &inputs.AdminNotificationFrequency, []string{})
 	bpdFlags.Method.RegisterString(cmd, &inputs.Method, "")
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }

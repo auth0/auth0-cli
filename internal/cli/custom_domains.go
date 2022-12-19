@@ -114,6 +114,8 @@ auth0 domains ls`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -153,6 +155,8 @@ auth0 domains show <id>`,
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -216,6 +220,8 @@ auth0 domains create <id>`,
 	customDomainVerification.RegisterString(cmd, &inputs.VerificationMethod, "")
 	customDomainPolicy.RegisterString(cmd, &inputs.TLSPolicy, "")
 	customDomainIPHeader.RegisterString(cmd, &inputs.CustomClientIPHeader, "")
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -295,6 +301,8 @@ auth0 domains update <id> -p compatible --ip-header "cf-connecting-ip"`,
 	customDomainPolicy.RegisterStringU(cmd, &inputs.TLSPolicy, "")
 	customDomainIPHeader.RegisterStringU(cmd, &inputs.CustomClientIPHeader, "")
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -338,11 +346,6 @@ auth0 domains delete <id>`,
 		},
 	}
 
-	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		_ = cmd.Flags().MarkHidden("json")
-		cmd.Parent().HelpFunc()(cmd, args)
-	})
-
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 
 	return cmd
@@ -384,6 +387,8 @@ auth0 domains verify <id>`,
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }

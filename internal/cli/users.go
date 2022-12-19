@@ -175,6 +175,8 @@ auth0 users search -q name -s "name:1"`,
 	userQuery.RegisterString(cmd, &inputs.query, "")
 	userSort.RegisterString(cmd, &inputs.sort, "")
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -257,6 +259,8 @@ auth0 users create -n "John Doe" -e john@example.com --connection "Username-Pass
 	userEmail.RegisterString(cmd, &inputs.Email, "")
 	userUsername.RegisterString(cmd, &inputs.Username, "")
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -304,6 +308,8 @@ auth0 users show <id>`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -345,11 +351,6 @@ auth0 users delete <id>`,
 			})
 		},
 	}
-
-	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		_ = cmd.Flags().MarkHidden("json")
-		cmd.Parent().HelpFunc()(cmd, args)
-	})
 
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 
@@ -459,6 +460,8 @@ auth0 users update -n John Doe --email john.doe@example.com`,
 	userPassword.RegisterStringU(cmd, &inputs.Password, "")
 	userEmail.RegisterStringU(cmd, &inputs.Email, "")
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -487,11 +490,6 @@ auth0 users open "auth0|xxxxxxxxxx"`,
 			return nil
 		},
 	}
-
-	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		_ = cmd.Flags().MarkHidden("json")
-		cmd.Parent().HelpFunc()(cmd, args)
-	})
 
 	return cmd
 }
@@ -545,6 +543,8 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -579,11 +579,6 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
-
-	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		_ = cmd.Flags().MarkHidden("json")
-		cmd.Parent().HelpFunc()(cmd, args)
-	})
 
 	return cmd
 }

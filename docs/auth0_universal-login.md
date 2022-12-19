@@ -19,7 +19,6 @@ Manage a consistent, branded Universal Login experience that can handle all of y
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

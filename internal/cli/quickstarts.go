@@ -83,6 +83,8 @@ auth0 qs ls`,
 		RunE: listQuickstarts(cli),
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 

@@ -26,6 +26,7 @@ auth0 roles update <id> -n myrole --description "awesome role"
 ```
   -d, --description string   Description of the role.
   -h, --help                 help for update
+      --json                 Output in json format.
   -n, --name string          Name of the role.
 ```
 
@@ -33,7 +34,6 @@ auth0 roles update <id> -n myrole --description "awesome role"
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

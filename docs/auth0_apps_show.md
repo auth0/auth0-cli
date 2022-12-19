@@ -24,6 +24,7 @@ auth0 apps show <id>
 
 ```
   -h, --help     help for show
+      --json     Output in json format.
   -r, --reveal   Display the Client Secret as part of the command output.
 ```
 
@@ -31,7 +32,6 @@ auth0 apps show <id>
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

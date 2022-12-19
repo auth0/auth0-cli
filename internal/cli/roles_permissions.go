@@ -85,6 +85,8 @@ auth0 roles permissions ls`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -149,6 +151,7 @@ auth0 roles permissions add`,
 
 	roleAPIIdentifier.RegisterString(cmd, &inputs.APIIdentifier, "")
 	roleAPIPermissions.RegisterStringSlice(cmd, &inputs.Permissions, nil)
+
 	return cmd
 }
 
@@ -214,6 +217,7 @@ auth0 roles permissions rm`,
 
 	roleAPIIdentifier.RegisterString(cmd, &inputs.APIIdentifier, "")
 	roleAPIPermissions.RegisterStringSlice(cmd, &inputs.Permissions, nil)
+
 	return cmd
 }
 

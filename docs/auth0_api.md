@@ -7,9 +7,11 @@ Makes an authenticated HTTP request to the Auth0 Management API
 
 ### Synopsis
 
-Makes an authenticated HTTP request to the Auth0 Management API and prints the response as JSON.
+Makes an authenticated HTTP request to the Auth0 Management API and returns the response as JSON.
 
-The method argument is optional, and when you don’t specify it, the command defaults to GET for requests without data and POST for requests with data.
+Method argument is optional, defaults to GET for requests without data and POST for requests with data.
+
+Additional scopes may need to be requested during authentication step via the `--scopes` flag. Ex: `auth0 login --scopes read:client_grants`.
 
 Auth0 Management API Docs:
   https://auth0.com/docs/api/management/v2
@@ -43,7 +45,6 @@ cat data.json | auth0 api post clients
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

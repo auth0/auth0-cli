@@ -48,54 +48,65 @@ With the Auth0 CLI, you can:
 
 ### macOS
 
-#### [Homebrew](https://brew.sh/)
+Install via [Homebrew](https://brew.sh/):
 
 ```bash
  brew tap auth0/auth0-cli && brew install auth0
 ```
 
-#### Manually
-
-1. Download the _Darwin_ binary from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
-1. Extract
-1. Run `./auth0`
-1. Setup CLI commands completion for your terminal:
-   - (**bash**) `auth0 completion bash > /usr/local/etc/bash_completion.d/auth0`
-   - (**zsh**) `auth0 completion zsh > "${fpath[1]}/_auth0"`
-   - (**fish**) `auth0 completion fish | source`
-
-> see more completion options: `auth0 completion -h`
-
 ### Windows
 
-#### [Scoop](https://scoop.sh/)
+Install via [Scoop](https://scoop.sh/):
 
 ```bash
 scoop bucket add auth0 https://github.com/auth0/scoop-auth0-cli.git
 scoop install auth0
 ```
 
-#### Manually
-
-1. Download the _Windows_ binary from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
-1. Extract
-1. Run `auth0.exe`
-
 ### Linux
 
-#### [Homebrew](https://brew.sh/)
+Install via [cURL](https://curl.se/):
 
 ```bash
- brew tap auth0/auth0-cli && brew install auth0
+# Binary will be downloaded to "./auth0".
+curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/v1/install.sh | sh -s -- -b .
 ```
 
-#### Manually
+### Manual
 
-1. Download the _Linux_ binary from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
-1. Extract `$ tar -xf auth0-cli_{dowloaded version here}_Linux_x86_64.tar.gz`
-1. Run `./auth0`
-1. Setup CLI commands completion for your terminal: - `sudo ./auth0 completion bash > /etc/bash_completion.d/auth0`
-   > see more completion options: `auth0 completion -h`
+1. Download the appropriate binary for your environment from the [latest release](https://github.com/auth0/auth0-cli/releases/latest/)
+2. Extract the archive
+   - **macOS**: `$ tar -xf auth0-cli_{version}_Darwin_{architecture}.tar.gz`
+   - **Linux**: `$ tar -xf auth0-cli_{version}_Linux_{architecture}.tar.gz`
+   - **Windows**: Extract `auth0-cli_{version}_Windows_{architecture}.zip` using your preferred method of choice
+3. Run `./auth0`
+
+> **Note**
+> Autocompletion instructions for supported platforms available by running `auth0 completion -h`
+
+### Go
+
+Install via [Go](https://go.dev/):
+
+```bash
+go install github.com/auth0/auth0-cli/cmd/auth0@latest
+```
+
+## Authentication
+
+Authenticating to your tenant is required for most functions of the CLI. It can be initiated by running:
+
+```bash
+auth0 login
+```
+
+There are two ways to authenticate:
+
+- **As a user** - Recommended when invoking on a personal machine or other interactive environment. Facilitated by [device authorization](https://auth0.com/docs/get-started/authentication-and-authorization-flow/device-authorization-flow) flow.
+- **As a machine** - Recommended when running on a server or non-interactive environments (ex: CI). Facilitated by [client credentials](https://auth0.com/docs/get-started/authentication-and-authorization-flow/client-credentials-flow) flow. Flags available for bypassing interactive shell.
+
+> **Warning**
+> Authenticating as a user is not supported for **private cloud** tenants. Instead, those users should authenticate with client credentials.
 
 ## Usage
 
@@ -126,23 +137,7 @@ auth0 [command] --help
 - [auth0 test](https://auth0.github.io/auth0-cli/auth0_test.html) - Try your Universal Login box or get a token
 - [auth0 users](https://auth0.github.io/auth0-cli/auth0_users.html) - Manage resources for users
 
-### Onboarding Journey
-
-Following these instructions will give you a sense of what's possible with the
-Auth0 CLI. To start, you will have to log in:
-
-#### Login
-
-To log in, run:
-
-```bash
-auth0 login
-```
-
-> **Warning**
-> Authenticating as a user via `auth0 login` is not supported for **private cloud** tenants. Instead, those users should authenticate with client credentials via `auth0 tenants add`.
-
-#### Creating your application
+### Creating an application
 
 If you haven't created an application yet, you may do so by running the
 following command:
@@ -183,7 +178,7 @@ $ auth0 apps create
 As you might observe, the next thing to do would likely be to try logging in
 using the client ID.
 
-#### Testing the login flow
+### Test the login flow
 
 Whether or not you've created the application using the CLI or the management
 dashboard, you'll be able to test logging in using a specific application.
@@ -195,9 +190,9 @@ otherwise a prompt will be presented:
 auth0 test login
 ```
 
-#### Tailing your logs
+### Tail your logs
 
-Once you have a few logins in place, you might wanna tail your logs. This is
+Once you have a few logins in place, you might want to tail your logs. This is
 done by running the following command:
 
 ```bash

@@ -146,7 +146,11 @@ auth0 orgs ls -n 100`,
 			return nil
 		},
 	}
+
 	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -186,6 +190,8 @@ auth0 orgs show <id>`,
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -269,6 +275,8 @@ auth0 orgs create -n myorganization -d "My Organization" -m "KEY=value" -m "OTHE
 	organizationAccent.RegisterString(cmd, &inputs.AccentColor, "")
 	organizationBackground.RegisterString(cmd, &inputs.BackgroundColor, "")
 	organizationMetadata.RegisterStringMap(cmd, &inputs.Metadata, nil)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -386,6 +394,8 @@ auth0 orgs update <id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_v
 	organizationBackground.RegisterStringU(cmd, &inputs.BackgroundColor, "")
 	organizationMetadata.RegisterStringMapU(cmd, &inputs.Metadata, nil)
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -429,11 +439,6 @@ auth0 orgs delete <id>`,
 		},
 	}
 
-	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		_ = cmd.Flags().MarkHidden("json")
-		cmd.Parent().HelpFunc()(cmd, args)
-	})
-
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 
 	return cmd
@@ -464,11 +469,6 @@ func openOrganizationCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
-
-	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		_ = cmd.Flags().MarkHidden("json")
-		cmd.Parent().HelpFunc()(cmd, args)
-	})
 
 	return cmd
 }
@@ -519,7 +519,11 @@ auth0 orgs members ls <id>`,
 			return nil
 		},
 	}
+
 	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -574,7 +578,11 @@ auth0 orgs roles ls <id>`,
 			return nil
 		},
 	}
+
 	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -635,8 +643,12 @@ auth0 orgs roles members list <org id> --role-id role`,
 			return nil
 		},
 	}
+
 	roleIdentifier.RegisterString(cmd, &inputs.RoleID, "")
 	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 

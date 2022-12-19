@@ -29,6 +29,7 @@ auth0 universal-login update -a "#FF4F40" -b "#2A2E35" --logo "https://example.c
   -f, --favicon string      URL for the favicon. Must use HTTPS.
   -c, --font string         URL for the custom font. The URL must point to a font file and not a stylesheet. Must use HTTPS.
   -h, --help                help for update
+      --json                Output in json format.
   -l, --logo string         URL for the logo. Must use HTTPS.
 ```
 
@@ -36,7 +37,6 @@ auth0 universal-login update -a "#FF4F40" -b "#2A2E35" --logo "https://example.c
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

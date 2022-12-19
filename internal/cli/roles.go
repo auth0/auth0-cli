@@ -102,6 +102,8 @@ auth0 roles ls -n 100`,
 
 	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -141,6 +143,8 @@ auth0 roles show <id>`,
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -191,6 +195,8 @@ auth0 roles create -n myrole --description "awesome role"`,
 
 	roleName.RegisterString(cmd, &inputs.Name, "")
 	roleDescription.RegisterString(cmd, &inputs.Description, "")
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -259,6 +265,8 @@ auth0 roles update <id> -n myrole --description "awesome role"`,
 	roleName.RegisterStringU(cmd, &inputs.Name, "")
 	roleDescription.RegisterStringU(cmd, &inputs.Description, "")
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -301,11 +309,6 @@ auth0 roles delete <id>`,
 			})
 		},
 	}
-
-	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		_ = cmd.Flags().MarkHidden("json")
-		cmd.Parent().HelpFunc()(cmd, args)
-	})
 
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 

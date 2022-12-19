@@ -31,6 +31,7 @@ auth0 logs ls -n 100
 ```
   -f, --filter string   Filter in Lucene query syntax. See https://auth0.com/docs/logs/log-search-query-syntax for more details.
   -h, --help            help for list
+      --json            Output in json format.
   -n, --number int      Number of log entries to show. (default 100)
 ```
 
@@ -38,7 +39,6 @@ auth0 logs ls -n 100
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

@@ -28,6 +28,7 @@ auth0 users create -n "John Doe" -e john@example.com --connection "Username-Pass
   -c, --connection string   Name of the database connection this user should be created in.
   -e, --email string        The user's email.
   -h, --help                help for create
+      --json                Output in json format.
   -n, --name string         The user's full name.
   -p, --password string     Initial password for this user (mandatory for non-SMS connections).
   -u, --username string     The user's username. Only valid if the connection requires a username.
@@ -37,7 +38,6 @@ auth0 users create -n "John Doe" -e john@example.com --connection "Username-Pass
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

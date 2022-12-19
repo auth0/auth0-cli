@@ -58,7 +58,7 @@ var (
 
 	actionTemplates = map[string]string{
 		"post-login":             actionTemplatePostLogin,
-		"credentials-exchange":   actionTemplateCredentialsEchange,
+		"credentials-exchange":   actionTemplateCredentialsExchange,
 		"pre-user-registration":  actionTemplatePreUserRegistration,
 		"post-user-registration": actionTemplatePostUserRegistration,
 		"post-change-password":   actionTemplatePostChangePassword,
@@ -111,6 +111,8 @@ auth0 actions ls`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -150,6 +152,8 @@ auth0 actions show <id>`,
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -229,6 +233,8 @@ auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=val
 	actionCode.RegisterString(cmd, &inputs.Code, "")
 	actionDependency.RegisterStringMap(cmd, &inputs.Dependencies, nil)
 	actionSecret.RegisterStringMap(cmd, &inputs.Secrets, nil)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -362,6 +368,8 @@ auth0 actions update <id> -n myaction -t post-login -d "lodash=4.0.0" -s "API_KE
 	actionDependency.RegisterStringMapU(cmd, &inputs.Dependencies, nil)
 	actionSecret.RegisterStringMapU(cmd, &inputs.Secrets, nil)
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -404,11 +412,6 @@ auth0 actions delete <id>`,
 			})
 		},
 	}
-
-	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		_ = cmd.Flags().MarkHidden("json")
-		cmd.Parent().HelpFunc()(cmd, args)
-	})
 
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 
@@ -457,6 +460,8 @@ auth0 actions deploy <id>`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -485,11 +490,6 @@ func openActionCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
-
-	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		_ = cmd.Flags().MarkHidden("json")
-		cmd.Parent().HelpFunc()(cmd, args)
-	})
 
 	return cmd
 }

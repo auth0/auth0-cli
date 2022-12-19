@@ -24,13 +24,13 @@ auth0 actions show <id>
 
 ```
   -h, --help   help for show
+      --json   Output in json format.
 ```
 
 ### Options inherited from parent commands
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

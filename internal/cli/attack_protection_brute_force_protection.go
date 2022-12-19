@@ -87,7 +87,7 @@ func bruteForceProtectionCmd(cli *cli) *cobra.Command {
 }
 
 func showBruteForceProtectionCmd(cli *cli) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:     "show",
 		Args:    cobra.NoArgs,
 		Short:   "Show brute force protection settings",
@@ -95,6 +95,10 @@ func showBruteForceProtectionCmd(cli *cli) *cobra.Command {
 		Example: `auth0 protection brute-force-protection show`,
 		RunE:    showBruteForceProtectionCmdRun(cli),
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
+	return cmd
 }
 
 func updateBruteForceProtectionCmd(cli *cli) *cobra.Command {
@@ -114,6 +118,8 @@ func updateBruteForceProtectionCmd(cli *cli) *cobra.Command {
 	bfpFlags.AllowList.RegisterStringSliceU(cmd, &inputs.AllowList, []string{})
 	bfpFlags.Mode.RegisterString(cmd, &inputs.Mode, "")
 	bfpFlags.MaxAttempts.RegisterIntU(cmd, &inputs.MaxAttempts, 1)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }

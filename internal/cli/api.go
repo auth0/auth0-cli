@@ -76,13 +76,16 @@ func apiCmd(cli *cli) *cobra.Command {
 		Args:  cobra.RangeArgs(1, 2),
 		Short: "Makes an authenticated HTTP request to the Auth0 Management API",
 		Long: fmt.Sprintf(
-			`Makes an authenticated HTTP request to the Auth0 Management API and prints the response as JSON.
+			`Makes an authenticated HTTP request to the Auth0 Management API and returns the response as JSON.
 
-The method argument is optional, and when you don’t specify it, the command defaults to GET for requests without data and POST for requests with data.
+Method argument is optional, defaults to GET for requests without data and POST for requests with data.
+
+%s
 
 %s  %s
 
 %s  %s`,
+			"Additional scopes may need to be requested during authentication step via the `--scopes` flag. Ex: `auth0 login --scopes read:client_grants`.",
 			"Auth0 Management API Docs:\n", apiDocsURL,
 			"Available Methods:\n", strings.ToLower(strings.Join(apiValidMethods, ", ")),
 		),
@@ -92,11 +95,6 @@ auth0 api clients --data "{\"name\":\"ssoTest\",\"app_type\":\"sso_integration\"
 cat data.json | auth0 api post clients`,
 		RunE: apiCmdRun(cli, &inputs),
 	}
-
-	cmd.SetHelpFunc(func(command *cobra.Command, strings []string) {
-		command.Flags().MarkHidden("json")
-		command.Parent().HelpFunc()(command, strings)
-	})
 
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation when using the delete method.")
 
@@ -146,6 +144,10 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 			return fmt.Errorf("failed to send request: %w", err)
 		}
 		defer response.Body.Close()
+
+		if err := isInsufficientScopeError(response); err != nil {
+			return err
+		}
 
 		rawBodyJSON, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -256,4 +258,35 @@ func (i *apiCmdInputs) parseRaw(args []string) {
 	}
 
 	i.RawURI = args[lenArgs-1]
+}
+
+func isInsufficientScopeError(r *http.Response) error {
+	if r.StatusCode != 403 {
+		return nil
+	}
+
+	type ErrorBody struct {
+		ErrorCode string `json:"errorCode"`
+		Message   string `json:"message"`
+	}
+
+	var body ErrorBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		return nil
+	}
+
+	if body.ErrorCode != "insufficient_scope" {
+		return nil
+	}
+
+	missingScopes := strings.Split(body.Message, "Insufficient scope, expected any of: ")[1]
+	recommendedScopeToAdd := strings.Split(missingScopes, ",")[0]
+
+	return fmt.Errorf(
+		"request failed because access token lacks scope: %s.\n "+
+			"If authenticated via client credentials, add this scope to the designated client. "+
+			"If authenticated as a user, request this scope during login by running `auth0 login --scopes %s`.",
+		recommendedScopeToAdd,
+		recommendedScopeToAdd,
+	)
 }
