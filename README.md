@@ -48,54 +48,49 @@ With the Auth0 CLI, you can:
 
 ### macOS
 
-#### [Homebrew](https://brew.sh/)
+Install via [Homebrew](https://brew.sh/):
 
 ```bash
  brew tap auth0/auth0-cli && brew install auth0
 ```
 
-#### Manually
-
-1. Download the _Darwin_ binary from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
-1. Extract
-1. Run `./auth0`
-1. Setup CLI commands completion for your terminal:
-   - (**bash**) `auth0 completion bash > /usr/local/etc/bash_completion.d/auth0`
-   - (**zsh**) `auth0 completion zsh > "${fpath[1]}/_auth0"`
-   - (**fish**) `auth0 completion fish | source`
-
-> see more completion options: `auth0 completion -h`
-
 ### Windows
 
-#### [Scoop](https://scoop.sh/)
+Install via [Scoop](https://scoop.sh/):
 
 ```bash
 scoop bucket add auth0 https://github.com/auth0/scoop-auth0-cli.git
 scoop install auth0
 ```
 
-#### Manually
-
-1. Download the _Windows_ binary from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
-1. Extract
-1. Run `auth0.exe`
-
 ### Linux
 
-#### [Homebrew](https://brew.sh/)
+Install via [cURL](https://curl.se/):
 
 ```bash
- brew tap auth0/auth0-cli && brew install auth0
+# Binary will be downloaded to "./auth0".
+curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/v1/install.sh | sh -s -- -b .
 ```
 
-#### Manually
+### Manual
 
-1. Download the _Linux_ binary from the latest release: https://github.com/auth0/auth0-cli/releases/latest/
-1. Extract `$ tar -xf auth0-cli_{dowloaded version here}_Linux_x86_64.tar.gz`
-1. Run `./auth0`
-1. Setup CLI commands completion for your terminal: - `sudo ./auth0 completion bash > /etc/bash_completion.d/auth0`
-   > see more completion options: `auth0 completion -h`
+1. Download the appropriate binary for your environment from the [latest release](https://github.com/auth0/auth0-cli/releases/latest/)
+2. Extract the archive
+   - **macOS**: `$ tar -xf auth0-cli_{version}_Darwin_{architecture}.tar.gz`
+   - **Linux**: `$ tar -xf auth0-cli_{version}_Linux_{architecture}.tar.gz`
+   - **Windows**: Extract `auth0-cli_{version}_Windows_{architecture}.zip` using your preferred method of choice
+3. Run `./auth0`
+
+> **Note**
+> Autocompletion instructions for supported platforms available by running `auth0 completion -h`
+
+### Go
+
+Install via [Go](https://go.dev/):
+
+```bash
+go install github.com/auth0/auth0-cli/cmd/auth0@latest
+```
 
 ## Usage
 
