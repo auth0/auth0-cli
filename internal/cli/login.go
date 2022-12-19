@@ -68,7 +68,7 @@ func loginCmd(cli *cli) *cobra.Command {
 		Use:   "login",
 		Args:  cobra.NoArgs,
 		Short: "Authenticate the Auth0 CLI",
-		Long:  "Authenticates the Auth0 CLI either as a user using personal credentials or as a machine using client credentials.",
+		Long:  "Authenticates the Auth0 CLI either as a user using personal credentials or as a machine using client credentials.\n\nAuthenticating as a user is recommended when working on a personal machine or other interactive environment; it is not available for Private Cloud users. Authenticating as a machine is recommended when running on a server or non-interactive environments (ex: CI). ",
 		Example: `auth0 login
 auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>
 auth0 login --scopes "read:client_grants,create:client_grants"`,
