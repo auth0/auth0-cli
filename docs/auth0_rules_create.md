@@ -27,6 +27,7 @@ auth0 rules create -n "My Rule" -t "Empty rule" --enabled=false
 ```
   -e, --enabled           Enable (or disable) a rule. (default true)
   -h, --help              help for create
+      --json              Output in json format.
   -n, --name string       Name of the rule.
   -t, --template string   Template to use for the rule.
 ```
@@ -35,7 +36,6 @@ auth0 rules create -n "My Rule" -t "Empty rule" --enabled=false
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

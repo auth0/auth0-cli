@@ -74,6 +74,9 @@ auth0 logs ls -n 100`,
 
 	logsFilter.RegisterString(cmd, &inputs.Filter, "")
 	logsNum.RegisterInt(cmd, &inputs.Num, 100)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -158,6 +161,9 @@ auth0 logs tail -n 100`,
 
 	logsFilter.RegisterString(cmd, &inputs.Filter, "")
 	logsNum.RegisterInt(cmd, &inputs.Num, 100)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	
 	return cmd
 }
 

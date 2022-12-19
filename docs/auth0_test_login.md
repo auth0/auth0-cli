@@ -29,6 +29,7 @@ auth0 test login <client-id> --connection <connection>
   -d, --domain string       One of your custom domains.
       --force               Skip confirmation.
   -h, --help                help for login
+      --json                Output in json format.
   -s, --scopes strings      The list of scopes you want to use. (default [openid,profile])
 ```
 
@@ -36,7 +37,6 @@ auth0 test login <client-id> --connection <connection>
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

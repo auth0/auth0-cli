@@ -9,7 +9,7 @@ var (
 	actionTemplatePostLogin string
 
 	//go:embed data/action-template-credentials-exchange.js
-	actionTemplateCredentialsEchange string
+	actionTemplateCredentialsExchange string
 
 	//go:embed data/action-template-pre-user-registration.js
 	actionTemplatePreUserRegistration string

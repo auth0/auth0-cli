@@ -30,7 +30,7 @@ func Execute() {
 
 	rootCmd.SetUsageTemplate(namespaceUsageTemplate())
 	addPersistentFlags(rootCmd, cli)
-	addSubcommands(rootCmd, cli)
+	addSubCommands(rootCmd, cli)
 
 	// TODO(cyx): backport this later on using latest auth0/v5.
 	// rootCmd.AddCommand(actionsCmd(cli))
@@ -142,9 +142,6 @@ func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.PersistentFlags().BoolVar(&cli.debug,
 		"debug", false, "Enable debug mode.")
 
-	rootCmd.PersistentFlags().BoolVar(&cli.json,
-		"json", false, "Output in json format.")
-
 	rootCmd.PersistentFlags().BoolVar(&cli.noInput,
 		"no-input", false, "Disable interactivity.")
 
@@ -152,7 +149,7 @@ func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
 		"no-color", false, "Disable colors.")
 }
 
-func addSubcommands(rootCmd *cobra.Command, cli *cli) {
+func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	// The order of the commands here matters.
 	// Add new commands in a place that reflect its
 	// relevance or relation with other commands:

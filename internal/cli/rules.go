@@ -110,6 +110,8 @@ auth0 rules ls`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -183,6 +185,8 @@ auth0 rules create -n "My Rule" -t "Empty rule" --enabled=false`,
 	ruleTemplate.RegisterString(cmd, &inputs.Template, "")
 	ruleEnabled.RegisterBool(cmd, &inputs.Enabled, true)
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -224,6 +228,8 @@ auth0 rules show <id>`,
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -267,11 +273,6 @@ auth0 rules delete <id>`,
 			})
 		},
 	}
-
-	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		_ = cmd.Flags().MarkHidden("json")
-		cmd.Parent().HelpFunc()(cmd, args)
-	})
 
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 
@@ -383,6 +384,8 @@ auth0 rules update <id> -n "My Updated Rule" --enabled=false`,
 	ruleName.RegisterStringU(cmd, &inputs.Name, "")
 	ruleEnabled.RegisterBool(cmd, &inputs.Enabled, true)
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -435,6 +438,8 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -486,6 +491,8 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }

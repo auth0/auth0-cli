@@ -74,7 +74,7 @@ $(GO_BIN)/auth0:
 .PHONY: docs docs-start docs-clean
 
 docs: docs-clean ## Build the documentation
-	@go run ./cmd/build_doc
+	@go run ./cmd/doc-gen
 	@mv ./docs/auth0.md ./docs/index.md
 
 docs-start: ## Start the doc site locally for testing purposes

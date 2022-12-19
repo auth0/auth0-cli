@@ -29,6 +29,7 @@ auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=val
   -c, --code string                 Code content for the action.
   -d, --dependency stringToString   Third party npm module, and it version, that the action depends on. (default [])
   -h, --help                        help for create
+      --json                        Output in json format.
   -n, --name string                 Name of the action.
   -s, --secret stringToString       Secret to be used in the action. (default [])
   -t, --trigger string              Trigger of the action. At this time, an action can only target a single trigger at a time.
@@ -38,7 +39,6 @@ auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=val
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

@@ -26,6 +26,7 @@ auth0 rules update <id> -n "My Updated Rule" --enabled=false
 ```
   -e, --enabled       Enable (or disable) a rule. (default true)
   -h, --help          help for update
+      --json          Output in json format.
   -n, --name string   Name of the rule.
 ```
 
@@ -33,7 +34,6 @@ auth0 rules update <id> -n "My Updated Rule" --enabled=false
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

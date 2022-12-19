@@ -26,6 +26,7 @@ auth0 apis ls -n 100
 
 ```
   -h, --help         help for list
+      --json         Output in json format.
   -n, --number int   Number of apps to retrieve (default 50)
 ```
 
@@ -33,7 +34,6 @@ auth0 apis ls -n 100
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.

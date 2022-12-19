@@ -146,6 +146,8 @@ auth0 email templates show welcome`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -272,6 +274,8 @@ auth0 email templates update welcome`,
 	emailTemplateEnabled.RegisterBoolU(cmd, &inputs.Enabled, true)
 	emailTemplateURL.RegisterStringU(cmd, &inputs.ResultURL, "")
 	emailTemplateLifetime.RegisterIntU(cmd, &inputs.ResultURLLifetime, 0)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }

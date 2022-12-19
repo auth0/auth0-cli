@@ -35,7 +35,6 @@ auth0 login --scopes "read:client_grants,create:client_grants"
 
 ```
       --debug           Enable debug mode.
-      --json            Output in json format.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
