@@ -281,7 +281,7 @@ auth0 email templates update welcome`,
 }
 
 func (c *cli) emailTemplateEditorHint() {
-	c.renderer.Infof("%s once you close the editor, the email template will be saved. To cancel, CTRL+C.", ansi.Faint("Hint:"))
+	c.renderer.Infof("%s once you close the editor, the email template will be saved. To cancel, press CTRL+C.", ansi.Faint("Hint:"))
 }
 
 func (c *cli) emailTemplatePickerOptions() (pickerOptions, error) {

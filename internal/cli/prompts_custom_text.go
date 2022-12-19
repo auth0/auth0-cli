@@ -301,7 +301,7 @@ func fetchEditedBrandingTextContent(
 func updateBrandingTextHint(cli *cli) func() {
 	return func() {
 		cli.renderer.Infof(
-			"%s once you close the editor, the custom text will be saved. To cancel, CTRL+C.",
+			"%s once you close the editor, the custom text will be saved. To cancel, press CTRL+C.",
 			ansi.Faint("Hint:"),
 		)
 	}

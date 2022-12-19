@@ -516,5 +516,5 @@ func (c *cli) rulePickerOptions() (pickerOptions, error) {
 }
 
 func (c *cli) ruleEditorHint() {
-	c.renderer.Infof("%s once you close the editor, the rule will be saved. To cancel, CTRL+C.", ansi.Faint("Hint:"))
+	c.renderer.Infof("%s once you close the editor, the rule will be saved. To cancel, press CTRL+C.", ansi.Faint("Hint:"))
 }
