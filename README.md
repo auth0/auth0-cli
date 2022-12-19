@@ -46,7 +46,6 @@ With the Auth0 CLI, you can:
 
 ## Installation
 
-Please install the `auth0-cli` in a way that matches your environment.
 
 ### macOS
 
