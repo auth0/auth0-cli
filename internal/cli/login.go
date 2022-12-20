@@ -122,6 +122,12 @@ auth0 login --scopes "read:client_grants,create:client_grants"`,
 
 			cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
 
+			if len(cli.config.Tenants) > 1 {
+				cli.renderer.Infof("%s switch between authenticated tenants with `auth0 tenants use <TENANT>`",
+					ansi.Faint("Hint:"),
+				)
+			}
+
 			return nil
 		},
 	}
