@@ -26,7 +26,7 @@ Manage custom domains.
 
 ### SEE ALSO
 
-* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Build, manage and test your Auth0 integrations from the command line.
 * [auth0 domains create](auth0_domains_create.md)	 - Create a custom domain
 * [auth0 domains delete](auth0_domains_delete.md)	 - Delete a custom domain
 * [auth0 domains list](auth0_domains_list.md)	 - List your custom domains
