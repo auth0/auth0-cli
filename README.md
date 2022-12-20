@@ -18,7 +18,7 @@ Build, manage and test your [Auth0](http://auth0.com/) integrations from the com
 ## Table of Contents
 
 - [Installation](#installation)
-- [Authentication](#authentication)
+- [Authenticating to Your Tenant](#authenticating-to-your-tenant)
 - [Available Commands](#available-commands)
 - [Customization](#customization)
 - [Anonymous Analytics](#anonymous-analytics)
@@ -71,7 +71,7 @@ Install via [Go](https://go.dev/):
 go install github.com/auth0/auth0-cli/cmd/auth0@latest
 ```
 
-## Authentication
+## Authenticating to Your Tenant
 
 Authenticating to your Auth0 tenant is required for most functions of the CLI. It can be initiated by running:
 
