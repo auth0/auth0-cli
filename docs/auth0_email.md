@@ -26,6 +26,6 @@ Manage email settings.
 
 ### SEE ALSO
 
-* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Build, manage and test your Auth0 integrations from the command line.
 * [auth0 email templates](auth0_email_templates.md)	 - Manage custom email templates
 

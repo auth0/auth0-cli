@@ -26,7 +26,7 @@ Manage resources for users.
 
 ### SEE ALSO
 
-* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Build, manage and test your Auth0 integrations from the command line.
 * [auth0 users blocks](auth0_users_blocks.md)	 - Manage brute-force protection user blocks
 * [auth0 users create](auth0_users_create.md)	 - Create a new user
 * [auth0 users delete](auth0_users_delete.md)	 - Delete a user

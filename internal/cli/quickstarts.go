@@ -174,7 +174,7 @@ func downloadQuickstart(cli *cli, inputs *qsInputs) func(cmd *cobra.Command, arg
 			return err
 		}
 
-		cli.renderer.Infof("%s Start with 'cd %s'", ansi.Faint("Hint:"), relativeQSSamplePath)
+		cli.renderer.Infof("%s Start with `cd %s`", ansi.Faint("Hint:"), relativeQSSamplePath)
 
 		return nil
 	}

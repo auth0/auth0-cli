@@ -731,5 +731,5 @@ func (c *cli) getConnReqUsername(s string) *bool {
 }
 
 func (c *cli) userImportEditorHint() {
-	c.renderer.Infof("%s once you close the editor, the user(s) will be imported. To cancel, CTRL+C.", ansi.Faint("Hint:"))
+	c.renderer.Infof("%s Once you close the editor, the user(s) will be imported. To cancel, CTRL+C.", ansi.Faint("Hint:"))
 }

@@ -26,7 +26,7 @@ Manage resources for rules.
 
 ### SEE ALSO
 
-* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Build, manage and test your Auth0 integrations from the command line.
 * [auth0 rules create](auth0_rules_create.md)	 - Create a new rule
 * [auth0 rules delete](auth0_rules_delete.md)	 - Delete a rule
 * [auth0 rules disable](auth0_rules_disable.md)	 - Disable a rule
