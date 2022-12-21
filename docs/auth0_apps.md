@@ -26,7 +26,7 @@ Manage resources for applications.
 
 ### SEE ALSO
 
-* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Build, manage and test your Auth0 integrations from the command line.
 * [auth0 apps create](auth0_apps_create.md)	 - Create a new application
 * [auth0 apps delete](auth0_apps_delete.md)	 - Delete an application
 * [auth0 apps list](auth0_apps_list.md)	 - List your applications

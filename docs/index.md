@@ -3,7 +3,7 @@ layout: home
 ---
 ## auth0
 
-Supercharge your development workflow.
+Build, manage and test your Auth0 integrations from the command line.
 
 ### Options
 

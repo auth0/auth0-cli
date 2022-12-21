@@ -26,7 +26,7 @@ Manage resources for APIs.
 
 ### SEE ALSO
 
-* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Build, manage and test your Auth0 integrations from the command line.
 * [auth0 apis create](auth0_apis_create.md)	 - Create a new API
 * [auth0 apis delete](auth0_apis_delete.md)	 - Delete an API
 * [auth0 apis list](auth0_apis_list.md)	 - List your APIs

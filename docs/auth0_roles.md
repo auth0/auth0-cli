@@ -26,7 +26,7 @@ Manage resources for roles.
 
 ### SEE ALSO
 
-* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Build, manage and test your Auth0 integrations from the command line.
 * [auth0 roles create](auth0_roles_create.md)	 - Create a new role
 * [auth0 roles delete](auth0_roles_delete.md)	 - Delete a role
 * [auth0 roles list](auth0_roles_list.md)	 - List your roles

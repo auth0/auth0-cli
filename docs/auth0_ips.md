@@ -26,7 +26,7 @@ Manage blocked IP addresses.
 
 ### SEE ALSO
 
-* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Build, manage and test your Auth0 integrations from the command line.
 * [auth0 ips check](auth0_ips_check.md)	 - Check IP address
 * [auth0 ips unblock](auth0_ips_unblock.md)	 - Unblock IP address
 

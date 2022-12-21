@@ -17,7 +17,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/instrumentation"
 )
 
-const rootShort = "Supercharge your development workflow."
+const rootShort = "Build, manage and test your Auth0 integrations from the command line."
 
 // Execute is the primary entrypoint of the CLI app.
 func Execute() {

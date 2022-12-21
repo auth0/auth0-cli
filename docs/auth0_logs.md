@@ -26,7 +26,7 @@ View tenant logs.
 
 ### SEE ALSO
 
-* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Build, manage and test your Auth0 integrations from the command line.
 * [auth0 logs list](auth0_logs_list.md)	 - Show the application logs
 * [auth0 logs streams](auth0_logs_streams.md)	 - Manage resources for log streams
 * [auth0 logs tail](auth0_logs_tail.md)	 - Tail the tenant logs
