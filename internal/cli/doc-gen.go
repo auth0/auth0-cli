@@ -16,6 +16,11 @@ const (
 	docsPath = "./docs/"
 )
 
+const (
+	associatedCommandsFragment = `{{range .AssociatedCommands}}- [{{.CommandPath}}](auth0_{{.Name}}.md) - {{.Short}}
+{{end}}`
+)
+
 // GenerateDocs will generate the documentation
 // for all the commands under the ./docs folder.
 func GenerateDocs() error {
@@ -77,7 +82,7 @@ Build, manage and test your [Auth0](http://auth0.com/) integrations from the com
 
 ## Installation
 
-Installation instructions available on [project README](https://github.com/auth0/auth0-cli#installation)
+Installation instructions available in [project README](https://github.com/auth0/auth0-cli#installation).
 
 ## Authenticating to Your Tenant
 
@@ -95,20 +100,19 @@ There are two ways to authenticate:
 
 ## Available Commands
 
-{{range .AvailableCommands}}* [{{.CommandPath}}](auth0_{{.Name}}.md) - {{.Short}}
-{{end}}
+%s
 `
 	var tpl bytes.Buffer
-	t := template.Must(template.New("homepageTemplate").Parse(homepageTemplate))
+	t := template.Must(template.New("homepageTemplate").Parse(fmt.Sprintf(homepageTemplate, associatedCommandsFragment)))
 
 	if err := t.Execute(&tpl, struct {
-		CommandPath       string
-		LoginCommand      string
-		AvailableCommands []*cobra.Command
+		CommandPath        string
+		LoginCommand       string
+		AssociatedCommands []*cobra.Command
 	}{
-		LoginCommand:      wrapWithBackticks("auth0 login"),
-		CommandPath:       cmd.CommandPath(),
-		AvailableCommands: cmd.Commands(),
+		LoginCommand:       wrapWithBackticks("auth0 login"),
+		CommandPath:        cmd.CommandPath(),
+		AssociatedCommands: cmd.Commands(),
 	}); err != nil {
 		return err
 	}
@@ -130,22 +134,21 @@ layout: default
 
 ## Commands
 
-{{range .AvailableCommands}}- [{{.CommandPath}}](auth0_{{.Name}}.md) - {{.Short}}
-{{end}}
+%s
 `
 	var tpl bytes.Buffer
-	t := template.Must(template.New("parentPageTemplate").Parse(parentPageTemplate))
+	t := template.Must(template.New("parentPageTemplate").Parse(fmt.Sprintf(parentPageTemplate, associatedCommandsFragment)))
 
 	err := t.Execute(&tpl, struct {
-		Name              string
-		Description       string
-		CommandPath       string
-		AvailableCommands []*cobra.Command
+		Name               string
+		Description        string
+		CommandPath        string
+		AssociatedCommands []*cobra.Command
 	}{
-		Name:              cmd.Name(),
-		Description:       cmd.Long,
-		CommandPath:       cmd.CommandPath(),
-		AvailableCommands: cmd.Commands(),
+		Name:               cmd.Name(),
+		Description:        cmd.Long,
+		CommandPath:        cmd.CommandPath(),
+		AssociatedCommands: cmd.Commands(),
 	})
 	if err != nil {
 		return err
@@ -182,30 +185,29 @@ layout: default
 
 ## Related Commands
 
-{{range .RelatedCommands}}* [{{.CommandPath}}](auth0_{{.Name}}.md) - {{.Short}}
-{{end}}
+%s
 `
 	var tpl bytes.Buffer
-	t := template.Must(template.New("commandPageTemplate").Parse(commandPageTemplate))
+	t := template.Must(template.New("commandPageTemplate").Parse(fmt.Sprintf(commandPageTemplate, associatedCommandsFragment)))
 
 	err := t.Execute(&tpl, struct {
-		Name            string
-		Flags           string
-		InheritedFlags  string
-		Description     string
-		CommandPath     string
-		RelatedCommands []*cobra.Command
-		Examples        string
-		UseLine         string
+		Name               string
+		Flags              string
+		InheritedFlags     string
+		Description        string
+		CommandPath        string
+		AssociatedCommands []*cobra.Command
+		Examples           string
+		UseLine            string
 	}{
-		Name:            fmt.Sprintf("`%s`", cmd.CommandPath()),
-		Description:     cmd.Long,
-		Flags:           wrapWithBackticks(cmd.NonInheritedFlags().FlagUsages()),
-		InheritedFlags:  wrapWithBackticks(cmd.InheritedFlags().FlagUsages()),
-		CommandPath:     cmd.CommandPath(),
-		RelatedCommands: cmd.Commands(),
-		Examples:        wrapWithBackticks(cmd.Example),
-		UseLine:         wrapWithBackticks(cmd.UseLine()),
+		Name:               fmt.Sprintf("`%s`", cmd.CommandPath()),
+		Description:        cmd.Long,
+		Flags:              wrapWithBackticks(cmd.NonInheritedFlags().FlagUsages()),
+		InheritedFlags:     wrapWithBackticks(cmd.InheritedFlags().FlagUsages()),
+		CommandPath:        cmd.CommandPath(),
+		AssociatedCommands: cmd.Commands(),
+		Examples:           wrapWithBackticks(cmd.Example),
+		UseLine:            wrapWithBackticks(cmd.UseLine()),
 	})
 	if err != nil {
 		return err
