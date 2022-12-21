@@ -18,7 +18,7 @@ Build, manage and test your [Auth0](http://auth0.com/) integrations from the com
 ## Table of Contents
 
 - [Installation](#installation)
-- [Authentication](#authentication)
+- [Authenticating to Your Tenant](#authenticating-to-your-tenant)
 - [Available Commands](#available-commands)
 - [Customization](#customization)
 - [Anonymous Analytics](#anonymous-analytics)
@@ -71,7 +71,7 @@ Install via [Go](https://go.dev/):
 go install github.com/auth0/auth0-cli/cmd/auth0@latest
 ```
 
-## Authentication
+## Authenticating to Your Tenant
 
 Authenticating to your Auth0 tenant is required for most functions of the CLI. It can be initiated by running:
 
@@ -129,25 +129,33 @@ Auth0 uses this data to better understand the usage of this tool to prioritize t
 
 To **opt-out** of this collection, set the `AUTH0_CLI_ANALYTICS` environment variable to `false`.
 
-## Issue Reporting
+## Feedback
 
-For general support or usage questions, use the [Auth0 Community](https://community.auth0.com/) forums or raise a [support ticket](https://support.auth0.com/). Only [raise an issue](https://github.com/auth0/auth0-cli/issues) if you have found a bug or want to request a feature.
+### Contributing
 
-**Do not report security vulnerabilities on the public GitHub issue tracker.** The [Responsible Disclosure Program](https://auth0.com/responsible-disclosure-policy) details the procedure for disclosing security issues.
+We appreciate feedback and contribution to this repo! Before you get started, please see the following:
 
-## What is Auth0?
+- [Auth0's general contribution guidelines](https://github.com/auth0/open-source-template/blob/master/GENERAL-CONTRIBUTING.md)
+- [Auth0's code of conduct guidelines](https://github.com/auth0/open-source-template/blob/master/CODE-OF-CONDUCT.md)
+- [This repo's contribution guide](https://github.com/auth0/auth0-cli/blob/main/CONTRIBUTING.md)
 
-Auth0 helps you to:
+### Raise an issue
 
-- Add authentication with [multiple sources](https://auth0.com/docs/authenticate/identity-providers), either social identity providers such as **Google, Facebook, Microsoft Account, LinkedIn, GitHub, Twitter, Box, Salesforce** (amongst others), or enterprise identity systems like **Windows Azure AD, Google Apps, Active Directory, ADFS, or any SAML identity provider**.
-- Add authentication through more traditional **[username/password databases](https://auth0.com/docs/authenticate/database-connections/custom-db)**.
-- Add support for **[linking different user accounts](https://auth0.com/docs/manage-users/user-accounts/user-account-linking)** with the same user.
-- Support for generating signed [JSON Web Tokens](https://auth0.com/docs/secure/tokens/json-web-tokens) to call your APIs and **flow the user identity** securely.
-- Analytics of how, when, and where users are logging in.
-- Pull data from other sources and add it to the user profile through [JavaScript Actions](https://auth0.com/docs/customize/actions).
+To provide feedback or report a bug, please [raise an issue on our issue tracker](https://github.com/auth0/auth0-cli/issues).
 
-**Why Auth0?** Because you should save time, be happy, and focus on what really matters: building your product.
+### Vulnerability Reporting
 
-## License
+Please do not report security vulnerabilities on the public GitHub issue tracker. The [Responsible Disclosure Program](https://auth0.com/responsible-disclosure-policy) details the procedure for disclosing security issues.
 
-This project is licensed under the MIT license. See the [LICENSE](LICENSE) file for more information.
+---
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="https://cdn.auth0.com/website/sdks/logos/auth0_light_mode.png"   width="150">
+    <source media="(prefers-color-scheme: dark)" srcset="https://cdn.auth0.com/website/sdks/logos//auth0_dark_mode.png" width="150">
+    <img alt="Auth0 Logo" src="https://cdn.auth0.com/website/sdks/logos/auth0_light_mode.png" width="150">
+  </picture>
+</p>
+<p align="center">Auth0 is an easy to implement, adaptable authentication and authorization platform. To learn more checkout <a href="https://auth0.com/why-auth0">Why Auth0?</a></p>
+<p align="center">
+This project is licensed under the MIT license. See the <a href="https://github.com/auth0/auth0-cli/blob/main/LICENSE"> LICENSE</a> file for more info.</p>
