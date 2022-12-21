@@ -353,7 +353,7 @@ func (cli *cli) customTemplateEditorPromptWithPreview(cmd *cobra.Command, body *
 	defer cancel()
 
 	onInfo := func() {
-		cli.renderer.Infof("%s once you close the editor, you'll be prompted to save your changes. To cancel, press CTRL+C.", ansi.Faint("Hint:"))
+		cli.renderer.Infof("%s Once you close the editor, you'll be prompted to save your changes. To cancel, press CTRL+C.", ansi.Faint("Hint:"))
 	}
 
 	onFileCreated := func(filename string) {
