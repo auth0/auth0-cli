@@ -66,7 +66,7 @@ func GenMarkdownTreeCustom(cmd *cobra.Command, dir string) error {
 	return GenerateCommandPage(cmd, f)
 }
 
-// GenerateHomepage creates custom markdown output.
+// GenerateHomepage creates custom markdown for the homepage.
 func GenerateHomepage(cmd *cobra.Command, w io.Writer) error {
 
 	homepageTemplate :=
@@ -117,7 +117,7 @@ There are two ways to authenticate:
 	return err
 }
 
-// GenerateParentPage creates custom markdown output.
+// GenerateParentPage creates custom markdown for the parent command pages.
 func GenerateParentPage(cmd *cobra.Command, w io.Writer) error {
 
 	parentPageTemplate :=
@@ -154,7 +154,7 @@ layout: default
 	return err
 }
 
-// GenerateCommandPage creates custom markdown output.
+// GenerateCommandPage creates custom markdown for the individual command pages.
 func GenerateCommandPage(cmd *cobra.Command, w io.Writer) error {
 
 	commandPageTemplate :=
