@@ -189,6 +189,8 @@ layout: default
 	var tpl bytes.Buffer
 	t := template.Must(template.New("commandPageTemplate").Parse(fmt.Sprintf(commandPageTemplate, associatedCommandsFragment)))
 
+	relatedCommands := cmd.Parent().Commands()
+
 	err := t.Execute(&tpl, struct {
 		Name               string
 		HasFlags           bool
@@ -208,7 +210,7 @@ layout: default
 		HasInheritedFlags:  cmd.HasInheritedFlags(),
 		InheritedFlags:     wrapWithBackticks(cmd.InheritedFlags().FlagUsages()),
 		CommandPath:        cmd.CommandPath(),
-		AssociatedCommands: cmd.Commands(),
+		AssociatedCommands: relatedCommands,
 		Examples:           wrapWithBackticks(cmd.Example),
 		UseLine:            wrapWithBackticks(cmd.UseLine()),
 	})
