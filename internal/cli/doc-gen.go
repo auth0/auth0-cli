@@ -35,16 +35,16 @@ func GenerateDocs() error {
 	addPersistentFlags(baseCmd, cli)
 	addSubCommands(baseCmd, cli)
 
-	return GenMarkdownTreeCustom(baseCmd, docsPath, handleLinks)
+	return GenMarkdownTreeCustom(baseCmd, docsPath)
 }
 
 // GenMarkdownTreeCustom is the the same as GenMarkdownTree, but with linkHandler.
-func GenMarkdownTreeCustom(cmd *cobra.Command, dir string, linkHandler func(string) string) error {
+func GenMarkdownTreeCustom(cmd *cobra.Command, dir string) error {
 	for _, c := range cmd.Commands() {
 		if !c.IsAvailableCommand() || c.IsAdditionalHelpTopicCommand() {
 			continue
 		}
-		if err := GenMarkdownTreeCustom(c, dir, linkHandler); err != nil {
+		if err := GenMarkdownTreeCustom(c, dir); err != nil {
 			return err
 		}
 	}
@@ -59,19 +59,19 @@ func GenMarkdownTreeCustom(cmd *cobra.Command, dir string, linkHandler func(stri
 
 	isHomepage := cmd.CommandPath() == "auth0"
 	if isHomepage {
-		return GenerateHomepage(cmd, f, linkHandler)
+		return GenerateHomepage(cmd, f)
 	}
 
 	isParentPage := !cmd.Runnable()
 	if isParentPage {
-		return GenerateParentPage(cmd, f, linkHandler)
+		return GenerateParentPage(cmd, f)
 	}
 
-	return GenerateCommandPage(cmd, f, linkHandler)
+	return GenerateCommandPage(cmd, f)
 }
 
 // GenerateHomepage creates custom markdown output.
-func GenerateHomepage(cmd *cobra.Command, w io.Writer, linkHandler func(string) string) error {
+func GenerateHomepage(cmd *cobra.Command, w io.Writer) error {
 
 	homepageTemplate :=
 		`---
@@ -122,7 +122,7 @@ There are two ways to authenticate:
 }
 
 // GenerateParentPage creates custom markdown output.
-func GenerateParentPage(cmd *cobra.Command, w io.Writer, linkHandler func(string) string) error {
+func GenerateParentPage(cmd *cobra.Command, w io.Writer) error {
 
 	parentPageTemplate :=
 		`---
@@ -159,7 +159,7 @@ layout: default
 }
 
 // GenerateCommandPage creates custom markdown output.
-func GenerateCommandPage(cmd *cobra.Command, w io.Writer, linkHandler func(string) string) error {
+func GenerateCommandPage(cmd *cobra.Command, w io.Writer) error {
 
 	commandPageTemplate :=
 		`---
@@ -219,16 +219,4 @@ layout: default
 
 func wrapWithBackticks(body string) string {
 	return fmt.Sprintf("```\n%s\n```", body)
-}
-
-func handleLinks(fileName string) string {
-	if isIndexFile(fileName) {
-		return "/auth0-cli/"
-	}
-
-	return fileName
-}
-
-func isIndexFile(fileName string) bool {
-	return strings.HasSuffix(fileName, "auth0.md")
 }
