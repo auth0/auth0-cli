@@ -13,10 +13,7 @@ import (
 )
 
 const (
-	docsPath = "./docs/"
-)
-
-const (
+	docsPath                   = "./docs/"
 	associatedCommandsFragment = `{{range .AssociatedCommands}}- [{{.CommandPath}}](auth0_{{.Name}}.md) - {{.Short}}
 {{end}}`
 )
