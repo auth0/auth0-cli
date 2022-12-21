@@ -22,9 +22,8 @@ const (
 // for all the commands under the ./docs folder.
 func GenerateDocs() error {
 	baseCmd := &cobra.Command{
-		Use:               "auth0",
-		Short:             rootShort,
-		DisableAutoGenTag: false,
+		Use:   "auth0",
+		Short: rootShort,
 	}
 	baseCmd.SetUsageTemplate(namespaceUsageTemplate())
 
