@@ -6,29 +6,19 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
+	"text/template"
 
 	"github.com/spf13/cobra"
 )
 
 const (
-	docsPath   = "./docs/"
-	homeLayout = `---
-layout: home
----
-`
-	defaultLayout = `---
-layout: default
----
-`
+	docsPath = "./docs/"
 )
 
 // GenerateDocs will generate the documentation
 // for all the commands under the ./docs folder.
 func GenerateDocs() error {
-
-	fmt.Println("GENERATING")
 	baseCmd := &cobra.Command{
 		Use:               "auth0",
 		Short:             rootShort,
@@ -40,17 +30,16 @@ func GenerateDocs() error {
 	addPersistentFlags(baseCmd, cli)
 	addSubCommands(baseCmd, cli)
 
-	return GenMarkdownTreeCustom(baseCmd, docsPath, prependToFiles, handleLinks)
+	return GenMarkdownTreeCustom(baseCmd, docsPath, handleLinks)
 }
 
-// GenMarkdownTreeCustom is the the same as GenMarkdownTree, but
-// with custom filePrepender and linkHandler.
-func GenMarkdownTreeCustom(cmd *cobra.Command, dir string, filePrepender, linkHandler func(string) string) error {
+// GenMarkdownTreeCustom is the the same as GenMarkdownTree, but with linkHandler.
+func GenMarkdownTreeCustom(cmd *cobra.Command, dir string, linkHandler func(string) string) error {
 	for _, c := range cmd.Commands() {
 		if !c.IsAvailableCommand() || c.IsAdditionalHelpTopicCommand() {
 			continue
 		}
-		if err := GenMarkdownTreeCustom(c, dir, filePrepender, linkHandler); err != nil {
+		if err := GenMarkdownTreeCustom(c, dir, linkHandler); err != nil {
 			return err
 		}
 	}
@@ -63,199 +52,156 @@ func GenMarkdownTreeCustom(cmd *cobra.Command, dir string, filePrepender, linkHa
 	}
 	defer f.Close()
 
-	if _, err := io.WriteString(f, filePrepender(filename)); err != nil {
-		return err
-	}
-
 	isHomepage := cmd.CommandPath() == "auth0"
-
 	if isHomepage {
-		if err := GenerateHomepage(cmd, f, linkHandler); err != nil {
-			return err
-		}
-		return nil
+		return GenerateHomepage(cmd, f, linkHandler)
 	}
 
 	isParentPage := !cmd.Runnable()
-
 	if isParentPage {
-		if err := GenerateParentPage(cmd, f, linkHandler); err != nil {
-			return err
-		}
-		return nil
+		return GenerateParentPage(cmd, f, linkHandler)
 	}
 
-	if err := GenerateCommandPage(cmd, f, linkHandler); err != nil {
-		return err
-	}
-
-	return nil
+	return GenerateCommandPage(cmd, f, linkHandler)
 }
 
 // GenerateHomepage creates custom markdown output.
 func GenerateHomepage(cmd *cobra.Command, w io.Writer, linkHandler func(string) string) error {
 
-	homepageContent := `
+	homepageTemplate :=
+		`---
+layout: home
+---
 ## Authenticating With Your Tenant
 
-foo bar this is how you authenticate
+This is how you authenticate with your tenant...
 
 ## Installation
 
 Installation instructions available on [project README](https://github.com/auth0/auth0-cli#installation)
+
+## Available Commands
+
+{{range .AvailableCommands}}* [{{.CommandPath}}](auth0_{{.Name}}.md) - {{.Short}}
+{{end}}
 `
+	var tpl bytes.Buffer
+	t := template.Must(template.New("homepageTemplate").Parse(homepageTemplate))
 
-	cmd.InitDefaultHelpCmd()
-	cmd.InitDefaultHelpFlag()
-
-	buf := new(bytes.Buffer)
-	name := cmd.CommandPath()
-
-	buf.WriteString(homepageContent)
-
-	if hasRelatedCommands(cmd) {
-		buf.WriteString("## Available Commands\n\n")
-
-		children := cmd.Commands()
-		sort.Sort(byName(children))
-
-		for _, child := range children {
-			if !child.IsAvailableCommand() || child.IsAdditionalHelpTopicCommand() {
-				continue
-			}
-			cname := name + " " + child.Name()
-			link := cname + ".md"
-			link = strings.ReplaceAll(link, " ", "_")
-			buf.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", cname, linkHandler(link), child.Short))
-		}
-		buf.WriteString("\n")
+	if err := t.Execute(&tpl, struct {
+		CommandPath       string
+		AvailableCommands []*cobra.Command
+	}{
+		CommandPath:       cmd.CommandPath(),
+		AvailableCommands: cmd.Commands(),
+	}); err != nil {
+		return err
 	}
-	_, err := buf.WriteTo(w)
+
+	_, err := tpl.WriteTo(w)
 	return err
 }
 
 // GenerateParentPage creates custom markdown output.
 func GenerateParentPage(cmd *cobra.Command, w io.Writer, linkHandler func(string) string) error {
 
-	cmd.InitDefaultHelpCmd()
-	cmd.InitDefaultHelpFlag()
+	parentPageTemplate :=
+		`---
+layout: default
+---
+# {{.Name}}
 
-	buf := new(bytes.Buffer)
-	name := cmd.CommandPath()
+{{.Description}}
 
-	buf.WriteString("# " + name + "\n\n")
-	buf.WriteString(cmd.Long + "\n\n")
+## Commands
 
-	if hasRelatedCommands(cmd) {
-		buf.WriteString("## Commands\n\n")
+{{range .AvailableCommands}}* [{{.CommandPath}}](auth0_{{.Name}}.md) - {{.Short}}
+{{end}}
+`
+	var tpl bytes.Buffer
+	t := template.Must(template.New("parentPageTemplate").Parse(parentPageTemplate))
 
-		children := cmd.Commands()
-		sort.Sort(byName(children))
-
-		for _, child := range children {
-			if !child.IsAvailableCommand() || child.IsAdditionalHelpTopicCommand() {
-				continue
-			}
-			cname := name + " " + child.Name()
-			link := cname + ".md"
-			link = strings.ReplaceAll(link, " ", "_")
-			buf.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", cname, linkHandler(link), child.Short))
-		}
-		buf.WriteString("\n")
+	err := t.Execute(&tpl, struct {
+		Name              string
+		Description       string
+		CommandPath       string
+		AvailableCommands []*cobra.Command
+	}{
+		Name:              cmd.Name(),
+		Description:       cmd.Long,
+		CommandPath:       cmd.CommandPath(),
+		AvailableCommands: cmd.Commands(),
+	})
+	if err != nil {
+		return err
 	}
-	_, err := buf.WriteTo(w)
+
+	_, err = tpl.WriteTo(w)
 	return err
 }
 
 // GenerateCommandPage creates custom markdown output.
 func GenerateCommandPage(cmd *cobra.Command, w io.Writer, linkHandler func(string) string) error {
 
-	cmd.InitDefaultHelpCmd()
-	cmd.InitDefaultHelpFlag()
+	commandPageTemplate :=
+		`---
+layout: default
+---
+# {{.Name}}
 
-	buf := new(bytes.Buffer)
-	name := cmd.CommandPath()
+{{.Description}}
 
-	buf.WriteString("# " + name + "\n\n")
-	buf.WriteString(cmd.Long + "\n\n")
+{{.UseLine}}
 
-	if cmd.Runnable() {
-		buf.WriteString(fmt.Sprintf("```\n%s\n```\n\n", cmd.UseLine()))
-	}
+## Flags
 
-	if len(cmd.Example) > 0 {
-		buf.WriteString("## Examples\n\n")
-		buf.WriteString(fmt.Sprintf("```\n%s\n```\n\n", cmd.Example))
-	}
+{{.Flags}}
 
-	if err := printOptions(buf, cmd, name); err != nil {
+## InheritedFlags
+
+{{.InheritedFlags}}
+
+## Examples
+
+{{.Examples}}
+
+## Related Commands
+
+{{range .RelatedCommands}}* [{{.CommandPath}}](auth0_{{.Name}}.md) - {{.Short}}
+{{end}}
+`
+	var tpl bytes.Buffer
+	t := template.Must(template.New("commandPageTemplate").Parse(commandPageTemplate))
+
+	err := t.Execute(&tpl, struct {
+		Name            string
+		Flags           string
+		InheritedFlags  string
+		Description     string
+		CommandPath     string
+		RelatedCommands []*cobra.Command
+		Examples        string
+		UseLine         string
+	}{
+		Name:            fmt.Sprintf("`%s`", cmd.CommandPath()),
+		Description:     cmd.Long,
+		Flags:           wrapWithBackticks(cmd.NonInheritedFlags().FlagUsages()),
+		InheritedFlags:  wrapWithBackticks(cmd.InheritedFlags().FlagUsages()),
+		CommandPath:     cmd.CommandPath(),
+		RelatedCommands: cmd.Commands(),
+		Examples:        wrapWithBackticks(cmd.Example),
+		UseLine:         wrapWithBackticks(cmd.UseLine()),
+	})
+	if err != nil {
 		return err
 	}
-	if hasRelatedCommands(cmd) {
-		buf.WriteString("## Related Commands\n\n")
 
-		children := cmd.Commands()
-		sort.Sort(byName(children))
-
-		for _, child := range children {
-			if !child.IsAvailableCommand() || child.IsAdditionalHelpTopicCommand() {
-				continue
-			}
-			cname := name + " " + child.Name()
-			link := cname + ".md"
-			link = strings.ReplaceAll(link, " ", "_")
-			buf.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", cname, linkHandler(link), child.Short))
-		}
-		buf.WriteString("\n")
-	}
-	_, err := buf.WriteTo(w)
+	_, err = tpl.WriteTo(w)
 	return err
 }
 
-func printOptions(buf *bytes.Buffer, cmd *cobra.Command, name string) error {
-	flags := cmd.NonInheritedFlags()
-	flags.SetOutput(buf)
-	if flags.HasAvailableFlags() {
-		buf.WriteString("## Flags\n\n```\n")
-		flags.PrintDefaults()
-		buf.WriteString("```\n\n")
-	}
-
-	parentFlags := cmd.InheritedFlags()
-	parentFlags.SetOutput(buf)
-	if parentFlags.HasAvailableFlags() {
-		buf.WriteString("## Inherited flags\n\n```\n")
-		parentFlags.PrintDefaults()
-		buf.WriteString("```\n\n")
-	}
-	return nil
-}
-
-type byName []*cobra.Command
-
-func (s byName) Len() int           { return len(s) }
-func (s byName) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-func (s byName) Less(i, j int) bool { return s[i].Name() < s[j].Name() }
-
-// Test to see if we have a reason to print See Also information in docs
-// Basically this is a test for a parent command or a subcommand which is
-// both not deprecated and not the autogenerated help command.
-func hasRelatedCommands(cmd *cobra.Command) bool {
-	for _, c := range cmd.Commands() {
-		if !c.IsAvailableCommand() || c.IsAdditionalHelpTopicCommand() {
-			continue
-		}
-		return true
-	}
-	return false
-}
-
-func prependToFiles(fileName string) string {
-	if isIndexFile(fileName) {
-		return homeLayout
-	}
-
-	return defaultLayout
+func wrapWithBackticks(body string) string {
+	return fmt.Sprintf("```\n%s\n```", body)
 }
 
 func handleLinks(fileName string) string {
