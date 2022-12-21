@@ -142,7 +142,7 @@ layout: default
 		CommandPath        string
 		AssociatedCommands []*cobra.Command
 	}{
-		Name:               cmd.Name(),
+		Name:               fmt.Sprintf("`%s`", cmd.CommandPath()),
 		Description:        cmd.Long,
 		CommandPath:        cmd.CommandPath(),
 		AssociatedCommands: cmd.Commands(),
@@ -168,13 +168,15 @@ layout: default
 
 {{.UseLine}}
 
+{{if .HasFlags}}
 ## Flags
 
-{{.Flags}}
+{{.Flags}}{{end}}
 
+{{if .HasInheritedFlags}}
 ## InheritedFlags
 
-{{.InheritedFlags}}
+{{.InheritedFlags}}{{end}}
 
 ## Examples
 
@@ -189,7 +191,9 @@ layout: default
 
 	err := t.Execute(&tpl, struct {
 		Name               string
+		HasFlags           bool
 		Flags              string
+		HasInheritedFlags  bool
 		InheritedFlags     string
 		Description        string
 		CommandPath        string
@@ -199,7 +203,9 @@ layout: default
 	}{
 		Name:               fmt.Sprintf("`%s`", cmd.CommandPath()),
 		Description:        cmd.Long,
+		HasFlags:           cmd.HasLocalFlags(),
 		Flags:              wrapWithBackticks(cmd.NonInheritedFlags().FlagUsages()),
+		HasInheritedFlags:  cmd.HasInheritedFlags(),
 		InheritedFlags:     wrapWithBackticks(cmd.InheritedFlags().FlagUsages()),
 		CommandPath:        cmd.CommandPath(),
 		AssociatedCommands: cmd.Commands(),
