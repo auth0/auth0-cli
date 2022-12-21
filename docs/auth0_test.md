@@ -26,7 +26,7 @@ Try your Universal Login box or get a token.
 
 ### SEE ALSO
 
-* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Build, manage and test your Auth0 integrations from the command line.
 * [auth0 test login](auth0_test_login.md)	 - Try out your Universal Login box
 * [auth0 test token](auth0_test_token.md)	 - Fetch a token for the given application and API
 
