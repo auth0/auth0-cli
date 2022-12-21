@@ -73,12 +73,12 @@ func (r *Renderer) RuleCreate(rule *management.Rule) {
 	r.Newline()
 
 	// TODO(cyx): possibly guard this with a --no-hint flag.
-	r.Infof("%s To edit this rule, do 'auth0 rules update %s'",
+	r.Infof("%s To edit this rule, run `auth0 rules update %s`",
 		ansi.Faint("Hint:"),
 		rule.GetID(),
 	)
 
-	r.Infof("%s You might wanna try 'auth0 test login'",
+	r.Infof("%s Consider running `auth0 test login` to emulate the login flow",
 		ansi.Faint("Hint:"),
 	)
 }
