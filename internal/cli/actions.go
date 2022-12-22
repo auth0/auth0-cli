@@ -46,14 +46,14 @@ var (
 		Name:      "Dependency",
 		LongForm:  "dependency",
 		ShortForm: "d",
-		Help:      "Third party npm module, and it version, that the action depends on.",
+		Help:      "Third party npm module, and its version, that the action depends on.",
 	}
 
 	actionSecret = Flag{
 		Name:      "Secret",
 		LongForm:  "secret",
 		ShortForm: "s",
-		Help:      "Secret to be used in the action.",
+		Help:      "Secrets to be used in the action.",
 	}
 
 	actionTemplates = map[string]string{
@@ -70,7 +70,9 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "actions",
 		Short: "Manage resources for actions",
-		Long:  "Manage resources for actions.",
+		Long: "Actions are secure, tenant-specific, versioned functions written in Node.js that execute " +
+			"at certain points within the Auth0 platform. Actions are used to customize and extend Auth0's " +
+			"capabilities with custom logic.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -91,10 +93,10 @@ func listActionsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your actions",
-		Long: `List your existing actions. To create one try:
-auth0 actions create`,
-		Example: `auth0 actions list
-auth0 actions ls`,
+		Long:    "List your existing actions. To create one, try running: `auth0 actions create`.",
+		Example: `  auth0 actions list
+  auth0 actions ls
+  auth0 actions ls --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ActionList
 
@@ -125,9 +127,10 @@ func showActionCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an action",
-		Long:  "Show an action.",
-		Example: `auth0 actions show 
-auth0 actions show <id>`,
+		Long:  "Display the name, type, status, code and other information about an action.",
+		Example: `  auth0 actions show
+  auth0 actions show <id>
+  auth0 actions show <id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)
@@ -171,12 +174,14 @@ func createActionCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new action",
-		Long:  "Create a new action.",
-		Example: `auth0 actions create 
-auth0 actions create --name myaction
-auth0 actions create -n myaction --trigger post-login
-auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -d "uuid=8.0.0"
-auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=value" -s "SECRET=value`,
+		Long: "Create a new action.\n\n" +
+			"To create an action interactively, use `auth0 actions create` with no arguments.\n\n" +
+			"To create an action non-interactively, supply the action name, trigger, secrets and dependencies.",
+		Example: `  auth0 actions create
+  auth0 actions create --name myaction
+  auth0 actions create -n myaction --trigger post-login
+  auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -d "uuid=8.0.0"
+  auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=value" -s "SECRET=value`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := actionName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -253,12 +258,15 @@ func updateActionCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an action",
-		Long:  "Update an action.",
-		Example: `auth0 actions update <id> 
-auth0 actions update <id> --name myaction
-auth0 actions update <id> -n myaction --trigger post-login
-auth0 actions update <id> -n myaction -t post-login -d "lodash=4.0.0" -d "uuid=8.0.0"
-auth0 actions update <id> -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=value" -s "SECRET=value`,
+		Long: "Update an action.\n\n" +
+			"To update an action interactively, use `auth0 actions update` with no arguments.\n\n" +
+			"To update an action non-interactively, supply the action id, name, trigger, secrets and " +
+			"dependencies through the flags.",
+		Example: `  auth0 actions update <id> 
+  auth0 actions update <id> --name myaction
+  auth0 actions update <id> -n myaction --trigger post-login
+  auth0 actions update <id> -n myaction -t post-login -d "lodash=4.0.0" -d "uuid=8.0.0"
+  auth0 actions update <id> -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=value" -s "SECRET=value`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -382,9 +390,12 @@ func deleteActionCmd(cli *cli) *cobra.Command {
 		Use:   "delete",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete an action",
-		Long:  "Delete an action.",
-		Example: `auth0 actions delete 
-auth0 actions delete <id>`,
+		Long: "Delete an action.\n\n" +
+			"To delete an action interactively, use `auth0 actions delete` with no arguments.\n\n" +
+			"To delete an action non-interactively, supply the action id and the `--force` flag to skip confirmation.",
+		Example: `  auth0 actions delete
+  auth0 actions delete <id>
+  auth0 actions delete <id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)
@@ -427,9 +438,14 @@ func deployActionCmd(cli *cli) *cobra.Command {
 		Use:   "deploy",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Deploy an action",
-		Long:  "Deploy an action.",
-		Example: `auth0 actions deploy 
-auth0 actions deploy <id>`,
+		Long: "Before an action can be bound to a flow, the action must be deployed.\n\n" +
+			"The selected action will be deployed and added to the collection of available actions for flows. " +
+			"Additionally, a new draft version of the deployed action will be created for future editing. " +
+			"Because secrets and dependencies are tied to versions, any saved secrets or dependencies will " +
+			"be available to the new draft.",
+		Example: `  auth0 actions deploy
+  auth0 actions deploy <id>
+  auth0 actions deploy <id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)
@@ -471,11 +487,12 @@ func openActionCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "open",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Open action details page in the Auth0 Dashboard",
-		Long:    "Open action details page in the Auth0 Dashboard.",
-		Example: "auth0 actions open <id>",
+		Use:   "open",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Open the details page of an action",
+		Long:  "Open an action's details page in the Auth0 Dashboard.",
+		Example: `  auth0 actions open
+  auth0 actions open <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)

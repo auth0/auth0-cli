@@ -56,10 +56,10 @@ func listRolePermissionsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "List permissions defined within a role",
-		Long: `List existing permissions defined in a role. To add a permission try:
-auth0 roles permissions add <role-id>`,
-		Example: `auth0 roles permissions list <role-id>
-auth0 roles permissions ls`,
+		Long:    "List existing permissions defined in a role. To add a permission try: `auth0 roles permissions add`.",
+		Example: `  auth0 roles permissions list
+  auth0 roles permissions list <role-id>
+  auth0 roles permissions ls --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
@@ -101,12 +101,10 @@ func addRolePermissionsCmd(cli *cli) *cobra.Command {
 		Use:   "add",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Add a permission to a role",
-		Long: `Add an existing permission defined in one of your APIs.
-To add a permission try:
-
-    auth0 roles permissions add <role-id> -p <permission-name>`,
-		Example: `auth0 roles permissions add <role-id> -p <permission-name>
-auth0 roles permissions add`,
+		Long: "Add an existing permission defined in one of your APIs. To add a permission try running:\n\n" +
+			"`auth0 roles permissions add <role-id> -p <permission-name>`",
+		Example: ` auth0 roles permissions add
+  auth0 roles permissions add <role-id> -p <permission-name>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
@@ -167,12 +165,10 @@ func removeRolePermissionsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"rm"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Remove a permission from a role",
-		Long: `Remove an existing permission defined in one of your APIs.
-To remove a permission try:
-
-    auth0 roles permissions remove <role-id> -p <permission-name>`,
-		Example: `auth0 roles permissions remove <role-id> -p <permission-name>
-auth0 roles permissions rm`,
+		Long: "Remove an existing permission defined in one of your APIs. To remove a permission, try running:\n\n" +
+			"`auth0 roles permissions remove <role-id> -p <permission-name>`",
+		Example: `  auth0 roles permissions rm
+  auth0 roles permissions remove <role-id> -p <permission-name>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)

@@ -39,7 +39,8 @@ func rolesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "roles",
 		Short: "Manage resources for roles",
-		Long:  "Manage resources for roles.",
+		Long: "Manage resources for roles. To learn more about roles and their behavior, read " +
+			"[Role-based Access Control](https://auth0.com/docs/manage-users/access-control/rbac).",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -63,11 +64,11 @@ func listRolesCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your roles",
-		Long: `List your existing roles. To create one try:
-auth0 roles create`,
-		Example: `auth0 roles list
-auth0 roles ls
-auth0 roles ls -n 100`,
+		Long:    "List your existing roles. To create one, try running: `auth0 roles create`.",
+		Example: `  auth0 roles list
+  auth0 roles ls
+  auth0 roles ls -n 100
+  auth0 roles ls -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			list, err := getWithPagination(
 				cmd.Context(),
@@ -116,9 +117,10 @@ func showRoleCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show a role",
-		Long:  "Show a role.",
-		Example: `auth0 roles show
-auth0 roles show <id>`,
+		Long:  "Display information about a role.",
+		Example: `  auth0 roles show
+  auth0 roles show <id>
+  auth0 roles show <id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
@@ -159,10 +161,12 @@ func createRoleCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new role",
-		Long:  "Create a new role.",
-		Example: `auth0 roles create
-auth0 roles create --name myrole
-auth0 roles create -n myrole --description "awesome role"`,
+		Long: "Create a new role.\n\n" +
+			"To create a role interactively, use `auth0 roles create` with no arguments.\n\n" +
+			"To create a role non-interactively, supply the role name and description through the flags.",
+		Example: `  auth0 roles create
+  auth0 roles create --name myrole
+  auth0 roles create -n myrole --description "awesome role"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Prompt for role name
 			if err := roleName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -212,10 +216,12 @@ func updateRoleCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a role",
-		Long:  "Update a role.",
-		Example: `auth0 roles update
-auth0 roles update <id> --name myrole
-auth0 roles update <id> -n myrole --description "awesome role"`,
+		Long: "Update a role.\n\n" +
+			"To update a role interactively, use `auth0 roles update` with no arguments.\n\n" +
+			"To update a role non-interactively, supply the role id, name and description through the flags.",
+		Example: `  auth0 roles update
+  auth0 roles update <id> --name myrole
+  auth0 roles update <id> -n myrole --description "awesome role"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
@@ -279,9 +285,12 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
 		Use:   "delete",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete a role",
-		Long:  "Delete a role.",
-		Example: `auth0 roles delete
-auth0 roles delete <id>`,
+		Long: "Delete a role.\n\n" +
+			"To delete a role interactively, use `auth0 roles delete`.\n\n" +
+			"To delete a role non-interactively, supply the role id and the `--force` flag to skip confirmation.",
+		Example: `  auth0 roles delete
+  auth0 roles delete <id>
+  auth0 roles delete <id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)

@@ -129,9 +129,11 @@ var (
 
 func appsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "apps",
-		Short:   "Manage resources for applications",
-		Long:    "Manage resources for applications.",
+		Use:   "apps",
+		Short: "Manage resources for applications",
+		Long: "The term application or app in Auth0 does not imply any particular implementation characteristics. " +
+			"For example, it could be a native app that executes on a mobile device, a single-page application that " +
+			"executes on a browser, or a regular web application that executes on a server.",
 		Aliases: []string{"clients"},
 	}
 
@@ -154,11 +156,13 @@ func useAppCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "use",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Choose a default application for the Auth0 CLI",
-		Long:    "Specify your preferred application for interaction with the Auth0 CLI.",
-		Example: "auth0 apps use <client-id>",
+		Use:   "use",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Choose a default application for the Auth0 CLI",
+		Long:  "Specify your preferred application for interaction with the Auth0 CLI.",
+		Example: `  auth0 apps use
+  auth0 apps use --none
+  auth0 apps use <client-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.None {
 				inputs.ID = ""
@@ -204,11 +208,11 @@ func listAppsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your applications",
-		Long: `List your existing applications. To create one try:
-auth0 apps create`,
-		Example: `auth0 apps list
-auth0 apps ls
-auth0 apps ls -n 100`,
+		Long:    "List your existing applications. To create one, try running: `auth0 apps create`.",
+		Example: `  auth0 apps list
+  auth0 apps ls
+  auth0 apps ls --json
+  auth0 apps ls -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			list, err := getWithPagination(
 				cmd.Context(),
@@ -254,9 +258,10 @@ func showAppCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an application",
-		Long:  "Show an application.",
-		Example: `auth0 apps show 
-auth0 apps show <id>`,
+		Long:  "Display the name, description, type, and other information about an application.",
+		Example: `  auth0 apps show
+  auth0 apps show --json
+  auth0 apps show <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
@@ -298,9 +303,12 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 		Use:   "delete",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete an application",
-		Long:  "Delete an application.",
-		Example: `auth0 apps delete 
-auth0 apps delete <id>`,
+		Long: "Delete an application.\n\n" +
+			"To delete an application interactively, use `auth0 apps delete` with no arguments.\n\n" +
+			"To delete an application non-interactively, supply the application id and the `--force` " +
+			"flag to skip confirmation.",
+		Example: `  auth0 apps delete 
+  auth0 apps delete <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
@@ -354,11 +362,14 @@ func createAppCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new application",
-		Long:  "Create a new application.",
-		Example: `auth0 apps create 
-auth0 apps create --name myapp 
-auth0 apps create -n myapp --type [native|spa|regular|m2m]
-auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <description>`,
+		Long: "Create a new application.\n\n" +
+			"To create an application interactively, use `auth0 apps create` with no arguments.\n\n" +
+			"To create an action non-interactively, supply at least the application name, and type.",
+		Example: `  auth0 apps create
+  auth0 apps create --name myapp
+  auth0 apps create --name myapp --json
+  auth0 apps create -n myapp --type [native|spa|regular|m2m]
+  auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <description>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Prompt for app name
 			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -503,10 +514,14 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an application",
-		Long:  "Update an application.",
-		Example: `auth0 apps update <id> 
-auth0 apps update <id> --name myapp 
-auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
+		Long: "Update an application.\n\n" +
+			"To update an application interactively, use `auth0 apps update` with no arguments.\n\n" +
+			"To update an action non-interactively, supply the application id, name, type and other information you " +
+			"might want to change through the available flags.",
+		Example: `  auth0 apps update
+  auth0 apps update <id> --json
+  auth0 apps update <id> --name myapp
+  auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Client
 
@@ -695,11 +710,12 @@ func openAppCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "open",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Open application settings page in the Auth0 Dashboard",
-		Long:    "Open application settings page in the Auth0 Dashboard.",
-		Example: "auth0 apps open <id>",
+		Use:   "open",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Open the settings page of an application",
+		Long:  "Open an application's settings page in the Auth0 Dashboard.",
+		Example: `  auth0 apps open
+  auth0 apps open <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)

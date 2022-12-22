@@ -58,9 +58,11 @@ var (
 
 func apisCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "apis",
-		Short:   "Manage resources for APIs",
-		Long:    "Manage resources for APIs.",
+		Use:   "apis",
+		Short: "Manage resources for APIs",
+		Long: "An API is an entity that represents an external resource, capable of " +
+			"accepting and responding to protected resource requests made by applications. " +
+			"In the OAuth2 specification, an API maps to the Resource Server.",
 		Aliases: []string{"resource-servers"},
 	}
 
@@ -80,7 +82,7 @@ func scopesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "scopes",
 		Short: "Manage resources for API scopes",
-		Long:  "Manage resources for API scopes.",
+		Long:  "API Scopes define the specific actions applications can be allowed to do on a user's behalf.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -99,11 +101,11 @@ func listApisCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your APIs",
-		Long: `List your existing APIs. To create one try:
-auth0 apis create`,
-		Example: `auth0 apis list
-auth0 apis ls
-auth0 apis ls -n 100`,
+		Long:    "List your existing APIs. To create one, try running: `auth0 apis create`.",
+		Example: `  auth0 apis list
+  auth0 apis ls
+  auth0 actions ls --json
+  auth0 apis ls -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			list, err := getWithPagination(
 				cmd.Context(),
@@ -152,9 +154,10 @@ func showApiCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an API",
-		Long:  "Show an API.",
-		Example: `auth0 apis show 
-auth0 apis show <id|audience>`,
+		Long:  "Display the name, scopes, token lifetime, and other information about an API.",
+		Example: `  auth0 apis show
+  auth0 apis show <id|audience>
+  auth0 apis show <id|audience> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
@@ -198,12 +201,15 @@ func createApiCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new API",
-		Long:  "Create a new API.",
-		Example: `auth0 apis create 
-auth0 apis create --name myapi
-auth0 apis create -n myapi --identifier http://my-api
-auth0 apis create -n myapi --token-expiration 6100
-auth0 apis create -n myapi -e 6100 --offline-access=true`,
+		Long: "Create a new API.\n\n" +
+			"To create an API interactively, use `auth0 apis create` with no arguments.\n\n" +
+			"To create an API non-interactively, supply the name, identifier, scopes, " +
+			"token lifetime and whether to allow offline access.",
+		Example: `  auth0 apis create 
+  auth0 apis create --name myapi
+  auth0 apis create -n myapi --identifier http://my-api
+  auth0 apis create -n myapi --token-expiration 6100
+  auth0 apis create -n myapi -e 6100 --offline-access=true`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := apiName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -279,12 +285,15 @@ func updateApiCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an API",
-		Long:  "Update an API.",
-		Example: `auth0 apis update 
-auth0 apis update <id|audience> 
-auth0 apis update <id|audience> --name myapi
-auth0 apis update -n myapi --token-expiration 6100
-auth0 apis update -n myapi -e 6100 --offline-access=true`,
+		Long: "Update an API.\n\n" +
+			"To update an API interactively, use `auth0 apis update` with no arguments.\n\n" +
+			"To update an API non-interactively, supply the name, identifier, scopes, " +
+			"token lifetime and whether to allow offline access.",
+		Example: `  auth0 apis update 
+  auth0 apis update <id|audience>
+  auth0 apis update <id|audience> --name myapi
+  auth0 apis update -n myapi --token-expiration 6100
+  auth0 apis update -n myapi -e 6100 --offline-access=true`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.ResourceServer
 
@@ -378,9 +387,12 @@ func deleteApiCmd(cli *cli) *cobra.Command {
 		Use:   "delete",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete an API",
-		Long:  "Delete an API.",
-		Example: `auth0 apis delete 
-auth0 apis delete <id|audience>`,
+		Long: "Delete an API.\n\n" +
+			"To delete an API interactively, use `auth0 apis delete` with no arguments.\n\n" +
+			"To delete an API non-interactively, supply the API id and the `--force` flag to skip confirmation.",
+		Example: `  auth0 apis delete 
+  auth0 apis delete <id|audience>
+  auth0 apis delete <id|audience> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
@@ -422,10 +434,10 @@ func openApiCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "open",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Open API settings page in the Auth0 Dashboard",
-		Long:  "Open API settings page in the Auth0 Dashboard.",
-		Example: `auth0 apis open
-auth0 apis open <id|audience>`,
+		Short: "Open the details page of an API",
+		Long:  "Open an APIs' details page in the Auth0 Dashboard.",
+		Example: `  auth0 apis open
+  auth0 apis open <id|audience>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
@@ -473,9 +485,10 @@ func listScopesCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "List the scopes of an API",
-		Long:    "List the scopes of an API.",
-		Example: `auth0 apis scopes list 
-auth0 apis scopes ls <id|audience>`,
+		Long:    "List the scopes of an API. To add scopes, try running: `auth0 apis update <id|audience> -s <scopes>`.",
+		Example: `  auth0 apis scopes list
+  auth0 apis scopes ls <id|audience>
+  auth0 apis scopes ls <id|audience> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)

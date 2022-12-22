@@ -663,7 +663,7 @@ auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --up
 				return err
 			}
 
-			cli.renderer.Heading("Starting user import job...")
+			cli.renderer.Heading("starting user import job...")
 			fmt.Println(jsonstr)
 
 			if inputs.SendCompletionEmail {

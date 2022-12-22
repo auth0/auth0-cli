@@ -92,7 +92,12 @@ func suspiciousIPThrottlingCmd(cli *cli) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Aliases: []string{"sit"},
 		Short:   "Manage suspicious ip throttling settings",
-		Long:    "Manage suspicious ip throttling settings.",
+		Long: "Suspicious IP throttling blocks traffic from any IP address that rapidly attempts too many " +
+			"logins or signups. This helps protect your applications from high-velocity attacks that target " +
+			"multiple accounts. Suspicious IP throttling is enabled by default when you create your Auth0 " +
+			"tenant.\n\nWhen Auth0 detects a high number of signup attempts or failed login attempts from an " +
+			"IP address, it suspends further attempts from that IP address. You can customize how suspicious " +
+			"IP throttling works for your tenant.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -105,12 +110,13 @@ func suspiciousIPThrottlingCmd(cli *cli) *cobra.Command {
 
 func showSuspiciousIPThrottlingCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "show",
-		Args:    cobra.NoArgs,
-		Short:   "Show suspicious ip throttling settings",
-		Long:    "Show suspicious ip throttling settings.",
-		Example: `auth0 protection suspicious-ip-throttling show`,
-		RunE:    showSuspiciousIPThrottlingCmdRun(cli),
+		Use:   "show",
+		Args:  cobra.NoArgs,
+		Short: "Show suspicious ip throttling settings",
+		Long:  "Display the current suspicious ip throttling settings.",
+		Example: `  auth0 protection suspicious-ip-throttling show
+  auth0 ap sit show --json`,
+		RunE: showSuspiciousIPThrottlingCmdRun(cli),
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
@@ -122,12 +128,13 @@ func updateSuspiciousIPThrottlingCmd(cli *cli) *cobra.Command {
 	var inputs suspiciousIPThrottlingInputs
 
 	cmd := &cobra.Command{
-		Use:     "update",
-		Args:    cobra.NoArgs,
-		Short:   "Update suspicious ip throttling settings",
-		Long:    "Update suspicious ip throttling settings.",
-		Example: `auth0 protection suspicious-ip-throttling update`,
-		RunE:    updateSuspiciousIPThrottlingCmdRun(cli, &inputs),
+		Use:   "update",
+		Args:  cobra.NoArgs,
+		Short: "Update suspicious ip throttling settings",
+		Long:  "Update the suspicious ip throttling settings.",
+		Example: `  auth0 protection suspicious-ip-throttling update
+  auth0 ap sit update`,
+		RunE: updateSuspiciousIPThrottlingCmdRun(cli, &inputs),
 	}
 
 	sitFlags.Enabled.RegisterBoolU(cmd, &inputs.Enabled, false)

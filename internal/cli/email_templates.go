@@ -118,9 +118,9 @@ func showEmailTemplateCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an email template",
-		Long:  "Show an email template.",
-		Example: `auth0 email templates show <template>
-auth0 email templates show welcome`,
+		Long:  "Display information about an email template.",
+		Example: `  auth0 email templates show <template>
+  auth0 email templates show welcome`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := emailTemplateTemplate.Pick(cmd, &inputs.Template, cli.emailTemplatePickerOptions)
@@ -166,9 +166,13 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an email template",
-		Long:  "Update an email template.",
-		Example: `auth0 email templates update <template>
-auth0 email templates update welcome`,
+		Long: "Update an email template.\n\n" +
+			"To update an email template interactively, use `auth0 email templates update` with no arguments.\n\n" +
+			"To update an email template non-interactively, supply the template name and other information " +
+			"through the flags.",
+		Example: `  auth0 email templates update <template>
+  auth0 email templates update <template> --json
+  auth0 email templates update welcome`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.Template = args[0]

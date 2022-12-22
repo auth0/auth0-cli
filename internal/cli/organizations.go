@@ -84,7 +84,8 @@ func organizationsCmd(cli *cli) *cobra.Command {
 		Use:     "orgs",
 		Aliases: []string{"organizations"},
 		Short:   "Manage resources for organizations",
-		Long:    "Manage resources for organizations.",
+		Long: "The Auth0 Organizations feature best supports business-to-business (B2B) implementations " +
+			"that have applications that end-users access.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -110,11 +111,11 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your organizations",
-		Long: `List your existing organizations. To create one try:
-auth0 orgs create`,
-		Example: `auth0 orgs list
-auth0 orgs ls
-auth0 orgs ls -n 100`,
+		Long:    "List your existing organizations. To create one, try running: `auth0 orgs create`.",
+		Example: `  auth0 orgs list
+  auth0 orgs ls
+  auth0 orgs ls --json
+  auth0 orgs ls -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			list, err := getWithPagination(
 				cmd.Context(),
@@ -163,9 +164,10 @@ func showOrganizationCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an organization",
-		Long:  "Show an organization.",
-		Example: `auth0 orgs show
-auth0 orgs show <id>`,
+		Long:  "Display information about an organization.",
+		Example: `  auth0 orgs show
+  auth0 orgs show <id>
+  auth0 orgs show <id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
@@ -210,12 +212,14 @@ func createOrganizationCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new organization",
-		Long:  "Create a new organization.",
-		Example: `auth0 orgs create
-auth0 orgs create --name myorganization
-auth0 orgs create -n myorganization --display "My Organization"
-auth0 orgs create -n myorganization -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
-auth0 orgs create -n myorganization -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
+		Long: "Create a new organization.\n\n" +
+			"To create an organization interactively, use `auth0 orgs create` with no arguments.\n\n" +
+			"To create an organization non-interactively, supply the name and other information through the flags.",
+		Example: `  auth0 orgs create
+  auth0 orgs create --name myorganization
+  auth0 orgs create -n myorganization --display "My Organization"
+  auth0 orgs create -n myorganization -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
+  auth0 orgs create -n myorganization -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := organizationName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -295,11 +299,14 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an organization",
-		Long:  "Update an organization.",
-		Example: `auth0 orgs update <id>
-auth0 orgs update <id> --display "My Organization"
-auth0 orgs update <id> -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
-auth0 orgs update <id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
+		Long: "Update an organization.\n\n" +
+			"To update an organization interactively, use `auth0 orgs update` with no arguments.\n\n" +
+			"To update an organization non-interactively, supply the organization id and " +
+			"other information through the flags.",
+		Example: `  auth0 orgs update <id>
+  auth0 orgs update <id> --display "My Organization"
+  auth0 orgs update <id> -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
+  auth0 orgs update <id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -408,9 +415,12 @@ func deleteOrganizationCmd(cli *cli) *cobra.Command {
 		Use:   "delete",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete an organization",
-		Long:  "Delete an organization.",
-		Example: `auth0 orgs delete
-auth0 orgs delete <id>`,
+		Long: "Delete an organization.\n\n" +
+			"To delete an organization interactively, use `auth0 orgs delete` with no arguments.\n\n" +
+			"To delete an organization non-interactively, supply the organization id and the `--force` " +
+			"flag to skip confirmation.",
+		Example: `  auth0 orgs delete
+  auth0 orgs delete <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
@@ -450,11 +460,12 @@ func openOrganizationCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "open",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Open organization settings page in the Auth0 Dashboard",
-		Long:    "Open organization settings page in the Auth0 Dashboard.",
-		Example: "auth0 orgs open <id>",
+		Use:   "open",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Open the settings page of an organization",
+		Long:  "Open an organization's settings page in the Auth0 Dashboard.",
+		Example: `  auth0 orgs open
+  auth0 orgs open <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
@@ -497,9 +508,10 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "List members of an organization",
-		Long:    "List members of an organization.",
-		Example: `auth0 orgs members list
-auth0 orgs members ls <id>`,
+		Long:    "List the existing members of an organization.",
+		Example: `  auth0 orgs members list
+  auth0 orgs members ls <id>
+  auth0 orgs members ls <id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
@@ -531,7 +543,8 @@ func rolesOrganizationCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "roles",
 		Short: "Manage roles of an organization",
-		Long:  "Manage roles of an organization.",
+		Long: "Manage roles of an organization. To learn more about roles and their behavior, read " +
+			"[Role-based Access Control](https://auth0.com/docs/manage-users/access-control/rbac).",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -553,8 +566,9 @@ func listRolesOrganizationCmd(cli *cli) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "List roles of an organization",
 		Long:    "List roles assigned to members of an organization.",
-		Example: `auth0 orgs roles list
-auth0 orgs roles ls <id>`,
+		Example: `  auth0 orgs roles list
+  auth0 orgs roles ls <id>
+  auth0 orgs roles ls <id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions)
@@ -590,7 +604,8 @@ func membersRolesOrganizationCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "members",
 		Short: "Manage roles of organization members",
-		Long:  "Manage roles assigned to members of an organization.",
+		Long: "Each organization member can be assigned one or more roles, " +
+			"which are applied when users log in through the organization.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -611,8 +626,8 @@ func listMembersRolesOrganizationCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "List organization members for a role",
 		Long:  "List organization members that have a given role assigned to them.",
-		Example: `auth0 orgs roles members list
-auth0 orgs roles members list <org id> --role-id role`,
+		Example: `  auth0 orgs roles members list
+  auth0 orgs roles members list <org id> --role-id role`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions)
