@@ -1,32 +1,23 @@
 ---
 layout: default
 ---
-## auth0 universal-login templates show
+# auth0 universal-login templates show
 
-Display the custom template for Universal Login
-
-### Synopsis
-
-Display the custom template for Universal Login.
+Display the custom template for the Universal Login experience.
 
 ```
 auth0 universal-login templates show [flags]
 ```
 
-### Examples
+
+## Flags
 
 ```
-auth0 universal-login templates show
-```
-
-### Options
-
-```
-  -h, --help   help for show
       --json   Output in json format.
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -35,7 +26,17 @@ auth0 universal-login templates show
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 universal-login templates](auth0_universal-login_templates.md)	 - Manage custom Universal Login templates
+```
+  auth0 universal-login templates show
+auth0 universal-login templates show --json
+```
+
+
+## Related Commands
+
+- [auth0 universal-login templates show](auth0_universal-login_templates_show.md) - Display the custom template for Universal Login
+- [auth0 universal-login templates update](auth0_universal-login_templates_update.md) - Update the custom template for Universal Login
+
 

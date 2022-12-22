@@ -1,33 +1,23 @@
 ---
 layout: default
 ---
-## auth0 domains show
+# auth0 domains show
 
-Show a custom domain
-
-### Synopsis
-
-Show a custom domain.
+Display information about a custom domain.
 
 ```
 auth0 domains show [flags]
 ```
 
-### Examples
+
+## Flags
 
 ```
-auth0 domains show 
-auth0 domains show <id>
-```
-
-### Options
-
-```
-  -h, --help   help for show
       --json   Output in json format.
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -36,7 +26,22 @@ auth0 domains show <id>
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 domains](auth0_domains.md)	 - Manage custom domains
+```
+  auth0 domains show 
+  auth0 domains show <id>
+  auth0 domains show <id> --json
+```
+
+
+## Related Commands
+
+- [auth0 domains create](auth0_domains_create.md) - Create a custom domain
+- [auth0 domains delete](auth0_domains_delete.md) - Delete a custom domain
+- [auth0 domains list](auth0_domains_list.md) - List your custom domains
+- [auth0 domains show](auth0_domains_show.md) - Show a custom domain
+- [auth0 domains update](auth0_domains_update.md) - Update a custom domain
+- [auth0 domains verify](auth0_domains_verify.md) - Verify a custom domain
+
 

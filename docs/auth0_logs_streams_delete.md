@@ -1,33 +1,27 @@
 ---
 layout: default
 ---
-## auth0 logs streams delete
-
-Delete a log stream
-
-### Synopsis
+# auth0 logs streams delete
 
 Delete a log stream.
+
+To delete interactively, use `auth0 logs streams delete` with no arguments.
+
+To delete non-interactively, supply the log stream id and the `--force` flag to skip confirmation.
 
 ```
 auth0 logs streams delete [flags]
 ```
 
-### Examples
 
-```
-auth0 logs streams delete
-auth0 logs streams delete <id>
-```
-
-### Options
+## Flags
 
 ```
       --force   Skip confirmation.
-  -h, --help    help for delete
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -36,7 +30,22 @@ auth0 logs streams delete <id>
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 logs streams](auth0_logs_streams.md)	 - Manage resources for log streams
+```
+  auth0 logs streams delete
+  auth0 logs streams delete <id>
+  auth0 logs streams delete <id> --force
+```
+
+
+## Related Commands
+
+- [auth0 logs streams create](auth0_logs_streams_create.md) - Create a new log stream
+- [auth0 logs streams delete](auth0_logs_streams_delete.md) - Delete a log stream
+- [auth0 logs streams list](auth0_logs_streams_list.md) - List all log streams
+- [auth0 logs streams open](auth0_logs_streams_open.md) - Open the settings page of a log stream
+- [auth0 logs streams show](auth0_logs_streams_show.md) - Show a log stream by Id
+- [auth0 logs streams update](auth0_logs_streams_update.md) - Update a log stream
+
 

@@ -1,11 +1,7 @@
 ---
 layout: default
 ---
-## auth0 logout
-
-Log out of a tenant's session
-
-### Synopsis
+# auth0 logout
 
 Log out of a tenant's session.
 
@@ -13,19 +9,10 @@ Log out of a tenant's session.
 auth0 logout [flags]
 ```
 
-### Examples
 
-```
-auth0 logout <tenant>
-```
 
-### Options
 
-```
-  -h, --help   help for logout
-```
-
-### Options inherited from parent commands
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -34,7 +21,11 @@ auth0 logout <tenant>
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0](/auth0-cli/)	 - Build, manage and test your Auth0 integrations from the command line.
+```
+  auth0 logout
+  auth0 logout <tenant>
+```
+
 

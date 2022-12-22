@@ -1,31 +1,18 @@
 ---
 layout: default
 ---
-## auth0 tenants open
+# auth0 tenants open
 
-Open tenant settings page in the Auth0 Dashboard
-
-### Synopsis
-
-Open tenant settings page in the Auth0 Dashboard.
+Open the tenant's settings page in the Auth0 Dashboard.
 
 ```
 auth0 tenants open [flags]
 ```
 
-### Examples
 
-```
-auth0 tenants open <tenant>
-```
 
-### Options
 
-```
-  -h, --help   help for open
-```
-
-### Options inherited from parent commands
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -34,7 +21,18 @@ auth0 tenants open <tenant>
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 tenants](auth0_tenants.md)	 - Manage configured tenants
+```
+  auth0 tenants open
+  auth0 tenants open <tenant>
+```
+
+
+## Related Commands
+
+- [auth0 tenants list](auth0_tenants_list.md) - List your tenants
+- [auth0 tenants open](auth0_tenants_open.md) - Open the settings page of the tenant
+- [auth0 tenants use](auth0_tenants_use.md) - Set the active tenant
+
 

@@ -1,11 +1,7 @@
 ---
 layout: default
 ---
-## auth0 api
-
-Makes an authenticated HTTP request to the Auth0 Management API
-
-### Synopsis
+# auth0 api
 
 Makes an authenticated HTTP request to the Auth0 Management API and returns the response as JSON.
 
@@ -23,25 +19,17 @@ Available Methods:
 auth0 api <method> <url-path> [flags]
 ```
 
-### Examples
 
-```
-auth0 api "stats/daily" -q "from=20221101" -q "to=20221118"
-auth0 api get "tenants/settings"
-auth0 api clients --data "{\"name\":\"ssoTest\",\"app_type\":\"sso_integration\"}"
-cat data.json | auth0 api post clients
-```
-
-### Options
+## Flags
 
 ```
   -d, --data string            JSON data payload to send with the request. Data can be piped in as well instead of using this flag.
       --force                  Skip confirmation when using the delete method.
-  -h, --help                   help for api
   -q, --query stringToString   Query params to send with the request. (default [])
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -50,7 +38,13 @@ cat data.json | auth0 api post clients
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0](/auth0-cli/)	 - Build, manage and test your Auth0 integrations from the command line.
+```
+  auth0 api "stats/daily" -q "from=20221101" -q "to=20221118"
+  auth0 api get "tenants/settings"
+  auth0 api clients --data "{\"name\":\"ssoTest\",\"app_type\":\"sso_integration\"}"
+  cat data.json | auth0 api post clients
+```
+
 
