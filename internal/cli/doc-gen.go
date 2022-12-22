@@ -160,7 +160,7 @@ func GenerateParentPage(cmd *cobra.Command, w io.Writer) error {
 		CommandPath        string
 		AssociatedCommands []*cobra.Command
 	}{
-		Name:               fmt.Sprintf("`%s`", cmd.CommandPath()),
+		Name:               cmd.CommandPath(),
 		Description:        cmd.Long,
 		CommandPath:        cmd.CommandPath(),
 		AssociatedCommands: cmd.Commands(),
@@ -185,7 +185,7 @@ func GenerateCommandPage(cmd *cobra.Command, w io.Writer) error {
 		Examples           string
 		UseLine            string
 	}{
-		Name:               fmt.Sprintf("`%s`", cmd.CommandPath()),
+		Name:               cmd.CommandPath(),
 		Description:        cmd.Long,
 		HasFlags:           cmd.HasLocalFlags(),
 		Flags:              cmd.NonInheritedFlags().FlagUsages(),
