@@ -75,9 +75,10 @@ var (
 
 func universalLoginCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "universal-login",
-		Short:   "Manage the Universal Login experience",
-		Long:    "Manage a consistent, branded Universal Login experience that can handle all of your authentication flows.",
+		Use:   "universal-login",
+		Short: "Manage the Universal Login experience",
+		Long: "Manage a consistent, branded Universal Login experience that can " +
+			"handle all of your authentication flows.",
 		Aliases: []string{"ul"},
 	}
 
@@ -121,11 +122,12 @@ Once you close the window, you’ll be asked if you want to save the template. I
 
 func showUniversalLoginCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "show",
-		Args:    cobra.NoArgs,
-		Short:   "Display the custom branding settings for Universal Login",
-		Long:    "Display the custom branding settings for Universal Login.",
-		Example: "auth0 universal-login show",
+		Use:   "show",
+		Args:  cobra.NoArgs,
+		Short: "Display the custom branding settings for Universal Login",
+		Long:  "Display the custom branding settings for Universal Login.",
+		Example: `  auth0 universal-login show
+  auth0 universal-login show --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var myBranding *management.Branding // Load app by id
 
@@ -161,10 +163,14 @@ func updateUniversalLoginCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.NoArgs,
 		Short: "Update the custom branding settings for Universal Login",
-		Long:  "Update the custom branding settings for Universal Login.",
-		Example: `auth0 universal-login update
-auth0 universal-login update --accent "#FF4F40" --background "#2A2E35" 
-auth0 universal-login update -a "#FF4F40" -b "#2A2E35" --logo "https://example.com/logo.png"`,
+		Long: "Update the custom branding settings for Universal Login.\n\n" +
+			"To update the settings for Universal Login interactively, use `auth0 universal-login update` " +
+			"with no arguments.\n\n" +
+			"To update the settings for Universal Login non-interactively, supply the accent, background and " +
+			"logo through the flags.",
+		Example: `  auth0 universal-login update
+  auth0 universal-login update --accent "#FF4F40" --background "#2A2E35" 
+  auth0 universal-login update -a "#FF4F40" -b "#2A2E35" --logo "https://example.com/logo.png"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Branding
 
@@ -260,11 +266,12 @@ auth0 universal-login update -a "#FF4F40" -b "#2A2E35" --logo "https://example.c
 
 func showBrandingTemplateCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "show",
-		Args:    cobra.NoArgs,
-		Short:   "Display the custom template for Universal Login",
-		Long:    "Display the custom template for Universal Login.",
-		Example: "auth0 universal-login templates show",
+		Use:   "show",
+		Args:  cobra.NoArgs,
+		Short: "Display the custom template for Universal Login",
+		Long:  "Display the custom template for the Universal Login experience.",
+		Example: `  auth0 universal-login templates show
+auth0 universal-login templates show --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var template *management.BrandingUniversalLogin // Load app by id
 
@@ -294,7 +301,7 @@ func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
 		Args:    cobra.NoArgs,
 		Short:   "Update the custom template for Universal Login",
 		Long:    "Update the custom template for Universal Login.",
-		Example: "auth0 universal-login templates update",
+		Example: "  auth0 universal-login templates update",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var templateData *branding.TemplateData
 			err := ansi.Waiting(func() error {

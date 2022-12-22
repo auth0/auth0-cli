@@ -74,7 +74,11 @@ func customDomainsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "domains",
 		Short: "Manage custom domains",
-		Long:  "Manage custom domains.",
+		Long: "With a custom domain, your users feel confident that they are providing their credentials to the " +
+			"right party. Authentication happens within the context of your brand which helps you build brand " +
+			"loyalty. Users are not redirected to a third-party site that breaks the branding context. " +
+			"This prevents users from becoming confused about whether they are still making a transaction " +
+			"or operation with you.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -94,10 +98,10 @@ func listCustomDomainsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your custom domains",
-		Long: `List your existing custom domains. To create one try:
-auth0 domains create`,
-		Example: `auth0 domains list
-auth0 domains ls`,
+		Long:    "List your existing custom domains. To create one, run: `auth0 domains create`.",
+		Example: `  auth0 domains list
+  auth0 domains ls
+  auth0 domains ls --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list []*management.CustomDomain
 
@@ -128,9 +132,10 @@ func showCustomDomainCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show a custom domain",
-		Long:  "Show a custom domain.",
-		Example: `auth0 domains show 
-auth0 domains show <id>`,
+		Long:  "Display information about a custom domain.",
+		Example: `  auth0 domains show 
+  auth0 domains show <id>
+  auth0 domains show <id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := customDomainID.Pick(cmd, &inputs.ID, cli.customDomainsPickerOptions)
@@ -174,9 +179,13 @@ func createCustomDomainCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a custom domain",
-		Long:  "Create a custom domain.",
-		Example: `auth0 domains create 
-auth0 domains create <id>`,
+		Long: "Create a custom domain.\n\n" +
+			"To create interactively, use `auth0 domains create` with no arguments.\n\n" +
+			"To create non-interactively, supply the domain name, type, policy and " +
+			"other information through the flags.",
+		Example: `  auth0 domains create
+  auth0 domains create --domain <domain-name>
+  auth0 domains create --domain <domain-name> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := customDomainDomain.Ask(cmd, &inputs.Domain, nil); err != nil {
 				return err
@@ -237,10 +246,13 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a custom domain",
-		Long:  "Update a custom domain.",
-		Example: `auth0 domains update
-auth0 domains update <id> --policy compatible
-auth0 domains update <id> -p compatible --ip-header "cf-connecting-ip"`,
+		Long: "Update a custom domain.\n\n" +
+			"To update interactively, use `auth0 domains update` with no arguments.\n\n" +
+			"To update non-interactively, supply the domain name, type, policy and " +
+			"other information through the flags.",
+		Example: `  auth0 domains update
+  auth0 domains update <id> --policy compatible
+  auth0 domains update <id> -p compatible --ip-header "cf-connecting-ip"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.CustomDomain
 
@@ -315,9 +327,13 @@ func deleteCustomDomainCmd(cli *cli) *cobra.Command {
 		Use:   "delete",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete a custom domain",
-		Long:  "Delete a custom domain.",
-		Example: `auth0 domains delete 
-auth0 domains delete <id>`,
+		Long: "Delete a custom domain.\n\n" +
+			"To delete interactively, use `auth0 domains delete` with no arguments.\n\n" +
+			"To delete non-interactively, supply the custom domain id and the `--force` flag to " +
+			"skip confirmation.",
+		Example: `  auth0 domains delete
+  auth0 domains delete <id>
+  auth0 domains delete <id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := customDomainID.Pick(cmd, &inputs.ID, cli.customDomainsPickerOptions)
@@ -360,9 +376,11 @@ func verifyCustomDomainCmd(cli *cli) *cobra.Command {
 		Use:   "verify",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Verify a custom domain",
-		Long:  "Verify a custom domain.",
-		Example: `auth0 domains verify 
-auth0 domains verify <id>`,
+		Long: "Verify a custom domain.\n\n" +
+			"To verify interactively, use `auth0 domains verify` with no arguments.\n\n" +
+			"To verify non-interactively, supply the custom domain id.",
+		Example: `  auth0 domains verify 
+  auth0 domains verify <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := customDomainID.Pick(cmd, &inputs.ID, cli.customDomainsPickerOptions)
