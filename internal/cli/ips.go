@@ -19,7 +19,7 @@ func ipsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ips",
 		Short: "Manage blocked IP addresses",
-		Long:  "Manage blocked IP addresses.",
+		Long:  "Manually block or unblock an IP address.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -35,11 +35,13 @@ func checkIPCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "check",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Check IP address",
-		Long:    "Check whether a given IP address is blocked.",
-		Example: "auth0 ips check <ip>",
+		Use:   "check",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Check IP address",
+		Long: "Check if a given IP address is blocked via the Suspicious IP Throttling due to " +
+			"multiple suspicious attempts.",
+		Example: `  auth0 ips check
+  auth0 ips check <ip>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := ipAddress.Ask(cmd, &inputs.IP); err != nil {
@@ -59,7 +61,7 @@ func checkIPCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
 
-			cli.renderer.Heading("IP")
+			cli.renderer.Heading("ip")
 
 			if isBlocked {
 				cli.renderer.Infof("The IP %s is blocked", inputs.IP)
@@ -80,11 +82,13 @@ func unblockIPCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "unblock",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Unblock IP address",
-		Long:    "Unblock an IP address which is currently blocked.",
-		Example: "auth0 ips unblock <ip>",
+		Use:   "unblock",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Unblock IP address",
+		Long: "Unblock an IP address currently blocked by the Suspicious IP Throttling due to " +
+			"multiple suspicious attempts.",
+		Example: `  auth0 ips unblock
+  auth0 ips unblock <ip>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := ipAddress.Ask(cmd, &inputs.IP); err != nil {
@@ -100,7 +104,7 @@ func unblockIPCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
 			}
 
-			cli.renderer.Heading("IP")
+			cli.renderer.Heading("ip")
 			cli.renderer.Infof("The IP %s was unblocked", inputs.IP)
 			return nil
 		},

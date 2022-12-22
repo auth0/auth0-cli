@@ -11,11 +11,12 @@ import (
 
 func logoutCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "logout",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Log out of a tenant's session",
-		Long:    "Log out of a tenant's session.",
-		Example: "auth0 logout <tenant>",
+		Use:   "logout",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Log out of a tenant's session",
+		Long:  "Log out of a tenant's session.",
+		Example: `  auth0 logout
+  auth0 logout <tenant>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// NOTE(cyx): This was mostly copy/pasted from tenants
 			// use command. Consider refactoring.

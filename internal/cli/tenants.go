@@ -50,11 +50,12 @@ func listTenantCmd(cli *cli) *cobra.Command {
 
 func useTenantCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "use",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Set the active tenant",
-		Long:    "Set the active tenant.",
-		Example: "auth0 tenants use <tenant>",
+		Use:   "use",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Set the active tenant",
+		Long:  "Set the active tenant for the Auth0 CLI.",
+		Example: `  auth0 tenants use
+  auth0 tenants use <tenant>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var selectedTenant string
 			if len(args) == 0 {
@@ -104,11 +105,12 @@ func openTenantCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "open",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Open tenant settings page in the Auth0 Dashboard",
-		Long:    "Open tenant settings page in the Auth0 Dashboard.",
-		Example: "auth0 tenants open <tenant>",
+		Use:   "open",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Open the settings page of the tenant",
+		Long:  "Open the tenant's settings page in the Auth0 Dashboard.",
+		Example: `  auth0 tenants open
+  auth0 tenants open <tenant>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := tenantDomain.Pick(cmd, &inputs.Domain, cli.tenantPickerOptions)

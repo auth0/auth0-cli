@@ -135,12 +135,11 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 		Use:   "search",
 		Args:  cobra.NoArgs,
 		Short: "Search for users",
-		Long: `Search for users. To create one try:
-auth0 users create`,
+		Long:  "Search for users. To create one, run: `auth0 users create`.",
 		Example: `auth0 users search
-auth0 users search --query id
-auth0 users search -q name --sort "name:1"
-auth0 users search -q name -s "name:1"`,
+  auth0 users search --query id
+  auth0 users search -q name --sort "name:1"
+  auth0 users search -q name -s "name:1"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := userQuery.Ask(cmd, &inputs.query, nil); err != nil {
 				return err
@@ -193,11 +192,13 @@ func createUserCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new user",
-		Long:  "Create a new user.",
-		Example: `auth0 users create 
-auth0 users create --name "John Doe" 
-auth0 users create -n "John Doe" --email john@example.com
-auth0 users create -n "John Doe" -e john@example.com --connection "Username-Password-Authentication"`,
+		Long: "Create a new user.\n\n" +
+			"To create interactively, use `auth0 users create` with no flags.\n\n" +
+			"To create non-interactively, supply the name and other information through the available flags.",
+		Example: `  auth0 users create 
+  auth0 users create --name "John Doe" 
+  auth0 users create -n "John Doe" --email john@example.com
+  auth0 users create -n "John Doe" -e john@example.com --connection "Username-Password-Authentication"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Select from the available connection types
 			// Users API currently support  database connections
@@ -273,9 +274,10 @@ func showUserCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an existing user",
-		Long:  "Show an existing user.",
-		Example: `auth0 users show 
-auth0 users show <id>`,
+		Long:  "Display information about an existing user.",
+		Example: `  auth0 users show 
+  auth0 users show <id>
+  auth0 users show <id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.ID); err != nil {
@@ -322,7 +324,9 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 		Use:   "delete",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete a user",
-		Long:  "Delete a user.",
+		Long: "Delete a user.\n\n" +
+			"To delete interactively, use `auth0 users delete` with no arguments.\n\n" +
+			"To delete non-interactively, supply the user id and the `--force` flag to skip confirmation.",
 		Example: `auth0 users delete 
 auth0 users delete <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -370,11 +374,13 @@ func updateUserCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a user",
-		Long:  "Update a user.",
-		Example: `auth0 users update 
-auth0 users update <id> 
-auth0 users update <id> --name John Doe
-auth0 users update -n John Doe --email john.doe@example.com`,
+		Long: "Update a user.\n\n" +
+			"To update interactively, use `auth0 users update` with no arguments.\n\n" +
+			"To update non-interactively, supply the user id and other information through the available flags.",
+		Example: `  auth0 users update 
+  auth0 users update <id> 
+  auth0 users update <id> --name John Doe
+  auth0 users update -n John Doe --email john.doe@example.com`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.ID); err != nil {
@@ -473,10 +479,10 @@ func openUserCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "open",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Open user details page in the Auth0 Dashboard",
-		Long:  "Open user details page in the Auth0 Dashboard.",
-		Example: `auth0 users open <id>
-auth0 users open "auth0|xxxxxxxxxx"`,
+		Short: "Open the user's settings page",
+		Long:  "Open the settings page of a user in the Auth0 Dashboard.",
+		Example: `  auth0 users open <id>
+  auth0 users open "auth0|xxxxxxxxxx"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.ID); err != nil {
@@ -516,7 +522,7 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "List brute-force protection blocks for a given user",
 		Long:    "List brute-force protection blocks for a given user.",
-		Example: "auth0 users blocks list <user-id>",
+		Example: `  auth0 users blocks list <user-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.userID); err != nil {
@@ -558,7 +564,7 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Remove brute-force protection blocks for a given user",
 		Long:    "Remove brute-force protection blocks for a given user.",
-		Example: "auth0 users unblock <user-id>",
+		Example: `  auth0 users unblock <user-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.userID); err != nil {
@@ -598,11 +604,11 @@ func importUsersCmd(cli *cli) *cobra.Command {
 		Short: "Import users from schema",
 		Long: `Import users from schema. Issues a Create Import Users Job. 
 The file size limit for a bulk import is 500KB. You will need to start multiple imports if your data exceeds this size.`,
-		Example: `auth0 users import
-auth0 users import --connection "Username-Password-Authentication"
-auth0 users import -c "Username-Password-Authentication" --template "Basic Example"
-auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=true
-auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=true --email-results=false`,
+		Example: `  auth0 users import
+  auth0 users import --connection "Username-Password-Authentication"
+  auth0 users import -c "Username-Password-Authentication" --template "Basic Example"
+  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=true
+  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=true --email-results=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Select from the available connection types
 			// Users API currently support database connections
@@ -663,7 +669,7 @@ auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --up
 				return err
 			}
 
-			cli.renderer.Heading("Starting user import job...")
+			cli.renderer.Heading("starting user import job...")
 			fmt.Println(jsonstr)
 
 			if inputs.SendCompletionEmail {

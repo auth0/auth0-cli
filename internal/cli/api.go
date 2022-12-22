@@ -89,10 +89,10 @@ Method argument is optional, defaults to GET for requests without data and POST 
 			"Auth0 Management API Docs:\n", apiDocsURL,
 			"Available Methods:\n", strings.ToLower(strings.Join(apiValidMethods, ", ")),
 		),
-		Example: `auth0 api "stats/daily" -q "from=20221101" -q "to=20221118"
-auth0 api get "tenants/settings"
-auth0 api clients --data "{\"name\":\"ssoTest\",\"app_type\":\"sso_integration\"}"
-cat data.json | auth0 api post clients`,
+		Example: `  auth0 api "stats/daily" -q "from=20221101" -q "to=20221118"
+  auth0 api get "tenants/settings"
+  auth0 api clients --data "{\"name\":\"ssoTest\",\"app_type\":\"sso_integration\"}"
+  cat data.json | auth0 api post clients`,
 		RunE: apiCmdRun(cli, &inputs),
 	}
 

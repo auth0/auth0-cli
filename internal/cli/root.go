@@ -19,6 +19,13 @@ import (
 
 const rootShort = "Build, manage and test your Auth0 integrations from the command line."
 
+const panicMessage = `
+!!     Uh oh. Something went wrong.
+!!     If this problem keeps happening feel free to report an issue at
+!!
+!!     https://github.com/auth0/auth0-cli/issues/new/choose
+`
+
 // Execute is the primary entrypoint of the CLI app.
 func Execute() {
 	cli := &cli{
@@ -27,14 +34,12 @@ func Execute() {
 	}
 
 	rootCmd := buildRootCmd(cli)
-
 	rootCmd.SetUsageTemplate(namespaceUsageTemplate())
+
 	addPersistentFlags(rootCmd, cli)
 	addSubCommands(rootCmd, cli)
 
-	// TODO(cyx): backport this later on using latest auth0/v5.
-	// rootCmd.AddCommand(actionsCmd(cli))
-	// rootCmd.AddCommand(triggersCmd(cli))
+	overrideHelpAndVersionFlagText(rootCmd)
 
 	defer func() {
 		if v := recover(); v != nil {
@@ -192,9 +197,18 @@ func contextWithCancel() context.Context {
 	return ctx
 }
 
-const panicMessage = `
-!!     Uh oh. Something went wrong.
-!!     If this problem keeps happening feel free to report an issue at
-!!
-!!     https://github.com/auth0/auth0-cli/issues/new/choose
-`
+func overrideHelpAndVersionFlagText(cmd *cobra.Command) {
+	cmd.Flags().BoolP("version", "v", false, "Version for auth0.")
+
+	setHelpFlagTextFunc := func(c *cobra.Command) {
+		c.Flags().BoolP("help", "h", false, fmt.Sprintf("Help for %s.", c.Name()))
+	}
+
+	setHelpFlagTextFunc(cmd)
+	for _, c := range cmd.Commands() {
+		setHelpFlagTextFunc(c)
+		for _, c := range c.Commands() {
+			setHelpFlagTextFunc(c)
+		}
+	}
+}

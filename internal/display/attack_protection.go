@@ -45,12 +45,12 @@ func (bpd *breachedPasswordDetectionView) Object() interface{} {
 }
 
 func (r *Renderer) BreachedPasswordDetectionShow(bpd *management.BreachedPasswordDetection) {
-	r.Heading("Breached Password Detection")
+	r.Heading("breached password detection")
 	r.Result(makeBreachedPasswordDetectionView(bpd))
 }
 
 func (r *Renderer) BreachedPasswordDetectionUpdate(bpd *management.BreachedPasswordDetection) {
-	r.Heading("Breached Password Detection Updated")
+	r.Heading("breached password detection updated")
 	r.Result(makeBreachedPasswordDetectionView(bpd))
 }
 
@@ -104,12 +104,12 @@ func (bfp *bruteForceProtectionView) Object() interface{} {
 }
 
 func (r *Renderer) BruteForceProtectionShow(bfp *management.BruteForceProtection) {
-	r.Heading("Brute Force Protection")
+	r.Heading("brute force protection")
 	r.Result(makeBruteForceProtectionView(bfp))
 }
 
 func (r *Renderer) BruteForceProtectionUpdate(bfp *management.BruteForceProtection) {
-	r.Heading("Brute Force Protection Updated")
+	r.Heading("brute force protection updated")
 	r.Result(makeBruteForceProtectionView(bfp))
 }
 
@@ -178,12 +178,12 @@ func (sit *suspiciousIPThrottlingView) Object() interface{} {
 }
 
 func (r *Renderer) SuspiciousIPThrottlingShow(sit *management.SuspiciousIPThrottling) {
-	r.Heading("Suspicious IP Throttling")
+	r.Heading("suspicious ip throttling")
 	r.Result(makeSuspiciousIPThrottlingView(sit))
 }
 
 func (r *Renderer) SuspiciousIPThrottlingUpdate(sit *management.SuspiciousIPThrottling) {
-	r.Heading("Suspicious IP Throttling Updated")
+	r.Heading("suspicious ip throttling updated")
 	r.Result(makeSuspiciousIPThrottlingView(sit))
 }
 
