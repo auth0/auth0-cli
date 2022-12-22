@@ -1,33 +1,23 @@
 ---
 layout: default
 ---
-## auth0 apis scopes list
+# auth0 apis scopes list
 
-List the scopes of an API
-
-### Synopsis
-
-List the scopes of an API.
+List the scopes of an API. To update scopes, run: `auth0 apis update <id|audience> -s <scopes>`.
 
 ```
 auth0 apis scopes list [flags]
 ```
 
-### Examples
+
+## Flags
 
 ```
-auth0 apis scopes list 
-auth0 apis scopes ls <id|audience>
-```
-
-### Options
-
-```
-  -h, --help   help for list
       --json   Output in json format.
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -36,7 +26,17 @@ auth0 apis scopes ls <id|audience>
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 apis scopes](auth0_apis_scopes.md)	 - Manage resources for API scopes
+```
+  auth0 apis scopes list
+  auth0 apis scopes ls <id|audience>
+  auth0 apis scopes ls <id|audience> --json
+```
+
+
+## Related Commands
+
+- [auth0 apis scopes list](auth0_apis_scopes_list.md) - List the scopes of an API
+
 

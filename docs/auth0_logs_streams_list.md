@@ -1,34 +1,23 @@
 ---
 layout: default
 ---
-## auth0 logs streams list
+# auth0 logs streams list
 
-List all log streams
-
-### Synopsis
-
-List your existing log streams. To create one try:
-auth0 logs streams create
+List your existing log streams. To create one, run: `auth0 logs streams create`.
 
 ```
 auth0 logs streams list [flags]
 ```
 
-### Examples
+
+## Flags
 
 ```
-auth0 logs streams list
-auth0 logs streams ls
-```
-
-### Options
-
-```
-  -h, --help   help for list
       --json   Output in json format.
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -37,7 +26,22 @@ auth0 logs streams ls
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 logs streams](auth0_logs_streams.md)	 - Manage resources for log streams
+```
+  auth0 logs streams list
+  auth0 logs streams ls
+  auth0 logs streams ls --json
+```
+
+
+## Related Commands
+
+- [auth0 logs streams create](auth0_logs_streams_create.md) - Create a new log stream
+- [auth0 logs streams delete](auth0_logs_streams_delete.md) - Delete a log stream
+- [auth0 logs streams list](auth0_logs_streams_list.md) - List all log streams
+- [auth0 logs streams open](auth0_logs_streams_open.md) - Open the settings page of a log stream
+- [auth0 logs streams show](auth0_logs_streams_show.md) - Show a log stream by Id
+- [auth0 logs streams update](auth0_logs_streams_update.md) - Update a log stream
+
 

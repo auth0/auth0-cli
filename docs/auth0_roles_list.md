@@ -1,36 +1,24 @@
 ---
 layout: default
 ---
-## auth0 roles list
+# auth0 roles list
 
-List your roles
-
-### Synopsis
-
-List your existing roles. To create one try:
-auth0 roles create
+List your existing roles. To create one, run: `auth0 roles create`.
 
 ```
 auth0 roles list [flags]
 ```
 
-### Examples
+
+## Flags
 
 ```
-auth0 roles list
-auth0 roles ls
-auth0 roles ls -n 100
-```
-
-### Options
-
-```
-  -h, --help         help for list
       --json         Output in json format.
   -n, --number int   Number of apps to retrieve (default 50)
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -39,7 +27,23 @@ auth0 roles ls -n 100
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 roles](auth0_roles.md)	 - Manage resources for roles
+```
+  auth0 roles list
+  auth0 roles ls
+  auth0 roles ls -n 100
+  auth0 roles ls -n 100 --json
+```
+
+
+## Related Commands
+
+- [auth0 roles create](auth0_roles_create.md) - Create a new role
+- [auth0 roles delete](auth0_roles_delete.md) - Delete a role
+- [auth0 roles list](auth0_roles_list.md) - List your roles
+- [auth0 roles permissions](auth0_roles_permissions.md) - Manage permissions within the role resource
+- [auth0 roles show](auth0_roles_show.md) - Show a role
+- [auth0 roles update](auth0_roles_update.md) - Update a role
+
 

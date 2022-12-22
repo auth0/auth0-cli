@@ -1,35 +1,26 @@
 ---
 layout: default
 ---
-## auth0 apps create
-
-Create a new application
-
-### Synopsis
+# auth0 apps create
 
 Create a new application.
+
+To create interactively, use `auth0 apps create` with no arguments.
+
+To create non-interactively, supply at least the application name, and type through the flags.
 
 ```
 auth0 apps create [flags]
 ```
 
-### Examples
 
-```
-auth0 apps create 
-auth0 apps create --name myapp 
-auth0 apps create -n myapp --type [native|spa|regular|m2m]
-auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <description>
-```
-
-### Options
+## Flags
 
 ```
   -a, --auth-method string    Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).
   -c, --callbacks strings     After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.
   -d, --description string    Description of the application. Max character count is 140.
   -g, --grants strings        List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.
-  -h, --help                  help for create
       --json                  Output in json format.
   -l, --logout-urls strings   Comma-separated list of URLs that are valid to redirect to after logout from Auth0. Wildcards are allowed for subdomains.
   -n, --name string           Name of the application.
@@ -43,7 +34,8 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <descriptio
   -w, --web-origins strings   Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode.
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -52,7 +44,25 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <descriptio
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 apps](auth0_apps.md)	 - Manage resources for applications
+```
+  auth0 apps create
+  auth0 apps create --name myapp
+  auth0 apps create --name myapp --json
+  auth0 apps create -n myapp --type [native|spa|regular|m2m]
+  auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <description>
+```
+
+
+## Related Commands
+
+- [auth0 apps create](auth0_apps_create.md) - Create a new application
+- [auth0 apps delete](auth0_apps_delete.md) - Delete an application
+- [auth0 apps list](auth0_apps_list.md) - List your applications
+- [auth0 apps open](auth0_apps_open.md) - Open the settings page of an application
+- [auth0 apps show](auth0_apps_show.md) - Show an application
+- [auth0 apps update](auth0_apps_update.md) - Update an application
+- [auth0 apps use](auth0_apps_use.md) - Choose a default application for the Auth0 CLI
+
 

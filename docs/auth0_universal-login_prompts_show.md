@@ -1,11 +1,7 @@
 ---
 layout: default
 ---
-## auth0 universal-login prompts show
-
-Show the custom text for a prompt
-
-### Synopsis
+# auth0 universal-login prompts show
 
 Show the custom text for a prompt.
 
@@ -13,22 +9,15 @@ Show the custom text for a prompt.
 auth0 universal-login prompts show [flags]
 ```
 
-### Examples
+
+## Flags
 
 ```
-
-auth0 universal-login prompts show <prompt> --language es
-auth0 universal-login prompts show <prompt> -l es
-```
-
-### Options
-
-```
-  -h, --help              help for show
   -l, --language string   Language of the custom text. (default "en")
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -37,7 +26,17 @@ auth0 universal-login prompts show <prompt> -l es
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 universal-login prompts](auth0_universal-login_prompts.md)	 - Manage custom text for prompts
+```
+  auth0 universal-login prompts show <prompt> --language es
+  auth0 universal-login prompts show <prompt> -l es
+```
+
+
+## Related Commands
+
+- [auth0 universal-login prompts show](auth0_universal-login_prompts_show.md) - Show the custom text for a prompt
+- [auth0 universal-login prompts update](auth0_universal-login_prompts_update.md) - Update the custom text for a prompt
+
 

@@ -1,30 +1,20 @@
 ---
 layout: default
 ---
-## auth0 protection suspicious-ip-throttling update
+# auth0 protection suspicious-ip-throttling update
 
-Update suspicious ip throttling settings
-
-### Synopsis
-
-Update suspicious ip throttling settings.
+Update the suspicious ip throttling settings.
 
 ```
 auth0 protection suspicious-ip-throttling update [flags]
 ```
 
-### Examples
 
-```
-auth0 protection suspicious-ip-throttling update
-```
-
-### Options
+## Flags
 
 ```
   -l, --allowlist strings           List of trusted IP addresses that will not have attack protection enforced against them. Comma-separated.
   -e, --enabled                     Enable (or disable) suspicious ip throttling.
-  -h, --help                        help for update
       --json                        Output in json format.
       --pre-login-max int           Configuration options that apply before every login attempt. Total number of attempts allowed per day. (default 1)
       --pre-login-rate int          Configuration options that apply before every login attempt. Interval of time, given in milliseconds, at which new attempts are granted. (default 34560)
@@ -33,7 +23,8 @@ auth0 protection suspicious-ip-throttling update
   -s, --shields strings             Action to take when a suspicious IP throttling threshold is violated. Possible values: block, admin_notification. Comma-separated.
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -42,7 +33,17 @@ auth0 protection suspicious-ip-throttling update
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 protection suspicious-ip-throttling](auth0_protection_suspicious-ip-throttling.md)	 - Manage suspicious ip throttling settings
+```
+  auth0 protection suspicious-ip-throttling update
+  auth0 ap sit update
+```
+
+
+## Related Commands
+
+- [auth0 protection suspicious-ip-throttling show](auth0_protection_suspicious-ip-throttling_show.md) - Show suspicious ip throttling settings
+- [auth0 protection suspicious-ip-throttling update](auth0_protection_suspicious-ip-throttling_update.md) - Update suspicious ip throttling settings
+
 

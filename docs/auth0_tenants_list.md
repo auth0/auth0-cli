@@ -1,11 +1,7 @@
 ---
 layout: default
 ---
-## auth0 tenants list
-
-List your tenants
-
-### Synopsis
+# auth0 tenants list
 
 List your tenants.
 
@@ -13,19 +9,10 @@ List your tenants.
 auth0 tenants list [flags]
 ```
 
-### Examples
 
-```
-auth0 tenants list
-```
 
-### Options
 
-```
-  -h, --help   help for list
-```
-
-### Options inherited from parent commands
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -34,7 +21,17 @@ auth0 tenants list
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 tenants](auth0_tenants.md)	 - Manage configured tenants
+```
+auth0 tenants list
+```
+
+
+## Related Commands
+
+- [auth0 tenants list](auth0_tenants_list.md) - List your tenants
+- [auth0 tenants open](auth0_tenants_open.md) - Open the settings page of the tenant
+- [auth0 tenants use](auth0_tenants_use.md) - Set the active tenant
+
 

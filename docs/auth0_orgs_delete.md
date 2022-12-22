@@ -1,33 +1,27 @@
 ---
 layout: default
 ---
-## auth0 orgs delete
-
-Delete an organization
-
-### Synopsis
+# auth0 orgs delete
 
 Delete an organization.
+
+To delete interactively, use `auth0 orgs delete` with no arguments.
+
+To delete non-interactively, supply the organization id and the `--force` flag to skip confirmation.
 
 ```
 auth0 orgs delete [flags]
 ```
 
-### Examples
 
-```
-auth0 orgs delete
-auth0 orgs delete <id>
-```
-
-### Options
+## Flags
 
 ```
       --force   Skip confirmation.
-  -h, --help    help for delete
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -36,7 +30,23 @@ auth0 orgs delete <id>
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 orgs](auth0_orgs.md)	 - Manage resources for organizations
+```
+  auth0 orgs delete
+  auth0 orgs delete <id>
+```
+
+
+## Related Commands
+
+- [auth0 orgs create](auth0_orgs_create.md) - Create a new organization
+- [auth0 orgs delete](auth0_orgs_delete.md) - Delete an organization
+- [auth0 orgs list](auth0_orgs_list.md) - List your organizations
+- [auth0 orgs members](auth0_orgs_members.md) - Manage members of an organization
+- [auth0 orgs open](auth0_orgs_open.md) - Open the settings page of an organization
+- [auth0 orgs roles](auth0_orgs_roles.md) - Manage roles of an organization
+- [auth0 orgs show](auth0_orgs_show.md) - Show an organization
+- [auth0 orgs update](auth0_orgs_update.md) - Update an organization
+
 

@@ -1,11 +1,7 @@
 ---
 layout: default
 ---
-## auth0 users blocks list
-
-List brute-force protection blocks for a given user
-
-### Synopsis
+# auth0 users blocks list
 
 List brute-force protection blocks for a given user.
 
@@ -13,20 +9,15 @@ List brute-force protection blocks for a given user.
 auth0 users blocks list [flags]
 ```
 
-### Examples
+
+## Flags
 
 ```
-auth0 users blocks list <user-id>
-```
-
-### Options
-
-```
-  -h, --help   help for list
       --json   Output in json format.
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -35,7 +26,15 @@ auth0 users blocks list <user-id>
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 users blocks](auth0_users_blocks.md)	 - Manage brute-force protection user blocks
+```
+  auth0 users blocks list <user-id>
+```
+
+
+## Related Commands
+
+- [auth0 users blocks list](auth0_users_blocks_list.md) - List brute-force protection blocks for a given user
+
 

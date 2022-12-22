@@ -1,32 +1,22 @@
 ---
 layout: default
 ---
-## auth0 apis create
-
-Create a new API
-
-### Synopsis
+# auth0 apis create
 
 Create a new API.
+
+To create interactively, use `auth0 apis create` with no flags.
+
+To create non-interactively, supply the name, identifier, scopes, token lifetime and whether to allow offline access through the flags.
 
 ```
 auth0 apis create [flags]
 ```
 
-### Examples
+
+## Flags
 
 ```
-auth0 apis create 
-auth0 apis create --name myapi
-auth0 apis create -n myapi --identifier http://my-api
-auth0 apis create -n myapi --token-expiration 6100
-auth0 apis create -n myapi -e 6100 --offline-access=true
-```
-
-### Options
-
-```
-  -h, --help                 help for create
   -i, --identifier string    Identifier of the API. Cannot be changed once set.
       --json                 Output in json format.
   -n, --name string          Name of the API.
@@ -35,7 +25,8 @@ auth0 apis create -n myapi -e 6100 --offline-access=true
   -l, --token-lifetime int   The amount of time in seconds that the token will be valid after being issued. Default value is 86400 seconds (1 day).
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -44,7 +35,25 @@ auth0 apis create -n myapi -e 6100 --offline-access=true
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 apis](auth0_apis.md)	 - Manage resources for APIs
+```
+  auth0 apis create 
+  auth0 apis create --name myapi
+  auth0 apis create -n myapi --identifier http://my-api
+  auth0 apis create -n myapi --token-expiration 6100
+  auth0 apis create -n myapi -e 6100 --offline-access=true
+```
+
+
+## Related Commands
+
+- [auth0 apis create](auth0_apis_create.md) - Create a new API
+- [auth0 apis delete](auth0_apis_delete.md) - Delete an API
+- [auth0 apis list](auth0_apis_list.md) - List your APIs
+- [auth0 apis open](auth0_apis_open.md) - Open the settings page of an API
+- [auth0 apis scopes](auth0_apis_scopes.md) - Manage resources for API scopes
+- [auth0 apis show](auth0_apis_show.md) - Show an API
+- [auth0 apis update](auth0_apis_update.md) - Update an API
+
 

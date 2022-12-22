@@ -1,11 +1,7 @@
 ---
 layout: default
 ---
-## auth0 completion
-
-Setup autocomplete features for this CLI on your terminal
-
-### Synopsis
+# auth0 completion
 
 completion [bash|zsh|fish|powershell]
 
@@ -53,13 +49,10 @@ PS> auth0 completion powershell > auth0.ps1
 auth0 completion
 ```
 
-### Options
 
-```
-  -h, --help   help for completion
-```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -68,7 +61,10 @@ auth0 completion
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0](/auth0-cli/)	 - Build, manage and test your Auth0 integrations from the command line.
+```
+
+```
+
 
