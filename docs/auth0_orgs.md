@@ -26,7 +26,7 @@ Manage resources for organizations.
 
 ### SEE ALSO
 
-* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Build, manage and test your Auth0 integrations from the command line.
 * [auth0 orgs create](auth0_orgs_create.md)	 - Create a new organization
 * [auth0 orgs delete](auth0_orgs_delete.md)	 - Delete an organization
 * [auth0 orgs list](auth0_orgs_list.md)	 - List your organizations

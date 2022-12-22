@@ -181,7 +181,7 @@ func useAppCmd(cli *cli) *cobra.Command {
 				cli.renderer.Infof("Successfully removed the default application")
 			} else {
 				cli.renderer.Infof("Successfully set the default application to %s", ansi.Faint(inputs.ID))
-				cli.renderer.Infof("%s You might wanna try 'auth0 quickstarts download %s'", ansi.Faint("Hint:"), inputs.ID)
+				cli.renderer.Infof("%s Consider running `auth0 quickstarts download %s`", ansi.Faint("Hint:"), inputs.ID)
 			}
 
 			return nil

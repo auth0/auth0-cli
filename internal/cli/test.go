@@ -183,7 +183,8 @@ auth0 test login <client-id> --connection <connection>`,
 			}
 
 			if isFirstRun {
-				cli.renderer.Infof("%s Login flow is working! Next, try downloading and running a Quickstart: 'auth0 quickstarts download %s'",
+				cli.renderer.Infof("Login flow is working!")
+				cli.renderer.Infof("%s Consider downloading and running a quickstart next by running `auth0 quickstarts download %s`",
 					ansi.Faint("Hint:"), inputs.ClientID)
 
 				if err := cli.setFirstCommandRun(inputs.ClientID, commandKey); err != nil {

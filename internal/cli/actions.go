@@ -515,7 +515,7 @@ func (c *cli) actionPickerOptions() (pickerOptions, error) {
 }
 
 func (c *cli) actionEditorHint() {
-	c.renderer.Infof("%s once you close the editor, the action will be saved. To cancel, CTRL+C.", ansi.Faint("Hint:"))
+	c.renderer.Infof("%s Once you close the editor, the action will be saved. To cancel, press CTRL+C.", ansi.Faint("Hint:"))
 }
 
 func formatActionDetailsPath(id string) string {

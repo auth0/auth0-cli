@@ -26,7 +26,7 @@ Manage resources for actions.
 
 ### SEE ALSO
 
-* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
+* [auth0](/auth0-cli/)	 - Build, manage and test your Auth0 integrations from the command line.
 * [auth0 actions create](auth0_actions_create.md)	 - Create a new action
 * [auth0 actions delete](auth0_actions_delete.md)	 - Delete an action
 * [auth0 actions deploy](auth0_actions_deploy.md)	 - Deploy an action

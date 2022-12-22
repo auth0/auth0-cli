@@ -1,17 +1,17 @@
 # Documentation at http://goreleaser.com
 builds:
-- main: ./cmd/auth0
-  env:
-  - CGO_ENABLED=0
-  goarch:
-  - amd64
-  - arm64
-  goos:
-  - darwin
-  - linux
-  - windows
-  binary: auth0
-  ldflags:
+  - main: ./cmd/auth0
+    env:
+      - CGO_ENABLED=0
+    goarch:
+      - amd64
+      - arm64
+    goos:
+      - darwin
+      - linux
+      - windows
+    binary: auth0
+    ldflags:
       - -X 'github.com/auth0/auth0-cli/internal/buildinfo.Version={{.Version}}'
       - -X 'github.com/auth0/auth0-cli/internal/buildinfo.Revision={{.Commit}}'
       - -X 'github.com/auth0/auth0-cli/internal/buildinfo.BuildUser=goreleaser'
@@ -40,8 +40,7 @@ changelog:
       - "^docs:"
       - "^test:"
 brews:
-  -
-    name: auth0
+  - name: auth0
     tap:
       owner: auth0
       name: homebrew-auth0-cli
@@ -49,27 +48,27 @@ brews:
       name: auth0
       email: support@auth0.com
     homepage: https://auth0.github.io/auth0-cli
-    description: Auth0 command-line tool to supercharge your developer workflow
+    description: Build, manage and test your Auth0 integrations from the command line
     license: MIT
     skip_upload: auto
     install: |
-        bin.install "auth0"
+      bin.install "auth0"
 
-        (bash_completion/"auth0").write `#{bin}/auth0 completion bash`
-        (fish_completion/"auth0.fish").write `#{bin}/auth0 completion fish`
-        (zsh_completion/"_auth0").write `#{bin}/auth0 completion zsh`
+      (bash_completion/"auth0").write `#{bin}/auth0 completion bash`
+      (fish_completion/"auth0.fish").write `#{bin}/auth0 completion fish`
+      (zsh_completion/"_auth0").write `#{bin}/auth0 completion zsh`
     caveats: "Thanks for installing the Auth0 CLI"
 scoop:
+  name: auth0
+  bucket:
+    owner: auth0
+    name: scoop-auth0-cli
+  commit_author:
     name: auth0
-    bucket:
-      owner: auth0
-      name: scoop-auth0-cli
-    commit_author:
-      name: auth0
-      email: support@auth0.com
-    commit_msg_template: "Scoop manifest update for {{ .ProjectName }} version {{ .Tag }}"
-    homepage: https://auth0.github.io/auth0-cli
-    description: Auth0 command-line tool to supercharge your developer workflow
-    license: MIT
-    skip_upload: auto
-    post_install: ["Write-Host 'Thanks for installing the Auth0 CLI'"]
+    email: support@auth0.com
+  commit_msg_template: "Scoop manifest update for {{ .ProjectName }} version {{ .Tag }}"
+  homepage: https://auth0.github.io/auth0-cli
+  description: Build, manage and test your Auth0 integrations from the command line
+  license: MIT
+  skip_upload: auto
+  post_install: ["Write-Host 'Thanks for installing the Auth0 CLI'"]
