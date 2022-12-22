@@ -103,7 +103,7 @@ func addRolePermissionsCmd(cli *cli) *cobra.Command {
 		Short: "Add a permission to a role",
 		Long: "Add an existing permission defined in one of your APIs. To add a permission try running:\n\n" +
 			"`auth0 roles permissions add <role-id> -p <permission-name>`",
-		Example: ` auth0 roles permissions add
+		Example: `  auth0 roles permissions add
   auth0 roles permissions add <role-id> -p <permission-name>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
