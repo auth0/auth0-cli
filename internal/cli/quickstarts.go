@@ -96,7 +96,8 @@ func downloadQuickstartCmd(cli *cli) *cobra.Command {
 		Use:   "download",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Download a Quickstart sample app for a specific tech stack",
-		Long:  "Download a Quickstart sample app for a specific tech stack.",
+		Long: "Download a Quickstart sample application for that’s already configured for your Auth0 application. " +
+			"Many different tech stacks available.",
 		Example: `  auth0 quickstarts download --stack <stack>
   auth0 qs download --stack <stack>`,
 		RunE: downloadQuickstart(cli, &inputs),

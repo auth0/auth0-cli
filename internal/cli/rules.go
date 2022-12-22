@@ -87,7 +87,7 @@ func listRulesCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your rules",
-		Long:    "List your existing rules. To create one, try running: `auth0 rules create`.",
+		Long:    "List your existing rules. To create one, run: `auth0 rules create`.",
 		Example: `  auth0 rules list
   auth0 rules ls
   auth0 rules ls --json`,
@@ -129,8 +129,8 @@ func createRuleCmd(cli *cli) *cobra.Command {
 		Args:  cobra.NoArgs,
 		Short: "Create a new rule",
 		Long: "Create a new rule.\n\n" +
-			"To create a new rule interactively, use `auth0 rules create` with no arguments.\n\n" +
-			"To create a new rule non-interactively, supply the name, template and other information through the flags.",
+			"To create interactively, use `auth0 rules create` with no arguments.\n\n" +
+			"To create non-interactively, supply the name, template and other information through the flags.",
 		Example: `  auth0 rules create
   auth0 rules create --name "My Rule"
   auth0 rules create -n "My Rule" --template "Empty rule"
@@ -248,8 +248,8 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete a rule",
 		Long: "Delete a rule.\n\n" +
-			"To delete a rule interactively, use `auth0 rules delete` with no arguments.\n\n" +
-			"To delete a rule non-interactively, supply the rule id and the `--force` flag to skip confirmation.",
+			"To delete interactively, use `auth0 rules delete` with no arguments.\n\n" +
+			"To delete non-interactively, supply the rule id and the `--force` flag to skip confirmation.",
 		Example: `  auth0 rules delete 
   auth0 rules delete <id>
   auth0 rules delete <id> --force`,
@@ -299,8 +299,8 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a rule",
 		Long: "Update a rule.\n\n" +
-			"To update a rule interactively, use `auth0 rules update` with no arguments.\n\n" +
-			"To update a rule non-interactively, supply the rule id and other information through the flags.",
+			"To update interactively, use `auth0 rules update` with no arguments.\n\n" +
+			"To update non-interactively, supply the rule id and other information through the flags.",
 		Example: `  auth0 rules update <id>
   auth0 rules update <id> --name "My Updated Rule"
   auth0 rules update <id> -n "My Updated Rule" --enabled=false`,
@@ -405,11 +405,12 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "enable",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Enable a rule",
-		Long:    "Enable a rule.",
-		Example: `  auth0 rules enable <id>`,
+		Use:   "enable",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Enable a rule",
+		Long:  "Enable a rule.",
+		Example: `  auth0 rules enable
+  auth0 rules enable <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -459,11 +460,12 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "disable",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Disable a rule",
-		Long:    "Disable a rule.",
-		Example: `  auth0 rules disable <id>`,
+		Use:   "disable",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Disable a rule",
+		Long:  "Disable a rule.",
+		Example: `  auth0 rules disable
+  auth0 rules disable <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]

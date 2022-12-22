@@ -269,7 +269,7 @@ func showBrandingTemplateCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.NoArgs,
 		Short: "Display the custom template for Universal Login",
-		Long:  "Display the custom template for Universal Login.",
+		Long:  "Display the custom template for the Universal Login experience.",
 		Example: `  auth0 universal-login templates show
 auth0 universal-login templates show --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {

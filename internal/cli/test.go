@@ -97,9 +97,9 @@ func testLoginCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Try out your Universal Login box",
 		Long:  "Launch a browser to try out your Universal Login box.",
-		Example: `auth0 test login
-auth0 test login <client-id>
-auth0 test login <client-id> --connection <connection>`,
+		Example: `  auth0 test login
+  auth0 test login <client-id>
+  auth0 test login <client-id> --connection <connection>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			const commandKey = "test_login"
 			var userInfo *authutil.UserInfo
@@ -222,8 +222,8 @@ func testTokenCmd(cli *cli) *cobra.Command {
 		Long: `Fetch an access token for the given application.
 If --client-id is not provided, the default client "CLI Login Testing" will be used (and created if not exists).
 Specify the API you want this token for with --audience (API Identifer). Additionally, you can also specify the --scope to use.`,
-		Example: `auth0 test token
-auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>`,
+		Example: `  auth0 test token
+  auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tenant, err := cli.getTenant()
 			if err != nil {

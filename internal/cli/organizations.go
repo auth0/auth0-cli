@@ -111,7 +111,7 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your organizations",
-		Long:    "List your existing organizations. To create one, try running: `auth0 orgs create`.",
+		Long:    "List your existing organizations. To create one, run: `auth0 orgs create`.",
 		Example: `  auth0 orgs list
   auth0 orgs ls
   auth0 orgs ls --json
@@ -213,8 +213,8 @@ func createOrganizationCmd(cli *cli) *cobra.Command {
 		Args:  cobra.NoArgs,
 		Short: "Create a new organization",
 		Long: "Create a new organization.\n\n" +
-			"To create an organization interactively, use `auth0 orgs create` with no arguments.\n\n" +
-			"To create an organization non-interactively, supply the name and other information through the flags.",
+			"To create interactively, use `auth0 orgs create` with no arguments.\n\n" +
+			"To create non-interactively, supply the name and other information through the flags.",
 		Example: `  auth0 orgs create
   auth0 orgs create --name myorganization
   auth0 orgs create -n myorganization --display "My Organization"
@@ -300,8 +300,8 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an organization",
 		Long: "Update an organization.\n\n" +
-			"To update an organization interactively, use `auth0 orgs update` with no arguments.\n\n" +
-			"To update an organization non-interactively, supply the organization id and " +
+			"To update interactively, use `auth0 orgs update` with no arguments.\n\n" +
+			"To update non-interactively, supply the organization id and " +
 			"other information through the flags.",
 		Example: `  auth0 orgs update <id>
   auth0 orgs update <id> --display "My Organization"
@@ -416,8 +416,8 @@ func deleteOrganizationCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete an organization",
 		Long: "Delete an organization.\n\n" +
-			"To delete an organization interactively, use `auth0 orgs delete` with no arguments.\n\n" +
-			"To delete an organization non-interactively, supply the organization id and the `--force` " +
+			"To delete interactively, use `auth0 orgs delete` with no arguments.\n\n" +
+			"To delete non-interactively, supply the organization id and the `--force` " +
 			"flag to skip confirmation.",
 		Example: `  auth0 orgs delete
   auth0 orgs delete <id>`,
@@ -508,7 +508,7 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "List members of an organization",
-		Long:    "List the existing members of an organization.",
+		Long:    "List the members of an organization.",
 		Example: `  auth0 orgs members list
   auth0 orgs members ls <id>
   auth0 orgs members ls <id> --json`,

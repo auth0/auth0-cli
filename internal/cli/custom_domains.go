@@ -98,7 +98,7 @@ func listCustomDomainsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your custom domains",
-		Long:    "List your existing custom domains. To create one, try running: `auth0 domains create`.",
+		Long:    "List your existing custom domains. To create one, run: `auth0 domains create`.",
 		Example: `  auth0 domains list
   auth0 domains ls
   auth0 domains ls --json`,
@@ -180,8 +180,8 @@ func createCustomDomainCmd(cli *cli) *cobra.Command {
 		Args:  cobra.NoArgs,
 		Short: "Create a custom domain",
 		Long: "Create a custom domain.\n\n" +
-			"To create a custom domain interactively, use `auth0 domains create` with no arguments.\n\n" +
-			"To create a custom domain non-interactively, supply the domain name, type, policy and " +
+			"To create interactively, use `auth0 domains create` with no arguments.\n\n" +
+			"To create non-interactively, supply the domain name, type, policy and " +
 			"other information through the flags.",
 		Example: `  auth0 domains create
   auth0 domains create --domain <domain-name>
@@ -247,8 +247,8 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a custom domain",
 		Long: "Update a custom domain.\n\n" +
-			"To update a custom domain interactively, use `auth0 domains update` with no arguments.\n\n" +
-			"To update a custom domain non-interactively, supply the domain name, type, policy and " +
+			"To update interactively, use `auth0 domains update` with no arguments.\n\n" +
+			"To update non-interactively, supply the domain name, type, policy and " +
 			"other information through the flags.",
 		Example: `  auth0 domains update
   auth0 domains update <id> --policy compatible
@@ -328,8 +328,8 @@ func deleteCustomDomainCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete a custom domain",
 		Long: "Delete a custom domain.\n\n" +
-			"To delete a custom domain interactively, use `auth0 domains delete` with no arguments.\n\n" +
-			"To delete a custom domain non-interactively, supply the custom domain id and the `--force` flag to " +
+			"To delete interactively, use `auth0 domains delete` with no arguments.\n\n" +
+			"To delete non-interactively, supply the custom domain id and the `--force` flag to " +
 			"skip confirmation.",
 		Example: `  auth0 domains delete
   auth0 domains delete <id>
@@ -377,8 +377,8 @@ func verifyCustomDomainCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Verify a custom domain",
 		Long: "Verify a custom domain.\n\n" +
-			"To verify a custom domain interactively, use `auth0 domains verify` with no arguments.\n\n" +
-			"To verify a custom domain non-interactively, supply the custom domain id.",
+			"To verify interactively, use `auth0 domains verify` with no arguments.\n\n" +
+			"To verify non-interactively, supply the custom domain id.",
 		Example: `  auth0 domains verify 
   auth0 domains verify <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {

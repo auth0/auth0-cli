@@ -167,8 +167,8 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an email template",
 		Long: "Update an email template.\n\n" +
-			"To update an email template interactively, use `auth0 email templates update` with no arguments.\n\n" +
-			"To update an email template non-interactively, supply the template name and other information " +
+			"To update interactively, use `auth0 email templates update` with no arguments.\n\n" +
+			"To update non-interactively, supply the template name and other information " +
 			"through the flags.",
 		Example: `  auth0 email templates update <template>
   auth0 email templates update <template> --json

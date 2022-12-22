@@ -64,7 +64,7 @@ func listRolesCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your roles",
-		Long:    "List your existing roles. To create one, try running: `auth0 roles create`.",
+		Long:    "List your existing roles. To create one, run: `auth0 roles create`.",
 		Example: `  auth0 roles list
   auth0 roles ls
   auth0 roles ls -n 100
@@ -162,8 +162,8 @@ func createRoleCmd(cli *cli) *cobra.Command {
 		Args:  cobra.NoArgs,
 		Short: "Create a new role",
 		Long: "Create a new role.\n\n" +
-			"To create a role interactively, use `auth0 roles create` with no arguments.\n\n" +
-			"To create a role non-interactively, supply the role name and description through the flags.",
+			"To create interactively, use `auth0 roles create` with no arguments.\n\n" +
+			"To create non-interactively, supply the role name and description through the flags.",
 		Example: `  auth0 roles create
   auth0 roles create --name myrole
   auth0 roles create -n myrole --description "awesome role"`,
@@ -217,8 +217,8 @@ func updateRoleCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a role",
 		Long: "Update a role.\n\n" +
-			"To update a role interactively, use `auth0 roles update` with no arguments.\n\n" +
-			"To update a role non-interactively, supply the role id, name and description through the flags.",
+			"To update interactively, use `auth0 roles update` with no arguments.\n\n" +
+			"To update non-interactively, supply the role id, name and description through the flags.",
 		Example: `  auth0 roles update
   auth0 roles update <id> --name myrole
   auth0 roles update <id> -n myrole --description "awesome role"`,
@@ -286,8 +286,8 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Delete a role",
 		Long: "Delete a role.\n\n" +
-			"To delete a role interactively, use `auth0 roles delete`.\n\n" +
-			"To delete a role non-interactively, supply the role id and the `--force` flag to skip confirmation.",
+			"To delete interactively, use `auth0 roles delete`.\n\n" +
+			"To delete non-interactively, supply the role id and the `--force` flag to skip confirmation.",
 		Example: `  auth0 roles delete
   auth0 roles delete <id>
   auth0 roles delete <id> --force`,
