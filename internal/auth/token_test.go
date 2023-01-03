@@ -48,7 +48,6 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 
 		tr := &TokenRetriever{
 			Authenticator: &Authenticator{"https://test.com/api/v2/", "client-id", "https://test.com/oauth/device/code", "https://test.com/token"},
-			Secrets:       secretsMock,
 			Client:        client,
 		}
 

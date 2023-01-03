@@ -195,9 +195,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (T
 	cli.renderer.Infof("Tenant: %s", result.Domain)
 	cli.renderer.Newline()
 
-	// Store the refresh token.
-	secretsStore := &auth.Keyring{}
-	err = secretsStore.Set(auth.SecretsNamespace, result.Domain, result.RefreshToken)
+	err = auth.StoreRefreshToken(result.Domain, result.RefreshToken)
 	if err != nil {
 		message = "Could not store the refresh token locally, " +
 			"please expect to login again once your access token expired. See %s."

@@ -149,7 +149,6 @@ func (t *Tenant) regenerateAccessToken(ctx context.Context, c *cli) error {
 	if t.authenticatedWithDeviceCodeFlow() {
 		tokenRetriever := &auth.TokenRetriever{
 			Authenticator: c.authenticator,
-			Secrets:       &auth.Keyring{},
 			Client:        http.DefaultClient,
 		}
 
@@ -368,8 +367,7 @@ func (c *cli) removeTenant(ten string) error {
 		return fmt.Errorf("Unexpected error persisting config: %w", err)
 	}
 
-	tr := &auth.TokenRetriever{Secrets: &auth.Keyring{}}
-	if err := tr.Delete(ten); err != nil {
+	if err := auth.DeleteSecretsForTenant(ten); err != nil {
 		return fmt.Errorf("Unexpected error clearing tenant information: %w", err)
 	}
 
