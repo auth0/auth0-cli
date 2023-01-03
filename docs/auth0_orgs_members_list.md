@@ -1,34 +1,24 @@
 ---
 layout: default
 ---
-## auth0 orgs members list
+# auth0 orgs members list
 
-List members of an organization
-
-### Synopsis
-
-List members of an organization.
+List the members of an organization.
 
 ```
 auth0 orgs members list [flags]
 ```
 
-### Examples
+
+## Flags
 
 ```
-auth0 orgs members list
-auth0 orgs members ls <id>
-```
-
-### Options
-
-```
-  -h, --help         help for list
       --json         Output in json format.
   -n, --number int   Number of apps to retrieve (default 50)
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -37,7 +27,17 @@ auth0 orgs members ls <id>
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 orgs members](auth0_orgs_members.md)	 - Manage members of an organization
+```
+  auth0 orgs members list
+  auth0 orgs members ls <id>
+  auth0 orgs members ls <id> --json
+```
+
+
+## Related Commands
+
+- [auth0 orgs members list](auth0_orgs_members_list.md) - List members of an organization
+
 

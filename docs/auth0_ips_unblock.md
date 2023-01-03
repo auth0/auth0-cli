@@ -1,31 +1,18 @@
 ---
 layout: default
 ---
-## auth0 ips unblock
+# auth0 ips unblock
 
-Unblock IP address
-
-### Synopsis
-
-Unblock an IP address which is currently blocked.
+Unblock an IP address currently blocked by the Suspicious IP Throttling due to multiple suspicious attempts.
 
 ```
 auth0 ips unblock [flags]
 ```
 
-### Examples
 
-```
-auth0 ips unblock <ip>
-```
 
-### Options
 
-```
-  -h, --help   help for unblock
-```
-
-### Options inherited from parent commands
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -34,7 +21,17 @@ auth0 ips unblock <ip>
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 ips](auth0_ips.md)	 - Manage blocked IP addresses
+```
+  auth0 ips unblock
+  auth0 ips unblock <ip>
+```
+
+
+## Related Commands
+
+- [auth0 ips check](auth0_ips_check.md) - Check IP address
+- [auth0 ips unblock](auth0_ips_unblock.md) - Unblock IP address
+
 

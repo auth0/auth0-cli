@@ -1,34 +1,24 @@
 ---
 layout: default
 ---
-## auth0 quickstarts download
+# auth0 quickstarts download
 
-Download a Quickstart sample app for a specific tech stack
-
-### Synopsis
-
-Download a Quickstart sample app for a specific tech stack.
+Download a Quickstart sample application for that’s already configured for your Auth0 application. Many different tech stacks available.
 
 ```
 auth0 quickstarts download [flags]
 ```
 
-### Examples
 
-```
-auth0 quickstarts download --stack <stack>
-auth0 qs download --stack <stack>
-```
-
-### Options
+## Flags
 
 ```
       --force          Skip confirmation.
-  -h, --help           help for download
   -s, --stack string   Tech/Language of the quickstart sample to download.
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -37,7 +27,17 @@ auth0 qs download --stack <stack>
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 quickstarts](auth0_quickstarts.md)	 - Quickstart support for getting bootstrapped
+```
+  auth0 quickstarts download --stack <stack>
+  auth0 qs download --stack <stack>
+```
+
+
+## Related Commands
+
+- [auth0 quickstarts download](auth0_quickstarts_download.md) - Download a Quickstart sample app for a specific tech stack
+- [auth0 quickstarts list](auth0_quickstarts_list.md) - List the available Quickstarts
+
 

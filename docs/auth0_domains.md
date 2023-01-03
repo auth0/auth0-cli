@@ -1,36 +1,16 @@
 ---
 layout: default
 ---
-## auth0 domains
+# auth0 domains
 
-Manage custom domains
+With a custom domain, your users feel confident that they are providing their credentials to the right party. Authentication happens within the context of your brand which helps you build brand loyalty. Users are not redirected to a third-party site that breaks the branding context. This prevents users from becoming confused about whether they are still making a transaction or operation with you.
 
-### Synopsis
+## Commands
 
-Manage custom domains.
-
-### Options
-
-```
-  -h, --help   help for domains
-```
-
-### Options inherited from parent commands
-
-```
-      --debug           Enable debug mode.
-      --no-color        Disable colors.
-      --no-input        Disable interactivity.
-      --tenant string   Specific tenant to use.
-```
-
-### SEE ALSO
-
-* [auth0](/auth0-cli/)	 - Build, manage and test your Auth0 integrations from the command line.
-* [auth0 domains create](auth0_domains_create.md)	 - Create a custom domain
-* [auth0 domains delete](auth0_domains_delete.md)	 - Delete a custom domain
-* [auth0 domains list](auth0_domains_list.md)	 - List your custom domains
-* [auth0 domains show](auth0_domains_show.md)	 - Show a custom domain
-* [auth0 domains update](auth0_domains_update.md)	 - Update a custom domain
-* [auth0 domains verify](auth0_domains_verify.md)	 - Verify a custom domain
+- [auth0 domains create](auth0_domains_create.md) - Create a custom domain
+- [auth0 domains delete](auth0_domains_delete.md) - Delete a custom domain
+- [auth0 domains list](auth0_domains_list.md) - List your custom domains
+- [auth0 domains show](auth0_domains_show.md) - Show a custom domain
+- [auth0 domains update](auth0_domains_update.md) - Update a custom domain
+- [auth0 domains verify](auth0_domains_verify.md) - Verify a custom domain
 

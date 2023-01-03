@@ -1,11 +1,7 @@
 ---
 layout: default
 ---
-## auth0 test login
-
-Try out your Universal Login box
-
-### Synopsis
+# auth0 test login
 
 Launch a browser to try out your Universal Login box.
 
@@ -13,27 +9,20 @@ Launch a browser to try out your Universal Login box.
 auth0 test login [flags]
 ```
 
-### Examples
 
-```
-auth0 test login
-auth0 test login <client-id>
-auth0 test login <client-id> --connection <connection>
-```
-
-### Options
+## Flags
 
 ```
   -a, --audience string     The unique identifier of the target API you want to access.
       --connection string   Connection to test during login.
   -d, --domain string       One of your custom domains.
       --force               Skip confirmation.
-  -h, --help                help for login
       --json                Output in json format.
   -s, --scopes strings      The list of scopes you want to use. (default [openid,profile])
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -42,7 +31,18 @@ auth0 test login <client-id> --connection <connection>
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 test](auth0_test.md)	 - Try your Universal Login box or get a token
+```
+  auth0 test login
+  auth0 test login <client-id>
+  auth0 test login <client-id> --connection <connection>
+```
+
+
+## Related Commands
+
+- [auth0 test login](auth0_test_login.md) - Try out your Universal Login box
+- [auth0 test token](auth0_test_token.md) - Fetch a token for the given application and API
+
 

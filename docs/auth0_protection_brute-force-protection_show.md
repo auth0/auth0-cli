@@ -1,32 +1,23 @@
 ---
 layout: default
 ---
-## auth0 protection brute-force-protection show
+# auth0 protection brute-force-protection show
 
-Show brute force protection settings
-
-### Synopsis
-
-Show brute force protection settings.
+Display the current brute force protection settings.
 
 ```
 auth0 protection brute-force-protection show [flags]
 ```
 
-### Examples
+
+## Flags
 
 ```
-auth0 protection brute-force-protection show
-```
-
-### Options
-
-```
-  -h, --help   help for show
       --json   Output in json format.
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -35,7 +26,17 @@ auth0 protection brute-force-protection show
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 protection brute-force-protection](auth0_protection_brute-force-protection.md)	 - Manage brute force protection settings
+```
+  auth0 protection brute-force-protection show
+  auth0 ap bfp show --json
+```
+
+
+## Related Commands
+
+- [auth0 protection brute-force-protection show](auth0_protection_brute-force-protection_show.md) - Show brute force protection settings
+- [auth0 protection brute-force-protection update](auth0_protection_brute-force-protection_update.md) - Update brute force protection settings
+
 

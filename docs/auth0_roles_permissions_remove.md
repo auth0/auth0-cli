@@ -1,37 +1,26 @@
 ---
 layout: default
 ---
-## auth0 roles permissions remove
+# auth0 roles permissions remove
 
-Remove a permission from a role
+Remove an existing permission defined in one of your APIs. To remove a permission, run:
 
-### Synopsis
-
-Remove an existing permission defined in one of your APIs.
-To remove a permission try:
-
-    auth0 roles permissions remove <role-id> -p <permission-name>
+`auth0 roles permissions remove <role-id> -p <permission-name>`
 
 ```
 auth0 roles permissions remove [flags]
 ```
 
-### Examples
 
-```
-auth0 roles permissions remove <role-id> -p <permission-name>
-auth0 roles permissions rm
-```
-
-### Options
+## Flags
 
 ```
   -a, --api-id string         API Identifier.
-  -h, --help                  help for remove
   -p, --permissions strings   Permissions.
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -40,7 +29,18 @@ auth0 roles permissions rm
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 roles permissions](auth0_roles_permissions.md)	 - Manage permissions within the role resource
+```
+  auth0 roles permissions rm
+  auth0 roles permissions remove <role-id> -p <permission-name>
+```
+
+
+## Related Commands
+
+- [auth0 roles permissions add](auth0_roles_permissions_add.md) - Add a permission to a role
+- [auth0 roles permissions list](auth0_roles_permissions_list.md) - List permissions defined within a role
+- [auth0 roles permissions remove](auth0_roles_permissions_remove.md) - Remove a permission from a role
+
 

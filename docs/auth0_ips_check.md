@@ -1,31 +1,18 @@
 ---
 layout: default
 ---
-## auth0 ips check
+# auth0 ips check
 
-Check IP address
-
-### Synopsis
-
-Check whether a given IP address is blocked.
+Check if a given IP address is blocked via the Suspicious IP Throttling due to multiple suspicious attempts.
 
 ```
 auth0 ips check [flags]
 ```
 
-### Examples
 
-```
-auth0 ips check <ip>
-```
 
-### Options
 
-```
-  -h, --help   help for check
-```
-
-### Options inherited from parent commands
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -34,7 +21,17 @@ auth0 ips check <ip>
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 ips](auth0_ips.md)	 - Manage blocked IP addresses
+```
+  auth0 ips check
+  auth0 ips check <ip>
+```
+
+
+## Related Commands
+
+- [auth0 ips check](auth0_ips_check.md) - Check IP address
+- [auth0 ips unblock](auth0_ips_unblock.md) - Unblock IP address
+
 

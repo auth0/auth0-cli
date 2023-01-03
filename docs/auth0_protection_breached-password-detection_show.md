@@ -1,32 +1,23 @@
 ---
 layout: default
 ---
-## auth0 protection breached-password-detection show
+# auth0 protection breached-password-detection show
 
-Show breached password detection settings
-
-### Synopsis
-
-Show breached password detection settings.
+Display the current breached password detection settings.
 
 ```
 auth0 protection breached-password-detection show [flags]
 ```
 
-### Examples
+
+## Flags
 
 ```
-auth0 protection breached-password-detection show
-```
-
-### Options
-
-```
-  -h, --help   help for show
       --json   Output in json format.
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -35,7 +26,17 @@ auth0 protection breached-password-detection show
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 protection breached-password-detection](auth0_protection_breached-password-detection.md)	 - Manage breached password detection settings
+```
+  auth0 protection breached-password-detection show
+  auth0 ap bpd show --json
+```
+
+
+## Related Commands
+
+- [auth0 protection breached-password-detection show](auth0_protection_breached-password-detection_show.md) - Show breached password detection settings
+- [auth0 protection breached-password-detection update](auth0_protection_breached-password-detection_update.md) - Update breached password detection settings
+
 

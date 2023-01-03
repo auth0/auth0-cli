@@ -1,31 +1,11 @@
 ---
 layout: default
 ---
-## auth0 email
+# auth0 email
 
-Manage email settings
+You can configure a test SMTP email server in your development or test environments to check for successful email delivery and view how emails you send appear to recipients prior to going to production.
 
-### Synopsis
+## Commands
 
-Manage email settings.
-
-### Options
-
-```
-  -h, --help   help for email
-```
-
-### Options inherited from parent commands
-
-```
-      --debug           Enable debug mode.
-      --no-color        Disable colors.
-      --no-input        Disable interactivity.
-      --tenant string   Specific tenant to use.
-```
-
-### SEE ALSO
-
-* [auth0](/auth0-cli/)	 - Build, manage and test your Auth0 integrations from the command line.
-* [auth0 email templates](auth0_email_templates.md)	 - Manage custom email templates
+- [auth0 email templates](auth0_email_templates.md) - Manage custom email templates
 

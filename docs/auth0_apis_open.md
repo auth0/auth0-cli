@@ -1,32 +1,18 @@
 ---
 layout: default
 ---
-## auth0 apis open
+# auth0 apis open
 
-Open API settings page in the Auth0 Dashboard
-
-### Synopsis
-
-Open API settings page in the Auth0 Dashboard.
+Open an APIs' settings page in the Auth0 Dashboard.
 
 ```
 auth0 apis open [flags]
 ```
 
-### Examples
 
-```
-auth0 apis open
-auth0 apis open <id|audience>
-```
 
-### Options
 
-```
-  -h, --help   help for open
-```
-
-### Options inherited from parent commands
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -35,7 +21,22 @@ auth0 apis open <id|audience>
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 apis](auth0_apis.md)	 - Manage resources for APIs
+```
+  auth0 apis open
+  auth0 apis open <id|audience>
+```
+
+
+## Related Commands
+
+- [auth0 apis create](auth0_apis_create.md) - Create a new API
+- [auth0 apis delete](auth0_apis_delete.md) - Delete an API
+- [auth0 apis list](auth0_apis_list.md) - List your APIs
+- [auth0 apis open](auth0_apis_open.md) - Open the settings page of an API
+- [auth0 apis scopes](auth0_apis_scopes.md) - Manage resources for API scopes
+- [auth0 apis show](auth0_apis_show.md) - Show an API
+- [auth0 apis update](auth0_apis_update.md) - Update an API
+
 

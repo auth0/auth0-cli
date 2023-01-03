@@ -1,11 +1,7 @@
 ---
 layout: default
 ---
-## auth0 quickstarts list
-
-List the available Quickstarts
-
-### Synopsis
+# auth0 quickstarts list
 
 List the available Quickstarts.
 
@@ -13,23 +9,15 @@ List the available Quickstarts.
 auth0 quickstarts list [flags]
 ```
 
-### Examples
+
+## Flags
 
 ```
-auth0 quickstarts list
-auth0 quickstarts ls
-auth0 qs list
-auth0 qs ls
-```
-
-### Options
-
-```
-  -h, --help   help for list
       --json   Output in json format.
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -38,7 +26,20 @@ auth0 qs ls
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 quickstarts](auth0_quickstarts.md)	 - Quickstart support for getting bootstrapped
+```
+  auth0 quickstarts list
+  auth0 quickstarts ls
+  auth0 qs list
+  auth0 qs ls
+  auth0 qs ls --json
+```
+
+
+## Related Commands
+
+- [auth0 quickstarts download](auth0_quickstarts_download.md) - Download a Quickstart sample app for a specific tech stack
+- [auth0 quickstarts list](auth0_quickstarts_list.md) - List the available Quickstarts
+
 

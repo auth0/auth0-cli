@@ -1,37 +1,25 @@
 ---
 layout: default
 ---
-## auth0 apps list
+# auth0 apps list
 
-List your applications
-
-### Synopsis
-
-List your existing applications. To create one try:
-auth0 apps create
+List your existing applications. To create one, run: `auth0 apps create`.
 
 ```
 auth0 apps list [flags]
 ```
 
-### Examples
+
+## Flags
 
 ```
-auth0 apps list
-auth0 apps ls
-auth0 apps ls -n 100
-```
-
-### Options
-
-```
-  -h, --help         help for list
       --json         Output in json format.
   -n, --number int   Number of apps to retrieve (default 50)
   -r, --reveal       Display the Client Secret as part of the command output.
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -40,7 +28,24 @@ auth0 apps ls -n 100
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 apps](auth0_apps.md)	 - Manage resources for applications
+```
+  auth0 apps list
+  auth0 apps ls
+  auth0 apps ls --json
+  auth0 apps ls -n 100
+```
+
+
+## Related Commands
+
+- [auth0 apps create](auth0_apps_create.md) - Create a new application
+- [auth0 apps delete](auth0_apps_delete.md) - Delete an application
+- [auth0 apps list](auth0_apps_list.md) - List your applications
+- [auth0 apps open](auth0_apps_open.md) - Open the settings page of an application
+- [auth0 apps show](auth0_apps_show.md) - Show an application
+- [auth0 apps update](auth0_apps_update.md) - Update an application
+- [auth0 apps use](auth0_apps_use.md) - Choose a default application for the Auth0 CLI
+
 

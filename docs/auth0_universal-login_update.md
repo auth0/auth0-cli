@@ -1,39 +1,32 @@
 ---
 layout: default
 ---
-## auth0 universal-login update
-
-Update the custom branding settings for Universal Login
-
-### Synopsis
+# auth0 universal-login update
 
 Update the custom branding settings for Universal Login.
+
+To update the settings for Universal Login interactively, use `auth0 universal-login update` with no arguments.
+
+To update the settings for Universal Login non-interactively, supply the accent, background and logo through the flags.
 
 ```
 auth0 universal-login update [flags]
 ```
 
-### Examples
 
-```
-auth0 universal-login update
-auth0 universal-login update --accent "#FF4F40" --background "#2A2E35" 
-auth0 universal-login update -a "#FF4F40" -b "#2A2E35" --logo "https://example.com/logo.png"
-```
-
-### Options
+## Flags
 
 ```
   -a, --accent string       Accent color.
   -b, --background string   Page background color
   -f, --favicon string      URL for the favicon. Must use HTTPS.
   -c, --font string         URL for the custom font. The URL must point to a font file and not a stylesheet. Must use HTTPS.
-  -h, --help                help for update
       --json                Output in json format.
   -l, --logo string         URL for the logo. Must use HTTPS.
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -42,7 +35,20 @@ auth0 universal-login update -a "#FF4F40" -b "#2A2E35" --logo "https://example.c
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 universal-login](auth0_universal-login.md)	 - Manage the Universal Login experience
+```
+  auth0 universal-login update
+  auth0 universal-login update --accent "#FF4F40" --background "#2A2E35" 
+  auth0 universal-login update -a "#FF4F40" -b "#2A2E35" --logo "https://example.com/logo.png"
+```
+
+
+## Related Commands
+
+- [auth0 universal-login prompts](auth0_universal-login_prompts.md) - Manage custom text for prompts
+- [auth0 universal-login show](auth0_universal-login_show.md) - Display the custom branding settings for Universal Login
+- [auth0 universal-login templates](auth0_universal-login_templates.md) - Manage custom Universal Login templates
+- [auth0 universal-login update](auth0_universal-login_update.md) - Update the custom branding settings for Universal Login
+
 

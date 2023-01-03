@@ -1,11 +1,7 @@
 ---
 layout: default
 ---
-## auth0 universal-login templates update
-
-Update the custom template for Universal Login
-
-### Synopsis
+# auth0 universal-login templates update
 
 Update the custom template for Universal Login.
 
@@ -13,19 +9,10 @@ Update the custom template for Universal Login.
 auth0 universal-login templates update [flags]
 ```
 
-### Examples
 
-```
-auth0 universal-login templates update
-```
 
-### Options
 
-```
-  -h, --help   help for update
-```
-
-### Options inherited from parent commands
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
@@ -34,7 +21,16 @@ auth0 universal-login templates update
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
+## Examples
 
-* [auth0 universal-login templates](auth0_universal-login_templates.md)	 - Manage custom Universal Login templates
+```
+  auth0 universal-login templates update
+```
+
+
+## Related Commands
+
+- [auth0 universal-login templates show](auth0_universal-login_templates_show.md) - Display the custom template for Universal Login
+- [auth0 universal-login templates update](auth0_universal-login_templates_update.md) - Update the custom template for Universal Login
+
 

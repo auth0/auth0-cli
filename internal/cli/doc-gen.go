@@ -81,9 +81,11 @@ layout: default
 
 {{ wrapWithBackticks .Examples }}
 
+{{ if .AssociatedCommands }}
 ## Related Commands
 
 %s
+{{ end }}
 `
 )
 
@@ -173,6 +175,11 @@ func GenerateParentPage(cmd *cobra.Command, w io.Writer) error {
 func GenerateCommandPage(cmd *cobra.Command, w io.Writer) error {
 	templateBody := fmt.Sprintf(commandPageTemplate, associatedCommandsFragment)
 
+	associatedCommands := cmd.Parent().Commands()
+	if cmd.Parent().Name() == "auth0" {
+		associatedCommands = nil
+	}
+
 	pageData := struct {
 		Name               string
 		HasFlags           bool
@@ -192,7 +199,7 @@ func GenerateCommandPage(cmd *cobra.Command, w io.Writer) error {
 		HasInheritedFlags:  cmd.HasInheritedFlags(),
 		InheritedFlags:     cmd.InheritedFlags().FlagUsages(),
 		CommandPath:        cmd.CommandPath(),
-		AssociatedCommands: cmd.Parent().Commands(),
+		AssociatedCommands: associatedCommands,
 		Examples:           cmd.Example,
 		UseLine:            cmd.UseLine(),
 	}
