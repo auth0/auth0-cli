@@ -3,7 +3,6 @@ package secret
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/zalando/go-keyring"
 )
 
@@ -30,12 +29,10 @@ func GetRefreshToken(tenant string) (string, error) {
 
 // DeleteSecretsForTenant deletes all secrets for a given tenant
 func DeleteSecretsForTenant(tenant string) error {
-	var errs error
-
-	e := keyring.Delete(secretRefreshToken, tenant)
-	if e != nil {
-		errs = errors.Wrap(errs, fmt.Sprintf("unable to delete refresh token from keyring: %s", e.Error()))
+	err := keyring.Delete(secretRefreshToken, tenant)
+	if err != nil {
+		return fmt.Errorf("unable to delete refresh token from keyring: %s", err)
 	}
 
-	return errs
+	return nil
 }
