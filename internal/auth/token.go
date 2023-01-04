@@ -26,7 +26,6 @@ type TokenRetriever struct {
 // The request is used the default client_id and endpoint for device authentication.
 func (t *TokenRetriever) Refresh(ctx context.Context, tenant string) (TokenResponse, error) {
 	refreshToken, err := GetRefreshToken(tenant)
-
 	if err != nil {
 		return TokenResponse{}, fmt.Errorf("cannot get the stored refresh token: %w", err)
 	}
