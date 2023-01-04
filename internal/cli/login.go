@@ -10,6 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/prompt"
+	"github.com/auth0/auth0-cli/internal/secret"
 )
 
 var (
@@ -195,7 +196,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (T
 	cli.renderer.Infof("Tenant: %s", result.Domain)
 	cli.renderer.Newline()
 
-	err = auth.StoreRefreshToken(result.Domain, result.RefreshToken)
+	err = secret.StoreRefreshToken(result.Domain, result.RefreshToken)
 	if err != nil {
 		message = "Could not store the refresh token locally, " +
 			"please expect to login again once your access token expired. See %s."

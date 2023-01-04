@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/auth0/auth0-cli/internal/secret"
 	"github.com/golang/mock/gomock"
 	"github.com/zalando/go-keyring"
 )
@@ -28,8 +29,10 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
+		testTenantName := "auth0-cli-test.us.auth0.com"
+
 		keyring.MockInit()
-		err := StoreRefreshToken(testTenantName, "refresh-token-here")
+		err := secret.StoreRefreshToken(testTenantName, "refresh-token-here")
 		if err != nil {
 			t.Fatal(err)
 		}
