@@ -29,7 +29,7 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 		defer ctrl.Finish()
 
 		keyring.MockInit()
-		err := keyring.Set(secretRefreshToken, testTenantName, "refresh-token-here")
+		err := StoreRefreshToken(testTenantName, "refresh-token-here")
 		if err != nil {
 			t.Fatal(err)
 		}
