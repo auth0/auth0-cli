@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	"github.com/zalando/go-keyring"
 )
@@ -11,21 +13,28 @@ const (
 
 // StoreRefreshToken stores a tenant's refresh token in the system keyring
 func StoreRefreshToken(tenant, value string) error {
-	return keyring.Set(secretRefreshToken, tenant, value)
+	if err := keyring.Set(secretRefreshToken, tenant, value); err != nil {
+		return fmt.Errorf("unable to retrieve refresh token from keyring: %w", err)
+	}
+	return nil
 }
 
 // GetRefreshToken retrieves a tenant's refresh token from the system keyring
 func GetRefreshToken(tenant string) (string, error) {
-	return keyring.Get(secretRefreshToken, tenant)
+	cs, err := keyring.Get(secretRefreshToken, tenant)
+	if err != nil {
+		return "", fmt.Errorf("unable to retrieve refresh token from keyring: %w", err)
+	}
+	return cs, nil
 }
 
-// Delete deletes a value for the given namespace and key.
+// DeleteSecretsForTenant deletes all secrets for a given tenant
 func DeleteSecretsForTenant(tenant string) error {
 	var errs error
 
 	e := keyring.Delete(secretRefreshToken, tenant)
 	if e != nil {
-		errs = errors.Wrap(errs, e.Error())
+		errs = errors.Wrap(errs, fmt.Sprintf("unable to delete refresh token from keyring: %s", e.Error()))
 	}
 
 	return errs
