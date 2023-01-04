@@ -20,10 +20,8 @@ func TestSecrets(t *testing.T) {
 	})
 
 	t.Run("succeed: get refresh token", func(t *testing.T) {
-		// init underlying keychain manager
 		keyring.MockInit()
 
-		// set with the underlying manager:
 		err := keyring.Set(secretRefreshToken, testTenantName, "fake-refresh-token")
 		if err != nil {
 			t.Fatal(err)
@@ -39,18 +37,14 @@ func TestSecrets(t *testing.T) {
 		}
 	})
 
-	t.Run("succeed: set secret", func(t *testing.T) {
-		// init underlying keychain manager
+	t.Run("succeed: set refresh token", func(t *testing.T) {
 		keyring.MockInit()
-
-		testTenantName := "auth0-cli-test.us.auth0.com"
 
 		err := StoreRefreshToken(testTenantName, "fake-refresh-token")
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		// get with the underlying manager:
 		v, err := keyring.Get(secretRefreshToken, testTenantName)
 		if err != nil {
 			t.Fatal(err)
