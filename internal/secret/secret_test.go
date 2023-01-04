@@ -1,6 +1,7 @@
 package secret
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/zalando/go-keyring"
@@ -14,7 +15,7 @@ func TestSecrets(t *testing.T) {
 
 		_, err := GetRefreshToken(testTenantName)
 
-		if got, want := err, keyring.ErrNotFound; got != want {
+		if got, want := err, fmt.Errorf("unable to retrieve refresh token from keyring: %s", keyring.ErrNotFound); got.Error() != want.Error() {
 			t.Fatalf("wanted error: %v, got: %v", want, got)
 		}
 	})
