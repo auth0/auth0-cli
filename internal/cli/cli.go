@@ -54,7 +54,6 @@ type Tenant struct {
 	Apps         map[string]app `json:"apps,omitempty"`
 	DefaultAppID string         `json:"default_app_id,omitempty"`
 	ClientID     string         `json:"client_id"`
-	ClientSecret string         `json:"client_secret"`
 }
 
 type app struct {
@@ -97,11 +96,11 @@ type cli struct {
 }
 
 func (t *Tenant) authenticatedWithClientCredentials() bool {
-	return t.ClientID != "" && t.ClientSecret != ""
+	return t.ClientID != ""
 }
 
 func (t *Tenant) authenticatedWithDeviceCodeFlow() bool {
-	return t.ClientID == "" && t.ClientSecret == ""
+	return t.ClientID == ""
 }
 
 func (t *Tenant) hasExpiredToken() bool {
@@ -131,11 +130,16 @@ func (t *Tenant) additionalRequestedScopes() []string {
 
 func (t *Tenant) regenerateAccessToken(ctx context.Context, c *cli) error {
 	if t.authenticatedWithClientCredentials() {
+		clientSecret, err := keyring.GetClientSecret(t.Domain)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve client secret from keyring: %w", err)
+		}
+
 		token, err := auth.GetAccessTokenFromClientCreds(
 			ctx,
 			auth.ClientCredentials{
 				ClientID:     t.ClientID,
-				ClientSecret: t.ClientSecret,
+				ClientSecret: clientSecret,
 				Domain:       t.Domain,
 			},
 		)
@@ -242,12 +246,16 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 
 	if err := t.regenerateAccessToken(ctx, c); err != nil {
 		if t.authenticatedWithClientCredentials() {
-			return t, fmt.Errorf(
-				"failed to fetch access token using client credentials.\n\n"+
-					"This may occur if the designated application has been deleted or the client secret has been rotated.\n\n"+
+			errorMessage := fmt.Errorf(
+				"failed to fetch access token using client credentials: %w\n\n"+
+					"This may occur if the designated Auth0 application has been deleted, "+
+					"the client secret has been rotated or previous failure to store client secret in the keyring.\n\n"+
 					"Please re-authenticate by running: %s",
+				err,
 				ansi.Bold("auth0 login --domain <tenant-domain --client-id <client-id> --client-secret <client-secret>"),
 			)
+
+			return t, errorMessage
 		}
 
 		c.renderer.Warnf("Failed to renew access token: %s", err)

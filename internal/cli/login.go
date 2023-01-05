@@ -266,15 +266,19 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 				"Ensure that the provided client-id, client-secret and domain are correct. \n\nerror: %w\n", err)
 	}
 
-	t := Tenant{
-		Domain:       inputs.Domain,
-		AccessToken:  token.AccessToken,
-		ExpiresAt:    token.ExpiresAt,
-		ClientID:     inputs.ClientID,
-		ClientSecret: inputs.ClientSecret,
+	if err = keyring.StoreClientSecret(inputs.Domain, inputs.ClientSecret); err != nil {
+		cli.renderer.Warnf("Could not store the client secret to the keyring: %s", err)
+		cli.renderer.Warnf("Expect to login again when your access token expires.")
 	}
 
-	if err := cli.addTenant(t); err != nil {
+	t := Tenant{
+		Domain:      inputs.Domain,
+		AccessToken: token.AccessToken,
+		ExpiresAt:   token.ExpiresAt,
+		ClientID:    inputs.ClientID,
+	}
+
+	if err = cli.addTenant(t); err != nil {
 		return fmt.Errorf("unexpected error when attempting to save tenant data: %w", err)
 	}
 

@@ -40,4 +40,35 @@ func TestSecrets(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, expectedRefreshToken, actualRefreshToken)
 	})
+
+	t.Run("it fails to retrieve an nonexistent client secret", func(t *testing.T) {
+		keyring.MockInit()
+
+		_, actualError := GetClientSecret(testTenantName)
+		assert.EqualError(t, actualError, keyring.ErrNotFound.Error())
+	})
+
+	t.Run("it successfully retrieves an existent client secret", func(t *testing.T) {
+		keyring.MockInit()
+
+		expectedRefreshToken := "fake-refresh-token"
+		err := keyring.Set(secretClientSecret, testTenantName, expectedRefreshToken)
+		assert.NoError(t, err)
+
+		actualRefreshToken, err := GetClientSecret(testTenantName)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedRefreshToken, actualRefreshToken)
+	})
+
+	t.Run("it successfully stores a client secret", func(t *testing.T) {
+		keyring.MockInit()
+
+		expectedRefreshToken := "fake-refresh-token"
+		err := StoreClientSecret(testTenantName, expectedRefreshToken)
+		assert.NoError(t, err)
+
+		actualRefreshToken, err := GetClientSecret(testTenantName)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedRefreshToken, actualRefreshToken)
+	})
 }
