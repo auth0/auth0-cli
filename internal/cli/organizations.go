@@ -229,15 +229,13 @@ func createOrganizationCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			orgMetadata := inputs.Metadata
-			if orgMetadata == nil {
-				orgMetadata = make(map[string]string)
-			}
-
 			o := &management.Organization{
 				Name:        &inputs.Name,
 				DisplayName: &inputs.DisplayName,
-				Metadata:    &orgMetadata,
+			}
+
+			if inputs.Metadata != nil {
+				o.Metadata = &inputs.Metadata
 			}
 
 			isLogoURLSet := len(inputs.LogoURL) > 0
