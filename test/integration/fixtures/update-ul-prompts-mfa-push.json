@@ -1,0 +1,64 @@
+{
+  "mfa-push-welcome": {
+    "pageTitle": "Install the application | ${clientName}",
+    "title": "Secure Your Account",
+    "description": "In order to continue, install the ${appName} app via the app store from your mobile device.",
+    "androidButtonText": "Google Play",
+    "buttonText": "Continue",
+    "iosButtonText": "App Store",
+    "pickAuthenticatorText": "Try another method",
+    "logoAltText": "${companyName}"
+  },
+  "mfa-push-enrollment-qr": {
+    "pageTitle": "Scan the code to log in using a push notification | ${clientName}",
+    "title": "Secure Your Account",
+    "description": "Scan the QR Code below using the ${appName} app on your mobile device.",
+    "pickAuthenticatorText": "Try another method",
+    "buttonText": "Continue",
+    "logoAltText": "${companyName}",
+    "enrollment-transaction-pending": "You must scan the QR code with the ${appName} app on your mobile device."
+  },
+  "mfa-push-enrollment-code": {
+    "pageTitle": "Copy the code to log in using a push notification | ${clientName}",
+    "buttonText": "Continue",
+    "altText": "Secure code to copy",
+    "copyCodeButtonText": "Copy Code",
+    "instructions1": "Open the ${appName} app on your phone and tap \"+\" button.",
+    "instructions2": "Select Add account manually",
+    "instructions3": "Copy & paste this code to that screen",
+    "title": "Trouble scanning?",
+    "logoAltText": "${companyName}"
+  },
+  "mfa-push-success": {
+    "pageTitle": "Device registration successful | ${clientName}",
+    "title": "You're All Set!",
+    "buttonText": "Continue",
+    "description": "We’re redirecting you to ${clientName} now. If you’re not redirected automatically, you can manually redirect yourself below."
+  },
+  "mfa-push-challenge-push": {
+    "pageTitle": "Accept the push notification to log in | ${clientName}",
+    "title": "Verify Your Identity",
+    "description": "We’ve sent a notification to the following device via the ${appName} app:",
+    "buttonText": "I've responded on my device",
+    "pickAuthenticatorText": "Try another method",
+    "rememberMeText": "Remember this device for 30 days",
+    "resendActionText": "Resend",
+    "resendText": "Didn't receive a notification?",
+    "enterOtpCode": "Manually Enter Code",
+    "separatorText": "OR",
+    "logoAltText": "${companyName}",
+    "challenge-transaction-pending": "You must accept the notification via the ${appName} app on your mobile device.",
+    "polling-interval-exceeded": "We have not received a confirmation, please slow down.",
+    "too-many-push": "We have received too many notification requests. Wait a few minutes and try again.",
+    "transaction-not-found": "Your enrollment transaction expired, you will need to start again.",
+    "mfa-push-verify-transaction-pending": "We have not received a confirmation, please try scanning the code again.",
+    "mfa-push-verify-authenticator-error": "We couldn't verify the enrollment. Please try again later.",
+    "mfa-push-challenge-authenticator-error": "We couldn't send the notification. Please try again later.",
+    "transaction-rejected": "Notification rejected"
+  },
+  "mfa-push-list": {
+    "pageTitle": "List of available devices | ${clientName}",
+    "backText": "Go back",
+    "title": "Registered Devices"
+  }
+}
