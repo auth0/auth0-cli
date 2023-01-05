@@ -29,10 +29,10 @@ type TokenRetriever struct {
 func (t *TokenRetriever) Refresh(ctx context.Context, tenant string) (TokenResponse, error) {
 	refreshToken, err := keyring.GetRefreshToken(tenant)
 	if err != nil {
-		return TokenResponse{}, fmt.Errorf("cannot get the stored refresh token: %w", err)
+		return TokenResponse{}, fmt.Errorf("failed to retrieve refresh token from keyring: %w", err)
 	}
 	if refreshToken == "" {
-		return TokenResponse{}, errors.New("cannot use the stored refresh token: the token is empty")
+		return TokenResponse{}, errors.New("failed to use stored refresh token: the token is empty")
 	}
 	// get access token:
 	r, err := t.Client.PostForm(t.Authenticator.OauthTokenEndpoint, url.Values{
