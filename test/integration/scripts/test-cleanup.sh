@@ -88,3 +88,19 @@ for rule in $( echo "${rules}" | jq -r '.[] | @base64' ); do
         $( auth0 rules delete "$id")
     fi
 done
+
+orgs=$( auth0 orgs list --json --no-input )
+
+for org in $( echo "${orgs}" | jq -r '.[] | @base64' ); do
+    _jq() {
+     echo "${org}" | base64 --decode | jq -r "${1}"
+    }
+
+    id=$(_jq '.id')
+    name=$(_jq '.name')
+    if [[ $name = integration-test-org-* ]]
+    then
+        echo deleting "$name"
+        $( auth0 orgs delete "$id")
+    fi
+done
