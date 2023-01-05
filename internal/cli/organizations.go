@@ -229,46 +229,42 @@ func createOrganizationCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			o := &management.Organization{
+			newOrg := &management.Organization{
 				Name:        &inputs.Name,
 				DisplayName: &inputs.DisplayName,
-				Metadata:    &inputs.Metadata,
 			}
 
-			isLogoURLSet := len(inputs.LogoURL) > 0
-			isAccentColorSet := len(inputs.AccentColor) > 0
-			isBackgroundColorSet := len(inputs.BackgroundColor) > 0
-			isAnyColorSet := isAccentColorSet || isBackgroundColorSet
+			if inputs.Metadata != nil {
+				newOrg.Metadata = &inputs.Metadata
+			}
 
-			if isLogoURLSet || isAnyColorSet {
-				o.Branding = &management.OrganizationBranding{}
+			branding := management.OrganizationBranding{}
+			if inputs.LogoURL != "" {
+				branding.LogoURL = &inputs.LogoURL
+			}
 
-				if isLogoURLSet {
-					o.Branding.LogoURL = &inputs.LogoURL
-				}
+			colors := make(map[string]string)
+			if inputs.AccentColor != "" {
+				colors[apiOrganizationColorPrimary] = inputs.AccentColor
+			}
+			if inputs.BackgroundColor != "" {
+				colors[apiOrganizationColorPageBackground] = inputs.BackgroundColor
+			}
+			if len(colors) > 0 {
+				branding.Colors = &colors
+			}
 
-				if isAnyColorSet {
-					colors := make(map[string]string)
-
-					if isAccentColorSet {
-						colors[apiOrganizationColorPrimary] = inputs.AccentColor
-					}
-
-					if isBackgroundColorSet {
-						colors[apiOrganizationColorPageBackground] = inputs.BackgroundColor
-					}
-
-					o.Branding.Colors = &colors
-				}
+			if branding.String() != "{}" {
+				newOrg.Branding = &branding
 			}
 
 			if err := ansi.Waiting(func() error {
-				return cli.api.Organization.Create(o)
+				return cli.api.Organization.Create(newOrg)
 			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred while attempting to create an organization with name '%s': %w", inputs.Name, err)
+				return fmt.Errorf("failed to create an organization with name '%s': %w", inputs.Name, err)
 			}
 
-			cli.renderer.OrganizationCreate(o)
+			cli.renderer.OrganizationCreate(newOrg)
 			return nil
 		},
 	}
@@ -317,46 +313,42 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			var current *management.Organization
+			var oldOrg *management.Organization
 			err := ansi.Waiting(func() error {
 				var err error
-				current, err = cli.api.Organization.Read(inputs.ID)
+				oldOrg, err = cli.api.Organization.Read(inputs.ID)
 				return err
 			})
 			if err != nil {
-				return fmt.Errorf("Failed to fetch organization with ID: %s %v", inputs.ID, err)
+				return fmt.Errorf("failed to fetch organization with ID: %s %w", inputs.ID, err)
 			}
 
-			if err := organizationDisplay.AskU(cmd, &inputs.DisplayName, current.DisplayName); err != nil {
+			if err := organizationDisplay.AskU(cmd, &inputs.DisplayName, oldOrg.DisplayName); err != nil {
 				return err
 			}
 
 			if inputs.DisplayName == "" {
-				inputs.DisplayName = current.GetDisplayName()
+				inputs.DisplayName = oldOrg.GetDisplayName()
 			}
 
-			// Prepare organization payload for update. This will also be
-			// re-hydrated by the SDK, which we'll use below during
-			// display.
-			o := &management.Organization{
-				ID:          current.ID,
+			newOrg := &management.Organization{
 				DisplayName: &inputs.DisplayName,
 			}
 
 			isLogoURLSet := len(inputs.LogoURL) > 0
 			isAccentColorSet := len(inputs.AccentColor) > 0
 			isBackgroundColorSet := len(inputs.BackgroundColor) > 0
-			currentHasBranding := current.Branding != nil
-			currentHasColors := currentHasBranding && current.Branding.Colors != nil
+			currentHasBranding := oldOrg.Branding != nil
+			currentHasColors := currentHasBranding && oldOrg.Branding.Colors != nil
 			needToAddColors := isAccentColorSet || isBackgroundColorSet || currentHasColors
 
 			if isLogoURLSet || needToAddColors {
-				o.Branding = &management.OrganizationBranding{}
+				newOrg.Branding = &management.OrganizationBranding{}
 
 				if isLogoURLSet {
-					o.Branding.LogoURL = &inputs.LogoURL
+					newOrg.Branding.LogoURL = &inputs.LogoURL
 				} else if currentHasBranding {
-					o.Branding.LogoURL = current.Branding.LogoURL
+					newOrg.Branding.LogoURL = oldOrg.Branding.LogoURL
 				}
 
 				if needToAddColors {
@@ -364,33 +356,32 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 
 					if isAccentColorSet {
 						colors[apiOrganizationColorPrimary] = inputs.AccentColor
-					} else if currentHasColors && len(current.Branding.GetColors()[apiOrganizationColorPrimary]) > 0 {
-						colors[apiOrganizationColorPrimary] = current.Branding.GetColors()[apiOrganizationColorPrimary]
+					} else if currentHasColors && len(oldOrg.Branding.GetColors()[apiOrganizationColorPrimary]) > 0 {
+						colors[apiOrganizationColorPrimary] = oldOrg.Branding.GetColors()[apiOrganizationColorPrimary]
 					}
 
 					if isBackgroundColorSet {
 						colors[apiOrganizationColorPageBackground] = inputs.BackgroundColor
-					} else if currentHasColors && len(current.Branding.GetColors()[apiOrganizationColorPageBackground]) > 0 {
-						colors[apiOrganizationColorPageBackground] = current.Branding.GetColors()[apiOrganizationColorPageBackground]
+					} else if currentHasColors && len(oldOrg.Branding.GetColors()[apiOrganizationColorPageBackground]) > 0 {
+						colors[apiOrganizationColorPageBackground] = oldOrg.Branding.GetColors()[apiOrganizationColorPageBackground]
 					}
 
-					o.Branding.Colors = &colors
+					newOrg.Branding.Colors = &colors
 				}
 			}
 
-			if len(inputs.Metadata) == 0 {
-				o.Metadata = current.Metadata
-			} else {
-				o.Metadata = &inputs.Metadata
+			newOrg.Metadata = oldOrg.Metadata
+			if len(inputs.Metadata) != 0 {
+				newOrg.Metadata = &inputs.Metadata
 			}
 
 			if err = ansi.Waiting(func() error {
-				return cli.api.Organization.Update(inputs.ID, o)
+				return cli.api.Organization.Update(inputs.ID, newOrg)
 			}); err != nil {
 				return err
 			}
 
-			cli.renderer.OrganizationUpdate(o)
+			cli.renderer.OrganizationUpdate(newOrg)
 			return nil
 		},
 	}
