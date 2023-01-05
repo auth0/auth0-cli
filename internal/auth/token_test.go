@@ -7,9 +7,10 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/auth0/auth0-cli/internal/secret"
 	"github.com/golang/mock/gomock"
 	"github.com/zalando/go-keyring"
+
+	"github.com/auth0/auth0-cli/internal/keyring"
 )
 
 // HTTPTransport implements an http.RoundTripper for testing purposes only.
@@ -32,7 +33,7 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 		testTenantName := "auth0-cli-test.us.auth0.com"
 
 		keyring.MockInit()
-		err := secret.StoreRefreshToken(testTenantName, "refresh-token-here")
+		err := keyring.StoreRefreshToken(testTenantName, "refresh-token-here")
 		if err != nil {
 			t.Fatal(err)
 		}

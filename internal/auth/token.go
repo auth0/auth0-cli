@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/auth0/auth0-cli/internal/secret"
+	"github.com/auth0/auth0-cli/internal/keyring"
 )
 
 type TokenResponse struct {
@@ -27,7 +27,7 @@ type TokenRetriever struct {
 // Refresh gets a new access token from the provided refresh token,
 // The request is used the default client_id and endpoint for device authentication.
 func (t *TokenRetriever) Refresh(ctx context.Context, tenant string) (TokenResponse, error) {
-	refreshToken, err := secret.GetRefreshToken(tenant)
+	refreshToken, err := keyring.GetRefreshToken(tenant)
 	if err != nil {
 		return TokenResponse{}, fmt.Errorf("cannot get the stored refresh token: %w", err)
 	}

@@ -26,7 +26,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/iostream"
-	"github.com/auth0/auth0-cli/internal/secret"
+	"github.com/auth0/auth0-cli/internal/keyring"
 )
 
 const (
@@ -368,7 +368,7 @@ func (c *cli) removeTenant(ten string) error {
 		return fmt.Errorf("Unexpected error persisting config: %w", err)
 	}
 
-	if err := secret.DeleteSecretsForTenant(ten); err != nil {
+	if err := keyring.DeleteSecretsForTenant(ten); err != nil {
 		return fmt.Errorf("Unexpected error clearing tenant information: %w", err)
 	}
 
