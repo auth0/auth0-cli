@@ -50,7 +50,7 @@ func logoutCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := cli.removeTenant(selectedTenant); err != nil {
-				return err // This error is already formatted for display
+				return err
 			}
 
 			cli.renderer.Infof("Successfully logged out tenant: %s", selectedTenant)

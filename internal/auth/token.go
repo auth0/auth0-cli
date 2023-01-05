@@ -8,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/auth0/auth0-cli/internal/keyring"
 )
 
 type TokenResponse struct {
@@ -19,25 +21,18 @@ type TokenResponse struct {
 
 type TokenRetriever struct {
 	Authenticator *Authenticator
-	Secrets       SecretStore
 	Client        *http.Client
-}
-
-// Delete deletes the given tenant from the secrets storage.
-func (t *TokenRetriever) Delete(tenant string) error {
-	return t.Secrets.Delete(SecretsNamespace, tenant)
 }
 
 // Refresh gets a new access token from the provided refresh token,
 // The request is used the default client_id and endpoint for device authentication.
 func (t *TokenRetriever) Refresh(ctx context.Context, tenant string) (TokenResponse, error) {
-	// get stored refresh token:
-	refreshToken, err := t.Secrets.Get(SecretsNamespace, tenant)
+	refreshToken, err := keyring.GetRefreshToken(tenant)
 	if err != nil {
-		return TokenResponse{}, fmt.Errorf("cannot get the stored refresh token: %w", err)
+		return TokenResponse{}, fmt.Errorf("failed to retrieve refresh token from keyring: %w", err)
 	}
 	if refreshToken == "" {
-		return TokenResponse{}, errors.New("cannot use the stored refresh token: the token is empty")
+		return TokenResponse{}, errors.New("failed to use stored refresh token: the token is empty")
 	}
 	// get access token:
 	r, err := t.Client.PostForm(t.Authenticator.OauthTokenEndpoint, url.Values{
