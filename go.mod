@@ -4,8 +4,8 @@ go 1.19
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
-	github.com/auth0/go-auth0 v0.13.0
-	github.com/briandowns/spinner v1.19.0
+	github.com/auth0/go-auth0 v0.14.0
+	github.com/briandowns/spinner v1.20.0
 	github.com/charmbracelet/glamour v0.6.0
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/getsentry/sentry-go v0.16.0
@@ -17,7 +17,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/lestrrat-go/jwx v1.2.25
 	github.com/logrusorgru/aurora v2.0.3+incompatible
-	github.com/mattn/go-isatty v0.0.16
+	github.com/mattn/go-isatty v0.0.17
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pkg/browser v0.0.0-20210706143420-7d21f8c997e2
@@ -28,11 +28,11 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/tidwall/pretty v1.2.1
 	github.com/zalando/go-keyring v0.2.0
-	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783
+	golang.org/x/oauth2 v0.4.0
 	golang.org/x/sync v0.1.0
-	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec
-	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
-	golang.org/x/text v0.5.0
+	golang.org/x/sys v0.4.0
+	golang.org/x/term v0.4.0
+	golang.org/x/text v0.6.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -90,7 +90,7 @@ require (
 	github.com/yuin/goldmark-emoji v1.0.1 // indirect
 	golang.org/x/crypto v0.0.0-20221005025214-4161e89ecf1b // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
-	golang.org/x/net v0.0.0-20221014081412-f15817d10f9b // indirect
+	golang.org/x/net v0.5.0 // indirect
 	golang.org/x/tools v0.1.12 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
