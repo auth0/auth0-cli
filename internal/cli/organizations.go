@@ -344,7 +344,6 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 			// re-hydrated by the SDK, which we'll use below during
 			// display.
 			o := &management.Organization{
-				ID:          current.ID,
 				DisplayName: &inputs.DisplayName,
 			}
 
