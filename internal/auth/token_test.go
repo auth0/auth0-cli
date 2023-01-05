@@ -8,11 +8,12 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	goKeyring "github.com/zalando/go-keyring"
 
-	"github.com/auth0/auth0-cli/internal/auth/mock"
+	"github.com/auth0/auth0-cli/internal/keyring"
 )
 
-// HTTPTransport implements an http.RoundTripper for testing purposes only.
+// HTTPTransport implements a http.RoundTripper for testing purposes only.
 type testTransport struct {
 	withResponse *http.Response
 	withError    error
@@ -29,8 +30,13 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		secretsMock := mock.NewMockSecretStore(ctrl)
-		secretsMock.EXPECT().Get("auth0-cli", "mytenant").Return("refresh-token-here", nil).Times(1)
+		testTenantName := "auth0-cli-test.us.auth0.com"
+
+		goKeyring.MockInit()
+		err := keyring.StoreRefreshToken(testTenantName, "refresh-token-here")
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		transport := &testTransport{
 			withResponse: &http.Response{
@@ -48,11 +54,10 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 
 		tr := &TokenRetriever{
 			Authenticator: &Authenticator{"https://test.com/api/v2/", "client-id", "https://test.com/oauth/device/code", "https://test.com/token"},
-			Secrets:       secretsMock,
 			Client:        client,
 		}
 
-		got, err := tr.Refresh(context.Background(), "mytenant")
+		got, err := tr.Refresh(context.Background(), testTenantName)
 		if err != nil {
 			t.Fatal(err)
 		}

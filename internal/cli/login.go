@@ -9,6 +9,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
+	"github.com/auth0/auth0-cli/internal/keyring"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -195,13 +196,9 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (T
 	cli.renderer.Infof("Tenant: %s", result.Domain)
 	cli.renderer.Newline()
 
-	// Store the refresh token.
-	secretsStore := &auth.Keyring{}
-	err = secretsStore.Set(auth.SecretsNamespace, result.Domain, result.RefreshToken)
-	if err != nil {
-		message = "Could not store the refresh token locally, " +
-			"please expect to login again once your access token expired. See %s."
-		cli.renderer.Warnf(message, "https://github.com/auth0/auth0-cli/blob/main/KNOWN-ISSUES.md")
+	if err := keyring.StoreRefreshToken(result.Domain, result.RefreshToken); err != nil {
+		cli.renderer.Warnf("Could not store the refresh token to the keyring: %s", err)
+		cli.renderer.Warnf("Expect to login again when your access token expires.")
 	}
 
 	tenant := Tenant{

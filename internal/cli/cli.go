@@ -26,6 +26,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/iostream"
+	"github.com/auth0/auth0-cli/internal/keyring"
 )
 
 const (
@@ -149,7 +150,6 @@ func (t *Tenant) regenerateAccessToken(ctx context.Context, c *cli) error {
 	if t.authenticatedWithDeviceCodeFlow() {
 		tokenRetriever := &auth.TokenRetriever{
 			Authenticator: c.authenticator,
-			Secrets:       &auth.Keyring{},
 			Client:        http.DefaultClient,
 		}
 
@@ -250,7 +250,8 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 			)
 		}
 
-		c.renderer.Warnf("Failed to renew access token. Please log in to re-authorize the CLI.\n")
+		c.renderer.Warnf("Failed to renew access token: %s", err)
+		c.renderer.Warnf("Please log in to re-authorize the CLI.\n")
 
 		return RunLoginAsUser(ctx, c, t.additionalRequestedScopes())
 	}
@@ -365,12 +366,11 @@ func (c *cli) removeTenant(ten string) error {
 	}
 
 	if err := c.persistConfig(); err != nil {
-		return fmt.Errorf("Unexpected error persisting config: %w", err)
+		return fmt.Errorf("failed to persist config: %w", err)
 	}
 
-	tr := &auth.TokenRetriever{Secrets: &auth.Keyring{}}
-	if err := tr.Delete(ten); err != nil {
-		return fmt.Errorf("Unexpected error clearing tenant information: %w", err)
+	if err := keyring.DeleteSecretsForTenant(ten); err != nil {
+		return fmt.Errorf("failed to delete tenant secrets: %w", err)
 	}
 
 	return nil

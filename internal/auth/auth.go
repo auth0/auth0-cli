@@ -19,8 +19,6 @@ import (
 const (
 	audiencePath           = "/api/v2/"
 	waitThresholdInSeconds = 3
-	// SecretsNamespace is the namespace used to set/get values from the keychain.
-	SecretsNamespace = "auth0-cli"
 )
 
 var requiredScopes = []string{
@@ -50,14 +48,6 @@ type Authenticator struct {
 	ClientID           string
 	DeviceCodeEndpoint string
 	OauthTokenEndpoint string
-}
-
-// SecretStore provides access to stored sensitive data.
-type SecretStore interface {
-	// Get gets the secret
-	Get(namespace, key string) (string, error)
-	// Delete removes the secret
-	Delete(namespace, key string) error
 }
 
 type Result struct {
