@@ -21,29 +21,8 @@ const (
 	waitThresholdInSeconds = 3
 )
 
-var requiredScopes = []string{
-	"openid",
-	"offline_access", // for retrieving refresh token
-	"create:clients", "delete:clients", "read:clients", "update:clients",
-	"create:resource_servers", "delete:resource_servers", "read:resource_servers", "update:resource_servers",
-	"create:roles", "delete:roles", "read:roles", "update:roles",
-	"create:rules", "delete:rules", "read:rules", "update:rules",
-	"create:users", "delete:users", "read:users", "update:users",
-	"read:branding", "update:branding",
-	"read:email_templates", "update:email_templates",
-	"read:connections", "update:connections",
-	"read:client_keys", "read:logs", "read:tenant_settings",
-	"read:custom_domains", "create:custom_domains", "update:custom_domains", "delete:custom_domains",
-	"read:anomaly_blocks", "delete:anomaly_blocks",
-	"create:log_streams", "delete:log_streams", "read:log_streams", "update:log_streams",
-	"create:actions", "delete:actions", "read:actions", "update:actions",
-	"create:organizations", "delete:organizations", "read:organizations", "update:organizations", "read:organization_members", "read:organization_member_roles",
-	"read:prompts", "update:prompts",
-	"read:attack_protection", "update:attack_protection",
-}
-
-// Authenticator is used to facilitate the login process.
-type Authenticator struct {
+// Credentials is used to facilitate the login process.
+type Credentials struct {
 	Audience           string
 	ClientID           string
 	DeviceCodeEndpoint string
@@ -66,38 +45,19 @@ type State struct {
 	Interval        int    `json:"interval"`
 }
 
-// RequiredScopes returns the scopes used for login.
-func RequiredScopes() []string {
-	return requiredScopes
-}
-
-// RequiredScopesMin returns minimum scopes used for login in integration tests.
-func RequiredScopesMin() []string {
-	var min []string
-	for _, s := range requiredScopes {
-		if s != "offline_access" && s != "openid" {
-			min = append(min, s)
-		}
-	}
-	return min
-}
-
 func (s *State) IntervalDuration() time.Duration {
 	return time.Duration(s.Interval+waitThresholdInSeconds) * time.Second
 }
 
-// New returns a new instance of Authenticator using Auth0 Public Cloud default values.
-func New() *Authenticator {
-	return &Authenticator{
-		Audience:           "https://*.auth0.com/api/v2/",
-		ClientID:           "2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT",
-		DeviceCodeEndpoint: "https://auth0.auth0.com/oauth/device/code",
-		OauthTokenEndpoint: "https://auth0.auth0.com/oauth/token",
-	}
+var credentials = &Credentials{
+	Audience:           "https://*.auth0.com/api/v2/",
+	ClientID:           "2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT",
+	DeviceCodeEndpoint: "https://auth0.auth0.com/oauth/device/code",
+	OauthTokenEndpoint: "https://auth0.auth0.com/oauth/token",
 }
 
 // Wait waits until the user is logged in on the browser.
-func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
+func WaitUntilUserLogsIn(ctx context.Context, state State) (Result, error) {
 	t := time.NewTicker(state.IntervalDuration())
 	for {
 		select {
@@ -105,11 +65,11 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 			return Result{}, ctx.Err()
 		case <-t.C:
 			data := url.Values{
-				"client_id":   []string{a.ClientID},
+				"client_id":   []string{credentials.ClientID},
 				"grant_type":  []string{"urn:ietf:params:oauth:grant-type:device_code"},
 				"device_code": []string{state.DeviceCode},
 			}
-			r, err := http.PostForm(a.OauthTokenEndpoint, data)
+			r, err := http.PostForm(credentials.OauthTokenEndpoint, data)
 			if err != nil {
 				return Result{}, fmt.Errorf("cannot get device code: %w", err)
 			}
@@ -159,7 +119,9 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 // GetDeviceCode kicks-off the device authentication flow by requesting
 // a device code from Auth0. The returned state contains the
 // URI for the next step of the flow.
-func (a *Authenticator) GetDeviceCode(ctx context.Context, additionalScopes []string) (State, error) {
+func GetDeviceCode(ctx context.Context, additionalScopes []string) (State, error) {
+	a := credentials
+
 	data := url.Values{
 		"client_id": []string{a.ClientID},
 		"scope":     []string{strings.Join(append(requiredScopes, additionalScopes...), " ")},

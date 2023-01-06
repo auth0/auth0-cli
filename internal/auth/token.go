@@ -20,13 +20,13 @@ type TokenResponse struct {
 }
 
 type TokenRetriever struct {
-	Authenticator *Authenticator
-	Client        *http.Client
+	Client *http.Client
 }
 
-// Refresh gets a new access token from the provided refresh token,
+// RefreshAccessToken gets a new access token from the provided refresh token,
 // The request is used the default client_id and endpoint for device authentication.
-func (t *TokenRetriever) Refresh(ctx context.Context, tenant string) (TokenResponse, error) {
+func (t *TokenRetriever) RefreshAccessToken(ctx context.Context, tenant string) (TokenResponse, error) {
+
 	refreshToken, err := keyring.GetRefreshToken(tenant)
 	if err != nil {
 		return TokenResponse{}, fmt.Errorf("failed to retrieve refresh token from keyring: %w", err)
@@ -35,9 +35,9 @@ func (t *TokenRetriever) Refresh(ctx context.Context, tenant string) (TokenRespo
 		return TokenResponse{}, errors.New("failed to use stored refresh token: the token is empty")
 	}
 	// get access token:
-	r, err := t.Client.PostForm(t.Authenticator.OauthTokenEndpoint, url.Values{
+	r, err := t.Client.PostForm(credentials.OauthTokenEndpoint, url.Values{
 		"grant_type":    {"refresh_token"},
-		"client_id":     {t.Authenticator.ClientID},
+		"client_id":     {credentials.ClientID},
 		"refresh_token": {refreshToken},
 	})
 	if err != nil {

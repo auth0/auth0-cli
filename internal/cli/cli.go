@@ -75,10 +75,9 @@ var errUnauthenticated = errors.New("Not logged in. Try 'auth0 login'.")
 // 3. --debug.
 type cli struct {
 	// Core primitives exposed to command builders.
-	api           *auth0.API
-	authenticator *auth.Authenticator
-	renderer      *display.Renderer
-	tracker       *analytics.Tracker
+	api      *auth0.API
+	renderer *display.Renderer
+	tracker  *analytics.Tracker
 
 	// Set of flags which are user specified.
 	debug   bool
@@ -153,11 +152,10 @@ func (t *Tenant) regenerateAccessToken(ctx context.Context, c *cli) error {
 
 	if t.authenticatedWithDeviceCodeFlow() {
 		tokenRetriever := &auth.TokenRetriever{
-			Authenticator: c.authenticator,
-			Client:        http.DefaultClient,
+			Client: http.DefaultClient,
 		}
 
-		tokenResponse, err := tokenRetriever.Refresh(ctx, t.Domain)
+		tokenResponse, err := tokenRetriever.RefreshAccessToken(ctx, t.Domain)
 		if err != nil {
 			return err
 		}
