@@ -2,7 +2,6 @@ package auth
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"net/http"
 	"testing"
@@ -10,7 +9,6 @@ import (
 	"github.com/golang/mock/gomock"
 	goKeyring "github.com/zalando/go-keyring"
 
-	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/keyring"
 )
 
@@ -31,15 +29,13 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		old := auth.New()
-		defer func() { auth.New() = old }()
-		auth.New() = func() Credentials {
-			return Credentials{
-				Audience:           "https://test.com/api/v2/",
-				ClientID:           "client-id",
-				OauthTokenEndpoint: "https://test.com/oauth/device/code",
-				DeviceCodeEndpoint: "https://test.com/token",
-			}
+		oldCreds := credentials
+		defer func() { credentials = oldCreds }()
+		credentials = &Credentials{
+			Audience:           "https://test.com/api/v2/",
+			ClientID:           "client-id",
+			OauthTokenEndpoint: "https://test.com/oauth/device/code",
+			DeviceCodeEndpoint: "https://test.com/token",
 		}
 
 		testTenantName := "auth0-cli-test.us.auth0.com"
@@ -64,11 +60,7 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 
 		client := &http.Client{Transport: transport}
 
-		tr := &TokenRetriever{
-			Client: client,
-		}
-
-		got, err := tr.RefreshAccessToken(context.Background(), testTenantName)
+		got, err := RefreshAccessToken(client, testTenantName)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -89,6 +81,8 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		t.Log("num reqs", len(transport.requests))
 
 		if want, got := "https://test.com/token", req.URL.String(); want != got {
 			t.Fatalf("wanted request URL: %v, got: %v", want, got)

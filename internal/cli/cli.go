@@ -151,11 +151,7 @@ func (t *Tenant) regenerateAccessToken(ctx context.Context, c *cli) error {
 	}
 
 	if t.authenticatedWithDeviceCodeFlow() {
-		tokenRetriever := &auth.TokenRetriever{
-			Client: http.DefaultClient,
-		}
-
-		tokenResponse, err := tokenRetriever.RefreshAccessToken(ctx, t.Domain)
+		tokenResponse, err := auth.RefreshAccessToken(http.DefaultClient, t.Domain)
 		if err != nil {
 			return err
 		}

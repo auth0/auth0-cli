@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,14 +18,9 @@ type TokenResponse struct {
 	ExpiresIn   int    `json:"expires_in"`
 }
 
-type TokenRetriever struct {
-	Client *http.Client
-}
-
 // RefreshAccessToken gets a new access token from the provided refresh token,
 // The request is used the default client_id and endpoint for device authentication.
-func (t *TokenRetriever) RefreshAccessToken(ctx context.Context, tenant string) (TokenResponse, error) {
-
+func RefreshAccessToken(httpClient *http.Client, tenant string) (TokenResponse, error) {
 	refreshToken, err := keyring.GetRefreshToken(tenant)
 	if err != nil {
 		return TokenResponse{}, fmt.Errorf("failed to retrieve refresh token from keyring: %w", err)
@@ -35,7 +29,7 @@ func (t *TokenRetriever) RefreshAccessToken(ctx context.Context, tenant string) 
 		return TokenResponse{}, errors.New("failed to use stored refresh token: the token is empty")
 	}
 	// get access token:
-	r, err := t.Client.PostForm(credentials.OauthTokenEndpoint, url.Values{
+	r, err := httpClient.PostForm(credentials.OauthTokenEndpoint, url.Values{
 		"grant_type":    {"refresh_token"},
 		"client_id":     {credentials.ClientID},
 		"refresh_token": {refreshToken},
