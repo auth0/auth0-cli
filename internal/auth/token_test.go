@@ -34,8 +34,8 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 		credentials = &Credentials{
 			Audience:           "https://test.com/api/v2/",
 			ClientID:           "client-id",
-			OauthTokenEndpoint: "https://test.com/oauth/device/code",
-			DeviceCodeEndpoint: "https://test.com/token",
+			DeviceCodeEndpoint: "https://test.com/oauth/device/code",
+			OauthTokenEndpoint: "https://test.com/token",
 		}
 
 		testTenantName := "auth0-cli-test.us.auth0.com"
@@ -82,7 +82,7 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if want, got := "https://test.com/oauth/device/code", req.URL.String(); want != got {
+		if want, got := "https://test.com/token", req.URL.String(); want != got {
 			t.Fatalf("wanted request URL: %v, got: %v", want, got)
 		}
 		if want, got := "refresh_token", req.Form["grant_type"][0]; want != got {
