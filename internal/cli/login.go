@@ -206,7 +206,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (T
 		Domain:      result.Domain,
 		AccessToken: result.AccessToken,
 		ExpiresAt:   result.ExpiresAt,
-		Scopes:      append(auth.RequiredScopes(), additionalScopes...),
+		Scopes:      append(auth.RequiredScopes, additionalScopes...),
 	}
 
 	err = cli.addTenant(tenant)

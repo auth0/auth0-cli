@@ -112,7 +112,7 @@ func (t *Tenant) additionalRequestedScopes() []string {
 	for _, scope := range t.Scopes {
 		found := false
 
-		for _, defaultScope := range auth.RequiredScopes() {
+		for _, defaultScope := range auth.RequiredScopes {
 			if scope == defaultScope {
 				found = true
 				break
@@ -268,7 +268,7 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 // hasAllRequiredScopes compare the tenant scopes
 // with the currently required scopes.
 func hasAllRequiredScopes(t Tenant) bool {
-	for _, requiredScope := range auth.RequiredScopes() {
+	for _, requiredScope := range auth.RequiredScopes {
 		if !containsStr(t.Scopes, requiredScope) {
 			return false
 		}

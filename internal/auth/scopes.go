@@ -1,6 +1,6 @@
 package auth
 
-var requiredScopes = []string{
+var RequiredScopes = []string{
 	"openid",
 	"offline_access", // for retrieving refresh token
 	"create:clients", "delete:clients", "read:clients", "update:clients",
@@ -21,15 +21,10 @@ var requiredScopes = []string{
 	"read:attack_protection", "update:attack_protection",
 }
 
-// RequiredScopes returns the scopes used for login.
-func RequiredScopes() []string {
-	return requiredScopes
-}
-
 // RequiredScopesMin returns minimum scopes used for login in integration tests.
 func RequiredScopesMin() []string {
 	var min []string
-	for _, s := range requiredScopes {
+	for _, s := range RequiredScopes {
 		if s != "offline_access" && s != "openid" {
 			min = append(min, s)
 		}

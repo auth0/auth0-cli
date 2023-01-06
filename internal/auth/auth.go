@@ -124,7 +124,7 @@ func GetDeviceCode(ctx context.Context, additionalScopes []string) (State, error
 
 	data := url.Values{
 		"client_id": []string{a.ClientID},
-		"scope":     []string{strings.Join(append(requiredScopes, additionalScopes...), " ")},
+		"scope":     []string{strings.Join(append(RequiredScopes, additionalScopes...), " ")},
 		"audience":  []string{a.Audience},
 	}
 
