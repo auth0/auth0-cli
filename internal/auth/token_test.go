@@ -82,9 +82,7 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		t.Log("num reqs", len(transport.requests))
-
-		if want, got := "https://test.com/token", req.URL.String(); want != got {
+		if want, got := "https://test.com/oauth/device/code", req.URL.String(); want != got {
 			t.Fatalf("wanted request URL: %v, got: %v", want, got)
 		}
 		if want, got := "refresh_token", req.Form["grant_type"][0]; want != got {
