@@ -18,8 +18,10 @@ type TokenResponse struct {
 	ExpiresIn   int    `json:"expires_in"`
 }
 
-// RefreshAccessToken gets a new access token from the provided refresh token,
-// The request is used the default client_id and endpoint for device authentication.
+// RefreshAccessToken retrieves a new access token using a refresh token.
+// This occurs when the access token has expired or is otherwise removed/inaccessible.
+// The request uses Auth0's dedicated public cloud client for token exchange.
+// This process will not work for Private Cloud tenants.
 func RefreshAccessToken(httpClient *http.Client, tenant string) (TokenResponse, error) {
 	refreshToken, err := keyring.GetRefreshToken(tenant)
 	if err != nil {
@@ -28,7 +30,7 @@ func RefreshAccessToken(httpClient *http.Client, tenant string) (TokenResponse, 
 	if refreshToken == "" {
 		return TokenResponse{}, errors.New("failed to use stored refresh token: the token is empty")
 	}
-	// get access token:
+
 	r, err := httpClient.PostForm(credentials.OauthTokenEndpoint, url.Values{
 		"grant_type":    {"refresh_token"},
 		"client_id":     {credentials.ClientID},
