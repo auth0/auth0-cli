@@ -56,7 +56,7 @@ var credentials = &Credentials{
 	OauthTokenEndpoint: "https://auth0.auth0.com/oauth/token",
 }
 
-// Wait waits until the user is logged in on the browser.
+// WaitUntilUserLogsIn waits until the user is logged in on the browser.
 func WaitUntilUserLogsIn(ctx context.Context, state State) (Result, error) {
 	t := time.NewTicker(state.IntervalDuration())
 	for {
