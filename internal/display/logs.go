@@ -174,7 +174,9 @@ func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, 
 				}
 			}
 		}()
+
+		r.Stream(res, viewChan) // streams results for `auth0 logs tail`
 	}
 
-	r.Stream(res, viewChan)
+	r.Results(res) //Includes headers for `auth0 logs list`
 }
