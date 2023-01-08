@@ -5,8 +5,16 @@ layout: default
 
 Show the custom text for a prompt.
 
+## Usage
 ```
 auth0 universal-login prompts show [flags]
+```
+
+## Examples
+
+```
+  auth0 universal-login prompts show <prompt> --language es
+  auth0 universal-login prompts show <prompt> -l es
 ```
 
 
@@ -24,13 +32,6 @@ auth0 universal-login prompts show [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 universal-login prompts show <prompt> --language es
-  auth0 universal-login prompts show <prompt> -l es
 ```
 
 

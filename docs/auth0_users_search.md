@@ -5,8 +5,18 @@ layout: default
 
 Search for users. To create one, run: `auth0 users create`.
 
+## Usage
 ```
 auth0 users search [flags]
+```
+
+## Examples
+
+```
+auth0 users search
+  auth0 users search --query id
+  auth0 users search -q name --sort "name:1"
+  auth0 users search -q name -s "name:1" --json
 ```
 
 
@@ -26,15 +36,6 @@ auth0 users search [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-auth0 users search
-  auth0 users search --query id
-  auth0 users search -q name --sort "name:1"
-  auth0 users search -q name -s "name:1"
 ```
 
 

@@ -9,8 +9,20 @@ To update interactively, use `auth0 apps update` with no arguments.
 
 To update non-interactively, supply the application id, name, type and other information you might want to change through the available flags.
 
+## Usage
 ```
 auth0 apps update [flags]
+```
+
+## Examples
+
+```
+  auth0 apps update
+  auth0 apps update <app-id> --name myapp
+  auth0 apps update <app-id> --name myapp --description <description>
+  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m]
+  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m] --reveal
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json
 ```
 
 
@@ -42,15 +54,6 @@ auth0 apps update [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 apps update
-  auth0 apps update <id> --json
-  auth0 apps update <id> --name myapp
-  auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]
 ```
 
 

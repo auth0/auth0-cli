@@ -5,8 +5,16 @@ layout: default
 
 Display the current breached password detection settings.
 
+## Usage
 ```
 auth0 protection breached-password-detection show [flags]
+```
+
+## Examples
+
+```
+  auth0 protection breached-password-detection show
+  auth0 ap bpd show --json
 ```
 
 
@@ -24,13 +32,6 @@ auth0 protection breached-password-detection show [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 protection breached-password-detection show
-  auth0 ap bpd show --json
 ```
 
 

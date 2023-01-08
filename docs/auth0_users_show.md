@@ -5,8 +5,17 @@ layout: default
 
 Display information about an existing user.
 
+## Usage
 ```
 auth0 users show [flags]
+```
+
+## Examples
+
+```
+  auth0 users show 
+  auth0 users show <user-id>
+  auth0 users show <user-id> --json
 ```
 
 
@@ -24,14 +33,6 @@ auth0 users show [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 users show 
-  auth0 users show <id>
-  auth0 users show <id> --json
 ```
 
 

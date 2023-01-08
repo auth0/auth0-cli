@@ -139,7 +139,7 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 		Example: `auth0 users search
   auth0 users search --query id
   auth0 users search -q name --sort "name:1"
-  auth0 users search -q name -s "name:1"`,
+  auth0 users search -q name -s "name:1" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := userQuery.Ask(cmd, &inputs.query, nil); err != nil {
 				return err
@@ -171,10 +171,9 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	userQuery.RegisterString(cmd, &inputs.query, "")
 	userSort.RegisterString(cmd, &inputs.sort, "")
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -197,8 +196,9 @@ func createUserCmd(cli *cli) *cobra.Command {
 			"To create non-interactively, supply the name and other information through the available flags.",
 		Example: `  auth0 users create 
   auth0 users create --name "John Doe" 
-  auth0 users create -n "John Doe" --email john@example.com
-  auth0 users create -n "John Doe" -e john@example.com --connection "Username-Password-Authentication"`,
+  auth0 users create --name "John Doe" --email john@example.com
+  auth0 users create --name "John Doe" --email john@example.com --connection "Username-Password-Authentication" --username "example"
+  auth0 users create -n "John Doe" -e john@example.com -c "Username-Password-Authentication" -u "example" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Select from the available connection types
 			// Users API currently support  database connections
@@ -254,13 +254,13 @@ func createUserCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	userName.RegisterString(cmd, &inputs.Name, "")
 	userConnection.RegisterString(cmd, &inputs.Connection, "")
 	userPassword.RegisterString(cmd, &inputs.Password, "")
 	userEmail.RegisterString(cmd, &inputs.Email, "")
 	userUsername.RegisterString(cmd, &inputs.Username, "")
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -276,8 +276,8 @@ func showUserCmd(cli *cli) *cobra.Command {
 		Short: "Show an existing user",
 		Long:  "Display information about an existing user.",
 		Example: `  auth0 users show 
-  auth0 users show <id>
-  auth0 users show <id> --json`,
+  auth0 users show <user-id>
+  auth0 users show <user-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.ID); err != nil {
@@ -321,14 +321,17 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Delete a user",
+		Use:     "delete",
+		Aliases: []string{"rm"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Delete a user",
 		Long: "Delete a user.\n\n" +
 			"To delete interactively, use `auth0 users delete` with no arguments.\n\n" +
 			"To delete non-interactively, supply the user id and the `--force` flag to skip confirmation.",
-		Example: `auth0 users delete 
-auth0 users delete <id>`,
+		Example: `  auth0 users delete 
+  auth0 users rm
+  auth0 users delete <user-id>
+  auth0 users delete <user-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.ID); err != nil {
@@ -378,9 +381,9 @@ func updateUserCmd(cli *cli) *cobra.Command {
 			"To update interactively, use `auth0 users update` with no arguments.\n\n" +
 			"To update non-interactively, supply the user id and other information through the available flags.",
 		Example: `  auth0 users update 
-  auth0 users update <id> 
-  auth0 users update <id> --name John Doe
-  auth0 users update -n John Doe --email john.doe@example.com`,
+  auth0 users update <user-id> 
+  auth0 users update <user-id> --name "John Doe"
+  auth0 users update <user-id> --name "John Doe" --email john.doe@example.com`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.ID); err != nil {
@@ -461,12 +464,11 @@ func updateUserCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	userName.RegisterStringU(cmd, &inputs.Name, "")
 	userConnection.RegisterStringU(cmd, &inputs.Connection, "")
 	userPassword.RegisterStringU(cmd, &inputs.Password, "")
 	userEmail.RegisterStringU(cmd, &inputs.Email, "")
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -518,11 +520,12 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "list",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "List brute-force protection blocks for a given user",
-		Long:    "List brute-force protection blocks for a given user.",
-		Example: `  auth0 users blocks list <user-id>`,
+		Use:   "list",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "List brute-force protection blocks for a given user",
+		Long:  "List brute-force protection blocks for a given user.",
+		Example: `  auth0 users blocks list <user-id>
+  auth0 users blocks list <user-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.userID); err != nil {
@@ -607,8 +610,8 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 		Example: `  auth0 users import
   auth0 users import --connection "Username-Password-Authentication"
   auth0 users import -c "Username-Password-Authentication" --template "Basic Example"
-  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=true
-  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=true --email-results=false`,
+  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert true
+  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert true --email-results false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Select from the available connection types
 			// Users API currently support database connections

@@ -5,8 +5,16 @@ layout: default
 
 Open the tenant's settings page in the Auth0 Dashboard.
 
+## Usage
 ```
 auth0 tenants open [flags]
+```
+
+## Examples
+
+```
+  auth0 tenants open
+  auth0 tenants open <tenant>
 ```
 
 
@@ -19,13 +27,6 @@ auth0 tenants open [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 tenants open
-  auth0 tenants open <tenant>
 ```
 
 

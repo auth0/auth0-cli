@@ -5,8 +5,16 @@ layout: default
 
 Open a log stream's settings page in the Auth0 Dashboard.
 
+## Usage
 ```
 auth0 logs streams open [flags]
+```
+
+## Examples
+
+```
+  auth0 logs streams open
+  auth0 logs streams open <log-stream-id>
 ```
 
 
@@ -19,13 +27,6 @@ auth0 logs streams open [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 logs streams open
-  auth0 logs streams open <id>
 ```
 
 

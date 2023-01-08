@@ -9,8 +9,18 @@ To delete interactively, use `auth0 apis delete` with no arguments.
 
 To delete non-interactively, supply the API id and the `--force` flag to skip confirmation.
 
+## Usage
 ```
 auth0 apis delete [flags]
+```
+
+## Examples
+
+```
+  auth0 apis delete 
+  auth0 apis rm
+  auth0 apis delete <api-id|api-audience>
+  auth0 apis delete <api-id|api-audience> --force
 ```
 
 
@@ -28,14 +38,6 @@ auth0 apis delete [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 apis delete 
-  auth0 apis delete <id|audience>
-  auth0 apis delete <id|audience> --force
 ```
 
 

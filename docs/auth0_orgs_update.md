@@ -9,8 +9,18 @@ To update interactively, use `auth0 orgs update` with no arguments.
 
 To update non-interactively, supply the organization id and other information through the flags.
 
+## Usage
 ```
 auth0 orgs update [flags]
+```
+
+## Examples
+
+```
+  auth0 orgs update <id>
+  auth0 orgs update <org-id> --display "My Organization"
+  auth0 orgs update <org-id> -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
+  auth0 orgs update <org-id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"
 ```
 
 
@@ -33,15 +43,6 @@ auth0 orgs update [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 orgs update <id>
-  auth0 orgs update <id> --display "My Organization"
-  auth0 orgs update <id> -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
-  auth0 orgs update <id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"
 ```
 
 

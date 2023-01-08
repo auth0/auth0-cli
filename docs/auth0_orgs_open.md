@@ -5,8 +5,16 @@ layout: default
 
 Open an organization's settings page in the Auth0 Dashboard.
 
+## Usage
 ```
 auth0 orgs open [flags]
+```
+
+## Examples
+
+```
+  auth0 orgs open
+  auth0 orgs open <org-id>
 ```
 
 
@@ -19,13 +27,6 @@ auth0 orgs open [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 orgs open
-  auth0 orgs open <id>
 ```
 
 

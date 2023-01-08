@@ -7,8 +7,17 @@ Before an action can be bound to a flow, the action must be deployed.
 
 The selected action will be deployed and added to the collection of available actions for flows. Additionally, a new draft version of the deployed action will be created for future editing. Because secrets and dependencies are tied to versions, any saved secrets or dependencies will be available to the new draft.
 
+## Usage
 ```
 auth0 actions deploy [flags]
+```
+
+## Examples
+
+```
+  auth0 actions deploy
+  auth0 actions deploy <action-id>
+  auth0 actions deploy <action-id> --json
 ```
 
 
@@ -26,14 +35,6 @@ auth0 actions deploy [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 actions deploy
-  auth0 actions deploy <id>
-  auth0 actions deploy <id> --json
 ```
 
 

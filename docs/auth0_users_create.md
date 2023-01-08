@@ -9,8 +9,19 @@ To create interactively, use `auth0 users create` with no flags.
 
 To create non-interactively, supply the name and other information through the available flags.
 
+## Usage
 ```
 auth0 users create [flags]
+```
+
+## Examples
+
+```
+  auth0 users create 
+  auth0 users create --name "John Doe" 
+  auth0 users create --name "John Doe" --email john@example.com
+  auth0 users create --name "John Doe" --email john@example.com --connection "Username-Password-Authentication" --username "example"
+  auth0 users create -n "John Doe" -e john@example.com -c "Username-Password-Authentication" -u "example" --json
 ```
 
 
@@ -33,15 +44,6 @@ auth0 users create [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 users create 
-  auth0 users create --name "John Doe" 
-  auth0 users create -n "John Doe" --email john@example.com
-  auth0 users create -n "John Doe" -e john@example.com --connection "Username-Password-Authentication"
 ```
 
 

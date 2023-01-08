@@ -5,8 +5,17 @@ layout: default
 
 Display the custom branding settings for Universal Login.
 
+## Usage
 ```
 auth0 universal-login show [flags]
+```
+
+## Examples
+
+```
+  auth0 universal-login show
+  auth0 ul show
+  auth0 universal-login show --json
 ```
 
 
@@ -24,13 +33,6 @@ auth0 universal-login show [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 universal-login show
-  auth0 universal-login show --json
 ```
 
 

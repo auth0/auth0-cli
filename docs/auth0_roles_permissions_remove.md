@@ -3,12 +3,20 @@ layout: default
 ---
 # auth0 roles permissions remove
 
-Remove an existing permission defined in one of your APIs. To remove a permission, run:
+Remove an existing permission defined in one of your APIs.
 
-`auth0 roles permissions remove <role-id> -p <permission-name>`
-
+## Usage
 ```
 auth0 roles permissions remove [flags]
+```
+
+## Examples
+
+```
+  auth0 roles permissions remove
+  auth0 roles permissions rm <role-id> --api-id <api-id>
+  auth0 roles permissions rm <role-id> --api-id <api-id> --permissions <permission-name>
+  auth0 roles permissions rm <role-id> -a <api-id> -p <permission-name>
 ```
 
 
@@ -27,13 +35,6 @@ auth0 roles permissions remove [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 roles permissions rm
-  auth0 roles permissions remove <role-id> -p <permission-name>
 ```
 
 

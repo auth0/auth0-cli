@@ -5,8 +5,16 @@ layout: default
 
 Log out of a tenant's session.
 
+## Usage
 ```
 auth0 logout [flags]
+```
+
+## Examples
+
+```
+  auth0 logout
+  auth0 logout <tenant>
 ```
 
 
@@ -19,13 +27,6 @@ auth0 logout [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 logout
-  auth0 logout <tenant>
 ```
 
 

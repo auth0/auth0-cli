@@ -9,8 +9,26 @@ To update interactively, use `auth0 logs streams update` with no arguments.
 
 To update non-interactively, supply the log stream id, name, type and other information through the flags.
 
+## Usage
 ```
 auth0 logs streams update [flags]
+```
+
+## Examples
+
+```
+  auth0 logs streams update
+  auth0 logs streams update <log-stream-id> --name mylogstream
+
+  # Custom Webhook
+  auth0 logs streams update <log-stream-id> -n mylogstream --type http
+  auth0 logs streams update <log-stream-id> -n mylogstream -t http --http-type application/json --http-format JSONLINES
+  
+  # Datadog
+  auth0 logs streams update <log-stream-id> -n mydatadog -t datadog --datadog-key 9999999 --datadog-id us
+  
+  # EventBridge
+  auth0 logs streams update <log-stream-id> -n myeventbridge -t eventbridge
 ```
 
 
@@ -42,20 +60,6 @@ auth0 logs streams update [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 logs streams update
-  auth0 logs streams update <id> --name mylogstream
-  # Custom Webhook
-  auth0 logs streams update <id> -n mylogstream --type http
-  auth0 logs streams update <id> -n mylogstream -t http --http-type application/json --http-format JSONLINES
-  # Datadog
-  auth0 logs streams update <id> -n mydatadog -t datadog --datadog-key 9999999 --datadog-id us
-  # EventBridge
-  auth0 logs streams update <id> -n myeventbridge -t eventbridge
 ```
 
 

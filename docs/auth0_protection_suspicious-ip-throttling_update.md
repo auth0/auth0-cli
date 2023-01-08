@@ -5,8 +5,19 @@ layout: default
 
 Update the suspicious ip throttling settings.
 
+## Usage
 ```
 auth0 protection suspicious-ip-throttling update [flags]
+```
+
+## Examples
+
+```
+  auth0 protection suspicious-ip-throttling update
+  auth0 ap sit update --enabled true
+  auth0 ap sit update --enabled true --allowlist "178.178.178.178"
+  auth0 ap sit update --enabled true --allowlist "178.178.178.178" --shields block
+  auth0 ap sit update -e true -l "178.178.178.178" -s block --json
 ```
 
 
@@ -31,13 +42,6 @@ auth0 protection suspicious-ip-throttling update [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 protection suspicious-ip-throttling update
-  auth0 ap sit update
 ```
 
 

@@ -5,8 +5,17 @@ layout: default
 
 List existing permissions defined in a role. To add a permission, run: `auth0 roles permissions add`.
 
+## Usage
 ```
 auth0 roles permissions list [flags]
+```
+
+## Examples
+
+```
+  auth0 roles permissions list
+  auth0 roles permissions list <role-id>
+  auth0 roles permissions ls <role-id> --json
 ```
 
 
@@ -24,14 +33,6 @@ auth0 roles permissions list [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 roles permissions list
-  auth0 roles permissions list <role-id>
-  auth0 roles permissions ls --json
 ```
 
 

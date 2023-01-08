@@ -127,6 +127,7 @@ func showUniversalLoginCmd(cli *cli) *cobra.Command {
 		Short: "Display the custom branding settings for Universal Login",
 		Long:  "Display the custom branding settings for Universal Login.",
 		Example: `  auth0 universal-login show
+  auth0 ul show
   auth0 universal-login show --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var myBranding *management.Branding // Load app by id
@@ -169,8 +170,9 @@ func updateUniversalLoginCmd(cli *cli) *cobra.Command {
 			"To update the settings for Universal Login non-interactively, supply the accent, background and " +
 			"logo through the flags.",
 		Example: `  auth0 universal-login update
-  auth0 universal-login update --accent "#FF4F40" --background "#2A2E35" 
-  auth0 universal-login update -a "#FF4F40" -b "#2A2E35" --logo "https://example.com/logo.png"`,
+  auth0 ul update --accent "#FF4F40" --background "#2A2E35" --logo "https://example.com/logo.png"
+  auth0 ul update -a "#FF4F40" -b "#2A2E35" -l "https://example.com/logo.png"
+  auth0 ul update -a "#FF4F40" -b "#2A2E35" -l "https://example.com/logo.png" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Branding
 
@@ -253,13 +255,12 @@ func updateUniversalLoginCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	brandingAccent.RegisterStringU(cmd, &inputs.AccentColor, "")
 	brandingBackground.RegisterStringU(cmd, &inputs.BackgroundColor, "")
 	brandingLogo.RegisterStringU(cmd, &inputs.LogoURL, "")
 	brandingFavicon.RegisterStringU(cmd, &inputs.FaviconURL, "")
 	brandingFont.RegisterStringU(cmd, &inputs.CustomFontURL, "")
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -271,7 +272,8 @@ func showBrandingTemplateCmd(cli *cli) *cobra.Command {
 		Short: "Display the custom template for Universal Login",
 		Long:  "Display the custom template for the Universal Login experience.",
 		Example: `  auth0 universal-login templates show
-auth0 universal-login templates show --json`,
+  auth0 ul templates show
+  auth0 ul templates show --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var template *management.BrandingUniversalLogin // Load app by id
 
@@ -297,11 +299,12 @@ auth0 universal-login templates show --json`,
 
 func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "update",
-		Args:    cobra.NoArgs,
-		Short:   "Update the custom template for Universal Login",
-		Long:    "Update the custom template for Universal Login.",
-		Example: "  auth0 universal-login templates update",
+		Use:   "update",
+		Args:  cobra.NoArgs,
+		Short: "Update the custom template for Universal Login",
+		Long:  "Update the custom template for Universal Login.",
+		Example: `  auth0 universal-login templates update
+  auth0 ul templates update`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var templateData *branding.TemplateData
 			err := ansi.Waiting(func() error {

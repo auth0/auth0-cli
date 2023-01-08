@@ -102,16 +102,19 @@ func updateBreachedPasswordDetectionCmd(cli *cli) *cobra.Command {
 		Short: "Update breached password detection settings",
 		Long:  "Update the breached password detection settings.",
 		Example: `  auth0 protection breached-password-detection update
-  auth0 ap bpd update --json`,
+  auth0 ap bpd update --enabled true
+  auth0 ap bpd update --enabled true --admin-notification-frequency weekly
+  auth0 ap bpd update --enabled true --admin-notification-frequency weekly --method enhanced
+  auth0 ap bpd update --enabled true --admin-notification-frequency weekly --method enhanced --shields admin_notification
+  auth0 ap bpd update -e true -f weekly -m enhanced -s admin_notification --json`,
 		RunE: updateBreachedPasswordDetectionCmdRun(cli, &inputs),
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	bpdFlags.Enabled.RegisterBoolU(cmd, &inputs.Enabled, false)
 	bpdFlags.Shields.RegisterStringSliceU(cmd, &inputs.Shields, []string{})
 	bpdFlags.AdminNotificationFrequency.RegisterStringSliceU(cmd, &inputs.AdminNotificationFrequency, []string{})
 	bpdFlags.Method.RegisterString(cmd, &inputs.Method, "")
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
