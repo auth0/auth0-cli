@@ -30,7 +30,9 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 		defer ctrl.Finish()
 
 		oldCreds := credentials
-		defer func() { credentials = oldCreds }()
+		defer func() { 
+		    credentials = oldCreds 
+		}()
 		credentials = &Credentials{
 			Audience:           "https://test.com/api/v2/",
 			ClientID:           "client-id",
