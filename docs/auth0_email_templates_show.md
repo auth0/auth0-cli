@@ -5,8 +5,17 @@ layout: default
 
 Display information about an email template.
 
+## Usage
 ```
 auth0 email templates show [flags]
+```
+
+## Examples
+
+```
+  auth0 email templates show
+  auth0 email templates show <template>
+  auth0 email templates show welcome
 ```
 
 
@@ -24,13 +33,6 @@ auth0 email templates show [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 email templates show <template>
-  auth0 email templates show welcome
 ```
 
 

@@ -7,8 +7,20 @@ Fetch an access token for the given application.
 If --client-id is not provided, the default client "CLI Login Testing" will be used (and created if not exists).
 Specify the API you want this token for with --audience (API Identifer). Additionally, you can also specify the --scope to use.
 
+## Usage
 ```
 auth0 test token [flags]
+```
+
+## Examples
+
+```
+  auth0 test token
+  auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
+  auth0 test token -c <id> -a <audience> -s <scope1,scope2>
+  auth0 test token -c <id> -a <audience> -s <scope1,scope2> --force
+  auth0 test token -c <id> -a <audience> -s <scope1,scope2> --json
+  auth0 test token -c <id> -a <audience> -s <scope1,scope2> --force --json
 ```
 
 
@@ -30,13 +42,6 @@ auth0 test token [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 test token
-  auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
 ```
 
 

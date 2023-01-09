@@ -209,8 +209,8 @@ func showLogStreamCmd(cli *cli) *cobra.Command {
 		Short: "Show a log stream by Id",
 		Long:  "Display information about a log stream.",
 		Example: `  auth0 logs streams show
-  auth0 logs streams show <id>
-  auth0 logs streams show <id> --json`,
+  auth0 logs streams show <log-stream-id>
+  auth0 logs streams show <log-stream-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := logsID.Ask(cmd, &inputs.ID)
@@ -271,12 +271,16 @@ func createLogStreamCmd(cli *cli) *cobra.Command {
 			"To create non-interactively, supply the log stream name, type and other information " +
 			"through the flags.",
 		Example: `  auth0 logs streams create
+
   # Custom Webhook
   auth0 logs streams create -n mylogstream -t http --http-type application/json --http-format JSONLINES --http-auth 1343434
+
   # Datadog 
   auth0 logs streams create -n mydatadog -t datadog --datadog-key 9999999 --datadog-id us
+
   # EventBridge
   auth0 logs streams create -n myeventbridge -t eventbridge --eventbridge-id 999999999999 --eventbridge-region us-east-1
+
   # Splunk
   auth0 logs streams create -n test-splunk -t splunk --splunk-domain demo.splunk.com --splunk-token 12a34ab5-c6d7-8901-23ef-456b7c89d0c1 --splunk-port 8080 --splunk-secure=true`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -484,14 +488,17 @@ func updateLogStreamCmd(cli *cli) *cobra.Command {
 			"To update non-interactively, supply the log stream id, name, type and other " +
 			"information through the flags.",
 		Example: `  auth0 logs streams update
-  auth0 logs streams update <id> --name mylogstream
+  auth0 logs streams update <log-stream-id> --name mylogstream
+
   # Custom Webhook
-  auth0 logs streams update <id> -n mylogstream --type http
-  auth0 logs streams update <id> -n mylogstream -t http --http-type application/json --http-format JSONLINES
+  auth0 logs streams update <log-stream-id> -n mylogstream --type http
+  auth0 logs streams update <log-stream-id> -n mylogstream -t http --http-type application/json --http-format JSONLINES
+  
   # Datadog
-  auth0 logs streams update <id> -n mydatadog -t datadog --datadog-key 9999999 --datadog-id us
+  auth0 logs streams update <log-stream-id> -n mydatadog -t datadog --datadog-key 9999999 --datadog-id us
+  
   # EventBridge
-  auth0 logs streams update <id> -n myeventbridge -t eventbridge`,
+  auth0 logs streams update <log-stream-id> -n myeventbridge -t eventbridge`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.LogStream
 
@@ -723,16 +730,18 @@ func deleteLogStreamCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Delete a log stream",
+		Use:     "delete",
+		Aliases: []string{"rm"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Delete a log stream",
 		Long: "Delete a log stream.\n\n" +
 			"To delete interactively, use `auth0 logs streams delete` with no arguments.\n\n" +
 			"To delete non-interactively, supply the log stream id and the `--force`" +
 			" flag to skip confirmation.",
 		Example: `  auth0 logs streams delete
-  auth0 logs streams delete <id>
-  auth0 logs streams delete <id> --force`,
+  auth0 logs streams rm
+  auth0 logs streams delete <log-stream-id>
+  auth0 logs streams delete <log-stream-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := logsID.Pick(cmd, &inputs.ID, cli.logStreamPickerOptions)
@@ -777,7 +786,7 @@ func openLogStreamsCmd(cli *cli) *cobra.Command {
 		Short: "Open the settings page of a log stream",
 		Long:  "Open a log stream's settings page in the Auth0 Dashboard.",
 		Example: `  auth0 logs streams open
-  auth0 logs streams open <id>`,
+  auth0 logs streams open <log-stream-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := logsID.Pick(cmd, &inputs.ID, cli.logStreamPickerOptions)

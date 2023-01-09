@@ -9,8 +9,18 @@ To update the settings for Universal Login interactively, use `auth0 universal-l
 
 To update the settings for Universal Login non-interactively, supply the accent, background and logo through the flags.
 
+## Usage
 ```
 auth0 universal-login update [flags]
+```
+
+## Examples
+
+```
+  auth0 universal-login update
+  auth0 ul update --accent "#FF4F40" --background "#2A2E35" --logo "https://example.com/logo.png"
+  auth0 ul update -a "#FF4F40" -b "#2A2E35" -l "https://example.com/logo.png"
+  auth0 ul update -a "#FF4F40" -b "#2A2E35" -l "https://example.com/logo.png" --json
 ```
 
 
@@ -33,14 +43,6 @@ auth0 universal-login update [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 universal-login update
-  auth0 universal-login update --accent "#FF4F40" --background "#2A2E35" 
-  auth0 universal-login update -a "#FF4F40" -b "#2A2E35" --logo "https://example.com/logo.png"
 ```
 
 

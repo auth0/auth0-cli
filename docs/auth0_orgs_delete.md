@@ -9,8 +9,18 @@ To delete interactively, use `auth0 orgs delete` with no arguments.
 
 To delete non-interactively, supply the organization id and the `--force` flag to skip confirmation.
 
+## Usage
 ```
 auth0 orgs delete [flags]
+```
+
+## Examples
+
+```
+  auth0 orgs delete
+  auth0 orgs rm
+  auth0 orgs delete <org-id>
+  auth0 orgs delete <org-id> --force
 ```
 
 
@@ -28,13 +38,6 @@ auth0 orgs delete [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 orgs delete
-  auth0 orgs delete <id>
 ```
 
 

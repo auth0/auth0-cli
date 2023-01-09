@@ -5,8 +5,16 @@ layout: default
 
 Open the settings page of a user in the Auth0 Dashboard.
 
+## Usage
 ```
 auth0 users open [flags]
+```
+
+## Examples
+
+```
+  auth0 users open <id>
+  auth0 users open "auth0|xxxxxxxxxx"
 ```
 
 
@@ -19,13 +27,6 @@ auth0 users open [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 users open <id>
-  auth0 users open "auth0|xxxxxxxxxx"
 ```
 
 

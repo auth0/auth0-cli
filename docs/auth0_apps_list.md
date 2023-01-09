@@ -5,8 +5,19 @@ layout: default
 
 List your existing applications. To create one, run: `auth0 apps create`.
 
+## Usage
 ```
 auth0 apps list [flags]
+```
+
+## Examples
+
+```
+  auth0 apps list
+  auth0 apps ls
+  auth0 apps list --reveal
+  auth0 apps list --reveal --number 100
+  auth0 apps ls -r -n 100 --json
 ```
 
 
@@ -26,15 +37,6 @@ auth0 apps list [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 apps list
-  auth0 apps ls
-  auth0 apps ls --json
-  auth0 apps ls -n 100
 ```
 
 

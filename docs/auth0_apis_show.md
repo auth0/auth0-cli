@@ -5,8 +5,17 @@ layout: default
 
 Display the name, scopes, token lifetime, and other information about an API.
 
+## Usage
 ```
 auth0 apis show [flags]
+```
+
+## Examples
+
+```
+  auth0 apis show
+  auth0 apis show <api-id|api-audience>
+  auth0 apis show <api-id|api-audience> --json
 ```
 
 
@@ -24,14 +33,6 @@ auth0 apis show [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 apis show
-  auth0 apis show <id|audience>
-  auth0 apis show <id|audience> --json
 ```
 
 

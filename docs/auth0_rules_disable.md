@@ -5,8 +5,17 @@ layout: default
 
 Disable a rule.
 
+## Usage
 ```
 auth0 rules disable [flags]
+```
+
+## Examples
+
+```
+  auth0 rules disable
+  auth0 rules disable <rule-id>
+  auth0 rules disable <rule-id> --json
 ```
 
 
@@ -24,13 +33,6 @@ auth0 rules disable [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 rules disable
-  auth0 rules disable <id>
 ```
 
 

@@ -5,8 +5,17 @@ layout: default
 
 List your existing rules. To create one, run: `auth0 rules create`.
 
+## Usage
 ```
 auth0 rules list [flags]
+```
+
+## Examples
+
+```
+  auth0 rules list
+  auth0 rules ls
+  auth0 rules ls --json
 ```
 
 
@@ -24,14 +33,6 @@ auth0 rules list [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 rules list
-  auth0 rules ls
-  auth0 rules ls --json
 ```
 
 

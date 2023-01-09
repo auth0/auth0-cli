@@ -5,8 +5,17 @@ layout: default
 
 Display information about an organization.
 
+## Usage
 ```
 auth0 orgs show [flags]
+```
+
+## Examples
+
+```
+  auth0 orgs show
+  auth0 orgs show <org-id>
+  auth0 orgs show <org-id> --json
 ```
 
 
@@ -24,14 +33,6 @@ auth0 orgs show [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 orgs show
-  auth0 orgs show <id>
-  auth0 orgs show <id> --json
 ```
 
 

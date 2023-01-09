@@ -9,8 +9,18 @@ To delete interactively, use `auth0 rules delete` with no arguments.
 
 To delete non-interactively, supply the rule id and the `--force` flag to skip confirmation.
 
+## Usage
 ```
 auth0 rules delete [flags]
+```
+
+## Examples
+
+```
+  auth0 rules delete 
+  auth0 rules rm
+  auth0 rules delete <rule-id>
+  auth0 rules delete <rule-id> --force
 ```
 
 
@@ -28,14 +38,6 @@ auth0 rules delete [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 rules delete 
-  auth0 rules delete <id>
-  auth0 rules delete <id> --force
 ```
 
 

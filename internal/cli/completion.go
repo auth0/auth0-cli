@@ -8,48 +8,55 @@ import (
 
 func completionCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "completion",
+		Use:   "completion [bash|zsh|fish|powershell]",
 		Short: "Setup autocomplete features for this CLI on your terminal",
-		Long: `completion [bash|zsh|fish|powershell]
+		Example: `  auth0 completion bash
+  auth0 completion zsh
+  auth0 completion fish
+  auth0 completion powershell`,
+		Long: `## Loading completions
 
-To load completions:
+### Bash
 
-Bash:
+To load completion for the current session, run:
 
-$ source <(auth0 completion bash)
+` + "```\n$ source <(auth0 completion bash)\n```" + `
 
-# To load completions for each session, execute once:
-Linux:
-  $ auth0 completion bash > /etc/bash_completion.d/auth0
-MacOS:
-  $ auth0 completion bash > /usr/local/etc/bash_completion.d/auth0
+To load completions for each session, run once:
 
-Zsh:
+` + "```\n# On Linux:\n$ auth0 completion bash > /etc/bash_completion.d/auth0\n\n# On MacOS:\n$ auth0 completion bash > /usr/local/etc/bash_completion.d/auth0\n```" + `
 
-# If shell completion is not already enabled in your environment you will need
-# to enable it.  You can execute the following once:
+### Zsh:
 
-$ echo "autoload -U compinit; compinit" >> ~/.zshrc
+If shell completion is not already enabled in your environment you will need to enable it.
 
-# To load completions for each session, execute once:
-$ auth0 completion zsh > "${fpath[1]}/_auth0"
+You can run the following once:
 
-# You will need to start a new shell for this setup to take effect.
+` + "```\n$ echo \"autoload -U compinit; compinit\" >> ~/.zshrc\n```" + `
 
-Fish:
+To load completions for each session, run once:
 
-$ auth0 completion fish | source
+` + "```\n$ auth0 completion zsh > \"${fpath[1]}/_auth0\"\n```" + `
 
-# To load completions for each session, execute once:
-$ auth0 completion fish > ~/.config/fish/completions/auth0.fish
+You will need to start a new shell for this setup to take effect.
 
-Powershell:
+### Fish:
 
-PS> auth0 completion powershell | Out-String | Invoke-Expression
+` + "```\n$ auth0 completion fish | source\n```" + `
 
-# To load completions for every new session, run:
-PS> auth0 completion powershell > auth0.ps1
-# and source this file from your powershell profile.
+To load completions for each session, run once:
+
+` + "```\n$ auth0 completion fish > ~/.config/fish/completions/auth0.fish\n```" + `
+
+### Powershell:
+
+` + "```\nPS> auth0 completion powershell | Out-String | Invoke-Expression\n```" + `
+
+To load completions for every new session, run:
+
+` + "```\nPS> auth0 completion powershell > auth0.ps1\n```" + `
+
+and source this file from your powershell profile.
 `,
 		DisableFlagsInUseLine: true,
 		ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},

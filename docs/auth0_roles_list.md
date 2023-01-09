@@ -5,8 +5,18 @@ layout: default
 
 List your existing roles. To create one, run: `auth0 roles create`.
 
+## Usage
 ```
 auth0 roles list [flags]
+```
+
+## Examples
+
+```
+  auth0 roles list
+  auth0 roles ls
+  auth0 roles ls --number 100
+  auth0 roles ls -n 100 --json
 ```
 
 
@@ -25,15 +35,6 @@ auth0 roles list [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 roles list
-  auth0 roles ls
-  auth0 roles ls -n 100
-  auth0 roles ls -n 100 --json
 ```
 
 

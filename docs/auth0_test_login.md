@@ -5,8 +5,23 @@ layout: default
 
 Launch a browser to try out your Universal Login box.
 
+## Usage
 ```
 auth0 test login [flags]
+```
+
+## Examples
+
+```
+  auth0 test login
+  auth0 test login <client-id>
+  auth0 test login <client-id> --connection <connection>
+  auth0 test login <client-id> --connection <connection> --audience <audience>
+  auth0 test login <client-id> --connection <connection> --audience <audience> --domain <domain>
+  auth0 test login <client-id> --connection <connection> --audience <audience> --domain <domain> --scopes <scope1,scope2>
+  auth0 test login <client-id> -c <connection> -a <audience> -d <domain> -s <scope1,scope2> --force
+  auth0 test login <client-id> -c <connection> -a <audience> -d <domain> -s <scope1,scope2> --json
+  auth0 test login <client-id> -c <connection> -a <audience> -d <domain> -s <scope1,scope2> --force --json
 ```
 
 
@@ -29,14 +44,6 @@ auth0 test login [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 test login
-  auth0 test login <client-id>
-  auth0 test login <client-id> --connection <connection>
 ```
 
 
