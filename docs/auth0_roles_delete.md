@@ -9,8 +9,18 @@ To delete interactively, use `auth0 roles delete`.
 
 To delete non-interactively, supply the role id and the `--force` flag to skip confirmation.
 
+## Usage
 ```
 auth0 roles delete [flags]
+```
+
+## Examples
+
+```
+  auth0 roles delete
+  auth0 roles rm
+  auth0 roles delete <role-id>
+  auth0 roles delete <role-id> --force
 ```
 
 
@@ -28,14 +38,6 @@ auth0 roles delete [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 roles delete
-  auth0 roles delete <id>
-  auth0 roles delete <id> --force
 ```
 
 

@@ -5,8 +5,17 @@ layout: default
 
 Display the custom template for the Universal Login experience.
 
+## Usage
 ```
 auth0 universal-login templates show [flags]
+```
+
+## Examples
+
+```
+  auth0 universal-login templates show
+  auth0 ul templates show
+  auth0 ul templates show --json
 ```
 
 
@@ -24,13 +33,6 @@ auth0 universal-login templates show [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 universal-login templates show
-auth0 universal-login templates show --json
 ```
 
 

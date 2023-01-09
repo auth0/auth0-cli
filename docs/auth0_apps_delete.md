@@ -9,8 +9,18 @@ To delete interactively, use `auth0 apps delete` with no arguments.
 
 To delete non-interactively, supply the application id and the `--force` flag to skip confirmation.
 
+## Usage
 ```
 auth0 apps delete [flags]
+```
+
+## Examples
+
+```
+  auth0 apps delete 
+  auth0 apps rm
+  auth0 apps delete <app-id>
+  auth0 apps delete <app-id> --force
 ```
 
 
@@ -28,13 +38,6 @@ auth0 apps delete [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 apps delete 
-  auth0 apps delete <id>
 ```
 
 

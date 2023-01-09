@@ -9,8 +9,20 @@ To create interactively, use `auth0 apps create` with no arguments.
 
 To create non-interactively, supply at least the application name, and type through the flags.
 
+## Usage
 ```
 auth0 apps create [flags]
+```
+
+## Examples
+
+```
+  auth0 apps create
+  auth0 apps create --name myapp 
+  auth0 apps create --name myapp --description <description>
+  auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m]
+  auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m] --reveal
+  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json
 ```
 
 
@@ -42,16 +54,6 @@ auth0 apps create [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 apps create
-  auth0 apps create --name myapp
-  auth0 apps create --name myapp --json
-  auth0 apps create -n myapp --type [native|spa|regular|m2m]
-  auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <description>
 ```
 
 

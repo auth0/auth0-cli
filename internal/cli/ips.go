@@ -41,7 +41,8 @@ func checkIPCmd(cli *cli) *cobra.Command {
 		Long: "Check if a given IP address is blocked via the Suspicious IP Throttling due to " +
 			"multiple suspicious attempts.",
 		Example: `  auth0 ips check
-  auth0 ips check <ip>`,
+  auth0 ips check <ip>
+  auth0 ips check "178.178.178.178"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := ipAddress.Ask(cmd, &inputs.IP); err != nil {
@@ -88,7 +89,8 @@ func unblockIPCmd(cli *cli) *cobra.Command {
 		Long: "Unblock an IP address currently blocked by the Suspicious IP Throttling due to " +
 			"multiple suspicious attempts.",
 		Example: `  auth0 ips unblock
-  auth0 ips unblock <ip>`,
+  auth0 ips unblock <ip>
+  auth0 ips unblock "178.178.178.178"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := ipAddress.Ask(cmd, &inputs.IP); err != nil {

@@ -5,8 +5,16 @@ layout: default
 
 List brute-force protection blocks for a given user.
 
+## Usage
 ```
 auth0 users blocks list [flags]
+```
+
+## Examples
+
+```
+  auth0 users blocks list <user-id>
+  auth0 users blocks list <user-id> --json
 ```
 
 
@@ -24,12 +32,6 @@ auth0 users blocks list [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 users blocks list <user-id>
 ```
 
 

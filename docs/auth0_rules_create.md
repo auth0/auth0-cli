@@ -9,8 +9,20 @@ To create interactively, use `auth0 rules create` with no arguments.
 
 To create non-interactively, supply the name, template and other information through the flags.
 
+## Usage
 ```
 auth0 rules create [flags]
+```
+
+## Examples
+
+```
+  auth0 rules create
+  auth0 rules create --enabled true
+  auth0 rules create --enabled true --name "My Rule" 
+  auth0 rules create --enabled true --name "My Rule" --template "Empty rule"
+  auth0 rules create --enabled true --name "My Rule" --template "Empty rule" --script "$(cat path/to/script.js)"
+  auth0 rules create -e true -n "My Rule" -t "Empty rule" -s "$(cat path/to/script.js)" --json
 ```
 
 
@@ -20,6 +32,7 @@ auth0 rules create [flags]
   -e, --enabled           Enable (or disable) a rule. (default true)
       --json              Output in json format.
   -n, --name string       Name of the rule.
+  -s, --script string     Script contents for the rule.
   -t, --template string   Template to use for the rule.
 ```
 
@@ -31,15 +44,6 @@ auth0 rules create [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 rules create
-  auth0 rules create --name "My Rule"
-  auth0 rules create -n "My Rule" --template "Empty rule"
-  auth0 rules create -n "My Rule" -t "Empty rule" --enabled=false
 ```
 
 

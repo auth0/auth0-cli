@@ -163,7 +163,7 @@ func useAppCmd(cli *cli) *cobra.Command {
 			"quickstarts and testing Universal login flow.",
 		Example: `  auth0 apps use
   auth0 apps use --none
-  auth0 apps use <client-id>`,
+  auth0 apps use <app-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.None {
 				inputs.ID = ""
@@ -212,8 +212,9 @@ func listAppsCmd(cli *cli) *cobra.Command {
 		Long:    "List your existing applications. To create one, run: `auth0 apps create`.",
 		Example: `  auth0 apps list
   auth0 apps ls
-  auth0 apps ls --json
-  auth0 apps ls -n 100`,
+  auth0 apps list --reveal
+  auth0 apps list --reveal --number 100
+  auth0 apps ls -r -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			list, err := getWithPagination(
 				cmd.Context(),
@@ -241,10 +242,9 @@ func listAppsCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	reveal.RegisterBool(cmd, &inputs.Reveal, false)
 	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -261,8 +261,9 @@ func showAppCmd(cli *cli) *cobra.Command {
 		Short: "Show an application",
 		Long:  "Display the name, description, app type, and other information about an application.",
 		Example: `  auth0 apps show
-  auth0 apps show --json
-  auth0 apps show <id>`,
+  auth0 apps show <app-id>
+  auth0 apps show <app-id> --reveal
+  auth0 apps show <app-id> --reveal --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
@@ -288,9 +289,8 @@ func showAppCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	reveal.RegisterBool(cmd, &inputs.Reveal, false)
-
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	reveal.RegisterBool(cmd, &inputs.Reveal, false)
 
 	return cmd
 }
@@ -301,15 +301,18 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Delete an application",
+		Use:     "delete",
+		Aliases: []string{"rm"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Delete an application",
 		Long: "Delete an application.\n\n" +
 			"To delete interactively, use `auth0 apps delete` with no arguments.\n\n" +
 			"To delete non-interactively, supply the application id and the `--force` " +
 			"flag to skip confirmation.",
 		Example: `  auth0 apps delete 
-  auth0 apps delete <id>`,
+  auth0 apps rm
+  auth0 apps delete <app-id>
+  auth0 apps delete <app-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
@@ -367,10 +370,11 @@ func createAppCmd(cli *cli) *cobra.Command {
 			"To create interactively, use `auth0 apps create` with no arguments.\n\n" +
 			"To create non-interactively, supply at least the application name, and type through the flags.",
 		Example: `  auth0 apps create
-  auth0 apps create --name myapp
-  auth0 apps create --name myapp --json
-  auth0 apps create -n myapp --type [native|spa|regular|m2m]
-  auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <description>`,
+  auth0 apps create --name myapp 
+  auth0 apps create --name myapp --description <description>
+  auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m]
+  auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m] --reveal
+  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Prompt for app name
 			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -480,6 +484,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	appName.RegisterString(cmd, &inputs.Name, "")
 	appType.RegisterString(cmd, &inputs.Type, "")
 	appDescription.RegisterString(cmd, &inputs.Description, "")
@@ -490,8 +495,6 @@ func createAppCmd(cli *cli) *cobra.Command {
 	appAuthMethod.RegisterString(cmd, &inputs.AuthMethod, "")
 	appGrants.RegisterStringSlice(cmd, &inputs.Grants, nil)
 	reveal.RegisterBool(cmd, &inputs.Reveal, false)
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -520,9 +523,11 @@ func updateAppCmd(cli *cli) *cobra.Command {
 			"To update non-interactively, supply the application id, name, type and other information you " +
 			"might want to change through the available flags.",
 		Example: `  auth0 apps update
-  auth0 apps update <id> --json
-  auth0 apps update <id> --name myapp
-  auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
+  auth0 apps update <app-id> --name myapp
+  auth0 apps update <app-id> --name myapp --description <description>
+  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m]
+  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m] --reveal
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Client
 
@@ -689,6 +694,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	appName.RegisterStringU(cmd, &inputs.Name, "")
 	appType.RegisterStringU(cmd, &inputs.Type, "")
 	appDescription.RegisterStringU(cmd, &inputs.Description, "")
@@ -699,8 +705,6 @@ func updateAppCmd(cli *cli) *cobra.Command {
 	appAuthMethod.RegisterStringU(cmd, &inputs.AuthMethod, "")
 	appGrants.RegisterStringSliceU(cmd, &inputs.Grants, nil)
 	reveal.RegisterBool(cmd, &inputs.Reveal, false)
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -716,7 +720,7 @@ func openAppCmd(cli *cli) *cobra.Command {
 		Short: "Open the settings page of an application",
 		Long:  "Open an application's settings page in the Auth0 Dashboard.",
 		Example: `  auth0 apps open
-  auth0 apps open <id>`,
+  auth0 apps open <app-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)

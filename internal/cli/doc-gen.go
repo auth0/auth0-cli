@@ -34,11 +34,35 @@ layout: default
 layout: home
 ---
 
-Build, manage and test your [Auth0](http://auth0.com/) integrations from the command line.
+Build, manage and test your [Auth0](https://auth0.com/) integrations from the command line.
 
 ## Installation
 
-Installation instructions available in [project README](https://github.com/auth0/auth0-cli#installation).
+### macOS
+
+Install via [Homebrew](https://brew.sh/):
+
+{{ wrapWithBackticks "brew tap auth0/auth0-cli && brew install auth0" }}
+
+### Windows
+
+Install via [Scoop](https://scoop.sh/):
+
+{{ wrapWithBackticks "scoop bucket add auth0 https://github.com/auth0/scoop-auth0-cli.git && scoop install auth0" }}
+
+### Linux
+
+Install via [cURL](https://curl.se/):
+
+{{ wrapWithBackticks "curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | sh -s -- -b ." }}
+
+### Manual
+
+1. Download the appropriate binary for your environment from the [latest release](https://github.com/auth0/auth0-cli/releases/latest/)
+2. Extract the archive
+3. Run ` + "`./auth0`" + `
+
+Autocompletion instructions for supported platforms available by running ` + "`auth0 completion -h`" + `
 
 ## Authenticating to Your Tenant
 
@@ -65,7 +89,12 @@ layout: default
 
 {{.Description}}
 
+## Usage
 {{ wrapWithBackticks .UseLine }}
+
+## Examples
+
+{{ wrapWithBackticks .Examples }}
 
 {{if .HasFlags}}
 ## Flags
@@ -76,10 +105,6 @@ layout: default
 ## InheritedFlags
 
 {{ wrapWithBackticks .InheritedFlags }}{{end}}
-
-## Examples
-
-{{ wrapWithBackticks .Examples }}
 
 {{ if .AssociatedCommands }}
 ## Related Commands

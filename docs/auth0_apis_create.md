@@ -9,8 +9,21 @@ To create interactively, use `auth0 apis create` with no flags.
 
 To create non-interactively, supply the name, identifier, scopes, token lifetime and whether to allow offline access through the flags.
 
+## Usage
 ```
 auth0 apis create [flags]
+```
+
+## Examples
+
+```
+  auth0 apis create 
+  auth0 apis create --name myapi
+  auth0 apis create --name myapi --identifier http://my-api
+  auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100
+  auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access
+  auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access false --scopes "letter:write,letter:read"
+  auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --json
 ```
 
 
@@ -33,16 +46,6 @@ auth0 apis create [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 apis create 
-  auth0 apis create --name myapi
-  auth0 apis create -n myapi --identifier http://my-api
-  auth0 apis create -n myapi --token-expiration 6100
-  auth0 apis create -n myapi -e 6100 --offline-access=true
 ```
 
 

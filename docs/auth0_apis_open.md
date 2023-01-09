@@ -5,8 +5,16 @@ layout: default
 
 Open an APIs' settings page in the Auth0 Dashboard.
 
+## Usage
 ```
 auth0 apis open [flags]
+```
+
+## Examples
+
+```
+  auth0 apis open
+  auth0 apis open <api-id|api-audience>
 ```
 
 
@@ -19,13 +27,6 @@ auth0 apis open [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 apis open
-  auth0 apis open <id|audience>
 ```
 
 

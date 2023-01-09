@@ -5,8 +5,16 @@ layout: default
 
 Open an action's settings page in the Auth0 Dashboard.
 
+## Usage
 ```
 auth0 actions open [flags]
+```
+
+## Examples
+
+```
+  auth0 actions open
+  auth0 actions open <action-id>
 ```
 
 
@@ -19,13 +27,6 @@ auth0 actions open [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 actions open
-  auth0 actions open <id>
 ```
 
 

@@ -9,17 +9,29 @@ To update interactively, use `auth0 rules update` with no arguments.
 
 To update non-interactively, supply the rule id and other information through the flags.
 
+## Usage
 ```
 auth0 rules update [flags]
+```
+
+## Examples
+
+```
+  auth0 rules update <id>
+  auth0 rules update <rule-id> --enabled true
+  auth0 rules update <rule-id> --enabled true --name "My Updated Rule"
+  auth0 rules update <rule-id> --enabled true --name "My Updated Rule" --script "$(cat path/to/script.js)"
+  auth0 rules update <rule-id> -e true -n "My Updated Rule" -s "$(cat path/to/script.js)" --json
 ```
 
 
 ## Flags
 
 ```
-  -e, --enabled       Enable (or disable) a rule. (default true)
-      --json          Output in json format.
-  -n, --name string   Name of the rule.
+  -e, --enabled         Enable (or disable) a rule. (default true)
+      --json            Output in json format.
+  -n, --name string     Name of the rule.
+  -s, --script string   Script contents for the rule.
 ```
 
 
@@ -30,14 +42,6 @@ auth0 rules update [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 rules update <id>
-  auth0 rules update <id> --name "My Updated Rule"
-  auth0 rules update <id> -n "My Updated Rule" --enabled=false
 ```
 
 

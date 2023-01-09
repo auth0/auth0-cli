@@ -5,8 +5,17 @@ layout: default
 
 Set the active tenant for the Auth0 CLI.
 
+## Usage
 ```
 auth0 tenants use [flags]
+```
+
+## Examples
+
+```
+  auth0 tenants use
+  auth0 tenants use <tenant>
+  auth0 tenants use "example.us.auth0.com"
 ```
 
 
@@ -19,13 +28,6 @@ auth0 tenants use [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 tenants use
-  auth0 tenants use <tenant>
 ```
 
 

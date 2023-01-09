@@ -5,8 +5,17 @@ layout: default
 
 Display the name, type, status, code and other information about an action.
 
+## Usage
 ```
 auth0 actions show [flags]
+```
+
+## Examples
+
+```
+  auth0 actions show
+  auth0 actions show <action-id>
+  auth0 actions show <action-id> --json
 ```
 
 
@@ -24,14 +33,6 @@ auth0 actions show [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 actions show
-  auth0 actions show <id>
-  auth0 actions show <id> --json
 ```
 
 

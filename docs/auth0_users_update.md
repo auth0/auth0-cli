@@ -9,8 +9,18 @@ To update interactively, use `auth0 users update` with no arguments.
 
 To update non-interactively, supply the user id and other information through the available flags.
 
+## Usage
 ```
 auth0 users update [flags]
+```
+
+## Examples
+
+```
+  auth0 users update 
+  auth0 users update <user-id> 
+  auth0 users update <user-id> --name "John Doe"
+  auth0 users update <user-id> --name "John Doe" --email john.doe@example.com
 ```
 
 
@@ -32,15 +42,6 @@ auth0 users update [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 users update 
-  auth0 users update <id> 
-  auth0 users update <id> --name John Doe
-  auth0 users update -n John Doe --email john.doe@example.com
 ```
 
 

@@ -9,8 +9,18 @@ To update interactively, use `auth0 domains update` with no arguments.
 
 To update non-interactively, supply the domain name, type, policy and other information through the flags.
 
+## Usage
 ```
 auth0 domains update [flags]
+```
+
+## Examples
+
+```
+  auth0 domains update
+  auth0 domains update <domain-id> --policy compatible
+  auth0 domains update <domain-id> --policy compatible --ip-header "cf-connecting-ip"
+  auth0 domains update <domain-id> -p compatible -i "cf-connecting-ip" --json
 ```
 
 
@@ -30,14 +40,6 @@ auth0 domains update [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 domains update
-  auth0 domains update <id> --policy compatible
-  auth0 domains update <id> -p compatible --ip-header "cf-connecting-ip"
 ```
 
 
