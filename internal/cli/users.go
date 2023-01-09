@@ -68,6 +68,12 @@ var (
 		ShortForm: "s",
 		Help:      "Field to sort by. Use 'field:order' where 'order' is '1' for ascending and '-1' for descending. e.g. 'created_at:1'.",
 	}
+	userNumber = Flag{
+		Name:      "Number",
+		LongForm:  "number",
+		ShortForm: "n",
+		Help:      "Number of users, that match the search criteria, to retrieve. Maximum result number is 1000. If limit is hit, please refine the search query.",
+	}
 	userImportTemplate = Flag{
 		Name:       "Template",
 		LongForm:   "template",
@@ -127,8 +133,9 @@ func usersCmd(cli *cli) *cobra.Command {
 
 func searchUsersCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		query string
-		sort  string
+		query  string
+		sort   string
+		number int
 	}
 
 	cmd := &cobra.Command{
@@ -139,34 +146,54 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 users search
   auth0 users search --query id
   auth0 users search -q name --sort "name:1"
-  auth0 users search -q name -s "name:1" --json`,
+  auth0 users search -q name -s "name:1" --number 200
+  auth0 users search -q name -s "name:1" -n 200 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := userQuery.Ask(cmd, &inputs.query, nil); err != nil {
 				return err
 			}
 
-			search := &management.UserList{}
-
-			var queryParams []management.RequestOption
-
-			if len(inputs.sort) == 0 {
-				queryParams = append(queryParams, management.Query(auth0.StringValue(&inputs.query)))
-			} else {
-				queryParams = append(queryParams,
-					management.Query(auth0.StringValue(&inputs.query)),
-					management.Parameter("sort", auth0.StringValue(&inputs.sort)),
-				)
+			queryParams := []management.RequestOption{
+				management.Query(inputs.query),
+			}
+			if inputs.sort != "" {
+				queryParams = append(queryParams, management.Parameter("sort", inputs.sort))
 			}
 
-			if err := ansi.Waiting(func() error {
-				var err error
-				search, err = cli.api.User.Search(queryParams...)
-				return err
-			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred: %w", err)
+			if inputs.number < 1 || inputs.number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
 			}
 
-			cli.renderer.UserSearch(search.Users)
+			list, err := getWithPagination(
+				cmd.Context(),
+				inputs.number,
+				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
+					opts = append(opts, queryParams...)
+
+					userList, err := cli.api.User.Search(opts...)
+					if err != nil {
+						return nil, false, err
+					}
+
+					var output []interface{}
+					for _, user := range userList.Users {
+						output = append(output, user)
+					}
+
+					return output, userList.HasNext(), nil
+				},
+			)
+			if err != nil {
+				return fmt.Errorf("failed to search for users: %w", err)
+			}
+
+			var foundUsers []*management.User
+			for _, item := range list {
+				foundUsers = append(foundUsers, item.(*management.User))
+			}
+
+			cli.renderer.UserSearch(foundUsers)
+
 			return nil
 		},
 	}
@@ -174,6 +201,7 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	userQuery.RegisterString(cmd, &inputs.query, "")
 	userSort.RegisterString(cmd, &inputs.sort, "")
+	userNumber.RegisterInt(cmd, &inputs.number, defaultPageSize)
 
 	return cmd
 }
