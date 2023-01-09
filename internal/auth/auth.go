@@ -212,7 +212,7 @@ func GetAccessTokenFromClientCreds(ctx context.Context, args ClientCredentials) 
 		TokenURL:     u.String() + "/oauth/token",
 		EndpointParams: url.Values{
 			"client_id": {args.ClientID},
-			"scope":     {strings.Join(RequiredScopesMin(), " ")},
+			"scope":     {strings.Join(RequiredScopesForClientCreds(), " ")},
 			"audience":  {u.String() + "/api/v2/"},
 		},
 	}

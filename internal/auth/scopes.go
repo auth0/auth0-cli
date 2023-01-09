@@ -21,10 +21,12 @@ var RequiredScopes = []string{
 	"read:attack_protection", "update:attack_protection",
 }
 
-// RequiredScopesMin returns minimum scopes used for login in integration tests.
-func RequiredScopesMin() []string {
+// RequiredScopesForClientCreds returns minimum scopes required when authenticating with client credentials
+func RequiredScopesForClientCreds() []string {
 	var min []string
 	for _, s := range RequiredScopes {
+		// Both "offline_access" and "openid" scopes only apply to device-flow authentication
+		// and should be ignored when authenticating with client credentials
 		if s != "offline_access" && s != "openid" {
 			min = append(min, s)
 		}
