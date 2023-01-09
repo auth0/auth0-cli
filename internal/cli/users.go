@@ -144,10 +144,10 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 		Short: "Search for users",
 		Long:  "Search for users. To create one, run: `auth0 users create`.",
 		Example: `  auth0 users search
-  auth0 users search --query id
-  auth0 users search -q name --sort "name:1"
-  auth0 users search -q name -s "name:1" --number 200
-  auth0 users search -q name -s "name:1" -n 200 --json`,
+  auth0 users search --query user_id:"<user-id>"
+  auth0 users search --query name:"Bob" --sort "name:1"
+  auth0 users search -q name:"Bob" -s "name:1" --number 200
+  auth0 users search -q name:"Bob" -s "name:1" -n 200 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := userQuery.Ask(cmd, &inputs.query, nil); err != nil {
 				return err
