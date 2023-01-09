@@ -31,7 +31,6 @@ var (
 		LongForm:  "description",
 		ShortForm: "d",
 		Help:      "Description of the role.",
-		// IsRequired: true,
 	}
 )
 
@@ -67,7 +66,7 @@ func listRolesCmd(cli *cli) *cobra.Command {
 		Long:    "List your existing roles. To create one, run: `auth0 roles create`.",
 		Example: `  auth0 roles list
   auth0 roles ls
-  auth0 roles ls -n 100
+  auth0 roles ls --number 100
   auth0 roles ls -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			list, err := getWithPagination(
@@ -101,9 +100,8 @@ func listRolesCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
-
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
 }
@@ -119,8 +117,8 @@ func showRoleCmd(cli *cli) *cobra.Command {
 		Short: "Show a role",
 		Long:  "Display information about a role.",
 		Example: `  auth0 roles show
-  auth0 roles show <id>
-  auth0 roles show <id> --json`,
+  auth0 roles show <role-id>
+  auth0 roles show <role-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
@@ -165,8 +163,8 @@ func createRoleCmd(cli *cli) *cobra.Command {
 			"To create interactively, use `auth0 roles create` with no arguments.\n\n" +
 			"To create non-interactively, supply the role name and description through the flags.",
 		Example: `  auth0 roles create
-  auth0 roles create --name myrole
-  auth0 roles create -n myrole --description "awesome role"`,
+  auth0 roles create --name myrole --description "awesome role"
+  auth0 roles create -n myrole -d "awesome role" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Prompt for role name
 			if err := roleName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -197,10 +195,9 @@ func createRoleCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	roleName.RegisterString(cmd, &inputs.Name, "")
 	roleDescription.RegisterString(cmd, &inputs.Description, "")
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -220,8 +217,9 @@ func updateRoleCmd(cli *cli) *cobra.Command {
 			"To update interactively, use `auth0 roles update` with no arguments.\n\n" +
 			"To update non-interactively, supply the role id, name and description through the flags.",
 		Example: `  auth0 roles update
-  auth0 roles update <id> --name myrole
-  auth0 roles update <id> -n myrole --description "awesome role"`,
+  auth0 roles update <role-id> --name myrole
+  auth0 roles update <role-id> --name myrole --description "awesome role"
+  auth0 roles update <role-id> -n myrole -d "awesome role" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
@@ -268,10 +266,9 @@ func updateRoleCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	roleName.RegisterStringU(cmd, &inputs.Name, "")
 	roleDescription.RegisterStringU(cmd, &inputs.Description, "")
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -282,15 +279,17 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Delete a role",
+		Use:     "delete",
+		Aliases: []string{"rm"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Delete a role",
 		Long: "Delete a role.\n\n" +
 			"To delete interactively, use `auth0 roles delete`.\n\n" +
 			"To delete non-interactively, supply the role id and the `--force` flag to skip confirmation.",
 		Example: `  auth0 roles delete
-  auth0 roles delete <id>
-  auth0 roles delete <id> --force`,
+  auth0 roles rm
+  auth0 roles delete <role-id>
+  auth0 roles delete <role-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)

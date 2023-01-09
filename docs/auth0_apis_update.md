@@ -9,8 +9,21 @@ To update interactively, use `auth0 apis update` with no arguments.
 
 To update non-interactively, supply the name, identifier, scopes, token lifetime and whether to allow offline access through the flags.
 
+## Usage
 ```
 auth0 apis update [flags]
+```
+
+## Examples
+
+```
+  auth0 apis update 
+  auth0 apis update <api-id|api-audience>
+  auth0 apis update <api-id|api-audience> --name myapi
+  auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100
+  auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access false
+  auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access false --scopes "letter:write,letter:read"
+  auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --json
 ```
 
 
@@ -32,16 +45,6 @@ auth0 apis update [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 apis update 
-  auth0 apis update <id|audience>
-  auth0 apis update <id|audience> --name myapi
-  auth0 apis update -n myapi --token-expiration 6100
-  auth0 apis update -n myapi -e 6100 --offline-access=true
 ```
 
 

@@ -5,8 +5,15 @@ layout: default
 
 Remove brute-force protection blocks for a given user.
 
+## Usage
 ```
 auth0 users unblock [flags]
+```
+
+## Examples
+
+```
+  auth0 users unblock <user-id>
 ```
 
 
@@ -19,12 +26,6 @@ auth0 users unblock [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 users unblock <user-id>
 ```
 
 

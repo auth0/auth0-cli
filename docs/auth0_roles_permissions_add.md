@@ -3,12 +3,21 @@ layout: default
 ---
 # auth0 roles permissions add
 
-Add an existing permission defined in one of your APIs. To add a permission, run:
+Add an existing permission defined in one of your APIs.
 
-`auth0 roles permissions add <role-id> -p <permission-name>`
-
+## Usage
 ```
 auth0 roles permissions add [flags]
+```
+
+## Examples
+
+```
+  auth0 roles permissions add
+  auth0 roles permissions add <role-id>
+  auth0 roles permissions add <role-id> --api-id <api-id>
+  auth0 roles permissions add <role-id> --api-id <api-id> --permissions <permission-name>
+  auth0 roles permissions add <role-id> -a <api-id> -p <permission-name>
 ```
 
 
@@ -27,13 +36,6 @@ auth0 roles permissions add [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 roles permissions add
-  auth0 roles permissions add <role-id> -p <permission-name>
 ```
 
 

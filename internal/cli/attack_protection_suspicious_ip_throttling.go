@@ -133,10 +133,14 @@ func updateSuspiciousIPThrottlingCmd(cli *cli) *cobra.Command {
 		Short: "Update suspicious ip throttling settings",
 		Long:  "Update the suspicious ip throttling settings.",
 		Example: `  auth0 protection suspicious-ip-throttling update
-  auth0 ap sit update`,
+  auth0 ap sit update --enabled true
+  auth0 ap sit update --enabled true --allowlist "178.178.178.178"
+  auth0 ap sit update --enabled true --allowlist "178.178.178.178" --shields block
+  auth0 ap sit update -e true -l "178.178.178.178" -s block --json`,
 		RunE: updateSuspiciousIPThrottlingCmdRun(cli, &inputs),
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	sitFlags.Enabled.RegisterBoolU(cmd, &inputs.Enabled, false)
 	sitFlags.Shields.RegisterStringSliceU(cmd, &inputs.Shields, []string{})
 	sitFlags.AllowList.RegisterStringSliceU(cmd, &inputs.AllowList, []string{})
@@ -144,8 +148,6 @@ func updateSuspiciousIPThrottlingCmd(cli *cli) *cobra.Command {
 	sitFlags.StagePreLoginRate.RegisterIntU(cmd, &inputs.StagePreLoginRate, 34560)
 	sitFlags.StagePreUserRegistrationMaxAttempts.RegisterIntU(cmd, &inputs.StagePreUserRegistrationMaxAttempts, 1)
 	sitFlags.StagePreUserRegistrationRate.RegisterIntU(cmd, &inputs.StagePreUserRegistrationRate, 1200)
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }

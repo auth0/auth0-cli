@@ -5,8 +5,17 @@ layout: default
 
 Unblock an IP address currently blocked by the Suspicious IP Throttling due to multiple suspicious attempts.
 
+## Usage
 ```
 auth0 ips unblock [flags]
+```
+
+## Examples
+
+```
+  auth0 ips unblock
+  auth0 ips unblock <ip>
+  auth0 ips unblock "178.178.178.178"
 ```
 
 
@@ -19,13 +28,6 @@ auth0 ips unblock [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 ips unblock
-  auth0 ips unblock <ip>
 ```
 
 

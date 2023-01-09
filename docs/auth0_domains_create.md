@@ -9,8 +9,20 @@ To create interactively, use `auth0 domains create` with no arguments.
 
 To create non-interactively, supply the domain name, type, policy and other information through the flags.
 
+## Usage
 ```
 auth0 domains create [flags]
+```
+
+## Examples
+
+```
+  auth0 domains create
+  auth0 domains create --domain <domain-name>
+  auth0 domains create --domain <domain-name> --policy recommended
+  auth0 domains create --domain <domain-name> --policy recommended --type auth0
+  auth0 domains create --domain <domain-name> --policy recommended --type auth0 --ip-header "cf-connecting-ip"
+  auth0 domains create -d <domain-name> -p recommended -t auth0 -i "cf-connecting-ip" --json
 ```
 
 
@@ -33,14 +45,6 @@ auth0 domains create [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 domains create
-  auth0 domains create --domain <domain-name>
-  auth0 domains create --domain <domain-name> --json
 ```
 
 

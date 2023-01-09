@@ -9,8 +9,17 @@ To create interactively, use `auth0 roles create` with no arguments.
 
 To create non-interactively, supply the role name and description through the flags.
 
+## Usage
 ```
 auth0 roles create [flags]
+```
+
+## Examples
+
+```
+  auth0 roles create
+  auth0 roles create --name myrole --description "awesome role"
+  auth0 roles create -n myrole -d "awesome role" --json
 ```
 
 
@@ -30,14 +39,6 @@ auth0 roles create [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 roles create
-  auth0 roles create --name myrole
-  auth0 roles create -n myrole --description "awesome role"
 ```
 
 

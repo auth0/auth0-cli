@@ -129,8 +129,8 @@ func showActionCmd(cli *cli) *cobra.Command {
 		Short: "Show an action",
 		Long:  "Display the name, type, status, code and other information about an action.",
 		Example: `  auth0 actions show
-  auth0 actions show <id>
-  auth0 actions show <id> --json`,
+  auth0 actions show <action-id>
+  auth0 actions show <action-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)
@@ -176,12 +176,15 @@ func createActionCmd(cli *cli) *cobra.Command {
 		Short: "Create a new action",
 		Long: "Create a new action.\n\n" +
 			"To create interactively, use `auth0 actions create` with no flags.\n\n" +
-			"To create non-interactively, supply the action name, trigger, secrets and dependencies through the flags.",
+			"To create non-interactively, supply the action name, trigger, code, secrets and dependencies through the flags.",
 		Example: `  auth0 actions create
   auth0 actions create --name myaction
-  auth0 actions create -n myaction --trigger post-login
-  auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -d "uuid=9.0.0"
-  auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=value" -s "SECRET=value`,
+  auth0 actions create --name myaction --trigger post-login
+  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)"
+  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
+  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
+  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
+  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := actionName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -233,13 +236,12 @@ func createActionCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	actionName.RegisterString(cmd, &inputs.Name, "")
 	actionTrigger.RegisterString(cmd, &inputs.Trigger, "")
 	actionCode.RegisterString(cmd, &inputs.Code, "")
 	actionDependency.RegisterStringMap(cmd, &inputs.Dependencies, nil)
 	actionSecret.RegisterStringMap(cmd, &inputs.Secrets, nil)
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -262,11 +264,14 @@ func updateActionCmd(cli *cli) *cobra.Command {
 			"To update interactively, use `auth0 actions update` with no arguments.\n\n" +
 			"To update non-interactively, supply the action id, name, trigger, secrets and " +
 			"dependencies through the flags.",
-		Example: `  auth0 actions update <id> 
-  auth0 actions update <id> --name myaction
-  auth0 actions update <id> -n myaction --trigger post-login
-  auth0 actions update <id> -n myaction -t post-login -d "lodash=4.0.0" -d "uuid=9.0.0"
-  auth0 actions update <id> -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=value" -s "SECRET=value`,
+		Example: `  auth0 actions update <action-id> 
+  auth0 actions update <action-id> --name myaction
+  auth0 actions update <action-id> --name myaction --trigger post-login
+  auth0 actions update <action-id> --name myaction --trigger post-login --code "$(cat path/to/code.js)"
+  auth0 actions update <action-id> --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
+  auth0 actions update <action-id> --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
+  auth0 actions update <action-id> --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
+  auth0 actions update <action-id> -n myaction -t post-login -c "$(cat path/to/code.js)" -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -370,13 +375,12 @@ func updateActionCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	actionName.RegisterStringU(cmd, &inputs.Name, "")
 	actionTrigger.RegisterStringU(cmd, &inputs.Trigger, "")
 	actionCode.RegisterStringU(cmd, &inputs.Code, "")
 	actionDependency.RegisterStringMapU(cmd, &inputs.Dependencies, nil)
 	actionSecret.RegisterStringMapU(cmd, &inputs.Secrets, nil)
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -387,15 +391,17 @@ func deleteActionCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Delete an action",
+		Use:     "delete",
+		Aliases: []string{"rm"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Delete an action",
 		Long: "Delete an action.\n\n" +
 			"To delete interactively, use `auth0 actions delete` with no arguments.\n\n" +
 			"To delete non-interactively, supply the action id and the `--force` flag to skip confirmation.",
 		Example: `  auth0 actions delete
-  auth0 actions delete <id>
-  auth0 actions delete <id> --force`,
+  auth0 actions rm
+  auth0 actions delete <action-id>
+  auth0 actions delete <action-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)
@@ -414,7 +420,6 @@ func deleteActionCmd(cli *cli) *cobra.Command {
 
 			return ansi.Spinner("Deleting action", func() error {
 				_, err := cli.api.Action.Read(inputs.ID)
-
 				if err != nil {
 					return fmt.Errorf("Unable to delete action: %w", err)
 				}
@@ -444,8 +449,8 @@ func deployActionCmd(cli *cli) *cobra.Command {
 			"Because secrets and dependencies are tied to versions, any saved secrets or dependencies will " +
 			"be available to the new draft.",
 		Example: `  auth0 actions deploy
-  auth0 actions deploy <id>
-  auth0 actions deploy <id> --json`,
+  auth0 actions deploy <action-id>
+  auth0 actions deploy <action-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)
@@ -492,7 +497,7 @@ func openActionCmd(cli *cli) *cobra.Command {
 		Short: "Open the settings page of an action",
 		Long:  "Open an action's settings page in the Auth0 Dashboard.",
 		Example: `  auth0 actions open
-  auth0 actions open <id>`,
+  auth0 actions open <action-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)

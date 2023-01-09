@@ -9,8 +9,18 @@ To delete interactively, use `auth0 domains delete` with no arguments.
 
 To delete non-interactively, supply the custom domain id and the `--force` flag to skip confirmation.
 
+## Usage
 ```
 auth0 domains delete [flags]
+```
+
+## Examples
+
+```
+  auth0 domains delete
+  auth0 domains rm
+  auth0 domains delete <domain-id>
+  auth0 domains delete <domain-id> --force
 ```
 
 
@@ -28,14 +38,6 @@ auth0 domains delete [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 domains delete
-  auth0 domains delete <id>
-  auth0 domains delete <id> --force
 ```
 
 

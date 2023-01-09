@@ -9,8 +9,18 @@ To delete interactively, use `auth0 logs streams delete` with no arguments.
 
 To delete non-interactively, supply the log stream id and the `--force` flag to skip confirmation.
 
+## Usage
 ```
 auth0 logs streams delete [flags]
+```
+
+## Examples
+
+```
+  auth0 logs streams delete
+  auth0 logs streams rm
+  auth0 logs streams delete <log-stream-id>
+  auth0 logs streams delete <log-stream-id> --force
 ```
 
 
@@ -28,14 +38,6 @@ auth0 logs streams delete [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 logs streams delete
-  auth0 logs streams delete <id>
-  auth0 logs streams delete <id> --force
 ```
 
 

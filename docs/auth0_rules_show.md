@@ -5,8 +5,17 @@ layout: default
 
 Display information about a rule.
 
+## Usage
 ```
 auth0 rules show [flags]
+```
+
+## Examples
+
+```
+  auth0 rules show 
+  auth0 rules show <rule-id>
+  auth0 rules show <rule-id> --json
 ```
 
 
@@ -24,14 +33,6 @@ auth0 rules show [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 rules show 
-  auth0 rules show <id>
-  auth0 rules show <id> --json
 ```
 
 

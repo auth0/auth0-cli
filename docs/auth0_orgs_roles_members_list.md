@@ -5,8 +5,20 @@ layout: default
 
 List organization members that have a given role assigned to them.
 
+## Usage
 ```
 auth0 orgs roles members list [flags]
+```
+
+## Examples
+
+```
+  auth0 orgs roles members list
+  auth0 orgs roles members ls
+  auth0 orgs roles members list <org-id> --role-id role
+  auth0 orgs roles members list <org-id> --role-id role --number 100
+  auth0 orgs roles members ls <org-id> -r role -n 100
+  auth0 orgs roles members ls <org-id> -r role -n 100 --json
 ```
 
 
@@ -26,13 +38,6 @@ auth0 orgs roles members list [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 orgs roles members list
-  auth0 orgs roles members list <org id> --role-id role
 ```
 
 

@@ -5,8 +5,19 @@ layout: default
 
 List the available Quickstarts.
 
+## Usage
 ```
 auth0 quickstarts list [flags]
+```
+
+## Examples
+
+```
+  auth0 quickstarts list
+  auth0 quickstarts ls
+  auth0 qs list
+  auth0 qs ls
+  auth0 qs ls --json
 ```
 
 
@@ -24,16 +35,6 @@ auth0 quickstarts list [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 quickstarts list
-  auth0 quickstarts ls
-  auth0 qs list
-  auth0 qs ls
-  auth0 qs ls --json
 ```
 
 

@@ -5,8 +5,16 @@ layout: default
 
 Open an application's settings page in the Auth0 Dashboard.
 
+## Usage
 ```
 auth0 apps open [flags]
+```
+
+## Examples
+
+```
+  auth0 apps open
+  auth0 apps open <app-id>
 ```
 
 
@@ -19,13 +27,6 @@ auth0 apps open [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 apps open
-  auth0 apps open <id>
 ```
 
 

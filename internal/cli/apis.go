@@ -104,8 +104,8 @@ func listApisCmd(cli *cli) *cobra.Command {
 		Long:    "List your existing APIs. To create one, run: `auth0 apis create`.",
 		Example: `  auth0 apis list
   auth0 apis ls
-  auth0 actions ls --json
-  auth0 apis ls -n 100`,
+  auth0 apis ls --number 100
+  auth0 apis ls -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			list, err := getWithPagination(
 				cmd.Context(),
@@ -138,9 +138,8 @@ func listApisCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
-
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
 }
@@ -156,8 +155,8 @@ func showApiCmd(cli *cli) *cobra.Command {
 		Short: "Show an API",
 		Long:  "Display the name, scopes, token lifetime, and other information about an API.",
 		Example: `  auth0 apis show
-  auth0 apis show <id|audience>
-  auth0 apis show <id|audience> --json`,
+  auth0 apis show <api-id|api-audience>
+  auth0 apis show <api-id|api-audience> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
@@ -207,9 +206,11 @@ func createApiCmd(cli *cli) *cobra.Command {
 			"token lifetime and whether to allow offline access through the flags.",
 		Example: `  auth0 apis create 
   auth0 apis create --name myapi
-  auth0 apis create -n myapi --identifier http://my-api
-  auth0 apis create -n myapi --token-expiration 6100
-  auth0 apis create -n myapi -e 6100 --offline-access=true`,
+  auth0 apis create --name myapi --identifier http://my-api
+  auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100
+  auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access
+  auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access false --scopes "letter:write,letter:read"
+  auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := apiName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -261,13 +262,12 @@ func createApiCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	apiName.RegisterString(cmd, &inputs.Name, "")
 	apiIdentifier.RegisterString(cmd, &inputs.Identifier, "")
 	apiScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
 	apiOfflineAccess.RegisterBool(cmd, &inputs.AllowOfflineAccess, false)
 	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 0)
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -290,10 +290,12 @@ func updateApiCmd(cli *cli) *cobra.Command {
 			"To update non-interactively, supply the name, identifier, scopes, " +
 			"token lifetime and whether to allow offline access through the flags.",
 		Example: `  auth0 apis update 
-  auth0 apis update <id|audience>
-  auth0 apis update <id|audience> --name myapi
-  auth0 apis update -n myapi --token-expiration 6100
-  auth0 apis update -n myapi -e 6100 --offline-access=true`,
+  auth0 apis update <api-id|api-audience>
+  auth0 apis update <api-id|api-audience> --name myapi
+  auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100
+  auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access false
+  auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access false --scopes "letter:write,letter:read"
+  auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.ResourceServer
 
@@ -368,12 +370,11 @@ func updateApiCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	apiName.RegisterStringU(cmd, &inputs.Name, "")
 	apiScopes.RegisterStringSliceU(cmd, &inputs.Scopes, nil)
 	apiOfflineAccess.RegisterBoolU(cmd, &inputs.AllowOfflineAccess, false)
 	apiTokenLifetime.RegisterIntU(cmd, &inputs.TokenLifetime, 0)
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -384,15 +385,17 @@ func deleteApiCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Delete an API",
+		Use:     "delete",
+		Aliases: []string{"rm"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Delete an API",
 		Long: "Delete an API.\n\n" +
 			"To delete interactively, use `auth0 apis delete` with no arguments.\n\n" +
 			"To delete non-interactively, supply the API id and the `--force` flag to skip confirmation.",
 		Example: `  auth0 apis delete 
-  auth0 apis delete <id|audience>
-  auth0 apis delete <id|audience> --force`,
+  auth0 apis rm
+  auth0 apis delete <api-id|api-audience>
+  auth0 apis delete <api-id|api-audience> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
@@ -437,7 +440,7 @@ func openApiCmd(cli *cli) *cobra.Command {
 		Short: "Open the settings page of an API",
 		Long:  "Open an APIs' settings page in the Auth0 Dashboard.",
 		Example: `  auth0 apis open
-  auth0 apis open <id|audience>`,
+  auth0 apis open <api-id|api-audience>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
@@ -487,8 +490,8 @@ func listScopesCmd(cli *cli) *cobra.Command {
 		Short:   "List the scopes of an API",
 		Long:    "List the scopes of an API. To update scopes, run: `auth0 apis update <id|audience> -s <scopes>`.",
 		Example: `  auth0 apis scopes list
-  auth0 apis scopes ls <id|audience>
-  auth0 apis scopes ls <id|audience> --json`,
+  auth0 apis scopes ls <api-id|api-audience>
+  auth0 apis scopes ls <api-id|api-audience> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)

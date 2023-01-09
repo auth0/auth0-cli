@@ -9,8 +9,18 @@ To update interactively, use `auth0 roles update` with no arguments.
 
 To update non-interactively, supply the role id, name and description through the flags.
 
+## Usage
 ```
 auth0 roles update [flags]
+```
+
+## Examples
+
+```
+  auth0 roles update
+  auth0 roles update <role-id> --name myrole
+  auth0 roles update <role-id> --name myrole --description "awesome role"
+  auth0 roles update <role-id> -n myrole -d "awesome role" --json
 ```
 
 
@@ -30,14 +40,6 @@ auth0 roles update [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 roles update
-  auth0 roles update <id> --name myrole
-  auth0 roles update <id> -n myrole --description "awesome role"
 ```
 
 

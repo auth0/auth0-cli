@@ -5,8 +5,17 @@ layout: default
 
 Display information about a role.
 
+## Usage
 ```
 auth0 roles show [flags]
+```
+
+## Examples
+
+```
+  auth0 roles show
+  auth0 roles show <role-id>
+  auth0 roles show <role-id> --json
 ```
 
 
@@ -24,14 +33,6 @@ auth0 roles show [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 roles show
-  auth0 roles show <id>
-  auth0 roles show <id> --json
 ```
 
 

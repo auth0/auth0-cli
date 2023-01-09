@@ -5,8 +5,22 @@ layout: default
 
 Display the tenant logs allowing to filter using Lucene query syntax.
 
+## Usage
 ```
 auth0 logs list [flags]
+```
+
+## Examples
+
+```
+  auth0 logs list
+  auth0 logs list --filter "client_id:<client-id>"
+  auth0 logs list --filter "client_name:<client-name>"
+  auth0 logs list --filter "user_id:<user-id>"
+  auth0 logs list --filter "user_name:<user-name>"
+  auth0 logs list --filter "ip:<ip>"
+  auth0 logs list --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
+  auth0 logs ls -n 100
 ```
 
 
@@ -26,19 +40,6 @@ auth0 logs list [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 logs list
-  auth0 logs list --filter "client_id:<client-id>"
-  auth0 logs list --filter "client_name:<client-name>"
-  auth0 logs list --filter "user_id:<user-id>"
-  auth0 logs list --filter "user_name:<user-name>"
-  auth0 logs list --filter "ip:<ip>"
-  auth0 logs list --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
-  auth0 logs ls -n 100
 ```
 
 

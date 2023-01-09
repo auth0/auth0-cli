@@ -132,9 +132,11 @@ func createRuleCmd(cli *cli) *cobra.Command {
 			"To create interactively, use `auth0 rules create` with no arguments.\n\n" +
 			"To create non-interactively, supply the name, template and other information through the flags.",
 		Example: `  auth0 rules create
-  auth0 rules create --name "My Rule"
-  auth0 rules create -n "My Rule" --template "Empty rule"
-  auth0 rules create -n "My Rule" -t "Empty rule" --enabled=false`,
+  auth0 rules create --enabled true
+  auth0 rules create --enabled true --name "My Rule" 
+  auth0 rules create --enabled true --name "My Rule" --template "Empty rule"
+  auth0 rules create --enabled true --name "My Rule" --template "Empty rule" --script "$(cat path/to/script.js)"
+  auth0 rules create -e true -n "My Rule" -t "Empty rule" -s "$(cat path/to/script.js)" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			rule := &management.Rule{}
 			pipedInput := iostream.PipedInput()
@@ -184,11 +186,11 @@ func createRuleCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	ruleName.RegisterString(cmd, &inputs.Name, "")
 	ruleTemplate.RegisterString(cmd, &inputs.Template, "")
 	ruleEnabled.RegisterBool(cmd, &inputs.Enabled, true)
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	ruleScript.RegisterString(cmd, &inputs.Script, "")
 
 	return cmd
 }
@@ -204,8 +206,8 @@ func showRuleCmd(cli *cli) *cobra.Command {
 		Short: "Show a rule",
 		Long:  "Display information about a rule.",
 		Example: `  auth0 rules show 
-  auth0 rules show <id>
-  auth0 rules show <id> --json`,
+  auth0 rules show <rule-id>
+  auth0 rules show <rule-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -244,15 +246,17 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Delete a rule",
+		Use:     "delete",
+		Aliases: []string{"rm"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Delete a rule",
 		Long: "Delete a rule.\n\n" +
 			"To delete interactively, use `auth0 rules delete` with no arguments.\n\n" +
 			"To delete non-interactively, supply the rule id and the `--force` flag to skip confirmation.",
 		Example: `  auth0 rules delete 
-  auth0 rules delete <id>
-  auth0 rules delete <id> --force`,
+  auth0 rules rm
+  auth0 rules delete <rule-id>
+  auth0 rules delete <rule-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -302,8 +306,10 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 			"To update interactively, use `auth0 rules update` with no arguments.\n\n" +
 			"To update non-interactively, supply the rule id and other information through the flags.",
 		Example: `  auth0 rules update <id>
-  auth0 rules update <id> --name "My Updated Rule"
-  auth0 rules update <id> -n "My Updated Rule" --enabled=false`,
+  auth0 rules update <rule-id> --enabled true
+  auth0 rules update <rule-id> --enabled true --name "My Updated Rule"
+  auth0 rules update <rule-id> --enabled true --name "My Updated Rule" --script "$(cat path/to/script.js)"
+  auth0 rules update <rule-id> -e true -n "My Updated Rule" -s "$(cat path/to/script.js)" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			rule := &management.Rule{}
 			pipedInput := iostream.PipedInput()
@@ -390,10 +396,10 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	ruleName.RegisterStringU(cmd, &inputs.Name, "")
 	ruleEnabled.RegisterBool(cmd, &inputs.Enabled, true)
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	ruleScript.RegisterStringU(cmd, &inputs.Script, "")
 
 	return cmd
 }
@@ -410,7 +416,8 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 		Short: "Enable a rule",
 		Long:  "Enable a rule.",
 		Example: `  auth0 rules enable
-  auth0 rules enable <id>`,
+  auth0 rules enable <rule-id>
+  auth0 rules enable <rule-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -465,7 +472,8 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 		Short: "Disable a rule",
 		Long:  "Disable a rule.",
 		Example: `  auth0 rules disable
-  auth0 rules disable <id>`,
+  auth0 rules disable <rule-id>
+  auth0 rules disable <rule-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
