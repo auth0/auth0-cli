@@ -13,7 +13,7 @@ auth0 users search [flags]
 ## Examples
 
 ```
-auth0 users search
+  auth0 users search
   auth0 users search --query id
   auth0 users search -q name --sort "name:1"
   auth0 users search -q name -s "name:1" --json

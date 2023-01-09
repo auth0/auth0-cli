@@ -15,7 +15,7 @@ auth0 universal-login show [flags]
 ```
   auth0 universal-login show
   auth0 ul show
-  auth0 universal-login show --json
+  auth0 ul show --json
 ```
 
 

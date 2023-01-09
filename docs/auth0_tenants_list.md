@@ -13,7 +13,8 @@ auth0 tenants list [flags]
 ## Examples
 
 ```
-auth0 tenants list
+  auth0 tenants list
+  auth0 tenants ls
 ```
 
 

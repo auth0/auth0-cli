@@ -19,7 +19,7 @@ auth0 roles create [flags]
 ```
   auth0 roles create
   auth0 roles create --name myrole --description "awesome role"
-  auth0 roles create -n myrole -d "awesome role --json"
+  auth0 roles create -n myrole -d "awesome role" --json
 ```
 
 

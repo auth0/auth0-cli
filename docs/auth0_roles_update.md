@@ -19,7 +19,7 @@ auth0 roles update [flags]
 ```
   auth0 roles update
   auth0 roles update <role-id> --name myrole
-  auth0 roles update <role-id> --name myrole --description "awesome role
+  auth0 roles update <role-id> --name myrole --description "awesome role"
   auth0 roles update <role-id> -n myrole -d "awesome role" --json
 ```
 

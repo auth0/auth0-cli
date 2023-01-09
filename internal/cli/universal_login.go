@@ -128,7 +128,7 @@ func showUniversalLoginCmd(cli *cli) *cobra.Command {
 		Long:  "Display the custom branding settings for Universal Login.",
 		Example: `  auth0 universal-login show
   auth0 ul show
-  auth0 universal-login show --json`,
+  auth0 ul show --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var myBranding *management.Branding // Load app by id
 

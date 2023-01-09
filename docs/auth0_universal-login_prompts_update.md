@@ -13,8 +13,9 @@ auth0 universal-login prompts update [flags]
 ## Examples
 
 ```
-  auth0 universal-login prompts update <prompt> --language es
-  auth0 universal-login prompts update <prompt> -l es
+  auth0 universal-login prompts update <prompt>
+  auth0 universal-login prompts update <prompt> --language <language>
+  auth0 ul prompts update signup -l es
 ```
 
 

@@ -14,7 +14,7 @@ auth0 roles permissions list [flags]
 
 ```
   auth0 roles permissions list
-  auth0 roles permissions list <role-id>
+  auth0 roles permissions ls <role-id>
   auth0 roles permissions ls <role-id> --json
 ```
 

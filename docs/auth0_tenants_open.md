@@ -15,6 +15,7 @@ auth0 tenants open [flags]
 ```
   auth0 tenants open
   auth0 tenants open <tenant>
+  auth0 tenants open "example.us.auth0.com"
 ```
 
 

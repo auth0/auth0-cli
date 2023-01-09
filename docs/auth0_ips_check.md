@@ -15,6 +15,7 @@ auth0 ips check [flags]
 ```
   auth0 ips check
   auth0 ips check <ip>
+  auth0 ips check "178.178.178.178"
 ```
 
 

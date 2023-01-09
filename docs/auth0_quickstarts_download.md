@@ -3,7 +3,7 @@ layout: default
 ---
 # auth0 quickstarts download
 
-Download a Quickstart sample application for that’s already configured for your Auth0 application. Many different tech stacks available.
+Download a Quickstart sample application for that’s already configured for your Auth0 application. There are many different tech stacks available.
 
 ## Usage
 ```
@@ -14,7 +14,8 @@ auth0 quickstarts download [flags]
 
 ```
   auth0 quickstarts download --stack <stack>
-  auth0 qs download --stack <stack>
+  auth0 qs download -s <stack>
+  auth0 qs download -s "Next.js"
 ```
 
 

@@ -15,6 +15,7 @@ auth0 logout [flags]
 ```
   auth0 logout
   auth0 logout <tenant>
+  auth0 logout "example.us.auth0.com"
 ```
 
 

@@ -15,6 +15,7 @@ auth0 ips unblock [flags]
 ```
   auth0 ips unblock
   auth0 ips unblock <ip>
+  auth0 ips unblock "178.178.178.178"
 ```
 
 

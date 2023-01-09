@@ -58,7 +58,7 @@ func listRolePermissionsCmd(cli *cli) *cobra.Command {
 		Short:   "List permissions defined within a role",
 		Long:    "List existing permissions defined in a role. To add a permission, run: `auth0 roles permissions add`.",
 		Example: `  auth0 roles permissions list
-  auth0 roles permissions list <role-id>
+  auth0 roles permissions ls <role-id>
   auth0 roles permissions ls <role-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {

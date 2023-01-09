@@ -298,7 +298,7 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 			"To update interactively, use `auth0 orgs update` with no arguments.\n\n" +
 			"To update non-interactively, supply the organization id and " +
 			"other information through the flags.",
-		Example: `  auth0 orgs update <id>
+		Example: `  auth0 orgs update <org-id>
   auth0 orgs update <org-id> --display "My Organization"
   auth0 orgs update <org-id> -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
   auth0 orgs update <org-id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,

@@ -17,7 +17,7 @@ auth0 orgs update [flags]
 ## Examples
 
 ```
-  auth0 orgs update <id>
+  auth0 orgs update <org-id>
   auth0 orgs update <org-id> --display "My Organization"
   auth0 orgs update <org-id> -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
   auth0 orgs update <org-id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"

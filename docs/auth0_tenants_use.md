@@ -15,6 +15,7 @@ auth0 tenants use [flags]
 ```
   auth0 tenants use
   auth0 tenants use <tenant>
+  auth0 tenants use "example.us.auth0.com"
 ```
 
 

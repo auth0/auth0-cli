@@ -136,7 +136,7 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 		Args:  cobra.NoArgs,
 		Short: "Search for users",
 		Long:  "Search for users. To create one, run: `auth0 users create`.",
-		Example: `auth0 users search
+		Example: `  auth0 users search
   auth0 users search --query id
   auth0 users search -q name --sort "name:1"
   auth0 users search -q name -s "name:1" --json`,

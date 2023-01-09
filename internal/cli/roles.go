@@ -164,7 +164,7 @@ func createRoleCmd(cli *cli) *cobra.Command {
 			"To create non-interactively, supply the role name and description through the flags.",
 		Example: `  auth0 roles create
   auth0 roles create --name myrole --description "awesome role"
-  auth0 roles create -n myrole -d "awesome role --json"`,
+  auth0 roles create -n myrole -d "awesome role" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Prompt for role name
 			if err := roleName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -218,7 +218,7 @@ func updateRoleCmd(cli *cli) *cobra.Command {
 			"To update non-interactively, supply the role id, name and description through the flags.",
 		Example: `  auth0 roles update
   auth0 roles update <role-id> --name myrole
-  auth0 roles update <role-id> --name myrole --description "awesome role
+  auth0 roles update <role-id> --name myrole --description "awesome role"
   auth0 roles update <role-id> -n myrole -d "awesome role" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {

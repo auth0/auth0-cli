@@ -13,8 +13,10 @@ auth0 universal-login prompts show [flags]
 ## Examples
 
 ```
-  auth0 universal-login prompts show <prompt> --language es
-  auth0 universal-login prompts show <prompt> -l es
+  auth0 universal-login prompts show <prompt>
+  auth0 universal-login prompts show <prompt> --language <language>
+  auth0 ul prompts show <prompt> -l <language>
+  auth0 ul prompts show signup -l es
 ```
 
 
