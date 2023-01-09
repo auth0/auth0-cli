@@ -113,9 +113,9 @@ var (
 		Help:       "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.",
 		IsRequired: false,
 	}
-	reveal = Flag{
+	revealClientSecret = Flag{
 		Name:      "Reveal",
-		LongForm:  "reveal",
+		LongForm:  "reveal-client-secret",
 		ShortForm: "r",
 		Help:      "Display the Client Secret as part of the command output.",
 	}
@@ -200,8 +200,8 @@ func useAppCmd(cli *cli) *cobra.Command {
 
 func listAppsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Reveal bool
-		Number int
+		RevealClientSecret bool
+		Number             int
 	}
 
 	cmd := &cobra.Command{
@@ -212,8 +212,8 @@ func listAppsCmd(cli *cli) *cobra.Command {
 		Long:    "List your existing applications. To create one, run: `auth0 apps create`.",
 		Example: `  auth0 apps list
   auth0 apps ls
-  auth0 apps list --reveal
-  auth0 apps list --reveal --number 100
+  auth0 apps list --reveal-client-secret
+  auth0 apps list --reveal-client-secret --number 100
   auth0 apps ls -r -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			list, err := getWithPagination(
@@ -237,13 +237,13 @@ func listAppsCmd(cli *cli) *cobra.Command {
 			for _, item := range list {
 				typedList = append(typedList, item.(*management.Client))
 			}
-			cli.renderer.ApplicationList(typedList, inputs.Reveal)
+			cli.renderer.ApplicationList(typedList, inputs.RevealClientSecret)
 			return nil
 		},
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	reveal.RegisterBool(cmd, &inputs.Reveal, false)
+	revealClientSecret.RegisterBool(cmd, &inputs.RevealClientSecret, false)
 	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
@@ -251,8 +251,8 @@ func listAppsCmd(cli *cli) *cobra.Command {
 
 func showAppCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID     string
-		Reveal bool
+		ID                 string
+		RevealClientSecret bool
 	}
 
 	cmd := &cobra.Command{
@@ -262,8 +262,8 @@ func showAppCmd(cli *cli) *cobra.Command {
 		Long:  "Display the name, description, app type, and other information about an application.",
 		Example: `  auth0 apps show
   auth0 apps show <app-id>
-  auth0 apps show <app-id> --reveal
-  auth0 apps show <app-id> --reveal --json`,
+  auth0 apps show <app-id> --reveal-client-secret
+  auth0 apps show <app-id> --reveal-client-secret --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
@@ -284,13 +284,13 @@ func showAppCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("Unable to load application: %w", err)
 			}
 
-			cli.renderer.ApplicationShow(a, inputs.Reveal)
+			cli.renderer.ApplicationShow(a, inputs.RevealClientSecret)
 			return nil
 		},
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	reveal.RegisterBool(cmd, &inputs.Reveal, false)
+	revealClientSecret.RegisterBool(cmd, &inputs.RevealClientSecret, false)
 
 	return cmd
 }
@@ -348,16 +348,16 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 
 func createAppCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Name              string
-		Type              string
-		Description       string
-		Callbacks         []string
-		AllowedOrigins    []string
-		AllowedWebOrigins []string
-		AllowedLogoutURLs []string
-		AuthMethod        string
-		Grants            []string
-		Reveal            bool
+		Name               string
+		Type               string
+		Description        string
+		Callbacks          []string
+		AllowedOrigins     []string
+		AllowedWebOrigins  []string
+		AllowedLogoutURLs  []string
+		AuthMethod         string
+		Grants             []string
+		RevealClientSecret bool
 	}
 	var oidcConformant = true
 	var algorithm = "RS256"
@@ -373,7 +373,7 @@ func createAppCmd(cli *cli) *cobra.Command {
   auth0 apps create --name myapp 
   auth0 apps create --name myapp --description <description>
   auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m]
-  auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m] --reveal
+  auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m] --reveal-client-secret
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Prompt for app name
@@ -478,7 +478,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 			}
 
 			// Render result
-			cli.renderer.ApplicationCreate(a, inputs.Reveal)
+			cli.renderer.ApplicationCreate(a, inputs.RevealClientSecret)
 
 			return nil
 		},
@@ -494,24 +494,24 @@ func createAppCmd(cli *cli) *cobra.Command {
 	appLogoutURLs.RegisterStringSlice(cmd, &inputs.AllowedLogoutURLs, nil)
 	appAuthMethod.RegisterString(cmd, &inputs.AuthMethod, "")
 	appGrants.RegisterStringSlice(cmd, &inputs.Grants, nil)
-	reveal.RegisterBool(cmd, &inputs.Reveal, false)
+	revealClientSecret.RegisterBool(cmd, &inputs.RevealClientSecret, false)
 
 	return cmd
 }
 
 func updateAppCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID                string
-		Name              string
-		Type              string
-		Description       string
-		Callbacks         []string
-		AllowedOrigins    []string
-		AllowedWebOrigins []string
-		AllowedLogoutURLs []string
-		AuthMethod        string
-		Grants            []string
-		Reveal            bool
+		ID                 string
+		Name               string
+		Type               string
+		Description        string
+		Callbacks          []string
+		AllowedOrigins     []string
+		AllowedWebOrigins  []string
+		AllowedLogoutURLs  []string
+		AuthMethod         string
+		Grants             []string
+		RevealClientSecret bool
 	}
 
 	cmd := &cobra.Command{
@@ -526,7 +526,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
   auth0 apps update <app-id> --name myapp
   auth0 apps update <app-id> --name myapp --description <description>
   auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m]
-  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m] --reveal
+  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m] --reveal-client-secret
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Client
@@ -688,7 +688,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 			}
 
 			// Render result
-			cli.renderer.ApplicationUpdate(a, inputs.Reveal)
+			cli.renderer.ApplicationUpdate(a, inputs.RevealClientSecret)
 
 			return nil
 		},
@@ -704,7 +704,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 	appLogoutURLs.RegisterStringSliceU(cmd, &inputs.AllowedLogoutURLs, nil)
 	appAuthMethod.RegisterStringU(cmd, &inputs.AuthMethod, "")
 	appGrants.RegisterStringSliceU(cmd, &inputs.Grants, nil)
-	reveal.RegisterBool(cmd, &inputs.Reveal, false)
+	revealClientSecret.RegisterBool(cmd, &inputs.RevealClientSecret, false)
 
 	return cmd
 }
