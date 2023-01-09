@@ -217,9 +217,12 @@ func downloadDefaultBrandingTextTranslations(prompt, language string) map[string
 			return nil
 		}
 
-		selectedPrompt := allPrompts[0][prompt].(map[string]interface{})
-
-		return selectedPrompt
+		for _, value := range allPrompts {
+			_, ok := value[prompt]
+			if ok {
+				return value[prompt].(map[string]interface{})
+			}
+		}
 	}
 
 	return nil
