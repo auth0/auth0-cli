@@ -119,7 +119,8 @@ func showEmailTemplateCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an email template",
 		Long:  "Display information about an email template.",
-		Example: `  auth0 email templates show <template>
+		Example: `  auth0 email templates show
+  auth0 email templates show <template>
   auth0 email templates show welcome`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -170,9 +171,16 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 			"To update interactively, use `auth0 email templates update` with no arguments.\n\n" +
 			"To update non-interactively, supply the template name and other information " +
 			"through the flags.",
-		Example: `  auth0 email templates update <template>
+		Example: `  auth0 email templates update
+  auth0 email templates update <template>
   auth0 email templates update <template> --json
-  auth0 email templates update welcome`,
+  auth0 email templates update welcome --enabled true
+  auth0 email templates update welcome --enabled true --body "$(cat path/to/body.html)"
+  auth0 email templates update welcome --enabled true --body "$(cat path/to/body.html)" --from "welcome@example.com"
+  auth0 email templates update welcome --enabled true --body "$(cat path/to/body.html)" --from "welcome@example.com" --lifetime 6100
+  auth0 email templates update welcome --enabled true --body "$(cat path/to/body.html)" --from "welcome@example.com" --lifetime 6100 --subject "Welcome"
+  auth0 email templates update welcome --enabled true --body "$(cat path/to/body.html)" --from "welcome@example.com" --lifetime 6100 --subject "Welcome" --url "https://example.com"
+  auth0 email templates update welcome -e true -b "$(cat path/to/body.html)" -f "welcome@example.com" -l 6100 -s "Welcome" -u "https://example.com" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.Template = args[0]
@@ -272,14 +280,13 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	emailTemplateBody.RegisterStringU(cmd, &inputs.Body, "")
 	emailTemplateFrom.RegisterStringU(cmd, &inputs.From, "")
 	emailTemplateSubject.RegisterStringU(cmd, &inputs.Subject, "")
 	emailTemplateEnabled.RegisterBoolU(cmd, &inputs.Enabled, true)
 	emailTemplateURL.RegisterStringU(cmd, &inputs.ResultURL, "")
 	emailTemplateLifetime.RegisterIntU(cmd, &inputs.ResultURLLifetime, 0)
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }

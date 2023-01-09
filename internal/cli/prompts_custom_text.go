@@ -67,8 +67,10 @@ func showPromptsTextCmd(cli *cli) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Short: "Show the custom text for a prompt",
 		Long:  "Show the custom text for a prompt.",
-		Example: `  auth0 universal-login prompts show <prompt> --language es
-  auth0 universal-login prompts show <prompt> -l es`,
+		Example: `  auth0 universal-login prompts show <prompt>
+  auth0 universal-login prompts show <prompt> --language <language>
+  auth0 ul prompts show <prompt> -l <language>
+  auth0 ul prompts show signup -l es`,
 		RunE: showPromptsText(cli, &inputs),
 	}
 
@@ -85,8 +87,9 @@ func updatePromptsTextCmd(cli *cli) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Short: "Update the custom text for a prompt",
 		Long:  "Update the custom text for a prompt.",
-		Example: `  auth0 universal-login prompts update <prompt> --language es
-  auth0 universal-login prompts update <prompt> -l es`,
+		Example: `  auth0 universal-login prompts update <prompt>
+  auth0 universal-login prompts update <prompt> --language <language>
+  auth0 ul prompts update signup -l es`,
 		RunE: updateBrandingText(cli, &inputs),
 	}
 

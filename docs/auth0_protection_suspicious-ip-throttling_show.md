@@ -5,8 +5,16 @@ layout: default
 
 Display the current suspicious ip throttling settings.
 
+## Usage
 ```
 auth0 protection suspicious-ip-throttling show [flags]
+```
+
+## Examples
+
+```
+  auth0 protection suspicious-ip-throttling show
+  auth0 ap sit show --json
 ```
 
 
@@ -24,13 +32,6 @@ auth0 protection suspicious-ip-throttling show [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 protection suspicious-ip-throttling show
-  auth0 ap sit show --json
 ```
 
 

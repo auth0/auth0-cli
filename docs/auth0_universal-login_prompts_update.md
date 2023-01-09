@@ -5,8 +5,17 @@ layout: default
 
 Update the custom text for a prompt.
 
+## Usage
 ```
 auth0 universal-login prompts update [flags]
+```
+
+## Examples
+
+```
+  auth0 universal-login prompts update <prompt>
+  auth0 universal-login prompts update <prompt> --language <language>
+  auth0 ul prompts update signup -l es
 ```
 
 
@@ -24,13 +33,6 @@ auth0 universal-login prompts update [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 universal-login prompts update <prompt> --language es
-  auth0 universal-login prompts update <prompt> -l es
 ```
 
 

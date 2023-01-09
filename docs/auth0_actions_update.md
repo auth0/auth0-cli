@@ -9,8 +9,22 @@ To update interactively, use `auth0 actions update` with no arguments.
 
 To update non-interactively, supply the action id, name, trigger, secrets and dependencies through the flags.
 
+## Usage
 ```
 auth0 actions update [flags]
+```
+
+## Examples
+
+```
+  auth0 actions update <action-id> 
+  auth0 actions update <action-id> --name myaction
+  auth0 actions update <action-id> --name myaction --trigger post-login
+  auth0 actions update <action-id> --name myaction --trigger post-login --code "$(cat path/to/code.js)"
+  auth0 actions update <action-id> --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
+  auth0 actions update <action-id> --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
+  auth0 actions update <action-id> --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
+  auth0 actions update <action-id> -n myaction -t post-login -c "$(cat path/to/code.js)" -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json
 ```
 
 
@@ -33,16 +47,6 @@ auth0 actions update [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 actions update <id> 
-  auth0 actions update <id> --name myaction
-  auth0 actions update <id> -n myaction --trigger post-login
-  auth0 actions update <id> -n myaction -t post-login -d "lodash=4.0.0" -d "uuid=9.0.0"
-  auth0 actions update <id> -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=value" -s "SECRET=value
 ```
 
 

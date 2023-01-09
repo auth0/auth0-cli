@@ -5,8 +5,17 @@ layout: default
 
 Specify the default application used when running other commands. Specifically when downloading quickstarts and testing Universal login flow.
 
+## Usage
 ```
 auth0 apps use [flags]
+```
+
+## Examples
+
+```
+  auth0 apps use
+  auth0 apps use --none
+  auth0 apps use <app-id>
 ```
 
 
@@ -24,14 +33,6 @@ auth0 apps use [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 apps use
-  auth0 apps use --none
-  auth0 apps use <client-id>
 ```
 
 

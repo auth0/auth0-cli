@@ -5,8 +5,17 @@ layout: default
 
 Display information about a custom domain.
 
+## Usage
 ```
 auth0 domains show [flags]
+```
+
+## Examples
+
+```
+  auth0 domains show 
+  auth0 domains show <domain-id>
+  auth0 domains show <domain-id> --json
 ```
 
 
@@ -24,14 +33,6 @@ auth0 domains show [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 domains show 
-  auth0 domains show <id>
-  auth0 domains show <id> --json
 ```
 
 

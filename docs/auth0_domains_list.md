@@ -5,8 +5,17 @@ layout: default
 
 List your existing custom domains. To create one, run: `auth0 domains create`.
 
+## Usage
 ```
 auth0 domains list [flags]
+```
+
+## Examples
+
+```
+  auth0 domains list
+  auth0 domains ls
+  auth0 domains ls --json
 ```
 
 
@@ -24,14 +33,6 @@ auth0 domains list [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 domains list
-  auth0 domains ls
-  auth0 domains ls --json
 ```
 
 

@@ -5,8 +5,18 @@ layout: default
 
 List your existing organizations. To create one, run: `auth0 orgs create`.
 
+## Usage
 ```
 auth0 orgs list [flags]
+```
+
+## Examples
+
+```
+  auth0 orgs list
+  auth0 orgs ls
+  auth0 orgs ls --json
+  auth0 orgs ls -n 100
 ```
 
 
@@ -25,15 +35,6 @@ auth0 orgs list [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 orgs list
-  auth0 orgs ls
-  auth0 orgs ls --json
-  auth0 orgs ls -n 100
 ```
 
 

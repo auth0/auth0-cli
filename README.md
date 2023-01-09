@@ -5,7 +5,7 @@
 
 </div>
 
-Build, manage and test your [Auth0](http://auth0.com/) integrations from the command line.
+Build, manage and test your [Auth0](https://auth0.com/) integrations from the command line.
 
 ![demo](./demo.gif)
 
@@ -30,7 +30,7 @@ Build, manage and test your [Auth0](http://auth0.com/) integrations from the com
 Install via [Homebrew](https://brew.sh/):
 
 ```bash
- brew tap auth0/auth0-cli && brew install auth0
+brew tap auth0/auth0-cli && brew install auth0
 ```
 
 ### Windows

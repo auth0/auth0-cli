@@ -5,8 +5,17 @@ layout: default
 
 List your existing actions. To create one, run: `auth0 actions create`.
 
+## Usage
 ```
 auth0 actions list [flags]
+```
+
+## Examples
+
+```
+  auth0 actions list
+  auth0 actions ls
+  auth0 actions ls --json
 ```
 
 
@@ -24,14 +33,6 @@ auth0 actions list [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 actions list
-  auth0 actions ls
-  auth0 actions ls --json
 ```
 
 

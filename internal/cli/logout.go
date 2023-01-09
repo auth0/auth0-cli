@@ -16,7 +16,8 @@ func logoutCmd(cli *cli) *cobra.Command {
 		Short: "Log out of a tenant's session",
 		Long:  "Log out of a tenant's session.",
 		Example: `  auth0 logout
-  auth0 logout <tenant>`,
+  auth0 logout <tenant>
+  auth0 logout "example.us.auth0.com"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// NOTE(cyx): This was mostly copy/pasted from tenants
 			// use command. Consider refactoring.

@@ -9,8 +9,18 @@ To delete interactively, use `auth0 users delete` with no arguments.
 
 To delete non-interactively, supply the user id and the `--force` flag to skip confirmation.
 
+## Usage
 ```
 auth0 users delete [flags]
+```
+
+## Examples
+
+```
+  auth0 users delete 
+  auth0 users rm
+  auth0 users delete <user-id>
+  auth0 users delete <user-id> --force
 ```
 
 
@@ -28,13 +38,6 @@ auth0 users delete [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-auth0 users delete 
-auth0 users delete <id>
 ```
 
 

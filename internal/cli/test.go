@@ -99,7 +99,13 @@ func testLoginCmd(cli *cli) *cobra.Command {
 		Long:  "Launch a browser to try out your Universal Login box.",
 		Example: `  auth0 test login
   auth0 test login <client-id>
-  auth0 test login <client-id> --connection <connection>`,
+  auth0 test login <client-id> --connection <connection>
+  auth0 test login <client-id> --connection <connection> --audience <audience>
+  auth0 test login <client-id> --connection <connection> --audience <audience> --domain <domain>
+  auth0 test login <client-id> --connection <connection> --audience <audience> --domain <domain> --scopes <scope1,scope2>
+  auth0 test login <client-id> -c <connection> -a <audience> -d <domain> -s <scope1,scope2> --force
+  auth0 test login <client-id> -c <connection> -a <audience> -d <domain> -s <scope1,scope2> --json
+  auth0 test login <client-id> -c <connection> -a <audience> -d <domain> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			const commandKey = "test_login"
 			var userInfo *authutil.UserInfo
@@ -196,10 +202,8 @@ func testLoginCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-
 	testAudience.RegisterString(cmd, &inputs.Audience, "")
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, cliLoginTestingScopes)
 	testConnection.RegisterString(cmd, &inputs.ConnectionName, "")
@@ -223,7 +227,11 @@ func testTokenCmd(cli *cli) *cobra.Command {
 If --client-id is not provided, the default client "CLI Login Testing" will be used (and created if not exists).
 Specify the API you want this token for with --audience (API Identifer). Additionally, you can also specify the --scope to use.`,
 		Example: `  auth0 test token
-  auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>`,
+  auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
+  auth0 test token -c <id> -a <audience> -s <scope1,scope2>
+  auth0 test token -c <id> -a <audience> -s <scope1,scope2> --force
+  auth0 test token -c <id> -a <audience> -s <scope1,scope2> --json
+  auth0 test token -c <id> -a <audience> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tenant, err := cli.getTenant()
 			if err != nil {
@@ -296,10 +304,8 @@ Specify the API you want this token for with --audience (API Identifer). Additio
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
-
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-
 	testClientID.RegisterString(cmd, &inputs.ClientID, "")
 	testAudienceRequired.RegisterString(cmd, &inputs.Audience, "")
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)

@@ -5,8 +5,17 @@ layout: default
 
 List your existing log streams. To create one, run: `auth0 logs streams create`.
 
+## Usage
 ```
 auth0 logs streams list [flags]
+```
+
+## Examples
+
+```
+  auth0 logs streams list
+  auth0 logs streams ls
+  auth0 logs streams ls --json
 ```
 
 
@@ -24,14 +33,6 @@ auth0 logs streams list [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 logs streams list
-  auth0 logs streams ls
-  auth0 logs streams ls --json
 ```
 
 

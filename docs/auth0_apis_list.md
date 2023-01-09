@@ -5,8 +5,18 @@ layout: default
 
 List your existing APIs. To create one, run: `auth0 apis create`.
 
+## Usage
 ```
 auth0 apis list [flags]
+```
+
+## Examples
+
+```
+  auth0 apis list
+  auth0 apis ls
+  auth0 apis ls --number 100
+  auth0 apis ls -n 100 --json
 ```
 
 
@@ -25,15 +35,6 @@ auth0 apis list [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 apis list
-  auth0 apis ls
-  auth0 actions ls --json
-  auth0 apis ls -n 100
 ```
 
 

@@ -5,8 +5,16 @@ layout: default
 
 Display the current brute force protection settings.
 
+## Usage
 ```
 auth0 protection brute-force-protection show [flags]
+```
+
+## Examples
+
+```
+  auth0 protection brute-force-protection show
+  auth0 ap bfp show --json
 ```
 
 
@@ -24,13 +32,6 @@ auth0 protection brute-force-protection show [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 protection brute-force-protection show
-  auth0 ap bfp show --json
 ```
 
 

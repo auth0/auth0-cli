@@ -111,17 +111,21 @@ func updateBruteForceProtectionCmd(cli *cli) *cobra.Command {
 		Short: "Update brute force protection settings",
 		Long:  "Update the brute force protection settings.",
 		Example: `  auth0 protection brute-force-protection update
-  auth0 ap bfp update --json`,
+  auth0 ap bfp update --enabled true
+  auth0 ap bfp update --enabled true --allowlist "156.156.156.156,175.175.175.175"
+  auth0 ap bfp update --enabled true --allowlist "156.156.156.156,175.175.175.175" --max-attempts 3
+  auth0 ap bfp update --enabled true --allowlist "156.156.156.156,175.175.175.175" --max-attempts 3 --mode count_per_identifier_and_ip
+  auth0 ap bfp update --enabled true --allowlist "156.156.156.156,175.175.175.175" --max-attempts 3 --mode count_per_identifier_and_ip --shields user_notification 
+  auth0 ap bfp update -e true -l "156.156.156.156,175.175.175.175" -a 3 -m count_per_identifier_and_ip -s user_notification --json`,
 		RunE: updateBruteForceDetectionCmdRun(cli, &inputs),
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	bfpFlags.Enabled.RegisterBoolU(cmd, &inputs.Enabled, false)
 	bfpFlags.Shields.RegisterStringSliceU(cmd, &inputs.Shields, []string{})
 	bfpFlags.AllowList.RegisterStringSliceU(cmd, &inputs.AllowList, []string{})
 	bfpFlags.Mode.RegisterString(cmd, &inputs.Mode, "")
 	bfpFlags.MaxAttempts.RegisterIntU(cmd, &inputs.MaxAttempts, 1)
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
