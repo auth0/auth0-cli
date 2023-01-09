@@ -717,3 +717,11 @@ tests:
         display_name: "Integration Test Updated Organization"
         branding.colors.page_background: "#AA1166"
         branding.colors.primary: "#00FFAA"
+
+  update universal login branding prompts (login):
+    command: cat ./test/integration/fixtures/update-ul-prompts-login.json | auth0 ul prompts update login
+    exit-code: 0
+
+  update universal login branding prompts (mfa-push):
+    command: cat ./test/integration/fixtures/update-ul-prompts-mfa-push.json | auth0 ul prompts update mfa-push
+    exit-code: 0
