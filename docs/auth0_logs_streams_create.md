@@ -9,8 +9,27 @@ To create interactively, use `auth0 logs streams create` with no arguments.
 
 To create non-interactively, supply the log stream name, type and other information through the flags.
 
+## Usage
 ```
 auth0 logs streams create [flags]
+```
+
+## Examples
+
+```
+  auth0 logs streams create
+
+  # Custom Webhook
+  auth0 logs streams create -n mylogstream -t http --http-type application/json --http-format JSONLINES --http-auth 1343434
+
+  # Datadog 
+  auth0 logs streams create -n mydatadog -t datadog --datadog-key 9999999 --datadog-id us
+
+  # EventBridge
+  auth0 logs streams create -n myeventbridge -t eventbridge --eventbridge-id 999999999999 --eventbridge-region us-east-1
+
+  # Splunk
+  auth0 logs streams create -n test-splunk -t splunk --splunk-domain demo.splunk.com --splunk-token 12a34ab5-c6d7-8901-23ef-456b7c89d0c1 --splunk-port 8080 --splunk-secure=true
 ```
 
 
@@ -47,20 +66,6 @@ auth0 logs streams create [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 logs streams create
-  # Custom Webhook
-  auth0 logs streams create -n mylogstream -t http --http-type application/json --http-format JSONLINES --http-auth 1343434
-  # Datadog 
-  auth0 logs streams create -n mydatadog -t datadog --datadog-key 9999999 --datadog-id us
-  # EventBridge
-  auth0 logs streams create -n myeventbridge -t eventbridge --eventbridge-id 999999999999 --eventbridge-region us-east-1
-  # Splunk
-  auth0 logs streams create -n test-splunk -t splunk --splunk-domain demo.splunk.com --splunk-token 12a34ab5-c6d7-8901-23ef-456b7c89d0c1 --splunk-port 8080 --splunk-secure=true
 ```
 
 

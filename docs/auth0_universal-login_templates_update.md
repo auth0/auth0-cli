@@ -5,8 +5,16 @@ layout: default
 
 Update the custom template for Universal Login.
 
+## Usage
 ```
 auth0 universal-login templates update [flags]
+```
+
+## Examples
+
+```
+  auth0 universal-login templates update
+  auth0 ul templates update
 ```
 
 
@@ -19,12 +27,6 @@ auth0 universal-login templates update [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 universal-login templates update
 ```
 
 

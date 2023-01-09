@@ -9,8 +9,18 @@ To delete interactively, use `auth0 actions delete` with no arguments.
 
 To delete non-interactively, supply the action id and the `--force` flag to skip confirmation.
 
+## Usage
 ```
 auth0 actions delete [flags]
+```
+
+## Examples
+
+```
+  auth0 actions delete
+  auth0 actions rm
+  auth0 actions delete <action-id>
+  auth0 actions delete <action-id> --force
 ```
 
 
@@ -28,14 +38,6 @@ auth0 actions delete [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 actions delete
-  auth0 actions delete <id>
-  auth0 actions delete <id> --force
 ```
 
 

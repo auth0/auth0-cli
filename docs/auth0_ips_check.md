@@ -5,8 +5,17 @@ layout: default
 
 Check if a given IP address is blocked via the Suspicious IP Throttling due to multiple suspicious attempts.
 
+## Usage
 ```
 auth0 ips check [flags]
+```
+
+## Examples
+
+```
+  auth0 ips check
+  auth0 ips check <ip>
+  auth0 ips check "178.178.178.178"
 ```
 
 
@@ -19,13 +28,6 @@ auth0 ips check [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 ips check
-  auth0 ips check <ip>
 ```
 
 

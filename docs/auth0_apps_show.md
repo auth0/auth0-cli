@@ -5,8 +5,18 @@ layout: default
 
 Display the name, description, app type, and other information about an application.
 
+## Usage
 ```
 auth0 apps show [flags]
+```
+
+## Examples
+
+```
+  auth0 apps show
+  auth0 apps show <app-id>
+  auth0 apps show <app-id> --reveal
+  auth0 apps show <app-id> --reveal --json
 ```
 
 
@@ -25,14 +35,6 @@ auth0 apps show [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 apps show
-  auth0 apps show --json
-  auth0 apps show <id>
 ```
 
 

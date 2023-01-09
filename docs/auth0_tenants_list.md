@@ -5,8 +5,16 @@ layout: default
 
 List your tenants.
 
+## Usage
 ```
 auth0 tenants list [flags]
+```
+
+## Examples
+
+```
+  auth0 tenants list
+  auth0 tenants ls
 ```
 
 
@@ -19,12 +27,6 @@ auth0 tenants list [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-auth0 tenants list
 ```
 
 

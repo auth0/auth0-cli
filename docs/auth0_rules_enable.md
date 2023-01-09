@@ -5,8 +5,17 @@ layout: default
 
 Enable a rule.
 
+## Usage
 ```
 auth0 rules enable [flags]
+```
+
+## Examples
+
+```
+  auth0 rules enable
+  auth0 rules enable <rule-id>
+  auth0 rules enable <rule-id> --json
 ```
 
 
@@ -24,13 +33,6 @@ auth0 rules enable [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 rules enable
-  auth0 rules enable <id>
 ```
 
 

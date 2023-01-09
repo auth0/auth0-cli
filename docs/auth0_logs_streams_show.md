@@ -5,8 +5,17 @@ layout: default
 
 Display information about a log stream.
 
+## Usage
 ```
 auth0 logs streams show [flags]
+```
+
+## Examples
+
+```
+  auth0 logs streams show
+  auth0 logs streams show <log-stream-id>
+  auth0 logs streams show <log-stream-id> --json
 ```
 
 
@@ -24,14 +33,6 @@ auth0 logs streams show [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 logs streams show
-  auth0 logs streams show <id>
-  auth0 logs streams show <id> --json
 ```
 
 

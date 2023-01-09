@@ -9,8 +9,16 @@ To verify interactively, use `auth0 domains verify` with no arguments.
 
 To verify non-interactively, supply the custom domain id.
 
+## Usage
 ```
 auth0 domains verify [flags]
+```
+
+## Examples
+
+```
+  auth0 domains verify 
+  auth0 domains verify <domain-id>
 ```
 
 
@@ -28,13 +36,6 @@ auth0 domains verify [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 domains verify 
-  auth0 domains verify <id>
 ```
 
 

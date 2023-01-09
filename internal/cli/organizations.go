@@ -148,9 +148,8 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
-
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
 }
@@ -166,8 +165,8 @@ func showOrganizationCmd(cli *cli) *cobra.Command {
 		Short: "Show an organization",
 		Long:  "Display information about an organization.",
 		Example: `  auth0 orgs show
-  auth0 orgs show <id>
-  auth0 orgs show <id> --json`,
+  auth0 orgs show <org-id>
+  auth0 orgs show <org-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
@@ -299,10 +298,10 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 			"To update interactively, use `auth0 orgs update` with no arguments.\n\n" +
 			"To update non-interactively, supply the organization id and " +
 			"other information through the flags.",
-		Example: `  auth0 orgs update <id>
-  auth0 orgs update <id> --display "My Organization"
-  auth0 orgs update <id> -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
-  auth0 orgs update <id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
+		Example: `  auth0 orgs update <org-id>
+  auth0 orgs update <org-id> --display "My Organization"
+  auth0 orgs update <org-id> -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
+  auth0 orgs update <org-id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -403,15 +402,18 @@ func deleteOrganizationCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Delete an organization",
+		Use:     "delete",
+		Aliases: []string{"rm"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Delete an organization",
 		Long: "Delete an organization.\n\n" +
 			"To delete interactively, use `auth0 orgs delete` with no arguments.\n\n" +
 			"To delete non-interactively, supply the organization id and the `--force` " +
 			"flag to skip confirmation.",
 		Example: `  auth0 orgs delete
-  auth0 orgs delete <id>`,
+  auth0 orgs rm
+  auth0 orgs delete <org-id>
+  auth0 orgs delete <org-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
@@ -456,7 +458,7 @@ func openOrganizationCmd(cli *cli) *cobra.Command {
 		Short: "Open the settings page of an organization",
 		Long:  "Open an organization's settings page in the Auth0 Dashboard.",
 		Example: `  auth0 orgs open
-  auth0 orgs open <id>`,
+  auth0 orgs open <org-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
@@ -501,8 +503,9 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
 		Short:   "List members of an organization",
 		Long:    "List the members of an organization.",
 		Example: `  auth0 orgs members list
-  auth0 orgs members ls <id>
-  auth0 orgs members ls <id> --json`,
+  auth0 orgs members ls <org-id>
+  auth0 orgs members list <org-id> --number 100
+  auth0 orgs members ls <org-id> -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
@@ -524,8 +527,8 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
 	}
 
 	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
-
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.SetUsageTemplate(resourceUsageTemplate())
 
 	return cmd
 }
@@ -558,8 +561,9 @@ func listRolesOrganizationCmd(cli *cli) *cobra.Command {
 		Short:   "List roles of an organization",
 		Long:    "List roles assigned to members of an organization.",
 		Example: `  auth0 orgs roles list
-  auth0 orgs roles ls <id>
-  auth0 orgs roles ls <id> --json`,
+  auth0 orgs roles ls <org-id>
+  auth0 orgs roles list <org-id> --number 100
+  auth0 orgs roles ls <org-id> -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions)
@@ -618,7 +622,11 @@ func listMembersRolesOrganizationCmd(cli *cli) *cobra.Command {
 		Short: "List organization members for a role",
 		Long:  "List organization members that have a given role assigned to them.",
 		Example: `  auth0 orgs roles members list
-  auth0 orgs roles members list <org id> --role-id role`,
+  auth0 orgs roles members ls
+  auth0 orgs roles members list <org-id> --role-id role
+  auth0 orgs roles members list <org-id> --role-id role --number 100
+  auth0 orgs roles members ls <org-id> -r role -n 100
+  auth0 orgs roles members ls <org-id> -r role -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions)
@@ -650,10 +658,10 @@ func listMembersRolesOrganizationCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	roleIdentifier.RegisterString(cmd, &inputs.RoleID, "")
 	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }

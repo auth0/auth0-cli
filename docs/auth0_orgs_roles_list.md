@@ -5,8 +5,18 @@ layout: default
 
 List roles assigned to members of an organization.
 
+## Usage
 ```
 auth0 orgs roles list [flags]
+```
+
+## Examples
+
+```
+  auth0 orgs roles list
+  auth0 orgs roles ls <org-id>
+  auth0 orgs roles list <org-id> --number 100
+  auth0 orgs roles ls <org-id> -n 100 --json
 ```
 
 
@@ -25,14 +35,6 @@ auth0 orgs roles list [flags]
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
-```
-
-## Examples
-
-```
-  auth0 orgs roles list
-  auth0 orgs roles ls <id>
-  auth0 orgs roles ls <id> --json
 ```
 
 
