@@ -15,9 +15,15 @@ auth0 universal-login templates update [flags]
 ```
   auth0 universal-login templates update
   auth0 ul templates update
+  cat path/to/body.html | auth0 ul templates update
 ```
 
 
+## Flags
+
+```
+      --force   Skip confirmation.
+```
 
 
 ## InheritedFlags
