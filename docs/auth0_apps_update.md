@@ -21,7 +21,7 @@ auth0 apps update [flags]
   auth0 apps update <app-id> --name myapp
   auth0 apps update <app-id> --name myapp --description <description>
   auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m]
-  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m] --reveal
+  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m] --reveal-secrets
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json
 ```
 
@@ -37,7 +37,7 @@ auth0 apps update [flags]
   -l, --logout-urls strings   Comma-separated list of URLs that are valid to redirect to after logout from Auth0. Wildcards are allowed for subdomains.
   -n, --name string           Name of the application.
   -o, --origins strings       Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.
-  -r, --reveal                Display the Client Secret as part of the command output.
+  -r, --reveal-secrets        Display the application secrets ('signing_keys', 'client_secret') as part of the command output.
   -t, --type string           Type of application:
                               - native: mobile, desktop, CLI and smart device apps running natively.
                               - spa (single page application): a JavaScript front-end app that uses an API.

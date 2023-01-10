@@ -129,12 +129,12 @@ func TestTenant_AdditionalRequestedScopes(t *testing.T) {
 	}{
 		{
 			name:           "it can correctly distinguish additionally requested scopes",
-			givenScopes:    append(auth.RequiredScopes(), "read:stats", "read:client_grants"),
+			givenScopes:    append(auth.RequiredScopes, "read:stats", "read:client_grants"),
 			expectedScopes: []string{"read:stats", "read:client_grants"},
 		},
 		{
 			name:           "it returns an empty string slice if no additional requested scopes were given",
-			givenScopes:    auth.RequiredScopes(),
+			givenScopes:    auth.RequiredScopes,
 			expectedScopes: []string{},
 		},
 	}

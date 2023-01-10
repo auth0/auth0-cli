@@ -22,8 +22,8 @@ func TestRequiredScopes(t *testing.T) {
 			for _, prefix := range crudPrefixes {
 				scope := prefix + resource
 
-				if !strInArray(requiredScopes, scope) {
-					t.Fatalf("wanted scope: %q, list: %+v", scope, requiredScopes)
+				if !strInArray(RequiredScopes, scope) {
+					t.Fatalf("wanted scope: %q, list: %+v", scope, RequiredScopes)
 				}
 			}
 		}
@@ -43,8 +43,8 @@ func TestRequiredScopes(t *testing.T) {
 		}
 
 		for _, v := range list {
-			if !strInArray(requiredScopes, v) {
-				t.Fatalf("wanted scope: %q, list: %+v", v, requiredScopes)
+			if !strInArray(RequiredScopes, v) {
+				t.Fatalf("wanted scope: %q, list: %+v", v, RequiredScopes)
 			}
 		}
 	})

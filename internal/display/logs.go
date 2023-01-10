@@ -74,7 +74,7 @@ func (v *logView) AsTableRow() []string {
 	return []string{
 		typ,
 		truncate(desc, 54),
-		ansi.Faint(truncate(timeAgo(v.GetDate()), 17)),
+		truncate(v.GetDate().Format("Jan 02 15:04:05.000"), 20),
 		conn,
 		clientName,
 	}
@@ -174,7 +174,9 @@ func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, 
 				}
 			}
 		}()
+
+		r.Stream(res, viewChan) // streams results for `auth0 logs tail`
 	}
 
-	r.Stream(res, viewChan)
+	r.Results(res) //Includes headers for `auth0 logs list`
 }
