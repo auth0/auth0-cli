@@ -15,8 +15,8 @@ auth0 apps list [flags]
 ```
   auth0 apps list
   auth0 apps ls
-  auth0 apps list --reveal-client-secret
-  auth0 apps list --reveal-client-secret --number 100
+  auth0 apps list --reveal-secrets
+  auth0 apps list --reveal-secrets --number 100
   auth0 apps ls -r -n 100 --json
 ```
 
@@ -24,9 +24,9 @@ auth0 apps list [flags]
 ## Flags
 
 ```
-      --json                   Output in json format.
-  -n, --number int             Number of apps to retrieve (default 50)
-  -r, --reveal-client-secret   Display the Client Secret as part of the command output.
+      --json                          Output in json format.
+  -n, --number int                    Number of apps to retrieve (default 50)
+  -r, --reveal-secrets signing_keys   Display the application secrets (signing_keys, `client_secret`) as part of the command output.
 ```
 
 

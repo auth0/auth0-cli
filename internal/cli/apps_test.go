@@ -31,7 +31,7 @@ func TestAppsListCmd(t *testing.T) {
 		},
 		{
 			name: "reveal secrets",
-			args: []string{"--reveal-client-secret"},
+			args: []string{"--reveal-secrets"},
 			assertOutput: func(t testing.TB, out string) {
 				expectTable(t, out,
 					[]string{"CLIENT ID", "NAME", "TYPE", "CLIENT SECRET"},
