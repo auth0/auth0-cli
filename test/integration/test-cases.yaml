@@ -10,6 +10,13 @@ tests:
 
   auth0 logs list:
     exit-code: 0
+    stdout:
+      contains:
+        - TYPE
+        - DESCRIPTION
+        - DATE
+        - CONNECTION
+        - CLIENT
 
   auth0 logs streams list:
     exit-code: 0
