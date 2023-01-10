@@ -15,16 +15,16 @@ auth0 apps show [flags]
 ```
   auth0 apps show
   auth0 apps show <app-id>
-  auth0 apps show <app-id> --reveal
-  auth0 apps show <app-id> --reveal --json
+  auth0 apps show <app-id> --reveal-secrets
+  auth0 apps show <app-id> -r --json
 ```
 
 
 ## Flags
 
 ```
-      --json     Output in json format.
-  -r, --reveal   Display the Client Secret as part of the command output.
+      --json             Output in json format.
+  -r, --reveal-secrets   Display the application secrets ('signing_keys', 'client_secret') as part of the command output.
 ```
 
 
