@@ -75,10 +75,9 @@ var errUnauthenticated = errors.New("Not logged in. Try 'auth0 login'.")
 // 3. --debug.
 type cli struct {
 	// Core primitives exposed to command builders.
-	api           *auth0.API
-	authenticator *auth.Authenticator
-	renderer      *display.Renderer
-	tracker       *analytics.Tracker
+	api      *auth0.API
+	renderer *display.Renderer
+	tracker  *analytics.Tracker
 
 	// Set of flags which are user specified.
 	debug   bool
@@ -113,7 +112,7 @@ func (t *Tenant) additionalRequestedScopes() []string {
 	for _, scope := range t.Scopes {
 		found := false
 
-		for _, defaultScope := range auth.RequiredScopes() {
+		for _, defaultScope := range auth.RequiredScopes {
 			if scope == defaultScope {
 				found = true
 				break
@@ -152,12 +151,7 @@ func (t *Tenant) regenerateAccessToken(ctx context.Context, c *cli) error {
 	}
 
 	if t.authenticatedWithDeviceCodeFlow() {
-		tokenRetriever := &auth.TokenRetriever{
-			Authenticator: c.authenticator,
-			Client:        http.DefaultClient,
-		}
-
-		tokenResponse, err := tokenRetriever.Refresh(ctx, t.Domain)
+		tokenResponse, err := auth.RefreshAccessToken(http.DefaultClient, t.Domain)
 		if err != nil {
 			return err
 		}
@@ -274,7 +268,7 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 // hasAllRequiredScopes compare the tenant scopes
 // with the currently required scopes.
 func hasAllRequiredScopes(t Tenant) bool {
-	for _, requiredScope := range auth.RequiredScopes() {
+	for _, requiredScope := range auth.RequiredScopes {
 		if !containsStr(t.Scopes, requiredScope) {
 			return false
 		}

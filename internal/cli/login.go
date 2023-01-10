@@ -154,7 +154,7 @@ func loginCmd(cli *cli) *cobra.Command {
 // RunLoginAsUser runs the login flow guiding the user through the process
 // by showing the login instructions, opening the browser.
 func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (Tenant, error) {
-	state, err := cli.authenticator.GetDeviceCode(ctx, additionalScopes)
+	state, err := auth.GetDeviceCode(ctx, additionalScopes)
 	if err != nil {
 		return Tenant{}, fmt.Errorf("failed to get the device code: %w", err)
 	}
@@ -184,7 +184,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (T
 
 	var result auth.Result
 	err = ansi.Spinner("Waiting for the login to complete in the browser", func() error {
-		result, err = cli.authenticator.Wait(ctx, state)
+		result, err = auth.WaitUntilUserLogsIn(ctx, state)
 		return err
 	})
 	if err != nil {
@@ -206,7 +206,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (T
 		Domain:      result.Domain,
 		AccessToken: result.AccessToken,
 		ExpiresAt:   result.ExpiresAt,
-		Scopes:      append(auth.RequiredScopes(), additionalScopes...),
+		Scopes:      append(auth.RequiredScopes, additionalScopes...),
 	}
 
 	err = cli.addTenant(tenant)
