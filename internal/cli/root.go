@@ -11,7 +11,6 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/analytics"
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/instrumentation"
@@ -85,8 +84,6 @@ func buildRootCmd(cli *cli) *cobra.Command {
 		Long:          rootShort + "\n" + getLogin(cli),
 		Version:       buildinfo.GetVersionWithCommit(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			cli.authenticator = auth.New()
-
 			ansi.DisableColors = cli.noColor
 			prepareInteractivity(cmd)
 

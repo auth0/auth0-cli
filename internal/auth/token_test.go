@@ -2,7 +2,6 @@ package auth
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"net/http"
 	"testing"
@@ -30,6 +29,17 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
+		oldCreds := credentials
+		defer func() { 
+		    credentials = oldCreds 
+		}()
+		credentials = &Credentials{
+			Audience:           "https://test.com/api/v2/",
+			ClientID:           "client-id",
+			DeviceCodeEndpoint: "https://test.com/oauth/device/code",
+			OauthTokenEndpoint: "https://test.com/token",
+		}
+
 		testTenantName := "auth0-cli-test.us.auth0.com"
 
 		goKeyring.MockInit()
@@ -52,12 +62,7 @@ func TestTokenRetriever_Refresh(t *testing.T) {
 
 		client := &http.Client{Transport: transport}
 
-		tr := &TokenRetriever{
-			Authenticator: &Authenticator{"https://test.com/api/v2/", "client-id", "https://test.com/oauth/device/code", "https://test.com/token"},
-			Client:        client,
-		}
-
-		got, err := tr.Refresh(context.Background(), testTenantName)
+		got, err := RefreshAccessToken(client, testTenantName)
 		if err != nil {
 			t.Fatal(err)
 		}
