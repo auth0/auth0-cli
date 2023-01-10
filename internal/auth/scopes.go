@@ -21,7 +21,7 @@ var RequiredScopes = []string{
 	"read:attack_protection", "update:attack_protection",
 }
 
-// RequiredScopesForClientCreds returns minimum scopes required when authenticating with client credentials
+// RequiredScopesForClientCreds returns minimum scopes required when authenticating with client credentials.
 func RequiredScopesForClientCreds() []string {
 	var min []string
 	for _, s := range RequiredScopes {
