@@ -85,6 +85,7 @@ func buildRootCmd(cli *cli) *cobra.Command {
 		Version:       buildinfo.GetVersionWithCommit(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			ansi.DisableColors = cli.noColor
+			ansi.ReInit()
 			prepareInteractivity(cmd)
 
 			// If the user is trying to login, no need to go

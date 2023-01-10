@@ -42,6 +42,10 @@ func Color() aurora.Aurora {
 	return aurora.NewAurora(shouldUseColors())
 }
 
+func ReInit() {
+	color = Color()
+}
+
 // ColorizeJSON returns a colorized version of the input JSON, if the writer
 // supports colors.
 func ColorizeJSON(json string, darkStyle bool) string {
