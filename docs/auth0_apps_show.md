@@ -23,8 +23,8 @@ auth0 apps show [flags]
 ## Flags
 
 ```
-      --json                          Output in json format.
-  -r, --reveal-secrets signing_keys   Display the application secrets (signing_keys, `client_secret`) as part of the command output.
+      --json             Output in json format.
+  -r, --reveal-secrets   Display the application secrets ('signing_keys', 'client_secret') as part of the command output.
 ```
 
 

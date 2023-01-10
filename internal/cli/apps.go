@@ -117,7 +117,7 @@ var (
 		Name:      "Reveal",
 		LongForm:  "reveal-secrets",
 		ShortForm: "r",
-		Help:      "Display the application secrets (`signing_keys`, `client_secret`) as part of the command output.",
+		Help:      "Display the application secrets ('signing_keys', 'client_secret') as part of the command output.",
 	}
 	number = Flag{
 		Name:      "Number",
