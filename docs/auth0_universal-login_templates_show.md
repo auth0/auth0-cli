@@ -15,15 +15,9 @@ auth0 universal-login templates show [flags]
 ```
   auth0 universal-login templates show
   auth0 ul templates show
-  auth0 ul templates show --json
 ```
 
 
-## Flags
-
-```
-      --json   Output in json format.
-```
 
 
 ## InheritedFlags
