@@ -28,7 +28,6 @@ auth0 logs tail [flags]
 
 ```
   -f, --filter string   Filter in Lucene query syntax. See https://auth0.com/docs/logs/log-search-query-syntax for more details.
-      --json            Output in json format.
   -n, --number int      Number of log entries to show. (default 100)
 ```
 

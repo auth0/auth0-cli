@@ -29,6 +29,10 @@ var DisableColors = false
 // `CLICOLOR_FORCE`. Cf. https://bixense.com/clicolors/
 var EnvironmentOverrideColors = true
 
+// Initialize the aurora.Aurora instance. This value needs to be
+// set to prevent any runtime errors. Re-initialization of this
+// value is done later in the application lifecycle, once the
+// color configuration (ex:`--no-color`) is known.
 var color = Color()
 
 // Bold returns bolded text if the writer supports colors.
@@ -40,6 +44,14 @@ func Bold(text string) string {
 // depending on whether the writer supports colors.
 func Color() aurora.Aurora {
 	return aurora.NewAurora(shouldUseColors())
+}
+
+// Initialize re-instantiates the Aurora instance
+// This initialization step is necessary because the parsing of the
+// --no-color flag is done fairly late in the application cycle
+func Initialize(shouldDisableColors bool) {
+	DisableColors = shouldDisableColors
+	color = Color()
 }
 
 // ColorizeJSON returns a colorized version of the input JSON, if the writer
