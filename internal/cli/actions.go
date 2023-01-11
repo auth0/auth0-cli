@@ -370,7 +370,7 @@ func updateActionCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			cli.renderer.ActionUpdate(current)
+			cli.renderer.ActionUpdate(action)
 			return nil
 		},
 	}
