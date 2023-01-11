@@ -190,12 +190,18 @@ func createActionCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			triggers, version, err := latestActionTriggers(cli)
+			triggers, err := getTriggers(cli)
 			if err != nil {
 				return err
 			}
+			triggers = filterDeprecatedActionTriggers(triggers)
 
-			if err := actionTrigger.Select(cmd, &inputs.Trigger, triggers, nil); err != nil {
+			triggerIds := make([]string, 0)
+			for _, t := range triggers {
+				triggerIds = append(triggerIds, t.GetID())
+			}
+
+			if err := actionTrigger.Select(cmd, &inputs.Trigger, triggerIds, nil); err != nil {
 				return err
 			}
 
@@ -210,6 +216,14 @@ func createActionCmd(cli *cli) *cobra.Command {
 				cli.actionEditorHint,
 			); err != nil {
 				return err
+			}
+
+			var version string
+			for _, t := range triggers {
+				if t.GetID() == inputs.Trigger {
+					version = t.GetVersion()
+					break
+				}
 			}
 
 			action := &management.Action{
@@ -250,7 +264,6 @@ func updateActionCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ID           string
 		Name         string
-		Trigger      string
 		Code         string
 		Dependencies map[string]string
 		Secrets      map[string]string
@@ -262,15 +275,15 @@ func updateActionCmd(cli *cli) *cobra.Command {
 		Short: "Update an action",
 		Long: "Update an action.\n\n" +
 			"To update interactively, use `auth0 actions update` with no arguments.\n\n" +
-			"To update non-interactively, supply the action id, name, trigger, secrets and " +
+			"To update non-interactively, supply the action id, name, cod, secrets and " +
 			"dependencies through the flags.",
 		Example: `  auth0 actions update <action-id> 
   auth0 actions update <action-id> --name myaction
-  auth0 actions update <action-id> --name myaction --trigger post-login
-  auth0 actions update <action-id> --name myaction --trigger post-login --code "$(cat path/to/code.js)"
-  auth0 actions update <action-id> --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
-  auth0 actions update <action-id> --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
-  auth0 actions update <action-id> --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
+  auth0 actions update <action-id> --name myaction
+  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)"
+  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
+  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
+  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
   auth0 actions update <action-id> -n myaction -t post-login -c "$(cat path/to/code.js)" -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
@@ -296,20 +309,6 @@ func updateActionCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			triggers, version, err := latestActionTriggers(cli)
-			if err != nil {
-				return err
-			}
-
-			var currentTriggerId = ""
-			if len(current.SupportedTriggers) > 0 {
-				currentTriggerId = current.SupportedTriggers[0].GetID()
-			}
-
-			if err := actionTrigger.SelectU(cmd, &inputs.Trigger, triggers, &currentTriggerId); err != nil {
-				return err
-			}
-
 			// TODO(cyx): we can re-think this once we have
 			// `--stdin` based commands. For now we don't have
 			// those yet, so keeping this simple.
@@ -330,10 +329,6 @@ func updateActionCmd(cli *cli) *cobra.Command {
 				inputs.Name = current.GetName()
 			}
 
-			if inputs.Trigger == "" && currentTriggerId != "" {
-				inputs.Trigger = currentTriggerId
-			}
-
 			if inputs.Code == "" {
 				inputs.Code = current.GetCode()
 			}
@@ -342,14 +337,9 @@ func updateActionCmd(cli *cli) *cobra.Command {
 			// re-hydrated by the SDK, which we'll use below during
 			// display.
 			action := &management.Action{
-				Name: &inputs.Name,
-				SupportedTriggers: []management.ActionTrigger{
-					{
-						ID:      &inputs.Trigger,
-						Version: &version,
-					},
-				},
-				Code: &inputs.Code,
+				Name:              &inputs.Name,
+				SupportedTriggers: current.SupportedTriggers,
+				Code:              &inputs.Code,
 			}
 
 			if len(inputs.Dependencies) == 0 {
@@ -377,7 +367,6 @@ func updateActionCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	actionName.RegisterStringU(cmd, &inputs.Name, "")
-	actionTrigger.RegisterStringU(cmd, &inputs.Trigger, "")
 	actionCode.RegisterStringU(cmd, &inputs.Code, "")
 	actionDependency.RegisterStringMapU(cmd, &inputs.Dependencies, nil)
 	actionSecret.RegisterStringMapU(cmd, &inputs.Secrets, nil)
@@ -557,17 +546,27 @@ func latestActionTriggerVersion(list []*management.ActionTrigger) string {
 	return latestVersion
 }
 
-func filterActionTriggersByVersion(list []*management.ActionTrigger, version string) []*management.ActionTrigger {
+func filterDeprecatedActionTriggers(list []*management.ActionTrigger) []*management.ActionTrigger {
 	res := []*management.ActionTrigger{}
 	for _, t := range list {
-		if t.GetVersion() == version && t.GetStatus() == "CURRENT" {
+		if t.GetStatus() == "CURRENT" {
 			res = append(res, t)
 		}
 	}
 	return res
 }
 
-func latestActionTriggers(cli *cli) ([]string, string, error) {
+func filterForActionTriggerVersion(list []*management.ActionTrigger, version string) []*management.ActionTrigger {
+	res := []*management.ActionTrigger{}
+	for _, t := range list {
+		if t.GetVersion() == version {
+			res = append(res, t)
+		}
+	}
+	return res
+}
+
+func getTriggers(cli *cli) ([]*management.ActionTrigger, error) {
 	var triggers []*management.ActionTrigger
 	if err := ansi.Waiting(func() error {
 		list, err := cli.api.Action.Triggers()
@@ -577,17 +576,9 @@ func latestActionTriggers(cli *cli) ([]string, string, error) {
 		triggers = list.Triggers
 		return nil
 	}); err != nil {
-		return nil, "", err
+		return nil, err
 	}
-
-	latestTriggerVersion := latestActionTriggerVersion(triggers)
-	triggers = filterActionTriggersByVersion(triggers, latestTriggerVersion)
-	var triggerIds []string
-
-	for _, t := range triggers {
-		triggerIds = append(triggerIds, t.GetID())
-	}
-	return triggerIds, latestTriggerVersion, nil
+	return triggers, nil
 }
 
 func actionTemplate(key string) string {
