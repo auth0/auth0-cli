@@ -11,9 +11,6 @@ import (
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
-// errNoRoles signifies no roles exist in a tenant.
-var errNoRoles = errors.New("there are currently no roles")
-
 var (
 	roleID = Argument{
 		Name: "Role ID",
@@ -338,7 +335,7 @@ func (c *cli) rolePickerOptions() (pickerOptions, error) {
 	}
 
 	if len(opts) == 0 {
-		return nil, errNoRoles
+		return nil, errors.New("there are currently no roles")
 	}
 
 	return opts, nil
