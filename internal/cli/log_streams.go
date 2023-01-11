@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -827,7 +828,7 @@ func (c *cli) logStreamPickerOptions() (pickerOptions, error) {
 	}
 
 	if len(opts) == 0 {
-		return nil, errNoRoles
+		return nil, errors.New("there are currently no log streams")
 	}
 
 	return opts, nil
