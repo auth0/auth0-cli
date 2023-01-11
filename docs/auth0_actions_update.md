@@ -7,7 +7,7 @@ Update an action.
 
 To update interactively, use `auth0 actions update` with no arguments.
 
-To update non-interactively, supply the action id, name, trigger, secrets and dependencies through the flags.
+To update non-interactively, supply the action id, name, cod, secrets and dependencies through the flags.
 
 ## Usage
 ```
@@ -19,11 +19,11 @@ auth0 actions update [flags]
 ```
   auth0 actions update <action-id> 
   auth0 actions update <action-id> --name myaction
-  auth0 actions update <action-id> --name myaction --trigger post-login
-  auth0 actions update <action-id> --name myaction --trigger post-login --code "$(cat path/to/code.js)"
-  auth0 actions update <action-id> --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
-  auth0 actions update <action-id> --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
-  auth0 actions update <action-id> --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
+  auth0 actions update <action-id> --name myaction
+  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)"
+  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
+  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
+  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
   auth0 actions update <action-id> -n myaction -t post-login -c "$(cat path/to/code.js)" -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json
 ```
 
@@ -36,7 +36,6 @@ auth0 actions update [flags]
       --json                        Output in json format.
   -n, --name string                 Name of the action.
   -s, --secret stringToString       Secrets to be used in the action. (default [])
-  -t, --trigger string              Trigger of the action. At this time, an action can only target a single trigger at a time.
 ```
 
 
