@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 
-	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
 
@@ -191,91 +190,65 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			var current *management.EmailTemplate
-			err := ansi.Waiting(func() error {
-				var err error
-				current, err = cli.api.EmailTemplate.Read(apiEmailTemplateFor(inputs.Template))
+			var oldTemplate *management.EmailTemplate
+			err := ansi.Waiting(func() (err error) {
+				oldTemplate, err = cli.api.EmailTemplate.Read(apiEmailTemplateFor(inputs.Template))
 				return err
 			})
 			if err != nil {
-				return fmt.Errorf("Unable to get the email template '%s': %w", inputs.Template, err)
+				return fmt.Errorf("failed to get the email template '%s': %w", inputs.Template, err)
 			}
 
-			if err := emailTemplateFrom.AskU(cmd, &inputs.From, current.From); err != nil {
+			if err := emailTemplateFrom.AskU(cmd, &inputs.From, oldTemplate.From); err != nil {
+				return err
+			}
+			if err := emailTemplateSubject.AskU(cmd, &inputs.Subject, oldTemplate.Subject); err != nil {
 				return err
 			}
 
-			if err := emailTemplateSubject.AskU(cmd, &inputs.Subject, current.Subject); err != nil {
-				return err
-			}
-
-			// TODO(cyx): we can re-think this once we have
-			// `--stdin` based commands. For now we don't have
-			// those yet, so keeping this simple.
 			if err := emailTemplateBody.OpenEditorU(
 				cmd,
 				&inputs.Body,
-				current.GetBody(),
+				oldTemplate.GetBody(),
 				inputs.Template+".*.liquid",
 				cli.emailTemplateEditorHint,
 			); err != nil {
+				return fmt.Errorf("failed to capture input from the editor: %w", err)
+			}
+
+			if err := emailTemplateEnabled.AskBoolU(cmd, &inputs.Enabled, oldTemplate.Enabled); err != nil {
 				return err
-			}
-			if err != nil {
-				return fmt.Errorf("Failed to capture input from the editor: %w", err)
-			}
-
-			if !ruleEnabled.IsSet(cmd) {
-				inputs.Enabled = auth0.BoolValue(current.Enabled)
-			}
-
-			if err := ruleEnabled.AskBoolU(cmd, &inputs.Enabled, current.Enabled); err != nil {
-				return err
-			}
-
-			if inputs.Body == "" {
-				inputs.Body = current.GetBody()
-			}
-
-			if inputs.From == "" {
-				inputs.From = current.GetFrom()
-			}
-
-			if inputs.Subject == "" {
-				inputs.Subject = current.GetSubject()
 			}
 
 			template := apiEmailTemplateFor(inputs.Template)
-			// Prepare email template payload for update. This will also be
-			// re-hydrated by the SDK, which we'll use below during
-			// display.
 			emailTemplate := &management.EmailTemplate{
-				Template: &template,
-				Body:     &inputs.Body,
-				From:     &inputs.From,
-				Subject:  &inputs.Subject,
 				Enabled:  &inputs.Enabled,
+				Template: &template,
 			}
-
-			if inputs.ResultURL == "" {
-				emailTemplate.ResultURL = current.ResultURL
-			} else {
+			if inputs.Body != "" {
+				emailTemplate.Body = &inputs.Body
+			}
+			if inputs.From != "" {
+				emailTemplate.From = &inputs.From
+			}
+			if inputs.Subject != "" {
+				emailTemplate.Subject = &inputs.Subject
+			}
+			if inputs.ResultURL != "" {
 				emailTemplate.ResultURL = &inputs.ResultURL
 			}
-
-			if inputs.ResultURLLifetime == 0 {
-				emailTemplate.URLLifetimeInSecoonds = current.URLLifetimeInSecoonds
-			} else {
+			if inputs.ResultURLLifetime != 0 {
 				emailTemplate.URLLifetimeInSecoonds = &inputs.ResultURLLifetime
 			}
 
 			if err = ansi.Waiting(func() error {
 				return cli.api.EmailTemplate.Update(template, emailTemplate)
 			}); err != nil {
-				return err
+				return fmt.Errorf("failed to update the email template '%s': %w", inputs.Template, err)
 			}
 
 			cli.renderer.EmailTemplateUpdate(emailTemplate)
+
 			return nil
 		},
 	}
