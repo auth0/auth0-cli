@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
 const (
@@ -211,9 +212,18 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 				&inputs.Body,
 				oldTemplate.GetBody(),
 				inputs.Template+".*.liquid",
-				cli.emailTemplateEditorHint,
 			); err != nil {
 				return fmt.Errorf("failed to capture input from the editor: %w", err)
+			}
+
+			if !cli.force && canPrompt(cmd) {
+				var confirmed bool
+				if err := prompt.AskBool("Do you want to save the email template body?", &confirmed, true); err != nil {
+					return fmt.Errorf("failed to capture prompt input: %w", err)
+				}
+				if !confirmed {
+					return nil
+				}
 			}
 
 			if err := emailTemplateEnabled.AskBoolU(cmd, &inputs.Enabled, oldTemplate.Enabled); err != nil {
@@ -254,6 +264,7 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	emailTemplateBody.RegisterStringU(cmd, &inputs.Body, "")
 	emailTemplateFrom.RegisterStringU(cmd, &inputs.From, "")
 	emailTemplateSubject.RegisterStringU(cmd, &inputs.Subject, "")

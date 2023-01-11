@@ -352,10 +352,19 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 					&inputs.Script,
 					oldRule.GetScript(),
 					oldRule.GetName()+".*.js",
-					cli.ruleEditorHint,
 				)
 				if err != nil {
 					return fmt.Errorf("failed to capture input from the editor: %w", err)
+				}
+
+				if !cli.force && canPrompt(cmd) {
+					var confirmed bool
+					if err := prompt.AskBool("Do you want to save the rule script?", &confirmed, true); err != nil {
+						return fmt.Errorf("failed to capture prompt input: %w", err)
+					}
+					if !confirmed {
+						return nil
+					}
 				}
 
 				updatedRule.Enabled = &inputs.Enabled
@@ -381,6 +390,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	ruleName.RegisterStringU(cmd, &inputs.Name, "")
 	ruleEnabled.RegisterBool(cmd, &inputs.Enabled, true)
 	ruleScript.RegisterStringU(cmd, &inputs.Script, "")
