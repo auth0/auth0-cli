@@ -274,10 +274,9 @@ func updateActionCmd(cli *cli) *cobra.Command {
 		Short: "Update an action",
 		Long: "Update an action.\n\n" +
 			"To update interactively, use `auth0 actions update` with no arguments.\n\n" +
-			"To update non-interactively, supply the action id, name, cod, secrets and " +
+			"To update non-interactively, supply the action id, name, code, secrets and " +
 			"dependencies through the flags.",
 		Example: `  auth0 actions update <action-id> 
-  auth0 actions update <action-id> --name myaction
   auth0 actions update <action-id> --name myaction
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)"
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"

@@ -7,7 +7,7 @@ Update an action.
 
 To update interactively, use `auth0 actions update` with no arguments.
 
-To update non-interactively, supply the action id, name, cod, secrets and dependencies through the flags.
+To update non-interactively, supply the action id, name, code, secrets and dependencies through the flags.
 
 ## Usage
 ```
@@ -18,7 +18,6 @@ auth0 actions update [flags]
 
 ```
   auth0 actions update <action-id> 
-  auth0 actions update <action-id> --name myaction
   auth0 actions update <action-id> --name myaction
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)"
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
