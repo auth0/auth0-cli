@@ -22,6 +22,7 @@ auth0 rules update [flags]
   auth0 rules update <rule-id> --enabled true --name "My Updated Rule"
   auth0 rules update <rule-id> --enabled true --name "My Updated Rule" --script "$(cat path/to/script.js)"
   auth0 rules update <rule-id> -e true -n "My Updated Rule" -s "$(cat path/to/script.js)" --json
+  echo "{\"id\":\"rul_ks3dUazcU3b6PqkH\",\"name\":\"piping-name\"}" | auth0 rules update
 ```
 
 
