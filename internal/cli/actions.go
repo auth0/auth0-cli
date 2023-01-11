@@ -148,7 +148,7 @@ func showActionCmd(cli *cli) *cobra.Command {
 				action, err = cli.api.Action.Read(inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to get an action with Id '%s': %w", inputs.ID, err)
+				return fmt.Errorf("Unable to get an action with ID '%s': %w", inputs.ID, err)
 			}
 
 			cli.renderer.ActionShow(action)
@@ -190,11 +190,10 @@ func createActionCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			triggers, err := getTriggers(cli)
+			triggers, err := getCurrentTriggers(cli)
 			if err != nil {
 				return err
 			}
-			triggers = filterDeprecatedActionTriggers(triggers)
 
 			triggerIds := make([]string, 0)
 			for _, t := range triggers {
@@ -536,16 +535,6 @@ func formatActionDetailsPath(id string) string {
 	return fmt.Sprintf("actions/library/details/%s", id)
 }
 
-func latestActionTriggerVersion(list []*management.ActionTrigger) string {
-	latestVersion := "v1"
-	for _, t := range list {
-		if t.GetVersion() > latestVersion {
-			latestVersion = t.GetVersion()
-		}
-	}
-	return latestVersion
-}
-
 func filterDeprecatedActionTriggers(list []*management.ActionTrigger) []*management.ActionTrigger {
 	res := []*management.ActionTrigger{}
 	for _, t := range list {
@@ -556,17 +545,7 @@ func filterDeprecatedActionTriggers(list []*management.ActionTrigger) []*managem
 	return res
 }
 
-func filterForActionTriggerVersion(list []*management.ActionTrigger, version string) []*management.ActionTrigger {
-	res := []*management.ActionTrigger{}
-	for _, t := range list {
-		if t.GetVersion() == version {
-			res = append(res, t)
-		}
-	}
-	return res
-}
-
-func getTriggers(cli *cli) ([]*management.ActionTrigger, error) {
+func getCurrentTriggers(cli *cli) ([]*management.ActionTrigger, error) {
 	var triggers []*management.ActionTrigger
 	if err := ansi.Waiting(func() error {
 		list, err := cli.api.Action.Triggers()
@@ -578,7 +557,8 @@ func getTriggers(cli *cli) ([]*management.ActionTrigger, error) {
 	}); err != nil {
 		return nil, err
 	}
-	return triggers, nil
+
+	return filterDeprecatedActionTriggers(triggers), nil
 }
 
 func actionTemplate(key string) string {
