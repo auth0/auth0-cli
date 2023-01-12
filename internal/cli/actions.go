@@ -287,78 +287,58 @@ func updateActionCmd(cli *cli) *cobra.Command {
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
-				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)
-				if err != nil {
+				if err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions); err != nil {
 					return err
 				}
 			}
 
-			var current *management.Action
-			err := ansi.Waiting(func() error {
-				var err error
-				current, err = cli.api.Action.Read(inputs.ID)
+			var oldAction *management.Action
+			err := ansi.Waiting(func() (err error) {
+				oldAction, err = cli.api.Action.Read(inputs.ID)
 				return err
 			})
 			if err != nil {
-				return fmt.Errorf("Failed to fetch action with ID: %s %v", inputs.ID, err)
+				return fmt.Errorf("failed to fetch action with ID %s: %w", inputs.ID, err)
 			}
 
-			if err := actionName.AskU(cmd, &inputs.Name, current.Name); err != nil {
+			if err := actionName.AskU(cmd, &inputs.Name, oldAction.Name); err != nil {
 				return err
 			}
 
-			// TODO(cyx): we can re-think this once we have
-			// `--stdin` based commands. For now we don't have
-			// those yet, so keeping this simple.
 			if err := actionCode.OpenEditorU(
 				cmd,
 				&inputs.Code,
-				current.GetCode(),
+				oldAction.GetCode(),
 				inputs.Name+".*.js",
 				cli.actionEditorHint,
 			); err != nil {
-				return err
-			}
-			if err != nil {
-				return fmt.Errorf("Failed to capture input from the editor: %w", err)
+				return fmt.Errorf("failed to capture input from the editor: %w", err)
 			}
 
-			if inputs.Name == "" {
-				inputs.Name = current.GetName()
+			updatedAction := &management.Action{
+				SupportedTriggers: oldAction.SupportedTriggers,
 			}
-
-			if inputs.Code == "" {
-				inputs.Code = current.GetCode()
+			if inputs.Name != "" {
+				updatedAction.Name = &inputs.Name
 			}
-
-			// Prepare action payload for update. This will also be
-			// re-hydrated by the SDK, which we'll use below during
-			// display.
-			action := &management.Action{
-				Name:              &inputs.Name,
-				SupportedTriggers: current.SupportedTriggers,
-				Code:              &inputs.Code,
+			if inputs.Code != "" {
+				updatedAction.Code = &inputs.Code
 			}
-
-			if len(inputs.Dependencies) == 0 {
-				action.Dependencies = current.Dependencies
-			} else {
-				action.Dependencies = inputDependenciesToActionDependencies(inputs.Dependencies)
+			if len(inputs.Dependencies) != 0 {
+				updatedAction.Dependencies = inputDependenciesToActionDependencies(inputs.Dependencies)
 			}
-
-			if len(inputs.Secrets) == 0 {
-				action.Secrets = current.Secrets
-			} else {
-				action.Secrets = inputSecretsToActionSecrets(inputs.Secrets)
+			if len(inputs.Secrets) != 0 {
+				updatedAction.Secrets = inputSecretsToActionSecrets(inputs.Secrets)
 			}
 
 			if err = ansi.Waiting(func() error {
-				return cli.api.Action.Update(inputs.ID, action)
+				return cli.api.Action.Update(oldAction.GetID(), updatedAction)
 			}); err != nil {
-				return err
+				return fmt.Errorf("failed to update action with ID %s: %w", oldAction.GetID(), err)
 			}
 
-			cli.renderer.ActionUpdate(action)
+			cli.renderer.ActionUpdate(updatedAction)
+
 			return nil
 		},
 	}
