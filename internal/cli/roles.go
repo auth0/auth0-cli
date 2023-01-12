@@ -29,6 +29,12 @@ var (
 		ShortForm: "d",
 		Help:      "Description of the role.",
 	}
+	roleNumber = Flag{
+		Name:      "Number",
+		LongForm:  "number",
+		ShortForm: "n",
+		Help:      "Number of roles, that match the search criteria, to retrieve. Maximum result number is 1000.",
+	}
 )
 
 func rolesCmd(cli *cli) *cobra.Command {
@@ -66,6 +72,10 @@ func listRolesCmd(cli *cli) *cobra.Command {
   auth0 roles ls --number 100
   auth0 roles ls -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Number < 1 || inputs.Number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
+
 			list, err := getWithPagination(
 				cmd.Context(),
 				inputs.Number,
@@ -98,7 +108,7 @@ func listRolesCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	roleNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
 }

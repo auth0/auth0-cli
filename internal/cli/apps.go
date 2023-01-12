@@ -119,11 +119,11 @@ var (
 		ShortForm: "r",
 		Help:      "Display the application secrets ('signing_keys', 'client_secret') as part of the command output.",
 	}
-	number = Flag{
+	appNumber = Flag{
 		Name:      "Number",
 		LongForm:  "number",
 		ShortForm: "n",
-		Help:      "Number of apps to retrieve",
+		Help:      "Number of apps, that match the search criteria, to retrieve. Maximum result number is 1000.",
 	}
 )
 
@@ -216,6 +216,10 @@ func listAppsCmd(cli *cli) *cobra.Command {
   auth0 apps list --reveal-secrets --number 100
   auth0 apps ls -r -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Number < 1 || inputs.Number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
+
 			list, err := getWithPagination(
 				cmd.Context(),
 				inputs.Number,
@@ -244,7 +248,7 @@ func listAppsCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
-	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	appNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
 }

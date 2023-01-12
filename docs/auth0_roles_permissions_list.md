@@ -15,14 +15,16 @@ auth0 roles permissions list [flags]
 ```
   auth0 roles permissions list
   auth0 roles permissions ls <role-id>
-  auth0 roles permissions ls <role-id> --json
+  auth0 roles permissions ls <role-id> --number 100
+  auth0 roles permissions ls <role-id> -n 100 --json
 ```
 
 
 ## Flags
 
 ```
-      --json   Output in json format.
+      --json         Output in json format.
+  -n, --number int   Number of permissions, that match the search criteria, to retrieve. Maximum result number is 1000. (default 50)
 ```
 
 
