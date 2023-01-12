@@ -177,7 +177,7 @@ func showApiCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("Unable to get an API with Id '%s': %w", inputs.ID, err)
 			}
 
-			cli.renderer.ApiShow(api)
+			cli.renderer.ApiShow(api, cli.json)
 			return nil
 		},
 	}

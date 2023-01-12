@@ -88,11 +88,11 @@ func (r *Renderer) ApiList(apis []*management.ResourceServer) {
 	r.Results(results)
 }
 
-func (r *Renderer) ApiShow(api *management.ResourceServer) {
+func (r *Renderer) ApiShow(api *management.ResourceServer, jsonFlag bool) {
 	r.Heading("api")
 	view, scopesTruncated := makeApiView(api)
 	r.Result(view)
-	if scopesTruncated {
+	if scopesTruncated && !jsonFlag {
 		r.Newline()
 		r.Infof("Scopes truncated for display. To see the full list, run %s", ansi.Faint(fmt.Sprintf("apis scopes list %s", *api.ID)))
 	}
