@@ -15,7 +15,7 @@ var (
 		Name:       "AWS Account ID",
 		LongForm:   "aws-id",
 		ShortForm:  "i",
-		Help:       "Id of the AWS account.",
+		Help:       "ID of the AWS account.",
 		IsRequired: true,
 	}
 	awsRegion = Flag{

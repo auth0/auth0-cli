@@ -33,6 +33,9 @@ var (
 		Help:         "The format of data sent over HTTP. Options are \"JSONLINES\", \"JSONARRAY\" or \"JSONOBJECT\"",
 		AlwaysPrompt: true,
 	}
+
+	httpContentFormatOptions = []string{"JSONLINES", "JSONARRAY", "JSONOBJECT"}
+
 	httpAuthorization = Flag{
 		Name:         "HTTP Authorization",
 		LongForm:     "authorization",
@@ -79,7 +82,7 @@ func createLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := httpContentFormat.Ask(cmd, &inputs.HttpContentFormat, nil); err != nil {
+			if err := httpContentFormat.Select(cmd, &inputs.HttpContentFormat, httpContentFormatOptions, nil); err != nil {
 				return err
 			}
 
@@ -182,7 +185,7 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 			if err := httpContentType.AskU(cmd, &inputs.HttpContentType, httpSink.ContentType); err != nil {
 				return err
 			}
-			if err := httpContentFormat.AskU(cmd, &inputs.HttpContentFormat, httpSink.ContentFormat); err != nil {
+			if err := httpContentFormat.SelectU(cmd, &inputs.HttpContentFormat, httpContentFormatOptions, httpSink.ContentFormat); err != nil {
 				return err
 			}
 			if err := httpAuthorization.AskPasswordU(cmd, &inputs.HttpAuthorization, httpSink.Authorization); err != nil {

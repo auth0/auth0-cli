@@ -47,8 +47,8 @@ func logStreamsCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listLogStreamsCmd(cli))
+	cmd.AddCommand(createLogStreamCmd(cli))
 	cmd.AddCommand(showLogStreamCmd(cli))
-	cmd.AddCommand(createLogStreamsCmd(cli))
 	cmd.AddCommand(updateLogStreamCmd(cli))
 	cmd.AddCommand(deleteLogStreamCmd(cli))
 	cmd.AddCommand(openLogStreamsCmd(cli))
@@ -96,7 +96,7 @@ func showLogStreamCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Show a log stream by Id",
+		Short: "Show a log stream by ID",
 		Long:  "Display information about a log stream.",
 		Example: `  auth0 logs streams show
   auth0 logs streams show <log-stream-id>
@@ -130,11 +130,11 @@ func showLogStreamCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func createLogStreamsCmd(cli *cli) *cobra.Command {
+func createLogStreamCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new log stream",
-		Long:  "Log Streaming allows you to export your events in near real-time. Choose an option below to configure.",
+		Long:  "Log Streaming allows you to export your events in near real-time.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -152,7 +152,7 @@ func updateLogStreamCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update an existing log stream",
-		Long:  "",
+		Long:  "Log Streaming allows you to export your events in near real-time.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())

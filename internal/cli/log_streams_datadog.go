@@ -19,6 +19,9 @@ var (
 			"If you are in the datadog EU site ('app.datadoghq.eu'), the Region should be EU otherwise it should be US.",
 		IsRequired: true,
 	}
+
+	datadogRegionOptions = []string{"eu", "us", "us3", "us5"}
+
 	datadogApiKey = Flag{
 		Name:       "Datadog API Key",
 		LongForm:   "api-key",
@@ -53,7 +56,7 @@ func createLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := datadogRegion.Ask(cmd, &inputs.DatadogRegion, nil); err != nil {
+			if err := datadogRegion.Select(cmd, &inputs.DatadogRegion, datadogRegionOptions, nil); err != nil {
 				return err
 			}
 
@@ -135,7 +138,7 @@ func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 
 			datadogSink := oldLogStream.Sink.(*management.LogStreamSinkDatadog)
 
-			if err := datadogRegion.AskU(cmd, &inputs.DatadogRegion, datadogSink.Region); err != nil {
+			if err := datadogRegion.SelectU(cmd, &inputs.DatadogRegion, datadogRegionOptions, datadogSink.Region); err != nil {
 				return err
 			}
 
