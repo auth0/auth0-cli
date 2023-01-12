@@ -23,6 +23,7 @@ auth0 rules create [flags]
   auth0 rules create --enabled true --name "My Rule" --template "Empty rule"
   auth0 rules create --enabled true --name "My Rule" --template "Empty rule" --script "$(cat path/to/script.js)"
   auth0 rules create -e true -n "My Rule" -t "Empty rule" -s "$(cat path/to/script.js)" --json
+  echo "{\"name\":\"piping-name\",\"script\":\"console.log('test')\"}" | auth0 rules create
 ```
 
 

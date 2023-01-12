@@ -94,7 +94,7 @@ func (f *Flag) OpenEditorW(cmd *cobra.Command, value *string, defaultValue, file
 	return openEditorFlag(cmd, f, value, defaultValue, filename, infoFn, tempFileFn, false)
 }
 
-func (f *Flag) OpenEditorU(cmd *cobra.Command, value *string, defaultValue string, filename string, infoFn func()) error {
+func (f *Flag) OpenEditorU(cmd *cobra.Command, value *string, defaultValue string, filename string) error {
 	return openEditorFlag(cmd, f, value, defaultValue, filename, nil, nil, true)
 }
 
