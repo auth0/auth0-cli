@@ -29,7 +29,7 @@ auth0 logs streams create eventbridge [flags]
 ## Flags
 
 ```
-  -i, --aws-id string       Id of the AWS account.
+  -i, --aws-id string       ID of the AWS account.
   -r, --aws-region string   The AWS region in which eventbridge will be created, e.g. 'us-east-2'.
       --json                Output in json format.
   -n, --name string         The name of the log stream.

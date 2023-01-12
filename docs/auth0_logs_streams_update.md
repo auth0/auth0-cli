@@ -3,7 +3,7 @@ layout: default
 ---
 # auth0 logs streams update
 
-
+Log Streaming allows you to export your events in near real-time.
 
 ## Commands
 

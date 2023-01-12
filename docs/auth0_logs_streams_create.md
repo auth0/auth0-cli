@@ -3,7 +3,7 @@ layout: default
 ---
 # auth0 logs streams create
 
-Log Streaming allows you to export your events in near real-time. Choose an option below to configure.
+Log Streaming allows you to export your events in near real-time.
 
 ## Commands
 
