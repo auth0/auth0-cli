@@ -136,7 +136,8 @@ func createRuleCmd(cli *cli) *cobra.Command {
   auth0 rules create --enabled true --name "My Rule" 
   auth0 rules create --enabled true --name "My Rule" --template "Empty rule"
   auth0 rules create --enabled true --name "My Rule" --template "Empty rule" --script "$(cat path/to/script.js)"
-  auth0 rules create -e true -n "My Rule" -t "Empty rule" -s "$(cat path/to/script.js)" --json`,
+  auth0 rules create -e true -n "My Rule" -t "Empty rule" -s "$(cat path/to/script.js)" --json
+  echo "{\"name\":\"piping-name\",\"script\":\"console.log('test')\"}" | auth0 rules create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			rule := &management.Rule{}
 			pipedInput := iostream.PipedInput()
@@ -309,89 +310,72 @@ func updateRuleCmd(cli *cli) *cobra.Command {
   auth0 rules update <rule-id> --enabled true
   auth0 rules update <rule-id> --enabled true --name "My Updated Rule"
   auth0 rules update <rule-id> --enabled true --name "My Updated Rule" --script "$(cat path/to/script.js)"
-  auth0 rules update <rule-id> -e true -n "My Updated Rule" -s "$(cat path/to/script.js)" --json`,
+  auth0 rules update <rule-id> -e true -n "My Updated Rule" -s "$(cat path/to/script.js)" --json
+  echo "{\"id\":\"rul_ks3dUazcU3b6PqkH\",\"name\":\"piping-name\"}" | auth0 rules update`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			rule := &management.Rule{}
+			updatedRule := &management.Rule{}
 			pipedInput := iostream.PipedInput()
-
 			if len(pipedInput) > 0 {
-				err := json.Unmarshal(pipedInput, rule)
-				if err != nil {
-					return fmt.Errorf("Invalid JSON input: %w", err)
+				if err := json.Unmarshal(pipedInput, updatedRule); err != nil {
+					return fmt.Errorf("invalid JSON input: %w", err)
 				}
 
-				inputs.ID = rule.GetID()
-				rule.ID = nil
+				inputs.ID = updatedRule.GetID()
+				updatedRule.ID = nil
 			} else {
 				if len(args) > 0 {
 					inputs.ID = args[0]
 				} else {
-					err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
-					if err != nil {
+					if err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions); err != nil {
 						return err
 					}
 				}
 
-				err := ansi.Waiting(func() error {
-					var err error
-					rule, err = cli.api.Rule.Read(inputs.ID)
+				var oldRule *management.Rule
+				err := ansi.Waiting(func() (err error) {
+					oldRule, err = cli.api.Rule.Read(inputs.ID)
 					return err
 				})
 				if err != nil {
-					return fmt.Errorf("Failed to fetch rule with ID: %s %v", inputs.ID, err)
+					return fmt.Errorf("failed to fetch rule with ID %s: %w", inputs.ID, err)
 				}
 
-				if err := ruleName.AskU(cmd, &inputs.Name, rule.Name); err != nil {
+				if err := ruleName.AskU(cmd, &inputs.Name, oldRule.Name); err != nil {
 					return err
 				}
-
-				if !ruleEnabled.IsSet(cmd) {
-					inputs.Enabled = auth0.BoolValue(rule.Enabled)
-				}
-
-				if err := ruleEnabled.AskBoolU(cmd, &inputs.Enabled, rule.Enabled); err != nil {
+				if err := ruleEnabled.AskBoolU(cmd, &inputs.Enabled, oldRule.Enabled); err != nil {
 					return err
 				}
 
 				err = ruleScript.OpenEditorU(
 					cmd,
 					&inputs.Script,
-					rule.GetScript(),
-					rule.GetName()+".*.js",
+					oldRule.GetScript(),
+					oldRule.GetName()+".*.js",
 					cli.ruleEditorHint,
 				)
 				if err != nil {
-					return fmt.Errorf("Failed to capture input from the editor: %w", err)
+					return fmt.Errorf("failed to capture input from the editor: %w", err)
 				}
 
-				// Since name is optional, no need to specify what they chose.
-				if inputs.Name == "" {
-					inputs.Name = rule.GetName()
+				updatedRule.Enabled = &inputs.Enabled
+				if inputs.Name != "" {
+					updatedRule.Name = &inputs.Name
 				}
-
-				if inputs.Script == "" {
-					inputs.Script = rule.GetScript()
-				}
-
-				// Prepare rule payload for update. This will also be
-				// re-hydrated by the SDK, which we'll use below during
-				// display.
-				rule = &management.Rule{
-					Name:    &inputs.Name,
-					Script:  &inputs.Script,
-					Enabled: &inputs.Enabled,
+				if inputs.Script != "" {
+					updatedRule.Script = &inputs.Script
 				}
 			}
 
 			err := ansi.Waiting(func() error {
-				return cli.api.Rule.Update(inputs.ID, rule)
+				return cli.api.Rule.Update(inputs.ID, updatedRule)
 			})
-
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to update rule with ID %s: %w", inputs.ID, err)
 			}
 
-			cli.renderer.RuleUpdate(rule)
+			cli.renderer.RuleUpdate(updatedRule)
+
 			return nil
 		},
 	}
