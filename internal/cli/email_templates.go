@@ -275,10 +275,6 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func (c *cli) emailTemplateEditorHint() {
-	c.renderer.Infof("%s Once you close the editor, the email template will be saved. To cancel, press CTRL+C.", ansi.Faint("Hint:"))
-}
-
 func (c *cli) emailTemplatePickerOptions() (pickerOptions, error) {
 	return emailTemplateOptions, nil
 }
