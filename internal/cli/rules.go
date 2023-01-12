@@ -136,7 +136,8 @@ func createRuleCmd(cli *cli) *cobra.Command {
   auth0 rules create --enabled true --name "My Rule" 
   auth0 rules create --enabled true --name "My Rule" --template "Empty rule"
   auth0 rules create --enabled true --name "My Rule" --template "Empty rule" --script "$(cat path/to/script.js)"
-  auth0 rules create -e true -n "My Rule" -t "Empty rule" -s "$(cat path/to/script.js)" --json`,
+  auth0 rules create -e true -n "My Rule" -t "Empty rule" -s "$(cat path/to/script.js)" --json
+  echo "{\"name\":\"piping-name\",\"script\":\"console.log('test')\"}" | auth0 rules create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			rule := &management.Rule{}
 			pipedInput := iostream.PipedInput()
