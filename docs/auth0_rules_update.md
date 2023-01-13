@@ -30,6 +30,7 @@ auth0 rules update [flags]
 
 ```
   -e, --enabled         Enable (or disable) a rule. (default true)
+      --force           Skip confirmation.
       --json            Output in json format.
   -n, --name string     Name of the rule.
   -s, --script string   Script contents for the rule.
