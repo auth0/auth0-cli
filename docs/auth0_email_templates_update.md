@@ -35,6 +35,7 @@ auth0 email templates update [flags]
 ```
   -b, --body string      Body of the email template.
   -e, --enabled          Whether the template is enabled (true) or disabled (false). (default true)
+      --force            Skip confirmation.
   -f, --from string      Sender's 'from' email address.
       --json             Output in json format.
   -l, --lifetime int     Lifetime in seconds that the link within the email will be valid for.

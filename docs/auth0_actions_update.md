@@ -32,6 +32,7 @@ auth0 actions update [flags]
 ```
   -c, --code string                 Code content for the action.
   -d, --dependency stringToString   Third party npm module, and its version, that the action depends on. (default [])
+      --force                       Skip confirmation.
       --json                        Output in json format.
   -n, --name string                 Name of the action.
   -s, --secret stringToString       Secrets to be used in the action. (default [])
