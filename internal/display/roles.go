@@ -58,6 +58,24 @@ func (r *Renderer) RoleList(roles []*management.Role) {
 	r.Results(res)
 }
 
+func (r *Renderer) UserRoleList(roles []*management.Role) {
+	resource := "roles assigned to user"
+	r.Heading(fmt.Sprintf("%s (%d)", resource, len(roles)))
+
+	if len(roles) == 0 {
+		r.EmptyState(resource)
+		r.Infof("Use 'auth0 users roles assign' to assign roles to a user.")
+		return
+	}
+
+	var res []View
+	for _, role := range roles {
+		res = append(res, makeRoleView(role))
+	}
+
+	r.Results(res)
+}
+
 func (r *Renderer) RoleShow(role *management.Role) {
 	r.Heading("role")
 	r.Result(makeRoleView(role))
