@@ -11,7 +11,7 @@ github_username: auth0
 github_repo: auth0-cli
 
 # Build settings
-theme: minima
+theme: just-the-docs
 
-header_pages:
-  -
+search_enabled: true
+favicon_ico: "/assets/images/favicon.png"
