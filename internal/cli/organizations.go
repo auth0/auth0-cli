@@ -78,7 +78,7 @@ var (
 		IsRequired: true,
 	}
 
-	// There is no Help value set here as it is set before registering each time so that we can ensure the help text is correct.
+	// Purposefully not setting the Help value on the Flag because overridden where appropriate. 
 	organizationNumber = Flag{
 		Name:      "Number",
 		LongForm:  "number",
