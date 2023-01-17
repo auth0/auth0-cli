@@ -40,6 +40,7 @@ auth0 users roles assign [flags]
 ## Related Commands
 
 - [auth0 users roles assign](auth0_users_roles_assign.md) - Assign roles to a user
+- [auth0 users roles remove](auth0_users_roles_remove.md) - Remove roles from a user
 - [auth0 users roles show](auth0_users_roles_show.md) - Show a user's roles
 
 

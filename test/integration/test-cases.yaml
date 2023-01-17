@@ -740,3 +740,7 @@ tests:
   users roles add:
     command: auth0 users roles add $(cat ./test/integration/identifiers/user-id) -r $(cat ./test/integration/identifiers/role-id)
     exit-code: 0
+
+  users roles remove:
+    command: auth0 users roles rm $(cat ./test/integration/identifiers/user-id) -r $(cat ./test/integration/identifiers/role-id)
+    exit-code: 0
