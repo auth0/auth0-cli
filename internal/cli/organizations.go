@@ -160,7 +160,7 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	organizationNumber.Help = "Number of organizations, that match the search criteria, to retrieve. Maximum result number is 1000."
+	organizationNumber.Help = "Number of organizations to retrieve. Minimum 1, maximum 1000."
 	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
@@ -542,7 +542,7 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	organizationNumber.Help = "Number of organization members to retrieve. Maximum result number is 1000."
+	organizationNumber.Help = "Number of organization members to retrieve. Minimum 1, maximum 1000."
 	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -608,7 +608,7 @@ func listRolesOrganizationCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	organizationNumber.Help = "Number of organization roles to retrieve. Maximum result number is 1000."
+	organizationNumber.Help = "Number of organization roles to retrieve. Minimum 1, maximum 1000."
 	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
@@ -686,7 +686,7 @@ func listMembersRolesOrganizationCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	roleIdentifier.RegisterString(cmd, &inputs.RoleID, "")
-	organizationNumber.Help = "Number of members to retrieve. Maximum result number is 1000."
+	organizationNumber.Help = "Number of members to retrieve. Minimum 1, maximum 1000."
 	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd

@@ -123,7 +123,7 @@ var (
 		Name:      "Number",
 		LongForm:  "number",
 		ShortForm: "n",
-		Help:      "Number of apps, that match the search criteria, to retrieve. Maximum result number is 1000.",
+		Help:      "Number of apps to retrieve. Minimum 1, maximum 1000.",
 	}
 )
 

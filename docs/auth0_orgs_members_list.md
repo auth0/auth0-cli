@@ -24,7 +24,7 @@ auth0 orgs members list [flags]
 
 ```
       --json         Output in json format.
-  -n, --number int   Number of organization members to retrieve. Maximum result number is 1000. (default 50)
+  -n, --number int   Number of organization members to retrieve. Minimum 1, maximum 1000. (default 50)
 ```
 
 
