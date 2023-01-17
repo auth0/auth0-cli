@@ -48,7 +48,7 @@ func Color() aurora.Aurora {
 
 // Initialize re-instantiates the Aurora instance
 // This initialization step is necessary because the parsing of the
-// --no-color flag is done fairly late in the application cycle
+// --no-color flag is done fairly late in the application cycle.
 func Initialize(shouldDisableColors bool) {
 	DisableColors = shouldDisableColors
 	color = Color()

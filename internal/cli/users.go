@@ -72,7 +72,7 @@ var (
 		Name:      "Number",
 		LongForm:  "number",
 		ShortForm: "n",
-		Help:      "Number of users, that match the search criteria, to retrieve. Maximum result number is 1000. If limit is hit, please refine the search query.",
+		Help:      "Number of users, that match the search criteria, to retrieve. Minimum 1, maximum 1000. If limit is hit, refine the search query.",
 	}
 	userImportTemplate = Flag{
 		Name:       "Template",
@@ -121,8 +121,9 @@ func usersCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(searchUsersCmd(cli))
 	cmd.AddCommand(createUserCmd(cli))
 	cmd.AddCommand(showUserCmd(cli))
-	cmd.AddCommand(deleteUserCmd(cli))
 	cmd.AddCommand(updateUserCmd(cli))
+	cmd.AddCommand(deleteUserCmd(cli))
+	cmd.AddCommand(userRolesCmd(cli))
 	cmd.AddCommand(openUserCmd(cli))
 	cmd.AddCommand(userBlocksCmd(cli))
 	cmd.AddCommand(deleteUserBlocksCmd(cli))
