@@ -30,4 +30,7 @@ type UserAPI interface {
 
 	// Roles lists all roles associated with a user.
 	Roles(id string, opts ...management.RequestOption) (r *management.RoleList, err error)
+
+	// AssignRoles assigns roles to a user.
+	AssignRoles(id string, roles []*management.Role, opts ...management.RequestOption) error
 }
