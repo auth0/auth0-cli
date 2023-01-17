@@ -3,7 +3,7 @@ package auth0
 import "github.com/auth0/go-auth0/management"
 
 type UserAPI interface {
-	// Retrieves a list of blocked IP addresses of a particular user.
+	// Blocks retrieves a list of blocked IP addresses of a particular user.
 	Blocks(id string, opts ...management.RequestOption) ([]*management.UserBlock, error)
 
 	// Unblock a user that was blocked due to an excessive amount of incorrectly
@@ -27,4 +27,10 @@ type UserAPI interface {
 
 	// Search for users
 	Search(opts ...management.RequestOption) (us *management.UserList, err error)
+
+	// Roles lists all roles associated with a user.
+	Roles(id string, opts ...management.RequestOption) (r *management.RoleList, err error)
+
+	// AssignRoles assigns roles to a user.
+	AssignRoles(id string, roles []*management.Role, opts ...management.RequestOption) error
 }
