@@ -140,10 +140,7 @@ test-unit: ## Run unit tests
 test-integration: $(GO_BIN)/commander ## Run integration tests. To run a specific test pass the FILTER var. Usage: `make test-integration FILTER="attack protection"`
 	${call print, "Running integration tests"}
 	@$(MAKE) install # ensure fresh install prior to running test
-	auth0 login --domain ${AUTH0_CLI_CLIENT_DOMAIN} --client-id ${AUTH0_CLI_CLIENT_ID} --client-secret ${AUTH0_CLI_CLIENT_SECRET}  && commander test ./test/integration/test-cases.yaml --filter "$(FILTER)"; \
-	exit_code=$$?; \
-	bash ./test/integration/scripts/test-cleanup.sh; \
-	exit $$exit_code
+	@bash ./test/integration/scripts/run-test-suites.sh
 
 test-mocks: $(GO_BIN)/mockgen ## Generate testing mocks using mockgen
 	${call print, "Generating test mocks"}
