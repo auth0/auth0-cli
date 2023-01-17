@@ -98,7 +98,7 @@ func listRolePermissionsCmd(cli *cli) *cobra.Command {
 			)
 
 			if err != nil {
-				return fmt.Errorf("Failed to get permissions: %w", err)
+				return fmt.Errorf("Failed to get permissions for role '%s': %w", inputs.ID, err)
 			}
 
 			var permissions []*management.Permission
