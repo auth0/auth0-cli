@@ -54,6 +54,12 @@ var (
 		Help:         "Whether Refresh Tokens can be issued for this API (true) or not (false).",
 		AlwaysPrompt: true,
 	}
+	apiNumber = Flag{
+		Name:      "Number",
+		LongForm:  "number",
+		ShortForm: "n",
+		Help:      "Number of APIs to retrieve. Minimum 1, maximum 1000.",
+	}
 )
 
 func apisCmd(cli *cli) *cobra.Command {
@@ -107,6 +113,10 @@ func listApisCmd(cli *cli) *cobra.Command {
   auth0 apis ls --number 100
   auth0 apis ls -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Number < 1 || inputs.Number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
+
 			list, err := getWithPagination(
 				cmd.Context(),
 				inputs.Number,
@@ -139,7 +149,7 @@ func listApisCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	apiNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
 }

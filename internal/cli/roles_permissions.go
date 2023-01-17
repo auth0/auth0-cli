@@ -8,8 +8,6 @@ import (
 	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
-
-	"github.com/auth0/auth0-cli/internal/ansi"
 )
 
 var (
@@ -27,6 +25,13 @@ var (
 		ShortForm:  "p",
 		Help:       "Permissions.",
 		IsRequired: true,
+	}
+
+	roleAPIPermissionsNumber = Flag{
+		Name:      "Number",
+		LongForm:  "number",
+		ShortForm: "n",
+		Help:      "Number of permissions to retrieve. Minimum 1, maximum 1000.",
 	}
 )
 
@@ -48,7 +53,8 @@ func rolePermissionsCmd(cli *cli) *cobra.Command {
 
 func listRolePermissionsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID string
+		ID     string
+		Number int
 	}
 
 	cmd := &cobra.Command{
@@ -59,8 +65,13 @@ func listRolePermissionsCmd(cli *cli) *cobra.Command {
 		Long:    "List existing permissions defined in a role. To add a permission, run: `auth0 roles permissions add`.",
 		Example: `  auth0 roles permissions list
   auth0 roles permissions ls <role-id>
-  auth0 roles permissions ls <role-id> --json`,
+  auth0 roles permissions ls <role-id> --number 100
+  auth0 roles permissions ls <role-id> -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Number < 1 || inputs.Number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
+
 			if len(args) == 0 {
 				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
 				if err != nil {
@@ -70,22 +81,38 @@ func listRolePermissionsCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			var list *management.PermissionList
+			list, err := getWithPagination(
+				cmd.Context(),
+				inputs.Number,
+				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
+					permissionsList, err := cli.api.Role.Permissions(inputs.ID, opts...)
+					if err != nil {
+						return nil, false, err
+					}
 
-			if err := ansi.Waiting(func() error {
-				var err error
-				list, err = cli.api.Role.Permissions(inputs.ID)
-				return err
-			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred: %w", err)
+					for _, role := range permissionsList.Permissions {
+						result = append(result, role)
+					}
+					return result, permissionsList.HasNext(), nil
+				},
+			)
+
+			if err != nil {
+				return fmt.Errorf("Failed to get permissions for role '%s': %w", inputs.ID, err)
 			}
 
-			cli.renderer.RolePermissionList(list.Permissions)
+			var permissions []*management.Permission
+			for _, item := range list {
+				permissions = append(permissions, item.(*management.Permission))
+			}
+
+			cli.renderer.RolePermissionList(permissions)
 			return nil
 		},
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	roleAPIPermissionsNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
 }

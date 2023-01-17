@@ -72,7 +72,7 @@ var (
 		Name:      "Number",
 		LongForm:  "number",
 		ShortForm: "n",
-		Help:      "Number of users, that match the search criteria, to retrieve. Maximum result number is 1000. If limit is hit, please refine the search query.",
+		Help:      "Number of users, that match the search criteria, to retrieve. Minimum 1, maximum 1000. If limit is hit, refine the search query.",
 	}
 	userImportTemplate = Flag{
 		Name:       "Template",
