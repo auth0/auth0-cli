@@ -464,10 +464,6 @@ tests:
         email: betteruser@example.com # Name is not being displayed, hence using email
     exit-code: 0
 
-  users roles show:
-    command: auth0 users roles show $(cat ./test/integration/identifiers/user-id)
-    exit-code: 0
-
   # Test 'roles create'
   roles create and check data:
     command: auth0 roles create --name integration-test-role-new1 --description testRole --json --no-input
@@ -735,4 +731,12 @@ tests:
 
   update universal login branding prompts (mfa-push):
     command: cat ./test/integration/fixtures/update-ul-prompts-mfa-push.json | auth0 ul prompts update mfa-push
+    exit-code: 0
+
+  users roles show:
+    command: auth0 users roles show $(cat ./test/integration/identifiers/user-id)
+    exit-code: 0
+
+  users roles add:
+    command: auth0 users roles add $(cat ./test/integration/identifiers/user-id) -r $(cat ./test/integration/identifiers/role-id)
     exit-code: 0
