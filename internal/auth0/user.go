@@ -33,4 +33,7 @@ type UserAPI interface {
 
 	// AssignRoles assigns roles to a user.
 	AssignRoles(id string, roles []*management.Role, opts ...management.RequestOption) error
+
+	// RemoveRoles removes roles from a user.
+	RemoveRoles(id string, roles []*management.Role, opts ...management.RequestOption) error
 }
