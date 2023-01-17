@@ -25,7 +25,7 @@ auth0 users search [flags]
 
 ```
       --json           Output in json format.
-  -n, --number int     Number of users to retrieve. Minimum 1, maximum 1000. (default 50)
+  -n, --number int     Number of users, that match the search criteria, to retrieve. Minimum 1, maximum 1000. If limit is hit, refine the search query. (default 50)
   -q, --query string   Query in Lucene query syntax. See https://auth0.com/docs/users/user-search/user-search-query-syntax for more details.
   -s, --sort string    Field to sort by. Use 'field:order' where 'order' is '1' for ascending and '-1' for descending. e.g. 'created_at:1'.
 ```
