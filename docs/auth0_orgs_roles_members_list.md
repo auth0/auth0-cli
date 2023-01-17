@@ -26,7 +26,7 @@ auth0 orgs roles members list [flags]
 
 ```
       --json             Output in json format.
-  -n, --number int       Number of organizations, that match the search criteria, to retrieve. Maximum result number is 1000. (default 50)
+  -n, --number int       Number of member to retrieve. Maximum result number is 1000. (default 50)
   -r, --role-id string   Role Identifier.
 ```
 
