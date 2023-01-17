@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -29,6 +30,8 @@ var (
 		Help:       "Roles to assign to a user.",
 		IsRequired: true,
 	}
+
+	errNoRolesSelected = errors.New("required to select at least one role")
 )
 
 type userRolesInput struct {
@@ -48,6 +51,7 @@ func userRolesCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(showUserRolesCmd(cli))
 	cmd.AddCommand(addUserRolesCmd(cli))
+	cmd.AddCommand(removeUserRolesCmd(cli))
 
 	return cmd
 }
@@ -137,7 +141,7 @@ func addUserRolesCmd(cli *cli) *cobra.Command {
 			}
 
 			if len(inputs.Roles) == 0 {
-				if err := cli.pickUserRoles(&inputs); err != nil {
+				if err := cli.pickUserRolesToAdd(&inputs); err != nil {
 					return err
 				}
 			}
@@ -175,7 +179,67 @@ func addUserRolesCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func (cli *cli) pickUserRoles(inputs *userRolesInput) error {
+func removeUserRolesCmd(cli *cli) *cobra.Command {
+	var inputs userRolesInput
+
+	cmd := &cobra.Command{
+		Use:     "remove",
+		Aliases: []string{"rm"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Remove roles from a user",
+		Long:    "Remove existing roles from a user.",
+		Example: `  auth0 users roles remove <user-id>
+  auth0 users roles remove <user-id> --roles <role-id1,role-id2>
+  auth0 users roles rm <user-id> -r "rol_1eKJp3jV04SiU04h,rol_2eKJp3jV04SiU04h" --json`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				if err := userID.Ask(cmd, &inputs.ID); err != nil {
+					return err
+				}
+			} else {
+				inputs.ID = args[0]
+			}
+
+			if len(inputs.Roles) == 0 {
+				if err := cli.pickUserRolesToRemove(&inputs); err != nil {
+					return err
+				}
+			}
+
+			var rolesToRemove []*management.Role
+			for _, roleID := range inputs.Roles {
+				rolesToRemove = append(rolesToRemove, &management.Role{
+					ID: auth0.String(roleID),
+				})
+			}
+
+			if err := ansi.Waiting(func() (err error) {
+				return cli.api.User.RemoveRoles(inputs.ID, rolesToRemove)
+			}); err != nil {
+				return fmt.Errorf("failed to remove roles for user with ID %s: %w", inputs.ID, err)
+			}
+
+			var userRoleList *management.RoleList
+			if err := ansi.Waiting(func() (err error) {
+				userRoleList, err = cli.api.User.Roles(inputs.ID)
+				return err
+			}); err != nil {
+				return fmt.Errorf("failed to find roles for user with ID %s: %w", inputs.ID, err)
+			}
+
+			cli.renderer.UserRoleList(userRoleList.Roles)
+
+			return nil
+		},
+	}
+
+	userRoles.RegisterStringSlice(cmd, &inputs.Roles, nil)
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
+	return cmd
+}
+
+func (cli *cli) pickUserRolesToAdd(inputs *userRolesInput) error {
 	var currentUserRoleList *management.RoleList
 	if err := ansi.Waiting(func() (err error) {
 		currentUserRoleList, err = cli.api.User.Roles(inputs.ID, management.PerPage(100))
@@ -220,7 +284,44 @@ func (cli *cli) pickUserRoles(inputs *userRolesInput) error {
 	}
 
 	if len(inputs.Roles) == 0 {
-		return fmt.Errorf("required to select at least one role")
+		return errNoRolesSelected
+	}
+
+	return nil
+}
+
+func (cli *cli) pickUserRolesToRemove(inputs *userRolesInput) error {
+	var currentUserRoleList *management.RoleList
+	if err := ansi.Waiting(func() (err error) {
+		currentUserRoleList, err = cli.api.User.Roles(inputs.ID)
+		return err
+	}); err != nil {
+		return fmt.Errorf("failed to find the current roles for user with ID %s: %w", inputs.ID, err)
+	}
+
+	const emptySpace = " "
+	var options []string
+	for _, role := range currentUserRoleList.Roles {
+		options = append(options, fmt.Sprintf("%s%s(Name: %s)", role.GetID(), emptySpace, role.GetName()))
+	}
+
+	rolesPrompt := &survey.MultiSelect{
+		Message: "Roles",
+		Options: options,
+	}
+
+	var selectedRoles []string
+	if err := survey.AskOne(rolesPrompt, &selectedRoles); err != nil {
+		return err
+	}
+
+	for _, selectedRole := range selectedRoles {
+		indexOfFirstEmptySpace := strings.Index(selectedRole, emptySpace)
+		inputs.Roles = append(inputs.Roles, selectedRole[:indexOfFirstEmptySpace])
+	}
+
+	if len(inputs.Roles) == 0 {
+		return errNoRolesSelected
 	}
 
 	return nil
