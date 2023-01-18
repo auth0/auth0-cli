@@ -2,11 +2,13 @@ package cli
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -133,13 +135,11 @@ func showEmailTemplateCmd(cli *cli) *cobra.Command {
 			}
 
 			var email *management.EmailTemplate
-
-			if err := ansi.Waiting(func() error {
-				var err error
+			if err := ansi.Waiting(func() (err error) {
 				email, err = cli.api.EmailTemplate.Read(apiEmailTemplateFor(inputs.Template))
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to get the email template '%s': %w", inputs.Template, err)
+				return fmt.Errorf("failed to get the email template '%s': %w", inputs.Template, err)
 			}
 
 			cli.renderer.EmailTemplateShow(email)
@@ -192,12 +192,24 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 			}
 
 			var oldTemplate *management.EmailTemplate
+			templateExists := true
 			err := ansi.Waiting(func() (err error) {
 				oldTemplate, err = cli.api.EmailTemplate.Read(apiEmailTemplateFor(inputs.Template))
 				return err
 			})
 			if err != nil {
-				return fmt.Errorf("failed to get the email template '%s': %w", inputs.Template, err)
+				mErr, ok := err.(management.Error)
+				if !ok || mErr.Status() != http.StatusNotFound {
+					return fmt.Errorf("failed to get the email template '%s': %w", inputs.Template, err)
+				}
+
+				templateExists = false
+				oldTemplate = &management.EmailTemplate{
+					From:    auth0.String(""),
+					Subject: auth0.String(""),
+					Enabled: auth0.Bool(false),
+					Syntax:  auth0.String("liquid"),
+				}
 			}
 
 			if err := emailTemplateFrom.AskU(cmd, &inputs.From, oldTemplate.From); err != nil {
@@ -234,6 +246,7 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 			emailTemplate := &management.EmailTemplate{
 				Enabled:  &inputs.Enabled,
 				Template: &template,
+				Syntax:   oldTemplate.Syntax,
 			}
 			if inputs.Body != "" {
 				emailTemplate.Body = &inputs.Body
@@ -252,7 +265,11 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 			}
 
 			if err = ansi.Waiting(func() error {
-				return cli.api.EmailTemplate.Update(template, emailTemplate)
+				if templateExists {
+					return cli.api.EmailTemplate.Update(template, emailTemplate)
+				}
+
+				return cli.api.EmailTemplate.Create(emailTemplate)
 			}); err != nil {
 				return fmt.Errorf("failed to update the email template '%s': %w", inputs.Template, err)
 			}
