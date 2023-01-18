@@ -16,7 +16,7 @@ func logoutCmd(cli *cli) *cobra.Command {
   auth0 logout <tenant>
   auth0 logout "example.us.auth0.com"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			selectedTenant, err := selectTenant(cli, cmd, args)
+			selectedTenant, err := selectValidTenantFromConfig(cli, cmd, args)
 			if err != nil {
 				return err
 			}

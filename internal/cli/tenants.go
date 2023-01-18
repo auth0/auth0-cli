@@ -63,7 +63,7 @@ func useTenantCmd(cli *cli) *cobra.Command {
   auth0 tenants use <tenant>
   auth0 tenants use "example.us.auth0.com"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			selectedTenant, err := selectTenant(cli, cmd, args)
+			selectedTenant, err := selectValidTenantFromConfig(cli, cmd, args)
 			if err != nil {
 				return err
 			}
@@ -91,7 +91,7 @@ func openTenantCmd(cli *cli) *cobra.Command {
   auth0 tenants open <tenant>
   auth0 tenants open "example.us.auth0.com"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			selectedTenant, err := selectTenant(cli, cmd, args)
+			selectedTenant, err := selectValidTenantFromConfig(cli, cmd, args)
 			if err != nil {
 				return err
 			}
@@ -104,7 +104,7 @@ func openTenantCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func selectTenant(cli *cli, cmd *cobra.Command, args []string) (string, error) {
+func selectValidTenantFromConfig(cli *cli, cmd *cobra.Command, args []string) (string, error) {
 	var selectedTenant string
 
 	if len(args) == 0 {
