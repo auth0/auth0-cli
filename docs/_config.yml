@@ -11,7 +11,7 @@ github_username: auth0
 github_repo: auth0-cli
 
 # Build settings
-remote_theme: just-the-docs/just-the-docs@v0.4.0.rc4
+remote_theme: just-the-docs/just-the-docs@v0.4.0.rc3
 
 search_enabled: true
 favicon_ico: "/assets/images/favicon.png"
