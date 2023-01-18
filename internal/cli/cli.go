@@ -296,7 +296,7 @@ func (c *cli) getTenant() (Tenant, error) {
 	return t, nil
 }
 
-// listTenants fetches all of the configured tenants.
+// listTenants fetches all the configured tenants.
 func (c *cli) listTenants() ([]Tenant, error) {
 	if err := c.init(); err != nil {
 		return []Tenant{}, err
