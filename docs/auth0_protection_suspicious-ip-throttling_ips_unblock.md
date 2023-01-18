@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 protection suspicious-ip-throttling ips
+has_toc: false
 ---
 # auth0 protection suspicious-ip-throttling ips unblock
 
