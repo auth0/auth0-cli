@@ -88,8 +88,10 @@ func runClientCredentialsFlow(
 // client being tested in order to log in successfully. If so, it asks the user
 // to confirm whether to proceed.
 func runLoginFlowPreflightChecks(cli *cli, c *management.Client) (abort bool) {
-	cli.renderer.Infof("A browser window will open to begin this client's login flow.")
-	cli.renderer.Infof("Once login is complete, you can return to the CLI to view user profile information and tokens.\n")
+	if !cli.noInput {
+		cli.renderer.Infof("A browser window will open to begin this client's login flow.")
+		cli.renderer.Infof("Once login is complete, you can return to the CLI to view user profile information and tokens.\n")
+	}
 
 	// check if the chosen client includes our local callback URL in its
 	// allowed list. If not we'll need to add it (after asking the user
@@ -101,7 +103,7 @@ func runLoginFlowPreflightChecks(cli *cli, c *management.Client) (abort bool) {
 		cli.renderer.Warnf("If you do not wish to modify the client, you can abort now.\n")
 	}
 
-	if !cli.force {
+	if !cli.force && !cli.noInput {
 		if confirmed := prompt.Confirm("Do you wish to proceed?"); !confirmed {
 			return false
 		}
@@ -139,8 +141,13 @@ func runLoginFlow(cli *cli, t Tenant, c *management.Client, connName, audience, 
 			return err
 		}
 
-		if err := browser.OpenURL(loginURL); err != nil {
-			return err
+		if cli.noInput {
+			cli.renderer.Infof("Open the following URL in a browser:")
+			fmt.Fprint(cli.renderer.MessageWriter, "\n"+loginURL+"\n\n")
+		} else {
+			if err := browser.OpenURL(loginURL); err != nil {
+				return err
+			}
 		}
 
 		// launch a HTTP server to wait for the callback to capture the auth
