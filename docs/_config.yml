@@ -15,3 +15,7 @@ remote_theme: just-the-docs/just-the-docs@v0.4.0.rc3
 
 search_enabled: true
 favicon_ico: "/assets/images/favicon.png"
+
+aux_links:
+  "Auth0 CLI on GitHub":
+    - "//github.com/auth0/auth0-cli"
