@@ -198,8 +198,15 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 				return err
 			})
 			if err != nil {
-				if mErr, ok := err.(management.Error); ok && mErr.Status() != http.StatusNotFound {
-					return fmt.Errorf("failed to get the email template '%s': %w", inputs.Template, err)
+				wrappedError := fmt.Errorf("failed to get the email template '%s': %w", inputs.Template, err)
+
+				mErr, ok := err.(management.Error)
+				if !ok {
+					return wrappedError
+				}
+
+				if mErr.Status() != http.StatusNotFound {
+					return wrappedError
 				} else {
 					templateExists = false
 					oldTemplate = &management.EmailTemplate{
