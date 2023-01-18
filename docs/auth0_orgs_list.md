@@ -24,7 +24,7 @@ auth0 orgs list [flags]
 
 ```
       --json         Output in json format.
-  -n, --number int   Number of apps to retrieve (default 50)
+  -n, --number int   Number of organizations to retrieve. Minimum 1, maximum 1000. (default 50)
 ```
 
 

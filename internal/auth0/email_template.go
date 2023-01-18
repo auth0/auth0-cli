@@ -3,6 +3,11 @@ package auth0
 import "github.com/auth0/go-auth0/management"
 
 type EmailTemplateAPI interface {
+	// Create an email template.
+	//
+	// See: https://auth0.com/docs/api/management/v2#!/Email_Templates/post_email_templates
+	Create(template *management.EmailTemplate, opts ...management.RequestOption) error
+
 	// Read an email template by pre-defined name.
 	//
 	// These names are `verify_email`, `reset_email`, `welcome_email`,

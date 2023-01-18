@@ -77,6 +77,13 @@ var (
 		Help:       "Role Identifier.",
 		IsRequired: true,
 	}
+
+	// Purposefully not setting the Help value on the Flag because overridden where appropriate. 
+	organizationNumber = Flag{
+		Name:      "Number",
+		LongForm:  "number",
+		ShortForm: "n",
+	}
 )
 
 func organizationsCmd(cli *cli) *cobra.Command {
@@ -117,6 +124,10 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
   auth0 orgs ls --json
   auth0 orgs ls -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Number < 1 || inputs.Number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
+
 			list, err := getWithPagination(
 				cmd.Context(),
 				inputs.Number,
@@ -149,7 +160,8 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	organizationNumber.Help = "Number of organizations to retrieve. Minimum 1, maximum 1000."
+	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
 }
@@ -507,6 +519,10 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
   auth0 orgs members list <org-id> --number 100
   auth0 orgs members ls <org-id> -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Number < 1 || inputs.Number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
+
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
 				if err != nil {
@@ -526,7 +542,8 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	organizationNumber.Help = "Number of organization members to retrieve. Minimum 1, maximum 1000."
+	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 
@@ -565,6 +582,9 @@ func listRolesOrganizationCmd(cli *cli) *cobra.Command {
   auth0 orgs roles list <org-id> --number 100
   auth0 orgs roles ls <org-id> -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Number < 1 || inputs.Number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions)
 				if err != nil {
@@ -588,7 +608,8 @@ func listRolesOrganizationCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	organizationNumber.Help = "Number of organization roles to retrieve. Minimum 1, maximum 1000."
+	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
@@ -628,6 +649,10 @@ func listMembersRolesOrganizationCmd(cli *cli) *cobra.Command {
   auth0 orgs roles members ls <org-id> -r role -n 100
   auth0 orgs roles members ls <org-id> -r role -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Number < 1 || inputs.Number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
+
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions)
 				if err != nil {
@@ -661,7 +686,8 @@ func listMembersRolesOrganizationCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	roleIdentifier.RegisterString(cmd, &inputs.RoleID, "")
-	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	organizationNumber.Help = "Number of members to retrieve. Minimum 1, maximum 1000."
+	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
 }
