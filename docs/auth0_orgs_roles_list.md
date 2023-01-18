@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 orgs roles
+has_toc: false
 ---
 # auth0 orgs roles list
 

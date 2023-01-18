@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 apis scopes
+has_toc: false
 ---
 # auth0 apis scopes list
 

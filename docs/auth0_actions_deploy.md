@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 actions
+has_toc: false
 ---
 # auth0 actions deploy
 

@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 apps
+has_toc: false
 ---
 # auth0 apps update
 

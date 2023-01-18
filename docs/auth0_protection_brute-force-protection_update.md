@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 protection brute-force-protection
+has_toc: false
 ---
 # auth0 protection brute-force-protection update
 

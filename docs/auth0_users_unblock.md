@@ -3,34 +3,22 @@ layout: default
 parent: auth0 users
 has_toc: false
 ---
-# auth0 users delete
+# auth0 users unblock
 
-Delete a user.
-
-To delete interactively, use `auth0 users delete` with no arguments.
-
-To delete non-interactively, supply the user id and the `--force` flag to skip confirmation.
+Remove brute-force protection blocks for a given user.
 
 ## Usage
 ```
-auth0 users delete [flags]
+auth0 users unblock [flags]
 ```
 
 ## Examples
 
 ```
-  auth0 users delete 
-  auth0 users rm
-  auth0 users delete <user-id>
-  auth0 users delete <user-id> --force
+  auth0 users unblock <user-id>
 ```
 
 
-## Flags
-
-```
-      --force   Skip confirmation.
-```
 
 
 ## InheritedFlags
@@ -53,6 +41,7 @@ auth0 users delete [flags]
 - [auth0 users roles](auth0_users_roles.md) - Manage a user's roles
 - [auth0 users search](auth0_users_search.md) - Search for users
 - [auth0 users show](auth0_users_show.md) - Show an existing user
+- [auth0 users unblock](auth0_users_unblock.md) - Remove brute-force protection blocks for a given user
 - [auth0 users update](auth0_users_update.md) - Update a user
 
 

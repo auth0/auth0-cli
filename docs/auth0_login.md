@@ -1,5 +1,6 @@
 ---
 layout: default
+has_toc: false
 ---
 # auth0 login
 

@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 test
+has_toc: false
 ---
 # auth0 test token
 

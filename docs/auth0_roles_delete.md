@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 roles
+has_toc: false
 ---
 # auth0 roles delete
 

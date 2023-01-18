@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 logs streams create
+has_toc: false
 ---
 # auth0 logs streams create http
 

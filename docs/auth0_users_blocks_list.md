@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 users blocks
+has_toc: false
 ---
 # auth0 users blocks list
 
