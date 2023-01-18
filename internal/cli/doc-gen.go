@@ -20,6 +20,13 @@ const (
 
 	parentPageTemplate = `---
 layout: default
+has_toc: false
+{{ if eq .RunnableChildren true }}
+has_children: true
+{{ end -}}
+{{ if ne .ParentCommand "" }}
+parent: {{.ParentCommand}}
+{{ end -}}
 ---
 # {{.Name}}
 
@@ -84,6 +91,14 @@ There are two ways to authenticate:
 
 	commandPageTemplate = `---
 layout: default
+has_toc: false
+{{ if ne .Parent "auth0" }}
+parent: {{.Parent}}
+{{end -}}
+
+{{ if ne .GrandParent ""}}
+grand_parent: {{.GrandParent}}
+{{end -}}
 ---
 # {{.Name}}
 
@@ -181,16 +196,32 @@ func GenerateHomepage(cmd *cobra.Command, w io.Writer) error {
 func GenerateParentPage(cmd *cobra.Command, w io.Writer) error {
 	templateBody := fmt.Sprintf(parentPageTemplate, associatedCommandsFragment)
 
+	hasRunnableChildren := false
+	for _, c := range cmd.Commands() {
+		if c.Runnable() {
+			hasRunnableChildren = true
+		}
+	}
+
+	parentCommand := ""
+	if cmd.Parent().Runnable() {
+		parentCommand = cmd.Parent().CommandPath()
+	}
+
 	pageData := struct {
 		Name               string
 		Description        string
 		CommandPath        string
 		AssociatedCommands []*cobra.Command
+		ParentCommand      string
+		RunnableChildren   bool
 	}{
 		Name:               cmd.CommandPath(),
 		Description:        cmd.Long,
 		CommandPath:        cmd.CommandPath(),
 		AssociatedCommands: cmd.Commands(),
+		ParentCommand:      parentCommand,
+		RunnableChildren:   hasRunnableChildren,
 	}
 
 	return GeneratePage(w, "parentPageTemplate", templateBody, pageData)
@@ -205,6 +236,13 @@ func GenerateCommandPage(cmd *cobra.Command, w io.Writer) error {
 		associatedCommands = nil
 	}
 
+	parentCommand := cmd.Parent()
+
+	grandParentCommand := ""
+	if len(cmd.Commands()) != 0 && parentCommand.Parent() != nil && parentCommand.Parent().CommandPath() != "auth0" {
+		grandParentCommand = cmd.Parent().Parent().CommandPath()
+	}
+
 	pageData := struct {
 		Name               string
 		HasFlags           bool
@@ -216,6 +254,8 @@ func GenerateCommandPage(cmd *cobra.Command, w io.Writer) error {
 		AssociatedCommands []*cobra.Command
 		Examples           string
 		UseLine            string
+		Parent             string
+		GrandParent        string
 	}{
 		Name:               cmd.CommandPath(),
 		Description:        cmd.Long,
@@ -227,6 +267,8 @@ func GenerateCommandPage(cmd *cobra.Command, w io.Writer) error {
 		AssociatedCommands: associatedCommands,
 		Examples:           cmd.Example,
 		UseLine:            cmd.UseLine(),
+		Parent:             parentCommand.CommandPath(),
+		GrandParent:        grandParentCommand,
 	}
 
 	return GeneratePage(w, "commandPageTemplate", templateBody, pageData)
