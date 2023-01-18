@@ -243,15 +243,18 @@ func GenerateParentPage(cmd *cobra.Command, w io.Writer) error {
 func GenerateCommandPage(cmd *cobra.Command, w io.Writer) error {
 	templateBody := fmt.Sprintf(commandPageTemplate, associatedCommandsFragment)
 
-	associatedCommands := cmd.Parent().Commands()
-	if cmd.Parent().Name() == "auth0" {
+	parentCommand := cmd.Parent()
+
+	associatedCommands := parentCommand.Commands()
+	if parentCommand.Name() == "auth0" {
 		associatedCommands = nil
 	}
 
-	parentCommand := cmd.Parent()
+	hasSubCommands := len(cmd.Commands()) != 0
+	parentCommandIsNotAuth0 := parentCommand.Parent() != nil && parentCommand.Parent().CommandPath() != "auth0"
 
 	grandParentCommand := ""
-	if len(cmd.Commands()) != 0 && parentCommand.Parent() != nil && parentCommand.Parent().CommandPath() != "auth0" {
+	if hasSubCommands && parentCommandIsNotAuth0 {
 		grandParentCommand = cmd.Parent().Parent().CommandPath()
 	}
 
