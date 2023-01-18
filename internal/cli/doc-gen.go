@@ -21,11 +21,11 @@ const (
 	parentPageTemplate = `---
 layout: default
 has_toc: false
-{{ if eq .RunnableChildren true }}
+{{ if eq .HasRunnableChildren true }}
 has_children: true
 {{ end -}}
-{{ if ne .ParentCommand "" }}
-parent: {{.ParentCommand}}
+{{ if ne .ParentCommandPath "" }}
+parent: {{.ParentCommandPath}}
 {{ end -}}
 ---
 # {{.Name}}
@@ -98,12 +98,12 @@ There are two ways to authenticate:
 	commandPageTemplate = `---
 layout: default
 has_toc: false
-{{ if ne .Parent "auth0" }}
-parent: {{.Parent}}
+{{ if ne .ParentCommandPath "auth0" }}
+parent: {{.ParentCommandPath}}
 {{end -}}
 
-{{ if ne .GrandParent ""}}
-grand_parent: {{.GrandParent}}
+{{ if ne .GrandParentCommandPath ""}}
+grand_parent: {{.GrandParentCommandPath}}
 {{end -}}
 ---
 # {{.Name}}
@@ -134,6 +134,22 @@ grand_parent: {{.GrandParent}}
 {{ end }}
 `
 )
+
+type pageData struct {
+	Name                   string
+	HasFlags               bool
+	Flags                  string
+	HasInheritedFlags      bool
+	InheritedFlags         string
+	Description            string
+	AssociatedCommands     []*cobra.Command
+	Examples               string
+	UseLine                string
+	CommandPath            string
+	ParentCommandPath      string
+	GrandParentCommandPath string
+	HasRunnableChildren    bool
+}
 
 // GenerateDocs will generate the documentation
 // for all the commands under the ./docs folder.
@@ -187,10 +203,7 @@ func GenMarkdownTree(cmd *cobra.Command, dir string) error {
 func GenerateHomepage(cmd *cobra.Command, w io.Writer) error {
 	templateBody := fmt.Sprintf(homepageTemplate, associatedCommandsFragment)
 
-	pageData := struct {
-		CommandPath        string
-		AssociatedCommands []*cobra.Command
-	}{
+	pageData := pageData{
 		CommandPath:        cmd.CommandPath(),
 		AssociatedCommands: cmd.Commands(),
 	}
@@ -214,20 +227,13 @@ func GenerateParentPage(cmd *cobra.Command, w io.Writer) error {
 		parentCommand = cmd.Parent().CommandPath()
 	}
 
-	pageData := struct {
-		Name               string
-		Description        string
-		CommandPath        string
-		AssociatedCommands []*cobra.Command
-		ParentCommand      string
-		RunnableChildren   bool
-	}{
-		Name:               cmd.CommandPath(),
-		Description:        cmd.Long,
-		CommandPath:        cmd.CommandPath(),
-		AssociatedCommands: cmd.Commands(),
-		ParentCommand:      parentCommand,
-		RunnableChildren:   hasRunnableChildren,
+	pageData := pageData{
+		Name:                cmd.CommandPath(),
+		Description:         cmd.Long,
+		CommandPath:         cmd.CommandPath(),
+		AssociatedCommands:  cmd.Commands(),
+		ParentCommandPath:   parentCommand,
+		HasRunnableChildren: hasRunnableChildren,
 	}
 
 	return GeneratePage(w, "parentPageTemplate", templateBody, pageData)
@@ -249,32 +255,19 @@ func GenerateCommandPage(cmd *cobra.Command, w io.Writer) error {
 		grandParentCommand = cmd.Parent().Parent().CommandPath()
 	}
 
-	pageData := struct {
-		Name               string
-		HasFlags           bool
-		Flags              string
-		HasInheritedFlags  bool
-		InheritedFlags     string
-		Description        string
-		CommandPath        string
-		AssociatedCommands []*cobra.Command
-		Examples           string
-		UseLine            string
-		Parent             string
-		GrandParent        string
-	}{
-		Name:               cmd.CommandPath(),
-		Description:        cmd.Long,
-		HasFlags:           cmd.HasLocalFlags(),
-		Flags:              cmd.NonInheritedFlags().FlagUsages(),
-		HasInheritedFlags:  cmd.HasInheritedFlags(),
-		InheritedFlags:     cmd.InheritedFlags().FlagUsages(),
-		CommandPath:        cmd.CommandPath(),
-		AssociatedCommands: associatedCommands,
-		Examples:           cmd.Example,
-		UseLine:            cmd.UseLine(),
-		Parent:             parentCommand.CommandPath(),
-		GrandParent:        grandParentCommand,
+	pageData := pageData{
+		Name:                   cmd.CommandPath(),
+		Description:            cmd.Long,
+		HasFlags:               cmd.HasLocalFlags(),
+		Flags:                  cmd.NonInheritedFlags().FlagUsages(),
+		HasInheritedFlags:      cmd.HasInheritedFlags(),
+		InheritedFlags:         cmd.InheritedFlags().FlagUsages(),
+		CommandPath:            cmd.CommandPath(),
+		AssociatedCommands:     associatedCommands,
+		Examples:               cmd.Example,
+		UseLine:                cmd.UseLine(),
+		ParentCommandPath:      parentCommand.CommandPath(),
+		GrandParentCommandPath: grandParentCommand,
 	}
 
 	return GeneratePage(w, "commandPageTemplate", templateBody, pageData)
