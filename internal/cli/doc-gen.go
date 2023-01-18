@@ -21,12 +21,12 @@ const (
 	parentPageTemplate = `---
 layout: default
 has_toc: false
-{{ if eq .HasRunnableChildren true }}
+{{- if eq .HasRunnableChildren true }}
 has_children: true
-{{ end -}}
-{{ if ne .ParentCommandPath "" }}
+{{- end}}
+{{- if ne .ParentCommandPath "" }}
 parent: {{.ParentCommandPath}}
-{{ end -}}
+{{- end}}
 ---
 # {{.Name}}
 
@@ -91,14 +91,10 @@ There are two ways to authenticate:
 
 	commandPageTemplate = `---
 layout: default
-has_toc: false
-{{ if ne .ParentCommandPath "auth0" }}
+{{- if ne .ParentCommandPath "auth0" }}
 parent: {{.ParentCommandPath}}
-{{end -}}
-
-{{ if ne .GrandParentCommandPath ""}}
-grand_parent: {{.GrandParentCommandPath}}
-{{end -}}
+{{- end}}
+has_toc: false
 ---
 # {{.Name}}
 
@@ -244,27 +240,18 @@ func GenerateCommandPage(cmd *cobra.Command, w io.Writer) error {
 		associatedCommands = nil
 	}
 
-	hasSubCommands := len(cmd.Commands()) != 0
-	parentCommandIsNotAuth0 := parentCommand.Parent() != nil && parentCommand.Parent().CommandPath() != "auth0"
-
-	grandParentCommand := ""
-	if hasSubCommands && parentCommandIsNotAuth0 {
-		grandParentCommand = cmd.Parent().Parent().CommandPath()
-	}
-
 	pageData := pageData{
-		Name:                   cmd.CommandPath(),
-		Description:            cmd.Long,
-		HasFlags:               cmd.HasLocalFlags(),
-		Flags:                  cmd.NonInheritedFlags().FlagUsages(),
-		HasInheritedFlags:      cmd.HasInheritedFlags(),
-		InheritedFlags:         cmd.InheritedFlags().FlagUsages(),
-		CommandPath:            cmd.CommandPath(),
-		AssociatedCommands:     associatedCommands,
-		Examples:               cmd.Example,
-		UseLine:                cmd.UseLine(),
-		ParentCommandPath:      parentCommand.CommandPath(),
-		GrandParentCommandPath: grandParentCommand,
+		Name:               cmd.CommandPath(),
+		Description:        cmd.Long,
+		HasFlags:           cmd.HasLocalFlags(),
+		Flags:              cmd.NonInheritedFlags().FlagUsages(),
+		HasInheritedFlags:  cmd.HasInheritedFlags(),
+		InheritedFlags:     cmd.InheritedFlags().FlagUsages(),
+		CommandPath:        cmd.CommandPath(),
+		AssociatedCommands: associatedCommands,
+		Examples:           cmd.Example,
+		UseLine:            cmd.UseLine(),
+		ParentCommandPath:  parentCommand.CommandPath(),
 	}
 
 	return GeneratePage(w, "commandPageTemplate", templateBody, pageData)
