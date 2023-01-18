@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 universal-login templates
+has_toc: false
 ---
 # auth0 universal-login templates show
 

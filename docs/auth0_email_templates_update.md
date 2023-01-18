@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 email templates
+has_toc: false
 ---
 # auth0 email templates update
 

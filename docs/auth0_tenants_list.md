@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 tenants
+has_toc: false
 ---
 # auth0 tenants list
 

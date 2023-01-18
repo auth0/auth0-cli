@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 ips
+has_toc: false
 ---
 # auth0 ips check
 

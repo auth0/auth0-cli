@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 quickstarts
+has_toc: false
 ---
 # auth0 quickstarts download
 
