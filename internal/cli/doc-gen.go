@@ -126,19 +126,18 @@ has_toc: false
 )
 
 type pageData struct {
-	Name                   string
-	HasFlags               bool
-	Flags                  string
-	HasInheritedFlags      bool
-	InheritedFlags         string
-	Description            string
-	AssociatedCommands     []*cobra.Command
-	Examples               string
-	UseLine                string
-	CommandPath            string
-	ParentCommandPath      string
-	GrandParentCommandPath string
-	HasRunnableChildren    bool
+	Name                string
+	HasFlags            bool
+	Flags               string
+	HasInheritedFlags   bool
+	InheritedFlags      string
+	Description         string
+	AssociatedCommands  []*cobra.Command
+	Examples            string
+	UseLine             string
+	CommandPath         string
+	ParentCommandPath   string
+	HasRunnableChildren bool
 }
 
 // GenerateDocs will generate the documentation
