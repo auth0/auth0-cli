@@ -1,28 +1,22 @@
 ---
 layout: default
 ---
-# auth0 users blocks list
+# auth0 users blocks unblock
 
-List brute-force protection blocks for a given user.
+Remove brute-force protection blocks for a given user.
 
 ## Usage
 ```
-auth0 users blocks list [flags]
+auth0 users blocks unblock [flags]
 ```
 
 ## Examples
 
 ```
-  auth0 users blocks list <user-id>
-  auth0 users blocks list <user-id> --json
+  auth0 users unblock <user-id>
 ```
 
 
-## Flags
-
-```
-      --json   Output in json format.
-```
 
 
 ## InheritedFlags
