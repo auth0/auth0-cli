@@ -70,7 +70,6 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "unblock",
-		Aliases: []string{"delete", "rm"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Remove brute-force protection blocks for a given user",
 		Long:    "Remove brute-force protection blocks for a given user.",
