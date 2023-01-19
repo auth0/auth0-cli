@@ -41,9 +41,9 @@ func checkIPCmd(cli *cli) *cobra.Command {
 		Short: "Check IP address",
 		Long: "Check if a given IP address is blocked via the Suspicious IP Throttling due to " +
 			"multiple suspicious attempts.",
-		Example: `  auth0 ips check
-  auth0 ips check <ip>
-  auth0 ips check "178.178.178.178"`,
+		Example: `  auth0 protection suspicious-ip-throttling ips check
+  auth0 ap sit ips check <ip>
+  auth0 ap sit ips check "178.178.178.178"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := ipAddress.Ask(cmd, &inputs.IP); err != nil {
@@ -54,23 +54,21 @@ func checkIPCmd(cli *cli) *cobra.Command {
 			}
 
 			var isBlocked bool
-
-			if err := ansi.Waiting(func() error {
-				var err error
+			if err := ansi.Waiting(func() (err error) {
 				isBlocked, err = cli.api.Anomaly.CheckIP(inputs.IP)
 				return err
 			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred: %w", err)
+				return fmt.Errorf("failed to check if IP %q is blocked: %w", inputs.IP, err)
 			}
 
 			cli.renderer.Heading("ip")
 
 			if isBlocked {
 				cli.renderer.Infof("The IP %s is blocked", inputs.IP)
-			} else {
-				cli.renderer.Infof("The IP %s is not blocked", inputs.IP)
+				return nil
 			}
 
+			cli.renderer.Infof("The IP %s is not blocked", inputs.IP)
 			return nil
 		},
 	}
@@ -89,9 +87,9 @@ func unblockIPCmd(cli *cli) *cobra.Command {
 		Short: "Unblock IP address",
 		Long: "Unblock an IP address currently blocked by the Suspicious IP Throttling due to " +
 			"multiple suspicious attempts.",
-		Example: `  auth0 ips unblock
-  auth0 ips unblock <ip>
-  auth0 ips unblock "178.178.178.178"`,
+		Example: `  auth0 protection suspicious-ip-throttling ips unblock
+  auth0 ap sit ips unblock <ip>
+  auth0 ap sit ips unblock "178.178.178.178"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := ipAddress.Ask(cmd, &inputs.IP); err != nil {
@@ -104,11 +102,12 @@ func unblockIPCmd(cli *cli) *cobra.Command {
 			if err := ansi.Waiting(func() error {
 				return cli.api.Anomaly.UnblockIP(inputs.IP)
 			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred: %w", err)
+				return fmt.Errorf("failed to unblock IP %q: %w", inputs.IP, err)
 			}
 
 			cli.renderer.Heading("ip")
-			cli.renderer.Infof("The IP %s was unblocked", inputs.IP)
+			cli.renderer.Infof("The IP %s was unblocked.", inputs.IP)
+
 			return nil
 		},
 	}

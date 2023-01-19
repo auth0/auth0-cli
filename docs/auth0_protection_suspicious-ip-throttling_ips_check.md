@@ -13,9 +13,9 @@ auth0 protection suspicious-ip-throttling ips check [flags]
 ## Examples
 
 ```
-  auth0 ips check
-  auth0 ips check <ip>
-  auth0 ips check "178.178.178.178"
+  auth0 protection suspicious-ip-throttling ips check
+  auth0 ap sit ips check <ip>
+  auth0 ap sit ips check "178.178.178.178"
 ```
 
 

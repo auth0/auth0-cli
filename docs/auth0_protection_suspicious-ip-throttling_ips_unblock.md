@@ -13,9 +13,9 @@ auth0 protection suspicious-ip-throttling ips unblock [flags]
 ## Examples
 
 ```
-  auth0 ips unblock
-  auth0 ips unblock <ip>
-  auth0 ips unblock "178.178.178.178"
+  auth0 protection suspicious-ip-throttling ips unblock
+  auth0 ap sit ips unblock <ip>
+  auth0 ap sit ips unblock "178.178.178.178"
 ```
 
 
