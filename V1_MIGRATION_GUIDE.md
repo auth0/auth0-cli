@@ -2,9 +2,9 @@
 
 Guide to migrating from `v0.x` to `v1.x` of the Auth0 CLI.
 
-## Branding Commands Reorganization
+## Commands Reorganization
 
-The branding commands have been reorganized to establish a more systematic hierarchy:
+Some commands have been reorganized to establish a more systematic hierarchy. All other facets of the commands (arguments, flags, etc) remain the same.
 
 | **Before (v0)**            | **After (v1)**                    |
 | -------------------------- | --------------------------------- |
@@ -14,14 +14,6 @@ The branding commands have been reorganized to establish a more systematic hiera
 | `auth0 branding update`    | `auth0 universal-login update`    |
 | `auth0 branding templates` | `auth0 universal-login templates` |
 | `auth0 branding texts`     | `auth0 universal-login prompts`   |
-
-## JSON Output Flag
-
-The `--format json` flag-value pair has been condensed into the `--json` flag.
-
-**Before:** `auth0 apps list --format json`
-
-**After:** `auth0 apps list --json`
 
 ## Authenticating With Client Credentials
 
@@ -42,6 +34,14 @@ auth0 login --domain travel0.us.auth0.com \
 --client-id tUIvPH7g2ykVm4lGriYEQ6BKV3je24Ka \
 --client-secret zvKP0uWfsF0mBEgAOCgAMdFXgthfwgt_GXf9eEeMOWEIOlPK8pc3b119qBL0b2av
 ```
+
+## JSON Output Flag
+
+The `--format json` flag-value pair has been condensed into the `--json` flag.
+
+**Before:** `auth0 apps list --format json`
+
+**After:** `auth0 apps list --json`
 
 ## Log Streams
 
