@@ -19,7 +19,8 @@ func ipsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ips",
 		Short: "Manage blocked IP addresses",
-		Long:  "Manually block or unblock an IP address.",
+		Long: "Manually block or unblock an IP address that was blocked via the Suspicious IP Throttling " +
+			"due to multiple suspicious attempts.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
