@@ -45,15 +45,12 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 			}
 
 			var userBlocks []*management.UserBlock
-
-			err := ansi.Waiting(func() error {
-				var err error
+			err := ansi.Waiting(func() (err error) {
 				userBlocks, err = cli.api.User.Blocks(inputs.userID)
 				return err
 			})
-
 			if err != nil {
-				return fmt.Errorf("Unable to load user blocks %v, error: %w", inputs.userID, err)
+				return fmt.Errorf("failed to list user blocks for user with ID %s: %w", inputs.userID, err)
 			}
 
 			cli.renderer.UserBlocksList(userBlocks)
@@ -73,10 +70,11 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "unblock",
+		Aliases: []string{"delete", "rm"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Remove brute-force protection blocks for a given user",
 		Long:    "Remove brute-force protection blocks for a given user.",
-		Example: `  auth0 users unblock <user-id>`,
+		Example: `  auth0 users blocks unblock <user-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.userID); err != nil {
@@ -86,12 +84,11 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 				inputs.userID = args[0]
 			}
 
-			err := ansi.Spinner("Deleting blocks for user...", func() error {
+			err := ansi.Spinner("Unblocking user...", func() error {
 				return cli.api.User.Unblock(inputs.userID)
 			})
-
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to unblock user with ID %s: %w", inputs.userID, err)
 			}
 
 			return nil
