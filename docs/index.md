@@ -62,7 +62,6 @@ There are two ways to authenticate:
 - [auth0 completion](auth0_completion.md) - Setup autocomplete features for this CLI on your terminal
 - [auth0 domains](auth0_domains.md) - Manage custom domains
 - [auth0 email](auth0_email.md) - Manage email settings
-- [auth0 ips](auth0_ips.md) - Manage blocked IP addresses
 - [auth0 login](auth0_login.md) - Authenticate the Auth0 CLI
 - [auth0 logout](auth0_logout.md) - Log out of a tenant's session
 - [auth0 logs](auth0_logs.md) - View tenant logs
