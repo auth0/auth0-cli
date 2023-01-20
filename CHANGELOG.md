@@ -55,4 +55,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` (#546)
 - Updating of action triggers which inevitably results in error (#597)
 
-Refer to the [v1 migration guide](V1_MIGRATION_GUIDE.md) for instructions on how to navigate breaking changes.
+Refer to the [v1 migration guide](MIGRATION_GUIDE.md) for instructions on how to navigate breaking changes.
+
+[#604]: https://github.com/auth0/auth0-cli/issues/604
+[#605]: https://github.com/auth0/auth0-cli/issues/605
+[#606]: https://github.com/auth0/auth0-cli/issues/606
+[#534]: https://github.com/auth0/auth0-cli/issues/534
+[#546]: https://github.com/auth0/auth0-cli/issues/546
+[#547]: https://github.com/auth0/auth0-cli/issues/547
+[#578]: https://github.com/auth0/auth0-cli/issues/578
+[#538]: https://github.com/auth0/auth0-cli/issues/538
+[#599]: https://github.com/auth0/auth0-cli/issues/599
+[#565]: https://github.com/auth0/auth0-cli/issues/565
+[#603]: https://github.com/auth0/auth0-cli/issues/603
+[#533]: https://github.com/auth0/auth0-cli/issues/533
+[#540]: https://github.com/auth0/auth0-cli/issues/540
+[#541]: https://github.com/auth0/auth0-cli/issues/541
+[#591]: https://github.com/auth0/auth0-cli/issues/591
+[#570]: https://github.com/auth0/auth0-cli/issues/570
+[#584]: https://github.com/auth0/auth0-cli/issues/584
+[#610]: https://github.com/auth0/auth0-cli/issues/610
+[#611]: https://github.com/auth0/auth0-cli/issues/611
+[#613]: https://github.com/auth0/auth0-cli/issues/613
+[#594]: https://github.com/auth0/auth0-cli/issues/594
+[#597]: https://github.com/auth0/auth0-cli/issues/597
+[#583]: https://github.com/auth0/auth0-cli/issues/583
+[#588]: https://github.com/auth0/auth0-cli/issues/588
+[#590]: https://github.com/auth0/auth0-cli/issues/590
+[#589]: https://github.com/auth0/auth0-cli/issues/589
+[#596]: https://github.com/auth0/auth0-cli/issues/596
+[#598]: https://github.com/auth0/auth0-cli/issues/598
+[#607]: https://github.com/auth0/auth0-cli/issues/607
+[#616]: https://github.com/auth0/auth0-cli/issues/616
+[#536]: https://github.com/auth0/auth0-cli/issues/536
+[#532]: https://github.com/auth0/auth0-cli/issues/532
+[#546]: https://github.com/auth0/auth0-cli/issues/546
+[#597]: https://github.com/auth0/auth0-cli/issues/597
