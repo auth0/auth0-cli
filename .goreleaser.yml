@@ -34,11 +34,7 @@ checksum:
 snapshot:
   name_template: "{{ .Tag }}-SNAPSHOT-{{.ShortCommit}}"
 changelog:
-  sort: asc
-  filters:
-    exclude:
-      - "^docs:"
-      - "^test:"
+  skip: true
 brews:
   - name: auth0
     tap:
