@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All available triggers present when running `auth0 actions create` [#597]
 - Extraneous payload property when running `auth0 orgs update` [#583]
 - Users search command enables pagination through `--number` flag [#588]
-- Tenant commands now respect `--tenant` flag
+- Tenant commands now respect `--tenant` flag [#612]
 - Log tail output now displays absolute time instead of relative [#590]
 - Adding missing headers for `auth0 logs list` [#589]
 - Output new action data when running `auth0 actions update` [#596]
@@ -52,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- `--force` and `--json` flags relegated from global context, now applied only where appropriate [#536, #595]
+- `--force` and `--json` flags relegated from global context, now applied only where appropriate [#536],[#595]
 - Undocumented `auth0 config init` command [#532]
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
@@ -95,3 +95,4 @@ Refer to the [v1 migration guide](MIGRATION_GUIDE.md) for instructions on how to
 [#597]: https://github.com/auth0/auth0-cli/issues/597
 [#617]: https://github.com/auth0/auth0-cli/issues/617
 [#618]: https://github.com/auth0/auth0-cli/issues/618
+[#612]: https://github.com/auth0/auth0-cli/issues/612
