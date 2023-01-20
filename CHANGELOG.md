@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `--format json` flag/value pair consolidated to `--json` (#533)
 - Flattened the `auth0 branding` commands into the root-level (#540,#541)
-- `--reveal` flag for reveal client secret renamed to `--reveal-client-secret` (#591)
+- `--reveal` flag for reveal client secret renamed to `--reveal-secrets` (#591)
 - Editorializing code "hints" throughout project (#570)
 
 ### Fixed
