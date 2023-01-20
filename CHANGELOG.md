@@ -55,4 +55,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` (#546)
 - Updating of action triggers which inevitably results in error (#597)
 
-Refer to the [v1 migration guide](V1_MIGRATION_GUIDE.md) for instructions on how to navigate breaking changes.
+Refer to the [v1 migration guide](MIGRATION_GUIDE.md) for instructions on how to navigate breaking changes.
