@@ -296,7 +296,7 @@ func (c *cli) getTenant() (Tenant, error) {
 	return t, nil
 }
 
-// listTenants fetches all of the configured tenants.
+// listTenants fetches all the configured tenants.
 func (c *cli) listTenants() ([]Tenant, error) {
 	if err := c.init(); err != nil {
 		return []Tenant{}, err
@@ -536,16 +536,15 @@ func shouldPrompt(cmd *cobra.Command, flag *Flag) bool {
 	return canPrompt(cmd) && !flag.IsSet(cmd)
 }
 
-func shouldPromptWhenFlagless(cmd *cobra.Command, flag string) bool {
-	isSet := false
-
+func shouldPromptWhenNoLocalFlagsSet(cmd *cobra.Command) bool {
+	localFlagIsSet := false
 	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
-		if f.Changed {
-			isSet = true
+		if f.Name != "json" && f.Name != "force" && f.Changed {
+			localFlagIsSet = true
 		}
 	})
 
-	return canPrompt(cmd) && !isSet
+	return canPrompt(cmd) && !localFlagIsSet
 }
 
 func prepareInteractivity(cmd *cobra.Command) {

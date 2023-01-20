@@ -104,6 +104,7 @@ func suspiciousIPThrottlingCmd(cli *cli) *cobra.Command {
 
 	cmd.AddCommand(showSuspiciousIPThrottlingCmd(cli))
 	cmd.AddCommand(updateSuspiciousIPThrottlingCmd(cli))
+	cmd.AddCommand(ipsCmd(cli))
 
 	return cmd
 }
