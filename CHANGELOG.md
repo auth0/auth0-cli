@@ -11,6 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Refer to the [v1 migration guide](MIGRATION_GUIDE.md) for instructions on how to navigate breaking changes.
 
+To try the `v1.0.0-beta.1` release:
+
+```bash
+# Binary will be downloaded to "./auth0".
+curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | sh -s -- -b . "v1.0.0-beta.1"
+
+# Note: will only download executable in current directory.
+# Intentionally omitted from $PATH to avoid collisions with
+# stable versions of the CLI. Append to $PATH at own risk.
+
+./auth0 --version # Example execution
+```
+
 ### Added
 
 - Ability to view user's assigned roles via `auth0 users roles show` [#604]
