@@ -10,6 +10,13 @@ tests:
 
   auth0 logs list:
     exit-code: 0
+    stdout:
+      contains:
+        - TYPE
+        - DESCRIPTION
+        - DATE
+        - CONNECTION
+        - CLIENT
 
   auth0 logs streams list:
     exit-code: 0
@@ -29,7 +36,7 @@ tests:
   auth0 orgs list:
     exit-code: 0
 
-  auth0 branding domains list:
+  auth0 domains list:
     exit-code: 0
 
   auth0 quickstarts list:
@@ -37,10 +44,10 @@ tests:
 
   auth0 completion bash:
     exit-code: 0
-  
+
   # Test 'apps create' --type flag
   apps create type native and check data:
-    command: auth0 apps create --name integration-test-app-nativeapp1 --type native --description NativeApp1 --format json
+    command: auth0 apps create --name integration-test-app-nativeapp1 --type native --description NativeApp1 --json
     exit-code: 0
     stdout:
       json:
@@ -58,7 +65,7 @@ tests:
         - TYPE                 Native
 
   apps create type spa:
-    command: auth0 apps create --name integration-test-app-spaapp1 --type spa --description SpaApp1 --format json
+    command: auth0 apps create --name integration-test-app-spaapp1 --type spa --description SpaApp1 --json
     exit-code: 0
     stdout:
       json:
@@ -67,7 +74,7 @@ tests:
         app_type: spa
 
   apps create type regular:
-    command: auth0 apps create --name integration-test-app-regapp1 --type regular --description RegApp1 --format json
+    command: auth0 apps create --name integration-test-app-regapp1 --type regular --description RegApp1 --json
     exit-code: 0
     stdout:
       json:
@@ -76,7 +83,7 @@ tests:
         app_type: regular_web
 
   apps create type m2m:
-    command: auth0 apps create --name integration-test-app-m2mapp1 --type m2m --description M2mApp1 --format json
+    command: auth0 apps create --name integration-test-app-m2mapp1 --type m2m --description M2mApp1 --json
     exit-code: 0
     stdout:
       json:
@@ -86,7 +93,7 @@ tests:
 
   # Test 'apps create' --auth-method flag
   apps create type spa auth method none:
-    command: auth0 apps create --name integration-test-app-spaapp2 --type spa --description SpaApp2 --auth-method None --format json
+    command: auth0 apps create --name integration-test-app-spaapp2 --type spa --description SpaApp2 --auth-method None --json
     stdout:
       json:
         token_endpoint_auth_method: none
@@ -97,19 +104,19 @@ tests:
     exit-code: 1
 
   apps create type regular auth method post:
-    command: auth0 apps create --name integration-test-app-regapp2 --type regular --description RegApp2 --auth-method Post --format json
+    command: auth0 apps create --name integration-test-app-regapp2 --type regular --description RegApp2 --auth-method Post --json
     stdout:
       json:
         token_endpoint_auth_method: client_secret_post
     exit-code: 0
 
   apps create type regular auth method basic:
-    command: auth0 apps create --name integration-test-app-regapp3 --type regular --description RegApp3 --auth-method Basic --format json
+    command: auth0 apps create --name integration-test-app-regapp3 --type regular --description RegApp3 --auth-method Basic --json
     stdout:
       json:
         token_endpoint_auth_method: client_secret_basic
     exit-code: 0
-  
+
   # Test 'apps create' --callbacks flag
   apps create type m2m callbacks:
     command: auth0 apps create --name integration-test-app-m2mapp3 --type m2m --description M2mApp3 --callbacks https://example.com
@@ -119,12 +126,12 @@ tests:
     exit-code: 0
 
   apps create type regular callbacks list:
-    command: auth0 apps create --name integration-test-app-regapp4 --type regular --description RegApp4 --callbacks https://example.com,https://google.com --format json
+    command: auth0 apps create --name integration-test-app-regapp4 --type regular --description RegApp4 --callbacks https://example.com,https://google.com --json
     stdout:
       json:
         callbacks: "[https://example.com https://google.com]"
     exit-code: 0
-  
+
   # Test 'apps create' --grants flag
   apps create type regular grants:
     command: auth0 apps create --name integration-test-app-regapp5 --type regular --description RegApp4 --grants credentials,password
@@ -134,14 +141,14 @@ tests:
     exit-code: 0
 
   apps create type spa grants:
-    command: auth0 apps create --name integration-test-app-spaapp3 --type spa --description SpaApp3 --grants refresh-token --format json
+    command: auth0 apps create --name integration-test-app-spaapp3 --type spa --description SpaApp3 --grants refresh-token --json
     stdout:
       json:
         grant_types: "[refresh_token]"
     exit-code: 0
 
   apps create type native grants:
-    command: auth0 apps create --name integration-test-app-nativeapp2 --type native --description NativeApp2 --grants refresh-token,code  --format json
+    command: auth0 apps create --name integration-test-app-nativeapp2 --type native --description NativeApp2 --grants refresh-token,code  --json
     stdout:
       json:
         grant_types: "[refresh_token authorization_code]"
@@ -153,7 +160,7 @@ tests:
 
   # Test 'apps create' --logout-urls flag
   apps create type regular logout urls:
-    command: auth0 apps create --name integration-test-app-regapp6 --type native --description RegularApp --logout-urls https://*.example.com/logout,https://example.com/logout --format json
+    command: auth0 apps create --name integration-test-app-regapp6 --type native --description RegularApp --logout-urls https://*.example.com/logout,https://example.com/logout --json
     stdout:
       json:
         allowed_logout_urls: "[https://*.example.com/logout https://example.com/logout]"
@@ -161,7 +168,7 @@ tests:
 
   # Test 'apps create' --origins flag
   apps create type regular origins:
-    command: auth0 apps create --name integration-test-app-regapp7 --type native --description RegularApp --origins https://*.example.com,https://example.com  --format json
+    command: auth0 apps create --name integration-test-app-regapp7 --type native --description RegularApp --origins https://*.example.com,https://example.com  --json
     stdout:
       json:
         allowed_origins: "[https://*.example.com https://example.com]"
@@ -169,7 +176,7 @@ tests:
 
   # Test 'apps create' --web-origins flag
   apps create type native web origins:
-    command: auth0 apps create --name integration-test-app-spaapp4 --type native --description SpaApp4 --web-origins https://example.com  --format json
+    command: auth0 apps create --name integration-test-app-spaapp4 --type native --description SpaApp4 --web-origins https://example.com  --json
     stdout:
       json:
         web_origins: "[https://example.com]"
@@ -181,7 +188,7 @@ tests:
     exit-code: 0
 
   apps show json:
-    command: auth0 apps show $(cat ./test/integration/identifiers/app-id) --format json # depends on "apps create test app" test
+    command: auth0 apps show $(cat ./test/integration/identifiers/app-id) --json # depends on "apps create test app" test
     stdout:
       json:
         name: integration-test-app-newapp
@@ -200,70 +207,70 @@ tests:
 
   # Test 'apps update'; all tests depend on "apps create test app" test
   apps update auth method:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --auth-method Basic --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --auth-method Basic --json
     stdout:
       json:
         token_endpoint_auth_method: client_secret_basic
     exit-code: 0
 
   apps update callbacks:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --callbacks https://example.com --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --callbacks https://example.com --json
     stdout:
       json:
         callbacks: "[https://example.com]"
     exit-code: 0
-  
+
   apps update description:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --description "A better description" --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --description "A better description" --json
     stdout:
       json:
         description: A better description
     exit-code: 0
 
   apps update grants:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --grants code --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --grants code --json
     stdout:
       json:
         grant_types: "[authorization_code]"
     exit-code: 0
 
   apps update logout urls:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --logout-urls https://example.com --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --logout-urls https://example.com --json
     stdout:
       json:
         allowed_logout_urls: "[https://example.com]"
     exit-code: 0
 
   apps update name:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --name integration-test-app-betterAppName --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --name integration-test-app-betterAppName --json
     stdout:
       json:
         name: integration-test-app-betterAppName
     exit-code: 0
 
   apps update origins:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --origins https://example.com --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --origins https://example.com --json
     stdout:
       json:
         allowed_origins: "[https://example.com]"
     exit-code: 0
 
   apps update type:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --type spa --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --type spa --json
     stdout:
       json:
         app_type: spa
     exit-code: 0
 
   apps update web origins:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --web-origins https://example.com --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --web-origins https://example.com --json
     stdout:
       json:
         web_origins: "[https://example.com]"
     exit-code: 0
 
   apps update multiple updates:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --web-origins https://examples.com --type native --format json
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --web-origins https://examples.com --type native --json
     stdout:
       json:
         app_type: native
@@ -272,7 +279,7 @@ tests:
 
   # Test 'apis create'
   apis create and check data:
-    command: auth0 apis create --name integration-test-api-def1 --identifier http://integration-test-api-def1 --scopes read:todos,write:todos --format json
+    command: auth0 apis create --name integration-test-api-def1 --identifier http://integration-test-api-def1 --scopes read:todos,write:todos --json
     exit-code: 0
     stdout:
       json:
@@ -295,7 +302,7 @@ tests:
 
   # Test 'apis create' --token-lifetime flag
   apis create token lifetime 1000 and check data:
-    command: auth0 apis create --name integration-test-api-toklif1 --identifier http://integration-test-api-toklif1 --scopes read:todos --token-lifetime 1000 --format json
+    command: auth0 apis create --name integration-test-api-toklif1 --identifier http://integration-test-api-toklif1 --scopes read:todos --token-lifetime 1000 --json
     exit-code: 0
     stdout:
       json:
@@ -310,7 +317,7 @@ tests:
 
   # Test 'apis create' --offline-access flag
   apis create offline access true and check data:
-    command: auth0 apis create --name integration-test-api-offacc1 --identifier http://integration-test-api-offacc1 --scopes read:todos --offline-access --format json
+    command: auth0 apis create --name integration-test-api-offacc1 --identifier http://integration-test-api-offacc1 --scopes read:todos --offline-access --json
     exit-code: 0
     stdout:
       json:
@@ -324,7 +331,7 @@ tests:
         - ALLOW OFFLINE ACCESS  ✓
 
   apis create offline access false and check data:
-    command: auth0 apis create --name integration-test-api-offacc3 --identifier http://integration-test-api-offacc3 --scopes read:todos --offline-access=false --format json
+    command: auth0 apis create --name integration-test-api-offacc3 --identifier http://integration-test-api-offacc3 --scopes read:todos --offline-access=false --json
     exit-code: 0
     stdout:
       json:
@@ -336,7 +343,7 @@ tests:
     exit-code: 0
 
   apis show json:
-    command: auth0 apis show $(cat ./test/integration/identifiers/api-id) --format json # depends on "apis create test app" test
+    command: auth0 apis show $(cat ./test/integration/identifiers/api-id) --json # depends on "apis create test app" test
     stdout:
       json:
         name: integration-test-api-newapi
@@ -350,10 +357,10 @@ tests:
     command: auth0 apis show $(cat ./test/integration/identifiers/api-id) # depends on "apis create test app" test
     stdout:
       contains:
-        - NAME                  integration-test-api-newapi         
-        - IDENTIFIER            http://integration-test-api-newapi  
-        - SCOPES                read:todos                          
-        - TOKEN LIFETIME        86400                               
+        - NAME                  integration-test-api-newapi
+        - IDENTIFIER            http://integration-test-api-newapi
+        - SCOPES                read:todos
+        - TOKEN LIFETIME        86400
         - ALLOW OFFLINE ACCESS  ✗
     exit-code: 0
 
@@ -363,35 +370,35 @@ tests:
 
   # Test 'apis update'; all tests depend on "apis create test api" test
   apis update name:
-    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --name integration-test-api-betterApiName --format json
+    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --name integration-test-api-betterApiName --json
     stdout:
       json:
         name: integration-test-api-betterApiName
     exit-code: 0
 
   apis update scopes:
-    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --scopes read:todos,write:todos --format json
+    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --scopes read:todos,write:todos --json
     stdout:
       json:
         scopes: "[map[value:read:todos] map[value:write:todos]]"
     exit-code: 0
 
   apis update token lifetime:
-    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --token-lifetime 1000 --format json
+    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --token-lifetime 1000 --json
     stdout:
       json:
         token_lifetime: "1000"
     exit-code: 0
 
   apis update offline access true:
-    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --offline-access --format json
+    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --offline-access --json
     stdout:
       json:
         allow_offline_access: "true"
     exit-code: 0
 
   apis update offline access false:
-    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --offline-access=false --format json
+    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --offline-access=false --json
     stdout:
       json:
         allow_offline_access: "false"
@@ -399,15 +406,15 @@ tests:
 
   # Test 'users create'
   users create and check data:
-    command: auth0 users create --name integration-test-user-new --connection Username-Password-Authentication --email testuser@example.com --password testUser12 --format json --no-input
+    command: auth0 users create --name integration-test-user-new --connection Username-Password-Authentication --email testuser@example.com --password testUser12 --username testuser1 --json --no-input
     exit-code: 0
     stdout:
       json:
-        email:      "testuser@example.com"
+        email: "testuser@example.com"
         connection: "Username-Password-Authentication"
 
   users create and check output:
-    command: auth0 users create --name integration-test-user-new2 --connection Username-Password-Authentication --email testuser2@example.com --password testUser12  --no-input
+    command: auth0 users create --name integration-test-user-new2 --connection Username-Password-Authentication --email testuser2@example.com --password testUser12 --username testuser2 --no-input
     exit-code: 0
     stdout:
       contains:
@@ -420,10 +427,10 @@ tests:
     exit-code: 0
 
   users show json:
-    command: auth0 users show $(cat ./test/integration/identifiers/user-id) --format json
+    command: auth0 users show $(cat ./test/integration/identifiers/user-id) --json
     stdout:
       json:
-        email:      "newuser@example.com"
+        email: "newuser@example.com"
         connection: "Username-Password-Authentication"
     exit-code: 0
 
@@ -435,29 +442,36 @@ tests:
         - CONNECTION  Username-Password-Authentication
     exit-code: 0
 
+  users search:
+    command: auth0 users search --query user_id:"$(cat ./test/integration/identifiers/user-id)" --number 1 --sort "name:-1"
+    exit-code: 0
+    stdout:
+      contains:
+        - newuser@example.com
+
   # Test 'users update'
   users update email:
-    command: auth0 users update $(cat ./test/integration/identifiers/user-id)  --email betteruser@example.com  --format json --no-input
+    command: auth0 users update $(cat ./test/integration/identifiers/user-id)  --email betteruser@example.com  --json --no-input
     stdout:
       json:
         email: betteruser@example.com
     exit-code: 0
 
   users update name:
-    command: auth0 users update $(cat ./test/integration/identifiers/user-id)  --name integration-test-user-bettername  --format json --no-input
+    command: auth0 users update $(cat ./test/integration/identifiers/user-id)  --name integration-test-user-bettername  --json --no-input
     stdout:
       json:
         email: betteruser@example.com # Name is not being displayed, hence using email
     exit-code: 0
 
-    # Test 'roles create'
+  # Test 'roles create'
   roles create and check data:
-    command: auth0 roles create --name integration-test-role-new1 --description testRole --format json --no-input
+    command: auth0 roles create --name integration-test-role-new1 --description testRole --json --no-input
     exit-code: 0
     stdout:
       json:
-        name:         integration-test-role-new1
-        description:  testRole
+        name: integration-test-role-new1
+        description: testRole
 
   roles create and check output:
     command: auth0 roles create --name integration-test-role-new2 --description testRole2 --no-input
@@ -473,10 +487,10 @@ tests:
     exit-code: 0
 
   roles show json:
-    command: auth0 roles show $(cat ./test/integration/identifiers/role-id) --format json
+    command: auth0 roles show $(cat ./test/integration/identifiers/role-id) --json
     stdout:
       json:
-        name:        integration-test-role-newRole
+        name: integration-test-role-newRole
         description: integration-test-role
     exit-code: 0
 
@@ -490,14 +504,14 @@ tests:
 
   # Test 'roles update'
   roles update name:
-    command: auth0 roles update $(cat ./test/integration/identifiers/role-id) --name integration-test-role-betterName --format json
+    command: auth0 roles update $(cat ./test/integration/identifiers/role-id) --name integration-test-role-betterName --json
     stdout:
       json:
         name: integration-test-role-betterName
     exit-code: 0
 
   roles update description:
-    command: auth0 roles update $(cat ./test/integration/identifiers/role-id) --description betterDescription --format json
+    command: auth0 roles update $(cat ./test/integration/identifiers/role-id) --description betterDescription --json
     stdout:
       json:
         description: betterDescription
@@ -505,7 +519,7 @@ tests:
 
   # Test 'rules create'
   rules create and check data:
-    command: cat ./test/integration/fixtures/create-rule.json | jq '.[0]' | auth0 rules create --format json
+    command: cat ./test/integration/fixtures/create-rule.json | jq '.[0]' | auth0 rules create --json
     stdout:
       json:
         name: integration-test-rule-new1
@@ -521,7 +535,7 @@ tests:
         - NAME     integration-test-rule-new2
         - ENABLED  ✗
         - ORDER    2
-        - SCRIPT   function(user, context, cb) {  
+        - SCRIPT   function(user, context, cb) {
     exit-code: 0
 
   # Test 'rules show'
@@ -530,7 +544,7 @@ tests:
     exit-code: 0
 
   rules show json:
-    command: auth0 rules show $(cat ./test/integration/identifiers/rule-id) --format json
+    command: auth0 rules show $(cat ./test/integration/identifiers/rule-id) --json
     stdout:
       json:
         name: integration-test-rule-newRule
@@ -549,7 +563,7 @@ tests:
 
   # Test 'rules update'
   rules update:
-    command: cat ./test/integration/fixtures/update-rule.json | auth0 rules update --format json
+    command: cat ./test/integration/fixtures/update-rule.json | auth0 rules update --json
     stdout:
       json:
         name: integration-test-rule-betterName
@@ -558,7 +572,7 @@ tests:
 
   # Test 'rules enable'
   rules enable:
-    command: auth0 rules enable $(cat ./test/integration/identifiers/rule-id) --format json
+    command: auth0 rules enable $(cat ./test/integration/identifiers/rule-id) --json
     stdout:
       json:
         enabled: "true"
@@ -566,7 +580,7 @@ tests:
 
   # Test 'rules disable'
   rules disable:
-    command: auth0 rules disable $(cat ./test/integration/identifiers/rule-id) --format json
+    command: auth0 rules disable $(cat ./test/integration/identifiers/rule-id) --json
     stdout:
       json:
         enabled: "false"
@@ -664,3 +678,69 @@ tests:
   api patch tenant settings with wrong json:
     command: auth0 api patch "tenants/settings" --data "{\"idle_session_lifetime:72}"
     exit-code: 1
+
+  create organization and check json output:
+    command: auth0 orgs create --name integration-test-org-new --display "Integration Test Organization" --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-org-new"
+        display_name: "Integration Test Organization"
+
+  create organization and check table output:
+    command: auth0 orgs create --name integration-test-org-new2 --display "Integration Test Organization2" --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME              integration-test-org-new2
+        - DISPLAY NAME      Integration Test Organization2
+
+  create organization to use in other tests:
+    command: ./test/integration/scripts/get-org-id.sh
+    exit-code: 0
+
+  show organization and check json output:
+    command: auth0 orgs show $(cat ./test/integration/identifiers/org-id) --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-org-better"
+        display_name: "Integration Test Better Organization"
+
+  show organization and check table output:
+    command: auth0 orgs show $(cat ./test/integration/identifiers/org-id)
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME              integration-test-org-better
+        - DISPLAY NAME      Integration Test Better Organization
+
+  update organization:
+    command: auth0 orgs update $(cat ./test/integration/identifiers/org-id) -d "Integration Test Updated Organization" -a "#00FFAA" -b "#AA1166" --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-org-better"
+        display_name: "Integration Test Updated Organization"
+        branding.colors.page_background: "#AA1166"
+        branding.colors.primary: "#00FFAA"
+
+  update universal login branding prompts (login):
+    command: cat ./test/integration/fixtures/update-ul-prompts-login.json | auth0 ul prompts update login
+    exit-code: 0
+
+  update universal login branding prompts (mfa-push):
+    command: cat ./test/integration/fixtures/update-ul-prompts-mfa-push.json | auth0 ul prompts update mfa-push
+    exit-code: 0
+
+  users roles show:
+    command: auth0 users roles show $(cat ./test/integration/identifiers/user-id)
+    exit-code: 0
+
+  users roles add:
+    command: auth0 users roles add $(cat ./test/integration/identifiers/user-id) -r $(cat ./test/integration/identifiers/role-id)
+    exit-code: 0
+
+  users roles remove:
+    command: auth0 users roles rm $(cat ./test/integration/identifiers/user-id) -r $(cat ./test/integration/identifiers/role-id)
+    exit-code: 0

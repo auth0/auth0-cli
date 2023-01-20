@@ -13,79 +13,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joeshaw/envdecode"
 	"golang.org/x/oauth2/clientcredentials"
 )
 
 const (
 	audiencePath           = "/api/v2/"
 	waitThresholdInSeconds = 3
-	// SecretsNamespace is the namespace used to set/get values from the keychain.
-	SecretsNamespace = "auth0-cli"
 )
 
-var requiredScopes = []string{
-	"openid",
-	"offline_access", // This is used to retrieve a refresh token.
-	"create:clients", "read:clients", "update:clients", "delete:clients",
-	"read:client_keys",
-	"create:client_grants", "read:client_grants", "update:client_grants", "delete:client_grants",
-	"create:resource_servers", "read:resource_servers", "update:resource_servers", "delete:resource_servers",
-	"create:connections", "read:connections", "update:connections", "delete:connections",
-	"create:users", "read:users", "update:users", "delete:users",
-	"create:roles", "read:roles", "update:roles", "delete:roles",
-	"create:actions", "read:actions", "update:actions", "delete:actions",
-	"read:triggers", "update:triggers",
-	"create:rules", "read:rules", "update:rules", "delete:rules",
-	"read:rules_configs", "update:rules_configs", "delete:rules_configs",
-	"create:hooks", "read:hooks", "update:hooks", "delete:hooks",
-	"read:attack_protection", "update:attack_protection",
-	"create:organizations", "read:organizations", "update:organizations", "delete:organizations",
-	"create:organization_members", "read:organization_members", "delete:organization_members",
-	"create:organization_connections", "read:organization_connections", "update:organization_connections", "delete:organization_connections",
-	"create:organization_member_roles", "read:organization_member_roles", "delete:organization_member_roles",
-	"create:organization_invitations", "read:organization_invitations", "delete:organization_invitations",
-	"read:prompts", "update:prompts",
-	"read:branding", "update:branding", "delete:branding",
-	"create:custom_domains", "read:custom_domains", "update:custom_domains", "delete:custom_domains",
-	"create:email_provider", "read:email_provider", "update:email_provider", "delete:email_provider",
-	"create:email_templates", "read:email_templates", "update:email_templates",
-	"read:tenant_settings", "update:tenant_settings",
-	"read:anomaly_blocks", "delete:anomaly_blocks",
-	"create:log_streams", "read:log_streams", "update:log_streams", "delete:log_streams",
-	"read:stats",
-	"read:insights",
-	"read:logs",
-	"create:shields", "read:shields", "update:shields", "delete:shields",
-	"create:users_app_metadata", "read:users_app_metadata", "update:users_app_metadata", "delete:users_app_metadata",
-	"create:user_custom_blocks", "read:user_custom_blocks", "delete:user_custom_blocks",
-	"create:user_tickets",
-	"blacklist:tokens",
-	"read:grants", "delete:grants",
-	"read:mfa_policies", "update:mfa_policies",
-	"read:guardian_factors", "update:guardian_factors",
-	"read:guardian_enrollments", "delete:guardian_enrollments",
-	"create:guardian_enrollment_tickets",
-	"read:user_idp_tokens",
-	"create:passwords_checking_job", "delete:passwords_checking_job",
-	"read:limits", "update:limits",
-	"read:entitlements",
-}
-
-// Authenticator is used to facilitate the login process.
-type Authenticator struct {
-	Audience           string `env:"AUTH0_AUDIENCE,default=https://*.auth0.com/api/v2/"`
-	ClientID           string `env:"AUTH0_CLIENT_ID,default=2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT"`
-	DeviceCodeEndpoint string `env:"AUTH0_DEVICE_CODE_ENDPOINT,default=https://auth0.auth0.com/oauth/device/code"`
-	OauthTokenEndpoint string `env:"AUTH0_OAUTH_TOKEN_ENDPOINT,default=https://auth0.auth0.com/oauth/token"`
-}
-
-// SecretStore provides access to stored sensitive data.
-type SecretStore interface {
-	// Get gets the secret
-	Get(namespace, key string) (string, error)
-	// Delete removes the secret
-	Delete(namespace, key string) error
+// Credentials is used to facilitate the login process.
+type Credentials struct {
+	Audience           string
+	ClientID           string
+	DeviceCodeEndpoint string
+	OauthTokenEndpoint string
 }
 
 type Result struct {
@@ -104,52 +45,19 @@ type State struct {
 	Interval        int    `json:"interval"`
 }
 
-// RequiredScopes returns the scopes used for login.
-func RequiredScopes() []string {
-	return requiredScopes
-}
-
-// RequiredScopesMin returns minimum scopes used for login in integration tests.
-func RequiredScopesMin() []string {
-	var min []string
-	for _, s := range requiredScopes {
-		if s != "offline_access" && s != "openid" {
-			min = append(min, s)
-		}
-	}
-	return min
-}
-
 func (s *State) IntervalDuration() time.Duration {
 	return time.Duration(s.Interval+waitThresholdInSeconds) * time.Second
 }
 
-// New returns a new instance of Authenticator
-// after decoding its parameters from env vars.
-func New() (*Authenticator, error) {
-	authenticator := Authenticator{}
-
-	if err := envdecode.StrictDecode(&authenticator); err != nil {
-		return nil, fmt.Errorf("failed to decode env vars for authenticator: %w", err)
-	}
-
-	return &authenticator, nil
+var credentials = &Credentials{
+	Audience:           "https://*.auth0.com/api/v2/",
+	ClientID:           "2iZo3Uczt5LFHacKdM0zzgUO2eG2uDjT",
+	DeviceCodeEndpoint: "https://auth0.auth0.com/oauth/device/code",
+	OauthTokenEndpoint: "https://auth0.auth0.com/oauth/token",
 }
 
-// Start kicks-off the device authentication flow by requesting
-// a device code from Auth0. The returned state contains the
-// URI for the next step of the flow.
-func (a *Authenticator) Start(ctx context.Context) (State, error) {
-	state, err := a.getDeviceCode(ctx)
-	if err != nil {
-		return State{}, fmt.Errorf("failed to get the device code: %w", err)
-	}
-
-	return state, nil
-}
-
-// Wait waits until the user is logged in on the browser.
-func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
+// WaitUntilUserLogsIn waits until the user is logged in on the browser.
+func WaitUntilUserLogsIn(ctx context.Context, state State) (Result, error) {
 	t := time.NewTicker(state.IntervalDuration())
 	for {
 		select {
@@ -157,11 +65,11 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 			return Result{}, ctx.Err()
 		case <-t.C:
 			data := url.Values{
-				"client_id":   []string{a.ClientID},
+				"client_id":   []string{credentials.ClientID},
 				"grant_type":  []string{"urn:ietf:params:oauth:grant-type:device_code"},
 				"device_code": []string{state.DeviceCode},
 			}
-			r, err := http.PostForm(a.OauthTokenEndpoint, data)
+			r, err := http.PostForm(credentials.OauthTokenEndpoint, data)
 			if err != nil {
 				return Result{}, fmt.Errorf("cannot get device code: %w", err)
 			}
@@ -208,10 +116,15 @@ func (a *Authenticator) Wait(ctx context.Context, state State) (Result, error) {
 	}
 }
 
-func (a *Authenticator) getDeviceCode(ctx context.Context) (State, error) {
+// GetDeviceCode kicks-off the device authentication flow by requesting
+// a device code from Auth0. The returned state contains the
+// URI for the next step of the flow.
+func GetDeviceCode(ctx context.Context, additionalScopes []string) (State, error) {
+	a := credentials
+
 	data := url.Values{
 		"client_id": []string{a.ClientID},
-		"scope":     []string{strings.Join(requiredScopes, " ")},
+		"scope":     []string{strings.Join(append(RequiredScopes, additionalScopes...), " ")},
 		"audience":  []string{a.Audience},
 	}
 
@@ -233,7 +146,7 @@ func (a *Authenticator) getDeviceCode(ctx context.Context) (State, error) {
 	}
 	defer response.Body.Close()
 
-	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusBadRequest {
+	if response.StatusCode != http.StatusOK {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
 			return State{}, fmt.Errorf(
@@ -246,8 +159,7 @@ func (a *Authenticator) getDeviceCode(ctx context.Context) (State, error) {
 	}
 
 	var state State
-	err = json.NewDecoder(response.Body).Decode(&state)
-	if err != nil {
+	if err = json.NewDecoder(response.Body).Decode(&state); err != nil {
 		return State{}, fmt.Errorf("failed to decode the response: %w", err)
 	}
 
@@ -280,15 +192,15 @@ func parseTenant(accessToken string) (tenant, domain string, err error) {
 	return "", "", fmt.Errorf("audience not found for %s", audiencePath)
 }
 
-// ClientCredentials encapsulates all data to facilitate access token creation with client credentials (client ID and client secret)
+// ClientCredentials encapsulates all data to facilitate access token creation with client credentials (client ID and client secret).
 type ClientCredentials struct {
 	ClientID     string
 	ClientSecret string
 	Domain       string
 }
 
-// GetAccessTokenFromClientCreds generates an access token from client credentials
-func GetAccessTokenFromClientCreds(args ClientCredentials) (Result, error) {
+// GetAccessTokenFromClientCreds generates an access token from client credentials.
+func GetAccessTokenFromClientCreds(ctx context.Context, args ClientCredentials) (Result, error) {
 	u, err := url.Parse("https://" + args.Domain)
 	if err != nil {
 		return Result{}, err
@@ -300,12 +212,12 @@ func GetAccessTokenFromClientCreds(args ClientCredentials) (Result, error) {
 		TokenURL:     u.String() + "/oauth/token",
 		EndpointParams: url.Values{
 			"client_id": {args.ClientID},
-			"scope":     {strings.Join(RequiredScopesMin(), " ")},
+			"scope":     {strings.Join(RequiredScopesForClientCreds(), " ")},
 			"audience":  {u.String() + "/api/v2/"},
 		},
 	}
 
-	resp, err := credsConfig.Token(context.Background())
+	resp, err := credsConfig.Token(ctx)
 	if err != nil {
 		return Result{}, err
 	}

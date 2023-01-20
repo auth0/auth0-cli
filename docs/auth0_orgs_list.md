@@ -1,46 +1,52 @@
 ---
 layout: default
 ---
-## auth0 orgs list
+# auth0 orgs list
 
-List your organizations
+List your existing organizations. To create one, run: `auth0 orgs create`.
 
-### Synopsis
-
-List your existing organizations. To create one try:
-auth0 orgs create
-
+## Usage
 ```
 auth0 orgs list [flags]
 ```
 
-### Examples
+## Examples
 
 ```
-auth0 orgs list
-auth0 orgs ls
-auth0 orgs ls -n 100
+  auth0 orgs list
+  auth0 orgs ls
+  auth0 orgs ls --json
+  auth0 orgs ls -n 100
 ```
 
-### Options
+
+## Flags
 
 ```
-  -h, --help         help for list
-  -n, --number int   Number of apps to retrieve (default 50)
+      --json         Output in json format.
+  -n, --number int   Number of organizations to retrieve. Minimum 1, maximum 1000. (default 50)
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
-      --format string   Command output format. Options: json.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
 
-* [auth0 orgs](auth0_orgs.md)	 - Manage resources for organizations
+## Related Commands
+
+- [auth0 orgs create](auth0_orgs_create.md) - Create a new organization
+- [auth0 orgs delete](auth0_orgs_delete.md) - Delete an organization
+- [auth0 orgs list](auth0_orgs_list.md) - List your organizations
+- [auth0 orgs members](auth0_orgs_members.md) - Manage members of an organization
+- [auth0 orgs open](auth0_orgs_open.md) - Open the settings page of an organization
+- [auth0 orgs roles](auth0_orgs_roles.md) - Manage roles of an organization
+- [auth0 orgs show](auth0_orgs_show.md) - Show an organization
+- [auth0 orgs update](auth0_orgs_update.md) - Update an organization
+
 

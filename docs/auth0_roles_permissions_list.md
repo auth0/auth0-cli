@@ -1,44 +1,47 @@
 ---
 layout: default
 ---
-## auth0 roles permissions list
+# auth0 roles permissions list
 
-List permissions defined within a role
+List existing permissions defined in a role. To add a permission, run: `auth0 roles permissions add`.
 
-### Synopsis
-
-List existing permissions defined in a role. To add a permission try:
-auth0 roles permissions add <role-id>
-
+## Usage
 ```
 auth0 roles permissions list [flags]
 ```
 
-### Examples
+## Examples
 
 ```
-auth0 roles permissions list <role-id>
-auth0 roles permissions ls
+  auth0 roles permissions list
+  auth0 roles permissions ls <role-id>
+  auth0 roles permissions ls <role-id> --number 100
+  auth0 roles permissions ls <role-id> -n 100 --json
 ```
 
-### Options
+
+## Flags
 
 ```
-  -h, --help   help for list
+      --json         Output in json format.
+  -n, --number int   Number of permissions to retrieve. Minimum 1, maximum 1000. (default 50)
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
-      --format string   Command output format. Options: json.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
 
-* [auth0 roles permissions](auth0_roles_permissions.md)	 - Manage permissions within the role resource
+## Related Commands
+
+- [auth0 roles permissions add](auth0_roles_permissions_add.md) - Add a permission to a role
+- [auth0 roles permissions list](auth0_roles_permissions_list.md) - List permissions defined within a role
+- [auth0 roles permissions remove](auth0_roles_permissions_remove.md) - Remove a permission from a role
+
 

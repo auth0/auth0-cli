@@ -11,35 +11,34 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/analytics"
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/instrumentation"
 )
 
-const rootShort = "Supercharge your development workflow."
+const rootShort = "Build, manage and test your Auth0 integrations from the command line."
+
+const panicMessage = `
+!!     Uh oh. Something went wrong.
+!!     If this problem keeps happening feel free to report an issue at
+!!
+!!     https://github.com/auth0/auth0-cli/issues/new/choose
+`
 
 // Execute is the primary entrypoint of the CLI app.
 func Execute() {
-	// cfg contains tenant related information, e.g. `travel0-dev`,
-	// `travel0-prod`. some of its information can be sourced via:
-	// 1. env var (e.g. AUTH0_API_KEY)
-	// 2. global flag (e.g. --api-key)
-	// 3. JSON file (e.g. api_key = "..." in ~/.config/auth0/config.json)
 	cli := &cli{
 		renderer: display.NewRenderer(),
 		tracker:  analytics.NewTracker(),
 	}
 
 	rootCmd := buildRootCmd(cli)
-
 	rootCmd.SetUsageTemplate(namespaceUsageTemplate())
-	addPersistentFlags(rootCmd, cli)
-	addSubcommands(rootCmd, cli)
 
-	// TODO(cyx): backport this later on using latest auth0/v5.
-	// rootCmd.AddCommand(actionsCmd(cli))
-	// rootCmd.AddCommand(triggersCmd(cli))
+	addPersistentFlags(rootCmd, cli)
+	addSubCommands(rootCmd, cli)
+
+	overrideHelpAndVersionFlagText(rootCmd)
 
 	defer func() {
 		if v := recover(); v != nil {
@@ -85,13 +84,7 @@ func buildRootCmd(cli *cli) *cobra.Command {
 		Long:          rootShort + "\n" + getLogin(cli),
 		Version:       buildinfo.GetVersionWithCommit(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			var err error
-			cli.authenticator, err = auth.New()
-			if err != nil {
-				return err
-			}
-
-			ansi.DisableColors = cli.noColor
+			ansi.Initialize(cli.noColor)
 			prepareInteractivity(cmd)
 
 			// If the user is trying to login, no need to go
@@ -151,12 +144,6 @@ func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.PersistentFlags().BoolVar(&cli.debug,
 		"debug", false, "Enable debug mode.")
 
-	rootCmd.PersistentFlags().StringVar(&cli.format,
-		"format", "", "Command output format. Options: json.")
-
-	rootCmd.PersistentFlags().BoolVar(&cli.force,
-		"force", false, "Skip confirmation.")
-
 	rootCmd.PersistentFlags().BoolVar(&cli.noInput,
 		"no-input", false, "Disable interactivity.")
 
@@ -164,13 +151,12 @@ func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
 		"no-color", false, "Disable colors.")
 }
 
-func addSubcommands(rootCmd *cobra.Command, cli *cli) {
+func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	// The order of the commands here matters.
 	// Add new commands in a place that reflect its
 	// relevance or relation with other commands:
 	rootCmd.AddCommand(loginCmd(cli))
 	rootCmd.AddCommand(logoutCmd(cli))
-	rootCmd.AddCommand(configCmd(cli))
 	rootCmd.AddCommand(tenantsCmd(cli))
 	rootCmd.AddCommand(appsCmd(cli))
 	rootCmd.AddCommand(usersCmd(cli))
@@ -179,8 +165,9 @@ func addSubcommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(apisCmd(cli))
 	rootCmd.AddCommand(rolesCmd(cli))
 	rootCmd.AddCommand(organizationsCmd(cli))
-	rootCmd.AddCommand(brandingCmd(cli))
-	rootCmd.AddCommand(ipsCmd(cli))
+	rootCmd.AddCommand(universalLoginCmd(cli))
+	rootCmd.AddCommand(emailCmd(cli))
+	rootCmd.AddCommand(customDomainsCmd(cli))
 	rootCmd.AddCommand(quickstartsCmd(cli))
 	rootCmd.AddCommand(attackProtectionCmd(cli))
 	rootCmd.AddCommand(testCmd(cli))
@@ -206,9 +193,18 @@ func contextWithCancel() context.Context {
 	return ctx
 }
 
-const panicMessage = `
-!!     Uh oh. Something went wrong.
-!!     If this problem keeps happening feel free to report an issue at
-!!
-!!     https://github.com/auth0/auth0-cli/issues/new/choose
-`
+func overrideHelpAndVersionFlagText(cmd *cobra.Command) {
+	cmd.Flags().BoolP("version", "v", false, "Version for auth0.")
+
+	setHelpFlagTextFunc := func(c *cobra.Command) {
+		c.Flags().BoolP("help", "h", false, fmt.Sprintf("Help for %s.", c.Name()))
+	}
+
+	setHelpFlagTextFunc(cmd)
+	for _, c := range cmd.Commands() {
+		setHelpFlagTextFunc(c)
+		for _, c := range c.Commands() {
+			setHelpFlagTextFunc(c)
+		}
+	}
+}

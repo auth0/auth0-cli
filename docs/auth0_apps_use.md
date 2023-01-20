@@ -1,43 +1,49 @@
 ---
 layout: default
 ---
-## auth0 apps use
+# auth0 apps use
 
-Choose a default application for the Auth0 CLI
+Specify the default application used when running other commands. Specifically when downloading quickstarts and testing Universal login flow.
 
-### Synopsis
-
-Specify your preferred application for interaction with the Auth0 CLI.
-
+## Usage
 ```
 auth0 apps use [flags]
 ```
 
-### Examples
+## Examples
 
 ```
-auth0 apps use <client-id>
+  auth0 apps use
+  auth0 apps use --none
+  auth0 apps use <app-id>
 ```
 
-### Options
+
+## Flags
 
 ```
-  -h, --help   help for use
   -n, --none   Specify none of your apps.
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
-      --format string   Command output format. Options: json.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
 
-* [auth0 apps](auth0_apps.md)	 - Manage resources for applications
+## Related Commands
+
+- [auth0 apps create](auth0_apps_create.md) - Create a new application
+- [auth0 apps delete](auth0_apps_delete.md) - Delete an application
+- [auth0 apps list](auth0_apps_list.md) - List your applications
+- [auth0 apps open](auth0_apps_open.md) - Open the settings page of an application
+- [auth0 apps show](auth0_apps_show.md) - Show an application
+- [auth0 apps update](auth0_apps_update.md) - Update an application
+- [auth0 apps use](auth0_apps_use.md) - Choose a default application for the Auth0 CLI
+
 

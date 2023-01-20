@@ -9,7 +9,7 @@
 From the top-level directory:
 ```
 $ make build
-$ ./auth0 --help
+$ ./out/auth0 --help
 ```
 
 ## Adding a new command
@@ -41,7 +41,7 @@ We use vendoring, so the last step is required.
 
 > This is only possible if you're a repository maintainer.
 
-The release is driven by a Github **workflow** triggered when a new **tag** is **created**. The workflow will run the checks and trigger _Goreleaser_ to:
+The release is driven by a GitHub **workflow** triggered when a new **tag** is **created**. The workflow will run the checks and trigger _Goreleaser_ to:
 - create the Release with the proper description (changelog)
 - upload the binaries for the different architectures
 - update https://github.com/auth0/homebrew-auth0-cli with the latest binary reference

@@ -71,18 +71,17 @@ $(GO_BIN)/auth0:
 #-----------------------------------------------------------------------------------------------------------------------
 # Documentation
 #-----------------------------------------------------------------------------------------------------------------------
-.PHONY: docs-build docs-start docs-clean
+.PHONY: docs docs-start docs-clean
 
-docs-build: docs-clean ## Build the documentation
-	@go run ./cmd/build_doc
+docs: docs-clean ## Build the documentation
+	@go run ./cmd/doc-gen
 	@mv ./docs/auth0.md ./docs/index.md
-	@cd docs && bundle install
 
 docs-start: ## Start the doc site locally for testing purposes
-	@cd docs && bundle exec jekyll serve
+	@cd docs && bundle install && bundle exec jekyll serve
 
 docs-clean: ## Remove the documentation
-	@rm ./docs/auth0_*.md
+	@rm -f ./docs/auth0_*.md
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Building & Installing
@@ -115,6 +114,18 @@ check-vuln: $(GO_BIN)/govulncheck ## Check go vulnerabilities
 	${call print, "Running govulncheck over project"}
 	@govulncheck -v ./...
 
+check-docs: ## Check that documentation was generated correctly
+	${call print, "Checking that documentation was generated correctly"}
+	@$(MAKE) docs
+	@if [ -n "$$(git status --porcelain)" ]; \
+	then \
+		echo "Rebuilding the documentation resulted in changed files:"; \
+		echo "$$(git diff)"; \
+		echo "Please run \`make docs\` to regenerate docs."; \
+		exit 1; \
+	fi
+	@echo "Documentation is generated correctly."
+
 #-----------------------------------------------------------------------------------------------------------------------
 # Testing
 #-----------------------------------------------------------------------------------------------------------------------
@@ -129,10 +140,7 @@ test-unit: ## Run unit tests
 test-integration: $(GO_BIN)/commander ## Run integration tests. To run a specific test pass the FILTER var. Usage: `make test-integration FILTER="attack protection"`
 	${call print, "Running integration tests"}
 	@$(MAKE) install # ensure fresh install prior to running test
-	auth0 config init && commander test ./test/integration/test-cases.yaml --filter "$(FILTER)"; \
-	exit_code=$$?; \
-	bash ./test/integration/scripts/test-cleanup.sh; \
-	exit $$exit_code
+	@bash ./test/integration/scripts/run-test-suites.sh
 
 test-mocks: $(GO_BIN)/mockgen ## Generate testing mocks using mockgen
 	${call print, "Generating test mocks"}

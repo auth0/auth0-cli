@@ -68,7 +68,7 @@ func (v *apiTableView) Object() interface{} {
 }
 
 func (r *Renderer) ApiList(apis []*management.ResourceServer) {
-	resource := "APIs"
+	resource := "apis"
 
 	r.Heading(resource)
 	r.Heading(fmt.Sprintf("%s (%d)", resource, len(apis)))
@@ -88,24 +88,24 @@ func (r *Renderer) ApiList(apis []*management.ResourceServer) {
 	r.Results(results)
 }
 
-func (r *Renderer) ApiShow(api *management.ResourceServer) {
-	r.Heading("API")
+func (r *Renderer) ApiShow(api *management.ResourceServer, jsonFlag bool) {
+	r.Heading("api")
 	view, scopesTruncated := makeApiView(api)
 	r.Result(view)
-	if scopesTruncated {
+	if scopesTruncated && !jsonFlag {
 		r.Newline()
 		r.Infof("Scopes truncated for display. To see the full list, run %s", ansi.Faint(fmt.Sprintf("apis scopes list %s", *api.ID)))
 	}
 }
 
 func (r *Renderer) ApiCreate(api *management.ResourceServer) {
-	r.Heading("API created")
+	r.Heading("api created")
 	view, _ := makeApiView(api)
 	r.Result(view)
 }
 
 func (r *Renderer) ApiUpdate(api *management.ResourceServer) {
-	r.Heading("API updated")
+	r.Heading("api updated")
 	view, _ := makeApiView(api)
 	r.Result(view)
 }

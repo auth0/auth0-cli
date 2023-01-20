@@ -1,13 +1,9 @@
 package cli
 
 import (
-	"context"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -15,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
-	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -33,23 +28,7 @@ const (
 	qspDefaultPort = 3000
 )
 
-const (
-	quickstartEndpoint           = `https://auth0.com/docs/package/v2`
-	quickstartContentType        = `application/json`
-	quickstartOrg                = "auth0-samples"
-	quickstartDefaultCallbackURL = `https://YOUR_APP/callback`
-)
-
 var (
-	//go:embed data/quickstarts.json
-	qsBuf             []byte
-	quickstartsByType = func() (qs map[string][]auth0.Quickstart) {
-		if err := json.Unmarshal(qsBuf, &qs); err != nil {
-			panic(auth0.Error(err, "failed to unmarshal data/quickstarts.json"))
-		}
-		return
-	}()
-
 	qsClientID = Argument{
 		Name: "Client ID",
 		Help: "Client Id of an Auth0 application.",
@@ -64,15 +43,26 @@ var (
 	}
 )
 
+type qsInputs struct {
+	ClientID string
+	Stack    string
+
+	Client     *management.Client
+	Quickstart auth0.Quickstart
+
+	QsTypeForClient string
+}
+
 func quickstartsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "quickstarts",
 		Short:   "Quickstart support for getting bootstrapped",
-		Long:    "Quickstart support for getting bootstrapped.",
+		Long:    "Step-by-step guides to quickly integrate Auth0 into your application.",
 		Aliases: []string{"qs"},
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
+
 	cmd.AddCommand(listQuickstartsCmd(cli))
 	cmd.AddCommand(downloadQuickstartCmd(cli))
 
@@ -86,240 +76,137 @@ func listQuickstartsCmd(cli *cli) *cobra.Command {
 		Args:    cobra.NoArgs,
 		Short:   "List the available Quickstarts",
 		Long:    "List the available Quickstarts.",
-		Example: `auth0 quickstarts list
-auth0 quickstarts ls
-auth0 qs list
-auth0 qs ls`,
-		Run: func(cmd *cobra.Command, args []string) {
-			cli.renderer.QuickstartList(quickstartsByType)
-		},
+		Example: `  auth0 quickstarts list
+  auth0 quickstarts ls
+  auth0 qs list
+  auth0 qs ls
+  auth0 qs ls --json`,
+		RunE: listQuickstarts(cli),
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
 
 func downloadQuickstartCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ClientID string
-		Stack    string
-	}
+	var inputs qsInputs
 
 	cmd := &cobra.Command{
 		Use:   "download",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Download a Quickstart sample app for a specific tech stack",
-		Long:  "Download a Quickstart sample app for a specific tech stack.",
-		Example: `auth0 quickstarts download --stack <stack>
-auth0 qs download --stack <stack>`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if !canPrompt(cmd) {
-				return errors.New("This command can only be run on interactive mode")
-			}
-
-			if len(args) == 0 {
-				err := qsClientID.Pick(cmd, &inputs.ClientID, cli.appPickerOptions)
-				if err != nil {
-					return err
-				}
-			} else {
-				inputs.ClientID = args[0]
-			}
-
-			var client *management.Client
-			err := ansi.Waiting(func() error {
-				var err error
-				client, err = cli.api.Client.Read(inputs.ClientID)
-				return err
-			})
-
-			if err != nil {
-				return fmt.Errorf("An unexpected error occurred, please verify your Client Id: %v", err.Error())
-			}
-
-			if inputs.Stack == "" {
-				// get the valid types for this App:
-				stacks, err := quickstartStacksFromType(client.GetAppType())
-				if err != nil {
-					return fmt.Errorf("An unexpected error occurred: %v", err)
-				}
-				// ask for input using the valid types only:
-				if err := qsStack.Select(cmd, &inputs.Stack, stacks, nil); err != nil {
-					return err
-				}
-			}
-
-			target, exists, err := quickstartPathFor(client)
-			if err != nil {
-				return fmt.Errorf("An unexpected error occurred: %v", err)
-			}
-
-			if exists && !cli.force {
-				if confirmed := prompt.Confirm(fmt.Sprintf("WARNING: %s already exists.\n Are you sure you want to proceed?", target)); !confirmed {
-					return nil
-				}
-			}
-
-			quickstart, err := getQuickstart(client.GetAppType(), inputs.Stack)
-			if err != nil {
-				return fmt.Errorf("An unexpected error occurred with the specified stack %v: %v", inputs.Stack, err)
-			}
-
-			err = ansi.Waiting(func() error {
-				return downloadQuickStart(cmd.Context(), client, target, quickstart)
-			})
-
-			if err != nil {
-				return fmt.Errorf("Unable to download quickstart sample: %v", err)
-			}
-
-			cli.renderer.Infof("Quickstart sample sucessfully downloaded at %s", target)
-
-			qsType := quickstartsTypeFor(client.GetAppType())
-			if err := promptDefaultURLs(cli, client, qsType, inputs.Stack); err != nil {
-				return err
-			}
-
-			qsSamplePath := path.Join(target, quickstart.Samples[0])
-			readme, err := loadQuickstartSampleReadme(qsSamplePath) // Some QS have non-markdown READMEs (eg auth0-python uses rst)
-
-			if err == nil {
-				cli.renderer.Markdown(readme)
-			} else {
-				cli.renderer.Infof("%s You might wanna check out the Quickstart sample README", ansi.Faint("Hint:"))
-			}
-
-			relativeQSSamplePath, err := relativeQuickstartSamplePath(qsSamplePath)
-			if err != nil {
-				return err
-			}
-
-			cli.renderer.Infof("%s Start with 'cd %s'", ansi.Faint("Hint:"), relativeQSSamplePath)
-
-			return nil
-		},
+		Long: "Download a Quickstart sample application for that’s already configured for your Auth0 application. " +
+			"There are many different tech stacks available.",
+		Example: `  auth0 quickstarts download --stack <stack>
+  auth0 qs download -s <stack>
+  auth0 qs download -s "Next.js"`,
+		RunE: downloadQuickstart(cli, &inputs),
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	qsStack.RegisterString(cmd, &inputs.Stack, "")
+
 	return cmd
 }
 
-func downloadQuickStart(ctx context.Context, client *management.Client, target string, q auth0.Quickstart) error {
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, quickstartEndpoint, nil)
-	if err != nil {
-		return unexpectedError(err)
+func listQuickstarts(cli *cli) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		quickstarts, err := auth0.GetQuickstarts(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		cli.renderer.QuickstartList(quickstarts)
+
+		return nil
 	}
-
-	params := request.URL.Query()
-
-	// FIXME(copland): Default to first item from list of samples.
-	// Eventually we should add a forced survey for
-	// user to select one if there are multiple.
-	params.Add("branch", q.Branch)
-	params.Add("repo", q.Repo)
-	params.Add("path", q.Samples[0])
-
-	// These appear to be largely constant and refers
-	// to the GitHub username they're under.
-	params.Add("org", quickstartOrg)
-	params.Add("client_id", client.GetClientID())
-
-	// Callback URL, if not set, it will just take the default one.
-	callbackURL := quickstartDefaultCallbackURL
-	if list := client.GetCallbacks(); len(list) > 0 {
-		callbackURL = list[0]
-	}
-	params.Add("callback_url", callbackURL)
-
-	request.URL.RawQuery = params.Encode()
-	request.Header.Set("Content-Type", quickstartContentType)
-
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		return unexpectedError(err)
-	}
-
-	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("Expected status %d, got %d", http.StatusOK, response.StatusCode)
-	}
-
-	tmpFile, err := os.CreateTemp("", "auth0-quickstart*.zip")
-	if err != nil {
-		return unexpectedError(err)
-	}
-
-	_, err = io.Copy(tmpFile, response.Body)
-	if err != nil {
-		return unexpectedError(err)
-	}
-
-	if err := tmpFile.Close(); err != nil {
-		return unexpectedError(err)
-	}
-	defer os.Remove(tmpFile.Name())
-
-	if err := os.RemoveAll(target); err != nil {
-		return unexpectedError(err)
-	}
-
-	if err := archiver.Unarchive(tmpFile.Name(), target); err != nil {
-		return unexpectedError(err)
-	}
-
-	return nil
 }
 
-func quickstartPathFor(client *management.Client) (p string, exists bool, err error) {
-	wd, err := os.Getwd()
+func downloadQuickstart(cli *cli, inputs *qsInputs) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		if err := inputs.fromArgs(cmd, args, cli); err != nil {
+			return fmt.Errorf("failed to parse command inputs: %w", err)
+		}
+
+		quickstartPath, pathExists, err := computeQuickstartPathFromClientName(inputs.Client.GetName())
+		if err != nil {
+			return fmt.Errorf("failed to compute the path where to download the quickstart sample: %w", err)
+		}
+
+		if pathExists && !cli.force {
+			message := fmt.Sprintf(
+				"%s %s already exists.\n Directory contents will be replaced. Are you sure you want to proceed? ",
+				ansi.Yellow("WARNING:"),
+				quickstartPath,
+			)
+			if confirmed := prompt.Confirm(message); !confirmed {
+				return nil
+			}
+		}
+
+		err = ansi.Waiting(func() error {
+			return inputs.Quickstart.Download(cmd.Context(), quickstartPath, inputs.Client)
+		})
+		if err != nil {
+			return fmt.Errorf("failed to download quickstart sample: %v", err)
+		}
+
+		cli.renderer.Infof("Quickstart sample successfully downloaded at %s", quickstartPath)
+
+		if err := promptDefaultURLs(cli, inputs.Client, inputs.QsTypeForClient, inputs.Stack); err != nil {
+			return err
+		}
+
+		qsSamplePath, err := inputs.Quickstart.SamplePath(quickstartPath)
+		if err != nil {
+			return err
+		}
+
+		readme, err := loadQuickstartSampleReadme(qsSamplePath)
+		if err != nil {
+			cli.renderer.Infof(inputs.Quickstart.DownloadInstructions)
+		} else {
+			cli.renderer.Markdown(readme)
+		}
+
+		relativeQSSamplePath, err := relativeQuickstartSamplePath(qsSamplePath)
+		if err != nil {
+			return err
+		}
+
+		cli.renderer.Infof("%s Start with `cd %s`", ansi.Faint("Hint:"), relativeQSSamplePath)
+
+		return nil
+	}
+}
+
+func computeQuickstartPathFromClientName(clientName string) (quickstartPath string, pathExists bool, err error) {
+	currDir, err := os.Getwd()
 	if err != nil {
 		return "", false, err
 	}
 
 	re := regexp.MustCompile(`[^\w]+`)
-	friendlyName := re.ReplaceAllString(client.GetName(), "-")
-	target := path.Join(wd, friendlyName)
+	friendlyName := re.ReplaceAllString(clientName, "-")
+	target := path.Join(currDir, friendlyName)
 
-	exists = true
+	pathExists = true
 	if _, err := os.Stat(target); err != nil {
 		if !os.IsNotExist(err) {
 			return "", false, err
 		}
-		exists = false
+		pathExists = false
 	}
 
-	if err := os.MkdirAll(target, 0755); err != nil {
+	const readWriteAndExecutePermission = os.FileMode(0755)
+	if err := os.MkdirAll(target, readWriteAndExecutePermission); err != nil {
 		return "", false, err
 	}
 
-	return target, exists, nil
-}
-
-func getQuickstart(t, stack string) (auth0.Quickstart, error) {
-	qsType := quickstartsTypeFor(t)
-	quickstarts, ok := quickstartsByType[qsType]
-	if !ok {
-		return auth0.Quickstart{}, fmt.Errorf("Unknown quickstart type: %s", qsType)
-	}
-	for _, q := range quickstarts {
-		if strings.EqualFold(q.Name, stack) {
-			return q, nil
-		}
-	}
-	return auth0.Quickstart{}, fmt.Errorf("Quickstart not found for %s/%s", qsType, stack)
-}
-
-func quickstartStacksFromType(t string) ([]string, error) {
-	qsType := quickstartsTypeFor(t)
-	_, ok := quickstartsByType[qsType]
-	if !ok {
-		return nil, fmt.Errorf("Unknown quickstart type: %s", qsType)
-	}
-	stacks := make([]string, 0, len(quickstartsByType[qsType]))
-	for _, s := range quickstartsByType[qsType] {
-		stacks = append(stacks, s.Name)
-	}
-	return stacks, nil
+	return target, pathExists, nil
 }
 
 func quickstartsTypeFor(v string) string {
@@ -461,4 +348,59 @@ func defaultCallbackURLFor(s string) string {
 
 func defaultURL(url string, port int) string {
 	return fmt.Sprintf("%s:%d", url, port)
+}
+
+func (i *qsInputs) fromArgs(cmd *cobra.Command, args []string, cli *cli) error {
+	if !canPrompt(cmd) {
+		return errors.New("this command can only be run on interactive mode")
+	}
+
+	if len(args) == 0 {
+		if err := qsClientID.Pick(cmd, &i.ClientID, cli.appPickerOptions); err != nil {
+			return err
+		}
+	} else {
+		i.ClientID = args[0]
+	}
+
+	var client *management.Client
+	err := ansi.Waiting(func() (err error) {
+		client, err = cli.api.Client.Read(i.ClientID)
+		return
+	})
+	if err != nil {
+		return fmt.Errorf("an unexpected error occurred, please verify your client ID: %w", err)
+	}
+
+	i.Client = client
+	i.QsTypeForClient = quickstartsTypeFor(client.GetAppType())
+
+	var quickstarts auth0.Quickstarts
+	err = ansi.Waiting(func() error {
+		quickstarts, err = auth0.GetQuickstarts(cmd.Context())
+		return err
+	})
+	if err != nil {
+		return err
+	}
+
+	if i.Stack == "" {
+		quickstartsByType, err := quickstarts.FilterByType(i.QsTypeForClient)
+		if err != nil {
+			return fmt.Errorf("an unexpected error occurred: %w", err)
+		}
+
+		if err := qsStack.Select(cmd, &i.Stack, quickstartsByType.Stacks(), nil); err != nil {
+			return err
+		}
+	}
+
+	quickstart, err := quickstarts.FindByStack(i.Stack)
+	if err != nil {
+		return err
+	}
+
+	i.Quickstart = quickstart
+
+	return nil
 }

@@ -63,7 +63,10 @@ func breachedPasswordDetectionCmd(cli *cli) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Aliases: []string{"bpd"},
 		Short:   "Manage breached password detection settings",
-		Long:    "Manage breached password detection settings.",
+		Long: "Breached password detection protects your applications from bad actors signing up or logging " +
+			"in with stolen credentials. Auth0 can notify users and/or block accounts that are at risk.\n\nAuth0 " +
+			"tracks large security breaches that occur on major third-party sites. If Auth0 identifies that any of " +
+			"your users’ credentials were part of a breach, the breached password detection security feature triggers.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -75,28 +78,39 @@ func breachedPasswordDetectionCmd(cli *cli) *cobra.Command {
 }
 
 func showBreachedPasswordDetectionCmd(cli *cli) *cobra.Command {
-	return &cobra.Command{
-		Use:     "show",
-		Args:    cobra.NoArgs,
-		Short:   "Show breached password detection settings",
-		Long:    "Show breached password detection settings.",
-		Example: `auth0 protection breached-password-detection show`,
-		RunE:    showBreachedPasswordDetectionCmdRun(cli),
+	cmd := &cobra.Command{
+		Use:   "show",
+		Args:  cobra.NoArgs,
+		Short: "Show breached password detection settings",
+		Long:  "Display the current breached password detection settings.",
+		Example: `  auth0 protection breached-password-detection show
+  auth0 ap bpd show --json`,
+		RunE: showBreachedPasswordDetectionCmdRun(cli),
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
+	return cmd
 }
 
 func updateBreachedPasswordDetectionCmd(cli *cli) *cobra.Command {
 	var inputs breachedPasswordDetectionInputs
 
 	cmd := &cobra.Command{
-		Use:     "update",
-		Args:    cobra.NoArgs,
-		Short:   "Update breached password detection settings",
-		Long:    "Update breached password detection settings.",
-		Example: `auth0 protection breached-password-detection update`,
-		RunE:    updateBreachedPasswordDetectionCmdRun(cli, &inputs),
+		Use:   "update",
+		Args:  cobra.NoArgs,
+		Short: "Update breached password detection settings",
+		Long:  "Update the breached password detection settings.",
+		Example: `  auth0 protection breached-password-detection update
+  auth0 ap bpd update --enabled true
+  auth0 ap bpd update --enabled true --admin-notification-frequency weekly
+  auth0 ap bpd update --enabled true --admin-notification-frequency weekly --method enhanced
+  auth0 ap bpd update --enabled true --admin-notification-frequency weekly --method enhanced --shields admin_notification
+  auth0 ap bpd update -e true -f weekly -m enhanced -s admin_notification --json`,
+		RunE: updateBreachedPasswordDetectionCmdRun(cli, &inputs),
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	bpdFlags.Enabled.RegisterBoolU(cmd, &inputs.Enabled, false)
 	bpdFlags.Shields.RegisterStringSliceU(cmd, &inputs.Shields, []string{})
 	bpdFlags.AdminNotificationFrequency.RegisterStringSliceU(cmd, &inputs.AdminNotificationFrequency, []string{})

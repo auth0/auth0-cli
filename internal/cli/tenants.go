@@ -1,37 +1,15 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
-
-	"github.com/auth0/auth0-cli/internal/auth"
-	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
-var (
-	tenantDomain = Argument{
-		Name: "Tenant",
-		Help: "Tenant to select",
-	}
-
-	tenantClientID = Flag{
-		Name:       "Client ID",
-		LongForm:   "client-id",
-		ShortForm:  "i",
-		Help:       "Client ID of the application.",
-		IsRequired: true,
-	}
-
-	tenantClientSecret = Flag{
-		Name:       "Client Secret",
-		LongForm:   "client-secret",
-		ShortForm:  "s",
-		Help:       "Client Secret of the application.",
-		IsRequired: true,
-	}
-)
+var tenantDomain = Argument{
+	Name: "Tenant",
+	Help: "Tenant to select",
+}
 
 func tenantsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
@@ -44,7 +22,6 @@ func tenantsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(useTenantCmd(cli))
 	cmd.AddCommand(listTenantCmd(cli))
 	cmd.AddCommand(openTenantCmd(cli))
-	cmd.AddCommand(addTenantCmd(cli))
 	return cmd
 }
 
@@ -55,62 +32,47 @@ func listTenantCmd(cli *cli) *cobra.Command {
 		Args:    cobra.NoArgs,
 		Short:   "List your tenants",
 		Long:    "List your tenants.",
-		Example: "auth0 tenants list",
+		Example: `  auth0 tenants list
+  auth0 tenants ls`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			tens, err := cli.listTenants()
+			tenants, err := cli.listTenants()
 			if err != nil {
-				return fmt.Errorf("Unable to load tenants due to an unexpected error: %w", err)
+				return fmt.Errorf("failed to load tenants: %w", err)
 			}
 
-			tenNames := make([]string, len(tens))
-			for i, t := range tens {
-				tenNames[i] = t.Domain
+			tenantNames := make([]string, len(tenants))
+			for i, t := range tenants {
+				tenantNames[i] = t.Domain
 			}
 
-			cli.renderer.TenantList(tenNames)
+			cli.renderer.TenantList(tenantNames)
 			return nil
 		},
 	}
+
 	return cmd
 }
 
 func useTenantCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "use",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Set the active tenant",
-		Long:    "Set the active tenant.",
-		Example: "auth0 tenants use <tenant>",
+		Use:   "use",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Set the active tenant",
+		Long:  "Set the active tenant for the Auth0 CLI.",
+		Example: `  auth0 tenants use
+  auth0 tenants use <tenant>
+  auth0 tenants use "example.us.auth0.com"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var selectedTenant string
-			if len(args) == 0 {
-				tens, err := cli.listTenants()
-				if err != nil {
-					return fmt.Errorf("Unable to load tenants due to an unexpected error: %w", err)
-				}
-
-				tenNames := make([]string, len(tens))
-				for i, t := range tens {
-					tenNames[i] = t.Domain
-				}
-
-				input := prompt.SelectInput("tenant", "Tenant:", "Tenant to activate", tenNames, tenNames[0], true)
-				if err := prompt.AskOne(input, &selectedTenant); err != nil {
-					return handleInputError(err)
-				}
-			} else {
-				requestedTenant := args[0]
-				t, ok := cli.config.Tenants[requestedTenant]
-				if !ok {
-					return fmt.Errorf("Unable to find tenant %s; run 'auth0 tenants use' to see your configured tenants or run 'auth0 login' to configure a new tenant", requestedTenant)
-				}
-				selectedTenant = t.Domain
+			selectedTenant, err := selectValidTenantFromConfig(cli, cmd, args)
+			if err != nil {
+				return err
 			}
 
 			cli.config.DefaultTenant = selectedTenant
 			if err := cli.persistConfig(); err != nil {
-				return fmt.Errorf("An error occurred while setting the default tenant: %w", err)
+				return fmt.Errorf("failed to set the default tenant: %w", err)
 			}
+
 			cli.renderer.Infof("Default tenant switched to: %s", selectedTenant)
 			return nil
 		},
@@ -120,97 +82,21 @@ func useTenantCmd(cli *cli) *cobra.Command {
 }
 
 func openTenantCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		Domain string
-	}
-
 	cmd := &cobra.Command{
-		Use:     "open",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Open tenant settings page in the Auth0 Dashboard",
-		Long:    "Open tenant settings page in the Auth0 Dashboard.",
-		Example: "auth0 tenants open <tenant>",
+		Use:   "open",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Open the settings page of the tenant",
+		Long:  "Open the tenant's settings page in the Auth0 Dashboard.",
+		Example: `  auth0 tenants open
+  auth0 tenants open <tenant>
+  auth0 tenants open "example.us.auth0.com"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				err := tenantDomain.Pick(cmd, &inputs.Domain, cli.tenantPickerOptions)
-				if err != nil {
-					return err
-				}
-			} else {
-				inputs.Domain = args[0]
-
-				if _, ok := cli.config.Tenants[inputs.Domain]; !ok {
-					return fmt.Errorf("Unable to find tenant %s; run 'auth0 login' to configure a new tenant", inputs.Domain)
-				}
-			}
-
-			openManageURL(cli, inputs.Domain, "tenant/general")
-			return nil
-		},
-	}
-
-	return cmd
-}
-
-func addTenantCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		Domain       string
-		ClientID     string
-		ClientSecret string
-	}
-
-	cmd := &cobra.Command{
-		Use:     "add",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Add a tenant with client credentials",
-		Long:    "Add a tenant with client credentials.",
-		Example: "auth0 tenants add <tenant> --client-id <id> --client-secret <secret>",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				err := tenantDomain.Pick(cmd, &inputs.Domain, cli.tenantPickerOptions)
-				if err != nil {
-					if !errors.Is(err, errUnauthenticated) {
-						return err
-					}
-
-					if err := tenantDomain.Ask(cmd, &inputs.Domain); err != nil {
-						return err
-					}
-				}
-			} else {
-				inputs.Domain = args[0]
-			}
-
-			if err := tenantClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
-				return err
-			}
-
-			if err := tenantClientSecret.Ask(cmd, &inputs.ClientSecret, nil); err != nil {
-				return err
-			}
-
-			token, err := auth.GetAccessTokenFromClientCreds(auth.ClientCredentials{
-				ClientID:     inputs.ClientID,
-				ClientSecret: inputs.ClientSecret,
-				Domain:       inputs.Domain,
-			})
+			selectedTenant, err := selectValidTenantFromConfig(cli, cmd, args)
 			if err != nil {
 				return err
 			}
 
-			t := Tenant{
-				Domain:       inputs.Domain,
-				AccessToken:  token.AccessToken,
-				ExpiresAt:    token.ExpiresAt,
-				ClientID:     inputs.ClientID,
-				ClientSecret: inputs.ClientSecret,
-			}
-
-			if err := cli.addTenant(t); err != nil {
-				return fmt.Errorf("unexpected error when attempting to save tenant data: %w", err)
-			}
-
-			cli.renderer.Infof("Tenant added successfully: %s", t.Domain)
+			openManageURL(cli, selectedTenant, "tenant/general")
 			return nil
 		},
 	}
@@ -218,19 +104,37 @@ func addTenantCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+func selectValidTenantFromConfig(cli *cli, cmd *cobra.Command, args []string) (string, error) {
+	var selectedTenant string
+
+	if len(args) == 0 {
+		err := tenantDomain.Pick(cmd, &selectedTenant, cli.tenantPickerOptions)
+		return selectedTenant, err
+	}
+
+	selectedTenant = args[0]
+	if _, ok := cli.config.Tenants[selectedTenant]; !ok {
+		return "", fmt.Errorf(
+			"failed to find tenant %s.\n\nRun 'auth0 login' to configure a new tenant.",
+			selectedTenant,
+		)
+	}
+
+	return selectedTenant, nil
+}
+
 func (c *cli) tenantPickerOptions() (pickerOptions, error) {
-	tens, err := c.listTenants()
+	tenants, err := c.listTenants()
 	if err != nil {
-		return nil, fmt.Errorf("Unable to load tenants due to an unexpected error: %w", err)
+		return nil, fmt.Errorf("failed to load tenants: %w", err)
 	}
 
 	var priorityOpts, opts pickerOptions
+	for _, tenant := range tenants {
+		opt := pickerOption{value: tenant.Domain, label: tenant.Domain}
 
-	for _, t := range tens {
-		opt := pickerOption{value: t.Domain, label: t.Domain}
-
-		// check if this is currently the default tenant.
-		if t.Domain == c.config.DefaultTenant {
+		// Check if this is currently the default tenant.
+		if tenant.Domain == c.config.DefaultTenant {
 			priorityOpts = append(priorityOpts, opt)
 		} else {
 			opts = append(opts, opt)
@@ -238,7 +142,7 @@ func (c *cli) tenantPickerOptions() (pickerOptions, error) {
 	}
 
 	if len(opts)+len(priorityOpts) == 0 {
-		return nil, errNoApps
+		return nil, fmt.Errorf("there are currently no tenants to pick from")
 	}
 
 	return append(priorityOpts, opts...), nil

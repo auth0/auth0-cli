@@ -1,42 +1,44 @@
 ---
 layout: default
 ---
-## auth0 protection suspicious-ip-throttling show
+# auth0 protection suspicious-ip-throttling show
 
-Show suspicious ip throttling settings
+Display the current suspicious ip throttling settings.
 
-### Synopsis
-
-Show suspicious ip throttling settings.
-
+## Usage
 ```
 auth0 protection suspicious-ip-throttling show [flags]
 ```
 
-### Examples
+## Examples
 
 ```
-auth0 protection suspicious-ip-throttling show
+  auth0 protection suspicious-ip-throttling show
+  auth0 ap sit show --json
 ```
 
-### Options
+
+## Flags
 
 ```
-  -h, --help   help for show
+      --json   Output in json format.
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
-      --format string   Command output format. Options: json.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
 
-* [auth0 protection suspicious-ip-throttling](auth0_protection_suspicious-ip-throttling.md)	 - Manage suspicious ip throttling settings
+## Related Commands
+
+- [auth0 protection suspicious-ip-throttling ips](auth0_protection_suspicious-ip-throttling_ips.md) - Manage blocked IP addresses
+- [auth0 protection suspicious-ip-throttling show](auth0_protection_suspicious-ip-throttling_show.md) - Show suspicious ip throttling settings
+- [auth0 protection suspicious-ip-throttling update](auth0_protection_suspicious-ip-throttling_update.md) - Update suspicious ip throttling settings
+
 

@@ -1,45 +1,48 @@
 ---
 layout: default
 ---
-## auth0 orgs roles members list
-
-List organization members for a role
-
-### Synopsis
+# auth0 orgs roles members list
 
 List organization members that have a given role assigned to them.
 
+## Usage
 ```
 auth0 orgs roles members list [flags]
 ```
 
-### Examples
+## Examples
 
 ```
-auth0 orgs roles members list
-auth0 orgs roles members list <org id> --role-id role
+  auth0 orgs roles members list
+  auth0 orgs roles members ls
+  auth0 orgs roles members list <org-id> --role-id role
+  auth0 orgs roles members list <org-id> --role-id role --number 100
+  auth0 orgs roles members ls <org-id> -r role -n 100
+  auth0 orgs roles members ls <org-id> -r role -n 100 --json
 ```
 
-### Options
+
+## Flags
 
 ```
-  -h, --help             help for list
-  -n, --number int       Number of apps to retrieve (default 50)
+      --json             Output in json format.
+  -n, --number int       Number of members to retrieve. Minimum 1, maximum 1000. (default 50)
   -r, --role-id string   Role Identifier.
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
-      --format string   Command output format. Options: json.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
 
-* [auth0 orgs roles members](auth0_orgs_roles_members.md)	 - Manage roles of organization members
+## Related Commands
+
+- [auth0 orgs roles members list](auth0_orgs_roles_members_list.md) - List organization members for a role
+
 

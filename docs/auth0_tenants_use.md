@@ -1,42 +1,40 @@
 ---
 layout: default
 ---
-## auth0 tenants use
+# auth0 tenants use
 
-Set the active tenant
+Set the active tenant for the Auth0 CLI.
 
-### Synopsis
-
-Set the active tenant.
-
+## Usage
 ```
 auth0 tenants use [flags]
 ```
 
-### Examples
+## Examples
 
 ```
-auth0 tenants use <tenant>
+  auth0 tenants use
+  auth0 tenants use <tenant>
+  auth0 tenants use "example.us.auth0.com"
 ```
 
-### Options
 
-```
-  -h, --help   help for use
-```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
-      --format string   Command output format. Options: json.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
 
-* [auth0 tenants](auth0_tenants.md)	 - Manage configured tenants
+## Related Commands
+
+- [auth0 tenants list](auth0_tenants_list.md) - List your tenants
+- [auth0 tenants open](auth0_tenants_open.md) - Open the settings page of the tenant
+- [auth0 tenants use](auth0_tenants_use.md) - Set the active tenant
+
 

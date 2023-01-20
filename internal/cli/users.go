@@ -68,6 +68,12 @@ var (
 		ShortForm: "s",
 		Help:      "Field to sort by. Use 'field:order' where 'order' is '1' for ascending and '-1' for descending. e.g. 'created_at:1'.",
 	}
+	userNumber = Flag{
+		Name:      "Number",
+		LongForm:  "number",
+		ShortForm: "n",
+		Help:      "Number of users, that match the search criteria, to retrieve. Minimum 1, maximum 1000. If limit is hit, refine the search query.",
+	}
 	userImportTemplate = Flag{
 		Name:       "Template",
 		LongForm:   "template",
@@ -115,11 +121,11 @@ func usersCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(searchUsersCmd(cli))
 	cmd.AddCommand(createUserCmd(cli))
 	cmd.AddCommand(showUserCmd(cli))
-	cmd.AddCommand(deleteUserCmd(cli))
 	cmd.AddCommand(updateUserCmd(cli))
+	cmd.AddCommand(deleteUserCmd(cli))
+	cmd.AddCommand(userRolesCmd(cli))
 	cmd.AddCommand(openUserCmd(cli))
 	cmd.AddCommand(userBlocksCmd(cli))
-	cmd.AddCommand(deleteUserBlocksCmd(cli))
 	cmd.AddCommand(importUsersCmd(cli))
 
 	return cmd
@@ -127,53 +133,75 @@ func usersCmd(cli *cli) *cobra.Command {
 
 func searchUsersCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		query string
-		sort  string
+		query  string
+		sort   string
+		number int
 	}
 
 	cmd := &cobra.Command{
 		Use:   "search",
 		Args:  cobra.NoArgs,
 		Short: "Search for users",
-		Long: `Search for users. To create one try:
-auth0 users create`,
-		Example: `auth0 users search
-auth0 users search --query id
-auth0 users search -q name --sort "name:1"
-auth0 users search -q name -s "name:1"`,
+		Long:  "Search for users. To create one, run: `auth0 users create`.",
+		Example: `  auth0 users search
+  auth0 users search --query user_id:"<user-id>"
+  auth0 users search --query name:"Bob" --sort "name:1"
+  auth0 users search -q name:"Bob" -s "name:1" --number 200
+  auth0 users search -q name:"Bob" -s "name:1" -n 200 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := userQuery.Ask(cmd, &inputs.query, nil); err != nil {
 				return err
 			}
 
-			search := &management.UserList{}
-
-			var queryParams []management.RequestOption
-
-			if len(inputs.sort) == 0 {
-				queryParams = append(queryParams, management.Query(auth0.StringValue(&inputs.query)))
-			} else {
-				queryParams = append(queryParams,
-					management.Query(auth0.StringValue(&inputs.query)),
-					management.Parameter("sort", auth0.StringValue(&inputs.sort)),
-				)
+			queryParams := []management.RequestOption{
+				management.Query(inputs.query),
+			}
+			if inputs.sort != "" {
+				queryParams = append(queryParams, management.Parameter("sort", inputs.sort))
 			}
 
-			if err := ansi.Waiting(func() error {
-				var err error
-				search, err = cli.api.User.Search(queryParams...)
-				return err
-			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred: %w", err)
+			if inputs.number < 1 || inputs.number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
 			}
 
-			cli.renderer.UserSearch(search.Users)
+			list, err := getWithPagination(
+				cmd.Context(),
+				inputs.number,
+				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
+					opts = append(opts, queryParams...)
+
+					userList, err := cli.api.User.Search(opts...)
+					if err != nil {
+						return nil, false, err
+					}
+
+					var output []interface{}
+					for _, user := range userList.Users {
+						output = append(output, user)
+					}
+
+					return output, userList.HasNext(), nil
+				},
+			)
+			if err != nil {
+				return fmt.Errorf("failed to search for users: %w", err)
+			}
+
+			var foundUsers []*management.User
+			for _, item := range list {
+				foundUsers = append(foundUsers, item.(*management.User))
+			}
+
+			cli.renderer.UserSearch(foundUsers)
+
 			return nil
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	userQuery.RegisterString(cmd, &inputs.query, "")
 	userSort.RegisterString(cmd, &inputs.sort, "")
+	userNumber.RegisterInt(cmd, &inputs.number, defaultPageSize)
 
 	return cmd
 }
@@ -191,11 +219,14 @@ func createUserCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new user",
-		Long:  "Create a new user.",
-		Example: `auth0 users create 
-auth0 users create --name "John Doe" 
-auth0 users create -n "John Doe" --email john@example.com
-auth0 users create -n "John Doe" -e john@example.com --connection "Username-Password-Authentication"`,
+		Long: "Create a new user.\n\n" +
+			"To create interactively, use `auth0 users create` with no flags.\n\n" +
+			"To create non-interactively, supply the name and other information through the available flags.",
+		Example: `  auth0 users create 
+  auth0 users create --name "John Doe" 
+  auth0 users create --name "John Doe" --email john@example.com
+  auth0 users create --name "John Doe" --email john@example.com --connection "Username-Password-Authentication" --username "example"
+  auth0 users create -n "John Doe" -e john@example.com -c "Username-Password-Authentication" -u "example" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Select from the available connection types
 			// Users API currently support  database connections
@@ -251,6 +282,8 @@ auth0 users create -n "John Doe" -e john@example.com --connection "Username-Pass
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	userName.RegisterString(cmd, &inputs.Name, "")
 	userConnection.RegisterString(cmd, &inputs.Connection, "")
 	userPassword.RegisterString(cmd, &inputs.Password, "")
@@ -269,9 +302,10 @@ func showUserCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an existing user",
-		Long:  "Show an existing user.",
-		Example: `auth0 users show 
-auth0 users show <id>`,
+		Long:  "Display information about an existing user.",
+		Example: `  auth0 users show 
+  auth0 users show <user-id>
+  auth0 users show <user-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.ID); err != nil {
@@ -304,6 +338,8 @@ auth0 users show <id>`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -313,12 +349,17 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Delete a user",
-		Long:  "Delete a user.",
-		Example: `auth0 users delete 
-auth0 users delete <id>`,
+		Use:     "delete",
+		Aliases: []string{"rm"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Delete a user",
+		Long: "Delete a user.\n\n" +
+			"To delete interactively, use `auth0 users delete` with no arguments.\n\n" +
+			"To delete non-interactively, supply the user id and the `--force` flag to skip confirmation.",
+		Example: `  auth0 users delete 
+  auth0 users rm
+  auth0 users delete <user-id>
+  auth0 users delete <user-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.ID); err != nil {
@@ -346,6 +387,8 @@ auth0 users delete <id>`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
+
 	return cmd
 }
 
@@ -362,11 +405,13 @@ func updateUserCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a user",
-		Long:  "Update a user.",
-		Example: `auth0 users update 
-auth0 users update <id> 
-auth0 users update <id> --name John Doe
-auth0 users update -n John Doe --email john.doe@example.com`,
+		Long: "Update a user.\n\n" +
+			"To update interactively, use `auth0 users update` with no arguments.\n\n" +
+			"To update non-interactively, supply the user id and other information through the available flags.",
+		Example: `  auth0 users update 
+  auth0 users update <user-id> 
+  auth0 users update <user-id> --name "John Doe"
+  auth0 users update <user-id> --name "John Doe" --email john.doe@example.com`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.ID); err != nil {
@@ -447,6 +492,7 @@ auth0 users update -n John Doe --email john.doe@example.com`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	userName.RegisterStringU(cmd, &inputs.Name, "")
 	userConnection.RegisterStringU(cmd, &inputs.Connection, "")
 	userPassword.RegisterStringU(cmd, &inputs.Password, "")
@@ -463,10 +509,10 @@ func openUserCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "open",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Open user details page in the Auth0 Dashboard",
-		Long:  "Open user details page in the Auth0 Dashboard.",
-		Example: `auth0 users open <id>
-auth0 users open "auth0|xxxxxxxxxx"`,
+		Short: "Open the user's settings page",
+		Long:  "Open the settings page of a user in the Auth0 Dashboard.",
+		Example: `  auth0 users open <id>
+  auth0 users open "auth0|xxxxxxxxxx"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.ID); err != nil {
@@ -477,93 +523,6 @@ auth0 users open "auth0|xxxxxxxxxx"`,
 			}
 
 			openManageURL(cli, cli.config.DefaultTenant, formatUserDetailsPath(url.PathEscape(inputs.ID)))
-			return nil
-		},
-	}
-
-	return cmd
-}
-
-func userBlocksCmd(cli *cli) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "blocks",
-		Short: "Manage brute-force protection user blocks",
-		Long:  "Manage brute-force protection user blocks.",
-	}
-
-	cmd.SetUsageTemplate(resourceUsageTemplate())
-	cmd.AddCommand(listUserBlocksCmd(cli))
-	return cmd
-}
-
-func listUserBlocksCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		userID string
-	}
-
-	cmd := &cobra.Command{
-		Use:     "list",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "List brute-force protection blocks for a given user",
-		Long:    "List brute-force protection blocks for a given user.",
-		Example: "auth0 users blocks list <user-id>",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				if err := userID.Ask(cmd, &inputs.userID); err != nil {
-					return err
-				}
-			} else {
-				inputs.userID = args[0]
-			}
-
-			var userBlocks []*management.UserBlock
-
-			err := ansi.Waiting(func() error {
-				var err error
-				userBlocks, err = cli.api.User.Blocks(inputs.userID)
-				return err
-			})
-
-			if err != nil {
-				return fmt.Errorf("Unable to load user blocks %v, error: %w", inputs.userID, err)
-			}
-
-			cli.renderer.UserBlocksList(userBlocks)
-			return nil
-		},
-	}
-
-	return cmd
-}
-
-func deleteUserBlocksCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		userID string
-	}
-
-	cmd := &cobra.Command{
-		Use:     "unblock",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Remove brute-force protection blocks for a given user",
-		Long:    "Remove brute-force protection blocks for a given user.",
-		Example: "auth0 users unblock <user-id>",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				if err := userID.Ask(cmd, &inputs.userID); err != nil {
-					return err
-				}
-			} else {
-				inputs.userID = args[0]
-			}
-
-			err := ansi.Spinner("Deleting blocks for user...", func() error {
-				return cli.api.User.Unblock(inputs.userID)
-			})
-
-			if err != nil {
-				return err
-			}
-
 			return nil
 		},
 	}
@@ -586,11 +545,11 @@ func importUsersCmd(cli *cli) *cobra.Command {
 		Short: "Import users from schema",
 		Long: `Import users from schema. Issues a Create Import Users Job. 
 The file size limit for a bulk import is 500KB. You will need to start multiple imports if your data exceeds this size.`,
-		Example: `auth0 users import
-auth0 users import --connection "Username-Password-Authentication"
-auth0 users import -c "Username-Password-Authentication" --template "Basic Example"
-auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=true
-auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=true --email-results=false`,
+		Example: `  auth0 users import
+  auth0 users import --connection "Username-Password-Authentication"
+  auth0 users import -c "Username-Password-Authentication" --template "Basic Example"
+  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert true
+  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert true --email-results false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Select from the available connection types
 			// Users API currently support database connections
@@ -651,7 +610,7 @@ auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --up
 				return err
 			}
 
-			cli.renderer.Heading("Starting user import job...")
+			cli.renderer.Heading("starting user import job...")
 			fmt.Println(jsonstr)
 
 			if inputs.SendCompletionEmail {
@@ -719,5 +678,5 @@ func (c *cli) getConnReqUsername(s string) *bool {
 }
 
 func (c *cli) userImportEditorHint() {
-	c.renderer.Infof("%s once you close the editor, the user(s) will be imported. To cancel, CTRL+C.", ansi.Faint("Hint:"))
+	c.renderer.Infof("%s Once you close the editor, the user(s) will be imported. To cancel, CTRL+C.", ansi.Faint("Hint:"))
 }

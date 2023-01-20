@@ -113,25 +113,27 @@ var (
 		Help:       "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.",
 		IsRequired: false,
 	}
-	reveal = Flag{
+	revealSecrets = Flag{
 		Name:      "Reveal",
-		LongForm:  "reveal",
+		LongForm:  "reveal-secrets",
 		ShortForm: "r",
-		Help:      "Display the Client Secret as part of the command output.",
+		Help:      "Display the application secrets ('signing_keys', 'client_secret') as part of the command output.",
 	}
-	number = Flag{
+	appNumber = Flag{
 		Name:      "Number",
 		LongForm:  "number",
 		ShortForm: "n",
-		Help:      "Number of apps to retrieve",
+		Help:      "Number of apps to retrieve. Minimum 1, maximum 1000.",
 	}
 )
 
 func appsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "apps",
-		Short:   "Manage resources for applications",
-		Long:    "Manage resources for applications.",
+		Use:   "apps",
+		Short: "Manage resources for applications",
+		Long: "The term application or app in Auth0 does not imply any particular implementation characteristics. " +
+			"For example, it could be a native app that executes on a mobile device, a single-page application that " +
+			"executes on a browser, or a regular web application that executes on a server.",
 		Aliases: []string{"clients"},
 	}
 
@@ -154,11 +156,14 @@ func useAppCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "use",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Choose a default application for the Auth0 CLI",
-		Long:    "Specify your preferred application for interaction with the Auth0 CLI.",
-		Example: "auth0 apps use <client-id>",
+		Use:   "use",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Choose a default application for the Auth0 CLI",
+		Long: "Specify the default application used when running other commands. Specifically when downloading " +
+			"quickstarts and testing Universal login flow.",
+		Example: `  auth0 apps use
+  auth0 apps use --none
+  auth0 apps use <app-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.None {
 				inputs.ID = ""
@@ -181,7 +186,7 @@ func useAppCmd(cli *cli) *cobra.Command {
 				cli.renderer.Infof("Successfully removed the default application")
 			} else {
 				cli.renderer.Infof("Successfully set the default application to %s", ansi.Faint(inputs.ID))
-				cli.renderer.Infof("%s You might wanna try 'auth0 quickstarts download %s'", ansi.Faint("Hint:"), inputs.ID)
+				cli.renderer.Infof("%s Consider running `auth0 quickstarts download %s`", ansi.Faint("Hint:"), inputs.ID)
 			}
 
 			return nil
@@ -189,13 +194,14 @@ func useAppCmd(cli *cli) *cobra.Command {
 	}
 
 	appNone.RegisterBool(cmd, &inputs.None, false)
+
 	return cmd
 }
 
 func listAppsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Reveal bool
-		Number int
+		RevealSecrets bool
+		Number        int
 	}
 
 	cmd := &cobra.Command{
@@ -203,12 +209,17 @@ func listAppsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your applications",
-		Long: `List your existing applications. To create one try:
-auth0 apps create`,
-		Example: `auth0 apps list
-auth0 apps ls
-auth0 apps ls -n 100`,
+		Long:    "List your existing applications. To create one, run: `auth0 apps create`.",
+		Example: `  auth0 apps list
+  auth0 apps ls
+  auth0 apps list --reveal-secrets
+  auth0 apps list --reveal-secrets --number 100
+  auth0 apps ls -r -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Number < 1 || inputs.Number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
+
 			list, err := getWithPagination(
 				cmd.Context(),
 				inputs.Number,
@@ -230,30 +241,33 @@ auth0 apps ls -n 100`,
 			for _, item := range list {
 				typedList = append(typedList, item.(*management.Client))
 			}
-			cli.renderer.ApplicationList(typedList, inputs.Reveal)
+			cli.renderer.ApplicationList(typedList, inputs.RevealSecrets)
 			return nil
 		},
 	}
 
-	reveal.RegisterBool(cmd, &inputs.Reveal, false)
-	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
+	appNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
 }
 
 func showAppCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID     string
-		Reveal bool
+		ID            string
+		RevealSecrets bool
 	}
 
 	cmd := &cobra.Command{
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an application",
-		Long:  "Show an application.",
-		Example: `auth0 apps show 
-auth0 apps show <id>`,
+		Long:  "Display the name, description, app type, and other information about an application.",
+		Example: `  auth0 apps show
+  auth0 apps show <app-id>
+  auth0 apps show <app-id> --reveal-secrets
+  auth0 apps show <app-id> -r --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
@@ -274,12 +288,13 @@ auth0 apps show <id>`,
 				return fmt.Errorf("Unable to load application: %w", err)
 			}
 
-			cli.renderer.ApplicationShow(a, inputs.Reveal)
+			cli.renderer.ApplicationShow(a, inputs.RevealSecrets)
 			return nil
 		},
 	}
 
-	reveal.RegisterBool(cmd, &inputs.Reveal, false)
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 
 	return cmd
 }
@@ -290,12 +305,18 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Delete an application",
-		Long:  "Delete an application.",
-		Example: `auth0 apps delete 
-auth0 apps delete <id>`,
+		Use:     "delete",
+		Aliases: []string{"rm"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Delete an application",
+		Long: "Delete an application.\n\n" +
+			"To delete interactively, use `auth0 apps delete` with no arguments.\n\n" +
+			"To delete non-interactively, supply the application id and the `--force` " +
+			"flag to skip confirmation.",
+		Example: `  auth0 apps delete 
+  auth0 apps rm
+  auth0 apps delete <app-id>
+  auth0 apps delete <app-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
@@ -324,6 +345,8 @@ auth0 apps delete <id>`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
+
 	return cmd
 }
 
@@ -338,7 +361,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 		AllowedLogoutURLs []string
 		AuthMethod        string
 		Grants            []string
-		Reveal            bool
+		RevealSecrets     bool
 	}
 	var oidcConformant = true
 	var algorithm = "RS256"
@@ -347,11 +370,15 @@ func createAppCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new application",
-		Long:  "Create a new application.",
-		Example: `auth0 apps create 
-auth0 apps create --name myapp 
-auth0 apps create -n myapp --type [native|spa|regular|m2m]
-auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <description>`,
+		Long: "Create a new application.\n\n" +
+			"To create interactively, use `auth0 apps create` with no arguments.\n\n" +
+			"To create non-interactively, supply at least the application name, and type through the flags.",
+		Example: `  auth0 apps create
+  auth0 apps create --name myapp 
+  auth0 apps create --name myapp --description <description>
+  auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m]
+  auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m] --reveal-secrets
+  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Prompt for app name
 			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -455,12 +482,13 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <descriptio
 			}
 
 			// Render result
-			cli.renderer.ApplicationCreate(a, inputs.Reveal)
+			cli.renderer.ApplicationCreate(a, inputs.RevealSecrets)
 
 			return nil
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	appName.RegisterString(cmd, &inputs.Name, "")
 	appType.RegisterString(cmd, &inputs.Type, "")
 	appDescription.RegisterString(cmd, &inputs.Description, "")
@@ -470,7 +498,7 @@ auth0 apps create -n myapp -t [native|spa|regular|m2m] --description <descriptio
 	appLogoutURLs.RegisterStringSlice(cmd, &inputs.AllowedLogoutURLs, nil)
 	appAuthMethod.RegisterString(cmd, &inputs.AuthMethod, "")
 	appGrants.RegisterStringSlice(cmd, &inputs.Grants, nil)
-	reveal.RegisterBool(cmd, &inputs.Reveal, false)
+	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 
 	return cmd
 }
@@ -487,17 +515,23 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		AllowedLogoutURLs []string
 		AuthMethod        string
 		Grants            []string
-		Reveal            bool
+		RevealSecrets     bool
 	}
 
 	cmd := &cobra.Command{
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an application",
-		Long:  "Update an application.",
-		Example: `auth0 apps update <id> 
-auth0 apps update <id> --name myapp 
-auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
+		Long: "Update an application.\n\n" +
+			"To update interactively, use `auth0 apps update` with no arguments.\n\n" +
+			"To update non-interactively, supply the application id, name, type and other information you " +
+			"might want to change through the available flags.",
+		Example: `  auth0 apps update
+  auth0 apps update <app-id> --name myapp
+  auth0 apps update <app-id> --name myapp --description <description>
+  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m]
+  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m] --reveal-secrets
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Client
 
@@ -658,12 +692,13 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 			}
 
 			// Render result
-			cli.renderer.ApplicationUpdate(a, inputs.Reveal)
+			cli.renderer.ApplicationUpdate(a, inputs.RevealSecrets)
 
 			return nil
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	appName.RegisterStringU(cmd, &inputs.Name, "")
 	appType.RegisterStringU(cmd, &inputs.Type, "")
 	appDescription.RegisterStringU(cmd, &inputs.Description, "")
@@ -673,7 +708,8 @@ auth0 apps update <id> -n myapp --type [native|spa|regular|m2m]`,
 	appLogoutURLs.RegisterStringSliceU(cmd, &inputs.AllowedLogoutURLs, nil)
 	appAuthMethod.RegisterStringU(cmd, &inputs.AuthMethod, "")
 	appGrants.RegisterStringSliceU(cmd, &inputs.Grants, nil)
-	reveal.RegisterBool(cmd, &inputs.Reveal, false)
+	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
+
 	return cmd
 }
 
@@ -683,11 +719,12 @@ func openAppCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "open",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Open application settings page in the Auth0 Dashboard",
-		Long:    "Open application settings page in the Auth0 Dashboard.",
-		Example: "auth0 apps open <id>",
+		Use:   "open",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Open the settings page of an application",
+		Long:  "Open an application's settings page in the Auth0 Dashboard.",
+		Example: `  auth0 apps open
+  auth0 apps open <app-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)

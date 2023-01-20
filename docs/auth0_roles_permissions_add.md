@@ -1,48 +1,48 @@
 ---
 layout: default
 ---
-## auth0 roles permissions add
-
-Add a permission to a role
-
-### Synopsis
+# auth0 roles permissions add
 
 Add an existing permission defined in one of your APIs.
-To add a permission try:
 
-    auth0 roles permissions add <role-id> -p <permission-name>
-
+## Usage
 ```
 auth0 roles permissions add [flags]
 ```
 
-### Examples
+## Examples
 
 ```
-auth0 roles permissions add <role-id> -p <permission-name>
-auth0 roles permissions add
+  auth0 roles permissions add
+  auth0 roles permissions add <role-id>
+  auth0 roles permissions add <role-id> --api-id <api-id>
+  auth0 roles permissions add <role-id> --api-id <api-id> --permissions <permission-name>
+  auth0 roles permissions add <role-id> -a <api-id> -p <permission-name>
 ```
 
-### Options
+
+## Flags
 
 ```
   -a, --api-id string         API Identifier.
-  -h, --help                  help for add
   -p, --permissions strings   Permissions.
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
-      --format string   Command output format. Options: json.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
 
-* [auth0 roles permissions](auth0_roles_permissions.md)	 - Manage permissions within the role resource
+## Related Commands
+
+- [auth0 roles permissions add](auth0_roles_permissions_add.md) - Add a permission to a role
+- [auth0 roles permissions list](auth0_roles_permissions_list.md) - List permissions defined within a role
+- [auth0 roles permissions remove](auth0_roles_permissions_remove.md) - Remove a permission from a role
+
 
