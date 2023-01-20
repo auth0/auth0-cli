@@ -2,12 +2,14 @@ package cli
 
 import (
 	"fmt"
+	"net/http"
 
-	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
 const (
@@ -96,6 +98,19 @@ var (
 	}
 )
 
+func emailTemplateCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "templates",
+		Short: "Manage custom email templates",
+		Long:  "Manage custom email templates. This requires a custom email provider to be configured for the tenant.",
+	}
+
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(showEmailTemplateCmd(cli))
+	cmd.AddCommand(updateEmailTemplateCmd(cli))
+	return cmd
+}
+
 func showEmailTemplateCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Template string
@@ -105,9 +120,10 @@ func showEmailTemplateCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an email template",
-		Long:  "Show an email template.",
-		Example: `auth0 branding emails show <template>
-auth0 branding emails show welcome`,
+		Long:  "Display information about an email template.",
+		Example: `  auth0 email templates show
+  auth0 email templates show <template>
+  auth0 email templates show welcome`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := emailTemplateTemplate.Pick(cmd, &inputs.Template, cli.emailTemplatePickerOptions)
@@ -119,19 +135,19 @@ auth0 branding emails show welcome`,
 			}
 
 			var email *management.EmailTemplate
-
-			if err := ansi.Waiting(func() error {
-				var err error
+			if err := ansi.Waiting(func() (err error) {
 				email, err = cli.api.EmailTemplate.Read(apiEmailTemplateFor(inputs.Template))
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to get the email template '%s': %w", inputs.Template, err)
+				return fmt.Errorf("failed to get the email template '%s': %w", inputs.Template, err)
 			}
 
 			cli.renderer.EmailTemplateShow(email)
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -151,9 +167,20 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an email template",
-		Long:  "Update an email template.",
-		Example: `auth0 branding emails update <template>
-auth0 branding emails update welcome`,
+		Long: "Update an email template.\n\n" +
+			"To update interactively, use `auth0 email templates update` with no arguments.\n\n" +
+			"To update non-interactively, supply the template name and other information " +
+			"through the flags.",
+		Example: `  auth0 email templates update
+  auth0 email templates update <template>
+  auth0 email templates update <template> --json
+  auth0 email templates update welcome --enabled true
+  auth0 email templates update welcome --enabled true --body "$(cat path/to/body.html)"
+  auth0 email templates update welcome --enabled true --body "$(cat path/to/body.html)" --from "welcome@example.com"
+  auth0 email templates update welcome --enabled true --body "$(cat path/to/body.html)" --from "welcome@example.com" --lifetime 6100
+  auth0 email templates update welcome --enabled true --body "$(cat path/to/body.html)" --from "welcome@example.com" --lifetime 6100 --subject "Welcome"
+  auth0 email templates update welcome --enabled true --body "$(cat path/to/body.html)" --from "welcome@example.com" --lifetime 6100 --subject "Welcome" --url "https://example.com"
+  auth0 email templates update welcome -e true -b "$(cat path/to/body.html)" -f "welcome@example.com" -l 6100 -s "Welcome" -u "https://example.com" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.Template = args[0]
@@ -164,95 +191,97 @@ auth0 branding emails update welcome`,
 				}
 			}
 
-			var current *management.EmailTemplate
-			err := ansi.Waiting(func() error {
-				var err error
-				current, err = cli.api.EmailTemplate.Read(apiEmailTemplateFor(inputs.Template))
+			var oldTemplate *management.EmailTemplate
+			templateExists := true
+			err := ansi.Waiting(func() (err error) {
+				oldTemplate, err = cli.api.EmailTemplate.Read(apiEmailTemplateFor(inputs.Template))
 				return err
 			})
 			if err != nil {
-				return fmt.Errorf("Unable to get the email template '%s': %w", inputs.Template, err)
+				mErr, ok := err.(management.Error)
+				if !ok || mErr.Status() != http.StatusNotFound {
+					return fmt.Errorf("failed to get the email template '%s': %w", inputs.Template, err)
+				}
+
+				templateExists = false
+				oldTemplate = &management.EmailTemplate{
+					From:    auth0.String(""),
+					Subject: auth0.String(""),
+					Enabled: auth0.Bool(false),
+					Syntax:  auth0.String("liquid"),
+				}
 			}
 
-			if err := emailTemplateFrom.AskU(cmd, &inputs.From, current.From); err != nil {
+			if err := emailTemplateFrom.AskU(cmd, &inputs.From, oldTemplate.From); err != nil {
+				return err
+			}
+			if err := emailTemplateSubject.AskU(cmd, &inputs.Subject, oldTemplate.Subject); err != nil {
 				return err
 			}
 
-			if err := emailTemplateSubject.AskU(cmd, &inputs.Subject, current.Subject); err != nil {
-				return err
-			}
-
-			// TODO(cyx): we can re-think this once we have
-			// `--stdin` based commands. For now we don't have
-			// those yet, so keeping this simple.
 			if err := emailTemplateBody.OpenEditorU(
 				cmd,
 				&inputs.Body,
-				current.GetBody(),
+				oldTemplate.GetBody(),
 				inputs.Template+".*.liquid",
-				cli.emailTemplateEditorHint,
 			); err != nil {
+				return fmt.Errorf("failed to capture input from the editor: %w", err)
+			}
+
+			if !cli.force && canPrompt(cmd) {
+				var confirmed bool
+				if err := prompt.AskBool("Do you want to save the email template body?", &confirmed, true); err != nil {
+					return fmt.Errorf("failed to capture prompt input: %w", err)
+				}
+				if !confirmed {
+					return nil
+				}
+			}
+
+			if err := emailTemplateEnabled.AskBoolU(cmd, &inputs.Enabled, oldTemplate.Enabled); err != nil {
 				return err
-			}
-			if err != nil {
-				return fmt.Errorf("Failed to capture input from the editor: %w", err)
-			}
-
-			if !ruleEnabled.IsSet(cmd) {
-				inputs.Enabled = auth0.BoolValue(current.Enabled)
-			}
-
-			if err := ruleEnabled.AskBoolU(cmd, &inputs.Enabled, current.Enabled); err != nil {
-				return err
-			}
-
-			if inputs.Body == "" {
-				inputs.Body = current.GetBody()
-			}
-
-			if inputs.From == "" {
-				inputs.From = current.GetFrom()
-			}
-
-			if inputs.Subject == "" {
-				inputs.Subject = current.GetSubject()
 			}
 
 			template := apiEmailTemplateFor(inputs.Template)
-			// Prepare email template payload for update. This will also be
-			// re-hydrated by the SDK, which we'll use below during
-			// display.
 			emailTemplate := &management.EmailTemplate{
-				Template: &template,
-				Body:     &inputs.Body,
-				From:     &inputs.From,
-				Subject:  &inputs.Subject,
 				Enabled:  &inputs.Enabled,
+				Template: &template,
+				Syntax:   oldTemplate.Syntax,
 			}
-
-			if inputs.ResultURL == "" {
-				emailTemplate.ResultURL = current.ResultURL
-			} else {
+			if inputs.Body != "" {
+				emailTemplate.Body = &inputs.Body
+			}
+			if inputs.From != "" {
+				emailTemplate.From = &inputs.From
+			}
+			if inputs.Subject != "" {
+				emailTemplate.Subject = &inputs.Subject
+			}
+			if inputs.ResultURL != "" {
 				emailTemplate.ResultURL = &inputs.ResultURL
 			}
-
-			if inputs.ResultURLLifetime == 0 {
-				emailTemplate.URLLifetimeInSecoonds = current.URLLifetimeInSecoonds
-			} else {
+			if inputs.ResultURLLifetime != 0 {
 				emailTemplate.URLLifetimeInSecoonds = &inputs.ResultURLLifetime
 			}
 
 			if err = ansi.Waiting(func() error {
-				return cli.api.EmailTemplate.Update(template, emailTemplate)
+				if templateExists {
+					return cli.api.EmailTemplate.Update(template, emailTemplate)
+				}
+
+				return cli.api.EmailTemplate.Create(emailTemplate)
 			}); err != nil {
-				return err
+				return fmt.Errorf("failed to update the email template '%s': %w", inputs.Template, err)
 			}
 
 			cli.renderer.EmailTemplateUpdate(emailTemplate)
+
 			return nil
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	emailTemplateBody.RegisterStringU(cmd, &inputs.Body, "")
 	emailTemplateFrom.RegisterStringU(cmd, &inputs.From, "")
 	emailTemplateSubject.RegisterStringU(cmd, &inputs.Subject, "")
@@ -261,10 +290,6 @@ auth0 branding emails update welcome`,
 	emailTemplateLifetime.RegisterIntU(cmd, &inputs.ResultURLLifetime, 0)
 
 	return cmd
-}
-
-func (c *cli) emailTemplateEditorHint() {
-	c.renderer.Infof("%s once you close the editor, the email template will be saved. To cancel, CTRL+C.", ansi.Faint("Hint:"))
 }
 
 func (c *cli) emailTemplatePickerOptions() (pickerOptions, error) {

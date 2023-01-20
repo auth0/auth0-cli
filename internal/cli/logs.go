@@ -50,16 +50,16 @@ func listLogsCmd(cli *cli) *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Args:    cobra.MaximumNArgs(1),
-		Short:   "Show the application logs",
-		Long:    "Show the tenant logs allowing to filter using Lucene query syntax.",
-		Example: `auth0 logs list
-auth0 logs list --filter "client_id:<client-id>"
-auth0 logs list --filter "client_name:<client-name>"
-auth0 logs list --filter "user_id:<user-id>"
-auth0 logs list --filter "user_name:<user-name>"
-auth0 logs list --filter "ip:<ip>"
-auth0 logs list --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
-auth0 logs ls -n 100`,
+		Short:   "Show the tenant logs",
+		Long:    "Display the tenant logs allowing to filter using Lucene query syntax.",
+		Example: `  auth0 logs list
+  auth0 logs list --filter "client_id:<client-id>"
+  auth0 logs list --filter "client_name:<client-name>"
+  auth0 logs list --filter "user_id:<user-id>"
+  auth0 logs list --filter "user_name:<user-name>"
+  auth0 logs list --filter "ip:<ip>"
+  auth0 logs list --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
+  auth0 logs ls -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			list, err := getLatestLogs(cli, inputs.Num, inputs.Filter)
 			if err != nil {
@@ -74,6 +74,9 @@ auth0 logs ls -n 100`,
 
 	logsFilter.RegisterString(cmd, &inputs.Filter, "")
 	logsNum.RegisterInt(cmd, &inputs.Num, 100)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -88,14 +91,14 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Tail the tenant logs",
 		Long:  "Tail the tenant logs allowing to filter using Lucene query syntax.",
-		Example: `auth0 logs tail
-auth0 logs tail --filter "client_id:<client-id>"
-auth0 logs tail --filter "client_name:<client-name>"
-auth0 logs tail --filter "user_id:<user-id>"
-auth0 logs tail --filter "user_name:<user-name>"
-auth0 logs tail --filter "ip:<ip>"
-auth0 logs tail --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
-auth0 logs tail -n 100`,
+		Example: `  auth0 logs tail
+  auth0 logs tail --filter "client_id:<client-id>"
+  auth0 logs tail --filter "client_name:<client-name>"
+  auth0 logs tail --filter "user_id:<user-id>"
+  auth0 logs tail --filter "user_name:<user-name>"
+  auth0 logs tail --filter "ip:<ip>"
+  auth0 logs tail --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
+  auth0 logs tail -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			lastLogID := ""
 			list, err := getLatestLogs(cli, inputs.Num, inputs.Filter)
@@ -158,6 +161,7 @@ auth0 logs tail -n 100`,
 
 	logsFilter.RegisterString(cmd, &inputs.Filter, "")
 	logsNum.RegisterInt(cmd, &inputs.Num, 100)
+
 	return cmd
 }
 

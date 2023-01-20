@@ -46,19 +46,19 @@ var (
 		Name:      "Dependency",
 		LongForm:  "dependency",
 		ShortForm: "d",
-		Help:      "Third party npm module, and it version, that the action depends on.",
+		Help:      "Third party npm module, and its version, that the action depends on.",
 	}
 
 	actionSecret = Flag{
 		Name:      "Secret",
 		LongForm:  "secret",
 		ShortForm: "s",
-		Help:      "Secret to be used in the action.",
+		Help:      "Secrets to be used in the action.",
 	}
 
 	actionTemplates = map[string]string{
 		"post-login":             actionTemplatePostLogin,
-		"credentials-exchange":   actionTemplateCredentialsEchange,
+		"credentials-exchange":   actionTemplateCredentialsExchange,
 		"pre-user-registration":  actionTemplatePreUserRegistration,
 		"post-user-registration": actionTemplatePostUserRegistration,
 		"post-change-password":   actionTemplatePostChangePassword,
@@ -70,7 +70,9 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "actions",
 		Short: "Manage resources for actions",
-		Long:  "Manage resources for actions.",
+		Long: "Actions are secure, tenant-specific, versioned functions written in Node.js that execute " +
+			"at certain points within the Auth0 platform. Actions are used to customize and extend Auth0's " +
+			"capabilities with custom logic.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -91,10 +93,10 @@ func listActionsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your actions",
-		Long: `List your existing actions. To create one try:
-auth0 actions create`,
-		Example: `auth0 actions list
-auth0 actions ls`,
+		Long:    "List your existing actions. To create one, run: `auth0 actions create`.",
+		Example: `  auth0 actions list
+  auth0 actions ls
+  auth0 actions ls --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ActionList
 
@@ -111,6 +113,8 @@ auth0 actions ls`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -123,9 +127,10 @@ func showActionCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an action",
-		Long:  "Show an action.",
-		Example: `auth0 actions show 
-auth0 actions show <id>`,
+		Long:  "Display the name, type, status, code and other information about an action.",
+		Example: `  auth0 actions show
+  auth0 actions show <action-id>
+  auth0 actions show <action-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)
@@ -143,13 +148,15 @@ auth0 actions show <id>`,
 				action, err = cli.api.Action.Read(inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to get an action with Id '%s': %w", inputs.ID, err)
+				return fmt.Errorf("Unable to get an action with ID '%s': %w", inputs.ID, err)
 			}
 
 			cli.renderer.ActionShow(action)
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -167,23 +174,33 @@ func createActionCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new action",
-		Long:  "Create a new action.",
-		Example: `auth0 actions create 
-auth0 actions create --name myaction
-auth0 actions create -n myaction --trigger post-login
-auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -d "uuid=8.0.0"
-auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=value" -s "SECRET=value`,
+		Long: "Create a new action.\n\n" +
+			"To create interactively, use `auth0 actions create` with no flags.\n\n" +
+			"To create non-interactively, supply the action name, trigger, code, secrets and dependencies through the flags.",
+		Example: `  auth0 actions create
+  auth0 actions create --name myaction
+  auth0 actions create --name myaction --trigger post-login
+  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)"
+  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
+  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
+  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
+  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := actionName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
 
-			triggers, version, err := latestActionTriggers(cli)
+			triggers, err := getCurrentTriggers(cli)
 			if err != nil {
 				return err
 			}
 
-			if err := actionTrigger.Select(cmd, &inputs.Trigger, triggers, nil); err != nil {
+			triggerIds := make([]string, 0)
+			for _, t := range triggers {
+				triggerIds = append(triggerIds, t.GetID())
+			}
+
+			if err := actionTrigger.Select(cmd, &inputs.Trigger, triggerIds, nil); err != nil {
 				return err
 			}
 
@@ -198,6 +215,14 @@ auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=val
 				cli.actionEditorHint,
 			); err != nil {
 				return err
+			}
+
+			var version string
+			for _, t := range triggers {
+				if t.GetID() == inputs.Trigger {
+					version = t.GetVersion()
+					break
+				}
 			}
 
 			action := &management.Action{
@@ -224,6 +249,7 @@ auth0 actions create -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=val
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	actionName.RegisterString(cmd, &inputs.Name, "")
 	actionTrigger.RegisterString(cmd, &inputs.Trigger, "")
 	actionCode.RegisterString(cmd, &inputs.Code, "")
@@ -237,7 +263,6 @@ func updateActionCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ID           string
 		Name         string
-		Trigger      string
 		Code         string
 		Dependencies map[string]string
 		Secrets      map[string]string
@@ -247,117 +272,89 @@ func updateActionCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an action",
-		Long:  "Update an action.",
-		Example: `auth0 actions update <id> 
-auth0 actions update <id> --name myaction
-auth0 actions update <id> -n myaction --trigger post-login
-auth0 actions update <id> -n myaction -t post-login -d "lodash=4.0.0" -d "uuid=8.0.0"
-auth0 actions update <id> -n myaction -t post-login -d "lodash=4.0.0" -s "API_KEY=value" -s "SECRET=value`,
+		Long: "Update an action.\n\n" +
+			"To update interactively, use `auth0 actions update` with no arguments.\n\n" +
+			"To update non-interactively, supply the action id, name, code, secrets and " +
+			"dependencies through the flags.",
+		Example: `  auth0 actions update <action-id> 
+  auth0 actions update <action-id> --name myaction
+  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)"
+  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
+  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
+  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
+  auth0 actions update <action-id> -n myaction -t post-login -c "$(cat path/to/code.js)" -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
-				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)
-				if err != nil {
+				if err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions); err != nil {
 					return err
 				}
 			}
 
-			var current *management.Action
-			err := ansi.Waiting(func() error {
-				var err error
-				current, err = cli.api.Action.Read(inputs.ID)
+			var oldAction *management.Action
+			err := ansi.Waiting(func() (err error) {
+				oldAction, err = cli.api.Action.Read(inputs.ID)
 				return err
 			})
 			if err != nil {
-				return fmt.Errorf("Failed to fetch action with ID: %s %v", inputs.ID, err)
+				return fmt.Errorf("failed to fetch action with ID %s: %w", inputs.ID, err)
 			}
 
-			if err := actionName.AskU(cmd, &inputs.Name, current.Name); err != nil {
+			if err := actionName.AskU(cmd, &inputs.Name, oldAction.Name); err != nil {
 				return err
 			}
 
-			triggers, version, err := latestActionTriggers(cli)
-			if err != nil {
-				return err
-			}
-
-			var currentTriggerId = ""
-			if len(current.SupportedTriggers) > 0 {
-				currentTriggerId = current.SupportedTriggers[0].GetID()
-			}
-
-			if err := actionTrigger.SelectU(cmd, &inputs.Trigger, triggers, &currentTriggerId); err != nil {
-				return err
-			}
-
-			// TODO(cyx): we can re-think this once we have
-			// `--stdin` based commands. For now we don't have
-			// those yet, so keeping this simple.
 			if err := actionCode.OpenEditorU(
 				cmd,
 				&inputs.Code,
-				current.GetCode(),
+				oldAction.GetCode(),
 				inputs.Name+".*.js",
-				cli.actionEditorHint,
 			); err != nil {
-				return err
-			}
-			if err != nil {
-				return fmt.Errorf("Failed to capture input from the editor: %w", err)
+				return fmt.Errorf("failed to capture input from the editor: %w", err)
 			}
 
-			if inputs.Name == "" {
-				inputs.Name = current.GetName()
+			if !cli.force && canPrompt(cmd) {
+				var confirmed bool
+				if err := prompt.AskBool("Do you want to save the action code?", &confirmed, true); err != nil {
+					return fmt.Errorf("failed to capture prompt input: %w", err)
+				}
+				if !confirmed {
+					return nil
+				}
 			}
 
-			if inputs.Trigger == "" && currentTriggerId != "" {
-				inputs.Trigger = currentTriggerId
+			updatedAction := &management.Action{
+				SupportedTriggers: oldAction.SupportedTriggers,
 			}
-
-			if inputs.Code == "" {
-				inputs.Code = current.GetCode()
+			if inputs.Name != "" {
+				updatedAction.Name = &inputs.Name
 			}
-
-			// Prepare action payload for update. This will also be
-			// re-hydrated by the SDK, which we'll use below during
-			// display.
-			action := &management.Action{
-				Name: &inputs.Name,
-				SupportedTriggers: []management.ActionTrigger{
-					{
-						ID:      &inputs.Trigger,
-						Version: &version,
-					},
-				},
-				Code: &inputs.Code,
+			if inputs.Code != "" {
+				updatedAction.Code = &inputs.Code
 			}
-
-			if len(inputs.Dependencies) == 0 {
-				action.Dependencies = current.Dependencies
-			} else {
-				action.Dependencies = inputDependenciesToActionDependencies(inputs.Dependencies)
+			if len(inputs.Dependencies) != 0 {
+				updatedAction.Dependencies = inputDependenciesToActionDependencies(inputs.Dependencies)
 			}
-
-			if len(inputs.Secrets) == 0 {
-				action.Secrets = current.Secrets
-			} else {
-				action.Secrets = inputSecretsToActionSecrets(inputs.Secrets)
+			if len(inputs.Secrets) != 0 {
+				updatedAction.Secrets = inputSecretsToActionSecrets(inputs.Secrets)
 			}
 
 			if err = ansi.Waiting(func() error {
-				return cli.api.Action.Update(inputs.ID, action)
+				return cli.api.Action.Update(oldAction.GetID(), updatedAction)
 			}); err != nil {
-				return err
+				return fmt.Errorf("failed to update action with ID %s: %w", oldAction.GetID(), err)
 			}
 
-			cli.renderer.ActionUpdate(current)
+			cli.renderer.ActionUpdate(updatedAction)
+
 			return nil
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	actionName.RegisterStringU(cmd, &inputs.Name, "")
-	actionTrigger.RegisterStringU(cmd, &inputs.Trigger, "")
 	actionCode.RegisterStringU(cmd, &inputs.Code, "")
 	actionDependency.RegisterStringMapU(cmd, &inputs.Dependencies, nil)
 	actionSecret.RegisterStringMapU(cmd, &inputs.Secrets, nil)
@@ -371,12 +368,17 @@ func deleteActionCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Delete an action",
-		Long:  "Delete an action.",
-		Example: `auth0 actions delete 
-auth0 actions delete <id>`,
+		Use:     "delete",
+		Aliases: []string{"rm"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Delete an action",
+		Long: "Delete an action.\n\n" +
+			"To delete interactively, use `auth0 actions delete` with no arguments.\n\n" +
+			"To delete non-interactively, supply the action id and the `--force` flag to skip confirmation.",
+		Example: `  auth0 actions delete
+  auth0 actions rm
+  auth0 actions delete <action-id>
+  auth0 actions delete <action-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)
@@ -395,7 +397,6 @@ auth0 actions delete <id>`,
 
 			return ansi.Spinner("Deleting action", func() error {
 				_, err := cli.api.Action.Read(inputs.ID)
-
 				if err != nil {
 					return fmt.Errorf("Unable to delete action: %w", err)
 				}
@@ -404,6 +405,8 @@ auth0 actions delete <id>`,
 			})
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 
 	return cmd
 }
@@ -417,9 +420,14 @@ func deployActionCmd(cli *cli) *cobra.Command {
 		Use:   "deploy",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Deploy an action",
-		Long:  "Deploy an action.",
-		Example: `auth0 actions deploy 
-auth0 actions deploy <id>`,
+		Long: "Before an action can be bound to a flow, the action must be deployed.\n\n" +
+			"The selected action will be deployed and added to the collection of available actions for flows. " +
+			"Additionally, a new draft version of the deployed action will be created for future editing. " +
+			"Because secrets and dependencies are tied to versions, any saved secrets or dependencies will " +
+			"be available to the new draft.",
+		Example: `  auth0 actions deploy
+  auth0 actions deploy <action-id>
+  auth0 actions deploy <action-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)
@@ -450,6 +458,8 @@ auth0 actions deploy <id>`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -459,11 +469,12 @@ func openActionCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "open",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Open action details page in the Auth0 Dashboard",
-		Long:    "Open action details page in the Auth0 Dashboard.",
-		Example: "auth0 actions open <id>",
+		Use:   "open",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Open the settings page of an action",
+		Long:  "Open an action's settings page in the Auth0 Dashboard.",
+		Example: `  auth0 actions open
+  auth0 actions open <action-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)
@@ -503,7 +514,7 @@ func (c *cli) actionPickerOptions() (pickerOptions, error) {
 }
 
 func (c *cli) actionEditorHint() {
-	c.renderer.Infof("%s once you close the editor, the action will be saved. To cancel, CTRL+C.", ansi.Faint("Hint:"))
+	c.renderer.Infof("%s Once you close the editor, the action will be saved. To cancel, press CTRL+C.", ansi.Faint("Hint:"))
 }
 
 func formatActionDetailsPath(id string) string {
@@ -513,27 +524,17 @@ func formatActionDetailsPath(id string) string {
 	return fmt.Sprintf("actions/library/details/%s", id)
 }
 
-func latestActionTriggerVersion(list []*management.ActionTrigger) string {
-	latestVersion := "v1"
-	for _, t := range list {
-		if t.GetVersion() > latestVersion {
-			latestVersion = t.GetVersion()
-		}
-	}
-	return latestVersion
-}
-
-func filterActionTriggersByVersion(list []*management.ActionTrigger, version string) []*management.ActionTrigger {
+func filterDeprecatedActionTriggers(list []*management.ActionTrigger) []*management.ActionTrigger {
 	res := []*management.ActionTrigger{}
 	for _, t := range list {
-		if t.GetVersion() == version && t.GetStatus() == "CURRENT" {
+		if t.GetStatus() == "CURRENT" {
 			res = append(res, t)
 		}
 	}
 	return res
 }
 
-func latestActionTriggers(cli *cli) ([]string, string, error) {
+func getCurrentTriggers(cli *cli) ([]*management.ActionTrigger, error) {
 	var triggers []*management.ActionTrigger
 	if err := ansi.Waiting(func() error {
 		list, err := cli.api.Action.Triggers()
@@ -543,17 +544,10 @@ func latestActionTriggers(cli *cli) ([]string, string, error) {
 		triggers = list.Triggers
 		return nil
 	}); err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
-	latestTriggerVersion := latestActionTriggerVersion(triggers)
-	triggers = filterActionTriggersByVersion(triggers, latestTriggerVersion)
-	var triggerIds []string
-
-	for _, t := range triggers {
-		triggerIds = append(triggerIds, t.GetID())
-	}
-	return triggerIds, latestTriggerVersion, nil
+	return filterDeprecatedActionTriggers(triggers), nil
 }
 
 func actionTemplate(key string) string {

@@ -77,6 +77,13 @@ var (
 		Help:       "Role Identifier.",
 		IsRequired: true,
 	}
+
+	// Purposefully not setting the Help value on the Flag because overridden where appropriate. 
+	organizationNumber = Flag{
+		Name:      "Number",
+		LongForm:  "number",
+		ShortForm: "n",
+	}
 )
 
 func organizationsCmd(cli *cli) *cobra.Command {
@@ -84,7 +91,8 @@ func organizationsCmd(cli *cli) *cobra.Command {
 		Use:     "orgs",
 		Aliases: []string{"organizations"},
 		Short:   "Manage resources for organizations",
-		Long:    "Manage resources for organizations.",
+		Long: "The Auth0 Organizations feature best supports business-to-business (B2B) implementations " +
+			"that have applications that end-users access.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -110,12 +118,16 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your organizations",
-		Long: `List your existing organizations. To create one try:
-auth0 orgs create`,
-		Example: `auth0 orgs list
-auth0 orgs ls
-auth0 orgs ls -n 100`,
+		Long:    "List your existing organizations. To create one, run: `auth0 orgs create`.",
+		Example: `  auth0 orgs list
+  auth0 orgs ls
+  auth0 orgs ls --json
+  auth0 orgs ls -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Number < 1 || inputs.Number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
+
 			list, err := getWithPagination(
 				cmd.Context(),
 				inputs.Number,
@@ -146,7 +158,11 @@ auth0 orgs ls -n 100`,
 			return nil
 		},
 	}
-	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	organizationNumber.Help = "Number of organizations to retrieve. Minimum 1, maximum 1000."
+	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+
 	return cmd
 }
 
@@ -159,9 +175,10 @@ func showOrganizationCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an organization",
-		Long:  "Show an organization.",
-		Example: `auth0 orgs show
-auth0 orgs show <id>`,
+		Long:  "Display information about an organization.",
+		Example: `  auth0 orgs show
+  auth0 orgs show <org-id>
+  auth0 orgs show <org-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
@@ -187,6 +204,8 @@ auth0 orgs show <id>`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -204,12 +223,14 @@ func createOrganizationCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new organization",
-		Long:  "Create a new organization.",
-		Example: `auth0 orgs create
-auth0 orgs create --name myorganization
-auth0 orgs create -n myorganization --display "My Organization"
-auth0 orgs create -n myorganization -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
-auth0 orgs create -n myorganization -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
+		Long: "Create a new organization.\n\n" +
+			"To create interactively, use `auth0 orgs create` with no arguments.\n\n" +
+			"To create non-interactively, supply the name and other information through the flags.",
+		Example: `  auth0 orgs create
+  auth0 orgs create --name myorganization
+  auth0 orgs create -n myorganization --display "My Organization"
+  auth0 orgs create -n myorganization -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
+  auth0 orgs create -n myorganization -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := organizationName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -219,46 +240,42 @@ auth0 orgs create -n myorganization -d "My Organization" -m "KEY=value" -m "OTHE
 				return err
 			}
 
-			o := &management.Organization{
+			newOrg := &management.Organization{
 				Name:        &inputs.Name,
 				DisplayName: &inputs.DisplayName,
-				Metadata:    &inputs.Metadata,
 			}
 
-			isLogoURLSet := len(inputs.LogoURL) > 0
-			isAccentColorSet := len(inputs.AccentColor) > 0
-			isBackgroundColorSet := len(inputs.BackgroundColor) > 0
-			isAnyColorSet := isAccentColorSet || isBackgroundColorSet
+			if inputs.Metadata != nil {
+				newOrg.Metadata = &inputs.Metadata
+			}
 
-			if isLogoURLSet || isAnyColorSet {
-				o.Branding = &management.OrganizationBranding{}
+			branding := management.OrganizationBranding{}
+			if inputs.LogoURL != "" {
+				branding.LogoURL = &inputs.LogoURL
+			}
 
-				if isLogoURLSet {
-					o.Branding.LogoURL = &inputs.LogoURL
-				}
+			colors := make(map[string]string)
+			if inputs.AccentColor != "" {
+				colors[apiOrganizationColorPrimary] = inputs.AccentColor
+			}
+			if inputs.BackgroundColor != "" {
+				colors[apiOrganizationColorPageBackground] = inputs.BackgroundColor
+			}
+			if len(colors) > 0 {
+				branding.Colors = &colors
+			}
 
-				if isAnyColorSet {
-					colors := make(map[string]string)
-
-					if isAccentColorSet {
-						colors[apiOrganizationColorPrimary] = inputs.AccentColor
-					}
-
-					if isBackgroundColorSet {
-						colors[apiOrganizationColorPageBackground] = inputs.BackgroundColor
-					}
-
-					o.Branding.Colors = &colors
-				}
+			if branding.String() != "{}" {
+				newOrg.Branding = &branding
 			}
 
 			if err := ansi.Waiting(func() error {
-				return cli.api.Organization.Create(o)
+				return cli.api.Organization.Create(newOrg)
 			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred while attempting to create an organization with name '%s': %w", inputs.Name, err)
+				return fmt.Errorf("failed to create an organization with name '%s': %w", inputs.Name, err)
 			}
 
-			cli.renderer.OrganizationCreate(o)
+			cli.renderer.OrganizationCreate(newOrg)
 			return nil
 		},
 	}
@@ -269,6 +286,8 @@ auth0 orgs create -n myorganization -d "My Organization" -m "KEY=value" -m "OTHE
 	organizationAccent.RegisterString(cmd, &inputs.AccentColor, "")
 	organizationBackground.RegisterString(cmd, &inputs.BackgroundColor, "")
 	organizationMetadata.RegisterStringMap(cmd, &inputs.Metadata, nil)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
@@ -287,11 +306,14 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an organization",
-		Long:  "Update an organization.",
-		Example: `auth0 orgs update <id>
-auth0 orgs update <id> --display "My Organization"
-auth0 orgs update <id> -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
-auth0 orgs update <id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
+		Long: "Update an organization.\n\n" +
+			"To update interactively, use `auth0 orgs update` with no arguments.\n\n" +
+			"To update non-interactively, supply the organization id and " +
+			"other information through the flags.",
+		Example: `  auth0 orgs update <org-id>
+  auth0 orgs update <org-id> --display "My Organization"
+  auth0 orgs update <org-id> -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
+  auth0 orgs update <org-id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -302,46 +324,42 @@ auth0 orgs update <id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_v
 				}
 			}
 
-			var current *management.Organization
+			var oldOrg *management.Organization
 			err := ansi.Waiting(func() error {
 				var err error
-				current, err = cli.api.Organization.Read(inputs.ID)
+				oldOrg, err = cli.api.Organization.Read(inputs.ID)
 				return err
 			})
 			if err != nil {
-				return fmt.Errorf("Failed to fetch organization with ID: %s %v", inputs.ID, err)
+				return fmt.Errorf("failed to fetch organization with ID: %s %w", inputs.ID, err)
 			}
 
-			if err := organizationDisplay.AskU(cmd, &inputs.DisplayName, current.DisplayName); err != nil {
+			if err := organizationDisplay.AskU(cmd, &inputs.DisplayName, oldOrg.DisplayName); err != nil {
 				return err
 			}
 
 			if inputs.DisplayName == "" {
-				inputs.DisplayName = current.GetDisplayName()
+				inputs.DisplayName = oldOrg.GetDisplayName()
 			}
 
-			// Prepare organization payload for update. This will also be
-			// re-hydrated by the SDK, which we'll use below during
-			// display.
-			o := &management.Organization{
-				ID:          current.ID,
+			newOrg := &management.Organization{
 				DisplayName: &inputs.DisplayName,
 			}
 
 			isLogoURLSet := len(inputs.LogoURL) > 0
 			isAccentColorSet := len(inputs.AccentColor) > 0
 			isBackgroundColorSet := len(inputs.BackgroundColor) > 0
-			currentHasBranding := current.Branding != nil
-			currentHasColors := currentHasBranding && current.Branding.Colors != nil
+			currentHasBranding := oldOrg.Branding != nil
+			currentHasColors := currentHasBranding && oldOrg.Branding.Colors != nil
 			needToAddColors := isAccentColorSet || isBackgroundColorSet || currentHasColors
 
 			if isLogoURLSet || needToAddColors {
-				o.Branding = &management.OrganizationBranding{}
+				newOrg.Branding = &management.OrganizationBranding{}
 
 				if isLogoURLSet {
-					o.Branding.LogoURL = &inputs.LogoURL
+					newOrg.Branding.LogoURL = &inputs.LogoURL
 				} else if currentHasBranding {
-					o.Branding.LogoURL = current.Branding.LogoURL
+					newOrg.Branding.LogoURL = oldOrg.Branding.LogoURL
 				}
 
 				if needToAddColors {
@@ -349,33 +367,32 @@ auth0 orgs update <id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_v
 
 					if isAccentColorSet {
 						colors[apiOrganizationColorPrimary] = inputs.AccentColor
-					} else if currentHasColors && len(current.Branding.GetColors()[apiOrganizationColorPrimary]) > 0 {
-						colors[apiOrganizationColorPrimary] = current.Branding.GetColors()[apiOrganizationColorPrimary]
+					} else if currentHasColors && len(oldOrg.Branding.GetColors()[apiOrganizationColorPrimary]) > 0 {
+						colors[apiOrganizationColorPrimary] = oldOrg.Branding.GetColors()[apiOrganizationColorPrimary]
 					}
 
 					if isBackgroundColorSet {
 						colors[apiOrganizationColorPageBackground] = inputs.BackgroundColor
-					} else if currentHasColors && len(current.Branding.GetColors()[apiOrganizationColorPageBackground]) > 0 {
-						colors[apiOrganizationColorPageBackground] = current.Branding.GetColors()[apiOrganizationColorPageBackground]
+					} else if currentHasColors && len(oldOrg.Branding.GetColors()[apiOrganizationColorPageBackground]) > 0 {
+						colors[apiOrganizationColorPageBackground] = oldOrg.Branding.GetColors()[apiOrganizationColorPageBackground]
 					}
 
-					o.Branding.Colors = &colors
+					newOrg.Branding.Colors = &colors
 				}
 			}
 
-			if len(inputs.Metadata) == 0 {
-				o.Metadata = current.Metadata
-			} else {
-				o.Metadata = &inputs.Metadata
+			newOrg.Metadata = oldOrg.Metadata
+			if len(inputs.Metadata) != 0 {
+				newOrg.Metadata = &inputs.Metadata
 			}
 
 			if err = ansi.Waiting(func() error {
-				return cli.api.Organization.Update(inputs.ID, o)
+				return cli.api.Organization.Update(inputs.ID, newOrg)
 			}); err != nil {
 				return err
 			}
 
-			cli.renderer.OrganizationUpdate(o)
+			cli.renderer.OrganizationUpdate(newOrg)
 			return nil
 		},
 	}
@@ -386,6 +403,8 @@ auth0 orgs update <id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_v
 	organizationBackground.RegisterStringU(cmd, &inputs.BackgroundColor, "")
 	organizationMetadata.RegisterStringMapU(cmd, &inputs.Metadata, nil)
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -395,12 +414,18 @@ func deleteOrganizationCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Delete an organization",
-		Long:  "Delete an organization.",
-		Example: `auth0 orgs delete
-auth0 orgs delete <id>`,
+		Use:     "delete",
+		Aliases: []string{"rm"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Delete an organization",
+		Long: "Delete an organization.\n\n" +
+			"To delete interactively, use `auth0 orgs delete` with no arguments.\n\n" +
+			"To delete non-interactively, supply the organization id and the `--force` " +
+			"flag to skip confirmation.",
+		Example: `  auth0 orgs delete
+  auth0 orgs rm
+  auth0 orgs delete <org-id>
+  auth0 orgs delete <org-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
@@ -429,6 +454,8 @@ auth0 orgs delete <id>`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
+
 	return cmd
 }
 
@@ -438,11 +465,12 @@ func openOrganizationCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "open",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Open organization settings page in the Auth0 Dashboard",
-		Long:    "Open organization settings page in the Auth0 Dashboard.",
-		Example: "auth0 orgs open <id>",
+		Use:   "open",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Open the settings page of an organization",
+		Long:  "Open an organization's settings page in the Auth0 Dashboard.",
+		Example: `  auth0 orgs open
+  auth0 orgs open <org-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
@@ -485,10 +513,16 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "List members of an organization",
-		Long:    "List members of an organization.",
-		Example: `auth0 orgs members list
-auth0 orgs members ls <id>`,
+		Long:    "List the members of an organization.",
+		Example: `  auth0 orgs members list
+  auth0 orgs members ls <org-id>
+  auth0 orgs members list <org-id> --number 100
+  auth0 orgs members ls <org-id> -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Number < 1 || inputs.Number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
+
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
 				if err != nil {
@@ -507,7 +541,12 @@ auth0 orgs members ls <id>`,
 			return nil
 		},
 	}
-	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+
+	organizationNumber.Help = "Number of organization members to retrieve. Minimum 1, maximum 1000."
+	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+
 	return cmd
 }
 
@@ -515,7 +554,8 @@ func rolesOrganizationCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "roles",
 		Short: "Manage roles of an organization",
-		Long:  "Manage roles of an organization.",
+		Long: "Manage roles of an organization. To learn more about roles and their behavior, read " +
+			"[Role-based Access Control](https://auth0.com/docs/manage-users/access-control/rbac).",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -537,9 +577,14 @@ func listRolesOrganizationCmd(cli *cli) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "List roles of an organization",
 		Long:    "List roles assigned to members of an organization.",
-		Example: `auth0 orgs roles list
-auth0 orgs roles ls <id>`,
+		Example: `  auth0 orgs roles list
+  auth0 orgs roles ls <org-id>
+  auth0 orgs roles list <org-id> --number 100
+  auth0 orgs roles ls <org-id> -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Number < 1 || inputs.Number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions)
 				if err != nil {
@@ -562,7 +607,12 @@ auth0 orgs roles ls <id>`,
 			return nil
 		},
 	}
-	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+
+	organizationNumber.Help = "Number of organization roles to retrieve. Minimum 1, maximum 1000."
+	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -570,7 +620,8 @@ func membersRolesOrganizationCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "members",
 		Short: "Manage roles of organization members",
-		Long:  "Manage roles assigned to members of an organization.",
+		Long: "Each organization member can be assigned one or more roles, " +
+			"which are applied when users log in through the organization.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -591,9 +642,17 @@ func listMembersRolesOrganizationCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "List organization members for a role",
 		Long:  "List organization members that have a given role assigned to them.",
-		Example: `auth0 orgs roles members list
-auth0 orgs roles members list <org id> --role-id role`,
+		Example: `  auth0 orgs roles members list
+  auth0 orgs roles members ls
+  auth0 orgs roles members list <org-id> --role-id role
+  auth0 orgs roles members list <org-id> --role-id role --number 100
+  auth0 orgs roles members ls <org-id> -r role -n 100
+  auth0 orgs roles members ls <org-id> -r role -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Number < 1 || inputs.Number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
+
 			if len(args) == 0 {
 				err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions)
 				if err != nil {
@@ -623,8 +682,13 @@ auth0 orgs roles members list <org id> --role-id role`,
 			return nil
 		},
 	}
+
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	roleIdentifier.RegisterString(cmd, &inputs.RoleID, "")
-	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	organizationNumber.Help = "Number of members to retrieve. Minimum 1, maximum 1000."
+	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+
 	return cmd
 }
 

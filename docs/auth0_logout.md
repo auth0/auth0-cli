@@ -1,42 +1,33 @@
 ---
 layout: default
 ---
-## auth0 logout
-
-Log out of a tenant's session
-
-### Synopsis
+# auth0 logout
 
 Log out of a tenant's session.
 
+## Usage
 ```
 auth0 logout [flags]
 ```
 
-### Examples
+## Examples
 
 ```
-auth0 logout <tenant>
+  auth0 logout
+  auth0 logout <tenant>
+  auth0 logout "example.us.auth0.com"
 ```
 
-### Options
 
-```
-  -h, --help   help for logout
-```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
-      --format string   Command output format. Options: json.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
-
-* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
 

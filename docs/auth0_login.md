@@ -1,36 +1,43 @@
 ---
 layout: default
 ---
-## auth0 login
+# auth0 login
 
-Authenticate the Auth0 CLI
+Authenticates the Auth0 CLI either as a user using personal credentials or as a machine using client credentials.
 
-### Synopsis
+Authenticating as a user is recommended when working on a personal machine or other interactive environment; it is not available for Private Cloud users. Authenticating as a machine is recommended when running on a server or non-interactive environments (ex: CI).
 
-Sign in to your Auth0 account and authorize the CLI to access the Management API.
-
+## Usage
 ```
 auth0 login [flags]
 ```
 
-### Options
+## Examples
 
 ```
-  -h, --help   help for login
+  auth0 login
+  auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>
+  auth0 login --scopes "read:client_grants,create:client_grants"
 ```
 
-### Options inherited from parent commands
+
+## Flags
+
+```
+      --client-id string       Client ID of the application when authenticating via client credentials.
+      --client-secret string   Client secret of the application when authenticating via client credentials.
+      --domain string          Tenant domain of the application when authenticating via client credentials.
+      --scopes strings         Additional scopes to request when authenticating via device code flow. By default, only scopes for first-class functions are requested. Primarily useful when using the api command to execute arbitrary Management API requests.
+```
+
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
-      --format string   Command output format. Options: json.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
-
-* [auth0](/auth0-cli/)	 - Supercharge your development workflow.
 

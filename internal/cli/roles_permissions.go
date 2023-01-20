@@ -8,8 +8,6 @@ import (
 	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
-
-	"github.com/auth0/auth0-cli/internal/ansi"
 )
 
 var (
@@ -28,13 +26,21 @@ var (
 		Help:       "Permissions.",
 		IsRequired: true,
 	}
+
+	roleAPIPermissionsNumber = Flag{
+		Name:      "Number",
+		LongForm:  "number",
+		ShortForm: "n",
+		Help:      "Number of permissions to retrieve. Minimum 1, maximum 1000.",
+	}
 )
 
 func rolePermissionsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "permissions",
-		Short: "Manage permissions within the role resource",
-		Long:  "Manage permissions within the role resource.",
+		Use:     "permissions",
+		Short:   "Manage permissions within the role resource",
+		Long:    "Manage permissions within the role resource.",
+		Aliases: []string{"perms"},
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -47,7 +53,8 @@ func rolePermissionsCmd(cli *cli) *cobra.Command {
 
 func listRolePermissionsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID string
+		ID     string
+		Number int
 	}
 
 	cmd := &cobra.Command{
@@ -55,11 +62,16 @@ func listRolePermissionsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "List permissions defined within a role",
-		Long: `List existing permissions defined in a role. To add a permission try:
-auth0 roles permissions add <role-id>`,
-		Example: `auth0 roles permissions list <role-id>
-auth0 roles permissions ls`,
+		Long:    "List existing permissions defined in a role. To add a permission, run: `auth0 roles permissions add`.",
+		Example: `  auth0 roles permissions list
+  auth0 roles permissions ls <role-id>
+  auth0 roles permissions ls <role-id> --number 100
+  auth0 roles permissions ls <role-id> -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Number < 1 || inputs.Number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
+
 			if len(args) == 0 {
 				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
 				if err != nil {
@@ -69,20 +81,38 @@ auth0 roles permissions ls`,
 				inputs.ID = args[0]
 			}
 
-			var list *management.PermissionList
+			list, err := getWithPagination(
+				cmd.Context(),
+				inputs.Number,
+				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
+					permissionsList, err := cli.api.Role.Permissions(inputs.ID, opts...)
+					if err != nil {
+						return nil, false, err
+					}
 
-			if err := ansi.Waiting(func() error {
-				var err error
-				list, err = cli.api.Role.Permissions(inputs.ID)
-				return err
-			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred: %w", err)
+					for _, role := range permissionsList.Permissions {
+						result = append(result, role)
+					}
+					return result, permissionsList.HasNext(), nil
+				},
+			)
+
+			if err != nil {
+				return fmt.Errorf("Failed to get permissions for role '%s': %w", inputs.ID, err)
 			}
 
-			cli.renderer.RolePermissionList(list.Permissions)
+			var permissions []*management.Permission
+			for _, item := range list {
+				permissions = append(permissions, item.(*management.Permission))
+			}
+
+			cli.renderer.RolePermissionList(permissions)
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	roleAPIPermissionsNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
 }
@@ -98,12 +128,12 @@ func addRolePermissionsCmd(cli *cli) *cobra.Command {
 		Use:   "add",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Add a permission to a role",
-		Long: `Add an existing permission defined in one of your APIs.
-To add a permission try:
-
-    auth0 roles permissions add <role-id> -p <permission-name>`,
-		Example: `auth0 roles permissions add <role-id> -p <permission-name>
-auth0 roles permissions add`,
+		Long:  "Add an existing permission defined in one of your APIs.",
+		Example: `  auth0 roles permissions add
+  auth0 roles permissions add <role-id>
+  auth0 roles permissions add <role-id> --api-id <api-id>
+  auth0 roles permissions add <role-id> --api-id <api-id> --permissions <permission-name>
+  auth0 roles permissions add <role-id> -a <api-id> -p <permission-name>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
@@ -148,6 +178,7 @@ auth0 roles permissions add`,
 
 	roleAPIIdentifier.RegisterString(cmd, &inputs.APIIdentifier, "")
 	roleAPIPermissions.RegisterStringSlice(cmd, &inputs.Permissions, nil)
+
 	return cmd
 }
 
@@ -163,12 +194,11 @@ func removeRolePermissionsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"rm"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Remove a permission from a role",
-		Long: `Remove an existing permission defined in one of your APIs.
-To remove a permission try:
-
-    auth0 roles permissions remove <role-id> -p <permission-name>`,
-		Example: `auth0 roles permissions remove <role-id> -p <permission-name>
-auth0 roles permissions rm`,
+		Long:    "Remove an existing permission defined in one of your APIs.",
+		Example: `  auth0 roles permissions remove
+  auth0 roles permissions rm <role-id> --api-id <api-id>
+  auth0 roles permissions rm <role-id> --api-id <api-id> --permissions <permission-name>
+  auth0 roles permissions rm <role-id> -a <api-id> -p <permission-name>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
@@ -213,6 +243,7 @@ auth0 roles permissions rm`,
 
 	roleAPIIdentifier.RegisterString(cmd, &inputs.APIIdentifier, "")
 	roleAPIPermissions.RegisterStringSlice(cmd, &inputs.Permissions, nil)
+
 	return cmd
 }
 

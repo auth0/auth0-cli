@@ -7,9 +7,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-const (
-	qsBaseURL = "https://auth0.com/docs/quickstart"
-)
+const qsBaseURL = "https://auth0.com"
 
 type quickstartView struct {
 	Stack   string
@@ -30,27 +28,21 @@ func (v *quickstartView) Object() interface{} {
 	return v.raw
 }
 
-func (r *Renderer) QuickstartList(qs map[string][]auth0.Quickstart) {
+func (r *Renderer) QuickstartList(quickstarts []auth0.Quickstart) {
 	r.Heading()
 
+	sort.SliceStable(quickstarts, func(i, j int) bool {
+		return quickstarts[i].AppType < quickstarts[j].AppType
+	})
+
 	var results []View
-	keys := make([]string, 0, len(qs))
-
-	for key := range qs {
-		keys = append(keys, key)
-	}
-
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		for _, item := range qs[key] {
-			results = append(results, &quickstartView{
-				Stack:   item.Name,
-				AppType: applyColor(qsAppTypeFor(key)),
-				URL:     fmt.Sprintf("%s/%s/%s", qsBaseURL, key, item.Path),
-				raw:     item,
-			})
-		}
+	for _, qs := range quickstarts {
+		results = append(results, &quickstartView{
+			Stack:   qs.Name,
+			AppType: applyColor(qsAppTypeFor(qs.AppType)),
+			URL:     fmt.Sprintf("%s%s", qsBaseURL, qs.URL),
+			raw:     qs,
+		})
 	}
 
 	r.Results(results)

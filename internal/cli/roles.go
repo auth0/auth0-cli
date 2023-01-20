@@ -11,9 +11,6 @@ import (
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
-// errNoRoles signifies no roles exist in a tenant.
-var errNoRoles = errors.New("there are currently no roles")
-
 var (
 	roleID = Argument{
 		Name: "Role ID",
@@ -31,7 +28,12 @@ var (
 		LongForm:  "description",
 		ShortForm: "d",
 		Help:      "Description of the role.",
-		// IsRequired: true,
+	}
+	roleNumber = Flag{
+		Name:      "Number",
+		LongForm:  "number",
+		ShortForm: "n",
+		Help:      "Number of roles to retrieve. Minimum 1, maximum 1000.",
 	}
 )
 
@@ -39,7 +41,8 @@ func rolesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "roles",
 		Short: "Manage resources for roles",
-		Long:  "Manage resources for roles.",
+		Long: "Manage resources for roles. To learn more about roles and their behavior, read " +
+			"[Role-based Access Control](https://auth0.com/docs/manage-users/access-control/rbac).",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -63,12 +66,16 @@ func listRolesCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your roles",
-		Long: `List your existing roles. To create one try:
-auth0 roles create`,
-		Example: `auth0 roles list
-auth0 roles ls
-auth0 roles ls -n 100`,
+		Long:    "List your existing roles. To create one, run: `auth0 roles create`.",
+		Example: `  auth0 roles list
+  auth0 roles ls
+  auth0 roles ls --number 100
+  auth0 roles ls -n 100 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Number < 1 || inputs.Number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
+
 			list, err := getWithPagination(
 				cmd.Context(),
 				inputs.Number,
@@ -100,7 +107,8 @@ auth0 roles ls -n 100`,
 		},
 	}
 
-	number.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	roleNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
 }
@@ -114,9 +122,10 @@ func showRoleCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show a role",
-		Long:  "Show a role.",
-		Example: `auth0 roles show
-auth0 roles show <id>`,
+		Long:  "Display information about a role.",
+		Example: `  auth0 roles show
+  auth0 roles show <role-id>
+  auth0 roles show <role-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
@@ -142,6 +151,8 @@ auth0 roles show <id>`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
 	return cmd
 }
 
@@ -155,10 +166,12 @@ func createRoleCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new role",
-		Long:  "Create a new role.",
-		Example: `auth0 roles create
-auth0 roles create --name myrole
-auth0 roles create -n myrole --description "awesome role"`,
+		Long: "Create a new role.\n\n" +
+			"To create interactively, use `auth0 roles create` with no arguments.\n\n" +
+			"To create non-interactively, supply the role name and description through the flags.",
+		Example: `  auth0 roles create
+  auth0 roles create --name myrole --description "awesome role"
+  auth0 roles create -n myrole -d "awesome role" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Prompt for role name
 			if err := roleName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -189,6 +202,7 @@ auth0 roles create -n myrole --description "awesome role"`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	roleName.RegisterString(cmd, &inputs.Name, "")
 	roleDescription.RegisterString(cmd, &inputs.Description, "")
 
@@ -206,10 +220,13 @@ func updateRoleCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a role",
-		Long:  "Update a role.",
-		Example: `auth0 roles update
-auth0 roles update <id> --name myrole
-auth0 roles update <id> -n myrole --description "awesome role"`,
+		Long: "Update a role.\n\n" +
+			"To update interactively, use `auth0 roles update` with no arguments.\n\n" +
+			"To update non-interactively, supply the role id, name and description through the flags.",
+		Example: `  auth0 roles update
+  auth0 roles update <role-id> --name myrole
+  auth0 roles update <role-id> --name myrole --description "awesome role"
+  auth0 roles update <role-id> -n myrole -d "awesome role" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
@@ -256,6 +273,7 @@ auth0 roles update <id> -n myrole --description "awesome role"`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	roleName.RegisterStringU(cmd, &inputs.Name, "")
 	roleDescription.RegisterStringU(cmd, &inputs.Description, "")
 
@@ -268,12 +286,17 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Delete a role",
-		Long:  "Delete a role.",
-		Example: `auth0 roles delete
-auth0 roles delete <id>`,
+		Use:     "delete",
+		Aliases: []string{"rm"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Delete a role",
+		Long: "Delete a role.\n\n" +
+			"To delete interactively, use `auth0 roles delete`.\n\n" +
+			"To delete non-interactively, supply the role id and the `--force` flag to skip confirmation.",
+		Example: `  auth0 roles delete
+  auth0 roles rm
+  auth0 roles delete <role-id>
+  auth0 roles delete <role-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
@@ -302,6 +325,8 @@ auth0 roles delete <id>`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
+
 	return cmd
 }
 
@@ -320,7 +345,7 @@ func (c *cli) rolePickerOptions() (pickerOptions, error) {
 	}
 
 	if len(opts) == 0 {
-		return nil, errNoRoles
+		return nil, errors.New("there are currently no roles")
 	}
 
 	return opts, nil

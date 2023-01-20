@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -21,11 +20,13 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/auth0/auth0-cli/internal/analytics"
+	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/iostream"
+	"github.com/auth0/auth0-cli/internal/keyring"
 )
 
 const (
@@ -53,7 +54,6 @@ type Tenant struct {
 	Apps         map[string]app `json:"apps,omitempty"`
 	DefaultAppID string         `json:"default_app_id,omitempty"`
 	ClientID     string         `json:"client_id"`
-	ClientSecret string         `json:"client_secret"`
 }
 
 type app struct {
@@ -70,24 +70,24 @@ var errUnauthenticated = errors.New("Not logged in. Try 'auth0 login'.")
 //
 // In addition, it stores a reference to all the flags passed, e.g.:
 //
-// 1. --format
+// 1. --json
 // 2. --tenant
 // 3. --debug.
 type cli struct {
-	// core primitives exposed to command builders.
-	api           *auth0.API
-	authenticator *auth.Authenticator
-	renderer      *display.Renderer
-	tracker       *analytics.Tracker
-	// set of flags which are user specified.
+	// Core primitives exposed to command builders.
+	api      *auth0.API
+	renderer *display.Renderer
+	tracker  *analytics.Tracker
+
+	// Set of flags which are user specified.
 	debug   bool
 	tenant  string
-	format  string
+	json    bool
 	force   bool
 	noInput bool
 	noColor bool
 
-	// config state management.
+	// Config state management.
 	initOnce sync.Once
 	errOnce  error
 	path     string
@@ -95,24 +95,53 @@ type cli struct {
 }
 
 func (t *Tenant) authenticatedWithClientCredentials() bool {
-	return t.ClientID != "" && t.ClientSecret != ""
+	return t.ClientID != ""
 }
 
 func (t *Tenant) authenticatedWithDeviceCodeFlow() bool {
-	return t.ClientID == "" && t.ClientSecret == ""
+	return t.ClientID == ""
 }
 
 func (t *Tenant) hasExpiredToken() bool {
 	return time.Now().Add(accessTokenExpThreshold).After(t.ExpiresAt)
 }
 
+func (t *Tenant) additionalRequestedScopes() []string {
+	additionallyRequestedScopes := make([]string, 0)
+
+	for _, scope := range t.Scopes {
+		found := false
+
+		for _, defaultScope := range auth.RequiredScopes {
+			if scope == defaultScope {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			additionallyRequestedScopes = append(additionallyRequestedScopes, scope)
+		}
+	}
+
+	return additionallyRequestedScopes
+}
+
 func (t *Tenant) regenerateAccessToken(ctx context.Context, c *cli) error {
 	if t.authenticatedWithClientCredentials() {
-		token, err := auth.GetAccessTokenFromClientCreds(auth.ClientCredentials{
-			ClientID:     t.ClientID,
-			ClientSecret: t.ClientSecret,
-			Domain:       t.Domain,
-		})
+		clientSecret, err := keyring.GetClientSecret(t.Domain)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve client secret from keyring: %w", err)
+		}
+
+		token, err := auth.GetAccessTokenFromClientCreds(
+			ctx,
+			auth.ClientCredentials{
+				ClientID:     t.ClientID,
+				ClientSecret: clientSecret,
+				Domain:       t.Domain,
+			},
+		)
 		if err != nil {
 			return err
 		}
@@ -122,13 +151,7 @@ func (t *Tenant) regenerateAccessToken(ctx context.Context, c *cli) error {
 	}
 
 	if t.authenticatedWithDeviceCodeFlow() {
-		tokenRetriever := &auth.TokenRetriever{
-			Authenticator: c.authenticator,
-			Secrets:       &auth.Keyring{},
-			Client:        http.DefaultClient,
-		}
-
-		tokenResponse, err := tokenRetriever.Refresh(ctx, t.Domain)
+		tokenResponse, err := auth.RefreshAccessToken(http.DefaultClient, t.Domain)
 		if err != nil {
 			return err
 		}
@@ -206,18 +229,33 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 		return Tenant{}, err
 	}
 
-	if t.AccessToken == "" || (scopesChanged(t) && t.authenticatedWithDeviceCodeFlow()) {
-		return RunLogin(ctx, c, true)
+	if !hasAllRequiredScopes(t) && t.authenticatedWithDeviceCodeFlow() {
+		c.renderer.Warnf("Required scopes have changed. Please log in to re-authorize the CLI.\n")
+		return RunLoginAsUser(ctx, c, t.additionalRequestedScopes())
 	}
 
-	if !t.hasExpiredToken() {
+	if t.AccessToken != "" && !t.hasExpiredToken() {
 		return t, nil
 	}
 
 	if err := t.regenerateAccessToken(ctx, c); err != nil {
-		// Ask and guide the user through the login process.
-		c.renderer.Errorf("failed to renew access token, %s", err)
-		return RunLogin(ctx, c, true)
+		if t.authenticatedWithClientCredentials() {
+			errorMessage := fmt.Errorf(
+				"failed to fetch access token using client credentials: %w\n\n"+
+					"This may occur if the designated Auth0 application has been deleted, "+
+					"the client secret has been rotated or previous failure to store client secret in the keyring.\n\n"+
+					"Please re-authenticate by running: %s",
+				err,
+				ansi.Bold("auth0 login --domain <tenant-domain --client-id <client-id> --client-secret <client-secret>"),
+			)
+
+			return t, errorMessage
+		}
+
+		c.renderer.Warnf("Failed to renew access token: %s", err)
+		c.renderer.Warnf("Please log in to re-authorize the CLI.\n")
+
+		return RunLoginAsUser(ctx, c, t.additionalRequestedScopes())
 	}
 
 	if err := c.addTenant(t); err != nil {
@@ -227,30 +265,16 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 	return t, nil
 }
 
-// scopesChanged compare the tenant scopes
+// hasAllRequiredScopes compare the tenant scopes
 // with the currently required scopes.
-func scopesChanged(t Tenant) bool {
-	want := auth.RequiredScopes()
-	got := t.Scopes
-
-	sort.Strings(want)
-	sort.Strings(got)
-
-	if (want == nil) != (got == nil) {
-		return true
-	}
-
-	if len(want) != len(got) {
-		return true
-	}
-
-	for i := range t.Scopes {
-		if want[i] != got[i] {
-			return true
+func hasAllRequiredScopes(t Tenant) bool {
+	for _, requiredScope := range auth.RequiredScopes {
+		if !containsStr(t.Scopes, requiredScope) {
+			return false
 		}
 	}
 
-	return false
+	return true
 }
 
 // getTenant fetches the default tenant configured (or the tenant specified via
@@ -272,7 +296,7 @@ func (c *cli) getTenant() (Tenant, error) {
 	return t, nil
 }
 
-// listTenants fetches all of the configured tenants.
+// listTenants fetches all the configured tenants.
 func (c *cli) listTenants() ([]Tenant, error) {
 	if err := c.init(); err != nil {
 		return []Tenant{}, err
@@ -344,12 +368,11 @@ func (c *cli) removeTenant(ten string) error {
 	}
 
 	if err := c.persistConfig(); err != nil {
-		return fmt.Errorf("Unexpected error persisting config: %w", err)
+		return fmt.Errorf("failed to persist config: %w", err)
 	}
 
-	tr := &auth.TokenRetriever{Secrets: &auth.Keyring{}}
-	if err := tr.Delete(ten); err != nil {
-		return fmt.Errorf("Unexpected error clearing tenant information: %w", err)
+	if err := keyring.DeleteSecretsForTenant(ten); err != nil {
+		return fmt.Errorf("failed to delete tenant secrets: %w", err)
 	}
 
 	return nil
@@ -447,30 +470,23 @@ func (c *cli) persistConfig() error {
 
 func (c *cli) init() error {
 	c.initOnce.Do(func() {
-		// Initialize the context -- e.g. the configuration
-		// information, tenants, etc.
 		if c.errOnce = c.initContext(); c.errOnce != nil {
 			return
 		}
+
 		c.renderer.Tenant = c.tenant
 
 		cobra.EnableCommandSorting = false
 	})
 
-	// Determine what the desired output format is.
-	//
-	// NOTE(cyx): Since this isn't expensive to do, we don't need to put it
-	// inside initOnce.
-	format := strings.ToLower(c.format)
-	if format != "" && format != string(display.OutputFormatJSON) {
-		return fmt.Errorf("Invalid format. Use `--format=json` or omit this option to use the default format.")
+	if c.json {
+		c.renderer.Format = display.OutputFormatJSON
 	}
-	c.renderer.Format = display.OutputFormat(format)
 
 	c.renderer.Tenant = c.tenant
 
-	// Once initialized, we'll keep returning the same err that was
-	// originally encountered.
+	// Once initialized, we'll keep returning the
+	// same err that was originally encountered.
 	return c.errOnce
 }
 
@@ -507,17 +523,8 @@ func defaultConfigPath() string {
 	return path.Join(os.Getenv("HOME"), ".config", "auth0", "config.json")
 }
 
-func (c *cli) setPath(p string) {
-	if p == "" {
-		c.path = defaultConfigPath()
-		return
-	}
-	c.path = p
-}
-
 func canPrompt(cmd *cobra.Command) bool {
 	noInput, err := cmd.Root().Flags().GetBool("no-input")
-
 	if err != nil {
 		return false
 	}
@@ -529,16 +536,15 @@ func shouldPrompt(cmd *cobra.Command, flag *Flag) bool {
 	return canPrompt(cmd) && !flag.IsSet(cmd)
 }
 
-func shouldPromptWhenFlagless(cmd *cobra.Command, flag string) bool {
-	isSet := false
-
+func shouldPromptWhenNoLocalFlagsSet(cmd *cobra.Command) bool {
+	localFlagIsSet := false
 	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
-		if f.Changed {
-			isSet = true
+		if f.Name != "json" && f.Name != "force" && f.Changed {
+			localFlagIsSet = true
 		}
 	})
 
-	return canPrompt(cmd) && !isSet
+	return canPrompt(cmd) && !localFlagIsSet
 }
 
 func prepareInteractivity(cmd *cobra.Command) {

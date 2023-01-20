@@ -10,7 +10,8 @@ func attackProtectionCmd(cli *cli) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Aliases: []string{"attack-protection", "ap"},
 		Short:   "Manage resources for attack protection",
-		Long:    "Manage resources for attack protection.",
+		Long: "Auth0 can detect attacks and stop malicious attempts to access your application such as " +
+			"blocking traffic from certain IPs and displaying CAPTCHA.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())

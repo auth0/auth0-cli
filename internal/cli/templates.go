@@ -11,9 +11,13 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 )
 
-//
-// Public functions
-//
+func init() {
+	cobra.AddTemplateFunc("WrappedInheritedFlagUsages", WrappedInheritedFlagUsages)
+	cobra.AddTemplateFunc("WrappedLocalFlagUsages", WrappedLocalFlagUsages)
+	cobra.AddTemplateFunc("WrappedRequestParamsFlagUsages", WrappedRequestParamsFlagUsages)
+	cobra.AddTemplateFunc("WrappedNonRequestParamsFlagUsages", WrappedNonRequestParamsFlagUsages)
+	cobra.AddTemplateFunc("WrappedAliases", WrappedAliases)
+}
 
 // WrappedInheritedFlagUsages returns a string containing the usage information
 // for all flags which were inherited from parent commands, wrapped to the
@@ -77,10 +81,6 @@ func WrappedAliases(cmd *cobra.Command) string {
 	return ""
 }
 
-//
-// Private functions
-//
-
 func getLogin(cli *cli) string {
 	if !cli.isLoggedIn() {
 		return ansi.Italic(`
@@ -118,13 +118,13 @@ func namespaceUsageTemplate() string {
 
 Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
 `,
-		ansi.Faint("Usage:"),
-		ansi.Faint("Aliases:"),
-		ansi.Faint("Examples:"),
-		ansi.Faint("Available Resources:"),
-		ansi.Faint("Flags:"),
-		ansi.Faint("Global Flags:"),
-		ansi.Faint("Additional help topics:"),
+		ansi.Bold("Usage:"),
+		ansi.Bold("Aliases:"),
+		ansi.Bold("Examples:"),
+		ansi.Bold("Available Resources:"),
+		ansi.Bold("Flags:"),
+		ansi.Bold("Global Flags:"),
+		ansi.Bold("Additional help topics:"),
 	)
 }
 
@@ -153,31 +153,21 @@ func resourceUsageTemplate() string {
 
 Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
 `,
-		ansi.Faint("Usage:"),
-		ansi.Faint("Aliases:"),
-		ansi.Faint("Examples:"),
-		ansi.Faint("Available Operations:"),
-		ansi.Faint("Flags:"),
-		ansi.Faint("Global Flags:"),
-		ansi.Faint("Additional help topics:"),
+		ansi.Bold("Usage:"),
+		ansi.Bold("Aliases:"),
+		ansi.Bold("Examples:"),
+		ansi.Bold("Available Operations:"),
+		ansi.Bold("Flags:"),
+		ansi.Bold("Global Flags:"),
+		ansi.Bold("Additional help topics:"),
 	)
 }
 
 func getTerminalWidth() int {
-	var width int
-
 	width, _, err := term.GetSize(0)
 	if err != nil {
 		width = 80
 	}
 
 	return width
-}
-
-func init() {
-	cobra.AddTemplateFunc("WrappedInheritedFlagUsages", WrappedInheritedFlagUsages)
-	cobra.AddTemplateFunc("WrappedLocalFlagUsages", WrappedLocalFlagUsages)
-	cobra.AddTemplateFunc("WrappedRequestParamsFlagUsages", WrappedRequestParamsFlagUsages)
-	cobra.AddTemplateFunc("WrappedNonRequestParamsFlagUsages", WrappedNonRequestParamsFlagUsages)
-	cobra.AddTemplateFunc("WrappedAliases", WrappedAliases)
 }

@@ -75,7 +75,7 @@ func bruteForceProtectionCmd(cli *cli) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Aliases: []string{"bfp"},
 		Short:   "Manage brute force protection settings",
-		Long:    "Manage brute force protection settings.",
+		Long:    "Brute-force protection safeguards against a single IP address attacking a single user account.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -87,28 +87,40 @@ func bruteForceProtectionCmd(cli *cli) *cobra.Command {
 }
 
 func showBruteForceProtectionCmd(cli *cli) *cobra.Command {
-	return &cobra.Command{
-		Use:     "show",
-		Args:    cobra.NoArgs,
-		Short:   "Show brute force protection settings",
-		Long:    "Show brute force protection settings.",
-		Example: `auth0 protection brute-force-protection show`,
-		RunE:    showBruteForceProtectionCmdRun(cli),
+	cmd := &cobra.Command{
+		Use:   "show",
+		Args:  cobra.NoArgs,
+		Short: "Show brute force protection settings",
+		Long:  "Display the current brute force protection settings.",
+		Example: `  auth0 protection brute-force-protection show
+  auth0 ap bfp show --json`,
+		RunE: showBruteForceProtectionCmdRun(cli),
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
+	return cmd
 }
 
 func updateBruteForceProtectionCmd(cli *cli) *cobra.Command {
 	var inputs bruteForceProtectionInputs
 
 	cmd := &cobra.Command{
-		Use:     "update",
-		Args:    cobra.NoArgs,
-		Short:   "Update brute force protection settings",
-		Long:    "Update brute force protection settings.",
-		Example: `auth0 protection brute-force-protection update`,
-		RunE:    updateBruteForceDetectionCmdRun(cli, &inputs),
+		Use:   "update",
+		Args:  cobra.NoArgs,
+		Short: "Update brute force protection settings",
+		Long:  "Update the brute force protection settings.",
+		Example: `  auth0 protection brute-force-protection update
+  auth0 ap bfp update --enabled true
+  auth0 ap bfp update --enabled true --allowlist "156.156.156.156,175.175.175.175"
+  auth0 ap bfp update --enabled true --allowlist "156.156.156.156,175.175.175.175" --max-attempts 3
+  auth0 ap bfp update --enabled true --allowlist "156.156.156.156,175.175.175.175" --max-attempts 3 --mode count_per_identifier_and_ip
+  auth0 ap bfp update --enabled true --allowlist "156.156.156.156,175.175.175.175" --max-attempts 3 --mode count_per_identifier_and_ip --shields user_notification 
+  auth0 ap bfp update -e true -l "156.156.156.156,175.175.175.175" -a 3 -m count_per_identifier_and_ip -s user_notification --json`,
+		RunE: updateBruteForceDetectionCmdRun(cli, &inputs),
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	bfpFlags.Enabled.RegisterBoolU(cmd, &inputs.Enabled, false)
 	bfpFlags.Shields.RegisterStringSliceU(cmd, &inputs.Shields, []string{})
 	bfpFlags.AllowList.RegisterStringSliceU(cmd, &inputs.AllowList, []string{})

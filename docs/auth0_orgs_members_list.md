@@ -1,44 +1,45 @@
 ---
 layout: default
 ---
-## auth0 orgs members list
+# auth0 orgs members list
 
-List members of an organization
+List the members of an organization.
 
-### Synopsis
-
-List members of an organization.
-
+## Usage
 ```
 auth0 orgs members list [flags]
 ```
 
-### Examples
+## Examples
 
 ```
-auth0 orgs members list
-auth0 orgs members ls <id>
+  auth0 orgs members list
+  auth0 orgs members ls <org-id>
+  auth0 orgs members list <org-id> --number 100
+  auth0 orgs members ls <org-id> -n 100 --json
 ```
 
-### Options
+
+## Flags
 
 ```
-  -h, --help         help for list
-  -n, --number int   Number of apps to retrieve (default 50)
+      --json         Output in json format.
+  -n, --number int   Number of organization members to retrieve. Minimum 1, maximum 1000. (default 50)
 ```
 
-### Options inherited from parent commands
+
+## InheritedFlags
 
 ```
       --debug           Enable debug mode.
-      --force           Skip confirmation.
-      --format string   Command output format. Options: json.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
       --tenant string   Specific tenant to use.
 ```
 
-### SEE ALSO
 
-* [auth0 orgs members](auth0_orgs_members.md)	 - Manage members of an organization
+## Related Commands
+
+- [auth0 orgs members list](auth0_orgs_members_list.md) - List members of an organization
+
 

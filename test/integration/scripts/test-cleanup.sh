@@ -1,6 +1,6 @@
 #! /bin/bash
 
-apps=$( auth0 apps list --format json --no-input )
+apps=$( auth0 apps list --json --no-input )
 
 for app in $( echo "${apps}" | jq -r '.[] | @base64' ); do
     _jq() {
@@ -18,7 +18,7 @@ for app in $( echo "${apps}" | jq -r '.[] | @base64' ); do
     fi
 done
 
-apis=$( auth0 apis list --format json --no-input )
+apis=$( auth0 apis list --json --no-input )
 
 for api in $( echo "${apis}" | jq -r '.[] | @base64' ); do
     _jq() {
@@ -37,7 +37,7 @@ for api in $( echo "${apis}" | jq -r '.[] | @base64' ); do
 done
 
 # using the search command since users have no list command
-users=$( auth0 users search -q "*"  --format json --no-input )
+users=$( auth0 users search -q "*"  --json --no-input )
 
 for user in $( echo "${users}" | jq -r '.[] | @base64' ); do
     _jq() {
@@ -53,7 +53,7 @@ for user in $( echo "${users}" | jq -r '.[] | @base64' ); do
     fi
 done
 
-roles=$( auth0 roles list --format json --no-input )
+roles=$( auth0 roles list --json --no-input )
 
 for role in $( echo "${roles}" | jq -r '.[] | @base64' ); do
     _jq() {
@@ -71,7 +71,7 @@ for role in $( echo "${roles}" | jq -r '.[] | @base64' ); do
     fi
 done
 
-rules=$( auth0 rules list --format json --no-input )
+rules=$( auth0 rules list --json --no-input )
 
 for rule in $( echo "${rules}" | jq -r '.[] | @base64' ); do
     _jq() {
@@ -86,5 +86,21 @@ for rule in $( echo "${rules}" | jq -r '.[] | @base64' ); do
     then
         echo deleting "$name"
         $( auth0 rules delete "$id")
+    fi
+done
+
+orgs=$( auth0 orgs list --json --no-input )
+
+for org in $( echo "${orgs}" | jq -r '.[] | @base64' ); do
+    _jq() {
+     echo "${org}" | base64 --decode | jq -r "${1}"
+    }
+
+    id=$(_jq '.id')
+    name=$(_jq '.name')
+    if [[ $name = integration-test-org-* ]]
+    then
+        echo deleting "$name"
+        $( auth0 orgs delete "$id")
     fi
 done
