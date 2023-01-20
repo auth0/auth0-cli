@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `--format json` flag/value pair consolidated to `--json` [#533]
-- Flattened the `auth0 branding` commands into the root-level [#540],[#541]
+- Flattened the `auth0 branding` commands into the root-level [#540], [#541]
 - Moved `auth0 ips` command to `auth0 ap sit ips` [#618]
 - Moved `auth0 users unblock` to `auth0 users blocks unblock` [#617]
 - `--reveal` flag for reveal client secret renamed to `--reveal-secrets` [#591]
@@ -52,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- `--force` and `--json` flags relegated from global context, now applied only where appropriate [#536],[#595]
+- `--force` and `--json` flags relegated from global context, now applied only where appropriate [#536], [#595]
 - Undocumented `auth0 config init` command [#532]
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
@@ -96,3 +96,4 @@ Refer to the [v1 migration guide](MIGRATION_GUIDE.md) for instructions on how to
 [#617]: https://github.com/auth0/auth0-cli/issues/617
 [#618]: https://github.com/auth0/auth0-cli/issues/618
 [#612]: https://github.com/auth0/auth0-cli/issues/612
+[#595]: https://github.com/auth0/auth0-cli/issues/595
