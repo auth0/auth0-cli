@@ -30,6 +30,14 @@ Install via [cURL](https://curl.se/):
 curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | sh -s -- -b .
 ```
 
+### Go
+
+Install via [Go](https://go.dev/):
+
+```
+go install github.com/auth0/auth0-cli/cmd/auth0@latest
+```
+
 ### Manual
 
 1. Download the appropriate binary for your environment from the [latest release](https://github.com/auth0/auth0-cli/releases/latest/)
