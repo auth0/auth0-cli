@@ -107,15 +107,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
   auth0 test login <client-id> -c <connection> -a <audience> -d <domain> -s <scope1,scope2> --json
   auth0 test login <client-id> -c <connection> -a <audience> -d <domain> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			const commandKey = "test_login"
-			var userInfo *authutil.UserInfo
 			isTempClient := false
-
-			tenant, err := cli.getTenant()
-			if err != nil {
-				return err
-			}
-
 			if len(args) == 0 {
 				err := testClientIDArg.Pick(cmd, &inputs.ClientID, cli.appPickerOptions)
 				if err != nil {
@@ -157,6 +149,11 @@ func testLoginCmd(cli *cli) *cobra.Command {
 				return nil
 			}
 
+			tenant, err := cli.getTenant()
+			if err != nil {
+				return err
+			}
+
 			tokenResponse, err := runLoginFlow(
 				cli,
 				tenant,
@@ -171,9 +168,9 @@ func testLoginCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("An unexpected error occurred while logging in to client %s: %w", inputs.ClientID, err)
 			}
 
+			var userInfo *authutil.UserInfo
 			if err := ansi.Spinner("Fetching user metadata", func() error {
-				// Use the access token to fetch user information from the /userinfo
-				// endpoint.
+				// Use the access token to fetch user information from the /userinfo endpoint.
 				userInfo, err = authutil.FetchUserInfo(tenant.Domain, tokenResponse.AccessToken)
 				return err
 			}); err != nil {
@@ -183,6 +180,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 			fmt.Fprint(cli.renderer.MessageWriter, "\n")
 			cli.renderer.TryLogin(userInfo, tokenResponse)
 
+			const commandKey = "test_login"
 			isFirstRun, err := cli.isFirstCommandRun(inputs.ClientID, commandKey)
 			if err != nil {
 				return err
@@ -190,13 +188,17 @@ func testLoginCmd(cli *cli) *cobra.Command {
 
 			if isFirstRun {
 				cli.renderer.Infof("Login flow is working!")
-				cli.renderer.Infof("%s Consider downloading and running a quickstart next by running `auth0 quickstarts download %s`",
-					ansi.Faint("Hint:"), inputs.ClientID)
+				cli.renderer.Infof(
+					"%s Consider downloading and running a quickstart next by running `auth0 quickstarts download %s`",
+					ansi.Faint("Hint:"),
+					inputs.ClientID,
+				)
 
 				if err := cli.setFirstCommandRun(inputs.ClientID, commandKey); err != nil {
 					return err
 				}
 			}
+
 			return nil
 		},
 	}
