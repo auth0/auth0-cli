@@ -13,6 +13,8 @@ import (
 	"github.com/auth0/auth0-cli/internal/iostream"
 )
 
+const newClientOption = "Create a new client to use for testing the login"
+
 var (
 	testClientIDArg = Argument{
 		Name: "Client ID",
@@ -107,33 +109,34 @@ func testLoginCmd(cli *cli) *cobra.Command {
   auth0 test login <client-id> -c <connection> -a <audience> -d <domain> -s <scope1,scope2> --json
   auth0 test login <client-id> -c <connection> -a <audience> -d <domain> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			isTempClient := false
 			if len(args) == 0 {
-				err := testClientIDArg.Pick(cmd, &inputs.ClientID, cli.appPickerOptions)
-				if err != nil {
-					if err != errNoApps {
-						return err
-					}
-					cli.renderer.Infof("No applications to select from, we will create a default test application " +
-						"for you and remove it once the test is complete.")
+				if err := testClientIDArg.Pick(cmd, &inputs.ClientID, cli.appPickerWithCreateOption); err != nil {
+					return err
+				}
+
+				if inputs.ClientID == newClientOption {
 					client := &management.Client{
 						Name:             auth0.String(cliLoginTestingClientName),
 						Description:      auth0.String(cliLoginTestingClientDescription),
 						Callbacks:        &[]string{cliLoginTestingCallbackURL},
 						InitiateLoginURI: auth0.String(cliLoginTestingInitiateLoginURI),
 					}
+
 					if err := cli.api.Client.Create(client); err != nil {
-						return fmt.Errorf("Unable to create an app for testing the login box: %w", err)
+						return fmt.Errorf("failed to create a new client to use for testing the login: %w", err)
 					}
+
 					inputs.ClientID = client.GetClientID()
-					isTempClient = true
-					cli.renderer.Infof("Default test application successfully created\n")
+
+					cli.renderer.Infof("New client created successfully.")
+					cli.renderer.Infof(
+						"If you wish to remove the created client after testing the login, run: 'auth0 apps delete %s'",
+						client.GetClientID(),
+					)
 				}
 			} else {
 				inputs.ClientID = args[0]
 			}
-
-			defer cleanupTempApplication(isTempClient, cli, inputs.ClientID)
 
 			client, err := cli.api.Client.Read(inputs.ClientID)
 			if err != nil {
@@ -315,17 +318,6 @@ Specify the API you want this token for with --audience (API Identifer). Additio
 	return cmd
 }
 
-// cleanupTempApplication will delete the specified application if it is marked
-// as a temporary application. It will log success or failure to the user.
-func cleanupTempApplication(isTemp bool, cli *cli, id string) {
-	if isTemp {
-		if err := cli.api.Client.Delete(id); err != nil {
-			cli.renderer.Errorf("unable to remove the default test application", err.Error())
-		}
-		cli.renderer.Infof("Default test application removed")
-	}
-}
-
 func (c *cli) customDomainPickerOptions() (pickerOptions, error) {
 	var opts pickerOptions
 
@@ -361,4 +353,21 @@ func (c *cli) customDomainPickerOptions() (pickerOptions, error) {
 	opts = append(opts, pickerOption{value: "", label: fmt.Sprintf("none (use %s)", tenant.Domain)})
 
 	return opts, nil
+}
+
+func (c *cli) appPickerWithCreateOption() (pickerOptions, error) {
+	options, err := c.appPickerOptions()
+	if err != nil {
+		return nil, err
+	}
+
+	enhancedOptions := []pickerOption{
+		{
+			value: newClientOption,
+			label: newClientOption,
+		},
+	}
+	enhancedOptions = append(enhancedOptions, options...)
+
+	return enhancedOptions, nil
 }
