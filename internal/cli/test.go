@@ -135,7 +135,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 
 			client, err := cli.api.Client.Read(inputs.ClientID)
 			if err != nil {
-				return fmt.Errorf("Unable to find client %s; if you specified a client, please verify it exists, otherwise re-run the command", inputs.ClientID)
+				return fmt.Errorf("failed to find client with ID :%q: %w", inputs.ClientID, err)
 			}
 
 			err = testDomain.Pick(cmd, &inputs.CustomDomain, cli.customDomainPickerOptions)
@@ -163,7 +163,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 				inputs.CustomDomain,
 			)
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred while logging in to client %s: %w", inputs.ClientID, err)
+				return fmt.Errorf("failed to log into the client %s: %w", inputs.ClientID, err)
 			}
 
 			var userInfo *authutil.UserInfo
@@ -172,10 +172,10 @@ func testLoginCmd(cli *cli) *cobra.Command {
 				userInfo, err = authutil.FetchUserInfo(tenant.Domain, tokenResponse.AccessToken)
 				return err
 			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred: %w", err)
+				return fmt.Errorf("failed to fetch user info: %w", err)
 			}
 
-			fmt.Fprint(cli.renderer.MessageWriter, "\n")
+			cli.renderer.Newline()
 			cli.renderer.TryLogin(userInfo, tokenResponse)
 
 			const commandKey = "test_login"
