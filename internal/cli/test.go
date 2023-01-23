@@ -56,11 +56,6 @@ var (
 		Help:      "The list of scopes you want to use.",
 	}
 
-	testDomainArg = Flag{
-		Name: "Custom Domain",
-		Help: "One of your custom domains.",
-	}
-
 	testDomain = Flag{
 		Name:      "Custom Domain",
 		LongForm:  "domain",
@@ -143,7 +138,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("Unable to find client %s; if you specified a client, please verify it exists, otherwise re-run the command", inputs.ClientID)
 			}
 
-			err = testDomainArg.Pick(cmd, &inputs.CustomDomain, cli.customDomainPickerOptions)
+			err = testDomain.Pick(cmd, &inputs.CustomDomain, cli.customDomainPickerOptions)
 			if err != nil && err != errNoCustomDomains {
 				return err
 			}
