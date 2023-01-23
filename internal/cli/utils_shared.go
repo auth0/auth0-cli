@@ -84,23 +84,24 @@ func runClientCredentialsFlow(
 	return tokenResponse, err
 }
 
-// runLoginFlowPreflightChecks checks if we need to make any updates to the
-// client being tested in order to log in successfully. If so, it asks the user
-// to confirm whether to proceed.
+// runLoginFlowPreflightChecks checks if we need to make any updates
+// to the client being tested in order to log in successfully.
+// If so, it asks the user to confirm whether to proceed.
 func runLoginFlowPreflightChecks(cli *cli, c *management.Client) (abort bool) {
 	if !cli.noInput {
-		cli.renderer.Infof("A browser window will open to begin this client's login flow.")
-		cli.renderer.Infof("Once login is complete, you can return to the CLI to view user profile information and tokens.\n")
+		cli.renderer.Infof("A browser window needs to be opened to complete this client's login flow.")
+		cli.renderer.Infof("Once login is complete, you can return to the CLI to view user profile information and tokens.")
+		cli.renderer.Newline()
 	}
 
-	// check if the chosen client includes our local callback URL in its
-	// allowed list. If not we'll need to add it (after asking the user
-	// for permission).
+	// Check if the chosen client includes our local callback URL in its allowed list.
+	// If not we'll need to add it (after asking the user for permission).
 	if !hasLocalCallbackURL(c) {
 		cli.renderer.Warnf("The client you are using does not currently allow callbacks to localhost.")
 		cli.renderer.Warnf("To complete the login flow the CLI needs to redirect logins to a local server and record the result.\n")
 		cli.renderer.Warnf("The client will be modified to update the allowed callback URLs, we'll remove them when done.")
-		cli.renderer.Warnf("If you do not wish to modify the client, you can abort now.\n")
+		cli.renderer.Warnf("If you do not wish to modify the client, you can abort now.")
+		cli.renderer.Newline()
 	}
 
 	if !cli.force && !cli.noInput {
@@ -109,7 +110,7 @@ func runLoginFlowPreflightChecks(cli *cli, c *management.Client) (abort bool) {
 		}
 	}
 
-	fmt.Fprint(cli.renderer.MessageWriter, "\n")
+	cli.renderer.Newline()
 
 	return true
 }
@@ -142,8 +143,7 @@ func runLoginFlow(cli *cli, t Tenant, c *management.Client, connName, audience, 
 		}
 
 		if cli.noInput {
-			cli.renderer.Infof("Open the following URL in a browser:")
-			fmt.Fprint(cli.renderer.MessageWriter, "\n"+loginURL+"\n\n")
+			cli.renderer.Infof("Open the following URL in a browser: %s\n", loginURL)
 		} else {
 			if err := browser.OpenURL(loginURL); err != nil {
 				return err

@@ -157,8 +157,8 @@ func testLoginCmd(cli *cli) *cobra.Command {
 				tenant,
 				client,
 				inputs.ConnectionName,
-				inputs.Audience, // audience is only supported for the test token command
-				"login",         // force a login page when using the test login command
+				inputs.Audience,
+				"login", // force a login page when using the test login command
 				inputs.Scopes,
 				inputs.CustomDomain,
 			)
@@ -177,6 +177,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 
 			cli.renderer.Newline()
 			cli.renderer.TryLogin(userInfo, tokenResponse)
+			cli.renderer.Newline()
 
 			const commandKey = "test_login"
 			isFirstRun, err := cli.isFirstCommandRun(inputs.ClientID, commandKey)
