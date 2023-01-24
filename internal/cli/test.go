@@ -235,11 +235,6 @@ Specify the API you want this token for with --audience (API Identifer). Additio
   auth0 test token -c <id> -a <audience> -s <scope1,scope2> --json
   auth0 test token -c <id> -a <audience> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			tenant, err := cli.getTenant()
-			if err != nil {
-				return err
-			}
-
 			// use the client ID as passed in by the user, or default to the
 			// "CLI Login Testing" client if none passed. This client is only
 			// used for testing login from the CLI and will be created if it
@@ -258,6 +253,11 @@ Specify the API you want this token for with --audience (API Identifer). Additio
 			}
 
 			appType := client.GetAppType()
+
+			tenant, err := cli.getTenant()
+			if err != nil {
+				return err
+			}
 
 			cli.renderer.Infof("Domain:   " + tenant.Domain)
 			cli.renderer.Infof("ClientID: " + inputs.ClientID)
