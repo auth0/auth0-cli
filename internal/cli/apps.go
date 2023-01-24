@@ -890,11 +890,10 @@ func (c *cli) appPickerOptions() (pickerOptions, error) {
 	for _, c := range list.Clients {
 		// Empty type means the default client that we shouldn't display.
 		// TODO(sergiught): We only need to exclude generic app types for
-		// the auth0 qs download command. We allow it for now and tackle
-		// the quickstart command update in a separate PR.
-		// if c.GetAppType() == "" {
-		// 	continue
-		// }
+		// the auth0 qs download command. Fix this in separate PR.
+		if c.GetAppType() == "" {
+			continue
+		}
 
 		value := c.GetClientID()
 		label := fmt.Sprintf("%s %s", c.GetName(), ansi.Faint("("+value+")"))
