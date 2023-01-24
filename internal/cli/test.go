@@ -105,6 +105,15 @@ func testLoginCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to select client to use for tests: %w", err)
 			}
 
+			if client.GetAppType() == appTypeNonInteractive {
+				return fmt.Errorf(
+					"cannot test the Universal Login with a %s application.\n\n"+
+						"Run 'auth0 test token %s' to fetch an access token instead.",
+					ansi.Bold("Machine to Machine"),
+					client.GetClientID(),
+				)
+			}
+
 			err = testDomain.Pick(cmd, &inputs.CustomDomain, cli.customDomainPickerOptions)
 			if err != nil && err != errNoCustomDomains {
 				return err
