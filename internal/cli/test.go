@@ -18,20 +18,21 @@ const newClientOption = "Create a new client to use for testing the login"
 var (
 	testClientIDArg = Argument{
 		Name: "Client ID",
-		Help: "Client Id of an Auth0 application.",
+		Help: "Client ID of an Auth0 application.",
 	}
 
 	testClientID = Flag{
 		Name:      "Client ID",
 		LongForm:  "client-id",
 		ShortForm: "c",
-		Help:      "Client Id of an Auth0 application.",
+		Help:      "Client ID of an Auth0 application.",
 	}
 
-	testConnection = Flag{
-		Name:     "Connection",
-		LongForm: "connection",
-		Help:     "Connection to test during login.",
+	testConnectionName = Flag{
+		Name:      "Connection Name",
+		LongForm:  "connection-name",
+		ShortForm: "c",
+		Help:      "The connection name to test during login.",
 	}
 
 	testAudience = Flag{
@@ -96,13 +97,13 @@ func testLoginCmd(cli *cli) *cobra.Command {
 		Long:  "Launch a browser to try out your Universal Login box.",
 		Example: `  auth0 test login
   auth0 test login <client-id>
-  auth0 test login <client-id> --connection <connection>
-  auth0 test login <client-id> --connection <connection> --audience <audience>
-  auth0 test login <client-id> --connection <connection> --audience <audience> --domain <domain>
-  auth0 test login <client-id> --connection <connection> --audience <audience> --domain <domain> --scopes <scope1,scope2>
-  auth0 test login <client-id> -c <connection> -a <audience> -d <domain> -s <scope1,scope2> --force
-  auth0 test login <client-id> -c <connection> -a <audience> -d <domain> -s <scope1,scope2> --json
-  auth0 test login <client-id> -c <connection> -a <audience> -d <domain> -s <scope1,scope2> --force --json`,
+  auth0 test login <client-id> --connection-name <connection-name>
+  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier>
+  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier> --domain <domain>
+  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier> --domain <domain> --scopes <scope1,scope2>
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier> -d <domain> -s <scope1,scope2> --force
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier> -d <domain> -s <scope1,scope2> --json
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier> -d <domain> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := testClientIDArg.Pick(cmd, &inputs.ClientID, cli.appPickerWithCreateOption); err != nil {
@@ -207,7 +208,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	testAudience.RegisterString(cmd, &inputs.Audience, "")
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, cliLoginTestingScopes)
-	testConnection.RegisterString(cmd, &inputs.ConnectionName, "")
+	testConnectionName.RegisterString(cmd, &inputs.ConnectionName, "")
 	testDomain.RegisterString(cmd, &inputs.CustomDomain, "")
 
 	return cmd
