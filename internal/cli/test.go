@@ -60,6 +60,14 @@ var (
 	errNoCustomDomains = errors.New("there are currently no custom domains")
 )
 
+type testCmdInputs struct {
+	ClientID       string
+	Audience       string
+	Scopes         []string
+	ConnectionName string
+	CustomDomain   string
+}
+
 func testCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "test",
@@ -75,13 +83,7 @@ func testCmd(cli *cli) *cobra.Command {
 }
 
 func testLoginCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ClientID       string
-		Audience       string
-		Scopes         []string
-		ConnectionName string
-		CustomDomain   string
-	}
+	var inputs testCmdInputs
 
 	cmd := &cobra.Command{
 		Use:   "login",
@@ -98,39 +100,9 @@ func testLoginCmd(cli *cli) *cobra.Command {
   auth0 test login <client-id> -c <connection-name> -a <api-identifier> -d <domain> -s <scope1,scope2> --json
   auth0 test login <client-id> -c <connection-name> -a <api-identifier> -d <domain> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				if err := testClientID.Pick(cmd, &inputs.ClientID, cli.appPickerWithCreateOption); err != nil {
-					return err
-				}
-
-				if inputs.ClientID == newClientOption {
-					client := &management.Client{
-						Name:             auth0.String(cliLoginTestingClientName),
-						Description:      auth0.String(cliLoginTestingClientDescription),
-						Callbacks:        &[]string{cliLoginTestingCallbackURL},
-						InitiateLoginURI: auth0.String(cliLoginTestingInitiateLoginURI),
-					}
-
-					if err := cli.api.Client.Create(client); err != nil {
-						return fmt.Errorf("failed to create a new client to use for testing the login: %w", err)
-					}
-
-					inputs.ClientID = client.GetClientID()
-
-					cli.renderer.Infof("New client created successfully.")
-					cli.renderer.Infof(
-						"If you wish to remove the created client after testing the login, run: 'auth0 apps delete %s'",
-						client.GetClientID(),
-					)
-					cli.renderer.Newline()
-				}
-			} else {
-				inputs.ClientID = args[0]
-			}
-
-			client, err := cli.api.Client.Read(inputs.ClientID)
+			client, err := selectClientToUseForTestsAndValidateExistence(cli, cmd, args, &inputs)
 			if err != nil {
-				return fmt.Errorf("failed to find client with ID :%q: %w", inputs.ClientID, err)
+				return fmt.Errorf("failed to select client to use for tests: %w", err)
 			}
 
 			err = testDomain.Pick(cmd, &inputs.CustomDomain, cli.customDomainPickerOptions)
@@ -209,59 +181,24 @@ func testLoginCmd(cli *cli) *cobra.Command {
 }
 
 func testTokenCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ClientID string
-		Audience string
-		Scopes   []string
-	}
+	var inputs testCmdInputs
 
 	cmd := &cobra.Command{
 		Use:   "token",
-		Args:  cobra.NoArgs,
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Fetch a token for the given application and API",
 		Long: `Fetch an access token for the given application.
-If --client-id is not provided, the default client "CLI Login Testing" will be used (and created if not exists).
-Specify the API you want this token for with --audience (API Identifier). Additionally, you can also specify the --scope to use.`,
+Specify the API you want this token for with --audience (API Identifier). Additionally, you can also specify the --scopes to use.`,
 		Example: `  auth0 test token
-  auth0 test token <client-id> --audience <audience> --scopes <scope1,scope2>
-  auth0 test token <client-id> -a <audience> -s <scope1,scope2>
-  auth0 test token <client-id> -a <audience> -s <scope1,scope2> --force
-  auth0 test token <client-id> -a <audience> -s <scope1,scope2> --json
-  auth0 test token <client-id> -a <audience> -s <scope1,scope2> --force --json`,
+  auth0 test token <client-id> --audience <api-identifier> --scopes <scope1,scope2>
+  auth0 test token <client-id> -a <api-identifier> -s <scope1,scope2>
+  auth0 test token <client-id> -a <api-identifier> -s <scope1,scope2> --force
+  auth0 test token <client-id> -a <api-identifier> -s <scope1,scope2> --json
+  auth0 test token <client-id> -a <api-identifier> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				if err := testClientID.Pick(cmd, &inputs.ClientID, cli.appPickerWithCreateOption); err != nil {
-					return err
-				}
-
-				if inputs.ClientID == newClientOption {
-					client := &management.Client{
-						Name:             auth0.String(cliLoginTestingClientName),
-						Description:      auth0.String(cliLoginTestingClientDescription),
-						Callbacks:        &[]string{cliLoginTestingCallbackURL},
-						InitiateLoginURI: auth0.String(cliLoginTestingInitiateLoginURI),
-					}
-
-					if err := cli.api.Client.Create(client); err != nil {
-						return fmt.Errorf("failed to create a new client to use for testing the login: %w", err)
-					}
-
-					inputs.ClientID = client.GetClientID()
-
-					cli.renderer.Infof("New client created successfully.")
-					cli.renderer.Infof(
-						"If you wish to remove the created client after testing the login, run: 'auth0 apps delete %s'",
-						client.GetClientID(),
-					)
-					cli.renderer.Newline()
-				}
-			} else {
-				inputs.ClientID = args[0]
-			}
-
-			client, err := cli.api.Client.Read(inputs.ClientID)
+			client, err := selectClientToUseForTestsAndValidateExistence(cli, cmd, args, &inputs)
 			if err != nil {
-				return fmt.Errorf("failed to find client with ID :%q: %w", inputs.ClientID, err)
+				return fmt.Errorf("failed to select client to use for tests: %w", err)
 			}
 
 			appType := client.GetAppType()
@@ -273,9 +210,10 @@ Specify the API you want this token for with --audience (API Identifier). Additi
 
 			cli.renderer.Infof("Domain:   " + tenant.Domain)
 			cli.renderer.Infof("ClientID: " + inputs.ClientID)
-			cli.renderer.Infof("Type:     " + appType + "\n")
+			cli.renderer.Infof("Type:     " + appType)
+			cli.renderer.Newline()
 
-			// We can check here if the client is an m2m client, and if so
+			// We can check here if the client is a m2m client, and if so
 			// initiate the client credentials flow instead to fetch a token,
 			// avoiding the browser and HTTP server shenanigans altogether.
 			if appType == "non_interactive" {
@@ -283,11 +221,13 @@ Specify the API you want this token for with --audience (API Identifier). Additi
 				if err != nil {
 					return fmt.Errorf("An unexpected error occurred while logging in to machine-to-machine client %s: %w", inputs.ClientID, err)
 				}
+
 				if iostream.IsOutputTerminal() {
 					cli.renderer.GetToken(client, tokenResponse)
 				} else {
 					cli.renderer.Output(tokenResponse.AccessToken)
 				}
+
 				return nil
 			}
 
@@ -324,6 +264,45 @@ Specify the API you want this token for with --audience (API Identifier). Additi
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
 
 	return cmd
+}
+
+func selectClientToUseForTestsAndValidateExistence(cli *cli, cmd *cobra.Command, args []string, inputs *testCmdInputs) (*management.Client, error) {
+	if len(args) == 0 {
+		if err := testClientID.Pick(cmd, &inputs.ClientID, cli.appPickerWithCreateOption); err != nil {
+			return nil, err
+		}
+
+		if inputs.ClientID == newClientOption {
+			client := &management.Client{
+				Name:             auth0.String(cliLoginTestingClientName),
+				Description:      auth0.String(cliLoginTestingClientDescription),
+				Callbacks:        &[]string{cliLoginTestingCallbackURL},
+				InitiateLoginURI: auth0.String(cliLoginTestingInitiateLoginURI),
+			}
+
+			if err := cli.api.Client.Create(client); err != nil {
+				return nil, fmt.Errorf("failed to create a new client to use for testing the login: %w", err)
+			}
+
+			inputs.ClientID = client.GetClientID()
+
+			cli.renderer.Infof("New client created successfully.")
+			cli.renderer.Infof(
+				"If you wish to remove the created client after testing the login, run: 'auth0 apps delete %s'",
+				client.GetClientID(),
+			)
+			cli.renderer.Newline()
+		}
+	} else {
+		inputs.ClientID = args[0]
+	}
+
+	client, err := cli.api.Client.Read(inputs.ClientID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find client with ID :%q: %w", inputs.ClientID, err)
+	}
+
+	return client, nil
 }
 
 func (c *cli) customDomainPickerOptions() (pickerOptions, error) {
