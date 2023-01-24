@@ -21,7 +21,7 @@ func (v *quickstartView) AsTableHeader() []string {
 }
 
 func (v *quickstartView) AsTableRow() []string {
-	return []string{v.Stack, applyColor(v.AppType), v.URL}
+	return []string{v.Stack, ApplyColorToFriendlyAppType(v.AppType), v.URL}
 }
 
 func (v *quickstartView) Object() interface{} {
@@ -39,7 +39,7 @@ func (r *Renderer) QuickstartList(quickstarts []auth0.Quickstart) {
 	for _, qs := range quickstarts {
 		results = append(results, &quickstartView{
 			Stack:   qs.Name,
-			AppType: applyColor(qsAppTypeFor(qs.AppType)),
+			AppType: ApplyColorToFriendlyAppType(qsAppTypeFor(qs.AppType)),
 			URL:     fmt.Sprintf("%s%s", qsBaseURL, qs.URL),
 			raw:     qs,
 		})

@@ -10,6 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/iostream"
 )
 
@@ -201,16 +202,16 @@ Specify the API you want this token for with --audience (API Identifier). Additi
 				return fmt.Errorf("failed to select client to use for tests: %w", err)
 			}
 
-			appType := client.GetAppType()
-
 			tenant, err := cli.getTenant()
 			if err != nil {
 				return err
 			}
 
-			cli.renderer.Infof("Domain:   " + tenant.Domain)
-			cli.renderer.Infof("ClientID: " + inputs.ClientID)
-			cli.renderer.Infof("Type:     " + appType)
+			appType := client.GetAppType()
+
+			cli.renderer.Infof("Domain:   " + ansi.Blue(tenant.Domain))
+			cli.renderer.Infof("ClientID: " + ansi.Bold(client.GetClientID()))
+			cli.renderer.Infof("Type:     " + display.ApplyColorToFriendlyAppType(display.FriendlyAppType(appType)))
 			cli.renderer.Newline()
 
 			// We can check here if the client is a m2m client, and if so

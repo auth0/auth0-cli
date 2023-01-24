@@ -51,14 +51,14 @@ func (v *applicationView) AsTableRow() []string {
 		return []string{
 			ansi.Faint(v.ClientID),
 			v.Name,
-			applyColor(v.Type),
+			ApplyColorToFriendlyAppType(v.Type),
 			ansi.Italic(v.ClientSecret),
 		}
 	}
 	return []string{
 		ansi.Faint(v.ClientID),
 		v.Name,
-		applyColor(v.Type),
+		ApplyColorToFriendlyAppType(v.Type),
 	}
 }
 
@@ -74,7 +74,7 @@ func (v *applicationView) KeyValues() [][]string {
 			{"CLIENT ID", ansi.Faint(v.ClientID)},
 			{"NAME", v.Name},
 			{"DESCRIPTION", v.Description},
-			{"TYPE", applyColor(v.Type)},
+			{"TYPE", ApplyColorToFriendlyAppType(v.Type)},
 			{"CLIENT SECRET", ansi.Italic(v.ClientSecret)},
 			{"CALLBACKS", callbacks},
 			{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
@@ -89,7 +89,7 @@ func (v *applicationView) KeyValues() [][]string {
 		{"CLIENT ID", ansi.Faint(v.ClientID)},
 		{"NAME", v.Name},
 		{"DESCRIPTION", v.Description},
-		{"TYPE", applyColor(v.Type)},
+		{"TYPE", ApplyColorToFriendlyAppType(v.Type)},
 		{"CALLBACKS", callbacks},
 		{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
 		{"ALLOWED ORIGINS", allowedOrigins},
@@ -172,7 +172,7 @@ func makeApplicationView(client *management.Client, revealSecrets bool) *applica
 		revealSecret:      revealSecrets,
 		Name:              client.GetName(),
 		Description:       client.GetDescription(),
-		Type:              appTypeFor(client.GetAppType()),
+		Type:              FriendlyAppType(client.GetAppType()),
 		ClientID:          client.GetClientID(),
 		ClientSecret:      client.GetClientSecret(),
 		Callbacks:         client.GetCallbacks(),
@@ -188,7 +188,7 @@ func makeApplicationView(client *management.Client, revealSecrets bool) *applica
 // TODO(cyx): determine if there's a better way to filter this out.
 const deprecatedAppName = "All Applications"
 
-func appTypeFor(appType string) string {
+func FriendlyAppType(appType string) string {
 	switch {
 	case appType == "":
 		return "Generic"
@@ -220,7 +220,7 @@ func quickstartsURIFor(appType string) string {
 	}
 }
 
-func applyColor(a string) string {
+func ApplyColorToFriendlyAppType(a string) string {
 	switch {
 	case a == friendlyM2M:
 		return ansi.Green(a)
