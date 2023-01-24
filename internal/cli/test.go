@@ -202,8 +202,9 @@ func testTokenCmd(cli *cli) *cobra.Command {
 		Use:   "token",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Fetch a token for the given application and API",
-		Long: `Fetch an access token for the given application.
-Specify the API you want this token for with --audience (API Identifier). Additionally, you can also specify the --scopes to use.`,
+		Long: "Fetch an access token for the given application. " +
+			"Specify the API you want this token for with `--audience` (API Identifier). " +
+			"Additionally, you can also specify the `--scopes` to use.",
 		Example: `  auth0 test token
   auth0 test token <client-id> --audience <api-audience|api-identifier> --scopes <scope1,scope2>
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2>
