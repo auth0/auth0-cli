@@ -114,6 +114,12 @@ func testLoginCmd(cli *cli) *cobra.Command {
 				return nil
 			}
 
+			if inputs.Audience != "" {
+				if err := checkClientIsAuthorizedForAPI(cli, client, inputs.Audience); err != nil {
+					return err
+				}
+			}
+
 			tenant, err := cli.getTenant()
 			if err != nil {
 				return err
@@ -190,11 +196,11 @@ func testTokenCmd(cli *cli) *cobra.Command {
 		Long: `Fetch an access token for the given application.
 Specify the API you want this token for with --audience (API Identifier). Additionally, you can also specify the --scopes to use.`,
 		Example: `  auth0 test token
-  auth0 test token <client-id> --audience <api-identifier> --scopes <scope1,scope2>
-  auth0 test token <client-id> -a <api-identifier> -s <scope1,scope2>
-  auth0 test token <client-id> -a <api-identifier> -s <scope1,scope2> --force
-  auth0 test token <client-id> -a <api-identifier> -s <scope1,scope2> --json
-  auth0 test token <client-id> -a <api-identifier> -s <scope1,scope2> --force --json`,
+  auth0 test token <client-id> --audience <api-audience|api-identifier> --scopes <scope1,scope2>
+  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2>
+  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --force
+  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --json
+  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := selectClientToUseForTestsAndValidateExistence(cli, cmd, args, &inputs)
 			if err != nil {
@@ -214,7 +220,7 @@ Specify the API you want this token for with --audience (API Identifier). Additi
 			cli.renderer.Newline()
 
 			if appType == appTypeNonInteractive {
-				tokenResponse, err := runClientCredentialsFlow(client, inputs.Audience, tenant.Domain)
+				tokenResponse, err := runClientCredentialsFlow(cli, client, inputs.Audience, tenant.Domain)
 				if err != nil {
 					return fmt.Errorf(
 						"failed to log in with client credentials for client with ID %q: %w",
@@ -352,4 +358,32 @@ func (c *cli) appPickerWithCreateOption() (pickerOptions, error) {
 	enhancedOptions = append(enhancedOptions, options...)
 
 	return enhancedOptions, nil
+}
+
+func checkClientIsAuthorizedForAPI(cli *cli, client *management.Client, audience string) error {
+	var list *management.ClientGrantList
+	if err := ansi.Waiting(func() (err error) {
+		list, err = cli.api.ClientGrant.List(
+			management.Parameter("audience", audience),
+			management.Parameter("client_id", client.GetClientID()),
+		)
+		return err
+	}); err != nil {
+		return fmt.Errorf(
+			"failed to find client grants for API identifier %q and client ID %q: %w",
+			audience,
+			client.GetClientID(),
+			err,
+		)
+	}
+
+	if len(list.ClientGrants) == 0 {
+		return fmt.Errorf(
+			"the %s application is not authorized to request access tokens for this API %s",
+			ansi.Bold(client.GetName()),
+			ansi.Bold(audience),
+		)
+	}
+
+	return nil
 }

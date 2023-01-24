@@ -13,6 +13,7 @@ type API struct {
 	AttackProtection AttackProtectionAPI
 	Branding         BrandingAPI
 	Client           ClientAPI
+	ClientGrant      ClientGrantAPI
 	Connection       ConnectionAPI
 	CustomDomain     CustomDomainAPI
 	EmailTemplate    EmailTemplateAPI
@@ -35,6 +36,7 @@ func NewAPI(m *management.Management) *API {
 		AttackProtection: m.AttackProtection,
 		Branding:         m.Branding,
 		Client:           m.Client,
+		ClientGrant:      m.ClientGrant,
 		Connection:       m.Connection,
 		CustomDomain:     m.CustomDomain,
 		EmailTemplate:    m.EmailTemplate,

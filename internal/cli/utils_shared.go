@@ -55,28 +55,30 @@ func BuildOauthTokenParams(clientID, clientSecret, audience string) url.Values {
 // runClientCredentialsFlow runs an M2M client
 // credentials flow without opening a browser.
 func runClientCredentialsFlow(
+	cli *cli,
 	client *management.Client,
 	audience string,
 	tenantDomain string,
 ) (*authutil.TokenResponse, error) {
-	var tokenResponse *authutil.TokenResponse
+	if err := checkClientIsAuthorizedForAPI(cli, client, audience); err != nil {
+		return nil, err
+	}
 
 	tokenURL := BuildOauthTokenURL(tenantDomain)
 	payload := BuildOauthTokenParams(client.GetClientID(), client.GetClientSecret(), audience)
 
-	// TODO: Check if the audience is valid, and suggest a different client if it is wrong.
-
+	var tokenResponse *authutil.TokenResponse
 	err := ansi.Spinner("Waiting for token", func() error {
-		res, err := http.PostForm(tokenURL, payload)
+		response, err := http.PostForm(tokenURL, payload)
 		if err != nil {
 			return err
 		}
-		defer res.Body.Close()
+		defer response.Body.Close()
 
-		err = json.NewDecoder(res.Body).Decode(&tokenResponse)
-		if err != nil {
-			return fmt.Errorf("cannot decode response: %w", err)
+		if err = json.NewDecoder(response.Body).Decode(&tokenResponse); err != nil {
+			return fmt.Errorf("failed to decode the response: %w", err)
 		}
+
 		return nil
 	})
 
