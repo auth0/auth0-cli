@@ -11,7 +11,6 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/display"
-	"github.com/auth0/auth0-cli/internal/iostream"
 )
 
 const newClientOption = "Create a new client to use for testing the login"
@@ -144,7 +143,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 			}
 
 			cli.renderer.Newline()
-			cli.renderer.TryLogin(userInfo, tokenResponse)
+			cli.renderer.TestLogin(userInfo, tokenResponse)
 			cli.renderer.Newline()
 
 			const commandKey = "test_login"
@@ -209,25 +208,22 @@ Specify the API you want this token for with --audience (API Identifier). Additi
 
 			appType := client.GetAppType()
 
-			cli.renderer.Infof("Domain:   " + ansi.Blue(tenant.Domain))
-			cli.renderer.Infof("ClientID: " + ansi.Bold(client.GetClientID()))
-			cli.renderer.Infof("Type:     " + display.ApplyColorToFriendlyAppType(display.FriendlyAppType(appType)))
+			cli.renderer.Infof("Domain    : " + ansi.Blue(tenant.Domain))
+			cli.renderer.Infof("Client ID : " + ansi.Bold(client.GetClientID()))
+			cli.renderer.Infof("Type      : " + display.ApplyColorToFriendlyAppType(display.FriendlyAppType(appType)))
 			cli.renderer.Newline()
 
-			// We can check here if the client is a m2m client, and if so
-			// initiate the client credentials flow instead to fetch a token,
-			// avoiding the browser and HTTP server shenanigans altogether.
-			if appType == "non_interactive" {
-				tokenResponse, err := runClientCredentialsFlow(client, inputs.ClientID, inputs.Audience, tenant)
+			if appType == appTypeNonInteractive {
+				tokenResponse, err := runClientCredentialsFlow(client, inputs.Audience, tenant.Domain)
 				if err != nil {
-					return fmt.Errorf("An unexpected error occurred while logging in to machine-to-machine client %s: %w", inputs.ClientID, err)
+					return fmt.Errorf(
+						"failed to log in with client credentials for client with ID %q: %w",
+						inputs.ClientID,
+						err,
+					)
 				}
 
-				if iostream.IsOutputTerminal() {
-					cli.renderer.GetToken(client, tokenResponse)
-				} else {
-					cli.renderer.Output(tokenResponse.AccessToken)
-				}
+				cli.renderer.TestToken(client, tokenResponse)
 
 				return nil
 			}
@@ -249,11 +245,9 @@ Specify the API you want this token for with --audience (API Identifier). Additi
 			if err != nil {
 				return fmt.Errorf("An unexpected error occurred when logging in to client %s: %w", inputs.ClientID, err)
 			}
-			if iostream.IsOutputTerminal() {
-				cli.renderer.GetToken(client, tokenResponse)
-			} else {
-				cli.renderer.Output(tokenResponse.AccessToken)
-			}
+
+			cli.renderer.TestToken(client, tokenResponse)
+
 			return nil
 		},
 	}
