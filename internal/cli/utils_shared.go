@@ -191,31 +191,6 @@ func runLoginFlow(cli *cli, t Tenant, c *management.Client, connName, audience, 
 	return tokenResponse, err
 }
 
-// getOrCreateCLITesterClient uses the manage API to look for an existing client
-// named `cliLoginTestingClientName`, and if it doesn't find one creates it with
-// default settings.
-func getOrCreateCLITesterClient(clientManager auth0.ClientAPI) (*management.Client, error) {
-	clients, err := clientManager.List()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, client := range clients.Clients {
-		if client.GetName() == cliLoginTestingClientName {
-			return client, nil
-		}
-	}
-
-	// we couldn't find the default client, so let's create it
-	client := &management.Client{
-		Name:             auth0.String(cliLoginTestingClientName),
-		Description:      auth0.String(cliLoginTestingClientDescription),
-		Callbacks:        &[]string{cliLoginTestingCallbackURL},
-		InitiateLoginURI: auth0.String(cliLoginTestingInitiateLoginURI),
-	}
-	return client, clientManager.Create(client)
-}
-
 // check if a client is already configured with our local callback URL.
 func hasLocalCallbackURL(client *management.Client) bool {
 	for _, callbackURL := range client.GetCallbacks() {

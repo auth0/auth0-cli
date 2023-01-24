@@ -131,7 +131,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 				client,
 				inputs.ConnectionName,
 				inputs.Audience,
-				"login", // force a login page when using the test login command
+				"login", // Force a login page when using the test login command.
 				inputs.Scopes,
 				inputs.CustomDomain,
 			)
@@ -242,14 +242,14 @@ Specify the API you want this token for with --audience (API Identifier). Additi
 				cli,
 				tenant,
 				client,
-				"", // specifying a connection is only supported for the test login command
+				"", // Specifying a connection is only supported for the test login command.
 				inputs.Audience,
-				"", // We don't want to force a prompt for the test token command
+				"", // We don't want to force a prompt for the test token command.
 				inputs.Scopes,
-				"",
+				"", // Specifying a custom domain is only supported for the test login command.
 			)
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred when logging in to client %s: %w", inputs.ClientID, err)
+				return fmt.Errorf("failed to log into the client %s: %w", inputs.ClientID, err)
 			}
 
 			cli.renderer.TestToken(client, tokenResponse)
@@ -377,7 +377,7 @@ func checkClientIsAuthorizedForAPI(cli *cli, client *management.Client, audience
 		)
 	}
 
-	if len(list.ClientGrants) == 0 {
+	if len(list.ClientGrants) < 1 {
 		return fmt.Errorf(
 			"the %s application is not authorized to request access tokens for this API %s",
 			ansi.Bold(client.GetName()),
