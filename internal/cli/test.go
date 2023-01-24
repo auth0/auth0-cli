@@ -16,16 +16,9 @@ import (
 const newClientOption = "Create a new client to use for testing the login"
 
 var (
-	testClientIDArg = Argument{
+	testClientID = Argument{
 		Name: "Client ID",
 		Help: "Client ID of an Auth0 application.",
-	}
-
-	testClientID = Flag{
-		Name:      "Client ID",
-		LongForm:  "client-id",
-		ShortForm: "c",
-		Help:      "Client ID of an Auth0 application.",
 	}
 
 	testConnectionName = Flag{
@@ -106,7 +99,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
   auth0 test login <client-id> -c <connection-name> -a <api-identifier> -d <domain> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if err := testClientIDArg.Pick(cmd, &inputs.ClientID, cli.appPickerWithCreateOption); err != nil {
+				if err := testClientID.Pick(cmd, &inputs.ClientID, cli.appPickerWithCreateOption); err != nil {
 					return err
 				}
 
@@ -129,6 +122,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 						"If you wish to remove the created client after testing the login, run: 'auth0 apps delete %s'",
 						client.GetClientID(),
 					)
+					cli.renderer.Newline()
 				}
 			} else {
 				inputs.ClientID = args[0]
@@ -227,29 +221,47 @@ func testTokenCmd(cli *cli) *cobra.Command {
 		Short: "Fetch a token for the given application and API",
 		Long: `Fetch an access token for the given application.
 If --client-id is not provided, the default client "CLI Login Testing" will be used (and created if not exists).
-Specify the API you want this token for with --audience (API Identifer). Additionally, you can also specify the --scope to use.`,
+Specify the API you want this token for with --audience (API Identifier). Additionally, you can also specify the --scope to use.`,
 		Example: `  auth0 test token
-  auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
-  auth0 test token -c <id> -a <audience> -s <scope1,scope2>
-  auth0 test token -c <id> -a <audience> -s <scope1,scope2> --force
-  auth0 test token -c <id> -a <audience> -s <scope1,scope2> --json
-  auth0 test token -c <id> -a <audience> -s <scope1,scope2> --force --json`,
+  auth0 test token <client-id> --audience <audience> --scopes <scope1,scope2>
+  auth0 test token <client-id> -a <audience> -s <scope1,scope2>
+  auth0 test token <client-id> -a <audience> -s <scope1,scope2> --force
+  auth0 test token <client-id> -a <audience> -s <scope1,scope2> --json
+  auth0 test token <client-id> -a <audience> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// use the client ID as passed in by the user, or default to the
-			// "CLI Login Testing" client if none passed. This client is only
-			// used for testing login from the CLI and will be created if it
-			// does not exist.
-			if inputs.ClientID == "" {
-				client, err := getOrCreateCLITesterClient(cli.api.Client)
-				if err != nil {
-					return fmt.Errorf("Unable to create an app to test getting a token: %w", err)
+			if len(args) == 0 {
+				if err := testClientID.Pick(cmd, &inputs.ClientID, cli.appPickerWithCreateOption); err != nil {
+					return err
 				}
-				inputs.ClientID = client.GetClientID()
+
+				if inputs.ClientID == newClientOption {
+					client := &management.Client{
+						Name:             auth0.String(cliLoginTestingClientName),
+						Description:      auth0.String(cliLoginTestingClientDescription),
+						Callbacks:        &[]string{cliLoginTestingCallbackURL},
+						InitiateLoginURI: auth0.String(cliLoginTestingInitiateLoginURI),
+					}
+
+					if err := cli.api.Client.Create(client); err != nil {
+						return fmt.Errorf("failed to create a new client to use for testing the login: %w", err)
+					}
+
+					inputs.ClientID = client.GetClientID()
+
+					cli.renderer.Infof("New client created successfully.")
+					cli.renderer.Infof(
+						"If you wish to remove the created client after testing the login, run: 'auth0 apps delete %s'",
+						client.GetClientID(),
+					)
+					cli.renderer.Newline()
+				}
+			} else {
+				inputs.ClientID = args[0]
 			}
 
 			client, err := cli.api.Client.Read(inputs.ClientID)
 			if err != nil {
-				return fmt.Errorf("Unable to find client %s; if you specified a client, please verify it exists, otherwise re-run the command", inputs.ClientID)
+				return fmt.Errorf("failed to find client with ID :%q: %w", inputs.ClientID, err)
 			}
 
 			appType := client.GetAppType()
@@ -308,7 +320,6 @@ Specify the API you want this token for with --audience (API Identifer). Additio
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	testClientID.RegisterString(cmd, &inputs.ClientID, "")
 	testAudienceRequired.RegisterString(cmd, &inputs.Audience, "")
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
 
