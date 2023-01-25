@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 domains
+has_toc: false
 ---
 # auth0 domains delete
 
@@ -31,7 +33,7 @@ auth0 domains delete [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

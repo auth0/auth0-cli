@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 apps
+has_toc: false
 ---
 # auth0 apps delete
 
@@ -31,7 +33,7 @@ auth0 apps delete [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

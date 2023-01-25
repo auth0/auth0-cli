@@ -5,7 +5,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/auth0/auth0-cli?style=flat-square)](https://goreportcard.com/report/github.com/auth0/auth0-cli)
 [![Release](https://img.shields.io/github/v/release/auth0/auth0-cli?logo=auth0&include_prereleases&style=flat-square)](https://github.com/auth0/auth0-cli/releases)
 [![License](https://img.shields.io/github/license/auth0/auth0-cli.svg?logo=fossa&style=flat-square)](https://github.com/auth0/auth0-cli/blob/main/LICENSE)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/auth0/auth0-cli/go.yml?branch=main)](https://github.com/auth0/auth0-cli/actions?query=branch%3Amain) 
+[![Build Status](https://img.shields.io/github/actions/workflow/status/auth0/auth0-cli/go.yml?branch=main)](https://github.com/auth0/auth0-cli/actions?query=branch%3Amain)
 
 </div>
 
@@ -15,21 +15,21 @@ Build, manage and test your [Auth0](https://auth0.com/) integrations from the co
 
 ![demo](./demo.gif)
 
-## 🎢 Highlights
+## Highlights
 
 - **🧪 Test your universal login flow:** Emulate your end users' login experience by running `auth0 test login`.
 - **🔍 Troubleshoot in real-time:** Inspect the events of your Auth0 integration as they happen with the `auth0 logs tail` command.
 - **🔁 Simplify repetitive tasks:** Create, update, list and delete your Auth0 resources directly from the terminal.
 
-## 📜 Table of Contents
+## Table of Contents
 
 - [Installation](#installation)
 - [Authenticating to Your Tenant](#authenticating-to-your-tenant)
 - [Available Commands](#available-commands)
 - [Customization](#customization)
-- [Anonymous Analytics](#anonymous-analytics)
+- [Anonymous Analytics](#anonymized-analytics-disclosure)
 
-## 🪛 Installation
+## Installation
 
 ### macOS
 
@@ -83,7 +83,7 @@ go install github.com/auth0/auth0-cli/cmd/auth0@latest
 > **Note**
 > Autocompletion instructions for supported platforms available by running `auth0 completion -h`
 
-## 🔐 Authenticating to Your Tenant
+## Authenticating to Your Tenant
 
 Authenticating to your Auth0 tenant is required for most functions of the CLI. It can be initiated by running:
 
@@ -99,7 +99,7 @@ There are two ways to authenticate:
 > **Warning**
 > Authenticating as a user is not supported for **private cloud** tenants. Instead, those users should authenticate with client credentials.
 
-## 💻 Available Commands
+## Available Commands
 
 - [auth0 actions](https://auth0.github.io/auth0-cli/auth0_actions.html) - Manage resources for actions
 - [auth0 api](https://auth0.github.io/auth0-cli/auth0_api.html) - Makes an authenticated HTTP request to the Auth0 Management API
@@ -121,7 +121,7 @@ There are two ways to authenticate:
 - [auth0 universal-login](https://auth0.github.io/auth0-cli/auth0_universal-login.html) - Manage the Universal Login experience
 - [auth0 users](https://auth0.github.io/auth0-cli/auth0_users.html) - Manage resources for users
 
-## 🖌️ Customization
+## Customization
 
 To change the text editor used for editing templates, rules, and actions,
 set the environment variable `EDITOR` to your preferred editor. Example:
@@ -132,7 +132,7 @@ export EDITOR="code -w"
 export EDITOR="nano"
 ```
 
-## 📊 Anonymized Analytics Disclosure
+## Anonymized Analytics Disclosure
 
 Anonymized data points are collected during the use of this CLI. This data includes the CLI version, operating system, timestamp, and other technical details that do not personally identify you.
 
@@ -140,7 +140,7 @@ Auth0 uses this data to better understand the usage of this tool to prioritize t
 
 To **opt-out** of this collection, set the `AUTH0_CLI_ANALYTICS` environment variable to `false`.
 
-## 🙇 Feedback
+## Feedback
 
 ### Contributing
 

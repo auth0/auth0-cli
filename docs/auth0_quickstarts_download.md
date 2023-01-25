@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 quickstarts
+has_toc: false
 ---
 # auth0 quickstarts download
 
@@ -27,7 +29,7 @@ auth0 quickstarts download [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 apps
+has_toc: false
 ---
 # auth0 apps show
 
@@ -28,7 +30,7 @@ auth0 apps show [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

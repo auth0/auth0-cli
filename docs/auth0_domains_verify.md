@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 domains
+has_toc: false
 ---
 # auth0 domains verify
 
@@ -29,7 +31,7 @@ auth0 domains verify [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 actions
+has_toc: false
 ---
 # auth0 actions delete
 
@@ -31,7 +33,7 @@ auth0 actions delete [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

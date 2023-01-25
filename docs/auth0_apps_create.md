@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 apps
+has_toc: false
 ---
 # auth0 apps create
 
@@ -47,7 +49,7 @@ auth0 apps create [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

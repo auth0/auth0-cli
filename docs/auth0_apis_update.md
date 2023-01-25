@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 apis
+has_toc: false
 ---
 # auth0 apis update
 
@@ -38,7 +40,7 @@ auth0 apis update [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

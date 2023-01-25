@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 roles permissions
+has_toc: false
 ---
 # auth0 roles permissions add
 
@@ -29,7 +31,7 @@ auth0 roles permissions add [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

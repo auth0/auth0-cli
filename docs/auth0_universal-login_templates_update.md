@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 universal-login templates
+has_toc: false
 ---
 # auth0 universal-login templates update
 
@@ -26,7 +28,7 @@ auth0 universal-login templates update [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

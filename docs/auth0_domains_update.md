@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 domains
+has_toc: false
 ---
 # auth0 domains update
 
@@ -33,7 +35,7 @@ auth0 domains update [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

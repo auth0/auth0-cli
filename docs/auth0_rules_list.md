@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 rules
+has_toc: false
 ---
 # auth0 rules list
 
@@ -26,7 +28,7 @@ auth0 rules list [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 universal-login prompts
+has_toc: false
 ---
 # auth0 universal-login prompts show
 
@@ -27,7 +29,7 @@ auth0 universal-login prompts show [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

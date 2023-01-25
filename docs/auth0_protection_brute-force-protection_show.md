@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 protection brute-force-protection
+has_toc: false
 ---
 # auth0 protection brute-force-protection show
 
@@ -25,7 +27,7 @@ auth0 protection brute-force-protection show [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

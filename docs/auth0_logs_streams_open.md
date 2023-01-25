@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 logs streams
+has_toc: false
 ---
 # auth0 logs streams open
 
@@ -20,7 +22,7 @@ auth0 logs streams open [flags]
 
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

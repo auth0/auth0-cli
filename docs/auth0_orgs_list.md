@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 orgs
+has_toc: false
 ---
 # auth0 orgs list
 
@@ -28,7 +30,7 @@ auth0 orgs list [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.
