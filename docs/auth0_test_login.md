@@ -18,12 +18,12 @@ auth0 test login [flags]
   auth0 test login
   auth0 test login <client-id>
   auth0 test login <client-id> --connection-name <connection-name>
-  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier>
-  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier> --domain <domain>
-  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier> --domain <domain> --scopes <scope1,scope2>
-  auth0 test login <client-id> -c <connection-name> -a <api-identifier> -d <domain> -s <scope1,scope2> --force
-  auth0 test login <client-id> -c <connection-name> -a <api-identifier> -d <domain> -s <scope1,scope2> --json
-  auth0 test login <client-id> -c <connection-name> -a <api-identifier> -d <domain> -s <scope1,scope2> --force --json
+  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience>
+  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --domain <domain>
+  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --domain <domain> --scopes <scope1,scope2>
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --force
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --json
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --force --json
 ```
 
 

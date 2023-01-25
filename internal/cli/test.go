@@ -93,16 +93,16 @@ func testLoginCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 test login
   auth0 test login <client-id>
   auth0 test login <client-id> --connection-name <connection-name>
-  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier>
-  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier> --domain <domain>
-  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier> --domain <domain> --scopes <scope1,scope2>
-  auth0 test login <client-id> -c <connection-name> -a <api-identifier> -d <domain> -s <scope1,scope2> --force
-  auth0 test login <client-id> -c <connection-name> -a <api-identifier> -d <domain> -s <scope1,scope2> --json
-  auth0 test login <client-id> -c <connection-name> -a <api-identifier> -d <domain> -s <scope1,scope2> --force --json`,
+  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience>
+  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --domain <domain>
+  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --domain <domain> --scopes <scope1,scope2>
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --force
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --json
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := selectClientToUseForTestsAndValidateExistence(cli, cmd, args, &inputs)
 			if err != nil {
-				return fmt.Errorf("failed to select client to use for tests: %w", err)
+				return err
 			}
 
 			if client.GetAppType() == appTypeNonInteractive {
@@ -214,7 +214,7 @@ func testTokenCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := selectClientToUseForTestsAndValidateExistence(cli, cmd, args, &inputs)
 			if err != nil {
-				return fmt.Errorf("failed to select client to use for tests: %w", err)
+				return err
 			}
 
 			tenant, err := cli.getTenant()
@@ -303,6 +303,8 @@ func selectClientToUseForTestsAndValidateExistence(cli *cli, cmd *cobra.Command,
 				client.GetClientID(),
 			)
 			cli.renderer.Newline()
+
+			return client, nil
 		}
 	} else {
 		inputs.ClientID = args[0]
