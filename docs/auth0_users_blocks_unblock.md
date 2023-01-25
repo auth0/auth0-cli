@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 users blocks
+has_toc: false
 ---
 # auth0 users blocks unblock
 
@@ -19,7 +21,7 @@ auth0 users blocks unblock [flags]
 
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

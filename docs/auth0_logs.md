@@ -1,5 +1,7 @@
 ---
 layout: default
+has_toc: false
+has_children: true
 ---
 # auth0 logs
 

@@ -1,5 +1,6 @@
 ---
 layout: default
+has_toc: false
 ---
 # auth0 logout
 
@@ -21,7 +22,7 @@ auth0 logout [flags]
 
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 users
+has_toc: false
 ---
 # auth0 users create
 
@@ -37,7 +39,7 @@ auth0 users create [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

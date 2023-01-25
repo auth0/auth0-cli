@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 actions
+has_toc: false
 ---
 # auth0 actions update
 
@@ -39,7 +41,7 @@ auth0 actions update [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

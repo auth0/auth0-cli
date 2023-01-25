@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 apis scopes
+has_toc: false
 ---
 # auth0 apis scopes list
 
@@ -26,7 +28,7 @@ auth0 apis scopes list [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

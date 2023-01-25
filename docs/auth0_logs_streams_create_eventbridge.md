@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 logs streams create
+has_toc: false
 ---
 # auth0 logs streams create eventbridge
 
@@ -36,7 +38,7 @@ auth0 logs streams create eventbridge [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

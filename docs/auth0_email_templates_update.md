@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 email templates
+has_toc: false
 ---
 # auth0 email templates update
 
@@ -44,7 +46,7 @@ auth0 email templates update [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

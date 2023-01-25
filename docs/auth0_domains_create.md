@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 domains
+has_toc: false
 ---
 # auth0 domains create
 
@@ -38,7 +40,7 @@ auth0 domains create [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

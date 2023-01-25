@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 tenants
+has_toc: false
 ---
 # auth0 tenants open
 
@@ -21,7 +23,7 @@ auth0 tenants open [flags]
 
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

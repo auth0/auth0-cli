@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 actions
+has_toc: false
 ---
 # auth0 actions create
 
@@ -40,7 +42,7 @@ auth0 actions create [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.
