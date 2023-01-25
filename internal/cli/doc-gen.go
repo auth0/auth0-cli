@@ -119,7 +119,7 @@ has_toc: false
 {{ wrapWithBackticks .Flags }}{{end}}
 
 {{if .HasInheritedFlags}}
-## InheritedFlags
+## Inherited Flags
 
 {{ wrapWithBackticks .InheritedFlags }}{{end}}
 
@@ -131,7 +131,7 @@ has_toc: false
 `
 )
 
-type pageData struct {
+type page struct {
 	Name                string
 	HasFlags            bool
 	Flags               string
@@ -198,7 +198,7 @@ func GenMarkdownTree(cmd *cobra.Command, dir string) error {
 func GenerateHomepage(cmd *cobra.Command, w io.Writer) error {
 	templateBody := fmt.Sprintf(homepageTemplate, associatedCommandsFragment)
 
-	pageData := pageData{
+	pageData := page{
 		CommandPath:        cmd.CommandPath(),
 		AssociatedCommands: cmd.Commands(),
 	}
@@ -222,7 +222,7 @@ func GenerateParentPage(cmd *cobra.Command, w io.Writer) error {
 		parentCommand = cmd.Parent().CommandPath()
 	}
 
-	pageData := pageData{
+	pageData := page{
 		Name:                cmd.CommandPath(),
 		Description:         cmd.Long,
 		CommandPath:         cmd.CommandPath(),
@@ -245,7 +245,7 @@ func GenerateCommandPage(cmd *cobra.Command, w io.Writer) error {
 		associatedCommands = nil
 	}
 
-	pageData := pageData{
+	pageData := page{
 		Name:               cmd.CommandPath(),
 		Description:        cmd.Long,
 		HasFlags:           cmd.HasLocalFlags(),
