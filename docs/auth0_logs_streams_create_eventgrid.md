@@ -40,7 +40,7 @@ auth0 logs streams create eventgrid [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

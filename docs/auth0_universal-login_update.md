@@ -38,7 +38,7 @@ auth0 universal-login update [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

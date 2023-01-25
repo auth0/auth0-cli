@@ -46,7 +46,7 @@ auth0 email templates update [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

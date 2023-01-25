@@ -38,7 +38,7 @@ auth0 orgs update [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

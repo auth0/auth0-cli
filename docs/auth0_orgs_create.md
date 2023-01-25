@@ -40,7 +40,7 @@ auth0 orgs create [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

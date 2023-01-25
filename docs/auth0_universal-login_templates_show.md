@@ -22,7 +22,7 @@ auth0 universal-login templates show [flags]
 
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

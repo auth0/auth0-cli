@@ -33,7 +33,7 @@ auth0 orgs delete [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

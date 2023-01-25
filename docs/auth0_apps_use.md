@@ -28,7 +28,7 @@ auth0 apps use [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

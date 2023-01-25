@@ -28,7 +28,7 @@ auth0 logs streams show [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

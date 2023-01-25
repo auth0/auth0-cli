@@ -21,7 +21,7 @@ auth0 users blocks unblock [flags]
 
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

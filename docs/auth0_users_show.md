@@ -28,7 +28,7 @@ auth0 users show [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

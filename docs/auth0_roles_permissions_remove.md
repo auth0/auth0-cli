@@ -30,7 +30,7 @@ auth0 roles permissions remove [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

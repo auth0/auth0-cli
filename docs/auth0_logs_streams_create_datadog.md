@@ -39,7 +39,7 @@ auth0 logs streams create datadog [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

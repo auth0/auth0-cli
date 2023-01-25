@@ -28,7 +28,7 @@ auth0 apis scopes list [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

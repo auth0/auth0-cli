@@ -22,7 +22,7 @@ auth0 orgs open [flags]
 
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

@@ -30,7 +30,7 @@ auth0 orgs members list [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

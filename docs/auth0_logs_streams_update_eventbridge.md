@@ -34,7 +34,7 @@ auth0 logs streams update eventbridge [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

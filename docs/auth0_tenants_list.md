@@ -22,7 +22,7 @@ auth0 tenants list [flags]
 
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

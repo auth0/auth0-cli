@@ -36,7 +36,7 @@ auth0 logs streams create sumo [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

@@ -39,7 +39,7 @@ auth0 test login [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

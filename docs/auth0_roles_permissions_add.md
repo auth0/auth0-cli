@@ -31,7 +31,7 @@ auth0 roles permissions add [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

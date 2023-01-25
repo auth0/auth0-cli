@@ -37,7 +37,7 @@ auth0 protection suspicious-ip-throttling update [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

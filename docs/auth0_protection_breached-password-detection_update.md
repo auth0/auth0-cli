@@ -35,7 +35,7 @@ auth0 protection breached-password-detection update [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

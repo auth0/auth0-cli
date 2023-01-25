@@ -30,7 +30,7 @@ auth0 quickstarts list [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

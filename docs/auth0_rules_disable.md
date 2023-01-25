@@ -28,7 +28,7 @@ auth0 rules disable [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

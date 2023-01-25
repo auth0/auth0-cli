@@ -34,7 +34,7 @@ auth0 logs tail [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

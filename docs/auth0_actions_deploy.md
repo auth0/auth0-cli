@@ -30,7 +30,7 @@ auth0 actions deploy [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

@@ -27,7 +27,7 @@ auth0 protection brute-force-protection show [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

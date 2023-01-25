@@ -29,7 +29,7 @@ auth0 quickstarts download [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

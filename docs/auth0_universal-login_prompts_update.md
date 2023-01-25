@@ -28,7 +28,7 @@ auth0 universal-login prompts update [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

@@ -33,7 +33,7 @@ auth0 logs streams delete [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

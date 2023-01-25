@@ -22,7 +22,7 @@ auth0 apis open [flags]
 
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

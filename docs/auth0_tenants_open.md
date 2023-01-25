@@ -23,7 +23,7 @@ auth0 tenants open [flags]
 
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

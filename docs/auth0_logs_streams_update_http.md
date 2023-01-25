@@ -42,7 +42,7 @@ auth0 logs streams update http [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

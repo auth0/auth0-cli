@@ -31,7 +31,7 @@ auth0 domains verify [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

@@ -35,7 +35,7 @@ auth0 api <method> <url-path> [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

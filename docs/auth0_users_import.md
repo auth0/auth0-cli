@@ -34,7 +34,7 @@ auth0 users import [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

@@ -37,7 +37,7 @@ auth0 test token [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.
