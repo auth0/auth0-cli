@@ -1,5 +1,6 @@
 ---
 layout: default
+has_toc: false
 ---
 # auth0 completion
 
@@ -85,7 +86,7 @@ auth0 completion [bash|zsh|fish|powershell]
 
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

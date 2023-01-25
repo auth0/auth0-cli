@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 users roles
+has_toc: false
 ---
 # auth0 users roles assign
 
@@ -27,7 +29,7 @@ auth0 users roles assign [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

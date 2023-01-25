@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 users
+has_toc: false
 ---
 # auth0 users search
 
@@ -31,7 +33,7 @@ auth0 users search [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

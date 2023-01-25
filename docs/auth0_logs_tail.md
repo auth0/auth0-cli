@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 logs
+has_toc: false
 ---
 # auth0 logs tail
 
@@ -32,7 +34,7 @@ auth0 logs tail [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

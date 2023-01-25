@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 users
+has_toc: false
 ---
 # auth0 users open
 
@@ -20,7 +22,7 @@ auth0 users open [flags]
 
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

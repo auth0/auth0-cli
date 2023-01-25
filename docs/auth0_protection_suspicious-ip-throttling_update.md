@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 protection suspicious-ip-throttling
+has_toc: false
 ---
 # auth0 protection suspicious-ip-throttling update
 
@@ -35,7 +37,7 @@ auth0 protection suspicious-ip-throttling update [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

@@ -1,5 +1,6 @@
 ---
 layout: default
+has_toc: false
 ---
 # auth0 api
 
@@ -34,7 +35,7 @@ auth0 api <method> <url-path> [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

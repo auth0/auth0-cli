@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 logs streams update
+has_toc: false
 ---
 # auth0 logs streams update sumo
 
@@ -34,7 +36,7 @@ auth0 logs streams update sumo [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

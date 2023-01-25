@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 logs streams update
+has_toc: false
 ---
 # auth0 logs streams update eventgrid
 
@@ -32,7 +34,7 @@ auth0 logs streams update eventgrid [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

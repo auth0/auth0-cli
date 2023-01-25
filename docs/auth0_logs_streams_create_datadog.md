@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 logs streams create
+has_toc: false
 ---
 # auth0 logs streams create datadog
 
@@ -37,7 +39,7 @@ auth0 logs streams create datadog [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

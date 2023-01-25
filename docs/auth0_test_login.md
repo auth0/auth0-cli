@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 test
+has_toc: false
 ---
 # auth0 test login
 
@@ -37,7 +39,7 @@ auth0 test login [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

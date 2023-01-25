@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 apis
+has_toc: false
 ---
 # auth0 apis list
 
@@ -28,7 +30,7 @@ auth0 apis list [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

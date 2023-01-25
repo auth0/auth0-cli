@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 logs streams update
+has_toc: false
 ---
 # auth0 logs streams update http
 
@@ -40,7 +42,7 @@ auth0 logs streams update http [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.

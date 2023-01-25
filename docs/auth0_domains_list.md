@@ -1,5 +1,7 @@
 ---
 layout: default
+parent: auth0 domains
+has_toc: false
 ---
 # auth0 domains list
 
@@ -26,7 +28,7 @@ auth0 domains list [flags]
 ```
 
 
-## InheritedFlags
+## Inherited Flags
 
 ```
       --debug           Enable debug mode.
