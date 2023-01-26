@@ -10,26 +10,24 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
 	"github.com/auth0/auth0-cli/internal/auth0"
-	"github.com/auth0/auth0-cli/internal/iostream"
+	"github.com/auth0/auth0-cli/internal/display"
+)
+
+const (
+	NEW_CLIENT = "NEW CLIENT"
 )
 
 var (
-	testClientIDArg = Argument{
+	testClientID = Argument{
 		Name: "Client ID",
-		Help: "Client Id of an Auth0 application.",
+		Help: "Client ID of an Auth0 application.",
 	}
 
-	testClientID = Flag{
-		Name:      "Client ID",
-		LongForm:  "client-id",
+	testConnectionName = Flag{
+		Name:      "Connection Name",
+		LongForm:  "connection-name",
 		ShortForm: "c",
-		Help:      "Client Id of an Auth0 application.",
-	}
-
-	testConnection = Flag{
-		Name:     "Connection",
-		LongForm: "connection",
-		Help:     "Connection to test during login.",
+		Help:      "The connection name to test during login.",
 	}
 
 	testAudience = Flag{
@@ -39,24 +37,11 @@ var (
 		Help:      "The unique identifier of the target API you want to access.",
 	}
 
-	testAudienceRequired = Flag{
-		Name:       testAudience.Name,
-		LongForm:   testAudience.LongForm,
-		ShortForm:  testAudience.ShortForm,
-		Help:       testAudience.Help,
-		IsRequired: true,
-	}
-
 	testScopes = Flag{
 		Name:      "Scopes",
 		LongForm:  "scopes",
 		ShortForm: "s",
 		Help:      "The list of scopes you want to use.",
-	}
-
-	testDomainArg = Flag{
-		Name: "Custom Domain",
-		Help: "One of your custom domains.",
 	}
 
 	testDomain = Flag{
@@ -68,6 +53,14 @@ var (
 
 	errNoCustomDomains = errors.New("there are currently no custom domains")
 )
+
+type testCmdInputs struct {
+	ClientID       string
+	Audience       string
+	Scopes         []string
+	ConnectionName string
+	CustomDomain   string
+}
 
 func testCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
@@ -84,71 +77,38 @@ func testCmd(cli *cli) *cobra.Command {
 }
 
 func testLoginCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ClientID       string
-		Audience       string
-		Scopes         []string
-		ConnectionName string
-		CustomDomain   string
-	}
+	var inputs testCmdInputs
 
 	cmd := &cobra.Command{
 		Use:   "login",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Try out your Universal Login box",
-		Long:  "Launch a browser to try out your Universal Login box.",
+		Short: "Try out your tenant's Universal Login experience",
+		Long:  "Try out your tenant's Universal Login experience in a browser.",
 		Example: `  auth0 test login
   auth0 test login <client-id>
-  auth0 test login <client-id> --connection <connection>
-  auth0 test login <client-id> --connection <connection> --audience <audience>
-  auth0 test login <client-id> --connection <connection> --audience <audience> --domain <domain>
-  auth0 test login <client-id> --connection <connection> --audience <audience> --domain <domain> --scopes <scope1,scope2>
-  auth0 test login <client-id> -c <connection> -a <audience> -d <domain> -s <scope1,scope2> --force
-  auth0 test login <client-id> -c <connection> -a <audience> -d <domain> -s <scope1,scope2> --json
-  auth0 test login <client-id> -c <connection> -a <audience> -d <domain> -s <scope1,scope2> --force --json`,
+  auth0 test login <client-id> --connection-name <connection-name>
+  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience>
+  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --domain <domain>
+  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --domain <domain> --scopes <scope1,scope2>
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --force
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --json
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			const commandKey = "test_login"
-			var userInfo *authutil.UserInfo
-			isTempClient := false
-
-			tenant, err := cli.getTenant()
+			client, err := selectClientToUseForTestsAndValidateExistence(cli, cmd, args, &inputs)
 			if err != nil {
 				return err
 			}
 
-			if len(args) == 0 {
-				err := testClientIDArg.Pick(cmd, &inputs.ClientID, cli.appPickerOptions)
-				if err != nil {
-					if err != errNoApps {
-						return err
-					}
-					cli.renderer.Infof("No applications to select from, we will create a default test application " +
-						"for you and remove it once the test is complete.")
-					client := &management.Client{
-						Name:             auth0.String(cliLoginTestingClientName),
-						Description:      auth0.String(cliLoginTestingClientDescription),
-						Callbacks:        &[]string{cliLoginTestingCallbackURL},
-						InitiateLoginURI: auth0.String(cliLoginTestingInitiateLoginURI),
-					}
-					if err := cli.api.Client.Create(client); err != nil {
-						return fmt.Errorf("Unable to create an app for testing the login box: %w", err)
-					}
-					inputs.ClientID = client.GetClientID()
-					isTempClient = true
-					cli.renderer.Infof("Default test application successfully created\n")
-				}
-			} else {
-				inputs.ClientID = args[0]
+			if client.GetAppType() == appTypeNonInteractive {
+				return fmt.Errorf(
+					"cannot test the Universal Login with a %s application.\n\n"+
+						"Run 'auth0 test token %s' to fetch an access token instead.",
+					ansi.Bold("Machine to Machine"),
+					client.GetClientID(),
+				)
 			}
 
-			defer cleanupTempApplication(isTempClient, cli, inputs.ClientID)
-
-			client, err := cli.api.Client.Read(inputs.ClientID)
-			if err != nil {
-				return fmt.Errorf("Unable to find client %s; if you specified a client, please verify it exists, otherwise re-run the command", inputs.ClientID)
-			}
-
-			err = testDomainArg.Pick(cmd, &inputs.CustomDomain, cli.customDomainPickerOptions)
+			err = testDomain.Pick(cmd, &inputs.CustomDomain, cli.customDomainPickerOptions)
 			if err != nil && err != errNoCustomDomains {
 				return err
 			}
@@ -157,32 +117,45 @@ func testLoginCmd(cli *cli) *cobra.Command {
 				return nil
 			}
 
+			if inputs.Audience != "" {
+				if err := checkClientIsAuthorizedForAPI(cli, client, inputs.Audience); err != nil {
+					return err
+				}
+			}
+
+			tenant, err := cli.getTenant()
+			if err != nil {
+				return err
+			}
+
 			tokenResponse, err := runLoginFlow(
 				cli,
 				tenant,
 				client,
 				inputs.ConnectionName,
-				inputs.Audience, // audience is only supported for the test token command
-				"login",         // force a login page when using the test login command
+				inputs.Audience,
+				"login", // Force a login page when using the test login command.
 				inputs.Scopes,
 				inputs.CustomDomain,
 			)
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred while logging in to client %s: %w", inputs.ClientID, err)
+				return fmt.Errorf("failed to log into the client %s: %w", inputs.ClientID, err)
 			}
 
+			var userInfo *authutil.UserInfo
 			if err := ansi.Spinner("Fetching user metadata", func() error {
-				// Use the access token to fetch user information from the /userinfo
-				// endpoint.
+				// Use the access token to fetch user information from the /userinfo endpoint.
 				userInfo, err = authutil.FetchUserInfo(tenant.Domain, tokenResponse.AccessToken)
 				return err
 			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred: %w", err)
+				return fmt.Errorf("failed to fetch user info: %w", err)
 			}
 
-			fmt.Fprint(cli.renderer.MessageWriter, "\n")
-			cli.renderer.TryLogin(userInfo, tokenResponse)
+			cli.renderer.Newline()
+			cli.renderer.TestLogin(userInfo, tokenResponse)
+			cli.renderer.Newline()
 
+			const commandKey = "test_login"
 			isFirstRun, err := cli.isFirstCommandRun(inputs.ClientID, commandKey)
 			if err != nil {
 				return err
@@ -190,13 +163,17 @@ func testLoginCmd(cli *cli) *cobra.Command {
 
 			if isFirstRun {
 				cli.renderer.Infof("Login flow is working!")
-				cli.renderer.Infof("%s Consider downloading and running a quickstart next by running `auth0 quickstarts download %s`",
-					ansi.Faint("Hint:"), inputs.ClientID)
+				cli.renderer.Infof(
+					"%s Consider downloading and running a quickstart next by running `auth0 quickstarts download %s`",
+					ansi.Faint("Hint:"),
+					inputs.ClientID,
+				)
 
 				if err := cli.setFirstCommandRun(inputs.ClientID, commandKey); err != nil {
 					return err
 				}
 			}
+
 			return nil
 		},
 	}
@@ -206,74 +183,62 @@ func testLoginCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	testAudience.RegisterString(cmd, &inputs.Audience, "")
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, cliLoginTestingScopes)
-	testConnection.RegisterString(cmd, &inputs.ConnectionName, "")
+	testConnectionName.RegisterString(cmd, &inputs.ConnectionName, "")
 	testDomain.RegisterString(cmd, &inputs.CustomDomain, "")
 
 	return cmd
 }
 
 func testTokenCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ClientID string
-		Audience string
-		Scopes   []string
-	}
+	var inputs testCmdInputs
 
 	cmd := &cobra.Command{
 		Use:   "token",
-		Args:  cobra.NoArgs,
-		Short: "Fetch a token for the given application and API",
-		Long: `Fetch an access token for the given application.
-If --client-id is not provided, the default client "CLI Login Testing" will be used (and created if not exists).
-Specify the API you want this token for with --audience (API Identifer). Additionally, you can also specify the --scope to use.`,
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Request an access token for a given application and API",
+		Long: "Request an access token for a given application. " +
+			"Specify the API you want this token for with `--audience` (API Identifier). " +
+			"Additionally, you can also specify the `--scopes` to grant.",
 		Example: `  auth0 test token
-  auth0 test token --client-id <id> --audience <audience> --scopes <scope1,scope2>
-  auth0 test token -c <id> -a <audience> -s <scope1,scope2>
-  auth0 test token -c <id> -a <audience> -s <scope1,scope2> --force
-  auth0 test token -c <id> -a <audience> -s <scope1,scope2> --json
-  auth0 test token -c <id> -a <audience> -s <scope1,scope2> --force --json`,
+  auth0 test token <client-id> --audience <api-audience|api-identifier> --scopes <scope1,scope2>
+  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2>
+  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --force
+  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --json
+  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			client, err := selectClientToUseForTestsAndValidateExistence(cli, cmd, args, &inputs)
+			if err != nil {
+				return err
+			}
+
+			if err := testAudience.Ask(cmd, inputs.Audience, nil); err != nil {
+				return nil
+			}
+
 			tenant, err := cli.getTenant()
 			if err != nil {
 				return err
 			}
 
-			// use the client ID as passed in by the user, or default to the
-			// "CLI Login Testing" client if none passed. This client is only
-			// used for testing login from the CLI and will be created if it
-			// does not exist.
-			if inputs.ClientID == "" {
-				client, err := getOrCreateCLITesterClient(cli.api.Client)
-				if err != nil {
-					return fmt.Errorf("Unable to create an app to test getting a token: %w", err)
-				}
-				inputs.ClientID = client.GetClientID()
-			}
-
-			client, err := cli.api.Client.Read(inputs.ClientID)
-			if err != nil {
-				return fmt.Errorf("Unable to find client %s; if you specified a client, please verify it exists, otherwise re-run the command", inputs.ClientID)
-			}
-
 			appType := client.GetAppType()
 
-			cli.renderer.Infof("Domain:   " + tenant.Domain)
-			cli.renderer.Infof("ClientID: " + inputs.ClientID)
-			cli.renderer.Infof("Type:     " + appType + "\n")
+			cli.renderer.Infof("Domain    : " + ansi.Blue(tenant.Domain))
+			cli.renderer.Infof("Client ID : " + ansi.Bold(client.GetClientID()))
+			cli.renderer.Infof("Type      : " + display.ApplyColorToFriendlyAppType(display.FriendlyAppType(appType)))
+			cli.renderer.Newline()
 
-			// We can check here if the client is an m2m client, and if so
-			// initiate the client credentials flow instead to fetch a token,
-			// avoiding the browser and HTTP server shenanigans altogether.
-			if appType == "non_interactive" {
-				tokenResponse, err := runClientCredentialsFlow(client, inputs.ClientID, inputs.Audience, tenant)
+			if appType == appTypeNonInteractive {
+				tokenResponse, err := runClientCredentialsFlow(cli, client, inputs.Audience, tenant.Domain)
 				if err != nil {
-					return fmt.Errorf("An unexpected error occurred while logging in to machine-to-machine client %s: %w", inputs.ClientID, err)
+					return fmt.Errorf(
+						"failed to log in with client credentials for client with ID %q: %w",
+						inputs.ClientID,
+						err,
+					)
 				}
-				if iostream.IsOutputTerminal() {
-					cli.renderer.GetToken(client, tokenResponse)
-				} else {
-					cli.renderer.Output(tokenResponse.AccessToken)
-				}
+
+				cli.renderer.TestToken(client, tokenResponse)
+
 				return nil
 			}
 
@@ -285,20 +250,18 @@ Specify the API you want this token for with --audience (API Identifer). Additio
 				cli,
 				tenant,
 				client,
-				"", // specifying a connection is only supported for the test login command
+				"", // Specifying a connection is only supported for the test login command.
 				inputs.Audience,
-				"", // We don't want to force a prompt for the test token command
+				"", // We don't want to force a prompt for the test token command.
 				inputs.Scopes,
-				"",
+				"", // Specifying a custom domain is only supported for the test login command.
 			)
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred when logging in to client %s: %w", inputs.ClientID, err)
+				return fmt.Errorf("failed to log into the client %s: %w", inputs.ClientID, err)
 			}
-			if iostream.IsOutputTerminal() {
-				cli.renderer.GetToken(client, tokenResponse)
-			} else {
-				cli.renderer.Output(tokenResponse.AccessToken)
-			}
+
+			cli.renderer.TestToken(client, tokenResponse)
+
 			return nil
 		},
 	}
@@ -306,22 +269,52 @@ Specify the API you want this token for with --audience (API Identifer). Additio
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	testClientID.RegisterString(cmd, &inputs.ClientID, "")
-	testAudienceRequired.RegisterString(cmd, &inputs.Audience, "")
+	testAudience.IsRequired = true
+	testAudience.RegisterString(cmd, &inputs.Audience, "")
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
 
 	return cmd
 }
 
-// cleanupTempApplication will delete the specified application if it is marked
-// as a temporary application. It will log success or failure to the user.
-func cleanupTempApplication(isTemp bool, cli *cli, id string) {
-	if isTemp {
-		if err := cli.api.Client.Delete(id); err != nil {
-			cli.renderer.Errorf("unable to remove the default test application", err.Error())
+func selectClientToUseForTestsAndValidateExistence(cli *cli, cmd *cobra.Command, args []string, inputs *testCmdInputs) (*management.Client, error) {
+	if len(args) == 0 {
+		if err := testClientID.Pick(cmd, &inputs.ClientID, cli.appPickerWithCreateOption); err != nil {
+			return nil, err
 		}
-		cli.renderer.Infof("Default test application removed")
+
+		if inputs.ClientID == NEW_CLIENT {
+			client := &management.Client{
+				Name:             auth0.String(cliLoginTestingClientName),
+				Description:      auth0.String(cliLoginTestingClientDescription),
+				Callbacks:        &[]string{cliLoginTestingCallbackURL},
+				InitiateLoginURI: auth0.String(cliLoginTestingInitiateLoginURI),
+			}
+
+			if err := cli.api.Client.Create(client); err != nil {
+				return nil, fmt.Errorf("failed to create a new client to use for testing the login: %w", err)
+			}
+
+			inputs.ClientID = client.GetClientID()
+
+			cli.renderer.Infof("New client created successfully.")
+			cli.renderer.Infof(
+				"If you wish to remove the created client after testing the login, run: 'auth0 apps delete %s'",
+				client.GetClientID(),
+			)
+			cli.renderer.Newline()
+
+			return client, nil
+		}
+	} else {
+		inputs.ClientID = args[0]
 	}
+
+	client, err := cli.api.Client.Read(inputs.ClientID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find client with ID :%q: %w", inputs.ClientID, err)
+	}
+
+	return client, nil
 }
 
 func (c *cli) customDomainPickerOptions() (pickerOptions, error) {
@@ -359,4 +352,51 @@ func (c *cli) customDomainPickerOptions() (pickerOptions, error) {
 	opts = append(opts, pickerOption{value: "", label: fmt.Sprintf("none (use %s)", tenant.Domain)})
 
 	return opts, nil
+}
+
+func (c *cli) appPickerWithCreateOption() (pickerOptions, error) {
+	options, err := c.appPickerOptions()
+	if err != nil {
+		return nil, err
+	}
+
+	enhancedOptions := []pickerOption{
+		{
+			value: NEW_CLIENT,
+			label: "Create a new client to use for testing the login",
+		},
+	}
+	enhancedOptions = append(enhancedOptions, options...)
+
+	return enhancedOptions, nil
+}
+
+func checkClientIsAuthorizedForAPI(cli *cli, client *management.Client, audience string) error {
+	var list *management.ClientGrantList
+	if err := ansi.Waiting(func() (err error) {
+		list, err = cli.api.ClientGrant.List(
+			management.Parameter("audience", audience),
+			management.Parameter("client_id", client.GetClientID()),
+		)
+		return err
+	}); err != nil {
+		return fmt.Errorf(
+			"failed to find client grants for API identifier %q and client ID %q: %w",
+			audience,
+			client.GetClientID(),
+			err,
+		)
+	}
+
+	if len(list.ClientGrants) < 1 {
+		return fmt.Errorf(
+			"the %s application is not authorized to request access tokens for this API %s.\n\n"+
+				"Run: 'auth0 apps open %s' to open the dashboard and authorize the application.",
+			ansi.Bold(client.GetName()),
+			ansi.Bold(audience),
+			client.GetClientID(),
+		)
+	}
+
+	return nil
 }
