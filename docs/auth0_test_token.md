@@ -5,7 +5,7 @@ has_toc: false
 ---
 # auth0 test token
 
-Fetch an access token for the given application. Specify the API you want this token for with `--audience` (API Identifier). Additionally, you can also specify the `--scopes` to use.
+Request an access token for a given application. Specify the API you want this token for with `--audience` (API Identifier). Additionally, you can also specify the `--scopes` to grant.
 
 ## Usage
 ```
@@ -46,7 +46,7 @@ auth0 test token [flags]
 
 ## Related Commands
 
-- [auth0 test login](auth0_test_login.md) - Try out your Universal Login box
-- [auth0 test token](auth0_test_token.md) - Fetch a token for the given application and API
+- [auth0 test login](auth0_test_login.md) - Try out your tenant's Universal Login experience
+- [auth0 test token](auth0_test_token.md) - Request an access token for a given application and API
 
 

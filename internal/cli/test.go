@@ -90,8 +90,8 @@ func testLoginCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "login",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Try out your Universal Login box",
-		Long:  "Launch a browser to try out your Universal Login box.",
+		Short: "Try out your tenant's Universal Login experience",
+		Long:  "Try out your tenant's Universal Login experience in a browser.",
 		Example: `  auth0 test login
   auth0 test login <client-id>
   auth0 test login <client-id> --connection-name <connection-name>
@@ -203,10 +203,10 @@ func testTokenCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "token",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Fetch a token for the given application and API",
-		Long: "Fetch an access token for the given application. " +
+		Short: "Request an access token for a given application and API",
+		Long: "Request an access token for a given application. " +
 			"Specify the API you want this token for with `--audience` (API Identifier). " +
-			"Additionally, you can also specify the `--scopes` to use.",
+			"Additionally, you can also specify the `--scopes` to grant.",
 		Example: `  auth0 test token
   auth0 test token <client-id> --audience <api-audience|api-identifier> --scopes <scope1,scope2>
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2>
@@ -393,9 +393,11 @@ func checkClientIsAuthorizedForAPI(cli *cli, client *management.Client, audience
 
 	if len(list.ClientGrants) < 1 {
 		return fmt.Errorf(
-			"the %s application is not authorized to request access tokens for this API %s",
+			"the %s application is not authorized to request access tokens for this API %s.\n\n"+
+				"Run: 'auth0 apps open %s' to open the dashboard and authorize the application.",
 			ansi.Bold(client.GetName()),
 			ansi.Bold(audience),
+			client.GetClientID(),
 		)
 	}
 

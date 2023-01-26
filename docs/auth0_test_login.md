@@ -5,7 +5,7 @@ has_toc: false
 ---
 # auth0 test login
 
-Launch a browser to try out your Universal Login box.
+Try out your tenant's Universal Login experience in a browser.
 
 ## Usage
 ```
@@ -51,7 +51,7 @@ auth0 test login [flags]
 
 ## Related Commands
 
-- [auth0 test login](auth0_test_login.md) - Try out your Universal Login box
-- [auth0 test token](auth0_test_token.md) - Fetch a token for the given application and API
+- [auth0 test login](auth0_test_login.md) - Try out your tenant's Universal Login experience
+- [auth0 test token](auth0_test_token.md) - Request an access token for a given application and API
 
 
