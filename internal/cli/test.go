@@ -13,7 +13,9 @@ import (
 	"github.com/auth0/auth0-cli/internal/display"
 )
 
-const newClientOption = "Create a new client to use for testing the login"
+const (
+	NEW_CLIENT = "NEW CLIENT"
+)
 
 var (
 	testClientID = Argument{
@@ -283,7 +285,7 @@ func selectClientToUseForTestsAndValidateExistence(cli *cli, cmd *cobra.Command,
 			return nil, err
 		}
 
-		if inputs.ClientID == newClientOption {
+		if inputs.ClientID == NEW_CLIENT {
 			client := &management.Client{
 				Name:             auth0.String(cliLoginTestingClientName),
 				Description:      auth0.String(cliLoginTestingClientDescription),
@@ -363,8 +365,8 @@ func (c *cli) appPickerWithCreateOption() (pickerOptions, error) {
 
 	enhancedOptions := []pickerOption{
 		{
-			value: newClientOption,
-			label: newClientOption,
+			value: NEW_CLIENT,
+			label: "Create a new client to use for testing the login",
 		},
 	}
 	enhancedOptions = append(enhancedOptions, options...)
