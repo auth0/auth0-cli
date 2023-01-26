@@ -37,14 +37,6 @@ var (
 		Help:      "The unique identifier of the target API you want to access.",
 	}
 
-	testAudienceRequired = Flag{
-		Name:       testAudience.Name,
-		LongForm:   testAudience.LongForm,
-		ShortForm:  testAudience.ShortForm,
-		Help:       testAudience.Help,
-		IsRequired: true,
-	}
-
 	testScopes = Flag{
 		Name:      "Scopes",
 		LongForm:  "scopes",
@@ -219,6 +211,10 @@ func testTokenCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
+			if err := testAudience.Ask(cmd, inputs.Audience, nil); err != nil {
+				return nil
+			}
+
 			tenant, err := cli.getTenant()
 			if err != nil {
 				return err
@@ -273,7 +269,8 @@ func testTokenCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	testAudienceRequired.RegisterString(cmd, &inputs.Audience, "")
+	testAudience.IsRequired = true
+	testAudience.RegisterString(cmd, &inputs.Audience, "")
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
 
 	return cmd
