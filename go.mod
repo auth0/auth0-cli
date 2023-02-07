@@ -25,7 +25,7 @@ require (
 	github.com/tidwall/pretty v1.2.1
 	github.com/zalando/go-keyring v0.2.2
 	golang.org/x/oauth2 v0.4.0
-	golang.org/x/sys v0.4.0
+	golang.org/x/sys v0.5.0
 	golang.org/x/term v0.4.0
 	golang.org/x/text v0.6.0
 	gopkg.in/yaml.v2 v2.4.0
