@@ -4,10 +4,10 @@ go 1.19
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
-	github.com/auth0/go-auth0 v0.14.0
-	github.com/briandowns/spinner v1.20.0
+	github.com/auth0/go-auth0 v0.15.1
+	github.com/briandowns/spinner v1.21.0
 	github.com/charmbracelet/glamour v0.6.0
-	github.com/getsentry/sentry-go v0.17.0
+	github.com/getsentry/sentry-go v0.18.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
@@ -25,8 +25,8 @@ require (
 	github.com/tidwall/pretty v1.2.1
 	github.com/zalando/go-keyring v0.2.2
 	golang.org/x/oauth2 v0.4.0
-	golang.org/x/sys v0.4.0
-	golang.org/x/term v0.4.0
+	golang.org/x/sys v0.5.0
+	golang.org/x/term v0.5.0
 	golang.org/x/text v0.6.0
 	gopkg.in/yaml.v2 v2.4.0
 )

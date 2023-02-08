@@ -888,7 +888,9 @@ func (c *cli) appPickerOptions() (pickerOptions, error) {
 		priorityOpts, opts pickerOptions
 	)
 	for _, c := range list.Clients {
-		// empty type means the default client that we shouldn't display.
+		// Empty type means the default client that we shouldn't display.
+		// TODO(sergiught): We only need to exclude generic app types for
+		// the auth0 qs download command. Fix this in separate PR.
 		if c.GetAppType() == "" {
 			continue
 		}

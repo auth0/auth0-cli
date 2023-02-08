@@ -4,6 +4,7 @@ var RequiredScopes = []string{
 	"openid",
 	"offline_access", // for retrieving refresh token
 	"create:clients", "delete:clients", "read:clients", "update:clients",
+	"read:client_grants",
 	"create:resource_servers", "delete:resource_servers", "read:resource_servers", "update:resource_servers",
 	"create:roles", "delete:roles", "read:roles", "update:roles",
 	"create:rules", "delete:rules", "read:rules", "update:rules",
