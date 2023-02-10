@@ -15,14 +15,6 @@ import (
 )
 
 var (
-	templateBody = Flag{
-		Name:       "Template",
-		LongForm:   "template",
-		ShortForm:  "t",
-		Help:       "Custom page template for Universal Login.",
-		IsRequired: true,
-	}
-
 	brandingAccent = Flag{
 		Name:         "Accent Color",
 		LongForm:     "accent",
