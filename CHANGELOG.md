@@ -74,6 +74,7 @@ curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | s
 
 ### Removed
 
+- Storybook preview when updating universal login templates [#592]
 - `--force` and `--json` flags relegated from global context, now applied only where appropriate [#536], [#595]
 - Undocumented `auth0 config init` command [#532]
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
@@ -81,6 +82,7 @@ curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | s
 
 [#645]: https://github.com/auth0/auth0-cli/issues/645
 [#629]: https://github.com/auth0/auth0-cli/issues/629
+[#592]: https://github.com/auth0/auth0-cli/issues/592
 [#604]: https://github.com/auth0/auth0-cli/issues/604
 [#605]: https://github.com/auth0/auth0-cli/issues/605
 [#606]: https://github.com/auth0/auth0-cli/issues/606
