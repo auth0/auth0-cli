@@ -14,7 +14,7 @@ const (
 	secretAccessToken                 = "Auth0 CLI Access Token"
 	secretAccessTokenChunkSizeInBytes = 2048
 
-	// Access tokens have no size limit, but should be smaller than (10*2048) bytes.
+	// Access tokens have no size limit, but should be smaller than (50*2048) bytes.
 	// The max number of loops safeguards against infinite loops, however unlikely.
 	secretAccessTokenMaxChunks = 50
 )
