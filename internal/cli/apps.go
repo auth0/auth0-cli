@@ -169,7 +169,7 @@ func useAppCmd(cli *cli) *cobra.Command {
 				inputs.ID = ""
 			} else {
 				if len(args) == 0 {
-					err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
+					err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions())
 					if err != nil {
 						return err
 					}
@@ -270,7 +270,7 @@ func showAppCmd(cli *cli) *cobra.Command {
   auth0 apps show <app-id> -r --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
+				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions())
 				if err != nil {
 					return err
 				}
@@ -319,7 +319,7 @@ func deleteAppCmd(cli *cli) *cobra.Command {
   auth0 apps delete <app-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
+				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions())
 				if err != nil {
 					return err
 				}
@@ -536,7 +536,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 			var current *management.Client
 
 			if len(args) == 0 {
-				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
+				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions())
 				if err != nil {
 					return err
 				}
@@ -727,7 +727,7 @@ func openAppCmd(cli *cli) *cobra.Command {
   auth0 apps open <app-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions)
+				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions())
 				if err != nil {
 					return err
 				}
@@ -868,48 +868,37 @@ func stringSliceToPtr(s []string) *[]string {
 	return &s
 }
 
-func (c *cli) appPickerOptions() (pickerOptions, error) {
-	list, err := c.api.Client.List()
-	if err != nil {
-		return nil, err
-	}
+func (c *cli) appPickerOptions(requestOpts ...management.RequestOption) pickerOptionsFunc {
+	requestOpts = append(requestOpts, management.Parameter("is_global", "false"))
 
-	tenant, err := c.getTenant()
-	if err != nil {
-		return nil, err
-	}
-
-	// NOTE(cyx): To keep the contract for this simple, we'll rely on the
-	// implicit knowledge that the default value for the picker is the
-	// first option. With that in mind, we'll use the state in
-	// tenant.DefaultAppID to determine which should be chosen as the
-	// default.
-	var (
-		priorityOpts, opts pickerOptions
-	)
-	for _, c := range list.Clients {
-		// Empty type means the default client that we shouldn't display.
-		// TODO(sergiught): We only need to exclude generic app types for
-		// the auth0 qs download command. Fix this in separate PR.
-		if c.GetAppType() == "" {
-			continue
+	return func() (pickerOptions, error) {
+		clientList, err := c.api.Client.List(requestOpts...)
+		if err != nil {
+			return nil, err
 		}
 
-		value := c.GetClientID()
-		label := fmt.Sprintf("%s %s", c.GetName(), ansi.Faint("("+value+")"))
-		opt := pickerOption{value: value, label: label}
-
-		// check if this is currently the default application.
-		if tenant.DefaultAppID == c.GetClientID() {
-			priorityOpts = append(priorityOpts, opt)
-		} else {
-			opts = append(opts, opt)
+		tenant, err := c.getTenant()
+		if err != nil {
+			return nil, err
 		}
-	}
 
-	if len(opts)+len(priorityOpts) == 0 {
-		return nil, errNoApps
-	}
+		var priorityOpts, opts pickerOptions
+		for _, client := range clientList.Clients {
+			value := client.GetClientID()
+			label := fmt.Sprintf("%s %s", client.GetName(), ansi.Faint("("+value+")"))
+			option := pickerOption{value: value, label: label}
 
-	return append(priorityOpts, opts...), nil
+			if tenant.DefaultAppID == client.GetClientID() {
+				priorityOpts = append(priorityOpts, option)
+			} else {
+				opts = append(opts, option)
+			}
+		}
+
+		if len(opts)+len(priorityOpts) == 0 {
+			return nil, errNoApps
+		}
+
+		return append(priorityOpts, opts...), nil
+	}
 }
