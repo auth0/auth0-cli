@@ -12,6 +12,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/olekukonko/tablewriter"
 	"github.com/stretchr/testify/assert"
+	"github.com/zalando/go-keyring"
 
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/display"
@@ -145,4 +146,31 @@ func TestTenant_AdditionalRequestedScopes(t *testing.T) {
 			assert.Equal(t, testCase.expectedScopes, tenant.additionalRequestedScopes())
 		})
 	}
+}
+
+func TestGetAccessToken(t *testing.T) {
+	mockTenantDomain := "mock-tenant.com"
+
+	t.Run("return empty string if no keyring and no access token on tenant struct", func(t *testing.T) {
+		assert.Equal(t, "", getAccessToken(Tenant{Domain: mockTenantDomain, AccessToken: ""}))
+	})
+
+	t.Run("returns access token on tenant struct if no keyring", func(t *testing.T) {
+		mockAccessToken := "this is the access token"
+
+		assert.Equal(t, mockAccessToken, getAccessToken(Tenant{Domain: mockTenantDomain, AccessToken: mockAccessToken}))
+	})
+
+	t.Run("returns chunked access token if set on the keyring", func(t *testing.T) {
+		accessTokenChunks := []string{"access-token-chunk0", "access-token-chunk1"}
+
+		keyring.MockInit()
+		err := keyring.Set("Auth0 CLI Access Token 0", mockTenantDomain, accessTokenChunks[0])
+		assert.NoError(t, err)
+		err = keyring.Set("Auth0 CLI Access Token 1", mockTenantDomain, accessTokenChunks[1])
+		assert.NoError(t, err)
+
+		assert.Equal(t, strings.Join(accessTokenChunks, ""), getAccessToken(Tenant{Domain: mockTenantDomain, AccessToken: ""}))
+		assert.Equal(t, strings.Join(accessTokenChunks, ""), getAccessToken(Tenant{Domain: mockTenantDomain, AccessToken: "even if this is set for some reason"}))
+	})
 }
