@@ -9,8 +9,14 @@ import (
 )
 
 const (
-	secretRefreshToken = "Auth0 CLI Refresh Token"
-	secretClientSecret = "Auth0 CLI Client Secret"
+	secretRefreshToken                = "Auth0 CLI Refresh Token"
+	secretClientSecret                = "Auth0 CLI Client Secret"
+	secretAccessToken                 = "Auth0 CLI Access Token"
+	secretAccessTokenChunkSizeInBytes = 2048
+
+	// Access tokens have no size limit, but should be smaller than (10*2048) bytes.
+	// The max number of loops safeguards against infinite loops, however unlikely.
+	secretAccessTokenMaxChunks = 50
 )
 
 // StoreRefreshToken stores a tenant's refresh token in the system keyring.
@@ -49,9 +55,64 @@ func DeleteSecretsForTenant(tenant string) error {
 		}
 	}
 
+	for i := 0; i < secretAccessTokenMaxChunks; i++ {
+		if err := keyring.Delete(fmt.Sprintf("%s %d", secretAccessToken, i), tenant); err != nil {
+			if !errors.Is(err, keyring.ErrNotFound) {
+				multiErrors = append(multiErrors, fmt.Sprintf("failed to delete access token from keyring: %s", err))
+			}
+		}
+	}
+
 	if len(multiErrors) == 0 {
 		return nil
 	}
 
 	return errors.New(strings.Join(multiErrors, ", "))
+}
+
+func StoreAccessToken(tenant, value string) error {
+	chunks := chunk(value, secretAccessTokenChunkSizeInBytes)
+
+	for i := 0; i < len(chunks); i++ {
+		err := keyring.Set(fmt.Sprintf("%s %d", secretAccessToken, i), tenant, chunks[i])
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func GetAccessToken(tenant string) (string, error) {
+	var accessToken string
+
+	for i := 0; i < secretAccessTokenMaxChunks; i++ {
+		a, err := keyring.Get(fmt.Sprintf("%s %d", secretAccessToken, i), tenant)
+		if err == keyring.ErrNotFound {
+			return accessToken, nil
+		}
+		if err != nil {
+			return "", err
+		}
+		accessToken += a
+	}
+
+	return accessToken, nil
+}
+
+func chunk(slice string, chunkSize int) []string {
+	var chunks []string
+	for i := 0; i < len(slice); i += chunkSize {
+		end := i + chunkSize
+
+		// necessary check to avoid slicing beyond
+		// slice capacity
+		if end > len(slice) {
+			end = len(slice)
+		}
+
+		chunks = append(chunks, slice[i:end])
+	}
+
+	return chunks
 }
