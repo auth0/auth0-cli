@@ -162,6 +162,11 @@ func (t *Tenant) regenerateAccessToken(ctx context.Context, c *cli) error {
 		)
 	}
 
+	err := keyring.StoreAccessToken(t.Domain, t.AccessToken)
+	if err != nil {
+		t.AccessToken = ""
+	}
+
 	return nil
 }
 
@@ -208,7 +213,7 @@ func (c *cli) setup(ctx context.Context) error {
 
 	api, err := management.New(
 		t.Domain,
-		management.WithStaticToken(t.AccessToken),
+		management.WithStaticToken(getAccessToken(t)),
 		management.WithUserAgent(userAgent),
 	)
 	if err != nil {
@@ -217,6 +222,15 @@ func (c *cli) setup(ctx context.Context) error {
 
 	c.api = auth0.NewAPI(api)
 	return nil
+}
+
+func getAccessToken(t Tenant) string {
+	accessToken, err := keyring.GetAccessToken(t.Domain)
+	if err == nil && accessToken != "" {
+		return accessToken
+	}
+
+	return t.AccessToken
 }
 
 // prepareTenant loads the tenant, refreshing its token if necessary.
@@ -234,7 +248,8 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 		return RunLoginAsUser(ctx, c, t.additionalRequestedScopes())
 	}
 
-	if t.AccessToken != "" && !t.hasExpiredToken() {
+	accessToken := getAccessToken(t)
+	if accessToken != "" && !t.hasExpiredToken() {
 		return t, nil
 	}
 

@@ -141,8 +141,8 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 				return err
 			}
 
-			bearerToken := cli.config.Tenants[cli.tenant].AccessToken
-			request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", bearerToken))
+			accessToken := getAccessToken(cli.config.Tenants[cli.tenant])
+			request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 			request.Header.Set("Content-Type", "application/json")
 			request.Header.Set("User-Agent", fmt.Sprintf("%s/%s", userAgent, strings.TrimPrefix(buildinfo.Version, "v")))
 

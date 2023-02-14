@@ -356,7 +356,11 @@ func (i *qsInputs) fromArgs(cmd *cobra.Command, args []string, cli *cli) error {
 	}
 
 	if len(args) == 0 {
-		if err := qsClientID.Pick(cmd, &i.ClientID, cli.appPickerOptions); err != nil {
+		if err := qsClientID.Pick(
+			cmd,
+			&i.ClientID,
+			cli.appPickerOptions(management.Parameter("app_type", "native,spa,regular_web,non_interactive")),
+		); err != nil {
 			return err
 		}
 	} else {
