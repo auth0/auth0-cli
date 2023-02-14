@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0-beta.2](https://github.com/auth0/auth0-cli/tree/1.0.0-beta.2) (Feb 13, 2023)
+## [1.0.0-beta.2](https://github.com/auth0/auth0-cli/tree/1.0.0-beta.2) (Feb 14, 2023)
 
 Refer to the [v1 migration guide](MIGRATION_GUIDE.md) for instructions on how to navigate breaking changes.
 
@@ -28,6 +28,10 @@ curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | s
 
 - Storing access token in OS keyring if possible [#645]
 - DX improvements to `test login` and `test token` commands [#629]
+
+### Fixed
+
+- Apps shown in multi select when no app-id is passed [#648]
 
 ## [1.0.0-beta.1](https://github.com/auth0/auth0-cli/tree/1.0.0-beta.1) (Jan 20, 2023)
 
@@ -80,6 +84,7 @@ curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | s
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
+[#648]: https://github.com/auth0/auth0-cli/issues/648
 [#645]: https://github.com/auth0/auth0-cli/issues/645
 [#629]: https://github.com/auth0/auth0-cli/issues/629
 [#592]: https://github.com/auth0/auth0-cli/issues/592
