@@ -7,15 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0-beta.1](https://github.com/auth0/auth0-cli/tree/1.0.0-beta.1) (Jan 20, 2023)
+## [1.0.0-beta.2](https://github.com/auth0/auth0-cli/tree/1.0.0-beta.2) (Feb 14, 2023)
 
 Refer to the [v1 migration guide](MIGRATION_GUIDE.md) for instructions on how to navigate breaking changes.
 
-To try the `v1.0.0-beta.1` release:
+To try the `v1.0.0-beta.2` release:
 
 ```bash
 # Binary will be downloaded to "./auth0".
-curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | sh -s -- -b . "v1.0.0-beta.1"
+curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | sh -s -- -b . "v1.0.0-beta.2"
 
 # Note: will only download executable in current directory.
 # Intentionally omitted from $PATH to avoid collisions with
@@ -23,6 +23,17 @@ curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | s
 
 ./auth0 --version # Example execution
 ```
+
+### Added
+
+- Storing access token in OS keyring if possible [#645]
+- DX improvements to `test login` and `test token` commands [#629]
+
+### Fixed
+
+- Apps shown in multi select when no app-id is passed [#648]
+
+## [1.0.0-beta.1](https://github.com/auth0/auth0-cli/tree/1.0.0-beta.1) (Jan 20, 2023)
 
 ### Added
 
@@ -67,11 +78,16 @@ curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | s
 
 ### Removed
 
+- Storybook preview when updating universal login templates [#592]
 - `--force` and `--json` flags relegated from global context, now applied only where appropriate [#536], [#595]
 - Undocumented `auth0 config init` command [#532]
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
+[#648]: https://github.com/auth0/auth0-cli/issues/648
+[#645]: https://github.com/auth0/auth0-cli/issues/645
+[#629]: https://github.com/auth0/auth0-cli/issues/629
+[#592]: https://github.com/auth0/auth0-cli/issues/592
 [#604]: https://github.com/auth0/auth0-cli/issues/604
 [#605]: https://github.com/auth0/auth0-cli/issues/605
 [#606]: https://github.com/auth0/auth0-cli/issues/606
