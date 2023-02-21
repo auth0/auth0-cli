@@ -2,9 +2,6 @@ name: Go
 
 on: [push, pull_request]
 
-env:
-  GO_VERSION: 1.19.4
-
 concurrency:
   group: one-at-time
   cancel-in-progress: false
@@ -18,13 +15,14 @@ jobs:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
 
     steps:
+      - name: Check out the code
+        uses: actions/checkout@v3
+
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: ${{env.GO_VERSION}}
-
-      - name: Check out the code
-        uses: actions/checkout@v3
+          go-version-file: go.mod
+          check-latest: true
 
       - name: Check that docs were generated
         run: make check-docs
@@ -48,13 +46,14 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
 
     steps:
+      - name: Check out the code
+        uses: actions/checkout@v3
+
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: ${{env.GO_VERSION}}
-
-      - name: Check out the code
-        uses: actions/checkout@v3
+          go-version-file: go.mod
+          check-latest: true
 
       - name: Run integration tests
         shell: bash
@@ -73,13 +72,14 @@ jobs:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
 
     steps:
+      - name: Check out the code
+        uses: actions/checkout@v3
+
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: ${{env.GO_VERSION}}
-
-      - name: Check out the code
-        uses: actions/checkout@v3
+          go-version-file: go.mod
+          check-latest: true
 
       - name: Ensure binaries can be built for all platforms
         run: make build-all-platforms
