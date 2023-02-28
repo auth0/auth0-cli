@@ -1,0 +1,263 @@
+config:
+  inherit-env: true
+
+tests:
+  01 - it successfully lists all apps:
+    command: auth0 apps list
+    exit-code: 0
+
+  02 - it throws an error when listing all apps and passing an invalid number flag:
+    command: auth0 apps list --number -1
+    exit-code: 1
+    stderr:
+      contains:
+        - "number flag invalid, please pass a number between 1 and 1000"
+
+  03 - it successfully creates a native app:
+    command: auth0 apps create --name integration-test-app-nativeapp1 --type native --description NativeApp1
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME                 integration-test-app-nativeapp1
+        - DESCRIPTION          NativeApp1
+        - TYPE                 Native
+
+  04 - it successfully creates a native app and outputs in json:
+    command: auth0 apps create --name integration-test-app-nativeapp1 --type native --description NativeApp1 --json
+    exit-code: 0
+    stdout:
+      json:
+        name: integration-test-app-nativeapp1
+        description: NativeApp1
+        app_type: native
+
+  05 - it successfully creates a spa app and outputs in json:
+    command: auth0 apps create --name integration-test-app-spaapp1 --type spa --description SpaApp1 --json
+    exit-code: 0
+    stdout:
+      json:
+        name: integration-test-app-spaapp1
+        description: SpaApp1
+        app_type: spa
+
+  06 - it successfully creates a regular app and outputs in json:
+    command: auth0 apps create --name integration-test-app-regapp1 --type regular --description RegApp1 --json
+    exit-code: 0
+    stdout:
+      json:
+        name: integration-test-app-regapp1
+        description: RegApp1
+        app_type: regular_web
+
+  07 - it successfully creates a m2m app and outputs in json:
+    command: auth0 apps create --name integration-test-app-m2mapp1 --type m2m --description M2mApp1 --json
+    exit-code: 0
+    stdout:
+      json:
+        name: integration-test-app-m2mapp1
+        description: M2mApp1
+        app_type: non_interactive
+
+  08 - it successfully creates a spa app with auth method set to none and outputs in json:
+    command: auth0 apps create --name integration-test-app-spaapp2 --type spa --description SpaApp2 --auth-method None --json
+    exit-code: 0
+    stdout:
+      json:
+        token_endpoint_auth_method: none
+
+  09 - it fails to creates a m2m app with auth method set to none:
+    command: auth0 apps create --name integration-test-app-m2mapp2 --type m2m --description M2mApp2 --auth-method None
+    exit-code: 1
+    stderr:
+      contains:
+        - "Unable to create application"
+
+  10 - it successfully creates a regular app with auth method set to post and outputs in json:
+    command: auth0 apps create --name integration-test-app-regapp2 --type regular --description RegApp2 --auth-method Post --json
+    exit-code: 0
+    stdout:
+      json:
+        token_endpoint_auth_method: client_secret_post
+
+  11 - it successfully creates a regular app with auth method set to basic and outputs in json:
+    command: auth0 apps create --name integration-test-app-regapp3 --type regular --description RegApp3 --auth-method Basic --json
+    exit-code: 0
+    stdout:
+      json:
+        token_endpoint_auth_method: client_secret_basic
+
+  12 - it successfully creates a m2m app with callbacks:
+    command: auth0 apps create --name integration-test-app-m2mapp3 --type m2m --description M2mApp3 --callbacks https://example.com
+    exit-code: 0
+    stdout:
+      contains:
+        - CALLBACKS            https://example.com
+
+  13 - it successfully creates a regular app with callbacks and outputs in json:
+    command: auth0 apps create --name integration-test-app-regapp4 --type regular --description RegApp4 --callbacks https://example.com,https://google.com --json
+    exit-code: 0
+    stdout:
+      json:
+        callbacks: "[https://example.com https://google.com]"
+
+  14 - it successfully creates a regular app with grants:
+    command: auth0 apps create --name integration-test-app-regapp5 --type regular --description RegApp4 --grants credentials,password
+    exit-code: 0
+    stdout:
+      contains:
+        - GRANTS               client_credentials, password
+
+  15 - it successfully creates a spa app with grants and outputs in json:
+    command: auth0 apps create --name integration-test-app-spaapp3 --type spa --description SpaApp3 --grants refresh-token --json
+    exit-code: 0
+    stdout:
+      json:
+        grant_types: "[refresh_token]"
+
+  16 - it successfully creates a native app with grants and outputs in json:
+    command: auth0 apps create --name integration-test-app-nativeapp2 --type native --description NativeApp2 --grants refresh-token,code  --json
+    exit-code: 0
+    stdout:
+      json:
+        grant_types: "[refresh_token authorization_code]"
+
+  17 - it fails to create a m2m app with device code grant:
+    command: auth0 apps create --name integration-test-app-m2mapp4 --type m2m --description M2mApp4 --grants credentials,device-code
+    exit-code: 1
+    stderr:
+      contains:
+        - "Unable to create application"
+
+  18 - it successfully creates a native app with logout urls and outputs in json:
+    command: auth0 apps create --name integration-test-app-regapp6 --type native --description RegularApp --logout-urls https://*.example.com/logout,https://example.com/logout --json
+    exit-code: 0
+    stdout:
+      json:
+        allowed_logout_urls: "[https://*.example.com/logout https://example.com/logout]"
+
+  19 - it successfully creates a native app with origins and outputs in json:
+    command: auth0 apps create --name integration-test-app-regapp7 --type native --description RegularApp --origins https://*.example.com,https://example.com  --json
+    exit-code: 0
+    stdout:
+      json:
+        allowed_origins: "[https://*.example.com https://example.com]"
+
+  20 - it successfully creates a native app with web origins and outputs in json:
+    command: auth0 apps create --name integration-test-app-spaapp4 --type native --description SpaApp4 --web-origins https://example.com  --json
+    exit-code: 0
+    stdout:
+      json:
+        web_origins: "[https://example.com]"
+
+  21 - given a test app:
+    command: ./test/integration/scripts/get-app-id.sh
+    exit-code: 0
+
+  22 - given a test app, it successfully gets the app's details and outputs in json:
+    command: auth0 apps show $(cat ./test/integration/identifiers/app-id) --json
+    exit-code: 0
+    stdout:
+      json:
+        name: integration-test-app-newapp
+        description: NewApp
+        app_type: native
+
+  23 - given a test app, it successfully gets the app's details:
+    command: auth0 apps show $(cat ./test/integration/identifiers/app-id)
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME                 integration-test-app-newapp
+        - DESCRIPTION          NewApp
+        - TYPE                 Native
+
+  24 - given a test app, it successfully updates the app's auth method and outputs in json:
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --auth-method Basic --json
+    exit-code: 0
+    stdout:
+      json:
+        token_endpoint_auth_method: client_secret_basic
+
+  25 - given a test app, it successfully updates the app's callbacks and outputs in json:
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --callbacks https://example.com --json
+    stdout:
+      json:
+        callbacks: "[https://example.com]"
+    exit-code: 0
+
+  26 - given a test app, it successfully updates the app's description and outputs in json:
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --description "A better description" --json
+    exit-code: 0
+    stdout:
+      json:
+        description: A better description
+
+  27 - given a test app, it successfully updates the app's grants and outputs in json:
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --grants code --json
+    exit-code: 0
+    stdout:
+      json:
+        grant_types: "[authorization_code]"
+
+  28 - given a test app, it successfully updates the app's logout urls and outputs in json:
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --logout-urls https://example.com --json
+    exit-code: 0
+    stdout:
+      json:
+        allowed_logout_urls: "[https://example.com]"
+
+  29 - given a test app, it successfully updates the app's name and outputs in json:
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --name integration-test-app-betterAppName --json
+    exit-code: 0
+    stdout:
+      json:
+        name: integration-test-app-betterAppName
+
+  30 - given a test app, it successfully updates the app's origins and outputs in json:
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --origins https://example.com --json
+    exit-code: 0
+    stdout:
+      json:
+        allowed_origins: "[https://example.com]"
+
+  31 - given a test app, it successfully updates the app's type and outputs in json:
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --type spa --json
+    exit-code: 0
+    stdout:
+      json:
+        app_type: spa
+
+  32 - given a test app, it successfully updates the app's web origins and outputs in json:
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --web-origins https://example.com --json
+    exit-code: 0
+    stdout:
+      json:
+        web_origins: "[https://example.com]"
+
+  33 - given a test app, it successfully updates the app's web origins and type and outputs in json:
+    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --web-origins https://examples.com --type native --json
+    exit-code: 0
+    stdout:
+      json:
+        app_type: native
+        web_origins: "[https://examples.com]"
+
+  34 - given a test app, it successfully opens the settings page:
+    command: auth0 apps open $(cat ./test/integration/identifiers/app-id) --no-input
+    exit-code: 0
+    stderr:
+      contains:
+        - "Open the following URL in a browser"
+
+
+  35 - given a test app, it successfully sets the default application:
+    command: auth0 apps use $(cat ./test/integration/identifiers/app-id) --no-input
+    exit-code: 0
+    stderr:
+      contains:
+        - "Successfully set the default application to"
+
+
+  36 - given a test app, it successfully deletes the app:
+    command: auth0 apps delete $(cat ./test/integration/identifiers/app-id) --force
+    exit-code: 0
