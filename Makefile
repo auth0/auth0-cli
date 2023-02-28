@@ -92,6 +92,10 @@ build: ## Build the cli binary for the native platform
 	${call print, "Building the cli binary"}
 	go build -v -ldflags "$(GO_LINKER_FLAGS)" -o "${BUILD_DIR}/auth0" cmd/auth0/main.go
 
+build-with-cover: ## Build the cli binary for the native platform with coverage support.
+	${call print, "Building the cli binary"}
+	go build -cover -v -ldflags "$(GO_LINKER_FLAGS)" -o "${BUILD_DIR}/auth0" cmd/auth0/main.go
+
 build-all-platforms: ## Build a dev version of the cli binary for all supported platforms
 	for os in darwin linux windows; \
 	do env GOOS=$$os go build -ldflags "$(GO_LINKER_FLAGS)" -o "${BUILD_DIR}/auth0-$${os}" cmd/auth0/main.go; \
@@ -100,6 +104,10 @@ build-all-platforms: ## Build a dev version of the cli binary for all supported 
 install: ## Install the cli binary for the native platform
 	${call print, "Installing the cli binary"}
 	@$(MAKE) build BUILD_DIR="$(GO_BIN)"
+
+install-with-cover: ## Install the cli binary for the native platform with coverage support.
+	${call print, "Installing the cli binary"}
+	@$(MAKE) build-with-cover BUILD_DIR="$(GO_BIN)"
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Checks
