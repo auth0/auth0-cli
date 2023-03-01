@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -272,6 +273,7 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 	}
 
 	t := Tenant{
+		Name:      strings.Split(inputs.Domain, ".")[0],
 		Domain:    inputs.Domain,
 		ExpiresAt: token.ExpiresAt,
 		ClientID:  inputs.ClientID,
