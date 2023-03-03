@@ -143,12 +143,13 @@ test: test-unit test-integration ## Run all tests
 
 test-unit: ## Run unit tests
 	${call print, "Running unit tests"}
-	@go test -race ${GO_PACKAGES} -count 1
+	@go test -v -race ${GO_PACKAGES} -coverprofile="coverage-unit-tests.out"
 
-test-integration: $(GO_BIN)/commander ## Run integration tests. To run a specific test pass the FILTER var. Usage: `make test-integration FILTER="attack protection"`
+test-integration: install-with-cover $(GO_BIN)/commander ## Run integration tests. To run a specific test pass the FILTER var. Usage: `make test-integration FILTER="attack protection"`
 	${call print, "Running integration tests"}
-	@$(MAKE) install # ensure fresh install prior to running test
-	@bash ./test/integration/scripts/run-test-suites.sh
+	@mkdir -p "coverage"
+	@GOCOVERDIR=coverage bash ./test/integration/scripts/run-test-suites.sh
+	@go tool covdata textfmt -i "coverage" -o "coverage-integration-tests.out"
 
 test-mocks: $(GO_BIN)/mockgen ## Generate testing mocks using mockgen
 	${call print, "Generating test mocks"}

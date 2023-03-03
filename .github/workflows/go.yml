@@ -1,19 +1,19 @@
 name: Go
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
 
 concurrency:
   group: one-at-time
   cancel-in-progress: false
 
 jobs:
-  unit:
-    name: Unit Test
+  checks:
+    name: Checks
     runs-on: ubuntu-latest
-    # We want to run on external PRs, but not on our own internal PRs as they'll be run
-    # by the push to the branch.
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-
     steps:
       - name: Check out the code
         uses: actions/checkout@v3
@@ -36,13 +36,33 @@ jobs:
           version: latest
           args: -v -c .golangci.yml
 
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
       - name: Run unit tests
         run: make test-unit
 
-  integration:
-    name: Integration Test
+      - name: Upload unit test coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-tests-artifact
+          path: ./coverage-unit-tests.out
+
+  integration-tests:
+    name: Integration Tests
     runs-on: ubuntu-latest
-    # skip running this action if the PR is coming from a fork:
+    needs: unit-tests
+    # Skip running this action if the PR is coming from a fork.
     if: github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
 
     steps:
@@ -64,13 +84,22 @@ jobs:
           AUTH0_CLI_CLIENT_ID: ${{ secrets.AUTH0_CLI_CLIENT_ID }}
           AUTH0_CLI_CLIENT_SECRET: ${{ secrets.AUTH0_CLI_CLIENT_SECRET }}
 
+      - name: Download unit test coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: unit-tests-artifact
+          path: ./unit-tests-artifact
+
+      - name: Update codecov report
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./unit-tests-artifact/coverage-unit-tests.out,./coverage-integration-tests.out
+          fail_ci_if_error: false
+          verbose: true
+
   build:
     name: Build
     runs-on: ubuntu-latest
-    # We want to run on external PRs, but not on our own internal PRs as they'll be run
-    # by the push to the branch.
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-
     steps:
       - name: Check out the code
         uses: actions/checkout@v3
