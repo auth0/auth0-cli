@@ -12,7 +12,7 @@
 
 ---
 
-Build, manage and test your [Auth0](https://auth0.com/) integrations from the command line.
+Build,  manage and test your [Auth0](https://auth0.com/) integrations from the command line.
 
 ![demo](./demo.gif)
 
