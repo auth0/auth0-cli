@@ -355,7 +355,7 @@ func (c *cli) customDomainPickerOptions() (pickerOptions, error) {
 }
 
 func (c *cli) appPickerWithCreateOption() (pickerOptions, error) {
-	options, err := c.appPickerOptions()
+	options, err := c.appPickerOptions()()
 	if err != nil {
 		return nil, err
 	}

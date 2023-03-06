@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -196,17 +197,22 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (T
 	cli.renderer.Infof("Tenant: %s", result.Domain)
 	cli.renderer.Newline()
 
+	tenant := Tenant{
+		Name:      result.Tenant,
+		Domain:    result.Domain,
+		ExpiresAt: result.ExpiresAt,
+		Scopes:    append(auth.RequiredScopes, additionalScopes...),
+	}
+
 	if err := keyring.StoreRefreshToken(result.Domain, result.RefreshToken); err != nil {
-		cli.renderer.Warnf("Could not store the refresh token to the keyring: %s", err)
+		cli.renderer.Warnf("Could not store the access token and the refresh token to the keyring: %s", err)
 		cli.renderer.Warnf("Expect to login again when your access token expires.")
 	}
 
-	tenant := Tenant{
-		Name:        result.Tenant,
-		Domain:      result.Domain,
-		AccessToken: result.AccessToken,
-		ExpiresAt:   result.ExpiresAt,
-		Scopes:      append(auth.RequiredScopes, additionalScopes...),
+	if err := keyring.StoreAccessToken(result.Domain, result.AccessToken); err != nil {
+		// In case we don't have a keyring, we want the
+		// access token to be saved in the config file.
+		tenant.AccessToken = result.AccessToken
 	}
 
 	err = cli.addTenant(tenant)
@@ -266,16 +272,22 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 				"Ensure that the provided client-id, client-secret and domain are correct. \n\nerror: %w\n", err)
 	}
 
+	t := Tenant{
+		Name:      strings.Split(inputs.Domain, ".")[0],
+		Domain:    inputs.Domain,
+		ExpiresAt: token.ExpiresAt,
+		ClientID:  inputs.ClientID,
+	}
+
 	if err = keyring.StoreClientSecret(inputs.Domain, inputs.ClientSecret); err != nil {
-		cli.renderer.Warnf("Could not store the client secret to the keyring: %s", err)
+		cli.renderer.Warnf("Could not store the client secret and the access token to the keyring: %s", err)
 		cli.renderer.Warnf("Expect to login again when your access token expires.")
 	}
 
-	t := Tenant{
-		Domain:      inputs.Domain,
-		AccessToken: token.AccessToken,
-		ExpiresAt:   token.ExpiresAt,
-		ClientID:    inputs.ClientID,
+	if err := keyring.StoreAccessToken(inputs.Domain, token.AccessToken); err != nil {
+		// In case we don't have a keyring, we want the
+		// access token to be saved in the config file.
+		t.AccessToken = token.AccessToken
 	}
 
 	if err = cli.addTenant(t); err != nil {

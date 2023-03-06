@@ -3,9 +3,9 @@ name: Semgrep
 on:
   pull_request_target: {}
   push:
-    branches: ["master", "main"]
+    branches: ["main"]
   schedule:
-    - cron: '30 0 1,15 * *' # scheduled for 00:30 UTC on both the 1st and 15th of the month
+    - cron: '30 0 1,15 * *' # Scheduled for 00:30 UTC on both the 1st and 15th of the month.
 
 jobs:
   semgrep:
@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: returntocorp/semgrep
+
+    # Skip any PR created by dependabot or snyk to avoid permission issues.
     if: (github.actor != 'dependabot[bot]' && github.actor != 'snyk-bot')
     steps:
       - uses: actions/checkout@v3

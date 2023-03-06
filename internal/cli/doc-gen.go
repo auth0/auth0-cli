@@ -88,7 +88,8 @@ There are two ways to authenticate:
 - **As a user** - Recommended when invoking on a personal machine or other interactive environment. Facilitated by [device authorization](https://auth0.com/docs/get-started/authentication-and-authorization-flow/device-authorization-flow) flow.
 - **As a machine** - Recommended when running on a server or non-interactive environments (ex: CI). Facilitated by [client credentials](https://auth0.com/docs/get-started/authentication-and-authorization-flow/client-credentials-flow) flow. Flags available for bypassing interactive shell.
 
-> ⚠️ Authenticating as a user is not supported for **private cloud** tenants. Instead, those users should authenticate with client credentials.
+{: .warning }
+Authenticating as a user is not supported for **private cloud** tenants. Instead, those users should authenticate with client credentials.
 
 ## Available Commands
 

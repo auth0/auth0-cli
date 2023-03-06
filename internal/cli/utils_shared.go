@@ -272,8 +272,16 @@ func openManageURL(cli *cli, tenant string, path string) {
 		cli.renderer.Warnf("Unable to format the correct URL, please ensure you have run 'auth0 login' and try again.")
 		return
 	}
-	if err := browser.OpenURL(fmt.Sprintf("%s%s", manageTenantURL, path)); err != nil {
-		cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s.", manageTenantURL)
+
+	settingsURL := fmt.Sprintf("%s%s", manageTenantURL, path)
+
+	if cli.noInput {
+		cli.renderer.Infof("Open the following URL in a browser: %s", settingsURL)
+		return
+	}
+
+	if err := browser.OpenURL(settingsURL); err != nil {
+		cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s", settingsURL)
 	}
 }
 
