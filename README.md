@@ -4,8 +4,9 @@
 [![GoDoc](https://pkg.go.dev/badge/github.com/auth0/auth0-cli.svg)](https://pkg.go.dev/github.com/auth0/auth0-cli)
 [![Go Report Card](https://goreportcard.com/badge/github.com/auth0/auth0-cli?style=flat-square)](https://goreportcard.com/report/github.com/auth0/auth0-cli)
 [![Release](https://img.shields.io/github/v/release/auth0/auth0-cli?logo=auth0&include_prereleases&style=flat-square)](https://github.com/auth0/auth0-cli/releases)
+[![Codecov](https://img.shields.io/codecov/c/github/auth0/auth0-cli?logo=codecov&style=flat-square)](https://codecov.io/gh/auth0/auth0-cli)
 [![License](https://img.shields.io/github/license/auth0/auth0-cli.svg?logo=fossa&style=flat-square)](https://github.com/auth0/auth0-cli/blob/main/LICENSE)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/auth0/auth0-cli/go.yml?branch=main)](https://github.com/auth0/auth0-cli/actions?query=branch%3Amain)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/auth0/auth0-cli/go.yml?branch=main&style=flat-square&logo=github)](https://github.com/auth0/auth0-cli/actions?query=branch%3Amain)
 
 </div>
 

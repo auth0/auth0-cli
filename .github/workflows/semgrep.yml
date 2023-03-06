@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: returntocorp/semgrep
+
+    # Skip any PR created by dependabot or snyk to avoid permission issues.
     if: (github.actor != 'dependabot[bot]' && github.actor != 'snyk-bot')
     steps:
       - uses: actions/checkout@v3
