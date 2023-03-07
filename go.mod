@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/auth0/go-auth0 v0.15.1
-	github.com/briandowns/spinner v1.22.0
+	github.com/briandowns/spinner v1.23.0
 	github.com/charmbracelet/glamour v0.6.0
 	github.com/getsentry/sentry-go v0.19.0
 	github.com/golang/mock v1.6.0
