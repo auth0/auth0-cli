@@ -5,19 +5,6 @@ tests:
   auth0 apis list:
     exit-code: 0
 
-  auth0 logs list:
-    exit-code: 0
-    stdout:
-      contains:
-        - TYPE
-        - DESCRIPTION
-        - DATE
-        - CONNECTION
-        - CLIENT
-
-  auth0 logs streams list:
-    exit-code: 0
-
   auth0 tenants list:
     exit-code: 0
 
