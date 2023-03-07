@@ -160,10 +160,9 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (T
 		return Tenant{}, fmt.Errorf("failed to get the device code: %w", err)
 	}
 
-	message := fmt.Sprintf("\n%s\n%s%s\n\n",
-		"A browser window needs to be opened to complete authentication.",
-		"Note your device confirmation code: ",
-		ansi.Bold(state.UserCode))
+	message := fmt.Sprintf("\n%s\n\n",
+		"Verify "+ansi.Bold(state.UserCode)+" code in opened browser window to complete authentication.",
+	)
 	cli.renderer.Output(message)
 
 	if cli.noInput {
