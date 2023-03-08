@@ -23,7 +23,7 @@ tests:
       json:
         idle_session_lifetime: "72"
 
-  004 - it fails to use the api command to patch tenant settings with wrong json:
+  004 - it fails to use the api command to patch tenant settings with invalid json:
     command: auth0 api patch "tenants/settings" --data "{\"idle_session_lifetime:72}"
     exit-code: 1
     stderr:
