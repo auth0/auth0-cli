@@ -97,7 +97,7 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "eventbridge",
-		Args:  cobra.NoArgs,
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an existing Amazon Event Bridge log stream",
 		Long: "Stream real-time Auth0 data to over 15 targets like AWS Lambda.\n\n" +
 			"To update interactively, use `auth0 logs streams create eventbridge` with no arguments.\n\n" +
@@ -122,6 +122,16 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to read log stream with ID %s: %w", inputs.ID, err)
+			}
+
+			if oldLogStream.GetType() != string(logStreamTypeAmazonEventBridge) {
+				return fmt.Errorf(
+					"the log stream with ID %q is of type %q instead of eventbridge, "+
+						"use 'auth0 logs streams update %s' to update it instead",
+					inputs.ID,
+					oldLogStream.GetType(),
+					oldLogStream.GetType(),
+				)
 			}
 
 			if err := logStreamName.AskU(cmd, &inputs.Name, oldLogStream.Name); err != nil {

@@ -83,7 +83,7 @@ func updateLogStreamsSumoLogicCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "sumo",
-		Args:  cobra.NoArgs,
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an existing Sumo Logic log stream",
 		Long: "Visualize logs and detect threats faster with security insights.\n\n" +
 			"To update interactively, use `auth0 logs streams create sumo` with no arguments.\n\n" +
@@ -109,6 +109,16 @@ func updateLogStreamsSumoLogicCmd(cli *cli) *cobra.Command {
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to read log stream with ID %s: %w", inputs.ID, err)
+			}
+
+			if oldLogStream.GetType() != string(logStreamTypeSumo) {
+				return fmt.Errorf(
+					"the log stream with ID %q is of type %q instead of sumo, "+
+						"use 'auth0 logs streams update %s' to update it instead",
+					inputs.ID,
+					oldLogStream.GetType(),
+					oldLogStream.GetType(),
+				)
 			}
 
 			if err := logStreamName.AskU(cmd, &inputs.Name, oldLogStream.Name); err != nil {

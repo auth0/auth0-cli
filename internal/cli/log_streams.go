@@ -290,7 +290,7 @@ func (c *cli) logStreamPickerOptionsByType(desiredType logStreamType) pickerOpti
 		}
 		if len(options) == 0 {
 			return nil, fmt.Errorf(
-				"there are currently no log streams of type: %s.\n\nTo create one, run: 'auth0 logs streams create %s'",
+				"there are currently no log streams of type: %q, use 'auth0 logs streams create %s' to create one",
 				desiredType,
 				desiredType,
 			)
