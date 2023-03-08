@@ -112,13 +112,7 @@ func updateLogStreamsSumoLogicCmd(cli *cli) *cobra.Command {
 			}
 
 			if oldLogStream.GetType() != string(logStreamTypeSumo) {
-				return fmt.Errorf(
-					"the log stream with ID %q is of type %q instead of sumo, "+
-						"use 'auth0 logs streams update %s' to update it instead",
-					inputs.ID,
-					oldLogStream.GetType(),
-					oldLogStream.GetType(),
-				)
+				return errInvalidLogStreamType(inputs.ID, oldLogStream.GetType(), string(logStreamTypeSumo))
 			}
 
 			if err := logStreamName.AskU(cmd, &inputs.Name, oldLogStream.Name); err != nil {

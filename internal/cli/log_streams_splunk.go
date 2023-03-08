@@ -164,13 +164,7 @@ func updateLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 			}
 
 			if oldLogStream.GetType() != string(logStreamTypeSplunk) {
-				return fmt.Errorf(
-					"the log stream with ID %q is of type %q instead of splunk, "+
-						"use 'auth0 logs streams update %s' to update it instead",
-					inputs.ID,
-					oldLogStream.GetType(),
-					oldLogStream.GetType(),
-				)
+				return errInvalidLogStreamType(inputs.ID, oldLogStream.GetType(), string(logStreamTypeSplunk))
 			}
 
 			if err := logStreamName.AskU(cmd, &inputs.Name, oldLogStream.Name); err != nil {

@@ -299,3 +299,10 @@ func (c *cli) logStreamPickerOptionsByType(desiredType logStreamType) pickerOpti
 		return options, nil
 	}
 }
+
+func errInvalidLogStreamType(id, actual, expected string) error {
+	message := "the log stream with ID %q is of type %q instead of %q, " +
+		"use 'auth0 logs streams update %s' to update it instead"
+
+	return fmt.Errorf(message, id, actual, expected, actual)
+}

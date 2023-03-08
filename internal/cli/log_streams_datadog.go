@@ -133,13 +133,7 @@ func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 			}
 
 			if oldLogStream.GetType() != string(logStreamTypeDatadog) {
-				return fmt.Errorf(
-					"the log stream with ID %q is of type %q instead of datadog, "+
-						"use 'auth0 logs streams update %s' to update it instead",
-					inputs.ID,
-					oldLogStream.GetType(),
-					oldLogStream.GetType(),
-				)
+				return errInvalidLogStreamType(inputs.ID, oldLogStream.GetType(), string(logStreamTypeDatadog))
 			}
 
 			if err := logStreamName.AskU(cmd, &inputs.Name, oldLogStream.Name); err != nil {
