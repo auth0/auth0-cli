@@ -142,7 +142,7 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "http",
-		Args:  cobra.NoArgs,
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an existing Custom Webhook log stream",
 		Long: "Specify a URL you'd like Auth0 to post events to.\n\n" +
 			"To update interactively, use `auth0 logs streams create http` with no arguments.\n\n" +
@@ -171,6 +171,10 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to read log stream with ID %s: %w", inputs.ID, err)
+			}
+
+			if oldLogStream.GetType() != string(logStreamTypeHTTP) {
+				return errInvalidLogStreamType(inputs.ID, oldLogStream.GetType(), string(logStreamTypeHTTP))
 			}
 
 			if err := logStreamName.AskU(cmd, &inputs.Name, oldLogStream.Name); err != nil {
