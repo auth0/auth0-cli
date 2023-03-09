@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="{{locale}}">
+  <head>
+    {%- auth0:head -%}
+    <style>
+      body {
+        background-image: url("https://images.unsplash.com/photo-1592450865877-e3a318ec3522?ixlib=rb-1.2.1&auto=format&fit=crop&w=2255&q=80");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+      }
+      .prompt-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        width: 480px;
+        height: 100%;
+        justify-content: center;
+        background-color: rgb(60,60,60);
+      }
+    </style>
+    <title>{{ prompt.screen.texts.pageTitle }}</title>
+
+  </head>
+  <body class="_widget-auto-layout">
+    {% if prompt.name == "login" or prompt.name == "signup" %} 
+        <div class="prompt-wrapper">
+        {%- auth0:widget -%}
+        </div>
+    {% else %}
+        {%- auth0:widget -%}
+    {% endif %}
+  </body>
+</html>

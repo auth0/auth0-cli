@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="{{locale}}">
+  <head>
+    {%- auth0:head -%}
+    <style>
+      body {
+        background-image: radial-gradient(white, rgb(200, 200, 200));
+      }
+      .footer {
+        background-color: rgb(120, 120, 120);
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        padding: 16px 0; 
+        width: 100%;
+        color: white;
+        /* Use a high z-index for future-proofing */
+        z-index: 10;
+      }
+      .footer ul {
+        text-align: center;
+      }
+      .footer ul li {
+        display: inline-block;
+        margin: 0 4px;
+      }
+      .footer ul li:not(:first-of-type) {
+        margin-left: 0;
+      }
+      .footer ul li:not(:first-of-type)::before {
+        content: '';
+        display: inline-block;
+        vertical-align: middle;
+        width: 4px;
+        height: 4px;
+        margin-right: 4px;
+        background-color: white;
+        border-radius: 50%;
+      }
+      .footer a {
+        color: white;
+      }
+    </style>
+     <title>{{ prompt.screen.texts.pageTitle }}</title>
+  </head>
+  <body class="_widget-auto-layout">
+    {%- auth0:widget -%}
+    <footer class="footer">
+      <ul>
+        <li><a href="https://company.com/privacy">Privacy Policy</a></li>
+        <li><a href="https://company.com/terms">Terms of Service</a></li>
+      </ul>
+    </footer>
+  </body>
+</html>

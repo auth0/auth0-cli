@@ -7,10 +7,12 @@ require (
 	github.com/auth0/go-auth0 v0.15.1
 	github.com/briandowns/spinner v1.23.0
 	github.com/charmbracelet/glamour v0.6.0
+	github.com/fsnotify/fsnotify v1.6.0
 	github.com/getsentry/sentry-go v0.19.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
+	github.com/guiguan/caster v0.0.0-20191104051807-3736c4464f38
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/lestrrat-go/jwx v1.2.25
 	github.com/logrusorgru/aurora v2.0.3+incompatible
@@ -25,6 +27,7 @@ require (
 	github.com/tidwall/pretty v1.2.1
 	github.com/zalando/go-keyring v0.2.2
 	golang.org/x/oauth2 v0.6.0
+	golang.org/x/sync v0.1.0
 	golang.org/x/sys v0.6.0
 	golang.org/x/term v0.6.0
 	golang.org/x/text v0.8.0
