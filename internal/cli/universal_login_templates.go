@@ -120,7 +120,7 @@ func showBrandingTemplateCmd(cli *cli) *cobra.Command {
 				cli.renderer.Infof("No custom template found. To set one, run: `auth0 universal-login templates update`.")
 			}
 
-			fmt.Println(currentTemplate.GetBody())
+			cli.renderer.Output(currentTemplate.GetBody())
 
 			return nil
 		},
