@@ -124,13 +124,24 @@ There are two ways to authenticate:
 
 ## Customization
 
-To change the text editor used for editing templates, rules, and actions,
-set the environment variable `EDITOR` to your preferred editor. Example:
+To change the text editor used for editing templates, rules, and actions, set the environment variable `EDITOR` to your
+preferred editor. If choosing a non-terminal editor, ensure that the command starts the editor and waits for the files
+to be closed before returning.
+
+Examples:
 
 ```shell
-export EDITOR="code -w"
-# or
+# Uses vscode with the --wait flag.
+export EDITOR="code --wait"
+
+# Uses sublime text with the --wait flag.
+export EDITOR="subl --wait"
+ 
+# Uses nano, a terminal based editor.
 export EDITOR="nano"
+
+# Uses vim, a terminal based editor.
+export EDITOR="vim"
 ```
 
 ## Anonymized Analytics Disclosure
