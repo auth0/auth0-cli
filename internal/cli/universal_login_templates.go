@@ -79,6 +79,7 @@ type TemplateData struct {
 	LogoURL         string
 	TenantName      string
 	Body            string
+	Experience      string
 }
 
 // ClientData is a minimal representation of an Auth0 Client as defined in the
@@ -148,6 +149,14 @@ func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to fetch the Universal Login template data: %w", err)
 			}
 
+			if templateData.Experience == "classic" {
+				cli.renderer.Warnf(
+					"The tenant is configured to use the classic Universal Login Experience instead of the new. " +
+						"The template changes won't apply until you select the new Universal Login Experience. " +
+						"You can do so by running: \"auth0 api patch prompts --data '{\"universal_login_experience\":\"new\"}'\"",
+				)
+			}
+
 			if templateData.Body == "" {
 				if err := templateBody.Select(cmd, &templateData.Body, templateOptions.labels(), nil); err != nil {
 					return fmt.Errorf("failed to select the desired template: %w", err)
@@ -197,6 +206,12 @@ func (cli *cli) fetchTemplateData(ctx context.Context) (*TemplateData, error) {
 		return ensureCustomDomainIsEnabled(ctx, cli.api)
 	})
 
+	var promptSettings *management.Prompt
+	group.Go(func() (err error) {
+		promptSettings, err = cli.api.Prompt.Read()
+		return err
+	})
+
 	var clientList *management.ClientList
 	group.Go(func() (err error) {
 		// Capping the clients retrieved to 100 for now.
@@ -232,6 +247,7 @@ func (cli *cli) fetchTemplateData(ctx context.Context) (*TemplateData, error) {
 		LogoURL:         brandingSettings.GetLogoURL(),
 		TenantName:      tenant.GetFriendlyName(),
 		Body:            currentTemplate.GetBody(),
+		Experience:      promptSettings.UniversalLoginExperience,
 	}
 
 	for _, client := range clientList.Clients {
