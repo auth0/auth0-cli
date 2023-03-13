@@ -211,8 +211,8 @@ func testTokenCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := testAudience.Ask(cmd, inputs.Audience, nil); err != nil {
-				return nil
+			if err := testAudience.Ask(cmd, &inputs.Audience, nil); err != nil {
+				return err
 			}
 
 			tenant, err := cli.getTenant()
