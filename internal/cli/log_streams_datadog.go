@@ -22,7 +22,7 @@ var (
 
 	datadogRegionOptions = []string{"eu", "us", "us3", "us5"}
 
-	datadogApiKey = Flag{
+	datadogAPIKey = Flag{
 		Name:       "Datadog API Key",
 		LongForm:   "api-key",
 		ShortForm:  "k",
@@ -60,7 +60,7 @@ func createLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := datadogApiKey.AskPassword(cmd, &inputs.DatadogAPIKey, nil); err != nil {
+			if err := datadogAPIKey.AskPassword(cmd, &inputs.DatadogAPIKey, nil); err != nil {
 				return err
 			}
 
@@ -87,7 +87,7 @@ func createLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	logStreamName.RegisterString(cmd, &inputs.Name, "")
-	datadogApiKey.RegisterString(cmd, &inputs.DatadogAPIKey, "")
+	datadogAPIKey.RegisterString(cmd, &inputs.DatadogAPIKey, "")
 	datadogRegion.RegisterString(cmd, &inputs.DatadogRegion, "")
 
 	return cmd
@@ -146,7 +146,7 @@ func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := datadogApiKey.AskPasswordU(cmd, &inputs.DatadogAPIKey, datadogSink.APIKey); err != nil {
+			if err := datadogAPIKey.AskPasswordU(cmd, &inputs.DatadogAPIKey, datadogSink.APIKey); err != nil {
 				return err
 			}
 
@@ -178,7 +178,7 @@ func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	logStreamName.RegisterStringU(cmd, &inputs.Name, "")
-	datadogApiKey.RegisterStringU(cmd, &inputs.DatadogAPIKey, "")
+	datadogAPIKey.RegisterStringU(cmd, &inputs.DatadogAPIKey, "")
 	datadogRegion.RegisterStringU(cmd, &inputs.DatadogRegion, "")
 
 	return cmd

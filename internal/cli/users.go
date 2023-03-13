@@ -533,7 +533,7 @@ func openUserCmd(cli *cli) *cobra.Command {
 func importUsersCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Connection          string
-		ConnectionId        string
+		ConnectionID        string
 		Template            string
 		TemplateBody        string
 		Upsert              bool
@@ -561,9 +561,9 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 			conn, connErr := cli.api.Connection.ReadByName(inputs.Connection)
 			if connErr != nil {
 				return fmt.Errorf("Connection does not exist: %w", connErr)
-			} else {
-				inputs.ConnectionId = *conn.ID
 			}
+
+			inputs.ConnectionID = *conn.ID
 
 			// Present user with template options
 			if templateErr := userImportTemplate.Select(cmd, &inputs.Template, userImportOptions.labels(), nil); templateErr != nil {
@@ -600,7 +600,7 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 
 			err := ansi.Waiting(func() error {
 				return cli.api.Jobs.ImportUsers(&management.Job{
-					ConnectionID:        &inputs.ConnectionId,
+					ConnectionID:        &inputs.ConnectionID,
 					Users:               jsonmap,
 					Upsert:              &inputs.Upsert,
 					SendCompletionEmail: &inputs.SendCompletionEmail,

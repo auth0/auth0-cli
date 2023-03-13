@@ -8,8 +8,6 @@ import (
 // BuildLoginURL constructs a URL + query string that can be used to
 // initiate a user-facing login-flow from the CLI.
 func BuildLoginURL(domain, clientID, callbackURL, state, connectionName, audience, prompt string, scopes []string) (string, error) {
-	var path string = "/authorize"
-
 	q := url.Values{}
 	q.Add("client_id", clientID)
 	q.Add("response_type", "code")
@@ -35,7 +33,7 @@ func BuildLoginURL(domain, clientID, callbackURL, state, connectionName, audienc
 	u := &url.URL{
 		Scheme:   "https",
 		Host:     domain,
-		Path:     path,
+		Path:     "/authorize",
 		RawQuery: q.Encode(),
 	}
 

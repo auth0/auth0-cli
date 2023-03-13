@@ -7,7 +7,8 @@ import (
 	"github.com/AlecAivazis/survey/v2/terminal"
 )
 
-// EXTENDED to enable different prompting behavior.
+// Editor is an extended survey.Editor to
+// enable different prompting behavior.
 type Editor struct {
 	*survey.Editor
 	EditorCommand string
@@ -22,7 +23,6 @@ func (e *Editor) editorCommand() string {
 	return e.EditorCommand
 }
 
-// EXTENDED to change prompt text.
 var EditorQuestionTemplate = `
 {{- if .ShowHelp }}{{- color .Config.Icons.Help.Format }}{{ .Config.Icons.Help.Text }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
 {{- color .Config.Icons.Question.Format }}{{ .Config.Icons.Question.Text }} {{color "reset"}}
@@ -35,7 +35,6 @@ var EditorQuestionTemplate = `
 	{{- color "cyan"}}[(e) to launch {{ .EditorCommand }}{{- if .BlankAllowed }}, enter to skip{{ end }}] {{color "reset"}}
 {{- end}}`
 
-// EXTENDED to pass editor name (to use in prompt).
 type EditorTemplateData struct {
 	survey.Editor
 	EditorCommand string
@@ -46,7 +45,6 @@ type EditorTemplateData struct {
 	Config        *survey.PromptConfig
 }
 
-// EXTENDED to augment prompt text and keypress handling.
 func (e *Editor) prompt(initialValue string, config *survey.PromptConfig) (interface{}, error) {
 	err := e.Render(
 		EditorQuestionTemplate,
@@ -86,9 +84,8 @@ func (e *Editor) prompt(initialValue string, config *survey.PromptConfig) (inter
 		if r == '\r' || r == '\n' {
 			if e.BlankAllowed {
 				return "", nil
-			} else {
-				continue
 			}
+			continue
 		}
 		if r == terminal.KeyInterrupt {
 			return "", terminal.InterruptErr
@@ -128,7 +125,7 @@ func (e *Editor) prompt(initialValue string, config *survey.PromptConfig) (inter
 	return text, nil
 }
 
-// EXTENDED This is straight copypasta from survey to get our overridden prompt called.
+// Prompt is a straight copy from survey to get our overridden prompt called.
 func (e *Editor) Prompt(config *survey.PromptConfig) (interface{}, error) {
 	initialValue := ""
 	if e.Default != "" && e.AppendDefault {
