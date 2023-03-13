@@ -106,14 +106,7 @@ func (v *applicationView) Object() interface{} {
 func (r *Renderer) ApplicationList(clients []*management.Client, revealSecrets bool) {
 	resource := "applications"
 
-	var appsToRender []View
-	for _, c := range clients {
-		if !revealSecrets {
-			c.ClientSecret = auth0.String("")
-		}
-
-		appsToRender = append(appsToRender, makeApplicationView(c, revealSecrets))
-	}
+	r.Heading(fmt.Sprintf("%s (%v)", resource, len(clients)))
 
 	if len(clients) == 0 {
 		r.EmptyState(resource)
@@ -121,9 +114,16 @@ func (r *Renderer) ApplicationList(clients []*management.Client, revealSecrets b
 		return
 	}
 
-	r.Heading(fmt.Sprintf("%s (%v)", resource, len(appsToRender)))
+	var res []View
+	for _, c := range clients {
+		if !revealSecrets {
+			c.ClientSecret = auth0.String("")
+		}
 
-	r.Results(appsToRender)
+		res = append(res, makeApplicationView(c, revealSecrets))
+	}
+
+	r.Results(res)
 }
 
 func (r *Renderer) ApplicationShow(client *management.Client, revealSecrets bool) {
