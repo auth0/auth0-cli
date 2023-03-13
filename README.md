@@ -14,7 +14,7 @@
 
 Build, manage and test your [Auth0](https://auth0.com/) integrations from the command line.
 
-![demo](./docs/assets/screen-recordings/assign-user-role.gif)
+![Auth0 CLI demo showing how to view and assign user roles](./docs/assets/screen-recordings/assign-user-role.gif)
 
 ## Highlights
 
