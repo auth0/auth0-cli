@@ -48,10 +48,10 @@ var (
 func createLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Name              string
-		HttpEndpoint      string
-		HttpContentType   string
-		HttpContentFormat string
-		HttpAuthorization string
+		HTTPEndpoint      string
+		HTTPContentType   string
+		HTTPContentFormat string
+		HTTPAuthorization string
 	}
 
 	cmd := &cobra.Command{
@@ -74,19 +74,19 @@ func createLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := httpEndpoint.Ask(cmd, &inputs.HttpEndpoint, nil); err != nil {
+			if err := httpEndpoint.Ask(cmd, &inputs.HTTPEndpoint, nil); err != nil {
 				return err
 			}
 
-			if err := httpContentType.Ask(cmd, &inputs.HttpContentType, nil); err != nil {
+			if err := httpContentType.Ask(cmd, &inputs.HTTPContentType, nil); err != nil {
 				return err
 			}
 
-			if err := httpContentFormat.Select(cmd, &inputs.HttpContentFormat, httpContentFormatOptions, nil); err != nil {
+			if err := httpContentFormat.Select(cmd, &inputs.HTTPContentFormat, httpContentFormatOptions, nil); err != nil {
 				return err
 			}
 
-			if err := httpAuthorization.AskPassword(cmd, &inputs.HttpAuthorization, nil); err != nil {
+			if err := httpAuthorization.AskPassword(cmd, &inputs.HTTPAuthorization, nil); err != nil {
 				return err
 			}
 
@@ -95,16 +95,16 @@ func createLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 				Type: auth0.String(string(logStreamTypeHTTP)),
 			}
 			sink := &management.LogStreamSinkHTTP{
-				Endpoint: &inputs.HttpEndpoint,
+				Endpoint: &inputs.HTTPEndpoint,
 			}
-			if inputs.HttpAuthorization != "" {
-				sink.Authorization = &inputs.HttpAuthorization
+			if inputs.HTTPAuthorization != "" {
+				sink.Authorization = &inputs.HTTPAuthorization
 			}
-			if inputs.HttpContentType != "" {
-				sink.ContentType = &inputs.HttpContentType
+			if inputs.HTTPContentType != "" {
+				sink.ContentType = &inputs.HTTPContentType
 			}
-			if inputs.HttpContentFormat != "" {
-				sink.ContentFormat = apiHTTPContentFormatFor(inputs.HttpContentFormat)
+			if inputs.HTTPContentFormat != "" {
+				sink.ContentFormat = apiHTTPContentFormatFor(inputs.HTTPContentFormat)
 			}
 			newLogStream.Sink = sink
 
@@ -122,10 +122,10 @@ func createLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	logStreamName.RegisterString(cmd, &inputs.Name, "")
-	httpEndpoint.RegisterString(cmd, &inputs.HttpEndpoint, "")
-	httpContentType.RegisterString(cmd, &inputs.HttpContentType, "")
-	httpContentFormat.RegisterString(cmd, &inputs.HttpContentFormat, "")
-	httpAuthorization.RegisterString(cmd, &inputs.HttpAuthorization, "")
+	httpEndpoint.RegisterString(cmd, &inputs.HTTPEndpoint, "")
+	httpContentType.RegisterString(cmd, &inputs.HTTPContentType, "")
+	httpContentFormat.RegisterString(cmd, &inputs.HTTPContentFormat, "")
+	httpAuthorization.RegisterString(cmd, &inputs.HTTPAuthorization, "")
 
 	return cmd
 }
@@ -134,10 +134,10 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ID                string
 		Name              string
-		HttpEndpoint      string
-		HttpContentType   string
-		HttpContentFormat string
-		HttpAuthorization string
+		HTTPEndpoint      string
+		HTTPContentType   string
+		HTTPContentFormat string
+		HTTPAuthorization string
 	}
 
 	cmd := &cobra.Command{
@@ -183,16 +183,16 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 
 			httpSink := oldLogStream.Sink.(*management.LogStreamSinkHTTP)
 
-			if err := httpEndpoint.AskU(cmd, &inputs.HttpEndpoint, httpSink.Endpoint); err != nil {
+			if err := httpEndpoint.AskU(cmd, &inputs.HTTPEndpoint, httpSink.Endpoint); err != nil {
 				return err
 			}
-			if err := httpContentType.AskU(cmd, &inputs.HttpContentType, httpSink.ContentType); err != nil {
+			if err := httpContentType.AskU(cmd, &inputs.HTTPContentType, httpSink.ContentType); err != nil {
 				return err
 			}
-			if err := httpContentFormat.SelectU(cmd, &inputs.HttpContentFormat, httpContentFormatOptions, httpSink.ContentFormat); err != nil {
+			if err := httpContentFormat.SelectU(cmd, &inputs.HTTPContentFormat, httpContentFormatOptions, httpSink.ContentFormat); err != nil {
 				return err
 			}
-			if err := httpAuthorization.AskPasswordU(cmd, &inputs.HttpAuthorization, httpSink.Authorization); err != nil {
+			if err := httpAuthorization.AskPasswordU(cmd, &inputs.HTTPAuthorization, httpSink.Authorization); err != nil {
 				return err
 			}
 
@@ -201,17 +201,17 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 			if inputs.Name != "" {
 				updatedLogStream.Name = &inputs.Name
 			}
-			if inputs.HttpEndpoint != "" {
-				httpSink.Endpoint = &inputs.HttpEndpoint
+			if inputs.HTTPEndpoint != "" {
+				httpSink.Endpoint = &inputs.HTTPEndpoint
 			}
-			if inputs.HttpAuthorization != "" {
-				httpSink.Authorization = &inputs.HttpAuthorization
+			if inputs.HTTPAuthorization != "" {
+				httpSink.Authorization = &inputs.HTTPAuthorization
 			}
-			if inputs.HttpContentType != "" {
-				httpSink.ContentType = &inputs.HttpContentType
+			if inputs.HTTPContentType != "" {
+				httpSink.ContentType = &inputs.HTTPContentType
 			}
-			if inputs.HttpContentFormat != "" {
-				httpSink.ContentFormat = apiHTTPContentFormatFor(inputs.HttpContentFormat)
+			if inputs.HTTPContentFormat != "" {
+				httpSink.ContentFormat = apiHTTPContentFormatFor(inputs.HTTPContentFormat)
 			}
 
 			updatedLogStream.Sink = httpSink
@@ -230,10 +230,10 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	logStreamName.RegisterStringU(cmd, &inputs.Name, "")
-	httpEndpoint.RegisterStringU(cmd, &inputs.HttpEndpoint, "")
-	httpContentType.RegisterStringU(cmd, &inputs.HttpContentType, "")
-	httpContentFormat.RegisterStringU(cmd, &inputs.HttpContentFormat, "")
-	httpAuthorization.RegisterStringU(cmd, &inputs.HttpAuthorization, "")
+	httpEndpoint.RegisterStringU(cmd, &inputs.HTTPEndpoint, "")
+	httpContentType.RegisterStringU(cmd, &inputs.HTTPContentType, "")
+	httpContentFormat.RegisterStringU(cmd, &inputs.HTTPContentFormat, "")
+	httpAuthorization.RegisterStringU(cmd, &inputs.HTTPAuthorization, "")
 
 	return cmd
 }

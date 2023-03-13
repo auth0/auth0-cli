@@ -116,7 +116,7 @@ install-with-cover: ## Install the cli binary for the native platform with cover
 
 lint: $(GO_BIN)/golangci-lint ## Run go linter checks
 	${call print, "Running golangci-lint over project"}
-	@golangci-lint run -v -c .golangci.yml ./...
+	@golangci-lint run -v --fix -c .golangci.yml ./...
 
 check-vuln: $(GO_BIN)/govulncheck ## Check go vulnerabilities
 	${call print, "Running govulncheck over project"}

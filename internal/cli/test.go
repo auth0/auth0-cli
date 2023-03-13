@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	NEW_CLIENT = "NEW CLIENT"
+	newClientOption = "NEW CLIENT"
 )
 
 var (
@@ -282,7 +282,7 @@ func selectClientToUseForTestsAndValidateExistence(cli *cli, cmd *cobra.Command,
 			return nil, err
 		}
 
-		if inputs.ClientID == NEW_CLIENT {
+		if inputs.ClientID == newClientOption {
 			client := &management.Client{
 				Name:             auth0.String(cliLoginTestingClientName),
 				Description:      auth0.String(cliLoginTestingClientDescription),
@@ -362,7 +362,7 @@ func (c *cli) appPickerWithCreateOption() (pickerOptions, error) {
 
 	enhancedOptions := []pickerOption{
 		{
-			value: NEW_CLIENT,
+			value: newClientOption,
 			label: "Create a new client to use for testing the login",
 		},
 	}

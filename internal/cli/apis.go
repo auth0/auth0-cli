@@ -74,11 +74,11 @@ func apisCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listApisCmd(cli))
-	cmd.AddCommand(createApiCmd(cli))
-	cmd.AddCommand(showApiCmd(cli))
-	cmd.AddCommand(updateApiCmd(cli))
-	cmd.AddCommand(deleteApiCmd(cli))
-	cmd.AddCommand(openApiCmd(cli))
+	cmd.AddCommand(createAPICmd(cli))
+	cmd.AddCommand(showAPICmd(cli))
+	cmd.AddCommand(updateAPICmd(cli))
+	cmd.AddCommand(deleteAPICmd(cli))
+	cmd.AddCommand(openAPICmd(cli))
 	cmd.AddCommand(scopesCmd(cli))
 
 	return cmd
@@ -142,7 +142,7 @@ func listApisCmd(cli *cli) *cobra.Command {
 				apis = append(apis, item.(*management.ResourceServer))
 			}
 
-			cli.renderer.ApiList(apis)
+			cli.renderer.APIList(apis)
 
 			return nil
 		},
@@ -154,7 +154,7 @@ func listApisCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func showApiCmd(cli *cli) *cobra.Command {
+func showAPICmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ID string
 	}
@@ -187,7 +187,7 @@ func showApiCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("Unable to get an API with Id '%s': %w", inputs.ID, err)
 			}
 
-			cli.renderer.ApiShow(api, cli.json)
+			cli.renderer.APIShow(api, cli.json)
 			return nil
 		},
 	}
@@ -197,7 +197,7 @@ func showApiCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func createApiCmd(cli *cli) *cobra.Command {
+func createAPICmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Name               string
 		Identifier         string
@@ -267,7 +267,7 @@ func createApiCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("An unexpected error occurred while attempting to create an API with name '%s' and identifier '%s': %w", inputs.Name, inputs.Identifier, err)
 			}
 
-			cli.renderer.ApiCreate(api)
+			cli.renderer.APICreate(api)
 			return nil
 		},
 	}
@@ -282,7 +282,7 @@ func createApiCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func updateApiCmd(cli *cli) *cobra.Command {
+func updateAPICmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ID                 string
 		Name               string
@@ -375,7 +375,7 @@ func updateApiCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("An unexpected error occurred while trying to update an API with Id '%s': %w", inputs.ID, err)
 			}
 
-			cli.renderer.ApiUpdate(api)
+			cli.renderer.APIUpdate(api)
 			return nil
 		},
 	}
@@ -389,7 +389,7 @@ func updateApiCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func deleteApiCmd(cli *cli) *cobra.Command {
+func deleteAPICmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ID string
 	}
@@ -439,7 +439,7 @@ func deleteApiCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func openApiCmd(cli *cli) *cobra.Command {
+func openAPICmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ID string
 	}
@@ -480,7 +480,7 @@ func openApiCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			openManageURL(cli, cli.config.DefaultTenant, formatApiSettingsPath(inputs.ID))
+			openManageURL(cli, cli.config.DefaultTenant, formatAPISettingsPath(inputs.ID))
 			return nil
 		},
 	}
@@ -532,7 +532,7 @@ func listScopesCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func formatApiSettingsPath(id string) string {
+func formatAPISettingsPath(id string) string {
 	if len(id) == 0 {
 		return ""
 	}

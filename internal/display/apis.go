@@ -67,7 +67,7 @@ func (v *apiTableView) Object() interface{} {
 	return v.raw
 }
 
-func (r *Renderer) ApiList(apis []*management.ResourceServer) {
+func (r *Renderer) APIList(apis []*management.ResourceServer) {
 	resource := "apis"
 
 	r.Heading(resource)
@@ -82,15 +82,15 @@ func (r *Renderer) ApiList(apis []*management.ResourceServer) {
 	results := []View{}
 
 	for _, api := range apis {
-		results = append(results, makeApiTableView(api))
+		results = append(results, makeAPITableView(api))
 	}
 
 	r.Results(results)
 }
 
-func (r *Renderer) ApiShow(api *management.ResourceServer, jsonFlag bool) {
+func (r *Renderer) APIShow(api *management.ResourceServer, jsonFlag bool) {
 	r.Heading("api")
-	view, scopesTruncated := makeApiView(api)
+	view, scopesTruncated := makeAPIView(api)
 	r.Result(view)
 	if scopesTruncated && !jsonFlag {
 		r.Newline()
@@ -98,19 +98,19 @@ func (r *Renderer) ApiShow(api *management.ResourceServer, jsonFlag bool) {
 	}
 }
 
-func (r *Renderer) ApiCreate(api *management.ResourceServer) {
+func (r *Renderer) APICreate(api *management.ResourceServer) {
 	r.Heading("api created")
-	view, _ := makeApiView(api)
+	view, _ := makeAPIView(api)
 	r.Result(view)
 }
 
-func (r *Renderer) ApiUpdate(api *management.ResourceServer) {
+func (r *Renderer) APIUpdate(api *management.ResourceServer) {
 	r.Heading("api updated")
-	view, _ := makeApiView(api)
+	view, _ := makeAPIView(api)
 	r.Result(view)
 }
 
-func makeApiView(api *management.ResourceServer) (*apiView, bool) {
+func makeAPIView(api *management.ResourceServer) (*apiView, bool) {
 	scopes, scopesTruncated := getScopes(api.GetScopes())
 	view := &apiView{
 		ID:            ansi.Faint(api.GetID()),
@@ -125,7 +125,7 @@ func makeApiView(api *management.ResourceServer) (*apiView, bool) {
 	return view, scopesTruncated
 }
 
-func makeApiTableView(api *management.ResourceServer) *apiTableView {
+func makeAPITableView(api *management.ResourceServer) *apiTableView {
 	scopes := len(api.GetScopes())
 
 	return &apiTableView{
