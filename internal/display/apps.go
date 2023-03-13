@@ -106,17 +106,9 @@ func (v *applicationView) Object() interface{} {
 func (r *Renderer) ApplicationList(clients []*management.Client, revealSecrets bool) {
 	resource := "applications"
 
-	r.Heading(fmt.Sprintf("%s (%v)", resource, len(clients)))
-
-	if len(clients) == 0 {
-		r.EmptyState(resource)
-		r.Infof("Use 'auth0 apps create' to add one")
-		return
-	}
-
-	var res []View
+	var appsToRender []View
 	for _, c := range clients {
-		if auth0.StringValue(c.Name) == deprecatedAppName {
+		if auth0.StringValue(c.Name) == deprecatedGlobalAppName {
 			continue
 		}
 
@@ -124,10 +116,18 @@ func (r *Renderer) ApplicationList(clients []*management.Client, revealSecrets b
 			c.ClientSecret = auth0.String("")
 		}
 
-		res = append(res, makeApplicationView(c, revealSecrets))
+		appsToRender = append(appsToRender, makeApplicationView(c, revealSecrets))
 	}
 
-	r.Results(res)
+	if len(clients) == 0 {
+		r.EmptyState(resource)
+		r.Infof("Use 'auth0 apps create' to add one")
+		return
+	}
+
+	r.Heading(fmt.Sprintf("%s (%v)", resource, len(appsToRender)))
+
+	r.Results(appsToRender)
 }
 
 func (r *Renderer) ApplicationShow(client *management.Client, revealSecrets bool) {
@@ -185,8 +185,7 @@ func makeApplicationView(client *management.Client, revealSecrets bool) *applica
 	}
 }
 
-// TODO(cyx): determine if there's a better way to filter this out.
-const deprecatedAppName = "All Applications"
+const deprecatedGlobalAppName = "All Applications" // Comparing on global app name because `global` boolean property is not returned by SDK
 
 func FriendlyAppType(appType string) string {
 	switch {
