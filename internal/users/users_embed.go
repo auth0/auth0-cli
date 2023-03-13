@@ -5,19 +5,19 @@ import (
 )
 
 var (
-	// EmptyExample ...
+	// EmptyExample for the user import options.
 	//go:embed data/empty-example.json
 	EmptyExample string
 
-	// BasicExample ...
+	// BasicExample for the user import options.
 	//go:embed data/basic-example.json
 	BasicExample string
 
-	// CustomPasswordHashExample ...
+	// CustomPasswordHashExample for the user import options.
 	//go:embed data/custom-password-hash-example.json
 	CustomPasswordHashExample string
 
-	// MFAFactors ...
+	// MFAFactors for the user import options.
 	//go:embed data/mfa-factors.json
 	MFAFactors string
 )
