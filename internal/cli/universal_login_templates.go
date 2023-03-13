@@ -16,7 +16,6 @@ import (
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/fsnotify/fsnotify"
-	"github.com/guiguan/caster"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -346,14 +345,14 @@ func previewTemplate(ctx context.Context, data *TemplateData) error {
 	}
 	defer listener.Close()
 
-	broadcaster, err := broadcastTemplateChanges(ctx, data.Filename)
+	changesChan, err := broadcastTemplateChanges(ctx, data.Filename)
 	if err != nil {
 		return err
 	}
 
 	requestTimeout := 10 * time.Minute
 	server := &http.Server{
-		Handler:      buildRoutes(requestTimeout, data, broadcaster),
+		Handler:      buildRoutes(requestTimeout, data, changesChan),
 		ReadTimeout:  requestTimeout + time.Minute,
 		WriteTimeout: requestTimeout + time.Minute,
 	}
@@ -384,15 +383,12 @@ func previewTemplate(ctx context.Context, data *TemplateData) error {
 func buildRoutes(
 	requestTimeout time.Duration,
 	data *TemplateData,
-	broadcaster *caster.Caster,
+	changesChan chan bool,
 ) *http.ServeMux {
 	router := http.NewServeMux()
 
 	router.HandleFunc("/dynamic/events", func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-
-		changes, _ := broadcaster.Sub(ctx, 1)
-		defer broadcaster.Unsub(changes)
 
 		writeStatus := func(w http.ResponseWriter, code int) {
 			msg := fmt.Sprintf("%d - %s", code, http.StatusText(http.StatusGone))
@@ -404,7 +400,7 @@ func buildRoutes(
 			writeStatus(w, http.StatusGone)
 		case <-time.After(requestTimeout):
 			writeStatus(w, http.StatusRequestTimeout)
-		case <-changes:
+		case <-changesChan:
 			writeStatus(w, http.StatusOK)
 		}
 	})
@@ -431,8 +427,8 @@ func buildRoutes(
 	return router
 }
 
-func broadcastTemplateChanges(ctx context.Context, filename string) (*caster.Caster, error) {
-	publisher := caster.New(ctx)
+func broadcastTemplateChanges(ctx context.Context, filename string) (chan bool, error) {
+	changesChan := make(chan bool)
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -442,12 +438,13 @@ func broadcastTemplateChanges(ctx context.Context, filename string) (*caster.Cas
 	go func() {
 		for {
 			select {
-			case _, ok := <-watcher.Events:
+			case event, ok := <-watcher.Events:
 				if !ok {
 					return
 				}
-				publisher.Pub(true)
-
+				if event.Op&fsnotify.Write == fsnotify.Write {
+					changesChan <- true
+				}
 			case _, ok := <-watcher.Errors:
 				if !ok {
 					return
@@ -459,12 +456,12 @@ func broadcastTemplateChanges(ctx context.Context, filename string) (*caster.Cas
 	go func() {
 		<-ctx.Done()
 		watcher.Close()
-		publisher.Close()
+		close(changesChan)
 	}()
 
 	if err := watcher.Add(filepath.Dir(filename)); err != nil {
 		return nil, err
 	}
 
-	return publisher, nil
+	return changesChan, nil
 }
