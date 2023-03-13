@@ -108,10 +108,6 @@ func (r *Renderer) ApplicationList(clients []*management.Client, revealSecrets b
 
 	var appsToRender []View
 	for _, c := range clients {
-		if auth0.StringValue(c.Name) == deprecatedGlobalAppName {
-			continue
-		}
-
 		if !revealSecrets {
 			c.ClientSecret = auth0.String("")
 		}
@@ -184,8 +180,6 @@ func makeApplicationView(client *management.Client, revealSecrets bool) *applica
 		raw:               client,
 	}
 }
-
-const deprecatedGlobalAppName = "All Applications" // Comparing on global app name because `global` boolean property is not returned by SDK
 
 func FriendlyAppType(appType string) string {
 	switch {
