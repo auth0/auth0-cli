@@ -14,7 +14,7 @@
 
 Build, manage and test your [Auth0](https://auth0.com/) integrations from the command line.
 
-![demo](./demo.gif)
+![demo](./docs/assets/screen-recordings/assign-user-role.gif)
 
 ## Highlights
 
@@ -136,7 +136,7 @@ export EDITOR="code --wait"
 
 # Uses sublime text with the --wait flag.
 export EDITOR="subl --wait"
- 
+
 # Uses nano, a terminal based editor.
 export EDITOR="nano"
 
