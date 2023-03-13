@@ -7,6 +7,7 @@ require (
 	github.com/auth0/go-auth0 v0.15.1
 	github.com/briandowns/spinner v1.23.0
 	github.com/charmbracelet/glamour v0.6.0
+	github.com/fsnotify/fsnotify v1.6.0
 	github.com/getsentry/sentry-go v0.19.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.9
@@ -25,6 +26,7 @@ require (
 	github.com/tidwall/pretty v1.2.1
 	github.com/zalando/go-keyring v0.2.2
 	golang.org/x/oauth2 v0.6.0
+	golang.org/x/sync v0.1.0
 	golang.org/x/sys v0.6.0
 	golang.org/x/term v0.6.0
 	golang.org/x/text v0.8.0

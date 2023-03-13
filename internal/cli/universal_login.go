@@ -1,17 +1,13 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
-	"net/http"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
-	"github.com/auth0/auth0-cli/internal/iostream"
-	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
 var (
@@ -54,8 +50,6 @@ var (
 		Help:         "URL for the custom font. The URL must point to a font file and not a stylesheet. Must use HTTPS.",
 		AlwaysPrompt: true,
 	}
-
-	errNotAllowed = errors.New("this feature requires at least one custom domain to be set and verified for the tenant")
 )
 
 func universalLoginCmd(cli *cli) *cobra.Command {
@@ -249,134 +243,4 @@ func updateUniversalLoginCmd(cli *cli) *cobra.Command {
 	brandingFont.RegisterStringU(cmd, &inputs.CustomFontURL, "")
 
 	return cmd
-}
-
-func showBrandingTemplateCmd(cli *cli) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "show",
-		Args:  cobra.NoArgs,
-		Short: "Display the custom template for Universal Login",
-		Long:  "Display the custom template for the Universal Login experience.",
-		Example: `  auth0 universal-login templates show
-  auth0 ul templates show`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			var template *management.BrandingUniversalLogin
-			if err := ansi.Waiting(func() (err error) {
-				template, err = cli.api.Branding.UniversalLogin()
-				if err != nil {
-					if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusNotFound {
-						return nil
-					}
-					return err
-				}
-
-				return nil
-			}); err != nil {
-				return fmt.Errorf("failed to load the Universal Login template: %w", err)
-			}
-
-			cli.renderer.Heading("universal login template")
-
-			if template == nil {
-				cli.renderer.Infof("No custom template found. To set one, run: `auth0 universal-login templates update`.")
-			}
-
-			fmt.Println(template.GetBody())
-
-			return nil
-		},
-	}
-
-	return cmd
-}
-
-func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "update",
-		Args:  cobra.NoArgs,
-		Short: "Update the custom template for Universal Login",
-		Long:  "Update the custom template for Universal Login.",
-		Example: `  auth0 universal-login templates update
-  auth0 ul templates update
-  cat path/to/body.html | auth0 ul templates update`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := isCustomDomainEnabled(cli.api); err != nil {
-				return err
-			}
-
-			var currentTemplate *management.BrandingUniversalLogin
-			if err := ansi.Waiting(func() (err error) {
-				currentTemplate, err = cli.api.Branding.UniversalLogin()
-				if err != nil {
-					if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusNotFound {
-						return nil
-					}
-					return err
-				}
-
-				return nil
-			}); err != nil {
-				return fmt.Errorf("failed to load the Universal Login template: %w", err)
-			}
-
-			onInfo := func() {
-				cli.renderer.Infof(
-					"%s Once you close the editor, you'll be prompted to save your changes. To cancel, press CTRL+C.",
-					ansi.Faint("Hint:"),
-				)
-			}
-
-			body := string(iostream.PipedInput())
-			err := textBody.OpenEditor(cmd, &body, currentTemplate.GetBody(), "ul-template.*.html", onInfo)
-			if err != nil {
-				return fmt.Errorf("failed to capture input from the editor: %w", err)
-			}
-
-			if !cli.force && canPrompt(cmd) {
-				var confirmed bool
-				if err := prompt.AskBool("Do you want to save the template?", &confirmed, true); err != nil {
-					return fmt.Errorf("failed to capture prompt input: %w", err)
-				}
-				if !confirmed {
-					return nil
-				}
-			}
-
-			if err = ansi.Waiting(func() error {
-				return cli.api.Branding.SetUniversalLogin(
-					&management.BrandingUniversalLogin{
-						Body: &body,
-					},
-				)
-			}); err != nil {
-				return fmt.Errorf("failed to update the Universal Login template: %w", err)
-			}
-
-			return nil
-		},
-	}
-
-	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
-
-	return cmd
-}
-
-func isCustomDomainEnabled(api *auth0.API) error {
-	domains, err := api.CustomDomain.List()
-	if err != nil {
-		// 403 is a valid response for free tenants that don't have custom domains enabled
-		if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusForbidden {
-			return errNotAllowed
-		}
-
-		return err
-	}
-
-	for _, domain := range domains {
-		if domain.GetStatus() == "ready" {
-			return nil
-		}
-	}
-
-	return errNotAllowed
 }

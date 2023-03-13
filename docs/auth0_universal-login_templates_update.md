@@ -5,7 +5,7 @@ has_toc: false
 ---
 # auth0 universal-login templates update
 
-Update the custom template for Universal Login.
+Update the custom template for the New Universal Login Experience.
 
 ## Usage
 ```
@@ -17,7 +17,6 @@ auth0 universal-login templates update [flags]
 ```
   auth0 universal-login templates update
   auth0 ul templates update
-  cat path/to/body.html | auth0 ul templates update
 ```
 
 

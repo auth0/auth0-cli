@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="{{locale}}">
+  <head>
+    {%- auth0:head -%}
+    <style>
+      body {
+        background-image: url("https://images.unsplash.com/photo-1643916861364-02e63ce3e52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2255&q=80");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+      }
+      .prompt-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        width: 600px;
+        height: 100%;
+        justify-content: center;
+        background-color: rgb(171,153,191);
+      }
+    </style>
+    <title>{{ prompt.screen.texts.pageTitle }}</title>
+  </head>
+  <body class="_widget-auto-layout">
+    {% if prompt.name == "login" or prompt.name == "signup" %}
+        <div class="prompt-wrapper">
+        {%- auth0:widget -%}
+        </div>
+    {% else %}
+        {%- auth0:widget -%}
+    {% endif %}
+  </body>
+  <scr`+`ipt>
+    {% comment %}Wrap script tags as explained here: https://community.auth0.com/t/the-script-tag-breaks-the-auth0-cli-storybook/90526{% endcomment %}
+  </scr`+`ipt>
+</html>

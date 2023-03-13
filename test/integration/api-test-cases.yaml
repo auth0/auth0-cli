@@ -1,0 +1,31 @@
+config:
+  inherit-env: true
+
+tests:
+  001 - it successfully uses the api command to fetch tenant settings:
+    command: auth0 api get "tenants/settings" --query "include_fields=true" --query "fields=idle_session_lifetime"
+    exit-code: 0
+    stdout:
+      contains:
+        - "idle_session_lifetime"
+
+  002 - it successfully uses the api command to patch tenant settings with piped data:
+    command: cat ./test/integration/fixtures/update-tenant-settings.json | auth0 api patch "tenants/settings" && auth0 api get "tenants/settings" --query "include_fields=true" --query "fields=idle_session_lifetime"
+    exit-code: 0
+    stdout:
+      json:
+        idle_session_lifetime: "73"
+
+  003 - it successfully uses the api command to patch tenant settings:
+    command: auth0 api patch "tenants/settings" --data "{\"idle_session_lifetime\":72}" && auth0 api get "tenants/settings" --query "include_fields=true" --query "fields=idle_session_lifetime"
+    exit-code: 0
+    stdout:
+      json:
+        idle_session_lifetime: "72"
+
+  004 - it fails to use the api command to patch tenant settings with invalid json:
+    command: auth0 api patch "tenants/settings" --data "{\"idle_session_lifetime:72}"
+    exit-code: 1
+    stderr:
+      contains:
+        - "failed to parse command inputs: invalid json data given"
