@@ -225,7 +225,7 @@ func listAppsCmd(cli *cli) *cobra.Command {
 				cmd.Context(),
 				inputs.Number,
 				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
-					opts = append(opts, management.Parameter("is_global", "false")) // Excluding deprecated global client from list
+					opts = append(opts, management.Parameter("is_global", "false"))
 					res, apiErr := cli.api.Client.List(opts...)
 					if apiErr != nil {
 						return nil, false, apiErr
