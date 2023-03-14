@@ -35,10 +35,11 @@ var (
 	}
 
 	qsStack = Flag{
-		Name:       "Stack",
-		LongForm:   "stack",
-		ShortForm:  "s",
-		Help:       "Tech/Language of the quickstart sample to download.",
+		Name:      "Stack",
+		LongForm:  "stack",
+		ShortForm: "s",
+		Help: "Tech/language of the Quickstart sample to download. " +
+			"You can use the 'auth0 quickstarts list' command to see all available tech stacks. ",
 		IsRequired: true,
 	}
 )
@@ -98,9 +99,12 @@ func downloadQuickstartCmd(cli *cli) *cobra.Command {
 		Short: "Download a Quickstart sample app for a specific tech stack",
 		Long: "Download a Quickstart sample application for that’s already configured for your Auth0 application. " +
 			"There are many different tech stacks available.",
-		Example: `  auth0 quickstarts download --stack <stack>
-  auth0 qs download -s <stack>
-  auth0 qs download -s "Next.js"`,
+		Example: `  auth0 quickstarts download
+  auth0 quickstarts download <app-id>
+  auth0 quickstarts download <app-id> --stack <stack>
+  auth0 qs download <app-id> -s <stack>
+  auth0 qs download <app-id> -s "Next.js"
+  auth0 qs download <app-id> -s "Next.js" --force`,
 		RunE: downloadQuickstart(cli, &inputs),
 	}
 

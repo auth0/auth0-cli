@@ -116,10 +116,6 @@ func (r *Renderer) ApplicationList(clients []*management.Client, revealSecrets b
 
 	var res []View
 	for _, c := range clients {
-		if auth0.StringValue(c.Name) == deprecatedAppName {
-			continue
-		}
-
 		if !revealSecrets {
 			c.ClientSecret = auth0.String("")
 		}
@@ -184,9 +180,6 @@ func makeApplicationView(client *management.Client, revealSecrets bool) *applica
 		raw:               client,
 	}
 }
-
-// TODO(cyx): determine if there's a better way to filter this out.
-const deprecatedAppName = "All Applications"
 
 func FriendlyAppType(appType string) string {
 	switch {
