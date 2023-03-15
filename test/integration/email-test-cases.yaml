@@ -1,0 +1,156 @@
+config:
+  inherit-env: true
+
+tests:
+  001 - configure and enable email provider:
+    command: sh ./test/integration/scripts/create-email-provider.sh
+    exit-code: 0
+
+  002 - it successfully updates welcome email template:
+    command: auth0 email templates update welcome --enabled --body "<h1>Welcome!</h1>" --from "welcome@travel0.com" --lifetime 6100 --subject "Welcome to Travel0" --url "travel0.com" --force
+    exit-code: 0
+
+  003 - it successfully shows welcome email template:
+    command: auth0 email templates show welcome
+    exit-code: 0
+    stdout:
+      contains:
+        - TEMPLATE             Welcome Email
+        - FROM                 welcome@travel0.com
+        - SUBJECT              Welcome to Travel0
+        - RESULT URL           travel0.com
+        - RESULT URL LIFETIME  6100
+        - ENABLED              ✓
+  004 - it successfully updates verify-link email template:
+    command: auth0 email templates update verify-link --enabled --body "<h1>Verify link</h1>" --from "verify@travel0.com" --lifetime 6100 --subject "Verify link" --url "travel0.com" --force
+    exit-code: 0
+
+  005 - it successfully shows verify-link email template:
+    command: auth0 email templates show verify-link
+    exit-code: 0
+    stdout:
+      contains:
+        - TEMPLATE             Verification Email (using Link)
+        - FROM                 verify@travel0.com
+        - SUBJECT              Verify link
+        - RESULT URL           travel0.com
+        - RESULT URL LIFETIME  6100
+        - ENABLED              ✓
+  006 - it successfully updates verify-code email template:
+    command: auth0 email templates update verify-code --enabled --body "<h1>Verify code</h1>" --from "verify@travel0.com" --lifetime 6100 --subject "Verify code" --url "travel0.com" --force
+    exit-code: 0
+
+  007 - it successfully shows verify-code email template:
+    command: auth0 email templates show verify-code
+    exit-code: 0
+    stdout:
+      contains:
+        - TEMPLATE             Verification Email (using Code)
+        - FROM                 verify@travel0.com
+        - SUBJECT              Verify code
+        - RESULT URL           travel0.com
+        - RESULT URL LIFETIME  6100
+        - ENABLED              ✓
+  008 - it successfully updates change-password email template:
+    command: auth0 email templates update change-password --enabled --body "<h1>Change password</h1>" --from "change-password@travel0.com" --lifetime 6100 --subject "Change password" --url "travel0.com" --force
+    exit-code: 0
+
+  009 - it successfully shows change-password email template:
+    command: auth0 email templates show change-password
+    exit-code: 0
+    stdout:
+      contains:
+        - TEMPLATE             reset_email
+        - FROM                 change-password@travel0.com
+        - SUBJECT              Change password
+        - RESULT URL           travel0.com
+        - RESULT URL LIFETIME  6100
+        - ENABLED              ✓
+  010 - it successfully updates blocked-account email template:
+    command: auth0 email templates update blocked-account --enabled --body "<h1>Change password</h1>" --from "blocked@travel0.com" --lifetime 6100 --subject "Blocked!" --url "travel0.com" --force
+    exit-code: 0
+
+  011 - it successfully shows blocked-account email template:
+    command: auth0 email templates show blocked-account
+    exit-code: 0
+    stdout:
+      contains:
+        - TEMPLATE             Blocked Account Email
+        - FROM                 blocked@travel0.com
+        - SUBJECT              Blocked!
+        - RESULT URL           travel0.com
+        - RESULT URL LIFETIME  6100
+        - ENABLED              ✓
+  012 - it successfully updates password-breach email template:
+    command: auth0 email templates update password-breach --enabled --body "<h1>Password breached</h1>" --from "security@travel0.com" --lifetime 6100 --subject "Breached Password!" --url "travel0.com" --force
+    exit-code: 0
+
+  013 - it successfully shows password-breach email template:
+    command: auth0 email templates show password-breach
+    exit-code: 0
+    stdout:
+      contains:
+        - TEMPLATE             Password Breach Alert
+        - FROM                 security@travel0.com
+        - SUBJECT              Breached Password!
+        - RESULT URL           travel0.com
+        - RESULT URL LIFETIME  6100
+        - ENABLED              ✓
+  014 - it successfully updates mfa-enrollment email template:
+    command: auth0 email templates update mfa-enrollment --enabled --body "<h1>Enroll in MFA</h1>" --from "security@travel0.com" --lifetime 6100 --subject "Enroll in MFA!" --url "travel0.com" --force
+    exit-code: 0
+
+  015 - it successfully shows mfa-enrollment email template:
+    command: auth0 email templates show mfa-enrollment
+    exit-code: 0
+    stdout:
+      contains:
+        - TEMPLATE             Enroll in Multifactor Authentication
+        - FROM                 security@travel0.com
+        - SUBJECT              Enroll in MFA!
+        - RESULT URL           travel0.com
+        - RESULT URL LIFETIME  6100
+        - ENABLED              ✓
+  016 - it successfully updates mfa-code email template:
+    command: auth0 email templates update mfa-code --enabled --body "<h1>MFA Enrollment code</h1>" --from "security@travel0.com" --lifetime 6100 --subject "MFA Enrollment Code" --url "travel0.com" --force
+    exit-code: 0
+
+  017 - it successfully shows mfa-code email template:
+    command: auth0 email templates show mfa-code
+    exit-code: 0
+    stdout:
+      contains:
+        - TEMPLATE             Verification Code for Email MFA
+        - FROM                 security@travel0.com
+        - SUBJECT              MFA Enrollment Code
+        - RESULT URL           travel0.com
+        - RESULT URL LIFETIME  6100
+        - ENABLED              ✓
+  018 - it successfully updates user-invitation email template:
+    command: auth0 email templates update user-invitation --enabled --body "<h1>You are invited!</h1>" --from "invited@travel0.com" --lifetime 6100 --subject "You are invited!" --url "travel0.com" --force
+    exit-code: 0
+
+  019 - it successfully shows user-invitation email template:
+    command: auth0 email templates show user-invitation
+    exit-code: 0
+    stdout:
+      contains:
+        - TEMPLATE             User Invitation
+        - FROM                 invited@travel0.com
+        - SUBJECT              You are invited!
+        - RESULT URL           travel0.com
+        - RESULT URL LIFETIME  6100
+        - ENABLED              ✓
+  020 - it successfully shows user-invitation email template (json):
+    command: "auth0 email templates show user-invitation --json | jq ."
+    exit-code: 0
+    stdout:
+      json:
+        template: "user_invitation"
+        body: "<h1>You are invited!</h1>"
+        from: "invited@travel0.com"
+        resultUrl: "travel0.com"
+        subject: "You are invited!"
+        syntax: "liquid"
+        urlLifetimeInSeconds: "6100"
+        enabled: "true"
