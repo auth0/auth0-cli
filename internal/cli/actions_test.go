@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/auth0/mock"
 	"github.com/auth0/auth0-cli/internal/display"
 )
 
@@ -20,7 +21,7 @@ func TestActionsDeployCmd(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		actionAPI := auth0.NewMockActionAPI(ctrl)
+		actionAPI := mock.NewMockActionAPI(ctrl)
 		actionAPI.EXPECT().
 			Deploy(actionID).
 			Return(nil, nil)
@@ -77,7 +78,7 @@ func TestActionsDeployCmd(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		actionAPI := auth0.NewMockActionAPI(ctrl)
+		actionAPI := mock.NewMockActionAPI(ctrl)
 		actionAPI.EXPECT().
 			Deploy(actionID).
 			Return(nil, fmt.Errorf("400 Bad Request"))
@@ -103,7 +104,7 @@ func TestActionsDeployCmd(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		actionAPI := auth0.NewMockActionAPI(ctrl)
+		actionAPI := mock.NewMockActionAPI(ctrl)
 		actionAPI.EXPECT().
 			Deploy(actionID).
 			Return(nil, nil)
