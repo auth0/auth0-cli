@@ -32,12 +32,13 @@ linters-settings:
     capital: true
   goimports:
     local-prefixes: "github.com/auth0/auth0-cli"
-  revive:
-    rules:
-      - name: package-comments
-        severity: warning
-        disabled: true
 
 issues:
   exclude-use-default: false
-  fix: true
+  exclude:
+    - "should have a package comment"
+    - "package comment should be of the form"
+    - "should have comment"
+    - "be unexported"
+    - "error strings should not be capitalized or end with punctuation or a newline"
+    - "blank-imports"

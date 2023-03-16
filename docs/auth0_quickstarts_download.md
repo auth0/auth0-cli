@@ -15,9 +15,12 @@ auth0 quickstarts download [flags]
 ## Examples
 
 ```
-  auth0 quickstarts download --stack <stack>
-  auth0 qs download -s <stack>
-  auth0 qs download -s "Next.js"
+  auth0 quickstarts download
+  auth0 quickstarts download <app-id>
+  auth0 quickstarts download <app-id> --stack <stack>
+  auth0 qs download <app-id> -s <stack>
+  auth0 qs download <app-id> -s "Next.js"
+  auth0 qs download <app-id> -s "Next.js" --force
 ```
 
 
@@ -25,7 +28,7 @@ auth0 quickstarts download [flags]
 
 ```
       --force          Skip confirmation.
-  -s, --stack string   Tech/Language of the quickstart sample to download.
+  -s, --stack string   Tech/language of the Quickstart sample to download. You can use the 'auth0 quickstarts list' command to see all available tech stacks. 
 ```
 
 

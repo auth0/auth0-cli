@@ -78,10 +78,9 @@ func TestAPICmdInputs_FromArgs(t *testing.T) {
 			if testCase.expectedError != "" {
 				assert.EqualError(t, err, testCase.expectedError)
 				return
-			} else {
-				assert.NoError(t, err)
 			}
 
+			assert.NoError(t, err)
 			assert.Equal(t, testCase.expectedMethod, actualInputs.Method)
 			assert.Equal(t, testCase.expectedURL, actualInputs.URL.String())
 		})

@@ -48,12 +48,10 @@ func (v *logView) getConnection() string {
 				return v
 			}
 			return notApplicable
-		} else {
-			return notApplicable
 		}
-	} else {
 		return notApplicable
 	}
+	return notApplicable
 }
 
 func (v *logView) AsTableRow() []string {

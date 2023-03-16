@@ -232,9 +232,8 @@ func openEditorFlag(cmd *cobra.Command, f *Flag, value *string, defaultValue str
 	if shouldAsk(cmd, f, false) { // Always open the editor on update
 		if isUpdate {
 			return openUpdateEditor(cmd, f, value, defaultValue, filename)
-		} else {
-			return openCreateEditor(cmd, f, value, defaultValue, filename, infoFn, tempFileFn)
 		}
+		return openCreateEditor(cmd, f, value, defaultValue, filename, infoFn, tempFileFn)
 	}
 
 	return nil

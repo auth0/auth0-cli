@@ -10,6 +10,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -224,6 +225,7 @@ func listAppsCmd(cli *cli) *cobra.Command {
 				cmd.Context(),
 				inputs.Number,
 				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
+					opts = append(opts, management.Parameter("is_global", "false"))
 					res, apiErr := cli.api.Client.List(opts...)
 					if apiErr != nil {
 						return nil, false, apiErr
@@ -885,7 +887,12 @@ func (c *cli) appPickerOptions(requestOpts ...management.RequestOption) pickerOp
 		var priorityOpts, opts pickerOptions
 		for _, client := range clientList.Clients {
 			value := client.GetClientID()
-			label := fmt.Sprintf("%s %s", client.GetName(), ansi.Faint("("+value+")"))
+			label := fmt.Sprintf(
+				"%s [%s] %s",
+				client.GetName(),
+				display.ApplyColorToFriendlyAppType(display.FriendlyAppType(client.GetAppType())),
+				ansi.Faint("("+value+")"),
+			)
 			option := pickerOption{value: value, label: label}
 
 			if tenant.DefaultAppID == client.GetClientID() {
