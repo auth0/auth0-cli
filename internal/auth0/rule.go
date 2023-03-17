@@ -1,4 +1,4 @@
-//go:generate mockgen -source=rule.go -destination=rule_mock.go -package=auth0
+//go:generate mockgen -source=rule.go -destination=mock/rule_mock.go -package=mock
 
 package auth0
 

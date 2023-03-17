@@ -9,6 +9,7 @@ import (
 	"github.com/golang/mock/gomock"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/auth0/mock"
 	"github.com/auth0/auth0-cli/internal/display"
 )
 
@@ -50,7 +51,7 @@ func TestAppsListCmd(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			clientAPI := auth0.NewMockClientAPI(ctrl)
+			clientAPI := mock.NewMockClientAPI(ctrl)
 			clientAPI.EXPECT().
 				List(gomock.Any()).
 				Return(&management.ClientList{
