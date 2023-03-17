@@ -9,10 +9,10 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -62,7 +62,7 @@ type (
 		RawQueryParams map[string]string
 		Method         string
 		URL            *url.URL
-		Data           io.Reader
+		Data           interface{}
 	}
 )
 
@@ -131,26 +131,25 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 
 		var response *http.Response
 		if err := ansi.Waiting(func() error {
-			request, err := http.NewRequestWithContext(
-				cmd.Context(),
+			request, err := cli.api.HTTPClient.NewRequest(
 				inputs.Method,
 				inputs.URL.String(),
 				inputs.Data,
+				management.Context(cmd.Context()),
 			)
 			if err != nil {
 				return err
 			}
 
-			accessToken := getAccessToken(cli.config.Tenants[cli.tenant])
-			request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-			request.Header.Set("Content-Type", "application/json")
-			request.Header.Set("User-Agent", fmt.Sprintf("%s/%s", userAgent, strings.TrimPrefix(buildinfo.Version, "v")))
-
 			if cli.debug {
-				cli.renderer.Infof("[%s]: %s", request.Method, request.URL.String())
+				cli.renderer.Infof("Sending the following request: %+v", map[string]interface{}{
+					"method":  request.Method,
+					"url":     request.URL.String(),
+					"payload": inputs.Data,
+				})
 			}
 
-			response, err = http.DefaultClient.Do(request)
+			response, err = cli.api.HTTPClient.Do(request)
 			return err
 		}); err != nil {
 			return fmt.Errorf("failed to send request: %w", err)
@@ -232,11 +231,11 @@ func (i *apiCmdInputs) validateAndSetData() error {
 		)
 	}
 
-	if len(data) > 0 && !json.Valid(data) {
-		return fmt.Errorf("invalid json data given: %s", data)
+	if len(data) > 0 {
+		if err := json.Unmarshal(data, &i.Data); err != nil {
+			return fmt.Errorf("invalid json data given: %w", err)
+		}
 	}
-
-	i.Data = bytes.NewReader(data)
 
 	return nil
 }
