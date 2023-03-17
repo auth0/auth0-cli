@@ -62,7 +62,7 @@ type (
 		RawQueryParams map[string]string
 		Method         string
 		URL            *url.URL
-		Data           []byte
+		Data           interface{}
 	}
 )
 
@@ -131,17 +131,10 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 
 		var response *http.Response
 		if err := ansi.Waiting(func() error {
-			var data interface{}
-			if string(inputs.Data) != "" {
-				if err := json.Unmarshal(inputs.Data, &data); err != nil {
-					return fmt.Errorf("invalid json provided: %w", err)
-				}
-			}
-
 			request, err := cli.api.HTTPClient.NewRequest(
 				inputs.Method,
 				inputs.URL.String(),
-				data,
+				inputs.Data,
 				management.Context(cmd.Context()),
 			)
 			if err != nil {
@@ -152,7 +145,7 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 				cli.renderer.Infof("Sending the following request: %+v", map[string]interface{}{
 					"method":  request.Method,
 					"url":     request.URL.String(),
-					"payload": data,
+					"payload": inputs.Data,
 				})
 			}
 
@@ -238,11 +231,11 @@ func (i *apiCmdInputs) validateAndSetData() error {
 		)
 	}
 
-	if len(data) > 0 && !json.Valid(data) {
-		return fmt.Errorf("invalid json data given: %s", data)
+	if len(data) > 0 {
+		if err := json.Unmarshal(data, &i.Data); err != nil {
+			return fmt.Errorf("invalid json data given: %w", err)
+		}
 	}
-
-	i.Data = data
 
 	return nil
 }
