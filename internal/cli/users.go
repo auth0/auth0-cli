@@ -245,7 +245,7 @@ func createUserCmd(cli *cli) *cobra.Command {
 			}
 
 			// //Prompt for user password
-			if err := userPassword.AskPassword(cmd, &inputs.Password, nil); err != nil {
+			if err := userPassword.AskPassword(cmd, &inputs.Password); err != nil {
 				return err
 			}
 
@@ -443,7 +443,7 @@ func updateUserCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := userPassword.AskPasswordU(cmd, &inputs.Password, current.Password); err != nil {
+			if err := userPassword.AskPasswordU(cmd, &inputs.Password); err != nil {
 				return err
 			}
 
