@@ -6,7 +6,7 @@
 NAME := auth0-cli
 GO_PKG := github.com/auth0/$(NAME)
 GO_BIN ?= $(shell go env GOPATH)/bin
-GO_PACKAGES := $(shell go list ./... | grep -v vendor)
+GO_PACKAGES := $(shell go list ./... | grep -vE "vendor|tools|mock")
 
 ## Configuration for build-info
 BUILD_DIR ?= $(CURDIR)/out

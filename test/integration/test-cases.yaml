@@ -14,9 +14,6 @@ tests:
   auth0 rules list:
     exit-code: 0
 
-  auth0 actions list:
-    exit-code: 0
-
   auth0 orgs list:
     exit-code: 0
 

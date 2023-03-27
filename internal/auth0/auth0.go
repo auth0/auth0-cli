@@ -27,6 +27,8 @@ type API struct {
 	Tenant           TenantAPI
 	User             UserAPI
 	Jobs             JobsAPI
+
+	HTTPClient HTTPClientAPI
 }
 
 func NewAPI(m *management.Management) *API {
@@ -50,6 +52,7 @@ func NewAPI(m *management.Management) *API {
 		Tenant:           m.Tenant,
 		User:             m.User,
 		Jobs:             m.Job,
+		HTTPClient:       m,
 	}
 }
 
