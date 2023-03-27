@@ -55,5 +55,6 @@ func TestGenerateState(t *testing.T) {
 
 	state, err = generateState(cliLoginTestingStateSize)
 	assert.IsType(t, "string", state)
+	assert.Equal(t, cliLoginTestingStateSize, len(state))
 	assert.Nil(t, err)
 }
