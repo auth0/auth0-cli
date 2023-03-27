@@ -148,7 +148,7 @@ func (f *Flag) RegisterBoolU(cmd *cobra.Command, value *bool, defaultValue bool)
 
 func askFlag(cmd *cobra.Command, f *Flag, value interface{}, defaultValue *string, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
-		return ask(cmd, f, value, defaultValue, isUpdate)
+		return ask(f, value, defaultValue, isUpdate)
 	}
 
 	return nil
@@ -158,7 +158,7 @@ func askManyFlag(cmd *cobra.Command, f *Flag, value interface{}, defaultValue *s
 	if shouldAsk(cmd, f, isUpdate) {
 		var strInput string
 
-		if err := ask(cmd, f, &strInput, defaultValue, isUpdate); err != nil {
+		if err := ask(f, &strInput, defaultValue, isUpdate); err != nil {
 			return err
 		}
 
@@ -170,7 +170,7 @@ func askManyFlag(cmd *cobra.Command, f *Flag, value interface{}, defaultValue *s
 
 func askBoolFlag(cmd *cobra.Command, f *Flag, value *bool, defaultValue *bool, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
-		if err := askBool(cmd, f, value, defaultValue); err != nil {
+		if err := askBool(f, value, defaultValue); err != nil {
 			return err
 		}
 	}
@@ -180,7 +180,7 @@ func askBoolFlag(cmd *cobra.Command, f *Flag, value *bool, defaultValue *bool, i
 
 func askIntFlag(cmd *cobra.Command, f *Flag, value *int, defaultValue *string, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
-		return askInt(cmd, f, value, defaultValue, isUpdate)
+		return askInt(f, value, defaultValue, isUpdate)
 	}
 	return nil
 }

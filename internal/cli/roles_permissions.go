@@ -281,11 +281,9 @@ func (c *cli) pickRolePermissions(apiScopes []management.ResourceServerScope, pe
 		Options: options,
 	}
 
-	if err := survey.AskOne(p, permissions); err != nil {
-		return err
-	}
+	err := survey.AskOne(p, permissions)
 
-	return nil
+	return err
 }
 
 func makePermissions(id string, permissions []string) []*management.Permission {

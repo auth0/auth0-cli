@@ -18,7 +18,7 @@ type commandInput interface {
 	GetIsRequired() bool
 }
 
-func ask(cmd *cobra.Command, i commandInput, value interface{}, defaultValue *string, isUpdate bool) error {
+func ask(i commandInput, value interface{}, defaultValue *string, isUpdate bool) error {
 	isRequired := isInputRequired(i, isUpdate)
 	input := prompt.TextInput("", i.GetLabel(), i.GetHelp(), auth0.StringValue(defaultValue), isRequired)
 
@@ -29,7 +29,7 @@ func ask(cmd *cobra.Command, i commandInput, value interface{}, defaultValue *st
 	return nil
 }
 
-func askBool(cmd *cobra.Command, i commandInput, value *bool, defaultValue *bool) error {
+func askBool(i commandInput, value *bool, defaultValue *bool) error {
 	if err := prompt.AskBool(i.GetLabel(), value, auth0.BoolValue(defaultValue)); err != nil {
 		return handleInputError(err)
 	}
@@ -37,7 +37,7 @@ func askBool(cmd *cobra.Command, i commandInput, value *bool, defaultValue *bool
 	return nil
 }
 
-func askInt(cmd *cobra.Command, i commandInput, value *int, defaultValue *string, isUpdate bool) error {
+func askInt(i commandInput, value *int, defaultValue *string, isUpdate bool) error {
 	isRequired := isInputRequired(i, isUpdate)
 	input := prompt.TextInput(i.GetName(), i.GetLabel(), i.GetHelp(), auth0.StringValue(defaultValue), isRequired)
 
@@ -50,7 +50,7 @@ func askInt(cmd *cobra.Command, i commandInput, value *int, defaultValue *string
 
 func askPassword(cmd *cobra.Command, i commandInput, value interface{}, defaultValue *string, isUpdate bool) error {
 	isRequired := isInputRequired(i, isUpdate)
-	input := prompt.PasswordInput("", i.GetLabel(), auth0.StringValue(defaultValue), isRequired)
+	input := prompt.PasswordInput("", i.GetLabel(), isRequired)
 
 	if err := prompt.AskOne(input, value); err != nil {
 		return handleInputError(err)
