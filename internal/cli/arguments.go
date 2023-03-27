@@ -59,7 +59,7 @@ func (a *Argument) Pick(cmd *cobra.Command, result *string, fn pickerOptionsFunc
 
 func selectArgument(cmd *cobra.Command, a *Argument, value interface{}, options []string, defaultValue *string) error {
 	if canPrompt(cmd) {
-		return _select(cmd, a, value, options, defaultValue, false)
+		return _select(a, value, options, defaultValue, false)
 	}
 
 	return fmt.Errorf("Missing a required argument: %s", a.GetName())

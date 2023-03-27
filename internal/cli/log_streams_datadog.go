@@ -60,7 +60,7 @@ func createLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := datadogAPIKey.AskPassword(cmd, &inputs.DatadogAPIKey, nil); err != nil {
+			if err := datadogAPIKey.AskPassword(cmd, &inputs.DatadogAPIKey); err != nil {
 				return err
 			}
 
@@ -146,7 +146,7 @@ func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := datadogAPIKey.AskPasswordU(cmd, &inputs.DatadogAPIKey, datadogSink.APIKey); err != nil {
+			if err := datadogAPIKey.AskPasswordU(cmd, &inputs.DatadogAPIKey); err != nil {
 				return err
 			}
 
