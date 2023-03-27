@@ -6,7 +6,6 @@ import (
 
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/auth0/go-auth0"
-	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
@@ -18,7 +17,7 @@ type commandInput interface {
 	GetIsRequired() bool
 }
 
-func ask(cmd *cobra.Command, i commandInput, value interface{}, defaultValue *string, isUpdate bool) error {
+func ask(i commandInput, value interface{}, defaultValue *string, isUpdate bool) error {
 	isRequired := isInputRequired(i, isUpdate)
 	input := prompt.TextInput("", i.GetLabel(), i.GetHelp(), auth0.StringValue(defaultValue), isRequired)
 
@@ -29,7 +28,7 @@ func ask(cmd *cobra.Command, i commandInput, value interface{}, defaultValue *st
 	return nil
 }
 
-func askBool(cmd *cobra.Command, i commandInput, value *bool, defaultValue *bool) error {
+func askBool(i commandInput, value *bool, defaultValue *bool) error {
 	if err := prompt.AskBool(i.GetLabel(), value, auth0.BoolValue(defaultValue)); err != nil {
 		return handleInputError(err)
 	}
@@ -37,7 +36,7 @@ func askBool(cmd *cobra.Command, i commandInput, value *bool, defaultValue *bool
 	return nil
 }
 
-func askInt(cmd *cobra.Command, i commandInput, value *int, defaultValue *string, isUpdate bool) error {
+func askInt(i commandInput, value *int, defaultValue *string, isUpdate bool) error {
 	isRequired := isInputRequired(i, isUpdate)
 	input := prompt.TextInput(i.GetName(), i.GetLabel(), i.GetHelp(), auth0.StringValue(defaultValue), isRequired)
 
@@ -48,9 +47,9 @@ func askInt(cmd *cobra.Command, i commandInput, value *int, defaultValue *string
 	return nil
 }
 
-func askPassword(cmd *cobra.Command, i commandInput, value interface{}, defaultValue *string, isUpdate bool) error {
+func askPassword(i commandInput, value interface{}, isUpdate bool) error {
 	isRequired := isInputRequired(i, isUpdate)
-	input := prompt.PasswordInput("", i.GetLabel(), auth0.StringValue(defaultValue), isRequired)
+	input := prompt.PasswordInput("", i.GetLabel(), isRequired)
 
 	if err := prompt.AskOne(input, value); err != nil {
 		return handleInputError(err)
@@ -59,7 +58,7 @@ func askPassword(cmd *cobra.Command, i commandInput, value interface{}, defaultV
 	return nil
 }
 
-func _select(cmd *cobra.Command, i commandInput, value interface{}, options []string, defaultValue *string, isUpdate bool) error {
+func _select(i commandInput, value interface{}, options []string, defaultValue *string, isUpdate bool) error {
 	isRequired := isInputRequired(i, isUpdate)
 
 	// If there is no provided default value, we'll use the first option in
@@ -77,7 +76,7 @@ func _select(cmd *cobra.Command, i commandInput, value interface{}, options []st
 	return nil
 }
 
-func openCreateEditor(cmd *cobra.Command, i commandInput, value *string, defaultValue string, filename string, infoFn func(), tempFileFn func(string)) error {
+func openCreateEditor(value *string, defaultValue string, filename string, infoFn func(), tempFileFn func(string)) error {
 	out, err := prompt.CaptureInputViaEditor(
 		defaultValue,
 		filename,
@@ -94,7 +93,7 @@ func openCreateEditor(cmd *cobra.Command, i commandInput, value *string, default
 	return nil
 }
 
-func openUpdateEditor(cmd *cobra.Command, i commandInput, value *string, defaultValue string, filename string) error {
+func openUpdateEditor(i commandInput, value *string, defaultValue string, filename string) error {
 	isRequired := isInputRequired(i, true)
 	response := map[string]interface{}{}
 	input := prompt.EditorInput(i.GetName(), i.GetLabel(), i.GetHelp(), filename, defaultValue, isRequired)

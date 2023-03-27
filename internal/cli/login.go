@@ -253,7 +253,7 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 		return err
 	}
 
-	if err := loginClientSecret.AskPassword(cmd, &inputs.ClientSecret, nil); err != nil {
+	if err := loginClientSecret.AskPassword(cmd, &inputs.ClientSecret); err != nil {
 		return err
 	}
 
