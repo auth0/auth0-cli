@@ -104,3 +104,5 @@ for org in $( echo "${orgs}" | jq -r '.[] | @base64' ); do
         $( auth0 orgs delete "$id")
     fi
 done
+
+rm -r test/integration/identifiers
