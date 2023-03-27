@@ -82,8 +82,8 @@ tests:
       contains:
         - NAME              integration-test-org-better
         - DISPLAY NAME      Integration Test Updated Organization
-        - BACKGROUND COLOR #AA1166
-        - ACCENT COLOR #00FFAA
+        - "BACKGROUND COLOR  #AA1166"
+        - "ACCENT COLOR      #00FFAA"
         - LOGO URL
         - METADATA          null
   012 - open organization dashboard view in browser:
