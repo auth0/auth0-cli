@@ -30,11 +30,9 @@ func AskBool(message string, value *bool, defaultValue bool) error {
 		Default: defaultValue,
 	}
 
-	if err := askOne(prompt, value); err != nil {
-		return err
-	}
+	err := askOne(prompt, value)
 
-	return nil
+	return err
 }
 
 func Confirm(message string) bool {
@@ -93,7 +91,7 @@ func SelectInput(name string, message string, help string, options []string, def
 	return input
 }
 
-func PasswordInput(name string, message string, defaultValue string, required bool) *survey.Question {
+func PasswordInput(name string, message string, required bool) *survey.Question {
 	input := &survey.Question{
 		Name:   name,
 		Prompt: &survey.Password{Message: message},

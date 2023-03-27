@@ -9,23 +9,61 @@ tests:
       contains:
         - "idle_session_lifetime"
 
-  002 - it successfully uses the api command to patch tenant settings with piped data:
+  002 - it defaults to using a get method when method is missing:
+    command: auth0 api "tenants/settings" --query "include_fields=true" --query "fields=idle_session_lifetime"
+    exit-code: 0
+    stdout:
+      contains:
+        - "idle_session_lifetime"
+
+  003 - it successfully uses the api command to patch tenant settings with piped data:
     command: cat ./test/integration/fixtures/update-tenant-settings.json | auth0 api patch "tenants/settings" && auth0 api get "tenants/settings" --query "include_fields=true" --query "fields=idle_session_lifetime"
     exit-code: 0
     stdout:
       json:
         idle_session_lifetime: "73"
 
-  003 - it successfully uses the api command to patch tenant settings:
+  004 - it successfully uses the api command to patch tenant settings:
     command: auth0 api patch "tenants/settings" --data "{\"idle_session_lifetime\":72}" && auth0 api get "tenants/settings" --query "include_fields=true" --query "fields=idle_session_lifetime"
     exit-code: 0
     stdout:
       json:
         idle_session_lifetime: "72"
 
-  004 - it fails to use the api command to patch tenant settings with invalid json:
+  005 - it defaults to using a post method when method is missing but data flag is present:
+    command: auth0 api "clients" --data '{"name":"integration-test-app-for-api-cmd"}'
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-app-for-api-cmd"
+
+  006 - it fails to use the api command to patch tenant settings with invalid json:
     command: auth0 api patch "tenants/settings" --data "{\"idle_session_lifetime:72}"
     exit-code: 1
     stderr:
       contains:
         - "failed to parse command inputs: invalid json data given"
+
+  007 - it fails to use the api command if an invalid method is given:
+    command: auth0 api conquer "tenants/settings"
+    exit-code: 1
+    stderr:
+      contains:
+        - "failed to parse command inputs: invalid method given"
+
+  008 - it throws a warning when both piped data and the data flag are present:
+    command: cat ./test/integration/fixtures/update-tenant-settings.json | auth0 api patch "tenants/settings" --data "{\"idle_session_lifetime\":72}"
+    exit-code: 0
+    stdout:
+      json:
+        idle_session_lifetime: "72"
+    stderr:
+      contains:
+        - "JSON data was passed using both the flag and as piped input. The Auth0 CLI will use only the data from the flag."
+
+  009 - it successfully prints out debug log messages:
+    command: auth0 api get "stats/daily" --query "from=20000317" --query "to=20000317" --debug
+    exit-code: 0
+    stderr:
+      contains:
+        - "Sending the following request"

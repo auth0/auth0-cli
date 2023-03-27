@@ -1,0 +1,106 @@
+config:
+  inherit-env: true
+
+tests:
+  001 - it successfully lists all actions:
+    command: auth0 actions list
+    exit-code: 0
+
+  002 - it successfully creates an action:
+    command: auth0 actions create -n "integration-test-action1" -t "post-login" -c "function() {}" -d "lodash=4.0.0" -s "SECRET=value"
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME           integration-test-action1"
+        - "TYPE           post-login"
+        - "STATUS         pending"
+        - "DEPLOYED       ✗"
+        - "LAST DEPLOYED"
+        - "LAST UPDATED   0 seconds ago"
+        - "CREATED        0 seconds ago"
+        - "CODE           function() {}"
+
+  003 - it successfully creates an action and outputs in json:
+    command: auth0 actions create -n "integration-test-action2" -t "post-login" -c "function() {}" -d "lodash=4.0.0" -s "SECRET=value" --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-action2"
+        supported_triggers.0.id: "post-login"
+        supported_triggers.0.version: "v3"
+        code: "function() {}"
+        dependencies.0.name: "lodash"
+        dependencies.0.version: "4.0.0"
+        secrets.0.name: "SECRET"
+        secrets.0.value: "value"
+        status: "pending"
+
+  004 - given a test action:
+    command: ./test/integration/scripts/create-action.sh
+    exit-code: 0
+
+  005 - given a test action, it successfully gets the action's details:
+    command: auth0 actions show $(cat ./test/integration/identifiers/action-id)
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME           integration-test-action"
+        - "TYPE           post-login"
+        - "STATUS"
+        - "DEPLOYED       ✗"
+        - "LAST DEPLOYED"
+        - "LAST UPDATED"
+        - "CREATED"
+        - "CODE           function() {}"
+
+  006 - given a test action, it successfully gets the action's details and outputs in json:
+    command: auth0 actions show $(cat ./test/integration/identifiers/action-id) --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-action"
+        supported_triggers.0.id: "post-login"
+        supported_triggers.0.version: "v3"
+        code: "function() {}"
+        dependencies.0.name: "lodash"
+        dependencies.0.version: "4.0.0"
+        secrets.0.name: "SECRET"
+
+  007 - given a test action, it successfully updates the action's details:
+    command: auth0 actions update $(cat ./test/integration/identifiers/action-id) -n "integration-test-action-updated" -c "function() {console.log()}" -d "uuid=9.0.0" -s "SECRET2=newValue"
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME           integration-test-action-updated"
+        - "TYPE           post-login"
+        - "STATUS"
+        - "DEPLOYED       ✗"
+        - "LAST DEPLOYED"
+        - "LAST UPDATED"
+        - "CREATED"
+        - "CODE           function() {console.log()}"
+
+  008 - given a test action, it successfully updates the action's details and outputs in json:
+    command: auth0 actions update $(cat ./test/integration/identifiers/action-id) -n "integration-test-action-updated-again" -c "function() {console.log()}" -d "uuid=9.0.0" -s "SECRET3=newValue" --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-action-updated-again"
+        supported_triggers.0.id: "post-login"
+        supported_triggers.0.version: "v3"
+        code: "function() {console.log()}"
+        dependencies.0.name: "uuid"
+        dependencies.0.version: "9.0.0"
+        secrets.0.name: "SECRET3"
+        secrets.0.value: "newValue"
+
+  011 - given a test action, it successfully opens the settings page:
+    command: auth0 actions open $(cat ./test/integration/identifiers/action-id) --no-input
+    exit-code: 0
+    stderr:
+      contains:
+        - "Open the following URL in a browser"
+
+  012 - given a test action, it successfully deletes the action:
+    command: auth0 actions delete $(cat ./test/integration/identifiers/action-id) --force
+    exit-code: 0

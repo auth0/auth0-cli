@@ -98,12 +98,12 @@ func (f *Flag) OpenEditorU(cmd *cobra.Command, value *string, defaultValue strin
 	return openEditorFlag(cmd, f, value, defaultValue, filename, nil, nil, true)
 }
 
-func (f *Flag) AskPassword(cmd *cobra.Command, value *string, defaultValue *string) error {
-	return askPasswordFlag(cmd, f, value, defaultValue, false)
+func (f *Flag) AskPassword(cmd *cobra.Command, value *string) error {
+	return askPasswordFlag(cmd, f, value, false)
 }
 
-func (f *Flag) AskPasswordU(cmd *cobra.Command, value *string, defaultValue *string) error {
-	return askPasswordFlag(cmd, f, value, defaultValue, true)
+func (f *Flag) AskPasswordU(cmd *cobra.Command, value *string) error {
+	return askPasswordFlag(cmd, f, value, true)
 }
 
 func (f *Flag) RegisterString(cmd *cobra.Command, value *string, defaultValue string) {
@@ -148,7 +148,7 @@ func (f *Flag) RegisterBoolU(cmd *cobra.Command, value *bool, defaultValue bool)
 
 func askFlag(cmd *cobra.Command, f *Flag, value interface{}, defaultValue *string, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
-		return ask(cmd, f, value, defaultValue, isUpdate)
+		return ask(f, value, defaultValue, isUpdate)
 	}
 
 	return nil
@@ -158,7 +158,7 @@ func askManyFlag(cmd *cobra.Command, f *Flag, value interface{}, defaultValue *s
 	if shouldAsk(cmd, f, isUpdate) {
 		var strInput string
 
-		if err := ask(cmd, f, &strInput, defaultValue, isUpdate); err != nil {
+		if err := ask(f, &strInput, defaultValue, isUpdate); err != nil {
 			return err
 		}
 
@@ -170,7 +170,7 @@ func askManyFlag(cmd *cobra.Command, f *Flag, value interface{}, defaultValue *s
 
 func askBoolFlag(cmd *cobra.Command, f *Flag, value *bool, defaultValue *bool, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
-		if err := askBool(cmd, f, value, defaultValue); err != nil {
+		if err := askBool(f, value, defaultValue); err != nil {
 			return err
 		}
 	}
@@ -180,14 +180,14 @@ func askBoolFlag(cmd *cobra.Command, f *Flag, value *bool, defaultValue *bool, i
 
 func askIntFlag(cmd *cobra.Command, f *Flag, value *int, defaultValue *string, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
-		return askInt(cmd, f, value, defaultValue, isUpdate)
+		return askInt(f, value, defaultValue, isUpdate)
 	}
 	return nil
 }
 
 func selectFlag(cmd *cobra.Command, f *Flag, value interface{}, options []string, defaultValue *string, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
-		return _select(cmd, f, value, options, defaultValue, isUpdate)
+		return _select(f, value, options, defaultValue, isUpdate)
 	}
 
 	return nil
@@ -218,9 +218,9 @@ func pickFlag(cmd *cobra.Command, f *Flag, result *string, fn pickerOptionsFunc,
 	return nil
 }
 
-func askPasswordFlag(cmd *cobra.Command, f *Flag, value *string, defaultValue *string, isUpdate bool) error {
+func askPasswordFlag(cmd *cobra.Command, f *Flag, value *string, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
-		if err := askPassword(cmd, f, value, defaultValue, isUpdate); err != nil {
+		if err := askPassword(f, value, isUpdate); err != nil {
 			return err
 		}
 	}
@@ -231,9 +231,9 @@ func askPasswordFlag(cmd *cobra.Command, f *Flag, value *string, defaultValue *s
 func openEditorFlag(cmd *cobra.Command, f *Flag, value *string, defaultValue string, filename string, infoFn func(), tempFileFn func(string), isUpdate bool) error {
 	if shouldAsk(cmd, f, false) { // Always open the editor on update
 		if isUpdate {
-			return openUpdateEditor(cmd, f, value, defaultValue, filename)
+			return openUpdateEditor(f, value, defaultValue, filename)
 		}
-		return openCreateEditor(cmd, f, value, defaultValue, filename, infoFn, tempFileFn)
+		return openCreateEditor(value, defaultValue, filename, infoFn, tempFileFn)
 	}
 
 	return nil

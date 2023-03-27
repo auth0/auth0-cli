@@ -127,7 +127,7 @@ func (t *Tenant) additionalRequestedScopes() []string {
 	return additionallyRequestedScopes
 }
 
-func (t *Tenant) regenerateAccessToken(ctx context.Context, c *cli) error {
+func (t *Tenant) regenerateAccessToken(ctx context.Context) error {
 	if t.authenticatedWithClientCredentials() {
 		clientSecret, err := keyring.GetClientSecret(t.Domain)
 		if err != nil {
@@ -253,7 +253,7 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 		return t, nil
 	}
 
-	if err := t.regenerateAccessToken(ctx, c); err != nil {
+	if err := t.regenerateAccessToken(ctx); err != nil {
 		if t.authenticatedWithClientCredentials() {
 			errorMessage := fmt.Errorf(
 				"failed to fetch access token using client credentials: %w\n\n"+
@@ -477,10 +477,9 @@ func (c *cli) persistConfig() error {
 		return err
 	}
 
-	if err := os.WriteFile(c.path, buf, 0600); err != nil {
-		return err
-	}
-	return nil
+	err = os.WriteFile(c.path, buf, 0600)
+
+	return err
 }
 
 func (c *cli) init() error {
