@@ -1,3 +1,5 @@
+//go:generate mockgen -source=action.go -destination=mock/action_mock.go -package=mock
+
 package auth0
 
 import "github.com/auth0/go-auth0/management"

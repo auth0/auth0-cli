@@ -100,12 +100,11 @@ func listActionsCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ActionList
 
-			if err := ansi.Waiting(func() error {
-				var err error
-				list, err = cli.api.Action.List()
+			if err := ansi.Waiting(func() (err error) {
+				list, err = cli.api.Action.List(management.PerPage(100))
 				return err
 			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred: %w", err)
+				return fmt.Errorf("failed to retrieve actions: %w", err)
 			}
 
 			cli.renderer.ActionList(list.Actions)
@@ -133,8 +132,7 @@ func showActionCmd(cli *cli) *cobra.Command {
   auth0 actions show <action-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)
-				if err != nil {
+				if err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions); err != nil {
 					return err
 				}
 			} else {
@@ -143,12 +141,11 @@ func showActionCmd(cli *cli) *cobra.Command {
 
 			var action *management.Action
 
-			if err := ansi.Waiting(func() error {
-				var err error
+			if err := ansi.Waiting(func() (err error) {
 				action, err = cli.api.Action.Read(inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to get an action with ID '%s': %w", inputs.ID, err)
+				return fmt.Errorf("failed to get action with ID %q: %w", inputs.ID, err)
 			}
 
 			cli.renderer.ActionShow(action)
@@ -195,18 +192,15 @@ func createActionCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			triggerIds := make([]string, 0)
+			triggerIDs := make([]string, 0)
 			for _, t := range triggers {
-				triggerIds = append(triggerIds, t.GetID())
+				triggerIDs = append(triggerIDs, t.GetID())
 			}
 
-			if err := actionTrigger.Select(cmd, &inputs.Trigger, triggerIds, nil); err != nil {
+			if err := actionTrigger.Select(cmd, &inputs.Trigger, triggerIDs, nil); err != nil {
 				return err
 			}
 
-			// TODO(cyx): we can re-think this once we have
-			// `--stdin` based commands. For now we don't have
-			// those yet, so keeping this simple.
 			if err := actionCode.OpenEditor(
 				cmd,
 				&inputs.Code,
@@ -241,7 +235,7 @@ func createActionCmd(cli *cli) *cobra.Command {
 			if err := ansi.Waiting(func() error {
 				return cli.api.Action.Create(action)
 			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred while attempting to create an action with name '%s': %w", inputs.Name, err)
+				return fmt.Errorf("failed to create action: %w", err)
 			}
 
 			cli.renderer.ActionCreate(action)
@@ -282,7 +276,7 @@ func updateActionCmd(cli *cli) *cobra.Command {
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
-  auth0 actions update <action-id> -n myaction -t post-login -c "$(cat path/to/code.js)" -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json`,
+  auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -343,11 +337,10 @@ func updateActionCmd(cli *cli) *cobra.Command {
 			if err = ansi.Waiting(func() error {
 				return cli.api.Action.Update(oldAction.GetID(), updatedAction)
 			}); err != nil {
-				return fmt.Errorf("failed to update action with ID %s: %w", oldAction.GetID(), err)
+				return fmt.Errorf("failed to update action with ID %q: %w", oldAction.GetID(), err)
 			}
 
 			cli.renderer.ActionUpdate(updatedAction)
-
 			return nil
 		},
 	}
@@ -381,8 +374,7 @@ func deleteActionCmd(cli *cli) *cobra.Command {
   auth0 actions delete <action-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)
-				if err != nil {
+				if err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions); err != nil {
 					return err
 				}
 			} else {
@@ -396,11 +388,6 @@ func deleteActionCmd(cli *cli) *cobra.Command {
 			}
 
 			return ansi.Spinner("Deleting action", func() error {
-				_, err := cli.api.Action.Read(inputs.ID)
-				if err != nil {
-					return fmt.Errorf("Unable to delete action: %w", err)
-				}
-
 				return cli.api.Action.Delete(inputs.ID)
 			})
 		},
@@ -430,8 +417,7 @@ func deployActionCmd(cli *cli) *cobra.Command {
   auth0 actions deploy <action-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)
-				if err != nil {
+				if err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions); err != nil {
 					return err
 				}
 			} else {
@@ -439,14 +425,12 @@ func deployActionCmd(cli *cli) *cobra.Command {
 			}
 
 			var action *management.Action
-
-			if err := ansi.Waiting(func() error {
-				var err error
+			if err := ansi.Waiting(func() (err error) {
 				if _, err = cli.api.Action.Deploy(inputs.ID); err != nil {
-					return fmt.Errorf("Unable to deploy an action with Id '%s': %w", inputs.ID, err)
+					return fmt.Errorf("failed to deploy action with ID %q: %w", inputs.ID, err)
 				}
 				if action, err = cli.api.Action.Read(inputs.ID); err != nil {
-					return fmt.Errorf("Unable to get deployed action with Id '%s': %w", inputs.ID, err)
+					return fmt.Errorf("failed to get deployed action with ID %q: %w", inputs.ID, err)
 				}
 				return nil
 			}); err != nil {
@@ -477,8 +461,7 @@ func openActionCmd(cli *cli) *cobra.Command {
   auth0 actions open <action-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions)
-				if err != nil {
+				if err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions); err != nil {
 					return err
 				}
 			} else {

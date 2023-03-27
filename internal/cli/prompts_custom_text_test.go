@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/auth0/mock"
 	"github.com/auth0/auth0-cli/internal/display"
 )
 
@@ -54,7 +55,7 @@ func TestBrandingTextsShowCmd(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			brandingTextsAPI := auth0.NewMockPromptAPI(ctrl)
+			brandingTextsAPI := mock.NewMockPromptAPI(ctrl)
 			brandingTextsAPI.EXPECT().
 				CustomText(test.inputPrompt, test.inputLanguage).
 				Return(test.returnedCustomText, test.returnedError)

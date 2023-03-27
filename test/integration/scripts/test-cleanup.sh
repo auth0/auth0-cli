@@ -105,4 +105,21 @@ for org in $( echo "${orgs}" | jq -r '.[] | @base64' ); do
     fi
 done
 
+actions=$( auth0 actions list --json --no-input )
+
+for action in $( echo "${actions}" | jq -r '.[] | @base64' ); do
+    _jq() {
+     echo "${action}" | base64 --decode | jq -r "${1}"
+    }
+
+    id=$(_jq '.id')
+    name=$(_jq '.name')
+
+    if [[ $name = integration-test-* ]]
+    then
+        echo deleting "$name"
+        $( auth0 actions delete "$id")
+    fi
+done
+
 rm -r test/integration/identifiers
