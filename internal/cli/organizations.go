@@ -22,8 +22,8 @@ const (
 
 var (
 	organizationID = Argument{
-		Name: "Id",
-		Help: "Id of the organization.",
+		Name: "ID",
+		Help: "ID of the organization.",
 	}
 
 	organizationName = Flag{
@@ -196,7 +196,7 @@ func showOrganizationCmd(cli *cli) *cobra.Command {
 				organization, err = cli.api.Organization.Read(url.PathEscape(inputs.ID))
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to get an organization with Id '%s': %w", inputs.ID, err)
+				return fmt.Errorf("Unable to get an organization with ID '%s': %w", inputs.ID, err)
 			}
 
 			cli.renderer.OrganizationShow(organization)
