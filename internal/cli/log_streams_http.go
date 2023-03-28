@@ -86,7 +86,7 @@ func createLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := httpAuthorization.AskPassword(cmd, &inputs.HTTPAuthorization, nil); err != nil {
+			if err := httpAuthorization.AskPassword(cmd, &inputs.HTTPAuthorization); err != nil {
 				return err
 			}
 
@@ -192,7 +192,7 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 			if err := httpContentFormat.SelectU(cmd, &inputs.HTTPContentFormat, httpContentFormatOptions, httpSink.ContentFormat); err != nil {
 				return err
 			}
-			if err := httpAuthorization.AskPasswordU(cmd, &inputs.HTTPAuthorization, httpSink.Authorization); err != nil {
+			if err := httpAuthorization.AskPasswordU(cmd, &inputs.HTTPAuthorization); err != nil {
 				return err
 			}
 

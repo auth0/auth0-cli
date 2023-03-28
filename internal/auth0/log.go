@@ -1,11 +1,11 @@
-//go:generate mockgen -source=log.go -destination=log_mock.go -package=auth0
+//go:generate mockgen -source=log.go -destination=mock/log_mock.go -package=mock
 
 package auth0
 
 import "github.com/auth0/go-auth0/management"
 
 type LogAPI interface {
-	// Retrieves the data related to the log entry identified by id. This returns a
+	// Read the data related to the log entry identified by id. This returns a
 	// single log entry representation as specified in the schema.
 	Read(id string, opts ...management.RequestOption) (l *management.Log, err error)
 
