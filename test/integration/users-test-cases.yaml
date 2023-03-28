@@ -85,3 +85,10 @@ tests:
   users roles remove:
     command: auth0 users roles rm $(cat ./test/integration/identifiers/user-id) -r $(cat ./test/integration/identifiers/role-id)
     exit-code: 0
+
+  open user dashboard page:
+    command: auth0 users open $(cat ./test/integration/identifiers/user-id) --no-input
+    exit-code: 0
+    stderr:
+      contains:
+        - "Open the following URL in a browser: https://manage.auth0.com/dashboard/"
