@@ -781,7 +781,7 @@ func (cli *cli) getOrgMembers(
 		})
 
 	if err != nil {
-		return nil, fmt.Errorf("Unable to list members of an organization with Id '%s': %w", orgID, err)
+		return nil, fmt.Errorf("Unable to list members of an organization with ID '%s': %w", orgID, err)
 	}
 	var typedList []management.OrganizationMember
 	for _, item := range list {
