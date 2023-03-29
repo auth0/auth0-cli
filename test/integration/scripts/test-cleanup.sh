@@ -121,3 +121,5 @@ for action in $( echo "${actions}" | jq -r '.[] | @base64' ); do
         $( auth0 actions delete "$id")
     fi
 done
+
+rm -r test/integration/identifiers

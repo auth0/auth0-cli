@@ -1,8 +1,6 @@
 package display
 
 import (
-	"io"
-
 	"github.com/auth0/go-auth0/management"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -44,13 +42,13 @@ func (r *Renderer) MembersList(members []management.OrganizationMember) {
 
 	var res []View
 	for _, m := range members {
-		res = append(res, makeMembersView(&m, r.MessageWriter))
+		res = append(res, makeMembersView(&m))
 	}
 
 	r.Results(res)
 }
 
-func makeMembersView(member *management.OrganizationMember, w io.Writer) *membersView {
+func makeMembersView(member *management.OrganizationMember) *membersView {
 	return &membersView{
 		ID:         member.GetUserID(),
 		Name:       member.GetName(),
