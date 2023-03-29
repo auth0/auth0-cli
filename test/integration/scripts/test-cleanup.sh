@@ -122,4 +122,6 @@ for action in $( echo "${actions}" | jq -r '.[] | @base64' ); do
     fi
 done
 
+auth0 domains delete $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
+
 rm -rf test/integration/identifiers
