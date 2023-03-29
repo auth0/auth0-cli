@@ -60,7 +60,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - "Unable to get an organization with Id 'this-org-id-does-not-exist'"
+        - "Unable to get an organization with ID 'this-org-id-does-not-exist'"
 
   009 - update organization:
     command: auth0 orgs update $(./test/integration/scripts/get-org-id.sh) -d "Integration Test Updated Organization" -a "#00FFAA" -b "#AA1166" --json --no-input
