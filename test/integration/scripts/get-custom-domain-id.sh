@@ -1,7 +1,8 @@
 #! /bin/bash
 
-domains=$( auth0 domains list --json --no-input )
+testing_domain_name = "integration-test.com"
 
+domains=$( auth0 domains list --json --no-input )
 for domain in $( printf "%s" "$domains" | jq -r '.[] | @base64' ); do
     _jq() {
      echo "${domain}" | base64 --decode | jq -r "${1}"
@@ -10,7 +11,7 @@ for domain in $( printf "%s" "$domains" | jq -r '.[] | @base64' ); do
     id=$(_jq '.custom_domain_id')
     name=$(_jq '.domain')
 
-    if [[ $name = "integration-test.com" ]]
+    if [[ $name = $testing_domain_name ]]
     then
         echo $id
         exit 0
