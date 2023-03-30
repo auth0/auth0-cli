@@ -122,4 +122,7 @@ for action in $( echo "${actions}" | jq -r '.[] | @base64' ); do
     fi
 done
 
+# Reset universal login branding
+auth0 ul update --accent "#2A2E35" --background "#FF4F40" --logo "https://example.com/logo.png" --favicon "https://example.com/favicon.png" --font https://example.com/font.woff --no-input
+
 rm -rf test/integration/identifiers
