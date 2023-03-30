@@ -460,15 +460,11 @@ func updateUserCmd(cli *cli) *cobra.Command {
 				user.Name = &inputs.Name
 			}
 
-			if len(inputs.Email) == 0 {
-				user.Email = current.Email
-			} else {
+			if len(inputs.Email) != 0 {
 				user.Email = &inputs.Email
 			}
 
-			if len(inputs.Password) == 0 {
-				user.Password = current.Password
-			} else {
+			if len(inputs.Password) != 0 {
 				user.Password = &inputs.Password
 			}
 

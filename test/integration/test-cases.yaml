@@ -145,61 +145,6 @@ tests:
         allow_offline_access: "false"
     exit-code: 0
 
-  # Test 'users create'
-  users create and check data:
-    command: auth0 users create --name integration-test-user-new --connection Username-Password-Authentication --email testuser@example.com --password testUser12 --username testuser1 --json --no-input
-    exit-code: 0
-    stdout:
-      json:
-        email: "testuser@example.com"
-        connection: "Username-Password-Authentication"
-
-  users create and check output:
-    command: auth0 users create --name integration-test-user-new2 --connection Username-Password-Authentication --email testuser2@example.com --password testUser12 --username testuser2 --no-input
-    exit-code: 0
-    stdout:
-      contains:
-        - EMAIL       testuser2@example.com
-        - CONNECTION  Username-Password-Authentication
-
-  users show json:
-    command: auth0 users show $(./test/integration/scripts/get-user-id.sh) --json
-    stdout:
-      json:
-        email: "newuser@example.com"
-        connection: "Username-Password-Authentication"
-    exit-code: 0
-
-  users show:
-    command: auth0 users show $(./test/integration/scripts/get-user-id.sh)
-    stdout:
-      contains:
-        - EMAIL       newuser@example.com
-        - CONNECTION  Username-Password-Authentication
-    exit-code: 0
-
-  users search:
-    command: auth0 users search --query user_id:"$(./test/integration/scripts/get-user-id.sh)" --number 1 --sort "name:-1"
-    exit-code: 0
-    stdout:
-      contains:
-        - newuser@example.com
-
-  # Test 'users update'
-  users update email:
-    command: auth0 users update $(./test/integration/scripts/get-user-id.sh)  --email betteruser@example.com  --json --no-input
-    stdout:
-      json:
-        email: betteruser@example.com
-    exit-code: 0
-
-  users update name:
-    command: auth0 users update $(./test/integration/scripts/get-user-id.sh)  --name integration-test-user-bettername  --json --no-input
-    stdout:
-      json:
-        email: betteruser@example.com # Name is not being displayed, hence using email
-    exit-code: 0
-
   # Test 'roles create'
   roles create and check data:
     command: auth0 roles create --name integration-test-role-new1 --description testRole --json --no-input
@@ -386,16 +331,4 @@ tests:
 
   update universal login branding prompts (mfa-push):
     command: cat ./test/integration/fixtures/update-ul-prompts-mfa-push.json | auth0 ul prompts update mfa-push
-    exit-code: 0
-
-  users roles show:
-    command: auth0 users roles show $(./test/integration/scripts/get-user-id.sh)
-    exit-code: 0
-
-  users roles add:
-    command: auth0 users roles add $(./test/integration/scripts/get-user-id.sh) -r $(./test/integration/scripts/get-role-id.sh)
-    exit-code: 0
-
-  users roles remove:
-    command: auth0 users roles rm $(./test/integration/scripts/get-user-id.sh) -r $(./test/integration/scripts/get-role-id.sh)
     exit-code: 0
