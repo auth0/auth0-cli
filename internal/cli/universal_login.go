@@ -178,7 +178,7 @@ func updateUniversalLoginCmd(cli *cli) *cobra.Command {
 			b := &management.Branding{}
 			isAccentColorSet := len(inputs.AccentColor) > 0
 			isBackgroundColorSet := len(inputs.BackgroundColor) > 0
-			currentHasColors := current.Colors != nil
+			currentHasColors := current.GetColors() != nil
 
 			if isAccentColorSet || isBackgroundColorSet || currentHasColors {
 				b.Colors = &management.BrandingColors{}
@@ -196,29 +196,23 @@ func updateUniversalLoginCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			if len(inputs.LogoURL) == 0 {
-				b.LogoURL = current.LogoURL
-			} else {
+			logoURL := current.GetLogoURL()
+			if len(inputs.LogoURL) == 0 && logoURL != "" {
+				b.LogoURL = &logoURL
+			} else if len(inputs.LogoURL) != 0 {
 				b.LogoURL = &inputs.LogoURL
 			}
 
-			if len(inputs.FaviconURL) == 0 {
-				b.FaviconURL = current.FaviconURL
-			} else {
+			favIconURL := current.GetFaviconURL()
+			if len(inputs.FaviconURL) == 0 && favIconURL != "" {
+				b.FaviconURL = &favIconURL
+			} else if len(inputs.FaviconURL) != 0 {
 				b.FaviconURL = &inputs.FaviconURL
 			}
 
 			// API2 will produce an error if we send an empty font struct
 			if b.Font == nil && inputs.CustomFontURL != "" {
 				b.Font = &management.BrandingFont{URL: &inputs.CustomFontURL}
-			}
-
-			if b.Font != nil {
-				if len(inputs.CustomFontURL) == 0 {
-					b.Font.URL = current.Font.URL
-				} else {
-					b.Font.URL = &inputs.CustomFontURL
-				}
 			}
 
 			// Update branding
