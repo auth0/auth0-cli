@@ -94,7 +94,6 @@ tests:
         sink.httpContentType: "application/json"
         sink.httpEndpoint: "https://example.com/webhook/logs/v2"
 
-
   014 - given an http log stream, it successfully deletes the log stream:
     command: auth0 logs streams delete $(cat ./test/integration/identifiers/log-stream-http-id) --force --no-input
     exit-code: 0

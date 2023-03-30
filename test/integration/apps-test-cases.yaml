@@ -149,12 +149,8 @@ tests:
       json:
         web_origins: "[https://example.com]"
 
-  021 - given a test app:
-    command: ./test/integration/scripts/get-app-id.sh
-    exit-code: 0
-
-  022 - given a test app, it successfully gets the app's details and outputs in json:
-    command: auth0 apps show $(cat ./test/integration/identifiers/app-id) --json
+  021 - given a test app, it successfully gets the app's details and outputs in json:
+    command: auth0 apps show $(./test/integration/scripts/get-app-id.sh) --json
     exit-code: 0
     stdout:
       json:
@@ -162,8 +158,8 @@ tests:
         description: NewApp
         app_type: native
 
-  023 - given a test app, it successfully gets the app's details:
-    command: auth0 apps show $(cat ./test/integration/identifiers/app-id)
+  022 - given a test app, it successfully gets the app's details:
+    command: auth0 apps show $(./test/integration/scripts/get-app-id.sh)
     exit-code: 0
     stdout:
       contains:
@@ -171,93 +167,91 @@ tests:
         - DESCRIPTION          NewApp
         - TYPE                 Native
 
-  024 - given a test app, it successfully updates the app's auth method and outputs in json:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --auth-method Basic --json
+  023 - given a test app, it successfully updates the app's auth method and outputs in json:
+    command: auth0 apps update $(./test/integration/scripts/get-app-id.sh) --auth-method Basic --json
     exit-code: 0
     stdout:
       json:
         token_endpoint_auth_method: client_secret_basic
 
-  025 - given a test app, it successfully updates the app's callbacks and outputs in json:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --callbacks https://example.com --json
+  024 - given a test app, it successfully updates the app's callbacks and outputs in json:
+    command: auth0 apps update $(./test/integration/scripts/get-app-id.sh) --callbacks https://example.com --json
     stdout:
       json:
         callbacks: "[https://example.com]"
     exit-code: 0
 
-  026 - given a test app, it successfully updates the app's description and outputs in json:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --description "A better description" --json
+  025 - given a test app, it successfully updates the app's description and outputs in json:
+    command: auth0 apps update $(./test/integration/scripts/get-app-id.sh) --description "A better description" --json
     exit-code: 0
     stdout:
       json:
         description: A better description
 
-  027 - given a test app, it successfully updates the app's grants and outputs in json:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --grants code --json
+  026 - given a test app, it successfully updates the app's grants and outputs in json:
+    command: auth0 apps update $(./test/integration/scripts/get-app-id.sh) --grants code --json
     exit-code: 0
     stdout:
       json:
         grant_types: "[authorization_code]"
 
-  028 - given a test app, it successfully updates the app's logout urls and outputs in json:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --logout-urls https://example.com --json
+  027 - given a test app, it successfully updates the app's logout urls and outputs in json:
+    command: auth0 apps update $(./test/integration/scripts/get-app-id.sh) --logout-urls https://example.com --json
     exit-code: 0
     stdout:
       json:
         allowed_logout_urls: "[https://example.com]"
 
-  029 - given a test app, it successfully updates the app's name and outputs in json:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --name integration-test-app-betterAppName --json
+  028 - given a test app, it successfully updates the app's name and outputs in json:
+    command: auth0 apps update $(./test/integration/scripts/get-app-id.sh) --name integration-test-app-betterAppName --json
     exit-code: 0
     stdout:
       json:
         name: integration-test-app-betterAppName
 
-  030 - given a test app, it successfully updates the app's origins and outputs in json:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --origins https://example.com --json
+  029 - given a test app, it successfully updates the app's origins and outputs in json:
+    command: auth0 apps update $(./test/integration/scripts/get-app-id.sh) --origins https://example.com --json
     exit-code: 0
     stdout:
       json:
         allowed_origins: "[https://example.com]"
 
-  031 - given a test app, it successfully updates the app's type and outputs in json:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --type spa --json
+  030 - given a test app, it successfully updates the app's type and outputs in json:
+    command: auth0 apps update $(./test/integration/scripts/get-app-id.sh) --type spa --json
     exit-code: 0
     stdout:
       json:
         app_type: spa
 
-  032 - given a test app, it successfully updates the app's web origins and outputs in json:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --web-origins https://example.com --json
+  031 - given a test app, it successfully updates the app's web origins and outputs in json:
+    command: auth0 apps update $(./test/integration/scripts/get-app-id.sh) --web-origins https://example.com --json
     exit-code: 0
     stdout:
       json:
         web_origins: "[https://example.com]"
 
-  033 - given a test app, it successfully updates the app's web origins and type and outputs in json:
-    command: auth0 apps update $(cat ./test/integration/identifiers/app-id) --web-origins https://examples.com --type native --json
+  032 - given a test app, it successfully updates the app's web origins and type and outputs in json:
+    command: auth0 apps update $(./test/integration/scripts/get-app-id.sh) --web-origins https://examples.com --type native --json
     exit-code: 0
     stdout:
       json:
         app_type: native
         web_origins: "[https://examples.com]"
 
-  034 - given a test app, it successfully opens the settings page:
-    command: auth0 apps open $(cat ./test/integration/identifiers/app-id) --no-input
+  033 - given a test app, it successfully opens the settings page:
+    command: auth0 apps open $(./test/integration/scripts/get-app-id.sh) --no-input
     exit-code: 0
     stderr:
       contains:
         - "Open the following URL in a browser"
 
-
-  035 - given a test app, it successfully sets the default application:
-    command: auth0 apps use $(cat ./test/integration/identifiers/app-id) --no-input
+  034 - given a test app, it successfully sets the default application:
+    command: auth0 apps use $(./test/integration/scripts/get-app-id.sh) --no-input
     exit-code: 0
     stderr:
       contains:
         - "Successfully set the default application to"
 
-
-  036 - given a test app, it successfully deletes the app:
-    command: auth0 apps delete $(cat ./test/integration/identifiers/app-id) --force
+  035 - given a test app, it successfully deletes the app:
+    command: auth0 apps delete $(./test/integration/scripts/get-app-id.sh) --force
     exit-code: 0

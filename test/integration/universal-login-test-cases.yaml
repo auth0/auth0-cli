@@ -1,0 +1,73 @@
+config:
+  inherit-env: true
+
+tests:
+  001 - sets default expected values:
+    command: auth0 ul update --accent "#2A2E35" --background "#FF4F40" --logo "https://example.com/logo.png" --favicon "https://example.com/favicon.png" --font https://example.com/font.woff --no-input
+    exit-code: 0
+
+  002 - it successfully shows universal login branding:
+    command: auth0 ul show
+    exit-code: 0
+    stdout:
+      contains:
+        - "ACCENT COLOR      #2A2E35"
+        - "BACKGROUND COLOR  #FF4F40"
+        - LOGO URL          https://example.com/logo.png
+        - FAVICON URL       https://example.com/favicon.png
+        - CUSTOM FONT URL   https://example.com/font.woff
+
+  003 - it successfully shows universal login branding in json:
+    command: auth0 ul show --json
+    exit-code: 0
+    stdout:
+      json:
+         colors.primary: "#2A2E35"
+         colors.page_background: "#FF4F40"
+         favicon_url: "https://example.com/favicon.png"
+         logo_url: "https://example.com/logo.png"
+         font.url: "https://example.com/font.woff"
+
+  004 - it successfully updates universal login branding:
+    command: auth0 ul update --accent "#2A2E35" --background "#FF4F40" --logo "https://example.com/logo-updated.png" --favicon "https://example.com/favicon-updated.png" --font https://example.com/font-updated.woff
+    exit-code: 0
+    stdout:
+      contains:
+          - "ACCENT COLOR      #2A2E35"
+          - "BACKGROUND COLOR  #FF4F40"
+          - LOGO URL          https://example.com/logo-updated.png
+          - FAVICON URL       https://example.com/favicon-updated.png
+          - CUSTOM FONT URL   https://example.com/font-updated.woff
+
+  005 - it successfully updates universal login branding and outputs as json:
+    command: auth0 ul update --accent "#FF4F40" --background "#2A2E35" --logo "https://example.com/logo-updated-json.png" --favicon "https://example.com/favicon-updated-json.png" --font https://example.com/font-updated-json.woff --json
+    exit-code: 0
+    stdout:
+      json:
+         colors.primary: "#FF4F40"
+         colors.page_background: "#2A2E35"
+         favicon_url: "https://example.com/favicon-updated-json.png"
+         logo_url: "https://example.com/logo-updated-json.png"
+         font.url: "https://example.com/font-updated-json.woff"
+
+  006 - it successfully updates universal login branding and persists previous colors:
+    command: auth0 ul update --logo "https://example.com/logo-updated-2.png" --favicon "https://example.com/favicon-updated-2.png" --font https://example.com/font-updated-2.woff --json
+    exit-code: 0
+    stdout:
+      json:
+         colors.primary: "#FF4F40"
+         colors.page_background: "#2A2E35"
+         favicon_url: "https://example.com/favicon-updated-2.png"
+         logo_url: "https://example.com/logo-updated-2.png"
+         font.url: "https://example.com/font-updated-2.woff"
+
+  007 - it successfully updates universal login branding and persists previous URLs:
+    command: auth0 ul update --accent "#2A2E35" --background "#FF4F40" --json
+    exit-code: 0
+    stdout:
+      json:
+         colors.primary: "#2A2E35"
+         colors.page_background: "#FF4F40"
+         favicon_url: "https://example.com/favicon-updated-2.png"
+         logo_url: "https://example.com/logo-updated-2.png"
+         font.url: "https://example.com/font-updated-2.woff"

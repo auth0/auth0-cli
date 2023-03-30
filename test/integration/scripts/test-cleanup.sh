@@ -73,7 +73,7 @@ done
 
 rules=$( auth0 rules list --json --no-input )
 
-for rule in $( echo "${rules}" | jq -r '.[] | @base64' ); do
+for rule in $( printf "%s" "$rules" | jq -r '.[] | @base64' ); do
     _jq() {
      echo "${rule}" | base64 --decode | jq -r "${1}"
     }
@@ -122,4 +122,9 @@ for action in $( echo "${actions}" | jq -r '.[] | @base64' ); do
     fi
 done
 
-rm -r test/integration/identifiers
+auth0 domains delete $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
+
+# Reset universal login branding
+auth0 ul update --accent "#2A2E35" --background "#FF4F40" --logo "https://example.com/logo.png" --favicon "https://example.com/favicon.png" --font https://example.com/font.woff --no-input
+
+rm -rf test/integration/identifiers
