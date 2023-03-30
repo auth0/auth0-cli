@@ -11,8 +11,8 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - ACCENT COLOR      #2A2E35
-        - BACKGROUND COLOR  #FF4F40
+        - "ACCENT COLOR      #2A2E35"
+        - "BACKGROUND COLOR  #FF4F40"
         - LOGO URL          https://example.com/logo.png
         - FAVICON URL       https://example.com/favicon.png
         - CUSTOM FONT URL   https://example.com/font.woff
@@ -33,8 +33,8 @@ tests:
     exit-code: 0
     stdout:
       contains:
-          - ACCENT COLOR      #2A2E35
-          - BACKGROUND COLOR  #FF4F40
+          - "ACCENT COLOR      #2A2E35"
+          - "BACKGROUND COLOR  #FF4F40"
           - LOGO URL          https://example.com/logo-updated.png
           - FAVICON URL       https://example.com/favicon-updated.png
           - CUSTOM FONT URL   https://example.com/font-updated.woff
