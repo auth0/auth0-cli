@@ -1,3 +1,5 @@
+#! /bin/bash
+
 management_api_audience=$(./test/integration/scripts/get-manage-api-audience.sh)
 m2m_client_id=$(./test/integration/scripts/get-m2m-app-id.sh)
 
