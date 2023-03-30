@@ -90,7 +90,7 @@ func GetAccessToken(tenant string) (string, error) {
 		a, err := keyring.Get(fmt.Sprintf("%s %d", secretAccessToken, i), tenant)
 		// Only return if we have pulled more than 1 item from the keyring, otherwise this will be
 		// a valid "secret not found in keyring"
-		if err == keyring.ErrNotFound && i > 1 {
+		if err == keyring.ErrNotFound && i > 0 {
 			return accessToken, nil
 		}
 		if err != nil {
