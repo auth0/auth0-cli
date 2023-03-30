@@ -142,7 +142,7 @@ func (v *logView) typeDesc() (typ, desc string) {
 	return typ, desc
 }
 
-func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, silent bool) {
+func (r *Renderer) LogList(logs []*management.Log, silent bool) {
 	resource := "logs"
 
 	r.Heading(resource)
@@ -158,23 +158,28 @@ func (r *Renderer) LogList(logs []*management.Log, ch <-chan []*management.Log, 
 		res = append(res, &logView{Log: l, silent: silent, raw: l})
 	}
 
-	var viewChan chan View
+	r.Results(res)
+}
 
-	if ch != nil {
-		viewChan = make(chan View)
+func (r *Renderer) LogTail(logs []*management.Log, ch <-chan []*management.Log, silent bool) {
+	r.Heading("logs")
 
-		go func() {
-			defer close(viewChan)
-
-			for list := range ch {
-				for _, l := range list {
-					viewChan <- &logView{Log: l, silent: silent, raw: l}
-				}
-			}
-		}()
-
-		r.Stream(res, viewChan) // streams results for `auth0 logs tail`
+	var res []View
+	for _, l := range logs {
+		res = append(res, &logView{Log: l, silent: silent, raw: l})
 	}
 
-	r.Results(res) // Includes headers for `auth0 logs list`
+	viewChan := make(chan View)
+
+	go func() {
+		defer close(viewChan)
+
+		for list := range ch {
+			for _, l := range list {
+				viewChan <- &logView{Log: l, silent: silent, raw: l}
+			}
+		}
+	}()
+
+	r.Stream(res, viewChan)
 }
