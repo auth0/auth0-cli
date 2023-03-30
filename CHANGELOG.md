@@ -37,6 +37,8 @@ curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | s
 - `auth0 logs tail` terminating early if no logs found [#672]
 - `auth0 apps list` rendering correct number of results in output header [#674]
 - `auth0 test token` failing silently with invalid audience input [#671]
+- Possible panic when running `auth0 ul update` with empty branding settings (newly-created tenant) [#692]
+- Inability to update user password with `auth0 users update --password` [#686]
 
 ## [1.0.0-beta.2](https://github.com/auth0/auth0-cli/tree/1.0.0-beta.2) (Feb 14, 2023)
 
@@ -100,6 +102,8 @@ curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | s
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
+[#686]: https://github.com/auth0/auth0-cli/issues/686
+[#692]: https://github.com/auth0/auth0-cli/issues/692
 [#671]: https://github.com/auth0/auth0-cli/issues/671
 [#667]: https://github.com/auth0/auth0-cli/issues/667
 [#666]: https://github.com/auth0/auth0-cli/issues/666
