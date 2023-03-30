@@ -196,17 +196,11 @@ func updateUniversalLoginCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			logoURL := current.GetLogoURL()
-			if len(inputs.LogoURL) == 0 && logoURL != "" {
-				b.LogoURL = &logoURL
-			} else if len(inputs.LogoURL) != 0 {
+			if len(inputs.LogoURL) != 0 {
 				b.LogoURL = &inputs.LogoURL
 			}
 
-			favIconURL := current.GetFaviconURL()
-			if len(inputs.FaviconURL) == 0 && favIconURL != "" {
-				b.FaviconURL = &favIconURL
-			} else if len(inputs.FaviconURL) != 0 {
+			if len(inputs.FaviconURL) != 0 {
 				b.FaviconURL = &inputs.FaviconURL
 			}
 
