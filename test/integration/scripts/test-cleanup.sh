@@ -127,4 +127,7 @@ auth0 domains delete $(./test/integration/scripts/get-custom-domain-id.sh) --no-
 # Reset universal login branding
 auth0 ul update --accent "#2A2E35" --background "#FF4F40" --logo "https://example.com/logo.png" --favicon "https://example.com/favicon.png" --font https://example.com/font.woff --no-input
 
+# Removes quickstart directory
+rm -rf integration-test-app-newapp 
+
 rm -rf test/integration/identifiers

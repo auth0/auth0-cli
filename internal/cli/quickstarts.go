@@ -2,7 +2,6 @@ package cli
 
 import (
 	_ "embed"
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -355,10 +354,6 @@ func defaultURL(url string, port int) string {
 }
 
 func (i *qsInputs) fromArgs(cmd *cobra.Command, args []string, cli *cli) error {
-	if !canPrompt(cmd) {
-		return errors.New("this command can only be run on interactive mode")
-	}
-
 	if len(args) == 0 {
 		if err := qsClientID.Pick(
 			cmd,
