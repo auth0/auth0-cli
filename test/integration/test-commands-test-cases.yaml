@@ -1,0 +1,49 @@
+config:
+  inherit-env: true
+
+tests:
+  001 - test login of default app (partially successful):
+    #Terminate early because command will otherwise wait for in-browser authorization stage
+    command: timeout 2s  auth0 test login $(./test/integration/scripts/get-default-app-id.sh) --no-input 2>&1
+    exit-code: 124 #Timeout exit code
+    stdout:
+      contains:
+        - "Open the following URL in a browser: https://"
+        - ".auth0.com/authorize?client_id="
+        - "&response_type=code&scope=openid+profile&state="
+
+  002 - unsuccessful test login of machine-to-machine app:
+    command: auth0 test login $(./test/integration/scripts/get-m2m-app-id.sh) --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "cannot test the Universal Login with a Machine to Machine application."
+
+  003 - test token without client grant:
+    command: auth0 test token $(./test/integration/scripts/get-m2m-app-id.sh) --audience "$(./test/integration/scripts/get-manage-api-audience.sh)" --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "failed to log in with client credentials for client with ID "
+        - "the integration-test-app-m2m application is not authorized to request access tokens for this API "
+        - ".auth0.com/api/v2/."
+
+  004 - test token after creating client grant:
+    command: ./test/integration/scripts/create-client-grant.sh; auth0 test token $(./test/integration/scripts/get-m2m-app-id.sh) --audience "$(./test/integration/scripts/get-manage-api-audience.sh)" --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - "TOKEN    TYPE   Bearer"
+        - "EXPIRES    IN   1440 minute(s)"
+        - "ACCESS  TOKEN   ey"
+
+  # 002 - it successfully shows universal login branding:
+  #   command: auth0 ul show
+  #   exit-code: 0
+  #   stdout:
+  #     contains:
+  #       - "ACCENT COLOR      #2A2E35"
+  #       - "BACKGROUND COLOR  #FF4F40"
+  #       - LOGO URL          https://example.com/logo.png
+  #       - FAVICON URL       https://example.com/favicon.png
+  #       - CUSTOM FONT URL   https://example.com/font.woff

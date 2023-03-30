@@ -269,7 +269,7 @@ func testTokenCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	testAudience.IsRequired = true
+	// testAudience.IsRequired = true
 	testAudience.RegisterString(cmd, &inputs.Audience, "")
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
 
