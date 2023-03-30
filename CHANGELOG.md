@@ -7,15 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0-beta.2](https://github.com/auth0/auth0-cli/tree/1.0.0-beta.2) (Feb 14, 2023)
+## [1.0.0-beta.3](https://github.com/auth0/auth0-cli/tree/1.0.0-beta.3) (Mar 30, 2023)
 
 Refer to the [v1 migration guide](MIGRATION_GUIDE.md) for instructions on how to navigate breaking changes.
 
-To try the `v1.0.0-beta.2` release:
+To try the `v1.0.0-beta.3` release:
 
 ```bash
 # Binary will be downloaded to "./auth0".
-curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | sh -s -- -b . "v1.0.0-beta.2"
+curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | sh -s -- -b . "v1.0.0-beta.3"
 
 # Note: will only download executable in current directory.
 # Intentionally omitted from $PATH to avoid collisions with
@@ -23,6 +23,24 @@ curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | s
 
 ./auth0 --version # Example execution
 ```
+
+### Added
+
+- Re-adding storybook preview when updating universal login templates [#666]
+- Warning if updating universal login templates with classic mode enabled [#667]
+- Automatic retries with `api` command [#681]
+- Clearer device code comparison instructions [#664]
+
+### Fixed
+
+- Empty dashboard urls during `open` commands when authenticated using client credentials [#652]
+- `auth0 logs tail` terminating early if no logs found [#672]
+- `auth0 apps list` rendering correct number of results in output header [#674]
+- `auth0 test token` failing silently with invalid audience input [#671]
+- Possible panic when running `auth0 ul update` with empty branding settings (ex: newly-created tenant) [#692]
+- Inability to update user password with `auth0 users update --password` [#686]
+
+## [1.0.0-beta.2](https://github.com/auth0/auth0-cli/tree/1.0.0-beta.2) (Feb 14, 2023)
 
 ### Added
 
@@ -84,6 +102,16 @@ curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | s
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
+[#686]: https://github.com/auth0/auth0-cli/issues/686
+[#692]: https://github.com/auth0/auth0-cli/issues/692
+[#671]: https://github.com/auth0/auth0-cli/issues/671
+[#667]: https://github.com/auth0/auth0-cli/issues/667
+[#666]: https://github.com/auth0/auth0-cli/issues/666
+[#674]: https://github.com/auth0/auth0-cli/issues/674
+[#681]: https://github.com/auth0/auth0-cli/issues/681
+[#664]: https://github.com/auth0/auth0-cli/issues/664
+[#672]: https://github.com/auth0/auth0-cli/issues/672
+[#652]: https://github.com/auth0/auth0-cli/issues/652
 [#648]: https://github.com/auth0/auth0-cli/issues/648
 [#645]: https://github.com/auth0/auth0-cli/issues/645
 [#629]: https://github.com/auth0/auth0-cli/issues/629
