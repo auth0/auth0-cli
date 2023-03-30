@@ -66,8 +66,7 @@ func listLogsCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("An unexpected error occurred while getting logs: %v", err)
 			}
 
-			var logsCh chan []*management.Log
-			cli.renderer.LogList(list, logsCh, !cli.debug)
+			cli.renderer.LogList(list, !cli.debug)
 			return nil
 		},
 	}
@@ -154,7 +153,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 				}
 			}()
 
-			cli.renderer.LogList(list, logsCh, !cli.debug)
+			cli.renderer.LogTail(list, logsCh, !cli.debug)
 			return nil
 		},
 	}
