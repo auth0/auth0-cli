@@ -83,12 +83,8 @@ tests:
       json:
         allow_offline_access: "false"
 
-  apis create test api: # create an api and capture its id
-    command: ./test/integration/scripts/get-api-id.sh
-    exit-code: 0
-
   apis show json:
-    command: auth0 apis show $(cat ./test/integration/identifiers/api-id) --json # depends on "apis create test app" test
+    command: auth0 apis show $(./test/integration/scripts/get-api-id.sh) --json # depends on "apis create test app" test
     stdout:
       json:
         name: integration-test-api-newapi
@@ -99,7 +95,7 @@ tests:
     exit-code: 0
 
   apis show:
-    command: auth0 apis show $(cat ./test/integration/identifiers/api-id) # depends on "apis create test app" test
+    command: auth0 apis show $(./test/integration/scripts/get-api-id.sh) # depends on "apis create test app" test
     stdout:
       contains:
         - NAME                  integration-test-api-newapi
@@ -110,40 +106,40 @@ tests:
     exit-code: 0
 
   apis scopes list:
-    command: auth0 apis scopes list $(cat ./test/integration/identifiers/api-id) # depends on "apis create test app" test
+    command: auth0 apis scopes list $(./test/integration/scripts/get-api-id.sh) # depends on "apis create test app" test
     exit-code: 0
 
   # Test 'apis update'; all tests depend on "apis create test api" test
   apis update name:
-    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --name integration-test-api-betterApiName --json
+    command: auth0 apis update $(./test/integration/scripts/get-api-id.sh) --name integration-test-api-betterApiName --json
     stdout:
       json:
         name: integration-test-api-betterApiName
     exit-code: 0
 
   apis update scopes:
-    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --scopes read:todos,write:todos --json
+    command: auth0 apis update $(./test/integration/scripts/get-api-id.sh) --scopes read:todos,write:todos --json
     stdout:
       json:
         scopes: "[map[value:read:todos] map[value:write:todos]]"
     exit-code: 0
 
   apis update token lifetime:
-    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --token-lifetime 1000 --json
+    command: auth0 apis update $(./test/integration/scripts/get-api-id.sh) --token-lifetime 1000 --json
     stdout:
       json:
         token_lifetime: "1000"
     exit-code: 0
 
   apis update offline access true:
-    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --offline-access --json
+    command: auth0 apis update $(./test/integration/scripts/get-api-id.sh) --offline-access --json
     stdout:
       json:
         allow_offline_access: "true"
     exit-code: 0
 
   apis update offline access false:
-    command: auth0 apis update $(cat ./test/integration/identifiers/api-id) --offline-access=false --json
+    command: auth0 apis update $(./test/integration/scripts/get-api-id.sh) --offline-access=false --json
     stdout:
       json:
         allow_offline_access: "false"
@@ -166,13 +162,8 @@ tests:
         - EMAIL       testuser2@example.com
         - CONNECTION  Username-Password-Authentication
 
-  # Test 'users show'
-  users create test user:
-    command: ./test/integration/scripts/get-user-id.sh
-    exit-code: 0
-
   users show json:
-    command: auth0 users show $(cat ./test/integration/identifiers/user-id) --json
+    command: auth0 users show $(./test/integration/scripts/get-user-id.sh) --json
     stdout:
       json:
         email: "newuser@example.com"
@@ -180,7 +171,7 @@ tests:
     exit-code: 0
 
   users show:
-    command: auth0 users show $(cat ./test/integration/identifiers/user-id)
+    command: auth0 users show $(./test/integration/scripts/get-user-id.sh)
     stdout:
       contains:
         - EMAIL       newuser@example.com
@@ -188,7 +179,7 @@ tests:
     exit-code: 0
 
   users search:
-    command: auth0 users search --query user_id:"$(cat ./test/integration/identifiers/user-id)" --number 1 --sort "name:-1"
+    command: auth0 users search --query user_id:"$(./test/integration/scripts/get-user-id.sh)" --number 1 --sort "name:-1"
     exit-code: 0
     stdout:
       contains:
@@ -196,14 +187,14 @@ tests:
 
   # Test 'users update'
   users update email:
-    command: auth0 users update $(cat ./test/integration/identifiers/user-id)  --email betteruser@example.com  --json --no-input
+    command: auth0 users update $(./test/integration/scripts/get-user-id.sh)  --email betteruser@example.com  --json --no-input
     stdout:
       json:
         email: betteruser@example.com
     exit-code: 0
 
   users update name:
-    command: auth0 users update $(cat ./test/integration/identifiers/user-id)  --name integration-test-user-bettername  --json --no-input
+    command: auth0 users update $(./test/integration/scripts/get-user-id.sh)  --name integration-test-user-bettername  --json --no-input
     stdout:
       json:
         email: betteruser@example.com # Name is not being displayed, hence using email
@@ -226,13 +217,8 @@ tests:
         - DESCRIPTION  testRole2
     exit-code: 0
 
-  # Test 'roles show'
-  roles create test role:
-    command: ./test/integration/scripts/get-role-id.sh
-    exit-code: 0
-
   roles show json:
-    command: auth0 roles show $(cat ./test/integration/identifiers/role-id) --json
+    command: auth0 roles show $(./test/integration/scripts/get-role-id.sh) --json
     stdout:
       json:
         name: integration-test-role-newRole
@@ -240,7 +226,7 @@ tests:
     exit-code: 0
 
   roles show:
-    command: auth0 roles show $(cat ./test/integration/identifiers/role-id)
+    command: auth0 roles show $(./test/integration/scripts/get-role-id.sh)
     stdout:
       contains:
         - NAME         integration-test-role-newRole
@@ -249,14 +235,14 @@ tests:
 
   # Test 'roles update'
   roles update name:
-    command: auth0 roles update $(cat ./test/integration/identifiers/role-id) --name integration-test-role-betterName --json
+    command: auth0 roles update $(./test/integration/scripts/get-role-id.sh) --name integration-test-role-betterName --json
     stdout:
       json:
         name: integration-test-role-betterName
     exit-code: 0
 
   roles update description:
-    command: auth0 roles update $(cat ./test/integration/identifiers/role-id) --description betterDescription --json
+    command: auth0 roles update $(./test/integration/scripts/get-role-id.sh) --description betterDescription --json
     stdout:
       json:
         description: betterDescription
@@ -283,13 +269,8 @@ tests:
         - SCRIPT   function(user, context, cb) {
     exit-code: 0
 
-  # Test 'rules show'
-  rules create test rule:
-    command: ./test/integration/scripts/get-rule-id.sh
-    exit-code: 0
-
   rules show json:
-    command: auth0 rules show $(cat ./test/integration/identifiers/rule-id) --json
+    command: auth0 rules show $(./test/integration/scripts/get-rule-id.sh) --json
     stdout:
       json:
         name: integration-test-rule-newRule
@@ -298,7 +279,7 @@ tests:
     exit-code: 0
 
   rules show:
-    command: auth0 rules show $(cat ./test/integration/identifiers/rule-id)
+    command: auth0 rules show $(./test/integration/scripts/get-rule-id.sh)
     stdout:
       contains:
         - NAME     integration-test-rule-newRule
@@ -317,7 +298,7 @@ tests:
 
   # Test 'rules enable'
   rules enable:
-    command: auth0 rules enable $(cat ./test/integration/identifiers/rule-id) --json
+    command: auth0 rules enable $(./test/integration/scripts/get-rule-id.sh) --json
     stdout:
       json:
         enabled: "true"
@@ -325,7 +306,7 @@ tests:
 
   # Test 'rules disable'
   rules disable:
-    command: auth0 rules disable $(cat ./test/integration/identifiers/rule-id) --json
+    command: auth0 rules disable $(./test/integration/scripts/get-rule-id.sh) --json
     stdout:
       json:
         enabled: "false"
@@ -408,13 +389,13 @@ tests:
     exit-code: 0
 
   users roles show:
-    command: auth0 users roles show $(cat ./test/integration/identifiers/user-id)
+    command: auth0 users roles show $(./test/integration/scripts/get-user-id.sh)
     exit-code: 0
 
   users roles add:
-    command: auth0 users roles add $(cat ./test/integration/identifiers/user-id) -r $(cat ./test/integration/identifiers/role-id)
+    command: auth0 users roles add $(./test/integration/scripts/get-user-id.sh) -r $(./test/integration/scripts/get-role-id.sh)
     exit-code: 0
 
   users roles remove:
-    command: auth0 users roles rm $(cat ./test/integration/identifiers/user-id) -r $(cat ./test/integration/identifiers/role-id)
+    command: auth0 users roles rm $(./test/integration/scripts/get-user-id.sh) -r $(./test/integration/scripts/get-role-id.sh)
     exit-code: 0

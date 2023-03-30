@@ -35,12 +35,8 @@ tests:
         secrets.0.value: "value"
         status: "pending"
 
-  004 - given a test action:
-    command: ./test/integration/scripts/create-action.sh
-    exit-code: 0
-
-  005 - given a test action, it successfully gets the action's details:
-    command: auth0 actions show $(cat ./test/integration/identifiers/action-id)
+  004 - given a test action, it successfully gets the action's details:
+    command: auth0 actions show $(./test/integration/scripts/get-action-id.sh)
     exit-code: 0
     stdout:
       contains:
@@ -53,8 +49,8 @@ tests:
         - "CREATED"
         - "CODE           function() {}"
 
-  006 - given a test action, it successfully gets the action's details and outputs in json:
-    command: auth0 actions show $(cat ./test/integration/identifiers/action-id) --json
+  005 - given a test action, it successfully gets the action's details and outputs in json:
+    command: auth0 actions show $(./test/integration/scripts/get-action-id.sh) --json
     exit-code: 0
     stdout:
       json:
@@ -66,8 +62,8 @@ tests:
         dependencies.0.version: "4.0.0"
         secrets.0.name: "SECRET"
 
-  007 - given a test action, it successfully updates the action's details:
-    command: auth0 actions update $(cat ./test/integration/identifiers/action-id) -n "integration-test-action-updated" -c "function() {console.log()}" -d "uuid=9.0.0" -s "SECRET2=newValue"
+  006 - given a test action, it successfully updates the action's details:
+    command: auth0 actions update $(./test/integration/scripts/get-action-id.sh) -n "integration-test-action-updated" -c "function() {console.log()}" -d "uuid=9.0.0" -s "SECRET2=newValue"
     exit-code: 0
     stdout:
       contains:
@@ -80,8 +76,8 @@ tests:
         - "CREATED"
         - "CODE           function() {console.log()}"
 
-  008 - given a test action, it successfully updates the action's details and outputs in json:
-    command: auth0 actions update $(cat ./test/integration/identifiers/action-id) -n "integration-test-action-updated-again" -c "function() {console.log()}" -d "uuid=9.0.0" -s "SECRET3=newValue" --json
+  007 - given a test action, it successfully updates the action's details and outputs in json:
+    command: auth0 actions update $(./test/integration/scripts/get-action-id.sh) -n "integration-test-action-updated-again" -c "function() {console.log()}" -d "uuid=9.0.0" -s "SECRET3=newValue" --json
     exit-code: 0
     stdout:
       json:
@@ -94,13 +90,13 @@ tests:
         secrets.0.name: "SECRET3"
         secrets.0.value: "newValue"
 
-  011 - given a test action, it successfully opens the settings page:
-    command: auth0 actions open $(cat ./test/integration/identifiers/action-id) --no-input
+  008 - given a test action, it successfully opens the settings page:
+    command: auth0 actions open $(./test/integration/scripts/get-action-id.sh) --no-input
     exit-code: 0
     stderr:
       contains:
         - "Open the following URL in a browser"
 
-  012 - given a test action, it successfully deletes the action:
-    command: auth0 actions delete $(cat ./test/integration/identifiers/action-id) --force
+  009 - given a test action, it successfully deletes the action:
+    command: auth0 actions delete $(./test/integration/scripts/get-action-id.sh) --force
     exit-code: 0

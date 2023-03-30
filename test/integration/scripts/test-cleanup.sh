@@ -73,7 +73,7 @@ done
 
 rules=$( auth0 rules list --json --no-input )
 
-for rule in $( echo "${rules}" | jq -r '.[] | @base64' ); do
+for rule in $( printf "%s" "$rules" | jq -r '.[] | @base64' ); do
     _jq() {
      echo "${rule}" | base64 --decode | jq -r "${1}"
     }
@@ -122,4 +122,4 @@ for action in $( echo "${actions}" | jq -r '.[] | @base64' ); do
     fi
 done
 
-rm -r test/integration/identifiers
+rm -rf test/integration/identifiers
