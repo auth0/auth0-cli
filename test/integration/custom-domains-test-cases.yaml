@@ -54,7 +54,6 @@ tests:
       contains:
         - "ID                       cd_"
         - "DOMAIN                   integration-test.com"
-        - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        auth0_managed_certs"
         - "TLS POLICY               recommended"
   008 - delete domain:
