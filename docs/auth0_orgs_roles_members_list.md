@@ -16,7 +16,7 @@ auth0 orgs roles members list [flags]
 
 ```
   auth0 orgs roles members list
-  auth0 orgs roles members ls
+  auth0 orgs roles members ls <org-id>
   auth0 orgs roles members list <org-id> --role-id role
   auth0 orgs roles members list <org-id> --role-id role --number 100
   auth0 orgs roles members ls <org-id> -r role -n 100
