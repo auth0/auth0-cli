@@ -1,24 +1,14 @@
-package cli
+package auth0
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-func TestQuickstartsTypeFor(t *testing.T) {
-	assert.Equal(t, qsSpa, quickstartsTypeFor("spa"))
-	assert.Equal(t, qsWebApp, quickstartsTypeFor("regular_web"))
-	assert.Equal(t, qsWebApp, quickstartsTypeFor("regular_web"))
-	assert.Equal(t, qsBackend, quickstartsTypeFor("non_interactive"))
-	assert.Equal(t, "generic", quickstartsTypeFor("some-unknown-value"))
-}
-
-var mockQuickStarts = auth0.Quickstarts{
-	auth0.Quickstart{
+var mockQuickStarts = Quickstarts{
+	Quickstart{
 		Name:                 "Express",
 		AppType:              "webapp",
 		URL:                  "/docs/quickstart/webapp/express",
@@ -26,7 +16,7 @@ var mockQuickStarts = auth0.Quickstarts{
 		DownloadLink:         "/docs/package/v2?repo=auth0-express-webapp-sample&branch=master&path=01-Login",
 		DownloadInstructions: "<!-- markdownlint-disable MD041 -->\n<p>To run the sample follow these steps:</p>\n<ol></p>",
 	},
-	auth0.Quickstart{
+	Quickstart{
 		Name:                 "Flutter",
 		AppType:              "native",
 		URL:                  "/docs/quickstart/native/flutter",
@@ -38,12 +28,12 @@ var mockQuickStarts = auth0.Quickstarts{
 
 func TestFilterByType(t *testing.T) {
 	t.Run("filter quickstarts by known types", func(t *testing.T) {
-		res, err := mockQuickStarts.FilterByType(qsWebApp)
+		res, err := mockQuickStarts.FilterByType("webapp")
 		assert.Len(t, res, 1)
 		assert.Equal(t, res[0].Name, "Express")
 		assert.NoError(t, err)
 
-		res, err = mockQuickStarts.FilterByType(qsNative)
+		res, err = mockQuickStarts.FilterByType("native")
 		assert.Len(t, res, 1)
 		assert.Equal(t, res[0].Name, "Flutter")
 		assert.NoError(t, err)
@@ -62,7 +52,7 @@ func TestStacks(t *testing.T) {
 		res := mockQuickStarts.Stacks()
 		assert.Equal(t, res, []string{"Express", "Flutter"})
 
-		res = auth0.Quickstarts{}.Stacks()
+		res = Quickstarts{}.Stacks()
 		assert.Len(t, res, 0)
 	})
 }
