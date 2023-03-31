@@ -1,5 +1,7 @@
 config:
   inherit-env: true
+  retries: 1
+
 tests:
   001 - list quickstarts:
     command: auth0 quickstarts list
@@ -10,4 +12,4 @@ tests:
     stderr:
       contains:
         - "Quickstart sample successfully downloaded at "
-        - "Hint: Start with `cd integration-test-app-qs/00-"
+        - "Hint: Start with `cd integration-test-app-q/00-"

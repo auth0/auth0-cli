@@ -1,5 +1,7 @@
 config:
   inherit-env: true
+  retries: 1
+
 tests:
   001 - list organizations:
     command: auth0 orgs list
