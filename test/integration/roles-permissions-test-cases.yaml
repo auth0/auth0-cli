@@ -9,7 +9,7 @@ tests:
       contains:
         - No role permissions available.
 
-  002 - list role permissions:
+  002 - list role permissions with invalid number:
     command: auth0 roles permissions ls $(./test/integration/scripts/get-role-id.sh) --number -1
     exit-code: 1
     stderr:
