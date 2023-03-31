@@ -1,7 +1,6 @@
 package ansi
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/logrusorgru/aurora"
@@ -9,15 +8,6 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/iostream"
 )
-
-var darkTerminalStyle = &pretty.Style{
-	Key:    [2]string{"\x1B[34m", "\x1B[0m"},
-	String: [2]string{"\x1B[30m", "\x1B[0m"},
-	Number: [2]string{"\x1B[94m", "\x1B[0m"},
-	True:   [2]string{"\x1B[35m", "\x1B[0m"},
-	False:  [2]string{"\x1B[35m", "\x1B[0m"},
-	Null:   [2]string{"\x1B[31m", "\x1B[0m"},
-}
 
 // ForceColors forces the use of colors and other ANSI sequences.
 var ForceColors = false
@@ -56,29 +46,14 @@ func Initialize(shouldDisableColors bool) {
 
 // ColorizeJSON returns a colorized version of the input JSON, if the writer
 // supports colors.
-func ColorizeJSON(json string, darkStyle bool) string {
+func ColorizeJSON(json string) string {
 	if !shouldUseColors() {
 		return json
 	}
 
 	style := (*pretty.Style)(nil)
-	if darkStyle {
-		style = darkTerminalStyle
-	}
 
 	return string(pretty.Color([]byte(json), style))
-}
-
-// ColorizeStatus returns a colorized number for HTTP status code.
-func ColorizeStatus(status int) aurora.Value {
-	switch {
-	case status >= 500:
-		return color.Red(status).Bold()
-	case status >= 300:
-		return color.Yellow(status).Bold()
-	default:
-		return color.Green(status).Bold()
-	}
 }
 
 // Faint returns slightly offset color text if the writer supports it.
@@ -129,23 +104,6 @@ func Magenta(text string) string {
 // Cyan returns text colored cyan.
 func Cyan(text string) string {
 	return color.Sprintf(color.BrightCyan(text))
-}
-
-// Linkify returns an ANSI escape sequence with an hyperlink, if the writer
-// supports colors.
-func Linkify(text, url string) string {
-	if !shouldUseColors() {
-		return text
-	}
-
-	// See https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda
-	// for more information about this escape sequence.
-	return fmt.Sprintf("\x1b]8;;%s\x1b\\%s\x1b]8;;\x1b\\", url, text)
-}
-
-// StrikeThrough returns struck though text if the writer supports colors.
-func StrikeThrough(text string) string {
-	return color.Sprintf(color.StrikeThrough(text))
 }
 
 func shouldUseColors() bool {

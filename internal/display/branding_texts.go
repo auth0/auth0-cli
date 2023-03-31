@@ -14,7 +14,7 @@ func (r *Renderer) BrandingTextShow(brandingTextJSON, prompt, language string) {
 			ansi.Bold(language),
 		),
 	)
-	r.Output(ansi.ColorizeJSON(brandingTextJSON, false))
+	r.Output(ansi.ColorizeJSON(brandingTextJSON))
 	r.Newline()
 }
 
@@ -26,6 +26,6 @@ func (r *Renderer) BrandingTextUpdate(brandingTextJSON string, prompt, language 
 			ansi.Bold(language),
 		),
 	)
-	r.Output(ansi.ColorizeJSON(brandingTextJSON, false))
+	r.Output(ansi.ColorizeJSON(brandingTextJSON))
 	r.Newline()
 }
