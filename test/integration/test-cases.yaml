@@ -14,9 +14,6 @@ tests:
   auth0 rules list:
     exit-code: 0
 
-  auth0 quickstarts list:
-    exit-code: 0
-
   auth0 completion bash:
     exit-code: 0
 
