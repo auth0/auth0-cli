@@ -1,5 +1,6 @@
 config:
   inherit-env: true
+  retries: 1
 
 tests:
   001 - it successfully uses the api command to fetch tenant settings:

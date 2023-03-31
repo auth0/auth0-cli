@@ -1,5 +1,7 @@
 config:
   inherit-env: true
+  retries: 1
+
 tests:
   001 - list organizations:
     command: auth0 orgs list
@@ -99,6 +101,8 @@ tests:
       contains:
         - '"user_id": "auth0|'
         - '"picture": "'
+    config:
+      retries: 3
   014 - list organization roles:
     command: auth0 orgs roles list $(./test/integration/scripts/get-org-id.sh)
     exit-code: 0
