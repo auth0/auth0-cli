@@ -36,37 +36,47 @@ var mockQuickStarts = auth0.Quickstarts{
 }
 
 func TestFilterByType(t *testing.T) {
-	res, err := mockQuickStarts.FilterByType(qsWebApp)
-	assert.Len(t, res, 1)
-	assert.Equal(t, res[0].Name, "Express")
-	assert.NoError(t, err)
+	t.Run("filter quickstarts by known types", func(t *testing.T) {
+		res, err := mockQuickStarts.FilterByType(qsWebApp)
+		assert.Len(t, res, 1)
+		assert.Equal(t, res[0].Name, "Express")
+		assert.NoError(t, err)
 
-	res, err = mockQuickStarts.FilterByType(qsNative)
-	assert.Len(t, res, 1)
-	assert.Equal(t, res[0].Name, "Flutter")
-	assert.NoError(t, err)
+		res, err = mockQuickStarts.FilterByType(qsNative)
+		assert.Len(t, res, 1)
+		assert.Equal(t, res[0].Name, "Flutter")
+		assert.NoError(t, err)
+	})
 
-	res, err = mockQuickStarts.FilterByType(qsSpa)
-	assert.Nil(t, res)
-	assert.Error(t, err)
-	assert.Equal(t, fmt.Sprintf("unable to find any quickstarts for: %s", qsSpa), err.Error())
+	t.Run("filter quickstarts by an unknown type", func(t *testing.T) {
+		res, err := mockQuickStarts.FilterByType("some-unknown-type")
+		assert.Nil(t, res)
+		assert.Error(t, err)
+		assert.Equal(t, fmt.Sprintf("unable to find any quickstarts for: %s", qsSpa), err.Error())
+	})
 }
 
 func TestStacks(t *testing.T) {
-	res := mockQuickStarts.Stacks()
-	assert.Equal(t, res, []string{"Express", "Flutter"})
+	t.Run("get quickstart stacks from quickstarts list", func(t *testing.T) {
+		res := mockQuickStarts.Stacks()
+		assert.Equal(t, res, []string{"Express", "Flutter"})
 
-	res = auth0.Quickstarts{}.Stacks()
-	assert.Len(t, res, 0)
+		res = auth0.Quickstarts{}.Stacks()
+		assert.Len(t, res, 0)
+	})
 }
 
 func TestFindByStack(t *testing.T) {
-	res, err := mockQuickStarts.FindByStack("Express")
-	assert.NoError(t, err)
-	assert.Equal(t, "Express", res.Name)
+	t.Run("find quickstart stack by known app type", func(t *testing.T) {
+		res, err := mockQuickStarts.FindByStack("Express")
+		assert.NoError(t, err)
+		assert.Equal(t, "Express", res.Name)
+	})
 
-	res, err = mockQuickStarts.FindByStack("some-non-existent-qs-type")
-	assert.Error(t, err)
-	assert.Empty(t, res)
-	assert.Equal(t, fmt.Sprintf("quickstart not found for %s", "some-non-existent-qs-type"), err.Error())
+	t.Run("find quickstart stack by known app type", func(t *testing.T) {
+		res, err := mockQuickStarts.FindByStack("some-non-existent-qs-type")
+		assert.Error(t, err)
+		assert.Empty(t, res)
+		assert.Equal(t, fmt.Sprintf("quickstart not found for %s", "some-non-existent-qs-type"), err.Error())
+	})
 }
