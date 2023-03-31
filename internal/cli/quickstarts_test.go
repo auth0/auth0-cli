@@ -53,7 +53,7 @@ func TestFilterByType(t *testing.T) {
 		res, err := mockQuickStarts.FilterByType("some-unknown-type")
 		assert.Nil(t, res)
 		assert.Error(t, err)
-		assert.Equal(t, fmt.Sprintf("unable to find any quickstarts for: %s", qsSpa), err.Error())
+		assert.Equal(t, fmt.Sprintf("unable to find any quickstarts for: %s", "some-unknown-type"), err.Error())
 	})
 }
 
