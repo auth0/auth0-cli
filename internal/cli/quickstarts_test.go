@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
 func TestQuickstartsTypeFor(t *testing.T) {
