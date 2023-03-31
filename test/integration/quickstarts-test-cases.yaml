@@ -12,4 +12,4 @@ tests:
     stderr:
       contains:
         - "Quickstart sample successfully downloaded at "
-        - "Hint: Start with `cd integration-test-app-q/00-"
+        - "Hint: Start with `cd integration-test-app-qs/00-"
