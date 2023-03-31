@@ -638,12 +638,13 @@ func listMembersRolesOrganizationCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "list",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "List organization members for a role",
-		Long:  "List organization members that have a given role assigned to them.",
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "List organization members for a role",
+		Long:    "List organization members that have a given role assigned to them.",
 		Example: `  auth0 orgs roles members list
-  auth0 orgs roles members ls
+  auth0 orgs roles members ls <org-id>
   auth0 orgs roles members list <org-id> --role-id role
   auth0 orgs roles members list <org-id> --role-id role --number 100
   auth0 orgs roles members ls <org-id> -r role -n 100
