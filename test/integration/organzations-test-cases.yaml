@@ -112,3 +112,12 @@ tests:
     stderr:
       contains:
         - number flag invalid, please pass a number between 1 and 1000
+  016 - list organization roles members:
+    command: auth0 orgs roles members list $(./test/integration/scripts/get-org-id.sh)
+    exit-code: 0
+  017 - list organization roles members with invalid number:
+    command: auth0 orgs roles members list $(./test/integration/scripts/get-org-id.sh) --number 1001
+    exit-code: 1
+    stderr:
+      contains:
+        - number flag invalid, please pass a number between 1 and 1000
