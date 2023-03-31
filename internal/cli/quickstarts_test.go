@@ -74,7 +74,7 @@ func TestFindByStack(t *testing.T) {
 		assert.Equal(t, "Express", res.Name)
 	})
 
-	t.Run("find quickstart stack by known app type", func(t *testing.T) {
+	t.Run("find quickstart stack by an unknown app type", func(t *testing.T) {
 		res, err := mockQuickStarts.FindByStack("some-non-existent-qs-type")
 		assert.Error(t, err)
 		assert.Empty(t, res)
