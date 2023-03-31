@@ -1,0 +1,49 @@
+config:
+  inherit-env: true
+
+tests:
+  001 - list role permissions with empty state:
+    command: auth0 roles permissions ls $(./test/integration/scripts/get-role-id.sh)
+    exit-code: 0
+    stderr:
+      contains:
+        - No role permissions available.
+
+  002 - list role permissions with invalid number:
+    command: auth0 roles permissions ls $(./test/integration/scripts/get-role-id.sh) --number -1
+    exit-code: 1
+    stderr:
+      contains:
+        - number flag invalid, please pass a number between 1 and 1000
+
+  003 - add role permissions:
+    command: auth0 roles permissions add $(./test/integration/scripts/get-role-id.sh) --api-id $(./test/integration/scripts/get-api-id.sh) --permissions read:todos
+    exit-code: 0
+    stderr:
+      contains: 
+        - Added permissions read:todos (http://integration-test-api-newapi) to role integration-test-role-newRole.
+  
+  004 - list role permissions with data:
+    command: auth0 roles permissions ls $(./test/integration/scripts/get-role-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - API IDENTIFIER                      API NAME                            PERMISSION NAME  DESCRIPTION
+        - http://integration-test-api-newapi  integration-test-api-betterApiName  read:todos
+
+  005 - list role permissions with data as json:
+    command: auth0 roles permissions ls $(./test/integration/scripts/get-role-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        0.resource_server_identifier: "http://integration-test-api-newapi"
+        0.resource_server_name: "integration-test-api-betterApiName"
+        0.permission_name: "read:todos"
+        0.description: ""
+  
+  006 - remove role permissions:
+    command: auth0 roles permissions rm $(./test/integration/scripts/get-role-id.sh) --api-id $(./test/integration/scripts/get-api-id.sh) --permissions read:todos
+    exit-code: 0
+    stderr:
+      contains:
+        - Removed permissions read:todos (http://integration-test-api-newapi) from role integration-test-role-newRole.
