@@ -2,7 +2,7 @@ config:
   inherit-env: true
 
 tests:
-  001 - list role permissions:
+  001 - list role permissions with empty state:
     command: auth0 roles permissions ls $(./test/integration/scripts/get-role-id.sh)
     exit-code: 0
     stderr:
