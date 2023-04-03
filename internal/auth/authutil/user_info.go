@@ -32,7 +32,7 @@ type UserInfo struct {
 }
 
 // FetchUserInfo fetches and parses user information with the provided access token.
-func FetchUserInfo(baseDomain, token string) (*UserInfo, error) {
+func FetchUserInfo(httpClient *http.Client, baseDomain, token string) (*UserInfo, error) {
 	endpoint := url.URL{Scheme: "https", Host: baseDomain, Path: "/userinfo"}
 
 	req, err := http.NewRequest("GET", endpoint.String(), nil)
@@ -41,7 +41,7 @@ func FetchUserInfo(baseDomain, token string) (*UserInfo, error) {
 	}
 	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", token))
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("unable to exchange code for token: %w", err)
 	}
