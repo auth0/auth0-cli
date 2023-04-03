@@ -7,6 +7,7 @@ import (
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
@@ -87,4 +88,34 @@ func TestAppsListCmd(t *testing.T) {
 			test.assertOutput(t, stdout.String())
 		})
 	}
+}
+
+func TestFormatAppSettingsPath(t *testing.T) {
+	assert.Empty(t, formatAppSettingsPath(""))
+	assert.Equal(t, "applications/app-id-1/settings", formatAppSettingsPath("app-id-1"))
+}
+
+func TestTypeFor(t *testing.T) {
+	testAppType := appTypeNative
+	expected := "Native"
+	assert.Equal(t, &expected, typeFor(&testAppType))
+
+	testAppType = appTypeSPA
+	expected = "Single Page Web Application"
+	assert.Equal(t, &expected, typeFor(&testAppType))
+
+	testAppType = appTypeRegularWeb
+	expected = "Regular Web Application"
+	assert.Equal(t, &expected, typeFor(&testAppType))
+
+	testAppType = appTypeNonInteractive
+	expected = "Machine to Machine"
+	assert.Equal(t, &expected, typeFor(&testAppType))
+
+	testAppType = "some-unknown-api-type"
+	assert.Nil(t, typeFor(&testAppType))
+}
+
+func TestCommaSeparatedStringToSlice(t *testing.T) {
+	assert.Equal(t, []string{"foo"}, commaSeparatedStringToSlice("foo"))
 }
