@@ -113,14 +113,14 @@ tests:
     exit-code: 0
     stdout:
       json:
-        grant_types: "[implicit, refresh_token]"
+        grant_types: "[implicit refresh_token]"
 
   016 - it successfully creates a native app with grants and outputs in json:
     command: auth0 apps create --name integration-test-app-nativeapp2 --type native --description NativeApp2 --grants code,mfa-oob,mfa-otp,mfa-recovery-code,password-realm --json
     exit-code: 0
     stdout:
       json:
-        grant_types: "[authorization_code, http://auth0.com/oauth/grant-type/mfa-oob, http://auth0.com/oauth/grant-type/mfa-otp, http://auth0.com/oauth/grant-type/mfa-recovery-code, http://auth0.com/oauth/grant-type/password-realm]"
+        grant_types: "[authorization_code http://auth0.com/oauth/grant-type/mfa-oob http://auth0.com/oauth/grant-type/mfa-otp http://auth0.com/oauth/grant-type/mfa-recovery-code http://auth0.com/oauth/grant-type/password-realm]"
 
   017 - it fails to create a m2m app with device code grant:
     command: auth0 apps create --name integration-test-app-m2mapp4 --type m2m --description M2mApp4 --grants credentials,device-code
