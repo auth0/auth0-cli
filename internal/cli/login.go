@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/pkg/browser"
@@ -155,7 +156,7 @@ func loginCmd(cli *cli) *cobra.Command {
 // RunLoginAsUser runs the login flow guiding the user through the process
 // by showing the login instructions, opening the browser.
 func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (Tenant, error) {
-	state, err := auth.GetDeviceCode(ctx, additionalScopes)
+	state, err := auth.GetDeviceCode(ctx, http.DefaultClient, additionalScopes)
 	if err != nil {
 		return Tenant{}, fmt.Errorf("failed to get the device code: %w", err)
 	}
@@ -184,7 +185,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (T
 
 	var result auth.Result
 	err = ansi.Spinner("Waiting for the login to complete in the browser", func() error {
-		result, err = auth.WaitUntilUserLogsIn(ctx, state)
+		result, err = auth.WaitUntilUserLogsIn(ctx, http.DefaultClient, state)
 		return err
 	})
 	if err != nil {
