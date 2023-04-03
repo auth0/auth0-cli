@@ -44,9 +44,8 @@ func Execute() {
 		if v := recover(); v != nil {
 			err := fmt.Errorf("panic: %v", v)
 
-			// If we're in development mode, we should throw the
-			// panic for so we have less surprises. For
-			// non-developers, we'll swallow the panics.
+			// If we're in development mode, we should throw the panic for so we have less surprises.
+			// For non-developers, we'll swallow the panics.
 			if instrumentation.ReportException(err) {
 				fmt.Print(panicMessage)
 			} else {

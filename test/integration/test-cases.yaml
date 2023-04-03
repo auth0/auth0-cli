@@ -15,6 +15,15 @@ tests:
   auth0 completion bash:
     exit-code: 0
 
+  auth0 completion zsh:
+    exit-code: 0
+
+  auth0 completion fish:
+    exit-code: 0
+
+  auth0 completion powershell:
+    exit-code: 0
+
   # Test 'roles create'
   roles create and check data:
     command: auth0 roles create --name integration-test-role-new1 --description testRole --json --no-input
@@ -31,6 +40,22 @@ tests:
         - NAME         integration-test-role-new2
         - DESCRIPTION  testRole2
     exit-code: 0
+
+  roles list all with data:
+    command: auth0 roles list
+    exit-code: 0
+    stdout:
+      contains:
+        - ID
+        - NAME
+        - DESCRIPTION
+
+  roles list all with invalid number:
+    command: auth0 roles list --number 1001
+    exit-code: 1
+    stderr:
+      contains:
+        - number flag invalid, please pass a number between 1 and 1000
 
   roles show json:
     command: auth0 roles show $(./test/integration/scripts/get-role-id.sh) --json
@@ -83,6 +108,16 @@ tests:
         - ORDER    2
         - SCRIPT   function(user, context, cb) {
     exit-code: 0
+  
+  rules list all with data:
+    command: auth0 rules list
+    exit-code: 0
+    stdout:
+      contains:
+        - ID
+        - NAME
+        - ENABLED
+        - ORDER
 
   rules show json:
     command: auth0 rules show $(./test/integration/scripts/get-rule-id.sh) --json
@@ -127,7 +162,7 @@ tests:
         enabled: "false"
     exit-code: 0
 
-  attack protection show breached password detection:
+  attack protection breached password detection show:
     command: auth0 attack-protection breached-password-detection show
     stdout:
       contains:
@@ -137,7 +172,7 @@ tests:
         - METHOD
     exit-code: 0
 
-  attack protection show brute force protection:
+  attack protection brute force protection show:
     command: auth0 attack-protection brute-force-protection show
     stdout:
       contains:
@@ -148,7 +183,7 @@ tests:
         - MAX_ATTEMPTS
     exit-code: 0
 
-  attack protection show suspicious ip throttling:
+  attack protection suspicious ip throttling show:
     command: auth0 attack-protection suspicious-ip-throttling show
     stdout:
       contains:
@@ -159,6 +194,20 @@ tests:
         - STAGE_PRE_LOGIN_RATE
         - STAGE_PRE_USER_REGISTRATION_MAX_ATTEMPTS
         - STAGE_PRE_USER_REGISTRATION_RATE
+    exit-code: 0
+
+  attack protection suspicious ip throttling ips check:
+    command: auth0 attack-protection suspicious-ip-throttling ips check 127.0.0.1
+    stderr:
+      contains:
+        - "The IP 127.0.0.1 is not blocked."
+    exit-code: 0
+
+  attack protection suspicious ip throttling ips unblock:
+    command: auth0 attack-protection suspicious-ip-throttling ips unblock 127.0.0.1
+    stderr:
+      contains:
+        - "The IP 127.0.0.1 was unblocked."
     exit-code: 0
 
   attack protection update breached password detection:
@@ -202,3 +251,17 @@ tests:
   update universal login branding prompts (mfa-push):
     command: cat ./test/integration/fixtures/update-ul-prompts-mfa-push.json | auth0 ul prompts update mfa-push
     exit-code: 0
+
+  tenants use:
+    command: auth0 tenants use $AUTH0_CLI_CLIENT_DOMAIN
+    exit-code: 0
+    stderr:
+      contains: 
+        - "Default tenant switched to:"
+
+  tenants open:
+    command: auth0 tenants open $AUTH0_CLI_CLIENT_DOMAIN --no-input
+    exit-code: 0
+    stderr:
+      contains: 
+        - "Open the following URL in a browser:"
