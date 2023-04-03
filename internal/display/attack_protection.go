@@ -19,16 +19,11 @@ type breachedPasswordDetectionView struct {
 }
 
 func (bpd *breachedPasswordDetectionView) AsTableHeader() []string {
-	return []string{"Enabled", "Shields", "AdminNotificationFrequency", "Method"}
+	return []string{}
 }
 
 func (bpd *breachedPasswordDetectionView) AsTableRow() []string {
-	return []string{
-		bpd.Enabled,
-		strings.Join(bpd.Shields, ", "),
-		strings.Join(bpd.AdminNotificationFrequency, ", "),
-		bpd.Method,
-	}
+	return []string{}
 }
 
 func (bpd *breachedPasswordDetectionView) KeyValues() [][]string {
@@ -76,17 +71,11 @@ type bruteForceProtectionView struct {
 }
 
 func (bfp *bruteForceProtectionView) AsTableHeader() []string {
-	return []string{"Enabled", "Shields", "AllowList", "Mode", "MaxAttempts"}
+	return []string{}
 }
 
 func (bfp *bruteForceProtectionView) AsTableRow() []string {
-	return []string{
-		bfp.Enabled,
-		strings.Join(bfp.Shields, ", "),
-		strings.Join(bfp.AllowList, ", "),
-		bfp.Mode,
-		strconv.Itoa(bfp.MaxAttempts),
-	}
+	return []string{}
 }
 
 func (bfp *bruteForceProtectionView) KeyValues() [][]string {
@@ -138,27 +127,11 @@ type suspiciousIPThrottlingView struct {
 }
 
 func (sit *suspiciousIPThrottlingView) AsTableHeader() []string {
-	return []string{
-		"Enabled",
-		"Shields",
-		"AllowList",
-		"StagePreLoginMaxAttempts",
-		"StagePreLoginRate",
-		"StagePreUserRegistrationMaxAttempts",
-		"StagePreUserRegistrationRate",
-	}
+	return []string{}
 }
 
 func (sit *suspiciousIPThrottlingView) AsTableRow() []string {
-	return []string{
-		sit.Enabled,
-		strings.Join(sit.Shields, ", "),
-		strings.Join(sit.AllowList, ", "),
-		strconv.Itoa(sit.StagePreLoginMaxAttempts),
-		strconv.Itoa(sit.StagePreLoginRate),
-		strconv.Itoa(sit.StagePreUserRegistrationMaxAttempts),
-		strconv.Itoa(sit.StagePreUserRegistrationRate),
-	}
+	return []string{}
 }
 
 func (sit *suspiciousIPThrottlingView) KeyValues() [][]string {
