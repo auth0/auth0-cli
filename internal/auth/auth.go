@@ -57,7 +57,7 @@ var credentials = &Credentials{
 }
 
 // WaitUntilUserLogsIn waits until the user is logged in on the browser.
-func WaitUntilUserLogsIn(ctx context.Context, state State) (Result, error) {
+func WaitUntilUserLogsIn(ctx context.Context, httpClient *http.Client, state State) (Result, error) {
 	t := time.NewTicker(state.IntervalDuration())
 	for {
 		select {
@@ -69,7 +69,7 @@ func WaitUntilUserLogsIn(ctx context.Context, state State) (Result, error) {
 				"grant_type":  []string{"urn:ietf:params:oauth:grant-type:device_code"},
 				"device_code": []string{state.DeviceCode},
 			}
-			r, err := http.PostForm(credentials.OauthTokenEndpoint, data)
+			r, err := httpClient.PostForm(credentials.OauthTokenEndpoint, data)
 			if err != nil {
 				return Result{}, fmt.Errorf("cannot get device code: %w", err)
 			}
@@ -119,7 +119,7 @@ func WaitUntilUserLogsIn(ctx context.Context, state State) (Result, error) {
 // GetDeviceCode kicks-off the device authentication flow by requesting
 // a device code from Auth0. The returned state contains the
 // URI for the next step of the flow.
-func GetDeviceCode(ctx context.Context, additionalScopes []string) (State, error) {
+func GetDeviceCode(ctx context.Context, httpClient *http.Client, additionalScopes []string) (State, error) {
 	a := credentials
 
 	data := url.Values{
@@ -140,7 +140,7 @@ func GetDeviceCode(ctx context.Context, additionalScopes []string) (State, error
 
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	response, err := http.DefaultClient.Do(request)
+	response, err := httpClient.Do(request)
 	if err != nil {
 		return State{}, fmt.Errorf("failed to send the request: %w", err)
 	}
