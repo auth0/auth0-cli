@@ -177,7 +177,7 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 			return fmt.Errorf("failed to prepare json output: %w", err)
 		}
 
-		cli.renderer.Output(ansi.ColorizeJSON(prettyJSON.String(), false))
+		cli.renderer.Output(ansi.ColorizeJSON(prettyJSON.String()))
 
 		return nil
 	}
