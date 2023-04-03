@@ -11,7 +11,6 @@ func TestNewDefaultBuildInfo(t *testing.T) {
 }
 
 func TestNewBuildInfo(t *testing.T) {
-
 	mockBuildInfo := NewBuildInfo("mock-version", "mock-branch", "mock-build-date", "mock-build-user", "mock-go-version", "mock-revision")
 
 	assert.Equal(t, mockBuildInfo, BuildInfo{
