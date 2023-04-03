@@ -11,7 +11,7 @@ import (
 )
 
 func TestWaitForBrowserCallback(t *testing.T) {
-	t.Run("Test success callback", func(t *testing.T) {
+	t.Run("Handle success on callback", func(t *testing.T) {
 		// Set a timer to wait for the server to have started and then call the URL and assert.
 		time.AfterFunc(1*time.Second, func() {
 			client := &http.Client{}
@@ -33,7 +33,7 @@ func TestWaitForBrowserCallback(t *testing.T) {
 		assert.Equal(t, "1234", state)
 	})
 
-	t.Run("Test error callback", func(t *testing.T) {
+	t.Run("Handle error on callback", func(t *testing.T) {
 		// Set a timer to wait for the server to have started and then call the URL and assert.
 		time.AfterFunc(1*time.Second, func() {
 			client := &http.Client{}
@@ -52,5 +52,26 @@ func TestWaitForBrowserCallback(t *testing.T) {
 		assert.Error(t, callbackErr)
 		assert.Equal(t, "", code)
 		assert.Equal(t, "", state)
+	})
+
+	t.Run("Failure to start server", func(t *testing.T) {
+		s := &http.Server{Addr: "localhost:1234"}
+
+		go func() {
+			if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				assert.NoError(t, err)
+			}
+		}()
+
+		time.Sleep(1 * time.Second)
+
+		defer s.Close()
+
+		code, state, callbackErr := WaitForBrowserCallback("localhost:1234")
+
+		assert.EqualError(t, callbackErr, "listen tcp 127.0.0.1:1234: bind: address already in use")
+		assert.Equal(t, "", code)
+		assert.Equal(t, "", state)
+
 	})
 }
