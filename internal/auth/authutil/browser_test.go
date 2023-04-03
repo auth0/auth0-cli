@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWaitForBrowserCallbackSuccess(t *testing.T) {
+func TestWaitForBrowserCallback(t *testing.T) {
 	t.Run("Test success callback", func(t *testing.T) {
 		// Set a timer to wait for the server to have started and then call the URL and assert.
 		time.AfterFunc(1*time.Second, func() {
