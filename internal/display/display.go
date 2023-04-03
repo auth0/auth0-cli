@@ -84,7 +84,7 @@ func (r *Renderer) JSONResult(data interface{}) {
 		r.Errorf("couldn't marshal results as JSON: %v", err)
 		return
 	}
-	r.Output(ansi.ColorizeJSON(string(b), false))
+	r.Output(ansi.ColorizeJSON(string(b)))
 }
 
 func (r *Renderer) Results(data []View) {

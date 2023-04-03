@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
@@ -153,7 +154,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 			var userInfo *authutil.UserInfo
 			if err := ansi.Spinner("Fetching user metadata", func() error {
 				// Use the access token to fetch user information from the /userinfo endpoint.
-				userInfo, err = authutil.FetchUserInfo(tenant.Domain, tokenResponse.AccessToken)
+				userInfo, err = authutil.FetchUserInfo(http.DefaultClient, tenant.Domain, tokenResponse.AccessToken)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to fetch user info: %w", err)

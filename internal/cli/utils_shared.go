@@ -165,6 +165,7 @@ func runLoginFlow(cli *cli, t Tenant, c *management.Client, connName, audience, 
 		// once the callback is received, exchange the code for an access
 		// token.
 		tokenResponse, err = authutil.ExchangeCodeForToken(
+			http.DefaultClient,
 			t.Domain,
 			c.GetClientID(),
 			c.GetClientSecret(),

@@ -18,7 +18,7 @@ type TokenResponse struct {
 }
 
 // ExchangeCodeForToken fetches an access token for the given application using the provided code.
-func ExchangeCodeForToken(baseDomain, clientID, clientSecret, code, cbURL string) (*TokenResponse, error) {
+func ExchangeCodeForToken(httpClient *http.Client, baseDomain, clientID, clientSecret, code, cbURL string) (*TokenResponse, error) {
 	data := url.Values{
 		"grant_type":    {"authorization_code"},
 		"client_id":     {clientID},
@@ -28,7 +28,7 @@ func ExchangeCodeForToken(baseDomain, clientID, clientSecret, code, cbURL string
 	}
 
 	u := url.URL{Scheme: "https", Host: baseDomain, Path: "/oauth/token"}
-	r, err := http.PostForm(u.String(), data)
+	r, err := httpClient.PostForm(u.String(), data)
 	if err != nil {
 		return nil, fmt.Errorf("unable to exchange code for token: %w", err)
 	}
