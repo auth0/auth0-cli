@@ -34,5 +34,4 @@ func TestExchangeCodeForToken(t *testing.T) {
 		assert.Equal(t, "token-type-here", token.TokenType)
 		assert.Equal(t, int64(1000), token.ExpiresIn)
 	})
-
 }

@@ -52,6 +52,5 @@ func TestWaitForBrowserCallbackSuccess(t *testing.T) {
 		assert.Error(t, callbackErr)
 		assert.Equal(t, "", code)
 		assert.Equal(t, "", state)
-
 	})
 }
