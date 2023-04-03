@@ -1,0 +1,2 @@
+ignore:
+  - "internal/cli/doc-gen.go"
