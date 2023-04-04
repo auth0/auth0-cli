@@ -70,7 +70,6 @@ func (v *apiTableView) Object() interface{} {
 func (r *Renderer) APIList(apis []*management.ResourceServer) {
 	resource := "apis"
 
-	r.Heading(resource)
 	r.Heading(fmt.Sprintf("%s (%d)", resource, len(apis)))
 
 	if len(apis) == 0 {
