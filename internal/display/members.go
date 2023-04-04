@@ -23,12 +23,7 @@ func (v *membersView) AsTableRow() []string {
 }
 
 func (v *membersView) KeyValues() [][]string {
-	return [][]string{
-		{"ID", ansi.Faint(v.ID)},
-		{"NAME", v.Name},
-		{"EMAIL", v.Email},
-		{"PICTURE URL", v.PictureURL},
-	}
+	return [][]string{}
 }
 
 func (v *membersView) Object() interface{} {

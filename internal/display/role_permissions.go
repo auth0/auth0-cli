@@ -34,12 +34,7 @@ func (v *rolePermissionView) AsTableRow() []string {
 }
 
 func (v *rolePermissionView) KeyValues() [][]string {
-	return [][]string{
-		{"ID", ansi.Faint(v.APIID)},
-		{"NAME", v.APIName},
-		{"PERMISSION NAME", v.Name},
-		{"DESCRIPTION", v.Description},
-	}
+	return [][]string{}
 }
 
 func (r *Renderer) RolePermissionList(perms []*management.Permission) {
