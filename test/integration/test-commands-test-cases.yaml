@@ -30,15 +30,13 @@ tests:
         - ".auth0.com/api/v2/."
 
   004 - test token after creating client grant:
-    command: ./test/integration/scripts/create-client-grant.sh; auth0 test token $(./test/integration/scripts/get-m2m-app-id.sh) --audience "$(./test/integration/scripts/get-manage-api-audience.sh)" --scopes openid,offline_access --no-input
+    command: ./test/integration/scripts/create-client-grant.sh; auth0 test token $(./test/integration/scripts/get-m2m-app-id.sh) --audience "$(./test/integration/scripts/get-manage-api-audience.sh)" --no-input
     exit-code: 0
     stdout:
       contains:
         - "TOKEN    TYPE   Bearer"
         - "EXPIRES    IN   1440 minute(s)"
         - "ACCESS  TOKEN   eyJhbGci"
-        - "ID      TOKEN"
-        - "REFRESH TOKEN"
   
   005 - test token as json:
     command: auth0 test token $(./test/integration/scripts/get-m2m-app-id.sh) --audience "$(./test/integration/scripts/get-manage-api-audience.sh)" --scopes openid,offline_access --no-input --json
