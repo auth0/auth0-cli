@@ -108,7 +108,7 @@ tests:
         - ORDER    2
         - SCRIPT   function(user, context, cb) {
     exit-code: 0
-  
+
   rules list all with data:
     command: auth0 rules list
     exit-code: 0
@@ -256,12 +256,12 @@ tests:
     command: auth0 tenants use $AUTH0_CLI_CLIENT_DOMAIN
     exit-code: 0
     stderr:
-      contains: 
+      contains:
         - "Default tenant switched to:"
 
   tenants open:
     command: auth0 tenants open $AUTH0_CLI_CLIENT_DOMAIN --no-input
     exit-code: 0
     stderr:
-      contains: 
+      contains:
         - "Open the following URL in a browser: https://manage.auth0.com/dashboard/"

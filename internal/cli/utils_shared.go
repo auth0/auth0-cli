@@ -286,7 +286,7 @@ func openManageURL(cli *cli, tenant string, path string) {
 	}
 }
 
-func formatManageTenantURL(tenant string, cfg config) string {
+func formatManageTenantURL(tenant string, cfg Config) string {
 	if len(tenant) == 0 {
 		return ""
 	}

@@ -36,7 +36,7 @@ const (
 
 // config defines the exact set of tenants, access tokens, which only exists
 // for a particular user's machine.
-type config struct {
+type Config struct {
 	InstallID     string            `json:"install_id,omitempty"`
 	DefaultTenant string            `json:"default_tenant"`
 	Tenants       map[string]Tenant `json:"tenants"`
@@ -91,7 +91,7 @@ type cli struct {
 	initOnce sync.Once
 	errOnce  error
 	path     string
-	config   config
+	config   Config
 }
 
 func (t *Tenant) authenticatedWithClientCredentials() bool {
@@ -472,14 +472,16 @@ func (c *cli) persistConfig() error {
 		}
 	}
 
-	buf, err := json.MarshalIndent(c.config, "", "    ")
+	return UpdateConfigFile(c.config, c.path)
+}
+
+func UpdateConfigFile(c Config, filepath string) error {
+	buf, err := json.MarshalIndent(c, "", "    ")
 	if err != nil {
 		return err
 	}
 
-	err = os.WriteFile(c.path, buf, 0600)
-
-	return err
+	return os.WriteFile(filepath, buf, 0600)
 }
 
 func (c *cli) init() error {
