@@ -27,20 +27,20 @@ func TestHasLocalCallbackURL(t *testing.T) {
 }
 
 func TestFormatManageTenantURL(t *testing.T) {
-	assert.Empty(t, formatManageTenantURL("", config{}))
+	assert.Empty(t, formatManageTenantURL("", Config{}))
 
-	assert.Empty(t, formatManageTenantURL("invalid-tenant-url", config{}))
+	assert.Empty(t, formatManageTenantURL("invalid-tenant-url", Config{}))
 
-	assert.Empty(t, formatManageTenantURL("valid-tenant-url-not-in-config.us.auth0", config{}))
+	assert.Empty(t, formatManageTenantURL("valid-tenant-url-not-in-config.us.auth0", Config{}))
 
 	tenantDomain := "some-tenant.us.auth0"
-	assert.Equal(t, formatManageTenantURL(tenantDomain, config{Tenants: map[string]Tenant{tenantDomain: {Name: "some-tenant"}}}), "https://manage.auth0.com/dashboard/us/some-tenant/")
+	assert.Equal(t, formatManageTenantURL(tenantDomain, Config{Tenants: map[string]Tenant{tenantDomain: {Name: "some-tenant"}}}), "https://manage.auth0.com/dashboard/us/some-tenant/")
 
 	tenantDomain = "some-eu-tenant.eu.auth0.com"
-	assert.Equal(t, formatManageTenantURL(tenantDomain, config{Tenants: map[string]Tenant{tenantDomain: {Name: "some-tenant"}}}), "https://manage.auth0.com/dashboard/eu/some-tenant/")
+	assert.Equal(t, formatManageTenantURL(tenantDomain, Config{Tenants: map[string]Tenant{tenantDomain: {Name: "some-tenant"}}}), "https://manage.auth0.com/dashboard/eu/some-tenant/")
 
 	tenantDomain = "dev-tti06f6y.auth0.com"
-	assert.Equal(t, formatManageTenantURL(tenantDomain, config{Tenants: map[string]Tenant{tenantDomain: {Name: "some-tenant"}}}), "https://manage.auth0.com/dashboard/us/some-tenant/")
+	assert.Equal(t, formatManageTenantURL(tenantDomain, Config{Tenants: map[string]Tenant{tenantDomain: {Name: "some-tenant"}}}), "https://manage.auth0.com/dashboard/us/some-tenant/")
 }
 
 func TestContainsStr(t *testing.T) {
