@@ -72,3 +72,4 @@ tests:
         - "PROVISIONING TYPE        self_managed_certs"
         - "VERIFICATION METHOD      txt"
         - "TLS POLICY               recommended"
+        - "CUSTOM CLIENT IP HEADER"
