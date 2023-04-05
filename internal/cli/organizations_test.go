@@ -14,11 +14,11 @@ import (
 
 func TestOrganizationsPickerOptions(t *testing.T) {
 	tests := []struct {
-		name         string
-		organizations        []*management.Organization
-		apiError     error
-		assertOutput func(t testing.TB, options pickerOptions)
-		assertError  func(t testing.TB, err error)
+		name          string
+		organizations []*management.Organization
+		apiError      error
+		assertOutput  func(t testing.TB, options pickerOptions)
+		assertError   func(t testing.TB, err error)
 	}{
 		{
 			name: "happy path",

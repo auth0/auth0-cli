@@ -15,7 +15,7 @@ import (
 func TestLogStreamsPickerOptions(t *testing.T) {
 	tests := []struct {
 		name         string
-		logStreams        []*management.LogStream
+		logStreams   []*management.LogStream
 		apiError     error
 		assertOutput func(t testing.TB, options pickerOptions)
 		assertError  func(t testing.TB, err error)

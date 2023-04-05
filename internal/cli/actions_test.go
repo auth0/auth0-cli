@@ -134,7 +134,7 @@ func TestActionsDeployCmd(t *testing.T) {
 func TestActionsPickerOptions(t *testing.T) {
 	tests := []struct {
 		name         string
-		actions        []*management.Action
+		actions      []*management.Action
 		apiError     error
 		assertOutput func(t testing.TB, options pickerOptions)
 		assertError  func(t testing.TB, err error)

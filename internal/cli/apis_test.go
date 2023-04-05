@@ -15,7 +15,7 @@ import (
 func TestAPIsPickerOptions(t *testing.T) {
 	tests := []struct {
 		name         string
-		apis        []*management.ResourceServer
+		apis         []*management.ResourceServer
 		apiError     error
 		assertOutput func(t testing.TB, options pickerOptions)
 		assertError  func(t testing.TB, err error)
