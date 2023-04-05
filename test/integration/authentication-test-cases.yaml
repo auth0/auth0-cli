@@ -3,19 +3,22 @@ config:
   retries: 1
 
 tests:
-  # 001a - should fail to regenerate access token when it has expired:
-  #   command: go run ./test/integration/scripts/expire-access-token.go && auth0 apps list # `auth0 apps list` is arbitrarily selected, can be most commands
-  #   exit-code: 1
-
-  # 001b - should install gnome-keyring:
-  #   command: install -qq dbus-x11 gnome-keyring
-
-  # 001c - logout:
-  #   command: auth0 logout $AUTH0_CLI_CLIENT_DOMAIN
-
-  # 001d - login as machine to repopulate secrets in keyring:
-  #   command: auth0 login --domain "${AUTH0_CLI_CLIENT_DOMAIN}" --client-id "${AUTH0_CLI_CLIENT_ID}" --client-secret "${AUTH0_CLI_CLIENT_SECRET}"
-
-  001e - should successfully regenerate access token when it has expired because keyring installed:
+  001 - should successfully regenerate access token when it has expired because keyring installed:
     command: go run ./test/integration/scripts/expire-access-token.go && auth0 apps list # `auth0 apps list` is arbitrarily selected, can be most commands
     exit-code: 0
+
+  002a - uninstall system keyring:
+    command: sudo apt-get purge dbus-x11 gnome-keyring
+    exit-code: 0
+
+  002b - should unsuccessfully regenerate access token because no keyring installed:
+    command: go run ./test/integration/scripts/expire-access-token.go && auth0 apps list # `auth0 apps list` is arbitrarily selected, can be most commands
+    exit-code: 1
+
+  003a - reauthenticate:
+    command: auth0 logout $AUTH0_CLI_CLIENT_DOMAIN && auth0 login --domain "${AUTH0_CLI_CLIENT_DOMAIN}" --client-id "${AUTH0_CLI_CLIENT_ID}" --client-secret "${AUTH0_CLI_CLIENT_SECRET}"
+    exit-code: 0
+
+  003b - should successfully make a request after reauthentication even if keyring not enabled:
+    command: auth0 apps list
+    exit-cod: 0
