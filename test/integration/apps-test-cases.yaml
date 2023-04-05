@@ -6,6 +6,11 @@ tests:
   001 - it successfully lists all apps:
     command: auth0 apps list
     exit-code: 0
+    stdout:
+      contains:
+        - CLIENT ID
+        - NAME
+        - TYPE
 
   002 - it throws an error when listing all apps and passing an invalid number flag:
     command: auth0 apps list --number -1
@@ -217,27 +222,27 @@ tests:
       json:
         allowed_origins: "[https://example.com]"
 
-  030 - given a test app, it successfully updates the app's type and outputs in json:
-    command: auth0 apps update $(./test/integration/scripts/get-app-id.sh) --type spa --json
-    exit-code: 0
-    stdout:
-      json:
-        app_type: spa
-
-  031 - given a test app, it successfully updates the app's web origins and outputs in json:
+  030 - given a test app, it successfully updates the app's web origins and outputs in json:
     command: auth0 apps update $(./test/integration/scripts/get-app-id.sh) --web-origins https://example.com --json
     exit-code: 0
     stdout:
       json:
         web_origins: "[https://example.com]"
 
-  032 - given a test app, it successfully updates the app's web origins and type and outputs in json:
+  031 - given a test app, it successfully updates the app's web origins and type and outputs in json:
     command: auth0 apps update $(./test/integration/scripts/get-app-id.sh) --web-origins https://examples.com --type native --json
     exit-code: 0
     stdout:
       json:
         app_type: native
         web_origins: "[https://examples.com]"
+
+  032 - given a test app, it successfully updates the app's type and outputs in json:
+    command: auth0 apps update $(./test/integration/scripts/get-app-id.sh) --type spa --json
+    exit-code: 0
+    stdout:
+      json:
+        app_type: spa
 
   033 - given a test app, it successfully opens the settings page:
     command: auth0 apps open $(./test/integration/scripts/get-app-id.sh) --no-input

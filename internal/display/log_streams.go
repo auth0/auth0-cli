@@ -47,7 +47,7 @@ func (r *Renderer) LogStreamList(logs []*management.LogStream) {
 
 	if len(logs) == 0 {
 		r.EmptyState(resource)
-		r.Infof("use 'auth0 logs streams create' to create one")
+		r.Infof("Use 'auth0 logs streams create' to add one")
 		return
 	}
 

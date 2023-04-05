@@ -68,7 +68,7 @@ func checkIPCmd(cli *cli) *cobra.Command {
 				return nil
 			}
 
-			cli.renderer.Infof("The IP %s is not blocked", inputs.IP)
+			cli.renderer.Infof("The IP %s is not blocked.", inputs.IP)
 			return nil
 		},
 	}
