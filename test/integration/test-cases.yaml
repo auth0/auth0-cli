@@ -264,4 +264,4 @@ tests:
     exit-code: 0
     stderr:
       contains: 
-        - "Open the following URL in a browser:"
+        - "Open the following URL in a browser: https://manage.auth0.com/dashboard/"
