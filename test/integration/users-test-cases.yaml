@@ -79,15 +79,29 @@ tests:
     command: auth0 users roles show $(./test/integration/scripts/get-user-id.sh)
     exit-code: 0
 
-  011 - users roles add:
+  011 - users roles show with invalid number:
+    command: auth0 users roles show $(./test/integration/scripts/get-user-id.sh) --number 1001
+    exit-code: 1
+    stderr:
+      contains:
+        - number flag invalid, please pass a number between 1 and 1000
+
+  012 - users roles add:
     command: auth0 users roles add $(./test/integration/scripts/get-user-id.sh) -r $(./test/integration/scripts/get-role-id.sh)
     exit-code: 0
 
-  012 - users roles remove:
+  013 - users roles remove:
     command: auth0 users roles rm $(./test/integration/scripts/get-user-id.sh) -r $(./test/integration/scripts/get-role-id.sh)
     exit-code: 0
 
-  013 - open user dashboard page:
+  014 - users blocks list:
+    command: auth0 users blocks list $(./test/integration/scripts/get-user-id.sh)
+    exit-code: 0
+    stderr:
+      contains:
+        - No user blocks available.
+
+  015 - open user dashboard page:
     command: auth0 users open $(./test/integration/scripts/get-user-id.sh) --no-input
     exit-code: 0
     stderr:
