@@ -7,8 +7,21 @@ tests:
   001 - list apis:
     command: auth0 apis list
     exit-code: 0
+    stdout:
+      contains:
+        - ID
+        - NAME
+        - IDENTIFIER
+        - SCOPES
 
-  002 - apis create and check data:
+  002 - list apis with invalid number:
+    command: auth0 apis list --number 1001
+    exit-code: 1
+    stderr:
+      contains:
+        - number flag invalid, please pass a number between 1 and 1000
+
+  003 - apis create and check data:
       command: auth0 apis create --name integration-test-api-def1 --identifier http://integration-test-api-def1 --scopes read:todos,write:todos --json
       exit-code: 0
       stdout:
@@ -19,7 +32,7 @@ tests:
           token_lifetime: "86400"
           allow_offline_access: "false"
 
-  003 - apis create and check output:
+  004 - apis create and check output:
     command: auth0 apis create --name integration-test-api-def2 --identifier http://integration-test-api-def2 --scopes read:todos,write:todos
     exit-code: 0
     stdout:
@@ -31,14 +44,14 @@ tests:
         - ALLOW OFFLINE ACCESS  ✗
 
   # Test 'apis create' --token-lifetime flag
-  004 - apis create token lifetime 1000 and check data:
+  005 - apis create token lifetime 1000 and check data:
     command: auth0 apis create --name integration-test-api-toklif1 --identifier http://integration-test-api-toklif1 --scopes read:todos --token-lifetime 1000 --json
     exit-code: 0
     stdout:
       json:
         token_lifetime: "1000"
 
-  005 - apis create token lifetime 1000 and check output:
+  006 - apis create token lifetime 1000 and check output:
     command: auth0 apis create --name integration-test-api-toklif2 --identifier http://integration-test-api-toklif2 --scopes read:todos --token-lifetime 1000
     exit-code: 0
     stdout:
@@ -46,28 +59,28 @@ tests:
         - TOKEN LIFETIME        1000
 
   # Test 'apis create' --offline-access flag
-  006 - apis create offline access true and check data:
+  007 - apis create offline access true and check data:
     command: auth0 apis create --name integration-test-api-offacc1 --identifier http://integration-test-api-offacc1 --scopes read:todos --offline-access --json
     exit-code: 0
     stdout:
       json:
         allow_offline_access: "true"
 
-  007 - apis create offline access true and check output:
+  008 - apis create offline access true and check output:
     command: auth0 apis create --name integration-test-api-offacc2 --identifier http://integration-test-api-offacc2 --scopes read:todos --offline-access
     exit-code: 0
     stdout:
       contains:
         - ALLOW OFFLINE ACCESS  ✓
 
-  008 - apis create offline access false and check data:
+  009 - apis create offline access false and check data:
     command: auth0 apis create --name integration-test-api-offacc3 --identifier http://integration-test-api-offacc3 --scopes read:todos --offline-access=false --json
     exit-code: 0
     stdout:
       json:
         allow_offline_access: "false"
 
-  009 - apis show json:
+  010 - apis show json:
     command: auth0 apis show $(./test/integration/scripts/get-api-id.sh) --json # depends on "apis create test app" test
     stdout:
       json:
@@ -78,7 +91,7 @@ tests:
         allow_offline_access: "false"
     exit-code: 0
 
-  010 - apis show:
+  011 - apis show:
     command: auth0 apis show $(./test/integration/scripts/get-api-id.sh) # depends on "apis create test app" test
     stdout:
       contains:
@@ -89,47 +102,47 @@ tests:
         - ALLOW OFFLINE ACCESS  ✗
     exit-code: 0
 
-  011 - apis scopes list:
+  012 - apis scopes list:
     command: auth0 apis scopes list $(./test/integration/scripts/get-api-id.sh) # depends on "apis create test app" test
     exit-code: 0
 
   # Test 'apis update'; all tests depend on "apis create test api" test
-  012 - apis update name:
+  013 - apis update name:
     command: auth0 apis update $(./test/integration/scripts/get-api-id.sh) --name integration-test-api-betterApiName --json
     stdout:
       json:
         name: integration-test-api-betterApiName
     exit-code: 0
 
-  013 - apis update scopes:
+  014 - apis update scopes:
     command: auth0 apis update $(./test/integration/scripts/get-api-id.sh) --scopes read:todos,write:todos --json
     stdout:
       json:
         scopes: "[map[value:read:todos] map[value:write:todos]]"
     exit-code: 0
 
-  014 - apis update token lifetime:
+  015 - apis update token lifetime:
     command: auth0 apis update $(./test/integration/scripts/get-api-id.sh) --token-lifetime 1000 --json
     stdout:
       json:
         token_lifetime: "1000"
     exit-code: 0
 
-  015 - apis update offline access true:
+  016 - apis update offline access true:
     command: auth0 apis update $(./test/integration/scripts/get-api-id.sh) --offline-access --json
     stdout:
       json:
         allow_offline_access: "true"
     exit-code: 0
 
-  016 - apis update offline access false:
+  017 - apis update offline access false:
     command: auth0 apis update $(./test/integration/scripts/get-api-id.sh) --offline-access=false --json
     stdout:
       json:
         allow_offline_access: "false"
     exit-code: 0
 
-  017 - it successfully prints out a URL to open:
+  018 - it successfully prints out a URL to open:
     command: auth0 apis open $(./test/integration/scripts/get-api-id.sh) --no-input
     exit-code: 0
     stderr:
