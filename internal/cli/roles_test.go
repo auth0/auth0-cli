@@ -7,9 +7,10 @@ import (
 	"github.com/auth0/go-auth0/management"
 	"github.com/golang/mock/gomock"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestRolesPickerOptions(t *testing.T) {
@@ -44,7 +45,7 @@ func TestRolesPickerOptions(t *testing.T) {
 			},
 		},
 		{
-			name: "no roles",
+			name:  "no roles",
 			roles: []*management.Role{},
 			assertOutput: func(t testing.TB, options pickerOptions) {
 				t.Fail()
@@ -54,7 +55,7 @@ func TestRolesPickerOptions(t *testing.T) {
 			},
 		},
 		{
-			name: "API error",
+			name:     "API error",
 			apiError: errors.New("error"),
 			assertOutput: func(t testing.TB, options pickerOptions) {
 				t.Fail()
@@ -74,7 +75,7 @@ func TestRolesPickerOptions(t *testing.T) {
 			roleAPI.EXPECT().
 				List(gomock.Any()).
 				Return(&management.RoleList{
-					Roles: test.roles} , test.apiError)
+					Roles: test.roles}, test.apiError)
 
 			cli := &cli{
 				api: &auth0.API{Role: roleAPI},

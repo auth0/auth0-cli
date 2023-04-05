@@ -7,9 +7,10 @@ import (
 	"github.com/auth0/go-auth0/management"
 	"github.com/golang/mock/gomock"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestConnectionsPickerOptions(t *testing.T) {
@@ -24,11 +25,11 @@ func TestConnectionsPickerOptions(t *testing.T) {
 			name: "happy path",
 			connections: []*management.Connection{
 				{
-					Name: auth0.String("some-name-1"),
+					Name:     auth0.String("some-name-1"),
 					Strategy: auth0.String("auth0"),
 				},
 				{
-					Name: auth0.String("some-name-2"),
+					Name:     auth0.String("some-name-2"),
 					Strategy: auth0.String("auth0"),
 				},
 			},
@@ -42,7 +43,7 @@ func TestConnectionsPickerOptions(t *testing.T) {
 			},
 		},
 		{
-			name: "no connections",
+			name:        "no connections",
 			connections: []*management.Connection{},
 			assertOutput: func(t testing.TB, options []string) {
 				t.Fail()
@@ -55,11 +56,11 @@ func TestConnectionsPickerOptions(t *testing.T) {
 			name: "no database connections",
 			connections: []*management.Connection{
 				{
-					Name: auth0.String("some-name-1"),
+					Name:     auth0.String("some-name-1"),
 					Strategy: auth0.String("foo"),
 				},
 				{
-					Name: auth0.String("some-name-2"),
+					Name:     auth0.String("some-name-2"),
 					Strategy: auth0.String("foo"),
 				},
 			},
@@ -71,7 +72,7 @@ func TestConnectionsPickerOptions(t *testing.T) {
 			},
 		},
 		{
-			name: "API error",
+			name:     "API error",
 			apiError: errors.New("error"),
 			assertOutput: func(t testing.TB, options []string) {
 				t.Fail()
@@ -91,7 +92,7 @@ func TestConnectionsPickerOptions(t *testing.T) {
 			connectionAPI.EXPECT().
 				List(gomock.Any()).
 				Return(&management.ConnectionList{
-					Connections: test.connections} , test.apiError)
+					Connections: test.connections}, test.apiError)
 
 			cli := &cli{
 				api: &auth0.API{Connection: connectionAPI},

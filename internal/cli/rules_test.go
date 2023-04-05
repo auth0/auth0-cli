@@ -7,9 +7,10 @@ import (
 	"github.com/auth0/go-auth0/management"
 	"github.com/golang/mock/gomock"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestRulesPickerOptions(t *testing.T) {
@@ -44,7 +45,7 @@ func TestRulesPickerOptions(t *testing.T) {
 			},
 		},
 		{
-			name: "no rules",
+			name:  "no rules",
 			rules: []*management.Rule{},
 			assertOutput: func(t testing.TB, options pickerOptions) {
 				t.Fail()
@@ -54,7 +55,7 @@ func TestRulesPickerOptions(t *testing.T) {
 			},
 		},
 		{
-			name: "API error",
+			name:     "API error",
 			apiError: errors.New("error"),
 			assertOutput: func(t testing.TB, options pickerOptions) {
 				t.Fail()
@@ -74,7 +75,7 @@ func TestRulesPickerOptions(t *testing.T) {
 			ruleAPI.EXPECT().
 				List(gomock.Any()).
 				Return(&management.RuleList{
-					Rules: test.rules} , test.apiError)
+					Rules: test.rules}, test.apiError)
 
 			cli := &cli{
 				api: &auth0.API{Rule: ruleAPI},

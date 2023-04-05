@@ -163,7 +163,7 @@ func TestActionsPickerOptions(t *testing.T) {
 			},
 		},
 		{
-			name: "no actions",
+			name:    "no actions",
 			actions: []*management.Action{},
 			assertOutput: func(t testing.TB, options pickerOptions) {
 				t.Fail()
@@ -173,7 +173,7 @@ func TestActionsPickerOptions(t *testing.T) {
 			},
 		},
 		{
-			name: "API error",
+			name:     "API error",
 			apiError: errors.New("error"),
 			assertOutput: func(t testing.TB, options pickerOptions) {
 				t.Fail()
@@ -193,7 +193,7 @@ func TestActionsPickerOptions(t *testing.T) {
 			actionAPI.EXPECT().
 				List(gomock.Any()).
 				Return(&management.ActionList{
-					Actions: test.actions} , test.apiError)
+					Actions: test.actions}, test.apiError)
 
 			cli := &cli{
 				api: &auth0.API{Action: actionAPI},

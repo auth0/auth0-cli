@@ -7,9 +7,10 @@ import (
 	"github.com/auth0/go-auth0/management"
 	"github.com/golang/mock/gomock"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestOrganizationsPickerOptions(t *testing.T) {
@@ -44,7 +45,7 @@ func TestOrganizationsPickerOptions(t *testing.T) {
 			},
 		},
 		{
-			name: "no organizations",
+			name:          "no organizations",
 			organizations: []*management.Organization{},
 			assertOutput: func(t testing.TB, options pickerOptions) {
 				t.Fail()
@@ -54,7 +55,7 @@ func TestOrganizationsPickerOptions(t *testing.T) {
 			},
 		},
 		{
-			name: "API error",
+			name:     "API error",
 			apiError: errors.New("error"),
 			assertOutput: func(t testing.TB, options pickerOptions) {
 				t.Fail()
@@ -74,7 +75,7 @@ func TestOrganizationsPickerOptions(t *testing.T) {
 			organizationAPI.EXPECT().
 				List(gomock.Any()).
 				Return(&management.OrganizationList{
-					Organizations: test.organizations} , test.apiError)
+					Organizations: test.organizations}, test.apiError)
 
 			cli := &cli{
 				api: &auth0.API{Organization: organizationAPI},
