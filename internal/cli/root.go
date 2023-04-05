@@ -47,7 +47,7 @@ func Execute() {
 			if instrumentation.ReportException(err) {
 				fmt.Print(panicMessage) // If we're in development mode, we should throw the panic for so we have less surprises.
 			} else {
-				panic(v)// For non-developers, we'll swallow the panics.
+				panic(v) // For non-developers, we'll swallow the panics.
 			}
 		}
 	}()
