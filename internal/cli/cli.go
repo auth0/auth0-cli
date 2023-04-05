@@ -34,7 +34,7 @@ const (
 	accessTokenExpThreshold = 5 * time.Minute
 )
 
-// config defines the exact set of tenants, access tokens, which only exists
+// Config defines the exact set of tenants, access tokens, which only exists
 // for a particular user's machine.
 type Config struct {
 	InstallID     string            `json:"install_id,omitempty"`

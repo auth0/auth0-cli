@@ -1,0 +1,15 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  001 - should fail to regenerate access token when it has expired:
+    command: go run ./test/integration/scripts/expire-access-token.go && auth0 apps list # `auth0 apps list` is arbitrarily selected, can be most commands
+    exit-code: 1
+
+  002 - should install gnome-keyring:
+    command: sudo apt-get install -y dbus dbus-x11 gnome-keyring && gnome-keyring-daemon --unlock
+
+  003 - should successfully regenerate access token when it has expired because keyring installed:
+    command: go run ./test/integration/scripts/expire-access-token.go && auth0 apps list # `auth0 apps list` is arbitrarily selected, can be most commands
+    exit-code: 0
