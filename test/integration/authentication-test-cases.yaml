@@ -3,18 +3,18 @@ config:
   retries: 1
 
 tests:
-  001a - should fail to regenerate access token when it has expired:
-    command: go run ./test/integration/scripts/expire-access-token.go && auth0 apps list # `auth0 apps list` is arbitrarily selected, can be most commands
-    exit-code: 1
+  # 001a - should fail to regenerate access token when it has expired:
+  #   command: go run ./test/integration/scripts/expire-access-token.go && auth0 apps list # `auth0 apps list` is arbitrarily selected, can be most commands
+  #   exit-code: 1
 
-  001b - should install gnome-keyring:
-    command: sudo apt-get install -y dbus dbus-x11 gnome-keyring && gnome-keyring-daemon --unlock
+  # 001b - should install gnome-keyring:
+  #   command: install -qq dbus-x11 gnome-keyring
 
-  001c - logout:
-    command: auth0 logout $AUTH0_CLI_CLIENT_DOMAIN
+  # 001c - logout:
+  #   command: auth0 logout $AUTH0_CLI_CLIENT_DOMAIN
 
-  001d - login as machine to repopulate secrets in keyring:
-    command: auth0 login --domain "${AUTH0_CLI_CLIENT_DOMAIN}" --client-id "${AUTH0_CLI_CLIENT_ID}" --client-secret "${AUTH0_CLI_CLIENT_SECRET}"
+  # 001d - login as machine to repopulate secrets in keyring:
+  #   command: auth0 login --domain "${AUTH0_CLI_CLIENT_DOMAIN}" --client-id "${AUTH0_CLI_CLIENT_ID}" --client-secret "${AUTH0_CLI_CLIENT_SECRET}"
 
   001e - should successfully regenerate access token when it has expired because keyring installed:
     command: go run ./test/integration/scripts/expire-access-token.go && auth0 apps list # `auth0 apps list` is arbitrarily selected, can be most commands

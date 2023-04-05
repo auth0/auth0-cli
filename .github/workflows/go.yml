@@ -77,6 +77,14 @@ jobs:
           go-version-file: go.mod
           check-latest: true
 
+      - name: Enable Gnome Keyring
+        run: |
+          #!/bin/bash
+          sudo update -qq
+          sudo install -qq dbus-x11 gnome-keyring
+          dbus-launch --sh-syntax
+          echo '' | /usr/bin/gnome-keyring-daemon --unlock
+
       - name: Run integration tests
         shell: bash
         run: make test-integration
