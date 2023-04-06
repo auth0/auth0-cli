@@ -14,7 +14,7 @@ auth0 login \
 
 set +e
 
-commander test --filter "$FILTER" --dir ./test/integration
+commander test --filter "$FILTER" --dir ./test/integration --verbose
 
 exit_code=$?
 
