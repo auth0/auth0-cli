@@ -149,11 +149,7 @@ func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
 			}
 
 			if templateData.Experience == "classic" {
-				cli.renderer.Warnf(
-					"The tenant is configured to use the classic Universal Login Experience instead of the new. " +
-						"The template changes won't apply until you select the new Universal Login Experience. " +
-						"You can do so by running: \"auth0 api patch prompts --data '{\"universal_login_experience\":\"new\"}'\"",
-				)
+				cli.renderer.Warnf("The tenant is configured to use the classic Universal Login Experience instead of the new. The template changes won't apply until you select the new Universal Login Experience. You can do so by running: \"auth0 api patch prompts --data '{\"universal_login_experience\":\"new\"}'\"")
 			}
 
 			if templateData.Body == "" {
@@ -200,7 +196,6 @@ func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
 
 func (cli *cli) fetchTemplateData(ctx context.Context) (*TemplateData, error) {
 	group, ctx := errgroup.WithContext(ctx)
-
 	group.Go(func() (err error) {
 		return ensureCustomDomainIsEnabled(ctx, cli.api)
 	})
@@ -213,8 +208,7 @@ func (cli *cli) fetchTemplateData(ctx context.Context) (*TemplateData, error) {
 
 	var clientList *management.ClientList
 	group.Go(func() (err error) {
-		// Capping the clients retrieved to 100 for now.
-		clientList, err = cli.api.Client.List(management.Context(ctx), management.PerPage(100))
+		clientList, err = cli.api.Client.List(management.Context(ctx), management.PerPage(100)) // Capping the clients retrieved to 100 for now.
 		return err
 	})
 
@@ -263,9 +257,8 @@ func (cli *cli) fetchTemplateData(ctx context.Context) (*TemplateData, error) {
 func ensureCustomDomainIsEnabled(ctx context.Context, api *auth0.API) error {
 	domains, err := api.CustomDomain.List(management.Context(ctx))
 	if err != nil {
-		// 403 is a valid response for free tenants that don't have custom domains enabled
 		if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusForbidden {
-			return errNotAllowed
+			return errNotAllowed // 403 is a valid response for free tenants that don't have custom domains enabled
 		}
 
 		return err
@@ -284,8 +277,7 @@ func ensureCustomDomainIsEnabled(ctx context.Context, api *auth0.API) error {
 func fetchBrandingSettingsOrUseDefaults(ctx context.Context, api *auth0.API) *management.Branding {
 	brandingSettings, err := api.Branding.Read(management.Context(ctx))
 	if err != nil {
-		// If we error we'll provide defaults.
-		brandingSettings = &management.Branding{}
+		brandingSettings = &management.Branding{} // If we error we'll provide defaults.
 	}
 
 	if brandingSettings.GetColors() == nil {
@@ -312,10 +304,7 @@ func fetchBrandingTemplateOrUseEmpty(ctx context.Context, api *auth0.API) *manag
 
 func (cli *cli) editTemplateAndPreviewChanges(ctx context.Context, cmd *cobra.Command, templateData *TemplateData) error {
 	onInfo := func() {
-		cli.renderer.Infof(
-			"%s Once you close the editor, you'll be prompted to save your changes. To cancel, press CTRL+C.",
-			ansi.Faint("Hint:"),
-		)
+		cli.renderer.Infof("%s Once you close the editor, you'll be prompted to save your changes. To cancel, press CTRL+C.", ansi.Faint("Hint:"))
 	}
 
 	onFileCreated := func(filename string) {
@@ -423,7 +412,6 @@ func buildRoutes(
 	})
 
 	router.Handle("/", http.FileServer(http.FS(templatePreviewAssets)))
-
 	return router
 }
 

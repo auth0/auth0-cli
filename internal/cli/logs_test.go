@@ -11,7 +11,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-func TestDedupLogs(t *testing.T) {
+func TestDedupeLogs(t *testing.T) {
 	t.Run("removes duplicate logs and sorts by date asc", func(t *testing.T) {
 		logs := []*management.Log{
 			{
@@ -28,7 +28,7 @@ func TestDedupLogs(t *testing.T) {
 			},
 		}
 		set := map[string]struct{}{"some-id-3": {}}
-		result := dedupLogs(logs, set)
+		result := dedupeLogs(logs, set)
 
 		assert.Len(t, result, 2)
 		assert.Equal(t, "some-id-2", result[0].GetID())
@@ -51,7 +51,7 @@ func TestDedupLogs(t *testing.T) {
 			},
 		}
 		set := map[string]struct{}{}
-		result := dedupLogs(logs, set)
+		result := dedupeLogs(logs, set)
 
 		assert.Len(t, logs, 3)
 		assert.Equal(t, "some-id-2", result[0].GetID())
@@ -79,7 +79,7 @@ func TestDedupLogs(t *testing.T) {
 			"some-id-2": {},
 			"some-id-3": {},
 		}
-		result := dedupLogs(logs, set)
+		result := dedupeLogs(logs, set)
 
 		assert.Len(t, result, 0)
 	})

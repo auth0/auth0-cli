@@ -174,3 +174,23 @@ func TestGetAccessToken(t *testing.T) {
 		assert.Equal(t, strings.Join(accessTokenChunks, ""), getAccessToken(Tenant{Domain: mockTenantDomain, AccessToken: "even if this is set for some reason"}))
 	})
 }
+
+func TestAuthenticatedWithClientCredentials(t *testing.T) {
+	mockTenantClientCredentials := Tenant{ClientID: "some-valid-client-id"}
+	assert.True(t, mockTenantClientCredentials.authenticatedWithClientCredentials())
+
+	mockTenantDeviceFlow := Tenant{ClientID: ""}
+	assert.False(t, mockTenantDeviceFlow.authenticatedWithClientCredentials())
+}
+
+func TestHasAllRequiredScopes(t *testing.T) {
+	mockTenantWithNoScopes := Tenant{Scopes: []string{}}
+	assert.False(t, hasAllRequiredScopes(mockTenantWithNoScopes))
+
+	mockTenantWithAllRequiredScopes := Tenant{Scopes: auth.RequiredScopes}
+	assert.True(t, hasAllRequiredScopes(mockTenantWithAllRequiredScopes))
+
+	requiredScopesAndMore := append(auth.RequiredScopes, "read:foo", "update:foo", "delete:foo")
+	mockTenantWithAllRequiredScopesAndMore := Tenant{Scopes: requiredScopesAndMore}
+	assert.True(t, hasAllRequiredScopes(mockTenantWithAllRequiredScopesAndMore))
+}

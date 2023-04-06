@@ -133,7 +133,6 @@ func (c *cli) tenantPickerOptions() (pickerOptions, error) {
 	for _, tenant := range tenants {
 		opt := pickerOption{value: tenant.Domain, label: tenant.Domain}
 
-		// Check if this is currently the default tenant.
 		if tenant.Domain == c.config.DefaultTenant {
 			priorityOpts = append(priorityOpts, opt)
 		} else {
