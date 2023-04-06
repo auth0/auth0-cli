@@ -88,3 +88,68 @@ func TestEnsureCustomDomainIsEnabled(t *testing.T) {
 		})
 	}
 }
+
+func TestFetchBrandingSettingsOrUseDefaults(t *testing.T) {
+	tests := []struct {
+		name         string
+		branding     *management.Branding
+		apiError     management.Error
+		assertOutput func(t testing.TB, branding *management.Branding)
+	}{
+		{
+			name: "happy path",
+			branding: &management.Branding{
+				Colors: &management.BrandingColors{
+					Primary: auth0.String("#FF4F40"),
+					PageBackground: auth0.String("#2A2E35"),
+				},
+				LogoURL: auth0.String("https://example.com/logo-updated-json.png"),
+			},
+			assertOutput: func(t testing.TB, branding *management.Branding) {
+				assert.NotNil(t, branding)
+				assert.NotNil(t, branding.Colors)
+				assert.Equal(t, branding.Colors.GetPrimary(), "#FF4F40")
+				assert.Equal(t, branding.Colors.GetPageBackground(), "#2A2E35")
+				assert.Equal(t, branding.GetLogoURL(), "https://example.com/logo-updated-json.png")
+			},
+		},
+		{
+			name: "no branding settings",
+			branding: &management.Branding{},
+			assertOutput: func(t testing.TB, branding *management.Branding) {
+				assert.NotNil(t, branding)
+				assert.NotNil(t, branding.Colors)
+				assert.Equal(t, branding.Colors.GetPrimary(), defaultPrimaryColor)
+				assert.Equal(t, branding.Colors.GetPageBackground(), defaultBackgroundColor)
+				assert.Equal(t, branding.GetLogoURL(), defaultLogoURL)
+			},
+		},
+		{
+			name: "api error",
+			apiError: mockManagamentError{status: http.StatusServiceUnavailable},
+			assertOutput: func(t testing.TB, branding *management.Branding) {
+				assert.NotNil(t, branding)
+				assert.Equal(t, branding.Colors.GetPrimary(), defaultPrimaryColor)
+				assert.Equal(t, branding.Colors.GetPageBackground(), defaultBackgroundColor)
+				assert.Equal(t, branding.GetLogoURL(), defaultLogoURL)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			brandingAPI := mock.NewMockBrandingAPI(ctrl)
+			brandingAPI.EXPECT().
+				Read(gomock.Any()).
+				Return(test.branding, test.apiError)
+
+			ctx := context.Background()
+			api := &auth0.API{Branding: brandingAPI}
+			branding := fetchBrandingSettingsOrUseDefaults(ctx, api)
+			test.assertOutput(t, branding)
+		})
+	}
+}
