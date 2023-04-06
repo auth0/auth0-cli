@@ -267,7 +267,7 @@ func (c *cli) allLogStreamsPickerOptions() (pickerOptions, error) {
 		options = append(options, pickerOption{value: value, label: label})
 	}
 	if len(options) == 0 {
-		return nil, errors.New("there are currently no log streams")
+		return nil, errors.New("There are currently no log streams.")
 	}
 
 	return options, nil
