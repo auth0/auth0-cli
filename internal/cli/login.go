@@ -267,9 +267,7 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 		},
 	)
 	if err != nil {
-		return fmt.Errorf(
-			"failed to fetch access token using client credentials. \n\n"+
-				"Ensure that the provided client-id, client-secret and domain are correct. \n\nerror: %w\n", err)
+		return fmt.Errorf("failed to fetch access token using client credentials. \n\nEnsure that the provided client-id, client-secret and domain are correct. \n\nerror: %w\n", err)
 	}
 
 	t := Tenant{
