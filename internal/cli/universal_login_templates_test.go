@@ -153,3 +153,48 @@ func TestFetchBrandingSettingsOrUseDefaults(t *testing.T) {
 		})
 	}
 }
+
+func TestFetchBrandingTemplateOrUseEmpty(t *testing.T) {
+	tests := []struct {
+		name         string
+		brandingUL   *management.BrandingUniversalLogin
+		apiError     management.Error
+		assertOutput func(t testing.TB, branding *management.BrandingUniversalLogin)
+	}{
+		{
+			name: "happy path",
+			brandingUL: &management.BrandingUniversalLogin{
+				Body: auth0.String("<html></html>"),
+			},
+			assertOutput: func(t testing.TB, branding *management.BrandingUniversalLogin) {
+				assert.NotNil(t, branding)
+				assert.Equal(t, branding.GetBody(), "<html></html>")
+			},
+		},
+		{
+			name: "api error",
+			apiError: mockManagamentError{status: http.StatusServiceUnavailable},
+			assertOutput: func(t testing.TB, branding *management.BrandingUniversalLogin) {
+				assert.NotNil(t, branding)
+				assert.Equal(t, branding.GetBody(), "")
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			brandingAPI := mock.NewMockBrandingAPI(ctrl)
+			brandingAPI.EXPECT().
+				UniversalLogin(gomock.Any()).
+				Return(test.brandingUL, test.apiError)
+
+			ctx := context.Background()
+			api := &auth0.API{Branding: brandingAPI}
+			branding := fetchBrandingTemplateOrUseEmpty(ctx, api)
+			test.assertOutput(t, branding)
+		})
+	}
+}
