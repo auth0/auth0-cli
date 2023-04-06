@@ -37,3 +37,11 @@ tests:
         - "TOKEN    TYPE   Bearer"
         - "EXPIRES    IN   1440 minute(s)"
         - "ACCESS  TOKEN   eyJhbGci"
+  
+  005 - test token as json:
+    command: auth0 test token $(./test/integration/scripts/get-m2m-app-id.sh) --audience "$(./test/integration/scripts/get-manage-api-audience.sh)" --scopes openid,offline_access --no-input --json
+    exit-code: 0
+    stdout:
+      json:
+        token_type: "Bearer"
+        expires_in: "86400"

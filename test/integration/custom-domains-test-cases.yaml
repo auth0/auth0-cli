@@ -7,27 +7,27 @@ tests:
     command: auth0 domains list
     exit-code: 0
   002 - create domain with minimal flags:
-    command: auth0 domains create --domain "integration-test.com" --no-input
+    command: auth0 domains create --domain "custom-domain.com" --no-input
     exit-code: 0
     stdout:
       contains:
         - "ID                       cd_"
-        - "DOMAIN                   integration-test.com"
+        - "DOMAIN                   custom-domain.com"
         - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        auth0_managed_certs"
   003 - unsuccessfully create domain with same name:
-    command: auth0 domains create --domain "integration-test.com" --no-input
+    command: auth0 domains create --domain "custom-domain.com" --no-input
     exit-code: 1
     stderr:
       contains:
-        - "An unexpected error occurred while attempting to create the custom domain 'integration-test.com': 409 Conflict: The specified custom domain already exists"
+        - "An unexpected error occurred while attempting to create the custom domain 'custom-domain.com': 409 Conflict: The specified custom domain already exists"
   004 - show domain:
     command: auth0 domains show $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
     exit-code: 0
     stdout:
       contains:
         - "ID                       cd_"
-        - "DOMAIN                   integration-test.com"
+        - "DOMAIN                   custom-domain.com"
         - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        auth0_managed_certs"
   005 - update domain minimal flags:
@@ -36,7 +36,7 @@ tests:
     stdout:
       contains:
         - "ID                       cd_"
-        - "DOMAIN                   integration-test.com"
+        - "DOMAIN                   custom-domain.com"
         - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        auth0_managed_certs"
   006 - update domain maximal flags:
@@ -45,7 +45,7 @@ tests:
     stdout:
       contains:
         - "ID                       cd_"
-        - "DOMAIN                   integration-test.com"
+        - "DOMAIN                   custom-domain.com"
         - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        auth0_managed_certs"
         - "TLS POLICY               recommended"
@@ -55,21 +55,21 @@ tests:
     stdout:
       contains:
         - "ID                       cd_"
-        - "DOMAIN                   integration-test.com"
+        - "DOMAIN                   custom-domain.com"
         - "PROVISIONING TYPE        auth0_managed_certs"
         - "TLS POLICY               recommended"
   008 - delete domain:
     command: auth0 domains delete $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
     exit-code: 0
   009 - create domain with maximal flags:
-    command: auth0 domains create --domain "integration-test.com" --verification txt --type auth0 --policy recommended --no-input
+    command: auth0 domains create --domain "custom-domain.com" --verification txt --type self --policy recommended --no-input
     exit-code: 0
     stdout:
       contains:
         - "ID                       cd_"
-        - "DOMAIN                   integration-test.com"
+        - "DOMAIN                   custom-domain.com"
         - "STATUS                   pending_verification"
-        - "PROVISIONING TYPE        auth0_managed_certs"
+        - "PROVISIONING TYPE        self_managed_certs"
         - "VERIFICATION METHOD      txt"
         - "TLS POLICY               recommended"
         - "CUSTOM CLIENT IP HEADER"

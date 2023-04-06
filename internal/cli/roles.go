@@ -345,7 +345,7 @@ func (c *cli) rolePickerOptions() (pickerOptions, error) {
 	}
 
 	if len(opts) == 0 {
-		return nil, errors.New("there are currently no roles")
+		return nil, errors.New("There are currently no roles.")
 	}
 
 	return opts, nil
