@@ -34,10 +34,10 @@ func TestEnsureCustomDomainIsEnabled(t *testing.T) {
 			name: "happy path",
 			customDomains: []*management.CustomDomain{
 				{
-					Status:   auth0.String("foo"),
+					Status: auth0.String("foo"),
 				},
 				{
-					Status:   auth0.String("ready"),
+					Status: auth0.String("ready"),
 				},
 			},
 			assertOutput: func(t testing.TB, err error) {
@@ -48,7 +48,7 @@ func TestEnsureCustomDomainIsEnabled(t *testing.T) {
 			name: "no verified domains",
 			customDomains: []*management.CustomDomain{
 				{
-					Status:   auth0.String("foo"),
+					Status: auth0.String("foo"),
 				},
 			},
 			assertOutput: func(t testing.TB, err error) {
@@ -56,14 +56,14 @@ func TestEnsureCustomDomainIsEnabled(t *testing.T) {
 			},
 		},
 		{
-			name: "custom domains are not enabled",
+			name:     "custom domains are not enabled",
 			apiError: mockManagamentError{status: http.StatusForbidden},
 			assertOutput: func(t testing.TB, err error) {
 				assert.ErrorIs(t, errNotAllowed, err)
 			},
 		},
 		{
-			name: "api error",
+			name:     "api error",
 			apiError: mockManagamentError{status: http.StatusServiceUnavailable},
 			assertOutput: func(t testing.TB, err error) {
 				assert.Error(t, err)
@@ -100,7 +100,7 @@ func TestFetchBrandingSettingsOrUseDefaults(t *testing.T) {
 			name: "happy path",
 			branding: &management.Branding{
 				Colors: &management.BrandingColors{
-					Primary: auth0.String("#FF4F40"),
+					Primary:        auth0.String("#FF4F40"),
 					PageBackground: auth0.String("#2A2E35"),
 				},
 				LogoURL: auth0.String("https://example.com/logo-updated-json.png"),
@@ -114,7 +114,7 @@ func TestFetchBrandingSettingsOrUseDefaults(t *testing.T) {
 			},
 		},
 		{
-			name: "no branding settings",
+			name:     "no branding settings",
 			branding: &management.Branding{},
 			assertOutput: func(t testing.TB, branding *management.Branding) {
 				assert.NotNil(t, branding)
@@ -125,7 +125,7 @@ func TestFetchBrandingSettingsOrUseDefaults(t *testing.T) {
 			},
 		},
 		{
-			name: "api error",
+			name:     "api error",
 			apiError: mockManagamentError{status: http.StatusServiceUnavailable},
 			assertOutput: func(t testing.TB, branding *management.Branding) {
 				assert.NotNil(t, branding)
@@ -172,7 +172,7 @@ func TestFetchBrandingTemplateOrUseEmpty(t *testing.T) {
 			},
 		},
 		{
-			name: "api error",
+			name:     "api error",
 			apiError: mockManagamentError{status: http.StatusServiceUnavailable},
 			assertOutput: func(t testing.TB, branding *management.BrandingUniversalLogin) {
 				assert.NotNil(t, branding)
