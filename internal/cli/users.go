@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -230,7 +231,12 @@ func createUserCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Select from the available connection types
 			// Users API currently support  database connections
-			if err := userConnection.Select(cmd, &inputs.Connection, cli.connectionPickerOptions(), nil); err != nil {
+			options, err := cli.connectionPickerOptions()
+			if err != nil {
+				return err
+			}
+
+			if err := userConnection.Select(cmd, &inputs.Connection, options, nil); err != nil {
 				return err
 			}
 
@@ -549,7 +555,12 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Select from the available connection types
 			// Users API currently support database connections
-			if err := userConnection.Select(cmd, &inputs.Connection, cli.connectionPickerOptions(), nil); err != nil {
+			options, optionsErr := cli.connectionPickerOptions()
+			if optionsErr != nil {
+				return optionsErr
+			}
+
+			if err := userConnection.Select(cmd, &inputs.Connection, options, nil); err != nil {
 				return err
 			}
 
@@ -632,12 +643,12 @@ func formatUserDetailsPath(id string) string {
 	return fmt.Sprintf("users/%s", id)
 }
 
-func (c *cli) connectionPickerOptions() []string {
+func (c *cli) connectionPickerOptions() ([]string, error) {
 	var res []string
 
 	list, err := c.api.Connection.List()
 	if err != nil {
-		fmt.Println(err)
+		return nil, err
 	}
 	for _, conn := range list.Connections {
 		if conn.GetStrategy() == "auth0" {
@@ -645,7 +656,11 @@ func (c *cli) connectionPickerOptions() []string {
 		}
 	}
 
-	return res
+	if len(res) == 0 {
+		return nil, errors.New("There are currently no database connections.")
+	}
+
+	return res, nil
 }
 
 func (c *cli) getUserConnection(users *management.User) []string {
