@@ -120,7 +120,7 @@ lint: $(GO_BIN)/golangci-lint ## Run go linter checks
 
 check-vuln: $(GO_BIN)/govulncheck ## Check go vulnerabilities
 	${call print, "Running govulncheck over project"}
-	@govulncheck -v ./...
+	@govulncheck ./...
 
 check-docs: ## Check that documentation was generated correctly
 	${call print, "Checking that documentation was generated correctly"}
