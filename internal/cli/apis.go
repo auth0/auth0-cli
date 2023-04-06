@@ -579,7 +579,7 @@ func (c *cli) filteredAPIPickerOptions(include func(r *management.ResourceServer
 	}
 
 	if len(opts) == 0 {
-		return nil, errors.New("There are currently no applications.")
+		return nil, errors.New("There are currently no APIs.")
 	}
 
 	return opts, nil
