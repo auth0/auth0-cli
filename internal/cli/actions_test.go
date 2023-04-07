@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"testing"
@@ -128,4 +129,83 @@ func TestActionsDeployCmd(t *testing.T) {
 
 		assert.EqualError(t, err, `failed to get deployed action with ID "1221c74c-cfd6-40db-af13-7bc9bb1c38db": 400 Bad Request`)
 	})
+}
+
+func TestActionsPickerOptions(t *testing.T) {
+	tests := []struct {
+		name         string
+		actions      []*management.Action
+		apiError     error
+		assertOutput func(t testing.TB, options pickerOptions)
+		assertError  func(t testing.TB, err error)
+	}{
+		{
+			name: "happy path",
+			actions: []*management.Action{
+				{
+					ID:   auth0.String("some-id-1"),
+					Name: auth0.String("some-name-1"),
+				},
+				{
+					ID:   auth0.String("some-id-2"),
+					Name: auth0.String("some-name-2"),
+				},
+			},
+			assertOutput: func(t testing.TB, options pickerOptions) {
+				assert.Len(t, options, 2)
+				assert.Equal(t, "some-name-1 (some-id-1)", options[0].label)
+				assert.Equal(t, "some-id-1", options[0].value)
+				assert.Equal(t, "some-name-2 (some-id-2)", options[1].label)
+				assert.Equal(t, "some-id-2", options[1].value)
+			},
+			assertError: func(t testing.TB, err error) {
+				t.Fail()
+			},
+		},
+		{
+			name:    "no actions",
+			actions: []*management.Action{},
+			assertOutput: func(t testing.TB, options pickerOptions) {
+				t.Fail()
+			},
+			assertError: func(t testing.TB, err error) {
+				assert.ErrorContains(t, err, "There are currently no actions.")
+			},
+		},
+		{
+			name:     "API error",
+			apiError: errors.New("error"),
+			assertOutput: func(t testing.TB, options pickerOptions) {
+				t.Fail()
+			},
+			assertError: func(t testing.TB, err error) {
+				assert.Error(t, err)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			actionAPI := mock.NewMockActionAPI(ctrl)
+			actionAPI.EXPECT().
+				List(gomock.Any()).
+				Return(&management.ActionList{
+					Actions: test.actions}, test.apiError)
+
+			cli := &cli{
+				api: &auth0.API{Action: actionAPI},
+			}
+
+			options, err := cli.actionPickerOptions()
+
+			if err != nil {
+				test.assertError(t, err)
+			} else {
+				test.assertOutput(t, options)
+			}
+		})
+	}
 }
