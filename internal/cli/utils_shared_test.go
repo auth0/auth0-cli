@@ -1,10 +1,15 @@
 package cli
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/auth0/mock"
 )
 
 func TestBuildOauthTokenURL(t *testing.T) {
@@ -56,4 +61,168 @@ func TestGenerateState(t *testing.T) {
 	state, err = generateState(cliLoginTestingStateSize)
 	assert.IsType(t, "string", state)
 	assert.Nil(t, err)
+}
+
+func TestAddLocalCallbackURLToClient(t *testing.T) {
+	tests := []struct {
+		name         string
+		intialClient *management.Client
+		finalClient  *management.Client
+		apiError     error
+		assertOutput func(t testing.TB, result bool)
+		assertError  func(t testing.TB, err error)
+	}{
+		{
+			name:         "adds the callback",
+			intialClient: &management.Client{ClientID: auth0.String("")},
+			finalClient: &management.Client{
+				Callbacks: &[]string{cliLoginTestingCallbackURL},
+			},
+			assertOutput: func(t testing.TB, result bool) {
+				assert.True(t, result)
+			},
+			assertError: func(t testing.TB, err error) {
+				t.Fail()
+			},
+		},
+		{
+			name: "does not add the callback when alredy present",
+			intialClient: &management.Client{
+				ClientID: auth0.String(""),
+				Callbacks: &[]string{
+					"http://localhost:3000",
+					cliLoginTestingCallbackURL,
+				},
+			},
+			assertOutput: func(t testing.TB, result bool) {
+				assert.False(t, result)
+			},
+			assertError: func(t testing.TB, err error) {
+				t.Fail()
+			},
+		},
+		{
+			name:         "returns the API error",
+			intialClient: &management.Client{ClientID: auth0.String("")},
+			finalClient: &management.Client{
+				Callbacks: &[]string{cliLoginTestingCallbackURL},
+			},
+			apiError: errors.New("error"),
+			assertError: func(t testing.TB, err error) {
+				assert.Error(t, err)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			timesAPIShouldBeCalled := 1
+			if test.finalClient == nil {
+				timesAPIShouldBeCalled = 0
+			}
+
+			clientAPI := mock.NewMockClientAPI(ctrl)
+			clientAPI.EXPECT().
+				Update(gomock.Any(), gomock.Eq(test.finalClient)).
+				Return(test.apiError).
+				Times(timesAPIShouldBeCalled)
+
+			result, err := addLocalCallbackURLToClient(clientAPI, test.intialClient)
+
+			if err != nil {
+				test.assertError(t, err)
+			} else {
+				test.assertOutput(t, result)
+			}
+		})
+	}
+}
+
+func TestRemoveLocalCallbackURLToClient(t *testing.T) {
+	tests := []struct {
+		name         string
+		intialClient *management.Client
+		finalClient  *management.Client
+		apiError     error
+		assertError  func(t testing.TB, err error)
+	}{
+		{
+			name: "removes the callback",
+			intialClient: &management.Client{
+				ClientID: auth0.String(""),
+				Callbacks: &[]string{
+					"http://localhost:3000",
+					cliLoginTestingCallbackURL,
+				},
+			},
+			finalClient: &management.Client{
+				Callbacks: &[]string{"http://localhost:3000"},
+			},
+			assertError: func(t testing.TB, err error) {
+				assert.Nil(t, err)
+			},
+		},
+		{
+			name: "does not remove the callback when not present",
+			intialClient: &management.Client{
+				ClientID:  auth0.String(""),
+				Callbacks: &[]string{"http://localhost:3000"},
+			},
+			assertError: func(t testing.TB, err error) {
+				assert.Nil(t, err)
+			},
+		},
+		{
+			name: "does not remove the callback when there are no other callbacks",
+			intialClient: &management.Client{
+				ClientID:  auth0.String(""),
+				Callbacks: &[]string{cliLoginTestingCallbackURL},
+			},
+			assertError: func(t testing.TB, err error) {
+				assert.Nil(t, err)
+			},
+		},
+		{
+			name: "returns the API error",
+			intialClient: &management.Client{
+				ClientID: auth0.String(""),
+				Callbacks: &[]string{
+					"http://localhost:3000",
+					cliLoginTestingCallbackURL,
+				},
+			},
+			finalClient: &management.Client{
+				Callbacks: &[]string{"http://localhost:3000"},
+			},
+			apiError: errors.New("error"),
+			assertError: func(t testing.TB, err error) {
+				assert.Error(t, err)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			timesAPIShouldBeCalled := 1
+			if test.finalClient == nil {
+				timesAPIShouldBeCalled = 0
+			}
+
+			clientAPI := mock.NewMockClientAPI(ctrl)
+			clientAPI.EXPECT().
+				Update(gomock.Any(), gomock.Eq(test.finalClient)).
+				Return(test.apiError).
+				Times(timesAPIShouldBeCalled)
+
+			err := removeLocalCallbackURLFromClient(clientAPI, test.intialClient)
+
+			test.assertError(t, err)
+		})
+	}
 }
