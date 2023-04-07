@@ -27,7 +27,7 @@ func TestDedupLogs(t *testing.T) {
 				Date: auth0.Time(time.Date(2023, 04, 06, 12, 00, 00, 0, time.UTC)),
 			},
 		}
-		set := map[string]struct{} { "some-id-3": {} }
+		set := map[string]struct{}{"some-id-3": {}}
 		result := dedupLogs(logs, set)
 
 		assert.Len(t, result, 2)
@@ -50,7 +50,7 @@ func TestDedupLogs(t *testing.T) {
 				Date: auth0.Time(time.Date(2023, 04, 06, 12, 00, 00, 0, time.UTC)),
 			},
 		}
-		set := map[string]struct{} {}
+		set := map[string]struct{}{}
 		result := dedupLogs(logs, set)
 
 		assert.Len(t, logs, 3)
@@ -74,7 +74,7 @@ func TestDedupLogs(t *testing.T) {
 				Date: auth0.Time(time.Date(2023, 04, 06, 12, 00, 00, 0, time.UTC)),
 			},
 		}
-		set := map[string]struct{} {
+		set := map[string]struct{}{
 			"some-id-1": {},
 			"some-id-2": {},
 			"some-id-3": {},
