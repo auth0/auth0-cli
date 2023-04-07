@@ -40,6 +40,8 @@ type userRolesInput struct {
 	Roles  []string
 }
 
+type userRolesFetcher func(cli *cli, userID string) ([]string, error)
+
 func userRolesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "roles",
@@ -141,7 +143,7 @@ func addUserRolesCmd(cli *cli) *cobra.Command {
 			}
 
 			if len(inputs.Roles) == 0 {
-				if err := cli.pickUserRolesToAdd(&inputs); err != nil {
+				if err := cli.pickUserRoles(&inputs, userRolesToAddPickerOptions); err != nil {
 					return err
 				}
 			}
@@ -201,7 +203,7 @@ func removeUserRolesCmd(cli *cli) *cobra.Command {
 			}
 
 			if len(inputs.Roles) == 0 {
-				if err := cli.pickUserRolesToRemove(&inputs); err != nil {
+				if err := cli.pickUserRoles(&inputs, userRolesToRemovePickerOptions); err != nil {
 					return err
 				}
 			}
@@ -239,35 +241,21 @@ func removeUserRolesCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func (cli *cli) pickUserRolesToAdd(inputs *userRolesInput) error {
-	var currentUserRoleList *management.RoleList
-	if err := ansi.Waiting(func() (err error) {
-		currentUserRoleList, err = cli.api.User.Roles(inputs.ID, management.PerPage(100))
-		return err
-	}); err != nil {
-		return fmt.Errorf("failed to find the current roles for user with ID %s: %w", inputs.ID, err)
-	}
-
-	var roleList *management.RoleList
-	if err := ansi.Waiting(func() (err error) {
-		roleList, err = cli.api.Role.List()
-		return err
-	}); err != nil {
-		return fmt.Errorf("failed to list all roles: %w", err)
-	}
-
-	if len(roleList.Roles) == len(currentUserRoleList.Roles) {
-		return fmt.Errorf("the user with ID %q has all roles assigned already", inputs.ID)
-	}
-
-	const emptySpace = " "
+func (cli *cli) pickUserRoles(inputs *userRolesInput, fetchOptions userRolesFetcher) error {
 	var options []string
-	for _, role := range roleList.Roles {
-		if !containsRole(currentUserRoleList.Roles, role.GetID()) {
-			options = append(options, fmt.Sprintf("%s%s(Name: %s)", role.GetID(), emptySpace, role.GetName()))
-		}
+	if err := ansi.Waiting(func() (err error) {
+		options, err = fetchOptions(cli, inputs.ID)
+		return err
+	}); err != nil {
+		return err
 	}
 
+	err := cli.selectUserRoles(inputs, options)
+
+	return err
+}
+
+func (cli *cli) selectUserRoles(inputs *userRolesInput, options []string) error {
 	rolesPrompt := &survey.MultiSelect{
 		Message: "Roles",
 		Options: options,
@@ -279,7 +267,7 @@ func (cli *cli) pickUserRolesToAdd(inputs *userRolesInput) error {
 	}
 
 	for _, selectedRole := range selectedRoles {
-		indexOfFirstEmptySpace := strings.Index(selectedRole, emptySpace)
+		indexOfFirstEmptySpace := strings.Index(selectedRole, " ")
 		inputs.Roles = append(inputs.Roles, selectedRole[:indexOfFirstEmptySpace])
 	}
 
@@ -290,41 +278,44 @@ func (cli *cli) pickUserRolesToAdd(inputs *userRolesInput) error {
 	return nil
 }
 
-func (cli *cli) pickUserRolesToRemove(inputs *userRolesInput) error {
-	var currentUserRoleList *management.RoleList
-	if err := ansi.Waiting(func() (err error) {
-		currentUserRoleList, err = cli.api.User.Roles(inputs.ID)
-		return err
-	}); err != nil {
-		return fmt.Errorf("failed to find the current roles for user with ID %s: %w", inputs.ID, err)
+func userRolesToAddPickerOptions(cli *cli, userID string) ([]string, error) {
+	currentUserRoleList, err := cli.api.User.Roles(userID, management.PerPage(100))
+	if err != nil {
+		return nil, fmt.Errorf("failed to find the current roles for user with ID %s: %w", userID, err)
 	}
 
-	const emptySpace = " "
+	var roleList *management.RoleList
+	roleList, err = cli.api.Role.List()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list all roles: %w", err)
+	}
+
+	if len(roleList.Roles) == len(currentUserRoleList.Roles) {
+		return nil, fmt.Errorf("the user with ID %q has all roles assigned already", userID)
+	}
+
+	var options []string
+	for _, role := range roleList.Roles {
+		if !containsRole(currentUserRoleList.Roles, role.GetID()) {
+			options = append(options, fmt.Sprintf("%s (Name: %s)", role.GetID(), role.GetName()))
+		}
+	}
+
+	return options, nil
+}
+
+func userRolesToRemovePickerOptions(cli *cli, userID string) ([]string, error) {
+	currentUserRoleList, err := cli.api.User.Roles(userID, management.PerPage(100))
+	if err != nil {
+		return nil, fmt.Errorf("failed to find the current roles for user with ID %s: %w", userID, err)
+	}
+
 	var options []string
 	for _, role := range currentUserRoleList.Roles {
-		options = append(options, fmt.Sprintf("%s%s(Name: %s)", role.GetID(), emptySpace, role.GetName()))
+		options = append(options, fmt.Sprintf("%s (Name: %s)", role.GetID(), role.GetName()))
 	}
 
-	rolesPrompt := &survey.MultiSelect{
-		Message: "Roles",
-		Options: options,
-	}
-
-	var selectedRoles []string
-	if err := survey.AskOne(rolesPrompt, &selectedRoles); err != nil {
-		return err
-	}
-
-	for _, selectedRole := range selectedRoles {
-		indexOfFirstEmptySpace := strings.Index(selectedRole, emptySpace)
-		inputs.Roles = append(inputs.Roles, selectedRole[:indexOfFirstEmptySpace])
-	}
-
-	if len(inputs.Roles) == 0 {
-		return errNoRolesSelected
-	}
-
-	return nil
+	return options, nil
 }
 
 func containsRole(roles []*management.Role, roleID string) bool {
