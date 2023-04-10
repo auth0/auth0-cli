@@ -1,8 +1,13 @@
 package display
 
 import (
+	"bytes"
+	"io"
 	"testing"
 	"time"
+
+	"github.com/auth0/go-auth0/management"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTimeAgo(t *testing.T) {
@@ -14,6 +19,7 @@ func TestTimeAgo(t *testing.T) {
 		want string
 	}{
 		{t0, "0 seconds ago"},
+		{t0.Add(-61 * time.Second), "a minute ago"},
 		{t0.Add(-2 * time.Minute), "2 minutes ago"},
 		{t0.Add(-119 * time.Minute), "an hour ago"},
 		{t0.Add(-3 * time.Hour), "3 hours ago"},
@@ -33,4 +39,34 @@ func TestTimeAgo(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStream(t *testing.T) {
+	results := []View{}
+	stdout := &bytes.Buffer{}
+	mockRender := &Renderer{
+		MessageWriter: io.Discard,
+		ResultWriter:  stdout,
+	}
+
+	t.Run("Stream correctly handles nil channel", func(t *testing.T) {
+		mockRender.Stream(results, nil)
+		assert.Len(t, stdout.Bytes(), 0)
+	})
+
+	t.Run("Stream successfully", func(t *testing.T) {
+		viewChan := make(chan View)
+		go mockRender.Stream(results, viewChan)
+
+		mockLogID := "log1"
+		mockLog := management.Log{LogID: &mockLogID}
+		viewChan <- &logView{Log: &mockLog}
+		close(viewChan)
+	})
+}
+
+func TestIndent(t *testing.T) {
+	assert.Equal(t, "foo", indent("foo", ""))
+	assert.Equal(t, " foo", indent("foo", " "))
+	assert.Equal(t, " line1\n line2\n line3", indent("line1\nline2\nline3", " "))
 }
