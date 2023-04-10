@@ -190,7 +190,8 @@ func TestHasAllRequiredScopes(t *testing.T) {
 	mockTenantWithAllRequiredScopes := Tenant{Scopes: auth.RequiredScopes}
 	assert.True(t, hasAllRequiredScopes(mockTenantWithAllRequiredScopes))
 
-	requiredScopesAndMore := append(auth.RequiredScopes, "read:foo", "update:foo", "delete:foo")
+	requiredScopesAndMore := auth.RequiredScopes
+	requiredScopesAndMore = append(requiredScopesAndMore, "read:foo", "update:foo", "delete:foo")
 	mockTenantWithAllRequiredScopesAndMore := Tenant{Scopes: requiredScopesAndMore}
 	assert.True(t, hasAllRequiredScopes(mockTenantWithAllRequiredScopesAndMore))
 }

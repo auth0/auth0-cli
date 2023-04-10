@@ -57,11 +57,11 @@ func TestGetScopes(t *testing.T) {
 }
 
 func TestApiView_AsTableHeader(t *testing.T) {
-	mockApiView := apiView{}
-	assert.Equal(t, []string{}, mockApiView.AsTableHeader())
+	mockAPIView := apiView{}
+	assert.Equal(t, []string{}, mockAPIView.AsTableHeader())
 }
 
 func TestApiView_AsTableRow(t *testing.T) {
-	mockApiView := apiView{}
-	assert.Equal(t, []string{}, mockApiView.AsTableRow())
+	mockAPIView := apiView{}
+	assert.Equal(t, []string{}, mockAPIView.AsTableRow())
 }
