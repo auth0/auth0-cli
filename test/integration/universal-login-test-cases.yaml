@@ -85,3 +85,20 @@ tests:
     stderr:
       contains:
         - "failed to fetch the Universal Login template data: this feature requires at least one custom domain to be set and verified for the tenant, use 'auth0 domains create' to create one and 'auth0 domains verify' to have it verified"
+
+  010 - update universal login branding prompts (login):
+    command: cat ./test/integration/fixtures/update-ul-prompts-login.json | auth0 ul prompts update login
+    exit-code: 0
+
+  011 - update universal login branding prompts (mfa-push):
+    command: cat ./test/integration/fixtures/update-ul-prompts-mfa-push.json | auth0 ul prompts update mfa-push
+    exit-code: 0
+
+  012 - show universal login branding prompts (mfa-push):
+    command: auth0 ul prompts show mfa-push
+    exit-code: 0
+    stdout:
+      json:
+        mfa-push-challenge-push.rememberMeText: "Remember this device for 30 days"
+        mfa-push-success.title: "You're All Set!"
+        mfa-push-enrollment-qr.logoAltText: "${companyName}"
