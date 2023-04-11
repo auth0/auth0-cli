@@ -1,4 +1,5 @@
 #! /bin/bash
+set -e
 
 FILE=./test/integration/identifiers/log-stream-http-id
 if [ -f "$FILE" ]; then

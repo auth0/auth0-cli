@@ -122,6 +122,22 @@ for action in $( echo "${actions}" | jq -r '.[] | @base64' ); do
     fi
 done
 
+logStreams=$( auth0 logs streams list --json )
+for logStream in $( echo "${logStreams}" | jq -r '.[] | @base64' ); do
+    _jq() {
+     echo "${logStream}" | base64 --decode | jq -r "${1}"
+    }
+
+    id=$(_jq '.id')
+    name=$(_jq '.name')
+
+    if [[ $name = integration-test-* ]]
+    then
+        echo deleting "$name"
+        $( auth0 logs streams delete "$id")
+    fi
+done
+
 auth0 domains delete $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
 
 # Reset universal login branding

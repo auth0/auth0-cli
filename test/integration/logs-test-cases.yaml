@@ -24,7 +24,7 @@ tests:
   003 - it successfully creates a datadog log stream:
     command: ./test/integration/scripts/create-log-stream-datadog-id.sh
     exit-code: 0
-  
+
   004 - it successfully lists all log streams with data:
     command: auth0 logs streams list
     exit-code: 0
