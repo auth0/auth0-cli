@@ -1,6 +1,16 @@
 package cli
 
-/*
+import (
+	"errors"
+	"testing"
+
+	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/auth0/mock"
+	"github.com/auth0/go-auth0/management"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+)
+
 func TestUserRolesToRemovePickerOptions(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -12,6 +22,7 @@ func TestUserRolesToRemovePickerOptions(t *testing.T) {
 	}{
 		{
 			name: "happy path",
+			userID: "",
 			roles: []*management.Role{
 				{
 					ID:   auth0.String("some-id-1"),
@@ -24,33 +35,33 @@ func TestUserRolesToRemovePickerOptions(t *testing.T) {
 			},
 			assertOutput: func(t testing.TB, options []string) {
 				assert.Len(t, options, 2)
-				assert.Equal(t, "some-name-1 (some-id-1)", options[0].label)
-				assert.Equal(t, "some-id-1", options[0].value)
-				assert.Equal(t, "some-name-2 (some-id-2)", options[1].label)
-				assert.Equal(t, "some-id-2", options[1].value)
+				assert.Equal(t, "some-id-1 (Name: some-name-1)", options[0])
+				assert.Equal(t, "some-id-2 (Name: some-name-2)", options[1])
 			},
 			assertError: func(t testing.TB, err error) {
 				t.Fail()
 			},
 		},
 		{
-			name:  "no roles",
+			name:  "no roles for user",
+			userID: "",
 			roles: []*management.Role{},
 			assertOutput: func(t testing.TB, options []string) {
-				t.Fail()
+				assert.Empty(t, options)
 			},
 			assertError: func(t testing.TB, err error) {
-				assert.ErrorContains(t, err, "There are currently no roles.")
+				t.Fail()
 			},
 		},
 		{
 			name:     "API error",
+			userID: "some-id",
 			apiError: errors.New("error"),
 			assertOutput: func(t testing.TB, options []string) {
 				t.Fail()
 			},
 			assertError: func(t testing.TB, err error) {
-				assert.Error(t, err)
+				assert.ErrorContains(t, err, "Failed to find the current roles for user with ID some-id: error.")
 			},
 		},
 	}
@@ -62,14 +73,11 @@ func TestUserRolesToRemovePickerOptions(t *testing.T) {
 
 			userAPI := mock.NewMockUserAPI(ctrl)
 			userAPI.EXPECT().
-				Roles(gomock.Any()).
-				Return(&management.RoleList{
-					Roles: test.roles}, test.apiError)
-
-		    // mock roles API and add to cli
+				Roles(gomock.Eq(test.userID), gomock.Any()).
+				Return(&management.RoleList{ Roles: test.roles }, test.apiError)
 
 			cli := &cli{
-				api: &auth0.API{User: userAPI},
+				api: &auth0.API{ User: userAPI },
 			}
 
 			options, err := userRolesToRemovePickerOptions(cli, test.userID)
@@ -82,5 +90,3 @@ func TestUserRolesToRemovePickerOptions(t *testing.T) {
 		})
 	}
 }
-
-*/
