@@ -12,8 +12,6 @@ func TestGetScopes(t *testing.T) {
 	t.Run("no scopes should not truncate", func(t *testing.T) {
 		mockScopes := []management.ResourceServerScope{}
 
-		getScopes(mockScopes)
-
 		scopes, didTruncate := getScopes(mockScopes)
 		assert.Equal(t, "", scopes)
 		assert.False(t, didTruncate)
