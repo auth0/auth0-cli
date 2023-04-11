@@ -3,10 +3,11 @@ config:
 
 tests:
   001 - test login of default app (partially successful):
-    #Terminate early because command will otherwise wait for in-browser authorization stage
-    # `timeout` command provided by GNU coreutils
-    command: timeout 2s  auth0 test login $(./test/integration/scripts/get-default-app-id.sh) --no-input 2>&1
-    exit-code: 124 #Timeout exit code
+    # Terminate early because command will otherwise wait for in-browser
+    # authorization stage `timeout` command provided by GNU coreutils.
+    # On Mac install with brew install coreutils.
+    command: timeout 2s auth0 test login $(./test/integration/scripts/get-rwa-app-id.sh) --no-input 2>&1
+    exit-code: 124 # Timeout exit code.
     stdout:
       contains:
         - "Open the following URL in a browser: https://"
