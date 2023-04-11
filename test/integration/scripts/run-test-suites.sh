@@ -20,6 +20,6 @@ exit_code=$?
 
 bash ./test/integration/scripts/test-cleanup.sh
 
-auth0 logout $AUTH0_CLI_CLIENT_DOMAIN
+auth0 logout "$AUTH0_CLI_CLIENT_DOMAIN"
 
 exit $exit_code
