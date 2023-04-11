@@ -155,6 +155,10 @@ test-mocks: $(GO_BIN)/mockgen ## Generate testing mocks using mockgen
 	${call print, "Generating test mocks"}
 	@go generate -v ./...
 
+test-clean: ## Clean up test tenant
+	${call print, "Cleaning up the test tenant"}
+	@bash ./test/integration/scripts/test-cleanup.sh
+
 #-----------------------------------------------------------------------------------------------------------------------
 # Helpers
 #-----------------------------------------------------------------------------------------------------------------------
