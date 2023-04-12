@@ -4,12 +4,94 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/auth0/auth0-cli/internal/auth0"
-	"github.com/auth0/auth0-cli/internal/auth0/mock"
 	"github.com/auth0/go-auth0/management"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/auth0/mock"
 )
+
+func TestGetUserRoles(t *testing.T) {
+	t.Run("gets user roles", func(t *testing.T) {
+		inputs := &userRolesInput{
+			ID:    "some-id",
+			Roles: []string{},
+		}
+		userRolesFetcher := func(cli *cli, userID string) ([]string, error) {
+			assert.Equal(t, userID, "some-id")
+			return []string{"some-id-1", "some-id-2"}, nil
+		}
+		userRolesSelector := func(options []string) ([]string, error) {
+			assert.Equal(t, options, []string{"some-id-1", "some-id-2"})
+			return []string{"some-id-3 (Name: some-name-3)", "some-id-4 (Name: some-name-4)"}, nil
+		}
+		cli := &cli{}
+		err := cli.getUserRoles(inputs, userRolesFetcher, userRolesSelector)
+
+		assert.Equal(t, inputs.Roles, []string{"some-id-3", "some-id-4"})
+		assert.Nil(t, err)
+	})
+
+	t.Run("gets user roles appending the roles passed by flag", func(t *testing.T) {
+		inputs := &userRolesInput{
+			ID:    "some-id",
+			Roles: []string{"some-role"},
+		}
+		userRolesFetcher := func(cli *cli, userID string) ([]string, error) {
+			assert.Equal(t, userID, "some-id")
+			return []string{"some-id-1", "some-id-2"}, nil
+		}
+		userRolesSelector := func(options []string) ([]string, error) {
+			assert.Equal(t, options, []string{"some-id-1", "some-id-2"})
+			return []string{"some-id-3 (Name: some-name-3)", "some-id-4 (Name: some-name-4)"}, nil
+		}
+		cli := &cli{}
+		err := cli.getUserRoles(inputs, userRolesFetcher, userRolesSelector)
+
+		assert.Equal(t, inputs.Roles, []string{"some-role", "some-id-3", "some-id-4"})
+		assert.Nil(t, err)
+	})
+
+	t.Run("returns error when user roles fetcher fails", func(t *testing.T) {
+		inputs := &userRolesInput{Roles: []string{}}
+		userRolesFetcher := func(cli *cli, userID string) ([]string, error) {
+			return nil, errors.New("error")
+		}
+		cli := &cli{}
+		err := cli.getUserRoles(inputs, userRolesFetcher, nil)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("returns error when user roles selector fails", func(t *testing.T) {
+		inputs := &userRolesInput{Roles: []string{}}
+		userRolesFetcher := func(cli *cli, userID string) ([]string, error) {
+			return []string{}, nil
+		}
+		userRolesSelector := func(options []string) ([]string, error) {
+			return nil, errors.New("error")
+		}
+		cli := &cli{}
+		err := cli.getUserRoles(inputs, userRolesFetcher, userRolesSelector)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("returns error when no roles where selected", func(t *testing.T) {
+		inputs := &userRolesInput{Roles: []string{}}
+		userRolesFetcher := func(cli *cli, userID string) ([]string, error) {
+			return []string{"some-id-1", "some-id-2"}, nil
+		}
+		userRolesSelector := func(options []string) ([]string, error) {
+			return []string{}, nil
+		}
+		cli := &cli{}
+		err := cli.getUserRoles(inputs, userRolesFetcher, userRolesSelector)
+
+		assert.ErrorIs(t, err, errNoRolesSelected)
+	})
+}
 
 func TestUserRolesToAddPickerOptions(t *testing.T) {
 	tests := []struct {
@@ -62,8 +144,8 @@ func TestUserRolesToAddPickerOptions(t *testing.T) {
 			},
 		},
 		{
-			name:  "user API error",
-			userID: "some-id",
+			name:         "user API error",
+			userID:       "some-id",
 			userAPIError: errors.New("error"),
 			assertOutput: func(t testing.TB, options []string) {
 				t.Fail()
@@ -73,7 +155,7 @@ func TestUserRolesToAddPickerOptions(t *testing.T) {
 			},
 		},
 		{
-			name:  "role API error",
+			name:         "role API error",
 			roleAPIError: errors.New("error"),
 			assertOutput: func(t testing.TB, options []string) {
 				t.Fail()
@@ -83,7 +165,7 @@ func TestUserRolesToAddPickerOptions(t *testing.T) {
 			},
 		},
 		{
-			name:  "user already has all roles assigned",
+			name:   "user already has all roles assigned",
 			userID: "some-id",
 			userRoles: []*management.Role{
 				{
@@ -131,7 +213,7 @@ func TestUserRolesToAddPickerOptions(t *testing.T) {
 				timesRolesAPIShouldBeCalled = 0
 			}
 
-		    roleAPI := mock.NewMockRoleAPI(ctrl)
+			roleAPI := mock.NewMockRoleAPI(ctrl)
 			roleAPI.EXPECT().
 				List(gomock.Any()).
 				Return(&management.RoleList{Roles: test.allRoles}, test.roleAPIError).
@@ -156,7 +238,7 @@ func TestUserRolesToRemovePickerOptions(t *testing.T) {
 	tests := []struct {
 		name         string
 		userID       string
-		userRoles        []*management.Role
+		userRoles    []*management.Role
 		apiError     error
 		assertOutput func(t testing.TB, options []string)
 		assertError  func(t testing.TB, err error)
@@ -183,7 +265,7 @@ func TestUserRolesToRemovePickerOptions(t *testing.T) {
 			},
 		},
 		{
-			name:  "no roles for user",
+			name:      "no roles for user",
 			userRoles: []*management.Role{},
 			assertOutput: func(t testing.TB, options []string) {
 				assert.Empty(t, options)
@@ -194,7 +276,7 @@ func TestUserRolesToRemovePickerOptions(t *testing.T) {
 		},
 		{
 			name:     "API error",
-			userID: "some-id",
+			userID:   "some-id",
 			apiError: errors.New("error"),
 			assertOutput: func(t testing.TB, options []string) {
 				t.Fail()
