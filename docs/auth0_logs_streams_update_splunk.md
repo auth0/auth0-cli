@@ -24,9 +24,9 @@ auth0 logs streams update splunk [flags]
   auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain>
   auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token>
   auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --port <port>
-  auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --port <port> --secure
+  auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --port <port> --secure=false
   auth0 log streams update splunk <log-stream-id> -n <name> -d <domain> -t <token> -p <port> -s
-  auth0 log streams update splunk <log-stream-id> -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s false --json
+  auth0 log streams update splunk <log-stream-id> -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s=false --json
 ```
 
 
