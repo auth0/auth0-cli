@@ -296,10 +296,10 @@ func TestContainsRole(t *testing.T) {
 	t.Run("returns true when role is found", func(t *testing.T) {
 		roles := []*management.Role{
 			{
-				ID:   auth0.String("some-id-1"),
+				ID: auth0.String("some-id-1"),
 			},
 			{
-				ID:   auth0.String("some-id-2"),
+				ID: auth0.String("some-id-2"),
 			},
 		}
 
@@ -311,10 +311,10 @@ func TestContainsRole(t *testing.T) {
 	t.Run("returns false when role is not found", func(t *testing.T) {
 		roles := []*management.Role{
 			{
-				ID:   auth0.String("some-id-1"),
+				ID: auth0.String("some-id-1"),
 			},
 			{
-				ID:   auth0.String("some-id-2"),
+				ID: auth0.String("some-id-2"),
 			},
 		}
 

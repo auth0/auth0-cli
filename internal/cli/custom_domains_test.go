@@ -22,6 +22,68 @@ func (m mockManagementError) Status() int {
 	return m.statusCode
 }
 
+func TestAPIProvisioningTypeFor(t *testing.T) {
+	t.Run("maps the 'auth0' provisioning type", func(t *testing.T) {
+		provisioningType := "auth0"
+		result := apiProvisioningTypeFor(provisioningType)
+
+		assert.Equal(t, *result, customDomainProvisioningTypeAuth0)
+	})
+
+	t.Run("maps the 'self' provisioning type", func(t *testing.T) {
+		provisioningType := "self"
+		result := apiProvisioningTypeFor(provisioningType)
+
+		assert.Equal(t, *result, customDomainProvisioningTypeSelf)
+	})
+
+	t.Run("returns the input string when the provisioning type is unknown", func(t *testing.T) {
+		provisioningType := "foo"
+		result := apiProvisioningTypeFor(provisioningType)
+
+		assert.Equal(t, *result, provisioningType)
+	})
+}
+
+func TestAPIPVerificationMethodFor(t *testing.T) {
+	t.Run("maps the 'txt' verification method", func(t *testing.T) {
+		verificationMethod := "txt"
+		result := apiVerificationMethodFor(verificationMethod)
+
+		assert.Equal(t, *result, customDomainVerificationMethodTxt)
+	})
+
+	t.Run("returns the input string when the verification method is unknown", func(t *testing.T) {
+		verificationMethod := "foo"
+		result := apiVerificationMethodFor(verificationMethod)
+
+		assert.Equal(t, *result, verificationMethod)
+	})
+}
+
+func TestAPITLSPolicyFor(t *testing.T) {
+	t.Run("maps the 'recommended' TLS policy", func(t *testing.T) {
+		tlsPolicy := "recommended"
+		result := apiTLSPolicyFor(tlsPolicy)
+
+		assert.Equal(t, *result, customDomainTLSPolicyRecommended)
+	})
+
+	t.Run("maps the 'recommended' TLS policy", func(t *testing.T) {
+		tlsPolicy := "compatible"
+		result := apiTLSPolicyFor(tlsPolicy)
+
+		assert.Equal(t, *result, customDomainTLSPolicyCompatible)
+	})
+
+	t.Run("returns the input string when the TLS policy is unknown", func(t *testing.T) {
+		tlsPolicy := "foo"
+		result := apiTLSPolicyFor(tlsPolicy)
+
+		assert.Equal(t, *result, tlsPolicy)
+	})
+}
+
 func TestCustomDomainsPickerOptions(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -34,12 +96,12 @@ func TestCustomDomainsPickerOptions(t *testing.T) {
 			name: "happy path",
 			customDomains: []*management.CustomDomain{
 				{
-					ID:   auth0.String("some-id-1"),
+					ID:     auth0.String("some-id-1"),
 					Domain: auth0.String("some-domain-1"),
 					Status: auth0.String("ready"),
 				},
 				{
-					ID:   auth0.String("some-id-2"),
+					ID:     auth0.String("some-id-2"),
 					Domain: auth0.String("some-domain-2"),
 					Status: auth0.String("ready"),
 				},
@@ -59,17 +121,17 @@ func TestCustomDomainsPickerOptions(t *testing.T) {
 			name: "custom domains with a non-ready status",
 			customDomains: []*management.CustomDomain{
 				{
-					ID:   auth0.String("some-id-1"),
+					ID:     auth0.String("some-id-1"),
 					Domain: auth0.String("some-domain-1"),
 					Status: auth0.String("foo"),
 				},
 				{
-					ID:   auth0.String("some-id-2"),
+					ID:     auth0.String("some-id-2"),
 					Domain: auth0.String("some-domain-2"),
 					Status: auth0.String("ready"),
 				},
 				{
-					ID:   auth0.String("some-id-3"),
+					ID:     auth0.String("some-id-3"),
 					Domain: auth0.String("some-domain-3"),
 					Status: auth0.String("bar"),
 				},
@@ -84,7 +146,7 @@ func TestCustomDomainsPickerOptions(t *testing.T) {
 			},
 		},
 		{
-			name:  "no custom domains",
+			name:          "no custom domains",
 			customDomains: []*management.CustomDomain{},
 			assertOutput: func(t testing.TB, options pickerOptions) {
 				t.Fail()
