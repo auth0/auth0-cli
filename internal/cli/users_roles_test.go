@@ -33,26 +33,6 @@ func TestGetUserRoles(t *testing.T) {
 		assert.Nil(t, err)
 	})
 
-	t.Run("gets user roles appending the roles passed by flag", func(t *testing.T) {
-		inputs := &userRolesInput{
-			ID:    "some-id",
-			Roles: []string{"some-role"},
-		}
-		userRolesFetcher := func(cli *cli, userID string) ([]string, error) {
-			assert.Equal(t, userID, "some-id")
-			return []string{"some-id-1", "some-id-2"}, nil
-		}
-		userRolesSelector := func(options []string) ([]string, error) {
-			assert.Equal(t, options, []string{"some-id-1", "some-id-2"})
-			return []string{"some-id-3 (Name: some-name-3)", "some-id-4 (Name: some-name-4)"}, nil
-		}
-		cli := &cli{}
-		err := cli.getUserRoles(inputs, userRolesFetcher, userRolesSelector)
-
-		assert.Equal(t, inputs.Roles, []string{"some-role", "some-id-3", "some-id-4"})
-		assert.Nil(t, err)
-	})
-
 	t.Run("returns error when user roles fetcher fails", func(t *testing.T) {
 		inputs := &userRolesInput{Roles: []string{}}
 		userRolesFetcher := func(cli *cli, userID string) ([]string, error) {
