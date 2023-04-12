@@ -66,7 +66,8 @@ func listLogsCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("An unexpected error occurred while getting logs: %v", err)
 			}
 
-			cli.renderer.LogList(list, !cli.debug)
+			hasFilter := inputs.Filter != ""
+			cli.renderer.LogList(list, !cli.debug, hasFilter)
 			return nil
 		},
 	}
