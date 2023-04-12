@@ -291,3 +291,42 @@ func TestUserRolesToRemovePickerOptions(t *testing.T) {
 		})
 	}
 }
+
+func TestContainsRole(t *testing.T) {
+	t.Run("returns true when role is found", func(t *testing.T) {
+		roles := []*management.Role{
+			{
+				ID:   auth0.String("some-id-1"),
+			},
+			{
+				ID:   auth0.String("some-id-2"),
+			},
+		}
+
+		result := containsRole(roles, "some-id-2")
+
+		assert.True(t, result)
+	})
+
+	t.Run("returns false when role is not found", func(t *testing.T) {
+		roles := []*management.Role{
+			{
+				ID:   auth0.String("some-id-1"),
+			},
+			{
+				ID:   auth0.String("some-id-2"),
+			},
+		}
+
+		result := containsRole(roles, "some-other-id")
+
+		assert.False(t, result)
+	})
+
+	t.Run("returns false when there are no roles", func(t *testing.T) {
+		roles := []*management.Role{}
+		result := containsRole(roles, "some-id")
+
+		assert.False(t, result)
+	})
+}
