@@ -22,13 +22,13 @@ auth0 email templates update [flags]
   auth0 email templates update
   auth0 email templates update <template>
   auth0 email templates update <template> --json
-  auth0 email templates update welcome --enabled true
-  auth0 email templates update welcome --enabled true --body "$(cat path/to/body.html)"
-  auth0 email templates update welcome --enabled true --body "$(cat path/to/body.html)" --from "welcome@example.com"
-  auth0 email templates update welcome --enabled true --body "$(cat path/to/body.html)" --from "welcome@example.com" --lifetime 6100
-  auth0 email templates update welcome --enabled true --body "$(cat path/to/body.html)" --from "welcome@example.com" --lifetime 6100 --subject "Welcome"
-  auth0 email templates update welcome --enabled true --body "$(cat path/to/body.html)" --from "welcome@example.com" --lifetime 6100 --subject "Welcome" --url "https://example.com"
-  auth0 email templates update welcome -e true -b "$(cat path/to/body.html)" -f "welcome@example.com" -l 6100 -s "Welcome" -u "https://example.com" --json
+  auth0 email templates update welcome --enabled=true
+  auth0 email templates update welcome --enabled=true --body "$(cat path/to/body.html)"
+  auth0 email templates update welcome --enabled=false --body "$(cat path/to/body.html)" --from "welcome@example.com"
+  auth0 email templates update welcome --enabled=true --body "$(cat path/to/body.html)" --from "welcome@example.com" --lifetime 6100
+  auth0 email templates update welcome --enabled=false --body "$(cat path/to/body.html)" --from "welcome@example.com" --lifetime 6100 --subject "Welcome"
+  auth0 email templates update welcome --enabled=true --body "$(cat path/to/body.html)" --from "welcome@example.com" --lifetime 6100 --subject "Welcome" --url "https://example.com"
+  auth0 email templates update welcome -e=true -b "$(cat path/to/body.html)" -f "welcome@example.com" -l 6100 -s "Welcome" -u "https://example.com" --json
 ```
 
 

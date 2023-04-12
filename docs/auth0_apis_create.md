@@ -23,8 +23,8 @@ auth0 apis create [flags]
   auth0 apis create --name myapi
   auth0 apis create --name myapi --identifier http://my-api
   auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100
-  auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access
-  auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access false --scopes "letter:write,letter:read"
+  auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=true
+  auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read"
   auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --json
 ```
 

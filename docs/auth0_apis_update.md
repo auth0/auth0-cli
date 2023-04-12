@@ -23,8 +23,8 @@ auth0 apis update [flags]
   auth0 apis update <api-id|api-audience>
   auth0 apis update <api-id|api-audience> --name myapi
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100
-  auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access false
-  auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access false --scopes "letter:write,letter:read"
+  auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false
+  auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read"
   auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --json
 ```
 
