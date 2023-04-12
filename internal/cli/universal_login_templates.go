@@ -275,17 +275,18 @@ func ensureCustomDomainIsEnabled(ctx context.Context, api *auth0.API) error {
 }
 
 func fetchBrandingSettingsOrUseDefaults(ctx context.Context, api *auth0.API) *management.Branding {
-	brandingSettings, err := api.Branding.Read(management.Context(ctx))
-	if err != nil {
-		brandingSettings = &management.Branding{} // If we error we'll provide defaults.
+	brandingSettings, _ := api.Branding.Read(management.Context(ctx))
+	if brandingSettings == nil {
+		brandingSettings = &management.Branding{}
 	}
 
-	if brandingSettings.GetColors() == nil {
+	if brandingSettings.Colors == nil {
 		brandingSettings.Colors = &management.BrandingColors{
 			Primary:        auth0.String(defaultPrimaryColor),
 			PageBackground: auth0.String(defaultBackgroundColor),
 		}
 	}
+
 	if brandingSettings.LogoURL == nil {
 		brandingSettings.LogoURL = auth0.String(defaultLogoURL)
 	}

@@ -116,6 +116,17 @@ func TestFetchBrandingSettingsOrUseDefaults(t *testing.T) {
 		},
 		{
 			name:     "no branding settings",
+			branding: nil,
+			assertOutput: func(t testing.TB, branding *management.Branding) {
+				assert.NotNil(t, branding)
+				assert.NotNil(t, branding.Colors)
+				assert.Equal(t, branding.Colors.GetPrimary(), defaultPrimaryColor)
+				assert.Equal(t, branding.Colors.GetPageBackground(), defaultBackgroundColor)
+				assert.Equal(t, branding.GetLogoURL(), defaultLogoURL)
+			},
+		},
+		{
+			name:     "empty branding settings",
 			branding: &management.Branding{},
 			assertOutput: func(t testing.TB, branding *management.Branding) {
 				assert.NotNil(t, branding)
