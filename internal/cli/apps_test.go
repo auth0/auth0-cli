@@ -117,5 +117,6 @@ func TestTypeFor(t *testing.T) {
 }
 
 func TestCommaSeparatedStringToSlice(t *testing.T) {
-	assert.Equal(t, []string{"foo"}, commaSeparatedStringToSlice("foo"))
+	assert.Equal(t, []string{}, commaSeparatedStringToSlice(""))
+	assert.Equal(t, []string{"foo", "bar", "baz"}, commaSeparatedStringToSlice(" foo  , bar , baz "))
 }

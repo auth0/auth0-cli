@@ -110,7 +110,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 			//
 			// Create a `set` to detect duplicates clientside.
 			set := make(map[string]struct{})
-			list = dedupLogs(list, set)
+			list = dedupeLogs(list, set)
 
 			if len(list) > 0 {
 				lastLogID = list[len(list)-1].GetLogID()
@@ -142,7 +142,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 					}
 
 					if len(list) > 0 {
-						logsCh <- dedupLogs(list, set)
+						logsCh <- dedupeLogs(list, set)
 						lastLogID = list[len(list)-1].GetLogID()
 					}
 
@@ -186,7 +186,7 @@ func getLatestLogs(cli *cli, n int, filter string) ([]*management.Log, error) {
 	return cli.api.Log.List(queryParams...)
 }
 
-func dedupLogs(list []*management.Log, set map[string]struct{}) []*management.Log {
+func dedupeLogs(list []*management.Log, set map[string]struct{}) []*management.Log {
 	res := make([]*management.Log, 0, len(list))
 
 	for _, l := range list {
