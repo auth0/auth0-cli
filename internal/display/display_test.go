@@ -3,11 +3,14 @@ package display
 import (
 	"bytes"
 	"io"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
 func TestTimeAgo(t *testing.T) {
@@ -42,26 +45,59 @@ func TestTimeAgo(t *testing.T) {
 }
 
 func TestStream(t *testing.T) {
-	results := []View{}
-	stdout := &bytes.Buffer{}
+	var stdout bytes.Buffer
 	mockRender := &Renderer{
 		MessageWriter: io.Discard,
-		ResultWriter:  stdout,
+		ResultWriter:  &stdout,
+	}
+
+	results := []View{
+		&logView{
+			Log: &management.Log{
+				LogID:       auth0.String("354234"),
+				Type:        auth0.String("sapi"),
+				Description: auth0.String("Update branding settings"),
+			},
+		},
 	}
 
 	t.Run("Stream correctly handles nil channel", func(t *testing.T) {
 		mockRender.Stream(results, nil)
-		assert.Len(t, stdout.Bytes(), 0)
+		expectedResult := "API Operation              Update branding settings                                  Jan 01 00:00:00.000     N/A                     N/A    \n"
+		assert.Equal(t, expectedResult, stdout.String())
+		stdout.Reset()
 	})
 
 	t.Run("Stream successfully", func(t *testing.T) {
 		viewChan := make(chan View)
-		go mockRender.Stream(results, viewChan)
 
-		mockLogID := "log1"
-		mockLog := management.Log{LogID: &mockLogID}
-		viewChan <- &logView{Log: &mockLog}
-		close(viewChan)
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			mockRender.Stream(results, viewChan)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			viewChan <- &logView{
+				Log: &management.Log{
+					LogID:       auth0.String("354236"),
+					Type:        auth0.String("sapi"),
+					Description: auth0.String("Update tenant settings"),
+				},
+			}
+			close(viewChan)
+		}()
+
+		wg.Wait()
+
+		expectedResult := `API Operation              Update branding settings                                  Jan 01 00:00:00.000     N/A                     N/A    
+API Operation              Update tenant settings                                    Jan 01 00:00:00.000     N/A                     N/A    
+`
+		assert.Equal(t, expectedResult, stdout.String())
+		stdout.Reset()
 	})
 }
 
