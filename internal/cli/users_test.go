@@ -53,25 +53,6 @@ func TestConnectionsPickerOptions(t *testing.T) {
 			},
 		},
 		{
-			name: "no database connections",
-			connections: []*management.Connection{
-				{
-					Name:     auth0.String("some-name-1"),
-					Strategy: auth0.String("foo"),
-				},
-				{
-					Name:     auth0.String("some-name-2"),
-					Strategy: auth0.String("foo"),
-				},
-			},
-			assertOutput: func(t testing.TB, options []string) {
-				t.Fail()
-			},
-			assertError: func(t testing.TB, err error) {
-				assert.ErrorContains(t, err, "There are currently no database connections.")
-			},
-		},
-		{
 			name:     "API error",
 			apiError: errors.New("error"),
 			assertOutput: func(t testing.TB, options []string) {
@@ -98,7 +79,7 @@ func TestConnectionsPickerOptions(t *testing.T) {
 				api: &auth0.API{Connection: connectionAPI},
 			}
 
-			options, err := cli.connectionPickerOptions()
+			options, err := cli.dbConnectionPickerOptions()
 
 			if err != nil {
 				test.assertError(t, err)
