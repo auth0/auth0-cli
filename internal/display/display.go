@@ -148,6 +148,17 @@ func (r *Renderer) Stream(data []View, ch <-chan View) {
 		}
 	}
 
+	if len(data) > 0 {
+		header := []string{
+			truncate("TYPE", 23),
+			truncate("DESCRIPTION", 54),
+			truncate("DATE", 20),
+			truncate("CONNECTION", 20),
+			truncate("CLIENT", 20),
+		}
+		displayRow(header)
+	}
+
 	for _, v := range data {
 		displayView(v)
 	}
