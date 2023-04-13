@@ -13,6 +13,7 @@ thoroughly and prepare your potential automated workflows before upgrading to th
 - [JSON Output Flag](#json-output-flag)
 - [Reveal Client Secrets Flag](#reveal-client-secrets-flag)
 - [Config Command Removal](#config-command-removal)
+- [Users Import Command](#users-import-command)
 
 #### Commands Reorganization
 
@@ -160,6 +161,35 @@ auth0 config init
 auth0 login --domain travel0.us.auth0.com \
 --client-id tUIvPH7g2ykVm4lGriYEQ6BKV3je24Ka \
 --client-secret XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+```
+
+</td>
+</tr>
+</table>
+
+#### Users Import Command
+
+The `-u` short form alias for the `--upsert` flag in the `auth0 users import` command has been redesignated to the `--users` flag which will likely see more prominent usage.
+
+<table>
+<tr>
+<th>Before (v0)</th>
+<th>After (v1)</th>
+</tr>
+<tr>
+<td>
+
+```sh
+# Example:
+auth0 users import -u
+```
+
+</td>
+<td>
+
+```sh
+# Example:
+auth0 users import --upsert
 ```
 
 </td>

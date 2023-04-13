@@ -7,22 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0-beta.3](https://github.com/auth0/auth0-cli/tree/1.0.0-beta.3) (Mar 30, 2023)
+## [1.0.0](https://github.com/auth0/auth0-cli/tree/1.0.0) (Apr 15, 2023)
 
 Refer to the [v1 migration guide](MIGRATION_GUIDE.md) for instructions on how to navigate breaking changes.
 
-To try the `v1.0.0-beta.3` release:
+### Added
 
-```bash
-# Binary will be downloaded to "./auth0".
-curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | sh -s -- -b . "v1.0.0-beta.3"
+- Bespoke messaging when no logs match the provided filter criteria [#733]
+- `--users` flag to `auth0 users import` command for providing user JSON payload [#735]
 
-# Note: will only download executable in current directory.
-# Intentionally omitted from $PATH to avoid collisions with
-# stable versions of the CLI. Append to $PATH at own risk.
+### Changed
 
-./auth0 --version # Example execution
-```
+- More actionable output when executing `auth0 users import` [#735]
+
+### Fixed
+
+- Return empty JSON array when no results for all list commands and the `--json` flag [#736]
+- Unrequiring `--audience` flag in `auth0 test login` [#694]
+- Removing duplicate header in `auth0 apis list` output [#711]
+- Prevent panic in `auth0 ul templates update` if no branding settings exist [#731]
+- Missing table header when using `auth0 logs tail` [#732]
+
+### Removed
+
+- `-u` shortform alias for `--upsert` flag in `auth0 users import` [#735]
+
+## [1.0.0-beta.3](https://github.com/auth0/auth0-cli/tree/1.0.0-beta.3) (Mar 30, 2023)
 
 ### Added
 
@@ -102,6 +112,13 @@ curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | s
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
+[#733]: https://github.com/auth0/auth0-cli/issues/733
+[#735]: https://github.com/auth0/auth0-cli/issues/735
+[#736]: https://github.com/auth0/auth0-cli/issues/736
+[#694]: https://github.com/auth0/auth0-cli/issues/694
+[#711]: https://github.com/auth0/auth0-cli/issues/711
+[#731]: https://github.com/auth0/auth0-cli/issues/731
+[#732]: https://github.com/auth0/auth0-cli/issues/732
 [#686]: https://github.com/auth0/auth0-cli/issues/686
 [#692]: https://github.com/auth0/auth0-cli/issues/692
 [#671]: https://github.com/auth0/auth0-cli/issues/671
