@@ -256,10 +256,7 @@ func (c *cli) prepareTenant(ctx context.Context) (Tenant, error) {
 	if err := t.regenerateAccessToken(ctx); err != nil {
 		if t.authenticatedWithClientCredentials() {
 			errorMessage := fmt.Errorf(
-				"failed to fetch access token using client credentials: %w\n\n"+
-					"This may occur if the designated Auth0 application has been deleted, "+
-					"the client secret has been rotated or previous failure to store client secret in the keyring.\n\n"+
-					"Please re-authenticate by running: %s",
+				"failed to fetch access token using client credentials: %w\n\nThis may occur if the designated Auth0 application has been deleted, the client secret has been rotated or previous failure to store client secret in the keyring.\n\nPlease re-authenticate by running: %s",
 				err,
 				ansi.Bold("auth0 login --domain <tenant-domain --client-id <client-id> --client-secret <client-secret>"),
 			)
