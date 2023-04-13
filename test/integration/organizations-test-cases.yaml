@@ -107,11 +107,18 @@ tests:
         - "Open the following URL in a browser: https://manage.auth0.com/dashboard/"
         - "/organizations/org_"
 
-  013 - add organization members:
+  013 - list organization members should return an empty array if no members found:
+    command: auth0 orgs members list $(./test/integration/scripts/get-org-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - "[]"
+
+  014 - add organization members:
     command: auth0 api POST "organizations/$(./test/integration/scripts/get-org-id.sh)/members" --data "{\"members\":[\"$(./test/integration/scripts/get-user-id.sh)\"]}"
     exit-code: 0
 
-  014 - list organization members:
+  015 - list organization members:
     command: auth0 orgs members list $(./test/integration/scripts/get-org-id.sh)
     exit-code: 0
     stdout:
@@ -123,7 +130,7 @@ tests:
     config:
       retries: 3
 
-  015 - list organization members as json:
+  016 - list organization members as json:
     command: auth0 orgs members list $(./test/integration/scripts/get-org-id.sh) --json
     exit-code: 0
     stdout:
@@ -133,7 +140,7 @@ tests:
     config:
       retries: 3
 
-  016 - list organization members with invalid number:
+  017 - list organization members with invalid number:
     command: auth0 orgs members list $(./test/integration/scripts/get-org-id.sh) --number 1001
     exit-code: 1
     stderr:
@@ -142,22 +149,22 @@ tests:
     config:
       retries: 3
 
-  017 - list organization roles:
+  018 - list organization roles:
     command: auth0 orgs roles list $(./test/integration/scripts/get-org-id.sh)
     exit-code: 0
 
-  018 - list organization roles with invalid number:
+  019 - list organization roles with invalid number:
     command: auth0 orgs roles list $(./test/integration/scripts/get-org-id.sh) --number 1001
     exit-code: 1
     stderr:
       contains:
         - number flag invalid, please pass a number between 1 and 1000
 
-  019 - list organization roles members:
+  020 - list organization roles members:
     command: auth0 orgs roles members list $(./test/integration/scripts/get-org-id.sh)
     exit-code: 0
 
-  020 - list organization roles members with invalid number:
+  021 - list organization roles members with invalid number:
     command: auth0 orgs roles members list $(./test/integration/scripts/get-org-id.sh) --number 1001
     exit-code: 1
     stderr:
