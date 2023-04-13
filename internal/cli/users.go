@@ -11,6 +11,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/auth0/auth0-cli/internal/users"
 )
@@ -575,6 +576,11 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 			}
 
 			inputs.ConnectionID = connection.GetID()
+
+			pipedUsersBody := iostream.PipedInput()
+			if len(pipedUsersBody) > 0 && inputs.UsersBody == "" {
+				inputs.UsersBody = string(pipedUsersBody)
+			}
 
 			if inputs.UsersBody == "" {
 				err := userImportTemplate.Select(cmd, &inputs.Template, userImportOptions.labels(), nil)

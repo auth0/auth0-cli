@@ -117,3 +117,13 @@ tests:
     stderr:
       contains:
         - "starting user import job..."
+
+  017 - users import with piped data:
+    command: echo "[]" | auth0 users import -c "Username-Password-Authentication" -r=false --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - "[]"
+    stderr:
+      contains:
+        - "starting user import job..."
