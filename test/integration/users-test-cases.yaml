@@ -109,21 +109,21 @@ tests:
         - "Open the following URL in a browser: https://manage.auth0.com/dashboard/"
 
   016 - users import:
-    command: auth0 users import -c "Username-Password-Authentication" --users "[]" -r=false --no-input
+    command: auth0 users import -c "Username-Password-Authentication" --users "[]" --email-results=false --no-input
     exit-code: 0
-    stdout:
-      contains:
-        - "[]"
     stderr:
       contains:
-        - "starting user import job..."
+        - "started user import job"
+        - "Job with ID"
+        - "successfully started"
+        - "to get the status of the job"
 
   017 - users import with piped data:
-    command: echo "[]" | auth0 users import -c "Username-Password-Authentication" -r=false --no-input
+    command: echo "[]" | auth0 users import -c "Username-Password-Authentication" --email-results=false --no-input
     exit-code: 0
-    stdout:
-      contains:
-        - "[]"
     stderr:
       contains:
-        - "starting user import job..."
+        - "started user import job"
+        - "Job with ID"
+        - "successfully started"
+        - "to get the status of the job"
