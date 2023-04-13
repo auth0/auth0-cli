@@ -132,11 +132,11 @@ func createRuleCmd(cli *cli) *cobra.Command {
 			"To create interactively, use `auth0 rules create` with no arguments.\n\n" +
 			"To create non-interactively, supply the name, template and other information through the flags.",
 		Example: `  auth0 rules create
-  auth0 rules create --enabled true
-  auth0 rules create --enabled true --name "My Rule" 
-  auth0 rules create --enabled true --name "My Rule" --template "Empty rule"
-  auth0 rules create --enabled true --name "My Rule" --template "Empty rule" --script "$(cat path/to/script.js)"
-  auth0 rules create -e true -n "My Rule" -t "Empty rule" -s "$(cat path/to/script.js)" --json
+  auth0 rules create --enabled=true
+  auth0 rules create --enabled=true --name "My Rule" 
+  auth0 rules create --enabled=false --name "My Rule" --template "Empty rule"
+  auth0 rules create --enabled=true --name "My Rule" --template "Empty rule" --script "$(cat path/to/script.js)"
+  auth0 rules create -e=true -n "My Rule" -t "Empty rule" -s "$(cat path/to/script.js)" --json
   echo "{\"name\":\"piping-name\",\"script\":\"console.log('test')\"}" | auth0 rules create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			rule := &management.Rule{}
@@ -307,10 +307,10 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 			"To update interactively, use `auth0 rules update` with no arguments.\n\n" +
 			"To update non-interactively, supply the rule id and other information through the flags.",
 		Example: `  auth0 rules update <id>
-  auth0 rules update <rule-id> --enabled true
-  auth0 rules update <rule-id> --enabled true --name "My Updated Rule"
-  auth0 rules update <rule-id> --enabled true --name "My Updated Rule" --script "$(cat path/to/script.js)"
-  auth0 rules update <rule-id> -e true -n "My Updated Rule" -s "$(cat path/to/script.js)" --json
+  auth0 rules update <rule-id> --enabled=true
+  auth0 rules update <rule-id> --enabled=false --name "My Updated Rule"
+  auth0 rules update <rule-id> --enabled=true --name "My Updated Rule" --script "$(cat path/to/script.js)"
+  auth0 rules update <rule-id> -e=true -n "My Updated Rule" -s "$(cat path/to/script.js)" --json
   echo "{\"id\":\"rul_ks3dUazcU3b6PqkH\",\"name\":\"piping-name\"}" | auth0 rules update`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			updatedRule := &management.Rule{}

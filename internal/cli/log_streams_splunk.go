@@ -60,7 +60,7 @@ func createLogStreamsSplunkCmd(cli *cli) *cobra.Command {
   auth0 log streams create splunk --name <name> --domain <domain>
   auth0 log streams create splunk --name <name> --domain <domain> --token <token>
   auth0 log streams create splunk --name <name> --domain <domain> --token <token> --port <port>
-  auth0 log streams create splunk --name <name> --domain <domain> --token <token> --port <port> --secure
+  auth0 log streams create splunk --name <name> --domain <domain> --token <token> --port <port> --secure=false
   auth0 log streams create splunk -n <name> -d <domain> -t <token> -p <port> -s
   auth0 log streams create splunk -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s false --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -142,9 +142,9 @@ func updateLogStreamsSplunkCmd(cli *cli) *cobra.Command {
   auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain>
   auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token>
   auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --port <port>
-  auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --port <port> --secure
+  auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --port <port> --secure=false
   auth0 log streams update splunk <log-stream-id> -n <name> -d <domain> -t <token> -p <port> -s
-  auth0 log streams update splunk <log-stream-id> -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s false --json`,
+  auth0 log streams update splunk <log-stream-id> -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s=false --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := logStreamID.Pick(cmd, &inputs.ID, cli.logStreamPickerOptionsByType(logStreamTypeSplunk))

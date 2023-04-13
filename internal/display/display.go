@@ -89,6 +89,9 @@ func (r *Renderer) JSONResult(data interface{}) {
 
 func (r *Renderer) Results(data []View) {
 	if len(data) == 0 {
+		if r.Format == OutputFormatJSON {
+			r.JSONResult([]interface{}{})
+		}
 		return
 	}
 
