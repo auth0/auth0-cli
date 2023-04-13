@@ -94,14 +94,12 @@ var (
 	userEmailResults = Flag{
 		Name:       "Email Completion Results",
 		LongForm:   "email-results",
-		ShortForm:  "r",
 		Help:       "When true, sends a completion email to all tenant owners when the job is finished. The default is true, so you must explicitly set this parameter to false if you do not want emails sent.",
 		IsRequired: false,
 	}
 	userImportUpsert = Flag{
 		Name:       "Upsert",
 		LongForm:   "upsert",
-		ShortForm:  "U",
 		Help:       "When set to false, pre-existing users that match on email address, user ID, or username will fail. When set to true, pre-existing users that match on any of these fields will be updated, but only with upsertable attributes.",
 		IsRequired: false,
 	}
@@ -557,11 +555,11 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
   auth0 users import -c "Username-Password-Authentication" --users "$(cat path/to/users.json)" --upsert --email-results
   auth0 users import -c "Username-Password-Authentication" --users "$(cat path/to/users.json)" --upsert --email-results --no-input
   cat path/to/users.json | auth0 users import -c "Username-Password-Authentication" --upsert --email-results --no-input
-  auth0 users import -c "Username-Password-Authentication" -u "$(cat path/to/users.json)" -U -r
-  cat path/to/users.json | auth0 users import -c "Username-Password-Authentication" -U -r
+  auth0 users import -c "Username-Password-Authentication" -u "$(cat path/to/users.json)" --upsert --email-results
+  cat path/to/users.json | auth0 users import -c "Username-Password-Authentication" --upsert --email-results
   auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert --email-results
   auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=false --email-results=false
-  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" -U=false -r=false`,
+  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=false --email-results=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Users API currently only supports database connections.
 			dbConnectionOptions, err := cli.dbConnectionPickerOptions()
@@ -617,23 +615,22 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 				return fmt.Errorf("invalid JSON input: %w", err)
 			}
 
+			job := &management.Job{
+				ConnectionID:        &inputs.ConnectionID,
+				Users:               usersBody,
+				Upsert:              &inputs.Upsert,
+				SendCompletionEmail: &inputs.SendCompletionEmail,
+			}
+
 			if err := ansi.Waiting(func() error {
-				return cli.api.Jobs.ImportUsers(
-					&management.Job{
-						ConnectionID:        &inputs.ConnectionID,
-						Users:               usersBody,
-						Upsert:              &inputs.Upsert,
-						SendCompletionEmail: &inputs.SendCompletionEmail,
-					},
-				)
+				return cli.api.Jobs.ImportUsers(job)
 			}); err != nil {
 				return err
 			}
 
-			cli.renderer.Heading("starting user import job...")
-			cli.renderer.JSONResult(usersBody)
-			cli.renderer.Newline()
-			cli.renderer.Newline()
+			cli.renderer.Heading("started user import job")
+			cli.renderer.Infof("Job with ID '%s' successfully started.", ansi.Bold(job.GetID()))
+			cli.renderer.Infof("Run '%s' to get the status of the job.", ansi.Cyan("auth0 api jobs/"+job.GetID()))
 
 			if inputs.SendCompletionEmail {
 				cli.renderer.Infof("Results of your user import job will be sent to your email.")
