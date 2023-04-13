@@ -19,8 +19,8 @@ auth0 users import [flags]
   auth0 users import
   auth0 users import --connection "Username-Password-Authentication"
   auth0 users import -c "Username-Password-Authentication" --template "Basic Example"
-  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert true
-  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert true --email-results false
+  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert
+  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert --email-results=false
 ```
 
 

@@ -134,10 +134,10 @@ func updateSuspiciousIPThrottlingCmd(cli *cli) *cobra.Command {
 		Short: "Update suspicious ip throttling settings",
 		Long:  "Update the suspicious ip throttling settings.",
 		Example: `  auth0 protection suspicious-ip-throttling update
-  auth0 ap sit update --enabled true
-  auth0 ap sit update --enabled true --allowlist "178.178.178.178"
-  auth0 ap sit update --enabled true --allowlist "178.178.178.178" --shields block
-  auth0 ap sit update -e true -l "178.178.178.178" -s block --json`,
+  auth0 ap sit update --enabled=true
+  auth0 ap sit update --enabled=true --allowlist "178.178.178.178"
+  auth0 ap sit update --enabled=false --allowlist "178.178.178.178" --shields block
+  auth0 ap sit update -e=true -l "178.178.178.178" -s block --json`,
 		RunE: updateSuspiciousIPThrottlingCmdRun(cli, &inputs),
 	}
 
