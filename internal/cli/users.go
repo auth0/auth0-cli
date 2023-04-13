@@ -87,6 +87,7 @@ var (
 	userImportBody = Flag{
 		Name:       "Users Payload",
 		LongForm:   "users",
+		ShortForm:  "u",
 		Help:       "JSON payload that contains an array of user(s) to be imported. Cannot be used if the '--template' flag is passed.",
 		IsRequired: false,
 	}
@@ -100,7 +101,7 @@ var (
 	userImportUpsert = Flag{
 		Name:       "Upsert",
 		LongForm:   "upsert",
-		ShortForm:  "u",
+		ShortForm:  "U",
 		Help:       "When set to false, pre-existing users that match on email address, user ID, or username will fail. When set to true, pre-existing users that match on any of these fields will be updated, but only with upsertable attributes.",
 		IsRequired: false,
 	}
@@ -556,11 +557,11 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
   auth0 users import -c "Username-Password-Authentication" --users "$(cat path/to/users.json)" --upsert --email-results
   auth0 users import -c "Username-Password-Authentication" --users "$(cat path/to/users.json)" --upsert --email-results --no-input
   cat path/to/users.json | auth0 users import -c "Username-Password-Authentication" --upsert --email-results --no-input
-  auth0 users import -c "Username-Password-Authentication" --users "$(cat path/to/users.json)" -u -r
-  cat path/to/users.json | auth0 users import -c "Username-Password-Authentication" -u -r
+  auth0 users import -c "Username-Password-Authentication" -u "$(cat path/to/users.json)" -U -r
+  cat path/to/users.json | auth0 users import -c "Username-Password-Authentication" -U -r
   auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert --email-results
   auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=false --email-results=false
-  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" -u=false -r=false`,
+  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" -U=false -r=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Users API currently only supports database connections.
 			dbConnectionOptions, err := cli.dbConnectionPickerOptions()
