@@ -16,12 +16,12 @@ auth0 protection brute-force-protection update [flags]
 
 ```
   auth0 protection brute-force-protection update
-  auth0 ap bfp update --enabled true
-  auth0 ap bfp update --enabled true --allowlist "156.156.156.156,175.175.175.175"
-  auth0 ap bfp update --enabled true --allowlist "156.156.156.156,175.175.175.175" --max-attempts 3
-  auth0 ap bfp update --enabled true --allowlist "156.156.156.156,175.175.175.175" --max-attempts 3 --mode count_per_identifier_and_ip
-  auth0 ap bfp update --enabled true --allowlist "156.156.156.156,175.175.175.175" --max-attempts 3 --mode count_per_identifier_and_ip --shields user_notification 
-  auth0 ap bfp update -e true -l "156.156.156.156,175.175.175.175" -a 3 -m count_per_identifier_and_ip -s user_notification --json
+  auth0 ap bfp update --enabled=true
+  auth0 ap bfp update --enabled=true --allowlist "156.156.156.156,175.175.175.175"
+  auth0 ap bfp update --enabled=false --allowlist "156.156.156.156,175.175.175.175" --max-attempts 3
+  auth0 ap bfp update --enabled=true --allowlist "156.156.156.156,175.175.175.175" --max-attempts 3 --mode count_per_identifier_and_ip
+  auth0 ap bfp update --enabled=false --allowlist "156.156.156.156,175.175.175.175" --max-attempts 3 --mode count_per_identifier_and_ip --shields user_notification 
+  auth0 ap bfp update -e=true -l "156.156.156.156,175.175.175.175" -a 3 -m count_per_identifier_and_ip -s user_notification --json
 ```
 
 

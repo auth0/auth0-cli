@@ -218,8 +218,8 @@ func createAPICmd(cli *cli) *cobra.Command {
   auth0 apis create --name myapi
   auth0 apis create --name myapi --identifier http://my-api
   auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100
-  auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access
-  auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access false --scopes "letter:write,letter:read"
+  auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=true
+  auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read"
   auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := apiName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -303,8 +303,8 @@ func updateAPICmd(cli *cli) *cobra.Command {
   auth0 apis update <api-id|api-audience>
   auth0 apis update <api-id|api-audience> --name myapi
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100
-  auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access false
-  auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access false --scopes "letter:write,letter:read"
+  auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false
+  auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read"
   auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.ResourceServer

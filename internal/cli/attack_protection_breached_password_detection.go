@@ -102,11 +102,11 @@ func updateBreachedPasswordDetectionCmd(cli *cli) *cobra.Command {
 		Short: "Update breached password detection settings",
 		Long:  "Update the breached password detection settings.",
 		Example: `  auth0 protection breached-password-detection update
-  auth0 ap bpd update --enabled true
-  auth0 ap bpd update --enabled true --admin-notification-frequency weekly
-  auth0 ap bpd update --enabled true --admin-notification-frequency weekly --method enhanced
-  auth0 ap bpd update --enabled true --admin-notification-frequency weekly --method enhanced --shields admin_notification
-  auth0 ap bpd update -e true -f weekly -m enhanced -s admin_notification --json`,
+  auth0 ap bpd update --enabled=true
+  auth0 ap bpd update --enabled=true --admin-notification-frequency weekly
+  auth0 ap bpd update --enabled=false --admin-notification-frequency weekly --method enhanced
+  auth0 ap bpd update --enabled=true --admin-notification-frequency weekly --method enhanced --shields admin_notification
+  auth0 ap bpd update -e=true -f weekly -m enhanced -s admin_notification --json`,
 		RunE: updateBreachedPasswordDetectionCmdRun(cli, &inputs),
 	}
 
