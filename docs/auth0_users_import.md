@@ -20,9 +20,16 @@ auth0 users import [flags]
   auth0 users import --connection "Username-Password-Authentication"
   auth0 users import --connection "Username-Password-Authentication" --users-body "[]"
   auth0 users import --connection "Username-Password-Authentication" --users-body "$(cat path/to/users.json)"
+  cat path/to/users.json | auth0 users import --connection "Username-Password-Authentication"
   auth0 users import -c "Username-Password-Authentication" --template "Basic Example"
-  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert
-  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert --email-results=false
+  auth0 users import -c "Username-Password-Authentication" --users-body "$(cat path/to/users.json)" --upsert --email-results
+  auth0 users import -c "Username-Password-Authentication" --users-body "$(cat path/to/users.json)" --upsert --email-results --no-input
+  cat path/to/users.json | auth0 users import -c "Username-Password-Authentication" --upsert --email-results --no-input
+  auth0 users import -c "Username-Password-Authentication" -b "$(cat path/to/users.json)" -u -r
+  cat path/to/users.json | auth0 users import -c "Username-Password-Authentication" -u -r
+  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert --email-results
+  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=false --email-results=false
+  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" -u=false -r=false
 ```
 
 
