@@ -80,15 +80,14 @@ var (
 		Name:      "Template",
 		LongForm:  "template",
 		ShortForm: "t",
-		Help: "Name of JSON example to be used. Cannot be used if the '--users-body' flag is passed. " +
+		Help: "Name of JSON example to be used. Cannot be used if the '--users' flag is passed. " +
 			"Options include: 'Empty', 'Basic Example', 'Custom Password Hash Example' and 'MFA Factors Example'.",
 		IsRequired: false,
 	}
 	userImportBody = Flag{
-		Name:       "Users Body",
-		LongForm:   "users-body",
-		ShortForm:  "b",
-		Help:       "JSON template body that contains an array of user(s) to be imported. Cannot be used if the '--template' flag is passed.",
+		Name:       "Users Payload",
+		LongForm:   "users",
+		Help:       "JSON payload that contains an array of user(s) to be imported. Cannot be used if the '--template' flag is passed.",
 		IsRequired: false,
 	}
 	userEmailResults = Flag{
@@ -550,14 +549,14 @@ func importUsersCmd(cli *cli) *cobra.Command {
 The file size limit for a bulk import is 500KB. You will need to start multiple imports if your data exceeds this size.`,
 		Example: `  auth0 users import
   auth0 users import --connection "Username-Password-Authentication"
-  auth0 users import --connection "Username-Password-Authentication" --users-body "[]"
-  auth0 users import --connection "Username-Password-Authentication" --users-body "$(cat path/to/users.json)"
+  auth0 users import --connection "Username-Password-Authentication" --users "[]"
+  auth0 users import --connection "Username-Password-Authentication" --users "$(cat path/to/users.json)"
   cat path/to/users.json | auth0 users import --connection "Username-Password-Authentication"
   auth0 users import -c "Username-Password-Authentication" --template "Basic Example"
-  auth0 users import -c "Username-Password-Authentication" --users-body "$(cat path/to/users.json)" --upsert --email-results
-  auth0 users import -c "Username-Password-Authentication" --users-body "$(cat path/to/users.json)" --upsert --email-results --no-input
+  auth0 users import -c "Username-Password-Authentication" --users "$(cat path/to/users.json)" --upsert --email-results
+  auth0 users import -c "Username-Password-Authentication" --users "$(cat path/to/users.json)" --upsert --email-results --no-input
   cat path/to/users.json | auth0 users import -c "Username-Password-Authentication" --upsert --email-results --no-input
-  auth0 users import -c "Username-Password-Authentication" -b "$(cat path/to/users.json)" -u -r
+  auth0 users import -c "Username-Password-Authentication" --users "$(cat path/to/users.json)" -u -r
   cat path/to/users.json | auth0 users import -c "Username-Password-Authentication" -u -r
   auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert --email-results
   auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=false --email-results=false
@@ -648,7 +647,7 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 	userImportBody.RegisterString(cmd, &inputs.UsersBody, "")
 	userEmailResults.RegisterBool(cmd, &inputs.SendCompletionEmail, true)
 	userImportUpsert.RegisterBool(cmd, &inputs.Upsert, false)
-	cmd.MarkFlagsMutuallyExclusive("template", "users-body")
+	cmd.MarkFlagsMutuallyExclusive("template", "users")
 
 	return cmd
 }

@@ -109,7 +109,7 @@ tests:
         - "Open the following URL in a browser: https://manage.auth0.com/dashboard/"
 
   016 - users import:
-    command: auth0 users import -c "Username-Password-Authentication" -b "[]" -r=false --no-input
+    command: auth0 users import -c "Username-Password-Authentication" --users "[]" -r=false --no-input
     exit-code: 0
     stdout:
       contains:
