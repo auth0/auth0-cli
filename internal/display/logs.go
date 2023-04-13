@@ -142,13 +142,18 @@ func (v *logView) typeDesc() (typ, desc string) {
 	return typ, desc
 }
 
-func (r *Renderer) LogList(logs []*management.Log, silent bool) {
+func (r *Renderer) LogList(logs []*management.Log, silent, hasFilter bool) {
 	resource := "logs"
 
 	r.Heading(resource)
 
 	if len(logs) == 0 {
-		r.EmptyState(resource)
+		if hasFilter {
+			r.Output("No logs available matching filter criteria.\n\n")
+		} else {
+			r.EmptyState(resource)
+		}
+
 		r.Infof("To generate logs, run a test command like 'auth0 test login' or 'auth0 test token'")
 		return
 	}

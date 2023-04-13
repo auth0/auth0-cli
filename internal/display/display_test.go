@@ -63,7 +63,9 @@ func TestStream(t *testing.T) {
 
 	t.Run("Stream correctly handles nil channel", func(t *testing.T) {
 		mockRender.Stream(results, nil)
-		expectedResult := "API Operation              Update branding settings                                  Jan 01 00:00:00.000     N/A                     N/A    \n"
+		expectedResult := `TYPE                       DESCRIPTION                                               DATE                    CONNECTION              CLIENT                  
+API Operation              Update branding settings                                  Jan 01 00:00:00.000     N/A                     N/A    
+`
 		assert.Equal(t, expectedResult, stdout.String())
 		stdout.Reset()
 	})
@@ -93,7 +95,8 @@ func TestStream(t *testing.T) {
 
 		wg.Wait()
 
-		expectedResult := `API Operation              Update branding settings                                  Jan 01 00:00:00.000     N/A                     N/A    
+		expectedResult := `TYPE                       DESCRIPTION                                               DATE                    CONNECTION              CLIENT                  
+API Operation              Update branding settings                                  Jan 01 00:00:00.000     N/A                     N/A    
 API Operation              Update tenant settings                                    Jan 01 00:00:00.000     N/A                     N/A    
 `
 		assert.Equal(t, expectedResult, stdout.String())
