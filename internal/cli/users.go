@@ -76,17 +76,18 @@ var (
 		Help:      "Number of users, that match the search criteria, to retrieve. Minimum 1, maximum 1000. If limit is hit, refine the search query.",
 	}
 	userImportTemplate = Flag{
-		Name:       "Template",
-		LongForm:   "template",
-		ShortForm:  "t",
-		Help:       "Name of JSON example to be used.",
+		Name:      "Template",
+		LongForm:  "template",
+		ShortForm: "t",
+		Help: "Name of JSON example to be used. Cannot be used if the '--users-body' flag is passed. " +
+			"Options include: 'Empty', 'Basic Example', 'Custom Password Hash Example' and 'MFA Factors Example'.",
 		IsRequired: false,
 	}
-	userImportTemplateBody = Flag{
-		Name:       "Template Body",
-		LongForm:   "template-body",
+	userImportBody = Flag{
+		Name:       "Users Body",
+		LongForm:   "users-body",
 		ShortForm:  "b",
-		Help:       "JSON template body that contains an array of user(s) to be imported.",
+		Help:       "JSON template body that contains an array of user(s) to be imported. Cannot be used if the '--template' flag is passed.",
 		IsRequired: false,
 	}
 	userEmailResults = Flag{
@@ -229,9 +230,8 @@ func createUserCmd(cli *cli) *cobra.Command {
   auth0 users create --name "John Doe" --email john@example.com --connection "Username-Password-Authentication" --username "example"
   auth0 users create -n "John Doe" -e john@example.com -c "Username-Password-Authentication" -u "example" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Select from the available connection types
-			// Users API currently support  database connections
-			options, err := cli.connectionPickerOptions()
+			// Users API currently only supports database connections.
+			options, err := cli.dbConnectionPickerOptions()
 			if err != nil {
 				return err
 			}
@@ -537,7 +537,7 @@ func importUsersCmd(cli *cli) *cobra.Command {
 		Connection          string
 		ConnectionID        string
 		Template            string
-		TemplateBody        string
+		UsersBody           string
 		Upsert              bool
 		SendCompletionEmail bool
 	}
@@ -549,76 +549,82 @@ func importUsersCmd(cli *cli) *cobra.Command {
 The file size limit for a bulk import is 500KB. You will need to start multiple imports if your data exceeds this size.`,
 		Example: `  auth0 users import
   auth0 users import --connection "Username-Password-Authentication"
+  auth0 users import --connection "Username-Password-Authentication" --users-body "[]"
+  auth0 users import --connection "Username-Password-Authentication" --users-body "$(cat path/to/users.json)"
   auth0 users import -c "Username-Password-Authentication" --template "Basic Example"
-  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert
-  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert --email-results=false`,
+  auth0 users import -c "Username-Password-Authentication" --users-body "$(cat path/to/users.json)" --upsert --email-results
+  auth0 users import -c "Username-Password-Authentication" --users-body "$(cat path/to/users.json)" --upsert --email-results --no-input
+  auth0 users import -c "Username-Password-Authentication" -b "$(cat path/to/users.json)" -u -r
+  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert --email-results
+  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=false --email-results=false
+  auth0 users import -c "Username-Password-Authentication" -t "Basic Example" -u=false -r=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Select from the available connection types
-			// Users API currently support database connections
-			options, optionsErr := cli.connectionPickerOptions()
-			if optionsErr != nil {
-				return optionsErr
-			}
-
-			if err := userConnection.Select(cmd, &inputs.Connection, options, nil); err != nil {
-				return err
-			}
-
-			// Get Connection ID
-			conn, connErr := cli.api.Connection.ReadByName(inputs.Connection)
-			if connErr != nil {
-				return fmt.Errorf("Connection does not exist: %w", connErr)
-			}
-
-			inputs.ConnectionID = *conn.ID
-
-			// Present user with template options
-			if templateErr := userImportTemplate.Select(cmd, &inputs.Template, userImportOptions.labels(), nil); templateErr != nil {
-				return templateErr
-			}
-
-			editorErr := userImportTemplateBody.OpenEditor(
-				cmd,
-				&inputs.TemplateBody,
-				userImportOptions.getValue(inputs.Template),
-				inputs.Template+".*.json",
-				cli.userImportEditorHint,
-			)
-			if editorErr != nil {
-				return fmt.Errorf("Failed to capture input from the editor: %w", editorErr)
-			}
-
-			var confirmed bool
-			if confirmedErr := prompt.AskBool("Do you want to import these user(s)?", &confirmed, true); confirmedErr != nil {
-				return fmt.Errorf("Failed to capture prompt input: %w", confirmedErr)
-			}
-
-			if !confirmed {
-				return nil
-			}
-
-			// Convert json array to map
-			jsonstr := inputs.TemplateBody
-			var jsonmap []map[string]interface{}
-			jsonErr := json.Unmarshal([]byte(jsonstr), &jsonmap)
-			if jsonErr != nil {
-				return fmt.Errorf("Invalid JSON input: %w", jsonErr)
-			}
-
-			err := ansi.Waiting(func() error {
-				return cli.api.Jobs.ImportUsers(&management.Job{
-					ConnectionID:        &inputs.ConnectionID,
-					Users:               jsonmap,
-					Upsert:              &inputs.Upsert,
-					SendCompletionEmail: &inputs.SendCompletionEmail,
-				})
-			})
+			// Users API currently only supports database connections.
+			dbConnectionOptions, err := cli.dbConnectionPickerOptions()
 			if err != nil {
 				return err
 			}
 
+			if err := userConnection.Select(cmd, &inputs.Connection, dbConnectionOptions, nil); err != nil {
+				return err
+			}
+
+			connection, err := cli.api.Connection.ReadByName(inputs.Connection)
+			if err != nil {
+				return fmt.Errorf("failed to find connection with name %q: %w", inputs.Connection, err)
+			}
+
+			inputs.ConnectionID = connection.GetID()
+
+			if inputs.UsersBody == "" {
+				err := userImportTemplate.Select(cmd, &inputs.Template, userImportOptions.labels(), nil)
+				if err != nil {
+					return err
+				}
+
+				if err := userImportBody.OpenEditor(
+					cmd,
+					&inputs.UsersBody,
+					userImportOptions.getValue(inputs.Template),
+					inputs.Template+".*.json",
+					cli.userImportEditorHint,
+				); err != nil {
+					return fmt.Errorf("failed to capture input from the editor: %w", err)
+				}
+			}
+
+			if canPrompt(cmd) {
+				var confirmed bool
+				if err := prompt.AskBool("Do you want to import these user(s)?", &confirmed, true); err != nil {
+					return fmt.Errorf("failed to capture prompt input: %w", err)
+				}
+				if !confirmed {
+					return nil
+				}
+			}
+
+			var usersBody []map[string]interface{}
+			if err := json.Unmarshal([]byte(inputs.UsersBody), &usersBody); err != nil {
+				return fmt.Errorf("invalid JSON input: %w", err)
+			}
+
+			if err := ansi.Waiting(func() error {
+				return cli.api.Jobs.ImportUsers(
+					&management.Job{
+						ConnectionID:        &inputs.ConnectionID,
+						Users:               usersBody,
+						Upsert:              &inputs.Upsert,
+						SendCompletionEmail: &inputs.SendCompletionEmail,
+					},
+				)
+			}); err != nil {
+				return err
+			}
+
 			cli.renderer.Heading("starting user import job...")
-			fmt.Println(jsonstr)
+			cli.renderer.JSONResult(usersBody)
+			cli.renderer.Newline()
+			cli.renderer.Newline()
 
 			if inputs.SendCompletionEmail {
 				cli.renderer.Infof("Results of your user import job will be sent to your email.")
@@ -630,8 +636,10 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 
 	userConnection.RegisterString(cmd, &inputs.Connection, "")
 	userImportTemplate.RegisterString(cmd, &inputs.Template, "")
+	userImportBody.RegisterString(cmd, &inputs.UsersBody, "")
 	userEmailResults.RegisterBool(cmd, &inputs.SendCompletionEmail, true)
 	userImportUpsert.RegisterBool(cmd, &inputs.Upsert, false)
+	cmd.MarkFlagsMutuallyExclusive("template", "users-body")
 
 	return cmd
 }
@@ -643,17 +651,15 @@ func formatUserDetailsPath(id string) string {
 	return fmt.Sprintf("users/%s", id)
 }
 
-func (c *cli) connectionPickerOptions() ([]string, error) {
-	var res []string
-
-	list, err := c.api.Connection.List()
+func (c *cli) dbConnectionPickerOptions() ([]string, error) {
+	list, err := c.api.Connection.List(management.Parameter("strategy", management.ConnectionStrategyAuth0))
 	if err != nil {
 		return nil, err
 	}
+
+	var res []string
 	for _, conn := range list.Connections {
-		if conn.GetStrategy() == "auth0" {
-			res = append(res, conn.GetName())
-		}
+		res = append(res, conn.GetName())
 	}
 
 	if len(res) == 0 {
@@ -666,9 +672,8 @@ func (c *cli) connectionPickerOptions() ([]string, error) {
 func (c *cli) getUserConnection(users *management.User) []string {
 	var res []string
 	for _, i := range users.Identities {
-		res = append(res, fmt.Sprintf("%v", auth0.StringValue(i.Connection)))
+		res = append(res, i.GetConnection())
 	}
-
 	return res
 }
 
