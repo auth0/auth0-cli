@@ -108,7 +108,7 @@ tests:
         - "/organizations/org_"
 
   013 - list organization members should return an empty array if no members found:
-    command: auth0 orgs members list $(./test/integration/scripts/get-org-id.sh)
+    command: auth0 orgs members list $(./test/integration/scripts/get-org-id.sh) --json
     exit-code: 0
     stdout:
       contains:
