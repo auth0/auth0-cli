@@ -22,7 +22,7 @@ auth0 users create [flags]
   auth0 users create 
   auth0 users create --name "John Doe" 
   auth0 users create --name "John Doe" --email john@example.com
-  auth0 users create --name "John Doe" --email john@example.com --connection "Username-Password-Authentication" --username "example"
+  auth0 users create --name "John Doe" --email john@example.com --connection-name "Username-Password-Authentication" --username "example"
   auth0 users create -n "John Doe" -e john@example.com -c "Username-Password-Authentication" -u "example" --json
 ```
 
@@ -30,12 +30,12 @@ auth0 users create [flags]
 ## Flags
 
 ```
-  -c, --connection string   Name of the database connection this user should be created in.
-  -e, --email string        The user's email.
-      --json                Output in json format.
-  -n, --name string         The user's full name.
-  -p, --password string     Initial password for this user (mandatory for non-SMS connections).
-  -u, --username string     The user's username. Only valid if the connection requires a username.
+  -c, --connection-name string   Name of the database connection this user should be created in.
+  -e, --email string             The user's email.
+      --json                     Output in json format.
+  -n, --name string              The user's full name.
+  -p, --password string          Initial password for this user (mandatory for non-SMS connections).
+  -u, --username string          The user's username. Only valid if the connection requires a username.
 ```
 
 
