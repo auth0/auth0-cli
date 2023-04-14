@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0](https://github.com/auth0/auth0-cli/tree/1.0.0) (Apr 14, 2023)
+## [v1.0.0](https://github.com/auth0/auth0-cli/tree/v1.0.0) (Apr 14, 2023)
 
-Refer to the [v1 migration guide](MIGRATION_GUIDE.md) for instructions on how to navigate breaking changes.
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v0.13.1...v1.0.0)
+
+:warning: Refer to the [v1 migration guide](MIGRATION_GUIDE.md) for instructions on how to navigate breaking changes.
 
 ### Added
 
@@ -80,7 +82,9 @@ Refer to the [v1 migration guide](MIGRATION_GUIDE.md) for instructions on how to
 - Updating of action triggers which inevitably results in error [#597]
 - `-u` shortform alias for `--upsert` flag in `auth0 users import` [#735]
 
-## [1.0.0-beta.3](https://github.com/auth0/auth0-cli/tree/1.0.0-beta.3) (Mar 30, 2023)
+## [v1.0.0-beta.3](https://github.com/auth0/auth0-cli/tree/v1.0.0-beta.3) (Mar 30, 2023)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.0.0-beta.2...v1.0.0-beta.3)
 
 ### Added
 
@@ -98,7 +102,9 @@ Refer to the [v1 migration guide](MIGRATION_GUIDE.md) for instructions on how to
 - Possible panic when running `auth0 ul update` with empty branding settings (ex: newly-created tenant) [#692]
 - Inability to update user password with `auth0 users update --password` [#686]
 
-## [1.0.0-beta.2](https://github.com/auth0/auth0-cli/tree/1.0.0-beta.2) (Feb 14, 2023)
+## [v1.0.0-beta.2](https://github.com/auth0/auth0-cli/tree/v1.0.0-beta.2) (Feb 14, 2023)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.0.0-beta.1...v1.0.0-beta.2)
 
 ### Added
 
@@ -109,7 +115,9 @@ Refer to the [v1 migration guide](MIGRATION_GUIDE.md) for instructions on how to
 
 - Apps shown in multi select when no app-id is passed [#648]
 
-## [1.0.0-beta.1](https://github.com/auth0/auth0-cli/tree/1.0.0-beta.1) (Jan 20, 2023)
+## [v1.0.0-beta.1](https://github.com/auth0/auth0-cli/tree/v1.0.0-beta.1) (Jan 20, 2023)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v0.13.1...v1.0.0-beta.1)
 
 ### Added
 
@@ -160,6 +168,7 @@ Refer to the [v1 migration guide](MIGRATION_GUIDE.md) for instructions on how to
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.0.0...HEAD
 [#733]: https://github.com/auth0/auth0-cli/issues/733
 [#735]: https://github.com/auth0/auth0-cli/issues/735
 [#736]: https://github.com/auth0/auth0-cli/issues/736
