@@ -22,9 +22,9 @@ var (
 		Help: "Id of the user.",
 	}
 
-	userConnection = Flag{
-		Name:       "Connection",
-		LongForm:   "connection",
+	userConnectionName = Flag{
+		Name:       "Connection Name",
+		LongForm:   "connection-name",
 		ShortForm:  "c",
 		Help:       "Name of the database connection this user should be created in.",
 		IsRequired: true,
@@ -209,11 +209,11 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 
 func createUserCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Connection string
-		Email      string
-		Password   string
-		Username   string
-		Name       string
+		ConnectionName string
+		Email          string
+		Password       string
+		Username       string
+		Name           string
 	}
 
 	cmd := &cobra.Command{
@@ -226,7 +226,7 @@ func createUserCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 users create 
   auth0 users create --name "John Doe" 
   auth0 users create --name "John Doe" --email john@example.com
-  auth0 users create --name "John Doe" --email john@example.com --connection "Username-Password-Authentication" --username "example"
+  auth0 users create --name "John Doe" --email john@example.com --connection-name "Username-Password-Authentication" --username "example"
   auth0 users create -n "John Doe" -e john@example.com -c "Username-Password-Authentication" -u "example" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Users API currently only supports database connections.
@@ -235,7 +235,7 @@ func createUserCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := userConnection.Select(cmd, &inputs.Connection, options, nil); err != nil {
+			if err := userConnectionName.Select(cmd, &inputs.ConnectionName, options, nil); err != nil {
 				return err
 			}
 
@@ -249,20 +249,20 @@ func createUserCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			// //Prompt for user password
+			// Prompt for user password
 			if err := userPassword.AskPassword(cmd, &inputs.Password); err != nil {
 				return err
 			}
 
 			// The getConnReqUsername returns the value for the requires_username field for the selected connection
 			// The result will be used to determine whether to prompt for username
-			conn := cli.getConnReqUsername(auth0.StringValue(&inputs.Connection))
+			conn := cli.getConnReqUsername(auth0.StringValue(&inputs.ConnectionName))
 			requireUsername := auth0.BoolValue(conn)
 
 			// Prompt for username if the requireUsername is set to true
 			// Load values including the username's field into a fresh users instance
 			a := &management.User{
-				Connection: &inputs.Connection,
+				Connection: &inputs.ConnectionName,
 				Email:      &inputs.Email,
 				Name:       &inputs.Name,
 				Password:   &inputs.Password,
@@ -290,7 +290,7 @@ func createUserCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	userName.RegisterString(cmd, &inputs.Name, "")
-	userConnection.RegisterString(cmd, &inputs.Connection, "")
+	userConnectionName.RegisterString(cmd, &inputs.ConnectionName, "")
 	userPassword.RegisterString(cmd, &inputs.Password, "")
 	userEmail.RegisterString(cmd, &inputs.Email, "")
 	userUsername.RegisterString(cmd, &inputs.Username, "")
@@ -399,11 +399,11 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 
 func updateUserCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID         string
-		Email      string
-		Password   string
-		Name       string
-		Connection string
+		ID             string
+		Email          string
+		Password       string
+		Name           string
+		ConnectionName string
 	}
 
 	cmd := &cobra.Command{
@@ -473,10 +473,10 @@ func updateUserCmd(cli *cli) *cobra.Command {
 				user.Password = &inputs.Password
 			}
 
-			if len(inputs.Connection) == 0 {
+			if len(inputs.ConnectionName) == 0 {
 				user.Connection = current.Connection
 			} else {
-				user.Connection = &inputs.Connection
+				user.Connection = &inputs.ConnectionName
 			}
 
 			if err := ansi.Waiting(func() error {
@@ -495,7 +495,7 @@ func updateUserCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	userName.RegisterStringU(cmd, &inputs.Name, "")
-	userConnection.RegisterStringU(cmd, &inputs.Connection, "")
+	userConnectionName.RegisterStringU(cmd, &inputs.ConnectionName, "")
 	userPassword.RegisterStringU(cmd, &inputs.Password, "")
 	userEmail.RegisterStringU(cmd, &inputs.Email, "")
 
@@ -533,7 +533,7 @@ func openUserCmd(cli *cli) *cobra.Command {
 
 func importUsersCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Connection          string
+		ConnectionName      string
 		ConnectionID        string
 		Template            string
 		UsersBody           string
@@ -567,13 +567,13 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 				return err
 			}
 
-			if err := userConnection.Select(cmd, &inputs.Connection, dbConnectionOptions, nil); err != nil {
+			if err := userConnectionName.Select(cmd, &inputs.ConnectionName, dbConnectionOptions, nil); err != nil {
 				return err
 			}
 
-			connection, err := cli.api.Connection.ReadByName(inputs.Connection)
+			connection, err := cli.api.Connection.ReadByName(inputs.ConnectionName)
 			if err != nil {
-				return fmt.Errorf("failed to find connection with name %q: %w", inputs.Connection, err)
+				return fmt.Errorf("failed to find connection with name %q: %w", inputs.ConnectionName, err)
 			}
 
 			inputs.ConnectionID = connection.GetID()
@@ -640,7 +640,7 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 		},
 	}
 
-	userConnection.RegisterString(cmd, &inputs.Connection, "")
+	userConnectionName.RegisterString(cmd, &inputs.ConnectionName, "")
 	userImportTemplate.RegisterString(cmd, &inputs.Template, "")
 	userImportBody.RegisterString(cmd, &inputs.UsersBody, "")
 	userEmailResults.RegisterBool(cmd, &inputs.SendCompletionEmail, true)

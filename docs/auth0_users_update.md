@@ -29,11 +29,11 @@ auth0 users update [flags]
 ## Flags
 
 ```
-  -c, --connection string   Name of the database connection this user should be created in.
-  -e, --email string        The user's email.
-      --json                Output in json format.
-  -n, --name string         The user's full name.
-  -p, --password string     Initial password for this user (mandatory for non-SMS connections).
+  -c, --connection-name string   Name of the database connection this user should be created in.
+  -e, --email string             The user's email.
+      --json                     Output in json format.
+  -n, --name string              The user's full name.
+  -p, --password string          Initial password for this user (mandatory for non-SMS connections).
 ```
 
 
