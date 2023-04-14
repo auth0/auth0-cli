@@ -167,31 +167,14 @@ auth0 login --domain travel0.us.auth0.com \
 </tr>
 </table>
 
-#### Users Import Command
+#### Users Commands
 
-The `-u` short form alias for the `--upsert` flag in the `auth0 users import` command has been redesignated to the `--users` flag which will likely see more prominent usage.
+The `--connection` flag has been renamed to `--connection-name` for the `auth0 users update`, `auth0 users create` and `auth0 users import` commands for consistency.
 
-<table>
-<tr>
-<th>Before (v0)</th>
-<th>After (v1)</th>
-</tr>
-<tr>
-<td>
+Also notably for the `auth0 users import` command, the `-u` short form alias for the `--upsert` flag in the command has been redesignated to the `--users` flag.
 
-```sh
-# Example:
-auth0 users import -u
-```
-
-</td>
-<td>
-
-```sh
-# Example:
-auth0 users import --upsert
-```
-
-</td>
-</tr>
-</table>
+| **Before (v0)**                      | **After (v1)**                                  |
+| ------------------------------------ | ----------------------------------------------- |
+| `auth0 users create --connection`    | `auth0 users create --connection-name`          |
+| `auth0 users update --connection`    | `auth0 users update --connection-name`          |
+| `auth0 users import -u --connection` | `auth0 users import --upsert --connection-name` |

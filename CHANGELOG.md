@@ -73,6 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--reveal` flag for reveal client secret renamed to `--reveal-secrets` [#591]
 - More actionable output when executing `auth0 users import` [#735]
 - Editorializing code "hints" throughout project [#570]
+- Renamed `--connection` flag to `--connection-name` for `auth0 users` commands for consistency [#738]
 
 ### Removed
 
@@ -170,6 +171,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [unreleased]: https://github.com/auth0/auth0-cli/compare/v1.0.0...HEAD
 [#733]: https://github.com/auth0/auth0-cli/issues/733
+[#738]: https://github.com/auth0/auth0-cli/issues/738
 [#735]: https://github.com/auth0/auth0-cli/issues/735
 [#736]: https://github.com/auth0/auth0-cli/issues/736
 [#694]: https://github.com/auth0/auth0-cli/issues/694
