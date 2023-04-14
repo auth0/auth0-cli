@@ -13,6 +13,7 @@ thoroughly and prepare your potential automated workflows before upgrading to th
 - [JSON Output Flag](#json-output-flag)
 - [Reveal Client Secrets Flag](#reveal-client-secrets-flag)
 - [Config Command Removal](#config-command-removal)
+- [Users Import Command](#users-import-command)
 
 #### Commands Reorganization
 
@@ -165,3 +166,15 @@ auth0 login --domain travel0.us.auth0.com \
 </td>
 </tr>
 </table>
+
+#### Users Commands
+
+The `--connection` flag has been renamed to `--connection-name` for the `auth0 users update`, `auth0 users create` and `auth0 users import` commands for consistency.
+
+Also notably for the `auth0 users import` command, the `-u` short form alias for the `--upsert` flag in the command has been redesignated to the `--users` flag.
+
+| **Before (v0)**                      | **After (v1)**                                  |
+| ------------------------------------ | ----------------------------------------------- |
+| `auth0 users create --connection`    | `auth0 users create --connection-name`          |
+| `auth0 users update --connection`    | `auth0 users update --connection-name`          |
+| `auth0 users import -u --connection` | `auth0 users import --upsert --connection-name` |
