@@ -152,37 +152,14 @@ func testLoginCmd(cli *cli) *cobra.Command {
 			}
 
 			var userInfo *authutil.UserInfo
-			if err := ansi.Spinner("Fetching user metadata", func() error {
-				// Use the access token to fetch user information from the /userinfo endpoint.
+			if err := ansi.Spinner("Fetching user metadata", func() (err error) {
 				userInfo, err = authutil.FetchUserInfo(http.DefaultClient, tenant.Domain, tokenResponse.AccessToken)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to fetch user info: %w", err)
 			}
 
-			cli.renderer.Newline()
-			cli.renderer.TestLogin(userInfo, tokenResponse)
-			cli.renderer.Newline()
-
-			const commandKey = "test_login"
-			isFirstRun, err := cli.isFirstCommandRun(inputs.ClientID, commandKey)
-			if err != nil {
-				return err
-			}
-
-			if isFirstRun {
-				cli.renderer.Infof("Login flow is working!")
-				cli.renderer.Infof(
-					"%s Consider downloading and running a quickstart next by running `auth0 quickstarts download %s`",
-					ansi.Faint("Hint:"),
-					inputs.ClientID,
-				)
-
-				if err := cli.setFirstCommandRun(inputs.ClientID, commandKey); err != nil {
-					return err
-				}
-			}
-
+			cli.renderer.TestLogin(userInfo, tokenResponse, inputs.ClientID)
 			return nil
 		},
 	}

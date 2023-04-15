@@ -46,18 +46,13 @@ type config struct {
 // The fields are tailor fit specifically for
 // interacting with the management API.
 type Tenant struct {
-	Name         string         `json:"name"`
-	Domain       string         `json:"domain"`
-	AccessToken  string         `json:"access_token,omitempty"`
-	Scopes       []string       `json:"scopes,omitempty"`
-	ExpiresAt    time.Time      `json:"expires_at"`
-	Apps         map[string]app `json:"apps,omitempty"`
-	DefaultAppID string         `json:"default_app_id,omitempty"`
-	ClientID     string         `json:"client_id"`
-}
-
-type app struct {
-	FirstRuns map[string]bool `json:"first_runs"`
+	Name         string    `json:"name"`
+	Domain       string    `json:"domain"`
+	AccessToken  string    `json:"access_token,omitempty"`
+	Scopes       []string  `json:"scopes,omitempty"`
+	ExpiresAt    time.Time `json:"expires_at"`
+	DefaultAppID string    `json:"default_app_id,omitempty"`
+	ClientID     string    `json:"client_id"`
 }
 
 var errUnauthenticated = errors.New("Not logged in. Try 'auth0 login'.")
@@ -301,10 +296,6 @@ func (c *cli) getTenant() (Tenant, error) {
 		return Tenant{}, fmt.Errorf("Unable to find tenant: %s; run 'auth0 tenants use' to see your configured tenants or run 'auth0 login' to configure a new tenant", c.tenant)
 	}
 
-	if t.Apps == nil {
-		t.Apps = map[string]app{}
-	}
-
 	return t, nil
 }
 
@@ -390,22 +381,6 @@ func (c *cli) removeTenant(ten string) error {
 	return nil
 }
 
-func (c *cli) isFirstCommandRun(clientID string, command string) (bool, error) {
-	tenant, err := c.getTenant()
-
-	if err != nil {
-		return false, err
-	}
-
-	if a, found := tenant.Apps[clientID]; found {
-		if a.FirstRuns[command] {
-			return false, nil
-		}
-	}
-
-	return true, nil
-}
-
 func (c *cli) setDefaultAppID(id string) error {
 	tenant, err := c.getTenant()
 	if err != nil {
@@ -418,31 +393,6 @@ func (c *cli) setDefaultAppID(id string) error {
 	if err := c.persistConfig(); err != nil {
 		return fmt.Errorf("Unexpected error persisting config: %w", err)
 	}
-
-	return nil
-}
-
-func (c *cli) setFirstCommandRun(clientID string, command string) error {
-	tenant, err := c.getTenant()
-	if err != nil {
-		return err
-	}
-
-	if a, found := tenant.Apps[clientID]; found {
-		if a.FirstRuns == nil {
-			a.FirstRuns = map[string]bool{}
-		}
-		a.FirstRuns[command] = true
-		tenant.Apps[clientID] = a
-	} else {
-		tenant.Apps[clientID] = app{
-			FirstRuns: map[string]bool{
-				command: true,
-			},
-		}
-	}
-
-	c.config.Tenants[tenant.Domain] = tenant
 
 	return nil
 }
