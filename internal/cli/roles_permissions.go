@@ -248,23 +248,15 @@ func removeRolePermissionsCmd(cli *cli) *cobra.Command {
 }
 
 func (c *cli) apiPickerOptionsWithoutAuth0() (pickerOptions, error) {
-	ten, err := c.getTenant()
-	if err != nil {
-		return nil, err
-	}
-
 	return c.filteredAPIPickerOptions(func(r *management.ResourceServer) bool {
-		u, err := url.Parse(r.GetIdentifier())
+		parsedURL, err := url.Parse(r.GetIdentifier())
 		if err != nil {
-			// We really should't get an error here, but for
-			// correctness it's indeterminate, therefore we return
-			// false.
 			return false
 		}
 
-		// We only allow API Identifiers not matching the tenant
-		// domain, similar to the dashboard UX.
-		return u.Host != ten.Domain
+		// We only allow API Identifiers not matching the
+		// tenant domain, similar to the dashboard UX.
+		return parsedURL.Host != c.tenant
 	})
 }
 

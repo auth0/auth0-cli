@@ -15,6 +15,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -118,7 +119,7 @@ func runLoginFlowPreflightChecks(cli *cli, c *management.Client) (abort bool) {
 
 // runLoginFlow initiates a full user-facing login flow, waits for a response
 // and returns the retrieved tokens to the caller when done.
-func runLoginFlow(cli *cli, t Tenant, c *management.Client, connName, audience, prompt string, scopes []string, customDomain string) (*authutil.TokenResponse, error) {
+func runLoginFlow(cli *cli, c *management.Client, connName, audience, prompt string, scopes []string, customDomain string) (*authutil.TokenResponse, error) {
 	var tokenResponse *authutil.TokenResponse
 
 	err := ansi.Spinner("Waiting for login flow to complete", func() error {
@@ -132,7 +133,7 @@ func runLoginFlow(cli *cli, t Tenant, c *management.Client, connName, audience, 
 			return err
 		}
 
-		domain := t.Domain
+		domain := cli.tenant
 		if customDomain != "" {
 			domain = customDomain
 		}
@@ -166,7 +167,7 @@ func runLoginFlow(cli *cli, t Tenant, c *management.Client, connName, audience, 
 		// token.
 		tokenResponse, err = authutil.ExchangeCodeForToken(
 			http.DefaultClient,
-			t.Domain,
+			cli.tenant,
 			c.GetClientID(),
 			c.GetClientSecret(),
 			authCode,
@@ -268,7 +269,7 @@ func containsStr(s []string, u string) bool {
 }
 
 func openManageURL(cli *cli, tenant string, path string) {
-	manageTenantURL := formatManageTenantURL(tenant, cli.config)
+	manageTenantURL := formatManageTenantURL(tenant, &cli.Config)
 	if len(manageTenantURL) == 0 || len(path) == 0 {
 		cli.renderer.Warnf("Unable to format the correct URL, please ensure you have run 'auth0 login' and try again.")
 		return
@@ -286,7 +287,7 @@ func openManageURL(cli *cli, tenant string, path string) {
 	}
 }
 
-func formatManageTenantURL(tenant string, cfg config) string {
+func formatManageTenantURL(tenant string, cfg *config.Config) string {
 	if len(tenant) == 0 {
 		return ""
 	}

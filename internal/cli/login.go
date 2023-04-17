@@ -11,6 +11,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
+	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/keyring"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
@@ -126,9 +127,9 @@ func loginCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
+			cli.tracker.TrackCommandRun(cmd, cli.Config.InstallID)
 
-			if len(cli.config.Tenants) > 1 {
+			if len(cli.Config.Tenants) > 1 {
 				cli.renderer.Infof("%s Switch between authenticated tenants with `auth0 tenants use <tenant>`",
 					ansi.Faint("Hint:"),
 				)
@@ -155,10 +156,10 @@ func loginCmd(cli *cli) *cobra.Command {
 
 // RunLoginAsUser runs the login flow guiding the user through the process
 // by showing the login instructions, opening the browser.
-func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (Tenant, error) {
+func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (config.Tenant, error) {
 	state, err := auth.GetDeviceCode(ctx, http.DefaultClient, additionalScopes)
 	if err != nil {
-		return Tenant{}, fmt.Errorf("failed to get the device code: %w", err)
+		return config.Tenant{}, fmt.Errorf("failed to get the device code: %w", err)
 	}
 
 	message := fmt.Sprintf("\n%s\n\n",
@@ -174,7 +175,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (T
 		cli.renderer.Infof(message, ansi.Green("Press Enter"), ansi.Red("^C"))
 
 		if _, err = fmt.Scanln(); err != nil {
-			return Tenant{}, err
+			return config.Tenant{}, err
 		}
 
 		if err = browser.OpenURL(state.VerificationURI); err != nil {
@@ -189,7 +190,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (T
 		return err
 	})
 	if err != nil {
-		return Tenant{}, fmt.Errorf("login error: %w", err)
+		return config.Tenant{}, fmt.Errorf("login error: %w", err)
 	}
 
 	cli.renderer.Newline()
@@ -197,7 +198,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (T
 	cli.renderer.Infof("Tenant: %s", result.Domain)
 	cli.renderer.Newline()
 
-	tenant := Tenant{
+	tenant := config.Tenant{
 		Name:      result.Tenant,
 		Domain:    result.Domain,
 		ExpiresAt: result.ExpiresAt,
@@ -215,27 +216,24 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (T
 		tenant.AccessToken = result.AccessToken
 	}
 
-	err = cli.addTenant(tenant)
+	err = cli.Config.AddTenant(tenant)
 	if err != nil {
-		return Tenant{}, fmt.Errorf("Failed to add the tenant to the config: %w", err)
+		return config.Tenant{}, fmt.Errorf("Failed to add the tenant to the config: %w", err)
 	}
 
-	if err := checkInstallID(cli); err != nil {
-		return Tenant{}, fmt.Errorf("Failed to update the config: %w", err)
-	}
+	cli.tracker.TrackFirstLogin(cli.Config.InstallID)
 
-	if cli.config.DefaultTenant != result.Domain {
+	if cli.Config.DefaultTenant != result.Domain {
 		message = fmt.Sprintf(
 			"Your default tenant is %s. Do you want to change it to %s?",
-			cli.config.DefaultTenant,
+			cli.Config.DefaultTenant,
 			result.Domain,
 		)
 		if confirmed := prompt.Confirm(message); !confirmed {
-			return Tenant{}, nil
+			return config.Tenant{}, nil
 		}
 
-		cli.config.DefaultTenant = result.Domain
-		if err := cli.persistConfig(); err != nil {
+		if err := cli.Config.SaveNewDefaultTenant(result.Domain); err != nil {
 			message = "Failed to set the default tenant, please try 'auth0 tenants use %s' instead: %w"
 			cli.renderer.Warnf(message, result.Domain, err)
 		}
@@ -270,7 +268,7 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 		return fmt.Errorf("failed to fetch access token using client credentials. \n\nEnsure that the provided client-id, client-secret and domain are correct. \n\nerror: %w\n", err)
 	}
 
-	t := Tenant{
+	tenant := config.Tenant{
 		Name:      strings.Split(inputs.Domain, ".")[0],
 		Domain:    inputs.Domain,
 		ExpiresAt: token.ExpiresAt,
@@ -285,10 +283,10 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 	if err := keyring.StoreAccessToken(inputs.Domain, token.AccessToken); err != nil {
 		// In case we don't have a keyring, we want the
 		// access token to be saved in the config file.
-		t.AccessToken = token.AccessToken
+		tenant.AccessToken = token.AccessToken
 	}
 
-	if err = cli.addTenant(t); err != nil {
+	if err = cli.Config.AddTenant(tenant); err != nil {
 		return fmt.Errorf("unexpected error when attempting to save tenant data: %w", err)
 	}
 
@@ -296,9 +294,7 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 	cli.renderer.Infof("Successfully logged in.")
 	cli.renderer.Infof("Tenant: %s", inputs.Domain)
 
-	if err := checkInstallID(cli); err != nil {
-		return fmt.Errorf("failed to update the config: %w", err)
-	}
+	cli.tracker.TrackFirstLogin(cli.Config.InstallID)
 
 	return nil
 }
