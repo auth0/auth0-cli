@@ -15,12 +15,20 @@ type userInfoAndTokens struct {
 	Tokens   *authutil.TokenResponse `json:"tokens"`
 }
 
-func (r *Renderer) TestLogin(u *authutil.UserInfo, t *authutil.TokenResponse) {
-	r.Heading("/userinfo")
+func (r *Renderer) TestLogin(u *authutil.UserInfo, t *authutil.TokenResponse, clientID string) {
+	r.Heading("user metadata and token")
 
 	data := &userInfoAndTokens{UserInfo: u, Tokens: t}
-
 	r.JSONResult(data)
+
+	r.Newline()
+	r.Newline()
+	r.Infof(
+		"%s Login flow is working! If this is the first time you are testing the login flow for this "+
+			"application, consider downloading and running a quickstart next by running %s",
+		ansi.Faint("Hint:"),
+		fmt.Sprintf("`auth0 quickstarts download %s`", clientID),
+	)
 }
 
 func (r *Renderer) TestToken(client *management.Client, t *authutil.TokenResponse) {
