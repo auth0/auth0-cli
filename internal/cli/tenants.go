@@ -104,22 +104,18 @@ func openTenantCmd(cli *cli) *cobra.Command {
 }
 
 func selectValidTenantFromConfig(cli *cli, cmd *cobra.Command, args []string) (string, error) {
+	if len(args) > 0 {
+		tenant, err := cli.Config.GetTenant(args[0])
+		if err != nil {
+			return "", err
+		}
+
+		return tenant.Domain, nil
+	}
+
 	var selectedTenant string
-
-	if len(args) == 0 {
-		err := tenantDomain.Pick(cmd, &selectedTenant, cli.tenantPickerOptions)
-		return selectedTenant, err
-	}
-
-	selectedTenant = args[0]
-	if _, ok := cli.Config.Tenants[selectedTenant]; !ok {
-		return "", fmt.Errorf(
-			"failed to find tenant %s.\n\nRun 'auth0 login' to configure a new tenant.",
-			selectedTenant,
-		)
-	}
-
-	return selectedTenant, nil
+	err := tenantDomain.Pick(cmd, &selectedTenant, cli.tenantPickerOptions)
+	return selectedTenant, err
 }
 
 func (c *cli) tenantPickerOptions() (pickerOptions, error) {
