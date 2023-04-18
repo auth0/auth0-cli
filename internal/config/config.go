@@ -102,7 +102,7 @@ func (c *Config) GetTenant(tenantName string) (Tenant, error) {
 	tenant, ok := c.Tenants[tenantName]
 	if !ok {
 		return Tenant{}, fmt.Errorf(
-			"failed to find tenant: %s. Run 'auth0 tenants use' to see your configured tenants "+
+			"failed to find tenant: %s. Run 'auth0 tenants list' to see your configured tenants "+
 				"or run 'auth0 login' to configure a new tenant",
 			tenantName,
 		)
@@ -181,12 +181,13 @@ func (c *Config) ListAllTenants() ([]Tenant, error) {
 }
 
 // SetDefaultTenant saves the new default tenant to the disk.
-func (c *Config) SetDefaultTenant(tenant string) error {
-	if err := c.Initialize(); err != nil {
+func (c *Config) SetDefaultTenant(tenantName string) error {
+	tenant, err := c.GetTenant(tenantName)
+	if err != nil {
 		return err
 	}
 
-	c.DefaultTenant = tenant
+	c.DefaultTenant = tenant.Domain
 
 	return c.saveToDisk()
 }

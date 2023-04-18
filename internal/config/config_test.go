@@ -246,7 +246,7 @@ func TestConfig_GetTenant(t *testing.T) {
 		config := &Config{path: tempFile}
 		_, err := config.GetTenant("auth0-cli.eu.auth0.com")
 
-		assert.EqualError(t, err, "failed to find tenant: auth0-cli.eu.auth0.com. Run 'auth0 tenants use' to see your configured tenants or run 'auth0 login' to configure a new tenant")
+		assert.EqualError(t, err, "failed to find tenant: auth0-cli.eu.auth0.com. Run 'auth0 tenants list' to see your configured tenants or run 'auth0 login' to configure a new tenant")
 	})
 
 	t.Run("it throws an error if the config can't be initialized", func(t *testing.T) {
@@ -566,7 +566,7 @@ func TestConfig_ListAllTenants(t *testing.T) {
 	})
 }
 
-func TestConfig_SaveNewDefaultTenant(t *testing.T) {
+func TestConfig_SetDefaultTenant(t *testing.T) {
 	t.Run("it can successfully save a new tenant default", func(t *testing.T) {
 		tempFile := createTempConfigFile(t, []byte(`{
 			"install_id": "3998b053-dd7f-4bfe-bb10-c4f3a96a0180",
@@ -616,6 +616,33 @@ func TestConfig_SaveNewDefaultTenant(t *testing.T) {
 		assertConfigFileMatches(t, config.path, expectedConfig)
 	})
 
+	t.Run("it fails to save a new tenant default if it doesn't exist", func(t *testing.T) {
+		tempFile := createTempConfigFile(t, []byte(`{
+			"install_id": "3998b053-dd7f-4bfe-bb10-c4f3a96a0180",
+			"default_tenant": "auth0-cli.eu.auth0.com",
+			"tenants": {
+				"auth0-cli.eu.auth0.com": {
+					"name": "auth0-cli",
+					"domain": "auth0-cli.eu.auth0.com",
+					"access_token": "eyfSaswe",
+					"expires_at": "2023-04-18T11:18:07.998809Z",
+					"client_id": "secret"
+				},
+				"auth0-mega-cli.eu.auth0.com": {
+					"name": "auth0-mega-cli",
+					"domain": "auth0-mega-cli.eu.auth0.com",
+					"access_token": "eyfSaswe",
+					"expires_at": "2023-04-18T11:18:07.998809Z",
+					"client_id": "secret"
+				}
+			}
+		}`))
+
+		config := &Config{path: tempFile}
+		err := config.SetDefaultTenant("auth0-super-cli.eu.auth0.com")
+		assert.EqualError(t, err, "failed to find tenant: auth0-super-cli.eu.auth0.com. Run 'auth0 tenants list' to see your configured tenants or run 'auth0 login' to configure a new tenant")
+	})
+
 	t.Run("it throws an error if there's an issue with the config file", func(t *testing.T) {
 		config := &Config{path: "i-dont-exist.json"}
 
@@ -624,7 +651,7 @@ func TestConfig_SaveNewDefaultTenant(t *testing.T) {
 	})
 }
 
-func TestConfig_SaveNewDefaultAppIDForTenant(t *testing.T) {
+func TestConfig_SetDefaultAppIDForTenant(t *testing.T) {
 	t.Run("it successfully saves a new default app id for the tenant", func(t *testing.T) {
 		tempFile := createTempConfigFile(t, []byte(`{
 			"install_id": "3998b053-dd7f-4bfe-bb10-c4f3a96a0180",
