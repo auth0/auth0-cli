@@ -45,6 +45,10 @@ func (r *Renderer) RoleList(roles []*management.Role) {
 	r.Heading(fmt.Sprintf("%s (%d)", resource, len(roles)))
 
 	if len(roles) == 0 {
+		if r.Format == OutputFormatJSON {
+			r.JSONResult([]interface{}{})
+			return
+		}
 		r.EmptyState(resource)
 		r.Infof("Use 'auth0 roles create' to add one")
 		return
@@ -63,6 +67,10 @@ func (r *Renderer) UserRoleList(roles []*management.Role) {
 	r.Heading(fmt.Sprintf("%s (%d)", resource, len(roles)))
 
 	if len(roles) == 0 {
+		if r.Format == OutputFormatJSON {
+			r.JSONResult([]interface{}{})
+			return
+		}
 		r.Output("No roles assigned to user.\n\n")
 		r.Infof("Use 'auth0 users roles assign' to assign roles to a user.")
 		return

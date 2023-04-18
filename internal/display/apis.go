@@ -73,6 +73,10 @@ func (r *Renderer) APIList(apis []*management.ResourceServer) {
 	r.Heading(fmt.Sprintf("%s (%d)", resource, len(apis)))
 
 	if len(apis) == 0 {
+		if r.Format == OutputFormatJSON {
+			r.JSONResult([]interface{}{})
+			return
+		}
 		r.EmptyState(resource)
 		r.Infof("Use 'auth0 apis create' to add one")
 		return
@@ -161,6 +165,10 @@ func (r *Renderer) ScopesList(api string, scopes []management.ResourceServerScop
 	r.Heading(fmt.Sprintf("%s of %s", resource, ansi.Bold(api)))
 
 	if len(scopes) == 0 {
+		if r.Format == OutputFormatJSON {
+			r.JSONResult([]interface{}{})
+			return
+		}
 		r.EmptyState(resource)
 		return
 	}

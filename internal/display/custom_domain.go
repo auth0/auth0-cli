@@ -53,6 +53,10 @@ func (r *Renderer) CustomDomainList(customDomains []*management.CustomDomain) {
 	r.Heading(resource)
 
 	if len(customDomains) == 0 {
+		if r.Format == OutputFormatJSON {
+			r.JSONResult([]interface{}{})
+			return
+		}
 		r.EmptyState(resource)
 		r.Infof("Use 'auth0 domains create' to add one")
 		return

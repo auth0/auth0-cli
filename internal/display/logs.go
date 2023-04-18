@@ -148,6 +148,10 @@ func (r *Renderer) LogList(logs []*management.Log, silent, hasFilter bool) {
 	r.Heading(resource)
 
 	if len(logs) == 0 {
+		if r.Format == OutputFormatJSON {
+			r.JSONResult([]interface{}{})
+			return
+		}
 		if hasFilter {
 			r.Output("No logs available matching filter criteria.\n\n")
 		} else {

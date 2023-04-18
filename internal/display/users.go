@@ -61,6 +61,10 @@ func (r *Renderer) UserSearch(users []*management.User) {
 	r.Heading(resource)
 
 	if len(users) == 0 {
+		if r.Format == OutputFormatJSON {
+			r.JSONResult([]interface{}{})
+			return
+		}
 		r.EmptyState(resource)
 		r.Infof("Use 'auth0 users create' to add one")
 		return

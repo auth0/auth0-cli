@@ -75,6 +75,10 @@ func (r *Renderer) Heading(text ...string) {
 }
 
 func (r *Renderer) EmptyState(resource string) {
+	if r.Format == OutputFormatJSON {
+		r.JSONResult([]interface{}{})
+		return
+	}
 	fmt.Fprintf(r.MessageWriter, "No %s available.\n\n", resource)
 }
 

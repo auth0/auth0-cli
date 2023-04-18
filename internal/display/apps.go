@@ -109,6 +109,10 @@ func (r *Renderer) ApplicationList(clients []*management.Client, revealSecrets b
 	r.Heading(fmt.Sprintf("%s (%v)", resource, len(clients)))
 
 	if len(clients) == 0 {
+		if r.Format == OutputFormatJSON {
+			r.JSONResult([]interface{}{})
+			return
+		}
 		r.EmptyState(resource)
 		r.Infof("Use 'auth0 apps create' to add one")
 		return
