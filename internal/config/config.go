@@ -24,7 +24,7 @@ type Config struct {
 	onlyOnce  sync.Once
 	initError error
 
-	Path string `json:"-"`
+	path string
 
 	InstallID     string  `json:"install_id,omitempty"`
 	DefaultTenant string  `json:"default_tenant"`
@@ -180,8 +180,8 @@ func (c *Config) ListAllTenants() ([]Tenant, error) {
 	return tenants, nil
 }
 
-// SaveNewDefaultTenant saves the new default tenant to the disk.
-func (c *Config) SaveNewDefaultTenant(tenant string) error {
+// SetDefaultTenant saves the new default tenant to the disk.
+func (c *Config) SetDefaultTenant(tenant string) error {
 	if err := c.Initialize(); err != nil {
 		return err
 	}
@@ -191,8 +191,8 @@ func (c *Config) SaveNewDefaultTenant(tenant string) error {
 	return c.saveToDisk()
 }
 
-// SaveNewDefaultAppIDForTenant saves the new default app id for the tenant to the disk.
-func (c *Config) SaveNewDefaultAppIDForTenant(tenantName, appID string) error {
+// SetDefaultAppIDForTenant saves the new default app id for the tenant to the disk.
+func (c *Config) SetDefaultAppIDForTenant(tenantName, appID string) error {
 	tenant, err := c.GetTenant(tenantName)
 	if err != nil {
 		return err
@@ -213,15 +213,15 @@ func (c *Config) ensureInstallIDAssigned() {
 }
 
 func (c *Config) loadFromDisk() error {
-	if c.Path == "" {
-		c.Path = defaultPath()
+	if c.path == "" {
+		c.path = defaultPath()
 	}
 
-	if _, err := os.Stat(c.Path); os.IsNotExist(err) {
+	if _, err := os.Stat(c.path); os.IsNotExist(err) {
 		return ErrConfigFileMissing
 	}
 
-	buffer, err := os.ReadFile(c.Path)
+	buffer, err := os.ReadFile(c.path)
 	if err != nil {
 		return err
 	}
@@ -230,7 +230,7 @@ func (c *Config) loadFromDisk() error {
 }
 
 func (c *Config) saveToDisk() error {
-	dir := filepath.Dir(c.Path)
+	dir := filepath.Dir(c.path)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		const dirPerm os.FileMode = 0700 // Directory permissions (read, write, and execute for the owner only).
 		if err := os.MkdirAll(dir, dirPerm); err != nil {
@@ -244,7 +244,7 @@ func (c *Config) saveToDisk() error {
 	}
 
 	const filePerm os.FileMode = 0600 // File permissions (read and write for the owner only).
-	return os.WriteFile(c.Path, buffer, filePerm)
+	return os.WriteFile(c.path, buffer, filePerm)
 }
 
 func defaultPath() string {

@@ -68,7 +68,7 @@ func useTenantCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := cli.Config.SaveNewDefaultTenant(selectedTenant); err != nil {
+			if err := cli.Config.SetDefaultTenant(selectedTenant); err != nil {
 				return fmt.Errorf("failed to set the default tenant: %w", err)
 			}
 

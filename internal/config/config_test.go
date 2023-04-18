@@ -24,7 +24,7 @@ func TestDefaultPath(t *testing.T) {
 
 func TestConfig_LoadFromDisk(t *testing.T) {
 	t.Run("it fails to load a non existent config file", func(t *testing.T) {
-		config := &Config{Path: "i-am-a-non-existent-config.json"}
+		config := &Config{path: "i-am-a-non-existent-config.json"}
 		err := config.loadFromDisk()
 		assert.EqualError(t, err, "config.json file is missing")
 	})
@@ -37,7 +37,7 @@ func TestConfig_LoadFromDisk(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		config := &Config{Path: dirPath}
+		config := &Config{path: dirPath}
 		err = config.loadFromDisk()
 
 		assert.EqualError(t, err, fmt.Sprintf("read %s: is a directory", dirPath))
@@ -46,7 +46,7 @@ func TestConfig_LoadFromDisk(t *testing.T) {
 	t.Run("it fails to load an empty config file", func(t *testing.T) {
 		tempFile := createTempConfigFile(t, []byte(""))
 
-		config := &Config{Path: tempFile}
+		config := &Config{path: tempFile}
 		err := config.loadFromDisk()
 
 		assert.EqualError(t, err, "unexpected end of JSON input")
@@ -70,7 +70,7 @@ func TestConfig_LoadFromDisk(t *testing.T) {
 		`))
 
 		expectedConfig := &Config{
-			Path:          tempFile,
+			path:          tempFile,
 			InstallID:     "3998b053-dd7f-4bfe-bb10-c4f3a96a0180",
 			DefaultTenant: "auth0-cli.eu.auth0.com",
 			Tenants: Tenants{
@@ -84,7 +84,7 @@ func TestConfig_LoadFromDisk(t *testing.T) {
 			},
 		}
 
-		config := &Config{Path: tempFile}
+		config := &Config{path: tempFile}
 		err := config.loadFromDisk()
 
 		assert.NoError(t, err)
@@ -101,12 +101,12 @@ func TestConfig_LoadFromDisk(t *testing.T) {
 		`))
 
 		expectedConfig := &Config{
-			Path:      tempFile,
+			path:      tempFile,
 			InstallID: "3998b053-dd7f-4bfe-bb10-c4f3a96a0180",
 			Tenants:   map[string]Tenant{},
 		}
 
-		config := &Config{Path: tempFile}
+		config := &Config{path: tempFile}
 		err := config.loadFromDisk()
 
 		assert.NoError(t, err)
@@ -172,12 +172,12 @@ func TestConfig_SaveToDisk(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			testCase.config.Path = path.Join(tmpDir, "auth0", "config.json")
+			testCase.config.path = path.Join(tmpDir, "auth0", "config.json")
 
 			err = testCase.config.saveToDisk()
 			assert.NoError(t, err)
 
-			fileContent, err := os.ReadFile(testCase.config.Path)
+			fileContent, err := os.ReadFile(testCase.config.path)
 			assert.NoError(t, err)
 			assert.Equal(t, string(fileContent), testCase.expectedOutput)
 		})
@@ -194,7 +194,7 @@ func TestConfig_SaveToDisk(t *testing.T) {
 		err = os.Chmod(tmpDir, 0555)
 		require.NoError(t, err)
 
-		config := &Config{Path: path.Join(tmpDir, "auth0", "config.json")}
+		config := &Config{path: path.Join(tmpDir, "auth0", "config.json")}
 
 		err = config.saveToDisk()
 		assert.EqualError(t, err, fmt.Sprintf("mkdir %s/auth0: permission denied", tmpDir))
@@ -227,7 +227,7 @@ func TestConfig_GetTenant(t *testing.T) {
 			ClientID:    "secret",
 		}
 
-		config := &Config{Path: tempFile}
+		config := &Config{path: tempFile}
 		actualTenant, err := config.GetTenant("auth0-cli.eu.auth0.com")
 
 		assert.NoError(t, err)
@@ -243,14 +243,14 @@ func TestConfig_GetTenant(t *testing.T) {
 		}
 		`))
 
-		config := &Config{Path: tempFile}
+		config := &Config{path: tempFile}
 		_, err := config.GetTenant("auth0-cli.eu.auth0.com")
 
 		assert.EqualError(t, err, "failed to find tenant: auth0-cli.eu.auth0.com. Run 'auth0 tenants use' to see your configured tenants or run 'auth0 login' to configure a new tenant")
 	})
 
 	t.Run("it throws an error if the config can't be initialized", func(t *testing.T) {
-		config := &Config{Path: "non-existent-config.json"}
+		config := &Config{path: "non-existent-config.json"}
 		_, err := config.GetTenant("auth0-cli.eu.auth0.com")
 
 		assert.EqualError(t, err, "config.json file is missing")
@@ -268,7 +268,7 @@ func TestConfig_AddTenant(t *testing.T) {
 
 		config := &Config{
 			InstallID: "6122fd48-a634-447e-88b0-0580d41b7fb6",
-			Path:      path.Join(tmpDir, "auth0", "config.json"),
+			path:      path.Join(tmpDir, "auth0", "config.json"),
 		}
 
 		tenant := Tenant{
@@ -296,7 +296,7 @@ func TestConfig_AddTenant(t *testing.T) {
     }
 }`
 
-		assertConfigFileMatches(t, config.Path, expectedOutput)
+		assertConfigFileMatches(t, config.path, expectedOutput)
 	})
 
 	t.Run("it can successfully add another tenant to the config", func(t *testing.T) {
@@ -317,7 +317,7 @@ func TestConfig_AddTenant(t *testing.T) {
 		`))
 
 		config := &Config{
-			Path: tempFile,
+			path: tempFile,
 		}
 
 		tenant := Tenant{
@@ -352,7 +352,7 @@ func TestConfig_AddTenant(t *testing.T) {
     }
 }`
 
-		assertConfigFileMatches(t, config.Path, expectedOutput)
+		assertConfigFileMatches(t, config.path, expectedOutput)
 	})
 }
 
@@ -491,18 +491,18 @@ func TestConfig_RemoveTenant(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			config := &Config{Path: testCase.givenConfig}
+			config := &Config{path: testCase.givenConfig}
 
 			err := config.RemoveTenant(testCase.givenTenant)
 			assert.NoError(t, err)
 
-			assertConfigFileMatches(t, config.Path, testCase.expectedConfig)
+			assertConfigFileMatches(t, config.path, testCase.expectedConfig)
 		})
 	}
 
 	t.Run("it doesn't throw an error if config file is missing", func(t *testing.T) {
 		config := &Config{
-			Path: "i-dont-exist.json",
+			path: "i-dont-exist.json",
 		}
 
 		err := config.RemoveTenant("auth0-cli.eu.auth0.com")
@@ -550,7 +550,7 @@ func TestConfig_ListAllTenants(t *testing.T) {
 			},
 		}
 
-		config := &Config{Path: tempFile}
+		config := &Config{path: tempFile}
 		actualTenants, err := config.ListAllTenants()
 
 		assert.NoError(t, err)
@@ -559,7 +559,7 @@ func TestConfig_ListAllTenants(t *testing.T) {
 	})
 
 	t.Run("it throws an error if there's an issue with the config file", func(t *testing.T) {
-		config := &Config{Path: "i-dont-exist.json"}
+		config := &Config{path: "i-dont-exist.json"}
 
 		_, err := config.ListAllTenants()
 		assert.EqualError(t, err, "config.json file is missing")
@@ -610,16 +610,16 @@ func TestConfig_SaveNewDefaultTenant(t *testing.T) {
     }
 }`
 
-		config := &Config{Path: tempFile}
-		err := config.SaveNewDefaultTenant("auth0-mega-cli.eu.auth0.com")
+		config := &Config{path: tempFile}
+		err := config.SetDefaultTenant("auth0-mega-cli.eu.auth0.com")
 		assert.NoError(t, err)
-		assertConfigFileMatches(t, config.Path, expectedConfig)
+		assertConfigFileMatches(t, config.path, expectedConfig)
 	})
 
 	t.Run("it throws an error if there's an issue with the config file", func(t *testing.T) {
-		config := &Config{Path: "i-dont-exist.json"}
+		config := &Config{path: "i-dont-exist.json"}
 
-		err := config.SaveNewDefaultTenant("tenant")
+		err := config.SetDefaultTenant("tenant")
 		assert.EqualError(t, err, "config.json file is missing")
 	})
 }
@@ -655,16 +655,16 @@ func TestConfig_SaveNewDefaultAppIDForTenant(t *testing.T) {
     }
 }`
 
-		config := &Config{Path: tempFile}
-		err := config.SaveNewDefaultAppIDForTenant("auth0-cli.eu.auth0.com", "appID123456")
+		config := &Config{path: tempFile}
+		err := config.SetDefaultAppIDForTenant("auth0-cli.eu.auth0.com", "appID123456")
 		assert.NoError(t, err)
-		assertConfigFileMatches(t, config.Path, expectedConfig)
+		assertConfigFileMatches(t, config.path, expectedConfig)
 	})
 
 	t.Run("it throws an error if there's an issue with the config file", func(t *testing.T) {
-		config := &Config{Path: "i-dont-exist.json"}
+		config := &Config{path: "i-dont-exist.json"}
 
-		err := config.SaveNewDefaultAppIDForTenant("tenant", "appID123456")
+		err := config.SetDefaultAppIDForTenant("tenant", "appID123456")
 		assert.EqualError(t, err, "config.json file is missing")
 	})
 }
@@ -685,12 +685,12 @@ func TestConfig_IsLoggedInWithTenant(t *testing.T) {
 			}
 		}`))
 
-		config := &Config{Path: tempFile}
+		config := &Config{path: tempFile}
 		assert.True(t, config.IsLoggedInWithTenant("auth0-cli.eu.auth0.com"))
 	})
 
 	t.Run("it returns false when we are not logged in", func(t *testing.T) {
-		config := &Config{Path: "i-dont-exist.json"}
+		config := &Config{path: "i-dont-exist.json"}
 		assert.False(t, config.IsLoggedInWithTenant("auth0-cli.eu.auth0.com"))
 	})
 
@@ -709,7 +709,7 @@ func TestConfig_IsLoggedInWithTenant(t *testing.T) {
 			}
 		}`))
 
-		config := &Config{Path: tempFile}
+		config := &Config{path: tempFile}
 		assert.False(t, config.IsLoggedInWithTenant("auth0-cli.eu.auth0.com"))
 	})
 
@@ -728,7 +728,7 @@ func TestConfig_IsLoggedInWithTenant(t *testing.T) {
 			}
 		}`))
 
-		config := &Config{Path: tempFile}
+		config := &Config{path: tempFile}
 		assert.False(t, config.IsLoggedInWithTenant(""))
 	})
 }
@@ -749,7 +749,7 @@ func TestConfig_VerifyAuthentication(t *testing.T) {
 			}
 		}`))
 
-		config := &Config{Path: tempFile}
+		config := &Config{path: tempFile}
 		err := config.VerifyAuthentication()
 		assert.NoError(t, err)
 	})
@@ -761,7 +761,7 @@ func TestConfig_VerifyAuthentication(t *testing.T) {
 			"tenants": {}
 		}`))
 
-		config := &Config{Path: tempFile}
+		config := &Config{path: tempFile}
 		err := config.VerifyAuthentication()
 		assert.EqualError(t, err, "Not logged in. Try `auth0 login`.")
 	})
@@ -781,7 +781,7 @@ func TestConfig_VerifyAuthentication(t *testing.T) {
 			}
 		}`))
 
-		config := &Config{Path: tempFile}
+		config := &Config{path: tempFile}
 		err := config.VerifyAuthentication()
 		assert.NoError(t, err)
 
@@ -799,11 +799,11 @@ func TestConfig_VerifyAuthentication(t *testing.T) {
     }
 }`
 
-		assertConfigFileMatches(t, config.Path, expectedConfig)
+		assertConfigFileMatches(t, config.path, expectedConfig)
 	})
 
 	t.Run("it throws an error if there's an issue with the config file", func(t *testing.T) {
-		config := &Config{Path: "i-dont-exist.json"}
+		config := &Config{path: "i-dont-exist.json"}
 
 		err := config.VerifyAuthentication()
 		assert.EqualError(t, err, "config.json file is missing")

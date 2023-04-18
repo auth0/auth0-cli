@@ -179,7 +179,7 @@ func useAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			if err := cli.Config.SaveNewDefaultAppIDForTenant(cli.tenant, inputs.ID); err != nil {
+			if err := cli.Config.SetDefaultAppIDForTenant(cli.tenant, inputs.ID); err != nil {
 				return err
 			}
 
@@ -479,7 +479,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("Unable to create application: %v", err)
 			}
 
-			if err := cli.Config.SaveNewDefaultAppIDForTenant(cli.tenant, a.GetClientID()); err != nil {
+			if err := cli.Config.SetDefaultAppIDForTenant(cli.tenant, a.GetClientID()); err != nil {
 				return err
 			}
 

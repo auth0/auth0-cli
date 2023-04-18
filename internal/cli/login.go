@@ -233,7 +233,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (c
 			return config.Tenant{}, nil
 		}
 
-		if err := cli.Config.SaveNewDefaultTenant(result.Domain); err != nil {
+		if err := cli.Config.SetDefaultTenant(result.Domain); err != nil {
 			message = "Failed to set the default tenant, please try 'auth0 tenants use %s' instead: %w"
 			cli.renderer.Warnf(message, result.Domain, err)
 		}
