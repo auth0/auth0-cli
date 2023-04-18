@@ -143,3 +143,55 @@ func TestTenant_GetAccessToken(t *testing.T) {
 		assert.Equal(t, expectedToken, actualToken)
 	})
 }
+
+func TestTenant_CheckAuthenticationStatus(t *testing.T) {
+	var testCases = []struct {
+		name          string
+		givenTenant   Tenant
+		expectedError string
+	}{
+		{
+			name: "it throws an error when required scopes are missing",
+			givenTenant: Tenant{
+				Scopes:   []string{"read:magazines"},
+				ClientID: "",
+			},
+			expectedError: "token is missing required scopes",
+		},
+		{
+			name: "it throws an error when the token is empty",
+			givenTenant: Tenant{
+				AccessToken: "",
+				ClientID:    "123",
+			},
+			expectedError: "token is invalid",
+		},
+		{
+			name: "it throws an error when the token is expired and we are authenticated through client credentials",
+			givenTenant: Tenant{
+				ExpiresAt: time.Now().Add(-time.Minute),
+				ClientID:  "123",
+			},
+			expectedError: "token is invalid",
+		},
+		{
+			name: "tenant has a valid token",
+			givenTenant: Tenant{
+				AccessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2F1dGgwLmF1dGgwLmNvbS8iLCJpYXQiOjE2ODExNDcwNjAsImV4cCI6OTY4MTgzMzQ2MH0.DsEpQkL0MIWcGJOIfEY8vr3MVS_E0GYsachNLQwBu5Q",
+				ExpiresAt:   time.Now().Add(10 * time.Minute),
+				ClientID:    "123",
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			err := testCase.givenTenant.CheckAuthenticationStatus()
+			if testCase.expectedError != "" {
+				assert.EqualError(t, err, testCase.expectedError)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
+}
