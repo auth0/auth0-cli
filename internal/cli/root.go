@@ -32,6 +32,9 @@ func Execute() {
 		tracker:  analytics.NewTracker(),
 	}
 
+	// Prevent sorting of commands.
+	cobra.EnableCommandSorting = false
+
 	rootCmd := buildRootCmd(cli)
 	rootCmd.SetUsageTemplate(namespaceUsageTemplate())
 
@@ -98,8 +101,12 @@ func buildRootCmd(cli *cli) *cobra.Command {
 				}
 			}()
 
-			// Initialize everything once.
-			return cli.setup(cmd.Context())
+			if err := cli.setupWithAuthentication(cmd.Context()); err != nil {
+				return err
+			}
+
+			cli.configureRenderer()
+			return nil
 		},
 	}
 

@@ -48,27 +48,63 @@ type cli struct {
 	Config config.Config
 }
 
-// setup will try to initialize the config context, as well as figure out if
-// there's a readily available tenant. A management API SDK instance is initialized IFF:
-//
-// 1. A tenant is found.
-// 2. The tenant has an access token.
-func (c *cli) setup(ctx context.Context) error {
-	cobra.EnableCommandSorting = false
-
-	if err := c.Config.VerifyAuthentication(); err != nil {
+// setupWithAuthentication will fetch the tenant from the config.json
+// and regenerate its access token if needed. The access token will
+// then be used to configure an instance of the Auth0 Management SDK.
+func (c *cli) setupWithAuthentication(ctx context.Context) error {
+	// Validate that we have at least one tenant that we can use.
+	if err := c.Config.Validate(); err != nil {
 		return err
 	}
 
+	// If we didn't pass any tenant through the
+	// flags we're going to use the default one.
 	if c.tenant == "" {
 		c.tenant = c.Config.DefaultTenant
 	}
 
-	c.configureRenderer()
-
-	tenant, err := c.ensureTenantAccessTokenIsUpdated(ctx)
+	// Get the tenant from the config.
+	tenant, err := c.Config.GetTenant(c.tenant)
 	if err != nil {
 		return err
+	}
+
+	// Check authentication status.
+	err = tenant.CheckAuthenticationStatus()
+	switch err {
+	case config.ErrTokenMissingRequiredScopes:
+		c.renderer.Warnf("Required scopes have changed. Please log in to re-authorize the CLI.\n")
+		tenant, err = RunLoginAsUser(ctx, c, tenant.GetExtraRequestedScopes())
+		if err != nil {
+			return err
+		}
+	case config.ErrInvalidToken:
+		if err := tenant.RegenerateAccessToken(ctx); err != nil {
+			if tenant.IsAuthenticatedWithClientCredentials() {
+				errorMessage := fmt.Errorf(
+					"failed to fetch access token using client credentials: %w\n\n"+
+						"This may occur if the designated Auth0 application has been deleted, "+
+						"the client secret has been rotated or previous failure to store client "+
+						"secret in the keyring.\n\n"+
+						"Please re-authenticate by running: %s",
+					err,
+					ansi.Bold("auth0 login --domain <tenant-domain --client-id <client-id> --client-secret <client-secret>"),
+				)
+				return errorMessage
+			}
+
+			c.renderer.Warnf("Failed to renew access token: %s", err)
+			c.renderer.Warnf("Please log in to re-authorize the CLI.\n")
+
+			tenant, err = RunLoginAsUser(ctx, c, tenant.GetExtraRequestedScopes())
+			if err != nil {
+				return err
+			}
+		}
+
+		if err := c.Config.AddTenant(tenant); err != nil {
+			return err
+		}
 	}
 
 	userAgent := fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v"))
@@ -92,50 +128,6 @@ func (c *cli) configureRenderer() {
 	if c.json {
 		c.renderer.Format = display.OutputFormatJSON
 	}
-}
-
-// ensureTenantAccessTokenIsUpdated loads the tenant, refreshing its token if necessary.
-// The tenant access token needs a refresh if:
-// 1. The tenant scopes are different than the currently required scopes.
-// 2. The access token is expired.
-func (c *cli) ensureTenantAccessTokenIsUpdated(ctx context.Context) (config.Tenant, error) {
-	t, err := c.Config.GetTenant(c.tenant)
-	if err != nil {
-		return config.Tenant{}, err
-	}
-
-	if !t.HasAllRequiredScopes() && t.IsAuthenticatedWithDeviceCodeFlow() {
-		c.renderer.Warnf("Required scopes have changed. Please log in to re-authorize the CLI.\n")
-		return RunLoginAsUser(ctx, c, t.GetExtraRequestedScopes())
-	}
-
-	accessToken := t.GetAccessToken()
-	if accessToken != "" && !t.HasExpiredToken() {
-		return t, nil
-	}
-
-	if err := t.RegenerateAccessToken(ctx); err != nil {
-		if t.IsAuthenticatedWithClientCredentials() {
-			errorMessage := fmt.Errorf(
-				"failed to fetch access token using client credentials: %w\n\nThis may occur if the designated Auth0 application has been deleted, the client secret has been rotated or previous failure to store client secret in the keyring.\n\nPlease re-authenticate by running: %s",
-				err,
-				ansi.Bold("auth0 login --domain <tenant-domain --client-id <client-id> --client-secret <client-secret>"),
-			)
-
-			return t, errorMessage
-		}
-
-		c.renderer.Warnf("Failed to renew access token: %s", err)
-		c.renderer.Warnf("Please log in to re-authorize the CLI.\n")
-
-		return RunLoginAsUser(ctx, c, t.GetExtraRequestedScopes())
-	}
-
-	if err := c.Config.AddTenant(t); err != nil {
-		return config.Tenant{}, fmt.Errorf("unexpected error adding tenant to config: %w", err)
-	}
-
-	return t, nil
 }
 
 func canPrompt(cmd *cobra.Command) bool {

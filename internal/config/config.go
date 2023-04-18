@@ -40,12 +40,12 @@ func (c *Config) Initialize() error {
 	return c.initError
 }
 
-// VerifyAuthentication checks to see if the config is not corrupted,
+// Validate checks to see if the config is not corrupted,
 // and we have an authenticated tenant saved.
 // If we have at least one tenant saved but the DefaultTenant
 // is empty, it will attempt to set the first available
 // tenant as the DefaultTenant and save to disk.
-func (c *Config) VerifyAuthentication() error {
+func (c *Config) Validate() error {
 	if err := c.Initialize(); err != nil {
 		return err
 	}

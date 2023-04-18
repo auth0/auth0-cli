@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -13,6 +14,14 @@ import (
 )
 
 const accessTokenExpThreshold = 5 * time.Minute
+
+var (
+	// ErrTokenMissingRequiredScopes is thrown when the token is missing required scopes.
+	ErrTokenMissingRequiredScopes = errors.New("token is missing required scopes")
+
+	// ErrInvalidToken is thrown when the token is invalid.
+	ErrInvalidToken = errors.New("token is invalid")
+)
 
 type (
 	// Tenants keeps track of all the tenants we
@@ -93,6 +102,19 @@ func (t *Tenant) GetAccessToken() string {
 	return t.AccessToken
 }
 
+func (t *Tenant) CheckAuthenticationStatus() error {
+	if !t.HasAllRequiredScopes() && t.IsAuthenticatedWithDeviceCodeFlow() {
+		return ErrTokenMissingRequiredScopes
+	}
+
+	accessToken := t.GetAccessToken()
+	if accessToken != "" && !t.HasExpiredToken() {
+		return nil
+	}
+
+	return ErrInvalidToken
+}
+
 // RegenerateAccessToken regenerates the access token for the tenant.
 func (t *Tenant) RegenerateAccessToken(ctx context.Context) error {
 	if t.IsAuthenticatedWithClientCredentials() {
@@ -124,13 +146,10 @@ func (t *Tenant) RegenerateAccessToken(ctx context.Context) error {
 		}
 
 		t.AccessToken = tokenResponse.AccessToken
-		t.ExpiresAt = time.Now().Add(
-			time.Duration(tokenResponse.ExpiresIn) * time.Second,
-		)
+		t.ExpiresAt = time.Now().Add(time.Duration(tokenResponse.ExpiresIn) * time.Second)
 	}
 
-	err := keyring.StoreAccessToken(t.Domain, t.AccessToken)
-	if err != nil {
+	if err := keyring.StoreAccessToken(t.Domain, t.AccessToken); err != nil {
 		t.AccessToken = ""
 	}
 

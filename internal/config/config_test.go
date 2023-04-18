@@ -789,7 +789,7 @@ func TestConfig_IsLoggedInWithTenant(t *testing.T) {
 	})
 }
 
-func TestConfig_VerifyAuthentication(t *testing.T) {
+func TestConfig_Validate(t *testing.T) {
 	t.Run("it successfully verifies that we are authenticated", func(t *testing.T) {
 		tempFile := createTempConfigFile(t, []byte(`{
 			"install_id": "3998b053-dd7f-4bfe-bb10-c4f3a96a0180",
@@ -806,7 +806,7 @@ func TestConfig_VerifyAuthentication(t *testing.T) {
 		}`))
 
 		config := &Config{path: tempFile}
-		err := config.VerifyAuthentication()
+		err := config.Validate()
 		assert.NoError(t, err)
 	})
 
@@ -818,7 +818,7 @@ func TestConfig_VerifyAuthentication(t *testing.T) {
 		}`))
 
 		config := &Config{path: tempFile}
-		err := config.VerifyAuthentication()
+		err := config.Validate()
 		assert.EqualError(t, err, "Not logged in. Try `auth0 login`.")
 	})
 
@@ -838,7 +838,7 @@ func TestConfig_VerifyAuthentication(t *testing.T) {
 		}`))
 
 		config := &Config{path: tempFile}
-		err := config.VerifyAuthentication()
+		err := config.Validate()
 		assert.NoError(t, err)
 
 		expectedConfig := `{
@@ -861,7 +861,7 @@ func TestConfig_VerifyAuthentication(t *testing.T) {
 	t.Run("it throws an error if there's an issue with the config file", func(t *testing.T) {
 		config := &Config{path: "i-dont-exist.json"}
 
-		err := config.VerifyAuthentication()
+		err := config.Validate()
 		assert.EqualError(t, err, "config.json file is missing")
 	})
 }
