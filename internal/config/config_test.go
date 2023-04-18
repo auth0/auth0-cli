@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zalando/go-keyring"
 )
 
 func TestDefaultPath(t *testing.T) {
@@ -697,7 +698,7 @@ func TestConfig_SetDefaultAppIDForTenant(t *testing.T) {
 }
 
 func TestConfig_IsLoggedInWithTenant(t *testing.T) {
-	t.Run("it returns true when we are logged in", func(t *testing.T) {
+	t.Run("it returns true when there is a tenant in the config and its access token is valid", func(t *testing.T) {
 		tempFile := createTempConfigFile(t, []byte(`{
 			"install_id": "3998b053-dd7f-4bfe-bb10-c4f3a96a0180",
 			"default_tenant": "auth0-cli.eu.auth0.com",
@@ -716,12 +717,40 @@ func TestConfig_IsLoggedInWithTenant(t *testing.T) {
 		assert.True(t, config.IsLoggedInWithTenant("auth0-cli.eu.auth0.com"))
 	})
 
-	t.Run("it returns false when we are not logged in", func(t *testing.T) {
+	t.Run("it returns true when there is a tenant in the config and its access token taken from the keyring is valid", func(t *testing.T) {
+		tempFile := createTempConfigFile(t, []byte(`{
+			"install_id": "3998b053-dd7f-4bfe-bb10-c4f3a96a0180",
+			"default_tenant": "auth0-cli.eu.auth0.com",
+			"tenants": {
+				"auth0-cli.eu.auth0.com": {
+					"name": "auth0-cli",
+					"domain": "auth0-cli.eu.auth0.com",
+					"expires_at": "2023-04-18T11:18:07.998809Z",
+					"client_id": "secret"
+				}
+			}
+		}`))
+
+		keyring.MockInit()
+		const secretAccessToken = "Auth0 CLI Access Token"
+		const testTenantName = "auth0-cli.eu.auth0.com"
+		err := keyring.Set(fmt.Sprintf("%s %d", secretAccessToken, 0), testTenantName, "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.")
+		assert.NoError(t, err)
+		err = keyring.Set(fmt.Sprintf("%s %d", secretAccessToken, 1), testTenantName, "eyJpc3MiOiJodHRwczovL2F1dGgwLmF1dGgwLmNvbS8iLCJpYXQiOjE2ODExNDcwNjAsImV4cCI6OTY4MTgzMzQ2MH0.")
+		assert.NoError(t, err)
+		err = keyring.Set(fmt.Sprintf("%s %d", secretAccessToken, 2), testTenantName, "DsEpQkL0MIWcGJOIfEY8vr3MVS_E0GYsachNLQwBu5Q")
+		assert.NoError(t, err)
+
+		config := &Config{path: tempFile}
+		assert.True(t, config.IsLoggedInWithTenant("auth0-cli.eu.auth0.com"))
+	})
+
+	t.Run("it returns false when the config file doesn't exist", func(t *testing.T) {
 		config := &Config{path: "i-dont-exist.json"}
 		assert.False(t, config.IsLoggedInWithTenant("auth0-cli.eu.auth0.com"))
 	})
 
-	t.Run("it returns false when we are logged in but the token is expired", func(t *testing.T) {
+	t.Run("it returns false when there is a tenant in the config and its access token is expired", func(t *testing.T) {
 		tempFile := createTempConfigFile(t, []byte(`{
 			"install_id": "3998b053-dd7f-4bfe-bb10-c4f3a96a0180",
 			"default_tenant": "auth0-cli.eu.auth0.com",
@@ -740,7 +769,7 @@ func TestConfig_IsLoggedInWithTenant(t *testing.T) {
 		assert.False(t, config.IsLoggedInWithTenant("auth0-cli.eu.auth0.com"))
 	})
 
-	t.Run("it returns false when we are logged in but the token is malformed", func(t *testing.T) {
+	t.Run("it returns false when there is a tenant in the config and its access token is malformed", func(t *testing.T) {
 		tempFile := createTempConfigFile(t, []byte(`{
 			"install_id": "3998b053-dd7f-4bfe-bb10-c4f3a96a0180",
 			"default_tenant": "auth0-cli.eu.auth0.com",
