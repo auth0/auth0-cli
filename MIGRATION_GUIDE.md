@@ -13,7 +13,7 @@ thoroughly and prepare your potential automated workflows before upgrading to th
 - [JSON Output Flag](#json-output-flag)
 - [Reveal Client Secrets Flag](#reveal-client-secrets-flag)
 - [Config Command Removal](#config-command-removal)
-- [Users Import Command](#users-import-command)
+- [Users Commands](#users-commands)
 
 #### Commands Reorganization
 

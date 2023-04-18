@@ -84,54 +84,43 @@ func buildRootCmd(cli *cli) *cobra.Command {
 			ansi.Initialize(cli.noColor)
 			prepareInteractivity(cmd)
 
-			// If the user is trying to login, no need to go
-			// through setup.
-			if cmd.Use == "login" && cmd.Parent().Use == "auth0" {
+			if !commandRequiresAuthentication(cmd.CommandPath()) {
 				return nil
 			}
 
-			// We're tracking the login command in its Run method
-			// so we'll only add this defer if the command is not login
+			// We're tracking the login command in its Run method, so
+			// we'll only add this defer if the command is not login.
 			defer func() {
-				if cli.tracker != nil && cli.isLoggedIn() {
+				if cli.tracker != nil && cmd.Name() != "login" && cli.isLoggedIn() {
 					cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
 				}
 			}()
 
-			// If the user is trying to logout, session information
-			// isn't important as well.
-			if cmd.Use == "logout" && cmd.Parent().Use == "auth0" {
-				return nil
-			}
-
-			// Selecting tenants shouldn't really trigger a login.
-			if cmd.Parent().Use == "tenants" && (cmd.Use == "use" || cmd.Use == "add") {
-				return nil
-			}
-
-			// Getting the CLI completion script shouldn't trigger a login.
-			if cmd.Use == "completion" && cmd.Parent().Use == "auth0" {
-				return nil
-			}
-
-			// Getting help shouldn't trigger a login.
-			if cmd.CalledAs() == "help" && cmd.Parent().Use == "auth0" {
-				return nil
-			}
-
-			// config init shouldn't trigger a login.
-			if cmd.CalledAs() == "init" && cmd.Parent().Use == "config" {
-				return nil
-			}
-
-			// Initialize everything once. Later callers can then
-			// freely assume that config is fully primed and ready
-			// to go.
+			// Initialize everything once.
 			return cli.setup(cmd.Context())
 		},
 	}
 
 	return rootCmd
+}
+
+func commandRequiresAuthentication(invokedCommandName string) bool {
+	commandsWithNoAuthRequired := []string{
+		"auth0 completion",
+		"auth0 help",
+		"auth0 login",
+		"auth0 logout",
+		"auth0 tenants use",
+		"auth0 tenants list",
+	}
+
+	for _, cmd := range commandsWithNoAuthRequired {
+		if cmd == invokedCommandName {
+			return false
+		}
+	}
+
+	return true
 }
 
 func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
