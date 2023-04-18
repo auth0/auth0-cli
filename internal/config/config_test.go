@@ -756,7 +756,7 @@ func TestConfig_IsLoggedInWithTenant(t *testing.T) {
 		}`))
 
 		config := &Config{path: tempFile}
-		assert.False(t, config.IsLoggedInWithTenant(""))
+		assert.False(t, config.IsLoggedInWithTenant("auth0-cli.eu.auth0.com"))
 	})
 }
 
