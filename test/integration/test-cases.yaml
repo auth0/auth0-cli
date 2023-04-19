@@ -6,9 +6,6 @@ tests:
   auth0 tenants list:
     exit-code: 0
 
-  auth0 rules list:
-    exit-code: 0
-
   auth0 completion bash:
     exit-code: 0
 
@@ -19,80 +16,6 @@ tests:
     exit-code: 0
 
   auth0 completion powershell:
-    exit-code: 0
-
-  # Test 'rules create'
-  rules create and check data:
-    command: cat ./test/integration/fixtures/create-rule.json | jq '.[0]' | auth0 rules create --json
-    stdout:
-      json:
-        name: integration-test-rule-new1
-        enabled: "true"
-        order: "1"
-        script: "function(user, context, cb) {\n  cb(null, user, context);\n}\n"
-    exit-code: 0
-
-  rules create and check output:
-    command: cat ./test/integration/fixtures/create-rule.json | jq '.[1]' | auth0 rules create
-    stdout:
-      contains:
-        - NAME     integration-test-rule-new2
-        - ENABLED  ✗
-        - ORDER    2
-        - SCRIPT   function(user, context, cb) {
-    exit-code: 0
-
-  rules list all with data:
-    command: auth0 rules list
-    exit-code: 0
-    stdout:
-      contains:
-        - ID
-        - NAME
-        - ENABLED
-        - ORDER
-
-  rules show json:
-    command: auth0 rules show $(./test/integration/scripts/get-rule-id.sh) --json
-    stdout:
-      json:
-        name: integration-test-rule-newRule
-        enabled: "true"
-        order: "3"
-    exit-code: 0
-
-  rules show:
-    command: auth0 rules show $(./test/integration/scripts/get-rule-id.sh)
-    stdout:
-      contains:
-        - NAME     integration-test-rule-newRule
-        - ENABLED  ✓
-        - ORDER    3
-    exit-code: 0
-
-  # Test 'rules update'
-  rules update:
-    command: cat ./test/integration/fixtures/update-rule.json | auth0 rules update --json
-    stdout:
-      json:
-        name: integration-test-rule-betterName
-        enabled: "false"
-    exit-code: 0
-
-  # Test 'rules enable'
-  rules enable:
-    command: auth0 rules enable $(./test/integration/scripts/get-rule-id.sh) --json
-    stdout:
-      json:
-        enabled: "true"
-    exit-code: 0
-
-  # Test 'rules disable'
-  rules disable:
-    command: auth0 rules disable $(./test/integration/scripts/get-rule-id.sh) --json
-    stdout:
-      json:
-        enabled: "false"
     exit-code: 0
 
   attack protection breached password detection show:

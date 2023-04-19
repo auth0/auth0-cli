@@ -1,5 +1,5 @@
 {
-  "id": "rul_LBnc1o7UxvuiEmkt",
+  "id": "rul_JPndgV9ZrYFegvgW",
   "name": "integration-test-rule-betterName",
   "script": "function(user, context, cb) {\n  cb(null, user, context);\n}\n",
   "order": 3,
