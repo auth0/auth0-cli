@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
+	"github.com/auth0/auth0-cli/internal/keyring"
 )
 
 func logoutCmd(cli *cli) *cobra.Command {
@@ -21,8 +23,12 @@ func logoutCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := cli.removeTenant(selectedTenant); err != nil {
+			if err := cli.Config.RemoveTenant(selectedTenant); err != nil {
 				return fmt.Errorf("failed to log out from the tenant %s: %w", selectedTenant, err)
+			}
+
+			if err := keyring.DeleteSecretsForTenant(selectedTenant); err != nil {
+				return fmt.Errorf("failed to delete tenant secrets: %w", err)
 			}
 
 			cli.renderer.Infof("Successfully logged out from tenant: %s", selectedTenant)
