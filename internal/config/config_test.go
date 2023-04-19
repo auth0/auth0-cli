@@ -523,13 +523,6 @@ func TestConfig_ListAllTenants(t *testing.T) {
 						"access_token": "eyfSaswe",
 						"expires_at": "2023-04-18T11:18:07.998809Z",
 						"client_id": "secret"
-					},
-					"auth0-mega-cli.eu.auth0.com": {
-						"name": "auth0-mega-cli",
-						"domain": "auth0-mega-cli.eu.auth0.com",
-						"access_token": "eyfSaswe",
-						"expires_at": "2023-04-18T11:18:07.998809Z",
-						"client_id": "secret"
 					}
 				}
 			}`))
@@ -542,20 +535,13 @@ func TestConfig_ListAllTenants(t *testing.T) {
 				ExpiresAt:   time.Date(2023, time.April, 18, 11, 18, 7, 998809000, time.UTC),
 				ClientID:    "secret",
 			},
-			{
-				Name:        "auth0-mega-cli",
-				Domain:      "auth0-mega-cli.eu.auth0.com",
-				AccessToken: "eyfSaswe",
-				ExpiresAt:   time.Date(2023, time.April, 18, 11, 18, 7, 998809000, time.UTC),
-				ClientID:    "secret",
-			},
 		}
 
 		config := &Config{path: tempFile}
 		actualTenants, err := config.ListAllTenants()
 
 		assert.NoError(t, err)
-		assert.Len(t, actualTenants, 2)
+		assert.Len(t, actualTenants, 1)
 		assert.Equal(t, expectedTenants, actualTenants)
 	})
 
