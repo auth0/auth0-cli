@@ -113,6 +113,7 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 		tenant.Domain,
 		management.WithStaticToken(tenant.GetAccessToken()),
 		management.WithUserAgent(userAgent),
+		management.WithAuth0ClientEnvEntry("Auth0-CLI", strings.TrimPrefix(buildinfo.Version, "v")),
 	)
 	if err != nil {
 		return err
