@@ -523,7 +523,7 @@ func openUserCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			openManageURL(cli, cli.config.DefaultTenant, formatUserDetailsPath(url.PathEscape(inputs.ID)))
+			openManageURL(cli, cli.Config.DefaultTenant, formatUserDetailsPath(url.PathEscape(inputs.ID)))
 			return nil
 		},
 	}

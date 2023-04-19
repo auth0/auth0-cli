@@ -132,14 +132,8 @@ func testLoginCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			tenant, err := cli.getTenant()
-			if err != nil {
-				return err
-			}
-
 			tokenResponse, err := runLoginFlow(
 				cli,
-				tenant,
 				client,
 				inputs.ConnectionName,
 				inputs.Audience,
@@ -153,7 +147,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 
 			var userInfo *authutil.UserInfo
 			if err := ansi.Spinner("Fetching user metadata", func() (err error) {
-				userInfo, err = authutil.FetchUserInfo(http.DefaultClient, tenant.Domain, tokenResponse.AccessToken)
+				userInfo, err = authutil.FetchUserInfo(http.DefaultClient, cli.tenant, tokenResponse.AccessToken)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to fetch user info: %w", err)
@@ -201,20 +195,15 @@ func testTokenCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			tenant, err := cli.getTenant()
-			if err != nil {
-				return err
-			}
-
 			appType := client.GetAppType()
 
-			cli.renderer.Infof("Domain    : " + ansi.Blue(tenant.Domain))
+			cli.renderer.Infof("Domain    : " + ansi.Blue(cli.tenant))
 			cli.renderer.Infof("Client ID : " + ansi.Bold(client.GetClientID()))
 			cli.renderer.Infof("Type      : " + display.ApplyColorToFriendlyAppType(display.FriendlyAppType(appType)))
 			cli.renderer.Newline()
 
 			if appType == appTypeNonInteractive {
-				tokenResponse, err := runClientCredentialsFlow(cli, client, inputs.Audience, tenant.Domain)
+				tokenResponse, err := runClientCredentialsFlow(cli, client, inputs.Audience, cli.tenant)
 				if err != nil {
 					return fmt.Errorf(
 						"failed to log in with client credentials for client with ID %q: %w",
@@ -234,7 +223,6 @@ func testTokenCmd(cli *cli) *cobra.Command {
 
 			tokenResponse, err := runLoginFlow(
 				cli,
-				tenant,
 				client,
 				"", // Specifying a connection is only supported for the test login command.
 				inputs.Audience,
@@ -317,11 +305,6 @@ func (c *cli) customDomainPickerOptions() (pickerOptions, error) {
 		return nil, err
 	}
 
-	tenant, err := c.getTenant()
-	if err != nil {
-		return nil, err
-	}
-
 	for _, d := range domains {
 		if d.GetStatus() != "ready" {
 			continue
@@ -334,7 +317,7 @@ func (c *cli) customDomainPickerOptions() (pickerOptions, error) {
 		return nil, errNoCustomDomains
 	}
 
-	opts = append(opts, pickerOption{value: "", label: fmt.Sprintf("none (use %s)", tenant.Domain)})
+	opts = append(opts, pickerOption{value: "", label: fmt.Sprintf("none (use %s)", c.tenant)})
 
 	return opts, nil
 }

@@ -32,6 +32,9 @@ func Execute() {
 		tracker:  analytics.NewTracker(),
 	}
 
+	// Prevent sorting of commands.
+	cobra.EnableCommandSorting = false
+
 	rootCmd := buildRootCmd(cli)
 	rootCmd.SetUsageTemplate(namespaceUsageTemplate())
 
@@ -91,13 +94,19 @@ func buildRootCmd(cli *cli) *cobra.Command {
 			// We're tracking the login command in its Run method, so
 			// we'll only add this defer if the command is not login.
 			defer func() {
-				if cli.tracker != nil && cmd.Name() != "login" && cli.isLoggedIn() {
-					cli.tracker.TrackCommandRun(cmd, cli.config.InstallID)
+				if cli.tracker != nil &&
+					cmd.CommandPath() != "auth0 login" &&
+					cli.Config.IsLoggedInWithTenant(cli.tenant) {
+					cli.tracker.TrackCommandRun(cmd, cli.Config.InstallID)
 				}
 			}()
 
-			// Initialize everything once.
-			return cli.setup(cmd.Context())
+			if err := cli.setupWithAuthentication(cmd.Context()); err != nil {
+				return err
+			}
+
+			cli.configureRenderer()
+			return nil
 		},
 	}
 
@@ -125,7 +134,7 @@ func commandRequiresAuthentication(invokedCommandName string) bool {
 
 func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.PersistentFlags().StringVar(&cli.tenant,
-		"tenant", cli.config.DefaultTenant, "Specific tenant to use.")
+		"tenant", cli.Config.DefaultTenant, "Specific tenant to use.")
 
 	rootCmd.PersistentFlags().BoolVar(&cli.debug,
 		"debug", false, "Enable debug mode.")
