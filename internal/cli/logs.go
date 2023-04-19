@@ -9,6 +9,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Pagination max out at 1000 entries in total
+// https://auth0.com/docs/logs/retrieve-log-events-using-mgmt-api#limitations
+const logsPerPageLimit = 1000
+
 var (
 	logsFilter = Flag{
 		Name:      "Filter",
@@ -63,7 +67,7 @@ func listLogsCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			list, err := getLatestLogs(cli, inputs.Num, inputs.Filter)
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred while getting logs: %v", err)
+				return fmt.Errorf("failed to get logs: %w", err)
 			}
 
 			hasFilter := inputs.Filter != ""
@@ -100,28 +104,26 @@ func tailLogsCmd(cli *cli) *cobra.Command {
   auth0 logs tail --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
   auth0 logs tail -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			lastLogID := ""
 			list, err := getLatestLogs(cli, inputs.Num, inputs.Filter)
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred while getting logs: %v", err)
+				return fmt.Errorf("failed to get logs: %w", err)
 			}
 
-			// TODO(cyx): This is a hack for now to make the
-			// streaming work faster.
-			//
-			// Create a `set` to detect duplicates clientside.
-			set := make(map[string]struct{})
-			list = dedupeLogs(list, set)
-
-			if len(list) > 0 {
-				lastLogID = list[len(list)-1].GetLogID()
+			if len(list) == 0 {
+				cli.renderer.EmptyState("logs")
+				cli.renderer.Infof("To generate logs, run a test command like 'auth0 test login' or 'auth0 test token'")
+				return nil
 			}
 
 			logsCh := make(chan []*management.Log)
 
+			lastLogID := list[len(list)-1].GetLogID()
+
+			// Create a `set` to detect duplicates clientside.
+			set := make(map[string]struct{})
+			list = dedupeLogs(list, set)
+
 			go func() {
-				// This is pretty important and allows
-				// us to close / terminate the command.
 				defer close(logsCh)
 
 				for {
@@ -138,7 +140,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 
 					list, err = cli.api.Log.List(queryParams...)
 					if err != nil {
-						cli.renderer.Errorf("An unexpected error occurred while getting logs: %v", err)
+						cli.renderer.Errorf("Failed to get latest logs: %v", err)
 						return
 					}
 
@@ -148,7 +150,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 					}
 
 					if len(list) < 90 {
-						// Not a lot is happening, sleep on it
+						// Not a lot is happening, sleep on it.
 						time.Sleep(1 * time.Second)
 					}
 				}
@@ -168,11 +170,8 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 func getLatestLogs(cli *cli, n int, filter string) ([]*management.Log, error) {
 	page := 0
 	perPage := n
-
-	if perPage > 1000 {
-		// Pagination max out at 1000 entries in total
-		// https://auth0.com/docs/logs/retrieve-log-events-using-mgmt-api#limitations
-		perPage = 1000
+	if perPage > logsPerPageLimit {
+		perPage = logsPerPageLimit
 	}
 
 	queryParams := []management.RequestOption{
