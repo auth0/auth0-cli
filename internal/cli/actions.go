@@ -468,7 +468,7 @@ func openActionCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			openManageURL(cli, cli.config.DefaultTenant, formatActionDetailsPath(url.PathEscape(inputs.ID)))
+			openManageURL(cli, cli.Config.DefaultTenant, formatActionDetailsPath(url.PathEscape(inputs.ID)))
 			return nil
 		},
 	}

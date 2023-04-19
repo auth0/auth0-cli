@@ -39,7 +39,7 @@ func WrappedAliases(cmd *cobra.Command) string {
 }
 
 func getLogin(cli *cli) string {
-	if !cli.isLoggedIn() {
+	if !cli.Config.IsLoggedInWithTenant(cli.tenant) {
 		return ansi.Italic(`
 Before using the CLI, you'll need to login:
 

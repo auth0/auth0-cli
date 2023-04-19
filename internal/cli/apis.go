@@ -480,7 +480,7 @@ func openAPICmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			openManageURL(cli, cli.config.DefaultTenant, formatAPISettingsPath(inputs.ID))
+			openManageURL(cli, cli.Config.DefaultTenant, formatAPISettingsPath(inputs.ID))
 			return nil
 		},
 	}
