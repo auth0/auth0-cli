@@ -71,7 +71,7 @@ func (r *Renderer) UserRoleList(roles []*management.Role) {
 			r.JSONResult([]interface{}{})
 			return
 		}
-		r.Output("No roles assigned to user.\n\n")
+		fmt.Fprintf(r.MessageWriter, "No %s.\n\n", resource)
 		r.Infof("Use 'auth0 users roles assign' to assign roles to a user.")
 		return
 	}

@@ -1,0 +1,80 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  000 - auth0 roles list no results:
+    command: auth0 roles list
+    exit-code: 0
+    stderr:
+      contains:
+        - "No roles available."
+        - "Use 'auth0 roles create' to add one"
+
+  001 - auth0 roles list no results (json):
+    command: auth0 roles list --json
+    exit-code: 0
+    stdout:
+      exactly: "[]"
+
+  002 - roles create and check data:
+    command: auth0 roles create --name integration-test-role-new1 --description testRole --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: integration-test-role-new1
+        description: testRole
+
+  003 - roles create and check output:
+    command: auth0 roles create --name integration-test-role-new2 --description testRole2 --no-input
+    stdout:
+      contains:
+        - NAME         integration-test-role-new2
+        - DESCRIPTION  testRole2
+    exit-code: 0
+
+  004 - roles list all with data:
+    command: auth0 roles list
+    exit-code: 0
+    stdout:
+      contains:
+        - ID
+        - NAME
+        - DESCRIPTION
+
+  005 - roles list all with invalid number:
+    command: auth0 roles list --number 1001
+    exit-code: 1
+    stderr:
+      contains:
+        - number flag invalid, please pass a number between 1 and 1000
+
+  006 - roles show json:
+    command: auth0 roles show $(./test/integration/scripts/get-role-id.sh) --json
+    stdout:
+      json:
+        name: integration-test-role-newRole
+        description: integration-test-role
+    exit-code: 0
+
+  007 - roles show:
+    command: auth0 roles show $(./test/integration/scripts/get-role-id.sh)
+    stdout:
+      contains:
+        - NAME         integration-test-role-newRole
+        - DESCRIPTION  integration-test-role
+    exit-code: 0
+
+  008 - roles update name:
+    command: auth0 roles update $(./test/integration/scripts/get-role-id.sh) --name integration-test-role-betterName --json
+    stdout:
+      json:
+        name: integration-test-role-betterName
+    exit-code: 0
+
+  009 - roles update description:
+    command: auth0 roles update $(./test/integration/scripts/get-role-id.sh) --description betterDescription --json
+    stdout:
+      json:
+        description: betterDescription
+    exit-code: 0
