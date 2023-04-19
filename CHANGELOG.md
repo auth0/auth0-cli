@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.0.1](https://github.com/auth0/auth0-cli/tree/v1.0.1) (Apr 20, 2023)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v01.0.0...v1.0.1)
+
+### Fixed
+
+- "Not logged in. Try 'auth0 login'." warnings when installing from package manager [#741]
+- Unmarshaling log scopes error with `auth0 logs` commands [#745]
+- Returning empty array when no results with `--json` flag [#747]
+- Error occurring no tenant logs when running `auth0 logs` commands [#744]
+
 ## [v1.0.0](https://github.com/auth0/auth0-cli/tree/v1.0.0) (Apr 14, 2023)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v0.13.1...v1.0.0)
@@ -170,6 +181,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 [unreleased]: https://github.com/auth0/auth0-cli/compare/v1.0.0...HEAD
+[#747]: https://github.com/auth0/auth0-cli/issues/747
+[#745]: https://github.com/auth0/auth0-cli/issues/745
+[#744]: https://github.com/auth0/auth0-cli/issues/744
+[#741]: https://github.com/auth0/auth0-cli/issues/741
 [#733]: https://github.com/auth0/auth0-cli/issues/733
 [#738]: https://github.com/auth0/auth0-cli/issues/738
 [#735]: https://github.com/auth0/auth0-cli/issues/735
