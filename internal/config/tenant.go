@@ -102,6 +102,8 @@ func (t *Tenant) GetAccessToken() string {
 	return t.AccessToken
 }
 
+// CheckAuthenticationStatus checks to see if the tenant in the config
+// has all the required scopes and that the access token is not expired.
 func (t *Tenant) CheckAuthenticationStatus() error {
 	if !t.HasAllRequiredScopes() && t.IsAuthenticatedWithDeviceCodeFlow() {
 		return ErrTokenMissingRequiredScopes
