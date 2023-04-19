@@ -35,7 +35,7 @@ func listTenantCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 tenants list
   auth0 tenants ls`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			tenants, err := cli.listTenants()
+			tenants, err := cli.Config.ListAllTenants()
 			if err != nil {
 				return fmt.Errorf("failed to load tenants: %w", err)
 			}
@@ -68,8 +68,7 @@ func useTenantCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			cli.config.DefaultTenant = selectedTenant
-			if err := cli.persistConfig(); err != nil {
+			if err := cli.Config.SetDefaultTenant(selectedTenant); err != nil {
 				return fmt.Errorf("failed to set the default tenant: %w", err)
 			}
 
@@ -105,26 +104,22 @@ func openTenantCmd(cli *cli) *cobra.Command {
 }
 
 func selectValidTenantFromConfig(cli *cli, cmd *cobra.Command, args []string) (string, error) {
+	if len(args) > 0 {
+		tenant, err := cli.Config.GetTenant(args[0])
+		if err != nil {
+			return "", err
+		}
+
+		return tenant.Domain, nil
+	}
+
 	var selectedTenant string
-
-	if len(args) == 0 {
-		err := tenantDomain.Pick(cmd, &selectedTenant, cli.tenantPickerOptions)
-		return selectedTenant, err
-	}
-
-	selectedTenant = args[0]
-	if _, ok := cli.config.Tenants[selectedTenant]; !ok {
-		return "", fmt.Errorf(
-			"failed to find tenant %s.\n\nRun 'auth0 login' to configure a new tenant.",
-			selectedTenant,
-		)
-	}
-
-	return selectedTenant, nil
+	err := tenantDomain.Pick(cmd, &selectedTenant, cli.tenantPickerOptions)
+	return selectedTenant, err
 }
 
 func (c *cli) tenantPickerOptions() (pickerOptions, error) {
-	tenants, err := c.listTenants()
+	tenants, err := c.Config.ListAllTenants()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load tenants: %w", err)
 	}
@@ -133,7 +128,7 @@ func (c *cli) tenantPickerOptions() (pickerOptions, error) {
 	for _, tenant := range tenants {
 		opt := pickerOption{value: tenant.Domain, label: tenant.Domain}
 
-		if tenant.Domain == c.config.DefaultTenant {
+		if tenant.Domain == c.Config.DefaultTenant {
 			priorityOpts = append(priorityOpts, opt)
 		} else {
 			opts = append(opts, opt)
@@ -141,7 +136,7 @@ func (c *cli) tenantPickerOptions() (pickerOptions, error) {
 	}
 
 	if len(opts)+len(priorityOpts) == 0 {
-		return nil, fmt.Errorf("there are currently no tenants to pick from")
+		return nil, fmt.Errorf("There are no tenants to pick from. Add tenants by running `auth0 login`.")
 	}
 
 	return append(priorityOpts, opts...), nil

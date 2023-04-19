@@ -179,7 +179,7 @@ func useAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			if err := cli.setDefaultAppID(inputs.ID); err != nil {
+			if err := cli.Config.SetDefaultAppIDForTenant(cli.tenant, inputs.ID); err != nil {
 				return err
 			}
 
@@ -479,7 +479,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("Unable to create application: %v", err)
 			}
 
-			if err := cli.setDefaultAppID(a.GetClientID()); err != nil {
+			if err := cli.Config.SetDefaultAppIDForTenant(cli.tenant, a.GetClientID()); err != nil {
 				return err
 			}
 
@@ -737,7 +737,7 @@ func openAppCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			openManageURL(cli, cli.config.DefaultTenant, formatAppSettingsPath(inputs.ID))
+			openManageURL(cli, cli.Config.DefaultTenant, formatAppSettingsPath(inputs.ID))
 			return nil
 		},
 	}
@@ -879,7 +879,7 @@ func (c *cli) appPickerOptions(requestOpts ...management.RequestOption) pickerOp
 			return nil, err
 		}
 
-		tenant, err := c.getTenant()
+		tenant, err := c.Config.GetTenant(c.tenant)
 		if err != nil {
 			return nil, err
 		}
