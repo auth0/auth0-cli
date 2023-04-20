@@ -1,0 +1,88 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  001 - rules list no results:
+    command: auth0 rules list
+    exit-code: 0
+    stderr:
+      contains:
+        - No rules available.
+        - Use 'auth0 rules create' to add one
+
+  002 - rules list no results (json):
+    command: auth0 rules list --json
+    exit-code: 0
+    stdout:
+      exactly: "[]"
+
+  003 - rules create and check data:
+    command: cat ./test/integration/fixtures/create-rule.json | jq '.[0]' | auth0 rules create --json
+    stdout:
+      json:
+        name: integration-test-rule-new1
+        enabled: "true"
+        order: "1"
+        script: "function(user, context, cb) {\n  cb(null, user, context);\n}\n"
+    exit-code: 0
+
+  004 - rules create and check output:
+    command: cat ./test/integration/fixtures/create-rule.json | jq '.[1]' | auth0 rules create
+    stdout:
+      contains:
+        - NAME     integration-test-rule-new2
+        - ENABLED  ✗
+        - ORDER    2
+        - SCRIPT   function(user, context, cb) {
+    exit-code: 0
+
+  005 - rules list all with data:
+    command: auth0 rules list
+    exit-code: 0
+    stdout:
+      contains:
+        - ID
+        - NAME
+        - ENABLED
+        - ORDER
+
+  006 - rules show json:
+    command: auth0 rules show $(./test/integration/scripts/get-rule-id.sh) --json
+    stdout:
+      json:
+        name: integration-test-rule-newRule
+        enabled: "false"
+        order: "3"
+    exit-code: 0
+
+  007 - rules show:
+    command: auth0 rules show $(./test/integration/scripts/get-rule-id.sh)
+    stdout:
+      contains:
+        - NAME     integration-test-rule-newRule
+        - ENABLED  ✗
+        - ORDER    3
+    exit-code: 0
+
+  008 - rules update:
+    command: cat ./test/integration/fixtures/update-rule.json | auth0 rules update --json
+    stdout:
+      json:
+        name: integration-test-rule-betterName
+        enabled: "false"
+    exit-code: 0
+
+  009 - rules enable:
+    command: auth0 rules enable $(./test/integration/scripts/get-rule-id.sh) --json
+    stdout:
+      json:
+        enabled: "true"
+    exit-code: 0
+
+  010 - rules disable:
+    command: auth0 rules disable $(./test/integration/scripts/get-rule-id.sh) --json
+    stdout:
+      json:
+        enabled: "false"
+    exit-code: 0

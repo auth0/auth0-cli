@@ -31,9 +31,14 @@ func (v *membersView) Object() interface{} {
 }
 
 func (r *Renderer) MembersList(members []management.OrganizationMember) {
-	resource := "members"
+	resource := "organization members"
 
 	r.Heading(resource)
+
+	if len(members) == 0 {
+		r.EmptyState(resource, "")
+		return
+	}
 
 	var res []View
 	for _, m := range members {
