@@ -110,15 +110,12 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to get logs: %w", err)
 			}
 
-			if len(list) == 0 {
-				cli.renderer.EmptyState("logs")
-				cli.renderer.Infof("To generate logs, run a test command like 'auth0 test login' or 'auth0 test token'")
-				return nil
-			}
-
 			logsCh := make(chan []*management.Log)
 
-			lastLogID := list[len(list)-1].GetLogID()
+			var lastLogID string
+			if len(list) > 0 {
+				lastLogID = list[len(list)-1].GetLogID()
+			}
 
 			// Create a `set` to detect duplicates clientside.
 			set := make(map[string]struct{})
@@ -129,10 +126,13 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 
 				for {
 					queryParams := []management.RequestOption{
-						management.Query(fmt.Sprintf("log_id:[%s TO *]", lastLogID)),
 						management.Parameter("page", "0"),
 						management.Parameter("per_page", "100"),
 						management.Parameter("sort", "date:-1"),
+					}
+
+					if lastLogID != "" {
+						queryParams = append(queryParams, management.Query(fmt.Sprintf("log_id:[%s TO *]", lastLogID)))
 					}
 
 					if inputs.Filter != "" {

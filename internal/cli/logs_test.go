@@ -3,7 +3,6 @@ package cli
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"testing"
 	"time"
 
@@ -18,33 +17,6 @@ import (
 )
 
 func TestTailLogsCommand(t *testing.T) {
-	t.Run("it returns early with a message to generate logs when there are no logs", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		logsAPI := mock.NewMockLogAPI(ctrl)
-		logsAPI.EXPECT().
-			List(gomock.Any()).
-			Return([]*management.Log{}, nil)
-
-		stdout := &bytes.Buffer{}
-		cli := &cli{
-			renderer: &display.Renderer{
-				MessageWriter: stdout,
-				ResultWriter:  io.Discard,
-			},
-			api: &auth0.API{Log: logsAPI},
-		}
-
-		cmd := tailLogsCmd(cli)
-		cmd.SetArgs([]string{"--number", "90", "--filter", "user_id:123"})
-		err := cmd.Execute()
-
-		assert.NoError(t, err)
-		assert.Contains(t, stdout.String(), "No logs available.")
-		assert.Contains(t, stdout.String(), "To generate logs, run a test command like 'auth0 test login' or 'auth0 test token'")
-	})
-
 	t.Run("it returns an error when it fails to get the logs on the first request", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
