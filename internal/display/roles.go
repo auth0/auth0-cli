@@ -62,7 +62,7 @@ func (r *Renderer) UserRoleList(roles []*management.Role) {
 	r.Heading(fmt.Sprintf("%s (%d)", resource, len(roles)))
 
 	if len(roles) == 0 {
-		r.EmptyState(resource, "Use 'auth0 users roles assign' to assign roles to a user.")
+		r.EmptyState(resource, "Use 'auth0 users roles assign' to assign roles to a user")
 		return
 	}
 
