@@ -9,9 +9,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Pagination max out at 1000 entries in total
+// Besides the limitation of 100 log events per request to retrieve logs,
+// we may only paginate through up to 1000 search results.
 // https://auth0.com/docs/logs/retrieve-log-events-using-mgmt-api#limitations
-const logsPerPageLimit = 1000
+const logsPerPageLimit = 100
 
 var (
 	logsFilter = Flag{
