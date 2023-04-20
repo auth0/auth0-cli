@@ -35,7 +35,7 @@ func (r *Renderer) UserBlocksList(userBlocks []*management.UserBlock) {
 	r.Heading(resource)
 
 	if len(userBlocks) == 0 {
-		r.EmptyState(resource)
+		r.EmptyState(resource, "")
 		return
 	}
 

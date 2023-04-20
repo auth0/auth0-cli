@@ -21,8 +21,7 @@ func (r *Renderer) TenantList(data []string) {
 	r.Heading()
 
 	if len(data) == 0 {
-		r.EmptyState("tenants")
-		r.Infof("Use 'auth0 login' to add one")
+		r.EmptyState("tenants", "Use 'auth0 login' to add one")
 		return
 	}
 

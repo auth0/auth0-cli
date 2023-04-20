@@ -3,10 +3,21 @@ config:
   retries: 1
 
 tests:
-  001 - list domains:
+  001 - list domains with no results:
     command: auth0 domains list
     exit-code: 0
-  002 - create domain with minimal flags:
+    stderr:
+      contains:
+        - No custom domains available.
+        - Use 'auth0 domains create' to add one
+
+  002 - list domains with no results (json):
+    command: auth0 domains list --json
+    exit-code: 0
+    stdout:
+      exactly: "[]"
+
+  003 - create domain with minimal flags:
     command: auth0 domains create --domain "custom-domain.com" --no-input
     exit-code: 0
     stdout:
@@ -15,13 +26,15 @@ tests:
         - "DOMAIN                   custom-domain.com"
         - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        auth0_managed_certs"
-  003 - unsuccessfully create domain with same name:
+
+  004 - unsuccessfully create domain with same name:
     command: auth0 domains create --domain "custom-domain.com" --no-input
     exit-code: 1
     stderr:
       contains:
         - "An unexpected error occurred while attempting to create the custom domain 'custom-domain.com': 409 Conflict: The specified custom domain already exists"
-  004 - show domain:
+
+  005 - show domain:
     command: auth0 domains show $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
     exit-code: 0
     stdout:
@@ -30,7 +43,8 @@ tests:
         - "DOMAIN                   custom-domain.com"
         - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        auth0_managed_certs"
-  005 - update domain minimal flags:
+
+  006 - update domain minimal flags:
     command: auth0 domains update $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
     exit-code: 0
     stdout:
@@ -39,7 +53,8 @@ tests:
         - "DOMAIN                   custom-domain.com"
         - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        auth0_managed_certs"
-  006 - update domain maximal flags:
+
+  007 - update domain maximal flags:
     command: auth0 domains update $(./test/integration/scripts/get-custom-domain-id.sh) --policy recommended --no-input
     exit-code: 0
     stdout:
@@ -49,7 +64,8 @@ tests:
         - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        auth0_managed_certs"
         - "TLS POLICY               recommended"
-  007 - verify domain:
+
+  008 - verify domain:
     command: auth0 domains update $(./test/integration/scripts/get-custom-domain-id.sh) --policy recommended --no-input
     exit-code: 0
     stdout:
@@ -58,10 +74,12 @@ tests:
         - "DOMAIN                   custom-domain.com"
         - "PROVISIONING TYPE        auth0_managed_certs"
         - "TLS POLICY               recommended"
-  008 - delete domain:
+
+  009 - delete domain:
     command: auth0 domains delete $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
     exit-code: 0
-  009 - create domain with maximal flags:
+
+  010 - create domain with maximal flags:
     command: auth0 domains create --domain "custom-domain.com" --verification txt --type self --policy recommended --no-input
     exit-code: 0
     stdout:
@@ -73,3 +91,12 @@ tests:
         - "VERIFICATION METHOD      txt"
         - "TLS POLICY               recommended"
         - "CUSTOM CLIENT IP HEADER"
+
+  011 - list custom domains with results:
+    command: auth0 domains list
+    exit-code: 0
+    stdout:
+      contains:
+        - "ID                   DOMAIN             STATUS"
+        - "cd_"
+        - "custom-domain.com"
