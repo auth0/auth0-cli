@@ -48,8 +48,7 @@ func (r *Renderer) RulesList(rules []*management.Rule) {
 	r.Heading(resource)
 
 	if len(rules) == 0 {
-		r.EmptyState(resource)
-		r.Infof("Use 'auth0 rules create' to add one")
+		r.EmptyState(resource, "Use 'auth0 rules create' to add one")
 		return
 	}
 

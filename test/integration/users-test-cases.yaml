@@ -75,40 +75,55 @@ tests:
         connection: Username-Password-Authentication
     exit-code: 0
 
-  010 - users roles show:
+  010 - users roles show no results:
     command: auth0 users roles show $(./test/integration/scripts/get-user-id.sh)
     exit-code: 0
+    stderr:
+      contains:
+        - "No user roles available. Use 'auth0 users roles assign' to assign roles to a user"
 
-  011 - users roles show with invalid number:
+  011 - users roles show no results (json):
+    command: auth0 users roles show $(./test/integration/scripts/get-user-id.sh) --json
+    exit-code: 0
+    stdout:
+      exactly: "[]"
+
+  012 - users roles show with invalid number:
     command: auth0 users roles show $(./test/integration/scripts/get-user-id.sh) --number 1001
     exit-code: 1
     stderr:
       contains:
         - number flag invalid, please pass a number between 1 and 1000
 
-  012 - users roles add:
+  013 - users roles add:
     command: auth0 users roles add $(./test/integration/scripts/get-user-id.sh) -r $(./test/integration/scripts/get-role-id.sh)
     exit-code: 0
 
-  013 - users roles remove:
+  014 - users roles remove:
     command: auth0 users roles rm $(./test/integration/scripts/get-user-id.sh) -r $(./test/integration/scripts/get-role-id.sh)
     exit-code: 0
 
-  014 - users blocks list:
+  015 - users blocks list:
     command: auth0 users blocks list $(./test/integration/scripts/get-user-id.sh)
     exit-code: 0
     stderr:
       contains:
         - No user blocks available.
 
-  015 - open user dashboard page:
+  016 - users blocks list (json):
+    command: auth0 users blocks list $(./test/integration/scripts/get-user-id.sh) --json
+    exit-code: 0
+    stdout:
+      exactly: "[]"
+
+  017 - open user dashboard page:
     command: auth0 users open $(./test/integration/scripts/get-user-id.sh) --no-input
     exit-code: 0
     stderr:
       contains:
         - "Open the following URL in a browser: https://manage.auth0.com/dashboard/"
 
-  016 - users import:
+  018 - users import:
     command: auth0 users import -c "Username-Password-Authentication" --users "[]" --email-results=false --no-input
     exit-code: 0
     stderr:
@@ -118,7 +133,7 @@ tests:
         - "successfully started"
         - "to get the status of the job"
 
-  017 - users import with piped data:
+  019 - users import with piped data:
     command: echo "[]" | auth0 users import -c "Username-Password-Authentication" --email-results=false --no-input
     exit-code: 0
     stderr:
