@@ -46,10 +46,6 @@ func (r *Renderer) LogStreamList(logs []*management.LogStream) {
 	r.Heading(resource)
 
 	if len(logs) == 0 {
-		if r.Format == OutputFormatJSON {
-			r.JSONResult([]interface{}{})
-			return
-		}
 		r.EmptyState(resource, "Use 'auth0 logs streams create' to add one")
 		return
 	}
