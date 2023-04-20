@@ -80,7 +80,7 @@ tests:
     exit-code: 0
     stderr:
       contains:
-        - "No user roles available. Use 'auth0 users roles assign' to assign roles to a user."
+        - "No user roles available. Use 'auth0 users roles assign' to assign roles to a user"
 
   011 - users roles show no results (json):
     command: auth0 users roles show $(./test/integration/scripts/get-user-id.sh) --json
