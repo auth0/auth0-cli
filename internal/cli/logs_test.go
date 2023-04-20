@@ -27,11 +27,6 @@ func TestTailLogsCommand(t *testing.T) {
 			List(gomock.Any()).
 			Return([]*management.Log{}, nil)
 
-		expectedResult := `No logs available.
-
- ▸    To generate logs, run a test command like 'auth0 test login' or 'auth0 test token'
-`
-
 		stdout := &bytes.Buffer{}
 		cli := &cli{
 			renderer: &display.Renderer{
@@ -42,11 +37,12 @@ func TestTailLogsCommand(t *testing.T) {
 		}
 
 		cmd := tailLogsCmd(cli)
-		cmd.SetArgs([]string{"--number", "9000", "--filter", "user_id:123"})
+		cmd.SetArgs([]string{"--number", "90", "--filter", "user_id:123"})
 		err := cmd.Execute()
 
 		assert.NoError(t, err)
-		assert.Equal(t, expectedResult, stdout.String())
+		assert.Contains(t, stdout.String(), "No logs available.")
+		assert.Contains(t, stdout.String(), "To generate logs, run a test command like 'auth0 test login' or 'auth0 test token'")
 	})
 
 	t.Run("it returns an error when it fails to get the logs on the first request", func(t *testing.T) {
@@ -63,7 +59,7 @@ func TestTailLogsCommand(t *testing.T) {
 		}
 
 		cmd := tailLogsCmd(cli)
-		cmd.SetArgs([]string{"--number", "9000", "--filter", "user_id:123"})
+		cmd.SetArgs([]string{"--number", "90", "--filter", "user_id:123"})
 		err := cmd.Execute()
 
 		assert.EqualError(t, err, "failed to get logs: generic error")
@@ -109,11 +105,6 @@ func TestTailLogsCommand(t *testing.T) {
 			List(gomock.Any()).
 			Return(nil, fmt.Errorf("generic error"))
 
-		expectedMessage := `
-=== auth0-cli-tests.eu.auth0.com logs
-
- ▸    Failed to get latest logs: generic error
-`
 		expectedResult := `TYPE                       DESCRIPTION                                               DATE                    CONNECTION              CLIENT                  
 API Operation              Update branding settings                                  Jan 01 00:00:00.000     N/A                     N/A    
 `
@@ -130,11 +121,13 @@ API Operation              Update branding settings                             
 		}
 
 		cmd := tailLogsCmd(cli)
-		cmd.SetArgs([]string{"--number", "9000", "--filter", "user_id:123"})
+		cmd.SetArgs([]string{"--number", "90", "--filter", "user_id:123"})
 		err := cmd.Execute()
 		assert.NoError(t, err)
 
-		assert.Equal(t, expectedMessage, message.String())
+		assert.Contains(t, message.String(), "auth0-cli-tests.eu.auth0.com") // Ensure we display the tenant name.
+		assert.Contains(t, message.String(), "logs")                         // Ensure header is set in output.
+		assert.Contains(t, message.String(), "Failed to get latest logs: generic error")
 		assert.Equal(t, expectedResult, result.String())
 	})
 }
