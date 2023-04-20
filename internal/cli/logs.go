@@ -124,7 +124,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 			set := make(map[string]struct{})
 			list = dedupeLogs(list, set)
 
-			go func() {
+			go func(lastLogID string) {
 				defer close(logsCh)
 
 				for {
@@ -139,7 +139,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 						queryParams = append(queryParams, management.Query(inputs.Filter))
 					}
 
-					list, err = cli.api.Log.List(queryParams...)
+					list, err := cli.api.Log.List(queryParams...)
 					if err != nil {
 						cli.renderer.Errorf("Failed to get latest logs: %v", err)
 						return
@@ -150,12 +150,12 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 						lastLogID = list[len(list)-1].GetLogID()
 					}
 
-					if len(list) < 90 {
+					if len(list) < logsPerPageLimit {
 						// Not a lot is happening, sleep on it.
-						time.Sleep(1 * time.Second)
+						time.Sleep(time.Second)
 					}
 				}
-			}()
+			}(lastLogID)
 
 			cli.renderer.LogTail(list, logsCh, !cli.debug)
 			return nil
