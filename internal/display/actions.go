@@ -55,12 +55,7 @@ func (r *Renderer) ActionList(actions []*management.Action) {
 	r.Heading(resource)
 
 	if len(actions) == 0 {
-		if r.Format == OutputFormatJSON {
-			r.JSONResult([]interface{}{})
-			return
-		}
-		r.EmptyState(resource)
-		r.Infof("Use 'auth0 actions create' to add one")
+		r.EmptyState(resource, "Use 'auth0 actions create' to add one")
 		return
 	}
 

@@ -148,17 +148,16 @@ func (r *Renderer) LogList(logs []*management.Log, silent, hasFilter bool) {
 	r.Heading(resource)
 
 	if len(logs) == 0 {
-		if r.Format == OutputFormatJSON {
-			r.JSONResult([]interface{}{})
-			return
-		}
 		if hasFilter {
-			r.Output("No logs available matching filter criteria.\n\n")
+			if r.Format == OutputFormatJSON {
+				r.JSONResult([]interface{}{})
+				return
+			}
+			r.Warnf("No logs available matching filter criteria.\n")
 		} else {
-			r.EmptyState(resource)
+			r.EmptyState(resource, "To generate logs, run a test command like 'auth0 test login' or 'auth0 test token'")
 		}
 
-		r.Infof("To generate logs, run a test command like 'auth0 test login' or 'auth0 test token'")
 		return
 	}
 

@@ -35,11 +35,7 @@ func (r *Renderer) UserBlocksList(userBlocks []*management.UserBlock) {
 	r.Heading(resource)
 
 	if len(userBlocks) == 0 {
-		if r.Format == OutputFormatJSON {
-			r.JSONResult([]interface{}{})
-			return
-		}
-		r.EmptyState(resource)
+		r.EmptyState(resource, "")
 		return
 	}
 

@@ -74,12 +74,12 @@ func (r *Renderer) Heading(text ...string) {
 	fmt.Fprintf(r.MessageWriter, "\n%s %s\n", ansi.Faint("==="), heading)
 }
 
-func (r *Renderer) EmptyState(resource string) {
+func (r *Renderer) EmptyState(resource string, hint string) {
 	if r.Format == OutputFormatJSON {
 		r.JSONResult([]interface{}{})
 		return
 	}
-	fmt.Fprintf(r.MessageWriter, "No %s available.\n\n", resource)
+	r.Warnf("No %s available. %s\n", resource, hint)
 }
 
 func (r *Renderer) JSONResult(data interface{}) {

@@ -43,12 +43,7 @@ func (r *Renderer) RolePermissionList(perms []*management.Permission) {
 	r.Heading(resource)
 
 	if len(perms) == 0 {
-		if r.Format == OutputFormatJSON {
-			r.JSONResult([]interface{}{})
-			return
-		}
-		r.EmptyState(resource)
-		r.Infof("Use 'auth0 roles permissions add' to add one")
+		r.EmptyState(resource, "Use 'auth0 roles permissions add' to add one")
 		return
 	}
 

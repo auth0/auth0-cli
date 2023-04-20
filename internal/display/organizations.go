@@ -49,12 +49,7 @@ func (r *Renderer) OrganizationList(organizations []*management.Organization) {
 	r.Heading(resource)
 
 	if len(organizations) == 0 {
-		if r.Format == OutputFormatJSON {
-			r.JSONResult([]interface{}{})
-			return
-		}
-		r.EmptyState(resource)
-		r.Infof("Use 'auth0 orgs create' to add one")
+		r.EmptyState(resource, "Use 'auth0 orgs create' to add one")
 		return
 	}
 

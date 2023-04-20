@@ -50,8 +50,7 @@ func (r *Renderer) LogStreamList(logs []*management.LogStream) {
 			r.JSONResult([]interface{}{})
 			return
 		}
-		r.EmptyState(resource)
-		r.Infof("Use 'auth0 logs streams create' to add one")
+		r.EmptyState(resource, "Use 'auth0 logs streams create' to add one")
 		return
 	}
 
