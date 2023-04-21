@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unmarshaling log scopes error with `auth0 logs` commands [#745]
 - Returning empty array when no results with `--json` flag [#747]
 - Error occurring no tenant logs when running `auth0 logs` commands [#744]
+- Always showing the hint to log in even if we are logged in [#743]
 
 ## [v1.0.0](https://github.com/auth0/auth0-cli/tree/v1.0.0) (Apr 14, 2023)
 
@@ -181,6 +182,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 [unreleased]: https://github.com/auth0/auth0-cli/compare/v1.0.0...HEAD
+[#743]: https://github.com/auth0/auth0-cli/issues/743
 [#747]: https://github.com/auth0/auth0-cli/issues/747
 [#745]: https://github.com/auth0/auth0-cli/issues/745
 [#744]: https://github.com/auth0/auth0-cli/issues/744
