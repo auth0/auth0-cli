@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Example</title>
+</head>
+<body>
+<h1>WebSocket Example</h1>
+<div id="messages"></div>
+<form>
+    <input type="text" id="messageInput" />
+    <button type="submit">Send</button>
+</form>
+<script>
+    const messagesDiv = document.getElementById("messages");
+    const messageInput = document.getElementById("messageInput");
+
+    const ws = new WebSocket("ws://localhost:8000");
+
+    ws.onopen = () => {
+        console.log("WebSocket connected");
+    };
+
+    ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        messagesDiv.innerHTML += "<p>" + message.text + "</p>";
+    };
+
+    document.querySelector("form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const message = { text: messageInput.value };
+        ws.send(JSON.stringify(message));
+        messageInput.value = "";
+    });
+</script>
+</body>
+</html>

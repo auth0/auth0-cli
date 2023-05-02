@@ -37,6 +37,7 @@ require (
 	golang.org/x/term v0.12.0
 	golang.org/x/text v0.13.0
 	gopkg.in/yaml.v2 v2.4.0
+	nhooyr.io/websocket v1.8.7
 )
 
 require (
@@ -61,6 +62,7 @@ require (
 	github.com/gorilla/css v1.0.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/terraform-json v0.17.1 // indirect
+	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.16.0 // indirect
 	github.com/klauspost/pgzip v1.2.5 // indirect

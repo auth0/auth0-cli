@@ -68,6 +68,9 @@ func universalLoginCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(universalLoginTemplatesCmd(cli))
 	cmd.AddCommand(universalLoginPromptsTextCmd(cli))
 
+	// Hackathon command.
+	cmd.AddCommand(universalLoginCustomizeBranding(cli))
+
 	return cmd
 }
 
