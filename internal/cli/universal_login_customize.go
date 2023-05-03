@@ -3,15 +3,17 @@ package cli
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"time"
 
+	"github.com/auth0/go-auth0/management"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 	"nhooyr.io/websocket"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
 )
 
 func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
@@ -25,9 +27,13 @@ func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			if err := startWebSocketServer(ctx); err != nil {
-				return fmt.Errorf("server error: %w", err)
+			if err := ansi.Spinner("Waiting for changes", func() error {
+				return startWebSocketServer(ctx)
+			}); err != nil {
+				return err
 			}
+
+			cli.renderer.Infof("Branding Updated")
 
 			return nil
 		},
@@ -47,9 +53,11 @@ func startWebSocketServer(ctx context.Context) error {
 	defer listener.Close()
 
 	server := &http.Server{
-		Handler:      &webSocketHandler{},
-		ReadTimeout:  time.Second * 10,
-		WriteTimeout: time.Second * 10,
+		Handler: &webSocketHandler{
+			cancel: cancel,
+		},
+		ReadTimeout:  time.Minute * 10,
+		WriteTimeout: time.Minute * 10,
 	}
 
 	errChan := make(chan error, 1)
@@ -65,15 +73,21 @@ func startWebSocketServer(ctx context.Context) error {
 	case err := <-errChan:
 		return err
 	case <-ctx.Done():
-		return nil
+		return server.Close()
 	}
 }
 
-type message struct {
+type pageData struct {
 	Text string `json:"text"`
 }
 
+type receivedSaveMessage struct {
+	Templates management.BrandingUniversalLogin `json:"templates"`
+	Themes    management.BrandingTheme          `json:"themes"`
+}
+
 type webSocketHandler struct {
+	cancel context.CancelFunc
 }
 
 func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -85,15 +99,23 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer func() {
-		err := connection.Close(websocket.StatusNormalClosure, "the sky is falling")
-		if err != nil {
-			log.Printf("error closing WebSocket: %v", err)
-		}
-	}()
+	data := pageData{
+		Text: "hello",
+	}
+	bytes, err := json.Marshal(&data)
+	if err != nil {
+		log.Printf("failed to marshal message: %v", err)
+		return
+	}
 
+	err = connection.Write(r.Context(), websocket.MessageText, bytes)
+	if err != nil {
+		log.Printf("failed to write message: %v", err)
+		h.cancel()
+		return
+	}
 	// Just wait for the save button, no need to wait for more messages.
-	var msg message
+	var msg receivedSaveMessage
 	_, message, err := connection.Read(r.Context())
 	if err != nil {
 		log.Printf("error reading from WebSocket: %v", err)
@@ -106,5 +128,12 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("received message: %s", msg.Text)
+	log.Printf("received message: %+v", msg)
+
+	err = connection.Close(websocket.StatusNormalClosure, "Received save message")
+	if err != nil {
+		log.Printf("error closing WebSocket: %v", err)
+	}
+
+	h.cancel()
 }
