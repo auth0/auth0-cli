@@ -25,16 +25,33 @@
 
     ws.onmessage = (event) => {
         const message = JSON.stringify(event.data);
-        messagesDiv.innerHTML += "<p>" + message + "</p>";
+        messagesDiv.innerHTML += message;
     };
 
     document.querySelector("form").addEventListener("submit", (event) => {
         event.preventDefault();
         const message = {
-            templates: {
-                body: "\u003c!DOCTYPE html\u003e\u003chtml\u003e\u003chead\u003e{%- auth0:head -%}\u003c/head\u003e\u003cbody\u003e{%- auth0:widget -%}\u003c/body\u003e\u003c/html\u003e"
+            "authentication_profile": {
+                "universal_login_experience": "new",
+                "identifier_first": true,
+                "webauthn_platform_first_factor": false
             },
-            themes: {
+            "branding": {
+                "colors": {
+                    "primary": "#0059d6",
+                    "page_background": "#000000"
+                },
+                "favicon_url": "https://mycompany.org/favicon.ico",
+                "logo_url": "https://mycompany.org/logo.png",
+                "font": {
+                    "url": "https://mycompany.org/font/myfont.ttf"
+                }
+            },
+            "templates": {
+                "body": "\\u003c!DOCTYPE html\\u003e\\u003chtml\\u003e\\u003chead\\u003e{%- auth0:head -%}\\u003c/head\\u003e\\u003cbody\\u003e{%- auth0:widget -%}\\u003c/body\\u003e\\u003c/html\\u003e"
+            },
+            "themes": {
+                "themeId": "k1aJUd6Tsj4X8YCm7LBhBe83qs5zJ34V",
                 "borders": {
                     "button_border_radius": 3,
                     "button_border_weight": 1,
@@ -106,8 +123,1041 @@
                     "logo_position": "center",
                     "logo_url": "",
                     "social_buttons_layout": "bottom"
+                }
+            },
+            "tenant": {
+                "change_password": {
+                    "enabled": true,
+                    "html": "\\u003chtml\\u003eChange Password\\u003c/html\\u003e"
                 },
-                "themeId": "fxmAUvKuVANjZlMYcRf2464QTgE55fLl"
+                "guardian_mfa_page": {
+                    "enabled": true,
+                    "html": "\\u003chtml\\u003eMFA\\u003c/html\\u003e"
+                },
+                "default_audience": "",
+                "default_directory": "",
+                "error_page": {
+                    "html": "\\u003chtml\\u003eError Page\\u003c/html\\u003e",
+                    "show_log_link": false,
+                    "url": "https://mycompany.org/error"
+                },
+                "flags": {
+                    "enable_client_connections": true,
+                    "enable_apis_section": false,
+                    "disable_impersonation": true,
+                    "enable_pipeline2": false,
+                    "enable_dynamic_client_registration": false,
+                    "enable_custom_domain_in_emails": false,
+                    "enable_sso": true,
+                    "allow_changing_enable_sso": false,
+                    "universal_login": true,
+                    "enable_legacy_logs_search_v2": false,
+                    "disable_clickjack_protection_headers": false,
+                    "enable_public_signup_user_exists_error": true,
+                    "use_scope_descriptions_for_consent": false,
+                    "allow_legacy_delegation_grant_types": true,
+                    "allow_legacy_ro_grant_types": true,
+                    "no_disclose_enterprise_connections": false,
+                    "disable_management_api_sms_obfuscation": true,
+                    "revoke_refresh_token_grant": false,
+                    "disable_fields_map_fix": true,
+                    "mfa_show_factor_list_on_enrollment": true
+                },
+                "friendly_name": "My Test Tenant",
+                "picture_url": "https://mycompany.org/logo.png",
+                "support_email": "support@mycompany.org",
+                "support_url": "https://mycompany.org/support",
+                "universal_login": {
+                    "colors": {
+                        "primary": "#0059d6",
+                        "page_background": "#000000"
+                    }
+                },
+                "allowed_logout_urls": [],
+                "session_lifetime": 168,
+                "idle_session_lifetime": 72,
+                "sandbox_version": "12",
+                "sandbox_versions_available": [
+                    "16",
+                    "12"
+                ],
+                "enabled_locales": [
+                    "de",
+                    "fr"
+                ],
+                "session_cookie": {
+                    "mode": "persistent"
+                }
+            },
+            "custom_text": {
+                "common": {
+                    "redeem-ticket": {
+                        "buttonText": "Continue",
+                        "description": "Click Continue to Enroll in Multi-Factor Authentication",
+                        "descriptionEmailVerify": "Click Continue to Verify Your Email",
+                        "descriptionPasswordlessVerify": "Click Continue to Sign In",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Enroll in multi-factor authentication"
+                    }
+                },
+                "consent": {
+                    "consent": {
+                        "acceptButtonText": "Accept",
+                        "audiencePickerAltText": "Tenant and Audience selector",
+                        "declineButtonText": "Decline",
+                        "invalid-action": "Invalid action",
+                        "invalid-audience": "Audience is required",
+                        "invalid-scope": "Invalid scope, must be an array",
+                        "logoAltText": "${companyName}",
+                        "messageMultipleTenants": "${clientName} is requesting access to your account.",
+                        "messageSingleTenant": "${clientName} is requesting access to your ${companyName} account.",
+                        "pageTitle": "Authorize ${clientName}",
+                        "pickerTitle": "Hi ${userName},",
+                        "title": "Authorize App"
+                    }
+                },
+                "device-flow": {
+                    "device-code-activation": {
+                        "buttonText": "Continue",
+                        "description": "Enter the code displayed on your device",
+                        "invalid-code": "The code you entered is invalid",
+                        "invalid-expired-code": "Invalid or expired user code",
+                        "logoAltText": "${companyName}",
+                        "no-code": "Please enter the code displayed on your device",
+                        "pageTitle": "Enter your device code to log in | ${clientName}",
+                        "placeholder": "Enter your one-time code",
+                        "title": "Device Activation"
+                    },
+                    "device-code-activation-allowed": {
+                        "description": "Your device is now connected.",
+                        "eventTitle": "Congratulations, you're all set!",
+                        "pageTitle": "Login successful | ${clientName}"
+                    },
+                    "device-code-activation-denied": {
+                        "description": "We are not able to activate your device.",
+                        "eventTitle": "Activation Denied",
+                        "pageTitle": "Login error | ${clientName}"
+                    },
+                    "device-code-confirmation": {
+                        "cancelButtonText": "Cancel",
+                        "confirmButtonText": "Confirm",
+                        "confirmationText": "If you did not initiate this action or you do not recognize this device select cancel.",
+                        "description": "Please confirm this is the code displayed on your ${clientName}:",
+                        "inputCodeLabel": "Secure code",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Confirm your device code to log in | ${clientName}",
+                        "title": "Device Confirmation"
+                    }
+                },
+                "email-otp-challenge": {
+                    "email-otp-challenge": {
+                        "authenticator-error": "We couldn't verify the code. Please try again later.",
+                        "buttonText": "Continue",
+                        "description": "We've sent an email with your code to ${email}",
+                        "invalid-code": "The code you entered is invalid",
+                        "invalid-otp-code-format": "OTP Code must have 6 numeric characters",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Enter your email code to log in | ${clientName}",
+                        "placeholder": "Enter the code",
+                        "resendActionText": "Resend",
+                        "resendText": "Didn't receive an email?",
+                        "title": "Verify Your Identity",
+                        "too-many-email": "You have exceeded the amount of emails. Wait a few minutes and try again."
+                    }
+                },
+                "email-verification": {
+                    "email-verification-result": {
+                        "alreadyVerifiedDescription": "This account is already verified.",
+                        "buttonText": "Back to ${clientName}",
+                        "custom-script-error-code": "Something went wrong, please try again later.",
+                        "errorTitle": "Error",
+                        "invalidAccountOrCodeDescription": "User account does not exist or the verification code is invalid.",
+                        "pageTitle": "Email verification status | ${clientName}",
+                        "unknownErrorDescription": "Your email address could not be verified.",
+                        "verifiedDescription": "Your email address was successfully verified.",
+                        "verifiedTitle": "Email Verified"
+                    }
+                },
+                "invitation": {
+                    "accept-invitation": {
+                        "buttonText": "Continue",
+                        "description": "${inviterName} has invited you (${email}) to join ${companyName} on ${clientName}.",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Accept your invitation to sign up | ${clientName}",
+                        "title": "You've Been Invited!"
+                    }
+                },
+                "login": {
+                    "login": {
+                        "alertListTitle": "Alerts",
+                        "auth0-users-validation": "Something went wrong, please try again later",
+                        "authentication-failure": "We are sorry, something went wrong when attempting to login",
+                        "buttonText": "Continue",
+                        "custom-script-error-code": "Something went wrong, please try again later.",
+                        "description": "Log in to ${companyName} to continue to ${clientName}.",
+                        "editEmailText": "Edit",
+                        "emailPlaceholder": "Email address",
+                        "federatedConnectionButtonText": "Continue with ${connectionName}",
+                        "footerLinkText": "Sign up",
+                        "footerText": "Don't have an account?",
+                        "forgotPasswordText": "Forgot password?",
+                        "hidePasswordText": "Hide password",
+                        "invalid-connection": "Invalid connection",
+                        "invalid-email-format": "Email is not valid..",
+                        "invitationDescription": "Log in to accept ${inviterName}'s invitation to join ${companyName} on ${clientName}.",
+                        "invitationTitle": "You've Been Invited!",
+                        "ip-blocked": "We have detected suspicious login behavior and further attempts will be blocked. Please contact the administrator.",
+                        "logoAltText": "${companyName}",
+                        "no-db-connection": "Invalid connection",
+                        "no-email": "Please enter an email address",
+                        "no-password": "Password is required",
+                        "no-username": "Username is required",
+                        "pageTitle": "Log in | ${clientName}",
+                        "password-breached": "We have detected a potential security issue with this account. To protect your account, we have prevented this login. Please reset your password to proceed.",
+                        "passwordPlaceholder": "Password",
+                        "same-user-login": "Too many login attempts for this user. Please wait, and try again later.",
+                        "separatorText": "Or",
+                        "showPasswordText": "Show password",
+                        "signupActionLinkText": "${footerLinkText}",
+                        "signupActionText": "${footerText}",
+                        "title": "Welcome",
+                        "user-blocked": "Your account has been blocked after multiple consecutive login attempts.",
+                        "usernamePlaceholder": "Username or email address",
+                        "wrong-credentials": "Wrong username or password",
+                        "wrong-email-credentials": "Wrong email or password"
+                    }
+                },
+                "login-email-verification": {
+                    "login-email-verification": {
+                        "authenticator-error": "We couldn't verify the code. Please try again later.",
+                        "buttonText": "Continue",
+                        "description": "We've sent an email with your code to ${email}",
+                        "invalid-code": "The code you entered is invalid",
+                        "invalid-expired-code": "Invalid or expired user code",
+                        "invalid-otp-code-format": "OTP Code must have 6 numeric characters",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Enter your email code to log in | ${clientName}",
+                        "placeholder": "Enter the code",
+                        "resendActionText": "Resend",
+                        "resendText": "Didn't receive an email?",
+                        "title": "Verify Your Email",
+                        "too-many-email": "You have exceeded the amount of emails. Wait a few minutes and try again."
+                    }
+                },
+                "login-id": {
+                    "login-id": {
+                        "alertListTitle": "Alerts",
+                        "auth0-users-validation": "Something went wrong, please try again later",
+                        "authentication-failure": "We are sorry, something went wrong when attempting to login",
+                        "buttonText": "Continue",
+                        "custom-script-error-code": "Something went wrong, please try again later.",
+                        "description": "Log in to ${companyName} to continue to ${clientName}.",
+                        "emailPlaceholder": "Email address",
+                        "federatedConnectionButtonText": "Continue with ${connectionName}",
+                        "footerLinkText": "Sign up",
+                        "footerText": "Don't have an account?",
+                        "invalid-connection": "Invalid connection",
+                        "invalid-email-format": "Email is not valid.",
+                        "invalid-phone-number": "Enter a valid phone number",
+                        "ip-blocked": "We have detected suspicious login behavior and further attempts will be blocked. Please contact the administrator.",
+                        "logoAltText": "${companyName}",
+                        "no-db-connection": "Invalid connection",
+                        "no-email": "Please enter an email address",
+                        "no-hrd-connection": "Email does not match any enterprise directory",
+                        "no-username": "Username is required",
+                        "pageTitle": "Log in | ${clientName}",
+                        "password-breached": "We have detected a potential security issue with this account. To protect your account, we have prevented this login. Please reset your password to proceed.",
+                        "phonePlaceholder": "Phone number",
+                        "same-user-login": "Too many login attempts for this user. Please wait, and try again later.",
+                        "separatorText": "Or",
+                        "signupActionLinkText": "${footerLinkText}",
+                        "signupActionText": "${footerText}",
+                        "title": "Welcome",
+                        "user-blocked": "Your account has been blocked after multiple consecutive login attempts.",
+                        "usernamePlaceholder": "Username or email address"
+                    }
+                },
+                "login-password": {
+                    "login-password": {
+                        "alertListTitle": "Alerts",
+                        "auth0-users-validation": "Something went wrong, please try again later",
+                        "authentication-failure": "We are sorry, something went wrong when attempting to login",
+                        "buttonText": "Continue",
+                        "custom-script-error-code": "Something went wrong, please try again later.",
+                        "description": "Enter your password for ${companyName} to continue to ${clientName}",
+                        "editEmailText": "Edit",
+                        "editLinkScreenReadableText": "Edit email address",
+                        "federatedConnectionButtonText": "Continue with ${connectionName}",
+                        "footerLinkText": "Sign up",
+                        "footerText": "Don't have an account?",
+                        "forgotPasswordText": "Forgot password?",
+                        "hidePasswordText": "Hide password",
+                        "invalid-connection": "Invalid connection",
+                        "invalid-email-format": "Email is not valid.",
+                        "invitationDescription": "Log in to accept ${inviterName}'s invitation to join ${companyName} on ${clientName}.",
+                        "invitationTitle": "You've Been Invited!",
+                        "ip-blocked": "We have detected suspicious login behavior and further attempts will be blocked. Please contact the administrator.",
+                        "logoAltText": "${companyName}",
+                        "no-db-connection": "Invalid connection",
+                        "no-email": "Please enter an email address",
+                        "no-password": "Password is required",
+                        "no-username": "Username is required",
+                        "pageTitle": "Enter your password to log in | ${clientName}",
+                        "password-breached": "We have detected a potential security issue with this account. To protect your account, we have prevented this login. Please reset your password to proceed.",
+                        "passwordPlaceholder": "Password",
+                        "same-user-login": "Too many login attempts for this user. Please wait, and try again later.",
+                        "separatorText": "Or",
+                        "showPasswordText": "Show password",
+                        "signupActionLinkText": "${footerLinkText}",
+                        "signupActionText": "${footerText}",
+                        "title": "Enter Your Password",
+                        "useBiometricsText": "Use Fingerprint or Face Recognition",
+                        "user-blocked": "Your account has been blocked after multiple consecutive login attempts.",
+                        "wrong-credentials": "Wrong username or password",
+                        "wrong-email-credentials": "Wrong email or password"
+                    }
+                },
+                "login-passwordless": {
+                    "login-passwordless-email-code": {
+                        "buttonText": "Continue",
+                        "description": "We've sent an email with your code to ${email}",
+                        "invalid-verification-code": "Code is invalid",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Enter your email code to log in | ${clientName}",
+                        "passwordless-authenticator-error": "Code could not be sent. Please try again later.",
+                        "passwordless-unknown-error": "Something went wrong. Please try again later.",
+                        "placeholder": "Enter the code",
+                        "resendActionText": "Resend",
+                        "resendText": "Didn't receive an email?",
+                        "title": "Verify Your Identity"
+                    },
+                    "login-passwordless-email-link": {
+                        "description": "Email sent. Check your inbox for a login link.",
+                        "errorTitle": "Something went wrong",
+                        "pageTitle": "Email Sign In Link | ${clientName}",
+                        "successTitle": "Email sent",
+                        "unknownErrorDescription": "Please try again later."
+                    },
+                    "login-passwordless-sms-otp": {
+                        "buttonText": "Continue",
+                        "description": "We've sent a text message to:",
+                        "editText": "Edit",
+                        "invalid-verification-code": "Code is invalid",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Enter your phone code to log in | ${clientName}",
+                        "passwordless-authenticator-error": "Code could not be sent. Please try again later.",
+                        "passwordless-unknown-error": "Something went wrong. Please try again later.",
+                        "placeholder": "Enter the 6-digit code",
+                        "resendActionText": "Resend",
+                        "resendText": "Didn't receive a code?",
+                        "title": "Verify Your Identity"
+                    }
+                },
+                "logout": {
+                    "logout": {
+                        "acceptButtonText": "Yes",
+                        "declineButtonText": "No",
+                        "description": "Are you sure you want to log out from ${clientName}?",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Logout | ${clientName}",
+                        "title": "Logout",
+                        "userSalute": "Hi ${userName},"
+                    },
+                    "logout-aborted": {
+                        "eventTitle": "You have not been logged out.",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Logout aborted"
+                    },
+                    "logout-complete": {
+                        "eventTitle": "You have successfully logged out.",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Logout complete"
+                    }
+                },
+                "mfa": {
+                    "mfa-begin-enroll-options": {
+                        "authenticatorNamesDUO": "Notification via DUO app",
+                        "authenticatorNamesEmail": "Email",
+                        "authenticatorNamesOTP": "Google Authenticator or similar",
+                        "authenticatorNamesPhone": "Phone",
+                        "authenticatorNamesPushNotification": "Notification via ${appName} app",
+                        "authenticatorNamesRecoveryCode": "Recovery code",
+                        "authenticatorNamesSMS": "SMS",
+                        "authenticatorNamesVoice": "Phone",
+                        "authenticatorNamesWebauthnPlatform": "Fingerprint or Face Recognition",
+                        "authenticatorNamesWebauthnRoaming": "Security Key",
+                        "description": "Add another authentication method.",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Add another authentication method | ${clientName}",
+                        "title": "Keep Your Account Safe"
+                    },
+                    "mfa-detect-browser-capabilities": {
+                        "noJSErrorDescription": "Your browser does not have JavaScript enabled. Please enable and press the Reload page button.",
+                        "noJSErrorTitle": "JavaScript Required",
+                        "pickAuthenticatorText": "Try another method",
+                        "reloadButtonText": "Reload"
+                    },
+                    "mfa-enroll-result": {
+                        "alreadyEnrolledDescription": "Two-factor Verification has Already Been Enabled.",
+                        "alreadyUsedDescription": "This link has already been used. Please get a new link to enroll with Multi-factor Authentication.",
+                        "alreadyUsedTitle": "Already used",
+                        "enrolledDescription": "You have successfully added a new authentication factor.",
+                        "enrolledTitle": "You're All Set!",
+                        "expiredTicketDescription": "This link is expired.",
+                        "expiredTicketTitle": "Expired Link",
+                        "genericError": "Something Went Wrong",
+                        "invalidTicketDescription": "This link is invalid or expired.",
+                        "invalidTicketTitle": "Invalid Link",
+                        "pageTitle": "MFA enrollment status"
+                    },
+                    "mfa-login-options": {
+                        "authenticatorNamesDUO": "Notification via DUO app",
+                        "authenticatorNamesEmail": "Email",
+                        "authenticatorNamesOTP": "Google Authenticator or similar",
+                        "authenticatorNamesPhone": "Phone",
+                        "authenticatorNamesPushNotification": "Notification via ${appName} app",
+                        "authenticatorNamesRecoveryCode": "Recovery code",
+                        "authenticatorNamesSMS": "SMS",
+                        "authenticatorNamesVoice": "Phone",
+                        "authenticatorNamesWebauthnPlatform": "Fingerprint or Face Recognition",
+                        "authenticatorNamesWebauthnRoaming": "Security Key",
+                        "backText": "Go back",
+                        "pageTitle": "List of other login methods | ${clientName}",
+                        "title": "Other Methods"
+                    }
+                },
+                "mfa-email": {
+                    "mfa-email-challenge": {
+                        "authenticator-error": "We couldn't verify the code. Please try again later.",
+                        "buttonText": "Continue",
+                        "description": "We've sent an email with your code to",
+                        "invalid-code": "The code you entered is invalid.",
+                        "invalid-otp-code-format": "OTP Code must have 6 numeric characters",
+                        "logoAltText": "${companyName}",
+                        "mfa-email-challenge-authenticator-error": "We couldn't send the email. Please try again later.",
+                        "no-transaction-in-progress": "Notification was not sent. Try resending the code.",
+                        "pageTitle": "Enter your email code to log in | ${clientName}",
+                        "pickAuthenticatorText": "Try another method",
+                        "placeholder": "Enter the code",
+                        "rememberMeText": "Remember this device for 30 days",
+                        "resendActionText": "Resend",
+                        "resendText": "Didn't receive an email?",
+                        "title": "Verify Your Identity",
+                        "too-many-email": "You have exceeded the amount of emails. Wait a few minutes and try again.",
+                        "transaction-not-found": "Your enrollment transaction expired, you will need to start again."
+                    },
+                    "mfa-email-list": {
+                        "backText": "Go back",
+                        "pageTitle": "List of available email addresses | ${clientName}",
+                        "title": "Enrolled Email Addresses"
+                    }
+                },
+                "mfa-otp": {
+                    "mfa-otp-challenge": {
+                        "authenticator-error": "We couldn't verify the code. Please try again later.",
+                        "buttonText": "Continue",
+                        "description": "Check your preferred one-time password application for a code.",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Enter your one-time password to log in | ${clientName}",
+                        "pickAuthenticatorText": "Try another method",
+                        "placeholder": "Enter your one-time code",
+                        "rememberMeText": "Remember this device for 30 days",
+                        "title": "Verify Your Identity",
+                        "too-many-failures": "Too many failed codes. Wait for some minutes before retrying.",
+                        "transaction-not-found": "Your enrollment transaction expired, you will need to start again.",
+                        "usePasswordText": "Use password"
+                    },
+                    "mfa-otp-enrollment-code": {
+                        "altText": "Secure code to copy",
+                        "buttonText": "Continue",
+                        "copyCodeButtonText": "Copy code",
+                        "description": "Manually enter the following code into your preferred authenticator app and then enter the provided one-time code below.",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Copy the code to log in using a one-time password | ${clientName}",
+                        "pickAuthenticatorText": "Try another method",
+                        "placeholder": "Enter your one-time code",
+                        "title": "Secure Your Account",
+                        "too-many-failures": "Too many failed codes. Wait for some minutes before retrying.",
+                        "transaction-not-found": "Your enrollment transaction expired, you will need to start again."
+                    },
+                    "mfa-otp-enrollment-qr": {
+                        "buttonText": "Continue",
+                        "codeEnrollmentText": "Trouble Scanning?",
+                        "description": "Scan the QR Code below using your preferred authenticator app and then enter the provided one-time code below.",
+                        "invalid-code": "The code you entered is invalid",
+                        "invalid-otp-code-format": "OTP Code must have 6 numeric characters",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Scan the code to log in using a one-time password | ${clientName}",
+                        "pickAuthenticatorText": "Try another method",
+                        "placeholder": "Enter your one-time code",
+                        "separatorText": "Then",
+                        "title": "Secure Your Account",
+                        "too-many-failures": "Too many failed codes. Wait for some minutes before retrying.",
+                        "transaction-not-found": "Your enrollment transaction expired, you will need to start again.",
+                        "user-already-enrolled": "You are already enrolled on MFA."
+                    }
+                },
+                "mfa-phone": {
+                    "mfa-phone-challenge": {
+                        "changePhoneText": "Choose another phone number.",
+                        "chooseMessageTypeText": "How do you want to receive the code?",
+                        "continueButtonText": "Continue",
+                        "description": "We will send a 6-digit code to the following phone number:",
+                        "invalid-phone": "It seems that your phone number is not valid. Please check and retry.",
+                        "invalid-phone-format": "Phone number can only include digits.",
+                        "logoAltText": "${companyName}",
+                        "no-phone": "Please enter a phone number",
+                        "pageTitle": "Use your phone number to log in | ${clientName}",
+                        "pickAuthenticatorText": "Try another method",
+                        "send-sms-failed": "There was a problem sending the SMS",
+                        "send-voice-failed": "There was a problem making the voice call",
+                        "smsButtonText": "Text message",
+                        "title": "Verify Your Identity",
+                        "too-many-sms": "You have exceeded the maximum number of phone messages per hour. Wait a few minutes and try again.",
+                        "too-many-voice": "You have exceeded the maximum number of phone messages per hour. Wait a few minutes and try again.",
+                        "transaction-not-found": "Your enrollment transaction expired, you will need to start again.",
+                        "voiceButtonText": "Voice call"
+                    },
+                    "mfa-phone-enrollment": {
+                        "chooseMessageTypeText": "How do you want to receive the code?",
+                        "continueButtonText": "Continue",
+                        "description": "Enter your country code and phone number to which we can send a 6-digit code:",
+                        "invalid-phone": "It seems that your phone number is not valid. Please check and retry.",
+                        "invalid-phone-format": "Phone number can only include digits.",
+                        "logoAltText": "${companyName}",
+                        "no-phone": "Please enter a phone number",
+                        "pageTitle": "Enter your phone number to log in using a phone code | ${clientName}",
+                        "pickAuthenticatorText": "Try another method",
+                        "placeholder": "Enter your phone number",
+                        "send-sms-failed": "There was a problem sending the SMS",
+                        "send-voice-failed": "There was a problem making the voice call",
+                        "sms-authenticator-error": "We couldn't send the SMS. Please try again later.",
+                        "smsButtonText": "Text message",
+                        "title": "Secure Your Account",
+                        "too-many-sms": "You have exceeded the maximum number of phone messages per hour. Wait a few minutes and try again.",
+                        "too-many-voice": "You have exceeded the maximum number of phone messages per hour. Wait a few minutes and try again.",
+                        "transaction-not-found": "Your enrollment transaction expired, you will need to start again.",
+                        "voiceButtonText": "Voice call"
+                    }
+                },
+                "mfa-push": {
+                    "mfa-push-challenge-push": {
+                        "buttonText": "I've responded on my device",
+                        "challenge-transaction-pending": "You must accept the notification via the ${appName} app on your mobile device.",
+                        "description": "We've sent a notification to the following device via the ${appName} app:",
+                        "enterOtpCode": "Manually Enter Code",
+                        "logoAltText": "${companyName}",
+                        "mfa-push-challenge-authenticator-error": "We couldn't send the notification. Please try again later.",
+                        "mfa-push-verify-authenticator-error": "We couldn't verify the enrollment. Please try again later.",
+                        "mfa-push-verify-transaction-pending": "We have not received a confirmation, please try scanning the code again.",
+                        "pageTitle": "Accept the push notification to log in | ${clientName}",
+                        "pickAuthenticatorText": "Try another method",
+                        "polling-interval-exceeded": "We have not received a confirmation, please slow down.",
+                        "rememberMeText": "Remember this device for 30 days",
+                        "resendActionText": "Resend",
+                        "resendText": "Didn't receive a notification?",
+                        "separatorText": "OR",
+                        "title": "Verify Your Identity",
+                        "too-many-push": "We have received too many notification requests. Wait a few minutes and try again.",
+                        "transaction-not-found": "Your enrollment transaction expired, you will need to start again.",
+                        "transaction-rejected": "Notification rejected"
+                    },
+                    "mfa-push-enrollment-code": {
+                        "altText": "Secure code to copy",
+                        "buttonText": "Continue",
+                        "copyCodeButtonText": "Copy Code",
+                        "instructions1": "Open the ${appName} app on your phone and tap button.",
+                        "instructions2": "Select Add account manually",
+                        "instructions3": "Copy \\u0026 paste this code to that screen",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Copy the code to log in using a push notification | ${clientName}",
+                        "title": "Trouble scanning?"
+                    },
+                    "mfa-push-enrollment-qr": {
+                        "buttonText": "Continue",
+                        "description": "Scan the QR Code below using the ${appName} app on your mobile device.",
+                        "enrollment-transaction-pending": "You must scan the QR code with the ${appName} app on your mobile device.",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Scan the code to log in using a push notification | ${clientName}",
+                        "pickAuthenticatorText": "Try another method",
+                        "title": "Secure Your Account"
+                    },
+                    "mfa-push-list": {
+                        "backText": "Go back",
+                        "pageTitle": "List of available devices | ${clientName}",
+                        "title": "Registered Devices"
+                    },
+                    "mfa-push-success": {
+                        "buttonText": "Continue",
+                        "description": "We're redirecting you to ${clientName} now. If you're not redirected automatically, you can manually redirect yourself below.",
+                        "pageTitle": "Device registration successful | ${clientName}",
+                        "title": "You're All Set!"
+                    },
+                    "mfa-push-welcome": {
+                        "androidButtonText": "Google Play",
+                        "buttonText": "Continue",
+                        "description": "In order to continue, install the ${appName} app via the app store from your mobile device.",
+                        "iosButtonText": "App Store",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Install the application | ${clientName}",
+                        "pickAuthenticatorText": "Try another method",
+                        "title": "Secure Your Account"
+                    }
+                },
+                "mfa-recovery-code": {
+                    "mfa-recovery-code-challenge": {
+                        "authenticator-error": "We couldn't verify the code. Please try again later.",
+                        "buttonText": "Continue",
+                        "description": "Enter the recovery code you were provided during your initial enrollment.",
+                        "invalid-code": "The code you entered is invalid",
+                        "invalid-code-format": "Recovery code must have 24 alphanumeric characters",
+                        "logoAltText": "${companyName}",
+                        "no-confirmation": "Please confirm you have recorded the code",
+                        "pageTitle": "Enter your recovery code to log in | ${clientName}",
+                        "pickAuthenticatorText": "Try another method",
+                        "placeholder": "Enter your recovery code",
+                        "title": "Verify Your Identity",
+                        "too-many-failures": "Too many failed codes. Wait for some minutes before retrying.",
+                        "transaction-not-found": "Your enrollment transaction expired, you will need to start again."
+                    },
+                    "mfa-recovery-code-enrollment": {
+                        "altText": "Secure code to copy",
+                        "buttonText": "Continue",
+                        "checkboxText": "I have safely recorded this code",
+                        "copyCodeButtonText": "Copy code",
+                        "description": "Copy this recovery code and keep it somewhere safe. You'll need it if you ever need to log in without your device.",
+                        "logoAltText": "${companyName}",
+                        "no-confirmation": "Please confirm you have recorded the code",
+                        "pageTitle": "Copy your recovery code for safe keeping | ${clientName}",
+                        "title": "Almost There!"
+                    }
+                },
+                "mfa-sms": {
+                    "mfa-country-codes": {
+                        "backText": "Go back",
+                        "pageTitle": "Select your country code | ${clientName}",
+                        "title": "Select a Country Code"
+                    },
+                    "mfa-sms-challenge": {
+                        "authenticator-error": "We couldn't verify the code. Please try again later.",
+                        "buttonText": "Continue",
+                        "description": "We've sent a text message to:",
+                        "editLinkScreenReadableText": "Edit phone number",
+                        "editText": "Edit",
+                        "invalid-code": "The code you entered is invalid",
+                        "invalid-otp-code-format": "OTP Code must have 6 numeric characters",
+                        "logoAltText": "${companyName}",
+                        "no-transaction-in-progress": "Notification was not sent. Try resending the code.",
+                        "pageTitle": "Enter your phone code to log in | ${clientName}",
+                        "pickAuthenticatorText": "Try another method",
+                        "placeholder": "Enter the 6-digit code",
+                        "rememberMeText": "Remember this device for 30 days",
+                        "resendActionText": "Resend",
+                        "resendText": "Didn't receive a code?",
+                        "resendVoiceActionSeparatorTextBefore": "or",
+                        "resendVoiceActionText": "get a call",
+                        "send-sms-failed": "There was a problem sending the SMS",
+                        "sms-authenticator-error": "We couldn't send the SMS. Please try again later.",
+                        "title": "Verify Your Identity",
+                        "too-many-failures": "Too many failed codes. Wait for some minutes before retrying.",
+                        "too-many-sms": "You have exceeded the maximum number of phone messages per hour. Wait a few minutes and try again.",
+                        "transaction-not-found": "Your enrollment transaction expired, you will need to start again."
+                    },
+                    "mfa-sms-enrollment": {
+                        "buttonText": "Continue",
+                        "description": "Enter your phone number below. An SMS will be sent to that number with a code to enter on the next screen.",
+                        "invalid-phone": "Seems that your phone number is not valid. Please check and retry.",
+                        "invalid-phone-format": "Phone number can only include digits.",
+                        "logoAltText": "${companyName}",
+                        "no-phone": "Please enter a phone number",
+                        "pageTitle": "Enter your phone number to log in using a text message | ${clientName}",
+                        "pickAuthenticatorText": "Try another method",
+                        "placeholder": "Enter your phone number",
+                        "send-sms-failed": "There was a problem sending the SMS",
+                        "sms-authenticator-error": "We couldn't send the SMS. Please try again later.",
+                        "title": "Secure Your Account",
+                        "too-many-sms": "You have exceeded the maximum number of phone messages per hour. Wait a few minutes and try again.",
+                        "transaction-not-found": "Your enrollment transaction expired, you will need to start again."
+                    },
+                    "mfa-sms-list": {
+                        "backText": "Go back",
+                        "pageTitle": "List of available phone numbers | ${clientName}",
+                        "title": "Enrolled Phone Numbers"
+                    }
+                },
+                "mfa-voice": {
+                    "mfa-voice-challenge": {
+                        "authenticator-error": "We couldn't verify the code. Please try again later.",
+                        "buttonText": "Continue",
+                        "changePhoneText": "Choose another phone number.",
+                        "description": "We've sent a 6-digit code via voice phone call to the following phone number:",
+                        "editLinkScreenReadableText": "Edit phone number",
+                        "editText": "Edit",
+                        "invalid-code": "The code you entered is invalid",
+                        "invalid-otp-code-format": "OTP Code must have 6 numeric characters",
+                        "logoAltText": "${companyName}",
+                        "no-transaction-in-progress": "Notification was not sent. Try resending the code.",
+                        "pageTitle": "Enter your phone code to log in | ${clientName}",
+                        "pickAuthenticatorText": "Try another method",
+                        "placeholder": "Enter the 6-digit code",
+                        "rememberMeText": "Remember this device for 30 days",
+                        "resendActionText": "Call again",
+                        "resendSmsActionSeparatorTextBefore": "or",
+                        "resendSmsActionText": "send a text",
+                        "resendText": "Didn't receive a call?",
+                        "send-voice-failed": "There was a problem making the voice call",
+                        "title": "Verify Your Identity",
+                        "too-many-failures": "Too many failed codes. Wait for some minutes before retrying.",
+                        "too-many-voice": "You have exceeded the maximum number of phone messages per hour. Wait a few minutes and try again.",
+                        "transaction-not-found": "Your enrollment transaction expired, you will need to start again.",
+                        "voice-authenticator-error": "We couldn't make the voice call. Please try again later."
+                    },
+                    "mfa-voice-enrollment": {
+                        "buttonText": "Continue",
+                        "description": "Enter your phone number below. A voice call will be placed on that number with a code to enter on the next screen.",
+                        "invalid-phone": "Seems that your phone number is not valid. Please check and retry.",
+                        "invalid-phone-format": "Phone number can only include digits.",
+                        "logoAltText": "${companyName}",
+                        "no-phone": "Please enter a phone number",
+                        "pageTitle": "Enter your phone number to log in using a phone code | ${clientName}",
+                        "pickAuthenticatorText": "Try another method",
+                        "placeholder": "Enter your phone number",
+                        "send-sms-failed": "There was a problem sending the SMS",
+                        "title": "Secure Your Account",
+                        "too-many-sms": "You have exceeded the maximum number of phone messages per hour. Wait a few minutes and try again.",
+                        "transaction-not-found": "Your enrollment transaction expired, you will need to start again."
+                    }
+                },
+                "mfa-webauthn": {
+                    "mfa-webauthn-change-key-nickname": {
+                        "buttonText": "Continue",
+                        "description": "If you own multiple keys, this alias will help you identify the right one.",
+                        "descriptionPlatform": "If you own multiple devices, this alias will help you identify the right one.",
+                        "error-while-patching": "An error occurred while trying to save the name . Please try again.",
+                        "error-while-retrieving-authenticator": "An error occurred while retrieving your information. Please try again.",
+                        "logoAltText": "${companyName}",
+                        "nickname": "${userName}'s key",
+                        "nickname-too-long": "Name is too long",
+                        "nickname-too-short": "Name is too short",
+                        "nicknamePlaceholder": "Security key name",
+                        "nicknamePlaceholderPlatform": "Device name",
+                        "nicknamePlatform": "${userName}'s ${deviceName}",
+                        "no-nickname": "Name is required",
+                        "title": "Name your security key | ${clientName}",
+                        "titlePlatform": "Name your device | ${clientName}",
+                        "webauthn-patch-nickname-error": "We could not update your key's name. Please try again.",
+                        "webauthn-platform-patch-nickname-error": "We could not update your Device's name. Please try again."
+                    },
+                    "mfa-webauthn-enrollment-success": {
+                        "buttonText": "Continue",
+                        "description": "You have successfully registered your Security Key.",
+                        "descriptionPlatform": "You have successfully registered your device.",
+                        "logoAltText": "${companyName}",
+                        "title": "Security key successful | ${clientName}",
+                        "titlePlatform": "Device registration successful | ${clientName}"
+                    },
+                    "mfa-webauthn-error": {
+                        "description": "Something went wrong. Please try again or try using another method.",
+                        "descriptionPlatform": "If you already registered this device, please try again. If not, try using another method.",
+                        "errorTitle": "Security key registration error | ${clientName}",
+                        "errorTitleChallenge": "Security Key Verification Failed",
+                        "errorTitlePlatform": "Device registration error | ${clientName}",
+                        "errorTitlePlatformChallenge": "Something Went Wrong",
+                        "pickAuthenticatorText": "Try another method",
+                        "refuseAddingAuthenticatorText": "No Thanks",
+                        "tryAgainLinkText": "Try again",
+                        "usePasswordText": "Use password"
+                    },
+                    "mfa-webauthn-not-available-error": {
+                        "errorDescription": "We are sorry but your browser or device does not support Security Keys. Try using another browser or log in from another device.",
+                        "errorTitle": "Security Keys Are Not Supported",
+                        "pageTitle": "Security keys are not supported | ${clientName}",
+                        "pickAuthenticatorText": "Try another method",
+                        "usePasswordText": "Use password"
+                    },
+                    "mfa-webauthn-platform-challenge": {
+                        "awaitingConfirmation": "Awaiting device confirmation",
+                        "continueButtonText": "Continue",
+                        "description": "Press the button below and follow your browser's steps to log in.",
+                        "logoAltText": "${companyName}",
+                        "pickAuthenticatorText": "Try another method",
+                        "rememberMeText": "Remember this device for 30 days",
+                        "title": "Use fingerprint or face recognition to login | ${clientName}",
+                        "too-many-webauthn-challenge-attempts-error": "Too many failed authentication attempts. Please try again later.",
+                        "usePasswordText": "Use password",
+                        "webauthn-platform-challenge-error": "We could not start the device verification. Please try again later."
+                    },
+                    "mfa-webauthn-platform-enrollment": {
+                        "awaitingConfirmation": "Awaiting device confirmation",
+                        "continueButtonText": "Continue",
+                        "description": "Trust this device? You can quickly and securely log in the next time using this device's fingerprint or face recognition.",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Log in faster on this device | ${clientName}",
+                        "refuseAddingDeviceText": "Not on this device",
+                        "skipAddingDeviceText": "Not now",
+                        "snoozeEnrollmentButtonText": "Remind me later",
+                        "title": "Log In Faster on This Device",
+                        "webauthn-platform-associate-error": "We could not start the device enrollment. Please try again later."
+                    },
+                    "mfa-webauthn-roaming-challenge": {
+                        "awaitingConfirmation": "Awaiting Security Key",
+                        "continueButtonText": "Use security key",
+                        "description": "Make sure your Security Key is nearby. Once you continue, you will be prompted to use it.",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Use your security key to log in | ${clientName}",
+                        "pickAuthenticatorText": "Try another method",
+                        "rememberMeText": "Remember this device for 30 days",
+                        "title": "Verify Your Identity",
+                        "too-many-webauthn-challenge-attempts-error": "Too many failed authentication attempts. Please try again later.",
+                        "webauthn-challenge-error": "We could not start the security key verification. Please try again later."
+                    },
+                    "mfa-webauthn-roaming-enrollment": {
+                        "awaitingConfirmation": "Awaiting Security Key",
+                        "continueButtonText": "Use security key",
+                        "description": "Security Keys can be used as an additional authentication factor.",
+                        "instructions1": "Connect your Security Key and continue.",
+                        "instructions2": "Follow the steps on the browser.",
+                        "instructions3": "Name your Security Key to easily identify it later.",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Register your security key | ${clientName}",
+                        "pickAuthenticatorText": "Try another method",
+                        "title": "Adding Your Security Key",
+                        "webauthn-associate-error": "We could not start the security key enrollment. Please try again later."
+                    }
+                },
+                "organizations": {
+                    "organization-picker": {
+                        "continueTextB2C": "Continue with personal account",
+                        "loggedInText": "is a part of multiple organizations.",
+                        "loggedInTextB2C": "is used as a personal account and is a part of multiple organizations.",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Choose an Organization",
+                        "separatorText": "OR",
+                        "switchAccountLinkText": "Login with a different email",
+                        "title": "Choose an Organization",
+                        "titleB2C": "Choose an Account to Continue"
+                    },
+                    "organization-selection": {
+                        "buttonText": "Continue",
+                        "description": "Kindly enter the organization name as stated in the email for proper identification.",
+                        "invalid-organization": "The Organization name you entered is invalid. Please refer to the invitation email for the correct organization name",
+                        "logoAltText": "${companyName}",
+                        "pageTitle": "Enter your organization | ${clientName}",
+                        "placeholder": "Enter your Organization Name",
+                        "title": "Enter Organization"
+                    }
+                },
+                "passkeys": {
+                    "passkey-enrollment": {},
+                    "passkey-enrollment-local": {},
+                    "passkey-not-supported": {}
+                },
+                "reset-password": {
+                    "reset-password": {
+                        "auth0-users-expired-ticket": "This ticket was expired.",
+                        "auth0-users-used-ticket": "This ticket was already used.",
+                        "auth0-users-validation": "Something went wrong, please try again later",
+                        "buttonText": "Reset password",
+                        "custom-script-error-code": "Something went wrong, please try again later.",
+                        "description": "Enter a new password below to change your password.",
+                        "hidePasswordText": "Hide password",
+                        "logoAltText": "${companyName}",
+                        "no-re-enter-password": "New password confirmation is missing",
+                        "pageTitle": "Reset your password | ${clientName}",
+                        "password-contains-user-information": "Password contains user information",
+                        "password-mismatch": "Passwords don't match",
+                        "passwordPlaceholder": "New password",
+                        "passwordSecurityText": "Your password must contain:",
+                        "reEnterpasswordPlaceholder": "Re-enter new password",
+                        "showPasswordText": "Show password",
+                        "title": "Change Your Password"
+                    },
+                    "reset-password-email": {
+                        "emailDescription": "Please check the email address ${email} for instructions to reset your password.",
+                        "pageTitle": "Check your email | ${clientName}",
+                        "resendLinkText": "Resend email.",
+                        "title": "Check Your Email",
+                        "usernameDescription": "Please check the email address associated with the username ${email} for instructions to reset your password."
+                    },
+                    "reset-password-error": {
+                        "auth0-users-expired-ticket": "This ticket was expired.",
+                        "auth0-users-used-ticket": "This ticket was already used.",
+                        "auth0-users-validation": "Something went wrong, please try again later",
+                        "backToLoginLinkText": "Back to ${clientName}",
+                        "custom-script-error-code": "Something went wrong, please try again later.",
+                        "descriptionExpired": "To reset your password, return to the login page and select Forgot Your Password to send a new email.",
+                        "descriptionGeneric": "To reset your password, return to the login page and select Forgot Your Password to send a new email.",
+                        "descriptionUsed": "This link has already been used. To reset your password, return to the login page and select Forgot Your Password to send a new email.",
+                        "eventTitleExpired": "Link Expired",
+                        "eventTitleGeneric": "Invalid Link",
+                        "eventTitleUsed": "Invalid Link",
+                        "pageTitle": "Password reset error | ${clientName}",
+                        "reset-password-error": "We had a problem sending the email, please try again later."
+                    },
+                    "reset-password-request": {
+                        "auth0-users-expired-ticket": "This ticket was expired.",
+                        "auth0-users-used-ticket": "This ticket was already used.",
+                        "auth0-users-validation": "Something went wrong, please try again later",
+                        "backToLoginLinkText": "Back to ${clientName}",
+                        "buttonText": "Continue",
+                        "custom-script-error-code": "Something went wrong, please try again later.",
+                        "descriptionEmail": "Enter your email address and we will send you instructions to reset your password.",
+                        "descriptionUsername": "Enter your username and we will send you instructions to reset your password.",
+                        "invalid-email-format": "Email is not valid.",
+                        "logoAltText": "${companyName}",
+                        "no-email": "Please enter an email address",
+                        "no-username": "Username is required",
+                        "pageTitle": "Reset your password | ${clientName}",
+                        "placeholderEmail": "Email address",
+                        "placeholderUsername": "Username",
+                        "reset-password-error": "We had a problem sending the email, please try again later.",
+                        "title": "Forgot Your Password?",
+                        "too-many-email": "You have exceeded the amount of emails. Wait a few minutes and try again.",
+                        "too-many-requests": "You have exceeded the amount of emails. Wait a few minutes and try again."
+                    },
+                    "reset-password-success": {
+                        "buttonText": "Back to ${clientName}",
+                        "description": "Your password has been changed successfully.",
+                        "eventTitle": "Password Changed!",
+                        "pageTitle": "Password reset successful | ${clientName}"
+                    }
+                },
+                "signup": {
+                    "signup": {
+                        "auth0-users-validation": "Something went wrong, please try again later",
+                        "buttonText": "Continue",
+                        "custom-script-error-code": "Something went wrong, please try again later.",
+                        "description": "Sign Up to ${companyName} to continue to ${clientName}.",
+                        "email-in-use": "The user already exists.",
+                        "emailPlaceholder": "Email address",
+                        "federatedConnectionButtonText": "Continue with ${connectionName}",
+                        "hidePasswordText": "Hide password",
+                        "invalid-connection": "Invalid connection",
+                        "invalid-email-format": "Email is not valid.",
+                        "invalid-username": "Username can only contain alphanumeric characters or: '${characters}'. Username should have between ${min} and ${max} characters.",
+                        "invalid-username-email-not-allowed": "The username cannot be an email.",
+                        "invalid-username-invalid-characters": "The username has invalid characters.",
+                        "invalid-username-max-length": "The username must not be longer than ${max} characters.",
+                        "invalid-username-min-length": "The username must have at least ${min} characters.",
+                        "ip-blocked": "We have detected suspicious login behavior and further attempts will be blocked. Please contact the administrator.",
+                        "ip-signup-blocked": "Too many signups from the same IP",
+                        "loginActionLinkText": "Log in",
+                        "loginActionText": "Already have an account?",
+                        "logoAltText": "${companyName}",
+                        "no-db-connection": "Invalid connection",
+                        "no-email": "Please enter an email address",
+                        "no-password": "Password is required",
+                        "no-re-enter-password": "New password confirmation is missing",
+                        "no-username": "Username is required",
+                        "pageTitle": "Sign up | ${clientName}",
+                        "password-breached": "This combination of credentials was detected in a public data breach on another website. Before your account is created, please use a different password to keep it secure.",
+                        "password-contains-user-information": "Password contains user information",
+                        "password-mismatch": "Passwords don't match",
+                        "password-policy-not-conformant": "The password is too weak",
+                        "password-previously-used": "Password has previously been used",
+                        "password-too-common": "The password is too common",
+                        "password-too-weak": "The password is too weak",
+                        "passwordPlaceholder": "Password",
+                        "passwordSecurityText": "Your password must contain:",
+                        "separatorText": "Or",
+                        "showPasswordText": "Show password",
+                        "title": "Welcome",
+                        "username-taken": "The username provided is in use already.",
+                        "usernamePlaceholder": "Username"
+                    }
+                },
+                "signup-id": {
+                    "signup-id": {
+                        "auth0-users-validation": "Something went wrong, please try again later",
+                        "buttonText": "Continue",
+                        "custom-script-error-code": "Something went wrong, please try again later.",
+                        "description": "Sign Up to ${companyName} to continue to ${clientName}.",
+                        "email-in-use": "The user already exists.",
+                        "emailPlaceholder": "Email address",
+                        "federatedConnectionButtonText": "Continue with ${connectionName}",
+                        "footerLinkText": "Log in",
+                        "footerText": "Already have an account?",
+                        "invalid-connection": "Invalid connection",
+                        "invalid-email-format": "Email is not valid.",
+                        "invalid-phone-number": "Enter a valid phone number",
+                        "ip-blocked": "We have detected suspicious login behavior and further attempts will be blocked. Please contact the administrator.",
+                        "ip-signup-blocked": "Too many signups from the same IP",
+                        "loginActionLinkText": "${footerLinkText}",
+                        "loginActionText": "${footerText}",
+                        "logoAltText": "${companyName}",
+                        "no-db-connection": "Invalid connection",
+                        "no-email": "Please enter an email address",
+                        "no-hrd-connection": "Email does not match any enterprise directory",
+                        "pageTitle": "Sign up | ${clientName}",
+                        "phonePlaceholder": "Phone number",
+                        "separatorText": "Or",
+                        "title": "Create Your Account"
+                    }
+                },
+                "signup-password": {
+                    "signup-password": {
+                        "auth0-users-validation": "Something went wrong, please try again later",
+                        "buttonText": "Continue",
+                        "custom-script-error-code": "Something went wrong, please try again later.",
+                        "description": "Set your password for ${companyName} to continue to ${clientName}",
+                        "editEmailText": "Edit",
+                        "editLinkScreenReadableText": "Edit email address",
+                        "email-in-use": "The user already exists.",
+                        "emailPlaceholder": "Email address",
+                        "federatedConnectionButtonText": "Continue with ${connectionName}",
+                        "footerLinkText": "Log in",
+                        "footerText": "Already have an account?",
+                        "hidePasswordText": "Hide password",
+                        "invalid-connection": "Invalid connection",
+                        "invalid-email-format": "Email is not valid.",
+                        "invalid-username": "Username can only contain alphanumeric characters or: '${characters}'. Username should have between ${min} and ${max} characters.",
+                        "invalid-username-email-not-allowed": "The username cannot be an email.",
+                        "invalid-username-invalid-characters": "The username has invalid characters.",
+                        "invalid-username-max-length": "The username must not be longer than ${max} characters.",
+                        "invalid-username-min-length": "The username must have at least ${min} characters.",
+                        "invitationDescription": "Sign Up to accept ${inviterName}'s invitation to join ${companyName} on ${clientName}.",
+                        "invitationTitle": "Accept your invitation to sign up | ${clientName}",
+                        "ip-blocked": "We have detected suspicious login behavior and further attempts will be blocked. Please contact the administrator.",
+                        "ip-signup-blocked": "Too many signups from the same IP",
+                        "loginActionLinkText": "${footerLinkText}",
+                        "loginActionText": "${footerText}",
+                        "logoAltText": "${companyName}",
+                        "no-db-connection": "Invalid connection",
+                        "no-email": "Please enter an email address",
+                        "no-password": "Password is required",
+                        "no-re-enter-password": "New password confirmation is missing",
+                        "no-username": "Username is required",
+                        "pageTitle": "Create a password to sign up | ${clientName}",
+                        "password-breached": "This combination of credentials was detected in a public data breach on another website. Before your account is created, please use a different password to keep it secure.",
+                        "password-contains-user-information": "Password contains user information",
+                        "password-mismatch": "Passwords don't match",
+                        "password-policy-not-conformant": "The password is too weak",
+                        "password-previously-used": "Password has previously been used",
+                        "password-too-common": "The password is too common",
+                        "password-too-weak": "The password is too weak",
+                        "passwordPlaceholder": "Password",
+                        "passwordSecurityText": "Your password must contain:",
+                        "separatorText": "Or",
+                        "showPasswordText": "Show password",
+                        "title": "Create Your Account",
+                        "username-taken": "The username provided is in use already.",
+                        "usernamePlaceholder": "Username"
+                    }
+                },
+                "status": {
+                    "status": {
+                        "auth0-users-validation": "Something went wrong, please try again later",
+                        "authentication-failure": "We are sorry, something went wrong when attempting to login",
+                        "custom-script-error-code": "Something went wrong, please try again later.",
+                        "mfa-required": "Two-factor authentication is required to access this application. To enable this, please contact your system administrator.",
+                        "mfa-required-title": "Something Went Wrong",
+                        "mfa-required-type": "error-cross",
+                        "passwordless-no-session": "The link must be opened on the same device and browser from which you submitted your email address.",
+                        "passwordless-no-session-link": "Start over from this device or browser",
+                        "passwordless-no-session-title": "Something Went Wrong",
+                        "passwordless-no-session-type": "error-cross"
+                    }
+                }
             }
         };
         ws.send(JSON.stringify(message));

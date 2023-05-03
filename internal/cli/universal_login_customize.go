@@ -30,35 +30,33 @@ func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			var pageData *pageData
-			if err := ansi.Spinner("Gathering data", func() (err error) {
-				pageData, err = fetchPageData(ctx, cli.api)
+			var dataToSend *pageData
+			if err := ansi.Spinner("Gathering data. This will take a while", func() (err error) {
+				dataToSend, err = fetchPageData(ctx, cli.api)
 				return err
 			}); err != nil {
 				return err
 			}
 
-			cli.renderer.JSONResult(pageData)
+			cli.renderer.JSONResult(dataToSend)
 
-			var receivedMessage *receivedSaveMessage
-			if err := ansi.Waiting(func() (err error) {
-				receivedMessage, err = startWebSocketServer(ctx, pageData)
+			var dataReceived *pageData
+			if err := ansi.Spinner("Waiting for changes", func() (err error) {
+				dataReceived, err = startWebSocketServer(ctx, dataToSend)
 				return err
 			}); err != nil {
 				return err
 			}
 
-			cli.renderer.Infof("%+v", receivedMessage)
+			cli.renderer.JSONResult(dataReceived)
 
-			if err := ansi.Waiting(func() error {
-				return cli.api.Branding.SetUniversalLogin(
-					&management.BrandingUniversalLogin{
-						Body: receivedMessage.Templates.Body,
-					},
-				)
+			if err := ansi.Spinner("Persisting branding data. This will take a while", func() error {
+				return persistData(ctx, cli.api, dataReceived)
 			}); err != nil {
-				return fmt.Errorf("failed to update the template for the New Universal Login Experience: %w", err)
+				return err
 			}
+
+			cli.renderer.Infof("Branding for the Universal Login updated")
 
 			return nil
 		},
@@ -67,7 +65,7 @@ func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func startWebSocketServer(ctx context.Context, pageData *pageData) (*receivedSaveMessage, error) {
+func startWebSocketServer(ctx context.Context, pageData *pageData) (*pageData, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -81,7 +79,7 @@ func startWebSocketServer(ctx context.Context, pageData *pageData) (*receivedSav
 
 	handler := &webSocketHandler{
 		cancel:   cancel,
-		pageData: pageData,
+		sentData: pageData,
 		port:     port,
 	}
 
@@ -112,7 +110,7 @@ func startWebSocketServer(ctx context.Context, pageData *pageData) (*receivedSav
 	case err := <-errChan:
 		return nil, err
 	case <-ctx.Done():
-		return handler.receivedSaveMessage, server.Close()
+		return handler.receivedData, server.Close()
 	}
 }
 
@@ -253,8 +251,14 @@ func mergeMaps(map1, map2 map[string]interface{}) map[string]interface{} {
 		if subMap, ok := value.(map[string]interface{}); ok {
 			if subMap2, ok := map2[key].(map[string]interface{}); ok {
 				merged[key] = mergeMaps(subMap, subMap2)
+				if len(merged[key].(map[string]interface{})) == 0 {
+					delete(merged, key)
+				}
 			} else {
 				merged[key] = subMap
+				if len(merged[key].(map[string]interface{})) == 0 {
+					delete(merged, key)
+				}
 			}
 		} else {
 			if map2Value, ok := map2[key]; ok {
@@ -272,19 +276,15 @@ func mergeMaps(map1, map2 map[string]interface{}) map[string]interface{} {
 	return merged
 }
 
-type receivedSaveMessage struct {
-	Templates *management.BrandingUniversalLogin `json:"templates"`
-	Themes    *management.BrandingTheme          `json:"themes"`
-}
-
 type webSocketHandler struct {
-	receivedSaveMessage *receivedSaveMessage
-	cancel              context.CancelFunc
-	pageData            *pageData
-	port                int
+	receivedData *pageData
+	sentData     *pageData
+	cancel       context.CancelFunc
+	port         int
 }
 
 func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Allow only one connection.
 	connection, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		//OriginPatterns: []string{fmt.Sprintf("127.0.0.1:%d", h.port)},
 		OriginPatterns: []string{"localhost:*"},
@@ -294,7 +294,9 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bytes, err := json.Marshal(&h.pageData)
+	connection.SetReadLimit(1024 * 1024)
+
+	bytes, err := json.Marshal(&h.sentData)
 	if err != nil {
 		log.Printf("failed to marshal message: %v", err)
 		return
@@ -314,14 +316,14 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var msg receivedSaveMessage
+	var msg pageData
 	err = json.Unmarshal(message, &msg)
 	if err != nil {
 		log.Printf("failed to unmarshal message: %v", err)
 		return
 	}
 
-	h.receivedSaveMessage = &msg
+	h.receivedData = &msg
 
 	err = connection.Close(websocket.StatusNormalClosure, "Received save message")
 	if err != nil {
@@ -329,4 +331,60 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.cancel()
+}
+
+func persistData(ctx context.Context, api *auth0.API, data *pageData) error {
+	group, ctx := errgroup.WithContext(ctx)
+
+	group.Go(func() (err error) {
+		return api.Branding.SetUniversalLogin(
+			&management.BrandingUniversalLogin{
+				Body: data.Templates.Body,
+			},
+		)
+	})
+
+	group.Go(func() (err error) {
+		data.Themes.ID = nil
+
+		existingTheme, err := api.BrandingTheme.Default()
+		if err != nil {
+			return api.BrandingTheme.Create(data.Themes)
+		}
+
+		return api.BrandingTheme.Update(existingTheme.GetID(), data.Themes)
+	})
+
+	group.Go(func() (err error) {
+		return api.Prompt.Update(data.AuthenticationProfile)
+	})
+
+	group.Go(func() (err error) {
+		return api.Branding.Update(data.Branding)
+	})
+
+	for key, value := range data.CustomText {
+		key := key
+		value := value
+		group.Go(func() (err error) {
+			bytes, err := json.Marshal(&value)
+			if err != nil {
+				return err
+			}
+
+			data := make(map[string]interface{})
+			err = json.Unmarshal(bytes, &data)
+			if err != nil {
+				return err
+			}
+
+			if len(data) == 0 || key == "passkeys" {
+				return nil
+			}
+
+			return api.Prompt.SetCustomText(key, "en", data)
+		})
+	}
+
+	return group.Wait()
 }
