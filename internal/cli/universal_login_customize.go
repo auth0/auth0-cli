@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -37,15 +38,25 @@ func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 				return err
 			}
 
-			cli.renderer.Infof("%+v", pageData)
-
-			if err := ansi.Waiting(func() error {
-				return startWebSocketServer(ctx, pageData)
+			var receivedMessage *receivedSaveMessage
+			if err := ansi.Waiting(func() (err error) {
+				receivedMessage, err = startWebSocketServer(ctx, pageData)
+				return err
 			}); err != nil {
 				return err
 			}
 
-			cli.renderer.Infof("Branding Updated")
+			cli.renderer.Infof("%+v", receivedMessage)
+
+			if err := ansi.Waiting(func() error {
+				return cli.api.Branding.SetUniversalLogin(
+					&management.BrandingUniversalLogin{
+						Body: receivedMessage.Templates.Body,
+					},
+				)
+			}); err != nil {
+				return fmt.Errorf("failed to update the template for the New Universal Login Experience: %w", err)
+			}
 
 			return nil
 		},
@@ -54,21 +65,23 @@ func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func startWebSocketServer(ctx context.Context, pageData *pageData) error {
+func startWebSocketServer(ctx context.Context, pageData *pageData) (*receivedSaveMessage, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	listener, err := net.Listen("tcp", "127.0.0.1:8000")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer listener.Close()
 
+	handler := &webSocketHandler{
+		cancel:   cancel,
+		pageData: pageData,
+	}
+
 	server := &http.Server{
-		Handler: &webSocketHandler{
-			cancel:   cancel,
-			pageData: pageData,
-		},
+		Handler:      handler,
 		ReadTimeout:  time.Minute * 10,
 		WriteTimeout: time.Minute * 10,
 	}
@@ -79,14 +92,14 @@ func startWebSocketServer(ctx context.Context, pageData *pageData) error {
 	}()
 
 	if err := browser.OpenURL("http://localhost:63342/auth0-cli/internal/cli/universal_login_customize.html?_ijt=up36ifofvbb0t6dtkn3j162ajb&_ij_reload=RELOAD_ON_SAVE"); err != nil {
-		return err
+		return nil, err
 	}
 
 	select {
 	case err := <-errChan:
-		return err
+		return nil, err
 	case <-ctx.Done():
-		return server.Close()
+		return handler.receivedSaveMessage, server.Close()
 	}
 }
 
@@ -160,13 +173,14 @@ func fetchBrandingThemeOrUseEmpty(ctx context.Context, api *auth0.API) *manageme
 }
 
 type receivedSaveMessage struct {
-	Templates management.BrandingUniversalLogin `json:"templates"`
-	Themes    management.BrandingTheme          `json:"themes"`
+	Templates *management.BrandingUniversalLogin `json:"templates"`
+	Themes    *management.BrandingTheme          `json:"themes"`
 }
 
 type webSocketHandler struct {
-	cancel   context.CancelFunc
-	pageData *pageData
+	receivedSaveMessage *receivedSaveMessage
+	cancel              context.CancelFunc
+	pageData            *pageData
 }
 
 func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -190,21 +204,22 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.cancel()
 		return
 	}
+
 	// Just wait for the save button, no need to wait for more messages.
-	var msg receivedSaveMessage
 	_, message, err := connection.Read(r.Context())
 	if err != nil {
 		log.Printf("error reading from WebSocket: %v", err)
 		return
 	}
 
+	var msg receivedSaveMessage
 	err = json.Unmarshal(message, &msg)
 	if err != nil {
 		log.Printf("failed to unmarshal message: %v", err)
 		return
 	}
 
-	log.Printf("received message: %+v", msg)
+	h.receivedSaveMessage = &msg
 
 	err = connection.Close(websocket.StatusNormalClosure, "Received save message")
 	if err != nil {
