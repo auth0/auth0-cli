@@ -7,17 +7,20 @@
 <h1>WebSocket Example</h1>
 <div id="messages"></div>
 <form>
-    <input type="text" id="messageInput" />
+    <input type="text" id="messageInput"/>
     <button type="submit">Save</button>
 </form>
 <script>
     const messagesDiv = document.getElementById("messages");
     const messageInput = document.getElementById("messageInput");
 
-    const ws = new WebSocket("ws://localhost:8000");
+    const urlParams = new URLSearchParams(window.location.search);
+    const wsPort = urlParams.get('ws_port');
+
+    const ws = new WebSocket("ws://localhost:" + wsPort);
 
     ws.onopen = () => {
-        console.log("WebSocket connected");
+        console.log("WebSocket connected on port " + wsPort);
     };
 
     ws.onmessage = (event) => {

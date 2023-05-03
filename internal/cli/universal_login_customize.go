@@ -69,15 +69,18 @@ func startWebSocketServer(ctx context.Context, pageData *pageData) (*receivedSav
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	listener, err := net.Listen("tcp", "127.0.0.1:8000")
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return nil, err
 	}
 	defer listener.Close()
 
+	port := listener.Addr().(*net.TCPAddr).Port
+
 	handler := &webSocketHandler{
 		cancel:   cancel,
 		pageData: pageData,
+		port:     port,
 	}
 
 	server := &http.Server{
@@ -91,7 +94,15 @@ func startWebSocketServer(ctx context.Context, pageData *pageData) (*receivedSav
 		errChan <- server.Serve(listener)
 	}()
 
-	if err := browser.OpenURL("http://localhost:63342/auth0-cli/internal/cli/universal_login_customize.html?_ijt=up36ifofvbb0t6dtkn3j162ajb&_ij_reload=RELOAD_ON_SAVE"); err != nil {
+	if err := browser.OpenURL(
+		fmt.Sprintf(
+			"http://localhost:63342/auth0-cli/internal/cli/universal_login_customize.html"+
+				"?_ijt=up36ifofvbb0t6dtkn3j162ajb"+
+				"&_ij_reload=RELOAD_ON_SAVE"+
+				"&ws_port=%d",
+			port,
+		),
+	); err != nil {
 		return nil, err
 	}
 
@@ -181,10 +192,12 @@ type webSocketHandler struct {
 	receivedSaveMessage *receivedSaveMessage
 	cancel              context.CancelFunc
 	pageData            *pageData
+	port                int
 }
 
 func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	connection, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+		//OriginPatterns: []string{fmt.Sprintf("127.0.0.1:%d", h.port)},
 		OriginPatterns: []string{"localhost:*"},
 	})
 	if err != nil {
