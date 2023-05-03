@@ -38,6 +38,8 @@ func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 				return err
 			}
 
+			cli.renderer.JSONResult(pageData)
+
 			var receivedMessage *receivedSaveMessage
 			if err := ansi.Waiting(func() (err error) {
 				receivedMessage, err = startWebSocketServer(ctx, pageData)
@@ -120,6 +122,7 @@ type pageData struct {
 	Templates             *management.BrandingUniversalLogin `json:"templates"`
 	Themes                *management.BrandingTheme          `json:"themes"`
 	Tenant                *management.Tenant                 `json:"tenant"`
+	CustomText            map[string]interface{}             `json:"custom_text"`
 }
 
 func fetchPageData(ctx context.Context, api *auth0.API) (*pageData, error) {
@@ -159,6 +162,12 @@ func fetchPageData(ctx context.Context, api *auth0.API) (*pageData, error) {
 		return err
 	})
 
+	var customText map[string]interface{}
+	group.Go(func() (err error) {
+		customText, err = fetchCustomTextWithDefaults(ctx, api)
+		return err
+	})
+
 	if err := group.Wait(); err != nil {
 		return nil, err
 	}
@@ -169,6 +178,7 @@ func fetchPageData(ctx context.Context, api *auth0.API) (*pageData, error) {
 		Templates:             currentTemplate,
 		Themes:                currentTheme,
 		Tenant:                tenant,
+		CustomText:            customText,
 	}
 
 	return data, nil
@@ -181,6 +191,85 @@ func fetchBrandingThemeOrUseEmpty(ctx context.Context, api *auth0.API) *manageme
 	}
 
 	return currentTheme
+}
+
+func fetchCustomTextWithDefaults(ctx context.Context, api *auth0.API) (map[string]interface{}, error) {
+	var availablePrompts = []string{
+		"common", "consent", "device-flow", "email-otp-challenge", "email-verification", "invitation", "login",
+		"login-id", "login-password", "login-passwordless", "login-email-verification", "logout", "mfa", "mfa-email",
+		"mfa-otp", "mfa-phone", "mfa-push", "mfa-recovery-code", "mfa-sms", "mfa-voice", "mfa-webauthn",
+		"organizations", "reset-password", "signup", "signup-id", "signup-password", "status",
+	}
+
+	const language = "en"
+
+	customText := make(map[string]interface{}, 0)
+	for _, availablePrompt := range availablePrompts {
+		promptText, err := api.Prompt.CustomText(availablePrompt, language)
+		if err != nil {
+			return nil, err
+		}
+
+		customText[availablePrompt] = promptText
+	}
+
+	request, err := api.HTTPClient.NewRequest(
+		http.MethodGet,
+		fmt.Sprintf("https://cdn.auth0.com/ulp/react-components/development/languages/%s/prompts.json", language),
+		nil,
+	)
+	if err != nil {
+		return customText, err
+	}
+
+	response, err := api.HTTPClient.Do(request)
+	if err != nil {
+		return customText, err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode >= http.StatusBadRequest {
+		return customText, err
+	}
+
+	defaultAllPromptsText := make([]map[string]interface{}, 0)
+	if err := json.NewDecoder(response.Body).Decode(&defaultAllPromptsText); err != nil {
+		return customText, err
+	}
+
+	defaultText := make(map[string]interface{}, 0)
+	for _, value := range defaultAllPromptsText {
+		for key, innerValue := range value {
+			defaultText[key] = innerValue
+		}
+	}
+
+	return mergeMaps(defaultText, customText), nil
+}
+
+func mergeMaps(map1, map2 map[string]interface{}) map[string]interface{} {
+	merged := make(map[string]interface{})
+	for key, value := range map1 {
+		if subMap, ok := value.(map[string]interface{}); ok {
+			if subMap2, ok := map2[key].(map[string]interface{}); ok {
+				merged[key] = mergeMaps(subMap, subMap2)
+			} else {
+				merged[key] = subMap
+			}
+		} else {
+			if map2Value, ok := map2[key]; ok {
+				merged[key] = map2Value
+			} else {
+				merged[key] = value
+			}
+		}
+	}
+	for key, value := range map2 {
+		if _, ok := merged[key]; !ok {
+			merged[key] = value
+		}
+	}
+	return merged
 }
 
 type receivedSaveMessage struct {
