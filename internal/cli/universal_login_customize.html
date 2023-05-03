@@ -21,8 +21,8 @@
     };
 
     ws.onmessage = (event) => {
-        const message = JSON.parse(event.data);
-        messagesDiv.innerHTML += "<p>" + message.text + "</p>";
+        const message = JSON.stringify(event.data);
+        messagesDiv.innerHTML += "<p>" + message + "</p>";
     };
 
     document.querySelector("form").addEventListener("submit", (event) => {

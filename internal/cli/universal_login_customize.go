@@ -11,9 +11,11 @@ import (
 	"github.com/auth0/go-auth0/management"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	"nhooyr.io/websocket"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
 func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
@@ -27,8 +29,18 @@ func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			if err := ansi.Spinner("Waiting for changes", func() error {
-				return startWebSocketServer(ctx)
+			var pageData *pageData
+			if err := ansi.Spinner("Gathering data", func() (err error) {
+				pageData, err = fetchPageData(ctx, cli.api)
+				return err
+			}); err != nil {
+				return err
+			}
+
+			cli.renderer.Infof("%+v", pageData)
+
+			if err := ansi.Waiting(func() error {
+				return startWebSocketServer(ctx, pageData)
 			}); err != nil {
 				return err
 			}
@@ -42,7 +54,7 @@ func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func startWebSocketServer(ctx context.Context) error {
+func startWebSocketServer(ctx context.Context, pageData *pageData) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -54,7 +66,8 @@ func startWebSocketServer(ctx context.Context) error {
 
 	server := &http.Server{
 		Handler: &webSocketHandler{
-			cancel: cancel,
+			cancel:   cancel,
+			pageData: pageData,
 		},
 		ReadTimeout:  time.Minute * 10,
 		WriteTimeout: time.Minute * 10,
@@ -78,7 +91,72 @@ func startWebSocketServer(ctx context.Context) error {
 }
 
 type pageData struct {
-	Text string `json:"text"`
+	AuthenticationProfile *management.Prompt                 `json:"authentication_profile"`
+	Branding              *management.Branding               `json:"branding"`
+	Templates             *management.BrandingUniversalLogin `json:"templates"`
+	Themes                *management.BrandingTheme          `json:"themes"`
+	Tenant                *management.Tenant                 `json:"tenant"`
+}
+
+func fetchPageData(ctx context.Context, api *auth0.API) (*pageData, error) {
+	group, ctx := errgroup.WithContext(ctx)
+
+	group.Go(func() (err error) {
+		return ensureCustomDomainIsEnabled(ctx, api)
+	})
+
+	var authenticationProfile *management.Prompt
+	group.Go(func() (err error) {
+		authenticationProfile, err = api.Prompt.Read()
+		return err
+	})
+
+	var brandingSettings *management.Branding
+	group.Go(func() (err error) {
+		brandingSettings = fetchBrandingSettingsOrUseDefaults(ctx, api)
+		return nil
+	})
+
+	var currentTemplate *management.BrandingUniversalLogin
+	group.Go(func() (err error) {
+		currentTemplate = fetchBrandingTemplateOrUseEmpty(ctx, api)
+		return nil
+	})
+
+	var currentTheme *management.BrandingTheme
+	group.Go(func() (err error) {
+		currentTheme = fetchBrandingThemeOrUseEmpty(ctx, api)
+		return nil
+	})
+
+	var tenant *management.Tenant
+	group.Go(func() (err error) {
+		tenant, err = api.Tenant.Read(management.Context(ctx))
+		return err
+	})
+
+	if err := group.Wait(); err != nil {
+		return nil, err
+	}
+
+	data := &pageData{
+		AuthenticationProfile: authenticationProfile,
+		Branding:              brandingSettings,
+		Templates:             currentTemplate,
+		Themes:                currentTheme,
+		Tenant:                tenant,
+	}
+
+	return data, nil
+}
+
+func fetchBrandingThemeOrUseEmpty(ctx context.Context, api *auth0.API) *management.BrandingTheme {
+	currentTheme, err := api.BrandingTheme.Default(management.Context(ctx))
+	if err != nil {
+		currentTheme = &management.BrandingTheme{}
+	}
+
+	return currentTheme
 }
 
 type receivedSaveMessage struct {
@@ -87,7 +165,8 @@ type receivedSaveMessage struct {
 }
 
 type webSocketHandler struct {
-	cancel context.CancelFunc
+	cancel   context.CancelFunc
+	pageData *pageData
 }
 
 func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -99,10 +178,7 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := pageData{
-		Text: "hello",
-	}
-	bytes, err := json.Marshal(&data)
+	bytes, err := json.Marshal(&h.pageData)
 	if err != nil {
 		log.Printf("failed to marshal message: %v", err)
 		return
