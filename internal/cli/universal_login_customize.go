@@ -32,7 +32,7 @@ func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 
 			var dataToSend *pageData
 			if err := ansi.Spinner("Gathering data. This will take a while", func() (err error) {
-				dataToSend, err = fetchPageData(ctx, cli.api)
+				dataToSend, err = fetchPageData(ctx, cli.api, cli.tenant)
 				return err
 			}); err != nil {
 				return err
@@ -119,11 +119,17 @@ type pageData struct {
 	Branding              *management.Branding               `json:"branding"`
 	Templates             *management.BrandingUniversalLogin `json:"templates"`
 	Themes                *management.BrandingTheme          `json:"themes"`
-	Tenant                *management.Tenant                 `json:"tenant"`
+	Tenant                *tenantData                        `json:"tenant"`
 	CustomText            map[string]interface{}             `json:"custom_text"`
 }
 
-func fetchPageData(ctx context.Context, api *auth0.API) (*pageData, error) {
+type tenantData struct {
+	FriendlyName   string   `json:"friendly_name"`
+	EnabledLocales []string `json:"enabled_locales"`
+	Domain         string   `json:"domain"`
+}
+
+func fetchPageData(ctx context.Context, api *auth0.API, tenantDomain string) (*pageData, error) {
 	group, ctx := errgroup.WithContext(ctx)
 
 	group.Go(func() (err error) {
@@ -175,8 +181,12 @@ func fetchPageData(ctx context.Context, api *auth0.API) (*pageData, error) {
 		Branding:              brandingSettings,
 		Templates:             currentTemplate,
 		Themes:                currentTheme,
-		Tenant:                tenant,
-		CustomText:            customText,
+		Tenant: &tenantData{
+			FriendlyName:   tenant.GetFriendlyName(),
+			EnabledLocales: tenant.GetEnabledLocales(),
+			Domain:         tenantDomain,
+		},
+		CustomText: customText,
 	}
 
 	return data, nil
@@ -185,7 +195,80 @@ func fetchPageData(ctx context.Context, api *auth0.API) (*pageData, error) {
 func fetchBrandingThemeOrUseEmpty(ctx context.Context, api *auth0.API) *management.BrandingTheme {
 	currentTheme, err := api.BrandingTheme.Default(management.Context(ctx))
 	if err != nil {
-		currentTheme = &management.BrandingTheme{}
+		currentTheme = &management.BrandingTheme{
+			Borders: management.BrandingThemeBorders{
+				ButtonBorderRadius: 3,
+				ButtonBorderWeight: 1,
+				ButtonsStyle:       "rounded",
+				InputBorderRadius:  3,
+				InputBorderWeight:  1,
+				InputsStyle:        "rounded",
+				ShowWidgetShadow:   true,
+				WidgetBorderWeight: 0,
+				WidgetCornerRadius: 5,
+			},
+			Colors: management.BrandingThemeColors{
+				BaseFocusColor:          auth0.String("#635dff"),
+				BaseHoverColor:          auth0.String("#000000"),
+				BodyText:                "#1e212a",
+				Error:                   "#d03c38",
+				Header:                  "#1e212a",
+				Icons:                   "#65676e",
+				InputBackground:         "#ffffff",
+				InputBorder:             "#c9cace",
+				InputFilledText:         "#000000",
+				InputLabelsPlaceholders: "#65676e",
+				LinksFocusedComponents:  "#635dff",
+				PrimaryButton:           "#635dff",
+				PrimaryButtonLabel:      "#ffffff",
+				SecondaryButtonBorder:   "#c9cace",
+				SecondaryButtonLabel:    "#1e212a",
+				Success:                 "#13a688",
+				WidgetBackground:        "#ffffff",
+				WidgetBorder:            "#c9cace",
+			},
+			Fonts: management.BrandingThemeFonts{
+				BodyText: management.BrandingThemeText{
+					Bold: false,
+					Size: 87.5,
+				},
+				ButtonsText: management.BrandingThemeText{
+					Bold: false,
+					Size: 100.0,
+				},
+				FontURL: "",
+				InputLabels: management.BrandingThemeText{
+					Bold: false,
+					Size: 100.0,
+				},
+				Links: management.BrandingThemeText{
+					Bold: true,
+					Size: 87.5,
+				},
+				LinksStyle:        "normal",
+				ReferenceTextSize: 16.0,
+				Subtitle: management.BrandingThemeText{
+					Bold: true,
+					Size: 87.5,
+				},
+				Title: management.BrandingThemeText{
+					Bold: true,
+					Size: 150.0,
+				},
+			},
+			PageBackground: management.BrandingThemePageBackground{
+				BackgroundColor:    "#000000",
+				BackgroundImageURL: "",
+				PageLayout:         "center",
+			},
+			Widget: management.BrandingThemeWidget{
+				HeaderTextAlignment: "center",
+				LogoHeight:          52.0,
+				LogoPosition:        "center",
+				LogoURL:             "",
+				SocialButtonsLayout: "bottom",
+			},
+		}
 	}
 
 	return currentTheme
