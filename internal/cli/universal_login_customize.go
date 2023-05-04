@@ -94,15 +94,7 @@ func startWebSocketServer(ctx context.Context, pageData *pageData) (*pageData, e
 		errChan <- server.Serve(listener)
 	}()
 
-	if err := browser.OpenURL(
-		fmt.Sprintf(
-			"http://localhost:63342/auth0-cli/internal/cli/universal_login_customize.html"+
-				"?_ijt=up36ifofvbb0t6dtkn3j162ajb"+
-				"&_ij_reload=RELOAD_ON_SAVE"+
-				"&ws_port=%d",
-			port,
-		),
-	); err != nil {
+	if err := browser.OpenURL(fmt.Sprintf("http://localhost:5173?ws_port=%d", port)); err != nil {
 		return nil, err
 	}
 
@@ -276,10 +268,11 @@ func fetchBrandingThemeOrUseEmpty(ctx context.Context, api *auth0.API) *manageme
 
 func fetchCustomTextWithDefaults(ctx context.Context, api *auth0.API) (map[string]interface{}, error) {
 	var availablePrompts = []string{
-		"common", "consent", "device-flow", "email-otp-challenge", "email-verification", "invitation", "login",
-		"login-id", "login-password", "login-passwordless", "login-email-verification", "logout", "mfa", "mfa-email",
-		"mfa-otp", "mfa-phone", "mfa-push", "mfa-recovery-code", "mfa-sms", "mfa-voice", "mfa-webauthn",
-		"organizations", "reset-password", "signup", "signup-id", "signup-password", "status",
+		"login",
+		//"consent", "device-flow", "email-otp-challenge", "email-verification", "invitation", "common",
+		//"login-id", "login-password", "login-passwordless", "login-email-verification", "logout", "mfa", "mfa-email",
+		//"mfa-otp", "mfa-phone", "mfa-push", "mfa-recovery-code", "mfa-sms", "mfa-voice", "mfa-webauthn",
+		//"organizations", "reset-password", "signup", "signup-id", "signup-password", "status",
 	}
 
 	const language = "en"
