@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/auth0/go-auth0/management"
@@ -38,7 +39,7 @@ func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 				return err
 			}
 
-			cli.renderer.JSONResult(dataToSend)
+			//cli.renderer.JSONResult(dataToSend)
 
 			var dataReceived *pageData
 			if err := ansi.Spinner("Waiting for changes", func() (err error) {
@@ -48,7 +49,7 @@ func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 				return err
 			}
 
-			cli.renderer.JSONResult(dataReceived)
+			//cli.renderer.JSONResult(dataReceived)
 
 			if err := ansi.Spinner("Persisting branding data. This will take a while", func() error {
 				return persistData(ctx, cli.api, dataReceived)
@@ -268,11 +269,11 @@ func fetchBrandingThemeOrUseEmpty(ctx context.Context, api *auth0.API) *manageme
 
 func fetchCustomTextWithDefaults(ctx context.Context, api *auth0.API) (map[string]interface{}, error) {
 	var availablePrompts = []string{
-		"login",
+		"login", "signup", "logout",
 		//"consent", "device-flow", "email-otp-challenge", "email-verification", "invitation", "common",
-		//"login-id", "login-password", "login-passwordless", "login-email-verification", "logout", "mfa", "mfa-email",
+		//"login-id", "login-password", "login-passwordless", "login-email-verification", "mfa", "mfa-email",
 		//"mfa-otp", "mfa-phone", "mfa-push", "mfa-recovery-code", "mfa-sms", "mfa-voice", "mfa-webauthn",
-		//"organizations", "reset-password", "signup", "signup-id", "signup-password", "status",
+		//"organizations", "reset-password", "signup-id", "signup-password", "status",
 	}
 
 	const language = "en"
@@ -448,13 +449,17 @@ func persistData(ctx context.Context, api *auth0.API, data *pageData) error {
 				return err
 			}
 
+			if strings.Contains(string(bytes), "{}") {
+				return nil
+			}
+
 			data := make(map[string]interface{})
 			err = json.Unmarshal(bytes, &data)
 			if err != nil {
 				return err
 			}
 
-			if len(data) == 0 || key == "passkeys" {
+			if len(data) == 0 {
 				return nil
 			}
 
