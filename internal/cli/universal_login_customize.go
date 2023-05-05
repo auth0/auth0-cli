@@ -41,21 +41,14 @@ func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 
 			//cli.renderer.JSONResult(dataToSend)
 
-			var dataReceived *pageData
-			if err := ansi.Spinner("Waiting for changes", func() (err error) {
-				dataReceived, err = startWebSocketServer(ctx, dataToSend)
-				return err
-			}); err != nil {
+			fmt.Fprintf(cli.renderer.MessageWriter, "Perform your changes within the UI"+"\n")
+
+			err := startWebSocketServer(ctx, cli.api, dataToSend)
+			if err != nil {
 				return err
 			}
 
 			//cli.renderer.JSONResult(dataReceived)
-
-			if err := ansi.Spinner("Persisting branding data. This will take a while", func() error {
-				return persistData(ctx, cli.api, dataReceived)
-			}); err != nil {
-				return err
-			}
 
 			cli.renderer.Infof("Branding for the Universal Login updated")
 			cli.renderer.Infof("Test the Universal Login by running: 'auth0 test login'")
@@ -67,19 +60,20 @@ func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func startWebSocketServer(ctx context.Context, pageData *pageData) (*pageData, error) {
+func startWebSocketServer(ctx context.Context, api *auth0.API, pageData *pageData) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer listener.Close()
 
 	port := listener.Addr().(*net.TCPAddr).Port
 
 	handler := &webSocketHandler{
+		api:      api,
 		cancel:   cancel,
 		sentData: pageData,
 		port:     port,
@@ -97,18 +91,19 @@ func startWebSocketServer(ctx context.Context, pageData *pageData) (*pageData, e
 	}()
 
 	if err := browser.OpenURL(fmt.Sprintf("http://localhost:5173?ws_port=%d", port)); err != nil {
-		return nil, err
+		return err
 	}
 
 	select {
 	case err := <-errChan:
-		return nil, err
+		return err
 	case <-ctx.Done():
-		return handler.receivedData, server.Close()
+		return server.Close()
 	}
 }
 
 type pageData struct {
+	Connected             bool                               `json:"connected"`
 	AuthenticationProfile *management.Prompt                 `json:"authentication_profile"`
 	Branding              *management.Branding               `json:"branding"`
 	Templates             *management.BrandingUniversalLogin `json:"templates"`
@@ -171,6 +166,7 @@ func fetchPageData(ctx context.Context, api *auth0.API, tenantDomain string) (*p
 	}
 
 	data := &pageData{
+		Connected:             true,
 		AuthenticationProfile: authenticationProfile,
 		Branding:              brandingSettings,
 		Templates:             currentTemplate,
@@ -271,10 +267,10 @@ func fetchBrandingThemeOrUseEmpty(ctx context.Context, api *auth0.API) *manageme
 func fetchCustomTextWithDefaults(ctx context.Context, api *auth0.API) (map[string]interface{}, error) {
 	var availablePrompts = []string{
 		"login", "signup", "logout",
-		//"consent", "device-flow", "email-otp-challenge", "email-verification", "invitation", "common",
-		//"login-id", "login-password", "login-passwordless", "login-email-verification", "mfa", "mfa-email",
-		//"mfa-otp", "mfa-phone", "mfa-push", "mfa-recovery-code", "mfa-sms", "mfa-voice", "mfa-webauthn",
-		//"organizations", "reset-password", "signup-id", "signup-password", "status",
+		"consent", "device-flow", "email-otp-challenge", "email-verification", "invitation", "common",
+		"login-id", "login-password", "login-passwordless", "login-email-verification", "mfa", "mfa-email",
+		"mfa-otp", "mfa-phone", "mfa-push", "mfa-recovery-code", "mfa-sms", "mfa-voice", "mfa-webauthn",
+		"organizations", "reset-password", "signup-id", "signup-password", "status",
 	}
 
 	const language = "en"
@@ -377,6 +373,7 @@ func mergeMaps(map1, map2 map[string]interface{}) map[string]interface{} {
 }
 
 type webSocketHandler struct {
+	api          *auth0.API
 	receivedData *pageData
 	sentData     *pageData
 	cancel       context.CancelFunc
@@ -410,27 +407,42 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Just wait for the save button, no need to wait for more messages.
-	_, message, err := connection.Read(r.Context())
-	if err != nil {
-		log.Printf("error reading from WebSocket: %v", err)
-		return
+	for {
+		_, message, err := connection.Read(r.Context())
+		if err != nil {
+			log.Printf("error reading from WebSocket: %v", err)
+			h.cancel()
+			return
+		}
+
+		var msg pageData
+		err = json.Unmarshal(message, &msg)
+		if err != nil {
+			log.Printf("failed to unmarshal message: %v", err)
+			h.cancel()
+			return
+		}
+
+		h.receivedData = &msg
+
+		if err := ansi.Spinner("Persisting branding data. This will take a while", func() error {
+			return persistData(r.Context(), h.api, h.receivedData)
+		}); err != nil {
+			log.Printf("error persisting data: %+v", err)
+			h.cancel()
+			return
+		}
+
+		if !h.receivedData.Connected {
+			err = connection.Close(websocket.StatusNormalClosure, "Received disconnect message")
+			if err != nil {
+				log.Printf("error closing WebSocket: %v", err)
+				h.cancel()
+			}
+
+			h.cancel()
+		}
 	}
-
-	var msg pageData
-	err = json.Unmarshal(message, &msg)
-	if err != nil {
-		log.Printf("failed to unmarshal message: %v", err)
-		return
-	}
-
-	h.receivedData = &msg
-
-	err = connection.Close(websocket.StatusNormalClosure, "Received save message")
-	if err != nil {
-		log.Printf("error closing WebSocket: %v", err)
-	}
-
-	h.cancel()
 }
 
 func persistData(ctx context.Context, api *auth0.API, data *pageData) error {
