@@ -233,11 +233,11 @@ func fetchBrandingThemeOrUseEmpty(ctx context.Context, api *auth0.API) *manageme
 				LinksStyle:        "normal",
 				ReferenceTextSize: 16.0,
 				Subtitle: management.BrandingThemeText{
-					Bold: true,
+					Bold: false,
 					Size: 87.5,
 				},
 				Title: management.BrandingThemeText{
-					Bold: true,
+					Bold: false,
 					Size: 150.0,
 				},
 			},
@@ -408,7 +408,6 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Just wait for the save button, no need to wait for more messages.
 	for {
 		_, message, err := connection.Read(r.Context())
 		if err != nil {
