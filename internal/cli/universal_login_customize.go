@@ -261,11 +261,12 @@ func fetchBrandingThemeOrUseEmpty(ctx context.Context, api *auth0.API) *manageme
 
 func fetchCustomTextWithDefaults(ctx context.Context, api *auth0.API) (map[string]interface{}, error) {
 	var availablePrompts = []string{
-		"login", "signup", "logout",
-		"consent", "device-flow", "email-otp-challenge", "email-verification", "invitation", "common",
-		"login-id", "login-password", "login-passwordless", "login-email-verification", "mfa", "mfa-email",
-		"mfa-otp", "mfa-phone", "mfa-push", "mfa-recovery-code", "mfa-sms", "mfa-voice", "mfa-webauthn",
-		"organizations", "reset-password", "signup-id", "signup-password", "status",
+		"login",
+		//"signup", "logout",
+		//"consent", "device-flow", "email-otp-challenge", "email-verification", "invitation", "common",
+		//"login-id", "login-password", "login-passwordless", "login-email-verification", "mfa", "mfa-email",
+		//"mfa-otp", "mfa-phone", "mfa-push", "mfa-recovery-code", "mfa-sms", "mfa-voice", "mfa-webauthn",
+		//"organizations", "reset-password", "signup-id", "signup-password", "status",
 	}
 
 	const language = "en"
@@ -307,29 +308,34 @@ func fetchCustomTextWithDefaults(ctx context.Context, api *auth0.API) (map[strin
 	defaultText := make(map[string]interface{}, 0)
 	for _, value := range defaultAllPromptsText {
 		for key, innerValue := range value {
-			if key == "passkeys" {
-				continue
-			}
-			innerInnerValue, ok := innerValue.(map[string]interface{})
-			if ok {
-				for k := range innerInnerValue {
-					if key == "reset-password" {
-						if k == "reset-password-mfa-email-challenge" ||
-							k == "reset-password-mfa-otp-challenge" ||
-							k == "reset-password-mfa-phone-challenge" ||
-							k == "reset-password-mfa-push-challenge-push" ||
-							k == "reset-password-mfa-recovery-code-challenge" ||
-							k == "reset-password-mfa-sms-challenge" ||
-							k == "reset-password-mfa-voice-challenge" ||
-							k == "reset-password-mfa-webauthn-platform-challenge" ||
-							k == "reset-password-mfa-webauthn-roaming-challenge" {
-							delete(innerInnerValue, k)
-						}
-					}
-				}
+			if key == "login" {
+				defaultText[key] = innerValue
+				break
 			}
 
-			defaultText[key] = innerInnerValue
+			//if key == "passkeys" {
+			//	continue
+			//}
+			//innerInnerValue, ok := innerValue.(map[string]interface{})
+			//if ok {
+			//	for k := range innerInnerValue {
+			//		if key == "reset-password" {
+			//			if k == "reset-password-mfa-email-challenge" ||
+			//				k == "reset-password-mfa-otp-challenge" ||
+			//				k == "reset-password-mfa-phone-challenge" ||
+			//				k == "reset-password-mfa-push-challenge-push" ||
+			//				k == "reset-password-mfa-recovery-code-challenge" ||
+			//				k == "reset-password-mfa-sms-challenge" ||
+			//				k == "reset-password-mfa-voice-challenge" ||
+			//				k == "reset-password-mfa-webauthn-platform-challenge" ||
+			//				k == "reset-password-mfa-webauthn-roaming-challenge" {
+			//				delete(innerInnerValue, k)
+			//			}
+			//		}
+			//	}
+			//}
+
+			//defaultText[key] = innerInnerValue
 		}
 	}
 
@@ -472,6 +478,7 @@ func persistData(ctx context.Context, api *auth0.API, data *pageData) error {
 	})
 
 	group.Go(func() (err error) {
+		data.Branding.LogoURL = nil
 		return api.Branding.Update(data.Branding)
 	})
 
