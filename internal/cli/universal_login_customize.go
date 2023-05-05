@@ -316,7 +316,29 @@ func fetchCustomTextWithDefaults(ctx context.Context, api *auth0.API) (map[strin
 	defaultText := make(map[string]interface{}, 0)
 	for _, value := range defaultAllPromptsText {
 		for key, innerValue := range value {
-			defaultText[key] = innerValue
+			if key == "passkeys" {
+				continue
+			}
+			innerInnerValue, ok := innerValue.(map[string]interface{})
+			if ok {
+				for k := range innerInnerValue {
+					if key == "reset-password" {
+						if k == "reset-password-mfa-email-challenge" ||
+							k == "reset-password-mfa-otp-challenge" ||
+							k == "reset-password-mfa-phone-challenge" ||
+							k == "reset-password-mfa-push-challenge-push" ||
+							k == "reset-password-mfa-recovery-code-challenge" ||
+							k == "reset-password-mfa-sms-challenge" ||
+							k == "reset-password-mfa-voice-challenge" ||
+							k == "reset-password-mfa-webauthn-platform-challenge" ||
+							k == "reset-password-mfa-webauthn-roaming-challenge" {
+							delete(innerInnerValue, k)
+						}
+					}
+				}
+			}
+
+			defaultText[key] = innerInnerValue
 		}
 	}
 
