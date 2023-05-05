@@ -18,6 +18,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/display"
 )
 
 func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
@@ -39,19 +40,12 @@ func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 				return err
 			}
 
-			//cli.renderer.JSONResult(dataToSend)
-
 			fmt.Fprintf(cli.renderer.MessageWriter, "Perform your changes within the UI"+"\n")
 
-			err := startWebSocketServer(ctx, cli.api, dataToSend)
+			err := startWebSocketServer(ctx, cli.renderer, cli.api, dataToSend)
 			if err != nil {
 				return err
 			}
-
-			//cli.renderer.JSONResult(dataReceived)
-
-			cli.renderer.Infof("Branding for the Universal Login updated")
-			cli.renderer.Infof("Test the Universal Login by running: 'auth0 test login'")
 
 			return nil
 		},
@@ -60,7 +54,7 @@ func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func startWebSocketServer(ctx context.Context, api *auth0.API, pageData *pageData) error {
+func startWebSocketServer(ctx context.Context, renderer *display.Renderer, api *auth0.API, pageData *pageData) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -73,6 +67,7 @@ func startWebSocketServer(ctx context.Context, api *auth0.API, pageData *pageDat
 	port := listener.Addr().(*net.TCPAddr).Port
 
 	handler := &webSocketHandler{
+		renderer: renderer,
 		api:      api,
 		cancel:   cancel,
 		sentData: pageData,
@@ -373,6 +368,7 @@ func mergeMaps(map1, map2 map[string]interface{}) map[string]interface{} {
 }
 
 type webSocketHandler struct {
+	renderer     *display.Renderer
 	api          *auth0.API
 	receivedData *pageData
 	sentData     *pageData
@@ -425,6 +421,18 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		h.receivedData = &msg
 
+		if !h.receivedData.Connected {
+			err = connection.Close(websocket.StatusNormalClosure, "Received disconnect message")
+			if err != nil {
+				log.Printf("error closing WebSocket: %v", err)
+				h.cancel()
+			}
+
+			fmt.Fprintf(h.renderer.MessageWriter, "Disconnected from the UI. Test the Universal Login by running: 'auth0 test login'"+"\n")
+
+			h.cancel()
+		}
+
 		if err := ansi.Spinner("Persisting branding data. This will take a while", func() error {
 			return persistData(r.Context(), h.api, h.receivedData)
 		}); err != nil {
@@ -433,15 +441,7 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if !h.receivedData.Connected {
-			err = connection.Close(websocket.StatusNormalClosure, "Received disconnect message")
-			if err != nil {
-				log.Printf("error closing WebSocket: %v", err)
-				h.cancel()
-			}
-
-			h.cancel()
-		}
+		fmt.Fprintf(h.renderer.MessageWriter, "Branding for the Universal Login updated ✓"+"\n")
 	}
 }
 
