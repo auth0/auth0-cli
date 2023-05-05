@@ -32,7 +32,7 @@ func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 			ctx := cmd.Context()
 
 			var dataToSend *pageData
-			if err := ansi.Spinner("Gathering data. This will take a while", func() (err error) {
+			if err := ansi.Spinner("Gathering branding data. This will take a while", func() (err error) {
 				dataToSend, err = fetchPageData(ctx, cli.api, cli.tenant)
 				return err
 			}); err != nil {
@@ -58,6 +58,7 @@ func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 			}
 
 			cli.renderer.Infof("Branding for the Universal Login updated")
+			cli.renderer.Infof("Test the Universal Login by running: 'auth0 test login'")
 
 			return nil
 		},
