@@ -24,7 +24,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.2
 	github.com/tidwall/pretty v1.2.1
-	github.com/zalando/go-keyring v0.2.2
+	github.com/zalando/go-keyring v0.2.3
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 	golang.org/x/oauth2 v0.8.0
 	golang.org/x/sync v0.2.0
@@ -41,7 +41,7 @@ require (
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/aymanbagabas/go-osc52 v1.0.3 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
-	github.com/danieljoos/wincred v1.1.2 // indirect
+	github.com/danieljoos/wincred v1.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.0-20210816181553-5444fa50b93d // indirect
 	github.com/dlclark/regexp2 v1.4.0 // indirect
