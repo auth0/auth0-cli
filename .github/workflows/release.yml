@@ -3,7 +3,10 @@ name: goreleaser
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
+
+permissions:
+  contents: write
 
 jobs:
   goreleaser:
