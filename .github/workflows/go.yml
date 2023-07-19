@@ -10,6 +10,9 @@ concurrency:
   group: one-at-time
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   checks:
     name: Checks
