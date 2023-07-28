@@ -1,6 +1,8 @@
 package auth0
 
 import (
+	"context"
+
 	"github.com/auth0/go-auth0/management"
 )
 
@@ -10,7 +12,7 @@ type AttackProtectionAPI interface {
 	// Required scope: `read:attack_protection`
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Attack_Protection/get_breached_password_detection
-	GetBreachedPasswordDetection(
+	GetBreachedPasswordDetection(ctx context.Context,
 		opts ...management.RequestOption,
 	) (bpd *management.BreachedPasswordDetection, err error)
 
@@ -20,7 +22,7 @@ type AttackProtectionAPI interface {
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Attack_Protection/patch_breached_password_detection
 	UpdateBreachedPasswordDetection(
-		bpd *management.BreachedPasswordDetection,
+		ctx context.Context, bpd *management.BreachedPasswordDetection,
 		opts ...management.RequestOption,
 	) (err error)
 
@@ -30,7 +32,7 @@ type AttackProtectionAPI interface {
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Attack_Protection/get_brute_force_protection
 	GetBruteForceProtection(
-		opts ...management.RequestOption,
+		ctx context.Context, opts ...management.RequestOption,
 	) (bfp *management.BruteForceProtection, err error)
 
 	// UpdateBruteForceProtection updates the brute force configuration.
@@ -39,7 +41,7 @@ type AttackProtectionAPI interface {
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Attack_Protection/patch_brute_force_protection
 	UpdateBruteForceProtection(
-		bfp *management.BruteForceProtection,
+		ctx context.Context, bfp *management.BruteForceProtection,
 		opts ...management.RequestOption,
 	) (err error)
 
@@ -49,7 +51,7 @@ type AttackProtectionAPI interface {
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Attack_Protection/get_suspicious_ip_throttling
 	GetSuspiciousIPThrottling(
-		opts ...management.RequestOption,
+		ctx context.Context, opts ...management.RequestOption,
 	) (sit *management.SuspiciousIPThrottling, err error)
 
 	// UpdateSuspiciousIPThrottling updates the suspicious IP throttling configuration.
@@ -58,7 +60,7 @@ type AttackProtectionAPI interface {
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Attack_Protection/patch_suspicious_ip_throttling
 	UpdateSuspiciousIPThrottling(
-		sit *management.SuspiciousIPThrottling,
+		ctx context.Context, sit *management.SuspiciousIPThrottling,
 		opts ...management.RequestOption,
 	) (err error)
 }

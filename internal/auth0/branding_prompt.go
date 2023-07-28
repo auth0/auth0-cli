@@ -2,26 +2,30 @@
 
 package auth0
 
-import "github.com/auth0/go-auth0/management"
+import (
+	"context"
+
+	"github.com/auth0/go-auth0/management"
+)
 
 type PromptAPI interface {
 	// Read retrieves prompts settings.
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Prompts/get_prompts
-	Read(opts ...management.RequestOption) (p *management.Prompt, err error)
+	Read(ctx context.Context, opts ...management.RequestOption) (p *management.Prompt, err error)
 
 	// Update prompts settings.
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Prompts/patch_prompts
-	Update(p *management.Prompt, opts ...management.RequestOption) error
+	Update(ctx context.Context, p *management.Prompt, opts ...management.RequestOption) error
 
 	// CustomText retrieves the custom text for a specific prompt and language.
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Prompts/get_custom_text_by_language
-	CustomText(p string, l string, opts ...management.RequestOption) (t map[string]interface{}, err error)
+	CustomText(ctx context.Context, p string, l string, opts ...management.RequestOption) (t map[string]interface{}, err error)
 
 	// SetCustomText sets the custom text for a specific prompt. Existing texts will be overwritten.
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Prompts/put_custom_text_by_language
-	SetCustomText(p string, l string, b map[string]interface{}, opts ...management.RequestOption) (err error)
+	SetCustomText(ctx context.Context, p string, l string, b map[string]interface{}, opts ...management.RequestOption) (err error)
 }

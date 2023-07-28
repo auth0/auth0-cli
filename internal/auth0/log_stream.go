@@ -1,20 +1,26 @@
+//go:generate mockgen -source=log_stream.go -destination=mock/log_stream_mock.go -package=mock
+
 package auth0
 
-import "github.com/auth0/go-auth0/management"
+import (
+	"context"
+
+	"github.com/auth0/go-auth0/management"
+)
 
 type LogStreamAPI interface {
 	// Create a log stream.
-	Create(ls *management.LogStream, opts ...management.RequestOption) (err error)
+	Create(ctx context.Context, ls *management.LogStream, opts ...management.RequestOption) (err error)
 
 	// Read a log stream.
-	Read(id string, opts ...management.RequestOption) (ls *management.LogStream, err error)
+	Read(ctx context.Context, id string, opts ...management.RequestOption) (ls *management.LogStream, err error)
 
 	// Update a log stream.
-	Update(id string, ls *management.LogStream, opts ...management.RequestOption) (err error)
+	Update(ctx context.Context, id string, ls *management.LogStream, opts ...management.RequestOption) (err error)
 
 	// List all log streams.
-	List(opts ...management.RequestOption) (ls []*management.LogStream, err error)
+	List(ctx context.Context, opts ...management.RequestOption) (ls []*management.LogStream, err error)
 
 	// Delete a log stream.
-	Delete(id string, opts ...management.RequestOption) (err error)
+	Delete(ctx context.Context, id string, opts ...management.RequestOption) (err error)
 }

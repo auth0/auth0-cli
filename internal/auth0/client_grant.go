@@ -1,8 +1,12 @@
 package auth0
 
-import "github.com/auth0/go-auth0/management"
+import (
+	"context"
+
+	"github.com/auth0/go-auth0/management"
+)
 
 type ClientGrantAPI interface {
 	// List all client grants.
-	List(opts ...management.RequestOption) (*management.ClientGrantList, error)
+	List(ctx context.Context, opts ...management.RequestOption) (*management.ClientGrantList, error)
 }
