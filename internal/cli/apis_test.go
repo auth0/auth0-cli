@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -83,7 +84,7 @@ func TestAPIsPickerOptions(t *testing.T) {
 				api: &auth0.API{ResourceServer: apiAPI},
 			}
 
-			options, err := cli.apiPickerOptions()
+			options, err := cli.apiPickerOptions(context.Background())
 
 			if err != nil {
 				test.assertError(t, err)

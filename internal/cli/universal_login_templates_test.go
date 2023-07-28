@@ -155,7 +155,7 @@ func TestFetchBrandingSettingsOrUseDefaults(t *testing.T) {
 
 			brandingAPI := mock.NewMockBrandingAPI(ctrl)
 			brandingAPI.EXPECT().
-				Read(gomock.Any()).
+				Read(context.Background(), gomock.Any()).
 				Return(test.branding, test.apiError)
 
 			ctx := context.Background()
@@ -352,15 +352,15 @@ func TestFetchTemplateData(t *testing.T) {
 			brandingAPI.EXPECT().
 				UniversalLogin(gomock.Any()).
 				Return(test.brandingUL, nil).
-				Do(func(opts ...management.RequestOption) {
+				Do(func(ctx context.Context, opts ...management.RequestOption) {
 					defer wg.Done()
 				})
 
 			clientAPI := mock.NewMockClientAPI(ctrl)
 			clientAPI.EXPECT().
-				List(gomock.All()).
+				List(gomock.All(), gomock.All()).
 				Return(&management.ClientList{Clients: test.clients}, test.clientAPIError).
-				Do(func(opts ...management.RequestOption) {
+				Do(func(ctx context.Context, opts ...management.RequestOption) {
 					defer wg.Done()
 				})
 
@@ -368,7 +368,7 @@ func TestFetchTemplateData(t *testing.T) {
 			customDomainAPI.EXPECT().
 				List(gomock.Any()).
 				Return([]*management.CustomDomain{test.customDomain}, nil).
-				Do(func(opts ...management.RequestOption) {
+				Do(func(ctx context.Context, opts ...management.RequestOption) {
 					defer wg.Done()
 				})
 
@@ -376,7 +376,7 @@ func TestFetchTemplateData(t *testing.T) {
 			promptAPI.EXPECT().
 				Read(gomock.Any()).
 				Return(test.prompt, test.promptAPIError).
-				Do(func(opts ...management.RequestOption) {
+				Do(func(ctx context.Context, opts ...management.RequestOption) {
 					defer wg.Done()
 				})
 
@@ -384,7 +384,7 @@ func TestFetchTemplateData(t *testing.T) {
 			tenantAPI.EXPECT().
 				Read(gomock.Any()).
 				Return(test.tenant, test.tenantAPIError).
-				Do(func(opts ...management.RequestOption) {
+				Do(func(ctx context.Context, opts ...management.RequestOption) {
 					defer wg.Done()
 				})
 
