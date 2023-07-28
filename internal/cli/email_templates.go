@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -136,7 +137,7 @@ func showEmailTemplateCmd(cli *cli) *cobra.Command {
 
 			var email *management.EmailTemplate
 			if err := ansi.Waiting(func() (err error) {
-				email, err = cli.api.EmailTemplate.Read(apiEmailTemplateFor(inputs.Template))
+				email, err = cli.api.EmailTemplate.Read(cmd.Context(), apiEmailTemplateFor(inputs.Template))
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to get the email template '%s': %w", inputs.Template, err)
@@ -194,7 +195,7 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 			var oldTemplate *management.EmailTemplate
 			templateExists := true
 			err := ansi.Waiting(func() (err error) {
-				oldTemplate, err = cli.api.EmailTemplate.Read(apiEmailTemplateFor(inputs.Template))
+				oldTemplate, err = cli.api.EmailTemplate.Read(cmd.Context(), apiEmailTemplateFor(inputs.Template))
 				return err
 			})
 			if err != nil {
@@ -266,10 +267,10 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 
 			if err = ansi.Waiting(func() error {
 				if templateExists {
-					return cli.api.EmailTemplate.Update(template, emailTemplate)
+					return cli.api.EmailTemplate.Update(cmd.Context(), template, emailTemplate)
 				}
 
-				return cli.api.EmailTemplate.Create(emailTemplate)
+				return cli.api.EmailTemplate.Create(cmd.Context(), emailTemplate)
 			}); err != nil {
 				return fmt.Errorf("failed to update the email template '%s': %w", inputs.Template, err)
 			}
@@ -292,7 +293,7 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func (c *cli) emailTemplatePickerOptions() (pickerOptions, error) {
+func (c *cli) emailTemplatePickerOptions(ctx context.Context) (pickerOptions, error) {
 	return emailTemplateOptions, nil
 }
 

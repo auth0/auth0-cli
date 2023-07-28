@@ -11,6 +11,7 @@ import (
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/pkg/browser"
+	"golang.org/x/net/context"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
@@ -56,12 +57,13 @@ func BuildOauthTokenParams(clientID, clientSecret, audience string) url.Values {
 // runClientCredentialsFlow runs an M2M client
 // credentials flow without opening a browser.
 func runClientCredentialsFlow(
+	ctx context.Context,
 	cli *cli,
 	client *management.Client,
 	audience string,
 	tenantDomain string,
 ) (*authutil.TokenResponse, error) {
-	if err := checkClientIsAuthorizedForAPI(cli, client, audience); err != nil {
+	if err := checkClientIsAuthorizedForAPI(ctx, cli, client, audience); err != nil {
 		return nil, err
 	}
 
@@ -119,11 +121,11 @@ func runLoginFlowPreflightChecks(cli *cli, c *management.Client) (abort bool) {
 
 // runLoginFlow initiates a full user-facing login flow, waits for a response
 // and returns the retrieved tokens to the caller when done.
-func runLoginFlow(cli *cli, c *management.Client, connName, audience, prompt string, scopes []string, customDomain string) (*authutil.TokenResponse, error) {
+func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName, audience, prompt string, scopes []string, customDomain string) (*authutil.TokenResponse, error) {
 	var tokenResponse *authutil.TokenResponse
 
 	err := ansi.Spinner("Waiting for login flow to complete", func() error {
-		callbackAdded, err := addLocalCallbackURLToClient(cli.api.Client, c)
+		callbackAdded, err := addLocalCallbackURLToClient(ctx, cli.api.Client, c)
 		if err != nil {
 			return err
 		}
@@ -181,7 +183,7 @@ func runLoginFlow(cli *cli, c *management.Client, connName, audience, prompt str
 		// remove it when we're done
 		defer func() {
 			if callbackAdded {
-				if err := removeLocalCallbackURLFromClient(cli.api.Client, c); err != nil { // TODO: Make it a warning
+				if err := removeLocalCallbackURLFromClient(ctx, cli.api.Client, c); err != nil { // TODO: Make it a warning
 					cli.renderer.Errorf("Unable to remove callback URL '%s' from client: %s", cliLoginTestingCallbackURL, err)
 				}
 			}
@@ -205,7 +207,7 @@ func hasLocalCallbackURL(client *management.Client) bool {
 }
 
 // adds the localhost callback URL to a given application.
-func addLocalCallbackURLToClient(clientManager auth0.ClientAPI, client *management.Client) (bool, error) {
+func addLocalCallbackURLToClient(ctx context.Context, clientManager auth0.ClientAPI, client *management.Client) (bool, error) {
 	for _, callbackURL := range client.GetCallbacks() {
 		if callbackURL == cliLoginTestingCallbackURL {
 			return false, nil
@@ -219,10 +221,10 @@ func addLocalCallbackURLToClient(clientManager auth0.ClientAPI, client *manageme
 	// reflect the changes in the original client instance so when we check it
 	// later it has the proper values in Callbacks
 	client.Callbacks = updatedClient.Callbacks
-	return true, clientManager.Update(client.GetClientID(), updatedClient)
+	return true, clientManager.Update(ctx, client.GetClientID(), updatedClient)
 }
 
-func removeLocalCallbackURLFromClient(clientManager auth0.ClientAPI, client *management.Client) error {
+func removeLocalCallbackURLFromClient(ctx context.Context, clientManager auth0.ClientAPI, client *management.Client) error {
 	callbacks := make([]string, 0)
 	for _, callbackURL := range client.GetCallbacks() {
 		if callbackURL != cliLoginTestingCallbackURL {
@@ -243,7 +245,7 @@ func removeLocalCallbackURLFromClient(clientManager auth0.ClientAPI, client *man
 	updatedClient := &management.Client{
 		Callbacks: &callbacks,
 	}
-	return clientManager.Update(client.GetClientID(), updatedClient)
+	return clientManager.Update(ctx, client.GetClientID(), updatedClient)
 }
 
 // generate state parameter value used to mitigate CSRF attacks

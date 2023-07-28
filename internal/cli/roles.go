@@ -6,6 +6,7 @@ import (
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
+	"golang.org/x/net/context"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -80,7 +81,7 @@ func listRolesCmd(cli *cli) *cobra.Command {
 				cmd.Context(),
 				inputs.Number,
 				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
-					roleList, err := cli.api.Role.List(opts...)
+					roleList, err := cli.api.Role.List(cmd.Context(), opts...)
 					if err != nil {
 						return nil, false, err
 					}
@@ -140,7 +141,7 @@ func showRoleCmd(cli *cli) *cobra.Command {
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				r, err = cli.api.Role.Read(inputs.ID)
+				r, err = cli.api.Role.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to load role: %w", err)
@@ -191,7 +192,7 @@ func createRoleCmd(cli *cli) *cobra.Command {
 
 			// Create role
 			if err := ansi.Waiting(func() error {
-				return cli.api.Role.Create(r)
+				return cli.api.Role.Create(cmd.Context(), r)
 			}); err != nil {
 				return fmt.Errorf("Unable to create role: %v", err)
 			}
@@ -262,7 +263,7 @@ func updateRoleCmd(cli *cli) *cobra.Command {
 
 			// Update role
 			if err := ansi.Waiting(func() error {
-				return cli.api.Role.Update(inputs.ID, r)
+				return cli.api.Role.Update(cmd.Context(), inputs.ID, r)
 			}); err != nil {
 				return fmt.Errorf("Unable to update role: %v", err)
 			}
@@ -314,13 +315,13 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
 			}
 
 			return ansi.Spinner("Deleting Role", func() error {
-				_, err := cli.api.Role.Read(inputs.ID)
+				_, err := cli.api.Role.Read(cmd.Context(), inputs.ID)
 
 				if err != nil {
 					return fmt.Errorf("Unable to delete role: %w", err)
 				}
 
-				return cli.api.Role.Delete(inputs.ID)
+				return cli.api.Role.Delete(cmd.Context(), inputs.ID)
 			})
 		},
 	}
@@ -330,8 +331,8 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func (c *cli) rolePickerOptions() (pickerOptions, error) {
-	list, err := c.api.Role.List()
+func (c *cli) rolePickerOptions(ctx context.Context) (pickerOptions, error) {
+	list, err := c.api.Role.List(ctx)
 	if err != nil {
 		return nil, err
 	}

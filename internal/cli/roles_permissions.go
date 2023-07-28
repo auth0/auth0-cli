@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 
@@ -85,7 +86,7 @@ func listRolePermissionsCmd(cli *cli) *cobra.Command {
 				cmd.Context(),
 				inputs.Number,
 				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
-					permissionsList, err := cli.api.Role.Permissions(inputs.ID, opts...)
+					permissionsList, err := cli.api.Role.Permissions(cmd.Context(), inputs.ID, opts...)
 					if err != nil {
 						return nil, false, err
 					}
@@ -149,7 +150,7 @@ func addRolePermissionsCmd(cli *cli) *cobra.Command {
 			}
 
 			var rs *management.ResourceServer
-			rs, err := cli.api.ResourceServer.Read(url.PathEscape(inputs.APIIdentifier))
+			rs, err := cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(inputs.APIIdentifier))
 			if err != nil {
 				return err
 			}
@@ -162,11 +163,11 @@ func addRolePermissionsCmd(cli *cli) *cobra.Command {
 			}
 
 			ps := makePermissions(rs.GetIdentifier(), inputs.Permissions)
-			if err := cli.api.Role.AssociatePermissions(inputs.ID, ps); err != nil {
+			if err := cli.api.Role.AssociatePermissions(cmd.Context(), inputs.ID, ps); err != nil {
 				return err
 			}
 
-			role, err := cli.api.Role.Read(inputs.ID)
+			role, err := cli.api.Role.Read(cmd.Context(), inputs.ID)
 			if err != nil {
 				return err
 			}
@@ -214,7 +215,7 @@ func removeRolePermissionsCmd(cli *cli) *cobra.Command {
 			}
 
 			var rs *management.ResourceServer
-			rs, err := cli.api.ResourceServer.Read(url.PathEscape(inputs.APIIdentifier))
+			rs, err := cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(inputs.APIIdentifier))
 			if err != nil {
 				return err
 			}
@@ -227,11 +228,11 @@ func removeRolePermissionsCmd(cli *cli) *cobra.Command {
 			}
 
 			ps := makePermissions(rs.GetIdentifier(), inputs.Permissions)
-			if err := cli.api.Role.RemovePermissions(inputs.ID, ps); err != nil {
+			if err := cli.api.Role.RemovePermissions(cmd.Context(), inputs.ID, ps); err != nil {
 				return err
 			}
 
-			role, err := cli.api.Role.Read(inputs.ID)
+			role, err := cli.api.Role.Read(cmd.Context(), inputs.ID)
 			if err != nil {
 				return err
 			}
@@ -247,8 +248,8 @@ func removeRolePermissionsCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func (c *cli) apiPickerOptionsWithoutAuth0() (pickerOptions, error) {
-	return c.filteredAPIPickerOptions(func(r *management.ResourceServer) bool {
+func (c *cli) apiPickerOptionsWithoutAuth0(ctx context.Context) (pickerOptions, error) {
+	return c.filteredAPIPickerOptions(ctx, func(r *management.ResourceServer) bool {
 		parsedURL, err := url.Parse(r.GetIdentifier())
 		if err != nil {
 			return false

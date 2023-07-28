@@ -109,7 +109,7 @@ func createLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 			newLogStream.Sink = sink
 
 			if err := ansi.Waiting(func() error {
-				return cli.api.LogStream.Create(newLogStream)
+				return cli.api.LogStream.Create(cmd.Context(), newLogStream)
 			}); err != nil {
 				return fmt.Errorf("failed to create log stream: %v", err)
 			}
@@ -167,7 +167,7 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 
 			var oldLogStream *management.LogStream
 			if err := ansi.Waiting(func() (err error) {
-				oldLogStream, err = cli.api.LogStream.Read(inputs.ID)
+				oldLogStream, err = cli.api.LogStream.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to read log stream with ID %s: %w", inputs.ID, err)
@@ -217,7 +217,7 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 			updatedLogStream.Sink = httpSink
 
 			if err := ansi.Waiting(func() error {
-				return cli.api.LogStream.Update(oldLogStream.GetID(), updatedLogStream)
+				return cli.api.LogStream.Update(cmd.Context(), oldLogStream.GetID(), updatedLogStream)
 			}); err != nil {
 				return fmt.Errorf("failed to update log stream with ID %s: %w", oldLogStream.GetID(), err)
 			}

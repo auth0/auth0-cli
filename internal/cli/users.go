@@ -8,6 +8,7 @@ import (
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
+	"golang.org/x/net/context"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -171,7 +172,7 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
 					opts = append(opts, queryParams...)
 
-					userList, err := cli.api.User.Search(opts...)
+					userList, err := cli.api.User.Search(cmd.Context(), opts...)
 					if err != nil {
 						return nil, false, err
 					}
@@ -230,7 +231,7 @@ func createUserCmd(cli *cli) *cobra.Command {
   auth0 users create -n "John Doe" -e john@example.com -c "Username-Password-Authentication" -u "example" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Users API currently only supports database connections.
-			options, err := cli.dbConnectionPickerOptions()
+			options, err := cli.dbConnectionPickerOptions(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -256,7 +257,7 @@ func createUserCmd(cli *cli) *cobra.Command {
 
 			// The getConnReqUsername returns the value for the requires_username field for the selected connection
 			// The result will be used to determine whether to prompt for username
-			conn := cli.getConnReqUsername(auth0.StringValue(&inputs.ConnectionName))
+			conn := cli.getConnReqUsername(cmd.Context(), auth0.StringValue(&inputs.ConnectionName))
 			requireUsername := auth0.BoolValue(conn)
 
 			// Prompt for username if the requireUsername is set to true
@@ -276,7 +277,7 @@ func createUserCmd(cli *cli) *cobra.Command {
 			}
 			// Create app
 			if err := ansi.Waiting(func() error {
-				return cli.api.User.Create(a)
+				return cli.api.User.Create(cmd.Context(), a)
 			}); err != nil {
 				return fmt.Errorf("Unable to create user: %w", err)
 			}
@@ -324,7 +325,7 @@ func showUserCmd(cli *cli) *cobra.Command {
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				a, err = cli.api.User.Read(inputs.ID)
+				a, err = cli.api.User.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to load user: %w", err)
@@ -335,7 +336,7 @@ func showUserCmd(cli *cli) *cobra.Command {
 			a.Connection = auth0.String(conn)
 
 			// parse the connection name to get the requireUsername status
-			u := cli.getConnReqUsername(auth0.StringValue(a.Connection))
+			u := cli.getConnReqUsername(cmd.Context(), auth0.StringValue(a.Connection))
 			requireUsername := auth0.BoolValue(u)
 
 			cli.renderer.UserShow(a, requireUsername)
@@ -381,13 +382,13 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 			}
 
 			return ansi.Spinner("Deleting user", func() error {
-				_, err := cli.api.User.Read(inputs.ID)
+				_, err := cli.api.User.Read(cmd.Context(), inputs.ID)
 
 				if err != nil {
 					return fmt.Errorf("Unable to delete user: %w", err)
 				}
 
-				return cli.api.User.Delete(inputs.ID)
+				return cli.api.User.Delete(cmd.Context(), inputs.ID)
 			})
 		},
 	}
@@ -430,7 +431,7 @@ func updateUserCmd(cli *cli) *cobra.Command {
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				current, err = cli.api.User.Read(inputs.ID)
+				current, err = cli.api.User.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to load user: %w", err)
@@ -480,12 +481,12 @@ func updateUserCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := ansi.Waiting(func() error {
-				return cli.api.User.Update(current.GetID(), user)
+				return cli.api.User.Update(cmd.Context(), current.GetID(), user)
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred while trying to update an user with Id '%s': %w", inputs.ID, err)
 			}
 
-			con := cli.getConnReqUsername(auth0.StringValue(user.Connection))
+			con := cli.getConnReqUsername(cmd.Context(), auth0.StringValue(user.Connection))
 			requireUsername := auth0.BoolValue(con)
 
 			cli.renderer.UserUpdate(user, requireUsername)
@@ -562,7 +563,7 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
   auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=false --email-results=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Users API currently only supports database connections.
-			dbConnectionOptions, err := cli.dbConnectionPickerOptions()
+			dbConnectionOptions, err := cli.dbConnectionPickerOptions(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -571,7 +572,7 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 				return err
 			}
 
-			connection, err := cli.api.Connection.ReadByName(inputs.ConnectionName)
+			connection, err := cli.api.Connection.ReadByName(cmd.Context(), inputs.ConnectionName)
 			if err != nil {
 				return fmt.Errorf("failed to find connection with name %q: %w", inputs.ConnectionName, err)
 			}
@@ -623,7 +624,7 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 			}
 
 			if err := ansi.Waiting(func() error {
-				return cli.api.Jobs.ImportUsers(job)
+				return cli.api.Jobs.ImportUsers(cmd.Context(), job)
 			}); err != nil {
 				return err
 			}
@@ -657,8 +658,8 @@ func formatUserDetailsPath(id string) string {
 	return fmt.Sprintf("users/%s", id)
 }
 
-func (c *cli) dbConnectionPickerOptions() ([]string, error) {
-	list, err := c.api.Connection.List(management.Parameter("strategy", management.ConnectionStrategyAuth0))
+func (c *cli) dbConnectionPickerOptions(ctx context.Context) ([]string, error) {
+	list, err := c.api.Connection.List(ctx, management.Parameter("strategy", management.ConnectionStrategyAuth0))
 	if err != nil {
 		return nil, err
 	}
@@ -684,8 +685,8 @@ func (c *cli) getUserConnection(users *management.User) []string {
 }
 
 // This is a workaround to get the requires_username field nested inside Options field.
-func (c *cli) getConnReqUsername(s string) *bool {
-	conn, err := c.api.Connection.ReadByName(s)
+func (c *cli) getConnReqUsername(ctx context.Context, s string) *bool {
+	conn, err := c.api.Connection.ReadByName(ctx, s)
 	if err != nil {
 		fmt.Println(err)
 	}

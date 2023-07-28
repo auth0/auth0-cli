@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -226,7 +227,7 @@ func listAppsCmd(cli *cli) *cobra.Command {
 				inputs.Number,
 				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
 					opts = append(opts, management.Parameter("is_global", "false"))
-					res, apiErr := cli.api.Client.List(opts...)
+					res, apiErr := cli.api.Client.List(cmd.Context(), opts...)
 					if apiErr != nil {
 						return nil, false, apiErr
 					}
@@ -284,7 +285,7 @@ func showAppCmd(cli *cli) *cobra.Command {
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				a, err = cli.api.Client.Read(inputs.ID)
+				a, err = cli.api.Client.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to load application: %w", err)
@@ -336,13 +337,13 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 			}
 
 			return ansi.Spinner("Deleting Application", func() error {
-				_, err := cli.api.Client.Read(inputs.ID)
+				_, err := cli.api.Client.Read(cmd.Context(), inputs.ID)
 
 				if err != nil {
 					return fmt.Errorf("Unable to delete application: %w", err)
 				}
 
-				return cli.api.Client.Delete(inputs.ID)
+				return cli.api.Client.Delete(cmd.Context(), inputs.ID)
 			})
 		},
 	}
@@ -474,7 +475,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 
 			// Create app
 			if err := ansi.Waiting(func() error {
-				return cli.api.Client.Create(a)
+				return cli.api.Client.Create(cmd.Context(), a)
 			}); err != nil {
 				return fmt.Errorf("Unable to create application: %v", err)
 			}
@@ -549,7 +550,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 			// Load app by id
 			if err := ansi.Waiting(func() error {
 				var err error
-				current, err = cli.api.Client.Read(inputs.ID)
+				current, err = cli.api.Client.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to load application: %w", err)
@@ -688,7 +689,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 
 			// Update app
 			if err := ansi.Waiting(func() error {
-				return cli.api.Client.Update(inputs.ID, a)
+				return cli.api.Client.Update(cmd.Context(), inputs.ID, a)
 			}); err != nil {
 				return fmt.Errorf("Unable to update application %v: %v", inputs.ID, err)
 			}
@@ -873,8 +874,8 @@ func stringSliceToPtr(s []string) *[]string {
 func (c *cli) appPickerOptions(requestOpts ...management.RequestOption) pickerOptionsFunc {
 	requestOpts = append(requestOpts, management.Parameter("is_global", "false"))
 
-	return func() (pickerOptions, error) {
-		clientList, err := c.api.Client.List(requestOpts...)
+	return func(ctx context.Context) (pickerOptions, error) {
+		clientList, err := c.api.Client.List(ctx, requestOpts...)
 		if err != nil {
 			return nil, err
 		}
