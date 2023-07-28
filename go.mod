@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
-	github.com/auth0/go-auth0 v0.17.2
+	github.com/auth0/go-auth0 v1.0.0
 	github.com/briandowns/spinner v1.23.0
 	github.com/charmbracelet/glamour v0.6.0
 	github.com/fsnotify/fsnotify v1.6.0
@@ -35,7 +35,7 @@ require (
 )
 
 require (
-	github.com/PuerkitoBio/rehttp v1.1.0 // indirect
+	github.com/PuerkitoBio/rehttp v1.2.0 // indirect
 	github.com/alecthomas/chroma v0.10.0 // indirect
 	github.com/alessio/shellescape v1.4.1 // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
