@@ -119,7 +119,7 @@ func selectValidTenantFromConfig(cli *cli, cmd *cobra.Command, args []string) (s
 	return selectedTenant, err
 }
 
-func (c *cli) tenantPickerOptions(ctx context.Context) (pickerOptions, error) {
+func (c *cli) tenantPickerOptions(_ context.Context) (pickerOptions, error) {
 	tenants, err := c.Config.ListAllTenants()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load tenants: %w", err)

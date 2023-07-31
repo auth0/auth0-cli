@@ -167,7 +167,6 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 			}
 
 			list, err := getWithPagination(
-				cmd.Context(),
 				inputs.number,
 				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
 					opts = append(opts, queryParams...)

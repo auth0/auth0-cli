@@ -129,7 +129,6 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
 			}
 
 			list, err := getWithPagination(
-				cmd.Context(),
 				inputs.Number,
 				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
 					res, err := cli.api.Organization.List(cmd.Context(), opts...)
@@ -721,7 +720,6 @@ func formatOrganizationDetailsPath(id string) string {
 }
 
 func getWithPagination(
-	context context.Context,
 	limit int,
 	api func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error),
 ) ([]interface{}, error) {
@@ -766,7 +764,6 @@ func (cli *cli) getOrgMembers(
 	number int,
 ) ([]management.OrganizationMember, error) {
 	list, err := getWithPagination(
-		context,
 		number,
 		func(opts ...management.RequestOption) (result []interface{}, hasNext bool, apiErr error) {
 			members, apiErr := cli.api.Organization.Members(context, url.PathEscape(orgID), opts...)

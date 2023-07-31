@@ -86,7 +86,6 @@ func showUserRolesCmd(cli *cli) *cobra.Command {
 			}
 
 			list, err := getWithPagination(
-				cmd.Context(),
 				inputs.Number,
 				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
 					userRoleList, err := cli.api.User.Roles(cmd.Context(), inputs.ID, opts...)

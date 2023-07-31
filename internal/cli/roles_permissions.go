@@ -83,7 +83,6 @@ func listRolePermissionsCmd(cli *cli) *cobra.Command {
 			}
 
 			list, err := getWithPagination(
-				cmd.Context(),
 				inputs.Number,
 				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
 					permissionsList, err := cli.api.Role.Permissions(cmd.Context(), inputs.ID, opts...)

@@ -293,7 +293,7 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func (c *cli) emailTemplatePickerOptions(ctx context.Context) (pickerOptions, error) {
+func (c *cli) emailTemplatePickerOptions(_ context.Context) (pickerOptions, error) {
 	return emailTemplateOptions, nil
 }
 

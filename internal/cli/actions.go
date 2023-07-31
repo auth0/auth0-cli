@@ -188,7 +188,7 @@ func createActionCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			triggers, err := getCurrentTriggers(cli, cmd.Context())
+			triggers, err := getCurrentTriggers(cmd.Context(), cli)
 			if err != nil {
 				return err
 			}
@@ -518,7 +518,7 @@ func filterDeprecatedActionTriggers(list []*management.ActionTrigger) []*managem
 	return res
 }
 
-func getCurrentTriggers(cli *cli, ctx context.Context) ([]*management.ActionTrigger, error) {
+func getCurrentTriggers(ctx context.Context, cli *cli) ([]*management.ActionTrigger, error) {
 	var triggers []*management.ActionTrigger
 	if err := ansi.Waiting(func() error {
 		list, err := cli.api.Action.Triggers(ctx)
