@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -191,7 +192,7 @@ func TestCustomDomainsPickerOptions(t *testing.T) {
 				api: &auth0.API{CustomDomain: customDomainAPI},
 			}
 
-			options, err := cli.customDomainsPickerOptions()
+			options, err := cli.customDomainsPickerOptions(context.Background())
 
 			if err != nil {
 				test.assertError(t, err)

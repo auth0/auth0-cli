@@ -134,7 +134,7 @@ func showBruteForceProtectionCmdRun(cli *cli) func(cmd *cobra.Command, args []st
 	return func(cmd *cobra.Command, args []string) error {
 		var bfp *management.BruteForceProtection
 		err := ansi.Waiting(func() (err error) {
-			bfp, err = cli.api.AttackProtection.GetBruteForceProtection()
+			bfp, err = cli.api.AttackProtection.GetBruteForceProtection(cmd.Context())
 			return err
 		})
 		if err != nil {
@@ -154,7 +154,7 @@ func updateBruteForceDetectionCmdRun(
 	return func(cmd *cobra.Command, args []string) error {
 		var bfp *management.BruteForceProtection
 		err := ansi.Waiting(func() (err error) {
-			bfp, err = cli.api.AttackProtection.GetBruteForceProtection()
+			bfp, err = cli.api.AttackProtection.GetBruteForceProtection(cmd.Context())
 			return err
 		})
 		if err != nil {
@@ -206,7 +206,7 @@ func updateBruteForceDetectionCmdRun(
 		bfp.MaxAttempts = &inputs.MaxAttempts
 
 		if err := ansi.Waiting(func() error {
-			return cli.api.AttackProtection.UpdateBruteForceProtection(bfp)
+			return cli.api.AttackProtection.UpdateBruteForceProtection(cmd.Context(), bfp)
 		}); err != nil {
 			return err
 		}

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -118,10 +119,9 @@ func listApisCmd(cli *cli) *cobra.Command {
 			}
 
 			list, err := getWithPagination(
-				cmd.Context(),
 				inputs.Number,
 				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
-					apiList, err := cli.api.ResourceServer.List(opts...)
+					apiList, err := cli.api.ResourceServer.List(cmd.Context(), opts...)
 					if err != nil {
 						return nil, false, err
 					}
@@ -181,7 +181,7 @@ func showAPICmd(cli *cli) *cobra.Command {
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				api, err = cli.api.ResourceServer.Read(url.PathEscape(inputs.ID))
+				api, err = cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(inputs.ID))
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to get an API with Id '%s': %w", inputs.ID, err)
@@ -262,7 +262,7 @@ func createAPICmd(cli *cli) *cobra.Command {
 			}
 
 			if err := ansi.Waiting(func() error {
-				return cli.api.ResourceServer.Create(api)
+				return cli.api.ResourceServer.Create(cmd.Context(), api)
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred while attempting to create an API with name '%s' and identifier '%s': %w", inputs.Name, inputs.Identifier, err)
 			}
@@ -320,7 +320,7 @@ func updateAPICmd(cli *cli) *cobra.Command {
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				current, err = cli.api.ResourceServer.Read(url.PathEscape(inputs.ID))
+				current, err = cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(inputs.ID))
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to load API: %w", err)
@@ -370,7 +370,7 @@ func updateAPICmd(cli *cli) *cobra.Command {
 			}
 
 			if err := ansi.Waiting(func() error {
-				return cli.api.ResourceServer.Update(current.GetID(), api)
+				return cli.api.ResourceServer.Update(cmd.Context(), current.GetID(), api)
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred while trying to update an API with Id '%s': %w", inputs.ID, err)
 			}
@@ -423,13 +423,13 @@ func deleteAPICmd(cli *cli) *cobra.Command {
 			}
 
 			return ansi.Spinner("Deleting API", func() error {
-				_, err := cli.api.ResourceServer.Read(url.PathEscape(inputs.ID))
+				_, err := cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(inputs.ID))
 
 				if err != nil {
 					return fmt.Errorf("Unable to delete API: %w", err)
 				}
 
-				return cli.api.ResourceServer.Delete(url.PathEscape(inputs.ID))
+				return cli.api.ResourceServer.Delete(cmd.Context(), url.PathEscape(inputs.ID))
 			})
 		},
 	}
@@ -469,7 +469,7 @@ func openAPICmd(cli *cli) *cobra.Command {
 			// But it should cover the vast majority of users
 			if _, err := url.ParseRequestURI(inputs.ID); err == nil || len(inputs.ID) != 24 {
 				if err := ansi.Waiting(func() error {
-					api, err := cli.api.ResourceServer.Read(url.PathEscape(inputs.ID))
+					api, err := cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(inputs.ID))
 					if err != nil {
 						return err
 					}
@@ -516,7 +516,7 @@ func listScopesCmd(cli *cli) *cobra.Command {
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				api, err = cli.api.ResourceServer.Read(url.PathEscape(inputs.ID))
+				api, err = cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(inputs.ID))
 				return err
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred while getting scopes for an API with Id '%s': %w", inputs.ID, err)
@@ -554,14 +554,14 @@ func apiDefaultTokenLifetime() int {
 	return 86400
 }
 
-func (c *cli) apiPickerOptions() (pickerOptions, error) {
-	return c.filteredAPIPickerOptions(func(r *management.ResourceServer) bool {
+func (c *cli) apiPickerOptions(ctx context.Context) (pickerOptions, error) {
+	return c.filteredAPIPickerOptions(ctx, func(r *management.ResourceServer) bool {
 		return true
 	})
 }
 
-func (c *cli) filteredAPIPickerOptions(include func(r *management.ResourceServer) bool) (pickerOptions, error) {
-	list, err := c.api.ResourceServer.List()
+func (c *cli) filteredAPIPickerOptions(ctx context.Context, include func(r *management.ResourceServer) bool) (pickerOptions, error) {
+	list, err := c.api.ResourceServer.List(ctx)
 	if err != nil {
 		return nil, err
 	}

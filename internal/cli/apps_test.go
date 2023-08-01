@@ -54,7 +54,7 @@ func TestAppsListCmd(t *testing.T) {
 
 			clientAPI := mock.NewMockClientAPI(ctrl)
 			clientAPI.EXPECT().
-				List(gomock.Any()).
+				List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 				Return(&management.ClientList{
 					Clients: []*management.Client{
 						{

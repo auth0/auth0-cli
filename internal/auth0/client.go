@@ -2,25 +2,29 @@
 
 package auth0
 
-import "github.com/auth0/go-auth0/management"
+import (
+	"context"
+
+	"github.com/auth0/go-auth0/management"
+)
 
 type ClientAPI interface {
 	// Create a new client application.
-	Create(c *management.Client, opts ...management.RequestOption) (err error)
+	Create(ctx context.Context, c *management.Client, opts ...management.RequestOption) (err error)
 
 	// Read a client by its id.
-	Read(id string, opts ...management.RequestOption) (c *management.Client, err error)
+	Read(ctx context.Context, id string, opts ...management.RequestOption) (c *management.Client, err error)
 
 	// List all client applications.
-	List(opts ...management.RequestOption) (c *management.ClientList, err error)
+	List(ctx context.Context, opts ...management.RequestOption) (c *management.ClientList, err error)
 
 	// Update a client.
-	Update(id string, c *management.Client, opts ...management.RequestOption) (err error)
+	Update(ctx context.Context, id string, c *management.Client, opts ...management.RequestOption) (err error)
 
 	// RotateSecret rotates a client secret.
-	RotateSecret(id string, opts ...management.RequestOption) (c *management.Client, err error)
+	RotateSecret(ctx context.Context, id string, opts ...management.RequestOption) (c *management.Client, err error)
 
 	// Delete a client and all its related assets (like rules, connections, etc)
 	// given its id.
-	Delete(id string, opts ...management.RequestOption) error
+	Delete(ctx context.Context, id string, opts ...management.RequestOption) error
 }

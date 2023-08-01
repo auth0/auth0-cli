@@ -7,6 +7,7 @@ import (
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
+	"golang.org/x/net/context"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
@@ -127,12 +128,13 @@ func testLoginCmd(cli *cli) *cobra.Command {
 			}
 
 			if inputs.Audience != "" {
-				if err := checkClientIsAuthorizedForAPI(cli, client, inputs.Audience); err != nil {
+				if err := checkClientIsAuthorizedForAPI(cmd.Context(), cli, client, inputs.Audience); err != nil {
 					return err
 				}
 			}
 
 			tokenResponse, err := runLoginFlow(
+				cmd.Context(),
 				cli,
 				client,
 				inputs.ConnectionName,
@@ -203,7 +205,7 @@ func testTokenCmd(cli *cli) *cobra.Command {
 			cli.renderer.Newline()
 
 			if appType == appTypeNonInteractive {
-				tokenResponse, err := runClientCredentialsFlow(cli, client, inputs.Audience, cli.tenant)
+				tokenResponse, err := runClientCredentialsFlow(cmd.Context(), cli, client, inputs.Audience, cli.tenant)
 				if err != nil {
 					return fmt.Errorf(
 						"failed to log in with client credentials for client with ID %q: %w",
@@ -222,6 +224,7 @@ func testTokenCmd(cli *cli) *cobra.Command {
 			}
 
 			tokenResponse, err := runLoginFlow(
+				cmd.Context(),
 				cli,
 				client,
 				"", // Specifying a connection is only supported for the test login command.
@@ -263,7 +266,7 @@ func selectClientToUseForTestsAndValidateExistence(cli *cli, cmd *cobra.Command,
 				InitiateLoginURI: auth0.String(cliLoginTestingInitiateLoginURI),
 			}
 
-			if err := cli.api.Client.Create(client); err != nil {
+			if err := cli.api.Client.Create(cmd.Context(), client); err != nil {
 				return nil, fmt.Errorf("failed to create a new client to use for testing the login: %w", err)
 			}
 
@@ -282,7 +285,7 @@ func selectClientToUseForTestsAndValidateExistence(cli *cli, cmd *cobra.Command,
 		inputs.ClientID = args[0]
 	}
 
-	client, err := cli.api.Client.Read(inputs.ClientID)
+	client, err := cli.api.Client.Read(cmd.Context(), inputs.ClientID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find client with ID :%q: %w", inputs.ClientID, err)
 	}
@@ -290,10 +293,10 @@ func selectClientToUseForTestsAndValidateExistence(cli *cli, cmd *cobra.Command,
 	return client, nil
 }
 
-func (c *cli) customDomainPickerOptions() (pickerOptions, error) {
+func (c *cli) customDomainPickerOptions(ctx context.Context) (pickerOptions, error) {
 	var opts pickerOptions
 
-	domains, err := c.api.CustomDomain.List()
+	domains, err := c.api.CustomDomain.List(ctx)
 	if err != nil {
 		errStatus := err.(management.Error)
 		// 403 is a valid response for free tenants that don't have
@@ -322,8 +325,8 @@ func (c *cli) customDomainPickerOptions() (pickerOptions, error) {
 	return opts, nil
 }
 
-func (c *cli) appPickerWithCreateOption() (pickerOptions, error) {
-	options, err := c.appPickerOptions()()
+func (c *cli) appPickerWithCreateOption(ctx context.Context) (pickerOptions, error) {
+	options, err := c.appPickerOptions()(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -339,10 +342,11 @@ func (c *cli) appPickerWithCreateOption() (pickerOptions, error) {
 	return enhancedOptions, nil
 }
 
-func checkClientIsAuthorizedForAPI(cli *cli, client *management.Client, audience string) error {
+func checkClientIsAuthorizedForAPI(ctx context.Context, cli *cli, client *management.Client, audience string) error {
 	var list *management.ClientGrantList
 	if err := ansi.Waiting(func() (err error) {
 		list, err = cli.api.ClientGrant.List(
+			ctx,
 			management.Parameter("audience", audience),
 			management.Parameter("client_id", client.GetClientID()),
 		)

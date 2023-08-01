@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -81,7 +82,7 @@ func TestRulesPickerOptions(t *testing.T) {
 				api: &auth0.API{Rule: ruleAPI},
 			}
 
-			options, err := cli.rulePickerOptions()
+			options, err := cli.rulePickerOptions(context.Background())
 
 			if err != nil {
 				test.assertError(t, err)

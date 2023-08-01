@@ -123,7 +123,7 @@ func showBreachedPasswordDetectionCmdRun(cli *cli) func(cmd *cobra.Command, args
 	return func(cmd *cobra.Command, args []string) error {
 		var bpd *management.BreachedPasswordDetection
 		err := ansi.Waiting(func() (err error) {
-			bpd, err = cli.api.AttackProtection.GetBreachedPasswordDetection()
+			bpd, err = cli.api.AttackProtection.GetBreachedPasswordDetection(cmd.Context())
 			return err
 		})
 		if err != nil {
@@ -143,7 +143,7 @@ func updateBreachedPasswordDetectionCmdRun(
 	return func(cmd *cobra.Command, args []string) error {
 		var bpd *management.BreachedPasswordDetection
 		err := ansi.Waiting(func() (err error) {
-			bpd, err = cli.api.AttackProtection.GetBreachedPasswordDetection()
+			bpd, err = cli.api.AttackProtection.GetBreachedPasswordDetection(cmd.Context())
 			return err
 		})
 		if err != nil {
@@ -186,7 +186,7 @@ func updateBreachedPasswordDetectionCmdRun(
 		bpd.Method = &inputs.Method
 
 		if err := ansi.Waiting(func() error {
-			return cli.api.AttackProtection.UpdateBreachedPasswordDetection(bpd)
+			return cli.api.AttackProtection.UpdateBreachedPasswordDetection(cmd.Context(), bpd)
 		}); err != nil {
 			return err
 		}

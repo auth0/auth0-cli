@@ -7,6 +7,7 @@ import (
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
+	"golang.org/x/net/context"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -101,7 +102,7 @@ func listActionsCmd(cli *cli) *cobra.Command {
 			var list *management.ActionList
 
 			if err := ansi.Waiting(func() (err error) {
-				list, err = cli.api.Action.List(management.PerPage(100))
+				list, err = cli.api.Action.List(cmd.Context(), management.PerPage(100))
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to retrieve actions: %w", err)
@@ -142,7 +143,7 @@ func showActionCmd(cli *cli) *cobra.Command {
 			var action *management.Action
 
 			if err := ansi.Waiting(func() (err error) {
-				action, err = cli.api.Action.Read(inputs.ID)
+				action, err = cli.api.Action.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to get action with ID %q: %w", inputs.ID, err)
@@ -187,7 +188,7 @@ func createActionCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			triggers, err := getCurrentTriggers(cli)
+			triggers, err := getCurrentTriggers(cmd.Context(), cli)
 			if err != nil {
 				return err
 			}
@@ -233,7 +234,7 @@ func createActionCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := ansi.Waiting(func() error {
-				return cli.api.Action.Create(action)
+				return cli.api.Action.Create(cmd.Context(), action)
 			}); err != nil {
 				return fmt.Errorf("failed to create action: %w", err)
 			}
@@ -288,7 +289,7 @@ func updateActionCmd(cli *cli) *cobra.Command {
 
 			var oldAction *management.Action
 			err := ansi.Waiting(func() (err error) {
-				oldAction, err = cli.api.Action.Read(inputs.ID)
+				oldAction, err = cli.api.Action.Read(cmd.Context(), inputs.ID)
 				return err
 			})
 			if err != nil {
@@ -335,7 +336,7 @@ func updateActionCmd(cli *cli) *cobra.Command {
 			}
 
 			if err = ansi.Waiting(func() error {
-				return cli.api.Action.Update(oldAction.GetID(), updatedAction)
+				return cli.api.Action.Update(cmd.Context(), oldAction.GetID(), updatedAction)
 			}); err != nil {
 				return fmt.Errorf("failed to update action with ID %q: %w", oldAction.GetID(), err)
 			}
@@ -388,7 +389,7 @@ func deleteActionCmd(cli *cli) *cobra.Command {
 			}
 
 			return ansi.Spinner("Deleting action", func() error {
-				return cli.api.Action.Delete(inputs.ID)
+				return cli.api.Action.Delete(cmd.Context(), inputs.ID)
 			})
 		},
 	}
@@ -426,10 +427,10 @@ func deployActionCmd(cli *cli) *cobra.Command {
 
 			var action *management.Action
 			if err := ansi.Waiting(func() (err error) {
-				if _, err = cli.api.Action.Deploy(inputs.ID); err != nil {
+				if _, err = cli.api.Action.Deploy(cmd.Context(), inputs.ID); err != nil {
 					return fmt.Errorf("failed to deploy action with ID %q: %w", inputs.ID, err)
 				}
-				if action, err = cli.api.Action.Read(inputs.ID); err != nil {
+				if action, err = cli.api.Action.Read(cmd.Context(), inputs.ID); err != nil {
 					return fmt.Errorf("failed to get deployed action with ID %q: %w", inputs.ID, err)
 				}
 				return nil
@@ -476,8 +477,8 @@ func openActionCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func (c *cli) actionPickerOptions() (pickerOptions, error) {
-	list, err := c.api.Action.List()
+func (c *cli) actionPickerOptions(ctx context.Context) (pickerOptions, error) {
+	list, err := c.api.Action.List(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -517,10 +518,10 @@ func filterDeprecatedActionTriggers(list []*management.ActionTrigger) []*managem
 	return res
 }
 
-func getCurrentTriggers(cli *cli) ([]*management.ActionTrigger, error) {
+func getCurrentTriggers(ctx context.Context, cli *cli) ([]*management.ActionTrigger, error) {
 	var triggers []*management.ActionTrigger
 	if err := ansi.Waiting(func() error {
-		list, err := cli.api.Action.Triggers()
+		list, err := cli.api.Action.Triggers(ctx)
 		if err != nil {
 			return err
 		}

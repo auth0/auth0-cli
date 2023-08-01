@@ -1,23 +1,29 @@
+//go:generate mockgen -source=custom_domain.go -destination=mock/custom_domain_mock.go -package=mock
+
 package auth0
 
-import "github.com/auth0/go-auth0/management"
+import (
+	"context"
+
+	"github.com/auth0/go-auth0/management"
+)
 
 type CustomDomainAPI interface {
 	// Create a new custom domain.
-	Create(c *management.CustomDomain, opts ...management.RequestOption) (err error)
+	Create(ctx context.Context, c *management.CustomDomain, opts ...management.RequestOption) (err error)
 
 	// Read retrieves a custom domain by its id.
-	Read(id string, opts ...management.RequestOption) (c *management.CustomDomain, err error)
+	Read(ctx context.Context, id string, opts ...management.RequestOption) (c *management.CustomDomain, err error)
 
 	// Update a custom domain.
-	Update(id string, c *management.CustomDomain, opts ...management.RequestOption) (err error)
+	Update(ctx context.Context, id string, c *management.CustomDomain, opts ...management.RequestOption) (err error)
 
 	// Delete a custom domain.
-	Delete(id string, opts ...management.RequestOption) (err error)
+	Delete(ctx context.Context, id string, opts ...management.RequestOption) (err error)
 
 	// Verify a custom domain.
-	Verify(id string, opts ...management.RequestOption) (c *management.CustomDomain, err error)
+	Verify(ctx context.Context, id string, opts ...management.RequestOption) (c *management.CustomDomain, err error)
 
 	// List all custom domains.
-	List(opts ...management.RequestOption) (c []*management.CustomDomain, err error)
+	List(ctx context.Context, opts ...management.RequestOption) (c []*management.CustomDomain, err error)
 }

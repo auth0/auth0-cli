@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -18,7 +19,7 @@ func TestGetUserRoles(t *testing.T) {
 			ID:    "some-id",
 			Roles: []string{},
 		}
-		userRolesFetcher := func(cli *cli, userID string) ([]string, error) {
+		userRolesFetcher := func(ctx context.Context, cli *cli, userID string) ([]string, error) {
 			assert.Equal(t, userID, "some-id")
 			return []string{"some-id-1", "some-id-2"}, nil
 		}
@@ -27,7 +28,7 @@ func TestGetUserRoles(t *testing.T) {
 			return []string{"some-id-3 (Name: some-name-3)", "some-id-4 (Name: some-name-4)"}, nil
 		}
 		cli := &cli{}
-		err := cli.getUserRoles(inputs, userRolesFetcher, userRolesSelector)
+		err := cli.getUserRoles(context.Background(), inputs, userRolesFetcher, userRolesSelector)
 
 		assert.Equal(t, inputs.Roles, []string{"some-id-3", "some-id-4"})
 		assert.Nil(t, err)
@@ -35,39 +36,39 @@ func TestGetUserRoles(t *testing.T) {
 
 	t.Run("returns error when user roles fetcher fails", func(t *testing.T) {
 		inputs := &userRolesInput{Roles: []string{}}
-		userRolesFetcher := func(cli *cli, userID string) ([]string, error) {
+		userRolesFetcher := func(ctx context.Context, cli *cli, userID string) ([]string, error) {
 			return nil, errors.New("error")
 		}
 		cli := &cli{}
-		err := cli.getUserRoles(inputs, userRolesFetcher, nil)
+		err := cli.getUserRoles(context.Background(), inputs, userRolesFetcher, nil)
 
 		assert.Error(t, err)
 	})
 
 	t.Run("returns error when user roles selector fails", func(t *testing.T) {
 		inputs := &userRolesInput{Roles: []string{}}
-		userRolesFetcher := func(cli *cli, userID string) ([]string, error) {
+		userRolesFetcher := func(ctx context.Context, cli *cli, userID string) ([]string, error) {
 			return []string{}, nil
 		}
 		userRolesSelector := func(options []string) ([]string, error) {
 			return nil, errors.New("error")
 		}
 		cli := &cli{}
-		err := cli.getUserRoles(inputs, userRolesFetcher, userRolesSelector)
+		err := cli.getUserRoles(context.Background(), inputs, userRolesFetcher, userRolesSelector)
 
 		assert.Error(t, err)
 	})
 
 	t.Run("returns error when no roles where selected", func(t *testing.T) {
 		inputs := &userRolesInput{Roles: []string{}}
-		userRolesFetcher := func(cli *cli, userID string) ([]string, error) {
+		userRolesFetcher := func(ctx context.Context, cli *cli, userID string) ([]string, error) {
 			return []string{"some-id-1", "some-id-2"}, nil
 		}
 		userRolesSelector := func(options []string) ([]string, error) {
 			return []string{}, nil
 		}
 		cli := &cli{}
-		err := cli.getUserRoles(inputs, userRolesFetcher, userRolesSelector)
+		err := cli.getUserRoles(context.Background(), inputs, userRolesFetcher, userRolesSelector)
 
 		assert.ErrorIs(t, err, errNoRolesSelected)
 	})
@@ -183,7 +184,7 @@ func TestUserRolesToAddPickerOptions(t *testing.T) {
 
 			userAPI := mock.NewMockUserAPI(ctrl)
 			userAPI.EXPECT().
-				Roles(gomock.Eq(test.userID), gomock.Any()).
+				Roles(gomock.Any(), gomock.Eq(test.userID), gomock.Any()).
 				Return(&management.RoleList{
 					Roles: test.userRoles}, test.userAPIError)
 
@@ -203,7 +204,7 @@ func TestUserRolesToAddPickerOptions(t *testing.T) {
 				api: &auth0.API{User: userAPI, Role: roleAPI},
 			}
 
-			options, err := userRolesToAddPickerOptions(cli, test.userID)
+			options, err := userRolesToAddPickerOptions(context.Background(), cli, test.userID)
 
 			if err != nil {
 				test.assertError(t, err)
@@ -274,14 +275,14 @@ func TestUserRolesToRemovePickerOptions(t *testing.T) {
 
 			userAPI := mock.NewMockUserAPI(ctrl)
 			userAPI.EXPECT().
-				Roles(gomock.Eq(test.userID), gomock.Any()).
+				Roles(gomock.Any(), gomock.Eq(test.userID), gomock.Any()).
 				Return(&management.RoleList{Roles: test.userRoles}, test.apiError)
 
 			cli := &cli{
 				api: &auth0.API{User: userAPI},
 			}
 
-			options, err := userRolesToRemovePickerOptions(cli, test.userID)
+			options, err := userRolesToRemovePickerOptions(context.Background(), cli, test.userID)
 
 			if err != nil {
 				test.assertError(t, err)

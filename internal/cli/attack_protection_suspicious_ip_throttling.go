@@ -157,7 +157,7 @@ func showSuspiciousIPThrottlingCmdRun(cli *cli) func(cmd *cobra.Command, args []
 	return func(cmd *cobra.Command, args []string) error {
 		var sit *management.SuspiciousIPThrottling
 		err := ansi.Waiting(func() (err error) {
-			sit, err = cli.api.AttackProtection.GetSuspiciousIPThrottling()
+			sit, err = cli.api.AttackProtection.GetSuspiciousIPThrottling(cmd.Context())
 			return err
 		})
 		if err != nil {
@@ -177,7 +177,7 @@ func updateSuspiciousIPThrottlingCmdRun(
 	return func(cmd *cobra.Command, args []string) error {
 		var sit *management.SuspiciousIPThrottling
 		err := ansi.Waiting(func() (err error) {
-			sit, err = cli.api.AttackProtection.GetSuspiciousIPThrottling()
+			sit, err = cli.api.AttackProtection.GetSuspiciousIPThrottling(cmd.Context())
 			return err
 		})
 		if err != nil {
@@ -266,7 +266,7 @@ func updateSuspiciousIPThrottlingCmdRun(
 		sit.Stage.PreUserRegistration.Rate = &inputs.StagePreUserRegistrationRate
 
 		if err := ansi.Waiting(func() error {
-			return cli.api.AttackProtection.UpdateSuspiciousIPThrottling(sit)
+			return cli.api.AttackProtection.UpdateSuspiciousIPThrottling(cmd.Context(), sit)
 		}); err != nil {
 			return err
 		}
