@@ -464,10 +464,6 @@ func (c *cli) customDomainsPickerOptions(ctx context.Context) (pickerOptions, er
 	}
 
 	for _, d := range domains {
-		if d.GetStatus() != "ready" {
-			continue
-		}
-
 		value := d.GetID()
 		label := fmt.Sprintf("%s %s", d.GetDomain(), ansi.Faint("("+value+")"))
 		opts = append(opts, pickerOption{value: value, label: label})
