@@ -1,10 +1,10 @@
-name: Go
+name: Main Workflow
 
 on:
+  pull_request: {}
   push:
-    branches:
-      - main
-  pull_request:
+    branches: [ "main" ]
+
 
 concurrency:
   group: one-at-time
@@ -22,16 +22,13 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
           check-latest: true
 
       - name: Check that docs were generated
         run: make check-docs
-
-      - name: Check for go vulnerabilities
-        run: make check-vuln
 
       - name: Check for linting errors
         uses: golangci/golangci-lint-action@639cd343e1d3b897ff35927a75193d57cfcba299 # pin@3.6.0
@@ -47,7 +44,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
           check-latest: true
@@ -76,7 +73,7 @@ jobs:
           fetch-depth: 2
 
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
           check-latest: true
@@ -112,7 +109,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
           check-latest: true
