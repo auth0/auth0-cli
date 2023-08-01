@@ -8,6 +8,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
+	"golang.org/x/net/context"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -40,7 +41,7 @@ type userRolesInput struct {
 	Roles  []string
 }
 
-type userRolesFetcher func(cli *cli, userID string) ([]string, error)
+type userRolesFetcher func(ctx context.Context, cli *cli, userID string) ([]string, error)
 type userRolesSelector func(options []string) ([]string, error)
 
 func userRolesCmd(cli *cli) *cobra.Command {
@@ -85,10 +86,9 @@ func showUserRolesCmd(cli *cli) *cobra.Command {
 			}
 
 			list, err := getWithPagination(
-				cmd.Context(),
 				inputs.Number,
 				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
-					userRoleList, err := cli.api.User.Roles(inputs.ID, opts...)
+					userRoleList, err := cli.api.User.Roles(cmd.Context(), inputs.ID, opts...)
 					if err != nil {
 						return nil, false, err
 					}
@@ -144,7 +144,7 @@ func addUserRolesCmd(cli *cli) *cobra.Command {
 			}
 
 			if len(inputs.Roles) == 0 {
-				if err := cli.getUserRoles(&inputs, userRolesToAddPickerOptions, pickUserRoles); err != nil {
+				if err := cli.getUserRoles(cmd.Context(), &inputs, userRolesToAddPickerOptions, pickUserRoles); err != nil {
 					return err
 				}
 			}
@@ -157,14 +157,14 @@ func addUserRolesCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := ansi.Waiting(func() (err error) {
-				return cli.api.User.AssignRoles(inputs.ID, rolesToAssign)
+				return cli.api.User.AssignRoles(cmd.Context(), inputs.ID, rolesToAssign)
 			}); err != nil {
 				return fmt.Errorf("failed to assign roles for user with ID %s: %w", inputs.ID, err)
 			}
 
 			var userRoleList *management.RoleList
 			if err := ansi.Waiting(func() (err error) {
-				userRoleList, err = cli.api.User.Roles(inputs.ID)
+				userRoleList, err = cli.api.User.Roles(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to find roles for user with ID %s: %w", inputs.ID, err)
@@ -204,7 +204,7 @@ func removeUserRolesCmd(cli *cli) *cobra.Command {
 			}
 
 			if len(inputs.Roles) == 0 {
-				if err := cli.getUserRoles(&inputs, userRolesToRemovePickerOptions, pickUserRoles); err != nil {
+				if err := cli.getUserRoles(cmd.Context(), &inputs, userRolesToRemovePickerOptions, pickUserRoles); err != nil {
 					return err
 				}
 			}
@@ -217,14 +217,14 @@ func removeUserRolesCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := ansi.Waiting(func() (err error) {
-				return cli.api.User.RemoveRoles(inputs.ID, rolesToRemove)
+				return cli.api.User.RemoveRoles(cmd.Context(), inputs.ID, rolesToRemove)
 			}); err != nil {
 				return fmt.Errorf("failed to remove roles for user with ID %s: %w", inputs.ID, err)
 			}
 
 			var userRoleList *management.RoleList
 			if err := ansi.Waiting(func() (err error) {
-				userRoleList, err = cli.api.User.Roles(inputs.ID)
+				userRoleList, err = cli.api.User.Roles(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to find roles for user with ID %s: %w", inputs.ID, err)
@@ -242,10 +242,10 @@ func removeUserRolesCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func (cli *cli) getUserRoles(inputs *userRolesInput, fetchUserRoles userRolesFetcher, selectUserRoles userRolesSelector) error {
+func (cli *cli) getUserRoles(ctx context.Context, inputs *userRolesInput, fetchUserRoles userRolesFetcher, selectUserRoles userRolesSelector) error {
 	var options []string
 	if err := ansi.Waiting(func() (err error) {
-		options, err = fetchUserRoles(cli, inputs.ID)
+		options, err = fetchUserRoles(ctx, cli, inputs.ID)
 		return err
 	}); err != nil {
 		return err
@@ -282,14 +282,14 @@ func pickUserRoles(options []string) ([]string, error) {
 	return selectedRoles, nil
 }
 
-func userRolesToAddPickerOptions(cli *cli, userID string) ([]string, error) {
-	currentUserRoleList, err := cli.api.User.Roles(userID, management.PerPage(100))
+func userRolesToAddPickerOptions(ctx context.Context, cli *cli, userID string) ([]string, error) {
+	currentUserRoleList, err := cli.api.User.Roles(ctx, userID, management.PerPage(100))
 	if err != nil {
 		return nil, fmt.Errorf("Failed to find the current roles for user with ID %q: %w.", userID, err)
 	}
 
 	var roleList *management.RoleList
-	roleList, err = cli.api.Role.List()
+	roleList, err = cli.api.Role.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to list all roles: %w.", err)
 	}
@@ -308,8 +308,8 @@ func userRolesToAddPickerOptions(cli *cli, userID string) ([]string, error) {
 	return options, nil
 }
 
-func userRolesToRemovePickerOptions(cli *cli, userID string) ([]string, error) {
-	currentUserRoleList, err := cli.api.User.Roles(userID, management.PerPage(100))
+func userRolesToRemovePickerOptions(ctx context.Context, cli *cli, userID string) ([]string, error) {
+	currentUserRoleList, err := cli.api.User.Roles(ctx, userID, management.PerPage(100))
 	if err != nil {
 		return nil, fmt.Errorf("Failed to find the current roles for user with ID %q: %w.", userID, err)
 	}

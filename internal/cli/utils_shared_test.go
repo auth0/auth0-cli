@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -127,11 +128,11 @@ func TestAddLocalCallbackURLToClient(t *testing.T) {
 
 			clientAPI := mock.NewMockClientAPI(ctrl)
 			clientAPI.EXPECT().
-				Update(gomock.Any(), gomock.Eq(test.finalClient)).
+				Update(context.Background(), gomock.Any(), gomock.Eq(test.finalClient)).
 				Return(test.apiError).
 				Times(timesAPIShouldBeCalled)
 
-			result, err := addLocalCallbackURLToClient(clientAPI, test.intialClient)
+			result, err := addLocalCallbackURLToClient(context.Background(), clientAPI, test.intialClient)
 
 			if err != nil {
 				test.assertError(t, err)
@@ -217,11 +218,11 @@ func TestRemoveLocalCallbackURLToClient(t *testing.T) {
 
 			clientAPI := mock.NewMockClientAPI(ctrl)
 			clientAPI.EXPECT().
-				Update(gomock.Any(), gomock.Eq(test.finalClient)).
+				Update(context.Background(), gomock.Any(), gomock.Eq(test.finalClient)).
 				Return(test.apiError).
 				Times(timesAPIShouldBeCalled)
 
-			err := removeLocalCallbackURLFromClient(clientAPI, test.intialClient)
+			err := removeLocalCallbackURLFromClient(context.Background(), clientAPI, test.intialClient)
 
 			test.assertError(t, err)
 		})

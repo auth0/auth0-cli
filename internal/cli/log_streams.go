@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -71,7 +72,7 @@ func listLogStreamsCmd(cli *cli) *cobra.Command {
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				list, err = cli.api.LogStream.List()
+				list, err = cli.api.LogStream.List(cmd.Context())
 				return err
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
@@ -115,7 +116,7 @@ func showLogStreamCmd(cli *cli) *cobra.Command {
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				a, err = cli.api.LogStream.Read(inputs.ID)
+				a, err = cli.api.LogStream.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to load log stream: %w", err)
@@ -201,13 +202,13 @@ func deleteLogStreamCmd(cli *cli) *cobra.Command {
 			}
 
 			return ansi.Spinner("Deleting Log Stream", func() error {
-				_, err := cli.api.LogStream.Read(inputs.ID)
+				_, err := cli.api.LogStream.Read(cmd.Context(), inputs.ID)
 
 				if err != nil {
 					return fmt.Errorf("Unable to delete log stream: %w", err)
 				}
 
-				return cli.api.LogStream.Delete(inputs.ID)
+				return cli.api.LogStream.Delete(cmd.Context(), inputs.ID)
 			})
 		},
 	}
@@ -254,8 +255,8 @@ func formatLogStreamSettingsPath(id string) string {
 	return fmt.Sprintf("log-streams/%s/settings", id)
 }
 
-func (c *cli) allLogStreamsPickerOptions() (pickerOptions, error) {
-	logStreams, err := c.api.LogStream.List()
+func (c *cli) allLogStreamsPickerOptions(ctx context.Context) (pickerOptions, error) {
+	logStreams, err := c.api.LogStream.List(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -274,8 +275,8 @@ func (c *cli) allLogStreamsPickerOptions() (pickerOptions, error) {
 }
 
 func (c *cli) logStreamPickerOptionsByType(desiredType logStreamType) pickerOptionsFunc {
-	return func() (pickerOptions, error) {
-		logStreams, err := c.api.LogStream.List()
+	return func(ctx context.Context) (pickerOptions, error) {
+		logStreams, err := c.api.LogStream.List(ctx)
 		if err != nil {
 			return nil, err
 		}

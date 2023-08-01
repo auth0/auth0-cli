@@ -198,7 +198,7 @@ func pickFlag(cmd *cobra.Command, f *Flag, result *string, fn pickerOptionsFunc,
 		var opts pickerOptions
 		err := ansi.Waiting(func() error {
 			var err error
-			opts, err = fn()
+			opts, err = fn(cmd.Context())
 			return err
 		})
 

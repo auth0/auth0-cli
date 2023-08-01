@@ -5,6 +5,7 @@
 package mock
 
 import (
+	context "context"
 	reflect "reflect"
 
 	management "github.com/auth0/go-auth0/management"
@@ -35,9 +36,9 @@ func (m *MockLogAPI) EXPECT() *MockLogAPIMockRecorder {
 }
 
 // List mocks base method.
-func (m *MockLogAPI) List(opts ...management.RequestOption) ([]*management.Log, error) {
+func (m *MockLogAPI) List(ctx context.Context, opts ...management.RequestOption) ([]*management.Log, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
+	varargs := []interface{}{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -48,15 +49,16 @@ func (m *MockLogAPI) List(opts ...management.RequestOption) ([]*management.Log, 
 }
 
 // List indicates an expected call of List.
-func (mr *MockLogAPIMockRecorder) List(opts ...interface{}) *gomock.Call {
+func (mr *MockLogAPIMockRecorder) List(ctx interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockLogAPI)(nil).List), opts...)
+	varargs := append([]interface{}{ctx}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockLogAPI)(nil).List), varargs...)
 }
 
 // Read mocks base method.
-func (m *MockLogAPI) Read(id string, opts ...management.RequestOption) (*management.Log, error) {
+func (m *MockLogAPI) Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.Log, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{id}
+	varargs := []interface{}{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -67,16 +69,16 @@ func (m *MockLogAPI) Read(id string, opts ...management.RequestOption) (*managem
 }
 
 // Read indicates an expected call of Read.
-func (mr *MockLogAPIMockRecorder) Read(id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockLogAPIMockRecorder) Read(ctx, id interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{id}, opts...)
+	varargs := append([]interface{}{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockLogAPI)(nil).Read), varargs...)
 }
 
 // Search mocks base method.
-func (m *MockLogAPI) Search(opts ...management.RequestOption) ([]*management.Log, error) {
+func (m *MockLogAPI) Search(ctx context.Context, opts ...management.RequestOption) ([]*management.Log, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
+	varargs := []interface{}{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -87,7 +89,8 @@ func (m *MockLogAPI) Search(opts ...management.RequestOption) ([]*management.Log
 }
 
 // Search indicates an expected call of Search.
-func (mr *MockLogAPIMockRecorder) Search(opts ...interface{}) *gomock.Call {
+func (mr *MockLogAPIMockRecorder) Search(ctx interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Search", reflect.TypeOf((*MockLogAPI)(nil).Search), opts...)
+	varargs := append([]interface{}{ctx}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Search", reflect.TypeOf((*MockLogAPI)(nil).Search), varargs...)
 }

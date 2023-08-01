@@ -101,7 +101,7 @@ func showBrandingTemplateCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var currentTemplate *management.BrandingUniversalLogin
 			if err := ansi.Waiting(func() (err error) {
-				currentTemplate, err = cli.api.Branding.UniversalLogin()
+				currentTemplate, err = cli.api.Branding.UniversalLogin(cmd.Context())
 				if err != nil {
 					if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusNotFound {
 						return nil
@@ -174,7 +174,7 @@ func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := ansi.Waiting(func() error {
-				return cli.api.Branding.SetUniversalLogin(
+				return cli.api.Branding.SetUniversalLogin(cmd.Context(),
 					&management.BrandingUniversalLogin{
 						Body: &templateData.Body,
 					},
@@ -202,13 +202,13 @@ func (cli *cli) fetchTemplateData(ctx context.Context) (*TemplateData, error) {
 
 	var promptSettings *management.Prompt
 	group.Go(func() (err error) {
-		promptSettings, err = cli.api.Prompt.Read()
+		promptSettings, err = cli.api.Prompt.Read(ctx)
 		return err
 	})
 
 	var clientList *management.ClientList
 	group.Go(func() (err error) {
-		clientList, err = cli.api.Client.List(management.Context(ctx), management.PerPage(100)) // Capping the clients retrieved to 100 for now.
+		clientList, err = cli.api.Client.List(ctx, management.PerPage(100)) // Capping the clients retrieved to 100 for now.
 		return err
 	})
 
@@ -226,7 +226,7 @@ func (cli *cli) fetchTemplateData(ctx context.Context) (*TemplateData, error) {
 
 	var tenant *management.Tenant
 	group.Go(func() (err error) {
-		tenant, err = cli.api.Tenant.Read(management.Context(ctx))
+		tenant, err = cli.api.Tenant.Read(ctx)
 		return err
 	})
 
@@ -255,7 +255,7 @@ func (cli *cli) fetchTemplateData(ctx context.Context) (*TemplateData, error) {
 }
 
 func ensureCustomDomainIsEnabled(ctx context.Context, api *auth0.API) error {
-	domains, err := api.CustomDomain.List(management.Context(ctx))
+	domains, err := api.CustomDomain.List(ctx)
 	if err != nil {
 		if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusForbidden {
 			return errNotAllowed // 403 is a valid response for free tenants that don't have custom domains enabled
@@ -275,7 +275,7 @@ func ensureCustomDomainIsEnabled(ctx context.Context, api *auth0.API) error {
 }
 
 func fetchBrandingSettingsOrUseDefaults(ctx context.Context, api *auth0.API) *management.Branding {
-	brandingSettings, _ := api.Branding.Read(management.Context(ctx))
+	brandingSettings, _ := api.Branding.Read(ctx)
 	if brandingSettings == nil {
 		brandingSettings = &management.Branding{}
 	}
@@ -295,7 +295,7 @@ func fetchBrandingSettingsOrUseDefaults(ctx context.Context, api *auth0.API) *ma
 }
 
 func fetchBrandingTemplateOrUseEmpty(ctx context.Context, api *auth0.API) *management.BrandingUniversalLogin {
-	currentTemplate, err := api.Branding.UniversalLogin(management.Context(ctx))
+	currentTemplate, err := api.Branding.UniversalLogin(ctx)
 	if err != nil {
 		currentTemplate = &management.BrandingUniversalLogin{}
 	}

@@ -23,7 +23,7 @@ func TestTailLogsCommand(t *testing.T) {
 
 		logsAPI := mock.NewMockLogAPI(ctrl)
 		logsAPI.EXPECT().
-			List(gomock.Any()).
+			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(nil, fmt.Errorf("generic error"))
 
 		cli := &cli{
@@ -43,7 +43,7 @@ func TestTailLogsCommand(t *testing.T) {
 
 		logsAPI := mock.NewMockLogAPI(ctrl)
 		logsAPI.EXPECT().
-			List(gomock.Any()).
+			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(
 				[]*management.Log{
 					{
@@ -56,7 +56,7 @@ func TestTailLogsCommand(t *testing.T) {
 			)
 
 		logsAPI.EXPECT().
-			List(gomock.Any()).
+			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(
 				[]*management.Log{
 					{
@@ -74,7 +74,7 @@ func TestTailLogsCommand(t *testing.T) {
 			)
 
 		logsAPI.EXPECT().
-			List(gomock.Any()).
+			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(nil, fmt.Errorf("generic error"))
 
 		expectedResult := `TYPE                       DESCRIPTION                                               DATE                    CONNECTION              CLIENT                  

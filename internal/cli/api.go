@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -132,10 +131,10 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 		var response *http.Response
 		if err := ansi.Waiting(func() error {
 			request, err := cli.api.HTTPClient.NewRequest(
+				cmd.Context(),
 				inputs.Method,
 				inputs.URL.String(),
 				inputs.Data,
-				management.Context(cmd.Context()),
 			)
 			if err != nil {
 				return err

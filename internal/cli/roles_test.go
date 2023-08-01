@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -81,7 +82,7 @@ func TestRolesPickerOptions(t *testing.T) {
 				api: &auth0.API{Role: roleAPI},
 			}
 
-			options, err := cli.rolePickerOptions()
+			options, err := cli.rolePickerOptions(context.Background())
 
 			if err != nil {
 				test.assertError(t, err)

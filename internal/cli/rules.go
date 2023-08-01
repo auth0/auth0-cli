@@ -7,6 +7,7 @@ import (
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
+	"golang.org/x/net/context"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -94,7 +95,7 @@ func listRulesCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var rules []*management.Rule
 			err := ansi.Waiting(func() error {
-				ruleList, err := cli.api.Rule.List()
+				ruleList, err := cli.api.Rule.List(cmd.Context())
 				if err != nil {
 					return err
 				}
@@ -175,7 +176,7 @@ func createRuleCmd(cli *cli) *cobra.Command {
 			}
 
 			err := ansi.Waiting(func() error {
-				return cli.api.Rule.Create(rule)
+				return cli.api.Rule.Create(cmd.Context(), rule)
 			})
 
 			if err != nil {
@@ -223,7 +224,7 @@ func showRuleCmd(cli *cli) *cobra.Command {
 
 			err := ansi.Waiting(func() error {
 				var err error
-				rule, err = cli.api.Rule.Read(inputs.ID)
+				rule, err = cli.api.Rule.Read(cmd.Context(), inputs.ID)
 				return err
 			})
 
@@ -275,13 +276,13 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 			}
 
 			return ansi.Spinner("Deleting Rule", func() error {
-				_, err := cli.api.Rule.Read(inputs.ID)
+				_, err := cli.api.Rule.Read(cmd.Context(), inputs.ID)
 
 				if err != nil {
 					return fmt.Errorf("Unable to delete rule: %w", err)
 				}
 
-				return cli.api.Rule.Delete(inputs.ID)
+				return cli.api.Rule.Delete(cmd.Context(), inputs.ID)
 			})
 		},
 	}
@@ -333,7 +334,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 
 				var oldRule *management.Rule
 				err := ansi.Waiting(func() (err error) {
-					oldRule, err = cli.api.Rule.Read(inputs.ID)
+					oldRule, err = cli.api.Rule.Read(cmd.Context(), inputs.ID)
 					return err
 				})
 				if err != nil {
@@ -377,7 +378,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 			}
 
 			err := ansi.Waiting(func() error {
-				return cli.api.Rule.Update(inputs.ID, updatedRule)
+				return cli.api.Rule.Update(cmd.Context(), inputs.ID, updatedRule)
 			})
 			if err != nil {
 				return fmt.Errorf("failed to update rule with ID %s: %w", inputs.ID, err)
@@ -425,7 +426,7 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 			var rule *management.Rule
 			err := ansi.Waiting(func() error {
 				var err error
-				rule, err = cli.api.Rule.Read(inputs.ID)
+				rule, err = cli.api.Rule.Read(cmd.Context(), inputs.ID)
 				return err
 			})
 			if err != nil {
@@ -437,7 +438,7 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 			}
 
 			err = ansi.Waiting(func() error {
-				return cli.api.Rule.Update(inputs.ID, rule)
+				return cli.api.Rule.Update(cmd.Context(), inputs.ID, rule)
 			})
 
 			if err != nil {
@@ -481,7 +482,7 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 			var rule *management.Rule
 			err := ansi.Waiting(func() error {
 				var err error
-				rule, err = cli.api.Rule.Read(inputs.ID)
+				rule, err = cli.api.Rule.Read(cmd.Context(), inputs.ID)
 				return err
 			})
 			if err != nil {
@@ -493,7 +494,7 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 			}
 
 			err = ansi.Waiting(func() error {
-				return cli.api.Rule.Update(inputs.ID, rule)
+				return cli.api.Rule.Update(cmd.Context(), inputs.ID, rule)
 			})
 
 			if err != nil {
@@ -510,8 +511,8 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func (c *cli) rulePickerOptions() (pickerOptions, error) {
-	list, err := c.api.Rule.List()
+func (c *cli) rulePickerOptions(ctx context.Context) (pickerOptions, error) {
+	list, err := c.api.Rule.List(ctx)
 	if err != nil {
 		return nil, err
 	}

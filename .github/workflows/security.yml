@@ -1,0 +1,33 @@
+name: Security
+
+on:
+  pull_request: {}
+  push:
+    branches: [ "main" ]
+  schedule:
+    - cron: "30 0 1,15 * *"
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    name: Semgrep Scan
+    runs-on: ubuntu-latest
+    container:
+      image: returntocorp/semgrep
+
+    steps:
+      - uses: actions/checkout@v3
+      - run: semgrep ci
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+  govulncheck:
+    name: Vulnerabilities Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scan for vulnerabilities in go code
+        uses: golang/govulncheck-action@dd3ead030e4f2cf713062f7a3395191802364e13 # pin@1.0.0
+        with:
+          check-latest: true

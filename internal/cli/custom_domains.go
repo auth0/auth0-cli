@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 
@@ -107,7 +108,7 @@ func listCustomDomainsCmd(cli *cli) *cobra.Command {
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				list, err = cli.api.CustomDomain.List()
+				list, err = cli.api.CustomDomain.List(cmd.Context())
 				return err
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred: %w", err)
@@ -150,7 +151,7 @@ func showCustomDomainCmd(cli *cli) *cobra.Command {
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				customDomain, err = cli.api.CustomDomain.Read(url.PathEscape(inputs.ID))
+				customDomain, err = cli.api.CustomDomain.Read(cmd.Context(), url.PathEscape(inputs.ID))
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to get a custom domain with Id '%s': %w", inputs.ID, err)
@@ -217,7 +218,7 @@ func createCustomDomainCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := ansi.Waiting(func() error {
-				return cli.api.CustomDomain.Create(customDomain)
+				return cli.api.CustomDomain.Create(cmd.Context(), customDomain)
 			}); err != nil {
 				return fmt.Errorf("An unexpected error occurred while attempting to create the custom domain '%s': %w", inputs.Domain, err)
 			}
@@ -271,7 +272,7 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
 			// Load custom domain by id
 			if err := ansi.Waiting(func() error {
 				var err error
-				current, err = cli.api.CustomDomain.Read(inputs.ID)
+				current, err = cli.api.CustomDomain.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to load custom domain: %w", err)
@@ -302,7 +303,7 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
 
 			// Update custom domain
 			if err := ansi.Waiting(func() error {
-				return cli.api.CustomDomain.Update(inputs.ID, c)
+				return cli.api.CustomDomain.Update(cmd.Context(), inputs.ID, c)
 			}); err != nil {
 				return fmt.Errorf("Unable to update custom domain: %v", err)
 			}
@@ -356,13 +357,13 @@ func deleteCustomDomainCmd(cli *cli) *cobra.Command {
 			}
 
 			return ansi.Spinner("Deleting custom domain", func() error {
-				_, err := cli.api.CustomDomain.Read(url.PathEscape(inputs.ID))
+				_, err := cli.api.CustomDomain.Read(cmd.Context(), url.PathEscape(inputs.ID))
 
 				if err != nil {
 					return fmt.Errorf("Unable to delete custom domain: %w", err)
 				}
 
-				return cli.api.CustomDomain.Delete(url.PathEscape(inputs.ID))
+				return cli.api.CustomDomain.Delete(cmd.Context(), url.PathEscape(inputs.ID))
 			})
 		},
 	}
@@ -400,7 +401,7 @@ func verifyCustomDomainCmd(cli *cli) *cobra.Command {
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				customDomain, err = cli.api.CustomDomain.Verify(url.PathEscape(inputs.ID))
+				customDomain, err = cli.api.CustomDomain.Verify(cmd.Context(), url.PathEscape(inputs.ID))
 				return err
 			}); err != nil {
 				return fmt.Errorf("Unable to verify a custom domain with Id '%s': %w", inputs.ID, err)
@@ -447,10 +448,10 @@ func apiTLSPolicyFor(v string) *string {
 	}
 }
 
-func (c *cli) customDomainsPickerOptions() (pickerOptions, error) {
+func (c *cli) customDomainsPickerOptions(ctx context.Context) (pickerOptions, error) {
 	var opts pickerOptions
 
-	domains, err := c.api.CustomDomain.List()
+	domains, err := c.api.CustomDomain.List(ctx)
 	if err != nil {
 		errStatus := err.(management.Error)
 		// 403 is a valid response for free tenants that don't have
