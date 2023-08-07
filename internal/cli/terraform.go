@@ -12,7 +12,8 @@ var tfFlags = terraformFlags{
 		Name:      "Output Dir",
 		LongForm:  "output-dir",
 		ShortForm: "o",
-		Help:      "Output directory for the generated Terraform config files.",
+		Help: "Output directory for the generated Terraform config files. If not provided, the files will be " +
+			"saved in the current working directory.",
 	},
 }
 
