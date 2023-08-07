@@ -169,7 +169,7 @@ func createImportFile(importResources []ImportResource, outputDirectory string) 
 		return fmt.Errorf("specified directory %s does not exists", outputDirectory)
 	}
 
-	filePath := path.Join(outputDirectory, "import.tf")
+	filePath := path.Join(outputDirectory, "auth0_import.tf")
 
 	file, err := os.Create(filePath)
 	if err != nil {

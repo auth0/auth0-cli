@@ -154,8 +154,8 @@ func TestGenerateCreateImportFile(t *testing.T) {
 			ResourceName:     "auth0_connection.email",
 		}}, tmpDir)
 		assert.NoError(t, err)
-		assert.FileExists(t, path.Join(tmpDir, "import.tf"))
-		fileContents, err := os.ReadFile(path.Join(tmpDir, "import.tf"))
+		assert.FileExists(t, path.Join(tmpDir, "auth0_import.tf"))
+		fileContents, err := os.ReadFile(path.Join(tmpDir, "auth0_import.tf"))
 		assert.NoError(t, err)
 		assert.Equal(t, string(fileContents),
 			`# This file automatically generated via the Auth0 CLI.
