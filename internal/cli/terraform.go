@@ -33,7 +33,7 @@ func terraformCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"tf"},
 		Short:   "Manage terraform configuration for your Auth0 Tenant",
 		Long: "This command facilitates the integration of Auth0 with [Terraform](https://www.terraform.io/), an " +
-			"infrastructure as code tool.",
+			"Infrastructure as Code tool.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -47,10 +47,10 @@ func generateTerraformCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "generate",
-		Aliases: []string{"gen", "export"},
+		Aliases: []string{"gen", "export"}, // Reconsider aliases and command name before releasing.
 		Short:   "Generate terraform configuration for your Auth0 Tenant",
 		Long: "This command is designed to streamline the process of generating Terraform configuration files for " +
-			"your Auth0 resources, serving as a bridge between the two.\n\n It automatically scans your Auth0 Tenant " +
+			"your Auth0 resources, serving as a bridge between the two.\n\nIt automatically scans your Auth0 Tenant " +
 			"and compiles a set of Terraform configuration files based on the existing resources and configurations." +
 			"\n\nThe generated Terraform files are written in HashiCorp Configuration Language (HCL).",
 		RunE: generateTerraformCmdRun(cli, &inputs),
