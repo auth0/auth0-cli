@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -80,7 +81,7 @@ func TestLogStreamsPickerOptions(t *testing.T) {
 				api: &auth0.API{LogStream: logStreamAPI},
 			}
 
-			options, err := cli.allLogStreamsPickerOptions()
+			options, err := cli.allLogStreamsPickerOptions(context.Background())
 
 			if err != nil {
 				test.assertError(t, err)
@@ -175,7 +176,7 @@ func TestLogStreamsPickerOptionsByType(t *testing.T) {
 			}
 
 			pickerOptionsFunc := cli.logStreamPickerOptionsByType(test.logsStreamType)
-			options, err := pickerOptionsFunc()
+			options, err := pickerOptionsFunc(context.Background())
 
 			if err != nil {
 				test.assertError(t, err)

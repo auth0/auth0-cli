@@ -1,12 +1,16 @@
 package auth0
 
-import "github.com/auth0/go-auth0/management"
+import (
+	"context"
+
+	"github.com/auth0/go-auth0/management"
+)
 
 type EmailTemplateAPI interface {
 	// Create an email template.
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Email_Templates/post_email_templates
-	Create(template *management.EmailTemplate, opts ...management.RequestOption) error
+	Create(ctx context.Context, template *management.EmailTemplate, opts ...management.RequestOption) error
 
 	// Read an email template by pre-defined name.
 	//
@@ -18,10 +22,10 @@ type EmailTemplateAPI interface {
 	// legacy scenarios.
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Email_Templates/get_email_templates_by_templateName
-	Read(template string, opts ...management.RequestOption) (e *management.EmailTemplate, err error)
+	Read(ctx context.Context, template string, opts ...management.RequestOption) (e *management.EmailTemplate, err error)
 
 	// Update an email template.
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Email_Templates/patch_email_templates_by_templateName
-	Update(template string, e *management.EmailTemplate, opts ...management.RequestOption) (err error)
+	Update(ctx context.Context, template string, e *management.EmailTemplate, opts ...management.RequestOption) (err error)
 }

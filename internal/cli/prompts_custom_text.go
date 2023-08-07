@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/net/context"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/iostream"
@@ -104,7 +105,7 @@ func showPromptsText(cli *cli, inputs *promptsTextInput) func(cmd *cobra.Command
 		brandingText := make(map[string]interface{})
 
 		if err := ansi.Waiting(func() (err error) {
-			brandingText, err = cli.api.Prompt.CustomText(inputs.Prompt, inputs.Language)
+			brandingText, err = cli.api.Prompt.CustomText(cmd.Context(), inputs.Prompt, inputs.Language)
 			return err
 		}); err != nil {
 			return fmt.Errorf(
@@ -131,7 +132,7 @@ func updateBrandingText(cli *cli, inputs *promptsTextInput) func(cmd *cobra.Comm
 		inputs.Prompt = args[0]
 		inputs.Body = string(iostream.PipedInput())
 
-		brandingTextToEdit, err := fetchBrandingTextContentToEdit(cli, inputs)
+		brandingTextToEdit, err := fetchBrandingTextContentToEdit(cmd.Context(), cli, inputs)
 		if err != nil {
 			return fmt.Errorf("failed to fetch branding text content to edit: %w", err)
 		}
@@ -142,7 +143,7 @@ func updateBrandingText(cli *cli, inputs *promptsTextInput) func(cmd *cobra.Comm
 		}
 
 		if err := ansi.Waiting(func() error {
-			return cli.api.Prompt.SetCustomText(inputs.Prompt, inputs.Language, editedBrandingText)
+			return cli.api.Prompt.SetCustomText(cmd.Context(), inputs.Prompt, inputs.Language, editedBrandingText)
 		}); err != nil {
 			return fmt.Errorf(
 				"unable to set custom text for prompt %s and language %s: %w",
@@ -163,13 +164,13 @@ func updateBrandingText(cli *cli, inputs *promptsTextInput) func(cmd *cobra.Comm
 	}
 }
 
-func fetchBrandingTextContentToEdit(cli *cli, inputs *promptsTextInput) (string, error) {
+func fetchBrandingTextContentToEdit(ctx context.Context, cli *cli, inputs *promptsTextInput) (string, error) {
 	contentToEdit := map[string]interface{}{textDocsKey: textDocsURL}
 
 	if err := ansi.Waiting(func() error {
 		defaultTranslations := downloadDefaultBrandingTextTranslations(inputs.Prompt, inputs.Language)
 
-		customTranslations, err := cli.api.Prompt.CustomText(inputs.Prompt, inputs.Language)
+		customTranslations, err := cli.api.Prompt.CustomText(ctx, inputs.Prompt, inputs.Language)
 		if err != nil {
 			return err
 		}

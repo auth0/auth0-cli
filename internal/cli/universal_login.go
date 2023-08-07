@@ -114,7 +114,7 @@ func showUniversalLoginCmd(cli *cli) *cobra.Command {
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				myBranding, err = cli.api.Branding.Read()
+				myBranding, err = cli.api.Branding.Read(cmd.Context())
 				return err
 			}); err != nil {
 				return fmt.Errorf("unable to load branding settings due to an unexpected error: %w", err)
@@ -158,7 +158,7 @@ func updateUniversalLoginCmd(cli *cli) *cobra.Command {
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				current, err = cli.api.Branding.Read()
+				current, err = cli.api.Branding.Read(cmd.Context())
 				return err
 			}); err != nil {
 				return fmt.Errorf("unable to load branding settings due to an unexpected error: %w", err)
@@ -211,7 +211,7 @@ func updateUniversalLoginCmd(cli *cli) *cobra.Command {
 
 			// Update branding
 			if err := ansi.Waiting(func() error {
-				return cli.api.Branding.Update(b)
+				return cli.api.Branding.Update(cmd.Context(), b)
 			}); err != nil {
 				return fmt.Errorf("unable to update branding settings: %v", err)
 			}

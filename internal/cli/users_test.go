@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -71,7 +72,7 @@ func TestConnectionsPickerOptions(t *testing.T) {
 
 			connectionAPI := mock.NewMockConnectionAPI(ctrl)
 			connectionAPI.EXPECT().
-				List(gomock.Any()).
+				List(gomock.Any(), gomock.Any()).
 				Return(&management.ConnectionList{
 					Connections: test.connections}, test.apiError)
 
@@ -79,7 +80,7 @@ func TestConnectionsPickerOptions(t *testing.T) {
 				api: &auth0.API{Connection: connectionAPI},
 			}
 
-			options, err := cli.dbConnectionPickerOptions()
+			options, err := cli.dbConnectionPickerOptions(context.Background())
 
 			if err != nil {
 				test.assertError(t, err)

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -123,23 +124,20 @@ func TestCustomDomainsPickerOptions(t *testing.T) {
 				{
 					ID:     auth0.String("some-id-1"),
 					Domain: auth0.String("some-domain-1"),
-					Status: auth0.String("foo"),
+					Status: auth0.String("pending_verification"),
 				},
 				{
 					ID:     auth0.String("some-id-2"),
 					Domain: auth0.String("some-domain-2"),
 					Status: auth0.String("ready"),
 				},
-				{
-					ID:     auth0.String("some-id-3"),
-					Domain: auth0.String("some-domain-3"),
-					Status: auth0.String("bar"),
-				},
 			},
 			assertOutput: func(t testing.TB, options pickerOptions) {
-				assert.Len(t, options, 1)
-				assert.Equal(t, "some-domain-2 (some-id-2)", options[0].label)
-				assert.Equal(t, "some-id-2", options[0].value)
+				assert.Len(t, options, 2)
+				assert.Equal(t, "some-domain-1 (some-id-1)", options[0].label)
+				assert.Equal(t, "some-id-1", options[0].value)
+				assert.Equal(t, "some-domain-2 (some-id-2)", options[1].label)
+				assert.Equal(t, "some-id-2", options[1].value)
 			},
 			assertError: func(t testing.TB, err error) {
 				t.Fail()
@@ -191,7 +189,7 @@ func TestCustomDomainsPickerOptions(t *testing.T) {
 				api: &auth0.API{CustomDomain: customDomainAPI},
 			}
 
-			options, err := cli.customDomainsPickerOptions()
+			options, err := cli.customDomainsPickerOptions(context.Background())
 
 			if err != nil {
 				test.assertError(t, err)

@@ -46,7 +46,7 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 
 			var userBlocks []*management.UserBlock
 			err := ansi.Waiting(func() (err error) {
-				userBlocks, err = cli.api.User.Blocks(inputs.userID)
+				userBlocks, err = cli.api.User.Blocks(cmd.Context(), inputs.userID)
 				return err
 			})
 			if err != nil {
@@ -84,7 +84,7 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 			}
 
 			err := ansi.Spinner("Unblocking user...", func() error {
-				return cli.api.User.Unblock(inputs.userID)
+				return cli.api.User.Unblock(cmd.Context(), inputs.userID)
 			})
 			if err != nil {
 				return fmt.Errorf("failed to unblock user with ID %s: %w", inputs.userID, err)

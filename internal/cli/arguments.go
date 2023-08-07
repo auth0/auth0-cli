@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -33,13 +34,13 @@ func (a *Argument) Ask(cmd *cobra.Command, value interface{}) error {
 	return askArgument(cmd, a, value)
 }
 
-type pickerOptionsFunc func() (pickerOptions, error)
+type pickerOptionsFunc func(ctx context.Context) (pickerOptions, error)
 
 func (a *Argument) Pick(cmd *cobra.Command, result *string, fn pickerOptionsFunc) error {
 	var opts pickerOptions
 	err := ansi.Waiting(func() error {
 		var err error
-		opts, err = fn()
+		opts, err = fn(cmd.Context())
 		return err
 	})
 

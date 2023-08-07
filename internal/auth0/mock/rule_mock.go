@@ -5,6 +5,7 @@
 package mock
 
 import (
+	context "context"
 	reflect "reflect"
 
 	management "github.com/auth0/go-auth0/management"
@@ -35,9 +36,9 @@ func (m *MockRuleAPI) EXPECT() *MockRuleAPIMockRecorder {
 }
 
 // Create mocks base method.
-func (m *MockRuleAPI) Create(r *management.Rule, opts ...management.RequestOption) error {
+func (m *MockRuleAPI) Create(ctx context.Context, r *management.Rule, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{r}
+	varargs := []interface{}{ctx, r}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -47,16 +48,16 @@ func (m *MockRuleAPI) Create(r *management.Rule, opts ...management.RequestOptio
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockRuleAPIMockRecorder) Create(r interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockRuleAPIMockRecorder) Create(ctx, r interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{r}, opts...)
+	varargs := append([]interface{}{ctx, r}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockRuleAPI)(nil).Create), varargs...)
 }
 
 // Delete mocks base method.
-func (m *MockRuleAPI) Delete(id string, opts ...management.RequestOption) error {
+func (m *MockRuleAPI) Delete(ctx context.Context, id string, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{id}
+	varargs := []interface{}{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -66,16 +67,16 @@ func (m *MockRuleAPI) Delete(id string, opts ...management.RequestOption) error 
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockRuleAPIMockRecorder) Delete(id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockRuleAPIMockRecorder) Delete(ctx, id interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{id}, opts...)
+	varargs := append([]interface{}{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockRuleAPI)(nil).Delete), varargs...)
 }
 
 // List mocks base method.
-func (m *MockRuleAPI) List(opts ...management.RequestOption) (*management.RuleList, error) {
+func (m *MockRuleAPI) List(ctx context.Context, opts ...management.RequestOption) (*management.RuleList, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
+	varargs := []interface{}{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -86,15 +87,16 @@ func (m *MockRuleAPI) List(opts ...management.RequestOption) (*management.RuleLi
 }
 
 // List indicates an expected call of List.
-func (mr *MockRuleAPIMockRecorder) List(opts ...interface{}) *gomock.Call {
+func (mr *MockRuleAPIMockRecorder) List(ctx interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockRuleAPI)(nil).List), opts...)
+	varargs := append([]interface{}{ctx}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockRuleAPI)(nil).List), varargs...)
 }
 
 // Read mocks base method.
-func (m *MockRuleAPI) Read(id string, opts ...management.RequestOption) (*management.Rule, error) {
+func (m *MockRuleAPI) Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.Rule, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{id}
+	varargs := []interface{}{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -105,16 +107,16 @@ func (m *MockRuleAPI) Read(id string, opts ...management.RequestOption) (*manage
 }
 
 // Read indicates an expected call of Read.
-func (mr *MockRuleAPIMockRecorder) Read(id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockRuleAPIMockRecorder) Read(ctx, id interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{id}, opts...)
+	varargs := append([]interface{}{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockRuleAPI)(nil).Read), varargs...)
 }
 
 // Update mocks base method.
-func (m *MockRuleAPI) Update(id string, r *management.Rule, opts ...management.RequestOption) error {
+func (m *MockRuleAPI) Update(ctx context.Context, id string, r *management.Rule, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{id, r}
+	varargs := []interface{}{ctx, id, r}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -124,8 +126,8 @@ func (m *MockRuleAPI) Update(id string, r *management.Rule, opts ...management.R
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockRuleAPIMockRecorder) Update(id, r interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockRuleAPIMockRecorder) Update(ctx, id, r interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{id, r}, opts...)
+	varargs := append([]interface{}{ctx, id, r}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockRuleAPI)(nil).Update), varargs...)
 }

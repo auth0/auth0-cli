@@ -55,7 +55,7 @@ func checkIPCmd(cli *cli) *cobra.Command {
 
 			var isBlocked bool
 			if err := ansi.Waiting(func() (err error) {
-				isBlocked, err = cli.api.Anomaly.CheckIP(inputs.IP)
+				isBlocked, err = cli.api.Anomaly.CheckIP(cmd.Context(), inputs.IP)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to check if IP %q is blocked: %w", inputs.IP, err)
@@ -100,7 +100,7 @@ func unblockIPCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := ansi.Waiting(func() error {
-				return cli.api.Anomaly.UnblockIP(inputs.IP)
+				return cli.api.Anomaly.UnblockIP(cmd.Context(), inputs.IP)
 			}); err != nil {
 				return fmt.Errorf("failed to unblock IP %q: %w", inputs.IP, err)
 			}

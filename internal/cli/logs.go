@@ -7,6 +7,7 @@ import (
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
+	"golang.org/x/net/context"
 )
 
 // Besides the limitation of 100 log events per request to retrieve logs,
@@ -66,7 +67,7 @@ func listLogsCmd(cli *cli) *cobra.Command {
   auth0 logs list --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
   auth0 logs ls -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			list, err := getLatestLogs(cli, inputs.Num, inputs.Filter)
+			list, err := getLatestLogs(cmd.Context(), cli, inputs.Num, inputs.Filter)
 			if err != nil {
 				return fmt.Errorf("failed to get logs: %w", err)
 			}
@@ -105,7 +106,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
   auth0 logs tail --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
   auth0 logs tail -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			list, err := getLatestLogs(cli, inputs.Num, inputs.Filter)
+			list, err := getLatestLogs(cmd.Context(), cli, inputs.Num, inputs.Filter)
 			if err != nil {
 				return fmt.Errorf("failed to get logs: %w", err)
 			}
@@ -139,7 +140,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 						queryParams = append(queryParams, management.Query(inputs.Filter))
 					}
 
-					list, err := cli.api.Log.List(queryParams...)
+					list, err := cli.api.Log.List(cmd.Context(), queryParams...)
 					if err != nil {
 						cli.renderer.Errorf("Failed to get latest logs: %v", err)
 						return
@@ -168,7 +169,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func getLatestLogs(cli *cli, n int, filter string) ([]*management.Log, error) {
+func getLatestLogs(ctx context.Context, cli *cli, n int, filter string) ([]*management.Log, error) {
 	page := 0
 	perPage := n
 	if perPage > logsPerPageLimit {
@@ -184,7 +185,7 @@ func getLatestLogs(cli *cli, n int, filter string) ([]*management.Log, error) {
 		queryParams = append(queryParams, management.Query(filter))
 	}
 
-	return cli.api.Log.List(queryParams...)
+	return cli.api.Log.List(ctx, queryParams...)
 }
 
 func dedupeLogs(list []*management.Log, set map[string]struct{}) []*management.Log {

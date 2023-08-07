@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -24,11 +25,11 @@ func TestActionsDeployCmd(t *testing.T) {
 
 		actionAPI := mock.NewMockActionAPI(ctrl)
 		actionAPI.EXPECT().
-			Deploy(actionID).
+			Deploy(context.Background(), actionID).
 			Return(nil, nil)
 
 		actionAPI.EXPECT().
-			Read(actionID).
+			Read(context.Background(), actionID).
 			Return(&management.Action{
 				ID:   auth0.String(actionID),
 				Name: auth0.String("actions-deploy"),
@@ -81,7 +82,7 @@ func TestActionsDeployCmd(t *testing.T) {
 
 		actionAPI := mock.NewMockActionAPI(ctrl)
 		actionAPI.EXPECT().
-			Deploy(actionID).
+			Deploy(context.Background(), actionID).
 			Return(nil, fmt.Errorf("400 Bad Request"))
 
 		stdout := &bytes.Buffer{}
@@ -107,11 +108,11 @@ func TestActionsDeployCmd(t *testing.T) {
 
 		actionAPI := mock.NewMockActionAPI(ctrl)
 		actionAPI.EXPECT().
-			Deploy(actionID).
+			Deploy(context.Background(), actionID).
 			Return(nil, nil)
 
 		actionAPI.EXPECT().
-			Read(actionID).
+			Read(context.Background(), actionID).
 			Return(nil, fmt.Errorf("400 Bad Request"))
 
 		stdout := &bytes.Buffer{}
@@ -199,7 +200,7 @@ func TestActionsPickerOptions(t *testing.T) {
 				api: &auth0.API{Action: actionAPI},
 			}
 
-			options, err := cli.actionPickerOptions()
+			options, err := cli.actionPickerOptions(context.Background())
 
 			if err != nil {
 				test.assertError(t, err)

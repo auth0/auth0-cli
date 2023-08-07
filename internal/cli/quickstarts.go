@@ -11,6 +11,7 @@ import (
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
+	"golang.org/x/net/context"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -159,7 +160,7 @@ func downloadQuickstart(cli *cli, inputs *qsInputs) func(cmd *cobra.Command, arg
 
 		cli.renderer.Infof("Quickstart sample successfully downloaded at %s", quickstartPath)
 
-		if err := promptDefaultURLs(cli, inputs.Client, inputs.QsTypeForClient, inputs.Stack); err != nil {
+		if err := promptDefaultURLs(cmd.Context(), cli, inputs.Client, inputs.QsTypeForClient, inputs.Stack); err != nil {
 			return err
 		}
 
@@ -254,7 +255,7 @@ func relativeQuickstartSamplePath(samplePath string) (string, error) {
 // whether the app has already added the default quickstart url to allowed url lists.
 // If not, it prompts the user to add the default url and updates the application
 // if they accept.
-func promptDefaultURLs(cli *cli, client *management.Client, qsType string, qsStack string) error {
+func promptDefaultURLs(ctx context.Context, cli *cli, client *management.Client, qsType string, qsStack string) error {
 	defaultURL := defaultURLFor(qsStack)
 	defaultCallbackURL := defaultCallbackURLFor(qsStack)
 
@@ -302,7 +303,7 @@ func promptDefaultURLs(cli *cli, client *management.Client, qsType string, qsSta
 
 	if confirmed := prompt.Confirm(urlPromptFor(qsType, qsStack)); confirmed {
 		err := ansi.Waiting(func() error {
-			return cli.api.Client.Update(client.GetClientID(), a)
+			return cli.api.Client.Update(ctx, client.GetClientID(), a)
 		})
 		if err != nil {
 			return err
@@ -368,7 +369,7 @@ func (i *qsInputs) fromArgs(cmd *cobra.Command, args []string, cli *cli) error {
 
 	var client *management.Client
 	err := ansi.Waiting(func() (err error) {
-		client, err = cli.api.Client.Read(i.ClientID)
+		client, err = cli.api.Client.Read(cmd.Context(), i.ClientID)
 		return
 	})
 	if err != nil {

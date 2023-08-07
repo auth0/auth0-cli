@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -57,7 +58,7 @@ func TestBrandingTextsShowCmd(t *testing.T) {
 
 			brandingTextsAPI := mock.NewMockPromptAPI(ctrl)
 			brandingTextsAPI.EXPECT().
-				CustomText(test.inputPrompt, test.inputLanguage).
+				CustomText(context.Background(), test.inputPrompt, test.inputLanguage).
 				Return(test.returnedCustomText, test.returnedError)
 
 			actualOutput := &bytes.Buffer{}
