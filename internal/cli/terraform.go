@@ -2,6 +2,8 @@ package cli
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"path"
 
@@ -88,6 +90,10 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 			return err
 		}
 
+		if err := createImportFile([]ImportResource{}, inputs.OutputDIR); err != nil {
+			return err
+		}
+
 		cli.renderer.Infof("Terraform config files generated successfully.")
 		cli.renderer.Infof(
 			"Follow this " +
@@ -145,5 +151,49 @@ provider "auth0" {
 `
 
 	_, err = mainTerraformConfigFile.WriteString(mainTerraformConfigFileContent)
+	return err
+}
+
+type ImportResource struct {
+	ImportIdentifier string
+	ResourceName     string
+}
+
+func createImportFile(importResources []ImportResource, outputDirectory string) error {
+	if len(importResources) == 0 {
+		return errors.New("cannot create import file for zero resources")
+	}
+
+	_, err := os.ReadDir(outputDirectory)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("specified directory %s does not exists", outputDirectory)
+	}
+
+	filePath := path.Join(outputDirectory, "import.tf")
+
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	fileData := `# This file automatically generated via the Auth0 CLI.
+# It can be safely removed after the successful generation 
+# of TF resource definition files.
+
+`
+
+	template := `%simport {
+	id = "%s"
+	to = %s
+}
+
+`
+
+	for _, importResource := range importResources {
+		fileData = fmt.Sprintf(template, fileData, importResource.ImportIdentifier, importResource.ResourceName)
+	}
+
+	_, err = file.Write([]byte(fileData))
 	return err
 }

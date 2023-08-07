@@ -124,3 +124,54 @@ provider "auth0" {
 	assert.NoError(t, err)
 	assert.Equal(t, expectedContent, string(content))
 }
+
+func TestGenerateCreateImportFile(t *testing.T) {
+	defer os.RemoveAll("./terraform")
+
+	t.Run("it errors when no import resources are provided", func(t *testing.T) {
+		err := createImportFile([]ImportResource{}, "./valid-directory")
+		assert.ErrorContains(t, err, "cannot create import file for zero resources")
+	})
+
+	t.Run("it errors when specified write directory does not exist", func(t *testing.T) {
+		err := createImportFile([]ImportResource{{
+			ImportIdentifier: "con_FJVIi5jt9aQXvioG",
+			ResourceName:     "auth0_connection.sms",
+		}}, "./this/directory/does/not/exist")
+		assert.ErrorContains(t, err, "specified directory ./this/directory/does/not/exist does not exists")
+	})
+
+	t.Run("it creates an appropriately formatted Terraform import file", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "create-import-file")
+		assert.NoError(t, err)
+		defer os.RemoveAll(tmpDir)
+
+		err = createImportFile([]ImportResource{{
+			ImportIdentifier: "con_FJVIi4jt1aQWwvoG",
+			ResourceName:     "auth0_connection.sms",
+		}, {
+			ImportIdentifier: "con_DW1Ii5Tb4aEkvtoE",
+			ResourceName:     "auth0_connection.email",
+		}}, tmpDir)
+		assert.NoError(t, err)
+		assert.FileExists(t, path.Join(tmpDir, "import.tf"))
+		fileContents, err := os.ReadFile(path.Join(tmpDir, "import.tf"))
+		assert.NoError(t, err)
+		assert.Equal(t, string(fileContents),
+			`# This file automatically generated via the Auth0 CLI.
+# It can be safely removed after the successful generation 
+# of TF resource definition files.
+
+import {
+	id = "con_FJVIi4jt1aQWwvoG"
+	to = auth0_connection.sms
+}
+
+import {
+	id = "con_DW1Ii5Tb4aEkvtoE"
+	to = auth0_connection.email
+}
+
+`)
+	})
+}
