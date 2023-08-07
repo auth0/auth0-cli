@@ -13,7 +13,7 @@ func TestGenerateTerraformConfigFiles(t *testing.T) {
 	testInputs := terraformInputs{
 		OutputDIR: "./terraform/dev",
 	}
-	defer os.RemoveAll(testInputs.OutputDIR)
+	defer os.RemoveAll("./terraform")
 
 	t.Run("it can correctly generate the terraform main config file", func(t *testing.T) {
 		assertTerraformConfigFilesWereGeneratedWithCorrectContent(t, &testInputs)
@@ -26,13 +26,13 @@ func TestGenerateTerraformConfigFiles(t *testing.T) {
 		assertTerraformConfigFilesWereGeneratedWithCorrectContent(t, &testInputs)
 	})
 
-	t.Run("it fails to create the directory if path is a read only location", func(t *testing.T) {
+	t.Run("it fails to create the directory if path is empty", func(t *testing.T) {
 		testInputs := terraformInputs{
-			OutputDIR: "/terraform/dev",
+			OutputDIR: "",
 		}
 
 		err := generateTerraformConfigFiles(&testInputs)
-		assert.EqualError(t, err, "mkdir /terraform: read-only file system")
+		assert.EqualError(t, err, "mkdir : no such file or directory")
 	})
 
 	t.Run("it fails to create the main.tf file if file is already created and read only", func(t *testing.T) {
