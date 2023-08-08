@@ -117,7 +117,7 @@ func generateTerraformConfigFiles(outputDIR string, data importDataList) error {
 	if len(data) == 0 {
 		return errors.New("no import data available")
 	}
-  
+
 	const readWritePermission = 0755
 	if err := os.MkdirAll(outputDIR, readWritePermission); err != nil {
 		if !os.IsExist(err) {
