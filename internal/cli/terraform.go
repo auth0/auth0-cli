@@ -1,10 +1,13 @@
 package cli
 
 import (
+	"context"
 	"os"
 	"path"
 
 	"github.com/spf13/cobra"
+
+	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
 var tfFlags = terraformFlags{
@@ -26,6 +29,15 @@ type (
 		OutputDIR string
 	}
 )
+
+func (i *terraformInputs) parseResourceFetchers(api *auth0.API) []resourceDataFetcher {
+	// Hard coding this for now until we add support for the `--resources` flag.
+	return []resourceDataFetcher{
+		&clientResourceFetcher{
+			api: api,
+		},
+	}
+}
 
 func terraformCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
@@ -63,6 +75,15 @@ func generateTerraformCmd(cli *cli) *cobra.Command {
 
 func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
+		data, err := fetchImportData(cmd.Context(), inputs.parseResourceFetchers(cli.api)...)
+		if err != nil {
+			return err
+		}
+
+		// Just temporarily. Remove this once import file generation is in place.
+		cli.renderer.JSONResult(data)
+		cli.renderer.Newline()
+
 		if err := generateTerraformConfigFiles(inputs); err != nil {
 			return err
 		}
@@ -77,6 +98,21 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 
 		return nil
 	}
+}
+
+func fetchImportData(ctx context.Context, fetchers ...resourceDataFetcher) (importDataList, error) {
+	var importData importDataList
+
+	for _, fetcher := range fetchers {
+		data, err := fetcher.FetchData(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		importData = append(importData, data...)
+	}
+
+	return importData, nil
 }
 
 func generateTerraformConfigFiles(inputs *terraformInputs) error {
