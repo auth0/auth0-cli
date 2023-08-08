@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"context"
+	"errors"
 	"os"
 	"path"
 	"testing"
@@ -8,6 +10,45 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type mockFetcher struct {
+	mockData importDataList
+	mockErr  error
+}
+
+func (m *mockFetcher) FetchData(context.Context) (importDataList, error) {
+	return m.mockData, m.mockErr
+}
+
+func TestFetchImportData(t *testing.T) {
+	t.Run("it can successfully fetch import data for multiple resources", func(t *testing.T) {
+		mockData1 := importDataList{{ResourceName: "Resource1", ImportID: "123"}}
+		mockData2 := importDataList{{ResourceName: "Resource2", ImportID: "456"}}
+		mockFetchers := []resourceDataFetcher{
+			&mockFetcher{mockData: mockData1},
+			&mockFetcher{mockData: mockData2},
+		}
+
+		expectedData := importDataList{
+			{ResourceName: "Resource1", ImportID: "123"},
+			{ResourceName: "Resource2", ImportID: "456"},
+		}
+
+		data, err := fetchImportData(context.Background(), mockFetchers...)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error when a data fetcher fails", func(t *testing.T) {
+		expectedErr := errors.New("failed to list clients")
+		mockFetchers := []resourceDataFetcher{
+			&mockFetcher{mockErr: expectedErr},
+		}
+
+		_, err := fetchImportData(context.Background(), mockFetchers...)
+		assert.EqualError(t, err, "failed to list clients")
+	})
+}
 
 func TestGenerateTerraformConfigFiles(t *testing.T) {
 	testInputs := terraformInputs{
