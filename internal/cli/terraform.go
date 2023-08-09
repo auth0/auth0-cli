@@ -111,10 +111,11 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 				"resources.",
 		)
 		cli.renderer.Infof(
-			"After setting up the provider credentials, run: "+
-				"`cd %s && terraform init && terraform plan -generate-config-out=generated.tf && terraform apply`",
+			"After setting up the provider credentials, run: \n\n"+
+				"	cd %s && terraform init && terraform plan -generate-config-out=generated.tf && terraform apply",
 			inputs.OutputDIR,
 		)
+		cli.renderer.Newline()
 
 		return nil
 	}
