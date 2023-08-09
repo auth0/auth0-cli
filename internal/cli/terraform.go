@@ -99,6 +99,11 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 			}
 
 			cli.renderer.Infof("Terraform resource config files generated successfully in: %q", inputs.OutputDIR)
+			cli.renderer.Infof(
+				"Review the config and generate the terraform state by running: \n\n	cd %s && ./terraform apply",
+				inputs.OutputDIR,
+			)
+			cli.renderer.Newline()
 
 			return nil
 		}
@@ -229,7 +234,6 @@ func generateTerraformResourceConfig(ctx context.Context, outputDIR string) erro
 		Version:    version.Must(version.NewVersion("1.5.0")),
 		InstallDir: absoluteOutputPath,
 	}
-	defer installer.Remove(ctx)
 
 	execPath, err := installer.Install(ctx)
 	if err != nil {
@@ -254,7 +258,7 @@ func generateTerraformResourceConfig(ctx context.Context, outputDIR string) erro
 		return err
 	}
 
-	return tf.Apply(context.Background())
+	return nil
 }
 
 func terraformProviderCredentialsAreAvailable() bool {
