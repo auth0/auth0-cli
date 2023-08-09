@@ -140,3 +140,104 @@ func TestClientResourceFetcher_FetchData(t *testing.T) {
 		assert.EqualError(t, err, "failed to list clients")
 	})
 }
+
+func TestConnectionResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves connections data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		connAPI := mock.NewMockConnectionAPI(ctrl)
+		connAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&management.ConnectionList{
+					List: management.List{
+						Start: 0,
+						Limit: 2,
+						Total: 4,
+					},
+					Connections: []*management.Connection{
+						{
+							ID:   auth0.String("con_id1"),
+							Name: auth0.String("Connection 1"),
+						},
+						{
+							ID:   auth0.String("con_id2"),
+							Name: auth0.String("Connection 2"),
+						},
+					},
+				},
+				nil,
+			)
+		connAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&management.ConnectionList{
+					List: management.List{
+						Start: 2,
+						Limit: 4,
+						Total: 4,
+					},
+					Connections: []*management.Connection{
+						{
+							ID:   auth0.String("con_id3"),
+							Name: auth0.String("Connection 3"),
+						},
+						{
+							ID:   auth0.String("con_id4"),
+							Name: auth0.String("Connection 4"),
+						},
+					},
+				},
+				nil,
+			)
+
+		fetcher := connectionResourceFetcher{
+			api: &auth0.API{
+				Connection: connAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_connection.Connection1",
+				ImportID:     "con_id1",
+			},
+			{
+				ResourceName: "auth0_connection.Connection2",
+				ImportID:     "con_id2",
+			},
+			{
+				ResourceName: "auth0_connection.Connection3",
+				ImportID:     "con_id3",
+			},
+			{
+				ResourceName: "auth0_connection.Connection4",
+				ImportID:     "con_id4",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		connAPI := mock.NewMockConnectionAPI(ctrl)
+		connAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil, fmt.Errorf("failed to list connections"))
+
+		fetcher := connectionResourceFetcher{
+			api: &auth0.API{
+				Connection: connAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to list connections")
+	})
+}
