@@ -3,10 +3,17 @@ package cli
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
+	"os/exec"
 	"path"
+	"path/filepath"
 	"text/template"
 
+	"github.com/hashicorp/go-version"
+	"github.com/hashicorp/hc-install/product"
+	"github.com/hashicorp/hc-install/releases"
+	"github.com/hashicorp/terraform-exec/tfexec"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -82,16 +89,31 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 			return err
 		}
 
-		if err := generateTerraformConfigFiles(inputs.OutputDIR, data); err != nil {
+		if err := generateTerraformImportConfig(inputs.OutputDIR, data); err != nil {
 			return err
 		}
 
-		cli.renderer.Infof("Terraform config files generated successfully.")
+		if terraformProviderCredentialsAreAvailable() {
+			if err := generateTerraformResourceConfig(cmd.Context(), inputs.OutputDIR); err != nil {
+				return err
+			}
+
+			cli.renderer.Infof("Terraform resource config files generated successfully in: %q", inputs.OutputDIR)
+
+			return nil
+		}
+
+		cli.renderer.Infof("Terraform resource import files generated successfully in: %q", inputs.OutputDIR)
 		cli.renderer.Infof(
 			"Follow this " +
 				"[quickstart](https://registry.terraform.io/providers/auth0/auth0/latest/docs/guides/quickstart) " +
 				"to go through setting up an Auth0 application for the provider to authenticate against and manage " +
 				"resources.",
+		)
+		cli.renderer.Infof(
+			"After setting up the provider credentials, run: "+
+				"`cd %s && terraform init && terraform plan -generate-config-out=generated.tf && terraform apply`",
+			inputs.OutputDIR,
 		)
 
 		return nil
@@ -113,16 +135,13 @@ func fetchImportData(ctx context.Context, fetchers ...resourceDataFetcher) (impo
 	return importData, nil
 }
 
-func generateTerraformConfigFiles(outputDIR string, data importDataList) error {
+func generateTerraformImportConfig(outputDIR string, data importDataList) error {
 	if len(data) == 0 {
 		return errors.New("no import data available")
 	}
 
-	const readWritePermission = 0755
-	if err := os.MkdirAll(outputDIR, readWritePermission); err != nil {
-		if !os.IsExist(err) {
-			return err
-		}
+	if err := createOutputDirectory(outputDIR); err != nil {
+		return err
 	}
 
 	if err := createMainFile(outputDIR); err != nil {
@@ -130,6 +149,16 @@ func generateTerraformConfigFiles(outputDIR string, data importDataList) error {
 	}
 
 	return createImportFile(outputDIR, data)
+}
+
+func createOutputDirectory(outputDIR string) error {
+	const readWritePermission = 0755
+
+	if err := os.MkdirAll(outputDIR, readWritePermission); err != nil && !os.IsExist(err) {
+		return err
+	}
+
+	return nil
 }
 
 func createMainFile(outputDIR string) error {
@@ -186,4 +215,52 @@ import {
 	}
 
 	return t.Execute(file, data)
+}
+
+func generateTerraformResourceConfig(ctx context.Context, outputDIR string) error {
+	absoluteOutputPath, err := filepath.Abs(outputDIR)
+	if err != nil {
+		return err
+	}
+
+	installer := &releases.ExactVersion{
+		Product:    product.Terraform,
+		Version:    version.Must(version.NewVersion("1.5.0")),
+		InstallDir: absoluteOutputPath,
+	}
+	defer installer.Remove(ctx)
+
+	execPath, err := installer.Install(ctx)
+	if err != nil {
+		return err
+	}
+
+	tf, err := tfexec.NewTerraform(absoluteOutputPath, execPath)
+	if err != nil {
+		return err
+	}
+
+	if err = tf.Init(context.Background()); err != nil {
+		return err
+	}
+
+	// -generate-config-out flag is not supported by terraform-exec, so we do this through exec.Command.
+	cmd := exec.CommandContext(ctx, execPath, "plan", "-generate-config-out=generated.tf")
+	cmd.Dir = absoluteOutputPath
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("%s", output)
+		return err
+	}
+
+	return tf.Apply(context.Background())
+}
+
+func terraformProviderCredentialsAreAvailable() bool {
+	domain := os.Getenv("AUTH0_DOMAIN")
+	clientID := os.Getenv("AUTH0_CLIENT_ID")
+	clientSecret := os.Getenv("AUTH0_CLIENT_SECRET")
+	apiToken := os.Getenv("AUTH0_API_TOKEN")
+
+	return (domain != "" && clientID != "" && clientSecret != "") || (domain != "" && apiToken != "")
 }

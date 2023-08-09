@@ -53,11 +53,11 @@ func TestFetchImportData(t *testing.T) {
 	})
 }
 
-func TestGenerateTerraformConfigFiles(t *testing.T) {
+func TestGenerateTerraformImportConfig(t *testing.T) {
 	t.Run("it can correctly generate the terraform config files", func(t *testing.T) {
 		outputDIR, importData := setupTestDIRAndImportData(t)
 
-		err := generateTerraformConfigFiles(outputDIR, importData)
+		err := generateTerraformImportConfig(outputDIR, importData)
 		require.NoError(t, err)
 
 		assertTerraformMainFileWasGeneratedCorrectly(t, outputDIR)
@@ -70,7 +70,7 @@ func TestGenerateTerraformConfigFiles(t *testing.T) {
 		err := os.MkdirAll(outputDIR, 0755)
 		require.NoError(t, err)
 
-		err = generateTerraformConfigFiles(outputDIR, importData)
+		err = generateTerraformImportConfig(outputDIR, importData)
 		require.NoError(t, err)
 
 		assertTerraformMainFileWasGeneratedCorrectly(t, outputDIR)
@@ -80,14 +80,14 @@ func TestGenerateTerraformConfigFiles(t *testing.T) {
 	t.Run("it fails to generate the terraform config files if there's no import data", func(t *testing.T) {
 		outputDIR, _ := setupTestDIRAndImportData(t)
 
-		err := generateTerraformConfigFiles(outputDIR, importDataList{})
+		err := generateTerraformImportConfig(outputDIR, importDataList{})
 		assert.EqualError(t, err, "no import data available")
 	})
 
 	t.Run("it fails to create the directory if path is empty", func(t *testing.T) {
 		_, importData := setupTestDIRAndImportData(t)
 
-		err := generateTerraformConfigFiles("", importData)
+		err := generateTerraformImportConfig("", importData)
 		assert.EqualError(t, err, "mkdir : no such file or directory")
 	})
 
@@ -104,7 +104,7 @@ func TestGenerateTerraformConfigFiles(t *testing.T) {
 		err = os.Chmod(mainFilePath, 0444)
 		require.NoError(t, err)
 
-		err = generateTerraformConfigFiles(outputDIR, importData)
+		err = generateTerraformImportConfig(outputDIR, importData)
 		assert.EqualError(t, err, fmt.Sprintf("open %s: permission denied", mainFilePath))
 	})
 
@@ -121,7 +121,7 @@ func TestGenerateTerraformConfigFiles(t *testing.T) {
 		err = os.Chmod(importFilePath, 0444)
 		require.NoError(t, err)
 
-		err = generateTerraformConfigFiles(outputDIR, importData)
+		err = generateTerraformImportConfig(outputDIR, importData)
 		assert.EqualError(t, err, fmt.Sprintf("open %s: permission denied", importFilePath))
 	})
 }
@@ -212,4 +212,50 @@ import {
 	content, err := os.ReadFile(filePath)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedContent.String(), string(content))
+}
+
+func TestTerraformProviderCredentialsAreAvailable(t *testing.T) {
+	testCases := []struct {
+		description  string
+		domain       string
+		clientID     string
+		clientSecret string
+		apiToken     string
+		expected     bool
+	}{
+		{
+			description:  "All credentials are available",
+			domain:       "example.com",
+			clientID:     "client123",
+			clientSecret: "secret123",
+			apiToken:     "token123",
+			expected:     true,
+		},
+		{
+			description: "Only domain and API token are available",
+			domain:      "example.com",
+			apiToken:    "token123",
+			expected:    true,
+		},
+		{
+			description: "Only domain is available",
+			domain:      "example.com",
+			expected:    false,
+		},
+		{
+			description: "No credentials are available",
+			expected:    false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.description, func(t *testing.T) {
+			t.Setenv("AUTH0_DOMAIN", testCase.domain)
+			t.Setenv("AUTH0_CLIENT_ID", testCase.clientID)
+			t.Setenv("AUTH0_CLIENT_SECRET", testCase.clientSecret)
+			t.Setenv("AUTH0_API_TOKEN", testCase.apiToken)
+
+			assert.Equal(t, testCase.expected, terraformProviderCredentialsAreAvailable())
+		})
+	}
 }
