@@ -45,6 +45,9 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) []resourceDataFe
 		&clientResourceFetcher{
 			api: api,
 		},
+		&connectionResourceFetcher{
+			api: api,
+		},
 	}
 }
 
