@@ -24,6 +24,10 @@ type (
 	clientResourceFetcher struct {
 		api *auth0.API
 	}
+
+	connectionResourceFetcher struct {
+		api *auth0.API
+	}
 )
 
 func (f *clientResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
@@ -49,6 +53,37 @@ func (f *clientResourceFetcher) FetchData(ctx context.Context) (importDataList, 
 		}
 
 		if !clients.HasNext() {
+			break
+		}
+
+		page++
+	}
+
+	return data, nil
+}
+
+func (f *connectionResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	var page int
+	for {
+		connections, err := f.api.Connection.List(
+			ctx,
+			management.Page(page),
+			management.IncludeFields("id", "name"),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, connection := range connections.Connections {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_connection." + sanitizeResourceName(connection.GetName()),
+				ImportID:     connection.GetID(),
+			})
+		}
+
+		if !connections.HasNext() {
 			break
 		}
 

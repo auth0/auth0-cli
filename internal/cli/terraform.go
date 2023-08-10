@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
 var tfFlags = terraformFlags{
@@ -43,6 +44,9 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) []resourceDataFe
 	// Hard coding this for now until we add support for the `--resources` flag.
 	return []resourceDataFetcher{
 		&clientResourceFetcher{
+			api: api,
+		},
+		&connectionResourceFetcher{
 			api: api,
 		},
 	}
@@ -77,6 +81,7 @@ func generateTerraformCmd(cli *cli) *cobra.Command {
 		RunE: generateTerraformCmdRun(cli, &inputs),
 	}
 
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	tfFlags.OutputDIR.RegisterString(cmd, &inputs.OutputDIR, "./")
 
 	return cmd
@@ -86,6 +91,14 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 	return func(cmd *cobra.Command, args []string) error {
 		data, err := fetchImportData(cmd.Context(), inputs.parseResourceFetchers(cli.api)...)
 		if err != nil {
+			return err
+		}
+
+		if !checkOutputDirectoryIsEmpty(cli, cmd, inputs.OutputDIR) {
+			return nil
+		}
+
+		if err := cleanOutputDirectory(inputs.OutputDIR); err != nil {
 			return err
 		}
 
@@ -119,7 +132,7 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 		)
 		cli.renderer.Infof(
 			"After setting up the provider credentials, run: \n\n"+
-				"	cd %s && terraform init && terraform plan -generate-config-out=generated.tf && terraform apply",
+				"	cd %s && terraform init && terraform plan -generate-config-out=auth0_generated.tf && terraform apply",
 			inputs.OutputDIR,
 		)
 		cli.renderer.Newline()
@@ -174,7 +187,7 @@ func createOutputDirectory(outputDIR string) error {
 }
 
 func createMainFile(outputDIR string) error {
-	filePath := path.Join(outputDIR, "main.tf")
+	filePath := path.Join(outputDIR, "auth0_main.tf")
 
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -256,7 +269,7 @@ func generateTerraformResourceConfig(ctx context.Context, outputDIR string) erro
 	}
 
 	// -generate-config-out flag is not supported by terraform-exec, so we do this through exec.Command.
-	cmd := exec.CommandContext(ctx, execPath, "plan", "-generate-config-out=generated.tf")
+	cmd := exec.CommandContext(ctx, execPath, "plan", "-generate-config-out=auth0_generated.tf")
 	cmd.Dir = absoluteOutputPath
 	return cmd.Run()
 }
@@ -285,4 +298,50 @@ func deduplicateResourceNames(data importDataList) importDataList {
 	}
 
 	return deduplicatedList
+}
+
+func checkOutputDirectoryIsEmpty(cli *cli, cmd *cobra.Command, outputDIR string) bool {
+	_, err := os.Stat(outputDIR)
+	if os.IsNotExist(err) {
+		return true
+	}
+
+	_, mainFileErr := os.Stat(path.Join(outputDIR, "auth0_main.tf"))
+	_, importFileErr := os.Stat(path.Join(outputDIR, "auth0_import.tf"))
+	_, generatedFileErr := os.Stat(path.Join(outputDIR, "auth0_generated.tf"))
+	if os.IsNotExist(mainFileErr) && os.IsNotExist(importFileErr) && os.IsNotExist(generatedFileErr) {
+		return true
+	}
+
+	cli.renderer.Warnf(
+		"Output directory %q is not empty. "+
+			"Proceeding will overwrite the auth0_main.tf, auth0_import.tf and auth0_generated.tf files.",
+		outputDIR,
+	)
+
+	if !cli.force && canPrompt(cmd) {
+		if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
+			return false
+		}
+	}
+
+	return true
+}
+
+func cleanOutputDirectory(outputDIR string) error {
+	var joinedErrors error
+
+	if err := os.Remove(path.Join(outputDIR, "auth0_main.tf")); err != nil && !os.IsNotExist(err) {
+		joinedErrors = errors.Join(err)
+	}
+
+	if err := os.Remove(path.Join(outputDIR, "auth0_import.tf")); err != nil && !os.IsNotExist(err) {
+		joinedErrors = errors.Join(err)
+	}
+
+	if err := os.Remove(path.Join(outputDIR, "auth0_generated.tf")); err != nil && !os.IsNotExist(err) {
+		joinedErrors = errors.Join(err)
+	}
+
+	return joinedErrors
 }
