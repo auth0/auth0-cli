@@ -10,6 +10,7 @@ import (
 	"testing"
 	"text/template"
 
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -266,12 +267,12 @@ func TestCheckOutputDirectoryIsEmpty(t *testing.T) {
 	t.Run("it returns true if the directory is empty", func(t *testing.T) {
 		tempDIR := t.TempDir()
 
-		isEmpty := checkOutputDirectoryIsEmpty(&cli{}, tempDIR)
+		isEmpty := checkOutputDirectoryIsEmpty(&cli{}, &cobra.Command{}, tempDIR)
 		assert.True(t, isEmpty)
 	})
 
 	t.Run("it returns true if the directory doesn't exist", func(t *testing.T) {
-		isEmpty := checkOutputDirectoryIsEmpty(&cli{}, "")
+		isEmpty := checkOutputDirectoryIsEmpty(&cli{}, &cobra.Command{}, "")
 		assert.True(t, isEmpty)
 	})
 
@@ -295,7 +296,7 @@ func TestCheckOutputDirectoryIsEmpty(t *testing.T) {
 			noInput: true,
 		}
 
-		isEmpty := checkOutputDirectoryIsEmpty(cli, tempDIR)
+		isEmpty := checkOutputDirectoryIsEmpty(cli, &cobra.Command{}, tempDIR)
 		assert.True(t, isEmpty)
 		assert.Contains(t, stdout.String(), "Proceeding will overwrite the auth0_main.tf, auth0_import.tf and auth0_generated.tf files.")
 	})

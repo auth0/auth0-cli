@@ -90,7 +90,7 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 			return err
 		}
 
-		if !checkOutputDirectoryIsEmpty(cli, inputs.OutputDIR) {
+		if !checkOutputDirectoryIsEmpty(cli, cmd, inputs.OutputDIR) {
 			return nil
 		}
 
@@ -279,7 +279,7 @@ func terraformProviderCredentialsAreAvailable() bool {
 	return (domain != "" && clientID != "" && clientSecret != "") || (domain != "" && apiToken != "")
 }
 
-func checkOutputDirectoryIsEmpty(cli *cli, outputDIR string) bool {
+func checkOutputDirectoryIsEmpty(cli *cli, cmd *cobra.Command, outputDIR string) bool {
 	_, err := os.Stat(outputDIR)
 	if os.IsNotExist(err) {
 		return true
@@ -298,7 +298,7 @@ func checkOutputDirectoryIsEmpty(cli *cli, outputDIR string) bool {
 		outputDIR,
 	)
 
-	if !cli.force && !cli.noInput {
+	if !cli.force && canPrompt(cmd) {
 		if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
 			return false
 		}
