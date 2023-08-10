@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"path"
@@ -94,18 +93,16 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 		}
 
 		if terraformProviderCredentialsAreAvailable() {
-			if err := generateTerraformResourceConfig(cmd.Context(), inputs.OutputDIR); err != nil {
-				return err
+			if err := generateTerraformResourceConfig(cmd.Context(), inputs.OutputDIR); err == nil {
+				cli.renderer.Infof("Terraform resource config files generated successfully in: %q", inputs.OutputDIR)
+				cli.renderer.Infof(
+					"Review the config and generate the terraform state by running: \n\n	cd %s && ./terraform apply",
+					inputs.OutputDIR,
+				)
+				cli.renderer.Newline()
+
+				return nil
 			}
-
-			cli.renderer.Infof("Terraform resource config files generated successfully in: %q", inputs.OutputDIR)
-			cli.renderer.Infof(
-				"Review the config and generate the terraform state by running: \n\n	cd %s && ./terraform apply",
-				inputs.OutputDIR,
-			)
-			cli.renderer.Newline()
-
-			return nil
 		}
 
 		cli.renderer.Infof("Terraform resource import files generated successfully in: %q", inputs.OutputDIR)
@@ -252,13 +249,7 @@ func generateTerraformResourceConfig(ctx context.Context, outputDIR string) erro
 	// -generate-config-out flag is not supported by terraform-exec, so we do this through exec.Command.
 	cmd := exec.CommandContext(ctx, execPath, "plan", "-generate-config-out=generated.tf")
 	cmd.Dir = absoluteOutputPath
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Printf("%s", output)
-		return err
-	}
-
-	return nil
+	return cmd.Run()
 }
 
 func terraformProviderCredentialsAreAvailable() bool {
