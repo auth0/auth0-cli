@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
 var tfFlags = terraformFlags{
@@ -76,6 +77,7 @@ func generateTerraformCmd(cli *cli) *cobra.Command {
 		RunE: generateTerraformCmdRun(cli, &inputs),
 	}
 
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	tfFlags.OutputDIR.RegisterString(cmd, &inputs.OutputDIR, "./")
 
 	return cmd
@@ -85,6 +87,14 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 	return func(cmd *cobra.Command, args []string) error {
 		data, err := fetchImportData(cmd.Context(), inputs.parseResourceFetchers(cli.api)...)
 		if err != nil {
+			return err
+		}
+
+		if !checkOutputDirectoryIsEmpty(cli, inputs.OutputDIR) {
+			return nil
+		}
+
+		if err := cleanOutputDirectory(inputs.OutputDIR); err != nil {
 			return err
 		}
 
@@ -267,4 +277,50 @@ func terraformProviderCredentialsAreAvailable() bool {
 	apiToken := os.Getenv("AUTH0_API_TOKEN")
 
 	return (domain != "" && clientID != "" && clientSecret != "") || (domain != "" && apiToken != "")
+}
+
+func checkOutputDirectoryIsEmpty(cli *cli, outputDIR string) bool {
+	_, err := os.Stat(outputDIR)
+	if os.IsNotExist(err) {
+		return true
+	}
+
+	_, mainFileErr := os.Stat(path.Join(outputDIR, "main.tf"))
+	_, importFileErr := os.Stat(path.Join(outputDIR, "auth0_import.tf"))
+	_, generatedFileErr := os.Stat(path.Join(outputDIR, "generated.tf"))
+	if os.IsNotExist(mainFileErr) && os.IsNotExist(importFileErr) && os.IsNotExist(generatedFileErr) {
+		return true
+	}
+
+	cli.renderer.Warnf(
+		"Output directory %q is not empty. "+
+			"Proceeding will overwrite the main.tf, auth0_import.tf and generated.tf files.",
+		outputDIR,
+	)
+
+	if !cli.force && !cli.noInput {
+		if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
+			return false
+		}
+	}
+
+	return true
+}
+
+func cleanOutputDirectory(outputDIR string) error {
+	var joinedErrors error
+
+	if err := os.Remove(path.Join(outputDIR, "main.tf")); err != nil && !os.IsNotExist(err) {
+		joinedErrors = errors.Join(err)
+	}
+
+	if err := os.Remove(path.Join(outputDIR, "auth0_import.tf")); err != nil && !os.IsNotExist(err) {
+		joinedErrors = errors.Join(err)
+	}
+
+	if err := os.Remove(path.Join(outputDIR, "generated.tf")); err != nil && !os.IsNotExist(err) {
+		joinedErrors = errors.Join(err)
+	}
+
+	return joinedErrors
 }
