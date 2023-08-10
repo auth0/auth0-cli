@@ -77,7 +77,7 @@ func TestGenerateTerraformImportConfig(t *testing.T) {
 		require.NoError(t, err)
 
 		assertTerraformMainFileWasGeneratedCorrectly(t, outputDIR)
-		assertTerraformImportFileWasGeneratedCorrectly(t, outputDIR, importData)
+		assertTerraformImportFileWasGeneratedCorrectly(t, outputDIR, deduplicateResourceNames(importData))
 	})
 
 	t.Run("it fails to generate the terraform config files if there's no import data", func(t *testing.T) {
