@@ -128,7 +128,7 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 		)
 		cli.renderer.Infof(
 			"After setting up the provider credentials, run: \n\n"+
-				"	cd %s && terraform init && terraform plan -generate-config-out=generated.tf && terraform apply",
+				"	cd %s && terraform init && terraform plan -generate-config-out=auth0_generated.tf && terraform apply",
 			inputs.OutputDIR,
 		)
 		cli.renderer.Newline()
@@ -183,7 +183,7 @@ func createOutputDirectory(outputDIR string) error {
 }
 
 func createMainFile(outputDIR string) error {
-	filePath := path.Join(outputDIR, "main.tf")
+	filePath := path.Join(outputDIR, "auth0_main.tf")
 
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -265,7 +265,7 @@ func generateTerraformResourceConfig(ctx context.Context, outputDIR string) erro
 	}
 
 	// -generate-config-out flag is not supported by terraform-exec, so we do this through exec.Command.
-	cmd := exec.CommandContext(ctx, execPath, "plan", "-generate-config-out=generated.tf")
+	cmd := exec.CommandContext(ctx, execPath, "plan", "-generate-config-out=auth0_generated.tf")
 	cmd.Dir = absoluteOutputPath
 	return cmd.Run()
 }
@@ -285,16 +285,16 @@ func checkOutputDirectoryIsEmpty(cli *cli, outputDIR string) bool {
 		return true
 	}
 
-	_, mainFileErr := os.Stat(path.Join(outputDIR, "main.tf"))
+	_, mainFileErr := os.Stat(path.Join(outputDIR, "auth0_main.tf"))
 	_, importFileErr := os.Stat(path.Join(outputDIR, "auth0_import.tf"))
-	_, generatedFileErr := os.Stat(path.Join(outputDIR, "generated.tf"))
+	_, generatedFileErr := os.Stat(path.Join(outputDIR, "auth0_generated.tf"))
 	if os.IsNotExist(mainFileErr) && os.IsNotExist(importFileErr) && os.IsNotExist(generatedFileErr) {
 		return true
 	}
 
 	cli.renderer.Warnf(
 		"Output directory %q is not empty. "+
-			"Proceeding will overwrite the main.tf, auth0_import.tf and generated.tf files.",
+			"Proceeding will overwrite the auth0_main.tf, auth0_import.tf and auth0_generated.tf files.",
 		outputDIR,
 	)
 
@@ -310,7 +310,7 @@ func checkOutputDirectoryIsEmpty(cli *cli, outputDIR string) bool {
 func cleanOutputDirectory(outputDIR string) error {
 	var joinedErrors error
 
-	if err := os.Remove(path.Join(outputDIR, "main.tf")); err != nil && !os.IsNotExist(err) {
+	if err := os.Remove(path.Join(outputDIR, "auth0_main.tf")); err != nil && !os.IsNotExist(err) {
 		joinedErrors = errors.Join(err)
 	}
 
@@ -318,7 +318,7 @@ func cleanOutputDirectory(outputDIR string) error {
 		joinedErrors = errors.Join(err)
 	}
 
-	if err := os.Remove(path.Join(outputDIR, "generated.tf")); err != nil && !os.IsNotExist(err) {
+	if err := os.Remove(path.Join(outputDIR, "auth0_generated.tf")); err != nil && !os.IsNotExist(err) {
 		joinedErrors = errors.Join(err)
 	}
 

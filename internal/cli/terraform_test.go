@@ -99,7 +99,7 @@ func TestGenerateTerraformImportConfig(t *testing.T) {
 		err := os.MkdirAll(outputDIR, 0755)
 		require.NoError(t, err)
 
-		mainFilePath := path.Join(outputDIR, "main.tf")
+		mainFilePath := path.Join(outputDIR, "auth0_main.tf")
 		_, err = os.Create(mainFilePath)
 		require.NoError(t, err)
 
@@ -158,7 +158,7 @@ func assertTerraformMainFileWasGeneratedCorrectly(t *testing.T, outputDIR string
 	assert.NoError(t, err)
 
 	// Assert that the main.tf file was created with the correct content.
-	filePath := path.Join(outputDIR, "main.tf")
+	filePath := path.Join(outputDIR, "auth0_main.tf")
 	_, err = os.Stat(filePath)
 	assert.NoError(t, err)
 
@@ -277,7 +277,7 @@ func TestCheckOutputDirectoryIsEmpty(t *testing.T) {
 
 	t.Run("it returns true if the directory is not empty but we're forcing the command", func(t *testing.T) {
 		tempDIR := t.TempDir()
-		files := []string{"main.tf", "auth0_import.tf", "generated.tf"}
+		files := []string{"auth0_main.tf", "auth0_import.tf", "auth0_generated.tf"}
 
 		for _, file := range files {
 			filePath := path.Join(tempDIR, file)
@@ -297,14 +297,14 @@ func TestCheckOutputDirectoryIsEmpty(t *testing.T) {
 
 		isEmpty := checkOutputDirectoryIsEmpty(cli, tempDIR)
 		assert.True(t, isEmpty)
-		assert.Contains(t, stdout.String(), "Proceeding will overwrite the main.tf, auth0_import.tf and generated.tf files.")
+		assert.Contains(t, stdout.String(), "Proceeding will overwrite the auth0_main.tf, auth0_import.tf and auth0_generated.tf files.")
 	})
 }
 
 func TestCleanOutputDirectory(t *testing.T) {
 	t.Run("it can successfully clean the output directory from all generated files", func(t *testing.T) {
 		tempDIR := t.TempDir()
-		files := []string{"main.tf", "auth0_import.tf", "generated.tf"}
+		files := []string{"auth0_main.tf", "auth0_import.tf", "auth0_generated.tf"}
 
 		for _, file := range files {
 			filePath := path.Join(tempDIR, file)
@@ -323,7 +323,7 @@ func TestCleanOutputDirectory(t *testing.T) {
 	})
 
 	t.Run("it returns an error if it can't remove a file", func(t *testing.T) {
-		files := []string{"main.tf", "auth0_import.tf", "generated.tf"}
+		files := []string{"auth0_main.tf", "auth0_import.tf", "auth0_generated.tf"}
 
 		for _, file := range files {
 			t.Run(file, func(t *testing.T) {
