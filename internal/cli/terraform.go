@@ -100,6 +100,10 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 					inputs.OutputDIR,
 				)
 				cli.renderer.Newline()
+				cli.renderer.Infof(
+					"After running the above command and generating the state, " +
+						"the ./terraform binary and auth0_import.tf files can be safely removed.\n",
+				)
 
 				return nil
 			}
@@ -118,6 +122,10 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 			inputs.OutputDIR,
 		)
 		cli.renderer.Newline()
+		cli.renderer.Infof(
+			"After running the above command and generating the state, " +
+				"the auth0_import.tf file can be safely removed.\n",
+		)
 
 		return nil
 	}
