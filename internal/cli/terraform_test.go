@@ -10,8 +10,11 @@ import (
 	"testing"
 	"text/template"
 
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/auth0/auth0-cli/internal/display"
 )
 
 type mockFetcher struct {
@@ -97,7 +100,7 @@ func TestGenerateTerraformImportConfig(t *testing.T) {
 		err := os.MkdirAll(outputDIR, 0755)
 		require.NoError(t, err)
 
-		mainFilePath := path.Join(outputDIR, "main.tf")
+		mainFilePath := path.Join(outputDIR, "auth0_main.tf")
 		_, err = os.Create(mainFilePath)
 		require.NoError(t, err)
 
@@ -156,7 +159,7 @@ func assertTerraformMainFileWasGeneratedCorrectly(t *testing.T, outputDIR string
 	assert.NoError(t, err)
 
 	// Assert that the main.tf file was created with the correct content.
-	filePath := path.Join(outputDIR, "main.tf")
+	filePath := path.Join(outputDIR, "auth0_main.tf")
 	_, err = os.Stat(filePath)
 	assert.NoError(t, err)
 
@@ -258,4 +261,90 @@ func TestTerraformProviderCredentialsAreAvailable(t *testing.T) {
 			assert.Equal(t, testCase.expected, terraformProviderCredentialsAreAvailable())
 		})
 	}
+}
+
+func TestCheckOutputDirectoryIsEmpty(t *testing.T) {
+	t.Run("it returns true if the directory is empty", func(t *testing.T) {
+		tempDIR := t.TempDir()
+
+		isEmpty := checkOutputDirectoryIsEmpty(&cli{}, &cobra.Command{}, tempDIR)
+		assert.True(t, isEmpty)
+	})
+
+	t.Run("it returns true if the directory doesn't exist", func(t *testing.T) {
+		isEmpty := checkOutputDirectoryIsEmpty(&cli{}, &cobra.Command{}, "")
+		assert.True(t, isEmpty)
+	})
+
+	t.Run("it returns true if the directory is not empty but we're forcing the command", func(t *testing.T) {
+		tempDIR := t.TempDir()
+		files := []string{"auth0_main.tf", "auth0_import.tf", "auth0_generated.tf"}
+
+		for _, file := range files {
+			filePath := path.Join(tempDIR, file)
+			_, err := os.Create(filePath)
+			require.NoError(t, err)
+		}
+
+		stdout := &bytes.Buffer{}
+		cli := &cli{
+			renderer: &display.Renderer{
+				MessageWriter: stdout,
+				ResultWriter:  stdout,
+			},
+			force:   true,
+			noInput: true,
+		}
+
+		isEmpty := checkOutputDirectoryIsEmpty(cli, &cobra.Command{}, tempDIR)
+		assert.True(t, isEmpty)
+		assert.Contains(t, stdout.String(), "Proceeding will overwrite the auth0_main.tf, auth0_import.tf and auth0_generated.tf files.")
+	})
+}
+
+func TestCleanOutputDirectory(t *testing.T) {
+	t.Run("it can successfully clean the output directory from all generated files", func(t *testing.T) {
+		tempDIR := t.TempDir()
+		files := []string{"auth0_main.tf", "auth0_import.tf", "auth0_generated.tf"}
+
+		for _, file := range files {
+			filePath := path.Join(tempDIR, file)
+			_, err := os.Create(filePath)
+			require.NoError(t, err)
+		}
+
+		err := cleanOutputDirectory(tempDIR)
+		assert.NoError(t, err)
+
+		for _, file := range files {
+			filePath := path.Join(tempDIR, file)
+			_, err := os.Stat(filePath)
+			assert.ErrorContains(t, err, "no such file or directory")
+		}
+	})
+
+	t.Run("it returns an error if it can't remove a file", func(t *testing.T) {
+		files := []string{"auth0_main.tf", "auth0_import.tf", "auth0_generated.tf"}
+
+		for _, file := range files {
+			t.Run(file, func(t *testing.T) {
+				tempDIR := t.TempDir()
+
+				filePath := path.Join(tempDIR, file)
+				_, err := os.Create(filePath)
+				require.NoError(t, err)
+
+				err = os.Chmod(tempDIR, 0444)
+				require.NoError(t, err)
+
+				t.Cleanup(func() {
+					err = os.Chmod(tempDIR, 0755)
+					require.NoError(t, err)
+				})
+
+				err = cleanOutputDirectory(tempDIR)
+				assert.ErrorContains(t, err, "permission denied")
+			})
+		}
+	})
 }

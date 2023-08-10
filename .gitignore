@@ -34,3 +34,6 @@ vendor
 
 # Binary output folder
 out/
+
+# Terraform export command artifacts
+*.tf
