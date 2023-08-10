@@ -273,7 +273,6 @@ func TestTerraformProviderCredentialsAreAvailable(t *testing.T) {
 
 func TestDeduplicatedResourceNames(t *testing.T) {
 	t.Run("it deduplicates identical resource names", func(t *testing.T) {
-
 		sameNameAction := "auth0_action.same_name"
 		sameNameClient := "auth0_client.same_name"
 

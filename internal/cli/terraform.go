@@ -284,7 +284,6 @@ func terraformProviderCredentialsAreAvailable() bool {
 }
 
 func deduplicateResourceNames(data importDataList) importDataList {
-
 	nameMap := map[string]int{}
 	deduplicatedList := importDataList{}
 
