@@ -62,11 +62,15 @@ var (
 	}
 )
 
+var rulesDeprecationText = "Rules are deprecated and will be removed in the near future. Users should migrate all rules to actions. See https://auth0.com/docs/customize/actions/migrate/migrate-from-rules-to-actions for more details.\n\n"
+var rulesDeprecationLogText = ansi.Red(ansi.Bold("DEPRECATED! ")) + ansi.Red(rulesDeprecationText)
+var rulesDeprecationDocumentationText = "*DEPRECATED!* " + rulesDeprecationText
+
 func rulesCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "rules",
 		Short: "Manage resources for rules",
-		Long: "Rules can be used in a variety of situations as part of the authentication pipeline where " +
+		Long: rulesDeprecationDocumentationText + "Rules can be used in a variety of situations as part of the authentication pipeline where " +
 			"protocol-specific artifacts are generated.",
 	}
 
@@ -88,7 +92,7 @@ func listRulesCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your rules",
-		Long:    "List your existing rules. To create one, run: `auth0 rules create`.",
+		Long:    rulesDeprecationDocumentationText + "List your existing rules. To create one, run: `auth0 rules create`.",
 		Example: `  auth0 rules list
   auth0 rules ls
   auth0 rules ls --json`,
@@ -106,7 +110,7 @@ func listRulesCmd(cli *cli) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
+			cli.renderer.Warnf(rulesDeprecationLogText)
 			cli.renderer.RulesList(rules)
 			return nil
 		},
@@ -129,7 +133,7 @@ func createRuleCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new rule",
-		Long: "Create a new rule.\n\n" +
+		Long: rulesDeprecationDocumentationText + "Create a new rule.\n\n" +
 			"To create interactively, use `auth0 rules create` with no arguments.\n\n" +
 			"To create non-interactively, supply the name, template and other information through the flags.",
 		Example: `  auth0 rules create
@@ -183,6 +187,7 @@ func createRuleCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("Unable to create rule: %w", err)
 			}
 
+			cli.renderer.Warnf(rulesDeprecationLogText)
 			cli.renderer.RuleCreate(rule)
 			return nil
 		},
@@ -206,7 +211,7 @@ func showRuleCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show a rule",
-		Long:  "Display information about a rule.",
+		Long:  rulesDeprecationDocumentationText + "Display information about a rule.",
 		Example: `  auth0 rules show 
   auth0 rules show <rule-id>
   auth0 rules show <rule-id> --json`,
@@ -232,6 +237,7 @@ func showRuleCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("Unable to load rule: %w", err)
 			}
 
+			cli.renderer.Warnf(rulesDeprecationLogText)
 			cli.renderer.RuleShow(rule)
 			return nil
 		},
@@ -252,7 +258,7 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"rm"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Delete a rule",
-		Long: "Delete a rule.\n\n" +
+		Long: rulesDeprecationDocumentationText + "Delete a rule.\n\n" +
 			"To delete interactively, use `auth0 rules delete` with no arguments.\n\n" +
 			"To delete non-interactively, supply the rule id and the `--force` flag to skip confirmation.",
 		Example: `  auth0 rules delete 
@@ -304,7 +310,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a rule",
-		Long: "Update a rule.\n\n" +
+		Long: rulesDeprecationDocumentationText + "Update a rule.\n\n" +
 			"To update interactively, use `auth0 rules update` with no arguments.\n\n" +
 			"To update non-interactively, supply the rule id and other information through the flags.",
 		Example: `  auth0 rules update <id>
@@ -384,6 +390,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to update rule with ID %s: %w", inputs.ID, err)
 			}
 
+			cli.renderer.Warnf(rulesDeprecationLogText)
 			cli.renderer.RuleUpdate(updatedRule)
 
 			return nil
@@ -409,7 +416,7 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 		Use:   "enable",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Enable a rule",
-		Long:  "Enable a rule.",
+		Long:  rulesDeprecationDocumentationText + "Enable a rule.",
 		Example: `  auth0 rules enable
   auth0 rules enable <rule-id>
   auth0 rules enable <rule-id> --json`,
@@ -445,6 +452,7 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
+			cli.renderer.Warnf(rulesDeprecationLogText)
 			cli.renderer.RuleEnable(rule)
 			return nil
 		},
@@ -465,7 +473,7 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 		Use:   "disable",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Disable a rule",
-		Long:  "Disable a rule.",
+		Long:  rulesDeprecationDocumentationText + "Disable a rule.",
 		Example: `  auth0 rules disable
   auth0 rules disable <rule-id>
   auth0 rules disable <rule-id> --json`,
@@ -502,6 +510,8 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 			}
 
 			cli.renderer.RuleDisable(rule)
+			cli.renderer.Warnf(rulesDeprecationLogText)
+
 			return nil
 		},
 	}
