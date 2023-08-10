@@ -61,7 +61,7 @@ func TestGenerateTerraformImportConfig(t *testing.T) {
 		require.NoError(t, err)
 
 		assertTerraformMainFileWasGeneratedCorrectly(t, outputDIR)
-		assertTerraformImportFileWasGeneratedCorrectly(t, outputDIR, importData)
+		assertTerraformImportFileWasGeneratedCorrectly(t, outputDIR, deduplicateResourceNames(importData))
 	})
 
 	t.Run("it can correctly generate the terraform main config file even if the dir exists", func(t *testing.T) {
@@ -144,6 +144,14 @@ func setupTestDIRAndImportData(t *testing.T) (string, importDataList) {
 		{
 			ResourceName: "auth0_client.MyTestClient2",
 			ImportID:     "clientID_2",
+		},
+		{
+			ResourceName: "auth0_action.MyTestAction",
+			ImportID:     "actionID_1",
+		},
+		{
+			ResourceName: "auth0_action.MyTestAction", //NOTE: duplicate name
+			ImportID:     "actionID_2",
 		},
 	}
 
@@ -258,4 +266,50 @@ func TestTerraformProviderCredentialsAreAvailable(t *testing.T) {
 			assert.Equal(t, testCase.expected, terraformProviderCredentialsAreAvailable())
 		})
 	}
+}
+
+func TestDeduplicatedResourceNames(t *testing.T) {
+	t.Run("it deduplicates identical resource names", func(t *testing.T) {
+
+		sameNameAction := "auth0_action.same_name"
+		sameNameClient := "auth0_client.same_name"
+
+		mockData := importDataList{
+			{ResourceName: sameNameAction, ImportID: "id-1"},
+			{ResourceName: sameNameAction, ImportID: "id-2"},
+			{ResourceName: sameNameAction, ImportID: "id-3"},
+			{ResourceName: sameNameAction, ImportID: "id-4"},
+			{ResourceName: sameNameAction, ImportID: "id-5"},
+			{ResourceName: sameNameClient, ImportID: "id-6"},
+			{ResourceName: sameNameClient, ImportID: "id-7"},
+			{ResourceName: sameNameClient, ImportID: "id-8"},
+		}
+
+		expectedData := importDataList{
+			{ResourceName: "auth0_action.same_name", ImportID: "id-1"},
+			{ResourceName: "auth0_action.same_name_2", ImportID: "id-2"},
+			{ResourceName: "auth0_action.same_name_3", ImportID: "id-3"},
+			{ResourceName: "auth0_action.same_name_4", ImportID: "id-4"},
+			{ResourceName: "auth0_action.same_name_5", ImportID: "id-5"},
+			{ResourceName: "auth0_client.same_name", ImportID: "id-6"},
+			{ResourceName: "auth0_client.same_name_2", ImportID: "id-7"},
+			{ResourceName: "auth0_client.same_name_3", ImportID: "id-8"},
+		}
+
+		assert.Equal(t, expectedData, deduplicateResourceNames(mockData))
+	})
+
+	t.Run("it does not modify import list if no duplicates exist", func(t *testing.T) {
+		mockData := importDataList{
+			{ResourceName: "auth0_action.example_a", ImportID: "action-id-1"},
+			{ResourceName: "auth0_action.example_b", ImportID: "action-id-2"},
+			{ResourceName: "auth0_action.example_c", ImportID: "action-id-3"},
+			{ResourceName: "auth0_connection.example_a", ImportID: "conn-id-1"},
+			{ResourceName: "auth0_connection.example_b", ImportID: "conn-id-2"},
+			{ResourceName: "auth0_client.example_a", ImportID: "client-id-1"},
+			{ResourceName: "auth0_client.example_b", ImportID: "client-id-2"},
+		}
+
+		assert.Equal(t, mockData, deduplicateResourceNames(mockData))
+	})
 }

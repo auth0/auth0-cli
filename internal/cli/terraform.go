@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path"
@@ -159,7 +160,7 @@ func generateTerraformImportConfig(outputDIR string, data importDataList) error 
 		return err
 	}
 
-	return createImportFile(outputDIR, data)
+	return createImportFile(outputDIR, deduplicateResourceNames(data))
 }
 
 func createOutputDirectory(outputDIR string) error {
@@ -267,4 +268,21 @@ func terraformProviderCredentialsAreAvailable() bool {
 	apiToken := os.Getenv("AUTH0_API_TOKEN")
 
 	return (domain != "" && clientID != "" && clientSecret != "") || (domain != "" && apiToken != "")
+}
+
+func deduplicateResourceNames(data importDataList) importDataList {
+
+	nameMap := map[string]int{}
+	deduplicatedList := importDataList{}
+
+	for _, resource := range data {
+		nameMap[resource.ResourceName]++
+		if nameMap[resource.ResourceName] > 1 {
+			resource.ResourceName = fmt.Sprintf("%s_%d", resource.ResourceName, nameMap[resource.ResourceName])
+		}
+
+		deduplicatedList = append(deduplicatedList, resource)
+	}
+
+	return deduplicatedList
 }
