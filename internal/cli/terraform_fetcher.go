@@ -9,6 +9,8 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
+var defaultResources = []string{"auth0_client", "auth0_connection"}
+
 type (
 	importDataList []importDataItem
 

@@ -28,6 +28,7 @@ auth0 terraform generate [flags]
 ```
       --force               Skip confirmation.
   -o, --output-dir string   Output directory for the generated Terraform config files. If not provided, the files will be saved in the current working directory. (default "./")
+  -r, --resources strings   Resource types to generate Terraform config for. If not provided, config files for all available resources will be generated. (default [auth0_client,auth0_connection])
 ```
 
 
