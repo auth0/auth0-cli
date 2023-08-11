@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/display"
 )
 
@@ -400,4 +401,70 @@ func TestCleanOutputDirectory(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestTerraformInputs_ParseResourceFetchers(t *testing.T) {
+	api := &auth0.API{}
+
+	var testCases = []struct {
+		name                 string
+		input                terraformInputs
+		expectedError        string
+		expectedDataFetchers []resourceDataFetcher
+	}{
+		{
+			name: "it can successfully parse resources: auth0_client",
+			input: terraformInputs{
+				Resources: []string{"auth0_client"},
+			},
+			expectedDataFetchers: []resourceDataFetcher{
+				&clientResourceFetcher{api},
+			},
+		},
+		{
+			name: "it can successfully parse resources: auth0_client, auth0_connection",
+			input: terraformInputs{
+				Resources: []string{"auth0_client", "auth0_connection"},
+			},
+			expectedDataFetchers: []resourceDataFetcher{
+				&clientResourceFetcher{api},
+				&connectionResourceFetcher{api},
+			},
+		},
+		{
+			name: "it fails to parse unsupported resources: auth0_technology",
+			input: terraformInputs{
+				Resources: []string{"auth0_technology"},
+			},
+			expectedError: "unsupported resource type: auth0_technology",
+		},
+		{
+			name: "it fails to parse unsupported resources even if combined with supported resources: auth0_client, auth0_technology",
+			input: terraformInputs{
+				Resources: []string{"auth0_client", "auth0_technology"},
+			},
+			expectedError: "unsupported resource type: auth0_technology",
+		},
+		{
+			name: "it fails to parse unsupported resources and raises the error for all of them: auth0_metrics, auth0_technology",
+			input: terraformInputs{
+				Resources: []string{"auth0_metrics", "auth0_technology"},
+			},
+			expectedError: "unsupported resource type: auth0_metrics\nunsupported resource type: auth0_technology",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			actual, err := testCase.input.parseResourceFetchers(api)
+
+			if testCase.expectedError != "" {
+				assert.EqualError(t, err, testCase.expectedError)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, testCase.expectedDataFetchers, actual)
+		})
+	}
 }

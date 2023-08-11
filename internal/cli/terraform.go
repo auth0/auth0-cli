@@ -28,28 +28,43 @@ var tfFlags = terraformFlags{
 		Help: "Output directory for the generated Terraform config files. If not provided, the files will be " +
 			"saved in the current working directory.",
 	},
+	Resources: Flag{
+		Name:      "Resource Types",
+		LongForm:  "resources",
+		ShortForm: "r",
+		Help: "Resource types to generate Terraform config for. If not provided, config files for all " +
+			"available resources will be generated.",
+	},
 }
 
 type (
 	terraformFlags struct {
 		OutputDIR Flag
+		Resources Flag
 	}
 
 	terraformInputs struct {
 		OutputDIR string
+		Resources []string
 	}
 )
 
-func (i *terraformInputs) parseResourceFetchers(api *auth0.API) []resourceDataFetcher {
-	// Hard coding this for now until we add support for the `--resources` flag.
-	return []resourceDataFetcher{
-		&clientResourceFetcher{
-			api: api,
-		},
-		&connectionResourceFetcher{
-			api: api,
-		},
+func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataFetcher, error) {
+	fetchers := make([]resourceDataFetcher, 0)
+	var err error
+
+	for _, resource := range i.Resources {
+		switch resource {
+		case "auth0_client":
+			fetchers = append(fetchers, &clientResourceFetcher{api})
+		case "auth0_connection":
+			fetchers = append(fetchers, &connectionResourceFetcher{api})
+		default:
+			err = errors.Join(err, fmt.Errorf("unsupported resource type: %s", resource))
+		}
 	}
+
+	return fetchers, err
 }
 
 func terraformCmd(cli *cli) *cobra.Command {
@@ -83,13 +98,19 @@ func generateTerraformCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	tfFlags.OutputDIR.RegisterString(cmd, &inputs.OutputDIR, "./")
+	tfFlags.Resources.RegisterStringSlice(cmd, &inputs.Resources, defaultResources)
 
 	return cmd
 }
 
 func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		data, err := fetchImportData(cmd.Context(), inputs.parseResourceFetchers(cli.api)...)
+		resources, err := inputs.parseResourceFetchers(cli.api)
+		if err != nil {
+			return err
+		}
+
+		data, err := fetchImportData(cmd.Context(), resources...)
 		if err != nil {
 			return err
 		}
