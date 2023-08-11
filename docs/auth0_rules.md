@@ -5,6 +5,8 @@ has_children: true
 ---
 # auth0 rules
 
+*DEPRECATED!* Rules are deprecated and will be removed in the near future. Users should migrate all rules to actions. See https://auth0.com/docs/customize/actions/migrate/migrate-from-rules-to-actions for more details.
+
 Rules can be used in a variety of situations as part of the authentication pipeline where protocol-specific artifacts are generated.
 
 ## Commands

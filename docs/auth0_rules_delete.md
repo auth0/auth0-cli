@@ -5,6 +5,8 @@ has_toc: false
 ---
 # auth0 rules delete
 
+*DEPRECATED!* Rules are deprecated and will be removed in the near future. Users should migrate all rules to actions. See https://auth0.com/docs/customize/actions/migrate/migrate-from-rules-to-actions for more details.
+
 Delete a rule.
 
 To delete interactively, use `auth0 rules delete` with no arguments.

@@ -5,6 +5,8 @@ has_toc: false
 ---
 # auth0 rules create
 
+*DEPRECATED!* Rules are deprecated and will be removed in the near future. Users should migrate all rules to actions. See https://auth0.com/docs/customize/actions/migrate/migrate-from-rules-to-actions for more details.
+
 Create a new rule.
 
 To create interactively, use `auth0 rules create` with no arguments.
