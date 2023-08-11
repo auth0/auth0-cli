@@ -154,6 +154,8 @@ func fetchImportData(ctx context.Context, fetchers ...resourceDataFetcher) (impo
 			return nil, err
 		}
 
+		data = deduplicateResourceNames(data)
+
 		importData = append(importData, data...)
 	}
 
@@ -173,7 +175,7 @@ func generateTerraformImportConfig(outputDIR string, data importDataList) error 
 		return err
 	}
 
-	return createImportFile(outputDIR, deduplicateResourceNames(data))
+	return createImportFile(outputDIR, data)
 }
 
 func createOutputDirectory(outputDIR string) error {
