@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
