@@ -45,6 +45,26 @@ func TestFetchImportData(t *testing.T) {
 		assert.Equal(t, expectedData, data)
 	})
 
+	t.Run("it deduplicates same-named resources", func(t *testing.T) {
+		mockData1 := importDataList{{ResourceName: "auth0_action.same", ImportID: "action-1"}, {ResourceName: "auth0_action.same", ImportID: "action-2"}}
+		mockData2 := importDataList{{ResourceName: "auth0_client.same", ImportID: "client-1"}}
+
+		mockFetchers := []resourceDataFetcher{
+			&mockFetcher{mockData: mockData1},
+			&mockFetcher{mockData: mockData2},
+		}
+
+		expectedData := importDataList{
+			{ResourceName: "auth0_action.same", ImportID: "action-1"},
+			{ResourceName: "auth0_action.same" + "_2", ImportID: "action-2"},
+			{ResourceName: "auth0_client.same", ImportID: "client-1"},
+		}
+
+		data, err := fetchImportData(context.Background(), mockFetchers...)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
 	t.Run("it returns an error when a data fetcher fails", func(t *testing.T) {
 		expectedErr := errors.New("failed to list clients")
 		mockFetchers := []resourceDataFetcher{
