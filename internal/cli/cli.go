@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
@@ -114,6 +115,7 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 		management.WithStaticToken(tenant.GetAccessToken()),
 		management.WithUserAgent(userAgent),
 		management.WithAuth0ClientEnvEntry("Auth0-CLI", strings.TrimPrefix(buildinfo.Version, "v")),
+		management.WithRetries(5, []int{http.StatusTooManyRequests, http.StatusInternalServerError}),
 	)
 	if err != nil {
 		return err
