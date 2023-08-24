@@ -178,7 +178,7 @@ func fetchImportData(ctx context.Context, fetchers ...resourceDataFetcher) (impo
 		importData = append(importData, data...)
 	}
 
-	return importData, nil
+	return deduplicateResourceNames(importData), nil
 }
 
 func generateTerraformImportConfig(outputDIR string, data importDataList) error {
@@ -302,6 +302,22 @@ func terraformProviderCredentialsAreAvailable() bool {
 	apiToken := os.Getenv("AUTH0_API_TOKEN")
 
 	return (domain != "" && clientID != "" && clientSecret != "") || (domain != "" && apiToken != "")
+}
+
+func deduplicateResourceNames(data importDataList) importDataList {
+	nameMap := map[string]int{}
+	deduplicatedList := importDataList{}
+
+	for _, resource := range data {
+		nameMap[resource.ResourceName]++
+		if nameMap[resource.ResourceName] > 1 {
+			resource.ResourceName = fmt.Sprintf("%s_%d", resource.ResourceName, nameMap[resource.ResourceName])
+		}
+
+		deduplicatedList = append(deduplicatedList, resource)
+	}
+
+	return deduplicatedList
 }
 
 func checkOutputDirectoryIsEmpty(cli *cli, cmd *cobra.Command, outputDIR string) bool {
