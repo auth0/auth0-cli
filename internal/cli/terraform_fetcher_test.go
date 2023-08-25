@@ -241,3 +241,17 @@ func TestConnectionResourceFetcher_FetchData(t *testing.T) {
 		assert.EqualError(t, err, "failed to list connections")
 	})
 }
+
+func TestTeantResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully generates tenant import data", func(t *testing.T) {
+		fetcher := tenantResourceFetcher{
+			api: &auth0.API{},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 1)
+		assert.Equal(t, data[0].ResourceName, "auth0_tenant.tenant")
+		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
