@@ -244,9 +244,7 @@ func TestConnectionResourceFetcher_FetchData(t *testing.T) {
 
 func TestTeantResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully generates tenant import data", func(t *testing.T) {
-		fetcher := tenantResourceFetcher{
-			api: &auth0.API{},
-		}
+		fetcher := tenantResourceFetcher{}
 
 		data, err := fetcher.FetchData(context.Background())
 		assert.NoError(t, err)

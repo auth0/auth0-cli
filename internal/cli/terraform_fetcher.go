@@ -34,9 +34,7 @@ type (
 		api *auth0.API
 	}
 
-	tenantResourceFetcher struct {
-		api *auth0.API
-	}
+	tenantResourceFetcher struct{}
 )
 
 func (f *clientResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {

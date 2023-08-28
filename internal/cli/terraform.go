@@ -60,7 +60,7 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 		case "auth0_connection":
 			fetchers = append(fetchers, &connectionResourceFetcher{api})
 		case "auth0_tenant":
-			fetchers = append(fetchers, &tenantResourceFetcher{api})
+			fetchers = append(fetchers, &tenantResourceFetcher{})
 		default:
 			err = errors.Join(err, fmt.Errorf("unsupported resource type: %s", resource))
 		}
