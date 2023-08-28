@@ -5,11 +5,12 @@ import (
 	"regexp"
 
 	"github.com/auth0/go-auth0/management"
+	"github.com/google/uuid"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_client", "auth0_connection"}
+var defaultResources = []string{"auth0_client", "auth0_connection", "auth0_tenant"}
 
 type (
 	importDataList []importDataItem
@@ -22,7 +23,9 @@ type (
 	resourceDataFetcher interface {
 		FetchData(ctx context.Context) (importDataList, error)
 	}
+)
 
+type (
 	clientResourceFetcher struct {
 		api *auth0.API
 	}
@@ -30,6 +33,8 @@ type (
 	connectionResourceFetcher struct {
 		api *auth0.API
 	}
+
+	tenantResourceFetcher struct{}
 )
 
 func (f *clientResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
@@ -93,6 +98,15 @@ func (f *connectionResourceFetcher) FetchData(ctx context.Context) (importDataLi
 	}
 
 	return data, nil
+}
+
+func (f *tenantResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
+	return []importDataItem{
+		{
+			ResourceName: "auth0_tenant.tenant",
+			ImportID:     uuid.NewString(),
+		},
+	}, nil
 }
 
 // sanitizeResourceName will return a valid terraform resource name.
