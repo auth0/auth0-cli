@@ -10,7 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_client", "auth0_connection", "auth0_tenant"}
+var defaultResources = []string{"auth0_client", "auth0_connection", "auth0_organization", "auth0_tenant"}
 
 type (
 	importDataList []importDataItem
@@ -31,6 +31,10 @@ type (
 	}
 
 	connectionResourceFetcher struct {
+		api *auth0.API
+	}
+
+	organizationResourceFetcher struct {
 		api *auth0.API
 	}
 
@@ -95,6 +99,30 @@ func (f *connectionResourceFetcher) FetchData(ctx context.Context) (importDataLi
 		}
 
 		page++
+	}
+
+	return data, nil
+}
+
+func (f *organizationResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	for {
+		res, err := f.api.Organization.List(ctx)
+		if err != nil {
+			return data, err
+		}
+
+		for _, org := range res.Organizations {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_organization." + sanitizeResourceName(org.GetName()),
+				ImportID:     org.GetID(),
+			})
+		}
+
+		if !res.HasNext() {
+			break
+		}
 	}
 
 	return data, nil
