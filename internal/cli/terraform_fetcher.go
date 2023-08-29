@@ -107,22 +107,30 @@ func (f *connectionResourceFetcher) FetchData(ctx context.Context) (importDataLi
 func (f *organizationResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	var data importDataList
 
-	for {
-		res, err := f.api.Organization.List(ctx)
-		if err != nil {
-			return data, err
-		}
+	orgs, err := getWithPagination(
+		100,
+		func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
+			res, err := f.api.Organization.List(ctx, opts...)
+			if err != nil {
+				return nil, false, err
+			}
 
-		for _, org := range res.Organizations {
-			data = append(data, importDataItem{
-				ResourceName: "auth0_organization." + sanitizeResourceName(org.GetName()),
-				ImportID:     org.GetID(),
-			})
-		}
+			for _, item := range res.Organizations {
+				result = append(result, item)
+			}
 
-		if !res.HasNext() {
-			break
-		}
+			return result, res.HasNext(), nil
+		},
+	)
+	if err != nil {
+		return data, err
+	}
+
+	for _, org := range orgs {
+		data = append(data, importDataItem{
+			ResourceName: "auth0_organization." + sanitizeResourceName(org.(*management.Organization).GetName()),
+			ImportID:     org.(*management.Organization).GetID(),
+		})
 	}
 
 	return data, nil
