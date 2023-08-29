@@ -242,6 +242,70 @@ func TestConnectionResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestCustomDomainResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves custom domains data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		customDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
+		customDomainAPI.EXPECT().
+			List(gomock.Any()).
+			Return(
+				[]*management.CustomDomain{
+					{
+						ID:     auth0.String("cd_XDVfBNsfL2vj7Wm1"),
+						Domain: auth0.String("travel0.com"),
+					},
+					{
+						ID:     auth0.String("cd_XDVfBNsfL2vj7Wm1"),
+						Domain: auth0.String("enterprise.travel0.com"),
+					},
+				},
+				nil,
+			)
+
+		fetcher := customDomainResourceFetcher{
+			api: &auth0.API{
+				CustomDomain: customDomainAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_custom_domain.travel0com",
+				ImportID:     "cd_XDVfBNsfL2vj7Wm1",
+			},
+			{
+				ResourceName: "auth0_custom_domain.enterprisetravel0com",
+				ImportID:     "cd_XDVfBNsfL2vj7Wm1",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		customDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
+		customDomainAPI.EXPECT().
+			List(gomock.Any()).
+			Return(nil, fmt.Errorf("failed to list custom domains"))
+
+		fetcher := customDomainResourceFetcher{
+			api: &auth0.API{
+				CustomDomain: customDomainAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to list custom domains")
+	})
+}
+
 func TestTeantResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully generates tenant import data", func(t *testing.T) {
 		fetcher := tenantResourceFetcher{}

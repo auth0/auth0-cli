@@ -10,7 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_client", "auth0_connection", "auth0_tenant"}
+var defaultResources = []string{"auth0_client", "auth0_connection", "auth0_custom_domain", "auth0_tenant"}
 
 type (
 	importDataList []importDataItem
@@ -31,6 +31,10 @@ type (
 	}
 
 	connectionResourceFetcher struct {
+		api *auth0.API
+	}
+
+	customDomainResourceFetcher struct {
 		api *auth0.API
 	}
 
@@ -95,6 +99,24 @@ func (f *connectionResourceFetcher) FetchData(ctx context.Context) (importDataLi
 		}
 
 		page++
+	}
+
+	return data, nil
+}
+
+func (f *customDomainResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	customDomains, err := f.api.CustomDomain.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, domain := range customDomains {
+		data = append(data, importDataItem{
+			ResourceName: "auth0_custom_domain." + sanitizeResourceName(domain.GetDomain()),
+			ImportID:     domain.GetID(),
+		})
 	}
 
 	return data, nil
