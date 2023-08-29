@@ -10,7 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_client", "auth0_connection", "auth0_tenant"}
+var defaultResources = []string{"auth0_client", "auth0_connection", "auth0_role", "auth0_tenant"}
 
 type (
 	importDataList []importDataItem
@@ -31,6 +31,10 @@ type (
 	}
 
 	connectionResourceFetcher struct {
+		api *auth0.API
+	}
+
+	roleResourceFetcher struct {
 		api *auth0.API
 	}
 
@@ -91,6 +95,37 @@ func (f *connectionResourceFetcher) FetchData(ctx context.Context) (importDataLi
 		}
 
 		if !connections.HasNext() {
+			break
+		}
+
+		page++
+	}
+
+	return data, nil
+}
+
+func (f *roleResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	var page int
+	for {
+		roles, err := f.api.Role.List(
+			ctx,
+			management.Page(page),
+			management.IncludeFields("id", "name"),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, role := range roles.Roles {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_role." + sanitizeResourceName(role.GetName()),
+				ImportID:     role.GetID(),
+			})
+		}
+
+		if !roles.HasNext() {
 			break
 		}
 
