@@ -249,7 +249,7 @@ func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 
 		orgAPI := mock.NewMockOrganizationAPI(ctrl)
 		orgAPI.EXPECT().
-			List(gomock.Any()).
+			List(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(
 				&management.OrganizationList{
 					List: management.List{
@@ -271,7 +271,7 @@ func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 				nil,
 			)
 		orgAPI.EXPECT().
-			List(gomock.Any()).
+			List(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(
 				&management.OrganizationList{
 					List: management.List{
@@ -329,7 +329,7 @@ func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 
 		orgAPI := mock.NewMockOrganizationAPI(ctrl)
 		orgAPI.EXPECT().
-			List(gomock.Any()).
+			List(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(nil, fmt.Errorf("failed to list organizations"))
 
 		fetcher := organizationResourceFetcher{
