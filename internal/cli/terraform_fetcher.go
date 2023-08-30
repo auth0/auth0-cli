@@ -10,7 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_organization", "auth0_role", "auth0_tenant"}
+var defaultResources = []string{"auth0_action", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_organization", "auth0_resource_server", "auth0_role", "auth0_tenant"}
 
 type (
 	importDataList []importDataItem
@@ -47,6 +47,10 @@ type (
 		api *auth0.API
 	}
 	organizationResourceFetcher struct {
+		api *auth0.API
+	}
+
+	resourceServerResourceFetcher struct {
 		api *auth0.API
 	}
 	roleResourceFetcher struct {
@@ -203,6 +207,41 @@ func (f *organizationResourceFetcher) FetchData(ctx context.Context) (importData
 			ResourceName: "auth0_organization." + sanitizeResourceName(org.(*management.Organization).GetName()),
 			ImportID:     org.(*management.Organization).GetID(),
 		})
+	}
+
+	return data, nil
+}
+
+func (f *resourceServerResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	var page int
+	for {
+		apis, err := f.api.ResourceServer.List(
+			ctx,
+			management.Page(page),
+			management.IncludeFields("id", "name"),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, api := range apis.ResourceServers {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_resource_server." + sanitizeResourceName(api.GetName()),
+				ImportID:     api.GetID(),
+			})
+			data = append(data, importDataItem{
+				ResourceName: "auth0_resource_server_scopes." + sanitizeResourceName(api.GetName()),
+				ImportID:     api.GetID(),
+			})
+		}
+
+		if !apis.HasNext() {
+			break
+		}
+
+		page++
 	}
 
 	return data, nil
