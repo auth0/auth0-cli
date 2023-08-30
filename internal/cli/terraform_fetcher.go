@@ -227,6 +227,10 @@ func (f *resourceServerResourceFetcher) FetchData(ctx context.Context) (importDa
 		}
 
 		for _, api := range apis.ResourceServers {
+			if api.GetName() == "Auth0 Management API" {
+				continue // Management API is not user-configurable and not intended for export
+			}
+
 			data = append(data, importDataItem{
 				ResourceName: "auth0_resource_server." + sanitizeResourceName(api.GetName()),
 				ImportID:     api.GetID(),

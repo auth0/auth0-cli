@@ -684,14 +684,6 @@ func TestResourceServerResourceFetcher_FetchData(t *testing.T) {
 
 		expectedData := importDataList{
 			{
-				ResourceName: "auth0_resource_server.Auth0ManagementAPI",
-				ImportID:     "610e04b71f71b9003a7eb3df",
-			},
-			{
-				ResourceName: "auth0_resource_server_scopes.Auth0ManagementAPI",
-				ImportID:     "610e04b71f71b9003a7eb3df",
-			},
-			{
 				ResourceName: "auth0_resource_server.PaymentsAPI",
 				ImportID:     "6358fed7b77d3c391dd78a40",
 			},
