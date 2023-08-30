@@ -223,10 +223,24 @@ func (f *roleResourceFetcher) FetchData(ctx context.Context) (importDataList, er
 		}
 
 		for _, role := range roles.Roles {
-			data = append(data, importDataItem{
-				ResourceName: "auth0_role." + sanitizeResourceName(role.GetName()),
-				ImportID:     role.GetID(),
-			})
+			data = append(data,
+				importDataItem{
+					ResourceName: "auth0_role." + sanitizeResourceName(role.GetName()),
+					ImportID:     role.GetID(),
+				},
+			)
+
+			rolePerms, err := f.api.Role.Permissions(ctx, role.GetID())
+			if err != nil {
+				return data, nil
+			}
+			if len(rolePerms.Permissions) > 0 {
+				// `permissions` block a required field for TF Provider; cannot have empty permissions
+				data = append(data, importDataItem{
+					ResourceName: "auth0_role_permissions." + sanitizeResourceName(role.GetName()),
+					ImportID:     role.GetID(),
+				})
+			}
 		}
 
 		if !roles.HasNext() {
