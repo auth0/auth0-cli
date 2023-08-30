@@ -10,7 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_organization", "auth0_role", "auth0_tenant"}
+var defaultResources = []string{"auth0_action", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_organization", "auth0_pages", "auth0_role", "auth0_tenant"}
 
 type (
 	importDataList []importDataItem
@@ -49,6 +49,9 @@ type (
 	organizationResourceFetcher struct {
 		api *auth0.API
 	}
+
+	pagesResourceFetcher struct{}
+
 	roleResourceFetcher struct {
 		api *auth0.API
 	}
@@ -206,6 +209,15 @@ func (f *organizationResourceFetcher) FetchData(ctx context.Context) (importData
 	}
 
 	return data, nil
+}
+
+func (f *pagesResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
+	return []importDataItem{
+		{
+			ResourceName: "auth0_pages.pages",
+			ImportID:     uuid.NewString(),
+		},
+	}, nil
 }
 
 func (f *roleResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
