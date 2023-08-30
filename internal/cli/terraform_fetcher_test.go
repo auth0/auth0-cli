@@ -343,6 +343,107 @@ func TestActionResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves organizations data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		orgAPI := mock.NewMockOrganizationAPI(ctrl)
+		orgAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&management.OrganizationList{
+					List: management.List{
+						Start: 0,
+						Limit: 2,
+						Total: 4,
+					},
+					Organizations: []*management.Organization{
+						{
+							ID:   auth0.String("org_1"),
+							Name: auth0.String("Organization 1"),
+						},
+						{
+							ID:   auth0.String("org_2"),
+							Name: auth0.String("Organization 2"),
+						},
+					},
+				},
+				nil,
+			)
+		orgAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&management.OrganizationList{
+					List: management.List{
+						Start: 2,
+						Limit: 4,
+						Total: 4,
+					},
+					Organizations: []*management.Organization{
+						{
+							ID:   auth0.String("org_3"),
+							Name: auth0.String("Organization 3"),
+						},
+						{
+							ID:   auth0.String("org_4"),
+							Name: auth0.String("Organization 4"),
+						},
+					},
+				},
+				nil,
+			)
+
+		fetcher := organizationResourceFetcher{
+			api: &auth0.API{
+				Organization: orgAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_organization.Organization1",
+				ImportID:     "org_1",
+			},
+			{
+				ResourceName: "auth0_organization.Organization2",
+				ImportID:     "org_2",
+			},
+			{
+				ResourceName: "auth0_organization.Organization3",
+				ImportID:     "org_3",
+			},
+			{
+				ResourceName: "auth0_organization.Organization4",
+				ImportID:     "org_4",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		orgAPI := mock.NewMockOrganizationAPI(ctrl)
+		orgAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil, fmt.Errorf("failed to list organizations"))
+
+		fetcher := organizationResourceFetcher{
+			api: &auth0.API{
+				Organization: orgAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to list organizations")
+	})
+}
+
 func TestTeantResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully generates tenant import data", func(t *testing.T) {
 		fetcher := tenantResourceFetcher{}
