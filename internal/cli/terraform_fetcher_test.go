@@ -141,6 +141,107 @@ func TestClientResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestClientGrantResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves client grant data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		clientGrantAPI := mock.NewMockClientGrantAPI(ctrl)
+		clientGrantAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&management.ClientList{
+					List: management.List{
+						Start: 0,
+						Limit: 2,
+						Total: 4,
+					},
+					Clients: []*management.Client{
+						{
+							ClientID: auth0.String("clientID_1"),
+							Name:     auth0.String("My Test Client 1"),
+						},
+						{
+							ClientID: auth0.String("clientID_2"),
+							Name:     auth0.String("My Test Client 2"),
+						},
+					},
+				},
+				nil,
+			)
+		clientGrantAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&management.ClientList{
+					List: management.List{
+						Start: 2,
+						Limit: 4,
+						Total: 4,
+					},
+					Clients: []*management.Client{
+						{
+							ClientID: auth0.String("clientID_3"),
+							Name:     auth0.String("My Test Client 3"),
+						},
+						{
+							ClientID: auth0.String("clientID_4"),
+							Name:     auth0.String("My Test Client 4"),
+						},
+					},
+				},
+				nil,
+			)
+
+		fetcher := clientGrantResourceFetcher{
+			api: &auth0.API{
+				ClientGrant: clientGrantAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_client.MyTestClient1",
+				ImportID:     "clientID_1",
+			},
+			{
+				ResourceName: "auth0_client.MyTestClient2",
+				ImportID:     "clientID_2",
+			},
+			{
+				ResourceName: "auth0_client.MyTestClient3",
+				ImportID:     "clientID_3",
+			},
+			{
+				ResourceName: "auth0_client.MyTestClient4",
+				ImportID:     "clientID_4",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		clientGrantAPI := mock.NewMockClientGrantAPI(ctrl)
+		clientGrantAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil, fmt.Errorf("failed to list clients"))
+
+		fetcher := clientGrantResourceFetcher{
+			api: &auth0.API{
+				ClientGrant: clientGrantAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to list clients")
+	})
+}
+
 func TestConnectionResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves connections data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
