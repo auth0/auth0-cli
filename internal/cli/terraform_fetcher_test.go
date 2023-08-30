@@ -40,6 +40,106 @@ func TestSanitizeResourceName(t *testing.T) {
 	}
 }
 
+func TestActionResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves actions data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		actionAPI := mock.NewMockActionAPI(ctrl)
+		actionAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).
+			Return(
+				&management.ActionList{
+					List: management.List{
+						Start: 0,
+						Limit: 2,
+						Total: 4,
+					},
+					Actions: []*management.Action{
+						{
+							ID:   auth0.String("07898b80-02ba-42ee-82ad-e5b224a9b450"),
+							Name: auth0.String("Action 1"),
+						},
+						{
+							ID:   auth0.String("24118aae-8022-4b94-80c1-e8e28511eb92"),
+							Name: auth0.String("Action 2"),
+						},
+					},
+				},
+				nil,
+			)
+		actionAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).
+			Return(
+				&management.ActionList{
+					List: management.List{
+						Start: 2,
+						Limit: 4,
+						Total: 4,
+					},
+					Actions: []*management.Action{
+						{
+							ID:   auth0.String("fa04d1ff-fe8d-4662-b7c2-32d212719876"),
+							Name: auth0.String("Action 3"),
+						},
+						{
+							ID:   auth0.String("9cb897b9-c25c-47be-b5aa-e03e31af2e44"),
+							Name: auth0.String("Action 4"),
+						},
+					},
+				},
+				nil,
+			)
+
+		fetcher := actionResourceFetcher{
+			api: &auth0.API{
+				Action: actionAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_action.Action1",
+				ImportID:     "07898b80-02ba-42ee-82ad-e5b224a9b450",
+			},
+			{
+				ResourceName: "auth0_action.Action2",
+				ImportID:     "24118aae-8022-4b94-80c1-e8e28511eb92",
+			},
+			{
+				ResourceName: "auth0_action.Action3",
+				ImportID:     "fa04d1ff-fe8d-4662-b7c2-32d212719876",
+			},
+			{
+				ResourceName: "auth0_action.Action4",
+				ImportID:     "9cb897b9-c25c-47be-b5aa-e03e31af2e44",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		actionAPI := mock.NewMockActionAPI(ctrl)
+		actionAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).
+			Return(nil, fmt.Errorf("failed to list actions"))
+
+		fetcher := actionResourceFetcher{
+			api: &auth0.API{
+				Action: actionAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to list actions")
+	})
+}
 func TestClientResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves client data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -254,79 +354,42 @@ func TestConnectionResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
-func TestActionResourceFetcher_FetchData(t *testing.T) {
-	t.Run("it successfully retrieves actions data", func(t *testing.T) {
+func TestCustomDomainResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves custom domains data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		actionAPI := mock.NewMockActionAPI(ctrl)
-		actionAPI.EXPECT().
-			List(gomock.Any(), gomock.Any()).
+		customDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
+		customDomainAPI.EXPECT().
+			List(gomock.Any()).
 			Return(
-				&management.ActionList{
-					List: management.List{
-						Start: 0,
-						Limit: 2,
-						Total: 4,
+				[]*management.CustomDomain{
+					{
+						ID:     auth0.String("cd_XDVfBNsfL2vj7Wm1"),
+						Domain: auth0.String("travel0.com"),
 					},
-					Actions: []*management.Action{
-						{
-							ID:   auth0.String("07898b80-02ba-42ee-82ad-e5b224a9b450"),
-							Name: auth0.String("Action 1"),
-						},
-						{
-							ID:   auth0.String("24118aae-8022-4b94-80c1-e8e28511eb92"),
-							Name: auth0.String("Action 2"),
-						},
-					},
-				},
-				nil,
-			)
-		actionAPI.EXPECT().
-			List(gomock.Any(), gomock.Any()).
-			Return(
-				&management.ActionList{
-					List: management.List{
-						Start: 2,
-						Limit: 4,
-						Total: 4,
-					},
-					Actions: []*management.Action{
-						{
-							ID:   auth0.String("fa04d1ff-fe8d-4662-b7c2-32d212719876"),
-							Name: auth0.String("Action 3"),
-						},
-						{
-							ID:   auth0.String("9cb897b9-c25c-47be-b5aa-e03e31af2e44"),
-							Name: auth0.String("Action 4"),
-						},
+					{
+						ID:     auth0.String("cd_XDVfBNsfL2vj7Wm1"),
+						Domain: auth0.String("enterprise.travel0.com"),
 					},
 				},
 				nil,
 			)
 
-		fetcher := actionResourceFetcher{
+		fetcher := customDomainResourceFetcher{
 			api: &auth0.API{
-				Action: actionAPI,
+				CustomDomain: customDomainAPI,
 			},
 		}
 
 		expectedData := importDataList{
 			{
-				ResourceName: "auth0_action.Action1",
-				ImportID:     "07898b80-02ba-42ee-82ad-e5b224a9b450",
+				ResourceName: "auth0_custom_domain.travel0com",
+				ImportID:     "cd_XDVfBNsfL2vj7Wm1",
 			},
 			{
-				ResourceName: "auth0_action.Action2",
-				ImportID:     "24118aae-8022-4b94-80c1-e8e28511eb92",
-			},
-			{
-				ResourceName: "auth0_action.Action3",
-				ImportID:     "fa04d1ff-fe8d-4662-b7c2-32d212719876",
-			},
-			{
-				ResourceName: "auth0_action.Action4",
-				ImportID:     "9cb897b9-c25c-47be-b5aa-e03e31af2e44",
+				ResourceName: "auth0_custom_domain.enterprisetravel0com",
+				ImportID:     "cd_XDVfBNsfL2vj7Wm1",
 			},
 		}
 
@@ -339,19 +402,19 @@ func TestActionResourceFetcher_FetchData(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		actionAPI := mock.NewMockActionAPI(ctrl)
-		actionAPI.EXPECT().
-			List(gomock.Any(), gomock.Any()).
-			Return(nil, fmt.Errorf("failed to list actions"))
+		customDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
+		customDomainAPI.EXPECT().
+			List(gomock.Any()).
+			Return(nil, fmt.Errorf("failed to list custom domains"))
 
-		fetcher := actionResourceFetcher{
+		fetcher := customDomainResourceFetcher{
 			api: &auth0.API{
-				Action: actionAPI,
+				CustomDomain: customDomainAPI,
 			},
 		}
 
 		_, err := fetcher.FetchData(context.Background())
-		assert.EqualError(t, err, "failed to list actions")
+		assert.EqualError(t, err, "failed to list custom domains")
 	})
 }
 
