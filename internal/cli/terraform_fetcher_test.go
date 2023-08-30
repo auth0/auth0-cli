@@ -148,44 +148,48 @@ func TestClientGrantResourceFetcher_FetchData(t *testing.T) {
 
 		clientGrantAPI := mock.NewMockClientGrantAPI(ctrl)
 		clientGrantAPI.EXPECT().
-			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			List(gomock.Any(), gomock.Any()).
 			Return(
-				&management.ClientList{
+				&management.ClientGrantList{
 					List: management.List{
 						Start: 0,
 						Limit: 2,
 						Total: 4,
 					},
-					Clients: []*management.Client{
+					ClientGrants: []*management.ClientGrant{
 						{
-							ClientID: auth0.String("clientID_1"),
-							Name:     auth0.String("My Test Client 1"),
+							ID:       auth0.String("cgr_1"),
+							ClientID: auth0.String("client-id-1"),
+							Audience: auth0.String("https://travel0.com/api"),
 						},
 						{
-							ClientID: auth0.String("clientID_2"),
-							Name:     auth0.String("My Test Client 2"),
+							ID:       auth0.String("cgr_2"),
+							ClientID: auth0.String("client-id-2"),
+							Audience: auth0.String("https://travel0.com/api"),
 						},
 					},
 				},
 				nil,
 			)
 		clientGrantAPI.EXPECT().
-			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			List(gomock.Any(), gomock.Any()).
 			Return(
-				&management.ClientList{
+				&management.ClientGrantList{
 					List: management.List{
 						Start: 2,
 						Limit: 4,
 						Total: 4,
 					},
-					Clients: []*management.Client{
+					ClientGrants: []*management.ClientGrant{
 						{
-							ClientID: auth0.String("clientID_3"),
-							Name:     auth0.String("My Test Client 3"),
+							ID:       auth0.String("cgr_3"),
+							ClientID: auth0.String("client-id-1"),
+							Audience: auth0.String("https://travel0.us.auth0.com/api/v2/"),
 						},
 						{
-							ClientID: auth0.String("clientID_4"),
-							Name:     auth0.String("My Test Client 4"),
+							ID:       auth0.String("cgr_4"),
+							ClientID: auth0.String("client-id-2"),
+							Audience: auth0.String("https://travel0.us.auth0.com/api/v2/"),
 						},
 					},
 				},
@@ -200,20 +204,20 @@ func TestClientGrantResourceFetcher_FetchData(t *testing.T) {
 
 		expectedData := importDataList{
 			{
-				ResourceName: "auth0_client.MyTestClient1",
-				ImportID:     "clientID_1",
+				ResourceName: "auth0_client_grant.client-id-1_httpstravel0comapi",
+				ImportID:     "cgr_1",
 			},
 			{
-				ResourceName: "auth0_client.MyTestClient2",
-				ImportID:     "clientID_2",
+				ResourceName: "auth0_client_grant.client-id-2_httpstravel0comapi",
+				ImportID:     "cgr_2",
 			},
 			{
-				ResourceName: "auth0_client.MyTestClient3",
-				ImportID:     "clientID_3",
+				ResourceName: "auth0_client_grant.client-id-1_httpstravel0usauth0comapiv2",
+				ImportID:     "cgr_3",
 			},
 			{
-				ResourceName: "auth0_client.MyTestClient4",
-				ImportID:     "clientID_4",
+				ResourceName: "auth0_client_grant.client-id-2_httpstravel0usauth0comapiv2",
+				ImportID:     "cgr_4",
 			},
 		}
 
@@ -228,7 +232,7 @@ func TestClientGrantResourceFetcher_FetchData(t *testing.T) {
 
 		clientGrantAPI := mock.NewMockClientGrantAPI(ctrl)
 		clientGrantAPI.EXPECT().
-			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			List(gomock.Any(), gomock.Any()).
 			Return(nil, fmt.Errorf("failed to list clients"))
 
 		fetcher := clientGrantResourceFetcher{
