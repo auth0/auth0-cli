@@ -10,7 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_branding", "auth0_client", "auth0_connection", "auth0_custom_domain", "auth0_organization", "auth0_tenant"}
+var defaultResources = []string{"auth0_action", "auth0_branding", "auth0_client", "auth0_connection", "auth0_custom_domain", "auth0_organization", "auth0_role", "auth0_tenant"}
 
 type (
 	importDataList []importDataItem
@@ -43,6 +43,9 @@ type (
 		api *auth0.API
 	}
 	organizationResourceFetcher struct {
+		api *auth0.API
+	}
+	roleResourceFetcher struct {
 		api *auth0.API
 	}
 
@@ -172,6 +175,37 @@ func (f *organizationResourceFetcher) FetchData(ctx context.Context) (importData
 			ResourceName: "auth0_organization." + sanitizeResourceName(org.(*management.Organization).GetName()),
 			ImportID:     org.(*management.Organization).GetID(),
 		})
+	}
+
+	return data, nil
+}
+
+func (f *roleResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	var page int
+	for {
+		roles, err := f.api.Role.List(
+			ctx,
+			management.Page(page),
+			management.IncludeFields("id", "name"),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, role := range roles.Roles {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_role." + sanitizeResourceName(role.GetName()),
+				ImportID:     role.GetID(),
+			})
+		}
+
+		if !roles.HasNext() {
+			break
+		}
+
+		page++
 	}
 
 	return data, nil
