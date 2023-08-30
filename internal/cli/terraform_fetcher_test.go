@@ -316,7 +316,15 @@ func TestConnectionResourceFetcher_FetchData(t *testing.T) {
 				ImportID:     "con_id1",
 			},
 			{
+				ResourceName: "auth0_connection_clients.Connection1",
+				ImportID:     "con_id1",
+			},
+			{
 				ResourceName: "auth0_connection.Connection2",
+				ImportID:     "con_id2",
+			},
+			{
+				ResourceName: "auth0_connection_clients.Connection2",
 				ImportID:     "con_id2",
 			},
 			{
@@ -324,7 +332,15 @@ func TestConnectionResourceFetcher_FetchData(t *testing.T) {
 				ImportID:     "con_id3",
 			},
 			{
+				ResourceName: "auth0_connection_clients.Connection3",
+				ImportID:     "con_id3",
+			},
+			{
 				ResourceName: "auth0_connection.Connection4",
+				ImportID:     "con_id4",
+			},
+			{
+				ResourceName: "auth0_connection_clients.Connection4",
 				ImportID:     "con_id4",
 			},
 		}
