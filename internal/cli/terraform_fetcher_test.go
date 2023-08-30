@@ -141,6 +141,18 @@ func TestClientResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestBrandingResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully generates branding import data", func(t *testing.T) {
+		fetcher := brandingResourceFetcher{}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 1)
+		assert.Equal(t, data[0].ResourceName, "auth0_branding.branding")
+		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
 func TestConnectionResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves connections data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -444,7 +456,7 @@ func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
-func TestTeantResourceFetcher_FetchData(t *testing.T) {
+func TestTenantResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully generates tenant import data", func(t *testing.T) {
 		fetcher := tenantResourceFetcher{}
 

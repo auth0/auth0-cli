@@ -55,6 +55,8 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 
 	for _, resource := range i.Resources {
 		switch resource {
+		case "auth0_branding":
+			fetchers = append(fetchers, &brandingResourceFetcher{})
 		case "auth0_action":
 			fetchers = append(fetchers, &actionResourceFetcher{api})
 		case "auth0_client":
