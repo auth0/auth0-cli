@@ -519,6 +519,107 @@ func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestRoleResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves roles data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		roleAPI := mock.NewMockRoleAPI(ctrl)
+		roleAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&management.RoleList{
+					List: management.List{
+						Start: 0,
+						Limit: 2,
+						Total: 4,
+					},
+					Roles: []*management.Role{
+						{
+							ID:   auth0.String("rol_1"),
+							Name: auth0.String("Role 1"),
+						},
+						{
+							ID:   auth0.String("rol_2"),
+							Name: auth0.String("Role 2"),
+						},
+					},
+				},
+				nil,
+			)
+		roleAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&management.RoleList{
+					List: management.List{
+						Start: 2,
+						Limit: 4,
+						Total: 4,
+					},
+					Roles: []*management.Role{
+						{
+							ID:   auth0.String("rol_3"),
+							Name: auth0.String("Role 3"),
+						},
+						{
+							ID:   auth0.String("rol_4"),
+							Name: auth0.String("Role 4"),
+						},
+					},
+				},
+				nil,
+			)
+
+		fetcher := roleResourceFetcher{
+			api: &auth0.API{
+				Role: roleAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_role.Role1",
+				ImportID:     "rol_1",
+			},
+			{
+				ResourceName: "auth0_role.Role2",
+				ImportID:     "rol_2",
+			},
+			{
+				ResourceName: "auth0_role.Role3",
+				ImportID:     "rol_3",
+			},
+			{
+				ResourceName: "auth0_role.Role4",
+				ImportID:     "rol_4",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		roleAPI := mock.NewMockRoleAPI(ctrl)
+		roleAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil, fmt.Errorf("failed to list roles"))
+
+		fetcher := roleResourceFetcher{
+			api: &auth0.API{
+				Role: roleAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to list roles")
+	})
+}
+
 func TestTenantResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully generates tenant import data", func(t *testing.T) {
 		fetcher := tenantResourceFetcher{}
