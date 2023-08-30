@@ -10,7 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_branding", "auth0_client", "auth0_connection", "auth0_custom_domain", "auth0_organization", "auth0_role", "auth0_tenant"}
+var defaultResources = []string{"auth0_action", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_organization", "auth0_role", "auth0_tenant"}
 
 type (
 	importDataList []importDataItem
@@ -32,6 +32,10 @@ type (
 
 	brandingResourceFetcher struct{}
 	clientResourceFetcher   struct {
+		api *auth0.API
+	}
+
+	clientGrantResourceFetcher struct {
 		api *auth0.API
 	}
 
@@ -84,6 +88,36 @@ func (f *clientResourceFetcher) FetchData(ctx context.Context) (importDataList, 
 		}
 
 		if !clients.HasNext() {
+			break
+		}
+
+		page++
+	}
+
+	return data, nil
+}
+
+func (f *clientGrantResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	var page int
+	for {
+		grants, err := f.api.ClientGrant.List(
+			ctx,
+			management.Page(page),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, grant := range grants.ClientGrants {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_client_grant." + grant.GetClientID() + "_" + sanitizeResourceName(grant.GetAudience()),
+				ImportID:     grant.GetID(),
+			})
+		}
+
+		if !grants.HasNext() {
 			break
 		}
 
