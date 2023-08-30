@@ -61,12 +61,16 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &brandingResourceFetcher{})
 		case "auth0_client":
 			fetchers = append(fetchers, &clientResourceFetcher{api})
+		case "auth0_client_grant":
+			fetchers = append(fetchers, &clientGrantResourceFetcher{api})
 		case "auth0_connection":
 			fetchers = append(fetchers, &connectionResourceFetcher{api})
 		case "auth0_custom_domain":
 			fetchers = append(fetchers, &customDomainResourceFetcher{api})
 		case "auth0_organization":
 			fetchers = append(fetchers, &organizationResourceFetcher{api})
+		case "auth0_role":
+			fetchers = append(fetchers, &roleResourceFetcher{api})
 		case "auth0_tenant":
 			fetchers = append(fetchers, &tenantResourceFetcher{})
 		default:

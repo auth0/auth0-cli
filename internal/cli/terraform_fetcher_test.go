@@ -140,6 +140,19 @@ func TestActionResourceFetcher_FetchData(t *testing.T) {
 		assert.EqualError(t, err, "failed to list actions")
 	})
 }
+
+func TestBrandingResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully generates branding import data", func(t *testing.T) {
+		fetcher := brandingResourceFetcher{}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 1)
+		assert.Equal(t, data[0].ResourceName, "auth0_branding.branding")
+		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
 func TestClientResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves client data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -241,15 +254,108 @@ func TestClientResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
-func TestBrandingResourceFetcher_FetchData(t *testing.T) {
-	t.Run("it successfully generates branding import data", func(t *testing.T) {
-		fetcher := brandingResourceFetcher{}
+func TestClientGrantResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves client grant data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		clientGrantAPI := mock.NewMockClientGrantAPI(ctrl)
+		clientGrantAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).
+			Return(
+				&management.ClientGrantList{
+					List: management.List{
+						Start: 0,
+						Limit: 2,
+						Total: 4,
+					},
+					ClientGrants: []*management.ClientGrant{
+						{
+							ID:       auth0.String("cgr_1"),
+							ClientID: auth0.String("client-id-1"),
+							Audience: auth0.String("https://travel0.com/api"),
+						},
+						{
+							ID:       auth0.String("cgr_2"),
+							ClientID: auth0.String("client-id-2"),
+							Audience: auth0.String("https://travel0.com/api"),
+						},
+					},
+				},
+				nil,
+			)
+		clientGrantAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).
+			Return(
+				&management.ClientGrantList{
+					List: management.List{
+						Start: 2,
+						Limit: 4,
+						Total: 4,
+					},
+					ClientGrants: []*management.ClientGrant{
+						{
+							ID:       auth0.String("cgr_3"),
+							ClientID: auth0.String("client-id-1"),
+							Audience: auth0.String("https://travel0.us.auth0.com/api/v2/"),
+						},
+						{
+							ID:       auth0.String("cgr_4"),
+							ClientID: auth0.String("client-id-2"),
+							Audience: auth0.String("https://travel0.us.auth0.com/api/v2/"),
+						},
+					},
+				},
+				nil,
+			)
+
+		fetcher := clientGrantResourceFetcher{
+			api: &auth0.API{
+				ClientGrant: clientGrantAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_client_grant.client-id-1_httpstravel0comapi",
+				ImportID:     "cgr_1",
+			},
+			{
+				ResourceName: "auth0_client_grant.client-id-2_httpstravel0comapi",
+				ImportID:     "cgr_2",
+			},
+			{
+				ResourceName: "auth0_client_grant.client-id-1_httpstravel0usauth0comapiv2",
+				ImportID:     "cgr_3",
+			},
+			{
+				ResourceName: "auth0_client_grant.client-id-2_httpstravel0usauth0comapiv2",
+				ImportID:     "cgr_4",
+			},
+		}
 
 		data, err := fetcher.FetchData(context.Background())
 		assert.NoError(t, err)
-		assert.Len(t, data, 1)
-		assert.Equal(t, data[0].ResourceName, "auth0_branding.branding")
-		assert.Greater(t, len(data[0].ImportID), 0)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		clientGrantAPI := mock.NewMockClientGrantAPI(ctrl)
+		clientGrantAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).
+			Return(nil, fmt.Errorf("failed to list clients"))
+
+		fetcher := clientGrantResourceFetcher{
+			api: &auth0.API{
+				ClientGrant: clientGrantAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to list clients")
 	})
 }
 
@@ -516,6 +622,107 @@ func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 
 		_, err := fetcher.FetchData(context.Background())
 		assert.EqualError(t, err, "failed to list organizations")
+	})
+}
+
+func TestRoleResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves roles data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		roleAPI := mock.NewMockRoleAPI(ctrl)
+		roleAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&management.RoleList{
+					List: management.List{
+						Start: 0,
+						Limit: 2,
+						Total: 4,
+					},
+					Roles: []*management.Role{
+						{
+							ID:   auth0.String("rol_1"),
+							Name: auth0.String("Role 1"),
+						},
+						{
+							ID:   auth0.String("rol_2"),
+							Name: auth0.String("Role 2"),
+						},
+					},
+				},
+				nil,
+			)
+		roleAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&management.RoleList{
+					List: management.List{
+						Start: 2,
+						Limit: 4,
+						Total: 4,
+					},
+					Roles: []*management.Role{
+						{
+							ID:   auth0.String("rol_3"),
+							Name: auth0.String("Role 3"),
+						},
+						{
+							ID:   auth0.String("rol_4"),
+							Name: auth0.String("Role 4"),
+						},
+					},
+				},
+				nil,
+			)
+
+		fetcher := roleResourceFetcher{
+			api: &auth0.API{
+				Role: roleAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_role.Role1",
+				ImportID:     "rol_1",
+			},
+			{
+				ResourceName: "auth0_role.Role2",
+				ImportID:     "rol_2",
+			},
+			{
+				ResourceName: "auth0_role.Role3",
+				ImportID:     "rol_3",
+			},
+			{
+				ResourceName: "auth0_role.Role4",
+				ImportID:     "rol_4",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		roleAPI := mock.NewMockRoleAPI(ctrl)
+		roleAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil, fmt.Errorf("failed to list roles"))
+
+		fetcher := roleResourceFetcher{
+			api: &auth0.API{
+				Role: roleAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to list roles")
 	})
 }
 
