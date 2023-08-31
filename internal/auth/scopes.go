@@ -17,7 +17,7 @@ var RequiredScopes = []string{
 	"read:anomaly_blocks", "delete:anomaly_blocks",
 	"create:log_streams", "delete:log_streams", "read:log_streams", "update:log_streams",
 	"create:actions", "delete:actions", "read:actions", "update:actions",
-	"create:organizations", "delete:organizations", "read:organizations", "update:organizations", "read:organization_members", "read:organization_member_roles",
+	"create:organizations", "delete:organizations", "read:organizations", "update:organizations", "read:organization_members", "read:organization_member_roles", "read:organization_connections",
 	"read:prompts", "update:prompts",
 	"read:attack_protection", "update:attack_protection",
 }

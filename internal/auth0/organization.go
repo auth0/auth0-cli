@@ -43,4 +43,9 @@ type OrganizationAPI interface {
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Organizations/get_organization_member_roles
 	MemberRoles(ctx context.Context, id string, userID string, opts ...management.RequestOption) (r *management.OrganizationMemberRoleList, err error)
+
+	// Connections retrieves connections enabled for an organization.
+	//
+	// See: https://auth0.com/docs/api/management/v2/#!/Organizations/get_enabled_connections
+	Connections(ctx context.Context, id string, opts ...management.RequestOption) (c *management.OrganizationConnectionList, err error)
 }
