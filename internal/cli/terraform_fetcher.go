@@ -142,10 +142,16 @@ func (f *connectionResourceFetcher) FetchData(ctx context.Context) (importDataLi
 		}
 
 		for _, connection := range connections.Connections {
-			data = append(data, importDataItem{
-				ResourceName: "auth0_connection." + sanitizeResourceName(connection.GetName()),
-				ImportID:     connection.GetID(),
-			})
+			data = append(data,
+				importDataItem{
+					ResourceName: "auth0_connection." + sanitizeResourceName(connection.GetName()),
+					ImportID:     connection.GetID(),
+				},
+				importDataItem{
+					ResourceName: "auth0_connection_clients." + sanitizeResourceName(connection.GetName()),
+					ImportID:     connection.GetID(),
+				},
+			)
 		}
 
 		if !connections.HasNext() {
