@@ -10,7 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_organization", "auth0_pages", "auth0_resource_server", "auth0_role", "auth0_tenant"}
+var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_organization", "auth0_pages", "auth0_resource_server", "auth0_role", "auth0_tenant"}
 
 type (
 	importDataList []importDataItem
@@ -29,6 +29,8 @@ type (
 	actionResourceFetcher struct {
 		api *auth0.API
 	}
+
+	attackProtectionResourceFetcher struct{}
 
 	brandingResourceFetcher struct{}
 	clientResourceFetcher   struct {
@@ -61,6 +63,15 @@ type (
 
 	tenantResourceFetcher struct{}
 )
+
+func (f *attackProtectionResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
+	return []importDataItem{
+		{
+			ResourceName: "auth0_attack_protection.attack_protection",
+			ImportID:     uuid.NewString(),
+		},
+	}, nil
+}
 
 func (f *brandingResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
 	return []importDataItem{
