@@ -141,6 +141,18 @@ func TestActionResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestAttackProtectionResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully generates attack protection import data", func(t *testing.T) {
+		fetcher := attackProtectionResourceFetcher{}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 1)
+		assert.Equal(t, data[0].ResourceName, "auth0_attack_protection.attack_protection")
+		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
 func TestBrandingResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully generates branding import data", func(t *testing.T) {
 		fetcher := brandingResourceFetcher{}
