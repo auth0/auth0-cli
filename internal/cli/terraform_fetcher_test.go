@@ -422,7 +422,15 @@ func TestConnectionResourceFetcher_FetchData(t *testing.T) {
 				ImportID:     "con_id1",
 			},
 			{
+				ResourceName: "auth0_connection_clients.Connection1",
+				ImportID:     "con_id1",
+			},
+			{
 				ResourceName: "auth0_connection.Connection2",
+				ImportID:     "con_id2",
+			},
+			{
+				ResourceName: "auth0_connection_clients.Connection2",
 				ImportID:     "con_id2",
 			},
 			{
@@ -430,7 +438,15 @@ func TestConnectionResourceFetcher_FetchData(t *testing.T) {
 				ImportID:     "con_id3",
 			},
 			{
+				ResourceName: "auth0_connection_clients.Connection3",
+				ImportID:     "con_id3",
+			},
+			{
 				ResourceName: "auth0_connection.Connection4",
+				ImportID:     "con_id4",
+			},
+			{
+				ResourceName: "auth0_connection_clients.Connection4",
 				ImportID:     "con_id4",
 			},
 		}
@@ -625,6 +641,18 @@ func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestPagesResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully generates pages import data", func(t *testing.T) {
+		fetcher := pagesResourceFetcher{}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 1)
+		assert.Equal(t, data[0].ResourceName, "auth0_pages.pages")
+		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
 func TestResourceServerResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves resource server data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -752,7 +780,7 @@ func TestRoleResourceFetcher_FetchData(t *testing.T) {
 					Roles: []*management.Role{
 						{
 							ID:   auth0.String("rol_1"),
-							Name: auth0.String("Role 1"),
+							Name: auth0.String("Role 1 - No Permissions"),
 						},
 						{
 							ID:   auth0.String("rol_2"),
@@ -762,6 +790,32 @@ func TestRoleResourceFetcher_FetchData(t *testing.T) {
 				},
 				nil,
 			)
+		roleAPI.EXPECT().Permissions(gomock.Any(), gomock.Any()).Return(
+			&management.PermissionList{
+				List: management.List{
+					Start: 0,
+					Limit: 0,
+					Total: 0,
+				},
+				Permissions: []*management.Permission{},
+			},
+			nil,
+		)
+		roleAPI.EXPECT().Permissions(gomock.Any(), gomock.Any()).Return(
+			&management.PermissionList{
+				List: management.List{
+					Start: 0,
+					Limit: 1,
+					Total: 1,
+				},
+				Permissions: []*management.Permission{
+					{
+						Name: auth0.String("Permission-1"),
+					},
+				},
+			},
+			nil,
+		)
 		roleAPI.EXPECT().
 			List(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(
@@ -784,6 +838,36 @@ func TestRoleResourceFetcher_FetchData(t *testing.T) {
 				},
 				nil,
 			)
+		roleAPI.EXPECT().Permissions(gomock.Any(), gomock.Any()).Return(
+			&management.PermissionList{
+				List: management.List{
+					Start: 0,
+					Limit: 4,
+					Total: 4,
+				},
+				Permissions: []*management.Permission{
+					{
+						Name: auth0.String("Permission-1"),
+					},
+				},
+			},
+			nil,
+		)
+		roleAPI.EXPECT().Permissions(gomock.Any(), gomock.Any()).Return(
+			&management.PermissionList{
+				List: management.List{
+					Start: 0,
+					Limit: 4,
+					Total: 4,
+				},
+				Permissions: []*management.Permission{
+					{
+						Name: auth0.String("Permission-2"),
+					},
+				},
+			},
+			nil,
+		)
 
 		fetcher := roleResourceFetcher{
 			api: &auth0.API{
@@ -793,7 +877,7 @@ func TestRoleResourceFetcher_FetchData(t *testing.T) {
 
 		expectedData := importDataList{
 			{
-				ResourceName: "auth0_role.Role1",
+				ResourceName: "auth0_role.Role1-NoPermissions",
 				ImportID:     "rol_1",
 			},
 			{
@@ -801,11 +885,23 @@ func TestRoleResourceFetcher_FetchData(t *testing.T) {
 				ImportID:     "rol_2",
 			},
 			{
+				ResourceName: "auth0_role_permissions.Role2",
+				ImportID:     "rol_2",
+			},
+			{
 				ResourceName: "auth0_role.Role3",
 				ImportID:     "rol_3",
 			},
 			{
+				ResourceName: "auth0_role_permissions.Role3",
+				ImportID:     "rol_3",
+			},
+			{
 				ResourceName: "auth0_role.Role4",
+				ImportID:     "rol_4",
+			},
+			{
+				ResourceName: "auth0_role_permissions.Role4",
 				ImportID:     "rol_4",
 			},
 		}

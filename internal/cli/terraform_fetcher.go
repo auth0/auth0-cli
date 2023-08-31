@@ -10,7 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_organization", "auth0_resource_server", "auth0_role", "auth0_tenant"}
+var defaultResources = []string{"auth0_action", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_organization", "auth0_pages", "auth0_resource_server", "auth0_role", "auth0_tenant"}
 
 type (
 	importDataList []importDataItem
@@ -50,9 +50,11 @@ type (
 		api *auth0.API
 	}
 
+	pagesResourceFetcher          struct{}
 	resourceServerResourceFetcher struct {
 		api *auth0.API
 	}
+
 	roleResourceFetcher struct {
 		api *auth0.API
 	}
@@ -146,10 +148,16 @@ func (f *connectionResourceFetcher) FetchData(ctx context.Context) (importDataLi
 		}
 
 		for _, connection := range connections.Connections {
-			data = append(data, importDataItem{
-				ResourceName: "auth0_connection." + sanitizeResourceName(connection.GetName()),
-				ImportID:     connection.GetID(),
-			})
+			data = append(data,
+				importDataItem{
+					ResourceName: "auth0_connection." + sanitizeResourceName(connection.GetName()),
+					ImportID:     connection.GetID(),
+				},
+				importDataItem{
+					ResourceName: "auth0_connection_clients." + sanitizeResourceName(connection.GetName()),
+					ImportID:     connection.GetID(),
+				},
+			)
 		}
 
 		if !connections.HasNext() {
@@ -212,6 +220,15 @@ func (f *organizationResourceFetcher) FetchData(ctx context.Context) (importData
 	return data, nil
 }
 
+func (f *pagesResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
+	return []importDataItem{
+		{
+			ResourceName: "auth0_pages.pages",
+			ImportID:     uuid.NewString(),
+		},
+	}, nil
+}
+
 func (f *resourceServerResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	var data importDataList
 
@@ -266,10 +283,24 @@ func (f *roleResourceFetcher) FetchData(ctx context.Context) (importDataList, er
 		}
 
 		for _, role := range roles.Roles {
-			data = append(data, importDataItem{
-				ResourceName: "auth0_role." + sanitizeResourceName(role.GetName()),
-				ImportID:     role.GetID(),
-			})
+			data = append(data,
+				importDataItem{
+					ResourceName: "auth0_role." + sanitizeResourceName(role.GetName()),
+					ImportID:     role.GetID(),
+				},
+			)
+
+			rolePerms, err := f.api.Role.Permissions(ctx, role.GetID())
+			if err != nil {
+				return data, nil
+			}
+			if len(rolePerms.Permissions) > 0 {
+				// `permissions` block a required field for TF Provider; cannot have empty permissions
+				data = append(data, importDataItem{
+					ResourceName: "auth0_role_permissions." + sanitizeResourceName(role.GetName()),
+					ImportID:     role.GetID(),
+				})
+			}
 		}
 
 		if !roles.HasNext() {
