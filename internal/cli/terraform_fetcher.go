@@ -10,7 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_guardian", "auth0_organization", "auth0_pages", "auth0_role", "auth0_tenant"}
+var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_email_provider", "auth0_guardian", "auth0_log_stream", "auth0_organization", "auth0_pages", "auth0_role", "auth0_tenant"}
 
 type (
 	importDataList []importDataItem
@@ -49,7 +49,12 @@ type (
 		api *auth0.API
 	}
 
-	guardianResourceFetcher     struct{}
+	emailProviderResourceFetcher struct{}
+
+	guardianResourceFetcher  struct{}
+	logStreamResourceFetcher struct {
+		api *auth0.API
+	}
 	organizationResourceFetcher struct {
 		api *auth0.API
 	}
@@ -198,13 +203,39 @@ func (f *customDomainResourceFetcher) FetchData(ctx context.Context) (importData
 	return data, nil
 }
 
+func (f *emailProviderResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
+	return []importDataItem{
+		{
+			ResourceName: "auth0_email_provider.email_provider",
+			ImportID:     uuid.NewString(),
+		},
+	}, nil
+}
+
 func (f *guardianResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	return []importDataItem{
 		{
 			ResourceName: "auth0_guardian.guardian",
-			ImportID:     uuid.NewString(),
 		},
 	}, nil
+}
+
+func (f *logStreamResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	logStreams, err := f.api.LogStream.List(ctx)
+	if err != nil {
+		return data, err
+	}
+
+	for _, log := range logStreams {
+		data = append(data, importDataItem{
+			ResourceName: "auth0_log_stream." + sanitizeResourceName(log.GetName()),
+			ImportID:     log.GetID(),
+		})
+	}
+
+	return data, nil
 }
 
 func (f *organizationResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
