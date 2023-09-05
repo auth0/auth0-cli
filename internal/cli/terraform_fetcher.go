@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 
 	"github.com/auth0/go-auth0/management"
@@ -10,7 +11,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_organization", "auth0_pages", "auth0_prompt_custom_text", "auth0_role", "auth0_tenant"}
+var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_log_stream", "auth0_organization", "auth0_pages", "auth0_prompt_custom_text", "auth0_role", "auth0_tenant"}
 
 type (
 	importDataList []importDataItem
@@ -46,6 +47,10 @@ type (
 	}
 
 	customDomainResourceFetcher struct {
+		api *auth0.API
+	}
+
+	logStreamResourceFetcher struct {
 		api *auth0.API
 	}
 	organizationResourceFetcher struct {
@@ -200,6 +205,24 @@ func (f *customDomainResourceFetcher) FetchData(ctx context.Context) (importData
 	return data, nil
 }
 
+func (f *logStreamResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	logStreams, err := f.api.LogStream.List(ctx)
+	if err != nil {
+		return data, err
+	}
+
+	for _, log := range logStreams {
+		data = append(data, importDataItem{
+			ResourceName: "auth0_log_stream." + sanitizeResourceName(log.GetName()),
+			ImportID:     log.GetID(),
+		})
+	}
+
+	return data, nil
+}
+
 func (f *organizationResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	var data importDataList
 
@@ -239,6 +262,26 @@ func (f *pagesResourceFetcher) FetchData(_ context.Context) (importDataList, err
 			ImportID:     uuid.NewString(),
 		},
 	}, nil
+}
+
+func (f *promptCustomTextResourceFetcherResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	tenant, err := f.api.Tenant.Read(ctx)
+	if err != nil {
+		return nil, err
+	}
+	promptTypes := []string{"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password", "consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa", "status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common"}
+
+	var data importDataList
+	for _, language := range tenant.GetEnabledLocales() {
+		for _, promptType := range promptTypes {
+			data = append(data, importDataItem{
+				ResourceName: fmt.Sprintf("auth0_prompt_custom_text.%s-%s", language, promptType),
+				ImportID:     promptType + "::" + language,
+			})
+		}
+	}
+
+	return data, nil
 }
 
 func (f *roleResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
