@@ -216,6 +216,7 @@ func (f *guardianResourceFetcher) FetchData(_ context.Context) (importDataList, 
 	return []importDataItem{
 		{
 			ResourceName: "auth0_guardian.guardian",
+			ImportID:     uuid.NewString(),
 		},
 	}, nil
 }
