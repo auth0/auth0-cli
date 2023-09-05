@@ -282,6 +282,7 @@ func (f *resourceServerResourceFetcher) FetchData(ctx context.Context) (importDa
 			ctx,
 			management.Page(page),
 			management.IncludeFields("id", "name"),
+			management.PerPage(100),
 		)
 		if err != nil {
 			return nil, err
