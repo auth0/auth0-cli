@@ -212,7 +212,7 @@ func (f *emailProviderResourceFetcher) FetchData(_ context.Context) (importDataL
 	}, nil
 }
 
-func (f *guardianResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+func (f *guardianResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
 	return []importDataItem{
 		{
 			ResourceName: "auth0_guardian.guardian",
