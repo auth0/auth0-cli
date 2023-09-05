@@ -552,6 +552,70 @@ func TestCustomDomainResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestLogStreamResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves log streams data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		logAPI := mock.NewMockLogStreamAPI(ctrl)
+		logAPI.EXPECT().
+			List(gomock.Any()).
+			Return(
+				[]*management.LogStream{
+					{
+						ID:   auth0.String("lst_0000000000014444"),
+						Name: auth0.String("DataDog"),
+					},
+					{
+						ID:   auth0.String("lst_0000000000015555"),
+						Name: auth0.String("HTTP Logs"),
+					},
+				},
+				nil,
+			)
+
+		fetcher := logStreamResourceFetcher{
+			api: &auth0.API{
+				LogStream: logAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_log_stream.DataDog",
+				ImportID:     "lst_0000000000014444",
+			},
+			{
+				ResourceName: "auth0_log_stream.HTTPLogs",
+				ImportID:     "lst_0000000000015555",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		logAPI := mock.NewMockLogStreamAPI(ctrl)
+		logAPI.EXPECT().
+			List(gomock.Any()).
+			Return(nil, fmt.Errorf("failed to list log streams"))
+
+		fetcher := logStreamResourceFetcher{
+			api: &auth0.API{
+				LogStream: logAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to list log streams")
+	})
+}
+
 func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves organizations data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
