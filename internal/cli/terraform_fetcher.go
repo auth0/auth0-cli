@@ -10,7 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_email_provider", "auth0_organization", "auth0_pages", "auth0_role", "auth0_tenant"}
+var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_email_provider", "auth0_log_stream", "auth0_organization", "auth0_pages", "auth0_role", "auth0_tenant"}
 
 type (
 	importDataList []importDataItem
@@ -51,6 +51,9 @@ type (
 
 	emailProviderResourceFetcher struct{}
 
+	logStreamResourceFetcher struct {
+		api *auth0.API
+	}
 	organizationResourceFetcher struct {
 		api *auth0.API
 	}
@@ -206,6 +209,24 @@ func (f *emailProviderResourceFetcher) FetchData(_ context.Context) (importDataL
 			ImportID:     uuid.NewString(),
 		},
 	}, nil
+}
+
+func (f *logStreamResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	logStreams, err := f.api.LogStream.List(ctx)
+	if err != nil {
+		return data, err
+	}
+
+	for _, log := range logStreams {
+		data = append(data, importDataItem{
+			ResourceName: "auth0_log_stream." + sanitizeResourceName(log.GetName()),
+			ImportID:     log.GetID(),
+		})
+	}
+
+	return data, nil
 }
 
 func (f *organizationResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
