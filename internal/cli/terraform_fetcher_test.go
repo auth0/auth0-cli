@@ -552,6 +552,17 @@ func TestCustomDomainResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestGuardianResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully generates pages guardian data", func(t *testing.T) {
+		fetcher := guardianResourceFetcher{}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 1)
+		assert.Equal(t, data[0].ResourceName, "auth0_guardian.guardian")
+		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
 func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves organizations data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
