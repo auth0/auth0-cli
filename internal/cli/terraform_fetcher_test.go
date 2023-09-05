@@ -741,6 +741,18 @@ func TestPagesResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestPromptProviderResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully generates prompts import data", func(t *testing.T) {
+		fetcher := promptResourceFetcher{}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 1)
+		assert.Equal(t, data[0].ResourceName, "auth0_prompt.prompts")
+		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
 func TestRoleResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves roles data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
