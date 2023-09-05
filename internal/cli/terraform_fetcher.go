@@ -10,7 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_organization", "auth0_pages", "auth0_role", "auth0_tenant"}
+var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_organization", "auth0_pages", "auth0_prompt_custom_text", "auth0_role", "auth0_tenant"}
 
 type (
 	importDataList []importDataItem
@@ -53,6 +53,10 @@ type (
 	}
 
 	pagesResourceFetcher struct{}
+
+	promptCustomTextResourceFetcherResourceFetcher struct {
+		api *auth0.API
+	}
 
 	roleResourceFetcher struct {
 		api *auth0.API
