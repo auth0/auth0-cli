@@ -635,7 +635,6 @@ func TestLogStreamResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
->>>>>>> 79c34f75391365374e59b7f9f305dac5f5e4873e
 func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves organizations data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
