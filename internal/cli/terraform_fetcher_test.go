@@ -552,6 +552,18 @@ func TestCustomDomainResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestGuardianResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully generates pages guardian data", func(t *testing.T) {
+		fetcher := guardianResourceFetcher{}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 1)
+		assert.Equal(t, data[0].ResourceName, "auth0_guardian.guardian")
+		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
 func TestEmailProviderResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully generates email provider import data", func(t *testing.T) {
 		fetcher := emailProviderResourceFetcher{}
@@ -737,6 +749,18 @@ func TestPagesResourceFetcher_FetchData(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, data, 1)
 		assert.Equal(t, data[0].ResourceName, "auth0_pages.pages")
+		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
+func TestPromptProviderResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully generates prompts import data", func(t *testing.T) {
+		fetcher := promptResourceFetcher{}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 1)
+		assert.Equal(t, data[0].ResourceName, "auth0_prompt.prompts")
 		assert.Greater(t, len(data[0].ImportID), 0)
 	})
 }
@@ -1036,5 +1060,73 @@ func TestTenantResourceFetcher_FetchData(t *testing.T) {
 		assert.Len(t, data, 1)
 		assert.Equal(t, data[0].ResourceName, "auth0_tenant.tenant")
 		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
+func TestTriggerActionsResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves trigger actions data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		actionAPI := mock.NewMockActionAPI(ctrl)
+
+		for _, trigger := range []string{"post-login", "credentials-exchange", "pre-user-registration", "post-user-registration", "post-change-password", "send-phone-message", "password-reset-post-challenge", "iga-approval", "iga-certification", "iga-fulfillment-assignment", "iga-fulfillment-execution"} {
+			bindings := []*management.ActionBinding{}
+
+			if trigger == "pre-user-registration" {
+				bindings = []*management.ActionBinding{
+					{
+						ID: auth0.String("action1"),
+					},
+					{
+						ID: auth0.String("action2"),
+					},
+				}
+			}
+
+			actionAPI.EXPECT().
+				Bindings(gomock.Any(), gomock.Any()).
+				Return(
+					&management.ActionBindingList{
+						Bindings: bindings,
+					},
+					nil,
+				)
+		}
+
+		fetcher := triggerActionsResourceFetcher{
+			api: &auth0.API{
+				Action: actionAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_trigger_actions.pre-user-registration",
+				ImportID:     "pre-user-registration",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		actionAPI := mock.NewMockActionAPI(ctrl)
+		actionAPI.EXPECT().
+			Bindings(gomock.Any(), gomock.Any()).
+			Return(nil, fmt.Errorf("failed to list action triggers"))
+
+		fetcher := triggerActionsResourceFetcher{
+			api: &auth0.API{
+				Action: actionAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to list action triggers")
 	})
 }
