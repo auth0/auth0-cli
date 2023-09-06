@@ -10,7 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_email_provider", "auth0_log_stream", "auth0_organization", "auth0_pages", "auth0_role", "auth0_tenant"}
+var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_email_provider", "auth0_guardian", "auth0_log_stream", "auth0_organization", "auth0_pages", "auth0_role", "auth0_tenant"}
 
 type (
 	importDataList []importDataItem
@@ -51,6 +51,7 @@ type (
 
 	emailProviderResourceFetcher struct{}
 
+	guardianResourceFetcher  struct{}
 	logStreamResourceFetcher struct {
 		api *auth0.API
 	}
@@ -206,6 +207,15 @@ func (f *emailProviderResourceFetcher) FetchData(_ context.Context) (importDataL
 	return []importDataItem{
 		{
 			ResourceName: "auth0_email_provider.email_provider",
+			ImportID:     uuid.NewString(),
+		},
+	}, nil
+}
+
+func (f *guardianResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
+	return []importDataItem{
+		{
+			ResourceName: "auth0_guardian.guardian",
 			ImportID:     uuid.NewString(),
 		},
 	}, nil
