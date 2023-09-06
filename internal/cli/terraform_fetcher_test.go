@@ -868,7 +868,7 @@ func TestResourceServerResourceFetcher_FetchData(t *testing.T) {
 
 		resourceServerAPI := mock.NewMockResourceServerAPI(ctrl)
 		resourceServerAPI.EXPECT().
-			List(gomock.Any(), gomock.Any(), gomock.Any()).
+			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(nil, fmt.Errorf("failed to list resource servers"))
 
 		fetcher := resourceServerResourceFetcher{
