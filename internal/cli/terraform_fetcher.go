@@ -10,7 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_email_provider", "auth0_guardian", "auth0_log_stream", "auth0_organization", "auth0_pages", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
+var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_email_provider", "auth0_guardian", "auth0_log_stream", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
 
 type (
 	importDataList []importDataItem
@@ -60,6 +60,8 @@ type (
 	}
 
 	pagesResourceFetcher struct{}
+
+	promptResourceFetcher struct{}
 
 	roleResourceFetcher struct {
 		api *auth0.API
@@ -279,6 +281,15 @@ func (f *pagesResourceFetcher) FetchData(_ context.Context) (importDataList, err
 	return []importDataItem{
 		{
 			ResourceName: "auth0_pages.pages",
+			ImportID:     uuid.NewString(),
+		},
+	}, nil
+}
+
+func (f *promptResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
+	return []importDataItem{
+		{
+			ResourceName: "auth0_prompt.prompts",
 			ImportID:     uuid.NewString(),
 		},
 	}, nil
