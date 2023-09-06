@@ -772,7 +772,7 @@ func TestResourceServerResourceFetcher_FetchData(t *testing.T) {
 
 		resourceServerAPI := mock.NewMockResourceServerAPI(ctrl)
 		resourceServerAPI.EXPECT().
-			List(gomock.Any(), gomock.Any(), gomock.Any()).
+			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(
 				&management.ResourceServerList{
 					List: management.List{
@@ -794,7 +794,7 @@ func TestResourceServerResourceFetcher_FetchData(t *testing.T) {
 				nil,
 			)
 		resourceServerAPI.EXPECT().
-			List(gomock.Any(), gomock.Any(), gomock.Any()).
+			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(
 				&management.ResourceServerList{
 					List: management.List{
