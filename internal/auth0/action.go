@@ -39,6 +39,11 @@ type ActionAPI interface {
 	// https://auth0.com/docs/api/management/v2/#!/Actions/get_triggers
 	Triggers(ctx context.Context, opts ...management.RequestOption) (l *management.ActionTriggerList, err error)
 
+	// Bindings lists the bindings of a trigger.
+	//
+	// See: https://auth0.com/docs/api/management/v2/#!/Actions/get_bindings
+	Bindings(ctx context.Context, triggerID string, opts ...management.RequestOption) (bl *management.ActionBindingList, err error)
+
 	// Deploy an action.
 	//
 	// See: https://auth0.com/docs/api/management/v2/#!/Actions/post_deploy_action

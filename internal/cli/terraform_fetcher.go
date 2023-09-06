@@ -10,7 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_email_provider", "auth0_log_stream", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_role", "auth0_tenant"}
+var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_email_provider", "auth0_guardian", "auth0_log_stream", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
 
 type (
 	importDataList []importDataItem
@@ -51,6 +51,7 @@ type (
 
 	emailProviderResourceFetcher struct{}
 
+	guardianResourceFetcher  struct{}
 	logStreamResourceFetcher struct {
 		api *auth0.API
 	}
@@ -67,6 +68,10 @@ type (
 	}
 
 	tenantResourceFetcher struct{}
+
+	triggerActionsResourceFetcher struct {
+		api *auth0.API
+	}
 )
 
 func (f *attackProtectionResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
@@ -213,6 +218,15 @@ func (f *emailProviderResourceFetcher) FetchData(_ context.Context) (importDataL
 	}, nil
 }
 
+func (f *guardianResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
+	return []importDataItem{
+		{
+			ResourceName: "auth0_guardian.guardian",
+			ImportID:     uuid.NewString(),
+		},
+	}, nil
+}
+
 func (f *logStreamResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	var data importDataList
 
@@ -333,6 +347,26 @@ func (f *tenantResourceFetcher) FetchData(_ context.Context) (importDataList, er
 			ImportID:     uuid.NewString(),
 		},
 	}, nil
+}
+
+func (f *triggerActionsResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+	triggers := []string{"post-login", "credentials-exchange", "pre-user-registration", "post-user-registration", "post-change-password", "send-phone-message", "password-reset-post-challenge", "iga-approval", "iga-certification", "iga-fulfillment-assignment", "iga-fulfillment-execution"}
+
+	for _, trigger := range triggers {
+		res, err := f.api.Action.Bindings(ctx, trigger)
+		if err != nil {
+			return nil, err
+		}
+		if len(res.Bindings) > 0 {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_trigger_actions." + trigger,
+				ImportID:     trigger,
+			})
+		}
+	}
+
+	return data, nil
 }
 
 func (f *actionResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
