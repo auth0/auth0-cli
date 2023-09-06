@@ -274,10 +274,22 @@ func (f *organizationResourceFetcher) FetchData(ctx context.Context) (importData
 	}
 
 	for _, org := range orgs {
+		organization := org.(*management.Organization)
 		data = append(data, importDataItem{
-			ResourceName: "auth0_organization." + sanitizeResourceName(org.(*management.Organization).GetName()),
-			ImportID:     org.(*management.Organization).GetID(),
+			ResourceName: "auth0_organization." + sanitizeResourceName(organization.GetName()),
+			ImportID:     organization.GetID(),
 		})
+
+		conns, err := f.api.Organization.Connections(ctx, organization.GetID())
+		if err != nil {
+			return data, err
+		}
+		if len(conns.OrganizationConnections) > 0 {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_organization_connections." + sanitizeResourceName(organization.GetName()),
+				ImportID:     organization.GetID(),
+			})
+		}
 	}
 
 	return data, nil

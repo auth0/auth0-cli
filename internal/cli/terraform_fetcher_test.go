@@ -643,6 +643,30 @@ func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 				nil,
 			)
 		orgAPI.EXPECT().
+			Connections(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&management.OrganizationConnectionList{
+					OrganizationConnections: []*management.OrganizationConnection{
+						{
+							ConnectionID: auth0.String("conn-1"),
+						},
+					},
+				},
+				nil,
+			)
+		orgAPI.EXPECT().
+			Connections(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&management.OrganizationConnectionList{
+					OrganizationConnections: []*management.OrganizationConnection{
+						{
+							ConnectionID: auth0.String("conn-1"),
+						},
+					},
+				},
+				nil,
+			)
+		orgAPI.EXPECT().
 			List(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(
 				&management.OrganizationList{
@@ -658,9 +682,29 @@ func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 						},
 						{
 							ID:   auth0.String("org_4"),
-							Name: auth0.String("Organization 4"),
+							Name: auth0.String("Organization 4 - NO CONNECTIONS!"),
 						},
 					},
+				},
+				nil,
+			)
+		orgAPI.EXPECT().
+			Connections(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&management.OrganizationConnectionList{
+					OrganizationConnections: []*management.OrganizationConnection{
+						{
+							ConnectionID: auth0.String("conn-1"),
+						},
+					},
+				},
+				nil,
+			)
+		orgAPI.EXPECT().
+			Connections(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&management.OrganizationConnectionList{
+					OrganizationConnections: []*management.OrganizationConnection{},
 				},
 				nil,
 			)
@@ -677,7 +721,15 @@ func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 				ImportID:     "org_1",
 			},
 			{
+				ResourceName: "auth0_organization_connections.organization_1",
+				ImportID:     "org_1",
+			},
+			{
 				ResourceName: "auth0_organization.organization_2",
+				ImportID:     "org_2",
+			},
+			{
+				ResourceName: "auth0_organization_connections.organization_2",
 				ImportID:     "org_2",
 			},
 			{
@@ -685,7 +737,11 @@ func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 				ImportID:     "org_3",
 			},
 			{
-				ResourceName: "auth0_organization.organization_4",
+				ResourceName: "auth0_organization_connections.organization_3",
+				ImportID:     "org_3",
+			},
+			{
+				ResourceName: "auth0_organization.organization_4_no_connections",
 				ImportID:     "org_4",
 			},
 		}
