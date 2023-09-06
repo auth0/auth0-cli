@@ -171,3 +171,23 @@ func (mr *MockOrganizationAPIMockRecorder) Update(ctx, id, o interface{}, opts .
 	varargs := append([]interface{}{ctx, id, o}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockOrganizationAPI)(nil).Update), varargs...)
 }
+
+// Connections mocks base method.
+func (m *MockOrganizationAPI) Connections(ctx context.Context, id string, opts ...management.RequestOption) (*management.OrganizationConnectionList, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Connections", varargs...)
+	ret0, _ := ret[0].(*management.OrganizationConnectionList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Connections indicates an expected call of Connections.
+func (mr *MockOrganizationAPIMockRecorder) Connections(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Connections", reflect.TypeOf((*MockOrganizationAPI)(nil).Connections), varargs...)
+}
