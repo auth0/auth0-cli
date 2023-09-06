@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 
 	"github.com/auth0/go-auth0/management"
@@ -10,7 +11,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_organization", "auth0_pages", "auth0_role", "auth0_tenant"}
+var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_email_provider", "auth0_guardian", "auth0_log_stream", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_resource_server", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
 
 type (
 	importDataList []importDataItem
@@ -48,17 +49,37 @@ type (
 	customDomainResourceFetcher struct {
 		api *auth0.API
 	}
+
+	emailProviderResourceFetcher struct{}
+
+	guardianResourceFetcher  struct{}
+	logStreamResourceFetcher struct {
+		api *auth0.API
+	}
 	organizationResourceFetcher struct {
 		api *auth0.API
 	}
 
-	pagesResourceFetcher struct{}
+	pagesResourceFetcher          struct{}
+	resourceServerResourceFetcher struct {
+		api *auth0.API
+	}
+
+	promptResourceFetcher struct{}
+
+	promptCustomTextResourceFetcherResourceFetcher struct {
+		api *auth0.API
+	}
 
 	roleResourceFetcher struct {
 		api *auth0.API
 	}
 
 	tenantResourceFetcher struct{}
+
+	triggerActionsResourceFetcher struct {
+		api *auth0.API
+	}
 )
 
 func (f *attackProtectionResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
@@ -196,6 +217,42 @@ func (f *customDomainResourceFetcher) FetchData(ctx context.Context) (importData
 	return data, nil
 }
 
+func (f *emailProviderResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
+	return []importDataItem{
+		{
+			ResourceName: "auth0_email_provider.email_provider",
+			ImportID:     uuid.NewString(),
+		},
+	}, nil
+}
+
+func (f *guardianResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
+	return []importDataItem{
+		{
+			ResourceName: "auth0_guardian.guardian",
+			ImportID:     uuid.NewString(),
+		},
+	}, nil
+}
+
+func (f *logStreamResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	logStreams, err := f.api.LogStream.List(ctx)
+	if err != nil {
+		return data, err
+	}
+
+	for _, log := range logStreams {
+		data = append(data, importDataItem{
+			ResourceName: "auth0_log_stream." + sanitizeResourceName(log.GetName()),
+			ImportID:     log.GetID(),
+		})
+	}
+
+	return data, nil
+}
+
 func (f *organizationResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	var data importDataList
 
@@ -247,6 +304,71 @@ func (f *pagesResourceFetcher) FetchData(_ context.Context) (importDataList, err
 			ImportID:     uuid.NewString(),
 		},
 	}, nil
+}
+
+func (f *promptResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
+	return []importDataItem{
+		{
+			ResourceName: "auth0_prompt.prompts",
+			ImportID:     uuid.NewString(),
+		},
+	}, nil
+}
+
+func (f *promptCustomTextResourceFetcherResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	tenant, err := f.api.Tenant.Read(ctx)
+	if err != nil {
+		return nil, err
+	}
+	promptTypes := []string{"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password", "consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa", "status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common"}
+
+	var data importDataList
+	for _, language := range tenant.GetEnabledLocales() {
+		for _, promptType := range promptTypes {
+			data = append(data, importDataItem{
+				ResourceName: fmt.Sprintf("auth0_prompt_custom_text.%s-%s", language, promptType),
+				ImportID:     promptType + "::" + language,
+			})
+		}
+	}
+
+	return data, nil
+}
+
+func (f *resourceServerResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	var page int
+	for {
+		apis, err := f.api.ResourceServer.List(
+			ctx,
+			management.Page(page),
+			management.IncludeFields("id", "name"),
+			management.PerPage(100),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, api := range apis.ResourceServers {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_resource_server." + sanitizeResourceName(api.GetName()),
+				ImportID:     api.GetID(),
+			})
+			data = append(data, importDataItem{
+				ResourceName: "auth0_resource_server_scopes." + sanitizeResourceName(api.GetName()),
+				ImportID:     api.GetID(),
+			})
+		}
+
+		if !apis.HasNext() {
+			break
+		}
+
+		page++
+	}
+
+	return data, nil
 }
 
 func (f *roleResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
@@ -301,6 +423,26 @@ func (f *tenantResourceFetcher) FetchData(_ context.Context) (importDataList, er
 			ImportID:     uuid.NewString(),
 		},
 	}, nil
+}
+
+func (f *triggerActionsResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+	triggers := []string{"post-login", "credentials-exchange", "pre-user-registration", "post-user-registration", "post-change-password", "send-phone-message", "password-reset-post-challenge", "iga-approval", "iga-certification", "iga-fulfillment-assignment", "iga-fulfillment-execution"}
+
+	for _, trigger := range triggers {
+		res, err := f.api.Action.Bindings(ctx, trigger)
+		if err != nil {
+			return nil, err
+		}
+		if len(res.Bindings) > 0 {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_trigger_actions." + trigger,
+				ImportID:     trigger,
+			})
+		}
+	}
+
+	return data, nil
 }
 
 func (f *actionResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {

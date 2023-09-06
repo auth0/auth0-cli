@@ -69,14 +69,28 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &connectionResourceFetcher{api})
 		case "auth0_custom_domain":
 			fetchers = append(fetchers, &customDomainResourceFetcher{api})
+		case "auth0_email_provider":
+			fetchers = append(fetchers, &emailProviderResourceFetcher{})
+		case "auth0_guardian":
+			fetchers = append(fetchers, &guardianResourceFetcher{})
+		case "auth0_log_stream":
+			fetchers = append(fetchers, &logStreamResourceFetcher{api})
 		case "auth0_organization":
 			fetchers = append(fetchers, &organizationResourceFetcher{api})
 		case "auth0_pages":
 			fetchers = append(fetchers, &pagesResourceFetcher{})
+		case "auth0_prompt":
+			fetchers = append(fetchers, &promptResourceFetcher{})
+		case "auth0_prompt_custom_text":
+			fetchers = append(fetchers, &promptCustomTextResourceFetcherResourceFetcher{api})
+		case "auth0_resource_server":
+			fetchers = append(fetchers, &resourceServerResourceFetcher{api})
 		case "auth0_role":
 			fetchers = append(fetchers, &roleResourceFetcher{api})
 		case "auth0_tenant":
 			fetchers = append(fetchers, &tenantResourceFetcher{})
+		case "auth0_trigger_actions":
+			fetchers = append(fetchers, &triggerActionsResourceFetcher{api})
 		default:
 			err = errors.Join(err, fmt.Errorf("unsupported resource type: %s", resource))
 		}

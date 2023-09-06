@@ -552,6 +552,94 @@ func TestCustomDomainResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestGuardianResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully generates pages guardian data", func(t *testing.T) {
+		fetcher := guardianResourceFetcher{}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 1)
+		assert.Equal(t, data[0].ResourceName, "auth0_guardian.guardian")
+		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
+func TestEmailProviderResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully generates email provider import data", func(t *testing.T) {
+		fetcher := emailProviderResourceFetcher{}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 1)
+		assert.Equal(t, data[0].ResourceName, "auth0_email_provider.email_provider")
+		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
+func TestLogStreamResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves log streams data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		logAPI := mock.NewMockLogStreamAPI(ctrl)
+		logAPI.EXPECT().
+			List(gomock.Any()).
+			Return(
+				[]*management.LogStream{
+					{
+						ID:   auth0.String("lst_0000000000014444"),
+						Name: auth0.String("DataDog"),
+					},
+					{
+						ID:   auth0.String("lst_0000000000015555"),
+						Name: auth0.String("HTTP Logs"),
+					},
+				},
+				nil,
+			)
+
+		fetcher := logStreamResourceFetcher{
+			api: &auth0.API{
+				LogStream: logAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_log_stream.DataDog",
+				ImportID:     "lst_0000000000014444",
+			},
+			{
+				ResourceName: "auth0_log_stream.HTTPLogs",
+				ImportID:     "lst_0000000000015555",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		logAPI := mock.NewMockLogStreamAPI(ctrl)
+		logAPI.EXPECT().
+			List(gomock.Any()).
+			Return(nil, fmt.Errorf("failed to list log streams"))
+
+		fetcher := logStreamResourceFetcher{
+			api: &auth0.API{
+				LogStream: logAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to list log streams")
+	})
+}
+
 func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves organizations data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -662,6 +750,195 @@ func TestPagesResourceFetcher_FetchData(t *testing.T) {
 		assert.Len(t, data, 1)
 		assert.Equal(t, data[0].ResourceName, "auth0_pages.pages")
 		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
+func TestPromptProviderResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully generates prompts import data", func(t *testing.T) {
+		fetcher := promptResourceFetcher{}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 1)
+		assert.Equal(t, data[0].ResourceName, "auth0_prompt.prompts")
+		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
+func TestPromptCustomTextResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves custom text prompts data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockEnabledLocales := []string{"es", "fr", "en"}
+
+		tenantAPI := mock.NewMockTenantAPI(ctrl)
+		tenantAPI.EXPECT().
+			Read(gomock.Any()).
+			Return(
+				&management.Tenant{
+					EnabledLocales: &mockEnabledLocales,
+				},
+				nil,
+			)
+
+		fetcher := promptCustomTextResourceFetcherResourceFetcher{
+			api: &auth0.API{
+				Tenant: tenantAPI,
+			},
+		}
+
+		promptTypes := []string{"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password", "consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa", "status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common"}
+
+		expectedData := importDataList{}
+		for _, enabledLocale := range mockEnabledLocales {
+			for _, promptType := range promptTypes {
+				expectedData = append(expectedData, importDataItem{
+					ResourceName: fmt.Sprintf("auth0_prompt_custom_text.%s-%s", enabledLocale, promptType),
+					ImportID:     fmt.Sprintf("%s::%s", promptType, enabledLocale),
+				})
+			}
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		tenantAPI := mock.NewMockTenantAPI(ctrl)
+		tenantAPI.EXPECT().
+			Read(gomock.Any()).
+			Return(nil, fmt.Errorf("failed to read tenant"))
+
+		fetcher := promptCustomTextResourceFetcherResourceFetcher{
+			api: &auth0.API{
+				Tenant: tenantAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to read tenant")
+	})
+}
+
+func TestResourceServerResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves resource server data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		resourceServerAPI := mock.NewMockResourceServerAPI(ctrl)
+		resourceServerAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&management.ResourceServerList{
+					List: management.List{
+						Start: 0,
+						Limit: 2,
+						Total: 4,
+					},
+					ResourceServers: []*management.ResourceServer{
+						{
+							ID:   auth0.String("610e04b71f71b9003a7eb3df"),
+							Name: auth0.String("Auth0 Management API"),
+						},
+						{
+							ID:   auth0.String("6358fed7b77d3c391dd78a40"),
+							Name: auth0.String("Payments API"),
+						},
+					},
+				},
+				nil,
+			)
+		resourceServerAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&management.ResourceServerList{
+					List: management.List{
+						Start: 2,
+						Limit: 4,
+						Total: 4,
+					},
+					ResourceServers: []*management.ResourceServer{
+						{
+							ID:   auth0.String("66ef6f9c435cab03def5fa16"),
+							Name: auth0.String("Blog API"),
+						},
+						{
+							ID:   auth0.String("63bf6f9b0e025715cb91ce7c"),
+							Name: auth0.String("User API"),
+						},
+					},
+				},
+				nil,
+			)
+
+		fetcher := resourceServerResourceFetcher{
+			api: &auth0.API{
+				ResourceServer: resourceServerAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_resource_server.Auth0ManagementAPI",
+				ImportID:     "610e04b71f71b9003a7eb3df",
+			},
+			{
+				ResourceName: "auth0_resource_server_scopes.Auth0ManagementAPI",
+				ImportID:     "610e04b71f71b9003a7eb3df",
+			},
+			{
+				ResourceName: "auth0_resource_server.PaymentsAPI",
+				ImportID:     "6358fed7b77d3c391dd78a40",
+			},
+			{
+				ResourceName: "auth0_resource_server_scopes.PaymentsAPI",
+				ImportID:     "6358fed7b77d3c391dd78a40",
+			},
+			{
+				ResourceName: "auth0_resource_server.BlogAPI",
+				ImportID:     "66ef6f9c435cab03def5fa16",
+			},
+			{
+				ResourceName: "auth0_resource_server_scopes.BlogAPI",
+				ImportID:     "66ef6f9c435cab03def5fa16",
+			},
+			{
+				ResourceName: "auth0_resource_server.UserAPI",
+				ImportID:     "63bf6f9b0e025715cb91ce7c",
+			},
+			{
+				ResourceName: "auth0_resource_server_scopes.UserAPI",
+				ImportID:     "63bf6f9b0e025715cb91ce7c",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		resourceServerAPI := mock.NewMockResourceServerAPI(ctrl)
+		resourceServerAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil, fmt.Errorf("failed to list resource servers"))
+
+		fetcher := resourceServerResourceFetcher{
+			api: &auth0.API{
+				ResourceServer: resourceServerAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to list resource servers")
 	})
 }
 
@@ -843,5 +1120,73 @@ func TestTenantResourceFetcher_FetchData(t *testing.T) {
 		assert.Len(t, data, 1)
 		assert.Equal(t, data[0].ResourceName, "auth0_tenant.tenant")
 		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
+func TestTriggerActionsResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves trigger actions data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		actionAPI := mock.NewMockActionAPI(ctrl)
+
+		for _, trigger := range []string{"post-login", "credentials-exchange", "pre-user-registration", "post-user-registration", "post-change-password", "send-phone-message", "password-reset-post-challenge", "iga-approval", "iga-certification", "iga-fulfillment-assignment", "iga-fulfillment-execution"} {
+			bindings := []*management.ActionBinding{}
+
+			if trigger == "pre-user-registration" {
+				bindings = []*management.ActionBinding{
+					{
+						ID: auth0.String("action1"),
+					},
+					{
+						ID: auth0.String("action2"),
+					},
+				}
+			}
+
+			actionAPI.EXPECT().
+				Bindings(gomock.Any(), gomock.Any()).
+				Return(
+					&management.ActionBindingList{
+						Bindings: bindings,
+					},
+					nil,
+				)
+		}
+
+		fetcher := triggerActionsResourceFetcher{
+			api: &auth0.API{
+				Action: actionAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_trigger_actions.pre-user-registration",
+				ImportID:     "pre-user-registration",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		actionAPI := mock.NewMockActionAPI(ctrl)
+		actionAPI.EXPECT().
+			Bindings(gomock.Any(), gomock.Any()).
+			Return(nil, fmt.Errorf("failed to list action triggers"))
+
+		fetcher := triggerActionsResourceFetcher{
+			api: &auth0.API{
+				Action: actionAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to list action triggers")
 	})
 }
