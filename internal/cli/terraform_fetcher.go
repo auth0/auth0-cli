@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 
 	"github.com/auth0/go-auth0/management"
@@ -10,7 +11,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_email_provider", "auth0_guardian", "auth0_log_stream", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_resource_server", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
+var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_email_provider", "auth0_guardian", "auth0_log_stream", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_resource_server", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
 
 type (
 	importDataList []importDataItem
@@ -65,6 +66,10 @@ type (
 	}
 
 	promptResourceFetcher struct{}
+
+	promptCustomTextResourceFetcherResourceFetcher struct {
+		api *auth0.API
+	}
 
 	roleResourceFetcher struct {
 		api *auth0.API
@@ -296,6 +301,26 @@ func (f *promptResourceFetcher) FetchData(_ context.Context) (importDataList, er
 			ImportID:     uuid.NewString(),
 		},
 	}, nil
+}
+
+func (f *promptCustomTextResourceFetcherResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	tenant, err := f.api.Tenant.Read(ctx)
+	if err != nil {
+		return nil, err
+	}
+	promptTypes := []string{"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password", "consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa", "status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common"}
+
+	var data importDataList
+	for _, language := range tenant.GetEnabledLocales() {
+		for _, promptType := range promptTypes {
+			data = append(data, importDataItem{
+				ResourceName: fmt.Sprintf("auth0_prompt_custom_text.%s-%s", language, promptType),
+				ImportID:     promptType + "::" + language,
+			})
+		}
+	}
+
+	return data, nil
 }
 
 func (f *resourceServerResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {

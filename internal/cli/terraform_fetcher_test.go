@@ -765,6 +765,66 @@ func TestPromptProviderResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestPromptCustomTextResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves custom text prompts data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockEnabledLocales := []string{"es", "fr", "en"}
+
+		tenantAPI := mock.NewMockTenantAPI(ctrl)
+		tenantAPI.EXPECT().
+			Read(gomock.Any()).
+			Return(
+				&management.Tenant{
+					EnabledLocales: &mockEnabledLocales,
+				},
+				nil,
+			)
+
+		fetcher := promptCustomTextResourceFetcherResourceFetcher{
+			api: &auth0.API{
+				Tenant: tenantAPI,
+			},
+		}
+
+		promptTypes := []string{"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password", "consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa", "status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common"}
+
+		expectedData := importDataList{}
+		for _, enabledLocale := range mockEnabledLocales {
+			for _, promptType := range promptTypes {
+				expectedData = append(expectedData, importDataItem{
+					ResourceName: fmt.Sprintf("auth0_prompt_custom_text.%s-%s", enabledLocale, promptType),
+					ImportID:     fmt.Sprintf("%s::%s", promptType, enabledLocale),
+				})
+			}
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		tenantAPI := mock.NewMockTenantAPI(ctrl)
+		tenantAPI.EXPECT().
+			Read(gomock.Any()).
+			Return(nil, fmt.Errorf("failed to read tenant"))
+
+		fetcher := promptCustomTextResourceFetcherResourceFetcher{
+			api: &auth0.API{
+				Tenant: tenantAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to read tenant")
+	})
+}
+
 func TestResourceServerResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves resource server data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
