@@ -10,7 +10,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_email_provider", "auth0_guardian", "auth0_log_stream", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
+var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_email_provider", "auth0_guardian", "auth0_log_stream", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_resource_server", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
 
 type (
 	importDataList []importDataItem
@@ -59,7 +59,10 @@ type (
 		api *auth0.API
 	}
 
-	pagesResourceFetcher struct{}
+	pagesResourceFetcher          struct{}
+	resourceServerResourceFetcher struct {
+		api *auth0.API
+	}
 
 	promptResourceFetcher struct{}
 
@@ -293,6 +296,42 @@ func (f *promptResourceFetcher) FetchData(_ context.Context) (importDataList, er
 			ImportID:     uuid.NewString(),
 		},
 	}, nil
+}
+
+func (f *resourceServerResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	var page int
+	for {
+		apis, err := f.api.ResourceServer.List(
+			ctx,
+			management.Page(page),
+			management.IncludeFields("id", "name"),
+			management.PerPage(100),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, api := range apis.ResourceServers {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_resource_server." + sanitizeResourceName(api.GetName()),
+				ImportID:     api.GetID(),
+			})
+			data = append(data, importDataItem{
+				ResourceName: "auth0_resource_server_scopes." + sanitizeResourceName(api.GetName()),
+				ImportID:     api.GetID(),
+			})
+		}
+
+		if !apis.HasNext() {
+			break
+		}
+
+		page++
+	}
+
+	return data, nil
 }
 
 func (f *roleResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
