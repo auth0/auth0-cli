@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
@@ -12,33 +13,6 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
 )
-
-func TestSanitizeResourceName(t *testing.T) {
-	testCases := []struct {
-		input    string
-		expected string
-	}{
-		// Test cases with valid names
-		{"ValidName123", "ValidName123"},
-		{"_Another_Valid-Name", "_Another_Valid-Name"},
-		{"name_with_123", "name_with_123"},
-		{"_start_with_underscore", "_start_with_underscore"},
-
-		// Test cases with invalid names to be sanitized
-		{"Invalid@Name", "InvalidName"},
-		{"Invalid Name", "InvalidName"},
-		{"123StartWithNumber", "StartWithNumber"},
-		{"-StartWithDash", "StartWithDash"},
-		{"", ""},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.input, func(t *testing.T) {
-			sanitized := sanitizeResourceName(testCase.input)
-			assert.Equal(t, testCase.expected, sanitized)
-		})
-	}
-}
 
 func TestActionResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves actions data", func(t *testing.T) {
@@ -99,19 +73,19 @@ func TestActionResourceFetcher_FetchData(t *testing.T) {
 
 		expectedData := importDataList{
 			{
-				ResourceName: "auth0_action.Action1",
+				ResourceName: "auth0_action.action_1",
 				ImportID:     "07898b80-02ba-42ee-82ad-e5b224a9b450",
 			},
 			{
-				ResourceName: "auth0_action.Action2",
+				ResourceName: "auth0_action.action_2",
 				ImportID:     "24118aae-8022-4b94-80c1-e8e28511eb92",
 			},
 			{
-				ResourceName: "auth0_action.Action3",
+				ResourceName: "auth0_action.action_3",
 				ImportID:     "fa04d1ff-fe8d-4662-b7c2-32d212719876",
 			},
 			{
-				ResourceName: "auth0_action.Action4",
+				ResourceName: "auth0_action.action_4",
 				ImportID:     "9cb897b9-c25c-47be-b5aa-e03e31af2e44",
 			},
 		}
@@ -224,19 +198,19 @@ func TestClientResourceFetcher_FetchData(t *testing.T) {
 
 		expectedData := importDataList{
 			{
-				ResourceName: "auth0_client.MyTestClient1",
+				ResourceName: "auth0_client.my_test_client_1",
 				ImportID:     "clientID_1",
 			},
 			{
-				ResourceName: "auth0_client.MyTestClient2",
+				ResourceName: "auth0_client.my_test_client_2",
 				ImportID:     "clientID_2",
 			},
 			{
-				ResourceName: "auth0_client.MyTestClient3",
+				ResourceName: "auth0_client.my_test_client_3",
 				ImportID:     "clientID_3",
 			},
 			{
-				ResourceName: "auth0_client.MyTestClient4",
+				ResourceName: "auth0_client.my_test_client_4",
 				ImportID:     "clientID_4",
 			},
 		}
@@ -329,19 +303,19 @@ func TestClientGrantResourceFetcher_FetchData(t *testing.T) {
 
 		expectedData := importDataList{
 			{
-				ResourceName: "auth0_client_grant.client-id-1_httpstravel0comapi",
+				ResourceName: "auth0_client_grant.client_id_1_https_travel0_com_api",
 				ImportID:     "cgr_1",
 			},
 			{
-				ResourceName: "auth0_client_grant.client-id-2_httpstravel0comapi",
+				ResourceName: "auth0_client_grant.client_id_2_https_travel0_com_api",
 				ImportID:     "cgr_2",
 			},
 			{
-				ResourceName: "auth0_client_grant.client-id-1_httpstravel0usauth0comapiv2",
+				ResourceName: "auth0_client_grant.client_id_1_https_travel0_us_auth0_com_api_v2",
 				ImportID:     "cgr_3",
 			},
 			{
-				ResourceName: "auth0_client_grant.client-id-2_httpstravel0usauth0comapiv2",
+				ResourceName: "auth0_client_grant.client_id_2_https_travel0_us_auth0_com_api_v2",
 				ImportID:     "cgr_4",
 			},
 		}
@@ -430,35 +404,35 @@ func TestConnectionResourceFetcher_FetchData(t *testing.T) {
 
 		expectedData := importDataList{
 			{
-				ResourceName: "auth0_connection.Connection1",
+				ResourceName: "auth0_connection.connection_1",
 				ImportID:     "con_id1",
 			},
 			{
-				ResourceName: "auth0_connection_clients.Connection1",
+				ResourceName: "auth0_connection_clients.connection_1",
 				ImportID:     "con_id1",
 			},
 			{
-				ResourceName: "auth0_connection.Connection2",
+				ResourceName: "auth0_connection.connection_2",
 				ImportID:     "con_id2",
 			},
 			{
-				ResourceName: "auth0_connection_clients.Connection2",
+				ResourceName: "auth0_connection_clients.connection_2",
 				ImportID:     "con_id2",
 			},
 			{
-				ResourceName: "auth0_connection.Connection3",
+				ResourceName: "auth0_connection.connection_3",
 				ImportID:     "con_id3",
 			},
 			{
-				ResourceName: "auth0_connection_clients.Connection3",
+				ResourceName: "auth0_connection_clients.connection_3",
 				ImportID:     "con_id3",
 			},
 			{
-				ResourceName: "auth0_connection.Connection4",
+				ResourceName: "auth0_connection.connection_4",
 				ImportID:     "con_id4",
 			},
 			{
-				ResourceName: "auth0_connection_clients.Connection4",
+				ResourceName: "auth0_connection_clients.connection_4",
 				ImportID:     "con_id4",
 			},
 		}
@@ -518,11 +492,11 @@ func TestCustomDomainResourceFetcher_FetchData(t *testing.T) {
 
 		expectedData := importDataList{
 			{
-				ResourceName: "auth0_custom_domain.travel0com",
+				ResourceName: "auth0_custom_domain.travel0_com",
 				ImportID:     "cd_XDVfBNsfL2vj7Wm1",
 			},
 			{
-				ResourceName: "auth0_custom_domain.enterprisetravel0com",
+				ResourceName: "auth0_custom_domain.enterprise_travel0_com",
 				ImportID:     "cd_XDVfBNsfL2vj7Wm1",
 			},
 		}
@@ -606,11 +580,11 @@ func TestLogStreamResourceFetcher_FetchData(t *testing.T) {
 
 		expectedData := importDataList{
 			{
-				ResourceName: "auth0_log_stream.DataDog",
+				ResourceName: "auth0_log_stream.datadog",
 				ImportID:     "lst_0000000000014444",
 			},
 			{
-				ResourceName: "auth0_log_stream.HTTPLogs",
+				ResourceName: "auth0_log_stream.http_logs",
 				ImportID:     "lst_0000000000015555",
 			},
 		}
@@ -699,19 +673,19 @@ func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 
 		expectedData := importDataList{
 			{
-				ResourceName: "auth0_organization.Organization1",
+				ResourceName: "auth0_organization.organization_1",
 				ImportID:     "org_1",
 			},
 			{
-				ResourceName: "auth0_organization.Organization2",
+				ResourceName: "auth0_organization.organization_2",
 				ImportID:     "org_2",
 			},
 			{
-				ResourceName: "auth0_organization.Organization3",
+				ResourceName: "auth0_organization.organization_3",
 				ImportID:     "org_3",
 			},
 			{
-				ResourceName: "auth0_organization.Organization4",
+				ResourceName: "auth0_organization.organization_4",
 				ImportID:     "org_4",
 			},
 		}
@@ -794,7 +768,7 @@ func TestPromptCustomTextResourceFetcher_FetchData(t *testing.T) {
 		for _, enabledLocale := range mockEnabledLocales {
 			for _, promptType := range promptTypes {
 				expectedData = append(expectedData, importDataItem{
-					ResourceName: fmt.Sprintf("auth0_prompt_custom_text.%s-%s", enabledLocale, promptType),
+					ResourceName: fmt.Sprintf("auth0_prompt_custom_text.%s_%s", enabledLocale, strings.ReplaceAll(promptType, "-", "_")),
 					ImportID:     fmt.Sprintf("%s::%s", promptType, enabledLocale),
 				})
 			}
@@ -884,35 +858,35 @@ func TestResourceServerResourceFetcher_FetchData(t *testing.T) {
 
 		expectedData := importDataList{
 			{
-				ResourceName: "auth0_resource_server.Auth0ManagementAPI",
+				ResourceName: "auth0_resource_server.auth0_management_api",
 				ImportID:     "610e04b71f71b9003a7eb3df",
 			},
 			{
-				ResourceName: "auth0_resource_server_scopes.Auth0ManagementAPI",
+				ResourceName: "auth0_resource_server_scopes.auth0_management_api",
 				ImportID:     "610e04b71f71b9003a7eb3df",
 			},
 			{
-				ResourceName: "auth0_resource_server.PaymentsAPI",
+				ResourceName: "auth0_resource_server.payments_api",
 				ImportID:     "6358fed7b77d3c391dd78a40",
 			},
 			{
-				ResourceName: "auth0_resource_server_scopes.PaymentsAPI",
+				ResourceName: "auth0_resource_server_scopes.payments_api",
 				ImportID:     "6358fed7b77d3c391dd78a40",
 			},
 			{
-				ResourceName: "auth0_resource_server.BlogAPI",
+				ResourceName: "auth0_resource_server.blog_api",
 				ImportID:     "66ef6f9c435cab03def5fa16",
 			},
 			{
-				ResourceName: "auth0_resource_server_scopes.BlogAPI",
+				ResourceName: "auth0_resource_server_scopes.blog_api",
 				ImportID:     "66ef6f9c435cab03def5fa16",
 			},
 			{
-				ResourceName: "auth0_resource_server.UserAPI",
+				ResourceName: "auth0_resource_server.user_api",
 				ImportID:     "63bf6f9b0e025715cb91ce7c",
 			},
 			{
-				ResourceName: "auth0_resource_server_scopes.UserAPI",
+				ResourceName: "auth0_resource_server_scopes.user_api",
 				ImportID:     "63bf6f9b0e025715cb91ce7c",
 			},
 		}
@@ -1057,31 +1031,31 @@ func TestRoleResourceFetcher_FetchData(t *testing.T) {
 
 		expectedData := importDataList{
 			{
-				ResourceName: "auth0_role.Role1-NoPermissions",
+				ResourceName: "auth0_role.role_1_no_permissions",
 				ImportID:     "rol_1",
 			},
 			{
-				ResourceName: "auth0_role.Role2",
+				ResourceName: "auth0_role.role_2",
 				ImportID:     "rol_2",
 			},
 			{
-				ResourceName: "auth0_role_permissions.Role2",
+				ResourceName: "auth0_role_permissions.role_2",
 				ImportID:     "rol_2",
 			},
 			{
-				ResourceName: "auth0_role.Role3",
+				ResourceName: "auth0_role.role_3",
 				ImportID:     "rol_3",
 			},
 			{
-				ResourceName: "auth0_role_permissions.Role3",
+				ResourceName: "auth0_role_permissions.role_3",
 				ImportID:     "rol_3",
 			},
 			{
-				ResourceName: "auth0_role.Role4",
+				ResourceName: "auth0_role.role_4",
 				ImportID:     "rol_4",
 			},
 			{
-				ResourceName: "auth0_role_permissions.Role4",
+				ResourceName: "auth0_role_permissions.role_4",
 				ImportID:     "rol_4",
 			},
 		}
@@ -1161,7 +1135,7 @@ func TestTriggerActionsResourceFetcher_FetchData(t *testing.T) {
 
 		expectedData := importDataList{
 			{
-				ResourceName: "auth0_trigger_actions.pre-user-registration",
+				ResourceName: "auth0_trigger_actions.pre_user_registration",
 				ImportID:     "pre-user-registration",
 			},
 		}

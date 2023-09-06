@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"text/template"
 
 	"github.com/hashicorp/go-version"
@@ -396,4 +398,26 @@ func cleanOutputDirectory(outputDIR string) error {
 	}
 
 	return joinedErrors
+}
+
+// sanitizeResourceName will return a valid terraform resource name.
+//
+// A name must start with a letter or underscore and may
+// contain only letters, digits, underscores, and dashes.
+func sanitizeResourceName(name string) string {
+	// Regular expression pattern to remove invalid characters.
+	namePattern := "[^a-zA-Z0-9_]+"
+	re := regexp.MustCompile(namePattern)
+
+	sanitizedName := re.ReplaceAllString(name, "_")
+
+	// Regular expression pattern to remove leading digits or dashes.
+	namePattern = "^[0-9-]+"
+	re = regexp.MustCompile(namePattern)
+
+	sanitizedName = re.ReplaceAllString(sanitizedName, "")
+	sanitizedName = strings.Trim(sanitizedName, "_")
+	sanitizedName = strings.ToLower(sanitizedName)
+
+	return sanitizedName
 }
