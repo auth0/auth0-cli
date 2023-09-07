@@ -488,3 +488,33 @@ func TestTerraformInputs_ParseResourceFetchers(t *testing.T) {
 		})
 	}
 }
+
+func TestSanitizeResourceName(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		// Test cases with valid names
+		{"ValidName123", "validname123"},
+		{"_Another_Valid-Name", "another_valid_name"},
+		{"name_with_123", "name_with_123"},
+		{"name-with-dashes", "name_with_dashes"},
+		{"_starts_and_ends_with_underscore_", "starts_and_ends_with_underscore"},
+		{"multiple          spaces       between", "multiple_spaces_between"},
+		{"https://travel0.us.auth0.com/api/v2/", "https_travel0_us_auth0_com_api_v2"},
+
+		// Test cases with invalid names to be sanitized
+		{"Invalid@Name", "invalid_name"},
+		{"Invalid Name", "invalid_name"},
+		{"123 Starts With Number", "starts_with_number"},
+		{"-Starts With Dash", "starts_with_dash"},
+		{"", ""},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.input, func(t *testing.T) {
+			sanitized := sanitizeResourceName(testCase.input)
+			assert.Equal(t, testCase.expected, sanitized)
+		})
+	}
+}

@@ -2,8 +2,6 @@ package cli
 
 import (
 	"context"
-	"fmt"
-	"regexp"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/google/uuid"
@@ -147,7 +145,7 @@ func (f *clientGrantResourceFetcher) FetchData(ctx context.Context) (importDataL
 
 		for _, grant := range grants.ClientGrants {
 			data = append(data, importDataItem{
-				ResourceName: "auth0_client_grant." + grant.GetClientID() + "_" + sanitizeResourceName(grant.GetAudience()),
+				ResourceName: "auth0_client_grant." + sanitizeResourceName(grant.GetClientID()+"_"+grant.GetAudience()),
 				ImportID:     grant.GetID(),
 			})
 		}
@@ -326,7 +324,7 @@ func (f *promptCustomTextResourceFetcherResourceFetcher) FetchData(ctx context.C
 	for _, language := range tenant.GetEnabledLocales() {
 		for _, promptType := range promptTypes {
 			data = append(data, importDataItem{
-				ResourceName: fmt.Sprintf("auth0_prompt_custom_text.%s-%s", language, promptType),
+				ResourceName: "auth0_prompt_custom_text." + sanitizeResourceName(language+"_"+promptType),
 				ImportID:     promptType + "::" + language,
 			})
 		}
@@ -436,7 +434,7 @@ func (f *triggerActionsResourceFetcher) FetchData(ctx context.Context) (importDa
 		}
 		if len(res.Bindings) > 0 {
 			data = append(data, importDataItem{
-				ResourceName: "auth0_trigger_actions." + trigger,
+				ResourceName: "auth0_trigger_actions." + sanitizeResourceName(trigger),
 				ImportID:     trigger,
 			})
 		}
@@ -473,24 +471,4 @@ func (f *actionResourceFetcher) FetchData(ctx context.Context) (importDataList, 
 	}
 
 	return data, nil
-}
-
-// sanitizeResourceName will return a valid terraform resource name.
-//
-// A name must start with a letter or underscore and may
-// contain only letters, digits, underscores, and dashes.
-func sanitizeResourceName(name string) string {
-	// Regular expression pattern to remove invalid characters.
-	namePattern := "[^a-zA-Z0-9_-]+"
-	re := regexp.MustCompile(namePattern)
-
-	sanitizedName := re.ReplaceAllString(name, "")
-
-	// Regular expression pattern to remove leading digits or dashes.
-	namePattern = "^[0-9-]+"
-	re = regexp.MustCompile(namePattern)
-
-	sanitizedName = re.ReplaceAllString(sanitizedName, "")
-
-	return sanitizedName
 }
