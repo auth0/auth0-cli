@@ -12,8 +12,9 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/rehttp"
-	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/go-auth0/management"
+
+	"github.com/auth0/auth0-cli/internal/buildinfo"
 )
 
 func initializeManagementClient(tenantDomain string, accessToken string) (*management.Management, error) {
