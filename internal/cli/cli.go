@@ -3,17 +3,13 @@ package cli
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strings"
 
-	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
 	"github.com/auth0/auth0-cli/internal/analytics"
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
-	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/iostream"
@@ -108,15 +104,7 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 		}
 	}
 
-	userAgent := fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v"))
-
-	api, err := management.New(
-		tenant.Domain,
-		management.WithStaticToken(tenant.GetAccessToken()),
-		management.WithUserAgent(userAgent),
-		management.WithAuth0ClientEnvEntry("Auth0-CLI", strings.TrimPrefix(buildinfo.Version, "v")),
-		management.WithRetries(5, []int{http.StatusTooManyRequests, http.StatusInternalServerError}),
-	)
+	api, err := initializeManagementClient(tenant)
 	if err != nil {
 		return err
 	}
