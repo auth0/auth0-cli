@@ -104,7 +104,7 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 		}
 	}
 
-	api, err := initializeManagementClient(tenant)
+	api, err := initializeManagementClient(tenant.Domain, tenant.GetAccessToken())
 	if err != nil {
 		return err
 	}

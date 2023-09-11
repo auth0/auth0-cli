@@ -13,14 +13,13 @@ import (
 
 	"github.com/PuerkitoBio/rehttp"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
-	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/go-auth0/management"
 )
 
-func initializeManagementClient(tenant config.Tenant) (*management.Management, error) {
+func initializeManagementClient(tenantDomain string, accessToken string) (*management.Management, error) {
 	client, err := management.New(
-		tenant.Domain,
-		management.WithStaticToken(tenant.GetAccessToken()),
+		tenantDomain,
+		management.WithStaticToken(accessToken),
 		management.WithUserAgent(fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v"))),
 		management.WithAuth0ClientEnvEntry("Auth0-CLI", strings.TrimPrefix(buildinfo.Version, "v")),
 		management.WithNoRetries(),
