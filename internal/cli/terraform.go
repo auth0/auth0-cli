@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-exec/tfexec"
 	"github.com/spf13/cobra"
 
+	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
@@ -144,7 +145,11 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 			return err
 		}
 
-		data, err := fetchImportData(cmd.Context(), resources...)
+		var data importDataList
+		err = ansi.Spinner("Fetching data from Auth0", func() error {
+			data, err = fetchImportData(cmd.Context(), resources...)
+			return err
+		})
 		if err != nil {
 			return err
 		}
@@ -162,7 +167,11 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 		}
 
 		if terraformProviderCredentialsAreAvailable() {
-			if err := generateTerraformResourceConfig(cmd.Context(), inputs.OutputDIR); err == nil {
+			err = ansi.Spinner("Generating Terraform configuration", func() error {
+				return generateTerraformResourceConfig(cmd.Context(), inputs.OutputDIR)
+			})
+
+			if err == nil {
 				cli.renderer.Infof("Terraform resource config files generated successfully in: %q", inputs.OutputDIR)
 				cli.renderer.Infof(
 					"Review the config and generate the terraform state by running: \n\n	cd %s && ./terraform apply",
