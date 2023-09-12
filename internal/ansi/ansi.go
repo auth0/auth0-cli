@@ -66,6 +66,11 @@ func Italic(text string) string {
 	return color.Sprintf(color.Italic(text))
 }
 
+// URL formats URL links if the writer supports it
+func URL(text string) string {
+	return color.Sprintf(color.Underline(text))
+}
+
 // Red returns text colored red.
 func Red(text string) string {
 	return color.Sprintf(color.Red(text))

@@ -166,43 +166,42 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 			return err
 		}
 
+		cdInstructions := ""
+		if inputs.OutputDIR != "./" {
+			cdInstructions = fmt.Sprintf("cd %s && ", inputs.OutputDIR)
+		}
+
 		if terraformProviderCredentialsAreAvailable() {
 			err = ansi.Spinner("Generating Terraform configuration", func() error {
 				return generateTerraformResourceConfig(cmd.Context(), inputs.OutputDIR)
 			})
 
-			if err == nil {
-				cli.renderer.Infof("Terraform resource config files generated successfully in: %q", inputs.OutputDIR)
-				cli.renderer.Infof(
-					"Review the config and generate the terraform state by running: \n\n	cd %s && ./terraform apply",
-					inputs.OutputDIR,
-				)
-				cli.renderer.Newline()
-				cli.renderer.Infof(
-					"After running the above command and generating the state, " +
-						"the ./terraform binary and auth0_import.tf files can be safely removed.\n",
-				)
-
+			if err != nil {
+				cli.renderer.Warnf("Terraform resource config generated successfully but error with terraform plan.\n\n")
+				cli.renderer.Warnf("Run " + ansi.Cyan(cdInstructions+"./terraform plan") + " to troubleshoot\n\n")
+				cli.renderer.Warnf("Once the plan succeeds, " + ansi.Cyan("./terraform apply") + " can be run to complete import.\n\n")
+				cli.renderer.Infof("The terraform binary and auth0_import.tf files can be deleted.\n")
 				return nil
 			}
+
+			cli.renderer.Infof("Terraform resource config files generated successfully in: %s", inputs.OutputDIR)
+			cli.renderer.Infof(
+				"Review the config and generate the terraform state by running: \n\n	" + ansi.Cyan(cdInstructions+"./terraform apply") + "\n",
+			)
+			cli.renderer.Infof(
+				"Once Terraform files are auto-generated, the terraform binary and auth0_import.tf files can be deleted.\n",
+			)
+
+			return nil
 		}
 
-		cli.renderer.Infof("Terraform resource import files generated successfully in: %q", inputs.OutputDIR)
-		cli.renderer.Infof(
-			"Follow this " +
-				"[quickstart](https://registry.terraform.io/providers/auth0/auth0/latest/docs/guides/quickstart) " +
-				"to go through setting up an Auth0 application for the provider to authenticate against and manage " +
-				"resources.",
-		)
-		cli.renderer.Infof(
-			"After setting up the provider credentials, run: \n\n"+
-				"	cd %s && terraform init && terraform plan -generate-config-out=auth0_generated.tf && terraform apply",
-			inputs.OutputDIR,
-		)
-		cli.renderer.Newline()
-		cli.renderer.Infof(
-			"After running the above command and generating the state, " +
-				"the auth0_import.tf file can be safely removed.\n",
+		cli.renderer.Errorf("Terraform provider credentials not detected\n")
+		cli.renderer.Warnf(
+			"Refer to following guide on how to create a dedicated Auth0 client and configure credentials: " +
+				ansi.URL("https://registry.terraform.io/providers/auth0/auth0/latest/docs/guides/quickstart") + "\n\n" +
+				"After provider credentials are set, run: \n\n" +
+				ansi.Cyan(cdInstructions+"./terraform init && ./terraform plan -generate-config-out=auth0_generated.tf && ./terraform apply") + "\n\n" +
+				"Once Terraform files are auto-generated, the terraform binary and auth0_import.tf files can be deleted.\n",
 		)
 
 		return nil
