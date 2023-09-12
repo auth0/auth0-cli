@@ -179,7 +179,7 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 			if err != nil {
 				cli.renderer.Warnf("Terraform resource config generated successfully but error with terraform plan.\n\n")
 				cli.renderer.Warnf("Run " + ansi.Cyan(cdInstructions+"./terraform plan") + " to troubleshoot\n\n")
-				cli.renderer.Warnf("Once the plan succeeds, " + ansi.Cyan("./terraform apply") + " can be run to complete import.\n\n")
+				cli.renderer.Warnf("Once the plan succeeds, run " + ansi.Cyan("./terraform apply") + " to complete import.\n\n")
 				cli.renderer.Infof("The terraform binary and auth0_import.tf files can be deleted.\n")
 				return nil
 			}
@@ -200,8 +200,8 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 			"Refer to following guide on how to create a dedicated Auth0 client and configure credentials: " +
 				ansi.URL("https://registry.terraform.io/providers/auth0/auth0/latest/docs/guides/quickstart") + "\n\n" +
 				"After provider credentials are set, run: \n\n" +
-				ansi.Cyan(cdInstructions+"./terraform init && ./terraform plan -generate-config-out=auth0_generated.tf && ./terraform apply") + "\n\n" +
-				"Once Terraform files are auto-generated, the terraform binary and auth0_import.tf files can be deleted.\n",
+				ansi.Cyan(cdInstructions+"terraform init && terraform plan -generate-config-out=auth0_generated.tf && terraform apply") + "\n\n" +
+				"Once the Terraform file is auto-generated, the auth0_import.tf file can be deleted.\n",
 		)
 
 		return nil
