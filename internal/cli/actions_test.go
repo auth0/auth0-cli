@@ -211,7 +211,7 @@ func TestActionsPickerOptions(t *testing.T) {
 	}
 }
 func TestActionsInputSecretsToActionSecrets(t *testing.T) {
-	t.Run("Should map input secrets to action payload", func(t *testing.T) {
+	t.Run("it should map input secrets to action payload", func(t *testing.T) {
 		input := map[string]string{
 			"secret1": "value1",
 			"secret2": "value2",
@@ -236,7 +236,7 @@ func TestActionsInputSecretsToActionSecrets(t *testing.T) {
 		assert.Equal(t, res, &expected)
 	})
 
-	t.Run("Should handle empty input secrets", func(t *testing.T) {
+	t.Run("it should handle empty input secrets", func(t *testing.T) {
 		emptyInput := map[string]string{}
 		res := inputSecretsToActionSecrets(emptyInput)
 		expected := []management.ActionSecret{}
