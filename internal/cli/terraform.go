@@ -124,10 +124,11 @@ func generateTerraformCmd(cli *cli) *cobra.Command {
 		Use:     "generate",
 		Aliases: []string{"gen", "export"}, // Reconsider aliases and command name before releasing.
 		Short:   "Generate terraform configuration for your Auth0 Tenant",
-		Long: "This command is designed to streamline the process of generating Terraform configuration files for " +
+		Long: "(Experimental) This command is designed to streamline the process of generating Terraform configuration files for " +
 			"your Auth0 resources, serving as a bridge between the two.\n\nIt automatically scans your Auth0 Tenant " +
 			"and compiles a set of Terraform configuration files based on the existing resources and configurations." +
-			"\n\nThe generated Terraform files are written in HashiCorp Configuration Language (HCL).",
+			"\n\nThe generated Terraform files are written in HashiCorp Configuration Language (HCL)." +
+			"\n\nThis command is experimental and is subject to change in future versions.",
 		RunE: generateTerraformCmdRun(cli, &inputs),
 	}
 
