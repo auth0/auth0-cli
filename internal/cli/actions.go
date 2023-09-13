@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -333,11 +332,7 @@ func updateActionCmd(cli *cli) *cobra.Command {
 				updatedAction.Dependencies = inputDependenciesToActionDependencies(inputs.Dependencies)
 			}
 			if len(inputs.Secrets) != 0 {
-				s, _ := json.MarshalIndent(inputs.Secrets, "", "\t")
-				fmt.Print(string(s))
 				updatedAction.Secrets = inputSecretsToActionSecrets(inputs.Secrets)
-				s2, _ := json.MarshalIndent(updatedAction.Secrets, "", "\t")
-				fmt.Print(string(s2))
 			}
 
 			if err = ansi.Waiting(func() error {
