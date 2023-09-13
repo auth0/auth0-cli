@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.1.0](https://github.com/auth0/auth0-cli/tree/v1.0.1) (Sept 15, 2023)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.0.1...v1.1.0)
+
+### Added
+
+- `terraform generate` command for auto-generating Terraform configuration from your Auth0 tenant. Refer to the [Generate Terraform Config guide](https://registry.terraform.io/providers/auth0/auth0/latest/docs/guides/generate_terraform_config) for instructions on how to use. [#792]
+- Retry for select HTTP error codes [#839]
+
+### Fixed
+
+- Passing of multiple secrets for `auth0 action` commands [#844]
+- Show non-ready custom domains with `auth0 domains list` command [#781]
+
 ## [v1.0.1](https://github.com/auth0/auth0-cli/tree/v1.0.1) (Apr 20, 2023)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.0.0...v1.0.1)
@@ -182,6 +196,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 [unreleased]: https://github.com/auth0/auth0-cli/compare/v1.0.0...HEAD
+[#792]: https://github.com/auth0/auth0-cli/issues/792
+[#839]: https://github.com/auth0/auth0-cli/issues/839
+[#844]: https://github.com/auth0/auth0-cli/issues/844
+[#781]: https://github.com/auth0/auth0-cli/issues/781
 [#743]: https://github.com/auth0/auth0-cli/issues/743
 [#747]: https://github.com/auth0/auth0-cli/issues/747
 [#745]: https://github.com/auth0/auth0-cli/issues/745
