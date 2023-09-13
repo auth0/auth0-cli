@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
@@ -560,8 +561,8 @@ func inputSecretsToActionSecrets(secrets map[string]string) *[]management.Action
 
 	for name, value := range secrets {
 		actionSecrets = append(actionSecrets, management.ActionSecret{
-			Name:  &name,
-			Value: &value,
+			Name:  auth0.String(name),
+			Value: auth0.String(value),
 		})
 	}
 
