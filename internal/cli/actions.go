@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -271,7 +272,7 @@ func updateActionCmd(cli *cli) *cobra.Command {
 			"To update interactively, use `auth0 actions update` with no arguments.\n\n" +
 			"To update non-interactively, supply the action id, name, code, secrets and " +
 			"dependencies through the flags.",
-		Example: `  auth0 actions update <action-id> 
+		Example: `  auth0 actions update <action-id>
   auth0 actions update <action-id> --name myaction
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)"
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
@@ -332,7 +333,11 @@ func updateActionCmd(cli *cli) *cobra.Command {
 				updatedAction.Dependencies = inputDependenciesToActionDependencies(inputs.Dependencies)
 			}
 			if len(inputs.Secrets) != 0 {
+				s, _ := json.MarshalIndent(inputs.Secrets, "", "\t")
+				fmt.Print(string(s))
 				updatedAction.Secrets = inputSecretsToActionSecrets(inputs.Secrets)
+				s2, _ := json.MarshalIndent(updatedAction.Secrets, "", "\t")
+				fmt.Print(string(s2))
 			}
 
 			if err = ansi.Waiting(func() error {
@@ -558,7 +563,9 @@ func inputDependenciesToActionDependencies(dependencies map[string]string) *[]ma
 func inputSecretsToActionSecrets(secrets map[string]string) *[]management.ActionSecret {
 	actionSecrets := make([]management.ActionSecret, 0)
 
-	for name, value := range secrets {
+	for k, v := range secrets {
+		name := k
+		value := v
 		actionSecrets = append(actionSecrets, management.ActionSecret{
 			Name:  &name,
 			Value: &value,
