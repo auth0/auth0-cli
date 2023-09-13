@@ -68,7 +68,7 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &clientResourceFetcher{api})
 		case "auth0_client_grant":
 			fetchers = append(fetchers, &clientGrantResourceFetcher{api})
-		case "auth0_connection":
+		case "auth0_connection", "auth0_connection_clients":
 			fetchers = append(fetchers, &connectionResourceFetcher{api})
 		case "auth0_custom_domain":
 			fetchers = append(fetchers, &customDomainResourceFetcher{api})
@@ -78,7 +78,7 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &guardianResourceFetcher{})
 		case "auth0_log_stream":
 			fetchers = append(fetchers, &logStreamResourceFetcher{api})
-		case "auth0_organization":
+		case "auth0_organization", "auth0_organization_connections":
 			fetchers = append(fetchers, &organizationResourceFetcher{api})
 		case "auth0_pages":
 			fetchers = append(fetchers, &pagesResourceFetcher{})
@@ -86,9 +86,9 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &promptResourceFetcher{})
 		case "auth0_prompt_custom_text":
 			fetchers = append(fetchers, &promptCustomTextResourceFetcherResourceFetcher{api})
-		case "auth0_resource_server":
+		case "auth0_resource_server", "auth0_resource_server_scopes":
 			fetchers = append(fetchers, &resourceServerResourceFetcher{api})
-		case "auth0_role":
+		case "auth0_role", "auth0_role_permissions":
 			fetchers = append(fetchers, &roleResourceFetcher{api})
 		case "auth0_tenant":
 			fetchers = append(fetchers, &tenantResourceFetcher{})
