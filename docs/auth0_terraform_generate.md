@@ -9,6 +9,8 @@ has_toc: false
 
 It automatically scans your Auth0 Tenant and compiles a set of Terraform configuration files based on the existing resources and configurations.
 
+Refer to the [instructional guide](https://registry.terraform.io/providers/auth0/auth0/latest/docs/guides/generate_terraform_config) for specific details on how to use this command.
+
 The generated Terraform files are written in HashiCorp Configuration Language (HCL).
 
 This command is experimental and is subject to change in future versions.
@@ -21,7 +23,9 @@ auth0 terraform generate [flags]
 ## Examples
 
 ```
-
+  auth0 tf generate
+		auth0 tf generate --output-dir tmp-auth0-tf
+		auth0 tf generate --output-dir tmp-auth0-tf --resources auth0_action,auth0_tenant,auth0_client 
 ```
 
 
