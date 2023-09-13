@@ -22,8 +22,8 @@ auth0 terraform generate [flags]
 
 ```
   auth0 tf generate
-		auth0 tf generate --output-dir tmp-auth0-tf
-		auth0 tf generate --output-dir tmp-auth0-tf --resources auth0_action,auth0_tenant,auth0_client 
+  auth0 tf generate --output-dir tmp-auth0-tf
+  auth0 tf generate --output-dir tmp-auth0-tf --resources auth0_action,auth0_tenant,auth0_client 
 ```
 
 
