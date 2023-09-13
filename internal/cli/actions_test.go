@@ -210,3 +210,37 @@ func TestActionsPickerOptions(t *testing.T) {
 		})
 	}
 }
+func TestActionsInputSecretsToActionSecrets(t *testing.T) {
+	t.Run("it should map input secrets to action payload", func(t *testing.T) {
+		input := map[string]string{
+			"secret1": "value1",
+			"secret2": "value2",
+			"secret3": "value3",
+		}
+		res := inputSecretsToActionSecrets(input)
+		expected := []management.ActionSecret{
+			{
+				Name:  auth0.String("secret1"),
+				Value: auth0.String("value1"),
+			},
+			{
+				Name:  auth0.String("secret2"),
+				Value: auth0.String("value2"),
+			},
+			{
+				Name:  auth0.String("secret3"),
+				Value: auth0.String("value3"),
+			},
+		}
+		assert.Len(t, *res, 3)
+		assert.Equal(t, res, &expected)
+	})
+
+	t.Run("it should handle empty input secrets", func(t *testing.T) {
+		emptyInput := map[string]string{}
+		res := inputSecretsToActionSecrets(emptyInput)
+		expected := []management.ActionSecret{}
+		assert.Len(t, *res, 0)
+		assert.Equal(t, res, &expected)
+	})
+}
