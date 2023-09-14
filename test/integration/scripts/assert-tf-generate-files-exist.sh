@@ -1,12 +1,19 @@
 #!/bin/bash
 
-files=(
-    "tmp-tf-gen/auth0_generated.tf" 
-    "tmp-tf-gen/auth0_import.tf" 
-    "tmp-tf-gen/auth0_main.tf" 
-    "tmp-tf-gen/terraform" 
-    "tmp-tf-gen/.terraform.lock.hcl" 
-)
+if [[ $1 == *partial_success* ]]; then
+    files=(
+        "tmp-tf-gen/auth0_import.tf" 
+        "tmp-tf-gen/auth0_main.tf" 
+    )
+else
+    files=(
+        "tmp-tf-gen/auth0_generated.tf" 
+        "tmp-tf-gen/auth0_import.tf" 
+        "tmp-tf-gen/auth0_main.tf" 
+        "tmp-tf-gen/terraform" 
+        "tmp-tf-gen/.terraform.lock.hcl" 
+    )
+fi
 
 has_error=false
 
