@@ -128,7 +128,7 @@ func generateTerraformCmd(cli *cli) *cobra.Command {
 			"your Auth0 resources, serving as a bridge between the two.\n\nIt automatically scans your Auth0 Tenant " +
 			"and compiles a set of Terraform configuration files (HCL) based on the existing resources and configurations." +
 			"\n\nRefer to the [instructional guide](https://registry.terraform.io/providers/auth0/auth0/latest/docs/guides/generate_terraform_config) for specific details on how to use this command." +
-			"\n\n**Note:** This command is experimental and is subject to change in future versions.",
+			"\n\n**Warning:** This command is experimental and is subject to change in future versions.",
 		Example: `  auth0 tf generate
   auth0 tf generate --output-dir tmp-auth0-tf
   auth0 tf generate --output-dir tmp-auth0-tf --resources auth0_action,auth0_tenant,auth0_client `,
