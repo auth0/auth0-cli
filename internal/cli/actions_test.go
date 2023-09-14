@@ -233,7 +233,7 @@ func TestActionsInputSecretsToActionSecrets(t *testing.T) {
 			},
 		}
 		assert.Len(t, *res, 3)
-		assert.Equal(t, res, &expected)
+		assert.Equal(t, *res, expected)
 	})
 
 	t.Run("it should handle empty input secrets", func(t *testing.T) {
