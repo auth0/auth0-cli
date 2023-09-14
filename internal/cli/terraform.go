@@ -122,7 +122,7 @@ func generateTerraformCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "generate",
-		Aliases: []string{"gen", "export"}, // Reconsider aliases and command name before releasing.
+		Aliases: []string{"gen"},
 		Short:   "Generate terraform configuration for your Auth0 Tenant",
 		Long: "(Experimental) This command is designed to streamline the process of generating Terraform configuration files for " +
 			"your Auth0 resources, serving as a bridge between the two.\n\nIt automatically scans your Auth0 Tenant " +
@@ -130,7 +130,8 @@ func generateTerraformCmd(cli *cli) *cobra.Command {
 			"\n\nRefer to the [instructional guide](https://registry.terraform.io/providers/auth0/auth0/latest/docs/guides/generate_terraform_config) for specific details on how to use this command." +
 			"\n\n**Warning:** This command is experimental and is subject to change in future versions.",
 		Example: `  auth0 tf generate
-  auth0 tf generate --output-dir tmp-auth0-tf
+  auth0 tf generate -o tmp-auth0-tf
+  auth0 tf generate -o tmp-auth0-tf -r auth0_client
   auth0 tf generate --output-dir tmp-auth0-tf --resources auth0_action,auth0_tenant,auth0_client `,
 		RunE: generateTerraformCmdRun(cli, &inputs),
 	}
