@@ -1,0 +1,43 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  000 - setup tf tests:
+    command: sh test/integration/scripts/setup-tf-credentials.sh
+  001.1 - it successfully runs for a single resource:
+    command: auth0 tf generate --output-dir tmp-tf-gen -r auth0_tenant
+    exit-code: 0
+    stderr:
+      contains:
+        - 'Terraform resource config files generated successfully in: "tmp-tf-gen"'
+        - Review the config and generate the terraform state by running
+        - cd tmp-tf-gen && ./terraform apply
+        - After running the above command and generating the state, the ./terraform binary and auth0_import.tf files can be safely removed.
+  001.2 - it successfully generates the expected files for a single resource:
+    command: sh test/integration/scripts/assert-tf-generate-files-exist.sh
+    exit-code: 0
+  001.3 - cleanup:
+    command: rm -rdf tmp-tf-gen
+
+  002.1 - it successfully runs for all default resources:
+    command: auth0 tf generate --output-dir tmp-tf-gen
+    exit-code: 0
+    stderr:
+      contains:
+        - 'Terraform resource config files generated successfully in: "tmp-tf-gen"'
+        - Review the config and generate the terraform state by running
+        - cd tmp-tf-gen && ./terraform apply
+        - After running the above command and generating the state, the ./terraform binary and auth0_import.tf files can be safely removed.
+  002.2 - it successfully generates the expected files for all default resources:
+    command: sh test/integration/scripts/assert-tf-generate-files-exist.sh
+    exit-code: 0
+  002.3 - cleanup:
+    command: rm -rdf tmp-tf-gen
+
+  003 - it does not run if invalid resource provided:
+    command: auth0 tf generate -r auth0_computer
+    exit-code: 1
+    stderr:
+      contains:
+        - "unsupported resource type: auth0_computer"
