@@ -68,7 +68,7 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &clientResourceFetcher{api})
 		case "auth0_client_grant":
 			fetchers = append(fetchers, &clientGrantResourceFetcher{api})
-		case "auth0_connection":
+		case "auth0_connection", "auth0_connection_clients":
 			fetchers = append(fetchers, &connectionResourceFetcher{api})
 		case "auth0_custom_domain":
 			fetchers = append(fetchers, &customDomainResourceFetcher{api})
@@ -78,7 +78,7 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &guardianResourceFetcher{})
 		case "auth0_log_stream":
 			fetchers = append(fetchers, &logStreamResourceFetcher{api})
-		case "auth0_organization":
+		case "auth0_organization", "auth0_organization_connections":
 			fetchers = append(fetchers, &organizationResourceFetcher{api})
 		case "auth0_pages":
 			fetchers = append(fetchers, &pagesResourceFetcher{})
@@ -86,9 +86,9 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &promptResourceFetcher{})
 		case "auth0_prompt_custom_text":
 			fetchers = append(fetchers, &promptCustomTextResourceFetcherResourceFetcher{api})
-		case "auth0_resource_server":
+		case "auth0_resource_server", "auth0_resource_server_scopes":
 			fetchers = append(fetchers, &resourceServerResourceFetcher{api})
-		case "auth0_role":
+		case "auth0_role", "auth0_role_permissions":
 			fetchers = append(fetchers, &roleResourceFetcher{api})
 		case "auth0_tenant":
 			fetchers = append(fetchers, &tenantResourceFetcher{})
@@ -122,12 +122,17 @@ func generateTerraformCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "generate",
-		Aliases: []string{"gen", "export"}, // Reconsider aliases and command name before releasing.
+		Aliases: []string{"gen"},
 		Short:   "Generate terraform configuration for your Auth0 Tenant",
-		Long: "This command is designed to streamline the process of generating Terraform configuration files for " +
+		Long: "(Experimental) This command is designed to streamline the process of generating Terraform configuration files for " +
 			"your Auth0 resources, serving as a bridge between the two.\n\nIt automatically scans your Auth0 Tenant " +
-			"and compiles a set of Terraform configuration files based on the existing resources and configurations." +
-			"\n\nThe generated Terraform files are written in HashiCorp Configuration Language (HCL).",
+			"and compiles a set of Terraform configuration files (HCL) based on the existing resources and configurations." +
+			"\n\nRefer to the [instructional guide](https://registry.terraform.io/providers/auth0/auth0/latest/docs/guides/generate_terraform_config) for specific details on how to use this command." +
+			"\n\n**Warning:** This command is experimental and is subject to change in future versions.",
+		Example: `  auth0 tf generate
+  auth0 tf generate -o tmp-auth0-tf
+  auth0 tf generate -o tmp-auth0-tf -r auth0_client
+  auth0 tf generate --output-dir tmp-auth0-tf --resources auth0_action,auth0_tenant,auth0_client `,
 		RunE: generateTerraformCmdRun(cli, &inputs),
 	}
 
@@ -166,43 +171,42 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 			return err
 		}
 
+		cdInstructions := ""
+		if inputs.OutputDIR != "./" {
+			cdInstructions = fmt.Sprintf("cd %s && ", inputs.OutputDIR)
+		}
+
 		if terraformProviderCredentialsAreAvailable() {
 			err = ansi.Spinner("Generating Terraform configuration", func() error {
 				return generateTerraformResourceConfig(cmd.Context(), inputs.OutputDIR)
 			})
 
-			if err == nil {
-				cli.renderer.Infof("Terraform resource config files generated successfully in: %q", inputs.OutputDIR)
-				cli.renderer.Infof(
-					"Review the config and generate the terraform state by running: \n\n	cd %s && ./terraform apply",
-					inputs.OutputDIR,
-				)
-				cli.renderer.Newline()
-				cli.renderer.Infof(
-					"After running the above command and generating the state, " +
-						"the ./terraform binary and auth0_import.tf files can be safely removed.\n",
-				)
-
+			if err != nil {
+				cli.renderer.Warnf("Terraform resource config generated successfully but there was an error with terraform plan.\n\n")
+				cli.renderer.Warnf("Run " + ansi.Cyan(cdInstructions+"./terraform plan") + " to troubleshoot\n\n")
+				cli.renderer.Warnf("Once the plan succeeds, run " + ansi.Cyan("./terraform apply") + " to complete the import.\n\n")
+				cli.renderer.Infof("The terraform binary and auth0_import.tf files can be deleted afterwards.\n")
 				return nil
 			}
+
+			cli.renderer.Infof("Terraform resource config files generated successfully in: %s", inputs.OutputDIR)
+			cli.renderer.Infof(
+				"Review the config and generate the terraform state by running: \n\n	" + ansi.Cyan(cdInstructions+"./terraform apply") + "\n",
+			)
+			cli.renderer.Infof(
+				"Once Terraform files are auto-generated, the terraform binary and auth0_import.tf files can be deleted.\n",
+			)
+
+			return nil
 		}
 
-		cli.renderer.Infof("Terraform resource import files generated successfully in: %q", inputs.OutputDIR)
-		cli.renderer.Infof(
-			"Follow this " +
-				"[quickstart](https://registry.terraform.io/providers/auth0/auth0/latest/docs/guides/quickstart) " +
-				"to go through setting up an Auth0 application for the provider to authenticate against and manage " +
-				"resources.",
-		)
-		cli.renderer.Infof(
-			"After setting up the provider credentials, run: \n\n"+
-				"	cd %s && terraform init && terraform plan -generate-config-out=auth0_generated.tf && terraform apply",
-			inputs.OutputDIR,
-		)
-		cli.renderer.Newline()
-		cli.renderer.Infof(
-			"After running the above command and generating the state, " +
-				"the auth0_import.tf file can be safely removed.\n",
+		cli.renderer.Errorf("Terraform provider credentials not detected\n")
+		cli.renderer.Warnf(
+			"Refer to following guide on how to create a dedicated Auth0 client and configure credentials: " +
+				ansi.URL("https://registry.terraform.io/providers/auth0/auth0/latest/docs/guides/quickstart") + "\n\n" +
+				"After provider credentials are set, run: \n\n" +
+				ansi.Cyan(cdInstructions+"terraform init && terraform plan -generate-config-out=auth0_generated.tf && terraform apply") + "\n\n" +
+				"Once the Terraform file is auto-generated, the auth0_import.tf file can be deleted.\n",
 		)
 
 		return nil
@@ -264,7 +268,7 @@ func createMainFile(outputDIR string) error {
   required_providers {
     auth0 = {
       source  = "auth0/auth0"
-      version = "1.0.0-beta.1"
+      version = "1.0.0-beta.4"
     }
   }
 }
