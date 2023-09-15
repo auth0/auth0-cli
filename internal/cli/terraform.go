@@ -68,7 +68,7 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &clientResourceFetcher{api})
 		case "auth0_client_grant":
 			fetchers = append(fetchers, &clientGrantResourceFetcher{api})
-		case "auth0_connection":
+		case "auth0_connection", "auth0_connection_clients":
 			fetchers = append(fetchers, &connectionResourceFetcher{api})
 		case "auth0_custom_domain":
 			fetchers = append(fetchers, &customDomainResourceFetcher{api})
@@ -78,7 +78,7 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &guardianResourceFetcher{})
 		case "auth0_log_stream":
 			fetchers = append(fetchers, &logStreamResourceFetcher{api})
-		case "auth0_organization":
+		case "auth0_organization", "auth0_organization_connections":
 			fetchers = append(fetchers, &organizationResourceFetcher{api})
 		case "auth0_pages":
 			fetchers = append(fetchers, &pagesResourceFetcher{})
@@ -86,9 +86,9 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &promptResourceFetcher{})
 		case "auth0_prompt_custom_text":
 			fetchers = append(fetchers, &promptCustomTextResourceFetcherResourceFetcher{api})
-		case "auth0_resource_server":
+		case "auth0_resource_server", "auth0_resource_server_scopes":
 			fetchers = append(fetchers, &resourceServerResourceFetcher{api})
-		case "auth0_role":
+		case "auth0_role", "auth0_role_permissions":
 			fetchers = append(fetchers, &roleResourceFetcher{api})
 		case "auth0_tenant":
 			fetchers = append(fetchers, &tenantResourceFetcher{})
@@ -122,12 +122,17 @@ func generateTerraformCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "generate",
-		Aliases: []string{"gen", "export"}, // Reconsider aliases and command name before releasing.
+		Aliases: []string{"gen"},
 		Short:   "Generate terraform configuration for your Auth0 Tenant",
-		Long: "This command is designed to streamline the process of generating Terraform configuration files for " +
+		Long: "(Experimental) This command is designed to streamline the process of generating Terraform configuration files for " +
 			"your Auth0 resources, serving as a bridge between the two.\n\nIt automatically scans your Auth0 Tenant " +
-			"and compiles a set of Terraform configuration files based on the existing resources and configurations." +
-			"\n\nThe generated Terraform files are written in HashiCorp Configuration Language (HCL).",
+			"and compiles a set of Terraform configuration files (HCL) based on the existing resources and configurations." +
+			"\n\nRefer to the [instructional guide](https://registry.terraform.io/providers/auth0/auth0/latest/docs/guides/generate_terraform_config) for specific details on how to use this command." +
+			"\n\n**Warning:** This command is experimental and is subject to change in future versions.",
+		Example: `  auth0 tf generate
+  auth0 tf generate -o tmp-auth0-tf
+  auth0 tf generate -o tmp-auth0-tf -r auth0_client
+  auth0 tf generate --output-dir tmp-auth0-tf --resources auth0_action,auth0_tenant,auth0_client `,
 		RunE: generateTerraformCmdRun(cli, &inputs),
 	}
 
@@ -263,7 +268,7 @@ func createMainFile(outputDIR string) error {
   required_providers {
     auth0 = {
       source  = "auth0/auth0"
-      version = "1.0.0-beta.1"
+      version = "1.0.0-beta.4"
     }
   }
 }
