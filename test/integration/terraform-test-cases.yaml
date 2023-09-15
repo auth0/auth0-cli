@@ -19,7 +19,7 @@ tests:
         - cd tmp-tf-gen && ./terraform apply
         - Once Terraform files are auto-generated, the terraform binary and auth0_import.tf files can be deleted.
   001.2 - it successfully generates the expected files for a single resource:
-    command: sh test/integration/scripts/assert-tf-generate-files-exist.sh
+    command: ./test/integration/scripts/assert-tf-generate-files-exist.sh
     exit-code: 0
   001.3 - cleanup:
     command: rm -rdf tmp-tf-gen
@@ -37,7 +37,7 @@ tests:
         - cd tmp-tf-gen && ./terraform apply
         - Once Terraform files are auto-generated, the terraform binary and auth0_import.tf files can be deleted.
   002.2 - it successfully generates the expected files for all default resources:
-    command: sh test/integration/scripts/assert-tf-generate-files-exist.sh
+    command: ./test/integration/scripts/assert-tf-generate-files-exist.sh
     exit-code: 0
   002.3 - cleanup:
     command: rm -rdf tmp-tf-gen
