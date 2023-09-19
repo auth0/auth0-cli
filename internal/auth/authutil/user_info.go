@@ -60,7 +60,7 @@ func (u *UserInfo) UnmarshalJSON(b []byte) error {
 				return err
 			}
 		default:
-			return fmt.Errorf("unable to unmarshal JSON for email_verified field. Expected bool or string, got: %s", reflect.TypeOf(rawEmailVerified))
+			return fmt.Errorf("email_verified field expected to be bool or string, got: %s", reflect.TypeOf(rawEmailVerified))
 		}
 		alias.EmailVerified = &emailVerified
 	}

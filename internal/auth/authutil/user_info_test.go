@@ -67,7 +67,7 @@ func TestUserInfo(t *testing.T) {
 		},
 		{
 			name:       "Email verified field not string or bool",
-			expect:     "cannot decode response: unable to unmarshal JSON for email_verified field. Expected bool or string, got: float64",
+			expect:     "cannot decode response: email_verified field expected to be bool or string, got: float64",
 			httpStatus: http.StatusOK,
 			response:   `{ "email_verified": 0 }`,
 		},
