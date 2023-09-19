@@ -272,7 +272,7 @@ func updateActionCmd(cli *cli) *cobra.Command {
 			"To update interactively, use `auth0 actions update` with no arguments.\n\n" +
 			"To update non-interactively, supply the action id, name, code, secrets and " +
 			"dependencies through the flags.",
-		Example: `  auth0 actions update <action-id> 
+		Example: `  auth0 actions update <action-id>
   auth0 actions update <action-id> --name myaction
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)"
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
@@ -548,8 +548,8 @@ func inputDependenciesToActionDependencies(dependencies map[string]string) *[]ma
 
 	for name, version := range dependencies {
 		actionDependencyList = append(actionDependencyList, management.ActionDependency{
-			Name:    &name,
-			Version: &version,
+			Name:    auth0.String(name),
+			Version: auth0.String(version),
 		})
 	}
 
