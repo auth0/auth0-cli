@@ -2,6 +2,7 @@ package authutil
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -60,7 +61,7 @@ func (u *UserInfo) UnmarshalJSON(b []byte) error {
 				return err
 			}
 		default:
-			panic(reflect.TypeOf(rawEmailVerified))
+			return errors.New(fmt.Sprintf("unable to unmarshal JSON for email_verified field. Expected bool or string, got: %s", reflect.TypeOf(rawEmailVerified)))
 		}
 		alias.EmailVerified = &emailVerified
 	}

@@ -65,6 +65,12 @@ func TestUserInfo(t *testing.T) {
 			httpStatus: http.StatusOK,
 			response:   `{ "foo": "bar" `,
 		},
+		{
+			name:       "Email verified field not string or bool",
+			expect:     "cannot decode response: unable to unmarshal JSON for email_verified field. Expected bool or string, got: float64",
+			httpStatus: http.StatusOK,
+			response:   `{ "email_verified": 0 }`,
+		},
 	}
 
 	for _, testCase := range testCases {
