@@ -262,12 +262,17 @@ func sortActionDependencies(dependencies []management.ActionDependency) {
 func TestActionsInputDependenciesToActionDependencies(t *testing.T) {
 	t.Run("it should map input dependencies to action payload", func(t *testing.T) {
 		input := map[string]string{
-			"lodash": "4.0.0",
-			"uuid":   "9.0.0",
+			"fs-extra": "11.1.1",
+			"lodash":   "4.0.0",
+			"uuid":     "9.0.0",
 		}
 		res := inputDependenciesToActionDependencies(input)
 		sortActionDependencies(*res)
 		expected := []management.ActionDependency{
+			{
+				Name:    auth0.String("fs-extra"),
+				Version: auth0.String("11.1.1"),
+			},
 			{
 				Name:    auth0.String("lodash"),
 				Version: auth0.String("4.0.0"),
@@ -278,7 +283,7 @@ func TestActionsInputDependenciesToActionDependencies(t *testing.T) {
 			},
 		}
 
-		assert.Len(t, *res, 2)
+		assert.Len(t, *res, 3)
 		assert.Equal(t, *res, expected)
 	})
 
