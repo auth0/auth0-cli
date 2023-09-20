@@ -548,8 +548,8 @@ func inputDependenciesToActionDependencies(dependencies map[string]string) *[]ma
 
 	for name, version := range dependencies {
 		actionDependencyList = append(actionDependencyList, management.ActionDependency{
-			Name:    &name,
-			Version: &version,
+			Name:    auth0.String(name),
+			Version: auth0.String(version),
 		})
 	}
 
