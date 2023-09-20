@@ -147,3 +147,5 @@ auth0 ul update --accent "#2A2E35" --background "#FF4F40" --logo "https://exampl
 rm -rf integration-test-app-qs
 
 rm -rf test/integration/identifiers
+
+rm -rdf tmp-tf-gen
