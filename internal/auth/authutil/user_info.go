@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"reflect"
+	"strconv"
 	"time"
 )
 
@@ -29,6 +31,41 @@ type UserInfo struct {
 	ZoneInfo          *string    `json:"zoneinfo,omitempty"`
 	Locale            *string    `json:"locale,omitempty"`
 	UpdatedAt         *time.Time `json:"updated_at,omitempty"`
+}
+
+// UnmarshalJSON is a custom deserializer for the UserInfo type.
+// A custom solution is necessary due to possible inconsistencies in value types.
+func (u *UserInfo) UnmarshalJSON(b []byte) error {
+	type userInfo UserInfo
+	type userAlias struct {
+		*userInfo
+		RawEmailVerified interface{} `json:"email_verified,omitempty"`
+	}
+
+	alias := &userAlias{(*userInfo)(u), nil}
+
+	err := json.Unmarshal(b, alias)
+	if err != nil {
+		return err
+	}
+
+	if alias.RawEmailVerified != nil {
+		var emailVerified bool
+		switch rawEmailVerified := alias.RawEmailVerified.(type) {
+		case bool:
+			emailVerified = rawEmailVerified
+		case string:
+			emailVerified, err = strconv.ParseBool(rawEmailVerified)
+			if err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("email_verified field expected to be bool or string, got: %s", reflect.TypeOf(rawEmailVerified))
+		}
+		alias.EmailVerified = &emailVerified
+	}
+
+	return nil
 }
 
 // FetchUserInfo fetches and parses user information with the provided access token.
