@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [v1.1.1](https://github.com/auth0/auth0-cli/tree/v1.0.1) (Sept 12, 2023)
+## [v1.1.1](https://github.com/auth0/auth0-cli/tree/v1.1.1) (Sept 22, 2023)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.1.0...v1.1.1)
 
@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Terraform provider version using latest version, 1.0.0 at minimum, for `auth0 tf generate` [#853]
 
-## [v1.1.0](https://github.com/auth0/auth0-cli/tree/v1.0.1) (Sept 15, 2023)
+## [v1.1.0](https://github.com/auth0/auth0-cli/tree/v1.1.0) (Sept 15, 2023)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.0.1...v1.1.0)
 
