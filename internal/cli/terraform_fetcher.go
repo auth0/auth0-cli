@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"strings"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/google/uuid"
@@ -202,6 +203,10 @@ func (f *customDomainResourceFetcher) FetchData(ctx context.Context) (importData
 
 	customDomains, err := f.api.CustomDomain.List(ctx)
 	if err != nil {
+		if strings.Contains(err.Error(), "The account is not allowed to perform this operation, please contact our support team") {
+			return data, nil
+		}
+
 		return nil, err
 	}
 

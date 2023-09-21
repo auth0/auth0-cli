@@ -524,6 +524,26 @@ func TestCustomDomainResourceFetcher_FetchData(t *testing.T) {
 		_, err := fetcher.FetchData(context.Background())
 		assert.EqualError(t, err, "failed to list custom domains")
 	})
+
+	t.Run("it returns empty set error if unsupported feature error occurs", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		customDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
+		customDomainAPI.EXPECT().
+			List(gomock.Any()).
+			Return(nil, fmt.Errorf("403 Forbidden: The account is not allowed to perform this operation, please contact our support team"))
+
+		fetcher := customDomainResourceFetcher{
+			api: &auth0.API{
+				CustomDomain: customDomainAPI,
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 0)
+	})
 }
 
 func TestGuardianResourceFetcher_FetchData(t *testing.T) {
