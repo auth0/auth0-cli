@@ -210,6 +210,7 @@ func TestActionsPickerOptions(t *testing.T) {
 		})
 	}
 }
+
 func TestActionsInputSecretsToActionSecrets(t *testing.T) {
 	t.Run("it should map input secrets to action payload", func(t *testing.T) {
 		input := map[string]string{
@@ -218,22 +219,20 @@ func TestActionsInputSecretsToActionSecrets(t *testing.T) {
 			"secret3": "value3",
 		}
 		res := inputSecretsToActionSecrets(input)
-		expected := []management.ActionSecret{
-			{
-				Name:  auth0.String("secret1"),
-				Value: auth0.String("value1"),
-			},
-			{
-				Name:  auth0.String("secret2"),
-				Value: auth0.String("value2"),
-			},
-			{
-				Name:  auth0.String("secret3"),
-				Value: auth0.String("value3"),
-			},
-		}
+
 		assert.Len(t, *res, 3)
-		assert.Equal(t, *res, expected)
+		assert.Contains(t, *res, management.ActionSecret{
+			Name:  auth0.String("secret1"),
+			Value: auth0.String("value1"),
+		})
+		assert.Contains(t, *res, management.ActionSecret{
+			Name:  auth0.String("secret2"),
+			Value: auth0.String("value2"),
+		})
+		assert.Contains(t, *res, management.ActionSecret{
+			Name:  auth0.String("secret3"),
+			Value: auth0.String("value3"),
+		})
 	})
 
 	t.Run("it should handle empty input secrets", func(t *testing.T) {
@@ -242,5 +241,37 @@ func TestActionsInputSecretsToActionSecrets(t *testing.T) {
 		expected := []management.ActionSecret{}
 		assert.Len(t, *res, 0)
 		assert.Equal(t, res, &expected)
+	})
+}
+func TestActionsInputDependenciesToActionDependencies(t *testing.T) {
+	t.Run("it should map input dependencies to action payload", func(t *testing.T) {
+		input := map[string]string{
+			"fs-extra": "11.1.1",
+			"lodash":   "4.0.0",
+			"uuid":     "9.0.0",
+		}
+		res := inputDependenciesToActionDependencies(input)
+
+		assert.Len(t, *res, 3)
+		assert.Contains(t, *res, management.ActionDependency{
+			Name:    auth0.String("fs-extra"),
+			Version: auth0.String("11.1.1"),
+		})
+		assert.Contains(t, *res, management.ActionDependency{
+			Name:    auth0.String("lodash"),
+			Version: auth0.String("4.0.0"),
+		})
+		assert.Contains(t, *res, management.ActionDependency{
+			Name:    auth0.String("uuid"),
+			Version: auth0.String("9.0.0"),
+		})
+	})
+
+	t.Run("it should handle empty input dependencies", func(t *testing.T) {
+		emptyInput := map[string]string{}
+		res := inputDependenciesToActionDependencies(emptyInput)
+		expected := []management.ActionDependency{}
+		assert.Len(t, *res, 0)
+		assert.Equal(t, expected, *res)
 	})
 }
