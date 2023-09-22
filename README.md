@@ -119,6 +119,7 @@ There are two ways to authenticate:
 - [auth0 rules](https://auth0.github.io/auth0-cli/auth0_rules.html) - Manage resources for rules
 - [auth0 tenants](https://auth0.github.io/auth0-cli/auth0_tenants.html) - Manage configured tenants
 - [auth0 test](https://auth0.github.io/auth0-cli/auth0_test.html) - Try your Universal Login box or get a token
+- [auth0 terraform generate](https://auth0.github.io/auth0-cli/auth0_terraform_generate.html) - Generate terraform configuration for your Auth0 Tenant
 - [auth0 universal-login](https://auth0.github.io/auth0-cli/auth0_universal-login.html) - Manage the Universal Login experience
 - [auth0 users](https://auth0.github.io/auth0-cli/auth0_users.html) - Manage resources for users
 
@@ -136,7 +137,7 @@ export EDITOR="code --wait"
 
 # Uses sublime text with the --wait flag.
 export EDITOR="subl --wait"
- 
+
 # Uses nano, a terminal based editor.
 export EDITOR="nano"
 
