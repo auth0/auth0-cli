@@ -197,7 +197,7 @@ func assertTerraformMainFileWasGeneratedCorrectly(t *testing.T, outputDIR string
   required_providers {
     auth0 = {
       source  = "auth0/auth0"
-      version = "1.0.0-beta.4"
+      version = ">= 1.0.0"
     }
   }
 }
