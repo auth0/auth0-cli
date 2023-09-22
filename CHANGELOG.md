@@ -7,7 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [v1.1.0](https://github.com/auth0/auth0-cli/tree/v1.0.1) (Sept 15, 2023)
+## [v1.1.1](https://github.com/auth0/auth0-cli/tree/v1.1.1) (Sept 22, 2023)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.1.0...v1.1.1)
+
+### Fixed
+
+- Passing of multiple dependencies for `auth0 action` commands [#850]
+- JSON unmarshalling error when testing login of Apple social connections [#851]
+- Free-tiered tenants erroring when exporting custom domains with `auth0 tf generate` [#854]
+
+### Changed
+
+- Terraform provider version using latest version, 1.0.0 at minimum, for `auth0 tf generate` [#853]
+
+## [v1.1.0](https://github.com/auth0/auth0-cli/tree/v1.1.0) (Sept 15, 2023)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.0.1...v1.1.0)
 
@@ -196,6 +210,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 [unreleased]: https://github.com/auth0/auth0-cli/compare/v1.0.0...HEAD
+[#850]: https://github.com/auth0/auth0-cli/issues/850
+[#851]: https://github.com/auth0/auth0-cli/issues/851
+[#854]: https://github.com/auth0/auth0-cli/issues/854
+[#853]: https://github.com/auth0/auth0-cli/issues/853
 [#792]: https://github.com/auth0/auth0-cli/issues/792
 [#839]: https://github.com/auth0/auth0-cli/issues/839
 [#844]: https://github.com/auth0/auth0-cli/issues/844
