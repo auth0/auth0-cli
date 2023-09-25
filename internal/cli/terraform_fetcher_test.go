@@ -603,6 +603,25 @@ func TestEmailProviderResourceFetcher_FetchData(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, data, 0)
 	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		emailProviderAPI := mock.NewMockEmailProviderAPI(ctrl)
+		emailProviderAPI.EXPECT().
+			Read(gomock.Any()).
+			Return(nil, fmt.Errorf("failed to read email provider"))
+
+		fetcher := emailProviderResourceFetcher{
+			api: &auth0.API{
+				EmailProvider: emailProviderAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to read email provider")
+	})
 }
 
 func TestLogStreamResourceFetcher_FetchData(t *testing.T) {
