@@ -359,7 +359,7 @@ func (f *resourceServerResourceFetcher) FetchData(ctx context.Context) (importDa
 				ImportID:     api.GetID(),
 			})
 
-			if len(*api.Scopes) > 0 {
+			if len(api.GetScopes()) > 0 {
 				data = append(data, importDataItem{
 					ResourceName: "auth0_resource_server_scopes." + sanitizeResourceName(api.GetName()),
 					ImportID:     api.GetID(),
