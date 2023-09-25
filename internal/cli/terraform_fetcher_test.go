@@ -881,8 +881,8 @@ func TestResourceServerResourceFetcher_FetchData(t *testing.T) {
 		defer ctrl.Finish()
 
 		mockScopes := []management.ResourceServerScope{
-			management.ResourceServerScope{Value: auth0.String("read:user")},
-			management.ResourceServerScope{Value: auth0.String("create:user")},
+			{Value: auth0.String("read:user")},
+			{Value: auth0.String("create:user")},
 		}
 		mockScopesEmpty := []management.ResourceServerScope{}
 
