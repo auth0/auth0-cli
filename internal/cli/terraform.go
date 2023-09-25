@@ -268,7 +268,7 @@ func createMainFile(outputDIR string) error {
   required_providers {
     auth0 = {
       source  = "auth0/auth0"
-      version = "1.0.0-beta.4"
+      version = ">= 1.0.0"
     }
   }
 }
