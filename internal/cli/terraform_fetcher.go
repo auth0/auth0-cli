@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -227,9 +226,6 @@ func (f *customDomainResourceFetcher) FetchData(ctx context.Context) (importData
 func (f *emailProviderResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	_, err := f.api.EmailProvider.Read(ctx)
 	if err != nil {
-		fmt.Println("-----------")
-		fmt.Println(err)
-		fmt.Println("-----------")
 		if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusNotFound {
 			return nil, nil
 		}
