@@ -518,3 +518,22 @@ func TestSanitizeResourceName(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckTerraformProviderAndCLIDomainsMatch(t *testing.T) {
+	t.Run("it should return no error if provided domain and TF provider env var domain match", func(t *testing.T) {
+		domain := "travel0.us.auth0.com"
+
+		os.Setenv("AUTH0_DOMAIN", domain)
+		err := checkTerraformProviderAndCLIDomainsMatch(domain)
+		assert.NoError(t, err)
+		os.Unsetenv("AUTH0_DOMAIN")
+	})
+
+	t.Run("it should return an error if provided domain and TF provider env var domain do not match", func(t *testing.T) {
+		os.Setenv("AUTH0_DOMAIN", "different-tenant.eu.auth0.com")
+		err := checkTerraformProviderAndCLIDomainsMatch("travel0.us.auth0.com")
+		assert.Error(t, err)
+		assert.Equal(t, err.Error(), "Terraform provider tenant domain 'different-tenant.eu.auth0.com' does not match current CLI tenant 'travel0.us.auth0.com'")
+		os.Unsetenv("AUTH0_DOMAIN")
+	})
+}
