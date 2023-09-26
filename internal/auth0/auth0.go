@@ -17,6 +17,7 @@ type API struct {
 	Connection       ConnectionAPI
 	CustomDomain     CustomDomainAPI
 	EmailTemplate    EmailTemplateAPI
+	EmailProvider    EmailProviderAPI
 	Log              LogAPI
 	LogStream        LogStreamAPI
 	Organization     OrganizationAPI
@@ -42,6 +43,7 @@ func NewAPI(m *management.Management) *API {
 		Connection:       m.Connection,
 		CustomDomain:     m.CustomDomain,
 		EmailTemplate:    m.EmailTemplate,
+		EmailProvider:    m.EmailProvider,
 		Log:              m.Log,
 		LogStream:        m.LogStream,
 		Organization:     m.Organization,

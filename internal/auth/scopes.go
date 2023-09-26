@@ -11,6 +11,7 @@ var RequiredScopes = []string{
 	"create:users", "delete:users", "read:users", "update:users",
 	"read:branding", "update:branding",
 	"read:email_templates", "update:email_templates",
+	"read:email_provider",
 	"read:connections", "update:connections",
 	"read:client_keys", "read:logs", "read:tenant_settings",
 	"read:custom_domains", "create:custom_domains", "update:custom_domains", "delete:custom_domains",

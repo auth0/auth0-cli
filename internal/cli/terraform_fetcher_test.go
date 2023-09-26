@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -560,13 +561,66 @@ func TestGuardianResourceFetcher_FetchData(t *testing.T) {
 
 func TestEmailProviderResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully generates email provider import data", func(t *testing.T) {
-		fetcher := emailProviderResourceFetcher{}
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		emailProviderAPI := mock.NewMockEmailProviderAPI(ctrl)
+
+		emailProviderAPI.EXPECT().
+			Read(gomock.Any(), gomock.Any()).
+			Return(nil, nil)
+
+		fetcher := emailProviderResourceFetcher{
+			api: &auth0.API{
+				EmailProvider: emailProviderAPI,
+			},
+		}
 
 		data, err := fetcher.FetchData(context.Background())
 		assert.NoError(t, err)
 		assert.Len(t, data, 1)
 		assert.Equal(t, data[0].ResourceName, "auth0_email_provider.email_provider")
 		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+
+	t.Run("it does not generate email provider import data if email provider does not exist", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mErr := mockManagamentError{status: http.StatusNotFound}
+
+		emailProviderAPI := mock.NewMockEmailProviderAPI(ctrl)
+		emailProviderAPI.EXPECT().
+			Read(gomock.Any(), gomock.Any()).
+			Return(nil, mErr)
+
+		fetcher := emailProviderResourceFetcher{
+			api: &auth0.API{
+				EmailProvider: emailProviderAPI,
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 0)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		emailProviderAPI := mock.NewMockEmailProviderAPI(ctrl)
+		emailProviderAPI.EXPECT().
+			Read(gomock.Any()).
+			Return(nil, fmt.Errorf("failed to read email provider"))
+
+		fetcher := emailProviderResourceFetcher{
+			api: &auth0.API{
+				EmailProvider: emailProviderAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to read email provider")
 	})
 }
 
