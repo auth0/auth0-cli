@@ -177,6 +177,11 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 		}
 
 		if terraformProviderCredentialsAreAvailable() {
+			err := checkTerraformProviderAndCLIDomainsMatch(cli.Config.DefaultTenant)
+			if err != nil {
+				return err
+			}
+
 			err = ansi.Spinner("Generating Terraform configuration", func() error {
 				return generateTerraformResourceConfig(cmd.Context(), inputs.OutputDIR)
 			})
@@ -349,6 +354,14 @@ func terraformProviderCredentialsAreAvailable() bool {
 	apiToken := os.Getenv("AUTH0_API_TOKEN")
 
 	return (domain != "" && clientID != "" && clientSecret != "") || (domain != "" && apiToken != "")
+}
+
+func checkTerraformProviderAndCLIDomainsMatch(currentCLIDomain string) error {
+	providerDomain := os.Getenv("AUTH0_DOMAIN")
+	if providerDomain == currentCLIDomain {
+		return nil
+	}
+	return fmt.Errorf("Terraform provider tenant domain '%s' does not match current CLI tenant '%s'", providerDomain, currentCLIDomain)
 }
 
 func deduplicateResourceNames(data importDataList) importDataList {

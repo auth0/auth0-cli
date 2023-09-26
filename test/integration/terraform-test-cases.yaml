@@ -64,3 +64,10 @@ tests:
     stderr:
       contains:
         - "unsupported resource type: auth0_computer"
+
+  005 - it errors if AUTH0_DOMAIN values for provider and CLI do not match:
+    command: AUTH0_DOMAIN=some-other-domain.us.auth0.com auth0 tf generate --output-dir tmp-tf-gen
+    exit-code: 1
+    stderr:
+      contains:
+        - "Terraform provider tenant domain 'some-other-domain.us.auth0.com' does not match current CLI tenant '"
