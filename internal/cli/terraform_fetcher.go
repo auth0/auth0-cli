@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"net/http"
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
@@ -49,7 +50,9 @@ type (
 		api *auth0.API
 	}
 
-	emailProviderResourceFetcher struct{}
+	emailProviderResourceFetcher struct {
+		api *auth0.API
+	}
 
 	guardianResourceFetcher  struct{}
 	logStreamResourceFetcher struct {
@@ -220,7 +223,15 @@ func (f *customDomainResourceFetcher) FetchData(ctx context.Context) (importData
 	return data, nil
 }
 
-func (f *emailProviderResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
+func (f *emailProviderResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	_, err := f.api.EmailProvider.Read(ctx)
+	if err != nil {
+		if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+
 	return []importDataItem{
 		{
 			ResourceName: "auth0_email_provider.email_provider",
