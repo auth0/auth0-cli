@@ -369,10 +369,13 @@ func (f *resourceServerResourceFetcher) FetchData(ctx context.Context) (importDa
 				ResourceName: "auth0_resource_server." + sanitizeResourceName(api.GetName()),
 				ImportID:     api.GetID(),
 			})
-			data = append(data, importDataItem{
-				ResourceName: "auth0_resource_server_scopes." + sanitizeResourceName(api.GetName()),
-				ImportID:     api.GetID(),
-			})
+
+			if len(api.GetScopes()) > 0 {
+				data = append(data, importDataItem{
+					ResourceName: "auth0_resource_server_scopes." + sanitizeResourceName(api.GetName()),
+					ImportID:     api.GetID(),
+				})
+			}
 		}
 
 		if !apis.HasNext() {

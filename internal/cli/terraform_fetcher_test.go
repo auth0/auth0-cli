@@ -934,6 +934,12 @@ func TestResourceServerResourceFetcher_FetchData(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
+		mockScopes := []management.ResourceServerScope{
+			{Value: auth0.String("read:user")},
+			{Value: auth0.String("create:user")},
+		}
+		mockScopesEmpty := []management.ResourceServerScope{}
+
 		resourceServerAPI := mock.NewMockResourceServerAPI(ctrl)
 		resourceServerAPI.EXPECT().
 			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -946,12 +952,14 @@ func TestResourceServerResourceFetcher_FetchData(t *testing.T) {
 					},
 					ResourceServers: []*management.ResourceServer{
 						{
-							ID:   auth0.String("610e04b71f71b9003a7eb3df"),
-							Name: auth0.String("Auth0 Management API"),
+							ID:     auth0.String("610e04b71f71b9003a7eb3df"),
+							Name:   auth0.String("Auth0 Management API"),
+							Scopes: &mockScopes,
 						},
 						{
-							ID:   auth0.String("6358fed7b77d3c391dd78a40"),
-							Name: auth0.String("Payments API"),
+							ID:     auth0.String("6358fed7b77d3c391dd78a40"),
+							Name:   auth0.String("Payments API"),
+							Scopes: &mockScopes,
 						},
 					},
 				},
@@ -968,12 +976,14 @@ func TestResourceServerResourceFetcher_FetchData(t *testing.T) {
 					},
 					ResourceServers: []*management.ResourceServer{
 						{
-							ID:   auth0.String("66ef6f9c435cab03def5fa16"),
-							Name: auth0.String("Blog API"),
+							ID:     auth0.String("66ef6f9c435cab03def5fa16"),
+							Name:   auth0.String("Blog API"),
+							Scopes: &mockScopes,
 						},
 						{
-							ID:   auth0.String("63bf6f9b0e025715cb91ce7c"),
-							Name: auth0.String("User API"),
+							ID:     auth0.String("63bf6f9b0e025715cb91ce7c"),
+							Name:   auth0.String("API with no scopes"),
+							Scopes: &mockScopesEmpty,
 						},
 					},
 				},
@@ -1012,11 +1022,7 @@ func TestResourceServerResourceFetcher_FetchData(t *testing.T) {
 				ImportID:     "66ef6f9c435cab03def5fa16",
 			},
 			{
-				ResourceName: "auth0_resource_server.user_api",
-				ImportID:     "63bf6f9b0e025715cb91ce7c",
-			},
-			{
-				ResourceName: "auth0_resource_server_scopes.user_api",
+				ResourceName: "auth0_resource_server.api_with_no_scopes",
 				ImportID:     "63bf6f9b0e025715cb91ce7c",
 			},
 		}
