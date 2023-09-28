@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.1.2](https://github.com/auth0/auth0-cli/tree/v1.1.2) (Sept 29, 2023)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.1.1...v1.1.2)
+
+### Fixed
+
+- Disallowing of mismatched Auth0 domain in Terraform provider when using `auth0 tf generate` [#858]
+- Check if an email provider is configured before exporting with `auth0 tf generate` [#857]
+- Check if a resource server has associated scopes before exporting `auth0_resource_server_scopes` with `auth0 tf generate` [#856]
+
 ## [v1.1.1](https://github.com/auth0/auth0-cli/tree/v1.1.1) (Sept 22, 2023)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.1.0...v1.1.1)
@@ -210,6 +220,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 [unreleased]: https://github.com/auth0/auth0-cli/compare/v1.0.0...HEAD
+[#858]: https://github.com/auth0/auth0-cli/issues/858
+[#857]: https://github.com/auth0/auth0-cli/issues/857
+[#856]: https://github.com/auth0/auth0-cli/issues/856
 [#850]: https://github.com/auth0/auth0-cli/issues/850
 [#851]: https://github.com/auth0/auth0-cli/issues/851
 [#854]: https://github.com/auth0/auth0-cli/issues/854
