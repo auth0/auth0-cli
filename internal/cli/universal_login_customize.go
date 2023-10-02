@@ -22,6 +22,35 @@ import (
 	"github.com/auth0/auth0-cli/internal/display"
 )
 
+const webAppURL = "http://localhost:5173"
+
+type (
+	pageData struct {
+		Connected             bool                               `json:"connected"`
+		AuthenticationProfile *management.Prompt                 `json:"authentication_profile"`
+		Branding              *management.Branding               `json:"branding"`
+		Templates             *management.BrandingUniversalLogin `json:"templates"`
+		Themes                *management.BrandingTheme          `json:"themes"`
+		Tenant                *tenantData                        `json:"tenant"`
+		CustomText            map[string]interface{}             `json:"custom_text"`
+	}
+
+	tenantData struct {
+		FriendlyName   string   `json:"friendly_name"`
+		EnabledLocales []string `json:"enabled_locales"`
+		Domain         string   `json:"domain"`
+	}
+
+	webSocketHandler struct {
+		renderer     *display.Renderer
+		api          *auth0.API
+		receivedData *pageData
+		sentData     *pageData
+		cancel       context.CancelFunc
+		port         int
+	}
+)
+
 func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "customize",
@@ -41,77 +70,11 @@ func universalLoginCustomizeBranding(cli *cli) *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintf(cli.renderer.MessageWriter, "Perform your changes within the UI"+"\n")
-
-			err := startWebSocketServer(ctx, cli.renderer, cli.api, dataToSend)
-			if err != nil {
-				return err
-			}
-
-			return nil
+			return startWebSocketServer(ctx, cli.renderer, cli.api, dataToSend)
 		},
 	}
 
 	return cmd
-}
-
-func startWebSocketServer(ctx context.Context, renderer *display.Renderer, api *auth0.API, pageData *pageData) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return err
-	}
-	defer listener.Close()
-
-	port := listener.Addr().(*net.TCPAddr).Port
-
-	handler := &webSocketHandler{
-		renderer: renderer,
-		api:      api,
-		cancel:   cancel,
-		sentData: pageData,
-		port:     port,
-	}
-
-	server := &http.Server{
-		Handler:      handler,
-		ReadTimeout:  time.Minute * 10,
-		WriteTimeout: time.Minute * 10,
-	}
-
-	errChan := make(chan error, 1)
-	go func() {
-		errChan <- server.Serve(listener)
-	}()
-
-	if err := browser.OpenURL(fmt.Sprintf("http://localhost:5173?ws_port=%d", port)); err != nil {
-		return err
-	}
-
-	select {
-	case err := <-errChan:
-		return err
-	case <-ctx.Done():
-		return server.Close()
-	}
-}
-
-type pageData struct {
-	Connected             bool                               `json:"connected"`
-	AuthenticationProfile *management.Prompt                 `json:"authentication_profile"`
-	Branding              *management.Branding               `json:"branding"`
-	Templates             *management.BrandingUniversalLogin `json:"templates"`
-	Themes                *management.BrandingTheme          `json:"themes"`
-	Tenant                *tenantData                        `json:"tenant"`
-	CustomText            map[string]interface{}             `json:"custom_text"`
-}
-
-type tenantData struct {
-	FriendlyName   string   `json:"friendly_name"`
-	EnabledLocales []string `json:"enabled_locales"`
-	Domain         string   `json:"domain"`
 }
 
 func fetchPageData(ctx context.Context, api *auth0.API, tenantDomain string) (*pageData, error) {
@@ -375,13 +338,51 @@ func mergeMaps(map1, map2 map[string]interface{}) map[string]interface{} {
 	return merged
 }
 
-type webSocketHandler struct {
-	renderer     *display.Renderer
-	api          *auth0.API
-	receivedData *pageData
-	sentData     *pageData
-	cancel       context.CancelFunc
-	port         int
+func startWebSocketServer(ctx context.Context, renderer *display.Renderer, api *auth0.API, pageData *pageData) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return err
+	}
+	defer listener.Close()
+
+	port := listener.Addr().(*net.TCPAddr).Port
+
+	handler := &webSocketHandler{
+		renderer: renderer,
+		api:      api,
+		cancel:   cancel,
+		sentData: pageData,
+		port:     port,
+	}
+
+	server := &http.Server{
+		Handler:      handler,
+		ReadTimeout:  time.Minute * 10,
+		WriteTimeout: time.Minute * 10,
+	}
+
+	errChan := make(chan error, 1)
+	go func() {
+		errChan <- server.Serve(listener)
+	}()
+
+	webAppURLWithPort := fmt.Sprintf("%s?ws_port=%d", webAppURL, port)
+
+	renderer.Infof("Perform your changes within the UI: %q", webAppURLWithPort)
+
+	if err := browser.OpenURL(webAppURLWithPort); err != nil {
+		return err
+	}
+
+	select {
+	case err := <-errChan:
+		return err
+	case <-ctx.Done():
+		return server.Close()
+	}
 }
 
 func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
