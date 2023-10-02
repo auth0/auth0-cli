@@ -7,14 +7,15 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/auth0/go-auth0/management"
+	"github.com/gorilla/websocket"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
-	"nhooyr.io/websocket"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -383,43 +384,39 @@ type webSocketHandler struct {
 }
 
 func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Allow only one connection.
-	connection, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-		//OriginPatterns: []string{fmt.Sprintf("127.0.0.1:%d", h.port)},
-		OriginPatterns: []string{"localhost:*"},
-	})
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			origin := r.Header["Origin"]
+			if len(origin) == 0 {
+				return true
+			}
+			u, err := url.Parse(origin[0])
+			if err != nil {
+				return false
+			}
+
+			return u.String() == "http://localhost:5173"
+		},
+	}
+
+	connection, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("error accepting WebSocket connection: %v", err)
 		return
 	}
 
-	connection.SetReadLimit(1024 * 1024)
+	connection.SetReadLimit(1e+6) // 1 MB.
 
-	bytes, err := json.Marshal(&h.sentData)
-	if err != nil {
-		log.Printf("failed to marshal message: %v", err)
-		return
-	}
-
-	err = connection.Write(r.Context(), websocket.MessageText, bytes)
-	if err != nil {
+	if err = connection.WriteJSON(&h.sentData); err != nil {
 		log.Printf("failed to write message: %v", err)
 		h.cancel()
 		return
 	}
 
 	for {
-		_, message, err := connection.Read(r.Context())
-		if err != nil {
-			log.Printf("error reading from WebSocket: %v", err)
-			h.cancel()
-			return
-		}
-
 		var msg pageData
-		err = json.Unmarshal(message, &msg)
-		if err != nil {
-			log.Printf("failed to unmarshal message: %v", err)
+		if err := connection.ReadJSON(&msg); err != nil {
+			log.Printf("error reading from WebSocket: %v", err)
 			h.cancel()
 			return
 		}
@@ -427,8 +424,7 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.receivedData = &msg
 
 		if !h.receivedData.Connected {
-			err = connection.Close(websocket.StatusNormalClosure, "Received disconnect message")
-			if err != nil {
+			if err = connection.Close(); err != nil {
 				log.Printf("error closing WebSocket: %v", err)
 				h.cancel()
 			}
