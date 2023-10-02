@@ -2,12 +2,16 @@
 
 package auth0
 
-import "github.com/auth0/go-auth0/management"
+import (
+	"context"
+
+	"github.com/auth0/go-auth0/management"
+)
 
 type BrandingThemeAPI interface {
-	Default(opts ...management.RequestOption) (theme *management.BrandingTheme, err error)
-	Create(theme *management.BrandingTheme, opts ...management.RequestOption) (err error)
-	Read(id string, opts ...management.RequestOption) (theme *management.BrandingTheme, err error)
-	Update(id string, theme *management.BrandingTheme, opts ...management.RequestOption) (err error)
-	Delete(id string, opts ...management.RequestOption) (err error)
+	Default(ctx context.Context, opts ...management.RequestOption) (theme *management.BrandingTheme, err error)
+	Create(ctx context.Context, theme *management.BrandingTheme, opts ...management.RequestOption) (err error)
+	Read(ctx context.Context, id string, opts ...management.RequestOption) (theme *management.BrandingTheme, err error)
+	Update(ctx context.Context, id string, theme *management.BrandingTheme, opts ...management.RequestOption) (err error)
+	Delete(ctx context.Context, id string, opts ...management.RequestOption) (err error)
 }

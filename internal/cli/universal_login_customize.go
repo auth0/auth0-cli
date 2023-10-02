@@ -123,7 +123,7 @@ func fetchPageData(ctx context.Context, api *auth0.API, tenantDomain string) (*p
 
 	var authenticationProfile *management.Prompt
 	group.Go(func() (err error) {
-		authenticationProfile, err = api.Prompt.Read()
+		authenticationProfile, err = api.Prompt.Read(ctx)
 		return err
 	})
 
@@ -147,7 +147,7 @@ func fetchPageData(ctx context.Context, api *auth0.API, tenantDomain string) (*p
 
 	var tenant *management.Tenant
 	group.Go(func() (err error) {
-		tenant, err = api.Tenant.Read(management.Context(ctx))
+		tenant, err = api.Tenant.Read(ctx)
 		return err
 	})
 
@@ -179,7 +179,7 @@ func fetchPageData(ctx context.Context, api *auth0.API, tenantDomain string) (*p
 }
 
 func fetchBrandingThemeOrUseEmpty(ctx context.Context, api *auth0.API) *management.BrandingTheme {
-	currentTheme, err := api.BrandingTheme.Default(management.Context(ctx))
+	currentTheme, err := api.BrandingTheme.Default(ctx)
 	if err != nil {
 		currentTheme = &management.BrandingTheme{
 			Borders: management.BrandingThemeBorders{
@@ -274,7 +274,7 @@ func fetchCustomTextWithDefaults(ctx context.Context, api *auth0.API) (map[strin
 
 	customText := make(map[string]interface{}, 0)
 	for _, availablePrompt := range availablePrompts {
-		promptText, err := api.Prompt.CustomText(availablePrompt, language)
+		promptText, err := api.Prompt.CustomText(ctx, availablePrompt, language)
 		if err != nil {
 			return nil, err
 		}
@@ -283,6 +283,7 @@ func fetchCustomTextWithDefaults(ctx context.Context, api *auth0.API) (map[strin
 	}
 
 	request, err := api.HTTPClient.NewRequest(
+		ctx,
 		http.MethodGet,
 		fmt.Sprintf("https://cdn.auth0.com/ulp/react-components/development/languages/%s/prompts.json", language),
 		nil,
@@ -451,6 +452,7 @@ func persistData(ctx context.Context, api *auth0.API, data *pageData) error {
 
 	group.Go(func() (err error) {
 		return api.Branding.SetUniversalLogin(
+			ctx,
 			&management.BrandingUniversalLogin{
 				Body: data.Templates.Body,
 			},
@@ -460,21 +462,21 @@ func persistData(ctx context.Context, api *auth0.API, data *pageData) error {
 	group.Go(func() (err error) {
 		data.Themes.ID = nil
 
-		existingTheme, err := api.BrandingTheme.Default()
+		existingTheme, err := api.BrandingTheme.Default(ctx)
 		if err != nil {
-			return api.BrandingTheme.Create(data.Themes)
+			return api.BrandingTheme.Create(ctx, data.Themes)
 		}
 
-		return api.BrandingTheme.Update(existingTheme.GetID(), data.Themes)
+		return api.BrandingTheme.Update(ctx, existingTheme.GetID(), data.Themes)
 	})
 
 	group.Go(func() (err error) {
-		return api.Prompt.Update(data.AuthenticationProfile)
+		return api.Prompt.Update(ctx, data.AuthenticationProfile)
 	})
 
 	group.Go(func() (err error) {
 		data.Branding.LogoURL = nil
-		return api.Branding.Update(data.Branding)
+		return api.Branding.Update(ctx, data.Branding)
 	})
 
 	for key, value := range data.CustomText {
@@ -500,7 +502,7 @@ func persistData(ctx context.Context, api *auth0.API, data *pageData) error {
 				return nil
 			}
 
-			return api.Prompt.SetCustomText(key, "en", data)
+			return api.Prompt.SetCustomText(ctx, key, "en", data)
 		})
 	}
 
