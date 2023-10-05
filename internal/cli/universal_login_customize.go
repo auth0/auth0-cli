@@ -10,7 +10,7 @@ func customizeUniversalLoginCmd(_ *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "customize",
 		Args:  cobra.NoArgs,
-		Short: "Customize the entire Universal Login experience",
+		Short: "Customize the Universal Login experience",
 		Long: "Customize and preview changes to the Universal Login experience. This command will open a webpage " +
 			"within your browser where you can edit and preview your branding changes. For a comprehensive list of " +
 			"editable parameters and their values please visit the " +
