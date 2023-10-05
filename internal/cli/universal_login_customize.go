@@ -2,14 +2,24 @@ package cli
 
 import (
 	"context"
+	"fmt"
+	"net"
+	"net/http"
+	"net/url"
+	"time"
 
 	"github.com/auth0/go-auth0/management"
+	"github.com/gorilla/websocket"
+	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/display"
 )
+
+const webAppURL = "http://localhost:5173"
 
 type (
 	universalLoginBrandingData struct {
@@ -31,6 +41,13 @@ type (
 		Language   string                            `json:"language"`
 		Prompt     string                            `json:"prompt"`
 		CustomText map[string]map[string]interface{} `json:"custom_text"`
+	}
+
+	webSocketHandler struct {
+		shutdown     context.CancelFunc
+		display      *display.Renderer
+		api          *auth0.API
+		brandingData *universalLoginBrandingData
 	}
 )
 
@@ -61,9 +78,7 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			cli.renderer.JSONResult(universalLoginBrandingData)
-
-			return nil
+			return startWebSocketServer(ctx, cli.api, cli.renderer, universalLoginBrandingData)
 		},
 	}
 
@@ -236,4 +251,93 @@ func fetchPromptCustomTextWithDefaults(
 		Prompt:     promptName,
 		CustomText: brandingTextTranslations,
 	}, nil
+}
+
+func startWebSocketServer(
+	ctx context.Context,
+	api *auth0.API,
+	display *display.Renderer,
+	brandingData *universalLoginBrandingData,
+) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return err
+	}
+	defer listener.Close()
+
+	handler := &webSocketHandler{
+		display:      display,
+		api:          api,
+		shutdown:     cancel,
+		brandingData: brandingData,
+	}
+
+	server := &http.Server{
+		Handler:      handler,
+		ReadTimeout:  time.Minute * 10,
+		WriteTimeout: time.Minute * 10,
+	}
+
+	errChan := make(chan error, 1)
+	go func() {
+		errChan <- server.Serve(listener)
+	}()
+
+	openWebAppInBrowser(display, listener.Addr())
+
+	select {
+	case err := <-errChan:
+		return err
+	case <-ctx.Done():
+		return server.Close()
+	}
+}
+
+func openWebAppInBrowser(display *display.Renderer, addr net.Addr) {
+	port := addr.(*net.TCPAddr).Port
+	webAppURLWithPort := fmt.Sprintf("%s?ws_port=%d", webAppURL, port)
+
+	display.Infof("Perform your changes within the UI: %q", webAppURLWithPort)
+
+	if err := browser.OpenURL(webAppURLWithPort); err != nil {
+		display.Warnf("Failed to open the browser. Visit the URL manually.")
+	}
+}
+
+func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	upgrader := websocket.Upgrader{
+		CheckOrigin: checkOriginFunc,
+	}
+
+	connection, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		h.display.Errorf("error accepting WebSocket connection: %v", err)
+		h.shutdown()
+		return
+	}
+
+	connection.SetReadLimit(1e+6) // 1 MB.
+
+	if err = connection.WriteJSON(h.brandingData); err != nil {
+		h.display.Errorf("failed to write json message: %v", err)
+		h.shutdown()
+		return
+	}
+}
+
+func checkOriginFunc(r *http.Request) bool {
+	origin := r.Header["Origin"]
+	if len(origin) == 0 {
+		return false
+	}
+
+	originURL, err := url.Parse(origin[0])
+	if err != nil {
+		return false
+	}
+
+	return originURL.String() == webAppURL
 }
