@@ -3,29 +3,23 @@ layout: default
 parent: auth0 universal-login
 has_toc: false
 ---
-# auth0 universal-login show
+# auth0 universal-login customize
 
-Display the custom branding settings for Universal Login.
+Customize and preview changes to the Universal Login experience. This command will open a webpage within your browser where you can edit and preview your branding changes. For a comprehensive list of editable parameters and their values please visit the [Management API Documentation](https://auth0.com/docs/api/management/v2).
 
 ## Usage
 ```
-auth0 universal-login show [flags]
+auth0 universal-login customize [flags]
 ```
 
 ## Examples
 
 ```
-  auth0 universal-login show
-  auth0 ul show
-  auth0 ul show --json
+  auth0 universal-login customize
+  auth0 ul customize
 ```
 
 
-## Flags
-
-```
-      --json   Output in json format.
-```
 
 
 ## Inherited Flags
