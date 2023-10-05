@@ -28,19 +28,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 		{
 			name: "it can correctly fetch universal login branding data",
 			mockedAPI: func() *auth0.API {
-				mockCustomDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
-				mockCustomDomainAPI.
-					EXPECT().
-					List(gomock.Any()).
-					Return(
-						[]*management.CustomDomain{
-							{
-								Status: auth0.String("ready"),
-							},
-						},
-						nil,
-					)
-
 				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
 				mockPromptAPI.
 					EXPECT().
@@ -112,7 +99,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				mockAPI := &auth0.API{
 					Branding:      mockBrandingAPI,
 					BrandingTheme: mockBrandingThemeAPI,
-					CustomDomain:  mockCustomDomainAPI,
 					Prompt:        mockPromptAPI,
 					Tenant:        mockTenantAPI,
 				}
@@ -190,19 +176,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 		{
 			name: "it uses default branding settings if it fails to fetch them",
 			mockedAPI: func() *auth0.API {
-				mockCustomDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
-				mockCustomDomainAPI.
-					EXPECT().
-					List(gomock.Any()).
-					Return(
-						[]*management.CustomDomain{
-							{
-								Status: auth0.String("ready"),
-							},
-						},
-						nil,
-					)
-
 				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
 				mockPromptAPI.
 					EXPECT().
@@ -265,7 +238,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				mockAPI := &auth0.API{
 					Branding:      mockBrandingAPI,
 					BrandingTheme: mockBrandingThemeAPI,
-					CustomDomain:  mockCustomDomainAPI,
 					Prompt:        mockPromptAPI,
 					Tenant:        mockTenantAPI,
 				}
@@ -343,19 +315,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 		{
 			name: "it uses an empty branding template if it fails to fetch it",
 			mockedAPI: func() *auth0.API {
-				mockCustomDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
-				mockCustomDomainAPI.
-					EXPECT().
-					List(gomock.Any()).
-					Return(
-						[]*management.CustomDomain{
-							{
-								Status: auth0.String("ready"),
-							},
-						},
-						nil,
-					)
-
 				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
 				mockPromptAPI.
 					EXPECT().
@@ -422,7 +381,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				mockAPI := &auth0.API{
 					Branding:      mockBrandingAPI,
 					BrandingTheme: mockBrandingThemeAPI,
-					CustomDomain:  mockCustomDomainAPI,
 					Prompt:        mockPromptAPI,
 					Tenant:        mockTenantAPI,
 				}
@@ -498,19 +456,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 		{
 			name: "it uses a default branding theme if it fails to fetch it",
 			mockedAPI: func() *auth0.API {
-				mockCustomDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
-				mockCustomDomainAPI.
-					EXPECT().
-					List(gomock.Any()).
-					Return(
-						[]*management.CustomDomain{
-							{
-								Status: auth0.String("ready"),
-							},
-						},
-						nil,
-					)
-
 				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
 				mockPromptAPI.
 					EXPECT().
@@ -582,7 +527,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				mockAPI := &auth0.API{
 					Branding:      mockBrandingAPI,
 					BrandingTheme: mockBrandingThemeAPI,
-					CustomDomain:  mockCustomDomainAPI,
 					Prompt:        mockPromptAPI,
 					Tenant:        mockTenantAPI,
 				}
@@ -733,19 +677,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 		{
 			name: "it fails to fetch branding data if there's an error retrieving tenant data",
 			mockedAPI: func() *auth0.API {
-				mockCustomDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
-				mockCustomDomainAPI.
-					EXPECT().
-					List(gomock.Any()).
-					Return(
-						[]*management.CustomDomain{
-							{
-								Status: auth0.String("ready"),
-							},
-						},
-						nil,
-					)
-
 				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
 				mockPromptAPI.
 					EXPECT().
@@ -799,7 +730,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				mockAPI := &auth0.API{
 					Branding:      mockBrandingAPI,
 					BrandingTheme: mockBrandingThemeAPI,
-					CustomDomain:  mockCustomDomainAPI,
 					Prompt:        mockPromptAPI,
 					Tenant:        mockTenantAPI,
 				}
@@ -811,19 +741,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 		{
 			name: "it fails to fetch branding data if there's an error retrieving prompt text data",
 			mockedAPI: func() *auth0.API {
-				mockCustomDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
-				mockCustomDomainAPI.
-					EXPECT().
-					List(gomock.Any()).
-					Return(
-						[]*management.CustomDomain{
-							{
-								Status: auth0.String("ready"),
-							},
-						},
-						nil,
-					)
-
 				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
 				mockPromptAPI.
 					EXPECT().
@@ -888,7 +805,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				mockAPI := &auth0.API{
 					Branding:      mockBrandingAPI,
 					BrandingTheme: mockBrandingThemeAPI,
-					CustomDomain:  mockCustomDomainAPI,
 					Prompt:        mockPromptAPI,
 					Tenant:        mockTenantAPI,
 				}
@@ -896,50 +812,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				return mockAPI
 			},
 			expectedError: "failed to fetch custom text",
-		},
-		{
-			name: "it fails to fetch any data if a custom domain is not enabled",
-			mockedAPI: func() *auth0.API {
-				mockCustomDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
-				mockCustomDomainAPI.
-					EXPECT().
-					List(gomock.Any()).
-					Return(
-						[]*management.CustomDomain{
-							{
-								Status: auth0.String("pending"),
-							},
-						},
-						nil,
-					)
-
-				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
-				mockPromptAPI.EXPECT().Read(gomock.Any()).Return(nil, nil)
-
-				mockBrandingAPI := mock.NewMockBrandingAPI(ctrl)
-				mockBrandingAPI.EXPECT().Read(gomock.Any()).Return(nil, nil)
-
-				mockBrandingAPI.EXPECT().UniversalLogin(gomock.Any()).Return(nil, nil)
-
-				mockBrandingThemeAPI := mock.NewMockBrandingThemeAPI(ctrl)
-				mockBrandingThemeAPI.EXPECT().Default(gomock.Any()).Return(nil, nil)
-
-				mockTenantAPI := mock.NewMockTenantAPI(ctrl)
-				mockTenantAPI.EXPECT().Read(gomock.Any()).Return(nil, nil)
-
-				mockPromptAPI.EXPECT().CustomText(gomock.Any(), "login", "en").Return(map[string]interface{}{}, nil)
-
-				mockAPI := &auth0.API{
-					Branding:      mockBrandingAPI,
-					BrandingTheme: mockBrandingThemeAPI,
-					CustomDomain:  mockCustomDomainAPI,
-					Prompt:        mockPromptAPI,
-					Tenant:        mockTenantAPI,
-				}
-
-				return mockAPI
-			},
-			expectedError: "this feature requires at least one custom domain to be set and verified for the tenant, use 'auth0 domains create' to create one and 'auth0 domains verify' to have it verified",
 		},
 	}
 

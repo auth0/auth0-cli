@@ -28,9 +28,9 @@ type (
 	}
 
 	promptData struct {
-		Language   string      `json:"language"`
-		Prompt     string      `json:"prompt"`
-		CustomText interface{} `json:"custom_text"`
+		Language   string                            `json:"language"`
+		Prompt     string                            `json:"prompt"`
+		CustomText map[string]map[string]interface{} `json:"custom_text"`
 	}
 )
 
@@ -46,10 +46,16 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 universal-login customize
   auth0 ul customize`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+
+			if err := ensureCustomDomainIsEnabled(ctx, cli.api); err != nil {
+				return err
+			}
+
 			var universalLoginBrandingData *universalLoginBrandingData
 
 			if err := ansi.Spinner("Fetching Universal Login branding data", func() (err error) {
-				universalLoginBrandingData, err = fetchUniversalLoginBrandingData(cmd.Context(), cli.api, cli.tenant)
+				universalLoginBrandingData, err = fetchUniversalLoginBrandingData(ctx, cli.api, cli.tenant)
 				return err
 			}); err != nil {
 				return err
@@ -70,10 +76,6 @@ func fetchUniversalLoginBrandingData(
 	tenantDomain string,
 ) (*universalLoginBrandingData, error) {
 	group, ctx := errgroup.WithContext(ctx)
-
-	group.Go(func() (err error) {
-		return ensureCustomDomainIsEnabled(ctx, api)
-	})
 
 	var authenticationProfile *management.Prompt
 	group.Go(func() (err error) {
@@ -108,10 +110,7 @@ func fetchUniversalLoginBrandingData(
 		}
 
 		defaultPrompt := "login"
-		defaultLanguage := "en"
-		if len(tenant.GetEnabledLocales()) > 0 {
-			defaultLanguage = tenant.GetEnabledLocales()[0]
-		}
+		defaultLanguage := tenant.GetEnabledLocales()[0]
 
 		prompt, err = fetchPromptCustomTextWithDefaults(ctx, api, defaultPrompt, defaultLanguage)
 		return err
