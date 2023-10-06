@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
@@ -165,6 +166,7 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 							"signupActionText":              "${footerText}",
 							"title":                         "Welcome friend, glad to have you!",
 							"user-blocked":                  "Your account has been blocked after multiple consecutive login attempts.",
+							"usernameOnlyPlaceholder":       "Username",
 							"usernamePlaceholder":           "Username or email address",
 							"wrong-credentials":             "Wrong username or password",
 							"wrong-email-credentials":       "Wrong email or password",
@@ -304,6 +306,7 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 							"signupActionText":              "${footerText}",
 							"title":                         "Welcome friend, glad to have you!",
 							"user-blocked":                  "Your account has been blocked after multiple consecutive login attempts.",
+							"usernameOnlyPlaceholder":       "Username",
 							"usernamePlaceholder":           "Username or email address",
 							"wrong-credentials":             "Wrong username or password",
 							"wrong-email-credentials":       "Wrong email or password",
@@ -445,6 +448,7 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 							"signupActionText":              "${footerText}",
 							"title":                         "Welcome friend, glad to have you!",
 							"user-blocked":                  "Your account has been blocked after multiple consecutive login attempts.",
+							"usernameOnlyPlaceholder":       "Username",
 							"usernamePlaceholder":           "Username or email address",
 							"wrong-credentials":             "Wrong username or password",
 							"wrong-email-credentials":       "Wrong email or password",
@@ -666,6 +670,7 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 							"signupActionText":              "${footerText}",
 							"title":                         "Welcome friend, glad to have you!",
 							"user-blocked":                  "Your account has been blocked after multiple consecutive login attempts.",
+							"usernameOnlyPlaceholder":       "Username",
 							"usernamePlaceholder":           "Username or email address",
 							"wrong-credentials":             "Wrong username or password",
 							"wrong-email-credentials":       "Wrong email or password",
@@ -826,6 +831,56 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.Equal(t, test.expectedData, actualData)
+		})
+	}
+}
+
+func TestCheckOriginFunc(t *testing.T) {
+	var testCases = []struct {
+		testName string
+		request  *http.Request
+		expected bool
+	}{
+		{
+			testName: "No Origin Header",
+			request: &http.Request{
+				Header: http.Header{},
+			},
+			expected: false,
+		},
+		{
+			testName: "Valid Origin",
+			request: &http.Request{
+				Header: http.Header{
+					"Origin": []string{webAppURL},
+				},
+			},
+			expected: true,
+		},
+		{
+			testName: "Invalid Origin",
+			request: &http.Request{
+				Header: http.Header{
+					"Origin": []string{"https://invalid.com"},
+				},
+			},
+			expected: false,
+		},
+		{
+			testName: "Malformed Origin",
+			request: &http.Request{
+				Header: http.Header{
+					"Origin": []string{"malformed-url"},
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.testName, func(t *testing.T) {
+			actual := checkOriginFunc(test.request)
+			assert.Equal(t, test.expected, actual)
 		})
 	}
 }
