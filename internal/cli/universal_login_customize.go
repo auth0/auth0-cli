@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -40,7 +41,7 @@ type (
 	promptData struct {
 		Language   string                            `json:"language"`
 		Prompt     string                            `json:"prompt"`
-		CustomText map[string]map[string]interface{} `json:"custom_text"`
+		CustomText map[string]map[string]interface{} `json:"custom_tex,omitempty"`
 	}
 
 	webSocketHandler struct {
@@ -48,6 +49,11 @@ type (
 		display      *display.Renderer
 		api          *auth0.API
 		brandingData *universalLoginBrandingData
+	}
+
+	webSocketMessage struct {
+		Type    string          `json:"type"`
+		Payload json.RawMessage `json:"payload"`
 	}
 )
 
@@ -325,6 +331,41 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.display.Errorf("failed to write json message: %v", err)
 		h.shutdown()
 		return
+	}
+
+	for {
+		var message webSocketMessage
+		if err := connection.ReadJSON(&message); err != nil {
+			h.display.Errorf("failed to read WebSocket message: %v", err)
+			continue
+		}
+
+		switch message.Type {
+		case "fetch_prompt":
+			var promptToFetch promptData
+			if err := json.Unmarshal(message.Payload, &promptToFetch); err != nil {
+				h.display.Errorf("failed to unmarshal %q payload: %v", message.Type, err)
+				continue
+			}
+
+			promptToSend, err := fetchPromptCustomTextWithDefaults(
+				r.Context(),
+				h.api,
+				promptToFetch.Prompt,
+				promptToFetch.Language,
+			)
+			if err != nil {
+				h.display.Errorf("failed to fetch custom text for prompt: %v", err)
+				continue
+			}
+
+			if err = connection.WriteJSON(promptToSend); err != nil {
+				h.display.Errorf("failed to send prompt data message: %v", err)
+				continue
+			}
+		case "save_branding":
+			h.display.Warnf("not yet implemented")
+		}
 	}
 }
 
