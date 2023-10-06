@@ -300,7 +300,7 @@ func openWebAppInBrowser(display *display.Renderer, addr net.Addr) {
 	port := addr.(*net.TCPAddr).Port
 	webAppURLWithPort := fmt.Sprintf("%s?ws_port=%d", webAppURL, port)
 
-	display.Infof("Perform your changes within the UI: %q", webAppURLWithPort)
+	display.Infof("Perform your changes within the editor: %q", webAppURLWithPort)
 
 	if err := browser.OpenURL(webAppURLWithPort); err != nil {
 		display.Warnf("Failed to open the browser. Visit the URL manually.")
