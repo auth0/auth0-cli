@@ -14,6 +14,89 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
 )
 
+func TestEnsureNewUniversalLoginExperienceIsActive(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	var testCases = []struct {
+		name          string
+		mockedAPI     func() *auth0.API
+		expectedError string
+	}{
+		{
+			name: "it returns nil if new ul is active",
+			mockedAPI: func() *auth0.API {
+				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
+				mockPromptAPI.
+					EXPECT().
+					Read(gomock.Any()).
+					Return(
+						&management.Prompt{
+							UniversalLoginExperience:    "new",
+							IdentifierFirst:             auth0.Bool(true),
+							WebAuthnPlatformFirstFactor: auth0.Bool(true),
+						},
+						nil,
+					)
+
+				return &auth0.API{
+					Prompt: mockPromptAPI,
+				}
+			},
+		},
+		{
+			name: "it returns an error if there is an api error",
+			mockedAPI: func() *auth0.API {
+				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
+				mockPromptAPI.
+					EXPECT().
+					Read(gomock.Any()).
+					Return(nil, fmt.Errorf("api error"))
+
+				return &auth0.API{
+					Prompt: mockPromptAPI,
+				}
+			},
+			expectedError: "api error",
+		},
+		{
+			name: "it returns an error if classic UL is enabled",
+			mockedAPI: func() *auth0.API {
+				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
+				mockPromptAPI.
+					EXPECT().
+					Read(gomock.Any()).
+					Return(
+						&management.Prompt{
+							UniversalLoginExperience:    "classic",
+							IdentifierFirst:             auth0.Bool(true),
+							WebAuthnPlatformFirstFactor: auth0.Bool(true),
+						},
+						nil,
+					)
+
+				return &auth0.API{
+					Prompt: mockPromptAPI,
+				}
+			},
+			expectedError: "this feature requires the new Universal Login experience to be enabled for the tenant, use `auth0 api patch prompts --data '{\"universal_login_experience\":\"new\"}'` to have it enabled",
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			err := ensureNewUniversalLoginExperienceIsActive(context.Background(), test.mockedAPI())
+
+			if test.expectedError != "" {
+				assert.EqualError(t, err, test.expectedError)
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
+}
+
 func TestFetchUniversalLoginBrandingData(t *testing.T) {
 	const tenantDomain = "tenant-example.auth0.com"
 
@@ -29,19 +112,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 		{
 			name: "it can correctly fetch universal login branding data",
 			mockedAPI: func() *auth0.API {
-				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
-				mockPromptAPI.
-					EXPECT().
-					Read(gomock.Any()).
-					Return(
-						&management.Prompt{
-							UniversalLoginExperience:    "new",
-							IdentifierFirst:             auth0.Bool(true),
-							WebAuthnPlatformFirstFactor: auth0.Bool(true),
-						},
-						nil,
-					)
-
 				mockBrandingAPI := mock.NewMockBrandingAPI(ctrl)
 				mockBrandingAPI.
 					EXPECT().
@@ -85,6 +155,7 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 						nil,
 					)
 
+				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
 				mockPromptAPI.
 					EXPECT().
 					CustomText(gomock.Any(), "login", "en").
@@ -107,11 +178,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				return mockAPI
 			},
 			expectedData: &universalLoginBrandingData{
-				AuthenticationProfile: &management.Prompt{
-					UniversalLoginExperience:    "new",
-					IdentifierFirst:             auth0.Bool(true),
-					WebAuthnPlatformFirstFactor: auth0.Bool(true),
-				},
 				Settings: &management.Branding{
 					Colors: &management.BrandingColors{
 						Primary:        auth0.String("#334455"),
@@ -178,19 +244,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 		{
 			name: "it uses default branding settings if it fails to fetch them",
 			mockedAPI: func() *auth0.API {
-				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
-				mockPromptAPI.
-					EXPECT().
-					Read(gomock.Any()).
-					Return(
-						&management.Prompt{
-							UniversalLoginExperience:    "new",
-							IdentifierFirst:             auth0.Bool(true),
-							WebAuthnPlatformFirstFactor: auth0.Bool(true),
-						},
-						nil,
-					)
-
 				mockBrandingAPI := mock.NewMockBrandingAPI(ctrl)
 				mockBrandingAPI.
 					EXPECT().
@@ -225,6 +278,7 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 						nil,
 					)
 
+				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
 				mockPromptAPI.
 					EXPECT().
 					CustomText(gomock.Any(), "login", "en").
@@ -247,11 +301,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				return mockAPI
 			},
 			expectedData: &universalLoginBrandingData{
-				AuthenticationProfile: &management.Prompt{
-					UniversalLoginExperience:    "new",
-					IdentifierFirst:             auth0.Bool(true),
-					WebAuthnPlatformFirstFactor: auth0.Bool(true),
-				},
 				Settings: &management.Branding{
 					Colors: &management.BrandingColors{
 						Primary:        auth0.String(defaultPrimaryColor),
@@ -318,19 +367,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 		{
 			name: "it uses an empty branding template if it fails to fetch it",
 			mockedAPI: func() *auth0.API {
-				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
-				mockPromptAPI.
-					EXPECT().
-					Read(gomock.Any()).
-					Return(
-						&management.Prompt{
-							UniversalLoginExperience:    "new",
-							IdentifierFirst:             auth0.Bool(true),
-							WebAuthnPlatformFirstFactor: auth0.Bool(true),
-						},
-						nil,
-					)
-
 				mockBrandingAPI := mock.NewMockBrandingAPI(ctrl)
 				mockBrandingAPI.
 					EXPECT().
@@ -369,6 +405,7 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 						nil,
 					)
 
+				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
 				mockPromptAPI.
 					EXPECT().
 					CustomText(gomock.Any(), "login", "en").
@@ -391,11 +428,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				return mockAPI
 			},
 			expectedData: &universalLoginBrandingData{
-				AuthenticationProfile: &management.Prompt{
-					UniversalLoginExperience:    "new",
-					IdentifierFirst:             auth0.Bool(true),
-					WebAuthnPlatformFirstFactor: auth0.Bool(true),
-				},
 				Settings: &management.Branding{
 					Colors: &management.BrandingColors{
 						Primary:        auth0.String("#334455"),
@@ -460,19 +492,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 		{
 			name: "it uses a default branding theme if it fails to fetch it",
 			mockedAPI: func() *auth0.API {
-				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
-				mockPromptAPI.
-					EXPECT().
-					Read(gomock.Any()).
-					Return(
-						&management.Prompt{
-							UniversalLoginExperience:    "new",
-							IdentifierFirst:             auth0.Bool(true),
-							WebAuthnPlatformFirstFactor: auth0.Bool(true),
-						},
-						nil,
-					)
-
 				mockBrandingAPI := mock.NewMockBrandingAPI(ctrl)
 				mockBrandingAPI.
 					EXPECT().
@@ -516,6 +535,7 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 						nil,
 					)
 
+				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
 				mockPromptAPI.
 					EXPECT().
 					CustomText(gomock.Any(), "login", "en").
@@ -538,11 +558,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				return mockAPI
 			},
 			expectedData: &universalLoginBrandingData{
-				AuthenticationProfile: &management.Prompt{
-					UniversalLoginExperience:    "new",
-					IdentifierFirst:             auth0.Bool(true),
-					WebAuthnPlatformFirstFactor: auth0.Bool(true),
-				},
 				Settings: &management.Branding{
 					Colors: &management.BrandingColors{
 						Primary:        auth0.String("#334455"),
@@ -682,19 +697,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 		{
 			name: "it fails to fetch branding data if there's an error retrieving tenant data",
 			mockedAPI: func() *auth0.API {
-				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
-				mockPromptAPI.
-					EXPECT().
-					Read(gomock.Any()).
-					Return(
-						&management.Prompt{
-							UniversalLoginExperience:    "new",
-							IdentifierFirst:             auth0.Bool(true),
-							WebAuthnPlatformFirstFactor: auth0.Bool(true),
-						},
-						nil,
-					)
-
 				mockBrandingAPI := mock.NewMockBrandingAPI(ctrl)
 				mockBrandingAPI.
 					EXPECT().
@@ -726,6 +728,8 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					Default(gomock.Any()).
 					Return(&management.BrandingTheme{}, nil)
 
+				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
+
 				mockTenantAPI := mock.NewMockTenantAPI(ctrl)
 				mockTenantAPI.
 					EXPECT().
@@ -746,19 +750,6 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 		{
 			name: "it fails to fetch branding data if there's an error retrieving prompt text data",
 			mockedAPI: func() *auth0.API {
-				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
-				mockPromptAPI.
-					EXPECT().
-					Read(gomock.Any()).
-					Return(
-						&management.Prompt{
-							UniversalLoginExperience:    "new",
-							IdentifierFirst:             auth0.Bool(true),
-							WebAuthnPlatformFirstFactor: auth0.Bool(true),
-						},
-						nil,
-					)
-
 				mockBrandingAPI := mock.NewMockBrandingAPI(ctrl)
 				mockBrandingAPI.
 					EXPECT().
@@ -802,6 +793,7 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 						nil,
 					)
 
+				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
 				mockPromptAPI.
 					EXPECT().
 					CustomText(gomock.Any(), "login", "en").
