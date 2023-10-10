@@ -242,7 +242,7 @@ func mergeBrandingTextTranslations(
 		}
 
 		for key, text := range translations {
-			if strings.HasPrefix(key, "error") || strings.HasPrefix(key, "devKeys") {
+			if strings.HasPrefix(key, "error") || strings.HasPrefix(key, "devKeys") || key == "usernameOnlyPlaceholder" {
 				continue
 			}
 
