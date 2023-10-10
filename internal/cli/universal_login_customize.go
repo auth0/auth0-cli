@@ -33,7 +33,7 @@ type (
 		Template *management.BrandingUniversalLogin `json:"template"`
 		Theme    *management.BrandingTheme          `json:"theme"`
 		Tenant   *tenantData                        `json:"tenant"`
-		Prompt   *promptData                        `json:"prompt"`
+		Prompts  []*promptData                      `json:"prompts"`
 	}
 
 	tenantData struct {
@@ -43,9 +43,9 @@ type (
 	}
 
 	promptData struct {
-		Language   string                            `json:"language"`
-		Prompt     string                            `json:"prompt"`
-		CustomText map[string]map[string]interface{} `json:"custom_text,omitempty"`
+		Language   string                 `json:"language"`
+		Prompt     string                 `json:"prompt"`
+		CustomText map[string]interface{} `json:"custom_text,omitempty"`
 	}
 
 	webSocketHandler struct {
@@ -168,7 +168,7 @@ func fetchUniversalLoginBrandingData(
 			EnabledLocales: tenant.GetEnabledLocales(),
 			Domain:         tenantDomain,
 		},
-		Prompt: prompt,
+		Prompts: []*promptData{prompt},
 	}, nil
 }
 
@@ -269,10 +269,15 @@ func fetchPromptCustomTextWithDefaults(
 
 	brandingTextTranslations := mergeBrandingTextTranslations(defaultTranslations, customTranslations)
 
+	customText := make(map[string]interface{}, 0)
+	for key, value := range brandingTextTranslations {
+		customText[key] = value
+	}
+
 	return &promptData{
 		Language:   language,
 		Prompt:     promptName,
-		CustomText: brandingTextTranslations,
+		CustomText: customText,
 	}, nil
 }
 
@@ -405,7 +410,16 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 		case saveBrandingMessageType:
-			h.display.Warnf("not yet implemented")
+			var saveBrandingMsg universalLoginBrandingData
+			if err := json.Unmarshal(message.Payload, &saveBrandingMsg); err != nil {
+				h.display.Errorf("failed to unmarshal save branding data payload: %v", err)
+				continue
+			}
+
+			if err := saveUniversalLoginBrandingData(r.Context(), h.api, &saveBrandingMsg); err != nil {
+				h.display.Errorf("failed to save branding data: %v", err)
+				continue
+			}
 		}
 	}
 }
@@ -422,4 +436,36 @@ func checkOriginFunc(r *http.Request) bool {
 	}
 
 	return originURL.String() == webAppURL
+}
+
+func saveUniversalLoginBrandingData(ctx context.Context, api *auth0.API, data *universalLoginBrandingData) error {
+	group, ctx := errgroup.WithContext(ctx)
+
+	group.Go(func() (err error) {
+		return api.Branding.Update(ctx, data.Settings)
+	})
+
+	group.Go(func() (err error) {
+		return api.Branding.SetUniversalLogin(ctx, data.Template)
+	})
+
+	group.Go(func() (err error) {
+		themeID := data.Theme.GetID()
+		if themeID != "" {
+			data.Theme.ID = nil
+			return api.BrandingTheme.Update(ctx, themeID, data.Theme)
+		}
+
+		return api.BrandingTheme.Create(ctx, data.Theme)
+	})
+
+	for _, prompt := range data.Prompts {
+		prompt := prompt
+
+		group.Go(func() (err error) {
+			return api.Prompt.SetCustomText(ctx, prompt.Prompt, prompt.Language, prompt.CustomText)
+		})
+	}
+
+	return group.Wait()
 }
