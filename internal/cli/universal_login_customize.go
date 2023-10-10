@@ -29,12 +29,11 @@ const (
 
 type (
 	universalLoginBrandingData struct {
-		AuthenticationProfile *management.Prompt                 `json:"auth_profile"`
-		Settings              *management.Branding               `json:"settings"`
-		Template              *management.BrandingUniversalLogin `json:"template"`
-		Theme                 *management.BrandingTheme          `json:"theme"`
-		Tenant                *tenantData                        `json:"tenant"`
-		Prompt                *promptData                        `json:"prompt"`
+		Settings *management.Branding               `json:"settings"`
+		Template *management.BrandingUniversalLogin `json:"template"`
+		Theme    *management.BrandingTheme          `json:"theme"`
+		Tenant   *tenantData                        `json:"tenant"`
+		Prompt   *promptData                        `json:"prompt"`
 	}
 
 	tenantData struct {
@@ -80,6 +79,10 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
+			if err := ensureNewUniversalLoginExperienceIsActive(ctx, cli.api); err != nil {
+				return err
+			}
+
 			var universalLoginBrandingData *universalLoginBrandingData
 
 			if err := ansi.Spinner("Fetching Universal Login branding data", func() (err error) {
@@ -96,18 +99,28 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+func ensureNewUniversalLoginExperienceIsActive(ctx context.Context, api *auth0.API) error {
+	authenticationProfile, err := api.Prompt.Read(ctx)
+	if err != nil {
+		return err
+	}
+
+	if authenticationProfile.UniversalLoginExperience == "new" {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"this feature requires the new Universal Login experience to be enabled for the tenant, " +
+			"use `auth0 api patch prompts --data '{\"universal_login_experience\":\"new\"}'` to enable it",
+	)
+}
+
 func fetchUniversalLoginBrandingData(
 	ctx context.Context,
 	api *auth0.API,
 	tenantDomain string,
 ) (*universalLoginBrandingData, error) {
 	group, ctx := errgroup.WithContext(ctx)
-
-	var authenticationProfile *management.Prompt
-	group.Go(func() (err error) {
-		authenticationProfile, err = api.Prompt.Read(ctx)
-		return err
-	})
 
 	var brandingSettings *management.Branding
 	group.Go(func() (err error) {
@@ -147,10 +160,9 @@ func fetchUniversalLoginBrandingData(
 	}
 
 	return &universalLoginBrandingData{
-		AuthenticationProfile: authenticationProfile,
-		Settings:              brandingSettings,
-		Template:              currentTemplate,
-		Theme:                 currentTheme,
+		Settings: brandingSettings,
+		Template: currentTemplate,
+		Theme:    currentTheme,
 		Tenant: &tenantData{
 			FriendlyName:   tenant.GetFriendlyName(),
 			EnabledLocales: tenant.GetEnabledLocales(),
