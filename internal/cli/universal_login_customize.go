@@ -111,7 +111,7 @@ func ensureNewUniversalLoginExperienceIsActive(ctx context.Context, api *auth0.A
 
 	return fmt.Errorf(
 		"this feature requires the new Universal Login experience to be enabled for the tenant, " +
-			"use `auth0 api patch prompts --data '{\"universal_login_experience\":\"new\"}'` to have it enabled",
+			"use `auth0 api patch prompts --data '{\"universal_login_experience\":\"new\"}'` to enable it",
 	)
 }
 

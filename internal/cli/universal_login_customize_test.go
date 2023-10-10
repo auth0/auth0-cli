@@ -79,7 +79,7 @@ func TestEnsureNewUniversalLoginExperienceIsActive(t *testing.T) {
 					Prompt: mockPromptAPI,
 				}
 			},
-			expectedError: "this feature requires the new Universal Login experience to be enabled for the tenant, use `auth0 api patch prompts --data '{\"universal_login_experience\":\"new\"}'` to have it enabled",
+			expectedError: "this feature requires the new Universal Login experience to be enabled for the tenant, use `auth0 api patch prompts --data '{\"universal_login_experience\":\"new\"}'` to enable it",
 		},
 	}
 
