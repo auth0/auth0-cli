@@ -16,7 +16,7 @@ import (
 const (
 	textDocsKey         = "__doc__"
 	textDocsURL         = "https://auth0.com/docs/customize/universal-login-pages/customize-login-text-prompts"
-	textLocalesURL      = "https://cdn.auth0.com/ulp/react-components/development/languages/%s/prompts.json"
+	textLocalesURL      = "https://cdn.auth0.com/ulp/react-components/1.66.3/languages/%s/prompts.json"
 	textLanguageDefault = "en"
 )
 
