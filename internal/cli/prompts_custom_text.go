@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
@@ -242,10 +241,6 @@ func mergeBrandingTextTranslations(
 		}
 
 		for key, text := range translations {
-			if strings.HasPrefix(key, "error") || strings.HasPrefix(key, "devKeys") || key == "usernameOnlyPlaceholder" {
-				continue
-			}
-
 			if _, ok := mergedTranslations[screen]; !ok {
 				mergedTranslations[screen] = make(map[string]interface{})
 			}
