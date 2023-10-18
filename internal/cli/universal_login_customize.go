@@ -26,6 +26,7 @@ const (
 	fetchPromptMessageType  = "FETCH_PROMPT"
 	saveBrandingMessageType = "SAVE_BRANDING"
 	errorMessageType        = "ERROR"
+	successMessageType      = "SUCCESS"
 )
 
 type (
@@ -51,6 +52,10 @@ type (
 
 	errorData struct {
 		Error string `json:"error"`
+	}
+
+	successData struct {
+		Success bool `json:"success"`
 	}
 
 	webSocketHandler struct {
@@ -503,6 +508,17 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 
 				continue
+			}
+
+			successMsg := webSocketMessage{
+				Type: successMessageType,
+				Payload: &successData{
+					Success: true,
+				},
+			}
+
+			if err := connection.WriteJSON(&successMsg); err != nil {
+				h.display.Errorf("Failed to send success message: %v", err)
 			}
 		}
 	}
