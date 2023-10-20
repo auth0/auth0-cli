@@ -30,23 +30,31 @@ const (
 
 type (
 	universalLoginBrandingData struct {
-		Settings *management.Branding               `json:"settings"`
-		Template *management.BrandingUniversalLogin `json:"template"`
-		Theme    *management.BrandingTheme          `json:"theme"`
-		Tenant   *tenantData                        `json:"tenant"`
-		Prompts  []*promptData                      `json:"prompts"`
+		Applications []*applicationData                 `json:"applications"`
+		Prompts      []*promptData                      `json:"prompts"`
+		Settings     *management.Branding               `json:"settings"`
+		Template     *management.BrandingUniversalLogin `json:"template"`
+		Theme        *management.BrandingTheme          `json:"theme"`
+		Tenant       *tenantData                        `json:"tenant"`
 	}
 
-	tenantData struct {
-		FriendlyName   string   `json:"friendly_name"`
-		EnabledLocales []string `json:"enabled_locales"`
-		Domain         string   `json:"domain"`
+	applicationData struct {
+		ID       string                 `json:"id"`
+		Name     string                 `json:"name"`
+		LogoURL  string                 `json:"logo_url"`
+		Metadata map[string]interface{} `json:"metadata"`
 	}
 
 	promptData struct {
 		Language   string                 `json:"language"`
 		Prompt     string                 `json:"prompt"`
 		CustomText map[string]interface{} `json:"custom_text,omitempty"`
+	}
+
+	tenantData struct {
+		FriendlyName   string   `json:"friendly_name"`
+		EnabledLocales []string `json:"enabled_locales"`
+		Domain         string   `json:"domain"`
 	}
 
 	errorData struct {
@@ -213,14 +221,21 @@ func fetchUniversalLoginBrandingData(
 		return err
 	})
 
+	var applications []*applicationData
+	group.Go(func() (err error) {
+		applications, err = fetchAllApplications(ctx, api)
+		return err
+	})
+
 	if err := group.Wait(); err != nil {
 		return nil, err
 	}
 
 	return &universalLoginBrandingData{
-		Settings: brandingSettings,
-		Template: currentTemplate,
-		Theme:    currentTheme,
+		Applications: applications,
+		Settings:     brandingSettings,
+		Template:     currentTemplate,
+		Theme:        currentTheme,
 		Tenant: &tenantData{
 			FriendlyName:   tenant.GetFriendlyName(),
 			EnabledLocales: tenant.GetEnabledLocales(),
@@ -338,6 +353,39 @@ func fetchPromptCustomTextWithDefaults(
 		Prompt:     promptName,
 		CustomText: customText,
 	}, nil
+}
+
+func fetchAllApplications(ctx context.Context, api *auth0.API) ([]*applicationData, error) {
+	var applications []*applicationData
+	var page int
+	for {
+		clientList, err := api.Client.List(
+			ctx,
+			management.Page(page),
+			management.PerPage(100),
+			management.IncludeFields("client_id", "name", "logo_uri", "client_metadata"),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, client := range clientList.Clients {
+			applications = append(applications, &applicationData{
+				ID:       client.GetClientID(),
+				Name:     client.GetName(),
+				LogoURL:  client.GetLogoURI(),
+				Metadata: client.GetClientMetadata(),
+			})
+		}
+
+		if !clientList.HasNext() {
+			break
+		}
+
+		page++
+	}
+
+	return applications, nil
 }
 
 func startWebSocketServer(
