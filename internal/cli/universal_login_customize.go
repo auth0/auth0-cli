@@ -233,6 +233,7 @@ func fetchUniversalLoginBrandingData(
 func fetchBrandingThemeOrUseDefault(ctx context.Context, api *auth0.API) *management.BrandingTheme {
 	currentTheme, err := api.BrandingTheme.Default(ctx)
 	if err == nil {
+		currentTheme.ID = nil
 		return currentTheme
 	}
 
@@ -548,10 +549,9 @@ func saveUniversalLoginBrandingData(ctx context.Context, api *auth0.API, data *u
 	})
 
 	group.Go(func() (err error) {
-		themeID := data.Theme.GetID()
-		if themeID != "" {
-			data.Theme.ID = nil
-			return api.BrandingTheme.Update(ctx, themeID, data.Theme)
+		existingTheme, err := api.BrandingTheme.Default(ctx)
+		if err == nil {
+			return api.BrandingTheme.Update(ctx, existingTheme.GetID(), data.Theme)
 		}
 
 		return api.BrandingTheme.Create(ctx, data.Theme)
