@@ -168,7 +168,23 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 						nil,
 					)
 
+				mockClientAPI := mock.NewMockClientAPI(ctrl)
+				mockClientAPI.
+					EXPECT().
+					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&management.ClientList{
+						Clients: []*management.Client{
+							{
+								ClientID:       auth0.String("1"),
+								Name:           auth0.String("My App"),
+								LogoURI:        auth0.String("https://my-app.example.com/image.png"),
+								ClientMetadata: &map[string]interface{}{"meta": "meta"},
+							},
+						},
+					}, nil)
+
 				mockAPI := &auth0.API{
+					Client:        mockClientAPI,
 					Branding:      mockBrandingAPI,
 					BrandingTheme: mockBrandingThemeAPI,
 					Prompt:        mockPromptAPI,
@@ -178,6 +194,14 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				return mockAPI
 			},
 			expectedData: &universalLoginBrandingData{
+				Applications: []*applicationData{
+					{
+						ID:       "1",
+						Name:     "My App",
+						LogoURL:  "https://my-app.example.com/image.png",
+						Metadata: map[string]interface{}{"meta": "meta"},
+					},
+				},
 				Settings: &management.Branding{
 					Colors: &management.BrandingColors{
 						Primary:        auth0.String("#334455"),
@@ -292,7 +316,23 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 						nil,
 					)
 
+				mockClientAPI := mock.NewMockClientAPI(ctrl)
+				mockClientAPI.
+					EXPECT().
+					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&management.ClientList{
+						Clients: []*management.Client{
+							{
+								ClientID:       auth0.String("1"),
+								Name:           auth0.String("My App"),
+								LogoURI:        auth0.String("https://my-app.example.com/image.png"),
+								ClientMetadata: &map[string]interface{}{"meta": "meta"},
+							},
+						},
+					}, nil)
+
 				mockAPI := &auth0.API{
+					Client:        mockClientAPI,
 					Branding:      mockBrandingAPI,
 					BrandingTheme: mockBrandingThemeAPI,
 					Prompt:        mockPromptAPI,
@@ -302,6 +342,14 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				return mockAPI
 			},
 			expectedData: &universalLoginBrandingData{
+				Applications: []*applicationData{
+					{
+						ID:       "1",
+						Name:     "My App",
+						LogoURL:  "https://my-app.example.com/image.png",
+						Metadata: map[string]interface{}{"meta": "meta"},
+					},
+				},
 				Settings: &management.Branding{
 					Colors: &management.BrandingColors{
 						Primary:        auth0.String(defaultPrimaryColor),
@@ -420,7 +468,23 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 						nil,
 					)
 
+				mockClientAPI := mock.NewMockClientAPI(ctrl)
+				mockClientAPI.
+					EXPECT().
+					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&management.ClientList{
+						Clients: []*management.Client{
+							{
+								ClientID:       auth0.String("1"),
+								Name:           auth0.String("My App"),
+								LogoURI:        auth0.String("https://my-app.example.com/image.png"),
+								ClientMetadata: &map[string]interface{}{"meta": "meta"},
+							},
+						},
+					}, nil)
+
 				mockAPI := &auth0.API{
+					Client:        mockClientAPI,
 					Branding:      mockBrandingAPI,
 					BrandingTheme: mockBrandingThemeAPI,
 					Prompt:        mockPromptAPI,
@@ -430,6 +494,14 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				return mockAPI
 			},
 			expectedData: &universalLoginBrandingData{
+				Applications: []*applicationData{
+					{
+						ID:       "1",
+						Name:     "My App",
+						LogoURL:  "https://my-app.example.com/image.png",
+						Metadata: map[string]interface{}{"meta": "meta"},
+					},
+				},
 				Settings: &management.Branding{
 					Colors: &management.BrandingColors{
 						Primary:        auth0.String("#334455"),
@@ -551,7 +623,23 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 						nil,
 					)
 
+				mockClientAPI := mock.NewMockClientAPI(ctrl)
+				mockClientAPI.
+					EXPECT().
+					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&management.ClientList{
+						Clients: []*management.Client{
+							{
+								ClientID:       auth0.String("1"),
+								Name:           auth0.String("My App"),
+								LogoURI:        auth0.String("https://my-app.example.com/image.png"),
+								ClientMetadata: &map[string]interface{}{"meta": "meta"},
+							},
+						},
+					}, nil)
+
 				mockAPI := &auth0.API{
+					Client:        mockClientAPI,
 					Branding:      mockBrandingAPI,
 					BrandingTheme: mockBrandingThemeAPI,
 					Prompt:        mockPromptAPI,
@@ -561,6 +649,14 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				return mockAPI
 			},
 			expectedData: &universalLoginBrandingData{
+				Applications: []*applicationData{
+					{
+						ID:       "1",
+						Name:     "My App",
+						LogoURL:  "https://my-app.example.com/image.png",
+						Metadata: map[string]interface{}{"meta": "meta"},
+					},
+				},
 				Settings: &management.Branding{
 					Colors: &management.BrandingColors{
 						Primary:        auth0.String("#334455"),
@@ -740,7 +836,23 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					Read(gomock.Any()).
 					Return(nil, fmt.Errorf("failed to fetch tenant data"))
 
+				mockClientAPI := mock.NewMockClientAPI(ctrl)
+				mockClientAPI.
+					EXPECT().
+					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&management.ClientList{
+						Clients: []*management.Client{
+							{
+								ClientID:       auth0.String("1"),
+								Name:           auth0.String("My App"),
+								LogoURI:        auth0.String("https://my-app.example.com/image.png"),
+								ClientMetadata: &map[string]interface{}{"meta": "meta"},
+							},
+						},
+					}, nil)
+
 				mockAPI := &auth0.API{
+					Client:        mockClientAPI,
 					Branding:      mockBrandingAPI,
 					BrandingTheme: mockBrandingThemeAPI,
 					Prompt:        mockPromptAPI,
@@ -803,7 +915,23 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					CustomText(gomock.Any(), "login", "en").
 					Return(nil, fmt.Errorf("failed to fetch custom text"))
 
+				mockClientAPI := mock.NewMockClientAPI(ctrl)
+				mockClientAPI.
+					EXPECT().
+					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&management.ClientList{
+						Clients: []*management.Client{
+							{
+								ClientID:       auth0.String("1"),
+								Name:           auth0.String("My App"),
+								LogoURI:        auth0.String("https://my-app.example.com/image.png"),
+								ClientMetadata: &map[string]interface{}{"meta": "meta"},
+							},
+						},
+					}, nil)
+
 				mockAPI := &auth0.API{
+					Client:        mockClientAPI,
 					Branding:      mockBrandingAPI,
 					BrandingTheme: mockBrandingThemeAPI,
 					Prompt:        mockPromptAPI,
