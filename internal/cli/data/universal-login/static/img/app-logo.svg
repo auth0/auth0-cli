@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="75px" height="75px" viewBox="0 0 75 75" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 48.2 (47327) - http://www.bohemiancoding.com/sketch -->
+    <title>App icon</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <filter x="-11.5%" y="-11.5%" width="123.1%" height="123.1%" filterUnits="objectBoundingBox" id="filter-1">
+            <feOffset dx="0" dy="0" in="SourceAlpha" result="shadowOffsetOuter1"></feOffset>
+            <feGaussianBlur stdDeviation="2.5" in="shadowOffsetOuter1" result="shadowBlurOuter1"></feGaussianBlur>
+            <feColorMatrix values="0 0 0 0 0.890196078   0 0 0 0 0.898039216   0 0 0 0 0.905882353  0 0 0 1 0" type="matrix" in="shadowBlurOuter1" result="shadowMatrixOuter1"></feColorMatrix>
+            <feMerge>
+                <feMergeNode in="shadowMatrixOuter1"></feMergeNode>
+                <feMergeNode in="SourceGraphic"></feMergeNode>
+            </feMerge>
+        </filter>
+        <rect id="path-2" x="0" y="0" width="65.0000026" height="65.0000026" rx="3.60000014"></rect>
+        <linearGradient x1="2.12013134%" y1="3.04291214%" x2="127.853261%" y2="126.406816%" id="linearGradient-4">
+            <stop stop-color="#4FACFE" offset="0%"></stop>
+            <stop stop-color="#00F2FE" offset="100%"></stop>
+        </linearGradient>
+    </defs>
+    <g id="ConsentDialog_Generic" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" transform="translate(-206.000000, -169.000000)">
+        <g id="01_Graph" transform="translate(45.000000, 174.000000)">
+            <g id="App-icon" filter="url(#filter-1)" transform="translate(166.000000, 0.000000)">
+                <mask id="mask-3" fill="white">
+                    <use xlink:href="#path-2"></use>
+                </mask>
+                <use id="Mask" fill="#D8D8D8" xlink:href="#path-2"></use>
+                <rect id="Rectangle-2-Copy" fill="url(#linearGradient-4)" mask="url(#mask-3)" x="-4.33333351" y="-4.33333351" width="74.750003" height="74.750003" rx="3.60000014"></rect>
+                <path d="M37.8406258,28.7000015 L34.9156257,28.7000015 L44.1171886,20.5343762 C44.1578138,20.493751 44.2187507,20.4531264 44.3000011,20.4125012 C44.7875035,20.1281248 45.1734372,20.1890617 45.4578136,20.5953137 C45.9046909,21.1234414 45.8843786,21.5906242 45.3968761,21.9968763 L37.8406258,28.7000015 Z M17,30.6500016 L48.2000012,30.6500016 C48.2000012,32.0312586 48.0171906,33.4124948 47.6515637,34.7937518 C46.514058,38.8968975 44.0968946,42.004679 40.4000009,44.1171897 L40.0953134,44.3000022 C39.2015589,44.7468794 38.6125023,45.0312516 38.3281258,45.1531272 C38.4093763,45.3562532 38.4500009,45.5593762 38.4500009,45.7625022 C38.4500009,46.0468787 38.389064,46.3312508 38.2671883,46.6156273 C37.9015615,47.6718826 37.1500065,48.2000023 36.0125008,48.2000023 L29.1875005,48.2000023 C28.9031241,48.2000023 28.6187519,48.1390654 28.3343755,48.0171898 C27.2781201,47.651563 26.7500004,46.900008 26.7500004,45.7625022 C26.7500004,45.6406266 26.790625,45.4375036 26.8718754,45.1531272 C26.7093746,45.0718768 26.1203179,44.7875046 25.1046878,44.3000022 L24.8000003,44.1171897 C23.8249954,43.5484368 22.910942,42.878131 22.0578127,42.1062521 C18.6859207,39.0187365 17,35.2000246 17,30.6500016 Z M36.5000008,46.2500022 L36.5000008,44.3000022 L28.7000005,44.3000022 L28.7000005,46.2500022 L36.5000008,46.2500022 Z M39.5468759,42.3500021 C39.8312523,42.1875013 40.1359368,42.0046906 40.4609384,41.8015646 C43.7109548,39.4859279 45.5796862,36.4187709 46.0671887,32.6000017 L19.1328126,32.6000017 C19.1734378,33.0062538 19.254687,33.432812 19.3765626,33.8796893 C20.2296919,37.5359577 22.3218586,40.3593671 25.6531253,42.3500021 L39.5468759,42.3500021 Z M40.2781259,18.4625011 L34.2453132,28.7000015 L31.9906256,28.7000015 L38.5718759,17.4875011 C38.9375027,16.9999986 39.3843732,16.8781249 39.9125009,17.1218761 C40.3593782,17.4468777 40.4812519,17.8937483 40.2781259,18.4625011 Z" id="T" fill-opacity="0.87" fill="#FFFFFF" mask="url(#mask-3)"></path>
+            </g>
+        </g>
+    </g>
+</svg>
