@@ -12,7 +12,7 @@ require (
 	github.com/getsentry/sentry-go v0.25.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.6.0
-	github.com/google/uuid v1.3.1
+	github.com/google/uuid v1.4.0
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hashicorp/hc-install v0.6.1
 	github.com/hashicorp/terraform-exec v0.19.0
