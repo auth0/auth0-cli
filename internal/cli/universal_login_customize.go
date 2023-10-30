@@ -22,7 +22,8 @@ import (
 )
 
 const (
-	webServerURL             = "http://127.0.0.1:52649"
+	webServerURL             = "127.0.0.1:52649"
+	webServerURLWithHTTP     = "http://127.0.0.1:52649"
 	fetchBrandingMessageType = "FETCH_BRANDING"
 	fetchPromptMessageType   = "FETCH_PROMPT"
 	saveBrandingMessageType  = "SAVE_BRANDING"
@@ -448,7 +449,7 @@ func startWebSocketServer(
 }
 
 func openWebAppInBrowser(display *display.Renderer) {
-	webAppURLWithPort := webServerURL + "?ws_port=52649"
+	webAppURLWithPort := webServerURLWithHTTP + "?ws_port=52649"
 
 	display.Infof("Perform your changes within the editor: %q", webAppURLWithPort)
 
@@ -597,7 +598,7 @@ func checkOriginFunc(r *http.Request) bool {
 		return false
 	}
 
-	return originURL.String() == webServerURL
+	return originURL.String() == webServerURLWithHTTP
 }
 
 func saveUniversalLoginBrandingData(ctx context.Context, api *auth0.API, data *universalLoginBrandingData) error {
