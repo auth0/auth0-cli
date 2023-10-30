@@ -22,8 +22,9 @@ import (
 )
 
 const (
-	webServerURL             = "127.0.0.1:52649"
-	webServerURLWithHTTP     = "http://127.0.0.1:52649"
+	webServerPort            = "52649"
+	webServerURL             = "localhost:" + webServerPort
+	webServerURLWithHTTP     = "http://localhost:" + webServerPort
 	fetchBrandingMessageType = "FETCH_BRANDING"
 	fetchPromptMessageType   = "FETCH_PROMPT"
 	saveBrandingMessageType  = "SAVE_BRANDING"
@@ -449,11 +450,9 @@ func startWebSocketServer(
 }
 
 func openWebAppInBrowser(display *display.Renderer) {
-	webAppURLWithPort := webServerURLWithHTTP + "?ws_port=52649"
+	display.Infof("Perform your changes within the editor: %q", webServerURLWithHTTP)
 
-	display.Infof("Perform your changes within the editor: %q", webAppURLWithPort)
-
-	if err := browser.OpenURL(webAppURLWithPort); err != nil {
+	if err := browser.OpenURL(webServerURLWithHTTP); err != nil {
 		display.Warnf("Failed to open the browser. Visit the URL manually.")
 	}
 }
