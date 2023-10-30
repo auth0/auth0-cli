@@ -2,8 +2,10 @@ package cli
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"net"
 	"net/http"
 	"net/url"
@@ -20,12 +22,17 @@ import (
 )
 
 const (
-	webAppURL                = "http://localhost:5173"
+	webServerURL             = "http://127.0.0.1:52649"
 	fetchBrandingMessageType = "FETCH_BRANDING"
 	fetchPromptMessageType   = "FETCH_PROMPT"
 	saveBrandingMessageType  = "SAVE_BRANDING"
 	errorMessageType         = "ERROR"
 	successMessageType       = "SUCCESS"
+)
+
+var (
+	//go:embed data/universal-login/*
+	universalLoginPreviewAssets embed.FS
 )
 
 type (
@@ -397,7 +404,7 @@ func startWebSocketServer(
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	listener, err := net.Listen("tcp", webServerURL)
 	if err != nil {
 		return err
 	}
@@ -410,8 +417,17 @@ func startWebSocketServer(
 		tenant:   tenantDomain,
 	}
 
+	assetsWithoutPrefix, err := fs.Sub(universalLoginPreviewAssets, "data/universal-login")
+	if err != nil {
+		return err
+	}
+
+	router := http.NewServeMux()
+	router.Handle("/", http.FileServer(http.FS(assetsWithoutPrefix)))
+	router.Handle("/ws", handler)
+
 	server := &http.Server{
-		Handler:      handler,
+		Handler:      router,
 		ReadTimeout:  time.Minute * 10,
 		WriteTimeout: time.Minute * 10,
 	}
@@ -421,7 +437,7 @@ func startWebSocketServer(
 		errChan <- server.Serve(listener)
 	}()
 
-	openWebAppInBrowser(display, listener.Addr())
+	openWebAppInBrowser(display)
 
 	select {
 	case err := <-errChan:
@@ -431,9 +447,8 @@ func startWebSocketServer(
 	}
 }
 
-func openWebAppInBrowser(display *display.Renderer, addr net.Addr) {
-	port := addr.(*net.TCPAddr).Port
-	webAppURLWithPort := fmt.Sprintf("%s?ws_port=%d", webAppURL, port)
+func openWebAppInBrowser(display *display.Renderer) {
+	webAppURLWithPort := webServerURL + "?ws_port=52649"
 
 	display.Infof("Perform your changes within the editor: %q", webAppURLWithPort)
 
@@ -582,7 +597,7 @@ func checkOriginFunc(r *http.Request) bool {
 		return false
 	}
 
-	return originURL.String() == webAppURL
+	return originURL.String() == webServerURL
 }
 
 func saveUniversalLoginBrandingData(ctx context.Context, api *auth0.API, data *universalLoginBrandingData) error {
