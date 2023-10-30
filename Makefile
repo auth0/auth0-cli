@@ -84,7 +84,7 @@ assets: ## Generate Universal Login embeddable assets
 		exit 1; \
 	fi
 	@rm -rf "${UNIVERSAL_LOGIN_ASSETS_INTERNAL_DIR}"
-	@cd "${UNIVERSAL_LOGIN_ASSETS_EXTERNAL_DIR}" && npm run build
+	@cd "${UNIVERSAL_LOGIN_ASSETS_EXTERNAL_DIR}" && npm install && npm run build
 	@cp -r "${UNIVERSAL_LOGIN_ASSETS_EXTERNAL_DIR}/dist" "${UNIVERSAL_LOGIN_ASSETS_INTERNAL_DIR}"
 
 #-----------------------------------------------------------------------------------------------------------------------
