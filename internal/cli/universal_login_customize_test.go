@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"testing"
@@ -1005,6 +1006,311 @@ func TestCheckOriginFunc(t *testing.T) {
 		t.Run(test.testName, func(t *testing.T) {
 			actual := checkOriginFunc(test.request)
 			assert.Equal(t, test.expected, actual)
+		})
+	}
+}
+
+func TestWebSocketMessage_MarshalJSON(t *testing.T) {
+	var testCases = []struct {
+		name     string
+		input    *webSocketMessage
+		expected string
+	}{
+		{
+			name: "it can marshal a fetch prompt data message",
+			input: &webSocketMessage{
+				Type: "FETCH_PROMPT",
+				Payload: &promptData{
+					Language:   "en",
+					Prompt:     "login",
+					CustomText: map[string]interface{}{"key": "value"},
+				},
+			},
+			expected: `{"type":"FETCH_PROMPT","payload":{"language":"en","prompt":"login","custom_text":{"key":"value"}}}`,
+		},
+		{
+			name: "it can marshal a fetch branding data message",
+			input: &webSocketMessage{
+				Type:    "FETCH_BRANDING",
+				Payload: &universalLoginBrandingData{},
+			},
+			expected: `{"type":"FETCH_BRANDING","payload":{"applications":null,"prompts":null,"settings":null,"template":null,"theme":null,"tenant":null}}`,
+		},
+		{
+			name: "it can marshal a message with an empty payload",
+			input: &webSocketMessage{
+				Type: "FETCH_BRANDING",
+			},
+			expected: `{"type":"FETCH_BRANDING","payload":null}`,
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			actual, err := json.Marshal(test.input)
+			assert.NoError(t, err)
+			assert.Equal(t, test.expected, string(actual))
+		})
+	}
+}
+
+func TestWebSocketMessage_UnmarshalJSON(t *testing.T) {
+	var testCases = []struct {
+		name     string
+		input    []byte
+		expected *webSocketMessage
+	}{
+		{
+			name:  "it can unmarshal a fetch prompt data message",
+			input: []byte(`{"type":"FETCH_PROMPT","payload":{"language":"en","prompt":"login","custom_text":{"key":"value"}}}`),
+			expected: &webSocketMessage{
+				Type: "FETCH_PROMPT",
+				Payload: &promptData{
+					Language:   "en",
+					Prompt:     "login",
+					CustomText: map[string]interface{}{"key": "value"},
+				},
+			},
+		},
+		{
+			name:  "it can unmarshal a fetch branding data message",
+			input: []byte(`{"type":"FETCH_BRANDING","payload":{"applications":null,"prompts":null,"settings":null,"template":null,"theme":null,"tenant":null}}`),
+			expected: &webSocketMessage{
+				Type:    "FETCH_BRANDING",
+				Payload: &universalLoginBrandingData{},
+			},
+		},
+		{
+			name:  "it can unmarshal a message with an empty payload",
+			input: []byte(`{"type":"FETCH_BRANDING","payload":null}`),
+			expected: &webSocketMessage{
+				Type: "FETCH_BRANDING",
+			},
+		},
+		{
+			name:  "it can unmarshal a message with an unknown payload",
+			input: []byte(`{"type":"UNKNOWN","payload":{"key":"value"}}`),
+			expected: &webSocketMessage{
+				Type:    "UNKNOWN",
+				Payload: map[string]interface{}{"key": "value"},
+			},
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			var actual webSocketMessage
+			err := json.Unmarshal(test.input, &actual)
+			assert.NoError(t, err)
+			assert.Equal(t, test.expected, &actual)
+		})
+	}
+}
+
+func TestSaveUniversalLoginBrandingData(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	var testCases = []struct {
+		name          string
+		input         *universalLoginBrandingData
+		expectedError string
+		mockedAPI     func() *auth0.API
+	}{
+		{
+			name: "it can correctly save all of the universal login branding data",
+			input: &universalLoginBrandingData{
+				Settings: &management.Branding{
+					Colors: &management.BrandingColors{
+						Primary:        auth0.String("#33ddff"),
+						PageBackground: auth0.String("#99aacc"),
+					},
+				},
+				Template: &management.BrandingUniversalLogin{
+					Body: auth0.String("<html></html>"),
+				},
+				Theme: &management.BrandingTheme{},
+				Prompts: []*promptData{
+					{
+						Language:   "en",
+						Prompt:     "login",
+						CustomText: map[string]interface{}{"key": "value"},
+					},
+				},
+			},
+			mockedAPI: func() *auth0.API {
+				mockBrandingAPI := mock.NewMockBrandingAPI(ctrl)
+				mockBrandingAPI.EXPECT().
+					Update(gomock.Any(), &management.Branding{
+						Colors: &management.BrandingColors{
+							Primary:        auth0.String("#33ddff"),
+							PageBackground: auth0.String("#99aacc"),
+						},
+					}).
+					Return(nil)
+				mockBrandingAPI.EXPECT().
+					SetUniversalLogin(gomock.Any(), &management.BrandingUniversalLogin{
+						Body: auth0.String("<html></html>"),
+					}).
+					Return(nil)
+
+				mockBrandingThemeAPI := mock.NewMockBrandingThemeAPI(ctrl)
+				mockBrandingThemeAPI.EXPECT().
+					Default(gomock.Any()).
+					Return(&management.BrandingTheme{
+						ID: auth0.String("111"),
+					}, nil)
+				mockBrandingThemeAPI.EXPECT().
+					Update(gomock.Any(), "111", &management.BrandingTheme{}).
+					Return(nil)
+
+				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
+				mockPromptAPI.EXPECT().
+					SetCustomText(gomock.Any(), "login", "en", map[string]interface{}{"key": "value"}).
+					Return(nil)
+
+				mockAPI := &auth0.API{
+					Branding:      mockBrandingAPI,
+					BrandingTheme: mockBrandingThemeAPI,
+					Prompt:        mockPromptAPI,
+				}
+
+				return mockAPI
+			},
+		},
+		{
+			name: "it fails to save the universal login branding data if the branding api returns an error",
+			input: &universalLoginBrandingData{
+				Settings: &management.Branding{
+					Colors: &management.BrandingColors{
+						Primary:        auth0.String("#33ddff"),
+						PageBackground: auth0.String("#99aacc"),
+					},
+				},
+				Template: &management.BrandingUniversalLogin{
+					Body: auth0.String("<html></html>"),
+				},
+				Theme: &management.BrandingTheme{},
+				Prompts: []*promptData{
+					{
+						Language:   "en",
+						Prompt:     "login",
+						CustomText: map[string]interface{}{"key": "value"},
+					},
+				},
+			},
+			expectedError: "branding api failure",
+			mockedAPI: func() *auth0.API {
+				mockBrandingAPI := mock.NewMockBrandingAPI(ctrl)
+				mockBrandingAPI.EXPECT().
+					Update(gomock.Any(), &management.Branding{
+						Colors: &management.BrandingColors{
+							Primary:        auth0.String("#33ddff"),
+							PageBackground: auth0.String("#99aacc"),
+						},
+					}).
+					Return(fmt.Errorf("branding api failure"))
+				mockBrandingAPI.EXPECT().
+					SetUniversalLogin(gomock.Any(), &management.BrandingUniversalLogin{
+						Body: auth0.String("<html></html>"),
+					}).
+					Return(nil)
+
+				mockBrandingThemeAPI := mock.NewMockBrandingThemeAPI(ctrl)
+				mockBrandingThemeAPI.EXPECT().
+					Default(gomock.Any()).
+					Return(&management.BrandingTheme{
+						ID: auth0.String("111"),
+					}, nil)
+				mockBrandingThemeAPI.EXPECT().
+					Update(gomock.Any(), "111", &management.BrandingTheme{}).
+					Return(nil)
+
+				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
+				mockPromptAPI.EXPECT().
+					SetCustomText(gomock.Any(), "login", "en", map[string]interface{}{"key": "value"}).
+					Return(nil)
+
+				mockAPI := &auth0.API{
+					Branding:      mockBrandingAPI,
+					BrandingTheme: mockBrandingThemeAPI,
+					Prompt:        mockPromptAPI,
+				}
+
+				return mockAPI
+			},
+		},
+		{
+			name: "it creates the theme if not found",
+			input: &universalLoginBrandingData{
+				Settings: &management.Branding{
+					Colors: &management.BrandingColors{
+						Primary:        auth0.String("#33ddff"),
+						PageBackground: auth0.String("#99aacc"),
+					},
+				},
+				Template: &management.BrandingUniversalLogin{
+					Body: auth0.String("<html></html>"),
+				},
+				Theme: &management.BrandingTheme{},
+				Prompts: []*promptData{
+					{
+						Language:   "en",
+						Prompt:     "login",
+						CustomText: map[string]interface{}{"key": "value"},
+					},
+				},
+			},
+			mockedAPI: func() *auth0.API {
+				mockBrandingAPI := mock.NewMockBrandingAPI(ctrl)
+				mockBrandingAPI.EXPECT().
+					Update(gomock.Any(), &management.Branding{
+						Colors: &management.BrandingColors{
+							Primary:        auth0.String("#33ddff"),
+							PageBackground: auth0.String("#99aacc"),
+						},
+					}).
+					Return(nil)
+				mockBrandingAPI.EXPECT().
+					SetUniversalLogin(gomock.Any(), &management.BrandingUniversalLogin{
+						Body: auth0.String("<html></html>"),
+					}).
+					Return(nil)
+
+				mockBrandingThemeAPI := mock.NewMockBrandingThemeAPI(ctrl)
+				mockBrandingThemeAPI.EXPECT().
+					Default(gomock.Any()).
+					Return(&management.BrandingTheme{}, fmt.Errorf("failed to find theme"))
+				mockBrandingThemeAPI.EXPECT().
+					Create(gomock.Any(), &management.BrandingTheme{}).
+					Return(nil)
+
+				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
+				mockPromptAPI.EXPECT().
+					SetCustomText(gomock.Any(), "login", "en", map[string]interface{}{"key": "value"}).
+					Return(nil)
+
+				mockAPI := &auth0.API{
+					Branding:      mockBrandingAPI,
+					BrandingTheme: mockBrandingThemeAPI,
+					Prompt:        mockPromptAPI,
+				}
+
+				return mockAPI
+			},
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			err := saveUniversalLoginBrandingData(context.Background(), test.mockedAPI(), test.input)
+
+			if test.expectedError != "" {
+				assert.EqualError(t, err, test.expectedError)
+				return
+			}
+
+			assert.NoError(t, err)
 		})
 	}
 }
