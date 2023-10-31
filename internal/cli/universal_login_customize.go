@@ -23,8 +23,8 @@ import (
 
 const (
 	webServerPort            = "52649"
-	webServerURL             = "localhost:" + webServerPort
-	webServerURLWithHTTP     = "http://localhost:" + webServerPort
+	webServerHost            = "localhost:" + webServerPort
+	webServerURL             = "http://localhost:" + webServerPort
 	fetchBrandingMessageType = "FETCH_BRANDING"
 	fetchPromptMessageType   = "FETCH_PROMPT"
 	saveBrandingMessageType  = "SAVE_BRANDING"
@@ -406,7 +406,7 @@ func startWebSocketServer(
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	listener, err := net.Listen("tcp", webServerURL)
+	listener, err := net.Listen("tcp", webServerHost)
 	if err != nil {
 		return err
 	}
@@ -450,9 +450,9 @@ func startWebSocketServer(
 }
 
 func openWebAppInBrowser(display *display.Renderer) {
-	display.Infof("Perform your changes within the editor: %q", webServerURLWithHTTP)
+	display.Infof("Perform your changes within the editor: %q", webServerURL)
 
-	if err := browser.OpenURL(webServerURLWithHTTP); err != nil {
+	if err := browser.OpenURL(webServerURL); err != nil {
 		display.Warnf("Failed to open the browser. Visit the URL manually.")
 	}
 }
@@ -597,7 +597,7 @@ func checkOriginFunc(r *http.Request) bool {
 		return false
 	}
 
-	return originURL.String() == webServerURLWithHTTP
+	return originURL.String() == webServerURL
 }
 
 func saveUniversalLoginBrandingData(ctx context.Context, api *auth0.API, data *universalLoginBrandingData) error {

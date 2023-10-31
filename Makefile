@@ -80,7 +80,7 @@ assets: ## Generate Universal Login embeddable assets
 	${call print, "Generating Universal Login embeddable assets"}
 	@if [ ! -d "${UNIVERSAL_LOGIN_ASSETS_EXTERNAL_DIR}" ]; \
 	then \
-	  	${call print_warning, "No such file or directory: ${UNIVERSAL_LOGIN_ASSETS_DIR}"}; \
+	  	${call print_warning, "No such file or directory: ${UNIVERSAL_LOGIN_ASSETS_EXTERNAL_DIR}"}; \
 		exit 1; \
 	fi
 	@rm -rf "${UNIVERSAL_LOGIN_ASSETS_INTERNAL_DIR}"
