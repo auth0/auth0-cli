@@ -172,7 +172,7 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				mockClientAPI := mock.NewMockClientAPI(ctrl)
 				mockClientAPI.
 					EXPECT().
-					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&management.ClientList{
 						Clients: []*management.Client{
 							{
@@ -320,7 +320,7 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				mockClientAPI := mock.NewMockClientAPI(ctrl)
 				mockClientAPI.
 					EXPECT().
-					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&management.ClientList{
 						Clients: []*management.Client{
 							{
@@ -472,7 +472,7 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				mockClientAPI := mock.NewMockClientAPI(ctrl)
 				mockClientAPI.
 					EXPECT().
-					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&management.ClientList{
 						Clients: []*management.Client{
 							{
@@ -627,7 +627,7 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				mockClientAPI := mock.NewMockClientAPI(ctrl)
 				mockClientAPI.
 					EXPECT().
-					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&management.ClientList{
 						Clients: []*management.Client{
 							{
@@ -840,7 +840,7 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				mockClientAPI := mock.NewMockClientAPI(ctrl)
 				mockClientAPI.
 					EXPECT().
-					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&management.ClientList{
 						Clients: []*management.Client{
 							{
@@ -919,7 +919,7 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 				mockClientAPI := mock.NewMockClientAPI(ctrl)
 				mockClientAPI.
 					EXPECT().
-					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&management.ClientList{
 						Clients: []*management.Client{
 							{
