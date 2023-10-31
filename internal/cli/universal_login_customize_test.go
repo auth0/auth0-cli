@@ -976,7 +976,7 @@ func TestCheckOriginFunc(t *testing.T) {
 			testName: "Valid Origin",
 			request: &http.Request{
 				Header: http.Header{
-					"Origin": []string{webAppURL},
+					"Origin": []string{webServerURL},
 				},
 			},
 			expected: true,
