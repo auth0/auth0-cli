@@ -8,6 +8,9 @@ GO_PKG := github.com/auth0/$(NAME)
 GO_BIN ?= $(shell go env GOPATH)/bin
 GO_PACKAGES := $(shell go list ./... | grep -vE "vendor|tools|mock")
 
+UNIVERSAL_LOGIN_ASSETS_EXTERNAL_DIR ?= ./../ulp-branding-app
+UNIVERSAL_LOGIN_ASSETS_INTERNAL_DIR = ./internal/cli/data/universal-login
+
 ## Configuration for build-info
 BUILD_DIR ?= $(CURDIR)/out
 BUILD_INFO_PKG := $(GO_PKG)/internal/buildinfo
@@ -67,6 +70,22 @@ $(GO_BIN)/commander:
 
 $(GO_BIN)/auth0:
 	@$(MAKE) install
+
+#-----------------------------------------------------------------------------------------------------------------------
+# Assets
+#-----------------------------------------------------------------------------------------------------------------------
+.PHONY: assets
+
+assets: ## Generate Universal Login embeddable assets
+	${call print, "Generating Universal Login embeddable assets"}
+	@if [ ! -d "${UNIVERSAL_LOGIN_ASSETS_EXTERNAL_DIR}" ]; \
+	then \
+	  	${call print_warning, "No such file or directory: ${UNIVERSAL_LOGIN_ASSETS_EXTERNAL_DIR}"}; \
+		exit 1; \
+	fi
+	@rm -rf "${UNIVERSAL_LOGIN_ASSETS_INTERNAL_DIR}"
+	@cd "${UNIVERSAL_LOGIN_ASSETS_EXTERNAL_DIR}" && npm install && npm run build
+	@cp -r "${UNIVERSAL_LOGIN_ASSETS_EXTERNAL_DIR}/dist" "${UNIVERSAL_LOGIN_ASSETS_INTERNAL_DIR}"
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Documentation
@@ -167,5 +186,5 @@ define print
 endef
 
 define print_warning
-	@printf "${TEXT_INVERSE}${COLOR_WHITE} ! ${COLOR_YELLOW} %-75s ${COLOR_WHITE} ${RESET}\n" $(1)
+	printf "${TEXT_INVERSE}${COLOR_WHITE} !! ${COLOR_YELLOW} %-75s ${COLOR_WHITE} ${RESET}\n" $(1)
 endef
