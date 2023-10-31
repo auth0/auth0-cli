@@ -575,6 +575,7 @@ func fetchAllApplications(ctx context.Context, api *auth0.API) ([]*applicationDa
 			ctx,
 			management.Page(page),
 			management.PerPage(100),
+			management.Parameter("is_global", "false"),
 			management.IncludeFields("client_id", "name", "logo_uri", "client_metadata"),
 		)
 		if err != nil {
