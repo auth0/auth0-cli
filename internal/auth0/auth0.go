@@ -12,6 +12,7 @@ type API struct {
 	Anomaly          AnomalyAPI
 	AttackProtection AttackProtectionAPI
 	Branding         BrandingAPI
+	BrandingTheme    BrandingThemeAPI
 	Client           ClientAPI
 	ClientGrant      ClientGrantAPI
 	Connection       ConnectionAPI
@@ -38,6 +39,7 @@ func NewAPI(m *management.Management) *API {
 		Anomaly:          m.Anomaly,
 		AttackProtection: m.AttackProtection,
 		Branding:         m.Branding,
+		BrandingTheme:    m.BrandingTheme,
 		Client:           m.Client,
 		ClientGrant:      m.ClientGrant,
 		Connection:       m.Connection,

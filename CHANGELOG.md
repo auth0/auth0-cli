@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.2.0](https://github.com/auth0/auth0-cli/tree/v1.2.0) (Nov 2, 2023)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.1.2...v1.2.0)
+
+### Added
+
+- `universal-login customize` command for customizing the branding for the new Universal Login Experience [#882]
+
 ## [v1.1.2](https://github.com/auth0/auth0-cli/tree/v1.1.2) (Sept 29, 2023)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.1.1...v1.1.2)
@@ -220,6 +228,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 [unreleased]: https://github.com/auth0/auth0-cli/compare/v1.0.0...HEAD
+[#882]: https://github.com/auth0/auth0-cli/issues/882
 [#858]: https://github.com/auth0/auth0-cli/issues/858
 [#857]: https://github.com/auth0/auth0-cli/issues/857
 [#856]: https://github.com/auth0/auth0-cli/issues/856

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
@@ -16,7 +15,7 @@ import (
 const (
 	textDocsKey         = "__doc__"
 	textDocsURL         = "https://auth0.com/docs/customize/universal-login-pages/customize-login-text-prompts"
-	textLocalesURL      = "https://cdn.auth0.com/ulp/react-components/development/languages/%s/prompts.json"
+	textLocalesURL      = "https://cdn.auth0.com/ulp/react-components/1.66.3/languages/%s/prompts.json"
 	textLanguageDefault = "en"
 )
 
@@ -242,10 +241,6 @@ func mergeBrandingTextTranslations(
 		}
 
 		for key, text := range translations {
-			if strings.HasPrefix(key, "error") || strings.HasPrefix(key, "devKeys") {
-				continue
-			}
-
 			if _, ok := mergedTranslations[screen]; !ok {
 				mergedTranslations[screen] = make(map[string]interface{})
 			}

@@ -63,6 +63,7 @@ func universalLoginCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 
+	cmd.AddCommand(customizeUniversalLoginCmd(cli))
 	cmd.AddCommand(showUniversalLoginCmd(cli))
 	cmd.AddCommand(updateUniversalLoginCmd(cli))
 	cmd.AddCommand(universalLoginTemplatesCmd(cli))
