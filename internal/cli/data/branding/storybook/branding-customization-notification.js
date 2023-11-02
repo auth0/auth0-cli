@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function () {
               <p style="
                   line-height: 1.45em;
                   font-size: 1.4em;
-                ">An improved branding customization UI experience is available with the <b><code>auth0 ul customization</code></b> command.</p>
+                ">An improved branding customization UI experience is available through the <b><code>auth0 universal-login customize</code></b> command.</p>
               <button 
                 id="branding-close-button"
                 style="

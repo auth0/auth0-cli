@@ -140,7 +140,7 @@ func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			cli.renderer.Warnf("An improved branding customization UI experience is available with the `auth0 ul customization` command.")
+			cli.renderer.Warnf("An improved branding customization UI experience is available through the `auth0 universal-login customize` command.")
 
 			var templateData *TemplateData
 			if err := ansi.Waiting(func() (err error) {
