@@ -147,9 +147,9 @@ This command has been removed in favor of the `auth0 login` command.
 
 ```sh
 # Example:
-AUTH0_DOMAIN="travel0.us.auth0.com" \
-AUTH0_CLIENT_ID="tUIvPH7g2ykVm4lGriYEQ6BKV3je24Ka" \
-AUTH0_CLIENT_SECRET="XXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+AUTH0_CLI_CLIENT_DOMAIN="travel0.us.auth0.com" \
+AUTH0_CLI_CLIENT_ID="tUIvPH7g2ykVm4lGriYEQ6BKV3je24Ka" \
+AUTH0_CLI_CLIENT_SECRET="XXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
 auth0 config init
 ```
 
