@@ -12,9 +12,9 @@ To pass the integration tests, you must have the `AUTH0_DOMAIN`, `AUTH0_CLIENT_I
 2. [Setup a Machine-to-Machine application](https://auth0.com/docs/get-started/auth0-overview/create-applications/machine-to-machine-apps)
 3. Use the resulting **Client Secret** values
 
-#### Using the Bash or Zsh shell
+#### Setting up your Environment Variables
 
-You can set these variables in your `~/.bashrc` or `~/.zshrc` (replace the values with your own):
+You can set these variables in a `.env` file at the root of the project (replace the values with your own):
 
 ```shell
 export AUTH0_DOMAIN="travel0.us.auth0.com"
