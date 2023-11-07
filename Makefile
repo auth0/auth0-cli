@@ -167,9 +167,9 @@ test-unit: ## Run unit tests
 test-integration: install-with-cover $(GO_BIN)/auth0 $(GO_BIN)/commander ## Run integration tests. To run a specific test pass the FILTER var. Usage: `make test-integration FILTER="attack protection"`
 	${call print, "Running integration tests"}
 	@mkdir -p "coverage"
-	@AUTH0_CLI_CLIENT_DOMAIN=$$AUTH0_CLI_CLIENT_DOMAIN \
-		AUTH0_CLI_CLIENT_ID=$$AUTH0_CLI_CLIENT_ID \
-		AUTH0_CLI_CLIENT_SECRET=$$AUTH0_CLI_CLIENT_SECRET \
+	@AUTH0_DOMAIN=$$AUTH0_DOMAIN \
+		AUTH0_CLIENT_ID=$$AUTH0_CLIENT_ID \
+		AUTH0_CLIENT_SECRET=$$AUTH0_CLIENT_SECRET \
 		PATH=$$PATH:$(GO_BIN) \
 		GOCOVERDIR=coverage bash ./test/integration/scripts/run-test-suites.sh
 	@go tool covdata textfmt -i "coverage" -o "coverage-integration-tests.out"

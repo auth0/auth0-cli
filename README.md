@@ -151,7 +151,7 @@ Anonymized data points are collected during the use of this CLI. This data inclu
 
 Auth0 uses this data to better understand the usage of this tool to prioritize the features, enhancements and fixes that matter most to our users.
 
-To **opt-out** of this collection, set the `AUTH0_CLI_ANALYTICS` environment variable to `false`.
+To **opt-out** of this collection, set the `AUTH0_ANALYTICS` environment variable to `false`.
 
 ## Feedback
 

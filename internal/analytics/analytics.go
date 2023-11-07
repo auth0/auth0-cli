@@ -143,7 +143,7 @@ func generateEventName(command string, action string) string {
 }
 
 func shouldTrack() bool {
-	if os.Getenv("AUTH0_CLI_ANALYTICS") == "false" || buildinfo.Version == "" { // Do not track debug builds
+	if os.Getenv("AUTH0_ANALYTICS") == "false" || buildinfo.Version == "" { // Do not track debug builds
 		return false
 	}
 
