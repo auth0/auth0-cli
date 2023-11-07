@@ -17,9 +17,9 @@ To pass the integration tests, you must have the `AUTH0_DOMAIN`, `AUTH0_CLIENT_I
 You can set these variables in your `~/.bashrc` or `~/.zshrc` (replace the values with your own):
 
 ```shell
-export AUTH0_DOMAIN="yourappdomain"
-export AUTH0_CLIENT_ID="yourclientid"
-export AUTH0_CLIENT_SECRET="yourcedentialsecret"
+export AUTH0_DOMAIN="travel0.us.auth0.com"
+export AUTH0_CLIENT_ID="tUIvPH7g2ykVm4lGriYEQ6BKV3je24Ka"
+export AUTH0_CLIENT_SECRET="XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ```
 
 ## Build and run on native platform
