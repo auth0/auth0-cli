@@ -170,7 +170,7 @@ test-integration: install-with-cover $(GO_BIN)/auth0 $(GO_BIN)/commander ## Run 
 	@AUTH0_DOMAIN=$$AUTH0_DOMAIN \
 		AUTH0_CLIENT_ID=$$AUTH0_CLIENT_ID \
 		AUTH0_CLIENT_SECRET=$$AUTH0_CLIENT_SECRET \
-		PATH=$$PATH:$(GO_BIN) \
+		PATH=$(GO_BIN):$$PATH \
 		GOCOVERDIR=coverage bash ./test/integration/scripts/run-test-suites.sh
 	@go tool covdata textfmt -i "coverage" -o "coverage-integration-tests.out"
 
