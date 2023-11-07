@@ -4,6 +4,24 @@
 2. Clone this repo: `git clone git@github.com:auth0/auth0-cli`
 3. `make test` - ensure everything works correctly. Should see things pass.
 
+### Adjusting your Development Environment (Optional)
+
+To pass the integration tests, you must have the `AUTH0_CLI_CLIENT_DOMAIN`, `AUTH0_CLI_CLIENT_ID` and `AUTH0_CLI_CLIENT_SECRET` environment variable set. To get these values, you can:
+
+1. Install [jq](https://jqlang.github.io/jq/)
+2. [Setup a Machine-to-Machine application](https://auth0.com/docs/get-started/auth0-overview/create-applications/machine-to-machine-apps)
+3. Use the resulting **Client Secret** values
+
+#### Using the Bash or Zsh shell
+
+You can set these variables in your `~/.bashrc` or `~/.zshrc` (replace the values with your own):
+
+```shell
+export AUTH0_CLI_CLIENT_DOMAIN="yourappdomain"
+export AUTH0_CLI_CLIENT_ID="yourclientid"
+export AUTH0_CLI_CLIENT_SECRET="yourcedentialsecret"
+```
+
 ## Build and run on native platform
 
 From the top-level directory:
