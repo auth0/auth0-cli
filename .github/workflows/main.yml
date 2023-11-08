@@ -82,10 +82,9 @@ jobs:
         shell: bash
         run: make test-integration
         env:
-          AUTH0_CLI_CLIENT_NAME: ${{ secrets.AUTH0_CLI_CLIENT_NAME }}
-          AUTH0_CLI_CLIENT_DOMAIN: ${{ secrets.AUTH0_CLI_CLIENT_DOMAIN }}
-          AUTH0_CLI_CLIENT_ID: ${{ secrets.AUTH0_CLI_CLIENT_ID }}
-          AUTH0_CLI_CLIENT_SECRET: ${{ secrets.AUTH0_CLI_CLIENT_SECRET }}
+          AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
+          AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
+          AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
 
       - name: Download unit test coverage
         uses: actions/download-artifact@v3

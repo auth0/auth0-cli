@@ -28,6 +28,7 @@ tags
 .vscode
 .DS_Store
 .idea
+.env
 
 # Vendor
 vendor

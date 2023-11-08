@@ -101,14 +101,14 @@ tests:
     exit-code: 0
 
   tenants use:
-    command: auth0 tenants use $AUTH0_CLI_CLIENT_DOMAIN
+    command: auth0 tenants use $AUTH0_DOMAIN
     exit-code: 0
     stderr:
       contains:
         - "Default tenant switched to:"
 
   tenants open:
-    command: auth0 tenants open $AUTH0_CLI_CLIENT_DOMAIN --no-input
+    command: auth0 tenants open $AUTH0_DOMAIN --no-input
     exit-code: 0
     stderr:
       contains:

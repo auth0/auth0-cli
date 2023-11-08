@@ -1,6 +1,8 @@
 #-----------------------------------------------------------------------------------------------------------------------
 # Variables (https://www.gnu.org/software/make/manual/html_node/Using-Variables.html#Using-Variables)
 #-----------------------------------------------------------------------------------------------------------------------
+-include .env
+
 .DEFAULT_GOAL := help
 
 NAME := auth0-cli
@@ -164,10 +166,11 @@ test-unit: ## Run unit tests
 	${call print, "Running unit tests"}
 	@go test -v -race ${GO_PACKAGES} -coverprofile="coverage-unit-tests.out"
 
-test-integration: install-with-cover $(GO_BIN)/commander ## Run integration tests. To run a specific test pass the FILTER var. Usage: `make test-integration FILTER="attack protection"`
+test-integration: install-with-cover $(GO_BIN)/auth0 $(GO_BIN)/commander ## Run integration tests. To run a specific test pass the FILTER var. Usage: `make test-integration FILTER="attack protection"`
 	${call print, "Running integration tests"}
 	@mkdir -p "coverage"
-	@GOCOVERDIR=coverage bash ./test/integration/scripts/run-test-suites.sh
+	@PATH=$(GO_BIN):$$PATH \
+		GOCOVERDIR=coverage bash ./test/integration/scripts/run-test-suites.sh
 	@go tool covdata textfmt -i "coverage" -o "coverage-integration-tests.out"
 
 test-mocks: $(GO_BIN)/mockgen ## Generate testing mocks using mockgen
