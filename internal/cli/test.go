@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
@@ -221,6 +222,12 @@ func testTokenCmd(cli *cli) *cobra.Command {
 				return nil
 			}
 
+			if len(inputs.Scopes) == 0 {
+				if err := cli.pickTokenScopes(cmd.Context(), &inputs); err != nil {
+					return err
+				}
+			}
+
 			if proceed := runLoginFlowPreflightChecks(cli, client); !proceed {
 				return nil
 			}
@@ -406,6 +413,25 @@ func (c *cli) audiencePickerOptions(client *management.Client) func(ctx context.
 
 		return opts, nil
 	}
+}
+
+func (c *cli) pickTokenScopes(ctx context.Context, inputs *testCmdInputs) error {
+	resourceServer, err := c.api.ResourceServer.Read(ctx, inputs.Audience)
+	if err != nil {
+		return err
+	}
+
+	var scopes []string
+	for _, scope := range resourceServer.GetScopes() {
+		scopes = append(scopes, scope.GetValue())
+	}
+
+	scopesPrompt := &survey.MultiSelect{
+		Message: "Scopes",
+		Options: scopes,
+	}
+
+	return survey.AskOne(scopesPrompt, &inputs.Scopes)
 }
 
 func checkClientIsAuthorizedForAPI(ctx context.Context, cli *cli, client *management.Client, audience string) error {
