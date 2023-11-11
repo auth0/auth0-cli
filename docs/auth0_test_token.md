@@ -27,7 +27,7 @@ auth0 test token [flags]
 ## Flags
 
 ```
-  -a, --audience string   The unique identifier of the target API you want to access.
+  -a, --audience string   The unique identifier of the target API you want to access. For Machine to Machine and Regular Web Applications, only the enabled APIs will be shown within the interactive prompt.
       --force             Skip confirmation.
       --json              Output in json format.
   -s, --scopes strings    The list of scopes you want to use.
