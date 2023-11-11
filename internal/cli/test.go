@@ -36,7 +36,7 @@ var (
 		Name:      "Audience",
 		LongForm:  "audience",
 		ShortForm: "a",
-		Help:      "The unique identifier of the target API you want to access.",
+		Help:      "The unique identifier of the target API you want to access. For Machine to Machine and Regular Web Applications, only the enabled APIs will be shown within the interactive prompt.",
 	}
 
 	testAudienceRequired = Flag{
@@ -193,18 +193,20 @@ func testTokenCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := testAudience.Ask(cmd, &inputs.Audience, nil); err != nil {
+			if err := testAudienceRequired.Pick(
+				cmd,
+				&inputs.Audience,
+				cli.audiencePickerOptions(client),
+			); err != nil {
 				return err
 			}
 
-			appType := client.GetAppType()
-
 			cli.renderer.Infof("Domain    : " + ansi.Blue(cli.tenant))
 			cli.renderer.Infof("Client ID : " + ansi.Bold(client.GetClientID()))
-			cli.renderer.Infof("Type      : " + display.ApplyColorToFriendlyAppType(display.FriendlyAppType(appType)))
+			cli.renderer.Infof("Type      : " + display.ApplyColorToFriendlyAppType(display.FriendlyAppType(client.GetAppType())))
 			cli.renderer.Newline()
 
-			if appType == appTypeNonInteractive {
+			if client.GetAppType() == appTypeNonInteractive {
 				tokenResponse, err := runClientCredentialsFlow(cmd.Context(), cli, client, inputs.Audience, cli.tenant)
 				if err != nil {
 					return fmt.Errorf(
@@ -340,6 +342,70 @@ func (c *cli) appPickerWithCreateOption(ctx context.Context) (pickerOptions, err
 	enhancedOptions = append(enhancedOptions, options...)
 
 	return enhancedOptions, nil
+}
+
+func (c *cli) audiencePickerOptions(client *management.Client) func(ctx context.Context) (pickerOptions, error) {
+	return func(ctx context.Context) (pickerOptions, error) {
+		var opts pickerOptions
+
+		switch client.GetAppType() {
+		case "regular_web", "non_interactive":
+			clientGrants, err := c.api.ClientGrant.List(
+				ctx,
+				management.PerPage(100),
+				management.Parameter("client_id", client.GetClientID()),
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			if len(clientGrants.ClientGrants) == 0 {
+				return nil, fmt.Errorf(
+					"the %s application is not authorized to request access tokens for any APIs.\n\n"+
+						"Run: 'auth0 apps open %s' to open the dashboard and authorize the application.",
+					ansi.Bold(client.GetName()),
+					client.GetClientID(),
+				)
+			}
+
+			for _, grant := range clientGrants.ClientGrants {
+				resourceServer, err := c.api.ResourceServer.Read(ctx, grant.GetAudience())
+				if err != nil {
+					return nil, err
+				}
+
+				label := fmt.Sprintf(
+					"%s %s",
+					resourceServer.GetName(),
+					ansi.Faint(fmt.Sprintf("(%s)", resourceServer.GetIdentifier())),
+				)
+
+				opts = append(opts, pickerOption{
+					label: label,
+					value: resourceServer.GetIdentifier(),
+				})
+			}
+		default:
+			resourceServerList, err := c.api.ResourceServer.List(ctx, management.PerPage(100))
+			if err != nil {
+				return nil, err
+			}
+
+			for _, resourceServer := range resourceServerList.ResourceServers {
+				label := fmt.Sprintf(
+					"%s %s",
+					resourceServer.GetName(),
+					ansi.Faint(fmt.Sprintf("(%s)", resourceServer.GetIdentifier())),
+				)
+				opts = append(opts, pickerOption{
+					label: label,
+					value: resourceServer.GetIdentifier(),
+				})
+			}
+		}
+
+		return opts, nil
+	}
 }
 
 func checkClientIsAuthorizedForAPI(ctx context.Context, cli *cli, client *management.Client, audience string) error {
