@@ -2,6 +2,7 @@
 /auth0
 /test/integration/identifiers
 coverage*
+/dist
 
 # Swap
 [._]*.s[a-v][a-z]
