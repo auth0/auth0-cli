@@ -62,7 +62,7 @@ var (
 		Name:       "Query",
 		LongForm:   "query",
 		ShortForm:  "q",
-		Help:       "Search query in Lucene query syntax.\n\nEx: name:\"Bob\" OR (user_id:\"user123\" AND email:\"user123@travel0.com\") \n\nMore info: https://auth0.com/docs/users/user-search/user-search-query-syntax",
+		Help:       "Search query in Lucene query syntax.\n\nEx: email:\"user123@*.com\" OR (user_id:\"user-id-123\" AND name:\"Bob\") \n\nMore info: https://auth0.com/docs/users/user-search/user-search-query-syntax",
 		IsRequired: true,
 	}
 	userSort = Flag{

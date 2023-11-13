@@ -30,7 +30,7 @@ auth0 users search [flags]
   -n, --number int     Number of users, that match the search criteria, to retrieve. Minimum 1, maximum 1000. If limit is hit, refine the search query. (default 50)
   -q, --query string   Search query in Lucene query syntax.
                        
-                       Ex: name:"Bob" OR (user_id:"user123" AND email:"user123@travel0.com") 
+                       Ex: email:"user123@*.com" OR (user_id:"user-id-123" AND name:"Bob") 
                        
                        More info: https://auth0.com/docs/users/user-search/user-search-query-syntax
   -s, --sort string    Field to sort by. Use 'field:order' where 'order' is '1' for ascending and '-1' for descending. e.g. 'created_at:1'.
