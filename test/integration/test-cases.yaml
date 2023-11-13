@@ -103,7 +103,7 @@ tests:
     stdout:
       contains: 
         - ACTIVE
-        - NAME
+        - TENANT
         - ✓
 
   tenants use:
