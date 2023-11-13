@@ -86,6 +86,7 @@ func buildRootCmd(cli *cli) *cobra.Command {
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			ansi.Initialize(cli.noColor)
 			prepareInteractivity(cmd)
+			cli.configureRenderer()
 
 			if !commandRequiresAuthentication(cmd.CommandPath()) {
 				return nil
@@ -105,7 +106,6 @@ func buildRootCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			cli.configureRenderer()
 			return nil
 		},
 	}

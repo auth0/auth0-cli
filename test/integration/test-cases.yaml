@@ -3,9 +3,6 @@ config:
   retries: 1
 
 tests:
-  auth0 tenants list:
-    exit-code: 0
-
   auth0 completion bash:
     exit-code: 0
 
@@ -99,6 +96,15 @@ tests:
         - STAGE_PRE_USER_REGISTRATION_MAX_ATTEMPTS
         - STAGE_PRE_USER_REGISTRATION_RATE
     exit-code: 0
+
+  tenants list:
+    command: auth0 tenants list
+    exit-code: 0
+    stdout:
+      contains: 
+        - ACTIVE
+        - NAME
+        - ✓
 
   tenants use:
     command: auth0 tenants use $AUTH0_DOMAIN
