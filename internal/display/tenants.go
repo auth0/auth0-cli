@@ -11,8 +11,13 @@ func (v *tenantView) AsTableHeader() []string {
 }
 
 func (v *tenantView) AsTableRow() []string {
+	activeText := ""
+	if v.Active {
+		activeText = boolean(v.Active)
+	}
+
 	return []string{
-		boolean(v.Active),
+		activeText,
 		v.Name,
 	}
 }
