@@ -329,16 +329,17 @@ func (f *promptResourceFetcher) FetchData(_ context.Context) (importDataList, er
 	}, nil
 }
 
+var customTextPromptTypes = []string{"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password", "consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa", "status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common"}
+
 func (f *promptCustomTextResourceFetcherResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	tenant, err := f.api.Tenant.Read(ctx)
 	if err != nil {
 		return nil, err
 	}
-	promptTypes := []string{"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password", "consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa", "status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common"}
 
 	var data importDataList
 	for _, language := range tenant.GetEnabledLocales() {
-		for _, promptType := range promptTypes {
+		for _, promptType := range customTextPromptTypes {
 			data = append(data, importDataItem{
 				ResourceName: "auth0_prompt_custom_text." + sanitizeResourceName(language+"_"+promptType),
 				ImportID:     promptType + "::" + language,
