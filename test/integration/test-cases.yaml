@@ -104,7 +104,7 @@ tests:
       contains: 
         - ACTIVE
         - TENANT
-        - ✓
+        - →
 
   tenants use:
     command: auth0 tenants use $AUTH0_DOMAIN
