@@ -1,16 +1,27 @@
 package display
 
+import "github.com/auth0/auth0-cli/internal/ansi"
+
 type tenantView struct {
-	Name string
-	raw  interface{}
+	Active bool
+	Name   string
+	raw    interface{}
 }
 
 func (v *tenantView) AsTableHeader() []string {
-	return []string{"Available tenants"}
+	return []string{"Active", "Tenant"}
 }
 
 func (v *tenantView) AsTableRow() []string {
-	return []string{v.Name}
+	activeText := ""
+	if v.Active {
+		activeText = ansi.Green("→")
+	}
+
+	return []string{
+		activeText,
+		v.Name,
+	}
 }
 
 func (v *tenantView) Object() interface{} {
@@ -18,8 +29,6 @@ func (v *tenantView) Object() interface{} {
 }
 
 func (r *Renderer) TenantList(data []string) {
-	r.Heading()
-
 	if len(data) == 0 {
 		r.EmptyState("tenants", "Use 'auth0 login' to add one")
 		return
@@ -28,8 +37,9 @@ func (r *Renderer) TenantList(data []string) {
 	var results []View
 	for _, item := range data {
 		results = append(results, &tenantView{
-			Name: item,
-			raw:  item,
+			Active: item == r.Tenant,
+			Name:   item,
+			raw:    item,
 		})
 	}
 
