@@ -208,6 +208,10 @@ func testTokenCmd(cli *cli) *cobra.Command {
 			cli.renderer.Newline()
 
 			if client.GetAppType() == appTypeNonInteractive {
+				if len(inputs.Scopes) != 0 {
+					cli.renderer.Warnf("Passed in scopes do not apply to Machine to Machine applications.\n")
+				}
+
 				tokenResponse, err := runClientCredentialsFlow(cmd.Context(), cli, client, inputs.Audience, cli.tenant)
 				if err != nil {
 					return fmt.Errorf(
