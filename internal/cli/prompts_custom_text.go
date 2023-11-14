@@ -85,38 +85,7 @@ func showPromptsTextCmd(cli *cli) *cobra.Command {
   auth0 ul prompts show <prompt> -l <language>
   auth0 ul prompts show signup -l es`,
 
-		RunE: func(cmd *cobra.Command, args []string) error {
-			brandingText := make(map[string]interface{})
-
-			if len(args) == 0 {
-				if err := customTextPrompt.Pick(cmd, &inputs.Prompt, customTextPromptOptions); err != nil {
-					return err
-				}
-			} else {
-				inputs.Prompt = args[0]
-			}
-
-			if err := ansi.Waiting(func() (err error) {
-				brandingText, err = cli.api.Prompt.CustomText(cmd.Context(), inputs.Prompt, inputs.Language)
-				return err
-			}); err != nil {
-				return fmt.Errorf(
-					"unable to fetch custom text for prompt %s and language %s: %w",
-					inputs.Prompt,
-					inputs.Language,
-					err,
-				)
-			}
-
-			brandingTextJSON, err := json.MarshalIndent(brandingText, "", "    ")
-			if err != nil {
-				return fmt.Errorf("failed to serialize the prompt custom text to JSON: %w", err)
-			}
-
-			cli.renderer.BrandingTextShow(string(brandingTextJSON), inputs.Prompt, inputs.Language)
-
-			return nil
-		},
+		RunE: showPromptsText(cli, &inputs),
 	}
 
 	textLanguage.RegisterString(cmd, &inputs.Language, textLanguageDefault)
@@ -141,6 +110,41 @@ func updatePromptsTextCmd(cli *cli) *cobra.Command {
 	textLanguage.RegisterString(cmd, &inputs.Language, textLanguageDefault)
 
 	return cmd
+}
+
+func showPromptsText(cli *cli, inputs *promptsTextInput) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+
+		if len(args) == 0 {
+			if err := customTextPrompt.Pick(cmd, &inputs.Prompt, customTextPromptOptions); err != nil {
+				return err
+			}
+		} else {
+			inputs.Prompt = args[0]
+		}
+
+		brandingText := make(map[string]interface{})
+		if err := ansi.Waiting(func() (err error) {
+			brandingText, err = cli.api.Prompt.CustomText(cmd.Context(), inputs.Prompt, inputs.Language)
+			return err
+		}); err != nil {
+			return fmt.Errorf(
+				"unable to fetch custom text for prompt %s and language %s: %w",
+				inputs.Prompt,
+				inputs.Language,
+				err,
+			)
+		}
+
+		brandingTextJSON, err := json.MarshalIndent(brandingText, "", "    ")
+		if err != nil {
+			return fmt.Errorf("failed to serialize the prompt custom text to JSON: %w", err)
+		}
+
+		cli.renderer.BrandingTextShow(string(brandingTextJSON), inputs.Prompt, inputs.Language)
+
+		return nil
+	}
 }
 
 func updateBrandingText(cli *cli, inputs *promptsTextInput) func(cmd *cobra.Command, args []string) error {
