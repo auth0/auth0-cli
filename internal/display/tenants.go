@@ -1,5 +1,7 @@
 package display
 
+import "github.com/auth0/auth0-cli/internal/ansi"
+
 type tenantView struct {
 	Active bool
 	Name   string
@@ -13,7 +15,7 @@ func (v *tenantView) AsTableHeader() []string {
 func (v *tenantView) AsTableRow() []string {
 	activeText := ""
 	if v.Active {
-		activeText = boolean(v.Active)
+		activeText = ansi.Green("→")
 	}
 
 	return []string{
