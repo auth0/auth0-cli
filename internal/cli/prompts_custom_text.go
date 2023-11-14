@@ -114,7 +114,6 @@ func updatePromptsTextCmd(cli *cli) *cobra.Command {
 
 func showPromptsText(cli *cli, inputs *promptsTextInput) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-
 		if len(args) == 0 {
 			if err := customTextPrompt.Pick(cmd, &inputs.Prompt, customTextPromptOptions); err != nil {
 				return err
