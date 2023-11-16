@@ -72,7 +72,7 @@ func apiCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "api <method> <url-path>",
-		Args:  cobra.RangeArgs(1, 2),
+		Args:  cobra.RangeArgs(0, 2),
 		Short: "Makes an authenticated HTTP request to the Auth0 Management API",
 		Long: fmt.Sprintf(
 			`Makes an authenticated HTTP request to the [Auth0 Management API](%s) and returns the response as JSON.
@@ -117,6 +117,10 @@ func apiUsageTemplate() string {
 
 func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Help()
+		}
+
 		if err := inputs.fromArgs(args, cli.tenant); err != nil {
 			return fmt.Errorf("failed to parse command inputs: %w", err)
 		}
