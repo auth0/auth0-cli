@@ -35,6 +35,11 @@ var (
 		Help:       "Text contents for the branding.",
 		IsRequired: true,
 	}
+
+	customTextPrompt = Argument{
+		Name: "Prompt",
+		Help: "ID of custom text prompt.",
+	}
 )
 
 type promptsTextInput struct {
@@ -59,18 +64,27 @@ func universalLoginPromptsTextCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+func customTextPromptOptions(_ context.Context) (pickerOptions, error) {
+	var opts pickerOptions
+	for _, promptType := range customTextPromptTypes {
+		opts = append(opts, pickerOption{value: promptType, label: promptType})
+	}
+	return opts, nil
+}
+
 func showPromptsTextCmd(cli *cli) *cobra.Command {
 	var inputs promptsTextInput
 
 	cmd := &cobra.Command{
 		Use:   "show",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Show the custom text for a prompt",
 		Long:  "Show the custom text for a prompt.",
 		Example: `  auth0 universal-login prompts show <prompt>
   auth0 universal-login prompts show <prompt> --language <language>
   auth0 ul prompts show <prompt> -l <language>
   auth0 ul prompts show signup -l es`,
+
 		RunE: showPromptsText(cli, &inputs),
 	}
 
@@ -84,7 +98,7 @@ func updatePromptsTextCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "update",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Update the custom text for a prompt",
 		Long:  "Update the custom text for a prompt.",
 		Example: `  auth0 universal-login prompts update <prompt>
@@ -100,9 +114,15 @@ func updatePromptsTextCmd(cli *cli) *cobra.Command {
 
 func showPromptsText(cli *cli, inputs *promptsTextInput) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		inputs.Prompt = args[0]
-		brandingText := make(map[string]interface{})
+		if len(args) == 0 {
+			if err := customTextPrompt.Pick(cmd, &inputs.Prompt, customTextPromptOptions); err != nil {
+				return err
+			}
+		} else {
+			inputs.Prompt = args[0]
+		}
 
+		brandingText := make(map[string]interface{})
 		if err := ansi.Waiting(func() (err error) {
 			brandingText, err = cli.api.Prompt.CustomText(cmd.Context(), inputs.Prompt, inputs.Language)
 			return err
@@ -128,7 +148,13 @@ func showPromptsText(cli *cli, inputs *promptsTextInput) func(cmd *cobra.Command
 
 func updateBrandingText(cli *cli, inputs *promptsTextInput) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		inputs.Prompt = args[0]
+		if len(args) == 0 {
+			if err := customTextPrompt.Pick(cmd, &inputs.Prompt, customTextPromptOptions); err != nil {
+				return err
+			}
+		} else {
+			inputs.Prompt = args[0]
+		}
 		inputs.Body = string(iostream.PipedInput())
 
 		brandingTextToEdit, err := fetchBrandingTextContentToEdit(cmd.Context(), cli, inputs)
