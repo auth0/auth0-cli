@@ -419,7 +419,7 @@ func deployActionCmd(cli *cli) *cobra.Command {
   auth0 actions deploy <action-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions); err != nil {
+				if err := actionID.Pick(cmd, &inputs.ID, cli.undeployedActionPickerOptions); err != nil {
 					return err
 				}
 			} else {
@@ -493,6 +493,26 @@ func (c *cli) actionPickerOptions(ctx context.Context) (pickerOptions, error) {
 
 	if len(opts) == 0 {
 		return nil, errors.New("There are currently no actions.")
+	}
+
+	return opts, nil
+}
+
+func (c *cli) undeployedActionPickerOptions(ctx context.Context) (pickerOptions, error) {
+	list, err := c.api.Action.List(ctx, management.Parameter("deployed", "false"))
+	if err != nil {
+		return nil, err
+	}
+
+	var opts pickerOptions
+	for _, r := range list.Actions {
+		label := fmt.Sprintf("%s %s", r.GetName(), ansi.Faint("("+r.GetID()+")"))
+
+		opts = append(opts, pickerOption{value: r.GetID(), label: label})
+	}
+
+	if len(opts) == 0 {
+		return nil, errors.New("There are currently no actions to deploy.")
 	}
 
 	return opts, nil
