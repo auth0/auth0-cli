@@ -25,10 +25,11 @@ var (
 		IsRequired: true,
 	}
 	roleDescription = Flag{
-		Name:      "Description",
-		LongForm:  "description",
-		ShortForm: "d",
-		Help:      "Description of the role.",
+		Name:       "Description",
+		LongForm:   "description",
+		ShortForm:  "d",
+		Help:       "Description of the role.",
+		IsRequired: true,
 	}
 	roleNumber = Flag{
 		Name:      "Number",
@@ -229,46 +230,46 @@ func updateRoleCmd(cli *cli) *cobra.Command {
   auth0 roles update <role-id> -n myrole -d "awesome role" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
-				if err != nil {
+				if err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions); err != nil {
 					return err
 				}
 			} else {
 				inputs.ID = args[0]
 			}
 
-			// Prompt for role name
-			if err := roleName.AskU(cmd, &inputs.Name, nil); err != nil {
+			var currentRole *management.Role
+			if err := ansi.Waiting(func() (err error) {
+				currentRole, err = cli.api.Role.Read(cmd.Context(), inputs.ID)
+				return err
+			}); err != nil {
+				return fmt.Errorf("failed to find role with ID %q: %v", inputs.ID, err)
+			}
+
+			if err := roleName.AskU(cmd, &inputs.Name, currentRole.Name); err != nil {
 				return err
 			}
 
-			// Prompt for role description
-			if err := roleDescription.AskU(cmd, &inputs.Description, nil); err != nil {
+			if err := roleDescription.AskU(cmd, &inputs.Description, currentRole.Description); err != nil {
 				return err
 			}
 
-			// Start with an empty role object. We'll conditionally
-			// hydrate it based on the provided parameters since
-			// we'll do PATCH semantics.
-			r := &management.Role{}
+			updatedRole := &management.Role{}
 
 			if inputs.Name != "" {
-				r.Name = &inputs.Name
+				updatedRole.Name = &inputs.Name
 			}
-
 			if inputs.Description != "" {
-				r.Description = &inputs.Description
+				updatedRole.Description = &inputs.Description
 			}
 
-			// Update role
 			if err := ansi.Waiting(func() error {
-				return cli.api.Role.Update(cmd.Context(), inputs.ID, r)
+				return cli.api.Role.Update(cmd.Context(), inputs.ID, updatedRole)
 			}); err != nil {
-				return fmt.Errorf("Unable to update role: %v", err)
+				return fmt.Errorf("failed to update role with ID %q: %v", inputs.ID, err)
 			}
 
-			// Render role creation specific view
-			cli.renderer.RoleUpdate(r)
+			cli.renderer.RoleUpdate(updatedRole)
+
 			return nil
 		},
 	}
