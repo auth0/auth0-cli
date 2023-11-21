@@ -151,7 +151,7 @@ func (t *Tenant) RegenerateAccessToken(ctx context.Context) error {
 		t.ExpiresAt = time.Now().Add(time.Duration(tokenResponse.ExpiresIn) * time.Second)
 	}
 
-	if err := keyring.StoreAccessToken(t.Domain, t.AccessToken); err != nil {
+	if err := keyring.StoreAccessToken(t.Domain, t.AccessToken); err == nil {
 		t.AccessToken = ""
 	}
 
