@@ -229,8 +229,7 @@ func createUserCmd(cli *cli) *cobra.Command {
   auth0 users create --name "John Doe" --email john@example.com --connection-name "Username-Password-Authentication" --username "example"
   auth0 users create -n "John Doe" -e john@example.com -c "Username-Password-Authentication" -u "example" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Users API currently only supports database connections.
-			options, err := cli.dbConnectionPickerOptions(cmd.Context())
+			options, err := cli.databaseAndPasswordlessConnectionOptions(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -239,17 +238,26 @@ func createUserCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			// Prompt for user's name
+			connection, err := cli.api.Connection.ReadByName(cmd.Context(), inputs.ConnectionName)
+			if err != nil {
+				return fmt.Errorf("failed to find connection with name %q: %w", inputs.ConnectionName, err)
+			}
+
+			if len(connection.GetEnabledClients()) == 0 {
+				return fmt.Errorf(
+					"failed to continue due to the connection with name %q being disabled, enable an application on this connection and try again",
+					inputs.ConnectionName,
+				)
+			}
+
 			if err := userName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
 
-			// Prompt for user email
 			if err := userEmail.Ask(cmd, &inputs.Email, nil); err != nil {
 				return err
 			}
 
-			// Prompt for user password
 			if err := userPassword.AskPassword(cmd, &inputs.Password); err != nil {
 				return err
 			}
@@ -562,7 +570,7 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
   auth0 users import -c "Username-Password-Authentication" -t "Basic Example" --upsert=false --email-results=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Users API currently only supports database connections.
-			dbConnectionOptions, err := cli.dbConnectionPickerOptions(cmd.Context())
+			dbConnectionOptions, err := cli.databaseAndPasswordlessConnectionOptions(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -574,6 +582,13 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 			connection, err := cli.api.Connection.ReadByName(cmd.Context(), inputs.ConnectionName)
 			if err != nil {
 				return fmt.Errorf("failed to find connection with name %q: %w", inputs.ConnectionName, err)
+			}
+
+			if len(connection.GetEnabledClients()) == 0 {
+				return fmt.Errorf(
+					"failed to continue due to the connection with name %q being disabled, enable an application on this connection and try again",
+					inputs.ConnectionName,
+				)
 			}
 
 			inputs.ConnectionID = connection.GetID()
@@ -657,22 +672,32 @@ func formatUserDetailsPath(id string) string {
 	return fmt.Sprintf("users/%s", id)
 }
 
-func (c *cli) dbConnectionPickerOptions(ctx context.Context) ([]string, error) {
-	list, err := c.api.Connection.List(ctx, management.Parameter("strategy", management.ConnectionStrategyAuth0))
+func (c *cli) databaseAndPasswordlessConnectionOptions(ctx context.Context) ([]string, error) {
+	connectionList, err := c.api.Connection.List(
+		ctx,
+		management.Parameter("strategy[0]", management.ConnectionStrategyAuth0),
+		management.Parameter("strategy[1]", management.ConnectionStrategyEmail),
+		management.Parameter("strategy[2]", management.ConnectionStrategySMS),
+		management.PerPage(100),
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	var res []string
-	for _, conn := range list.Connections {
-		res = append(res, conn.GetName())
+	var connectionNames []string
+	for _, connection := range connectionList.Connections {
+		if len(connection.GetEnabledClients()) == 0 {
+			continue
+		}
+
+		connectionNames = append(connectionNames, connection.GetName())
 	}
 
-	if len(res) == 0 {
-		return nil, errors.New("There are currently no database connections.")
+	if len(connectionNames) == 0 {
+		return nil, errors.New("there are currently no active database or passwordless connections to choose from")
 	}
 
-	return res, nil
+	return connectionNames, nil
 }
 
 func (c *cli) getUserConnection(users *management.User) []string {
