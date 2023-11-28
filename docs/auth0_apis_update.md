@@ -24,8 +24,8 @@ auth0 apis update [flags]
   auth0 apis update <api-id|api-audience> --name myapi
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false
-  auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read"
-  auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --json
+  auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read" --signing-alg "RS256"
+  auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" -a "RS256" --json
 ```
 
 
@@ -36,6 +36,7 @@ auth0 apis update [flags]
   -n, --name string          Name of the API.
   -o, --offline-access       Whether Refresh Tokens can be issued for this API (true) or not (false).
   -s, --scopes strings       Comma-separated list of scopes (permissions).
+  -a, --signing-alg string   Algorithm used to sign JWTs. Can be HS256 or RS256. PS256 available via addon. (default "RS256")
   -l, --token-lifetime int   The amount of time in seconds that the token will be valid after being issued. Default value is 86400 seconds (1 day).
 ```
 
