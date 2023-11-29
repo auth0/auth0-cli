@@ -26,12 +26,57 @@ func TestConnectionsPickerOptions(t *testing.T) {
 			name: "happy path",
 			connections: []*management.Connection{
 				{
-					Name:     auth0.String("some-name-1"),
-					Strategy: auth0.String("auth0"),
+					Name:           auth0.String("some-name-1"),
+					Strategy:       auth0.String("auth0"),
+					EnabledClients: &[]string{"1"},
 				},
 				{
-					Name:     auth0.String("some-name-2"),
-					Strategy: auth0.String("auth0"),
+					Name:           auth0.String("some-name-2"),
+					Strategy:       auth0.String("auth0"),
+					EnabledClients: &[]string{"1"},
+				},
+				{
+					Name:           auth0.String("some-name-3"),
+					Strategy:       auth0.String("sms"),
+					EnabledClients: &[]string{"1"},
+				},
+				{
+					Name:           auth0.String("some-name-4"),
+					Strategy:       auth0.String("email"),
+					EnabledClients: &[]string{"1"},
+				},
+			},
+			assertOutput: func(t testing.TB, options []string) {
+				assert.Len(t, options, 4)
+				assert.Equal(t, "some-name-1", options[0])
+				assert.Equal(t, "some-name-2", options[1])
+				assert.Equal(t, "some-name-3", options[2])
+				assert.Equal(t, "some-name-4", options[3])
+			},
+			assertError: func(t testing.TB, err error) {
+				t.Fail()
+			},
+		},
+		{
+			name: "happy path: returning only active connections",
+			connections: []*management.Connection{
+				{
+					Name:           auth0.String("some-name-1"),
+					Strategy:       auth0.String("auth0"),
+					EnabledClients: &[]string{"1"},
+				},
+				{
+					Name:           auth0.String("some-name-2"),
+					Strategy:       auth0.String("auth0"),
+					EnabledClients: &[]string{"1"},
+				},
+				{
+					Name:     auth0.String("some-name-3"),
+					Strategy: auth0.String("sms"),
+				},
+				{
+					Name:     auth0.String("some-name-4"),
+					Strategy: auth0.String("email"),
 				},
 			},
 			assertOutput: func(t testing.TB, options []string) {
@@ -50,7 +95,7 @@ func TestConnectionsPickerOptions(t *testing.T) {
 				t.Fail()
 			},
 			assertError: func(t testing.TB, err error) {
-				assert.ErrorContains(t, err, "There are currently no database connections.")
+				assert.ErrorContains(t, err, "there are currently no active database or passwordless connections to choose from")
 			},
 		},
 		{
@@ -67,26 +112,35 @@ func TestConnectionsPickerOptions(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			ctx := context.TODO()
+
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
 			connectionAPI := mock.NewMockConnectionAPI(ctrl)
 			connectionAPI.EXPECT().
-				List(gomock.Any(), gomock.Any()).
-				Return(&management.ConnectionList{
-					Connections: test.connections}, test.apiError)
+				List(ctx, gomock.Any()).
+				Return(
+					&management.ConnectionList{
+						Connections: test.connections,
+					},
+					test.apiError,
+				)
 
 			cli := &cli{
-				api: &auth0.API{Connection: connectionAPI},
+				api: &auth0.API{
+					Connection: connectionAPI,
+				},
 			}
 
-			options, err := cli.dbConnectionPickerOptions(context.Background())
+			options, err := cli.databaseAndPasswordlessConnectionOptions(ctx)
 
 			if err != nil {
 				test.assertError(t, err)
-			} else {
-				test.assertOutput(t, options)
+				return
 			}
+
+			test.assertOutput(t, options)
 		})
 	}
 }
