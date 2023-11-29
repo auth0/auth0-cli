@@ -104,7 +104,7 @@ func showLogStreamCmd(cli *cli) *cobra.Command {
   auth0 logs streams show <log-stream-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := logStreamID.Ask(cmd, &inputs.ID)
+				err := logStreamID.Pick(cmd, &inputs.ID, cli.allLogStreamsPickerOptions)
 				if err != nil {
 					return err
 				}
