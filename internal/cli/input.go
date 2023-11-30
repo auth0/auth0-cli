@@ -58,6 +58,16 @@ func askPassword(i commandInput, value interface{}, isUpdate bool) error {
 	return nil
 }
 
+func askMultiSelect(i commandInput, value interface{}, isUpdate bool, options ...string) error {
+	_ = isInputRequired(i, isUpdate) // TODO: handle isRequired
+
+	if err := prompt.AskMultiSelect(i.GetLabel(), value, options...); err != nil {
+		handleInputError(err)
+	}
+
+	return nil
+}
+
 func _select(i commandInput, value interface{}, options []string, defaultValue *string, isUpdate bool) error {
 	isRequired := isInputRequired(i, isUpdate)
 

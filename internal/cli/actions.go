@@ -358,14 +358,10 @@ func updateActionCmd(cli *cli) *cobra.Command {
 }
 
 func deleteActionCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ID string
-	}
-
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.MaximumNArgs(1),
+		Args:    cobra.MinimumNArgs(0),
 		Short:   "Delete an action",
 		Long: "Delete an action.\n\n" +
 			"To delete interactively, use `auth0 actions delete` with no arguments.\n\n" +
@@ -375,12 +371,15 @@ func deleteActionCmd(cli *cli) *cobra.Command {
   auth0 actions delete <action-id>
   auth0 actions delete <action-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var ids []string
 			if len(args) == 0 {
-				if err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions); err != nil {
+				if err := actionID.PickMany(cmd, &ids, cli.actionPickerOptions); err != nil {
 					return err
 				}
 			} else {
-				inputs.ID = args[0]
+				for _, id := range args[0:] {
+					ids = append(ids, id)
+				}
 			}
 
 			if !cli.force && canPrompt(cmd) {
@@ -390,7 +389,13 @@ func deleteActionCmd(cli *cli) *cobra.Command {
 			}
 
 			return ansi.Spinner("Deleting action", func() error {
-				return cli.api.Action.Delete(cmd.Context(), inputs.ID)
+				var errs []error
+				for _, id := range ids {
+					if err := cli.api.Action.Delete(cmd.Context(), id); err != nil {
+						errs = append(errs, err)
+					}
+				}
+				return errors.Join(errs...)
 			})
 		},
 	}

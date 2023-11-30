@@ -46,4 +46,20 @@ func TestPickerOptions(t *testing.T) {
 
 		assert.Equal(t, want, got)
 	})
+
+	t.Run("return the values for a given set of labels", func(t *testing.T) {
+		options := pickerOptions{pickerOption{label: "Foo", value: "0"}, pickerOption{label: "Bar", value: "1"}, pickerOption{label: "Baz", value: "2"}}
+		want := []string{"0", "2"}
+		got := options.getValues("Foo", "Fizz")
+
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("returns empty values for a given set of non-existant labels", func(t *testing.T) {
+		options := pickerOptions{pickerOption{label: "Foo", value: "0"}, pickerOption{label: "Bar", value: "1"}, pickerOption{label: "Baz", value: "2"}}
+		want := []string(nil)
+		got := options.getValues("Buz")
+
+		assert.Equal(t, want, got)
+	})
 }
