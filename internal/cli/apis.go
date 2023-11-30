@@ -15,6 +15,8 @@ import (
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
+const apiDefaultTokenLifetime = 86400
+
 var (
 	apiID = Argument{
 		Name: "Id",
@@ -54,6 +56,11 @@ var (
 		ShortForm:    "o",
 		Help:         "Whether Refresh Tokens can be issued for this API (true) or not (false).",
 		AlwaysPrompt: true,
+	}
+	apiSigningAlgorithm = Flag{
+		Name:     "Signing Algorithm",
+		LongForm: "signing-alg",
+		Help:     "Algorithm used to sign JWTs. Can be HS256 or RS256. PS256 available via addon.",
 	}
 	apiNumber = Flag{
 		Name:      "Number",
@@ -204,6 +211,7 @@ func createAPICmd(cli *cli) *cobra.Command {
 		Scopes             []string
 		TokenLifetime      int
 		AllowOfflineAccess bool
+		SigningAlgorithm   string
 	}
 
 	cmd := &cobra.Command{
@@ -220,7 +228,8 @@ func createAPICmd(cli *cli) *cobra.Command {
   auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100
   auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=true
   auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read"
-  auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --json`,
+  auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read" --signing-alg "RS256"
+  auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := apiName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -234,7 +243,7 @@ func createAPICmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			defaultTokenLifetime := strconv.Itoa(apiDefaultTokenLifetime())
+			defaultTokenLifetime := strconv.Itoa(apiDefaultTokenLifetime)
 			if err := apiTokenLifetime.Ask(cmd, &inputs.TokenLifetime, &defaultTokenLifetime); err != nil {
 				return err
 			}
@@ -243,20 +252,24 @@ func createAPICmd(cli *cli) *cobra.Command {
 				return err
 			}
 
+			if err := apiSigningAlgorithm.Ask(cmd, &inputs.SigningAlgorithm, auth0.String("RS256")); err != nil {
+				return err
+			}
+
 			api := &management.ResourceServer{
 				Name:               &inputs.Name,
 				Identifier:         &inputs.Identifier,
 				AllowOfflineAccess: &inputs.AllowOfflineAccess,
 				TokenLifetime:      &inputs.TokenLifetime,
+				SigningAlgorithm:   &inputs.SigningAlgorithm,
 			}
 
 			if len(inputs.Scopes) > 0 {
 				api.Scopes = apiScopesFor(inputs.Scopes)
 			}
 
-			// Set token lifetime
 			if inputs.TokenLifetime <= 0 {
-				api.TokenLifetime = auth0.Int(apiDefaultTokenLifetime())
+				api.TokenLifetime = auth0.Int(apiDefaultTokenLifetime)
 			} else {
 				api.TokenLifetime = auth0.Int(inputs.TokenLifetime)
 			}
@@ -264,10 +277,16 @@ func createAPICmd(cli *cli) *cobra.Command {
 			if err := ansi.Waiting(func() error {
 				return cli.api.ResourceServer.Create(cmd.Context(), api)
 			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred while attempting to create an API with name '%s' and identifier '%s': %w", inputs.Name, inputs.Identifier, err)
+				return fmt.Errorf(
+					"failed to create an API with name '%s' and identifier '%s': %w",
+					inputs.Name,
+					inputs.Identifier,
+					err,
+				)
 			}
 
 			cli.renderer.APICreate(api)
+
 			return nil
 		},
 	}
@@ -278,6 +297,7 @@ func createAPICmd(cli *cli) *cobra.Command {
 	apiScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
 	apiOfflineAccess.RegisterBool(cmd, &inputs.AllowOfflineAccess, false)
 	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 0)
+	apiSigningAlgorithm.RegisterString(cmd, &inputs.SigningAlgorithm, "RS256")
 
 	return cmd
 }
@@ -289,6 +309,7 @@ func updateAPICmd(cli *cli) *cobra.Command {
 		Scopes             []string
 		TokenLifetime      int
 		AllowOfflineAccess bool
+		SigningAlgorithm   string
 	}
 
 	cmd := &cobra.Command{
@@ -304,26 +325,23 @@ func updateAPICmd(cli *cli) *cobra.Command {
   auth0 apis update <api-id|api-audience> --name myapi
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false
-  auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read"
-  auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --json`,
+  auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read" --signing-alg "RS256"
+  auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var current *management.ResourceServer
-
 			if len(args) == 0 {
-				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
-				if err != nil {
+				if err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions); err != nil {
 					return err
 				}
 			} else {
 				inputs.ID = args[0]
 			}
 
-			if err := ansi.Waiting(func() error {
-				var err error
-				current, err = cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(inputs.ID))
+			var current *management.ResourceServer
+			if err := ansi.Waiting(func() (err error) {
+				current, err = cli.api.ResourceServer.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load API: %w", err)
+				return fmt.Errorf("failed to find API with ID %q: %w", inputs.ID, err)
 			}
 
 			if err := apiName.AskU(cmd, &inputs.Name, current.Name); err != nil {
@@ -334,16 +352,20 @@ func updateAPICmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			currentTokenLifetime := strconv.Itoa(auth0.IntValue(current.TokenLifetime))
-			if err := apiTokenLifetime.AskU(cmd, &inputs.TokenLifetime, &currentTokenLifetime); err != nil {
+			currentTokenLifetime := strconv.Itoa(current.GetTokenLifetime())
+			if err := apiTokenLifetime.AskIntU(cmd, &inputs.TokenLifetime, &currentTokenLifetime); err != nil {
 				return err
 			}
 
 			if !apiOfflineAccess.IsSet(cmd) {
-				inputs.AllowOfflineAccess = auth0.BoolValue(current.AllowOfflineAccess)
+				inputs.AllowOfflineAccess = current.GetAllowOfflineAccess()
 			}
 
 			if err := apiOfflineAccess.AskBoolU(cmd, &inputs.AllowOfflineAccess, current.AllowOfflineAccess); err != nil {
+				return err
+			}
+
+			if err := apiSigningAlgorithm.AskU(cmd, &inputs.SigningAlgorithm, current.SigningAlgorithm); err != nil {
 				return err
 			}
 
@@ -351,31 +373,34 @@ func updateAPICmd(cli *cli) *cobra.Command {
 				AllowOfflineAccess: &inputs.AllowOfflineAccess,
 			}
 
-			if len(inputs.Name) == 0 {
-				api.Name = current.Name
-			} else {
+			api.Name = current.Name
+			if len(inputs.Name) != 0 {
 				api.Name = &inputs.Name
 			}
 
-			if len(inputs.Scopes) == 0 {
-				api.Scopes = current.Scopes
-			} else {
+			api.Scopes = current.Scopes
+			if len(inputs.Scopes) != 0 {
 				api.Scopes = apiScopesFor(inputs.Scopes)
 			}
 
-			if inputs.TokenLifetime == 0 {
-				api.TokenLifetime = current.TokenLifetime
-			} else {
+			api.TokenLifetime = current.TokenLifetime
+			if inputs.TokenLifetime != 0 {
 				api.TokenLifetime = &inputs.TokenLifetime
+			}
+
+			api.SigningAlgorithm = current.SigningAlgorithm
+			if inputs.SigningAlgorithm != "" {
+				api.SigningAlgorithm = &inputs.SigningAlgorithm
 			}
 
 			if err := ansi.Waiting(func() error {
 				return cli.api.ResourceServer.Update(cmd.Context(), current.GetID(), api)
 			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred while trying to update an API with Id '%s': %w", inputs.ID, err)
+				return fmt.Errorf("failed to update the API with ID %q: %w", inputs.ID, err)
 			}
 
 			cli.renderer.APIUpdate(api)
+
 			return nil
 		},
 	}
@@ -385,6 +410,7 @@ func updateAPICmd(cli *cli) *cobra.Command {
 	apiScopes.RegisterStringSliceU(cmd, &inputs.Scopes, nil)
 	apiOfflineAccess.RegisterBoolU(cmd, &inputs.AllowOfflineAccess, false)
 	apiTokenLifetime.RegisterIntU(cmd, &inputs.TokenLifetime, 0)
+	apiSigningAlgorithm.RegisterStringU(cmd, &inputs.SigningAlgorithm, "RS256")
 
 	return cmd
 }
@@ -550,10 +576,6 @@ func apiScopesFor(scopes []string) *[]management.ResourceServerScope {
 	}
 
 	return &models
-}
-
-func apiDefaultTokenLifetime() int {
-	return 86400
 }
 
 func (c *cli) apiPickerOptions(ctx context.Context) (pickerOptions, error) {
