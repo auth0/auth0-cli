@@ -408,14 +408,10 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 }
 
 func deleteOrganizationCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ID string
-	}
-
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.MaximumNArgs(1),
+		Args:    cobra.MinimumNArgs(0),
 		Short:   "Delete an organization",
 		Long: "Delete an organization.\n\n" +
 			"To delete interactively, use `auth0 orgs delete` with no arguments.\n\n" +
@@ -426,13 +422,16 @@ func deleteOrganizationCmd(cli *cli) *cobra.Command {
   auth0 orgs delete <org-id>
   auth0 orgs delete <org-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ids := make([]string, len(args))
 			if len(args) == 0 {
-				err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions)
+				err := organizationID.PickMany(cmd, &ids, cli.organizationPickerOptions)
 				if err != nil {
 					return err
 				}
 			} else {
-				inputs.ID = args[0]
+				for _, id := range args {
+					ids = append(ids, id)
+				}
 			}
 
 			if !cli.force && canPrompt(cmd) {
@@ -442,13 +441,17 @@ func deleteOrganizationCmd(cli *cli) *cobra.Command {
 			}
 
 			return ansi.Spinner("Deleting organization", func() error {
-				_, err := cli.api.Organization.Read(cmd.Context(), url.PathEscape(inputs.ID))
+				var errs []error
+				for _, id := range ids {
+					if _, err := cli.api.Organization.Read(cmd.Context(), url.PathEscape(id)); err != nil {
+						errs = append(errs, fmt.Errorf("Unable to read organization for deletion: %w", err))
+					}
 
-				if err != nil {
-					return fmt.Errorf("Unable to delete organization: %w", err)
+					if err := cli.api.Organization.Delete(cmd.Context(), url.PathEscape(id)); err != nil {
+						errs = append(errs, fmt.Errorf("Unable to delete organization: %w", err))
+					}
 				}
-
-				return cli.api.Organization.Delete(cmd.Context(), url.PathEscape(inputs.ID))
+				return errors.Join(errs...)
 			})
 		},
 	}

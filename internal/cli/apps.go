@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
@@ -302,14 +303,10 @@ func showAppCmd(cli *cli) *cobra.Command {
 }
 
 func deleteAppCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ID string
-	}
-
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.MaximumNArgs(1),
+		Args:    cobra.MinimumNArgs(0),
 		Short:   "Delete an application",
 		Long: "Delete an application.\n\n" +
 			"To delete interactively, use `auth0 apps delete` with no arguments.\n\n" +
@@ -320,13 +317,16 @@ func deleteAppCmd(cli *cli) *cobra.Command {
   auth0 apps delete <app-id>
   auth0 apps delete <app-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ids := make([]string, len(args))
 			if len(args) == 0 {
-				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions())
+				err := appID.PickMany(cmd, &ids, cli.appPickerOptions())
 				if err != nil {
 					return err
 				}
 			} else {
-				inputs.ID = args[0]
+				for _, id := range args[0:] {
+					ids = append(ids, id)
+				}
 			}
 
 			if !cli.force && canPrompt(cmd) {
@@ -336,13 +336,17 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 			}
 
 			return ansi.Spinner("Deleting Application", func() error {
-				_, err := cli.api.Client.Read(cmd.Context(), inputs.ID)
+				var errs []error
+				for _, id := range ids {
+					if _, err := cli.api.Client.Read(cmd.Context(), url.PathEscape(id)); err != nil {
+						errs = append(errs, fmt.Errorf("Unable to read application for deletion: %w", err))
+					}
 
-				if err != nil {
-					return fmt.Errorf("Unable to delete application: %w", err)
+					if err := cli.api.Client.Delete(cmd.Context(), url.PathEscape(id)); err != nil {
+						errs = append(errs, fmt.Errorf("Unable to delete application: %w", err))
+					}
 				}
-
-				return cli.api.Client.Delete(cmd.Context(), inputs.ID)
+				return errors.Join(errs...)
 			})
 		},
 	}

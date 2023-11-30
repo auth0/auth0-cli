@@ -282,14 +282,10 @@ func updateRoleCmd(cli *cli) *cobra.Command {
 }
 
 func deleteRoleCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ID string
-	}
-
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.MaximumNArgs(1),
+		Args:    cobra.MinimumNArgs(0),
 		Short:   "Delete a role",
 		Long: "Delete a role.\n\n" +
 			"To delete interactively, use `auth0 roles delete`.\n\n" +
@@ -299,13 +295,16 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
   auth0 roles delete <role-id>
   auth0 roles delete <role-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ids := make([]string, len(args))
 			if len(args) == 0 {
-				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
+				err := roleID.PickMany(cmd, &ids, cli.rolePickerOptions)
 				if err != nil {
 					return err
 				}
 			} else {
-				inputs.ID = args[0]
+				for _, id := range args {
+					ids = append(ids, id)
+				}
 			}
 
 			if !cli.force && canPrompt(cmd) {
@@ -315,13 +314,17 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
 			}
 
 			return ansi.Spinner("Deleting Role", func() error {
-				_, err := cli.api.Role.Read(cmd.Context(), inputs.ID)
+				var errs []error
+				for _, id := range ids {
+					if _, err := cli.api.Role.Read(cmd.Context(), id); err != nil {
+						errs = append(errs, fmt.Errorf("Unable to read role for deletion: %w", err))
+					}
 
-				if err != nil {
-					return fmt.Errorf("Unable to delete role: %w", err)
+					if err := cli.api.Role.Delete(cmd.Context(), id); err != nil {
+						errs = append(errs, fmt.Errorf("Unable to delete role: %w", err))
+					}
 				}
-
-				return cli.api.Role.Delete(cmd.Context(), inputs.ID)
+				return errors.Join(errs...)
 			})
 		},
 	}

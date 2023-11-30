@@ -390,14 +390,10 @@ func updateAPICmd(cli *cli) *cobra.Command {
 }
 
 func deleteAPICmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ID string
-	}
-
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.MaximumNArgs(1),
+		Args:    cobra.MinimumNArgs(0),
 		Short:   "Delete an API",
 		Long: "Delete an API.\n\n" +
 			"To delete interactively, use `auth0 apis delete` with no arguments.\n\n" +
@@ -407,13 +403,15 @@ func deleteAPICmd(cli *cli) *cobra.Command {
   auth0 apis delete <api-id|api-audience>
   auth0 apis delete <api-id|api-audience> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var ids []string
 			if len(args) == 0 {
-				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
-				if err != nil {
+				if err := apiID.PickMany(cmd, &ids, cli.apiPickerOptions); err != nil {
 					return err
 				}
 			} else {
-				inputs.ID = args[0]
+				for _, id := range args[0:] {
+					ids = append(ids, id)
+				}
 			}
 
 			if !cli.force && canPrompt(cmd) {
@@ -423,13 +421,17 @@ func deleteAPICmd(cli *cli) *cobra.Command {
 			}
 
 			return ansi.Spinner("Deleting API", func() error {
-				_, err := cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(inputs.ID))
+				var errs []error
+				for _, id := range ids {
+					if _, err := cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(id)); err != nil {
+						errs = append(errs, fmt.Errorf("Unable to read API for deletion: %w", err))
+					}
 
-				if err != nil {
-					return fmt.Errorf("Unable to delete API: %w", err)
+					if err := cli.api.ResourceServer.Delete(cmd.Context(), url.PathEscape(id)); err != nil {
+						errs = append(errs, fmt.Errorf("Unable to delete API: %w", err))
+					}
 				}
-
-				return cli.api.ResourceServer.Delete(cmd.Context(), url.PathEscape(inputs.ID))
+				return errors.Join(errs...)
 			})
 		},
 	}

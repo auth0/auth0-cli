@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/auth0/go-auth0/management"
@@ -64,33 +65,35 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 }
 
 func deleteUserBlocksCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		userID string
-	}
-
 	cmd := &cobra.Command{
 		Use:     "unblock",
-		Args:    cobra.MaximumNArgs(1),
+		Args:    cobra.MinimumNArgs(0),
 		Short:   "Remove brute-force protection blocks for a given user",
 		Long:    "Remove brute-force protection blocks for a given user.",
 		Example: `  auth0 users blocks unblock <user-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ids := make([]string, len(args))
 			if len(args) == 0 {
-				if err := userID.Ask(cmd, &inputs.userID); err != nil {
+				var id string
+				if err := userID.Ask(cmd, &id); err != nil {
 					return err
 				}
+				ids = append(ids, id)
 			} else {
-				inputs.userID = args[0]
+				for _, id := range args {
+					ids = append(ids, id)
+				}
 			}
 
-			err := ansi.Spinner("Unblocking user...", func() error {
-				return cli.api.User.Unblock(cmd.Context(), inputs.userID)
+			return ansi.Spinner("Unblocking user...", func() error {
+				var errs []error
+				for _, id := range ids {
+					if err := cli.api.User.Unblock(cmd.Context(), id); err != nil {
+						errs = append(errs, fmt.Errorf("failed to unblock user with ID %s: %w", id, err))
+					}
+				}
+				return errors.Join(errs...)
 			})
-			if err != nil {
-				return fmt.Errorf("failed to unblock user with ID %s: %w", inputs.userID, err)
-			}
-
-			return nil
 		},
 	}
 
