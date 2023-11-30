@@ -71,7 +71,7 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 
 func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		userID string
+		userIdentifier string
 	}
 
 	cmd := &cobra.Command{
@@ -82,18 +82,23 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 users blocks unblock <user-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if err := userID.Ask(cmd, &inputs.userID); err != nil {
+				if err := userID.Ask(cmd, &inputs.userIdentifier); err != nil {
 					return err
 				}
 			} else {
-				inputs.userID = args[0]
+				inputs.userIdentifier = args[0]
 			}
 
 			err := ansi.Spinner("Unblocking user...", func() error {
-				return cli.api.User.Unblock(cmd.Context(), inputs.userID)
+				err := cli.api.User.Unblock(cmd.Context(), inputs.userIdentifier)
+				if mErr, ok := err.(management.Error); ok && mErr.Status() != http.StatusBadRequest {
+					return nil
+				}
+
+				return cli.api.User.UnblockByIdentifier(cmd.Context(), inputs.userIdentifier)
 			})
 			if err != nil {
-				return fmt.Errorf("failed to unblock user with ID %s: %w", inputs.userID, err)
+				return fmt.Errorf("failed to unblock user with ID %s: %w", inputs.userIdentifier, err)
 			}
 
 			return nil

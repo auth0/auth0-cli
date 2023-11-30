@@ -19,6 +19,9 @@ type UserAPI interface {
 	// provided credentials.
 	Unblock(ctx context.Context, id string, opts ...management.RequestOption) error
 
+	// UnblockByIdentifier a user that was blocked due to an excessive amount of incorrectly provided credentials using any of the user identifiers: username, phone number or email.
+	UnblockByIdentifier(ctx context.Context, identifier string, opts ...management.RequestOption) error
+
 	// Create a new user.
 	Create(ctx context.Context, u *management.User, opts ...management.RequestOption) (err error)
 
