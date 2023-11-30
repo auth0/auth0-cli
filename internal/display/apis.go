@@ -13,12 +13,13 @@ import (
 )
 
 type apiView struct {
-	ID            string
-	Name          string
-	Identifier    string
-	Scopes        string
-	TokenLifetime int
-	OfflineAccess string
+	ID               string
+	Name             string
+	Identifier       string
+	Scopes           string
+	TokenLifetime    int
+	OfflineAccess    string
+	SigningAlgorithm string
 
 	raw interface{}
 }
@@ -39,6 +40,7 @@ func (v *apiView) KeyValues() [][]string {
 		{"SCOPES", v.Scopes},
 		{"TOKEN LIFETIME", strconv.Itoa(v.TokenLifetime)},
 		{"ALLOW OFFLINE ACCESS", v.OfflineAccess},
+		{"SIGNING ALGORITHM", v.SigningAlgorithm},
 	}
 }
 
@@ -111,14 +113,14 @@ func (r *Renderer) APIUpdate(api *management.ResourceServer) {
 func makeAPIView(api *management.ResourceServer) (*apiView, bool) {
 	scopes, scopesTruncated := getScopes(api.GetScopes())
 	view := &apiView{
-		ID:            ansi.Faint(api.GetID()),
-		Name:          api.GetName(),
-		Identifier:    api.GetIdentifier(),
-		Scopes:        scopes,
-		TokenLifetime: api.GetTokenLifetime(),
-		OfflineAccess: boolean(api.GetAllowOfflineAccess()),
-
-		raw: api,
+		ID:               ansi.Faint(api.GetID()),
+		Name:             api.GetName(),
+		Identifier:       api.GetIdentifier(),
+		Scopes:           scopes,
+		TokenLifetime:    api.GetTokenLifetime(),
+		OfflineAccess:    boolean(api.GetAllowOfflineAccess()),
+		SigningAlgorithm: api.GetSigningAlgorithm(),
+		raw:              api,
 	}
 	return view, scopesTruncated
 }
