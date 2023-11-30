@@ -58,10 +58,9 @@ var (
 		AlwaysPrompt: true,
 	}
 	apiSigningAlgorithm = Flag{
-		Name:      "Signing Algorithm",
-		LongForm:  "signing-alg",
-		ShortForm: "a",
-		Help:      "Algorithm used to sign JWTs. Can be HS256 or RS256. PS256 available via addon.",
+		Name:     "Signing Algorithm",
+		LongForm: "signing-alg",
+		Help:     "Algorithm used to sign JWTs. Can be HS256 or RS256. PS256 available via addon.",
 	}
 	apiNumber = Flag{
 		Name:      "Number",
@@ -230,7 +229,7 @@ func createAPICmd(cli *cli) *cobra.Command {
   auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=true
   auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read"
   auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read" --signing-alg "RS256"
-  auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" -a "RS256" --json`,
+  auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := apiName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -327,7 +326,7 @@ func updateAPICmd(cli *cli) *cobra.Command {
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read" --signing-alg "RS256"
-  auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" -a "RS256" --json`,
+  auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions); err != nil {
