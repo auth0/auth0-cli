@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.3.0](https://github.com/auth0/auth0-cli/tree/v1.3.0) (Dec 1, 2023)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.2.0...v1.3.0)
+
+### Added
+
+- Audience dropdown UI when running `auth0 test token` [#906]
+- Scopes dropdown UI when running `auth0 test token` [#910]
+- Multiple argument support when running delete commands [#xxx]
+- Multi-select dropdown when running delete commands in interactive mode [#xxx]
+- Active tenant indicator when running `auth0 tenants list` [#907]
+- Prompt dropdown UI when running  `auth0 ul prompts update` and `auth0 ul prompts list` [#913]
+- Signing algorithm management when running `auth0 apis create` and `auth0 apis update` [#926]
+- Log stream dropdown UI when running `auth0 logs streams show` [#920]
+- Validate connection is enabled before creating and importing users [#921]
+
+### Fixed
+
+- Display description field when updating roles in interactive mode [#915]
+- Only store access token in config file if keyring unavailable [#919]
+- Only display undeployed actions when running `auth0 actions deploy` [#916]
+- Don't require any scopes when authenticating with client credentials [#917]
+- Show help text when no arguments provided when running  `auth0 api` [#914]
+
+### Changed
+
+- Removal of "Getting members of organization" loader messaging when running `auth0 orgs members list` [#918]
+
 ## [v1.2.0](https://github.com/auth0/auth0-cli/tree/v1.2.0) (Nov 2, 2023)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.1.2...v1.2.0)
@@ -228,6 +256,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 [unreleased]: https://github.com/auth0/auth0-cli/compare/v1.0.0...HEAD
+[#906]: https://github.com/auth0/auth0-cli/issues/906
+[#910]: https://github.com/auth0/auth0-cli/issues/910
+[#907]: https://github.com/auth0/auth0-cli/issues/907
+[#913]: https://github.com/auth0/auth0-cli/issues/913
+[#926]: https://github.com/auth0/auth0-cli/issues/926
+[#920]: https://github.com/auth0/auth0-cli/issues/920
+[#921]: https://github.com/auth0/auth0-cli/issues/921
+[#915]: https://github.com/auth0/auth0-cli/issues/915
+[#919]: https://github.com/auth0/auth0-cli/issues/919
+[#916]: https://github.com/auth0/auth0-cli/issues/916
+[#917]: https://github.com/auth0/auth0-cli/issues/917
+[#914]: https://github.com/auth0/auth0-cli/issues/914
+[#918]: https://github.com/auth0/auth0-cli/issues/918
 [#882]: https://github.com/auth0/auth0-cli/issues/882
 [#858]: https://github.com/auth0/auth0-cli/issues/858
 [#857]: https://github.com/auth0/auth0-cli/issues/857
