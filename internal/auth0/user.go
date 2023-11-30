@@ -12,6 +12,9 @@ type UserAPI interface {
 	// Blocks retrieves a list of blocked IP addresses of a particular user.
 	Blocks(ctx context.Context, id string, opts ...management.RequestOption) ([]*management.UserBlock, error)
 
+	// BlocksByIdentifier retrieves a list of blocked IP addresses of a particular user using any of the user identifiers: username, phone number or email.
+	BlocksByIdentifier(ctx context.Context, identifier string, opts ...management.RequestOption) ([]*management.UserBlock, error)
+
 	// Unblock a user that was blocked due to an excessive amount of incorrectly
 	// provided credentials.
 	Unblock(ctx context.Context, id string, opts ...management.RequestOption) error

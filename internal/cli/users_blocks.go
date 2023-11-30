@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
@@ -25,7 +26,7 @@ func userBlocksCmd(cli *cli) *cobra.Command {
 
 func listUserBlocksCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		userID string
+		userIdentifier string
 	}
 
 	cmd := &cobra.Command{
@@ -33,24 +34,29 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "List brute-force protection blocks for a given user",
 		Long:  "List brute-force protection blocks for a given user.",
-		Example: `  auth0 users blocks list <user-id>
-  auth0 users blocks list <user-id> --json`,
+		Example: `  auth0 users blocks list <user-identifier>
+  auth0 users blocks list <user-identifier> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if err := userID.Ask(cmd, &inputs.userID); err != nil {
+				if err := userID.Ask(cmd, &inputs.userIdentifier); err != nil {
 					return err
 				}
 			} else {
-				inputs.userID = args[0]
+				inputs.userIdentifier = args[0]
 			}
 
 			var userBlocks []*management.UserBlock
 			err := ansi.Waiting(func() (err error) {
-				userBlocks, err = cli.api.User.Blocks(cmd.Context(), inputs.userID)
+				userBlocks, err = cli.api.User.Blocks(cmd.Context(), inputs.userIdentifier)
+				if mErr, ok := err.(management.Error); ok && mErr.Status() != http.StatusBadRequest {
+					return nil
+				}
+
+				userBlocks, err = cli.api.User.BlocksByIdentifier(cmd.Context(), inputs.userIdentifier)
 				return err
 			})
 			if err != nil {
-				return fmt.Errorf("failed to list user blocks for user with ID %s: %w", inputs.userID, err)
+				return fmt.Errorf("failed to list user blocks for user with ID %s: %w", inputs.userIdentifier, err)
 			}
 
 			cli.renderer.UserBlocksList(userBlocks)
