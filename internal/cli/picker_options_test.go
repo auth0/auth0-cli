@@ -50,7 +50,7 @@ func TestPickerOptions(t *testing.T) {
 	t.Run("return the values for a given set of labels", func(t *testing.T) {
 		options := pickerOptions{pickerOption{label: "Foo", value: "0"}, pickerOption{label: "Bar", value: "1"}, pickerOption{label: "Baz", value: "2"}}
 		want := []string{"0", "2"}
-		got := options.getValues("Foo", "Fizz")
+		got := options.getValues("Foo", "Baz")
 
 		assert.Equal(t, want, got)
 	})

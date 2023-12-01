@@ -427,7 +427,9 @@ func deleteAPICmd(cli *cli) *cobra.Command {
 		Example: `  auth0 apis delete 
   auth0 apis rm
   auth0 apis delete <api-id|api-audience>
-  auth0 apis delete <api-id|api-audience> --force`,
+  auth0 apis delete <api-id|api-audience> --force
+  auth0 apis delete <api-id|api-audience> <api-id2> <api-idn>
+  auth0 apis delete <api-id|api-audience> <api-id2> <api-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var ids []string
 			if len(args) == 0 {

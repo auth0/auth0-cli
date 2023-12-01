@@ -420,7 +420,9 @@ func deleteOrganizationCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 orgs delete
   auth0 orgs rm
   auth0 orgs delete <org-id>
-  auth0 orgs delete <org-id> --force`,
+  auth0 orgs delete <org-id> --force
+  auth0 orgs delete <org-id> <org-id2> <org-idn>
+  auth0 orgs delete <org-id> <org-id2> <org-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ids := make([]string, len(args))
 			if len(args) == 0 {

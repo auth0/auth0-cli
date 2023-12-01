@@ -369,7 +369,9 @@ func deleteActionCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 actions delete
   auth0 actions rm
   auth0 actions delete <action-id>
-  auth0 actions delete <action-id> --force`,
+  auth0 actions delete <action-id> --force
+  auth0 actions delete <action-id> <action-id2> <action-idn>
+  auth0 actions delete <action-id> <action-id2> <action-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ids := make([]string, len(args))
 			if len(args) == 0 {

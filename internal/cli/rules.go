@@ -260,7 +260,9 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 rules delete 
   auth0 rules rm
   auth0 rules delete <rule-id>
-  auth0 rules delete <rule-id> --force`,
+  auth0 rules delete <rule-id> --force
+  auth0 rules delete <rule-id> <rule-id2> <rule-idn>
+  auth0 rules delete <rule-id> <rule-id2> <rule-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ids := make([]string, len(args))
 			if len(args) == 0 {

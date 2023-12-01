@@ -23,6 +23,8 @@ auth0 domains delete [flags]
   auth0 domains rm
   auth0 domains delete <domain-id>
   auth0 domains delete <domain-id> --force
+  auth0 domains delete <domain-id> <domain-id2> <domain-idn>
+  auth0 domains delete <domain-id> <domain-id2> <domain-idn> --force
 ```
 
 

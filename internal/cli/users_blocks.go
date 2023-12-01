@@ -66,11 +66,13 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 
 func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "unblock",
-		Args:    cobra.MinimumNArgs(0),
-		Short:   "Remove brute-force protection blocks for a given user",
-		Long:    "Remove brute-force protection blocks for a given user.",
-		Example: `  auth0 users blocks unblock <user-id>`,
+		Use:   "unblock",
+		Args:  cobra.MinimumNArgs(0),
+		Short: "Remove brute-force protection blocks for a given user",
+		Long:  "Remove brute-force protection blocks for a given user.",
+		Example: `  auth0 users blocks unblock
+  auth0 users blocks unblock <user-id>
+  auth0 users blocks unblock <user-id> <user-id2> <user-idn>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ids := make([]string, len(args))
 			if len(args) == 0 {

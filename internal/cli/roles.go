@@ -293,7 +293,9 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 roles delete
   auth0 roles rm
   auth0 roles delete <role-id>
-  auth0 roles delete <role-id> --force`,
+  auth0 roles delete <role-id> --force
+  auth0 roles delete <role-id> <role-id2> <role-idn>
+  auth0 roles delete <role-id> <role-id2> <role-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ids := make([]string, len(args))
 			if len(args) == 0 {

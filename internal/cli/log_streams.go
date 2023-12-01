@@ -180,7 +180,9 @@ func deleteLogStreamCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 logs streams delete
   auth0 logs streams rm
   auth0 logs streams delete <log-stream-id>
-  auth0 logs streams delete <log-stream-id> --force`,
+  auth0 logs streams delete <log-stream-id> --force
+  auth0 logs streams delete <log-stream-id> <log-stream-id2> <log-stream-idn>
+  auth0 logs streams delete <log-stream-id> <log-stream-id2> <log-stream-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ids := make([]string, len(args))
 			if len(args) == 0 {

@@ -315,7 +315,9 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 apps delete 
   auth0 apps rm
   auth0 apps delete <app-id>
-  auth0 apps delete <app-id> --force`,
+  auth0 apps delete <app-id> --force
+  auth0 apps delete <app-id> <app-id2> <app-idn>
+  auth0 apps delete <app-id> <app-id2> <app-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ids := make([]string, len(args))
 			if len(args) == 0 {

@@ -336,7 +336,9 @@ func deleteCustomDomainCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 domains delete
   auth0 domains rm
   auth0 domains delete <domain-id>
-  auth0 domains delete <domain-id> --force`,
+  auth0 domains delete <domain-id> --force
+  auth0 domains delete <domain-id> <domain-id2> <domain-idn>
+  auth0 domains delete <domain-id> <domain-id2> <domain-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ids := make([]string, len(args))
 			if len(args) == 0 {

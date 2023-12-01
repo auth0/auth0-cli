@@ -368,7 +368,9 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 users delete 
   auth0 users rm
   auth0 users delete <user-id>
-  auth0 users delete <user-id> --force`,
+  auth0 users delete <user-id> --force
+  auth0 users delete <user-id> <user-id2> <user-idn>
+  auth0 users delete <user-id> <user-id2> <user-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ids := make([]string, len(args))
 			if len(args) == 0 {
