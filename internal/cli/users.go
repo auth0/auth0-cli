@@ -380,9 +380,7 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 				}
 				ids = append(ids, id)
 			} else {
-				for _, id := range args {
-					ids = append(ids, id)
-				}
+				ids = append(ids, args...)
 			}
 
 			if !cli.force && canPrompt(cmd) {

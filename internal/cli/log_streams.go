@@ -191,9 +191,7 @@ func deleteLogStreamCmd(cli *cli) *cobra.Command {
 					return err
 				}
 			} else {
-				for _, id := range args[0:] {
-					ids = append(ids, id)
-				}
+				ids = append(ids, args...)
 			}
 
 			if !cli.force && canPrompt(cmd) {
