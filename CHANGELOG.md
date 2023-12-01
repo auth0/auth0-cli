@@ -15,8 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Audience dropdown UI when running `auth0 test token` [#906]
 - Scopes dropdown UI when running `auth0 test token` [#910]
-- Multiple argument support when running delete commands [#xxx]
-- Multi-select dropdown when running delete commands in interactive mode [#xxx]
 - Active tenant indicator when running `auth0 tenants list` [#907]
 - Prompt dropdown UI when running  `auth0 ul prompts update` and `auth0 ul prompts list` [#913]
 - Signing algorithm management when running `auth0 apis create` and `auth0 apis update` [#926]
