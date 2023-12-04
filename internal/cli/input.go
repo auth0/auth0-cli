@@ -59,7 +59,7 @@ func askPassword(i commandInput, value interface{}, isUpdate bool) error {
 	return nil
 }
 
-func askMultiSelect(i commandInput, value interface{}, isUpdate bool, options ...string) error {
+func askMultiSelect(i commandInput, value interface{}, options ...string) error {
 	v := reflect.ValueOf(value)
 	if v.Kind() != reflect.Slice || v.Len() <= 0 {
 		handleInputError(fmt.Errorf("there is not enough data to select from"))
