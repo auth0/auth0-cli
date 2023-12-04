@@ -171,7 +171,6 @@ func deleteLogStreamCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.MinimumNArgs(0),
 		Short:   "Delete a log stream",
 		Long: "Delete a log stream.\n\n" +
 			"To delete interactively, use `auth0 logs streams delete` with no arguments.\n\n" +
@@ -181,8 +180,8 @@ func deleteLogStreamCmd(cli *cli) *cobra.Command {
   auth0 logs streams rm
   auth0 logs streams delete <log-stream-id>
   auth0 logs streams delete <log-stream-id> --force
-  auth0 logs streams delete <log-stream-id> <log-stream-id2> <log-stream-idn>
-  auth0 logs streams delete <log-stream-id> <log-stream-id2> <log-stream-idn> --force`,
+  auth0 logs streams delete <log-stream-id> <log-stream-id2>
+  auth0 logs streams delete <log-stream-id> <log-stream-id2> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ids := make([]string, len(args))
 			if len(args) == 0 {
@@ -200,14 +199,17 @@ func deleteLogStreamCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting Log Stream", func() error {
+			return ansi.Spinner("Deleting Log Stream(s)", func() error {
 				var errs []error
 				for _, id := range ids {
-					if _, err := cli.api.LogStream.Read(cmd.Context(), id); err != nil {
-						errs = append(errs, fmt.Errorf("Unable to read log stream for deletion: %w", err))
-					}
-					if err := cli.api.LogStream.Delete(cmd.Context(), id); err != nil {
-						errs = append(errs, fmt.Errorf("Unable to delete log stream: %w", err))
+					if id != "" {
+						if _, err := cli.api.LogStream.Read(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete log stream (%s): %w", id, err))
+							continue
+						}
+						if err := cli.api.LogStream.Delete(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete log stream (%s): %w", id, err))
+						}
 					}
 				}
 

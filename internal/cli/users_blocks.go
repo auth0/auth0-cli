@@ -67,7 +67,6 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unblock",
-		Args:  cobra.MinimumNArgs(0),
 		Short: "Remove brute-force protection blocks for a given user",
 		Long:  "Remove brute-force protection blocks for a given user.",
 		Example: `  auth0 users blocks unblock
@@ -85,11 +84,13 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 				ids = append(ids, args...)
 			}
 
-			return ansi.Spinner("Unblocking user...", func() error {
+			return ansi.Spinner("Unblocking user(s)...", func() error {
 				var errs []error
 				for _, id := range ids {
-					if err := cli.api.User.Unblock(cmd.Context(), id); err != nil {
-						errs = append(errs, fmt.Errorf("failed to unblock user with ID %s: %w", id, err))
+					if id != "" {
+						if err := cli.api.User.Unblock(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("failed to unblock user with ID %s: %w", id, err))
+						}
 					}
 				}
 				return errors.Join(errs...)

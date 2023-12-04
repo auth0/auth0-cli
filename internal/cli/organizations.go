@@ -411,7 +411,6 @@ func deleteOrganizationCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.MinimumNArgs(0),
 		Short:   "Delete an organization",
 		Long: "Delete an organization.\n\n" +
 			"To delete interactively, use `auth0 orgs delete` with no arguments.\n\n" +
@@ -440,15 +439,18 @@ func deleteOrganizationCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting organization", func() error {
+			return ansi.Spinner("Deleting organization(s)", func() error {
 				var errs []error
 				for _, id := range ids {
-					if _, err := cli.api.Organization.Read(cmd.Context(), url.PathEscape(id)); err != nil {
-						errs = append(errs, fmt.Errorf("Unable to read organization for deletion: %w", err))
-					}
+					if id != "" {
+						if _, err := cli.api.Organization.Read(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete organization (%s): %w", id, err))
+							continue
+						}
 
-					if err := cli.api.Organization.Delete(cmd.Context(), url.PathEscape(id)); err != nil {
-						errs = append(errs, fmt.Errorf("Unable to delete organization: %w", err))
+						if err := cli.api.Organization.Delete(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete organization (%s): %w", id, err))
+						}
 					}
 				}
 				return errors.Join(errs...)

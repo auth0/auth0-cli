@@ -361,7 +361,6 @@ func deleteActionCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.MinimumNArgs(0),
 		Short:   "Delete an action",
 		Long: "Delete an action.\n\n" +
 			"To delete interactively, use `auth0 actions delete` with no arguments.\n\n" +
@@ -388,11 +387,13 @@ func deleteActionCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting action", func() error {
+			return ansi.Spinner("Deleting action(s)", func() error {
 				var errs []error
 				for _, id := range ids {
-					if err := cli.api.Action.Delete(cmd.Context(), id); err != nil {
-						errs = append(errs, err)
+					if id != "" {
+						if err := cli.api.Action.Delete(cmd.Context(), id); err != nil {
+							errs = append(errs, err)
+						}
 					}
 				}
 				return errors.Join(errs...)

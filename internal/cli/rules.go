@@ -252,7 +252,6 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.MinimumNArgs(0),
 		Short:   "Delete a rule",
 		Long: rulesDeprecationDocumentationText + "Delete a rule.\n\n" +
 			"To delete interactively, use `auth0 rules delete` with no arguments.\n\n" +
@@ -280,15 +279,18 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting Rule", func() error {
+			return ansi.Spinner("Deleting Rule(s)", func() error {
 				var errs []error
 				for _, id := range ids {
-					if _, err := cli.api.Rule.Read(cmd.Context(), id); err != nil {
-						errs = append(errs, fmt.Errorf("Unable to read rule for deletion: %w", err))
-					}
+					if id != "" {
+						if _, err := cli.api.Rule.Read(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete rule (%s): %w", id, err))
+							continue
+						}
 
-					if err := cli.api.Rule.Delete(cmd.Context(), id); err != nil {
-						errs = append(errs, fmt.Errorf("Unable to delete rule: %w", err))
+						if err := cli.api.Rule.Delete(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete rule (%s): %w", id, err))
+						}
 					}
 				}
 				return errors.Join(errs...)

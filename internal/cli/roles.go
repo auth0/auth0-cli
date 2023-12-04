@@ -285,7 +285,6 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.MinimumNArgs(0),
 		Short:   "Delete a role",
 		Long: "Delete a role.\n\n" +
 			"To delete interactively, use `auth0 roles delete`.\n\n" +
@@ -313,15 +312,18 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting Role", func() error {
+			return ansi.Spinner("Deleting Role(s)", func() error {
 				var errs []error
 				for _, id := range ids {
-					if _, err := cli.api.Role.Read(cmd.Context(), id); err != nil {
-						errs = append(errs, fmt.Errorf("Unable to read role for deletion: %w", err))
-					}
+					if id != "" {
+						if _, err := cli.api.Role.Read(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete role (%s): %w", id, err))
+							continue
+						}
 
-					if err := cli.api.Role.Delete(cmd.Context(), id); err != nil {
-						errs = append(errs, fmt.Errorf("Unable to delete role: %w", err))
+						if err := cli.api.Role.Delete(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete role (%s): %w", id, err))
+						}
 					}
 				}
 				return errors.Join(errs...)

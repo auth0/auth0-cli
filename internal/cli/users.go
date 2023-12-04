@@ -360,7 +360,6 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.MinimumNArgs(0),
 		Short:   "Delete a user",
 		Long: "Delete a user.\n\n" +
 			"To delete interactively, use `auth0 users delete` with no arguments.\n\n" +
@@ -389,15 +388,18 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting user", func() error {
+			return ansi.Spinner("Deleting user(s)", func() error {
 				var errs []error
 				for _, id := range ids {
-					if _, err := cli.api.User.Read(cmd.Context(), id); err != nil {
-						errs = append(errs, fmt.Errorf("Unable to read user for deletion: %w", err))
-					}
+					if id != "" {
+						if _, err := cli.api.User.Read(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete user (%s): %w", id, err))
+							continue
+						}
 
-					if err := cli.api.User.Delete(cmd.Context(), id); err != nil {
-						errs = append(errs, fmt.Errorf("Unable to delete user: %w", err))
+						if err := cli.api.User.Delete(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete user (%s): %w", id, err))
+						}
 					}
 				}
 				return errors.Join(errs...)
