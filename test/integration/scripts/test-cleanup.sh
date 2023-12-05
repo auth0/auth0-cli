@@ -16,7 +16,7 @@ function delete_resources {
 delete_resources "apps" "integration-test-app" "client_id"
 delete_resources "apis" "integration-test-api" "id"
 
-print "\r\nGathering resource user_ids for users...\r\n"
+printf "\r\nGathering resource user_ids for users...\r\n"
 # using the search command since users have no list command
 users=$( auth0 users search -q "*"  --json --no-input | jq -r '.[] | select(.name | test("^integration-.+")) | .user_id' | tr '\n' ' ' )
 if [[ $users ]]
