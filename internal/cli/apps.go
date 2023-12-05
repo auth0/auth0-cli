@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
@@ -302,14 +303,9 @@ func showAppCmd(cli *cli) *cobra.Command {
 }
 
 func deleteAppCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ID string
-	}
-
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.MaximumNArgs(1),
 		Short:   "Delete an application",
 		Long: "Delete an application.\n\n" +
 			"To delete interactively, use `auth0 apps delete` with no arguments.\n\n" +
@@ -318,34 +314,44 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 apps delete 
   auth0 apps rm
   auth0 apps delete <app-id>
-  auth0 apps delete <app-id> --force`,
+  auth0 apps delete <app-id> --force
+  auth0 apps delete <app-id> <app-id2> <app-idn>
+  auth0 apps delete <app-id> <app-id2> <app-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ids := make([]string, len(args))
 			if len(args) == 0 {
-				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions())
+				err := appID.PickMany(cmd, &ids, cli.appPickerOptions())
 				if err != nil {
 					return err
 				}
 			} else {
-				inputs.ID = args[0]
+				ids = append(ids, args...)
 			}
 
 			if !cli.force && canPrompt(cmd) {
-				if tenant, _ := cli.Config.GetTenant(cli.tenant); tenant.ClientID == inputs.ID {
-					cli.renderer.Warnf("Warning: You're about to delete the client used to authenticate the CLI. If deleted, the CLI will cease to operate once the access token has expired.", inputs.ID)
+				if tenant, _ := cli.Config.GetTenant(cli.tenant); slices.Contains(ids, tenant.ClientID) {
+					cli.renderer.Warnf("Warning: You're about to delete the client used to authenticate the CLI. If deleted, the CLI will cease to operate once the access token has expired.")
 				}
 				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
 					return nil
 				}
 			}
 
-			return ansi.Spinner("Deleting Application", func() error {
-				_, err := cli.api.Client.Read(cmd.Context(), inputs.ID)
+			return ansi.Spinner("Deleting Application(s)", func() error {
+				var errs []error
+				for _, id := range ids {
+					if id != "" {
+						if _, err := cli.api.Client.Read(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete application (%s): %w", id, err))
+							continue
+						}
 
-				if err != nil {
-					return fmt.Errorf("Unable to delete application: %w", err)
+						if err := cli.api.Client.Delete(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete application (%s): %w", id, err))
+						}
+					}
 				}
-
-				return cli.api.Client.Delete(cmd.Context(), inputs.ID)
+				return errors.Join(errs...)
 			})
 		},
 	}

@@ -15,7 +15,9 @@ auth0 users blocks unblock [flags]
 ## Examples
 
 ```
+  auth0 users blocks unblock
   auth0 users blocks unblock <user-id>
+  auth0 users blocks unblock <user-id> <user-id2> <user-idn>
 ```
 
 
