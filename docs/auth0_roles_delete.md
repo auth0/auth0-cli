@@ -23,6 +23,8 @@ auth0 roles delete [flags]
   auth0 roles rm
   auth0 roles delete <role-id>
   auth0 roles delete <role-id> --force
+  auth0 roles delete <role-id> <role-id2> <role-idn>
+  auth0 roles delete <role-id> <role-id2> <role-idn> --force
 ```
 
 

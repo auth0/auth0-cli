@@ -23,6 +23,8 @@ auth0 apis delete [flags]
   auth0 apis rm
   auth0 apis delete <api-id|api-audience>
   auth0 apis delete <api-id|api-audience> --force
+  auth0 apis delete <api-id|api-audience> <api-id2> <api-idn>
+  auth0 apis delete <api-id|api-audience> <api-id2> <api-idn> --force
 ```
 
 

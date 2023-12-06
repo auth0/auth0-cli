@@ -23,6 +23,8 @@ auth0 apps delete [flags]
   auth0 apps rm
   auth0 apps delete <app-id>
   auth0 apps delete <app-id> --force
+  auth0 apps delete <app-id> <app-id2> <app-idn>
+  auth0 apps delete <app-id> <app-id2> <app-idn> --force
 ```
 
 
