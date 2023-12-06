@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
@@ -26,32 +27,39 @@ func userBlocksCmd(cli *cli) *cobra.Command {
 
 func listUserBlocksCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		userID string
+		userIdentifier string
 	}
 
 	cmd := &cobra.Command{
 		Use:   "list",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "List brute-force protection blocks for a given user",
-		Long:  "List brute-force protection blocks for a given user.",
-		Example: `  auth0 users blocks list <user-id>
-  auth0 users blocks list <user-id> --json`,
+		Long:  "List brute-force protection blocks for a given user by user ID, username, phone number or email.",
+		Example: `  auth0 users blocks list <user-id|username|email|phone-number>
+  auth0 users blocks list <user-id|username|email|phone-number> --json
+  auth0 users blocks list "auth0|61b5b6e90783fa19f7c57dad"
+  auth0 users blocks list "frederik@travel0.com"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if err := userID.Ask(cmd, &inputs.userID); err != nil {
+				if err := userIdentifier.Ask(cmd, &inputs.userIdentifier); err != nil {
 					return err
 				}
 			} else {
-				inputs.userID = args[0]
+				inputs.userIdentifier = args[0]
 			}
 
 			var userBlocks []*management.UserBlock
 			err := ansi.Waiting(func() (err error) {
-				userBlocks, err = cli.api.User.Blocks(cmd.Context(), inputs.userID)
+				userBlocks, err = cli.api.User.Blocks(cmd.Context(), inputs.userIdentifier)
+				if mErr, ok := err.(management.Error); ok && mErr.Status() != http.StatusBadRequest {
+					return err
+				}
+
+				userBlocks, err = cli.api.User.BlocksByIdentifier(cmd.Context(), inputs.userIdentifier)
 				return err
 			})
 			if err != nil {
-				return fmt.Errorf("failed to list user blocks for user with ID %s: %w", inputs.userID, err)
+				return fmt.Errorf("failed to list user blocks for user with ID %s: %w", inputs.userIdentifier, err)
 			}
 
 			cli.renderer.UserBlocksList(userBlocks)
@@ -67,29 +75,37 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unblock",
-		Short: "Remove brute-force protection blocks for a given user",
-		Long:  "Remove brute-force protection blocks for a given user.",
-		Example: `  auth0 users blocks unblock
-  auth0 users blocks unblock <user-id>
-  auth0 users blocks unblock <user-id> <user-id2> <user-idn>`,
+		Short: "Remove brute-force protection blocks for users",
+		Long:  "Remove brute-force protection blocks for users by user ID, username, phone number or email.",
+		Example: `  auth0 users blocks unblock <user-id1|username1|email1|phone-number1> <user-id2|username2|email2|phone-number2>
+  auth0 users blocks unblock "auth0|61b5b6e90783fa19f7c57dad"
+  auth0 users blocks unblock "frederik@travel0.com" "poovam@travel0.com"
+		`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ids := make([]string, len(args))
+			identifiers := make([]string, len(args))
 			if len(args) == 0 {
 				var id string
-				if err := userID.Ask(cmd, &id); err != nil {
+				if err := userIdentifier.Ask(cmd, &id); err != nil {
 					return err
 				}
-				ids = append(ids, id)
+				identifiers = append(identifiers, id)
 			} else {
-				ids = append(ids, args...)
+				identifiers = append(identifiers, args...)
 			}
 
 			return ansi.Spinner("Unblocking user(s)...", func() error {
 				var errs []error
-				for _, id := range ids {
-					if id != "" {
-						if err := cli.api.User.Unblock(cmd.Context(), id); err != nil {
-							errs = append(errs, fmt.Errorf("failed to unblock user with ID %s: %w", id, err))
+				for _, identifier := range identifiers {
+					if identifier != "" {
+						err := cli.api.User.Unblock(cmd.Context(), identifier)
+						if mErr, ok := err.(management.Error); ok && mErr.Status() != http.StatusBadRequest {
+							errs = append(errs, fmt.Errorf("failed to unblock user with identifier %s: %w", identifier, err))
+							continue
+						}
+
+						err = cli.api.User.UnblockByIdentifier(cmd.Context(), identifier)
+						if err != nil {
+							errs = append(errs, fmt.Errorf("failed to unblock user with identifier %s: %w", identifier, err))
 						}
 					}
 				}
