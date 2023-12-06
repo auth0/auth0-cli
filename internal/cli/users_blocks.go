@@ -41,7 +41,7 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
   auth0 users blocks unblock "frederik@travel0.com`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if err := userID.Ask(cmd, &inputs.userIdentifier); err != nil {
+				if err := userIdentifier.Ask(cmd, &inputs.userIdentifier); err != nil {
 					return err
 				}
 			} else {
@@ -85,7 +85,7 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 			identifiers := make([]string, len(args))
 			if len(args) == 0 {
 				var id string
-				if err := userID.Ask(cmd, &id); err != nil {
+				if err := userIdentifier.Ask(cmd, &id); err != nil {
 					return err
 				}
 				identifiers = append(identifiers, id)
