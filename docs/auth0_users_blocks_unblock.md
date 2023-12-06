@@ -16,7 +16,7 @@ auth0 users blocks unblock [flags]
 
 ```
   auth0 users blocks unblock <user-id1|username1|email1|phone-number1> <user-id2|username2|email2|phone-number2>
-  auth0 users blocks unblock "auth0|61b5b6e90783fa19f7c57dad
+  auth0 users blocks unblock "auth0|61b5b6e90783fa19f7c57dad"
   auth0 users blocks unblock "frederik@travel0.com" "poovam@travel0.com"
 		
 ```

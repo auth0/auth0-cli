@@ -37,8 +37,8 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 		Long:  "List brute-force protection blocks for a given user by user ID, username, phone number or email.",
 		Example: `  auth0 users blocks list <user-id|username|email|phone-number>
   auth0 users blocks list <user-id|username|email|phone-number> --json
-  auth0 users blocks list "auth0|61b5b6e90783fa19f7c57dad
-  auth0 users blocks list "frederik@travel0.com`,
+  auth0 users blocks list "auth0|61b5b6e90783fa19f7c57dad"
+  auth0 users blocks list "frederik@travel0.com"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userIdentifier.Ask(cmd, &inputs.userIdentifier); err != nil {
@@ -78,7 +78,7 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 		Short: "Remove brute-force protection blocks for users",
 		Long:  "Remove brute-force protection blocks for users by user ID, username, phone number or email.",
 		Example: `  auth0 users blocks unblock <user-id1|username1|email1|phone-number1> <user-id2|username2|email2|phone-number2>
-  auth0 users blocks unblock "auth0|61b5b6e90783fa19f7c57dad
+  auth0 users blocks unblock "auth0|61b5b6e90783fa19f7c57dad"
   auth0 users blocks unblock "frederik@travel0.com" "poovam@travel0.com"
 		`,
 		RunE: func(cmd *cobra.Command, args []string) error {
