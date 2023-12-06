@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -323,14 +324,9 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
 }
 
 func deleteCustomDomainCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ID string
-	}
-
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.MaximumNArgs(1),
 		Short:   "Delete a custom domain",
 		Long: "Delete a custom domain.\n\n" +
 			"To delete interactively, use `auth0 domains delete` with no arguments.\n\n" +
@@ -339,15 +335,18 @@ func deleteCustomDomainCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 domains delete
   auth0 domains rm
   auth0 domains delete <domain-id>
-  auth0 domains delete <domain-id> --force`,
+  auth0 domains delete <domain-id> --force
+  auth0 domains delete <domain-id> <domain-id2>
+  auth0 domains delete <domain-id> <domain-id2> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ids := make([]string, len(args))
 			if len(args) == 0 {
-				err := customDomainID.Pick(cmd, &inputs.ID, cli.customDomainsPickerOptions)
+				err := customDomainID.PickMany(cmd, &ids, cli.customDomainsPickerOptions)
 				if err != nil {
 					return err
 				}
 			} else {
-				inputs.ID = args[0]
+				ids = append(ids, args...)
 			}
 
 			if !cli.force && canPrompt(cmd) {
@@ -357,13 +356,20 @@ func deleteCustomDomainCmd(cli *cli) *cobra.Command {
 			}
 
 			return ansi.Spinner("Deleting custom domain", func() error {
-				_, err := cli.api.CustomDomain.Read(cmd.Context(), url.PathEscape(inputs.ID))
+				var errs []error
+				for _, id := range ids {
+					if id != "" {
+						if _, err := cli.api.CustomDomain.Read(cmd.Context(), url.PathEscape(id)); err != nil {
+							return fmt.Errorf("Unable to delete custom domain (%s): %w", id, err)
+						}
 
-				if err != nil {
-					return fmt.Errorf("Unable to delete custom domain: %w", err)
+						if err := cli.api.CustomDomain.Delete(cmd.Context(), url.PathEscape(id)); err != nil {
+							return fmt.Errorf("Unable to delete custom domain (%s): %w", id, err)
+						}
+					}
 				}
 
-				return cli.api.CustomDomain.Delete(cmd.Context(), url.PathEscape(inputs.ID))
+				return errors.Join(errs...)
 			})
 		},
 	}

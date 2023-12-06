@@ -23,6 +23,8 @@ auth0 users delete [flags]
   auth0 users rm
   auth0 users delete <user-id>
   auth0 users delete <user-id> --force
+  auth0 users delete <user-id> <user-id2> <user-idn>
+  auth0 users delete <user-id> <user-id2> <user-idn> --force
 ```
 
 

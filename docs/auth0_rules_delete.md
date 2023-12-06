@@ -25,6 +25,8 @@ auth0 rules delete [flags]
   auth0 rules rm
   auth0 rules delete <rule-id>
   auth0 rules delete <rule-id> --force
+  auth0 rules delete <rule-id> <rule-id2> <rule-idn>
+  auth0 rules delete <rule-id> <rule-id2> <rule-idn> --force
 ```
 
 

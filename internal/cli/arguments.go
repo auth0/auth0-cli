@@ -58,6 +58,27 @@ func (a *Argument) Pick(cmd *cobra.Command, result *string, fn pickerOptionsFunc
 	return nil
 }
 
+func (a *Argument) PickMany(cmd *cobra.Command, result *[]string, fn pickerOptionsFunc) error {
+	var opts pickerOptions
+	err := ansi.Waiting(func() error {
+		var err error
+		opts, err = fn(cmd.Context())
+		return err
+	})
+
+	if err != nil {
+		return err
+	}
+
+	var values []string
+	if err := askMultiSelect(a, &values, opts.labels()...); err != nil {
+		return err
+	}
+
+	*result = opts.getValues(values...)
+	return nil
+}
+
 func selectArgument(cmd *cobra.Command, a *Argument, value interface{}, options []string, defaultValue *string) error {
 	if canPrompt(cmd) {
 		return _select(a, value, options, defaultValue, false)

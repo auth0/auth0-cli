@@ -23,6 +23,8 @@ auth0 logs streams delete [flags]
   auth0 logs streams rm
   auth0 logs streams delete <log-stream-id>
   auth0 logs streams delete <log-stream-id> --force
+  auth0 logs streams delete <log-stream-id> <log-stream-id2>
+  auth0 logs streams delete <log-stream-id> <log-stream-id2> --force
 ```
 
 

@@ -168,14 +168,9 @@ func updateLogStreamCmd(cli *cli) *cobra.Command {
 }
 
 func deleteLogStreamCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ID string
-	}
-
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.MaximumNArgs(1),
 		Short:   "Delete a log stream",
 		Long: "Delete a log stream.\n\n" +
 			"To delete interactively, use `auth0 logs streams delete` with no arguments.\n\n" +
@@ -184,15 +179,18 @@ func deleteLogStreamCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 logs streams delete
   auth0 logs streams rm
   auth0 logs streams delete <log-stream-id>
-  auth0 logs streams delete <log-stream-id> --force`,
+  auth0 logs streams delete <log-stream-id> --force
+  auth0 logs streams delete <log-stream-id> <log-stream-id2>
+  auth0 logs streams delete <log-stream-id> <log-stream-id2> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ids := make([]string, len(args))
 			if len(args) == 0 {
-				err := logStreamID.Pick(cmd, &inputs.ID, cli.allLogStreamsPickerOptions)
+				err := logStreamID.PickMany(cmd, &ids, cli.allLogStreamsPickerOptions)
 				if err != nil {
 					return err
 				}
 			} else {
-				inputs.ID = args[0]
+				ids = append(ids, args...)
 			}
 
 			if !cli.force && canPrompt(cmd) {
@@ -201,14 +199,21 @@ func deleteLogStreamCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting Log Stream", func() error {
-				_, err := cli.api.LogStream.Read(cmd.Context(), inputs.ID)
-
-				if err != nil {
-					return fmt.Errorf("Unable to delete log stream: %w", err)
+			return ansi.Spinner("Deleting Log Stream(s)", func() error {
+				var errs []error
+				for _, id := range ids {
+					if id != "" {
+						if _, err := cli.api.LogStream.Read(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete log stream (%s): %w", id, err))
+							continue
+						}
+						if err := cli.api.LogStream.Delete(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete log stream (%s): %w", id, err))
+						}
+					}
 				}
 
-				return cli.api.LogStream.Delete(cmd.Context(), inputs.ID)
+				return errors.Join(errs...)
 			})
 		},
 	}

@@ -1,5 +1,7 @@
 package cli
 
+import "slices"
+
 type pickerOptions []pickerOption
 
 func (p pickerOptions) labels() []string {
@@ -24,6 +26,16 @@ func (p pickerOptions) getValue(label string) string {
 		}
 	}
 	return ""
+}
+
+func (p pickerOptions) getValues(labels ...string) []string {
+	var values []string
+	for _, o := range p {
+		if i := slices.Index(labels, o.label); i > -1 {
+			values = append(values, o.value)
+		}
+	}
+	return values
 }
 
 type pickerOption struct {

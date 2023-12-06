@@ -24,6 +24,17 @@ func askOne(prompt survey.Prompt, response interface{}) error {
 	return survey.AskOne(prompt, response, stdErrWriter, Icons)
 }
 
+func AskMultiSelect(message string, response interface{}, options ...string) error {
+	prompt := &survey.MultiSelect{
+		Message: message,
+		Options: options,
+	}
+
+	err := askOne(prompt, response)
+
+	return err
+}
+
 func AskBool(message string, value *bool, defaultValue bool) error {
 	prompt := &survey.Confirm{
 		Message: message,

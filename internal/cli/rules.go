@@ -249,14 +249,9 @@ func showRuleCmd(cli *cli) *cobra.Command {
 }
 
 func deleteRuleCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ID string
-	}
-
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.MaximumNArgs(1),
 		Short:   "Delete a rule",
 		Long: rulesDeprecationDocumentationText + "Delete a rule.\n\n" +
 			"To delete interactively, use `auth0 rules delete` with no arguments.\n\n" +
@@ -264,15 +259,18 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 rules delete 
   auth0 rules rm
   auth0 rules delete <rule-id>
-  auth0 rules delete <rule-id> --force`,
+  auth0 rules delete <rule-id> --force
+  auth0 rules delete <rule-id> <rule-id2> <rule-idn>
+  auth0 rules delete <rule-id> <rule-id2> <rule-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				inputs.ID = args[0]
-			} else {
-				err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
+			ids := make([]string, len(args))
+			if len(args) == 0 {
+				err := ruleID.PickMany(cmd, &ids, cli.rulePickerOptions)
 				if err != nil {
 					return err
 				}
+			} else {
+				ids = append(ids, args...)
 			}
 
 			if !cli.force && canPrompt(cmd) {
@@ -281,14 +279,21 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting Rule", func() error {
-				_, err := cli.api.Rule.Read(cmd.Context(), inputs.ID)
+			return ansi.Spinner("Deleting Rule(s)", func() error {
+				var errs []error
+				for _, id := range ids {
+					if id != "" {
+						if _, err := cli.api.Rule.Read(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete rule (%s): %w", id, err))
+							continue
+						}
 
-				if err != nil {
-					return fmt.Errorf("Unable to delete rule: %w", err)
+						if err := cli.api.Rule.Delete(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete rule (%s): %w", id, err))
+						}
+					}
 				}
-
-				return cli.api.Rule.Delete(cmd.Context(), inputs.ID)
+				return errors.Join(errs...)
 			})
 		},
 	}
