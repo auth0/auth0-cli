@@ -40,7 +40,7 @@ auth0 apps update [flags]
   -g, --grants strings            List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.
       --json                      Output in json format.
   -l, --logout-urls strings       Comma-separated list of URLs that are valid to redirect to after logout from Auth0. Wildcards are allowed for subdomains.
-      --metadata stringToString   Will add Metadata to an application (default [])
+      --metadata stringToString   Arbitrary keys-value pairs (max 255 characters each), that  can be assigned to each application. More about application metadata: https://auth0.com/docs/get-started/applications/configure-application-metadata (default [])
   -n, --name string               Name of the application.
   -o, --origins strings           Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.
   -r, --reveal-secrets            Display the application secrets ('signing_keys', 'client_secret') as part of the command output.
