@@ -160,28 +160,34 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - METADATA            key=value
+        - METADATA
+        - key=value
 
   022 - it successfully creates a native app with a multiple metadata sets, multiple flags:
     command: auth0 apps create --name integration-test-app-nativeapp22 --type native --description NativeApp22 --metadata "key=value" --metadata "foo=bar"
     exit-code: 0
     stdout:
       contains:
-        - METADATA            key=value, foo=bar
+        - METADATA
+        - key=value
+        - foo=bar
 
   023 - it successfully creates a native app with a multiple metadata sets, single flag:
     command: auth0 apps create --name integration-test-app-nativeapp23 --type native --description NativeApp23 --metadata "key=value,foo=bar"
     exit-code: 0
     stdout:
       contains:
-        - METADATA            key=value, foo=bar
+        - METADATA
+        - key=value
+        - foo=bar
 
   024 - given a test app, it successfully updates the app's details with a metadata set:
     command: auth0 apps update $(./test/integration/scripts/get-app-id.sh) --metadata "baz=buzz"
     exit-code: 0
     stdout:
       contains:
-        - METADATA            baz=buzz
+        - METADATA
+        - baz=buzz
 
   025 - given a test app, it successfully gets the app's details and outputs in json:
     command: auth0 apps show $(./test/integration/scripts/get-app-id.sh) --json
