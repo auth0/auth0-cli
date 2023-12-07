@@ -27,7 +27,7 @@ var (
 		Name:      "Number of Entries",
 		LongForm:  "number",
 		ShortForm: "n",
-		Help:      "Number of log entries to show.",
+		Help:      "Number of log entries to show. Minimum 1, maximum 1000.",
 	}
 )
 
@@ -65,8 +65,11 @@ func listLogsCmd(cli *cli) *cobra.Command {
   auth0 logs list --filter "user_name:<user-name>"
   auth0 logs list --filter "ip:<ip>"
   auth0 logs list --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
-  auth0 logs ls -n 100`,
+  auth0 logs ls -n 250`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Num < 1 || inputs.Num > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
 			list, err := getLatestLogs(cmd.Context(), cli, inputs.Num, inputs.Filter)
 			if err != nil {
 				return fmt.Errorf("failed to get logs: %w", err)
@@ -104,8 +107,11 @@ func tailLogsCmd(cli *cli) *cobra.Command {
   auth0 logs tail --filter "user_name:<user-name>"
   auth0 logs tail --filter "ip:<ip>"
   auth0 logs tail --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
-  auth0 logs tail -n 100`,
+  auth0 logs tail -n 10`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Num < 1 || inputs.Num > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
 			list, err := getLatestLogs(cmd.Context(), cli, inputs.Num, inputs.Filter)
 			if err != nil {
 				return fmt.Errorf("failed to get logs: %w", err)
@@ -169,23 +175,43 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func getLatestLogs(ctx context.Context, cli *cli, n int, filter string) ([]*management.Log, error) {
+func getLatestLogs(ctx context.Context, cli *cli, numRequested int, filter string) ([]*management.Log, error) {
 	page := 0
-	perPage := n
-	if perPage > logsPerPageLimit {
-		perPage = logsPerPageLimit
+	logs := []*management.Log{}
+	lastRequest := false
+
+	for {
+		perPage := logsPerPageLimit
+		if ((page + 1) * logsPerPageLimit) > numRequested {
+			perPage = numRequested % logsPerPageLimit
+			if perPage == 0 {
+				break
+			}
+			lastRequest = true
+		}
+
+		queryParams := []management.RequestOption{
+			management.Parameter("sort", "date:-1"),
+			management.Parameter("page", fmt.Sprintf("%d", page)),
+			management.Parameter("per_page", fmt.Sprintf("%d", perPage))}
+
+		if filter != "" {
+			queryParams = append(queryParams, management.Query(filter))
+		}
+
+		res, err := cli.api.Log.List(ctx, queryParams...)
+		if err != nil {
+			return nil, err
+		}
+		logs = append(logs, res...)
+		if lastRequest || page == 9 {
+			break
+		}
+
+		page++
 	}
 
-	queryParams := []management.RequestOption{
-		management.Parameter("sort", "date:-1"),
-		management.Parameter("page", fmt.Sprintf("%d", page)),
-		management.Parameter("per_page", fmt.Sprintf("%d", perPage))}
-
-	if filter != "" {
-		queryParams = append(queryParams, management.Query(filter))
-	}
-
-	return cli.api.Log.List(ctx, queryParams...)
+	return logs, nil
 }
 
 func dedupeLogs(list []*management.Log, set map[string]struct{}) []*management.Log {
