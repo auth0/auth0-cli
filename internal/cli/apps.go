@@ -81,7 +81,7 @@ var (
 	appMetadata = Flag{
 		Name:       "Metadata",
 		LongForm:   "metadata",
-		Help:       "Will add Metadata to an application",
+		Help:       "Arbitrary keys-value pairs (max 255 characters each), that  can be assigned to each application. More about application metadata: https://auth0.com/docs/get-started/applications/configure-application-metadata",
 		IsRequired: false,
 	}
 	appOrigins = Flag{
