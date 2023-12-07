@@ -1,6 +1,7 @@
 config:
   inherit-env: true
   retries: 1
+  interval: 1s
 
 tests:
   001 - list organizations with no data:
@@ -133,7 +134,7 @@ tests:
         - EMAIL
         - PICTURE
     config:
-      retries: 3
+      retries: 10
 
   017 - list organization members as json:
     command: auth0 orgs members list $(./test/integration/scripts/get-org-id.sh) --json
