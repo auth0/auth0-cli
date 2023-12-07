@@ -78,6 +78,12 @@ var (
 		IsRequired:   false,
 		AlwaysPrompt: true,
 	}
+	appMetadata = Flag{
+		Name:       "Metadata",
+		LongForm:   "metadata",
+		Help:       "Will add Metadata to an application",
+		IsRequired: false,
+	}
 	appOrigins = Flag{
 		Name:         "Allowed Origin URLs",
 		LongForm:     "origins",
@@ -373,6 +379,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 		AuthMethod        string
 		Grants            []string
 		RevealSecrets     bool
+		Metadata          map[string]string
 	}
 	var oidcConformant = true
 	var algorithm = "RS256"
@@ -389,7 +396,10 @@ func createAppCmd(cli *cli) *cobra.Command {
   auth0 apps create --name myapp --description <description>
   auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m]
   auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m] --reveal-secrets
-  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json`,
+  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json
+  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar"
+  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
+  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Prompt for app name
 			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -454,6 +464,11 @@ func createAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			clientMetadata := make(map[string]interface{}, len(inputs.Metadata))
+			for k, v := range inputs.Metadata {
+				clientMetadata[k] = v
+			}
+
 			// Load values into a fresh app instance
 			a := &management.Client{
 				Name:              &inputs.Name,
@@ -465,6 +480,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 				AllowedLogoutURLs: stringSliceToPtr(inputs.AllowedLogoutURLs),
 				OIDCConformant:    &oidcConformant,
 				JWTConfiguration:  &management.ClientJWTConfiguration{Algorithm: &algorithm},
+				ClientMetadata:    &clientMetadata,
 			}
 
 			// Set token endpoint auth method
@@ -505,6 +521,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 	appDescription.RegisterString(cmd, &inputs.Description, "")
 	appCallbacks.RegisterStringSlice(cmd, &inputs.Callbacks, nil)
 	appOrigins.RegisterStringSlice(cmd, &inputs.AllowedOrigins, nil)
+	appMetadata.RegisterStringMap(cmd, &inputs.Metadata, nil)
 	appWebOrigins.RegisterStringSlice(cmd, &inputs.AllowedWebOrigins, nil)
 	appLogoutURLs.RegisterStringSlice(cmd, &inputs.AllowedLogoutURLs, nil)
 	appAuthMethod.RegisterString(cmd, &inputs.AuthMethod, "")
@@ -527,6 +544,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		AuthMethod        string
 		Grants            []string
 		RevealSecrets     bool
+		Metadata          map[string]string
 	}
 
 	cmd := &cobra.Command{
@@ -542,7 +560,10 @@ func updateAppCmd(cli *cli) *cobra.Command {
   auth0 apps update <app-id> --name myapp --description <description>
   auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m]
   auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m] --reveal-secrets
-  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json`,
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar"
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Client
 
@@ -638,8 +659,13 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			clientMetadata := make(map[string]interface{}, len(inputs.Metadata))
+			for k, v := range inputs.Metadata {
+				clientMetadata[k] = v
+			}
+
 			// Load updated values into a fresh app instance
-			a := &management.Client{}
+			a := &management.Client{ClientMetadata: &clientMetadata}
 
 			if len(inputs.Name) == 0 {
 				a.Name = current.Name
@@ -714,6 +740,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 	appType.RegisterStringU(cmd, &inputs.Type, "")
 	appDescription.RegisterStringU(cmd, &inputs.Description, "")
 	appCallbacks.RegisterStringSliceU(cmd, &inputs.Callbacks, nil)
+	appMetadata.RegisterStringMap(cmd, &inputs.Metadata, map[string]string{})
 	appOrigins.RegisterStringSliceU(cmd, &inputs.AllowedOrigins, nil)
 	appWebOrigins.RegisterStringSliceU(cmd, &inputs.AllowedWebOrigins, nil)
 	appLogoutURLs.RegisterStringSliceU(cmd, &inputs.AllowedLogoutURLs, nil)
