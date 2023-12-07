@@ -103,27 +103,42 @@ tests:
     command: auth0 users roles rm $(./test/integration/scripts/get-user-id.sh) -r $(./test/integration/scripts/get-role-id.sh)
     exit-code: 0
 
-  015 - users blocks list:
+  015 - users blocks list by email:
+    command: auth0 users blocks list "newuser@example.com"
+    exit-code: 0
+    stderr:
+      contains:
+        - No user blocks available.
+  
+  016 - users blocks list by user ID:
     command: auth0 users blocks list $(./test/integration/scripts/get-user-id.sh)
     exit-code: 0
     stderr:
       contains:
         - No user blocks available.
 
-  016 - users blocks list (json):
+  017 - users blocks list (json):
     command: auth0 users blocks list $(./test/integration/scripts/get-user-id.sh) --json
     exit-code: 0
     stdout:
       exactly: "[]"
 
-  017 - open user dashboard page:
+  018 - users unblock by user email:
+    command: auth0 users blocks unblock "newuser@example.com"
+    exit-code: 0
+
+  019 - users unblock by user ID:
+    command: auth0 users blocks unblock $(./test/integration/scripts/get-user-id.sh)
+    exit-code: 0
+
+  020 - open user dashboard page:
     command: auth0 users open $(./test/integration/scripts/get-user-id.sh) --no-input
     exit-code: 0
     stderr:
       contains:
         - "Open the following URL in a browser: https://manage.auth0.com/dashboard/"
 
-  018 - users import:
+  021 - users import:
     command: auth0 users import -c "Username-Password-Authentication" --users "[]" --email-results=false --no-input
     exit-code: 0
     stderr:
@@ -133,7 +148,7 @@ tests:
         - "successfully started"
         - "to get the status of the job"
 
-  019 - users import with piped data:
+  022 - users import with piped data:
     command: echo "[]" | auth0 users import -c "Username-Password-Authentication" --email-results=false --no-input
     exit-code: 0
     stderr:

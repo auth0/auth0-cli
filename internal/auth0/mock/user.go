@@ -74,6 +74,26 @@ func (mr *MockUserAPIMockRecorder) Blocks(ctx, id interface{}, opts ...interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Blocks", reflect.TypeOf((*MockUserAPI)(nil).Blocks), varargs...)
 }
 
+// BlocksByIdentifier mocks base method.
+func (m *MockUserAPI) BlocksByIdentifier(ctx context.Context, id string, opts ...management.RequestOption) ([]*management.UserBlock, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "BlocksByIdentifier", varargs...)
+	ret0, _ := ret[0].([]*management.UserBlock)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BlocksByIdentifier indicates an expected call of BlocksByIdentifier.
+func (mr *MockUserAPIMockRecorder) BlocksByIdentifier(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlocksByIdentifier", reflect.TypeOf((*MockUserAPI)(nil).BlocksByIdentifier), varargs...)
+}
+
 // Create mocks base method.
 func (m *MockUserAPI) Create(ctx context.Context, u *management.User, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
@@ -228,6 +248,25 @@ func (mr *MockUserAPIMockRecorder) Unblock(ctx, id interface{}, opts ...interfac
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unblock", reflect.TypeOf((*MockUserAPI)(nil).Unblock), varargs...)
+}
+
+// UnblockByIdentifier mocks base method.
+func (m *MockUserAPI) UnblockByIdentifier(ctx context.Context, id string, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UnblockByIdentifier", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UnblockByIdentifier indicates an expected call of UnblockByIdentifier.
+func (mr *MockUserAPIMockRecorder) UnblockByIdentifier(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnblockByIdentifier", reflect.TypeOf((*MockUserAPI)(nil).UnblockByIdentifier), varargs...)
 }
 
 // Update mocks base method.

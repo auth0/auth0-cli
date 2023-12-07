@@ -23,6 +23,11 @@ var (
 		Help: "Id of the user.",
 	}
 
+	userIdentifier = Argument{
+		Name: "User Identifier",
+		Help: "User ID, username, email or phone number.",
+	}
+
 	userConnectionName = Flag{
 		Name:       "Connection Name",
 		LongForm:   "connection-name",
