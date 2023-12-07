@@ -1,0 +1,7 @@
+{
+  "id": "rul_xWavq6OFKbMma9DH",
+  "name": "integration-test-rule-betterName",
+  "script": "function(user, context, cb) {\n  cb(null, user, context);\n}\n",
+  "order": 3,
+  "enabled": false
+}
