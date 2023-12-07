@@ -27,14 +27,14 @@ tests:
   004 - it errors because of invalid number arg:
     command: auth0 logs list --number 0 --json
     exit-code: 0
-    stdout:
+    stderr:
       contains: 
         - "number flag invalid, please pass a number between 1 and 1000"
   
   005 - it errors because of invalid number arg:
     command: auth0 logs list --number 1001 --json
     exit-code: 0
-    stdout:
+    stderr:
       contains: 
        - "number flag invalid, please pass a number between 1 and 1000"
 
