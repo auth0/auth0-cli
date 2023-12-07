@@ -178,16 +178,11 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 func getLatestLogs(ctx context.Context, cli *cli, numRequested int, filter string) ([]*management.Log, error) {
 	page := 0
 	logs := []*management.Log{}
-	lastRequest := false
 
 	for {
 		perPage := logsPerPageLimit
-		if ((page + 1) * logsPerPageLimit) > numRequested {
+		if numRequested < (page+1)*logsPerPageLimit {
 			perPage = numRequested % logsPerPageLimit
-			if perPage == 0 {
-				break
-			}
-			lastRequest = true
 		}
 
 		queryParams := []management.RequestOption{
@@ -204,11 +199,11 @@ func getLatestLogs(ctx context.Context, cli *cli, numRequested int, filter strin
 			return nil, err
 		}
 		logs = append(logs, res...)
-		if lastRequest || page == 9 {
-			break
-		}
 
 		page++
+		if page == 10 || (page*logsPerPageLimit) >= numRequested {
+			break
+		}
 	}
 
 	return logs, nil
