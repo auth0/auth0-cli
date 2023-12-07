@@ -14,24 +14,46 @@ tests:
         - CONNECTION
         - CLIENT
 
-  002 - it successfully lists all log streams with no data:
+  002 - it successfully lists a specific number of logs:
+    command: auth0 logs list --number 3 --json | jq length
+    exit-code: 0
+    stdout:
+      exactly: "3"
+
+  003 - it successfully lists as many logs as possible:
+    command: auth0 logs list --number 1000
+    exit-code: 0
+  
+  004 - it errors because of invalid number arg:
+    command: auth0 logs list --number 0 --json
+    exit-code: 0
+    stdout:
+      contains: "number flag invalid, please pass a number between 1 and 1000"
+  
+  005 - it errors because of invalid number arg:
+    command: auth0 logs list --number 1001 --json
+    exit-code: 0
+    stdout:
+      contains: "number flag invalid, please pass a number between 1 and 1000"
+
+  006 - it successfully lists all log streams with no data:
     command: auth0 logs streams list
     exit-code: 0
     stderr:
       contains:
         - Use 'auth0 logs streams create' to add one
 
-  003 - it successfully lists all log streams with no data (json):
+  007 - it successfully lists all log streams with no data (json):
     command: auth0 logs streams list --json
     exit-code: 0
     stdout:
       exactly: "[]"
 
-  004 - it successfully creates a datadog log stream:
+  008 - it successfully creates a datadog log stream:
     command: ./test/integration/scripts/create-log-stream-datadog-id.sh
     exit-code: 0
 
-  005 - it successfully lists all log streams with data:
+  009 - it successfully lists all log streams with data:
     command: auth0 logs streams list
     exit-code: 0
     stdout:
@@ -41,7 +63,7 @@ tests:
         - TYPE
         - STATUS
 
-  006 - given a datadog log stream, it successfully gets the log stream's details:
+  010 - given a datadog log stream, it successfully gets the log stream's details:
     command: auth0 logs streams show $(cat ./test/integration/identifiers/log-stream-datadog-id)
     exit-code: 0
     stdout:
@@ -50,7 +72,7 @@ tests:
         - TYPE    datadog
         - STATUS  active
 
-  007 - given a datadog log stream, it successfully gets the log stream's details and outputs in json:
+  011 - given a datadog log stream, it successfully gets the log stream's details and outputs in json:
     command: auth0 logs streams show $(cat ./test/integration/identifiers/log-stream-datadog-id) --json
     exit-code: 0
     stdout:
@@ -60,7 +82,7 @@ tests:
         status: "active"
         sink.datadogRegion: "eu"
 
-  008 - given a datadog log stream, it successfully updates the log stream's details:
+  012 - given a datadog log stream, it successfully updates the log stream's details:
     command: auth0 logs streams update datadog $(cat ./test/integration/identifiers/log-stream-datadog-id) --name integration-test-updated-datadog --region us --api-key 123123123123123 --json
     exit-code: 0
     stdout:
@@ -70,22 +92,22 @@ tests:
         status: "active"
         sink.datadogRegion: "us"
 
-  009 - given a datadog log stream, it successfully opens the log stream's settings page:
+  013 - given a datadog log stream, it successfully opens the log stream's settings page:
     command: auth0 logs streams open $(cat ./test/integration/identifiers/log-stream-datadog-id) --no-input
     exit-code: 0
     stderr:
       contains:
         - "Open the following URL in a browser"
 
-  010 - given a datadog log stream, it successfully deletes the log stream:
+  014 - given a datadog log stream, it successfully deletes the log stream:
     command: auth0 logs streams delete $(cat ./test/integration/identifiers/log-stream-datadog-id) --force --no-input
     exit-code: 0
 
-  011 - it successfully creates an eventbridge log stream:
+  015 - it successfully creates an eventbridge log stream:
     command: ./test/integration/scripts/create-log-stream-eventbridge-id.sh
     exit-code: 0
 
-  012 - given an eventbridge log stream, it successfully updates the log stream's details:
+  016 - given an eventbridge log stream, it successfully updates the log stream's details:
     command: auth0 logs streams update eventbridge $(cat ./test/integration/identifiers/log-stream-eventbridge-id) --name integration-test-updated-eventbridge --json
     exit-code: 0
     stdout:
@@ -94,15 +116,15 @@ tests:
         type: "eventbridge"
         status: "active"
 
-  013 - given an eventbridge log stream, it successfully deletes the log stream:
+  017 - given an eventbridge log stream, it successfully deletes the log stream:
     command: auth0 logs streams delete $(cat ./test/integration/identifiers/log-stream-eventbridge-id) --force --no-input
     exit-code: 0
 
-  014 - it successfully creates an http log stream:
+  018 - it successfully creates an http log stream:
     command: ./test/integration/scripts/create-log-stream-http-id.sh
     exit-code: 0
 
-  015 - given an http log stream, it successfully updates the log stream's details:
+  019 - given an http log stream, it successfully updates the log stream's details:
     command: auth0 logs streams update http $(cat ./test/integration/identifiers/log-stream-http-id) --name integration-test-updated-http --endpoint "https://example.com/webhook/logs/v2" --format "JSONOBJECT" --type "application/xml" --authorization "KHEWXXXXXXXXXXXXXXXX" --json --no-input
     exit-code: 0
     stdout:
@@ -115,15 +137,15 @@ tests:
         sink.httpEndpoint: "https://example.com/webhook/logs/v2"
         sink.httpAuthorization: "KHEWXXXXXXXXXXXXXXXX"
 
-  016 - given an http log stream, it successfully deletes the log stream:
+  020 - given an http log stream, it successfully deletes the log stream:
     command: auth0 logs streams delete $(cat ./test/integration/identifiers/log-stream-http-id) --force --no-input
     exit-code: 0
 
-  017 - it successfully creates a splunk log stream:
+  021 - it successfully creates a splunk log stream:
     command: ./test/integration/scripts/create-log-stream-splunk-id.sh
     exit-code: 0
 
-  018 - given a splunk log stream, it successfully updates the log stream's details:
+  022 - given a splunk log stream, it successfully updates the log stream's details:
     command: auth0 logs streams update splunk $(cat ./test/integration/identifiers/log-stream-splunk-id) --name integration-test-updated-splunk --domain "example.splunk.com" --token "92a34ab5-c6d7-8901-23ef-456b7c89d0c1" --port 8000 --secure --json --no-input
     exit-code: 0
     stdout:
@@ -136,15 +158,15 @@ tests:
         sink.splunkPort: "8000"
         sink.splunkSecure: "true"
 
-  019 - given a splunk log stream, it successfully deletes the log stream:
+  023 - given a splunk log stream, it successfully deletes the log stream:
     command: auth0 logs streams delete $(cat ./test/integration/identifiers/log-stream-splunk-id) --force --no-input
     exit-code: 0
 
-  020 - it successfully creates a sumo log stream:
+  024 - it successfully creates a sumo log stream:
     command: ./test/integration/scripts/create-log-stream-sumo-id.sh
     exit-code: 0
 
-  021 - given a sumo log stream, it successfully updates the log stream's details:
+  025 - given a sumo log stream, it successfully updates the log stream's details:
     command: auth0 logs streams update sumo $(cat ./test/integration/identifiers/log-stream-sumo-id) --name integration-test-updated-sumo --source "example.sumo.com" --json --no-input
     exit-code: 0
     stdout:
@@ -154,6 +176,6 @@ tests:
         status: "active"
         sink.sumoSourceAddress: "example.sumo.com"
 
-  022 - given a sumo log stream, it successfully deletes the log stream:
+  026 - given a sumo log stream, it successfully deletes the log stream:
     command: auth0 logs streams delete $(cat ./test/integration/identifiers/log-stream-sumo-id) --force --no-input
     exit-code: 0
