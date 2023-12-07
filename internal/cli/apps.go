@@ -659,13 +659,8 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			clientMetadata := make(map[string]interface{}, len(inputs.Metadata))
-			for k, v := range inputs.Metadata {
-				clientMetadata[k] = v
-			}
-
 			// Load updated values into a fresh app instance
-			a := &management.Client{ClientMetadata: &clientMetadata}
+			a := &management.Client{}
 
 			if len(inputs.Name) == 0 {
 				a.Name = current.Name
@@ -719,6 +714,16 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				a.GrantTypes = current.GrantTypes
 			} else {
 				a.GrantTypes = apiGrantsFor(inputs.Grants)
+			}
+
+			if len(inputs.Metadata) == 0 {
+				a.ClientMetadata = current.ClientMetadata
+			} else {
+				clientMetadata := make(map[string]interface{}, len(inputs.Metadata))
+				for k, v := range inputs.Metadata {
+					clientMetadata[k] = v
+				}
+				a.ClientMetadata = &clientMetadata
 			}
 
 			// Update app
