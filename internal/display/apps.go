@@ -34,6 +34,7 @@ type applicationView struct {
 	AllowedLogoutURLs []string
 	AuthMethod        string
 	Grants            []string
+	Metadata          []string
 	revealSecret      bool
 
 	raw interface{}
@@ -68,6 +69,7 @@ func (v *applicationView) KeyValues() [][]string {
 	allowedWebOrigins := strings.Join(v.AllowedWebOrigins, ", ")
 	allowedLogoutURLs := strings.Join(v.AllowedLogoutURLs, ", ")
 	grants := strings.Join(v.Grants, ", ")
+	metadata := strings.Join(v.Metadata, ", ")
 
 	if v.revealSecret {
 		return [][]string{
@@ -82,6 +84,7 @@ func (v *applicationView) KeyValues() [][]string {
 			{"ALLOWED WEB ORIGINS", allowedWebOrigins},
 			{"TOKEN ENDPOINT AUTH", v.AuthMethod},
 			{"GRANTS", grants},
+			{"METADATA", metadata},
 		}
 	}
 
@@ -96,6 +99,7 @@ func (v *applicationView) KeyValues() [][]string {
 		{"ALLOWED WEB ORIGINS", allowedWebOrigins},
 		{"TOKEN ENDPOINT AUTH", v.AuthMethod},
 		{"GRANTS", grants},
+		{"METADATA", metadata},
 	}
 }
 
@@ -176,6 +180,7 @@ func makeApplicationView(client *management.Client, revealSecrets bool) *applica
 		AllowedLogoutURLs: client.GetAllowedLogoutURLs(),
 		AuthMethod:        client.GetTokenEndpointAuthMethod(),
 		Grants:            client.GetGrantTypes(),
+		Metadata:          mapPointerToArray(client.ClientMetadata),
 		raw:               client,
 	}
 }
@@ -195,6 +200,16 @@ func FriendlyAppType(appType string) string {
 	default:
 		return appType
 	}
+}
+
+func mapPointerToArray(m *map[string]interface{}) []string {
+	var result []string
+	if m != nil {
+		for k, v := range *m {
+			result = append(result, fmt.Sprintf("%s=%v", k, v))
+		}
+	}
+	return result
 }
 
 func quickstartsURIFor(appType string) string {
