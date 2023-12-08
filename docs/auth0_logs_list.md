@@ -22,7 +22,7 @@ auth0 logs list [flags]
   auth0 logs list --filter "user_name:<user-name>"
   auth0 logs list --filter "ip:<ip>"
   auth0 logs list --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
-  auth0 logs ls -n 100
+  auth0 logs ls -n 250
 ```
 
 
@@ -31,7 +31,7 @@ auth0 logs list [flags]
 ```
   -f, --filter string   Filter in Lucene query syntax. See https://auth0.com/docs/logs/log-search-query-syntax for more details.
       --json            Output in json format.
-  -n, --number int      Number of log entries to show. (default 100)
+  -n, --number int      Number of log entries to show. Minimum 1, maximum 1000. (default 100)
 ```
 
 
