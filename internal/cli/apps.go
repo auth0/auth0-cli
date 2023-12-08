@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
@@ -76,6 +77,12 @@ var (
 		Help:         "After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.",
 		IsRequired:   false,
 		AlwaysPrompt: true,
+	}
+	appMetadata = Flag{
+		Name:       "Metadata",
+		LongForm:   "metadata",
+		Help:       "Arbitrary keys-value pairs (max 255 characters each), that  can be assigned to each application. More about application metadata: https://auth0.com/docs/get-started/applications/configure-application-metadata",
+		IsRequired: false,
 	}
 	appOrigins = Flag{
 		Name:         "Allowed Origin URLs",
@@ -302,14 +309,9 @@ func showAppCmd(cli *cli) *cobra.Command {
 }
 
 func deleteAppCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ID string
-	}
-
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.MaximumNArgs(1),
 		Short:   "Delete an application",
 		Long: "Delete an application.\n\n" +
 			"To delete interactively, use `auth0 apps delete` with no arguments.\n\n" +
@@ -318,31 +320,44 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 apps delete 
   auth0 apps rm
   auth0 apps delete <app-id>
-  auth0 apps delete <app-id> --force`,
+  auth0 apps delete <app-id> --force
+  auth0 apps delete <app-id> <app-id2> <app-idn>
+  auth0 apps delete <app-id> <app-id2> <app-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ids := make([]string, len(args))
 			if len(args) == 0 {
-				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions())
+				err := appID.PickMany(cmd, &ids, cli.appPickerOptions())
 				if err != nil {
 					return err
 				}
 			} else {
-				inputs.ID = args[0]
+				ids = append(ids, args...)
 			}
 
 			if !cli.force && canPrompt(cmd) {
+				if tenant, _ := cli.Config.GetTenant(cli.tenant); slices.Contains(ids, tenant.ClientID) {
+					cli.renderer.Warnf("Warning: You're about to delete the client used to authenticate the CLI. If deleted, the CLI will cease to operate once the access token has expired.")
+				}
 				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
 					return nil
 				}
 			}
 
-			return ansi.Spinner("Deleting Application", func() error {
-				_, err := cli.api.Client.Read(cmd.Context(), inputs.ID)
+			return ansi.Spinner("Deleting Application(s)", func() error {
+				var errs []error
+				for _, id := range ids {
+					if id != "" {
+						if _, err := cli.api.Client.Read(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete application (%s): %w", id, err))
+							continue
+						}
 
-				if err != nil {
-					return fmt.Errorf("Unable to delete application: %w", err)
+						if err := cli.api.Client.Delete(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete application (%s): %w", id, err))
+						}
+					}
 				}
-
-				return cli.api.Client.Delete(cmd.Context(), inputs.ID)
+				return errors.Join(errs...)
 			})
 		},
 	}
@@ -364,6 +379,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 		AuthMethod        string
 		Grants            []string
 		RevealSecrets     bool
+		Metadata          map[string]string
 	}
 	var oidcConformant = true
 	var algorithm = "RS256"
@@ -380,7 +396,10 @@ func createAppCmd(cli *cli) *cobra.Command {
   auth0 apps create --name myapp --description <description>
   auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m]
   auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m] --reveal-secrets
-  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json`,
+  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json
+  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar"
+  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
+  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Prompt for app name
 			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -445,6 +464,11 @@ func createAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			clientMetadata := make(map[string]interface{}, len(inputs.Metadata))
+			for k, v := range inputs.Metadata {
+				clientMetadata[k] = v
+			}
+
 			// Load values into a fresh app instance
 			a := &management.Client{
 				Name:              &inputs.Name,
@@ -456,6 +480,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 				AllowedLogoutURLs: stringSliceToPtr(inputs.AllowedLogoutURLs),
 				OIDCConformant:    &oidcConformant,
 				JWTConfiguration:  &management.ClientJWTConfiguration{Algorithm: &algorithm},
+				ClientMetadata:    &clientMetadata,
 			}
 
 			// Set token endpoint auth method
@@ -496,6 +521,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 	appDescription.RegisterString(cmd, &inputs.Description, "")
 	appCallbacks.RegisterStringSlice(cmd, &inputs.Callbacks, nil)
 	appOrigins.RegisterStringSlice(cmd, &inputs.AllowedOrigins, nil)
+	appMetadata.RegisterStringMap(cmd, &inputs.Metadata, nil)
 	appWebOrigins.RegisterStringSlice(cmd, &inputs.AllowedWebOrigins, nil)
 	appLogoutURLs.RegisterStringSlice(cmd, &inputs.AllowedLogoutURLs, nil)
 	appAuthMethod.RegisterString(cmd, &inputs.AuthMethod, "")
@@ -518,6 +544,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		AuthMethod        string
 		Grants            []string
 		RevealSecrets     bool
+		Metadata          map[string]string
 	}
 
 	cmd := &cobra.Command{
@@ -533,7 +560,10 @@ func updateAppCmd(cli *cli) *cobra.Command {
   auth0 apps update <app-id> --name myapp --description <description>
   auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m]
   auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m] --reveal-secrets
-  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json`,
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar"
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Client
 
@@ -686,6 +716,16 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				a.GrantTypes = apiGrantsFor(inputs.Grants)
 			}
 
+			if len(inputs.Metadata) == 0 {
+				a.ClientMetadata = current.ClientMetadata
+			} else {
+				clientMetadata := make(map[string]interface{}, len(inputs.Metadata))
+				for k, v := range inputs.Metadata {
+					clientMetadata[k] = v
+				}
+				a.ClientMetadata = &clientMetadata
+			}
+
 			// Update app
 			if err := ansi.Waiting(func() error {
 				return cli.api.Client.Update(cmd.Context(), inputs.ID, a)
@@ -705,6 +745,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 	appType.RegisterStringU(cmd, &inputs.Type, "")
 	appDescription.RegisterStringU(cmd, &inputs.Description, "")
 	appCallbacks.RegisterStringSliceU(cmd, &inputs.Callbacks, nil)
+	appMetadata.RegisterStringMap(cmd, &inputs.Metadata, map[string]string{})
 	appOrigins.RegisterStringSliceU(cmd, &inputs.AllowedOrigins, nil)
 	appWebOrigins.RegisterStringSliceU(cmd, &inputs.AllowedWebOrigins, nil)
 	appLogoutURLs.RegisterStringSliceU(cmd, &inputs.AllowedLogoutURLs, nil)

@@ -22,7 +22,7 @@ auth0 logs tail [flags]
   auth0 logs tail --filter "user_name:<user-name>"
   auth0 logs tail --filter "ip:<ip>"
   auth0 logs tail --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
-  auth0 logs tail -n 100
+  auth0 logs tail -n 10
 ```
 
 
@@ -30,7 +30,7 @@ auth0 logs tail [flags]
 
 ```
   -f, --filter string   Filter in Lucene query syntax. See https://auth0.com/docs/logs/log-search-query-syntax for more details.
-  -n, --number int      Number of log entries to show. (default 100)
+  -n, --number int      Number of log entries to show. Minimum 1, maximum 1000. (default 100)
 ```
 
 

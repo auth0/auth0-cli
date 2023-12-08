@@ -23,6 +23,8 @@ auth0 orgs delete [flags]
   auth0 orgs rm
   auth0 orgs delete <org-id>
   auth0 orgs delete <org-id> --force
+  auth0 orgs delete <org-id> <org-id2> <org-idn>
+  auth0 orgs delete <org-id> <org-id2> <org-idn> --force
 ```
 
 

@@ -23,6 +23,11 @@ var (
 		Help: "Id of the user.",
 	}
 
+	userIdentifier = Argument{
+		Name: "User Identifier",
+		Help: "User ID, username, email or phone number.",
+	}
+
 	userConnectionName = Flag{
 		Name:       "Connection Name",
 		LongForm:   "connection-name",
@@ -357,14 +362,9 @@ func showUserCmd(cli *cli) *cobra.Command {
 }
 
 func deleteUserCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ID string
-	}
-
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.MaximumNArgs(1),
 		Short:   "Delete a user",
 		Long: "Delete a user.\n\n" +
 			"To delete interactively, use `auth0 users delete` with no arguments.\n\n" +
@@ -372,14 +372,19 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 users delete 
   auth0 users rm
   auth0 users delete <user-id>
-  auth0 users delete <user-id> --force`,
+  auth0 users delete <user-id> --force
+  auth0 users delete <user-id> <user-id2> <user-idn>
+  auth0 users delete <user-id> <user-id2> <user-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ids := make([]string, len(args))
 			if len(args) == 0 {
-				if err := userID.Ask(cmd, &inputs.ID); err != nil {
+				var id string
+				if err := userID.Ask(cmd, &id); err != nil {
 					return err
 				}
+				ids = append(ids, id)
 			} else {
-				inputs.ID = args[0]
+				ids = append(ids, args...)
 			}
 
 			if !cli.force && canPrompt(cmd) {
@@ -388,14 +393,21 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting user", func() error {
-				_, err := cli.api.User.Read(cmd.Context(), inputs.ID)
+			return ansi.Spinner("Deleting user(s)", func() error {
+				var errs []error
+				for _, id := range ids {
+					if id != "" {
+						if _, err := cli.api.User.Read(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete user (%s): %w", id, err))
+							continue
+						}
 
-				if err != nil {
-					return fmt.Errorf("Unable to delete user: %w", err)
+						if err := cli.api.User.Delete(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("Unable to delete user (%s): %w", id, err))
+						}
+					}
 				}
-
-				return cli.api.User.Delete(cmd.Context(), inputs.ID)
+				return errors.Join(errs...)
 			})
 		},
 	}

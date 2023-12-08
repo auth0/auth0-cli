@@ -23,6 +23,8 @@ auth0 actions delete [flags]
   auth0 actions rm
   auth0 actions delete <action-id>
   auth0 actions delete <action-id> --force
+  auth0 actions delete <action-id> <action-id2> <action-idn>
+  auth0 actions delete <action-id> <action-id2> <action-idn> --force
 ```
 
 
