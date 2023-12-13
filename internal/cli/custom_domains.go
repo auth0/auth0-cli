@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 
@@ -355,21 +354,17 @@ func deleteCustomDomainCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting custom domain", func() error {
-				var errs []error
-				for _, id := range ids {
-					if id != "" {
-						if _, err := cli.api.CustomDomain.Read(cmd.Context(), url.PathEscape(id)); err != nil {
-							return fmt.Errorf("Unable to delete custom domain (%s): %w", id, err)
-						}
+			return ansi.ProgressBar("Deleting custom domain", ids, func(_ int, id string) error {
+				if id != "" {
+					if _, err := cli.api.CustomDomain.Read(cmd.Context(), url.PathEscape(id)); err != nil {
+						return fmt.Errorf("Unable to delete custom domain (%s): %w", id, err)
+					}
 
-						if err := cli.api.CustomDomain.Delete(cmd.Context(), url.PathEscape(id)); err != nil {
-							return fmt.Errorf("Unable to delete custom domain (%s): %w", id, err)
-						}
+					if err := cli.api.CustomDomain.Delete(cmd.Context(), url.PathEscape(id)); err != nil {
+						return fmt.Errorf("Unable to delete custom domain (%s): %w", id, err)
 					}
 				}
-
-				return errors.Join(errs...)
+				return nil
 			})
 		},
 	}

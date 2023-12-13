@@ -445,21 +445,15 @@ func deleteAPICmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting API(s)", func() error {
-				var errs []error
-				for _, id := range ids {
-					if id != "" {
-						if _, err := cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(id)); err != nil {
-							errs = append(errs, fmt.Errorf("Unable to delete API (%s): %w", id, err))
-							continue
-						}
-
-						if err := cli.api.ResourceServer.Delete(cmd.Context(), url.PathEscape(id)); err != nil {
-							errs = append(errs, fmt.Errorf("Unable to delete API (%s): %w", id, err))
-						}
-					}
+			return ansi.ProgressBar("Deleting API(s)", ids, func(_ int, id string) error {
+				if _, err := cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(id)); err != nil {
+					return fmt.Errorf("Unable to delete API (%s): %w", id, err)
 				}
-				return errors.Join(errs...)
+
+				if err := cli.api.ResourceServer.Delete(cmd.Context(), url.PathEscape(id)); err != nil {
+					return fmt.Errorf("Unable to delete API (%s): %w", id, err)
+				}
+				return nil
 			})
 		},
 	}

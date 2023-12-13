@@ -393,21 +393,17 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting user(s)", func() error {
-				var errs []error
-				for _, id := range ids {
-					if id != "" {
-						if _, err := cli.api.User.Read(cmd.Context(), id); err != nil {
-							errs = append(errs, fmt.Errorf("Unable to delete user (%s): %w", id, err))
-							continue
-						}
+			return ansi.ProgressBar("Deleting user(s)", ids, func(_ int, id string) error {
+				if id != "" {
+					if _, err := cli.api.User.Read(cmd.Context(), id); err != nil {
+						return fmt.Errorf("Unable to delete user (%s): %w", id, err)
+					}
 
-						if err := cli.api.User.Delete(cmd.Context(), id); err != nil {
-							errs = append(errs, fmt.Errorf("Unable to delete user (%s): %w", id, err))
-						}
+					if err := cli.api.User.Delete(cmd.Context(), id); err != nil {
+						return fmt.Errorf("Unable to delete user (%s): %w", id, err)
 					}
 				}
-				return errors.Join(errs...)
+				return nil
 			})
 		},
 	}

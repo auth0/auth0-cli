@@ -439,21 +439,15 @@ func deleteOrganizationCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting organization(s)", func() error {
-				var errs []error
-				for _, id := range ids {
-					if id != "" {
-						if _, err := cli.api.Organization.Read(cmd.Context(), id); err != nil {
-							errs = append(errs, fmt.Errorf("Unable to delete organization (%s): %w", id, err))
-							continue
-						}
-
-						if err := cli.api.Organization.Delete(cmd.Context(), id); err != nil {
-							errs = append(errs, fmt.Errorf("Unable to delete organization (%s): %w", id, err))
-						}
-					}
+			return ansi.ProgressBar("Deleting organization(s)", ids, func(_ int, id string) error {
+				if _, err := cli.api.Organization.Read(cmd.Context(), id); err != nil {
+					return fmt.Errorf("Unable to delete organization (%s): %w", id, err)
 				}
-				return errors.Join(errs...)
+
+				if err := cli.api.Organization.Delete(cmd.Context(), id); err != nil {
+					return fmt.Errorf("Unable to delete organization (%s): %w", id, err)
+				}
+				return nil
 			})
 		},
 	}
@@ -599,7 +593,6 @@ func listRolesOrganizationCmd(cli *cli) *cobra.Command {
 			} else {
 				inputs.OrgID = args[0]
 			}
-
 			members, err := cli.getOrgMembersWithSpinner(cmd.Context(), inputs.OrgID, inputs.Number)
 			if err != nil {
 				return err

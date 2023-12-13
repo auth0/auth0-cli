@@ -343,21 +343,17 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting Application(s)", func() error {
-				var errs []error
-				for _, id := range ids {
-					if id != "" {
-						if _, err := cli.api.Client.Read(cmd.Context(), id); err != nil {
-							errs = append(errs, fmt.Errorf("Unable to delete application (%s): %w", id, err))
-							continue
-						}
+			return ansi.ProgressBar("Deleting Application(s)", ids, func(_ int, id string) error {
+				if id != "" {
+					if _, err := cli.api.Client.Read(cmd.Context(), id); err != nil {
+						return fmt.Errorf("Unable to delete application (%s): %w", id, err)
+					}
 
-						if err := cli.api.Client.Delete(cmd.Context(), id); err != nil {
-							errs = append(errs, fmt.Errorf("Unable to delete application (%s): %w", id, err))
-						}
+					if err := cli.api.Client.Delete(cmd.Context(), id); err != nil {
+						return fmt.Errorf("Unable to delete application (%s): %w", id, err)
 					}
 				}
-				return errors.Join(errs...)
+				return nil
 			})
 		},
 	}

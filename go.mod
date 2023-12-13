@@ -25,6 +25,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pkg/browser v0.0.0-20210706143420-7d21f8c997e2
 	github.com/pkg/errors v0.9.1
+	github.com/schollz/progressbar/v3 v3.14.1
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
@@ -76,12 +77,13 @@ require (
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/microcosm-cc/bluemonday v1.0.23 // indirect
+	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.13.0 // indirect
 	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.3 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/yuin/goldmark v1.5.2 // indirect
