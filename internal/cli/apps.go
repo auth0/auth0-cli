@@ -25,7 +25,7 @@ const (
 	appTypeRegularWeb     = "regular_web"
 	appTypeNonInteractive = "non_interactive"
 	appDefaultURL         = "http://localhost:3000"
-	defaultPageSize       = 50
+	defaultPageSize       = 100
 )
 
 var (

@@ -27,7 +27,7 @@ auth0 users search [flags]
 
 ```
       --json                                                                    Output in json format.
-  -n, --number int                                                              Number of users, that match the search criteria, to retrieve. Minimum 1, maximum 1000. If limit is hit, refine the search query. (default 50)
+  -n, --number int                                                              Number of users, that match the search criteria, to retrieve. Minimum 1, maximum 1000. If limit is hit, refine the search query. (default 100)
   -q, --query email:"user123@*.com" OR (user_id:"user-id-123" AND name:"Bob")   Search query in Lucene query syntax.
                                                                                 
                                                                                 For example: email:"user123@*.com" OR (user_id:"user-id-123" AND name:"Bob")
