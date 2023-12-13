@@ -27,7 +27,7 @@ auth0 apps list [flags]
 
 ```
       --json             Output in json format.
-  -n, --number int       Number of apps to retrieve. Minimum 1, maximum 1000. (default 50)
+  -n, --number int       Number of apps to retrieve. Minimum 1, maximum 1000. (default 100)
   -r, --reveal-secrets   Display the application secrets ('signing_keys', 'client_secret') as part of the command output.
 ```
 

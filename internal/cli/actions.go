@@ -103,7 +103,7 @@ func listActionsCmd(cli *cli) *cobra.Command {
 			var list *management.ActionList
 
 			if err := ansi.Waiting(func() (err error) {
-				list, err = cli.api.Action.List(cmd.Context(), management.PerPage(100))
+				list, err = cli.api.Action.List(cmd.Context(), management.PerPage(defaultPageSize))
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to retrieve actions: %w", err)
