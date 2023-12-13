@@ -12,7 +12,7 @@ require (
 	github.com/getsentry/sentry-go v0.25.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.6.0
-	github.com/google/uuid v1.4.0
+	github.com/google/uuid v1.5.0
 	github.com/gorilla/websocket v1.5.1
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hashicorp/hc-install v0.6.2
