@@ -132,7 +132,7 @@ func TestUserRolesToAddPickerOptions(t *testing.T) {
 				t.Fail()
 			},
 			assertError: func(t testing.TB, err error) {
-				assert.ErrorContains(t, err, "Failed to find the current roles for user with ID \"some-id\": error.")
+				assert.ErrorContains(t, err, "failed to read the current roles for user with ID \"some-id\": error")
 			},
 		},
 		{
@@ -142,7 +142,7 @@ func TestUserRolesToAddPickerOptions(t *testing.T) {
 				t.Fail()
 			},
 			assertError: func(t testing.TB, err error) {
-				assert.ErrorContains(t, err, "Failed to list all roles: error.")
+				assert.ErrorContains(t, err, "failed to list all roles: error")
 			},
 		},
 		{
@@ -172,7 +172,7 @@ func TestUserRolesToAddPickerOptions(t *testing.T) {
 				t.Fail()
 			},
 			assertError: func(t testing.TB, err error) {
-				assert.ErrorContains(t, err, "The user with ID \"some-id\" has all roles assigned already.")
+				assert.ErrorContains(t, err, "the user with ID \"some-id\" has all roles assigned already")
 			},
 		},
 	}
@@ -263,7 +263,7 @@ func TestUserRolesToRemovePickerOptions(t *testing.T) {
 				t.Fail()
 			},
 			assertError: func(t testing.TB, err error) {
-				assert.ErrorContains(t, err, "Failed to find the current roles for user with ID \"some-id\": error.")
+				assert.ErrorContains(t, err, "failed to read the current roles for user with ID \"some-id\": error")
 			},
 		},
 	}

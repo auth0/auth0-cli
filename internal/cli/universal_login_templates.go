@@ -260,7 +260,7 @@ func ensureCustomDomainIsEnabled(ctx context.Context, api *auth0.API) error {
 	domains, err := api.CustomDomain.List(ctx)
 	if err != nil {
 		if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusForbidden {
-			return errNotAllowed // 403 is a valid response for free tenants that don't have custom domains enabled
+			return errNotAllowed // 403 is a valid response for free tenants that don't have custom domains enabled.
 		}
 
 		return err
@@ -335,7 +335,9 @@ func previewTemplate(ctx context.Context, data *TemplateData) error {
 	if err != nil {
 		return err
 	}
-	defer listener.Close()
+	defer func() {
+		_ = listener.Close()
+	}()
 
 	changesChan, err := broadcastTemplateChanges(ctx, data.Filename)
 	if err != nil {
@@ -348,7 +350,9 @@ func previewTemplate(ctx context.Context, data *TemplateData) error {
 		ReadTimeout:  requestTimeout + time.Minute,
 		WriteTimeout: requestTimeout + time.Minute,
 	}
-	defer server.Close()
+	defer func() {
+		_ = server.Close()
+	}()
 
 	go func() {
 		if err = server.Serve(listener); err != http.ErrServerClosed {
@@ -367,7 +371,7 @@ func previewTemplate(ctx context.Context, data *TemplateData) error {
 		return err
 	}
 
-	// Wait until the file is closed or input is cancelled
+	// Wait until the file is closed or input is cancelled.
 	<-ctx.Done()
 	return nil
 }
@@ -446,7 +450,7 @@ func broadcastTemplateChanges(ctx context.Context, filename string) (chan bool, 
 
 	go func() {
 		<-ctx.Done()
-		watcher.Close()
+		_ = watcher.Close()
 		close(changesChan)
 	}()
 

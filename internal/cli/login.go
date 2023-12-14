@@ -218,7 +218,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (c
 
 	err = cli.Config.AddTenant(tenant)
 	if err != nil {
-		return config.Tenant{}, fmt.Errorf("Failed to add the tenant to the config: %w", err)
+		return config.Tenant{}, fmt.Errorf("failed to add the tenant to the config: %w", err)
 	}
 
 	cli.tracker.TrackFirstLogin(cli.Config.InstallID)
@@ -265,7 +265,7 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("failed to fetch access token using client credentials. \n\nEnsure that the provided client-id, client-secret and domain are correct. \n\nerror: %w\n", err)
+		return fmt.Errorf("failed to fetch access token using client credentials. \n\nEnsure that the provided client-id, client-secret and domain are correct. \n\nerror: %w", err)
 	}
 
 	tenant := config.Tenant{
@@ -287,7 +287,7 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 	}
 
 	if err = cli.Config.AddTenant(tenant); err != nil {
-		return fmt.Errorf("unexpected error when attempting to save tenant data: %w", err)
+		return fmt.Errorf("failed to save tenant data: %w", err)
 	}
 
 	cli.renderer.Newline()

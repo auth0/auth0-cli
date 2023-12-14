@@ -805,7 +805,7 @@ func TestConfig_Validate(t *testing.T) {
 
 		config := &Config{path: tempFile}
 		err := config.Validate()
-		assert.EqualError(t, err, "Not logged in. Try `auth0 login`.")
+		assert.EqualError(t, err, "not logged in. Try `auth0 login`")
 	})
 
 	t.Run("it fixes the default tenant if there are tenant entries and the default is empty", func(t *testing.T) {

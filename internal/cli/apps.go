@@ -178,8 +178,7 @@ func useAppCmd(cli *cli) *cobra.Command {
 				inputs.ID = ""
 			} else {
 				if len(args) == 0 {
-					err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions())
-					if err != nil {
+					if err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions()); err != nil {
 						return err
 					}
 				} else {
@@ -244,13 +243,16 @@ func listAppsCmd(cli *cli) *cobra.Command {
 					return output, res.HasNext(), nil
 				})
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred: %w", err)
+				return fmt.Errorf("failed to list applications: %w", err)
 			}
+
 			var typedList []*management.Client
 			for _, item := range list {
 				typedList = append(typedList, item.(*management.Client))
 			}
+
 			cli.renderer.ApplicationList(typedList, inputs.RevealSecrets)
+
 			return nil
 		},
 	}
@@ -287,17 +289,20 @@ func showAppCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			a := &management.Client{ClientID: &inputs.ID}
+			a := &management.Client{
+				ClientID: &inputs.ID,
+			}
 
 			if err := ansi.Waiting(func() error {
 				var err error
 				a, err = cli.api.Client.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load application: %w", err)
+				return fmt.Errorf("failed to read application with ID %q: %w", inputs.ID, err)
 			}
 
 			cli.renderer.ApplicationShow(a, inputs.RevealSecrets)
+
 			return nil
 		},
 	}
@@ -326,8 +331,7 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ids := make([]string, len(args))
 			if len(args) == 0 {
-				err := appID.PickMany(cmd, &ids, cli.appPickerOptions())
-				if err != nil {
+				if err := appID.PickMany(cmd, &ids, cli.appPickerOptions()); err != nil {
 					return err
 				}
 			} else {
@@ -348,12 +352,12 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 				for _, id := range ids {
 					if id != "" {
 						if _, err := cli.api.Client.Read(cmd.Context(), id); err != nil {
-							errs = append(errs, fmt.Errorf("Unable to delete application (%s): %w", id, err))
+							errs = append(errs, fmt.Errorf("failed to delete application with ID %q: %w", id, err))
 							continue
 						}
 
 						if err := cli.api.Client.Delete(cmd.Context(), id); err != nil {
-							errs = append(errs, fmt.Errorf("Unable to delete application (%s): %w", id, err))
+							errs = append(errs, fmt.Errorf("failed to delete application with ID %q: %w", id, err))
 						}
 					}
 				}
@@ -401,17 +405,14 @@ func createAppCmd(cli *cli) *cobra.Command {
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Prompt for app name
 			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
 
-			// Prompt for app description
 			if err := appDescription.Ask(cmd, &inputs.Description, nil); err != nil {
 				return err
 			}
 
-			// Prompt for app type
 			if err := appType.Select(cmd, &inputs.Type, appTypeOptions, nil); err != nil {
 				return err
 			}
@@ -420,7 +421,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 			appIsNative := apiTypeFor(inputs.Type) == appTypeNative
 			appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
 
-			// Prompt for callback URLs if app is not m2m
+			// Prompt for callback URLs if app is not m2m.
 			if !appIsM2M {
 				var defaultValue string
 
@@ -433,7 +434,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			// Prompt for logout URLs if app is not m2m
+			// Prompt for logout URLs if app is not m2m.
 			if !appIsM2M {
 				var defaultValue string
 
@@ -446,7 +447,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			// Prompt for allowed origins URLs if app is SPA
+			// Prompt for allowed origins URLs if app is SPA.
 			if appIsSPA {
 				defaultValue := appDefaultURL
 
@@ -455,7 +456,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			// Prompt for allowed web origins URLs if app is SPA
+			// Prompt for allowed web origins URLs if app is SPA.
 			if appIsSPA {
 				defaultValue := appDefaultURL
 
@@ -469,7 +470,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 				clientMetadata[k] = v
 			}
 
-			// Load values into a fresh app instance
+			// Load values into a fresh app instance.
 			a := &management.Client{
 				Name:              &inputs.Name,
 				Description:       &inputs.Description,
@@ -483,32 +484,31 @@ func createAppCmd(cli *cli) *cobra.Command {
 				ClientMetadata:    &clientMetadata,
 			}
 
-			// Set token endpoint auth method
+			// Set token endpoint auth method.
 			if len(inputs.AuthMethod) == 0 {
 				a.TokenEndpointAuthMethod = apiDefaultAuthMethodFor(inputs.Type)
 			} else {
 				a.TokenEndpointAuthMethod = apiAuthMethodFor(inputs.AuthMethod)
 			}
 
-			// Set grants
+			// Set grants.
 			if len(inputs.Grants) == 0 {
 				a.GrantTypes = apiDefaultGrantsFor(inputs.Type)
 			} else {
 				a.GrantTypes = apiGrantsFor(inputs.Grants)
 			}
 
-			// Create app
+			// Create app.
 			if err := ansi.Waiting(func() error {
 				return cli.api.Client.Create(cmd.Context(), a)
 			}); err != nil {
-				return fmt.Errorf("Unable to create application: %v", err)
+				return fmt.Errorf("failed to create application: %w", err)
 			}
 
 			if err := cli.Config.SetDefaultAppIDForTenant(cli.tenant, a.GetClientID()); err != nil {
 				return err
 			}
 
-			// Render result
 			cli.renderer.ApplicationCreate(a, inputs.RevealSecrets)
 
 			return nil
@@ -576,21 +576,17 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			// Load app by id
-			if err := ansi.Waiting(func() error {
-				var err error
+			if err := ansi.Waiting(func() (err error) {
 				current, err = cli.api.Client.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load application: %w", err)
+				return fmt.Errorf("failed to find application with ID %q: %w", inputs.ID, err)
 			}
 
-			// Prompt for app name
 			if err := appName.AskU(cmd, &inputs.Name, current.Name); err != nil {
 				return err
 			}
 
-			// Prompt for app type
 			if err := appType.SelectU(cmd, &inputs.Type, appTypeOptions, typeFor(current.AppType)); err != nil {
 				return err
 			}
@@ -599,7 +595,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 			appIsNative := apiTypeFor(inputs.Type) == appTypeNative
 			appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
 
-			// Prompt for callback URLs if app is not m2m
+			// Prompt for callback URLs if app is not m2m.
 			if !appIsM2M {
 				var defaultValue string
 
@@ -616,7 +612,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			// Prompt for logout URLs if app is not m2m
+			// Prompt for logout URLs if app is not m2m.
 			if !appIsM2M {
 				var defaultValue string
 
@@ -633,7 +629,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			// Prompt for allowed origins URLs if app is SPA
+			// Prompt for allowed origins URLs if app is SPA.
 			if appIsSPA {
 				defaultValue := appDefaultURL
 
@@ -646,7 +642,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			// Prompt for allowed web origins URLs if app is SPA
+			// Prompt for allowed web origins URLs if app is SPA.
 			if appIsSPA {
 				defaultValue := appDefaultURL
 
@@ -659,7 +655,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			// Load updated values into a fresh app instance
+			// Load updated values into a fresh app instance.
 			a := &management.Client{}
 
 			if len(inputs.Name) == 0 {
@@ -726,14 +722,12 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				a.ClientMetadata = &clientMetadata
 			}
 
-			// Update app
 			if err := ansi.Waiting(func() error {
 				return cli.api.Client.Update(cmd.Context(), inputs.ID, a)
 			}); err != nil {
-				return fmt.Errorf("Unable to update application %v: %v", inputs.ID, err)
+				return fmt.Errorf("failed to update application with ID %q: %w", inputs.ID, err)
 			}
 
-			// Render result
 			cli.renderer.ApplicationUpdate(a, inputs.RevealSecrets)
 
 			return nil
@@ -770,8 +764,7 @@ func openAppCmd(cli *cli) *cobra.Command {
   auth0 apps open <app-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions())
-				if err != nil {
+				if err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions()); err != nil {
 					return err
 				}
 			} else {
@@ -779,6 +772,7 @@ func openAppCmd(cli *cli) *cobra.Command {
 			}
 
 			openManageURL(cli, cli.Config.DefaultTenant, formatAppSettingsPath(inputs.ID))
+
 			return nil
 		},
 	}
@@ -917,7 +911,7 @@ func (c *cli) appPickerOptions(requestOpts ...management.RequestOption) pickerOp
 	return func(ctx context.Context) (pickerOptions, error) {
 		clientList, err := c.api.Client.List(ctx, requestOpts...)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to list applications: %w", err)
 		}
 
 		tenant, err := c.Config.GetTenant(c.tenant)

@@ -52,7 +52,7 @@ func TestLogStreamsPickerOptions(t *testing.T) {
 				t.Fail()
 			},
 			assertError: func(t testing.TB, err error) {
-				assert.ErrorContains(t, err, "There are currently no log streams.")
+				assert.ErrorContains(t, err, "there are currently no log streams to choose from. Create one by running: `auth0 logs streams create`")
 			},
 		},
 		{
@@ -146,7 +146,7 @@ func TestLogStreamsPickerOptionsByType(t *testing.T) {
 				t.Fail()
 			},
 			assertError: func(t testing.TB, err error) {
-				assert.ErrorContains(t, err, "There are currently no log streams of type: \"foo\", use 'auth0 logs streams create foo' to create one.")
+				assert.ErrorContains(t, err, "there are currently no log streams of type: \"foo\", use 'auth0 logs streams create foo' to create one")
 			},
 		},
 		{

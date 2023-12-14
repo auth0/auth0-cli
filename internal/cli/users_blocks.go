@@ -59,7 +59,7 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 				return err
 			})
 			if err != nil {
-				return fmt.Errorf("failed to list user blocks for user with ID %s: %w", inputs.userIdentifier, err)
+				return fmt.Errorf("failed to list user blocks for user with ID %q: %w", inputs.userIdentifier, err)
 			}
 
 			cli.renderer.UserBlocksList(userBlocks)
@@ -99,13 +99,13 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 					if identifier != "" {
 						err := cli.api.User.Unblock(cmd.Context(), identifier)
 						if mErr, ok := err.(management.Error); ok && mErr.Status() != http.StatusBadRequest {
-							errs = append(errs, fmt.Errorf("failed to unblock user with identifier %s: %w", identifier, err))
+							errs = append(errs, fmt.Errorf("failed to unblock user with identifier %q: %w", identifier, err))
 							continue
 						}
 
 						err = cli.api.User.UnblockByIdentifier(cmd.Context(), identifier)
 						if err != nil {
-							errs = append(errs, fmt.Errorf("failed to unblock user with identifier %s: %w", identifier, err))
+							errs = append(errs, fmt.Errorf("failed to unblock user with identifier %q: %w", identifier, err))
 						}
 					}
 				}
