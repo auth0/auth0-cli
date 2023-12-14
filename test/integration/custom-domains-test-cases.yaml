@@ -32,7 +32,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - "An unexpected error occurred while attempting to create the custom domain 'custom-domain.com': 409 Conflict: The specified custom domain already exists"
+        - "Failed to create custom domain \"custom-domain.com\": 409 Conflict: The specified custom domain already exists"
 
   005 - show domain:
     command: auth0 domains show $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
