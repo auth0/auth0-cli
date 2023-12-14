@@ -83,7 +83,9 @@ func (q Quickstart) Download(ctx context.Context, downloadPath string, client *m
 	if err := tmpFile.Close(); err != nil {
 		return err
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() {
+		_ = os.Remove(tmpFile.Name())
+	}()
 
 	if err := os.RemoveAll(downloadPath); err != nil {
 		return err
@@ -102,7 +104,9 @@ func GetQuickstarts(ctx context.Context) (Quickstarts, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer func() {
+		_ = response.Body.Close()
+	}()
 
 	if response.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf(

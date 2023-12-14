@@ -48,7 +48,7 @@ type EditorTemplateData struct {
 func (e *Editor) prompt(initialValue string, config *survey.PromptConfig) (interface{}, error) {
 	err := e.Render(
 		EditorQuestionTemplate,
-		// EXTENDED to support printing editor in prompt and BlankAllowed
+		// EXTENDED to support printing editor in prompt and BlankAllowed.
 		EditorTemplateData{
 			Editor:        *e.Editor,
 			BlankAllowed:  e.BlankAllowed,
@@ -60,7 +60,7 @@ func (e *Editor) prompt(initialValue string, config *survey.PromptConfig) (inter
 		return "", err
 	}
 
-	// start reading runes from the standard in
+	// Start reading runes from the standard in.
 	rr := e.NewRuneReader()
 	_ = rr.SetTermMode()
 	defer func() { _ = rr.RestoreTermMode() }()
@@ -73,7 +73,7 @@ func (e *Editor) prompt(initialValue string, config *survey.PromptConfig) (inter
 	}()
 
 	for {
-		// EXTENDED to handle the e to edit / enter to skip behavior + BlankAllowed
+		// EXTENDED to handle the e to edit / enter to skip behavior + BlankAllowed.
 		r, _, err := rr.ReadRune()
 		if err != nil {
 			return "", err
@@ -97,7 +97,7 @@ func (e *Editor) prompt(initialValue string, config *survey.PromptConfig) (inter
 			err = e.Render(
 				EditorQuestionTemplate,
 				EditorTemplateData{
-					// EXTENDED to support printing editor in prompt, BlankAllowed
+					// EXTENDED to support printing editor in prompt, BlankAllowed.
 					Editor:        *e.Editor,
 					BlankAllowed:  e.BlankAllowed,
 					EditorCommand: filepath.Base(e.editorCommand()),
@@ -117,7 +117,7 @@ func (e *Editor) prompt(initialValue string, config *survey.PromptConfig) (inter
 		return "", err
 	}
 
-	// check length, return default value on empty
+	// Check length, return default value on empty.
 	if len(text) == 0 && !e.AppendDefault {
 		return e.Default, nil
 	}

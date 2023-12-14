@@ -23,13 +23,13 @@ type OutputFormat string
 type Renderer struct {
 	Tenant string
 
-	// MessageWriter receives the renderer messages (typically os.Stderr)
+	// MessageWriter receives the renderer messages (typically os.Stderr).
 	MessageWriter io.Writer
 
-	// ResultWriter writes the final result of the commands (typically os.Stdout which can be piped to other commands)
+	// ResultWriter writes the final result of the commands (typically os.Stdout which can be piped to other commands).
 	ResultWriter io.Writer
 
-	// Format indicates how the results are rendered. Default (empty) will write as table
+	// Format indicates how the results are rendered. Default (empty) will write as table.
 	Format OutputFormat
 }
 
