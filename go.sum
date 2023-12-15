@@ -19,8 +19,8 @@ github.com/andybalholm/brotli v1.0.5 h1:8uQZIdzKmjc/iuPu7O2ioW48L81FgatrcpfFmiq/
 github.com/andybalholm/brotli v1.0.5/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
 github.com/apparentlymart/go-textseg/v15 v15.0.0 h1:uYvfpb3DyLSCGWnctWKGj857c6ew1u1fNQOlOtuGxQY=
 github.com/apparentlymart/go-textseg/v15 v15.0.0/go.mod h1:K8XmNZdhEBkdlyDdvbmmsvpAG721bKi0joRfFdHIWJ4=
-github.com/auth0/go-auth0 v1.3.1 h1:J9QIKOMKs/uE9eo1OvTHfci8inuPau0M4WSgdNmPRaQ=
-github.com/auth0/go-auth0 v1.3.1/go.mod h1:lpfYGQAGw5RFFWCmVc0kJI4c6w9mA1CbEaJfZ7xZycw=
+github.com/auth0/go-auth0 v1.4.0 h1:oZL3xIBBPW2ckLQmp6BSqpx5RV5yuqqOEVEPp4cipR4=
+github.com/auth0/go-auth0 v1.4.0/go.mod h1:X1o5gVvYUYAQltayD5HrLimFZN9tfZUlJDUh+lz8h9I=
 github.com/aybabtme/iocontrol v0.0.0-20150809002002-ad15bcfc95a0 h1:0NmehRCgyk5rljDQLKUO+cRJCnduDyn11+zGZIc9Z48=
 github.com/aybabtme/iocontrol v0.0.0-20150809002002-ad15bcfc95a0/go.mod h1:6L7zgvqo0idzI7IO8de6ZC051AfXb5ipkIJ7bIA2tGA=
 github.com/aymanbagabas/go-osc52 v1.0.3 h1:DTwqENW7X9arYimJrPeGZcV0ln14sGMt3pHZspWD+Mg=
