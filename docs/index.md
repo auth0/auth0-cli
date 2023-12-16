@@ -24,7 +24,7 @@ scoop bucket add auth0 https://github.com/auth0/scoop-auth0-cli.git && scoop ins
 
 Install via [Powershell](https://learn.microsoft.com/en-us/powershell/)
 
-```ps
+```powershell
 # Download the binary to the current folder. Use the desired version number.
 $version = "1.2.0"
 Invoke-WebRequest "https://github.com/auth0/auth0-cli/releases/download/v${version}/auth0-cli_${version}_Windows_x86_64.zip' -OutFile .\auth0.zip
