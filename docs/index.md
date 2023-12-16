@@ -22,6 +22,17 @@ Install via [Scoop](https://scoop.sh/):
 scoop bucket add auth0 https://github.com/auth0/scoop-auth0-cli.git && scoop install auth0
 ```
 
+Install via [Powershell](https://learn.microsoft.com/en-us/powershell/)
+
+```ps
+# Download the binary to the current folder. Use the desired version number.
+$version = "1.2.0"
+Invoke-WebRequest "https://github.com/auth0/auth0-cli/releases/download/v${version}/auth0-cli_${version}_Windows_x86_64.zip' -OutFile .\auth0.zip
+Expand-Archive .\auth0.zip .\
+# To be able to run the binary from any directory, make sure you add it to your $PATH
+[System.Environment]::SetEnvironmentVariable('PATH',$Env:PATH + ";${pwd}")
+```
+
 ### Linux
 
 Install via [cURL](https://curl.se/):
