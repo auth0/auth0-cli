@@ -126,7 +126,7 @@ func TestAPICmd_IsInsufficientScopeError(t *testing.T) {
 				"message": "Insufficient scope, expected any of: create:client_grants",
 				"errorCode": "insufficient_scope"
 			  }`,
-			expectedError: "request failed because access token lacks scope: create:client_grants.\n If authenticated via client credentials, add this scope to the designated client. If authenticated as a user, request this scope during login by running `auth0 login --scopes create:client_grants`.",
+			expectedError: "request failed because access token lacks scope: create:client_grants.\n If authenticated via client credentials, add this scope to the designated client. If authenticated as a user, request this scope during login by running `auth0 login --scopes create:client_grants`",
 		},
 		{
 			name:            "it correctly detects an insufficient scope error with multiple scope",
@@ -137,7 +137,7 @@ func TestAPICmd_IsInsufficientScopeError(t *testing.T) {
 				"message": "Insufficient scope, expected any of: read:clients, read:client_summary",
 				"errorCode": "insufficient_scope"
 			  }`,
-			expectedError: "request failed because access token lacks scope: read:clients.\n If authenticated via client credentials, add this scope to the designated client. If authenticated as a user, request this scope during login by running `auth0 login --scopes read:clients`.",
+			expectedError: "request failed because access token lacks scope: read:clients.\n If authenticated via client credentials, add this scope to the designated client. If authenticated as a user, request this scope during login by running `auth0 login --scopes read:clients`",
 		},
 	}
 

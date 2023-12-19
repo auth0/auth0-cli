@@ -94,7 +94,7 @@ func listRolesCmd(cli *cli) *cobra.Command {
 				},
 			)
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred: %w", err)
+				return fmt.Errorf("failed to list roles: %w", err)
 			}
 
 			var roles []*management.Role
@@ -129,8 +129,7 @@ func showRoleCmd(cli *cli) *cobra.Command {
   auth0 roles show <role-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
-				if err != nil {
+				if err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions); err != nil {
 					return err
 				}
 			} else {
@@ -144,7 +143,7 @@ func showRoleCmd(cli *cli) *cobra.Command {
 				r, err = cli.api.Role.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load role: %w", err)
+				return fmt.Errorf("failed to read role with ID %q: %w", inputs.ID, err)
 			}
 
 			cli.renderer.RoleShow(r)
@@ -174,31 +173,27 @@ func createRoleCmd(cli *cli) *cobra.Command {
   auth0 roles create --name myrole --description "awesome role"
   auth0 roles create -n myrole -d "awesome role" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Prompt for role name
 			if err := roleName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
 
-			// Prompt for role description
 			if err := roleDescription.Ask(cmd, &inputs.Description, nil); err != nil {
 				return err
 			}
 
-			// Load values into a fresh role instance
 			r := &management.Role{
 				Name:        &inputs.Name,
 				Description: &inputs.Description,
 			}
 
-			// Create role
 			if err := ansi.Waiting(func() error {
 				return cli.api.Role.Create(cmd.Context(), r)
 			}); err != nil {
-				return fmt.Errorf("Unable to create role: %v", err)
+				return fmt.Errorf("failed to create role: %w", err)
 			}
 
-			// Render role creation specific view
 			cli.renderer.RoleCreate(r)
+
 			return nil
 		},
 	}
@@ -242,7 +237,7 @@ func updateRoleCmd(cli *cli) *cobra.Command {
 				currentRole, err = cli.api.Role.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("failed to find role with ID %q: %v", inputs.ID, err)
+				return fmt.Errorf("failed to read role with ID %q: %w", inputs.ID, err)
 			}
 
 			if err := roleName.AskU(cmd, &inputs.Name, currentRole.Name); err != nil {
@@ -265,7 +260,7 @@ func updateRoleCmd(cli *cli) *cobra.Command {
 			if err := ansi.Waiting(func() error {
 				return cli.api.Role.Update(cmd.Context(), inputs.ID, updatedRole)
 			}); err != nil {
-				return fmt.Errorf("failed to update role with ID %q: %v", inputs.ID, err)
+				return fmt.Errorf("failed to update role with ID %q: %w", inputs.ID, err)
 			}
 
 			cli.renderer.RoleUpdate(updatedRole)
@@ -298,8 +293,7 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ids := make([]string, len(args))
 			if len(args) == 0 {
-				err := roleID.PickMany(cmd, &ids, cli.rolePickerOptions)
-				if err != nil {
+				if err := roleID.PickMany(cmd, &ids, cli.rolePickerOptions); err != nil {
 					return err
 				}
 			} else {
@@ -315,11 +309,11 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
 			return ansi.ProgressBar("Deleting Role(s)", ids, func(_ int, id string) error {
 				if id != "" {
 					if _, err := cli.api.Role.Read(cmd.Context(), id); err != nil {
-						return fmt.Errorf("Unable to delete role (%s): %w", id, err)
+						return fmt.Errorf("Failed to delete role (%s): %w", id, err)
 					}
 
 					if err := cli.api.Role.Delete(cmd.Context(), id); err != nil {
-						return fmt.Errorf("Unable to delete role (%s): %w", id, err)
+						return fmt.Errorf("Failed to delete role (%s): %w", id, err)
 					}
 				}
 				return nil
@@ -347,7 +341,7 @@ func (c *cli) rolePickerOptions(ctx context.Context) (pickerOptions, error) {
 	}
 
 	if len(opts) == 0 {
-		return nil, errors.New("There are currently no roles.")
+		return nil, errors.New("there are currently no roles to choose from. Create one by running: `auth0 roles create`")
 	}
 
 	return opts, nil

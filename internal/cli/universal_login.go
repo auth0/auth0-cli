@@ -118,7 +118,7 @@ func showUniversalLoginCmd(cli *cli) *cobra.Command {
 				myBranding, err = cli.api.Branding.Read(cmd.Context())
 				return err
 			}); err != nil {
-				return fmt.Errorf("unable to load branding settings due to an unexpected error: %w", err)
+				return fmt.Errorf("failed to read branding settings: %w", err)
 			}
 
 			cli.renderer.BrandingShow(myBranding)
@@ -157,25 +157,21 @@ func updateUniversalLoginCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Branding
 
-			if err := ansi.Waiting(func() error {
-				var err error
+			if err := ansi.Waiting(func() (err error) {
 				current, err = cli.api.Branding.Read(cmd.Context())
 				return err
 			}); err != nil {
-				return fmt.Errorf("unable to load branding settings due to an unexpected error: %w", err)
+				return fmt.Errorf("failed to read branding settings: %w", err)
 			}
 
-			// Prompt for accent color
 			if err := brandingAccent.AskU(cmd, &inputs.AccentColor, auth0.String(current.GetColors().GetPrimary())); err != nil {
 				return err
 			}
 
-			// Prompt for background color
 			if err := brandingBackground.AskU(cmd, &inputs.BackgroundColor, auth0.String(current.GetColors().GetPageBackground())); err != nil {
 				return err
 			}
 
-			// Load updated values into a fresh branding instance
 			b := &management.Branding{}
 			isAccentColorSet := len(inputs.AccentColor) > 0
 			isBackgroundColorSet := len(inputs.BackgroundColor) > 0
@@ -205,19 +201,18 @@ func updateUniversalLoginCmd(cli *cli) *cobra.Command {
 				b.FaviconURL = &inputs.FaviconURL
 			}
 
-			// API2 will produce an error if we send an empty font struct
+			// API2 will produce an error if we send an empty font struct.
 			if b.Font == nil && inputs.CustomFontURL != "" {
 				b.Font = &management.BrandingFont{URL: &inputs.CustomFontURL}
 			}
 
-			// Update branding
+			// Update branding.
 			if err := ansi.Waiting(func() error {
 				return cli.api.Branding.Update(cmd.Context(), b)
 			}); err != nil {
-				return fmt.Errorf("unable to update branding settings: %v", err)
+				return fmt.Errorf("failed to update branding settings: %w", err)
 			}
 
-			// Render result
 			cli.renderer.BrandingUpdate(b)
 
 			return nil

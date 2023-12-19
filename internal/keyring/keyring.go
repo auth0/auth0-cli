@@ -89,7 +89,7 @@ func GetAccessToken(tenant string) (string, error) {
 	for i := 0; i < secretAccessTokenMaxChunks; i++ {
 		a, err := keyring.Get(fmt.Sprintf("%s %d", secretAccessToken, i), tenant)
 		// Only return if we have pulled more than 1 item from the keyring, otherwise this will be
-		// a valid "secret not found in keyring"
+		// a valid "secret not found in keyring".
 		if err == keyring.ErrNotFound && i > 0 {
 			return accessToken, nil
 		}
@@ -107,8 +107,8 @@ func chunk(slice string, chunkSize int) []string {
 	for i := 0; i < len(slice); i += chunkSize {
 		end := i + chunkSize
 
-		// necessary check to avoid slicing beyond
-		// slice capacity
+		// Necessary check to avoid slicing beyond
+		// slice capacity.
 		if end > len(slice) {
 			end = len(slice)
 		}

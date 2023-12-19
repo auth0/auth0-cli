@@ -58,7 +58,7 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 				return err
 			})
 			if err != nil {
-				return fmt.Errorf("failed to list user blocks for user with ID %s: %w", inputs.userIdentifier, err)
+				return fmt.Errorf("failed to list user blocks for user with ID %q: %w", inputs.userIdentifier, err)
 			}
 
 			cli.renderer.UserBlocksList(userBlocks)

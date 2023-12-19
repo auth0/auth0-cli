@@ -82,7 +82,9 @@ func FetchUserInfo(httpClient *http.Client, baseDomain, token string) (*UserInfo
 	if err != nil {
 		return nil, fmt.Errorf("unable to exchange code for token: %w", err)
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unable to fetch user info: %s", res.Status)

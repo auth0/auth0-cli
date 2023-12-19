@@ -136,7 +136,7 @@ func updateLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 				oldLogStream, err = cli.api.LogStream.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("failed to read log stream with ID %s: %w", inputs.ID, err)
+				return fmt.Errorf("failed to read log stream with ID %q: %w", inputs.ID, err)
 			}
 
 			if oldLogStream.GetType() != string(logStreamTypeAzureEventGrid) {
@@ -155,7 +155,7 @@ func updateLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 			if err := ansi.Waiting(func() error {
 				return cli.api.LogStream.Update(cmd.Context(), oldLogStream.GetID(), updatedLogStream)
 			}); err != nil {
-				return fmt.Errorf("failed to update log stream with ID %s: %w", oldLogStream.GetID(), err)
+				return fmt.Errorf("failed to update log stream with ID %q: %w", oldLogStream.GetID(), err)
 			}
 
 			cli.renderer.LogStreamUpdate(updatedLogStream)

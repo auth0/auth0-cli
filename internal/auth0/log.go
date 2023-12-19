@@ -21,6 +21,6 @@ type LogAPI interface {
 	// and descriptions, Log Data Event Listing.
 	List(ctx context.Context, opts ...management.RequestOption) (l []*management.Log, err error)
 
-	// Search is an alias for List
+	// Search is an alias for List.
 	Search(ctx context.Context, opts ...management.RequestOption) ([]*management.Log, error)
 }

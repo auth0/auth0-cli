@@ -19,7 +19,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - number flag invalid, please pass a number between 1 and 1000
+        - Number flag invalid, please pass a number between 1 and 1000
 
   003 - apis create and check data:
       command: auth0 apis create --name integration-test-api-def1 --identifier http://integration-test-api-def1 --scopes read:todos,write:todos --signing-alg RS256 --json

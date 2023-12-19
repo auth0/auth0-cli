@@ -47,7 +47,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - number flag invalid, please pass a number between 1 and 1000
+        - Number flag invalid, please pass a number between 1 and 1000
 
   007 - roles show json:
     command: auth0 roles show $(./test/integration/scripts/get-role-id.sh) --json
@@ -97,7 +97,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - number flag invalid, please pass a number between 1 and 1000
+        - Number flag invalid, please pass a number between 1 and 1000
 
   014 - add role permissions:
     command: auth0 roles permissions add $(./test/integration/scripts/get-role-id.sh) --api-id $(./test/integration/scripts/get-api-id.sh) --permissions read:todos

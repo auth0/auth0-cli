@@ -155,7 +155,7 @@ func downloadQuickstart(cli *cli, inputs *qsInputs) func(cmd *cobra.Command, arg
 			return inputs.Quickstart.Download(cmd.Context(), quickstartPath, inputs.Client)
 		})
 		if err != nil {
-			return fmt.Errorf("failed to download quickstart sample: %v", err)
+			return fmt.Errorf("failed to download quickstart sample: %w", err)
 		}
 
 		cli.renderer.Infof("Quickstart sample successfully downloaded at %s", quickstartPath)
@@ -373,7 +373,7 @@ func (i *qsInputs) fromArgs(cmd *cobra.Command, args []string, cli *cli) error {
 		return
 	})
 	if err != nil {
-		return fmt.Errorf("an unexpected error occurred, please verify your client ID: %w", err)
+		return fmt.Errorf("failed to find client with ID %q, please verify your client ID: %w", i.ClientID, err)
 	}
 
 	i.Client = client
@@ -391,7 +391,7 @@ func (i *qsInputs) fromArgs(cmd *cobra.Command, args []string, cli *cli) error {
 	if i.Stack == "" {
 		quickstartsByType, err := quickstarts.FilterByType(i.QsTypeForClient)
 		if err != nil {
-			return fmt.Errorf("an unexpected error occurred: %w", err)
+			return err
 		}
 
 		if err := qsStack.Select(cmd, &i.Stack, quickstartsByType.Stacks(), nil); err != nil {

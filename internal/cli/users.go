@@ -268,12 +268,12 @@ func createUserCmd(cli *cli) *cobra.Command {
 			}
 
 			// The getConnReqUsername returns the value for the requires_username field for the selected connection
-			// The result will be used to determine whether to prompt for username
+			// The result will be used to determine whether to prompt for username.
 			conn := cli.getConnReqUsername(cmd.Context(), auth0.StringValue(&inputs.ConnectionName))
 			requireUsername := auth0.BoolValue(conn)
 
 			// Prompt for username if the requireUsername is set to true
-			// Load values including the username's field into a fresh users instance
+			// Load values including the username's field into a fresh users instance.
 			a := &management.User{
 				Connection: &inputs.ConnectionName,
 				Email:      &inputs.Email,
@@ -287,14 +287,13 @@ func createUserCmd(cli *cli) *cobra.Command {
 				}
 				a.Username = &inputs.Username
 			}
-			// Create app
+
 			if err := ansi.Waiting(func() error {
 				return cli.api.User.Create(cmd.Context(), a)
 			}); err != nil {
-				return fmt.Errorf("Unable to create user: %w", err)
+				return fmt.Errorf("failed to create user: %w", err)
 			}
 
-			// Render Result
 			cli.renderer.UserCreate(a, requireUsername)
 
 			return nil
@@ -340,14 +339,14 @@ func showUserCmd(cli *cli) *cobra.Command {
 				a, err = cli.api.User.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load user: %w", err)
+				return fmt.Errorf("failed to load user with ID %q: %w", inputs.ID, err)
 			}
 
-			// get the current connection
+			// Get the current connection.
 			conn := stringSliceToCommaSeparatedString(cli.getUserConnection(a))
 			a.Connection = auth0.String(conn)
 
-			// parse the connection name to get the requireUsername status
+			// Parse the connection name to get the requireUsername status.
 			u := cli.getConnReqUsername(cmd.Context(), auth0.StringValue(a.Connection))
 			requireUsername := auth0.BoolValue(u)
 
@@ -396,11 +395,11 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 			return ansi.ProgressBar("Deleting user(s)", ids, func(_ int, id string) error {
 				if id != "" {
 					if _, err := cli.api.User.Read(cmd.Context(), id); err != nil {
-						return fmt.Errorf("Unable to delete user (%s): %w", id, err)
+						return fmt.Errorf("Failed to delete user (%s): %w", id, err)
 					}
 
 					if err := cli.api.User.Delete(cmd.Context(), id); err != nil {
-						return fmt.Errorf("Unable to delete user (%s): %w", id, err)
+						return fmt.Errorf("Failed to delete user (%s): %w", id, err)
 					}
 				}
 				return nil
@@ -449,10 +448,10 @@ func updateUserCmd(cli *cli) *cobra.Command {
 				current, err = cli.api.User.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load user: %w", err)
+				return fmt.Errorf("failed to read user with ID %q: %w", inputs.ID, err)
 			}
-			// using getUserConnection to get connection name from user Identities
-			// just using current.connection will return empty
+			// Using getUserConnection to get connection name from user Identities
+			// just using current.connection will return empty.
 			conn := stringSliceToCommaSeparatedString(cli.getUserConnection(current))
 			current.Connection = auth0.String(conn)
 
@@ -468,10 +467,10 @@ func updateUserCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			// username cannot be updated for database connections
+			// Username cannot be updated for database connections
 			// if err := userUsername.AskU(cmd, &inputs.Username, current.Username); err != nil {
 			//	return err
-			// }
+			// }.
 
 			user := &management.User{}
 
@@ -498,7 +497,7 @@ func updateUserCmd(cli *cli) *cobra.Command {
 			if err := ansi.Waiting(func() error {
 				return cli.api.User.Update(cmd.Context(), current.GetID(), user)
 			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred while trying to update an user with Id '%s': %w", inputs.ID, err)
+				return fmt.Errorf("failed to update user with ID %q: %w", inputs.ID, err)
 			}
 
 			con := cli.getConnReqUsername(cmd.Context(), auth0.StringValue(user.Connection))
@@ -589,7 +588,7 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 
 			connection, err := cli.api.Connection.ReadByName(cmd.Context(), inputs.ConnectionName)
 			if err != nil {
-				return fmt.Errorf("failed to find connection with name %q: %w", inputs.ConnectionName, err)
+				return fmt.Errorf("failed to read connection with name %q: %w", inputs.ConnectionName, err)
 			}
 
 			if len(connection.GetEnabledClients()) == 0 {
@@ -648,7 +647,7 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 			if err := ansi.Waiting(func() error {
 				return cli.api.Jobs.ImportUsers(cmd.Context(), job)
 			}); err != nil {
-				return err
+				return fmt.Errorf("failed to import users: %w", err)
 			}
 
 			cli.renderer.Heading("started user import job")

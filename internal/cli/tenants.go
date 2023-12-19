@@ -137,7 +137,7 @@ func (c *cli) tenantPickerOptions(_ context.Context) (pickerOptions, error) {
 	}
 
 	if len(opts)+len(priorityOpts) == 0 {
-		return nil, fmt.Errorf("There are no tenants to pick from. Add tenants by running `auth0 login`.")
+		return nil, fmt.Errorf("there are no tenants to pick from. Add tenants by running `auth0 login`")
 	}
 
 	return append(priorityOpts, opts...), nil

@@ -72,7 +72,7 @@ func listLogsCmd(cli *cli) *cobra.Command {
 			}
 			list, err := getLatestLogs(cmd.Context(), cli, inputs.Num, inputs.Filter)
 			if err != nil {
-				return fmt.Errorf("failed to get logs: %w", err)
+				return fmt.Errorf("failed to list logs: %w", err)
 			}
 
 			hasFilter := inputs.Filter != ""
@@ -114,7 +114,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 			}
 			list, err := getLatestLogs(cmd.Context(), cli, inputs.Num, inputs.Filter)
 			if err != nil {
-				return fmt.Errorf("failed to get logs: %w", err)
+				return fmt.Errorf("failed to list logs: %w", err)
 			}
 
 			logsCh := make(chan []*management.Log)

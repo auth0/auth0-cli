@@ -84,7 +84,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - "failed to fetch the Universal Login template data: this feature requires at least one custom domain to be set and verified for the tenant, use 'auth0 domains create' to create one and 'auth0 domains verify' to have it verified"
+        - "Failed to fetch the Universal Login template data: this feature requires at least one custom domain to be set and verified for the tenant, use 'auth0 domains create' to create one and 'auth0 domains verify' to have it verified"
 
   010 - update universal login branding prompts (login):
     command: cat ./test/integration/fixtures/update-ul-prompts-login.json | auth0 ul prompts update login

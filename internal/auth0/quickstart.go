@@ -83,7 +83,9 @@ func (q Quickstart) Download(ctx context.Context, downloadPath string, client *m
 	if err := tmpFile.Close(); err != nil {
 		return err
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() {
+		_ = os.Remove(tmpFile.Name())
+	}()
 
 	if err := os.RemoveAll(downloadPath); err != nil {
 		return err
@@ -102,7 +104,9 @@ func GetQuickstarts(ctx context.Context) (Quickstarts, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer func() {
+		_ = response.Body.Close()
+	}()
 
 	if response.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf(
@@ -126,7 +130,7 @@ func (q Quickstarts) FindByStack(stack string) (Quickstart, error) {
 		}
 	}
 
-	return Quickstart{}, fmt.Errorf("quickstart not found for %s", stack)
+	return Quickstart{}, fmt.Errorf("failed to find any quickstarts for stack: %q", stack)
 }
 
 func (q Quickstarts) FilterByType(qsType string) (Quickstarts, error) {
@@ -138,7 +142,7 @@ func (q Quickstarts) FilterByType(qsType string) (Quickstarts, error) {
 	}
 
 	if len(filteredQuickstarts) == 0 {
-		return nil, fmt.Errorf("unable to find any quickstarts for: %s", qsType)
+		return nil, fmt.Errorf("failed to find any quickstarts for type: %q", qsType)
 	}
 
 	return filteredQuickstarts, nil

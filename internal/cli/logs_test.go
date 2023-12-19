@@ -34,7 +34,7 @@ func TestTailLogsCommand(t *testing.T) {
 		cmd.SetArgs([]string{"--number", "90", "--filter", "user_id:123"})
 		err := cmd.Execute()
 
-		assert.EqualError(t, err, "failed to get logs: generic error")
+		assert.EqualError(t, err, "failed to list logs: generic error")
 	})
 
 	t.Run("it returns an error when it fails to get the logs on the 3rd request", func(t *testing.T) {
