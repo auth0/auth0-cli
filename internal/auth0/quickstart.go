@@ -130,7 +130,7 @@ func (q Quickstarts) FindByStack(stack string) (Quickstart, error) {
 		}
 	}
 
-	return Quickstart{}, fmt.Errorf("failed to find any quickstarts by stack: %q", stack)
+	return Quickstart{}, fmt.Errorf("failed to find any quickstarts for stack: %q", stack)
 }
 
 func (q Quickstarts) FilterByType(qsType string) (Quickstarts, error) {
@@ -142,7 +142,7 @@ func (q Quickstarts) FilterByType(qsType string) (Quickstarts, error) {
 	}
 
 	if len(filteredQuickstarts) == 0 {
-		return nil, fmt.Errorf("failed to find any quickstarts by type: %q", qsType)
+		return nil, fmt.Errorf("failed to find any quickstarts for type: %q", qsType)
 	}
 
 	return filteredQuickstarts, nil

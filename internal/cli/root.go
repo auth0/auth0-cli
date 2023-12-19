@@ -58,7 +58,7 @@ func Execute() {
 
 	// Platform specific terminal initialization:
 	// this should run for all commands,
-	// for most of the architectures there's no requirements:.
+	// for most of the architectures there's no requirements.
 	ansi.InitConsole()
 
 	cancelCtx := contextWithCancel()
@@ -149,7 +149,7 @@ func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
 func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	// The order of the commands here matters.
 	// Add new commands in a place that reflect its
-	// relevance or relation with other commands:.
+	// relevance or relation with other commands.
 	rootCmd.AddCommand(loginCmd(cli))
 	rootCmd.AddCommand(logoutCmd(cli))
 	rootCmd.AddCommand(tenantsCmd(cli))
@@ -170,7 +170,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(apiCmd(cli))
 	rootCmd.AddCommand(terraformCmd(cli))
 
-	// Keep completion at the bottom:.
+	// Keep completion at the bottom.
 	rootCmd.AddCommand(completionCmd(cli))
 }
 

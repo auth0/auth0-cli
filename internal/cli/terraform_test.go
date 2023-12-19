@@ -174,7 +174,7 @@ func setupTestDIRAndImportData(t *testing.T) (string, importDataList) {
 			ImportID:     "actionID_1",
 		},
 		{
-			ResourceName: "auth0_action.MyTestAction", //NOTE: duplicate name.
+			ResourceName: "auth0_action.MyTestAction", // NOTE: duplicate name.
 			ImportID:     "actionID_2",
 		},
 	}

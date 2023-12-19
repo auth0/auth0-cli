@@ -43,7 +43,7 @@ func TestFilterByType(t *testing.T) {
 		res, err := mockQuickStarts.FilterByType("some-unknown-type")
 		assert.Nil(t, res)
 		assert.Error(t, err)
-		assert.Equal(t, fmt.Sprintf("failed to find any quickstarts by type: %q", "some-unknown-type"), err.Error())
+		assert.Equal(t, fmt.Sprintf("failed to find any quickstarts for type: %q", "some-unknown-type"), err.Error())
 	})
 }
 
@@ -68,6 +68,6 @@ func TestFindByStack(t *testing.T) {
 		res, err := mockQuickStarts.FindByStack("some-non-existent-qs-type")
 		assert.Error(t, err)
 		assert.Empty(t, res)
-		assert.Equal(t, fmt.Sprintf("failed to find any quickstarts by stack: %q", "some-non-existent-qs-type"), err.Error())
+		assert.Equal(t, fmt.Sprintf("failed to find any quickstarts for stack: %q", "some-non-existent-qs-type"), err.Error())
 	})
 }
