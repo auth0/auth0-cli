@@ -43,14 +43,14 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - "failed to parse command inputs: invalid json data given"
+        - "Failed to parse command inputs: invalid json data given"
 
   007 - it fails to use the api command if an invalid method is given:
     command: auth0 api conquer "tenants/settings"
     exit-code: 1
     stderr:
       contains:
-        - "failed to parse command inputs: invalid method given"
+        - "Failed to parse command inputs: invalid method given"
 
   008 - it throws a warning when both piped data and the data flag are present:
     command: cat ./test/integration/fixtures/update-tenant-settings.json | auth0 api patch "tenants/settings" --data "{\"idle_session_lifetime\":72}"

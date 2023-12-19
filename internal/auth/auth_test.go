@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWaitUntilUserLogsIn(t *testing.T) {
@@ -34,12 +35,14 @@ func TestWaitUntilUserLogsIn(t *testing.T) {
 		ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			if counter < 1 {
-				io.WriteString(w, `{
+				_, err := io.WriteString(w, `{
 					"error": "authorization_pending",
 					"error_description": "still pending auth"
 				}`)
+				require.NoError(t, err)
 			} else {
-				io.WriteString(w, tokenResponse)
+				_, err := io.WriteString(w, tokenResponse)
+				require.NoError(t, err)
 			}
 			counter++
 		}))
@@ -89,7 +92,8 @@ func TestWaitUntilUserLogsIn(t *testing.T) {
 			ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(testCase.httpStatus)
 				if testCase.response != "" {
-					io.WriteString(w, testCase.response)
+					_, err := io.WriteString(w, testCase.response)
+					require.NoError(t, err)
 				}
 			}))
 
@@ -111,13 +115,14 @@ func TestGetDeviceCode(t *testing.T) {
 	t.Run("successfully retrieve state from response", func(t *testing.T) {
 		ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			io.WriteString(w, `{
+			_, err := io.WriteString(w, `{
 				"device_code": "device-code-here",
 				"user_code": "user-code-here",
 				"verification_uri_complete": "verification-uri-here",
 				"expires_in": 1000,
 				"interval": 1
 			}`)
+			require.NoError(t, err)
 		}))
 
 		defer ts.Close()
@@ -163,7 +168,8 @@ func TestGetDeviceCode(t *testing.T) {
 			ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(testCase.httpStatus)
 				if testCase.response != "" {
-					io.WriteString(w, testCase.response)
+					_, err := io.WriteString(w, testCase.response)
+					require.NoError(t, err)
 				}
 			}))
 
@@ -201,7 +207,7 @@ func TestParseTenant(t *testing.T) {
 		},
 		{
 			name:        "bad json encoding",
-			accessToken: "Zm9v.Zm9v", // foo encoded in base64
+			accessToken: "Zm9v.Zm9v", // Foo encoded in base64.
 			err:         "invalid character 'o' in literal false (expecting 'a')",
 		},
 		{

@@ -62,7 +62,7 @@ var (
 		Help:      "One of your custom domains.",
 	}
 
-	errNoCustomDomains = errors.New("there are currently no custom domains")
+	errNoCustomDomains = errors.New("there are currently no custom domains. Create one by running: `auth0 domains create`")
 )
 
 type testCmdInputs struct {
@@ -145,7 +145,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 				inputs.CustomDomain,
 			)
 			if err != nil {
-				return fmt.Errorf("failed to log into the client %s: %w", inputs.ClientID, err)
+				return fmt.Errorf("failed to log into the client with ID %q: %w", inputs.ClientID, err)
 			}
 
 			var userInfo *authutil.UserInfo
@@ -247,7 +247,7 @@ func testTokenCmd(cli *cli) *cobra.Command {
 				"", // Specifying a custom domain is only supported for the test login command.
 			)
 			if err != nil {
-				return fmt.Errorf("failed to log into the client %s: %w", inputs.ClientID, err)
+				return fmt.Errorf("failed to log into the client with ID %q: %w", inputs.ClientID, err)
 			}
 
 			cli.renderer.TestToken(client, tokenResponse)
@@ -300,7 +300,7 @@ func selectClientToUseForTestsAndValidateExistence(cli *cli, cmd *cobra.Command,
 
 	client, err := cli.api.Client.Read(cmd.Context(), inputs.ClientID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find client with ID :%q: %w", inputs.ClientID, err)
+		return nil, fmt.Errorf("failed to find client with ID %q: %w", inputs.ClientID, err)
 	}
 
 	return client, nil
@@ -313,7 +313,7 @@ func (c *cli) customDomainPickerOptions(ctx context.Context) (pickerOptions, err
 	if err != nil {
 		errStatus := err.(management.Error)
 		// 403 is a valid response for free tenants that don't have
-		// custom domains enabled
+		// custom domains enabled.
 		if errStatus != nil && errStatus.Status() == 403 {
 			return nil, errNoCustomDomains
 		}

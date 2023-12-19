@@ -16,7 +16,7 @@ linters:
     - whitespace
     - goimports
     - gosimple
-#    - errcheck
+    - errcheck
     - unconvert
     - gocritic
 #    - gosec
@@ -28,8 +28,9 @@ linters-settings:
   staticcheck:
     checks: [ "all" ]
   godot:
-    scope: declarations
+    scope: all
     capital: true
+    period: true
   goimports:
     local-prefixes: "github.com/auth0/auth0-cli"
 
@@ -40,5 +41,4 @@ issues:
     - "package comment should be of the form"
     - "should have comment"
     - "be unexported"
-    - "error strings should not be capitalized or end with punctuation or a newline"
     - "blank-imports"

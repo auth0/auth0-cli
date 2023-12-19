@@ -203,7 +203,9 @@ func startWebSocketServer(
 	if err != nil {
 		return err
 	}
-	defer listener.Close()
+	defer func() {
+		_ = listener.Close()
+	}()
 
 	handler := &webSocketHandler{
 		display:  display,

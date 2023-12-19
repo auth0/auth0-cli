@@ -127,8 +127,7 @@ func showEmailTemplateCmd(cli *cli) *cobra.Command {
   auth0 email templates show welcome`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := emailTemplateTemplate.Pick(cmd, &inputs.Template, cli.emailTemplatePickerOptions)
-				if err != nil {
+				if err := emailTemplateTemplate.Pick(cmd, &inputs.Template, cli.emailTemplatePickerOptions); err != nil {
 					return err
 				}
 			} else {
@@ -140,10 +139,11 @@ func showEmailTemplateCmd(cli *cli) *cobra.Command {
 				email, err = cli.api.EmailTemplate.Read(cmd.Context(), apiEmailTemplateFor(inputs.Template))
 				return err
 			}); err != nil {
-				return fmt.Errorf("failed to get the email template '%s': %w", inputs.Template, err)
+				return fmt.Errorf("failed to read email template %q: %w", inputs.Template, err)
 			}
 
 			cli.renderer.EmailTemplateShow(email)
+
 			return nil
 		},
 	}
@@ -186,8 +186,7 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 			if len(args) > 0 {
 				inputs.Template = args[0]
 			} else {
-				err := emailTemplateTemplate.Pick(cmd, &inputs.Template, cli.emailTemplatePickerOptions)
-				if err != nil {
+				if err := emailTemplateTemplate.Pick(cmd, &inputs.Template, cli.emailTemplatePickerOptions); err != nil {
 					return err
 				}
 			}
@@ -201,7 +200,7 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 			if err != nil {
 				mErr, ok := err.(management.Error)
 				if !ok || mErr.Status() != http.StatusNotFound {
-					return fmt.Errorf("failed to get the email template '%s': %w", inputs.Template, err)
+					return fmt.Errorf("failed to read email template %q: %w", inputs.Template, err)
 				}
 
 				templateExists = false
@@ -272,7 +271,7 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 
 				return cli.api.EmailTemplate.Create(cmd.Context(), emailTemplate)
 			}); err != nil {
-				return fmt.Errorf("failed to update the email template '%s': %w", inputs.Template, err)
+				return fmt.Errorf("failed to update email template %q: %w", inputs.Template, err)
 			}
 
 			cli.renderer.EmailTemplateUpdate(emailTemplate)

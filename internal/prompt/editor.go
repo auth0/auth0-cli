@@ -81,7 +81,9 @@ func (p *editorPrompt) captureInput(contents []byte, pattern string, infoFn func
 	if err != nil {
 		return []byte{}, err
 	}
-	defer os.Remove(dir)
+	defer func() {
+		_ = os.Remove(dir)
+	}()
 
 	file, err := os.CreateTemp(dir, pattern)
 	if err != nil {
@@ -95,9 +97,11 @@ func (p *editorPrompt) captureInput(contents []byte, pattern string, infoFn func
 	}
 
 	// Defer removal of the temporary file in case any of the next steps fail.
-	defer os.Remove(filename)
+	defer func() {
+		_ = os.Remove(filename)
+	}()
 
-	// write utf8 BOM header
+	// Write utf8 BOM header
 	// The reason why we do this is because notepad.exe on Windows determines the
 	// encoding of an "empty" text file by the locale, for example, GBK in China,
 	// while golang string only handles utf8 well. However, a text file with utf8
@@ -109,7 +113,7 @@ func (p *editorPrompt) captureInput(contents []byte, pattern string, infoFn func
 
 	if len(contents) > 0 {
 		if _, err := file.Write(contents); err != nil {
-			return nil, fmt.Errorf("Failed to write to file: %w", err)
+			return nil, fmt.Errorf("failed to write to file: %w", err)
 		}
 	}
 
@@ -126,7 +130,7 @@ func (p *editorPrompt) captureInput(contents []byte, pattern string, infoFn func
 		return []byte{}, err
 	}
 
-	// strip BOM header
+	// Strip BOM header.
 	return bytes.TrimPrefix(raw, bom), nil
 }
 

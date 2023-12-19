@@ -229,7 +229,7 @@ func askPasswordFlag(cmd *cobra.Command, f *Flag, value *string, isUpdate bool) 
 }
 
 func openEditorFlag(cmd *cobra.Command, f *Flag, value *string, defaultValue string, filename string, infoFn func(), tempFileFn func(string), isUpdate bool) error {
-	if shouldAsk(cmd, f, false) { // Always open the editor on update
+	if shouldAsk(cmd, f, false) { // Always open the editor on update.
 		if isUpdate {
 			return openUpdateEditor(f, value, defaultValue, filename)
 		}

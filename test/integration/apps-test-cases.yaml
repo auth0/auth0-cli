@@ -17,7 +17,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - "number flag invalid, please pass a number between 1 and 1000"
+        - "Number flag invalid, please pass a number between 1 and 1000"
 
   003 - it successfully creates a native app:
     command: auth0 apps create --name integration-test-app-nativeapp1 --type native --description NativeApp1
@@ -76,7 +76,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - "Unable to create application"
+        - "Failed to create application"
 
   010 - it successfully creates a regular app with auth method set to post and outputs in json:
     command: auth0 apps create --name integration-test-app-regapp2 --type regular --description RegApp2 --auth-method Post --json
@@ -132,7 +132,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - "Unable to create application"
+        - "Failed to create application"
 
   018 - it successfully creates a native app with logout urls and outputs in json:
     command: auth0 apps create --name integration-test-app-regapp6 --type native --description RegularApp --logout-urls https://*.example.com/logout,https://example.com/logout --json

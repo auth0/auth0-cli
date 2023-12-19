@@ -106,10 +106,11 @@ func listActionsCmd(cli *cli) *cobra.Command {
 				list, err = cli.api.Action.List(cmd.Context(), management.PerPage(defaultPageSize))
 				return err
 			}); err != nil {
-				return fmt.Errorf("failed to retrieve actions: %w", err)
+				return fmt.Errorf("failed to list actions: %w", err)
 			}
 
 			cli.renderer.ActionList(list.Actions)
+
 			return nil
 		},
 	}
@@ -147,10 +148,11 @@ func showActionCmd(cli *cli) *cobra.Command {
 				action, err = cli.api.Action.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("failed to get action with ID %q: %w", inputs.ID, err)
+				return fmt.Errorf("failed to read action with ID %q: %w", inputs.ID, err)
 			}
 
 			cli.renderer.ActionShow(action)
+
 			return nil
 		},
 	}
@@ -191,7 +193,7 @@ func createActionCmd(cli *cli) *cobra.Command {
 
 			triggers, err := getCurrentTriggers(cmd.Context(), cli)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to retrieve available triggers: %w", err)
 			}
 
 			triggerIDs := make([]string, 0)
@@ -241,6 +243,7 @@ func createActionCmd(cli *cli) *cobra.Command {
 			}
 
 			cli.renderer.ActionCreate(action)
+
 			return nil
 		},
 	}
@@ -294,7 +297,7 @@ func updateActionCmd(cli *cli) *cobra.Command {
 				return err
 			})
 			if err != nil {
-				return fmt.Errorf("failed to fetch action with ID %s: %w", inputs.ID, err)
+				return fmt.Errorf("failed to read action with ID %q: %w", inputs.ID, err)
 			}
 
 			if err := actionName.AskU(cmd, &inputs.Name, oldAction.Name); err != nil {
@@ -343,6 +346,7 @@ func updateActionCmd(cli *cli) *cobra.Command {
 			}
 
 			cli.renderer.ActionUpdate(updatedAction)
+
 			return nil
 		},
 	}
@@ -392,7 +396,7 @@ func deleteActionCmd(cli *cli) *cobra.Command {
 				for _, id := range ids {
 					if id != "" {
 						if err := cli.api.Action.Delete(cmd.Context(), id); err != nil {
-							errs = append(errs, err)
+							errs = append(errs, fmt.Errorf("failed to delete action with ID %q: %w", id, err))
 						}
 					}
 				}
@@ -425,7 +429,7 @@ func deployActionCmd(cli *cli) *cobra.Command {
   auth0 actions deploy <action-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if err := actionID.Pick(cmd, &inputs.ID, cli.undeployedActionPickerOptions); err != nil {
+				if err := actionID.Pick(cmd, &inputs.ID, cli.unDeployedActionPickerOptions); err != nil {
 					return err
 				}
 			} else {
@@ -433,19 +437,23 @@ func deployActionCmd(cli *cli) *cobra.Command {
 			}
 
 			var action *management.Action
+
 			if err := ansi.Waiting(func() (err error) {
 				if _, err = cli.api.Action.Deploy(cmd.Context(), inputs.ID); err != nil {
 					return fmt.Errorf("failed to deploy action with ID %q: %w", inputs.ID, err)
 				}
+
 				if action, err = cli.api.Action.Read(cmd.Context(), inputs.ID); err != nil {
-					return fmt.Errorf("failed to get deployed action with ID %q: %w", inputs.ID, err)
+					return fmt.Errorf("failed to read deployed action with ID %q: %w", inputs.ID, err)
 				}
+
 				return nil
 			}); err != nil {
 				return err
 			}
 
 			cli.renderer.ActionDeploy(action)
+
 			return nil
 		},
 	}
@@ -477,6 +485,7 @@ func openActionCmd(cli *cli) *cobra.Command {
 			}
 
 			openManageURL(cli, cli.Config.DefaultTenant, formatActionDetailsPath(url.PathEscape(inputs.ID)))
+
 			return nil
 		},
 	}
@@ -498,16 +507,16 @@ func (c *cli) actionPickerOptions(ctx context.Context) (pickerOptions, error) {
 	}
 
 	if len(opts) == 0 {
-		return nil, errors.New("There are currently no actions.")
+		return nil, errors.New("there are currently no actions to choose from. Create one by running: `auth0 actions create`")
 	}
 
 	return opts, nil
 }
 
-func (c *cli) undeployedActionPickerOptions(ctx context.Context) (pickerOptions, error) {
+func (c *cli) unDeployedActionPickerOptions(ctx context.Context) (pickerOptions, error) {
 	list, err := c.api.Action.List(ctx, management.Parameter("deployed", "false"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list actions: %w", err)
 	}
 
 	var opts pickerOptions
@@ -518,7 +527,7 @@ func (c *cli) undeployedActionPickerOptions(ctx context.Context) (pickerOptions,
 	}
 
 	if len(opts) == 0 {
-		return nil, errors.New("There are currently no actions to deploy.")
+		return nil, errors.New("there are currently no actions to deploy")
 	}
 
 	return opts, nil
@@ -535,7 +544,7 @@ func formatActionDetailsPath(id string) string {
 	return fmt.Sprintf("actions/library/details/%s", id)
 }
 
-func filterDeprecatedActionTriggers(list []*management.ActionTrigger) []*management.ActionTrigger {
+func filterOutDeprecatedActionTriggers(list []*management.ActionTrigger) []*management.ActionTrigger {
 	res := []*management.ActionTrigger{}
 	for _, t := range list {
 		if t.GetStatus() == "CURRENT" {
@@ -547,18 +556,21 @@ func filterDeprecatedActionTriggers(list []*management.ActionTrigger) []*managem
 
 func getCurrentTriggers(ctx context.Context, cli *cli) ([]*management.ActionTrigger, error) {
 	var triggers []*management.ActionTrigger
+
 	if err := ansi.Waiting(func() error {
 		list, err := cli.api.Action.Triggers(ctx)
 		if err != nil {
 			return err
 		}
+
 		triggers = list.Triggers
+
 		return nil
 	}); err != nil {
 		return nil, err
 	}
 
-	return filterDeprecatedActionTriggers(triggers), nil
+	return filterOutDeprecatedActionTriggers(triggers), nil
 }
 
 func actionTemplate(key string) string {

@@ -141,7 +141,7 @@ func listApisCmd(cli *cli) *cobra.Command {
 				},
 			)
 			if err != nil {
-				return fmt.Errorf("An unexpected error occurred while listing apis: %w", err)
+				return fmt.Errorf("failed to list APIs: %w", err)
 			}
 
 			var apis []*management.ResourceServer
@@ -191,7 +191,7 @@ func showAPICmd(cli *cli) *cobra.Command {
 				api, err = cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(inputs.ID))
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to get an API with Id '%s': %w", inputs.ID, err)
+				return fmt.Errorf("failed to read API with ID %q: %w", inputs.ID, err)
 			}
 
 			cli.renderer.APIShow(api, cli.json)
@@ -278,7 +278,7 @@ func createAPICmd(cli *cli) *cobra.Command {
 				return cli.api.ResourceServer.Create(cmd.Context(), api)
 			}); err != nil {
 				return fmt.Errorf(
-					"failed to create an API with name '%s' and identifier '%s': %w",
+					"failed to create API with name %q and identifier %q: %w",
 					inputs.Name,
 					inputs.Identifier,
 					err,
@@ -396,7 +396,7 @@ func updateAPICmd(cli *cli) *cobra.Command {
 			if err := ansi.Waiting(func() error {
 				return cli.api.ResourceServer.Update(cmd.Context(), current.GetID(), api)
 			}); err != nil {
-				return fmt.Errorf("failed to update the API with ID %q: %w", inputs.ID, err)
+				return fmt.Errorf("failed to update API with ID %q: %w", inputs.ID, err)
 			}
 
 			cli.renderer.APIUpdate(api)
@@ -449,13 +449,13 @@ func deleteAPICmd(cli *cli) *cobra.Command {
 				var errs []error
 				for _, id := range ids {
 					if id != "" {
-						if _, err := cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(id)); err != nil {
-							errs = append(errs, fmt.Errorf("Unable to delete API (%s): %w", id, err))
+						if _, err := cli.api.ResourceServer.Read(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("failed to delete API with ID %q: %w", id, err))
 							continue
 						}
 
-						if err := cli.api.ResourceServer.Delete(cmd.Context(), url.PathEscape(id)); err != nil {
-							errs = append(errs, fmt.Errorf("Unable to delete API (%s): %w", id, err))
+						if err := cli.api.ResourceServer.Delete(cmd.Context(), id); err != nil {
+							errs = append(errs, fmt.Errorf("failed to delete API with ID %q: %w", id, err))
 						}
 					}
 				}
@@ -496,21 +496,24 @@ func openAPICmd(cli *cli) *cobra.Command {
 			// So here if the value is not a URL, we then check if has the length of an ID
 			// If the length check fails, we know it's a non-URL audience value
 			// This will fail for non-URL audience values with the same length as the ID
-			// But it should cover the vast majority of users
+			// But it should cover the vast majority of users.
 			if _, err := url.ParseRequestURI(inputs.ID); err == nil || len(inputs.ID) != 24 {
 				if err := ansi.Waiting(func() error {
-					api, err := cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(inputs.ID))
+					api, err := cli.api.ResourceServer.Read(cmd.Context(), inputs.ID)
 					if err != nil {
 						return err
 					}
-					inputs.ID = auth0.StringValue(api.ID)
+
+					inputs.ID = api.GetID()
+
 					return nil
 				}); err != nil {
-					return fmt.Errorf("An unexpected error occurred while trying to get the API Id for '%s': %w", inputs.ID, err)
+					return fmt.Errorf("failed to read API with ID %q: %w", inputs.ID, err)
 				}
 			}
 
 			openManageURL(cli, cli.Config.DefaultTenant, formatAPISettingsPath(inputs.ID))
+
 			return nil
 		},
 	}
@@ -549,10 +552,11 @@ func listScopesCmd(cli *cli) *cobra.Command {
 				api, err = cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(inputs.ID))
 				return err
 			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred while getting scopes for an API with Id '%s': %w", inputs.ID, err)
+				return fmt.Errorf("failed to read scopes for API with ID %q: %w", inputs.ID, err)
 			}
 
 			cli.renderer.ScopesList(api.GetName(), api.GetScopes())
+
 			return nil
 		},
 	}
@@ -589,7 +593,7 @@ func (c *cli) apiPickerOptions(ctx context.Context) (pickerOptions, error) {
 func (c *cli) filteredAPIPickerOptions(ctx context.Context, include func(r *management.ResourceServer) bool) (pickerOptions, error) {
 	list, err := c.api.ResourceServer.List(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list APIs: %w", err)
 	}
 
 	// NOTE: because client names are not unique, we'll just number these
@@ -605,7 +609,7 @@ func (c *cli) filteredAPIPickerOptions(ctx context.Context, include func(r *mana
 	}
 
 	if len(opts) == 0 {
-		return nil, errors.New("There are currently no APIs.")
+		return nil, errors.New("there are currently no APIs to choose from. Create one by running: `auth0 apis create`")
 	}
 
 	return opts, nil

@@ -52,7 +52,7 @@ func TestOrganizationsPickerOptions(t *testing.T) {
 				t.Fail()
 			},
 			assertError: func(t testing.TB, err error) {
-				assert.ErrorContains(t, err, "There are currently no organizations.")
+				assert.ErrorContains(t, err, "there are currently no organizations to choose from. Create one by running: `auth0 orgs create`")
 			},
 		},
 		{

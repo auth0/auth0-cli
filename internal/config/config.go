@@ -17,7 +17,7 @@ import (
 var ErrConfigFileMissing = errors.New("config.json file is missing")
 
 // ErrNoAuthenticatedTenants is thrown when the config file has no authenticated tenants.
-var ErrNoAuthenticatedTenants = errors.New("Not logged in. Try `auth0 login`.")
+var ErrNoAuthenticatedTenants = errors.New("not logged in. Try `auth0 login`")
 
 // Config holds cli configuration settings.
 type Config struct {
