@@ -19,7 +19,7 @@ func ProgressBar[T comparable](desc string, items []T, fn func(int, T) error) er
 		bar := progressbar.Default(int64(len(items)), desc)
 		var errs []error
 		for i, item := range items {
-			bar.Add(1)
+			_ = bar.Add(1)
 			if err := fn(i, item); err != nil {
 				errs = append(errs, err)
 			}
