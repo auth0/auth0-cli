@@ -439,11 +439,11 @@ func deleteOrganizationCmd(cli *cli) *cobra.Command {
 
 			return ansi.ProgressBar("Deleting organization(s)", ids, func(_ int, id string) error {
 				if _, err := cli.api.Organization.Read(cmd.Context(), id); err != nil {
-					return fmt.Errorf("Failed to delete organization (%s): %w", id, err)
+					return fmt.Errorf("failed to delete organization (%s): %w", id, err)
 				}
 
 				if err := cli.api.Organization.Delete(cmd.Context(), id); err != nil {
-					return fmt.Errorf("Failed to delete organization (%s): %w", id, err)
+					return fmt.Errorf("failed to delete organization (%s): %w", id, err)
 				}
 				return nil
 			})

@@ -202,10 +202,10 @@ func deleteLogStreamCmd(cli *cli) *cobra.Command {
 			return ansi.ProgressBar("Deleting Log Stream(s)", ids, func(_ int, id string) error {
 				if id != "" {
 					if _, err := cli.api.LogStream.Read(cmd.Context(), id); err != nil {
-						return fmt.Errorf("Failed to delete log stream (%s): %w", id, err)
+						return fmt.Errorf("failed to delete log stream (%s): %w", id, err)
 					}
 					if err := cli.api.LogStream.Delete(cmd.Context(), id); err != nil {
-						return fmt.Errorf("Failed to delete log stream (%s): %w", id, err)
+						return fmt.Errorf("failed to delete log stream (%s): %w", id, err)
 					}
 				}
 				return nil

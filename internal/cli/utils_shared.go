@@ -186,7 +186,7 @@ func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName,
 		defer func() {
 			if callbackAdded {
 				if err := removeLocalCallbackURLFromClient(ctx, cli.api.Client, c); err != nil { // TODO: Make it a warning.
-					cli.renderer.Errorf("Failed to remove callback URL '%s' from client: %s", cliLoginTestingCallbackURL, err)
+					cli.renderer.Errorf("failed to remove callback URL '%s' from client: %s", cliLoginTestingCallbackURL, err)
 				}
 			}
 		}()

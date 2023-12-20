@@ -395,11 +395,11 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 			return ansi.ProgressBar("Deleting user(s)", ids, func(_ int, id string) error {
 				if id != "" {
 					if _, err := cli.api.User.Read(cmd.Context(), id); err != nil {
-						return fmt.Errorf("Failed to delete user (%s): %w", id, err)
+						return fmt.Errorf("failed to delete user (%s): %w", id, err)
 					}
 
 					if err := cli.api.User.Delete(cmd.Context(), id); err != nil {
-						return fmt.Errorf("Failed to delete user (%s): %w", id, err)
+						return fmt.Errorf("failed to delete user (%s): %w", id, err)
 					}
 				}
 				return nil

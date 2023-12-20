@@ -309,11 +309,11 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
 			return ansi.ProgressBar("Deleting Role(s)", ids, func(_ int, id string) error {
 				if id != "" {
 					if _, err := cli.api.Role.Read(cmd.Context(), id); err != nil {
-						return fmt.Errorf("Failed to delete role (%s): %w", id, err)
+						return fmt.Errorf("failed to delete role (%s): %w", id, err)
 					}
 
 					if err := cli.api.Role.Delete(cmd.Context(), id); err != nil {
-						return fmt.Errorf("Failed to delete role (%s): %w", id, err)
+						return fmt.Errorf("failed to delete role (%s): %w", id, err)
 					}
 				}
 				return nil
