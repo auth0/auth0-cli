@@ -2,6 +2,7 @@ package ansi
 
 import (
 	"errors"
+
 	"github.com/schollz/progressbar/v3"
 )
 
