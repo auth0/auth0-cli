@@ -446,11 +446,11 @@ func deleteAPICmd(cli *cli) *cobra.Command {
 			}
 
 			return ansi.ProgressBar("Deleting API(s)", ids, func(_ int, id string) error {
-				if _, err := cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(id)); err != nil {
+				if _, err := cli.api.ResourceServer.Read(cmd.Context(), id); err != nil {
 					return fmt.Errorf("failed to delete API with ID %q: %w", id, err)
 				}
 
-				if err := cli.api.ResourceServer.Delete(cmd.Context(), url.PathEscape(id)); err != nil {
+				if err := cli.api.ResourceServer.Delete(cmd.Context(), id); err != nil {
 					return fmt.Errorf("failed to delete API with ID %q: %w", id, err)
 				}
 				return nil
