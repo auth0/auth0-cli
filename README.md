@@ -80,7 +80,7 @@ go install github.com/auth0/auth0-cli/cmd/auth0@latest
    - **Linux**: `$ tar -xf auth0-cli_{version}_Linux_{architecture}.tar.gz`
    - **Windows**: Extract `auth0-cli_{version}_Windows_{architecture}.zip` using your preferred method of choice
 3. Make sure that the `PATH` and `HOME` environment variables include the folder where the binary was extracted.
-4. Run `./auth0`
+4. Run `auth0`
 
 > **Note**
 > Autocompletion instructions for supported platforms available by running `auth0 completion -h`
