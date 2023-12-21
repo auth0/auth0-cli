@@ -391,16 +391,13 @@ func deleteActionCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting action(s)", func() error {
-				var errs []error
-				for _, id := range ids {
-					if id != "" {
-						if err := cli.api.Action.Delete(cmd.Context(), id); err != nil {
-							errs = append(errs, fmt.Errorf("failed to delete action with ID %q: %w", id, err))
-						}
+			return ansi.ProgressBar("Deleting action(s)", ids, func(i int, id string) error {
+				if id != "" {
+					if err := cli.api.Action.Delete(cmd.Context(), id); err != nil {
+						return fmt.Errorf("failed to delete Action with ID %q: %w", id, err)
 					}
 				}
-				return errors.Join(errs...)
+				return nil
 			})
 		},
 	}

@@ -186,7 +186,7 @@ func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName,
 		defer func() {
 			if callbackAdded {
 				if err := removeLocalCallbackURLFromClient(ctx, cli.api.Client, c); err != nil { // TODO: Make it a warning.
-					cli.renderer.Errorf("Unable to remove callback URL '%s' from client: %s", cliLoginTestingCallbackURL, err)
+					cli.renderer.Errorf("failed to remove callback URL '%s' from client: %s", cliLoginTestingCallbackURL, err)
 				}
 			}
 		}()
@@ -275,7 +275,7 @@ func containsStr(s []string, u string) bool {
 func openManageURL(cli *cli, tenant string, path string) {
 	manageTenantURL := formatManageTenantURL(tenant, &cli.Config)
 	if len(manageTenantURL) == 0 || len(path) == 0 {
-		cli.renderer.Warnf("Unable to format the correct URL, please ensure you have run 'auth0 login' and try again.")
+		cli.renderer.Warnf("Failed to format the correct URL, please ensure you have run 'auth0 login' and try again.")
 		return
 	}
 

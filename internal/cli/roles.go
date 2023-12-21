@@ -306,21 +306,17 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting Role(s)", func() error {
-				var errs []error
-				for _, id := range ids {
-					if id != "" {
-						if _, err := cli.api.Role.Read(cmd.Context(), id); err != nil {
-							errs = append(errs, fmt.Errorf("failed to delete role with ID %q: %w", id, err))
-							continue
-						}
+			return ansi.ProgressBar("Deleting Role(s)", ids, func(_ int, id string) error {
+				if id != "" {
+					if _, err := cli.api.Role.Read(cmd.Context(), id); err != nil {
+						return fmt.Errorf("failed to delete role with ID %q: %w", id, err)
+					}
 
-						if err := cli.api.Role.Delete(cmd.Context(), id); err != nil {
-							errs = append(errs, fmt.Errorf("failed to delete role with ID %q: %w", id, err))
-						}
+					if err := cli.api.Role.Delete(cmd.Context(), id); err != nil {
+						return fmt.Errorf("failed to delete role with ID %q: %w", id, err)
 					}
 				}
-				return errors.Join(errs...)
+				return nil
 			})
 		},
 	}

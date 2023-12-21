@@ -199,21 +199,16 @@ func deleteLogStreamCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting Log Stream(s)", func() error {
-				var errs []error
-				for _, id := range ids {
-					if id != "" {
-						if _, err := cli.api.LogStream.Read(cmd.Context(), id); err != nil {
-							errs = append(errs, fmt.Errorf("failed to delete log stream with ID %q: %w", id, err))
-							continue
-						}
-						if err := cli.api.LogStream.Delete(cmd.Context(), id); err != nil {
-							errs = append(errs, fmt.Errorf("failed to delete log stream with ID %q: %w", id, err))
-						}
+			return ansi.ProgressBar("Deleting Log Stream(s)", ids, func(_ int, id string) error {
+				if id != "" {
+					if _, err := cli.api.LogStream.Read(cmd.Context(), id); err != nil {
+						return fmt.Errorf("failed to delete log stream with ID %q: %w", id, err)
+					}
+					if err := cli.api.LogStream.Delete(cmd.Context(), id); err != nil {
+						return fmt.Errorf("failed to delete log stream with ID %q: %w", id, err)
 					}
 				}
-
-				return errors.Join(errs...)
+				return nil
 			})
 		},
 	}

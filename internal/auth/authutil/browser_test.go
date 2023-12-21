@@ -49,7 +49,7 @@ func TestWaitForBrowserCallback(t *testing.T) {
 				_ = resp.Body.Close()
 			}()
 
-			assert.Contains(t, body, "Unable to extract code from request, please try authenticating again")
+			assert.Contains(t, body, "Failed to extract code from request, please try authenticating again")
 		})
 
 		code, state, callbackErr := WaitForBrowserCallback("localhost:1234")
