@@ -3,10 +3,11 @@ package display
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/auth0/go-auth0/management"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"testing"
+
+	"github.com/auth0/go-auth0/management"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRenderer_MembersList_json(t *testing.T) {
