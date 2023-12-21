@@ -350,11 +350,11 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 			return ansi.ProgressBar("Deleting Application(s)", ids, func(_ int, id string) error {
 				if id != "" {
 					if _, err := cli.api.Client.Read(cmd.Context(), id); err != nil {
-						return fmt.Errorf("failed to delete application (%s): %w", id, err)
+						return fmt.Errorf("failed to delete application with ID %q: %w", id, err)
 					}
 
 					if err := cli.api.Client.Delete(cmd.Context(), id); err != nil {
-						return fmt.Errorf("failed to delete application (%s): %w", id, err)
+						return fmt.Errorf("failed to delete application with ID %q: %w", id, err)
 					}
 				}
 				return nil

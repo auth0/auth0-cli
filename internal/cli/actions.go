@@ -393,7 +393,9 @@ func deleteActionCmd(cli *cli) *cobra.Command {
 
 			return ansi.ProgressBar("Deleting action(s)", ids, func(i int, id string) error {
 				if id != "" {
-					return cli.api.Action.Delete(cmd.Context(), id)
+					if err := cli.api.Action.Delete(cmd.Context(), id); err != nil {
+						return fmt.Errorf("failed to delete Action with ID %q: %w", id, err)
+					}
 				}
 				return nil
 			})

@@ -284,11 +284,11 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 			return ansi.ProgressBar("Deleting Rule(s)", ids, func(_ int, id string) error {
 				if id != "" {
 					if _, err := cli.api.Rule.Read(cmd.Context(), id); err != nil {
-						return fmt.Errorf("failed to delete rule (%s): %w", id, err)
+						return fmt.Errorf("failed to delete rule with ID %q: %w", id, err)
 					}
 
 					if err := cli.api.Rule.Delete(cmd.Context(), id); err != nil {
-						return fmt.Errorf("failed to delete rule (%s): %w", id, err)
+						return fmt.Errorf("failed to delete rule with ID %q: %w", id, err)
 					}
 				}
 				return nil
