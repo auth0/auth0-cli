@@ -22,6 +22,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -136,7 +137,9 @@ func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
 		Short: "Update the custom template for Universal Login",
 		Long:  "Update the custom template for the New Universal Login Experience.",
 		Example: `  auth0 universal-login templates update
-  auth0 ul templates update`,
+  auth0 ul templates update
+  cat login.liquid | auth0 ul templates update
+  echo "<html>{%- auth0:head -%}{%- auth0:widget -%}</html>" | auth0 ul templates update`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
@@ -159,6 +162,11 @@ func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
 					return fmt.Errorf("failed to select the desired template: %w", err)
 				}
 				templateData.Body = templateOptions.getValue(templateData.Body)
+			}
+
+			pipedTemplateHTML := iostream.PipedInput()
+			if len(pipedTemplateHTML) > 0 {
+				templateData.Body = string(pipedTemplateHTML)
 			}
 
 			if err := cli.editTemplateAndPreviewChanges(ctx, cmd, templateData); err != nil {
