@@ -78,7 +78,7 @@ func TestSecrets(t *testing.T) {
 	t.Run("it successfully stores an access token", func(t *testing.T) {
 		keyring.MockInit()
 
-		expectedAccessToken := randomStringOfLength((2048 * 5) + 1) // Some arbitrarily long random string
+		expectedAccessToken := randomStringOfLength((2048 * 5) + 1) // Some arbitrarily long random string.
 		err := StoreAccessToken(testTenantName, expectedAccessToken)
 		assert.NoError(t, err)
 
@@ -105,8 +105,8 @@ func TestSecrets(t *testing.T) {
 	t.Run("it successfully deletes all secrets for a tenant", func(t *testing.T) {
 		keyring.MockInit()
 
-		// Store keys and check they were set
-		expectedAccessToken := randomStringOfLength((2048 * 5) + 1) // Some arbitrarily long random string
+		// Store keys and check they were set.
+		expectedAccessToken := randomStringOfLength((2048 * 5) + 1) // Some arbitrarily long random string.
 		err := StoreAccessToken(testTenantName, expectedAccessToken)
 		assert.NoError(t, err)
 		actualAccessToken, err := GetAccessToken(testTenantName)
@@ -130,7 +130,7 @@ func TestSecrets(t *testing.T) {
 		err = DeleteSecretsForTenant(testTenantName)
 		assert.NoError(t, err)
 
-		// Assert that values were deleted
+		// Assert that values were deleted.
 		actualAccessToken, err = GetAccessToken(testTenantName)
 		assert.EqualError(t, err, keyring.ErrNotFound.Error())
 		assert.Equal(t, "", actualAccessToken)

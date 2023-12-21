@@ -37,7 +37,7 @@ type UserAPI interface {
 	// List all users.
 	List(ctx context.Context, opts ...management.RequestOption) (ul *management.UserList, err error)
 
-	// Search for users
+	// Search for users.
 	Search(ctx context.Context, opts ...management.RequestOption) (us *management.UserList, err error)
 
 	// Roles lists all roles associated with a user.

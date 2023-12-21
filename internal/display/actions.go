@@ -137,7 +137,7 @@ func actionStatus(v string) string {
 		return ansi.Blue(v)
 	case "built":
 		return ansi.Green(v)
-	default: // including "unspecified"
+	default: // Including "unspecified".
 		return v
 	}
 }

@@ -26,7 +26,7 @@ auth0 apis list [flags]
 
 ```
       --json         Output in json format.
-  -n, --number int   Number of APIs to retrieve. Minimum 1, maximum 1000. (default 50)
+  -n, --number int   Number of APIs to retrieve. Minimum 1, maximum 1000. (default 100)
 ```
 
 

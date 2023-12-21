@@ -128,7 +128,7 @@ func TestActionsDeployCmd(t *testing.T) {
 		cmd.SetArgs([]string{actionID})
 		err := cmd.Execute()
 
-		assert.EqualError(t, err, `failed to get deployed action with ID "1221c74c-cfd6-40db-af13-7bc9bb1c38db": 400 Bad Request`)
+		assert.EqualError(t, err, `failed to read deployed action with ID "1221c74c-cfd6-40db-af13-7bc9bb1c38db": 400 Bad Request`)
 	})
 }
 
@@ -170,7 +170,7 @@ func TestActionsPickerOptions(t *testing.T) {
 				t.Fail()
 			},
 			assertError: func(t testing.TB, err error) {
-				assert.ErrorContains(t, err, "There are currently no actions.")
+				assert.ErrorContains(t, err, "there are currently no actions to choose from. Create one by running: `auth0 actions create`")
 			},
 		},
 		{
@@ -249,7 +249,7 @@ func TestUndeployedActionsPickerOptions(t *testing.T) {
 				t.Fail()
 			},
 			assertError: func(t testing.TB, err error) {
-				assert.ErrorContains(t, err, "There are currently no actions to deploy.")
+				assert.ErrorContains(t, err, "there are currently no actions to deploy")
 			},
 		},
 		{
@@ -279,7 +279,7 @@ func TestUndeployedActionsPickerOptions(t *testing.T) {
 				api: &auth0.API{Action: actionAPI},
 			}
 
-			options, err := cli.undeployedActionPickerOptions(context.Background())
+			options, err := cli.unDeployedActionPickerOptions(context.Background())
 
 			if err != nil {
 				test.assertError(t, err)

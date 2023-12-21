@@ -50,7 +50,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - number flag invalid, please pass a number between 1 and 1000
+        - Number flag invalid, please pass a number between 1 and 1000
 
   007 - users update minimal flags:
     command: auth0 users update $(./test/integration/scripts/get-user-id.sh) --json --no-input
@@ -93,7 +93,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - number flag invalid, please pass a number between 1 and 1000
+        - Number flag invalid, please pass a number between 1 and 1000
 
   013 - users roles add:
     command: auth0 users roles add $(./test/integration/scripts/get-user-id.sh) -r $(./test/integration/scripts/get-role-id.sh)

@@ -73,7 +73,9 @@ func WaitUntilUserLogsIn(ctx context.Context, httpClient *http.Client, state Sta
 			if err != nil {
 				return Result{}, fmt.Errorf("cannot get device code: %w", err)
 			}
-			defer r.Body.Close()
+			defer func() {
+				_ = r.Body.Close()
+			}()
 
 			var res struct {
 				AccessToken      string  `json:"access_token"`
@@ -118,7 +120,7 @@ func WaitUntilUserLogsIn(ctx context.Context, httpClient *http.Client, state Sta
 
 var RequiredScopes = []string{
 	"openid",
-	"offline_access", // for retrieving refresh token
+	"offline_access", // For retrieving refresh token.
 	"create:clients", "delete:clients", "read:clients", "update:clients",
 	"read:client_grants",
 	"create:resource_servers", "delete:resource_servers", "read:resource_servers", "update:resource_servers",
@@ -167,7 +169,9 @@ func GetDeviceCode(ctx context.Context, httpClient *http.Client, additionalScope
 	if err != nil {
 		return State{}, fmt.Errorf("failed to send the request: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() {
+		_ = response.Body.Close()
+	}()
 
 	if response.StatusCode != http.StatusOK {
 		bodyBytes, err := io.ReadAll(response.Body)

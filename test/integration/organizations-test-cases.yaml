@@ -22,7 +22,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - number flag invalid, please pass a number between 1 and 1000
+        - Number flag invalid, please pass a number between 1 and 1000
 
   004 - create organization and check json output:
     command: auth0 orgs create --name integration-test-org-new --display "Integration Test Organization" --json --no-input
@@ -49,7 +49,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - failed to create an organization with name 'integration-test-org-new2'
+        - Failed to create organization with name "integration-test-org-new2"
 
   007 - list organizations with data:
     command: auth0 orgs list
@@ -81,7 +81,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - "Unable to get an organization with ID 'this-org-id-does-not-exist'"
+        - "Failed to read organization with ID \"this-org-id-does-not-exist\""
 
   011 - update organization with minimal flags:
     command: auth0 orgs update $(./test/integration/scripts/get-org-id.sh) --no-input
@@ -151,7 +151,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - number flag invalid, please pass a number between 1 and 1000
+        - Number flag invalid, please pass a number between 1 and 1000
     config:
       retries: 3
 
@@ -164,7 +164,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - number flag invalid, please pass a number between 1 and 1000
+        - Number flag invalid, please pass a number between 1 and 1000
 
   021 - list organization roles members:
     command: auth0 orgs roles members list $(./test/integration/scripts/get-org-id.sh)
@@ -175,4 +175,4 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - number flag invalid, please pass a number between 1 and 1000
+        - Number flag invalid, please pass a number between 1 and 1000

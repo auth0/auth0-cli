@@ -174,7 +174,7 @@ func setupTestDIRAndImportData(t *testing.T) (string, importDataList) {
 			ImportID:     "actionID_1",
 		},
 		{
-			ResourceName: "auth0_action.MyTestAction", //NOTE: duplicate name
+			ResourceName: "auth0_action.MyTestAction", // NOTE: duplicate name.
 			ImportID:     "actionID_2",
 		},
 	}
@@ -206,7 +206,7 @@ provider "auth0" {
   debug = true
 }
 `
-	// Read the file content and check if it matches the expected content
+	// Read the file content and check if it matches the expected content.
 	content, err := os.ReadFile(filePath)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedContent, string(content))
@@ -240,7 +240,7 @@ import {
 	err = tmpl.Execute(&expectedContent, data)
 	require.NoError(t, err)
 
-	// Read the file content and check if it matches the expected content
+	// Read the file content and check if it matches the expected content.
 	content, err := os.ReadFile(filePath)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedContent.String(), string(content))
@@ -494,7 +494,7 @@ func TestSanitizeResourceName(t *testing.T) {
 		input    string
 		expected string
 	}{
-		// Test cases with valid names
+		// Test cases with valid names.
 		{"ValidName123", "validname123"},
 		{"_Another_Valid-Name", "another_valid_name"},
 		{"name_with_123", "name_with_123"},
@@ -503,7 +503,7 @@ func TestSanitizeResourceName(t *testing.T) {
 		{"multiple          spaces       between", "multiple_spaces_between"},
 		{"https://travel0.us.auth0.com/api/v2/", "https_travel0_us_auth0_com_api_v2"},
 
-		// Test cases with invalid names to be sanitized
+		// Test cases with invalid names to be sanitized.
 		{"Invalid@Name", "invalid_name"},
 		{"Invalid Name", "invalid_name"},
 		{"123 Starts With Number", "starts_with_number"},
@@ -523,17 +523,15 @@ func TestCheckTerraformProviderAndCLIDomainsMatch(t *testing.T) {
 	t.Run("it should return no error if provided domain and TF provider env var domain match", func(t *testing.T) {
 		domain := "travel0.us.auth0.com"
 
-		os.Setenv("AUTH0_DOMAIN", domain)
+		t.Setenv("AUTH0_DOMAIN", domain)
 		err := checkTerraformProviderAndCLIDomainsMatch(domain)
 		assert.NoError(t, err)
-		os.Unsetenv("AUTH0_DOMAIN")
 	})
 
 	t.Run("it should return an error if provided domain and TF provider env var domain do not match", func(t *testing.T) {
-		os.Setenv("AUTH0_DOMAIN", "different-tenant.eu.auth0.com")
+		t.Setenv("AUTH0_DOMAIN", "different-tenant.eu.auth0.com")
 		err := checkTerraformProviderAndCLIDomainsMatch("travel0.us.auth0.com")
 		assert.Error(t, err)
-		assert.Equal(t, err.Error(), "Terraform provider tenant domain 'different-tenant.eu.auth0.com' does not match current CLI tenant 'travel0.us.auth0.com'")
-		os.Unsetenv("AUTH0_DOMAIN")
+		assert.Equal(t, err.Error(), "terraform provider tenant domain \"different-tenant.eu.auth0.com\" does not match current CLI tenant \"travel0.us.auth0.com\"")
 	})
 }

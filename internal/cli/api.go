@@ -157,7 +157,9 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 		}); err != nil {
 			return fmt.Errorf("failed to send request: %w", err)
 		}
-		defer response.Body.Close()
+		defer func() {
+			_ = response.Body.Close()
+		}()
 
 		if err := isInsufficientScopeError(response); err != nil {
 			return err
@@ -299,7 +301,7 @@ func isInsufficientScopeError(r *http.Response) error {
 	return fmt.Errorf(
 		"request failed because access token lacks scope: %s.\n "+
 			"If authenticated via client credentials, add this scope to the designated client. "+
-			"If authenticated as a user, request this scope during login by running `auth0 login --scopes %s`.",
+			"If authenticated as a user, request this scope during login by running `auth0 login --scopes %s`",
 		recommendedScopeToAdd,
 		recommendedScopeToAdd,
 	)

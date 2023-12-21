@@ -23,7 +23,9 @@ func TestWaitForBrowserCallback(t *testing.T) {
 			assert.NoError(t, err)
 			body := string(bytes)
 
-			defer resp.Body.Close()
+			defer func() {
+				_ = resp.Body.Close()
+			}()
 			assert.Contains(t, body, "You can close the window and go back to the CLI to see the user info and tokens.")
 		})
 
@@ -43,9 +45,11 @@ func TestWaitForBrowserCallback(t *testing.T) {
 			bytes, err := io.ReadAll(resp.Body)
 			assert.NoError(t, err)
 			body := string(bytes)
-			defer resp.Body.Close()
+			defer func() {
+				_ = resp.Body.Close()
+			}()
 
-			assert.Contains(t, body, "Unable to extract code from request, please try authenticating again")
+			assert.Contains(t, body, "Failed to extract code from request, please try authenticating again")
 		})
 
 		code, state, callbackErr := WaitForBrowserCallback("localhost:1234")
@@ -65,7 +69,9 @@ func TestWaitForBrowserCallback(t *testing.T) {
 
 		time.Sleep(1 * time.Second)
 
-		defer s.Close()
+		defer func() {
+			_ = s.Close()
+		}()
 
 		code, state, callbackErr := WaitForBrowserCallback("localhost:1234")
 

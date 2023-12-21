@@ -98,20 +98,24 @@ func listRulesCmd(cli *cli) *cobra.Command {
   auth0 rules ls --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var rules []*management.Rule
+
 			err := ansi.Waiting(func() error {
 				ruleList, err := cli.api.Rule.List(cmd.Context())
 				if err != nil {
 					return err
 				}
+
 				rules = ruleList.Rules
+
 				return nil
 			})
-
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to list rules: %w", err)
 			}
+
 			cli.renderer.Warnf(rulesDeprecationLogText)
 			cli.renderer.RulesList(rules)
+
 			return nil
 		},
 	}
@@ -150,7 +154,7 @@ func createRuleCmd(cli *cli) *cobra.Command {
 			if len(pipedInput) > 0 {
 				err := json.Unmarshal(pipedInput, rule)
 				if err != nil {
-					return fmt.Errorf("Invalid JSON input: %w", err)
+					return fmt.Errorf("failed to unmarshal JSON input: %w", err)
 				}
 			} else {
 				if err := ruleName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -169,7 +173,7 @@ func createRuleCmd(cli *cli) *cobra.Command {
 					cli.ruleEditorHint,
 				)
 				if err != nil {
-					return fmt.Errorf("Failed to capture input from the editor: %w", err)
+					return fmt.Errorf("failed to capture input from the editor: %w", err)
 				}
 
 				rule = &management.Rule{
@@ -179,16 +183,15 @@ func createRuleCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			err := ansi.Waiting(func() error {
+			if err := ansi.Waiting(func() error {
 				return cli.api.Rule.Create(cmd.Context(), rule)
-			})
-
-			if err != nil {
-				return fmt.Errorf("Unable to create rule: %w", err)
+			}); err != nil {
+				return fmt.Errorf("failed to create rule: %w", err)
 			}
 
 			cli.renderer.Warnf(rulesDeprecationLogText)
 			cli.renderer.RuleCreate(rule)
+
 			return nil
 		},
 	}
@@ -219,8 +222,7 @@ func showRuleCmd(cli *cli) *cobra.Command {
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
-				err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
-				if err != nil {
+				if err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions); err != nil {
 					return err
 				}
 			}
@@ -234,11 +236,12 @@ func showRuleCmd(cli *cli) *cobra.Command {
 			})
 
 			if err != nil {
-				return fmt.Errorf("Unable to load rule: %w", err)
+				return fmt.Errorf("failed to read rule with ID %q: %w", inputs.ID, err)
 			}
 
 			cli.renderer.Warnf(rulesDeprecationLogText)
 			cli.renderer.RuleShow(rule)
+
 			return nil
 		},
 	}
@@ -265,8 +268,7 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ids := make([]string, len(args))
 			if len(args) == 0 {
-				err := ruleID.PickMany(cmd, &ids, cli.rulePickerOptions)
-				if err != nil {
+				if err := ruleID.PickMany(cmd, &ids, cli.rulePickerOptions); err != nil {
 					return err
 				}
 			} else {
@@ -279,21 +281,17 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting Rule(s)", func() error {
-				var errs []error
-				for _, id := range ids {
-					if id != "" {
-						if _, err := cli.api.Rule.Read(cmd.Context(), id); err != nil {
-							errs = append(errs, fmt.Errorf("Unable to delete rule (%s): %w", id, err))
-							continue
-						}
+			return ansi.ProgressBar("Deleting Rule(s)", ids, func(_ int, id string) error {
+				if id != "" {
+					if _, err := cli.api.Rule.Read(cmd.Context(), id); err != nil {
+						return fmt.Errorf("failed to delete rule with ID %q: %w", id, err)
+					}
 
-						if err := cli.api.Rule.Delete(cmd.Context(), id); err != nil {
-							errs = append(errs, fmt.Errorf("Unable to delete rule (%s): %w", id, err))
-						}
+					if err := cli.api.Rule.Delete(cmd.Context(), id); err != nil {
+						return fmt.Errorf("failed to delete rule with ID %q: %w", id, err)
 					}
 				}
-				return errors.Join(errs...)
+				return nil
 			})
 		},
 	}
@@ -349,7 +347,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 					return err
 				})
 				if err != nil {
-					return fmt.Errorf("failed to fetch rule with ID %s: %w", inputs.ID, err)
+					return fmt.Errorf("failed to fetch rule with ID %q: %w", inputs.ID, err)
 				}
 
 				if err := ruleName.AskU(cmd, &inputs.Name, oldRule.Name); err != nil {
@@ -392,7 +390,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 				return cli.api.Rule.Update(cmd.Context(), inputs.ID, updatedRule)
 			})
 			if err != nil {
-				return fmt.Errorf("failed to update rule with ID %s: %w", inputs.ID, err)
+				return fmt.Errorf("failed to update rule with ID %q: %w", inputs.ID, err)
 			}
 
 			cli.renderer.Warnf(rulesDeprecationLogText)
@@ -429,8 +427,7 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
-				err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
-				if err != nil {
+				if err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions); err != nil {
 					return err
 				}
 			}
@@ -442,23 +439,22 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 				return err
 			})
 			if err != nil {
-				return fmt.Errorf("Failed to fetch rule with ID: %s %v", inputs.ID, err)
+				return fmt.Errorf("failed to fetch rule with ID %q: %w", inputs.ID, err)
 			}
 
 			rule = &management.Rule{
 				Enabled: auth0.Bool(true),
 			}
 
-			err = ansi.Waiting(func() error {
+			if err = ansi.Waiting(func() error {
 				return cli.api.Rule.Update(cmd.Context(), inputs.ID, rule)
-			})
-
-			if err != nil {
-				return err
+			}); err != nil {
+				return fmt.Errorf("failed to update rule with ID %q: %w", inputs.ID, err)
 			}
 
 			cli.renderer.Warnf(rulesDeprecationLogText)
 			cli.renderer.RuleEnable(rule)
+
 			return nil
 		},
 	}
@@ -486,32 +482,28 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
-				err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
-				if err != nil {
+				if err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions); err != nil {
 					return err
 				}
 			}
 
 			var rule *management.Rule
-			err := ansi.Waiting(func() error {
-				var err error
+			err := ansi.Waiting(func() (err error) {
 				rule, err = cli.api.Rule.Read(cmd.Context(), inputs.ID)
 				return err
 			})
 			if err != nil {
-				return fmt.Errorf("Failed to fetch rule with ID: %s %v", inputs.ID, err)
+				return fmt.Errorf("failed to fetch rule with ID %q: %w", inputs.ID, err)
 			}
 
 			rule = &management.Rule{
 				Enabled: auth0.Bool(false),
 			}
 
-			err = ansi.Waiting(func() error {
+			if err = ansi.Waiting(func() error {
 				return cli.api.Rule.Update(cmd.Context(), inputs.ID, rule)
-			})
-
-			if err != nil {
-				return err
+			}); err != nil {
+				return fmt.Errorf("failed to update rule with ID %q: %w", inputs.ID, err)
 			}
 
 			cli.renderer.RuleDisable(rule)
@@ -538,7 +530,7 @@ func (c *cli) rulePickerOptions(ctx context.Context) (pickerOptions, error) {
 	}
 
 	if len(opts) == 0 {
-		return nil, errors.New("There are currently no rules.")
+		return nil, errors.New("there are currently no rules to choose from")
 	}
 
 	return opts, nil

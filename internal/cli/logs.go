@@ -72,7 +72,7 @@ func listLogsCmd(cli *cli) *cobra.Command {
 			}
 			list, err := getLatestLogs(cmd.Context(), cli, inputs.Num, inputs.Filter)
 			if err != nil {
-				return fmt.Errorf("failed to get logs: %w", err)
+				return fmt.Errorf("failed to list logs: %w", err)
 			}
 
 			hasFilter := inputs.Filter != ""
@@ -82,7 +82,7 @@ func listLogsCmd(cli *cli) *cobra.Command {
 	}
 
 	logsFilter.RegisterString(cmd, &inputs.Filter, "")
-	logsNum.RegisterInt(cmd, &inputs.Num, 100)
+	logsNum.RegisterInt(cmd, &inputs.Num, defaultPageSize)
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
@@ -114,7 +114,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 			}
 			list, err := getLatestLogs(cmd.Context(), cli, inputs.Num, inputs.Filter)
 			if err != nil {
-				return fmt.Errorf("failed to get logs: %w", err)
+				return fmt.Errorf("failed to list logs: %w", err)
 			}
 
 			logsCh := make(chan []*management.Log)
