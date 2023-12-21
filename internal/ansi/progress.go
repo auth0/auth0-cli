@@ -5,13 +5,12 @@ import (
 
 	"github.com/schollz/progressbar/v3"
 )
+
 // ProgressBar will display progress indication for the given items.
 func ProgressBar[T comparable](desc string, items []T, fn func(int, T) error) error {
 	switch len(items) {
 	case 0:
-		return Spinner(desc, func() error {
-			return nil
-		})
+		return nil
 	case 1:
 		return Spinner(desc, func() error {
 			return fn(1, items[0])
