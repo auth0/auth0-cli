@@ -97,6 +97,18 @@ func TestRenderer_Results(t *testing.T) {
 			givenFormat:     string(OutputFormatJSON),
 			expectedResults: "[]",
 		},
+		{
+			name: "it can correctly output members as csv",
+			givenData: []View{
+				&membersView{
+					ID:    "123",
+					Name:  "John",
+					Email: "john@example.com",
+				},
+			},
+			givenFormat:     string(OutputFormatCSV),
+			expectedResults: "ID,Name,Email,Picture\n123,John,john@example.com,\n",
+		},
 	}
 
 	for _, testCase := range testCases {
