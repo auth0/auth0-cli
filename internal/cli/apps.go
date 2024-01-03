@@ -222,7 +222,8 @@ func listAppsCmd(cli *cli) *cobra.Command {
   auth0 apps ls
   auth0 apps list --reveal-secrets
   auth0 apps list --reveal-secrets --number 100
-  auth0 apps ls -r -n 100 --json`,
+  auth0 apps ls -r -n 100 --json
+  auth0 apps ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
 				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
@@ -258,6 +259,7 @@ func listAppsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 	appNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 

@@ -71,7 +71,8 @@ func showUserRolesCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 users roles show
   auth0 users roles show <user-id>
   auth0 users roles show <user-id> --number 100
-  auth0 users roles show <user-id> -n 100 --json`,
+  auth0 users roles show <user-id> -n 100 --json
+  auth0 users roles show <user-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.ID); err != nil {
@@ -117,6 +118,7 @@ func showUserRolesCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	userRolesNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd

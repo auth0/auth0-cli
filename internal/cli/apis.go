@@ -119,7 +119,8 @@ func listApisCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 apis list
   auth0 apis ls
   auth0 apis ls --number 100
-  auth0 apis ls -n 100 --json`,
+  auth0 apis ls -n 100 --json
+  auth0 apis ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
 				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
@@ -156,6 +157,7 @@ func listApisCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	apiNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
@@ -528,7 +530,8 @@ func listScopesCmd(cli *cli) *cobra.Command {
 		Long:    "List the scopes of an API. To update scopes, run: `auth0 apis update <id|audience> -s <scopes>`.",
 		Example: `  auth0 apis scopes list
   auth0 apis scopes ls <api-id|api-audience>
-  auth0 apis scopes ls <api-id|api-audience> --json`,
+  auth0 apis scopes ls <api-id|api-audience> --json
+  auth0 apis scopes ls <api-id|api-audience> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
@@ -556,6 +559,7 @@ func listScopesCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 
 	return cmd
 }
