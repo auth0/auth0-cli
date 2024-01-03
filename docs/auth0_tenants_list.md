@@ -17,9 +17,17 @@ auth0 tenants list [flags]
 ```
   auth0 tenants list
   auth0 tenants ls
+  auth0 tenants ls --json
+  auth0 tenants ls --csv
 ```
 
 
+## Flags
+
+```
+      --csv    Output in csv format.
+      --json   Output in json format.
+```
 
 
 ## Inherited Flags

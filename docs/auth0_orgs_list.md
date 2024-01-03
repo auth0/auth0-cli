@@ -18,6 +18,7 @@ auth0 orgs list [flags]
   auth0 orgs list
   auth0 orgs ls
   auth0 orgs ls --json
+  auth0 orgs ls --csv
   auth0 orgs ls -n 100
 ```
 
@@ -25,6 +26,7 @@ auth0 orgs list [flags]
 ## Flags
 
 ```
+      --csv          Output in csv format.
       --json         Output in json format.
   -n, --number int   Number of organizations to retrieve. Minimum 1, maximum 1000. (default 100)
 ```

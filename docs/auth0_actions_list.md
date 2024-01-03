@@ -18,12 +18,14 @@ auth0 actions list [flags]
   auth0 actions list
   auth0 actions ls
   auth0 actions ls --json
+  auth0 actions ls --csv
 ```
 
 
 ## Flags
 
 ```
+      --csv    Output in csv format.
       --json   Output in json format.
 ```
 
