@@ -154,7 +154,8 @@ func searchUsersCmd(cli *cli) *cobra.Command {
   auth0 users search --query user_id:"<user-id>"
   auth0 users search --query name:"Bob" --sort "name:1"
   auth0 users search -q name:"Bob" -s "name:1" --number 200
-  auth0 users search -q name:"Bob" -s "name:1" -n 200 --json`,
+  auth0 users search -q name:"Bob" -s "name:1" -n 200 --json
+  auth0 users search -q name:"Bob" -s "name:1" -n 200 --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := userQuery.Ask(cmd, &inputs.query, nil); err != nil {
 				return err
@@ -205,6 +206,7 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	userQuery.RegisterString(cmd, &inputs.query, "")
 	userSort.RegisterString(cmd, &inputs.sort, "")
 	userNumber.RegisterInt(cmd, &inputs.number, defaultPageSize)
