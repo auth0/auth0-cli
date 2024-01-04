@@ -18,12 +18,14 @@ auth0 apis scopes list [flags]
   auth0 apis scopes list
   auth0 apis scopes ls <api-id|api-audience>
   auth0 apis scopes ls <api-id|api-audience> --json
+  auth0 apis scopes ls <api-id|api-audience> --csv
 ```
 
 
 ## Flags
 
 ```
+      --csv    Output in csv format.
       --json   Output in json format.
 ```
 

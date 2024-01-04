@@ -18,12 +18,14 @@ auth0 logs streams list [flags]
   auth0 logs streams list
   auth0 logs streams ls
   auth0 logs streams ls --json
+  auth0 logs streams ls --csv
 ```
 
 
 ## Flags
 
 ```
+      --csv    Output in csv format.
       --json   Output in json format.
 ```
 

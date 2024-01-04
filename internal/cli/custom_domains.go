@@ -102,7 +102,8 @@ func listCustomDomainsCmd(cli *cli) *cobra.Command {
 		Long:    "List your existing custom domains. To create one, run: `auth0 domains create`.",
 		Example: `  auth0 domains list
   auth0 domains ls
-  auth0 domains ls --json`,
+  auth0 domains ls --json
+  auth0 domains ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list []*management.CustomDomain
 
@@ -120,6 +121,8 @@ func listCustomDomainsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
 
 	return cmd
 }

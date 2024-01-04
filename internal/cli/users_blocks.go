@@ -37,7 +37,8 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 users blocks list <user-id|username|email|phone-number>
   auth0 users blocks list <user-id|username|email|phone-number> --json
   auth0 users blocks list "auth0|61b5b6e90783fa19f7c57dad"
-  auth0 users blocks list "frederik@travel0.com"`,
+  auth0 users blocks list "frederik@travel0.com"
+  auth0 users blocks list <user-id|username|email|phone-number> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userIdentifier.Ask(cmd, &inputs.userIdentifier); err != nil {
@@ -67,6 +68,8 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
 
 	return cmd
 }

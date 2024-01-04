@@ -18,12 +18,14 @@ auth0 domains list [flags]
   auth0 domains list
   auth0 domains ls
   auth0 domains ls --json
+  auth0 domains ls --csv
 ```
 
 
 ## Flags
 
 ```
+      --csv    Output in csv format.
       --json   Output in json format.
 ```
 

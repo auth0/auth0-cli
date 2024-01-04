@@ -1,6 +1,7 @@
 package display
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,11 +15,12 @@ import (
 	"github.com/auth0/auth0-cli/internal/iostream"
 )
 
+type OutputFormat string
+
 const (
 	OutputFormatJSON OutputFormat = "json"
+	OutputFormatCSV  OutputFormat = "csv"
 )
-
-type OutputFormat string
 
 type Renderer struct {
 	Tenant string
@@ -106,6 +108,15 @@ func (r *Renderer) Results(data []View) {
 			list = append(list, item.Object())
 		}
 		r.JSONResult(list)
+	case OutputFormatCSV:
+		rows := make([][]string, 0, len(data))
+		for _, d := range data {
+			rows = append(rows, d.AsTableRow())
+		}
+		if err := writeCSV(r.ResultWriter, data[0].AsTableHeader(), rows); err != nil {
+			r.Errorf("couldn't render results as csv: %v", err)
+			return
+		}
 	default:
 		rows := make([][]string, 0, len(data))
 		for _, d := range data {
@@ -218,6 +229,19 @@ func writeTable(w io.Writer, header []string, data [][]string) {
 		table.Append(v)
 	}
 	table.Render()
+}
+
+func writeCSV(w io.Writer, header []string, data [][]string) error {
+	sheet := csv.NewWriter(w)
+	if err := sheet.Write(header); err != nil {
+		return fmt.Errorf("error writing csv header: %w", err)
+	}
+
+	if err := sheet.WriteAll(data); err != nil {
+		return fmt.Errorf("error writing csv data: %w", err)
+	}
+
+	return nil
 }
 
 func timeAgo(ts time.Time) string {

@@ -95,7 +95,8 @@ func listRulesCmd(cli *cli) *cobra.Command {
 		Long:    rulesDeprecationDocumentationText + "List your existing rules. To create one, run: `auth0 rules create`.",
 		Example: `  auth0 rules list
   auth0 rules ls
-  auth0 rules ls --json`,
+  auth0 rules ls --json
+  auth0 rules ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var rules []*management.Rule
 
@@ -121,6 +122,8 @@ func listRulesCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
 
 	return cmd
 }

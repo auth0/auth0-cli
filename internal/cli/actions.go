@@ -98,7 +98,8 @@ func listActionsCmd(cli *cli) *cobra.Command {
 		Long:    "List your existing actions. To create one, run: `auth0 actions create`.",
 		Example: `  auth0 actions list
   auth0 actions ls
-  auth0 actions ls --json`,
+  auth0 actions ls --json
+  auth0 actions ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ActionList
 
@@ -116,6 +117,8 @@ func listActionsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
 
 	return cmd
 }

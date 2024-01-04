@@ -122,6 +122,7 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 orgs list
   auth0 orgs ls
   auth0 orgs ls --json
+  auth0 orgs ls --csv
   auth0 orgs ls -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
@@ -159,6 +160,9 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+
 	organizationNumber.Help = "Number of organizations to retrieve. Minimum 1, maximum 1000."
 	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
@@ -515,7 +519,8 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 orgs members list
   auth0 orgs members ls <org-id>
   auth0 orgs members list <org-id> --number 100
-  auth0 orgs members ls <org-id> -n 100 --json`,
+  auth0 orgs members ls <org-id> -n 100 --json
+  auth0 orgs members ls <org-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
 				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
@@ -544,7 +549,10 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
 
 	organizationNumber.Help = "Number of organization members to retrieve. Minimum 1, maximum 1000."
 	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 
 	return cmd
@@ -580,7 +588,8 @@ func listRolesOrganizationCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 orgs roles list
   auth0 orgs roles ls <org-id>
   auth0 orgs roles list <org-id> --number 100
-  auth0 orgs roles ls <org-id> -n 100 --json`,
+  auth0 orgs roles ls <org-id> -n 100 --json
+  auth0 orgs roles ls <org-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
 				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
@@ -615,6 +624,8 @@ func listRolesOrganizationCmd(cli *cli) *cobra.Command {
 	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
 
 	return cmd
 }
@@ -651,7 +662,8 @@ func listMembersRolesOrganizationCmd(cli *cli) *cobra.Command {
   auth0 orgs roles members list <org-id> --role-id role
   auth0 orgs roles members list <org-id> --role-id role --number 100
   auth0 orgs roles members ls <org-id> -r role -n 100
-  auth0 orgs roles members ls <org-id> -r role -n 100 --json`,
+  auth0 orgs roles members ls <org-id> -r role -n 100 --json
+  auth0 orgs roles members ls <org-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
 				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
@@ -689,7 +701,11 @@ func listMembersRolesOrganizationCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
+
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+
 	roleIdentifier.RegisterString(cmd, &inputs.RoleID, "")
 	organizationNumber.Help = "Number of members to retrieve. Minimum 1, maximum 1000."
 	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)

@@ -65,7 +65,9 @@ func listLogsCmd(cli *cli) *cobra.Command {
   auth0 logs list --filter "user_name:<user-name>"
   auth0 logs list --filter "ip:<ip>"
   auth0 logs list --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
-  auth0 logs ls -n 250`,
+  auth0 logs ls -n 250
+  auth0 logs ls --json
+  auth0 logs ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Num < 1 || inputs.Num > 1000 {
 				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
@@ -85,6 +87,8 @@ func listLogsCmd(cli *cli) *cobra.Command {
 	logsNum.RegisterInt(cmd, &inputs.Num, defaultPageSize)
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
 
 	return cmd
 }
@@ -170,7 +174,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 	}
 
 	logsFilter.RegisterString(cmd, &inputs.Filter, "")
-	logsNum.RegisterInt(cmd, &inputs.Num, 100)
+	logsNum.RegisterInt(cmd, &inputs.Num, defaultPageSize)
 
 	return cmd
 }
