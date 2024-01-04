@@ -260,6 +260,8 @@ func listAppsCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 	appNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 

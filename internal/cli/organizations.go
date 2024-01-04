@@ -161,6 +161,8 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+
 	organizationNumber.Help = "Number of organizations to retrieve. Minimum 1, maximum 1000."
 	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
@@ -547,8 +549,10 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
 
 	organizationNumber.Help = "Number of organization members to retrieve. Minimum 1, maximum 1000."
 	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 
 	return cmd
@@ -621,6 +625,7 @@ func listRolesOrganizationCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
 
 	return cmd
 }
@@ -696,8 +701,11 @@ func listMembersRolesOrganizationCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
+
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+
 	roleIdentifier.RegisterString(cmd, &inputs.RoleID, "")
 	organizationNumber.Help = "Number of members to retrieve. Minimum 1, maximum 1000."
 	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)

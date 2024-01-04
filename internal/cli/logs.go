@@ -88,6 +88,7 @@ func listLogsCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
 
 	return cmd
 }
@@ -173,7 +174,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 	}
 
 	logsFilter.RegisterString(cmd, &inputs.Filter, "")
-	logsNum.RegisterInt(cmd, &inputs.Num, 100)
+	logsNum.RegisterInt(cmd, &inputs.Num, defaultPageSize)
 
 	return cmd
 }
