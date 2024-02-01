@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.4.0](https://github.com/auth0/auth0-cli/tree/v1.4.0) (Feb 1, 2024)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.3.0...v1.4.0)
+
+### Added
+
+- Warning when the user is about to delete the client used to authenticate the CLI [#934]
+- Ability to select multiple IDs when deleting a resource [#935]
+- Support for multiple identifiers for blocks list and unblock commands [#931]
+- Ability to manage client metadata through `--metadata` flag on apps create and update commands [#938]
+- Allow piped-in templates when invoking the universal-login templates update command [#950]
+- CSV format for list commands [#955]
+
+### Fixed
+
+- Listing organizations members in json format [#953]
+- Prevent saving branding data in universal-login customize command if empty [#968]
+
+### Changed
+
+- Set default resources per page to 100 when invoking list commands [#940]
+- Standardize error messages [#943]
+- Progress indicator changed from a spinner icon to a progress bar across commands that work with bulk resources [#949]
+
 ## [v1.3.0](https://github.com/auth0/auth0-cli/tree/v1.3.0) (Dec 1, 2023)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.2.0...v1.3.0)
@@ -254,6 +278,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 [unreleased]: https://github.com/auth0/auth0-cli/compare/v1.0.0...HEAD
+[#968]: https://github.com/auth0/auth0-cli/issues/968
+[#955]: https://github.com/auth0/auth0-cli/issues/955
+[#949]: https://github.com/auth0/auth0-cli/issues/949
+[#953]: https://github.com/auth0/auth0-cli/issues/953
+[#950]: https://github.com/auth0/auth0-cli/issues/950
+[#943]: https://github.com/auth0/auth0-cli/issues/943
+[#940]: https://github.com/auth0/auth0-cli/issues/940
+[#938]: https://github.com/auth0/auth0-cli/issues/938
+[#931]: https://github.com/auth0/auth0-cli/issues/931
+[#935]: https://github.com/auth0/auth0-cli/issues/935
+[#934]: https://github.com/auth0/auth0-cli/issues/934
 [#906]: https://github.com/auth0/auth0-cli/issues/906
 [#910]: https://github.com/auth0/auth0-cli/issues/910
 [#907]: https://github.com/auth0/auth0-cli/issues/907
