@@ -138,8 +138,7 @@ func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
 		Long:  "Update the custom template for the New Universal Login Experience.",
 		Example: `  auth0 universal-login templates update
   auth0 ul templates update
-  cat login.liquid | auth0 ul templates update
-  echo "<html>{%- auth0:head -%}{%- auth0:widget -%}</html>" | auth0 ul templates update`,
+  cat login.liquid | auth0 ul templates update`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
