@@ -28,4 +28,24 @@ type PromptAPI interface {
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Prompts/put_custom_text_by_language
 	SetCustomText(ctx context.Context, p string, l string, b map[string]interface{}, opts ...management.RequestOption) (err error)
+
+	// CreatePartials creates new custom prompt partials for a given segment.
+	//
+	// See: https://auth0.com/docs/sign-up-prompt-customizations#use-the-api-to-edit-custom-prompts
+	CreatePartials(ctx context.Context, c *management.PartialsPrompt, opts ...management.RequestOption) error
+
+	// UpdatePartials updates custom prompt partials for a given segment.
+	//
+	// See: https://auth0.com/docs/sign-up-prompt-customizations#use-the-api-to-edit-custom-prompts
+	UpdatePartials(ctx context.Context, c *management.PartialsPrompt, opts ...management.RequestOption) error
+
+	// ReadPartials reads custom prompt partials for a given segment.
+	//
+	// See: https://auth0.com/docs/sign-up-prompt-customizations#use-the-api-to-edit-custom-prompts
+	ReadPartials(ctx context.Context, segment management.PartialsPromptSegment, opts ...management.RequestOption) (c *management.PartialsPrompt, err error)
+
+	// DeletePartials deletes custom prompt partials for a given segment.
+	//
+	// See: https://auth0.com/docs/sign-up-prompt-customizations#use-the-api-to-edit-custom-prompts
+	DeletePartials(ctx context.Context, c *management.PartialsPrompt, opts ...management.RequestOption) error
 }
