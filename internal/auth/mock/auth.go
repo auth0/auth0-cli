@@ -4,6 +4,3 @@
 // Package mock is a generated GoMock package.
 package mock
 
-import (
-	gomock "github.com/golang/mock/gomock"
-)
