@@ -6,36 +6,35 @@ package mock
 
 import (
 	context "context"
-	reflect "reflect"
-
 	management "github.com/auth0/go-auth0/management"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
-// MockCustomDomainAPI is a mock of CustomDomainAPI interface.
+// MockCustomDomainAPI is a mock of CustomDomainAPI interface
 type MockCustomDomainAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockCustomDomainAPIMockRecorder
 }
 
-// MockCustomDomainAPIMockRecorder is the mock recorder for MockCustomDomainAPI.
+// MockCustomDomainAPIMockRecorder is the mock recorder for MockCustomDomainAPI
 type MockCustomDomainAPIMockRecorder struct {
 	mock *MockCustomDomainAPI
 }
 
-// NewMockCustomDomainAPI creates a new mock instance.
+// NewMockCustomDomainAPI creates a new mock instance
 func NewMockCustomDomainAPI(ctrl *gomock.Controller) *MockCustomDomainAPI {
 	mock := &MockCustomDomainAPI{ctrl: ctrl}
 	mock.recorder = &MockCustomDomainAPIMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use.
+// EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockCustomDomainAPI) EXPECT() *MockCustomDomainAPIMockRecorder {
 	return m.recorder
 }
 
-// Create mocks base method.
+// Create mocks base method
 func (m *MockCustomDomainAPI) Create(ctx context.Context, c *management.CustomDomain, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, c}
@@ -47,53 +46,14 @@ func (m *MockCustomDomainAPI) Create(ctx context.Context, c *management.CustomDo
 	return ret0
 }
 
-// Create indicates an expected call of Create.
+// Create indicates an expected call of Create
 func (mr *MockCustomDomainAPIMockRecorder) Create(ctx, c interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, c}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockCustomDomainAPI)(nil).Create), varargs...)
 }
 
-// Delete mocks base method.
-func (m *MockCustomDomainAPI) Delete(ctx context.Context, id string, opts ...management.RequestOption) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Delete", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Delete indicates an expected call of Delete.
-func (mr *MockCustomDomainAPIMockRecorder) Delete(ctx, id interface{}, opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockCustomDomainAPI)(nil).Delete), varargs...)
-}
-
-// List mocks base method.
-func (m *MockCustomDomainAPI) List(ctx context.Context, opts ...management.RequestOption) ([]*management.CustomDomain, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "List", varargs...)
-	ret0, _ := ret[0].([]*management.CustomDomain)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// List indicates an expected call of List.
-func (mr *MockCustomDomainAPIMockRecorder) List(ctx interface{}, opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockCustomDomainAPI)(nil).List), varargs...)
-}
-
-// Read mocks base method.
+// Read mocks base method
 func (m *MockCustomDomainAPI) Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.CustomDomain, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, id}
@@ -106,14 +66,14 @@ func (m *MockCustomDomainAPI) Read(ctx context.Context, id string, opts ...manag
 	return ret0, ret1
 }
 
-// Read indicates an expected call of Read.
+// Read indicates an expected call of Read
 func (mr *MockCustomDomainAPIMockRecorder) Read(ctx, id interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockCustomDomainAPI)(nil).Read), varargs...)
 }
 
-// Update mocks base method.
+// Update mocks base method
 func (m *MockCustomDomainAPI) Update(ctx context.Context, id string, c *management.CustomDomain, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, id, c}
@@ -125,14 +85,33 @@ func (m *MockCustomDomainAPI) Update(ctx context.Context, id string, c *manageme
 	return ret0
 }
 
-// Update indicates an expected call of Update.
+// Update indicates an expected call of Update
 func (mr *MockCustomDomainAPIMockRecorder) Update(ctx, id, c interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, id, c}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockCustomDomainAPI)(nil).Update), varargs...)
 }
 
-// Verify mocks base method.
+// Delete mocks base method
+func (m *MockCustomDomainAPI) Delete(ctx context.Context, id string, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Delete", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete
+func (mr *MockCustomDomainAPIMockRecorder) Delete(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockCustomDomainAPI)(nil).Delete), varargs...)
+}
+
+// Verify mocks base method
 func (m *MockCustomDomainAPI) Verify(ctx context.Context, id string, opts ...management.RequestOption) (*management.CustomDomain, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, id}
@@ -145,9 +124,29 @@ func (m *MockCustomDomainAPI) Verify(ctx context.Context, id string, opts ...man
 	return ret0, ret1
 }
 
-// Verify indicates an expected call of Verify.
+// Verify indicates an expected call of Verify
 func (mr *MockCustomDomainAPIMockRecorder) Verify(ctx, id interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verify", reflect.TypeOf((*MockCustomDomainAPI)(nil).Verify), varargs...)
+}
+
+// List mocks base method
+func (m *MockCustomDomainAPI) List(ctx context.Context, opts ...management.RequestOption) ([]*management.CustomDomain, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "List", varargs...)
+	ret0, _ := ret[0].([]*management.CustomDomain)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List
+func (mr *MockCustomDomainAPIMockRecorder) List(ctx interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockCustomDomainAPI)(nil).List), varargs...)
 }

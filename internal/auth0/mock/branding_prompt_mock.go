@@ -6,56 +6,35 @@ package mock
 
 import (
 	context "context"
-	reflect "reflect"
-
 	management "github.com/auth0/go-auth0/management"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
-// MockPromptAPI is a mock of PromptAPI interface.
+// MockPromptAPI is a mock of PromptAPI interface
 type MockPromptAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockPromptAPIMockRecorder
 }
 
-// MockPromptAPIMockRecorder is the mock recorder for MockPromptAPI.
+// MockPromptAPIMockRecorder is the mock recorder for MockPromptAPI
 type MockPromptAPIMockRecorder struct {
 	mock *MockPromptAPI
 }
 
-// NewMockPromptAPI creates a new mock instance.
+// NewMockPromptAPI creates a new mock instance
 func NewMockPromptAPI(ctrl *gomock.Controller) *MockPromptAPI {
 	mock := &MockPromptAPI{ctrl: ctrl}
 	mock.recorder = &MockPromptAPIMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use.
+// EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockPromptAPI) EXPECT() *MockPromptAPIMockRecorder {
 	return m.recorder
 }
 
-// CustomText mocks base method.
-func (m *MockPromptAPI) CustomText(ctx context.Context, p, l string, opts ...management.RequestOption) (map[string]interface{}, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, p, l}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "CustomText", varargs...)
-	ret0, _ := ret[0].(map[string]interface{})
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CustomText indicates an expected call of CustomText.
-func (mr *MockPromptAPIMockRecorder) CustomText(ctx, p, l interface{}, opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, p, l}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CustomText", reflect.TypeOf((*MockPromptAPI)(nil).CustomText), varargs...)
-}
-
-// Read mocks base method.
+// Read mocks base method
 func (m *MockPromptAPI) Read(ctx context.Context, opts ...management.RequestOption) (*management.Prompt, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx}
@@ -68,33 +47,14 @@ func (m *MockPromptAPI) Read(ctx context.Context, opts ...management.RequestOpti
 	return ret0, ret1
 }
 
-// Read indicates an expected call of Read.
+// Read indicates an expected call of Read
 func (mr *MockPromptAPIMockRecorder) Read(ctx interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockPromptAPI)(nil).Read), varargs...)
 }
 
-// SetCustomText mocks base method.
-func (m *MockPromptAPI) SetCustomText(ctx context.Context, p, l string, b map[string]interface{}, opts ...management.RequestOption) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, p, l, b}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "SetCustomText", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SetCustomText indicates an expected call of SetCustomText.
-func (mr *MockPromptAPIMockRecorder) SetCustomText(ctx, p, l, b interface{}, opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, p, l, b}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCustomText", reflect.TypeOf((*MockPromptAPI)(nil).SetCustomText), varargs...)
-}
-
-// Update mocks base method.
+// Update mocks base method
 func (m *MockPromptAPI) Update(ctx context.Context, p *management.Prompt, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, p}
@@ -106,9 +66,125 @@ func (m *MockPromptAPI) Update(ctx context.Context, p *management.Prompt, opts .
 	return ret0
 }
 
-// Update indicates an expected call of Update.
+// Update indicates an expected call of Update
 func (mr *MockPromptAPIMockRecorder) Update(ctx, p interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, p}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockPromptAPI)(nil).Update), varargs...)
+}
+
+// CustomText mocks base method
+func (m *MockPromptAPI) CustomText(ctx context.Context, p, l string, opts ...management.RequestOption) (map[string]interface{}, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, p, l}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CustomText", varargs...)
+	ret0, _ := ret[0].(map[string]interface{})
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CustomText indicates an expected call of CustomText
+func (mr *MockPromptAPIMockRecorder) CustomText(ctx, p, l interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, p, l}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CustomText", reflect.TypeOf((*MockPromptAPI)(nil).CustomText), varargs...)
+}
+
+// SetCustomText mocks base method
+func (m *MockPromptAPI) SetCustomText(ctx context.Context, p, l string, b map[string]interface{}, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, p, l, b}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SetCustomText", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetCustomText indicates an expected call of SetCustomText
+func (mr *MockPromptAPIMockRecorder) SetCustomText(ctx, p, l, b interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, p, l, b}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCustomText", reflect.TypeOf((*MockPromptAPI)(nil).SetCustomText), varargs...)
+}
+
+// CreatePartials mocks base method
+func (m *MockPromptAPI) CreatePartials(ctx context.Context, c *management.PartialsPrompt, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, c}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CreatePartials", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreatePartials indicates an expected call of CreatePartials
+func (mr *MockPromptAPIMockRecorder) CreatePartials(ctx, c interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, c}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePartials", reflect.TypeOf((*MockPromptAPI)(nil).CreatePartials), varargs...)
+}
+
+// UpdatePartials mocks base method
+func (m *MockPromptAPI) UpdatePartials(ctx context.Context, c *management.PartialsPrompt, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, c}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdatePartials", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdatePartials indicates an expected call of UpdatePartials
+func (mr *MockPromptAPIMockRecorder) UpdatePartials(ctx, c interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, c}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePartials", reflect.TypeOf((*MockPromptAPI)(nil).UpdatePartials), varargs...)
+}
+
+// ReadPartials mocks base method
+func (m *MockPromptAPI) ReadPartials(ctx context.Context, segment management.PartialsPromptSegment, opts ...management.RequestOption) (*management.PartialsPrompt, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, segment}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ReadPartials", varargs...)
+	ret0, _ := ret[0].(*management.PartialsPrompt)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadPartials indicates an expected call of ReadPartials
+func (mr *MockPromptAPIMockRecorder) ReadPartials(ctx, segment interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, segment}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadPartials", reflect.TypeOf((*MockPromptAPI)(nil).ReadPartials), varargs...)
+}
+
+// DeletePartials mocks base method
+func (m *MockPromptAPI) DeletePartials(ctx context.Context, c *management.PartialsPrompt, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, c}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeletePartials", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeletePartials indicates an expected call of DeletePartials
+func (mr *MockPromptAPIMockRecorder) DeletePartials(ctx, c interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, c}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePartials", reflect.TypeOf((*MockPromptAPI)(nil).DeletePartials), varargs...)
 }
