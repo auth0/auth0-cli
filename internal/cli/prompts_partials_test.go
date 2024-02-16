@@ -1,9 +1,10 @@
 package cli
 
 import (
+	"testing"
+
 	"github.com/auth0/go-auth0/management"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestPromptsPartials_mergePartialsPrompt(t *testing.T) {

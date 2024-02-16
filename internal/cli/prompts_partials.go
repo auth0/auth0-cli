@@ -4,13 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/go-auth0/management"
-	"github.com/spf13/cobra"
 	"io"
 	"os"
 	"reflect"
 	"strings"
+
+	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
 )
 
 const (
@@ -338,7 +340,9 @@ func promptPartialsFromInputs(inputs *promptsPartialsInput) error {
 		if err != nil {
 			return fmt.Errorf("failed to open input file (%s): %w", ansi.Bold(inputs.InputFile), err)
 		}
-		defer file.Close()
+		defer func(file *os.File) {
+			_ = file.Close()
+		}(file)
 
 		inputJSON, err := io.ReadAll(file)
 		if err != nil {
@@ -354,7 +358,7 @@ func promptPartialsFromInputs(inputs *promptsPartialsInput) error {
 }
 
 func addCommonPromptPartialsFlags(cmd *cobra.Command, inputs *promptsPartialsInput) {
-	// TODO: look for an automated way of adding flags
+	// TODO: look for an automated way of adding flags.
 	cmd.Flags().StringVar(&inputs.PartialsPrompt.FormContentStart, "form-content-start", "", "Content for the Form Content Start Partial")
 	cmd.Flags().StringVar(&inputs.PartialsPrompt.FormContentEnd, "form-content-end", "", "Content for the Form Content End Partial")
 	cmd.Flags().StringVar(&inputs.PartialsPrompt.FormFooterStart, "form-footer-start", "", "Content for the Form Footer Start Partial")
