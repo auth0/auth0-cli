@@ -2,6 +2,7 @@ package display
 
 import (
 	"fmt"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 )
 
