@@ -41,6 +41,7 @@ type (
 	universalLoginBrandingData struct {
 		Applications []*applicationData                 `json:"applications"`
 		Prompts      []*promptData                      `json:"prompts"`
+		Partials     []*management.PromptPartials       `json:"partials"`
 		Settings     *management.Branding               `json:"settings"`
 		Template     *management.BrandingUniversalLogin `json:"template"`
 		Theme        *management.BrandingTheme          `json:"theme"`
@@ -214,13 +215,13 @@ func startWebSocketServer(
 		tenant:   tenantDomain,
 	}
 
-	assetsWithoutPrefix, err := fs.Sub(universalLoginPreviewAssets, "data/universal-login")
+	fs.Sub(universalLoginPreviewAssets, "data/universal-login")
 	if err != nil {
 		return err
 	}
 
 	router := http.NewServeMux()
-	router.Handle("/", http.FileServer(http.FS(assetsWithoutPrefix)))
+	//router.Handle("/", http.FileServer(http.FS(assetsWithoutPrefix)))
 	router.Handle("/ws", handler)
 
 	server := &http.Server{
@@ -441,6 +442,12 @@ func fetchUniversalLoginBrandingData(
 		return err
 	})
 
+	var partials []*management.PromptPartials
+	group.Go(func() (err error) {
+		partials, err = fetchAllPartials(ctx, api)
+		return err
+	})
+
 	if err := group.Wait(); err != nil {
 		return nil, err
 	}
@@ -455,7 +462,8 @@ func fetchUniversalLoginBrandingData(
 			EnabledLocales: tenant.GetEnabledLocales(),
 			Domain:         tenantDomain,
 		},
-		Prompts: []*promptData{prompt},
+		Prompts:  []*promptData{prompt},
+		Partials: partials,
 	}, nil
 }
 
@@ -603,6 +611,23 @@ func fetchAllApplications(ctx context.Context, api *auth0.API) ([]*applicationDa
 	return applications, nil
 }
 
+func fetchAllPartials(ctx context.Context, api *auth0.API) ([]*management.PromptPartials, error) {
+	prompts := []string{"form-content-start", "form-content-end", "form-footer-start", "form-footer-end", "secondary-actions-start", "secondary-actions-end"}
+	var partials []*management.PromptPartials
+
+	for _, prompt := range prompts {
+		promptPartials, err := api.Prompt.ReadPartials(ctx, management.PromptType(prompt))
+
+		if err != nil {
+			return nil, err
+		}
+
+		partials = append(partials, promptPartials)
+	}
+
+	return partials, nil
+}
+
 func saveUniversalLoginBrandingData(ctx context.Context, api *auth0.API, data *universalLoginBrandingData) error {
 	group, ctx := errgroup.WithContext(ctx)
 
@@ -640,6 +665,14 @@ func saveUniversalLoginBrandingData(ctx context.Context, api *auth0.API, data *u
 
 		group.Go(func() (err error) {
 			return api.Prompt.SetCustomText(ctx, prompt.Prompt, prompt.Language, prompt.CustomText)
+		})
+	}
+
+	for _, partial := range data.Partials {
+		partial := partial
+
+		group.Go(func() (err error) {
+			return api.Prompt.UpdatePartials(ctx, partial)
 		})
 	}
 
