@@ -137,6 +137,8 @@ func (m *webSocketMessage) UnmarshalJSON(b []byte) error {
 		payload = &universalLoginBrandingData{}
 	case fetchPromptMessageType:
 		payload = &promptData{}
+	case fetchPartialMessageType:
+		payload = &partialData{}
 	default:
 		payload = make(map[string]interface{})
 	}
@@ -497,8 +499,7 @@ func fetchUniversalLoginBrandingData(
 			EnabledLocales: tenant.GetEnabledLocales(),
 			Domain:         tenantDomain,
 		},
-		Prompts:  []*promptData{prompt},
-		Partials: partials,
+		Prompts: []*promptData{prompt},
 	}, nil
 }
 
