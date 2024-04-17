@@ -612,10 +612,10 @@ func fetchAllApplications(ctx context.Context, api *auth0.API) ([]*applicationDa
 }
 
 func fetchAllPartials(ctx context.Context, api *auth0.API) ([]*management.PromptPartials, error) {
-	prompts := []string{"form-content-start", "form-content-end", "form-footer-start", "form-footer-end", "secondary-actions-start", "secondary-actions-end"}
+	allowedPrompts := []string{"signup", "signup-id", "signup-password", "login", "login-id", "login-password"}
 	var partials []*management.PromptPartials
 
-	for _, prompt := range prompts {
+	for _, prompt := range allowedPrompts {
 		promptPartials, err := api.Prompt.ReadPartials(ctx, management.PromptType(prompt))
 
 		if err != nil {
