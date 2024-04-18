@@ -38,6 +38,15 @@ var (
 	universalLoginPreviewAssets embed.FS
 )
 
+var allowedPromptsWithPartials = []management.PromptType{
+	management.PromptSignup,
+	management.PromptSignupID,
+	management.PromptSignupPassword,
+	management.PromptLogin,
+	management.PromptLoginID,
+	management.PromptLoginPassword,
+}
+
 type (
 	universalLoginBrandingData struct {
 		Applications []*applicationData                 `json:"applications"`
@@ -485,6 +494,12 @@ func fetchUniversalLoginBrandingData(
 		return err
 	})
 
+	var partials []*management.PromptPartials
+	group.Go(func() (err error) {
+		partials, err = fetchAllPartials(ctx, api)
+		return err
+	})
+
 	if err := group.Wait(); err != nil {
 		return nil, err
 	}
@@ -499,7 +514,8 @@ func fetchUniversalLoginBrandingData(
 			EnabledLocales: tenant.GetEnabledLocales(),
 			Domain:         tenantDomain,
 		},
-		Prompts: []*promptData{prompt},
+		Prompts:  []*promptData{prompt},
+		Partials: partials,
 	}, nil
 }
 
@@ -654,6 +670,22 @@ func fetchPartial(ctx context.Context, api *auth0.API, prompt *partialData) (*ma
 	}
 
 	return partial, nil
+}
+
+func fetchAllPartials(ctx context.Context, api *auth0.API) ([]*management.PromptPartials, error) {
+	var partials []*management.PromptPartials
+
+	for _, prompt := range allowedPromptsWithPartials {
+		partial, err := api.Prompt.ReadPartials(ctx, prompt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		partials = append(partials, partial)
+	}
+
+	return partials, nil
 }
 
 func saveUniversalLoginBrandingData(ctx context.Context, api *auth0.API, data *universalLoginBrandingData) error {
