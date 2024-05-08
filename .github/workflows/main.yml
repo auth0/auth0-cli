@@ -36,6 +36,28 @@ jobs:
           version: latest
           args: -v -c .golangci.yml
 
+  unit-tests-windows:
+    name: Windows Unit Tests
+    runs-on: windows-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Run unit tests
+        run: ./scripts/test.ps1
+
+      - name: Upload unit test coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-tests-artifact
+          path: ./coverage-unit-tests.out
+
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
