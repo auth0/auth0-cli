@@ -249,5 +249,6 @@ func (c *Config) saveToDisk() error {
 }
 
 func defaultPath() string {
-	return path.Join(os.Getenv("HOME"), ".config", "auth0", "config.json")
+	home, _ := os.UserHomeDir()
+	return path.Join(home, ".config", "auth0", "config.json")
 }

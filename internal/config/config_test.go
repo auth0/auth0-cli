@@ -41,7 +41,7 @@ func TestConfig_LoadFromDisk(t *testing.T) {
 		config := &Config{path: dirPath}
 		err = config.loadFromDisk()
 
-		assert.EqualError(t, err, fmt.Sprintf("read %s: is a directory", dirPath))
+		assert.EqualError(t, err, fmt.Sprintf("read %s: %s", dirPath, ErrFileIsADirectory))
 	})
 
 	t.Run("it fails to load an empty config file", func(t *testing.T) {
@@ -184,22 +184,7 @@ func TestConfig_SaveToDisk(t *testing.T) {
 		})
 	}
 
-	t.Run("it fails to save config if file path is a read only directory", func(t *testing.T) {
-		tmpDir, err := os.MkdirTemp("", "")
-		require.NoError(t, err)
-		t.Cleanup(func() {
-			err := os.RemoveAll(tmpDir)
-			require.NoError(t, err)
-		})
-
-		err = os.Chmod(tmpDir, 0555)
-		require.NoError(t, err)
-
-		config := &Config{path: path.Join(tmpDir, "auth0", "config.json")}
-
-		err = config.saveToDisk()
-		assert.EqualError(t, err, fmt.Sprintf("mkdir %s/auth0: permission denied", tmpDir))
-	})
+	t.Run("it fails to save config if file path is a read only directory", FailsToSaveToReadOnlyDirectory)
 }
 
 func TestConfig_GetTenant(t *testing.T) {
@@ -859,7 +844,9 @@ func createTempConfigFile(t *testing.T, data []byte) string {
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
-		err := os.Remove(tempFile.Name())
+		err := tempFile.Close()
+		require.NoError(t, err)
+		err = os.Remove(tempFile.Name())
 		require.NoError(t, err)
 	})
 
