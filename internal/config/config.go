@@ -249,6 +249,13 @@ func (c *Config) saveToDisk() error {
 }
 
 func defaultPath() string {
-	home, _ := os.UserHomeDir()
-	return path.Join(home, ".config", "auth0", "config.json")
+	if path, ok := os.LookupEnv("AUTH0_CONFIG_FILE"); ok {
+		return path
+	}
+
+	if config_dir, err := os.UserConfigDir(); err == nil {
+		return path.Join(config_dir, "auth0", "config.json")
+	}
+
+	return path.Join(os.TempDir(), "auth0", "config.json")
 }

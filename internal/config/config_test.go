@@ -13,14 +13,62 @@ import (
 )
 
 func TestDefaultPath(t *testing.T) {
-	homeDir, err := os.UserHomeDir()
-	require.NoError(t, err)
+	XDG_CONFIG_HOME, xdg_config_exists := os.LookupEnv("XDG_CONFIG_HOME")
+	HOME, home_exists := os.LookupEnv("HOME")
+	AUTH0_CONFIG_FILE, auth0_config_exists := os.LookupEnv("AUTH0_CONFIG_FILE")
+	APPDATA, appdata_exists := os.LookupEnv("APPDATA")
 
-	expectedPath := path.Join(homeDir, ".config", "auth0", "config.json")
+	os.Unsetenv("XDG_CONFIG_HOME")
+	os.Unsetenv("HOME")
+	os.Unsetenv("AUTH0_CONFIG_FILE")
+	os.Unsetenv("APPDATA")
 
-	actualPath := defaultPath()
+	t.Cleanup(func() {
+		if xdg_config_exists {
+			os.Setenv("XDG_CONFIG_HOME", XDG_CONFIG_HOME)
+		} else {
+			os.Unsetenv("XDG_CONFIG_HOME")
+		}
+		if home_exists {
+			os.Setenv("HOME", HOME)
+		} else {
+			os.Unsetenv("HOME")
+		}
+		if auth0_config_exists {
+			os.Setenv("AUTH0_CONFIG_FILE", AUTH0_CONFIG_FILE)
+		} else {
+			os.Unsetenv("AUTH0_CONFIG_FILE")
+		}
+		if appdata_exists {
+			os.Setenv("APPDATA", APPDATA)
+		} else {
+			os.Unsetenv("APPDATA")
+		}
+	})
 
-	assert.Equal(t, expectedPath, actualPath)
+	t.Run("it returns the path set in AUTH0_CONFIG_FILE", func(t *testing.T) {
+		t.Setenv("AUTH0_CONFIG_FILE", "/path/to/auth0/config.json")
+		t.Setenv("XDG_CONFIG_HOME", "/path/to/xdg_config_home")
+		t.Setenv("HOME", "/path/to/home")
+		t.Setenv("APPDATA", "/path/to/userprofile")
+		expectedPath := "/path/to/auth0/config.json"
+		actualPath := defaultPath()
+		assert.Equal(t, expectedPath, actualPath)
+	})
+
+	t.Run("it returns the path set in XDG_CONFIG_HOME", PlatformTestXDGConfigHome)
+
+	t.Run("it returns the path in the user config directory", PlatformTestConfigFileDefaultPath)
+	t.Run("it fallsback to temp if no user config directory is found", func(t *testing.T) {
+		os.Unsetenv("AUTH0_CONFIG_FILE")
+		os.Unsetenv("XDG_CONFIG_HOME")
+		os.Unsetenv("HOME")
+		os.Unsetenv("USERPROFILE")
+		os.Unsetenv("APPDATA")
+		expectedPath := path.Join(os.TempDir(), "auth0", "config.json")
+		actualPath := defaultPath()
+		assert.Equal(t, expectedPath, actualPath)
+	})
 }
 
 func TestConfig_LoadFromDisk(t *testing.T) {

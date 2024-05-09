@@ -79,11 +79,19 @@ go install github.com/auth0/auth0-cli/cmd/auth0@latest
    - **macOS**: `$ tar -xf auth0-cli_{version}_Darwin_{architecture}.tar.gz`
    - **Linux**: `$ tar -xf auth0-cli_{version}_Linux_{architecture}.tar.gz`
    - **Windows**: Extract `auth0-cli_{version}_Windows_{architecture}.zip` using your preferred method of choice
-3. Make sure that the `PATH` and `HOME` environment variables include the folder where the binary was extracted.
+3. Make sure that the `PATH` environment variable includes the folder where the binary was extracted.
 4. Run `auth0`
 
 > **Note**
 > Autocompletion instructions for supported platforms available by running `auth0 completion -h`
+
+### Configuration File
+
+On Unix systems, the config file is `$XDG_CONFIG_HOME/auth0/config.json` if `XDG_CONFIG_HOME` is non-empty, else `$HOME/.config/auth0/config.json`.
+On Darwin, the config file is `$HOME/Library/Application Support/auth0/config.json`.
+On Windows, the config file is `%AppData%\auth0\config.json`.
+
+The configuration file location can be overridden by setting the `AUTH0_CONFIG_PATH` environment variable.
 
 ## Authenticating to Your Tenant
 
