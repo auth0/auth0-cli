@@ -416,7 +416,7 @@ func (f *roleResourceFetcher) FetchData(ctx context.Context) (importDataList, er
 				return data, nil
 			}
 			if len(rolePerms.Permissions) > 0 {
-				// `permissions` block a required field for TF Provider; cannot have empty permissions
+				// `permissions` block a required field for TF Provider; cannot have empty permissions.
 				data = append(data, importDataItem{
 					ResourceName: "auth0_role_permissions." + sanitizeResourceName(role.GetName()),
 					ImportID:     role.GetID(),

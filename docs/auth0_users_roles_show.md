@@ -19,12 +19,14 @@ auth0 users roles show [flags]
   auth0 users roles show <user-id>
   auth0 users roles show <user-id> --number 100
   auth0 users roles show <user-id> -n 100 --json
+  auth0 users roles show <user-id> --csv
 ```
 
 
 ## Flags
 
 ```
+      --csv          Output in csv format.
       --json         Output in json format.
   -n, --number int   Number of user roles to retrieve. Minimum 1, maximum 1000. (default 100)
 ```

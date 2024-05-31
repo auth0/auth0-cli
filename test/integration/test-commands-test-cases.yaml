@@ -19,14 +19,14 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - "cannot test the Universal Login with a Machine to Machine application."
+        - "Cannot test the Universal Login with a Machine to Machine application."
 
   003 - test token without client grant:
     command: auth0 test token $(./test/integration/scripts/get-m2m-app-id.sh) --audience "$(./test/integration/scripts/get-manage-api-audience.sh)" --no-input
     exit-code: 1
     stderr:
       contains:
-        - "failed to log in with client credentials for client with ID "
+        - "Failed to log in with client credentials for client with ID "
         - "the integration-test-app-m2m application is not authorized to request access tokens for this API "
         - ".auth0.com/api/v2/."
 

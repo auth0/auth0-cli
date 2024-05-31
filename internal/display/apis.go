@@ -185,7 +185,7 @@ func makeScopeView(scope management.ResourceServerScope) *scopeView {
 func getScopes(scopes []management.ResourceServerScope) (string, bool) {
 	ellipsis := "..."
 	separator := " "
-	padding := 22 // the longest apiView key plus two spaces before and after in the label column
+	padding := 22 // The longest apiView key plus two spaces before and after in the label column.
 	terminalWidth, _, err := term.GetSize(int(iostream.Input.Fd()))
 	if err != nil {
 		terminalWidth = 80
@@ -197,7 +197,7 @@ func getScopes(scopes []management.ResourceServerScope) (string, bool) {
 	for i, scope := range scopes {
 		prepend := separator
 
-		// no separator prepended for first value
+		// No separator prepended for first value.
 		if i == 0 {
 			prepend = ""
 		}

@@ -128,7 +128,7 @@ func showPromptsText(cli *cli, inputs *promptsTextInput) func(cmd *cobra.Command
 			return err
 		}); err != nil {
 			return fmt.Errorf(
-				"unable to fetch custom text for prompt %s and language %s: %w",
+				"failed to fetch custom text for prompt %q and language %q: %w",
 				inputs.Prompt,
 				inputs.Language,
 				err,
@@ -171,7 +171,7 @@ func updateBrandingText(cli *cli, inputs *promptsTextInput) func(cmd *cobra.Comm
 			return cli.api.Prompt.SetCustomText(cmd.Context(), inputs.Prompt, inputs.Language, editedBrandingText)
 		}); err != nil {
 			return fmt.Errorf(
-				"unable to set custom text for prompt %s and language %s: %w",
+				"failed to set custom text for prompt %q and language %q: %w",
 				inputs.Prompt,
 				inputs.Language,
 				err,
@@ -209,7 +209,7 @@ func fetchBrandingTextContentToEdit(ctx context.Context, cli *cli, inputs *promp
 		return nil
 	}); err != nil {
 		return "", fmt.Errorf(
-			"unable to load custom text for prompt %s and language %s: %w",
+			"failed to load custom text for prompt %q and language %q: %w",
 			inputs.Prompt,
 			inputs.Language,
 			err,
@@ -235,7 +235,9 @@ func downloadDefaultBrandingTextTranslations(prompt, language string) map[string
 		return nil
 	}
 
-	defer response.Body.Close()
+	defer func() {
+		_ = response.Body.Close()
+	}()
 
 	if response.StatusCode == http.StatusOK {
 		var allPrompts []map[string]interface{}

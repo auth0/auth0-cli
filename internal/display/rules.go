@@ -54,7 +54,7 @@ func (r *Renderer) RulesList(rules []*management.Rule) {
 
 	var res []View
 
-	// @TODO Provide sort options via flags
+	// @TODO Provide sort options via flags.
 	sort.Slice(rules, func(i, j int) bool {
 		return rules[i].GetOrder() < rules[j].GetOrder()
 	})

@@ -20,12 +20,14 @@ auth0 rules list [flags]
   auth0 rules list
   auth0 rules ls
   auth0 rules ls --json
+  auth0 rules ls --csv
 ```
 
 
 ## Flags
 
 ```
+      --csv    Output in csv format.
       --json   Output in json format.
 ```
 

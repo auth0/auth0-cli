@@ -17,6 +17,7 @@ auth0 universal-login templates update [flags]
 ```
   auth0 universal-login templates update
   auth0 ul templates update
+  cat login.liquid | auth0 ul templates update
 ```
 
 

@@ -42,13 +42,13 @@ func (r *Renderer) MembersList(members []management.OrganizationMember) {
 
 	var res []View
 	for _, m := range members {
-		res = append(res, makeMembersView(&m))
+		res = append(res, makeMembersView(m))
 	}
 
 	r.Results(res)
 }
 
-func makeMembersView(member *management.OrganizationMember) *membersView {
+func makeMembersView(member management.OrganizationMember) *membersView {
 	return &membersView{
 		ID:         member.GetUserID(),
 		Name:       member.GetName(),

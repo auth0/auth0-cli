@@ -77,7 +77,7 @@ func TestBrandingTextsShowCmd(t *testing.T) {
 
 			if test.returnedError != nil {
 				expectedErrorMessage := fmt.Errorf(
-					"unable to fetch custom text for prompt %s and language %s: %w",
+					"failed to fetch custom text for prompt %q and language %q: %w",
 					test.inputPrompt,
 					test.inputLanguage,
 					test.returnedError,

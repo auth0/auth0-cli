@@ -76,7 +76,9 @@ func runClientCredentialsFlow(
 		if err != nil {
 			return err
 		}
-		defer response.Body.Close()
+		defer func() {
+			_ = response.Body.Close()
+		}()
 
 		if err = json.NewDecoder(response.Body).Decode(&tokenResponse); err != nil {
 			return fmt.Errorf("failed to decode the response: %w", err)
@@ -154,7 +156,7 @@ func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName,
 			}
 		}
 
-		// launch a HTTP server to wait for the callback to capture the auth
+		// Launch a HTTP server to wait for the callback to capture the auth
 		// code.
 		authCode, authState, err := authutil.WaitForBrowserCallback(cliLoginTestingCallbackAddr)
 		if err != nil {
@@ -165,7 +167,7 @@ func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName,
 			return fmt.Errorf("unexpected auth state")
 		}
 
-		// once the callback is received, exchange the code for an access
+		// Once the callback is received, exchange the code for an access
 		// token.
 		tokenResponse, err = authutil.ExchangeCodeForToken(
 			http.DefaultClient,
@@ -179,12 +181,12 @@ func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName,
 			return fmt.Errorf("%w", err)
 		}
 
-		// if we added the local callback URL to the client then we need to
-		// remove it when we're done
+		// If we added the local callback URL to the client then we need to
+		// remove it when we're done.
 		defer func() {
 			if callbackAdded {
-				if err := removeLocalCallbackURLFromClient(ctx, cli.api.Client, c); err != nil { // TODO: Make it a warning
-					cli.renderer.Errorf("Unable to remove callback URL '%s' from client: %s", cliLoginTestingCallbackURL, err)
+				if err := removeLocalCallbackURLFromClient(ctx, cli.api.Client, c); err != nil { // TODO: Make it a warning.
+					cli.renderer.Errorf("failed to remove callback URL '%s' from client: %s", cliLoginTestingCallbackURL, err)
 				}
 			}
 		}()
@@ -218,8 +220,8 @@ func addLocalCallbackURLToClient(ctx context.Context, clientManager auth0.Client
 	updatedClient := &management.Client{
 		Callbacks: &callbacks,
 	}
-	// reflect the changes in the original client instance so when we check it
-	// later it has the proper values in Callbacks
+	// Reflect the changes in the original client instance so when we check it
+	// later it has the proper values in Callbacks.
 	client.Callbacks = updatedClient.Callbacks
 	return true, clientManager.Update(ctx, client.GetClientID(), updatedClient)
 }
@@ -232,12 +234,12 @@ func removeLocalCallbackURLFromClient(ctx context.Context, clientManager auth0.C
 		}
 	}
 
-	// no callback URLs to remove, so don't attempt to do so
+	// No callback URLs to remove, so don't attempt to do so.
 	if len(client.GetCallbacks()) == len(callbacks) {
 		return nil
 	}
 
-	// can't update a client to have 0 callback URLs, so don't attempt it
+	// Can't update a client to have 0 callback URLs, so don't attempt it.
 	if len(callbacks) == 0 {
 		return nil
 	}
@@ -273,7 +275,7 @@ func containsStr(s []string, u string) bool {
 func openManageURL(cli *cli, tenant string, path string) {
 	manageTenantURL := formatManageTenantURL(tenant, &cli.Config)
 	if len(manageTenantURL) == 0 || len(path) == 0 {
-		cli.renderer.Warnf("Unable to format the correct URL, please ensure you have run 'auth0 login' and try again.")
+		cli.renderer.Warnf("Failed to format the correct URL, please ensure you have run 'auth0 login' and try again.")
 		return
 	}
 
@@ -301,7 +303,7 @@ func formatManageTenantURL(tenant string, cfg *config.Config) string {
 	}
 
 	var region string
-	if len(s) == 3 { // It's a PUS1 tenant, ex: dev-tti06f6y.auth0.com
+	if len(s) == 3 { // It's a PUS1 tenant, ex: dev-tti06f6y.auth0.com.
 		region = "us"
 	} else {
 		region = s[len(s)-3]
