@@ -18,7 +18,6 @@ auth0 universal-login templates update [flags]
   auth0 universal-login templates update
   auth0 ul templates update
   cat login.liquid | auth0 ul templates update
-  echo "<html>{%- auth0:head -%}{%- auth0:widget -%}</html>" | auth0 ul templates update
 ```
 
 
