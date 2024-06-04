@@ -102,11 +102,7 @@ func buildRootCmd(cli *cli) *cobra.Command {
 				}
 			}()
 
-			if err := cli.setupWithAuthentication(cmd.Context()); err != nil {
-				return err
-			}
-
-			return nil
+			return cli.setupWithAuthentication(cmd.Context())
 		},
 	}
 

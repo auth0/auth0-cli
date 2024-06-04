@@ -6,55 +6,35 @@ package mock
 
 import (
 	context "context"
-	reflect "reflect"
-
 	management "github.com/auth0/go-auth0/management"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
-// MockBrandingAPI is a mock of BrandingAPI interface.
+// MockBrandingAPI is a mock of BrandingAPI interface
 type MockBrandingAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockBrandingAPIMockRecorder
 }
 
-// MockBrandingAPIMockRecorder is the mock recorder for MockBrandingAPI.
+// MockBrandingAPIMockRecorder is the mock recorder for MockBrandingAPI
 type MockBrandingAPIMockRecorder struct {
 	mock *MockBrandingAPI
 }
 
-// NewMockBrandingAPI creates a new mock instance.
+// NewMockBrandingAPI creates a new mock instance
 func NewMockBrandingAPI(ctrl *gomock.Controller) *MockBrandingAPI {
 	mock := &MockBrandingAPI{ctrl: ctrl}
 	mock.recorder = &MockBrandingAPIMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use.
+// EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockBrandingAPI) EXPECT() *MockBrandingAPIMockRecorder {
 	return m.recorder
 }
 
-// DeleteUniversalLogin mocks base method.
-func (m *MockBrandingAPI) DeleteUniversalLogin(ctx context.Context, opts ...management.RequestOption) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "DeleteUniversalLogin", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteUniversalLogin indicates an expected call of DeleteUniversalLogin.
-func (mr *MockBrandingAPIMockRecorder) DeleteUniversalLogin(ctx interface{}, opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUniversalLogin", reflect.TypeOf((*MockBrandingAPI)(nil).DeleteUniversalLogin), varargs...)
-}
-
-// Read mocks base method.
+// Read mocks base method
 func (m *MockBrandingAPI) Read(ctx context.Context, opts ...management.RequestOption) (*management.Branding, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx}
@@ -67,33 +47,33 @@ func (m *MockBrandingAPI) Read(ctx context.Context, opts ...management.RequestOp
 	return ret0, ret1
 }
 
-// Read indicates an expected call of Read.
+// Read indicates an expected call of Read
 func (mr *MockBrandingAPIMockRecorder) Read(ctx interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockBrandingAPI)(nil).Read), varargs...)
 }
 
-// SetUniversalLogin mocks base method.
-func (m *MockBrandingAPI) SetUniversalLogin(ctx context.Context, ul *management.BrandingUniversalLogin, opts ...management.RequestOption) error {
+// Update mocks base method
+func (m *MockBrandingAPI) Update(ctx context.Context, t *management.Branding, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, ul}
+	varargs := []interface{}{ctx, t}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "SetUniversalLogin", varargs...)
+	ret := m.ctrl.Call(m, "Update", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// SetUniversalLogin indicates an expected call of SetUniversalLogin.
-func (mr *MockBrandingAPIMockRecorder) SetUniversalLogin(ctx, ul interface{}, opts ...interface{}) *gomock.Call {
+// Update indicates an expected call of Update
+func (mr *MockBrandingAPIMockRecorder) Update(ctx, t interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, ul}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetUniversalLogin", reflect.TypeOf((*MockBrandingAPI)(nil).SetUniversalLogin), varargs...)
+	varargs := append([]interface{}{ctx, t}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockBrandingAPI)(nil).Update), varargs...)
 }
 
-// UniversalLogin mocks base method.
+// UniversalLogin mocks base method
 func (m *MockBrandingAPI) UniversalLogin(ctx context.Context, opts ...management.RequestOption) (*management.BrandingUniversalLogin, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx}
@@ -106,28 +86,47 @@ func (m *MockBrandingAPI) UniversalLogin(ctx context.Context, opts ...management
 	return ret0, ret1
 }
 
-// UniversalLogin indicates an expected call of UniversalLogin.
+// UniversalLogin indicates an expected call of UniversalLogin
 func (mr *MockBrandingAPIMockRecorder) UniversalLogin(ctx interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UniversalLogin", reflect.TypeOf((*MockBrandingAPI)(nil).UniversalLogin), varargs...)
 }
 
-// Update mocks base method.
-func (m *MockBrandingAPI) Update(ctx context.Context, t *management.Branding, opts ...management.RequestOption) error {
+// SetUniversalLogin mocks base method
+func (m *MockBrandingAPI) SetUniversalLogin(ctx context.Context, ul *management.BrandingUniversalLogin, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, t}
+	varargs := []interface{}{ctx, ul}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "Update", varargs...)
+	ret := m.ctrl.Call(m, "SetUniversalLogin", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Update indicates an expected call of Update.
-func (mr *MockBrandingAPIMockRecorder) Update(ctx, t interface{}, opts ...interface{}) *gomock.Call {
+// SetUniversalLogin indicates an expected call of SetUniversalLogin
+func (mr *MockBrandingAPIMockRecorder) SetUniversalLogin(ctx, ul interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, t}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockBrandingAPI)(nil).Update), varargs...)
+	varargs := append([]interface{}{ctx, ul}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetUniversalLogin", reflect.TypeOf((*MockBrandingAPI)(nil).SetUniversalLogin), varargs...)
+}
+
+// DeleteUniversalLogin mocks base method
+func (m *MockBrandingAPI) DeleteUniversalLogin(ctx context.Context, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteUniversalLogin", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteUniversalLogin indicates an expected call of DeleteUniversalLogin
+func (mr *MockBrandingAPIMockRecorder) DeleteUniversalLogin(ctx interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUniversalLogin", reflect.TypeOf((*MockBrandingAPI)(nil).DeleteUniversalLogin), varargs...)
 }

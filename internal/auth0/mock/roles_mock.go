@@ -6,55 +6,35 @@ package mock
 
 import (
 	context "context"
-	reflect "reflect"
-
 	management "github.com/auth0/go-auth0/management"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
-// MockRoleAPI is a mock of RoleAPI interface.
+// MockRoleAPI is a mock of RoleAPI interface
 type MockRoleAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockRoleAPIMockRecorder
 }
 
-// MockRoleAPIMockRecorder is the mock recorder for MockRoleAPI.
+// MockRoleAPIMockRecorder is the mock recorder for MockRoleAPI
 type MockRoleAPIMockRecorder struct {
 	mock *MockRoleAPI
 }
 
-// NewMockRoleAPI creates a new mock instance.
+// NewMockRoleAPI creates a new mock instance
 func NewMockRoleAPI(ctrl *gomock.Controller) *MockRoleAPI {
 	mock := &MockRoleAPI{ctrl: ctrl}
 	mock.recorder = &MockRoleAPIMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use.
+// EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockRoleAPI) EXPECT() *MockRoleAPIMockRecorder {
 	return m.recorder
 }
 
-// AssociatePermissions mocks base method.
-func (m *MockRoleAPI) AssociatePermissions(ctx context.Context, id string, permissions []*management.Permission, opts ...management.RequestOption) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id, permissions}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "AssociatePermissions", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// AssociatePermissions indicates an expected call of AssociatePermissions.
-func (mr *MockRoleAPIMockRecorder) AssociatePermissions(ctx, id, permissions interface{}, opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id, permissions}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AssociatePermissions", reflect.TypeOf((*MockRoleAPI)(nil).AssociatePermissions), varargs...)
-}
-
-// Create mocks base method.
+// Create mocks base method
 func (m *MockRoleAPI) Create(ctx context.Context, r *management.Role, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, r}
@@ -66,73 +46,14 @@ func (m *MockRoleAPI) Create(ctx context.Context, r *management.Role, opts ...ma
 	return ret0
 }
 
-// Create indicates an expected call of Create.
+// Create indicates an expected call of Create
 func (mr *MockRoleAPIMockRecorder) Create(ctx, r interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, r}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockRoleAPI)(nil).Create), varargs...)
 }
 
-// Delete mocks base method.
-func (m *MockRoleAPI) Delete(ctx context.Context, id string, opts ...management.RequestOption) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Delete", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Delete indicates an expected call of Delete.
-func (mr *MockRoleAPIMockRecorder) Delete(ctx, id interface{}, opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockRoleAPI)(nil).Delete), varargs...)
-}
-
-// List mocks base method.
-func (m *MockRoleAPI) List(ctx context.Context, opts ...management.RequestOption) (*management.RoleList, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "List", varargs...)
-	ret0, _ := ret[0].(*management.RoleList)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// List indicates an expected call of List.
-func (mr *MockRoleAPIMockRecorder) List(ctx interface{}, opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockRoleAPI)(nil).List), varargs...)
-}
-
-// Permissions mocks base method.
-func (m *MockRoleAPI) Permissions(ctx context.Context, id string, opts ...management.RequestOption) (*management.PermissionList, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Permissions", varargs...)
-	ret0, _ := ret[0].(*management.PermissionList)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Permissions indicates an expected call of Permissions.
-func (mr *MockRoleAPIMockRecorder) Permissions(ctx, id interface{}, opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Permissions", reflect.TypeOf((*MockRoleAPI)(nil).Permissions), varargs...)
-}
-
-// Read mocks base method.
+// Read mocks base method
 func (m *MockRoleAPI) Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.Role, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, id}
@@ -145,33 +66,34 @@ func (m *MockRoleAPI) Read(ctx context.Context, id string, opts ...management.Re
 	return ret0, ret1
 }
 
-// Read indicates an expected call of Read.
+// Read indicates an expected call of Read
 func (mr *MockRoleAPIMockRecorder) Read(ctx, id interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockRoleAPI)(nil).Read), varargs...)
 }
 
-// RemovePermissions mocks base method.
-func (m *MockRoleAPI) RemovePermissions(ctx context.Context, id string, permissions []*management.Permission, opts ...management.RequestOption) error {
+// List mocks base method
+func (m *MockRoleAPI) List(ctx context.Context, opts ...management.RequestOption) (*management.RoleList, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id, permissions}
+	varargs := []interface{}{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "RemovePermissions", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret := m.ctrl.Call(m, "List", varargs...)
+	ret0, _ := ret[0].(*management.RoleList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// RemovePermissions indicates an expected call of RemovePermissions.
-func (mr *MockRoleAPIMockRecorder) RemovePermissions(ctx, id, permissions interface{}, opts ...interface{}) *gomock.Call {
+// List indicates an expected call of List
+func (mr *MockRoleAPIMockRecorder) List(ctx interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id, permissions}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemovePermissions", reflect.TypeOf((*MockRoleAPI)(nil).RemovePermissions), varargs...)
+	varargs := append([]interface{}{ctx}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockRoleAPI)(nil).List), varargs...)
 }
 
-// Update mocks base method.
+// Update mocks base method
 func (m *MockRoleAPI) Update(ctx context.Context, id string, r *management.Role, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, id, r}
@@ -183,9 +105,86 @@ func (m *MockRoleAPI) Update(ctx context.Context, id string, r *management.Role,
 	return ret0
 }
 
-// Update indicates an expected call of Update.
+// Update indicates an expected call of Update
 func (mr *MockRoleAPIMockRecorder) Update(ctx, id, r interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, id, r}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockRoleAPI)(nil).Update), varargs...)
+}
+
+// Delete mocks base method
+func (m *MockRoleAPI) Delete(ctx context.Context, id string, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Delete", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete
+func (mr *MockRoleAPIMockRecorder) Delete(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockRoleAPI)(nil).Delete), varargs...)
+}
+
+// AssociatePermissions mocks base method
+func (m *MockRoleAPI) AssociatePermissions(ctx context.Context, id string, permissions []*management.Permission, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id, permissions}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AssociatePermissions", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AssociatePermissions indicates an expected call of AssociatePermissions
+func (mr *MockRoleAPIMockRecorder) AssociatePermissions(ctx, id, permissions interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id, permissions}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AssociatePermissions", reflect.TypeOf((*MockRoleAPI)(nil).AssociatePermissions), varargs...)
+}
+
+// Permissions mocks base method
+func (m *MockRoleAPI) Permissions(ctx context.Context, id string, opts ...management.RequestOption) (*management.PermissionList, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Permissions", varargs...)
+	ret0, _ := ret[0].(*management.PermissionList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Permissions indicates an expected call of Permissions
+func (mr *MockRoleAPIMockRecorder) Permissions(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Permissions", reflect.TypeOf((*MockRoleAPI)(nil).Permissions), varargs...)
+}
+
+// RemovePermissions mocks base method
+func (m *MockRoleAPI) RemovePermissions(ctx context.Context, id string, permissions []*management.Permission, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id, permissions}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RemovePermissions", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemovePermissions indicates an expected call of RemovePermissions
+func (mr *MockRoleAPIMockRecorder) RemovePermissions(ctx, id, permissions interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id, permissions}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemovePermissions", reflect.TypeOf((*MockRoleAPI)(nil).RemovePermissions), varargs...)
 }
