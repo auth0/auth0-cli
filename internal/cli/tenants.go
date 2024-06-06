@@ -34,7 +34,9 @@ func listTenantCmd(cli *cli) *cobra.Command {
 		Short:   "List your tenants",
 		Long:    "List your tenants.",
 		Example: `  auth0 tenants list
-  auth0 tenants ls`,
+  auth0 tenants ls
+  auth0 tenants ls --json
+  auth0 tenants ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tenants, err := cli.Config.ListAllTenants()
 			if err != nil {
@@ -50,6 +52,10 @@ func listTenantCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
 
 	return cmd
 }
@@ -137,7 +143,7 @@ func (c *cli) tenantPickerOptions(_ context.Context) (pickerOptions, error) {
 	}
 
 	if len(opts)+len(priorityOpts) == 0 {
-		return nil, fmt.Errorf("There are no tenants to pick from. Add tenants by running `auth0 login`.")
+		return nil, fmt.Errorf("there are no tenants to pick from. Add tenants by running `auth0 login`")
 	}
 
 	return append(priorityOpts, opts...), nil

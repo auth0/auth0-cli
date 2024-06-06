@@ -8,18 +8,20 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExchangeCodeForToken(t *testing.T) {
 	t.Run("Successfully call token endpoint", func(t *testing.T) {
 		ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			io.WriteString(w, `{
+			_, err := io.WriteString(w, `{
 				"access_token": "access-token-here",
 				"id_token": "id-token-here",
 				"token_type": "token-type-here",
 				"expires_in": 1000
 			}`)
+			require.NoError(t, err)
 		}))
 
 		defer ts.Close()
@@ -59,7 +61,8 @@ func TestExchangeCodeForToken(t *testing.T) {
 			ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(testCase.httpStatus)
 				if testCase.response != "" {
-					io.WriteString(w, testCase.response)
+					_, err := io.WriteString(w, testCase.response)
+					require.NoError(t, err)
 				}
 			}))
 

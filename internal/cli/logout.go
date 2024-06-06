@@ -24,7 +24,7 @@ func logoutCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := cli.Config.RemoveTenant(selectedTenant); err != nil {
-				return fmt.Errorf("failed to log out from the tenant %s: %w", selectedTenant, err)
+				return fmt.Errorf("failed to log out from the tenant %q: %w", selectedTenant, err)
 			}
 
 			if err := keyring.DeleteSecretsForTenant(selectedTenant); err != nil {

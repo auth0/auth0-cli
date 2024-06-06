@@ -87,7 +87,7 @@ func BoolInput(name string, message string, help string, defaultValue bool, requ
 }
 
 func SelectInput(name string, message string, help string, options []string, defaultValue string, required bool) *survey.Question {
-	// force options "page" size to full,
+	// Force options "page" size to full,
 	// since there's not visual clue about extra options.
 	pageSize := len(options)
 	input := &survey.Question{

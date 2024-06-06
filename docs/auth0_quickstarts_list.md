@@ -20,12 +20,14 @@ auth0 quickstarts list [flags]
   auth0 qs list
   auth0 qs ls
   auth0 qs ls --json
+  auth0 qs ls --csv
 ```
 
 
 ## Flags
 
 ```
+      --csv    Output in csv format.
       --json   Output in json format.
 ```
 

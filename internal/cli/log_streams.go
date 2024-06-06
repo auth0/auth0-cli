@@ -66,7 +66,8 @@ func listLogStreamsCmd(cli *cli) *cobra.Command {
 		Long:    "List your existing log streams. To create one, run: `auth0 logs streams create`.",
 		Example: `  auth0 logs streams list
   auth0 logs streams ls
-  auth0 logs streams ls --json`,
+  auth0 logs streams ls --json
+  auth0 logs streams ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list []*management.LogStream
 
@@ -75,7 +76,7 @@ func listLogStreamsCmd(cli *cli) *cobra.Command {
 				list, err = cli.api.LogStream.List(cmd.Context(), management.PerPage(defaultPageSize))
 				return err
 			}); err != nil {
-				return fmt.Errorf("An unexpected error occurred: %w", err)
+				return fmt.Errorf("failed to list log streams: %w", err)
 			}
 
 			cli.renderer.LogStreamList(list)
@@ -84,6 +85,8 @@ func listLogStreamsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
 
 	return cmd
 }
@@ -119,7 +122,7 @@ func showLogStreamCmd(cli *cli) *cobra.Command {
 				a, err = cli.api.LogStream.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
-				return fmt.Errorf("Unable to load log stream: %w", err)
+				return fmt.Errorf("failed to read log stream: %w", err)
 			}
 			cli.renderer.LogStreamShow(a)
 			return nil
@@ -199,21 +202,16 @@ func deleteLogStreamCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.Spinner("Deleting Log Stream(s)", func() error {
-				var errs []error
-				for _, id := range ids {
-					if id != "" {
-						if _, err := cli.api.LogStream.Read(cmd.Context(), id); err != nil {
-							errs = append(errs, fmt.Errorf("Unable to delete log stream (%s): %w", id, err))
-							continue
-						}
-						if err := cli.api.LogStream.Delete(cmd.Context(), id); err != nil {
-							errs = append(errs, fmt.Errorf("Unable to delete log stream (%s): %w", id, err))
-						}
+			return ansi.ProgressBar("Deleting Log Stream(s)", ids, func(_ int, id string) error {
+				if id != "" {
+					if _, err := cli.api.LogStream.Read(cmd.Context(), id); err != nil {
+						return fmt.Errorf("failed to delete log stream with ID %q: %w", id, err)
+					}
+					if err := cli.api.LogStream.Delete(cmd.Context(), id); err != nil {
+						return fmt.Errorf("failed to delete log stream with ID %q: %w", id, err)
 					}
 				}
-
-				return errors.Join(errs...)
+				return nil
 			})
 		},
 	}
@@ -263,7 +261,7 @@ func formatLogStreamSettingsPath(id string) string {
 func (c *cli) allLogStreamsPickerOptions(ctx context.Context) (pickerOptions, error) {
 	logStreams, err := c.api.LogStream.List(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list log streams: %w", err)
 	}
 
 	var options pickerOptions
@@ -272,8 +270,9 @@ func (c *cli) allLogStreamsPickerOptions(ctx context.Context) (pickerOptions, er
 		label := fmt.Sprintf("%s %s", logStream.GetName(), ansi.Faint("("+value+")"))
 		options = append(options, pickerOption{value: value, label: label})
 	}
+
 	if len(options) == 0 {
-		return nil, errors.New("There are currently no log streams.")
+		return nil, errors.New("there are currently no log streams to choose from. Create one by running: `auth0 logs streams create`")
 	}
 
 	return options, nil
@@ -283,7 +282,7 @@ func (c *cli) logStreamPickerOptionsByType(desiredType logStreamType) pickerOpti
 	return func(ctx context.Context) (pickerOptions, error) {
 		logStreams, err := c.api.LogStream.List(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to list log streams: %w", err)
 		}
 
 		var options pickerOptions
@@ -296,7 +295,7 @@ func (c *cli) logStreamPickerOptionsByType(desiredType logStreamType) pickerOpti
 		}
 		if len(options) == 0 {
 			return nil, fmt.Errorf(
-				"There are currently no log streams of type: %q, use 'auth0 logs streams create %s' to create one.",
+				"there are currently no log streams of type: %q, use `auth0 logs streams create %s` to create one",
 				desiredType,
 				desiredType,
 			)

@@ -26,8 +26,9 @@ const userAgent = "Auth0 CLI"
 // In addition, it stores a reference to all the flags passed, e.g.:
 //
 // 1. --json
-// 2. --tenant
-// 3. --debug.
+// 2. --csv
+// 3. --tenant
+// 4. --debug.
 type cli struct {
 	// Core primitives exposed to command builders.
 	api      *auth0.API
@@ -38,6 +39,7 @@ type cli struct {
 	debug   bool
 	tenant  string
 	json    bool
+	csv     bool
 	force   bool
 	noInput bool
 	noColor bool
@@ -118,6 +120,10 @@ func (c *cli) configureRenderer() {
 
 	if c.json {
 		c.renderer.Format = display.OutputFormatJSON
+	}
+
+	if c.csv {
+		c.renderer.Format = display.OutputFormatCSV
 	}
 }
 

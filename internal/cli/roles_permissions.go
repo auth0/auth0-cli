@@ -67,15 +67,15 @@ func listRolePermissionsCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 roles permissions list
   auth0 roles permissions ls <role-id>
   auth0 roles permissions ls <role-id> --number 100
-  auth0 roles permissions ls <role-id> -n 100 --json`,
+  auth0 roles permissions ls <role-id> -n 100 --json
+  auth0 roles permissions ls <role-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
 				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
 			}
 
 			if len(args) == 0 {
-				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
-				if err != nil {
+				if err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions); err != nil {
 					return err
 				}
 			} else {
@@ -98,7 +98,7 @@ func listRolePermissionsCmd(cli *cli) *cobra.Command {
 			)
 
 			if err != nil {
-				return fmt.Errorf("Failed to get permissions for role '%s': %w", inputs.ID, err)
+				return fmt.Errorf("failed to read permissions for role with ID %q: %w", inputs.ID, err)
 			}
 
 			var permissions []*management.Permission
@@ -112,6 +112,9 @@ func listRolePermissionsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+
 	roleAPIPermissionsNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
@@ -136,8 +139,7 @@ func addRolePermissionsCmd(cli *cli) *cobra.Command {
   auth0 roles permissions add <role-id> -a <api-id> -p <permission-name>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
-				if err != nil {
+				if err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions); err != nil {
 					return err
 				}
 			} else {
@@ -149,9 +151,9 @@ func addRolePermissionsCmd(cli *cli) *cobra.Command {
 			}
 
 			var rs *management.ResourceServer
-			rs, err := cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(inputs.APIIdentifier))
+			rs, err := cli.api.ResourceServer.Read(cmd.Context(), inputs.APIIdentifier)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to read API with identifier %q: %w", inputs.APIIdentifier, err)
 			}
 
 			if len(inputs.Permissions) == 0 {
@@ -163,15 +165,16 @@ func addRolePermissionsCmd(cli *cli) *cobra.Command {
 
 			ps := makePermissions(rs.GetIdentifier(), inputs.Permissions)
 			if err := cli.api.Role.AssociatePermissions(cmd.Context(), inputs.ID, ps); err != nil {
-				return err
+				return fmt.Errorf("failed to associate permissions to role with ID %q: %w", inputs.ID, err)
 			}
 
 			role, err := cli.api.Role.Read(cmd.Context(), inputs.ID)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to read role with ID %q: %w", inputs.ID, err)
 			}
 
 			cli.renderer.RolePermissionAdd(role, rs, inputs.Permissions)
+
 			return nil
 		},
 	}
@@ -201,8 +204,7 @@ func removeRolePermissionsCmd(cli *cli) *cobra.Command {
   auth0 roles permissions rm <role-id> -a <api-id> -p <permission-name>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions)
-				if err != nil {
+				if err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions); err != nil {
 					return err
 				}
 			} else {
@@ -214,9 +216,9 @@ func removeRolePermissionsCmd(cli *cli) *cobra.Command {
 			}
 
 			var rs *management.ResourceServer
-			rs, err := cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(inputs.APIIdentifier))
+			rs, err := cli.api.ResourceServer.Read(cmd.Context(), inputs.APIIdentifier)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to read API with identifier %q: %w", inputs.APIIdentifier, err)
 			}
 
 			if len(inputs.Permissions) == 0 {
@@ -228,15 +230,16 @@ func removeRolePermissionsCmd(cli *cli) *cobra.Command {
 
 			ps := makePermissions(rs.GetIdentifier(), inputs.Permissions)
 			if err := cli.api.Role.RemovePermissions(cmd.Context(), inputs.ID, ps); err != nil {
-				return err
+				return fmt.Errorf("failed to remove permissions from role with ID %q: %w", inputs.ID, err)
 			}
 
 			role, err := cli.api.Role.Read(cmd.Context(), inputs.ID)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to read role with ID %q: %w", inputs.ID, err)
 			}
 
 			cli.renderer.RolePermissionRemove(role, rs, inputs.Permissions)
+
 			return nil
 		},
 	}

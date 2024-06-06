@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -38,7 +37,8 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 users blocks list <user-id|username|email|phone-number>
   auth0 users blocks list <user-id|username|email|phone-number> --json
   auth0 users blocks list "auth0|61b5b6e90783fa19f7c57dad"
-  auth0 users blocks list "frederik@travel0.com"`,
+  auth0 users blocks list "frederik@travel0.com"
+  auth0 users blocks list <user-id|username|email|phone-number> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userIdentifier.Ask(cmd, &inputs.userIdentifier); err != nil {
@@ -59,7 +59,7 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 				return err
 			})
 			if err != nil {
-				return fmt.Errorf("failed to list user blocks for user with ID %s: %w", inputs.userIdentifier, err)
+				return fmt.Errorf("failed to list user blocks for user with ID %q: %w", inputs.userIdentifier, err)
 			}
 
 			cli.renderer.UserBlocksList(userBlocks)
@@ -68,6 +68,8 @@ func listUserBlocksCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
 
 	return cmd
 }
@@ -82,34 +84,30 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
   auth0 users blocks unblock "frederik@travel0.com" "poovam@travel0.com"
 		`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			identifiers := make([]string, len(args))
+			ids := make([]string, len(args))
 			if len(args) == 0 {
 				var id string
 				if err := userIdentifier.Ask(cmd, &id); err != nil {
 					return err
 				}
-				identifiers = append(identifiers, id)
+				ids = append(ids, id)
 			} else {
-				identifiers = append(identifiers, args...)
+				ids = append(ids, args...)
 			}
 
-			return ansi.Spinner("Unblocking user(s)...", func() error {
-				var errs []error
-				for _, identifier := range identifiers {
-					if identifier != "" {
-						err := cli.api.User.Unblock(cmd.Context(), identifier)
-						if mErr, ok := err.(management.Error); ok && mErr.Status() != http.StatusBadRequest {
-							errs = append(errs, fmt.Errorf("failed to unblock user with identifier %s: %w", identifier, err))
-							continue
-						}
+			return ansi.ProgressBar("Unblocking user(s)", ids, func(_ int, id string) error {
+				if id != "" {
+					err := cli.api.User.Unblock(cmd.Context(), id)
+					if mErr, ok := err.(management.Error); ok && mErr.Status() != http.StatusBadRequest {
+						return fmt.Errorf("failed to unblock user with identifier %s: %w", id, err)
+					}
 
-						err = cli.api.User.UnblockByIdentifier(cmd.Context(), identifier)
-						if err != nil {
-							errs = append(errs, fmt.Errorf("failed to unblock user with identifier %s: %w", identifier, err))
-						}
+					err = cli.api.User.UnblockByIdentifier(cmd.Context(), id)
+					if err != nil {
+						return fmt.Errorf("failed to unblock user with identifier %s: %w", id, err)
 					}
 				}
-				return errors.Join(errs...)
+				return nil
 			})
 		},
 	}

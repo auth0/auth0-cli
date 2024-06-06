@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUserInfo(t *testing.T) {
@@ -16,7 +17,8 @@ func TestUserInfo(t *testing.T) {
 			assert.Equal(t, "Bearer token", r.Header.Get("authorization"))
 
 			w.Header().Set("Content-Type", "application/json")
-			io.WriteString(w, `{"name": "Joe Bloggs","email_verified":true}`)
+			_, err := io.WriteString(w, `{"name": "Joe Bloggs","email_verified":true}`)
+			require.NoError(t, err)
 		}))
 
 		defer ts.Close()
@@ -35,7 +37,8 @@ func TestUserInfo(t *testing.T) {
 			assert.Equal(t, "Bearer token", r.Header.Get("authorization"))
 
 			w.Header().Set("Content-Type", "application/json")
-			io.WriteString(w, `{"email_verified":"true"}`)
+			_, err := io.WriteString(w, `{"email_verified":"true"}`)
+			require.NoError(t, err)
 		}))
 
 		defer ts.Close()
@@ -78,7 +81,8 @@ func TestUserInfo(t *testing.T) {
 			ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(testCase.httpStatus)
 				if testCase.response != "" {
-					io.WriteString(w, testCase.response)
+					_, err := io.WriteString(w, testCase.response)
+					require.NoError(t, err)
 				}
 			}))
 

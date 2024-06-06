@@ -63,7 +63,7 @@ func (t *Tracker) Wait(ctx context.Context) {
 	}()
 
 	select {
-	case <-ch: // waitgroup is done
+	case <-ch: // Waitgroup is done.
 		return
 	case <-ctx.Done():
 		return
@@ -101,9 +101,11 @@ func (t *Tracker) sendEvent(event *event) {
 		return
 	}
 
-	// defers execute in LIFO order
+	// Defers execute in LIFO order.
 	defer t.wg.Done()
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 }
 
 func newEvent(eventName string, id string) *event {
@@ -131,9 +133,9 @@ func generateEventName(command string, action string) string {
 	}
 
 	switch length := len(commands); {
-	case length == 1: // the root command
+	case length == 1: // The root command.
 		return fmt.Sprintf("%s - %s - %s", eventNamePrefix, commands[0], action)
-	case length == 2: // a top-level command e.g. auth0 apps
+	case length == 2: // A top-level command e.g. auth0 apps.
 		return fmt.Sprintf("%s - %s - %s - %s", eventNamePrefix, commands[0], commands[1], action)
 	case length >= 3:
 		return fmt.Sprintf("%s - %s - %s - %s", eventNamePrefix, commands[1], strings.Join(commands[2:], " "), action)
@@ -143,7 +145,7 @@ func generateEventName(command string, action string) string {
 }
 
 func shouldTrack() bool {
-	if os.Getenv("AUTH0_CLI_ANALYTICS") == "false" || buildinfo.Version == "" { // Do not track debug builds
+	if os.Getenv("AUTH0_CLI_ANALYTICS") == "false" || buildinfo.Version == "" { // Do not track debug builds.
 		return false
 	}
 

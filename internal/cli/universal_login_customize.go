@@ -203,7 +203,9 @@ func startWebSocketServer(
 	if err != nil {
 		return err
 	}
-	defer listener.Close()
+	defer func() {
+		_ = listener.Close()
+	}()
 
 	handler := &webSocketHandler{
 		display:  display,
@@ -605,14 +607,26 @@ func saveUniversalLoginBrandingData(ctx context.Context, api *auth0.API, data *u
 	group, ctx := errgroup.WithContext(ctx)
 
 	group.Go(func() (err error) {
+		if data.Settings == nil || data.Settings.String() == "{}" {
+			return nil
+		}
+
 		return api.Branding.Update(ctx, data.Settings)
 	})
 
 	group.Go(func() (err error) {
+		if data.Template == nil || data.Template.String() == "{}" {
+			return nil
+		}
+
 		return api.Branding.SetUniversalLogin(ctx, data.Template)
 	})
 
 	group.Go(func() (err error) {
+		if data.Theme == nil || data.Theme.String() == "{}" {
+			return nil
+		}
+
 		existingTheme, err := api.BrandingTheme.Default(ctx)
 		if err == nil {
 			return api.BrandingTheme.Update(ctx, existingTheme.GetID(), data.Theme)

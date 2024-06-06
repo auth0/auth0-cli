@@ -40,7 +40,10 @@ func RefreshAccessToken(httpClient *http.Client, tenant string) (TokenResponse, 
 		return TokenResponse{}, fmt.Errorf("cannot get a new access token from the refresh token: %w", err)
 	}
 
-	defer r.Body.Close()
+	defer func() {
+		_ = r.Body.Close()
+	}()
+
 	if r.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(r.Body)
 		bodyStr := string(b)

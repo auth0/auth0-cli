@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"time"
+	"unicode"
 
 	"github.com/spf13/cobra"
 
@@ -55,24 +56,23 @@ func Execute() {
 		}
 	}()
 
-	// platform specific terminal initialization:
+	// Platform specific terminal initialization:
 	// this should run for all commands,
-	// for most of the architectures there's no requirements:
+	// for most of the architectures there's no requirements.
 	ansi.InitConsole()
 
 	cancelCtx := contextWithCancel()
 	if err := rootCmd.ExecuteContext(cancelCtx); err != nil {
-		cli.renderer.Heading("error")
-		cli.renderer.Errorf(err.Error())
+		renderErrorMessage(cli.renderer, err.Error())
 
 		instrumentation.ReportException(err)
 		os.Exit(1) // nolint:gocritic
 	}
 
 	timeoutCtx, cancel := context.WithTimeout(cancelCtx, 3*time.Second)
-	// defers are executed in LIFO order
+	// Defers are executed in LIFO order.
 	defer cancel()
-	defer cli.tracker.Wait(timeoutCtx) // No event should be tracked after this has run, or it will panic e.g. in earlier deferred functions
+	defer cli.tracker.Wait(timeoutCtx) // No event should be tracked after this has run, or it will panic e.g. in earlier deferred functions.
 }
 
 func buildRootCmd(cli *cli) *cobra.Command {
@@ -149,7 +149,7 @@ func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
 func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	// The order of the commands here matters.
 	// Add new commands in a place that reflect its
-	// relevance or relation with other commands:
+	// relevance or relation with other commands.
 	rootCmd.AddCommand(loginCmd(cli))
 	rootCmd.AddCommand(logoutCmd(cli))
 	rootCmd.AddCommand(tenantsCmd(cli))
@@ -170,7 +170,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(apiCmd(cli))
 	rootCmd.AddCommand(terraformCmd(cli))
 
-	// keep completion at the bottom:
+	// Keep completion at the bottom.
 	rootCmd.AddCommand(completionCmd(cli))
 }
 
@@ -203,4 +203,19 @@ func overrideHelpAndVersionFlagText(cmd *cobra.Command) {
 			setHelpFlagTextFunc(c)
 		}
 	}
+}
+
+func renderErrorMessage(display *display.Renderer, errorMessage string) {
+	display.Heading(ansi.Red("error"))
+
+	rawErrorMessage := []rune(errorMessage)
+	humanReadableErrorMessage := string(
+		append(
+			[]rune{unicode.ToUpper(rawErrorMessage[0])},
+			rawErrorMessage[1:]...,
+		),
+	) + "."
+
+	display.Errorf(humanReadableErrorMessage)
+	display.Newline()
 }

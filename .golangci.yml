@@ -4,9 +4,6 @@ run:
 
 linters:
   disable-all: true
-  # We are commenting a couple of them,
-  # so we can fix them one at a time
-  # as the effort is non-trivial.
   enable:
     - unused
     - gofmt
@@ -16,7 +13,7 @@ linters:
     - whitespace
     - goimports
     - gosimple
-#    - errcheck
+    - errcheck
     - unconvert
     - gocritic
 #    - gosec
@@ -28,17 +25,22 @@ linters-settings:
   staticcheck:
     checks: [ "all" ]
   godot:
-    scope: declarations
+    scope: all
     capital: true
+    period: true
   goimports:
     local-prefixes: "github.com/auth0/auth0-cli"
 
 issues:
   exclude-use-default: false
+  # We are excluding a couple of them,
+  # so we can fix them one at a time
+  # as the effort is non-trivial.
   exclude:
     - "should have a package comment"
     - "package comment should be of the form"
     - "should have comment"
     - "be unexported"
-    - "error strings should not be capitalized or end with punctuation or a newline"
     - "blank-imports"
+    - "unused-parameter"
+    - "Error return value of (.+) is not checked"

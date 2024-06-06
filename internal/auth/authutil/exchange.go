@@ -32,7 +32,9 @@ func ExchangeCodeForToken(httpClient *http.Client, baseDomain, clientID, clientS
 	if err != nil {
 		return nil, fmt.Errorf("unable to exchange code for token: %w", err)
 	}
-	defer r.Body.Close()
+	defer func() {
+		_ = r.Body.Close()
+	}()
 
 	if r.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unable to exchange code for token: %s", r.Status)

@@ -35,7 +35,7 @@ func WaitForBrowserCallback(addr string) (code string, state string, err error) 
 
 		if cb.code == "" {
 			_, _ = w.Write([]byte(resultPage("Login Failed",
-				"Unable to extract code from request, please try authenticating again.",
+				"Failed to extract code from request, please try authenticating again.",
 				"error-denied")))
 		} else {
 			_, _ = w.Write([]byte(resultPage("Login Successful",
