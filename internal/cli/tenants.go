@@ -53,7 +53,7 @@ func listTenantCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&cli.csv, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "csv")
 

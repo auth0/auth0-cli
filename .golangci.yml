@@ -4,9 +4,6 @@ run:
 
 linters:
   disable-all: true
-  # We are commenting a couple of them,
-  # so we can fix them one at a time
-  # as the effort is non-trivial.
   enable:
     - unused
     - gofmt
@@ -36,9 +33,14 @@ linters-settings:
 
 issues:
   exclude-use-default: false
+  # We are excluding a couple of them,
+  # so we can fix them one at a time
+  # as the effort is non-trivial.
   exclude:
     - "should have a package comment"
     - "package comment should be of the form"
     - "should have comment"
     - "be unexported"
     - "blank-imports"
+    - "unused-parameter"
+    - "Error return value of (.+) is not checked"
