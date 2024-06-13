@@ -18,7 +18,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1
 	github.com/hashicorp/go-version v1.6.0
-	github.com/hashicorp/hc-install v0.6.4
+	github.com/hashicorp/hc-install v0.7.0
 	github.com/hashicorp/terraform-exec v0.21.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/lestrrat-go/jwx v1.2.29
