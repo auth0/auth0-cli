@@ -25,7 +25,6 @@ scoop bucket add auth0 https://github.com/auth0/scoop-auth0-cli.git && scoop ins
 Install via [Powershell](https://learn.microsoft.com/en-us/powershell/)
 
 ```
-
 #fetch latest release information
 $apiUrl = "https://api.github.com/repos/auth0/auth0-cli/releases/latest"
 $latestRelease = Invoke-RestMethod -Uri $apiUrl
