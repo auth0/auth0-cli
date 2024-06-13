@@ -2,6 +2,9 @@ module github.com/auth0/auth0-cli
 
 go 1.22
 
+// TODO: This could be removed after https://github.com/mholt/archiver/pull/396 merged
+replace github.com/mholt/archiver/v3 => github.com/anchore/archiver/v3 v3.5.2
+
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/PuerkitoBio/rehttp v1.4.0
