@@ -1196,6 +1196,12 @@ func TestSaveUniversalLoginBrandingData(t *testing.T) {
 					Body: auth0.String("<html></html>"),
 				},
 				Theme: &management.BrandingTheme{},
+				Partials: []*management.PromptPartials{
+					{
+						Prompt:           "login",
+						FormContentStart: "<div>Updated Form Content Start</div>",
+					},
+				},
 				Prompts: []*promptData{
 					{
 						Language:   "en",
@@ -1234,6 +1240,12 @@ func TestSaveUniversalLoginBrandingData(t *testing.T) {
 				mockPromptAPI.EXPECT().
 					SetCustomText(gomock.Any(), "login", "en", map[string]interface{}{"key": "value"}).
 					Return(nil)
+				mockPromptAPI.EXPECT().
+					UpdatePartials(gomock.Any(), &management.PromptPartials{
+						Prompt:           "login",
+						FormContentStart: "<div>Updated Form Content Start</div>",
+					}).
+					Return(nil)
 				mockAPI := &auth0.API{
 					Branding:      mockBrandingAPI,
 					BrandingTheme: mockBrandingThemeAPI,
@@ -1256,6 +1268,12 @@ func TestSaveUniversalLoginBrandingData(t *testing.T) {
 					Body: auth0.String("<html></html>"),
 				},
 				Theme: &management.BrandingTheme{},
+				Partials: []*management.PromptPartials{
+					{
+						Prompt:           "login",
+						FormContentStart: "<div>Updated Form Content Start</div>",
+					},
+				},
 				Prompts: []*promptData{
 					{
 						Language:   "en",
@@ -1295,6 +1313,12 @@ func TestSaveUniversalLoginBrandingData(t *testing.T) {
 				mockPromptAPI.EXPECT().
 					SetCustomText(gomock.Any(), "login", "en", map[string]interface{}{"key": "value"}).
 					Return(nil)
+				mockPromptAPI.EXPECT().
+					UpdatePartials(gomock.Any(), &management.PromptPartials{
+						Prompt:           "login",
+						FormContentStart: "<div>Updated Form Content Start</div>",
+					}).
+					Return(nil)
 				mockAPI := &auth0.API{
 					Branding:      mockBrandingAPI,
 					BrandingTheme: mockBrandingThemeAPI,
@@ -1317,6 +1341,12 @@ func TestSaveUniversalLoginBrandingData(t *testing.T) {
 					Body: auth0.String("<html></html>"),
 				},
 				Theme: &management.BrandingTheme{},
+				Partials: []*management.PromptPartials{
+					{
+						Prompt:           "login",
+						FormContentStart: "<div>Updated Form Content Start</div>",
+					},
+				},
 				Prompts: []*promptData{
 					{
 						Language:   "en",
