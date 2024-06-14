@@ -237,54 +237,14 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 						},
 						nil,
 					)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("signup"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptSignup,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("signup-id"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptSignupID,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("signup-password"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptSignupPassword,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("login"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptLogin,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("login-id"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptLoginID,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("login-password"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptLoginPassword,
-				},
-					nil,
-				)
+				for _, promptType := range allowedPromptsWithPartials {
+					mockPromptAPI.EXPECT().
+						ReadPartials(gomock.Any(), promptType).
+						Return(&management.PromptPartials{
+							FormContentStart: "<form>",
+							Prompt:           promptType,
+						}, nil)
+				}
 
 				mockClientAPI := mock.NewMockClientAPI(ctrl)
 				mockClientAPI.
@@ -459,54 +419,14 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 						},
 						nil,
 					)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("signup"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptSignup,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("signup-id"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptSignupID,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("signup-password"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptSignupPassword,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("login"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptLogin,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("login-id"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptLoginID,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("login-password"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptLoginPassword,
-				},
-					nil,
-				)
+				for _, promptType := range allowedPromptsWithPartials {
+					mockPromptAPI.EXPECT().
+						ReadPartials(gomock.Any(), promptType).
+						Return(&management.PromptPartials{
+							FormContentStart: "<form>",
+							Prompt:           promptType,
+						}, nil)
+				}
 				mockClientAPI := mock.NewMockClientAPI(ctrl)
 				mockClientAPI.
 					EXPECT().
@@ -684,54 +604,14 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 						},
 						nil,
 					)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("signup"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptSignup,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("signup-id"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptSignupID,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("signup-password"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptSignupPassword,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("login"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptLogin,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("login-id"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptLoginID,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("login-password"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptLoginPassword,
-				},
-					nil,
-				)
+				for _, promptType := range allowedPromptsWithPartials {
+					mockPromptAPI.EXPECT().
+						ReadPartials(gomock.Any(), promptType).
+						Return(&management.PromptPartials{
+							FormContentStart: "<form>",
+							Prompt:           promptType,
+						}, nil)
+				}
 				mockClientAPI := mock.NewMockClientAPI(ctrl)
 				mockClientAPI.
 					EXPECT().
@@ -912,54 +792,14 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 						},
 						nil,
 					)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("signup"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptSignup,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("signup-id"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptSignupID,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("signup-password"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptSignupPassword,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("login"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptLogin,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("login-id"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptLoginID,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("login-password"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptLoginPassword,
-				},
-					nil,
-				)
+				for _, promptType := range allowedPromptsWithPartials {
+					mockPromptAPI.EXPECT().
+						ReadPartials(gomock.Any(), promptType).
+						Return(&management.PromptPartials{
+							FormContentStart: "<form>",
+							Prompt:           promptType,
+						}, nil)
+				}
 				mockClientAPI := mock.NewMockClientAPI(ctrl)
 				mockClientAPI.
 					EXPECT().
@@ -1197,54 +1037,14 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					EXPECT().
 					Read(gomock.Any()).
 					Return(nil, fmt.Errorf("failed to fetch tenant data"))
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("signup"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptSignup,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("signup-id"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptSignupID,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("signup-password"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptSignupPassword,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("login"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptLogin,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("login-id"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptLoginID,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("login-password"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptLoginPassword,
-				},
-					nil,
-				)
+				for _, promptType := range allowedPromptsWithPartials {
+					mockPromptAPI.EXPECT().
+						ReadPartials(gomock.Any(), promptType).
+						Return(&management.PromptPartials{
+							FormContentStart: "<form>",
+							Prompt:           promptType,
+						}, nil)
+				}
 				mockClientAPI := mock.NewMockClientAPI(ctrl)
 				mockClientAPI.
 					EXPECT().
@@ -1323,54 +1123,14 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					EXPECT().
 					CustomText(gomock.Any(), "login", "en").
 					Return(nil, fmt.Errorf("failed to fetch custom text"))
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("signup"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptSignup,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("signup-id"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptSignupID,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("signup-password"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptSignupPassword,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("login"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptLogin,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("login-id"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptLoginID,
-				},
-					nil,
-				)
-				mockPromptAPI.EXPECT().ReadPartials(
-					gomock.Any(), management.PromptType("login-password"),
-				).Return(&management.PromptPartials{
-					FormContentStart: "<form>",
-					Prompt:           management.PromptLoginPassword,
-				},
-					nil,
-				)
+				for _, promptType := range allowedPromptsWithPartials {
+					mockPromptAPI.EXPECT().
+						ReadPartials(gomock.Any(), promptType).
+						Return(&management.PromptPartials{
+							FormContentStart: "<form>",
+							Prompt:           promptType,
+						}, nil)
+				}
 				mockClientAPI := mock.NewMockClientAPI(ctrl)
 				mockClientAPI.
 					EXPECT().
