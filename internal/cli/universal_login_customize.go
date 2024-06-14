@@ -232,13 +232,13 @@ func startWebSocketServer(
 		tenant:   tenantDomain,
 	}
 
-	fs.Sub(universalLoginPreviewAssets, "data/universal-login")
+	assetsWithoutPrefix, err := fs.Sub(universalLoginPreviewAssets, "data/universal-login")
 	if err != nil {
 		return err
 	}
 
 	router := http.NewServeMux()
-	//router.Handle("/", http.FileServer(http.FS(assetsWithoutPrefix)))
+	router.Handle("/", http.FileServer(http.FS(assetsWithoutPrefix)))
 	router.Handle("/ws", handler)
 
 	server := &http.Server{
