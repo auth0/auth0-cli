@@ -623,6 +623,124 @@ func TestEmailProviderResourceFetcher_FetchData(t *testing.T) {
 		assert.EqualError(t, err, "failed to read email provider")
 	})
 }
+func TestEmailTemplateResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves email templates data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		emailTemplateAPI := mock.NewMockEmailTemplateAPI(ctrl)
+		templates := []string{
+			"verify_email", "reset_email", "welcome_email",
+			"blocked_account", "stolen_credentials",
+			"enrollment_email", "mfa_oob_code",
+			"change_password", "password_reset",
+		}
+
+		for _, tmpl := range templates {
+			emailTemplateAPI.EXPECT().
+				Read(gomock.Any(), tmpl).
+				Return(&management.EmailTemplate{Template: auth0.String(tmpl)}, nil)
+		}
+
+		fetcher := emailTemplateResourceFetcher{
+			api: &auth0.API{
+				EmailTemplate: emailTemplateAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_email_template.verify_email",
+				ImportID:     "verify_email",
+			},
+			{
+				ResourceName: "auth0_email_template.reset_email",
+				ImportID:     "reset_email",
+			},
+			{
+				ResourceName: "auth0_email_template.welcome_email",
+				ImportID:     "welcome_email",
+			},
+			{
+				ResourceName: "auth0_email_template.blocked_account",
+				ImportID:     "blocked_account",
+			},
+			{
+				ResourceName: "auth0_email_template.stolen_credentials",
+				ImportID:     "stolen_credentials",
+			},
+			{
+				ResourceName: "auth0_email_template.enrollment_email",
+				ImportID:     "enrollment_email",
+			},
+			{
+				ResourceName: "auth0_email_template.mfa_oob_code",
+				ImportID:     "mfa_oob_code",
+			},
+			{
+				ResourceName: "auth0_email_template.change_password",
+				ImportID:     "change_password",
+			},
+			{
+				ResourceName: "auth0_email_template.password_reset",
+				ImportID:     "password_reset",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it does not generate email template import data if email template does not exist", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mErr := mockManagamentError{status: http.StatusNotFound}
+		emailTemplateAPI := mock.NewMockEmailTemplateAPI(ctrl)
+		templates := []string{
+			"verify_email", "reset_email", "welcome_email",
+			"blocked_account", "stolen_credentials",
+			"enrollment_email", "mfa_oob_code",
+			"change_password", "password_reset",
+		}
+
+		for _, tmpl := range templates {
+			emailTemplateAPI.EXPECT().
+				Read(gomock.Any(), tmpl).
+				Return(nil, mErr)
+		}
+
+		fetcher := emailTemplateResourceFetcher{
+			api: &auth0.API{
+				EmailTemplate: emailTemplateAPI,
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 0)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		emailTemplateAPI := mock.NewMockEmailTemplateAPI(ctrl)
+		emailTemplateAPI.EXPECT().
+			Read(gomock.Any(), gomock.Any()).
+			Return(nil, fmt.Errorf("failed to read email template"))
+
+		fetcher := emailTemplateResourceFetcher{
+			api: &auth0.API{
+				EmailTemplate: emailTemplateAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to read email template")
+	})
+}
 
 func TestLogStreamResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves log streams data", func(t *testing.T) {

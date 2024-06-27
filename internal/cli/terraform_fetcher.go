@@ -250,7 +250,6 @@ func (f *emailTemplateResourceFetcher) FetchData(ctx context.Context) (importDat
 	templates := []string{`verify_email`, `reset_email`, `welcome_email`, `blocked_account`, `stolen_credentials`, `enrollment_email`, `mfa_oob_code`, `change_password`, `password_reset`}
 
 	for _, template := range templates {
-
 		emailTemplate, err := f.api.EmailTemplate.Read(ctx, template)
 		if err != nil {
 			if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusNotFound {
