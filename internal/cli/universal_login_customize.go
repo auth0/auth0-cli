@@ -28,6 +28,7 @@ const (
 	fetchBrandingMessageType = "FETCH_BRANDING"
 	fetchPromptMessageType   = "FETCH_PROMPT"
 	saveBrandingMessageType  = "SAVE_BRANDING"
+	fetchPartialMessageType  = "FETCH_PARTIAL"
 	errorMessageType         = "ERROR"
 	successMessageType       = "SUCCESS"
 )
@@ -37,10 +38,20 @@ var (
 	universalLoginPreviewAssets embed.FS
 )
 
+var allowedPromptsWithPartials = []management.PromptType{
+	management.PromptSignup,
+	management.PromptSignupID,
+	management.PromptSignupPassword,
+	management.PromptLogin,
+	management.PromptLoginID,
+	management.PromptLoginPassword,
+}
+
 type (
 	universalLoginBrandingData struct {
 		Applications []*applicationData                 `json:"applications"`
 		Prompts      []*promptData                      `json:"prompts"`
+		Partials     []*management.PromptPartials       `json:"partials"`
 		Settings     *management.Branding               `json:"settings"`
 		Template     *management.BrandingUniversalLogin `json:"template"`
 		Theme        *management.BrandingTheme          `json:"theme"`
@@ -58,6 +69,11 @@ type (
 		Language   string                 `json:"language"`
 		Prompt     string                 `json:"prompt"`
 		CustomText map[string]interface{} `json:"custom_text,omitempty"`
+	}
+
+	partialData struct {
+		InsertionPoint string `json:"insertion_point"`
+		PromptName     string `json:"prompt_name"`
 	}
 
 	tenantData struct {
@@ -130,6 +146,8 @@ func (m *webSocketMessage) UnmarshalJSON(b []byte) error {
 		payload = &universalLoginBrandingData{}
 	case fetchPromptMessageType:
 		payload = &promptData{}
+	case fetchPartialMessageType:
+		payload = &partialData{}
 	default:
 		payload = make(map[string]interface{})
 	}
@@ -377,6 +395,41 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if err := connection.WriteJSON(&successMsg); err != nil {
 				h.display.Errorf("Failed to send success message: %v", err)
 			}
+		case fetchPartialMessageType:
+			partialToFetch, ok := message.Payload.(*partialData)
+
+			if !ok {
+				h.display.Errorf("Invalid payload type: %T", message.Payload)
+				continue
+			}
+
+			partialToSend, err := fetchPartial(r.Context(), h.api, partialToFetch)
+
+			if err != nil {
+				h.display.Errorf("Failed to fetch partial for prompt: %v", err)
+				errorMsg := webSocketMessage{
+					Type: errorMessageType,
+					Payload: &errorData{
+						Error: err.Error(),
+					},
+				}
+
+				if err := connection.WriteJSON(&errorMsg); err != nil {
+					h.display.Errorf("Failed to send error message: %v", err)
+				}
+
+				continue
+			}
+
+			fetchPartialMsg := webSocketMessage{
+				Type:    fetchPartialMessageType,
+				Payload: partialToSend,
+			}
+
+			if err = connection.WriteJSON(&fetchPartialMsg); err != nil {
+				h.display.Errorf("Failed to send prompt data message: %v", err)
+				continue
+			}
 		}
 	}
 }
@@ -441,6 +494,12 @@ func fetchUniversalLoginBrandingData(
 		return err
 	})
 
+	var partials []*management.PromptPartials
+	group.Go(func() (err error) {
+		partials, err = fetchAllPartials(ctx, api)
+		return err
+	})
+
 	if err := group.Wait(); err != nil {
 		return nil, err
 	}
@@ -455,7 +514,8 @@ func fetchUniversalLoginBrandingData(
 			EnabledLocales: tenant.GetEnabledLocales(),
 			Domain:         tenantDomain,
 		},
-		Prompts: []*promptData{prompt},
+		Prompts:  []*promptData{prompt},
+		Partials: partials,
 	}, nil
 }
 
@@ -603,6 +663,31 @@ func fetchAllApplications(ctx context.Context, api *auth0.API) ([]*applicationDa
 	return applications, nil
 }
 
+func fetchPartial(ctx context.Context, api *auth0.API, prompt *partialData) (*management.PromptPartials, error) {
+	partial, err := api.Prompt.ReadPartials(ctx, management.PromptType(prompt.PromptName))
+	if err != nil {
+		return nil, err
+	}
+
+	return partial, nil
+}
+
+func fetchAllPartials(ctx context.Context, api *auth0.API) ([]*management.PromptPartials, error) {
+	var partials []*management.PromptPartials
+
+	for _, prompt := range allowedPromptsWithPartials {
+		partial, err := api.Prompt.ReadPartials(ctx, prompt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		partials = append(partials, partial)
+	}
+
+	return partials, nil
+}
+
 func saveUniversalLoginBrandingData(ctx context.Context, api *auth0.API, data *universalLoginBrandingData) error {
 	group, ctx := errgroup.WithContext(ctx)
 
@@ -640,6 +725,14 @@ func saveUniversalLoginBrandingData(ctx context.Context, api *auth0.API, data *u
 
 		group.Go(func() (err error) {
 			return api.Prompt.SetCustomText(ctx, prompt.Prompt, prompt.Language, prompt.CustomText)
+		})
+	}
+
+	for _, partial := range data.Partials {
+		partial := partial
+
+		group.Go(func() (err error) {
+			return api.Prompt.UpdatePartials(ctx, partial)
 		})
 	}
 
