@@ -203,7 +203,15 @@ func TestClientResourceFetcher_FetchData(t *testing.T) {
 				ImportID:     "clientID_1",
 			},
 			{
+				ResourceName: "auth0_client_credentials.my_test_client_1",
+				ImportID:     "clientID_1",
+			},
+			{
 				ResourceName: "auth0_client.my_test_client_2",
+				ImportID:     "clientID_2",
+			},
+			{
+				ResourceName: "auth0_client_credentials.my_test_client_2",
 				ImportID:     "clientID_2",
 			},
 			{
@@ -211,7 +219,15 @@ func TestClientResourceFetcher_FetchData(t *testing.T) {
 				ImportID:     "clientID_3",
 			},
 			{
+				ResourceName: "auth0_client_credentials.my_test_client_3",
+				ImportID:     "clientID_3",
+			},
+			{
 				ResourceName: "auth0_client.my_test_client_4",
+				ImportID:     "clientID_4",
+			},
+			{
+				ResourceName: "auth0_client_credentials.my_test_client_4",
 				ImportID:     "clientID_4",
 			},
 		}

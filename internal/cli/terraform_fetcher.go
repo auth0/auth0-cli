@@ -126,6 +126,11 @@ func (f *clientResourceFetcher) FetchData(ctx context.Context) (importDataList, 
 				ResourceName: "auth0_client." + sanitizeResourceName(client.GetName()),
 				ImportID:     client.GetClientID(),
 			})
+
+			data = append(data, importDataItem{
+				ResourceName: "auth0_client_credentials." + sanitizeResourceName(client.GetName()),
+				ImportID:     client.GetClientID(),
+			})
 		}
 
 		if !clients.HasNext() {
