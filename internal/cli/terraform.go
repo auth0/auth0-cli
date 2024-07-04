@@ -64,7 +64,7 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &attackProtectionResourceFetcher{})
 		case "auth0_branding":
 			fetchers = append(fetchers, &brandingResourceFetcher{})
-		case "auth0_client":
+		case "auth0_client", "auth0_client_credentials":
 			fetchers = append(fetchers, &clientResourceFetcher{api})
 		case "auth0_client_grant":
 			fetchers = append(fetchers, &clientGrantResourceFetcher{api})
@@ -74,6 +74,8 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &customDomainResourceFetcher{api})
 		case "auth0_email_provider":
 			fetchers = append(fetchers, &emailProviderResourceFetcher{api})
+		case "auth0_email_template":
+			fetchers = append(fetchers, &emailTemplateResourceFetcher{api})
 		case "auth0_guardian":
 			fetchers = append(fetchers, &guardianResourceFetcher{})
 		case "auth0_log_stream":
