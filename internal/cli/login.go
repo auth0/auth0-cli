@@ -58,7 +58,11 @@ type LoginInputs struct {
 }
 
 func (i *LoginInputs) isLoggingInAsAMachine() bool {
-	return i.ClientID != "" || i.ClientSecret != "" || i.Domain != ""
+	return i.ClientID != "" || i.ClientSecret != ""
+}
+
+func (i *LoginInputs) isLoggingInAsAUser() bool {
+	return i.ClientID == "" && i.ClientSecret == "" && i.Domain != ""
 }
 
 func (i *LoginInputs) isLoggingInWithAdditionalScopes() bool {
@@ -86,7 +90,7 @@ func loginCmd(cli *cli) *cobra.Command {
 			// We want to prompt if we don't pass the following flags:
 			// --no-input, --scopes, --client-id, --client-secret, --domain.
 			// Because then the prompt is unnecessary as we know the login type.
-			shouldPrompt := !inputs.isLoggingInAsAMachine() && !cli.noInput && !inputs.isLoggingInWithAdditionalScopes()
+			shouldPrompt := !inputs.isLoggingInAsAMachine() && !cli.noInput && !inputs.isLoggingInWithAdditionalScopes() && !inputs.isLoggingInAsAUser()
 			if shouldPrompt {
 				cli.renderer.Output(
 					fmt.Sprintf(
@@ -116,9 +120,9 @@ func loginCmd(cli *cli) *cobra.Command {
 			ctx := cmd.Context()
 
 			// Allows to skip to user login if either the --no-input or --scopes flag is passed.
-			shouldLoginAsUser := (cli.noInput && !inputs.isLoggingInAsAMachine()) || inputs.isLoggingInWithAdditionalScopes() || selectedLoginType == loginAsUser
+			shouldLoginAsUser := (cli.noInput && !inputs.isLoggingInAsAMachine()) || inputs.isLoggingInWithAdditionalScopes() || inputs.isLoggingInAsAUser() || selectedLoginType == loginAsUser
 			if shouldLoginAsUser {
-				if _, err := RunLoginAsUser(ctx, cli, inputs.AdditionalScopes); err != nil {
+				if _, err := RunLoginAsUser(ctx, cli, inputs.AdditionalScopes, inputs.Domain); err != nil {
 					return fmt.Errorf("failed to start the authentication process: %w", err)
 				}
 			} else {
@@ -143,7 +147,7 @@ func loginCmd(cli *cli) *cobra.Command {
 	loginClientID.RegisterString(cmd, &inputs.ClientID, "")
 	loginClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
 	loginAdditionalScopes.RegisterStringSlice(cmd, &inputs.AdditionalScopes, []string{})
-	cmd.MarkFlagsRequiredTogether("client-id", "client-secret", "domain")
+	cmd.MarkFlagsRequiredTogether("client-id", "client-secret")
 	cmd.MarkFlagsMutuallyExclusive("client-id", "scopes")
 
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
@@ -154,10 +158,36 @@ func loginCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+func ensureAuth0URL(input string) (string, error) {
+	if input == "" {
+		return "https://*.auth0.com/api/v2/", nil
+	}
+	input = strings.TrimPrefix(input, "http://")
+	input = strings.TrimPrefix(input, "https://")
+	input = strings.TrimSuffix(input, "/api/v2")
+
+	// Check if the input ends with auth0.com
+	if !strings.HasSuffix(input, "auth0.com") {
+		return "", fmt.Errorf("not a valid auth0.com domain")
+	}
+
+	// Extract the domain part without any path
+	domainParts := strings.Split(input, "/")
+	domain := domainParts[0]
+
+	// Return the formatted URL
+	return fmt.Sprintf("https://%s/api/v2/", domain), nil
+}
+
 // RunLoginAsUser runs the login flow guiding the user through the process
 // by showing the login instructions, opening the browser.
-func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string) (config.Tenant, error) {
-	state, err := auth.GetDeviceCode(ctx, http.DefaultClient, additionalScopes)
+func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string, domain string) (config.Tenant, error) {
+	domain, err := ensureAuth0URL(domain)
+	if err != nil {
+		return config.Tenant{}, err
+	}
+
+	state, err := auth.GetDeviceCode(ctx, http.DefaultClient, additionalScopes, domain)
 	if err != nil {
 		return config.Tenant{}, fmt.Errorf("failed to get the device code: %w", err)
 	}

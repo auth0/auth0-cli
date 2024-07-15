@@ -73,7 +73,7 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 	switch err {
 	case config.ErrTokenMissingRequiredScopes:
 		c.renderer.Warnf("Required scopes have changed. Please log in to re-authorize the CLI.\n")
-		tenant, err = RunLoginAsUser(ctx, c, tenant.GetExtraRequestedScopes())
+		tenant, err = RunLoginAsUser(ctx, c, tenant.GetExtraRequestedScopes(), "")
 		if err != nil {
 			return err
 		}
@@ -95,7 +95,7 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 			c.renderer.Warnf("Failed to renew access token: %s", err)
 			c.renderer.Warnf("Please log in to re-authorize the CLI.\n")
 
-			tenant, err = RunLoginAsUser(ctx, c, tenant.GetExtraRequestedScopes())
+			tenant, err = RunLoginAsUser(ctx, c, tenant.GetExtraRequestedScopes(), "")
 			if err != nil {
 				return err
 			}
