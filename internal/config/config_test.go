@@ -13,14 +13,62 @@ import (
 )
 
 func TestDefaultPath(t *testing.T) {
-	homeDir, err := os.UserHomeDir()
-	require.NoError(t, err)
+	XDG_CONFIG_HOME, xdg_config_exists := os.LookupEnv("XDG_CONFIG_HOME")
+	HOME, home_exists := os.LookupEnv("HOME")
+	AUTH0_CONFIG_FILE, auth0_config_exists := os.LookupEnv("AUTH0_CONFIG_FILE")
+	APPDATA, appdata_exists := os.LookupEnv("APPDATA")
 
-	expectedPath := path.Join(homeDir, ".config", "auth0", "config.json")
+	os.Unsetenv("XDG_CONFIG_HOME")
+	os.Unsetenv("HOME")
+	os.Unsetenv("AUTH0_CONFIG_FILE")
+	os.Unsetenv("APPDATA")
 
-	actualPath := defaultPath()
+	t.Cleanup(func() {
+		if xdg_config_exists {
+			os.Setenv("XDG_CONFIG_HOME", XDG_CONFIG_HOME)
+		} else {
+			os.Unsetenv("XDG_CONFIG_HOME")
+		}
+		if home_exists {
+			os.Setenv("HOME", HOME)
+		} else {
+			os.Unsetenv("HOME")
+		}
+		if auth0_config_exists {
+			os.Setenv("AUTH0_CONFIG_FILE", AUTH0_CONFIG_FILE)
+		} else {
+			os.Unsetenv("AUTH0_CONFIG_FILE")
+		}
+		if appdata_exists {
+			os.Setenv("APPDATA", APPDATA)
+		} else {
+			os.Unsetenv("APPDATA")
+		}
+	})
 
-	assert.Equal(t, expectedPath, actualPath)
+	t.Run("it returns the path set in AUTH0_CONFIG_FILE", func(t *testing.T) {
+		t.Setenv("AUTH0_CONFIG_FILE", "/path/to/auth0/config.json")
+		t.Setenv("XDG_CONFIG_HOME", "/path/to/xdg_config_home")
+		t.Setenv("HOME", "/path/to/home")
+		t.Setenv("APPDATA", "/path/to/userprofile")
+		expectedPath := "/path/to/auth0/config.json"
+		actualPath := defaultPath()
+		assert.Equal(t, expectedPath, actualPath)
+	})
+
+	t.Run("it returns the path set in XDG_CONFIG_HOME", PlatformTestXDGConfigHome)
+
+	t.Run("it returns the path in the user config directory", PlatformTestConfigFileDefaultPath)
+	t.Run("it fallsback to temp if no user config directory is found", func(t *testing.T) {
+		os.Unsetenv("AUTH0_CONFIG_FILE")
+		os.Unsetenv("XDG_CONFIG_HOME")
+		os.Unsetenv("HOME")
+		os.Unsetenv("USERPROFILE")
+		os.Unsetenv("APPDATA")
+		expectedPath := path.Join(os.TempDir(), "auth0", "config.json")
+		actualPath := defaultPath()
+		assert.Equal(t, expectedPath, actualPath)
+	})
 }
 
 func TestConfig_LoadFromDisk(t *testing.T) {
@@ -41,7 +89,7 @@ func TestConfig_LoadFromDisk(t *testing.T) {
 		config := &Config{path: dirPath}
 		err = config.loadFromDisk()
 
-		assert.EqualError(t, err, fmt.Sprintf("read %s: is a directory", dirPath))
+		assert.EqualError(t, err, fmt.Sprintf("read %s: %s", dirPath, ErrFileIsADirectory))
 	})
 
 	t.Run("it fails to load an empty config file", func(t *testing.T) {
@@ -184,22 +232,7 @@ func TestConfig_SaveToDisk(t *testing.T) {
 		})
 	}
 
-	t.Run("it fails to save config if file path is a read only directory", func(t *testing.T) {
-		tmpDir, err := os.MkdirTemp("", "")
-		require.NoError(t, err)
-		t.Cleanup(func() {
-			err := os.RemoveAll(tmpDir)
-			require.NoError(t, err)
-		})
-
-		err = os.Chmod(tmpDir, 0555)
-		require.NoError(t, err)
-
-		config := &Config{path: path.Join(tmpDir, "auth0", "config.json")}
-
-		err = config.saveToDisk()
-		assert.EqualError(t, err, fmt.Sprintf("mkdir %s/auth0: permission denied", tmpDir))
-	})
+	t.Run("it fails to save config if file path is a read only directory", FailsToSaveToReadOnlyDirectory)
 }
 
 func TestConfig_GetTenant(t *testing.T) {
@@ -859,7 +892,9 @@ func createTempConfigFile(t *testing.T, data []byte) string {
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
-		err := os.Remove(tempFile.Name())
+		err := tempFile.Close()
+		require.NoError(t, err)
+		err = os.Remove(tempFile.Name())
 		require.NoError(t, err)
 	})
 

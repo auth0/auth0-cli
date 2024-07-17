@@ -75,7 +75,7 @@ func TestWaitForBrowserCallback(t *testing.T) {
 
 		code, state, callbackErr := WaitForBrowserCallback("localhost:1234")
 
-		assert.EqualError(t, callbackErr, "listen tcp 127.0.0.1:1234: bind: address already in use")
+		assert.EqualError(t, callbackErr, ErrBindFailure)
 		assert.Equal(t, "", code)
 		assert.Equal(t, "", state)
 	})
