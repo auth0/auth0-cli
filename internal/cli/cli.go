@@ -136,10 +136,6 @@ func canPrompt(cmd *cobra.Command) bool {
 	return iostream.IsInputTerminal() && iostream.IsOutputTerminal() && !noInput
 }
 
-func shouldPrompt(cmd *cobra.Command, flag *Flag) bool {
-	return canPrompt(cmd) && !flag.IsSet(cmd)
-}
-
 func shouldPromptWhenNoLocalFlagsSet(cmd *cobra.Command) bool {
 	localFlagIsSet := false
 	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {

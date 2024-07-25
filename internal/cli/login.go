@@ -57,13 +57,13 @@ type LoginInputs struct {
 	AdditionalScopes []string
 }
 
-func (i *LoginInputs) isLoggingInAsAMachine() bool {
-	return i.ClientID != "" || i.ClientSecret != ""
-}
+//func (i *LoginInputs) isLoggingInAsAMachine() bool {
+//	return i.ClientID != "" && i.ClientSecret != "" && i.Domain != ""
+//}
 
-func (i *LoginInputs) isLoggingInAsAUser() bool {
-	return i.ClientID == "" && i.ClientSecret == "" && i.Domain != ""
-}
+//func (i *LoginInputs) isLoggingInAsAUser() bool {
+//	return i.ClientID == "" && i.ClientSecret == "" && i.Domain != ""
+//}
 
 func (i *LoginInputs) isLoggingInWithAdditionalScopes() bool {
 	return len(i.AdditionalScopes) > 0
@@ -86,12 +86,64 @@ func loginCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var selectedLoginType string
 			const loginAsUser, loginAsMachine = "As a user", "As a machine"
+			shouldLoginAsUser, shouldLoginAsMachine := false, false
 
-			// We want to prompt if we don't pass the following flags:
-			// --no-input, --scopes, --client-id, --client-secret, --domain.
-			// Because then the prompt is unnecessary as we know the login type.
-			shouldPrompt := !inputs.isLoggingInAsAMachine() && !cli.noInput && !inputs.isLoggingInWithAdditionalScopes() && !inputs.isLoggingInAsAUser()
-			if shouldPrompt {
+			/*
+				Based on the initial inputs we'd like to determine if
+				it's a machine login or a user login
+				If we successfully determine it, we don't need to prompt the user.
+
+				The --no-input flag add strict restriction that we shall not take any further input after
+				initial command.
+				Hence, the flow diverges into two based on no-input flag's value.
+			*/
+			if cli.noInput {
+				// --no-input has been passed in command
+				if inputs.Domain != "" && inputs.ClientSecret != "" && inputs.ClientID != "" {
+					//If all three fields are passed, machine login flag is set to true.
+					shouldLoginAsMachine = true
+				} else if inputs.Domain != "" && inputs.ClientSecret == "" && inputs.ClientID == "" {
+					/*
+						The domain flag is common between Machine and User Login.
+						If domain is passed without client-id and client-secret,
+						it can be evaluated that it is a user login flow.
+					*/
+					shouldLoginAsUser = true
+				} else if inputs.Domain != "" || inputs.ClientSecret != "" || inputs.ClientID != "" {
+					/*
+						At this point, if AT LEAST one of the three flags are passed but not ALL three,
+						we return an error since it's a no-input flow and it will need all three params
+						for successful machine flow.
+						Note that we already determined it's not a user login flow in the condition above.
+					*/
+					return fmt.Errorf("flags client-id, client-secret and domain are required together")
+				} else {
+					/*
+						If no flags are passed along with --no-input, it is defaulted to user login flow.
+					*/
+					shouldLoginAsUser = true
+				}
+			} else {
+				if !(inputs.Domain != "" && inputs.ClientSecret == "" && inputs.ClientID == "") {
+					/*
+						If all three params are passed, we evaluate it as a Machine Login Flow.
+						Else required params are prompted for.
+					*/
+					shouldLoginAsMachine = true
+				}
+			}
+
+			//If additional scopes are passed we mark shouldLoginAsUser flag to be true
+			if inputs.isLoggingInWithAdditionalScopes() {
+				shouldLoginAsUser = true
+			}
+
+			/*
+				If we are unable to determine if it's a user login or a machine login
+				based on all the evaluation above, we go on to prompt the user and
+				determine if it's LoginAsUser or LoginAsMachine
+			*/
+			if !shouldLoginAsUser && !shouldLoginAsMachine {
 				cli.renderer.Output(
 					fmt.Sprintf(
 						"%s\n\n%s\n%s\n\n%s\n%s\n%s\n%s\n\n",
@@ -111,7 +163,7 @@ func loginCmd(cli *cli) *cobra.Command {
 					"Authenticating as a user is recommended if performing ad-hoc operations or working locally.",
 					"Alternatively, authenticating as a machine is recommended for automated workflows (ex:CI).",
 				)
-				input := prompt.SelectInput("", label, help, []string{loginAsUser, loginAsMachine}, loginAsUser, shouldPrompt)
+				input := prompt.SelectInput("", label, help, []string{loginAsUser, loginAsMachine}, loginAsUser, true)
 				if err := prompt.AskOne(input, &selectedLoginType); err != nil {
 					return handleInputError(err)
 				}
@@ -119,9 +171,7 @@ func loginCmd(cli *cli) *cobra.Command {
 
 			ctx := cmd.Context()
 
-			// Allows to skip to user login if either the --no-input or --scopes flag is passed.
-			shouldLoginAsUser := (cli.noInput && !inputs.isLoggingInAsAMachine()) || inputs.isLoggingInWithAdditionalScopes() || inputs.isLoggingInAsAUser() || selectedLoginType == loginAsUser
-			if shouldLoginAsUser {
+			if shouldLoginAsUser || selectedLoginType == loginAsUser {
 				if _, err := RunLoginAsUser(ctx, cli, inputs.AdditionalScopes, inputs.Domain); err != nil {
 					return fmt.Errorf("failed to start the authentication process: %w", err)
 				}
@@ -147,8 +197,8 @@ func loginCmd(cli *cli) *cobra.Command {
 	loginClientID.RegisterString(cmd, &inputs.ClientID, "")
 	loginClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
 	loginAdditionalScopes.RegisterStringSlice(cmd, &inputs.AdditionalScopes, []string{})
-	cmd.MarkFlagsRequiredTogether("client-id", "client-secret")
 	cmd.MarkFlagsMutuallyExclusive("client-id", "scopes")
+	cmd.MarkFlagsMutuallyExclusive("client-secret", "scopes")
 
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		_ = cmd.Flags().MarkHidden("tenant")
