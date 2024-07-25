@@ -124,7 +124,7 @@ func loginCmd(cli *cli) *cobra.Command {
 					shouldLoginAsUser = true
 				}
 			} else {
-				if !(inputs.Domain != "" && inputs.ClientSecret == "" && inputs.ClientID == "") {
+				if inputs.ClientSecret != "" || inputs.ClientID != "" {
 					/*
 						If all three params are passed, we evaluate it as a Machine Login Flow.
 						Else required params are prompted for.
