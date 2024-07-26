@@ -149,6 +149,24 @@ func TestReadPartials(t *testing.T) {
 			expectedResult: nil,
 			expectedError:  "api error",
 		},
+		{
+			name: "it returns an error if featureflag is not enabled",
+			mockedAPI: func() *auth0.API {
+				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
+				mockPromptAPI.
+					EXPECT().
+					ReadPartials(gomock.Any(), management.PromptType("login")).
+					Return(nil, fmt.Errorf("failed to read partials: 403 forbidden: this feature is not available for your plan. To create or modify prompt templates, please upgrade your account to a professional or enterprise plan"))
+				return &auth0.API{
+					Prompt: mockPromptAPI,
+				}
+			},
+			promptData: &partialData{
+				PromptName: "login",
+			},
+			expectedResult: nil,
+			expectedError:  "this feature is not available for your plan. To create or modify prompt templates, please upgrade your account to a professional or enterprise plan",
+		},
 	}
 
 	for _, test := range testCases {
@@ -156,7 +174,11 @@ func TestReadPartials(t *testing.T) {
 			partials, err := fetchPartial(context.Background(), test.mockedAPI(), test.promptData)
 
 			if test.expectedError != "" {
-				assert.EqualError(t, err, test.expectedError)
+				if test.name == "it returns an error if featureflag is not enabled" {
+					assert.ErrorContains(t, err, test.expectedError)
+				} else {
+					assert.EqualError(t, err, test.expectedError)
+				}
 				assert.Nil(t, partials)
 				return
 			}
@@ -1269,6 +1291,13 @@ func TestWebSocketMessage_MarshalJSON(t *testing.T) {
 			},
 			expected: `{"type":"FETCH_BRANDING","payload":null}`,
 		},
+		{
+			name: "it can marshal a message without payload",
+			input: &webSocketMessage{
+				Type: "FETCH_PARTIALS_FEATURE_FLAG",
+			},
+			expected: `{"type":"FETCH_PARTIALS_FEATURE_FLAG","payload":null}`,
+		},
 	}
 
 	for _, test := range testCases {
@@ -1306,6 +1335,16 @@ func TestWebSocketMessage_UnmarshalJSON(t *testing.T) {
 				Payload: &partialData{
 					InsertionPoint: "form-content-start",
 					PromptName:     "login",
+				},
+			},
+		},
+		{
+			name:  "it can unmarshal a fetch partials feature flag message",
+			input: []byte(`{"type":"FETCH_PARTIALS_FEATURE_FLAG", "payload": {"feature_flag": false}}`),
+			expected: &webSocketMessage{
+				Type: "FETCH_PARTIALS_FEATURE_FLAG",
+				Payload: &partialFlagData{
+					FeatureFlag: false,
 				},
 			},
 		},
