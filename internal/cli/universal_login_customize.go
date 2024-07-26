@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/auth0/go-auth0/management"
@@ -29,6 +30,7 @@ const (
 	fetchPromptMessageType   = "FETCH_PROMPT"
 	saveBrandingMessageType  = "SAVE_BRANDING"
 	fetchPartialMessageType  = "FETCH_PARTIAL"
+	fetchPartialFeatureFlag  = "FETCH_PARTIALS_FEATURE_FLAG"
 	errorMessageType         = "ERROR"
 	successMessageType       = "SUCCESS"
 )
@@ -74,6 +76,10 @@ type (
 	partialData struct {
 		InsertionPoint string `json:"insertion_point"`
 		PromptName     string `json:"prompt_name"`
+	}
+
+	partialFlagData struct {
+		FeatureFlag bool `json:"feature_flag"`
 	}
 
 	tenantData struct {
@@ -148,6 +154,8 @@ func (m *webSocketMessage) UnmarshalJSON(b []byte) error {
 		payload = &promptData{}
 	case fetchPartialMessageType:
 		payload = &partialData{}
+	case fetchPartialFeatureFlag:
+		payload = &partialFlagData{}
 	default:
 		payload = make(map[string]interface{})
 	}
@@ -394,6 +402,33 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 			if err := connection.WriteJSON(&successMsg); err != nil {
 				h.display.Errorf("Failed to send success message: %v", err)
+			}
+		case fetchPartialFeatureFlag:
+			partial := &partialData{
+				InsertionPoint: "form-content-start",
+				PromptName:     "login",
+			}
+			_, err := fetchPartial(r.Context(), h.api, partial)
+
+			if err != nil && !strings.Contains(err.Error(), "This feature is not available for your plan. To create or modify prompt templates, please upgrade your account to a Professional or Enterprise plan.") {
+				fetchPartialFlagMsg := webSocketMessage{
+					Type:    fetchPartialFeatureFlag,
+					Payload: &partialFlagData{FeatureFlag: false},
+				}
+				if err = connection.WriteJSON(&fetchPartialFlagMsg); err != nil {
+					h.display.Errorf("Failed to send partial flag data message: %v", err)
+					continue
+				}
+			}
+
+			fetchPartialFlagMsg := webSocketMessage{
+				Type:    fetchPartialFeatureFlag,
+				Payload: &partialFlagData{FeatureFlag: true},
+			}
+
+			if err = connection.WriteJSON(&fetchPartialFlagMsg); err != nil {
+				h.display.Errorf("Failed to send partial flag data message: %v", err)
+				continue
 			}
 		case fetchPartialMessageType:
 			partialToFetch, ok := message.Payload.(*partialData)
