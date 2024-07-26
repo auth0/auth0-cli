@@ -410,7 +410,7 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			_, err := fetchPartial(r.Context(), h.api, partial)
 
-			if err != nil && !strings.Contains(err.Error(), "This feature is not available for your plan. To create or modify prompt templates, please upgrade your account to a Professional or Enterprise plan.") {
+			if err != nil && strings.Contains(err.Error(), "This feature is not available for your plan. To create or modify prompt templates, please upgrade your account to a Professional or Enterprise plan.") {
 				fetchPartialFlagMsg := webSocketMessage{
 					Type:    fetchPartialFeatureFlag,
 					Payload: &partialFlagData{FeatureFlag: false},
@@ -419,17 +419,18 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					h.display.Errorf("Failed to send partial flag data message: %v", err)
 					continue
 				}
+			} else {
+				fetchPartialFlagMsg := webSocketMessage{
+					Type:    fetchPartialFeatureFlag,
+					Payload: &partialFlagData{FeatureFlag: true},
+				}
+
+				if err = connection.WriteJSON(&fetchPartialFlagMsg); err != nil {
+					h.display.Errorf("Failed to send partial flag data message: %v", err)
+					continue
+				}
 			}
 
-			fetchPartialFlagMsg := webSocketMessage{
-				Type:    fetchPartialFeatureFlag,
-				Payload: &partialFlagData{FeatureFlag: true},
-			}
-
-			if err = connection.WriteJSON(&fetchPartialFlagMsg); err != nil {
-				h.display.Errorf("Failed to send partial flag data message: %v", err)
-				continue
-			}
 		case fetchPartialMessageType:
 			partialToFetch, ok := message.Payload.(*partialData)
 
