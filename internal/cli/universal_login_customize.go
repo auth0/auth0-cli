@@ -715,6 +715,9 @@ func fetchAllPartials(ctx context.Context, api *auth0.API) ([]*management.Prompt
 		partial, err := api.Prompt.ReadPartials(ctx, prompt)
 
 		if err != nil {
+			if strings.Contains(err.Error(), "This feature is not available for your plan. To create or modify prompt templates, please upgrade your account to a Professional or Enterprise plan.") {
+				return []*management.PromptPartials{}, nil
+			}
 			return nil, err
 		}
 
