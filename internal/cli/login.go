@@ -126,7 +126,7 @@ func loginCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			//If additional scopes are passed we mark shouldLoginAsUser flag to be true
+			// If additional scopes are passed we mark shouldLoginAsUser flag to be true.
 			if inputs.isLoggingInWithAdditionalScopes() {
 				shouldLoginAsUser = true
 			}
@@ -209,16 +209,16 @@ func ensureAuth0URL(input string) (string, error) {
 	input = strings.TrimPrefix(input, "https://")
 	input = strings.TrimSuffix(input, "/api/v2")
 
-	// Check if the input ends with auth0.com
+	// Check if the input ends with auth0.com .
 	if !strings.HasSuffix(input, "auth0.com") {
 		return "", fmt.Errorf("not a valid auth0.com domain")
 	}
 
-	// Extract the domain part without any path
+	// Extract the domain part without any path.
 	domainParts := strings.Split(input, "/")
 	domain := domainParts[0]
 
-	// Return the formatted URL
+	// Return the formatted URL.
 	return fmt.Sprintf("https://%s/api/v2/", domain), nil
 }
 
