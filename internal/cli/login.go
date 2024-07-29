@@ -57,14 +57,6 @@ type LoginInputs struct {
 	AdditionalScopes []string
 }
 
-//func (i *LoginInputs) isLoggingInAsAMachine() bool {
-//	return i.ClientID != "" && i.ClientSecret != "" && i.Domain != ""
-//}
-
-//func (i *LoginInputs) isLoggingInAsAUser() bool {
-//	return i.ClientID == "" && i.ClientSecret == "" && i.Domain != ""
-//}
-
 func (i *LoginInputs) isLoggingInWithAdditionalScopes() bool {
 	return len(i.AdditionalScopes) > 0
 }
@@ -97,19 +89,20 @@ func loginCmd(cli *cli) *cobra.Command {
 				initial command.
 				Hence, the flow diverges into two based on no-input flag's value.
 			*/
-			if cli.noInput {
-				// --no-input has been passed in command
-				if inputs.Domain != "" && inputs.ClientSecret != "" && inputs.ClientID != "" {
-					//If all three fields are passed, machine login flag is set to true.
+			switch {
+			case cli.noInput:
+				switch {
+				case inputs.Domain != "" && inputs.ClientSecret != "" && inputs.ClientID != "":
+					// If all three fields are passed, machine login flag is set to true.
 					shouldLoginAsMachine = true
-				} else if inputs.Domain != "" && inputs.ClientSecret == "" && inputs.ClientID == "" {
+				case inputs.Domain != "" && inputs.ClientSecret == "" && inputs.ClientID == "":
 					/*
 						The domain flag is common between Machine and User Login.
 						If domain is passed without client-id and client-secret,
 						it can be evaluated that it is a user login flow.
 					*/
 					shouldLoginAsUser = true
-				} else if inputs.Domain != "" || inputs.ClientSecret != "" || inputs.ClientID != "" {
+				case inputs.Domain != "" || inputs.ClientSecret != "" || inputs.ClientID != "":
 					/*
 						At this point, if AT LEAST one of the three flags are passed but not ALL three,
 						we return an error since it's a no-input flow and it will need all three params
@@ -117,13 +110,13 @@ func loginCmd(cli *cli) *cobra.Command {
 						Note that we already determined it's not a user login flow in the condition above.
 					*/
 					return fmt.Errorf("flags client-id, client-secret and domain are required together")
-				} else {
+				default:
 					/*
 						If no flags are passed along with --no-input, it is defaulted to user login flow.
 					*/
 					shouldLoginAsUser = true
 				}
-			} else {
+			default:
 				if inputs.ClientSecret != "" || inputs.ClientID != "" {
 					/*
 						If all three params are passed, we evaluate it as a Machine Login Flow.
