@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"os"
 	"testing"
 
 	"github.com/auth0/auth0-cli/internal/display"
@@ -67,8 +68,12 @@ func TestLoginCommand(t *testing.T) {
 			noInput: true,
 		}
 
+		domain := os.Getenv("AUTH0_DOMAIN")
+		clientID := os.Getenv("AUTH0_CLIENT_ID")
+		clientSecret := os.Getenv("AUTH0_CLIENT_SECRET")
+
 		cmd := loginCmd(cli)
-		cmd.SetArgs([]string{"--client-id", "t3dbMFeTokYBguVu1Ty88gqntUXELSn9", "--client-secret", "3OAzE7j2HTnGOPeCRFX3Hg-0sipaEnodzQK8xpwsRiTkqdjjwEFT04rgCp4PZL4Z", "--domain", "duedares.us.auth0.com"})
+		cmd.SetArgs([]string{"--client-id", clientID, "--client-secret", clientSecret, "--domain", domain})
 		err := cmd.Execute()
 		assert.NoError(t, err)
 		assert.Contains(t, message.String(), "Successfully logged in.")
