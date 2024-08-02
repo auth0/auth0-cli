@@ -1,3 +1,5 @@
+//go:generate mockgen -source=email_template.go -destination=mock/email_template_mock.go -package=mock
+
 package auth0
 
 import (

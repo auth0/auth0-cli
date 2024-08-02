@@ -11,7 +11,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_email_provider", "auth0_guardian", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_resource_server", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
+var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_resource_server", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
 
 type (
 	importDataList []importDataItem
@@ -51,6 +51,10 @@ type (
 	}
 
 	emailProviderResourceFetcher struct {
+		api *auth0.API
+	}
+
+	emailTemplateResourceFetcher struct {
 		api *auth0.API
 	}
 
@@ -120,6 +124,11 @@ func (f *clientResourceFetcher) FetchData(ctx context.Context) (importDataList, 
 		for _, client := range clients.Clients {
 			data = append(data, importDataItem{
 				ResourceName: "auth0_client." + sanitizeResourceName(client.GetName()),
+				ImportID:     client.GetClientID(),
+			})
+
+			data = append(data, importDataItem{
+				ResourceName: "auth0_client_credentials." + sanitizeResourceName(client.GetName()),
 				ImportID:     client.GetClientID(),
 			})
 		}
@@ -238,6 +247,29 @@ func (f *emailProviderResourceFetcher) FetchData(ctx context.Context) (importDat
 			ImportID:     uuid.NewString(),
 		},
 	}, nil
+}
+
+func (f *emailTemplateResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	templates := []string{`verify_email`, `reset_email`, `welcome_email`, `blocked_account`, `stolen_credentials`, `enrollment_email`, `mfa_oob_code`, `change_password`, `password_reset`}
+
+	for _, template := range templates {
+		emailTemplate, err := f.api.EmailTemplate.Read(ctx, template)
+		if err != nil {
+			if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusNotFound {
+				continue
+			}
+			return nil, err
+		}
+
+		data = append(data, importDataItem{
+			ResourceName: "auth0_email_template." + sanitizeResourceName(emailTemplate.GetTemplate()),
+			ImportID:     sanitizeResourceName(emailTemplate.GetTemplate()),
+		})
+	}
+
+	return data, nil
 }
 
 func (f *guardianResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
