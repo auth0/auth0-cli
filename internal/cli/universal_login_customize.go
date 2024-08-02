@@ -409,8 +409,7 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				PromptName:     "login",
 			}
 			_, err := fetchPartial(r.Context(), h.api, partial)
-
-			if err != nil && strings.Contains(err.Error(), "This feature is not available for your plan. To create or modify prompt templates, please upgrade your account to a Professional or Enterprise plan.") {
+			if err != nil && strings.Contains(err.Error(), "feature is not available for your plan") {
 				fetchPartialFlagMsg := webSocketMessage{
 					Type:    fetchPartialFeatureFlag,
 					Payload: &partialFlagData{FeatureFlag: false},
@@ -442,19 +441,23 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			partialToSend, err := fetchPartial(r.Context(), h.api, partialToFetch)
 
 			if err != nil {
-				h.display.Errorf("Failed to fetch partial for prompt: %v", err)
-				errorMsg := webSocketMessage{
-					Type: errorMessageType,
-					Payload: &errorData{
-						Error: err.Error(),
-					},
-				}
+				if strings.Contains(err.Error(), "feature is not available for your plan") {
+					partialToSend = &management.PromptPartials{}
+				} else {
+					h.display.Errorf("Failed to fetch partial for prompt: %v", err)
+					errorMsg := webSocketMessage{
+						Type: errorMessageType,
+						Payload: &errorData{
+							Error: err.Error(),
+						},
+					}
 
-				if err := connection.WriteJSON(&errorMsg); err != nil {
-					h.display.Errorf("Failed to send error message: %v", err)
-				}
+					if err := connection.WriteJSON(&errorMsg); err != nil {
+						h.display.Errorf("Failed to send error message: %v", err)
+					}
 
-				continue
+					continue
+				}
 			}
 
 			fetchPartialMsg := webSocketMessage{
@@ -715,7 +718,7 @@ func fetchAllPartials(ctx context.Context, api *auth0.API) ([]*management.Prompt
 		partial, err := api.Prompt.ReadPartials(ctx, prompt)
 
 		if err != nil {
-			if strings.Contains(err.Error(), "This feature is not available for your plan. To create or modify prompt templates, please upgrade your account to a Professional or Enterprise plan.") {
+			if strings.Contains(err.Error(), "To create or modify prompt templates") {
 				return []*management.PromptPartials{}, nil
 			}
 			return nil, err
