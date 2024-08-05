@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"reflect"
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
@@ -1829,16 +1828,11 @@ func TestFetchAllPartials(t *testing.T) {
 			actualData, actualError := fetchAllPartials(context.Background(), test.mockedAPI())
 
 			if test.expectedError != "" {
-				if actualError == nil || actualError.Error() != test.expectedError {
-					t.Errorf("expected error %q, got %q", test.expectedError, actualError)
-				}
+				assert.Error(t, actualError)
+				assert.EqualError(t, actualError, test.expectedError)
 			} else {
-				if actualError != nil {
-					t.Errorf("unexpected error: %v", actualError)
-				}
-				if !reflect.DeepEqual(actualData, test.expectedData) {
-					t.Errorf("expected data %v, got %v", test.expectedData, actualData)
-				}
+				assert.NoError(t, actualError)
+				assert.Equal(t, test.expectedData, actualData)
 			}
 		})
 	}
