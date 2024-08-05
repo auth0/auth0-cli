@@ -93,22 +93,7 @@ require (
 	github.com/yuin/goldmark-emoji v1.0.2 // indirect
 	github.com/zclconf/go-cty v1.14.4 // indirect
 	golang.org/x/crypto v0.25.0 // indirect
-<<<<<<< HEAD
 	golang.org/x/mod v0.19.0 // indirect
-=======
-	golang.org/x/mod v0.17.0 // indirect
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> 68543d3 (Bump golang.org/x/net from 0.26.0 to 0.27.0 (#1035))
-=======
->>>>>>> 7c63c2f (Bump golang.org/x/net from 0.26.0 to 0.27.0 (#1035))
->>>>>>> 7272a99 (Bump golang.org/x/net from 0.26.0 to 0.27.0 (#1035))
-=======
->>>>>>> 7c63c2f (Bump golang.org/x/net from 0.26.0 to 0.27.0 (#1035))
-=======
->>>>>>> 68543d3 (Bump golang.org/x/net from 0.26.0 to 0.27.0 (#1035))
->>>>>>> 9f986e8 (Bump golang.org/x/net from 0.26.0 to 0.27.0 (#1035))
->>>>>>> 5647873 (Bump golang.org/x/net from 0.26.0 to 0.27.0 (#1035))
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
