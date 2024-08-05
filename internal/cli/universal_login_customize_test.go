@@ -1181,6 +1181,89 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 			},
 			expectedError: "failed to fetch custom text",
 		},
+		{
+			name: "it fails to fetch branding data if there's an error retrieving client data",
+			mockedAPI: func() *auth0.API {
+				mockBrandingAPI := mock.NewMockBrandingAPI(ctrl)
+				mockBrandingAPI.
+					EXPECT().
+					Read(gomock.Any()).
+					Return(
+						&management.Branding{
+							Colors: &management.BrandingColors{
+								Primary:        auth0.String("#334455"),
+								PageBackground: auth0.String("#00AABB"),
+							},
+							LogoURL: auth0.String("https://some-log.example.com"),
+						},
+						nil,
+					)
+
+				mockBrandingAPI.
+					EXPECT().
+					UniversalLogin(gomock.Any()).
+					Return(
+						&management.BrandingUniversalLogin{
+							Body: auth0.String("<html></html>"),
+						},
+						nil,
+					)
+
+				mockBrandingThemeAPI := mock.NewMockBrandingThemeAPI(ctrl)
+				mockBrandingThemeAPI.
+					EXPECT().
+					Default(gomock.Any()).
+					Return(&management.BrandingTheme{}, nil)
+
+				mockTenantAPI := mock.NewMockTenantAPI(ctrl)
+				mockTenantAPI.
+					EXPECT().
+					Read(gomock.Any()).
+					Return(
+						&management.Tenant{
+							FriendlyName:   auth0.String("My Test Tenant"),
+							EnabledLocales: &[]string{"en", "es"},
+						},
+						nil,
+					)
+
+				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
+				mockPromptAPI.
+					EXPECT().
+					CustomText(gomock.Any(), "login", "en").
+					Return(
+						map[string]interface{}{
+							"login": map[string]interface{}{
+								"title": "Welcome friend, glad to have you!",
+							},
+						},
+						nil,
+					)
+				for _, promptType := range allowedPromptsWithPartials {
+					mockPromptAPI.EXPECT().
+						ReadPartials(gomock.Any(), promptType).
+						Return(&management.PromptPartials{
+							FormContentStart: "<form>",
+							Prompt:           promptType,
+						}, nil)
+				}
+				mockClientAPI := mock.NewMockClientAPI(ctrl)
+				mockClientAPI.
+					EXPECT().
+					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil, fmt.Errorf("failed to fetch client data"))
+				mockAPI := &auth0.API{
+					Client:        mockClientAPI,
+					Branding:      mockBrandingAPI,
+					BrandingTheme: mockBrandingThemeAPI,
+					Prompt:        mockPromptAPI,
+					Tenant:        mockTenantAPI,
+				}
+
+				return mockAPI
+			},
+			expectedError: "failed to fetch client data",
+		},
 	}
 
 	for _, test := range testCases {
@@ -1230,10 +1313,37 @@ func TestCheckOriginFunc(t *testing.T) {
 			expected: false,
 		},
 		{
-			testName: "Malformed Origin",
+			testName: "Malformed Origin - Invalid URL",
 			request: &http.Request{
 				Header: http.Header{
-					"Origin": []string{"malformed-url"},
+					"Origin": []string{"http://:80"}, // Incomplete URL with missing host
+				},
+			},
+			expected: false,
+		},
+		{
+			testName: "Malformed Origin - Invalid Scheme",
+			request: &http.Request{
+				Header: http.Header{
+					"Origin": []string{"ftp://example.com"}, // Unsupported scheme
+				},
+			},
+			expected: false,
+		},
+		{
+			testName: "Malformed Origin - Invalid URL Encoding",
+			request: &http.Request{
+				Header: http.Header{
+					"Origin": []string{"http://%zz%zz"}, // Invalid percent encoding
+				},
+			},
+			expected: false,
+		},
+		{
+			testName: "Empty Origin URL",
+			request: &http.Request{
+				Header: http.Header{
+					"Origin": []string{"http://"}, // Valid scheme but empty path
 				},
 			},
 			expected: false,
