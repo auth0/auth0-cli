@@ -1316,7 +1316,7 @@ func TestCheckOriginFunc(t *testing.T) {
 			testName: "Malformed Origin - Invalid URL",
 			request: &http.Request{
 				Header: http.Header{
-					"Origin": []string{"http://:80"}, // Incomplete URL with missing host
+					"Origin": []string{"http://:80"}, // Incomplete URL with missing host.
 				},
 			},
 			expected: false,
@@ -1325,7 +1325,7 @@ func TestCheckOriginFunc(t *testing.T) {
 			testName: "Malformed Origin - Invalid Scheme",
 			request: &http.Request{
 				Header: http.Header{
-					"Origin": []string{"ftp://example.com"}, // Unsupported scheme
+					"Origin": []string{"ftp://example.com"}, // Unsupported scheme.
 				},
 			},
 			expected: false,
@@ -1334,7 +1334,7 @@ func TestCheckOriginFunc(t *testing.T) {
 			testName: "Malformed Origin - Invalid URL Encoding",
 			request: &http.Request{
 				Header: http.Header{
-					"Origin": []string{"http://%zz%zz"}, // Invalid percent encoding
+					"Origin": []string{"http://%zz%zz"}, // Invalid percent encoding.
 				},
 			},
 			expected: false,
@@ -1343,7 +1343,7 @@ func TestCheckOriginFunc(t *testing.T) {
 			testName: "Empty Origin URL",
 			request: &http.Request{
 				Header: http.Header{
-					"Origin": []string{"http://"}, // Valid scheme but empty path
+					"Origin": []string{"http://"}, // Valid scheme but empty path.
 				},
 			},
 			expected: false,
