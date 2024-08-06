@@ -10,7 +10,7 @@ require (
 	github.com/PuerkitoBio/rehttp v1.4.0
 	github.com/auth0/go-auth0 v1.8.0
 	github.com/briandowns/spinner v1.23.1
-	github.com/charmbracelet/glamour v0.7.0
+	github.com/charmbracelet/glamour v0.8.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/getsentry/sentry-go v0.28.1
 	github.com/golang/mock v1.6.0
@@ -46,23 +46,25 @@ require (
 
 require (
 	github.com/ProtonMail/go-crypto v1.1.0-alpha.2 // indirect
-	github.com/alecthomas/chroma/v2 v2.8.0 // indirect
+	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
 	github.com/alessio/shellescape v1.4.1 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
+	github.com/charmbracelet/lipgloss v0.12.1 // indirect
+	github.com/charmbracelet/x/ansi v0.1.4 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/danieljoos/wincred v1.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
-	github.com/dlclark/regexp2 v1.4.0 // indirect
+	github.com/dlclark/regexp2 v1.11.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/gorilla/css v1.0.0 // indirect
+	github.com/gorilla/css v1.0.1 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
 	github.com/hashicorp/terraform-json v0.22.1 // indirect
@@ -79,18 +81,18 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
-	github.com/microcosm-cc/bluemonday v1.0.25 // indirect
+	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
-	github.com/muesli/termenv v0.15.2 // indirect
+	github.com/muesli/termenv v0.15.3-0.20240618155329-98d742f6907a // indirect
 	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.3 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
-	github.com/yuin/goldmark v1.5.4 // indirect
-	github.com/yuin/goldmark-emoji v1.0.2 // indirect
+	github.com/yuin/goldmark v1.7.4 // indirect
+	github.com/yuin/goldmark-emoji v1.0.3 // indirect
 	github.com/zclconf/go-cty v1.14.4 // indirect
 	golang.org/x/crypto v0.25.0 // indirect
 	golang.org/x/mod v0.19.0 // indirect
