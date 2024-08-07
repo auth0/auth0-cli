@@ -18,21 +18,21 @@ tests:
       exactly: "[]"
 
   003 - create domain with minimal flags:
-    command: auth0 domains create --domain "custom-domain.com" --no-input
+    command: auth0 domains create --domain "example-custom-domain.com" --no-input
     exit-code: 0
     stdout:
       contains:
         - "ID                       cd_"
-        - "DOMAIN                   custom-domain.com"
+        - "DOMAIN                   example-custom-domain.com"
         - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        auth0_managed_certs"
 
   004 - unsuccessfully create domain with same name:
-    command: auth0 domains create --domain "custom-domain.com" --no-input
+    command: auth0 domains create --domain "example-custom-domain.com" --no-input
     exit-code: 1
     stderr:
       contains:
-        - "Failed to create custom domain \"custom-domain.com\": 409 Conflict: The specified custom domain already exists"
+        - "Failed to create custom domain \"example-custom-domain.com\": 409 Conflict: The specified custom domain already exists"
 
   005 - show domain:
     command: auth0 domains show $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
@@ -40,7 +40,7 @@ tests:
     stdout:
       contains:
         - "ID                       cd_"
-        - "DOMAIN                   custom-domain.com"
+        - "DOMAIN                   example-custom-domain.com"
         - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        auth0_managed_certs"
 
@@ -50,7 +50,7 @@ tests:
     stdout:
       contains:
         - "ID                       cd_"
-        - "DOMAIN                   custom-domain.com"
+        - "DOMAIN                   example-custom-domain.com"
         - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        auth0_managed_certs"
 
@@ -60,7 +60,7 @@ tests:
     stdout:
       contains:
         - "ID                       cd_"
-        - "DOMAIN                   custom-domain.com"
+        - "DOMAIN                   example-custom-domain.com"
         - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        auth0_managed_certs"
         - "TLS POLICY               recommended"
@@ -71,7 +71,7 @@ tests:
     stdout:
       contains:
         - "ID                       cd_"
-        - "DOMAIN                   custom-domain.com"
+        - "DOMAIN                   example-custom-domain.com"
         - "PROVISIONING TYPE        auth0_managed_certs"
         - "TLS POLICY               recommended"
 
@@ -80,12 +80,12 @@ tests:
     exit-code: 0
 
   010 - create domain with maximal flags:
-    command: auth0 domains create --domain "custom-domain.com" --verification txt --type self --policy recommended --no-input
+    command: auth0 domains create --domain "example-custom-domain.com" --verification txt --type self --policy recommended --no-input
     exit-code: 0
     stdout:
       contains:
         - "ID                       cd_"
-        - "DOMAIN                   custom-domain.com"
+        - "DOMAIN                   example-custom-domain.com"
         - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        self_managed_certs"
         - "VERIFICATION METHOD      txt"
@@ -99,4 +99,4 @@ tests:
       contains:
         - "ID                   DOMAIN             STATUS"
         - "cd_"
-        - "custom-domain.com"
+        - "example-custom-domain.com"
