@@ -97,6 +97,6 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - "ID                   DOMAIN             STATUS"
+        - "ID                   DOMAIN              STATUS"
         - "cd_"
         - "custom-domains.com"
