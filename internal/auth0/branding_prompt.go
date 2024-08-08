@@ -28,4 +28,8 @@ type PromptAPI interface {
 	//
 	// See: https://auth0.com/docs/api/management/v2#!/Prompts/put_custom_text_by_language
 	SetCustomText(ctx context.Context, p string, l string, b map[string]interface{}, opts ...management.RequestOption) (err error)
+
+	ReadPartials(ctx context.Context, prompt management.PromptType, opts ...management.RequestOption) (c *management.PromptPartials, err error)
+
+	UpdatePartials(ctx context.Context, c *management.PromptPartials, opts ...management.RequestOption) error
 }
