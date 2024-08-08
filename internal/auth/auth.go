@@ -144,13 +144,13 @@ var RequiredScopes = []string{
 // GetDeviceCode kicks-off the device authentication flow by requesting
 // a device code from Auth0. The returned state contains the
 // URI for the next step of the flow.
-func GetDeviceCode(ctx context.Context, httpClient *http.Client, additionalScopes []string) (State, error) {
+func GetDeviceCode(ctx context.Context, httpClient *http.Client, additionalScopes []string, domain string) (State, error) {
 	a := credentials
 
 	data := url.Values{
 		"client_id": []string{a.ClientID},
 		"scope":     []string{strings.Join(append(RequiredScopes, additionalScopes...), " ")},
-		"audience":  []string{a.Audience},
+		"audience":  []string{domain},
 	}
 
 	request, err := http.NewRequestWithContext(

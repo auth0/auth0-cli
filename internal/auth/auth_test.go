@@ -132,7 +132,7 @@ func TestGetDeviceCode(t *testing.T) {
 		u := url.URL{Scheme: "https", Host: parsedURL.Host, Path: "/oauth/device/code"}
 		credentials.DeviceCodeEndpoint = u.String()
 
-		state, err := GetDeviceCode(context.Background(), ts.Client(), []string{})
+		state, err := GetDeviceCode(context.Background(), ts.Client(), []string{}, "")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "device-code-here", state.DeviceCode)
@@ -180,7 +180,7 @@ func TestGetDeviceCode(t *testing.T) {
 			u := url.URL{Scheme: "https", Host: parsedURL.Host, Path: "/oauth/device/code"}
 			credentials.DeviceCodeEndpoint = u.String()
 
-			_, err = GetDeviceCode(context.Background(), ts.Client(), []string{})
+			_, err = GetDeviceCode(context.Background(), ts.Client(), []string{}, "")
 
 			assert.EqualError(t, err, testCase.expect)
 		})
