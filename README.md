@@ -32,13 +32,26 @@ Build, manage and test your [Auth0](https://auth0.com/) integrations from the co
 
 ## Installation
 
-### Homebrew (macOS & Linux)
+### Linux and macOS
 
 Install via [Homebrew](https://brew.sh/):
 
 ```bash
 brew tap auth0/auth0-cli && brew install auth0
 ```
+
+Install via [cURL](https://curl.se/):
+
+1. Download the binary. It will be placed in `./auth0`:
+  ```bash
+  curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | sh -s -- -b .
+  ```
+2. Optionally, if you want to be able to run the binary from any directory, make sure you move it to a place in your $PATH:
+  ```bash
+  sudo mv ./auth0 /usr/local/bin
+  ```
+  > [!TIP]
+  > On macOS, depending on your current development environment state you may have to move the binary to create the directory first with `sudo mkdir -p /usr/local/bin` in order for the above command will work. Alternatively, move it to a directory of your choice and then add that directory to your $PATH.
 
 ### Windows
 
@@ -49,32 +62,25 @@ scoop bucket add auth0 https://github.com/auth0/scoop-auth0-cli.git
 scoop install auth0
 ```
 
-Install via [Powershell](https://learn.microsoft.com/en-us/powershell/)
 
-```powershell
-#fetch latest release information
-$latestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/auth0/auth0-cli/releases/latest"
-$latestVersion = $latestRelease.tag_name
-$version = $latestVersion -replace "^v"
-# Download the binary to the current folder
-Invoke-WebRequest -Uri "https://github.com/auth0/auth0-cli/releases/download/${latestVersion}/auth0-cli_${version}_Windows_x86_64.zip" -OutFile ".\auth0.zip"
-Expand-Archive ".\auth0.zip" .\
-# To be able to run the binary from any directory, make sure you add it to your $PATH
-[System.Environment]::SetEnvironmentVariable('PATH', $Env:PATH + ";${pwd}")
-```
+Install via [Powershell](https://learn.microsoft.com/en-us/powershell/):
 
-### Linux
-
-Install via [cURL](https://curl.se/):
-
-```bash
-# Binary will be downloaded to "./auth0".
-curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | sh -s -- -b .
-
-# To be able to run the binary from any directory
-# make sure you move it to a place in your $PATH
-# sudo mv ./auth0 /usr/local/bin
-```
+1. Fetch latest release information with the following commands:
+  ```powershell
+  $latestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/auth0/auth0-cli/releases/latest"
+  $latestVersion = $latestRelease.tag_name
+  $version = $latestVersion -replace "^v"
+  ```
+2. Download the binary to the current folder:
+  ```powershell
+  Invoke-WebRequest -Uri "https://github.com/auth0/auth0-cli/releases/download/${latestVersion}/auth0-cli_${version}_Windows_x86_64.zip" -OutFile ".\auth0.zip"
+  Expand-Archive ".\auth0.zip" .\
+  ```
+3. To be able to run the binary from any directory, make sure you add it to your $PATH. This can be done through powershell by entering the following command:
+  ```powershell
+  [System.Environment]::SetEnvironmentVariable('PATH', $Env:PATH + ";${pwd}")
+  ```
+  Alternatively, follow the instructions in the Manual section below. Learn more about [environment variables in Powershell](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_environment_variables?view=powershell-7.4)
 
 ### Go
 
@@ -92,11 +98,30 @@ go install github.com/auth0/auth0-cli/cmd/auth0@latest
 2. Extract the archive
    - **macOS**: `$ tar -xf auth0-cli_{version}_Darwin_{architecture}.tar.gz`
    - **Linux**: `$ tar -xf auth0-cli_{version}_Linux_{architecture}.tar.gz`
-   - **Windows**: Extract `auth0-cli_{version}_Windows_{architecture}.zip` using your preferred method of choice
+   - **Windows**: Extract `auth0-cli_{version}_Windows_{architecture}.zip` using your preferred method for working with compressed files.
 3. Make sure that the `PATH` and `HOME` environment variables include the folder where the binary was extracted.
-4. Run `auth0`
+   - **macOS/Linux**:
+     1. Open your shell configuration file (for example, ~/.bashrc for bash, ~/.zshrc for zsh) and ensure the following variables `PATH` and `HOME` are set correctly:
+    
+       ```bash
+       export PATH=$PATH:/path/to/extracted/auth0/cli/folder
+       export HOME=/path/to/home/directory
+       ```
 
-> **Note**
+     2. After editing the file, run source ~/.bashrc or source ~/.zshrc (depending on your shell) to apply the changes.
+
+   - **Windows**:
+     1. Open the Start Menu, search for "Environment Variables", and select "Edit the system environment variables".
+     2. In the System Properties window, click on the "Environment Variables" button.
+     3. Under "User variables", select Path and click "Edit". Add the path to the directory where you extracted the auth0.exe file.
+     4. Click 'OK' to close the Edit environment variable dialog and return to the Environment Variables dialog.
+     5. Click "New" to add a new HOME variable, and set it to your home directory path.
+     6. Click "OK" to apply the changes.
+     7. Close any existing Powershell or Command Prompt windows, and re-open your terminal in order to load the new environment variables you've just finished creating.
+
+5. Run `auth0`
+
+> [!TIP]
 > Autocompletion instructions for supported platforms available by running `auth0 completion -h`
 
 ## Authenticating to Your Tenant
