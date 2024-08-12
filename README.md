@@ -76,7 +76,7 @@ Install via [Powershell](https://learn.microsoft.com/en-us/powershell/):
   Invoke-WebRequest -Uri "https://github.com/auth0/auth0-cli/releases/download/${latestVersion}/auth0-cli_${version}_Windows_x86_64.zip" -OutFile ".\auth0.zip"
   Expand-Archive ".\auth0.zip" .\
   ```
-3. To be able to run the binary from any directory, make sure you add it to your $PATH. This can be done through powershell by entering the following command:
+3. To be able to run the binary from any directory, make sure you add it to your $PATH. This can be done through Powershell by entering the following command:
   ```powershell
   [System.Environment]::SetEnvironmentVariable('PATH', $Env:PATH + ";${pwd}")
   ```
