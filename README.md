@@ -51,7 +51,7 @@ Install via [cURL](https://curl.se/):
   sudo mv ./auth0 /usr/local/bin
   ```
   > [!TIP]
-  > On macOS, depending on your current development environment state you may have to move the binary to create the directory first with `sudo mkdir -p /usr/local/bin` in order for the above command will work. Alternatively, move it to a directory of your choice and then add that directory to your $PATH.
+  > On macOS, depending on the state of your current development environment you may have to first create the directory with `sudo mkdir -p /usr/local/bin` in order for the above command to work. Alternatively, you can move it to a directory of your choice and then add that directory to your $PATH instead.
 
 ### Windows
 
