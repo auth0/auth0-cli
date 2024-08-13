@@ -119,7 +119,7 @@ go install github.com/auth0/auth0-cli/cmd/auth0@latest
      6. Click "OK" to apply the changes.
      7. Close any existing Powershell or Command Prompt windows, and re-open your terminal in order to load the new environment variables you've just finished creating.
 
-5. Run `auth0`
+4. Run `auth0`
 
 > [!TIP]
 > Autocompletion instructions for supported platforms available by running `auth0 completion -h`
