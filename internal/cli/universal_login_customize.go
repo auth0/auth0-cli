@@ -47,13 +47,16 @@ var allowedPromptsWithPartials = []management.PromptType{
 	management.PromptLogin,
 	management.PromptLoginID,
 	management.PromptLoginPassword,
+	management.PromptLoginPasswordLess,
 }
+
+type partialsData map[string]*management.PromptScreenPartials
 
 type (
 	universalLoginBrandingData struct {
 		Applications []*applicationData                 `json:"applications"`
 		Prompts      []*promptData                      `json:"prompts"`
-		Partials     []*management.PromptPartials       `json:"partials"`
+		Partials     []partialsData                     `json:"partials"`
 		Settings     *management.Branding               `json:"settings"`
 		Template     *management.BrandingUniversalLogin `json:"template"`
 		Theme        *management.BrandingTheme          `json:"theme"`
@@ -75,6 +78,7 @@ type (
 
 	partialData struct {
 		InsertionPoint string `json:"insertion_point"`
+		ScreenName     string `json:"screen_name"`
 		PromptName     string `json:"prompt_name"`
 	}
 
@@ -405,8 +409,8 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		case fetchPartialFeatureFlag:
 			partial := &partialData{
-				InsertionPoint: "form-content-start",
-				PromptName:     "login",
+				ScreenName: "login",
+				PromptName: "login",
 			}
 			_, err := fetchPartial(r.Context(), h.api, partial)
 			if err != nil && strings.Contains(err.Error(), "feature is not available for your plan") {
@@ -442,7 +446,7 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 			if err != nil {
 				if strings.Contains(err.Error(), "feature is not available for your plan") {
-					partialToSend = &management.PromptPartials{}
+					partialToSend = &management.PromptScreenPartials{}
 				} else {
 					h.display.Errorf("Failed to fetch partial for prompt: %v", err)
 					errorMsg := webSocketMessage{
@@ -533,7 +537,7 @@ func fetchUniversalLoginBrandingData(
 		return err
 	})
 
-	var partials []*management.PromptPartials
+	var partials []partialsData
 	group.Go(func() (err error) {
 		partials, err = fetchAllPartials(ctx, api)
 		return err
@@ -656,7 +660,7 @@ func fetchPromptCustomTextWithDefaults(
 
 	brandingTextTranslations := mergeBrandingTextTranslations(defaultTranslations, customTranslations)
 
-	customText := make(map[string]interface{}, 0)
+	customText := make(map[string]interface{})
 	for key, value := range brandingTextTranslations {
 		customText[key] = value
 	}
@@ -702,32 +706,48 @@ func fetchAllApplications(ctx context.Context, api *auth0.API) ([]*applicationDa
 	return applications, nil
 }
 
-func fetchPartial(ctx context.Context, api *auth0.API, prompt *partialData) (*management.PromptPartials, error) {
-	partial, err := api.Prompt.ReadPartials(ctx, management.PromptType(prompt.PromptName))
+func fetchPartial(ctx context.Context, api *auth0.API, prompt *partialData) (*management.PromptScreenPartials, error) {
+	partial, err := api.Prompt.GetPartials(ctx, management.PromptType(prompt.PromptName))
 	if err != nil {
 		return nil, err
 	}
 
-	return partial, nil
+	if partial == nil {
+		return &management.PromptScreenPartials{}, nil
+	}
+
+	filteredPartials := management.PromptScreenPartials{}
+
+	if screenPartials, ok := (*partial)[management.ScreenName(prompt.ScreenName)]; ok {
+		filteredPartials[management.ScreenName(prompt.ScreenName)] = screenPartials
+	}
+
+	return &filteredPartials, nil
 }
 
-func fetchAllPartials(ctx context.Context, api *auth0.API) ([]*management.PromptPartials, error) {
-	var partials []*management.PromptPartials
+func fetchAllPartials(ctx context.Context, api *auth0.API) ([]partialsData, error) {
+	var partialsList []partialsData
 
 	for _, prompt := range allowedPromptsWithPartials {
-		partial, err := api.Prompt.ReadPartials(ctx, prompt)
-
+		partial, err := api.Prompt.GetPartials(ctx, prompt)
 		if err != nil {
 			if strings.Contains(err.Error(), "feature is not available for your plan") {
-				return []*management.PromptPartials{}, nil
+				constructedPartial := partialsData{
+					string(prompt): &management.PromptScreenPartials{},
+				}
+				partialsList = append(partialsList, constructedPartial)
+				continue
 			}
 			return nil, err
 		}
 
-		partials = append(partials, partial)
+		constructedPartial := partialsData{
+			string(prompt): partial,
+		}
+		partialsList = append(partialsList, constructedPartial)
 	}
 
-	return partials, nil
+	return partialsList, nil
 }
 
 func saveUniversalLoginBrandingData(ctx context.Context, api *auth0.API, data *universalLoginBrandingData) error {
@@ -770,12 +790,18 @@ func saveUniversalLoginBrandingData(ctx context.Context, api *auth0.API, data *u
 		})
 	}
 
-	for _, partial := range data.Partials {
-		partial := partial
+	for _, partials := range data.Partials {
+		for promptName, screenPartials := range partials {
+			promptName := promptName
+			screenPartials := screenPartials
 
-		group.Go(func() (err error) {
-			return api.Prompt.UpdatePartials(ctx, partial)
-		})
+			group.Go(func() error {
+				if screenPartials != nil {
+					return api.Prompt.SetPartials(ctx, management.PromptType(promptName), screenPartials)
+				}
+				return nil
+			})
+		}
 	}
 
 	return group.Wait()

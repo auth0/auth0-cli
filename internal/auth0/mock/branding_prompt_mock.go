@@ -55,6 +55,26 @@ func (mr *MockPromptAPIMockRecorder) CustomText(ctx, p, l interface{}, opts ...i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CustomText", reflect.TypeOf((*MockPromptAPI)(nil).CustomText), varargs...)
 }
 
+// GetPartials mocks base method.
+func (m *MockPromptAPI) GetPartials(ctx context.Context, prompt management.PromptType, opts ...management.RequestOption) (*management.PromptScreenPartials, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, prompt}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetPartials", varargs...)
+	ret0, _ := ret[0].(*management.PromptScreenPartials)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPartials indicates an expected call of GetPartials.
+func (mr *MockPromptAPIMockRecorder) GetPartials(ctx, prompt interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, prompt}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPartials", reflect.TypeOf((*MockPromptAPI)(nil).GetPartials), varargs...)
+}
+
 // Read mocks base method.
 func (m *MockPromptAPI) Read(ctx context.Context, opts ...management.RequestOption) (*management.Prompt, error) {
 	m.ctrl.T.Helper()
@@ -73,6 +93,26 @@ func (mr *MockPromptAPIMockRecorder) Read(ctx interface{}, opts ...interface{}) 
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockPromptAPI)(nil).Read), varargs...)
+}
+
+// ReadPartials mocks base method.
+func (m *MockPromptAPI) ReadPartials(ctx context.Context, prompt management.PromptType, opts ...management.RequestOption) (*management.PromptPartials, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, prompt}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ReadPartials", varargs...)
+	ret0, _ := ret[0].(*management.PromptPartials)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadPartials indicates an expected call of ReadPartials.
+func (mr *MockPromptAPIMockRecorder) ReadPartials(ctx, prompt interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, prompt}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadPartials", reflect.TypeOf((*MockPromptAPI)(nil).ReadPartials), varargs...)
 }
 
 // SetCustomText mocks base method.
@@ -94,6 +134,25 @@ func (mr *MockPromptAPIMockRecorder) SetCustomText(ctx, p, l, b interface{}, opt
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCustomText", reflect.TypeOf((*MockPromptAPI)(nil).SetCustomText), varargs...)
 }
 
+// SetPartials mocks base method.
+func (m *MockPromptAPI) SetPartials(ctx context.Context, prompt management.PromptType, c *management.PromptScreenPartials, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, prompt, c}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SetPartials", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetPartials indicates an expected call of SetPartials.
+func (mr *MockPromptAPIMockRecorder) SetPartials(ctx, prompt, c interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, prompt, c}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPartials", reflect.TypeOf((*MockPromptAPI)(nil).SetPartials), varargs...)
+}
+
 // Update mocks base method.
 func (m *MockPromptAPI) Update(ctx context.Context, p *management.Prompt, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
@@ -111,26 +170,6 @@ func (mr *MockPromptAPIMockRecorder) Update(ctx, p interface{}, opts ...interfac
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, p}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockPromptAPI)(nil).Update), varargs...)
-}
-
-// ReadPartials mocks base method.
-func (m *MockPromptAPI) ReadPartials(ctx context.Context, prompt management.PromptType, opts ...management.RequestOption) (*management.PromptPartials, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, prompt}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ReadPartials", varargs...)
-	ret0, _ := ret[0].(*management.PromptPartials)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ReadPartials indicates an expected call of ReadPartials.
-func (mr *MockPromptAPIMockRecorder) ReadPartials(ctx, prompt interface{}, opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, prompt}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadPartials", reflect.TypeOf((*MockPromptAPI)(nil).ReadPartials), varargs...)
 }
 
 // UpdatePartials mocks base method.

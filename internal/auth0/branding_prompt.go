@@ -29,7 +29,23 @@ type PromptAPI interface {
 	// See: https://auth0.com/docs/api/management/v2#!/Prompts/put_custom_text_by_language
 	SetCustomText(ctx context.Context, p string, l string, b map[string]interface{}, opts ...management.RequestOption) (err error)
 
+	// ReadPartials retrieves the partials for a specific prompt.
+	//
+	// See: https://auth0.com/docs/api/management/v2/prompts/get-partials
 	ReadPartials(ctx context.Context, prompt management.PromptType, opts ...management.RequestOption) (c *management.PromptPartials, err error)
 
+	// UpdatePartials updates the partials for a specific prompt.
+	//
+	// See: https://auth0.com/docs/api/management/v2/prompts/put-partials
 	UpdatePartials(ctx context.Context, c *management.PromptPartials, opts ...management.RequestOption) error
+
+	// GetPartials retrieves the partials for a specific prompt.
+	//
+	// See: https://auth0.com/docs/api/management/v2/prompts/get-partials
+	GetPartials(ctx context.Context, prompt management.PromptType, opts ...management.RequestOption) (c *management.PromptScreenPartials, err error)
+
+	// SetPartials sets the partials for a specific prompt.
+	//
+	// See: https://auth0.com/docs/api/management/v2/prompts/put-partials
+	SetPartials(ctx context.Context, prompt management.PromptType, c *management.PromptScreenPartials, opts ...management.RequestOption) error
 }
