@@ -112,7 +112,7 @@ func TestGenerateTerraformImportConfig(t *testing.T) {
 		_, importData := setupTestDIRAndImportData(t)
 
 		err := generateTerraformImportConfig("", importData)
-		assert.EqualError(t, err, "mkdir : no such file or directory")
+		assert.EqualError(t, err, "mkdir : "+ErrNotFound)
 	})
 
 	t.Run("it fails to create the main.tf file if file is already created and read only", func(t *testing.T) {
@@ -122,14 +122,16 @@ func TestGenerateTerraformImportConfig(t *testing.T) {
 		require.NoError(t, err)
 
 		mainFilePath := path.Join(outputDIR, "auth0_main.tf")
-		_, err = os.Create(mainFilePath)
+		f, err := os.Create(mainFilePath)
+		require.NoError(t, err)
+		err = f.Close()
 		require.NoError(t, err)
 
 		err = os.Chmod(mainFilePath, 0444)
 		require.NoError(t, err)
 
 		err = generateTerraformImportConfig(outputDIR, importData)
-		assert.EqualError(t, err, fmt.Sprintf("open %s: permission denied", mainFilePath))
+		assert.EqualError(t, err, fmt.Sprintf("open %s: %s", mainFilePath, ErrPermissionDenied))
 	})
 
 	t.Run("it fails to create the auth0_import.tf file if file is already created and read only", func(t *testing.T) {
@@ -139,14 +141,16 @@ func TestGenerateTerraformImportConfig(t *testing.T) {
 		require.NoError(t, err)
 
 		importFilePath := path.Join(outputDIR, "auth0_import.tf")
-		_, err = os.Create(importFilePath)
+		f, err := os.Create(importFilePath)
+		require.NoError(t, err)
+		err = f.Close()
 		require.NoError(t, err)
 
 		err = os.Chmod(importFilePath, 0444)
 		require.NoError(t, err)
 
 		err = generateTerraformImportConfig(outputDIR, importData)
-		assert.EqualError(t, err, fmt.Sprintf("open %s: permission denied", importFilePath))
+		assert.EqualError(t, err, fmt.Sprintf("open %s: %s", importFilePath, ErrPermissionDenied))
 	})
 }
 
@@ -356,8 +360,11 @@ func TestCheckOutputDirectoryIsEmpty(t *testing.T) {
 
 		for _, file := range files {
 			filePath := path.Join(tempDIR, file)
-			_, err := os.Create(filePath)
+			f, err := os.Create(filePath)
 			require.NoError(t, err)
+			err = f.Close()
+			require.NoError(t, err)
+
 		}
 
 		stdout := &bytes.Buffer{}
@@ -383,8 +390,11 @@ func TestCleanOutputDirectory(t *testing.T) {
 
 		for _, file := range files {
 			filePath := path.Join(tempDIR, file)
-			_, err := os.Create(filePath)
+			f, err := os.Create(filePath)
 			require.NoError(t, err)
+			err = f.Close()
+			require.NoError(t, err)
+
 		}
 
 		err := cleanOutputDirectory(tempDIR)
@@ -393,7 +403,7 @@ func TestCleanOutputDirectory(t *testing.T) {
 		for _, file := range files {
 			filePath := path.Join(tempDIR, file)
 			_, err := os.Stat(filePath)
-			assert.ErrorContains(t, err, "no such file or directory")
+			assert.ErrorContains(t, err, ErrFileNotFound)
 		}
 	})
 
@@ -405,9 +415,12 @@ func TestCleanOutputDirectory(t *testing.T) {
 				tempDIR := t.TempDir()
 
 				filePath := path.Join(tempDIR, file)
-				_, err := os.Create(filePath)
+				f, err := os.Create(filePath)
 				require.NoError(t, err)
-
+				defer func() {
+					err := f.Close()
+					require.NoError(t, err)
+				}()
 				err = os.Chmod(tempDIR, 0444)
 				require.NoError(t, err)
 
@@ -417,7 +430,7 @@ func TestCleanOutputDirectory(t *testing.T) {
 				})
 
 				err = cleanOutputDirectory(tempDIR)
-				assert.ErrorContains(t, err, "permission denied")
+				assert.ErrorContains(t, err, ErrCannotRemoveFile)
 			})
 		}
 	})
