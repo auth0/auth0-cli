@@ -753,54 +753,43 @@ func fetchAllPartials(ctx context.Context, api *auth0.API) ([]partialsData, erro
 func saveUniversalLoginBrandingData(ctx context.Context, api *auth0.API, data *universalLoginBrandingData) error {
 	group, ctx := errgroup.WithContext(ctx)
 
-	group.Go(func() (err error) {
-		if data.Settings == nil || data.Settings.String() == "{}" {
-			return nil
-		}
+	if data.Settings != nil && data.Settings.String() != "{}" {
+		group.Go(func() error {
+			return api.Branding.Update(ctx, data.Settings)
+		})
+	}
 
-		return api.Branding.Update(ctx, data.Settings)
-	})
+	if data.Template != nil && data.Template.String() != "{}" {
+		group.Go(func() error {
+			return api.Branding.SetUniversalLogin(ctx, data.Template)
+		})
+	}
 
-	group.Go(func() (err error) {
-		if data.Template == nil || data.Template.String() == "{}" {
-			return nil
-		}
-
-		return api.Branding.SetUniversalLogin(ctx, data.Template)
-	})
-
-	group.Go(func() (err error) {
-		if data.Theme == nil || data.Theme.String() == "{}" {
-			return nil
-		}
-
-		existingTheme, err := api.BrandingTheme.Default(ctx)
-		if err == nil {
-			return api.BrandingTheme.Update(ctx, existingTheme.GetID(), data.Theme)
-		}
-
-		return api.BrandingTheme.Create(ctx, data.Theme)
-	})
+	if data.Theme != nil && data.Theme.String() != "{}" {
+		group.Go(func() error {
+			existingTheme, err := api.BrandingTheme.Default(ctx)
+			if err == nil {
+				return api.BrandingTheme.Update(ctx, existingTheme.GetID(), data.Theme)
+			}
+			return api.BrandingTheme.Create(ctx, data.Theme)
+		})
+	}
 
 	for _, prompt := range data.Prompts {
 		prompt := prompt
-
-		group.Go(func() (err error) {
+		group.Go(func() error {
 			return api.Prompt.SetCustomText(ctx, prompt.Prompt, prompt.Language, prompt.CustomText)
 		})
 	}
 
 	for _, partials := range data.Partials {
 		for promptName, screenPartials := range partials {
-			promptName := promptName
-			screenPartials := screenPartials
-
-			group.Go(func() error {
-				if screenPartials != nil {
+			if screenPartials != nil {
+				promptName := promptName
+				group.Go(func() error {
 					return api.Prompt.SetPartials(ctx, management.PromptType(promptName), screenPartials)
-				}
-				return nil
-			})
+				})
+			}
 		}
 	}
 
