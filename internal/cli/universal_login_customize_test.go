@@ -96,7 +96,7 @@ func TestEnsureNewUniversalLoginExperienceIsActive(t *testing.T) {
 	}
 }
 
-func TestReadPartials(t *testing.T) {
+func TestGetPartials(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -104,7 +104,7 @@ func TestReadPartials(t *testing.T) {
 		name           string
 		mockedAPI      func() *auth0.API
 		promptData     *partialData
-		expectedResult *management.PromptPartials
+		expectedResult *management.PromptScreenPartials
 		expectedError  string
 	}{
 		{
@@ -113,10 +113,12 @@ func TestReadPartials(t *testing.T) {
 				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
 				mockPromptAPI.
 					EXPECT().
-					ReadPartials(gomock.Any(), management.PromptType("login")).
-					Return(&management.PromptPartials{
-						FormContentStart: "start",
-						FormContentEnd:   "end",
+					GetPartials(gomock.Any(), management.PromptType("login")).
+					Return(&management.PromptScreenPartials{
+						management.ScreenLogin: {
+							management.InsertionPointFormContentStart: "start",
+							management.InsertionPointFormContentEnd:   "end",
+						},
 					}, nil)
 				return &auth0.API{
 					Prompt: mockPromptAPI,
@@ -124,10 +126,13 @@ func TestReadPartials(t *testing.T) {
 			},
 			promptData: &partialData{
 				PromptName: "login",
+				ScreenName: "login",
 			},
-			expectedResult: &management.PromptPartials{
-				FormContentStart: "start",
-				FormContentEnd:   "end",
+			expectedResult: &management.PromptScreenPartials{
+				management.ScreenName("login"): {
+					management.InsertionPointFormContentStart: "start",
+					management.InsertionPointFormContentEnd:   "end",
+				},
 			},
 			expectedError: "",
 		},
@@ -137,7 +142,7 @@ func TestReadPartials(t *testing.T) {
 				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
 				mockPromptAPI.
 					EXPECT().
-					ReadPartials(gomock.Any(), management.PromptType("login")).
+					GetPartials(gomock.Any(), management.PromptType("login")).
 					Return(nil, fmt.Errorf("api error"))
 				return &auth0.API{
 					Prompt: mockPromptAPI,
@@ -145,6 +150,7 @@ func TestReadPartials(t *testing.T) {
 			},
 			promptData: &partialData{
 				PromptName: "login",
+				ScreenName: "login",
 			},
 			expectedResult: nil,
 			expectedError:  "api error",
@@ -155,7 +161,7 @@ func TestReadPartials(t *testing.T) {
 				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
 				mockPromptAPI.
 					EXPECT().
-					ReadPartials(gomock.Any(), management.PromptType("login")).
+					GetPartials(gomock.Any(), management.PromptType("login")).
 					Return(nil, fmt.Errorf("failed to read partials: 403 forbidden: this feature is not available for your plan. To create or modify prompt templates, please upgrade your account to a professional or enterprise plan"))
 				return &auth0.API{
 					Prompt: mockPromptAPI,
@@ -163,6 +169,7 @@ func TestReadPartials(t *testing.T) {
 			},
 			promptData: &partialData{
 				PromptName: "login",
+				ScreenName: "login",
 			},
 			expectedResult: nil,
 			expectedError:  "this feature is not available for your plan. To create or modify prompt templates, please upgrade your account to a professional or enterprise plan",
@@ -261,10 +268,11 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					)
 				for _, promptType := range allowedPromptsWithPartials {
 					mockPromptAPI.EXPECT().
-						ReadPartials(gomock.Any(), promptType).
-						Return(&management.PromptPartials{
-							FormContentStart: "<form>",
-							Prompt:           promptType,
+						GetPartials(gomock.Any(), promptType).
+						Return(&management.PromptScreenPartials{
+							management.ScreenName(promptType): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
 						}, nil)
 				}
 
@@ -318,30 +326,55 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					EnabledLocales: []string{"en", "es"},
 					Domain:         "tenant-example.auth0.com",
 				},
-				Partials: []*management.PromptPartials{
+				Partials: []partialsData{
 					{
-						Prompt:           "signup",
-						FormContentStart: "<form>",
+						"signup": {
+							management.ScreenName("signup"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "signup-id",
-						FormContentStart: "<form>",
+						"signup-id": {
+							management.ScreenName("signup-id"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "signup-password",
-						FormContentStart: "<form>",
+						"signup-password": {
+							management.ScreenName("signup-password"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "login",
-						FormContentStart: "<form>",
+						"login": {
+							management.ScreenName("login"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "login-id",
-						FormContentStart: "<form>",
+						"login-id": {
+							management.ScreenName("login-id"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "login-password",
-						FormContentStart: "<form>",
+						"login-password": {
+							management.ScreenName("login-password"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
+					},
+					{
+						"login-passwordless": {
+							management.ScreenName("login-passwordless"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 				},
 				Prompts: []*promptData{
@@ -443,10 +476,11 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					)
 				for _, promptType := range allowedPromptsWithPartials {
 					mockPromptAPI.EXPECT().
-						ReadPartials(gomock.Any(), promptType).
-						Return(&management.PromptPartials{
-							FormContentStart: "<form>",
-							Prompt:           promptType,
+						GetPartials(gomock.Any(), promptType).
+						Return(&management.PromptScreenPartials{
+							management.ScreenName(promptType): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
 						}, nil)
 				}
 				mockClientAPI := mock.NewMockClientAPI(ctrl)
@@ -499,30 +533,55 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					EnabledLocales: []string{"en", "es"},
 					Domain:         "tenant-example.auth0.com",
 				},
-				Partials: []*management.PromptPartials{
+				Partials: []partialsData{
 					{
-						Prompt:           "signup",
-						FormContentStart: "<form>",
+						"signup": {
+							management.ScreenName("signup"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "signup-id",
-						FormContentStart: "<form>",
+						"signup-id": {
+							management.ScreenName("signup-id"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "signup-password",
-						FormContentStart: "<form>",
+						"signup-password": {
+							management.ScreenName("signup-password"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "login",
-						FormContentStart: "<form>",
+						"login": {
+							management.ScreenName("login"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "login-id",
-						FormContentStart: "<form>",
+						"login-id": {
+							management.ScreenName("login-id"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "login-password",
-						FormContentStart: "<form>",
+						"login-password": {
+							management.ScreenName("login-password"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
+					},
+					{
+						"login-passwordless": {
+							management.ScreenName("login-passwordless"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 				},
 				Prompts: []*promptData{
@@ -628,10 +687,11 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					)
 				for _, promptType := range allowedPromptsWithPartials {
 					mockPromptAPI.EXPECT().
-						ReadPartials(gomock.Any(), promptType).
-						Return(&management.PromptPartials{
-							FormContentStart: "<form>",
-							Prompt:           promptType,
+						GetPartials(gomock.Any(), promptType).
+						Return(&management.PromptScreenPartials{
+							management.ScreenName(promptType): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
 						}, nil)
 				}
 				mockClientAPI := mock.NewMockClientAPI(ctrl)
@@ -682,30 +742,55 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					EnabledLocales: []string{"en", "es"},
 					Domain:         "tenant-example.auth0.com",
 				},
-				Partials: []*management.PromptPartials{
+				Partials: []partialsData{
 					{
-						Prompt:           "signup",
-						FormContentStart: "<form>",
+						"signup": {
+							management.ScreenName("signup"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "signup-id",
-						FormContentStart: "<form>",
+						"signup-id": {
+							management.ScreenName("signup-id"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "signup-password",
-						FormContentStart: "<form>",
+						"signup-password": {
+							management.ScreenName("signup-password"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "login",
-						FormContentStart: "<form>",
+						"login": {
+							management.ScreenName("login"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "login-id",
-						FormContentStart: "<form>",
+						"login-id": {
+							management.ScreenName("login-id"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "login-password",
-						FormContentStart: "<form>",
+						"login-password": {
+							management.ScreenName("login-password"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
+					},
+					{
+						"login-passwordless": {
+							management.ScreenName("login-passwordless"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 				},
 				Prompts: []*promptData{
@@ -816,10 +901,11 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					)
 				for _, promptType := range allowedPromptsWithPartials {
 					mockPromptAPI.EXPECT().
-						ReadPartials(gomock.Any(), promptType).
-						Return(&management.PromptPartials{
-							FormContentStart: "<form>",
-							Prompt:           promptType,
+						GetPartials(gomock.Any(), promptType).
+						Return(&management.PromptScreenPartials{
+							management.ScreenName(promptType): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
 						}, nil)
 				}
 				mockClientAPI := mock.NewMockClientAPI(ctrl)
@@ -945,30 +1031,55 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					EnabledLocales: []string{"en", "es"},
 					Domain:         "tenant-example.auth0.com",
 				},
-				Partials: []*management.PromptPartials{
+				Partials: []partialsData{
 					{
-						Prompt:           "signup",
-						FormContentStart: "<form>",
+						"signup": {
+							management.ScreenName("signup"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "signup-id",
-						FormContentStart: "<form>",
+						"signup-id": {
+							management.ScreenName("signup-id"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "signup-password",
-						FormContentStart: "<form>",
+						"signup-password": {
+							management.ScreenName("signup-password"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "login",
-						FormContentStart: "<form>",
+						"login": {
+							management.ScreenName("login"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "login-id",
-						FormContentStart: "<form>",
+						"login-id": {
+							management.ScreenName("login-id"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 					{
-						Prompt:           "login-password",
-						FormContentStart: "<form>",
+						"login-password": {
+							management.ScreenName("login-password"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
+					},
+					{
+						"login-passwordless": {
+							management.ScreenName("login-passwordless"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
 					},
 				},
 				Prompts: []*promptData{
@@ -1061,10 +1172,11 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					Return(nil, fmt.Errorf("failed to fetch tenant data"))
 				for _, promptType := range allowedPromptsWithPartials {
 					mockPromptAPI.EXPECT().
-						ReadPartials(gomock.Any(), promptType).
-						Return(&management.PromptPartials{
-							FormContentStart: "<form>",
-							Prompt:           promptType,
+						GetPartials(gomock.Any(), promptType).
+						Return(&management.PromptScreenPartials{
+							management.ScreenName(promptType): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
 						}, nil)
 				}
 				mockClientAPI := mock.NewMockClientAPI(ctrl)
@@ -1147,10 +1259,11 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					Return(nil, fmt.Errorf("failed to fetch custom text"))
 				for _, promptType := range allowedPromptsWithPartials {
 					mockPromptAPI.EXPECT().
-						ReadPartials(gomock.Any(), promptType).
-						Return(&management.PromptPartials{
-							FormContentStart: "<form>",
-							Prompt:           promptType,
+						GetPartials(gomock.Any(), promptType).
+						Return(&management.PromptScreenPartials{
+							management.ScreenName(promptType): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
 						}, nil)
 				}
 				mockClientAPI := mock.NewMockClientAPI(ctrl)
@@ -1240,10 +1353,11 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					)
 				for _, promptType := range allowedPromptsWithPartials {
 					mockPromptAPI.EXPECT().
-						ReadPartials(gomock.Any(), promptType).
-						Return(&management.PromptPartials{
-							FormContentStart: "<form>",
-							Prompt:           promptType,
+						GetPartials(gomock.Any(), promptType).
+						Return(&management.PromptScreenPartials{
+							management.ScreenName(promptType): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
 						}, nil)
 				}
 				mockClientAPI := mock.NewMockClientAPI(ctrl)
@@ -1381,10 +1495,11 @@ func TestWebSocketMessage_MarshalJSON(t *testing.T) {
 				Type: "FETCH_PARTIAL",
 				Payload: &partialData{
 					InsertionPoint: "form-content-start",
+					ScreenName:     "login",
 					PromptName:     "login",
 				},
 			},
-			expected: `{"type":"FETCH_PARTIAL","payload":{"insertion_point":"form-content-start","prompt_name":"login"}}`,
+			expected: `{"type":"FETCH_PARTIAL","payload":{"insertion_point":"form-content-start","screen_name":"login","prompt_name":"login"}}`,
 		},
 		{
 			name: "it can marshal a fetch branding data message",
@@ -1516,10 +1631,13 @@ func TestSaveUniversalLoginBrandingData(t *testing.T) {
 					Body: auth0.String("<html></html>"),
 				},
 				Theme: &management.BrandingTheme{},
-				Partials: []*management.PromptPartials{
+				Partials: []partialsData{
 					{
-						Prompt:           "login",
-						FormContentStart: "<div>Updated Form Content Start</div>",
+						"login": {
+							management.ScreenName("login"): {
+								management.InsertionPointFormContentStart: "<div>Updated Form Content Start</div>",
+							},
+						},
 					},
 				},
 				Prompts: []*promptData{
@@ -1561,9 +1679,10 @@ func TestSaveUniversalLoginBrandingData(t *testing.T) {
 					SetCustomText(gomock.Any(), "login", "en", map[string]interface{}{"key": "value"}).
 					Return(nil)
 				mockPromptAPI.EXPECT().
-					UpdatePartials(gomock.Any(), &management.PromptPartials{
-						Prompt:           "login",
-						FormContentStart: "<div>Updated Form Content Start</div>",
+					SetPartials(gomock.Any(), management.PromptLogin, &management.PromptScreenPartials{
+						management.ScreenLogin: {
+							management.InsertionPointFormContentStart: "<div>Updated Form Content Start</div>",
+						},
 					}).
 					Return(nil)
 				mockAPI := &auth0.API{
@@ -1588,10 +1707,13 @@ func TestSaveUniversalLoginBrandingData(t *testing.T) {
 					Body: auth0.String("<html></html>"),
 				},
 				Theme: &management.BrandingTheme{},
-				Partials: []*management.PromptPartials{
+				Partials: []partialsData{
 					{
-						Prompt:           "login",
-						FormContentStart: "<div>Updated Form Content Start</div>",
+						"login": {
+							management.ScreenName("login"): {
+								management.InsertionPointFormContentStart: "<div>Updated Form Content Start</div>",
+							},
+						},
 					},
 				},
 				Prompts: []*promptData{
@@ -1634,9 +1756,10 @@ func TestSaveUniversalLoginBrandingData(t *testing.T) {
 					SetCustomText(gomock.Any(), "login", "en", map[string]interface{}{"key": "value"}).
 					Return(nil)
 				mockPromptAPI.EXPECT().
-					UpdatePartials(gomock.Any(), &management.PromptPartials{
-						Prompt:           "login",
-						FormContentStart: "<div>Updated Form Content Start</div>",
+					SetPartials(gomock.Any(), management.PromptLogin, &management.PromptScreenPartials{
+						management.ScreenLogin: {
+							management.InsertionPointFormContentStart: "<div>Updated Form Content Start</div>",
+						},
 					}).
 					Return(nil)
 				mockAPI := &auth0.API{
@@ -1661,10 +1784,13 @@ func TestSaveUniversalLoginBrandingData(t *testing.T) {
 					Body: auth0.String("<html></html>"),
 				},
 				Theme: &management.BrandingTheme{},
-				Partials: []*management.PromptPartials{
+				Partials: []partialsData{
 					{
-						Prompt:           "login",
-						FormContentStart: "<div>Updated Form Content Start</div>",
+						"login": {
+							management.ScreenName("login"): {
+								management.InsertionPointFormContentStart: "<div>Updated Form Content Start</div>",
+							},
+						},
 					},
 				},
 				Prompts: []*promptData{
@@ -1704,9 +1830,10 @@ func TestSaveUniversalLoginBrandingData(t *testing.T) {
 					SetCustomText(gomock.Any(), "login", "en", map[string]interface{}{"key": "value"}).
 					Return(nil)
 				mockPromptAPI.EXPECT().
-					UpdatePartials(gomock.Any(), &management.PromptPartials{
-						Prompt:           "login",
-						FormContentStart: "<div>Updated Form Content Start</div>",
+					SetPartials(gomock.Any(), management.PromptLogin, &management.PromptScreenPartials{
+						management.ScreenLogin: {
+							management.InsertionPointFormContentStart: "<div>Updated Form Content Start</div>",
+						},
 					}).
 					Return(nil)
 				mockAPI := &auth0.API{
@@ -1740,46 +1867,72 @@ func TestFetchAllPartials(t *testing.T) {
 
 	var testCases = []struct {
 		name          string
-		expectedData  []*management.PromptPartials
+		expectedData  []partialsData
 		expectedError string
 		mockedAPI     func() *auth0.API
 	}{
 		{
 			name: "it can fetch all partials",
-			expectedData: []*management.PromptPartials{
+			expectedData: []partialsData{
 				{
-					Prompt:           "signup",
-					FormContentStart: "<form>",
+					"signup": {
+						management.ScreenName("signup"): {
+							management.InsertionPointFormContentEnd: "<form>",
+						},
+					},
 				},
 				{
-					Prompt:           "signup-id",
-					FormContentStart: "<form>",
+					"signup-id": {
+						management.ScreenName("signup-id"): {
+							management.InsertionPointFormContentEnd: "<form>",
+						},
+					},
 				},
 				{
-					Prompt:           "signup-password",
-					FormContentStart: "<form>",
+					"signup-password": {
+						management.ScreenName("signup-password"): {
+							management.InsertionPointFormContentEnd: "<form>",
+						},
+					},
 				},
 				{
-					Prompt:           "login",
-					FormContentStart: "<form>",
+					"login": {
+						management.ScreenName("login"): {
+							management.InsertionPointFormContentEnd: "<form>",
+						},
+					},
 				},
 				{
-					Prompt:           "login-id",
-					FormContentStart: "<form>",
+					"login-id": {
+						management.ScreenName("login-id"): {
+							management.InsertionPointFormContentEnd: "<form>",
+						},
+					},
 				},
 				{
-					Prompt:           "login-password",
-					FormContentStart: "<form>",
+					"login-password": {
+						management.ScreenName("login-password"): {
+							management.InsertionPointFormContentEnd: "<form>",
+						},
+					},
+				},
+				{
+					"login-passwordless": {
+						management.ScreenName("login-passwordless"): {
+							management.InsertionPointFormContentEnd: "<form>",
+						},
+					},
 				},
 			},
 			mockedAPI: func() *auth0.API {
 				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
 				for _, promptType := range allowedPromptsWithPartials {
 					mockPromptAPI.EXPECT().
-						ReadPartials(gomock.Any(), promptType).
-						Return(&management.PromptPartials{
-							FormContentStart: "<form>",
-							Prompt:           promptType,
+						GetPartials(gomock.Any(), promptType).
+						Return(&management.PromptScreenPartials{
+							management.ScreenName(promptType): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
 						}, nil)
 				}
 
@@ -1796,7 +1949,7 @@ func TestFetchAllPartials(t *testing.T) {
 			mockedAPI: func() *auth0.API {
 				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
 				mockPromptAPI.EXPECT().
-					ReadPartials(gomock.Any(), gomock.Any()).
+					GetPartials(gomock.Any(), gomock.Any()).
 					Return(nil, fmt.Errorf("failed to fetch partials"))
 
 				mockAPI := &auth0.API{
@@ -1807,18 +1960,41 @@ func TestFetchAllPartials(t *testing.T) {
 			},
 		},
 		{
-			name:         "it doesn't fails if feature flag is disabled",
-			expectedData: []*management.PromptPartials{},
+			name: "it doesn't fail if feature flag is disabled",
+			expectedData: []partialsData{
+				{
+					"signup": {},
+				},
+				{
+					"signup-id": {},
+				},
+				{
+					"signup-password": {},
+				},
+				{
+					"login": {},
+				},
+				{
+					"login-id": {},
+				},
+				{
+					"login-password": {},
+				},
+				{
+					"login-passwordless": {},
+				},
+			},
 			mockedAPI: func() *auth0.API {
 				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
-				mockPromptAPI.EXPECT().
-					ReadPartials(gomock.Any(), gomock.Any()).
-					Return(nil, fmt.Errorf("feature is not available for your plan"))
-				mockAPI := &auth0.API{
+				for _, prompt := range allowedPromptsWithPartials {
+					mockPromptAPI.EXPECT().
+						GetPartials(gomock.Any(), prompt).
+						Return(nil, fmt.Errorf("feature is not available for your plan")).
+						Times(1)
+				}
+				return &auth0.API{
 					Prompt: mockPromptAPI,
 				}
-
-				return mockAPI
 			},
 		},
 	}
