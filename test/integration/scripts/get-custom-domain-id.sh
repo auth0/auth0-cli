@@ -1,6 +1,6 @@
 #! /bin/bash
 
-testing_domain_name="custom-domains.com"
+testing_domain_name="auth0-cli-integration-test.com"
 
 domains=$( auth0 domains list --json --no-input )
 for domain in $( printf "%s" "$domains" | jq -r '.[] | @base64' ); do
