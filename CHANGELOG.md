@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v1.5.0](https://github.com/auth0/auth0-cli/tree/v1.5.0) (Aug 13, 2024)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.4.0...v1.5.0)
+
+### Added
+
+- Support for `auth0_client_credentials` within `auth0_client` when generating Terraform configuration [#1032]
+- Support for `auth0_email_template` when generating Terraform configuration [#988]
+- Ability to use **Custom Partial Prompts** in the `auth0 universal-login customize` command [#1031]
+- Ability to manage the login domain through the `--domain` flag in the `auth0 login` command with an updated login flow [#1038]
+
+### Fixed
+
+- Issue with listing tenants in JSON format. [#1002](https://github.com/auth0/auth0-cli/issues/1002)
+
 ## [v1.4.0](https://github.com/auth0/auth0-cli/tree/v1.4.0) (Feb 1, 2024)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.3.0...v1.4.0)
@@ -277,7 +292,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.0.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.5.0...HEAD
+[#1038]: https://github.com/auth0/auth0-cli/issues/1038
+[#1032]:https://github.com/auth0/auth0-cli/issues/1032
+[#1031]: https://github.com/auth0/auth0-cli/issues/1031
+[#1002]: https://github.com/auth0/auth0-cli/issues/1002
+[#988]:https://github.com/auth0/auth0-cli/issues/988
 [#968]: https://github.com/auth0/auth0-cli/issues/968
 [#955]: https://github.com/auth0/auth0-cli/issues/955
 [#949]: https://github.com/auth0/auth0-cli/issues/949
