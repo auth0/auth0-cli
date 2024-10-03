@@ -27,6 +27,8 @@ github.com/apparentlymart/go-textseg/v15 v15.0.0 h1:uYvfpb3DyLSCGWnctWKGj857c6ew
 github.com/apparentlymart/go-textseg/v15 v15.0.0/go.mod h1:K8XmNZdhEBkdlyDdvbmmsvpAG721bKi0joRfFdHIWJ4=
 github.com/auth0/go-auth0 v1.10.0 h1:7fjcuVjtTET5NEg8RPl3uYadGto7WZnBl31LcnXANWc=
 github.com/auth0/go-auth0 v1.10.0/go.mod h1:VMTiemb4rn2TUPiH9obD2FoHS2FoTALTsnKU0NUXLxk=
+github.com/auth0/go-auth0 v1.11.0 h1:gFBVhJCQUW1cET+f/fSH+aXiUebvH2IaaXhMiSaPclw=
+github.com/auth0/go-auth0 v1.11.0/go.mod h1:VyYseHsdB4s9jmfBqoxnzJTvZr0w17ZJ5kjNdA+ag9Y=
 github.com/aybabtme/iocontrol v0.0.0-20150809002002-ad15bcfc95a0 h1:0NmehRCgyk5rljDQLKUO+cRJCnduDyn11+zGZIc9Z48=
 github.com/aybabtme/iocontrol v0.0.0-20150809002002-ad15bcfc95a0/go.mod h1:6L7zgvqo0idzI7IO8de6ZC051AfXb5ipkIJ7bIA2tGA=
 github.com/aymanbagabas/go-osc52/v2 v2.0.1 h1:HwpRHbFMcZLEVr42D4p7XBqjyuxQH5SMiErDT4WkJ2k=

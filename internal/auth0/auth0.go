@@ -8,55 +8,61 @@ import (
 // API mimics `management.Management`s general interface, except it refers to
 // the interfaces instead of the concrete structs.
 type API struct {
-	Action           ActionAPI
-	Anomaly          AnomalyAPI
-	AttackProtection AttackProtectionAPI
-	Branding         BrandingAPI
-	BrandingTheme    BrandingThemeAPI
-	Client           ClientAPI
-	ClientGrant      ClientGrantAPI
-	Connection       ConnectionAPI
-	CustomDomain     CustomDomainAPI
-	EmailTemplate    EmailTemplateAPI
-	EmailProvider    EmailProviderAPI
-	Log              LogAPI
-	LogStream        LogStreamAPI
-	Organization     OrganizationAPI
-	Prompt           PromptAPI
-	ResourceServer   ResourceServerAPI
-	Role             RoleAPI
-	Rule             RuleAPI
-	Tenant           TenantAPI
-	User             UserAPI
-	Jobs             JobsAPI
+	Action              ActionAPI
+	Anomaly             AnomalyAPI
+	AttackProtection    AttackProtectionAPI
+	Branding            BrandingAPI
+	BrandingTheme       BrandingThemeAPI
+	Client              ClientAPI
+	ClientGrant         ClientGrantAPI
+	Connection          ConnectionAPI
+	CustomDomain        CustomDomainAPI
+	EmailTemplate       EmailTemplateAPI
+	EmailProvider       EmailProviderAPI
+	Flow                FlowAPI
+	FlowVaultConnection FlowVaultConnectionAPI
+	Form                FormAPI
+	Log                 LogAPI
+	LogStream           LogStreamAPI
+	Organization        OrganizationAPI
+	Prompt              PromptAPI
+	ResourceServer      ResourceServerAPI
+	Role                RoleAPI
+	Rule                RuleAPI
+	Tenant              TenantAPI
+	User                UserAPI
+	Jobs                JobsAPI
 
 	HTTPClient HTTPClientAPI
 }
 
 func NewAPI(m *management.Management) *API {
 	return &API{
-		Action:           m.Action,
-		Anomaly:          m.Anomaly,
-		AttackProtection: m.AttackProtection,
-		Branding:         m.Branding,
-		BrandingTheme:    m.BrandingTheme,
-		Client:           m.Client,
-		ClientGrant:      m.ClientGrant,
-		Connection:       m.Connection,
-		CustomDomain:     m.CustomDomain,
-		EmailTemplate:    m.EmailTemplate,
-		EmailProvider:    m.EmailProvider,
-		Log:              m.Log,
-		LogStream:        m.LogStream,
-		Organization:     m.Organization,
-		Prompt:           m.Prompt,
-		ResourceServer:   m.ResourceServer,
-		Role:             m.Role,
-		Rule:             m.Rule,
-		Tenant:           m.Tenant,
-		User:             m.User,
-		Jobs:             m.Job,
-		HTTPClient:       m,
+		Action:              m.Action,
+		Anomaly:             m.Anomaly,
+		AttackProtection:    m.AttackProtection,
+		Branding:            m.Branding,
+		BrandingTheme:       m.BrandingTheme,
+		Client:              m.Client,
+		ClientGrant:         m.ClientGrant,
+		Connection:          m.Connection,
+		CustomDomain:        m.CustomDomain,
+		EmailTemplate:       m.EmailTemplate,
+		EmailProvider:       m.EmailProvider,
+		Flow:                m.Flow,
+		FlowVaultConnection: m.Flow.Vault,
+		Form:                m.Form,
+		Log:                 m.Log,
+		LogStream:           m.LogStream,
+		Organization:        m.Organization,
+		Prompt:              m.Prompt,
+		ResourceServer:      m.ResourceServer,
+		Role:                m.Role,
+		Rule:                m.Rule,
+		Tenant:              m.Tenant,
+		User:                m.User,
+		Jobs:                m.Job,
+		HTTPClient:          m,
 	}
 }
 
