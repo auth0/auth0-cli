@@ -88,7 +88,7 @@ tests:
         - "DOMAIN                     auth0-cli-integration-test.com"
         - "STATUS                     pending_verification"
         - "PROVISIONING TYPE          self_managed_certs"
-        - "VERIFICATION METHOD        txt"
+        - "VERIFICATION METHOD        TXT"
         - "TLS POLICY                 recommended"
         - "CUSTOM CLIENT IP HEADER"
 

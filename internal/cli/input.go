@@ -2,11 +2,9 @@ package cli
 
 import (
 	"fmt"
-	"os"
-	"reflect"
-
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/auth0/go-auth0"
+	"os"
 
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
@@ -60,12 +58,6 @@ func askPassword(i commandInput, value interface{}, isUpdate bool) error {
 }
 
 func askMultiSelect(i commandInput, value interface{}, options ...string) error {
-	v := reflect.Indirect(reflect.ValueOf(value))
-
-	if v.Kind() != reflect.Slice {
-		return handleInputError(fmt.Errorf("there is not enough data to select from"))
-	}
-
 	if err := prompt.AskMultiSelect(i.GetLabel(), value, options...); err != nil {
 		return handleInputError(err)
 	}
