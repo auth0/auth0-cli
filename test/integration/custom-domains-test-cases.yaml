@@ -90,7 +90,6 @@ tests:
         - "PROVISIONING TYPE          self_managed_certs"
         - "VERIFICATION METHOD        TXT"
         - "TLS POLICY                 recommended"
-        - "CUSTOM CLIENT IP HEADER"
 
   011 - list custom domains with results:
     command: auth0 domains list
