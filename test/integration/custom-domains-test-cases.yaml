@@ -23,9 +23,9 @@ tests:
     stdout:
       contains:
         - "ID                         cd_"
-        - "DOMAIN                   auth0-cli-integration-test.com"
-        - "STATUS                   pending_verification"
-        - "PROVISIONING TYPE        auth0_managed_certs"
+        - "DOMAIN                     auth0-cli-integration-test.com"
+        - "STATUS                     pending_verification"
+        - "PROVISIONING TYPE          auth0_managed_certs"
 
   004 - unsuccessfully create domain with same name:
     command: auth0 domains create --domain "auth0-cli-integration-test.com" --no-input
@@ -40,9 +40,9 @@ tests:
     stdout:
       contains:
         - "ID                         cd_"
-        - "DOMAIN                   auth0-cli-integration-test.com"
-        - "STATUS                   pending_verification"
-        - "PROVISIONING TYPE        auth0_managed_certs"
+        - "DOMAIN                     auth0-cli-integration-test.com"
+        - "STATUS                     pending_verification"
+        - "PROVISIONING TYPE          auth0_managed_certs"
 
   006 - update domain minimal flags:
     command: auth0 domains update $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
@@ -50,9 +50,9 @@ tests:
     stdout:
       contains:
         - "ID                         cd_"
-        - "DOMAIN                   auth0-cli-integration-test.com"
-        - "STATUS                   pending_verification"
-        - "PROVISIONING TYPE        auth0_managed_certs"
+        - "DOMAIN                     auth0-cli-integration-test.com"
+        - "STATUS                     pending_verification"
+        - "PROVISIONING TYPE          auth0_managed_certs"
 
   007 - update domain maximal flags:
     command: auth0 domains update $(./test/integration/scripts/get-custom-domain-id.sh) --policy recommended --no-input
@@ -60,10 +60,10 @@ tests:
     stdout:
       contains:
         - "ID                         cd_"
-        - "DOMAIN                   auth0-cli-integration-test.com"
-        - "STATUS                   pending_verification"
-        - "PROVISIONING TYPE        auth0_managed_certs"
-        - "TLS POLICY               recommended"
+        - "DOMAIN                     auth0-cli-integration-test.com"
+        - "STATUS                     pending_verification"
+        - "PROVISIONING TYPE          auth0_managed_certs"
+        - "TLS POLICY                 recommended"
 
   008 - verify domain:
     command: auth0 domains update $(./test/integration/scripts/get-custom-domain-id.sh) --policy recommended --no-input
@@ -71,9 +71,9 @@ tests:
     stdout:
       contains:
         - "ID                         cd_"
-        - "DOMAIN                   auth0-cli-integration-test.com"
-        - "PROVISIONING TYPE        auth0_managed_certs"
-        - "TLS POLICY               recommended"
+        - "DOMAIN                     auth0-cli-integration-test.com"
+        - "PROVISIONING TYPE          auth0_managed_certs"
+        - "TLS POLICY                 recommended"
 
   009 - delete domain:
     command: auth0 domains delete $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
@@ -85,11 +85,11 @@ tests:
     stdout:
       contains:
         - "ID                         cd_"
-        - "DOMAIN                   auth0-cli-integration-test.com"
-        - "STATUS                   pending_verification"
-        - "PROVISIONING TYPE        self_managed_certs"
-        - "VERIFICATION METHOD      txt"
-        - "TLS POLICY               recommended"
+        - "DOMAIN                     auth0-cli-integration-test.com"
+        - "STATUS                     pending_verification"
+        - "PROVISIONING TYPE          self_managed_certs"
+        - "VERIFICATION METHOD        txt"
+        - "TLS POLICY                 recommended"
         - "CUSTOM CLIENT IP HEADER"
 
   011 - list custom domains with results:
