@@ -36,7 +36,7 @@ func (v *customDomainView) KeyValues() [][]string {
 	var keyValues [][]string
 
 	if v.ID != "" {
-		keyValues = append(keyValues, []string{"ID", ansi.Faint(v.ID)})
+		keyValues = append(keyValues, []string{"ID", v.ID})
 	}
 	if v.Domain != "" {
 		keyValues = append(keyValues, []string{"DOMAIN", v.Domain})

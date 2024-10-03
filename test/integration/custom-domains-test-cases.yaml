@@ -22,7 +22,7 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - "ID                       cd_"
+        - "ID                         cd_"
         - "DOMAIN                   auth0-cli-integration-test.com"
         - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        auth0_managed_certs"
@@ -39,7 +39,7 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - "ID                       cd_"
+        - "ID                         cd_"
         - "DOMAIN                   auth0-cli-integration-test.com"
         - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        auth0_managed_certs"
@@ -49,7 +49,7 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - "ID                       cd_"
+        - "ID                         cd_"
         - "DOMAIN                   auth0-cli-integration-test.com"
         - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        auth0_managed_certs"
@@ -59,7 +59,7 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - "ID                       cd_"
+        - "ID                         cd_"
         - "DOMAIN                   auth0-cli-integration-test.com"
         - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        auth0_managed_certs"
@@ -70,7 +70,7 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - "ID                       cd_"
+        - "ID                         cd_"
         - "DOMAIN                   auth0-cli-integration-test.com"
         - "PROVISIONING TYPE        auth0_managed_certs"
         - "TLS POLICY               recommended"
@@ -84,7 +84,7 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - "ID                       cd_"
+        - "ID                         cd_"
         - "DOMAIN                   auth0-cli-integration-test.com"
         - "STATUS                   pending_verification"
         - "PROVISIONING TYPE        self_managed_certs"
