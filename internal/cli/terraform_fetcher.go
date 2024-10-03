@@ -456,7 +456,7 @@ func (f *resourceServerResourceFetcher) FetchData(ctx context.Context) (importDa
 		apis, err := f.api.ResourceServer.List(
 			ctx,
 			management.Page(page),
-			management.IncludeFields("id", "name"),
+			management.IncludeFields("id", "name", "scopes"),
 			management.PerPage(100),
 		)
 		if err != nil {

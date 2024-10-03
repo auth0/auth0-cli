@@ -413,7 +413,7 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				PromptName: "login",
 			}
 			_, err := fetchPartial(r.Context(), h.api, partial)
-			if err != nil && strings.Contains(err.Error(), "feature is not available for your plan") {
+			if err != nil && (strings.Contains(err.Error(), "feature is not available for your plan") || strings.Contains(err.Error(), "Your account does not have custom prompts")) {
 				fetchPartialFlagMsg := webSocketMessage{
 					Type:    fetchPartialFeatureFlag,
 					Payload: &partialFlagData{FeatureFlag: false},
@@ -445,7 +445,7 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			partialToSend, err := fetchPartial(r.Context(), h.api, partialToFetch)
 
 			if err != nil {
-				if strings.Contains(err.Error(), "feature is not available for your plan") {
+				if strings.Contains(err.Error(), "feature is not available for your plan") || strings.Contains(err.Error(), "Your account does not have custom prompts") {
 					partialToSend = &management.PromptScreenPartials{}
 				} else {
 					h.display.Errorf("Failed to fetch partial for prompt: %v", err)
@@ -731,7 +731,8 @@ func fetchAllPartials(ctx context.Context, api *auth0.API) ([]partialsData, erro
 	for _, prompt := range allowedPromptsWithPartials {
 		partial, err := api.Prompt.GetPartials(ctx, prompt)
 		if err != nil {
-			if strings.Contains(err.Error(), "feature is not available for your plan") {
+			if strings.Contains(err.Error(), "feature is not available for your plan") ||
+				strings.Contains(err.Error(), "Your account does not have custom prompts") {
 				constructedPartial := partialsData{
 					string(prompt): &management.PromptScreenPartials{},
 				}
@@ -787,7 +788,11 @@ func saveUniversalLoginBrandingData(ctx context.Context, api *auth0.API, data *u
 			if screenPartials != nil {
 				promptName := promptName
 				group.Go(func() error {
-					return api.Prompt.SetPartials(ctx, management.PromptType(promptName), screenPartials)
+					err := api.Prompt.SetPartials(ctx, management.PromptType(promptName), screenPartials)
+					if err != nil && (strings.Contains(err.Error(), "feature is not available for your plan") || strings.Contains(err.Error(), "Your account does not have custom prompts")) {
+						return nil
+					}
+					return err
 				})
 			}
 		}

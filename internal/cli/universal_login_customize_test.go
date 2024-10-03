@@ -1845,6 +1845,82 @@ func TestSaveUniversalLoginBrandingData(t *testing.T) {
 				return mockAPI
 			},
 		},
+		{
+			name: "it ignores errors of partial prompts for specific prompts error",
+			input: &universalLoginBrandingData{
+				Settings: &management.Branding{
+					Colors: &management.BrandingColors{
+						Primary:        auth0.String("#33ddff"),
+						PageBackground: auth0.String("#99aacc"),
+					},
+				},
+				Template: &management.BrandingUniversalLogin{
+					Body: auth0.String("<html></html>"),
+				},
+				Theme: &management.BrandingTheme{},
+				Partials: []partialsData{
+					{
+						"login": {
+							management.ScreenName("login"): {
+								management.InsertionPointFormContentStart: "<div>Updated Form Content Start</div>",
+							},
+						},
+					},
+				},
+				Prompts: []*promptData{
+					{
+						Language:   "en",
+						Prompt:     "login",
+						CustomText: map[string]interface{}{"key": "value"},
+					},
+				},
+			},
+			mockedAPI: func() *auth0.API {
+				mockBrandingAPI := mock.NewMockBrandingAPI(ctrl)
+				mockBrandingAPI.EXPECT().
+					Update(gomock.Any(), &management.Branding{
+						Colors: &management.BrandingColors{
+							Primary:        auth0.String("#33ddff"),
+							PageBackground: auth0.String("#99aacc"),
+						},
+					}).
+					Return(nil)
+				mockBrandingAPI.EXPECT().
+					SetUniversalLogin(gomock.Any(), &management.BrandingUniversalLogin{
+						Body: auth0.String("<html></html>"),
+					}).
+					Return(nil)
+
+				mockBrandingThemeAPI := mock.NewMockBrandingThemeAPI(ctrl)
+				mockBrandingThemeAPI.EXPECT().
+					Default(gomock.Any()).
+					Return(&management.BrandingTheme{
+						ID: auth0.String("111"),
+					}, nil)
+				mockBrandingThemeAPI.EXPECT().
+					Update(gomock.Any(), "111", &management.BrandingTheme{}).
+					Return(nil)
+
+				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
+				mockPromptAPI.EXPECT().
+					SetCustomText(gomock.Any(), "login", "en", map[string]interface{}{"key": "value"}).
+					Return(nil)
+				mockPromptAPI.EXPECT().
+					SetPartials(gomock.Any(), management.PromptLogin, &management.PromptScreenPartials{
+						management.ScreenLogin: {
+							management.InsertionPointFormContentStart: "<div>Updated Form Content Start</div>",
+						},
+					}).
+					Return(fmt.Errorf("Your account does not have custom prompts"))
+				mockAPI := &auth0.API{
+					Branding:      mockBrandingAPI,
+					BrandingTheme: mockBrandingThemeAPI,
+					Prompt:        mockPromptAPI,
+				}
+
+				return mockAPI
+			},
+		},
 	}
 
 	for _, test := range testCases {
