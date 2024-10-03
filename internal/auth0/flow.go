@@ -4,6 +4,7 @@ package auth0
 
 import (
 	"context"
+
 	"github.com/auth0/go-auth0/management"
 )
 

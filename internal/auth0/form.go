@@ -4,6 +4,7 @@ package auth0
 
 import (
 	"context"
+
 	"github.com/auth0/go-auth0/management"
 )
 
@@ -17,7 +18,7 @@ type FormAPI interface {
 	// Update an existing action.
 	Update(ctx context.Context, id string, r *management.Form, opts ...management.RequestOption) error
 
-	// Delete an action
+	// Delete an action.
 	Delete(ctx context.Context, id string, opts ...management.RequestOption) error
 
 	// List form.
