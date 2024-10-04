@@ -2,10 +2,11 @@ package cli
 
 import (
 	"fmt"
-	"github.com/AlecAivazis/survey/v2/terminal"
-	"github.com/auth0/go-auth0"
 	"os"
 	"reflect"
+
+	"github.com/AlecAivazis/survey/v2/terminal"
+	"github.com/auth0/go-auth0"
 
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
