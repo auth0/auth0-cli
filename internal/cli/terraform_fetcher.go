@@ -305,15 +305,15 @@ func (f *flowResourceFetcher) FetchData(ctx context.Context) (importDataList, er
 func (f *flowVaultConnectionResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	var data importDataList
 
-	flowVaultConnectionList, err := f.api.Flow.List(ctx)
+	flowVaultConnectionList, err := f.api.FlowVaultConnection.GetConnectionList(ctx)
 	if err != nil {
 		return data, err
 	}
 
-	for _, flow := range flowVaultConnectionList.Flows {
+	for _, flowVaultConnection := range flowVaultConnectionList.Connections {
 		data = append(data, importDataItem{
-			ResourceName: "auth0_flow_vault_connection." + sanitizeResourceName(flow.GetName()),
-			ImportID:     flow.GetID(),
+			ResourceName: "auth0_flow_vault_connection." + sanitizeResourceName(flowVaultConnection.GetName()),
+			ImportID:     flowVaultConnection.GetID(),
 		})
 	}
 

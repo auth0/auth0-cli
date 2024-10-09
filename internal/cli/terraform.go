@@ -335,7 +335,7 @@ func generateTerraformResourceConfig(ctx context.Context, outputDIR string) erro
 
 	installer := &releases.ExactVersion{
 		Product:    product.Terraform,
-		Version:    version.Must(version.NewVersion("1.8.0")),
+		Version:    version.Must(version.NewVersion("1.5.0")),
 		InstallDir: absoluteOutputPath,
 	}
 
