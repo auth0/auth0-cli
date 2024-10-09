@@ -218,12 +218,11 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 
 func createUserCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ConnectionName string
-		Email          string
-		Password       string
-		Username       string
-		Name           string
+		connectionName string
+		username       string
 	}
+
+	var user = management.User{}
 
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -243,75 +242,103 @@ func createUserCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := userConnectionName.Select(cmd, &inputs.ConnectionName, options, nil); err != nil {
+			if err := userConnectionName.Select(cmd, &inputs.connectionName, options, nil); err != nil {
 				return err
 			}
 
-			connection, err := cli.api.Connection.ReadByName(cmd.Context(), inputs.ConnectionName)
+			connection, err := cli.api.Connection.ReadByName(cmd.Context(), inputs.connectionName)
 			if err != nil {
-				return fmt.Errorf("failed to find connection with name %q: %w", inputs.ConnectionName, err)
+				return fmt.Errorf("failed to find connection with name %q: %w", inputs.connectionName, err)
 			}
 
 			if len(connection.GetEnabledClients()) == 0 {
 				return fmt.Errorf(
 					"failed to continue due to the connection with name %q being disabled, enable an application on this connection and try again",
-					inputs.ConnectionName,
+					inputs.connectionName,
 				)
 			}
 
-			if err := userName.Ask(cmd, &inputs.Name, nil); err != nil {
+			// Fetch user info basis on the connection's strategy
+			// if connection.GetStrategy() == management.ConnectionStrategyAuth0 {
+			user, err := fetchOAuthRequiredDetails(cmd)
+			if err != nil {
 				return err
 			}
+			//}
 
-			if err := userEmail.Ask(cmd, &inputs.Email, nil); err != nil {
-				return err
-			}
-
-			if err := userPassword.AskPassword(cmd, &inputs.Password); err != nil {
-				return err
-			}
+			user.Connection = &inputs.connectionName
 
 			// The getConnReqUsername returns the value for the requires_username field for the selected connection
 			// The result will be used to determine whether to prompt for username.
-			conn := cli.getConnReqUsername(cmd.Context(), auth0.StringValue(&inputs.ConnectionName))
-			requireUsername := auth0.BoolValue(conn)
+			conn := cli.getConnReqUsername(cmd.Context(), auth0.StringValue(&inputs.connectionName))
+			requiredUsername := auth0.BoolValue(conn)
 
-			// Prompt for username if the requireUsername is set to true
-			// Load values including the username's field into a fresh users instance.
-			a := &management.User{
-				Connection: &inputs.ConnectionName,
-				Email:      &inputs.Email,
-				Name:       &inputs.Name,
-				Password:   &inputs.Password,
-			}
-
-			if requireUsername {
-				if err := userUsername.Ask(cmd, &inputs.Username, nil); err != nil {
+			if requiredUsername {
+				if err := userUsername.Ask(cmd, &inputs.username, nil); err != nil {
 					return err
 				}
-				a.Username = &inputs.Username
+
+				user.Username = &inputs.username
 			}
 
 			if err := ansi.Waiting(func() error {
-				return cli.api.User.Create(cmd.Context(), a)
+				return cli.api.User.Create(cmd.Context(), user)
 			}); err != nil {
 				return fmt.Errorf("failed to create user: %w", err)
 			}
 
-			cli.renderer.UserCreate(a, requireUsername)
+			cli.renderer.UserCreate(user, requiredUsername)
 
 			return nil
 		},
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	userName.RegisterString(cmd, &inputs.Name, "")
-	userConnectionName.RegisterString(cmd, &inputs.ConnectionName, "")
-	userPassword.RegisterString(cmd, &inputs.Password, "")
-	userEmail.RegisterString(cmd, &inputs.Email, "")
-	userUsername.RegisterString(cmd, &inputs.Username, "")
+
+	userConnectionName.RegisterString(cmd, &inputs.connectionName, "")
+	userUsername.RegisterString(cmd, &inputs.username, "")
+	//if connection.GetStrategy() == management.ConnectionStrategyAuth0 {
+	registerOAuthDetailsInfo(cmd, &user)
+	//}
 
 	return cmd
+}
+
+func fetchOAuthRequiredDetails(cmd *cobra.Command) (*management.User, error) {
+	var inputs struct {
+		Email    string
+		Password string
+		Name     string
+	}
+
+	if err := userName.Ask(cmd, &inputs.Name, nil); err != nil {
+		return nil, err
+	}
+
+	if err := userEmail.Ask(cmd, &inputs.Email, nil); err != nil {
+		return nil, err
+	}
+
+	if err := userPassword.AskPassword(cmd, &inputs.Password); err != nil {
+		return nil, err
+	}
+
+	// Prompt for username if the requireUsername is set to true
+	// Load values including the username's field into a fresh users instance.
+	userInfo := &management.User{
+
+		Email:    &inputs.Email,
+		Name:     &inputs.Name,
+		Password: &inputs.Password,
+	}
+
+	return userInfo, nil
+}
+
+func registerOAuthDetailsInfo(cmd *cobra.Command, user *management.User) {
+	userName.RegisterString(cmd, user.Name, "")
+	userPassword.RegisterString(cmd, user.Password, "")
+	userEmail.RegisterString(cmd, user.Email, "")
 }
 
 func showUserCmd(cli *cli) *cobra.Command {
