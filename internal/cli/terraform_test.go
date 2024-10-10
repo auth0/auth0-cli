@@ -193,7 +193,7 @@ func assertTerraformMainFileWasGeneratedCorrectly(t *testing.T, outputDIR string
 	assert.NoError(t, err)
 
 	expectedContent := `terraform {
-  required_version = "~> 1.5.0"
+  required_version = ">= 1.5.0"
   required_providers {
     auth0 = {
       source  = "auth0/auth0"
