@@ -13,6 +13,8 @@ type customDomainView struct {
 	Primary              string
 	ProvisioningType     string
 	VerificationMethod   string
+	VerificationRecord   string
+	VerificationDomain   string
 	TLSPolicy            string
 	CustomClientIPHeader string
 	raw                  interface{}
@@ -31,16 +33,40 @@ func (v *customDomainView) AsTableRow() []string {
 }
 
 func (v *customDomainView) KeyValues() [][]string {
-	return [][]string{
-		{"ID", ansi.Faint(v.ID)},
-		{"DOMAIN", v.Domain},
-		{"STATUS", v.Status},
-		{"PRIMARY", v.Primary},
-		{"PROVISIONING TYPE", v.ProvisioningType},
-		{"VERIFICATION METHOD", v.VerificationMethod},
-		{"TLS POLICY", v.TLSPolicy},
-		{"CUSTOM CLIENT IP HEADER", v.CustomClientIPHeader},
+	var keyValues [][]string
+
+	if v.ID != "" {
+		keyValues = append(keyValues, []string{"ID", v.ID})
 	}
+	if v.Domain != "" {
+		keyValues = append(keyValues, []string{"DOMAIN", v.Domain})
+	}
+	if v.Status != "" {
+		keyValues = append(keyValues, []string{"STATUS", v.Status})
+	}
+	if v.Primary != "" {
+		keyValues = append(keyValues, []string{"PRIMARY", v.Primary})
+	}
+	if v.ProvisioningType != "" {
+		keyValues = append(keyValues, []string{"PROVISIONING TYPE", v.ProvisioningType})
+	}
+	if v.VerificationMethod != "" {
+		keyValues = append(keyValues, []string{ansi.Cyan(ansi.Bold("VERIFICATION METHOD")), ansi.Cyan(ansi.Bold(v.VerificationMethod))})
+	}
+	if v.VerificationRecord != "" {
+		keyValues = append(keyValues, []string{ansi.Cyan(ansi.Bold("VERIFICATION RECORD VALUE")), ansi.Cyan(ansi.Bold(v.VerificationRecord))})
+	}
+	if v.VerificationDomain != "" {
+		keyValues = append(keyValues, []string{ansi.Cyan(ansi.Bold("VERIFICATION DOMAIN")), ansi.Cyan(ansi.Bold(v.VerificationDomain))})
+	}
+	if v.TLSPolicy != "" {
+		keyValues = append(keyValues, []string{"TLS POLICY", v.TLSPolicy})
+	}
+	if v.CustomClientIPHeader != "" {
+		keyValues = append(keyValues, []string{"CUSTOM CLIENT IP HEADER", v.CustomClientIPHeader})
+	}
+
+	return keyValues
 }
 
 func (v *customDomainView) Object() interface{} {
@@ -81,17 +107,31 @@ func (r *Renderer) CustomDomainUpdate(customDomain *management.CustomDomain) {
 }
 
 func makeCustomDomainView(customDomain *management.CustomDomain) *customDomainView {
-	return &customDomainView{
+	view := &customDomainView{
 		ID:                   ansi.Faint(customDomain.GetID()),
 		Domain:               customDomain.GetDomain(),
 		Status:               customDomainStatusColor(customDomain.GetStatus()),
 		Primary:              boolean(customDomain.GetPrimary()),
 		ProvisioningType:     customDomain.GetType(),
-		VerificationMethod:   customDomain.GetVerificationMethod(),
 		TLSPolicy:            customDomain.GetTLSPolicy(),
 		CustomClientIPHeader: customDomain.GetCustomClientIPHeader(),
 		raw:                  customDomain,
 	}
+
+	if len(customDomain.GetVerification().Methods) > 0 {
+		method := customDomain.GetVerification().Methods[0]
+		if name, ok := method["name"].(string); ok {
+			view.VerificationMethod = name
+		}
+		if record, ok := method["record"].(string); ok {
+			view.VerificationRecord = record
+		}
+		if domain, ok := method["domain"].(string); ok {
+			view.VerificationDomain = domain
+		}
+	}
+
+	return view
 }
 
 func customDomainStatusColor(v string) string {

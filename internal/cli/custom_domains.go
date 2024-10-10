@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -449,7 +450,8 @@ func (c *cli) customDomainsPickerOptions(ctx context.Context) (pickerOptions, er
 
 	domains, err := c.api.CustomDomain.List(ctx)
 	if err != nil {
-		errStatus := err.(management.Error)
+		var errStatus management.Error
+		errors.As(err, &errStatus)
 		// 403 is a valid response for free tenants that don't have
 		// custom domains enabled.
 		if errStatus != nil && errStatus.Status() == 403 {

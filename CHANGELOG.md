@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v1.5.1](https://github.com/auth0/auth0-cli/tree/v1.5.1) (Oct 4, 2024)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.5.0...v1.5.1)
+
+### Fixed
+
+- Resolved an issue with `auth0_resource_server_scopes` in the `auth0_resource_server` Terraform import when generating Terraform configuration [#1079]
+- Improved error handling in `auth0 ul customize` to gracefully ignore specific prompt errors [#1081]
+- Fixed an issue with the display of custom domains data and deletion across all commands that involve multiple pick options [#1083]
+
 # [v1.5.0](https://github.com/auth0/auth0-cli/tree/v1.5.0) (Aug 13, 2024)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.4.0...v1.5.0)
@@ -292,12 +302,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.5.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.5.1...HEAD
+[#1083]: https://github.com/auth0/auth0-cli/issues/1083
+[#1081]: https://github.com/auth0/auth0-cli/issues/1081
+[#1079]: https://github.com/auth0/auth0-cli/issues/1079
 [#1038]: https://github.com/auth0/auth0-cli/issues/1038
-[#1032]:https://github.com/auth0/auth0-cli/issues/1032
+[#1032]: https://github.com/auth0/auth0-cli/issues/1032
 [#1031]: https://github.com/auth0/auth0-cli/issues/1031
 [#1002]: https://github.com/auth0/auth0-cli/issues/1002
-[#988]:https://github.com/auth0/auth0-cli/issues/988
+[#988]: https://github.com/auth0/auth0-cli/issues/988
 [#968]: https://github.com/auth0/auth0-cli/issues/968
 [#955]: https://github.com/auth0/auth0-cli/issues/955
 [#949]: https://github.com/auth0/auth0-cli/issues/949
