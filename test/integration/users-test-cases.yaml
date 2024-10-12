@@ -8,6 +8,7 @@ tests:
     exit-code: 0
     stdout:
       json:
+        user_id: "auth0|"
         email: "testuser@example.com"
         connection: "Username-Password-Authentication"
 
@@ -16,14 +17,52 @@ tests:
     exit-code: 0
     stdout:
       contains:
+        - ID          auth0|
         - EMAIL       testuser2@example.com
         - CONNECTION  Username-Password-Authentication
 
-  003 - users create test user:
+  003 - users create and check data for an email connection:
+    command: auth0 users create --name integration-test-user-new --connection-name email --email testemailuser@example.com --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        user_id: "email|"
+        email: "testemailuser@example.com"
+        connection: "email"
+
+  004 - users create and check output for an email connection:
+    command: auth0 users create --name integration-test-user-new2 --connection-name email --email testemailuser2@example.com --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - ID          email|
+        - EMAIL       testemailuser2@example.com
+        - CONNECTION  email
+
+  005 - users create and check data for an sms connection:
+    command: auth0 users create --connection-name sms --phone-number +919898989898 --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        user_id: "sms|"
+        phone_number: "+919898989898"
+        connection: "sms"
+
+  006 - users create and check output for an sms connection:
+    command: auth0 users create --connection-name sms --m testemailuser2@example.com --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - ID          sms|
+        - EMAIL       +919898989898
+        - CONNECTION  sms
+
+
+  007 - users create test user:
     command: ./test/integration/scripts/get-user-id.sh
     exit-code: 0
 
-  004 - users show json:
+  008 - users show json:
     command: auth0 users show $(./test/integration/scripts/get-user-id.sh) --json
     stdout:
       json:
@@ -31,7 +70,7 @@ tests:
         connection: "Username-Password-Authentication"
     exit-code: 0
 
-  005 - users show:
+  009 - users show:
     command: auth0 users show $(./test/integration/scripts/get-user-id.sh)
     stdout:
       contains:
@@ -39,40 +78,40 @@ tests:
         - CONNECTION  Username-Password-Authentication
     exit-code: 0
 
-  005 - users search:
+  010 - users search:
     command: auth0 users search --query user_id:"$(./test/integration/scripts/get-user-id.sh)" --number 1 --sort "name:-1"
     exit-code: 0
     stdout:
       contains:
         - newuser@example.com
-  006 - users search with invalid number flag:
+  011 - users search with invalid number flag:
     command: auth0 users search --query "*" --number 1001
     exit-code: 1
     stderr:
       contains:
         - Number flag invalid, please pass a number between 1 and 1000
-  007 - users search with csv output:
+  012 - users search with csv output:
     command: auth0 users search --query user_id:"$(./test/integration/scripts/get-user-id.sh)" --number 1 --sort "name:-1" --csv
     exit-code: 0
     stdout:
       contains:
         - "UserID,Email,Connection"
 
-  008 - users update minimal flags:
+  013 - users update minimal flags:
     command: auth0 users update $(./test/integration/scripts/get-user-id.sh) --json --no-input
     stdout:
       contains:
         - "id"
     exit-code: 0
 
-  009 - users update password: #needs to be done in isolation
+  014 - users update password: #needs to be done in isolation
     command: auth0 users update $(./test/integration/scripts/get-user-id.sh) --password 'S0me-new-P@$$Word' --json --no-input
     stdout:
       json:
         password: "S0me-new-P@$$Word"
     exit-code: 0
 
-  010 - users update maximal flags:
+  015 - users update maximal flags:
     command: auth0 users update $(./test/integration/scripts/get-user-id.sh)  --email betteruser@example.com  --connection-name Username-Password-Authentication --name integration-test-user-bettername --json --no-input
     stdout:
       json:
@@ -81,70 +120,70 @@ tests:
         connection: Username-Password-Authentication
     exit-code: 0
 
-  011 - users roles show no results:
+  016 - users roles show no results:
     command: auth0 users roles show $(./test/integration/scripts/get-user-id.sh)
     exit-code: 0
     stderr:
       contains:
         - "No user roles available. Use 'auth0 users roles assign' to assign roles to a user"
 
-  012 - users roles show no results (json):
+  017 - users roles show no results (json):
     command: auth0 users roles show $(./test/integration/scripts/get-user-id.sh) --json
     exit-code: 0
     stdout:
       exactly: "[]"
 
-  013 - users roles show with invalid number:
+  018 - users roles show with invalid number:
     command: auth0 users roles show $(./test/integration/scripts/get-user-id.sh) --number 1001
     exit-code: 1
     stderr:
       contains:
         - Number flag invalid, please pass a number between 1 and 1000
 
-  014 - users roles add:
+  019 - users roles add:
     command: auth0 users roles add $(./test/integration/scripts/get-user-id.sh) -r $(./test/integration/scripts/get-role-id.sh)
     exit-code: 0
 
-  015 - users roles remove:
+  020 - users roles remove:
     command: auth0 users roles rm $(./test/integration/scripts/get-user-id.sh) -r $(./test/integration/scripts/get-role-id.sh)
     exit-code: 0
 
-  016 - users blocks list by email:
+  021 - users blocks list by email:
     command: auth0 users blocks list "newuser@example.com"
     exit-code: 0
     stderr:
       contains:
         - No user blocks available.
   
-  017 - users blocks list by user ID:
+  022 - users blocks list by user ID:
     command: auth0 users blocks list $(./test/integration/scripts/get-user-id.sh)
     exit-code: 0
     stderr:
       contains:
         - No user blocks available.
 
-  018 - users blocks list (json):
+  023 - users blocks list (json):
     command: auth0 users blocks list $(./test/integration/scripts/get-user-id.sh) --json
     exit-code: 0
     stdout:
       exactly: "[]"
 
-  019 - users unblock by user email:
+  024 - users unblock by user email:
     command: auth0 users blocks unblock "newuser@example.com"
     exit-code: 0
 
-  020 - users unblock by user ID:
+  025 - users unblock by user ID:
     command: auth0 users blocks unblock $(./test/integration/scripts/get-user-id.sh)
     exit-code: 0
 
-  021 - open user dashboard page:
+  026 - open user dashboard page:
     command: auth0 users open $(./test/integration/scripts/get-user-id.sh) --no-input
     exit-code: 0
     stderr:
       contains:
         - "Open the following URL in a browser: https://manage.auth0.com/dashboard/"
 
-  022 - users import:
+  027 - users import:
     command: auth0 users import -c "Username-Password-Authentication" --users "[]" --email-results=false --no-input
     exit-code: 0
     stderr:
@@ -154,7 +193,7 @@ tests:
         - "successfully started"
         - "to get the status of the job"
 
-  023 - users import with piped data:
+  028 - users import with piped data:
     command: echo "[]" | auth0 users import -c "Username-Password-Authentication" --email-results=false --no-input
     exit-code: 0
     stderr:

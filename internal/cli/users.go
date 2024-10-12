@@ -67,7 +67,7 @@ var (
 		LongForm:     "name",
 		ShortForm:    "n",
 		Help:         "The user's full name.",
-		IsRequired:   true,
+		IsRequired:   false,
 		AlwaysPrompt: true,
 	}
 	userQuery = Flag{
@@ -248,9 +248,9 @@ func createUserCmd(cli *cli) *cobra.Command {
   auth0 users create --name "John Doe" --email john@example.com --connection-name "Username-Password-Authentication" --username "example"
   auth0 users create -n "John Doe" -e john@example.com -c "Username-Password-Authentication" -u "example" --json
   auth0 users create -n "John Doe" -e john@example.com -c "email" --json
-  auth0 users create -e john@example.com -c "Username-Password-Authentication"
-  auth0 users create --name "John Doe" --phone-number +916898989898 --connection-name "sms"
-  auth0 users create -n "John Doe" -m +916898989898 -c "sms" --json`,
+  auth0 users create -e john@example.com -c "email"
+  auth0 users create --phone-number +916898989898 --connection-name "sms"
+  auth0 users create -m +916898989898 -c "sms" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			options, err := cli.databaseAndPasswordlessConnectionOptions(cmd.Context())
 			if err != nil {
@@ -333,12 +333,8 @@ func createUserCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-// retrieveAuth0UserDetails retrieves required fields: name, email, and password for Auth0 strategy.
+// retrieveAuth0UserDetails retrieves required fields: email, and password for Auth0 strategy.
 func retrieveAuth0UserDetails(cmd *cobra.Command, input *userInput) (*management.User, error) {
-	if err := userName.Ask(cmd, &input.name, nil); err != nil {
-		return nil, err
-	}
-
 	if err := userEmail.Ask(cmd, &input.email, nil); err != nil {
 		return nil, err
 	}
@@ -349,15 +345,19 @@ func retrieveAuth0UserDetails(cmd *cobra.Command, input *userInput) (*management
 
 	userInfo := &management.User{
 		Email:      &input.email,
-		Name:       &input.name,
 		Password:   &input.password,
 		Connection: &input.connectionName,
+	}
+
+	// user's name is optional for auth0 connection and takes the email-id as default
+	if input.name != "" {
+		userInfo.Name = &input.name
 	}
 
 	return userInfo, nil
 }
 
-// retrieveSMSUserDetails retrieves required fields: name, email, and password for sms strategy.
+// retrieveSMSUserDetails retrieves required fields: phone-number for sms strategy.
 func retrieveSMSUserDetails(cmd *cobra.Command, input *userInput) (*management.User, error) {
 	if err := userPhoneNumber.Ask(cmd, &input.phoneNumber, nil); err != nil {
 		return nil, err
@@ -381,6 +381,11 @@ func retrieveEmailUserDetails(cmd *cobra.Command, input *userInput) (*management
 	userInfo := &management.User{
 		Email:      &input.email,
 		Connection: &input.connectionName,
+	}
+
+	// user's name is optional for email connection and takes the email-id as default
+	if input.name != "" {
+		userInfo.Name = &input.name
 	}
 
 	return userInfo, nil
