@@ -542,13 +542,10 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 }
 
 func updateUserCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ID             string
-		Email          string
-		Password       string
-		Name           string
-		ConnectionName string
-	}
+	var (
+		inputs userInput
+		id     string
+	)
 
 	cmd := &cobra.Command{
 		Use:   "update",
@@ -563,70 +560,37 @@ func updateUserCmd(cli *cli) *cobra.Command {
   auth0 users update <user-id> --name "John Doe" --email john.doe@example.com`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if err := userID.Ask(cmd, &inputs.ID); err != nil {
+				if err := userID.Ask(cmd, &id); err != nil {
 					return err
 				}
 			} else {
-				inputs.ID = args[0]
+				id = args[0]
 			}
 
 			var current *management.User
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				current, err = cli.api.User.Read(cmd.Context(), inputs.ID)
+				current, err = cli.api.User.Read(cmd.Context(), id)
 				return err
 			}); err != nil {
-				return fmt.Errorf("failed to read user with ID %q: %w", inputs.ID, err)
+				return fmt.Errorf("failed to read user with ID %q: %w", id, err)
 			}
 			// Using getUserConnection to get connection name from user Identities
 			// just using current.connection will return empty.
 			conn := stringSliceToCommaSeparatedString(cli.getUserConnection(current))
 			current.Connection = auth0.String(conn)
 
-			if err := userName.AskU(cmd, &inputs.Name, current.Name); err != nil {
+			if err := fetchUserInputByConnection(cmd, inputs, current); err != nil {
 				return err
 			}
 
-			if err := userEmail.AskU(cmd, &inputs.Email, current.Email); err != nil {
-				return err
-			}
-
-			if err := userPassword.AskPasswordU(cmd, &inputs.Password); err != nil {
-				return err
-			}
-
-			// Username cannot be updated for database connections
-			// if err := userUsername.AskU(cmd, &inputs.Username, current.Username); err != nil {
-			//	return err
-			// }.
-
-			user := &management.User{}
-
-			if len(inputs.Name) == 0 {
-				user.Name = current.Name
-			} else {
-				user.Name = &inputs.Name
-			}
-
-			if len(inputs.Email) != 0 {
-				user.Email = &inputs.Email
-			}
-
-			if len(inputs.Password) != 0 {
-				user.Password = &inputs.Password
-			}
-
-			if len(inputs.ConnectionName) == 0 {
-				user.Connection = current.Connection
-			} else {
-				user.Connection = &inputs.ConnectionName
-			}
+			user := fetchUpdateUserDetails(inputs, current)
 
 			if err := ansi.Waiting(func() error {
 				return cli.api.User.Update(cmd.Context(), current.GetID(), user)
 			}); err != nil {
-				return fmt.Errorf("failed to update user with ID %q: %w", inputs.ID, err)
+				return fmt.Errorf("failed to update user with ID %q: %w", id, err)
 			}
 
 			con := cli.getConnReqUsername(cmd.Context(), auth0.StringValue(user.Connection))
@@ -638,12 +602,66 @@ func updateUserCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	userName.RegisterStringU(cmd, &inputs.Name, "")
-	userConnectionName.RegisterStringU(cmd, &inputs.ConnectionName, "")
-	userPassword.RegisterStringU(cmd, &inputs.Password, "")
-	userEmail.RegisterStringU(cmd, &inputs.Email, "")
+	registerDetailsInfo(cmd, &inputs)
 
 	return cmd
+}
+
+func fetchUserInputByConnection(cmd *cobra.Command, inputs userInput, current *management.User) error {
+	switch *current.Connection {
+	case "email":
+		if err := userEmail.AskU(cmd, &inputs.email, current.Email); err != nil {
+			return err
+		}
+	case "sms":
+		if err := userPhoneNumber.AskU(cmd, &inputs.phoneNumber, current.PhoneNumber); err != nil {
+			return err
+		}
+	default:
+		if err := userName.AskU(cmd, &inputs.name, current.Name); err != nil {
+			return err
+		}
+		if err := userEmail.AskU(cmd, &inputs.email, current.Email); err != nil {
+			return err
+		}
+		if err := userPassword.AskPasswordU(cmd, &inputs.password); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func fetchUpdateUserDetails(inputs userInput, current *management.User) *management.User {
+	user := &management.User{}
+
+	switch *current.Connection {
+	case "email":
+		user.Email = current.Email
+	case "sms":
+		user.PhoneNumber = current.PhoneNumber
+	default:
+		if len(inputs.email) != 0 && current.Email != &inputs.email {
+			user.Email = &inputs.email
+		}
+
+		if len(inputs.password) != 0 {
+			user.Password = &inputs.password
+		}
+	}
+
+	if len(inputs.name) == 0 {
+		user.Name = current.Name
+	} else {
+		user.Name = &inputs.name
+	}
+
+	if len(inputs.connectionName) == 0 {
+		user.Connection = current.Connection
+	} else {
+		user.Connection = &inputs.connectionName
+	}
+
+	return user
 }
 
 func openUserCmd(cli *cli) *cobra.Command {
