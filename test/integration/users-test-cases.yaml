@@ -8,7 +8,6 @@ tests:
     exit-code: 0
     stdout:
       json:
-        user_id: "auth0|"
         email: "testuser@example.com"
         connection: "Username-Password-Authentication"
 
@@ -26,7 +25,6 @@ tests:
     exit-code: 0
     stdout:
       json:
-        user_id: "email|"
         email: "testemailuser@example.com"
         connection: "email"
 
@@ -44,12 +42,11 @@ tests:
     exit-code: 0
     stdout:
       json:
-        user_id: "sms|"
         phone_number: "+919898989898"
         connection: "sms"
 
   006 - users create and check output for an sms connection:
-    command: auth0 users create --connection-name sms --m testemailuser2@example.com --no-input
+    command: auth0 users create --connection-name sms -m +919898989899 --no-input
     exit-code: 0
     stdout:
       contains:

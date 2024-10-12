@@ -35,33 +35,38 @@ var (
 		Help:       "Name of the database connection this user should be created in.",
 		IsRequired: true,
 	}
+
 	userEmail = Flag{
 		Name:       "Email",
 		LongForm:   "email",
 		ShortForm:  "e",
 		Help:       "The user's email.",
-		IsRequired: true,
+		IsRequired: false,
 	}
+
 	userPhoneNumber = Flag{
 		Name:       "Phone Number",
 		LongForm:   "phone-number",
 		ShortForm:  "m",
 		Help:       "The user's phone number.",
-		IsRequired: true,
+		IsRequired: false,
 	}
+
 	userPassword = Flag{
 		Name:       "Password",
 		LongForm:   "password",
 		ShortForm:  "p",
 		Help:       "Initial password for this user (mandatory for non-SMS connections).",
-		IsRequired: true,
+		IsRequired: false,
 	}
+
 	userUsername = Flag{
 		Name:      "Username",
 		LongForm:  "username",
 		ShortForm: "u",
 		Help:      "The user's username. Only valid if the connection requires a username.",
 	}
+
 	userName = Flag{
 		Name:         "Name",
 		LongForm:     "name",
@@ -70,6 +75,7 @@ var (
 		IsRequired:   false,
 		AlwaysPrompt: true,
 	}
+
 	userQuery = Flag{
 		Name:       "Query",
 		LongForm:   "query",
@@ -77,18 +83,21 @@ var (
 		Help:       "Search query in Lucene query syntax.\n\nFor example: `email:\"user123@*.com\" OR (user_id:\"user-id-123\" AND name:\"Bob\")`\n\n For more info: https://auth0.com/docs/users/user-search/user-search-query-syntax.",
 		IsRequired: true,
 	}
+
 	userSort = Flag{
 		Name:      "Sort",
 		LongForm:  "sort",
 		ShortForm: "s",
 		Help:      "Field to sort by. Use 'field:order' where 'order' is '1' for ascending and '-1' for descending. e.g. 'created_at:1'.",
 	}
+
 	userNumber = Flag{
 		Name:      "Number",
 		LongForm:  "number",
 		ShortForm: "n",
 		Help:      "Number of users, that match the search criteria, to retrieve. Minimum 1, maximum 1000. If limit is hit, refine the search query.",
 	}
+
 	userImportTemplate = Flag{
 		Name:      "Template",
 		LongForm:  "template",
@@ -97,6 +106,7 @@ var (
 			"Options include: 'Empty', 'Basic Example', 'Custom Password Hash Example' and 'MFA Factors Example'.",
 		IsRequired: false,
 	}
+
 	userImportBody = Flag{
 		Name:       "Users Payload",
 		LongForm:   "users",
@@ -104,18 +114,21 @@ var (
 		Help:       "JSON payload that contains an array of user(s) to be imported. Cannot be used if the '--template' flag is passed.",
 		IsRequired: false,
 	}
+
 	userEmailResults = Flag{
 		Name:       "Email Completion Results",
 		LongForm:   "email-results",
 		Help:       "When true, sends a completion email to all tenant owners when the job is finished. The default is true, so you must explicitly set this parameter to false if you do not want emails sent.",
 		IsRequired: false,
 	}
+
 	userImportUpsert = Flag{
 		Name:       "Upsert",
 		LongForm:   "upsert",
 		Help:       "When set to false, pre-existing users that match on email address, user ID, or username will fail. When set to true, pre-existing users that match on any of these fields will be updated, but only with upsertable attributes.",
 		IsRequired: false,
 	}
+
 	userImportOptions = pickerOptions{
 		{"Empty", users.EmptyExample},
 		{"Basic Example", users.BasicExample},
@@ -252,6 +265,13 @@ func createUserCmd(cli *cli) *cobra.Command {
   auth0 users create --phone-number +916898989898 --connection-name "sms"
   auth0 users create -m +916898989898 -c "sms" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Validate provided flags basis on the given connection type.
+			if cli.noInput {
+				if err := validateRequiredFlags(&inputs); err != nil {
+					return err
+				}
+			}
+
 			options, err := cli.databaseAndPasswordlessConnectionOptions(cmd.Context())
 			if err != nil {
 				return err
@@ -278,7 +298,7 @@ func createUserCmd(cli *cli) *cobra.Command {
 				strategy = connection.GetStrategy()
 			)
 
-			// Fetch user info based on the connection's strategy
+			// Fetch user info based on the connection's strategy.
 			switch strategy {
 			case management.ConnectionStrategyAuth0:
 				user, err = retrieveAuth0UserDetails(cmd, &inputs)
@@ -349,7 +369,7 @@ func retrieveAuth0UserDetails(cmd *cobra.Command, input *userInput) (*management
 		Connection: &input.connectionName,
 	}
 
-	// user's name is optional for auth0 connection and takes the email-id as default
+	// User's name is optional for auth0 connection and takes the email-id as default.
 	if input.name != "" {
 		userInfo.Name = &input.name
 	}
@@ -383,7 +403,7 @@ func retrieveEmailUserDetails(cmd *cobra.Command, input *userInput) (*management
 		Connection: &input.connectionName,
 	}
 
-	// user's name is optional for email connection and takes the email-id as default
+	// User's name is optional for email connection and takes the email-id as default.
 	if input.name != "" {
 		userInfo.Name = &input.name
 	}
@@ -398,6 +418,25 @@ func registerDetailsInfo(cmd *cobra.Command, input *userInput) {
 	userPassword.RegisterString(cmd, &input.password, "")
 	userEmail.RegisterString(cmd, &input.email, "")
 	userPhoneNumber.RegisterString(cmd, &input.phoneNumber, "")
+}
+
+func validateRequiredFlags(inputs *userInput) error {
+	switch inputs.connectionName {
+	case "email":
+		if inputs.email == "" {
+			return fmt.Errorf("required flag email not set")
+		}
+	case "sms":
+		if inputs.phoneNumber == "" {
+			return fmt.Errorf("required flag phone-number not set")
+		}
+	default:
+		if inputs.email == "" || inputs.password == "" {
+			return fmt.Errorf("required flag email or password not set")
+		}
+	}
+
+	return nil
 }
 
 func showUserCmd(cli *cli) *cobra.Command {
