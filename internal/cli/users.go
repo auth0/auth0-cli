@@ -37,27 +37,30 @@ var (
 	}
 
 	userEmail = Flag{
-		Name:       "Email",
-		LongForm:   "email",
-		ShortForm:  "e",
-		Help:       "The user's email.",
-		IsRequired: false,
+		Name:         "Email",
+		LongForm:     "email",
+		ShortForm:    "e",
+		Help:         "The user's email.",
+		IsRequired:   false,
+		AlwaysPrompt: true,
 	}
 
 	userPhoneNumber = Flag{
-		Name:       "Phone Number",
-		LongForm:   "phone-number",
-		ShortForm:  "m",
-		Help:       "The user's phone number.",
-		IsRequired: false,
+		Name:         "Phone Number",
+		LongForm:     "phone-number",
+		ShortForm:    "m",
+		Help:         "The user's phone number.",
+		IsRequired:   false,
+		AlwaysPrompt: true,
 	}
 
 	userPassword = Flag{
-		Name:       "Password",
-		LongForm:   "password",
-		ShortForm:  "p",
-		Help:       "Initial password for this user (mandatory for non-SMS connections).",
-		IsRequired: false,
+		Name:         "Password",
+		LongForm:     "password",
+		ShortForm:    "p",
+		Help:         "Initial password for this user (mandatory for non-SMS connections).",
+		IsRequired:   false,
+		AlwaysPrompt: true,
 	}
 
 	userUsername = Flag{
@@ -543,7 +546,7 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 
 func updateUserCmd(cli *cli) *cobra.Command {
 	var (
-		inputs userInput
+		inputs = &userInput{}
 		id     string
 	)
 
@@ -557,7 +560,13 @@ func updateUserCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 users update 
   auth0 users update <user-id> 
   auth0 users update <user-id> --name "John Doe"
-  auth0 users update <user-id> --name "John Doe" --email john.doe@example.com`,
+  auth0 users update <user-id> -n "John Kennedy" -e johnk@example.com --json
+  auth0 users update <user-id> -n "John Kennedy" -p <newPassword>
+  auth0 users update <user-id> -p <newPassword>
+  auth0 users update <user-id> -e johnk@example.com
+  auth0 users update <user-id> --phone-number +916898989899
+  auth0 users update <user-id> -m +916898989899 --json`,
+
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &id); err != nil {
@@ -602,12 +611,12 @@ func updateUserCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	registerDetailsInfo(cmd, &inputs)
+	registerDetailsInfo(cmd, inputs)
 
 	return cmd
 }
 
-func fetchUserInputByConnection(cmd *cobra.Command, inputs userInput, current *management.User) error {
+func fetchUserInputByConnection(cmd *cobra.Command, inputs *userInput, current *management.User) error {
 	switch *current.Connection {
 	case "email":
 		if err := userEmail.AskU(cmd, &inputs.email, current.Email); err != nil {
@@ -631,14 +640,18 @@ func fetchUserInputByConnection(cmd *cobra.Command, inputs userInput, current *m
 	return nil
 }
 
-func fetchUpdateUserDetails(inputs userInput, current *management.User) *management.User {
+func fetchUpdateUserDetails(inputs *userInput, current *management.User) *management.User {
 	user := &management.User{}
 
 	switch *current.Connection {
 	case "email":
-		user.Email = current.Email
+		if len(inputs.email) != 0 {
+			user.Email = &inputs.email
+		}
 	case "sms":
-		user.PhoneNumber = current.PhoneNumber
+		if len(inputs.phoneNumber) != 0 {
+			user.PhoneNumber = &inputs.phoneNumber
+		}
 	default:
 		if len(inputs.email) != 0 && current.Email != &inputs.email {
 			user.Email = &inputs.email

@@ -22,7 +22,12 @@ auth0 users update [flags]
   auth0 users update 
   auth0 users update <user-id> 
   auth0 users update <user-id> --name "John Doe"
-  auth0 users update <user-id> --name "John Doe" --email john.doe@example.com
+  auth0 users update <user-id> -n "John Kennedy" -e johnk@example.com --json
+  auth0 users update <user-id> -n "John Kennedy" -p <newPassword>
+  auth0 users update <user-id> -p <newPassword>
+  auth0 users update <user-id> -e johnk@example.com
+  auth0 users update <user-id> --phone-number +916898989899
+  auth0 users update <user-id> -m +916898989899 --json
 ```
 
 
@@ -34,6 +39,8 @@ auth0 users update [flags]
       --json                     Output in json format.
   -n, --name string              The user's full name.
   -p, --password string          Initial password for this user (mandatory for non-SMS connections).
+  -m, --phone-number string      The user's phone number.
+  -u, --username string          The user's username. Only valid if the connection requires a username.
 ```
 
 
