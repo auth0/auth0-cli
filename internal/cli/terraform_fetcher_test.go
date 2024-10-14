@@ -563,6 +563,153 @@ func TestCustomDomainResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestFormResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully generates form import data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		formAPI := mock.NewMockFormAPI(ctrl)
+		formAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).Return(
+			&management.FormList{
+				List: management.List{
+					Start: 0,
+					Limit: 1,
+					Total: 2,
+				},
+				Forms: []*management.Form{
+					{
+						ID:   auth0.String("form_id1"),
+						Name: auth0.String("Form 1"),
+					},
+					{
+						ID:   auth0.String("form_id2"),
+						Name: auth0.String("Form 2"),
+					},
+				},
+			}, nil)
+
+		fetcher := formResourceFetcher{
+			api: &auth0.API{
+				Form: formAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_form.form_1",
+				ImportID:     "form_id1",
+			},
+			{
+				ResourceName: "auth0_form.form_2",
+				ImportID:     "form_id2",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+}
+
+func TestFlowResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully generates form import data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		flowAPI := mock.NewMockFlowAPI(ctrl)
+		flowAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).Return(
+			&management.FlowList{
+				List: management.List{
+					Start: 0,
+					Limit: 1,
+					Total: 2,
+				},
+				Flows: []*management.Flow{
+					{
+						ID:   auth0.String("flow_id1"),
+						Name: auth0.String("Flow 1"),
+					},
+					{
+						ID:   auth0.String("flow_id2"),
+						Name: auth0.String("Flow 2"),
+					},
+				},
+			}, nil)
+
+		fetcher := flowResourceFetcher{
+			api: &auth0.API{
+				Flow: flowAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_flow.flow_1",
+				ImportID:     "flow_id1",
+			},
+			{
+				ResourceName: "auth0_flow.flow_2",
+				ImportID:     "flow_id2",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+}
+
+func TestFlowVaultConnectionResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully generates form import data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		flowVaultAPI := mock.NewMockFlowVaultConnectionAPI(ctrl)
+		flowVaultAPI.EXPECT().
+			GetConnectionList(gomock.Any()).Return(
+			&management.FlowVaultConnectionList{
+				List: management.List{
+					Start: 0,
+					Limit: 1,
+					Total: 2,
+				},
+				Connections: []*management.FlowVaultConnection{
+					{
+						ID:   auth0.String("flow_vault_connection1"),
+						Name: auth0.String("Flow Vault Connection 1"),
+					},
+					{
+						ID:   auth0.String("flow_vault_connection2"),
+						Name: auth0.String("Flow Vault Connection 2"),
+					},
+				},
+			}, nil)
+
+		fetcher := flowVaultConnectionResourceFetcher{
+			api: &auth0.API{
+				FlowVaultConnection: flowVaultAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_flow_vault_connection.flow_vault_connection_1",
+				ImportID:     "flow_vault_connection1",
+			},
+			{
+				ResourceName: "auth0_flow_vault_connection.flow_vault_connection_2",
+				ImportID:     "flow_vault_connection2",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+}
+
 func TestGuardianResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully generates pages guardian data", func(t *testing.T) {
 		fetcher := guardianResourceFetcher{}

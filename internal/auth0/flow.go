@@ -1,4 +1,4 @@
-//go:generate mockgen -source=flow.go -destination=flow/flow_mock.go -package=mock
+//go:generate mockgen -source=flow.go -destination=mock/flow_mock.go -package=mock
 
 package auth0
 
