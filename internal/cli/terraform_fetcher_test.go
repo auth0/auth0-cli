@@ -610,6 +610,52 @@ func TestFormResourceFetcher_FetchData(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, expectedData, data)
 	})
+
+	t.Run("it successfully returns empty import list", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		formAPI := mock.NewMockFormAPI(ctrl)
+		formAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).Return(
+			&management.FormList{
+				List: management.List{
+					Start: 0,
+					Limit: 0,
+					Total: 0,
+				},
+				Forms: []*management.Form{},
+			}, nil)
+
+		fetcher := formResourceFetcher{
+			api: &auth0.API{
+				Form: formAPI,
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Nil(t, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		formAPI := mock.NewMockFormAPI(ctrl)
+		formAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).
+			Return(nil, fmt.Errorf("failed to read form"))
+
+		fetcher := formResourceFetcher{
+			api: &auth0.API{
+				Form: formAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to read form")
+	})
 }
 
 func TestFlowResourceFetcher_FetchData(t *testing.T) {
@@ -659,6 +705,52 @@ func TestFlowResourceFetcher_FetchData(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, expectedData, data)
 	})
+
+	t.Run("it successfully returns empty import list", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		flowAPI := mock.NewMockFlowAPI(ctrl)
+		flowAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).Return(
+			&management.FlowList{
+				List: management.List{
+					Start: 0,
+					Limit: 0,
+					Total: 0,
+				},
+				Flows: []*management.Flow{},
+			}, nil)
+
+		fetcher := flowResourceFetcher{
+			api: &auth0.API{
+				Flow: flowAPI,
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Nil(t, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		flowAPI := mock.NewMockFlowAPI(ctrl)
+		flowAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).
+			Return(nil, fmt.Errorf("failed to read flow"))
+
+		fetcher := flowResourceFetcher{
+			api: &auth0.API{
+				Flow: flowAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to read flow")
+	})
 }
 
 func TestFlowVaultConnectionResourceFetcher_FetchData(t *testing.T) {
@@ -707,6 +799,52 @@ func TestFlowVaultConnectionResourceFetcher_FetchData(t *testing.T) {
 		data, err := fetcher.FetchData(context.Background())
 		assert.NoError(t, err)
 		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it successfully returns empty import list", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		flowVaultAPI := mock.NewMockFlowVaultConnectionAPI(ctrl)
+		flowVaultAPI.EXPECT().
+			GetConnectionList(gomock.Any()).Return(
+			&management.FlowVaultConnectionList{
+				List: management.List{
+					Start: 0,
+					Limit: 0,
+					Total: 0,
+				},
+				Connections: []*management.FlowVaultConnection{},
+			}, nil)
+
+		fetcher := flowVaultConnectionResourceFetcher{
+			api: &auth0.API{
+				FlowVaultConnection: flowVaultAPI,
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Nil(t, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		flowVaultConnectionAPI := mock.NewMockFlowVaultConnectionAPI(ctrl)
+		flowVaultConnectionAPI.EXPECT().
+			GetConnectionList(gomock.Any(), gomock.Any()).
+			Return(nil, fmt.Errorf("failed to read flow connection"))
+
+		fetcher := flowVaultConnectionResourceFetcher{
+			api: &auth0.API{
+				FlowVaultConnection: flowVaultConnectionAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to read flow connection")
 	})
 }
 
