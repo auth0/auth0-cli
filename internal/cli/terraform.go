@@ -76,6 +76,12 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &emailProviderResourceFetcher{api})
 		case "auth0_email_template":
 			fetchers = append(fetchers, &emailTemplateResourceFetcher{api})
+		case "auth0_flow":
+			fetchers = append(fetchers, &flowResourceFetcher{api})
+		case "auth0_flow_vault_connection":
+			fetchers = append(fetchers, &flowVaultConnectionResourceFetcher{api})
+		case "auth0_form":
+			fetchers = append(fetchers, &formResourceFetcher{api})
 		case "auth0_guardian":
 			fetchers = append(fetchers, &guardianResourceFetcher{})
 		case "auth0_log_stream":
@@ -273,7 +279,7 @@ func createMainFile(outputDIR string) error {
 	}()
 
 	fileContent := `terraform {
-  required_version = "~> 1.5.0"
+  required_version = ">= 1.5.0"
   required_providers {
     auth0 = {
       source  = "auth0/auth0"
