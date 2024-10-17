@@ -15,11 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Support for importing `Flows`, `Forms` and `FlowVaultConnections` Terraform Resources [#1084]
 
-
 ### Fixed
 
 - Resolved an issue to support `passwordless connection` while creating and updating a user  [#1091]
-
 
 # [v1.5.1](https://github.com/auth0/auth0-cli/tree/v1.5.1) (Oct 4, 2024)
 
