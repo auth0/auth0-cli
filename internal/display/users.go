@@ -13,6 +13,7 @@ import (
 type userView struct {
 	UserID          string
 	Email           string
+	PhoneNumber     string
 	Connection      string
 	Username        string
 	RequireUsername bool
@@ -20,6 +21,14 @@ type userView struct {
 }
 
 func (v *userView) AsTableHeader() []string {
+	if v.Connection == management.ConnectionStrategySMS {
+		return []string{
+			"UserID",
+			"PhoneNumber",
+			"Connection",
+		}
+	}
+
 	return []string{
 		"UserID",
 		"Email",
@@ -28,6 +37,14 @@ func (v *userView) AsTableHeader() []string {
 }
 
 func (v *userView) AsTableRow() []string {
+	if v.Connection == management.ConnectionStrategySMS {
+		return []string{
+			ansi.Faint(v.UserID),
+			v.PhoneNumber,
+			v.Connection,
+		}
+	}
+
 	return []string{
 		ansi.Faint(v.UserID),
 		v.Email,
@@ -36,7 +53,13 @@ func (v *userView) AsTableRow() []string {
 }
 
 func (v *userView) KeyValues() [][]string {
-	if v.RequireUsername {
+	if v.Connection == management.ConnectionStrategySMS {
+		return [][]string{
+			{"ID", ansi.Faint(v.UserID)},
+			{"PHONE-NUMBER", v.PhoneNumber},
+			{"CONNECTION", v.Connection},
+		}
+	} else if v.RequireUsername {
 		return [][]string{
 			{"ID", ansi.Faint(v.UserID)},
 			{"EMAIL", v.Email},
@@ -95,6 +118,7 @@ func makeUserView(user *management.User, requireUsername bool) *userView {
 		Email:           auth0.StringValue(user.Email),
 		Connection:      stringSliceToCommaSeparatedString(getUserConnection(user)),
 		Username:        auth0.StringValue(user.Username),
+		PhoneNumber:     auth0.StringValue(user.PhoneNumber),
 		raw:             user,
 	}
 }
