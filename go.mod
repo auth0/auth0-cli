@@ -12,7 +12,7 @@ require (
 	github.com/briandowns/spinner v1.23.1
 	github.com/charmbracelet/glamour v0.8.0
 	github.com/fsnotify/fsnotify v1.7.0
-	github.com/getsentry/sentry-go v0.29.0
+	github.com/getsentry/sentry-go v0.29.1
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
