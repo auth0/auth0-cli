@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v1.6.0](https://github.com/auth0/auth0-cli/tree/v1.6.0) (Oct 17, 2024)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.5.1...v1.6.0)
+
+### Added
+
+- Support for importing `Flows`, `Forms` and `FlowVaultConnections` Terraform Resources [#1084]
+
+### Fixed
+
+- Resolved an issue to support `passwordless connection` while creating and updating a user  [#1091]
+
 # [v1.5.1](https://github.com/auth0/auth0-cli/tree/v1.5.1) (Oct 4, 2024)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.5.0...v1.5.1)
@@ -303,6 +315,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 [unreleased]: https://github.com/auth0/auth0-cli/compare/v1.5.1...HEAD
+[#1091]: https://github.com/auth0/auth0-cli/issues/1091
+[#1084]: https://github.com/auth0/auth0-cli/issues/1084
 [#1083]: https://github.com/auth0/auth0-cli/issues/1083
 [#1081]: https://github.com/auth0/auth0-cli/issues/1081
 [#1079]: https://github.com/auth0/auth0-cli/issues/1079
