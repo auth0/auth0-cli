@@ -543,7 +543,7 @@ func (f *tenantResourceFetcher) FetchData(_ context.Context) (importDataList, er
 
 func (f *triggerActionsResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	var data importDataList
-	triggers := []string{"post-login", "credentials-exchange", "pre-user-registration", "post-user-registration", "post-change-password", "send-phone-message", "password-reset-post-challenge", "iga-approval", "iga-certification", "iga-fulfillment-assignment", "iga-fulfillment-execution"}
+	triggers := []string{"post-login", "credentials-exchange", "pre-user-registration", "post-user-registration", "post-change-password", "send-phone-message", "password-reset-post-challenge"}
 
 	for _, trigger := range triggers {
 		res, err := f.api.Action.Bindings(ctx, trigger)
