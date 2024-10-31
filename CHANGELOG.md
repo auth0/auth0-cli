@@ -15,9 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added new flag (`tf-version`) to pass terraform version during `auth0 tf generate` command [#1098]
 
-### Remove
+### Removed
 
-- Remove iga-* triggers from triggerActionsResourceFetcher [#1099]
+- Removed iga-* triggers from triggerActionsResourceFetcher [#1099]
 
 # [v1.6.0](https://github.com/auth0/auth0-cli/tree/v1.6.0) (Oct 17, 2024)
 
