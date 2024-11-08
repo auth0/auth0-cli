@@ -227,10 +227,16 @@ func (f *customDomainResourceFetcher) FetchData(ctx context.Context) (importData
 
 	customDomains, err := f.api.CustomDomain.List(ctx)
 	if err != nil {
-		if strings.Contains(err.Error(), "The account is not allowed to perform this operation, please contact our support team") {
-			return data, nil
+		errNotEnabled := []string{
+			"The account is not allowed to perform this operation, please contact our support team",
+			"There must be a verified credit card on file to perform this operation",
 		}
 
+		for _, e := range errNotEnabled {
+			if strings.Contains(err.Error(), e) {
+				return data, nil
+			}
+		}
 		return nil, err
 	}
 
