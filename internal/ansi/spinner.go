@@ -1,6 +1,9 @@
 package ansi
 
 import (
+	"fmt"
+	"github.com/charmbracelet/lipgloss"
+	"strings"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -21,12 +24,45 @@ func Waiting(fn func() error) error {
 	return loading("", "", "", fn)
 }
 
+// Spinner simulates a spinner animation while executing a function.
 func Spinner(text string, fn func() error) error {
-	initialMsg := text + spinnerTextEllipsis + " "
-	doneMsg := initialMsg + spinnerTextDone + "\n"
-	failMsg := initialMsg + spinnerTextFailed + "\n"
+	// Spinner frames
+	frames := []string{"🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"}
 
-	return loading(initialMsg, doneMsg, failMsg, fn)
+	// Styles
+	spinnerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("45")) // Cyan
+	textStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))              // Gray
+	successStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("42")) // Green
+	failStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("124"))   // Red
+
+	// Messages
+	initialMsg := textStyle.Render(text)
+	doneMsg := successStyle.Render("✔ Completed" + strings.Repeat("\t", 50))
+	failMsg := failStyle.Render("✖ Failed" + strings.Repeat("\t", 50))
+
+	// Print initial message
+	fmt.Print(initialMsg)
+
+	// Start spinner
+	done := make(chan error)
+	go func() { done <- fn() }()
+
+	for i := 0; ; i++ {
+		select {
+		case err := <-done: // Function completed
+			if err != nil {
+				fmt.Println("\r" + failMsg)
+				return err
+			}
+			fmt.Println("\r" + doneMsg)
+			return nil
+		default:
+			// Update spinner
+			frame := spinnerStyle.Render(frames[i%len(frames)])
+			fmt.Printf("\r%s %s", frame, initialMsg)
+			time.Sleep(150 * time.Millisecond)
+		}
+	}
 }
 
 func loading(initialMsg, doneMsg, failMsg string, fn func() error) error {

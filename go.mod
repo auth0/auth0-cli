@@ -11,6 +11,7 @@ require (
 	github.com/auth0/go-auth0 v1.11.0
 	github.com/briandowns/spinner v1.23.1
 	github.com/charmbracelet/glamour v0.8.0
+	github.com/charmbracelet/lipgloss v0.12.1
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/getsentry/sentry-go v0.29.1
 	github.com/golang/mock v1.6.0
@@ -23,6 +24,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/lestrrat-go/jwx v1.2.30
 	github.com/logrusorgru/aurora v2.0.3+incompatible
+	github.com/manifoldco/promptui v0.9.0
 	github.com/mattn/go-isatty v0.0.20
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/olekukonko/tablewriter v0.0.5
@@ -38,7 +40,7 @@ require (
 	golang.org/x/net v0.30.0
 	golang.org/x/oauth2 v0.23.0
 	golang.org/x/sync v0.8.0
-	golang.org/x/sys v0.26.0
+	golang.org/x/sys v0.27.0
 	golang.org/x/term v0.25.0
 	golang.org/x/text v0.19.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -52,8 +54,8 @@ require (
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
-	github.com/charmbracelet/lipgloss v0.12.1 // indirect
 	github.com/charmbracelet/x/ansi v0.1.4 // indirect
+	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/danieljoos/wincred v1.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
