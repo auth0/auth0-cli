@@ -33,6 +33,7 @@ func (v *userView) AsTableHeader() []string {
 		"UserID",
 		"Email",
 		"Connection",
+		"Name",
 	}
 }
 
@@ -49,6 +50,7 @@ func (v *userView) AsTableRow() []string {
 		ansi.Faint(v.UserID),
 		v.Email,
 		v.Connection,
+		v.Username,
 	}
 }
 
@@ -71,6 +73,7 @@ func (v *userView) KeyValues() [][]string {
 		{"ID", ansi.Faint(v.UserID)},
 		{"EMAIL", v.Email},
 		{"CONNECTION", v.Connection},
+		{"USERNAME", v.Username},
 	}
 }
 

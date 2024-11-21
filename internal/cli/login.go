@@ -3,17 +3,16 @@ package cli
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strings"
-
-	"github.com/pkg/browser"
-	"github.com/spf13/cobra"
-
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/keyring"
 	"github.com/auth0/auth0-cli/internal/prompt"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/pkg/browser"
+	"github.com/spf13/cobra"
+	"net/http"
+	"strings"
 )
 
 var (
@@ -137,18 +136,44 @@ func loginCmd(cli *cli) *cobra.Command {
 				determine if it's LoginAsUser or LoginAsMachine
 			*/
 			if !shouldLoginAsUser && !shouldLoginAsMachine {
-				cli.renderer.Output(
+
+				titleStyle := lipgloss.NewStyle().
+					Bold(true).
+					Align(lipgloss.Center).
+					Foreground(lipgloss.Color("159")).
+					Background(lipgloss.Color("57")).
+					AlignHorizontal(30)
+
+				bulletPointStyle := lipgloss.NewStyle().
+					Foreground(lipgloss.Color("205")).
+					SetString("• ")
+
+				highlightBoxStyle := lipgloss.NewStyle().
+					Border(lipgloss.RoundedBorder()).
+					BorderForeground(lipgloss.Color("63")).Padding(1).Margin(1)
+
+				// Compose the message parts with styling
+				title := titleStyle.Render("\t\t\t\t\t\t✪ Welcome to the Auth0 CLI 🚀\t\t\t\t\t\t")
+				requirement := bulletPointStyle.String() + "An Auth0 tenant is required to operate this CLI."
+				signupLink := fmt.Sprintf("%s%s", bulletPointStyle.String(), "To create one, visit: https://auth0.com/signup.")
+				authOptions := fmt.Sprintf("%s%s", bulletPointStyle.String(), "You may authenticate to your tenant either as a user with \n "+
+					" personal credentials or as a machine via client credentials.")
+				learnMore := fmt.Sprintf("%s%s", bulletPointStyle.String(), "For more information about authenticating the CLI to your tenant, "+
+					"\n  visit the docs: https://auth0.github.io/auth0-cli/auth0_login.html")
+
+				// Combine everything into a final formatted message
+				finalMessage := highlightBoxStyle.Render(
 					fmt.Sprintf(
-						"%s\n\n%s\n%s\n\n%s\n%s\n%s\n%s\n\n",
-						ansi.Bold("✪ Welcome to the Auth0 CLI 🎊"),
-						"An Auth0 tenant is required to operate this CLI.",
-						"To create one, visit: https://auth0.com/signup.",
-						"You may authenticate to your tenant either as a user with personal",
-						"credentials or as a machine via client credentials. For more",
-						"information about authenticating the CLI to your tenant, visit",
-						"the docs: https://auth0.github.io/auth0-cli/auth0_login.html",
+						"%s\n\n%s\n%s\n\n%s\n%s",
+						title,
+						requirement,
+						signupLink,
+						authOptions,
+						learnMore,
 					),
 				)
+
+				cli.renderer.Output(finalMessage)
 
 				label := "How would you like to authenticate?"
 				help := fmt.Sprintf(
@@ -235,25 +260,24 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string, do
 		return config.Tenant{}, fmt.Errorf("failed to get the device code: %w", err)
 	}
 
-	message := fmt.Sprintf("\n%s\n\n",
-		"Verify "+ansi.Bold(state.UserCode)+" code in opened browser window to complete authentication.",
-	)
-	cli.renderer.Output(message)
+	cli.renderer.Infof(fmt.Sprintf("%s",
+		"Verify "+ansi.Bold(ansi.Green(state.UserCode))+" code in opened browser window to complete authentication.\n",
+	))
 
 	if cli.noInput {
-		message = "Open the following URL in a browser: %s\n"
-		cli.renderer.Infof(message, ansi.Green(state.VerificationURI))
+		cli.renderer.Infof("Open the following URL in a browser: " + state.VerificationURI + "\n")
 	} else {
-		message = "%s to open the browser to log in or %s to quit..."
-		cli.renderer.Infof(message, ansi.Green("Press Enter"), ansi.Red("^C"))
+		cli.renderer.Infof("Enter to open browser and log in")
+		cli.renderer.Warnf("^C to quit")
 
 		if _, err = fmt.Scanln(); err != nil {
 			return config.Tenant{}, err
 		}
-
+		cli.renderer.ProgressBar()
+		cli.renderer.Success("Browser opened successfully!")
 		if err = browser.OpenURL(state.VerificationURI); err != nil {
-			message = "Couldn't open the URL, please do it manually: %s."
-			cli.renderer.Warnf(message, state.VerificationURI)
+			message := "Couldn't open the URL, please do it manually: " + state.VerificationURI + "."
+			cli.renderer.Warnf(message)
 		}
 	}
 
@@ -297,7 +321,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string, do
 	cli.tracker.TrackFirstLogin(cli.Config.InstallID)
 
 	if cli.Config.DefaultTenant != result.Domain {
-		message = fmt.Sprintf(
+		message := fmt.Sprintf(
 			"Your default tenant is %s. Do you want to change it to %s?",
 			cli.Config.DefaultTenant,
 			result.Domain,

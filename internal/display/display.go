@@ -1,9 +1,12 @@
 package display
 
 import (
+	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/manifoldco/promptui"
 	"io"
 	"strings"
 	"time"
@@ -21,6 +24,10 @@ const (
 	OutputFormatJSON OutputFormat = "json"
 	OutputFormatCSV  OutputFormat = "csv"
 )
+
+var infoStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("63"))               // Green
+var warningStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("220"))           // Yellow
+var successStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("42")) // Green for success
 
 type Renderer struct {
 	Tenant string
@@ -57,13 +64,51 @@ func (r *Renderer) Newline() {
 }
 
 func (r *Renderer) Infof(format string, a ...interface{}) {
-	fmt.Fprint(r.MessageWriter, ansi.Green(" ▸    "))
+	fmt.Fprint(r.MessageWriter, infoStyle.Render(" ▸▸   "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
 func (r *Renderer) Warnf(format string, a ...interface{}) {
-	fmt.Fprint(r.MessageWriter, ansi.Yellow(" ▸    "))
+	fmt.Fprint(r.MessageWriter, warningStyle.Render(" ⚠️   "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
+}
+
+func (r *Renderer) Success(format string, a ...interface{}) {
+	fmt.Fprint(r.MessageWriter, successStyle.Render("✔ "))
+	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
+}
+
+func (r *Renderer) ProgressBar() {
+	gradientStyle := func(progress int) lipgloss.Style {
+		return lipgloss.NewStyle().
+			Foreground(lipgloss.Color(fmt.Sprintf("%d", 42+progress/2))).
+			Width(60)
+	}
+
+	labelStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("244")) // Light gray for percentage
+
+	// Simulate progress
+	total := 100
+	for i := 0; i <= total; i++ {
+		progress := strings.Repeat("✪", i*60/total)
+		remaining := strings.Repeat(" ", 60-(i*60/total))
+
+		bar := gradientStyle(i).Render(progress + remaining)
+		percentage := labelStyle.Render(fmt.Sprintf("%3d%%", i))
+
+		// Clear the previous output to simulate updating the progress
+		if i > 0 {
+			fmt.Print("\033[1A\033[K") // Clear the previous line
+			//fmt.Print("\033[1A\033[K") // Clear the previous bar
+			//fmt.Print("\033[1A\033[K") // Clear the previous label
+		}
+
+		fmt.Printf("%s %s\n", bar, percentage)
+
+		time.Sleep(20 * time.Millisecond) // Simulate work
+	}
+
 }
 
 func (r *Renderer) Errorf(format string, a ...interface{}) {
@@ -122,7 +167,8 @@ func (r *Renderer) Results(data []View) {
 		for _, d := range data {
 			rows = append(rows, d.AsTableRow())
 		}
-		writeTable(r.ResultWriter, data[0].AsTableHeader(), rows)
+
+		writeTable(data[0].AsTableHeader(), rows)
 	}
 }
 
@@ -141,7 +187,7 @@ func (r *Renderer) Result(data View) {
 				v := pair[1]
 				kvs = append(kvs, []string{k, v})
 			}
-			writeTable(r.ResultWriter, nil, kvs)
+			writeTable(nil, kvs)
 		}
 	}
 }
@@ -211,10 +257,11 @@ func fprintfStr(w io.Writer, fmtStr string, argsStr ...string) {
 	fmt.Fprintf(w, fmtStr, args...)
 }
 
-func writeTable(w io.Writer, header []string, data [][]string) {
-	table := tablewriter.NewWriter(w)
-	table.SetHeader(header)
+func writeTable(header []string, data [][]string) {
+	var buffer bytes.Buffer
+	table := tablewriter.NewWriter(&buffer)
 
+	table.SetHeader(header)
 	table.SetAutoWrapText(false)
 	table.SetAutoFormatHeaders(true)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
@@ -229,6 +276,34 @@ func writeTable(w io.Writer, header []string, data [][]string) {
 		table.Append(v)
 	}
 	table.Render()
+
+	// Split the rendered table into rows
+	rows := bytes.Split(buffer.Bytes(), []byte("\n"))
+
+	// Convert rows to a list of strings and remove empty rows
+	var formattedRows []string
+	for _, row := range rows {
+		if len(row) > 0 {
+			formattedRows = append(formattedRows, string(row))
+		}
+	}
+
+	// Use the rows as prompt items
+	prompt := promptui.Select{
+		Label: "Select a User",
+		Items: formattedRows[1:], // Skip the header row for selection
+	}
+
+	// Run the prompt
+	_, result, err := prompt.Run()
+	if err != nil {
+		fmt.Printf("Prompt failed: %v\n", err)
+		return
+	}
+
+	// Output the selected row
+	fmt.Printf("You selected: %s\n", result)
+
 }
 
 func writeCSV(w io.Writer, header []string, data [][]string) error {
