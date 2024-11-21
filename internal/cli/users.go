@@ -224,6 +224,28 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 
 			cli.renderer.UserSearch(foundUsers)
 
+			if cli.renderer.ID != "" {
+				a := &management.User{ID: &cli.renderer.ID}
+
+				if err := ansi.Waiting(func() error {
+					var err error
+					a, err = cli.api.User.Read(cmd.Context(), cli.renderer.ID)
+					return err
+				}); err != nil {
+					return fmt.Errorf("failed to load user with ID %q: %w", cli.renderer.ID, err)
+				}
+
+				// Get the current connection.
+				conn := stringSliceToCommaSeparatedString(cli.getUserConnection(a))
+				a.Connection = auth0.String(conn)
+
+				// Parse the connection name to get the requireUsername status.
+				u := cli.getConnReqUsername(cmd.Context(), auth0.StringValue(a.Connection))
+				requireUsername := auth0.BoolValue(u)
+				cli.renderer.Format = "json"
+				cli.renderer.UserShow(a, requireUsername)
+			}
+
 			return nil
 		},
 	}
@@ -483,6 +505,7 @@ func showUserCmd(cli *cli) *cobra.Command {
 			requireUsername := auth0.BoolValue(u)
 
 			cli.renderer.UserShow(a, requireUsername)
+
 			return nil
 		},
 	}
@@ -887,7 +910,6 @@ func (c *cli) getConnReqUsername(ctx context.Context, s string) *bool {
 	if err := json.Unmarshal([]byte(res), &opts); err != nil {
 		fmt.Println(err)
 	}
-
 	return opts.RequiresUsername
 }
 

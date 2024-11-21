@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/manifoldco/promptui"
 	"io"
+	"regexp"
 	"strings"
 	"time"
 
@@ -40,6 +41,8 @@ type Renderer struct {
 
 	// Format indicates how the results are rendered. Default (empty) will write as table.
 	Format OutputFormat
+
+	ID string
 }
 
 type View interface {
@@ -168,8 +171,57 @@ func (r *Renderer) Results(data []View) {
 			rows = append(rows, d.AsTableRow())
 		}
 
-		writeTable(data[0].AsTableHeader(), rows)
+		buffer := &bytes.Buffer{}
+		writeTable(buffer, data[0].AsTableHeader(), rows)
+
+		if len(data) < 25 {
+			// Split the rendered table into rows
+			rows := bytes.Split(buffer.Bytes(), []byte("\n"))
+
+			// Convert rows to a list of strings and remove empty rows
+			var formattedRows []string
+			for _, row := range rows {
+				if len(row) > 0 {
+					formattedRows = append(formattedRows, string(row))
+				}
+			}
+
+			// Use the rows as prompt items
+			prompt := promptui.Select{
+				Label: "Select a User",
+				Items: formattedRows[1:], // Skip the header row for selection
+			}
+
+			// Run the prompt
+			_, result, err := prompt.Run()
+			if err != nil {
+				fmt.Printf("Prompt failed: %v\n", err)
+				return
+			}
+
+			r.ID, err = fetchId(result)
+			if err != nil {
+				return
+			}
+		} else {
+			r.ResultWriter = buffer
+		}
+
 	}
+}
+
+func fetchId(inputString string) (string, error) {
+	regex := regexp.MustCompile(`(sms|auth0|email)\|[a-zA-Z0-9]+`)
+
+	// Find the first match
+	match := regex.FindString(inputString)
+
+	// Check if a match was found
+	if match == "" {
+		return "", fmt.Errorf("no valid ID found in the input string")
+	}
+
+	return match, nil
 }
 
 func (r *Renderer) Result(data View) {
@@ -187,7 +239,8 @@ func (r *Renderer) Result(data View) {
 				v := pair[1]
 				kvs = append(kvs, []string{k, v})
 			}
-			writeTable(nil, kvs)
+			buffer := &bytes.Buffer{}
+			writeTable(buffer, nil, kvs)
 		}
 	}
 }
@@ -257,9 +310,8 @@ func fprintfStr(w io.Writer, fmtStr string, argsStr ...string) {
 	fmt.Fprintf(w, fmtStr, args...)
 }
 
-func writeTable(header []string, data [][]string) {
-	var buffer bytes.Buffer
-	table := tablewriter.NewWriter(&buffer)
+func writeTable(buffer *bytes.Buffer, header []string, data [][]string) {
+	table := tablewriter.NewWriter(buffer)
 
 	table.SetHeader(header)
 	table.SetAutoWrapText(false)
@@ -276,33 +328,6 @@ func writeTable(header []string, data [][]string) {
 		table.Append(v)
 	}
 	table.Render()
-
-	// Split the rendered table into rows
-	rows := bytes.Split(buffer.Bytes(), []byte("\n"))
-
-	// Convert rows to a list of strings and remove empty rows
-	var formattedRows []string
-	for _, row := range rows {
-		if len(row) > 0 {
-			formattedRows = append(formattedRows, string(row))
-		}
-	}
-
-	// Use the rows as prompt items
-	prompt := promptui.Select{
-		Label: "Select a User",
-		Items: formattedRows[1:], // Skip the header row for selection
-	}
-
-	// Run the prompt
-	_, result, err := prompt.Run()
-	if err != nil {
-		fmt.Printf("Prompt failed: %v\n", err)
-		return
-	}
-
-	// Output the selected row
-	fmt.Printf("You selected: %s\n", result)
 
 }
 
