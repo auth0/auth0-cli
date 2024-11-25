@@ -1288,6 +1288,26 @@ func TestPromptProviderResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestPromptScreenRendererResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully renders the prompts & screen settings import data", func(t *testing.T) {
+		fetcher := promptScreenRendererResourceFetcher{}
+
+		expectedData := importDataList{}
+		for promptType, screenNames := range ScreenPromptMap {
+			for _, screenName := range screenNames {
+				expectedData = append(expectedData, importDataItem{
+					ResourceName: "auth0_prompt_screen_renderer." + sanitizeResourceName(promptType+"_"+screenName),
+					ImportID:     promptType + ":" + screenName,
+				})
+			}
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, expectedData, data)
+	})
+}
+
 func TestPromptCustomTextResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves custom text prompts data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)

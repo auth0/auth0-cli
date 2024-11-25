@@ -11,7 +11,44 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_resource_server", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
+var (
+	defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_resource_server", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
+	ScreenPromptMap  = map[string][]string{
+		"signup":                      {"signup"},
+		"signup-id":                   {"signup-id"},
+		"signup-password":             {"signup-password"},
+		"login":                       {"login"},
+		"login-id":                    {"login-id"},
+		"login-password":              {"login-password"},
+		"login-passwordless":          {"login-passwordless-email-code", "login-passwordless-email-link", "login-passwordless-sms-otp"},
+		"login-email-verification":    {"login-email-verification"},
+		"phone-identifier-enrollment": {"phone-identifier-enrollment"},
+		"phone-identifier-challenge":  {"phone-identifier-challenge"},
+		"email-identifier-challenge":  {"email-identifier-challenge"},
+		"reset-password":              {"reset-password-request", "reset-password-email", "reset-password", "reset-password-success", "reset-password-error", "reset-password-mfa-email-challenge", "reset-password-mfa-otp-challenge", "reset-password-mfa-phone-challenge", "reset-password-mfa-push-challenge-push", "reset-password-mfa-recovery-code-challenge", "reset-password-mfa-sms-challenge", "reset-password-mfa-voice-challenge", "reset-password-mfa-webauthn-platform-challenge", "reset-password-mfa-webauthn-roaming-challenge"},
+		"custom-form":                 {"custom-form"},
+		"consent":                     {"consent"},
+		"logout":                      {"logout", "logout-complete", "logout-aborted"},
+		"mfa-push":                    {"mfa-push-welcome", "mfa-push-enrollment-qr", "mfa-push-enrollment-code", "mfa-push-success", "mfa-push-challenge-push", "mfa-push-list"},
+		"mfa-otp":                     {"mfa-otp-enrollment-qr", "mfa-otp-enrollment-code", "mfa-otp-challenge"},
+		"mfa-voice":                   {"mfa-voice-enrollment", "mfa-voice-challenge"},
+		"mfa-phone":                   {"mfa-phone-enrollment", "mfa-phone-challenge"},
+		"mfa-webauthn":                {"mfa-webauthn-platform-enrollment", "mfa-webauthn-roaming-enrollment", "mfa-webauthn-platform-challenge", "mfa-webauthn-roaming-challenge", "mfa-webauthn-change-key-nickname", "mfa-webauthn-enrollment-success", "mfa-webauthn-error", "mfa-webauthn-not-available-error"},
+		"mfa-sms":                     {"mfa-sms-enrollment", "mfa-sms-challenge", "mfa-sms-list", "mfa-country-codes"},
+		"mfa-email":                   {"mfa-email-challenge", "mfa-email-list"},
+		"mfa-recovery-code":           {"mfa-recovery-code-enrollment", "mfa-recovery-code-challenge"},
+		"mfa":                         {"mfa-detect-browser-capabilities", "mfa-enroll-result", "mfa-login-options", "mfa-begin-enroll-options"},
+		"status":                      {"status"},
+		"device-flow":                 {"device-code-activation", "device-code-activation-allowed", "device-code-activation-denied", "device-code-confirmation"},
+		"email-verification":          {"email-verification-result"},
+		"email-otp-challenge":         {"email-otp-challenge"},
+		"organizations":               {"organization-selection", "organization-picker"},
+		"invitation":                  {"accept-invitation"},
+		"passkeys":                    {"passkey-enrollment", "passkey-enrollment-local"},
+		"captcha":                     {"interstitial-captcha"},
+		"common":                      {"redeem-ticket"},
+	}
+)
 
 type (
 	importDataList []importDataItem
@@ -83,7 +120,8 @@ type (
 		api *auth0.API
 	}
 
-	promptResourceFetcher struct{}
+	promptResourceFetcher               struct{}
+	promptScreenRendererResourceFetcher struct{}
 
 	promptCustomTextResourceFetcherResourceFetcher struct {
 		api *auth0.API
@@ -441,6 +479,21 @@ func (f *promptCustomTextResourceFetcherResourceFetcher) FetchData(ctx context.C
 			data = append(data, importDataItem{
 				ResourceName: "auth0_prompt_custom_text." + sanitizeResourceName(language+"_"+promptType),
 				ImportID:     promptType + "::" + language,
+			})
+		}
+	}
+
+	return data, nil
+}
+
+func (f *promptScreenRendererResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
+	var data importDataList
+
+	for promptType, screenNames := range ScreenPromptMap {
+		for _, screenName := range screenNames {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_prompt_screen_renderer." + sanitizeResourceName(promptType+"_"+screenName),
+				ImportID:     promptType + ":" + screenName,
 			})
 		}
 	}
