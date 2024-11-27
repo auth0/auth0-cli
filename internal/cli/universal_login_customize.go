@@ -234,7 +234,10 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 }
 
 func advanceCustomize(cmd *cobra.Command, cli *cli) error {
-	var headTags string
+	var (
+		headTags       string
+		renderSettings = &management.PromptRendering{}
+	)
 
 	promptName, screenName, err := fetchPromptScreenInfo()
 	if err != nil {
@@ -243,7 +246,15 @@ func advanceCustomize(cmd *cobra.Command, cli *cli) error {
 
 	cli.renderer.Infof("Updating the rendering settings for the prompt: %s and for the screen: %s", ansi.Green(promptName), ansi.Green(screenName))
 
-	renderSettings := &management.PromptRendering{}
+	readRendering, err := cli.api.Prompt.ReadRendering(cmd.Context(), management.PromptType(promptName), management.ScreenName(screenName))
+	if err != nil {
+		return fmt.Errorf("failed to fetch the existing render settings: %w", err)
+	}
+
+	if readRendering != nil {
+		jsonData, _ := json.MarshalIndent(readRendering, "", "  ")
+		promptScreenSettings = string(jsonData)
+	}
 
 	err = ruleScript.OpenEditor(cmd, &headTags, promptScreenSettings, promptName+"_"+screenName+".json", cli.ruleEditorHint)
 	if err != nil {
@@ -256,6 +267,8 @@ func advanceCustomize(cmd *cobra.Command, cli *cli) error {
 	}); err != nil {
 		return fmt.Errorf("failed to set the render settings: %w", err)
 	}
+
+	cli.renderer.Infof("Successfully set the render settings")
 
 	return nil
 }
