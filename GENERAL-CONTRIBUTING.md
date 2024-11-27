@@ -56,3 +56,4 @@ In general, we follow the ["fork-and-pull" Git workflow](https://github.com/susa
 ## Getting Help
 
 Join us in the [Auth0 Community](https://community.auth0.com) and post your question there in the correct category with a descriptive tag.
+
