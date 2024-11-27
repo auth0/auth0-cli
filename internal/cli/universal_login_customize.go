@@ -12,14 +12,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/auth0/go-auth0/management"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/display"
+	"github.com/auth0/auth0-cli/internal/prompt"
+	"github.com/auth0/go-auth0/management"
 )
 
 const (
@@ -38,6 +41,9 @@ const (
 var (
 	//go:embed data/universal-login/*
 	universalLoginPreviewAssets embed.FS
+
+	//go:embed data/universal-login/prompt-screen-settings.json
+	promptScreenSettings string
 )
 
 var allowedPromptsWithPartials = []management.PromptType{
@@ -185,8 +191,26 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 			"editable parameters and their values please visit the " +
 			"[Management API Documentation](https://auth0.com/docs/api/management/v2).",
 		Example: `  auth0 universal-login customize
-  auth0 ul customize`,
+  					auth0 ul customize`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var (
+				selectedRenderingMode string
+			)
+
+			const advancedMode, standardMode = "advanced", "standard"
+			label := "Please choose the renderingMode: "
+			help := fmt.Sprintf(
+				"%s\n%s\n",
+				"standardMode is recommended for customizating consistent, branded experience for users.",
+				"Alternatively, advancedMode is recommended for full customization/granular control of the login experience",
+				"and to integrate own component design system",
+			)
+
+			input := prompt.SelectInput("", label, help, []string{standardMode, advancedMode}, standardMode, true)
+			if err := prompt.AskOne(input, &selectedRenderingMode); err != nil {
+				return handleInputError(err)
+			}
+
 			ctx := cmd.Context()
 
 			if err := ensureCustomDomainIsEnabled(ctx, cli.api); err != nil {
@@ -197,11 +221,70 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
+			if selectedRenderingMode == advancedMode {
+				return advanceCustomize(cmd, cli)
+			}
+
+			// renderingMode as standard
 			return startWebSocketServer(ctx, cli.api, cli.renderer, cli.tenant)
 		},
 	}
 
 	return cmd
+}
+
+func advanceCustomize(cmd *cobra.Command, cli *cli) error {
+	var headTags string
+
+	promptName, screenName, err := fetchPromptScreenInfo()
+	if err != nil {
+		return err
+	}
+
+	cli.renderer.Infof("Updating the rendering settings for the prompt: %s and for the screen: %s", ansi.Green(promptName), ansi.Green(screenName))
+
+	renderSettings := &management.PromptRendering{}
+
+	err = ruleScript.OpenEditor(cmd, &headTags, promptScreenSettings, promptName+"_"+screenName+".json", cli.ruleEditorHint)
+	if err != nil {
+		return fmt.Errorf("failed to capture input from the editor: %w", err)
+	}
+
+	err = json.Unmarshal([]byte(headTags), renderSettings)
+	if err := ansi.Waiting(func() error {
+		return cli.api.Prompt.UpdateRendering(cmd.Context(), management.PromptType(promptName), management.ScreenName(screenName), renderSettings)
+	}); err != nil {
+		return fmt.Errorf("failed to set the render settings: %w", err)
+	}
+
+	return nil
+}
+
+func fetchPromptScreenInfo() (string, string, error) {
+	var (
+		promptName, screenName string
+		help                   = "Auth0 supports customizing for many prompts & screens"
+	)
+
+	promptLabel := "Please choose the Prompt Name:"
+
+	PromptInput := prompt.SelectInput("", promptLabel, help, maps.Keys(ScreenPromptMap), "login-id", true)
+	if err := prompt.AskOne(PromptInput, &promptName); err != nil {
+		return "", "", handleInputError(err)
+	}
+
+	if len(ScreenPromptMap[promptName]) > 1 {
+		screenLabel := "Please choose the Screen Name:"
+
+		screenInput := prompt.SelectInput("", screenLabel, help, ScreenPromptMap[promptName], ScreenPromptMap[promptName][0], true)
+		if err := prompt.AskOne(screenInput, &screenName); err != nil {
+			return "", "", handleInputError(err)
+		}
+	} else {
+		screenName = ScreenPromptMap[promptName][0]
+	}
+
+	return promptName, screenName, nil
 }
 
 func ensureNewUniversalLoginExperienceIsActive(ctx context.Context, api *auth0.API) error {
