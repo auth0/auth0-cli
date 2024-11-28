@@ -191,7 +191,7 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 			"editable parameters and their values please visit the " +
 			"[Management API Documentation](https://auth0.com/docs/api/management/v2).",
 		Example: `  auth0 universal-login customize
-  					auth0 ul customize`,
+  auth0 ul customize`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var (
 				selectedRenderingMode string
