@@ -15,7 +15,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -280,7 +279,7 @@ func fetchPromptScreenInfo() (string, string, error) {
 
 	promptLabel := "Please choose the Prompt Name:"
 
-	PromptInput := prompt.SelectInput("", promptLabel, help, maps.Keys(ScreenPromptMap), "login-id", true)
+	PromptInput := prompt.SelectInput("", promptLabel, help, fetchKeys(ScreenPromptMap), "login-id", true)
 	if err := prompt.AskOne(PromptInput, &promptName); err != nil {
 		return "", "", handleInputError(err)
 	}
@@ -297,6 +296,15 @@ func fetchPromptScreenInfo() (string, string, error) {
 	}
 
 	return promptName, screenName, nil
+}
+
+// Utility function to get all keys from a map
+func fetchKeys[K comparable, V any](m map[K]V) []K {
+	keys := make([]K, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 func ensureNewUniversalLoginExperienceIsActive(ctx context.Context, api *auth0.API) error {
