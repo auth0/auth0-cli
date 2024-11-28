@@ -202,8 +202,7 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 			help := fmt.Sprintf(
 				"%s\n%s\n",
 				"standardMode is recommended for customizating consistent, branded experience for users.",
-				"Alternatively, advancedMode is recommended for full customization/granular control of the login experience",
-				"and to integrate own component design system",
+				"Alternatively, advancedMode is recommended for full customization/granular control of the login experience and to integrate own component design system",
 			)
 
 			input := prompt.SelectInput("", label, help, []string{standardMode, advancedMode}, standardMode, true)

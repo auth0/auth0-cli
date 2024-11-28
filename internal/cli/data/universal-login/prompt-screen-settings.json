@@ -1,5 +1,11 @@
 {
+  "_comment1": "The rendering_mode could be either advanced or standard... default_head_tags_disabled is a toggle to override Universal Login default head tags... context_configuration are the set of Context values to make available(Refer docs for the possible values)... head_tags are the array of head tags)..",
+  "_comment2": "Note1: Inorder to update the rendering_mode to standard, just parse only the rendering_mode field; At standard_mode, we can't update the rest of fields",
+  "_comment3": "Note2: head_tags must contain at least one script tag",
+  "_comment4": "Only the declared fields will be updated, Rest stays same.",
+
   "rendering_mode": "advanced",
+  "default_head_tags": false,
   "context_configuration": [
     "screen.texts"
   ],
