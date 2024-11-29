@@ -22,7 +22,7 @@
     "showPasswordText": "Show password",
     "hidePasswordText": "Hide password",
     "wrong-credentials": "Wrong username or password",
-    "invalid-email-format": "Email is not valid.",
+    "invalid-email-format": "Email is not valid.\t",
     "wrong-email-credentials": "Wrong email or password",
     "custom-script-error-code": "Something went wrong, please try again later.",
     "auth0-users-validation": "Something went wrong, please try again later",
