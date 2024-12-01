@@ -223,7 +223,7 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 				return advanceCustomize(cmd, cli)
 			}
 
-			// renderingMode as standard
+			// RenderingMode as standard.
 			return startWebSocketServer(ctx, cli.api, cli.renderer, cli.tenant)
 		},
 	}
@@ -260,6 +260,10 @@ func advanceCustomize(cmd *cobra.Command, cli *cli) error {
 	}
 
 	err = json.Unmarshal([]byte(headTags), renderSettings)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal JSON input: %w", err)
+	}
+
 	if err := ansi.Waiting(func() error {
 		return cli.api.Prompt.UpdateRendering(cmd.Context(), management.PromptType(promptName), management.ScreenName(screenName), renderSettings)
 	}); err != nil {
@@ -298,7 +302,7 @@ func fetchPromptScreenInfo() (string, string, error) {
 	return promptName, screenName, nil
 }
 
-// Utility function to get all keys from a map
+// Utility function to get all keys from a map.
 func fetchKeys[K comparable, V any](m map[K]V) []K {
 	keys := make([]K, 0, len(m))
 	for k := range m {
