@@ -10,7 +10,7 @@ replace github.com/mholt/archiver/v3 => github.com/anchore/archiver/v3 v3.5.2
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/PuerkitoBio/rehttp v1.4.0
-	github.com/auth0/go-auth0 v1.11.3-0.20241125143227-780dbbbc0b95
+	github.com/auth0/go-auth0 v1.12.1-0.20241202041512-cb28f03cf8bf
 	github.com/briandowns/spinner v1.23.1
 	github.com/charmbracelet/glamour v0.8.0
 	github.com/fsnotify/fsnotify v1.7.0
@@ -33,12 +33,12 @@ require (
 	github.com/schollz/progressbar/v3 v3.16.1
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/pretty v1.2.1
 	github.com/zalando/go-keyring v0.2.5
 	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f
 	golang.org/x/net v0.31.0
-	golang.org/x/oauth2 v0.23.0
+	golang.org/x/oauth2 v0.24.0
 	golang.org/x/sync v0.9.0
 	golang.org/x/sys v0.27.0
 	golang.org/x/term v0.26.0
