@@ -477,6 +477,16 @@ func (h *webSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func isSupportedPartial(givenPrompt management.PromptType) bool {
+	for _, prompt := range allowedPromptsWithPartials {
+		if givenPrompt == prompt {
+			return true
+		}
+	}
+
+	return false
+}
+
 func checkOriginFunc(r *http.Request) bool {
 	origin := r.Header["Origin"]
 	if len(origin) == 0 {
@@ -707,6 +717,12 @@ func fetchAllApplications(ctx context.Context, api *auth0.API) ([]*applicationDa
 }
 
 func fetchPartial(ctx context.Context, api *auth0.API, prompt *partialData) (*management.PromptScreenPartials, error) {
+	var filteredPartials = management.PromptScreenPartials{}
+
+	if !isSupportedPartial(management.PromptType(prompt.PromptName)) {
+		return &management.PromptScreenPartials{}, nil
+	}
+
 	partial, err := api.Prompt.GetPartials(ctx, management.PromptType(prompt.PromptName))
 	if err != nil {
 		return nil, err
@@ -715,8 +731,6 @@ func fetchPartial(ctx context.Context, api *auth0.API, prompt *partialData) (*ma
 	if partial == nil {
 		return &management.PromptScreenPartials{}, nil
 	}
-
-	filteredPartials := management.PromptScreenPartials{}
 
 	if screenPartials, ok := (*partial)[management.ScreenName(prompt.ScreenName)]; ok {
 		filteredPartials[management.ScreenName(prompt.ScreenName)] = screenPartials
