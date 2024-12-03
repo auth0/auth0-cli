@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/auth0/go-auth0/management"
+
 	"github.com/gorilla/websocket"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -21,7 +23,6 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/prompt"
-	"github.com/auth0/go-auth0/management"
 )
 
 const (
