@@ -2,8 +2,6 @@ module github.com/auth0/auth0-cli
 
 go 1.22.0
 
-toolchain go1.23.1
-
 // TODO: This could be removed after https://github.com/mholt/archiver/pull/396 merged
 replace github.com/mholt/archiver/v3 => github.com/anchore/archiver/v3 v3.5.2
 
