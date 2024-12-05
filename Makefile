@@ -60,7 +60,7 @@ $(GO_BIN)/mockgen:
 
 $(GO_BIN)/golangci-lint:
 	${call print, "Installing golangci-lint"}
-	@go install -v github.com/golangci/golangci-lint/cmd/golangci-lint@22b58c9b648f027d699f305c069a2a97ed0c5b06 #1.62.0
+	@go install -v github.com/golangci/golangci-lint/cmd/golangci-lint@v1.59.0
 
 $(GO_BIN)/govulncheck:
 	${call print, "Installing go vulnerability checker"}
