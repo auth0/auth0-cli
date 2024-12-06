@@ -185,11 +185,14 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "customize",
 		Args:  cobra.NoArgs,
-		Short: "Customize the Universal Login experience",
-		Long: "Customize and preview changes to the Universal Login experience. This command will open a webpage " +
-			"within your browser where you can edit and preview your branding changes. For a comprehensive list of " +
-			"editable parameters and their values please visit the " +
-			"[Management API Documentation](https://auth0.com/docs/api/management/v2).",
+		Short: "Customize the Universal Login experience for the standard or advanced mode",
+		Long: "\nCustomize your Universal Login Experience. Note that this requires a custom domain to be configured for the tenant. \n\n" +
+			"* Standard mode is recommended for creating a consistent, branded experience for users. Choosing Standard mode will open a webpage\n" +
+			"within your browser where you can edit and preview your branding changes.For a comprehensive list of editable parameters and their values,\n" +
+			"please visit the [Management API Documentation](https://auth0.com/docs/api/management/v2)\n\n" +
+			"* Advanced mode is recommended for full customization/granular control of the login experience and to integrate your own component design system. \n" +
+			"Choosing Advanced mode will open the default terminal editor, with the rendering configs:\n\n" +
+			"![storybook](settings.json)\n\nClosing the terminal editor will save the settings to your tenant.",
 		Example: `  auth0 universal-login customize
   auth0 ul customize`,
 		RunE: func(cmd *cobra.Command, args []string) error {
