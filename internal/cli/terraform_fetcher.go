@@ -98,7 +98,9 @@ type (
 	}
 
 	promptResourceFetcher               struct{}
-	promptScreenRendererResourceFetcher struct{}
+	promptScreenRendererResourceFetcher struct {
+		api *auth0.API
+	}
 
 	promptCustomTextResourceFetcherResourceFetcher struct {
 		api *auth0.API
@@ -463,8 +465,18 @@ func (f *promptCustomTextResourceFetcherResourceFetcher) FetchData(ctx context.C
 	return data, nil
 }
 
-func (f *promptScreenRendererResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
+func (f *promptScreenRendererResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	var data importDataList
+
+	_, err := f.api.Prompt.ReadRendering(ctx, "login-id", "login-id")
+	// Checking for the ACUL enabled feature.
+	if err != nil {
+		if strings.Contains(err.Error(), "This tenant does not have ACUL enabled") {
+			return nil, nil
+		}
+
+		return nil, err
+	}
 
 	for promptType, screenNames := range ScreenPromptMap {
 		for _, screenName := range screenNames {
