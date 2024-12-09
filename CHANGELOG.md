@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.7.0](https://github.com/auth0/auth0-cli/tree/v1.7.0) (Dec 9, 2024))
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.6.1...v1.7.0)
+
+### Added
+
+- For `ul login` added check to filter and identify only support partials. [#1107]
+- Support for importing `auth0_prompt_screen_renderer` terraform resource [#1106]
+
+
 # [v1.6.1](https://github.com/auth0/auth0-cli/tree/v1.6.1) (Oct 31, 2024)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.6.0...v1.6.1)
@@ -327,6 +337,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 [unreleased]: https://github.com/auth0/auth0-cli/compare/v1.5.1...HEAD
+[#1107]: https://github.com/auth0/auth0-cli/issues/1107
+[#1106]: https://github.com/auth0/auth0-cli/issues/1106
 [#1099]: https://github.com/auth0/auth0-cli/issues/1099
 [#1098]: https://github.com/auth0/auth0-cli/issues/1098
 [#1091]: https://github.com/auth0/auth0-cli/issues/1091
