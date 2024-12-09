@@ -13,9 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- For `ul login` added check to filter and identify only support partials. [#1107]
 - Support for importing `auth0_prompt_screen_renderer` terraform resource [#1106]
 
+### Fixed
+
+- For `ul login` added check to filter and identify only support partials. [#1107]
 
 # [v1.6.1](https://github.com/auth0/auth0-cli/tree/v1.6.1) (Oct 31, 2024)
 
