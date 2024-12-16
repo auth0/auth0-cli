@@ -1,9 +1,9 @@
 {
   "__doc1__": "The rendering_mode could be either advanced or standard... default_head_tags_disabled is a toggle to override Universal Login default head tags... context_configuration are the set of Context values to make available(Refer docs for the possible values)... head_tags are the array of head tags)..",
-  "__doc2__": "Note1: while update the rendering_mode to standard, only the rendering_mode field gets updated, rest of the other fields wouldn't be updated.",
+  "__doc2__": "Note1: while updating the rendering_mode to standard, only the rendering_mode field gets updated, the other fields shall not be updated.",
   "__doc3__": "Note2: head_tags must contain at least one script tag",
-  "__doc4__": "Only the declared fields will be updated, Rest stays same.",
-  "__doc5__": "See the https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens for possible values for each fields",
+  "__doc4__": "Only the declared fields get updated, rest stays same",
+  "__doc5__": "See https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens for all possible values for each field",
 
   "rendering_mode": "advanced",
   "default_head_tags": false,
