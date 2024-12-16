@@ -1352,7 +1352,6 @@ func TestPromptScreenRendererResourceFetcher_FetchData(t *testing.T) {
 		_, err := fetcher.FetchData(context.Background())
 		assert.EqualError(t, err, "failed to read rendering settings")
 	})
-
 }
 
 func TestPromptCustomTextResourceFetcher_FetchData(t *testing.T) {
