@@ -1323,7 +1323,7 @@ func TestPromptScreenRendererResourceFetcher_FetchData(t *testing.T) {
 
 		promptAPI := mock.NewMockPromptAPI(ctrl)
 		promptAPI.EXPECT().ReadRendering(gomock.Any(), management.PromptType("login-id"), management.ScreenName("login-id")).
-			Return(&management.PromptRendering{}, fmt.Errorf("This tenant does not have ACUL enabled"))
+			Return(&management.PromptRendering{}, fmt.Errorf("403 Forbidden: This tenant does not have Advanced Customizations enabled"))
 
 		fetcher := promptScreenRendererResourceFetcher{
 			api: &auth0.API{
