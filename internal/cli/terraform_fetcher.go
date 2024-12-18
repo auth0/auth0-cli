@@ -477,7 +477,7 @@ func (f *promptScreenRendererResourceFetcher) FetchData(ctx context.Context) (im
 	_, err := f.api.Prompt.ReadRendering(ctx, "login-id", "login-id")
 	// Checking for the ACUL enabled feature.
 	if err != nil {
-		if strings.Contains(err.Error(), "This tenant does not have ACUL enabled") {
+		if strings.Contains(err.Error(), "403 Forbidden: This tenant does not have Advanced Customizations enabled") {
 			return nil, nil
 		}
 
