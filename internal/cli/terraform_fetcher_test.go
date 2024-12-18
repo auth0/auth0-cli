@@ -561,6 +561,26 @@ func TestCustomDomainResourceFetcher_FetchData(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, data, 0)
 	})
+
+	t.Run("it returns empty set error if no verified CC error occurs", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		customDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
+		customDomainAPI.EXPECT().
+			List(gomock.Any()).
+			Return(nil, fmt.Errorf("403 Forbidden: There must be a verified credit card on file to perform this operation"))
+
+		fetcher := customDomainResourceFetcher{
+			api: &auth0.API{
+				CustomDomain: customDomainAPI,
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 0)
+	})
 }
 
 func TestFormResourceFetcher_FetchData(t *testing.T) {
