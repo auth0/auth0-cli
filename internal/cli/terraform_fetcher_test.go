@@ -561,6 +561,26 @@ func TestCustomDomainResourceFetcher_FetchData(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, data, 0)
 	})
+
+	t.Run("it returns empty set error if no verified CC error occurs", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		customDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
+		customDomainAPI.EXPECT().
+			List(gomock.Any()).
+			Return(nil, fmt.Errorf("403 Forbidden: There must be a verified credit card on file to perform this operation"))
+
+		fetcher := customDomainResourceFetcher{
+			api: &auth0.API{
+				CustomDomain: customDomainAPI,
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 0)
+	})
 }
 
 func TestFormResourceFetcher_FetchData(t *testing.T) {
@@ -1285,6 +1305,72 @@ func TestPromptProviderResourceFetcher_FetchData(t *testing.T) {
 		assert.Len(t, data, 1)
 		assert.Equal(t, data[0].ResourceName, "auth0_prompt.prompts")
 		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
+func TestPromptScreenRendererResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully renders the prompts & screen settings import data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		promptAPI := mock.NewMockPromptAPI(ctrl)
+		promptAPI.EXPECT().ReadRendering(gomock.Any(), management.PromptType("login-id"), management.ScreenName("login-id")).
+			Return(&management.PromptRendering{}, nil)
+
+		fetcher := promptScreenRendererResourceFetcher{
+			api: &auth0.API{
+				Prompt: promptAPI,
+			},
+		}
+
+		expectedData := importDataList{}
+		for promptType, screenNames := range ScreenPromptMap {
+			for _, screenName := range screenNames {
+				expectedData = append(expectedData, importDataItem{
+					ResourceName: "auth0_prompt_screen_renderer." + sanitizeResourceName(promptType+"_"+screenName),
+					ImportID:     promptType + ":" + screenName,
+				})
+			}
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, expectedData, data)
+	})
+	t.Run("it handles error, even if tenant does not have ACUL enabled", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		promptAPI := mock.NewMockPromptAPI(ctrl)
+		promptAPI.EXPECT().ReadRendering(gomock.Any(), management.PromptType("login-id"), management.ScreenName("login-id")).
+			Return(&management.PromptRendering{}, fmt.Errorf("403 Forbidden: This tenant does not have Advanced Customizations enabled"))
+
+		fetcher := promptScreenRendererResourceFetcher{
+			api: &auth0.API{
+				Prompt: promptAPI,
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 0)
+	})
+	t.Run("it returns error, if the API call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		promptAPI := mock.NewMockPromptAPI(ctrl)
+		promptAPI.EXPECT().ReadRendering(gomock.Any(), management.PromptType("login-id"), management.ScreenName("login-id")).
+			Return(&management.PromptRendering{}, fmt.Errorf("failed to read rendering settings"))
+
+		fetcher := promptScreenRendererResourceFetcher{
+			api: &auth0.API{
+				Prompt: promptAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to read rendering settings")
 	})
 }
 
