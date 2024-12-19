@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.7.2](https://github.com/auth0/auth0-cli/tree/v1.7.2) (Dec 19, 2024))
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.7.1...v1.7.2)
+
+### Fixed
+
+- fix(terraform): Handle 403 forbidden error [#1115]
+
+
 # [v.1.7.1](https://github.com/auth0/auth0-cli/tree/v1.7.1) (Dec 19, 2024))
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.7.0...v1.7.1)
@@ -353,6 +362,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 [unreleased]: https://github.com/auth0/auth0-cli/compare/v1.5.1...HEAD
+[#1115]: https://github.com/auth0/auth0-cli/issues/1115
 [#1111]: https://github.com/auth0/auth0-cli/issues/1111
 [#1109]: https://github.com/auth0/auth0-cli/issues/1109
 [#1103]: https://github.com/auth0/auth0-cli/issues/1103
