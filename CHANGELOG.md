@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-# [v.1.7.2](https://github.com/auth0/auth0-cli/tree/v1.7.1) (Dec 19, 2024))
+# [v.1.7.2](https://github.com/auth0/auth0-cli/tree/v1.7.2) (Dec 19, 2024))
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.7.1...v1.7.2)
 
