@@ -38,4 +38,14 @@ type PromptAPI interface {
 	//
 	// See: https://auth0.com/docs/api/management/v2/prompts/put-partials
 	SetPartials(ctx context.Context, prompt management.PromptType, c *management.PromptScreenPartials, opts ...management.RequestOption) error
+
+	// ReadRendering retrieves the settings for the ACUL.
+	//
+	// See: https://auth0.com/docs/api/management/v2/prompts/get-rendering
+	ReadRendering(ctx context.Context, prompt management.PromptType, screen management.ScreenName, opts ...management.RequestOption) (c *management.PromptRendering, err error)
+
+	// UpdateRendering updates the settings for the ACUL.
+	//
+	// See: https://auth0.com/docs/api/management/v2/prompts/patch-rendering
+	UpdateRendering(ctx context.Context, prompt management.PromptType, screen management.ScreenName, c *management.PromptRendering, opts ...management.RequestOption) error
 }

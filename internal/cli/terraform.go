@@ -38,17 +38,26 @@ var tfFlags = terraformFlags{
 		Help: "Resource types to generate Terraform config for. If not provided, config files for all " +
 			"available resources will be generated.",
 	},
+	TerraformVersion: Flag{
+		Name:      "Terraform Version",
+		LongForm:  "tf-version",
+		ShortForm: "v",
+		Help: "Terraform version that ought to be used while generating the terraform files for resources. " +
+			"If not provided, 1.5.0 is used by default",
+	},
 }
 
 type (
 	terraformFlags struct {
-		OutputDIR Flag
-		Resources Flag
+		OutputDIR        Flag
+		Resources        Flag
+		TerraformVersion Flag
 	}
 
 	terraformInputs struct {
-		OutputDIR string
-		Resources []string
+		OutputDIR        string
+		Resources        []string
+		TerraformVersion string
 	}
 )
 
@@ -94,6 +103,8 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &promptResourceFetcher{})
 		case "auth0_prompt_custom_text":
 			fetchers = append(fetchers, &promptCustomTextResourceFetcherResourceFetcher{api})
+		case "auth0_prompt_screen_renderer":
+			fetchers = append(fetchers, &promptScreenRendererResourceFetcher{api})
 		case "auth0_resource_server", "auth0_resource_server_scopes":
 			fetchers = append(fetchers, &resourceServerResourceFetcher{api})
 		case "auth0_role", "auth0_role_permissions":
@@ -147,6 +158,7 @@ func generateTerraformCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	tfFlags.OutputDIR.RegisterString(cmd, &inputs.OutputDIR, "./")
 	tfFlags.Resources.RegisterStringSlice(cmd, &inputs.Resources, defaultResources)
+	tfFlags.TerraformVersion.RegisterString(cmd, &inputs.TerraformVersion, "1.5.0")
 
 	return cmd
 }
@@ -175,7 +187,7 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 			return err
 		}
 
-		if err := generateTerraformImportConfig(inputs.OutputDIR, data); err != nil {
+		if err := generateTerraformImportConfig(inputs, data); err != nil {
 			return err
 		}
 
@@ -191,7 +203,7 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 			}
 
 			err = ansi.Spinner("Generating Terraform configuration", func() error {
-				return generateTerraformResourceConfig(cmd.Context(), inputs.OutputDIR)
+				return generateTerraformResourceConfig(cmd.Context(), inputs)
 			})
 
 			if err != nil {
@@ -241,20 +253,20 @@ func fetchImportData(ctx context.Context, fetchers ...resourceDataFetcher) (impo
 	return deduplicateResourceNames(importData), nil
 }
 
-func generateTerraformImportConfig(outputDIR string, data importDataList) error {
+func generateTerraformImportConfig(inputs *terraformInputs, data importDataList) error {
 	if len(data) == 0 {
 		return errors.New("no import data available")
 	}
 
-	if err := createOutputDirectory(outputDIR); err != nil {
+	if err := createOutputDirectory(inputs.OutputDIR); err != nil {
 		return err
 	}
 
-	if err := createMainFile(outputDIR); err != nil {
+	if err := createMainFile(inputs); err != nil {
 		return err
 	}
 
-	return createImportFile(outputDIR, data)
+	return createImportFile(inputs.OutputDIR, data)
 }
 
 func createOutputDirectory(outputDIR string) error {
@@ -267,8 +279,8 @@ func createOutputDirectory(outputDIR string) error {
 	return nil
 }
 
-func createMainFile(outputDIR string) error {
-	filePath := path.Join(outputDIR, "auth0_main.tf")
+func createMainFile(input *terraformInputs) error {
+	filePath := path.Join(input.OutputDIR, "auth0_main.tf")
 
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -279,7 +291,7 @@ func createMainFile(outputDIR string) error {
 	}()
 
 	fileContent := `terraform {
-  required_version = ">= 1.5.0"
+  required_version = ">= ` + input.TerraformVersion + `"
   required_providers {
     auth0 = {
       source  = "auth0/auth0"
@@ -327,15 +339,15 @@ import {
 	return t.Execute(file, data)
 }
 
-func generateTerraformResourceConfig(ctx context.Context, outputDIR string) error {
-	absoluteOutputPath, err := filepath.Abs(outputDIR)
+func generateTerraformResourceConfig(ctx context.Context, input *terraformInputs) error {
+	absoluteOutputPath, err := filepath.Abs(input.OutputDIR)
 	if err != nil {
 		return err
 	}
 
 	installer := &releases.ExactVersion{
 		Product:    product.Terraform,
-		Version:    version.Must(version.NewVersion("1.5.0")),
+		Version:    version.Must(version.NewVersion(input.TerraformVersion)),
 		InstallDir: absoluteOutputPath,
 	}
 

@@ -9,7 +9,7 @@ Manage a consistent, branded Universal Login experience that can handle all of y
 
 ## Commands
 
-- [auth0 universal-login customize](auth0_universal-login_customize.md) - Customize the Universal Login experience
+- [auth0 universal-login customize](auth0_universal-login_customize.md) - Customize the Universal Login experience for the standard or advanced mode
 - [auth0 universal-login prompts](auth0_universal-login_prompts.md) - Manage custom text for prompts
 - [auth0 universal-login show](auth0_universal-login_show.md) - Display the custom branding settings for Universal Login
 - [auth0 universal-login templates](auth0_universal-login_templates.md) - Manage custom Universal Login templates
