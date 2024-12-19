@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.7.1](https://github.com/auth0/auth0-cli/tree/v1.7.1) (Dec 19, 2024))
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.7.0...v1.7.1)
+
+### Added
+
+- Support flags for `auth0 ul customize` command to choose the renderingMode, prompt & screenNames along with configSettings file[#1111]
+
+### Fixed
+
+- Fix `auth0 tf generate` command and handle error when custom domain is not enabled [#1103]
+- Fix CDN textLocal URL & include unit tests for fetchData of the resource `auth0_prompt_screen_renderer`[#1109]
+
+
 # [v.1.7.0](https://github.com/auth0/auth0-cli/tree/v1.7.0) (Dec 9, 2024))
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.6.1...v1.7.0)
@@ -339,6 +353,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 [unreleased]: https://github.com/auth0/auth0-cli/compare/v1.5.1...HEAD
+[#1111]: https://github.com/auth0/auth0-cli/issues/1111
+[#1109]: https://github.com/auth0/auth0-cli/issues/1109
+[#1103]: https://github.com/auth0/auth0-cli/issues/1103
 [#1107]: https://github.com/auth0/auth0-cli/issues/1107
 [#1106]: https://github.com/auth0/auth0-cli/issues/1106
 [#1099]: https://github.com/auth0/auth0-cli/issues/1099
