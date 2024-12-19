@@ -130,6 +130,7 @@ var RequiredScopes = []string{
 	"read:branding", "update:branding",
 	"read:email_templates", "update:email_templates",
 	"read:email_provider",
+	"read:flows", "read:forms", "read:flows_vault_connections",
 	"read:connections", "update:connections",
 	"read:client_keys", "read:logs", "read:tenant_settings",
 	"read:custom_domains", "create:custom_domains", "update:custom_domains", "delete:custom_domains",

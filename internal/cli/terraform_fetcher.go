@@ -11,7 +11,21 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-var defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_resource_server", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
+var (
+	defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_prompt_screen_renderer", "auth0_resource_server", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
+	ScreenPromptMap  = map[string][]string{
+		"signup-id":                   {"signup-id"},
+		"signup-password":             {"signup-password"},
+		"login-id":                    {"login-id"},
+		"login-password":              {"login-password"},
+		"login-passwordless":          {"login-passwordless-email-code", "login-passwordless-sms-otp"},
+		"phone-identifier-enrollment": {"phone-identifier-enrollment"},
+		"phone-identifier-challenge":  {"phone-identifier-challenge"},
+		"email-identifier-challenge":  {"email-identifier-challenge"},
+		"passkeys":                    {"passkey-enrollment", "passkey-enrollment-local"},
+		"captcha":                     {"interstitial-captcha"},
+	}
+)
 
 type (
 	importDataList []importDataItem
@@ -83,7 +97,10 @@ type (
 		api *auth0.API
 	}
 
-	promptResourceFetcher struct{}
+	promptResourceFetcher               struct{}
+	promptScreenRendererResourceFetcher struct {
+		api *auth0.API
+	}
 
 	promptCustomTextResourceFetcherResourceFetcher struct {
 		api *auth0.API
@@ -227,10 +244,16 @@ func (f *customDomainResourceFetcher) FetchData(ctx context.Context) (importData
 
 	customDomains, err := f.api.CustomDomain.List(ctx)
 	if err != nil {
-		if strings.Contains(err.Error(), "The account is not allowed to perform this operation, please contact our support team") {
-			return data, nil
+		errNotEnabled := []string{
+			"The account is not allowed to perform this operation, please contact our support team",
+			"There must be a verified credit card on file to perform this operation",
 		}
 
+		for _, e := range errNotEnabled {
+			if strings.Contains(err.Error(), e) {
+				return data, nil
+			}
+		}
 		return nil, err
 	}
 
@@ -441,6 +464,31 @@ func (f *promptCustomTextResourceFetcherResourceFetcher) FetchData(ctx context.C
 			data = append(data, importDataItem{
 				ResourceName: "auth0_prompt_custom_text." + sanitizeResourceName(language+"_"+promptType),
 				ImportID:     promptType + "::" + language,
+			})
+		}
+	}
+
+	return data, nil
+}
+
+func (f *promptScreenRendererResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	_, err := f.api.Prompt.ReadRendering(ctx, "login-id", "login-id")
+	// Checking for the ACUL enabled feature.
+	if err != nil {
+		if strings.Contains(err.Error(), "403 Forbidden: This tenant does not have Advanced Customizations enabled") {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	for promptType, screenNames := range ScreenPromptMap {
+		for _, screenName := range screenNames {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_prompt_screen_renderer." + sanitizeResourceName(promptType+"_"+screenName),
+				ImportID:     promptType + ":" + screenName,
 			})
 		}
 	}
