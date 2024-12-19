@@ -245,7 +245,12 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 			"Choosing Advanced mode will open the default terminal editor, with the rendering configs:\n\n" +
 			"![storybook](settings.json)\n\nClosing the terminal editor will save the settings to your tenant.",
 		Example: `  auth0 universal-login customize
-  auth0 ul customize`,
+  auth0 ul customize
+  auth0 ul customize --rendering-mode standard
+  auth0 ul customize -r standard
+  auth0 ul customize --rendering-mode advanced --prompt login-id --screen login-id
+  auth0 ul customize --rendering-mode advanced --prompt login-id --screen login-id --settings-file settings.json
+  auth0 ul customize -r advanced -p login-id -s login-id -f settings.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
@@ -313,7 +318,7 @@ func fetchPromptScreenInfo(cmd *cobra.Command, input *customizationInputs) error
 		if err := screenName.Select(cmd, &input.screenName, ScreenPromptMap[input.promptName], nil); err != nil {
 			return handleInputError(err)
 		}
-
+	} else {
 		input.screenName = ScreenPromptMap[input.promptName][0]
 	}
 

@@ -29,6 +29,11 @@ auth0 universal-login customize [flags]
 ```
   auth0 universal-login customize
   auth0 ul customize
+  auth0 ul customize --rendering-mode standard
+  auth0 ul customize -r standard
+  auth0 ul customize --rendering-mode advanced --prompt login-id --screen login-id
+  auth0 ul customize --rendering-mode advanced --prompt login-id --screen login-id --settings-file settings.json
+  auth0 ul customize -r advanced -p login-id -s login-id -f settings.json
 ```
 
 
