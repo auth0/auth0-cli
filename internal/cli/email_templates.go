@@ -14,24 +14,26 @@ import (
 )
 
 const (
-	emailTemplateVerifyLink     = "verify-link"
-	emailTemplateVerifyCode     = "verify-code"
-	emailTemplateChangePassword = "change-password"
-	emailTemplateWelcome        = "welcome"
-	emailTemplateBlockedAccount = "blocked-account"
-	emailTemplatePasswordBreach = "password-breach"
-	emailTemplateMFAEnrollment  = "mfa-enrollment"
-	emailTemplateMFACode        = "mfa-code"
-	emailTemplateUserInvitation = "user-invitation"
+	emailTemplateVerifyLink         = "verify-link"
+	emailTemplateVerifyCode         = "verify-code"
+	emailTemplateChangePassword     = "change-password"
+	emailTemplateChangePasswordCode = "change-password-code"
+	emailTemplateWelcome            = "welcome"
+	emailTemplateBlockedAccount     = "blocked-account"
+	emailTemplatePasswordBreach     = "password-breach"
+	emailTemplateMFAEnrollment      = "mfa-enrollment"
+	emailTemplateMFACode            = "mfa-code"
+	emailTemplateUserInvitation     = "user-invitation"
 )
 
 var (
 	emailTemplateTemplate = Argument{
 		Name: "Template",
-		Help: fmt.Sprintf("Template name. Can be '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' or '%s'",
+		Help: fmt.Sprintf("Template name. Can be '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' or '%s'",
 			emailTemplateVerifyLink,
 			emailTemplateVerifyCode,
 			emailTemplateChangePassword,
+			emailTemplateChangePasswordCode,
 			emailTemplateWelcome,
 			emailTemplateBlockedAccount,
 			emailTemplatePasswordBreach,
@@ -89,7 +91,8 @@ var (
 	emailTemplateOptions = pickerOptions{
 		{"Verification Email (using Link)", emailTemplateVerifyLink},
 		{"Verification Email (using Code)", emailTemplateVerifyCode},
-		{"Change Password", emailTemplateChangePassword},
+		{"Change Password (using Link)", emailTemplateChangePassword},
+		{"Change Password (using Code)", emailTemplateChangePasswordCode},
 		{"Welcome Email", emailTemplateWelcome},
 		{"Blocked Account Email", emailTemplateBlockedAccount},
 		{"Password Breach Alert", emailTemplatePasswordBreach},
@@ -304,6 +307,8 @@ func apiEmailTemplateFor(v string) string {
 		return "verify_email_by_code"
 	case emailTemplateChangePassword:
 		return "reset_email"
+	case emailTemplateChangePasswordCode:
+		return "reset_email_by_code"
 	case emailTemplateWelcome:
 		return "welcome_email"
 	case emailTemplateBlockedAccount:
