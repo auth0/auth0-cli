@@ -65,6 +65,7 @@ var (
 		"post-user-registration": actionTemplatePostUserRegistration,
 		"post-change-password":   actionTemplatePostChangePassword,
 		"send-phone-message":     actionTemplateSendPhoneMessage,
+		"custom-email-provider":  actionTemplateCustomEmailProvider,
 	}
 )
 
