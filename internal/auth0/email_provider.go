@@ -9,7 +9,20 @@ import (
 )
 
 type EmailProviderAPI interface {
+	// Create email provider.
+	// See: https://auth0.com/docs/api/management/v2#!/Emails/post_provider
+	Create(ctx context.Context, ep *management.EmailProvider, opts ...management.RequestOption) error
+
+	// Update email provider.
+	// See: https://auth0.com/docs/api/management/v2#!/Emails/patch_provider
+	Update(ctx context.Context, ep *management.EmailProvider, opts ...management.RequestOption) (err error)
+
 	// Read email provider details.
 	// See: https://auth0.com/docs/api/management/v2#!/Emails/get_provider
 	Read(ctx context.Context, opts ...management.RequestOption) (ep *management.EmailProvider, err error)
+
+	// Delete the email provider.
+	//
+	// See: https://auth0.com/docs/api/management/v2#!/Emails/delete_provider
+	Delete(ctx context.Context, opts ...management.RequestOption) (err error)
 }
