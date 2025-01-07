@@ -156,7 +156,7 @@ tests:
         urlLifetimeInSeconds: "6100"
         enabled: "true"
   021 - it successfully updates change-password-code email template:
-    command: auth0 email templates update change-password-code --enabled --body "<h1>Change password (by code)</h1>" --from "change-password-by-code@travel0.com" --lifetime 6100 --subject "Change password by code" --url "travel0.com" --force
+    command: auth0 email templates update change-password-code --enabled --body "<h1>Change password (by code)</h1>" --from "change-password-by-code@travel0.com" --lifetime 6100 --subject "Change password (using code)" --url "travel0.com" --force
     exit-code: 0
 
   022 - it successfully shows change-password-code email template:
@@ -166,7 +166,7 @@ tests:
       contains:
         - TEMPLATE             reset_email_by_code
         - FROM                 change-password-by-code@travel0.com
-        - SUBJECT              Change password (by code)
+        - SUBJECT              Change password (using code)
         - RESULT URL           travel0.com
         - RESULT URL LIFETIME  6100
         - ENABLED              ✓
