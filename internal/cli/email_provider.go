@@ -174,6 +174,7 @@ func createEmailProviderCmd(cli *cli) *cobra.Command {
 				if len(inputs.credentials) > 0 {
 					return fmt.Errorf("credentials not supported for provider: %s", inputs.name)
 				}
+				credentials = make(map[string]interface{})
 			} else {
 				if err := emailProviderCredentials.Ask(cmd, &inputs.credentials, nil); err != nil {
 					return err
@@ -216,11 +217,11 @@ func createEmailProviderCmd(cli *cli) *cobra.Command {
 				emailProvider.DefaultFromAddress = &inputs.defaultFromAddress
 			}
 
-			if len(credentials) > 0 {
+			if credentials != nil {
 				emailProvider.Credentials = &credentials
 			}
 
-			if len(settings) > 0 {
+			if settings != nil {
 				emailProvider.Settings = &settings
 			}
 
@@ -315,6 +316,7 @@ func updateEmailProviderCmd(cli *cli) *cobra.Command {
 					if len(inputs.credentials) > 0 {
 						return fmt.Errorf("credentials not supported for provider: %s", inputs.name)
 					}
+					credentials = make(map[string]interface{})
 				} else {
 					if err := emailProviderCredentials.AskU(cmd, &inputs.credentials, nil); err != nil {
 						return err
@@ -357,11 +359,11 @@ func updateEmailProviderCmd(cli *cli) *cobra.Command {
 				emailProvider.DefaultFromAddress = &inputs.defaultFromAddress
 			}
 
-			if len(credentials) > 0 {
+			if credentials != nil {
 				emailProvider.Credentials = &credentials
 			}
 
-			if len(settings) > 0 {
+			if settings != nil {
 				emailProvider.Settings = &settings
 			}
 

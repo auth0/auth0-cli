@@ -7,23 +7,31 @@ tests:
     command: auth0 email provider delete --force
     exit-code: 0
 
-  002 - create email provider:
-    command: auth0 email provider create --provider=mandrill --enabled=false --default-from-address='not-admin@auth0.invalid' --credentials='{"api_key":"some-api-key"}' --settings='{}'
+  002 - create custom email provider action:
+    command: ./test/integration/scripts/create-custom-email-action.sh
     exit-code: 0
 
-  003 - delete up email provider:
+  003 - create custom email provider:
+    command: auth0 email provider create --provider=custom --enabled=false --default-from-address='not-admin@auth0.invalid'
+    exit-code: 0
+
+  004 - delete up email provider:
     command: auth0 email provider delete --force
     exit-code: 0
 
-  004 - it doesn't show the email provider:
+  005 - it doesn't show the email provider:
     command: auth0 email provider show
     exit-code: 1
 
-  005 - create email provider:
+  006 - delete custom email provider action:
+    command: ./test/integration/scripts/delete-custom-email-action.sh
+    exit-code: 0
+
+  007 - create email provider:
     command: auth0 email provider create --provider=mandrill --enabled=false --default-from-address='not-admin@auth0.invalid' --credentials='{"api_key":"some-api-key"}' --settings='{}'
     exit-code: 0
 
-  006 - it successfully shows the email provider:
+  008 - it successfully shows the email provider:
     command: auth0 email provider show
     exit-code: 0
     stdout:
@@ -33,11 +41,11 @@ tests:
         - DEFAULT FROM ADDRESS  not-admin@auth0.invalid
         - SETTINGS              {}
 
-  007 - update and enable email provider:
+  009 - update and enable email provider:
     command: auth0 email provider update --enabled --default-from-address='admin@auth0.invalid'
     exit-code: 0
 
-  008 - it successfully shows the email provider:
+  010 - it successfully shows the email provider:
     command: auth0 email provider show
     exit-code: 0
     stdout:
