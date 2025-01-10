@@ -12,7 +12,7 @@ tests:
     exit-code: 0
 
   003 - create custom email provider:
-    command: auth0 email provider create --provider=custom --enabled=false --default-from-address='not-admin@auth0.invalid'
+    command: auth0 email provider create --provider=custom --enabled=true --default-from-address='not-admin@auth0.invalid'
     exit-code: 0
 
   004 - delete up email provider:
