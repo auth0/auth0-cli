@@ -32,6 +32,10 @@ func PipedInput() []byte {
 		for {
 			input, err := reader.ReadBytes('\n')
 			if err == io.EOF {
+				// Handle the last partial line (if any) at EOF.
+				if len(input) > 0 {
+					pipedInput = append(pipedInput, input...)
+				}
 				break
 			} else if err != nil {
 				panic(auth0.Error(err, "unable to read from pipe"))

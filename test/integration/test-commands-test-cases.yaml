@@ -6,7 +6,7 @@ tests:
     # Terminate early because command will otherwise wait for in-browser
     # authorization stage `timeout` command provided by GNU coreutils.
     # On Mac install with brew install coreutils.
-    command: timeout 2s auth0 test login $(./test/integration/scripts/get-rwa-app-id.sh) --no-input 2>&1
+    command: timeout 5s auth0 test login $(./test/integration/scripts/get-rwa-app-id.sh) --no-input 2>&1
     exit-code: 124 # Timeout exit code.
     stdout:
       contains:

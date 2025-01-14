@@ -29,9 +29,24 @@ auth0 universal-login customize [flags]
 ```
   auth0 universal-login customize
   auth0 ul customize
+  auth0 ul customize --rendering-mode standard
+  auth0 ul customize -r standard
+  auth0 ul customize --rendering-mode advanced --prompt login-id --screen login-id
+  auth0 ul customize --rendering-mode advanced --prompt login-id --screen login-id --settings-file settings.json
+  auth0 ul customize -r advanced -p login-id -s login-id -f settings.json
 ```
 
 
+## Flags
+
+```
+  -p, --prompt string           Name of the prompt to customize.
+  -r, --rendering-mode string   standardMode is recommended for customizating consistent, branded experience for users.
+                                Alternatively, advancedMode is recommended for full customization/granular control of the login experience and to integrate own component design system
+                                
+  -s, --screen string           Name of the screen to customize.
+  -f, --settings-file string    File to save the rendering configs to.
+```
 
 
 ## Inherited Flags
