@@ -35,7 +35,7 @@ require (
 	github.com/tidwall/pretty v1.2.1
 	github.com/zalando/go-keyring v0.2.5
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
-	golang.org/x/net v0.30.0
+	golang.org/x/net v0.33.0
 	golang.org/x/oauth2 v0.25.0
 	golang.org/x/sync v0.10.0
 	golang.org/x/sys v0.28.0
