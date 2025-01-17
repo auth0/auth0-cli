@@ -8,5 +8,6 @@ You can configure a test SMTP email server in your development or test environme
 
 ## Commands
 
+- [auth0 email provider](auth0_email_provider.md) - Manage custom email provider
 - [auth0 email templates](auth0_email_templates.md) - Manage custom email templates
 

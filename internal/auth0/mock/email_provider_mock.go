@@ -35,6 +35,44 @@ func (m *MockEmailProviderAPI) EXPECT() *MockEmailProviderAPIMockRecorder {
 	return m.recorder
 }
 
+// Create mocks base method.
+func (m *MockEmailProviderAPI) Create(ctx context.Context, ep *management.EmailProvider, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, ep}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Create", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockEmailProviderAPIMockRecorder) Create(ctx, ep interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, ep}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockEmailProviderAPI)(nil).Create), varargs...)
+}
+
+// Delete mocks base method.
+func (m *MockEmailProviderAPI) Delete(ctx context.Context, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Delete", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockEmailProviderAPIMockRecorder) Delete(ctx interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockEmailProviderAPI)(nil).Delete), varargs...)
+}
+
 // Read mocks base method.
 func (m *MockEmailProviderAPI) Read(ctx context.Context, opts ...management.RequestOption) (*management.EmailProvider, error) {
 	m.ctrl.T.Helper()
@@ -53,4 +91,23 @@ func (mr *MockEmailProviderAPIMockRecorder) Read(ctx interface{}, opts ...interf
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockEmailProviderAPI)(nil).Read), varargs...)
+}
+
+// Update mocks base method.
+func (m *MockEmailProviderAPI) Update(ctx context.Context, ep *management.EmailProvider, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, ep}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Update", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockEmailProviderAPIMockRecorder) Update(ctx, ep interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, ep}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockEmailProviderAPI)(nil).Update), varargs...)
 }

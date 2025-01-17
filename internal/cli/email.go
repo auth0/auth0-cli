@@ -13,6 +13,7 @@ func emailCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.AddCommand(emailTemplateCmd(cli))
+	cmd.AddCommand(emailProviderCmd(cli))
 
 	return cmd
 }
