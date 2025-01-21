@@ -129,7 +129,7 @@ var RequiredScopes = []string{
 	"create:users", "delete:users", "read:users", "update:users",
 	"read:branding", "update:branding",
 	"create:email_templates", "read:email_templates", "update:email_templates",
-	"read:email_provider",
+	"create:email_provider", "read:email_provider", "update:email_provider", "delete:email_provider",
 	"read:flows", "read:forms", "read:flows_vault_connections",
 	"read:connections", "update:connections",
 	"read:client_keys", "read:logs", "read:tenant_settings",
