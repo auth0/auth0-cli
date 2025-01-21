@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.8.0](https://github.com/auth0/auth0-cli/tree/v1.7.1) (Jan 21, 2025))
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.7.2...v1.8.0)
+
+### Added
+
+- Support `reset_email_by_code` email template [#1119]
+- Add support for configuring `email provider` [#1120]
+
+
 # [v.1.7.2](https://github.com/auth0/auth0-cli/tree/v1.7.2) (Dec 19, 2024))
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.7.1...v1.7.2)
@@ -362,6 +372,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 [unreleased]: https://github.com/auth0/auth0-cli/compare/v1.5.1...HEAD
+[#1120]: https://github.com/auth0/auth0-cli/issues/1120
+[#1119]: https://github.com/auth0/auth0-cli/issues/1119
 [#1115]: https://github.com/auth0/auth0-cli/issues/1115
 [#1111]: https://github.com/auth0/auth0-cli/issues/1111
 [#1109]: https://github.com/auth0/auth0-cli/issues/1109
