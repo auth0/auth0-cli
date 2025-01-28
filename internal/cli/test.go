@@ -62,6 +62,13 @@ var (
 		Help:      "One of your custom domains.",
 	}
 
+	testCustomParams = Flag{
+		Name:      "Custom Params",
+		LongForm:  "params",
+		ShortForm: "p",
+		Help:      "Custom parameters to include in the login URL.",
+	}
+
 	errNoCustomDomains = errors.New("there are currently no custom domains. Create one by running: `auth0 domains create`")
 )
 
@@ -71,6 +78,7 @@ type testCmdInputs struct {
 	Scopes         []string
 	ConnectionName string
 	CustomDomain   string
+	CustomParams   map[string]string
 }
 
 func testCmd(cli *cli) *cobra.Command {
@@ -99,10 +107,12 @@ func testLoginCmd(cli *cli) *cobra.Command {
   auth0 test login <client-id>
   auth0 test login <client-id> --connection-name <connection-name>
   auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience>
-  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --domain <domain>
+  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --domain <domain> --params "foo=bar"
   auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --domain <domain> --scopes <scope1,scope2>
   auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --force
   auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --json
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> -p "foo=bar" -p "bazz=buzz" --json
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> -p "foo=bar","bazz=buzz" --json
   auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := selectClientToUseForTestsAndValidateExistence(cli, cmd, args, &inputs)
@@ -143,6 +153,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 				"login", // Force a login page when using the test login command.
 				inputs.Scopes,
 				inputs.CustomDomain,
+				inputs.CustomParams,
 			)
 			if err != nil {
 				return fmt.Errorf("failed to log into the client with ID %q: %w", inputs.ClientID, err)
@@ -168,6 +179,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, cliLoginTestingScopes)
 	testConnectionName.RegisterString(cmd, &inputs.ConnectionName, "")
 	testDomain.RegisterString(cmd, &inputs.CustomDomain, "")
+	testCustomParams.RegisterStringMap(cmd, &inputs.CustomParams, nil)
 
 	return cmd
 }
@@ -183,10 +195,12 @@ func testTokenCmd(cli *cli) *cobra.Command {
 			"Specify the API you want this token for with `--audience` (API Identifier). " +
 			"Additionally, you can also specify the `--scopes` to grant.",
 		Example: `  auth0 test token
-  auth0 test token <client-id> --audience <api-audience|api-identifier> --scopes <scope1,scope2>
+  auth0 test token <client-id> --audience <api-audience|api-identifier> --scopes <scope1,scope2> --params "foo=bar"
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2>
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --force
+  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> -p "foo=bar" -p "bazz=buzz" --force
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --json
+  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> -p "foo=bar","bazz=buzz" --json
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := selectClientToUseForTestsAndValidateExistence(cli, cmd, args, &inputs)
@@ -245,6 +259,7 @@ func testTokenCmd(cli *cli) *cobra.Command {
 				"", // We don't want to force a prompt for the test token command.
 				inputs.Scopes,
 				"", // Specifying a custom domain is only supported for the test login command.
+				inputs.CustomParams,
 			)
 			if err != nil {
 				return fmt.Errorf("failed to log into the client with ID %q: %w", inputs.ClientID, err)
@@ -261,6 +276,7 @@ func testTokenCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	testAudienceRequired.RegisterString(cmd, &inputs.Audience, "")
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
+	testCustomParams.RegisterStringMap(cmd, &inputs.CustomParams, nil)
 
 	return cmd
 }

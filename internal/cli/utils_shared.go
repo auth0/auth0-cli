@@ -123,7 +123,7 @@ func runLoginFlowPreflightChecks(cli *cli, c *management.Client) (abort bool) {
 
 // runLoginFlow initiates a full user-facing login flow, waits for a response
 // and returns the retrieved tokens to the caller when done.
-func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName, audience, prompt string, scopes []string, customDomain string) (*authutil.TokenResponse, error) {
+func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName, audience, prompt string, scopes []string, customDomain string, customParams map[string]string) (*authutil.TokenResponse, error) {
 	var tokenResponse *authutil.TokenResponse
 
 	err := ansi.Spinner("Waiting for login flow to complete", func() error {
@@ -143,7 +143,7 @@ func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName,
 		}
 
 		// Build a login URL and initiate login in a browser window.
-		loginURL, err := authutil.BuildLoginURL(domain, c.GetClientID(), cliLoginTestingCallbackURL, state, connName, audience, prompt, scopes)
+		loginURL, err := authutil.BuildLoginURL(domain, c.GetClientID(), cliLoginTestingCallbackURL, state, connName, audience, prompt, scopes, customParams)
 		if err != nil {
 			return err
 		}
