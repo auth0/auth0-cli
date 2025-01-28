@@ -58,6 +58,13 @@ var (
 		Help:      "Secrets to be used in the action.",
 	}
 
+	actionRuntime = Flag{
+		Name:      "Runtime",
+		LongForm:  "runtime",
+		ShortForm: "r",
+		Help:      "Runtime to be used in the action.",
+	}
+
 	actionTemplates = map[string]string{
 		"post-login":             actionTemplatePostLogin,
 		"credentials-exchange":   actionTemplateCredentialsExchange,
@@ -173,6 +180,7 @@ func createActionCmd(cli *cli) *cobra.Command {
 		Code         string
 		Dependencies map[string]string
 		Secrets      map[string]string
+		Runtime      string
 	}
 
 	cmd := &cobra.Command{
@@ -185,11 +193,11 @@ func createActionCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 actions create
   auth0 actions create --name myaction
   auth0 actions create --name myaction --trigger post-login
-  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)"
+  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js) --runtime node18
   auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
   auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
   auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
-  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json`,
+  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := actionName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -235,6 +243,7 @@ func createActionCmd(cli *cli) *cobra.Command {
 						Version: &version,
 					},
 				},
+				Runtime:      &inputs.Runtime,
 				Code:         &inputs.Code,
 				Dependencies: inputDependenciesToActionDependencies(inputs.Dependencies),
 				Secrets:      inputSecretsToActionSecrets(inputs.Secrets),
@@ -258,6 +267,7 @@ func createActionCmd(cli *cli) *cobra.Command {
 	actionCode.RegisterString(cmd, &inputs.Code, "")
 	actionDependency.RegisterStringMap(cmd, &inputs.Dependencies, nil)
 	actionSecret.RegisterStringMap(cmd, &inputs.Secrets, nil)
+	actionRuntime.RegisterString(cmd, &inputs.Runtime, "")
 
 	return cmd
 }
@@ -269,6 +279,7 @@ func updateActionCmd(cli *cli) *cobra.Command {
 		Code         string
 		Dependencies map[string]string
 		Secrets      map[string]string
+		Runtime      string
 	}
 
 	cmd := &cobra.Command{
@@ -279,13 +290,14 @@ func updateActionCmd(cli *cli) *cobra.Command {
 			"To update interactively, use `auth0 actions update` with no arguments.\n\n" +
 			"To update non-interactively, supply the action id, name, code, secrets and " +
 			"dependencies through the flags.",
-		Example: `  auth0 actions update <action-id> 
-  auth0 actions update <action-id> --name myaction
-  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)"
+		Example: `  auth0 actions update <action-id>
+  auth0 actions update <action-id> --runtime node18
+  auth0 actions update <action-id> --name myaction --runtime node18
+  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js) --r node18"
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
-  auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json`,
+  auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -343,6 +355,10 @@ func updateActionCmd(cli *cli) *cobra.Command {
 				updatedAction.Secrets = inputSecretsToActionSecrets(inputs.Secrets)
 			}
 
+			if inputs.Runtime != "" {
+				updatedAction.Runtime = &inputs.Runtime
+			}
+
 			if err = ansi.Waiting(func() error {
 				return cli.api.Action.Update(cmd.Context(), oldAction.GetID(), updatedAction)
 			}); err != nil {
@@ -361,6 +377,7 @@ func updateActionCmd(cli *cli) *cobra.Command {
 	actionCode.RegisterStringU(cmd, &inputs.Code, "")
 	actionDependency.RegisterStringMapU(cmd, &inputs.Dependencies, nil)
 	actionSecret.RegisterStringMapU(cmd, &inputs.Secrets, nil)
+	actionRuntime.RegisterStringU(cmd, &inputs.Runtime, "")
 
 	return cmd
 }

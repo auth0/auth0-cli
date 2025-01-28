@@ -17,7 +17,7 @@ tests:
       exactly: "[]"
 
   003 - it successfully creates an action:
-    command: auth0 actions create -n "integration-test-action1" -t "post-login" -c "function() {}" -d "lodash=4.0.0" -s "SECRET=value"
+    command: auth0 actions create -n "integration-test-action1" -r node18 -t "post-login" -c "function() {}" -d "lodash=4.0.0" -s "SECRET=value"
     exit-code: 0
     stdout:
       contains:
@@ -42,7 +42,7 @@ tests:
         - DEPLOYED
 
   005 - it successfully creates an action and outputs in json:
-    command: auth0 actions create -n "integration-test-action2" -t "post-login" -c "function() {}" -d "lodash=4.0.0" -s "SECRET=value" --json
+    command: auth0 actions create -n "integration-test-action2" -r node18 -t "post-login" -c "function() {}" -d "lodash=4.0.0" -s "SECRET=value" --json
     exit-code: 0
     stdout:
       json:
@@ -84,7 +84,7 @@ tests:
         secrets.0.name: "SECRET"
 
   008 - given a test action, it successfully updates the action's details:
-    command: auth0 actions update $(./test/integration/scripts/get-action-id.sh) -n "integration-test-action-updated" -c "function() {console.log()}" -d "uuid=9.0.0" -s "SECRET2=newValue"
+    command: auth0 actions update $(./test/integration/scripts/get-action-id.sh) -r node18 -n "integration-test-action-updated" -c "function() {console.log()}" -d "uuid=9.0.0" -s "SECRET2=newValue"
     exit-code: 0
     stdout:
       contains:
@@ -98,7 +98,7 @@ tests:
         - "CODE           function() {console.log()}"
 
   009 - given a test action, it successfully updates the action's details and outputs in json:
-    command: auth0 actions update $(./test/integration/scripts/get-action-id.sh) -n "integration-test-action-updated-again" -c "function() {console.log()}" -d "uuid=9.0.0" -s "SECRET3=newValue" --json
+    command: auth0 actions update $(./test/integration/scripts/get-action-id.sh) -r node18 -n "integration-test-action-updated-again" -c "function() {console.log()}" -d "uuid=9.0.0" -s "SECRET3=newValue" --json
     exit-code: 0
     stdout:
       json:
