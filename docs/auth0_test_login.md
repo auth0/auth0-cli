@@ -19,10 +19,12 @@ auth0 test login [flags]
   auth0 test login <client-id>
   auth0 test login <client-id> --connection-name <connection-name>
   auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience>
-  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --domain <domain>
+  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --domain <domain> --params "foo=bar"
   auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --domain <domain> --scopes <scope1,scope2>
   auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --force
   auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --json
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> -p "foo=bar" -p "bazz=buzz" --json
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> -p "foo=bar","bazz=buzz" --json
   auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --force --json
 ```
 
@@ -35,6 +37,7 @@ auth0 test login [flags]
   -d, --domain string            One of your custom domains.
       --force                    Skip confirmation.
       --json                     Output in json format.
+  -p, --params stringToString    Custom parameters to include in the login URL. (default [])
   -s, --scopes strings           The list of scopes you want to use. (default [openid,profile])
 ```
 

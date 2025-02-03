@@ -16,10 +16,12 @@ auth0 test token [flags]
 
 ```
   auth0 test token
-  auth0 test token <client-id> --audience <api-audience|api-identifier> --scopes <scope1,scope2>
+  auth0 test token <client-id> --audience <api-audience|api-identifier> --scopes <scope1,scope2> --params "foo=bar"
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2>
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --force
+  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> -p "foo=bar" -p "bazz=buzz" --force
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --json
+  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> -p "foo=bar","bazz=buzz" --json
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --force --json
 ```
 
@@ -27,10 +29,11 @@ auth0 test token [flags]
 ## Flags
 
 ```
-  -a, --audience string   The unique identifier of the target API you want to access. For Machine to Machine and Regular Web Applications, only the enabled APIs will be shown within the interactive prompt.
-      --force             Skip confirmation.
-      --json              Output in json format.
-  -s, --scopes strings    The list of scopes you want to use.
+  -a, --audience string         The unique identifier of the target API you want to access. For Machine to Machine and Regular Web Applications, only the enabled APIs will be shown within the interactive prompt.
+      --force                   Skip confirmation.
+      --json                    Output in json format.
+  -p, --params stringToString   Custom parameters to include in the login URL. (default [])
+  -s, --scopes strings          The list of scopes you want to use.
 ```
 
 

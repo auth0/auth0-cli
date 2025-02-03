@@ -7,7 +7,7 @@ import (
 
 // BuildLoginURL constructs a URL + query string that can be used to
 // initiate a user-facing login-flow from the CLI.
-func BuildLoginURL(domain, clientID, callbackURL, state, connectionName, audience, prompt string, scopes []string) (string, error) {
+func BuildLoginURL(domain, clientID, callbackURL, state, connectionName, audience, prompt string, scopes []string, customParams map[string]string) (string, error) {
 	q := url.Values{}
 	q.Add("client_id", clientID)
 	q.Add("response_type", "code")
@@ -28,6 +28,12 @@ func BuildLoginURL(domain, clientID, callbackURL, state, connectionName, audienc
 
 	if len(scopes) > 0 {
 		q.Add("scope", strings.Join(scopes, " "))
+	}
+
+	if len(customParams) > 0 {
+		for k, v := range customParams {
+			q.Add(k, v)
+		}
 	}
 
 	u := &url.URL{
