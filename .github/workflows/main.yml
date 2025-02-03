@@ -54,7 +54,7 @@ jobs:
         run: make test-unit
 
       - name: Upload unit test coverage
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: unit-tests-artifact
           path: ./coverage-unit-tests.out
@@ -88,7 +88,7 @@ jobs:
           AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
 
       - name: Download unit test coverage
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: unit-tests-artifact
           path: ./unit-tests-artifact
