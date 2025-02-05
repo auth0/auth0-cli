@@ -17,11 +17,11 @@ tests:
       exactly: "[]"
 
   003 - it successfully creates an event stream:
-    command: auth0 events create -n my-event-stream -t webhook -s "user.created,user.deleted" -c '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'
+    command: auth0 events create -n integration-test-stream -t webhook -s "user.created,user.deleted" -c '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'
     exit-code: 0
     stdout:
       contains:
-        - "NAME           my-event-stream"
+        - "NAME           integration-test-stream"
         - "TYPE           webhook"
         - "STATUS         disabled"
         - "SUBSCRIPTIONS  user.created, user.deleted"
@@ -40,11 +40,11 @@ tests:
         - CONFIGURATION
 
   005 - it successfully creates an event streams and outputs in json:
-    command: auth0 events create -n my-event-stream-new1 -t webhook -s "user.created,user.deleted" -c '{"webhook_endpoint":"https://mywebhook-new.net","webhook_authorization":{"method":"bearer","token":"123456789"}}' --json
+    command: auth0 events create -n integration-test-stream1 -t webhook -s "user.created,user.deleted" -c '{"webhook_endpoint":"https://mywebhook-new.net","webhook_authorization":{"method":"bearer","token":"123456789"}}' --json
     exit-code: 0
     stdout:
       json:
-        name: "my-event-stream-new1"
+        name: "integration-test-stream1"
         status: "disabled"
         subscriptions.0.event_type: "user.created"
         subscriptions.1.event_type: "user.deleted"
