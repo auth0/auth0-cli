@@ -19,6 +19,7 @@ type API struct {
 	CustomDomain        CustomDomainAPI
 	EmailTemplate       EmailTemplateAPI
 	EmailProvider       EmailProviderAPI
+	EventStream         EventStreamAPI
 	Flow                FlowAPI
 	FlowVaultConnection FlowVaultConnectionAPI
 	Form                FormAPI
@@ -49,6 +50,7 @@ func NewAPI(m *management.Management) *API {
 		CustomDomain:        m.CustomDomain,
 		EmailTemplate:       m.EmailTemplate,
 		EmailProvider:       m.EmailProvider,
+		EventStream:         m.EventStream,
 		Flow:                m.Flow,
 		FlowVaultConnection: m.Flow.Vault,
 		Form:                m.Form,

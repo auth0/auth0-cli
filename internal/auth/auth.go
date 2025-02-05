@@ -140,6 +140,7 @@ var RequiredScopes = []string{
 	"create:organizations", "delete:organizations", "read:organizations", "update:organizations", "read:organization_members", "read:organization_member_roles", "read:organization_connections",
 	"read:prompts", "update:prompts",
 	"read:attack_protection", "update:attack_protection",
+	"read:event_streams", "create:event_streams", "update:event_streams", "delete:event_streams",
 }
 
 // GetDeviceCode kicks-off the device authentication flow by requesting

@@ -1,0 +1,100 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  001 - it successfully lists all event streams with no data:
+    command: auth0 events list
+    exit-code: 0
+    stderr:
+      contains:
+        - Use 'auth0 events create' to add one
+
+  002 - it successfully lists all event streams with no data (json):
+    command: auth0 events list --json
+    exit-code: 0
+    stdout:
+      exactly: "[]"
+
+  003 - it successfully creates an event stream:
+    command: auth0 events create -n my-event-stream -t webhook -s "user.created,user.deleted" -c '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME           my-event-stream"
+        - "TYPE           webhook"
+        - "STATUS         disabled"
+        - "SUBSCRIPTIONS  user.created, user.deleted"
+        - "CONFIGURATION  {"webhook_authorization":{"method":"bearer"},"webhook_endpoint":"https://mywebhook.net"}"
+
+  004 - it successfully lists all event streams with data:
+    command: auth0 events list
+    exit-code: 0
+    stdout:
+      contains:
+        - ID
+        - NAME
+        - TYPE
+        - STATUS
+        - SUBSCRIPTIONS
+        - CONFIGURATION
+
+  005 - it successfully creates an event streams and outputs in json:
+    command: auth0 events create -n my-event-stream2 -t webhook -s "user.created,user.deleted" -c '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}' --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "my-event-stream2"
+        status: "disabled"
+        subscriptions.0.event_type: "user.created"
+        subscriptions.1.event_type: "user_deleted"
+        destination.type: "webhook"
+        destination.0.configuration.webhook_authorization.method: "bearer"
+        destination.0.configuration.webhook_endpoint: "https://mywebhook.net"
+
+  006 - given a test event stream, it successfully gets the event stream details:
+    command: auth0 events show $(./test/integration/scripts/get-event-stream-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME           integration-test-event"
+        - "TYPE           webhook"
+        - "STATUS         disabled"
+        - "SUBSCRIPTIONS  user.created, user.deleted"
+        - "CONFIGURATION  {"webhook_authorization":{"method":"bearer"},"webhook_endpoint":"https://mywebhook.net"}"
+
+  007 - given a test event stream, it successfully gets the event stream details and outputs in json:
+    command: auth0 events show $(./test/integration/scripts/get-event-stream-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-event"
+        status: "disabled"
+        subscriptions.0.event_type: "user.created"
+        subscriptions.1.event_type: "user_deleted"
+        destination.type: "webhook"
+        destination.0.configuration.webhook_authorization.method: "bearer"
+        destination.0.configuration.webhook_endpoint: "https://mywebhook.net"
+
+  008 - given a test event stream, it successfully updates the event stream details:
+    command: auth0 events update $(./test/integration/scripts/get-event-stream-id.sh) -n integration-test-event-updated -status enabled --subscriptions "user.created,user.updated"
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME           integration-test-event-updated"
+        - "STATUS         enabled"
+        - "SUBSCRIPTIONS  user.created, user.updated"
+
+  009 - given a test event stream, it successfully updates the event stream details and outputs in json:
+    command: auth0 events update $(./test/integration/scripts/get-event-stream-id.sh) -n integration-test-event-updated-again -status enabled --subscriptions "user.updated" --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-event-updated-again"
+        subscriptions.0.event_type: "user.updated"
+        status: "disabled"
+
+
+  011 - given a test event stream, it successfully deletes the event stream:
+    command: auth0 events delete $(./test/integration/scripts/get-event-stream-id.sh) --force
+    exit-code: 0
