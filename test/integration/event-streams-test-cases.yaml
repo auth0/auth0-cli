@@ -47,7 +47,7 @@ tests:
         name: "my-event-stream2"
         status: "disabled"
         subscriptions.0.event_type: "user.created"
-        subscriptions.1.event_type: "user_deleted"
+        subscriptions.1.event_type: "user.deleted"
         destination.type: "webhook"
         destination.0.configuration.webhook_authorization.method: "bearer"
         destination.0.configuration.webhook_endpoint: "https://mywebhook.net"
@@ -71,13 +71,13 @@ tests:
         name: "integration-test-event"
         status: "disabled"
         subscriptions.0.event_type: "user.created"
-        subscriptions.1.event_type: "user_deleted"
+        subscriptions.1.event_type: "user.deleted"
         destination.type: "webhook"
         destination.0.configuration.webhook_authorization.method: "bearer"
         destination.0.configuration.webhook_endpoint: "https://mywebhook.net"
 
   008 - given a test event stream, it successfully updates the event stream details:
-    command: auth0 events update $(./test/integration/scripts/get-event-stream-id.sh) -n integration-test-event-updated -status enabled --subscriptions "user.created,user.updated"
+    command: auth0 events update $(./test/integration/scripts/get-event-stream-id.sh) -n integration-test-event-updated --status enabled --subscriptions "user.created,user.updated"
     exit-code: 0
     stdout:
       contains:
@@ -86,7 +86,7 @@ tests:
         - "SUBSCRIPTIONS  user.created, user.updated"
 
   009 - given a test event stream, it successfully updates the event stream details and outputs in json:
-    command: auth0 events update $(./test/integration/scripts/get-event-stream-id.sh) -n integration-test-event-updated-again -status enabled --subscriptions "user.updated" --json
+    command: auth0 events update $(./test/integration/scripts/get-event-stream-id.sh) -n integration-test-event-updated-again --status enabled --subscriptions "user.updated" --json
     exit-code: 0
     stdout:
       json:
