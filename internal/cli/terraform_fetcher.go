@@ -24,6 +24,9 @@ var (
 		"email-identifier-challenge":  {"email-identifier-challenge"},
 		"passkeys":                    {"passkey-enrollment", "passkey-enrollment-local"},
 		"captcha":                     {"interstitial-captcha"},
+		"login":                       {"login"},
+		"signup":                      {"signup"},
+		"reset-password":              {"reset-password-request", "reset-password-email", "reset-password", "reset-password-success", "reset-password-error"},
 	}
 )
 
