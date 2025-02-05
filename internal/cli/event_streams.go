@@ -251,7 +251,7 @@ func updateEventStreamCmd(cli *cli) *cobra.Command {
 			"To update non-interactively, supply the event id, name, status, subscriptions and " +
 			"configuration through the flags. An event stream type CANNOT be updated hence the configuration " +
 			"should match the schema based on the type of event stream",
-		Example: `  auth0 events update <action-id>
+		Example: `  auth0 events update <event-id>
   auth0 events update <event-id> --name my-event-stream
   auth0 events update <event-id> --name my-event-stream --status enabled
   auth0 events update <event-id> --name my-event-stream --status enabled --subscriptions "user.created,user.updated"
