@@ -73,8 +73,8 @@ tests:
         subscriptions.0.event_type: "user.created"
         subscriptions.1.event_type: "user.deleted"
         destination.type: "webhook"
-        destination.0.configuration.webhook_authorization.method: "bearer"
-        destination.0.configuration.webhook_endpoint: "https://mywebhook.net"
+        destination.configuration.webhook_authorization.method: "bearer"
+        destination.configuration.webhook_endpoint: "https://mywebhook.net"
 
   008 - given a test event stream, it successfully updates the event stream details:
     command: auth0 events update $(./test/integration/scripts/get-event-stream-id.sh) -n integration-test-event-updated --status enabled --subscriptions "user.created,user.updated"
