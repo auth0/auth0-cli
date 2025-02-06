@@ -30,9 +30,10 @@ var (
 	}
 
 	eventStreamStatus = Flag{
-		Name:     "Status",
-		LongForm: "status",
-		Help:     "Status of the Event Stream. (enabled/disabled)",
+		Name:       "Status",
+		LongForm:   "status",
+		Help:       "Status of the Event Stream. (enabled/disabled)",
+		IsRequired: true,
 	}
 
 	eventStreamSubscriptions = Flag{
@@ -278,7 +279,18 @@ func updateEventStreamCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to read event stream with ID %q: %w", inputs.ID, err)
 			}
 
-			if err := eventStreamName.AskU(cmd, &inputs.Name, oldEventStream.Name); err != nil {
+			if err := eventStreamName.AskU(cmd, &inputs.Name, nil); err != nil {
+				return err
+			}
+			if err := eventStreamStatus.AskU(cmd, &inputs.Status, nil); err != nil {
+				return err
+			}
+
+			if err := eventStreamSubscriptions.AskManyU(cmd, &inputs.Subscriptions, nil); err != nil {
+				return err
+			}
+
+			if err := eventStreamConfig.AskU(cmd, &inputs.Configuration, nil); err != nil {
 				return err
 			}
 

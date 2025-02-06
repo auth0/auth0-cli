@@ -43,7 +43,7 @@ func (v *eventStreamView) Object() interface{} {
 }
 
 func (r *Renderer) EventStreamsList(eventStreams []*management.EventStream) {
-	resource := "events"
+	resource := "event streams"
 
 	r.Heading(resource)
 

@@ -25,8 +25,6 @@ tests:
         - "TYPE           webhook"
         - "STATUS         disabled"
         - "SUBSCRIPTIONS  user.created, user.deleted"
-#        - "CONFIGURATION  {"webhook_authorization":{"method":"bearer"},"webhook_endpoint":"https://mywebhook.net"}"
-
   004 - it successfully lists all event streams with data:
     command: auth0 events list
     exit-code: 0
