@@ -7,7 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-# [v.1.8.0](https://github.com/auth0/auth0-cli/tree/v1.7.1) (Jan 21, 2025))
+# [v.1.9.0](https://github.com/auth0/auth0-cli/tree/v1.9.0) (Feb 6, 2025))
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.8.0...v1.9.0)
+
+### Added
+
+- Add support for new screens in Advanced Customization for Universal Login [#1132]
+- Add support to set custom url parameters using `--params` in `auth0 test` [#1130]
+- Add support to set runtime using `--runtime` in `auth0 actions` [#1131]
+- Add support to manage Event Streams using `auth0 events` [#1134]
+
+### Changed
+
+- Updated `auth0 ul customize` branding assets to load custom text based on selected screens [#1124]
+
+
+# [v.1.8.0](https://github.com/auth0/auth0-cli/tree/v1.8.0) (Jan 21, 2025))
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.7.2...v1.8.0)
 
@@ -372,8 +388,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.5.1...HEAD
+
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.9.0...HEAD
+[#1134]: https://github.com/auth0/auth0-cli/issues/1134
+[#1132]: https://github.com/auth0/auth0-cli/issues/1132
+[#1130]: https://github.com/auth0/auth0-cli/issues/1130
+[#1131]: https://github.com/auth0/auth0-cli/issues/1131
 [#1129]: https://github.com/auth0/auth0-cli/issues/1129
+[#1124]: https://github.com/auth0/auth0-cli/issues/1124
 [#1120]: https://github.com/auth0/auth0-cli/issues/1120
 [#1119]: https://github.com/auth0/auth0-cli/issues/1119
 [#1115]: https://github.com/auth0/auth0-cli/issues/1115
