@@ -29,6 +29,7 @@ delete_resources "roles" "integration-test-role" "id"
 delete_resources "rules" "integration-test-rule" "id"
 delete_resources "orgs" "integration-test-org" "id"
 delete_resources "actions" "integration-test-" "id"
+delete_resources "events" "integration-test-" "id"
 delete_resources "logs streams" "integration-test-" "id"
 
 auth0 domains delete $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
