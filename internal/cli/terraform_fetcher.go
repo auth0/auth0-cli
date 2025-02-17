@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_prompt_screen_renderer", "auth0_resource_server", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
+	defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_credentials", "auth0_client_grant", "auth0_connection", "auth0_connection_clients", "auth0_custom_domain", "auth0_email_provider", "auth0_email_template", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_guardian", "auth0_log_stream", "auth0_organization", "auth0_organization_connections", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_prompt_screen_renderer", "auth0_resource_server", "auth0_resource_server_scopes", "auth0_role", "auth0_role_permissions", "auth0_tenant", "auth0_trigger_actions"}
 	ScreenPromptMap  = map[string][]string{
 		"signup-id":                   {"signup-id"},
 		"signup-password":             {"signup-password"},
@@ -51,7 +51,12 @@ type (
 	attackProtectionResourceFetcher struct{}
 
 	brandingResourceFetcher struct{}
-	clientResourceFetcher   struct {
+
+	phoneProviderResourceFetcher struct {
+		api *auth0.API
+	}
+
+	clientResourceFetcher struct {
 		api *auth0.API
 	}
 
@@ -136,6 +141,28 @@ func (f *brandingResourceFetcher) FetchData(_ context.Context) (importDataList, 
 			ImportID:     uuid.NewString(),
 		},
 	}, nil
+}
+
+func (f *phoneProviderResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	phoneProvidersList, err := f.api.Branding.ListPhoneProviders(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(phoneProvidersList.Providers) == 0 {
+		return nil, nil
+	}
+
+	for _, provider := range phoneProvidersList.Providers {
+		data = append(data, importDataItem{
+			ResourceName: "auth0_phone_providers." + sanitizeResourceName(provider.GetName()),
+			ImportID:     provider.GetID(),
+		})
+	}
+
+	return data, nil
 }
 
 func (f *clientResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
