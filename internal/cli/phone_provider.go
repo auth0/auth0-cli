@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/auth0/auth0-cli/internal/auth0"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
@@ -49,7 +50,7 @@ var (
 
 	phoneProviderConfiguration = Flag{
 		Name:         "Configuration Settings",
-		LongForm:     "configuration settings",
+		LongForm:     "configuration",
 		ShortForm:    "s",
 		Help:         "Configuration for the phone provider. formatted as JSON.",
 		AlwaysPrompt: true,
@@ -135,7 +136,7 @@ func createBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 phone provider create
   auth0 phone provider create --json
   auth0 phone provider create --provider twilio --disabled=false --credentials='{ "auth_token":"TheAuthToken" }' --configuration='{ "default_from": "admin@example.com", "sid": "+1234567890", "delivery_methods": ["text", "voice"] }'
-  auth0 phone provider create --provider custom --enabled=true --default-from-address="admin@example.com"
+  auth0 phone provider create --provider custom --disabled=true --configuration='{ "delivery_methods": ["text", "voice"] }
   auth0 phone provider create -p twilio -d "false" -c '{ "auth_token":"TheAuthToken" }' -s '{ "default_from": "admin@example.com", "sid": "+1234567890", "delivery_methods": ["text", "voice"] }  `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := phoneProviderName.Select(cmd, &inputs.name, PhoneProviderNameOptions, nil); err != nil {
@@ -149,7 +150,7 @@ func createBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 			var credentials *management.BrandingPhoneProviderCredential
 
 			if inputs.name != phoneProviderCustom {
-				if err := phoneProviderCredentials.Ask(cmd, &inputs.credentials, nil); err != nil {
+				if err := phoneProviderCredentials.Ask(cmd, &inputs.credentials, auth0.String("{}")); err != nil {
 					return err
 				}
 
@@ -232,7 +233,7 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "update",
-		Args:  cobra.NoArgs,
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Update the phone provider",
 		Long: "Update the phone provider.\n\n" +
 			"To update interactively, use `auth0 phone provider update` with no arguments.\n\n" +
@@ -283,28 +284,22 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 			if len(inputs.name) > 0 && inputs.name != currentProvider.GetName() {
 				// Only set the name if we are changing it.
 				phoneProvider.Name = &inputs.name
+			}
 
-				if inputs.name != phoneProviderCustom {
-					if err := phoneProviderCredentials.Ask(cmd, &inputs.credentials, nil); err != nil {
-						return err
-					}
+			if err := phoneProviderCredentials.AskU(cmd, &inputs.credentials, nil); err != nil {
+				return err
+			}
 
-					if err := json.Unmarshal([]byte(inputs.credentials), &credentials); err != nil {
-						return fmt.Errorf("provider: %s credentials invalid JSON: %w", inputs.name, err)
-					}
-				} else {
-					if err := phoneProviderCredentials.AskU(cmd, &inputs.credentials, nil); err != nil {
-						return err
-					}
-					if err := json.Unmarshal([]byte(inputs.credentials), &credentials); err != nil {
-						return fmt.Errorf("provider: %s credentials invalid JSON: %w", inputs.name, err)
-					}
+			if len(inputs.credentials) > 0 {
+				if err := json.Unmarshal([]byte(inputs.credentials), &credentials); err != nil {
+					return fmt.Errorf("provider: %s credentials invalid JSON: %w", inputs.name, err)
 				}
 			}
 
 			if err := phoneProviderConfiguration.AskU(cmd, &inputs.configuration, nil); err != nil {
 				return err
 			}
+
 			if len(inputs.configuration) > 0 {
 				if err := json.Unmarshal([]byte(inputs.configuration), &configuration); err != nil {
 					return fmt.Errorf("provider: %s configuration invalid JSON: %w", inputs.name, err)
@@ -350,7 +345,7 @@ func deleteBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.NoArgs,
+		Args:    cobra.MaximumNArgs(1),
 		Short:   "Delete the phone provider",
 		Long: "Delete the phone provider.\n\n" +
 			"To delete interactively, use `auth0 phone provider delete` with no arguments.\n\n" +

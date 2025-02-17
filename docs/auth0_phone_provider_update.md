@@ -33,11 +33,11 @@ auth0 phone provider update [flags]
 ## Flags
 
 ```
-  -s, --configuration settings string   Configuration for the phone provider. formatted as JSON.
-  -c, --credentials string              Credentials for the phone provider, formatted as JSON.
-  -d, --disabled                        Whether the provided is disabled (true) or enabled (false).
-      --json                            Output in json format.
-  -p, --provider string                 Provider name. Can be 'twilio', or 'custom'
+  -s, --configuration string   Configuration for the phone provider. formatted as JSON.
+  -c, --credentials string     Credentials for the phone provider, formatted as JSON.
+  -d, --disabled               Whether the provided is disabled (true) or enabled (false).
+      --json                   Output in json format.
+  -p, --provider string        Provider name. Can be 'twilio', or 'custom'
 ```
 
 
