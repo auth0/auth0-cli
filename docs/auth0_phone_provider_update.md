@@ -26,7 +26,7 @@ auth0 phone provider update [flags]
   auth0 phone provider update --configuration='{ "delivery_methods": ["voice"] }'
   auth0 phone provider update --configuration='{ "default_from": admin@example.com }'
   auth0 phone provider update --provider twilio --disabled=false --credentials='{ "auth_token":"NewAuthToken" }' --configuration='{ "default_from": "admin@example.com", "delivery_methods": ["voice", "text"] }'
-  auth0 phone provider update --provider custom --disabled=false --configuration='{ "delivery_methods": ["voice", "text"] }"
+  auth0 phone provider update --provider custom --disabled=false --configuration='{ "delivery_methods": ["voice", "text"] }'
 ```
 
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/auth0/auth0-cli/internal/auth0"
 
 	"github.com/auth0/go-auth0/management"
@@ -38,6 +39,7 @@ var (
 			phoneProviderTwilio,
 			phoneProviderCustom),
 		AlwaysPrompt: true,
+		IsRequired:   true,
 	}
 
 	phoneProviderCredentials = Flag{
@@ -46,6 +48,7 @@ var (
 		ShortForm:    "c",
 		Help:         "Credentials for the phone provider, formatted as JSON.",
 		AlwaysPrompt: true,
+		IsRequired:   true,
 	}
 
 	phoneProviderConfiguration = Flag{
@@ -54,6 +57,7 @@ var (
 		ShortForm:    "s",
 		Help:         "Configuration for the phone provider. formatted as JSON.",
 		AlwaysPrompt: true,
+		IsRequired:   true,
 	}
 
 	phoneProviderDisabled = Flag{
@@ -85,7 +89,6 @@ func showBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "show",
-		Args:  cobra.NoArgs,
 		Short: "Show the Phone provider",
 		Long:  "Display information about the phone provider.",
 		Example: `  auth0 phone provider show
@@ -127,7 +130,6 @@ func createBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create",
-		Args:  cobra.NoArgs,
 		Short: "Create the phone provider",
 		Long: "Create the phone provider.\n\n" +
 			"To create interactively, use `auth0 phone provider create` with no arguments.\n\n" +
@@ -137,7 +139,7 @@ func createBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
   auth0 phone provider create --json
   auth0 phone provider create --provider twilio --disabled=false --credentials='{ "auth_token":"TheAuthToken" }' --configuration='{ "default_from": "admin@example.com", "sid": "+1234567890", "delivery_methods": ["text", "voice"] }'
   auth0 phone provider create --provider custom --disabled=true --configuration='{ "delivery_methods": ["text", "voice"] }
-  auth0 phone provider create -p twilio -d "false" -c '{ "auth_token":"TheAuthToken" }' -s '{ "default_from": "admin@example.com", "sid": "+1234567890", "delivery_methods": ["text", "voice"] }  `,
+  auth0 phone provider create -p twilio -d "false" -c '{ "auth_token":"TheAuthToken" }' -s '{ "default_from": "admin@example.com", "sid": "+1234567890", "delivery_methods": ["text", "voice"] }'  `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := phoneProviderName.Select(cmd, &inputs.name, PhoneProviderNameOptions, nil); err != nil {
 				return err
@@ -233,7 +235,6 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "update",
-		Args:  cobra.MaximumNArgs(1),
 		Short: "Update the phone provider",
 		Long: "Update the phone provider.\n\n" +
 			"To update interactively, use `auth0 phone provider update` with no arguments.\n\n" +
@@ -246,9 +247,14 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
   auth0 phone provider update --configuration='{ "delivery_methods": ["voice"] }'
   auth0 phone provider update --configuration='{ "default_from": admin@example.com }'
   auth0 phone provider update --provider twilio --disabled=false --credentials='{ "auth_token":"NewAuthToken" }' --configuration='{ "default_from": "admin@example.com", "delivery_methods": ["voice", "text"] }'
-  auth0 phone provider update --provider custom --disabled=false --configuration='{ "delivery_methods": ["voice", "text"] }"`,
+  auth0 phone provider update --provider custom --disabled=false --configuration='{ "delivery_methods": ["voice", "text"] }'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var currentProvider *management.BrandingPhoneProvider
+			var (
+				existingProvider *management.BrandingPhoneProvider
+				credentials      *management.BrandingPhoneProviderCredential
+				configuration    *management.BrandingPhoneProviderConfiguration
+				phoneProvider    = &management.BrandingPhoneProvider{}
+			)
 
 			if len(args) == 0 {
 				if err := phoneProviderID.Pick(cmd, &inputs.id, cli.phoneProviderPickerOptions); err != nil {
@@ -259,29 +265,22 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := ansi.Waiting(func() (err error) {
-				currentProvider, err = cli.api.Branding.ReadPhoneProvider(cmd.Context(), inputs.id)
+				existingProvider, err = cli.api.Branding.ReadPhoneProvider(cmd.Context(), inputs.id)
 				return
 			}); err != nil {
 				return fmt.Errorf("failed to read phone provider: %w", err)
 			}
 
-			if err := phoneProviderName.SelectU(cmd, &inputs.name, PhoneProviderNameOptions, currentProvider.Name); err != nil {
+			if err := phoneProviderName.SelectU(cmd, &inputs.name, PhoneProviderNameOptions, existingProvider.Name); err != nil {
 				return err
 			}
 
-			if err := phoneProviderDisabled.AskBoolU(cmd, &inputs.disabled, currentProvider.Disabled); err != nil {
+			if err := phoneProviderDisabled.AskBoolU(cmd, &inputs.disabled, existingProvider.Disabled); err != nil {
 				return err
 			}
-
-			var (
-				credentials   *management.BrandingPhoneProviderCredential
-				configuration *management.BrandingPhoneProviderConfiguration
-			)
-
-			phoneProvider := &management.BrandingPhoneProvider{}
 
 			// Check if we are changing providers.
-			if len(inputs.name) > 0 && inputs.name != currentProvider.GetName() {
+			if len(inputs.name) > 0 && inputs.name != existingProvider.GetName() {
 				// Only set the name if we are changing it.
 				phoneProvider.Name = &inputs.name
 			}
@@ -331,9 +330,9 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
-	phoneProviderName.RegisterString(cmd, &inputs.name, "")
-	phoneProviderCredentials.RegisterString(cmd, &inputs.credentials, "")
-	phoneProviderConfiguration.RegisterString(cmd, &inputs.configuration, "")
+	phoneProviderName.RegisterStringU(cmd, &inputs.name, "")
+	phoneProviderCredentials.RegisterStringU(cmd, &inputs.credentials, "")
+	phoneProviderConfiguration.RegisterStringU(cmd, &inputs.configuration, "")
 	phoneProviderDisabled.RegisterBool(cmd, &inputs.disabled, false)
 
 	return cmd
@@ -345,7 +344,6 @@ func deleteBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
-		Args:    cobra.MaximumNArgs(1),
 		Short:   "Delete the phone provider",
 		Long: "Delete the phone provider.\n\n" +
 			"To delete interactively, use `auth0 phone provider delete` with no arguments.\n\n" +

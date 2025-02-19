@@ -30,10 +30,9 @@ var (
 	}
 
 	eventStreamStatus = Flag{
-		Name:       "Status",
-		LongForm:   "status",
-		Help:       "Status of the Event Stream. (enabled/disabled)",
-		IsRequired: true,
+		Name:     "Status",
+		LongForm: "status",
+		Help:     "Status of the Event Stream. (enabled/disabled)",
 	}
 
 	eventStreamSubscriptions = Flag{
@@ -190,12 +189,14 @@ func createEventStreamCmd(cli *cli) *cobra.Command {
 
 			var configuration map[string]interface{}
 
-			if err := eventStreamConfig.Ask(cmd, &inputs.Configuration, nil); err != nil {
+			if err := eventStreamConfig.Ask(cmd, &inputs.Configuration, auth0.String("{}")); err != nil {
 				return err
 			}
+
 			if err := json.Unmarshal([]byte(inputs.Configuration), &configuration); err != nil {
 				return fmt.Errorf("provider: %s event stream config invalid JSON: %w", inputs.Name, err)
 			}
+
 			if len(inputs.Configuration) == 0 {
 				return fmt.Errorf("must provider configuration for event stream")
 			}
@@ -338,10 +339,10 @@ func updateEventStreamCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	eventStreamName.RegisterString(cmd, &inputs.Name, "")
-	eventStreamStatus.RegisterString(cmd, &inputs.Status, "")
-	eventStreamSubscriptions.RegisterStringSlice(cmd, &inputs.Subscriptions, nil)
-	eventStreamConfig.RegisterString(cmd, &inputs.Configuration, "")
+	eventStreamName.RegisterStringU(cmd, &inputs.Name, "")
+	eventStreamStatus.RegisterStringU(cmd, &inputs.Status, "")
+	eventStreamSubscriptions.RegisterStringSliceU(cmd, &inputs.Subscriptions, nil)
+	eventStreamConfig.RegisterStringU(cmd, &inputs.Configuration, "")
 
 	return cmd
 }

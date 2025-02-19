@@ -1839,7 +1839,7 @@ func TestTriggerActionsResourceFetcher_FetchData(t *testing.T) {
 		defer ctrl.Finish()
 		actionAPI := mock.NewMockActionAPI(ctrl)
 
-		for _, trigger := range []string{"post-login", "credentials-exchange", "pre-user-registration", "post-user-registration", "post-change-password", "send-phone-message", "password-reset-post-challenge"} {
+		for _, trigger := range []string{"post-login", "credentials-exchange", "pre-user-registration", "post-user-registration", "post-change-password", "send-phone-message", "password-reset-post-challenge", "custom-email-provider", "custom-phone-provider"} {
 			bindings := []*management.ActionBinding{}
 
 			if trigger == "pre-user-registration" {
