@@ -94,7 +94,7 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - TEMPLATE             Verification Email (using Link)
+        - TEMPLATE             Verification Email (Link)
         - FROM                 verify@travel0.com
         - SUBJECT              Verify link
         - RESULT URL           travel0.com
@@ -109,7 +109,7 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - TEMPLATE             Verification Email (using Code)
+        - TEMPLATE             Verification Email (Code)
         - FROM                 verify@travel0.com
         - SUBJECT              Verify code
         - RESULT URL           travel0.com
