@@ -101,9 +101,7 @@ func listEventStreamsCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to list event streams: %w", err)
 			}
 
-			cli.renderer.EventStreamsList(list.EventStreams)
-
-			return nil
+			return cli.renderer.EventStreamsList(list.EventStreams)
 		},
 	}
 
@@ -145,9 +143,7 @@ func showEventStreamCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to read event stream with ID %q: %w", inputs.ID, err)
 			}
 
-			cli.renderer.EventStreamShow(eventStream)
-
-			return nil
+			return cli.renderer.EventStreamShow(eventStream)
 		},
 	}
 
@@ -222,9 +218,7 @@ func createEventStreamCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to create event stream: %w", err)
 			}
 
-			cli.renderer.EventStreamCreate(eventStream)
-
-			return nil
+			return cli.renderer.EventStreamCreate(eventStream)
 		},
 	}
 
@@ -332,9 +326,7 @@ func updateEventStreamCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to update event stream with ID %q: %w", oldEventStream.GetID(), err)
 			}
 
-			cli.renderer.EventStreamUpdate(updatedEventStream)
-
-			return nil
+			return cli.renderer.EventStreamUpdate(updatedEventStream)
 		},
 	}
 

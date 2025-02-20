@@ -1,8 +1,6 @@
 package display
 
 import (
-	"encoding/json"
-
 	"github.com/auth0/go-auth0/management"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -85,12 +83,12 @@ func (r *Renderer) PhoneProviderUpdate(phoneProvider *management.BrandingPhonePr
 }
 
 func makePhoneProviderView(phoneProvider *management.BrandingPhoneProvider) (*phoneProviderView, error) {
-	credentials, err := formatPhoneProviderCredentials(phoneProvider.Credentials)
+	credentials, err := toJSONString(phoneProvider.Credentials)
 	if err != nil {
 		return nil, err
 	}
 
-	configuration, err := formatPhoneProviderConfiguration(phoneProvider.Configuration)
+	configuration, err := toJSONString(phoneProvider.Configuration)
 	if err != nil {
 		return nil, err
 	}
@@ -104,30 +102,4 @@ func makePhoneProviderView(phoneProvider *management.BrandingPhoneProvider) (*ph
 
 		raw: phoneProvider,
 	}, nil
-}
-
-func formatPhoneProviderCredentials(credentials interface{}) (string, error) {
-	if credentials == nil {
-		return "", nil
-	}
-
-	raw, err := json.Marshal(credentials)
-	if err != nil {
-		return "", err
-	}
-
-	return string(raw), nil
-}
-
-func formatPhoneProviderConfiguration(configuration interface{}) (string, error) {
-	if configuration == nil {
-		return "", nil
-	}
-
-	raw, err := json.Marshal(configuration)
-	if err != nil {
-		return "", err
-	}
-
-	return string(raw), nil
 }

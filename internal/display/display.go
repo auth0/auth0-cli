@@ -319,3 +319,16 @@ func boolean(v bool) string {
 	}
 	return ansi.Red("✗")
 }
+
+func toJSONString(data interface{}) (string, error) {
+	if data == nil {
+		return "", nil
+	}
+
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+
+	return string(raw), nil
+}
