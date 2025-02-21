@@ -30,10 +30,9 @@ var (
 	}
 
 	eventStreamStatus = Flag{
-		Name:       "Status",
-		LongForm:   "status",
-		Help:       "Status of the Event Stream. (enabled/disabled)",
-		IsRequired: true,
+		Name:     "Status",
+		LongForm: "status",
+		Help:     "Status of the Event Stream. (enabled/disabled)",
 	}
 
 	eventStreamSubscriptions = Flag{
@@ -102,9 +101,7 @@ func listEventStreamsCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to list event streams: %w", err)
 			}
 
-			cli.renderer.EventStreamsList(list.EventStreams)
-
-			return nil
+			return cli.renderer.EventStreamsList(list.EventStreams)
 		},
 	}
 
@@ -146,9 +143,7 @@ func showEventStreamCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to read event stream with ID %q: %w", inputs.ID, err)
 			}
 
-			cli.renderer.EventStreamShow(eventStream)
-
-			return nil
+			return cli.renderer.EventStreamShow(eventStream)
 		},
 	}
 
@@ -190,12 +185,14 @@ func createEventStreamCmd(cli *cli) *cobra.Command {
 
 			var configuration map[string]interface{}
 
-			if err := eventStreamConfig.Ask(cmd, &inputs.Configuration, nil); err != nil {
+			if err := eventStreamConfig.Ask(cmd, &inputs.Configuration, auth0.String("{}")); err != nil {
 				return err
 			}
+
 			if err := json.Unmarshal([]byte(inputs.Configuration), &configuration); err != nil {
 				return fmt.Errorf("provider: %s event stream config invalid JSON: %w", inputs.Name, err)
 			}
+
 			if len(inputs.Configuration) == 0 {
 				return fmt.Errorf("must provider configuration for event stream")
 			}
@@ -221,9 +218,7 @@ func createEventStreamCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to create event stream: %w", err)
 			}
 
-			cli.renderer.EventStreamCreate(eventStream)
-
-			return nil
+			return cli.renderer.EventStreamCreate(eventStream)
 		},
 	}
 
@@ -331,17 +326,15 @@ func updateEventStreamCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to update event stream with ID %q: %w", oldEventStream.GetID(), err)
 			}
 
-			cli.renderer.EventStreamUpdate(updatedEventStream)
-
-			return nil
+			return cli.renderer.EventStreamUpdate(updatedEventStream)
 		},
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	eventStreamName.RegisterString(cmd, &inputs.Name, "")
-	eventStreamStatus.RegisterString(cmd, &inputs.Status, "")
-	eventStreamSubscriptions.RegisterStringSlice(cmd, &inputs.Subscriptions, nil)
-	eventStreamConfig.RegisterString(cmd, &inputs.Configuration, "")
+	eventStreamName.RegisterStringU(cmd, &inputs.Name, "")
+	eventStreamStatus.RegisterStringU(cmd, &inputs.Status, "")
+	eventStreamSubscriptions.RegisterStringSliceU(cmd, &inputs.Subscriptions, nil)
+	eventStreamConfig.RegisterStringU(cmd, &inputs.Configuration, "")
 
 	return cmd
 }

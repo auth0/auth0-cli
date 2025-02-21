@@ -1,8 +1,6 @@
 package display
 
 import (
-	"encoding/json"
-
 	"github.com/auth0/go-auth0/management"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -85,12 +83,12 @@ func (r *Renderer) EmailProviderUpdate(emailProvider *management.EmailProvider) 
 }
 
 func makeEmailProviderView(emailProvider *management.EmailProvider) (*emailProviderView, error) {
-	credentials, err := formatProviderCredentials(emailProvider.Credentials)
+	credentials, err := toJSONString(emailProvider.Credentials)
 	if err != nil {
 		return nil, err
 	}
 
-	settings, err := formatProviderSettings(emailProvider.Settings)
+	settings, err := toJSONString(emailProvider.Settings)
 	if err != nil {
 		return nil, err
 	}
@@ -104,30 +102,4 @@ func makeEmailProviderView(emailProvider *management.EmailProvider) (*emailProvi
 
 		raw: emailProvider,
 	}, nil
-}
-
-func formatProviderCredentials(credentials interface{}) (string, error) {
-	if credentials == nil {
-		return "", nil
-	}
-
-	raw, err := json.Marshal(credentials)
-	if err != nil {
-		return "", err
-	}
-
-	return string(raw), nil
-}
-
-func formatProviderSettings(settings interface{}) (string, error) {
-	if settings == nil {
-		return "", nil
-	}
-
-	raw, err := json.Marshal(settings)
-	if err != nil {
-		return "", err
-	}
-
-	return string(raw), nil
 }

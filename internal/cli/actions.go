@@ -73,6 +73,7 @@ var (
 		"post-change-password":   actionTemplatePostChangePassword,
 		"send-phone-message":     actionTemplateSendPhoneMessage,
 		"custom-email-provider":  actionTemplateCustomEmailProvider,
+		"custom-phone-provider":  actionTemplateCustomPhoneProvider,
 	}
 )
 

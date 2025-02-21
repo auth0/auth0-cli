@@ -1,7 +1,6 @@
 package display
 
 import (
-	"encoding/json"
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
@@ -42,43 +41,79 @@ func (v *eventStreamView) Object() interface{} {
 	return v.raw
 }
 
-func (r *Renderer) EventStreamsList(eventStreams []*management.EventStream) {
+func (r *Renderer) EventStreamsList(eventStreams []*management.EventStream) error {
 	resource := "event streams"
 
 	r.Heading(resource)
 
 	if len(eventStreams) == 0 {
 		r.EmptyState(resource, "Use 'auth0 events create' to add one")
-		return
+		return nil
 	}
 
 	var res []View
 	for _, e := range eventStreams {
-		res = append(res, makeEventStreamView(e))
+		view, err := makeEventStreamView(e)
+		if err != nil {
+			return err
+		}
+
+		res = append(res, view)
 	}
 
 	r.Results(res)
+
+	return nil
 }
 
-func (r *Renderer) EventStreamShow(eventStream *management.EventStream) {
+func (r *Renderer) EventStreamShow(eventStream *management.EventStream) error {
 	r.Heading("eventStream")
-	r.Result(makeEventStreamView(eventStream))
+
+	view, err := makeEventStreamView(eventStream)
+	if err != nil {
+		return err
+	}
+
+	r.Result(view)
+
+	return nil
 }
 
-func (r *Renderer) EventStreamCreate(eventStream *management.EventStream) {
+func (r *Renderer) EventStreamCreate(eventStream *management.EventStream) error {
 	r.Heading("eventStream created")
-	r.Result(makeEventStreamView(eventStream))
+
+	view, err := makeEventStreamView(eventStream)
+	if err != nil {
+		return err
+	}
+
+	r.Result(view)
+
+	return nil
 }
 
-func (r *Renderer) EventStreamUpdate(eventStream *management.EventStream) {
+func (r *Renderer) EventStreamUpdate(eventStream *management.EventStream) error {
 	r.Heading("eventStream updated")
-	r.Result(makeEventStreamView(eventStream))
+
+	view, err := makeEventStreamView(eventStream)
+	if err != nil {
+		return err
+	}
+
+	r.Result(view)
+
+	return nil
 }
 
-func makeEventStreamView(eventStream *management.EventStream) *eventStreamView {
+func makeEventStreamView(eventStream *management.EventStream) (*eventStreamView, error) {
 	var subscriptions []string
 	for _, subs := range eventStream.GetSubscriptions() {
 		subscriptions = append(subscriptions, subs.GetEventStreamSubscriptionType())
+	}
+
+	configuration, err := toJSONString(eventStream.GetDestination().GetEventStreamDestinationConfiguration())
+	if err != nil {
+		return nil, err
 	}
 
 	return &eventStreamView{
@@ -87,18 +122,7 @@ func makeEventStreamView(eventStream *management.EventStream) *eventStreamView {
 		Type:          eventStream.Destination.GetEventStreamDestinationType(),
 		Status:        eventStream.GetStatus(),
 		Subscriptions: subscriptions,
-		Configuration: formatConfiguration(eventStream.GetDestination().GetEventStreamDestinationConfiguration()),
+		Configuration: configuration,
 		raw:           eventStream,
-	}
-}
-
-func formatConfiguration(cfg map[string]interface{}) string {
-	if cfg == nil {
-		return ""
-	}
-	raw, err := json.Marshal(cfg)
-	if err != nil {
-		return ""
-	}
-	return string(raw)
+	}, nil
 }

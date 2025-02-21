@@ -161,6 +161,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(rolesCmd(cli))
 	rootCmd.AddCommand(organizationsCmd(cli))
 	rootCmd.AddCommand(universalLoginCmd(cli))
+	rootCmd.AddCommand(phoneCmd(cli))
 	rootCmd.AddCommand(emailCmd(cli))
 	rootCmd.AddCommand(customDomainsCmd(cli))
 	rootCmd.AddCommand(quickstartsCmd(cli))
