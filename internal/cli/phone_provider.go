@@ -48,7 +48,6 @@ var (
 		ShortForm:    "c",
 		Help:         "Credentials for the phone provider, formatted as JSON.",
 		AlwaysPrompt: true,
-		IsRequired:   true,
 	}
 
 	phoneProviderConfiguration = Flag{
@@ -77,6 +76,7 @@ func phoneProviderCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(listBrandingPhoneProviderCmd(cli))
 	cmd.AddCommand(showBrandingPhoneProviderCmd(cli))
 	cmd.AddCommand(createBrandingPhoneProviderCmd(cli))
 	cmd.AddCommand(updateBrandingPhoneProviderCmd(cli))
@@ -120,6 +120,36 @@ func showBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+func listBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "List your Phone providers",
+		Long:    "List your existing Phone providers. Currently we can create a max of 1 phone Provider, If none are created, you can create one by running `auth0 phone provider create`.",
+		Example: `  auth0 phone provider list
+  auth0 phone provider ls 
+  auth0 phone provider ls --json
+  auth0 phone provider ls --csv`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var list *management.BrandingPhoneProviderList
+			if err := ansi.Waiting(func() (err error) {
+				list, err = cli.api.Branding.ListPhoneProviders(cmd.Context())
+				return err
+			}); err != nil {
+				return fmt.Errorf("failed to list phone providers: %w", err)
+			}
+
+			return cli.renderer.PhoneProviderList(list.Providers)
+		},
+	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+
+	return cmd
+}
+
 func createBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		name          string
@@ -149,7 +179,7 @@ func createBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			var credentials *management.BrandingPhoneProviderCredential
+			var credentials management.BrandingPhoneProviderCredential
 
 			if inputs.name != phoneProviderCustom {
 				if err := phoneProviderCredentials.Ask(cmd, &inputs.credentials, auth0.String("{}")); err != nil {
@@ -178,7 +208,7 @@ func createBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 				Disabled: &inputs.disabled,
 			}
 
-			phoneProvider.Credentials = credentials
+			phoneProvider.Credentials = &credentials
 
 			if configuration != nil {
 				phoneProvider.Configuration = configuration
@@ -242,7 +272,7 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 			"through the flags.",
 		Example: `  auth0 phone provider update
   auth0 phone provider update --json
-  auth0 phone provider update --disabled=false
+  auth0 phone provider update --disabled
   auth0 phone provider update --credentials='{ "auth_token":"NewAuthToken" }'
   auth0 phone provider update --configuration='{ "delivery_methods": ["voice"] }'
   auth0 phone provider update --configuration='{ "default_from": admin@example.com }'

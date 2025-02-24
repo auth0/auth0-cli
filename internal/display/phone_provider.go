@@ -42,6 +42,30 @@ func (v *phoneProviderView) KeyValues() [][]string {
 	}
 }
 
+func (r *Renderer) PhoneProviderList(phoneProviders []*management.BrandingPhoneProvider) error {
+	resource := "phone providers"
+
+	r.Heading(resource)
+
+	if len(phoneProviders) == 0 {
+		r.EmptyState(resource, "Use 'auth0 actions create' to add one")
+		return nil
+	}
+
+	var res []View
+	for _, p := range phoneProviders {
+		view, err := makePhoneProviderView(p)
+		if err != nil {
+			return err
+		}
+
+		res = append(res, view)
+	}
+
+	r.Results(res)
+	return nil
+}
+
 func (r *Renderer) PhoneProviderShow(phoneProvider *management.BrandingPhoneProvider) error {
 	r.Heading("phone provider")
 	view, err := makePhoneProviderView(phoneProvider)

@@ -44,6 +44,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
+//replace github.com/auth0/go-auth0 v1.16.1-0.20250212051907-88b14d38822d => /Users/ramyaanusri.ankisetty/go/src/projects/okta/go-auth0
+
 require (
 	github.com/ProtonMail/go-crypto v1.1.0-alpha.2 // indirect
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
