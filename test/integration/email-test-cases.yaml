@@ -124,7 +124,7 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - TEMPLATE             reset_email
+        - TEMPLATE             Change Password (Link)
         - FROM                 change-password@travel0.com
         - SUBJECT              Change password
         - RESULT URL           travel0.com

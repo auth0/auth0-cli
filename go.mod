@@ -8,7 +8,7 @@ replace github.com/mholt/archiver/v3 => github.com/anchore/archiver/v3 v3.5.2
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/PuerkitoBio/rehttp v1.4.0
-	github.com/auth0/go-auth0 v1.16.1-0.20250212051907-88b14d38822d
+	github.com/auth0/go-auth0 v1.17.1-0.20250224070739-0a1e74dc9bc6
 	github.com/briandowns/spinner v1.23.1
 	github.com/charmbracelet/glamour v0.8.0
 	github.com/fsnotify/fsnotify v1.7.0
@@ -43,8 +43,6 @@ require (
 	golang.org/x/text v0.21.0
 	gopkg.in/yaml.v2 v2.4.0
 )
-
-//replace github.com/auth0/go-auth0 v1.16.1-0.20250212051907-88b14d38822d => /Users/ramyaanusri.ankisetty/go/src/projects/okta/go-auth0
 
 require (
 	github.com/ProtonMail/go-crypto v1.1.0-alpha.2 // indirect
