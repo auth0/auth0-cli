@@ -96,6 +96,26 @@ var allowedPromptsWithPartials = []management.PromptType{
 	management.PromptLoginPasswordLess,
 }
 
+var ScreenPromptMap = map[string][]string{
+	"signup-id":                   {"signup-id"},
+	"signup-password":             {"signup-password"},
+	"login-id":                    {"login-id"},
+	"login-password":              {"login-password"},
+	"login-passwordless":          {"login-passwordless-email-code", "login-passwordless-sms-otp"},
+	"phone-identifier-enrollment": {"phone-identifier-enrollment"},
+	"phone-identifier-challenge":  {"phone-identifier-challenge"},
+	"email-identifier-challenge":  {"email-identifier-challenge"},
+	"passkeys":                    {"passkey-enrollment", "passkey-enrollment-local"},
+	"captcha":                     {"interstitial-captcha"},
+	"login":                       {"login"},
+	"signup":                      {"signup"},
+	"reset-password":              {"reset-password-request", "reset-password-email", "reset-password", "reset-password-success", "reset-password-error"},
+	"mfa":                         {"mfa-detect-browser-capabilities", "mfa-enroll-result", "mfa-begin-enroll-options", "mfa-login-options"},
+	"mfa-email":                   {"mfa-email-challenge", "mfa-email-list"},
+	"mfa-sms":                     {"mfa-country-codes", "mfa-sms-challenge", "mfa-sms-enrollment", "mfa-sms-list"},
+	"mfa-push":                    {"mfa-push-challenge-push", "mfa-push-enrollment-qr", "mfa-push-list", "mfa-push-welcome"},
+}
+
 type partialsData map[string]*management.PromptScreenPartials
 
 type (
