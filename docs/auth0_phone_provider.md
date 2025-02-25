@@ -11,6 +11,7 @@ Manage custom and twilio phone provider for the tenant.
 
 - [auth0 phone provider create](auth0_phone_provider_create.md) - Create the phone provider
 - [auth0 phone provider delete](auth0_phone_provider_delete.md) - Delete the phone provider
+- [auth0 phone provider list](auth0_phone_provider_list.md) - List your Phone providers
 - [auth0 phone provider show](auth0_phone_provider_show.md) - Show the Phone provider
 - [auth0 phone provider update](auth0_phone_provider_update.md) - Update the phone provider
 

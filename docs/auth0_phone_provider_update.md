@@ -21,7 +21,7 @@ auth0 phone provider update [flags]
 ```
   auth0 phone provider update
   auth0 phone provider update --json
-  auth0 phone provider update --disabled=false
+  auth0 phone provider update --disabled
   auth0 phone provider update --credentials='{ "auth_token":"NewAuthToken" }'
   auth0 phone provider update --configuration='{ "delivery_methods": ["voice"] }'
   auth0 phone provider update --configuration='{ "default_from": admin@example.com }'
@@ -55,6 +55,7 @@ auth0 phone provider update [flags]
 
 - [auth0 phone provider create](auth0_phone_provider_create.md) - Create the phone provider
 - [auth0 phone provider delete](auth0_phone_provider_delete.md) - Delete the phone provider
+- [auth0 phone provider list](auth0_phone_provider_list.md) - List your Phone providers
 - [auth0 phone provider show](auth0_phone_provider_show.md) - Show the Phone provider
 - [auth0 phone provider update](auth0_phone_provider_update.md) - Update the phone provider
 
