@@ -241,10 +241,14 @@ func (m *webSocketMessage) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type customizationInputs struct {
+type promptScreen struct {
 	promptName string
 	screenName string
-	filePath   string
+}
+
+type customizationInputs struct {
+	promptScreen
+	filePath string
 }
 
 func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
@@ -282,6 +286,8 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
+			cli.renderer.Infof("Tip : Use `auth0 ul switch` to switch the rendering-modes between standard and advanced mode")
+
 			if err := renderingMode.Select(cmd, &selectedRenderingMode, []string{advancedMode, standardMode}, nil); err != nil {
 				return err
 			}
@@ -304,7 +310,7 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 }
 
 func advanceCustomize(cmd *cobra.Command, cli *cli, input customizationInputs) error {
-	err := fetchPromptScreenInfo(cmd, &input)
+	err := fetchPromptScreenInfo(cmd, &input.promptScreen)
 	if err != nil {
 		return err
 	}
@@ -327,7 +333,7 @@ func advanceCustomize(cmd *cobra.Command, cli *cli, input customizationInputs) e
 	return nil
 }
 
-func fetchPromptScreenInfo(cmd *cobra.Command, input *customizationInputs) error {
+func fetchPromptScreenInfo(cmd *cobra.Command, input *promptScreen) error {
 	if input.promptName == "" {
 		if err := promptName.Select(cmd, &input.promptName, fetchKeys(ScreenPromptMap), nil); err != nil {
 			return handleInputError(err)
@@ -375,7 +381,7 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input customizationInputs
 		promptScreenSettings = string(jsonData)
 	}
 
-	err = ruleScript.OpenEditor(cmd, &headTags, promptScreenSettings, input.promptName+"_"+input.screenName+".json", cli.ruleEditorHint)
+	err = ruleScript.OpenEditor(cmd, &headTags, promptScreenSettings, input.promptName+"_"+input.screenName+".json", cli.customizeEditorHint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to capture input from the editor: %w", err)
 	}
@@ -386,6 +392,10 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input customizationInputs
 	}
 
 	return renderSettings, nil
+}
+
+func (c *cli) customizeEditorHint() {
+	c.renderer.Infof("%s Once you close the editor, the shown settings will be saved. To cancel, press CTRL+C.", ansi.Faint("Hint:"))
 }
 
 // Utility function to get all keys from a map.
@@ -1006,4 +1016,58 @@ func saveUniversalLoginBrandingData(ctx context.Context, api *auth0.API, data *u
 	}
 
 	return group.Wait()
+}
+
+func switchUniversalLoginRendererModeCmd(cli *cli) *cobra.Command {
+	var (
+		selectedRenderingMode string
+		input                 promptScreen
+	)
+
+	cmd := &cobra.Command{
+		Use:   "switch",
+		Args:  cobra.NoArgs,
+		Short: "Switch the rendering mode for Universal Login",
+		Long:  "Switch the rendering mode for Universal Login. Note that this requires a custom domain to be configured for the tenant.",
+		Example: `  auth0 universal-login switch
+  auth0 universal-login switch --rendering-mode standard 
+  auth0 ul switch --rendering-mode advanced --prompt login-id --screen login-id
+  auth0 ul switch -r standard -p login-id -s login-id`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := fetchPromptScreenInfo(cmd, &input)
+			if err != nil {
+				return err
+			}
+
+			if err := renderingMode.Select(cmd, &selectedRenderingMode, []string{advancedMode, standardMode}, nil); err != nil {
+				return err
+			}
+
+			if err = ansi.Waiting(func() error {
+				rendererMode := management.RenderingMode(selectedRenderingMode)
+				return cli.api.Prompt.UpdateRendering(cmd.Context(), management.PromptType(input.promptName), management.ScreenName(input.screenName), &management.PromptRendering{RenderingMode: &rendererMode})
+			}); err != nil {
+				return fmt.Errorf("failed to switch the rendering mode for the prompt - %s, screen - %s : %w", ansi.Green(input.promptName), ansi.Green(input.screenName), err)
+			}
+
+			//cli.renderer.Infof("successfully switched the rendering mode to %s for the prompt - %s, screen - %s", ansi.Green(selectedRenderingMode), ansi.Green(input.promptName), ansi.Green(input.screenName))
+			cli.renderer.Infof(
+				"%s switched the rendering mode to %s for Prompt: %s and Screen: %s\n",
+				ansi.Green("✅ Successfully"),
+				ansi.Green(selectedRenderingMode),
+				ansi.Green(input.promptName),
+				ansi.Green(input.screenName),
+			)
+
+			cli.renderer.Infof("Use `auth0 universal-login customize` to customize the Universal Login Experience")
+
+			return nil
+		},
+	}
+
+	promptName.RegisterString(cmd, &input.promptName, "")
+	screenName.RegisterString(cmd, &input.screenName, "")
+	renderingMode.RegisterString(cmd, &selectedRenderingMode, "")
+
+	return cmd
 }
