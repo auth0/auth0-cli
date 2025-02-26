@@ -94,7 +94,30 @@ Additional scopes may need to be requested during authentication step via the %s
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation when using the delete method.")
 	apiFlags.Data.RegisterString(cmd, &inputs.RawData, "")
 	apiFlags.QueryParams.RegisterStringMap(cmd, &inputs.RawQueryParams, nil)
+	
+	// Add the get-token subcommand
+	apiGetTokenCmd := &cobra.Command{
+		Use:   "get-token",
+		Short: "Display the access token for the current tenant",
+		Long:  "Output the access token for the current tenant (used by integrations)",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := cli.setupWithAuthentication(cmd.Context()); err != nil {
+				return err
+			}
 
+			tenant, err := cli.Config.GetTenant(cli.tenant)
+			if err != nil {
+				return err
+			}
+
+			// Simply output the token, nothing else
+			fmt.Fprint(cmd.OutOrStdout(), tenant.GetAccessToken())
+			return nil
+		},
+	}
+	
+	cmd.AddCommand(apiGetTokenCmd)
+	
 	return cmd
 }
 
