@@ -1,4 +1,4 @@
-# 🚀 Universal Login Rendering Mode & Customization Guide
+# 🚀 Universal Login Customization Guide
 
 Welcome to the **Universal Login Customization Guide**! 🎨  
 This document provides essential information on **configuring the rendering mode** and **customizing head tags** for Universal Login.

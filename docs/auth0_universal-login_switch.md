@@ -16,9 +16,9 @@ auth0 universal-login switch [flags]
 
 ```
   auth0 universal-login switch
-  auth0 universal-login switch --rendering-mode standard 
-  auth0 ul switch --rendering-mode advanced --prompt login-id --screen login-id
-  auth0 ul switch -r standard -p login-id -s login-id
+  auth0 universal-login switch --prompt login-id --screen login-id --rendering-mode standard
+  auth0 ul switch --prompt login-id --screen login-id --rendering-mode advanced
+  auth0 ul switch -p login-id -s login-id -r standard
 ```
 
 
