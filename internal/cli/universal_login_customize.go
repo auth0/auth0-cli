@@ -295,7 +295,7 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			// cli.renderer.Infof("Tip : Use `auth0 ul switch` to switch the rendering-modes between standard and advanced mode")
+			cli.renderer.Infof("Tip : Use `auth0 ul switch` to switch the rendering-modes between standard and advanced mode")
 
 			if selectedRenderingMode == "" {
 				cli.renderer.Infof("Please select a rendering mode to customize:")
@@ -416,7 +416,7 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input customizationInputs
 
 	promptScreenSettings["___customization guide___"] = "https://github.com/auth0/auth0-cli/blob/enhance-auth0-experience-for-UL/CUSTOMIZATION_GUIDE.md"
 
-	// Step 5: Marshal final JSON once
+	// Step 5: Marshal final JSON once.
 	finalJSON, err := json.MarshalIndent(promptScreenSettings, "", "  ")
 	if err != nil {
 		fmt.Println("Error generating final JSON:", err)
