@@ -25,11 +25,11 @@ auth0 universal-login switch [flags]
 ## Flags
 
 ```
-  -p, --prompt string           Name of the prompt to customize.
+  -p, --prompt string           Name of the prompt to to switch or customize.
   -r, --rendering-mode string   standardMode is recommended for customizating consistent, branded experience for users.
                                 Alternatively, advancedMode is recommended for full customization/granular control of the login experience and to integrate own component design system
                                 
-  -s, --screen string           Name of the screen to customize.
+  -s, --screen string           Name of the screen to to switch or customize.
 ```
 
 
