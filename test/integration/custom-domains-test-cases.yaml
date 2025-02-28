@@ -3,19 +3,19 @@ config:
   retries: 1
 
 tests:
-#  001 - list domains with no results:
-#    command: auth0 domains list
-#    exit-code: 0
-#    stderr:
-#      contains:
-#        - No custom domains available.
-#        - Use 'auth0 domains create' to add one
-#
-#  002 - list domains with no results (json):
-#    command: auth0 domains list --json
-#    exit-code: 0
-#    stdout:
-#      exactly: "[]"
+  001 - list domains with no results:
+    command: auth0 domains list
+    exit-code: 0
+    stderr:
+      contains:
+        - No custom domains available.
+        - Use 'auth0 domains create' to add one
+
+  002 - list domains with no results (json):
+    command: auth0 domains list --json
+    exit-code: 0
+    stdout:
+      exactly: "[]"
 
   003 - create domain with minimal flags:
     command: auth0 domains create --domain "auth0-cli-integration-test.com" --no-input
@@ -34,68 +34,68 @@ tests:
       contains:
         - "Failed to create custom domain \"auth0-cli-integration-test.com\": 409 Conflict: The specified custom domain already exists"
 
-#  005 - show domain:
-#    command: auth0 domains show $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
-#    exit-code: 0
-#    stdout:
-#      contains:
-#        - "ID                         cd_"
-#        - "DOMAIN                     auth0-cli-integration-test.com"
-#        - "STATUS                     pending_verification"
-#        - "PROVISIONING TYPE          auth0_managed_certs"
-#
-#  006 - update domain minimal flags:
-#    command: auth0 domains update $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
-#    exit-code: 0
-#    stdout:
-#      contains:
-#        - "ID                         cd_"
-#        - "DOMAIN                     auth0-cli-integration-test.com"
-#        - "STATUS                     pending_verification"
-#        - "PROVISIONING TYPE          auth0_managed_certs"
-#
-#  007 - update domain maximal flags:
-#    command: auth0 domains update $(./test/integration/scripts/get-custom-domain-id.sh) --policy recommended --no-input
-#    exit-code: 0
-#    stdout:
-#      contains:
-#        - "ID                         cd_"
-#        - "DOMAIN                     auth0-cli-integration-test.com"
-#        - "STATUS                     pending_verification"
-#        - "PROVISIONING TYPE          auth0_managed_certs"
-#        - "TLS POLICY                 recommended"
-#
-#  008 - verify domain:
-#    command: auth0 domains update $(./test/integration/scripts/get-custom-domain-id.sh) --policy recommended --no-input
-#    exit-code: 0
-#    stdout:
-#      contains:
-#        - "ID                         cd_"
-#        - "DOMAIN                     auth0-cli-integration-test.com"
-#        - "PROVISIONING TYPE          auth0_managed_certs"
-#        - "TLS POLICY                 recommended"
-#
-#  009 - delete domain:
-#    command: auth0 domains delete $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
-#    exit-code: 0
-#
-#  010 - create domain with maximal flags:
-#    command: auth0 domains create --domain "auth0-cli-integration-test.com" --verification txt --type self --policy recommended --no-input
-#    exit-code: 0
-#    stdout:
-#      contains:
-#        - "ID                         cd_"
-#        - "DOMAIN                     auth0-cli-integration-test.com"
-#        - "STATUS                     pending_verification"
-#        - "PROVISIONING TYPE          self_managed_certs"
-#        - "VERIFICATION METHOD        TXT"
-#        - "TLS POLICY                 recommended"
-#
-#  011 - list custom domains with results:
-#    command: auth0 domains list
-#    exit-code: 0
-#    stdout:
-#      contains:
-#        - "ID                   DOMAIN                          STATUS"
-#        - "cd_"
-#        - "auth0-cli-integration-test.com"
+  005 - show domain:
+    command: auth0 domains show $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - "ID                         cd_"
+        - "DOMAIN                     auth0-cli-integration-test.com"
+        - "STATUS                     pending_verification"
+        - "PROVISIONING TYPE          auth0_managed_certs"
+
+  006 - update domain minimal flags:
+    command: auth0 domains update $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - "ID                         cd_"
+        - "DOMAIN                     auth0-cli-integration-test.com"
+        - "STATUS                     pending_verification"
+        - "PROVISIONING TYPE          auth0_managed_certs"
+
+  007 - update domain maximal flags:
+    command: auth0 domains update $(./test/integration/scripts/get-custom-domain-id.sh) --policy recommended --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - "ID                         cd_"
+        - "DOMAIN                     auth0-cli-integration-test.com"
+        - "STATUS                     pending_verification"
+        - "PROVISIONING TYPE          auth0_managed_certs"
+        - "TLS POLICY                 recommended"
+
+  008 - verify domain:
+    command: auth0 domains update $(./test/integration/scripts/get-custom-domain-id.sh) --policy recommended --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - "ID                         cd_"
+        - "DOMAIN                     auth0-cli-integration-test.com"
+        - "PROVISIONING TYPE          auth0_managed_certs"
+        - "TLS POLICY                 recommended"
+
+  009 - delete domain:
+    command: auth0 domains delete $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
+    exit-code: 0
+
+  010 - create domain with maximal flags:
+    command: auth0 domains create --domain "auth0-cli-integration-test.com" --verification txt --type self --policy recommended --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - "ID                         cd_"
+        - "DOMAIN                     auth0-cli-integration-test.com"
+        - "STATUS                     pending_verification"
+        - "PROVISIONING TYPE          self_managed_certs"
+        - "VERIFICATION METHOD        TXT"
+        - "TLS POLICY                 recommended"
+
+  011 - list custom domains with results:
+    command: auth0 domains list
+    exit-code: 0
+    stdout:
+      contains:
+        - "ID                   DOMAIN                          STATUS"
+        - "cd_"
+        - "auth0-cli-integration-test.com"
