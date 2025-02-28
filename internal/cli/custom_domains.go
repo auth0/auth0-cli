@@ -109,7 +109,7 @@ func listCustomDomainsCmd(cli *cli) *cobra.Command {
 			var list []*management.CustomDomain
 
 			if err := ansi.Waiting(func() (err error) {
-				list, err = cli.api.CustomDomain.List(cmd.Context(), management.PerPage(defaultPageSize))
+				list, err = cli.api.CustomDomain.List(cmd.Context())
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to list custom domains: %w", err)
