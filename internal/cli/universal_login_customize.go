@@ -330,7 +330,7 @@ func advanceCustomize(cmd *cobra.Command, cli *cli, input customizationInputs) e
 	renderSettings, err := fetchRenderSettings(cmd, cli, input)
 	if errors.Is(err, ErrNoChangesDetected) {
 		currMode := "standard"
-		if renderSettings.RenderingMode != nil {
+		if renderSettings != nil && renderSettings.RenderingMode != nil {
 			currMode = string(*renderSettings.RenderingMode)
 		}
 
