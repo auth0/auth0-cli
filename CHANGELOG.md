@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Optimize universal-login commands [#1142]
+
+### Removed
+
 - Remove unsupported query params from the domains list implementation [1144]
 
 
