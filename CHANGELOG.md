@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- Remove unsupported query params from the domains list implementation [1144]
+- Remove unsupported query params from the domains list implementation [#1144]
 
 
 # [v.1.9.1](https://github.com/auth0/auth0-cli/tree/v1.9.1) (Feb 21, 2025))
