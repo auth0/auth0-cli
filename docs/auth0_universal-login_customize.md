@@ -40,11 +40,11 @@ auth0 universal-login customize [flags]
 ## Flags
 
 ```
-  -p, --prompt string           Name of the prompt to customize.
+  -p, --prompt string           Name of the prompt to to switch or customize.
   -r, --rendering-mode string   standardMode is recommended for customizating consistent, branded experience for users.
                                 Alternatively, advancedMode is recommended for full customization/granular control of the login experience and to integrate own component design system
                                 
-  -s, --screen string           Name of the screen to customize.
+  -s, --screen string           Name of the screen to to switch or customize.
   -f, --settings-file string    File to save the rendering configs to.
 ```
 
@@ -64,6 +64,7 @@ auth0 universal-login customize [flags]
 - [auth0 universal-login customize](auth0_universal-login_customize.md) - Customize the Universal Login experience for the standard or advanced mode
 - [auth0 universal-login prompts](auth0_universal-login_prompts.md) - Manage custom text for prompts
 - [auth0 universal-login show](auth0_universal-login_show.md) - Display the custom branding settings for Universal Login
+- [auth0 universal-login switch](auth0_universal-login_switch.md) - Switch the rendering mode for Universal Login
 - [auth0 universal-login templates](auth0_universal-login_templates.md) - Manage custom Universal Login templates
 - [auth0 universal-login update](auth0_universal-login_update.md) - Update the custom branding settings for Universal Login
 

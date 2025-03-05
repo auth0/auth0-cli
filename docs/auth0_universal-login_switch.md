@@ -3,28 +3,33 @@ layout: default
 parent: auth0 universal-login
 has_toc: false
 ---
-# auth0 universal-login show
+# auth0 universal-login switch
 
-Display the custom branding settings for Universal Login.
+Switch the rendering mode for Universal Login. Note that this requires a custom domain to be configured for the tenant.
 
 ## Usage
 ```
-auth0 universal-login show [flags]
+auth0 universal-login switch [flags]
 ```
 
 ## Examples
 
 ```
-  auth0 universal-login show
-  auth0 ul show
-  auth0 ul show --json
+  auth0 universal-login switch
+  auth0 universal-login switch --prompt login-id --screen login-id --rendering-mode standard
+  auth0 ul switch --prompt login-id --screen login-id --rendering-mode advanced
+  auth0 ul switch -p login-id -s login-id -r standard
 ```
 
 
 ## Flags
 
 ```
-      --json   Output in json format.
+  -p, --prompt string           Name of the prompt to to switch or customize.
+  -r, --rendering-mode string   standardMode is recommended for customizating consistent, branded experience for users.
+                                Alternatively, advancedMode is recommended for full customization/granular control of the login experience and to integrate own component design system
+                                
+  -s, --screen string           Name of the screen to to switch or customize.
 ```
 
 
