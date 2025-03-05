@@ -414,7 +414,7 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input customizationInputs
 		}
 	}
 
-	promptScreenSettings["___customization guide___"] = "https://github.com/auth0/auth0-cli/blob/enhance-auth0-experience-for-UL/CUSTOMIZATION_GUIDE.md"
+	promptScreenSettings["___customization guide___"] = "https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"
 
 	// Step 5: Marshal final JSON once.
 	finalJSON, err := json.MarshalIndent(promptScreenSettings, "", "  ")
