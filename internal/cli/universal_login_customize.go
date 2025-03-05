@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bytes"
 	"context"
 	"embed"
 	"encoding/json"
@@ -12,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 
@@ -322,6 +322,8 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 }
 
 func advanceCustomize(cmd *cobra.Command, cli *cli, input customizationInputs) error {
+	var currMode = "standard"
+
 	err := fetchPromptScreenInfo(cmd, cli, &input.promptScreen, "customize")
 	if err != nil {
 		return err
@@ -329,12 +331,11 @@ func advanceCustomize(cmd *cobra.Command, cli *cli, input customizationInputs) e
 
 	renderSettings, err := fetchRenderSettings(cmd, cli, input)
 	if errors.Is(err, ErrNoChangesDetected) {
-		currMode := "standard"
 		if renderSettings != nil && renderSettings.RenderingMode != nil {
 			currMode = string(*renderSettings.RenderingMode)
 		}
 
-		cli.renderer.Infof("Current rendering mode for prompt '%s' and screen '%s': %s", ansi.Green(input.promptName), ansi.Green(input.screenName), ansi.Green(currMode))
+		cli.renderer.Infof("Current rendering mode for prompt '%s' and screen '%s': %s", ansi.Green(input.promptName), ansi.Green(input.screenName), ansi.Blue(currMode))
 		return nil
 	}
 
@@ -354,7 +355,7 @@ func advanceCustomize(cmd *cobra.Command, cli *cli, input customizationInputs) e
 		"Successfully updated the rendering settings: Prompt '%s', Screen '%s',Rendering-Mode '%s'.",
 		ansi.Green(input.promptName),
 		ansi.Green(input.screenName),
-		ansi.Green(string(*renderSettings.RenderingMode)),
+		ansi.Green(currMode),
 	)
 
 	return nil
@@ -382,9 +383,11 @@ func fetchPromptScreenInfo(cmd *cobra.Command, cli *cli, input *promptScreen, ac
 
 func fetchRenderSettings(cmd *cobra.Command, cli *cli, input customizationInputs) (*management.PromptRendering, error) {
 	var (
-		userRenderSettings   string
-		renderSettings       = &management.PromptRendering{}
-		promptScreenSettings = map[string]interface{}{}
+		userRenderSettings string
+		renderSettings     = &management.PromptRendering{}
+		existingSettings   = map[string]interface{}{}
+		currentSettings    = map[string]interface{}{}
+		readRenderingJSON  []byte
 	)
 
 	if input.filePath != "" {
@@ -401,23 +404,22 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input customizationInputs
 		return renderSettings, nil
 	}
 
+	// Fetch existing render settings from the API.
 	existingRenderSettings, err := cli.api.Prompt.ReadRendering(cmd.Context(), management.PromptType(input.promptName), management.ScreenName(input.screenName))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch the existing render settings: %w", err)
 	}
 
-	if existingRenderSettings != nil {
-		readRenderingJSON, _ := json.MarshalIndent(existingRenderSettings, "", "  ")
-
-		if err := json.Unmarshal(readRenderingJSON, &promptScreenSettings); err != nil {
-			fmt.Println("Error parsing readRendering JSON:", err)
-		}
+	// Marshal existing render settings into JSON and parse into a map.
+	readRenderingJSON, _ = json.MarshalIndent(existingRenderSettings, "", "  ")
+	if err := json.Unmarshal(readRenderingJSON, &existingSettings); err != nil {
+		fmt.Println("Error parsing readRendering JSON:", err)
 	}
 
-	promptScreenSettings["___customization guide___"] = "https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"
+	existingSettings["___customization guide___"] = "https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"
 
 	// Step 5: Marshal final JSON once.
-	finalJSON, err := json.MarshalIndent(promptScreenSettings, "", "  ")
+	finalJSON, err := json.MarshalIndent(existingSettings, "", "  ")
 	if err != nil {
 		fmt.Println("Error generating final JSON:", err)
 	}
@@ -427,14 +429,20 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input customizationInputs
 		return nil, fmt.Errorf("failed to capture input from the editor: %w", err)
 	}
 
-	if bytes.Equal(finalJSON, []byte(userRenderSettings)) {
+	// Unmarshal user-provided JSON into a map for comparison.
+	err = json.Unmarshal([]byte(userRenderSettings), &currentSettings)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON input into a map: %w", err)
+	}
+
+	// Compare the existing settings with the updated settings to detect changes.
+	if reflect.DeepEqual(existingSettings, currentSettings) {
 		cli.renderer.Warnf("No changes detected in the rendering settings. This could be due to uncommitted configuration changes or no modifications being made to the configurations ")
 
 		return existingRenderSettings, ErrNoChangesDetected
 	}
 
-	err = json.Unmarshal([]byte(userRenderSettings), renderSettings)
-	if err != nil {
+	if err := json.Unmarshal([]byte(userRenderSettings), &renderSettings); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON input: %w", err)
 	}
 
