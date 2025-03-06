@@ -1,6 +1,7 @@
 module github.com/auth0/auth0-cli
 
 go 1.22
+toolchain go1.23.7
 
 // TODO: This could be removed after https://github.com/mholt/archiver/pull/396 merged
 replace github.com/mholt/archiver/v3 => github.com/anchore/archiver/v3 v3.5.2
@@ -38,8 +39,8 @@ require (
 	golang.org/x/net v0.33.0
 	golang.org/x/oauth2 v0.26.0
 	golang.org/x/sync v0.10.0
-	golang.org/x/sys v0.28.0
-	golang.org/x/term v0.27.0
+	golang.org/x/sys v0.31.0
+	golang.org/x/term v0.30.0
 	golang.org/x/text v0.21.0
 	gopkg.in/yaml.v2 v2.4.0
 )
