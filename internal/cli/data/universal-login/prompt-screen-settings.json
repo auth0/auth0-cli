@@ -3,7 +3,8 @@
   "__doc2__": "Note1: while updating the rendering_mode to standard, only the rendering_mode field gets updated, the other fields shall not be updated.",
   "__doc3__": "Note2: head_tags must contain at least one script tag",
   "__doc4__": "Only the declared fields get updated, rest stays same",
-  "__doc5__": "See https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens for all possible values for each field",
+  
+  "__doc5__": "<------------------ See https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens for all possible values for each field",
 
   "rendering_mode": "advanced",
   "default_head_tags": false,
@@ -15,7 +16,7 @@
       "tag": "script",
       "attributes": {
         "defer": true,
-        "src": "URL_TO_YOUR_ASSET",
+        "src": "<------------------  PLEASE UPDATE URL_TO_YOUR_ASSET VALUE ----------------------->",
         "async": true,
         "integrity": [
           "ASSET_SHA"
