@@ -13,21 +13,6 @@ import (
 
 var (
 	defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_prompt_screen_renderer", "auth0_resource_server", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
-	ScreenPromptMap  = map[string][]string{
-		"signup-id":                   {"signup-id"},
-		"signup-password":             {"signup-password"},
-		"login-id":                    {"login-id"},
-		"login-password":              {"login-password"},
-		"login-passwordless":          {"login-passwordless-email-code", "login-passwordless-sms-otp"},
-		"phone-identifier-enrollment": {"phone-identifier-enrollment"},
-		"phone-identifier-challenge":  {"phone-identifier-challenge"},
-		"email-identifier-challenge":  {"email-identifier-challenge"},
-		"passkeys":                    {"passkey-enrollment", "passkey-enrollment-local"},
-		"captcha":                     {"interstitial-captcha"},
-		"login":                       {"login"},
-		"signup":                      {"signup"},
-		"reset-password":              {"reset-password-request", "reset-password-email", "reset-password", "reset-password-success", "reset-password-error"},
-	}
 )
 
 type (
