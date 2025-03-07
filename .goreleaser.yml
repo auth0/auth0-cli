@@ -40,10 +40,14 @@ brews:
       branch: main
       pull_request:
         enabled: true
-        draft: false
+        base:
+          owner: auth0
+          name: homebrew-auth0-cli
+          branch: main
+      token: "{{ .Env.GITHUB_TOKEN }}"
     commit_author:
       name: auth0
-      email: support@auth0.com
+      email: auth0-cli-cd-sa@okta.com
     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
     homepage: https://auth0.github.io/auth0-cli
     description: Build, manage and test your Auth0 integrations from the command line
@@ -56,6 +60,7 @@ brews:
       (fish_completion/"auth0.fish").write `#{bin}/auth0 completion fish`
       (zsh_completion/"_auth0").write `#{bin}/auth0 completion zsh`
     caveats: "Thanks for installing the Auth0 CLI"
+
 scoops:
   - name: auth0
     repository:
@@ -64,10 +69,14 @@ scoops:
       branch: main
       pull_request:
         enabled: true
-        draft: false
+        base:
+          owner: auth0
+          name: scoop-auth0-cli
+          branch: main
+      token: "{{ .Env.GITHUB_TOKEN }}"
     commit_author:
       name: auth0
-      email: support@auth0.com
+      email: auth0-cli-cd-sa@okta.com
     commit_msg_template: "Scoop manifest update for {{ .ProjectName }} version {{ .Tag }}"
     homepage: https://auth0.github.io/auth0-cli
     description: Build, manage and test your Auth0 integrations from the command line
