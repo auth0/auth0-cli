@@ -322,7 +322,7 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 }
 
 func advanceCustomize(cmd *cobra.Command, cli *cli, input customizationInputs) error {
-	var currMode = "standard"
+	var currMode = standardMode
 
 	err := fetchPromptScreenInfo(cmd, cli, &input.promptScreen, "customize")
 	if err != nil {
@@ -330,20 +330,19 @@ func advanceCustomize(cmd *cobra.Command, cli *cli, input customizationInputs) e
 	}
 
 	renderSettings, err := fetchRenderSettings(cmd, cli, input)
-	if errors.Is(err, ErrNoChangesDetected) {
-		if renderSettings != nil && renderSettings.RenderingMode != nil {
-			currMode = string(*renderSettings.RenderingMode)
-		}
+	if renderSettings != nil && renderSettings.RenderingMode != nil {
+		currMode = string(*renderSettings.RenderingMode)
+	}
 
-		cli.renderer.Infof("Current rendering mode for prompt '%s' and screen '%s': %s", ansi.Green(input.promptName), ansi.Green(input.screenName), ansi.Blue(currMode))
+	if errors.Is(err, ErrNoChangesDetected) {
+		cli.renderer.Infof("Current rendering mode for Prompt '%s' and Screen '%s': %s",
+			ansi.Green(input.promptName), ansi.Green(input.screenName), ansi.Green(currMode))
 		return nil
 	}
 
 	if err != nil {
 		return err
 	}
-
-	cli.renderer.Infof("Updating the rendering settings")
 
 	if err = ansi.Waiting(func() error {
 		return cli.api.Prompt.UpdateRendering(cmd.Context(), management.PromptType(input.promptName), management.ScreenName(input.screenName), renderSettings)
@@ -352,7 +351,7 @@ func advanceCustomize(cmd *cobra.Command, cli *cli, input customizationInputs) e
 	}
 
 	cli.renderer.Infof(
-		"Successfully updated the rendering settings: Prompt '%s', Screen '%s',Rendering-Mode '%s'.",
+		"Successfully updated the rendering settings.\n Current rendering mode for Prompt '%s' and Screen '%s': %s",
 		ansi.Green(input.promptName),
 		ansi.Green(input.screenName),
 		ansi.Green(currMode),
