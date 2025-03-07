@@ -40,7 +40,11 @@ brews:
       branch: main
       pull_request:
         enabled: true
-        draft: false
+        base:
+          owner: auth0
+          name: homebrew-auth0-cli
+          branch: main
+      token: "{{ .Env.GITHUB_TOKEN }}"
     commit_author:
       name: auth0
       email: support@auth0.com
@@ -64,7 +68,11 @@ scoops:
       branch: main
       pull_request:
         enabled: true
-        draft: false
+        base:
+          owner: auth0
+          name: scoop-auth0-cli
+          branch: main
+      token: "{{ .Env.GITHUB_TOKEN }}"
     commit_author:
       name: auth0
       email: support@auth0.com
