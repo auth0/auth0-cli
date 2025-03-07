@@ -40,10 +40,6 @@ brews:
       branch: main
       pull_request:
         enabled: true
-        draft: false
-      branch: main
-      pull_request:
-        enabled: true
         base:
           owner: auth0
           name: homebrew-auth0-cli
@@ -52,7 +48,6 @@ brews:
     commit_author:
       name: auth0
       email: support@auth0.com
-    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
     homepage: https://auth0.github.io/auth0-cli
     description: Build, manage and test your Auth0 integrations from the command line
@@ -71,10 +66,6 @@ scoops:
     repository:
       owner: auth0
       name: scoop-auth0-cli
-      branch: main
-      pull_request:
-        enabled: true
-        draft: false
       branch: main
       pull_request:
         enabled: true
