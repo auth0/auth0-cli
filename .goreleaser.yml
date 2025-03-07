@@ -1,4 +1,5 @@
 # Documentation at http://goreleaser.com
+version: 2
 builds:
   - main: ./cmd/auth0
     env:
@@ -23,21 +24,26 @@ archives:
       - none*
     format_overrides:
       - goos: windows
-        format: zip
+        formats: zip
 checksum:
   name_template: "checksums.txt"
 snapshot:
-  name_template: "{{ .Tag }}-SNAPSHOT-{{.ShortCommit}}"
+  version_template: "{{ .Tag }}-SNAPSHOT-{{.ShortCommit}}"
 changelog:
-  skip: true
+  disable: true
 brews:
   - name: auth0
     repository:
       owner: auth0
       name: homebrew-auth0-cli
+      branch: main
+      pull_request:
+        enabled: true
+        draft: false
     commit_author:
       name: auth0
       email: support@auth0.com
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
     homepage: https://auth0.github.io/auth0-cli
     description: Build, manage and test your Auth0 integrations from the command line
     license: MIT
@@ -54,6 +60,10 @@ scoops:
     repository:
       owner: auth0
       name: scoop-auth0-cli
+      branch: main
+      pull_request:
+        enabled: true
+        draft: false
     commit_author:
       name: auth0
       email: support@auth0.com
