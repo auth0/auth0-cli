@@ -25,10 +25,10 @@ jobs:
           check-latest: true
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@b508e2e3ef3b19d4e4146d4f8fb3ba9db644a757 # pin@4.3.0
+        uses: goreleaser/goreleaser-action@90a3faa9d0182683851fbfa97ca1a2cb983bfca3 # pin@6.2.1
         with:
-          version: '1.26.2'
-          args: release --rm-dist
+          version: "2.7.0"
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
