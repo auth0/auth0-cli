@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.9.3](https://github.com/auth0/auth0-cli/tree/v1.9.3) (Mar 07, 2025))
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.9.2...v1.9.3)
+
+### Fixed
+
+- Handle nil check on ReadRendering management API Response [#1150]
+
+
 # [v.1.9.2](https://github.com/auth0/auth0-cli/tree/v1.9.2) (Mar 05, 2025))
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.9.1...v1.9.2)
@@ -411,7 +420,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.9.2...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.9.3...HEAD
+[#1150]: https://github.com/auth0/auth0-cli/issues/1150
 [#1144]: https://github.com/auth0/auth0-cli/issues/1144
 [#1142]: https://github.com/auth0/auth0-cli/issues/1142
 [#1140]: https://github.com/auth0/auth0-cli/issues/1140
