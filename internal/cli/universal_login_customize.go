@@ -409,7 +409,7 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input customizationInputs
 		return nil, fmt.Errorf("failed to fetch the existing render settings: %w", err)
 	}
 
-	// Marshal existing render settings into JSON and parse into a map if it's not nil
+	// Marshal existing render settings into JSON and parse into a map if it's not nil.
 	if existingRenderSettings != nil {
 		readRenderingJSON, _ := json.MarshalIndent(existingRenderSettings, "", "  ")
 		if err := json.Unmarshal(readRenderingJSON, &existingSettings); err != nil {
@@ -419,7 +419,7 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input customizationInputs
 
 	existingSettings["___customization guide___"] = "https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"
 
-	// Marshal final JSON once.
+	// Marshal final JSON.
 	finalJSON, err := json.MarshalIndent(existingSettings, "", "  ")
 	if err != nil {
 		fmt.Println("Error generating final JSON:", err)
