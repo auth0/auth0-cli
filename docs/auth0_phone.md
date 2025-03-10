@@ -4,7 +4,7 @@ has_toc: false
 ---
 # auth0 phone
 
-Configure the phone providers like twilio and custom
+Manage all the resources related to phone.
 
 ## Commands
 

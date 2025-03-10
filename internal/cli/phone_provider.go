@@ -168,8 +168,8 @@ func createBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 phone provider create
   auth0 phone provider create --json
   auth0 phone provider create --provider twilio --disabled=false --credentials='{ "auth_token":"TheAuthToken" }' --configuration='{ "default_from": "admin@example.com", "sid": "+1234567890", "delivery_methods": ["text", "voice"] }'
-  auth0 phone provider create --provider custom --disabled=true --configuration='{ "delivery_methods": ["text", "voice"] }
-  auth0 phone provider create -p twilio -d "false" -c '{ "auth_token":"TheAuthToken" }' -s '{ "default_from": "admin@example.com", "sid": "+1234567890", "delivery_methods": ["text", "voice"] }'  `,
+  auth0 phone provider create --provider custom --disabled=true --configuration='{ "delivery_methods": ["text", "voice"] }'
+  auth0 phone provider create -p twilio -d "false" -c '{ "auth_token":"TheAuthToken" }' -s '{ "default_from": "admin@example.com", "sid": "+1234567890", "delivery_methods": ["text"] }'  `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := phoneProviderName.Select(cmd, &inputs.name, PhoneProviderNameOptions, nil); err != nil {
 				return err
@@ -276,7 +276,7 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
   auth0 phone provider update --credentials='{ "auth_token":"NewAuthToken" }'
   auth0 phone provider update --configuration='{ "delivery_methods": ["voice"] }'
   auth0 phone provider update --configuration='{ "default_from": admin@example.com }'
-  auth0 phone provider update --provider twilio --disabled=false --credentials='{ "auth_token":"NewAuthToken" }' --configuration='{ "default_from": "admin@example.com", "delivery_methods": ["voice", "text"] }'
+  auth0 phone provider update --provider twilio --disabled=false --credentials='{ "auth_token":"NewAuthToken" }' --configuration='{ "sid": "+1234567890", "default_from": "admin@example.com", "delivery_methods": ["voice", "text"] }'
   auth0 phone provider update --provider custom --disabled=false --configuration='{ "delivery_methods": ["voice", "text"] }'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var (

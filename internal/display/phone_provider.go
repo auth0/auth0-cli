@@ -48,7 +48,7 @@ func (r *Renderer) PhoneProviderList(phoneProviders []*management.BrandingPhoneP
 	r.Heading(resource)
 
 	if len(phoneProviders) == 0 {
-		r.EmptyState(resource, "Use 'auth0 actions create' to add one")
+		r.EmptyState(resource, "Use 'auth0 phone provider create' to add one")
 		return nil
 	}
 

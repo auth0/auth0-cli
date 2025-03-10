@@ -8,7 +8,7 @@ func phoneCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "phone",
 		Short: "Manage phone providers",
-		Long:  "Configure the phone providers like twilio and custom",
+		Long:  "Manage all the resources related to phone.",
 	}
 
 	cmd.AddCommand(phoneProviderCmd(cli))

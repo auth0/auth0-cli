@@ -8,7 +8,7 @@ tests:
     exit-code: 0
     stderr:
       contains:
-        - No phone providers available. Use 'auth0 actions create' to add one
+        - No phone providers available. Use 'auth0 phone provider create' to add one
 
   002 - it successfully lists all phone providers with no data (json):
     command: auth0 phone provider list --json
@@ -77,7 +77,7 @@ tests:
     exit-code: 0
     stderr:
       contains:
-        - No phone providers available. Use 'auth0 actions create' to add one
+        - No phone providers available. Use 'auth0 phone provider create' to add one
 
   014 - delete custom phone provider action:
     command: ./test/integration/scripts/delete-custom-phone-action.sh
