@@ -168,7 +168,7 @@ func Test_phoneProviderResourceFetcher_FetchData(t *testing.T) {
 
 		expectedData := importDataList{
 			{
-				ResourceName: "auth0_phone_providers.twilio",
+				ResourceName: "auth0_phone_provider.twilio",
 				ImportID:     "pro_epg5EAGoQydDkAdgWMiMLz",
 			},
 		}
@@ -205,7 +205,7 @@ func Test_phoneProviderResourceFetcher_FetchData(t *testing.T) {
 
 		expectedData := importDataList{
 			{
-				ResourceName: "auth0_phone_providers.custom",
+				ResourceName: "auth0_phone_provider.custom",
 				ImportID:     "pro_epg5EAGoQydDkAdgWMiMLa",
 			},
 		}

@@ -7,7 +7,7 @@ if [ -f "$FILE" ]; then
 fi
 
 # Create the phone provider.
-phone_provider_id=$( auth0 phone provider create -n "custom" --disabled=false --configuration='{"delivery_methods":["text", "voice"]}' --json | jq -r '.["id"]' )
+phone_provider_id=$( auth0 phone provider create -p "custom" --disabled=false --configuration='{"delivery_methods":["text", "voice"]}' --json | jq -r '.["id"]' )
 
 mkdir -p ./test/integration/identifiers
 echo "$phone_provider_id" > $FILE
