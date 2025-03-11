@@ -78,7 +78,3 @@ tests:
     stderr:
       contains:
         - No phone providers available. Use 'auth0 phone provider create' to add one
-
-  014 - delete custom phone provider action:
-    command: ./test/integration/scripts/delete-custom-phone-action.sh
-    exit-code: 0

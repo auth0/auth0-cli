@@ -23,10 +23,6 @@ tests:
     command: auth0 email provider show
     exit-code: 1
 
-  006 - delete custom email provider action:
-    command: ./test/integration/scripts/delete-custom-email-action.sh
-    exit-code: 0
-
   007 - create email provider:
     command: auth0 email provider create --provider=sendgrid --enabled=false --default-from-address='admin@auth0.invalid' --credentials='{"api_key":"some-api-key"}'
     exit-code: 0
