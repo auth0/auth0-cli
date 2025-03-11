@@ -25,7 +25,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
-          check-latest: true
+          check-latest: false
 
       - name: Check that docs were generated
         run: make check-docs
