@@ -1,0 +1,80 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  001 - it successfully lists all phone providers with no data:
+    command: auth0 phone provider list
+    exit-code: 0
+    stderr:
+      contains:
+        - No phone providers available. Use 'auth0 phone provider create' to add one
+
+  002 - it successfully lists all phone providers with no data (json):
+    command: auth0 phone provider list --json
+    exit-code: 0
+    stdout:
+      exactly: "[]"
+
+  003 - create custom phone provider action:
+    command: ./test/integration/scripts/create-custom-phone-action.sh
+    exit-code: 0
+
+  004 - create custom phone provider:
+    command: ./test/integration/scripts/create-custom-phone-provider.sh
+    exit-code: 0
+
+
+  005 - update to twilio phone provider:
+    command: auth0 phone provider update  $(./test/integration/scripts/get-custom-phone-provider-id.sh) --provider=twilio --disabled=false -c '{ "auth_token":"TheAuthToken" }' -s '{ "default_from":"admin@example.com", "sid":"+1234567890", "delivery_methods":["text", "voice"] }'
+    exit-code: 0
+
+  006 - it successfully shows the phone provider:
+    command: auth0 phone provider show $(./test/integration/scripts/get-custom-phone-provider-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - PROVIDER       twilio
+        - DISABLED       ✗
+        - CONFIGURATION  {"default_from":"admin@example.com","sid":"+1234567890","delivery_methods":["text","voice"]}
+
+  007 - update to twilio phone provider:
+    command: auth0 phone provider update $(./test/integration/scripts/get-custom-phone-provider-id.sh) --provider=twilio --disabled=false --configuration '{ "default_from":"admin1@example.com", "sid":"+1234567899", "delivery_methods":["text"] }'
+    exit-code: 0
+
+  008 - it successfully shows the phone provider:
+    command: auth0 phone provider show $(./test/integration/scripts/get-custom-phone-provider-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - PROVIDER       twilio
+        - DISABLED       ✗
+        - CONFIGURATION  {"default_from":"admin1@example.com","sid":"+1234567899","delivery_methods":["text"]}
+
+  009 - update and disable phone provider:
+    command: auth0 phone provider update $(./test/integration/scripts/get-custom-phone-provider-id.sh) --disabled
+    exit-code: 0
+
+  010 - update to custom phone provider:
+    command: auth0 phone provider update $(./test/integration/scripts/get-custom-phone-provider-id.sh) --provider=custom --disabled --configuration '{ "delivery_methods":["text", "voice"] }'
+    exit-code: 0
+
+  011 - it successfully shows the phone provider:
+    command: auth0 phone provider show $(./test/integration/scripts/get-custom-phone-provider-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - PROVIDER       custom
+        - DISABLED       ✓
+        - CONFIGURATION  {"delivery_methods":["text","voice"]}
+
+  012 - delete phone provider:
+    command: auth0 phone provider delete --force $(./test/integration/scripts/get-custom-phone-provider-id.sh)
+    exit-code: 0
+
+  013 - it doesn't show the phone provider:
+    command: auth0 phone provider list
+    exit-code: 0
+    stderr:
+      contains:
+        - No phone providers available. Use 'auth0 phone provider create' to add one

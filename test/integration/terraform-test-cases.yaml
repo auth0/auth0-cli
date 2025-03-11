@@ -27,6 +27,7 @@ tests:
   002.0 - setup:
     command: rm -rdf tmp-tf-gen
     exit-code: 0
+
   002.1 - it successfully runs for all default resources:
     command: auth0 tf generate --output-dir tmp-tf-gen
     exit-code: 0
