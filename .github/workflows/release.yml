@@ -24,18 +24,6 @@ jobs:
           go-version-file: auth0-cli/go.mod
           check-latest: true
 
-      - name: Import GPG key
-        id: import_gpg
-        uses: crazy-max/ghaction-import-gpg@cb9bde2e2525e640591a934b1fd28eef1dcaf5e5 # ping 6.2.0
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.GPG_PASSPHRASE }}
-          git_user_signingkey: true
-          git_commit_gpgsign: true
-          git_tag_gpgsign: true
-          git_committer_email: auth0-cli-cd-sa@okta.com
-          git_committer_name: auth0
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@90a3faa9d0182683851fbfa97ca1a2cb983bfca3 # pin@6.2.1
         with:
@@ -53,6 +41,19 @@ jobs:
           repository: auth0/homebrew-auth0-cli
           token: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
           path: homebrew-auth0-cli
+
+      - name: Import GPG key for Homebrew Tap
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@cb9bde2e2525e640591a934b1fd28eef1dcaf5e5 # ping 6.2.0
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+          git_tag_gpgsign: true
+          git_committer_email: auth0-cli-cd-sa@okta.com
+          git_committer_name: auth0
+          workdir: 'homebrew-auth0-cli'
 
       - name: Copy Brew Formula
         run: |
@@ -81,6 +82,20 @@ jobs:
       - name: Copy Scoop Manifest
         run: |
           cp auth0-cli/dist/scoop/*.json scoop-auth0-cli/
+
+      - name: Import GPG key for Scoop
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@cb9bde2e2525e640591a934b1fd28eef1dcaf5e5 # ping 6.2.0
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+          git_tag_gpgsign: true
+          git_committer_email: auth0-cli-cd-sa@okta.com
+          git_committer_name: auth0
+          workdir: 'scoop-auth0-cli'
+
       - name: Create Scoop Pull Request
         uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # pin@7.0.8
         with:
