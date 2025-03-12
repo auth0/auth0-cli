@@ -32,6 +32,8 @@ jobs:
           git_user_signingkey: true
           git_commit_gpgsign: true
           git_tag_gpgsign: true
+          git_committer_email: auth0-cli-cd-sa@okta.com
+          git_committer_name: auth0
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@90a3faa9d0182683851fbfa97ca1a2cb983bfca3 # pin@6.2.1
@@ -41,3 +43,49 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      # Homebrew Tap Process
+      - name: Checkout Homebrew Tap Repo
+        uses: actions/checkout@v3
+        with:
+          repository: auth0/homebrew-auth0-cli
+          token: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
+          path: homebrew-auth0-cli
+
+      - name: Copy Brew Formula
+        run: |
+          cp dist/homebrew/*.rb homebrew-auth0-cli/
+
+      - name: Create Homebrew Pull Request
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # pin@7.0.8
+        with:
+          token: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
+          commit-message: "Brew formula update for auth0-cli version ${{ github.ref_name }}"
+          branch: ${{ github.ref_name }}
+          title: "Brew formula update for auth0-cli version ${{ github.ref_name }}"
+          body: "This PR updates the Homebrew formula for version ${{ github.ref_name }}."
+          base: main
+          committer: auth0 <auth0-cli-cd-sa@okta.com>
+
+      # Scoop Manifest Process
+      - name: Checkout Scoop Repo
+        uses: actions/checkout@v3
+        with:
+          repository: auth0/scoop-auth0-cli
+          token: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
+          path: scoop-auth0-cli
+
+      - name: Copy Scoop Manifest
+        run: |
+          cp dist/scoop/*.json scoop-auth0-cli/
+
+      - name: Create Scoop Pull Request
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # pin@7.0.8
+        with:
+          token: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
+          commit-message: "Scoop manifest update for auth0-cli version ${{ github.ref_name }}"
+          branch: ${{ github.ref_name }}
+          title: "Scoop manifest update for auth0-cli version ${{ github.ref_name }}"
+          body: "This PR updates the Scoop manifest for version ${{ github.ref_name }}."
+          base: main
+          committer: auth0 <auth0-cli-cd-sa@okta.com>
