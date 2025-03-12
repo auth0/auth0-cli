@@ -68,6 +68,7 @@ jobs:
           body: "This PR updates the Homebrew formula for version ${{ github.ref_name }}."
           base: main
           committer: auth0 <auth0-cli-cd-sa@okta.com>
+          path: homebrew-auth0-cli
 
       # Scoop Manifest Process
       - name: Checkout Scoop Repo
@@ -80,7 +81,6 @@ jobs:
       - name: Copy Scoop Manifest
         run: |
           cp auth0-cli/dist/scoop/*.json scoop-auth0-cli/
-
       - name: Create Scoop Pull Request
         uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # pin@7.0.8
         with:
@@ -91,3 +91,4 @@ jobs:
           body: "This PR updates the Scoop manifest for version ${{ github.ref_name }}."
           base: main
           committer: auth0 <auth0-cli-cd-sa@okta.com>
+          path: scoop-auth0-cli
