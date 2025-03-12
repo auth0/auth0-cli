@@ -16,11 +16,12 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0 # This ensures all history and tags are fetched
+          path: auth0-cli
 
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version-file: go.mod
+          go-version-file: auth0-cli/go.mod
           check-latest: true
 
       - name: Import GPG key
@@ -40,6 +41,7 @@ jobs:
         with:
           version: "2.7.0"
           args: release --clean
+          workdir: 'auth0-cli'
         env:
           GITHUB_TOKEN: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
@@ -54,7 +56,7 @@ jobs:
 
       - name: Copy Brew Formula
         run: |
-          cp dist/homebrew/*.rb homebrew-auth0-cli/
+          cp auth0-cli/dist/homebrew/*.rb homebrew-auth0-cli/
 
       - name: Create Homebrew Pull Request
         uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # pin@7.0.8
@@ -77,7 +79,7 @@ jobs:
 
       - name: Copy Scoop Manifest
         run: |
-          cp dist/scoop/*.json scoop-auth0-cli/
+          cp auth0-cli/dist/scoop/*.json scoop-auth0-cli/
 
       - name: Create Scoop Pull Request
         uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # pin@7.0.8
