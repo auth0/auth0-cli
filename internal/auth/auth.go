@@ -141,6 +141,7 @@ var RequiredScopes = []string{
 	"read:prompts", "update:prompts",
 	"read:attack_protection", "update:attack_protection",
 	"read:event_streams", "create:event_streams", "update:event_streams", "delete:event_streams",
+	"read:network_acls", "create:network_acls", "update:network_acls", "delete:network_acls",
 }
 
 // GetDeviceCode kicks-off the device authentication flow by requesting

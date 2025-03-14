@@ -170,6 +170,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(apiCmd(cli))
 	rootCmd.AddCommand(terraformCmd(cli))
 	rootCmd.AddCommand(eventStreamsCmd(cli))
+	rootCmd.AddCommand(networkACLCmd(cli))
 
 	// Keep completion at the bottom.
 	rootCmd.AddCommand(completionCmd(cli))
