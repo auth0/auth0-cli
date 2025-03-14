@@ -521,7 +521,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
   auth0 network-acl update <id> --active true --priority 5 
   auth0 network-acl update <id> --priority 5 
   auth0 network-acl update <id> --active true
-  auth0 network-acl update --description "Complex Rule" --priority 5 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ip_v4_cidrs":["192.168.1.0/24"],"country_codes":["US"]}}'`,
+  auth0 network-acl update <id> --description "Complex Rule updated" --priority 9 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ip_v4_cidrs":["192.168.1.0/24"],"country_codes":["US"],"scope": "authentication"}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get the network ACL ID
 			if len(args) > 0 {
@@ -936,7 +936,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 
 	cmd.Flags().StringVarP(&inputs.Description, "description", "d", "", "Description of the network ACL")
 	cmd.Flags().StringVar(&inputs.ActiveStr, "active", "", "Whether the network ACL is active ('true' or 'false')")
-	cmd.Flags().IntVarP(&inputs.Priority, "priority", "p", 0, "Priority of the network ACL (1-10)")
+	cmd.Flags().IntVarP(&inputs.Priority, "priority", "p", 1, "Priority of the network ACL (1-10)")
 	cmd.Flags().StringVar(&inputs.RuleJSON, "rule", "", "Network ACL rule configuration in JSON format")
 	cmd.Flags().StringVar(&inputs.Action, "action", "", "Action for the rule (block, allow, log, redirect)")
 	cmd.Flags().StringVar(&inputs.RedirectURI, "redirect-uri", "", "URI to redirect to when action is redirect")
