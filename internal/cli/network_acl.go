@@ -507,6 +507,8 @@ func updateNetworkACLCmd(cli *cli) *cobra.Command {
 		JA3            []string
 		JA4            []string
 		UserAgents     []string
+		MatchRule      bool
+		NoMatchRule    bool
 	}
 
 	cmd := &cobra.Command{
@@ -515,13 +517,12 @@ func updateNetworkACLCmd(cli *cli) *cobra.Command {
 		Short: "Update a network ACL",
 		Long: `Update a network ACL.
 To update interactively, use "auth0 network-acl update" with no arguments.
-To update non-interactively, supply the network ACL ID and at least one parameter to update.
-When updating the rule, provide a complete JSON object with action, scope, and match properties.`,
+To update non-interactively, supply the required parameters (description, active, priority, and rule) through flags.
+When updating the rule, provide a complete JSON object with action, scope, and match/not_match properties.`,
 		Example: `  auth0 network-acl update <id>
-  auth0 network-acl update <id> --active true --priority 5 
   auth0 network-acl update <id> --priority 5 
   auth0 network-acl update <id> --active true
-  auth0 network-acl update <id> --description "Complex Rule updated" --priority 9 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ip_v4_cidrs":["192.168.1.0/24"],"country_codes":["US"],"scope": "authentication"}}'`,
+  auth0 network-acl update <id> --description "Complex Rule updated" --priority 9 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ip_v4_cidrs":["192.168.1.0/24"],"country_codes":["US"]}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get the network ACL ID
 			if len(args) > 0 {
@@ -724,6 +725,18 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					updatedACL.Rule.Action.RedirectURI = &inputs.RedirectURI
 				}
 
+				// Depending on Match/NotMatch ask the user if they want to update the current or change it
+				if currentACL.Rule != nil && currentACL.Rule.Match != nil {
+					if err := prompt.AskBool("Do you want to update the current match criteria to NotMatch criteria?", &inputs.NoMatchRule, false); err != nil {
+						return err
+					}
+				}
+				if currentACL.Rule != nil && currentACL.Rule.NotMatch != nil {
+					if err := prompt.AskBool("Do you want to update the current not match criteria to match criteria?", &inputs.MatchRule, false); err != nil {
+						return err
+					}
+				}
+
 				// Set match criteria if any were provided
 				match := &management.NetworkACLRuleMatch{}
 				matchProvided := false
@@ -774,14 +787,35 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 				}
 
 				if matchProvided {
-					updatedACL.Rule.Match = match
+					if inputs.NoMatchRule {
+						updatedACL.Rule.NotMatch = match
+						updatedACL.Rule.Match = nil // Clear Match if converting to NotMatch
+					} else if inputs.MatchRule {
+						updatedACL.Rule.Match = match
+						updatedACL.Rule.NotMatch = nil // Clear NotMatch if converting to Match
+					} else {
+						// Preserve the existing rule type (Match or NotMatch)
+						if currentACL.Rule != nil {
+							if currentACL.Rule.Match != nil {
+								updatedACL.Rule.Match = match
+							} else if currentACL.Rule.NotMatch != nil {
+								updatedACL.Rule.NotMatch = match
+							} else {
+								// Default to Match if neither exists
+								updatedACL.Rule.Match = match
+							}
+						} else {
+							// Default to Match if no rule exists
+							updatedACL.Rule.Match = match
+						}
+					}
 				}
+
 			} else {
 				// Non-interactive update flow
-				if !(cmd.Flags().Changed("description") || cmd.Flags().Changed("active") ||
-					cmd.Flags().Changed("priority") || cmd.Flags().Changed("rule") ||
-					cmd.Flags().Changed("scope") || cmd.Flags().Changed("action")) {
-					return fmt.Errorf("at least one parameter must be provided for non-interactive mode")
+				if !(cmd.Flags().Changed("description") && cmd.Flags().Changed("active") &&
+					cmd.Flags().Changed("priority") && cmd.Flags().Changed("rule")) {
+					return fmt.Errorf("all parameters (description, active, priority, and rule) must be provided for non-interactive mode")
 				}
 
 				// Parse the active flag if provided
@@ -795,6 +829,8 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					} else {
 						return fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr)
 					}
+				} else {
+					return fmt.Errorf("--active flag not provided")
 				}
 
 				// Parse description if provided
@@ -803,6 +839,8 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 						return fmt.Errorf("description cannot exceed 255 characters")
 					}
 					updatedACL.Description = &inputs.Description
+				} else {
+					return fmt.Errorf("--description flag not provided")
 				}
 
 				// Parse priority if provided
@@ -811,6 +849,8 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 						return fmt.Errorf("priority must be between 1 and 10")
 					}
 					updatedACL.Priority = &inputs.Priority
+				} else {
+					return fmt.Errorf("--priority flag not provided")
 				}
 
 				// Parse rule JSON if provided
@@ -821,97 +861,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					}
 					updatedACL.Rule = &rule
 				} else {
-					// Handle individual rule components if rule JSON is not provided
-					if cmd.Flags().Changed("scope") || cmd.Flags().Changed("action") {
-						// Initialize rule if needed
-						updatedACL.Rule = &management.NetworkACLRule{}
-
-						// Parse scope if provided
-						if cmd.Flags().Changed("scope") {
-							scopes := []string{"management", "authentication", "tenant"}
-							if !contains(scopes, inputs.Scope) {
-								return fmt.Errorf("scope must be one of: management, authentication, tenant")
-							}
-							updatedACL.Rule.Scope = &inputs.Scope
-						}
-
-						// Parse action if provided
-						if cmd.Flags().Changed("action") {
-							actions := []string{"block", "allow", "log", "redirect"}
-							if !contains(actions, inputs.Action) {
-								return fmt.Errorf("action must be one of: block, allow, log, redirect")
-							}
-
-							updatedACL.Rule.Action = &management.NetworkACLRuleAction{}
-							switch inputs.Action {
-							case "block":
-								updatedACL.Rule.Action.Block = auth0.Bool(true)
-							case "allow":
-								updatedACL.Rule.Action.Allow = auth0.Bool(true)
-							case "log":
-								updatedACL.Rule.Action.Log = auth0.Bool(true)
-							case "redirect":
-								updatedACL.Rule.Action.Redirect = auth0.Bool(true)
-								if cmd.Flags().Changed("redirect-uri") {
-									if inputs.RedirectURI == "" {
-										return fmt.Errorf("redirect URI is required when action is redirect")
-									}
-									updatedACL.Rule.Action.RedirectURI = &inputs.RedirectURI
-								}
-							}
-						}
-
-						// Handle match criteria flags
-						if cmd.Flags().Changed("anonymous-proxy") ||
-							cmd.Flags().Changed("asns") ||
-							cmd.Flags().Changed("country-codes") ||
-							cmd.Flags().Changed("subdivision-codes") ||
-							cmd.Flags().Changed("ipv4-cidrs") ||
-							cmd.Flags().Changed("ipv6-cidrs") ||
-							cmd.Flags().Changed("ja3-fingerprints") ||
-							cmd.Flags().Changed("ja4-fingerprints") ||
-							cmd.Flags().Changed("user-agents") {
-
-							// Initialize match if needed
-							updatedACL.Rule.Match = &management.NetworkACLRuleMatch{}
-
-							if cmd.Flags().Changed("anonymous-proxy") {
-								updatedACL.Rule.Match.AnonymousProxy = auth0.Bool(inputs.AnonymousProxy)
-							}
-
-							if cmd.Flags().Changed("asns") && len(inputs.ASNs) > 0 {
-								updatedACL.Rule.Match.Asns = inputs.ASNs
-							}
-
-							if cmd.Flags().Changed("country-codes") && len(inputs.CountryCodes) > 0 {
-								updatedACL.Rule.Match.GeoCountryCodes = &inputs.CountryCodes
-							}
-
-							if cmd.Flags().Changed("subdivision-codes") && len(inputs.SubdivCodes) > 0 {
-								updatedACL.Rule.Match.GeoSubdivisionCodes = &inputs.SubdivCodes
-							}
-
-							if cmd.Flags().Changed("ipv4-cidrs") && len(inputs.IPv4CIDRs) > 0 {
-								updatedACL.Rule.Match.IPv4Cidrs = &inputs.IPv4CIDRs
-							}
-
-							if cmd.Flags().Changed("ipv6-cidrs") && len(inputs.IPv6CIDRs) > 0 {
-								updatedACL.Rule.Match.IPv6Cidrs = &inputs.IPv6CIDRs
-							}
-
-							if cmd.Flags().Changed("ja3-fingerprints") && len(inputs.JA3) > 0 {
-								updatedACL.Rule.Match.Ja3Fingerprints = &inputs.JA3
-							}
-
-							if cmd.Flags().Changed("ja4-fingerprints") && len(inputs.JA4) > 0 {
-								updatedACL.Rule.Match.Ja4Fingerprints = &inputs.JA4
-							}
-
-							if cmd.Flags().Changed("user-agents") && len(inputs.UserAgents) > 0 {
-								updatedACL.Rule.Match.UserAgents = &inputs.UserAgents
-							}
-						}
-					}
+					return fmt.Errorf("--rule flag not provided")
 				}
 			}
 
