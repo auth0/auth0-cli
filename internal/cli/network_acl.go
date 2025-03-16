@@ -617,7 +617,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 				}
 
 				// Default scope from current ACL
-				currentScope := "tenant"
+				currentScope := ""
 				if currentACL.Rule != nil && currentACL.Rule.Scope != nil {
 					currentScope = *currentACL.Rule.Scope
 				}
