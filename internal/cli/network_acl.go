@@ -552,6 +552,55 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 
 			// Interactive update flow
 			if canPrompt(cmd) {
+				// Check if specific flags were provided (partial update)
+				flagsProvided := cmd.Flags().Changed("description") || cmd.Flags().Changed("active") ||
+					cmd.Flags().Changed("priority") || cmd.Flags().Changed("rule")
+
+				// If some flags were provided, ask if user wants to update other fields
+				if flagsProvided {
+					var updateOtherFields bool
+					if err := prompt.AskBool("Do you want to update other fields as well?", &updateOtherFields, false); err != nil {
+						return err
+					}
+
+					if !updateOtherFields {
+						// User doesn't want to update other fields, use current values
+						// Initialize with current values
+						updatedACL = currentACL
+
+						// Override only the fields that were specified via flags
+						if cmd.Flags().Changed("description") {
+							updatedACL.Description = &inputs.Description
+						}
+
+						if cmd.Flags().Changed("active") {
+							if inputs.ActiveStr == "true" {
+								inputs.Active = true
+							} else if inputs.ActiveStr == "false" {
+								inputs.Active = false
+							} else {
+								return fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr)
+							}
+							updatedACL.Active = &inputs.Active
+						}
+
+						if cmd.Flags().Changed("priority") {
+							updatedACL.Priority = &inputs.Priority
+						}
+
+						if cmd.Flags().Changed("rule") {
+							var rule management.NetworkACLRule
+							if err := json.Unmarshal([]byte(inputs.RuleJSON), &rule); err != nil {
+								return fmt.Errorf("invalid rule JSON: %w", err)
+							}
+							updatedACL.Rule = &rule
+						}
+
+						// Skip the rest of the interactive flow
+						goto updateACL
+					}
+				}
+
 				// Use current values as defaults for interactive prompts
 				currentDescriptionStr := *currentACL.Description
 				if err := networkACLDescription.Ask(cmd, &inputs.Description, &currentDescriptionStr); err != nil {
@@ -872,6 +921,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 				updatedACL = currentACL
 			}
 
+		updateACL:
 			// Update the network ACL
 			if err := ansi.Waiting(func() error {
 				return cli.api.NetworkACL.Update(cmd.Context(), inputs.ID, updatedACL)
