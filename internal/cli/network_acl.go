@@ -312,8 +312,10 @@ The --rule parameter is required and must contain a valid JSON object with actio
 					return fmt.Errorf("scope must be one of: management, authentication, tenant")
 				}
 			} else {
-				var scopeFlag Flag
-				if err := scopeFlag.Select(cmd, &inputs.Scope, scopes, nil); err != nil {
+				if err := (&Flag{
+					Name: "Scope",
+					Help: "Scope of the rule (management, authentication, tenant)",
+				}).Select(cmd, &inputs.Scope, scopes, nil); err != nil {
 					return err
 				}
 			}
