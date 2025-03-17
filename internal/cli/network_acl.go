@@ -221,6 +221,7 @@ func createNetworkACLCmd(cli *cli) *cobra.Command {
 		JA4            []string
 		UserAgents     []string
 		Scope          string
+		isMatchRule    bool
 	}
 
 	cmd := &cobra.Command{
@@ -305,6 +306,8 @@ The --rule parameter is required and must contain a valid JSON object with actio
 				return fmt.Errorf("priority must be between 1 and 10")
 			}
 
+			cli.renderer.Infof("Define the rule for the network ACL.\n")
+
 			// Ask for scope
 			scopes := []string{"management", "authentication", "tenant"}
 			if cmd.Flags().Changed("scope") {
@@ -335,6 +338,17 @@ The --rule parameter is required and must contain a valid JSON object with actio
 					return fmt.Errorf("redirect URI is required when action is redirect")
 				}
 			}
+
+			// Ask for Match or Not Match rule
+			matchOptions := []string{"match", "not_match"}
+			var selectedMatchOption string
+			if err := (&Flag{
+				Name: "What kind of rule do you want to create?",
+				Help: "Match or Not Match rule",
+			}).Select(cmd, &selectedMatchOption, matchOptions, nil); err != nil {
+				return err
+			}
+			inputs.isMatchRule = selectedMatchOption == "match"
 
 			// Handle match criteria
 			if err := networkACLAnonymousProxy.AskBool(cmd, &inputs.AnonymousProxy, nil); err != nil {
@@ -447,7 +461,11 @@ The --rule parameter is required and must contain a valid JSON object with actio
 			}
 
 			if matchProvided {
-				acl.Rule.Match = match
+				if inputs.isMatchRule {
+					acl.Rule.Match = match
+				} else {
+					acl.Rule.NotMatch = match
+				}
 			} else {
 				return fmt.Errorf("at least one match criteria must be provided")
 			}
@@ -618,6 +636,8 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					return err
 				}
 
+				cli.renderer.Infof("Define the rule for the network ACL.\n")
+
 				// Default scope from current ACL
 				currentScope := ""
 				if currentACL.Rule != nil && currentACL.Rule.Scope != nil {
@@ -659,6 +679,18 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					}
 
 					if err := networkACLRedirectURI.Ask(cmd, &inputs.RedirectURI, &currentRedirectURI); err != nil {
+						return err
+					}
+				}
+
+				// Depending on Match/NotMatch ask the user if they want to update the current or change it
+				if currentACL.Rule != nil && currentACL.Rule.Match != nil {
+					if err := prompt.AskBool("Do you want to update the current match criteria to NotMatch criteria?", &inputs.NoMatchRule, false); err != nil {
+						return err
+					}
+				}
+				if currentACL.Rule != nil && currentACL.Rule.NotMatch != nil {
+					if err := prompt.AskBool("Do you want to update the current not match criteria to match criteria?", &inputs.MatchRule, false); err != nil {
 						return err
 					}
 				}
@@ -774,18 +806,6 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 				case "redirect":
 					updatedACL.Rule.Action.Redirect = auth0.Bool(true)
 					updatedACL.Rule.Action.RedirectURI = &inputs.RedirectURI
-				}
-
-				// Depending on Match/NotMatch ask the user if they want to update the current or change it
-				if currentACL.Rule != nil && currentACL.Rule.Match != nil {
-					if err := prompt.AskBool("Do you want to update the current match criteria to NotMatch criteria?", &inputs.NoMatchRule, false); err != nil {
-						return err
-					}
-				}
-				if currentACL.Rule != nil && currentACL.Rule.NotMatch != nil {
-					if err := prompt.AskBool("Do you want to update the current not match criteria to match criteria?", &inputs.MatchRule, false); err != nil {
-						return err
-					}
 				}
 
 				// Set match criteria if any were provided
