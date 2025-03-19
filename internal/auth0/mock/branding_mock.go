@@ -35,6 +35,44 @@ func (m *MockBrandingAPI) EXPECT() *MockBrandingAPIMockRecorder {
 	return m.recorder
 }
 
+// CreatePhoneProvider mocks base method.
+func (m *MockBrandingAPI) CreatePhoneProvider(ctx context.Context, pp *management.BrandingPhoneProvider, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, pp}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CreatePhoneProvider", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreatePhoneProvider indicates an expected call of CreatePhoneProvider.
+func (mr *MockBrandingAPIMockRecorder) CreatePhoneProvider(ctx, pp interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, pp}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePhoneProvider", reflect.TypeOf((*MockBrandingAPI)(nil).CreatePhoneProvider), varargs...)
+}
+
+// DeletePhoneProvider mocks base method.
+func (m *MockBrandingAPI) DeletePhoneProvider(ctx context.Context, id string, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeletePhoneProvider", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeletePhoneProvider indicates an expected call of DeletePhoneProvider.
+func (mr *MockBrandingAPIMockRecorder) DeletePhoneProvider(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePhoneProvider", reflect.TypeOf((*MockBrandingAPI)(nil).DeletePhoneProvider), varargs...)
+}
+
 // DeleteUniversalLogin mocks base method.
 func (m *MockBrandingAPI) DeleteUniversalLogin(ctx context.Context, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
@@ -52,6 +90,26 @@ func (mr *MockBrandingAPIMockRecorder) DeleteUniversalLogin(ctx interface{}, opt
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUniversalLogin", reflect.TypeOf((*MockBrandingAPI)(nil).DeleteUniversalLogin), varargs...)
+}
+
+// ListPhoneProviders mocks base method.
+func (m *MockBrandingAPI) ListPhoneProviders(ctx context.Context, opts ...management.RequestOption) (*management.BrandingPhoneProviderList, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListPhoneProviders", varargs...)
+	ret0, _ := ret[0].(*management.BrandingPhoneProviderList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPhoneProviders indicates an expected call of ListPhoneProviders.
+func (mr *MockBrandingAPIMockRecorder) ListPhoneProviders(ctx interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPhoneProviders", reflect.TypeOf((*MockBrandingAPI)(nil).ListPhoneProviders), varargs...)
 }
 
 // Read mocks base method.
@@ -72,6 +130,26 @@ func (mr *MockBrandingAPIMockRecorder) Read(ctx interface{}, opts ...interface{}
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockBrandingAPI)(nil).Read), varargs...)
+}
+
+// ReadPhoneProvider mocks base method.
+func (m *MockBrandingAPI) ReadPhoneProvider(ctx context.Context, id string, opts ...management.RequestOption) (*management.BrandingPhoneProvider, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ReadPhoneProvider", varargs...)
+	ret0, _ := ret[0].(*management.BrandingPhoneProvider)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadPhoneProvider indicates an expected call of ReadPhoneProvider.
+func (mr *MockBrandingAPIMockRecorder) ReadPhoneProvider(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadPhoneProvider", reflect.TypeOf((*MockBrandingAPI)(nil).ReadPhoneProvider), varargs...)
 }
 
 // SetUniversalLogin mocks base method.
@@ -130,4 +208,23 @@ func (mr *MockBrandingAPIMockRecorder) Update(ctx, t interface{}, opts ...interf
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, t}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockBrandingAPI)(nil).Update), varargs...)
+}
+
+// UpdatePhoneProvider mocks base method.
+func (m *MockBrandingAPI) UpdatePhoneProvider(ctx context.Context, id string, pp *management.BrandingPhoneProvider, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id, pp}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdatePhoneProvider", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdatePhoneProvider indicates an expected call of UpdatePhoneProvider.
+func (mr *MockBrandingAPIMockRecorder) UpdatePhoneProvider(ctx, id, pp interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id, pp}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePhoneProvider", reflect.TypeOf((*MockBrandingAPI)(nil).UpdatePhoneProvider), varargs...)
 }

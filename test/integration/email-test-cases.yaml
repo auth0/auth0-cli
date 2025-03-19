@@ -23,10 +23,6 @@ tests:
     command: auth0 email provider show
     exit-code: 1
 
-  006 - delete custom email provider action:
-    command: ./test/integration/scripts/delete-custom-email-action.sh
-    exit-code: 0
-
   007 - create email provider:
     command: auth0 email provider create --provider=sendgrid --enabled=false --default-from-address='admin@auth0.invalid' --credentials='{"api_key":"some-api-key"}'
     exit-code: 0
@@ -94,7 +90,7 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - TEMPLATE             Verification Email (using Link)
+        - TEMPLATE             Verification Email (Link)
         - FROM                 verify@travel0.com
         - SUBJECT              Verify link
         - RESULT URL           travel0.com
@@ -109,7 +105,7 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - TEMPLATE             Verification Email (using Code)
+        - TEMPLATE             Verification Email (Code)
         - FROM                 verify@travel0.com
         - SUBJECT              Verify code
         - RESULT URL           travel0.com
@@ -124,7 +120,7 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - TEMPLATE             reset_email
+        - TEMPLATE             Change Password (Link)
         - FROM                 change-password@travel0.com
         - SUBJECT              Change password
         - RESULT URL           travel0.com
@@ -227,7 +223,7 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - TEMPLATE             reset_email_by_code
+        - TEMPLATE             Change Password (Code)
         - FROM                 change-password-by-code@travel0.com
         - SUBJECT              Change password (using code)
         - RESULT URL           travel0.com

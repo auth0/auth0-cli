@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.10.0](https://github.com/auth0/auth0-cli/tree/v1.10.0) (Mar 11, 2025))
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.9.3...v1.10.0)
+
+### Added
+
+- Add support to manage phone provider using `auth0 phone provider` [#1137]
+
+
 # [v.1.9.3](https://github.com/auth0/auth0-cli/tree/v1.9.3) (Mar 07, 2025))
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.9.2...v1.9.3)
@@ -420,7 +429,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.9.3...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.10.0...HEAD
+[#1137]: https://github.com/auth0/auth0-cli/issues/1137
 [#1150]: https://github.com/auth0/auth0-cli/issues/1150
 [#1144]: https://github.com/auth0/auth0-cli/issues/1144
 [#1142]: https://github.com/auth0/auth0-cli/issues/1142

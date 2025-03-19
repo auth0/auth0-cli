@@ -64,11 +64,13 @@ func makeEmailTemplateView(email *management.EmailTemplate) *emailView {
 func emailTemplateFor(v string) string {
 	switch v {
 	case "verify_email":
-		return "Verification Email (using Link)"
+		return "Verification Email (Link)"
 	case "verify_email_by_code":
-		return "Verification Email (using Code)"
-	case "change_password":
-		return "Change Password"
+		return "Verification Email (Code)"
+	case "reset_email":
+		return "Change Password (Link)"
+	case "reset_email_by_code":
+		return "Change Password (Code)"
 	case "welcome_email":
 		return "Welcome Email"
 	case "blocked_account":

@@ -37,13 +37,6 @@ brews:
     repository:
       owner: auth0
       name: homebrew-auth0-cli
-      branch: main
-      pull_request:
-        enabled: true
-        base:
-          owner: auth0
-          name: homebrew-auth0-cli
-          branch: main
       token: "{{ .Env.GITHUB_TOKEN }}"
     commit_author:
       name: auth0
@@ -52,7 +45,7 @@ brews:
     homepage: https://auth0.github.io/auth0-cli
     description: Build, manage and test your Auth0 integrations from the command line
     license: MIT
-    skip_upload: auto
+    skip_upload: true
     install: |
       bin.install "auth0"
 
@@ -66,13 +59,6 @@ scoops:
     repository:
       owner: auth0
       name: scoop-auth0-cli
-      branch: main
-      pull_request:
-        enabled: true
-        base:
-          owner: auth0
-          name: scoop-auth0-cli
-          branch: main
       token: "{{ .Env.GITHUB_TOKEN }}"
     commit_author:
       name: auth0
@@ -81,5 +67,5 @@ scoops:
     homepage: https://auth0.github.io/auth0-cli
     description: Build, manage and test your Auth0 integrations from the command line
     license: MIT
-    skip_upload: auto
+    skip_upload: true
     post_install: ["Write-Host 'Thanks for installing the Auth0 CLI'"]

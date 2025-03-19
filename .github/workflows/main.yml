@@ -31,10 +31,10 @@ jobs:
         run: make check-docs
 
       - name: Check for linting errors
-        uses: golangci/golangci-lint-action@a4f60bb28d35aeee14e6880718e0c85ff1882e64 # v6.0.1
+        uses: golangci/golangci-lint-action@2226d7cb06a077cd73e56eedd38eecad18e5d837 # v6.5.0
         with:
           install-mode: "goinstall"
-          version: v1.59.0
+          version: v1.64.6
           args: -v -c .golangci.yml
 
   unit-tests:

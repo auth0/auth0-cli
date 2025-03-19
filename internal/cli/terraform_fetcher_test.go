@@ -140,6 +140,101 @@ func TestBrandingResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func Test_phoneProviderResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves twilio's phone providers data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		brandingAPI := mock.NewMockBrandingAPI(ctrl)
+		brandingAPI.EXPECT().
+			ListPhoneProviders(gomock.Any(), gomock.Any()).
+			Return(
+				&management.BrandingPhoneProviderList{
+					Providers: []*management.BrandingPhoneProvider{
+						{
+							ID:   auth0.String("pro_epg5EAGoQydDkAdgWMiMLz"),
+							Name: auth0.String("twilio"),
+						},
+					},
+				},
+				nil,
+			)
+
+		fetcher := phoneProviderResourceFetcher{
+			api: &auth0.API{
+				Branding: brandingAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_phone_provider.twilio",
+				ImportID:     "pro_epg5EAGoQydDkAdgWMiMLz",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it successfully retrieves custom's phone providers data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		brandingAPI := mock.NewMockBrandingAPI(ctrl)
+		brandingAPI.EXPECT().
+			ListPhoneProviders(gomock.Any(), gomock.Any()).
+			Return(
+				&management.BrandingPhoneProviderList{
+					Providers: []*management.BrandingPhoneProvider{
+						{
+							ID:   auth0.String("pro_epg5EAGoQydDkAdgWMiMLa"),
+							Name: auth0.String("custom"),
+						},
+					},
+				},
+				nil,
+			)
+
+		fetcher := phoneProviderResourceFetcher{
+			api: &auth0.API{
+				Branding: brandingAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_phone_provider.custom",
+				ImportID:     "pro_epg5EAGoQydDkAdgWMiMLa",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		brandingAPI := mock.NewMockBrandingAPI(ctrl)
+		brandingAPI.EXPECT().
+			ListPhoneProviders(gomock.Any(), gomock.Any()).
+			Return(nil, fmt.Errorf("failed to list phone providers"))
+
+		fetcher := phoneProviderResourceFetcher{
+			api: &auth0.API{
+				Branding: brandingAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to list phone providers")
+	})
+}
+
 func TestClientResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves client data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -1744,7 +1839,7 @@ func TestTriggerActionsResourceFetcher_FetchData(t *testing.T) {
 		defer ctrl.Finish()
 		actionAPI := mock.NewMockActionAPI(ctrl)
 
-		for _, trigger := range []string{"post-login", "credentials-exchange", "pre-user-registration", "post-user-registration", "post-change-password", "send-phone-message", "password-reset-post-challenge"} {
+		for _, trigger := range []string{"post-login", "credentials-exchange", "pre-user-registration", "post-user-registration", "post-change-password", "send-phone-message", "password-reset-post-challenge", "custom-email-provider", "custom-phone-provider"} {
 			bindings := []*management.ActionBinding{}
 
 			if trigger == "pre-user-registration" {
