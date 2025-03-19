@@ -108,7 +108,7 @@ var (
 	}
 )
 
-// Helper function to check if a string is in a slice
+// Helper function to check if a string is in a slice.
 func contains(slice []string, item string) bool {
 	for _, s := range slice {
 		if s == item {
@@ -206,7 +206,7 @@ func createNetworkACLCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Description    string
 		Active         bool
-		ActiveStr      string // Added for handling --active true/false
+		ActiveStr      string // Added for handling --active true/false.
 		Priority       int
 		RuleJSON       string
 		Action         string
@@ -239,38 +239,39 @@ The --rule parameter is required and must contain a valid JSON object with actio
   auth0 network-acl create -d "Block Bots" -p 4 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"user_agents":["badbot/*","malicious/*"],"ja3_fingerprints":["deadbeef","cafebabe"]}}'
   auth0 network-acl create --description "Complex Rule" --priority 5 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ip_v4_cidrs":["192.168.1.0/24"],"country_codes":["US"]}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Check if we're in non-interactive mode (flags provided) but rule JSON is missing
+			// Check if we're in non-interactive mode (flags provided) but rule JSON is missing.
 			if !canPrompt(cmd) && !cmd.Flags().Changed("rule") {
 				return fmt.Errorf("the --rule parameter is required for non-interactive mode. Please provide a valid JSON rule")
 			}
 
-			// Parse the active flag if provided
+			// Parse the active flag if provided.
 			if cmd.Flags().Changed("active") {
-				if inputs.ActiveStr == "true" {
+				switch inputs.ActiveStr {
+				case "true":
 					inputs.Active = true
-				} else if inputs.ActiveStr == "false" {
+				case "false":
 					inputs.Active = false
-				} else {
+				default:
 					return fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr)
 				}
 			}
 
-			// Check if rule JSON was provided
+			// Check if rule JSON was provided.
 			if cmd.Flags().Changed("rule") {
-				// Parse the rule JSON
+				// Parse the rule JSON.
 				var rule map[string]interface{}
 				if err := json.Unmarshal([]byte(inputs.RuleJSON), &rule); err != nil {
 					return fmt.Errorf("invalid rule JSON: %w", err)
 				}
 
-				// Create the network ACL with the provided rule
+				// Create the network ACL with the provided rule.
 				acl := &management.NetworkACL{
 					Description: &inputs.Description,
 					Active:      &inputs.Active,
 					Priority:    &inputs.Priority,
 				}
 
-				// Convert the rule map to the appropriate structure
+				// Convert the rule map to the appropriate structure.
 				if err := json.Unmarshal([]byte(inputs.RuleJSON), &acl.Rule); err != nil {
 					return fmt.Errorf("failed to parse rule JSON: %w", err)
 				}
@@ -285,7 +286,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 				return nil
 			}
 
-			// Interactive or flag-based creation
+			// Interactive or flag-based creation.
 			if err := networkACLDescription.Ask(cmd, &inputs.Description, nil); err != nil {
 				return err
 			}
@@ -308,7 +309,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 
 			cli.renderer.Infof("Define the rule for the network ACL.\n")
 
-			// Ask for scope
+			// Ask for scope.
 			scopes := []string{"management", "authentication", "tenant"}
 			if cmd.Flags().Changed("scope") {
 				if !contains(scopes, inputs.Scope) {
@@ -323,13 +324,13 @@ The --rule parameter is required and must contain a valid JSON object with actio
 				}
 			}
 
-			// Ask for action
+			// Ask for action.
 			actions := []string{"block", "allow", "log", "redirect"}
 			if err := networkACLRuleAction.Select(cmd, &inputs.Action, actions, nil); err != nil {
 				return err
 			}
 
-			// If action is redirect, ask for redirect URI
+			// If action is redirect, ask for redirect URI.
 			if inputs.Action == "redirect" {
 				if err := networkACLRedirectURI.Ask(cmd, &inputs.RedirectURI, nil); err != nil {
 					return err
@@ -339,7 +340,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 				}
 			}
 
-			// Ask for Match or Not Match rule
+			// Ask for Match or Not Match rule.
 			matchOptions := []string{"match", "not_match"}
 			var selectedMatchOption string
 			if err := (&Flag{
@@ -350,7 +351,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 			}
 			inputs.isMatchRule = selectedMatchOption == "match"
 
-			// Handle match criteria
+			// Handle match criteria.
 			if err := networkACLAnonymousProxy.AskBool(cmd, &inputs.AnonymousProxy, nil); err != nil {
 				return err
 			}
@@ -387,7 +388,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 				return err
 			}
 
-			// Build the network ACL
+			// Build the network ACL.
 			acl := &management.NetworkACL{
 				Description: &inputs.Description,
 				Active:      &inputs.Active,
@@ -397,7 +398,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 				},
 			}
 
-			// Set the action based on the selected action type
+			// Set the action based on the selected action type.
 			acl.Rule.Action = &management.NetworkACLRuleAction{}
 			switch inputs.Action {
 			case "block":
@@ -411,7 +412,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 				acl.Rule.Action.RedirectURI = &inputs.RedirectURI
 			}
 
-			// Set match criteria if any were provided
+			// Set match criteria if any were provided.
 			match := &management.NetworkACLRuleMatch{}
 			matchProvided := false
 
@@ -490,7 +491,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 	cmd.Flags().BoolVar(&inputs.AnonymousProxy, "anonymous-proxy", false, "Match anonymous proxy traffic")
 	cmd.Flags().StringVar(&inputs.Scope, "scope", "", "Scope of the rule (management, authentication, tenant)")
 
-	// Register the string slice flags
+	// Register the string slice flags.
 	networkACLASNs.RegisterIntSlice(cmd, &inputs.ASNs, nil)
 	networkACLCountryCodes.RegisterStringSlice(cmd, &inputs.CountryCodes, nil)
 	networkACLSubdivisionCodes.RegisterStringSlice(cmd, &inputs.SubdivCodes, nil)
@@ -544,7 +545,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
   auth0 network-acl update <id> --active true
   auth0 network-acl update <id> --description "Complex Rule updated" --priority 9 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ip_v4_cidrs":["192.168.1.0/24"],"country_codes":["US"]}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Get the network ACL ID
+			// Get the network ACL ID.
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
@@ -553,7 +554,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 				}
 			}
 
-			// Read the current ACL
+			// Read the current ACL.
 			var currentACL *management.NetworkACL
 			err := ansi.Waiting(func() (err error) {
 				currentACL, err = cli.api.NetworkACL.Read(cmd.Context(), inputs.ID)
@@ -565,18 +566,18 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 
 			var updatedACL *management.NetworkACL
 
-			// Initialize updatedACL with the ID from the current ACL
+			// Initialize updatedACL with the ID from the current ACL.
 			updatedACL = &management.NetworkACL{
 				ID: currentACL.ID,
 			}
 
-			// Interactive update flow
+			// Interactive update flow.
 			if canPrompt(cmd) {
-				// Check if specific flags were provided (partial update)
+				// Check if specific flags were provided (partial update).
 				flagsProvided := cmd.Flags().Changed("description") || cmd.Flags().Changed("active") ||
 					cmd.Flags().Changed("priority") || cmd.Flags().Changed("rule")
 
-				// If some flags were provided, ask if user wants to update other fields
+				// If some flags were provided, ask if user wants to update other fields.
 				if flagsProvided {
 					var updateOtherFields bool
 					if err := prompt.AskBool("Do you want to update other fields as well?", &updateOtherFields, false); err != nil {
@@ -584,21 +585,21 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					}
 
 					if !updateOtherFields {
-						// User doesn't want to update other fields, use current values
-						// Initialize with current values
+						// Initialize with current values.
 						updatedACL = currentACL
 
-						// Override only the fields that were specified via flags
+						// Override only the fields that were specified via flags.
 						if cmd.Flags().Changed("description") {
 							updatedACL.Description = &inputs.Description
 						}
 
 						if cmd.Flags().Changed("active") {
-							if inputs.ActiveStr == "true" {
+							switch inputs.ActiveStr {
+							case "true":
 								inputs.Active = true
-							} else if inputs.ActiveStr == "false" {
+							case "false":
 								inputs.Active = false
-							} else {
+							default:
 								return fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr)
 							}
 							updatedACL.Active = &inputs.Active
@@ -616,12 +617,12 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 							updatedACL.Rule = &rule
 						}
 
-						// Skip the rest of the interactive flow
+						// Skip the rest of the interactive flow.
 						goto updateACL
 					}
 				}
 
-				// Use current values as defaults for interactive prompts
+				// Use current values as defaults for interactive prompts.
 				currentDescriptionStr := *currentACL.Description
 				if err := networkACLDescription.Ask(cmd, &inputs.Description, &currentDescriptionStr); err != nil {
 					return err
@@ -638,7 +639,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 
 				cli.renderer.Infof("Define the rule for the network ACL.\n")
 
-				// Default scope from current ACL
+				// Default scope from current ACL.
 				currentScope := ""
 				if currentACL.Rule != nil && currentACL.Rule.Scope != nil {
 					currentScope = *currentACL.Rule.Scope
@@ -652,16 +653,17 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					return err
 				}
 
-				// Determine current action
+				// Determine current action.
 				currentAction := "block"
 				if currentACL.Rule != nil && currentACL.Rule.Action != nil {
-					if currentACL.Rule.Action.Block != nil && *currentACL.Rule.Action.Block {
+					switch {
+					case currentACL.Rule.Action.Block != nil && *currentACL.Rule.Action.Block:
 						currentAction = "block"
-					} else if currentACL.Rule.Action.Allow != nil && *currentACL.Rule.Action.Allow {
+					case currentACL.Rule.Action.Allow != nil && *currentACL.Rule.Action.Allow:
 						currentAction = "allow"
-					} else if currentACL.Rule.Action.Log != nil && *currentACL.Rule.Action.Log {
+					case currentACL.Rule.Action.Log != nil && *currentACL.Rule.Action.Log:
 						currentAction = "log"
-					} else if currentACL.Rule.Action.Redirect != nil && *currentACL.Rule.Action.Redirect {
+					case currentACL.Rule.Action.Redirect != nil && *currentACL.Rule.Action.Redirect:
 						currentAction = "redirect"
 					}
 				}
@@ -683,7 +685,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					}
 				}
 
-				// Depending on Match/NotMatch ask the user if they want to update the current or change it
+				// Depending on Match/NotMatch ask the user if they want to update the current or change it.
 				if currentACL.Rule != nil && currentACL.Rule.Match != nil {
 					if err := prompt.AskBool("Do you want to update the current match criteria to NotMatch criteria?", &inputs.NoMatchRule, false); err != nil {
 						return err
@@ -695,7 +697,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					}
 				}
 
-				// Get current match values for defaults
+				// Get current match values for defaults.
 				currentAnonymousProxy := false
 				var currentASNs []int
 				var currentCountryCodes, currentSubDivCodes []string
@@ -750,7 +752,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					return err
 				}
 
-				// Convert string slices to comma-separated strings for AskMany
+				// Convert string slices to comma-separated strings for AskMany.
 				currentCountryCodesStr := strings.Join(currentCountryCodes, ",")
 				if err := networkACLCountryCodes.AskMany(cmd, &inputs.CountryCodes, &currentCountryCodesStr); err != nil {
 					return err
@@ -786,7 +788,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					return err
 				}
 
-				// Build the updated ACL from interactive inputs
+				// Build the updated ACL from interactive inputs.
 				updatedACL.Description = &inputs.Description
 				updatedACL.Active = &inputs.Active
 				updatedACL.Priority = &inputs.Priority
@@ -794,7 +796,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					Scope: &inputs.Scope,
 				}
 
-				// Set the action based on the selected action type
+				// Set the action based on the selected action type.
 				updatedACL.Rule.Action = &management.NetworkACLRuleAction{}
 				switch inputs.Action {
 				case "block":
@@ -808,7 +810,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					updatedACL.Rule.Action.RedirectURI = &inputs.RedirectURI
 				}
 
-				// Set match criteria if any were provided
+				// Set match criteria if any were provided.
 				match := &management.NetworkACLRuleMatch{}
 				matchProvided := false
 
@@ -858,53 +860,55 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 				}
 
 				if matchProvided {
-					if inputs.NoMatchRule {
+					switch {
+					case inputs.NoMatchRule:
 						updatedACL.Rule.NotMatch = match
-						updatedACL.Rule.Match = nil // Clear Match if converting to NotMatch
-					} else if inputs.MatchRule {
+						updatedACL.Rule.Match = nil // Clear Match if converting to NotMatch.
+					case inputs.MatchRule:
 						updatedACL.Rule.Match = match
-						updatedACL.Rule.NotMatch = nil // Clear NotMatch if converting to Match
-					} else {
-						// Preserve the existing rule type (Match or NotMatch)
+						updatedACL.Rule.NotMatch = nil // Clear NotMatch if converting to Match.
+					default:
+						// Preserve the existing rule type (Match or NotMatch).
 						if currentACL.Rule != nil {
-							if currentACL.Rule.Match != nil {
+							switch {
+							case currentACL.Rule.Match != nil:
 								updatedACL.Rule.Match = match
-							} else if currentACL.Rule.NotMatch != nil {
+							case currentACL.Rule.NotMatch != nil:
 								updatedACL.Rule.NotMatch = match
-							} else {
-								// Default to Match if neither exists
+							default:
+								// Default to Match if neither exists.
 								updatedACL.Rule.Match = match
 							}
 						} else {
-							// Default to Match if no rule exists
+							// Default to Match if no rule exists.
 							updatedACL.Rule.Match = match
 						}
 					}
 				}
-
 			} else {
-				// Non-interactive update flow
+				// Non-interactive update flow.
 				if !(cmd.Flags().Changed("description") && cmd.Flags().Changed("active") &&
 					cmd.Flags().Changed("priority") && cmd.Flags().Changed("rule")) {
 					return fmt.Errorf("all parameters (description, active, priority, and rule) must be provided for non-interactive mode")
 				}
 
-				// Parse the active flag if provided
+				// Parse the active flag if provided.
 				if cmd.Flags().Changed("active") {
-					if inputs.ActiveStr == "true" {
+					switch inputs.ActiveStr {
+					case "true":
 						inputs.Active = true
 						updatedACL.Active = &inputs.Active
-					} else if inputs.ActiveStr == "false" {
+					case "false":
 						inputs.Active = false
 						updatedACL.Active = &inputs.Active
-					} else {
+					default:
 						return fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr)
 					}
 				} else {
 					return fmt.Errorf("--active flag not provided")
 				}
 
-				// Parse description if provided
+				// Parse description if provided.
 				if cmd.Flags().Changed("description") {
 					if len(inputs.Description) > 255 {
 						return fmt.Errorf("description cannot exceed 255 characters")
@@ -914,7 +918,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					return fmt.Errorf("--description flag not provided")
 				}
 
-				// Parse priority if provided
+				// Parse priority if provided.
 				if cmd.Flags().Changed("priority") {
 					if inputs.Priority < 1 || inputs.Priority > 10 {
 						return fmt.Errorf("priority must be between 1 and 10")
@@ -924,7 +928,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					return fmt.Errorf("--priority flag not provided")
 				}
 
-				// Parse rule JSON if provided
+				// Parse rule JSON if provided.
 				if cmd.Flags().Changed("rule") {
 					var rule management.NetworkACLRule
 					if err := json.Unmarshal([]byte(inputs.RuleJSON), &rule); err != nil {
@@ -936,15 +940,15 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 				}
 			}
 
-			// If no changes were made, use the current ACL data as fallback
+			// If no changes were made, use the current ACL data as fallback.
 			if updatedACL.Description == nil && updatedACL.Active == nil &&
 				updatedACL.Priority == nil && updatedACL.Rule == nil {
-				// Copy current ACL data
+				// Copy current ACL data.
 				updatedACL = currentACL
 			}
 
 		updateACL:
-			// Update the network ACL
+			// Update the network ACL.
 			if err := ansi.Waiting(func() error {
 				return cli.api.NetworkACL.Update(cmd.Context(), inputs.ID, updatedACL)
 			}); err != nil {
@@ -965,7 +969,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 	cmd.Flags().BoolVar(&inputs.AnonymousProxy, "anonymous-proxy", false, "Match anonymous proxy traffic")
 	cmd.Flags().StringVar(&inputs.Scope, "scope", "", "Scope of the rule (management, authentication, tenant)")
 
-	// Register the string slice flags
+	// Register the string slice flags.
 	networkACLASNs.RegisterIntSlice(cmd, &inputs.ASNs, nil)
 	networkACLCountryCodes.RegisterStringSlice(cmd, &inputs.CountryCodes, nil)
 	networkACLSubdivisionCodes.RegisterStringSlice(cmd, &inputs.SubdivCodes, nil)
@@ -998,9 +1002,9 @@ Use --all flag to delete all network ACLs at once.`,
   auth0 network-acl delete --all
   auth0 network-acl delete --all --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Check if --all flag is set
+			// Check if --all flag is set.
 			if inputs.All {
-				// Get all network ACLs
+				// Get all network ACLs.
 				var list []*management.NetworkACL
 				if err := ansi.Waiting(func() error {
 					var err error
@@ -1015,14 +1019,14 @@ Use --all flag to delete all network ACLs at once.`,
 					return nil
 				}
 
-				// Confirm deletion
+				// Confirm deletion.
 				if !cli.force && canPrompt(cmd) {
 					if confirmed := prompt.Confirm(fmt.Sprintf("Are you sure you want to delete ALL %d network ACLs?", len(list))); !confirmed {
 						return nil
 					}
 				}
 
-				// Delete all ACLs with progress bar
+				// Delete all ACLs with progress bar.
 				return ansi.ProgressBar("Deleting all network ACLs", list, func(i int, acl *management.NetworkACL) error {
 					if acl != nil && acl.ID != nil {
 						return cli.api.NetworkACL.Delete(cmd.Context(), *acl.ID)
@@ -1031,7 +1035,7 @@ Use --all flag to delete all network ACLs at once.`,
 				})
 			}
 
-			// Regular single or multiple ACL delete flow
+			// Regular single or multiple ACL delete flow.
 			ids := make([]string, len(args))
 			if len(args) == 0 {
 				if err := networkACLID.PickMany(cmd, &ids, cli.networkACLPickerOptions); err != nil {

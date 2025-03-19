@@ -49,7 +49,7 @@ func (v *networkACLView) KeyValues() [][]string {
 	if v.acl.Rule != nil {
 		keyValues = append(keyValues, []string{"SCOPE", v.acl.Rule.GetScope()})
 
-		// Add action information
+		// Add action information.
 		action := "block"
 		if v.acl.Rule.Action != nil {
 			switch {
@@ -63,12 +63,12 @@ func (v *networkACLView) KeyValues() [][]string {
 		}
 		keyValues = append(keyValues, []string{"ACTION", action})
 
-		// Add redirect URI if present
+		// Add redirect URI if present.
 		if v.acl.Rule.Action != nil && v.acl.Rule.Action.RedirectURI != nil {
 			keyValues = append(keyValues, []string{"REDIRECT URI", *v.acl.Rule.Action.RedirectURI})
 		}
 
-		// Add match criteria if present
+		// Add match criteria if present.
 		if v.acl.Rule.Match != nil {
 			match := v.acl.Rule.Match
 
@@ -113,7 +113,7 @@ func (v *networkACLView) KeyValues() [][]string {
 			}
 		}
 
-		// Add not_match criteria if present
+		// Add not_match criteria if present.
 		if v.acl.Rule.NotMatch != nil {
 			notMatch := v.acl.Rule.NotMatch
 			keyValues = append(keyValues, []string{"NOT MATCH", "true"})

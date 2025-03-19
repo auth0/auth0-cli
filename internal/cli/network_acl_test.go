@@ -15,7 +15,7 @@ import (
 )
 
 func TestNetworkACLPickerOptions(t *testing.T) {
-	// Disable colors for consistent test output
+	// Disable colors for consistent test output.
 	tests := []struct {
 		name         string
 		networkACLs  []*management.NetworkACL
@@ -37,11 +37,11 @@ func TestNetworkACLPickerOptions(t *testing.T) {
 			},
 			assertOutput: func(t testing.TB, options pickerOptions) {
 				assert.Len(t, options, 2)
-				// Check the value which should not have ANSI formatting
+				// Check the value which should not have ANSI formatting.
 				assert.Equal(t, "acl-id-1", options[0].value)
 				assert.Equal(t, "acl-id-2", options[1].value)
 
-				// For labels, just check that they contain the expected text without worrying about ANSI codes
+				// For labels, just check that they contain the expected text without worrying about ANSI codes.
 				assert.Contains(t, options[0].label, "Block IPs")
 				assert.Contains(t, options[0].label, "acl-id-1")
 				assert.Contains(t, options[1].label, "Allow Countries")
