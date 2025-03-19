@@ -90,6 +90,7 @@ Authenticating as a user is not supported for **private cloud** tenants. Instead
 - [auth0 login](auth0_login.md) - Authenticate the Auth0 CLI
 - [auth0 logout](auth0_logout.md) - Log out of a tenant's session
 - [auth0 logs](auth0_logs.md) - View tenant logs
+- [auth0 network-acl](auth0_network-acl.md) - Manage network ACL settings
 - [auth0 orgs](auth0_orgs.md) - Manage resources for organizations
 - [auth0 protection](auth0_protection.md) - Manage resources for attack protection
 - [auth0 quickstarts](auth0_quickstarts.md) - Quickstart support for getting bootstrapped
