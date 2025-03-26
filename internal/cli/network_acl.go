@@ -25,20 +25,20 @@ var (
 		Name:      "Description",
 		LongForm:  "description",
 		ShortForm: "d",
-		Help:      "Description of the network ACL",
+		Help:      "Description of the network ACL (Eg. \"Block suspicious IPs\")",
 	}
 
 	networkACLActive = Flag{
 		Name:     "Active",
 		LongForm: "active",
-		Help:     "Whether the network ACL is active",
+		Help:     "Whether the network ACL is active (Eg. true, default: false)",
 	}
 
 	networkACLPriority = Flag{
 		Name:      "Priority",
 		LongForm:  "priority",
 		ShortForm: "p",
-		Help:      "Priority of the network ACL",
+		Help:      "Priority of the network ACL 1-10 number(Eg. 5)",
 	}
 
 	networkACLRuleAction = Flag{
@@ -50,61 +50,61 @@ var (
 	networkACLRedirectURI = Flag{
 		Name:     "RedirectURI",
 		LongForm: "redirect-uri",
-		Help:     "URI to redirect to when action is redirect",
+		Help:     "URI to redirect to when action is redirect (Eg. \"https://example.com/blocked\")",
 	}
 
 	networkACLAnonymousProxy = Flag{
 		Name:     "AnonymousProxy",
 		LongForm: "anonymous-proxy",
-		Help:     "Match anonymous proxy traffic",
+		Help:     "Match anonymous proxy traffic (Eg. true)",
 	}
 
 	networkACLASNs = Flag{
 		Name:     "ASNs",
 		LongForm: "asns",
-		Help:     "Comma-separated list of ASNs to match",
+		Help:     "Comma-separated list of ASNs to match (Eg. 64496,64497,64498)",
 	}
 
 	networkACLCountryCodes = Flag{
 		Name:     "CountryCodes",
 		LongForm: "country-codes",
-		Help:     "Comma-separated list of country codes to match",
+		Help:     "Comma-separated list of country codes to match (Eg. US,CA,MX)",
 	}
 
 	networkACLSubdivisionCodes = Flag{
 		Name:     "SubdivisionCodes",
 		LongForm: "subdivision-codes",
-		Help:     "Comma-separated list of subdivision codes to match",
+		Help:     "Comma-separated list of subdivision codes to match (Eg. US-NY,US-CA)",
 	}
 
 	networkACLIPv4CIDRs = Flag{
 		Name:     "IPv4CIDRs",
 		LongForm: "ipv4-cidrs",
-		Help:     "Comma-separated list of IPv4 CIDR ranges",
+		Help:     "Comma-separated list of IPv4 CIDR ranges (Eg. 192.168.1.0/24,10.0.0.0/8)",
 	}
 
 	networkACLIPv6CIDRs = Flag{
 		Name:     "IPv6CIDRs",
 		LongForm: "ipv6-cidrs",
-		Help:     "Comma-separated list of IPv6 CIDR ranges",
+		Help:     "Comma-separated list of IPv6 CIDR ranges (Eg. 2001:db8::/32,2001:db8:1234::/48)",
 	}
 
 	networkACLJA3Fingerprints = Flag{
 		Name:     "JA3Fingerprints",
 		LongForm: "ja3-fingerprints",
-		Help:     "Comma-separated list of JA3 fingerprints to match",
+		Help:     "Comma-separated list of JA3 fingerprints to match (Eg. deadbeef,cafebabe)",
 	}
 
 	networkACLJA4Fingerprints = Flag{
 		Name:     "JA4Fingerprints",
 		LongForm: "ja4-fingerprints",
-		Help:     "Comma-separated list of JA4 fingerprints to match",
+		Help:     "Comma-separated list of JA4 fingerprints to match (Eg. t13d1516h2_8daaf6152771)",
 	}
 
 	networkACLUserAgents = Flag{
 		Name:     "UserAgents",
 		LongForm: "user-agents",
-		Help:     "Comma-separated list of user agents to match",
+		Help:     "Comma-separated list of user agents to match (Eg. badbot/*,malicious/*)",
 	}
 )
 
