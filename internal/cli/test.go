@@ -67,7 +67,7 @@ var (
 		Name:      "Organization",
 		LongForm:  "organization",
 		ShortForm: "o",
-		Help:      "organization id to use for the login, can parse organization name only if allow_organization_name_in_authentication_api is enabled on tenant",
+		Help:      "organization-id to use for the login, can parse organization-name only if allow_organization_name_in_authentication_api is enabled on tenant",
 	}
 
 	testCustomParams = Flag{
