@@ -32,6 +32,7 @@ auth0 test token [flags]
   -a, --audience string         The unique identifier of the target API you want to access. For Machine to Machine and Regular Web Applications, only the enabled APIs will be shown within the interactive prompt.
       --force                   Skip confirmation.
       --json                    Output in json format.
+  -o, --organization string     organization id to use for the login, can parse organization name only if allow_organization_name_in_authentication_api is enabled on tenant
   -p, --params stringToString   Custom parameters to include in the login URL. (default [])
   -s, --scopes strings          The list of scopes you want to use.
 ```
