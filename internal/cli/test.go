@@ -238,7 +238,7 @@ func testTokenCmd(cli *cli) *cobra.Command {
 			cli.renderer.Infof("Type      : " + display.ApplyColorToFriendlyAppType(display.FriendlyAppType(client.GetAppType())))
 			cli.renderer.Newline()
 
-			// Deferred function to handle token rendering and clipboard copying
+			// Deferred function to handle token rendering and clipboard copying.
 			defer func() {
 				if tokenResponse != nil {
 					cli.renderer.TestToken(client, tokenResponse)
