@@ -155,7 +155,11 @@ func testLoginCmd(cli *cli) *cobra.Command {
 			}
 
 			if inputs.Organization != "" {
-				inputs.CustomParams["organization"] = inputs.Organization
+				if inputs.CustomParams != nil {
+					inputs.CustomParams["organization"] = inputs.Organization
+				} else {
+					inputs.CustomParams = map[string]string{"organization": inputs.Organization}
+				}
 			}
 
 			tokenResponse, err := runLoginFlow(
@@ -267,14 +271,20 @@ func testTokenCmd(cli *cli) *cobra.Command {
 				return nil
 			}
 
-			if len(inputs.Scopes) == 0 {
+			var managementAPI = "https://" + cli.tenant + "/api/v2/"
+
+			if len(inputs.Scopes) == 0 && inputs.Audience != managementAPI {
 				if err := cli.pickTokenScopes(cmd.Context(), &inputs); err != nil {
 					return err
 				}
 			}
 
 			if inputs.Organization != "" {
-				inputs.CustomParams["organization"] = inputs.Organization
+				if inputs.CustomParams != nil {
+					inputs.CustomParams["organization"] = inputs.Organization
+				} else {
+					inputs.CustomParams = map[string]string{"organization": inputs.Organization}
+				}
 			}
 
 			if proceed := runLoginFlowPreflightChecks(cli, client); !proceed {
@@ -474,6 +484,11 @@ func (c *cli) pickTokenScopes(ctx context.Context, inputs *testCmdInputs) error 
 	var scopes []string
 	for _, scope := range resourceServer.GetScopes() {
 		scopes = append(scopes, scope.GetValue())
+	}
+
+	if len(scopes) == 0 {
+		c.renderer.Warnf("The API %s does not have any scopes defined.\n", ansi.Bold(resourceServer.GetName()))
+		return nil
 	}
 
 	scopesPrompt := &survey.MultiSelect{
