@@ -238,6 +238,18 @@ func testTokenCmd(cli *cli) *cobra.Command {
 			cli.renderer.Infof("Type      : " + display.ApplyColorToFriendlyAppType(display.FriendlyAppType(client.GetAppType())))
 			cli.renderer.Newline()
 
+			// Deferred function to handle token rendering and clipboard copying
+			defer func() {
+				if tokenResponse != nil {
+					cli.renderer.TestToken(client, tokenResponse)
+					if err := clipboard.WriteAll(tokenResponse.AccessToken); err != nil {
+						cli.renderer.Errorf("❌  Failed to copy the token to clipboard: %v", err)
+					} else {
+						cli.renderer.Infof("✅   Access Token copied to clipboard!\n")
+					}
+				}
+			}()
+
 			if client.GetAppType() == appTypeNonInteractive {
 				if len(inputs.Scopes) != 0 {
 					cli.renderer.Warnf("Passed in scopes do not apply to Machine to Machine applications.\n")
@@ -250,15 +262,6 @@ func testTokenCmd(cli *cli) *cobra.Command {
 						inputs.ClientID,
 						err,
 					)
-				}
-
-				cli.renderer.TestToken(client, tokenResponse)
-
-				err = clipboard.WriteAll(tokenResponse.AccessToken)
-				if err != nil {
-					cli.renderer.Errorf("❌  Failed to copy the token to clipboard: %v", err)
-				} else {
-					cli.renderer.Infof("✅   Access Token copied to clipboard!\n")
 				}
 
 				return nil
@@ -291,15 +294,6 @@ func testTokenCmd(cli *cli) *cobra.Command {
 			)
 			if err != nil {
 				return fmt.Errorf("failed to log into the client with ID %q: %w", inputs.ClientID, err)
-			}
-
-			cli.renderer.TestToken(client, tokenResponse)
-
-			err = clipboard.WriteAll(tokenResponse.AccessToken)
-			if err != nil {
-				cli.renderer.Errorf("❌  Failed to copy the token to clipboard: %v", err)
-			} else {
-				cli.renderer.Infof("✅   Access Token copied to clipboard!\n")
 			}
 
 			return nil
