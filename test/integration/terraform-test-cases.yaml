@@ -1,11 +1,11 @@
-#config:
-#  inherit-env: true
-#  retries: 1
-#  env:
-#    AUTH0_DOMAIN: $AUTH0_DOMAIN
-#    AUTH0_CLIENT_ID: $AUTH0_CLIENT_ID
-#    AUTH0_CLIENT_SECRET: $AUTH0_CLIENT_SECRET
-#tests:
+config:
+  inherit-env: true
+  retries: 1
+  env:
+    AUTH0_DOMAIN: $AUTH0_DOMAIN
+    AUTH0_CLIENT_ID: $AUTH0_CLIENT_ID
+    AUTH0_CLIENT_SECRET: $AUTH0_CLIENT_SECRET
+tests:
 #  001.0 - setup:
 #    command: rm -rdf tmp-tf-gen
 #    exit-code: 0
@@ -23,7 +23,7 @@
 #    exit-code: 0
 #  001.3 - cleanup:
 #    command: rm -rdf tmp-tf-gen
-#
+
 #  002.0 - setup:
 #    command: rm -rdf tmp-tf-gen
 #    exit-code: 0
@@ -42,33 +42,33 @@
 #    exit-code: 0
 #  002.3 - cleanup:
 #    command: mv tmp-tf-gen /tmp/tmp-tf-gen
-#
-#  003.1 - it partially succeeds if Terraform credentials not provided:
-#    command: unset AUTH0_DOMAIN && auth0 tf generate --output-dir tmp-tf-gen
-#    exit-code: 0
-#    stderr:
-#      contains:
-#        - "Terraform provider credentials not detected"
-#        - "Refer to following guide on how to create a dedicated Auth0 client and configure credentials: https://registry.terraform.io/providers/auth0/auth0/latest/docs/guides/quickstart"
-#        - "After provider credentials are set, run:"
-#        - "cd tmp-tf-gen && terraform init && terraform plan -generate-config-out=auth0_generated.tf && terraform apply"
-#        - "Once the Terraform file is auto-generated, the auth0_import.tf file can be deleted."
-#  003.2 - it successfully generates the expected files for a partial success:
-#    command: ./test/integration/scripts/assert-tf-generate-files-exist.sh partial_success
-#    exit-code: 0
-#  003.3 - cleanup:
-#    command: rm -rdf tmp-tf-gen
-#
-#  004 - it does not run if invalid resource provided:
-#    command: auth0 tf generate -r auth0_computer
-#    exit-code: 1
-#    stderr:
-#      contains:
-#        - "Unsupported resource type: auth0_computer"
-#
-#  005 - it errors if AUTH0_DOMAIN values for provider and CLI do not match:
-#    command: AUTH0_DOMAIN=some-other-domain.us.auth0.com auth0 tf generate --output-dir tmp-tf-gen
-#    exit-code: 1
-#    stderr:
-#      contains:
-#        - "Terraform provider tenant domain \"some-other-domain.us.auth0.com\" does not match current CLI tenant"
+
+  003.1 - it partially succeeds if Terraform credentials not provided:
+    command: unset AUTH0_DOMAIN && auth0 tf generate --output-dir tmp-tf-gen
+    exit-code: 0
+    stderr:
+      contains:
+        - "Terraform provider credentials not detected"
+        - "Refer to following guide on how to create a dedicated Auth0 client and configure credentials: https://registry.terraform.io/providers/auth0/auth0/latest/docs/guides/quickstart"
+        - "After provider credentials are set, run:"
+        - "cd tmp-tf-gen && terraform init && terraform plan -generate-config-out=auth0_generated.tf && terraform apply"
+        - "Once the Terraform file is auto-generated, the auth0_import.tf file can be deleted."
+  003.2 - it successfully generates the expected files for a partial success:
+    command: ./test/integration/scripts/assert-tf-generate-files-exist.sh partial_success
+    exit-code: 0
+  003.3 - cleanup:
+    command: rm -rdf tmp-tf-gen
+
+  004 - it does not run if invalid resource provided:
+    command: auth0 tf generate -r auth0_computer
+    exit-code: 1
+    stderr:
+      contains:
+        - "Unsupported resource type: auth0_computer"
+
+  005 - it errors if AUTH0_DOMAIN values for provider and CLI do not match:
+    command: AUTH0_DOMAIN=some-other-domain.us.auth0.com auth0 tf generate --output-dir tmp-tf-gen
+    exit-code: 1
+    stderr:
+      contains:
+        - "Terraform provider tenant domain \"some-other-domain.us.auth0.com\" does not match current CLI tenant"
