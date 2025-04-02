@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/atotto/clipboard"
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
@@ -62,6 +63,13 @@ var (
 		Help:      "One of your custom domains.",
 	}
 
+	testOrganization = Flag{
+		Name:      "Organization",
+		LongForm:  "organization",
+		ShortForm: "o",
+		Help:      "organization-id to use for the login. Can use organization-name if allow_organization_name_in_authentication_api is enabled for tenant",
+	}
+
 	testCustomParams = Flag{
 		Name:      "Custom Params",
 		LongForm:  "params",
@@ -79,6 +87,7 @@ type testCmdInputs struct {
 	ConnectionName string
 	CustomDomain   string
 	CustomParams   map[string]string
+	Organization   string
 }
 
 func testCmd(cli *cli) *cobra.Command {
@@ -107,12 +116,13 @@ func testLoginCmd(cli *cli) *cobra.Command {
   auth0 test login <client-id>
   auth0 test login <client-id> --connection-name <connection-name>
   auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience>
+  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --organization <org-id>
   auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --domain <domain> --params "foo=bar"
   auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --domain <domain> --scopes <scope1,scope2>
   auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --force
   auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --json
-  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> -p "foo=bar" -p "bazz=buzz" --json
-  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> -p "foo=bar","bazz=buzz" --json
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -o <org-id> -s <scope1,scope2> -p "foo=bar" -p "bazz=buzz" --json
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -o <org-id> -s <scope1,scope2> -p "foo=bar","bazz=buzz" --json
   auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := selectClientToUseForTestsAndValidateExistence(cli, cmd, args, &inputs)
@@ -141,6 +151,14 @@ func testLoginCmd(cli *cli) *cobra.Command {
 			if inputs.Audience != "" {
 				if err := checkClientIsAuthorizedForAPI(cmd.Context(), cli, client, inputs.Audience); err != nil {
 					return err
+				}
+			}
+
+			if inputs.Organization != "" {
+				if inputs.CustomParams != nil {
+					inputs.CustomParams["organization"] = inputs.Organization
+				} else {
+					inputs.CustomParams = map[string]string{"organization": inputs.Organization}
 				}
 			}
 
@@ -180,6 +198,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 	testConnectionName.RegisterString(cmd, &inputs.ConnectionName, "")
 	testDomain.RegisterString(cmd, &inputs.CustomDomain, "")
 	testCustomParams.RegisterStringMap(cmd, &inputs.CustomParams, nil)
+	testOrganization.RegisterString(cmd, &inputs.Organization, "")
 
 	return cmd
 }
@@ -195,14 +214,16 @@ func testTokenCmd(cli *cli) *cobra.Command {
 			"Specify the API you want this token for with `--audience` (API Identifier). " +
 			"Additionally, you can also specify the `--scopes` to grant.",
 		Example: `  auth0 test token
-  auth0 test token <client-id> --audience <api-audience|api-identifier> --scopes <scope1,scope2> --params "foo=bar"
-  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2>
+  auth0 test token <client-id> --audience <api-audience|api-identifier> --organization <org-id> --scopes <scope1,scope2> --params "foo=bar"
+  auth0 test token <client-id> -a <api-audience|api-identifier> -o <org-id> -s <scope1,scope2>
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --force
-  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> -p "foo=bar" -p "bazz=buzz" --force
+  auth0 test token <client-id> -a <api-audience|api-identifier> -o <org-id> -s <scope1,scope2> -p "foo=bar" -p "bazz=buzz" --force
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --json
-  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> -p "foo=bar","bazz=buzz" --json
+  auth0 test token <client-id> -a <api-audience|api-identifier> -o <org-id> -s <scope1,scope2> -p "foo=bar","bazz=buzz" --json
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var tokenResponse *authutil.TokenResponse
+
 			client, err := selectClientToUseForTestsAndValidateExistence(cli, cmd, args, &inputs)
 			if err != nil {
 				return err
@@ -221,12 +242,24 @@ func testTokenCmd(cli *cli) *cobra.Command {
 			cli.renderer.Infof("Type      : " + display.ApplyColorToFriendlyAppType(display.FriendlyAppType(client.GetAppType())))
 			cli.renderer.Newline()
 
+			// Deferred function to handle token rendering and clipboard copying.
+			defer func() {
+				if tokenResponse != nil {
+					cli.renderer.TestToken(client, tokenResponse)
+					if err := clipboard.WriteAll(tokenResponse.AccessToken); err != nil {
+						cli.renderer.Errorf("❌  Failed to copy the token to clipboard: %v", err)
+					} else {
+						cli.renderer.Infof("✅   Access Token copied to clipboard!\n")
+					}
+				}
+			}()
+
 			if client.GetAppType() == appTypeNonInteractive {
 				if len(inputs.Scopes) != 0 {
 					cli.renderer.Warnf("Passed in scopes do not apply to Machine to Machine applications.\n")
 				}
 
-				tokenResponse, err := runClientCredentialsFlow(cmd.Context(), cli, client, inputs.Audience, cli.tenant)
+				tokenResponse, err = runClientCredentialsFlow(cmd.Context(), cli, client, inputs.Audience, cli.tenant)
 				if err != nil {
 					return fmt.Errorf(
 						"failed to log in with client credentials for client with ID %q: %w",
@@ -235,14 +268,22 @@ func testTokenCmd(cli *cli) *cobra.Command {
 					)
 				}
 
-				cli.renderer.TestToken(client, tokenResponse)
-
 				return nil
 			}
 
-			if len(inputs.Scopes) == 0 {
+			var managementAPI = "https://" + cli.tenant + "/api/v2/"
+
+			if len(inputs.Scopes) == 0 && inputs.Audience != managementAPI {
 				if err := cli.pickTokenScopes(cmd.Context(), &inputs); err != nil {
 					return err
+				}
+			}
+
+			if inputs.Organization != "" {
+				if inputs.CustomParams != nil {
+					inputs.CustomParams["organization"] = inputs.Organization
+				} else {
+					inputs.CustomParams = map[string]string{"organization": inputs.Organization}
 				}
 			}
 
@@ -250,7 +291,7 @@ func testTokenCmd(cli *cli) *cobra.Command {
 				return nil
 			}
 
-			tokenResponse, err := runLoginFlow(
+			tokenResponse, err = runLoginFlow(
 				cmd.Context(),
 				cli,
 				client,
@@ -265,8 +306,6 @@ func testTokenCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to log into the client with ID %q: %w", inputs.ClientID, err)
 			}
 
-			cli.renderer.TestToken(client, tokenResponse)
-
 			return nil
 		},
 	}
@@ -277,6 +316,7 @@ func testTokenCmd(cli *cli) *cobra.Command {
 	testAudienceRequired.RegisterString(cmd, &inputs.Audience, "")
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
 	testCustomParams.RegisterStringMap(cmd, &inputs.CustomParams, nil)
+	testOrganization.RegisterString(cmd, &inputs.Organization, "")
 
 	return cmd
 }
@@ -444,6 +484,11 @@ func (c *cli) pickTokenScopes(ctx context.Context, inputs *testCmdInputs) error 
 	var scopes []string
 	for _, scope := range resourceServer.GetScopes() {
 		scopes = append(scopes, scope.GetValue())
+	}
+
+	if len(scopes) == 0 {
+		c.renderer.Warnf("The API %s does not have any scopes defined.\n", ansi.Bold(resourceServer.GetName()))
+		return nil
 	}
 
 	scopesPrompt := &survey.MultiSelect{

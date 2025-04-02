@@ -17,10 +17,10 @@ auth0 users import [flags]
 
 ```
   auth0 users import
-  auth0 users import --connection "Username-Password-Authentication"
-  auth0 users import --connection "Username-Password-Authentication" --users "[]"
-  auth0 users import --connection "Username-Password-Authentication" --users "$(cat path/to/users.json)"
-  cat path/to/users.json | auth0 users import --connection "Username-Password-Authentication"
+  auth0 users import --connection-name "Username-Password-Authentication"
+  auth0 users import --connection-name "Username-Password-Authentication" --users "[]"
+  auth0 users import --connection-name "Username-Password-Authentication" --users "$(cat path/to/users.json)"
+  cat path/to/users.json | auth0 users import --connection-name "Username-Password-Authentication"
   auth0 users import -c "Username-Password-Authentication" --template "Basic Example"
   auth0 users import -c "Username-Password-Authentication" --users "$(cat path/to/users.json)" --upsert --email-results
   auth0 users import -c "Username-Password-Authentication" --users "$(cat path/to/users.json)" --upsert --email-results --no-input
