@@ -1,11 +1,11 @@
-config:
-  inherit-env: true
-  retries: 1
-  env:
-    AUTH0_DOMAIN: $AUTH0_DOMAIN
-    AUTH0_CLIENT_ID: $AUTH0_CLIENT_ID
-    AUTH0_CLIENT_SECRET: $AUTH0_CLIENT_SECRET
-tests:
+#config:
+#  inherit-env: true
+#  retries: 1
+#  env:
+#    AUTH0_DOMAIN: $AUTH0_DOMAIN
+#    AUTH0_CLIENT_ID: $AUTH0_CLIENT_ID
+#    AUTH0_CLIENT_SECRET: $AUTH0_CLIENT_SECRET
+#tests:
 #  001.0 - setup:
 #    command: rm -rdf tmp-tf-gen
 #    exit-code: 0
