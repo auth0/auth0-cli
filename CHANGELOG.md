@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.11.0](https://github.com/auth0/auth0-cli/tree/v1.11.0) (Apr 02, 2025))
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.10.1...v1.11.0)
+
+### Added
+
+- Support org flag in test login and test token command [#1173]
+
+### Fixed
+
+- Update assets related to universal login[#1172]
+
+
 # [v.1.10.1](https://github.com/auth0/auth0-cli/tree/v1.10.1) (Mar 28, 2025))
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.10.0...v1.10.1)
@@ -442,7 +455,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.10.1...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.11.0...HEAD
+[#1173]: https://github.com/auth0/auth0-cli/issues/1173
+[#1172]: https://github.com/auth0/auth0-cli/issues/1172
 [#1170]: https://github.com/auth0/auth0-cli/issues/1170
 [#1167]: https://github.com/auth0/auth0-cli/issues/1167
 [#1137]: https://github.com/auth0/auth0-cli/issues/1137
