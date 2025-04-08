@@ -12,8 +12,7 @@ tests:
     exit-code: 0
     stderr:
       contains:
-        - No network ACLs available.
-        - Use 'auth0 network-acl create' to add one
+        - 'No network ACLs available. To create one, run: auth0 network-acl create'
 
   003 - list network ACLs with no data (json):
     command: auth0 network-acl list --json
@@ -21,26 +20,26 @@ tests:
     stdout:
       exactly: "[]"
 
-#  003 - create network ACL:
-#    command: auth0 network-acl create --description "Integration Test ACL" --active true --priority 1 --rule '{"action":{"block":true},"scope":"tenant","match":{"ip_v4_cidrs":["192.168.1.0/24"],"ip_v6_cidrs":["2001:db8::/32"]}}' --no-input
-#    exit-code: 0
-#    stdout:
-#      contains:
-#        - "ID"
-#        - "DESCRIPTION          Integration Test ACL"
-#        - "ACTIVE               ✓"
-#        - "PRIORITY             1"
-#        - "RULE"
-#
-#  004 - list network ACLs with data:
-#    command: auth0 network-acl list
-#    exit-code: 0
-#    stdout:
-#      contains:
-#        - ID
-#        - DESCRIPTION
-#        - ACTIVE
-#        - PRIORITY
+  003 - create network ACL:
+    command: auth0 network-acl create --description "Integration Test ACL" --active true --priority 2 --rule '{"action":{"block":true},"scope":"management","match":{"ipv4_cidrs":["192.168.1.0/24"]}}' --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - "ID"
+        - "DESCRIPTION          Integration Test ACL"
+        - "ACTIVE               ✓"
+        - "PRIORITY             2"
+        - "RULE"
+
+  004 - list network ACLs with data:
+    command: auth0 network-acl list
+    exit-code: 0
+    stdout:
+      contains:
+        - ID
+        - DESCRIPTION
+        - ACTIVE
+        - PRIORITY
 
   # 005 - create network ACL and output in json:
   #   command: auth0 network-acl create --description "Integration Test ACL 2" --active true --priority 2 --rule '{"action":{"allow":true},"scope":"authentication","match":{"country_codes":["US","CA"]}}' --json --no-input
