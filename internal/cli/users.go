@@ -722,10 +722,10 @@ func importUsersCmd(cli *cli) *cobra.Command {
 		Long: `Import users from schema. Issues a Create Import Users Job. 
 The file size limit for a bulk import is 500KB. You will need to start multiple imports if your data exceeds this size.`,
 		Example: `  auth0 users import
-  auth0 users import --connection "Username-Password-Authentication"
-  auth0 users import --connection "Username-Password-Authentication" --users "[]"
-  auth0 users import --connection "Username-Password-Authentication" --users "$(cat path/to/users.json)"
-  cat path/to/users.json | auth0 users import --connection "Username-Password-Authentication"
+  auth0 users import --connection-name "Username-Password-Authentication"
+  auth0 users import --connection-name "Username-Password-Authentication" --users "[]"
+  auth0 users import --connection-name "Username-Password-Authentication" --users "$(cat path/to/users.json)"
+  cat path/to/users.json | auth0 users import --connection-name "Username-Password-Authentication"
   auth0 users import -c "Username-Password-Authentication" --template "Basic Example"
   auth0 users import -c "Username-Password-Authentication" --users "$(cat path/to/users.json)" --upsert --email-results
   auth0 users import -c "Username-Password-Authentication" --users "$(cat path/to/users.json)" --upsert --email-results --no-input
