@@ -22,8 +22,11 @@ auth0 users update [flags]
   auth0 users update 
   auth0 users update <user-id> 
   auth0 users update <user-id> --name "John Doe"
+  auth0 users update <user-id> --block=true"
+  auth0 users update <user-id> --block=false"
   auth0 users update <user-id> -n "John Kennedy" -e johnk@example.com --json
   auth0 users update <user-id> -n "John Kennedy" -p <newPassword>
+  auth0 users update <user-id> -b
   auth0 users update <user-id> -p <newPassword>
   auth0 users update <user-id> -e johnk@example.com
   auth0 users update <user-id> --phone-number +916898989899
@@ -34,6 +37,7 @@ auth0 users update [flags]
 ## Flags
 
 ```
+  -b, --block                    Block the user authentication.
   -c, --connection-name string   Name of the database connection this user should be created in.
   -e, --email string             The user's email.
       --json                     Output in json format.
