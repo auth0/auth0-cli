@@ -81,7 +81,7 @@ var (
 
 	userBlock = Flag{
 		Name:       "Block",
-		LongForm:   "block",
+		LongForm:   "blocked",
 		ShortForm:  "b",
 		Help:       "Block the user authentication.",
 		IsRequired: false,
@@ -575,8 +575,8 @@ func updateUserCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 users update 
   auth0 users update <user-id> 
   auth0 users update <user-id> --name "John Doe"
-  auth0 users update <user-id> --block=true"
-  auth0 users update <user-id> --block=false"
+  auth0 users update <user-id> --blocked=true"
+  auth0 users update <user-id> --blocked=false"
   auth0 users update <user-id> -n "John Kennedy" -e johnk@example.com --json
   auth0 users update <user-id> -n "John Kennedy" -p <newPassword>
   auth0 users update <user-id> -b
