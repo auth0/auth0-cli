@@ -20,7 +20,7 @@ tests:
     stdout:
       exactly: "[]"
 
-  003 - create network ACL:
+  004 - create network ACL:
     command: auth0 network-acl create --description "Integration Test ACL" --active true --priority 2 --rule '{"action":{"block":true},"scope":"management","match":{"ipv4_cidrs":["192.168.1.0/24"]}}' --no-input
     exit-code: 0
     stdout:
@@ -31,7 +31,7 @@ tests:
         - "PRIORITY             2"
         - "RULE"
 
-  004 - list network ACLs with data:
+  005 - list network ACLs with data:
     command: auth0 network-acl list
     exit-code: 0
     stdout:
