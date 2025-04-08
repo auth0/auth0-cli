@@ -8,7 +8,7 @@ replace github.com/mholt/archiver/v3 => github.com/anchore/archiver/v3 v3.5.2
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/PuerkitoBio/rehttp v1.4.0
-	github.com/auth0/go-auth0 v1.18.1-0.20250326075009-e865086539dc
+	github.com/auth0/go-auth0 v1.19.0
 	github.com/briandowns/spinner v1.23.2
 	github.com/charmbracelet/glamour v0.8.0
 	github.com/fsnotify/fsnotify v1.8.0
