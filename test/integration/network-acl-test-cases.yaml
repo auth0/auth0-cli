@@ -3,7 +3,11 @@ config:
   retries: 1
 
 tests:
-  001 - list network ACLs with no data:
+  001 - delete all network ACLs:
+    command: auth0 network-acl delete --all --force --no-input
+    exit-code: 0
+
+  002 - list network ACLs with no data:
     command: auth0 network-acl list
     exit-code: 0
     stderr:
@@ -11,7 +15,7 @@ tests:
         - No network ACLs available.
         - Use 'auth0 network-acl create' to add one
 
-  002 - list network ACLs with no data (json):
+  003 - list network ACLs with no data (json):
     command: auth0 network-acl list --json
     exit-code: 0
     stdout:
