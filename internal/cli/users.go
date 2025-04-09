@@ -492,7 +492,7 @@ func showUserCmd(cli *cli) *cobra.Command {
 
 			cli.renderer.UserShow(userInfo, requireUsername)
 
-			if *userInfo.Blocked && !cli.json {
+			if auth0.BoolValue(userInfo.Blocked) && !cli.json {
 				cli.renderer.Newline()
 				cli.renderer.Warnf("This user is %s and cannot authenticate.\n", ansi.BrightRed("blocked"))
 			}
