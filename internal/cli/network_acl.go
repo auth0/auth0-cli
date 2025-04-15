@@ -53,12 +53,6 @@ var (
 		Help:     "URI to redirect to when action is redirect (Eg. \"https://example.com/blocked\")",
 	}
 
-	networkACLAnonymousProxy = Flag{
-		Name:     "AnonymousProxy",
-		LongForm: "anonymous-proxy",
-		Help:     "Match anonymous proxy traffic (Eg. true)",
-	}
-
 	networkACLASNs = Flag{
 		Name:     "ASNs",
 		LongForm: "asns",
@@ -204,24 +198,23 @@ func showNetworkACLCmd(cli *cli) *cobra.Command {
 
 func createNetworkACLCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Description    string
-		Active         bool
-		ActiveStr      string // Added for handling --active true/false.
-		Priority       int
-		RuleJSON       string
-		Action         string
-		RedirectURI    string
-		AnonymousProxy bool
-		ASNs           []int
-		CountryCodes   []string
-		SubdivCodes    []string
-		IPv4CIDRs      []string
-		IPv6CIDRs      []string
-		JA3            []string
-		JA4            []string
-		UserAgents     []string
-		Scope          string
-		isMatchRule    bool
+		Description  string
+		Active       bool
+		ActiveStr    string // Added for handling --active true/false.
+		Priority     int
+		RuleJSON     string
+		Action       string
+		RedirectURI  string
+		ASNs         []int
+		CountryCodes []string
+		SubdivCodes  []string
+		IPv4CIDRs    []string
+		IPv6CIDRs    []string
+		JA3          []string
+		JA4          []string
+		UserAgents   []string
+		Scope        string
+		isMatchRule  bool
 	}
 
 	cmd := &cobra.Command{
@@ -352,10 +345,6 @@ The --rule parameter is required and must contain a valid JSON object with actio
 			inputs.isMatchRule = selectedMatchOption == "match"
 
 			// Handle match criteria.
-			if err := networkACLAnonymousProxy.AskBool(cmd, &inputs.AnonymousProxy, nil); err != nil {
-				return err
-			}
-
 			if err := networkACLASNs.AskIntSlice(cmd, &inputs.ASNs, nil); err != nil {
 				return err
 			}
@@ -415,11 +404,6 @@ The --rule parameter is required and must contain a valid JSON object with actio
 			// Set match criteria if any were provided.
 			match := &management.NetworkACLRuleMatch{}
 			matchProvided := false
-
-			if inputs.AnonymousProxy {
-				match.AnonymousProxy = auth0.Bool(true)
-				matchProvided = true
-			}
 
 			if len(inputs.ASNs) > 0 {
 				match.Asns = inputs.ASNs
@@ -488,7 +472,6 @@ The --rule parameter is required and must contain a valid JSON object with actio
 	cmd.Flags().StringVar(&inputs.RuleJSON, "rule", "", "Network ACL rule configuration in JSON format (required for non-interactive mode)")
 	cmd.Flags().StringVar(&inputs.Action, "action", "", "Action for the rule (block, allow, log, redirect)")
 	cmd.Flags().StringVar(&inputs.RedirectURI, "redirect-uri", "", "URI to redirect to when action is redirect")
-	cmd.Flags().BoolVar(&inputs.AnonymousProxy, "anonymous-proxy", false, "Match anonymous proxy traffic")
 	cmd.Flags().StringVar(&inputs.Scope, "scope", "", "Scope of the rule (management, authentication, tenant)")
 
 	// Register the string slice flags.
@@ -698,7 +681,6 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 				}
 
 				// Get current match values for defaults.
-				currentAnonymousProxy := false
 				var currentASNs []int
 				var currentCountryCodes, currentSubDivCodes []string
 				var currentIPv4CIDRs, currentIPv6CIDRs []string
@@ -706,10 +688,6 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 
 				if currentACL.Rule != nil && currentACL.Rule.Match != nil {
 					match := currentACL.Rule.Match
-
-					if match.AnonymousProxy != nil {
-						currentAnonymousProxy = *match.AnonymousProxy
-					}
 
 					if len(match.Asns) > 0 {
 						currentASNs = match.Asns
@@ -742,10 +720,6 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					if match.UserAgents != nil {
 						currentUserAgents = *match.UserAgents
 					}
-				}
-
-				if err := networkACLAnonymousProxy.AskBool(cmd, &inputs.AnonymousProxy, &currentAnonymousProxy); err != nil {
-					return err
 				}
 
 				if err := networkACLASNs.AskIntSlice(cmd, &inputs.ASNs, &currentASNs); err != nil {
@@ -813,11 +787,6 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 				// Set match criteria if any were provided.
 				match := &management.NetworkACLRuleMatch{}
 				matchProvided := false
-
-				if inputs.AnonymousProxy {
-					match.AnonymousProxy = auth0.Bool(true)
-					matchProvided = true
-				}
 
 				if len(inputs.ASNs) > 0 {
 					match.Asns = inputs.ASNs
@@ -966,7 +935,6 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 	cmd.Flags().StringVar(&inputs.RuleJSON, "rule", "", "Network ACL rule configuration in JSON format")
 	cmd.Flags().StringVar(&inputs.Action, "action", "", "Action for the rule (block, allow, log, redirect)")
 	cmd.Flags().StringVar(&inputs.RedirectURI, "redirect-uri", "", "URI to redirect to when action is redirect")
-	cmd.Flags().BoolVar(&inputs.AnonymousProxy, "anonymous-proxy", false, "Match anonymous proxy traffic")
 	cmd.Flags().StringVar(&inputs.Scope, "scope", "", "Scope of the rule (management, authentication, tenant)")
 
 	// Register the string slice flags.

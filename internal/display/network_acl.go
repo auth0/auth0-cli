@@ -72,10 +72,6 @@ func (v *networkACLView) KeyValues() [][]string {
 		if v.acl.Rule.Match != nil {
 			match := v.acl.Rule.Match
 
-			if match.AnonymousProxy != nil && *match.AnonymousProxy {
-				keyValues = append(keyValues, []string{"ANONYMOUS PROXY", "true"})
-			}
-
 			if len(match.Asns) > 0 {
 				asns := make([]string, len(match.Asns))
 				for i, asn := range match.Asns {
@@ -117,10 +113,6 @@ func (v *networkACLView) KeyValues() [][]string {
 		if v.acl.Rule.NotMatch != nil {
 			notMatch := v.acl.Rule.NotMatch
 			keyValues = append(keyValues, []string{"NOT MATCH", "true"})
-
-			if notMatch.AnonymousProxy != nil && *notMatch.AnonymousProxy {
-				keyValues = append(keyValues, []string{"NOT ANONYMOUS PROXY", "true"})
-			}
 
 			if len(notMatch.Asns) > 0 {
 				asns := make([]string, len(notMatch.Asns))
