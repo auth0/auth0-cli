@@ -32,7 +32,6 @@ auth0 network-acl create [flags]
 ```
       --action string               Action for the rule (block, allow, log, redirect)
       --active string               Whether the network ACL is active (required, 'true' or 'false')
-      --anonymous-proxy             Match anonymous proxy traffic
       --asns ints                   Comma-separated list of ASNs to match (Eg. 64496,64497,64498)
       --country-codes strings       Comma-separated list of country codes to match (Eg. US,CA,MX)
   -d, --description string          Description of the network ACL (required)
