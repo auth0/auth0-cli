@@ -4,7 +4,7 @@ config:
 
 tests:
   001 - users create and check data:
-    command: auth0 users create --name integration-test-user-new --connection-name Username-Password-Authentication --email testuser@example.com --password testUser12 --username testuser1 --json --no-input
+    command: timeout 5s auth0 users create --name integration-test-user-new --connection-name Username-Password-Authentication --email testuser@example.com --password testUser12 --username testuser1 --json --no-input
     exit-code: 0
     stdout:
       json:

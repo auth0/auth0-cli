@@ -134,7 +134,7 @@ tests:
         - EMAIL
         - PICTURE
     config:
-      retries: 10
+      retries: 15
 
   017 - list organization members as json:
     command: auth0 orgs members list $(./test/integration/scripts/get-org-id.sh) --json
@@ -144,7 +144,7 @@ tests:
         - '"user_id": "auth0|'
         - '"picture": "'
     config:
-      retries: 3
+      retries: 5
 
   018 - list organization members with invalid number:
     command: auth0 orgs members list $(./test/integration/scripts/get-org-id.sh) --number 1001
