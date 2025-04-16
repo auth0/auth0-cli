@@ -227,10 +227,10 @@ To create non-interactively, supply the required parameters (description, active
 The --rule parameter is required and must contain a valid JSON object with action, scope, and match properties.`,
 		Example: `  auth0 network-acl create
   auth0 network-acl create --description "Block IPs" --priority 1 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24","10.0.0.0/8"]}}'
-  auth0 network-acl create --description "Geo Block" --priority 2 --active true --rule '{"action":{"block":true},"scope":"authentication","match":{"country_codes":["US","CA"],"anonymous_proxy":true}}'
+  auth0 network-acl create --description "Geo Block" --priority 2 --active true --rule '{"action":{"block":true},"scope":"authentication","match":{"geo_country_codes":["US","CA"],"anonymous_proxy":true}}'
   auth0 network-acl create --description "Redirect Traffic" --priority 3 --active true --rule '{"action":{"redirect":true,"redirect_uri":"https://example.com"},"scope":"management","match":{"ipv4_cidrs":["192.168.1.0/24"]}}'
   auth0 network-acl create -d "Block Bots" -p 4 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"user_agents":["badbot/*","malicious/*"],"ja3_fingerprints":["deadbeef","cafebabe"]}}'
-  auth0 network-acl create --description "Complex Rule" --priority 5 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"country_codes":["US"]}}'`,
+  auth0 network-acl create --description "Complex Rule" --priority 5 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Check if we're in non-interactive mode (flags provided) but rule JSON is missing.
 			if !canPrompt(cmd) && !cmd.Flags().Changed("rule") {
@@ -466,6 +466,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().StringVarP(&inputs.Description, "description", "d", "", "Description of the network ACL (required)")
 	cmd.Flags().StringVar(&inputs.ActiveStr, "active", "", "Whether the network ACL is active (required, 'true' or 'false')")
 	cmd.Flags().IntVarP(&inputs.Priority, "priority", "p", 0, "Priority of the network ACL (required, 1-10)")
@@ -526,7 +527,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 		Example: `  auth0 network-acl update <id>
   auth0 network-acl update <id> --priority 5 
   auth0 network-acl update <id> --active true
-  auth0 network-acl update <id> --description "Complex Rule updated" --priority 9 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ip_v4_cidrs":["192.168.1.0/24"],"country_codes":["US"]}}'`,
+  auth0 network-acl update <id> --description "Complex Rule updated" --priority 9 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ip_v4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get the network ACL ID.
 			if len(args) > 0 {
@@ -929,6 +930,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in JSON format")
 	cmd.Flags().StringVarP(&inputs.Description, "description", "d", "", "Description of the network ACL")
 	cmd.Flags().StringVar(&inputs.ActiveStr, "active", "", "Whether the network ACL is active ('true' or 'false')")
 	cmd.Flags().IntVarP(&inputs.Priority, "priority", "p", 1, "Priority of the network ACL (1-10)")

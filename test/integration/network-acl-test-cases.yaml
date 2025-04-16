@@ -17,12 +17,15 @@ tests:
       exactly: "[]"
 
   003 - create network ACL:
-    command: auth0 network-acl create --description "Integration Test ACL" --active true --priority 2 --rule '{"action":{"block":true},"scope":"management","match":{"ipv4_cidrs":["192.168.1.0/24"]}}' --no-input
+    command: auth0 network-acl create --description "Integration Test ACL 2" --active true --priority 2 --rule '{"action":{"block":true},"scope":"management","match":{"ipv4_cidrs":["192.168.1.0/24"]}}' --no-input
     exit-code: 0
     stdout:
-      contains:
-        - "ID"
-        - "DESCRIPTION          Integration Test ACL"
+      - "DESCRIPTION          Integration Test ACL 2"
+      - "PRIORITY             2"
+      - "ACTIVE               true"
+      - "SCOPE                management"
+      - "ACTION               block"
+      - "IPV4 CIDRS           192.168.1.0/24"
 
   004 - list network ACLs with data:
     command: auth0 network-acl list
@@ -35,13 +38,13 @@ tests:
         - PRIORITY
 
   005 - create network ACL and output in json:
-    command: auth0 network-acl create --description "Integration Test ACL 2" --active true --priority 2 --rule '{"action":{"allow":true},"scope":"authentication","match":{"country_codes":["US","CA"]}}' --json --no-input
+    command: auth0 network-acl create --description "Integration Test ACL 3" --active true --priority 3 --rule '{"action":{"allow":true},"scope":"authentication","match":{"geo_country_codes":["US","CA"]}}' --json --no-input
     exit-code: 0
     stdout:
       json:
-        description: "Integration Test ACL 2"
+        description: "Integration Test ACL 3"
         active: "true"
-        priority: "2"
+        priority: "3"
         rule.scope: "authentication"
         rule.action.allow: "true"
         rule.match.geo_country_codes: "[US CA]"
@@ -52,32 +55,32 @@ tests:
     stdout:
       contains:
         - "ID"
-        - "DESCRIPTION          Integration Test ACL"
-        - "ACTIVE               ✓"
-        - "PRIORITY             1"
-        - "RULE"
+        - "DESCRIPTION          Integration Test ACL 2"
+        - "ACTIVE               true"
+        - "PRIORITY             2"
+        - "ACTION               block"
 
   007 - show network ACL details in json:
     command: auth0 network-acl show $(./test/integration/scripts/get-network-acl-id.sh) --json
     exit-code: 0
     stdout:
       json:
-        description: "Integration Test ACL"
+        description: "Integration Test ACL 3"
         active: "true"
-        priority: "1"
-        rule.scope: "tenant"
-        rule.action.block: "true"
+        priority: "3"
+        rule.scope: "authentication"
+        rule.action.allow: "true"
 
   008 - update network ACL:
-    command: auth0 network-acl update $(./test/integration/scripts/get-network-acl-id.sh) --description "Integration Test ACL Updated" --priority 3 --rule '{"action":{"log":true},"scope":"management","match":{"country_codes":["GB","DE"]}}' --no-input
+    command: auth0 network-acl update $(./test/integration/scripts/get-network-acl-id.sh) --description "Integration Test ACL Updated" --priority 3 --rule '{"action":{"log":true},"scope":"management","match":{"geo_country_codes":["GB","DE"]}}' --no-input
     exit-code: 0
     stdout:
       contains:
-        - "DESCRIPTION          Integration Test ACL Updated"
+        - "DESCRIPTION          Integration Test ACL 3 Updated"
         - "PRIORITY             3"
 
   009 - update network ACL and output in json:
-    command: auth0 network-acl update $(./test/integration/scripts/get-network-acl-id.sh) --description "Integration Test ACL Updated Again" --active false --priority 4 --rule '{"action":{"redirect":true,"redirect_uri":"https://example.com"},"scope":"tenant","match":{"user_agents":["badbot/*"]}}' --json --no-input
+    command: auth0 network-acl update $(./test/integration/scripts/get-network-acl-id.sh) --description "Integration Test ACL Updated Again" --active false --priority 4 --rule '{"action":{"redirect":true,"redirect_uri":"https://example.com"},"scope":"tenant","match":{"geo_country_codes":["US","CA"]}}' --json --no-input
     exit-code: 0
     stdout:
       json:
@@ -87,7 +90,7 @@ tests:
         rule.scope: "tenant"
         rule.action.redirect: "true"
         rule.action.redirect_uri: "https://example.com"
-        rule.match.user_agents: "[badbot/*]"
+        rule.match.geo_country_codes: "[US CA]"
 
   010 - create network ACL with not_match rule:
     command: auth0 network-acl create --description "Integration Test ACL Not Match" --active true --priority 5 --rule '{"action":{"block":true},"scope":"tenant","not_match":{"ip_v4_cidrs":["10.0.0.0/8"]}}' --json --no-input
