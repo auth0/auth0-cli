@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_phone_provider", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_prompt_screen_renderer", "auth0_resource_server", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
+	defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_phone_provider", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_organization", "auth0_network_acl", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_prompt_screen_renderer", "auth0_resource_server", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
 )
 
 type (
@@ -82,6 +82,10 @@ type (
 		api *auth0.API
 	}
 	organizationResourceFetcher struct {
+		api *auth0.API
+	}
+
+	networkACLResourceFetcher struct {
 		api *auth0.API
 	}
 
@@ -442,6 +446,24 @@ func (f *organizationResourceFetcher) FetchData(ctx context.Context) (importData
 				ImportID:     organization.GetID(),
 			})
 		}
+	}
+
+	return data, nil
+}
+
+func (f *networkACLResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	networkACLs, err := f.api.NetworkACL.List(ctx)
+	if err != nil {
+		return data, err
+	}
+
+	for _, networkACL := range networkACLs {
+		data = append(data, importDataItem{
+			ResourceName: "auth0_network_acl." + sanitizeResourceName(networkACL.GetID()),
+			ImportID:     networkACL.GetID(),
+		})
 	}
 
 	return data, nil
