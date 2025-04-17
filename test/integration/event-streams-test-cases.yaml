@@ -23,7 +23,7 @@ tests:
       contains:
         - "NAME           integration-test-stream"
         - "TYPE           webhook"
-        - "STATUS         disabled"
+        - "STATUS         enabled"
         - "SUBSCRIPTIONS  user.created, user.deleted"
   004 - it successfully lists all event streams with data:
     command: auth0 events list
@@ -43,7 +43,7 @@ tests:
     stdout:
       json:
         name: "integration-test-stream1"
-        status: "disabled"
+        status: "enabled"
         subscriptions.0.event_type: "user.created"
         subscriptions.1.event_type: "user.deleted"
         destination.type: "webhook"
@@ -57,7 +57,7 @@ tests:
       contains:
         - "NAME           integration-test-event"
         - "TYPE           webhook"
-        - "STATUS         disabled"
+        - "STATUS         enabled"
         - "SUBSCRIPTIONS  user.created, user.deleted"
 
   007 - given a test event stream, it successfully gets the event stream details and outputs in json:
@@ -66,7 +66,7 @@ tests:
     stdout:
       json:
         name: "integration-test-event"
-        status: "disabled"
+        status: "enabled"
         subscriptions.0.event_type: "user.created"
         subscriptions.1.event_type: "user.deleted"
         destination.type: "webhook"
