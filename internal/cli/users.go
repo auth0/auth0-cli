@@ -472,27 +472,27 @@ func showUserCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			userInfo := &management.User{ID: &inputs.ID}
+			user := &management.User{ID: &inputs.ID}
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				userInfo, err = cli.api.User.Read(cmd.Context(), inputs.ID)
+				user, err = cli.api.User.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to load user with ID %q: %w", inputs.ID, err)
 			}
 
 			// Get the current connection.
-			conn := stringSliceToCommaSeparatedString(cli.getUserConnection(userInfo))
-			userInfo.Connection = auth0.String(conn)
+			conn := stringSliceToCommaSeparatedString(cli.getUserConnection(user))
+			user.Connection = auth0.String(conn)
 
 			// Parse the connection name to get the requireUsername status.
-			u := cli.getConnReqUsername(cmd.Context(), auth0.StringValue(userInfo.Connection))
+			u := cli.getConnReqUsername(cmd.Context(), auth0.StringValue(user.Connection))
 			requireUsername := auth0.BoolValue(u)
 
-			cli.renderer.UserShow(userInfo, requireUsername)
+			cli.renderer.UserShow(user, requireUsername)
 
-			if auth0.BoolValue(userInfo.Blocked) && !cli.json {
+			if auth0.BoolValue(user.Blocked) && !cli.json {
 				cli.renderer.Newline()
 				cli.renderer.Warnf("This user is %s and cannot authenticate.\n", ansi.BrightRed("blocked"))
 			}
