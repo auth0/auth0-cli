@@ -6,6 +6,7 @@ has_children: true
 # auth0 test
 
 Try your Universal Login box or get a token.
+This command uses the client credentials grant for machine-to-machine applications and the authorization code grant (with Universal Login) for other application types, such as regular, web or native apps.
 
 ## Commands
 
