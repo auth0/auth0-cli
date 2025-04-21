@@ -21,7 +21,7 @@ auth0 network-acl update [flags]
   auth0 network-acl update <id>
   auth0 network-acl update <id> --priority 5 
   auth0 network-acl update <id> --active true
-  auth0 network-acl update <id> --description "Complex Rule updated" --priority 9 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ip_v4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
+  auth0 network-acl update <id> --description "Complex Rule updated" --priority 9 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
 ```
 
 

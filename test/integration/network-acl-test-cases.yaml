@@ -81,7 +81,7 @@ tests:
         rule.match.geo_country_codes: "[US CA]"
 
   009 - create network ACL with not_match rule:
-    command: auth0 network-acl create --description "Integration Test ACL Not Match" --active true --priority 5 --rule '{"action":{"block":true},"scope":"tenant","not_match":{"ip_v4_cidrs":["10.0.0.0/8"]}}' --json --no-input
+    command: auth0 network-acl create --description "Integration Test ACL Not Match" --active true --priority 5 --rule '{"action":{"block":true},"scope":"tenant","not_match":{"ipv4_cidrs":["10.0.0.0/8"]}}' --json --no-input
     exit-code: 0
     stdout:
       json:
@@ -90,7 +90,7 @@ tests:
         priority: "5"
         rule.scope: "tenant"
         rule.action.block: "true"
-        rule.not_match.ip_v4_cidrs: "[10.0.0.0/8]"
+        rule.not_match.ipv4_cidrs: "[10.0.0.0/8]"
 
   010 - delete network ACL:
     command: auth0 network-acl delete $(./test/integration/scripts/get-network-acl-id.sh) --force --no-input
