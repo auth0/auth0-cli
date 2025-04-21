@@ -60,12 +60,12 @@ tests:
         rule.scope: "tenant"
 
   007 - update network ACL:
-    command: auth0 network-acl update $(./test/integration/scripts/get-network-acl-id.sh) --description "Integration Test ACL Updated" --priority 3 --rule '{"action":{"log":true},"scope":"management","match":{"geo_country_codes":["GB","DE"]}}' --no-input
+    command: auth0 network-acl update $(./test/integration/scripts/get-network-acl-id.sh) --description "Integration Test ACL Updated" --priority 8 --rule '{"action":{"log":true},"scope":"management","match":{"geo_country_codes":["US"]}}' --no-input
     exit-code: 0
     stdout:
       contains:
-        - "DESCRIPTION          Integration Test ACL 3 Updated"
-        - "PRIORITY             3"
+        - "DESCRIPTION        Integration Test ACL Updated"
+        - "PRIORITY           8"
 
   008 - update network ACL and output in json:
     command: auth0 network-acl update $(./test/integration/scripts/get-network-acl-id.sh) --description "Integration Test ACL Updated Again" --active false --priority 4 --rule '{"action":{"redirect":true,"redirect_uri":"https://example.com"},"scope":"tenant","match":{"geo_country_codes":["US","CA"]}}' --json --no-input
