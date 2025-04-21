@@ -161,13 +161,13 @@ func makeNetworkACLView(acl *management.NetworkACL) *networkACLView {
 			action = "redirect"
 		}
 	}
-	// create a copy of all the attributes of acl in new variable called rawData
+	// Create a copy of all the attributes of acl in new variable called rawData
 	id := acl.GetID()
 	description := acl.GetDescription()
 	priority := acl.GetPriority()
 	active := acl.GetActive()
 
-	// create a new instance of management.NetworkACL with the ID values
+	// Create a new instance of management.NetworkACL with the ID values
 	rawData := management.NetworkACL{
 		ID:          &id,
 		Description: &description,
