@@ -40,7 +40,7 @@ func (v *networkACLView) KeyValues() [][]string {
 		{"ACTION", v.Action},
 	}
 
-	// Get the original ACL object with nil check
+	// Get the original ACL object with nil check.
 	if v.raw == nil {
 		return keyValues
 	}
@@ -161,13 +161,13 @@ func makeNetworkACLView(acl *management.NetworkACL) *networkACLView {
 			action = "redirect"
 		}
 	}
-	// Create a copy of all the attributes of acl in new variable called rawData
+	// Create a copy of all the attributes of acl in new variable called rawData.
 	id := acl.GetID()
 	description := acl.GetDescription()
 	priority := acl.GetPriority()
 	active := acl.GetActive()
 
-	// Create a new instance of management.NetworkACL with the ID values
+	// Create a new instance of management.NetworkACL with the ID values.
 	rawData := management.NetworkACL{
 		ID:          &id,
 		Description: &description,
