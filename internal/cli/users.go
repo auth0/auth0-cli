@@ -79,6 +79,14 @@ var (
 		AlwaysPrompt: true,
 	}
 
+	userBlock = Flag{
+		Name:       "Block",
+		LongForm:   "blocked",
+		ShortForm:  "b",
+		Help:       "Block the user authentication.",
+		IsRequired: false,
+	}
+
 	userQuery = Flag{
 		Name:       "Query",
 		LongForm:   "query",
@@ -464,25 +472,31 @@ func showUserCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			a := &management.User{ID: &inputs.ID}
+			user := &management.User{ID: &inputs.ID}
 
 			if err := ansi.Waiting(func() error {
 				var err error
-				a, err = cli.api.User.Read(cmd.Context(), inputs.ID)
+				user, err = cli.api.User.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to load user with ID %q: %w", inputs.ID, err)
 			}
 
 			// Get the current connection.
-			conn := stringSliceToCommaSeparatedString(cli.getUserConnection(a))
-			a.Connection = auth0.String(conn)
+			conn := stringSliceToCommaSeparatedString(cli.getUserConnection(user))
+			user.Connection = auth0.String(conn)
 
 			// Parse the connection name to get the requireUsername status.
-			u := cli.getConnReqUsername(cmd.Context(), auth0.StringValue(a.Connection))
+			u := cli.getConnReqUsername(cmd.Context(), auth0.StringValue(user.Connection))
 			requireUsername := auth0.BoolValue(u)
 
-			cli.renderer.UserShow(a, requireUsername)
+			cli.renderer.UserShow(user, requireUsername)
+
+			if auth0.BoolValue(user.Blocked) && !cli.json {
+				cli.renderer.Newline()
+				cli.renderer.Warnf("This user is %s and cannot authenticate.\n", ansi.BrightRed("blocked"))
+			}
+
 			return nil
 		},
 	}
@@ -546,8 +560,9 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 
 func updateUserCmd(cli *cli) *cobra.Command {
 	var (
-		inputs = &userInput{}
-		id     string
+		inputs  = &userInput{}
+		blocked bool
+		id      string
 	)
 
 	cmd := &cobra.Command{
@@ -560,8 +575,11 @@ func updateUserCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 users update 
   auth0 users update <user-id> 
   auth0 users update <user-id> --name "John Doe"
+  auth0 users update <user-id> --blocked=true"
+  auth0 users update <user-id> --blocked=false"
   auth0 users update <user-id> -n "John Kennedy" -e johnk@example.com --json
   auth0 users update <user-id> -n "John Kennedy" -p <newPassword>
+  auth0 users update <user-id> -b
   auth0 users update <user-id> -p <newPassword>
   auth0 users update <user-id> -e johnk@example.com
   auth0 users update <user-id> --phone-number +916898989899
@@ -596,6 +614,12 @@ func updateUserCmd(cli *cli) *cobra.Command {
 
 			user := fetchUpdateUserDetails(inputs, current)
 
+			if blocked {
+				user.Blocked = auth0.Bool(true)
+			} else {
+				user.Blocked = auth0.Bool(false)
+			}
+
 			if err := ansi.Waiting(func() error {
 				return cli.api.User.Update(cmd.Context(), current.GetID(), user)
 			}); err != nil {
@@ -606,12 +630,19 @@ func updateUserCmd(cli *cli) *cobra.Command {
 			requireUsername := auth0.BoolValue(con)
 
 			cli.renderer.UserUpdate(user, requireUsername)
+
+			if *user.Blocked && !cli.json {
+				cli.renderer.Newline()
+				cli.renderer.Warnf("This user is %s and cannot authenticate.\n", ansi.BrightRed("blocked"))
+			}
+
 			return nil
 		},
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	registerDetailsInfo(cmd, inputs)
+	userBlock.RegisterBool(cmd, &blocked, false)
 
 	return cmd
 }
