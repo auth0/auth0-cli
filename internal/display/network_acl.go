@@ -9,7 +9,12 @@ import (
 )
 
 type networkACLView struct {
-	acl *management.NetworkACL
+	ID          string
+	Description string
+	Priority    string
+	Active      string
+	Action      string
+	raw         interface{}
 }
 
 func (v *networkACLView) AsTableHeader() []string {
@@ -17,60 +22,45 @@ func (v *networkACLView) AsTableHeader() []string {
 }
 
 func (v *networkACLView) AsTableRow() []string {
-	action := "block"
-	if v.acl.Rule != nil && v.acl.Rule.Action != nil {
-		switch {
-		case v.acl.Rule.Action.Allow != nil && *v.acl.Rule.Action.Allow:
-			action = "allow"
-		case v.acl.Rule.Action.Log != nil && *v.acl.Rule.Action.Log:
-			action = "log"
-		case v.acl.Rule.Action.Redirect != nil && *v.acl.Rule.Action.Redirect:
-			action = "redirect"
-		}
-	}
-
 	return []string{
-		v.acl.GetID(),
-		v.acl.GetDescription(),
-		strconv.Itoa(v.acl.GetPriority()),
-		fmt.Sprintf("%v", v.acl.GetActive()),
-		action,
+		v.ID,
+		v.Description,
+		v.Priority,
+		v.Active,
+		v.Action,
 	}
 }
 
 func (v *networkACLView) KeyValues() [][]string {
 	keyValues := [][]string{
-		{"ID", v.acl.GetID()},
-		{"DESCRIPTION", v.acl.GetDescription()},
-		{"PRIORITY", strconv.Itoa(v.acl.GetPriority())},
-		{"ACTIVE", fmt.Sprintf("%v", v.acl.GetActive())},
+		{"ID", v.ID},
+		{"DESCRIPTION", v.Description},
+		{"PRIORITY", v.Priority},
+		{"ACTIVE", v.Active},
+		{"ACTION", v.Action},
 	}
 
-	if v.acl.Rule != nil {
-		keyValues = append(keyValues, []string{"SCOPE", v.acl.Rule.GetScope()})
+	// Get the original ACL object with nil check
+	if v.raw == nil {
+		return keyValues
+	}
 
-		// Add action information.
-		action := "block"
-		if v.acl.Rule.Action != nil {
-			switch {
-			case v.acl.Rule.Action.Allow != nil && *v.acl.Rule.Action.Allow:
-				action = "allow"
-			case v.acl.Rule.Action.Log != nil && *v.acl.Rule.Action.Log:
-				action = "log"
-			case v.acl.Rule.Action.Redirect != nil && *v.acl.Rule.Action.Redirect:
-				action = "redirect"
-			}
-		}
-		keyValues = append(keyValues, []string{"ACTION", action})
+	acl, ok := v.raw.(*management.NetworkACL)
+	if !ok {
+		return keyValues
+	}
+
+	if acl.Rule != nil {
+		keyValues = append(keyValues, []string{"SCOPE", acl.Rule.GetScope()})
 
 		// Add redirect URI if present.
-		if v.acl.Rule.Action != nil && v.acl.Rule.Action.RedirectURI != nil {
-			keyValues = append(keyValues, []string{"REDIRECT URI", *v.acl.Rule.Action.RedirectURI})
+		if acl.Rule.Action != nil && acl.Rule.Action.RedirectURI != nil {
+			keyValues = append(keyValues, []string{"REDIRECT URI", *acl.Rule.Action.RedirectURI})
 		}
 
 		// Add match criteria if present.
-		if v.acl.Rule.Match != nil {
-			match := v.acl.Rule.Match
+		if acl.Rule.Match != nil {
+			match := acl.Rule.Match
 
 			if len(match.Asns) > 0 {
 				asns := make([]string, len(match.Asns))
@@ -110,8 +100,8 @@ func (v *networkACLView) KeyValues() [][]string {
 		}
 
 		// Add not_match criteria if present.
-		if v.acl.Rule.NotMatch != nil {
-			notMatch := v.acl.Rule.NotMatch
+		if acl.Rule.NotMatch != nil {
+			notMatch := acl.Rule.NotMatch
 			keyValues = append(keyValues, []string{"NOT MATCH", "true"})
 
 			if len(notMatch.Asns) > 0 {
@@ -156,39 +146,80 @@ func (v *networkACLView) KeyValues() [][]string {
 }
 
 func (v *networkACLView) Object() interface{} {
-	return v.acl
+	return v.raw
+}
+
+func makeNetworkACLView(acl *management.NetworkACL) *networkACLView {
+	action := "block"
+	if acl.Rule != nil && acl.Rule.Action != nil {
+		switch {
+		case acl.Rule.Action.Allow != nil && *acl.Rule.Action.Allow:
+			action = "allow"
+		case acl.Rule.Action.Log != nil && *acl.Rule.Action.Log:
+			action = "log"
+		case acl.Rule.Action.Redirect != nil && *acl.Rule.Action.Redirect:
+			action = "redirect"
+		}
+	}
+	// create a copy of all the attributes of acl in new variable called rawData
+	id := acl.GetID()
+	description := acl.GetDescription()
+	priority := acl.GetPriority()
+	active := acl.GetActive()
+
+	// create a new instance of management.NetworkACL with the ID values
+	rawData := management.NetworkACL{
+		ID:          &id,
+		Description: &description,
+		Priority:    &priority,
+		Active:      &active,
+		Rule:        acl.GetRule(),
+	}
+
+	return &networkACLView{
+		ID:          id,
+		Description: description,
+		Priority:    strconv.Itoa(priority),
+		Active:      fmt.Sprintf("%v", active),
+		Action:      action,
+		raw:         rawData,
+	}
 }
 
 // NetworkACLList displays a list of network ACLs.
-func (r *Renderer) NetworkACLList(acls []*management.NetworkACL) {
+func (r *Renderer) NetworkACLList(acls []*management.NetworkACL) error {
 	if len(acls) == 0 {
 		r.EmptyState("network ACLs", "To create one, run: auth0 network-acl create")
-		return
+		return nil
 	}
 
 	views := make([]View, len(acls))
 	for i, acl := range acls {
-		views[i] = &networkACLView{acl: acl}
+		views[i] = makeNetworkACLView(acl)
 	}
 
 	r.Heading("network ACLs")
 	r.Results(views)
+	return nil
 }
 
 // NetworkACLShow displays a single network ACL.
-func (r *Renderer) NetworkACLShow(acl *management.NetworkACL) {
+func (r *Renderer) NetworkACLShow(acl *management.NetworkACL) error {
 	r.Heading("network ACL")
-	r.Result(&networkACLView{acl: acl})
+	r.Result(makeNetworkACLView(acl))
+	return nil
 }
 
 // NetworkACLCreate displays the result of creating a network ACL.
-func (r *Renderer) NetworkACLCreate(acl *management.NetworkACL) {
+func (r *Renderer) NetworkACLCreate(acl *management.NetworkACL) error {
 	r.Heading("network ACL created")
-	r.Result(&networkACLView{acl: acl})
+	r.Result(makeNetworkACLView(acl))
+	return nil
 }
 
 // NetworkACLUpdate displays the result of updating a network ACL.
-func (r *Renderer) NetworkACLUpdate(acl *management.NetworkACL) {
+func (r *Renderer) NetworkACLUpdate(acl *management.NetworkACL) error {
 	r.Heading("network ACL updated")
-	r.Result(&networkACLView{acl: acl})
+	r.Result(makeNetworkACLView(acl))
+	return nil
 }
