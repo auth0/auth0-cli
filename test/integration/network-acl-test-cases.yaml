@@ -17,11 +17,11 @@ tests:
       exactly: "[]"
 
   003 - create network ACL:
-    command: auth0 network-acl create --description "Integration Test ACL 003" --active true --priority 2 --rule '{"action":{"block":true},"scope":"management","match":{"ipv4_cidrs":["192.168.1.0/24"]}}' --no-input
+    command: auth0 network-acl create --description "Integration Test ACL" --active true --priority 2 --rule '{"action":{"block":true},"scope":"management","match":{"ipv4_cidrs":["192.168.1.0/24"]}}' --no-input
     exit-code: 0
     stdout:
       contains:
-        - "DESCRIPTION          Integration Test ACL 003"
+        - "DESCRIPTION          Integration Test ACL"
         - "PRIORITY             2"
         - "ACTIVE               true"
         - "SCOPE                management"
