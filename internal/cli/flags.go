@@ -284,19 +284,8 @@ func (f *Flag) RegisterIntSlice(cmd *cobra.Command, value *[]int, defaultValue [
 	registerIntSlice(cmd, f, value, defaultValue, false)
 }
 
-func (f *Flag) RegisterIntSliceU(cmd *cobra.Command, value *[]int, defaultValue []int) {
-	registerIntSlice(cmd, f, value, defaultValue, true)
-}
-
 func (f *Flag) AskIntSlice(cmd *cobra.Command, value *[]int, defaultValue *[]int) error {
 	if shouldAsk(cmd, f, false) {
-		return askIntSlice(f, value, defaultValue)
-	}
-	return nil
-}
-
-func (f *Flag) AskIntSliceU(cmd *cobra.Command, value *[]int, defaultValue *[]int) error {
-	if shouldAsk(cmd, f, true) {
 		return askIntSlice(f, value, defaultValue)
 	}
 	return nil
