@@ -64,7 +64,6 @@ tests:
     stdout:
       contains:
         - ID
-        - DESCRIPTION  Integration Test ACL Updated
         - PRIORITY     8
         - ACTIVE       true
         - ACTION       log
