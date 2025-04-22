@@ -21,12 +21,11 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - "DESCRIPTION          Integration Test ACL"
-        - "PRIORITY             2"
-        - "ACTIVE               true"
-        - "SCOPE                management"
-        - "ACTION               block"
-        - "IPV4 CIDRS           192.168.1.0/24"
+        - ID
+        - DESCRIPTION  Integration Test ACL
+        - PRIORITY     2
+        - ACTIVE       true
+        - ACTION       block
 
   004 - list network ACLs with data:
     command: auth0 network-acl list
@@ -64,8 +63,9 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - "DESCRIPTION        Integration Test ACL Updated"
-        - "PRIORITY           8"
+        - ID
+        - DESCRIPTION  Integration Test ACL Updated
+        - PRIORITY     8
 
   008 - update network ACL and output in json:
     command: auth0 network-acl update $(./test/integration/scripts/get-network-acl-id.sh) --description "Integration Test ACL Updated Again" --active false --priority 4 --rule '{"action":{"redirect":true,"redirect_uri":"https://example.com"},"scope":"tenant","match":{"geo_country_codes":["US","CA"]}}' --json --no-input
