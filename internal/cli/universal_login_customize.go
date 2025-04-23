@@ -125,13 +125,11 @@ var ScreenPromptMap = map[string][]string{
 	"mfa-push":                    {"mfa-push-challenge-push", "mfa-push-enrollment-qr", "mfa-push-list", "mfa-push-welcome"},
 	"invitation":                  {"accept-invitation"},
 	"organizations":               {"organization-selection", "organization-picker"},
-	"consent":                     {"consent"},
-	"customized-consent":          {"customized-consent"},
 	"mfa-otp":                     {"mfa-otp-challenge", "mfa-otp-enrollment-code", "mfa-otp-enrollment-qr"},
 	"device-flow":                 {"device-code-activation", "device-code-activation-allowed", "device-code-activation-denied", "device-code-confirmation"},
 	"mfa-phone":                   {"mfa-phone-challenge", "mfa-phone-enrollment"},
 	"mfa-voice":                   {"mfa-voice-challenge", "mfa-voice-enrollment"},
-	"mfa-recovery-code":           {"mfa-recovery-code-challenge", "mfa-recovery-code-enrollment", "mfa-recovery-code-challenge-new-code"},
+	"mfa-recovery-code":           {"mfa-recovery-code-challenge", "mfa-recovery-code-enrollment"},
 	"common":                      {"redeem-ticket"},
 }
 
