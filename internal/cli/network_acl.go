@@ -25,7 +25,7 @@ var (
 		Name:      "Description",
 		LongForm:  "description",
 		ShortForm: "d",
-		Help:      "Description of the network ACL (Eg. \"Block suspicious IPs\")",
+		Help:      "Description of the network ACL (Eg. \"Block suspicious IPs\", required)",
 	}
 
 	networkACLActive = Flag{
@@ -38,7 +38,7 @@ var (
 		Name:      "Priority",
 		LongForm:  "priority",
 		ShortForm: "p",
-		Help:      "Priority of the network ACL 1-10 number(Eg. 5)",
+		Help:      "Priority of the network ACL 1-10 number(Eg. 5, default: 1)",
 	}
 
 	networkACLRuleAction = Flag{
@@ -288,11 +288,17 @@ The --rule parameter is required and must contain a valid JSON object with actio
 				return fmt.Errorf("description cannot exceed 255 characters")
 			}
 
-			if err := networkACLActive.AskBool(cmd, &inputs.Active, nil); err != nil {
+			if len(inputs.Description) == 0 {
+				return fmt.Errorf("description is required")
+			}
+
+			defaultStatus := false
+			if err := networkACLActive.AskBool(cmd, &inputs.Active, &defaultStatus); err != nil {
 				return err
 			}
 
-			if err := networkACLPriority.AskInt(cmd, &inputs.Priority, nil); err != nil {
+			defaultPriority := "1"
+			if err := networkACLPriority.AskInt(cmd, &inputs.Priority, &defaultPriority); err != nil {
 				return err
 			}
 
@@ -338,7 +344,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 			var selectedMatchOption string
 			if err := (&Flag{
 				Name: "What kind of rule do you want to create?",
-				Help: "Match or Not Match rule",
+				Help: "Match or Not Match rule (ASNs, Country Codes, Subdivision Codes, IPv4 CIDRs, IPv6 CIDRs, JA3/JA4 Fingerprints, User Agents)",
 			}).Select(cmd, &selectedMatchOption, matchOptions, nil); err != nil {
 				return err
 			}
