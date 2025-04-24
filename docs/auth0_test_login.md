@@ -33,7 +33,7 @@ auth0 test login [flags]
 ## Flags
 
 ```
-  -a, --audience string          The unique identifier of the target API you want to access. For Machine to Machine and Regular Web Applications, only the enabled APIs will be shown within the interactive prompt.
+  -a, --audience string          The unique identifier of the target API you want to access. For Machine to Machine Applications, only the enabled APIs will be shown within the interactive prompt.
   -c, --connection-name string   The connection name to test during login.
   -d, --domain string            One of your custom domains.
       --force                    Skip confirmation.

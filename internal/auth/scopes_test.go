@@ -32,7 +32,7 @@ func TestRequiredScopes(t *testing.T) {
 	t.Run("Verify special scopes", func(t *testing.T) {
 		list := []string{
 			"read:branding", "update:branding",
-			"read:connections", "update:connections",
+			"read:connections", "update:connections", "read:connections_options", "update:connections_options",
 			"read:email_templates", "update:email_templates",
 			"read:custom_domains", "create:custom_domains", "update:custom_domains", "delete:custom_domains",
 			"read:client_keys", "read:logs", "read:tenant_settings",
