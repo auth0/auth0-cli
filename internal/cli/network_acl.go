@@ -102,17 +102,60 @@ var (
 	}
 )
 
+// formatValue formats a value for display in the parameter selection list.
+func formatValue(values interface{}) string {
+	switch v := values.(type) {
+	case []int:
+		if len(v) > 0 {
+			return fmt.Sprintf(" (%v)", strings.Join(strings.Fields(fmt.Sprint(v)), ","))
+		}
+	case []string:
+		if len(v) > 0 {
+			return fmt.Sprintf(" (%s)", strings.Join(v, ","))
+		}
+	}
+	return ""
+}
+
 // Returns a map of parameter names to boolean indicating if they were selected.
-func selectNetworkACLParams(cmd *cobra.Command) (map[string]bool, error) {
+func selectNetworkACLParams(cmd *cobra.Command, match *management.NetworkACLRuleMatch) (map[string]bool, error) {
+	var asns []int
+	var countryCodes, subdivCodes, ipv4CIDRs, ipv6CIDRs, ja3, ja4, userAgents []string
+
+	if match != nil {
+		asns = match.Asns
+		if match.GeoCountryCodes != nil {
+			countryCodes = *match.GeoCountryCodes
+		}
+		if match.GeoSubdivisionCodes != nil {
+			subdivCodes = *match.GeoSubdivisionCodes
+		}
+		if match.IPv4Cidrs != nil {
+			ipv4CIDRs = *match.IPv4Cidrs
+		}
+		if match.IPv6Cidrs != nil {
+			ipv6CIDRs = *match.IPv6Cidrs
+		}
+		if match.Ja3Fingerprints != nil {
+			ja3 = *match.Ja3Fingerprints
+		}
+		if match.Ja4Fingerprints != nil {
+			ja4 = *match.Ja4Fingerprints
+		}
+		if match.UserAgents != nil {
+			userAgents = *match.UserAgents
+		}
+	}
+
 	options := []string{
-		"ASNs",
-		"Country Codes",
-		"Subdivision Codes",
-		"IPv4CIDRs",
-		"IPv6CIDRs",
-		"JA3Fingerprints",
-		"JA4Fingerprints",
-		"User Agents",
+		"ASNs" + formatValue(asns),
+		"Country Codes" + formatValue(countryCodes),
+		"Subdivision Codes" + formatValue(subdivCodes),
+		"IPv4CIDRs" + formatValue(ipv4CIDRs),
+		"IPv6CIDRs" + formatValue(ipv6CIDRs),
+		"JA3Fingerprints" + formatValue(ja3),
+		"JA4Fingerprints" + formatValue(ja4),
+		"User Agents" + formatValue(userAgents),
 	}
 
 	var selected []string
@@ -130,8 +173,27 @@ func selectNetworkACLParams(cmd *cobra.Command) (map[string]bool, error) {
 
 	// Convert selected slice to map for easier lookup.
 	selectedParams := make(map[string]bool)
-	for _, opt := range options {
-		selectedParams[opt] = contains(selected, opt)
+	baseOptions := []string{
+		"ASNs",
+		"Country Codes",
+		"Subdivision Codes",
+		"IPv4CIDRs",
+		"IPv6CIDRs",
+		"JA3Fingerprints",
+		"JA4Fingerprints",
+		"User Agents",
+	}
+	
+		// Map full options (with values) back to base options for lookup.
+	optionMap := make(map[string]string)
+	for i, opt := range options {
+		optionMap[opt] = baseOptions[i]
+	}
+
+	for _, opt := range selected {
+		if baseOpt, ok := optionMap[opt]; ok {
+			selectedParams[baseOpt] = true
+		}
 	}
 
 	return selectedParams, nil
@@ -386,7 +448,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 			inputs.isMatchRule = selectedMatchOption == "match"
 
 			// Select which parameters to provide.
-			selectedParams, err := selectNetworkACLParams(cmd)
+			selectedParams, err := selectNetworkACLParams(cmd, nil) 			selectedParams, err := selectNetworkACLParams(cmd, nil) // No current values for create.
 			if err != nil {
 				return err
 			}
@@ -787,7 +849,15 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 				}
 
 				// Select which parameters to provide.
-				selectedParams, err := selectNetworkACLParams(cmd)
+				var currentMatch *management.NetworkACLRuleMatch
+				if currentACL.Rule != nil {
+					if currentACL.Rule.Match != nil {
+						currentMatch = currentACL.Rule.Match
+					} else if currentACL.Rule.NotMatch != nil {
+						currentMatch = currentACL.Rule.NotMatch
+					}
+				}
+				selectedParams, err := selectNetworkACLParams(cmd, currentMatch)
 				if err != nil {
 					return err
 				}
