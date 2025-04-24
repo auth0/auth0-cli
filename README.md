@@ -134,11 +134,22 @@ auth0 login
 
 There are two ways to authenticate:
 
-- **As a user** - Recommended when invoking on a personal machine or other interactive environment. Facilitated by [device authorization](https://auth0.com/docs/get-started/authentication-and-authorization-flow/device-authorization-flow) flow.
-- **As a machine** - Recommended when running on a server or non-interactive environments (ex: CI). Facilitated by [client credentials](https://auth0.com/docs/get-started/authentication-and-authorization-flow/client-credentials-flow) flow. Flags available for bypassing interactive shell.
+- **As a user** - Recommended when invoking on a personal machine or other interactive environment. Facilitated by [device authorization](https://auth0.com/docs/get-started/authentication-and-authorization-flow/device-authorization-flow) flow and cannot be used for private cloud tenants.
+- **As a machine** - Recommended when running on a server or non-interactive environments (ex: CI, authenticating to a **private cloud**).  Facilitated by [client credentials](https://auth0.com/docs/get-started/authentication-and-authorization-flow/client-credentials-flow) flow. Flags available for bypassing interactive shell.
+
+
 
 > **Warning**
-> Authenticating as a user is not supported for **private cloud** tenants. Instead, those users should authenticate with client credentials.
+> Authenticating as a user is not supported for **private cloud** tenants. 
+> Instead, those users should authenticate with client credentials.
+> Refer command below:
+
+```bash
+auth0 login --domain <domain> --client-id <client-id> --client-secret <client-secret>
+```
+
+> **Note:**
+> Using the CLI will consume Management API rate limits according to the subscription plan. Ref [Rate limit Policy](https://auth0.com/docs/troubleshoot/customer-support/operational-policies/rate-limit-policy)
 
 ## Available Commands
 
