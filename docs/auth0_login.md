@@ -4,9 +4,12 @@ has_toc: false
 ---
 # auth0 login
 
-Authenticates the Auth0 CLI either as a user using personal credentials or as a machine using client credentials.
+Authenticates the Auth0 CLI using either personal credentials (user login) or client credentials (machine login).
 
-Authenticating as a user is recommended when working on a personal machine or other interactive environment; it is not available for Private Cloud users. Authenticating as a machine is recommended when running on a server or non-interactive environments (ex: CI).
+Use user login on personal machines or interactive environments (not supported for Private Cloud users).
+Use machine login for servers, CI, or any non-interactive environments — this is the recommended method for Private Cloud users.
+
+
 
 ## Usage
 ```
