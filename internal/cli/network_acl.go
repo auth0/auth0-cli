@@ -183,8 +183,8 @@ func selectNetworkACLParams(cmd *cobra.Command, match *management.NetworkACLRule
 		"JA4Fingerprints",
 		"User Agents",
 	}
-	
-		// Map full options (with values) back to base options for lookup.
+
+	// Map full options (with values) back to base options for lookup.
 	optionMap := make(map[string]string)
 	for i, opt := range options {
 		optionMap[opt] = baseOptions[i]
@@ -448,7 +448,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 			inputs.isMatchRule = selectedMatchOption == "match"
 
 			// Select which parameters to provide.
-			selectedParams, err := selectNetworkACLParams(cmd, nil) 			selectedParams, err := selectNetworkACLParams(cmd, nil) // No current values for create.
+			selectedParams, err := selectNetworkACLParams(cmd, nil)
 			if err != nil {
 				return err
 			}
