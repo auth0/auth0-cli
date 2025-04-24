@@ -102,6 +102,41 @@ var (
 	}
 )
 
+// Returns a map of parameter names to boolean indicating if they were selected.
+func selectNetworkACLParams(cmd *cobra.Command) (map[string]bool, error) {
+	options := []string{
+		"ASNs",
+		"Country Codes",
+		"Subdivision Codes",
+		"IPv4CIDRs",
+		"IPv6CIDRs",
+		"JA3Fingerprints",
+		"JA4Fingerprints",
+		"User Agents",
+	}
+
+	var selected []string
+	if err := prompt.AskMultiSelect(
+		"Select the params you wish to provide using the spacebar, then press Enter to confirm:",
+		&selected,
+		options...,
+	); err != nil {
+		return nil, err
+	}
+
+	if len(selected) == 0 {
+		return nil, errors.New("at least one parameter must be selected")
+	}
+
+	// Convert selected slice to map for easier lookup.
+	selectedParams := make(map[string]bool)
+	for _, opt := range options {
+		selectedParams[opt] = contains(selected, opt)
+	}
+
+	return selectedParams, nil
+}
+
 // Helper function to check if a string is in a slice.
 func contains(slice []string, item string) bool {
 	for _, s := range slice {
@@ -350,37 +385,59 @@ The --rule parameter is required and must contain a valid JSON object with actio
 			}
 			inputs.isMatchRule = selectedMatchOption == "match"
 
-			// Handle match criteria.
-			if err := networkACLASNs.AskIntSlice(cmd, &inputs.ASNs, nil); err != nil {
+			// Select which parameters to provide.
+			selectedParams, err := selectNetworkACLParams(cmd)
+			if err != nil {
 				return err
 			}
 
-			if err := networkACLCountryCodes.AskMany(cmd, &inputs.CountryCodes, nil); err != nil {
-				return err
+			// Ask for values only for selected parameters.
+			if selectedParams["ASNs"] {
+				if err := networkACLASNs.AskIntSlice(cmd, &inputs.ASNs, nil); err != nil {
+					return err
+				}
 			}
 
-			if err := networkACLSubdivisionCodes.AskMany(cmd, &inputs.SubdivCodes, nil); err != nil {
-				return err
+			if selectedParams["Country Codes"] {
+				if err := networkACLCountryCodes.AskMany(cmd, &inputs.CountryCodes, nil); err != nil {
+					return err
+				}
 			}
 
-			if err := networkACLIPv4CIDRs.AskMany(cmd, &inputs.IPv4CIDRs, nil); err != nil {
-				return err
+			if selectedParams["Subdivision Codes"] {
+				if err := networkACLSubdivisionCodes.AskMany(cmd, &inputs.SubdivCodes, nil); err != nil {
+					return err
+				}
 			}
 
-			if err := networkACLIPv6CIDRs.AskMany(cmd, &inputs.IPv6CIDRs, nil); err != nil {
-				return err
+			if selectedParams["IPv4CIDRs"] {
+				if err := networkACLIPv4CIDRs.AskMany(cmd, &inputs.IPv4CIDRs, nil); err != nil {
+					return err
+				}
 			}
 
-			if err := networkACLJA3Fingerprints.AskMany(cmd, &inputs.JA3, nil); err != nil {
-				return err
+			if selectedParams["IPv6CIDRs"] {
+				if err := networkACLIPv6CIDRs.AskMany(cmd, &inputs.IPv6CIDRs, nil); err != nil {
+					return err
+				}
 			}
 
-			if err := networkACLJA4Fingerprints.AskMany(cmd, &inputs.JA4, nil); err != nil {
-				return err
+			if selectedParams["JA3Fingerprints"] {
+				if err := networkACLJA3Fingerprints.AskMany(cmd, &inputs.JA3, nil); err != nil {
+					return err
+				}
 			}
 
-			if err := networkACLUserAgents.AskMany(cmd, &inputs.UserAgents, nil); err != nil {
-				return err
+			if selectedParams["JA4Fingerprints"] {
+				if err := networkACLJA4Fingerprints.AskMany(cmd, &inputs.JA4, nil); err != nil {
+					return err
+				}
+			}
+
+			if selectedParams["User Agents"] {
+				if err := networkACLUserAgents.AskMany(cmd, &inputs.UserAgents, nil); err != nil {
+					return err
+				}
 			}
 
 			// Build the network ACL.
@@ -729,44 +786,66 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					}
 				}
 
-				if err := networkACLASNs.AskIntSlice(cmd, &inputs.ASNs, &currentASNs); err != nil {
+				// Select which parameters to provide.
+				selectedParams, err := selectNetworkACLParams(cmd)
+				if err != nil {
 					return err
 				}
 
-				// Convert string slices to comma-separated strings for AskMany.
-				currentCountryCodesStr := strings.Join(currentCountryCodes, ",")
-				if err := networkACLCountryCodes.AskMany(cmd, &inputs.CountryCodes, &currentCountryCodesStr); err != nil {
-					return err
+				// Ask for values only for selected parameters.
+				if selectedParams["ASNs"] {
+					if err := networkACLASNs.AskIntSlice(cmd, &inputs.ASNs, &currentASNs); err != nil {
+						return err
+					}
 				}
 
-				currentSubDivCodesStr := strings.Join(currentSubDivCodes, ",")
-				if err := networkACLSubdivisionCodes.AskMany(cmd, &inputs.SubdivCodes, &currentSubDivCodesStr); err != nil {
-					return err
+				if selectedParams["Country Codes"] {
+					currentCountryCodesStr := strings.Join(currentCountryCodes, ",")
+					if err := networkACLCountryCodes.AskMany(cmd, &inputs.CountryCodes, &currentCountryCodesStr); err != nil {
+						return err
+					}
 				}
 
-				currentIPv4CIDRsStr := strings.Join(currentIPv4CIDRs, ",")
-				if err := networkACLIPv4CIDRs.AskMany(cmd, &inputs.IPv4CIDRs, &currentIPv4CIDRsStr); err != nil {
-					return err
+				if selectedParams["Subdivision Codes"] {
+					currentSubDivCodesStr := strings.Join(currentSubDivCodes, ",")
+					if err := networkACLSubdivisionCodes.AskMany(cmd, &inputs.SubdivCodes, &currentSubDivCodesStr); err != nil {
+						return err
+					}
 				}
 
-				currentIPv6CIDRsStr := strings.Join(currentIPv6CIDRs, ",")
-				if err := networkACLIPv6CIDRs.AskMany(cmd, &inputs.IPv6CIDRs, &currentIPv6CIDRsStr); err != nil {
-					return err
+				if selectedParams["IPv4CIDRs"] {
+					currentIPv4CIDRsStr := strings.Join(currentIPv4CIDRs, ",")
+					if err := networkACLIPv4CIDRs.AskMany(cmd, &inputs.IPv4CIDRs, &currentIPv4CIDRsStr); err != nil {
+						return err
+					}
 				}
 
-				currentJA3Str := strings.Join(currentJA3, ",")
-				if err := networkACLJA3Fingerprints.AskMany(cmd, &inputs.JA3, &currentJA3Str); err != nil {
-					return err
+				if selectedParams["IPv6CIDRs"] {
+					currentIPv6CIDRsStr := strings.Join(currentIPv6CIDRs, ",")
+					if err := networkACLIPv6CIDRs.AskMany(cmd, &inputs.IPv6CIDRs, &currentIPv6CIDRsStr); err != nil {
+						return err
+					}
 				}
 
-				currentJA4Str := strings.Join(currentJA4, ",")
-				if err := networkACLJA4Fingerprints.AskMany(cmd, &inputs.JA4, &currentJA4Str); err != nil {
-					return err
+				if selectedParams["JA3Fingerprints"] {
+					currentJA3Str := strings.Join(currentJA3, ",")
+					if err := networkACLJA3Fingerprints.AskMany(cmd, &inputs.JA3, &currentJA3Str); err != nil {
+						return err
+					}
 				}
 
-				currentUserAgentsStr := strings.Join(currentUserAgents, ",")
-				if err := networkACLUserAgents.AskMany(cmd, &inputs.UserAgents, &currentUserAgentsStr); err != nil {
-					return err
+				if selectedParams["JA4Fingerprints"] {
+					currentJA4Str := strings.Join(currentJA4, ",")
+					if err := networkACLJA4Fingerprints.AskMany(cmd, &inputs.JA4, &currentJA4Str); err != nil {
+						return err
+					}
+				}
+
+				if selectedParams["User Agents"] {
+					currentUserAgentsStr := strings.Join(currentUserAgents, ",")
+					if err := networkACLUserAgents.AskMany(cmd, &inputs.UserAgents, &currentUserAgentsStr); err != nil {
+						return err
+					}
 				}
 
 				// Build the updated ACL from interactive inputs.
