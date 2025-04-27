@@ -1,14 +1,17 @@
 package display
 
 import (
-	"fmt"
-	"strings"
-"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/go-auth0/management"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
 )
 
 type SessionTransferView struct {
-	Client *management.Client
+	ID             string
+	CanCreateTOKEN string
+	AllowedMethods string
+	DeviceBinding  string
+
 	raw interface{}
 }
 
@@ -17,26 +20,20 @@ func (v *SessionTransferView) AsTableHeader() []string {
 }
 
 func (v *SessionTransferView) AsTableRow() []string {
-	st := v.Client.SessionTransfer
 	return []string{
-		ansi.Faint(v.Client.GetClientID()),
-		v.Client.GetName(),
-		fmt.Sprintf("%v", derefBool(st.CanCreateSessionTransferToken)),
-		strings.Join(derefStringSlice(st.AllowedAuthenticationMethods), ", "),
-		derefString(st.EnforceDeviceBinding),
+		v.ID,
+		v.CanCreateTOKEN,
+		v.AllowedMethods,
+		v.DeviceBinding,
 	}
 }
 
-
-
 func (v *SessionTransferView) KeyValues() [][]string {
-	st := v.Client.SessionTransfer
 	return [][]string{
-		{"CLIENT ID", ansi.Faint(v.Client.GetClientID())},
-		{"NAME", v.Client.GetName()},
-		{"CAN CREATE TOKEN", fmt.Sprintf("%v", derefBool(st.CanCreateSessionTransferToken))},
-		{"ALLOWED METHODS", strings.Join(derefStringSlice(st.AllowedAuthenticationMethods), ", ")},
-		{"DEVICE BINDING", derefString(st.EnforceDeviceBinding)},
+		{"CLIENT ID", v.ID},
+		{"CAN CREATE TOKEN", v.CanCreateTOKEN},
+		{"ALLOWED METHODS", v.AllowedMethods},
+		{"DEVICE BINDING", v.DeviceBinding},
 	}
 }
 
@@ -49,31 +46,19 @@ func (r *Renderer) SessionTransferShow(client *management.Client) {
 	r.Result(MakeSessionTransferView(client))
 }
 
+func (r *Renderer) SessionTransferUpdate(client *management.Client, id string) {
+	r.Heading("application session transfer")
+	r.Infof("✅ Updated session transfer settings for application %s", ansi.Faint(id))
+
+	r.Result(MakeSessionTransferView(client))
+}
+
 func MakeSessionTransferView(client *management.Client) *SessionTransferView {
 	return &SessionTransferView{
-		Client: client,
-		raw:    client.SessionTransfer,
+		ID:             client.GetClientID(),
+		CanCreateTOKEN: boolean(client.SessionTransfer.GetCanCreateSessionTransferToken()),
+		AllowedMethods: stringSliceToCommaSeparatedString(client.SessionTransfer.GetAllowedAuthenticationMethods()),
+		DeviceBinding:  client.SessionTransfer.GetEnforceDeviceBinding(),
+		raw:            client.SessionTransfer,
 	}
-}
-
-// Helpers used here instead of auth0 package utils
-func derefString(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
-}
-
-func derefBool(b *bool) bool {
-	if b == nil {
-		return false
-	}
-	return *b
-}
-
-func derefStringSlice(s *[]string) []string {
-	if s == nil {
-		return nil
-	}
-	return *s
 }

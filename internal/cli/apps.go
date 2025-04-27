@@ -134,6 +134,27 @@ var (
 		ShortForm: "n",
 		Help:      "Number of apps to retrieve. Minimum 1, maximum 1000.",
 	}
+	appSTCanCreateToken = Flag{
+		Name:         "Can Create Token",
+		LongForm:     "can-create-token",
+		ShortForm:    "t",
+		Help:         "Allow creation of session transfer tokens.",
+		AlwaysPrompt: true,
+	}
+	appSTAllowedAuthMethods = Flag{
+		Name:         "Allowed Auth Methods",
+		LongForm:     "allowed-auth-methods",
+		ShortForm:    "m",
+		Help:         "Comma-separated list of authentication methods (e.g., cookie, query).",
+		AlwaysPrompt: true,
+	}
+	appSTEnforceDeviceBinding = Flag{
+		Name:         "Enforce Device Binding",
+		LongForm:     "enforce-device-binding",
+		ShortForm:    "e",
+		Help:         "Device binding enforcement: 'none', 'ip', or 'asn'.",
+		AlwaysPrompt: true,
+	}
 )
 
 func appsCmd(cli *cli) *cobra.Command {
@@ -546,7 +567,6 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		Grants            []string
 		RevealSecrets     bool
 		Metadata          map[string]string
-
 	}
 
 	cmd := &cobra.Command{
@@ -947,8 +967,7 @@ func (c *cli) appPickerOptions(requestOpts ...management.RequestOption) pickerOp
 	}
 }
 
-// Session Transfer 
-
+// Session Transfer.
 func appsSessionTransferCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "session-transfer",
@@ -957,21 +976,23 @@ func appsSessionTransferCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(appsSessionTransferShowCmd(cli))
-	cmd.AddCommand(appsSessionTransferSetCmd(cli))
+	cmd.AddCommand(appsSessionTransferUpdateCmd(cli))
 
 	return cmd
 }
 
 func appsSessionTransferShowCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID   string
-		JSON bool
+		ID string
 	}
 
 	cmd := &cobra.Command{
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show session transfer settings for an app",
+		Example: `auth0 apps session-transfer show
+  auth0 apps session-transfer show <app-id>
+  auth0 apps session-transfer show <app-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions())
@@ -982,46 +1003,46 @@ func appsSessionTransferShowCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			var app *management.Client
+			var client *management.Client
 			if err := ansi.Waiting(func() error {
 				var err error
-				app, err = cli.api.Client.Read(cmd.Context(), inputs.ID)
+				client, err = cli.api.Client.Read(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to read application: %w", err)
 			}
 
-			if app.SessionTransfer == nil {
+			if client.SessionTransfer == nil {
 				cli.renderer.Infof("No session transfer settings configured for app %s", ansi.Faint(inputs.ID))
 				return nil
 			}
 
-			cli.renderer.SessionTransferShow(app)
+			cli.renderer.SessionTransferShow(client)
 
 			return nil
 		},
 	}
 
-	cmd.Flags().BoolVar(&inputs.JSON, "json", false, "Output in JSON format.")
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	return cmd
 }
 
-func appsSessionTransferSetCmd(cli *cli) *cobra.Command {
+func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ID                   string
-		CanCreateToken       *bool
+		CanCreateToken       bool
 		AllowedAuthMethods   []string
 		EnforceDeviceBinding string
 	}
 
 	cmd := &cobra.Command{
-		Use:   "set",
+		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Set session transfer settings for an app",
-		Example: `  auth0 apps session-transfer set <app-id> \
-  --can-create-token=true \
-  --allowed-auth-methods=cookie,query \
-  --enforce-device-binding=ip`,
+		Short: "Update session transfer settings for an app",
+		Example: ` auth0 apps session-transfer update 
+  auth0 apps session-transfer update <app-id>
+  auth0 apps session-transfer update <app-id> --can-create-token --json
+  auth0 apps session-transfer update <app-id> --can-create-token=true --allowed-auth-methods=cookie,query --enforce-device-binding=ip`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions())
@@ -1032,56 +1053,64 @@ func appsSessionTransferSetCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			if inputs.CanCreateToken == nil && len(inputs.AllowedAuthMethods) == 0 && inputs.EnforceDeviceBinding == "" {
-				return fmt.Errorf("you must provide at least one flag to update session transfer settings")
+			var (
+				current *management.Client
+				st      management.SessionTransfer
+			)
+
+			if err := ansi.Waiting(func() (err error) {
+				current, err = cli.api.Client.Read(cmd.Context(), inputs.ID)
+				return err
+			}); err != nil {
+				return fmt.Errorf("failed to find application with ID %q: %w", inputs.ID, err)
 			}
 
-			// Validate device binding input
-			if inputs.EnforceDeviceBinding != "" {
-				valid := []string{"none", "ip", "asn"}
-				if !slices.Contains(valid, inputs.EnforceDeviceBinding) {
-					return fmt.Errorf("invalid --enforce-device-binding value: must be one of %v", valid)
-				}
+			if err := appSTCanCreateToken.AskBoolU(cmd, &inputs.CanCreateToken, current.SessionTransfer.CanCreateSessionTransferToken); err != nil {
+				return err
 			}
 
-			// Build the session transfer struct
-			st := &management.SessionTransfer{}
-
-			if inputs.CanCreateToken != nil {
-				st.CanCreateSessionTransferToken = inputs.CanCreateToken
+			defaultVal := stringSliceToCommaSeparatedString(current.SessionTransfer.GetAllowedAuthenticationMethods())
+			if err := appSTAllowedAuthMethods.AskManyU(cmd, &inputs.AllowedAuthMethods, &defaultVal); err != nil {
+				return err
 			}
+
+			if err := appSTEnforceDeviceBinding.SelectU(cmd, &inputs.EnforceDeviceBinding, []string{"none", "ip", "asn"}, current.SessionTransfer.EnforceDeviceBinding); err != nil {
+				return err
+			}
+
+			// Set the flag if it was supplied or entered by the prompt.
+			if appSTCanCreateToken.IsSet(cmd) || shouldPromptWhenNoLocalFlagsSet(cmd) {
+				st.CanCreateSessionTransferToken = &inputs.CanCreateToken
+			}
+
 			if len(inputs.AllowedAuthMethods) > 0 {
 				st.AllowedAuthenticationMethods = &inputs.AllowedAuthMethods
 			}
+
 			if inputs.EnforceDeviceBinding != "" {
 				st.EnforceDeviceBinding = &inputs.EnforceDeviceBinding
+			} else {
+				st.EnforceDeviceBinding = current.SessionTransfer.EnforceDeviceBinding
 			}
 
-			// Send update request
-			app := &management.Client{
-				SessionTransfer: st,
-			}
-
+			// Send update request.
+			clientST := &management.Client{SessionTransfer: &st}
 			if err := ansi.Waiting(func() error {
-				return cli.api.Client.Update(cmd.Context(), inputs.ID, app)
+				return cli.api.Client.Update(cmd.Context(), inputs.ID, clientST)
 			}); err != nil {
 				return fmt.Errorf("failed to update session transfer: %w", err)
 			}
 
-			cli.renderer.Infof("✅ Updated session transfer settings for application %s", ansi.Faint(inputs.ID))
+			cli.renderer.SessionTransferUpdate(clientST, inputs.ID)
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
-	inputs.CanCreateToken = new(bool)
-
-	// Register CLI flags
-	cmd.Flags().BoolVar(inputs.CanCreateToken, "can-create-token", false, "Allow creation of session transfer tokens.")
-	cmd.Flags().StringSliceVar(&inputs.AllowedAuthMethods, "allowed-auth-methods", nil, "Comma-separated list of authentication methods (e.g. cookie,query).")
-	cmd.Flags().StringVar(&inputs.EnforceDeviceBinding, "enforce-device-binding", "", "Device binding enforcement: 'none', 'ip', or 'asn'.")
+	// Register CLI flags.
+	appSTCanCreateToken.RegisterBoolU(cmd, &inputs.CanCreateToken, false)
+	appSTAllowedAuthMethods.RegisterStringSliceU(cmd, &inputs.AllowedAuthMethods, nil)
+	appSTEnforceDeviceBinding.RegisterStringU(cmd, &inputs.EnforceDeviceBinding, "")
 
 	return cmd
 }
-
-
-
