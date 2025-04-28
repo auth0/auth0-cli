@@ -26,6 +26,7 @@ type API struct {
 	Log                 LogAPI
 	LogStream           LogStreamAPI
 	Organization        OrganizationAPI
+	NetworkACL          NetworkACLAPI
 	Prompt              PromptAPI
 	ResourceServer      ResourceServerAPI
 	Role                RoleAPI
@@ -57,6 +58,7 @@ func NewAPI(m *management.Management) *API {
 		Log:                 m.Log,
 		LogStream:           m.LogStream,
 		Organization:        m.Organization,
+		NetworkACL:          m.NetworkACL,
 		Prompt:              m.Prompt,
 		ResourceServer:      m.ResourceServer,
 		Role:                m.Role,
