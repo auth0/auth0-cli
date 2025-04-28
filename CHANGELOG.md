@@ -14,14 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Support to manage tenant ACL using `auth0 network-acl` (EA Release) [#1166]
 - Add support for new screens in Advanced Customization for Universal Login [#1185]
-- Support `users_authentication block` in the update command using `auth0 users update <user-id> --blocked`[#1181]
+- Support authentication blocking for an user via `auth0 users update <user-id> --blocked`[#1181]
 - Support additional scopes for connections [#1184]
 
 ### Changed
 - Updated ULP branding assets to support standard customization of Universal login for all the available prompts[#1188]
 
 ### Fixed
-- Add timeout and increase retries for intermittent failed tests [#1182]
 - Fix validation to authorize audience only for M2M apps in test commands [#1183]
 
 
