@@ -22,19 +22,19 @@ const (
 
 type logCategory int
 
-var _ View = &logView{}
+var _ View = &LogView{}
 
-type logView struct {
+type LogView struct {
 	silent bool
 	*management.Log
 	raw interface{}
 }
 
-func (v *logView) AsTableHeader() []string {
+func (v *LogView) AsTableHeader() []string {
 	return []string{"Type", "Description", "Date", "Connection", "Client"}
 }
 
-func (v *logView) getConnection() string {
+func (v *LogView) getConnection() string {
 	if v.Details["prompts"] == nil {
 		return notApplicable
 	}
@@ -54,7 +54,7 @@ func (v *logView) getConnection() string {
 	return notApplicable
 }
 
-func (v *logView) AsTableRow() []string {
+func (v *LogView) AsTableRow() []string {
 	typ, desc := v.typeDesc()
 
 	clientName := v.GetClientName()
@@ -78,11 +78,11 @@ func (v *logView) AsTableRow() []string {
 	}
 }
 
-func (v *logView) Object() interface{} {
+func (v *LogView) Object() interface{} {
 	return v.raw
 }
 
-func (v *logView) Extras() []string {
+func (v *LogView) Extras() []string {
 	if v.silent {
 		return nil
 	}
@@ -97,9 +97,9 @@ func (v *logView) Extras() []string {
 	return []string{ansi.Faint(indent(string(raw), "\t"))}
 }
 
-func (v *logView) category() logCategory {
+func (v *LogView) category() logCategory {
 	switch logType := v.GetType(); {
-	case strings.HasPrefix(logType, "s"):
+	case strings.HasPrefix(logType, "s") || strings.HasPrefix(logType, "m"):
 		return logCategorySuccess
 	case strings.HasPrefix(logType, "w"):
 		return logCategoryWarning
@@ -110,7 +110,7 @@ func (v *logView) category() logCategory {
 	}
 }
 
-func (v *logView) typeDesc() (typ, desc string) {
+func (v *LogView) typeDesc() (typ, desc string) {
 	chunks := strings.Split(v.TypeName(), "(")
 
 	// NOTE(cyx): Some logs don't have a typ at all -- for those we'll
@@ -163,7 +163,7 @@ func (r *Renderer) LogList(logs []*management.Log, silent, hasFilter bool) {
 
 	var res []View
 	for _, l := range logs {
-		res = append(res, &logView{Log: l, silent: silent, raw: l})
+		res = append(res, &LogView{Log: l, silent: silent, raw: l})
 	}
 
 	r.Results(res)
@@ -174,7 +174,7 @@ func (r *Renderer) LogTail(logs []*management.Log, ch <-chan []*management.Log, 
 
 	var res []View
 	for _, l := range logs {
-		res = append(res, &logView{Log: l, silent: silent, raw: l})
+		res = append(res, &LogView{Log: l, silent: silent, raw: l})
 	}
 
 	viewChan := make(chan View)
@@ -184,7 +184,7 @@ func (r *Renderer) LogTail(logs []*management.Log, ch <-chan []*management.Log, 
 
 		for list := range ch {
 			for _, l := range list {
-				viewChan <- &logView{Log: l, silent: silent, raw: l}
+				viewChan <- &LogView{Log: l, silent: silent, raw: l}
 			}
 		}
 	}()

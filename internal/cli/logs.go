@@ -2,6 +2,9 @@ package cli
 
 import (
 	"fmt"
+	"github.com/auth0/auth0-cli/internal/display"
+	"github.com/manifoldco/promptui"
+
 	"sort"
 	"time"
 
@@ -29,6 +32,13 @@ var (
 		ShortForm: "n",
 		Help:      "Number of log entries to show. Minimum 1, maximum 1000.",
 	}
+
+	logPicker = Flag{
+		Name:      "Interactive picker option on rendered logs",
+		LongForm:  "picker",
+		ShortForm: "p",
+		Help:      "Help Text Here",
+	}
 )
 
 func logsCmd(cli *cli) *cobra.Command {
@@ -46,10 +56,28 @@ func logsCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+// Format the log row nicely
+//func formatLogAsTableRow(view display.LogView) string {
+//	// Access log details from the LogView (adjust based on your actual LogView structure)
+//	log := view.Log
+//
+//	// Formatting each row with padding for better alignment
+//	logType := fmt.Sprintf("%-20s", log.GetType())            // Left-align Type, 20 characters wide
+//	description := fmt.Sprintf("%-40s", log.GetDescription()) // Left-align Description, 40 characters wide
+//	date := fmt.Sprintf("%-25s", log.GetDate())               // Left-align Date, 25 characters wide
+//	connection := fmt.Sprintf("%-30s", log.GetConnection())   // Left-align Connection, 30 characters wide
+//	client := fmt.Sprintf("%-30s", log.GetClientID())         // Left-align Client, 30 characters wide
+//
+//	// Combine the fields with a clear separator (this can be a tab, space, etc.)
+//	return fmt.Sprintf("%s | %s | %s | %s | %s", logType, description, date, connection, client)
+//}
+
 func listLogsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
+		ID     string
 		Filter string
 		Num    int
+		Picker bool
 	}
 
 	cmd := &cobra.Command{
@@ -78,13 +106,52 @@ func listLogsCmd(cli *cli) *cobra.Command {
 			}
 
 			hasFilter := inputs.Filter != ""
-			cli.renderer.LogList(list, !cli.debug, hasFilter)
+			if inputs.Picker == false {
+				cli.renderer.LogList(list, !cli.debug, hasFilter)
+			} else {
+				rows := make([]string, 0, len(list))
+				for _, l := range list {
+					view := display.LogView{Log: l}
+					row := view.AsTableRow()
+					rows = append(rows, fmt.Sprintf(
+						"%-*s  %-*s  %-*s  %-*s  %-*s",
+						20, row[0], // Type
+						40, row[1], // Description
+						25, row[2], // Date
+						30, row[3], // Connection
+						30, row[4], // Client
+					))
+				}
+
+				prompt := promptui.Select{
+					Label: "Select a log to view details",
+					Items: rows,
+				}
+
+				selectedLogIndex, _, err := prompt.Run()
+				if err != nil {
+					return fmt.Errorf("failed to select a log: %w", err)
+				}
+
+				// Now we have the selected log index, fetch the corresponding detailed log
+				selectedLog := list[selectedLogIndex]
+				logDetail, err := cli.api.Log.Read(cmd.Context(), *selectedLog.ID)
+				if err != nil {
+					return fmt.Errorf("failed to get detailed log: %w", err)
+				}
+
+				// Print the detailed log in JSON format
+				fmt.Println("\nDetailed Log:")
+				cli.renderer.JSONResult(logDetail)
+
+			}
 			return nil
 		},
 	}
 
 	logsFilter.RegisterString(cmd, &inputs.Filter, "")
 	logsNum.RegisterInt(cmd, &inputs.Num, defaultPageSize)
+	logPicker.RegisterBool(cmd, &inputs.Picker, false)
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
