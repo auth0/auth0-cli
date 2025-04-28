@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.12.0](https://github.com/auth0/auth0-cli/tree/v1.12.0) (Apr 28, 2025))
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.11.0...v1.12.0)
+
+### Added
+- Support to manage tenant ACL using `auth0 network-acl` (EA Release) [#1166]
+- Add support for new screens in Advanced Customization for Universal Login [#1185]
+- Support `users_authentication block` in the update command using `auth0 users update <user-id> --blocked`[#1181]
+- Support additional scopes for connections [#1184]
+
+### Changed
+- Updated ULP branding assets to support standard customization of Universal login for all the available prompts[#1188]
+
+### Fixed
+- Add timeout and increase retries for intermittent failed tests [#1182]
+- Fix validation to authorize audience only for M2M apps in test commands [#1183]
+
+
 # [v.1.11.0](https://github.com/auth0/auth0-cli/tree/v1.11.0) (Apr 02, 2025))
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.10.1...v1.11.0)
@@ -455,7 +473,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.11.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.12.0...HEAD
+
+[#1188]: https://github.com/auth0/auth0-cli/issues/1188
+[#1185]: https://github.com/auth0/auth0-cli/issues/1185
+[#1184]: https://github.com/auth0/auth0-cli/issues/1184
+[#1183]: https://github.com/auth0/auth0-cli/issues/1183
+[#1182]: https://github.com/auth0/auth0-cli/issues/1182
+[#1181]: https://github.com/auth0/auth0-cli/issues/1181
+[#1166]: https://github.com/auth0/auth0-cli/issues/1166
 [#1173]: https://github.com/auth0/auth0-cli/issues/1173
 [#1172]: https://github.com/auth0/auth0-cli/issues/1172
 [#1170]: https://github.com/auth0/auth0-cli/issues/1170
