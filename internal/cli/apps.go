@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -133,6 +134,12 @@ var (
 		LongForm:  "number",
 		ShortForm: "n",
 		Help:      "Number of apps to retrieve. Minimum 1, maximum 1000.",
+	}
+	refreshToken = Flag{
+		Name:      "Refresh Token",
+		LongForm:  "refresh-token",
+		ShortForm: "z",
+		Help:      "Refresh Token Config for the application, formatted as JSON.",
 	}
 )
 
@@ -384,6 +391,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 		Grants            []string
 		RevealSecrets     bool
 		Metadata          map[string]string
+		RefreshToken      string
 	}
 	var oidcConformant = true
 	var algorithm = "RS256"
@@ -484,6 +492,12 @@ func createAppCmd(cli *cli) *cobra.Command {
 				ClientMetadata:    &clientMetadata,
 			}
 
+			if len(inputs.RefreshToken) != 0 {
+				if err := json.Unmarshal([]byte(inputs.RefreshToken), &a.RefreshToken); err != nil {
+					return fmt.Errorf("apps: %s refreshToken invalid JSON", err)
+				}
+			}
+
 			// Set token endpoint auth method.
 			if len(inputs.AuthMethod) == 0 {
 				a.TokenEndpointAuthMethod = apiDefaultAuthMethodFor(inputs.Type)
@@ -527,6 +541,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 	appAuthMethod.RegisterString(cmd, &inputs.AuthMethod, "")
 	appGrants.RegisterStringSlice(cmd, &inputs.Grants, nil)
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
+	refreshToken.RegisterString(cmd, &inputs.RefreshToken, "")
 
 	return cmd
 }
@@ -545,6 +560,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		Grants            []string
 		RevealSecrets     bool
 		Metadata          map[string]string
+		RefreshToken      string
 	}
 
 	cmd := &cobra.Command{
@@ -722,6 +738,14 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				a.ClientMetadata = &clientMetadata
 			}
 
+			if len(inputs.RefreshToken) == 0 {
+				a.RefreshToken = current.RefreshToken
+			} else {
+				if err := json.Unmarshal([]byte(inputs.RefreshToken), &a.RefreshToken); err != nil {
+					return fmt.Errorf("apps: %s refreshToken invalid JSON", err)
+				}
+			}
+
 			if err := ansi.Waiting(func() error {
 				return cli.api.Client.Update(cmd.Context(), inputs.ID, a)
 			}); err != nil {
@@ -746,6 +770,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 	appAuthMethod.RegisterStringU(cmd, &inputs.AuthMethod, "")
 	appGrants.RegisterStringSliceU(cmd, &inputs.Grants, nil)
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
+	refreshToken.RegisterString(cmd, &inputs.RefreshToken, "")
 
 	return cmd
 }

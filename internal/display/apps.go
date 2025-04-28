@@ -1,6 +1,7 @@
 package display
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -35,6 +36,7 @@ type applicationView struct {
 	AuthMethod        string
 	Grants            []string
 	Metadata          []string
+	RefreshToken      string
 	revealSecret      bool
 
 	raw interface{}
@@ -85,6 +87,7 @@ func (v *applicationView) KeyValues() [][]string {
 			{"TOKEN ENDPOINT AUTH", v.AuthMethod},
 			{"GRANTS", grants},
 			{"METADATA", metadata},
+			{"REFRESH TOKEN", v.RefreshToken},
 		}
 	}
 
@@ -100,6 +103,7 @@ func (v *applicationView) KeyValues() [][]string {
 		{"TOKEN ENDPOINT AUTH", v.AuthMethod},
 		{"GRANTS", grants},
 		{"METADATA", metadata},
+		{"REFRESH TOKEN", v.RefreshToken},
 	}
 }
 
@@ -167,6 +171,10 @@ func (r *Renderer) ApplicationUpdate(client *management.Client, revealSecrets bo
 }
 
 func makeApplicationView(client *management.Client, revealSecrets bool) *applicationView {
+
+	// Convert the struct to JSON using json.Marshal
+	jsonRefreshToken, _ := json.Marshal(client.GetRefreshToken())
+
 	return &applicationView{
 		revealSecret:      revealSecrets,
 		Name:              client.GetName(),
@@ -182,6 +190,7 @@ func makeApplicationView(client *management.Client, revealSecrets bool) *applica
 		Grants:            client.GetGrantTypes(),
 		Metadata:          mapPointerToArray(client.ClientMetadata),
 		raw:               client,
+		RefreshToken:      string(jsonRefreshToken),
 	}
 }
 
