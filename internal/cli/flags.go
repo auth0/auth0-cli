@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -146,6 +147,17 @@ func (f *Flag) RegisterBoolU(cmd *cobra.Command, value *bool, defaultValue bool)
 	registerBool(cmd, f, value, defaultValue, true)
 }
 
+func (f *Flag) RegisterIntSlice(cmd *cobra.Command, value *[]int, defaultValue []int) {
+	registerIntSlice(cmd, f, value, defaultValue, false)
+}
+
+func (f *Flag) AskIntSlice(cmd *cobra.Command, value *[]int, defaultValue *[]int) error {
+	if shouldAsk(cmd, f, false) {
+		return askIntSlice(f, value, defaultValue)
+	}
+	return nil
+}
+
 func askFlag(cmd *cobra.Command, f *Flag, value interface{}, defaultValue *string, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
 		return ask(f, value, defaultValue, isUpdate)
@@ -269,6 +281,50 @@ func registerInt(cmd *cobra.Command, f *Flag, value *int, defaultValue int, isUp
 	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
 		panic(auth0.Error(err, "failed to register int flag"))
 	}
+}
+
+func registerIntSlice(cmd *cobra.Command, f *Flag, value *[]int, defaultValue []int, isUpdate bool) {
+	cmd.Flags().IntSliceVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
+
+	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
+		panic(auth0.Error(err, "failed to register int slice flag"))
+	}
+}
+
+func askIntSlice(i commandInput, value *[]int, defaultValue *[]int) error {
+	var strInput string
+	var defaultStr string
+	if defaultValue != nil && len(*defaultValue) > 0 {
+		var strs []string
+		for _, v := range *defaultValue {
+			strs = append(strs, fmt.Sprintf("%d", v))
+		}
+		defaultStr = strings.Join(strs, ",")
+	}
+
+	if err := ask(i, &strInput, &defaultStr, false); err != nil {
+		return err
+	}
+
+	if strInput == "" {
+		return nil
+	}
+
+	parts := strings.Split(strInput, ",")
+	var result []int
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		v := 0
+		if _, err := fmt.Sscanf(part, "%d", &v); err != nil {
+			return fmt.Errorf("invalid integer value: %s", part)
+		}
+		result = append(result, v)
+	}
+	*value = result
+	return nil
 }
 
 func registerBool(cmd *cobra.Command, f *Flag, value *bool, defaultValue bool, isUpdate bool) {
