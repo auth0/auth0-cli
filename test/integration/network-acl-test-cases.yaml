@@ -1,0 +1,104 @@
+config:
+  inherit-env: true
+  retries: 1
+  interval: 1s
+
+tests:
+  001 - list network ACLs with no data:
+    command: auth0 network-acl list
+    exit-code: 0
+    stderr:
+      contains:
+        - "No network ACLs available. To create one, run: auth0 network-acl create"
+
+  002 - list network ACLs with no data (json):
+    command: auth0 network-acl list --json
+    exit-code: 0
+    stdout:
+      exactly: "[]"
+
+  003 - create network ACL:
+    command: auth0 network-acl create --description "Integration Test ACL" --active true --priority 2 --rule '{"action":{"block":true},"scope":"management","match":{"ipv4_cidrs":["192.168.1.0/24"]}}' --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - ID
+        - DESCRIPTION  Integration Test ACL
+        - PRIORITY     2
+        - ACTIVE       true
+        - ACTION       block
+
+  004 - list network ACLs with data:
+    command: auth0 network-acl list
+    exit-code: 0
+    stdout:
+      contains:
+        - ID
+        - DESCRIPTION
+        - ACTIVE
+        - PRIORITY
+
+  005 - create network ACL and output in json:
+    command: auth0 network-acl create --description "Integration Test ACL 3" --active true --priority 3 --rule '{"action":{"allow":true},"scope":"authentication","match":{"geo_country_codes":["US","CA"]}}' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        description: "Integration Test ACL 3"
+        active: "true"
+        priority: "3"
+        rule.scope: "authentication"
+        rule.action.allow: "true"
+        rule.match.geo_country_codes: "[US CA]"
+
+  006 - show network ACL details in json:
+    command: auth0 network-acl show $(./test/integration/scripts/get-network-acl-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        description: "integration-test-acl"
+        active: "true"
+        rule.scope: "tenant"
+
+  007 - update network ACL:
+    command: auth0 network-acl update $(./test/integration/scripts/get-network-acl-id.sh) --description "Integration Test ACL Updated" --priority 8 --active true --rule '{"action":{"log":true},"scope":"management","match":{"geo_country_codes":["US"]}}' --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - ID
+        - DESCRIPTION  Integration Test ACL Updated
+        - PRIORITY     8
+        - ACTIVE       true
+        - ACTION       log
+
+  008 - update network ACL and output in json:
+    command: auth0 network-acl update $(./test/integration/scripts/get-network-acl-id.sh) --description "Integration Test ACL Updated Again" --active false --priority 4 --rule '{"action":{"redirect":true,"redirect_uri":"https://example.com"},"scope":"tenant","match":{"geo_country_codes":["US","CA"]}}' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        description: "Integration Test ACL Updated Again"
+        active: "false"
+        priority: "4"
+        rule.scope: "tenant"
+        rule.action.redirect: "true"
+        rule.action.redirect_uri: "https://example.com"
+        rule.match.geo_country_codes: "[US CA]"
+
+  009 - create network ACL with not_match rule:
+    command: auth0 network-acl create --description "Integration Test ACL Not Match" --active true --priority 5 --rule '{"action":{"block":true},"scope":"tenant","not_match":{"ipv4_cidrs":["10.0.0.0/8"]}}' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        description: "Integration Test ACL Not Match"
+        active: "true"
+        priority: "5"
+        rule.scope: "tenant"
+        rule.action.block: "true"
+        rule.not_match.ipv4_cidrs: "[10.0.0.0/8]"
+
+  010 - delete network ACL:
+    command: auth0 network-acl delete $(./test/integration/scripts/get-network-acl-id.sh) --force --no-input
+    exit-code: 0
+
+  011 - delete all network ACLs:
+    command: auth0 network-acl delete --all --force --no-input
+    exit-code: 0
