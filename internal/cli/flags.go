@@ -147,6 +147,17 @@ func (f *Flag) RegisterBoolU(cmd *cobra.Command, value *bool, defaultValue bool)
 	registerBool(cmd, f, value, defaultValue, true)
 }
 
+func (f *Flag) RegisterIntSlice(cmd *cobra.Command, value *[]int, defaultValue []int) {
+	registerIntSlice(cmd, f, value, defaultValue, false)
+}
+
+func (f *Flag) AskIntSlice(cmd *cobra.Command, value *[]int, defaultValue *[]int) error {
+	if shouldAsk(cmd, f, false) {
+		return askIntSlice(f, value, defaultValue)
+	}
+	return nil
+}
+
 func askFlag(cmd *cobra.Command, f *Flag, value interface{}, defaultValue *string, isUpdate bool) error {
 	if shouldAsk(cmd, f, isUpdate) {
 		return ask(f, value, defaultValue, isUpdate)
@@ -278,17 +289,6 @@ func registerIntSlice(cmd *cobra.Command, f *Flag, value *[]int, defaultValue []
 	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
 		panic(auth0.Error(err, "failed to register int slice flag"))
 	}
-}
-
-func (f *Flag) RegisterIntSlice(cmd *cobra.Command, value *[]int, defaultValue []int) {
-	registerIntSlice(cmd, f, value, defaultValue, false)
-}
-
-func (f *Flag) AskIntSlice(cmd *cobra.Command, value *[]int, defaultValue *[]int) error {
-	if shouldAsk(cmd, f, false) {
-		return askIntSlice(f, value, defaultValue)
-	}
-	return nil
 }
 
 func askIntSlice(i commandInput, value *[]int, defaultValue *[]int) error {
