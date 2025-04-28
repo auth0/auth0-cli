@@ -38,7 +38,7 @@ var (
 		Name:      "Priority",
 		LongForm:  "priority",
 		ShortForm: "p",
-		Help:      "Priority of the network ACL 1-10 number(Eg. 5, default: 1)",
+		Help:      "Priority of the network ACL 1-10 number(Eg. 5)",
 	}
 
 	networkACLRuleAction = Flag{
@@ -394,9 +394,8 @@ The --rule parameter is required and must contain a valid JSON object with actio
 				return err
 			}
 
-			defaultPriority := "1"
-			if err := networkACLPriority.AskInt(cmd, &inputs.Priority, &defaultPriority); err != nil {
-				return err
+			if err := networkACLPriority.AskInt(cmd, &inputs.Priority, nil); err != nil {
+				return fmt.Errorf("priority must be between 1 and 10")
 			}
 
 			if inputs.Priority < 1 || inputs.Priority > 10 {
