@@ -734,12 +734,12 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 
 				// Depending on Match/NotMatch ask the user if they want to update the current or change it.
 				if currentACL.Rule != nil && currentACL.Rule.Match != nil {
-					if err := prompt.AskBool("Do you want to update the current match criteria to NotMatch criteria?", &inputs.NoMatchRule, false); err != nil {
+					if err := prompt.AskBool("The current rule uses 'Match' criteria. Do you want to update it to 'NotMatch'?", &inputs.NoMatchRule, false); err != nil {
 						return err
 					}
 				}
 				if currentACL.Rule != nil && currentACL.Rule.NotMatch != nil {
-					if err := prompt.AskBool("Do you want to update the current not match criteria to match criteria?", &inputs.MatchRule, false); err != nil {
+					if err := prompt.AskBool("The current rule uses 'NotMatch' criteria. Do you want to update it to 'Match'?", &inputs.MatchRule, false); err != nil {
 						return err
 					}
 				}
