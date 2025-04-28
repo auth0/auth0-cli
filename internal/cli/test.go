@@ -38,7 +38,7 @@ var (
 		Name:      "Audience",
 		LongForm:  "audience",
 		ShortForm: "a",
-		Help:      "The unique identifier of the target API you want to access. For Machine to Machine and Regular Web Applications, only the enabled APIs will be shown within the interactive prompt.",
+		Help:      "The unique identifier of the target API you want to access. For Machine to Machine Applications, only the enabled APIs will be shown within the interactive prompt.",
 	}
 
 	testAudienceRequired = Flag{
@@ -94,7 +94,7 @@ func testCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "test",
 		Short: "Try your Universal Login box or get a token",
-		Long:  "Try your Universal Login box or get a token.",
+		Long:  "Try your Universal Login box or get a token.\n" + "This command uses the client credentials grant for machine-to-machine applications and the authorization code grant (with Universal Login) for other application types, such as regular, web or native apps.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -148,7 +148,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 				return nil
 			}
 
-			if inputs.Audience != "" {
+			if inputs.Audience != "" && (client.GetAppType() == appTypeNonInteractive) {
 				if err := checkClientIsAuthorizedForAPI(cmd.Context(), cli, client, inputs.Audience); err != nil {
 					return err
 				}
@@ -416,7 +416,7 @@ func (c *cli) audiencePickerOptions(client *management.Client) func(ctx context.
 		var opts pickerOptions
 
 		switch client.GetAppType() {
-		case "regular_web", "non_interactive":
+		case "non_interactive":
 			clientGrants, err := c.api.ClientGrant.List(
 				ctx,
 				management.PerPage(100),

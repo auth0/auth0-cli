@@ -678,6 +678,68 @@ func TestCustomDomainResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestNetworkACLResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves network ACL data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		networkACLAPI := mock.NewMockNetworkACLAPI(ctrl)
+		networkACLAPI.EXPECT().
+			List(gomock.Any()).
+			Return(
+				[]*management.NetworkACL{
+					{
+						ID: auth0.String("acl_1"),
+					},
+					{
+						ID: auth0.String("acl_2"),
+					},
+				},
+				nil,
+			)
+
+		fetcher := networkACLResourceFetcher{
+			api: &auth0.API{
+				NetworkACL: networkACLAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_network_acl.acl_1",
+				ImportID:     "acl_1",
+			},
+			{
+				ResourceName: "auth0_network_acl.acl_2",
+				ImportID:     "acl_2",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		networkACLAPI := mock.NewMockNetworkACLAPI(ctrl)
+		networkACLAPI.EXPECT().
+			List(gomock.Any()).
+			Return(nil, fmt.Errorf("failed to list network ACLs"))
+
+		fetcher := networkACLResourceFetcher{
+			api: &auth0.API{
+				NetworkACL: networkACLAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to list network ACLs")
+	})
+}
+
 func TestFormResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully generates form import data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
