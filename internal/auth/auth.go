@@ -132,7 +132,7 @@ var RequiredScopes = []string{
 	"create:email_templates", "read:email_templates", "update:email_templates",
 	"create:email_provider", "read:email_provider", "update:email_provider", "delete:email_provider",
 	"read:flows", "read:forms", "read:flows_vault_connections",
-	"read:connections", "update:connections",
+	"read:connections", "update:connections", "read:connections_options", "update:connections_options",
 	"read:client_keys", "read:logs", "read:tenant_settings",
 	"read:custom_domains", "create:custom_domains", "update:custom_domains", "delete:custom_domains",
 	"read:anomaly_blocks", "delete:anomaly_blocks",
