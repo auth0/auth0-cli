@@ -86,7 +86,7 @@ func listLogsCmd(cli *cli) *cobra.Command {
 			}
 
 			hasFilter := inputs.Filter != ""
-			if inputs.Picker == false {
+			if !inputs.Picker {
 				cli.renderer.LogList(logs, !cli.debug, hasFilter)
 			} else {
 				selectedLogID := cli.renderer.LogPrompt(logs, !cli.debug, hasFilter)

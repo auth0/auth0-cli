@@ -192,11 +192,11 @@ func (r *Renderer) LogPrompt(logs []*management.Log, silent, hasFilter bool) str
 
 	rows := make([]string, 0, len(logs))
 
-	// append the first header row
+	// Append the first header row
 	view := LogView{Log: logs[0]}
 	rows = append(rows, view.AsTableHeaderString())
 
-	// recursively append each log from logs list
+	// Recursively append each log from logs list
 	for _, l := range logs {
 		view := LogView{Log: l}
 		rows = append(rows, view.AsTableRowString())
@@ -214,7 +214,7 @@ func (r *Renderer) LogPrompt(logs []*management.Log, silent, hasFilter bool) str
 		r.Errorf("failed to select a log: %w", err)
 	}
 
-	// return the ID of the select log
+	// Return the ID of the select log
 	return logs[selectedLogIndex].GetLogID()
 }
 
