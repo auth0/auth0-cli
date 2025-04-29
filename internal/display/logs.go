@@ -2,6 +2,7 @@ package display
 
 import (
 	"fmt"
+	"github.com/manifoldco/promptui"
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -18,6 +19,11 @@ const (
 	logCategoryWarning
 	logCategoryFailure
 	logCategoryUnknown
+	colWidthType       = 20
+	colWidthDesc       = 40
+	colWidthDate       = 25
+	colWidthConnection = 20
+	colWidthClient     = 30
 )
 
 type logCategory int
@@ -52,6 +58,30 @@ func (v *LogView) getConnection() string {
 		return notApplicable
 	}
 	return notApplicable
+}
+
+func (v *LogView) AsTableRowString() string {
+	row := v.AsTableRow()
+	return fmt.Sprintf(
+		"%-*s  %-*s  %-*s  %-*s  %-*s",
+		colWidthType, row[0],
+		colWidthDesc, row[1],
+		colWidthDate, row[2],
+		colWidthConnection, row[3],
+		colWidthClient, row[4],
+	)
+}
+
+func (v *LogView) AsTableHeaderString() string {
+	row := v.AsTableHeader()
+	return fmt.Sprintf(
+		"%-*s  %-*s  %-*s  %-*s  %-*s",
+		colWidthType+3, row[0],
+		colWidthDesc+14, row[1],
+		colWidthDate, row[2],
+		colWidthConnection, row[3],
+		colWidthClient, row[4],
+	)
 }
 
 func (v *LogView) AsTableRow() []string {
@@ -140,6 +170,48 @@ func (v *LogView) typeDesc() (typ, desc string) {
 	}
 
 	return typ, desc
+}
+
+func (r *Renderer) LogPrompt(logs []*management.Log, silent, hasFilter bool) string {
+	resource := "logs"
+
+	r.Heading(resource)
+	if len(logs) == 0 {
+		if hasFilter {
+			if r.Format == OutputFormatJSON {
+				r.JSONResult([]interface{}{})
+				return ""
+			}
+			r.Warnf("No logs available matching filter criteria.\n")
+		} else {
+			r.EmptyState(resource, "To generate logs, run a test command like 'auth0 test login' or 'auth0 test token'")
+		}
+
+		return ""
+	}
+
+	rows := make([]string, 0, len(logs))
+
+	view := LogView{Log: logs[0]}
+	//r.Infof(view.AsTableHeaderString() + "\n")
+	rows = append(rows, view.AsTableHeaderString())
+	for _, l := range logs {
+		view := LogView{Log: l}
+		rows = append(rows, view.AsTableRowString())
+	}
+
+	prompt := promptui.Select{
+		Label:    "Select a log to view details",
+		Items:    rows,
+		Size:     10,
+		HideHelp: true,
+	}
+
+	selectedLogIndex, _, err := prompt.Run()
+	if err != nil {
+		r.Errorf("failed to select a log: %w", err)
+	}
+	return logs[selectedLogIndex].GetLogID()
 }
 
 func (r *Renderer) LogList(logs []*management.Log, silent, hasFilter bool) {

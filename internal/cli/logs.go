@@ -2,9 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"github.com/auth0/auth0-cli/internal/display"
-	"github.com/manifoldco/promptui"
-
 	"sort"
 	"time"
 
@@ -33,11 +30,11 @@ var (
 		Help:      "Number of log entries to show. Minimum 1, maximum 1000.",
 	}
 
-	logPicker = Flag{
+	enableLogPicker = Flag{
 		Name:      "Interactive picker option on rendered logs",
 		LongForm:  "picker",
 		ShortForm: "p",
-		Help:      "Help Text Here",
+		Help:      "Allows to toggle from list of logs and view a selected log in detail",
 	}
 )
 
@@ -100,42 +97,20 @@ func listLogsCmd(cli *cli) *cobra.Command {
 			if inputs.Num < 1 || inputs.Num > 1000 {
 				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
 			}
-			list, err := getLatestLogs(cmd.Context(), cli, inputs.Num, inputs.Filter)
+			logs, err := getLatestLogs(cmd.Context(), cli, inputs.Num, inputs.Filter)
 			if err != nil {
 				return fmt.Errorf("failed to list logs: %w", err)
 			}
 
 			hasFilter := inputs.Filter != ""
 			if inputs.Picker == false {
-				cli.renderer.LogList(list, !cli.debug, hasFilter)
+
+				cli.renderer.LogList(logs, !cli.debug, hasFilter)
+
 			} else {
-				rows := make([]string, 0, len(list))
-				for _, l := range list {
-					view := display.LogView{Log: l}
-					row := view.AsTableRow()
-					rows = append(rows, fmt.Sprintf(
-						"%-*s  %-*s  %-*s  %-*s  %-*s",
-						20, row[0], // Type
-						40, row[1], // Description
-						25, row[2], // Date
-						30, row[3], // Connection
-						30, row[4], // Client
-					))
-				}
+				selectedLogID := cli.renderer.LogPrompt(logs, !cli.debug, hasFilter)
 
-				prompt := promptui.Select{
-					Label: "Select a log to view details",
-					Items: rows,
-				}
-
-				selectedLogIndex, _, err := prompt.Run()
-				if err != nil {
-					return fmt.Errorf("failed to select a log: %w", err)
-				}
-
-				// Now we have the selected log index, fetch the corresponding detailed log
-				selectedLog := list[selectedLogIndex]
-				logDetail, err := cli.api.Log.Read(cmd.Context(), *selectedLog.ID)
+				logDetail, err := cli.api.Log.Read(cmd.Context(), selectedLogID)
 				if err != nil {
 					return fmt.Errorf("failed to get detailed log: %w", err)
 				}
@@ -143,7 +118,6 @@ func listLogsCmd(cli *cli) *cobra.Command {
 				// Print the detailed log in JSON format
 				fmt.Println("\nDetailed Log:")
 				cli.renderer.JSONResult(logDetail)
-
 			}
 			return nil
 		},
@@ -151,7 +125,7 @@ func listLogsCmd(cli *cli) *cobra.Command {
 
 	logsFilter.RegisterString(cmd, &inputs.Filter, "")
 	logsNum.RegisterInt(cmd, &inputs.Num, defaultPageSize)
-	logPicker.RegisterBool(cmd, &inputs.Picker, false)
+	enableLogPicker.RegisterBool(cmd, &inputs.Picker, false)
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
