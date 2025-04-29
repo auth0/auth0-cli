@@ -252,7 +252,7 @@ func fetchImportData(ctx context.Context, fetchers ...resourceDataFetcher) (impo
 			if strings.Contains(err.Error(), "403 Forbidden") {
 				return nil, nil
 			}
-			
+
 			return nil, err
 		}
 
