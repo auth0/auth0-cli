@@ -248,6 +248,11 @@ func fetchImportData(ctx context.Context, fetchers ...resourceDataFetcher) (impo
 	for _, fetcher := range fetchers {
 		data, err := fetcher.FetchData(ctx)
 		if err != nil {
+			// Checking for the forbidden scenario.
+			if strings.Contains(err.Error(), "403 Forbidden") {
+				return nil, nil
+			}
+			
 			return nil, err
 		}
 

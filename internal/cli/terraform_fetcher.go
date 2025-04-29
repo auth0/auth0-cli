@@ -456,11 +456,6 @@ func (f *networkACLResourceFetcher) FetchData(ctx context.Context) (importDataLi
 
 	networkACLs, err := f.api.NetworkACL.List(ctx)
 	if err != nil {
-		// Checking for the forbidden scenario.
-		if strings.Contains(err.Error(), "403 Forbidden") {
-			return nil, nil
-		}
-
 		return nil, err
 	}
 
@@ -519,10 +514,6 @@ func (f *promptScreenRendererResourceFetcher) FetchData(ctx context.Context) (im
 	_, err := f.api.Prompt.ReadRendering(ctx, "login-id", "login-id")
 	// Checking for the forbidden scenario.
 	if err != nil {
-		if strings.Contains(err.Error(), "403 Forbidden") {
-			return nil, nil
-		}
-
 		return nil, err
 	}
 
