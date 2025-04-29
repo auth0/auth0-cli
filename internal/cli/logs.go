@@ -53,25 +53,8 @@ func logsCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-// Format the log row nicely
-//func formatLogAsTableRow(view display.LogView) string {
-//	// Access log details from the LogView (adjust based on your actual LogView structure)
-//	log := view.Log
-//
-//	// Formatting each row with padding for better alignment
-//	logType := fmt.Sprintf("%-20s", log.GetType())            // Left-align Type, 20 characters wide
-//	description := fmt.Sprintf("%-40s", log.GetDescription()) // Left-align Description, 40 characters wide
-//	date := fmt.Sprintf("%-25s", log.GetDate())               // Left-align Date, 25 characters wide
-//	connection := fmt.Sprintf("%-30s", log.GetConnection())   // Left-align Connection, 30 characters wide
-//	client := fmt.Sprintf("%-30s", log.GetClientID())         // Left-align Client, 30 characters wide
-//
-//	// Combine the fields with a clear separator (this can be a tab, space, etc.)
-//	return fmt.Sprintf("%s | %s | %s | %s | %s", logType, description, date, connection, client)
-//}
-
 func listLogsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID     string
 		Filter string
 		Num    int
 		Picker bool
@@ -104,9 +87,7 @@ func listLogsCmd(cli *cli) *cobra.Command {
 
 			hasFilter := inputs.Filter != ""
 			if inputs.Picker == false {
-
 				cli.renderer.LogList(logs, !cli.debug, hasFilter)
-
 			} else {
 				selectedLogID := cli.renderer.LogPrompt(logs, !cli.debug, hasFilter)
 
@@ -115,7 +96,6 @@ func listLogsCmd(cli *cli) *cobra.Command {
 					return fmt.Errorf("failed to get detailed log: %w", err)
 				}
 
-				// Print the detailed log in JSON format
 				fmt.Println("\nDetailed Log:")
 				cli.renderer.JSONResult(logDetail)
 			}
