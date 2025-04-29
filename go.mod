@@ -11,9 +11,9 @@ require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/auth0/go-auth0 v1.19.1-0.20250422112745-2b063b3390fb
 	github.com/briandowns/spinner v1.23.2
-	github.com/charmbracelet/glamour v0.8.0
+	github.com/charmbracelet/glamour v0.10.0
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/getsentry/sentry-go v0.31.1
+	github.com/getsentry/sentry-go v0.32.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
@@ -30,18 +30,18 @@ require (
 	github.com/pkg/browser v0.0.0-20210706143420-7d21f8c997e2
 	github.com/pkg/errors v0.9.1
 	github.com/schollz/progressbar/v3 v3.17.1
-	github.com/spf13/cobra v1.9.1
-	github.com/spf13/pflag v1.0.6
+	github.com/spf13/cobra v1.8.1
+	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/pretty v1.2.1
 	github.com/zalando/go-keyring v0.2.6
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
-	golang.org/x/net v0.38.0
+	golang.org/x/net v0.39.0
 	golang.org/x/oauth2 v0.29.0
-	golang.org/x/sync v0.12.0
+	golang.org/x/sync v0.13.0
 	golang.org/x/sys v0.32.0
 	golang.org/x/term v0.31.0
-	golang.org/x/text v0.23.0
+	golang.org/x/text v0.24.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -53,8 +53,12 @@ require (
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
-	github.com/charmbracelet/lipgloss v0.12.1 // indirect
-	github.com/charmbracelet/x/ansi v0.1.4 // indirect
+	github.com/charmbracelet/colorprofile v0.2.3-0.20250311203215-f60798e515dc // indirect
+	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834 // indirect
+	github.com/charmbracelet/x/ansi v0.8.0 // indirect
+	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
+	github.com/charmbracelet/x/exp/slice v0.0.0-20250327172914-2fdc97757edf // indirect
+	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/danieljoos/wincred v1.2.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -76,9 +80,7 @@ require (
 	github.com/lestrrat-go/backoff/v2 v2.0.8 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.2 // indirect
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
-	github.com/lestrrat-go/httprc v1.0.6 // indirect
 	github.com/lestrrat-go/iter v1.0.2 // indirect
-	github.com/lestrrat-go/jwx/v2 v2.1.4 // indirect
 	github.com/lestrrat-go/option v1.0.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -87,18 +89,18 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
-	github.com/muesli/termenv v0.15.3-0.20240618155329-98d742f6907a // indirect
+	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.3 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
-	github.com/yuin/goldmark v1.7.4 // indirect
-	github.com/yuin/goldmark-emoji v1.0.3 // indirect
+	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
+	github.com/yuin/goldmark v1.7.8 // indirect
+	github.com/yuin/goldmark-emoji v1.0.5 // indirect
 	github.com/zclconf/go-cty v1.16.1 // indirect
-	golang.org/x/crypto v0.36.0 // indirect
+	golang.org/x/crypto v0.37.0 // indirect
 	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
