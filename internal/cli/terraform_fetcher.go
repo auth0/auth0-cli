@@ -512,7 +512,6 @@ func (f *promptScreenRendererResourceFetcher) FetchData(ctx context.Context) (im
 	var data importDataList
 
 	_, err := f.api.Prompt.ReadRendering(ctx, "login-id", "login-id")
-	// Checking for the forbidden scenario.
 	if err != nil {
 		return nil, err
 	}
