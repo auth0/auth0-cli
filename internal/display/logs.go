@@ -2,13 +2,15 @@ package display
 
 import (
 	"fmt"
+	"github.com/chzyer/readline"
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
-
 	"github.com/auth0/go-auth0/management"
 	"github.com/manifoldco/promptui"
+	"github.com/mattn/go-tty"
+
 	"gopkg.in/yaml.v2"
 )
 
@@ -75,7 +77,7 @@ func (v *LogView) AsTableRowString() string {
 func (v *LogView) AsTableHeaderString() string {
 	row := v.AsTableHeader()
 	return fmt.Sprintf(
-		"%-*s  %-*s  %-*s  %-*s  %-*s",
+		"    "+"\033[4m%-*s  %-*s  %-*s  %-*s  %-*s\033[0m",
 		colWidthType+3, row[0],
 		colWidthDesc+14, row[1],
 		colWidthDate, row[2],
@@ -172,7 +174,7 @@ func (v *LogView) typeDesc() (typ, desc string) {
 	return typ, desc
 }
 
-func (r *Renderer) LogPrompt(logs []*management.Log, silent, hasFilter bool) string {
+func (r *Renderer) LogPrompt(logs []*management.Log, hasFilter bool, startIndex int) (string, int) {
 	resource := "logs"
 
 	r.Heading(resource)
@@ -180,21 +182,19 @@ func (r *Renderer) LogPrompt(logs []*management.Log, silent, hasFilter bool) str
 		if hasFilter {
 			if r.Format == OutputFormatJSON {
 				r.JSONResult([]interface{}{})
-				return ""
+				return "", -1
 			}
 			r.Warnf("No logs available matching filter criteria.\n")
 		} else {
 			r.EmptyState(resource, "To generate logs, run a test command like 'auth0 test login' or 'auth0 test token'")
 		}
 
-		return ""
+		return "", -1
 	}
 
-	rows := make([]string, 0, len(logs))
-
-	// Append the first header row.
 	view := LogView{Log: logs[0]}
-	rows = append(rows, view.AsTableHeaderString())
+	label := view.AsTableHeaderString()
+	var rows []string
 
 	// Recursively append each log from logs list.
 	for _, l := range logs {
@@ -202,20 +202,28 @@ func (r *Renderer) LogPrompt(logs []*management.Log, silent, hasFilter bool) str
 		rows = append(rows, view.AsTableRowString())
 	}
 
+	promptui.IconInitial = promptui.Styler()("")
 	prompt := promptui.Select{
-		Label:    "Select a log to view details",
+		Label:    label,
 		Items:    rows,
 		Size:     10,
 		HideHelp: true,
+		Stdout:   &noBellStdout{},
+		Templates: &promptui.SelectTemplates{
+			Label: "{{ . }}",
+			//Active:   "\U000027A4 {{ . | cyan }}", // Default uses arrow + cyan
+			//Inactive: "  {{ . }}",
+			//Selected: "\U000027A4 {{ . | green }}",
+		},
 	}
 
-	selectedLogIndex, _, err := prompt.Run()
+	selectedLogIndex, _, err := prompt.RunCursorAt(startIndex, startIndex)
 	if err != nil {
 		r.Errorf("failed to select a log: %w", err)
 	}
 
 	// Return the ID of the select log.
-	return logs[selectedLogIndex].GetLogID()
+	return logs[selectedLogIndex].GetLogID(), selectedLogIndex
 }
 
 func (r *Renderer) LogList(logs []*management.Log, silent, hasFilter bool) {
@@ -266,4 +274,38 @@ func (r *Renderer) LogTail(logs []*management.Log, ch <-chan []*management.Log, 
 	}()
 
 	r.Stream(res, viewChan)
+}
+
+// Using below code to avoid the Bell sound
+// when toggling up/down on prompt.
+type noBellStdout struct{}
+
+func (n *noBellStdout) Write(p []byte) (int, error) {
+	if len(p) == 1 && p[0] == readline.CharBell {
+		return 0, nil
+	}
+	return readline.Stdout.Write(p)
+}
+
+func (n *noBellStdout) Close() error {
+	return readline.Stdout.Close()
+}
+
+func (r *Renderer) QuitPrompt() bool {
+	fmt.Print("\nPress 'q' to quit or any other key to continue...\n")
+
+	ContTty, _ := tty.Open()
+	defer func(ContTty *tty.TTY) {
+		err := ContTty.Close()
+		if err != nil {
+
+		}
+	}(ContTty)
+
+	rn, err := ContTty.ReadRune()
+	if err != nil {
+		panic(err)
+	}
+
+	return rn == 'q' || rn == 'Q'
 }

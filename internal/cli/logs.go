@@ -89,15 +89,24 @@ func listLogsCmd(cli *cli) *cobra.Command {
 			if !inputs.Picker {
 				cli.renderer.LogList(logs, !cli.debug, hasFilter)
 			} else {
-				selectedLogID := cli.renderer.LogPrompt(logs, !cli.debug, hasFilter)
+				var selectedLogID string
+				selectedIndex := 0
+				for {
+					selectedLogID, selectedIndex = cli.renderer.LogPrompt(logs, hasFilter, selectedIndex)
 
-				logDetail, err := cli.api.Log.Read(cmd.Context(), selectedLogID)
-				if err != nil {
-					return fmt.Errorf("failed to get detailed log: %w", err)
+					logDetail, err := cli.api.Log.Read(cmd.Context(), selectedLogID)
+					if err != nil {
+						fmt.Println("Failed to fetch details:", err)
+						continue
+					}
+
+					fmt.Println("\nDetailed Log:")
+					cli.renderer.JSONResult(logDetail)
+
+					if cli.renderer.QuitPrompt() {
+						break
+					}
 				}
-
-				fmt.Println("\nDetailed Log:")
-				cli.renderer.JSONResult(logDetail)
 			}
 			return nil
 		},
