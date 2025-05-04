@@ -1065,6 +1065,14 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to find application with ID %q: %w", inputs.ID, err)
 			}
 
+			if current.SessionTransfer == nil {
+				current.SessionTransfer = &management.SessionTransfer{
+					CanCreateSessionTransferToken: auth0.Bool(false),
+					AllowedAuthenticationMethods:  &[]string{},
+					EnforceDeviceBinding:          auth0.String("ip"),
+				}
+			}
+
 			if err := appSTCanCreateToken.AskBoolU(cmd, &inputs.CanCreateToken, current.SessionTransfer.CanCreateSessionTransferToken); err != nil {
 				return err
 			}
