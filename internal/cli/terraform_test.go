@@ -41,7 +41,7 @@ func TestFetchImportData(t *testing.T) {
 			{ResourceName: "Resource2", ImportID: "456"},
 		}
 
-		data, err := fetchImportData(context.Background(), mockFetchers...)
+		data, err := fetchImportData(context.Background(), &cli{}, mockFetchers...)
 		assert.NoError(t, err)
 		assert.Equal(t, expectedData, data)
 	})
@@ -61,7 +61,7 @@ func TestFetchImportData(t *testing.T) {
 			{ResourceName: "auth0_client.same", ImportID: "client-1"},
 		}
 
-		data, err := fetchImportData(context.Background(), mockFetchers...)
+		data, err := fetchImportData(context.Background(), &cli{}, mockFetchers...)
 		assert.NoError(t, err)
 		assert.Equal(t, expectedData, data)
 	})
@@ -72,7 +72,7 @@ func TestFetchImportData(t *testing.T) {
 			&mockFetcher{mockErr: expectedErr},
 		}
 
-		_, err := fetchImportData(context.Background(), mockFetchers...)
+		_, err := fetchImportData(context.Background(), &cli{}, mockFetchers...)
 		assert.EqualError(t, err, "failed to list clients")
 	})
 }
