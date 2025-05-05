@@ -155,6 +155,7 @@ var (
 		ShortForm:    "e",
 		Help:         "Device binding enforcement: 'none', 'ip', or 'asn'.",
 		AlwaysPrompt: true,
+	}
 	refreshToken = Flag{
 		Name:      "Refresh Token",
 		LongForm:  "refresh-token",
