@@ -720,6 +720,26 @@ func TestNetworkACLResourceFetcher_FetchData(t *testing.T) {
 		assert.Equal(t, expectedData, data)
 	})
 
+	t.Run("it handles error, even if tenant does not have Tenant ACL enabled", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		networkACLAPI := mock.NewMockNetworkACLAPI(ctrl)
+		networkACLAPI.EXPECT().
+			List(gomock.Any()).
+			Return(nil, fmt.Errorf("403 Forbidden: Please upgrade your subscription to enable Tenant ACL Management"))
+
+		fetcher := networkACLResourceFetcher{
+			api: &auth0.API{
+				NetworkACL: networkACLAPI,
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "403 Forbidden: Please upgrade your subscription to enable Tenant ACL Management")
+		assert.Len(t, data, 0)
+	})
+
 	t.Run("it returns an error if api call fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -1509,7 +1529,7 @@ func TestPromptScreenRendererResourceFetcher_FetchData(t *testing.T) {
 		}
 
 		data, err := fetcher.FetchData(context.Background())
-		assert.NoError(t, err)
+		assert.EqualError(t, err, "403 Forbidden: This tenant does not have Advanced Customizations enabled")
 		assert.Len(t, data, 0)
 	})
 	t.Run("it returns error, if the API call fails", func(t *testing.T) {
