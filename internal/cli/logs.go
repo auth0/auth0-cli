@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"sort"
 	"time"
 
@@ -89,10 +90,12 @@ func listLogsCmd(cli *cli) *cobra.Command {
 			if !inputs.Picker {
 				cli.renderer.LogList(logs, !cli.debug, hasFilter)
 			} else {
-				var selectedLogID string
-				selectedIndex := 0
+				var (
+					selectedLogID string
+					currentIndex  = auth0.Int(0)
+				)
 				for {
-					selectedLogID, selectedIndex = cli.renderer.LogPrompt(logs, hasFilter, selectedIndex)
+					selectedLogID = cli.renderer.LogPrompt(logs, hasFilter, currentIndex)
 
 					logDetail, err := cli.api.Log.Read(cmd.Context(), selectedLogID)
 					if err != nil {

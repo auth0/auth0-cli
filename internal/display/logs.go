@@ -9,6 +9,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/go-auth0/management"
 	"github.com/manifoldco/promptui"
+	"github.com/mattn/go-tty"
 	"gopkg.in/yaml.v2"
 )
 
@@ -172,7 +173,7 @@ func (v *LogView) typeDesc() (typ, desc string) {
 	return typ, desc
 }
 
-func (r *Renderer) LogPrompt(logs []*management.Log, hasFilter bool, startIndex int) (string, int) {
+func (r *Renderer) LogPrompt(logs []*management.Log, hasFilter bool, currentIndex *int) string {
 	resource := "logs"
 
 	r.Heading(resource)
@@ -180,14 +181,14 @@ func (r *Renderer) LogPrompt(logs []*management.Log, hasFilter bool, startIndex 
 		if hasFilter {
 			if r.Format == OutputFormatJSON {
 				r.JSONResult([]interface{}{})
-				return "", -1
+				return ""
 			}
 			r.Warnf("No logs available matching filter criteria.\n")
 		} else {
 			r.EmptyState(resource, "To generate logs, run a test command like 'auth0 test login' or 'auth0 test token'")
 		}
 
-		return "", -1
+		return ""
 	}
 
 	view := LogView{Log: logs[0]}
@@ -211,14 +212,14 @@ func (r *Renderer) LogPrompt(logs []*management.Log, hasFilter bool, startIndex 
 			Label: "{{ . }}",
 		},
 	}
-
-	selectedLogIndex, _, err := prompt.RunCursorAt(startIndex, startIndex)
+	var err error
+	*currentIndex, _, err = prompt.RunCursorAt(*currentIndex, *currentIndex)
 	if err != nil {
 		r.Errorf("failed to select a log: %w", err)
 	}
 
 	// Return the ID of the select log.
-	return logs[selectedLogIndex].GetLogID(), selectedLogIndex
+	return logs[*currentIndex].GetLogID()
 }
 
 func (r *Renderer) LogList(logs []*management.Log, silent, hasFilter bool) {
