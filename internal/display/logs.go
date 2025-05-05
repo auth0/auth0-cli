@@ -2,12 +2,13 @@ package display
 
 import (
 	"fmt"
-	"github.com/chzyer/readline"
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/go-auth0/management"
+
+	"github.com/chzyer/readline"
 	"github.com/manifoldco/promptui"
 	"github.com/mattn/go-tty"
 	"gopkg.in/yaml.v2"
@@ -292,10 +293,7 @@ func (r *Renderer) QuitPrompt() bool {
 
 	ContTty, _ := tty.Open()
 	defer func(ContTty *tty.TTY) {
-		err := ContTty.Close()
-		if err != nil {
-
-		}
+		_ = ContTty.Close()
 	}(ContTty)
 
 	rn, err := ContTty.ReadRune()
