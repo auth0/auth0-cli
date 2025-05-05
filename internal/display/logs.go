@@ -2,10 +2,12 @@ package display
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/auth0/go-auth0/management"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
-	"github.com/auth0/go-auth0/management"
-	"strings"
 
 	"github.com/chzyer/readline"
 	"github.com/manifoldco/promptui"
