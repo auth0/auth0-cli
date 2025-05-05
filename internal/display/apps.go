@@ -171,7 +171,6 @@ func (r *Renderer) ApplicationUpdate(client *management.Client, revealSecrets bo
 }
 
 func makeApplicationView(client *management.Client, revealSecrets bool) *applicationView {
-
 	jsonRefreshToken, _ := json.Marshal(client.GetRefreshToken())
 
 	return &applicationView{
