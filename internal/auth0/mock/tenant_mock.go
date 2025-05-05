@@ -54,3 +54,22 @@ func (mr *MockTenantAPIMockRecorder) Read(ctx interface{}, opts ...interface{}) 
 	varargs := append([]interface{}{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockTenantAPI)(nil).Read), varargs...)
 }
+
+// Update mocks base method.
+func (m *MockTenantAPI) Update(ctx context.Context, t *management.Tenant, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, t}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Update", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockTenantAPIMockRecorder) Update(ctx, t interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, t}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockTenantAPI)(nil).Update), varargs...)
+}
