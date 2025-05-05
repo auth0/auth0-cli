@@ -9,8 +9,6 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/go-auth0/management"
 	"github.com/manifoldco/promptui"
-	"github.com/mattn/go-tty"
-
 	"gopkg.in/yaml.v2"
 )
 
@@ -211,9 +209,6 @@ func (r *Renderer) LogPrompt(logs []*management.Log, hasFilter bool, startIndex 
 		Stdout:   &noBellStdout{},
 		Templates: &promptui.SelectTemplates{
 			Label: "{{ . }}",
-			//Active:   "\U000027A4 {{ . | cyan }}", // Default uses arrow + cyan
-			//Inactive: "  {{ . }}",
-			//Selected: "\U000027A4 {{ . | green }}",
 		},
 	}
 
