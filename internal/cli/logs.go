@@ -5,6 +5,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/auth0/auth0-cli/internal/auth0"
+
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
@@ -29,6 +31,13 @@ var (
 		ShortForm: "n",
 		Help:      "Number of log entries to show. Minimum 1, maximum 1000.",
 	}
+
+	enableLogPicker = Flag{
+		Name:      "Interactive picker option on rendered logs",
+		LongForm:  "picker",
+		ShortForm: "p",
+		Help:      "Allows to toggle from list of logs and view a selected log in detail",
+	}
 )
 
 func logsCmd(cli *cli) *cobra.Command {
@@ -50,6 +59,7 @@ func listLogsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Filter string
 		Num    int
+		Picker bool
 	}
 
 	cmd := &cobra.Command{
@@ -72,19 +82,43 @@ func listLogsCmd(cli *cli) *cobra.Command {
 			if inputs.Num < 1 || inputs.Num > 1000 {
 				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
 			}
-			list, err := getLatestLogs(cmd.Context(), cli, inputs.Num, inputs.Filter)
+			logs, err := getLatestLogs(cmd.Context(), cli, inputs.Num, inputs.Filter)
 			if err != nil {
 				return fmt.Errorf("failed to list logs: %w", err)
 			}
 
 			hasFilter := inputs.Filter != ""
-			cli.renderer.LogList(list, !cli.debug, hasFilter)
+			if !inputs.Picker {
+				cli.renderer.LogList(logs, !cli.debug, hasFilter)
+			} else {
+				var (
+					selectedLogID string
+					currentIndex  = auth0.Int(0)
+				)
+				for {
+					selectedLogID = cli.renderer.LogPrompt(logs, hasFilter, currentIndex)
+
+					logDetail, err := cli.api.Log.Read(cmd.Context(), selectedLogID)
+					if err != nil {
+						fmt.Println("Failed to fetch details:", err)
+						continue
+					}
+
+					fmt.Println("\nDetailed Log:")
+					cli.renderer.JSONResult(logDetail)
+
+					if cli.renderer.QuitPrompt() {
+						break
+					}
+				}
+			}
 			return nil
 		},
 	}
 
 	logsFilter.RegisterString(cmd, &inputs.Filter, "")
 	logsNum.RegisterInt(cmd, &inputs.Num, defaultPageSize)
+	enableLogPicker.RegisterBool(cmd, &inputs.Picker, false)
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")

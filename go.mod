@@ -12,6 +12,7 @@ require (
 	github.com/auth0/go-auth0 v1.20.0
 	github.com/briandowns/spinner v1.23.2
 	github.com/charmbracelet/glamour v0.10.0
+	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/getsentry/sentry-go v0.32.0
 	github.com/golang/mock v1.6.0
@@ -24,7 +25,9 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/lestrrat-go/jwx v1.2.30
 	github.com/logrusorgru/aurora v2.0.3+incompatible
+	github.com/manifoldco/promptui v0.9.0
 	github.com/mattn/go-isatty v0.0.20
+	github.com/mattn/go-tty v0.0.7
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pkg/browser v0.0.0-20210706143420-7d21f8c997e2
