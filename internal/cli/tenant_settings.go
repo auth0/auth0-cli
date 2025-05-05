@@ -3,10 +3,9 @@ package cli
 import (
 	"fmt"
 
-	"github.com/auth0/go-auth0/management"
-
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
+	"github.com/auth0/go-auth0/management"
 
 	"github.com/spf13/cobra"
 )
@@ -63,22 +62,19 @@ func tenantSettingsCmd(cli *cli) *cobra.Command {
 func show(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show",
-		Short: "Display current tenant settings",
+		Short: "Display the current tenant settings",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var tenant *management.Tenant
-
 			tenant, err := cli.api.Tenant.Read(cmd.Context())
 			if err != nil {
-				return fmt.Errorf("failed to fetch tenant settings : %w", err)
+				return fmt.Errorf("failed to fetch tenant settings: %w", err)
 			}
 
 			cli.renderer.TenantSettingsShow(tenant)
-
 			return nil
 		},
 	}
 
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in JSON format.")
 
 	return cmd
 }
@@ -86,7 +82,7 @@ func show(cli *cli) *cobra.Command {
 func update(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
-		Short: "Update tenant settings by setting and unsetting the flags",
+		Short: "Update tenant settings by enabling or disabling flags",
 	}
 
 	cmd.AddCommand(set(cli))
@@ -98,25 +94,18 @@ func update(cli *cli) *cobra.Command {
 func set(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set",
-		Short: "Toggles on the tenant settings flags that are parsed",
+		Short: "Enable selected tenant setting flags",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Fields , that u want to toggle as true (set to true)
-
-			// auth0 tenant-settings update set flag1,flag2
-
-			// Prompt for updating the fields , that u want to toggle as true
 			tenant, err := askTenantSettingsUpdates(true)
 			if err != nil {
 				return err
 			}
 
-			// Perform the update
 			if err := cli.api.Tenant.Update(cmd.Context(), tenant); err != nil {
 				return err
 			}
 
 			cli.renderer.TenantSettingsUpdate(tenant)
-
 			return nil
 		},
 	}
@@ -127,25 +116,18 @@ func set(cli *cli) *cobra.Command {
 func unset(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unset",
-		Short: "Toggles off the tenant settings flags that are parsed",
+		Short: "Disable selected tenant setting flags",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Fields , that u want to toggle as false (set to false)
-
-			// auth0 tenant-settings update unset flag3,flag4
-
-			// Prompt for updating the fields , that u want to toggle as false
 			tenant, err := askTenantSettingsUpdates(false)
 			if err != nil {
 				return err
 			}
 
-			// Perform the update
 			if err := cli.api.Tenant.Update(cmd.Context(), tenant); err != nil {
 				return err
 			}
 
 			cli.renderer.TenantSettingsUpdate(tenant)
-
 			return nil
 		},
 	}
@@ -154,10 +136,8 @@ func unset(cli *cli) *cobra.Command {
 }
 
 func askTenantSettingsUpdates(isSet bool) (*management.Tenant, error) {
-	var (
-		tenantFlags = &management.TenantFlags{}
-		tenant      = &management.Tenant{}
-	)
+	tenantFlags := &management.TenantFlags{}
+	tenant := &management.Tenant{}
 
 	settingsMap, err := selectTenantSettingsParams(isSet)
 	if err != nil {
@@ -165,7 +145,6 @@ func askTenantSettingsUpdates(isSet bool) (*management.Tenant, error) {
 	}
 
 	setSelectTenantSettings(tenant, settingsMap)
-
 	setSelectedTenantFlags(tenantFlags, settingsMap)
 	tenant.Flags = tenantFlags
 
@@ -174,17 +153,18 @@ func askTenantSettingsUpdates(isSet bool) (*management.Tenant, error) {
 
 func selectTenantSettingsParams(isSet bool) (map[string]*bool, error) {
 	var selected []string
-	if err := prompt.AskMultiSelect(
-		"Please select the flags to enable (only the selected would be change):",
-		&selected,
-		flags...,
-	); err != nil {
+	label := "Please select the flags you want to "
+	if isSet {
+		label += "enable (only the selected flags will be changed):"
+	} else {
+		label += "disable (only the selected flags will be changed):"
+	}
+
+	if err := prompt.AskMultiSelect(label, &selected, flags...); err != nil {
 		return nil, err
 	}
 
-	// Convert to lookup map
 	selectedMap := make(map[string]*bool)
-
 	for _, opt := range selected {
 		selectedMap[opt] = auth0.Bool(isSet)
 	}

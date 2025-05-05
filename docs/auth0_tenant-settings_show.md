@@ -22,7 +22,7 @@ auth0 tenant-settings show [flags]
 ## Flags
 
 ```
-      --json   Output in json format.
+      --json   Output in JSON format.
 ```
 
 
@@ -38,7 +38,7 @@ auth0 tenant-settings show [flags]
 
 ## Related Commands
 
-- [auth0 tenant-settings show](auth0_tenant-settings_show.md) - Display current tenant settings
-- [auth0 tenant-settings update](auth0_tenant-settings_update.md) - Update tenant settings by setting and unsetting the flags
+- [auth0 tenant-settings show](auth0_tenant-settings_show.md) - Display the current tenant settings
+- [auth0 tenant-settings update](auth0_tenant-settings_update.md) - Update tenant settings by enabling or disabling flags
 
 
