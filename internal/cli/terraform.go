@@ -176,7 +176,7 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 
 		var data importDataList
 		err = ansi.Spinner("Fetching data from Auth0", func() error {
-			data, err = fetchImportData(cmd.Context(), resources...)
+			data, err = fetchImportData(cmd.Context(), cli, resources...)
 			return err
 		})
 		if err != nil {
@@ -242,12 +242,18 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 	}
 }
 
-func fetchImportData(ctx context.Context, fetchers ...resourceDataFetcher) (importDataList, error) {
+func fetchImportData(ctx context.Context, cli *cli, fetchers ...resourceDataFetcher) (importDataList, error) {
 	var importData importDataList
 
 	for _, fetcher := range fetchers {
 		data, err := fetcher.FetchData(ctx)
 		if err != nil {
+			// Checking for the forbidden scenario and skip.
+			if strings.Contains(err.Error(), "403 Forbidden") {
+				cli.renderer.Warnf("Skipping resource due to forbidden access: %s", err.Error())
+				continue
+			}
+
 			return nil, err
 		}
 

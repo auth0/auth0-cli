@@ -43,6 +43,7 @@ auth0 apps create [flags]
       --metadata stringToString   Arbitrary keys-value pairs (max 255 characters each), that  can be assigned to each application. More about application metadata: https://auth0.com/docs/get-started/applications/configure-application-metadata (default [])
   -n, --name string               Name of the application.
   -o, --origins strings           Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.
+  -z, --refresh-token string      Refresh Token Config for the application, formatted as JSON.
   -r, --reveal-secrets            Display the application secrets ('signing_keys', 'client_secret') as part of the command output.
   -t, --type string               Type of application:
                                   - native: mobile, desktop, CLI and smart device apps running natively.
@@ -69,6 +70,7 @@ auth0 apps create [flags]
 - [auth0 apps delete](auth0_apps_delete.md) - Delete an application
 - [auth0 apps list](auth0_apps_list.md) - List your applications
 - [auth0 apps open](auth0_apps_open.md) - Open the settings page of an application
+- [auth0 apps session-transfer](auth0_apps_session-transfer.md) - Manage session transfer settings for an application
 - [auth0 apps show](auth0_apps_show.md) - Show an application
 - [auth0 apps update](auth0_apps_update.md) - Update an application
 - [auth0 apps use](auth0_apps_use.md) - Choose a default application for the Auth0 CLI
