@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -134,6 +135,33 @@ var (
 		ShortForm: "n",
 		Help:      "Number of apps to retrieve. Minimum 1, maximum 1000.",
 	}
+	appSTCanCreateToken = Flag{
+		Name:         "Can Create Token",
+		LongForm:     "can-create-token",
+		ShortForm:    "t",
+		Help:         "Allow creation of session transfer tokens.",
+		AlwaysPrompt: true,
+	}
+	appSTAllowedAuthMethods = Flag{
+		Name:         "Allowed Auth Methods",
+		LongForm:     "allowed-auth-methods",
+		ShortForm:    "m",
+		Help:         "Comma-separated list of authentication methods (e.g., cookie, query).",
+		AlwaysPrompt: true,
+	}
+	appSTEnforceDeviceBinding = Flag{
+		Name:         "Enforce Device Binding",
+		LongForm:     "enforce-device-binding",
+		ShortForm:    "e",
+		Help:         "Device binding enforcement: 'none', 'ip', or 'asn'.",
+		AlwaysPrompt: true,
+	}
+	refreshToken = Flag{
+		Name:      "Refresh Token",
+		LongForm:  "refresh-token",
+		ShortForm: "z",
+		Help:      "Refresh Token Config for the application, formatted as JSON.",
+	}
 )
 
 func appsCmd(cli *cli) *cobra.Command {
@@ -154,6 +182,7 @@ func appsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(updateAppCmd(cli))
 	cmd.AddCommand(deleteAppCmd(cli))
 	cmd.AddCommand(openAppCmd(cli))
+	cmd.AddCommand(appsSessionTransferCmd(cli))
 
 	return cmd
 }
@@ -384,6 +413,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 		Grants            []string
 		RevealSecrets     bool
 		Metadata          map[string]string
+		RefreshToken      string
 	}
 	var oidcConformant = true
 	var algorithm = "RS256"
@@ -484,6 +514,12 @@ func createAppCmd(cli *cli) *cobra.Command {
 				ClientMetadata:    &clientMetadata,
 			}
 
+			if len(inputs.RefreshToken) != 0 {
+				if err := json.Unmarshal([]byte(inputs.RefreshToken), &a.RefreshToken); err != nil {
+					return fmt.Errorf("apps: %s refreshToken invalid JSON", err)
+				}
+			}
+
 			// Set token endpoint auth method.
 			if len(inputs.AuthMethod) == 0 {
 				a.TokenEndpointAuthMethod = apiDefaultAuthMethodFor(inputs.Type)
@@ -527,6 +563,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 	appAuthMethod.RegisterString(cmd, &inputs.AuthMethod, "")
 	appGrants.RegisterStringSlice(cmd, &inputs.Grants, nil)
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
+	refreshToken.RegisterString(cmd, &inputs.RefreshToken, "")
 
 	return cmd
 }
@@ -545,6 +582,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		Grants            []string
 		RevealSecrets     bool
 		Metadata          map[string]string
+		RefreshToken      string
 	}
 
 	cmd := &cobra.Command{
@@ -722,6 +760,14 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				a.ClientMetadata = &clientMetadata
 			}
 
+			if len(inputs.RefreshToken) == 0 {
+				a.RefreshToken = current.RefreshToken
+			} else {
+				if err := json.Unmarshal([]byte(inputs.RefreshToken), &a.RefreshToken); err != nil {
+					return fmt.Errorf("apps: %s refreshToken invalid JSON", err)
+				}
+			}
+
 			if err := ansi.Waiting(func() error {
 				return cli.api.Client.Update(cmd.Context(), inputs.ID, a)
 			}); err != nil {
@@ -746,6 +792,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 	appAuthMethod.RegisterStringU(cmd, &inputs.AuthMethod, "")
 	appGrants.RegisterStringSliceU(cmd, &inputs.Grants, nil)
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
+	refreshToken.RegisterString(cmd, &inputs.RefreshToken, "")
 
 	return cmd
 }
@@ -943,4 +990,160 @@ func (c *cli) appPickerOptions(requestOpts ...management.RequestOption) pickerOp
 
 		return append(priorityOpts, opts...), nil
 	}
+}
+
+// Session Transfer.
+func appsSessionTransferCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "session-transfer",
+		Short: "Manage session transfer settings for an application",
+	}
+
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(appsSessionTransferShowCmd(cli))
+	cmd.AddCommand(appsSessionTransferUpdateCmd(cli))
+
+	return cmd
+}
+
+func appsSessionTransferShowCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "show",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Show session transfer settings for an app",
+		Example: `auth0 apps session-transfer show
+  auth0 apps session-transfer show <app-id>
+  auth0 apps session-transfer show <app-id> --json`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions())
+				if err != nil {
+					return err
+				}
+			} else {
+				inputs.ID = args[0]
+			}
+
+			var client *management.Client
+			if err := ansi.Waiting(func() error {
+				var err error
+				client, err = cli.api.Client.Read(cmd.Context(), inputs.ID)
+				return err
+			}); err != nil {
+				return fmt.Errorf("failed to read application: %w", err)
+			}
+
+			if client.SessionTransfer == nil {
+				cli.renderer.Infof("No session transfer settings configured for app %s", ansi.Faint(inputs.ID))
+				return nil
+			}
+
+			cli.renderer.SessionTransferShow(client)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	return cmd
+}
+
+func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID                   string
+		CanCreateToken       bool
+		AllowedAuthMethods   []string
+		EnforceDeviceBinding string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "update",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Update session transfer settings for an app",
+		Example: ` auth0 apps session-transfer update 
+  auth0 apps session-transfer update <app-id>
+  auth0 apps session-transfer update <app-id> --can-create-token --json
+  auth0 apps session-transfer update <app-id> --can-create-token=true --allowed-auth-methods=cookie,query --enforce-device-binding=ip`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions())
+				if err != nil {
+					return err
+				}
+			} else {
+				inputs.ID = args[0]
+			}
+
+			var (
+				current *management.Client
+				st      management.SessionTransfer
+			)
+
+			if err := ansi.Waiting(func() (err error) {
+				current, err = cli.api.Client.Read(cmd.Context(), inputs.ID)
+				return err
+			}); err != nil {
+				return fmt.Errorf("failed to find application with ID %q: %w", inputs.ID, err)
+			}
+
+			if current.SessionTransfer == nil {
+				current.SessionTransfer = &management.SessionTransfer{
+					CanCreateSessionTransferToken: auth0.Bool(false),
+					AllowedAuthenticationMethods:  &[]string{},
+					EnforceDeviceBinding:          auth0.String("ip"),
+				}
+			}
+
+			if err := appSTCanCreateToken.AskBoolU(cmd, &inputs.CanCreateToken, current.SessionTransfer.CanCreateSessionTransferToken); err != nil {
+				return err
+			}
+
+			defaultVal := stringSliceToCommaSeparatedString(current.SessionTransfer.GetAllowedAuthenticationMethods())
+			if err := appSTAllowedAuthMethods.AskManyU(cmd, &inputs.AllowedAuthMethods, &defaultVal); err != nil {
+				return err
+			}
+
+			if err := appSTEnforceDeviceBinding.SelectU(cmd, &inputs.EnforceDeviceBinding, []string{"none", "ip", "asn"}, current.SessionTransfer.EnforceDeviceBinding); err != nil {
+				return err
+			}
+
+			// Set the flag if it was supplied or entered by the prompt.
+			if appSTCanCreateToken.IsSet(cmd) || shouldPromptWhenNoLocalFlagsSet(cmd) {
+				st.CanCreateSessionTransferToken = &inputs.CanCreateToken
+			}
+
+			if len(inputs.AllowedAuthMethods) > 0 {
+				st.AllowedAuthenticationMethods = &inputs.AllowedAuthMethods
+			}
+
+			if inputs.EnforceDeviceBinding != "" {
+				st.EnforceDeviceBinding = &inputs.EnforceDeviceBinding
+			} else {
+				st.EnforceDeviceBinding = current.SessionTransfer.EnforceDeviceBinding
+			}
+
+			// Send update request.
+			clientST := &management.Client{SessionTransfer: &st}
+			if err := ansi.Waiting(func() error {
+				return cli.api.Client.Update(cmd.Context(), inputs.ID, clientST)
+			}); err != nil {
+				return fmt.Errorf("failed to update session transfer: %w", err)
+			}
+
+			cli.renderer.SessionTransferUpdate(clientST, inputs.ID)
+			return nil
+		},
+	}
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+
+	// Register CLI flags.
+	appSTCanCreateToken.RegisterBoolU(cmd, &inputs.CanCreateToken, false)
+	appSTAllowedAuthMethods.RegisterStringSliceU(cmd, &inputs.AllowedAuthMethods, nil)
+	appSTEnforceDeviceBinding.RegisterStringU(cmd, &inputs.EnforceDeviceBinding, "")
+
+	return cmd
 }
