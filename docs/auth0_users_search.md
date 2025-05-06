@@ -18,6 +18,7 @@ auth0 users search [flags]
   auth0 users search
   auth0 users search --query user_id:"<user-id>"
   auth0 users search --query name:"Bob" --sort "name:1"
+  auth0 users search --query name:"Bob" --sort "name:1"
   auth0 users search -q name:"Bob" -s "name:1" --number 200
   auth0 users search -q name:"Bob" -s "name:1" -n 200 --json
   auth0 users search -q name:"Bob" -s "name:1" -n 200 --csv
@@ -30,6 +31,7 @@ auth0 users search [flags]
       --csv                                                                     Output in csv format.
       --json                                                                    Output in json format.
   -n, --number int                                                              Number of users, that match the search criteria, to retrieve. Minimum 1, maximum 1000. If limit is hit, refine the search query. (default 100)
+  -p, --picker                                                                  Allows to toggle from list of users and view a user in detail
   -q, --query email:"user123@*.com" OR (user_id:"user-id-123" AND name:"Bob")   Search query in Lucene query syntax.
                                                                                 
                                                                                 For example: email:"user123@*.com" OR (user_id:"user-id-123" AND name:"Bob")
