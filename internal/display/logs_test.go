@@ -20,7 +20,7 @@ func TestStream(t *testing.T) {
 	}
 
 	results := []View{
-		&logView{
+		&LogView{
 			Log: &management.Log{
 				LogID:       auth0.String("354234"),
 				Type:        auth0.String("sapi"),
@@ -51,7 +51,7 @@ API Operation              Update branding settings                             
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			viewChan <- &logView{
+			viewChan <- &LogView{
 				Log: &management.Log{
 					LogID:       auth0.String("354236"),
 					Type:        auth0.String("sapi"),

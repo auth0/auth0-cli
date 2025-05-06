@@ -292,6 +292,24 @@ tests:
       contains:
         - "Successfully set the default application to"
 
-  039 - given a test app, it successfully deletes the app:
+  039 - it successfully updates the session-transfer of an application:
+    command: auth0 apps session-transfer update $(./test/integration/scripts/get-app-id.sh) --can-create-token=true --allowed-auth-methods=cookie,query --enforce-device-binding=asn --json
+    exit-code: 0
+    stdout:
+      json:
+        can_create_session_transfer_token: "true"
+        allowed_authentication_methods: "[cookie query]"
+        enforce_device_binding: asn
+
+  040 - it successfully renders the session-transfer of an application:
+    command: auth0 apps session-transfer show $(./test/integration/scripts/get-app-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - CAN CREATE TOKEN  ✓
+        - ALLOWED METHODS   cookie, query
+        - DEVICE BINDING    asn
+
+  041 - given a test app, it successfully deletes the app:
     command: auth0 apps delete $(./test/integration/scripts/get-app-id.sh) --force
     exit-code: 0
