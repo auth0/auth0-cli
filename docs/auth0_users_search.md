@@ -18,9 +18,9 @@ auth0 users search [flags]
   auth0 users search
   auth0 users search --query user_id:"<user-id>"
   auth0 users search --query name:"Bob" --sort "name:1"
-  auth0 users search --query name:"Bob" --sort "name:1"
+  auth0 users search --query name:"Bob" --sort "name:1 --picker"
   auth0 users search -q name:"Bob" -s "name:1" --number 200
-  auth0 users search -q name:"Bob" -s "name:1" -n 200 --json
+  auth0 users search -q name:"Bob" -s "name:1" -n 200 -p --json
   auth0 users search -q name:"Bob" -s "name:1" -n 200 --csv
 ```
 

@@ -140,7 +140,7 @@ var (
 		IsRequired: false,
 	}
 
-	enableUserPicker = Flag{
+	userPicker = Flag{
 		Name:      "Interactive picker option on rendered users during search",
 		LongForm:  "picker",
 		ShortForm: "p",
@@ -193,9 +193,9 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 users search
   auth0 users search --query user_id:"<user-id>"
   auth0 users search --query name:"Bob" --sort "name:1"
-  auth0 users search --query name:"Bob" --sort "name:1"
+  auth0 users search --query name:"Bob" --sort "name:1 --picker"
   auth0 users search -q name:"Bob" -s "name:1" --number 200
-  auth0 users search -q name:"Bob" -s "name:1" -n 200 --json
+  auth0 users search -q name:"Bob" -s "name:1" -n 200 -p --json
   auth0 users search -q name:"Bob" -s "name:1" -n 200 --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := userQuery.Ask(cmd, &inputs.query, nil); err != nil {
@@ -240,7 +240,7 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 				foundUsers = append(foundUsers, item.(*management.User))
 			}
 
-			if !inputs.picker {
+			if !inputs.picker || len(foundUsers) == 0 {
 				cli.renderer.UserSearch(foundUsers)
 			} else {
 				var (
@@ -276,7 +276,7 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 
 	userQuery.RegisterString(cmd, &inputs.query, "")
 	userSort.RegisterString(cmd, &inputs.sort, "")
-	enableUserPicker.RegisterBool(cmd, &inputs.picker, false)
+	userPicker.RegisterBool(cmd, &inputs.picker, false)
 	userNumber.RegisterInt(cmd, &inputs.number, defaultPageSize)
 
 	return cmd
@@ -290,25 +290,29 @@ func searchUsersByEmailCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "search-by-email",
-		Args:  cobra.NoArgs,
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Search for users",
 		Long:  "Search for users. To create one, run: `auth0 users create`.",
 		Example: `  auth0 users search-by-email
-  auth0 users search-by-email --email "t1@gmail.com`,
+  auth0 users search-by-email <user-email>,
+  auth0 users search-by-email <user-email> -p`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := userEmail.Ask(cmd, &inputs.email, nil); err != nil {
-				return err
+			var emailID string
+
+			if len(args) == 0 {
+				if err := userEmail.Ask(cmd, &emailID, nil); err != nil {
+					return err
+				}
+			} else {
+				emailID = args[0]
 			}
 
-			usersList, err := cli.api.User.ListByEmail(cmd.Context(), inputs.email)
+			usersList, err := cli.api.User.ListByEmail(cmd.Context(), emailID)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to search for users with email - %v: %w", emailID, err)
 			}
 
-			if err != nil {
-				return fmt.Errorf("failed to search for users with email - %v: %w", inputs.email, err)
-			}
-			if !inputs.picker {
+			if !inputs.picker || len(usersList) == 0 {
 				cli.renderer.UserSearch(usersList)
 			} else {
 				var (
@@ -341,8 +345,7 @@ func searchUsersByEmailCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "csv")
 
-	userEmail.RegisterString(cmd, &inputs.email, "")
-	enableUserPicker.RegisterBool(cmd, &inputs.picker, false)
+	userPicker.RegisterBool(cmd, &inputs.picker, false)
 
 	return cmd
 }

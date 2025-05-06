@@ -16,17 +16,17 @@ auth0 users search-by-email [flags]
 
 ```
   auth0 users search-by-email
-  auth0 users search-by-email --email "t1@gmail.com
+  auth0 users search-by-email <user-email>,
+  auth0 users search-by-email <user-email> -p
 ```
 
 
 ## Flags
 
 ```
-      --csv            Output in csv format.
-  -e, --email string   The user's email.
-      --json           Output in json format.
-  -p, --picker         Allows to toggle from list of users and view a user in detail
+      --csv      Output in csv format.
+      --json     Output in json format.
+  -p, --picker   Allows to toggle from list of users and view a user in detail
 ```
 
 

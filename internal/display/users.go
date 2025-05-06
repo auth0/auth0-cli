@@ -120,13 +120,7 @@ func (r *Renderer) UserSearch(users []*management.User) {
 
 func (r *Renderer) UserPrompt(users []*management.User, currentIndex *int) string {
 	resource := "user"
-
 	r.Heading(resource)
-
-	if len(users) == 0 {
-		r.EmptyState(resource, "Use 'auth0 users create' to add one")
-		return ""
-	}
 
 	label := makeUserView(users[0], false).AsTableHeaderString()
 	var rows []string
