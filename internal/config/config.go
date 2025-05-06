@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/lestrrat-go/jwx/jwt"
+	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
 // ErrConfigFileMissing is thrown when the config.json file is missing.
@@ -81,7 +81,7 @@ func (c *Config) IsLoggedInWithTenant(tenantName string) bool {
 		return false
 	}
 
-	token, err := jwt.ParseString(tenant.GetAccessToken())
+	token, err := jwt.ParseInsecure([]byte(tenant.GetAccessToken()))
 	if err != nil {
 		return false
 	}
