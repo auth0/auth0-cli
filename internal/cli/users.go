@@ -157,6 +157,7 @@ func usersCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(searchUsersCmd(cli))
+	cmd.AddCommand(searchUsersByEmailCmd(cli))
 	cmd.AddCommand(createUserCmd(cli))
 	cmd.AddCommand(showUserCmd(cli))
 	cmd.AddCommand(updateUserCmd(cli))
@@ -243,6 +244,47 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 	userQuery.RegisterString(cmd, &inputs.query, "")
 	userSort.RegisterString(cmd, &inputs.sort, "")
 	userNumber.RegisterInt(cmd, &inputs.number, defaultPageSize)
+
+	return cmd
+}
+
+func searchUsersByEmailCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		email string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "search-by-email",
+		Args:  cobra.NoArgs,
+		Short: "Search for users",
+		Long:  "Search for users. To create one, run: `auth0 users create`.",
+		Example: `  auth0 users search-by-email
+  auth0 users search-by-email --email "t1@gmail.com`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := userEmail.Ask(cmd, &inputs.email, nil); err != nil {
+				return err
+			}
+
+			usersList, err := cli.api.User.ListByEmail(cmd.Context(), inputs.email)
+			if err != nil {
+				return err
+			}
+
+			if err != nil {
+				return fmt.Errorf("failed to search for users with email - %v: %w", inputs.email, err)
+			}
+
+			cli.renderer.UserSearch(usersList)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+
+	userEmail.RegisterString(cmd, &inputs.email, "")
 
 	return cmd
 }
