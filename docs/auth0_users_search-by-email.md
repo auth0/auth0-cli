@@ -3,35 +3,30 @@ layout: default
 parent: auth0 users
 has_toc: false
 ---
-# auth0 users delete
+# auth0 users search-by-email
 
-Delete a user.
-
-To delete interactively, use `auth0 users delete` with no arguments.
-
-To delete non-interactively, supply the user id and the `--force` flag to skip confirmation.
+Search for users. To create one, run: `auth0 users create`.
 
 ## Usage
 ```
-auth0 users delete [flags]
+auth0 users search-by-email [flags]
 ```
 
 ## Examples
 
 ```
-  auth0 users delete 
-  auth0 users rm
-  auth0 users delete <user-id>
-  auth0 users delete <user-id> --force
-  auth0 users delete <user-id> <user-id2> <user-idn>
-  auth0 users delete <user-id> <user-id2> <user-idn> --force
+  auth0 users search-by-email
+  auth0 users search-by-email <user-email>,
+  auth0 users search-by-email <user-email> -p
 ```
 
 
 ## Flags
 
 ```
-      --force   Skip confirmation.
+      --csv      Output in csv format.
+      --json     Output in json format.
+  -p, --picker   Allows to toggle from list of users and view a user in detail
 ```
 
 

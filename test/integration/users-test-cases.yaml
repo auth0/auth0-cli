@@ -164,3 +164,11 @@ tests:
         - "Job with ID"
         - "successfully started"
         - "to get the status of the job"
+
+  025 - users search with email:
+    command: auth0 users show $(./test/integration/scripts/get-user-id.sh) --json
+    stdout:
+      json:
+        email: "betteruser@example.com"
+        connection: "Username-Password-Authentication"
+    exit-code: 0

@@ -48,4 +48,7 @@ type UserAPI interface {
 
 	// RemoveRoles removes roles from a user.
 	RemoveRoles(ctx context.Context, id string, roles []*management.Role, opts ...management.RequestOption) error
+
+	// ListByEmail lists all users by email in all the connections.
+	ListByEmail(ctx context.Context, email string, opts ...management.RequestOption) (us []*management.User, err error)
 }

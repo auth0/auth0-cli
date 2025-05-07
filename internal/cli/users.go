@@ -140,6 +140,13 @@ var (
 		IsRequired: false,
 	}
 
+	userPicker = Flag{
+		Name:      "Interactive picker option on rendered users during search",
+		LongForm:  "picker",
+		ShortForm: "p",
+		Help:      "Allows to toggle from list of users and view a user in detail",
+	}
+
 	userImportOptions = pickerOptions{
 		{"Empty", users.EmptyExample},
 		{"Basic Example", users.BasicExample},
@@ -157,6 +164,7 @@ func usersCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(searchUsersCmd(cli))
+	cmd.AddCommand(searchUsersByEmailCmd(cli))
 	cmd.AddCommand(createUserCmd(cli))
 	cmd.AddCommand(showUserCmd(cli))
 	cmd.AddCommand(updateUserCmd(cli))
@@ -174,6 +182,7 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 		query  string
 		sort   string
 		number int
+		picker bool
 	}
 
 	cmd := &cobra.Command{
@@ -184,8 +193,9 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 users search
   auth0 users search --query user_id:"<user-id>"
   auth0 users search --query name:"Bob" --sort "name:1"
+  auth0 users search --query name:"Bob" --sort "name:1 --picker"
   auth0 users search -q name:"Bob" -s "name:1" --number 200
-  auth0 users search -q name:"Bob" -s "name:1" -n 200 --json
+  auth0 users search -q name:"Bob" -s "name:1" -n 200 -p --json
   auth0 users search -q name:"Bob" -s "name:1" -n 200 --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := userQuery.Ask(cmd, &inputs.query, nil); err != nil {
@@ -230,7 +240,102 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 				foundUsers = append(foundUsers, item.(*management.User))
 			}
 
-			cli.renderer.UserSearch(foundUsers)
+			if !inputs.picker || len(foundUsers) == 0 {
+				cli.renderer.UserSearch(foundUsers)
+			} else {
+				var (
+					selectedUserID string
+					currentIndex   = auth0.Int(0)
+				)
+				for {
+					selectedUserID = cli.renderer.UserPrompt(foundUsers, currentIndex)
+
+					userDetail, err := cli.api.User.Read(cmd.Context(), selectedUserID)
+					if err != nil {
+						fmt.Println("Failed to fetch details:", err)
+						continue
+					}
+
+					fmt.Println("\nUser Details:")
+					cli.renderer.JSONResult(userDetail)
+
+					if cli.renderer.QuitPrompt() {
+						break
+					}
+				}
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+
+	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+
+	userQuery.RegisterString(cmd, &inputs.query, "")
+	userSort.RegisterString(cmd, &inputs.sort, "")
+	userPicker.RegisterBool(cmd, &inputs.picker, false)
+	userNumber.RegisterInt(cmd, &inputs.number, defaultPageSize)
+
+	return cmd
+}
+
+func searchUsersByEmailCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		email  string
+		picker bool
+	}
+
+	cmd := &cobra.Command{
+		Use:   "search-by-email",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Search for users",
+		Long:  "Search for users. To create one, run: `auth0 users create`.",
+		Example: `  auth0 users search-by-email
+  auth0 users search-by-email <user-email>,
+  auth0 users search-by-email <user-email> -p`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var emailID string
+
+			if len(args) == 0 {
+				if err := userEmail.Ask(cmd, &emailID, nil); err != nil {
+					return err
+				}
+			} else {
+				emailID = args[0]
+			}
+
+			usersList, err := cli.api.User.ListByEmail(cmd.Context(), emailID)
+			if err != nil {
+				return fmt.Errorf("failed to search for users with email - %v: %w", emailID, err)
+			}
+
+			if !inputs.picker || len(usersList) == 0 {
+				cli.renderer.UserSearch(usersList)
+			} else {
+				var (
+					selectedUserID string
+					currentIndex   = auth0.Int(0)
+				)
+				for {
+					selectedUserID = cli.renderer.UserPrompt(usersList, currentIndex)
+
+					userDetail, err := cli.api.User.Read(cmd.Context(), selectedUserID)
+					if err != nil {
+						fmt.Println("Failed to fetch details:", err)
+						continue
+					}
+
+					fmt.Println("\nUser Details:")
+					cli.renderer.JSONResult(userDetail)
+
+					if cli.renderer.QuitPrompt() {
+						break
+					}
+				}
+			}
 
 			return nil
 		},
@@ -240,9 +345,7 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "csv")
 
-	userQuery.RegisterString(cmd, &inputs.query, "")
-	userSort.RegisterString(cmd, &inputs.sort, "")
-	userNumber.RegisterInt(cmd, &inputs.number, defaultPageSize)
+	userPicker.RegisterBool(cmd, &inputs.picker, false)
 
 	return cmd
 }

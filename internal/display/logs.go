@@ -175,23 +175,10 @@ func (v *LogView) typeDesc() (typ, desc string) {
 	return typ, desc
 }
 
-func (r *Renderer) LogPrompt(logs []*management.Log, hasFilter bool, currentIndex *int) string {
+func (r *Renderer) LogPrompt(logs []*management.Log, currentIndex *int) string {
 	resource := "logs"
 
 	r.Heading(resource)
-	if len(logs) == 0 {
-		if hasFilter {
-			if r.Format == OutputFormatJSON {
-				r.JSONResult([]interface{}{})
-				return ""
-			}
-			r.Warnf("No logs available matching filter criteria.\n")
-		} else {
-			r.EmptyState(resource, "To generate logs, run a test command like 'auth0 test login' or 'auth0 test token'")
-		}
-
-		return ""
-	}
 
 	view := LogView{Log: logs[0]}
 	label := view.AsTableHeaderString()
