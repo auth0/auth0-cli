@@ -89,7 +89,7 @@ func listLogsCmd(cli *cli) *cobra.Command {
 			}
 
 			hasFilter := inputs.Filter != ""
-			if !inputs.Picker && len(logs) == 0 {
+			if !inputs.Picker || len(logs) == 0 {
 				cli.renderer.LogList(logs, !cli.debug, hasFilter)
 			} else {
 				var (
