@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.13.0](https://github.com/auth0/auth0-cli/tree/v1.13.0) (May 7, 2025))
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.12.0...v1.13.0)
+
+### Added
+- New flag for improved visualization of logs using `auth0 logs ls -p` [#1195]
+- Support to manage session-transfer for applications using `auth0 apps session-transfer` [#1180]
+- Support to set `refresh-token` for a client and configure Multi Resource Refresh Token [#1192]
+
+### Fixed
+- Handle 403 forbidden during `auth0 tf generate` for non feature-flag enabled tenants [#1197]
+
 # [v.1.12.0](https://github.com/auth0/auth0-cli/tree/v1.12.0) (Apr 28, 2025))
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.11.0...v1.12.0)
@@ -472,14 +484,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.12.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.13.0...HEAD
 
+[#1197]:https://github.com/auth0/auth0-cli/issues/1197
+[#1195]:https://github.com/auth0/auth0-cli/issues/1195
+[#1192]:https://github.com/auth0/auth0-cli/issues/1192
 [#1188]: https://github.com/auth0/auth0-cli/issues/1188
 [#1185]: https://github.com/auth0/auth0-cli/issues/1185
 [#1184]: https://github.com/auth0/auth0-cli/issues/1184
 [#1183]: https://github.com/auth0/auth0-cli/issues/1183
 [#1182]: https://github.com/auth0/auth0-cli/issues/1182
 [#1181]: https://github.com/auth0/auth0-cli/issues/1181
+[#1180]:https://github.com/auth0/auth0-cli/issues/1180
 [#1166]: https://github.com/auth0/auth0-cli/issues/1166
 [#1173]: https://github.com/auth0/auth0-cli/issues/1173
 [#1172]: https://github.com/auth0/auth0-cli/issues/1172
