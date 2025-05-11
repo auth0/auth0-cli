@@ -1,6 +1,7 @@
 package auth0
 
 import (
+	"archive/zip"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,9 +10,10 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/auth0/go-auth0/management"
-	"github.com/mholt/archiver/v3"
 )
 
 const (
@@ -91,7 +93,52 @@ func (q Quickstart) Download(ctx context.Context, downloadPath string, client *m
 		return err
 	}
 
-	return archiver.Unarchive(tmpFile.Name(), downloadPath)
+	return unzip(tmpFile.Name(), downloadPath)
+}
+
+func unzip(src, dest string) error {
+	r, err := zip.OpenReader(src)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range r.File {
+		filPath := filepath.Join(dest, f.Name)
+
+		if !strings.HasPrefix(filPath, filepath.Clean(dest)+string(os.PathSeparator)) {
+			return fmt.Errorf("illegal file path: %s", filPath)
+		}
+
+		if f.FileInfo().IsDir() {
+			err = os.MkdirAll(filPath, os.ModePerm)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+
+		err = os.MkdirAll(filepath.Dir(filPath), os.ModePerm)
+		if err != nil {
+			return err
+		}
+
+		inFile, err := f.Open()
+		if err != nil {
+			return err
+		}
+
+		outFile, err := os.OpenFile(filPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(outFile, inFile)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func GetQuickstarts(ctx context.Context) (Quickstarts, error) {
