@@ -5,7 +5,7 @@ has_toc: false
 ---
 # auth0 tenant-settings show
 
-
+Display the current tenant settings
 
 ## Usage
 ```
@@ -15,7 +15,7 @@ auth0 tenant-settings show [flags]
 ## Examples
 
 ```
-
+auth0 tenant-settings show
 ```
 
 

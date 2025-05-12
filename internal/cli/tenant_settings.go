@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	flags = []string{
+	supportedFlags = []string{
 		"EnableClientConnections",
 		"EnableAPIsSection",
 		"EnablePipeline2",
@@ -61,8 +61,10 @@ func tenantSettingsCmd(cli *cli) *cobra.Command {
 
 func show(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "show",
-		Short: "Display the current tenant settings",
+		Use:     "show",
+		Short:   "Display the current tenant settings",
+		Long:    "Display the current tenant settings",
+		Example: "auth0 tenant-settings show",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tenant, err := cli.api.Tenant.Read(cmd.Context())
 			if err != nil {
@@ -94,14 +96,34 @@ func update(cli *cli) *cobra.Command {
 func set(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set",
-		Short: "Enable selected tenant setting flags",
+		Short: "Enable tenant setting flags",
+		Long: "Enable selected tenant setting flags.\n\n" +
+			"To enable interactively, use `auth0 tenant-settings update set` with no arguments.\n\n" +
+			"To enable non-interactively, supply the flags.",
+		Example: `auth0 tenant-settings update set
+auth0 tenant-settings update set <flag1> <flag2> <flag3>
+auth0 tenant-settings update set enable_client_connections enable_apis_section enable_pipeline2`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			tenant, err := askTenantSettingsUpdates(true)
-			if err != nil {
-				return err
+			var (
+				tenant        = &management.Tenant{}
+				tenantFlags   = &management.TenantFlags{}
+				selectedFlags []string
+				err           error
+			)
+			if len(args) != 0 {
+				selectedFlags = append(selectedFlags, args...)
+			} else {
+				selectedFlags, err = selectTenantSettingsParams(true)
+				if err != nil {
+					return err
+				}
 			}
 
-			if err := cli.api.Tenant.Update(cmd.Context(), tenant); err != nil {
+			setSelectTenantSettings(tenant, selectedFlags, true)
+			setSelectedTenantFlags(tenantFlags, selectedFlags, true)
+			tenant.Flags = tenantFlags
+
+			if err = cli.api.Tenant.Update(cmd.Context(), tenant); err != nil {
 				return err
 			}
 
@@ -116,12 +138,32 @@ func set(cli *cli) *cobra.Command {
 func unset(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unset",
-		Short: "Disable selected tenant setting flags",
+		Short: "Disable tenant setting flags",
+		Long: "Disable selected tenant setting flags.\n\n" +
+			"To disable interactively, use `auth0 tenant-settings update unset` with no arguments.\n\n" +
+			"To disable non-interactively, supply the flags.",
+		Example: `auth0 tenant-settings update unset
+auth0 tenant-settings update unset <flag1> <flag2> <flag3>
+auth0 tenant-settings update unset enable_client_connections enable_apis_section enable_pipeline2`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			tenant, err := askTenantSettingsUpdates(false)
-			if err != nil {
-				return err
+			var (
+				tenant        = &management.Tenant{}
+				tenantFlags   = &management.TenantFlags{}
+				selectedFlags []string
+				err           error
+			)
+			if len(args) != 0 {
+				selectedFlags = append(selectedFlags, args...)
+			} else {
+				selectedFlags, err = selectTenantSettingsParams(false)
+				if err != nil {
+					return err
+				}
 			}
+
+			setSelectTenantSettings(tenant, selectedFlags, false)
+			setSelectedTenantFlags(tenantFlags, selectedFlags, false)
+			tenant.Flags = tenantFlags
 
 			if err := cli.api.Tenant.Update(cmd.Context(), tenant); err != nil {
 				return err
@@ -135,24 +177,8 @@ func unset(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func askTenantSettingsUpdates(isSet bool) (*management.Tenant, error) {
-	tenantFlags := &management.TenantFlags{}
-	tenant := &management.Tenant{}
-
-	settingsMap, err := selectTenantSettingsParams(isSet)
-	if err != nil {
-		return nil, err
-	}
-
-	setSelectTenantSettings(tenant, settingsMap)
-	setSelectedTenantFlags(tenantFlags, settingsMap)
-	tenant.Flags = tenantFlags
-
-	return tenant, nil
-}
-
-func selectTenantSettingsParams(isSet bool) (map[string]*bool, error) {
-	var selected []string
+func selectTenantSettingsParams(isSet bool) ([]string, error) {
+	var selectedFlags []string
 	label := "Please select the flags you want to "
 	if isSet {
 		label += "enable (only the selected flags will be changed):"
@@ -160,92 +186,91 @@ func selectTenantSettingsParams(isSet bool) (map[string]*bool, error) {
 		label += "disable (only the selected flags will be changed):"
 	}
 
-	if err := prompt.AskMultiSelect(label, &selected, flags...); err != nil {
+	if err := prompt.AskMultiSelect(label, &selectedFlags, supportedFlags...); err != nil {
 		return nil, err
 	}
 
-	selectedMap := make(map[string]*bool)
-	for _, opt := range selected {
-		selectedMap[opt] = auth0.Bool(isSet)
-	}
-
-	return selectedMap, nil
+	return selectedFlags, nil
 }
 
-func setSelectedTenantFlags(f *management.TenantFlags, flags map[string]*bool) {
-	for name, enabled := range flags {
+func setSelectedTenantFlags(f *management.TenantFlags, selectedFlags []string, isSet bool) {
+	val := auth0.Bool(isSet)
+
+	for _, name := range selectedFlags {
 		switch name {
-		case "EnableClientConnections":
-			f.EnableClientConnections = enabled
-		case "EnableAPIsSection":
-			f.EnableAPIsSection = enabled
-		case "EnablePipeline2":
-			f.EnablePipeline2 = enabled
-		case "EnableDynamicClientRegistration":
-			f.EnableDynamicClientRegistration = enabled
-		case "EnableCustomDomainInEmails":
-			f.EnableCustomDomainInEmails = enabled
-		case "EnableSSO":
-			f.EnableSSO = enabled
-		case "AllowChangingEnableSSO":
-			f.AllowChangingEnableSSO = enabled
-		case "UniversalLogin":
-			f.UniversalLogin = enabled
-		case "EnableLegacyLogsSearchV2":
-			f.EnableLegacyLogsSearchV2 = enabled
-		case "DisableClickjackProtectionHeaders":
-			f.DisableClickjackProtectionHeaders = enabled
-		case "EnablePublicSignupUserExistsError":
-			f.EnablePublicSignupUserExistsError = enabled
-		case "UseScopeDescriptionsForConsent":
-			f.UseScopeDescriptionsForConsent = enabled
-		case "AllowLegacyDelegationGrantTypes":
-			f.AllowLegacyDelegationGrantTypes = enabled
-		case "AllowLegacyROGrantTypes":
-			f.AllowLegacyROGrantTypes = enabled
-		case "AllowLegacyTokenInfoEndpoint":
-			f.AllowLegacyTokenInfoEndpoint = enabled
-		case "EnableLegacyProfile":
-			f.EnableLegacyProfile = enabled
-		case "EnableIDTokenAPI2":
-			f.EnableIDTokenAPI2 = enabled
-		case "NoDisclosureEnterpriseConnections":
-			f.NoDisclosureEnterpriseConnections = enabled
-		case "DisableManagementAPISMSObfuscation":
-			f.DisableManagementAPISMSObfuscation = enabled
-		case "EnableADFSWAADEmailVerification":
-			f.EnableADFSWAADEmailVerification = enabled
-		case "RevokeRefreshTokenGrant":
-			f.RevokeRefreshTokenGrant = enabled
-		case "DashboardLogStreams":
-			f.DashboardLogStreams = enabled
-		case "DashboardInsightsView":
-			f.DashboardInsightsView = enabled
-		case "DisableFieldsMapFix":
-			f.DisableFieldsMapFix = enabled
-		case "MFAShowFactorListOnEnrollment":
-			f.MFAShowFactorListOnEnrollment = enabled
-		case "RequirePushedAuthorizationRequests":
-			f.RequirePushedAuthorizationRequests = enabled
-		case "RemoveAlgFromJWKS":
-			f.RemoveAlgFromJWKS = enabled
+		case "enable_client_connections", "EnableClientConnections":
+			f.EnableClientConnections = val
+		case "enable_apis_section", "EnableAPIsSection":
+			f.EnableAPIsSection = val
+		case "enable_pipeline2", "EnablePipeline2":
+			f.EnablePipeline2 = val
+		case "enable_dynamic_client_registration", "EnableDynamicClientRegistration":
+			f.EnableDynamicClientRegistration = val
+		case "enable_custom_domain_in_emails", "EnableCustomDomainInEmails":
+			f.EnableCustomDomainInEmails = val
+		case "enable_sso", "EnableSSO":
+			f.EnableSSO = val
+		case "allow_changing_enable_sso", "AllowChangingEnableSSO":
+			f.AllowChangingEnableSSO = val
+		case "universal_login", "UniversalLogin":
+			f.UniversalLogin = val
+		case "enable_legacy_logs_search_v2", "EnableLegacyLogsSearchV2":
+			f.EnableLegacyLogsSearchV2 = val
+		case "disable_clickjack_protection_headers", "DisableClickjackProtectionHeaders":
+			f.DisableClickjackProtectionHeaders = val
+		case "enable_public_signup_user_exists_error", "EnablePublicSignupUserExistsError":
+			f.EnablePublicSignupUserExistsError = val
+		case "use_scope_descriptions_for_consent", "UseScopeDescriptionsForConsent":
+			f.UseScopeDescriptionsForConsent = val
+		case "allow_legacy_delegation_grant_types", "AllowLegacyDelegationGrantTypes":
+			f.AllowLegacyDelegationGrantTypes = val
+		case "allow_legacy_ro_grant_types", "AllowLegacyROGrantTypes":
+			f.AllowLegacyROGrantTypes = val
+		case "allow_legacy_tokeninfo_endpoint", "AllowLegacyTokenInfoEndpoint":
+			f.AllowLegacyTokenInfoEndpoint = val
+		case "enable_legacy_profile", "EnableLegacyProfile":
+			f.EnableLegacyProfile = val
+		case "enable_idtoken_api2", "EnableIDTokenAPI2":
+			f.EnableIDTokenAPI2 = val
+		case "no_disclose_enterprise_connections", "NoDisclosureEnterpriseConnections":
+			f.NoDisclosureEnterpriseConnections = val
+		case "disable_management_api_sms_obfuscation", "DisableManagementAPISMSObfuscation":
+			f.DisableManagementAPISMSObfuscation = val
+		case "enable_adfs_waad_email_verification", "EnableADFSWAADEmailVerification":
+			f.EnableADFSWAADEmailVerification = val
+		case "revoke_refresh_token_grant", "RevokeRefreshTokenGrant":
+			f.RevokeRefreshTokenGrant = val
+		case "dashboard_log_streams_next", "DashboardLogStreams":
+			f.DashboardLogStreams = val
+		case "dashboard_insights_view", "DashboardInsightsView":
+			f.DashboardInsightsView = val
+		case "disable_fields_map_fix", "DisableFieldsMapFix":
+			f.DisableFieldsMapFix = val
+		case "mfa_show_factor_list_on_enrollment", "MFAShowFactorListOnEnrollment":
+			f.MFAShowFactorListOnEnrollment = val
+		case "require_pushed_authorization_requests", "RequirePushedAuthorizationRequests":
+			f.RequirePushedAuthorizationRequests = val
+		case "remove_alg_from_jwks", "RemoveAlgFromJWKS":
+			f.RemoveAlgFromJWKS = val
 		}
 	}
 }
 
-func setSelectTenantSettings(tenant *management.Tenant, flags map[string]*bool) {
-	for name, enabled := range flags {
+func setSelectTenantSettings(tenant *management.Tenant, selectedFlags []string, isSet bool) {
+	val := auth0.Bool(isSet)
+
+	for _, name := range selectedFlags {
 		switch name {
-		case "CustomizeMFAInPostLoginAction":
-			tenant.CustomizeMFAInPostLoginAction = enabled
-		case "AllowOrgNameInAuthAPI":
-			tenant.AllowOrgNameInAuthAPI = enabled
+		case "CustomizeMFAInPostLoginAction", "customize_mfa_in_postlogin_action":
+			tenant.CustomizeMFAInPostLoginAction = val
+		case "AllowOrgNameInAuthAPI", "allow_organization_name_in_authentication_api":
+			tenant.AllowOrgNameInAuthAPI = val
 		case "PushedAuthorizationRequestsSupported":
-			tenant.PushedAuthorizationRequestsSupported = enabled
-		case "OIDCResourceProviderLogoutEndSessionEndpointDiscovery":
-			tenant.OIDCLogout.OIDCResourceProviderLogoutEndSessionEndpointDiscovery = enabled
-		case "EnableEndpointAliases":
-			tenant.MTLS.EnableEndpointAliases = enabled
+			tenant.PushedAuthorizationRequestsSupported = val
+		case "OIDCResourceProviderLogoutEndSessionEndpointDiscovery", "rp_logout_end_session_endpoint_discovery":
+			tenant.OIDCLogout.OIDCResourceProviderLogoutEndSessionEndpointDiscovery = val
+		case "EnableEndpointAliases", "enable_endpoint_aliases":
+			tenant.MTLS.EnableEndpointAliases = val
 		}
 	}
 }
