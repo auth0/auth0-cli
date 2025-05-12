@@ -32,7 +32,7 @@ var (
 		Help:      "Number of log entries to show. Minimum 1, maximum 1000.",
 	}
 
-	enableLogPicker = Flag{
+	logPicker = Flag{
 		Name:      "Interactive picker option on rendered logs",
 		LongForm:  "picker",
 		ShortForm: "p",
@@ -69,13 +69,14 @@ func listLogsCmd(cli *cli) *cobra.Command {
 		Short:   "Show the tenant logs",
 		Long:    "Display the tenant logs allowing to filter using Lucene query syntax.",
 		Example: `  auth0 logs list
+  auth0 logs list --filter "client_id:<client-id> --picker"
   auth0 logs list --filter "client_id:<client-id>"
   auth0 logs list --filter "client_name:<client-name>"
   auth0 logs list --filter "user_id:<user-id>"
   auth0 logs list --filter "user_name:<user-name>"
   auth0 logs list --filter "ip:<ip>"
   auth0 logs list --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
-  auth0 logs ls -n 250
+  auth0 logs ls -n 250 -p
   auth0 logs ls --json
   auth0 logs ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -88,7 +89,7 @@ func listLogsCmd(cli *cli) *cobra.Command {
 			}
 
 			hasFilter := inputs.Filter != ""
-			if !inputs.Picker {
+			if !inputs.Picker || len(logs) == 0 {
 				cli.renderer.LogList(logs, !cli.debug, hasFilter)
 			} else {
 				var (
@@ -96,7 +97,7 @@ func listLogsCmd(cli *cli) *cobra.Command {
 					currentIndex  = auth0.Int(0)
 				)
 				for {
-					selectedLogID = cli.renderer.LogPrompt(logs, hasFilter, currentIndex)
+					selectedLogID = cli.renderer.LogPrompt(logs, currentIndex)
 
 					logDetail, err := cli.api.Log.Read(cmd.Context(), selectedLogID)
 					if err != nil {
@@ -118,7 +119,7 @@ func listLogsCmd(cli *cli) *cobra.Command {
 
 	logsFilter.RegisterString(cmd, &inputs.Filter, "")
 	logsNum.RegisterInt(cmd, &inputs.Num, defaultPageSize)
-	enableLogPicker.RegisterBool(cmd, &inputs.Picker, false)
+	logPicker.RegisterBool(cmd, &inputs.Picker, false)
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")

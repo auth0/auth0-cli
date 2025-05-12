@@ -152,6 +152,26 @@ func (mr *MockUserAPIMockRecorder) List(ctx interface{}, opts ...interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockUserAPI)(nil).List), varargs...)
 }
 
+// ListByEmail mocks base method.
+func (m *MockUserAPI) ListByEmail(ctx context.Context, email string, opts ...management.RequestOption) ([]*management.User, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, email}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListByEmail", varargs...)
+	ret0, _ := ret[0].([]*management.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListByEmail indicates an expected call of ListByEmail.
+func (mr *MockUserAPIMockRecorder) ListByEmail(ctx, email interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, email}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByEmail", reflect.TypeOf((*MockUserAPI)(nil).ListByEmail), varargs...)
+}
+
 // Read mocks base method.
 func (m *MockUserAPI) Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.User, error) {
 	m.ctrl.T.Helper()
