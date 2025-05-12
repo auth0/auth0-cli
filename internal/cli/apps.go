@@ -140,8 +140,8 @@ var (
 
 	appSettings = Flag{
 		Name:       "File",
-		LongForm:   "settings",
-		ShortForm:  "s",
+		LongForm:   "settings-file",
+		ShortForm:  "f",
 		Help:       "File to save the app configurations to.",
 		IsRequired: false,
 	}
@@ -180,7 +180,7 @@ func appsCmd(cli *cli) *cobra.Command {
 		Use:   "apps",
 		Short: "Manage resources for applications",
 		Long: "The term application or app in Auth0 does not imply any particular implementation characteristics. " +
-			"For example, it could be a native app that executes on a mobile device, a single-page application that " +
+			"For example, it could be a native app that executes on a mobile device, a single-page app that " +
 			"executes on a browser, or a regular web application that executes on a server.",
 		Aliases: []string{"clients"},
 	}
@@ -429,28 +429,39 @@ type appInputs struct {
 }
 
 func createAppCmd(cli *cli) *cobra.Command {
-	var inputs appInputs
+	var appConfig appInputs
 
 	cmd := &cobra.Command{
 		Use:   "create",
-		Args:  cobra.NoArgs,
-		Short: "Create a new application",
-		Long: "Create a new application.\n\n" +
-			"To create interactively, use `auth0 apps create` with no arguments.\n\n" +
-			"To create non-interactively, supply at least the application name, and type through the flags.",
+		Short: "Create a new application with basic or advanced settings",
+		Long: `Create a new application in your Auth0 tenant with either basic or advanced configuration.
+
+Basic Configuration (Interactive):
+- Name, description, and application type, Callback URLs and allowed origins, Logout URLs and authentication methods, Grants and metadata
+
+Advanced Configuration (JSON):
+- Complete application settings via JSON file Any Auth0 Management API supported settings Custom metadata and advanced configurations
+
+Application Types:
+- Native: mobile, desktop, CLI, and smart device apps running natively
+- Single Page Web Application (SPA): a JavaScript front-end app that uses an API
+- Regular Web Application: traditional web app using redirects
+- Machine to Machine (M2M): CLIs, daemons, or services running on your backend
+
+The command supports both basic and advanced configuration options. For advanced configuration, you can provide a JSON file with all settings.`,
 		Example: `  auth0 apps create
-  auth0 apps create --name myapp 
-  auth0 apps create --name myapp --description <description>
-  auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m]
-  auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m] --reveal-secrets
-  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json
-  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar"
-  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
-  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"`,
+  auth0 apps create --name myapp
+  auth0 apps create --name myapp --description "My new application"
+  auth0 apps create --name myapp --description "My new application" --type spa
+  auth0 apps create --name myapp --description "My new application" --type spa --reveal-secrets
+  auth0 apps create -n myapp -d "My new application" -t spa -r --json
+  auth0 apps create -n myapp -d "My new application" -t spa -r --json --metadata "foo=bar"
+  auth0 apps create -n myapp -d "My new application" -t spa -r --json --metadata "foo=bar" --metadata "bazz=buzz"
+  auth0 apps create -n myapp -d "My new application" -t spa -r --json --metadata "foo=bar,bazz=buzz"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var (
 				selectedMode string
-				settings     *management.Client
+				app          *management.Client
 				err          error
 			)
 
@@ -461,7 +472,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 				"Alternatively, advanced is recommended for full ",
 			)
 
-			if inputs.FilePath == "" {
+			if appConfig.FilePath == "" {
 				input := prompt.SelectInput("", label, help, []string{"basic", "advanced"}, "basic", false)
 				if err := prompt.AskOne(input, &selectedMode); err != nil {
 					return handleInputError(err)
@@ -469,9 +480,9 @@ func createAppCmd(cli *cli) *cobra.Command {
 			}
 
 			if selectedMode == "basic" {
-				settings, err = fetchBasicCreateAppSettings(cmd, &inputs)
+				app, err = fetchAppCreateSettings(cmd, &appConfig)
 			} else {
-				settings, err = fetchAdvancedAppSettings(cmd, cli, inputs.FilePath, "")
+				app, err = fetchAdvancedAppSettings(cmd, cli, appConfig.FilePath, "")
 			}
 
 			if err != nil {
@@ -480,50 +491,58 @@ func createAppCmd(cli *cli) *cobra.Command {
 
 			// Create app.
 			if err := ansi.Waiting(func() error {
-				return cli.api.Client.Create(cmd.Context(), settings)
+				return cli.api.Client.Create(cmd.Context(), app)
 			}); err != nil {
 				return fmt.Errorf("failed to create application: %w", err)
 			}
 
-			if err := cli.Config.SetDefaultAppIDForTenant(cli.tenant, settings.GetClientID()); err != nil {
+			if err := cli.Config.SetDefaultAppIDForTenant(cli.tenant, app.GetClientID()); err != nil {
 				return err
 			}
 
-			cli.renderer.ApplicationCreate(settings, inputs.RevealSecrets)
+			cli.renderer.ApplicationCreate(app, appConfig.RevealSecrets)
 
 			return nil
 		},
 	}
 
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	appName.RegisterString(cmd, &inputs.Name, "")
-	appType.RegisterString(cmd, &inputs.Type, "")
-	appDescription.RegisterString(cmd, &inputs.Description, "")
-	appCallbacks.RegisterStringSlice(cmd, &inputs.Callbacks, nil)
-	appOrigins.RegisterStringSlice(cmd, &inputs.AllowedOrigins, nil)
-	appMetadata.RegisterStringMap(cmd, &inputs.Metadata, nil)
-	appWebOrigins.RegisterStringSlice(cmd, &inputs.AllowedWebOrigins, nil)
-	appLogoutURLs.RegisterStringSlice(cmd, &inputs.AllowedLogoutURLs, nil)
-	appAuthMethod.RegisterString(cmd, &inputs.AuthMethod, "")
-	appGrants.RegisterStringSlice(cmd, &inputs.Grants, nil)
-	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
-	refreshToken.RegisterString(cmd, &inputs.RefreshToken, "")
-	file.RegisterString(cmd, &inputs.FilePath, "")
+	// Register flags for basic app creation
+	appName.RegisterString(cmd, &appConfig.Name, "")
+	appType.RegisterString(cmd, &appConfig.Type, "")
+	appDescription.RegisterString(cmd, &appConfig.Description, "")
+	appCallbacks.RegisterStringSlice(cmd, &appConfig.Callbacks, nil)
+	appOrigins.RegisterStringSlice(cmd, &appConfig.AllowedOrigins, nil)
+	appMetadata.RegisterStringMap(cmd, &appConfig.Metadata, nil)
+	appWebOrigins.RegisterStringSlice(cmd, &appConfig.AllowedWebOrigins, nil)
+	appLogoutURLs.RegisterStringSlice(cmd, &appConfig.AllowedLogoutURLs, nil)
+	appAuthMethod.RegisterString(cmd, &appConfig.AuthMethod, "")
+	appGrants.RegisterStringSlice(cmd, &appConfig.Grants, nil)
+	revealSecrets.RegisterBool(cmd, &appConfig.RevealSecrets, false)
+	refreshToken.RegisterString(cmd, &appConfig.RefreshToken, "")
+	appSettings.RegisterString(cmd, &appConfig.FilePath, "")
 
 	return cmd
 }
 
 func updateAppCmd(cli *cli) *cobra.Command {
-	var inputs = &appInputs{}
+	var appConfig appInputs
 
 	cmd := &cobra.Command{
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Update an application",
-		Long: "Update an application.\n\n" +
-			"To update interactively, use `auth0 apps update` with no arguments.\n\n" +
-			"To update non-interactively, supply the application id, name, type and other information you " +
-			"might want to change through the available flags.",
+		Short: "Update an existing Auth0 application with basic or advanced settings",
+		Long: `Update an existing application in your Auth0 tenant with either basic or advanced configuration.
+
+Basic Configuration (Interactive):
+- Update name, description, and application type Modify callback URLs and allowed origins Change logout URLs and authentication methods Update grants and metadata
+
+Advanced Configuration (JSON):
+- Update complete application settings via JSON file Modify any Auth0 Management API supported settings Change custom metadata and advanced configurations
+
+The command supports both basic updates through flags and advanced updates through a JSON configuration file. 
+For advanced updates, you can either provide a JSON file or use the interactive editor to modify the settings.
+
+Note: Only the specified settings will be updated; unspecified settings will remain unchanged.`,
 		Example: `  auth0 apps update
   auth0 apps update <app-id> --name myapp
   auth0 apps update <app-id> --name myapp --description <description>
@@ -541,12 +560,12 @@ func updateAppCmd(cli *cli) *cobra.Command {
 			)
 
 			if len(args) == 0 {
-				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions())
+				err := appID.Pick(cmd, &appConfig.ID, cli.appPickerOptions())
 				if err != nil {
 					return err
 				}
 			} else {
-				inputs.ID = args[0]
+				appConfig.ID = args[0]
 			}
 
 			label := "Please select whether to provide the basic/advanced settings of an client:"
@@ -556,7 +575,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				"Alternatively, advanced is recommended for full ",
 			)
 
-			if inputs.FilePath == "" {
+			if appConfig.FilePath == "" {
 				input := prompt.SelectInput("", label, help, []string{"basic", "advanced"}, "basic", false)
 				if err := prompt.AskOne(input, &selectedMode); err != nil {
 					return handleInputError(err)
@@ -564,9 +583,9 @@ func updateAppCmd(cli *cli) *cobra.Command {
 			}
 
 			if selectedMode == "basic" {
-				settings, err = fetchBasicUpdateSettings(cmd, cli, inputs)
+				settings, err = fetchAppUpdateSettings(cmd, cli, &appConfig)
 			} else {
-				settings, err = fetchAdvancedAppSettings(cmd, cli, inputs.FilePath, inputs.ID)
+				settings, err = fetchAdvancedAppSettings(cmd, cli, appConfig.FilePath, appConfig.ID)
 			}
 
 			if err != nil {
@@ -574,31 +593,31 @@ func updateAppCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := ansi.Waiting(func() error {
-				return cli.api.Client.Update(cmd.Context(), inputs.ID, settings)
+				return cli.api.Client.Update(cmd.Context(), appConfig.ID, settings)
 			}); err != nil {
-				return fmt.Errorf("failed to update application with ID %q: %w", inputs.ID, err)
+				return fmt.Errorf("failed to update application with ID %q: %w", appConfig.ID, err)
 			}
 
-			cli.renderer.ApplicationUpdate(settings, inputs.RevealSecrets)
+			cli.renderer.ApplicationUpdate(settings, appConfig.RevealSecrets)
 
 			return nil
 		},
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	appName.RegisterStringU(cmd, &inputs.Name, "")
-	appType.RegisterStringU(cmd, &inputs.Type, "")
-	appDescription.RegisterStringU(cmd, &inputs.Description, "")
-	appCallbacks.RegisterStringSliceU(cmd, &inputs.Callbacks, nil)
-	appMetadata.RegisterStringMap(cmd, &inputs.Metadata, map[string]string{})
-	appOrigins.RegisterStringSliceU(cmd, &inputs.AllowedOrigins, nil)
-	appWebOrigins.RegisterStringSliceU(cmd, &inputs.AllowedWebOrigins, nil)
-	appLogoutURLs.RegisterStringSliceU(cmd, &inputs.AllowedLogoutURLs, nil)
-	appAuthMethod.RegisterStringU(cmd, &inputs.AuthMethod, "")
-	appGrants.RegisterStringSliceU(cmd, &inputs.Grants, nil)
-	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
-	refreshToken.RegisterString(cmd, &inputs.RefreshToken, "")
-	file.RegisterString(cmd, &inputs.FilePath, "")
+	appName.RegisterStringU(cmd, &appConfig.Name, "")
+	appType.RegisterStringU(cmd, &appConfig.Type, "")
+	appDescription.RegisterStringU(cmd, &appConfig.Description, "")
+	appCallbacks.RegisterStringSliceU(cmd, &appConfig.Callbacks, nil)
+	appMetadata.RegisterStringMap(cmd, &appConfig.Metadata, map[string]string{})
+	appOrigins.RegisterStringSliceU(cmd, &appConfig.AllowedOrigins, nil)
+	appWebOrigins.RegisterStringSliceU(cmd, &appConfig.AllowedWebOrigins, nil)
+	appLogoutURLs.RegisterStringSliceU(cmd, &appConfig.AllowedLogoutURLs, nil)
+	appAuthMethod.RegisterStringU(cmd, &appConfig.AuthMethod, "")
+	appGrants.RegisterStringSliceU(cmd, &appConfig.Grants, nil)
+	revealSecrets.RegisterBool(cmd, &appConfig.RevealSecrets, false)
+	refreshToken.RegisterString(cmd, &appConfig.RefreshToken, "")
+	appSettings.RegisterString(cmd, &appConfig.FilePath, "")
 
 	return cmd
 }
@@ -633,7 +652,9 @@ func openAppCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func fetchBasicCreateAppSettings(cmd *cobra.Command, inputs *appInputs) (*management.Client, error) {
+// fetchAppCreateSettings collects all necessary settings for creating a new application
+// through interactive prompts or command-line flags.
+func fetchAppCreateSettings(cmd *cobra.Command, inputs *appInputs) (*management.Client, error) {
 	var oidcConformant = true
 	var algorithm = "RS256"
 
@@ -739,7 +760,9 @@ func fetchBasicCreateAppSettings(cmd *cobra.Command, inputs *appInputs) (*manage
 	return a, nil
 }
 
-func fetchBasicUpdateSettings(cmd *cobra.Command, cli *cli, inputs *appInputs) (*management.Client, error) {
+// fetchAppUpdateSettings collects all necessary settings for updating an existing application
+// through interactive prompts or command-line flags.
+func fetchAppUpdateSettings(cmd *cobra.Command, cli *cli, inputs *appInputs) (*management.Client, error) {
 	var current *management.Client
 
 	if err := ansi.Waiting(func() (err error) {
@@ -899,6 +922,8 @@ func fetchBasicUpdateSettings(cmd *cobra.Command, cli *cli, inputs *appInputs) (
 	return a, nil
 }
 
+// fetchAdvancedAppSettings fetches advanced application settings not are supported through command-line flags, provided via a JSON file or interactive editor.
+// Includes all configurable application settings supported by the Auth0 Management API.
 func fetchAdvancedAppSettings(cmd *cobra.Command, cli *cli, filePath string, id string) (*management.Client, error) {
 	var (
 		clientSettings      = &management.Client{}
