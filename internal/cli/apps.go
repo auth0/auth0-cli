@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -135,6 +137,15 @@ var (
 		ShortForm: "n",
 		Help:      "Number of apps to retrieve. Minimum 1, maximum 1000.",
 	}
+
+	appSettings = Flag{
+		Name:       "File",
+		LongForm:   "settings",
+		ShortForm:  "s",
+		Help:       "File to save the app configurations to.",
+		IsRequired: false,
+	}
+
 	appSTCanCreateToken = Flag{
 		Name:         "Can Create Token",
 		LongForm:     "can-create-token",
@@ -400,23 +411,25 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+type appInputs struct {
+	ID                string
+	Name              string
+	Type              string
+	Description       string
+	Callbacks         []string
+	AllowedOrigins    []string
+	AllowedWebOrigins []string
+	AllowedLogoutURLs []string
+	AuthMethod        string
+	Grants            []string
+	RevealSecrets     bool
+	Metadata          map[string]string
+	RefreshToken      string
+	FilePath          string
+}
+
 func createAppCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		Name              string
-		Type              string
-		Description       string
-		Callbacks         []string
-		AllowedOrigins    []string
-		AllowedWebOrigins []string
-		AllowedLogoutURLs []string
-		AuthMethod        string
-		Grants            []string
-		RevealSecrets     bool
-		Metadata          map[string]string
-		RefreshToken      string
-	}
-	var oidcConformant = true
-	var algorithm = "RS256"
+	var inputs appInputs
 
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -435,117 +448,48 @@ func createAppCmd(cli *cli) *cobra.Command {
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
-				return err
-			}
+			var (
+				selectedMode string
+				settings     *management.Client
+				err          error
+			)
 
-			if err := appDescription.Ask(cmd, &inputs.Description, nil); err != nil {
-				return err
-			}
+			label := "Please select whether to provide the basic/advanced settings of an client:"
+			help := fmt.Sprintf(
+				"%s\n%s\n",
+				"basic is recommended for .",
+				"Alternatively, advanced is recommended for full ",
+			)
 
-			if err := appType.Select(cmd, &inputs.Type, appTypeOptions, nil); err != nil {
-				return err
-			}
-
-			appIsM2M := apiTypeFor(inputs.Type) == appTypeNonInteractive
-			appIsNative := apiTypeFor(inputs.Type) == appTypeNative
-			appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
-
-			// Prompt for callback URLs if app is not m2m.
-			if !appIsM2M {
-				var defaultValue string
-
-				if !appIsNative {
-					defaultValue = appDefaultURL
-				}
-
-				if err := appCallbacks.AskMany(cmd, &inputs.Callbacks, &defaultValue); err != nil {
-					return err
+			if inputs.FilePath == "" {
+				input := prompt.SelectInput("", label, help, []string{"basic", "advanced"}, "basic", false)
+				if err := prompt.AskOne(input, &selectedMode); err != nil {
+					return handleInputError(err)
 				}
 			}
 
-			// Prompt for logout URLs if app is not m2m.
-			if !appIsM2M {
-				var defaultValue string
-
-				if !appIsNative {
-					defaultValue = appDefaultURL
-				}
-
-				if err := appLogoutURLs.AskMany(cmd, &inputs.AllowedLogoutURLs, &defaultValue); err != nil {
-					return err
-				}
-			}
-
-			// Prompt for allowed origins URLs if app is SPA.
-			if appIsSPA {
-				defaultValue := appDefaultURL
-
-				if err := appOrigins.AskMany(cmd, &inputs.AllowedOrigins, &defaultValue); err != nil {
-					return err
-				}
-			}
-
-			// Prompt for allowed web origins URLs if app is SPA.
-			if appIsSPA {
-				defaultValue := appDefaultURL
-
-				if err := appWebOrigins.AskMany(cmd, &inputs.AllowedWebOrigins, &defaultValue); err != nil {
-					return err
-				}
-			}
-
-			clientMetadata := make(map[string]interface{}, len(inputs.Metadata))
-			for k, v := range inputs.Metadata {
-				clientMetadata[k] = v
-			}
-
-			// Load values into a fresh app instance.
-			a := &management.Client{
-				Name:              &inputs.Name,
-				Description:       &inputs.Description,
-				AppType:           auth0.String(apiTypeFor(inputs.Type)),
-				Callbacks:         stringSliceToPtr(inputs.Callbacks),
-				AllowedOrigins:    stringSliceToPtr(inputs.AllowedOrigins),
-				WebOrigins:        stringSliceToPtr(inputs.AllowedWebOrigins),
-				AllowedLogoutURLs: stringSliceToPtr(inputs.AllowedLogoutURLs),
-				OIDCConformant:    &oidcConformant,
-				JWTConfiguration:  &management.ClientJWTConfiguration{Algorithm: &algorithm},
-				ClientMetadata:    &clientMetadata,
-			}
-
-			if len(inputs.RefreshToken) != 0 {
-				if err := json.Unmarshal([]byte(inputs.RefreshToken), &a.RefreshToken); err != nil {
-					return fmt.Errorf("apps: %s refreshToken invalid JSON", err)
-				}
-			}
-
-			// Set token endpoint auth method.
-			if len(inputs.AuthMethod) == 0 {
-				a.TokenEndpointAuthMethod = apiDefaultAuthMethodFor(inputs.Type)
+			if selectedMode == "basic" {
+				settings, err = fetchBasicCreateAppSettings(cmd, &inputs)
 			} else {
-				a.TokenEndpointAuthMethod = apiAuthMethodFor(inputs.AuthMethod)
+				settings, err = fetchAdvancedAppSettings(cmd, cli, inputs.FilePath, "")
 			}
 
-			// Set grants.
-			if len(inputs.Grants) == 0 {
-				a.GrantTypes = apiDefaultGrantsFor(inputs.Type)
-			} else {
-				a.GrantTypes = apiGrantsFor(inputs.Grants)
+			if err != nil {
+				return err
 			}
 
 			// Create app.
 			if err := ansi.Waiting(func() error {
-				return cli.api.Client.Create(cmd.Context(), a)
+				return cli.api.Client.Create(cmd.Context(), settings)
 			}); err != nil {
 				return fmt.Errorf("failed to create application: %w", err)
 			}
 
-			if err := cli.Config.SetDefaultAppIDForTenant(cli.tenant, a.GetClientID()); err != nil {
+			if err := cli.Config.SetDefaultAppIDForTenant(cli.tenant, settings.GetClientID()); err != nil {
 				return err
 			}
 
-			cli.renderer.ApplicationCreate(a, inputs.RevealSecrets)
+			cli.renderer.ApplicationCreate(settings, inputs.RevealSecrets)
 
 			return nil
 		},
@@ -564,26 +508,13 @@ func createAppCmd(cli *cli) *cobra.Command {
 	appGrants.RegisterStringSlice(cmd, &inputs.Grants, nil)
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 	refreshToken.RegisterString(cmd, &inputs.RefreshToken, "")
+	file.RegisterString(cmd, &inputs.FilePath, "")
 
 	return cmd
 }
 
 func updateAppCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ID                string
-		Name              string
-		Type              string
-		Description       string
-		Callbacks         []string
-		AllowedOrigins    []string
-		AllowedWebOrigins []string
-		AllowedLogoutURLs []string
-		AuthMethod        string
-		Grants            []string
-		RevealSecrets     bool
-		Metadata          map[string]string
-		RefreshToken      string
-	}
+	var inputs = &appInputs{}
 
 	cmd := &cobra.Command{
 		Use:   "update",
@@ -603,7 +534,11 @@ func updateAppCmd(cli *cli) *cobra.Command {
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var current *management.Client
+			var (
+				selectedMode string
+				settings     *management.Client
+				err          error
+			)
 
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions())
@@ -614,167 +549,37 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			if err := ansi.Waiting(func() (err error) {
-				current, err = cli.api.Client.Read(cmd.Context(), inputs.ID)
+			label := "Please select whether to provide the basic/advanced settings of an client:"
+			help := fmt.Sprintf(
+				"%s\n%s\n",
+				"basic is recommended for .",
+				"Alternatively, advanced is recommended for full ",
+			)
+
+			if inputs.FilePath == "" {
+				input := prompt.SelectInput("", label, help, []string{"basic", "advanced"}, "basic", false)
+				if err := prompt.AskOne(input, &selectedMode); err != nil {
+					return handleInputError(err)
+				}
+			}
+
+			if selectedMode == "basic" {
+				settings, err = fetchBasicUpdateSettings(cmd, cli, inputs)
+			} else {
+				settings, err = fetchAdvancedAppSettings(cmd, cli, inputs.FilePath, inputs.ID)
+			}
+
+			if err != nil {
 				return err
-			}); err != nil {
-				return fmt.Errorf("failed to find application with ID %q: %w", inputs.ID, err)
-			}
-
-			if err := appName.AskU(cmd, &inputs.Name, current.Name); err != nil {
-				return err
-			}
-
-			if err := appType.SelectU(cmd, &inputs.Type, appTypeOptions, typeFor(current.AppType)); err != nil {
-				return err
-			}
-
-			appIsM2M := apiTypeFor(inputs.Type) == appTypeNonInteractive
-			appIsNative := apiTypeFor(inputs.Type) == appTypeNative
-			appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
-
-			// Prompt for callback URLs if app is not m2m.
-			if !appIsM2M {
-				var defaultValue string
-
-				if !appIsNative {
-					defaultValue = appDefaultURL
-				}
-
-				if len(current.GetCallbacks()) > 0 {
-					defaultValue = stringSliceToCommaSeparatedString(current.GetCallbacks())
-				}
-
-				if err := appCallbacks.AskManyU(cmd, &inputs.Callbacks, &defaultValue); err != nil {
-					return err
-				}
-			}
-
-			// Prompt for logout URLs if app is not m2m.
-			if !appIsM2M {
-				var defaultValue string
-
-				if !appIsNative {
-					defaultValue = appDefaultURL
-				}
-
-				if len(current.GetAllowedLogoutURLs()) > 0 {
-					defaultValue = stringSliceToCommaSeparatedString(current.GetAllowedLogoutURLs())
-				}
-
-				if err := appLogoutURLs.AskManyU(cmd, &inputs.AllowedLogoutURLs, &defaultValue); err != nil {
-					return err
-				}
-			}
-
-			// Prompt for allowed origins URLs if app is SPA.
-			if appIsSPA {
-				defaultValue := appDefaultURL
-
-				if len(current.GetAllowedOrigins()) > 0 {
-					defaultValue = stringSliceToCommaSeparatedString(current.GetAllowedOrigins())
-				}
-
-				if err := appOrigins.AskManyU(cmd, &inputs.AllowedOrigins, &defaultValue); err != nil {
-					return err
-				}
-			}
-
-			// Prompt for allowed web origins URLs if app is SPA.
-			if appIsSPA {
-				defaultValue := appDefaultURL
-
-				if len(current.GetWebOrigins()) > 0 {
-					defaultValue = stringSliceToCommaSeparatedString(current.GetWebOrigins())
-				}
-
-				if err := appWebOrigins.AskManyU(cmd, &inputs.AllowedWebOrigins, &defaultValue); err != nil {
-					return err
-				}
-			}
-
-			// Load updated values into a fresh app instance.
-			a := &management.Client{}
-
-			if len(inputs.Name) == 0 {
-				a.Name = current.Name
-			} else {
-				a.Name = &inputs.Name
-			}
-
-			if len(inputs.Description) == 0 {
-				a.Description = current.Description
-			} else {
-				a.Description = &inputs.Description
-			}
-
-			if len(inputs.Type) == 0 {
-				a.AppType = current.AppType
-			} else {
-				a.AppType = auth0.String(apiTypeFor(inputs.Type))
-			}
-
-			if len(inputs.Callbacks) == 0 {
-				a.Callbacks = current.Callbacks
-			} else {
-				a.Callbacks = &inputs.Callbacks
-			}
-
-			if len(inputs.AllowedOrigins) == 0 {
-				a.AllowedOrigins = current.AllowedOrigins
-			} else {
-				a.AllowedOrigins = &inputs.AllowedOrigins
-			}
-
-			if len(inputs.AllowedWebOrigins) == 0 {
-				a.WebOrigins = current.WebOrigins
-			} else {
-				a.WebOrigins = &inputs.AllowedWebOrigins
-			}
-
-			if len(inputs.AllowedLogoutURLs) == 0 {
-				a.AllowedLogoutURLs = current.AllowedLogoutURLs
-			} else {
-				a.AllowedLogoutURLs = &inputs.AllowedLogoutURLs
-			}
-
-			if len(inputs.AuthMethod) == 0 {
-				a.TokenEndpointAuthMethod = current.TokenEndpointAuthMethod
-			} else {
-				a.TokenEndpointAuthMethod = apiAuthMethodFor(inputs.AuthMethod)
-			}
-
-			if len(inputs.Grants) == 0 {
-				a.GrantTypes = current.GrantTypes
-			} else {
-				a.GrantTypes = apiGrantsFor(inputs.Grants)
-			}
-
-			if len(inputs.Metadata) == 0 {
-				a.ClientMetadata = current.ClientMetadata
-			} else {
-				clientMetadata := make(map[string]interface{}, len(inputs.Metadata))
-				for k, v := range inputs.Metadata {
-					clientMetadata[k] = v
-				}
-				a.ClientMetadata = &clientMetadata
-			}
-
-			if len(inputs.RefreshToken) == 0 {
-				a.RefreshToken = current.RefreshToken
-			} else {
-				if err := json.Unmarshal([]byte(inputs.RefreshToken), &a.RefreshToken); err != nil {
-					return fmt.Errorf("apps: %s refreshToken invalid JSON", err)
-				}
 			}
 
 			if err := ansi.Waiting(func() error {
-				return cli.api.Client.Update(cmd.Context(), inputs.ID, a)
+				return cli.api.Client.Update(cmd.Context(), inputs.ID, settings)
 			}); err != nil {
 				return fmt.Errorf("failed to update application with ID %q: %w", inputs.ID, err)
 			}
 
-			cli.renderer.ApplicationUpdate(a, inputs.RevealSecrets)
+			cli.renderer.ApplicationUpdate(settings, inputs.RevealSecrets)
 
 			return nil
 		},
@@ -793,6 +598,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 	appGrants.RegisterStringSliceU(cmd, &inputs.Grants, nil)
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 	refreshToken.RegisterString(cmd, &inputs.RefreshToken, "")
+	file.RegisterString(cmd, &inputs.FilePath, "")
 
 	return cmd
 }
@@ -825,6 +631,344 @@ func openAppCmd(cli *cli) *cobra.Command {
 	}
 
 	return cmd
+}
+
+func fetchBasicCreateAppSettings(cmd *cobra.Command, inputs *appInputs) (*management.Client, error) {
+	var oidcConformant = true
+	var algorithm = "RS256"
+
+	if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
+		return nil, err
+	}
+
+	if err := appDescription.Ask(cmd, &inputs.Description, nil); err != nil {
+		return nil, err
+	}
+
+	if err := appType.Select(cmd, &inputs.Type, appTypeOptions, nil); err != nil {
+		return nil, err
+	}
+
+	appIsM2M := apiTypeFor(inputs.Type) == appTypeNonInteractive
+	appIsNative := apiTypeFor(inputs.Type) == appTypeNative
+	appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
+
+	// Prompt for callback URLs if app is not m2m.
+	if !appIsM2M {
+		var defaultValue string
+
+		if !appIsNative {
+			defaultValue = appDefaultURL
+		}
+
+		if err := appCallbacks.AskMany(cmd, &inputs.Callbacks, &defaultValue); err != nil {
+			return nil, err
+		}
+	}
+
+	// Prompt for logout URLs if app is not m2m.
+	if !appIsM2M {
+		var defaultValue string
+
+		if !appIsNative {
+			defaultValue = appDefaultURL
+		}
+
+		if err := appLogoutURLs.AskMany(cmd, &inputs.AllowedLogoutURLs, &defaultValue); err != nil {
+			return nil, err
+		}
+	}
+
+	// Prompt for allowed origins URLs if app is SPA.
+	if appIsSPA {
+		defaultValue := appDefaultURL
+
+		if err := appOrigins.AskMany(cmd, &inputs.AllowedOrigins, &defaultValue); err != nil {
+			return nil, err
+		}
+	}
+
+	// Prompt for allowed web origins URLs if app is SPA.
+	if appIsSPA {
+		defaultValue := appDefaultURL
+
+		if err := appWebOrigins.AskMany(cmd, &inputs.AllowedWebOrigins, &defaultValue); err != nil {
+			return nil, err
+		}
+	}
+
+	clientMetadata := make(map[string]interface{}, len(inputs.Metadata))
+	for k, v := range inputs.Metadata {
+		clientMetadata[k] = v
+	}
+
+	// Load values into a fresh app instance.
+	a := &management.Client{
+		Name:              &inputs.Name,
+		Description:       &inputs.Description,
+		AppType:           auth0.String(apiTypeFor(inputs.Type)),
+		Callbacks:         stringSliceToPtr(inputs.Callbacks),
+		AllowedOrigins:    stringSliceToPtr(inputs.AllowedOrigins),
+		WebOrigins:        stringSliceToPtr(inputs.AllowedWebOrigins),
+		AllowedLogoutURLs: stringSliceToPtr(inputs.AllowedLogoutURLs),
+		OIDCConformant:    &oidcConformant,
+		JWTConfiguration:  &management.ClientJWTConfiguration{Algorithm: &algorithm},
+		ClientMetadata:    &clientMetadata,
+	}
+
+	if len(inputs.RefreshToken) != 0 {
+		if err := json.Unmarshal([]byte(inputs.RefreshToken), &a.RefreshToken); err != nil {
+			return nil, fmt.Errorf("apps: %s refreshToken invalid JSON", err)
+		}
+	}
+
+	// Set token endpoint auth method.
+	if len(inputs.AuthMethod) == 0 {
+		a.TokenEndpointAuthMethod = apiDefaultAuthMethodFor(inputs.Type)
+	} else {
+		a.TokenEndpointAuthMethod = apiAuthMethodFor(inputs.AuthMethod)
+	}
+
+	// Set grants.
+	if len(inputs.Grants) == 0 {
+		a.GrantTypes = apiDefaultGrantsFor(inputs.Type)
+	} else {
+		a.GrantTypes = apiGrantsFor(inputs.Grants)
+	}
+
+	return a, nil
+}
+
+func fetchBasicUpdateSettings(cmd *cobra.Command, cli *cli, inputs *appInputs) (*management.Client, error) {
+	var current *management.Client
+
+	if err := ansi.Waiting(func() (err error) {
+		current, err = cli.api.Client.Read(cmd.Context(), inputs.ID)
+		return err
+	}); err != nil {
+		return nil, fmt.Errorf("failed to find application with ID %q: %w", inputs.ID, err)
+	}
+
+	if err := appName.AskU(cmd, &inputs.Name, current.Name); err != nil {
+		return nil, err
+	}
+
+	if err := appType.SelectU(cmd, &inputs.Type, appTypeOptions, typeFor(current.AppType)); err != nil {
+		return nil, err
+	}
+
+	appIsM2M := apiTypeFor(inputs.Type) == appTypeNonInteractive
+	appIsNative := apiTypeFor(inputs.Type) == appTypeNative
+	appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
+
+	// Prompt for callback URLs if app is not m2m.
+	if !appIsM2M {
+		var defaultValue string
+
+		if !appIsNative {
+			defaultValue = appDefaultURL
+		}
+
+		if len(current.GetCallbacks()) > 0 {
+			defaultValue = stringSliceToCommaSeparatedString(current.GetCallbacks())
+		}
+
+		if err := appCallbacks.AskManyU(cmd, &inputs.Callbacks, &defaultValue); err != nil {
+			return nil, err
+		}
+	}
+
+	// Prompt for logout URLs if app is not m2m.
+	if !appIsM2M {
+		var defaultValue string
+
+		if !appIsNative {
+			defaultValue = appDefaultURL
+		}
+
+		if len(current.GetAllowedLogoutURLs()) > 0 {
+			defaultValue = stringSliceToCommaSeparatedString(current.GetAllowedLogoutURLs())
+		}
+
+		if err := appLogoutURLs.AskManyU(cmd, &inputs.AllowedLogoutURLs, &defaultValue); err != nil {
+			return nil, err
+		}
+	}
+
+	// Prompt for allowed origins URLs if app is SPA.
+	if appIsSPA {
+		defaultValue := appDefaultURL
+
+		if len(current.GetAllowedOrigins()) > 0 {
+			defaultValue = stringSliceToCommaSeparatedString(current.GetAllowedOrigins())
+		}
+
+		if err := appOrigins.AskManyU(cmd, &inputs.AllowedOrigins, &defaultValue); err != nil {
+			return nil, err
+		}
+	}
+
+	// Prompt for allowed web origins URLs if app is SPA.
+	if appIsSPA {
+		defaultValue := appDefaultURL
+
+		if len(current.GetWebOrigins()) > 0 {
+			defaultValue = stringSliceToCommaSeparatedString(current.GetWebOrigins())
+		}
+
+		if err := appWebOrigins.AskManyU(cmd, &inputs.AllowedWebOrigins, &defaultValue); err != nil {
+			return nil, err
+		}
+	}
+
+	// Load updated values into a fresh app instance.
+	a := &management.Client{}
+
+	if len(inputs.Name) == 0 {
+		a.Name = current.Name
+	} else {
+		a.Name = &inputs.Name
+	}
+
+	if len(inputs.Description) == 0 {
+		a.Description = current.Description
+	} else {
+		a.Description = &inputs.Description
+	}
+
+	if len(inputs.Type) == 0 {
+		a.AppType = current.AppType
+	} else {
+		a.AppType = auth0.String(apiTypeFor(inputs.Type))
+	}
+
+	if len(inputs.Callbacks) == 0 {
+		a.Callbacks = current.Callbacks
+	} else {
+		a.Callbacks = &inputs.Callbacks
+	}
+
+	if len(inputs.AllowedOrigins) == 0 {
+		a.AllowedOrigins = current.AllowedOrigins
+	} else {
+		a.AllowedOrigins = &inputs.AllowedOrigins
+	}
+
+	if len(inputs.AllowedWebOrigins) == 0 {
+		a.WebOrigins = current.WebOrigins
+	} else {
+		a.WebOrigins = &inputs.AllowedWebOrigins
+	}
+
+	if len(inputs.AllowedLogoutURLs) == 0 {
+		a.AllowedLogoutURLs = current.AllowedLogoutURLs
+	} else {
+		a.AllowedLogoutURLs = &inputs.AllowedLogoutURLs
+	}
+
+	if len(inputs.AuthMethod) == 0 {
+		a.TokenEndpointAuthMethod = current.TokenEndpointAuthMethod
+	} else {
+		a.TokenEndpointAuthMethod = apiAuthMethodFor(inputs.AuthMethod)
+	}
+
+	if len(inputs.Grants) == 0 {
+		a.GrantTypes = current.GrantTypes
+	} else {
+		a.GrantTypes = apiGrantsFor(inputs.Grants)
+	}
+
+	if len(inputs.Metadata) == 0 {
+		a.ClientMetadata = current.ClientMetadata
+	} else {
+		clientMetadata := make(map[string]interface{}, len(inputs.Metadata))
+		for k, v := range inputs.Metadata {
+			clientMetadata[k] = v
+		}
+		a.ClientMetadata = &clientMetadata
+	}
+
+	if len(inputs.RefreshToken) == 0 {
+		a.RefreshToken = current.RefreshToken
+	} else {
+		if err := json.Unmarshal([]byte(inputs.RefreshToken), &a.RefreshToken); err != nil {
+			return nil, fmt.Errorf("apps: %s refreshToken invalid JSON", err)
+		}
+	}
+
+	return a, nil
+}
+
+func fetchAdvancedAppSettings(cmd *cobra.Command, cli *cli, filePath string, id string) (*management.Client, error) {
+	var (
+		clientSettings      = &management.Client{}
+		newSettings         string
+		existingAppSettings = &management.Client{}
+		existingSettings    = map[string]interface{}{}
+		currentSettings     = map[string]interface{}{}
+	)
+
+	if filePath != "" {
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("unable to read file %q: %v", filePath, err)
+		}
+
+		// Validate JSON content.
+		if err := json.Unmarshal(data, &clientSettings); err != nil {
+			return nil, fmt.Errorf("file %q contains invalid JSON: %v", filePath, err)
+		}
+
+		return clientSettings, nil
+	}
+
+	if id != "" {
+		// Fetch existing App settings from the API.
+		existingAppSettings, err := cli.api.Client.Read(cmd.Context(), id)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch the existing render settings: %w", err)
+		}
+
+		// Marshal existing render settings into JSON and parse into a map if it's not nil.
+		if existingAppSettings != nil {
+			readRenderingJSON, _ := json.MarshalIndent(existingAppSettings, "", "  ")
+			if err := json.Unmarshal(readRenderingJSON, &existingSettings); err != nil {
+				fmt.Println("Error parsing readRendering JSON:", err)
+			}
+		}
+	}
+
+	existingSettings["___customization guide___"] = "https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"
+
+	// Marshal final JSON.
+	finalJSON, err := json.MarshalIndent(existingSettings, "", "  ")
+	if err != nil {
+		fmt.Println("Error generating final JSON:", err)
+	}
+
+	err = rendererScript.OpenEditor(cmd, &newSettings, string(finalJSON), "settings.json", cli.customizeEditorHint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to capture input from the editor: %w", err)
+	}
+
+	// Unmarshal user-provided JSON into a map for comparison.
+	err = json.Unmarshal([]byte(newSettings), &currentSettings)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON input into a map: %w", err)
+	}
+
+	// Compare the existing settings with the updated settings to detect changes.
+	if id != "" && reflect.DeepEqual(existingSettings, currentSettings) {
+		cli.renderer.Warnf("No changes detected in the client settings. This could be due to uncommitted configuration changes or no modifications being made to the configurations.")
+
+		return existingAppSettings, ErrNoChangesDetected
+	}
+
+	if err := json.Unmarshal([]byte(newSettings), &clientSettings); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON input: %w", err)
+	}
+
+	return clientSettings, nil
 }
 
 func formatAppSettingsPath(id string) string {
