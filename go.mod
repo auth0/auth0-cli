@@ -29,7 +29,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20
 	github.com/mattn/go-tty v0.0.7
 	github.com/mholt/archiver/v3 v3.5.1
-	github.com/olekukonko/tablewriter v0.0.5
+	github.com/olekukonko/tablewriter v1.0.4
 	github.com/pkg/browser v0.0.0-20210706143420-7d21f8c997e2
 	github.com/pkg/errors v0.9.1
 	github.com/schollz/progressbar/v3 v3.17.1
@@ -96,6 +96,8 @@ require (
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/nwaples/rardecode v1.1.0 // indirect
+	github.com/olekukonko/errors v0.0.0-20250405072817-4e6d85265da6 // indirect
+	github.com/olekukonko/ll v0.0.6-0.20250511102614-9564773e9d27 // indirect
 	github.com/pierrec/lz4/v4 v4.1.3 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
