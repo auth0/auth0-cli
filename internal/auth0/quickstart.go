@@ -1,7 +1,6 @@
 package auth0
 
 import (
-	"archive/zip"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,10 +9,10 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"path/filepath"
-	"strings"
 
 	"github.com/auth0/go-auth0/management"
+
+	"github.com/auth0/auth0-cli/internal/utils"
 )
 
 const (
@@ -93,61 +92,7 @@ func (q Quickstart) Download(ctx context.Context, downloadPath string, client *m
 		return err
 	}
 
-	return unzip(tmpFile.Name(), downloadPath)
-}
-
-func unzip(src, dest string) error {
-	r, err := zip.OpenReader(src)
-	if err != nil {
-		return err
-	}
-	defer func(r *zip.ReadCloser) {
-		_ = r.Close()
-	}(r)
-
-	for _, f := range r.File {
-		// Construct the full path for the file.
-		filPath := filepath.Join(dest, f.Name)
-
-		// Prevent zip-slip attacks by validating the path.
-		relPath, err := filepath.Rel(dest, filPath)
-		if err != nil || strings.Contains(relPath, ".."+string(os.PathSeparator)) {
-			return fmt.Errorf("illegal file path: %s", filPath)
-		}
-
-		if f.FileInfo().IsDir() {
-			// Create directories.
-			if err := os.MkdirAll(filPath, os.ModePerm); err != nil {
-				return err
-			}
-			continue
-		}
-
-		if err := os.MkdirAll(filepath.Dir(filPath), os.ModePerm); err != nil {
-			return err
-		}
-
-		inFile, err := f.Open()
-		if err != nil {
-			return err
-		}
-
-		outFile, err := os.OpenFile(filPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-		if err != nil {
-			_ = inFile.Close()
-			return err
-		}
-
-		_, err = io.Copy(outFile, inFile)
-		_ = inFile.Close()
-		_ = outFile.Close()
-
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return utils.Unzip(tmpFile.Name(), downloadPath)
 }
 
 func GetQuickstarts(ctx context.Context) (Quickstarts, error) {
