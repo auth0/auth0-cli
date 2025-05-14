@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -295,8 +296,19 @@ func isInsufficientScopeError(r *http.Response) error {
 		return nil
 	}
 
-	missingScopes := strings.Split(body.Message, "Insufficient scope, expected any of: ")[1]
-	recommendedScopeToAdd := strings.Split(missingScopes, ",")[0]
+	var recommendedScopeToAdd string
+
+	parts := strings.Split(body.Message, "Insufficient scope, expected any of: ")
+	if len(parts) > 1 {
+		missingScopes := parts[1]
+		recommendedScopeToAdd = strings.Split(missingScopes, ",")[0]
+	} else {
+		re := regexp.MustCompile(`scope: ([\w:,_\s]+)`)
+		matches := re.FindStringSubmatch(body.Message)
+		if len(matches) > 1 {
+			recommendedScopeToAdd = matches[1]
+		}
+	}
 
 	return fmt.Errorf(
 		"request failed because access token lacks scope: %s.\n "+
