@@ -21,17 +21,14 @@ func Unzip(src, dest string) error {
 	}(r)
 
 	for _, f := range r.File {
-		// Construct the full path for the file.
 		filPath := filepath.Join(dest, f.Name)
 
-		// Prevent zip-slip attacks by validating the path.
 		relPath, err := filepath.Rel(dest, filPath)
 		if err != nil || strings.Contains(relPath, ".."+string(os.PathSeparator)) {
 			return fmt.Errorf("illegal file path: %s", filPath)
 		}
 
 		if f.FileInfo().IsDir() {
-			// Create directories.
 			if err := os.MkdirAll(filPath, os.ModePerm); err != nil {
 				return err
 			}

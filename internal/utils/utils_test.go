@@ -71,7 +71,7 @@ func TestUnzip_IllegalPath(t *testing.T) {
 	defer out.Close()
 
 	zipWriter := zip.NewWriter(out)
-	_, err = zipWriter.Create("../evil.txt") // zip-slip attack
+	_, err = zipWriter.Create("../evil.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
