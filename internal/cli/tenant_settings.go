@@ -88,7 +88,9 @@ auth0 tenant-settings update set flags.enable_client_connections mtls.enable_end
 
 			setSelectTenantSettings(tenant, selectedFlags, true)
 			setSelectedTenantFlags(tenantFlags, selectedFlags, true)
-			tenant.Flags = tenantFlags
+			if *tenantFlags != (management.TenantFlags{}) {
+				tenant.Flags = tenantFlags
+			}
 
 			if err = cli.api.Tenant.Update(cmd.Context(), tenant); err != nil {
 				return err

@@ -65,6 +65,12 @@ func (v *TenantSettingsView) Object() interface{} {
 
 func (r *Renderer) TenantSettingsShow(tenant *management.Tenant) {
 	r.Heading("tenant settings")
+
+	if r.Format == OutputFormatJSON {
+		r.JSONResult(tenant)
+		return
+	}
+
 	r.Results(makeTenantSettings(tenant))
 }
 
@@ -155,8 +161,6 @@ func makeTenantSettings(tenant *management.Tenant) []View {
 			if tenant.MTLS != nil {
 				addSetting(settingName, friendlyFlagName, tenant.MTLS.EnableEndpointAliases)
 			}
-
-			return views
 		}
 	}
 
