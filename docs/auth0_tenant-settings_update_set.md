@@ -20,8 +20,8 @@ auth0 tenant-settings update set [flags]
 
 ```
 auth0 tenant-settings update set
-auth0 tenant-settings update set <flag1> <flag2> <flag3>
-auth0 tenant-settings update set enable_client_connections enable_apis_section enable_pipeline2
+auth0 tenant-settings update set <setting1> <setting2> <setting3>
+auth0 tenant-settings update set flags.enable_client_connections mtls.enable_endpoint_aliases pushed_authorization_requests_supported
 ```
 
 

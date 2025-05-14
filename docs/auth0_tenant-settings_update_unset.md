@@ -20,8 +20,8 @@ auth0 tenant-settings update unset [flags]
 
 ```
 auth0 tenant-settings update unset
-auth0 tenant-settings update unset <flag1> <flag2> <flag3>
-auth0 tenant-settings update unset enable_client_connections enable_apis_section enable_pipeline2
+auth0 tenant-settings update unset <setting1> <setting2> <setting3>
+auth0 tenant-settings update unset customize_mfa_in_postlogin_action flags.enable_pipeline2
 ```
 
 
