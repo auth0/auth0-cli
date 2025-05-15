@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/manifoldco/promptui"
+
 	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
 
@@ -52,6 +54,26 @@ func (v *userView) AsTableRow() []string {
 	}
 }
 
+func (v *userView) AsTableRowString() string {
+	row := v.AsTableRow()
+	return fmt.Sprintf(
+		"%-*s  %-*s  %-*s",
+		50, row[0],
+		50, row[1],
+		50, row[2],
+	)
+}
+
+func (v *userView) AsTableHeaderString() string {
+	row := v.AsTableHeader()
+	return fmt.Sprintf(
+		"    "+"\033[4m%-*s  %-*s  %-*s\033[0m",
+		34, row[0],
+		50, row[1],
+		50, row[2],
+	)
+}
+
 func (v *userView) KeyValues() [][]string {
 	if v.Connection == management.ConnectionStrategySMS {
 		return [][]string{
@@ -94,6 +116,39 @@ func (r *Renderer) UserSearch(users []*management.User) {
 	}
 
 	r.Results(res)
+}
+
+func (r *Renderer) UserPrompt(users []*management.User, currentIndex *int) string {
+	resource := "user"
+	r.Heading(resource)
+
+	label := makeUserView(users[0], false).AsTableHeaderString()
+	var rows []string
+
+	// Recursively append each user from users list.
+	for _, u := range users {
+		rows = append(rows, makeUserView(u, false).AsTableRowString())
+	}
+
+	promptui.IconInitial = promptui.Styler()("")
+	prompt := promptui.Select{
+		Label:    label,
+		Items:    rows,
+		Size:     10,
+		HideHelp: true,
+		Stdout:   &noBellStdout{},
+		Templates: &promptui.SelectTemplates{
+			Label: "{{ . }}",
+		},
+	}
+	var err error
+	*currentIndex, _, err = prompt.RunCursorAt(*currentIndex, *currentIndex)
+	if err != nil {
+		r.Errorf("failed to select a log: %w", err)
+	}
+
+	// Return the ID of the select user.
+	return users[*currentIndex].GetID()
 }
 
 func (r *Renderer) UserShow(user *management.User, requireUsername bool) {
