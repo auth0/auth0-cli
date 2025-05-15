@@ -217,8 +217,6 @@ func setSelectedTenantFlags(f *management.TenantFlags, selectedFlags []string, i
 			f.DisableFieldsMapFix = val
 		case "flags.mfa_show_factor_list_on_enrollment", "MFAShowFactorListOnEnrollment":
 			f.MFAShowFactorListOnEnrollment = val
-		case "flags.require_pushed_authorization_requests", "RequirePushedAuthorizationRequests":
-			f.RequirePushedAuthorizationRequests = val
 		case "flags.remove_alg_from_jwks", "RemoveAlgFromJWKS":
 			f.RemoveAlgFromJWKS = val
 		}

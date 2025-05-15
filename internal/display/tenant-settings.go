@@ -31,7 +31,6 @@ var SupportedTenantSettings = map[string]string{
 	"DashboardInsightsView":                          "flags.dashboard_insights_view",
 	"DisableFieldsMapFix":                            "flags.disable_fields_map_fix",
 	"MFAShowFactorListOnEnrollment":                  "flags.mfa_show_factor_list_on_enrollment",
-	"RequirePushedAuthorizationRequests":             "flags.require_pushed_authorization_requests",
 	"RemoveAlgFromJWKS":                              "flags.remove_alg_from_jwks",
 	"CustomizeMFAInPostLoginAction":                  "customize_mfa_in_postlogin_action",
 	"AllowOrgNameInAuthAPI":                          "allow_organization_name_in_authentication_api",
@@ -143,8 +142,6 @@ func makeTenantSettings(tenant *management.Tenant) []View {
 			addSetting(settingName, friendlyFlagName, tenant.Flags.DisableFieldsMapFix)
 		case "MFAShowFactorListOnEnrollment":
 			addSetting(settingName, friendlyFlagName, tenant.Flags.MFAShowFactorListOnEnrollment)
-		case "RequirePushedAuthorizationRequests":
-			addSetting(settingName, friendlyFlagName, tenant.Flags.RequirePushedAuthorizationRequests)
 		case "RemoveAlgFromJWKS":
 			addSetting(settingName, friendlyFlagName, tenant.Flags.RemoveAlgFromJWKS)
 		case "CustomizeMFAInPostLoginAction":
