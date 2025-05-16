@@ -132,7 +132,9 @@ auth0 tenant-settings update unset customize_mfa_in_postlogin_action flags.enabl
 
 			setSelectTenantSettings(tenant, selectedFlags, false)
 			setSelectedTenantFlags(tenantFlags, selectedFlags, false)
-			tenant.Flags = tenantFlags
+			if *tenantFlags != (management.TenantFlags{}) {
+				tenant.Flags = tenantFlags
+			}
 
 			if err := cli.api.Tenant.Update(cmd.Context(), tenant); err != nil {
 				return err
@@ -235,8 +237,14 @@ func setSelectTenantSettings(tenant *management.Tenant, selectedFlags []string, 
 		case "pushed_authorization_requests_supported", "PushedAuthorizationRequestsSupported":
 			tenant.PushedAuthorizationRequestsSupported = val
 		case "oidc_logout.rp_logout_end_session_endpoint_discovery", "OIDCLogout.RPLogoutEndSessionEndpointDiscovery":
+			if tenant.OIDCLogout == nil {
+				tenant.OIDCLogout = &management.TenantOIDCLogout{}
+			}
 			tenant.OIDCLogout.OIDCResourceProviderLogoutEndSessionEndpointDiscovery = val
 		case "mtls.enable_endpoint_aliases", "MTLS.EnableEndpointAliases":
+			if tenant.MTLS == nil {
+				tenant.MTLS = &management.TenantMTLSConfiguration{}
+			}
 			tenant.MTLS.EnableEndpointAliases = val
 		}
 	}
