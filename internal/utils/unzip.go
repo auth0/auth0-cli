@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 )
 
+// Unzip extracts files from a zip archive to a specified destination directory.
 func Unzip(src, dest string) error {
 	r, err := zip.OpenReader(src)
 	if err != nil {

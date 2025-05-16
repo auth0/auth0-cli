@@ -81,18 +81,22 @@ func (q Quickstart) Download(ctx context.Context, downloadPath string, client *m
 		return err
 	}
 
-	if err := tmpFile.Close(); err != nil {
+	if err = tmpFile.Close(); err != nil {
 		return err
 	}
 	defer func() {
 		_ = os.Remove(tmpFile.Name())
 	}()
 
-	if err := os.RemoveAll(downloadPath); err != nil {
+	if err = os.RemoveAll(downloadPath); err != nil {
 		return err
 	}
 
-	return utils.Unzip(tmpFile.Name(), downloadPath)
+	if err = utils.Unzip(tmpFile.Name(), downloadPath); err != nil {
+		return fmt.Errorf("failed to unzip file: %w", err)
+	}
+
+	return nil
 }
 
 func GetQuickstarts(ctx context.Context) (Quickstarts, error) {
