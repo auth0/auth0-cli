@@ -10,4 +10,5 @@ import (
 
 type TenantAPI interface {
 	Read(ctx context.Context, opts ...management.RequestOption) (t *management.Tenant, err error)
+	Update(ctx context.Context, t *management.Tenant, opts ...management.RequestOption) (err error)
 }
