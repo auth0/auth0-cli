@@ -48,4 +48,8 @@ type PromptAPI interface {
 	//
 	// See: https://auth0.com/docs/api/management/v2/prompts/patch-rendering
 	UpdateRendering(ctx context.Context, prompt management.PromptType, screen management.ScreenName, c *management.PromptRendering, opts ...management.RequestOption) error
+
+	// ListRendering retrieves the settings for the ACUL.
+	//
+	ListRendering(ctx context.Context, opts ...management.RequestOption) (c *management.PromptRenderingList, err error)
 }
