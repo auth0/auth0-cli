@@ -388,13 +388,15 @@ func fetchPromptScreenInfo(cmd *cobra.Command, cli *cli, input *promptScreen, ac
 		}
 	}
 
-	if (input.screenName == "") && len(ScreenPromptMap[input.promptName]) > 1 {
-		cli.renderer.Infof("Please select a screen to %s its rendering mode:", action)
-		if err := screenName.Select(cmd, &input.screenName, ScreenPromptMap[input.promptName], nil); err != nil {
-			return handleInputError(err)
+	if input.screenName == "" {
+		if len(ScreenPromptMap[input.promptName]) > 1 {
+			cli.renderer.Infof("Please select a screen to %s its rendering mode:", action)
+			if err := screenName.Select(cmd, &input.screenName, ScreenPromptMap[input.promptName], nil); err != nil {
+				return handleInputError(err)
+			}
+		} else {
+			input.screenName = ScreenPromptMap[input.promptName][0]
 		}
-	} else {
-		input.screenName = ScreenPromptMap[input.promptName][0]
 	}
 
 	return nil
