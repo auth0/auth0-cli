@@ -119,19 +119,31 @@ var ScreenPromptMap = map[string][]string{
 	"captcha":                     {"interstitial-captcha"},
 	"login":                       {"login"},
 	"signup":                      {"signup"},
-	"reset-password":              {"reset-password-request", "reset-password-email", "reset-password", "reset-password-success", "reset-password-error", "reset-password-mfa-email-challenge", "reset-password-mfa-otp-challenge", "reset-password-mfa-push-challenge-push", "reset-password-mfa-sms-challenge", "reset-password-mfa-phone-challenge", "reset-password-mfa-voice-challenge", "reset-password-mfa-recovery-code-challenge"},
-	"mfa":                         {"mfa-detect-browser-capabilities", "mfa-enroll-result", "mfa-begin-enroll-options", "mfa-login-options"},
-	"mfa-email":                   {"mfa-email-challenge", "mfa-email-list"},
-	"mfa-sms":                     {"mfa-country-codes", "mfa-sms-challenge", "mfa-sms-enrollment", "mfa-sms-list"},
-	"mfa-push":                    {"mfa-push-challenge-push", "mfa-push-enrollment-qr", "mfa-push-list", "mfa-push-welcome"},
-	"invitation":                  {"accept-invitation"},
-	"organizations":               {"organization-selection", "organization-picker"},
-	"mfa-otp":                     {"mfa-otp-challenge", "mfa-otp-enrollment-code", "mfa-otp-enrollment-qr"},
-	"device-flow":                 {"device-code-activation", "device-code-activation-allowed", "device-code-activation-denied", "device-code-confirmation"},
-	"mfa-phone":                   {"mfa-phone-challenge", "mfa-phone-enrollment"},
-	"mfa-voice":                   {"mfa-voice-challenge", "mfa-voice-enrollment"},
-	"mfa-recovery-code":           {"mfa-recovery-code-challenge", "mfa-recovery-code-enrollment"},
-	"common":                      {"redeem-ticket"},
+	"reset-password": {"reset-password-request", "reset-password-email", "reset-password", "reset-password-success", "reset-password-error",
+		"reset-password-mfa-email-challenge", "reset-password-mfa-otp-challenge", "reset-password-mfa-push-challenge-push",
+		"reset-password-mfa-sms-challenge", "reset-password-mfa-phone-challenge", "reset-password-mfa-voice-challenge",
+		"reset-password-mfa-recovery-code-challenge", "reset-password-mfa-webauthn-platform-challenge", "reset-password-mfa-webauthn-roaming-challenge"},
+	"mfa":                      {"mfa-detect-browser-capabilities", "mfa-enroll-result", "mfa-begin-enroll-options", "mfa-login-options"},
+	"mfa-email":                {"mfa-email-challenge", "mfa-email-list"},
+	"mfa-sms":                  {"mfa-country-codes", "mfa-sms-challenge", "mfa-sms-enrollment", "mfa-sms-list"},
+	"mfa-push":                 {"mfa-push-challenge-push", "mfa-push-enrollment-qr", "mfa-push-list", "mfa-push-welcome"},
+	"invitation":               {"accept-invitation"},
+	"organizations":            {"organization-selection", "organization-picker"},
+	"mfa-otp":                  {"mfa-otp-challenge", "mfa-otp-enrollment-code", "mfa-otp-enrollment-qr"},
+	"device-flow":              {"device-code-activation", "device-code-activation-allowed", "device-code-activation-denied", "device-code-confirmation"},
+	"mfa-phone":                {"mfa-phone-challenge", "mfa-phone-enrollment"},
+	"mfa-voice":                {"mfa-voice-challenge", "mfa-voice-enrollment"},
+	"mfa-recovery-code":        {"mfa-recovery-code-challenge", "mfa-recovery-code-enrollment", "mfa-recovery-code-challenge-new-code"},
+	"common":                   {"redeem-ticket"},
+	"consent":                  {"consent"},
+	"customized-consent":       {"customized-consent"},
+	"email-otp-challenge":      {"email-otp-challenge"},
+	"email-verification":       {"email-verification-result"},
+	"login-email-verification": {"login-email-verification"},
+	"logout":                   {"logout", "logout-aborted", "logout-complete"},
+	"mfa-webauthn": {"mfa-webauthn-change-key-nickname", "mfa-webauthn-enrollment-success", "mfa-webauthn-error", "mfa-webauthn-not-available-error",
+		"mfa-webauthn-platform-challenge", "mfa-webauthn-platform-enrollment", "mfa-webauthn-roaming-challenge", "mfa-webauthn-roaming-enrollment"},
+	"brute-force-protection": {"brute-force-protection-unblock", "brute-force-protection-unblock-failure", "brute-force-protection-unblock-success"},
 }
 
 type partialsData map[string]*management.PromptScreenPartials
@@ -377,13 +389,15 @@ func fetchPromptScreenInfo(cmd *cobra.Command, cli *cli, input *promptScreen, ac
 		}
 	}
 
-	if (input.screenName == "") && len(ScreenPromptMap[input.promptName]) > 1 {
-		cli.renderer.Infof("Please select a screen to %s its rendering mode:", action)
-		if err := screenName.Select(cmd, &input.screenName, ScreenPromptMap[input.promptName], nil); err != nil {
-			return handleInputError(err)
+	if input.screenName == "" {
+		if len(ScreenPromptMap[input.promptName]) > 1 {
+			cli.renderer.Infof("Please select a screen to %s its rendering mode:", action)
+			if err := screenName.Select(cmd, &input.screenName, ScreenPromptMap[input.promptName], nil); err != nil {
+				return handleInputError(err)
+			}
+		} else {
+			input.screenName = ScreenPromptMap[input.promptName][0]
 		}
-	} else {
-		input.screenName = ScreenPromptMap[input.promptName][0]
 	}
 
 	return nil

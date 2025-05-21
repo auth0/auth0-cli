@@ -1486,13 +1486,26 @@ func TestPromptProviderResourceFetcher_FetchData(t *testing.T) {
 }
 
 func TestPromptScreenRendererResourceFetcher_FetchData(t *testing.T) {
+	var settingList = &management.PromptRenderingList{
+		PromptRenderings: []*management.PromptRendering{
+			{
+				Prompt: (*management.PromptType)(auth0.String("login")),
+				Screen: (*management.ScreenName)(auth0.String("login")),
+			},
+			{
+				Prompt: (*management.PromptType)(auth0.String("login-password")),
+				Screen: (*management.ScreenName)(auth0.String("login-password")),
+			},
+		},
+	}
+
 	t.Run("it successfully renders the prompts & screen settings import data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
 		promptAPI := mock.NewMockPromptAPI(ctrl)
-		promptAPI.EXPECT().ReadRendering(gomock.Any(), management.PromptType("login-id"), management.ScreenName("login-id")).
-			Return(&management.PromptRendering{}, nil)
+		promptAPI.EXPECT().ListRendering(gomock.Any()).
+			Return(settingList, nil)
 
 		fetcher := promptScreenRendererResourceFetcher{
 			api: &auth0.API{
@@ -1501,13 +1514,13 @@ func TestPromptScreenRendererResourceFetcher_FetchData(t *testing.T) {
 		}
 
 		expectedData := importDataList{}
-		for promptType, screenNames := range ScreenPromptMap {
-			for _, screenName := range screenNames {
-				expectedData = append(expectedData, importDataItem{
-					ResourceName: "auth0_prompt_screen_renderer." + sanitizeResourceName(promptType+"_"+screenName),
-					ImportID:     promptType + ":" + screenName,
-				})
-			}
+		for _, settings := range settingList.PromptRenderings {
+			promptType := string(*settings.Prompt)
+			screenName := string(*settings.Screen)
+			expectedData = append(expectedData, importDataItem{
+				ResourceName: "auth0_prompt_screen_renderer." + sanitizeResourceName(promptType+"_"+screenName),
+				ImportID:     promptType + ":" + screenName,
+			})
 		}
 
 		data, err := fetcher.FetchData(context.Background())
@@ -1519,8 +1532,8 @@ func TestPromptScreenRendererResourceFetcher_FetchData(t *testing.T) {
 		defer ctrl.Finish()
 
 		promptAPI := mock.NewMockPromptAPI(ctrl)
-		promptAPI.EXPECT().ReadRendering(gomock.Any(), management.PromptType("login-id"), management.ScreenName("login-id")).
-			Return(&management.PromptRendering{}, fmt.Errorf("403 Forbidden: This tenant does not have Advanced Customizations enabled"))
+		promptAPI.EXPECT().ListRendering(gomock.Any()).
+			Return(nil, fmt.Errorf("403 Forbidden: This tenant does not have Advanced Customizations enabled"))
 
 		fetcher := promptScreenRendererResourceFetcher{
 			api: &auth0.API{
@@ -1537,8 +1550,8 @@ func TestPromptScreenRendererResourceFetcher_FetchData(t *testing.T) {
 		defer ctrl.Finish()
 
 		promptAPI := mock.NewMockPromptAPI(ctrl)
-		promptAPI.EXPECT().ReadRendering(gomock.Any(), management.PromptType("login-id"), management.ScreenName("login-id")).
-			Return(&management.PromptRendering{}, fmt.Errorf("failed to read rendering settings"))
+		promptAPI.EXPECT().ListRendering(gomock.Any()).
+			Return(nil, fmt.Errorf("failed to read rendering settings"))
 
 		fetcher := promptScreenRendererResourceFetcher{
 			api: &auth0.API{

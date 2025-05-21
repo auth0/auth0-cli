@@ -509,20 +509,18 @@ func (f *promptCustomTextResourceFetcherResourceFetcher) FetchData(ctx context.C
 }
 
 func (f *promptScreenRendererResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
-	var data importDataList
-
-	_, err := f.api.Prompt.ReadRendering(ctx, "login-id", "login-id")
+	screenSettingList, err := f.api.Prompt.ListRendering(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	for promptType, screenNames := range ScreenPromptMap {
-		for _, screenName := range screenNames {
-			data = append(data, importDataItem{
-				ResourceName: "auth0_prompt_screen_renderer." + sanitizeResourceName(promptType+"_"+screenName),
-				ImportID:     promptType + ":" + screenName,
-			})
-		}
+	var data importDataList
+
+	for _, screenSetting := range screenSettingList.PromptRenderings {
+		data = append(data, importDataItem{
+			ResourceName: "auth0_prompt_screen_renderer." + sanitizeResourceName(string(*screenSetting.Prompt)+"_"+string(*screenSetting.Screen)),
+			ImportID:     string(*screenSetting.Prompt) + ":" + string(*screenSetting.Screen),
+		})
 	}
 
 	return data, nil
