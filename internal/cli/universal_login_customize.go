@@ -25,6 +25,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/display"
+	"github.com/auth0/auth0-cli/internal/utils"
 )
 
 const (
@@ -383,7 +384,7 @@ func advanceCustomize(cmd *cobra.Command, cli *cli, input customizationInputs) e
 func fetchPromptScreenInfo(cmd *cobra.Command, cli *cli, input *promptScreen, action string) error {
 	if input.promptName == "" {
 		cli.renderer.Infof("Please select a prompt to %s its rendering mode:", action)
-		if err := promptName.Select(cmd, &input.promptName, fetchKeys(ScreenPromptMap), nil); err != nil {
+		if err := promptName.Select(cmd, &input.promptName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
 			return handleInputError(err)
 		}
 	}
@@ -473,15 +474,6 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input customizationInputs
 
 func (c *cli) customizeEditorHint() {
 	c.renderer.Infof("%s Once you close the editor, the shown settings will be saved. To cancel, press CTRL+C.", ansi.Faint("Hint:"))
-}
-
-// Utility function to get all keys from a map.
-func fetchKeys[K comparable, V any](m map[K]V) []K {
-	keys := make([]K, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return keys
 }
 
 func ensureNewUniversalLoginExperienceIsActive(ctx context.Context, api *auth0.API) error {

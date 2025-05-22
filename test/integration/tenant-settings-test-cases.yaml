@@ -1,0 +1,109 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  001 - show tenant settings:
+    command: auth0 tenant-settings show
+    exit-code: 0
+    stdout:
+      contains:
+        - AllowLegacyROGrantTypes               flags.allow_legacy_ro_grant_types              ✓
+        - DashboardInsightsView                 flags.dashboard_insights_view                  ✗
+        - DisableFieldsMapFix                   flags.disable_fields_map_fix                   ✗
+        - EnableAPIsSection                     flags.enable_apis_section                      ✗
+        - EnablePipeline2                       flags.enable_pipeline2                         ✗
+        - DisableClickjackProtectionHeaders     flags.disable_clickjack_protection_headers     ✗
+        - NoDisclosureEnterpriseConnections     flags.no_disclose_enterprise_connections       ✗
+        - MFAShowFactorListOnEnrollment         flags.mfa_show_factor_list_on_enrollment       ✗
+        - RemoveAlgFromJWKS                     flags.remove_alg_from_jwks                     ✗
+        - EnableDynamicClientRegistration       flags.enable_dynamic_client_registration       ✗
+        - AllowLegacyDelegationGrantTypes       flags.allow_legacy_delegation_grant_types      ✓
+        - AllowLegacyTokenInfoEndpoint          flags.allow_legacy_tokeninfo_endpoint          ✗
+        - EnableIDTokenAPI2                     flags.enable_idtoken_api2                      ✗
+        - DisableManagementAPISMSObfuscation    flags.disable_management_api_sms_obfuscation   ✗
+        - AllowOrgNameInAuthAPI                 allow_organization_name_in_authentication_api  ✗
+        - PushedAuthorizationRequestsSupported  pushed_authorization_requests_supported        ✗
+        - EnableLegacyLogsSearchV2              flags.enable_legacy_logs_search_v2             ✗
+        - EnableLegacyProfile                   flags.enable_legacy_profile                    ✗
+        - EnableCustomDomainInEmails            flags.enable_custom_domain_in_emails           ✗
+        - EnableSSO                             flags.enable_sso                               ✓
+        - AllowChangingEnableSSO                flags.allow_changing_enable_sso                ✗
+        - UniversalLogin                        flags.universal_login                          ✓
+        - EnablePublicSignupUserExistsError     flags.enable_public_signup_user_exists_error   ✓
+        - EnableADFSWAADEmailVerification       flags.enable_adfs_waad_email_verification      ✗
+        - RevokeRefreshTokenGrant               flags.revoke_refresh_token_grant               ✗
+        - DashboardLogStreams                   flags.dashboard_log_streams_next               ✓
+        - UseScopeDescriptionsForConsent        flags.use_scope_descriptions_for_consent       ✗
+        - CustomizeMFAInPostLoginAction         customize_mfa_in_postlogin_action              ✗
+        - EnableClientConnections               flags.enable_client_connections                ✗
+
+  002 - update set tenant settings :
+    command: auth0 tenant-settings update set flags.enable_client_connections
+    exit-code: 0
+    stdout:
+      contains:
+        - EnableClientConnections               flags.enable_client_connections                ✓
+        - EnableDynamicClientRegistration       flags.enable_dynamic_client_registration       ✗
+        - NoDisclosureEnterpriseConnections     flags.no_disclose_enterprise_connections       ✗
+        - DashboardLogStreams                   flags.dashboard_log_streams_next               ✓
+        - EnableLegacyLogsSearchV2              flags.enable_legacy_logs_search_v2             ✗
+        - AllowLegacyROGrantTypes               flags.allow_legacy_ro_grant_types              ✓
+        - AllowLegacyTokenInfoEndpoint          flags.allow_legacy_tokeninfo_endpoint          ✗
+        - DashboardInsightsView                 flags.dashboard_insights_view                  ✗
+        - DisableManagementAPISMSObfuscation    flags.disable_management_api_sms_obfuscation   ✗
+        - RevokeRefreshTokenGrant               flags.revoke_refresh_token_grant               ✗
+        - AllowOrgNameInAuthAPI                 allow_organization_name_in_authentication_api  ✗
+        - EnableCustomDomainInEmails            flags.enable_custom_domain_in_emails           ✗
+        - UniversalLogin                        flags.universal_login                          ✓
+        - EnableIDTokenAPI2                     flags.enable_idtoken_api2                      ✗
+        - AllowLegacyDelegationGrantTypes       flags.allow_legacy_delegation_grant_types      ✓
+        - EnableSSO                             flags.enable_sso                               ✓
+        - AllowChangingEnableSSO                flags.allow_changing_enable_sso                ✗
+        - EnableLegacyProfile                   flags.enable_legacy_profile                    ✗
+        - MFAShowFactorListOnEnrollment         flags.mfa_show_factor_list_on_enrollment       ✗
+        - RemoveAlgFromJWKS                     flags.remove_alg_from_jwks                     ✗
+        - EnablePipeline2                       flags.enable_pipeline2                         ✗
+        - EnablePublicSignupUserExistsError     flags.enable_public_signup_user_exists_error   ✓
+        - EnableADFSWAADEmailVerification       flags.enable_adfs_waad_email_verification      ✗
+        - CustomizeMFAInPostLoginAction         customize_mfa_in_postlogin_action              ✗
+        - PushedAuthorizationRequestsSupported  pushed_authorization_requests_supported        ✗
+        - EnableAPIsSection                     flags.enable_apis_section                      ✗
+        - DisableClickjackProtectionHeaders     flags.disable_clickjack_protection_headers     ✗
+        - UseScopeDescriptionsForConsent        flags.use_scope_descriptions_for_consent       ✗
+        - DisableFieldsMapFix                   flags.disable_fields_map_fix                   ✗
+
+  003 - update unset tenant settings :
+    command: auth0 tenant-settings update unset flags.enable_client_connections
+    exit-code: 0
+    stdout:
+      contains:
+        - EnableClientConnections               flags.enable_client_connections
+        - EnableDynamicClientRegistration       flags.enable_dynamic_client_registration       ✗
+        - NoDisclosureEnterpriseConnections     flags.no_disclose_enterprise_connections       ✗
+        - DashboardLogStreams                   flags.dashboard_log_streams_next               ✓
+        - EnableLegacyLogsSearchV2              flags.enable_legacy_logs_search_v2             ✗
+        - AllowLegacyROGrantTypes               flags.allow_legacy_ro_grant_types              ✓
+        - AllowLegacyTokenInfoEndpoint          flags.allow_legacy_tokeninfo_endpoint          ✗
+        - DashboardInsightsView                 flags.dashboard_insights_view                  ✗
+        - DisableManagementAPISMSObfuscation    flags.disable_management_api_sms_obfuscation   ✗
+        - RevokeRefreshTokenGrant               flags.revoke_refresh_token_grant               ✗
+        - AllowOrgNameInAuthAPI                 allow_organization_name_in_authentication_api  ✗
+        - EnableCustomDomainInEmails            flags.enable_custom_domain_in_emails           ✗
+        - UniversalLogin                        flags.universal_login                          ✓
+        - EnableIDTokenAPI2                     flags.enable_idtoken_api2                      ✗
+        - AllowLegacyDelegationGrantTypes       flags.allow_legacy_delegation_grant_types      ✓
+        - EnableSSO                             flags.enable_sso                               ✓
+        - AllowChangingEnableSSO                flags.allow_changing_enable_sso                ✗
+        - EnableLegacyProfile                   flags.enable_legacy_profile                    ✗
+        - MFAShowFactorListOnEnrollment         flags.mfa_show_factor_list_on_enrollment       ✗
+        - RemoveAlgFromJWKS                     flags.remove_alg_from_jwks                     ✗
+        - EnablePipeline2                       flags.enable_pipeline2                         ✗
+        - EnablePublicSignupUserExistsError     flags.enable_public_signup_user_exists_error   ✓
+        - EnableADFSWAADEmailVerification       flags.enable_adfs_waad_email_verification      ✗
+        - CustomizeMFAInPostLoginAction         customize_mfa_in_postlogin_action              ✗
+        - PushedAuthorizationRequestsSupported  pushed_authorization_requests_supported        ✗
+        - EnableAPIsSection                     flags.enable_apis_section                      ✗
+        - DisableClickjackProtectionHeaders     flags.disable_clickjack_protection_headers     ✗
+        - UseScopeDescriptionsForConsent        flags.use_scope_descriptions_for_consent       ✗
+        - DisableFieldsMapFix                   flags.disable_fields_map_fix                   ✗
