@@ -135,15 +135,13 @@ var ScreenPromptMap = map[string][]string{
 	"mfa-voice":         {"mfa-voice-challenge", "mfa-voice-enrollment"},
 	"mfa-recovery-code": {"mfa-recovery-code-challenge", "mfa-recovery-code-enrollment", "mfa-recovery-code-challenge-new-code"},
 	"common":            {"redeem-ticket"},
-	//"consent":                  {"consent"},
-	//"customized-consent":       {"customized-consent"},
-	//"email-otp-challenge":      {"email-otp-challenge"},
+	//"email-otp-challenge":      {"email-otp-challenge"},.
 	"email-verification":       {"email-verification-result"},
 	"login-email-verification": {"login-email-verification"},
 	"logout":                   {"logout", "logout-aborted", "logout-complete"},
 	"mfa-webauthn": {"mfa-webauthn-change-key-nickname", "mfa-webauthn-enrollment-success", "mfa-webauthn-error",
 		"mfa-webauthn-platform-challenge", "mfa-webauthn-platform-enrollment", "mfa-webauthn-roaming-challenge", "mfa-webauthn-roaming-enrollment"},
-	//"brute-force-protection": {"brute-force-protection-unblock", "brute-force-protection-unblock-failure", "brute-force-protection-unblock-success"},
+	//"brute-force-protection": {"brute-force-protection-unblock", "brute-force-protection-unblock-failure", "brute-force-protection-unblock-success"},.
 }
 
 type partialsData map[string]*management.PromptScreenPartials
