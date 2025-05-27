@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.14.1](https://github.com/auth0/auth0-cli/tree/v1.14.1) (May 27, 2025))
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.14.0...v1.14.1)
+
+### Fixed:
+- Remove unreleased screens for ACUL [#1231] 
+
+
 # [v.1.14.0](https://github.com/auth0/auth0-cli/tree/v1.14.0) (May 22, 2025))
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.13.0...v1.14.0)
@@ -498,8 +506,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.14.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.14.1...HEAD
 
+[#1231]:https://github.com/auth0/auth0-cli/issues/1231
 [#1228]:https://github.com/auth0/auth0-cli/issues/1228
 [#1225]:https://github.com/auth0/auth0-cli/issues/1225
 [#1218]:https://github.com/auth0/auth0-cli/issues/1218
