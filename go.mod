@@ -6,7 +6,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/PuerkitoBio/rehttp v1.4.0
 	github.com/atotto/clipboard v0.1.4
-	github.com/auth0/go-auth0 v1.21.1-0.20250529025026-5323fb5cf4a3
+	github.com/auth0/go-auth0 v1.22.2-0.20250604132229-f10c125ef75c
 	github.com/briandowns/spinner v1.23.2
 	github.com/charmbracelet/glamour v0.10.0
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
