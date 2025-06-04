@@ -71,7 +71,7 @@ var (
 		Name:         "Domain Metadata",
 		LongForm:     "metadata",
 		ShortForm:    "m",
-		Help:         "The Custom Domain Metadata,  formatted as JSON.",
+		Help:         "The Custom Domain Metadata, formatted as JSON.",
 		AlwaysPrompt: true,
 	}
 
@@ -212,7 +212,7 @@ func createCustomDomainCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := customDomainMetadata.AskU(cmd, &inputs.DomainMetadata, nil); err != nil {
+			if err := customDomainMetadata.Ask(cmd, &inputs.DomainMetadata, nil); err != nil {
 				return err
 			}
 
@@ -285,7 +285,7 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
   auth0 domains update <domain-id> --policy compatible
   auth0 domains update <domain-id> --policy compatible --ip-header "cf-connecting-ip"
   auth0 domains update <domain-id> -metadata '{"key1":"value1","key2":null}'
-  auth0 domains update <domain-id> -p compatible -i "cf-connecting-ip" --json'
+  auth0 domains update <domain-id> -p compatible -i "cf-connecting-ip" --json
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.CustomDomain

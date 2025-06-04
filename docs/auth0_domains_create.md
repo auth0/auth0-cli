@@ -35,10 +35,10 @@ auth0 domains create [flags]
   -d, --domain string         Domain name.
   -i, --ip-header string      The HTTP header to fetch the client's IP address.
       --json                  Output in json format.
-  -m, --metadata string       The Custom Domain Metadata,  formatted as JSON.
+  -m, --metadata string       The Custom Domain Metadata, formatted as JSON.
   -p, --policy string         The TLS version policy. Can be either 'compatible' or 'recommended'.
   -t, --type string           Custom domain provisioning type. Must be 'auth0' for Auth0-managed certs or 'self' for self-managed certs.
-  -v, --verification string   Custom domain verification method. Must be 'txt'.
+  -v, --verification string   *DEPRECATED* Custom domain verification method. Must be 'txt'.
 ```
 
 
