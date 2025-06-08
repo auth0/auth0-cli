@@ -4,7 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
+
+	"gopkg.in/ini.v1"
 
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -48,6 +52,14 @@ var (
 		IsRequired:   false,
 		AlwaysPrompt: false,
 	}
+
+	loginTenantProfileLabel = Flag{
+		Name:         "Tenant Profile Label",
+		LongForm:     "profile",
+		Help:         "Tenant Profile Label name to load Auth0 credentials from. If not provided, the default profile will be used.",
+		IsRequired:   false,
+		AlwaysPrompt: false,
+	}
 )
 
 type LoginInputs struct {
@@ -55,14 +67,49 @@ type LoginInputs struct {
 	ClientID         string
 	ClientSecret     string
 	AdditionalScopes []string
+	TenantProfile    string
 }
 
 func (i *LoginInputs) isLoggingInWithAdditionalScopes() bool {
 	return len(i.AdditionalScopes) > 0
 }
 
+func loadAuth0Credentials(profile string, inputs *LoginInputs) error {
+	// 1. Determine credentials file location
+	credPath := os.Getenv("AUTH0_CREDENTIALS_FILE")
+	if credPath == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return err
+		}
+
+		credPath = filepath.Join(home, ".auth0", "credentials")
+	}
+
+	// 2. Parse the ini file
+	cfg, err := ini.Load(credPath)
+	if err != nil {
+		return err
+	}
+
+	section := profile
+
+	sec := cfg.Section(section)
+	if sec == nil {
+		return fmt.Errorf("profile %q not found", section)
+	}
+
+	inputs.Domain = sec.Key("domain").String()
+	inputs.ClientID = sec.Key("client_id").String()
+	inputs.ClientSecret = sec.Key("client_secret").String()
+
+	return nil
+}
+
 func loginCmd(cli *cli) *cobra.Command {
-	var inputs LoginInputs
+	var (
+		inputs LoginInputs
+	)
 
 	cmd := &cobra.Command{
 		Use:   "login",
@@ -76,6 +123,13 @@ func loginCmd(cli *cli) *cobra.Command {
   auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>
   auth0 login --scopes "read:client_grants,create:client_grants"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.TenantProfile != "" {
+				err := loadAuth0Credentials(inputs.TenantProfile, &inputs)
+				if err != nil {
+					cli.renderer.Warnf("Failed to load auth0 credentials from %q: %v", inputs.TenantProfile, err)
+				}
+			}
+
 			var selectedLoginType string
 			const loginAsUser, loginAsMachine = "As a user", "As a machine"
 			shouldLoginAsUser, shouldLoginAsMachine := false, false
@@ -189,6 +243,7 @@ func loginCmd(cli *cli) *cobra.Command {
 	loginTenantDomain.RegisterString(cmd, &inputs.Domain, "")
 	loginClientID.RegisterString(cmd, &inputs.ClientID, "")
 	loginClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
+	loginTenantProfileLabel.RegisterString(cmd, &inputs.TenantProfile, "")
 	loginAdditionalScopes.RegisterStringSlice(cmd, &inputs.AdditionalScopes, []string{})
 	cmd.MarkFlagsMutuallyExclusive("client-id", "scopes")
 	cmd.MarkFlagsMutuallyExclusive("client-secret", "scopes")
@@ -317,16 +372,11 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string, do
 
 // RunLoginAsMachine facilitates the authentication process using client credentials (client ID, client secret).
 func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *cobra.Command) error {
-	if err := loginTenantDomain.Ask(cmd, &inputs.Domain, nil); err != nil {
-		return err
-	}
-
-	if err := loginClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
-		return err
-	}
-
-	if err := loginClientSecret.AskPassword(cmd, &inputs.ClientSecret); err != nil {
-		return err
+	if inputs.TenantProfile == "" {
+		err := loadCredentials(cmd, inputs)
+		if err != nil {
+			return err
+		}
 	}
 
 	token, err := auth.GetAccessTokenFromClientCreds(
@@ -368,6 +418,22 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 	cli.renderer.Infof("Tenant: %s", inputs.Domain)
 
 	cli.tracker.TrackFirstLogin(cli.Config.InstallID)
+
+	return nil
+}
+
+func loadCredentials(cmd *cobra.Command, inputs LoginInputs) error {
+	if err := loginTenantDomain.Ask(cmd, &inputs.Domain, nil); err != nil {
+		return err
+	}
+
+	if err := loginClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
+		return err
+	}
+
+	if err := loginClientSecret.AskPassword(cmd, &inputs.ClientSecret); err != nil {
+		return err
+	}
 
 	return nil
 }
