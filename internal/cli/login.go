@@ -75,7 +75,6 @@ func (i *LoginInputs) isLoggingInWithAdditionalScopes() bool {
 }
 
 func loadAuth0Credentials(profile string, inputs *LoginInputs) error {
-	// 1. Determine credentials file location
 	credPath := os.Getenv("AUTH0_CREDENTIALS_FILE")
 	if credPath == "" {
 		home, err := os.UserHomeDir()
@@ -86,7 +85,6 @@ func loadAuth0Credentials(profile string, inputs *LoginInputs) error {
 		credPath = filepath.Join(home, ".auth0", "credentials")
 	}
 
-	// 2. Parse the ini file
 	cfg, err := ini.Load(credPath)
 	if err != nil {
 		return err
