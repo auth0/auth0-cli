@@ -11,24 +11,6 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth"
 )
 
-func TestTenant_HasAllRequiredScopes(t *testing.T) {
-	t.Run("tenant has all required scopes", func(t *testing.T) {
-		tenant := &Tenant{
-			Scopes: auth.RequiredScopes,
-		}
-
-		assert.True(t, tenant.HasAllRequiredScopes())
-	})
-
-	t.Run("tenant does not have all required scopes", func(t *testing.T) {
-		tenant := &Tenant{
-			Scopes: []string{"read:clients"},
-		}
-
-		assert.False(t, tenant.HasAllRequiredScopes())
-	})
-}
-
 func TestTenant_GetExtraRequestedScopes(t *testing.T) {
 	t.Run("tenant has no extra requested scopes", func(t *testing.T) {
 		tenant := &Tenant{
