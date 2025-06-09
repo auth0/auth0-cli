@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/exp/slices"
-
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/keyring"
 )
@@ -45,18 +43,6 @@ type (
 		ClientID     string    `json:"client_id"`
 	}
 )
-
-// HasAllRequiredScopes returns true if the tenant
-// has all the required scopes, false otherwise.
-func (t *Tenant) HasAllRequiredScopes() bool {
-	for _, requiredScope := range auth.RequiredScopes {
-		if !slices.Contains(t.Scopes, requiredScope) {
-			return false
-		}
-	}
-
-	return true
-}
 
 // GetExtraRequestedScopes retrieves any extra scopes requested
 // for the tenant when logging in through the device code flow.
