@@ -22,6 +22,7 @@ auth0 login [flags]
   auth0 login
   auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>
   auth0 login --scopes "read:client_grants,create:client_grants"
+  auth0 login --profile <tenant-profile>
 ```
 
 

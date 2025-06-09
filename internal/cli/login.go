@@ -90,11 +90,9 @@ func loadAuth0Credentials(profile string, inputs *LoginInputs) error {
 		return err
 	}
 
-	section := profile
-
-	sec := cfg.Section(section)
+	sec := cfg.Section(profile)
 	if sec == nil {
-		return fmt.Errorf("profile %q not found", section)
+		return fmt.Errorf("profile %q not found", profile)
 	}
 
 	inputs.Domain = sec.Key("domain").String()
@@ -119,12 +117,13 @@ func loginCmd(cli *cli) *cobra.Command {
 			"this is the recommended method for Private Cloud users.\n\n",
 		Example: `  auth0 login
   auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>
-  auth0 login --scopes "read:client_grants,create:client_grants"`,
+  auth0 login --scopes "read:client_grants,create:client_grants"
+  auth0 login --profile <tenant-profile>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.TenantProfile != "" {
 				err := loadAuth0Credentials(inputs.TenantProfile, &inputs)
 				if err != nil {
-					cli.renderer.Warnf("Failed to load auth0 credentials from %q: %v", inputs.TenantProfile, err)
+					return fmt.Errorf("failed to load auth0 credentials from %q: %v", inputs.TenantProfile, err)
 				}
 			}
 
