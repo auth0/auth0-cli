@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/auth0/auth0-cli/internal/auth"
@@ -24,7 +23,7 @@ type ErrTokenMissingRequiredScopes struct {
 }
 
 func (e ErrTokenMissingRequiredScopes) Error() string {
-	return fmt.Sprintf("token is missing required scopes: %s", strings.Join(e.MissingScopes, ", "))
+	return "token is missing required scopes"
 }
 
 type (
