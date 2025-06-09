@@ -18,22 +18,22 @@ tests:
       exactly: "[]"
 
   003 - create domain with minimal flags:
-    command: auth0 domains create --domain "auth0-cli-integration-test.com" --metadata '{"key1":"value1","key2":"value2"}' --no-input
+    command: auth0 domains create --domain "auth0-cli-integration-tests.com" --metadata '{"key1":"value1","key2":"value2"}' --no-input
     exit-code: 0
     stdout:
       contains:
         - "ID                         cd_"
-        - "DOMAIN                     auth0-cli-integration-test.com"
+        - "DOMAIN                     auth0-cli-integration-tests.com"
         - "STATUS                     pending_verification"
         - "PROVISIONING TYPE          auth0_managed_certs"
-        - "DOMAIN METADATA            {\"key1\":\"value1\",\"key2\":\"value2\"}"
+        - DOMAIN METADATA             {"key1":"value1","key2":"value2"}
 
   004 - unsuccessfully create domain with same name:
-    command: auth0 domains create --domain "auth0-cli-integration-test.com" --no-input
+    command: auth0 domains create --domain "auth0-cli-integration-tests.com" --no-input
     exit-code: 1
     stderr:
       contains:
-        - "Failed to create custom domain \"auth0-cli-integration-test.com\": 409 Conflict: The specified custom domain already exists"
+        - "Failed to create custom domain \"auth0-cli-integration-tests.com\": 409 Conflict: The specified custom domain already exists"
 
   005 - show domain:
     command: auth0 domains show $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
@@ -41,7 +41,7 @@ tests:
     stdout:
       contains:
         - "ID                         cd_"
-        - "DOMAIN                     auth0-cli-integration-test.com"
+        - "DOMAIN                     auth0-cli-integration-tests.com"
         - "STATUS                     pending_verification"
         - "PROVISIONING TYPE          auth0_managed_certs"
 
@@ -51,7 +51,7 @@ tests:
     stdout:
       contains:
         - "ID                         cd_"
-        - "DOMAIN                     auth0-cli-integration-test.com"
+        - "DOMAIN                     auth0-cli-integration-tests.com"
         - "STATUS                     pending_verification"
         - "PROVISIONING TYPE          auth0_managed_certs"
         - DOMAIN METADATA             {"key1":"value1"}
@@ -62,7 +62,7 @@ tests:
     stdout:
       contains:
         - "ID                         cd_"
-        - "DOMAIN                     auth0-cli-integration-test.com"
+        - "DOMAIN                     auth0-cli-integration-tests.com"
         - "STATUS                     pending_verification"
         - "PROVISIONING TYPE          auth0_managed_certs"
         - "TLS POLICY                 recommended"
@@ -73,7 +73,7 @@ tests:
     stdout:
       contains:
         - "ID                         cd_"
-        - "DOMAIN                     auth0-cli-integration-test.com"
+        - "DOMAIN                     auth0-cli-integration-tests.com"
         - "PROVISIONING TYPE          auth0_managed_certs"
         - "TLS POLICY                 recommended"
 
@@ -82,12 +82,12 @@ tests:
     exit-code: 0
 
   010 - create domain with maximal flags:
-    command: auth0 domains create --domain "auth0-cli-integration-test.com" --verification txt --type self --policy recommended --no-input
+    command: auth0 domains create --domain "auth0-cli-integration-tests.com" --verification txt --type self --policy recommended --no-input
     exit-code: 0
     stdout:
       contains:
         - "ID                         cd_"
-        - "DOMAIN                     auth0-cli-integration-test.com"
+        - "DOMAIN                     auth0-cli-integration-tests.com"
         - "STATUS                     pending_verification"
         - "PROVISIONING TYPE          self_managed_certs"
         - "VERIFICATION METHOD        TXT"
@@ -100,4 +100,4 @@ tests:
       contains:
         - "ID                   DOMAIN                          STATUS"
         - "cd_"
-        - "auth0-cli-integration-test.com"
+        - "auth0-cli-integration-tests.com"
