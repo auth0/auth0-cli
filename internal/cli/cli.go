@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -70,14 +71,14 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 
 	// Check authentication status.
 	err = tenant.CheckAuthenticationStatus()
-	switch err {
-	case config.ErrTokenMissingRequiredScopes:
+	if errors.As(err, &config.ErrTokenMissingRequiredScopes{}) {
 		c.renderer.Warnf("Required scopes have changed. Please log in to re-authorize the CLI.\n")
 		tenant, err = RunLoginAsUser(ctx, c, tenant.GetExtraRequestedScopes(), "")
 		if err != nil {
 			return err
 		}
-	case config.ErrInvalidToken:
+	}
+	if errors.Is(err, config.ErrInvalidToken) {
 		if err := tenant.RegenerateAccessToken(ctx); err != nil {
 			if tenant.IsAuthenticatedWithClientCredentials() {
 				errorMessage := fmt.Errorf(

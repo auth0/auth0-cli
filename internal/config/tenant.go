@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"golang.org/x/exp/slices"
@@ -16,12 +17,17 @@ import (
 const accessTokenExpThreshold = 5 * time.Minute
 
 var (
-	// ErrTokenMissingRequiredScopes is thrown when the token is missing required scopes.
-	ErrTokenMissingRequiredScopes = errors.New("token is missing required scopes")
-
 	// ErrInvalidToken is thrown when the token is invalid.
 	ErrInvalidToken = errors.New("token is invalid")
 )
+
+type ErrTokenMissingRequiredScopes struct {
+	MissingScopes []string
+}
+
+func (e ErrTokenMissingRequiredScopes) Error() string {
+	return fmt.Sprintf("token is missing required scopes: %s", strings.Join(e.MissingScopes, ", "))
+}
 
 type (
 	// Tenants keeps track of all the tenants we
@@ -105,8 +111,8 @@ func (t *Tenant) GetAccessToken() string {
 // CheckAuthenticationStatus checks to see if the tenant in the config
 // has all the required scopes and that the access token is not expired.
 func (t *Tenant) CheckAuthenticationStatus() error {
-	if !t.HasAllRequiredScopes() && t.IsAuthenticatedWithDeviceCodeFlow() {
-		return ErrTokenMissingRequiredScopes
+	if extraScopes := t.GetExtraRequestedScopes(); len(extraScopes) > 0 && t.IsAuthenticatedWithDeviceCodeFlow() {
+		return ErrTokenMissingRequiredScopes{MissingScopes: extraScopes}
 	}
 
 	accessToken := t.GetAccessToken()
