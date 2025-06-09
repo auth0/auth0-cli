@@ -26,7 +26,7 @@ tests:
         - "DOMAIN                     auth0-cli-integration-test.com"
         - "STATUS                     pending_verification"
         - "PROVISIONING TYPE          auth0_managed_certs"
-        - DOMAIN METADATA             {"key1":"value1","key2":"value2"}
+        - "DOMAIN METADATA            {\"key1\":\"value1\",\"key2\":\"value2\"}"
 
   004 - unsuccessfully create domain with same name:
     command: auth0 domains create --domain "auth0-cli-integration-test.com" --no-input
