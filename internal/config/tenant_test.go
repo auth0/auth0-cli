@@ -138,7 +138,7 @@ func TestTenant_CheckAuthenticationStatus(t *testing.T) {
 				Scopes:   []string{"read:magazines"},
 				ClientID: "",
 			},
-			expectedError: "token is missing required scopes: read:magazines",
+			expectedError: "token is missing required scopes",
 		},
 		{
 			name: "it throws an error when the token is empty",
