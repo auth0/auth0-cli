@@ -22,11 +22,11 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - "ID                         cd_"
-        - "DOMAIN                     auth0-cli-integration-tests.com"
-        - "STATUS                     pending_verification"
-        - "PROVISIONING TYPE          auth0_managed_certs"
-        - DOMAIN METADATA             {"key1":"value1","key2":"value2"}
+        - ID                         cd_
+        - DOMAIN                     auth0-cli-integration-tests.com
+        - STATUS                     pending_verification
+        - PROVISIONING TYPE          auth0_managed_certs
+        - DOMAIN METADATA            {"key1":"value1","key2":"value2"}
 
   004 - unsuccessfully create domain with same name:
     command: auth0 domains create --domain "auth0-cli-integration-tests.com" --no-input
@@ -50,11 +50,11 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - "ID                         cd_"
-        - "DOMAIN                     auth0-cli-integration-tests.com"
-        - "STATUS                     pending_verification"
-        - "PROVISIONING TYPE          auth0_managed_certs"
-        - DOMAIN METADATA             {"key1":"value1"}
+        - ID                         cd_
+        - DOMAIN                     auth0-cli-integration-tests.com
+        - STATUS                     pending_verification
+        - PROVISIONING TYPE          auth0_managed_certs
+        - DOMAIN METADATA            {"key1":"value1"}
 
   007 - update domain maximal flags:
     command: auth0 domains update $(./test/integration/scripts/get-custom-domain-id.sh) --policy recommended --no-input
