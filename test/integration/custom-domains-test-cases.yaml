@@ -98,6 +98,6 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - "ID                   DOMAIN                          STATUS"
+        - "ID                   DOMAIN                           STATUS"
         - "cd_"
         - "auth0-cli-integration-tests.com"
