@@ -149,12 +149,12 @@ The file should use **INI format** and can contain multiple profiles.
 
 ```ini
 [default]
-tenant = your-tenant.auth0.com
+domain = your-tenant.auth0.com
 client_id = YOUR_CLIENT_ID
 client_secret = YOUR_CLIENT_SECRET
 
 [dev]
-tenant = dev-tenant.auth0.com
+domain = dev-tenant.auth0.com
 client_id = YOUR_DEV_CLIENT_ID
 client_secret = YOUR_DEV_CLIENT_SECRET
 ```

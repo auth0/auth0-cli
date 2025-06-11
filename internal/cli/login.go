@@ -90,10 +90,11 @@ func loadAuth0Credentials(profile string, inputs *LoginInputs) error {
 		return err
 	}
 
-	sec := cfg.Section(profile)
-	if sec == nil {
+	if !cfg.HasSection(profile) {
 		return fmt.Errorf("profile %q not found", profile)
 	}
+
+	sec := cfg.Section(profile)
 
 	inputs.Domain = sec.Key("domain").String()
 	inputs.ClientID = sec.Key("client_id").String()
@@ -370,7 +371,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string, do
 // RunLoginAsMachine facilitates the authentication process using client credentials (client ID, client secret).
 func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *cobra.Command) error {
 	if inputs.TenantProfile == "" {
-		err := loadCredentials(cmd, inputs)
+		err := promptForCredentials(cmd, &inputs)
 		if err != nil {
 			return err
 		}
@@ -419,7 +420,7 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 	return nil
 }
 
-func loadCredentials(cmd *cobra.Command, inputs LoginInputs) error {
+func promptForCredentials(cmd *cobra.Command, inputs *LoginInputs) error {
 	if err := loginTenantDomain.Ask(cmd, &inputs.Domain, nil); err != nil {
 		return err
 	}
