@@ -294,7 +294,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string, do
 		return config.Tenant{}, fmt.Errorf("failed to add the tenant to the config: %w", err)
 	}
 
-	cli.tracker.TrackFirstLogin(cli.Config.InstallID)
+	cli.tracker.TrackFirstLogin(cli.Config.InstallID, "As-User")
 
 	if cli.Config.DefaultTenant != result.Domain {
 		message = fmt.Sprintf(
@@ -367,7 +367,7 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 	cli.renderer.Infof("Successfully logged in.")
 	cli.renderer.Infof("Tenant: %s", inputs.Domain)
 
-	cli.tracker.TrackFirstLogin(cli.Config.InstallID)
+	cli.tracker.TrackFirstLogin(cli.Config.InstallID, "As-Machine")
 
 	return nil
 }
