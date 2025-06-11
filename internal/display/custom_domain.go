@@ -7,17 +7,22 @@ import (
 )
 
 type customDomainView struct {
-	ID                   string
-	Domain               string
-	Status               string
-	Primary              string
-	ProvisioningType     string
-	VerificationMethod   string
-	VerificationRecord   string
-	VerificationDomain   string
-	TLSPolicy            string
-	CustomClientIPHeader string
-	raw                  interface{}
+	ID                      string
+	Domain                  string
+	Status                  string
+	Primary                 string
+	ProvisioningType        string
+	VerificationMethod      string
+	VerificationRecord      string
+	VerificationDomain      string
+	TLSPolicy               string
+	CustomClientIPHeader    string
+	DomainMetadata          string
+	CertificateStatus       string
+	CertificateErrorMsg     string
+	CertificateAuthority    string
+	CertificateRenewsBefore string
+	raw                     interface{}
 }
 
 func (v *customDomainView) AsTableHeader() []string {
@@ -65,7 +70,21 @@ func (v *customDomainView) KeyValues() [][]string {
 	if v.CustomClientIPHeader != "" {
 		keyValues = append(keyValues, []string{"CUSTOM CLIENT IP HEADER", v.CustomClientIPHeader})
 	}
-
+	if v.DomainMetadata != "" {
+		keyValues = append(keyValues, []string{"DOMAIN METADATA", v.DomainMetadata})
+	}
+	if v.CertificateStatus != "" {
+		keyValues = append(keyValues, []string{ansi.Yellow(ansi.Bold("CERTIFICATE STATUS")), ansi.Yellow(ansi.Bold(v.CertificateStatus))})
+	}
+	if v.CertificateErrorMsg != "" {
+		keyValues = append(keyValues, []string{ansi.Yellow(ansi.Bold("CERTIFICATE ERROR MSG")), ansi.Yellow(ansi.Bold(v.CertificateErrorMsg))})
+	}
+	if v.CertificateAuthority != "" {
+		keyValues = append(keyValues, []string{ansi.Yellow(ansi.Bold("CERTIFICATE AUTHORITY")), ansi.Yellow(ansi.Bold(v.CertificateAuthority))})
+	}
+	if v.CertificateRenewsBefore != "" {
+		keyValues = append(keyValues, []string{ansi.Yellow(ansi.Bold("CERTIFICATE RENEWS BEFORE")), ansi.Yellow(ansi.Bold(v.CertificateRenewsBefore))})
+	}
 	return keyValues
 }
 
@@ -107,15 +126,24 @@ func (r *Renderer) CustomDomainUpdate(customDomain *management.CustomDomain) {
 }
 
 func makeCustomDomainView(customDomain *management.CustomDomain) *customDomainView {
+	metadata, err := toJSONString(customDomain.GetDomainMetadata())
+	if err != nil {
+		return nil
+	}
+
 	view := &customDomainView{
-		ID:                   ansi.Faint(customDomain.GetID()),
-		Domain:               customDomain.GetDomain(),
-		Status:               customDomainStatusColor(customDomain.GetStatus()),
-		Primary:              boolean(customDomain.GetPrimary()),
-		ProvisioningType:     customDomain.GetType(),
-		TLSPolicy:            customDomain.GetTLSPolicy(),
-		CustomClientIPHeader: customDomain.GetCustomClientIPHeader(),
-		raw:                  customDomain,
+		ID:                      ansi.Faint(customDomain.GetID()),
+		Domain:                  customDomain.GetDomain(),
+		Status:                  customDomainStatusColor(customDomain.GetStatus()),
+		Primary:                 boolean(customDomain.GetPrimary()),
+		ProvisioningType:        customDomain.GetType(),
+		TLSPolicy:               customDomain.GetTLSPolicy(),
+		CustomClientIPHeader:    customDomain.GetCustomClientIPHeader(),
+		DomainMetadata:          metadata,
+		CertificateStatus:       customDomain.GetCertificate().GetStatus(),
+		CertificateAuthority:    customDomain.GetCertificate().GetCertificateAuthority(),
+		CertificateRenewsBefore: customDomain.GetCertificate().GetRenewsBefore(),
+		raw:                     customDomain,
 	}
 
 	if len(customDomain.GetVerification().Methods) > 0 {

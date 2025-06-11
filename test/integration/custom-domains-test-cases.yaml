@@ -18,14 +18,15 @@ tests:
       exactly: "[]"
 
   003 - create domain with minimal flags:
-    command: auth0 domains create --domain "auth0-cli-integration-tests.com" --no-input
+    command: auth0 domains create --domain "auth0-cli-integration-tests.com" --metadata '{"key1":"value1","key2":"value2"}' --no-input
     exit-code: 0
     stdout:
       contains:
-        - "ID                         cd_"
-        - "DOMAIN                     auth0-cli-integration-tests.com"
-        - "STATUS                     pending_verification"
-        - "PROVISIONING TYPE          auth0_managed_certs"
+        - ID                         cd_
+        - DOMAIN                     auth0-cli-integration-tests.com
+        - STATUS                     pending_verification
+        - PROVISIONING TYPE          auth0_managed_certs
+        - DOMAIN METADATA            {"key1":"value1","key2":"value2"}
 
   004 - unsuccessfully create domain with same name:
     command: auth0 domains create --domain "auth0-cli-integration-tests.com" --no-input
@@ -45,14 +46,15 @@ tests:
         - "PROVISIONING TYPE          auth0_managed_certs"
 
   006 - update domain minimal flags:
-    command: auth0 domains update $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
+    command: auth0 domains update $(./test/integration/scripts/get-custom-domain-id.sh) --metadata '{"key1":"value1","key2":null}' --no-input
     exit-code: 0
     stdout:
       contains:
-        - "ID                         cd_"
-        - "DOMAIN                     auth0-cli-integration-tests.com"
-        - "STATUS                     pending_verification"
-        - "PROVISIONING TYPE          auth0_managed_certs"
+        - ID                         cd_
+        - DOMAIN                     auth0-cli-integration-tests.com
+        - STATUS                     pending_verification
+        - PROVISIONING TYPE          auth0_managed_certs
+        - DOMAIN METADATA            {"key1":"value1"}
 
   007 - update domain maximal flags:
     command: auth0 domains update $(./test/integration/scripts/get-custom-domain-id.sh) --policy recommended --no-input

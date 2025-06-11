@@ -26,4 +26,7 @@ type CustomDomainAPI interface {
 
 	// List all custom domains.
 	List(ctx context.Context, opts ...management.RequestOption) (c []*management.CustomDomain, err error)
+
+	// ListWithPagination lists all custom domains with support for pagination.
+	ListWithPagination(ctx context.Context, opts ...management.RequestOption) (c *management.CustomDomainList, err error)
 }
