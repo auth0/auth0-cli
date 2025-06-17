@@ -200,7 +200,7 @@ func createCustomDomainCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 domains create
   auth0 domains create --domain <domain-name>
   auth0 domains create --domain <domain-name> --policy recommended
-  auth0 domains create --domain <domain-name> --policy recommended -metadata '{"key1":"value1","key2":"value2"}' 
+  auth0 domains create --domain <domain-name> --policy recommended --metadata '{"key1":"value1","key2":"value2"}' 
   auth0 domains create --domain <domain-name> --policy recommended --type auth0
   auth0 domains create --domain <domain-name> --policy recommended --type auth0 --ip-header "cf-connecting-ip"
   auth0 domains create -d <domain-name> -p recommended -t auth0 -i "cf-connecting-ip" --json`,
@@ -284,7 +284,7 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 domains update
   auth0 domains update <domain-id> --policy compatible
   auth0 domains update <domain-id> --policy compatible --ip-header "cf-connecting-ip"
-  auth0 domains update <domain-id> -metadata '{"key1":"value1","key2":null}'
+  auth0 domains update <domain-id> --metadata '{"key1":"value1","key2":null}'
   auth0 domains update <domain-id> -p compatible -i "cf-connecting-ip" --json
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {

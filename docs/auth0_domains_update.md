@@ -22,7 +22,7 @@ auth0 domains update [flags]
   auth0 domains update
   auth0 domains update <domain-id> --policy compatible
   auth0 domains update <domain-id> --policy compatible --ip-header "cf-connecting-ip"
-  auth0 domains update <domain-id> -metadata '{"key1":"value1","key2":null}'
+  auth0 domains update <domain-id> --metadata '{"key1":"value1","key2":null}'
   auth0 domains update <domain-id> -p compatible -i "cf-connecting-ip" --json
 ```
 

@@ -22,7 +22,7 @@ auth0 domains create [flags]
   auth0 domains create
   auth0 domains create --domain <domain-name>
   auth0 domains create --domain <domain-name> --policy recommended
-  auth0 domains create --domain <domain-name> --policy recommended -metadata '{"key1":"value1","key2":"value2"}' 
+  auth0 domains create --domain <domain-name> --policy recommended --metadata '{"key1":"value1","key2":"value2"}' 
   auth0 domains create --domain <domain-name> --policy recommended --type auth0
   auth0 domains create --domain <domain-name> --policy recommended --type auth0 --ip-header "cf-connecting-ip"
   auth0 domains create -d <domain-name> -p recommended -t auth0 -i "cf-connecting-ip" --json
