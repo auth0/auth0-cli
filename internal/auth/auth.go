@@ -270,8 +270,6 @@ func GetAccessTokenFromClientPrivateJWT(args PrivateKeyJwtTokenSource) (Result, 
 		return Result{}, err
 	}
 
-	fmt.Println(resp.AccessToken)
-
 	return Result{
 		AccessToken: resp.AccessToken,
 		ExpiresAt:   resp.Expiry,
@@ -284,7 +282,7 @@ type PrivateKeyJwtTokenSource struct {
 	Uri                       string
 	ClientID                  string
 	ClientAssertionSigningAlg string
-	ClientAssertionSigningKey string
+	ClientAssertionPrivateKey string
 	Audience                  string
 }
 
@@ -302,10 +300,11 @@ func (p PrivateKeyJwtTokenSource) Token() (*oauth2.Token, error) {
 
 	assertion, err := CreateClientAssertion(
 		alg,
-		p.ClientAssertionSigningKey,
+		p.ClientAssertionPrivateKey,
 		p.ClientID,
 		baseURL.JoinPath("/").String(),
 	)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client assertion: %w", err)
 	}
@@ -336,20 +335,8 @@ func DetermineSigningAlgorithm(alg string) (jwa.SignatureAlgorithm, error) {
 		return jwa.RS256, nil
 	case "RS384":
 		return jwa.RS384, nil
-	case "RS512":
-		return jwa.RS512, nil
 	case "PS256":
 		return jwa.PS256, nil
-	case "PS384":
-		return jwa.PS384, nil
-	case "PS512":
-		return jwa.PS512, nil
-	case "ES256":
-		return jwa.ES256, nil
-	case "ES384":
-		return jwa.ES384, nil
-	case "ES512":
-		return jwa.ES512, nil
 	default:
 		return "", fmt.Errorf("unsupported client assertion algorithm %q", alg)
 	}
