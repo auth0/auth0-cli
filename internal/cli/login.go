@@ -139,7 +139,6 @@ func loginCmd(cli *cli) *cobra.Command {
 					shouldLoginAsUser = true
 				}
 			} else {
-				// only minimal checks, not validating completeness
 				if inputs.ClientAssertionSigningAlg != "" || inputs.ClientAssertionPrivateKeyPath != "" {
 					shouldLoginAsMachineJWT = true
 				}
@@ -151,12 +150,16 @@ func loginCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			// Mark as user login if additional scopes are passed
+			// If additional scopes are passed we mark shouldLoginAsUser flag to be true.
 			if inputs.isLoggingInWithAdditionalScopes() {
 				shouldLoginAsUser = true
 			}
 
-			// Prompt only if none of the login types can be inferred
+			/*
+				If we are unable to determine if it's a user login or a machine login
+				based on all the evaluation above, we go on to prompt the user and
+				determine if it's LoginAsUser or LoginAsMachine
+			*/
 			if !shouldLoginAsUser && !shouldLoginAsMachineSecret && !shouldLoginAsMachineJWT && !shouldLoginAsMachine {
 				cli.renderer.Output(
 					fmt.Sprintf(
@@ -181,7 +184,6 @@ func loginCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			// Execute login
 			switch {
 			case shouldLoginAsUser || selectedLoginType == loginAsUser:
 				if _, err := RunLoginAsUser(ctx, cli, inputs.AdditionalScopes, inputs.Domain); err != nil {
@@ -234,6 +236,8 @@ func loginCmd(cli *cli) *cobra.Command {
 	loginTenantDomain.RegisterString(cmd, &inputs.Domain, "")
 	loginClientID.RegisterString(cmd, &inputs.ClientID, "")
 	loginClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
+	loginClientAssertionSigningAlg.RegisterString(cmd, &inputs.ClientAssertionSigningAlg, "")
+	loginClientAssertionPrivateKeyPath.RegisterString(cmd, &inputs.ClientAssertionPrivateKeyPath, "")
 	loginAdditionalScopes.RegisterStringSlice(cmd, &inputs.AdditionalScopes, []string{})
 	cmd.MarkFlagsMutuallyExclusive("client-id", "scopes")
 	cmd.MarkFlagsMutuallyExclusive("client-secret", "scopes")
