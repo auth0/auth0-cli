@@ -93,6 +93,26 @@ func (mr *MockCustomDomainAPIMockRecorder) List(ctx interface{}, opts ...interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockCustomDomainAPI)(nil).List), varargs...)
 }
 
+// ListWithPagination mocks base method.
+func (m *MockCustomDomainAPI) ListWithPagination(ctx context.Context, opts ...management.RequestOption) (*management.CustomDomainList, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListWithPagination", varargs...)
+	ret0, _ := ret[0].(*management.CustomDomainList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListWithPagination indicates an expected call of ListWithPagination.
+func (mr *MockCustomDomainAPIMockRecorder) ListWithPagination(ctx interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWithPagination", reflect.TypeOf((*MockCustomDomainAPI)(nil).ListWithPagination), varargs...)
+}
+
 // Read mocks base method.
 func (m *MockCustomDomainAPI) Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.CustomDomain, error) {
 	m.ctrl.T.Helper()
