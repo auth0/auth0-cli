@@ -194,7 +194,7 @@ func loginCmd(cli *cli) *cobra.Command {
 					return err
 				}
 
-				// Prompt client credentials method if not clear yet
+				// Prompt client credentials method if not clear yet.
 				if !shouldLoginAsMachineSecret && !shouldLoginAsMachineJWT {
 					promptText := prompt.SelectInput(
 						"", "How would you like to provide client credentials?",
@@ -476,13 +476,13 @@ func RunLoginAsMachineJWT(ctx context.Context, inputs LoginInputs, cli *cli, cmd
 }
 
 func readPrivateKey(path string) string {
-	// Read the content of the file
+	// Read the content of the file.
 	content, err := os.ReadFile(path)
 	if err != nil {
-		// Handle the error appropriately, e.g., log it or return an empty string with an error
+		// Handle the error appropriately, e.g., log it or return an empty string with an error.
 		fmt.Println("Error reading private key file:", err)
 		return ""
 	}
-	// Return the content
+	// Return the content.
 	return string(content)
 }
