@@ -279,7 +279,7 @@ func GetAccessTokenFromClientPrivateJWT(args PrivateKeyJwtTokenSource) (Result, 
 // PrivateKeyJwtTokenSource implements oauth2.TokenSource for Private Key JWT client authentication.
 type PrivateKeyJwtTokenSource struct {
 	Ctx                       context.Context
-	Uri                       string
+	URI                       string
 	ClientID                  string
 	ClientAssertionSigningAlg string
 	ClientAssertionPrivateKey string
@@ -293,7 +293,7 @@ func (p PrivateKeyJwtTokenSource) Token() (*oauth2.Token, error) {
 		return nil, fmt.Errorf("invalid algorithm: %w", err)
 	}
 
-	baseURL, err := url.Parse(p.Uri)
+	baseURL, err := url.Parse(p.URI)
 	if err != nil {
 		return nil, fmt.Errorf("invalid URI: %w", err)
 	}
@@ -310,7 +310,7 @@ func (p PrivateKeyJwtTokenSource) Token() (*oauth2.Token, error) {
 	}
 
 	cfg := &clientcredentials.Config{
-		TokenURL:  p.Uri + "/oauth/token",
+		TokenURL:  p.URI + "/oauth/token",
 		AuthStyle: oauth2.AuthStyleInParams,
 		EndpointParams: url.Values{
 			"audience":              []string{p.Audience},
@@ -349,7 +349,7 @@ func CreateClientAssertion(alg jwa.SignatureAlgorithm, signingKey, clientID, aud
 		return "", fmt.Errorf("failed to parse signing key: %w", err)
 	}
 
-	// Verify that the key type is compatible with the algorithm
+	// Verify that the key type is compatible with the algorithm.
 	if err := verifyKeyCompatibility(alg, key); err != nil {
 		return "", err
 	}
@@ -381,7 +381,7 @@ func CreateClientAssertion(alg jwa.SignatureAlgorithm, signingKey, clientID, aud
 func verifyKeyCompatibility(alg jwa.SignatureAlgorithm, key jwk.Key) error {
 	keyType := key.KeyType()
 
-	// Check key compatibility with algorithm
+	// Check key compatibility with algorithm.
 	switch alg {
 	case jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512:
 		if keyType != "RSA" {

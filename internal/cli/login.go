@@ -158,15 +158,18 @@ func loginCmd(cli *cli) *cobra.Command {
 
 			// Prompt only if none of the login types can be inferred
 			if !shouldLoginAsUser && !shouldLoginAsMachineSecret && !shouldLoginAsMachineJWT && !shouldLoginAsMachine {
-				cli.renderer.Output(fmt.Sprintf(
-					"%s\n\n%s\n%s\n\n%s\n%s\n%s\n%s\n\n",
-					ansi.Bold("✪ Welcome to the Auth0 CLI 🎊"),
-					"An Auth0 tenant is required to operate this CLI.",
-					"To create one, visit: https://auth0.com/signup.",
-					"You may authenticate to your tenant either as a user with personal",
-					"credentials or as a machine via client credentials. For more",
-					"information, visit: https://auth0.github.io/auth0-cli/auth0_login.html",
-				))
+				cli.renderer.Output(
+					fmt.Sprintf(
+						"%s\n\n%s\n%s\n\n%s\n%s\n%s\n%s\n\n",
+						ansi.Bold("✪ Welcome to the Auth0 CLI 🎊"),
+						"An Auth0 tenant is required to operate this CLI.",
+						"To create one, visit: https://auth0.com/signup.",
+						"You may authenticate to your tenant either as a user with personal",
+						"credentials or as a machine via client credentials. For more",
+						"information about authenticating the CLI to your tenant, visit",
+						"the docs: https://auth0.github.io/auth0-cli/auth0_login.html",
+					),
+				)
 
 				promptText := prompt.SelectInput(
 					"", "How would you like to authenticate?",
@@ -432,7 +435,7 @@ func RunLoginAsMachineJWT(ctx context.Context, inputs LoginInputs, cli *cli, cmd
 			Ctx:                       ctx,
 			ClientID:                  inputs.ClientID,
 			ClientAssertionSigningAlg: inputs.ClientAssertionSigningAlg,
-			Uri:                       domain,
+			URI:                       domain,
 			Audience:                  domain + "/api/v2/",
 			ClientAssertionPrivateKey: readPrivateKey(inputs.ClientAssertionPrivateKeyPath),
 		},
