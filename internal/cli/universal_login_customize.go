@@ -7,16 +7,20 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/auth0/go-auth0/management"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -1136,4 +1140,151 @@ func switchUniversalLoginRendererModeCmd(cli *cli) *cobra.Command {
 	renderingMode.RegisterString(cmd, &selectedRenderingMode, "")
 
 	return cmd
+}
+func newUpdateAssetsCmd(cli *cli) *cobra.Command {
+	var screen, prompt, watchFolder string
+
+	cmd := &cobra.Command{
+		Use:   "update-assets",
+		Short: "Watch dist folder and patch screen assets",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return watchAndPatch(context.Background(), cli, screen, prompt, watchFolder)
+		},
+	}
+
+	cmd.Flags().StringVar(&screen, "screen", "", "Screen name (e.g., login)")
+	cmd.Flags().StringVar(&prompt, "prompt", "", "Prompt name (e.g., login)")
+	cmd.Flags().StringVar(&watchFolder, "watch-folder", "", "Folder to watch for new builds")
+	cmd.MarkFlagRequired("screen")
+	cmd.MarkFlagRequired("prompt")
+	cmd.MarkFlagRequired("watch-folder")
+
+	return cmd
+}
+
+func watchAndPatch(ctx context.Context, cli *cli, screen, prompt, watchFolder string) error {
+	if !isSupportedPartial(management.PromptType(prompt)) {
+		return fmt.Errorf("the prompt %q is not supported for partials", prompt)
+	}
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return fmt.Errorf("failed to create file watcher: %w", err)
+	}
+
+	defer watcher.Close()
+
+	err = watcher.Add(watchFolder)
+	if err != nil {
+		return fmt.Errorf("failed to add folder to watcher: %w", err)
+	}
+
+	fmt.Printf("Watching folder %q for changes...\n", watchFolder)
+
+	settings, err := fetchSettings(ctx, cli, prompt, screen)
+	if err != nil {
+		return fmt.Errorf("failed to fetch settings for prompt %q and screen %q: %w", prompt, screen, err)
+	}
+
+	if settings == nil {
+		return fmt.Errorf("no settings found for prompt %q and screen %q", prompt, screen)
+	}
+
+	fmt.Println(settings.HeadTags)
+
+	for {
+		select {
+		case event, ok := <-watcher.Events:
+			if !ok || event.Op&fsnotify.Create == 0 {
+				continue
+			}
+
+			if strings.HasSuffix(event.Name, ".js") || strings.HasSuffix(event.Name, ".css") {
+				time.Sleep(500 * time.Millisecond) // wait for file to stabilize
+				log.Println("Change detected:", event.Name)
+
+				// Get latest .js and .css files
+				jsFile, cssFile, err := getLatestAssets(watchFolder)
+				if err != nil {
+					log.Println("Error:", err)
+					continue
+				}
+
+				fmt.Printf("Latest assets found: %s, %s\n", jsFile, cssFile)
+
+				settings.HeadTags = []interface{}{
+					map[string]interface{}{
+						"tag": "script",
+						"attributes": map[string]interface{}{
+							"defer": true,
+							"async": true,
+							"src":   jsFile,
+							//"integrity": []string{jsHash},
+						},
+					},
+					map[string]interface{}{
+						"tag": "link",
+						"attributes": map[string]interface{}{
+							"href": cssFile,
+							"rel":  "stylesheet",
+						},
+					},
+				}
+
+				// Patch settings to Auth0
+				if err := patchToAuth0(ctx, cli, prompt, screen, settings); err != nil {
+					log.Println("Patch error:", err)
+				} else {
+					log.Println("Patch successful.")
+				}
+			}
+		case err := <-watcher.Errors:
+			fmt.Printf("Error: %v\n", err)
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
+func getLatestAssets(folder string) (jsFile, cssFile string, err error) {
+	var jsPattern = regexp.MustCompile(`^index-[a-f0-9]+\.js$`)
+	var cssPattern = regexp.MustCompile(`^index-[a-f0-9]+\.css$`)
+
+	err = filepath.WalkDir(folder, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil || d.IsDir() {
+			return nil
+		}
+
+		base := filepath.Base(path)
+		switch {
+		case jsPattern.MatchString(base):
+			jsFile = path
+		case cssPattern.MatchString(base):
+			cssFile = path
+		}
+
+		return nil
+	})
+
+	if jsFile == "" || cssFile == "" {
+		return "", "", fmt.Errorf("missing required asset files")
+	}
+
+	return jsFile, cssFile, nil
+}
+
+func fetchSettings(ctx context.Context, cli *cli, promptName, screenName string) (*management.PromptRendering, error) {
+	return cli.api.Prompt.ReadRendering(ctx, management.PromptType(promptName), management.ScreenName(screenName))
+}
+
+func patchToAuth0(ctx context.Context, cli *cli, promptName, screenName string, settings *management.PromptRendering) error {
+	if settings == nil || settings.RenderingMode == nil {
+		return fmt.Errorf("settings or rendering mode is nil")
+	}
+
+	if err := cli.api.Prompt.UpdateRendering(ctx, management.PromptType(promptName), management.ScreenName(screenName), settings); err != nil {
+		return fmt.Errorf("failed to patch settings to Auth0: %w", err)
+	}
+
+	return nil
 }
