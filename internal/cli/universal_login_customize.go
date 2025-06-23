@@ -1189,7 +1189,7 @@ func watchAndPatch(ctx context.Context, cli *cli, screen, prompt, assetsUrl, wat
 	fmt.Println("Initial settings: ", settings.HeadTags)
 
 	//var lastEventTime time.Time
-	const debounceDelay = 2000 * time.Millisecond
+	//const debounceDelay = 2000 * time.Millisecond
 
 	for {
 		select {
@@ -1272,6 +1272,7 @@ func buildHeadTagsFromDist(distDir, assetURLPrefix string) ([]interface{}, error
 				"attributes": map[string]interface{}{
 					"src":   fullURL,
 					"defer": true,
+					"type":  "module",
 				},
 			})
 		case ".css":
