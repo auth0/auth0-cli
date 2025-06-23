@@ -38,7 +38,7 @@ auth0 actions update [flags]
       --force                       Skip confirmation.
       --json                        Output in json format.
   -n, --name string                 Name of the action.
-  -r, --runtime string              Runtime to be used in the action.
+  -r, --runtime string              Runtime to be used in the action.  Possible values are: node22(recommended), node18, node16, node12
   -s, --secret stringToString       Secrets to be used in the action. (default [])
 ```
 

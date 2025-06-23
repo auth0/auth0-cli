@@ -299,7 +299,7 @@ func testTokenCmd(cli *cli) *cobra.Command {
 				inputs.Audience,
 				"", // We don't want to force a prompt for the test token command.
 				inputs.Scopes,
-				"", // Specifying a custom domain is only supported for the test login command.
+				inputs.CustomDomain,
 				inputs.CustomParams,
 			)
 			if err != nil {
@@ -316,6 +316,7 @@ func testTokenCmd(cli *cli) *cobra.Command {
 	testAudienceRequired.RegisterString(cmd, &inputs.Audience, "")
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
 	testCustomParams.RegisterStringMap(cmd, &inputs.CustomParams, nil)
+	testDomain.RegisterString(cmd, &inputs.CustomDomain, "")
 	testOrganization.RegisterString(cmd, &inputs.Organization, "")
 
 	return cmd
