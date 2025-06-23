@@ -1144,7 +1144,7 @@ func newUpdateAssetsCmd(cli *cli) *cobra.Command {
 	var screen, prompt, watchFolder, assetURL string
 
 	cmd := &cobra.Command{
-		Use:   "update-assets",
+		Use:   "watch-assets",
 		Short: "Watch dist folder and patch screen assets",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return watchAndPatch(context.Background(), cli, screen, prompt, assetURL, watchFolder)
@@ -1186,10 +1186,10 @@ func watchAndPatch(ctx context.Context, cli *cli, screen, prompt, assetsUrl, wat
 		return fmt.Errorf("no settings found for prompt %q and screen %q", prompt, screen)
 	}
 
-	fmt.Println("previous: ", settings.HeadTags)
+	fmt.Println("Initial settings: ", settings.HeadTags)
 
-	var lastEventTime time.Time
-	const debounceDelay = 500 * time.Millisecond
+	//var lastEventTime time.Time
+	const debounceDelay = 2000 * time.Millisecond
 
 	for {
 		select {
@@ -1199,12 +1199,9 @@ func watchAndPatch(ctx context.Context, cli *cli, screen, prompt, assetsUrl, wat
 			}
 
 			if strings.HasSuffix(event.Name, "assets") {
-				if event.Op&(fsnotify.Create|fsnotify.Remove|fsnotify.Rename) != 0 {
-					// Debounce events
-					if time.Since(lastEventTime) < debounceDelay {
-						continue
-					}
-					lastEventTime = time.Now()
+				if event.Op&(fsnotify.Create) != 0 {
+					time.Sleep(300 * time.Millisecond) // Allow some time for the file system to settle
+
 					log.Println("Change detected in assets:", event.Name)
 
 					headTags, err := buildHeadTagsFromDist(watchFolder, assetsUrl)
@@ -1221,7 +1218,6 @@ func watchAndPatch(ctx context.Context, cli *cli, screen, prompt, assetsUrl, wat
 					} else {
 						log.Println("Patch successful.")
 					}
-					//}()
 				}
 			}
 		case err := <-watcher.Errors:
