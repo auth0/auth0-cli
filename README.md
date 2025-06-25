@@ -136,8 +136,39 @@ There are two ways to authenticate:
 
 - **As a user** - Recommended when invoking on a personal machine or other interactive environment. Facilitated by [device authorization](https://auth0.com/docs/get-started/authentication-and-authorization-flow/device-authorization-flow) flow and cannot be used for private cloud tenants.
 - **As a machine** - Recommended when running on a server or non-interactive environments (ex: CI, authenticating to a **private cloud**).  Facilitated by [client credentials](https://auth0.com/docs/get-started/authentication-and-authorization-flow/client-credentials-flow) flow. Flags available for bypassing interactive shell.
+- **Profile-based login:** Use `--profile` to easily switch between multiple Auth0 tenants or environments (e.g., `default`, `dev`, etc.)
 
+---
 
+### Configure Your Credentials
+
+Create a credentials file at `~/.auth0/credentials` (or set the `AUTH0_CREDENTIALS_FILE` environment variable to use a custom path).
+
+The file should use **INI format** and can contain multiple profiles.  
+**Example:**
+
+```ini
+[default]
+domain = your-tenant.auth0.com
+client_id = YOUR_CLIENT_ID
+client_secret = YOUR_CLIENT_SECRET
+
+[dev]
+domain = dev-tenant.auth0.com
+client_id = YOUR_DEV_CLIENT_ID
+client_secret = YOUR_DEV_CLIENT_SECRET
+```
+
+- Each section name (e.g., `[default]`, `[dev]`) is a **tenant-profile**.
+- You can add as many tenant profiles as needed for different tenants/environments.
+
+---
+
+## Environment Variables
+
+- `AUTH0_CREDENTIALS_FILE`: Path to the credentials file (defaults to `~/.auth0/credentials`).
+
+---
 
 > **Warning**
 > Authenticating as a user is not supported for **private cloud** tenants. 

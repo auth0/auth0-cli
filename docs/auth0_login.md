@@ -22,6 +22,7 @@ auth0 login [flags]
   auth0 login
   auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>
   auth0 login --scopes "read:client_grants,create:client_grants"
+  auth0 login --profile <tenant-profile>
 ```
 
 
@@ -31,6 +32,7 @@ auth0 login [flags]
       --client-id string       Client ID of the application when authenticating via client credentials.
       --client-secret string   Client secret of the application when authenticating via client credentials.
       --domain string          Tenant domain of the application when authenticating via client credentials.
+      --profile string         Tenant Profile Label name to load Auth0 credentials from. If not provided, the default profile will be used.
       --scopes strings         Additional scopes to request when authenticating via device code flow. By default, only scopes for first-class functions are requested. Primarily useful when using the api command to execute arbitrary Management API requests.
 ```
 
