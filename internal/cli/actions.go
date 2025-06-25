@@ -62,7 +62,7 @@ var (
 		Name:      "Runtime",
 		LongForm:  "runtime",
 		ShortForm: "r",
-		Help:      "Runtime to be used in the action.",
+		Help:      "Runtime to be used in the action.  Possible values are: node22(recommended), node18, node16, node12",
 	}
 
 	actionTemplates = map[string]string{
