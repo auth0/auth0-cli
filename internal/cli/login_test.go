@@ -60,11 +60,11 @@ func TestLoginCommand(t *testing.T) {
 		err := cmd.Execute()
 		assert.EqualError(t, err, "for machine login, provide domain with either (client-id, client-secret) or (client-id, client-assertion-signing-alg, client-assertion-private-key)")
 	})
-	t.Run("Negative Test: it returns an error when only client-assertion-private-key-path, domain passed together", func(t *testing.T) {
+	t.Run("Negative Test: it returns an error when only client-assertion-private-key, domain passed together", func(t *testing.T) {
 		cli := &cli{}
 		cli.noInput = true
 		cmd := loginCmd(cli)
-		cmd.SetArgs([]string{"--client-assertion-private-key-path", "./secrets/private_key.pem", "--domain", "test.auth0.com"})
+		cmd.SetArgs([]string{"--client-assertion-private-key", "./secrets/private_key.pem", "--domain", "test.auth0.com"})
 		err := cmd.Execute()
 		assert.EqualError(t, err, "for machine login, provide domain with either (client-id, client-secret) or (client-id, client-assertion-signing-alg, client-assertion-private-key)")
 	})

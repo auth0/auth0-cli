@@ -42,10 +42,10 @@ var (
 		AlwaysPrompt: false,
 	}
 
-	loginClientAssertionPrivateKeyPath = Flag{
-		Name:         "Client Assertion Private Key Path",
-		LongForm:     "client-assertion-private-key-path",
-		Help:         "Client Assertion Private key file path when authenticating via Private key JWT.",
+	loginClientAssertionPrivateKey = Flag{
+		Name:         "Client Assertion Private Key",
+		LongForm:     "client-assertion-private-key",
+		Help:         "Client Assertion Private key with either a file path or direct content when authenticating via Private key JWT.",
 		IsRequired:   false,
 		AlwaysPrompt: false,
 	}
@@ -68,12 +68,12 @@ var (
 )
 
 type LoginInputs struct {
-	Domain                        string
-	ClientID                      string
-	ClientSecret                  string
-	ClientAssertionPrivateKeyPath string
-	ClientAssertionSigningAlg     string
-	AdditionalScopes              []string
+	Domain                    string
+	ClientID                  string
+	ClientSecret              string
+	ClientAssertionPrivateKey string
+	ClientAssertionSigningAlg string
+	AdditionalScopes          []string
 }
 
 func (i *LoginInputs) isLoggingInWithAdditionalScopes() bool {
@@ -93,6 +93,8 @@ func loginCmd(cli *cli) *cobra.Command {
 			"this is the recommended method for Private Cloud users.\n\n",
 		Example: `  auth0 login
   auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>
+  auth0 login --domain <tenant-domain> --client-id <client-id> --client-assertion-signing-alg RS256 --client-assertion-private-key <path-to-private-key>
+  auth0 login --domain <tenant-domain> --client-id <client-id> --client-assertion-signing-alg RS256 --client-assertion-private-key <client-assertion-private-key>
   auth0 login --scopes "read:client_grants,create:client_grants"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -124,13 +126,13 @@ func loginCmd(cli *cli) *cobra.Command {
 				switch {
 				case inputs.Domain != "" && inputs.ClientID != "" && inputs.ClientSecret != "":
 					shouldLoginAsMachineSecret = true
-				case inputs.Domain != "" && inputs.ClientID != "" && inputs.ClientAssertionSigningAlg != "" && inputs.ClientAssertionPrivateKeyPath != "":
+				case inputs.Domain != "" && inputs.ClientID != "" && inputs.ClientAssertionSigningAlg != "" && inputs.ClientAssertionPrivateKey != "":
 					shouldLoginAsMachineJWT = true
 				case inputs.Domain != "" &&
 					inputs.ClientID == "" && inputs.ClientSecret == "" &&
-					inputs.ClientAssertionSigningAlg == "" && inputs.ClientAssertionPrivateKeyPath == "":
+					inputs.ClientAssertionSigningAlg == "" && inputs.ClientAssertionPrivateKey == "":
 					shouldLoginAsUser = true
-				case inputs.Domain != "" || inputs.ClientID != "" || inputs.ClientSecret != "" || inputs.ClientAssertionSigningAlg != "" || inputs.ClientAssertionPrivateKeyPath != "":
+				case inputs.Domain != "" || inputs.ClientID != "" || inputs.ClientSecret != "" || inputs.ClientAssertionSigningAlg != "" || inputs.ClientAssertionPrivateKey != "":
 					return fmt.Errorf("for machine login, provide domain with either (client-id, client-secret) or (client-id, client-assertion-signing-alg, client-assertion-private-key)")
 				default:
 					/*
@@ -139,7 +141,7 @@ func loginCmd(cli *cli) *cobra.Command {
 					shouldLoginAsUser = true
 				}
 			} else {
-				if inputs.ClientAssertionSigningAlg != "" || inputs.ClientAssertionPrivateKeyPath != "" {
+				if inputs.ClientAssertionSigningAlg != "" || inputs.ClientAssertionPrivateKey != "" {
 					shouldLoginAsMachineJWT = true
 				}
 				if inputs.ClientSecret != "" {
@@ -237,7 +239,7 @@ func loginCmd(cli *cli) *cobra.Command {
 	loginClientID.RegisterString(cmd, &inputs.ClientID, "")
 	loginClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
 	loginClientAssertionSigningAlg.RegisterString(cmd, &inputs.ClientAssertionSigningAlg, "")
-	loginClientAssertionPrivateKeyPath.RegisterString(cmd, &inputs.ClientAssertionPrivateKeyPath, "")
+	loginClientAssertionPrivateKey.RegisterString(cmd, &inputs.ClientAssertionPrivateKey, "")
 	loginAdditionalScopes.RegisterStringSlice(cmd, &inputs.AdditionalScopes, []string{})
 	cmd.MarkFlagsMutuallyExclusive("client-id", "scopes")
 	cmd.MarkFlagsMutuallyExclusive("client-secret", "scopes")
@@ -428,11 +430,15 @@ func RunLoginAsMachineJWT(ctx context.Context, inputs LoginInputs, cli *cli, cmd
 		return err
 	}
 
-	if err := loginClientAssertionPrivateKeyPath.Ask(cmd, &inputs.ClientAssertionPrivateKeyPath, nil); err != nil {
+	if err := loginClientAssertionPrivateKey.Ask(cmd, &inputs.ClientAssertionPrivateKey, nil); err != nil {
 		return err
 	}
 
 	domain := "https://" + inputs.Domain
+
+	if !strings.HasPrefix(inputs.ClientAssertionPrivateKey, "-----BEGIN ") {
+		inputs.ClientAssertionPrivateKey = readPrivateKey(inputs.ClientAssertionPrivateKey)
+	}
 
 	token, err := auth.GetAccessTokenFromClientPrivateJWT(
 		auth.PrivateKeyJwtTokenSource{
@@ -441,12 +447,12 @@ func RunLoginAsMachineJWT(ctx context.Context, inputs LoginInputs, cli *cli, cmd
 			ClientAssertionSigningAlg: inputs.ClientAssertionSigningAlg,
 			URI:                       domain,
 			Audience:                  domain + "/api/v2/",
-			ClientAssertionPrivateKey: readPrivateKey(inputs.ClientAssertionPrivateKeyPath),
+			ClientAssertionPrivateKey: inputs.ClientAssertionPrivateKey,
 		},
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to fetch access token using client credentials with Private Key. \n\nEnsure that the provided client-id, client-assertion-private-key-path, client-assertion-signing-alg and domain are correct. \n\nerror: %w", err)
+		return fmt.Errorf("failed to fetch access token using client credentials with Private Key. \n\nEnsure that the provided client-id, client-assertion-private-key, client-assertion-signing-alg and domain are correct. \n\nerror: %w", err)
 	}
 
 	tenant := config.Tenant{
