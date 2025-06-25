@@ -350,8 +350,8 @@ func CreateClientAssertion(alg jwa.SignatureAlgorithm, signingKey, clientID, aud
 	}
 
 	// Verify that the key type is compatible with the algorithm.
-	if err := verifyKeyCompatibility(alg, key); err != nil {
-		return "", err
+	if key.KeyType() != "RSA" {
+		return "", fmt.Errorf("%s algorithm requires an RSA key, but got %s", alg, key.KeyType())
 	}
 
 	now := time.Now()
@@ -375,25 +375,4 @@ func CreateClientAssertion(alg jwa.SignatureAlgorithm, signingKey, clientID, aud
 	}
 
 	return string(signedToken), nil
-}
-
-// verifyKeyCompatibility checks if the provided key is compatible with the specified algorithm.
-func verifyKeyCompatibility(alg jwa.SignatureAlgorithm, key jwk.Key) error {
-	keyType := key.KeyType()
-
-	// Check key compatibility with algorithm.
-	switch alg {
-	case jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512:
-		if keyType != "RSA" {
-			return fmt.Errorf("%s algorithm requires an RSA key, but got %s", alg, keyType)
-		}
-	case jwa.ES256, jwa.ES384, jwa.ES512:
-		if keyType != "EC" {
-			return fmt.Errorf("%s algorithm requires an EC key, but got %s", alg, keyType)
-		}
-	default:
-		return fmt.Errorf("unsupported algorithm: %s", alg)
-	}
-
-	return nil
 }
