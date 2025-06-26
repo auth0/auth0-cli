@@ -138,8 +138,11 @@ var ScreenPromptMap = map[string][]string{
 	"email-verification":       {"email-verification-result"},
 	"login-email-verification": {"login-email-verification"},
 	"logout":                   {"logout", "logout-aborted", "logout-complete"},
-	"mfa-webauthn": {"mfa-webauthn-change-key-nickname", "mfa-webauthn-enrollment-success", "mfa-webauthn-error",
-		"mfa-webauthn-platform-challenge", "mfa-webauthn-platform-enrollment", "mfa-webauthn-roaming-challenge", "mfa-webauthn-roaming-enrollment"},
+	"mfa-webauthn": {"mfa-webauthn-change-key-nickname", "mfa-webauthn-enrollment-success", "mfa-webauthn-error", "mfa-webauthn-platform-challenge",
+		"mfa-webauthn-platform-enrollment", "mfa-webauthn-roaming-challenge", "mfa-webauthn-roaming-enrollment", "mfa-webauthn-not-available-error"},
+	"consent":             {"consent"},
+	"customized-consent":  {"customized-consent"},
+	"email-otp-challenge": {"email-otp-challenge"},
 }
 
 type partialsData map[string]*management.PromptScreenPartials
