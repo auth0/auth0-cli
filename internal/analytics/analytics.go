@@ -44,8 +44,11 @@ func NewTracker() *Tracker {
 	return &Tracker{}
 }
 
-func (t *Tracker) TrackFirstLogin(id string) {
+func (t *Tracker) TrackFirstLogin(id string, loginType string) {
 	eventName := fmt.Sprintf("%s - Auth0 - First Login", eventNamePrefix)
+	t.track(eventName, id)
+
+	eventName = fmt.Sprintf("%s - Auth0 - First Login - %s", eventNamePrefix, loginType)
 	t.track(eventName, id)
 }
 
