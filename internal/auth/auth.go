@@ -13,6 +13,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwk"
+	"github.com/lestrrat-go/jwx/v2/jwt"
+	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )
 
@@ -256,4 +261,118 @@ func GetAccessTokenFromClientCreds(ctx context.Context, args ClientCredentials) 
 		AccessToken: resp.AccessToken,
 		ExpiresAt:   resp.Expiry,
 	}, nil
+}
+
+// GetAccessTokenFromClientPrivateJWT generates an access token from client prviateJWT.
+func GetAccessTokenFromClientPrivateJWT(args PrivateKeyJwtTokenSource) (Result, error) {
+	resp, err := args.Token()
+	if err != nil {
+		return Result{}, err
+	}
+
+	return Result{
+		AccessToken: resp.AccessToken,
+		ExpiresAt:   resp.Expiry,
+	}, nil
+}
+
+// PrivateKeyJwtTokenSource implements oauth2.TokenSource for Private Key JWT client authentication.
+type PrivateKeyJwtTokenSource struct {
+	Ctx                       context.Context
+	URI                       string
+	ClientID                  string
+	ClientAssertionSigningAlg string
+	ClientAssertionPrivateKey string
+	Audience                  string
+}
+
+// Token generates a new token using Private Key JWT client authentication.
+func (p PrivateKeyJwtTokenSource) Token() (*oauth2.Token, error) {
+	alg, err := DetermineSigningAlgorithm(p.ClientAssertionSigningAlg)
+	if err != nil {
+		return nil, fmt.Errorf("invalid algorithm: %w", err)
+	}
+
+	baseURL, err := url.Parse(p.URI)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URI: %w", err)
+	}
+
+	assertion, err := CreateClientAssertion(
+		alg,
+		p.ClientAssertionPrivateKey,
+		p.ClientID,
+		baseURL.JoinPath("/").String(),
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create client assertion: %w", err)
+	}
+
+	cfg := &clientcredentials.Config{
+		TokenURL:  p.URI + "/oauth/token",
+		AuthStyle: oauth2.AuthStyleInParams,
+		EndpointParams: url.Values{
+			"audience":              []string{p.Audience},
+			"client_assertion_type": []string{"urn:ietf:params:oauth:client-assertion-type:jwt-bearer"},
+			"client_assertion":      []string{assertion},
+			"grant_type":            []string{"client_credentials"},
+		},
+	}
+
+	token, err := cfg.Token(p.Ctx)
+	if err != nil {
+		return nil, fmt.Errorf("token request failed: %w", err)
+	}
+
+	return token, nil
+}
+
+// DetermineSigningAlgorithm returns the appropriate JWA signature algorithm based on the string representation.
+func DetermineSigningAlgorithm(alg string) (jwa.SignatureAlgorithm, error) {
+	switch alg {
+	case "RS256":
+		return jwa.RS256, nil
+	case "RS384":
+		return jwa.RS384, nil
+	case "PS256":
+		return jwa.PS256, nil
+	default:
+		return "", fmt.Errorf("unsupported client assertion algorithm %q", alg)
+	}
+}
+
+// CreateClientAssertion creates a JWT token for client authentication with the specified lifetime.
+func CreateClientAssertion(alg jwa.SignatureAlgorithm, signingKey, clientID, audience string) (string, error) {
+	key, err := jwk.ParseKey([]byte(signingKey), jwk.WithPEM(true))
+	if err != nil {
+		return "", fmt.Errorf("failed to parse signing key: %w", err)
+	}
+
+	// Verify that the key type is compatible with the algorithm.
+	if key.KeyType() != "RSA" {
+		return "", fmt.Errorf("%s algorithm requires an RSA key, but got %s", alg, key.KeyType())
+	}
+
+	now := time.Now()
+
+	token, err := jwt.NewBuilder().
+		IssuedAt(now).
+		NotBefore(now).
+		Subject(clientID).
+		JwtID(uuid.NewString()).
+		Issuer(clientID).
+		Audience([]string{audience}).
+		Expiration(now.Add(2 * time.Minute)).
+		Build()
+	if err != nil {
+		return "", fmt.Errorf("failed to build JWT: %w", err)
+	}
+
+	signedToken, err := jwt.Sign(token, jwt.WithKey(alg, key))
+	if err != nil {
+		return "", fmt.Errorf("failed to sign JWT: %w", err)
+	}
+
+	return string(signedToken), nil
 }
