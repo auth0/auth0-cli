@@ -12,21 +12,37 @@ This document provides essential information on **configuring the rendering mode
 - The **default value** is `"standard"`.
 
 ### 🔹 2. Default Head Tags
-- `default_head_tags_disabled` is a **toggle** to enable/disable **Universal Login's default head tags**.
+- `default_head_tags_disabled` is a **toggle** to enable or disable **Universal Login's default head tags**.
 
 ### 🔹 3. Context Configuration
-- `context_configuration` contains a list of **context values** made available.
-- Refer to the [official documentation](https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens) for possible values.
+- `context_configuration` specifies a list of **context values** that are made available.
+- Refer to the [official documentation](https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens) for supported values.
 
 ### 🔹 4. Head Tags Customization
-- `head_tags` is an **array of custom head tags** (e.g., scripts, stylesheets).
+- `head_tags` defines an **array of custom head tags** (e.g., scripts, stylesheets).
 - **⚠️ At least one** `<script>` tag **must be included**.
 
-### 🔹 5. Updating Rendering Mode
-- **Switching to `"standard"` only updates `rendering_mode`**.
-- **All other fields remain unchanged**.
+### 🔹 5. Filter Configuration
+- `filter` defines the conditions under which **advanced rendering mode** with custom UI is applied. By default, the configuration applies tenant-wide.
+- `match_type` and at least one of the entity arrays (`clients`, `organizations`, or `domains`) must be specified.
+  - `match_type` defines the matching logic:
+    - `"includes_any"`: Uses custom assets if **any match**.
+    - `"excludes_any"`: Excludes custom assets if **any match**.
+  - `clients`: Up to 25 client objects, defined by either `id` or `metadata` key/value.
+  - `organizations`: Up to 25 organization objects, defined by either `id` or `metadata`.
+  - `domains`: Up to 25 domain objects, defined by either `id` or `metadata`.
 
-### 🔹 6. Partial Updates
+### 🔹 6. Page Template Option
+- `use_page_template` determines whether to render using the **tenant’s custom page template**.
+  - When set to `true`, it attempts to use the custom page template (a warning is logged if not defined).
+  - When set to `false` or omitted, the default template is used.
+  - The **default is `false`**.
+
+### 🔹 7. Updating Rendering Mode
+- Switching to `"standard"` **only updates the `rendering_mode`**.
+- All other fields remain unchanged.
+
+### 🔹 8. Partial Updates
 - Only **explicitly declared fields** are updated.
 - **Unspecified fields remain as they are**.
 
@@ -66,7 +82,23 @@ This document provides essential information on **configuring the rendering mode
         "href": "https://cdn.sass.app/auth-screens/{{client.name}}.css"
       }
     }
-  ]
+  ],
+  "filter": {
+    "match_type": "includes_any",
+    "clients": [
+      { "id": "appId12345" },
+      { "metadata": { "key": "value" } }
+    ],
+    "organizations": [
+      { "id": "orgId12345" },
+      { "metadata": { "key": "value" } }
+    ],
+    "domains": [
+      { "id": "domainId12345" },
+      { "metadata": { "key": "value" } }
+    ]
+  },
+  "use_page_template": false
 }
 ```
 
