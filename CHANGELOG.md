@@ -12,11 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.14.1...v1.15.0)
 
 ### Added
-- Support generating test token using custom domain via `auth0 test token -d domain.auth0.com`[#1237]
-- Add logic to handle analytics basis on type of login Method [#1245]
-- Add support private key jwt authentication [#1254]
-- Support for new screens in Advanced Customization for Universal Login [#1258]
-- Add support to new schema fields in advanced customization for Universal Login [#1260]
+- Support for generating test tokens using a custom domain via `auth0 test token -d domain.auth0.com` [#1237]
+- Added logic to handle analytics based on the type of login method. [#1245]
+- Support for private key JWT authentication. [#1254]
+- Support for new screens in Advanced Customization for Universal Login. [#1258]
+- Support for new schema fields in Advanced Customization for Universal Login. [#1260]
 
 
 # [v.1.14.1](https://github.com/auth0/auth0-cli/tree/v1.14.1) (May 27, 2025))
