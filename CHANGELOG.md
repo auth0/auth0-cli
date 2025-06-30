@@ -18,9 +18,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for new screens in Advanced Customization for Universal Login [#1258]
 - Add support to new schema fields in advanced customization for Universal Login [#1260]
 
-### Fixed
-- Respect --screen flag for `auth0 ul customize` [#1228]
-- Replace package `mholt/archiver` with custom implementation of unzip [#1218]
 
 # [v.1.14.1](https://github.com/auth0/auth0-cli/tree/v1.14.1) (May 27, 2025))
 
