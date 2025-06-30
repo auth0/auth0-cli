@@ -22,8 +22,8 @@ This document provides essential information on **configuring the rendering mode
 - `head_tags` defines an **array of custom head tags** (e.g., scripts, stylesheets).
 - **⚠️ At least one** `<script>` tag **must be included**.
 
-### 🔹 5. Filter Configuration
-- `filter` defines the conditions under which **advanced rendering mode** with custom UI is applied. By default, the configuration applies tenant-wide.
+### 🔹 5. Filters Configuration
+- `filters` defines the conditions under which **advanced rendering mode** with custom UI is applied. By default, the configuration applies tenant-wide.
 - `match_type` and at least one of the entity arrays (`clients`, `organizations`, or `domains`) must be specified.
   - `match_type` defines the matching logic:
     - `"includes_any"`: Uses custom assets if **any match**.
@@ -83,18 +83,18 @@ This document provides essential information on **configuring the rendering mode
       }
     }
   ],
-  "filter": {
+  "filters": {
     "match_type": "includes_any",
     "clients": [
-      { "id": "appId12345" },
+      { "id": "appId" },
       { "metadata": { "key": "value" } }
     ],
     "organizations": [
-      { "id": "orgId12345" },
+      { "id": "orgId" },
       { "metadata": { "key": "value" } }
     ],
     "domains": [
-      { "id": "domainId12345" },
+      { "id": "domainId" },
       { "metadata": { "key": "value" } }
     ]
   },
