@@ -146,6 +146,7 @@ There are two ways to authenticate:
 
 ```bash
 auth0 login --domain <domain> --client-id <client-id> --client-secret <client-secret>
+auth0 login --domain <domain> --client-id <client-id> --client-assertion-private-key <path-to-private-key / private-key> --client-assertion-signing-alg <signing-algorithm>
 ```
 
 > **Note:**
