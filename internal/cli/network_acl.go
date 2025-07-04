@@ -944,7 +944,6 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					}
 				}
 			} else {
-
 				// Initialize patch ACL with the ID from the current ACL.
 				updatedACL = &management.NetworkACL{
 					ID: &inputs.ID,
@@ -1012,7 +1011,6 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 
 				cli.renderer.NetworkACLUpdate(updatedACL)
 				return nil
-
 			}
 
 		updateACL:
@@ -1024,7 +1022,6 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 
 			cli.renderer.NetworkACLUpdate(updatedACL)
 			return nil
-
 		},
 	}
 
