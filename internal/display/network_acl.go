@@ -1,6 +1,7 @@
 package display
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -14,11 +15,12 @@ type networkACLView struct {
 	Priority    string
 	Active      string
 	Action      string
+	Rule        string
 	raw         interface{}
 }
 
 func (v *networkACLView) AsTableHeader() []string {
-	return []string{"ID", "Description", "Priority", "Active", "Action"}
+	return []string{"ID", "Description", "Priority", "Active", "Action", "Rule"}
 }
 
 func (v *networkACLView) AsTableRow() []string {
@@ -28,6 +30,7 @@ func (v *networkACLView) AsTableRow() []string {
 		v.Priority,
 		v.Active,
 		v.Action,
+		v.Rule,
 	}
 }
 
@@ -176,12 +179,19 @@ func makeNetworkACLView(acl *management.NetworkACL) *networkACLView {
 		Rule:        acl.GetRule(),
 	}
 
+	// Marshal the rule to JSON
+	ruleJSON, err := json.Marshal(acl.Rule)
+	if err != nil {
+		ruleJSON = []byte("") // Fallback to empty string
+	}
+
 	return &networkACLView{
 		ID:          id,
 		Description: description,
 		Priority:    strconv.Itoa(priority),
 		Active:      fmt.Sprintf("%v", active),
 		Action:      action,
+		Rule:        string(ruleJSON),
 		raw:         rawData,
 	}
 }
