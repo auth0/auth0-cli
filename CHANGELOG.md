@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.15.0](https://github.com/auth0/auth0-cli/tree/v1.15.0) (June 30, 2025))
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.14.1...v1.15.0)
+
+### Added
+- Support for generating test tokens using a custom domain via `auth0 test token -d domain.auth0.com` [#1237]
+- Added logic to handle analytics based on the type of login method [#1245]
+- Support for private key JWT authentication [#1254]
+- Support for new screens in Advanced Customization for Universal Login [#1258]
+- Support for new schema fields in Advanced Customization for Universal Login [#1260]
+
+
 # [v.1.14.1](https://github.com/auth0/auth0-cli/tree/v1.14.1) (May 27, 2025))
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.14.0...v1.14.1)
@@ -506,17 +518,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.14.1...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.15.0...HEAD
 
-[#1231]:https://github.com/auth0/auth0-cli/issues/1231
-[#1228]:https://github.com/auth0/auth0-cli/issues/1228
-[#1225]:https://github.com/auth0/auth0-cli/issues/1225
-[#1218]:https://github.com/auth0/auth0-cli/issues/1218
-[#1209]:https://github.com/auth0/auth0-cli/issues/1209
-[#1203]:https://github.com/auth0/auth0-cli/issues/1203
-[#1197]:https://github.com/auth0/auth0-cli/issues/1197
-[#1195]:https://github.com/auth0/auth0-cli/issues/1195
-[#1192]:https://github.com/auth0/auth0-cli/issues/1192
+[#1260]: https://github.com/auth0/auth0-cli/issues/1260
+[#1258]: https://github.com/auth0/auth0-cli/issues/1258
+[#1254]: https://github.com/auth0/auth0-cli/issues/1254
+[#1245]: https://github.com/auth0/auth0-cli/issues/1245
+[#1237]: https://github.com/auth0/auth0-cli/issues/1237
+[#1231]: https://github.com/auth0/auth0-cli/issues/1231
+[#1228]: https://github.com/auth0/auth0-cli/issues/1228   
+[#1225]: https://github.com/auth0/auth0-cli/issues/1225
+[#1218]: https://github.com/auth0/auth0-cli/issues/1218
+[#1209]: https://github.com/auth0/auth0-cli/issues/1209
+[#1203]: https://github.com/auth0/auth0-cli/issues/1203
+[#1197]: https://github.com/auth0/auth0-cli/issues/1197
+[#1195]: https://github.com/auth0/auth0-cli/issues/1195
+[#1192]: https://github.com/auth0/auth0-cli/issues/1192
 [#1188]: https://github.com/auth0/auth0-cli/issues/1188
 [#1185]: https://github.com/auth0/auth0-cli/issues/1185
 [#1184]: https://github.com/auth0/auth0-cli/issues/1184
