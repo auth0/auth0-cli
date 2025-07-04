@@ -664,7 +664,15 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 						}
 
 						// Skip the rest of the interactive flow.
-						goto updateACL
+						// Patch the network ACL.
+						if err := ansi.Waiting(func() error {
+							return cli.api.NetworkACL.Patch(cmd.Context(), inputs.ID, updatedACL)
+						}); err != nil {
+							return fmt.Errorf("failed to patch network ACL with ID %q: %w", inputs.ID, err)
+						}
+
+						cli.renderer.NetworkACLUpdate(updatedACL)
+						return nil
 					}
 				}
 
@@ -943,6 +951,15 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 						}
 					}
 				}
+
+				// Update the network ACL.
+				if err := ansi.Waiting(func() error {
+					return cli.api.NetworkACL.Update(cmd.Context(), inputs.ID, updatedACL)
+				}); err != nil {
+					return fmt.Errorf("failed to update network ACL with ID %q: %w", inputs.ID, err)
+				}
+
+				cli.renderer.NetworkACLUpdate(updatedACL)
 			} else {
 				// Initialize patch ACL with the ID from the current ACL.
 				updatedACL = &management.NetworkACL{
@@ -1002,25 +1019,15 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					return fmt.Errorf("--rule flag not provided")
 				}
 
-				// Patch the network ACL.
+				// Update the network ACL.
 				if err := ansi.Waiting(func() error {
-					return cli.api.NetworkACL.Patch(cmd.Context(), inputs.ID, updatedACL)
+					return cli.api.NetworkACL.Update(cmd.Context(), inputs.ID, updatedACL)
 				}); err != nil {
-					return fmt.Errorf("failed to patch network ACL with ID %q: %w", inputs.ID, err)
+					return fmt.Errorf("failed to update network ACL with ID %q: %w", inputs.ID, err)
 				}
 
 				cli.renderer.NetworkACLUpdate(updatedACL)
-				return nil
 			}
-
-		updateACL:
-			if err := ansi.Waiting(func() error {
-				return cli.api.NetworkACL.Update(cmd.Context(), inputs.ID, updatedACL)
-			}); err != nil {
-				return fmt.Errorf("failed to update network ACL with ID %q: %w", inputs.ID, err)
-			}
-
-			cli.renderer.NetworkACLUpdate(updatedACL)
 			return nil
 		},
 	}

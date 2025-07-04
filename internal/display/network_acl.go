@@ -179,10 +179,10 @@ func makeNetworkACLView(acl *management.NetworkACL) *networkACLView {
 		Rule:        acl.GetRule(),
 	}
 
-	// Marshal the rule to JSON
+	// Marshal the rule to JSON.
 	ruleJSON, err := json.Marshal(acl.Rule)
 	if err != nil {
-		ruleJSON = []byte("") // Fallback to empty string
+		ruleJSON = []byte("") // Fallback to empty string.
 	}
 
 	return &networkACLView{
