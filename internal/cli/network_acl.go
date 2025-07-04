@@ -601,25 +601,24 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 				}
 			}
 
-			// Read the current ACL.
-			var currentACL *management.NetworkACL
-			err := ansi.Waiting(func() (err error) {
-				currentACL, err = cli.api.NetworkACL.Read(cmd.Context(), inputs.ID)
-				return err
-			})
-			if err != nil {
-				return fmt.Errorf("failed to get network ACL with ID %q: %w", inputs.ID, err)
-			}
-
 			var updatedACL *management.NetworkACL
-
-			// Initialize updatedACL with the ID from the current ACL.
-			updatedACL = &management.NetworkACL{
-				ID: currentACL.ID,
-			}
-
 			// Interactive update flow.
 			if canPrompt(cmd) {
+				// Read the current ACL.
+				var currentACL *management.NetworkACL
+				err := ansi.Waiting(func() (err error) {
+					currentACL, err = cli.api.NetworkACL.Read(cmd.Context(), inputs.ID)
+					return err
+				})
+				if err != nil {
+					return fmt.Errorf("failed to get network ACL with ID %q: %w", inputs.ID, err)
+				}
+
+				// Initialize updatedACL with the ID from the current ACL.
+				updatedACL = &management.NetworkACL{
+					ID: currentACL.ID,
+				}
+
 				// Check if specific flags were provided (partial update).
 				flagsProvided := cmd.Flags().Changed("description") || cmd.Flags().Changed("active") ||
 					cmd.Flags().Changed("priority") || cmd.Flags().Changed("rule")
@@ -945,6 +944,12 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 					}
 				}
 			} else {
+
+				// Initialize patch ACL with the ID from the current ACL.
+				updatedACL = &management.NetworkACL{
+					ID: &inputs.ID,
+				}
+
 				// Non-interactive update flow.
 				if !(cmd.Flags().Changed("description") && cmd.Flags().Changed("active") &&
 					cmd.Flags().Changed("priority") && cmd.Flags().Changed("rule")) {
@@ -997,17 +1002,20 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 				} else {
 					return fmt.Errorf("--rule flag not provided")
 				}
-			}
 
-			// If no changes were made, use the current ACL data as fallback.
-			if updatedACL.Description == nil && updatedACL.Active == nil &&
-				updatedACL.Priority == nil && updatedACL.Rule == nil {
-				// Copy current ACL data.
-				updatedACL = currentACL
+				// Patch the network ACL.
+				if err := ansi.Waiting(func() error {
+					return cli.api.NetworkACL.Patch(cmd.Context(), inputs.ID, updatedACL)
+				}); err != nil {
+					return fmt.Errorf("failed to patch network ACL with ID %q: %w", inputs.ID, err)
+				}
+
+				cli.renderer.NetworkACLUpdate(updatedACL)
+				return nil
+
 			}
 
 		updateACL:
-			// Update the network ACL.
 			if err := ansi.Waiting(func() error {
 				return cli.api.NetworkACL.Update(cmd.Context(), inputs.ID, updatedACL)
 			}); err != nil {
@@ -1016,6 +1024,7 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 
 			cli.renderer.NetworkACLUpdate(updatedACL)
 			return nil
+
 		},
 	}
 
