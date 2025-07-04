@@ -602,6 +602,12 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 			}
 
 			var updatedACL *management.NetworkACL
+
+			// Initialize with the ID from the inputs ACL.
+			updatedACL = &management.NetworkACL{
+				ID: &inputs.ID,
+			}
+
 			// Interactive update flow.
 			if canPrompt(cmd) {
 				// Read the current ACL.
@@ -612,11 +618,6 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 				})
 				if err != nil {
 					return fmt.Errorf("failed to get network ACL with ID %q: %w", inputs.ID, err)
-				}
-
-				// Initialize updatedACL with the ID from the current ACL.
-				updatedACL = &management.NetworkACL{
-					ID: currentACL.ID,
 				}
 
 				// Check if specific flags were provided (partial update).
@@ -961,11 +962,6 @@ When updating the rule, provide a complete JSON object with action, scope, and m
 
 				cli.renderer.NetworkACLUpdate(updatedACL)
 			} else {
-				// Initialize patch ACL with the ID from the current ACL.
-				updatedACL = &management.NetworkACL{
-					ID: &inputs.ID,
-				}
-
 				// Non-interactive update flow.
 				if !(cmd.Flags().Changed("description") && cmd.Flags().Changed("active") &&
 					cmd.Flags().Changed("priority") && cmd.Flags().Changed("rule")) {
