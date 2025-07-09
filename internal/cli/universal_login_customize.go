@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/auth0/go-auth0/management"
@@ -97,6 +98,15 @@ var (
 		Help:       "Script contents for the rendering configs.",
 		IsRequired: true,
 	}
+
+	screens1 = Flag{
+		Name:         "screen",
+		LongForm:     "screens",
+		ShortForm:    "s",
+		Help:         "watching screens",
+		IsRequired:   false,
+		AlwaysPrompt: true,
+	}
 )
 
 var allowedPromptsWithPartials = []management.PromptType{
@@ -109,7 +119,7 @@ var allowedPromptsWithPartials = []management.PromptType{
 	management.PromptLoginPasswordLess,
 }
 
-var ScreenPromptMap = map[string][]string{
+var PromptScreenMap = map[string][]string{
 	"signup-id":                   {"signup-id"},
 	"signup-password":             {"signup-password"},
 	"login-id":                    {"login-id"},
@@ -143,6 +153,81 @@ var ScreenPromptMap = map[string][]string{
 	"logout":                   {"logout", "logout-aborted", "logout-complete"},
 	"mfa-webauthn": {"mfa-webauthn-change-key-nickname", "mfa-webauthn-enrollment-success", "mfa-webauthn-error",
 		"mfa-webauthn-platform-challenge", "mfa-webauthn-platform-enrollment", "mfa-webauthn-roaming-challenge", "mfa-webauthn-roaming-enrollment"},
+}
+
+var ScreenPromptMap = map[string]string{
+	"signup-id":                                      "signup-id",
+	"signup-password":                                "signup-password",
+	"login-id":                                       "login-id",
+	"login-password":                                 "login-password",
+	"login-passwordless-email-code":                  "login-passwordless",
+	"login-passwordless-sms-otp":                     "login-passwordless",
+	"phone-identifier-enrollment":                    "phone-identifier-enrollment",
+	"phone-identifier-challenge":                     "phone-identifier-challenge",
+	"email-identifier-challenge":                     "email-identifier-challenge",
+	"passkey-enrollment":                             "passkeys",
+	"passkey-enrollment-local":                       "passkeys",
+	"interstitial-captcha":                           "captcha",
+	"login":                                          "login",
+	"signup":                                         "signup",
+	"reset-password-request":                         "reset-password",
+	"reset-password-email":                           "reset-password",
+	"reset-password":                                 "reset-password",
+	"reset-password-success":                         "reset-password",
+	"reset-password-error":                           "reset-password",
+	"reset-password-mfa-email-challenge":             "reset-password",
+	"reset-password-mfa-otp-challenge":               "reset-password",
+	"reset-password-mfa-push-challenge-push":         "reset-password",
+	"reset-password-mfa-sms-challenge":               "reset-password",
+	"reset-password-mfa-phone-challenge":             "reset-password",
+	"reset-password-mfa-voice-challenge":             "reset-password",
+	"reset-password-mfa-recovery-code-challenge":     "reset-password",
+	"reset-password-mfa-webauthn-platform-challenge": "reset-password",
+	"reset-password-mfa-webauthn-roaming-challenge":  "reset-password",
+	"mfa-detect-browser-capabilities":                "mfa",
+	"mfa-enroll-result":                              "mfa",
+	"mfa-begin-enroll-options":                       "mfa",
+	"mfa-login-options":                              "mfa",
+	"mfa-email-challenge":                            "mfa-email",
+	"mfa-email-list":                                 "mfa-email",
+	"mfa-country-codes":                              "mfa-sms",
+	"mfa-sms-challenge":                              "mfa-sms",
+	"mfa-sms-enrollment":                             "mfa-sms",
+	"mfa-sms-list":                                   "mfa-sms",
+	"mfa-push-challenge-push":                        "mfa-push",
+	"mfa-push-enrollment-qr":                         "mfa-push",
+	"mfa-push-list":                                  "mfa-push",
+	"mfa-push-welcome":                               "mfa-push",
+	"accept-invitation":                              "invitation",
+	"organization-selection":                         "organizations",
+	"organization-picker":                            "organizations",
+	"mfa-otp-challenge":                              "mfa-otp",
+	"mfa-otp-enrollment-code":                        "mfa-otp",
+	"mfa-otp-enrollment-qr":                          "mfa-otp",
+	"device-code-activation":                         "device-flow",
+	"device-code-activation-allowed":                 "device-flow",
+	"device-code-activation-denied":                  "device-flow",
+	"device-code-confirmation":                       "device-flow",
+	"mfa-phone-challenge":                            "mfa-phone",
+	"mfa-phone-enrollment":                           "mfa-phone",
+	"mfa-voice-challenge":                            "mfa-voice",
+	"mfa-voice-enrollment":                           "mfa-voice",
+	"mfa-recovery-code-challenge":                    "mfa-recovery-code",
+	"mfa-recovery-code-enrollment":                   "mfa-recovery-code",
+	"mfa-recovery-code-challenge-new-code":           "mfa-recovery-code",
+	"redeem-ticket":                                  "common",
+	"email-verification-result":                      "email-verification",
+	"login-email-verification":                       "login-email-verification",
+	"logout":                                         "logout",
+	"logout-aborted":                                 "logout",
+	"logout-complete":                                "logout",
+	"mfa-webauthn-change-key-nickname":               "mfa-webauthn",
+	"mfa-webauthn-enrollment-success":                "mfa-webauthn",
+	"mfa-webauthn-error":                             "mfa-webauthn",
+	"mfa-webauthn-platform-challenge":                "mfa-webauthn",
+	"mfa-webauthn-platform-enrollment":               "mfa-webauthn",
+	"mfa-webauthn-roaming-challenge":                 "mfa-webauthn",
+	"mfa-webauthn-roaming-enrollment":                "mfa-webauthn",
 }
 
 type partialsData map[string]*management.PromptScreenPartials
@@ -383,19 +468,19 @@ func advanceCustomize(cmd *cobra.Command, cli *cli, input customizationInputs) e
 func fetchPromptScreenInfo(cmd *cobra.Command, cli *cli, input *promptScreen, action string) error {
 	if input.promptName == "" {
 		cli.renderer.Infof("Please select a prompt to %s its rendering mode:", action)
-		if err := promptName.Select(cmd, &input.promptName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
+		if err := promptName.Select(cmd, &input.promptName, utils.FetchKeys(PromptScreenMap), nil); err != nil {
 			return handleInputError(err)
 		}
 	}
 
 	if input.screenName == "" {
-		if len(ScreenPromptMap[input.promptName]) > 1 {
+		if len(PromptScreenMap[input.promptName]) > 1 {
 			cli.renderer.Infof("Please select a screen to %s its rendering mode:", action)
-			if err := screenName.Select(cmd, &input.screenName, ScreenPromptMap[input.promptName], nil); err != nil {
+			if err := screenName.Select(cmd, &input.screenName, PromptScreenMap[input.promptName], nil); err != nil {
 				return handleInputError(err)
 			}
 		} else {
-			input.screenName = ScreenPromptMap[input.promptName][0]
+			input.screenName = PromptScreenMap[input.promptName][0]
 		}
 	}
 
@@ -1141,104 +1226,38 @@ func switchUniversalLoginRendererModeCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 func newUpdateAssetsCmd(cli *cli) *cobra.Command {
-	var screen, prompt, watchFolder, assetURL string
+	var watchFolder, assetURL string
+	var screens []string
 
 	cmd := &cobra.Command{
 		Use:   "watch-assets",
 		Short: "Watch dist folder and patch screen assets",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return watchAndPatch(context.Background(), cli, screen, prompt, assetURL, watchFolder)
+			return watchAndPatch(context.Background(), cli, assetURL, watchFolder, screens)
 		},
 	}
 
-	cmd.Flags().StringVar(&screen, "screen", "", "Screen name (e.g., login)")
-	cmd.Flags().StringVar(&prompt, "prompt", "", "Prompt name (e.g., login)")
+	screens1.RegisterStringSlice(cmd, &screens, nil)
 	cmd.Flags().StringVar(&watchFolder, "watch-folder", "", "Folder to watch for new builds")
 	cmd.Flags().StringVar(&assetURL, "assets-url", "", "Base URL for serving dist assets (e.g., http://localhost:5173)")
-	cmd.MarkFlagRequired("screen")
-	cmd.MarkFlagRequired("prompt")
+	cmd.MarkFlagRequired("screens1")
 	cmd.MarkFlagRequired("watch-folder")
 	cmd.MarkFlagRequired("asset-url")
 
 	return cmd
 }
 
-func watchAndPatch(ctx context.Context, cli *cli, screen, prompt, assetsUrl, watchFolder string) error {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return err
-	}
-
-	defer watcher.Close()
-
-	if err := watcher.Add(watchFolder); err != nil {
-		return fmt.Errorf("failed to watch %s: %w", watchFolder, err)
-	}
-
-	fmt.Printf("Watching folder '%q' for assets changes...\n", watchFolder)
-
-	settings, err := fetchSettings(ctx, cli, prompt, screen)
-	if err != nil {
-		return fmt.Errorf("failed to fetch settings for prompt %q and screen %q: %w", prompt, screen, err)
-	}
-
-	if settings == nil {
-		return fmt.Errorf("no settings found for prompt %q and screen %q", prompt, screen)
-	}
-
-	fmt.Println("Initial settings: ", settings.HeadTags)
-
-	//var lastEventTime time.Time
-	//const debounceDelay = 2000 * time.Millisecond
-
-	for {
-		select {
-		case event, ok := <-watcher.Events:
-			if !ok {
-				return nil
-			}
-
-			if strings.HasSuffix(event.Name, "assets") {
-				if event.Op&(fsnotify.Create) != 0 {
-					time.Sleep(300 * time.Millisecond) // Allow some time for the file system to settle
-
-					log.Println("Change detected in assets:", event.Name)
-
-					headTags, err := buildHeadTagsFromDist(watchFolder, assetsUrl)
-					if err != nil {
-						log.Printf("Failed to build head tags: %v\n", err)
-						continue
-					}
-
-					settings.HeadTags = headTags
-
-					// Patch settings to Auth0
-					if err := updateSettings(ctx, cli, prompt, screen, settings); err != nil {
-						log.Println("Patch error:", err)
-					} else {
-						log.Println("Patch successful.")
-					}
-				}
-			}
-		case err := <-watcher.Errors:
-			fmt.Printf("Error: %v\n", err)
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-}
-
 func fetchSettings(ctx context.Context, cli *cli, promptName, screenName string) (*management.PromptRendering, error) {
 	return cli.api.Prompt.ReadRendering(ctx, management.PromptType(promptName), management.ScreenName(screenName))
 }
 
-func updateSettings(ctx context.Context, cli *cli, promptName, screenName string, settings *management.PromptRendering) error {
+func updateSettings(ctx context.Context, cli *cli, screenName string, settings *management.PromptRendering) error {
 	if settings == nil || settings.RenderingMode == nil {
 		return fmt.Errorf("settings or rendering mode is nil")
 	}
 
 	if err := ansi.Waiting(func() error {
-		return cli.api.Prompt.UpdateRendering(ctx, management.PromptType(promptName), management.ScreenName(screenName), settings)
+		return cli.api.Prompt.UpdateRendering(ctx, management.PromptType(ScreenPromptMap[screenName]), management.ScreenName(screenName), settings)
 	}); err != nil {
 		return fmt.Errorf("failed to set the render settings: %w", err)
 	}
@@ -1246,50 +1265,241 @@ func updateSettings(ctx context.Context, cli *cli, promptName, screenName string
 	return nil
 }
 
-func buildHeadTagsFromDist(distDir, assetURLPrefix string) ([]interface{}, error) {
-	var headTags []interface{}
-
-	targetFolder := filepath.Join(distDir, "assets")
-
-	err := filepath.Walk(targetFolder, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
-			return nil
-		}
-
-		ext := filepath.Ext(path)
-		relPath, err := filepath.Rel(distDir, path)
-		if err != nil {
-			return err
-		}
-
-		relPath = filepath.ToSlash(relPath)
-		fullURL := strings.TrimRight(assetURLPrefix, "/") + "/" + relPath
-
-		switch ext {
-		case ".js":
-			headTags = append(headTags, map[string]interface{}{
-				"tag": "script",
-				"attributes": map[string]interface{}{
-					"src":   fullURL,
-					"defer": true,
-					"type":  "module",
-				},
-			})
-		case ".css":
-			headTags = append(headTags, map[string]interface{}{
-				"tag": "link",
-				"attributes": map[string]interface{}{
-					"href": fullURL,
-					"rel":  "stylesheet",
-				},
-			})
-		}
-		return nil
-	})
-
+func patchScreen(ctx context.Context, cli *cli, prompt, assetsURL, distAssetsPath, screen string) error {
+	settings, err := fetchSettings(ctx, cli, prompt, screen)
+	if err != nil || settings == nil {
+		return fmt.Errorf("failed to fetch settings for %s: %w", screen, err)
+	}
+	headTags, err := buildHeadTagsFromDirs(filepath.Dir(distAssetsPath), assetsURL, screen)
 	if err != nil {
-		return nil, fmt.Errorf("error reading folder %s: %w", targetFolder, err)
+		return fmt.Errorf("failed to build head tags for %s: %w", screen, err)
+	}
+	settings.HeadTags = headTags
+	if err := updateSettings(ctx, cli, screen, settings); err != nil {
+		return fmt.Errorf("failed to update settings for %s: %w", screen, err)
+	}
+	log.Printf("✅ Patched screen: %s", screen)
+	return nil
+}
+
+func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, screenDirs []string) error {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return err
 	}
 
-	return headTags, nil
+	defer watcher.Close()
+
+	distAssetsPath := filepath.Join(distPath, "assets")
+	var screensToWatch []string
+
+	if len(screenDirs) == 1 && screenDirs[0] == "all" {
+		dirs, err := os.ReadDir(distAssetsPath)
+		if err != nil {
+			return fmt.Errorf("failed to read assets dir: %w", err)
+		}
+		for _, d := range dirs {
+			if d.IsDir() && d.Name() != "shared" {
+				screensToWatch = append(screensToWatch, d.Name())
+			}
+		}
+	} else {
+		for _, screen := range screenDirs {
+			path := filepath.Join(distAssetsPath, screen)
+			_, err = os.Stat(path)
+			if err != nil {
+				log.Printf("⚠️ screen directory %q not found in dist/assets: %v", screen, err)
+				continue
+			}
+
+			screensToWatch = append(screensToWatch, screen)
+		}
+	}
+
+	screenSet := make(map[string]bool)
+	for _, s := range screensToWatch {
+		screenSet[s] = true
+	}
+
+	// Watch paths
+	watchPaths := []string{
+		// distPath,
+		distAssetsPath,
+		filepath.Join(distAssetsPath, "shared"),
+	}
+
+	for _, screen := range screensToWatch {
+		watchPaths = append(watchPaths, filepath.Join(distAssetsPath, screen))
+	}
+
+	var watchedPaths []string
+	for _, path := range watchPaths {
+		if err := watcher.Add(path); err != nil {
+			log.Printf("⚠️ Failed to watch %q: %v", path, err)
+		} else {
+			watchedPaths = append(watchedPaths, filepath.Base(path))
+		}
+	}
+
+	if len(watchedPaths) > 0 {
+		log.Printf("👀 Watching %d folders: %s", len(watchedPaths), strings.Join(watchedPaths, ", "))
+	}
+
+	eventChan := make(chan string, 100)
+
+	go func() {
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+
+				if event.Op&(fsnotify.Create|fsnotify.Write|fsnotify.Rename|fsnotify.Remove) != 0 && isAssetFile(event.Name) {
+					eventChan <- event.Name
+				}
+			case err := <-watcher.Errors:
+				log.Printf("❗ Watcher error: %v", err)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	// Start a goroutine to process file change events in batches
+	go func() {
+		for {
+			// Wait for the first event from the channel
+			path, ok := <-eventChan
+			if !ok {
+				return
+			}
+
+			paths := []string{path}
+
+			// Set a 2-second window to collect additional events
+			collectWindow := time.After(2 * time.Second)
+
+		loop:
+			for {
+				select {
+				// If another file change event comes in before 2s, collect it
+				case p := <-eventChan:
+					paths = append(paths, p)
+
+				// If no events arrive within the window, break and process collected paths
+				case <-collectWindow:
+					break loop
+				}
+			}
+
+			affectedScreens := make(map[string]bool)
+			sharedChanged := false
+
+			for _, p := range paths {
+				relPath, _ := filepath.Rel(distAssetsPath, p)
+				relPath = filepath.ToSlash(relPath)
+
+				switch {
+				case strings.HasPrefix(relPath, "shared/"), strings.HasPrefix(relPath, "main-") && strings.HasSuffix(relPath, ".js"):
+					sharedChanged = true
+					break
+
+				default:
+					parts := strings.Split(relPath, "/")
+					if len(parts) >= 2 {
+						screen := parts[0]
+						if screenSet[screen] {
+							affectedScreens[screen] = true
+						} else {
+							log.Printf("ℹ️ Ignored change from unknown or untracked folder: %q", screen)
+						}
+					}
+				}
+			}
+
+			var wg sync.WaitGroup
+			errChan := make(chan error, len(screensToWatch))
+
+			if sharedChanged {
+				for _, screen := range screensToWatch {
+					wg.Add(1)
+					go func(screen string) {
+						defer wg.Done()
+						if err = patchScreen(ctx, cli, ScreenPromptMap[screen], assetsURL, distAssetsPath, screen); err != nil {
+							errChan <- fmt.Errorf("❌ Failed to patch screen %q: %v", screen, err)
+						}
+					}(screen)
+				}
+			} else {
+				for screen := range affectedScreens {
+					wg.Add(1)
+					go func(screen string) {
+						defer wg.Done()
+						if err = patchScreen(ctx, cli, ScreenPromptMap[screen], assetsURL, distAssetsPath, screen); err != nil {
+							errChan <- fmt.Errorf("❌ Failed to patch screen %q: %v", screen, err)
+						}
+					}(screen)
+				}
+			}
+
+			wg.Wait()
+			close(errChan)
+
+			for err = range errChan {
+				log.Println(err)
+			}
+		}
+	}()
+
+	<-ctx.Done()
+	return nil
+}
+
+func isAssetFile(name string) bool {
+	return strings.HasSuffix(name, ".js") || strings.HasSuffix(name, ".css")
+}
+
+func buildHeadTagsFromDirs(distPath, assetsURL, screen string) ([]interface{}, error) {
+	var tags []interface{}
+	screenPath := filepath.Join(distPath, "assets", screen)
+	sharedPath := filepath.Join(distPath, "assets", "shared")
+	mainPath := filepath.Join(distPath, "assets")
+
+	sources := []string{sharedPath, screenPath, mainPath}
+
+	for _, dir := range sources {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue // skip on error
+		}
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			name := entry.Name()
+			src := fmt.Sprintf("%s/assets/%s/%s", assetsURL, filepath.Base(dir), name)
+
+			switch {
+			case strings.HasSuffix(name, ".js"):
+				tags = append(tags, map[string]interface{}{
+					"tag": "script",
+					"attributes": map[string]interface{}{
+						"src":   src,
+						"defer": true,
+					},
+				})
+			case strings.HasSuffix(name, ".css"):
+				tags = append(tags, map[string]interface{}{
+					"tag": "link",
+					"attributes": map[string]interface{}{
+						"href": src,
+						"rel":  "stylesheet",
+					},
+				})
+			}
+		}
+	}
+
+	return tags, nil
 }
