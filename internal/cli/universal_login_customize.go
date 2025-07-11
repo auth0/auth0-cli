@@ -1304,75 +1304,79 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 		log.Printf("👀 Watching: %d screen(s): %v", len(screensToWatch), screensToWatch)
 	}
 
-	eventChan := make(chan string, 100)
+	const debounceWindow = 5 * time.Second
+	var lastProcessTime time.Time
+	lastHeadTags := make(map[string][]interface{})
 
-	go func() {
-		for {
-			select {
-			case event, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
-				if strings.HasSuffix(event.Name, "assets") && event.Op&(fsnotify.Create) != 0 {
-					time.Sleep(300 * time.Millisecond) // Allow some time for the file system to settle
-					eventChan <- event.Name
-				}
-			case err := <-watcher.Errors:
-				log.Printf("❗ Watcher error: %v", err)
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-
-	go func() {
-		for {
-			path, ok := <-eventChan
+	for {
+		select {
+		case event, ok := <-watcher.Events:
 			if !ok {
-				return
+				return nil
 			}
 
-			time.Sleep(300 * time.Millisecond) // short delay to let writes settle
-			log.Printf("🔁 Detected change in: %s — patching screens...", path)
+			if strings.HasSuffix(event.Name, "assets") && event.Op&(fsnotify.Create) != 0 {
+				now := time.Now()
+				if now.Sub(lastProcessTime) < debounceWindow {
+					log.Println("⏱️ Ignoring event due to debounce window")
+					continue
+				}
+				lastProcessTime = now
 
-			var wg sync.WaitGroup
-			errChan := make(chan error, len(screensToWatch))
+				time.Sleep(500 * time.Millisecond) // short delay to let writes settle
+				log.Println("📦 Change detected in assets folder. Rebuilding and patching...")
 
-			for _, screen := range screensToWatch {
-				wg.Add(1)
-				go func(screen string) {
-					defer wg.Done()
-					if err := patchScreen(ctx, cli, assetsURL, distAssetsPath, screen); err != nil {
-						errChan <- fmt.Errorf("❌ Failed to patch screen %q: %v", screen, err)
-					}
-				}(screen)
+				var wg sync.WaitGroup
+				errChan := make(chan error, len(screensToWatch))
+
+				for _, screen := range screensToWatch {
+					wg.Add(1)
+
+					go func(screen string) {
+						defer wg.Done()
+
+						headTags, err := buildHeadTagsFromDirs(filepath.Dir(distAssetsPath), assetsURL, screen)
+						if err != nil {
+							errChan <- fmt.Errorf("failed to build headTags for %s: %w", screen, err)
+							return
+						}
+
+						if reflect.DeepEqual(lastHeadTags[screen], headTags) {
+							log.Printf("🔁 Skipping patch for '%s' — headTags unchanged", screen)
+							return
+						}
+
+						log.Printf("📦 Detected changes for screen '%s'", screen)
+						lastHeadTags[screen] = headTags
+
+						var settings = &management.PromptRendering{
+							HeadTags: headTags,
+						}
+
+						if err = cli.api.Prompt.UpdateRendering(ctx, management.PromptType(ScreenPromptMap[screen]), management.ScreenName(screen), settings); err != nil {
+							errChan <- fmt.Errorf("failed to patch settings for %s: %w", screen, err)
+							return
+						}
+
+						log.Printf("✅ Successfully patched screen '%s'", screen)
+					}(screen)
+				}
+
+				wg.Wait()
+				close(errChan)
+
+				for err = range errChan {
+					log.Println(err)
+				}
 			}
 
-			wg.Wait()
-			close(errChan)
+		case err = <-watcher.Errors:
+			log.Println("Watcher error: ", err)
 
-			for err := range errChan {
-				log.Println(err)
-			}
+		case <-ctx.Done():
+			return ctx.Err()
 		}
-	}()
-
-	<-ctx.Done()
-	return nil
-}
-
-func patchScreen(ctx context.Context, cli *cli, assetsURL, distAssetsPath, screen string) error {
-	var settings management.PromptRendering
-	headTags, err := buildHeadTagsFromDirs(filepath.Dir(distAssetsPath), assetsURL, screen)
-	if err != nil {
-		return fmt.Errorf("failed to build head tags for %s: %w", screen, err)
 	}
-	settings.HeadTags = headTags
-	if err := updateSettings(ctx, cli, screen, &settings); err != nil {
-		return fmt.Errorf("failed to update settings for %s: %w", screen, err)
-	}
-	log.Printf("✅ Patched screen: %s", screen)
-	return nil
 }
 
 func buildHeadTagsFromDirs(distPath, assetsURL, screen string) ([]interface{}, error) {
