@@ -1247,12 +1247,8 @@ func newUpdateAssetsCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func fetchSettings(ctx context.Context, cli *cli, promptName, screenName string) (*management.PromptRendering, error) {
-	return cli.api.Prompt.ReadRendering(ctx, management.PromptType(promptName), management.ScreenName(screenName))
-}
-
 func updateSettings(ctx context.Context, cli *cli, screenName string, settings *management.PromptRendering) error {
-	if settings == nil || settings.RenderingMode == nil {
+	if settings == nil {
 		return fmt.Errorf("settings or rendering mode is nil")
 	}
 
@@ -1265,29 +1261,11 @@ func updateSettings(ctx context.Context, cli *cli, screenName string, settings *
 	return nil
 }
 
-func patchScreen(ctx context.Context, cli *cli, prompt, assetsURL, distAssetsPath, screen string) error {
-	settings, err := fetchSettings(ctx, cli, prompt, screen)
-	if err != nil || settings == nil {
-		return fmt.Errorf("failed to fetch settings for %s: %w", screen, err)
-	}
-	headTags, err := buildHeadTagsFromDirs(filepath.Dir(distAssetsPath), assetsURL, screen)
-	if err != nil {
-		return fmt.Errorf("failed to build head tags for %s: %w", screen, err)
-	}
-	settings.HeadTags = headTags
-	if err := updateSettings(ctx, cli, screen, settings); err != nil {
-		return fmt.Errorf("failed to update settings for %s: %w", screen, err)
-	}
-	log.Printf("✅ Patched screen: %s", screen)
-	return nil
-}
-
 func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, screenDirs []string) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return err
 	}
-
 	defer watcher.Close()
 
 	distAssetsPath := filepath.Join(distPath, "assets")
@@ -1298,6 +1276,7 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 		if err != nil {
 			return fmt.Errorf("failed to read assets dir: %w", err)
 		}
+
 		for _, d := range dirs {
 			if d.IsDir() && d.Name() != "shared" {
 				screensToWatch = append(screensToWatch, d.Name())
@@ -1306,43 +1285,23 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 	} else {
 		for _, screen := range screenDirs {
 			path := filepath.Join(distAssetsPath, screen)
-			_, err = os.Stat(path)
+			info, err := os.Stat(path)
 			if err != nil {
 				log.Printf("⚠️ screen directory %q not found in dist/assets: %v", screen, err)
 				continue
 			}
-
+			if !info.IsDir() {
+				log.Printf("⚠️ screen path %q exists but is not a directory", path)
+				continue
+			}
 			screensToWatch = append(screensToWatch, screen)
 		}
 	}
 
-	screenSet := make(map[string]bool)
-	for _, s := range screensToWatch {
-		screenSet[s] = true
-	}
-
-	// Watch paths
-	watchPaths := []string{
-		// distPath,
-		distAssetsPath,
-		filepath.Join(distAssetsPath, "shared"),
-	}
-
-	for _, screen := range screensToWatch {
-		watchPaths = append(watchPaths, filepath.Join(distAssetsPath, screen))
-	}
-
-	var watchedPaths []string
-	for _, path := range watchPaths {
-		if err := watcher.Add(path); err != nil {
-			log.Printf("⚠️ Failed to watch %q: %v", path, err)
-		} else {
-			watchedPaths = append(watchedPaths, filepath.Base(path))
-		}
-	}
-
-	if len(watchedPaths) > 0 {
-		log.Printf("👀 Watching %d folders: %s", len(watchedPaths), strings.Join(watchedPaths, ", "))
+	if err := watcher.Add(distPath); err != nil {
+		log.Printf("⚠️ Failed to watch %q: %v", distPath, err)
+	} else {
+		log.Printf("👀 Watching: %d screen(s): %v", len(screensToWatch), screensToWatch)
 	}
 
 	eventChan := make(chan string, 100)
@@ -1354,8 +1313,8 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 				if !ok {
 					return
 				}
-
-				if event.Op&(fsnotify.Create|fsnotify.Write|fsnotify.Rename|fsnotify.Remove) != 0 && isAssetFile(event.Name) {
+				if strings.HasSuffix(event.Name, "assets") && event.Op&(fsnotify.Create) != 0 {
+					time.Sleep(300 * time.Millisecond) // Allow some time for the file system to settle
 					eventChan <- event.Name
 				}
 			case err := <-watcher.Errors:
@@ -1366,87 +1325,33 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 		}
 	}()
 
-	// Start a goroutine to process file change events in batches
 	go func() {
 		for {
-			// Wait for the first event from the channel
 			path, ok := <-eventChan
 			if !ok {
 				return
 			}
 
-			paths := []string{path}
-
-			// Set a 2-second window to collect additional events
-			collectWindow := time.After(2 * time.Second)
-
-		loop:
-			for {
-				select {
-				// If another file change event comes in before 2s, collect it
-				case p := <-eventChan:
-					paths = append(paths, p)
-
-				// If no events arrive within the window, break and process collected paths
-				case <-collectWindow:
-					break loop
-				}
-			}
-
-			affectedScreens := make(map[string]bool)
-			sharedChanged := false
-
-			for _, p := range paths {
-				relPath, _ := filepath.Rel(distAssetsPath, p)
-				relPath = filepath.ToSlash(relPath)
-
-				switch {
-				case strings.HasPrefix(relPath, "shared/"), strings.HasPrefix(relPath, "main-") && strings.HasSuffix(relPath, ".js"):
-					sharedChanged = true
-					break
-
-				default:
-					parts := strings.Split(relPath, "/")
-					if len(parts) >= 2 {
-						screen := parts[0]
-						if screenSet[screen] {
-							affectedScreens[screen] = true
-						} else {
-							log.Printf("ℹ️ Ignored change from unknown or untracked folder: %q", screen)
-						}
-					}
-				}
-			}
+			time.Sleep(300 * time.Millisecond) // short delay to let writes settle
+			log.Printf("🔁 Detected change in: %s — patching screens...", path)
 
 			var wg sync.WaitGroup
 			errChan := make(chan error, len(screensToWatch))
 
-			if sharedChanged {
-				for _, screen := range screensToWatch {
-					wg.Add(1)
-					go func(screen string) {
-						defer wg.Done()
-						if err = patchScreen(ctx, cli, ScreenPromptMap[screen], assetsURL, distAssetsPath, screen); err != nil {
-							errChan <- fmt.Errorf("❌ Failed to patch screen %q: %v", screen, err)
-						}
-					}(screen)
-				}
-			} else {
-				for screen := range affectedScreens {
-					wg.Add(1)
-					go func(screen string) {
-						defer wg.Done()
-						if err = patchScreen(ctx, cli, ScreenPromptMap[screen], assetsURL, distAssetsPath, screen); err != nil {
-							errChan <- fmt.Errorf("❌ Failed to patch screen %q: %v", screen, err)
-						}
-					}(screen)
-				}
+			for _, screen := range screensToWatch {
+				wg.Add(1)
+				go func(screen string) {
+					defer wg.Done()
+					if err := patchScreen(ctx, cli, assetsURL, distAssetsPath, screen); err != nil {
+						errChan <- fmt.Errorf("❌ Failed to patch screen %q: %v", screen, err)
+					}
+				}(screen)
 			}
 
 			wg.Wait()
 			close(errChan)
 
-			for err = range errChan {
+			for err := range errChan {
 				log.Println(err)
 			}
 		}
@@ -1456,8 +1361,18 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 	return nil
 }
 
-func isAssetFile(name string) bool {
-	return strings.HasSuffix(name, ".js") || strings.HasSuffix(name, ".css")
+func patchScreen(ctx context.Context, cli *cli, assetsURL, distAssetsPath, screen string) error {
+	var settings management.PromptRendering
+	headTags, err := buildHeadTagsFromDirs(filepath.Dir(distAssetsPath), assetsURL, screen)
+	if err != nil {
+		return fmt.Errorf("failed to build head tags for %s: %w", screen, err)
+	}
+	settings.HeadTags = headTags
+	if err := updateSettings(ctx, cli, screen, &settings); err != nil {
+		return fmt.Errorf("failed to update settings for %s: %w", screen, err)
+	}
+	log.Printf("✅ Patched screen: %s", screen)
+	return nil
 }
 
 func buildHeadTagsFromDirs(distPath, assetsURL, screen string) ([]interface{}, error) {
@@ -1473,23 +1388,34 @@ func buildHeadTagsFromDirs(distPath, assetsURL, screen string) ([]interface{}, e
 		if err != nil {
 			continue // skip on error
 		}
+
 		for _, entry := range entries {
 			if entry.IsDir() {
 				continue
 			}
 			name := entry.Name()
-			src := fmt.Sprintf("%s/assets/%s/%s", assetsURL, filepath.Base(dir), name)
+			subDir := filepath.Base(dir)
+			if subDir == "assets" {
+				subDir = "" // root-level main-*.js
+			}
+			src := fmt.Sprintf("%s/assets/%s%s", assetsURL, subDir, name)
+			if subDir != "" {
+				src = fmt.Sprintf("%s/assets/%s/%s", assetsURL, subDir, name)
+			}
 
-			switch {
-			case strings.HasSuffix(name, ".js"):
+			ext := filepath.Ext(name)
+
+			switch ext {
+			case ".js":
 				tags = append(tags, map[string]interface{}{
 					"tag": "script",
 					"attributes": map[string]interface{}{
 						"src":   src,
 						"defer": true,
+						"type":  "module",
 					},
 				})
-			case strings.HasSuffix(name, ".css"):
+			case ".css":
 				tags = append(tags, map[string]interface{}{
 					"tag": "link",
 					"attributes": map[string]interface{}{
