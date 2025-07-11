@@ -99,12 +99,28 @@ var (
 		IsRequired: true,
 	}
 
+	watchFolder = Flag{
+		Name:       "Watch Folder",
+		LongForm:   "watch-folder",
+		ShortForm:  "w",
+		Help:       "Folder to watch for new builds. CLI will watch for changes in the folder and automatically update the assets.",
+		IsRequired: true,
+	}
+
+	assetURL = Flag{
+		Name:       "Assets URL",
+		LongForm:   "assets-url",
+		ShortForm:  "u",
+		Help:       "Base URL for serving dist assets (e.g., http://localhost:5173).",
+		IsRequired: true,
+	}
+
 	screens1 = Flag{
 		Name:         "screen",
 		LongForm:     "screens",
 		ShortForm:    "s",
 		Help:         "watching screens",
-		IsRequired:   false,
+		IsRequired:   true,
 		AlwaysPrompt: true,
 	}
 )
@@ -1226,39 +1242,26 @@ func switchUniversalLoginRendererModeCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 func newUpdateAssetsCmd(cli *cli) *cobra.Command {
-	var watchFolder, assetURL string
+	var watchFolders, assetsURL string
 	var screens []string
 
 	cmd := &cobra.Command{
 		Use:   "watch-assets",
-		Short: "Watch dist folder and patch screen assets",
+		Short: "Watch the dist folder and patch screen assets. You can watch all screens or one or more specific screens.",
+		Example: `  auth0 universal-login watch-assets --screens login-id,login,signup,email-identifier-challenge,login-passwordless-email-code --watch-folder "/dist" --assets-url "http://localhost:8080"
+  auth0 ul watch-assets --screens all -w "/dist" -u "http://localhost:8080"
+  auth0 ul watch-assets --screen login-id --watch-folder "/dist"" --assets-url "http://localhost:8080"
+  auth0 ul switch -p login-id -s login-id -r standard`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return watchAndPatch(context.Background(), cli, assetURL, watchFolder, screens)
+			return watchAndPatch(context.Background(), cli, assetsURL, watchFolders, screens)
 		},
 	}
 
 	screens1.RegisterStringSlice(cmd, &screens, nil)
-	cmd.Flags().StringVar(&watchFolder, "watch-folder", "", "Folder to watch for new builds")
-	cmd.Flags().StringVar(&assetURL, "assets-url", "", "Base URL for serving dist assets (e.g., http://localhost:5173)")
-	cmd.MarkFlagRequired("screens1")
-	cmd.MarkFlagRequired("watch-folder")
-	cmd.MarkFlagRequired("asset-url")
+	watchFolder.RegisterString(cmd, &watchFolders, "")
+	assetURL.RegisterString(cmd, &assetsURL, "")
 
 	return cmd
-}
-
-func updateSettings(ctx context.Context, cli *cli, screenName string, settings *management.PromptRendering) error {
-	if settings == nil {
-		return fmt.Errorf("settings or rendering mode is nil")
-	}
-
-	if err := ansi.Waiting(func() error {
-		return cli.api.Prompt.UpdateRendering(ctx, management.PromptType(ScreenPromptMap[screenName]), management.ScreenName(screenName), settings)
-	}); err != nil {
-		return fmt.Errorf("failed to set the render settings: %w", err)
-	}
-
-	return nil
 }
 
 func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, screenDirs []string) error {
@@ -1287,11 +1290,11 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 			path := filepath.Join(distAssetsPath, screen)
 			info, err := os.Stat(path)
 			if err != nil {
-				log.Printf("⚠️ screen directory %q not found in dist/assets: %v", screen, err)
+				log.Printf("Screen directory %q not found in dist/assets: %v", screen, err)
 				continue
 			}
 			if !info.IsDir() {
-				log.Printf("⚠️ screen path %q exists but is not a directory", path)
+				log.Printf("Screen path %q exists but is not a directory", path)
 				continue
 			}
 			screensToWatch = append(screensToWatch, screen)
@@ -1299,7 +1302,7 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 	}
 
 	if err := watcher.Add(distPath); err != nil {
-		log.Printf("⚠️ Failed to watch %q: %v", distPath, err)
+		log.Printf("Failed to watch %q: %v", distPath, err)
 	} else {
 		log.Printf("👀 Watching: %d screen(s): %v", len(screensToWatch), screensToWatch)
 	}
