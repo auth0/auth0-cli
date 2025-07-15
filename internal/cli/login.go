@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/pkg/browser"
@@ -41,6 +42,22 @@ var (
 		AlwaysPrompt: false,
 	}
 
+	loginClientAssertionPrivateKey = Flag{
+		Name:         "Client Assertion Private Key",
+		LongForm:     "client-assertion-private-key",
+		Help:         "Client Assertion Private key with either a file path or direct content when authenticating via Private key JWT.",
+		IsRequired:   false,
+		AlwaysPrompt: false,
+	}
+
+	loginClientAssertionSigningAlg = Flag{
+		Name:         "Client Assertion Signing Algorithm",
+		LongForm:     "client-assertion-signing-alg",
+		Help:         "Client Assertion Signing Algorithm when authenticating via Private key JWT. Supported algorithms: RS256, RS384, PS256.",
+		IsRequired:   false,
+		AlwaysPrompt: false,
+	}
+
 	loginAdditionalScopes = Flag{
 		Name:         "Additional Scopes",
 		LongForm:     "scopes",
@@ -51,10 +68,12 @@ var (
 )
 
 type LoginInputs struct {
-	Domain           string
-	ClientID         string
-	ClientSecret     string
-	AdditionalScopes []string
+	Domain                    string
+	ClientID                  string
+	ClientSecret              string
+	ClientAssertionPrivateKey string
+	ClientAssertionSigningAlg string
+	AdditionalScopes          []string
 }
 
 func (i *LoginInputs) isLoggingInWithAdditionalScopes() bool {
@@ -74,11 +93,25 @@ func loginCmd(cli *cli) *cobra.Command {
 			"this is the recommended method for Private Cloud users.\n\n",
 		Example: `  auth0 login
   auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>
+  auth0 login --domain <tenant-domain> --client-id <client-id> --client-assertion-signing-alg RS256 --client-assertion-private-key <path-to-private-key>
+  auth0 login --domain <tenant-domain> --client-id <client-id> --client-assertion-signing-alg RS256 --client-assertion-private-key <client-assertion-private-key>
   auth0 login --scopes "read:client_grants,create:client_grants"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var selectedLoginType string
-			const loginAsUser, loginAsMachine = "As a user", "As a machine"
-			shouldLoginAsUser, shouldLoginAsMachine := false, false
+			ctx := cmd.Context()
+			const (
+				loginAsUser    = "As a user"
+				loginAsMachine = "As a machine"
+				clientSecret   = "Client Secret"
+				clientJWT      = "Client Assertion"
+			)
+
+			var (
+				shouldLoginAsUser          = false
+				shouldLoginAsMachineJWT    = false
+				shouldLoginAsMachineSecret = false
+				shouldLoginAsMachine       = false
+				selectedLoginType          = ""
+			)
 
 			/*
 				Based on the initial inputs we'd like to determine if
@@ -89,39 +122,32 @@ func loginCmd(cli *cli) *cobra.Command {
 				initial command.
 				Hence, the flow diverges into two based on no-input flag's value.
 			*/
-			switch {
-			case cli.noInput:
+			if cli.noInput {
 				switch {
-				case inputs.Domain != "" && inputs.ClientSecret != "" && inputs.ClientID != "":
-					// If all three fields are passed, machine login flag is set to true.
-					shouldLoginAsMachine = true
-				case inputs.Domain != "" && inputs.ClientSecret == "" && inputs.ClientID == "":
-					/*
-						The domain flag is common between Machine and User Login.
-						If domain is passed without client-id and client-secret,
-						it can be evaluated that it is a user login flow.
-					*/
+				case inputs.Domain != "" && inputs.ClientID != "" && inputs.ClientSecret != "":
+					shouldLoginAsMachineSecret = true
+				case inputs.Domain != "" && inputs.ClientID != "" && inputs.ClientAssertionSigningAlg != "" && inputs.ClientAssertionPrivateKey != "":
+					shouldLoginAsMachineJWT = true
+				case inputs.Domain != "" &&
+					inputs.ClientID == "" && inputs.ClientSecret == "" &&
+					inputs.ClientAssertionSigningAlg == "" && inputs.ClientAssertionPrivateKey == "":
 					shouldLoginAsUser = true
-				case inputs.Domain != "" || inputs.ClientSecret != "" || inputs.ClientID != "":
-					/*
-						At this point, if AT LEAST one of the three flags are passed but not ALL three,
-						we return an error since it's a no-input flow and it will need all three params
-						for successful machine flow.
-						Note that we already determined it's not a user login flow in the condition above.
-					*/
-					return fmt.Errorf("flags client-id, client-secret and domain are required together")
+				case inputs.Domain != "" || inputs.ClientID != "" || inputs.ClientSecret != "" || inputs.ClientAssertionSigningAlg != "" || inputs.ClientAssertionPrivateKey != "":
+					return fmt.Errorf("for machine login, provide domain with either (client-id, client-secret) or (client-id, client-assertion-signing-alg, client-assertion-private-key)")
 				default:
 					/*
 						If no flags are passed along with --no-input, it is defaulted to user login flow.
 					*/
 					shouldLoginAsUser = true
 				}
-			default:
-				if inputs.ClientSecret != "" || inputs.ClientID != "" {
-					/*
-						If all three params are passed, we evaluate it as a Machine Login Flow.
-						Else required params are prompted for.
-					*/
+			} else {
+				if inputs.ClientAssertionSigningAlg != "" || inputs.ClientAssertionPrivateKey != "" {
+					shouldLoginAsMachineJWT = true
+				}
+				if inputs.ClientSecret != "" {
+					shouldLoginAsMachineSecret = true
+				}
+				if inputs.ClientID != "" {
 					shouldLoginAsMachine = true
 				}
 			}
@@ -136,7 +162,7 @@ func loginCmd(cli *cli) *cobra.Command {
 				based on all the evaluation above, we go on to prompt the user and
 				determine if it's LoginAsUser or LoginAsMachine
 			*/
-			if !shouldLoginAsUser && !shouldLoginAsMachine {
+			if !shouldLoginAsUser && !shouldLoginAsMachineSecret && !shouldLoginAsMachineJWT && !shouldLoginAsMachine {
 				cli.renderer.Output(
 					fmt.Sprintf(
 						"%s\n\n%s\n%s\n\n%s\n%s\n%s\n%s\n\n",
@@ -150,27 +176,50 @@ func loginCmd(cli *cli) *cobra.Command {
 					),
 				)
 
-				label := "How would you like to authenticate?"
-				help := fmt.Sprintf(
-					"%s\n%s\n",
-					"Authenticating as a user is recommended if performing ad-hoc operations or working locally.",
-					"Alternatively, authenticating as a machine is recommended for automated workflows (ex:CI).",
+				promptText := prompt.SelectInput(
+					"", "How would you like to authenticate?",
+					"Authenticating as a user is recommended for local use.\nMachine auth is recommended for CI/CD.",
+					[]string{loginAsUser, loginAsMachine}, loginAsUser, true,
 				)
-				input := prompt.SelectInput("", label, help, []string{loginAsUser, loginAsMachine}, loginAsUser, true)
-				if err := prompt.AskOne(input, &selectedLoginType); err != nil {
+				if err := prompt.AskOne(promptText, &selectedLoginType); err != nil {
 					return handleInputError(err)
 				}
 			}
 
-			ctx := cmd.Context()
-
-			if shouldLoginAsUser || selectedLoginType == loginAsUser {
+			switch {
+			case shouldLoginAsUser || selectedLoginType == loginAsUser:
 				if _, err := RunLoginAsUser(ctx, cli, inputs.AdditionalScopes, inputs.Domain); err != nil {
-					return fmt.Errorf("failed to start the authentication process: %w", err)
+					return fmt.Errorf("failed to start user login: %w", err)
 				}
-			} else {
-				if err := RunLoginAsMachine(ctx, inputs, cli, cmd); err != nil {
+			default:
+				if err := loginTenantDomain.Ask(cmd, &inputs.Domain, nil); err != nil {
 					return err
+				}
+
+				// Prompt client credentials method if not clear yet.
+				if !shouldLoginAsMachineSecret && !shouldLoginAsMachineJWT {
+					promptText := prompt.SelectInput(
+						"", "How would you like to provide client credentials?",
+						"", []string{clientSecret, clientJWT}, clientSecret, true,
+					)
+					if err := prompt.AskOne(promptText, &selectedLoginType); err != nil {
+						return handleInputError(err)
+					}
+					if selectedLoginType == clientJWT {
+						shouldLoginAsMachineJWT = true
+					} else {
+						shouldLoginAsMachineSecret = true
+					}
+				}
+
+				if shouldLoginAsMachineJWT {
+					if err := RunLoginAsMachineJWT(ctx, inputs, cli, cmd); err != nil {
+						return fmt.Errorf("failed to start JWT machine login: %w", err)
+					}
+				} else if shouldLoginAsMachineSecret {
+					if err := RunLoginAsMachineSecret(ctx, inputs, cli, cmd); err != nil {
+						return fmt.Errorf("failed to start secret machine login: %w", err)
+					}
 				}
 			}
 
@@ -189,6 +238,8 @@ func loginCmd(cli *cli) *cobra.Command {
 	loginTenantDomain.RegisterString(cmd, &inputs.Domain, "")
 	loginClientID.RegisterString(cmd, &inputs.ClientID, "")
 	loginClientSecret.RegisterString(cmd, &inputs.ClientSecret, "")
+	loginClientAssertionSigningAlg.RegisterString(cmd, &inputs.ClientAssertionSigningAlg, "")
+	loginClientAssertionPrivateKey.RegisterString(cmd, &inputs.ClientAssertionPrivateKey, "")
 	loginAdditionalScopes.RegisterStringSlice(cmd, &inputs.AdditionalScopes, []string{})
 	cmd.MarkFlagsMutuallyExclusive("client-id", "scopes")
 	cmd.MarkFlagsMutuallyExclusive("client-secret", "scopes")
@@ -294,7 +345,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string, do
 		return config.Tenant{}, fmt.Errorf("failed to add the tenant to the config: %w", err)
 	}
 
-	cli.tracker.TrackFirstLogin(cli.Config.InstallID)
+	cli.tracker.TrackFirstLogin(cli.Config.InstallID, "As-User")
 
 	if cli.Config.DefaultTenant != result.Domain {
 		message = fmt.Sprintf(
@@ -315,12 +366,8 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string, do
 	return tenant, nil
 }
 
-// RunLoginAsMachine facilitates the authentication process using client credentials (client ID, client secret).
-func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *cobra.Command) error {
-	if err := loginTenantDomain.Ask(cmd, &inputs.Domain, nil); err != nil {
-		return err
-	}
-
+// RunLoginAsMachineSecret facilitates the authentication process using client credentials (client ID, client secret).
+func RunLoginAsMachineSecret(ctx context.Context, inputs LoginInputs, cli *cli, cmd *cobra.Command) error {
 	if err := loginClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
 		return err
 	}
@@ -341,16 +388,16 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 		return fmt.Errorf("failed to fetch access token using client credentials. \n\nEnsure that the provided client-id, client-secret and domain are correct. \n\nerror: %w", err)
 	}
 
+	if err = keyring.StoreClientSecret(inputs.Domain, inputs.ClientSecret); err != nil {
+		cli.renderer.Warnf("Could not store the client secret and the access token to the keyring: %s", err)
+		cli.renderer.Warnf("Expect to login again when your access token expires.")
+	}
+
 	tenant := config.Tenant{
 		Name:      strings.Split(inputs.Domain, ".")[0],
 		Domain:    inputs.Domain,
 		ExpiresAt: token.ExpiresAt,
 		ClientID:  inputs.ClientID,
-	}
-
-	if err = keyring.StoreClientSecret(inputs.Domain, inputs.ClientSecret); err != nil {
-		cli.renderer.Warnf("Could not store the client secret and the access token to the keyring: %s", err)
-		cli.renderer.Warnf("Expect to login again when your access token expires.")
 	}
 
 	if err := keyring.StoreAccessToken(inputs.Domain, token.AccessToken); err != nil {
@@ -367,7 +414,81 @@ func RunLoginAsMachine(ctx context.Context, inputs LoginInputs, cli *cli, cmd *c
 	cli.renderer.Infof("Successfully logged in.")
 	cli.renderer.Infof("Tenant: %s", inputs.Domain)
 
-	cli.tracker.TrackFirstLogin(cli.Config.InstallID)
+	cli.tracker.TrackFirstLogin(cli.Config.InstallID, "As-Machine")
 
 	return nil
+}
+
+// RunLoginAsMachineJWT facilitates the authentication process using  the client credentials
+// with Private Key JWT authentication flow. (client ID, client Assertion Private key, client Assertion Signing Algorithm).
+func RunLoginAsMachineJWT(ctx context.Context, inputs LoginInputs, cli *cli, cmd *cobra.Command) error {
+	if err := loginClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
+		return err
+	}
+
+	if err := loginClientAssertionSigningAlg.Select(cmd, &inputs.ClientAssertionSigningAlg, []string{"RS256", "RS384", "PS256"}, nil); err != nil {
+		return err
+	}
+
+	if err := loginClientAssertionPrivateKey.Ask(cmd, &inputs.ClientAssertionPrivateKey, nil); err != nil {
+		return err
+	}
+
+	domain := "https://" + inputs.Domain
+
+	if !strings.HasPrefix(inputs.ClientAssertionPrivateKey, "-----BEGIN ") {
+		inputs.ClientAssertionPrivateKey = readPrivateKey(inputs.ClientAssertionPrivateKey)
+	}
+
+	token, err := auth.GetAccessTokenFromClientPrivateJWT(
+		auth.PrivateKeyJwtTokenSource{
+			Ctx:                       ctx,
+			ClientID:                  inputs.ClientID,
+			ClientAssertionSigningAlg: inputs.ClientAssertionSigningAlg,
+			URI:                       domain,
+			Audience:                  domain + "/api/v2/",
+			ClientAssertionPrivateKey: inputs.ClientAssertionPrivateKey,
+		},
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to fetch access token using client credentials with Private Key. \n\nEnsure that the provided client-id, client-assertion-private-key, client-assertion-signing-alg and domain are correct. \n\nerror: %w", err)
+	}
+
+	tenant := config.Tenant{
+		Name:      strings.Split(inputs.Domain, ".")[0],
+		Domain:    inputs.Domain,
+		ExpiresAt: token.ExpiresAt,
+		ClientID:  inputs.ClientID,
+	}
+
+	if err := keyring.StoreAccessToken(inputs.Domain, token.AccessToken); err != nil {
+		// In case we don't have a keyring, we want the
+		// access token to be saved in the config file.
+		tenant.AccessToken = token.AccessToken
+	}
+
+	if err = cli.Config.AddTenant(tenant); err != nil {
+		return fmt.Errorf("failed to save tenant data: %w", err)
+	}
+
+	cli.renderer.Newline()
+	cli.renderer.Infof("Successfully logged in.")
+	cli.renderer.Infof("Tenant: %s", inputs.Domain)
+
+	cli.tracker.TrackFirstLogin(cli.Config.InstallID, "As-Machine")
+
+	return nil
+}
+
+func readPrivateKey(path string) string {
+	// Read the content of the file.
+	content, err := os.ReadFile(path)
+	if err != nil {
+		// Handle the error appropriately, e.g., log it or return an empty string with an error.
+		fmt.Println("Error reading private key file:", err)
+		return ""
+	}
+	// Return the content.
+	return string(content)
 }
