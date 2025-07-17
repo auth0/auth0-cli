@@ -24,6 +24,7 @@ auth0 logs streams create http [flags]
   auth0 logs streams create http --name <name> --endpoint <endpoint>
   auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type>
   auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type> --format <format>
+  auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type> --format <format> --pii-config "{\"log_fields\": [\"first_name\", \"last_name\"], \"method\": \"hash\", \"algorithm\": \"xxhash\"}"
   auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type> --format <format> --authorization <authorization>
   auth0 logs streams create http -n <name> -e <endpoint> -t <type> -f <format> -a <authorization>
   auth0 logs streams create http -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json
@@ -38,6 +39,10 @@ auth0 logs streams create http [flags]
   -f, --format string          The format of data sent over HTTP. Options are "JSONLINES", "JSONARRAY" or "JSONOBJECT"
       --json                   Output in json format.
   -n, --name string            The name of the log stream.
+  -c, --pii-config string      Specifies how PII fields are logged, Formatted as JSON. 
+                               including which fields to log (first_name, last_name, username, email, phone, address),the protection method (mask or hash), and the hashing algorithm (xxhash). 
+                                Example : {"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}. 
+                                (default "{}")
   -t, --type string            The "Content-Type" header to send over HTTP. Common value is "application/json".
 ```
 

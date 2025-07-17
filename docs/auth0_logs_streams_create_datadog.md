@@ -23,6 +23,7 @@ auth0 logs streams create datadog [flags]
   auth0 logs streams create datadog --name <name>
   auth0 logs streams create datadog --name <name> --region <region>
   auth0 logs streams create datadog --name <name> --region <region> --api-key <api-key>
+  auth0 logs streams create datadog --name <name> --region <region> --api-key <api-key> --pii-config "{\"log_fields\": [\"first_name\", \"last_name\"], \"method\": \"hash\", \"algorithm\": \"xxhash\"}"
   auth0 logs streams create datadog -n <name> -r <region> -k <api-key>
   auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json
 ```
@@ -31,11 +32,15 @@ auth0 logs streams create datadog [flags]
 ## Flags
 
 ```
-  -k, --api-key string   Datadog API Key. To obtain a key, see the Datadog Authentication documentation (https://docs.datadoghq.com/api/latest/authentication).
-      --json             Output in json format.
-  -n, --name string      The name of the log stream.
-  -r, --region string    The region in which the datadog dashboard is created.
-                         If you are in the datadog EU site ('app.datadoghq.eu'), the Region should be EU otherwise it should be US.
+  -k, --api-key string      Datadog API Key. To obtain a key, see the Datadog Authentication documentation (https://docs.datadoghq.com/api/latest/authentication).
+      --json                Output in json format.
+  -n, --name string         The name of the log stream.
+  -c, --pii-config string   Specifies how PII fields are logged, Formatted as JSON. 
+                            including which fields to log (first_name, last_name, username, email, phone, address),the protection method (mask or hash), and the hashing algorithm (xxhash). 
+                             Example : {"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}. 
+                             (default "{}")
+  -r, --region string       The region in which the datadog dashboard is created.
+                            If you are in the datadog EU site ('app.datadoghq.eu'), the Region should be EU otherwise it should be US.
 ```
 
 

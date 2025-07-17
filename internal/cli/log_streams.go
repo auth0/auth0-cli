@@ -35,6 +35,17 @@ var (
 		Help:         "The name of the log stream.",
 		AlwaysPrompt: true,
 	}
+
+	logStreamPIIConfig = Flag{
+		Name:      "PII Configuration",
+		LongForm:  "pii-config",
+		ShortForm: "c",
+		Help: "Specifies how PII fields are logged, Formatted as JSON. \n" +
+			"including which fields to log (first_name, last_name, username, email, phone, address)," +
+			"the protection method (mask or hash), and the hashing algorithm (xxhash). \n" +
+			" Example : {\"log_fields\": [\"first_name\", \"last_name\"], \"method\": \"mask\", \"algorithm\": \"xxhash\"}. \n",
+		AlwaysPrompt: true,
+	}
 )
 
 func logStreamsCmd(cli *cli) *cobra.Command {
