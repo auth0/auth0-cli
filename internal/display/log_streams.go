@@ -35,7 +35,7 @@ func (v *logStreamView) KeyValues() [][]string {
 		{"NAME", v.Name},
 		{"TYPE", v.Type},
 		{"STATUS", v.Status},
-		{"PII Config", v.PIIConfig},
+		{"PII CONFIG", v.PIIConfig},
 	}
 }
 

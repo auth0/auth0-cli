@@ -246,7 +246,7 @@ func updateLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	logStreamName.RegisterStringU(cmd, &inputs.name, "")
-	logStreamPIIConfig.RegisterStringU(cmd, &inputs.piiConfig, "")
+	logStreamPIIConfig.RegisterStringU(cmd, &inputs.piiConfig, "{}")
 	splunkDomain.RegisterStringU(cmd, &inputs.splunkDomain, "")
 	splunkToken.RegisterStringU(cmd, &inputs.splunkToken, "")
 	splunkPort.RegisterStringU(cmd, &inputs.splunkPort, "")
