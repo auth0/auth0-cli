@@ -40,7 +40,7 @@ auth0 logs streams update splunk [flags]
   -c, --pii-config string   Specifies how PII fields are logged, Formatted as JSON. 
                             including which fields to log (first_name, last_name, username, email, phone, address),the protection method (mask or hash), and the hashing algorithm (xxhash). 
                              Example : {"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}. 
-                            
+                             (default "{}")
   -p, --port string         The port of the HTTP event collector.
   -s, --secure              This should be set to 'false' when using self-signed certificates.
   -t, --token string        Splunk event collector token.
