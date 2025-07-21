@@ -23,7 +23,7 @@ auth0 logs streams update http [flags]
   auth0 logs streams update http <log-stream-id> --name <name>
   auth0 logs streams update http <log-stream-id> --name <name> --endpoint <endpoint>
   auth0 logs streams update http <log-stream-id> --name <name> --endpoint <endpoint> --type <type>
-  auth0 logs streams update http <log-stream-id> --name <name> --endpoint <endpoint> --type <type>  --pii-config "{\"log_fields\": [\"first_name\", \"last_name\"], \"method\": \"mask\", \"algorithm\": \"xxhash\"}"
+  auth0 logs streams update http <log-stream-id> --name <name> --endpoint <endpoint> --type <type>  --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update http <log-stream-id> --name <name> --endpoint <endpoint> --type <type> --format <format>
   auth0 logs streams update http <log-stream-id> --name <name> --endpoint <endpoint> --type <type> --format <format> --authorization <authorization>
   auth0 logs streams update http <log-stream-id> -n <name> -e <endpoint> -t <type> -f <format> -a <authorization> -c null

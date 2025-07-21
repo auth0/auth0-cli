@@ -21,7 +21,7 @@ auth0 logs streams update eventbridge [flags]
 ```
   auth0 logs streams update eventbridge
   auth0 logs streams update eventbridge <log-stream-id> --name <name>
-  auth0 logs streams update eventbridge <log-stream-id> --name <name>  --pii-config "{\"log_fields\": [\"first_name\", \"last_name\"], \"method\": \"mask\", \"algorithm\": \"xxhash\"}"
+  auth0 logs streams update eventbridge <log-stream-id> --name <name>  --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update eventbridge <log-stream-id> -n <name> -p null
   auth0 logs streams update eventbridge <log-stream-id> -n mylogstream --json
 ```

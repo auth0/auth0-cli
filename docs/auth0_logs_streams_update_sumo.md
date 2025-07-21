@@ -22,7 +22,7 @@ auth0 logs streams update sumo [flags]
   auth0 logs streams update sumo
   auth0 logs streams update sumo <log-stream-id> --name <name>
   auth0 logs streams update sumo <log-stream-id> --name <name> --source <source>
-  auth0 logs streams update sumo <log-stream-id> --name <name> --source <source>  --pii-config "{\"log_fields\": [\"first_name\", \"last_name\"], \"method\": \"mask\", \"algorithm\": \"xxhash\"}"
+  auth0 logs streams update sumo <log-stream-id> --name <name> --source <source>  --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update sumo <log-stream-id> -n <name> -s <source> -c null
   auth0 logs streams update sumo <log-stream-id> -n "mylogstream" -s "demo.sumo.com" --json
 ```

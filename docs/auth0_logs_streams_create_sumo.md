@@ -22,7 +22,7 @@ auth0 logs streams create sumo [flags]
   auth0 logs streams create sumo
   auth0 logs streams create sumo --name <name>
   auth0 logs streams create sumo --name <name> --source <source>
-  auth0 logs streams create sumo --name <name> --source <source> --pii-config "{\"log_fields\": [\"first_name\", \"last_name\"], \"method\": \"hash\", \"algorithm\": \"xxhash\"}"
+  auth0 logs streams create sumo --name <name> --source <source> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "hash", "algorithm": "xxhash"}'
   auth0 logs streams create sumo -n <name> -s <source>
   auth0 logs streams create sumo -n "mylogstream" -s "demo.sumo.com" --json
 ```

@@ -22,7 +22,7 @@ auth0 logs streams update eventgrid [flags]
   auth0 logs streams update eventgrid
   auth0 logs streams update eventgrid <log-stream-id> --name <name>
   auth0 logs streams update eventgrid <log-stream-id> -n <name>
-  auth0 logs streams update eventgrid <log-stream-id> -n <name> --pii-config  "{\"log_fields\": [\"first_name\", \"last_name\"], \"method\": \"mask\", \"algorithm\": \"xxhash\"}"
+  auth0 logs streams update eventgrid <log-stream-id> -n <name> --pii-config  '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update eventgrid <log-stream-id> -n mylogstream -c null --json
 ```
 

@@ -23,7 +23,7 @@ auth0 logs streams update datadog [flags]
   auth0 logs streams update datadog <log-stream-id> --name <name>
   auth0 logs streams update datadog <log-stream-id> --name <name> --region <region>
   auth0 logs streams update datadog <log-stream-id> --name <name> --region <region> --api-key <api-key>
-  auth0 logs streams update datadog <log-stream-id> --name <name> --region <region> --api-key <api-key> --pii-config "{\"log_fields\": [\"first_name\", \"last_name\"], \"method\": \"mask\", \"algorithm\": \"xxhash\"}"
+  auth0 logs streams update datadog <log-stream-id> --name <name> --region <region> --api-key <api-key> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update datadog <log-stream-id> -n <name> -r <region> -k <api-key> -c null
   auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json
 ```

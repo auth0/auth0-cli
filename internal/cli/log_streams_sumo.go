@@ -38,7 +38,7 @@ func createLogStreamsSumoLogicCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 logs streams create sumo
   auth0 logs streams create sumo --name <name>
   auth0 logs streams create sumo --name <name> --source <source>
-  auth0 logs streams create sumo --name <name> --source <source> --pii-config "{\"log_fields\": [\"first_name\", \"last_name\"], \"method\": \"hash\", \"algorithm\": \"xxhash\"}"
+  auth0 logs streams create sumo --name <name> --source <source> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "hash", "algorithm": "xxhash"}'
   auth0 logs streams create sumo -n <name> -s <source>
   auth0 logs streams create sumo -n "mylogstream" -s "demo.sumo.com" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -107,7 +107,7 @@ func updateLogStreamsSumoLogicCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 logs streams update sumo
   auth0 logs streams update sumo <log-stream-id> --name <name>
   auth0 logs streams update sumo <log-stream-id> --name <name> --source <source>
-  auth0 logs streams update sumo <log-stream-id> --name <name> --source <source>  --pii-config "{\"log_fields\": [\"first_name\", \"last_name\"], \"method\": \"mask\", \"algorithm\": \"xxhash\"}"
+  auth0 logs streams update sumo <log-stream-id> --name <name> --source <source>  --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update sumo <log-stream-id> -n <name> -s <source> -c null
   auth0 logs streams update sumo <log-stream-id> -n "mylogstream" -s "demo.sumo.com" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {

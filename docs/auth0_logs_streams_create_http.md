@@ -24,7 +24,7 @@ auth0 logs streams create http [flags]
   auth0 logs streams create http --name <name> --endpoint <endpoint>
   auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type>
   auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type> --format <format>
-  auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type> --format <format> --pii-config "{\"log_fields\": [\"first_name\", \"last_name\"], \"method\": \"hash\", \"algorithm\": \"xxhash\"}"
+  auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type> --format <format> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "hash", "algorithm": "xxhash"}''
   auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type> --format <format> --authorization <authorization>
   auth0 logs streams create http -n <name> -e <endpoint> -t <type> -f <format> -a <authorization>
   auth0 logs streams create http -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json

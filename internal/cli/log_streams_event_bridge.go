@@ -47,7 +47,7 @@ func createLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
   auth0 logs streams create eventbridge --name <name>
   auth0 logs streams create eventbridge --name <name> --aws-id <aws-id>
   auth0 logs streams create eventbridge --name <name> --aws-id <aws-id> --aws-region <aws-region>
-  auth0 logs streams create eventbridge --name <name> --aws-id <aws-id> --aws-region <aws-region> --pii-config "{\"log_fields\": [\"first_name\", \"last_name\"], \"method\": \"mask\", \"algorithm\": \"xxhash\"}"
+  auth0 logs streams create eventbridge --name <name> --aws-id <aws-id> --aws-region <aws-region> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams create eventbridge -n <name> -i <aws-id> -r <aws-region>
   auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -120,7 +120,7 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 			"To update non-interactively, supply the log stream name through the flag.",
 		Example: `  auth0 logs streams update eventbridge
   auth0 logs streams update eventbridge <log-stream-id> --name <name>
-  auth0 logs streams update eventbridge <log-stream-id> --name <name>  --pii-config "{\"log_fields\": [\"first_name\", \"last_name\"], \"method\": \"mask\", \"algorithm\": \"xxhash\"}"
+  auth0 logs streams update eventbridge <log-stream-id> --name <name>  --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update eventbridge <log-stream-id> -n <name> -p null
   auth0 logs streams update eventbridge <log-stream-id> -n mylogstream --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
