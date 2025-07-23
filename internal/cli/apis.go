@@ -120,6 +120,7 @@ func listApisCmd(cli *cli) *cobra.Command {
   auth0 apis ls
   auth0 apis ls --number 100
   auth0 apis ls -n 100 --json
+  auth0 apis ls -n 100 --json-compact
   auth0 apis ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
@@ -157,8 +158,9 @@ func listApisCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	apiNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
@@ -177,7 +179,8 @@ func showAPICmd(cli *cli) *cobra.Command {
 		Long:  "Display the name, scopes, token lifetime, and other information about an API.",
 		Example: `  auth0 apis show
   auth0 apis show <api-id|api-audience>
-  auth0 apis show <api-id|api-audience> --json`,
+  auth0 apis show <api-id|api-audience> --json
+  auth0 apis show <api-id|api-audience> --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
@@ -204,6 +207,7 @@ func showAPICmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -233,7 +237,8 @@ func createAPICmd(cli *cli) *cobra.Command {
   auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=true
   auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read"
   auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read" --signing-alg "RS256"
-  auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json`,
+  auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json
+  auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := apiName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -296,6 +301,7 @@ func createAPICmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	apiName.RegisterString(cmd, &inputs.Name, "")
 	apiIdentifier.RegisterString(cmd, &inputs.Identifier, "")
 	apiScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
@@ -330,7 +336,8 @@ func updateAPICmd(cli *cli) *cobra.Command {
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read" --signing-alg "RS256"
-  auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json`,
+  auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json
+  auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions); err != nil {
@@ -410,6 +417,7 @@ func updateAPICmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	apiName.RegisterStringU(cmd, &inputs.Name, "")
 	apiScopes.RegisterStringSliceU(cmd, &inputs.Scopes, nil)
 	apiOfflineAccess.RegisterBoolU(cmd, &inputs.AllowOfflineAccess, false)
@@ -533,6 +541,7 @@ func listScopesCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 apis scopes list
   auth0 apis scopes ls <api-id|api-audience>
   auth0 apis scopes ls <api-id|api-audience> --json
+  auth0 apis scopes ls <api-id|api-audience> --json-compact
   auth0 apis scopes ls <api-id|api-audience> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -561,8 +570,9 @@ func listScopesCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	return cmd
 }

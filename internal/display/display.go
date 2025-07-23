@@ -18,8 +18,9 @@ import (
 type OutputFormat string
 
 const (
-	OutputFormatJSON OutputFormat = "json"
-	OutputFormatCSV  OutputFormat = "csv"
+	OutputFormatJSON        OutputFormat = "json"
+	OutputFormatJSONCompact OutputFormat = "json-compact"
+	OutputFormatCSV         OutputFormat = "csv"
 )
 
 type Renderer struct {
@@ -77,7 +78,7 @@ func (r *Renderer) Heading(text ...string) {
 }
 
 func (r *Renderer) EmptyState(resource string, hint string) {
-	if r.Format == OutputFormatJSON {
+	if r.Format == OutputFormatJSON || r.Format == OutputFormatJSONCompact {
 		r.JSONResult([]interface{}{})
 		return
 	}
@@ -93,9 +94,19 @@ func (r *Renderer) JSONResult(data interface{}) {
 	r.Output(ansi.ColorizeJSON(string(b)))
 }
 
+func (r *Renderer) JSONCompactResult(data interface{}) {
+	b, err := json.Marshal(data)
+	if err != nil {
+		r.Errorf("couldn't marshal results as JSON: %v", err)
+		return
+	}
+
+	r.Output(ansi.ColorizeJSON(string(b)))
+}
+
 func (r *Renderer) Results(data []View) {
 	if len(data) == 0 {
-		if r.Format == OutputFormatJSON {
+		if r.Format == OutputFormatJSON || r.Format == OutputFormatJSONCompact {
 			r.JSONResult([]interface{}{})
 		}
 		return
@@ -108,6 +119,12 @@ func (r *Renderer) Results(data []View) {
 			list = append(list, item.Object())
 		}
 		r.JSONResult(list)
+	case OutputFormatJSONCompact:
+		var list []interface{}
+		for _, item := range data {
+			list = append(list, item.Object())
+		}
+		r.JSONCompactResult(list)
 	case OutputFormatCSV:
 		rows := make([][]string, 0, len(data))
 		for _, d := range data {
@@ -128,6 +145,8 @@ func (r *Renderer) Results(data []View) {
 
 func (r *Renderer) Result(data View) {
 	switch r.Format {
+	case OutputFormatJSONCompact:
+		r.JSONCompactResult(data.Object())
 	case OutputFormatJSON:
 		r.JSONResult(data.Object())
 	default:

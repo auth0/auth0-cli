@@ -55,7 +55,8 @@ func createLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
   auth0 logs streams create eventgrid --name <name> --azure-id <azure-id> --azure-region <azure-region>
   auth0 logs streams create eventgrid --name <name> --azure-id <azure-id> --azure-region <azure-region> --azure-group <azure-group>
   auth0 logs streams create eventgrid -n <name> -i <azure-id> -r <azure-region> -g <azure-group>
-  auth0 logs streams create eventgrid -n mylogstream -i "b69a6835-57c7-4d53-b0d5-1c6ae580b6d5" -r northeurope -g "azure-logs-rg" --json`,
+  auth0 logs streams create eventgrid -n mylogstream -i "b69a6835-57c7-4d53-b0d5-1c6ae580b6d5" -r northeurope -g "azure-logs-rg" --json
+  auth0 logs streams create eventgrid -n mylogstream -i "b69a6835-57c7-4d53-b0d5-1c6ae580b6d5" -r northeurope -g "azure-logs-rg" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := logStreamName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -96,6 +97,7 @@ func createLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	logStreamName.RegisterString(cmd, &inputs.Name, "")
 	azureSubscriptionID.RegisterString(cmd, &inputs.AzureSubscriptionID, "")
 	azureRegion.RegisterString(cmd, &inputs.AzureRegion, "")
@@ -120,7 +122,8 @@ func updateLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 logs streams update eventgrid
   auth0 logs streams update eventgrid <log-stream-id> --name <name>
   auth0 logs streams update eventgrid <log-stream-id> -n <name>
-  auth0 logs streams update eventgrid <log-stream-id> -n mylogstream --json`,
+  auth0 logs streams update eventgrid <log-stream-id> -n mylogstream --json
+  auth0 logs streams update eventgrid <log-stream-id> -n mylogstream --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := logStreamID.Pick(cmd, &inputs.ID, cli.logStreamPickerOptionsByType(logStreamTypeAzureEventGrid))
@@ -165,6 +168,7 @@ func updateLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	logStreamName.RegisterStringU(cmd, &inputs.Name, "")
 
 	return cmd

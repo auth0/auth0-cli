@@ -26,6 +26,7 @@ auth0 apis update [flags]
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read" --signing-alg "RS256"
   auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json
+  auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json-compact
 ```
 
 
@@ -33,6 +34,7 @@ auth0 apis update [flags]
 
 ```
       --json                 Output in json format.
+      --json-compact         Output in compact json format.
   -n, --name string          Name of the API.
   -o, --offline-access       Whether Refresh Tokens can be issued for this API (true) or not (false).
   -s, --scopes strings       Comma-separated list of scopes (permissions).

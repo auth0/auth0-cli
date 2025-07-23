@@ -18,6 +18,7 @@ auth0 tenants list [flags]
   auth0 tenants list
   auth0 tenants ls
   auth0 tenants ls --json
+  auth0 tenants ls --json-compact
   auth0 tenants ls --csv
 ```
 
@@ -25,8 +26,9 @@ auth0 tenants list [flags]
 ## Flags
 
 ```
-      --csv    Output in csv format.
-      --json   Output in json format.
+      --csv            Output in csv format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

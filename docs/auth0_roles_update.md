@@ -23,6 +23,7 @@ auth0 roles update [flags]
   auth0 roles update <role-id> --name myrole
   auth0 roles update <role-id> --name myrole --description "awesome role"
   auth0 roles update <role-id> -n myrole -d "awesome role" --json
+  auth0 roles update <role-id> -n myrole -d "awesome role" --json-compact
 ```
 
 
@@ -31,6 +32,7 @@ auth0 roles update [flags]
 ```
   -d, --description string   Description of the role.
       --json                 Output in json format.
+      --json-compact         Output in compact json format.
   -n, --name string          Name of the role.
 ```
 

@@ -21,6 +21,7 @@ auth0 roles create [flags]
 ```
   auth0 roles create
   auth0 roles create --name myrole --description "awesome role"
+  auth0 roles create -n myrole -d "awesome role" --json-compact
   auth0 roles create -n myrole -d "awesome role" --json
 ```
 
@@ -30,6 +31,7 @@ auth0 roles create [flags]
 ```
   -d, --description string   Description of the role.
       --json                 Output in json format.
+      --json-compact         Output in compact json format.
   -n, --name string          Name of the role.
 ```
 

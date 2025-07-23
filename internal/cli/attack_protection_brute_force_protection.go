@@ -98,6 +98,7 @@ func showBruteForceProtectionCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -121,6 +122,7 @@ func updateBruteForceProtectionCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	bfpFlags.Enabled.RegisterBoolU(cmd, &inputs.Enabled, false)
 	bfpFlags.Shields.RegisterStringSliceU(cmd, &inputs.Shields, []string{})
 	bfpFlags.AllowList.RegisterStringSliceU(cmd, &inputs.AllowList, []string{})

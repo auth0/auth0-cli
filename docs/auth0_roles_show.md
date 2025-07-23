@@ -18,13 +18,15 @@ auth0 roles show [flags]
   auth0 roles show
   auth0 roles show <role-id>
   auth0 roles show <role-id> --json
+  auth0 roles show <role-id> --json-compact
 ```
 
 
 ## Flags
 
 ```
-      --json   Output in json format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

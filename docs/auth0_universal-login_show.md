@@ -18,13 +18,15 @@ auth0 universal-login show [flags]
   auth0 universal-login show
   auth0 ul show
   auth0 ul show --json
+  auth0 ul show --json-compact
 ```
 
 
 ## Flags
 
 ```
-      --json   Output in json format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

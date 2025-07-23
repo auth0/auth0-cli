@@ -237,7 +237,7 @@ func (i *apiCmdInputs) validateAndSetData() error {
 		)
 	}
 
-	if len(data) > 0 {
+	if !(i.Method == http.MethodDelete || i.Method == http.MethodGet) && len(data) > 0 {
 		if err := json.Unmarshal(data, &i.Data); err != nil {
 			return fmt.Errorf("invalid json data given: %w", err)
 		}
