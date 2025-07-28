@@ -23,8 +23,9 @@ auth0 logs streams update splunk [flags]
   auth0 log streams update splunk <log-stream-id> --name <name>
   auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain>
   auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token>
+  auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
+  auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --filters '[{"type":"category","name":"user.fail"},{"type":"category","name":"scim.event"}]'
   auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --port <port>
-  auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --port <port> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --port <port> --secure=false
   auth0 log streams update splunk <log-stream-id> -n <name> -d <domain> -t <token> -p <port> -s -c null
   auth0 log streams update splunk <log-stream-id> -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s=false --json
@@ -35,6 +36,7 @@ auth0 logs streams update splunk [flags]
 
 ```
   -d, --domain string       The domain name of the splunk instance.
+  -m, --filters string      Events matching these filters will be delivered by the stream. (default "[]")
       --json                Output in json format.
   -n, --name string         The name of the log stream.
   -c, --pii-config string   Specifies how PII fields are logged, Formatted as JSON. 

@@ -24,6 +24,7 @@ auth0 logs streams create http [flags]
   auth0 logs streams create http --name <name> --endpoint <endpoint>
   auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type>
   auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type> --format <format>
+  auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type> --format <format> --filters '[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]'
   auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type> --format <format> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "hash", "algorithm": "xxhash"}''
   auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type> --format <format> --authorization <authorization>
   auth0 logs streams create http -n <name> -e <endpoint> -t <type> -f <format> -a <authorization>
@@ -36,6 +37,7 @@ auth0 logs streams create http [flags]
 ```
   -a, --authorization string   Sent in the HTTP "Authorization" header with each request.
   -e, --endpoint string        The HTTP endpoint to send streaming logs to.
+  -m, --filters string         Events matching these filters will be delivered by the stream. (default "[]")
   -f, --format string          The format of data sent over HTTP. Options are "JSONLINES", "JSONARRAY" or "JSONOBJECT"
       --json                   Output in json format.
   -n, --name string            The name of the log stream.

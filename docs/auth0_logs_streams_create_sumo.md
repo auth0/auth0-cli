@@ -22,6 +22,7 @@ auth0 logs streams create sumo [flags]
   auth0 logs streams create sumo
   auth0 logs streams create sumo --name <name>
   auth0 logs streams create sumo --name <name> --source <source>
+  auth0 logs streams create sumo --name <name> --source <source> --filters '[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]'
   auth0 logs streams create sumo --name <name> --source <source> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "hash", "algorithm": "xxhash"}'
   auth0 logs streams create sumo -n <name> -s <source>
   auth0 logs streams create sumo -n "mylogstream" -s "demo.sumo.com" --json
@@ -31,6 +32,7 @@ auth0 logs streams create sumo [flags]
 ## Flags
 
 ```
+  -m, --filters string      Events matching these filters will be delivered by the stream. (default "[]")
       --json                Output in json format.
   -n, --name string         The name of the log stream.
   -c, --pii-config string   Specifies how PII fields are logged, Formatted as JSON. 

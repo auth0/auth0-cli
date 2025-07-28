@@ -34,6 +34,7 @@ func createLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 		awsAccountID string
 		awsRegion    string
 		piiConfig    string
+		filters      string
 	}
 
 	cmd := &cobra.Command{
@@ -46,6 +47,7 @@ func createLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 logs streams create eventbridge
   auth0 logs streams create eventbridge --name <name>
   auth0 logs streams create eventbridge --name <name> --aws-id <aws-id>
+  auth0 logs streams create eventbridge --name <name> --aws-id <aws-id> --filters '[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]'
   auth0 logs streams create eventbridge --name <name> --aws-id <aws-id> --aws-region <aws-region>
   auth0 logs streams create eventbridge --name <name> --aws-id <aws-id> --aws-region <aws-region> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams create eventbridge -n <name> -i <aws-id> -r <aws-region>
@@ -75,6 +77,17 @@ func createLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			var filters *[]map[string]string
+			if err := logStreamFilters.Ask(cmd, &filters, auth0.String("[]")); err != nil {
+				return err
+			}
+
+			if inputs.filters != "[]" {
+				if err := json.Unmarshal([]byte(inputs.filters), &filters); err != nil {
+					return fmt.Errorf("provider: %s filters invalid JSON: %w", inputs.filters, err)
+				}
+			}
+
 			newLogStream := &management.LogStream{
 				Name: &inputs.name,
 				Type: auth0.String(string(logStreamTypeAmazonEventBridge)),
@@ -83,6 +96,7 @@ func createLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 					Region:    &inputs.awsRegion,
 				},
 				PIIConfig: piiConfig,
+				Filters:   filters,
 			}
 
 			if err := ansi.Waiting(func() error {
@@ -98,6 +112,7 @@ func createLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	logStreamName.RegisterString(cmd, &inputs.name, "")
 	logStreamPIIConfig.RegisterString(cmd, &inputs.piiConfig, "{}")
+	logStreamFilters.RegisterString(cmd, &inputs.filters, "[]")
 	awsAccountID.RegisterString(cmd, &inputs.awsAccountID, "")
 	awsRegion.RegisterString(cmd, &inputs.awsRegion, "")
 
@@ -109,6 +124,7 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 		id        string
 		name      string
 		piiConfig string
+		filters   string
 	}
 
 	cmd := &cobra.Command{
@@ -120,6 +136,8 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 			"To update non-interactively, supply the log stream name through the flag.",
 		Example: `  auth0 logs streams update eventbridge
   auth0 logs streams update eventbridge <log-stream-id> --name <name>
+  auth0 logs streams update eventbridge <log-stream-id> --name <name>
+  auth0 logs streams update eventbridge <log-stream-id> --name <name> --filters '[{"type":"category","name":"user.fail"},{"type":"category","name":"scim.event"}]'
   auth0 logs streams update eventbridge <log-stream-id> --name <name>  --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update eventbridge <log-stream-id> -n <name> -p null
   auth0 logs streams update eventbridge <log-stream-id> -n mylogstream --json`,
@@ -149,6 +167,16 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
+			existingConfig, _ := json.Marshal(oldLogStream.GetPIIConfig())
+			if err := logStreamPIIConfig.AskU(cmd, &inputs.piiConfig, auth0.String(string(existingConfig))); err != nil {
+				return err
+			}
+
+			existingFilters, _ := json.Marshal(oldLogStream.GetFilters())
+			if err := logStreamFilters.AskU(cmd, &inputs.filters, auth0.String(string(existingFilters))); err != nil {
+				return err
+			}
+
 			updatedLogStream := &management.LogStream{
 				PIIConfig: oldLogStream.GetPIIConfig(),
 			}
@@ -165,6 +193,14 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 				updatedLogStream.PIIConfig = piiConfig
 			}
 
+			if inputs.filters != "[]" {
+				var filters *[]map[string]string
+				if err := json.Unmarshal([]byte(inputs.filters), &filters); err != nil {
+					return fmt.Errorf("provider: %s filters invalid JSON: %w", inputs.filters, err)
+				}
+				updatedLogStream.Filters = filters
+			}
+
 			if err := ansi.Waiting(func() error {
 				return cli.api.LogStream.Update(cmd.Context(), oldLogStream.GetID(), updatedLogStream)
 			}); err != nil {
@@ -178,6 +214,7 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	logStreamName.RegisterStringU(cmd, &inputs.name, "")
 	logStreamPIIConfig.RegisterStringU(cmd, &inputs.piiConfig, "{}")
+	logStreamFilters.RegisterStringU(cmd, &inputs.filters, "[]")
 
 	return cmd
 }

@@ -22,7 +22,7 @@ auth0 logs streams update datadog [flags]
   auth0 logs streams update datadog
   auth0 logs streams update datadog <log-stream-id> --name <name>
   auth0 logs streams update datadog <log-stream-id> --name <name> --region <region>
-  auth0 logs streams update datadog <log-stream-id> --name <name> --region <region> --api-key <api-key>
+  auth0 logs streams update datadog <log-stream-id> --name <name> --region <region> --api-key <api-key> --filters '[{"type":"category","name":"user.fail"},{"type":"category","name":"scim.event"}]'
   auth0 logs streams update datadog <log-stream-id> --name <name> --region <region> --api-key <api-key> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update datadog <log-stream-id> -n <name> -r <region> -k <api-key> -c null
   auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json
@@ -33,6 +33,7 @@ auth0 logs streams update datadog [flags]
 
 ```
   -k, --api-key string      Datadog API Key. To obtain a key, see the Datadog Authentication documentation (https://docs.datadoghq.com/api/latest/authentication).
+  -m, --filters string      Events matching these filters will be delivered by the stream. (default "[]")
       --json                Output in json format.
   -n, --name string         The name of the log stream.
   -c, --pii-config string   Specifies how PII fields are logged, Formatted as JSON. 

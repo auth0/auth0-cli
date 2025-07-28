@@ -42,6 +42,7 @@ func createLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 		azureRegion         string
 		azureResourceGroup  string
 		piiConfig           string
+		filters             string
 	}
 
 	cmd := &cobra.Command{
@@ -56,6 +57,7 @@ func createLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
   auth0 logs streams create eventgrid --name <name> --azure-id <azure-id> 
   auth0 logs streams create eventgrid --name <name> --azure-id <azure-id> --azure-region <azure-region>
   auth0 logs streams create eventgrid --name <name> --azure-id <azure-id> --azure-region <azure-region> --azure-group <azure-group>
+  auth0 logs streams create eventgrid --name <name> --azure-id <azure-id> --azure-region <azure-region> --azure-group <azure-group> --filters '[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]'
   auth0 logs streams create eventgrid --name <name> --azure-id <azure-id> --azure-region <azure-region> --azure-group <azure-group> --pii-config  '{"log_fields": ["first_name", "last_name"], "method": "hash", "algorithm": "xxhash"}'
   auth0 logs streams create eventgrid -n <name> -i <azure-id> -r <azure-region> -g <azure-group>
   auth0 logs streams create eventgrid -n mylogstream -i "b69a6835-57c7-4d53-b0d5-1c6ae580b6d5" -r northeurope -g "azure-logs-rg" --json`,
@@ -77,7 +79,6 @@ func createLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 			}
 
 			var piiConfig *management.LogStreamPiiConfig
-
 			if err := logStreamPIIConfig.Ask(cmd, &inputs.piiConfig, auth0.String("{}")); err != nil {
 				return err
 			}
@@ -85,6 +86,17 @@ func createLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 			if inputs.piiConfig != "{}" {
 				if err := json.Unmarshal([]byte(inputs.piiConfig), &piiConfig); err != nil {
 					return fmt.Errorf("provider: %s credentials invalid JSON: %w", inputs.piiConfig, err)
+				}
+			}
+
+			var filters *[]map[string]string
+			if err := logStreamFilters.Ask(cmd, &filters, auth0.String("[]")); err != nil {
+				return err
+			}
+
+			if inputs.filters != "[]" {
+				if err := json.Unmarshal([]byte(inputs.filters), &filters); err != nil {
+					return fmt.Errorf("provider: %s filters invalid JSON: %w", inputs.filters, err)
 				}
 			}
 
@@ -97,6 +109,7 @@ func createLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 					Region:         &inputs.azureRegion,
 				},
 				PIIConfig: piiConfig,
+				Filters:   filters,
 			}
 
 			if err := ansi.Waiting(func() error {
@@ -112,6 +125,7 @@ func createLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	logStreamName.RegisterString(cmd, &inputs.name, "")
 	logStreamPIIConfig.RegisterString(cmd, &inputs.piiConfig, "{}")
+	logStreamFilters.RegisterString(cmd, &inputs.filters, "[]")
 	azureSubscriptionID.RegisterString(cmd, &inputs.azureSubscriptionID, "")
 	azureRegion.RegisterString(cmd, &inputs.azureRegion, "")
 	azureResourceGroup.RegisterString(cmd, &inputs.azureResourceGroup, "")
@@ -124,6 +138,7 @@ func updateLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 		id        string
 		name      string
 		piiConfig string
+		filters   string
 	}
 
 	cmd := &cobra.Command{
@@ -136,6 +151,7 @@ func updateLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 logs streams update eventgrid
   auth0 logs streams update eventgrid <log-stream-id> --name <name>
   auth0 logs streams update eventgrid <log-stream-id> -n <name>
+  auth0 logs streams update eventgrid <log-stream-id> -n <name> --filters '[{"type":"category","name":"user.fail"},{"type":"category","name":"scim.event"}]'
   auth0 logs streams update eventgrid <log-stream-id> -n <name> --pii-config  '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update eventgrid <log-stream-id> -n mylogstream -c null --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -164,6 +180,16 @@ func updateLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
+			existingConfig, _ := json.Marshal(oldLogStream.GetPIIConfig())
+			if err := logStreamPIIConfig.AskU(cmd, &inputs.piiConfig, auth0.String(string(existingConfig))); err != nil {
+				return err
+			}
+
+			existingFilters, _ := json.Marshal(oldLogStream.GetFilters())
+			if err := logStreamFilters.AskU(cmd, &inputs.filters, auth0.String(string(existingFilters))); err != nil {
+				return err
+			}
+
 			updatedLogStream := &management.LogStream{}
 			if inputs.name != "" {
 				updatedLogStream.Name = &inputs.name
@@ -175,6 +201,14 @@ func updateLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 					return fmt.Errorf("provider: %s credentials invalid JSON: %w", inputs.piiConfig, err)
 				}
 				updatedLogStream.PIIConfig = piiConfig
+			}
+
+			if inputs.filters != "[]" {
+				var filters *[]map[string]string
+				if err := json.Unmarshal([]byte(inputs.filters), &filters); err != nil {
+					return fmt.Errorf("provider: %s filters invalid JSON: %w", inputs.filters, err)
+				}
+				updatedLogStream.Filters = filters
 			}
 
 			existing, _ := json.Marshal(oldLogStream.GetPIIConfig())
@@ -195,6 +229,7 @@ func updateLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	logStreamName.RegisterStringU(cmd, &inputs.name, "")
 	logStreamPIIConfig.RegisterStringU(cmd, &inputs.piiConfig, "{}")
+	logStreamFilters.RegisterStringU(cmd, &inputs.filters, "[]")
 
 	return cmd
 }

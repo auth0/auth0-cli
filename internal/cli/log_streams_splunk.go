@@ -48,6 +48,7 @@ func createLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 		splunkPort      string
 		splunkVerifyTLS bool
 		piiConfig       string
+		filters         string
 	}
 
 	cmd := &cobra.Command{
@@ -62,6 +63,7 @@ func createLogStreamsSplunkCmd(cli *cli) *cobra.Command {
   auth0 log streams create splunk --name <name> --domain <domain>
   auth0 log streams create splunk --name <name> --domain <domain> --token <token>
   auth0 log streams create splunk --name <name> --domain <domain> --token <token> --port <port>
+  auth0 log streams create splunk --name <name> --domain <domain> --token <token> --port <port> --filters '[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]'
   auth0 log streams create splunk --name <name> --domain <domain> --token <token> --port <port> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "hash", "algorithm": "xxhash"}'
   auth0 log streams create splunk --name <name> --domain <domain> --token <token> --port <port> --secure=false
   auth0 log streams create splunk -n <name> -d <domain> -t <token> -p <port> -s
@@ -88,7 +90,6 @@ func createLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 			}
 
 			var piiConfig *management.LogStreamPiiConfig
-
 			if err := logStreamPIIConfig.Ask(cmd, &inputs.piiConfig, auth0.String("{}")); err != nil {
 				return err
 			}
@@ -99,10 +100,22 @@ func createLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			var filters *[]map[string]string
+			if err := logStreamFilters.Ask(cmd, &filters, auth0.String("[]")); err != nil {
+				return err
+			}
+
+			if inputs.filters != "[]" {
+				if err := json.Unmarshal([]byte(inputs.filters), &filters); err != nil {
+					return fmt.Errorf("provider: %s filters invalid JSON: %w", inputs.filters, err)
+				}
+			}
+
 			newLogStream := &management.LogStream{
 				Name:      &inputs.name,
 				Type:      auth0.String(string(logStreamTypeSplunk)),
 				PIIConfig: piiConfig,
+				Filters:   filters,
 			}
 			sink := &management.LogStreamSinkSplunk{
 				Domain: &inputs.splunkDomain,
@@ -126,6 +139,7 @@ func createLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	logStreamName.RegisterString(cmd, &inputs.name, "")
+	logStreamFilters.RegisterString(cmd, &inputs.filters, "[]")
 	logStreamPIIConfig.RegisterString(cmd, &inputs.piiConfig, "{}")
 	splunkDomain.RegisterString(cmd, &inputs.splunkDomain, "")
 	splunkToken.RegisterString(cmd, &inputs.splunkToken, "")
@@ -144,6 +158,7 @@ func updateLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 		splunkPort      string
 		splunkVerifyTLS bool
 		piiConfig       string
+		filters         string
 	}
 
 	cmd := &cobra.Command{
@@ -157,8 +172,9 @@ func updateLogStreamsSplunkCmd(cli *cli) *cobra.Command {
   auth0 log streams update splunk <log-stream-id> --name <name>
   auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain>
   auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token>
+  auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
+  auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --filters '[{"type":"category","name":"user.fail"},{"type":"category","name":"scim.event"}]'
   auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --port <port>
-  auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --port <port> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --port <port> --secure=false
   auth0 log streams update splunk <log-stream-id> -n <name> -d <domain> -t <token> -p <port> -s -c null
   auth0 log streams update splunk <log-stream-id> -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s=false --json`,
@@ -188,8 +204,13 @@ func updateLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			existing, _ := json.Marshal(oldLogStream.GetPIIConfig())
-			if err := logStreamPIIConfig.AskU(cmd, &inputs.piiConfig, auth0.String(string(existing))); err != nil {
+			existingConfig, _ := json.Marshal(oldLogStream.GetPIIConfig())
+			if err := logStreamPIIConfig.AskU(cmd, &inputs.piiConfig, auth0.String(string(existingConfig))); err != nil {
+				return err
+			}
+
+			existingFilters, _ := json.Marshal(oldLogStream.GetFilters())
+			if err := logStreamFilters.AskU(cmd, &inputs.filters, auth0.String(string(existingFilters))); err != nil {
 				return err
 			}
 
@@ -234,6 +255,14 @@ func updateLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 				updatedLogStream.PIIConfig = piiConfig
 			}
 
+			if inputs.filters != "[]" {
+				var filters *[]map[string]string
+				if err := json.Unmarshal([]byte(inputs.filters), &filters); err != nil {
+					return fmt.Errorf("provider: %s filters invalid JSON: %w", inputs.filters, err)
+				}
+				updatedLogStream.Filters = filters
+			}
+
 			if err := ansi.Waiting(func() error {
 				return cli.api.LogStream.Update(cmd.Context(), oldLogStream.GetID(), updatedLogStream)
 			}); err != nil {
@@ -247,6 +276,7 @@ func updateLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	logStreamName.RegisterStringU(cmd, &inputs.name, "")
 	logStreamPIIConfig.RegisterStringU(cmd, &inputs.piiConfig, "{}")
+	logStreamFilters.RegisterStringU(cmd, &inputs.filters, "[]")
 	splunkDomain.RegisterStringU(cmd, &inputs.splunkDomain, "")
 	splunkToken.RegisterStringU(cmd, &inputs.splunkToken, "")
 	splunkPort.RegisterStringU(cmd, &inputs.splunkPort, "")
