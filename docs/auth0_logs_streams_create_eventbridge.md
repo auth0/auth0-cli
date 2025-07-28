@@ -35,7 +35,8 @@ auth0 logs streams create eventbridge [flags]
 ```
   -i, --aws-id string       ID of the AWS account.
   -r, --aws-region string   The AWS region in which eventbridge will be created, e.g. 'us-east-2'.
-  -m, --filters string      Events matching these filters will be delivered by the stream. (default "[]")
+  -m, --filters string      Events matching these filters will be delivered by the stream, Formatted as JSON. 
+                            Example: "[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]" (default "[]")
       --json                Output in json format.
   -n, --name string         The name of the log stream.
   -c, --pii-config string   Specifies how PII fields are logged, Formatted as JSON. 

@@ -37,7 +37,8 @@ auth0 logs streams create http [flags]
 ```
   -a, --authorization string   Sent in the HTTP "Authorization" header with each request.
   -e, --endpoint string        The HTTP endpoint to send streaming logs to.
-  -m, --filters string         Events matching these filters will be delivered by the stream. (default "[]")
+  -m, --filters string         Events matching these filters will be delivered by the stream, Formatted as JSON. 
+                               Example: "[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]" (default "[]")
   -f, --format string          The format of data sent over HTTP. Options are "JSONLINES", "JSONARRAY" or "JSONOBJECT"
       --json                   Output in json format.
   -n, --name string            The name of the log stream.

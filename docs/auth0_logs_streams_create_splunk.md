@@ -36,7 +36,8 @@ auth0 logs streams create splunk [flags]
 
 ```
   -d, --domain string       The domain name of the splunk instance.
-  -m, --filters string      Events matching these filters will be delivered by the stream. (default "[]")
+  -m, --filters string      Events matching these filters will be delivered by the stream, Formatted as JSON. 
+                            Example: "[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]" (default "[]")
       --json                Output in json format.
   -n, --name string         The name of the log stream.
   -c, --pii-config string   Specifies how PII fields are logged, Formatted as JSON. 

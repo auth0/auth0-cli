@@ -48,10 +48,11 @@ var (
 	}
 
 	logStreamFilters = Flag{
-		Name:         "Matching Filters",
-		LongForm:     "filters",
-		ShortForm:    "m",
-		Help:         "Events matching these filters will be delivered by the stream.",
+		Name:      "Matching Filters",
+		LongForm:  "filters",
+		ShortForm: "m",
+		Help: "Events matching these filters will be delivered by the stream, Formatted as JSON. \n" +
+			"Example: " + `"[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]"`,
 		AlwaysPrompt: true,
 	}
 )

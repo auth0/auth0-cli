@@ -74,6 +74,7 @@ tests:
         - TYPE        datadog
         - STATUS      active
         - PII CONFIG  null
+        - FILTERS     []
 
   011 - given a datadog log stream, it successfully gets the log stream's details and outputs in json:
     command: auth0 logs streams show $(cat ./test/integration/identifiers/log-stream-datadog-id) --json

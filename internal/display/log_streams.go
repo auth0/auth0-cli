@@ -12,6 +12,7 @@ type logStreamView struct {
 	Type      string
 	Status    string
 	PIIConfig string
+	Filters   string
 	raw       interface{}
 }
 
@@ -26,6 +27,7 @@ func (v *logStreamView) AsTableRow() []string {
 		v.Type,
 		v.Status,
 		v.PIIConfig,
+		v.Filters,
 	}
 }
 
@@ -36,6 +38,7 @@ func (v *logStreamView) KeyValues() [][]string {
 		{"TYPE", v.Type},
 		{"STATUS", v.Status},
 		{"PII CONFIG", v.PIIConfig},
+		{"FILTERS", v.Filters},
 	}
 }
 
@@ -106,12 +109,19 @@ func makeLogStreamView(logs *management.LogStream) (*logStreamView, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	filters, err := toJSONString(logs.GetFilters())
+	if err != nil {
+		return nil, err
+	}
+
 	return &logStreamView{
 		ID:        ansi.Faint(logs.GetID()),
 		Name:      logs.GetName(),
 		Type:      logs.GetType(),
 		Status:    logs.GetStatus(),
 		PIIConfig: config,
+		Filters:   filters,
 		raw:       logs,
 	}, nil
 }
