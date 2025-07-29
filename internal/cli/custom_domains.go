@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -47,7 +48,7 @@ var (
 		Name:      "Verification Method",
 		LongForm:  "verification",
 		ShortForm: "v",
-		Help:      "Custom domain verification method. Must be 'txt'.",
+		Help:      "*DEPRECATED* Custom domain verification method. Must be 'txt'.",
 	}
 
 	customDomainPolicy = Flag{
@@ -63,6 +64,14 @@ var (
 		LongForm:     "ip-header",
 		ShortForm:    "i",
 		Help:         "The HTTP header to fetch the client's IP address.",
+		AlwaysPrompt: true,
+	}
+
+	customDomainMetadata = Flag{
+		Name:         "Domain Metadata",
+		LongForm:     "metadata",
+		ShortForm:    "m",
+		Help:         "The Custom Domain Metadata, formatted as JSON.",
 		AlwaysPrompt: true,
 	}
 
@@ -177,6 +186,7 @@ func createCustomDomainCmd(cli *cli) *cobra.Command {
 		VerificationMethod   string
 		TLSPolicy            string
 		CustomClientIPHeader string
+		DomainMetadata       string
 	}
 
 	cmd := &cobra.Command{
@@ -190,11 +200,19 @@ func createCustomDomainCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 domains create
   auth0 domains create --domain <domain-name>
   auth0 domains create --domain <domain-name> --policy recommended
+  auth0 domains create --domain <domain-name> --policy recommended --metadata '{"key1":"value1","key2":"value2"}' 
   auth0 domains create --domain <domain-name> --policy recommended --type auth0
   auth0 domains create --domain <domain-name> --policy recommended --type auth0 --ip-header "cf-connecting-ip"
   auth0 domains create -d <domain-name> -p recommended -t auth0 -i "cf-connecting-ip" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := customDomainDomain.Ask(cmd, &inputs.Domain, nil); err != nil {
+				return err
+			}
+			if err := customDomainPolicy.Select(cmd, &inputs.TLSPolicy, customDomainPolicyOptions, auth0.String(customDomainTLSPolicyRecommended)); err != nil {
+				return err
+			}
+
+			if err := customDomainMetadata.Ask(cmd, &inputs.DomainMetadata, nil); err != nil {
 				return err
 			}
 
@@ -208,16 +226,20 @@ func createCustomDomainCmd(cli *cli) *cobra.Command {
 				customDomain.Type = auth0.String(customDomainProvisioningTypeAuth0)
 			}
 
-			if inputs.VerificationMethod != "" {
-				customDomain.VerificationMethod = apiVerificationMethodFor(inputs.VerificationMethod)
-			}
-
 			if inputs.TLSPolicy != "" {
 				customDomain.TLSPolicy = apiTLSPolicyFor(inputs.TLSPolicy)
 			}
 
 			if inputs.CustomClientIPHeader != "" {
 				customDomain.CustomClientIPHeader = &inputs.CustomClientIPHeader
+			}
+
+			if inputs.DomainMetadata != "" {
+				var metadata map[string]interface{}
+				if err := json.Unmarshal([]byte(inputs.DomainMetadata), &metadata); err != nil {
+					return fmt.Errorf("invalid JSON for metadata: %w", err)
+				}
+				customDomain.DomainMetadata = &metadata
 			}
 
 			if err := ansi.Waiting(func() error {
@@ -238,6 +260,7 @@ func createCustomDomainCmd(cli *cli) *cobra.Command {
 	customDomainVerification.RegisterString(cmd, &inputs.VerificationMethod, "")
 	customDomainPolicy.RegisterString(cmd, &inputs.TLSPolicy, "")
 	customDomainIPHeader.RegisterString(cmd, &inputs.CustomClientIPHeader, "")
+	customDomainMetadata.RegisterString(cmd, &inputs.DomainMetadata, "")
 
 	return cmd
 }
@@ -247,6 +270,7 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
 		ID                   string
 		TLSPolicy            string
 		CustomClientIPHeader string
+		DomainMetadata       string
 	}
 
 	cmd := &cobra.Command{
@@ -260,7 +284,9 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 domains update
   auth0 domains update <domain-id> --policy compatible
   auth0 domains update <domain-id> --policy compatible --ip-header "cf-connecting-ip"
-  auth0 domains update <domain-id> -p compatible -i "cf-connecting-ip" --json`,
+  auth0 domains update <domain-id> --metadata '{"key1":"value1","key2":null}'
+  auth0 domains update <domain-id> -p compatible -i "cf-connecting-ip" --json
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.CustomDomain
 
@@ -287,6 +313,10 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
+			if err := customDomainMetadata.AskU(cmd, &inputs.DomainMetadata, nil); err != nil {
+				return err
+			}
+
 			// Start with an empty custom domain object. We'll conditionally
 			// hydrate it based on the provided parameters since
 			// we'll do PATCH semantics.
@@ -300,10 +330,27 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
 				c.CustomClientIPHeader = &inputs.CustomClientIPHeader
 			}
 
+			if inputs.DomainMetadata != "" {
+				var metadata map[string]interface{}
+				if err := json.Unmarshal([]byte(inputs.DomainMetadata), &metadata); err != nil {
+					return fmt.Errorf("invalid JSON for metadata: %w", err)
+				}
+				c.DomainMetadata = &metadata
+			}
+
 			if err := ansi.Waiting(func() error {
 				return cli.api.CustomDomain.Update(cmd.Context(), inputs.ID, c)
 			}); err != nil {
 				return fmt.Errorf("failed to update custom domain: %w", err)
+			}
+
+			// AFTER the API call: clean nil values from the map for clean rendering.
+			if c.DomainMetadata != nil {
+				for k, v := range *c.DomainMetadata {
+					if v == nil {
+						delete(*c.DomainMetadata, k)
+					}
+				}
 			}
 
 			cli.renderer.CustomDomainUpdate(c)
@@ -314,6 +361,7 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
 
 	customDomainPolicy.RegisterStringU(cmd, &inputs.TLSPolicy, "")
 	customDomainIPHeader.RegisterStringU(cmd, &inputs.CustomClientIPHeader, "")
+	customDomainMetadata.RegisterString(cmd, &inputs.DomainMetadata, "")
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
