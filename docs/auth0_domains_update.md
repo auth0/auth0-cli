@@ -22,6 +22,7 @@ auth0 domains update [flags]
   auth0 domains update
   auth0 domains update <domain-id> --policy compatible
   auth0 domains update <domain-id> --policy compatible --ip-header "cf-connecting-ip"
+  auth0 domains update <domain-id> --metadata '{"key1":"value1","key2":null}'
   auth0 domains update <domain-id> -p compatible -i "cf-connecting-ip" --json
 ```
 
@@ -31,6 +32,7 @@ auth0 domains update [flags]
 ```
   -i, --ip-header string   The HTTP header to fetch the client's IP address.
       --json               Output in json format.
+  -m, --metadata string    The Custom Domain Metadata, formatted as JSON.
   -p, --policy string      The TLS version policy. Can be either 'compatible' or 'recommended'.
 ```
 
