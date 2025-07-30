@@ -3,35 +3,32 @@ layout: default
 parent: auth0 events
 has_toc: false
 ---
-# auth0 events delete
+# auth0 events redeliver-many
 
-Delete an event stream.
-
-To delete interactively, use `auth0 events delete` with no arguments.
-
-To delete non-interactively, supply the event id and the `--force` flag to skip confirmation.
+Retry multiple failed event deliveries for a given event stream.
+				You can filter by event type and date range. All filters are combined using AND logic.
+				If no filters are passed, all failed events are retried
 
 ## Usage
 ```
-auth0 events delete [flags]
+auth0 events redeliver-many [stream-id] [flags]
 ```
 
 ## Examples
 
 ```
-  auth0 events delete
-  auth0 events rm
-  auth0 events delete <event-id>
-  auth0 events delete <event-id> --force
-  auth0 events delete <event-id> <event-id2> <event-idn>
-  auth0 events delete <event-id> <event-id2> <event-idn> --force
+  auth0 events redeliver-many
+  auth0 events redeliver-many <stream-id>
+  auth0 events redeliver-many <stream-id> --type=user.created,user.deleted --from=-2d --to=now
 ```
 
 
 ## Flags
 
 ```
-      --force   Skip confirmation.
+  -f, --from string   Start date for filtering (e.g. 2025-07-25, -2d, yesterday)
+  -t, --to string     End date for filtering (e.g. 2025-07-29, today, now)
+      --type string   Comma-separated event types (e.g. user.created,user.deleted)
 ```
 
 

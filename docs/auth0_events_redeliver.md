@@ -3,36 +3,26 @@ layout: default
 parent: auth0 events
 has_toc: false
 ---
-# auth0 events delete
+# auth0 events redeliver
 
-Delete an event stream.
+Retry one or more failed event deliveries for a given event stream.
 
-To delete interactively, use `auth0 events delete` with no arguments.
-
-To delete non-interactively, supply the event id and the `--force` flag to skip confirmation.
+If no delivery IDs are provided, you'll be prompted to select from recent failed deliveries.
 
 ## Usage
 ```
-auth0 events delete [flags]
+auth0 events redeliver [stream-id] [comma-separated-delivery-ids] [flags]
 ```
 
 ## Examples
 
 ```
-  auth0 events delete
-  auth0 events rm
-  auth0 events delete <event-id>
-  auth0 events delete <event-id> --force
-  auth0 events delete <event-id> <event-id2> <event-idn>
-  auth0 events delete <event-id> <event-id2> <event-idn> --force
+  auth0 events redeliver
+  auth0 events redeliver <stream-id>
+  auth0 events redeliver <stream-id> evt_abc123,evt_def456
 ```
 
 
-## Flags
-
-```
-      --force   Skip confirmation.
-```
 
 
 ## Inherited Flags
