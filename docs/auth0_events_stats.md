@@ -3,35 +3,31 @@ layout: default
 parent: auth0 events
 has_toc: false
 ---
-# auth0 events delete
+# auth0 events stats
 
-Delete an event stream.
-
-To delete interactively, use `auth0 events delete` with no arguments.
-
-To delete non-interactively, supply the event id and the `--force` flag to skip confirmation.
+Retrieve metrics over time for a given event stream, including 
+successful and failed delivery counts. Supports custom date range filtering.
 
 ## Usage
 ```
-auth0 events delete [flags]
+auth0 events stats [stream-id] [flags]
 ```
 
 ## Examples
 
 ```
-  auth0 events delete
-  auth0 events rm
-  auth0 events delete <event-id>
-  auth0 events delete <event-id> --force
-  auth0 events delete <event-id> <event-id2> <event-idn>
-  auth0 events delete <event-id> <event-id2> <event-idn> --force
+  auth0 events stats
+  auth0 events stats <stream-id>
+  auth0 events stats <stream-id> --from 2025-07-15 --to 2025-07-29
 ```
 
 
 ## Flags
 
 ```
-      --force   Skip confirmation.
+  -f, --from string   Start date for stats (e.g. 2025-07-15, -3d)
+      --json          Output in json format.
+  -t, --to string     End date for stats (e.g. 2025-07-29, now)
 ```
 
 
