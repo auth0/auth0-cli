@@ -219,27 +219,29 @@ func (i *apiCmdInputs) validateAndSetMethod() error {
 }
 
 func (i *apiCmdInputs) validateAndSetData() error {
+	if i.Method == http.MethodDelete || i.Method == http.MethodGet {
+		return nil
+	}
+
 	var data []byte
+
+	pipedData := iostream.PipedInput()
 
 	if i.RawData != "" {
 		data = []byte(i.RawData)
+		if len(pipedData) > 0 {
+			i.renderer.Warnf(
+				"JSON data was provided via both the flag and piped input. " +
+					"The Auth0 CLI will use the data from the flag.",
+			)
+		}
+	} else if len(pipedData) > 0 {
+		data = pipedData
 	}
 
-	pipedRawData := iostream.PipedInput()
-	if len(pipedRawData) > 0 && data == nil {
-		data = pipedRawData
-	}
-
-	if len(pipedRawData) > 0 && len(i.RawData) > 0 {
-		i.renderer.Warnf(
-			"JSON data was passed using both the flag and as piped input. " +
-				"The Auth0 CLI will use only the data from the flag.",
-		)
-	}
-
-	if !(i.Method == http.MethodDelete || i.Method == http.MethodGet) && len(data) > 0 {
+	if len(data) > 0 {
 		if err := json.Unmarshal(data, &i.Data); err != nil {
-			return fmt.Errorf("invalid json data given: %w", err)
+			return fmt.Errorf("invalid JSON data provided: %w", err)
 		}
 	}
 

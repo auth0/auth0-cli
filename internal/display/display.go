@@ -51,6 +51,9 @@ func NewRenderer() *Renderer {
 
 func (r *Renderer) Output(message string) {
 	fmt.Fprint(r.ResultWriter, message)
+	if iostream.IsOutputTerminal() {
+		r.Newline()
+	}
 }
 
 func (r *Renderer) Newline() {
