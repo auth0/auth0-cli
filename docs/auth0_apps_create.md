@@ -25,6 +25,7 @@ auth0 apps create [flags]
   auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m]
   auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m] --reveal-secrets
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json
+  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json-compact
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar"
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"
@@ -39,6 +40,7 @@ auth0 apps create [flags]
   -d, --description string        Description of the application. Max character count is 140.
   -g, --grants strings            List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.
       --json                      Output in json format.
+      --json-compact              Output in compact json format.
   -l, --logout-urls strings       Comma-separated list of URLs that are valid to redirect to after logout from Auth0. Wildcards are allowed for subdomains.
       --metadata stringToString   Arbitrary keys-value pairs (max 255 characters each), that  can be assigned to each application. More about application metadata: https://auth0.com/docs/get-started/applications/configure-application-metadata (default [])
   -n, --name string               Name of the application.

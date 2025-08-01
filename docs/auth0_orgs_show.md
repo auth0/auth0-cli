@@ -18,13 +18,15 @@ auth0 orgs show [flags]
   auth0 orgs show
   auth0 orgs show <org-id>
   auth0 orgs show <org-id> --json
+  auth0 orgs show <org-id> --json-compact
 ```
 
 
 ## Flags
 
 ```
-      --json   Output in json format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

@@ -25,6 +25,7 @@ auth0 logs streams update datadog [flags]
   auth0 logs streams update datadog <log-stream-id> --name <name> --region <region> --api-key <api-key>
   auth0 logs streams update datadog <log-stream-id> -n <name> -r <region> -k <api-key>
   auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json
+  auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json-compact
 ```
 
 
@@ -33,6 +34,7 @@ auth0 logs streams update datadog [flags]
 ```
   -k, --api-key string   Datadog API Key. To obtain a key, see the Datadog Authentication documentation (https://docs.datadoghq.com/api/latest/authentication).
       --json             Output in json format.
+      --json-compact     Output in compact json format.
   -n, --name string      The name of the log stream.
   -r, --region string    The region in which the datadog dashboard is created.
                          If you are in the datadog EU site ('app.datadoghq.eu'), the Region should be EU otherwise it should be US.

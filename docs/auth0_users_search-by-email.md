@@ -24,9 +24,10 @@ auth0 users search-by-email [flags]
 ## Flags
 
 ```
-      --csv      Output in csv format.
-      --json     Output in json format.
-  -p, --picker   Allows to toggle from list of users and view a user in detail
+      --csv            Output in csv format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
+  -p, --picker         Allows to toggle from list of users and view a user in detail
 ```
 
 

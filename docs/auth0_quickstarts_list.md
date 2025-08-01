@@ -20,6 +20,7 @@ auth0 quickstarts list [flags]
   auth0 qs list
   auth0 qs ls
   auth0 qs ls --json
+  auth0 qs ls --json-compact
   auth0 qs ls --csv
 ```
 
@@ -27,8 +28,9 @@ auth0 quickstarts list [flags]
 ## Flags
 
 ```
-      --csv    Output in csv format.
-      --json   Output in json format.
+      --csv            Output in csv format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

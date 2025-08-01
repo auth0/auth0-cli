@@ -62,7 +62,8 @@ func createLogStreamsSplunkCmd(cli *cli) *cobra.Command {
   auth0 log streams create splunk --name <name> --domain <domain> --token <token> --port <port>
   auth0 log streams create splunk --name <name> --domain <domain> --token <token> --port <port> --secure=false
   auth0 log streams create splunk -n <name> -d <domain> -t <token> -p <port> -s
-  auth0 log streams create splunk -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s false --json`,
+  auth0 log streams create splunk -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s false --json
+  auth0 log streams create splunk -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s false --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := logStreamName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -111,6 +112,7 @@ func createLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	logStreamName.RegisterString(cmd, &inputs.Name, "")
 	splunkDomain.RegisterString(cmd, &inputs.SplunkDomain, "")
 	splunkToken.RegisterString(cmd, &inputs.SplunkToken, "")
@@ -144,7 +146,8 @@ func updateLogStreamsSplunkCmd(cli *cli) *cobra.Command {
   auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --port <port>
   auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --port <port> --secure=false
   auth0 log streams update splunk <log-stream-id> -n <name> -d <domain> -t <token> -p <port> -s
-  auth0 log streams update splunk <log-stream-id> -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s=false --json`,
+  auth0 log streams update splunk <log-stream-id> -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s=false --json
+  auth0 log streams update splunk <log-stream-id> -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s=false --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := logStreamID.Pick(cmd, &inputs.ID, cli.logStreamPickerOptionsByType(logStreamTypeSplunk))
@@ -215,6 +218,7 @@ func updateLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	logStreamName.RegisterStringU(cmd, &inputs.Name, "")
 	splunkDomain.RegisterStringU(cmd, &inputs.SplunkDomain, "")
 	splunkToken.RegisterStringU(cmd, &inputs.SplunkToken, "")

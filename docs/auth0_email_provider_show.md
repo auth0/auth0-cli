@@ -17,13 +17,15 @@ auth0 email provider show [flags]
 ```
   auth0 email provider show
   auth0 email provider show --json
+  auth0 email provider show --json-compact
 ```
 
 
 ## Flags
 
 ```
-      --json   Output in json format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

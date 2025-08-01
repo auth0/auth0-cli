@@ -26,6 +26,7 @@ auth0 rules update [flags]
   auth0 rules update <rule-id> --enabled=false --name "My Updated Rule"
   auth0 rules update <rule-id> --enabled=true --name "My Updated Rule" --script "$(cat path/to/script.js)"
   auth0 rules update <rule-id> -e=true -n "My Updated Rule" -s "$(cat path/to/script.js)" --json
+  auth0 rules update <rule-id> -e=true -n "My Updated Rule" -s "$(cat path/to/script.js)" --json-compact
   echo "{\"id\":\"rul_ks3dUazcU3b6PqkH\",\"name\":\"piping-name\"}" | auth0 rules update
 ```
 
@@ -36,6 +37,7 @@ auth0 rules update [flags]
   -e, --enabled         Enable (or disable) a rule. (default true)
       --force           Skip confirmation.
       --json            Output in json format.
+      --json-compact    Output in compact json format.
   -n, --name string     Name of the rule.
   -s, --script string   Script contents for the rule.
 ```

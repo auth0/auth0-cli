@@ -21,6 +21,7 @@ auth0 email provider update [flags]
 ```
   auth0 email provider update
   auth0 email provider update --json
+  auth0 email provider update --json-compact
   auth0 email provider update --enabled=false
   auth0 email provider update --credentials='{ "api_key":"NewAPIKey" }'
   auth0 email provider update --settings='{ "message": { "view_control_link": true } }'
@@ -47,6 +48,7 @@ auth0 email provider update [flags]
   -f, --default-from-address string   Provider default FROM address if none is specified.
   -e, --enabled                       Whether the provided is enabled (true) or disabled (false). (default true)
       --json                          Output in json format.
+      --json-compact                  Output in compact json format.
   -p, --provider string               Provider name. Can be 'mandrill', 'ses', 'sendgrid', 'sparkpost', 'mailgun', 'smtp', 'azure_cs', 'ms365', or 'custom'
   -s, --settings string               Settings for the email provider. formatted as JSON.
 ```

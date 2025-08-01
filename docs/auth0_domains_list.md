@@ -18,6 +18,7 @@ auth0 domains list [flags]
   auth0 domains list
   auth0 domains ls
   auth0 domains ls --json
+  auth0 domains ls --json-compact
   auth0 domains ls --csv
 ```
 
@@ -25,8 +26,9 @@ auth0 domains list [flags]
 ## Flags
 
 ```
-      --csv    Output in csv format.
-      --json   Output in json format.
+      --csv            Output in csv format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

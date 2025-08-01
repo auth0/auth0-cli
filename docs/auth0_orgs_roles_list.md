@@ -19,6 +19,7 @@ auth0 orgs roles list [flags]
   auth0 orgs roles ls <org-id>
   auth0 orgs roles list <org-id> --number 100
   auth0 orgs roles ls <org-id> -n 100 --json
+  auth0 orgs roles ls <org-id> -n 100 --json-compact
   auth0 orgs roles ls <org-id> --csv
 ```
 
@@ -26,9 +27,10 @@ auth0 orgs roles list [flags]
 ## Flags
 
 ```
-      --csv          Output in csv format.
-      --json         Output in json format.
-  -n, --number int   Number of organization roles to retrieve. Minimum 1, maximum 1000. (default 100)
+      --csv            Output in csv format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
+  -n, --number int     Number of organization roles to retrieve. Minimum 1, maximum 1000. (default 100)
 ```
 
 

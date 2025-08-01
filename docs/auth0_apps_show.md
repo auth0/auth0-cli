@@ -19,6 +19,7 @@ auth0 apps show [flags]
   auth0 apps show <app-id>
   auth0 apps show <app-id> --reveal-secrets
   auth0 apps show <app-id> -r --json
+  auth0 apps show <app-id> -r --json-compact
 ```
 
 
@@ -26,6 +27,7 @@ auth0 apps show [flags]
 
 ```
       --json             Output in json format.
+      --json-compact     Output in compact json format.
   -r, --reveal-secrets   Display the application secrets ('signing_keys', 'client_secret') as part of the command output.
 ```
 

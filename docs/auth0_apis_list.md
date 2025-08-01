@@ -19,6 +19,7 @@ auth0 apis list [flags]
   auth0 apis ls
   auth0 apis ls --number 100
   auth0 apis ls -n 100 --json
+  auth0 apis ls -n 100 --json-compact
   auth0 apis ls --csv
 ```
 
@@ -26,9 +27,10 @@ auth0 apis list [flags]
 ## Flags
 
 ```
-      --csv          Output in csv format.
-      --json         Output in json format.
-  -n, --number int   Number of APIs to retrieve. Minimum 1, maximum 1000. (default 100)
+      --csv            Output in csv format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
+  -n, --number int     Number of APIs to retrieve. Minimum 1, maximum 1000. (default 100)
 ```
 
 

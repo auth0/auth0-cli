@@ -18,13 +18,15 @@ auth0 users show [flags]
   auth0 users show 
   auth0 users show <user-id>
   auth0 users show <user-id> --json
+  auth0 users show <user-id> --json-compact
 ```
 
 
 ## Flags
 
 ```
-      --json   Output in json format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

@@ -18,6 +18,7 @@ auth0 network-acl list [flags]
   auth0 network-acl list
   auth0 network-acl ls
   auth0 network-acl ls --json
+  auth0 network-acl ls --json-compact
 ```
 
 

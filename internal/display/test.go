@@ -37,6 +37,8 @@ func (r *Renderer) TestToken(client *management.Client, t *authutil.TokenRespons
 	switch r.Format {
 	case OutputFormatJSON:
 		r.JSONResult(t)
+	case OutputFormatJSONCompact:
+		r.JSONCompactResult(t)
 	default:
 		if t.TokenType != "" {
 			r.Output("  TOKEN    TYPE   " + t.TokenType)

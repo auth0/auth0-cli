@@ -26,6 +26,7 @@ auth0 logs streams create eventgrid [flags]
   auth0 logs streams create eventgrid --name <name> --azure-id <azure-id> --azure-region <azure-region> --azure-group <azure-group>
   auth0 logs streams create eventgrid -n <name> -i <azure-id> -r <azure-region> -g <azure-group>
   auth0 logs streams create eventgrid -n mylogstream -i "b69a6835-57c7-4d53-b0d5-1c6ae580b6d5" -r northeurope -g "azure-logs-rg" --json
+  auth0 logs streams create eventgrid -n mylogstream -i "b69a6835-57c7-4d53-b0d5-1c6ae580b6d5" -r northeurope -g "azure-logs-rg" --json-compact
 ```
 
 
@@ -36,6 +37,7 @@ auth0 logs streams create eventgrid [flags]
   -i, --azure-id string       Id of the Azure subscription.
   -r, --azure-region string   The region in which the Azure subscription is hosted.
       --json                  Output in json format.
+      --json-compact          Output in compact json format.
   -n, --name string           The name of the log stream.
 ```
 

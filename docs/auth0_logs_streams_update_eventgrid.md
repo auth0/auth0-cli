@@ -23,14 +23,16 @@ auth0 logs streams update eventgrid [flags]
   auth0 logs streams update eventgrid <log-stream-id> --name <name>
   auth0 logs streams update eventgrid <log-stream-id> -n <name>
   auth0 logs streams update eventgrid <log-stream-id> -n mylogstream --json
+  auth0 logs streams update eventgrid <log-stream-id> -n mylogstream --json-compact
 ```
 
 
 ## Flags
 
 ```
-      --json          Output in json format.
-  -n, --name string   The name of the log stream.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
+  -n, --name string    The name of the log stream.
 ```
 
 

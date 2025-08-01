@@ -18,6 +18,7 @@ auth0 users roles remove [flags]
   auth0 users roles remove <user-id>
   auth0 users roles remove <user-id> --roles <role-id1,role-id2>
   auth0 users roles rm <user-id> -r "rol_1eKJp3jV04SiU04h,rol_2eKJp3jV04SiU04h" --json
+  auth0 users roles rm <user-id> -r "rol_1eKJp3jV04SiU04h,rol_2eKJp3jV04SiU04h" --json-compact
 ```
 
 
@@ -25,6 +26,7 @@ auth0 users roles remove [flags]
 
 ```
       --json            Output in json format.
+      --json-compact    Output in compact json format.
   -r, --roles strings   Roles to assign to a user.
 ```
 

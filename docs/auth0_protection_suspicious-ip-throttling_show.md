@@ -23,7 +23,8 @@ auth0 protection suspicious-ip-throttling show [flags]
 ## Flags
 
 ```
-      --json   Output in json format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

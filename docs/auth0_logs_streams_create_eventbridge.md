@@ -25,6 +25,7 @@ auth0 logs streams create eventbridge [flags]
   auth0 logs streams create eventbridge --name <name> --aws-id <aws-id> --aws-region <aws-region>
   auth0 logs streams create eventbridge -n <name> -i <aws-id> -r <aws-region>
   auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json
+  auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json-compact
 ```
 
 
@@ -34,6 +35,7 @@ auth0 logs streams create eventbridge [flags]
   -i, --aws-id string       ID of the AWS account.
   -r, --aws-region string   The AWS region in which eventbridge will be created, e.g. 'us-east-2'.
       --json                Output in json format.
+      --json-compact        Output in compact json format.
   -n, --name string         The name of the log stream.
 ```
 

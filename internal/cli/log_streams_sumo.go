@@ -37,7 +37,8 @@ func createLogStreamsSumoLogicCmd(cli *cli) *cobra.Command {
   auth0 logs streams create sumo --name <name>
   auth0 logs streams create sumo --name <name> --source <source>
   auth0 logs streams create sumo -n <name> -s <source>
-  auth0 logs streams create sumo -n "mylogstream" -s "demo.sumo.com" --json`,
+  auth0 logs streams create sumo -n "mylogstream" -s "demo.sumo.com" --json
+  auth0 logs streams create sumo -n "mylogstream" -s "demo.sumo.com" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := logStreamName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -68,6 +69,7 @@ func createLogStreamsSumoLogicCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	logStreamName.RegisterString(cmd, &inputs.Name, "")
 	sumoLogicSource.RegisterString(cmd, &inputs.SumoLogicSource, "")
 
@@ -92,7 +94,8 @@ func updateLogStreamsSumoLogicCmd(cli *cli) *cobra.Command {
   auth0 logs streams update sumo <log-stream-id> --name <name>
   auth0 logs streams update sumo <log-stream-id> --name <name> --source <source>
   auth0 logs streams update sumo <log-stream-id> -n <name> -s <source>
-  auth0 logs streams update sumo <log-stream-id> -n "mylogstream" -s "demo.sumo.com" --json`,
+  auth0 logs streams update sumo <log-stream-id> -n "mylogstream" -s "demo.sumo.com" --json
+  auth0 logs streams update sumo <log-stream-id> -n "mylogstream" -s "demo.sumo.com" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := logStreamID.Pick(cmd, &inputs.ID, cli.logStreamPickerOptionsByType(logStreamTypeSumo))
@@ -146,6 +149,7 @@ func updateLogStreamsSumoLogicCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	logStreamName.RegisterStringU(cmd, &inputs.Name, "")
 	sumoLogicSource.RegisterStringU(cmd, &inputs.SumoLogicSource, "")
 

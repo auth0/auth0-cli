@@ -54,7 +54,7 @@ func TestAPICmdInputs_FromArgs(t *testing.T) {
 			name:          "it fails to parse input arguments when data is not a valid JSON",
 			givenArgs:     []string{"patch", "clients"},
 			givenDataFlag: "{",
-			expectedError: "invalid json data given: unexpected end of JSON input",
+			expectedError: "invalid JSON data provided: unexpected end of JSON input",
 		},
 		{
 			name:          "it fails to parse input arguments when uri is invalid",

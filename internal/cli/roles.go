@@ -73,6 +73,7 @@ func listRolesCmd(cli *cli) *cobra.Command {
   auth0 roles ls
   auth0 roles ls --number 100
   auth0 roles ls -n 100 --json
+  auth0 roles ls -n 100 --json-compact
   auth0 roles ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
@@ -110,8 +111,9 @@ func listRolesCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	roleNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
@@ -130,7 +132,8 @@ func showRoleCmd(cli *cli) *cobra.Command {
 		Long:  "Display information about a role.",
 		Example: `  auth0 roles show
   auth0 roles show <role-id>
-  auth0 roles show <role-id> --json`,
+  auth0 roles show <role-id> --json
+  auth0 roles show <role-id> --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions); err != nil {
@@ -156,6 +159,7 @@ func showRoleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -175,6 +179,7 @@ func createRoleCmd(cli *cli) *cobra.Command {
 			"To create non-interactively, supply the role name and description through the flags.",
 		Example: `  auth0 roles create
   auth0 roles create --name myrole --description "awesome role"
+  auth0 roles create -n myrole -d "awesome role" --json-compact
   auth0 roles create -n myrole -d "awesome role" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := roleName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -203,6 +208,7 @@ func createRoleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	roleName.RegisterString(cmd, &inputs.Name, "")
 	roleDescription.RegisterString(cmd, &inputs.Description, "")
 
@@ -226,7 +232,8 @@ func updateRoleCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 roles update
   auth0 roles update <role-id> --name myrole
   auth0 roles update <role-id> --name myrole --description "awesome role"
-  auth0 roles update <role-id> -n myrole -d "awesome role" --json`,
+  auth0 roles update <role-id> -n myrole -d "awesome role" --json
+  auth0 roles update <role-id> -n myrole -d "awesome role" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions); err != nil {
@@ -274,6 +281,7 @@ func updateRoleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	roleName.RegisterStringU(cmd, &inputs.Name, "")
 	roleDescription.RegisterStringU(cmd, &inputs.Description, "")
 

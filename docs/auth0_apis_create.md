@@ -27,6 +27,7 @@ auth0 apis create [flags]
   auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read"
   auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read" --signing-alg "RS256"
   auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json
+  auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json-compact
 ```
 
 
@@ -35,6 +36,7 @@ auth0 apis create [flags]
 ```
   -i, --identifier string    Identifier of the API. Cannot be changed once set.
       --json                 Output in json format.
+      --json-compact         Output in compact json format.
   -n, --name string          Name of the API.
   -o, --offline-access       Whether Refresh Tokens can be issued for this API (true) or not (false).
   -s, --scopes strings       Comma-separated list of scopes (permissions).

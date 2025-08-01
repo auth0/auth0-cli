@@ -18,13 +18,15 @@ auth0 actions show [flags]
   auth0 actions show
   auth0 actions show <action-id>
   auth0 actions show <action-id> --json
+  auth0 actions show <action-id> --json-compact
 ```
 
 
 ## Flags
 
 ```
-      --json   Output in json format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

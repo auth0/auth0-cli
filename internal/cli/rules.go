@@ -96,6 +96,7 @@ func listRulesCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 rules list
   auth0 rules ls
   auth0 rules ls --json
+  auth0 rules ls --json-compact
   auth0 rules ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var rules []*management.Rule
@@ -122,8 +123,9 @@ func listRulesCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	return cmd
 }
@@ -149,6 +151,7 @@ func createRuleCmd(cli *cli) *cobra.Command {
   auth0 rules create --enabled=false --name "My Rule" --template "Empty rule"
   auth0 rules create --enabled=true --name "My Rule" --template "Empty rule" --script "$(cat path/to/script.js)"
   auth0 rules create -e=true -n "My Rule" -t "Empty rule" -s "$(cat path/to/script.js)" --json
+  auth0 rules create -e=true -n "My Rule" -t "Empty rule" -s "$(cat path/to/script.js)" --json-compact
   echo "{\"name\":\"piping-name\",\"script\":\"console.log('test')\"}" | auth0 rules create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			rule := &management.Rule{}
@@ -200,6 +203,7 @@ func createRuleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	ruleName.RegisterString(cmd, &inputs.Name, "")
 	ruleTemplate.RegisterString(cmd, &inputs.Template, "")
 	ruleEnabled.RegisterBool(cmd, &inputs.Enabled, true)
@@ -220,7 +224,8 @@ func showRuleCmd(cli *cli) *cobra.Command {
 		Long:  rulesDeprecationDocumentationText + "Display information about a rule.",
 		Example: `  auth0 rules show 
   auth0 rules show <rule-id>
-  auth0 rules show <rule-id> --json`,
+  auth0 rules show <rule-id> --json
+  auth0 rules show <rule-id> --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -250,6 +255,7 @@ func showRuleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -324,6 +330,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
   auth0 rules update <rule-id> --enabled=false --name "My Updated Rule"
   auth0 rules update <rule-id> --enabled=true --name "My Updated Rule" --script "$(cat path/to/script.js)"
   auth0 rules update <rule-id> -e=true -n "My Updated Rule" -s "$(cat path/to/script.js)" --json
+  auth0 rules update <rule-id> -e=true -n "My Updated Rule" -s "$(cat path/to/script.js)" --json-compact
   echo "{\"id\":\"rul_ks3dUazcU3b6PqkH\",\"name\":\"piping-name\"}" | auth0 rules update`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			updatedRule := &management.Rule{}
@@ -404,6 +411,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	ruleName.RegisterStringU(cmd, &inputs.Name, "")
 	ruleEnabled.RegisterBool(cmd, &inputs.Enabled, true)
@@ -425,7 +433,8 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 		Long:  rulesDeprecationDocumentationText + "Enable a rule.",
 		Example: `  auth0 rules enable
   auth0 rules enable <rule-id>
-  auth0 rules enable <rule-id> --json`,
+  auth0 rules enable <rule-id> --json
+  auth0 rules enable <rule-id> --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -463,6 +472,7 @@ func enableRuleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -480,7 +490,8 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 		Long:  rulesDeprecationDocumentationText + "Disable a rule.",
 		Example: `  auth0 rules disable
   auth0 rules disable <rule-id>
-  auth0 rules disable <rule-id> --json`,
+  auth0 rules disable <rule-id> --json
+  auth0 rules disable <rule-id> --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -517,6 +528,7 @@ func disableRuleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }

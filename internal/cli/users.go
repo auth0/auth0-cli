@@ -270,9 +270,10 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	userQuery.RegisterString(cmd, &inputs.query, "")
 	userSort.RegisterString(cmd, &inputs.sort, "")
@@ -342,8 +343,9 @@ func searchUsersByEmailCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	userPicker.RegisterBool(cmd, &inputs.picker, false)
 
@@ -374,10 +376,12 @@ func createUserCmd(cli *cli) *cobra.Command {
   auth0 users create --name "John Doe" --email john@example.com
   auth0 users create --name "John Doe" --email john@example.com --connection-name "Username-Password-Authentication" --username "example"
   auth0 users create -n "John Doe" -e john@example.com -c "Username-Password-Authentication" -u "example" --json
+  auth0 users create -n "John Doe" -e john@example.com -c "Username-Password-Authentication" -u "example" --json-compact
   auth0 users create -n "John Doe" -e john@example.com -c "email" --json
   auth0 users create -e john@example.com -c "email"
   auth0 users create --phone-number +916898989898 --connection-name "sms"
-  auth0 users create -m +916898989898 -c "sms" --json`,
+  auth0 users create -m +916898989898 -c "sms" --json
+  auth0 users create -m +916898989898 -c "sms" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Validate provided flags basis on the given connection type.
 			if cli.noInput {
@@ -461,6 +465,7 @@ func createUserCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	registerDetailsInfo(cmd, &inputs)
 
@@ -565,7 +570,8 @@ func showUserCmd(cli *cli) *cobra.Command {
 		Long:  "Display information about an existing user.",
 		Example: `  auth0 users show 
   auth0 users show <user-id>
-  auth0 users show <user-id> --json`,
+  auth0 users show <user-id> --json
+  auth0 users show <user-id> --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.ID); err != nil {
@@ -605,6 +611,7 @@ func showUserCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -681,6 +688,7 @@ func updateUserCmd(cli *cli) *cobra.Command {
   auth0 users update <user-id> --blocked=true"
   auth0 users update <user-id> --blocked=false"
   auth0 users update <user-id> -n "John Kennedy" -e johnk@example.com --json
+  auth0 users update <user-id> -n "John Kennedy" -e johnk@example.com --json-compact
   auth0 users update <user-id> -n "John Kennedy" -p <newPassword>
   auth0 users update <user-id> -b
   auth0 users update <user-id> -p <newPassword>
@@ -744,6 +752,7 @@ func updateUserCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	registerDetailsInfo(cmd, inputs)
 	userBlock.RegisterBool(cmd, &blocked, false)
 

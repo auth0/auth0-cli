@@ -21,6 +21,7 @@ auth0 phone provider update [flags]
 ```
   auth0 phone provider update
   auth0 phone provider update --json
+  auth0 phone provider update --json-compact
   auth0 phone provider update --disabled
   auth0 phone provider update --credentials='{ "auth_token":"NewAuthToken" }'
   auth0 phone provider update --configuration='{ "delivery_methods": ["voice"] }'
@@ -37,6 +38,7 @@ auth0 phone provider update [flags]
   -c, --credentials string     Credentials for the phone provider, formatted as JSON.
   -d, --disabled               Whether the provided is disabled (true) or enabled (false).
       --json                   Output in json format.
+      --json-compact           Output in compact json format.
   -p, --provider string        Provider name. Can be 'twilio', or 'custom'
 ```
 

@@ -29,6 +29,7 @@ auth0 apps session-transfer update [flags]
   -t, --can-create-token                Allow creation of session transfer tokens.
   -e, --enforce-device-binding string   Device binding enforcement: 'none', 'ip', or 'asn'.
       --json                            Output in json format.
+      --json-compact                    Output in compact json format.
 ```
 
 

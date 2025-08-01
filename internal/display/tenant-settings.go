@@ -65,6 +65,11 @@ func (v *TenantSettingsView) Object() interface{} {
 func (r *Renderer) TenantSettingsShow(tenant *management.Tenant) {
 	r.Heading("tenant settings")
 
+	if r.Format == OutputFormatJSONCompact {
+		r.JSONCompactResult(tenant)
+		return
+	}
+
 	if r.Format == OutputFormatJSON {
 		r.JSONResult(tenant)
 		return

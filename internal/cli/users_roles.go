@@ -72,6 +72,7 @@ func showUserRolesCmd(cli *cli) *cobra.Command {
   auth0 users roles show <user-id>
   auth0 users roles show <user-id> --number 100
   auth0 users roles show <user-id> -n 100 --json
+  auth0 users roles show <user-id> -n 100 --json-compact
   auth0 users roles show <user-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -118,8 +119,9 @@ func showUserRolesCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	userRolesNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
@@ -137,7 +139,8 @@ func addUserRolesCmd(cli *cli) *cobra.Command {
 		Long:    "Assign existing roles to a user.",
 		Example: `  auth0 users roles assign <user-id>
   auth0 users roles add <user-id> --roles <role-id1,role-id2>
-  auth0 users roles add <user-id> -r "rol_1eKJp3jV04SiU04h,rol_2eKJp3jV04SiU04h" --json`,
+  auth0 users roles add <user-id> -r "rol_1eKJp3jV04SiU04h,rol_2eKJp3jV04SiU04h" --json
+  auth0 users roles add <user-id> -r "rol_1eKJp3jV04SiU04h,rol_2eKJp3jV04SiU04h" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.ID); err != nil {
@@ -182,6 +185,7 @@ func addUserRolesCmd(cli *cli) *cobra.Command {
 
 	userRoles.RegisterStringSlice(cmd, &inputs.Roles, nil)
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -197,7 +201,8 @@ func removeUserRolesCmd(cli *cli) *cobra.Command {
 		Long:    "Remove existing roles from a user.",
 		Example: `  auth0 users roles remove <user-id>
   auth0 users roles remove <user-id> --roles <role-id1,role-id2>
-  auth0 users roles rm <user-id> -r "rol_1eKJp3jV04SiU04h,rol_2eKJp3jV04SiU04h" --json`,
+  auth0 users roles rm <user-id> -r "rol_1eKJp3jV04SiU04h,rol_2eKJp3jV04SiU04h" --json
+  auth0 users roles rm <user-id> -r "rol_1eKJp3jV04SiU04h,rol_2eKJp3jV04SiU04h" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.ID); err != nil {
@@ -242,6 +247,7 @@ func removeUserRolesCmd(cli *cli) *cobra.Command {
 
 	userRoles.RegisterStringSlice(cmd, &inputs.Roles, nil)
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }

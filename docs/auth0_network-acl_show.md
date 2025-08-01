@@ -17,6 +17,7 @@ auth0 network-acl show [flags]
 ```
   auth0 network-acl show <id>
   auth0 network-acl show <id> --json
+  auth0 network-acl show <id> --json-compact
 ```
 
 

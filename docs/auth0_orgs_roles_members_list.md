@@ -21,6 +21,7 @@ auth0 orgs roles members list [flags]
   auth0 orgs roles members list <org-id> --role-id role --number 100
   auth0 orgs roles members ls <org-id> -r role -n 100
   auth0 orgs roles members ls <org-id> -r role -n 100 --json
+  auth0 orgs roles members ls <org-id> -r role -n 100 --json-compact
   auth0 orgs roles members ls <org-id> --csv
 ```
 
@@ -30,6 +31,7 @@ auth0 orgs roles members list [flags]
 ```
       --csv              Output in csv format.
       --json             Output in json format.
+      --json-compact     Output in compact json format.
   -n, --number int       Number of members to retrieve. Minimum 1, maximum 1000. (default 100)
   -r, --role-id string   Role Identifier.
 ```

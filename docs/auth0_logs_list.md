@@ -25,6 +25,7 @@ auth0 logs list [flags]
   auth0 logs list --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
   auth0 logs ls -n 250 -p
   auth0 logs ls --json
+  auth0 logs ls --json-compact
   auth0 logs ls --csv
 ```
 
@@ -35,6 +36,7 @@ auth0 logs list [flags]
       --csv             Output in csv format.
   -f, --filter string   Filter in Lucene query syntax. See https://auth0.com/docs/logs/log-search-query-syntax for more details.
       --json            Output in json format.
+      --json-compact    Output in compact json format.
   -n, --number int      Number of log entries to show. Minimum 1, maximum 1000. (default 100)
   -p, --picker          Allows to toggle from list of logs and view a selected log in detail
 ```

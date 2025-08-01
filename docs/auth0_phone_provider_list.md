@@ -18,6 +18,7 @@ auth0 phone provider list [flags]
   auth0 phone provider list
   auth0 phone provider ls 
   auth0 phone provider ls --json
+  auth0 phone provider ls --json-compact
   auth0 phone provider ls --csv
 ```
 
@@ -25,8 +26,9 @@ auth0 phone provider list [flags]
 ## Flags
 
 ```
-      --csv    Output in csv format.
-      --json   Output in json format.
+      --csv            Output in csv format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

@@ -22,6 +22,7 @@ auth0 email templates update [flags]
   auth0 email templates update
   auth0 email templates update <template>
   auth0 email templates update <template> --json
+  auth0 email templates update <template> --json-compact
   auth0 email templates update welcome --enabled=true
   auth0 email templates update welcome --enabled=true --body "$(cat path/to/body.html)"
   auth0 email templates update welcome --enabled=false --body "$(cat path/to/body.html)" --from "welcome@example.com"
@@ -29,6 +30,7 @@ auth0 email templates update [flags]
   auth0 email templates update welcome --enabled=false --body "$(cat path/to/body.html)" --from "welcome@example.com" --lifetime 6100 --subject "Welcome"
   auth0 email templates update welcome --enabled=true --body "$(cat path/to/body.html)" --from "welcome@example.com" --lifetime 6100 --subject "Welcome" --url "https://example.com"
   auth0 email templates update welcome -e=true -b "$(cat path/to/body.html)" -f "welcome@example.com" -l 6100 -s "Welcome" -u "https://example.com" --json
+  auth0 email templates update welcome -e=true -b "$(cat path/to/body.html)" -f "welcome@example.com" -l 6100 -s "Welcome" -u "https://example.com" --json-compact
 ```
 
 
@@ -40,6 +42,7 @@ auth0 email templates update [flags]
       --force            Skip confirmation.
   -f, --from string      Sender's 'from' email address.
       --json             Output in json format.
+      --json-compact     Output in compact json format.
   -l, --lifetime int     Lifetime in seconds that the link within the email will be valid for.
   -s, --subject string   Subject line of the email.
   -u, --url string       URL to redirect the user to after a successful action.

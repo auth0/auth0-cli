@@ -18,13 +18,15 @@ auth0 logs streams show [flags]
   auth0 logs streams show
   auth0 logs streams show <log-stream-id>
   auth0 logs streams show <log-stream-id> --json
+  auth0 logs streams show <log-stream-id> --json-compact
 ```
 
 
 ## Flags
 
 ```
-      --json   Output in json format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

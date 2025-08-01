@@ -176,7 +176,8 @@ func listNetworkACLsCmd(cli *cli) *cobra.Command {
 		Long:    "List your network ACLs. To create one, run: auth0 network-acl create",
 		Example: `  auth0 network-acl list
   auth0 network-acl ls
-  auth0 network-acl ls --json`,
+  auth0 network-acl ls --json
+  auth0 network-acl ls --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list []*management.NetworkACL
 			if err := ansi.Waiting(func() error {
@@ -207,7 +208,8 @@ func showNetworkACLCmd(cli *cli) *cobra.Command {
 		Short: "Show a network ACL",
 		Long:  "Show the details of a network ACL.",
 		Example: `  auth0 network-acl show <id>
-  auth0 network-acl show <id> --json`,
+  auth0 network-acl show <id> --json
+  auth0 network-acl show <id> --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -530,6 +532,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().StringVarP(&inputs.Description, "description", "d", "", "Description of the network ACL (required)")
 	cmd.Flags().StringVar(&inputs.ActiveStr, "active", "", "Whether the network ACL is active (required, 'true' or 'false')")
 	cmd.Flags().IntVarP(&inputs.Priority, "priority", "p", 0, "Priority of the network ACL (required, 1-10)")

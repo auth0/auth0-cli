@@ -82,13 +82,15 @@ func listQuickstartsCmd(cli *cli) *cobra.Command {
   auth0 qs list
   auth0 qs ls
   auth0 qs ls --json
+  auth0 qs ls --json-compact
   auth0 qs ls --csv`,
 		RunE: listQuickstarts(cli),
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	return cmd
 }

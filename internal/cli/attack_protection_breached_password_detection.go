@@ -89,6 +89,7 @@ func showBreachedPasswordDetectionCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -111,6 +112,7 @@ func updateBreachedPasswordDetectionCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	bpdFlags.Enabled.RegisterBoolU(cmd, &inputs.Enabled, false)
 	bpdFlags.Shields.RegisterStringSliceU(cmd, &inputs.Shields, []string{})
 	bpdFlags.AdminNotificationFrequency.RegisterStringSliceU(cmd, &inputs.AdminNotificationFrequency, []string{})

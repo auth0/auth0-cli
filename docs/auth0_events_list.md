@@ -18,6 +18,7 @@ auth0 events list [flags]
   auth0 events list
   auth0 events ls
   auth0 events ls --json
+  auth0 events ls --json-compact
   auth0 events ls --csv
 ```
 
@@ -25,8 +26,9 @@ auth0 events list [flags]
 ## Flags
 
 ```
-      --csv    Output in csv format.
-      --json   Output in json format.
+      --csv            Output in csv format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

@@ -113,6 +113,7 @@ func listCustomDomainsCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 domains list
   auth0 domains ls
   auth0 domains ls --json
+  auth0 domains ls --json-compact
   auth0 domains ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list []*management.CustomDomain
@@ -131,8 +132,9 @@ func listCustomDomainsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	return cmd
 }
@@ -149,7 +151,8 @@ func showCustomDomainCmd(cli *cli) *cobra.Command {
 		Long:  "Display information about a custom domain.",
 		Example: `  auth0 domains show 
   auth0 domains show <domain-id>
-  auth0 domains show <domain-id> --json`,
+  auth0 domains show <domain-id> --json
+  auth0 domains show <domain-id> --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := customDomainID.Pick(cmd, &inputs.ID, cli.customDomainsPickerOptions); err != nil {
@@ -175,6 +178,7 @@ func showCustomDomainCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -203,7 +207,8 @@ func createCustomDomainCmd(cli *cli) *cobra.Command {
   auth0 domains create --domain <domain-name> --policy recommended --metadata '{"key1":"value1","key2":"value2"}' 
   auth0 domains create --domain <domain-name> --policy recommended --type auth0
   auth0 domains create --domain <domain-name> --policy recommended --type auth0 --ip-header "cf-connecting-ip"
-  auth0 domains create -d <domain-name> -p recommended -t auth0 -i "cf-connecting-ip" --json`,
+  auth0 domains create -d <domain-name> -p recommended -t auth0 -i "cf-connecting-ip" --json
+  auth0 domains create -d <domain-name> -p recommended -t auth0 -i "cf-connecting-ip" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := customDomainDomain.Ask(cmd, &inputs.Domain, nil); err != nil {
 				return err
@@ -255,6 +260,7 @@ func createCustomDomainCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	customDomainDomain.RegisterString(cmd, &inputs.Domain, "")
 	customDomainType.RegisterString(cmd, &inputs.Type, "")
 	customDomainVerification.RegisterString(cmd, &inputs.VerificationMethod, "")
@@ -286,7 +292,7 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
   auth0 domains update <domain-id> --policy compatible --ip-header "cf-connecting-ip"
   auth0 domains update <domain-id> --metadata '{"key1":"value1","key2":null}'
   auth0 domains update <domain-id> -p compatible -i "cf-connecting-ip" --json
-`,
+  auth0 domains update <domain-id> -p compatible -i "cf-connecting-ip" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.CustomDomain
 
@@ -364,6 +370,7 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
 	customDomainMetadata.RegisterString(cmd, &inputs.DomainMetadata, "")
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -458,6 +465,7 @@ func verifyCustomDomainCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }

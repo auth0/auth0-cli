@@ -67,11 +67,6 @@ func (r *Renderer) ActionList(actions []*management.Action) {
 	r.Results(res)
 }
 
-func (r *Renderer) ActionTest(payload management.ActionTestPayload) {
-	r.Heading("action test")
-	r.JSONResult(payload)
-}
-
 func (r *Renderer) ActionShow(action *management.Action) {
 	r.Heading("action")
 	r.Result(makeActionView(action))

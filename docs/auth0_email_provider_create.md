@@ -21,6 +21,7 @@ auth0 email provider create [flags]
 ```
   auth0 email provider create
   auth0 email provider create --json
+  auth0 email provider create --json-compact
   auth0 email provider create --provider mandrill --enabled=true --credentials='{ "api_key":"TheAPIKey" }' --settings='{ "message": { "view_control_link": true } }'
   auth0 email provider create --provider mandrill --default-from-address='admin@example.com' --credentials='{ "api_key":"TheAPIKey" }' --settings='{ "message": { "view_control_link": true } }'
   auth0 email provider create --provider ses --credentials='{ "accessKeyId":"TheAccessKeyId", "secretAccessKey":"TheSecretAccessKey", "region":"eu" }' --settings='{ "message": { "configuration_set_name": "TheConfigurationSetName" } }'
@@ -43,6 +44,7 @@ auth0 email provider create [flags]
   -f, --default-from-address string   Provider default FROM address if none is specified.
   -e, --enabled                       Whether the provided is enabled (true) or disabled (false). (default true)
       --json                          Output in json format.
+      --json-compact                  Output in compact json format.
   -p, --provider string               Provider name. Can be 'mandrill', 'ses', 'sendgrid', 'sparkpost', 'mailgun', 'smtp', 'azure_cs', 'ms365', or 'custom'
   -s, --settings string               Settings for the email provider. formatted as JSON.
 ```

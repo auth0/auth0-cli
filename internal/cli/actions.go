@@ -108,6 +108,7 @@ func listActionsCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 actions list
   auth0 actions ls
   auth0 actions ls --json
+  auth0 actions ls --json-compact
   auth0 actions ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.ActionList
@@ -126,8 +127,9 @@ func listActionsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	return cmd
 }
@@ -144,7 +146,8 @@ func showActionCmd(cli *cli) *cobra.Command {
 		Long:  "Display the name, type, status, code and other information about an action.",
 		Example: `  auth0 actions show
   auth0 actions show <action-id>
-  auth0 actions show <action-id> --json`,
+  auth0 actions show <action-id> --json
+  auth0 actions show <action-id> --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions); err != nil {
@@ -170,6 +173,7 @@ func showActionCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -198,7 +202,8 @@ func createActionCmd(cli *cli) *cobra.Command {
   auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
   auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
   auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
-  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json`,
+  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json
+  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := actionName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -263,6 +268,7 @@ func createActionCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	actionName.RegisterString(cmd, &inputs.Name, "")
 	actionTrigger.RegisterString(cmd, &inputs.Trigger, "")
 	actionCode.RegisterString(cmd, &inputs.Code, "")
@@ -298,7 +304,8 @@ func updateActionCmd(cli *cli) *cobra.Command {
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
-  auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json`,
+  auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json
+  auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -373,6 +380,7 @@ func updateActionCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	actionName.RegisterStringU(cmd, &inputs.Name, "")
 	actionCode.RegisterStringU(cmd, &inputs.Code, "")
@@ -445,7 +453,8 @@ func deployActionCmd(cli *cli) *cobra.Command {
 			"be available to the new draft.",
 		Example: `  auth0 actions deploy
   auth0 actions deploy <action-id>
-  auth0 actions deploy <action-id> --json`,
+  auth0 actions deploy <action-id> --json
+  auth0 actions deploy <action-id> --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := actionID.Pick(cmd, &inputs.ID, cli.unDeployedActionPickerOptions); err != nil {
@@ -478,6 +487,7 @@ func deployActionCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }

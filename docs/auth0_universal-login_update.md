@@ -23,6 +23,7 @@ auth0 universal-login update [flags]
   auth0 ul update --accent "#FF4F40" --background "#2A2E35" --logo "https://example.com/logo.png"
   auth0 ul update -a "#FF4F40" -b "#2A2E35" -l "https://example.com/logo.png"
   auth0 ul update -a "#FF4F40" -b "#2A2E35" -l "https://example.com/logo.png" --json
+  auth0 ul update -a "#FF4F40" -b "#2A2E35" -l "https://example.com/logo.png" --json-compact
 ```
 
 
@@ -34,6 +35,7 @@ auth0 universal-login update [flags]
   -f, --favicon string      URL for the favicon. Must use HTTPS.
   -c, --font string         URL for the custom font. The URL must point to a font file and not a stylesheet. Must use HTTPS.
       --json                Output in json format.
+      --json-compact        Output in compact json format.
   -l, --logo string         URL for the logo. Must use HTTPS.
 ```
 

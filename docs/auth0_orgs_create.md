@@ -34,6 +34,7 @@ auth0 orgs create [flags]
   -b, --background string         Background color used to customize the login pages.
   -d, --display string            Friendly name of the organization.
       --json                      Output in json format.
+      --json-compact              Output in compact json format.
   -l, --logo string               URL of the logo to be displayed on the login page.
   -m, --metadata stringToString   Metadata associated with the organization (max 255 chars). Maximum of 10 metadata properties allowed. (default [])
   -n, --name string               Name of the organization.
