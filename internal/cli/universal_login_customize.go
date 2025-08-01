@@ -881,6 +881,7 @@ func fetchBrandingThemeOrUseDefault(ctx context.Context, api *auth0.API) *manage
 			Success:                 "#13a688",
 			WidgetBackground:        "#ffffff",
 			WidgetBorder:            "#c9cace",
+			CaptchaWidgetTheme:      "auto",
 		},
 		Fonts: management.BrandingThemeFonts{
 			BodyText: management.BrandingThemeText{

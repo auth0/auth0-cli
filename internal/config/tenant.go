@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"golang.org/x/exp/slices"
-
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/keyring"
 )
@@ -16,12 +14,17 @@ import (
 const accessTokenExpThreshold = 5 * time.Minute
 
 var (
-	// ErrTokenMissingRequiredScopes is thrown when the token is missing required scopes.
-	ErrTokenMissingRequiredScopes = errors.New("token is missing required scopes")
-
 	// ErrInvalidToken is thrown when the token is invalid.
 	ErrInvalidToken = errors.New("token is invalid")
 )
+
+type ErrTokenMissingRequiredScopes struct {
+	MissingScopes []string
+}
+
+func (e ErrTokenMissingRequiredScopes) Error() string {
+	return "token is missing required scopes"
+}
 
 type (
 	// Tenants keeps track of all the tenants we
@@ -39,18 +42,6 @@ type (
 		ClientID     string    `json:"client_id"`
 	}
 )
-
-// HasAllRequiredScopes returns true if the tenant
-// has all the required scopes, false otherwise.
-func (t *Tenant) HasAllRequiredScopes() bool {
-	for _, requiredScope := range auth.RequiredScopes {
-		if !slices.Contains(t.Scopes, requiredScope) {
-			return false
-		}
-	}
-
-	return true
-}
 
 // GetExtraRequestedScopes retrieves any extra scopes requested
 // for the tenant when logging in through the device code flow.
@@ -105,8 +96,8 @@ func (t *Tenant) GetAccessToken() string {
 // CheckAuthenticationStatus checks to see if the tenant in the config
 // has all the required scopes and that the access token is not expired.
 func (t *Tenant) CheckAuthenticationStatus() error {
-	if !t.HasAllRequiredScopes() && t.IsAuthenticatedWithDeviceCodeFlow() {
-		return ErrTokenMissingRequiredScopes
+	if extraScopes := t.GetExtraRequestedScopes(); len(extraScopes) > 0 && t.IsAuthenticatedWithDeviceCodeFlow() {
+		return ErrTokenMissingRequiredScopes{MissingScopes: extraScopes}
 	}
 
 	accessToken := t.GetAccessToken()
