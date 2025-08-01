@@ -56,8 +56,8 @@ var (
 		LongForm:  "configuration",
 		ShortForm: "c",
 		Help: "Configuration of the Event Stream. Formatted as JSON. \n" +
-			"Webhook Example: {\"webhook_endpoint\":\"https://my-webhook.net\",\"webhook_authorization\":{\"method\":\"bearer\",\"token\":\"123456789\"}} \n" +
-			"Eventbridge Example: {\"aws_account_id\":\"7832467231933\",\"aws_region\":\"us-east-2\"}",
+			"Webhook Example: " + `{"webhook_endpoint":"https://my-webhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}} ` + "\n" +
+			"Eventbridge Example: " + `{"aws_account_id":"7832467231933","aws_region":"us-east-2"}`,
 		IsRequired: true,
 	}
 )
