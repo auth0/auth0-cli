@@ -513,10 +513,9 @@ func TestSanitizeResourceName(t *testing.T) {
 		{"Invalid Name", "invalid_name"},
 		{"123 Starts With Number", "_123_starts_with_number"},
 		{"-Starts With Dash", "starts_with_dash"},
-		// Test case for the bug: connection name with only digits
 		{"123456", "_123456"},
 		{"999", "_999"},
-		{"999(1234)", "_999_1234"},  // Leading digits are removed, then prefixed with underscore
+		{"999(1234)", "_999_1234"},
 	}
 
 	for _, testCase := range testCases {
