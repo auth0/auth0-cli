@@ -472,10 +472,6 @@ func sanitizeResourceName(name string) string {
 
 	sanitizedName := re.ReplaceAllString(name, "_")
 
-	// Regular expression pattern to remove leading digits or dashes.
-	namePattern = "^[0-9-]+"
-	re = regexp.MustCompile(namePattern)
-
 	sanitizedName = strings.Trim(sanitizedName, "_")
 	sanitizedName = strings.ToLower(sanitizedName)
 
