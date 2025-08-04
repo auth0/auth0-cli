@@ -513,6 +513,7 @@ func TestSanitizeResourceName(t *testing.T) {
 		{"Invalid Name", "invalid_name"},
 		{"123 Starts With Number", "_123_starts_with_number"},
 		{"-Starts With Dash", "starts_with_dash"},
+		{"", ""},
 		{"123456", "_123456"},
 		{"999", "_999"},
 		{"999(1234)", "_999_1234"},
