@@ -534,7 +534,7 @@ func (c *cli) ListAllCustomDomains(ctx context.Context) ([]*management.CustomDom
 
 		allDomains = append(allDomains, list.CustomDomains...)
 
-		// If we've retrieved all items, break
+		// If we've retrieved all items, break.
 		if len(allDomains) >= list.Total || len(list.CustomDomains) == 0 {
 			break
 		}
