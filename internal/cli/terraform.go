@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"text/template"
+	"unicode"
 
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/hc-install/product"
@@ -475,9 +476,13 @@ func sanitizeResourceName(name string) string {
 	namePattern = "^[0-9-]+"
 	re = regexp.MustCompile(namePattern)
 
-	sanitizedName = re.ReplaceAllString(sanitizedName, "")
 	sanitizedName = strings.Trim(sanitizedName, "_")
 	sanitizedName = strings.ToLower(sanitizedName)
+
+	// If the result starts with a digit, prefix with underscore
+	if unicode.IsDigit(rune(sanitizedName[0])) {
+		sanitizedName = "_" + sanitizedName
+	}
 
 	return sanitizedName
 }
