@@ -264,7 +264,24 @@ func (cli *cli) fetchTemplateData(ctx context.Context) (*TemplateData, error) {
 }
 
 func ensureCustomDomainIsEnabled(ctx context.Context, api *auth0.API) error {
-	domains, err := api.CustomDomain.List(ctx)
+	var domains []*management.CustomDomain
+	var p int
+	var err error
+	var customDomainList *management.CustomDomainList
+
+	for {
+		customDomainList, err = api.CustomDomain.ListWithPagination(ctx, management.Page(p))
+		if err != nil {
+			break
+		}
+
+		domains = append(domains, customDomainList.CustomDomains...)
+
+		if len(domains) >= customDomainList.Total || len(customDomainList.CustomDomains) == 0 {
+			break
+		}
+		p++
+	}
 	if err != nil {
 		if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusForbidden {
 			return errNotAllowed // 403 is a valid response for free tenants that don't have custom domains enabled.

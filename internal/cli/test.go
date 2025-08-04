@@ -366,7 +366,7 @@ func selectClientToUseForTestsAndValidateExistence(cli *cli, cmd *cobra.Command,
 func (c *cli) customDomainPickerOptions(ctx context.Context) (pickerOptions, error) {
 	var opts pickerOptions
 
-	domains, err := c.api.CustomDomain.List(ctx)
+	domains, err := c.ListAllCustomDomains(ctx)
 	if err != nil {
 		errStatus := err.(management.Error)
 		// 403 is a valid response for free tenants that don't have

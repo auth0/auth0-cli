@@ -261,7 +261,25 @@ func (f *connectionResourceFetcher) FetchData(ctx context.Context) (importDataLi
 func (f *customDomainResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	var data importDataList
 
-	customDomains, err := f.api.CustomDomain.List(ctx)
+	var allDomains []*management.CustomDomain
+	var p int
+	var err error
+	var customDomainList *management.CustomDomainList
+
+	for {
+		customDomainList, err = f.api.CustomDomain.ListWithPagination(ctx, management.Page(p))
+		if err != nil {
+			break
+		}
+
+		allDomains = append(allDomains, customDomainList.CustomDomains...)
+
+		if len(allDomains) >= customDomainList.Total || len(customDomainList.CustomDomains) == 0 {
+			break
+		}
+		p++
+	}
+
 	if err != nil {
 		errNotEnabled := []string{
 			"The account is not allowed to perform this operation, please contact our support team",
@@ -276,7 +294,7 @@ func (f *customDomainResourceFetcher) FetchData(ctx context.Context) (importData
 		return nil, err
 	}
 
-	for _, domain := range customDomains {
+	for _, domain := range allDomains {
 		data = append(data, importDataItem{
 			ResourceName: "auth0_custom_domain." + sanitizeResourceName(domain.GetDomain()),
 			ImportID:     domain.GetID(),
