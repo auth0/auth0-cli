@@ -6,7 +6,6 @@ has_toc: false
 # auth0 events deliveries list
 
 List all failed delivery attempts associated with a specific event stream.
-
 Optionally filter by event type(s) using the --type flag.
 
 ## Usage

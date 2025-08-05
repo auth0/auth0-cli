@@ -5,9 +5,10 @@ has_toc: false
 ---
 # auth0 events redeliver-many
 
-Retry multiple failed event deliveries for a given event stream.
-				You can filter by event type and date range. All filters are combined using AND logic.
-				If no filters are passed, all failed events are retried
+Retry multiple failed event deliveries for a given event stream. 
+You can filter by event type and date range. 
+All filters are combined using AND logic. 
+If no filters are passed, all failed events are retried
 
 ## Usage
 ```
