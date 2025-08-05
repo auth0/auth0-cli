@@ -290,18 +290,18 @@ func updateEventStreamCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to read event stream with ID %q: %w", inputs.ID, err)
 			}
 
-			if e := eventStreamName.AskU(cmd, &inputs.Name, nil); err != nil {
+			if e := eventStreamName.AskU(cmd, &inputs.Name, nil); e != nil {
 				return e
 			}
-			if e := eventStreamStatus.AskU(cmd, &inputs.Status, nil); err != nil {
-				return e
-			}
-
-			if e := eventStreamSubscriptions.AskManyU(cmd, &inputs.Subscriptions, nil); err != nil {
+			if e := eventStreamStatus.AskU(cmd, &inputs.Status, nil); e != nil {
 				return e
 			}
 
-			if e := eventStreamConfig.AskU(cmd, &inputs.Configuration, nil); err != nil {
+			if e := eventStreamSubscriptions.AskManyU(cmd, &inputs.Subscriptions, nil); e != nil {
+				return e
+			}
+
+			if e := eventStreamConfig.AskU(cmd, &inputs.Configuration, nil); e != nil {
 				return e
 			}
 

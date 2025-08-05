@@ -544,7 +544,11 @@ func safeMetric(values []int, i int) int {
 func (r *Renderer) ConfirmPrompt(prompt string) bool {
 	fmt.Printf("\n%s [y/N]: ", prompt)
 
-	ContTty, _ := tty.Open()
+	ContTty, err := tty.Open()
+	if err != nil {
+		fmt.Println("Error: Unable to open TTY for user input.")
+		return false
+	}
 	defer func(ContTty *tty.TTY) {
 		_ = ContTty.Close()
 	}(ContTty)
