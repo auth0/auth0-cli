@@ -2,11 +2,12 @@ package display
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/auth0/go-auth0/management"
 	"github.com/manifoldco/promptui"
 	"github.com/mattn/go-tty"
-	"strings"
-	"time"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 )
@@ -450,7 +451,6 @@ func (v *eventStreamStatsRowView) Object() interface{} {
 }
 
 func (r *Renderer) RenderEventStreamStats(stats *management.EventStreamStats) {
-
 	if r.Format == OutputFormatJSON {
 		r.JSONResult(stats)
 		return
@@ -469,7 +469,7 @@ func (r *Renderer) RenderEventStreamStats(stats *management.EventStreamStats) {
 	fmt.Println(ansi.Bold(ansi.Cyan("Event Stream Stats")))
 	r.Result(v)
 
-	// Metric buckets
+	// Metric buckets.
 	metricMap := extractMetricMap(stats.Metrics)
 
 	success := metricMap[MetricSuccessfulDeliveries]
@@ -491,7 +491,7 @@ func (r *Renderer) RenderEventStreamStats(stats *management.EventStreamStats) {
 	fmt.Println(ansi.Bold(ansi.Cyan("Delivery Metrics")))
 	r.Results(rows)
 
-	// Metric Totals + Types
+	// Metric Totals + Types.
 	r.Newline()
 	if success != nil {
 		s := findMetric(stats.Metrics, MetricSuccessfulDeliveries)

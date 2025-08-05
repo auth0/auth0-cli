@@ -510,7 +510,7 @@ func listDeliveriesCmd(cli *cli) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Aliases: []string{"ls"},
 		Short:   "List failed deliveries for an event stream",
-		Long: "List all failed delivery attempts associated with a specific event stream.\n\n" +
+		Long: "List all failed delivery attempts associated with a specific event stream.\n" +
 			"Optionally filter by event type(s) using the --type flag.",
 		Example: `  auth0 events deliveries list
   auth0 events deliveries list <event-stream-id>
@@ -605,10 +605,10 @@ func showDeliveryCmd(cli *cli) *cobra.Command {
 		Use:   "show [stream-id] [delivery-id]",
 		Args:  cobra.MaximumNArgs(2),
 		Short: "Show details for a specific delivery",
-		Long: `Displays metadata, attempts, and event payload for a specific delivery
-associated with an event stream.
-
-If stream ID or delivery ID is not provided, you will be prompted to select them interactively.`,
+		Long: "Displays metadata, attempts, and event payload for a specific \n" +
+			"delivery associated with an event stream. \n" +
+			"If stream ID or delivery ID is not provided, you will be " +
+			"prompted to select them interactively.",
 		Example: `  auth0 events deliveries show
   auth0 events deliveries show <stream-id>
   auth0 events deliveries show <stream-id> <delivery-id>`,
@@ -668,9 +668,9 @@ func redeliverEventStreamCmd(cli *cli) *cobra.Command {
 		Use:   "redeliver [stream-id] [comma-separated-delivery-ids]",
 		Args:  cobra.MaximumNArgs(2),
 		Short: "Retry one or more event deliveries for a given stream",
-		Long: `Retry one or more failed event deliveries for a given event stream.
-
-If no delivery IDs are provided, you'll be prompted to select from recent failed deliveries.`,
+		Long: "Retry one or more failed event deliveries for a given event stream. \n" +
+			"If no delivery IDs are provided, you'll be prompted " +
+			"to select from recent failed deliveries.",
 		Example: `  auth0 events redeliver
   auth0 events redeliver <stream-id>
   auth0 events redeliver <stream-id> evt_abc123,evt_def456`,
@@ -724,9 +724,10 @@ func redeliverManyEventStreamCmd(cli *cli) *cobra.Command {
 		Use:   "redeliver-many [stream-id]",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Bulk retry failed event deliveries using filters",
-		Long: `Retry multiple failed event deliveries for a given event stream.
-				You can filter by event type and date range. All filters are combined using AND logic.
-				If no filters are passed, all failed events are retried`,
+		Long: "Retry multiple failed event deliveries for a given event stream. \n" +
+			"You can filter by event type and date range. \n" +
+			"All filters are combined using AND logic. \n" +
+			"If no filters are passed, all failed events are retried",
 		Example: `  auth0 events redeliver-many
   auth0 events redeliver-many <stream-id>
   auth0 events redeliver-many <stream-id> --type=user.created,user.deleted --from=-2d --to=now`,

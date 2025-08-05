@@ -5,9 +5,8 @@ has_toc: false
 ---
 # auth0 events deliveries show
 
-Displays metadata, attempts, and event payload for a specific delivery
-associated with an event stream.
-
+Displays metadata, attempts, and event payload for a specific 
+delivery associated with an event stream. 
 If stream ID or delivery ID is not provided, you will be prompted to select them interactively.
 
 ## Usage

@@ -5,8 +5,7 @@ has_toc: false
 ---
 # auth0 events redeliver
 
-Retry one or more failed event deliveries for a given event stream.
-
+Retry one or more failed event deliveries for a given event stream. 
 If no delivery IDs are provided, you'll be prompted to select from recent failed deliveries.
 
 ## Usage
