@@ -475,7 +475,7 @@ func sanitizeResourceName(name string) string {
 	sanitizedName = strings.Trim(sanitizedName, "_")
 	sanitizedName = strings.ToLower(sanitizedName)
 
-	// If the result starts with a digit, prefix with underscore
+	// If the result starts with a digit, prefix with underscore.
 	if len(sanitizedName) > 0 && unicode.IsDigit(rune(sanitizedName[0])) {
 		sanitizedName = "_" + sanitizedName
 	}
