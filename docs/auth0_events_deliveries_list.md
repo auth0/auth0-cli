@@ -33,7 +33,7 @@ auth0 events deliveries list [event-stream-id] [flags]
       --json           Output in JSON format.
   -n, --n int          Number of results to return, defaults to 50 (default 50)
   -p, --picker         Allows to toggle from list of events and view a selected event in detail
-  -t, --to string      Filter deliveries up to this date (e.g. 2025-07-29, today, now)
+  -t, --to string      Filter deliveries up to this date (e.g. 2025-07-29, today)
       --type strings   Filter deliveries by one or more event types (comma-separated)
 ```
 

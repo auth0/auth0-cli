@@ -20,7 +20,7 @@ auth0 events redeliver-many [stream-id] [flags]
 ```
   auth0 events redeliver-many
   auth0 events redeliver-many <stream-id>
-  auth0 events redeliver-many <stream-id> --type=user.created,user.deleted --from=-2d --to=now
+  auth0 events redeliver-many <stream-id> --type=user.created,user.deleted --from=-2d
 ```
 
 
@@ -28,7 +28,7 @@ auth0 events redeliver-many [stream-id] [flags]
 
 ```
   -f, --from string   Start date for filtering (e.g. 2025-07-25, -2d, yesterday)
-  -t, --to string     End date for filtering (e.g. 2025-07-29, today, now)
+  -t, --to string     End date for filtering (e.g. 2025-07-29, today)
       --type string   Comma-separated event types (e.g. user.created,user.deleted)
 ```
 

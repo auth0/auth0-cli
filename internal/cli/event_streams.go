@@ -584,7 +584,7 @@ func listDeliveriesCmd(cli *cli) *cobra.Command {
 	cmd.Flags().StringSliceVar(&inputs.EventTypes, "type", nil, "Filter deliveries by one or more event types (comma-separated)")
 
 	cmd.Flags().StringVarP(&inputs.From, "from", "f", "", "Filter deliveries from this date (e.g. 2025-07-25, yesterday, -2d)")
-	cmd.Flags().StringVarP(&inputs.To, "to", "t", "", "Filter deliveries up to this date (e.g. 2025-07-29, today, now)")
+	cmd.Flags().StringVarP(&inputs.To, "to", "t", "", "Filter deliveries up to this date (e.g. 2025-07-29, today)")
 	cmd.Flags().IntVarP(&inputs.N, "n", "n", 50, "Number of results to return, defaults to 50")
 
 	eventPicker.RegisterBool(cmd, &inputs.Picker, false)
@@ -730,7 +730,7 @@ func redeliverManyEventStreamCmd(cli *cli) *cobra.Command {
 			"If no filters are passed, all failed events are retried",
 		Example: `  auth0 events redeliver-many
   auth0 events redeliver-many <stream-id>
-  auth0 events redeliver-many <stream-id> --type=user.created,user.deleted --from=-2d --to=now`,
+  auth0 events redeliver-many <stream-id> --type=user.created,user.deleted --from=-2d`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) >= 1 {
 				inputs.StreamID = args[0]
@@ -772,7 +772,7 @@ func redeliverManyEventStreamCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().StringVar(&inputs.EventType, "type", "", "Comma-separated event types (e.g. user.created,user.deleted)")
 	cmd.Flags().StringVarP(&inputs.From, "from", "f", "", "Start date for filtering (e.g. 2025-07-25, -2d, yesterday)")
-	cmd.Flags().StringVarP(&inputs.To, "to", "t", "", "End date for filtering (e.g. 2025-07-29, today, now)")
+	cmd.Flags().StringVarP(&inputs.To, "to", "t", "", "End date for filtering (e.g. 2025-07-29, today)")
 
 	return cmd
 }
@@ -832,7 +832,7 @@ successful and failed delivery counts. Supports custom date range filtering.`,
 	}
 
 	cmd.Flags().StringVarP(&inputs.From, "from", "f", "", "Start date for stats (e.g. 2025-07-15, -3d)")
-	cmd.Flags().StringVarP(&inputs.To, "to", "t", "", "End date for stats (e.g. 2025-07-29, now)")
+	cmd.Flags().StringVarP(&inputs.To, "to", "t", "", "End date for stats (e.g. 2025-07-29)")
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd

@@ -27,7 +27,7 @@ auth0 events stats [stream-id] [flags]
 ```
   -f, --from string   Start date for stats (e.g. 2025-07-15, -3d)
       --json          Output in json format.
-  -t, --to string     End date for stats (e.g. 2025-07-29, now)
+  -t, --to string     End date for stats (e.g. 2025-07-29)
 ```
 
 
