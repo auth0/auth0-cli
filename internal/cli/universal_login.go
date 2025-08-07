@@ -110,7 +110,8 @@ func showUniversalLoginCmd(cli *cli) *cobra.Command {
 		Long:  "Display the custom branding settings for Universal Login.",
 		Example: `  auth0 universal-login show
   auth0 ul show
-  auth0 ul show --json`,
+  auth0 ul show --json
+  auth0 ul show --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var myBranding *management.Branding
 
@@ -129,6 +130,7 @@ func showUniversalLoginCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -154,7 +156,8 @@ func updateUniversalLoginCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 universal-login update
   auth0 ul update --accent "#FF4F40" --background "#2A2E35" --logo "https://example.com/logo.png"
   auth0 ul update -a "#FF4F40" -b "#2A2E35" -l "https://example.com/logo.png"
-  auth0 ul update -a "#FF4F40" -b "#2A2E35" -l "https://example.com/logo.png" --json`,
+  auth0 ul update -a "#FF4F40" -b "#2A2E35" -l "https://example.com/logo.png" --json
+  auth0 ul update -a "#FF4F40" -b "#2A2E35" -l "https://example.com/logo.png" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Branding
 
@@ -221,6 +224,7 @@ func updateUniversalLoginCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	brandingAccent.RegisterStringU(cmd, &inputs.AccentColor, "")
 	brandingBackground.RegisterStringU(cmd, &inputs.BackgroundColor, "")
 	brandingLogo.RegisterStringU(cmd, &inputs.LogoURL, "")

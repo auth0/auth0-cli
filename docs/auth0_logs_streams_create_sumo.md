@@ -24,6 +24,7 @@ auth0 logs streams create sumo [flags]
   auth0 logs streams create sumo --name <name> --source <source>
   auth0 logs streams create sumo -n <name> -s <source>
   auth0 logs streams create sumo -n "mylogstream" -s "demo.sumo.com" --json
+  auth0 logs streams create sumo -n "mylogstream" -s "demo.sumo.com" --json-compact
 ```
 
 
@@ -31,6 +32,7 @@ auth0 logs streams create sumo [flags]
 
 ```
       --json            Output in json format.
+      --json-compact    Output in compact json format.
   -n, --name string     The name of the log stream.
   -s, --source string   Generated URL for your defined HTTP source in Sumo Logic.
 ```

@@ -27,6 +27,7 @@ auth0 logs streams update splunk [flags]
   auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --port <port> --secure=false
   auth0 log streams update splunk <log-stream-id> -n <name> -d <domain> -t <token> -p <port> -s
   auth0 log streams update splunk <log-stream-id> -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s=false --json
+  auth0 log streams update splunk <log-stream-id> -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s=false --json-compact
 ```
 
 
@@ -35,6 +36,7 @@ auth0 logs streams update splunk [flags]
 ```
   -d, --domain string   The domain name of the splunk instance.
       --json            Output in json format.
+      --json-compact    Output in compact json format.
   -n, --name string     The name of the log stream.
   -p, --port string     The port of the HTTP event collector.
   -s, --secure          This should be set to 'false' when using self-signed certificates.

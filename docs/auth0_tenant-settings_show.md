@@ -15,14 +15,17 @@ auth0 tenant-settings show [flags]
 ## Examples
 
 ```
-auth0 tenant-settings show
+  auth0 tenant-settings show 
+  auth0 tenant-settings show --json
+  auth0 tenant-settings show --json-compact
 ```
 
 
 ## Flags
 
 ```
-      --json   Output in JSON format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

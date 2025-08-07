@@ -50,7 +50,8 @@ func createLogStreamsDatadogCmd(cli *cli) *cobra.Command {
   auth0 logs streams create datadog --name <name> --region <region>
   auth0 logs streams create datadog --name <name> --region <region> --api-key <api-key>
   auth0 logs streams create datadog -n <name> -r <region> -k <api-key>
-  auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json`,
+  auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json
+  auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := logStreamName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -86,6 +87,7 @@ func createLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	logStreamName.RegisterString(cmd, &inputs.Name, "")
 	datadogAPIKey.RegisterString(cmd, &inputs.DatadogAPIKey, "")
 	datadogRegion.RegisterString(cmd, &inputs.DatadogRegion, "")
@@ -113,7 +115,8 @@ func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
   auth0 logs streams update datadog <log-stream-id> --name <name> --region <region>
   auth0 logs streams update datadog <log-stream-id> --name <name> --region <region> --api-key <api-key>
   auth0 logs streams update datadog <log-stream-id> -n <name> -r <region> -k <api-key>
-  auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json`,
+  auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json
+  auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := logStreamID.Pick(cmd, &inputs.ID, cli.logStreamPickerOptionsByType(logStreamTypeDatadog))
@@ -177,6 +180,7 @@ func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	logStreamName.RegisterStringU(cmd, &inputs.Name, "")
 	datadogAPIKey.RegisterStringU(cmd, &inputs.DatadogAPIKey, "")
 	datadogRegion.RegisterStringU(cmd, &inputs.DatadogRegion, "")
