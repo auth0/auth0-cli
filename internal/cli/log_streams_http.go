@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -47,11 +48,13 @@ var (
 
 func createLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Name              string
-		HTTPEndpoint      string
-		HTTPContentType   string
-		HTTPContentFormat string
-		HTTPAuthorization string
+		name              string
+		httpEndpoint      string
+		httpContentType   string
+		httpContentFormat string
+		httpAuthorization string
+		piiConfig         string
+		filters           string
 	}
 
 	cmd := &cobra.Command{
@@ -66,46 +69,72 @@ func createLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
   auth0 logs streams create http --name <name> --endpoint <endpoint>
   auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type>
   auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type> --format <format>
+  auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type> --format <format> --filters '[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]'
+  auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type> --format <format> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "hash", "algorithm": "xxhash"}''
   auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type> --format <format> --authorization <authorization>
   auth0 logs streams create http -n <name> -e <endpoint> -t <type> -f <format> -a <authorization>
   auth0 logs streams create http -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json
   auth0 logs streams create http -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := logStreamName.Ask(cmd, &inputs.Name, nil); err != nil {
+			if err := logStreamName.Ask(cmd, &inputs.name, nil); err != nil {
 				return err
 			}
 
-			if err := httpEndpoint.Ask(cmd, &inputs.HTTPEndpoint, nil); err != nil {
+			if err := httpEndpoint.Ask(cmd, &inputs.httpEndpoint, nil); err != nil {
 				return err
 			}
 
-			if err := httpContentType.Ask(cmd, &inputs.HTTPContentType, nil); err != nil {
+			if err := httpContentType.Ask(cmd, &inputs.httpContentType, nil); err != nil {
 				return err
 			}
 
-			if err := httpContentFormat.Select(cmd, &inputs.HTTPContentFormat, httpContentFormatOptions, nil); err != nil {
+			if err := httpContentFormat.Select(cmd, &inputs.httpContentFormat, httpContentFormatOptions, nil); err != nil {
 				return err
 			}
 
-			if err := httpAuthorization.AskPassword(cmd, &inputs.HTTPAuthorization); err != nil {
+			if err := httpAuthorization.AskPassword(cmd, &inputs.httpAuthorization); err != nil {
 				return err
+			}
+
+			var piiConfig *management.LogStreamPiiConfig
+			if err := logStreamPIIConfig.Ask(cmd, &inputs.piiConfig, auth0.String("{}")); err != nil {
+				return err
+			}
+
+			if inputs.piiConfig != "{}" {
+				if err := json.Unmarshal([]byte(inputs.piiConfig), &piiConfig); err != nil {
+					return fmt.Errorf("provider: %s credentials invalid JSON: %w", inputs.piiConfig, err)
+				}
+			}
+
+			var filters *[]map[string]string
+			if err := logStreamFilters.Ask(cmd, &filters, auth0.String("[]")); err != nil {
+				return err
+			}
+
+			if inputs.filters != "[]" {
+				if err := json.Unmarshal([]byte(inputs.filters), &filters); err != nil {
+					return fmt.Errorf("provider: %s filters invalid JSON: %w", inputs.filters, err)
+				}
 			}
 
 			newLogStream := &management.LogStream{
-				Name: &inputs.Name,
-				Type: auth0.String(string(logStreamTypeHTTP)),
+				Name:      &inputs.name,
+				Type:      auth0.String(string(logStreamTypeHTTP)),
+				PIIConfig: piiConfig,
+				Filters:   filters,
 			}
 			sink := &management.LogStreamSinkHTTP{
-				Endpoint: &inputs.HTTPEndpoint,
+				Endpoint: &inputs.httpEndpoint,
 			}
-			if inputs.HTTPAuthorization != "" {
-				sink.Authorization = &inputs.HTTPAuthorization
+			if inputs.httpAuthorization != "" {
+				sink.Authorization = &inputs.httpAuthorization
 			}
-			if inputs.HTTPContentType != "" {
-				sink.ContentType = &inputs.HTTPContentType
+			if inputs.httpContentType != "" {
+				sink.ContentType = &inputs.httpContentType
 			}
-			if inputs.HTTPContentFormat != "" {
-				sink.ContentFormat = apiHTTPContentFormatFor(inputs.HTTPContentFormat)
+			if inputs.httpContentFormat != "" {
+				sink.ContentFormat = apiHTTPContentFormatFor(inputs.httpContentFormat)
 			}
 			newLogStream.Sink = sink
 
@@ -115,31 +144,33 @@ func createLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to create log stream: %w", err)
 			}
 
-			cli.renderer.LogStreamCreate(newLogStream)
-
-			return nil
+			return cli.renderer.LogStreamCreate(newLogStream)
 		},
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
-	logStreamName.RegisterString(cmd, &inputs.Name, "")
-	httpEndpoint.RegisterString(cmd, &inputs.HTTPEndpoint, "")
-	httpContentType.RegisterString(cmd, &inputs.HTTPContentType, "")
-	httpContentFormat.RegisterString(cmd, &inputs.HTTPContentFormat, "")
-	httpAuthorization.RegisterString(cmd, &inputs.HTTPAuthorization, "")
+	logStreamName.RegisterString(cmd, &inputs.name, "")
+	logStreamPIIConfig.RegisterString(cmd, &inputs.piiConfig, "{}")
+	logStreamFilters.RegisterString(cmd, &inputs.filters, "[]")
+	httpEndpoint.RegisterString(cmd, &inputs.httpEndpoint, "")
+	httpContentType.RegisterString(cmd, &inputs.httpContentType, "")
+	httpContentFormat.RegisterString(cmd, &inputs.httpContentFormat, "")
+	httpAuthorization.RegisterString(cmd, &inputs.httpAuthorization, "")
 
 	return cmd
 }
 
 func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID                string
-		Name              string
-		HTTPEndpoint      string
-		HTTPContentType   string
-		HTTPContentFormat string
-		HTTPAuthorization string
+		id                string
+		name              string
+		httpEndpoint      string
+		httpContentType   string
+		httpContentFormat string
+		httpAuthorization string
+		piiConfig         string
+		filters           string
 	}
 
 	cmd := &cobra.Command{
@@ -153,71 +184,99 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
   auth0 logs streams update http <log-stream-id> --name <name>
   auth0 logs streams update http <log-stream-id> --name <name> --endpoint <endpoint>
   auth0 logs streams update http <log-stream-id> --name <name> --endpoint <endpoint> --type <type>
+  auth0 logs streams update http <log-stream-id> --name <name> --endpoint <endpoint> --type <type> --filters '[{"type":"category","name":"user.fail"},{"type":"category","name":"scim.event"}]'
+  auth0 logs streams update http <log-stream-id> --name <name> --endpoint <endpoint> --type <type>  --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update http <log-stream-id> --name <name> --endpoint <endpoint> --type <type> --format <format>
   auth0 logs streams update http <log-stream-id> --name <name> --endpoint <endpoint> --type <type> --format <format> --authorization <authorization>
-  auth0 logs streams update http <log-stream-id> -n <name> -e <endpoint> -t <type> -f <format> -a <authorization>
+  auth0 logs streams update http <log-stream-id> -n <name> -e <endpoint> -t <type> -f <format> -a <authorization> -c null
   auth0 logs streams update http <log-stream-id> -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json
   auth0 logs streams update http <log-stream-id> -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := logStreamID.Pick(cmd, &inputs.ID, cli.logStreamPickerOptionsByType(logStreamTypeHTTP))
+				err := logStreamID.Pick(cmd, &inputs.id, cli.logStreamPickerOptionsByType(logStreamTypeHTTP))
 				if err != nil {
 					return err
 				}
 			} else {
-				inputs.ID = args[0]
+				inputs.id = args[0]
 			}
 
 			var oldLogStream *management.LogStream
 			if err := ansi.Waiting(func() (err error) {
-				oldLogStream, err = cli.api.LogStream.Read(cmd.Context(), inputs.ID)
+				oldLogStream, err = cli.api.LogStream.Read(cmd.Context(), inputs.id)
 				return err
 			}); err != nil {
-				return fmt.Errorf("failed to read log stream with ID %q: %w", inputs.ID, err)
+				return fmt.Errorf("failed to read log stream with ID %q: %w", inputs.id, err)
 			}
 
 			if oldLogStream.GetType() != string(logStreamTypeHTTP) {
-				return errInvalidLogStreamType(inputs.ID, oldLogStream.GetType(), string(logStreamTypeHTTP))
+				return errInvalidLogStreamType(inputs.id, oldLogStream.GetType(), string(logStreamTypeHTTP))
 			}
 
-			if err := logStreamName.AskU(cmd, &inputs.Name, oldLogStream.Name); err != nil {
+			if err := logStreamName.AskU(cmd, &inputs.name, oldLogStream.Name); err != nil {
+				return err
+			}
+
+			existingConfig, _ := json.Marshal(oldLogStream.GetPIIConfig())
+			if err := logStreamPIIConfig.AskU(cmd, &inputs.piiConfig, auth0.String(string(existingConfig))); err != nil {
+				return err
+			}
+
+			existingFilters, _ := json.Marshal(oldLogStream.GetFilters())
+			if err := logStreamFilters.AskU(cmd, &inputs.filters, auth0.String(string(existingFilters))); err != nil {
 				return err
 			}
 
 			httpSink := oldLogStream.Sink.(*management.LogStreamSinkHTTP)
 
-			if err := httpEndpoint.AskU(cmd, &inputs.HTTPEndpoint, httpSink.Endpoint); err != nil {
+			if err := httpEndpoint.AskU(cmd, &inputs.httpEndpoint, httpSink.Endpoint); err != nil {
 				return err
 			}
-			if err := httpContentType.AskU(cmd, &inputs.HTTPContentType, httpSink.ContentType); err != nil {
+			if err := httpContentType.AskU(cmd, &inputs.httpContentType, httpSink.ContentType); err != nil {
 				return err
 			}
-			if err := httpContentFormat.SelectU(cmd, &inputs.HTTPContentFormat, httpContentFormatOptions, httpSink.ContentFormat); err != nil {
+			if err := httpContentFormat.SelectU(cmd, &inputs.httpContentFormat, httpContentFormatOptions, httpSink.ContentFormat); err != nil {
 				return err
 			}
-			if err := httpAuthorization.AskPasswordU(cmd, &inputs.HTTPAuthorization); err != nil {
+			if err := httpAuthorization.AskPasswordU(cmd, &inputs.httpAuthorization); err != nil {
 				return err
 			}
 
 			updatedLogStream := &management.LogStream{}
 
-			if inputs.Name != "" {
-				updatedLogStream.Name = &inputs.Name
+			if inputs.name != "" {
+				updatedLogStream.Name = &inputs.name
 			}
-			if inputs.HTTPEndpoint != "" {
-				httpSink.Endpoint = &inputs.HTTPEndpoint
+			if inputs.httpEndpoint != "" {
+				httpSink.Endpoint = &inputs.httpEndpoint
 			}
-			if inputs.HTTPAuthorization != "" {
-				httpSink.Authorization = &inputs.HTTPAuthorization
+			if inputs.httpAuthorization != "" {
+				httpSink.Authorization = &inputs.httpAuthorization
 			}
-			if inputs.HTTPContentType != "" {
-				httpSink.ContentType = &inputs.HTTPContentType
+			if inputs.httpContentType != "" {
+				httpSink.ContentType = &inputs.httpContentType
 			}
-			if inputs.HTTPContentFormat != "" {
-				httpSink.ContentFormat = apiHTTPContentFormatFor(inputs.HTTPContentFormat)
+			if inputs.httpContentFormat != "" {
+				httpSink.ContentFormat = apiHTTPContentFormatFor(inputs.httpContentFormat)
 			}
 
 			updatedLogStream.Sink = httpSink
+
+			if inputs.piiConfig != "{}" {
+				var piiConfig *management.LogStreamPiiConfig
+				if err := json.Unmarshal([]byte(inputs.piiConfig), &piiConfig); err != nil {
+					return fmt.Errorf("provider: %s credentials invalid JSON: %w", inputs.piiConfig, err)
+				}
+				updatedLogStream.PIIConfig = piiConfig
+			}
+
+			if inputs.filters != "[]" {
+				var filters *[]map[string]string
+				if err := json.Unmarshal([]byte(inputs.filters), &filters); err != nil {
+					return fmt.Errorf("provider: %s filters invalid JSON: %w", inputs.filters, err)
+				}
+				updatedLogStream.Filters = filters
+			}
 
 			if err := ansi.Waiting(func() error {
 				return cli.api.LogStream.Update(cmd.Context(), oldLogStream.GetID(), updatedLogStream)
@@ -225,19 +284,19 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to update log stream with ID %q: %w", oldLogStream.GetID(), err)
 			}
 
-			cli.renderer.LogStreamUpdate(updatedLogStream)
-
-			return nil
+			return cli.renderer.LogStreamUpdate(updatedLogStream)
 		},
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
-	logStreamName.RegisterStringU(cmd, &inputs.Name, "")
-	httpEndpoint.RegisterStringU(cmd, &inputs.HTTPEndpoint, "")
-	httpContentType.RegisterStringU(cmd, &inputs.HTTPContentType, "")
-	httpContentFormat.RegisterStringU(cmd, &inputs.HTTPContentFormat, "")
-	httpAuthorization.RegisterStringU(cmd, &inputs.HTTPAuthorization, "")
+	logStreamName.RegisterStringU(cmd, &inputs.name, "")
+	logStreamPIIConfig.RegisterStringU(cmd, &inputs.piiConfig, "{}")
+	logStreamFilters.RegisterString(cmd, &inputs.filters, "[]")
+	httpEndpoint.RegisterStringU(cmd, &inputs.httpEndpoint, "")
+	httpContentType.RegisterStringU(cmd, &inputs.httpContentType, "")
+	httpContentFormat.RegisterStringU(cmd, &inputs.httpContentFormat, "")
+	httpAuthorization.RegisterStringU(cmd, &inputs.httpAuthorization, "")
 
 	return cmd
 }

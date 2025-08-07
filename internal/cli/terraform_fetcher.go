@@ -259,24 +259,42 @@ func (f *connectionResourceFetcher) FetchData(ctx context.Context) (importDataLi
 }
 
 func (f *customDomainResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
-	var data importDataList
+	var (
+		data       importDataList
+		from       string
+		options    = []management.RequestOption{management.Take(100)}
+		allDomains []*management.CustomDomain
+	)
 
-	customDomains, err := f.api.CustomDomain.List(ctx)
-	if err != nil {
-		errNotEnabled := []string{
-			"The account is not allowed to perform this operation, please contact our support team",
-			"There must be a verified credit card on file to perform this operation",
+	for {
+		if from != "" {
+			options = append([]management.RequestOption{management.From(from)}, options...)
 		}
 
-		for _, e := range errNotEnabled {
-			if strings.Contains(err.Error(), e) {
-				return data, nil
+		list, err := f.api.CustomDomain.ListWithPagination(ctx, options...)
+		if err != nil {
+			errNotEnabled := []string{
+				"The account is not allowed to perform this operation, please contact our support team",
+				"There must be a verified credit card on file to perform this operation",
 			}
+
+			for _, e := range errNotEnabled {
+				if strings.Contains(err.Error(), e) {
+					return data, nil
+				}
+			}
+			return nil, err
 		}
-		return nil, err
+
+		allDomains = append(allDomains, list.CustomDomains...)
+
+		if !list.HasNext() {
+			break
+		}
+		from = list.Next
 	}
 
-	for _, domain := range customDomains {
+	for _, domain := range allDomains {
 		data = append(data, importDataItem{
 			ResourceName: "auth0_custom_domain." + sanitizeResourceName(domain.GetDomain()),
 			ImportID:     domain.GetID(),

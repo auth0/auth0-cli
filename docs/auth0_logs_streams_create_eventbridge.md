@@ -22,7 +22,9 @@ auth0 logs streams create eventbridge [flags]
   auth0 logs streams create eventbridge
   auth0 logs streams create eventbridge --name <name>
   auth0 logs streams create eventbridge --name <name> --aws-id <aws-id>
+  auth0 logs streams create eventbridge --name <name> --aws-id <aws-id> --filters '[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]'
   auth0 logs streams create eventbridge --name <name> --aws-id <aws-id> --aws-region <aws-region>
+  auth0 logs streams create eventbridge --name <name> --aws-id <aws-id> --aws-region <aws-region> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams create eventbridge -n <name> -i <aws-id> -r <aws-region>
   auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json
   auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json-compact
@@ -34,9 +36,15 @@ auth0 logs streams create eventbridge [flags]
 ```
   -i, --aws-id string       ID of the AWS account.
   -r, --aws-region string   The AWS region in which eventbridge will be created, e.g. 'us-east-2'.
+  -m, --filters string      Events matching these filters will be delivered by the stream, Formatted as JSON. 
+                            Example: "[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]" (default "[]")
       --json                Output in json format.
       --json-compact        Output in compact json format.
   -n, --name string         The name of the log stream.
+  -c, --pii-config string   Specifies how PII fields are logged, Formatted as JSON. 
+                            including which fields to log (first_name, last_name, username, email, phone, address),the protection method (mask or hash), and the hashing algorithm (xxhash). 
+                             Example : {"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}. 
+                             (default "{}")
 ```
 
 

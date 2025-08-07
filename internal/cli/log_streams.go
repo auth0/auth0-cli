@@ -35,6 +35,26 @@ var (
 		Help:         "The name of the log stream.",
 		AlwaysPrompt: true,
 	}
+
+	logStreamPIIConfig = Flag{
+		Name:      "PII Configuration",
+		LongForm:  "pii-config",
+		ShortForm: "c",
+		Help: "Specifies how PII fields are logged, Formatted as JSON. \n" +
+			"including which fields to log (first_name, last_name, username, email, phone, address)," +
+			"the protection method (mask or hash), and the hashing algorithm (xxhash). \n" +
+			" Example : " + `{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}. ` + "\n",
+		AlwaysPrompt: true,
+	}
+
+	logStreamFilters = Flag{
+		Name:      "Matching Filters",
+		LongForm:  "filters",
+		ShortForm: "m",
+		Help: "Events matching these filters will be delivered by the stream, Formatted as JSON. \n" +
+			"Example: " + `"[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]"`,
+		AlwaysPrompt: true,
+	}
 )
 
 func logStreamsCmd(cli *cli) *cobra.Command {
@@ -80,8 +100,7 @@ func listLogStreamsCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to list log streams: %w", err)
 			}
 
-			cli.renderer.LogStreamList(list)
-			return nil
+			return cli.renderer.LogStreamList(list)
 		},
 	}
 
@@ -127,8 +146,7 @@ func showLogStreamCmd(cli *cli) *cobra.Command {
 			}); err != nil {
 				return fmt.Errorf("failed to read log stream: %w", err)
 			}
-			cli.renderer.LogStreamShow(a)
-			return nil
+			return cli.renderer.LogStreamShow(a)
 		},
 	}
 

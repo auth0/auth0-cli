@@ -87,24 +87,26 @@ func TestAPITLSPolicyFor(t *testing.T) {
 
 func TestCustomDomainsPickerOptions(t *testing.T) {
 	tests := []struct {
-		name          string
-		customDomains []*management.CustomDomain
-		apiError      error
-		assertOutput  func(t testing.TB, options pickerOptions)
-		assertError   func(t testing.TB, err error)
+		name              string
+		customDomainsList *management.CustomDomainList
+		apiError          error
+		assertOutput      func(t testing.TB, options pickerOptions)
+		assertError       func(t testing.TB, err error)
 	}{
 		{
 			name: "happy path",
-			customDomains: []*management.CustomDomain{
-				{
-					ID:     auth0.String("some-id-1"),
-					Domain: auth0.String("some-domain-1"),
-					Status: auth0.String("ready"),
-				},
-				{
-					ID:     auth0.String("some-id-2"),
-					Domain: auth0.String("some-domain-2"),
-					Status: auth0.String("ready"),
+			customDomainsList: &management.CustomDomainList{
+				CustomDomains: []*management.CustomDomain{
+					{
+						ID:     auth0.String("some-id-1"),
+						Domain: auth0.String("some-domain-1"),
+						Status: auth0.String("ready"),
+					},
+					{
+						ID:     auth0.String("some-id-2"),
+						Domain: auth0.String("some-domain-2"),
+						Status: auth0.String("ready"),
+					},
 				},
 			},
 			assertOutput: func(t testing.TB, options pickerOptions) {
@@ -120,16 +122,18 @@ func TestCustomDomainsPickerOptions(t *testing.T) {
 		},
 		{
 			name: "custom domains with a non-ready status",
-			customDomains: []*management.CustomDomain{
-				{
-					ID:     auth0.String("some-id-1"),
-					Domain: auth0.String("some-domain-1"),
-					Status: auth0.String("pending_verification"),
-				},
-				{
-					ID:     auth0.String("some-id-2"),
-					Domain: auth0.String("some-domain-2"),
-					Status: auth0.String("ready"),
+			customDomainsList: &management.CustomDomainList{
+				CustomDomains: []*management.CustomDomain{
+					{
+						ID:     auth0.String("some-id-1"),
+						Domain: auth0.String("some-domain-1"),
+						Status: auth0.String("pending_verification"),
+					},
+					{
+						ID:     auth0.String("some-id-2"),
+						Domain: auth0.String("some-domain-2"),
+						Status: auth0.String("ready"),
+					},
 				},
 			},
 			assertOutput: func(t testing.TB, options pickerOptions) {
@@ -144,8 +148,10 @@ func TestCustomDomainsPickerOptions(t *testing.T) {
 			},
 		},
 		{
-			name:          "no custom domains",
-			customDomains: []*management.CustomDomain{},
+			name: "no custom domains",
+			customDomainsList: &management.CustomDomainList{
+				CustomDomains: []*management.CustomDomain{},
+			},
 			assertOutput: func(t testing.TB, options pickerOptions) {
 				t.Fail()
 			},
@@ -182,8 +188,8 @@ func TestCustomDomainsPickerOptions(t *testing.T) {
 
 			customDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
 			customDomainAPI.EXPECT().
-				List(gomock.Any()).
-				Return(test.customDomains, test.apiError)
+				ListWithPagination(gomock.Any(), gomock.Any()).
+				Return(test.customDomainsList, test.apiError)
 
 			cli := &cli{
 				api: &auth0.API{CustomDomain: customDomainAPI},
