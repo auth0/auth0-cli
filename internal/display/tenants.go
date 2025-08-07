@@ -39,7 +39,10 @@ func (r *Renderer) TenantList(data []string) {
 		results = append(results, &tenantView{
 			Active: item == r.Tenant,
 			Name:   item,
-			raw:    item,
+			raw: map[string]interface{}{
+				"name":   item,
+				"active": item == r.Tenant,
+			},
 		})
 	}
 

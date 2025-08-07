@@ -27,6 +27,7 @@ auth0 logs streams update http [flags]
   auth0 logs streams update http <log-stream-id> --name <name> --endpoint <endpoint> --type <type> --format <format> --authorization <authorization>
   auth0 logs streams update http <log-stream-id> -n <name> -e <endpoint> -t <type> -f <format> -a <authorization>
   auth0 logs streams update http <log-stream-id> -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json
+  auth0 logs streams update http <log-stream-id> -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json-compact
 ```
 
 
@@ -37,6 +38,7 @@ auth0 logs streams update http [flags]
   -e, --endpoint string        The HTTP endpoint to send streaming logs to.
   -f, --format string          The format of data sent over HTTP. Options are "JSONLINES", "JSONARRAY" or "JSONOBJECT"
       --json                   Output in json format.
+      --json-compact           Output in compact json format.
   -n, --name string            The name of the log stream.
   -t, --type string            The "Content-Type" header to send over HTTP. Common value is "application/json".
 ```

@@ -20,13 +20,15 @@ auth0 actions deploy [flags]
   auth0 actions deploy
   auth0 actions deploy <action-id>
   auth0 actions deploy <action-id> --json
+  auth0 actions deploy <action-id> --json-compact
 ```
 
 
 ## Flags
 
 ```
-      --json   Output in json format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

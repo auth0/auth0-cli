@@ -92,7 +92,8 @@ func showBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 		Short: "Show the Phone provider",
 		Long:  "Display information about the phone provider.",
 		Example: `  auth0 phone provider show
-  auth0 phone provider show --json`,
+  auth0 phone provider show --json
+  auth0 phone provider show --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := phoneProviderID.Pick(cmd, &id, cli.phoneProviderPickerOptions); err != nil {
@@ -116,6 +117,7 @@ func showBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -129,6 +131,7 @@ func listBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 phone provider list
   auth0 phone provider ls 
   auth0 phone provider ls --json
+  auth0 phone provider ls --json-compact
   auth0 phone provider ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.BrandingPhoneProviderList
@@ -144,8 +147,9 @@ func listBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	return cmd
 }
@@ -167,6 +171,7 @@ func createBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 			"through the flags.",
 		Example: `  auth0 phone provider create
   auth0 phone provider create --json
+  auth0 phone provider create --json-compact
   auth0 phone provider create --provider twilio --disabled=false --credentials='{ "auth_token":"TheAuthToken" }' --configuration='{ "default_from": "admin@example.com", "sid": "+1234567890", "delivery_methods": ["text", "voice"] }'
   auth0 phone provider create --provider custom --disabled=true --configuration='{ "delivery_methods": ["text", "voice"] }'
   auth0 phone provider create -p twilio -d "false" -c '{ "auth_token":"TheAuthToken" }' -s '{ "default_from": "admin@example.com", "sid": "+1234567890", "delivery_methods": ["text"] }'  `,
@@ -225,6 +230,7 @@ func createBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	phoneProviderName.RegisterString(cmd, &inputs.name, "")
 	phoneProviderCredentials.RegisterString(cmd, &inputs.credentials, "")
@@ -272,6 +278,7 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 			"through the flags.",
 		Example: `  auth0 phone provider update
   auth0 phone provider update --json
+  auth0 phone provider update --json-compact
   auth0 phone provider update --disabled
   auth0 phone provider update --credentials='{ "auth_token":"NewAuthToken" }'
   auth0 phone provider update --configuration='{ "delivery_methods": ["voice"] }'
@@ -359,6 +366,7 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	phoneProviderName.RegisterStringU(cmd, &inputs.name, "")
 	phoneProviderCredentials.RegisterStringU(cmd, &inputs.credentials, "")

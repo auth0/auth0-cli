@@ -121,6 +121,7 @@ func showSuspiciousIPThrottlingCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -142,6 +143,7 @@ func updateSuspiciousIPThrottlingCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	sitFlags.Enabled.RegisterBoolU(cmd, &inputs.Enabled, false)
 	sitFlags.Shields.RegisterStringSliceU(cmd, &inputs.Shields, []string{})
 	sitFlags.AllowList.RegisterStringSliceU(cmd, &inputs.AllowList, []string{})

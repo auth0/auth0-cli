@@ -20,6 +20,7 @@ auth0 rules list [flags]
   auth0 rules list
   auth0 rules ls
   auth0 rules ls --json
+  auth0 rules ls --json-compact
   auth0 rules ls --csv
 ```
 
@@ -27,8 +28,9 @@ auth0 rules list [flags]
 ## Flags
 
 ```
-      --csv    Output in csv format.
-      --json   Output in json format.
+      --csv            Output in csv format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

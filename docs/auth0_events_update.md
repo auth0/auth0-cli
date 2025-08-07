@@ -36,6 +36,7 @@ auth0 events update [flags]
                                 Webhook Example: {"webhook_endpoint":"https://my-webhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}} 
                                 Eventbridge Example: {"aws_account_id":"7832467231933","aws_region":"us-east-2"}
       --json                    Output in json format.
+      --json-compact            Output in compact json format.
   -n, --name string             Name of the Event Stream.
       --status string           Status of the Event Stream. (enabled/disabled)
   -s, --subscriptions strings   Subscriptions of the Event Stream. Formatted as comma separated string. Eg. user.created,user.updated
