@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"text/template"
+	"unicode"
 
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/hc-install/product"
@@ -471,13 +472,13 @@ func sanitizeResourceName(name string) string {
 
 	sanitizedName := re.ReplaceAllString(name, "_")
 
-	// Regular expression pattern to remove leading digits or dashes.
-	namePattern = "^[0-9-]+"
-	re = regexp.MustCompile(namePattern)
-
-	sanitizedName = re.ReplaceAllString(sanitizedName, "")
 	sanitizedName = strings.Trim(sanitizedName, "_")
 	sanitizedName = strings.ToLower(sanitizedName)
+
+	// If the result starts with a digit, prefix with underscore.
+	if len(sanitizedName) > 0 && unicode.IsDigit(rune(sanitizedName[0])) {
+		sanitizedName = "_" + sanitizedName
+	}
 
 	return sanitizedName
 }
