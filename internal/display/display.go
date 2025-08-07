@@ -77,7 +77,7 @@ func (r *Renderer) Errorf(format string, a ...interface{}) {
 
 func (r *Renderer) Heading(text ...string) {
 	heading := fmt.Sprintf("%s %s\n", ansi.Bold(r.Tenant), strings.Join(text, " "))
-	if r.Format == OutputFormatJSONCompact {
+	if r.Format != OutputFormatJSONCompact {
 		fmt.Fprintf(r.MessageWriter, "\n%s %s\n", ansi.Faint("==="), heading)
 	}
 }
