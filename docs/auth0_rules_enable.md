@@ -20,13 +20,15 @@ auth0 rules enable [flags]
   auth0 rules enable
   auth0 rules enable <rule-id>
   auth0 rules enable <rule-id> --json
+  auth0 rules enable <rule-id> --json-compact
 ```
 
 
 ## Flags
 
 ```
-      --json   Output in json format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

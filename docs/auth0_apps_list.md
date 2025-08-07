@@ -20,6 +20,7 @@ auth0 apps list [flags]
   auth0 apps list --reveal-secrets
   auth0 apps list --reveal-secrets --number 100
   auth0 apps ls -r -n 100 --json
+  auth0 apps ls -r -n 100 --json-compact
   auth0 apps ls --csv
 ```
 
@@ -29,6 +30,7 @@ auth0 apps list [flags]
 ```
       --csv              Output in csv format.
       --json             Output in json format.
+      --json-compact     Output in compact json format.
   -n, --number int       Number of apps to retrieve. Minimum 1, maximum 1000. (default 100)
   -r, --reveal-secrets   Display the application secrets ('signing_keys', 'client_secret') as part of the command output.
 ```

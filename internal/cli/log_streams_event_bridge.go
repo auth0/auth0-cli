@@ -46,7 +46,8 @@ func createLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
   auth0 logs streams create eventbridge --name <name> --aws-id <aws-id>
   auth0 logs streams create eventbridge --name <name> --aws-id <aws-id> --aws-region <aws-region>
   auth0 logs streams create eventbridge -n <name> -i <aws-id> -r <aws-region>
-  auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json`,
+  auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json
+  auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := logStreamName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -82,6 +83,7 @@ func createLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	logStreamName.RegisterString(cmd, &inputs.Name, "")
 	awsAccountID.RegisterString(cmd, &inputs.AwsAccountID, "")
 	awsRegion.RegisterString(cmd, &inputs.AwsRegion, "")
@@ -105,7 +107,8 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 logs streams update eventbridge
   auth0 logs streams update eventbridge <log-stream-id> --name <name>
   auth0 logs streams update eventbridge <log-stream-id> -n <name>
-  auth0 logs streams update eventbridge <log-stream-id> -n mylogstream --json`,
+  auth0 logs streams update eventbridge <log-stream-id> -n mylogstream --json
+  auth0 logs streams update eventbridge <log-stream-id> -n mylogstream --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := logStreamID.Pick(cmd, &inputs.ID, cli.logStreamPickerOptionsByType(logStreamTypeAmazonEventBridge))
@@ -151,6 +154,7 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	logStreamName.RegisterStringU(cmd, &inputs.Name, "")
 
 	return cmd

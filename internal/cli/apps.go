@@ -252,6 +252,7 @@ func listAppsCmd(cli *cli) *cobra.Command {
   auth0 apps list --reveal-secrets
   auth0 apps list --reveal-secrets --number 100
   auth0 apps ls -r -n 100 --json
+  auth0 apps ls -r -n 100 --json-compact
   auth0 apps ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
@@ -288,8 +289,9 @@ func listAppsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 	appNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
@@ -311,7 +313,8 @@ func showAppCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 apps show
   auth0 apps show <app-id>
   auth0 apps show <app-id> --reveal-secrets
-  auth0 apps show <app-id> -r --json`,
+  auth0 apps show <app-id> -r --json
+  auth0 apps show <app-id> -r --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions())
@@ -341,6 +344,7 @@ func showAppCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 
 	return cmd
@@ -431,6 +435,7 @@ func createAppCmd(cli *cli) *cobra.Command {
   auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m]
   auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m] --reveal-secrets
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json
+  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json-compact
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar"
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"`,
@@ -552,6 +557,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	appName.RegisterString(cmd, &inputs.Name, "")
 	appType.RegisterString(cmd, &inputs.Type, "")
 	appDescription.RegisterString(cmd, &inputs.Description, "")
@@ -599,6 +605,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
   auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m]
   auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m] --reveal-secrets
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json-compact
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar"
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"`,
@@ -781,6 +788,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	appName.RegisterStringU(cmd, &inputs.Name, "")
 	appType.RegisterStringU(cmd, &inputs.Type, "")
 	appDescription.RegisterStringU(cmd, &inputs.Description, "")
@@ -1049,6 +1057,7 @@ func appsSessionTransferShowCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	return cmd
 }
 
@@ -1139,6 +1148,7 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	// Register CLI flags.
 	appSTCanCreateToken.RegisterBoolU(cmd, &inputs.CanCreateToken, false)

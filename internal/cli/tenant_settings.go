@@ -28,10 +28,12 @@ func tenantSettingsCmd(cli *cli) *cobra.Command {
 
 func show(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "show",
-		Short:   "Display the current tenant settings",
-		Long:    "Display the current tenant settings",
-		Example: "auth0 tenant-settings show",
+		Use:   "show",
+		Short: "Display the current tenant settings",
+		Long:  "Display the current tenant settings",
+		Example: `  auth0 tenant-settings show 
+  auth0 tenant-settings show --json
+  auth0 tenant-settings show --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tenant, err := cli.api.Tenant.Read(cmd.Context())
 			if err != nil {
@@ -43,7 +45,8 @@ func show(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in JSON format.")
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }

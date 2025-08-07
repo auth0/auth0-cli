@@ -40,6 +40,7 @@ auth0 network-acl create [flags]
       --ja3-fingerprints strings    Comma-separated list of JA3 fingerprints to match (Eg. deadbeef,cafebabe)
       --ja4-fingerprints strings    Comma-separated list of JA4 fingerprints to match (Eg. t13d1516h2_8daaf6152771)
       --json                        Output in json format.
+      --json-compact                Output in compact json format.
   -p, --priority int                Priority of the network ACL (required, 1-10)
       --redirect-uri string         URI to redirect to when action is redirect
       --rule string                 Network ACL rule configuration in JSON format (required for non-interactive mode)

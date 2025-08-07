@@ -18,13 +18,15 @@ auth0 domains show [flags]
   auth0 domains show 
   auth0 domains show <domain-id>
   auth0 domains show <domain-id> --json
+  auth0 domains show <domain-id> --json-compact
 ```
 
 
 ## Flags
 
 ```
-      --json   Output in json format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 
