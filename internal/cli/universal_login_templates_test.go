@@ -79,8 +79,8 @@ func TestEnsureCustomDomainIsEnabled(t *testing.T) {
 
 			customDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
 			customDomainAPI.EXPECT().
-				List(gomock.Any()).
-				Return(test.customDomain, test.apiError)
+				ListWithPagination(gomock.Any(), gomock.Any()).
+				Return(&management.CustomDomainList{CustomDomains: test.customDomain}, test.apiError)
 
 			ctx := context.Background()
 			api := &auth0.API{CustomDomain: customDomainAPI}

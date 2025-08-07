@@ -259,39 +259,39 @@ func (f *connectionResourceFetcher) FetchData(ctx context.Context) (importDataLi
 }
 
 func (f *customDomainResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
-	var data importDataList
-
-	var allDomains []*management.CustomDomain
-	var p int
-	var err error
-	var customDomainList *management.CustomDomainList
+	var (
+		data       importDataList
+		from       string
+		options    = []management.RequestOption{management.Take(100)}
+		allDomains []*management.CustomDomain
+	)
 
 	for {
-		customDomainList, err = f.api.CustomDomain.ListWithPagination(ctx, management.Page(p))
+		if from != "" {
+			options = append([]management.RequestOption{management.From(from)}, options...)
+		}
+
+		list, err := f.api.CustomDomain.ListWithPagination(ctx, options...)
 		if err != nil {
-			break
-		}
-
-		allDomains = append(allDomains, customDomainList.CustomDomains...)
-
-		if len(allDomains) >= customDomainList.Total || len(customDomainList.CustomDomains) == 0 {
-			break
-		}
-		p++
-	}
-
-	if err != nil {
-		errNotEnabled := []string{
-			"The account is not allowed to perform this operation, please contact our support team",
-			"There must be a verified credit card on file to perform this operation",
-		}
-
-		for _, e := range errNotEnabled {
-			if strings.Contains(err.Error(), e) {
-				return data, nil
+			errNotEnabled := []string{
+				"The account is not allowed to perform this operation, please contact our support team",
+				"There must be a verified credit card on file to perform this operation",
 			}
+
+			for _, e := range errNotEnabled {
+				if strings.Contains(err.Error(), e) {
+					return data, nil
+				}
+			}
+			return nil, err
 		}
-		return nil, err
+
+		allDomains = append(allDomains, list.CustomDomains...)
+
+		if !list.HasNext() {
+			break
+		}
+		from = list.Next
 	}
 
 	for _, domain := range allDomains {

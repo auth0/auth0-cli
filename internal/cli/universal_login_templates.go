@@ -264,34 +264,44 @@ func (cli *cli) fetchTemplateData(ctx context.Context) (*TemplateData, error) {
 }
 
 func ensureCustomDomainIsEnabled(ctx context.Context, api *auth0.API) error {
-	var domains []*management.CustomDomain
-	var p int
-	var err error
-	var customDomainList *management.CustomDomainList
+	var (
+		from         string
+		allDomains   []*management.CustomDomain
+		options      = []management.RequestOption{management.Take(100)}
+		customDomain *management.CustomDomainList
+		err          error
+	)
 
 	for {
-		customDomainList, err = api.CustomDomain.ListWithPagination(ctx, management.Page(p))
+		reqOptions := append([]management.RequestOption{}, options...)
+		if from != "" {
+			reqOptions = append(reqOptions, management.From(from))
+		}
+
+		customDomain, err = api.CustomDomain.ListWithPagination(ctx, reqOptions...)
 		if err != nil {
 			break
 		}
 
-		domains = append(domains, customDomainList.CustomDomains...)
+		allDomains = append(allDomains, customDomain.CustomDomains...)
 
-		if len(domains) >= customDomainList.Total || len(customDomainList.CustomDomains) == 0 {
+		if !customDomain.HasNext() {
 			break
 		}
-		p++
+
+		from = customDomain.Next
 	}
+
 	if err != nil {
 		if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusForbidden {
-			return errNotAllowed // 403 is a valid response for free tenants that don't have custom domains enabled.
+			return errNotAllowed // 403 is expected for tenants without custom domain support
 		}
 
 		return err
 	}
 
 	const domainIsVerified = "ready"
-	for _, domain := range domains {
+	for _, domain := range allDomains {
 		if domain.GetStatus() == domainIsVerified {
 			return nil
 		}
