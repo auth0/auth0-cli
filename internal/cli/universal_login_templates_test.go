@@ -216,7 +216,7 @@ func TestFetchTemplateData(t *testing.T) {
 		name           string
 		brandingUL     *management.BrandingUniversalLogin
 		clients        []*management.Client
-		customDomain   *management.CustomDomain
+		customDomain   []*management.CustomDomain
 		prompt         *management.Prompt
 		tenant         *management.Tenant
 		clientAPIError management.Error
@@ -242,8 +242,10 @@ func TestFetchTemplateData(t *testing.T) {
 					LogoURI:  auth0.String("https://example.com/logo-2.png"),
 				},
 			},
-			customDomain: &management.CustomDomain{
-				Status: auth0.String("ready"),
+			customDomain: []*management.CustomDomain{
+				{
+					Status: auth0.String("ready"),
+				},
 			},
 			prompt: &management.Prompt{
 				UniversalLoginExperience: "classic",
@@ -272,8 +274,10 @@ func TestFetchTemplateData(t *testing.T) {
 		},
 		{
 			name: "client api error",
-			customDomain: &management.CustomDomain{
-				Status: auth0.String("ready"),
+			customDomain: []*management.CustomDomain{
+				{
+					Status: auth0.String("ready"),
+				},
 			},
 			prompt: &management.Prompt{
 				UniversalLoginExperience: "",
@@ -298,8 +302,10 @@ func TestFetchTemplateData(t *testing.T) {
 					LogoURI:  auth0.String(""),
 				},
 			},
-			customDomain: &management.CustomDomain{
-				Status: auth0.String("ready"),
+			customDomain: []*management.CustomDomain{
+				{
+					Status: auth0.String("ready"),
+				},
 			},
 			tenant: &management.Tenant{
 				FriendlyName: auth0.String(""),
@@ -321,8 +327,10 @@ func TestFetchTemplateData(t *testing.T) {
 					LogoURI:  auth0.String(""),
 				},
 			},
-			customDomain: &management.CustomDomain{
-				Status: auth0.String("ready"),
+			customDomain: []*management.CustomDomain{
+				{
+					Status: auth0.String("ready"),
+				},
 			},
 			prompt: &management.Prompt{
 				UniversalLoginExperience: "",
@@ -366,8 +374,8 @@ func TestFetchTemplateData(t *testing.T) {
 
 			customDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
 			customDomainAPI.EXPECT().
-				List(gomock.Any()).
-				Return([]*management.CustomDomain{test.customDomain}, nil).
+				ListWithPagination(gomock.Any(), gomock.Any()).
+				Return(&management.CustomDomainList{CustomDomains: test.customDomain}, nil).
 				Do(func(ctx context.Context, opts ...management.RequestOption) {
 					defer wg.Done()
 				})
