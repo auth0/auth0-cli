@@ -523,22 +523,31 @@ func (c *cli) customDomainsPickerOptions(ctx context.Context) (pickerOptions, er
 }
 
 func (c *cli) ListAllCustomDomains(ctx context.Context) ([]*management.CustomDomain, error) {
-	var allDomains []*management.CustomDomain
-	var p int
+	var (
+		from       string
+		allDomains []*management.CustomDomain
+		options    = []management.RequestOption{
+			management.Take(100),
+		}
+	)
 
 	for {
-		list, err := c.api.CustomDomain.ListWithPagination(ctx, management.Page(p))
+		if from != "" {
+			options = append(options, management.From(from))
+		}
+
+		list, err := c.api.CustomDomain.ListWithPagination(ctx, options...)
 		if err != nil {
 			return nil, err
 		}
 
 		allDomains = append(allDomains, list.CustomDomains...)
 
-		// If we've retrieved all items, break.
-		if len(allDomains) >= list.Total || len(list.CustomDomains) == 0 {
+		if !list.HasNext() {
 			break
 		}
-		p++
+
+		from = list.Next
 	}
 
 	return allDomains, nil
