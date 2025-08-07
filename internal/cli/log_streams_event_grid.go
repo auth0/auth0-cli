@@ -60,7 +60,8 @@ func createLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
   auth0 logs streams create eventgrid --name <name> --azure-id <azure-id> --azure-region <azure-region> --azure-group <azure-group> --filters '[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]'
   auth0 logs streams create eventgrid --name <name> --azure-id <azure-id> --azure-region <azure-region> --azure-group <azure-group> --pii-config  '{"log_fields": ["first_name", "last_name"], "method": "hash", "algorithm": "xxhash"}'
   auth0 logs streams create eventgrid -n <name> -i <azure-id> -r <azure-region> -g <azure-group>
-  auth0 logs streams create eventgrid -n mylogstream -i "b69a6835-57c7-4d53-b0d5-1c6ae580b6d5" -r northeurope -g "azure-logs-rg" --json`,
+  auth0 logs streams create eventgrid -n mylogstream -i "b69a6835-57c7-4d53-b0d5-1c6ae580b6d5" -r northeurope -g "azure-logs-rg" --json
+  auth0 logs streams create eventgrid -n mylogstream -i "b69a6835-57c7-4d53-b0d5-1c6ae580b6d5" -r northeurope -g "azure-logs-rg" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := logStreamName.Ask(cmd, &inputs.name, nil); err != nil {
 				return err
@@ -123,6 +124,7 @@ func createLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	logStreamName.RegisterString(cmd, &inputs.name, "")
 	logStreamPIIConfig.RegisterString(cmd, &inputs.piiConfig, "{}")
 	logStreamFilters.RegisterString(cmd, &inputs.filters, "[]")
@@ -153,7 +155,8 @@ func updateLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
   auth0 logs streams update eventgrid <log-stream-id> -n <name>
   auth0 logs streams update eventgrid <log-stream-id> -n <name> --filters '[{"type":"category","name":"user.fail"},{"type":"category","name":"scim.event"}]'
   auth0 logs streams update eventgrid <log-stream-id> -n <name> --pii-config  '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
-  auth0 logs streams update eventgrid <log-stream-id> -n mylogstream -c null --json`,
+  auth0 logs streams update eventgrid <log-stream-id> -n mylogstream -c null --json
+  auth0 logs streams update eventgrid <log-stream-id> -n mylogstream --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := logStreamID.Pick(cmd, &inputs.id, cli.logStreamPickerOptionsByType(logStreamTypeAzureEventGrid))
@@ -227,6 +230,7 @@ func updateLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	logStreamName.RegisterStringU(cmd, &inputs.name, "")
 	logStreamPIIConfig.RegisterStringU(cmd, &inputs.piiConfig, "{}")
 	logStreamFilters.RegisterStringU(cmd, &inputs.filters, "[]")

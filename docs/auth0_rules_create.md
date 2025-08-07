@@ -27,6 +27,7 @@ auth0 rules create [flags]
   auth0 rules create --enabled=false --name "My Rule" --template "Empty rule"
   auth0 rules create --enabled=true --name "My Rule" --template "Empty rule" --script "$(cat path/to/script.js)"
   auth0 rules create -e=true -n "My Rule" -t "Empty rule" -s "$(cat path/to/script.js)" --json
+  auth0 rules create -e=true -n "My Rule" -t "Empty rule" -s "$(cat path/to/script.js)" --json-compact
   echo "{\"name\":\"piping-name\",\"script\":\"console.log('test')\"}" | auth0 rules create
 ```
 
@@ -36,6 +37,7 @@ auth0 rules create [flags]
 ```
   -e, --enabled           Enable (or disable) a rule. (default true)
       --json              Output in json format.
+      --json-compact      Output in compact json format.
   -n, --name string       Name of the rule.
   -s, --script string     Script contents for the rule.
   -t, --template string   Template to use for the rule.

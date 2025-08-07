@@ -73,7 +73,8 @@ func createLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
   auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type> --format <format> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "hash", "algorithm": "xxhash"}''
   auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type> --format <format> --authorization <authorization>
   auth0 logs streams create http -n <name> -e <endpoint> -t <type> -f <format> -a <authorization>
-  auth0 logs streams create http -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json`,
+  auth0 logs streams create http -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json
+  auth0 logs streams create http -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := logStreamName.Ask(cmd, &inputs.name, nil); err != nil {
 				return err
@@ -148,6 +149,7 @@ func createLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	logStreamName.RegisterString(cmd, &inputs.name, "")
 	logStreamPIIConfig.RegisterString(cmd, &inputs.piiConfig, "{}")
 	logStreamFilters.RegisterString(cmd, &inputs.filters, "[]")
@@ -187,7 +189,8 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
   auth0 logs streams update http <log-stream-id> --name <name> --endpoint <endpoint> --type <type> --format <format>
   auth0 logs streams update http <log-stream-id> --name <name> --endpoint <endpoint> --type <type> --format <format> --authorization <authorization>
   auth0 logs streams update http <log-stream-id> -n <name> -e <endpoint> -t <type> -f <format> -a <authorization> -c null
-  auth0 logs streams update http <log-stream-id> -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json`,
+  auth0 logs streams update http <log-stream-id> -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json
+  auth0 logs streams update http <log-stream-id> -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := logStreamID.Pick(cmd, &inputs.id, cli.logStreamPickerOptionsByType(logStreamTypeHTTP))
@@ -286,6 +289,7 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	logStreamName.RegisterStringU(cmd, &inputs.name, "")
 	logStreamPIIConfig.RegisterStringU(cmd, &inputs.piiConfig, "{}")
 	logStreamFilters.RegisterString(cmd, &inputs.filters, "[]")

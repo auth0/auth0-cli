@@ -21,6 +21,7 @@ auth0 test token [flags]
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --force
   auth0 test token <client-id> -a <api-audience|api-identifier> -o <org-id> -s <scope1,scope2> -p "foo=bar" -p "bazz=buzz" --force
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --json
+  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --json-compact
   auth0 test token <client-id> -a <api-audience|api-identifier> -o <org-id> -s <scope1,scope2> -p "foo=bar","bazz=buzz" --json
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --force --json
 ```
@@ -33,6 +34,7 @@ auth0 test token [flags]
   -d, --domain string           One of your custom domains.
       --force                   Skip confirmation.
       --json                    Output in json format.
+      --json-compact            Output in compact json format.
   -o, --organization string     organization-id to use for the login. Can use organization-name if allow_organization_name_in_authentication_api is enabled for tenant
   -p, --params stringToString   Custom parameters to include in the login URL. (default [])
   -s, --scopes strings          The list of scopes you want to use.

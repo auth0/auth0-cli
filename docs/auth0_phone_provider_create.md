@@ -21,6 +21,7 @@ auth0 phone provider create [flags]
 ```
   auth0 phone provider create
   auth0 phone provider create --json
+  auth0 phone provider create --json-compact
   auth0 phone provider create --provider twilio --disabled=false --credentials='{ "auth_token":"TheAuthToken" }' --configuration='{ "default_from": "admin@example.com", "sid": "+1234567890", "delivery_methods": ["text", "voice"] }'
   auth0 phone provider create --provider custom --disabled=true --configuration='{ "delivery_methods": ["text", "voice"] }'
   auth0 phone provider create -p twilio -d "false" -c '{ "auth_token":"TheAuthToken" }' -s '{ "default_from": "admin@example.com", "sid": "+1234567890", "delivery_methods": ["text"] }'  
@@ -34,6 +35,7 @@ auth0 phone provider create [flags]
   -c, --credentials string     Credentials for the phone provider, formatted as JSON.
   -d, --disabled               Whether the provided is disabled (true) or enabled (false).
       --json                   Output in json format.
+      --json-compact           Output in compact json format.
   -p, --provider string        Provider name. Can be 'twilio', or 'custom'
 ```
 

@@ -87,6 +87,7 @@ func listLogStreamsCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 logs streams list
   auth0 logs streams ls
   auth0 logs streams ls --json
+  auth0 logs streams ls --json-compact
   auth0 logs streams ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list []*management.LogStream
@@ -104,8 +105,9 @@ func listLogStreamsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	return cmd
 }
@@ -123,7 +125,8 @@ func showLogStreamCmd(cli *cli) *cobra.Command {
 		Long:  "Display information about a log stream.",
 		Example: `  auth0 logs streams show
   auth0 logs streams show <log-stream-id>
-  auth0 logs streams show <log-stream-id> --json`,
+  auth0 logs streams show <log-stream-id> --json
+  auth0 logs streams show <log-stream-id> --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := logStreamID.Pick(cmd, &inputs.ID, cli.allLogStreamsPickerOptions)
@@ -148,6 +151,7 @@ func showLogStreamCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }

@@ -51,7 +51,8 @@ func createLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
   auth0 logs streams create eventbridge --name <name> --aws-id <aws-id> --aws-region <aws-region>
   auth0 logs streams create eventbridge --name <name> --aws-id <aws-id> --aws-region <aws-region> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams create eventbridge -n <name> -i <aws-id> -r <aws-region>
-  auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json`,
+  auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json
+  auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := logStreamName.Ask(cmd, &inputs.name, nil); err != nil {
 				return err
@@ -110,6 +111,7 @@ func createLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	logStreamName.RegisterString(cmd, &inputs.name, "")
 	logStreamPIIConfig.RegisterString(cmd, &inputs.piiConfig, "{}")
 	logStreamFilters.RegisterString(cmd, &inputs.filters, "[]")
@@ -140,7 +142,8 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
   auth0 logs streams update eventbridge <log-stream-id> --name <name> --filters '[{"type":"category","name":"user.fail"},{"type":"category","name":"scim.event"}]'
   auth0 logs streams update eventbridge <log-stream-id> --name <name>  --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update eventbridge <log-stream-id> -n <name> -p null
-  auth0 logs streams update eventbridge <log-stream-id> -n mylogstream --json`,
+  auth0 logs streams update eventbridge <log-stream-id> -n mylogstream --json
+  auth0 logs streams update eventbridge <log-stream-id> -n mylogstream --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := logStreamID.Pick(cmd, &inputs.id, cli.logStreamPickerOptionsByType(logStreamTypeAmazonEventBridge))
@@ -212,6 +215,7 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	logStreamName.RegisterStringU(cmd, &inputs.name, "")
 	logStreamPIIConfig.RegisterStringU(cmd, &inputs.piiConfig, "{}")
 	logStreamFilters.RegisterStringU(cmd, &inputs.filters, "[]")

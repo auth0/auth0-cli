@@ -18,13 +18,15 @@ auth0 apis show [flags]
   auth0 apis show
   auth0 apis show <api-id|api-audience>
   auth0 apis show <api-id|api-audience> --json
+  auth0 apis show <api-id|api-audience> --json-compact
 ```
 
 
 ## Flags
 
 ```
-      --json   Output in json format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

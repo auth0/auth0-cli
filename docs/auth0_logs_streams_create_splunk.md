@@ -29,6 +29,7 @@ auth0 logs streams create splunk [flags]
   auth0 log streams create splunk --name <name> --domain <domain> --token <token> --port <port> --secure=false
   auth0 log streams create splunk -n <name> -d <domain> -t <token> -p <port> -s
   auth0 log streams create splunk -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s false --json
+  auth0 log streams create splunk -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s false --json-compact
 ```
 
 
@@ -39,6 +40,7 @@ auth0 logs streams create splunk [flags]
   -m, --filters string      Events matching these filters will be delivered by the stream, Formatted as JSON. 
                             Example: "[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]" (default "[]")
       --json                Output in json format.
+      --json-compact        Output in compact json format.
   -n, --name string         The name of the log stream.
   -c, --pii-config string   Specifies how PII fields are logged, Formatted as JSON. 
                             including which fields to log (first_name, last_name, username, email, phone, address),the protection method (mask or hash), and the hashing algorithm (xxhash). 

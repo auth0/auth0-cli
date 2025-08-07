@@ -54,7 +54,8 @@ func createLogStreamsDatadogCmd(cli *cli) *cobra.Command {
   auth0 logs streams create datadog --name <name> --region <region> --api-key <api-key> --filters '[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]'
   auth0 logs streams create datadog --name <name> --region <region> --api-key <api-key> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "hash", "algorithm": "xxhash"}'
   auth0 logs streams create datadog -n <name> -r <region> -k <api-key>
-  auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json`,
+  auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json
+  auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := logStreamName.Ask(cmd, &inputs.name, nil); err != nil {
 				return err
@@ -112,6 +113,7 @@ func createLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	logStreamName.RegisterString(cmd, &inputs.name, "")
 	logStreamPIIConfig.RegisterString(cmd, &inputs.piiConfig, "{}")
 	logStreamFilters.RegisterString(cmd, &inputs.filters, "[]")
@@ -144,7 +146,8 @@ func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
   auth0 logs streams update datadog <log-stream-id> --name <name> --region <region> --api-key <api-key> --filters '[{"type":"category","name":"user.fail"},{"type":"category","name":"scim.event"}]'
   auth0 logs streams update datadog <log-stream-id> --name <name> --region <region> --api-key <api-key> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update datadog <log-stream-id> -n <name> -r <region> -k <api-key> -c null
-  auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json`,
+  auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json
+  auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := logStreamID.Pick(cmd, &inputs.id, cli.logStreamPickerOptionsByType(logStreamTypeDatadog))
@@ -234,6 +237,7 @@ func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	logStreamName.RegisterStringU(cmd, &inputs.name, "")
 	logStreamPIIConfig.RegisterStringU(cmd, &inputs.piiConfig, "{}")
 	logStreamFilters.RegisterStringU(cmd, &inputs.filters, "[]")
