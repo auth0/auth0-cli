@@ -294,7 +294,7 @@ func ensureCustomDomainIsEnabled(ctx context.Context, api *auth0.API) error {
 
 	if err != nil {
 		if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusForbidden {
-			return errNotAllowed // 403 is expected for tenants without custom domain support
+			return errNotAllowed // 403 is expected for tenants without custom domain support.
 		}
 
 		return err
