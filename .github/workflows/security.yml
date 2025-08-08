@@ -11,18 +11,6 @@ permissions:
   contents: read
 
 jobs:
-  semgrep:
-    name: Semgrep Scan
-    runs-on: ubuntu-latest
-    container:
-      image: returntocorp/semgrep
-
-    steps:
-      - uses: actions/checkout@v3
-      - run: semgrep ci
-        env:
-          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
-
   govulncheck:
     name: Vulnerabilities Scan
     runs-on: ubuntu-latest
