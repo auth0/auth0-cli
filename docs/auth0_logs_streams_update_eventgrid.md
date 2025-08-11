@@ -22,15 +22,25 @@ auth0 logs streams update eventgrid [flags]
   auth0 logs streams update eventgrid
   auth0 logs streams update eventgrid <log-stream-id> --name <name>
   auth0 logs streams update eventgrid <log-stream-id> -n <name>
-  auth0 logs streams update eventgrid <log-stream-id> -n mylogstream --json
+  auth0 logs streams update eventgrid <log-stream-id> -n <name> --filters '[{"type":"category","name":"user.fail"},{"type":"category","name":"scim.event"}]'
+  auth0 logs streams update eventgrid <log-stream-id> -n <name> --pii-config  '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
+  auth0 logs streams update eventgrid <log-stream-id> -n mylogstream -c null --json
+  auth0 logs streams update eventgrid <log-stream-id> -n mylogstream --json-compact
 ```
 
 
 ## Flags
 
 ```
-      --json          Output in json format.
-  -n, --name string   The name of the log stream.
+  -m, --filters string      Events matching these filters will be delivered by the stream, Formatted as JSON. 
+                            Example: "[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]" (default "[]")
+      --json                Output in json format.
+      --json-compact        Output in compact json format.
+  -n, --name string         The name of the log stream.
+  -c, --pii-config string   Specifies how PII fields are logged, Formatted as JSON. 
+                            including which fields to log (first_name, last_name, username, email, phone, address),the protection method (mask or hash), and the hashing algorithm (xxhash). 
+                             Example : {"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}. 
+                             (default "{}")
 ```
 
 

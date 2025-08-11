@@ -30,6 +30,7 @@ auth0 protection breached-password-detection update [flags]
   -f, --admin-notification-frequency strings   When "admin_notification" is enabled, determines how often email notifications are sent. Possible values: immediately, daily, weekly, monthly. Comma-separated.
   -e, --enabled                                Enable (or disable) breached password detection.
       --json                                   Output in json format.
+      --json-compact                           Output in compact json format.
   -m, --method string                          The subscription level for breached password detection methods. Use "enhanced" to enable Credential Guard. Possible values: standard, enhanced.
   -s, --shields strings                        Action to take when a breached password is detected. Possible values: block, user_notification, admin_notification. Comma-separated.
 ```

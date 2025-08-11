@@ -121,6 +121,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
   auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --domain <domain> --scopes <scope1,scope2>
   auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --force
   auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --json
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --json-compact
   auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -o <org-id> -s <scope1,scope2> -p "foo=bar" -p "bazz=buzz" --json
   auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -o <org-id> -s <scope1,scope2> -p "foo=bar","bazz=buzz" --json
   auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --force --json`,
@@ -193,6 +194,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	testAudience.RegisterString(cmd, &inputs.Audience, "")
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, cliLoginTestingScopes)
 	testConnectionName.RegisterString(cmd, &inputs.ConnectionName, "")
@@ -219,6 +221,7 @@ func testTokenCmd(cli *cli) *cobra.Command {
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --force
   auth0 test token <client-id> -a <api-audience|api-identifier> -o <org-id> -s <scope1,scope2> -p "foo=bar" -p "bazz=buzz" --force
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --json
+  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --json-compact
   auth0 test token <client-id> -a <api-audience|api-identifier> -o <org-id> -s <scope1,scope2> -p "foo=bar","bazz=buzz" --json
   auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -313,6 +316,7 @@ func testTokenCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	testAudienceRequired.RegisterString(cmd, &inputs.Audience, "")
 	testScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
 	testCustomParams.RegisterStringMap(cmd, &inputs.CustomParams, nil)
@@ -366,7 +370,7 @@ func selectClientToUseForTestsAndValidateExistence(cli *cli, cmd *cobra.Command,
 func (c *cli) customDomainPickerOptions(ctx context.Context) (pickerOptions, error) {
 	var opts pickerOptions
 
-	domains, err := c.api.CustomDomain.List(ctx)
+	domains, err := c.ListAllCustomDomains(ctx)
 	if err != nil {
 		errStatus := err.(management.Error)
 		// 403 is a valid response for free tenants that don't have

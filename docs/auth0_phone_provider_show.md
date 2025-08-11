@@ -17,13 +17,15 @@ auth0 phone provider show [flags]
 ```
   auth0 phone provider show
   auth0 phone provider show --json
+  auth0 phone provider show --json-compact
 ```
 
 
 ## Flags
 
 ```
-      --json   Output in json format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

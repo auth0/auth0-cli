@@ -38,13 +38,14 @@ type cli struct {
 	tracker  *analytics.Tracker
 
 	// Set of flags which are user specified.
-	debug   bool
-	tenant  string
-	json    bool
-	csv     bool
-	force   bool
-	noInput bool
-	noColor bool
+	debug       bool
+	tenant      string
+	json        bool
+	jsonCompact bool
+	csv         bool
+	force       bool
+	noInput     bool
+	noColor     bool
 
 	Config config.Config
 }
@@ -124,6 +125,10 @@ func (c *cli) configureRenderer() {
 
 	if c.json {
 		c.renderer.Format = display.OutputFormatJSON
+	}
+
+	if c.jsonCompact {
+		c.renderer.Format = display.OutputFormatJSONCompact
 	}
 
 	if c.csv {

@@ -25,6 +25,7 @@ auth0 users update [flags]
   auth0 users update <user-id> --blocked=true"
   auth0 users update <user-id> --blocked=false"
   auth0 users update <user-id> -n "John Kennedy" -e johnk@example.com --json
+  auth0 users update <user-id> -n "John Kennedy" -e johnk@example.com --json-compact
   auth0 users update <user-id> -n "John Kennedy" -p <newPassword>
   auth0 users update <user-id> -b
   auth0 users update <user-id> -p <newPassword>
@@ -41,6 +42,7 @@ auth0 users update [flags]
   -c, --connection-name string   Name of the database connection this user should be created in.
   -e, --email string             The user's email.
       --json                     Output in json format.
+      --json-compact             Output in compact json format.
   -n, --name string              The user's full name.
   -p, --password string          Initial password for this user (mandatory for non-SMS connections).
   -m, --phone-number string      The user's phone number.

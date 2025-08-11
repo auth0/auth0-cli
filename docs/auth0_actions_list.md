@@ -18,6 +18,7 @@ auth0 actions list [flags]
   auth0 actions list
   auth0 actions ls
   auth0 actions ls --json
+  auth0 actions ls --json-compact
   auth0 actions ls --csv
 ```
 
@@ -25,8 +26,9 @@ auth0 actions list [flags]
 ## Flags
 
 ```
-      --csv    Output in csv format.
-      --json   Output in json format.
+      --csv            Output in csv format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

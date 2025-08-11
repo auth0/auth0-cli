@@ -122,6 +122,7 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 orgs list
   auth0 orgs ls
   auth0 orgs ls --json
+  auth0 orgs ls --json-compact
   auth0 orgs ls --csv
   auth0 orgs ls -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -160,8 +161,9 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	organizationNumber.Help = "Number of organizations to retrieve. Minimum 1, maximum 1000."
 	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
@@ -181,7 +183,8 @@ func showOrganizationCmd(cli *cli) *cobra.Command {
 		Long:  "Display information about an organization.",
 		Example: `  auth0 orgs show
   auth0 orgs show <org-id>
-  auth0 orgs show <org-id> --json`,
+  auth0 orgs show <org-id> --json
+  auth0 orgs show <org-id> --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions); err != nil {
@@ -208,6 +211,7 @@ func showOrganizationCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -291,6 +295,7 @@ func createOrganizationCmd(cli *cli) *cobra.Command {
 	organizationMetadata.RegisterStringMap(cmd, &inputs.Metadata, nil)
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -406,6 +411,7 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 	organizationMetadata.RegisterStringMapU(cmd, &inputs.Metadata, nil)
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -520,6 +526,7 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
   auth0 orgs members ls <org-id>
   auth0 orgs members list <org-id> --number 100
   auth0 orgs members ls <org-id> -n 100 --json
+  auth0 orgs members ls <org-id> -n 100 --json-compact
   auth0 orgs members ls <org-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
@@ -551,8 +558,9 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
 	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 
 	return cmd
@@ -589,6 +597,7 @@ func listRolesOrganizationCmd(cli *cli) *cobra.Command {
   auth0 orgs roles ls <org-id>
   auth0 orgs roles list <org-id> --number 100
   auth0 orgs roles ls <org-id> -n 100 --json
+  auth0 orgs roles ls <org-id> -n 100 --json-compact
   auth0 orgs roles ls <org-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
@@ -624,8 +633,9 @@ func listRolesOrganizationCmd(cli *cli) *cobra.Command {
 	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	return cmd
 }
@@ -663,6 +673,7 @@ func listMembersRolesOrganizationCmd(cli *cli) *cobra.Command {
   auth0 orgs roles members list <org-id> --role-id role --number 100
   auth0 orgs roles members ls <org-id> -r role -n 100
   auth0 orgs roles members ls <org-id> -r role -n 100 --json
+  auth0 orgs roles members ls <org-id> -r role -n 100 --json-compact
   auth0 orgs roles members ls <org-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
@@ -703,8 +714,9 @@ func listMembersRolesOrganizationCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	roleIdentifier.RegisterString(cmd, &inputs.RoleID, "")
 	organizationNumber.Help = "Number of members to retrieve. Minimum 1, maximum 1000."

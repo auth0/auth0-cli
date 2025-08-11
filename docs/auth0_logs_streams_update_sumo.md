@@ -22,17 +22,27 @@ auth0 logs streams update sumo [flags]
   auth0 logs streams update sumo
   auth0 logs streams update sumo <log-stream-id> --name <name>
   auth0 logs streams update sumo <log-stream-id> --name <name> --source <source>
-  auth0 logs streams update sumo <log-stream-id> -n <name> -s <source>
+  auth0 logs streams update sumo <log-stream-id> --name <name> --source <source> --filters '[{"type":"category","name":"user.fail"},{"type":"category","name":"scim.event"}]'
+  auth0 logs streams update sumo <log-stream-id> --name <name> --source <source>  --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
+  auth0 logs streams update sumo <log-stream-id> -n <name> -s <source> -c null
   auth0 logs streams update sumo <log-stream-id> -n "mylogstream" -s "demo.sumo.com" --json
+  auth0 logs streams update sumo <log-stream-id> -n "mylogstream" -s "demo.sumo.com" --json-compact
 ```
 
 
 ## Flags
 
 ```
-      --json            Output in json format.
-  -n, --name string     The name of the log stream.
-  -s, --source string   Generated URL for your defined HTTP source in Sumo Logic.
+  -m, --filters string      Events matching these filters will be delivered by the stream, Formatted as JSON. 
+                            Example: "[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]" (default "[]")
+      --json                Output in json format.
+      --json-compact        Output in compact json format.
+  -n, --name string         The name of the log stream.
+  -c, --pii-config string   Specifies how PII fields are logged, Formatted as JSON. 
+                            including which fields to log (first_name, last_name, username, email, phone, address),the protection method (mask or hash), and the hashing algorithm (xxhash). 
+                             Example : {"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}. 
+                             (default "{}")
+  -s, --source string       Generated URL for your defined HTTP source in Sumo Logic.
 ```
 
 
