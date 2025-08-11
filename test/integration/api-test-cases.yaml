@@ -43,7 +43,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - "Failed to parse command inputs: invalid json data given"
+        - "Failed to parse command inputs: invalid JSON data provided"
 
   007 - it fails to use the api command if an invalid method is given:
     command: auth0 api conquer "tenants/settings"
@@ -60,7 +60,7 @@ tests:
         idle_session_lifetime: "72"
     stderr:
       contains:
-        - "JSON data was passed using both the flag and as piped input. The Auth0 CLI will use only the data from the flag."
+        - "JSON data was provided via both the flag and piped input. The Auth0 CLI will use the data from the flag."
 
   009 - it successfully prints out debug log messages:
     command: auth0 api get "stats/daily" --query "from=20000317" --query "to=20000317" --debug

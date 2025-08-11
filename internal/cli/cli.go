@@ -2,7 +2,9 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -36,13 +38,14 @@ type cli struct {
 	tracker  *analytics.Tracker
 
 	// Set of flags which are user specified.
-	debug   bool
-	tenant  string
-	json    bool
-	csv     bool
-	force   bool
-	noInput bool
-	noColor bool
+	debug       bool
+	tenant      string
+	json        bool
+	jsonCompact bool
+	csv         bool
+	force       bool
+	noInput     bool
+	noColor     bool
 
 	Config config.Config
 }
@@ -70,14 +73,16 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 
 	// Check authentication status.
 	err = tenant.CheckAuthenticationStatus()
-	switch err {
-	case config.ErrTokenMissingRequiredScopes:
-		c.renderer.Warnf("Required scopes have changed. Please log in to re-authorize the CLI.\n")
-		tenant, err = RunLoginAsUser(ctx, c, tenant.GetExtraRequestedScopes(), "")
+	var scopesErr config.ErrTokenMissingRequiredScopes
+	if errors.As(err, &scopesErr) {
+		c.renderer.Warnf("Required scopes have changed (missing: %s). Please log in to re-authorize the CLI.\n", strings.Join(scopesErr.MissingScopes, ", "))
+		tenant, err = RunLoginAsUser(ctx, c, scopesErr.MissingScopes, "")
 		if err != nil {
 			return err
 		}
-	case config.ErrInvalidToken:
+	}
+
+	if errors.Is(err, config.ErrInvalidToken) {
 		if err := tenant.RegenerateAccessToken(ctx); err != nil {
 			if tenant.IsAuthenticatedWithClientCredentials() {
 				errorMessage := fmt.Errorf(
@@ -120,6 +125,10 @@ func (c *cli) configureRenderer() {
 
 	if c.json {
 		c.renderer.Format = display.OutputFormatJSON
+	}
+
+	if c.jsonCompact {
+		c.renderer.Format = display.OutputFormatJSONCompact
 	}
 
 	if c.csv {

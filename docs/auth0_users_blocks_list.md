@@ -17,6 +17,7 @@ auth0 users blocks list [flags]
 ```
   auth0 users blocks list <user-id|username|email|phone-number>
   auth0 users blocks list <user-id|username|email|phone-number> --json
+  auth0 users blocks list <user-id|username|email|phone-number> --json-compact
   auth0 users blocks list "auth0|61b5b6e90783fa19f7c57dad"
   auth0 users blocks list "frederik@travel0.com"
   auth0 users blocks list <user-id|username|email|phone-number> --csv
@@ -26,8 +27,9 @@ auth0 users blocks list [flags]
 ## Flags
 
 ```
-      --csv    Output in csv format.
-      --json   Output in json format.
+      --csv            Output in csv format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

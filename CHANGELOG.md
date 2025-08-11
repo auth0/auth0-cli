@@ -7,7 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-# [v.1.15.0](https://github.com/auth0/auth0-cli/tree/v1.15.0) (June 30, 2025))
+# [v.1.17.0](https://github.com/auth0/auth0-cli/tree/v1.17.0) (August 07, 2025)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.16.0...v1.17.0)
+
+### Added
+- Updated ULP branding assets to support standard customization to latest [#1268]
+- Improve error messaging for missing token scopes [#1247]
+- Add json-compact Flag and improve JSON Output Handling [#1283]
+- Add support for `pii-config` and `filters` flags to log-streams commands [#1280]
+
+
+# [v.1.16.0](https://github.com/auth0/auth0-cli/tree/v1.16.0) (July 15, 2025)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.15.0...v1.16.0)
+
+### Added
+- Support for Multiple Custom Domains via `auth0 domains create` [#1240]
+
+
+# [v.1.15.0](https://github.com/auth0/auth0-cli/tree/v1.15.0) (June 30, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.14.1...v1.15.0)
 
@@ -19,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for new schema fields in Advanced Customization for Universal Login [#1260]
 
 
-# [v.1.14.1](https://github.com/auth0/auth0-cli/tree/v1.14.1) (May 27, 2025))
+# [v.1.14.1](https://github.com/auth0/auth0-cli/tree/v1.14.1) (May 27, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.14.0...v1.14.1)
 
@@ -27,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove unreleased screens for ACUL [#1231] 
 
 
-# [v.1.14.0](https://github.com/auth0/auth0-cli/tree/v1.14.0) (May 22, 2025))
+# [v.1.14.0](https://github.com/auth0/auth0-cli/tree/v1.14.0) (May 22, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.13.0...v1.14.0)
 
@@ -41,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replace package `mholt/archiver` with custom implementation of unzip [#1218]
 
 
-# [v.1.13.0](https://github.com/auth0/auth0-cli/tree/v1.13.0) (May 7, 2025))
+# [v.1.13.0](https://github.com/auth0/auth0-cli/tree/v1.13.0) (May 7, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.12.0...v1.13.0)
 
@@ -53,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Handle 403 forbidden during `auth0 tf generate` for non feature-flag enabled tenants [#1197]
 
-# [v.1.12.0](https://github.com/auth0/auth0-cli/tree/v1.12.0) (Apr 28, 2025))
+# [v.1.12.0](https://github.com/auth0/auth0-cli/tree/v1.12.0) (Apr 28, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.11.0...v1.12.0)
 
@@ -70,7 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix validation to authorize audience only for M2M apps in test commands [#1183]
 
 
-# [v.1.11.0](https://github.com/auth0/auth0-cli/tree/v1.11.0) (Apr 02, 2025))
+# [v.1.11.0](https://github.com/auth0/auth0-cli/tree/v1.11.0) (Apr 02, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.10.1...v1.11.0)
 
@@ -83,7 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update assets related to universal login[#1172]
 
 
-# [v.1.10.1](https://github.com/auth0/auth0-cli/tree/v1.10.1) (Mar 28, 2025))
+# [v.1.10.1](https://github.com/auth0/auth0-cli/tree/v1.10.1) (Mar 28, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.10.0...v1.10.1)
 
@@ -96,7 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Handle nil check on customText cache in assets and update CDN textLocal URL [#1170]
 
 
-# [v.1.10.0](https://github.com/auth0/auth0-cli/tree/v1.10.0) (Mar 11, 2025))
+# [v.1.10.0](https://github.com/auth0/auth0-cli/tree/v1.10.0) (Mar 11, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.9.3...v1.10.0)
 
@@ -105,7 +124,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add support to manage phone provider using `auth0 phone provider` [#1137]
 
 
-# [v.1.9.3](https://github.com/auth0/auth0-cli/tree/v1.9.3) (Mar 07, 2025))
+# [v.1.9.3](https://github.com/auth0/auth0-cli/tree/v1.9.3) (Mar 07, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.9.2...v1.9.3)
 
@@ -114,7 +133,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Handle nil check on ReadRendering management API Response [#1150]
 
 
-# [v.1.9.2](https://github.com/auth0/auth0-cli/tree/v1.9.2) (Mar 05, 2025))
+# [v.1.9.2](https://github.com/auth0/auth0-cli/tree/v1.9.2) (Mar 05, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.9.1...v1.9.2)
 
@@ -127,7 +146,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove unsupported query params from the domains list implementation [#1144]
 
 
-# [v.1.9.1](https://github.com/auth0/auth0-cli/tree/v1.9.1) (Feb 21, 2025))
+# [v.1.9.1](https://github.com/auth0/auth0-cli/tree/v1.9.1) (Feb 21, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.9.0...v1.9.1)
 
@@ -136,7 +155,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add support for new screens in Advanced Customization for Universal Login [#1140]
 
 
-# [v.1.9.0](https://github.com/auth0/auth0-cli/tree/v1.9.0) (Feb 6, 2025))
+# [v.1.9.0](https://github.com/auth0/auth0-cli/tree/v1.9.0) (Feb 6, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.8.0...v1.9.0)
 
@@ -152,7 +171,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `auth0 ul customize` branding assets to load custom text based on selected screens [#1124]
 
 
-# [v.1.8.0](https://github.com/auth0/auth0-cli/tree/v1.8.0) (Jan 21, 2025))
+# [v.1.8.0](https://github.com/auth0/auth0-cli/tree/v1.8.0) (Jan 21, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.7.2...v1.8.0)
 
@@ -163,7 +182,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `requiredScopes` related to emailProvider [#1129]
 
 
-# [v.1.7.2](https://github.com/auth0/auth0-cli/tree/v1.7.2) (Dec 19, 2024))
+# [v.1.7.2](https://github.com/auth0/auth0-cli/tree/v1.7.2) (Dec 19, 2024)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.7.1...v1.7.2)
 
@@ -172,7 +191,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix(terraform): Handle 403 forbidden error [#1115]
 
 
-# [v.1.7.1](https://github.com/auth0/auth0-cli/tree/v1.7.1) (Dec 19, 2024))
+# [v.1.7.1](https://github.com/auth0/auth0-cli/tree/v1.7.1) (Dec 19, 2024)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.7.0...v1.7.1)
 
@@ -186,7 +205,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix CDN textLocal URL & include unit tests for fetchData of the resource `auth0_prompt_screen_renderer`[#1109]
 
 
-# [v.1.7.0](https://github.com/auth0/auth0-cli/tree/v1.7.0) (Dec 9, 2024))
+# [v.1.7.0](https://github.com/auth0/auth0-cli/tree/v1.7.0) (Dec 9, 2024)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.6.1...v1.7.0)
 
@@ -518,12 +537,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.15.0...HEAD
-
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.17.0...HEAD
+[1283]: https://github.com/auth0/auth0-cli/issues/1283
+[1280]: https://github.com/auth0/auth0-cli/issues/1280
+[#1268]: https://github.com/auth0/auth0-cli/issues/1268
 [#1260]: https://github.com/auth0/auth0-cli/issues/1260
 [#1258]: https://github.com/auth0/auth0-cli/issues/1258
 [#1254]: https://github.com/auth0/auth0-cli/issues/1254
+[1247]: https://github.com/auth0/auth0-cli/issues/1247
 [#1245]: https://github.com/auth0/auth0-cli/issues/1245
+[#1240]: https://github.com/auth0/auth0-cli/issues/1240
 [#1237]: https://github.com/auth0/auth0-cli/issues/1237
 [#1231]: https://github.com/auth0/auth0-cli/issues/1231
 [#1228]: https://github.com/auth0/auth0-cli/issues/1228   

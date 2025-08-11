@@ -18,6 +18,7 @@ auth0 logs streams list [flags]
   auth0 logs streams list
   auth0 logs streams ls
   auth0 logs streams ls --json
+  auth0 logs streams ls --json-compact
   auth0 logs streams ls --csv
 ```
 
@@ -25,8 +26,9 @@ auth0 logs streams list [flags]
 ## Flags
 
 ```
-      --csv    Output in csv format.
-      --json   Output in json format.
+      --csv            Output in csv format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

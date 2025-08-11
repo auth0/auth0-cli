@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/auth0/go-auth0/management"
@@ -33,9 +34,11 @@ var (
 
 func createLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Name          string
-		DatadogAPIKey string
-		DatadogRegion string
+		name          string
+		datadogAPIKey string
+		datadogRegion string
+		piiConfig     string
+		filters       string
 	}
 
 	cmd := &cobra.Command{
@@ -48,29 +51,55 @@ func createLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 logs streams create datadog
   auth0 logs streams create datadog --name <name>
   auth0 logs streams create datadog --name <name> --region <region>
-  auth0 logs streams create datadog --name <name> --region <region> --api-key <api-key>
+  auth0 logs streams create datadog --name <name> --region <region> --api-key <api-key> --filters '[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]'
+  auth0 logs streams create datadog --name <name> --region <region> --api-key <api-key> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "hash", "algorithm": "xxhash"}'
   auth0 logs streams create datadog -n <name> -r <region> -k <api-key>
-  auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json`,
+  auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json
+  auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := logStreamName.Ask(cmd, &inputs.Name, nil); err != nil {
+			if err := logStreamName.Ask(cmd, &inputs.name, nil); err != nil {
 				return err
 			}
 
-			if err := datadogRegion.Select(cmd, &inputs.DatadogRegion, datadogRegionOptions, nil); err != nil {
+			if err := datadogRegion.Select(cmd, &inputs.datadogRegion, datadogRegionOptions, nil); err != nil {
 				return err
 			}
 
-			if err := datadogAPIKey.AskPassword(cmd, &inputs.DatadogAPIKey); err != nil {
+			if err := datadogAPIKey.AskPassword(cmd, &inputs.datadogAPIKey); err != nil {
 				return err
+			}
+
+			var piiConfig *management.LogStreamPiiConfig
+			if err := logStreamPIIConfig.Ask(cmd, &inputs.piiConfig, auth0.String("{}")); err != nil {
+				return err
+			}
+
+			if inputs.piiConfig != "{}" {
+				if err := json.Unmarshal([]byte(inputs.piiConfig), &piiConfig); err != nil {
+					return fmt.Errorf("provider: %s credentials invalid JSON: %w", inputs.piiConfig, err)
+				}
+			}
+
+			var filters *[]map[string]string
+			if err := logStreamFilters.Ask(cmd, &filters, auth0.String("[]")); err != nil {
+				return err
+			}
+
+			if inputs.filters != "[]" {
+				if err := json.Unmarshal([]byte(inputs.filters), &filters); err != nil {
+					return fmt.Errorf("provider: %s filters invalid JSON: %w", inputs.filters, err)
+				}
 			}
 
 			newLogStream := &management.LogStream{
-				Name: &inputs.Name,
+				Name: &inputs.name,
 				Type: auth0.String(string(logStreamTypeDatadog)),
 				Sink: &management.LogStreamSinkDatadog{
-					Region: &inputs.DatadogRegion,
-					APIKey: &inputs.DatadogAPIKey,
+					Region: &inputs.datadogRegion,
+					APIKey: &inputs.datadogAPIKey,
 				},
+				PIIConfig: piiConfig,
+				Filters:   filters,
 			}
 
 			if err := ansi.Waiting(func() error {
@@ -79,26 +108,29 @@ func createLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to create log stream: %w", err)
 			}
 
-			cli.renderer.LogStreamCreate(newLogStream)
-
-			return nil
+			return cli.renderer.LogStreamCreate(newLogStream)
 		},
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	logStreamName.RegisterString(cmd, &inputs.Name, "")
-	datadogAPIKey.RegisterString(cmd, &inputs.DatadogAPIKey, "")
-	datadogRegion.RegisterString(cmd, &inputs.DatadogRegion, "")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	logStreamName.RegisterString(cmd, &inputs.name, "")
+	logStreamPIIConfig.RegisterString(cmd, &inputs.piiConfig, "{}")
+	logStreamFilters.RegisterString(cmd, &inputs.filters, "[]")
+	datadogAPIKey.RegisterString(cmd, &inputs.datadogAPIKey, "")
+	datadogRegion.RegisterString(cmd, &inputs.datadogRegion, "")
 
 	return cmd
 }
 
 func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID            string
-		Name          string
-		DatadogAPIKey string
-		DatadogRegion string
+		id            string
+		name          string
+		piiConfig     string
+		filters       string
+		datadogAPIKey string
+		datadogRegion string
 	}
 
 	cmd := &cobra.Command{
@@ -111,58 +143,88 @@ func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 logs streams update datadog
   auth0 logs streams update datadog <log-stream-id> --name <name>
   auth0 logs streams update datadog <log-stream-id> --name <name> --region <region>
-  auth0 logs streams update datadog <log-stream-id> --name <name> --region <region> --api-key <api-key>
-  auth0 logs streams update datadog <log-stream-id> -n <name> -r <region> -k <api-key>
-  auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json`,
+  auth0 logs streams update datadog <log-stream-id> --name <name> --region <region> --api-key <api-key> --filters '[{"type":"category","name":"user.fail"},{"type":"category","name":"scim.event"}]'
+  auth0 logs streams update datadog <log-stream-id> --name <name> --region <region> --api-key <api-key> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
+  auth0 logs streams update datadog <log-stream-id> -n <name> -r <region> -k <api-key> -c null
+  auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json
+  auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err := logStreamID.Pick(cmd, &inputs.ID, cli.logStreamPickerOptionsByType(logStreamTypeDatadog))
+				err := logStreamID.Pick(cmd, &inputs.id, cli.logStreamPickerOptionsByType(logStreamTypeDatadog))
 				if err != nil {
 					return err
 				}
 			} else {
-				inputs.ID = args[0]
+				inputs.id = args[0]
 			}
 
 			var oldLogStream *management.LogStream
 			if err := ansi.Waiting(func() (err error) {
-				oldLogStream, err = cli.api.LogStream.Read(cmd.Context(), inputs.ID)
+				oldLogStream, err = cli.api.LogStream.Read(cmd.Context(), inputs.id)
 				return err
 			}); err != nil {
-				return fmt.Errorf("failed to read log stream with ID %q: %w", inputs.ID, err)
+				return fmt.Errorf("failed to read log stream with ID %q: %w", inputs.id, err)
 			}
 
 			if oldLogStream.GetType() != string(logStreamTypeDatadog) {
-				return errInvalidLogStreamType(inputs.ID, oldLogStream.GetType(), string(logStreamTypeDatadog))
+				return errInvalidLogStreamType(inputs.id, oldLogStream.GetType(), string(logStreamTypeDatadog))
 			}
 
-			if err := logStreamName.AskU(cmd, &inputs.Name, oldLogStream.Name); err != nil {
+			if err := logStreamName.AskU(cmd, &inputs.name, oldLogStream.Name); err != nil {
+				return err
+			}
+
+			existingConfig, _ := json.Marshal(oldLogStream.GetPIIConfig())
+			if err := logStreamPIIConfig.AskU(cmd, &inputs.piiConfig, auth0.String(string(existingConfig))); err != nil {
+				return err
+			}
+
+			existingFilters, _ := json.Marshal(oldLogStream.GetFilters())
+			if err := logStreamFilters.AskU(cmd, &inputs.filters, auth0.String(string(existingFilters))); err != nil {
 				return err
 			}
 
 			datadogSink := oldLogStream.Sink.(*management.LogStreamSinkDatadog)
 
-			if err := datadogRegion.SelectU(cmd, &inputs.DatadogRegion, datadogRegionOptions, datadogSink.Region); err != nil {
+			if err := datadogRegion.SelectU(cmd, &inputs.datadogRegion, datadogRegionOptions, datadogSink.Region); err != nil {
 				return err
 			}
 
-			if err := datadogAPIKey.AskPasswordU(cmd, &inputs.DatadogAPIKey); err != nil {
+			if err := datadogAPIKey.AskPasswordU(cmd, &inputs.datadogAPIKey); err != nil {
 				return err
 			}
 
-			updatedLogStream := &management.LogStream{}
+			updatedLogStream := &management.LogStream{
+				PIIConfig: oldLogStream.GetPIIConfig(),
+			}
 
-			if inputs.Name != "" {
-				updatedLogStream.Name = &inputs.Name
+			if inputs.name != "" {
+				updatedLogStream.Name = &inputs.name
 			}
-			if inputs.DatadogRegion != "" {
-				datadogSink.Region = &inputs.DatadogRegion
+			if inputs.datadogRegion != "" {
+				datadogSink.Region = &inputs.datadogRegion
 			}
-			if inputs.DatadogAPIKey != "" {
-				datadogSink.APIKey = &inputs.DatadogAPIKey
+			if inputs.datadogAPIKey != "" {
+				datadogSink.APIKey = &inputs.datadogAPIKey
 			}
 
 			updatedLogStream.Sink = datadogSink
+
+			if inputs.piiConfig != "{}" {
+				var piiConfig *management.LogStreamPiiConfig
+				if err := json.Unmarshal([]byte(inputs.piiConfig), &piiConfig); err != nil {
+					return fmt.Errorf("provider: %s credentials invalid JSON: %w", inputs.piiConfig, err)
+				}
+				updatedLogStream.PIIConfig = piiConfig
+			}
+
+			if inputs.filters != "[]" {
+				var filters *[]map[string]string
+				if err := json.Unmarshal([]byte(inputs.filters), &filters); err != nil {
+					return fmt.Errorf("provider: %s filters invalid JSON: %w", inputs.filters, err)
+				}
+				updatedLogStream.Filters = filters
+			}
 
 			if err := ansi.Waiting(func() error {
 				return cli.api.LogStream.Update(cmd.Context(), oldLogStream.GetID(), updatedLogStream)
@@ -170,16 +232,17 @@ func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to update log stream with ID %q: %w", oldLogStream.GetID(), err)
 			}
 
-			cli.renderer.LogStreamUpdate(updatedLogStream)
-
-			return nil
+			return cli.renderer.LogStreamUpdate(updatedLogStream)
 		},
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	logStreamName.RegisterStringU(cmd, &inputs.Name, "")
-	datadogAPIKey.RegisterStringU(cmd, &inputs.DatadogAPIKey, "")
-	datadogRegion.RegisterStringU(cmd, &inputs.DatadogRegion, "")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	logStreamName.RegisterStringU(cmd, &inputs.name, "")
+	logStreamPIIConfig.RegisterStringU(cmd, &inputs.piiConfig, "{}")
+	logStreamFilters.RegisterStringU(cmd, &inputs.filters, "[]")
+	datadogAPIKey.RegisterStringU(cmd, &inputs.datadogAPIKey, "")
+	datadogRegion.RegisterStringU(cmd, &inputs.datadogRegion, "")
 
 	return cmd
 }

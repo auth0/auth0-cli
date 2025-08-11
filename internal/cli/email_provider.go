@@ -108,7 +108,8 @@ func showEmailProviderCmd(cli *cli) *cobra.Command {
 		Short: "Show the email provider",
 		Long:  "Display information about the email provider.",
 		Example: `  auth0 email provider show
-  auth0 email provider show --json`,
+  auth0 email provider show --json
+  auth0 email provider show --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var emailProvider *management.EmailProvider
 			if err := ansi.Waiting(func() (err error) {
@@ -123,6 +124,7 @@ func showEmailProviderCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -146,6 +148,7 @@ func createEmailProviderCmd(cli *cli) *cobra.Command {
 			"through the flags.",
 		Example: `  auth0 email provider create
   auth0 email provider create --json
+  auth0 email provider create --json-compact
   auth0 email provider create --provider mandrill --enabled=true --credentials='{ "api_key":"TheAPIKey" }' --settings='{ "message": { "view_control_link": true } }'
   auth0 email provider create --provider mandrill --default-from-address='admin@example.com' --credentials='{ "api_key":"TheAPIKey" }' --settings='{ "message": { "view_control_link": true } }'
   auth0 email provider create --provider ses --credentials='{ "accessKeyId":"TheAccessKeyId", "secretAccessKey":"TheSecretAccessKey", "region":"eu" }' --settings='{ "message": { "configuration_set_name": "TheConfigurationSetName" } }'
@@ -236,6 +239,7 @@ func createEmailProviderCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	emailProviderName.RegisterString(cmd, &inputs.name, "")
 	emailProviderFrom.RegisterString(cmd, &inputs.defaultFromAddress, "")
@@ -265,6 +269,7 @@ func updateEmailProviderCmd(cli *cli) *cobra.Command {
 			"through the flags.",
 		Example: `  auth0 email provider update
   auth0 email provider update --json
+  auth0 email provider update --json-compact
   auth0 email provider update --enabled=false
   auth0 email provider update --credentials='{ "api_key":"NewAPIKey" }'
   auth0 email provider update --settings='{ "message": { "view_control_link": true } }'
@@ -378,6 +383,7 @@ func updateEmailProviderCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	emailProviderName.RegisterString(cmd, &inputs.name, "")
 	emailProviderFrom.RegisterString(cmd, &inputs.defaultFromAddress, "")

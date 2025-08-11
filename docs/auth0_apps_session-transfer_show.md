@@ -24,7 +24,8 @@ auth0 apps session-transfer show
 ## Flags
 
 ```
-      --json   Output in json format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 
