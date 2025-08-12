@@ -283,7 +283,18 @@ func (f *customDomainResourceFetcher) FetchData(ctx context.Context) (importData
 					return data, nil
 				}
 			}
-			return nil, err
+			// If ListWithPagination fails with other errors, fallback to List method
+			fallbackList, fallbackErr := f.api.CustomDomain.List(ctx)
+			if fallbackErr != nil {
+				for _, e := range errNotEnabled {
+					if strings.Contains(fallbackErr.Error(), e) {
+						return data, nil
+					}
+				}
+				return nil, fallbackErr
+			}
+			allDomains = fallbackList
+			break
 		}
 
 		allDomains = append(allDomains, list.CustomDomains...)

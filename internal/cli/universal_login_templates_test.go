@@ -82,6 +82,13 @@ func TestEnsureCustomDomainIsEnabled(t *testing.T) {
 				ListWithPagination(gomock.Any(), gomock.Any()).
 				Return(&management.CustomDomainList{CustomDomains: test.customDomain}, test.apiError)
 
+			// If ListWithPagination fails, expect a fallback call to List
+			if test.apiError != nil {
+				customDomainAPI.EXPECT().
+					List(gomock.Any()).
+					Return(test.customDomain, test.apiError)
+			}
+
 			ctx := context.Background()
 			api := &auth0.API{CustomDomain: customDomainAPI}
 			err := ensureCustomDomainIsEnabled(ctx, api)

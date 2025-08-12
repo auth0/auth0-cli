@@ -191,6 +191,17 @@ func TestCustomDomainsPickerOptions(t *testing.T) {
 				ListWithPagination(gomock.Any(), gomock.Any()).
 				Return(test.customDomainsList, test.apiError)
 
+			// If ListWithPagination fails, expect a fallback call to List
+			if test.apiError != nil {
+				var listResult []*management.CustomDomain
+				if test.customDomainsList != nil {
+					listResult = test.customDomainsList.CustomDomains
+				}
+				customDomainAPI.EXPECT().
+					List(gomock.Any()).
+					Return(listResult, test.apiError)
+			}
+
 			cli := &cli{
 				api: &auth0.API{CustomDomain: customDomainAPI},
 			}

@@ -280,6 +280,15 @@ func ensureCustomDomainIsEnabled(ctx context.Context, api *auth0.API) error {
 
 		customDomain, err = api.CustomDomain.ListWithPagination(ctx, reqOptions...)
 		if err != nil {
+			// If ListWithPagination fails, try fallback to List method
+			fallbackList, fallbackErr := api.CustomDomain.List(ctx)
+			if fallbackErr != nil {
+				if mErr, ok := fallbackErr.(management.Error); ok && mErr.Status() == http.StatusForbidden {
+					return errNotAllowed
+				}
+				return fallbackErr
+			}
+			allDomains = fallbackList
 			break
 		}
 

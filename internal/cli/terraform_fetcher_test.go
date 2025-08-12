@@ -628,6 +628,11 @@ func TestCustomDomainResourceFetcher_FetchData(t *testing.T) {
 			ListWithPagination(gomock.Any(), gomock.Any()).
 			Return(nil, fmt.Errorf("failed to list custom domains"))
 
+		// Expect fallback call to List method which also fails
+		customDomainAPI.EXPECT().
+			List(gomock.Any()).
+			Return(nil, fmt.Errorf("failed to list custom domains"))
+
 		fetcher := customDomainResourceFetcher{
 			api: &auth0.API{
 				CustomDomain: customDomainAPI,
@@ -666,6 +671,31 @@ func TestCustomDomainResourceFetcher_FetchData(t *testing.T) {
 		customDomainAPI.EXPECT().
 			ListWithPagination(gomock.Any(), gomock.Any()).
 			Return(nil, fmt.Errorf("403 Forbidden: There must be a verified credit card on file to perform this operation"))
+
+		fetcher := customDomainResourceFetcher{
+			api: &auth0.API{
+				CustomDomain: customDomainAPI,
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 0)
+	})
+
+	t.Run("it returns empty set when fallback List method returns specific error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		customDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
+		customDomainAPI.EXPECT().
+			ListWithPagination(gomock.Any(), gomock.Any()).
+			Return(nil, fmt.Errorf("some other error"))
+
+		// Fallback call returns specific error message
+		customDomainAPI.EXPECT().
+			List(gomock.Any()).
+			Return(nil, fmt.Errorf("403 Forbidden: The account is not allowed to perform this operation, please contact our support team"))
 
 		fetcher := customDomainResourceFetcher{
 			api: &auth0.API{

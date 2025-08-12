@@ -539,6 +539,7 @@ func (c *cli) ListAllCustomDomains(ctx context.Context) ([]*management.CustomDom
 		}
 	)
 
+	// First try ListWithPagination (requires feature flag)
 	for {
 		if from != "" {
 			options = append(options, management.From(from))
@@ -546,7 +547,12 @@ func (c *cli) ListAllCustomDomains(ctx context.Context) ([]*management.CustomDom
 
 		list, err := c.api.CustomDomain.ListWithPagination(ctx, options...)
 		if err != nil {
-			return nil, err
+			// If ListWithPagination fails, fallback to List method
+			fallbackList, fallbackErr := c.api.CustomDomain.List(ctx)
+			if fallbackErr != nil {
+				return nil, fallbackErr
+			}
+			return fallbackList, nil
 		}
 
 		allDomains = append(allDomains, list.CustomDomains...)
