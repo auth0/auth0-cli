@@ -581,20 +581,19 @@ func TestCustomDomainResourceFetcher_FetchData(t *testing.T) {
 
 		customDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
 		customDomainAPI.EXPECT().
-			ListWithPagination(gomock.Any(), gomock.Any()).
+			List(gomock.Any()).
 			Return(
-				&management.CustomDomainList{
-					CustomDomains: []*management.CustomDomain{
-						{
-							ID:     auth0.String("cd_XDVfBNsfL2vj7Wm1"),
-							Domain: auth0.String("travel0.com"),
-						},
-						{
-							ID:     auth0.String("cd_XDVfBNsfL2vj7Wm1"),
-							Domain: auth0.String("enterprise.travel0.com"),
-						},
+				[]*management.CustomDomain{
+					{
+						ID:     auth0.String("cd_XDVfBNsfL2vj7Wm1"),
+						Domain: auth0.String("travel0.com"),
 					},
-				}, nil,
+					{
+						ID:     auth0.String("cd_XDVfBNsfL2vj7Wm1"),
+						Domain: auth0.String("enterprise.travel0.com"),
+					},
+				},
+				nil,
 			)
 
 		fetcher := customDomainResourceFetcher{
@@ -625,7 +624,7 @@ func TestCustomDomainResourceFetcher_FetchData(t *testing.T) {
 
 		customDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
 		customDomainAPI.EXPECT().
-			ListWithPagination(gomock.Any(), gomock.Any()).
+			List(gomock.Any()).
 			Return(nil, fmt.Errorf("failed to list custom domains"))
 
 		fetcher := customDomainResourceFetcher{
@@ -644,7 +643,7 @@ func TestCustomDomainResourceFetcher_FetchData(t *testing.T) {
 
 		customDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
 		customDomainAPI.EXPECT().
-			ListWithPagination(gomock.Any(), gomock.Any()).
+			List(gomock.Any()).
 			Return(nil, fmt.Errorf("403 Forbidden: The account is not allowed to perform this operation, please contact our support team"))
 
 		fetcher := customDomainResourceFetcher{
@@ -664,7 +663,7 @@ func TestCustomDomainResourceFetcher_FetchData(t *testing.T) {
 
 		customDomainAPI := mock.NewMockCustomDomainAPI(ctrl)
 		customDomainAPI.EXPECT().
-			ListWithPagination(gomock.Any(), gomock.Any()).
+			List(gomock.Any()).
 			Return(nil, fmt.Errorf("403 Forbidden: There must be a verified credit card on file to perform this operation"))
 
 		fetcher := customDomainResourceFetcher{
