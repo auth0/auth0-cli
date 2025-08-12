@@ -545,7 +545,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.17.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.17.1...HEAD
 [1306]: https://github.com/auth0/auth0-cli/issues/1306
 [1283]: https://github.com/auth0/auth0-cli/issues/1283
 [1280]: https://github.com/auth0/auth0-cli/issues/1280
