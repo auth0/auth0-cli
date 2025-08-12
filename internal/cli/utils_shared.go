@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/pkg/browser"
@@ -318,4 +320,45 @@ func formatManageTenantURL(tenant string, cfg *config.Config) string {
 		region,
 		tenantName,
 	)
+}
+
+func parseFlexibleDate(input string) (string, error) {
+	now := time.Now().UTC()
+	input = strings.TrimSpace(input)
+
+	// Try full RFC3339 first.
+	if t, err := time.Parse(time.RFC3339, input); err == nil {
+		return t.Format(time.RFC3339), nil
+	}
+
+	// Try "YYYY-MM-DD" date only.
+	if t, err := time.Parse("2006-01-02", input); err == nil {
+		return t.UTC().Format(time.RFC3339), nil
+	}
+
+	input = strings.ToLower(input)
+	// Keywords.
+	switch input {
+	case "yesterday":
+		return now.AddDate(0, 0, -1).Format(time.RFC3339), nil
+	case "today":
+		t := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+		return t.Format(time.RFC3339), nil
+	}
+
+	if strings.HasSuffix(input, "d") {
+		dayStr := strings.TrimSuffix(input, "d")
+		if n, err := strconv.Atoi(dayStr); err == nil {
+			return now.AddDate(0, 0, n).Format(time.RFC3339), nil
+		}
+	}
+
+	if strings.HasSuffix(input, "h") {
+		hourStr := strings.TrimSuffix(input, "h")
+		if n, err := strconv.Atoi(hourStr); err == nil {
+			return now.Add(time.Duration(n) * time.Hour).Format(time.RFC3339), nil
+		}
+	}
+
+	return "", fmt.Errorf("invalid date format: use RFC3339, 'YYYY-MM-DD', or formats like 'yesterday', '-2d'")
 }
