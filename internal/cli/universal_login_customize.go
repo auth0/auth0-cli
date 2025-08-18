@@ -4,14 +4,11 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/fs"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
-	"reflect"
 	"strings"
 	"time"
 
@@ -22,10 +19,8 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/display"
-	"github.com/auth0/auth0-cli/internal/utils"
 )
 
 const (
@@ -62,38 +57,6 @@ var (
 		),
 		IsRequired: true,
 	}
-
-	promptName = Flag{
-		Name:       "Prompt Name",
-		LongForm:   "prompt",
-		ShortForm:  "p",
-		Help:       "Name of the prompt to to switch or customize.",
-		IsRequired: true,
-	}
-
-	screenName = Flag{
-		Name:       "Screen Name",
-		LongForm:   "screen",
-		ShortForm:  "s",
-		Help:       "Name of the screen to to switch or customize.",
-		IsRequired: true,
-	}
-
-	file = Flag{
-		Name:       "File",
-		LongForm:   "settings-file",
-		ShortForm:  "f",
-		Help:       "File to save the rendering configs to.",
-		IsRequired: false,
-	}
-
-	rendererScript = Flag{
-		Name:       "Script",
-		LongForm:   "script",
-		ShortForm:  "s",
-		Help:       "Script contents for the rendering configs.",
-		IsRequired: true,
-	}
 )
 
 var allowedPromptsWithPartials = []management.PromptType{
@@ -104,45 +67,6 @@ var allowedPromptsWithPartials = []management.PromptType{
 	management.PromptLoginID,
 	management.PromptLoginPassword,
 	management.PromptLoginPasswordLess,
-}
-
-var ScreenPromptMap = map[string][]string{
-	"signup-id":                   {"signup-id"},
-	"signup-password":             {"signup-password"},
-	"login-id":                    {"login-id"},
-	"login-password":              {"login-password"},
-	"login-passwordless":          {"login-passwordless-email-code", "login-passwordless-sms-otp"},
-	"phone-identifier-enrollment": {"phone-identifier-enrollment"},
-	"phone-identifier-challenge":  {"phone-identifier-challenge"},
-	"email-identifier-challenge":  {"email-identifier-challenge"},
-	"passkeys":                    {"passkey-enrollment", "passkey-enrollment-local"},
-	"captcha":                     {"interstitial-captcha"},
-	"login":                       {"login"},
-	"signup":                      {"signup"},
-	"reset-password": {"reset-password-request", "reset-password-email", "reset-password", "reset-password-success", "reset-password-error",
-		"reset-password-mfa-email-challenge", "reset-password-mfa-otp-challenge", "reset-password-mfa-push-challenge-push",
-		"reset-password-mfa-sms-challenge", "reset-password-mfa-phone-challenge", "reset-password-mfa-voice-challenge",
-		"reset-password-mfa-recovery-code-challenge", "reset-password-mfa-webauthn-platform-challenge", "reset-password-mfa-webauthn-roaming-challenge"},
-	"mfa":                      {"mfa-detect-browser-capabilities", "mfa-enroll-result", "mfa-begin-enroll-options", "mfa-login-options"},
-	"mfa-email":                {"mfa-email-challenge", "mfa-email-list"},
-	"mfa-sms":                  {"mfa-country-codes", "mfa-sms-challenge", "mfa-sms-enrollment", "mfa-sms-list"},
-	"mfa-push":                 {"mfa-push-challenge-push", "mfa-push-enrollment-qr", "mfa-push-list", "mfa-push-welcome"},
-	"invitation":               {"accept-invitation"},
-	"organizations":            {"organization-selection", "organization-picker"},
-	"mfa-otp":                  {"mfa-otp-challenge", "mfa-otp-enrollment-code", "mfa-otp-enrollment-qr"},
-	"device-flow":              {"device-code-activation", "device-code-activation-allowed", "device-code-activation-denied", "device-code-confirmation"},
-	"mfa-phone":                {"mfa-phone-challenge", "mfa-phone-enrollment"},
-	"mfa-voice":                {"mfa-voice-challenge", "mfa-voice-enrollment"},
-	"mfa-recovery-code":        {"mfa-recovery-code-challenge", "mfa-recovery-code-enrollment", "mfa-recovery-code-challenge-new-code"},
-	"common":                   {"redeem-ticket"},
-	"email-verification":       {"email-verification-result"},
-	"login-email-verification": {"login-email-verification"},
-	"logout":                   {"logout", "logout-aborted", "logout-complete"},
-	"mfa-webauthn": {"mfa-webauthn-change-key-nickname", "mfa-webauthn-enrollment-success", "mfa-webauthn-error", "mfa-webauthn-platform-challenge",
-		"mfa-webauthn-platform-enrollment", "mfa-webauthn-roaming-challenge", "mfa-webauthn-roaming-enrollment", "mfa-webauthn-not-available-error"},
-	"consent":             {"consent"},
-	"customized-consent":  {"customized-consent"},
-	"email-otp-challenge": {"email-otp-challenge"},
 }
 
 type partialsData map[string]*management.PromptScreenPartials
@@ -270,21 +194,7 @@ func (m *webSocketMessage) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type promptScreen struct {
-	promptName string
-	screenName string
-}
-
-type customizationInputs struct {
-	promptScreen
-	filePath string
-}
-
 func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
-	var (
-		selectedRenderingMode string
-		input                 customizationInputs
-	)
 
 	cmd := &cobra.Command{
 		Use:   "customize",
@@ -317,162 +227,12 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 
 			cli.renderer.Infof("Tip : Use `auth0 ul switch` to switch the rendering-modes between standard and advanced mode")
 
-			if selectedRenderingMode == "" {
-				cli.renderer.Infof("Please select a rendering mode to customize:")
-				if err := renderingMode.Select(cmd, &selectedRenderingMode, []string{advancedMode, standardMode}, nil); err != nil {
-					return err
-				}
-			}
-
-			if selectedRenderingMode == advancedMode {
-				return advanceCustomize(cmd, cli, input)
-			}
-
 			// RenderingMode as standard.
 			return startWebSocketServer(ctx, cli.api, cli.renderer, cli.tenant)
 		},
 	}
 
-	renderingMode.RegisterString(cmd, &selectedRenderingMode, "")
-	promptName.RegisterString(cmd, &input.promptName, "")
-	screenName.RegisterString(cmd, &input.screenName, "")
-	file.RegisterString(cmd, &input.filePath, "")
-
 	return cmd
-}
-
-func advanceCustomize(cmd *cobra.Command, cli *cli, input customizationInputs) error {
-	var currMode = standardMode
-
-	err := fetchPromptScreenInfo(cmd, cli, &input.promptScreen, "customize")
-	if err != nil {
-		return err
-	}
-
-	renderSettings, err := fetchRenderSettings(cmd, cli, input)
-	if renderSettings != nil && renderSettings.RenderingMode != nil {
-		currMode = string(*renderSettings.RenderingMode)
-	}
-
-	if errors.Is(err, ErrNoChangesDetected) {
-		cli.renderer.Infof("Current rendering mode for Prompt '%s' and Screen '%s': %s",
-			ansi.Green(input.promptName), ansi.Green(input.screenName), ansi.Green(currMode))
-		return nil
-	}
-
-	if err != nil {
-		return err
-	}
-
-	if err = ansi.Waiting(func() error {
-		return cli.api.Prompt.UpdateRendering(cmd.Context(), management.PromptType(input.promptName), management.ScreenName(input.screenName), renderSettings)
-	}); err != nil {
-		return fmt.Errorf("failed to set the render settings: %w", err)
-	}
-
-	cli.renderer.Infof(
-		"Successfully updated the rendering settings.\n Current rendering mode for Prompt '%s' and Screen '%s': %s",
-		ansi.Green(input.promptName),
-		ansi.Green(input.screenName),
-		ansi.Green(currMode),
-	)
-
-	return nil
-}
-
-func fetchPromptScreenInfo(cmd *cobra.Command, cli *cli, input *promptScreen, action string) error {
-	if input.promptName == "" {
-		cli.renderer.Infof("Please select a prompt to %s its rendering mode:", action)
-		if err := promptName.Select(cmd, &input.promptName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
-			return handleInputError(err)
-		}
-	}
-
-	if input.screenName == "" {
-		if len(ScreenPromptMap[input.promptName]) > 1 {
-			cli.renderer.Infof("Please select a screen to %s its rendering mode:", action)
-			if err := screenName.Select(cmd, &input.screenName, ScreenPromptMap[input.promptName], nil); err != nil {
-				return handleInputError(err)
-			}
-		} else {
-			input.screenName = ScreenPromptMap[input.promptName][0]
-		}
-	}
-
-	return nil
-}
-
-func fetchRenderSettings(cmd *cobra.Command, cli *cli, input customizationInputs) (*management.PromptRendering, error) {
-	var (
-		userRenderSettings string
-		renderSettings     = &management.PromptRendering{}
-		existingSettings   = map[string]interface{}{}
-		currentSettings    = map[string]interface{}{}
-	)
-
-	if input.filePath != "" {
-		data, err := os.ReadFile(input.filePath)
-		if err != nil {
-			return nil, fmt.Errorf("unable to read file %q: %v", input.filePath, err)
-		}
-
-		// Validate JSON content.
-		if err := json.Unmarshal(data, &renderSettings); err != nil {
-			return nil, fmt.Errorf("file %q contains invalid JSON: %v", input.filePath, err)
-		}
-
-		return renderSettings, nil
-	}
-
-	// Fetch existing render settings from the API.
-	existingRenderSettings, err := cli.api.Prompt.ReadRendering(cmd.Context(), management.PromptType(input.promptName), management.ScreenName(input.screenName))
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch the existing render settings: %w", err)
-	}
-
-	// Marshal existing render settings into JSON and parse into a map if it's not nil.
-	if existingRenderSettings != nil {
-		readRenderingJSON, _ := json.MarshalIndent(existingRenderSettings, "", "  ")
-		if err := json.Unmarshal(readRenderingJSON, &existingSettings); err != nil {
-			fmt.Println("Error parsing readRendering JSON:", err)
-		}
-	}
-
-	existingSettings["___customization guide___"] = "https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"
-
-	// Marshal final JSON.
-	finalJSON, err := json.MarshalIndent(existingSettings, "", "  ")
-	if err != nil {
-		fmt.Println("Error generating final JSON:", err)
-	}
-
-	err = rendererScript.OpenEditor(cmd, &userRenderSettings, string(finalJSON), input.promptName+"_"+input.screenName+".json", cli.customizeEditorHint)
-	if err != nil {
-		return nil, fmt.Errorf("failed to capture input from the editor: %w", err)
-	}
-
-	// Unmarshal user-provided JSON into a map for comparison.
-	err = json.Unmarshal([]byte(userRenderSettings), &currentSettings)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON input into a map: %w", err)
-	}
-
-	// Compare the existing settings with the updated settings to detect changes.
-	if reflect.DeepEqual(existingSettings, currentSettings) {
-		cli.renderer.Warnf("No changes detected in the customization settings. This could be due to uncommitted configuration changes or no modifications being made to the configurations.")
-
-		return existingRenderSettings, ErrNoChangesDetected
-	}
-
-	if err := json.Unmarshal([]byte(userRenderSettings), &renderSettings); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON input: %w", err)
-	}
-
-	return renderSettings, nil
-}
-
-func (c *cli) customizeEditorHint() {
-	c.renderer.Infof("%s Once you close the editor, the shown settings will be saved. To cancel, press CTRL+C.", ansi.Faint("Hint:"))
 }
 
 func ensureNewUniversalLoginExperienceIsActive(ctx context.Context, api *auth0.API) error {
@@ -1085,59 +845,4 @@ func saveUniversalLoginBrandingData(ctx context.Context, api *auth0.API, data *u
 	}
 
 	return group.Wait()
-}
-
-func switchUniversalLoginRendererModeCmd(cli *cli) *cobra.Command {
-	var (
-		selectedRenderingMode string
-		input                 promptScreen
-	)
-
-	cmd := &cobra.Command{
-		Use:   "switch",
-		Args:  cobra.NoArgs,
-		Short: "Switch the rendering mode for Universal Login",
-		Long:  "Switch the rendering mode for Universal Login. Note that this requires a custom domain to be configured for the tenant.",
-		Example: `  auth0 universal-login switch
-  auth0 universal-login switch --prompt login-id --screen login-id --rendering-mode standard
-  auth0 ul switch --prompt login-id --screen login-id --rendering-mode advanced
-  auth0 ul switch -p login-id -s login-id -r standard`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			err := fetchPromptScreenInfo(cmd, cli, &input, "switch")
-			if err != nil {
-				return err
-			}
-
-			if selectedRenderingMode == "" {
-				cli.renderer.Infof("Please select a select a rendering mode to switch:\n")
-				if err = renderingMode.Select(cmd, &selectedRenderingMode, []string{advancedMode, standardMode}, nil); err != nil {
-					return err
-				}
-			}
-
-			if err = ansi.Waiting(func() error {
-				rendererMode := management.RenderingMode(selectedRenderingMode)
-				return cli.api.Prompt.UpdateRendering(cmd.Context(), management.PromptType(input.promptName), management.ScreenName(input.screenName), &management.PromptRendering{RenderingMode: &rendererMode})
-			}); err != nil {
-				return fmt.Errorf("failed to switch the rendering mode for the prompt - %s, screen - %s : %w", ansi.Green(input.promptName), ansi.Green(input.screenName), err)
-			}
-
-			cli.renderer.Infof(
-				"Successfully switched the rendering mode to %s for Prompt: %s and Screen: %s\n",
-				ansi.Green(selectedRenderingMode),
-				ansi.Green(input.promptName),
-				ansi.Green(input.screenName),
-			)
-
-			cli.renderer.Infof("Use `auth0 universal-login customize` to customize the Universal Login Experience\n")
-
-			return nil
-		},
-	}
-
-	promptName.RegisterString(cmd, &input.promptName, "")
-	screenName.RegisterString(cmd, &input.screenName, "")
-	renderingMode.RegisterString(cmd, &selectedRenderingMode, "")
-
-	return cmd
 }
