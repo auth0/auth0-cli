@@ -1,6 +1,7 @@
 package display
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -13,13 +14,14 @@ import (
 )
 
 type apiView struct {
-	ID               string
-	Name             string
-	Identifier       string
-	Scopes           string
-	TokenLifetime    int
-	OfflineAccess    string
-	SigningAlgorithm string
+	ID                  string
+	Name                string
+	Identifier          string
+	Scopes              string
+	TokenLifetime       int
+	OfflineAccess       string
+	SigningAlgorithm    string
+	SubjectTypeAuthJSON string
 
 	raw interface{}
 }
@@ -33,7 +35,7 @@ func (v *apiView) AsTableRow() []string {
 }
 
 func (v *apiView) KeyValues() [][]string {
-	return [][]string{
+	kvs := [][]string{
 		{"ID", ansi.Faint(v.ID)},
 		{"NAME", v.Name},
 		{"IDENTIFIER", v.Identifier},
@@ -42,6 +44,12 @@ func (v *apiView) KeyValues() [][]string {
 		{"ALLOW OFFLINE ACCESS", v.OfflineAccess},
 		{"SIGNING ALGORITHM", v.SigningAlgorithm},
 	}
+
+	if len(v.SubjectTypeAuthJSON) > 0 {
+		kvs = append(kvs, []string{"SUBJECT TYPE AUTHORIZATION", v.SubjectTypeAuthJSON})
+	}
+
+	return kvs
 }
 
 func (v *apiView) Object() interface{} {
@@ -112,15 +120,25 @@ func (r *Renderer) APIUpdate(api *management.ResourceServer) {
 
 func makeAPIView(api *management.ResourceServer) (*apiView, bool) {
 	scopes, scopesTruncated := getScopes(api.GetScopes())
+
+	// Format subject type authorization as JSON if present.
+	var subjectTypeAuthJSON string
+	if api.SubjectTypeAuthorization != nil {
+		if jsonBytes, err := json.Marshal(api.SubjectTypeAuthorization); err == nil {
+			subjectTypeAuthJSON = string(jsonBytes)
+		}
+	}
+
 	view := &apiView{
-		ID:               ansi.Faint(api.GetID()),
-		Name:             api.GetName(),
-		Identifier:       api.GetIdentifier(),
-		Scopes:           scopes,
-		TokenLifetime:    api.GetTokenLifetime(),
-		OfflineAccess:    boolean(api.GetAllowOfflineAccess()),
-		SigningAlgorithm: api.GetSigningAlgorithm(),
-		raw:              api,
+		ID:                  ansi.Faint(api.GetID()),
+		Name:                api.GetName(),
+		Identifier:          api.GetIdentifier(),
+		Scopes:              scopes,
+		TokenLifetime:       api.GetTokenLifetime(),
+		OfflineAccess:       boolean(api.GetAllowOfflineAccess()),
+		SigningAlgorithm:    api.GetSigningAlgorithm(),
+		SubjectTypeAuthJSON: subjectTypeAuthJSON,
+		raw:                 api,
 	}
 	return view, scopesTruncated
 }
