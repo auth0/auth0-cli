@@ -37,12 +37,12 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - NAME                  integration-test-api-def2
-        - IDENTIFIER            http://integration-test-api-def2
-        - SCOPES                read:todos write:todos
-        - TOKEN LIFETIME        86400
-        - ALLOW OFFLINE ACCESS  ✗
-        - SIGNING ALGORITHM     RS256
+        - NAME                        integration-test-api-def2
+        - IDENTIFIER                  http://integration-test-api-def2
+        - SCOPES                      read:todos write:todos
+        - TOKEN LIFETIME              86400
+        - ALLOW OFFLINE ACCESS        ✗
+        - SIGNING ALGORITHM           RS256
         - SUBJECT TYPE AUTHORIZATION  {"user":{"policy":"allow_all"},"client":{"policy":"require_client_grant"}}
 
   # Test 'apis create' --token-lifetime flag
@@ -58,12 +58,12 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - NAME                  integration-test-api-toklif2
-        - IDENTIFIER            http://integration-test-api-toklif2
-        - SCOPES                read:todos
-        - TOKEN LIFETIME        1000
-        - ALLOW OFFLINE ACCESS  ✗
-        - SIGNING ALGORITHM     RS256
+        - NAME                        integration-test-api-toklif2
+        - IDENTIFIER                  http://integration-test-api-toklif2
+        - SCOPES                      read:todos
+        - TOKEN LIFETIME              1000
+        - ALLOW OFFLINE ACCESS        ✗
+        - SIGNING ALGORITHM           RS256
         - SUBJECT TYPE AUTHORIZATION  {"user":{"policy":"allow_all"},"client":{"policy":"require_client_grant"}}
 
   # Test 'apis create' --offline-access flag
