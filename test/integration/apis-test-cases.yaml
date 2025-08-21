@@ -43,6 +43,7 @@ tests:
         - TOKEN LIFETIME        86400
         - ALLOW OFFLINE ACCESS  ✗
         - SIGNING ALGORITHM     RS256
+        - SUBJECT TYPE AUTHORIZATION
 
   # Test 'apis create' --token-lifetime flag
   005 - apis create token lifetime 1000 and check data:
@@ -101,6 +102,7 @@ tests:
         - SCOPES                read:todos
         - TOKEN LIFETIME        86400
         - ALLOW OFFLINE ACCESS  ✗
+        - SUBJECT TYPE AUTHORIZATION  {"user":{"policy":"allow_all"},"client":{"policy":"require_client_grant"}}
     exit-code: 0
 
   012 - apis scopes list:
