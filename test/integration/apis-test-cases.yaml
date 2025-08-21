@@ -3,7 +3,6 @@ config:
   retries: 1
 
 tests:
-
   001 - list apis:
     command: auth0 apis list
     exit-code: 0
@@ -22,16 +21,16 @@ tests:
         - Number flag invalid, please pass a number between 1 and 1000
 
   003 - apis create and check data:
-      command: auth0 apis create --name integration-test-api-def1 --identifier http://integration-test-api-def1 --scopes read:todos,write:todos --signing-alg RS256 --json
-      exit-code: 0
-      stdout:
-        json:
-          name: integration-test-api-def1
-          identifier: http://integration-test-api-def1
-          scopes: "[map[value:read:todos] map[value:write:todos]]"
-          token_lifetime: "86400"
-          allow_offline_access: "false"
-          signing_alg: "RS256"
+    command: auth0 apis create --name integration-test-api-def1 --identifier http://integration-test-api-def1 --scopes read:todos,write:todos --signing-alg RS256 --json
+    exit-code: 0
+    stdout:
+      json:
+        name: integration-test-api-def1
+        identifier: http://integration-test-api-def1
+        scopes: "[map[value:read:todos] map[value:write:todos]]"
+        token_lifetime: "86400"
+        allow_offline_access: "false"
+        signing_alg: "RS256"
 
   004 - apis create and check output:
     command: auth0 apis create --name integration-test-api-def2 --identifier http://integration-test-api-def2 --scopes read:todos,write:todos --signing-alg RS256
@@ -158,30 +157,36 @@ tests:
       json:
         name: integration-test-api-subjauth1
         identifier: http://integration-test-api-subjauth1
-        subject_type_authorization: '{"user":{"policy":"allow_all"},"client":{"policy":"deny_all"}}'
+        subject_type_authorization: "map[client:map[policy:deny_all] user:map[policy:allow_all]]"
 
   020 - apis create with invalid subject type authorization should fail:
     command: auth0 apis create --name integration-test-api-subjauth-fail --identifier http://integration-test-api-subjauth-fail --scopes read:todos --subject-type-authorization '{"user":{"policy":"invalid_policy"}}' --json
     exit-code: 1
     stderr:
       contains:
-        - "invalid user policy: invalid_policy"
+        - "invalid_policy"
 
   021 - apis update with subject type authorization:
     command: auth0 apis update $(./test/integration/scripts/get-api-id.sh) --subject-type-authorization '{"user":{"policy":"require_client_grant"},"client":{"policy":"deny_all"}}' --json
     stdout:
       json:
-        subject_type_authorization: '{"user":{"policy":"require_client_grant"},"client":{"policy":"deny_all"}}'
+        subject_type_authorization: "map[client:map[policy:deny_all] user:map[policy:require_client_grant]]"
     exit-code: 0
 
   022 - apis show displays subject type authorization:
     command: auth0 apis show $(./test/integration/scripts/get-api-id.sh) --json
     stdout:
       json:
-        subject_type_authorization: '{"user":{"policy":"require_client_grant"},"client":{"policy":"deny_all"}}'
+        subject_type_authorization: "map[client:map[policy:deny_all] user:map[policy:require_client_grant]]"
+    exit-code: 0
+  023 - apis show displays subject type authorization with json-compact:
+    command: auth0 apis show $(./test/integration/scripts/get-api-id.sh) --json-compact
+    stdout:
+      json:
+        subject_type_authorization: "map[client:map[policy:deny_all] user:map[policy:require_client_grant]]"
     exit-code: 0
 
-  023 - it successfully prints out a URL to open:
+  024 - it successfully prints out a URL to open:
     command: auth0 apis open $(./test/integration/scripts/get-api-id.sh) --no-input
     exit-code: 0
     stderr:
