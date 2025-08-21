@@ -43,7 +43,7 @@ tests:
         - TOKEN LIFETIME        86400
         - ALLOW OFFLINE ACCESS  ✗
         - SIGNING ALGORITHM     RS256
-        - SUBJECT TYPE AUTHORIZATION
+        - SUBJECT TYPE AUTHORIZATION  {"user":{"policy":"allow_all"},"client":{"policy":"require_client_grant"}}
 
   # Test 'apis create' --token-lifetime flag
   005 - apis create token lifetime 1000 and check data:
@@ -58,7 +58,13 @@ tests:
     exit-code: 0
     stdout:
       contains:
+        - NAME                  integration-test-api-toklif2
+        - IDENTIFIER            http://integration-test-api-toklif2
+        - SCOPES                read:todos
         - TOKEN LIFETIME        1000
+        - ALLOW OFFLINE ACCESS  ✗
+        - SIGNING ALGORITHM     RS256
+        - SUBJECT TYPE AUTHORIZATION  {"user":{"policy":"allow_all"},"client":{"policy":"require_client_grant"}}
 
   # Test 'apis create' --offline-access flag
   007 - apis create offline access true and check data:
@@ -73,7 +79,13 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - ALLOW OFFLINE ACCESS  ✓
+        - NAME                        integration-test-api-offacc2
+        - IDENTIFIER                  http://integration-test-api-offacc2
+        - SCOPES                      read:todos
+        - TOKEN LIFETIME              86400
+        - ALLOW OFFLINE ACCESS        ✓
+        - SIGNING ALGORITHM           RS256
+        - SUBJECT TYPE AUTHORIZATION  {"user":{"policy":"allow_all"},"client":{"policy":"require_client_grant"}}
 
   009 - apis create offline access false and check data:
     command: auth0 apis create --name integration-test-api-offacc3 --identifier http://integration-test-api-offacc3 --scopes read:todos --offline-access=false --json
@@ -97,11 +109,12 @@ tests:
     command: auth0 apis show $(./test/integration/scripts/get-api-id.sh) # depends on "apis create test app" test
     stdout:
       contains:
-        - NAME                  integration-test-api-newapi
-        - IDENTIFIER            http://integration-test-api-newapi
-        - SCOPES                read:todos
-        - TOKEN LIFETIME        86400
-        - ALLOW OFFLINE ACCESS  ✗
+        - NAME                        integration-test-api-newapi
+        - IDENTIFIER                  http://integration-test-api-newapi
+        - SCOPES                      read:todos
+        - TOKEN LIFETIME              86400
+        - ALLOW OFFLINE ACCESS        ✗
+        - SIGNING ALGORITHM           RS256
         - SUBJECT TYPE AUTHORIZATION  {"user":{"policy":"allow_all"},"client":{"policy":"require_client_grant"}}
     exit-code: 0
 
