@@ -45,20 +45,6 @@ var (
 	ErrNoChangesDetected = fmt.Errorf("no changes detected")
 )
 
-var (
-	renderingMode = Flag{
-		Name:      "Rendering Mode",
-		LongForm:  "rendering-mode",
-		ShortForm: "r",
-		Help: fmt.Sprintf(
-			"%s\n%s\n",
-			"standardMode is recommended for customizating consistent, branded experience for users.",
-			"Alternatively, advancedMode is recommended for full customization/granular control of the login experience and to integrate own component design system",
-		),
-		IsRequired: true,
-	}
-)
-
 var allowedPromptsWithPartials = []management.PromptType{
 	management.PromptSignup,
 	management.PromptSignupID,
@@ -195,7 +181,6 @@ func (m *webSocketMessage) UnmarshalJSON(b []byte) error {
 }
 
 func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "customize",
 		Args:  cobra.NoArgs,

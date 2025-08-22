@@ -4,14 +4,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/pkg/browser"
 	"os"
 	"reflect"
+	"strconv"
 
-	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/utils"
+	"github.com/pkg/browser"
+
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/prompt"
+	"github.com/auth0/auth0-cli/internal/utils"
 )
 
 var (
@@ -19,10 +23,9 @@ var (
 		Name:       "Screen Name",
 		LongForm:   "screen",
 		ShortForm:  "s",
-		Help:       "Name of the screen to to switch or customize.",
+		Help:       "Name of the screen to customize.",
 		IsRequired: true,
 	}
-
 	file = Flag{
 		Name:       "File",
 		LongForm:   "settings-file",
@@ -30,13 +33,67 @@ var (
 		Help:       "File to save the rendering configs to.",
 		IsRequired: false,
 	}
-
 	rendererScript = Flag{
 		Name:       "Script",
 		LongForm:   "script",
 		ShortForm:  "s",
 		Help:       "Script contents for the rendering configs.",
 		IsRequired: true,
+	}
+	fieldsFlag = Flag{
+		Name:       "Fields",
+		LongForm:   "fields",
+		Help:       "Comma-separated list of fields to include or exclude in the result (based on value provided for include_fields) ",
+		IsRequired: false,
+	}
+	includeFieldsFlag = Flag{
+		Name:       "Include Fields",
+		LongForm:   "include-fields",
+		Help:       "Whether specified fields are to be included (default: true) or excluded (false).",
+		IsRequired: false,
+	}
+	includeTotalsFlag = Flag{
+		Name:       "Include Totals",
+		LongForm:   "include-totals",
+		Help:       "Return results inside an object that contains the total result count (true) or as a direct array of results (false).",
+		IsRequired: false,
+	}
+	pageFlag = Flag{
+		Name:       "Page",
+		LongForm:   "page",
+		Help:       "Page index of the results to return. First page is 0.",
+		IsRequired: false,
+	}
+	perPageFlag = Flag{
+		Name:       "Per Page",
+		LongForm:   "per-page",
+		Help:       "Number of results per page. Default value is 50, maximum value is 100.",
+		IsRequired: false,
+	}
+	promptFlag = Flag{
+		Name:       "Prompt",
+		LongForm:   "prompt",
+		Help:       "Filter by the Universal Login prompt.",
+		IsRequired: false,
+	}
+	screenFlag = Flag{
+		Name:       "Screen",
+		LongForm:   "screen",
+		Help:       "Filter by the Universal Login screen.",
+		IsRequired: false,
+	}
+	renderingModeFlag = Flag{
+		Name:       "Rendering Mode",
+		LongForm:   "rendering-mode",
+		Help:       "Filter by the rendering mode (advanced or standard).",
+		IsRequired: false,
+	}
+	queryFlag = Flag{
+		Name:       "Query",
+		LongForm:   "query",
+		ShortForm:  "q",
+		Help:       "Advanced query.",
+		IsRequired: false,
 	}
 
 	ScreenPromptMap = map[string]string{
@@ -116,7 +173,6 @@ var (
 )
 
 func aculCmd(cli *cli) *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "acul",
 		Short: "Advance Customize the Universal Login experience",
@@ -149,6 +205,7 @@ func aculConfigureCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(aculConfigGenerateCmd(cli))
 	cmd.AddCommand(aculConfigGet(cli))
 	cmd.AddCommand(aculConfigSet(cli))
+	cmd.AddCommand(aculConfigListCmd(cli))
 	cmd.AddCommand(aculConfigDocsCmd(cli))
 
 	return cmd
@@ -159,15 +216,21 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "generate",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Generate a default rendering config for a screen",
 		Long:  "Generate a default rendering config for a specific screen and save it to a file.",
+		Example: `  auth0 acul config generate signup-id
+  auth0 acul config generate login-id --file login-settings.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if input.screenName == "" {
-				cli.renderer.Infof("Please select a screen")
-				if err := screenName.Select(cmd, &input.screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
+			if len(args) == 0 {
+				cli.renderer.Infof("Please select a screen ")
+				if err := screenName.Select(cmd, &screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
 					return handleInputError(err)
 				}
+			} else {
+				input.screenName = args[0]
 			}
+
 			if input.filePath == "" {
 				input.filePath = fmt.Sprintf("%s.json", input.screenName)
 			}
@@ -190,12 +253,14 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to write config file: %w", err)
 			}
 
-			cli.renderer.Infof("\nGeneration Message\n\nConfiguration successfully generated!\nYour new config file is located at ./%s\nReview the documentation for configuring screens to use ACUL\nhttps://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens\nGenerated configuration\n", input.filePath)
+			cli.renderer.Infof("Configuration successfully generated!\n"+
+				"      Your new config file is located at ./%s\n"+
+				"      Review the documentation for configuring screens to use ACUL\n"+
+				"      https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens\n", ansi.Green(input.filePath))
 			return nil
 		},
 	}
 
-	screenName.RegisterString(cmd, &input.screenName, "")
 	file.RegisterString(cmd, &input.filePath, "")
 
 	return cmd
@@ -212,7 +277,6 @@ func aculConfigGet(cli *cli) *cobra.Command {
 		Example: `  auth0 acul config get signup-id
   auth0 acul config get login-id`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			if len(args) == 0 {
 				cli.renderer.Infof("Please select a screen ")
 				if err := screenName.Select(cmd, &input.screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
@@ -228,7 +292,20 @@ func aculConfigGet(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to fetch the existing render settings: %w", err)
 			}
 
-			if input.filePath == "" {
+			if input.filePath != "" {
+				if isFileExists(cli, cmd, input.filePath, input.screenName) {
+					return nil
+				}
+			} else {
+				cli.renderer.Warnf("No configuration file exists for %s on %s", ansi.Green(input.screenName), ansi.Blue(input.filePath))
+
+				if !cli.force && canPrompt(cmd) {
+					message := "Would you like to generate a local config file instead? (Y/n)"
+					if confirmed := prompt.Confirm(message); !confirmed {
+						return nil
+					}
+				}
+
 				input.filePath = fmt.Sprintf("%s.json", input.screenName)
 			}
 
@@ -243,7 +320,6 @@ func aculConfigGet(cli *cli) *cobra.Command {
 
 			cli.renderer.Infof("Configuration succcessfully downloaded and saved to %s", ansi.Green(input.filePath))
 			return nil
-
 		},
 	}
 
@@ -251,6 +327,24 @@ func aculConfigGet(cli *cli) *cobra.Command {
 	file.RegisterString(cmd, &input.filePath, "")
 
 	return cmd
+}
+
+func isFileExists(cli *cli, cmd *cobra.Command, filePath, screen string) bool {
+	_, err := os.Stat(filePath)
+	if os.IsNotExist(err) {
+		return false
+	}
+
+	cli.renderer.Warnf("A configuration file for %s already exists at %s", ansi.Green(screen), ansi.Blue(filePath))
+
+	if !cli.force && canPrompt(cmd) {
+		message := fmt.Sprintf("Overwrite this file with the data from %s? (y/N): ", ansi.Blue(cli.tenant))
+		if confirmed := prompt.Confirm(message); !confirmed {
+			return true
+		}
+	}
+
+	return false
 }
 
 func aculConfigSet(cli *cli) *cobra.Command {
@@ -377,11 +471,98 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input customizationInputs
 	return renderSettings, nil
 }
 
+func aculConfigListCmd(cli *cli) *cobra.Command {
+	var (
+		fields        string
+		includeFields bool
+		includeTotals bool
+		page          int
+		perPage       int
+		promptName    string
+		screen        string
+		renderingMode string
+		query         string
+	)
+
+	cmd := &cobra.Command{
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "List Universal Login rendering configurations",
+		Long:    "List Universal Login rendering configurations with optional filters and pagination.",
+		Example: `  auth0 acul config list --prompt login-id --screen login --rendering-mode advanced --include-fields true --fields head_tags,context_configuration`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			params := []management.RequestOption{
+				management.Parameter("page", strconv.Itoa(page)),
+				management.Parameter("per_page", strconv.Itoa(perPage)),
+			}
+
+			if query != "" {
+				params = append(params, management.Parameter("q", query))
+			}
+
+			if includeFields {
+				if fields != "" {
+					params = append(params, management.IncludeFields(fields))
+				}
+			} else {
+				if fields != "" {
+					params = append(params, management.ExcludeFields(fields))
+				}
+			}
+
+			if screen != "" {
+				params = append(params, management.Parameter("screen", screen))
+			}
+
+			if promptName != "" {
+				params = append(params, management.Parameter("prompt", promptName))
+			}
+
+			if renderingMode != "" {
+				params = append(params, management.Parameter("rendering_mode", renderingMode))
+			}
+
+			var results *management.PromptRenderingList
+
+			if err := ansi.Waiting(func() (err error) {
+				results, err = cli.api.Prompt.ListRendering(cmd.Context(), params...)
+				return err
+			}); err != nil {
+				return err
+			}
+
+			fmt.Printf("Results : %v\n", results)
+
+			cli.renderer.ACULConfigList(results)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
+
+	fieldsFlag.RegisterString(cmd, &fields, "")
+	includeFieldsFlag.RegisterBool(cmd, &includeFields, true)
+	includeTotalsFlag.RegisterBool(cmd, &includeTotals, false)
+	pageFlag.RegisterInt(cmd, &page, 0)
+	perPageFlag.RegisterInt(cmd, &perPage, 50)
+	promptFlag.RegisterString(cmd, &promptName, "")
+	screenFlag.RegisterString(cmd, &screen, "")
+	renderingModeFlag.RegisterString(cmd, &renderingMode, "")
+	queryFlag.RegisterString(cmd, &query, "")
+
+	return cmd
+}
+
 func aculConfigDocsCmd(cli *cli) *cobra.Command {
 	return &cobra.Command{
-		Use:   "docs",
-		Short: "Open the ACUL configuration documentation",
-		Long:  "Open the documentation for configuring Advanced Customizations for Universal Login screens.",
+		Use:     "docs",
+		Short:   "Open the ACUL configuration documentation",
+		Long:    "Open the documentation for configuring Advanced Customizations for Universal Login screens.",
+		Example: `  auth0 acul config docs`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			url := "https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens"
 			cli.renderer.Infof("Opening documentation: %s", url)
