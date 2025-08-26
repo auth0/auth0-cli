@@ -24,12 +24,13 @@ const (
 	emailTemplateMFAEnrollment      = "mfa-enrollment"
 	emailTemplateMFACode            = "mfa-code"
 	emailTemplateUserInvitation     = "user-invitation"
+	emailTemplateAsyncApproval      = "async-approval"
 )
 
 var (
 	emailTemplateTemplate = Argument{
 		Name: "Template",
-		Help: fmt.Sprintf("Template name. Can be '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' or '%s'",
+		Help: fmt.Sprintf("Template name. Can be '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' or '%s'",
 			emailTemplateVerifyLink,
 			emailTemplateVerifyCode,
 			emailTemplateChangePassword,
@@ -39,7 +40,8 @@ var (
 			emailTemplatePasswordBreach,
 			emailTemplateMFAEnrollment,
 			emailTemplateMFACode,
-			emailTemplateUserInvitation),
+			emailTemplateUserInvitation,
+			emailTemplateAsyncApproval),
 	}
 
 	emailTemplateBody = Flag{
@@ -99,6 +101,7 @@ var (
 		{"Enroll in Multifactor Authentication", emailTemplateMFAEnrollment},
 		{"Verification Code for Email MFA", emailTemplateMFACode},
 		{"User Invitation", emailTemplateUserInvitation},
+		{"Async Approval", emailTemplateAsyncApproval},
 	}
 )
 
@@ -325,6 +328,8 @@ func apiEmailTemplateFor(v string) string {
 		return "mfa_oob_code"
 	case emailTemplateUserInvitation:
 		return "user_invitation"
+	case emailTemplateAsyncApproval:
+		return "async_approval"
 	default:
 		return v
 	}
