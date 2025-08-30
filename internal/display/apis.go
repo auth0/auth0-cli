@@ -1,7 +1,6 @@
 package display
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -121,11 +120,10 @@ func (r *Renderer) APIUpdate(api *management.ResourceServer) {
 func makeAPIView(api *management.ResourceServer) (*apiView, bool) {
 	scopes, scopesTruncated := getScopes(api.GetScopes())
 
-	// Format subject type authorization as JSON if present.
 	var subjectTypeAuthJSON string
 	if api.SubjectTypeAuthorization != nil {
-		if jsonBytes, err := json.Marshal(api.SubjectTypeAuthorization); err == nil {
-			subjectTypeAuthJSON = string(jsonBytes)
+		if subjectTypeAuthString, err := toJSONString(api.SubjectTypeAuthorization); err == nil {
+			subjectTypeAuthJSON = subjectTypeAuthString
 		}
 	}
 

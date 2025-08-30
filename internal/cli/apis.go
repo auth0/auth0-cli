@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
-	"strings"
 
 	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
@@ -18,13 +17,6 @@ import (
 )
 
 const apiDefaultTokenLifetime = 86400
-
-// Subject Type Authorization Policy Constants.
-const (
-	subjectTypePolicyAllowAll           = "allow_all"
-	subjectTypePolicyDenyAll            = "deny_all"
-	subjectTypePolicyRequireClientGrant = "require_client_grant"
-)
 
 var (
 	apiID = Argument{
@@ -303,12 +295,12 @@ func createAPICmd(cli *cli) *cobra.Command {
 				api.TokenLifetime = auth0.Int(inputs.TokenLifetime)
 			}
 
-			if len(inputs.SubjectTypeAuthorization) > 0 {
-				subjectTypeAuth, err := parseSubjectTypeAuthorization(inputs.SubjectTypeAuthorization)
-				if err != nil {
-					return err
+			if inputs.SubjectTypeAuthorization != "{}" {
+				var subjectTypeAuth management.ResourceServerSubjectTypeAuthorization
+				if err := json.Unmarshal([]byte(inputs.SubjectTypeAuthorization), &subjectTypeAuth); err != nil {
+					return fmt.Errorf("invalid JSON for subject-type-authorization: %w", err)
 				}
-				api.SubjectTypeAuthorization = subjectTypeAuth
+				api.SubjectTypeAuthorization = &subjectTypeAuth
 			}
 
 			if err := ansi.Waiting(func() error {
@@ -336,7 +328,7 @@ func createAPICmd(cli *cli) *cobra.Command {
 	apiOfflineAccess.RegisterBool(cmd, &inputs.AllowOfflineAccess, false)
 	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 0)
 	apiSigningAlgorithm.RegisterString(cmd, &inputs.SigningAlgorithm, "RS256")
-	apiSubjectTypeAuthorization.RegisterString(cmd, &inputs.SubjectTypeAuthorization, "")
+	apiSubjectTypeAuthorization.RegisterString(cmd, &inputs.SubjectTypeAuthorization, "{}")
 
 	return cmd
 }
@@ -448,12 +440,12 @@ func updateAPICmd(cli *cli) *cobra.Command {
 			}
 
 			api.SubjectTypeAuthorization = current.SubjectTypeAuthorization
-			if inputs.SubjectTypeAuthorization != "" {
-				subjectTypeAuth, err := parseSubjectTypeAuthorization(inputs.SubjectTypeAuthorization)
-				if err != nil {
-					return err
+			if inputs.SubjectTypeAuthorization != "{}" {
+				var subjectTypeAuth management.ResourceServerSubjectTypeAuthorization
+				if err := json.Unmarshal([]byte(inputs.SubjectTypeAuthorization), &subjectTypeAuth); err != nil {
+					return fmt.Errorf("invalid JSON for subject-type-authorization: %w", err)
 				}
-				api.SubjectTypeAuthorization = subjectTypeAuth
+				api.SubjectTypeAuthorization = &subjectTypeAuth
 			}
 
 			if err := ansi.Waiting(func() error {
@@ -475,7 +467,7 @@ func updateAPICmd(cli *cli) *cobra.Command {
 	apiOfflineAccess.RegisterBoolU(cmd, &inputs.AllowOfflineAccess, false)
 	apiTokenLifetime.RegisterIntU(cmd, &inputs.TokenLifetime, 0)
 	apiSigningAlgorithm.RegisterStringU(cmd, &inputs.SigningAlgorithm, "RS256")
-	apiSubjectTypeAuthorization.RegisterStringU(cmd, &inputs.SubjectTypeAuthorization, "")
+	apiSubjectTypeAuthorization.RegisterStringU(cmd, &inputs.SubjectTypeAuthorization, "{}")
 
 	return cmd
 }
@@ -677,51 +669,4 @@ func (c *cli) filteredAPIPickerOptions(ctx context.Context, include func(r *mana
 	}
 
 	return opts, nil
-}
-
-func parseSubjectTypeAuthorization(jsonStr string) (*management.ResourceServerSubjectTypeAuthorization, error) {
-	if jsonStr == "" {
-		return nil, nil
-	}
-
-	var result management.ResourceServerSubjectTypeAuthorization
-	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
-		return nil, fmt.Errorf("invalid JSON for subject type authorization: %w", err)
-	}
-
-	// Define valid policies for each flow type.
-	validUserPolicies := []string{subjectTypePolicyAllowAll, subjectTypePolicyDenyAll, subjectTypePolicyRequireClientGrant}
-	validClientPolicies := []string{subjectTypePolicyDenyAll, subjectTypePolicyRequireClientGrant}
-
-	// Validate user policy.
-	if result.User != nil && result.User.Policy != nil {
-		userPolicy := *result.User.Policy
-		isValid := false
-		for _, valid := range validUserPolicies {
-			if userPolicy == valid {
-				isValid = true
-				break
-			}
-		}
-		if !isValid {
-			return nil, fmt.Errorf("invalid user policy: %s. Valid options: %s", userPolicy, strings.Join(validUserPolicies, ", "))
-		}
-	}
-
-	// Validate client policy.
-	if result.Client != nil && result.Client.Policy != nil {
-		clientPolicy := *result.Client.Policy
-		isValid := false
-		for _, valid := range validClientPolicies {
-			if clientPolicy == valid {
-				isValid = true
-				break
-			}
-		}
-		if !isValid {
-			return nil, fmt.Errorf("invalid client policy: %s. Valid options: %s", clientPolicy, strings.Join(validClientPolicies, ", "))
-		}
-	}
-
-	return &result, nil
 }
