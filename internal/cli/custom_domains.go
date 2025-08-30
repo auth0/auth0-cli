@@ -119,7 +119,7 @@ func listCustomDomainsCmd(cli *cli) *cobra.Command {
 			var list []*management.CustomDomain
 
 			if err := ansi.Waiting(func() (err error) {
-				list, err = cli.ListAllCustomDomains(cmd.Context())
+				list, err = cli.api.CustomDomain.List(cmd.Context())
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to list custom domains: %w", err)
@@ -504,7 +504,7 @@ func apiTLSPolicyFor(v string) *string {
 func (c *cli) customDomainsPickerOptions(ctx context.Context) (pickerOptions, error) {
 	var opts pickerOptions
 
-	domains, err := c.ListAllCustomDomains(ctx)
+	domains, err := c.api.CustomDomain.List(ctx)
 	if err != nil {
 		var errStatus management.Error
 		errors.As(err, &errStatus)
@@ -528,35 +528,4 @@ func (c *cli) customDomainsPickerOptions(ctx context.Context) (pickerOptions, er
 	}
 
 	return opts, nil
-}
-
-func (c *cli) ListAllCustomDomains(ctx context.Context) ([]*management.CustomDomain, error) {
-	var (
-		from       string
-		allDomains []*management.CustomDomain
-		options    = []management.RequestOption{
-			management.Take(100),
-		}
-	)
-
-	for {
-		if from != "" {
-			options = append(options, management.From(from))
-		}
-
-		list, err := c.api.CustomDomain.ListWithPagination(ctx, options...)
-		if err != nil {
-			return nil, err
-		}
-
-		allDomains = append(allDomains, list.CustomDomains...)
-
-		if !list.HasNext() {
-			break
-		}
-
-		from = list.Next
-	}
-
-	return allDomains, nil
 }
