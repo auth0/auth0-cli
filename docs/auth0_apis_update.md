@@ -40,7 +40,7 @@ auth0 apis update [flags]
   -o, --offline-access                      Whether Refresh Tokens can be issued for this API (true) or not (false).
   -s, --scopes strings                      Comma-separated list of scopes (permissions).
       --signing-alg string                  Algorithm used to sign JWTs. Can be HS256 or RS256. PS256 available via addon. (default "RS256")
-      --subject-type-authorization string   JSON object defining access policies for user and client flows. Example: '{"user":{"policy":"require_client_grant"},"client":{"policy":"deny_all"}}'
+      --subject-type-authorization string   JSON object defining access policies for user and client flows. Example: '{"user":{"policy":"require_client_grant"},"client":{"policy":"deny_all"}}' (default "{}")
   -l, --token-lifetime int                  The amount of time in seconds that the token will be valid after being issued. Default value is 86400 seconds (1 day).
 ```
 
