@@ -40,3 +40,6 @@ out/
 
 # Terraform export command artifacts
 *.tf
+
+# Copilot instructions
+.github/copilot-instructions.md
