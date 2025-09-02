@@ -48,6 +48,47 @@ func TestAPIsPickerOptions(t *testing.T) {
 			},
 		},
 		{
+			name: "APIs with subject type authorization",
+			apis: []*management.ResourceServer{
+				{
+					ID:         auth0.String("api-id-1"),
+					Identifier: auth0.String("https://api.example.com"),
+					Name:       auth0.String("Example API"),
+					SubjectTypeAuthorization: &management.ResourceServerSubjectTypeAuthorization{
+						User: &management.ResourceServerSubjectTypeAuthorizationUser{
+							Policy: auth0.String("allow_all"),
+						},
+						Client: &management.ResourceServerSubjectTypeAuthorizationClient{
+							Policy: auth0.String("deny_all"),
+						},
+					},
+				},
+				{
+					ID:         auth0.String("api-id-2"),
+					Identifier: auth0.String("https://secure-api.example.com"),
+					Name:       auth0.String("Secure API"),
+					SubjectTypeAuthorization: &management.ResourceServerSubjectTypeAuthorization{
+						User: &management.ResourceServerSubjectTypeAuthorizationUser{
+							Policy: auth0.String("require_client_grant"),
+						},
+						Client: &management.ResourceServerSubjectTypeAuthorizationClient{
+							Policy: auth0.String("deny_all"),
+						},
+					},
+				},
+			},
+			assertOutput: func(t testing.TB, options pickerOptions) {
+				assert.Len(t, options, 2)
+				assert.Equal(t, "Example API (https://api.example.com)", options[0].label)
+				assert.Equal(t, "api-id-1", options[0].value)
+				assert.Equal(t, "Secure API (https://secure-api.example.com)", options[1].label)
+				assert.Equal(t, "api-id-2", options[1].value)
+			},
+			assertError: func(t testing.TB, err error) {
+				t.Fail()
+			},
+		},
+		{
 			name: "no apis",
 			apis: []*management.ResourceServer{},
 			assertOutput: func(t testing.TB, options pickerOptions) {
