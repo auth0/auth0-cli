@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Add support for `subject-type-authorization` flag to apis commands. [#1315]
 
+### Fixed
+- Fix log ID retrieval and adjust sleep duration in logs processing. [#1314]
+
 
 # [v.1.17.1](https://github.com/auth0/auth0-cli/tree/v1.17.1) (August 12, 2025)
 
