@@ -7,7 +7,7 @@ has_toc: false
 
 Update a network ACL.
 To update interactively, use "auth0 network-acl update" with no arguments.
-To update non-interactively, supply the required parameters (description, active, priority, and rule) through flags.
+To update non-interactively, supply the parameters you want to update through flags.
 When updating the rule, provide a complete JSON object with action, scope, and match/not_match properties.
 
 ## Usage
@@ -21,6 +21,8 @@ auth0 network-acl update [flags]
   auth0 network-acl update <id>
   auth0 network-acl update <id> --priority 5 
   auth0 network-acl update <id> --active true
+  auth0 network-acl update <id> --description "Updated description"
+  auth0 network-acl update <id> --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"]}}'
   auth0 network-acl update <id> --description "Complex Rule updated" --priority 1 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
 ```
 
