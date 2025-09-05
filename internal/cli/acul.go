@@ -180,6 +180,9 @@ func aculCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.AddCommand(aculConfigureCmd(cli))
+	cmd.AddCommand(aculInitCmd(cli))
+	cmd.AddCommand(aculInitCmd1(cli))
+	cmd.AddCommand(aculInitCmd2(cli))
 
 	return cmd
 }
