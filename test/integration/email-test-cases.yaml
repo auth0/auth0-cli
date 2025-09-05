@@ -35,7 +35,7 @@ tests:
         - PROVIDER              sendgrid
         - ENABLED               ✗
         - DEFAULT FROM ADDRESS  admin@auth0.invalid
-        - SETTINGS              
+        - SETTINGS
 
   009 - update and change email provider:
     command: auth0 email provider update --provider=mandrill --enabled=false --default-from-address='not-admin@auth0.invalid' --credentials='{"api_key":"some-api-key"}' --settings='{"message":{"view_content_link":false}}'
@@ -214,6 +214,21 @@ tests:
         syntax: "liquid"
         urlLifetimeInSeconds: "6100"
         enabled: "true"
+  119 - it successfully updates async-approval email template:
+    command: auth0 email templates update async-approval --enabled --body "<h1>Async Approval Required</h1>" --from "approval@travel0.com" --lifetime 6100 --subject "Approval Required" --url "travel0.com" --force
+    exit-code: 0
+
+  120 - it successfully shows async-approval email template:
+    command: auth0 email templates show async-approval
+    exit-code: 0
+    stdout:
+      contains:
+        - TEMPLATE             Async Approval
+        - FROM                 approval@travel0.com
+        - SUBJECT              Approval Required
+        - RESULT URL           travel0.com
+        - RESULT URL LIFETIME  6100
+        - ENABLED              ✓
   021 - it successfully updates change-password-code email template:
     command: auth0 email templates update change-password-code --enabled --body "<h1>Change password (by code)</h1>" --from "change-password-by-code@travel0.com" --lifetime 6100 --subject "Change password (using code)" --url "travel0.com" --force
     exit-code: 0

@@ -83,6 +83,8 @@ func emailTemplateFor(v string) string {
 		return "Verification Code for Email MFA"
 	case "user_invitation":
 		return "User Invitation"
+	case "async_approval":
+		return "Async Approval"
 	default:
 		return v
 	}
