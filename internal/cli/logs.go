@@ -162,7 +162,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 
 			var lastLogID string
 			if len(list) > 0 {
-				lastLogID = list[len(list)-1].GetLogID()
+				lastLogID = list[0].GetLogID()
 			}
 
 			// Create a `set` to detect duplicates clientside.
@@ -193,14 +193,14 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 						return
 					}
 
-					if len(list) > 0 {
+					if len(list) > 1 {
 						logsCh <- dedupeLogs(list, set)
-						lastLogID = list[len(list)-1].GetLogID()
+						lastLogID = list[0].GetLogID()
 					}
 
 					if len(list) < logsPerPageLimit {
 						// Not a lot is happening, sleep on it.
-						time.Sleep(time.Second)
+						time.Sleep(2 * time.Second)
 					}
 				}
 			}(lastLogID)

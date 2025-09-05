@@ -6,7 +6,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/PuerkitoBio/rehttp v1.4.0
 	github.com/atotto/clipboard v0.1.4
-	github.com/auth0/go-auth0 v1.25.0
+	github.com/auth0/go-auth0 v1.27.0
 	github.com/briandowns/spinner v1.23.2
 	github.com/charmbracelet/glamour v0.10.0
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
@@ -31,8 +31,8 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/schollz/progressbar/v3 v3.17.1
 	github.com/spf13/cobra v1.9.1
-	github.com/spf13/pflag v1.0.6
-	github.com/stretchr/testify v1.10.0
+	github.com/spf13/pflag v1.0.9
+	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/pretty v1.2.1
 	github.com/zalando/go-keyring v0.2.6
 	golang.org/x/net v0.42.0
