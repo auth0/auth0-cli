@@ -254,6 +254,11 @@ func fetchImportData(ctx context.Context, cli *cli, fetchers ...resourceDataFetc
 				continue
 			}
 
+			if strings.Contains(err.Error(), "402 Payment Required") {
+				cli.renderer.Warnf("Skipping resource due to payment required: %s", err.Error())
+				continue
+			}
+
 			return nil, err
 		}
 
