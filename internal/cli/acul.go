@@ -195,11 +195,7 @@ func aculConfigureCmd(cli *cli) *cobra.Command {
 		Short: "Configure the Universal Login experience",
 		Long:  "Configure the Universal Login experience. This requires a custom domain to be configured for the tenant.",
 		Example: `  auth0 acul config
-  auth0 acul config
   auth0 acul config --screen login-id --file settings.json`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return advanceCustomize(cmd, cli, customizationInputs{})
-		},
 	}
 
 	cmd.AddCommand(aculConfigGenerateCmd(cli))
@@ -229,6 +225,10 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
 				}
 			} else {
 				input.screenName = args[0]
+				// Add validation for screen name
+				if _, exists := ScreenPromptMap[input.screenName]; !exists {
+					return fmt.Errorf("invalid screen name: %s. Use one of the valid screen names", input.screenName)
+				}
 			}
 
 			if input.filePath == "" {
@@ -358,6 +358,15 @@ func aculConfigSet(cli *cli) *cobra.Command {
 		Example: `  auth0 acul config set signup-id --file settings.json
   auth0 acul config set login-id --file settings.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				cli.renderer.Infof("Please select a screen ")
+				if err := screenName.Select(cmd, &input.screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
+					return handleInputError(err)
+				}
+			} else {
+				input.screenName = args[0]
+			}
+
 			return advanceCustomize(cmd, cli, input)
 		},
 	}
@@ -439,6 +448,9 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input customizationInputs
 	}
 
 	existingSettings["___customization guide___"] = "https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"
+	delete(existingSettings, "prompt")
+	delete(existingSettings, "screen")
+	delete(existingSettings, "tenant")
 
 	// Marshal final JSON.
 	finalJSON, err := json.MarshalIndent(existingSettings, "", "  ")
@@ -489,37 +501,39 @@ func aculConfigListCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Short:   "List Universal Login rendering configurations",
 		Long:    "List Universal Login rendering configurations with optional filters and pagination.",
-		Example: `  auth0 acul config list --prompt login-id --screen login --rendering-mode advanced --include-fields true --fields head_tags,context_configuration`,
+		Example: `  auth0 acul config list
+  auth0 acul config list --prompt login-id 
+  auth0 acul config list --screen login --rendering-mode advanced
+  auth0 acul config list --fields head_tags,context_configuration --include-fields=true
+  auth0 acul config list --query "prompt:login AND screen:login"
+  auth0 acul config list --page 1 --per-page 25`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			params := []management.RequestOption{
 				management.Parameter("page", strconv.Itoa(page)),
 				management.Parameter("per_page", strconv.Itoa(perPage)),
 			}
 
-			if query != "" {
-				params = append(params, management.Parameter("q", query))
+			// Add optional query parameters
+			paramMap := map[string]string{
+				"q":              query,
+				"screen":         screen,
+				"prompt":         promptName,
+				"rendering_mode": renderingMode,
 			}
 
-			if includeFields {
-				if fields != "" {
-					params = append(params, management.IncludeFields(fields))
+			for key, value := range paramMap {
+				if value != "" {
+					params = append(params, management.Parameter(key, value))
 				}
-			} else {
-				if fields != "" {
+			}
+
+			// Handle fields parameter
+			if fields != "" {
+				if includeFields {
+					params = append(params, management.IncludeFields(fields))
+				} else {
 					params = append(params, management.ExcludeFields(fields))
 				}
-			}
-
-			if screen != "" {
-				params = append(params, management.Parameter("screen", screen))
-			}
-
-			if promptName != "" {
-				params = append(params, management.Parameter("prompt", promptName))
-			}
-
-			if renderingMode != "" {
-				params = append(params, management.Parameter("rendering_mode", renderingMode))
 			}
 
 			var results *management.PromptRenderingList
