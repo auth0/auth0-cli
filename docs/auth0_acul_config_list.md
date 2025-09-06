@@ -15,7 +15,12 @@ auth0 acul config list [flags]
 ## Examples
 
 ```
-  auth0 acul config list --prompt login-id --screen login --rendering-mode advanced --include-fields true --fields head_tags,context_configuration
+  auth0 acul config list
+  auth0 acul config list --prompt login-id 
+  auth0 acul config list --screen login --rendering-mode advanced
+  auth0 acul config list --fields head_tags,context_configuration --include-fields=true
+  auth0 acul config list --query "prompt:login AND screen:login"
+  auth0 acul config list --page 1 --per-page 25
 ```
 
 

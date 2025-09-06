@@ -225,7 +225,7 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
 				}
 			} else {
 				input.screenName = args[0]
-				// Add validation for screen name
+				// Add validation for screen name.
 				if _, exists := ScreenPromptMap[input.screenName]; !exists {
 					return fmt.Errorf("invalid screen name: %s. Use one of the valid screen names", input.screenName)
 				}
@@ -513,7 +513,7 @@ func aculConfigListCmd(cli *cli) *cobra.Command {
 				management.Parameter("per_page", strconv.Itoa(perPage)),
 			}
 
-			// Add optional query parameters
+			// Add optional query parameters.
 			paramMap := map[string]string{
 				"q":              query,
 				"screen":         screen,
@@ -527,7 +527,7 @@ func aculConfigListCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			// Handle fields parameter
+			// Handle fields parameter.
 			if fields != "" {
 				if includeFields {
 					params = append(params, management.IncludeFields(fields))
