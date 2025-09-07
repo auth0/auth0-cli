@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -167,6 +168,26 @@ func runScaffold2(cmd *cobra.Command, args []string) error {
 
 	fmt.Println(time.Since(curr))
 
+	config := AculConfig{
+		ChosenTemplate:      chosenTemplate,
+		Screen:              selectedScreens,                 // If needed
+		InitTimestamp:       time.Now().Format(time.RFC3339), // Standard time format
+		AculManifestVersion: manifest.Metadata.Version,
+	}
+
+	b, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		panic(err) // or handle gracefully
+	}
+
+	// Build full path to acul_config.json inside destDir
+	configPath := filepath.Join(destDir, "acul_config.json")
+
+	err = os.WriteFile(configPath, b, 0644)
+	if err != nil {
+		fmt.Printf("Failed to write config: %v\n", err)
+	}
+
 	fmt.Println("\nProject successfully created!\n" +
 		"Explore the sample app: https://github.com/auth0/acul-sample-app")
 
@@ -262,4 +283,11 @@ func createScreenMap(screens []Screen) map[string]Screen {
 	}
 
 	return screenMap
+}
+
+type AculConfig struct {
+	ChosenTemplate      string   `json:"chosen_template"`
+	Screen              []string `json:"screens"`        // if you want to track this
+	InitTimestamp       string   `json:"init_timestamp"` // ISO8601 for readability
+	AculManifestVersion string   `json:"acul_manifest_version"`
 }
