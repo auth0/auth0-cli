@@ -3,21 +3,19 @@ layout: default
 parent: auth0 acul
 has_toc: false
 ---
-# auth0 acul config
+# auth0 acul init2
 
-Configure the Universal Login experience. This requires a custom domain to be configured for the tenant.
+Generate a new project from a template.
 
 ## Usage
 ```
-auth0 acul config [flags]
+auth0 acul init2 [flags]
 ```
 
 ## Examples
 
 ```
-  auth0 acul config
-  auth0 acul config
-  auth0 acul config --screen login-id --file settings.json
+
 ```
 
 

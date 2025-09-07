@@ -2,8 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"github.com/auth0/auth0-cli/internal/utils"
-	"github.com/spf13/cobra"
 	"io"
 	"log"
 	"net/http"
@@ -11,11 +9,22 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/auth0/auth0-cli/internal/prompt"
+	"github.com/auth0/auth0-cli/internal/utils"
 )
 
+var templateFlag = Flag{
+	Name:       "Template",
+	LongForm:   "template",
+	ShortForm:  "t",
+	Help:       "Name of the template to use",
+	IsRequired: false,
+}
+
 // This logic goes inside your `RunE` function.
-func aculInitCmd2(c *cli) *cobra.Command {
+func aculInitCmd2(_ *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init2",
 		Args:  cobra.MaximumNArgs(1),
@@ -25,42 +34,34 @@ func aculInitCmd2(c *cli) *cobra.Command {
 	}
 
 	return cmd
-
 }
 
 func runScaffold2(cmd *cobra.Command, args []string) error {
-	// Step 1: fetch manifest.json
+	// Step 1: fetch manifest.json.
 	manifest, err := fetchManifest()
 	if err != nil {
 		return err
 	}
 
-	// Step 2: select template
-	var templateNames []string
-	for k := range manifest.Templates {
-		templateNames = append(templateNames, k)
+	var chosenTemplate string
+	if err := templateFlag.Select(cmd, &chosenTemplate, utils.FetchKeys(manifest.Templates), nil); err != nil {
+		return handleInputError(err)
 	}
 
-	var chosen string
-	promptText := prompt.SelectInput("", "Select a template", "Chosen template(Todo)", utils.FetchKeys(manifest.Templates), "react-js", true)
-	if err := prompt.AskOne(promptText, &chosen); err != nil {
-		fmt.Println(err)
-	}
-
-	// Step 3: select screens
+	// Step 3: select screens.
 	var screenOptions []string
-	template := manifest.Templates[chosen]
+	template := manifest.Templates[chosenTemplate]
 	for _, s := range template.Screens {
 		screenOptions = append(screenOptions, s.ID)
 	}
 
-	// Step 3: Let user select screens
+	// Step 3: Let user select screens.
 	var selectedScreens []string
 	if err := prompt.AskMultiSelect("Select screens to include:", &selectedScreens, screenOptions...); err != nil {
 		return err
 	}
 
-	// Step 3: Create project folder
+	// Step 3: Create project folder.
 	var destDir string
 	if len(args) < 1 {
 		destDir = "my_acul_proj2"
@@ -73,56 +74,66 @@ func runScaffold2(cmd *cobra.Command, args []string) error {
 
 	curr := time.Now()
 
-	// --- Step 1: Download and Unzip to Temp Dir ---
+	// --- Step 1: Download and Unzip to Temp Dir ---.
 	repoURL := "https://github.com/auth0-samples/auth0-acul-samples/archive/refs/heads/monorepo-sample.zip"
 	tempZipFile := downloadFile(repoURL)
-	defer os.Remove(tempZipFile) // Clean up the temp zip file
+	defer os.Remove(tempZipFile) // Clean up the temp zip file.
 
 	tempUnzipDir, err := os.MkdirTemp("", "unzipped-repo-*")
 	check(err, "Error creating temporary unzipped directory")
-	defer os.RemoveAll(tempUnzipDir) // Clean up the entire temp directory
+	defer os.RemoveAll(tempUnzipDir) // Clean up the entire temp directory.
 
 	err = utils.Unzip(tempZipFile, tempUnzipDir)
 	if err != nil {
 		return err
 	}
 
-	// TODO: Adjust this prefix based on the actual structure of the unzipped content(once main branch is used)
-	const sourcePathPrefix = "auth0-acul-samples-monorepo-sample/"
+	// TODO: Adjust this prefix based on the actual structure of the unzipped content(once main branch is used).
+	var sourcePathPrefix = "auth0-acul-samples-monorepo-sample/" + chosenTemplate
 
-	// --- Step 2: Copy the Specified Base Directories ---
-	for _, dir := range manifest.Templates[chosen].BaseDirectories {
-		srcPath := filepath.Join(tempUnzipDir, sourcePathPrefix, dir)
-		destPath := filepath.Join(destDir, dir)
+	// --- Step 2: Copy the Specified Base Directories ---.
+	for _, dir := range manifest.Templates[chosenTemplate].BaseDirectories {
+		// TODO: Remove hardcoding of removing the template - instead ensure to remove the template name in sourcePathPrefix.
+		relPath, err := filepath.Rel(chosenTemplate, dir)
+		if err != nil {
+			continue
+		}
 
-		if _, err := os.Stat(srcPath); os.IsNotExist(err) {
+		srcPath := filepath.Join(tempUnzipDir, sourcePathPrefix, relPath)
+		destPath := filepath.Join(destDir, relPath)
+
+		if _, err = os.Stat(srcPath); os.IsNotExist(err) {
 			log.Printf("Warning: Source directory does not exist: %s", srcPath)
 			continue
 		}
 
-		fmt.Printf("Copying directory: %s\n", dir)
-		err := copyDir(srcPath, destPath)
+		err = copyDir(srcPath, destPath)
 		check(err, fmt.Sprintf("Error copying directory %s", dir))
 	}
 
-	// --- Step 3: Copy the Specified Base Files ---
-	for _, baseFile := range manifest.Templates[chosen].BaseFiles {
-		srcPath := filepath.Join(tempUnzipDir, sourcePathPrefix, baseFile)
-		destPath := filepath.Join(destDir, baseFile)
+	// --- Step 3: Copy the Specified Base Files ---.
+	for _, baseFile := range manifest.Templates[chosenTemplate].BaseFiles {
+		// TODO: Remove hardcoding of removing the template - instead ensure to remove the template name in sourcePathPrefix.
+		relPath, err := filepath.Rel(chosenTemplate, baseFile)
+		if err != nil {
+			continue
+		}
+
+		srcPath := filepath.Join(tempUnzipDir, sourcePathPrefix, relPath)
+		destPath := filepath.Join(destDir, relPath)
 
 		if _, err = os.Stat(srcPath); os.IsNotExist(err) {
 			log.Printf("Warning: Source file does not exist: %s", srcPath)
 			continue
 		}
 
-		//parentDir := filepath.Dir(destPath)
-		//if err := os.MkdirAll(parentDir, 0755); err != nil {
-		//	log.Printf("Error creating parent directory for %s: %v", baseFile, err)
-		//	continue
-		//}
+		parentDir := filepath.Dir(destPath)
+		if err := os.MkdirAll(parentDir, 0755); err != nil {
+			log.Printf("Error creating parent directory for %s: %v", baseFile, err)
+			continue
+		}
 
-		fmt.Printf("Copying file: %s\n", baseFile)
-		err := copyFile(srcPath, destPath)
+		err = copyFile(srcPath, destPath)
 		check(err, fmt.Sprintf("Error copying file %s", baseFile))
 	}
 
@@ -130,41 +141,46 @@ func runScaffold2(cmd *cobra.Command, args []string) error {
 	for _, s := range selectedScreens {
 		screen := screenInfo[s]
 
-		srcPath := filepath.Join(tempUnzipDir, sourcePathPrefix, screen.Path)
-		destPath := filepath.Join(destDir, screen.Path)
+		relPath, err := filepath.Rel(chosenTemplate, screen.Path)
+		if err != nil {
+			continue
+		}
+
+		srcPath := filepath.Join(tempUnzipDir, sourcePathPrefix, relPath)
+		destPath := filepath.Join(destDir, relPath)
 
 		if _, err = os.Stat(srcPath); os.IsNotExist(err) {
 			log.Printf("Warning: Source directory does not exist: %s", srcPath)
 			continue
 		}
 
-		//parentDir := filepath.Dir(destPath)
-		//if err := os.MkdirAll(parentDir, 0755); err != nil {
-		//	log.Printf("Error creating parent directory for %s: %v", screen.Path, err)
-		//	continue
-		//}
+		parentDir := filepath.Dir(destPath)
+		if err := os.MkdirAll(parentDir, 0755); err != nil {
+			log.Printf("Error creating parent directory for %s: %v", screen.Path, err)
+			continue
+		}
 
-		fmt.Printf("Copying screen file: %s\n", screen.Path)
-		err := copyFile(srcPath, destPath)
+		fmt.Printf("Copying screen path: %s\n", screen.Path)
+		err = copyDir(srcPath, destPath)
 		check(err, fmt.Sprintf("Error copying screen file %s", screen.Path))
-
 	}
 
-	fmt.Println("\nSuccess! The files and directories have been copied.")
-
 	fmt.Println(time.Since(curr))
+
+	fmt.Println("\nProject successfully created!\n" +
+		"Explore the sample app: https://github.com/auth0/acul-sample-app")
 
 	return nil
 }
 
-// Helper function to handle errors and log them
+// Helper function to handle errors and log them.
 func check(err error, msg string) {
 	if err != nil {
 		log.Fatalf("%s: %v", err, msg)
 	}
 }
 
-// Function to download a file from a URL to a temporary location
+// Function to download a file from a URL to a temporary location.
 func downloadFile(url string) string {
 	tempFile, err := os.CreateTemp("", "github-zip-*.zip")
 	check(err, "Error creating temporary file")
@@ -175,7 +191,7 @@ func downloadFile(url string) string {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Fatalf("Bad status code: %s", resp.Status)
+		log.Printf("Bad status code: %s", resp.Status)
 	}
 
 	_, err = io.Copy(tempFile, resp.Body)
@@ -185,7 +201,7 @@ func downloadFile(url string) string {
 	return tempFile.Name()
 }
 
-// Function to copy a file from a source path to a destination path
+// Function to copy a file from a source path to a destination path.
 func copyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
@@ -206,7 +222,7 @@ func copyFile(src, dst string) error {
 	return out.Close()
 }
 
-// Function to recursively copy a directory
+// Function to recursively copy a directory.
 func copyDir(src, dst string) error {
 	sourceInfo, err := os.Stat(src)
 	if err != nil {
@@ -242,7 +258,8 @@ func copyDir(src, dst string) error {
 func createScreenMap(screens []Screen) map[string]Screen {
 	screenMap := make(map[string]Screen)
 	for _, screen := range screens {
-		screenMap[screen.Name] = screen
+		screenMap[screen.ID] = screen
 	}
+
 	return screenMap
 }

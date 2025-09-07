@@ -32,6 +32,7 @@ Uses the GitHub Tree API to enumerate files and `raw.githubusercontent.com` to d
 **Cons:**
 - Many HTTP requests; slower and susceptible to GitHub API rate limits.
 - Loses executable bits and some metadata unless explicitly restored.
+- Takes more time to download many small files [so, removed in favor of Method C].
 
 
 ---
