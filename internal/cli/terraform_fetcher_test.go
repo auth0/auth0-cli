@@ -140,6 +140,57 @@ func TestBrandingResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestBrandingThemeResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves branding theme data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		brandingThemeAPI := mock.NewMockBrandingThemeAPI(ctrl)
+		brandingThemeAPI.EXPECT().
+			Default(gomock.Any()).
+			Return(&management.BrandingTheme{
+				ID:          auth0.String("theme_123"),
+				DisplayName: auth0.String("My Theme"),
+			}, nil)
+
+		fetcher := brandingThemeResourceFetcher{
+			api: &auth0.API{
+				BrandingTheme: brandingThemeAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_branding_theme.my_theme",
+				ImportID:     "theme_123",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		brandingThemeAPI := mock.NewMockBrandingThemeAPI(ctrl)
+		brandingThemeAPI.EXPECT().
+			Default(gomock.Any()).
+			Return(nil, fmt.Errorf("failed to get default theme"))
+
+		fetcher := brandingThemeResourceFetcher{
+			api: &auth0.API{
+				BrandingTheme: brandingThemeAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to get default theme")
+	})
+}
+
 func Test_phoneProviderResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves twilio's phone providers data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
