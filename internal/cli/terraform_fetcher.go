@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_branding_theme", "auth0_phone_provider", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_log_stream", "auth0_network_acl", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_prompt_screen_renderer", "auth0_resource_server", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
+	defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_phone_provider", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_log_stream", "auth0_network_acl", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_prompt_screen_renderer", "auth0_resource_server", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
 )
 
 type (
@@ -36,8 +36,6 @@ type (
 	attackProtectionResourceFetcher struct{}
 
 	brandingResourceFetcher struct{}
-
-	brandingThemeResourceFetcher struct{}
 
 	phoneProviderResourceFetcher struct {
 		api *auth0.API
@@ -129,14 +127,6 @@ func (f *brandingResourceFetcher) FetchData(_ context.Context) (importDataList, 
 	return []importDataItem{
 		{
 			ResourceName: "auth0_branding.branding",
-			ImportID:     uuid.NewString(),
-		},
-	}, nil
-}
-func (f *brandingThemeResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
-	return []importDataItem{
-		{
-			ResourceName: "auth0_branding_theme.branding_theme",
 			ImportID:     uuid.NewString(),
 		},
 	}, nil
