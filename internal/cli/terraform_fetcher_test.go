@@ -140,6 +140,18 @@ func TestBrandingResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestBrandingThemeResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully generates branding theme import data", func(t *testing.T) {
+		fetcher := brandingThemeResourceFetcher{}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 1)
+		assert.Equal(t, data[0].ResourceName, "auth0_branding_theme.branding_theme")
+		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
 func Test_phoneProviderResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves twilio's phone providers data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
