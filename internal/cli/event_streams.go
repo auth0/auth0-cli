@@ -74,7 +74,7 @@ var (
 
 func eventStreamsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "events",
+		Use:   "event-streams",
 		Short: "Manage Event Stream",
 		Long: "Events are a way for Auth0 customers to synchronize, correlate or orchestrate " +
 			"changes that occur within Auth0 or 3rd-party identity providers to your app or 3rd party services.",
@@ -572,6 +572,9 @@ func listDeliveriesCmd(cli *cli) *cobra.Command {
 			var currentIndex = auth0.Int(0)
 			for {
 				selectedDelivery := cli.renderer.EventDeliveryPrompt(deliveries.Deliveries, currentIndex)
+				if selectedDelivery == nil {
+					return handleInputError(errors.New("bad input"))
+				}
 				cli.renderer.ShowDelivery(selectedDelivery)
 				if cli.renderer.QuitPrompt() {
 					break

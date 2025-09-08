@@ -1,9 +1,9 @@
 ---
 layout: default
-parent: auth0 events
+parent: auth0 event-streams
 has_toc: false
 ---
-# auth0 events update
+# auth0 event-streams update
 
 Update an event.
 
@@ -13,7 +13,7 @@ To update non-interactively, supply the event id, name, status, subscriptions an
 
 ## Usage
 ```
-auth0 events update [flags]
+auth0 event-streams update [flags]
 ```
 
 ## Examples
@@ -54,15 +54,15 @@ auth0 events update [flags]
 
 ## Related Commands
 
-- [auth0 events create](auth0_events_create.md) - Create a new event stream
-- [auth0 events delete](auth0_events_delete.md) - Delete an event stream
-- [auth0 events deliveries](auth0_events_deliveries.md) - Manage event stream deliveries
-- [auth0 events list](auth0_events_list.md) - List your event streams
-- [auth0 events redeliver](auth0_events_redeliver.md) - Retry one or more event deliveries for a given stream
-- [auth0 events redeliver-many](auth0_events_redeliver-many.md) - Bulk retry failed event deliveries using filters
-- [auth0 events show](auth0_events_show.md) - Show an event stream
-- [auth0 events stats](auth0_events_stats.md) - View delivery stats for an event stream
-- [auth0 events trigger](auth0_events_trigger.md) - Trigger a test event for an event stream
-- [auth0 events update](auth0_events_update.md) - Update an event
+- [auth0 event-streams create](auth0_event-streams_create.md) - Create a new event stream
+- [auth0 event-streams delete](auth0_event-streams_delete.md) - Delete an event stream
+- [auth0 event-streams deliveries](auth0_event-streams_deliveries.md) - Manage event stream deliveries
+- [auth0 event-streams list](auth0_event-streams_list.md) - List your event streams
+- [auth0 event-streams redeliver](auth0_event-streams_redeliver.md) - Retry one or more event deliveries for a given stream
+- [auth0 event-streams redeliver-many](auth0_event-streams_redeliver-many.md) - Bulk retry failed event deliveries using filters
+- [auth0 event-streams show](auth0_event-streams_show.md) - Show an event stream
+- [auth0 event-streams stats](auth0_event-streams_stats.md) - View delivery stats for an event stream
+- [auth0 event-streams trigger](auth0_event-streams_trigger.md) - Trigger a test event for an event stream
+- [auth0 event-streams update](auth0_event-streams_update.md) - Update an event
 
 

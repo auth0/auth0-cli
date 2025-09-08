@@ -1,16 +1,16 @@
 ---
 layout: default
-parent: auth0 events deliveries
+parent: auth0 event-streams deliveries
 has_toc: false
 ---
-# auth0 events deliveries list
+# auth0 event-streams deliveries list
 
 List all failed delivery attempts associated with a specific event stream.
 Optionally filter by event type(s) using the --type flag.
 
 ## Usage
 ```
-auth0 events deliveries list [event-stream-id] [flags]
+auth0 event-streams deliveries list [event-stream-id] [flags]
 ```
 
 ## Examples
@@ -50,7 +50,7 @@ auth0 events deliveries list [event-stream-id] [flags]
 
 ## Related Commands
 
-- [auth0 events deliveries list](auth0_events_deliveries_list.md) - List failed deliveries for an event stream
-- [auth0 events deliveries show](auth0_events_deliveries_show.md) - Show details for a specific delivery
+- [auth0 event-streams deliveries list](auth0_event-streams_deliveries_list.md) - List failed deliveries for an event stream
+- [auth0 event-streams deliveries show](auth0_event-streams_deliveries_show.md) - Show details for a specific delivery
 
 
