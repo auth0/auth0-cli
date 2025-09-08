@@ -13,6 +13,7 @@ func aculCmd(cli *cli) *cobra.Command {
 	// Check out the ./acul_scaffolding_app.MD file for more information on the commands below.
 	cmd.AddCommand(aculInitCmd1(cli))
 	cmd.AddCommand(aculInitCmd2(cli))
+	cmd.AddCommand(aculAddScreenCmd(cli))
 
 	return cmd
 }

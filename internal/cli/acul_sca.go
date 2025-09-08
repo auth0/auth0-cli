@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -15,6 +16,45 @@ import (
 	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/auth0/auth0-cli/internal/utils"
 )
+
+var (
+	manifestLoaded   Manifest   // type Manifest should match your manifest schema
+	aculConfigLoaded AculConfig // type AculConfig should match your config schema
+	manifestOnce     sync.Once
+	aculConfigOnce   sync.Once
+)
+
+// LoadManifest Loads manifest.json once
+func LoadManifest() (*Manifest, error) {
+	url := "https://raw.githubusercontent.com/auth0-samples/auth0-acul-samples/monorepo-sample/manifest.json"
+	var manifestErr error
+	manifestOnce.Do(func() {
+		resp, err := http.Get(url)
+		if err != nil {
+			manifestErr = fmt.Errorf("cannot fetch manifest: %w", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			manifestErr = fmt.Errorf("failed to fetch manifest: received status code %d", resp.StatusCode)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			manifestErr = fmt.Errorf("cannot read manifest body: %w", err)
+		}
+
+		if err := json.Unmarshal(body, &manifestLoaded); err != nil {
+			manifestErr = fmt.Errorf("invalid manifest format: %w", err)
+		}
+	})
+
+	if manifestErr != nil {
+		return nil, manifestErr
+	}
+
+	return &manifestLoaded, nil
+}
 
 var templateFlag = Flag{
 	Name:       "Template",
@@ -39,7 +79,7 @@ func aculInitCmd2(_ *cli) *cobra.Command {
 
 func runScaffold2(cmd *cobra.Command, args []string) error {
 	// Step 1: fetch manifest.json.
-	manifest, err := fetchManifest()
+	manifest, err := LoadManifest()
 	if err != nil {
 		return err
 	}
@@ -188,8 +228,13 @@ func runScaffold2(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Failed to write config: %v\n", err)
 	}
 
-	fmt.Println("\nProject successfully created!\n" +
-		"Explore the sample app: https://github.com/auth0/acul-sample-app")
+	fmt.Println("\nProject successfully created!")
+
+	for _, scr := range selectedScreens {
+		fmt.Printf("https://auth0.com/docs/acul/screens/+%s\n", scr)
+	}
+
+	fmt.Println("Explore the sample app: https://github.com/auth0/acul-sample-app")
 
 	return nil
 }
