@@ -102,7 +102,80 @@ var (
 	}
 )
 
-// Returns a map of parameter names to boolean indicating if they were selected.
+// validateAndSetBasicFields handles the common validation and patch building logic for basic fields.
+func validateAndSetBasicFields(inputs *struct {
+	ID           string
+	Description  string
+	Active       bool
+	ActiveStr    string
+	Priority     int
+	RuleJSON     string
+	Action       string
+	RedirectURI  string
+	Scope        string
+	ASNs         []int
+	CountryCodes []string
+	SubdivCodes  []string
+	IPv4CIDRs    []string
+	IPv6CIDRs    []string
+	JA3          []string
+	JA4          []string
+	UserAgents   []string
+	MatchRule    bool
+	NoMatchRule  bool
+}, patch *management.NetworkACL, cmd *cobra.Command) error {
+	if cmd.Flags().Changed("description") {
+		if len(inputs.Description) > 255 {
+			return fmt.Errorf("description cannot exceed 255 characters")
+		}
+		if len(inputs.Description) == 0 {
+			return fmt.Errorf("description cannot be empty")
+		}
+		patch.Description = &inputs.Description
+	}
+
+	if cmd.Flags().Changed("active") {
+		switch inputs.ActiveStr {
+		case "true":
+			inputs.Active = true
+		case "false":
+			inputs.Active = false
+		default:
+			return fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr)
+		}
+		patch.Active = &inputs.Active
+	}
+
+	if cmd.Flags().Changed("priority") {
+		if inputs.Priority < 1 || inputs.Priority > 10 {
+			return fmt.Errorf("priority must be between 1 and 10")
+		}
+		patch.Priority = &inputs.Priority
+	}
+
+	if cmd.Flags().Changed("rule") {
+		var rule management.NetworkACLRule
+		if err := json.Unmarshal([]byte(inputs.RuleJSON), &rule); err != nil {
+			return fmt.Errorf("invalid rule JSON: %w", err)
+		}
+		patch.Rule = &rule
+	}
+
+	return nil
+}
+
+// applyNetworkACLPatch handles the common API call and rendering logic.
+func applyNetworkACLPatch(ctx context.Context, cli *cli, id string, patch *management.NetworkACL) error {
+	if err := ansi.Waiting(func() error {
+		return cli.api.NetworkACL.Patch(ctx, id, patch)
+	}); err != nil {
+		return fmt.Errorf("failed to update network ACL with ID %q: %w", id, err)
+	}
+
+	cli.renderer.NetworkACLUpdate(patch)
+	return nil
+}
+
 func selectNetworkACLParams(cmd *cobra.Command) (map[string]bool, error) {
 	options := []string{
 		"ASNs",
@@ -580,7 +653,7 @@ func updateNetworkACLCmd(cli *cli) *cobra.Command {
 		MatchRule    bool
 		NoMatchRule  bool
 	}
-	
+
 	cmd := &cobra.Command{
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
@@ -618,52 +691,13 @@ To update non-interactively, supply the description, active, priority, and rule 
 
 			// Non-interactive mode with flags only - no need to read current ACL.
 			if !canPrompt(cmd) && flagsProvided {
-				if cmd.Flags().Changed("description") {
-					if len(inputs.Description) > 255 {
-						return fmt.Errorf("description cannot exceed 255 characters")
-					}
-					if len(inputs.Description) == 0 {
-						return fmt.Errorf("description cannot be empty")
-					}
-					patch.Description = &inputs.Description
-				}
-
-				if cmd.Flags().Changed("active") {
-					switch inputs.ActiveStr {
-					case "true":
-						inputs.Active = true
-					case "false":
-						inputs.Active = false
-					default:
-						return fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr)
-					}
-					patch.Active = &inputs.Active
-				}
-
-				if cmd.Flags().Changed("priority") {
-					if inputs.Priority < 1 || inputs.Priority > 10 {
-						return fmt.Errorf("priority must be between 1 and 10")
-					}
-					patch.Priority = &inputs.Priority
-				}
-
-				if cmd.Flags().Changed("rule") {
-					var rule management.NetworkACLRule
-					if err := json.Unmarshal([]byte(inputs.RuleJSON), &rule); err != nil {
-						return fmt.Errorf("invalid rule JSON: %w", err)
-					}
-					patch.Rule = &rule
+				// Validate and set basic fields from flags.
+				if err := validateAndSetBasicFields(&inputs, patch, cmd); err != nil {
+					return err
 				}
 
 				// Apply the patch.
-				if err := ansi.Waiting(func() error {
-					return cli.api.NetworkACL.Patch(cmd.Context(), inputs.ID, patch)
-				}); err != nil {
-					return fmt.Errorf("failed to update network ACL with ID %q: %w", inputs.ID, err)
-				}
-
-				cli.renderer.NetworkACLUpdate(patch)
-				return nil
+				return applyNetworkACLPatch(cmd.Context(), cli, inputs.ID, patch)
 			}
 
 			// Interactive mode - read current ACL first for defaults.
@@ -685,52 +719,12 @@ To update non-interactively, supply the description, active, priority, and rule 
 
 				if !updateOtherFields {
 					// Only update the fields that were specified via flags.
-					if cmd.Flags().Changed("description") {
-						if len(inputs.Description) > 255 {
-							return fmt.Errorf("description cannot exceed 255 characters")
-						}
-						if len(inputs.Description) == 0 {
-							return fmt.Errorf("description cannot be empty")
-						}
-						patch.Description = &inputs.Description
-					}
-
-					if cmd.Flags().Changed("active") {
-						switch inputs.ActiveStr {
-						case "true":
-							inputs.Active = true
-						case "false":
-							inputs.Active = false
-						default:
-							return fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr)
-						}
-						patch.Active = &inputs.Active
-					}
-
-					if cmd.Flags().Changed("priority") {
-						if inputs.Priority < 1 || inputs.Priority > 10 {
-							return fmt.Errorf("priority must be between 1 and 10")
-						}
-						patch.Priority = &inputs.Priority
-					}
-
-					if cmd.Flags().Changed("rule") {
-						var rule management.NetworkACLRule
-						if err := json.Unmarshal([]byte(inputs.RuleJSON), &rule); err != nil {
-							return fmt.Errorf("invalid rule JSON: %w", err)
-						}
-						patch.Rule = &rule
+					if err := validateAndSetBasicFields(&inputs, patch, cmd); err != nil {
+						return err
 					}
 
 					// Apply the patch.
-					if err := ansi.Waiting(func() error {
-						return cli.api.NetworkACL.Patch(cmd.Context(), inputs.ID, patch)
-					}); err != nil {
-						return fmt.Errorf("failed to update network ACL with ID %q: %w", inputs.ID, err)
-					}
-
-					cli.renderer.NetworkACLUpdate(patch)
-					return nil
+					return applyNetworkACLPatch(cmd.Context(), cli, inputs.ID, patch)
 				}
 			}
 
@@ -1004,14 +998,7 @@ To update non-interactively, supply the description, active, priority, and rule 
 			}
 
 			// Apply the patch.
-			if err := ansi.Waiting(func() error {
-				return cli.api.NetworkACL.Patch(cmd.Context(), inputs.ID, patch)
-			}); err != nil {
-				return fmt.Errorf("failed to update network ACL with ID %q: %w", inputs.ID, err)
-			}
-
-			cli.renderer.NetworkACLUpdate(patch)
-			return nil
+			return applyNetworkACLPatch(cmd.Context(), cli, inputs.ID, patch)
 		},
 	}
 
