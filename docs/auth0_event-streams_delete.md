@@ -7,7 +7,7 @@ has_toc: false
 
 Delete an event stream.
 
-To delete interactively, use `auth0 events delete` with no arguments.
+To delete interactively, use `auth0 event-streams delete` with no arguments.
 
 To delete non-interactively, supply the event id and the `--force` flag to skip confirmation.
 
@@ -19,12 +19,12 @@ auth0 event-streams delete [flags]
 ## Examples
 
 ```
-  auth0 events delete
-  auth0 events rm
-  auth0 events delete <event-id>
-  auth0 events delete <event-id> --force
-  auth0 events delete <event-id> <event-id2> <event-idn>
-  auth0 events delete <event-id> <event-id2> <event-idn> --force
+  auth0 event-streams delete
+  auth0 event-streams rm
+  auth0 event-streams delete <event-id>
+  auth0 event-streams delete <event-id> --force
+  auth0 event-streams delete <event-id> <event-id2> <event-idn>
+  auth0 event-streams delete <event-id> <event-id2> <event-idn> --force
 ```
 
 

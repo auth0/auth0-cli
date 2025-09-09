@@ -16,9 +16,9 @@ auth0 event-streams stats [stream-id] [flags]
 ## Examples
 
 ```
-  auth0 events stats
-  auth0 events stats <stream-id>
-  auth0 events stats <stream-id> --from 2025-07-15 --to 2025-07-29
+  auth0 event-streams stats
+  auth0 event-streams stats <stream-id>
+  auth0 event-streams stats <stream-id> --from 2025-07-15 --to 2025-07-29
 ```
 
 

@@ -18,8 +18,8 @@ auth0 event-streams trigger <event-id> [flags]
 ## Examples
 
 ```
-  auth0 events trigger <event-id> --type user.created
-  auth0 events trigger <event-id> --type user.updated --payload ./test-event.json
+  auth0 event-streams trigger <event-id> --type user.created
+  auth0 event-streams trigger <event-id> --type user.updated --payload ./test-event.json
 ```
 
 

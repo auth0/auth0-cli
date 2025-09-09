@@ -7,7 +7,7 @@ has_toc: false
 
 Update an event.
 
-To update interactively, use `auth0 events update` with no arguments.
+To update interactively, use `auth0 event-streams update` with no arguments.
 
 To update non-interactively, supply the event id, name, status, subscriptions and configuration through the flags. An event stream type CANNOT be updated hence the configuration should match the schema based on the type of event stream. Configuration for `eventbridge` streams cannot be updated.
 
@@ -19,13 +19,13 @@ auth0 event-streams update [flags]
 ## Examples
 
 ```
-  auth0 events update <event-id>
-  auth0 events update <event-id> --name my-event-stream
-  auth0 events update <event-id> --name my-event-stream --status enabled
-  auth0 events update <event-id> --name my-event-stream --status enabled --subscriptions "user.created,user.updated"
-  auth0 events update <event-id> --name my-event-stream --status disabled --subscriptions "user.deleted" --configuration '{"aws_account_id":"325235643634","aws_region":"us-east-2"}'
-  auth0 events update <event-id> --name my-event-stream --status enabled --subscriptions "user.created" --configuration '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"0909090909"}}
-  auth0 events update <event-id> -n my-event-stream --status enabled -s "user.created" -c '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"987654321"}}
+  auth0 event-streams update <event-id>
+  auth0 event-streams update <event-id> --name my-event-stream
+  auth0 event-streams update <event-id> --name my-event-stream --status enabled
+  auth0 event-streams update <event-id> --name my-event-stream --status enabled --subscriptions "user.created,user.updated"
+  auth0 event-streams update <event-id> --name my-event-stream --status disabled --subscriptions "user.deleted" --configuration '{"aws_account_id":"325235643634","aws_region":"us-east-2"}'
+  auth0 event-streams update <event-id> --name my-event-stream --status enabled --subscriptions "user.created" --configuration '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"0909090909"}}
+  auth0 event-streams update <event-id> -n my-event-stream --status enabled -s "user.created" -c '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"987654321"}}
 ```
 
 

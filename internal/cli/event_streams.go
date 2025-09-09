@@ -101,12 +101,12 @@ func listEventStreamsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your event streams",
-		Long:    "List your existing event streams. To create one, run: `auth0 events create`.",
-		Example: `  auth0 events list
-  auth0 events ls
-  auth0 events ls --json
-  auth0 events ls --json-compact
-  auth0 events ls --csv`,
+		Long:    "List your existing event streams. To create one, run: `auth0 event-streams create`.",
+		Example: `  auth0 event-streams list
+  auth0 event-streams ls
+  auth0 event-streams ls --json
+  auth0 event-streams ls --json-compact
+  auth0 event-streams ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.EventStreamList
 
@@ -139,10 +139,10 @@ func showEventStreamCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an event stream",
 		Long:  "Display the name, type, status, subscriptions and other information about an event stream",
-		Example: `  auth0 events show
-  auth0 events show <event-id>
-  auth0 events show <event-id> --json
-  auth0 events show <event-id> --json-compact`,
+		Example: `  auth0 event-streams show
+  auth0 event-streams show <event-id>
+  auth0 event-streams show <event-id> --json
+  auth0 event-streams show <event-id> --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := eventStreamID.Pick(cmd, &inputs.ID, cli.eventStreamPickerOptions); err != nil {
@@ -184,12 +184,12 @@ func createEventStreamCmd(cli *cli) *cobra.Command {
 		Args:  cobra.NoArgs,
 		Short: "Create a new event stream",
 		Long: "Create a new event stream.\n\n" +
-			"To create interactively, use `auth0 events create` with no flags.\n\n" +
+			"To create interactively, use `auth0 event-streams create` with no flags.\n\n" +
 			"To create non-interactively, supply the event stream name, type, subscriptions and configuration through the flags.",
-		Example: `  auth0 events create
-  auth0 events create --name my-event-stream --type eventbridge --subscriptions "user.created,user.updated" --configuration '{"aws_account_id":"325235643634","aws_region":"us-east-2"}'
-  auth0 events create --name my-event-stream --type webhook --subscriptions "user.created,user.deleted" --configuration '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'
-  auth0 events create -n my-event-stream -t webhook -s "user.created,user.deleted" -c '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'`,
+		Example: `  auth0 event-streams create
+  auth0 event-streams create --name my-event-stream --type eventbridge --subscriptions "user.created,user.updated" --configuration '{"aws_account_id":"325235643634","aws_region":"us-east-2"}'
+  auth0 event-streams create --name my-event-stream --type webhook --subscriptions "user.created,user.deleted" --configuration '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'
+  auth0 event-streams create -n my-event-stream -t webhook -s "user.created,user.deleted" -c '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := eventStreamName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -265,18 +265,18 @@ func updateEventStreamCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an event",
 		Long: "Update an event.\n\n" +
-			"To update interactively, use `auth0 events update` with no arguments.\n\n" +
+			"To update interactively, use `auth0 event-streams update` with no arguments.\n\n" +
 			"To update non-interactively, supply the event id, name, status, subscriptions and " +
 			"configuration through the flags. An event stream type CANNOT be updated hence the configuration " +
 			"should match the schema based on the type of event stream. Configuration for `eventbridge` streams " +
 			"cannot be updated.",
-		Example: `  auth0 events update <event-id>
-  auth0 events update <event-id> --name my-event-stream
-  auth0 events update <event-id> --name my-event-stream --status enabled
-  auth0 events update <event-id> --name my-event-stream --status enabled --subscriptions "user.created,user.updated"
-  auth0 events update <event-id> --name my-event-stream --status disabled --subscriptions "user.deleted" --configuration '{"aws_account_id":"325235643634","aws_region":"us-east-2"}'
-  auth0 events update <event-id> --name my-event-stream --status enabled --subscriptions "user.created" --configuration '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"0909090909"}}
-  auth0 events update <event-id> -n my-event-stream --status enabled -s "user.created" -c '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"987654321"}}`,
+		Example: `  auth0 event-streams update <event-id>
+  auth0 event-streams update <event-id> --name my-event-stream
+  auth0 event-streams update <event-id> --name my-event-stream --status enabled
+  auth0 event-streams update <event-id> --name my-event-stream --status enabled --subscriptions "user.created,user.updated"
+  auth0 event-streams update <event-id> --name my-event-stream --status disabled --subscriptions "user.deleted" --configuration '{"aws_account_id":"325235643634","aws_region":"us-east-2"}'
+  auth0 event-streams update <event-id> --name my-event-stream --status enabled --subscriptions "user.created" --configuration '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"0909090909"}}
+  auth0 event-streams update <event-id> -n my-event-stream --status enabled -s "user.created" -c '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"987654321"}}`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -367,14 +367,14 @@ func deleteEventStreamCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"rm"},
 		Short:   "Delete an event stream",
 		Long: "Delete an event stream.\n\n" +
-			"To delete interactively, use `auth0 events delete` with no arguments.\n\n" +
+			"To delete interactively, use `auth0 event-streams delete` with no arguments.\n\n" +
 			"To delete non-interactively, supply the event id and the `--force` flag to skip confirmation.",
-		Example: `  auth0 events delete
-  auth0 events rm
-  auth0 events delete <event-id>
-  auth0 events delete <event-id> --force
-  auth0 events delete <event-id> <event-id2> <event-idn>
-  auth0 events delete <event-id> <event-id2> <event-idn> --force`,
+		Example: `  auth0 event-streams delete
+  auth0 event-streams rm
+  auth0 event-streams delete <event-id>
+  auth0 event-streams delete <event-id> --force
+  auth0 event-streams delete <event-id> <event-id2> <event-idn>
+  auth0 event-streams delete <event-id> <event-id2> <event-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ids := make([]string, len(args))
 			if len(args) == 0 {
@@ -421,8 +421,8 @@ func triggerEventStreamCmd(cli *cli) *cobra.Command {
 		Long: "Manually trigger a test event for a specific Event Stream.\n\n" +
 			"Use this to simulate an event like `user.created` or `user.updated`.\n" +
 			"You can optionally provide a JSON payload from a file to simulate request content.",
-		Example: `  auth0 events trigger <event-id> --type user.created
-  auth0 events trigger <event-id> --type user.updated --payload ./test-event.json`,
+		Example: `  auth0 event-streams trigger <event-id> --type user.created
+  auth0 event-streams trigger <event-id> --type user.updated --payload ./test-event.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -518,12 +518,12 @@ func listDeliveriesCmd(cli *cli) *cobra.Command {
 		Short:   "List failed deliveries for an event stream",
 		Long: "List all failed delivery attempts associated with a specific event stream.\n" +
 			"Optionally filter by event type(s) using the --type flag.",
-		Example: `  auth0 events deliveries list
-  auth0 events deliveries list <event-stream-id>
-  auth0 events deliveries list <event-stream-id> --type user.created
-  auth0 events deliveries list --json
-  auth0 events deliveries list --csv
-  auth0 events deliveries list --picker`,
+		Example: `  auth0 event-streams deliveries list
+  auth0 event-streams deliveries list <event-stream-id>
+  auth0 event-streams deliveries list <event-stream-id> --type user.created
+  auth0 event-streams deliveries list --json
+  auth0 event-streams deliveries list --csv
+  auth0 event-streams deliveries list --picker`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -618,9 +618,9 @@ func showDeliveryCmd(cli *cli) *cobra.Command {
 			"delivery associated with an event stream. \n" +
 			"If stream ID or delivery ID is not provided, you will be " +
 			"prompted to select them interactively.",
-		Example: `  auth0 events deliveries show
-  auth0 events deliveries show <stream-id>
-  auth0 events deliveries show <stream-id> <delivery-id>`,
+		Example: `  auth0 event-streams deliveries show
+  auth0 event-streams deliveries show <stream-id>
+  auth0 event-streams deliveries show <stream-id> <delivery-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) >= 1 {
 				inputs.StreamID = args[0]
@@ -680,9 +680,9 @@ func redeliverEventStreamCmd(cli *cli) *cobra.Command {
 		Long: "Retry one or more failed event deliveries for a given event stream. \n" +
 			"If no delivery IDs are provided, you'll be prompted " +
 			"to select from recent failed deliveries.",
-		Example: `  auth0 events redeliver
-  auth0 events redeliver <stream-id>
-  auth0 events redeliver <stream-id> evt_abc123,evt_def456`,
+		Example: `  auth0 event-streams redeliver
+  auth0 event-streams redeliver <stream-id>
+  auth0 event-streams redeliver <stream-id> evt_abc123,evt_def456`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) >= 1 {
 				inputs.StreamID = args[0]
@@ -737,9 +737,9 @@ func redeliverManyEventStreamCmd(cli *cli) *cobra.Command {
 			"You can filter by event type and date range. \n" +
 			"All filters are combined using AND logic. \n" +
 			"If no filters are passed, all failed events are retried",
-		Example: `  auth0 events redeliver-many
-  auth0 events redeliver-many <stream-id>
-  auth0 events redeliver-many <stream-id> --type=user.created,user.deleted --from=-2d`,
+		Example: `  auth0 event-streams redeliver-many
+  auth0 event-streams redeliver-many <stream-id>
+  auth0 event-streams redeliver-many <stream-id> --type=user.created,user.deleted --from=-2d`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) >= 1 {
 				inputs.StreamID = args[0]
@@ -799,9 +799,9 @@ func statsEventStreamCmd(cli *cli) *cobra.Command {
 		Long: `Retrieve metrics over time for a given event stream, including 
 successful and failed delivery counts. Supports custom date range filtering.`,
 		Args: cobra.MaximumNArgs(1),
-		Example: `  auth0 events stats
-  auth0 events stats <stream-id>
-  auth0 events stats <stream-id> --from 2025-07-15 --to 2025-07-29`,
+		Example: `  auth0 event-streams stats
+  auth0 event-streams stats <stream-id>
+  auth0 event-streams stats <stream-id> --from 2025-07-15 --to 2025-07-29`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.StreamID = args[0]
@@ -875,7 +875,7 @@ func (c *cli) eventStreamPickerOptions(ctx context.Context) (pickerOptions, erro
 	}
 
 	if len(opts) == 0 {
-		return nil, errors.New("there are currently no event streams to choose from. Create one by running: `auth0 events create`")
+		return nil, errors.New("there are currently no event streams to choose from. Create one by running: `auth0 event-streams create`")
 	}
 
 	return opts, nil

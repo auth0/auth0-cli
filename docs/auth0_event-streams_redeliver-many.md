@@ -18,9 +18,9 @@ auth0 event-streams redeliver-many [stream-id] [flags]
 ## Examples
 
 ```
-  auth0 events redeliver-many
-  auth0 events redeliver-many <stream-id>
-  auth0 events redeliver-many <stream-id> --type=user.created,user.deleted --from=-2d
+  auth0 event-streams redeliver-many
+  auth0 event-streams redeliver-many <stream-id>
+  auth0 event-streams redeliver-many <stream-id> --type=user.created,user.deleted --from=-2d
 ```
 
 

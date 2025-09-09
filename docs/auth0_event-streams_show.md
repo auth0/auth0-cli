@@ -15,16 +15,18 @@ auth0 event-streams show [flags]
 ## Examples
 
 ```
-  auth0 events show
-  auth0 events show <event-id>
-  auth0 events show <event-id> --json
+  auth0 event-streams show
+  auth0 event-streams show <event-id>
+  auth0 event-streams show <event-id> --json
+  auth0 event-streams show <event-id> --json-compact
 ```
 
 
 ## Flags
 
 ```
-      --json   Output in json format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

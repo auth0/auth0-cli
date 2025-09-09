@@ -7,7 +7,7 @@ has_toc: false
 
 Create a new event stream.
 
-To create interactively, use `auth0 events create` with no flags.
+To create interactively, use `auth0 event-streams create` with no flags.
 
 To create non-interactively, supply the event stream name, type, subscriptions and configuration through the flags.
 
@@ -19,10 +19,10 @@ auth0 event-streams create [flags]
 ## Examples
 
 ```
-  auth0 events create
-  auth0 events create --name my-event-stream --type eventbridge --subscriptions "user.created,user.updated" --configuration '{"aws_account_id":"325235643634","aws_region":"us-east-2"}'
-  auth0 events create --name my-event-stream --type webhook --subscriptions "user.created,user.deleted" --configuration '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'
-  auth0 events create -n my-event-stream -t webhook -s "user.created,user.deleted" -c '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'
+  auth0 event-streams create
+  auth0 event-streams create --name my-event-stream --type eventbridge --subscriptions "user.created,user.updated" --configuration '{"aws_account_id":"325235643634","aws_region":"us-east-2"}'
+  auth0 event-streams create --name my-event-stream --type webhook --subscriptions "user.created,user.deleted" --configuration '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'
+  auth0 event-streams create -n my-event-stream -t webhook -s "user.created,user.deleted" -c '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'
 ```
 
 

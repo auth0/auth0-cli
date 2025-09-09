@@ -16,12 +16,12 @@ auth0 event-streams deliveries list [event-stream-id] [flags]
 ## Examples
 
 ```
-  auth0 events deliveries list
-  auth0 events deliveries list <event-stream-id>
-  auth0 events deliveries list <event-stream-id> --type user.created
-  auth0 events deliveries list --json
-  auth0 events deliveries list --csv
-  auth0 events deliveries list --picker
+  auth0 event-streams deliveries list
+  auth0 event-streams deliveries list <event-stream-id>
+  auth0 event-streams deliveries list <event-stream-id> --type user.created
+  auth0 event-streams deliveries list --json
+  auth0 event-streams deliveries list --csv
+  auth0 event-streams deliveries list --picker
 ```
 
 

@@ -17,9 +17,9 @@ auth0 event-streams deliveries show [stream-id] [delivery-id] [flags]
 ## Examples
 
 ```
-  auth0 events deliveries show
-  auth0 events deliveries show <stream-id>
-  auth0 events deliveries show <stream-id> <delivery-id>
+  auth0 event-streams deliveries show
+  auth0 event-streams deliveries show <stream-id>
+  auth0 event-streams deliveries show <stream-id> <delivery-id>
 ```
 
 

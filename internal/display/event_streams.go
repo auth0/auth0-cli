@@ -51,7 +51,7 @@ func (r *Renderer) EventStreamsList(eventStreams []*management.EventStream) erro
 	r.Heading(resource)
 
 	if len(eventStreams) == 0 {
-		r.EmptyState(resource, "Use 'auth0 events create' to add one")
+		r.EmptyState(resource, "Use 'auth0 event-streams create' to add one")
 		return nil
 	}
 

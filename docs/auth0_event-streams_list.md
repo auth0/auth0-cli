@@ -5,7 +5,7 @@ has_toc: false
 ---
 # auth0 event-streams list
 
-List your existing event streams. To create one, run: `auth0 events create`.
+List your existing event streams. To create one, run: `auth0 event-streams create`.
 
 ## Usage
 ```
@@ -15,18 +15,20 @@ auth0 event-streams list [flags]
 ## Examples
 
 ```
-  auth0 events list
-  auth0 events ls
-  auth0 events ls --json
-  auth0 events ls --csv
+  auth0 event-streams list
+  auth0 event-streams ls
+  auth0 event-streams ls --json
+  auth0 event-streams ls --json-compact
+  auth0 event-streams ls --csv
 ```
 
 
 ## Flags
 
 ```
-      --csv    Output in csv format.
-      --json   Output in json format.
+      --csv            Output in csv format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
 ```
 
 

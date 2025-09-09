@@ -16,9 +16,9 @@ auth0 event-streams redeliver [stream-id] [comma-separated-delivery-ids] [flags]
 ## Examples
 
 ```
-  auth0 events redeliver
-  auth0 events redeliver <stream-id>
-  auth0 events redeliver <stream-id> evt_abc123,evt_def456
+  auth0 event-streams redeliver
+  auth0 event-streams redeliver <stream-id>
+  auth0 event-streams redeliver <stream-id> evt_abc123,evt_def456
 ```
 
 
