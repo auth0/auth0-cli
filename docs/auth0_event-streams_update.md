@@ -5,7 +5,7 @@ has_toc: false
 ---
 # auth0 event-streams update
 
-Update an event.
+Update an event stream.
 
 To update interactively, use `auth0 event-streams update` with no arguments.
 
@@ -64,6 +64,6 @@ auth0 event-streams update [flags]
 - [auth0 event-streams show](auth0_event-streams_show.md) - Show an event stream
 - [auth0 event-streams stats](auth0_event-streams_stats.md) - View delivery stats for an event stream
 - [auth0 event-streams trigger](auth0_event-streams_trigger.md) - Trigger a test event for an event stream
-- [auth0 event-streams update](auth0_event-streams_update.md) - Update an event
+- [auth0 event-streams update](auth0_event-streams_update.md) - Update an event stream
 
 

@@ -56,6 +56,6 @@ auth0 event-streams delete [flags]
 - [auth0 event-streams show](auth0_event-streams_show.md) - Show an event stream
 - [auth0 event-streams stats](auth0_event-streams_stats.md) - View delivery stats for an event stream
 - [auth0 event-streams trigger](auth0_event-streams_trigger.md) - Trigger a test event for an event stream
-- [auth0 event-streams update](auth0_event-streams_update.md) - Update an event
+- [auth0 event-streams update](auth0_event-streams_update.md) - Update an event stream
 
 

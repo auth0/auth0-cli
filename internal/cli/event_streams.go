@@ -263,8 +263,8 @@ func updateEventStreamCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Update an event",
-		Long: "Update an event.\n\n" +
+		Short: "Update an event stream",
+		Long: "Update an event stream.\n\n" +
 			"To update interactively, use `auth0 event-streams update` with no arguments.\n\n" +
 			"To update non-interactively, supply the event id, name, status, subscriptions and " +
 			"configuration through the flags. An event stream type CANNOT be updated hence the configuration " +
