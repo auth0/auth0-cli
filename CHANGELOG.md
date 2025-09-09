@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.19.0](https://github.com/auth0/auth0-cli/tree/v1.19.0) (September 9, 2025)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.18.0...v1.19.0)
+
+### Added
+- Add support for managing `Async Approval` email template [#1317]
+- Add support for Events: test triggers, redeliver, check failed deliveries and stats [#1288] 
+
+### Fixed
+- Handle 402 Payment error for specific resources during terraform generate [#1313]
+
+
 # [v.1.18.0](https://github.com/auth0/auth0-cli/tree/v1.18.0) (September 2, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.17.1...v1.18.0)
@@ -556,8 +568,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.17.1...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.19.0...HEAD
+[1317]: https://github.com/auth0/auth0-cli/issues/1317
+[1313]: https://github.com/auth0/auth0-cli/issues/1313
 [1306]: https://github.com/auth0/auth0-cli/issues/1306
+[1288]: https://github.com/auth0/auth0-cli/issues/1288
 [1283]: https://github.com/auth0/auth0-cli/issues/1283
 [1280]: https://github.com/auth0/auth0-cli/issues/1280
 [#1268]: https://github.com/auth0/auth0-cli/issues/1268
