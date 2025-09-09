@@ -580,15 +580,15 @@ func updateNetworkACLCmd(cli *cli) *cobra.Command {
 		MatchRule    bool
 		NoMatchRule  bool
 	}
-
+	
 	cmd := &cobra.Command{
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a network ACL",
 		Long: `Update a network ACL.
 To update interactively, use "auth0 network-acl update" with no arguments.
-To update non-interactively, supply the parameters you want to update through flags.
-When updating the rule, provide a complete JSON object with action, scope, and match/not_match properties.`,
+To update non-interactively, supply the description, active, priority, and rule through flags.
+`,
 		Example: `  auth0 network-acl update <id>
   auth0 network-acl update <id> --priority 5 
   auth0 network-acl update <id> --active true
