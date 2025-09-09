@@ -68,6 +68,7 @@ func listRolePermissionsCmd(cli *cli) *cobra.Command {
   auth0 roles permissions ls <role-id>
   auth0 roles permissions ls <role-id> --number 100
   auth0 roles permissions ls <role-id> -n 100 --json
+  auth0 roles permissions ls <role-id> -n 100 --json-compact
   auth0 roles permissions ls <role-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
@@ -112,8 +113,9 @@ func listRolePermissionsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	roleAPIPermissionsNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 

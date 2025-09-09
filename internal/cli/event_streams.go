@@ -59,8 +59,8 @@ var (
 		LongForm:  "configuration",
 		ShortForm: "c",
 		Help: "Configuration of the Event Stream. Formatted as JSON. \n" +
-			"Webhook Example: {\"webhook_endpoint\":\"https://my-webhook.net\",\"webhook_authorization\":{\"method\":\"bearer\",\"token\":\"123456789\"}} \n" +
-			"Eventbridge Example: {\"aws_account_id\":\"7832467231933\",\"aws_region\":\"us-east-2\"}",
+			"Webhook Example: " + `{"webhook_endpoint":"https://my-webhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}} ` + "\n" +
+			"Eventbridge Example: " + `{"aws_account_id":"7832467231933","aws_region":"us-east-2"}`,
 		IsRequired: true,
 	}
 
@@ -105,6 +105,7 @@ func listEventStreamsCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 events list
   auth0 events ls
   auth0 events ls --json
+  auth0 events ls --json-compact
   auth0 events ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var list *management.EventStreamList
@@ -121,8 +122,9 @@ func listEventStreamsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	return cmd
 }
@@ -139,7 +141,8 @@ func showEventStreamCmd(cli *cli) *cobra.Command {
 		Long:  "Display the name, type, status, subscriptions and other information about an event stream",
 		Example: `  auth0 events show
   auth0 events show <event-id>
-  auth0 events show <event-id> --json`,
+  auth0 events show <event-id> --json
+  auth0 events show <event-id> --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := eventStreamID.Pick(cmd, &inputs.ID, cli.eventStreamPickerOptions); err != nil {
@@ -163,6 +166,7 @@ func showEventStreamCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -238,6 +242,7 @@ func createEventStreamCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	eventStreamName.RegisterString(cmd, &inputs.Name, "")
 	eventStreamType.RegisterString(cmd, &inputs.Type, "")
 	eventStreamSubscriptions.RegisterStringSlice(cmd, &inputs.Subscriptions, nil)
@@ -347,6 +352,7 @@ func updateEventStreamCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	eventStreamName.RegisterStringU(cmd, &inputs.Name, "")
 	eventStreamStatus.RegisterStringU(cmd, &inputs.Status, "")
 	eventStreamSubscriptions.RegisterStringSliceU(cmd, &inputs.Subscriptions, nil)

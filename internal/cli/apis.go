@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -68,6 +69,11 @@ var (
 		ShortForm: "n",
 		Help:      "Number of APIs to retrieve. Minimum 1, maximum 1000.",
 	}
+	apiSubjectTypeAuthorization = Flag{
+		Name:     "Subject Type Authorization",
+		LongForm: "subject-type-authorization",
+		Help:     "JSON object defining access policies for user and client flows. Example: '{\"user\":{\"policy\":\"require_client_grant\"},\"client\":{\"policy\":\"deny_all\"}}'",
+	}
 )
 
 func apisCmd(cli *cli) *cobra.Command {
@@ -120,6 +126,7 @@ func listApisCmd(cli *cli) *cobra.Command {
   auth0 apis ls
   auth0 apis ls --number 100
   auth0 apis ls -n 100 --json
+  auth0 apis ls -n 100 --json-compact
   auth0 apis ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
@@ -157,8 +164,9 @@ func listApisCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	apiNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
@@ -177,7 +185,8 @@ func showAPICmd(cli *cli) *cobra.Command {
 		Long:  "Display the name, scopes, token lifetime, and other information about an API.",
 		Example: `  auth0 apis show
   auth0 apis show <api-id|api-audience>
-  auth0 apis show <api-id|api-audience> --json`,
+  auth0 apis show <api-id|api-audience> --json
+  auth0 apis show <api-id|api-audience> --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions)
@@ -204,18 +213,20 @@ func showAPICmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
 
 func createAPICmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Name               string
-		Identifier         string
-		Scopes             []string
-		TokenLifetime      int
-		AllowOfflineAccess bool
-		SigningAlgorithm   string
+		Name                     string
+		Identifier               string
+		Scopes                   []string
+		TokenLifetime            int
+		AllowOfflineAccess       bool
+		SigningAlgorithm         string
+		SubjectTypeAuthorization string
 	}
 
 	cmd := &cobra.Command{
@@ -233,7 +244,9 @@ func createAPICmd(cli *cli) *cobra.Command {
   auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=true
   auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read"
   auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read" --signing-alg "RS256"
-  auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json`,
+  auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json
+  auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json-compact
+  auth0 apis create --name myapi --identifier http://my-api --subject-type-authorization '{"user":{"policy":"allow_all"},"client":{"policy":"deny_all"}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := apiName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -260,6 +273,10 @@ func createAPICmd(cli *cli) *cobra.Command {
 				return err
 			}
 
+			if err := apiSubjectTypeAuthorization.Ask(cmd, &inputs.SubjectTypeAuthorization, nil); err != nil {
+				return err
+			}
+
 			api := &management.ResourceServer{
 				Name:               &inputs.Name,
 				Identifier:         &inputs.Identifier,
@@ -276,6 +293,14 @@ func createAPICmd(cli *cli) *cobra.Command {
 				api.TokenLifetime = auth0.Int(apiDefaultTokenLifetime)
 			} else {
 				api.TokenLifetime = auth0.Int(inputs.TokenLifetime)
+			}
+
+			if inputs.SubjectTypeAuthorization != "{}" {
+				var subjectTypeAuth management.ResourceServerSubjectTypeAuthorization
+				if err := json.Unmarshal([]byte(inputs.SubjectTypeAuthorization), &subjectTypeAuth); err != nil {
+					return fmt.Errorf("invalid JSON for subject-type-authorization: %w", err)
+				}
+				api.SubjectTypeAuthorization = &subjectTypeAuth
 			}
 
 			if err := ansi.Waiting(func() error {
@@ -296,24 +321,27 @@ func createAPICmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	apiName.RegisterString(cmd, &inputs.Name, "")
 	apiIdentifier.RegisterString(cmd, &inputs.Identifier, "")
 	apiScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
 	apiOfflineAccess.RegisterBool(cmd, &inputs.AllowOfflineAccess, false)
 	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 0)
 	apiSigningAlgorithm.RegisterString(cmd, &inputs.SigningAlgorithm, "RS256")
+	apiSubjectTypeAuthorization.RegisterString(cmd, &inputs.SubjectTypeAuthorization, "{}")
 
 	return cmd
 }
 
 func updateAPICmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID                 string
-		Name               string
-		Scopes             []string
-		TokenLifetime      int
-		AllowOfflineAccess bool
-		SigningAlgorithm   string
+		ID                       string
+		Name                     string
+		Scopes                   []string
+		TokenLifetime            int
+		AllowOfflineAccess       bool
+		SigningAlgorithm         string
+		SubjectTypeAuthorization string
 	}
 
 	cmd := &cobra.Command{
@@ -330,7 +358,9 @@ func updateAPICmd(cli *cli) *cobra.Command {
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read" --signing-alg "RS256"
-  auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json`,
+  auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json
+  auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json-compact
+  auth0 apis update <api-id|api-audience> --subject-type-authorization '{"user":{"policy":"require_client_grant"},"client":{"policy":"deny_all"}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions); err != nil {
@@ -373,6 +403,18 @@ func updateAPICmd(cli *cli) *cobra.Command {
 				return err
 			}
 
+			// Current subject type authorization value for display.
+			var currentSubjectTypeJSON string
+			if current.SubjectTypeAuthorization != nil {
+				if jsonBytes, err := json.Marshal(current.SubjectTypeAuthorization); err == nil {
+					currentSubjectTypeJSON = string(jsonBytes)
+				}
+			}
+
+			if err := apiSubjectTypeAuthorization.AskU(cmd, &inputs.SubjectTypeAuthorization, &currentSubjectTypeJSON); err != nil {
+				return err
+			}
+
 			api := &management.ResourceServer{
 				AllowOfflineAccess: &inputs.AllowOfflineAccess,
 			}
@@ -397,6 +439,15 @@ func updateAPICmd(cli *cli) *cobra.Command {
 				api.SigningAlgorithm = &inputs.SigningAlgorithm
 			}
 
+			api.SubjectTypeAuthorization = current.SubjectTypeAuthorization
+			if inputs.SubjectTypeAuthorization != "{}" {
+				var subjectTypeAuth management.ResourceServerSubjectTypeAuthorization
+				if err := json.Unmarshal([]byte(inputs.SubjectTypeAuthorization), &subjectTypeAuth); err != nil {
+					return fmt.Errorf("invalid JSON for subject-type-authorization: %w", err)
+				}
+				api.SubjectTypeAuthorization = &subjectTypeAuth
+			}
+
 			if err := ansi.Waiting(func() error {
 				return cli.api.ResourceServer.Update(cmd.Context(), current.GetID(), api)
 			}); err != nil {
@@ -410,11 +461,13 @@ func updateAPICmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	apiName.RegisterStringU(cmd, &inputs.Name, "")
 	apiScopes.RegisterStringSliceU(cmd, &inputs.Scopes, nil)
 	apiOfflineAccess.RegisterBoolU(cmd, &inputs.AllowOfflineAccess, false)
 	apiTokenLifetime.RegisterIntU(cmd, &inputs.TokenLifetime, 0)
 	apiSigningAlgorithm.RegisterStringU(cmd, &inputs.SigningAlgorithm, "RS256")
+	apiSubjectTypeAuthorization.RegisterStringU(cmd, &inputs.SubjectTypeAuthorization, "{}")
 
 	return cmd
 }
@@ -533,6 +586,7 @@ func listScopesCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 apis scopes list
   auth0 apis scopes ls <api-id|api-audience>
   auth0 apis scopes ls <api-id|api-audience> --json
+  auth0 apis scopes ls <api-id|api-audience> --json-compact
   auth0 apis scopes ls <api-id|api-audience> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -561,8 +615,9 @@ func listScopesCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	return cmd
 }

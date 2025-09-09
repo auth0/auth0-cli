@@ -6,12 +6,12 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/PuerkitoBio/rehttp v1.4.0
 	github.com/atotto/clipboard v0.1.4
-	github.com/auth0/go-auth0 v1.25.1-0.20250726174643-1e661151334e
+	github.com/auth0/go-auth0 v1.27.0
 	github.com/briandowns/spinner v1.23.2
 	github.com/charmbracelet/glamour v0.10.0
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/getsentry/sentry-go v0.34.1
+	github.com/getsentry/sentry-go v0.35.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
@@ -21,7 +21,7 @@ require (
 	github.com/hashicorp/terraform-exec v0.23.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/lestrrat-go/jwx/v2 v2.1.6
-	github.com/lestrrat-go/jwx/v3 v3.0.9
+	github.com/lestrrat-go/jwx/v3 v3.0.10
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/manifoldco/promptui v0.9.0
 	github.com/mattn/go-isatty v0.0.20
@@ -31,16 +31,16 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/schollz/progressbar/v3 v3.17.1
 	github.com/spf13/cobra v1.9.1
-	github.com/spf13/pflag v1.0.6
-	github.com/stretchr/testify v1.10.0
+	github.com/spf13/pflag v1.0.10
+	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/pretty v1.2.1
 	github.com/zalando/go-keyring v0.2.6
 	golang.org/x/net v0.42.0
-	golang.org/x/oauth2 v0.30.0
-	golang.org/x/sync v0.16.0
-	golang.org/x/sys v0.34.0
-	golang.org/x/term v0.33.0
-	golang.org/x/text v0.27.0
+	golang.org/x/oauth2 v0.31.0
+	golang.org/x/sync v0.17.0
+	golang.org/x/sys v0.36.0
+	golang.org/x/term v0.35.0
+	golang.org/x/text v0.28.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -96,7 +96,7 @@ require (
 	github.com/zclconf/go-cty v1.16.2 // indirect
 	golang.org/x/crypto v0.40.0 // indirect
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
-	golang.org/x/mod v0.25.0 // indirect
-	golang.org/x/tools v0.34.0 // indirect
+	golang.org/x/mod v0.26.0 // indirect
+	golang.org/x/tools v0.35.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

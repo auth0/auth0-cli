@@ -78,6 +78,7 @@ func listLogsCmd(cli *cli) *cobra.Command {
   auth0 logs list --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
   auth0 logs ls -n 250 -p
   auth0 logs ls --json
+  auth0 logs ls --json-compact
   auth0 logs ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Num < 1 || inputs.Num > 1000 {
@@ -122,8 +123,9 @@ func listLogsCmd(cli *cli) *cobra.Command {
 	logPicker.RegisterBool(cmd, &inputs.Picker, false)
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	return cmd
 }
@@ -160,7 +162,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 
 			var lastLogID string
 			if len(list) > 0 {
-				lastLogID = list[len(list)-1].GetLogID()
+				lastLogID = list[0].GetLogID()
 			}
 
 			// Create a `set` to detect duplicates clientside.
@@ -191,14 +193,14 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 						return
 					}
 
-					if len(list) > 0 {
+					if len(list) > 1 {
 						logsCh <- dedupeLogs(list, set)
-						lastLogID = list[len(list)-1].GetLogID()
+						lastLogID = list[0].GetLogID()
 					}
 
 					if len(list) < logsPerPageLimit {
 						// Not a lot is happening, sleep on it.
-						time.Sleep(time.Second)
+						time.Sleep(2 * time.Second)
 					}
 				}
 			}(lastLogID)

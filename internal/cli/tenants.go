@@ -36,6 +36,7 @@ func listTenantCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 tenants list
   auth0 tenants ls
   auth0 tenants ls --json
+  auth0 tenants ls --json-compact
   auth0 tenants ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tenants, err := cli.Config.ListAllTenants()
@@ -54,8 +55,9 @@ func listTenantCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "csv")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	return cmd
 }

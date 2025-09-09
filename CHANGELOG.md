@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.18.0](https://github.com/auth0/auth0-cli/tree/v1.18.0) (September 2, 2025)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.17.1...v1.18.0)
+
+### Added
+- Add support for `subject-type-authorization` flag to apis commands. [#1315]
+
+### Fixed
+- Fix log ID retrieval and adjust sleep duration in logs processing. [#1314]
+
+
+# [v.1.17.1](https://github.com/auth0/auth0-cli/tree/v1.17.1) (August 12, 2025)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.17.0...v1.17.1)
+
+### Fixed
+- Updated custom domain retrieval to use the `LIST` endpoint instead of `ListWithPagination`. [#1306]
+
+
+# [v.1.17.0](https://github.com/auth0/auth0-cli/tree/v1.17.0) (August 07, 2025)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.16.0...v1.17.0)
+
+### Added
+- Updated ULP branding assets to support standard customization to latest [#1268]
+- Improve error messaging for missing token scopes [#1247]
+- Add json-compact Flag and improve JSON Output Handling [#1283]
+- Add support for `pii-config` and `filters` flags to log-streams commands [#1280]
+
+
 # [v.1.16.0](https://github.com/auth0/auth0-cli/tree/v1.16.0) (July 15, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.15.0...v1.16.0)
@@ -526,11 +556,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.16.0...HEAD
-
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.17.1...HEAD
+[1306]: https://github.com/auth0/auth0-cli/issues/1306
+[1283]: https://github.com/auth0/auth0-cli/issues/1283
+[1280]: https://github.com/auth0/auth0-cli/issues/1280
+[#1268]: https://github.com/auth0/auth0-cli/issues/1268
 [#1260]: https://github.com/auth0/auth0-cli/issues/1260
 [#1258]: https://github.com/auth0/auth0-cli/issues/1258
 [#1254]: https://github.com/auth0/auth0-cli/issues/1254
+[1247]: https://github.com/auth0/auth0-cli/issues/1247
 [#1245]: https://github.com/auth0/auth0-cli/issues/1245
 [#1240]: https://github.com/auth0/auth0-cli/issues/1240
 [#1237]: https://github.com/auth0/auth0-cli/issues/1237
