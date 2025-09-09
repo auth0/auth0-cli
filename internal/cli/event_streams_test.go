@@ -52,7 +52,7 @@ func TestEventStreamPickerOptions(t *testing.T) {
 				t.Fail()
 			},
 			assertError: func(t testing.TB, err error) {
-				assert.ErrorContains(t, err, "there are currently no event streams to choose from. Create one by running: `auth0 events create`")
+				assert.ErrorContains(t, err, "there are currently no event streams to choose from. Create one by running: `auth0 event-streams create`")
 			},
 		},
 		{
