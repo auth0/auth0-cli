@@ -75,6 +75,38 @@ func TestFetchImportData(t *testing.T) {
 		_, err := fetchImportData(context.Background(), &cli{}, mockFetchers...)
 		assert.EqualError(t, err, "failed to list clients")
 	})
+
+	t.Run("it skips resources with 403 Forbidden error", func(t *testing.T) {
+		mockFetchers := []resourceDataFetcher{
+			&mockFetcher{mockErr: errors.New("403 Forbidden: access denied")},
+			&mockFetcher{mockData: importDataList{{ResourceName: "auth0_client.allowed", ImportID: "client-allowed"}}},
+		}
+
+		_, err := fetchImportData(context.Background(), &cli{
+			renderer: &display.Renderer{
+				MessageWriter: &bytes.Buffer{},
+				ResultWriter:  &bytes.Buffer{},
+			},
+		}, mockFetchers...)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("it skips resources with 402 Payment Required error", func(t *testing.T) {
+		mockFetchers := []resourceDataFetcher{
+			&mockFetcher{mockErr: errors.New("402 Payment Required: upgrade needed")},
+			&mockFetcher{mockData: importDataList{{ResourceName: "auth0_client.allowed", ImportID: "client-allowed"}}},
+		}
+
+		_, err := fetchImportData(context.Background(), &cli{
+			renderer: &display.Renderer{
+				MessageWriter: &bytes.Buffer{},
+				ResultWriter:  &bytes.Buffer{},
+			},
+		}, mockFetchers...)
+
+		assert.NoError(t, err)
+	})
 }
 
 func TestGenerateTerraformImportConfig(t *testing.T) {
