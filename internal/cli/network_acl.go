@@ -710,22 +710,15 @@ To update non-interactively, supply the description, active, priority, and rule 
 				return fmt.Errorf("failed to get network ACL with ID %q: %w", inputs.ID, err)
 			}
 
-			// If some flags were provided in interactive mode, ask if user wants to update other fields.
+			// If some flags were provided in interactive mode, only update those fields.
 			if canPrompt(cmd) && flagsProvided {
-				var updateOtherFields bool
-				if err := prompt.AskBool("Do you want to update other fields as well?", &updateOtherFields, false); err != nil {
+				// Only update the fields that were specified via flags.
+				if err := validateAndSetBasicFields(&inputs, patch, cmd); err != nil {
 					return err
 				}
 
-				if !updateOtherFields {
-					// Only update the fields that were specified via flags.
-					if err := validateAndSetBasicFields(&inputs, patch, cmd); err != nil {
-						return err
-					}
-
-					// Apply the patch.
-					return applyNetworkACLPatch(cmd.Context(), cli, inputs.ID, patch)
-				}
+				// Apply the patch.
+				return applyNetworkACLPatch(cmd.Context(), cli, inputs.ID, patch)
 			}
 
 			// Use current values as defaults for interactive prompts.
