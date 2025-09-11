@@ -231,7 +231,7 @@ func runScaffold2(cmd *cobra.Command, args []string) error {
 	fmt.Println("\nProject successfully created!")
 
 	for _, scr := range selectedScreens {
-		fmt.Printf("https://auth0.com/docs/acul/screens/+%s\n", scr)
+		fmt.Printf("https://auth0.com/docs/acul/screens/%s\n", scr)
 	}
 
 	fmt.Println("Explore the sample app: https://github.com/auth0/acul-sample-app")
@@ -251,7 +251,7 @@ func downloadFile(url string) string {
 	tempFile, err := os.CreateTemp("", "github-zip-*.zip")
 	check(err, "Error creating temporary file")
 
-	fmt.Printf("Downloading from %s...\n", url)
+	// fmt.Printf("Downloading from %s...\n", url)
 	resp, err := http.Get(url)
 	check(err, "Error downloading file")
 	defer resp.Body.Close()
