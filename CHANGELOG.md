@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.19.0...v1.20.0)
 
 ### Added
-- Add support Patch for Network ACL update flow [#1265]
+- Add support patch for network ACL update flow [#1265]
 
 # [v.1.19.0](https://github.com/auth0/auth0-cli/tree/v1.19.0) (September 9, 2025)
 
