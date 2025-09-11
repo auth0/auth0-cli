@@ -7,8 +7,8 @@ has_toc: false
 
 Update a network ACL.
 To update interactively, use "auth0 network-acl update" with no arguments.
-To update non-interactively, supply the required parameters (description, active, priority, and rule) through flags.
-When updating the rule, provide a complete JSON object with action, scope, and match/not_match properties.
+To update non-interactively, supply the description, active, priority, and rule through flags.
+
 
 ## Usage
 ```
@@ -21,6 +21,8 @@ auth0 network-acl update [flags]
   auth0 network-acl update <id>
   auth0 network-acl update <id> --priority 5 
   auth0 network-acl update <id> --active true
+  auth0 network-acl update <id> --description "Updated description"
+  auth0 network-acl update <id> --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"]}}'
   auth0 network-acl update <id> --description "Complex Rule updated" --priority 1 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
 ```
 
@@ -38,7 +40,7 @@ auth0 network-acl update [flags]
       --ja3-fingerprints strings    Comma-separated list of JA3 fingerprints to match (Eg. deadbeef,cafebabe)
       --ja4-fingerprints strings    Comma-separated list of JA4 fingerprints to match (Eg. t13d1516h2_8daaf6152771)
       --json                        Output in JSON format
-  -p, --priority int                Priority of the network ACL (1-10) (default 1)
+  -p, --priority int                Priority of the network ACL (default 1)
       --redirect-uri string         URI to redirect to when action is redirect
       --rule string                 Network ACL rule configuration in JSON format
       --scope string                Scope of the rule (management, authentication, tenant)
