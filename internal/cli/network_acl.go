@@ -38,7 +38,7 @@ var (
 		Name:      "Priority",
 		LongForm:  "priority",
 		ShortForm: "p",
-		Help:      "Priority of the network ACL 1-10 number(Eg. 5)",
+		Help:      "Priority of the network ACL in number(Eg. 5)",
 	}
 
 	networkACLRuleAction = Flag{
@@ -147,9 +147,6 @@ func validateAndSetBasicFields(inputs *struct {
 	}
 
 	if cmd.Flags().Changed("priority") {
-		if inputs.Priority < 1 || inputs.Priority > 10 {
-			return fmt.Errorf("priority must be between 1 and 10")
-		}
 		patch.Priority = &inputs.Priority
 	}
 
@@ -716,11 +713,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 			}
 
 			if err := networkACLPriority.AskInt(cmd, &inputs.Priority, nil); err != nil {
-				return fmt.Errorf("priority must be between 1 and 10")
-			}
-
-			if inputs.Priority < 1 || inputs.Priority > 10 {
-				return fmt.Errorf("priority must be between 1 and 10")
+				return err
 			}
 
 			// Use helper functions for rule configuration.
@@ -762,7 +755,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().StringVarP(&inputs.Description, "description", "d", "", "Description of the network ACL (required)")
 	cmd.Flags().StringVar(&inputs.ActiveStr, "active", "", "Whether the network ACL is active (required, 'true' or 'false')")
-	cmd.Flags().IntVarP(&inputs.Priority, "priority", "p", 0, "Priority of the network ACL (required, 1-10)")
+	cmd.Flags().IntVarP(&inputs.Priority, "priority", "p", 0, "Priority of the network ACL (required)")
 	cmd.Flags().StringVar(&inputs.RuleJSON, "rule", "", "Network ACL rule configuration in JSON format (required for non-interactive mode)")
 	cmd.Flags().StringVar(&inputs.Action, "action", "", "Action for the rule (block, allow, log, redirect)")
 	cmd.Flags().StringVar(&inputs.RedirectURI, "redirect-uri", "", "URI to redirect to when action is redirect")
@@ -891,9 +884,7 @@ To update non-interactively, supply the description, active, priority, and rule 
 			if err := networkACLPriority.AskInt(cmd, &inputs.Priority, &currentPriorityStr); err != nil {
 				return err
 			}
-			if inputs.Priority < 1 || inputs.Priority > 10 {
-				return fmt.Errorf("priority must be between 1 and 10")
-			}
+
 			patch.Priority = &inputs.Priority
 
 			// Use helper functions for rule configuration.
@@ -918,7 +909,7 @@ To update non-interactively, supply the description, active, priority, and rule 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in JSON format")
 	cmd.Flags().StringVarP(&inputs.Description, "description", "d", "", "Description of the network ACL")
 	cmd.Flags().StringVar(&inputs.ActiveStr, "active", "", "Whether the network ACL is active ('true' or 'false')")
-	cmd.Flags().IntVarP(&inputs.Priority, "priority", "p", 1, "Priority of the network ACL (1-10)")
+	cmd.Flags().IntVarP(&inputs.Priority, "priority", "p", 1, "Priority of the network ACL")
 	cmd.Flags().StringVar(&inputs.RuleJSON, "rule", "", "Network ACL rule configuration in JSON format")
 	cmd.Flags().StringVar(&inputs.Action, "action", "", "Action for the rule (block, allow, log, redirect)")
 	cmd.Flags().StringVar(&inputs.RedirectURI, "redirect-uri", "", "URI to redirect to when action is redirect")
