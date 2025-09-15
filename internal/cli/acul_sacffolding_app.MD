@@ -19,7 +19,7 @@ Initializes a git repo in the target directory, enables sparse-checkout, writes 
 ---
 
 ## Method B: HTTP Raw + GitHub Tree API
-*File: `internal/cli/acul_scaffolding.go` (command `init`)*
+*File: `internal/cli/acul_scaffolding.go` (command `init2`)*
 
 **Summary:**  
 Uses the GitHub Tree API to enumerate files and `raw.githubusercontent.com` to download each file individually to a target folder.
@@ -38,7 +38,7 @@ Uses the GitHub Tree API to enumerate files and `raw.githubusercontent.com` to d
 ---
 
 ## Method C: Zip Download + Selective Copy
-*File: `internal/cli/acul_sca.go` (command `init2`)*
+*File: `internal/cli/acul_sca.go` (command `init`)*
 
 **Summary:**  
 Downloads a branch zip archive once, unzips to a temp directory, then copies only base directories/files and selected screens into the target directory.

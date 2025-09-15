@@ -24,10 +24,10 @@ var templateFlag = Flag{
 	IsRequired: false,
 }
 
-// aculInitCmd2 returns the cobra.Command for project initialization.
-func aculInitCmd2(cli *cli) *cobra.Command {
+// aculInitCmd returns the cobra.Command for project initialization.
+func aculInitCmd(cli *cli) *cobra.Command {
 	return &cobra.Command{
-		Use:   "init2",
+		Use:   "init",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Generate a new project from a template",
 		Long:  "Generate a new project from a template.",
@@ -113,7 +113,7 @@ func selectScreens(template Template) ([]string, error) {
 
 func getDestDir(args []string) string {
 	if len(args) < 1 {
-		return "my_acul_proj2"
+		return "my_acul_proj"
 	}
 	return args[0]
 }
@@ -216,7 +216,6 @@ func copyProjectScreens(cli *cli, screens []Screen, selectedScreens []string, ch
 			continue
 		}
 
-		fmt.Printf("Copying screen path: %s\n", screen.Path)
 		if err := copyDir(srcPath, destPath); err != nil {
 			return fmt.Errorf("error copying screen directory %s: %w", screen.Path, err)
 		}
@@ -258,7 +257,6 @@ func downloadFile(url string) string {
 	tempFile, err := os.CreateTemp("", "github-zip-*.zip")
 	check(err, "Error creating temporary file")
 
-	fmt.Printf("Downloading from %s...\n", url)
 	resp, err := http.Get(url)
 	check(err, "Error downloading file")
 	defer resp.Body.Close()
