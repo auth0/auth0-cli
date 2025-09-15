@@ -3,7 +3,9 @@ package display
 import "github.com/auth0/go-auth0/management"
 
 type aculConfigView struct {
-	raw interface{}
+	ScreenName    string
+	RenderingMode string
+	raw           interface{}
 }
 
 func (v *aculConfigView) Object() interface{} {
@@ -11,32 +13,47 @@ func (v *aculConfigView) Object() interface{} {
 }
 
 func (v *aculConfigView) AsTableHeader() []string {
-	return []string{}
+	return []string{
+		"Screen Name",
+		"Rendering Mode",
+	}
 }
 
 func (v *aculConfigView) AsTableRow() []string {
-	return []string{}
+	return []string{v.ScreenName, v.RenderingMode}
 }
 
 func (r *Renderer) ACULConfigList(aculConfigs *management.PromptRenderingList) {
 	resource := "prompt rendering configurations"
+	r.Heading(resource)
 
 	if len(aculConfigs.PromptRenderings) == 0 {
 		r.EmptyState(resource, "Use 'auth0 config set' to configure acul settings for any screen")
 	}
 
-	var res []View
-	for _, aculConfig := range aculConfigs.PromptRenderings {
-		view := makeACULConfigView(aculConfig)
-
-		res = append(res, view)
+	if r.Format == OutputFormatJSONCompact {
+		r.JSONCompactResult(aculConfigs)
+		return
 	}
 
-	r.Results(res)
+	if r.Format == OutputFormatJSON {
+		r.JSONResult(aculConfigs)
+		return
+	}
+
+	r.Results(makeACULConfigView(aculConfigs))
 }
 
-func makeACULConfigView(aculConfig *management.PromptRendering) View {
-	return &aculConfigView{
-		raw: aculConfig,
+func makeACULConfigView(aculConfig *management.PromptRenderingList) []View {
+	views := make([]View, 0, len(SupportedTenantSettings))
+
+	for _, v := range aculConfig.PromptRenderings {
+		views = append(views, &aculConfigView{
+			ScreenName:    string(*v.Screen),
+			RenderingMode: string(*v.RenderingMode),
+			raw:           v,
+		})
 	}
+
+	return views
 }

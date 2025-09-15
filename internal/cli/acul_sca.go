@@ -64,76 +64,120 @@ var templateFlag = Flag{
 	IsRequired: false,
 }
 
-// This logic goes inside your `RunE` function.
-func aculInitCmd2(_ *cli) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "init2",
+// aculInitCmd returns the cobra.Command for project initialization.
+func aculInitCmd(cli *cli) *cobra.Command {
+	return &cobra.Command{
+		Use:   "init",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Generate a new project from a template",
-		Long:  `Generate a new project from a template.`,
-		RunE:  runScaffold2,
+		Long:  "Generate a new project from a template.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runScaffold2(cli, cmd, args)
+		},
 	}
-
-	return cmd
 }
 
-func runScaffold2(cmd *cobra.Command, args []string) error {
-	// Step 1: fetch manifest.json.
+func runScaffold2(cli *cli, cmd *cobra.Command, args []string) error {
 	manifest, err := LoadManifest()
 	if err != nil {
 		return err
 	}
 
-	var chosenTemplate string
-	if err := templateFlag.Select(cmd, &chosenTemplate, utils.FetchKeys(manifest.Templates), nil); err != nil {
-		return handleInputError(err)
-	}
-
-	// Step 3: select screens.
-	var screenOptions []string
-	template := manifest.Templates[chosenTemplate]
-	for _, s := range template.Screens {
-		screenOptions = append(screenOptions, s.ID)
-	}
-
-	// Step 3: Let user select screens.
-	var selectedScreens []string
-	if err := prompt.AskMultiSelect("Select screens to include:", &selectedScreens, screenOptions...); err != nil {
+	chosenTemplate, err := selectTemplate(cmd, manifest)
+	if err != nil {
 		return err
 	}
 
-	// Step 3: Create project folder.
-	var destDir string
-	if len(args) < 1 {
-		destDir = "my_acul_proj2"
-	} else {
-		destDir = args[0]
+	selectedScreens, err := selectScreens(manifest.Templates[chosenTemplate])
+	if err != nil {
+		return err
 	}
+
+	destDir := getDestDir(args)
+
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return fmt.Errorf("failed to create project dir: %w", err)
 	}
 
-	curr := time.Now()
+	tempUnzipDir, err := downloadAndUnzipSampleRepo()
+	defer os.RemoveAll(tempUnzipDir) // Clean up the entire temp directory.
+	if err != nil {
+		return err
+	}
 
-	// --- Step 1: Download and Unzip to Temp Dir ---.
+	selectedTemplate := manifest.Templates[chosenTemplate]
+
+	err = copyTemplateBaseDirs(cli, selectedTemplate.BaseDirectories, chosenTemplate, tempUnzipDir, destDir)
+	if err != nil {
+		return err
+	}
+
+	err = copyProjectTemplateFiles(cli, selectedTemplate.BaseFiles, chosenTemplate, tempUnzipDir, destDir)
+	if err != nil {
+		return err
+	}
+
+	err = copyProjectScreens(cli, selectedTemplate.Screens, selectedScreens, chosenTemplate, tempUnzipDir, destDir)
+	if err != nil {
+		return err
+	}
+
+	err = writeAculConfig(destDir, chosenTemplate, selectedScreens, manifest.Metadata.Version)
+	if err != nil {
+		fmt.Printf("Failed to write config: %v\n", err)
+	}
+
+	fmt.Println("\nProject successfully created!\n" +
+		"Explore the sample app: https://github.com/auth0/acul-sample-app")
+	return nil
+}
+
+func selectTemplate(cmd *cobra.Command, manifest *Manifest) (string, error) {
+	var chosenTemplate string
+	err := templateFlag.Select(cmd, &chosenTemplate, utils.FetchKeys(manifest.Templates), nil)
+	if err != nil {
+		return "", handleInputError(err)
+	}
+	return chosenTemplate, nil
+}
+
+func selectScreens(template Template) ([]string, error) {
+	var screenOptions []string
+	for _, s := range template.Screens {
+		screenOptions = append(screenOptions, s.ID)
+	}
+	var selectedScreens []string
+	err := prompt.AskMultiSelect("Select screens to include:", &selectedScreens, screenOptions...)
+	return selectedScreens, err
+}
+
+func getDestDir(args []string) string {
+	if len(args) < 1 {
+		return "my_acul_proj"
+	}
+	return args[0]
+}
+
+func downloadAndUnzipSampleRepo() (string, error) {
 	repoURL := "https://github.com/auth0-samples/auth0-acul-samples/archive/refs/heads/monorepo-sample.zip"
 	tempZipFile := downloadFile(repoURL)
 	defer os.Remove(tempZipFile) // Clean up the temp zip file.
 
 	tempUnzipDir, err := os.MkdirTemp("", "unzipped-repo-*")
-	check(err, "Error creating temporary unzipped directory")
-	defer os.RemoveAll(tempUnzipDir) // Clean up the entire temp directory.
-
-	err = utils.Unzip(tempZipFile, tempUnzipDir)
 	if err != nil {
-		return err
+		return "", fmt.Errorf("error creating temporary unzip dir: %w", err)
 	}
 
-	// TODO: Adjust this prefix based on the actual structure of the unzipped content(once main branch is used).
-	var sourcePathPrefix = "auth0-acul-samples-monorepo-sample/" + chosenTemplate
+	if err = utils.Unzip(tempZipFile, tempUnzipDir); err != nil {
+		return "", err
+	}
 
-	// --- Step 2: Copy the Specified Base Directories ---.
-	for _, dir := range manifest.Templates[chosenTemplate].BaseDirectories {
+	return tempUnzipDir, nil
+}
+
+func copyTemplateBaseDirs(cli *cli, baseDirs []string, chosenTemplate, tempUnzipDir, destDir string) error {
+	sourcePathPrefix := "auth0-acul-samples-monorepo-sample/" + chosenTemplate
+	for _, dir := range baseDirs {
 		// TODO: Remove hardcoding of removing the template - instead ensure to remove the template name in sourcePathPrefix.
 		relPath, err := filepath.Rel(chosenTemplate, dir)
 		if err != nil {
@@ -144,16 +188,21 @@ func runScaffold2(cmd *cobra.Command, args []string) error {
 		destPath := filepath.Join(destDir, relPath)
 
 		if _, err = os.Stat(srcPath); os.IsNotExist(err) {
-			log.Printf("Warning: Source directory does not exist: %s", srcPath)
+			cli.renderer.Warnf("Warning: Source directory does not exist: %s", srcPath)
 			continue
 		}
 
-		err = copyDir(srcPath, destPath)
-		check(err, fmt.Sprintf("Error copying directory %s", dir))
+		if err := copyDir(srcPath, destPath); err != nil {
+			return fmt.Errorf("error copying directory %s: %w", dir, err)
+		}
 	}
 
-	// --- Step 3: Copy the Specified Base Files ---.
-	for _, baseFile := range manifest.Templates[chosenTemplate].BaseFiles {
+	return nil
+}
+
+func copyProjectTemplateFiles(cli *cli, baseFiles []string, chosenTemplate, tempUnzipDir, destDir string) error {
+	sourcePathPrefix := "auth0-acul-samples-monorepo-sample/" + chosenTemplate
+	for _, baseFile := range baseFiles {
 		// TODO: Remove hardcoding of removing the template - instead ensure to remove the template name in sourcePathPrefix.
 		relPath, err := filepath.Rel(chosenTemplate, baseFile)
 		if err != nil {
@@ -164,21 +213,27 @@ func runScaffold2(cmd *cobra.Command, args []string) error {
 		destPath := filepath.Join(destDir, relPath)
 
 		if _, err = os.Stat(srcPath); os.IsNotExist(err) {
-			log.Printf("Warning: Source file does not exist: %s", srcPath)
+			cli.renderer.Warnf("Warning: Source file does not exist: %s", srcPath)
 			continue
 		}
 
 		parentDir := filepath.Dir(destPath)
 		if err := os.MkdirAll(parentDir, 0755); err != nil {
-			log.Printf("Error creating parent directory for %s: %v", baseFile, err)
+			cli.renderer.Warnf("Error creating parent directory for %s: %v", baseFile, err)
 			continue
 		}
 
-		err = copyFile(srcPath, destPath)
-		check(err, fmt.Sprintf("Error copying file %s", baseFile))
+		if err := copyFile(srcPath, destPath); err != nil {
+			return fmt.Errorf("error copying file %s: %w", baseFile, err)
+		}
 	}
 
-	screenInfo := createScreenMap(template.Screens)
+	return nil
+}
+
+func copyProjectScreens(cli *cli, screens []Screen, selectedScreens []string, chosenTemplate, tempUnzipDir, destDir string) error {
+	sourcePathPrefix := "auth0-acul-samples-monorepo-sample/" + chosenTemplate
+	screenInfo := createScreenMap(screens)
 	for _, s := range selectedScreens {
 		screen := screenInfo[s]
 
@@ -191,41 +246,40 @@ func runScaffold2(cmd *cobra.Command, args []string) error {
 		destPath := filepath.Join(destDir, relPath)
 
 		if _, err = os.Stat(srcPath); os.IsNotExist(err) {
-			log.Printf("Warning: Source directory does not exist: %s", srcPath)
+			cli.renderer.Warnf("Warning: Source directory does not exist: %s", srcPath)
 			continue
 		}
 
 		parentDir := filepath.Dir(destPath)
 		if err := os.MkdirAll(parentDir, 0755); err != nil {
-			log.Printf("Error creating parent directory for %s: %v", screen.Path, err)
+			cli.renderer.Warnf("Error creating parent directory for %s: %v", screen.Path, err)
 			continue
 		}
 
-		fmt.Printf("Copying screen path: %s\n", screen.Path)
-		err = copyDir(srcPath, destPath)
-		check(err, fmt.Sprintf("Error copying screen file %s", screen.Path))
+		if err := copyDir(srcPath, destPath); err != nil {
+			return fmt.Errorf("error copying screen directory %s: %w", screen.Path, err)
+		}
 	}
 
-	fmt.Println(time.Since(curr))
+	return nil
+}
 
+func writeAculConfig(destDir, chosenTemplate string, selectedScreens []string, manifestVersion string) error {
 	config := AculConfig{
 		ChosenTemplate:      chosenTemplate,
-		Screen:              selectedScreens,                 // If needed
-		InitTimestamp:       time.Now().Format(time.RFC3339), // Standard time format
-		AculManifestVersion: manifest.Metadata.Version,
+		Screen:              selectedScreens,
+		InitTimestamp:       time.Now().Format(time.RFC3339),
+		AculManifestVersion: manifestVersion,
 	}
 
-	b, err := json.MarshalIndent(config, "", "  ")
+	data, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
-		panic(err) // or handle gracefully
+		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	// Build full path to acul_config.json inside destDir
 	configPath := filepath.Join(destDir, "acul_config.json")
-
-	err = os.WriteFile(configPath, b, 0644)
-	if err != nil {
-		fmt.Printf("Failed to write config: %v\n", err)
+	if err = os.WriteFile(configPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write config: %v", err)
 	}
 
 	fmt.Println("\nProject successfully created!")
@@ -239,19 +293,18 @@ func runScaffold2(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// Helper function to handle errors and log them.
+// Helper function to handle errors and log them, exiting the process.
 func check(err error, msg string) {
 	if err != nil {
-		log.Fatalf("%s: %v", err, msg)
+		log.Fatalf("%s: %v", msg, err)
 	}
 }
 
-// Function to download a file from a URL to a temporary location.
+// downloadFile downloads a file from a URL to a temporary file and returns its name.
 func downloadFile(url string) string {
 	tempFile, err := os.CreateTemp("", "github-zip-*.zip")
 	check(err, "Error creating temporary file")
 
-	// fmt.Printf("Downloading from %s...\n", url)
 	resp, err := http.Get(url)
 	check(err, "Error downloading file")
 	defer resp.Body.Close()
@@ -281,8 +334,7 @@ func copyFile(src, dst string) error {
 	}
 	defer out.Close()
 
-	_, err = io.Copy(out, in)
-	if err != nil {
+	if _, err = io.Copy(out, in); err != nil {
 		return fmt.Errorf("failed to copy file contents: %w", err)
 	}
 	return out.Close()
@@ -326,13 +378,12 @@ func createScreenMap(screens []Screen) map[string]Screen {
 	for _, screen := range screens {
 		screenMap[screen.ID] = screen
 	}
-
 	return screenMap
 }
 
 type AculConfig struct {
 	ChosenTemplate      string   `json:"chosen_template"`
-	Screen              []string `json:"screens"`        // if you want to track this
-	InitTimestamp       string   `json:"init_timestamp"` // ISO8601 for readability
+	Screen              []string `json:"screens"`
+	InitTimestamp       string   `json:"init_timestamp"`
 	AculManifestVersion string   `json:"acul_manifest_version"`
 }

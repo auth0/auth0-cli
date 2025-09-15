@@ -28,7 +28,7 @@ var (
 	}
 	file = Flag{
 		Name:       "File",
-		LongForm:   "settings-file",
+		LongForm:   "file",
 		ShortForm:  "f",
 		Help:       "File to save the rendering configs to.",
 		IsRequired: false,
@@ -95,7 +95,6 @@ var (
 		Help:       "Advanced query.",
 		IsRequired: false,
 	}
-
 	ScreenPromptMap = map[string]string{
 		"signup-id":                                      "signup-id",
 		"signup-password":                                "signup-password",
@@ -172,47 +171,38 @@ var (
 	}
 )
 
-type customizationInputs struct {
+type aculConfigInput struct {
 	screenName string
 	filePath   string
 }
 
-func aculConfigureCmd(cli *cli) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "config",
-		Short: "Configure the Universal Login experience",
-		Long:  "Configure the Universal Login experience. This requires a custom domain to be configured for the tenant.",
-		Example: `  auth0 acul config
-  auth0 acul config
-  auth0 acul config --screen login-id --file settings.json`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return advanceCustomize(cmd, cli, customizationInputs{})
-		},
+// Generate default ACUL config stub.
+func defaultACULConfig() map[string]interface{} {
+	return map[string]interface{}{
+		"rendering_mode":             "standard",
+		"context_configuration":      []interface{}{},
+		"use_page_template":          false,
+		"default_head_tags_disabled": false,
+		"head_tags":                  []interface{}{},
+		"filters":                    []interface{}{},
 	}
-
-	cmd.AddCommand(aculConfigGenerateCmd(cli))
-	cmd.AddCommand(aculConfigGet(cli))
-	cmd.AddCommand(aculConfigSet(cli))
-	cmd.AddCommand(aculConfigListCmd(cli))
-	cmd.AddCommand(aculConfigDocsCmd(cli))
-
-	return cmd
 }
 
 func aculConfigGenerateCmd(cli *cli) *cobra.Command {
-	var input customizationInputs
+	var input aculConfigInput
 
 	cmd := &cobra.Command{
 		Use:   "generate",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Generate a default rendering config for a screen",
-		Long:  "Generate a default rendering config for a specific screen and save it to a file.",
+		Short: "Generate a stub config file for a Universal Login screen.",
+		Long: "Generate a stub config file for a Universal Login screen and save it to a file.\n" +
+			"If fileName is not provided, it will default to <screen-name>.json in the current directory.",
 		Example: `  auth0 acul config generate signup-id
   auth0 acul config generate login-id --file login-settings.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				cli.renderer.Infof("Please select a screen ")
-				if err := screenName.Select(cmd, &screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
+				if err := screenName.Select(cmd, &input.screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
 					return handleInputError(err)
 				}
 			} else {
@@ -223,26 +213,17 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
 				input.filePath = fmt.Sprintf("%s.json", input.screenName)
 			}
 
-			defaultConfig := map[string]interface{}{
-				"rendering_mode":             "standard",
-				"context_configuration":      []interface{}{},
-				"use_page_template":          false,
-				"default_head_tags_disabled": false,
-				"head_tags":                  []interface{}{},
-				"filters":                    []interface{}{},
-			}
+			config := defaultACULConfig()
 
-			data, err := json.MarshalIndent(defaultConfig, "", "  ")
-			if err != nil {
-				return fmt.Errorf("failed to marshal default config: %w", err)
-			}
+			// Error handling omitted for brevity.
+			data, _ := json.MarshalIndent(config, "", "  ")
 
 			if err := os.WriteFile(input.filePath, data, 0644); err != nil {
-				return fmt.Errorf("failed to write config file: %w", err)
+				return fmt.Errorf("could not write config: %w", err)
 			}
 
 			cli.renderer.Infof("Configuration successfully generated!\n"+
-				"      Your new config file is located at ./%s\n"+
+				"      Your new config file is located at %s\n"+
 				"      Review the documentation for configuring screens to use ACUL\n"+
 				"      https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens\n", ansi.Green(input.filePath))
 			return nil
@@ -254,8 +235,8 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func aculConfigGet(cli *cli) *cobra.Command {
-	var input customizationInputs
+func aculConfigGetCmd(cli *cli) *cobra.Command {
+	var input aculConfigInput
 
 	cmd := &cobra.Command{
 		Use:   "get",
@@ -263,7 +244,7 @@ func aculConfigGet(cli *cli) *cobra.Command {
 		Short: "Get the current rendering settings for a specific screen",
 		Long:  "Get the current rendering settings for a specific screen.",
 		Example: `  auth0 acul config get signup-id
-  auth0 acul config get login-id`,
+  auth0 acul config get login-id -f ./login.json"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				cli.renderer.Infof("Please select a screen ")
@@ -281,14 +262,14 @@ func aculConfigGet(cli *cli) *cobra.Command {
 			}
 
 			if input.filePath != "" {
-				if isFileExists(cli, cmd, input.filePath, input.screenName) {
+				if shouldOverwriteFile(cli, cmd, input.filePath, input.screenName) {
 					return nil
 				}
 			} else {
 				cli.renderer.Warnf("No configuration file exists for %s on %s", ansi.Green(input.screenName), ansi.Blue(input.filePath))
 
 				if !cli.force && canPrompt(cmd) {
-					message := "Would you like to generate a local config file instead? (Y/n)"
+					message := fmt.Sprintf("Would you like to generate a local config file instead at %v.json? (Y/n)", input.screenName)
 					if confirmed := prompt.Confirm(message); !confirmed {
 						return nil
 					}
@@ -311,13 +292,12 @@ func aculConfigGet(cli *cli) *cobra.Command {
 		},
 	}
 
-	screenName.RegisterString(cmd, &input.screenName, "")
 	file.RegisterString(cmd, &input.filePath, "")
 
 	return cmd
 }
 
-func isFileExists(cli *cli, cmd *cobra.Command, filePath, screen string) bool {
+func shouldOverwriteFile(cli *cli, cmd *cobra.Command, filePath, screen string) bool {
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
 		return false
@@ -335,8 +315,8 @@ func isFileExists(cli *cli, cmd *cobra.Command, filePath, screen string) bool {
 	return false
 }
 
-func aculConfigSet(cli *cli) *cobra.Command {
-	var input customizationInputs
+func aculConfigSetCmd(cli *cli) *cobra.Command {
+	var input aculConfigInput
 
 	cmd := &cobra.Command{
 		Use:   "set",
@@ -344,19 +324,27 @@ func aculConfigSet(cli *cli) *cobra.Command {
 		Short: "Set the rendering settings for a specific screen",
 		Long:  "Set the rendering settings for a specific screen.",
 		Example: `  auth0 acul config set signup-id --file settings.json
-  auth0 acul config set login-id --file settings.json`,
+  auth0 acul config set login-id`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				cli.renderer.Infof("Please select a screen ")
+				if err := screenName.Select(cmd, &input.screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
+					return handleInputError(err)
+				}
+			} else {
+				input.screenName = args[0]
+			}
+
 			return advanceCustomize(cmd, cli, input)
 		},
 	}
 
-	screenName.RegisterString(cmd, &input.screenName, "")
 	file.RegisterString(cmd, &input.filePath, "")
 
 	return cmd
 }
 
-func advanceCustomize(cmd *cobra.Command, cli *cli, input customizationInputs) error {
+func advanceCustomize(cmd *cobra.Command, cli *cli, input aculConfigInput) error {
 	var currMode = standardMode
 
 	renderSettings, err := fetchRenderSettings(cmd, cli, input)
@@ -390,7 +378,7 @@ func advanceCustomize(cmd *cobra.Command, cli *cli, input customizationInputs) e
 	return nil
 }
 
-func fetchRenderSettings(cmd *cobra.Command, cli *cli, input customizationInputs) (*management.PromptRendering, error) {
+func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*management.PromptRendering, error) {
 	var (
 		userRenderSettings string
 		renderSettings     = &management.PromptRendering{}
@@ -487,15 +475,11 @@ func aculConfigListCmd(cli *cli) *cobra.Command {
 			if query != "" {
 				params = append(params, management.Parameter("q", query))
 			}
-
-			if includeFields {
-				if fields != "" {
-					params = append(params, management.IncludeFields(fields))
-				}
-			} else {
-				if fields != "" {
-					params = append(params, management.ExcludeFields(fields))
-				}
+			if includeFields && fields != "" {
+				params = append(params, management.IncludeFields(fields))
+			}
+			if !includeFields && fields != "" {
+				params = append(params, management.ExcludeFields(fields))
 			}
 
 			if screen != "" {
@@ -518,8 +502,6 @@ func aculConfigListCmd(cli *cli) *cobra.Command {
 			}); err != nil {
 				return err
 			}
-
-			fmt.Printf("Results : %v\n", results)
 
 			cli.renderer.ACULConfigList(results)
 
