@@ -9,11 +9,13 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
 
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/prompt"
-	"github.com/auth0/auth0-cli/internal/utils"
 )
 
 var destDirFlag = Flag{
@@ -24,17 +26,21 @@ var destDirFlag = Flag{
 	IsRequired: false,
 }
 
-func aculAddScreenCmd(_ *cli) *cobra.Command {
+var (
+	aculConfigOnce   sync.Once
+	aculConfigLoaded AculConfig
+)
+
+func aculScreenAddCmd(cli *cli) *cobra.Command {
 	var destDir string
 	cmd := &cobra.Command{
-		Use:   "add-screen",
+		Use:   "add",
 		Short: "Add screens to an existing project",
-		Long:  `Add screens to an existing project.`,
+		Long:  "Add screens to an existing project.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Get current working directory
 			pwd, err := os.Getwd()
 			if err != nil {
-				log.Fatalf("Failed to get current directory: %v", err)
+				return fmt.Errorf("failed to get current directory: %v", err)
 			}
 
 			if len(destDir) < 1 {
@@ -42,11 +48,9 @@ func aculAddScreenCmd(_ *cli) *cobra.Command {
 				if err != nil {
 					return err
 				}
-			} else {
-				destDir = args[0]
 			}
 
-			return runScaffoldAddScreen(cmd, args, destDir)
+			return scaffoldAddScreen(cli, args, destDir)
 		},
 	}
 
@@ -55,220 +59,236 @@ func aculAddScreenCmd(_ *cli) *cobra.Command {
 	return cmd
 }
 
-func runScaffoldAddScreen(cmd *cobra.Command, args []string, destDir string) error {
-	// Step 1: fetch manifest.json.
+func scaffoldAddScreen(cli *cli, args []string, destDir string) error {
 	manifest, err := LoadManifest()
 	if err != nil {
 		return err
 	}
 
-	// Step 2: read acul_config.json from destDir.
 	aculConfig, err := LoadAculConfig(filepath.Join(destDir, "acul_config.json"))
 	if err != nil {
 		return err
 	}
 
-	// Step 2: select screens.
-	var selectedScreens []string
-
-	if len(args) != 0 {
-		selectedScreens = args
-	} else {
-		var screenOptions []string
-
-		for _, s := range manifest.Templates[aculConfig.ChosenTemplate].Screens {
-			screenOptions = append(screenOptions, s.ID)
-		}
-
-		if err = prompt.AskMultiSelect("Select screens to include:", &selectedScreens, screenOptions...); err != nil {
-			return err
-		}
-	}
-
-	// Step 3: Add screens to existing project.
-	if err = addScreensToProject(destDir, aculConfig.ChosenTemplate, selectedScreens); err != nil {
+	selectedScreens, err := chooseScreens(args, manifest, aculConfig.ChosenTemplate)
+	if err != nil {
 		return err
 	}
+
+	selectedScreens = filterScreensForOverwrite(selectedScreens, aculConfig.Screens)
+
+	if err = addScreensToProject(cli, destDir, aculConfig.ChosenTemplate, selectedScreens, manifest.Templates[aculConfig.ChosenTemplate]); err != nil {
+		return err
+	}
+
+	// Update acul_config.json with new screens.
+	aculConfig.Screens = append(aculConfig.Screens, selectedScreens...)
+	configBytes, err := json.MarshalIndent(aculConfig, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal updated acul_config.json: %w", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(destDir, "acul_config.json"), configBytes, 0644); err != nil {
+		return fmt.Errorf("failed to write updated acul_config.json: %w", err)
+	}
+
+	cli.renderer.Infof(ansi.Bold(ansi.Green("Screens added successfully")))
 
 	return nil
 }
 
-func addScreensToProject(destDir, chosenTemplate string, selectedScreens []string) error {
-	// --- Step 1: Download and Unzip to Temp Dir ---.
-	repoURL := "https://github.com/auth0-samples/auth0-acul-samples/archive/refs/heads/monorepo-sample.zip"
-	tempZipFile := downloadFile(repoURL)
-	defer os.Remove(tempZipFile) // Clean up the temp zip file.
+// Filter out screens user does not want to overwrite.
+func filterScreensForOverwrite(selectedScreens []string, existingScreens []string) []string {
+	var finalScreens []string
+	for _, s := range selectedScreens {
+		if screenExists(existingScreens, s) {
+			promptMsg := fmt.Sprintf("Screen '%s' already exists. Do you want to overwrite its directory? (y/N): ", s)
+			if !prompt.Confirm(promptMsg) {
+				continue
+			}
+		}
+		finalScreens = append(finalScreens, s)
+	}
+	return finalScreens
+}
 
-	tempUnzipDir, err := os.MkdirTemp("", "unzipped-repo-*")
-	check(err, "Error creating temporary unzipped directory")
+// Helper to check if a screen exists in the slice.
+func screenExists(screens []string, target string) bool {
+	for _, screen := range screens {
+		if screen == target {
+			return true
+		}
+	}
+	return false
+}
+
+// Select screens: from args or prompt.
+func chooseScreens(args []string, manifest *Manifest, chosenTemplate string) ([]string, error) {
+	if len(args) != 0 {
+		return args, nil
+	}
+
+	selectedScreens, err := selectScreens(manifest.Templates[chosenTemplate])
+	if err != nil {
+		return nil, err
+	}
+
+	return selectedScreens, nil
+}
+
+func addScreensToProject(cli *cli, destDir, chosenTemplate string, selectedScreens []string, selectedTemplate Template) error {
+	tempUnzipDir, err := downloadAndUnzipSampleRepo()
 	defer os.RemoveAll(tempUnzipDir) // Clean up the entire temp directory.
-
-	err = utils.Unzip(tempZipFile, tempUnzipDir)
 	if err != nil {
 		return err
 	}
 
 	// TODO: Adjust this prefix based on the actual structure of the unzipped content(once main branch is used).
-	var sourcePathPrefix = "auth0-acul-samples-monorepo-sample/" + chosenTemplate
-	var sourceRoot = filepath.Join(tempUnzipDir, sourcePathPrefix)
-
+	var sourcePrefix = "auth0-acul-samples-monorepo-sample/" + chosenTemplate
+	var sourceRoot = filepath.Join(tempUnzipDir, sourcePrefix)
 	var destRoot = destDir
 
-	missingFiles, _, editedFiles, err := processFiles(manifestLoaded.Templates[chosenTemplate].BaseFiles, sourceRoot, destRoot, chosenTemplate)
+	missingFiles, editedFiles, err := processFiles(cli, selectedTemplate.BaseFiles, sourceRoot, destRoot, chosenTemplate)
 	if err != nil {
 		log.Printf("Error processing base files: %v", err)
 	}
 
-	missingDirFiles, _, editedDirFiles, err := processDirectories(manifestLoaded.Templates[chosenTemplate].BaseDirectories, sourceRoot, destRoot, chosenTemplate)
+	missingDirFiles, editedDirFiles, err := processDirectories(cli, selectedTemplate.BaseDirectories, sourceRoot, destRoot, chosenTemplate)
 	if err != nil {
 		log.Printf("Error processing base directories: %v", err)
 	}
 
-	allEdited := append(editedFiles, editedDirFiles...)
-	allMissing := append(missingFiles, missingDirFiles...)
+	editedFiles = append(editedFiles, editedDirFiles...)
+	missingFiles = append(missingFiles, missingDirFiles...)
 
-	if len(allEdited) > 0 {
-		fmt.Printf("The following files/directories have been edited and may be overwritten:\n")
-		for _, p := range allEdited {
-			fmt.Println("  ", p)
-		}
-
-		// Show disclaimer before asking for confirmation
-		fmt.Println("⚠️ DISCLAIMER: Some required base files and directories have been edited.\n" +
-			"Your added screen(s) may NOT work correctly without these updates.\n" +
-			"Proceeding without overwriting could lead to inconsistent or unstable behavior.")
-
-		// Now ask for confirmation
-		if confirmed := prompt.Confirm("Proceed with overwrite and backup? (y/N): "); !confirmed {
-			fmt.Println("Operation aborted. No files were changed.")
-			// Handle abort scenario here (return, exit, etc.)
-		} else {
-			err = backupAndOverwrite(allEdited, sourceRoot, destRoot)
-			if err != nil {
-				fmt.Printf("Backup and overwrite operation finished with errors: %v\n", err)
-			} else {
-				fmt.Println("All edited files have been backed up and overwritten successfully.")
-			}
-		}
+	err = handleEditedFiles(cli, editedFiles, sourceRoot, destRoot)
+	if err != nil {
+		return fmt.Errorf("error during backup/overwrite: %w", err)
 	}
 
-	fmt.Println("all missing files:", allMissing)
-	if len(allMissing) > 0 {
-		for _, baseFile := range allMissing {
-			// TODO: Remove hardcoding of removing the template - instead ensure to remove the template name in sourcePathPrefix.
-			//relPath, err := filepath.Rel(chosenTemplate, baseFile)
-			//if err != nil {
-			//	continue
-			//}
+	err = handleMissingFiles(cli, missingFiles, tempUnzipDir, sourcePrefix, destDir)
+	if err != nil {
+		return fmt.Errorf("error copying missing files: %w", err)
+	}
 
-			srcPath := filepath.Join(tempUnzipDir, sourcePathPrefix, baseFile)
+	return copyProjectScreens(cli, selectedTemplate.Screens, selectedScreens, chosenTemplate, tempUnzipDir, destDir)
+}
+
+func handleEditedFiles(cli *cli, edited []string, sourceRoot, destRoot string) error {
+	if len(edited) < 1 {
+		return nil
+	}
+
+	fmt.Println("Edited files/directories may be overwritten:")
+	for _, p := range edited {
+		fmt.Println("  ", p)
+	}
+
+	fmt.Println("⚠️ DISCLAIMER: Some required base files and directories have been edited.\n" +
+		"Your added screen(s) may NOT work correctly without these updates.\n" +
+		"Proceeding without overwriting could lead to inconsistent or unstable behavior.")
+
+	if !prompt.Confirm("Proceed with overwrite and backup? (y/N): ") {
+		cli.renderer.Warnf("User opted not to overwrite modified files.")
+		return nil
+	}
+
+	err := backupAndOverwrite(cli, edited, sourceRoot, destRoot)
+	if err != nil {
+		cli.renderer.Warnf("Error during backup and overwrite: %v\n", err)
+		return err
+	}
+
+	cli.renderer.Infof(ansi.Bold(ansi.Blue("Edited files backed up to back_up folder and overwritten.")))
+
+	return nil
+}
+
+// Copy missing files from source to destination.
+func handleMissingFiles(cli *cli, missing []string, tempUnzipDir, sourcePrefix, destDir string) error {
+	if len(missing) > 0 {
+		for _, baseFile := range missing {
+			srcPath := filepath.Join(tempUnzipDir, sourcePrefix, baseFile)
 			destPath := filepath.Join(destDir, baseFile)
-
-			if _, err = os.Stat(srcPath); os.IsNotExist(err) {
-				log.Printf("Warning: Source file does not exist: %s", srcPath)
+			if _, err := os.Stat(srcPath); os.IsNotExist(err) {
+				cli.renderer.Warnf("Warning: Source file does not exist: %s", srcPath)
 				continue
 			}
 
 			parentDir := filepath.Dir(destPath)
 			if err := os.MkdirAll(parentDir, 0755); err != nil {
-				log.Printf("Error creating parent directory for %s: %v", baseFile, err)
+				cli.renderer.Warnf("Error creating parent dir for %s: %v", baseFile, err)
 				continue
 			}
 
-			err = copyFile(srcPath, destPath)
-			check(err, fmt.Sprintf("Error copying file %s", baseFile))
+			if err := copyFile(srcPath, destPath); err != nil {
+				return fmt.Errorf("error copying file %s: %w", baseFile, err)
+			}
 		}
-		// Copy missing files and directories
 	}
-
-	screenInfo := createScreenMap(manifestLoaded.Templates[chosenTemplate].Screens)
-	for _, s := range selectedScreens {
-		screen := screenInfo[s]
-
-		relPath, err := filepath.Rel(chosenTemplate, screen.Path)
-		if err != nil {
-			continue
-		}
-
-		srcPath := filepath.Join(tempUnzipDir, sourcePathPrefix, relPath)
-		destPath := filepath.Join(destDir, relPath)
-
-		if _, err = os.Stat(srcPath); os.IsNotExist(err) {
-			log.Printf("Warning: Source directory does not exist: %s", srcPath)
-			continue
-		}
-
-		parentDir := filepath.Dir(destPath)
-		if err := os.MkdirAll(parentDir, 0755); err != nil {
-			log.Printf("Error creating parent directory for %s: %v", screen.Path, err)
-			continue
-		}
-
-		fmt.Printf("Copying screen path: %s\n", screen.Path)
-		err = copyDir(srcPath, destPath)
-		check(err, fmt.Sprintf("Error copying screen file %s", screen.Path))
-	}
-
 	return nil
 }
 
-// backupAndOverwrite backs up edited files, then overwrites them with source files
-func backupAndOverwrite(allEdited []string, sourceRoot, destRoot string) error {
+// backupAndOverwrite backs up edited files, then overwrites them with source files.
+func backupAndOverwrite(cli *cli, edited []string, sourceRoot, destRoot string) error {
 	backupRoot := filepath.Join(destRoot, "back_up")
 
-	// Create back_up directory if it doesn't exist
+	// Remove existing backup folder if it exists.
+	if _, err := os.Stat(backupRoot); err == nil {
+		if err := os.RemoveAll(backupRoot); err != nil {
+			return fmt.Errorf("failed to clear existing backup folder: %w", err)
+		}
+	}
+
+	// Create a fresh backup folder.
 	if err := os.MkdirAll(backupRoot, 0755); err != nil {
 		return fmt.Errorf("failed to create backup directory: %w", err)
 	}
 
-	for _, relPath := range allEdited {
+	for _, relPath := range edited {
 		destFile := filepath.Join(destRoot, relPath)
 		backupFile := filepath.Join(backupRoot, relPath)
 		sourceFile := filepath.Join(sourceRoot, relPath)
 
-		// Backup only if file exists in destination
-		// Ensure backup directory exists
 		if err := os.MkdirAll(filepath.Dir(backupFile), 0755); err != nil {
-			fmt.Printf("Warning: failed to create backup dir for %s: %v\n", relPath, err)
+			cli.renderer.Warnf("Failed to create backup directory for %s: %v", relPath, err)
 			continue
 		}
-		// copyFile overwrites backupFile if it exists
-		if err := copyFile(destFile, backupFile); err != nil {
-			fmt.Printf("Warning: failed to backup file %s: %v\n", relPath, err)
-			continue
-		}
-		fmt.Printf("Backed up: %s\n", relPath)
 
-		// Overwrite destination with source file
-		if err := copyFile(sourceFile, destFile); err != nil {
-			fmt.Printf("Error overwriting file %s: %v\n", relPath, err)
+		if err := copyFile(destFile, backupFile); err != nil {
+			cli.renderer.Warnf("Failed to backup file %s: %v", relPath, err)
 			continue
 		}
-		fmt.Printf("Overwritten: %s\n", relPath)
+
+		if err := copyFile(sourceFile, destFile); err != nil {
+			cli.renderer.Errorf("Failed to overwrite file %s: %v", relPath, err)
+			continue
+		}
+
+		cli.renderer.Infof("Overwritten: %s", relPath)
 	}
 	return nil
 }
 
-// processDirectories processes files in all base directories relative to chosenTemplate,
-// returning slices of missing, identical, and edited relative file paths.
-func processDirectories(baseDirs []string, sourceRoot, destRoot, chosenTemplate string) (missing, identical, edited []string, err error) {
+// processDirectories processes files in all base directories relative to chosenTemplate.
+func processDirectories(cli *cli, baseDirs []string, sourceRoot, destRoot, chosenTemplate string) (missing, edited []string, err error) {
 	for _, dir := range baseDirs {
-		// Remove chosenTemplate prefix from dir to get relative base directory
+		// TODO: Remove chosenTemplate prefix from dir to get relative base directory.
 		baseDir, relErr := filepath.Rel(chosenTemplate, dir)
 		if relErr != nil {
-			return nil, nil, nil, relErr
+			return
 		}
 
 		sourceDir := filepath.Join(sourceRoot, baseDir)
 		files, listErr := listFilesInDir(sourceDir)
 		if listErr != nil {
-			return nil, nil, nil, listErr
+			return
 		}
 
 		for _, sourceFile := range files {
 			relPath, relErr := filepath.Rel(sourceRoot, sourceFile)
 			if relErr != nil {
-				return nil, nil, nil, relErr
+				continue
 			}
 
 			destFile := filepath.Join(destRoot, relPath)
@@ -277,18 +297,16 @@ func processDirectories(baseDirs []string, sourceRoot, destRoot, chosenTemplate 
 			case compErr != nil && os.IsNotExist(compErr):
 				missing = append(missing, relPath)
 			case compErr != nil:
-				return nil, nil, nil, compErr
+				cli.renderer.Warnf("Warning: failed to determine if file has been edited: %v", compErr)
+				continue
 			case editedFlag:
 				edited = append(edited, relPath)
-			default:
-				identical = append(identical, relPath)
 			}
 		}
 	}
-	return missing, identical, edited, nil
+	return
 }
 
-// Get all files in a directory recursively (for base_directories)
 func listFilesInDir(dir string) ([]string, error) {
 	var files []string
 	err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
@@ -300,10 +318,11 @@ func listFilesInDir(dir string) ([]string, error) {
 		}
 		return nil
 	})
+
 	return files, err
 }
 
-func processFiles(baseFiles []string, sourceRoot, destRoot, chosenTemplate string) (missing, identical, edited []string, err error) {
+func processFiles(cli *cli, baseFiles []string, sourceRoot, destRoot, chosenTemplate string) (missing, edited []string, err error) {
 	for _, baseFile := range baseFiles {
 		// TODO: Remove hardcoding of removing the template - instead ensure to remove the template name in sourcePathPrefix.
 		relPath, err := filepath.Rel(chosenTemplate, baseFile)
@@ -319,15 +338,12 @@ func processFiles(baseFiles []string, sourceRoot, destRoot, chosenTemplate strin
 		case err != nil && os.IsNotExist(err):
 			missing = append(missing, relPath)
 		case err != nil:
-			fmt.Println("Warning: failed to determine if file has been edited:", err)
+			cli.renderer.Warnf("Warning: failed to determine if file has been edited: %v", err)
 			continue
 		case editedFlag:
 			edited = append(edited, relPath)
-		default:
-			identical = append(identical, relPath)
 		}
 	}
-
 	return
 }
 
@@ -349,7 +365,7 @@ func isFileEdited(source, dest string) (bool, error) {
 	if sourceInfo.Size() != destInfo.Size() {
 		return true, nil
 	}
-	// Fallback to hash comparison
+
 	hashSource, err := fileHash(source)
 	if err != nil {
 		return false, err
@@ -373,7 +389,6 @@ func equalByteSlices(a, b []byte) bool {
 	return true
 }
 
-// Returns SHA256 hash of file at given path
 func fileHash(path string) ([]byte, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -381,14 +396,14 @@ func fileHash(path string) ([]byte, error) {
 	}
 	defer f.Close()
 	h := sha256.New()
-	// Use buffered copy for performance
+	// Use buffered copy for performance.
 	if _, err := io.Copy(h, f); err != nil {
 		return nil, err
 	}
 	return h.Sum(nil), nil
 }
 
-// LoadAculConfig Loads acul_config.json once
+// LoadAculConfig loads acul_config.json once.
 func LoadAculConfig(configPath string) (*AculConfig, error) {
 	var configErr error
 	aculConfigOnce.Do(func() {

@@ -36,5 +36,6 @@ auth0 acul init [flags]
 - [auth0 acul config](auth0_acul_config.md) - Configure Advanced Customizations for Universal Login screens.
 - [auth0 acul init](auth0_acul_init.md) - Generate a new project from a template
 - [auth0 acul init1](auth0_acul_init1.md) - Generate a new project from a template
+- [auth0 acul screen](auth0_acul_screen.md) - Manage individual screens for Advanced Customizations for Universal Login.
 
 

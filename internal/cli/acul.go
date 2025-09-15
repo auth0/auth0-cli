@@ -13,6 +13,19 @@ func aculCmd(cli *cli) *cobra.Command {
 	// Check out the ./acul_scaffolding_app.MD file for more information on the commands below.
 	cmd.AddCommand(aculInitCmd1(cli))
 	cmd.AddCommand(aculInitCmd(cli))
+	cmd.AddCommand(aculScreenCmd(cli))
+
+	return cmd
+}
+
+func aculScreenCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "screen",
+		Short: "Manage individual screens for Advanced Customizations for Universal Login.",
+		Long:  "Manage individual screens for Auth0 Universal Login using ACUL (Advanced Customizations).",
+	}
+
+	cmd.AddCommand(aculScreenAddCmd(cli))
 
 	return cmd
 }
@@ -29,7 +42,6 @@ func aculConfigureCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(aculConfigSetCmd(cli))
 	cmd.AddCommand(aculConfigListCmd(cli))
 	cmd.AddCommand(aculConfigDocsCmd(cli))
-	cmd.AddCommand(aculAddScreenCmd(cli))
 
 	return cmd
 }

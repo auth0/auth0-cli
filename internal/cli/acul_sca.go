@@ -18,10 +18,8 @@ import (
 )
 
 var (
-	manifestLoaded   Manifest   // type Manifest should match your manifest schema
-	aculConfigLoaded AculConfig // type AculConfig should match your config schema
-	manifestOnce     sync.Once
-	aculConfigOnce   sync.Once
+	manifestLoaded Manifest // type Manifest should match your manifest schema
+	manifestOnce   sync.Once
 )
 
 // LoadManifest Loads manifest.json once
@@ -267,7 +265,7 @@ func copyProjectScreens(cli *cli, screens []Screen, selectedScreens []string, ch
 func writeAculConfig(destDir, chosenTemplate string, selectedScreens []string, manifestVersion string) error {
 	config := AculConfig{
 		ChosenTemplate:      chosenTemplate,
-		Screen:              selectedScreens,
+		Screens:             selectedScreens,
 		InitTimestamp:       time.Now().Format(time.RFC3339),
 		AculManifestVersion: manifestVersion,
 	}
@@ -281,14 +279,6 @@ func writeAculConfig(destDir, chosenTemplate string, selectedScreens []string, m
 	if err = os.WriteFile(configPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write config: %v", err)
 	}
-
-	fmt.Println("\nProject successfully created!")
-
-	for _, scr := range selectedScreens {
-		fmt.Printf("https://auth0.com/docs/acul/screens/%s\n", scr)
-	}
-
-	fmt.Println("Explore the sample app: https://github.com/auth0/acul-sample-app")
 
 	return nil
 }
@@ -383,7 +373,7 @@ func createScreenMap(screens []Screen) map[string]Screen {
 
 type AculConfig struct {
 	ChosenTemplate      string   `json:"chosen_template"`
-	Screen              []string `json:"screens"`
+	Screens             []string `json:"screens"`
 	InitTimestamp       string   `json:"init_timestamp"`
 	AculManifestVersion string   `json:"acul_manifest_version"`
 }
