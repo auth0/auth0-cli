@@ -5,7 +5,8 @@ has_toc: false
 ---
 # auth0 acul config generate
 
-Generate a default rendering config for a specific screen and save it to a file.
+Generate a stub config file for a Universal Login screen and save it to a file.
+If fileName is not provided, it will default to <screen-name>.json in the current directory.
 
 ## Usage
 ```
@@ -23,7 +24,7 @@ auth0 acul config generate [flags]
 ## Flags
 
 ```
-  -f, --settings-file string   File to save the rendering configs to.
+  -f, --file string   File to save the rendering configs to.
 ```
 
 
@@ -40,7 +41,7 @@ auth0 acul config generate [flags]
 ## Related Commands
 
 - [auth0 acul config docs](auth0_acul_config_docs.md) - Open the ACUL configuration documentation
-- [auth0 acul config generate](auth0_acul_config_generate.md) - Generate a default rendering config for a screen
+- [auth0 acul config generate](auth0_acul_config_generate.md) - Generate a stub config file for a Universal Login screen.
 - [auth0 acul config get](auth0_acul_config_get.md) - Get the current rendering settings for a specific screen
 - [auth0 acul config list](auth0_acul_config_list.md) - List Universal Login rendering configurations
 - [auth0 acul config set](auth0_acul_config_set.md) - Set the rendering settings for a specific screen

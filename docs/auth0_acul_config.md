@@ -1,42 +1,17 @@
 ---
 layout: default
-parent: auth0 acul
 has_toc: false
+has_children: true
 ---
 # auth0 acul config
 
-Configure the Universal Login experience. This requires a custom domain to be configured for the tenant.
+Manage screen-level configuration for Auth0 Universal Login using ACUL (Advanced Customizations).
 
-## Usage
-```
-auth0 acul config [flags]
-```
+## Commands
 
-## Examples
-
-```
-  auth0 acul config
-  auth0 acul config
-  auth0 acul config --screen login-id --file settings.json
-```
-
-
-
-
-## Inherited Flags
-
-```
-      --debug           Enable debug mode.
-      --no-color        Disable colors.
-      --no-input        Disable interactivity.
-      --tenant string   Specific tenant to use.
-```
-
-
-## Related Commands
-
-- [auth0 acul config](auth0_acul_config.md) - Configure the Universal Login experience
-- [auth0 acul init1](auth0_acul_init1.md) - Generate a new project from a template
-- [auth0 acul init2](auth0_acul_init2.md) - Generate a new project from a template
-
+- [auth0 acul config docs](auth0_acul_config_docs.md) - Open the ACUL configuration documentation
+- [auth0 acul config generate](auth0_acul_config_generate.md) - Generate a stub config file for a Universal Login screen.
+- [auth0 acul config get](auth0_acul_config_get.md) - Get the current rendering settings for a specific screen
+- [auth0 acul config list](auth0_acul_config_list.md) - List Universal Login rendering configurations
+- [auth0 acul config set](auth0_acul_config_set.md) - Set the rendering settings for a specific screen
 
