@@ -1,26 +1,21 @@
 ---
 layout: default
-parent: auth0 acul config
+parent: auth0 config
 has_toc: false
 ---
-# auth0 acul config list
+# auth0 config list
 
 List Universal Login rendering configurations with optional filters and pagination.
 
 ## Usage
 ```
-auth0 acul config list [flags]
+auth0 config list [flags]
 ```
 
 ## Examples
 
 ```
-  auth0 acul config list
-  auth0 acul config list --prompt login-id 
-  auth0 acul config list --screen login --rendering-mode advanced
-  auth0 acul config list --fields head_tags,context_configuration --include-fields=true
-  auth0 acul config list --query "prompt:login AND screen:login"
-  auth0 acul config list --page 1 --per-page 25
+  auth0 acul config list --prompt login-id --screen login --rendering-mode advanced --include-fields true --fields head_tags,context_configuration
 ```
 
 
@@ -53,10 +48,10 @@ auth0 acul config list [flags]
 
 ## Related Commands
 
-- [auth0 acul config docs](auth0_acul_config_docs.md) - Open the ACUL configuration documentation
-- [auth0 acul config generate](auth0_acul_config_generate.md) - Generate a default rendering config for a screen
-- [auth0 acul config get](auth0_acul_config_get.md) - Get the current rendering settings for a specific screen
-- [auth0 acul config list](auth0_acul_config_list.md) - List Universal Login rendering configurations
-- [auth0 acul config set](auth0_acul_config_set.md) - Set the rendering settings for a specific screen
+- [auth0 config docs](auth0_config_docs.md) - Open the ACUL configuration documentation
+- [auth0 config generate](auth0_config_generate.md) - Generate a stub config file for a Universal Login screen.
+- [auth0 config get](auth0_config_get.md) - Get the current rendering settings for a specific screen
+- [auth0 config list](auth0_config_list.md) - List Universal Login rendering configurations
+- [auth0 config set](auth0_config_set.md) - Set the rendering settings for a specific screen
 
 
