@@ -176,7 +176,7 @@ type aculConfigInput struct {
 	filePath   string
 }
 
-// Generate default ACUL config stub
+// Generate default ACUL config stub.
 func defaultACULConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"rendering_mode":             "standard",
@@ -215,7 +215,7 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
 
 			config := defaultACULConfig()
 
-			// error handling omitted for brevity
+			// Error handling omitted for brevity.
 			data, _ := json.MarshalIndent(config, "", "  ")
 
 			if err := os.WriteFile(input.filePath, data, 0644); err != nil {
