@@ -65,10 +65,11 @@ var templateFlag = Flag{
 // aculInitCmd returns the cobra.Command for project initialization.
 func aculInitCmd(cli *cli) *cobra.Command {
 	return &cobra.Command{
-		Use:   "init",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Generate a new project from a template",
-		Long:  "Generate a new project from a template.",
+		Use:     "init",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Generate a new project from a template",
+		Long:    "Generate a new project from a template.",
+		Example: `  acul init acul_project`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runScaffold2(cli, cmd, args)
 		},

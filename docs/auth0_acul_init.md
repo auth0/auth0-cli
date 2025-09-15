@@ -15,7 +15,7 @@ auth0 acul init [flags]
 ## Examples
 
 ```
-
+  acul init acul_project
 ```
 
 

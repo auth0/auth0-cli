@@ -244,7 +244,7 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 		Short: "Get the current rendering settings for a specific screen",
 		Long:  "Get the current rendering settings for a specific screen.",
 		Example: `  auth0 acul config get signup-id
-  auth0 acul config get login-id -f ./login.json"`,
+  auth0 acul config get login-id -f ./login-id.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				cli.renderer.Infof("Please select a screen ")

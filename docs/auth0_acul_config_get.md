@@ -16,7 +16,7 @@ auth0 acul config get [flags]
 
 ```
   auth0 acul config get signup-id
-  auth0 acul config get login-id -f ./login.json"
+  auth0 acul config get login-id -f ./login-id.json
 ```
 
 
