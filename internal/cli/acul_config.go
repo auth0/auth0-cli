@@ -197,7 +197,9 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
 		Short: "Generate a stub config file for a Universal Login screen.",
 		Long: "Generate a stub config file for a Universal Login screen and save it to a file.\n" +
 			"If fileName is not provided, it will default to <screen-name>.json in the current directory.",
-		Example: `  auth0 acul config generate signup-id
+		Example: `  auth0 acul config generate <screen-name>
+  auth0 acul config generate <screen-name> --file settings.json
+  auth0 acul config generate signup-id
   auth0 acul config generate login-id --file login-settings.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -243,7 +245,9 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Get the current rendering settings for a specific screen",
 		Long:  "Get the current rendering settings for a specific screen.",
-		Example: `  auth0 acul config get signup-id
+		Example: `  auth0 acul config get <screen-name>
+  auth0 acul config get <screen-name> --file settings.json
+  auth0 acul config get signup-id
   auth0 acul config get login-id -f ./login-id.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -323,7 +327,9 @@ func aculConfigSetCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Set the rendering settings for a specific screen",
 		Long:  "Set the rendering settings for a specific screen.",
-		Example: `  auth0 acul config set signup-id --file settings.json
+		Example: `  auth0 acul config set <screen-name>
+  auth0 acul config set <screen-name> --file settings.json
+  auth0 acul config set signup-id --file settings.json
   auth0 acul config set login-id`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -465,7 +471,8 @@ func aculConfigListCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Short:   "List Universal Login rendering configurations",
 		Long:    "List Universal Login rendering configurations with optional filters and pagination.",
-		Example: `  auth0 acul config list --prompt login-id --screen login --rendering-mode advanced --include-fields true --fields head_tags,context_configuration`,
+		Example: `  auth0 acul config list --prompt reset-password
+  auth0 acul config list --rendering-mode advanced --include-fields true --fields head_tags,context_configuration`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			params := []management.RequestOption{
 				management.Parameter("page", strconv.Itoa(page)),

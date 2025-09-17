@@ -9,12 +9,10 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sync"
-
-	"github.com/auth0/auth0-cli/internal/ansi"
 
 	"github.com/spf13/cobra"
 
+	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -26,17 +24,14 @@ var destDirFlag = Flag{
 	IsRequired: false,
 }
 
-var (
-	aculConfigOnce   sync.Once
-	aculConfigLoaded AculConfig
-)
-
 func aculScreenAddCmd(cli *cli) *cobra.Command {
 	var destDir string
 	cmd := &cobra.Command{
 		Use:   "add",
 		Short: "Add screens to an existing project",
-		Long:  "Add screens to an existing project.",
+		Long:  "Add screens to an existing project. The project must have been initialized using `auth0 acul init`.",
+		Example: `  auth0 acul screen add <screen-name> <screen-name>... --dir <app-directory>
+  auth0 acul screen add login-id login-password -d acul_app`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			pwd, err := os.Getwd()
 			if err != nil {
@@ -60,36 +55,33 @@ func aculScreenAddCmd(cli *cli) *cobra.Command {
 }
 
 func scaffoldAddScreen(cli *cli, args []string, destDir string) error {
-	manifest, err := LoadManifest()
+	manifest, err := loadManifest()
 	if err != nil {
 		return err
 	}
 
-	aculConfig, err := LoadAculConfig(filepath.Join(destDir, "acul_config.json"))
+	aculConfig, err := loadAculConfig(cli, filepath.Join(destDir, "acul_config.json"))
+
 	if err != nil {
+		if os.IsNotExist(err) {
+			cli.renderer.Warnf("couldn't find acul_config.json in destination directory. Please ensure you're in the right directory or have initialized the project using `auth0 acul init`\n")
+			return nil
+		}
+
 		return err
 	}
 
-	selectedScreens, err := chooseScreens(args, manifest, aculConfig.ChosenTemplate)
+	selectedScreens, err := selectAndFilterScreens(cli, args, manifest, aculConfig.ChosenTemplate, aculConfig.Screens)
 	if err != nil {
 		return err
 	}
-
-	selectedScreens = filterScreensForOverwrite(selectedScreens, aculConfig.Screens)
 
 	if err = addScreensToProject(cli, destDir, aculConfig.ChosenTemplate, selectedScreens, manifest.Templates[aculConfig.ChosenTemplate]); err != nil {
 		return err
 	}
 
-	// Update acul_config.json with new screens.
-	aculConfig.Screens = append(aculConfig.Screens, selectedScreens...)
-	configBytes, err := json.MarshalIndent(aculConfig, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal updated acul_config.json: %w", err)
-	}
-
-	if err := os.WriteFile(filepath.Join(destDir, "acul_config.json"), configBytes, 0644); err != nil {
-		return fmt.Errorf("failed to write updated acul_config.json: %w", err)
+	if err = updateAculConfigFile(destDir, aculConfig, selectedScreens); err != nil {
+		return err
 	}
 
 	cli.renderer.Infof(ansi.Bold(ansi.Green("Screens added successfully")))
@@ -97,22 +89,6 @@ func scaffoldAddScreen(cli *cli, args []string, destDir string) error {
 	return nil
 }
 
-// Filter out screens user does not want to overwrite.
-func filterScreensForOverwrite(selectedScreens []string, existingScreens []string) []string {
-	var finalScreens []string
-	for _, s := range selectedScreens {
-		if screenExists(existingScreens, s) {
-			promptMsg := fmt.Sprintf("Screen '%s' already exists. Do you want to overwrite its directory? (y/N): ", s)
-			if !prompt.Confirm(promptMsg) {
-				continue
-			}
-		}
-		finalScreens = append(finalScreens, s)
-	}
-	return finalScreens
-}
-
-// Helper to check if a screen exists in the slice.
 func screenExists(screens []string, target string) bool {
 	for _, screen := range screens {
 		if screen == target {
@@ -122,18 +98,51 @@ func screenExists(screens []string, target string) bool {
 	return false
 }
 
-// Select screens: from args or prompt.
-func chooseScreens(args []string, manifest *Manifest, chosenTemplate string) ([]string, error) {
+func selectAndFilterScreens(cli *cli, args []string, manifest *Manifest, chosenTemplate string, existingScreens []string) ([]string, error) {
+	var supportedScreens []string
+	for _, s := range manifest.Templates[chosenTemplate].Screens {
+		supportedScreens = append(supportedScreens, s.ID)
+	}
+
+	var initialSelected []string
+
 	if len(args) != 0 {
-		return args, nil
+		var invalidScreens []string
+		for _, s := range args {
+			if !screenExists(supportedScreens, s) {
+				invalidScreens = append(invalidScreens, s)
+			} else {
+				initialSelected = append(initialSelected, s)
+			}
+		}
+
+		if len(invalidScreens) > 0 {
+			cli.renderer.Warnf("The following screens are either not valid or not yet supported: %v. See https://github.com/auth0-samples/auth0-acul-samples for available screens.", invalidScreens)
+		}
+	} else {
+		selectedScreens, err := selectScreens(manifest.Templates[chosenTemplate].Screens)
+		if err != nil {
+			return nil, err
+		}
+		initialSelected = selectedScreens
 	}
 
-	selectedScreens, err := selectScreens(manifest.Templates[chosenTemplate])
-	if err != nil {
-		return nil, err
+	if len(initialSelected) == 0 {
+		return nil, fmt.Errorf("no valid screens provided or selected. At least one valid screen is required to proceed")
 	}
 
-	return selectedScreens, nil
+	var finalScreens []string
+	for _, s := range initialSelected {
+		if screenExists(existingScreens, s) {
+			promptMsg := fmt.Sprintf("Screen '%s' already exists. Do you want to overwrite its directory? (y/N): ", s)
+			if !prompt.Confirm(promptMsg) {
+				continue
+			}
+		}
+		finalScreens = append(finalScreens, s)
+	}
+
+	return finalScreens, nil
 }
 
 func addScreensToProject(cli *cli, destDir, chosenTemplate string, selectedScreens []string, selectedTemplate Template) error {
@@ -403,22 +412,30 @@ func fileHash(path string) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
-// LoadAculConfig loads acul_config.json once.
-func LoadAculConfig(configPath string) (*AculConfig, error) {
-	var configErr error
-	aculConfigOnce.Do(func() {
-		b, err := os.ReadFile(configPath)
-		if err != nil {
-			configErr = err
-			return
-		}
-		err = json.Unmarshal(b, &aculConfigLoaded)
-		if err != nil {
-			configErr = err
-		}
-	})
-	if configErr != nil {
-		return nil, configErr
+// LoadAculConfig loads acul_config.json from the specified directory.
+func loadAculConfig(cli *cli, configPath string) (*AculConfig, error) {
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, err
 	}
-	return &aculConfigLoaded, nil
+
+	var config AculConfig
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &config, nil
+}
+
+func updateAculConfigFile(destDir string, aculConfig *AculConfig, selectedScreens []string) error {
+	aculConfig.Screens = append(aculConfig.Screens, selectedScreens...)
+	configBytes, err := json.MarshalIndent(aculConfig, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal updated acul_config.json: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(destDir, "acul_config.json"), configBytes, 0644); err != nil {
+		return fmt.Errorf("failed to write updated acul_config.json: %w", err)
+	}
+	return nil
 }
