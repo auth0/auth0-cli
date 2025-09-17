@@ -34,6 +34,7 @@ type API struct {
 	Tenant              TenantAPI
 	User                UserAPI
 	Jobs                JobsAPI
+	SelfServiceProfile  SelfServiceProfileAPI
 
 	HTTPClient HTTPClientAPI
 }
@@ -66,6 +67,7 @@ func NewAPI(m *management.Management) *API {
 		Tenant:              m.Tenant,
 		User:                m.User,
 		Jobs:                m.Job,
+		SelfServiceProfile:  m.SelfServiceProfile,
 		HTTPClient:          m,
 	}
 }
