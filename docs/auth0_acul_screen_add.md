@@ -5,7 +5,7 @@ has_toc: false
 ---
 # auth0 acul screen add
 
-Add screens to an existing project.
+Add screens to an existing project. The project must have been initialized using `auth0 acul init`.
 
 ## Usage
 ```
@@ -15,7 +15,8 @@ auth0 acul screen add [flags]
 ## Examples
 
 ```
-
+  auth0 acul screen add <screen-name> <screen-name>... --dir <app-directory>
+  auth0 acul screen add login-id login-password -d acul_app
 ```
 
 

@@ -15,7 +15,8 @@ auth0 acul init [flags]
 ## Examples
 
 ```
-  acul init acul_project
+	auth0 acul init <app_name>
+  auth0 acul init acul_app
 ```
 
 
