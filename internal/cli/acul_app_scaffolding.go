@@ -115,7 +115,7 @@ func aculInitCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Generate a new project from a template",
 		Long:  "Generate a new project from a template.",
-		Example: `	auth0 acul init <app_name>
+		Example: `  auth0 acul init <app_name>
   auth0 acul init acul_app`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runScaffold(cli, cmd, args)
@@ -194,6 +194,11 @@ func selectScreens(screens []Screens) ([]string, error) {
 	}
 	var selectedScreens []string
 	err := prompt.AskMultiSelect("Select screens to include:", &selectedScreens, screenOptions...)
+
+	if len(selectedScreens) == 0 {
+		return nil, fmt.Errorf("at least one screen must be selected")
+	}
+
 	return selectedScreens, err
 }
 
