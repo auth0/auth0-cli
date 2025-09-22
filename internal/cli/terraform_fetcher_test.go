@@ -2069,3 +2069,33 @@ func TestTriggerActionsResourceFetcher_FetchData(t *testing.T) {
 		assert.EqualError(t, err, "failed to list action triggers")
 	})
 }
+
+func TestUserAttributeProfileResourceFetcher(t *testing.T) {
+	t.Run("it successfully generates user attribute profile import data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		userAttributeProfileAPI := mock.NewMockUserAttributeProfilesAPI(ctrl)
+
+		userAttributeProfileAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).
+			Return(&management.UserAttributeProfileList{
+				UserAttributeProfiles: []*management.UserAttributeProfile{
+					{
+						ID:   auth0.String("uap_123456"),
+						Name: auth0.String("User Attribute Profile 1"),
+					}}}, nil)
+
+		fetcher := userAttributeProfilesResourceFetcher{
+			api: &auth0.API{
+				UserAttributeProfile: userAttributeProfileAPI,
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 1)
+		assert.Equal(t, data[0].ResourceName, "auth0_user_attribute_profile.user_attribute_profile_1")
+		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
