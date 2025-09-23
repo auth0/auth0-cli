@@ -44,8 +44,8 @@ type (
 	}
 )
 
-// GetMissingRequiredScopes returns a slice of missing required scopes.
-// Returns empty slice if all required scopes are present
+// GetMissingRequiredScopes returns a slice of required scopes
+// that are missing from the tenant's current scopes.
 func (t *Tenant) GetMissingRequiredScopes() []string {
 	var missingScopes []string
 	for _, requiredScope := range auth.RequiredScopes {
