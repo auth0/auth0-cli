@@ -8,65 +8,69 @@ import (
 // API mimics `management.Management`s general interface, except it refers to
 // the interfaces instead of the concrete structs.
 type API struct {
-	Action              ActionAPI
-	Anomaly             AnomalyAPI
-	AttackProtection    AttackProtectionAPI
-	Branding            BrandingAPI
-	BrandingTheme       BrandingThemeAPI
-	Client              ClientAPI
-	ClientGrant         ClientGrantAPI
-	Connection          ConnectionAPI
-	CustomDomain        CustomDomainAPI
-	EmailTemplate       EmailTemplateAPI
-	EmailProvider       EmailProviderAPI
-	EventStream         EventStreamAPI
-	Flow                FlowAPI
-	FlowVaultConnection FlowVaultConnectionAPI
-	Form                FormAPI
-	Log                 LogAPI
-	LogStream           LogStreamAPI
-	Organization        OrganizationAPI
-	NetworkACL          NetworkACLAPI
-	Prompt              PromptAPI
-	ResourceServer      ResourceServerAPI
-	Role                RoleAPI
-	Rule                RuleAPI
-	Tenant              TenantAPI
-	User                UserAPI
-	Jobs                JobsAPI
+	Action               ActionAPI
+	Anomaly              AnomalyAPI
+	AttackProtection     AttackProtectionAPI
+	Branding             BrandingAPI
+	BrandingTheme        BrandingThemeAPI
+	Client               ClientAPI
+	ClientGrant          ClientGrantAPI
+	Connection           ConnectionAPI
+	CustomDomain         CustomDomainAPI
+	EmailTemplate        EmailTemplateAPI
+	EmailProvider        EmailProviderAPI
+	EventStream          EventStreamAPI
+	Flow                 FlowAPI
+	FlowVaultConnection  FlowVaultConnectionAPI
+	Form                 FormAPI
+	Log                  LogAPI
+	LogStream            LogStreamAPI
+	Organization         OrganizationAPI
+	NetworkACL           NetworkACLAPI
+	Prompt               PromptAPI
+	ResourceServer       ResourceServerAPI
+	Role                 RoleAPI
+	Rule                 RuleAPI
+	Tenant               TenantAPI
+	User                 UserAPI
+	Jobs                 JobsAPI
+	SelfServiceProfile   SelfServiceProfileAPI
+	UserAttributeProfile UserAttributeProfilesAPI
 
 	HTTPClient HTTPClientAPI
 }
 
 func NewAPI(m *management.Management) *API {
 	return &API{
-		Action:              m.Action,
-		Anomaly:             m.Anomaly,
-		AttackProtection:    m.AttackProtection,
-		Branding:            m.Branding,
-		BrandingTheme:       m.BrandingTheme,
-		Client:              m.Client,
-		ClientGrant:         m.ClientGrant,
-		Connection:          m.Connection,
-		CustomDomain:        m.CustomDomain,
-		EmailTemplate:       m.EmailTemplate,
-		EmailProvider:       m.EmailProvider,
-		EventStream:         m.EventStream,
-		Flow:                m.Flow,
-		FlowVaultConnection: m.Flow.Vault,
-		Form:                m.Form,
-		Log:                 m.Log,
-		LogStream:           m.LogStream,
-		Organization:        m.Organization,
-		NetworkACL:          m.NetworkACL,
-		Prompt:              m.Prompt,
-		ResourceServer:      m.ResourceServer,
-		Role:                m.Role,
-		Rule:                m.Rule,
-		Tenant:              m.Tenant,
-		User:                m.User,
-		Jobs:                m.Job,
-		HTTPClient:          m,
+		Action:               m.Action,
+		Anomaly:              m.Anomaly,
+		AttackProtection:     m.AttackProtection,
+		Branding:             m.Branding,
+		BrandingTheme:        m.BrandingTheme,
+		Client:               m.Client,
+		ClientGrant:          m.ClientGrant,
+		Connection:           m.Connection,
+		CustomDomain:         m.CustomDomain,
+		EmailTemplate:        m.EmailTemplate,
+		EmailProvider:        m.EmailProvider,
+		EventStream:          m.EventStream,
+		Flow:                 m.Flow,
+		FlowVaultConnection:  m.Flow.Vault,
+		Form:                 m.Form,
+		Log:                  m.Log,
+		LogStream:            m.LogStream,
+		Organization:         m.Organization,
+		NetworkACL:           m.NetworkACL,
+		Prompt:               m.Prompt,
+		ResourceServer:       m.ResourceServer,
+		Role:                 m.Role,
+		Rule:                 m.Rule,
+		Tenant:               m.Tenant,
+		User:                 m.User,
+		Jobs:                 m.Job,
+		SelfServiceProfile:   m.SelfServiceProfile,
+		UserAttributeProfile: m.UserAttributeProfile,
+		HTTPClient:           m,
 	}
 }
 

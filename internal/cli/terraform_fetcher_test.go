@@ -1916,6 +1916,80 @@ func TestRoleResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestSelfServiceProfileFetcher(t *testing.T) {
+	t.Run("it successfully generates self service profile import data with custom text", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		selfServiceProfileAPI := mock.NewMockSelfServiceProfileAPI(ctrl)
+
+		selfServiceProfileAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).
+			Return(&management.SelfServiceProfileList{
+				SelfServiceProfile: []*management.SelfServiceProfile{
+					{
+						ID:   auth0.String("ss_profile_1"),
+						Name: auth0.String("Self Service Profile 1"),
+					},
+				},
+			}, nil)
+
+		selfServiceProfileAPI.EXPECT().
+			GetCustomText(gomock.Any(), "ss_profile_1", "en", "get-started").
+			Return(map[string]interface{}{
+				"introduction": "hello, world",
+			}, nil)
+
+		fetcher := selfServiceProfileFetcher{
+			api: &auth0.API{
+				SelfServiceProfile: selfServiceProfileAPI,
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 2)
+		assert.Equal(t, data[0].ResourceName, "auth0_self_service_profile.self_service_profile_1")
+		assert.Greater(t, len(data[0].ImportID), 0)
+		assert.Equal(t, data[1].ResourceName, "auth0_self_service_profile_custom_text.self_service_profile_1_en_get_started")
+		assert.Greater(t, len(data[1].ImportID), 0)
+	})
+
+	t.Run("it successfully generates self service profile import data without custom text", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		selfServiceProfileAPI := mock.NewMockSelfServiceProfileAPI(ctrl)
+
+		selfServiceProfileAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).
+			Return(&management.SelfServiceProfileList{
+				SelfServiceProfile: []*management.SelfServiceProfile{
+					{
+						ID:   auth0.String("ss_profile_1"),
+						Name: auth0.String("Self Service Profile 1"),
+					},
+				},
+			}, nil)
+
+		selfServiceProfileAPI.EXPECT().
+			GetCustomText(gomock.Any(), "ss_profile_1", "en", "get-started").
+			Return(map[string]interface{}{}, nil)
+
+		fetcher := selfServiceProfileFetcher{
+			api: &auth0.API{
+				SelfServiceProfile: selfServiceProfileAPI,
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 1)
+		assert.Equal(t, data[0].ResourceName, "auth0_self_service_profile.self_service_profile_1")
+		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
 func TestTenantResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully generates tenant import data", func(t *testing.T) {
 		fetcher := tenantResourceFetcher{}
@@ -1993,5 +2067,35 @@ func TestTriggerActionsResourceFetcher_FetchData(t *testing.T) {
 
 		_, err := fetcher.FetchData(context.Background())
 		assert.EqualError(t, err, "failed to list action triggers")
+	})
+}
+
+func TestUserAttributeProfileResourceFetcher(t *testing.T) {
+	t.Run("it successfully generates user attribute profile import data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		userAttributeProfileAPI := mock.NewMockUserAttributeProfilesAPI(ctrl)
+
+		userAttributeProfileAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).
+			Return(&management.UserAttributeProfileList{
+				UserAttributeProfiles: []*management.UserAttributeProfile{
+					{
+						ID:   auth0.String("uap_123456"),
+						Name: auth0.String("User Attribute Profile 1"),
+					}}}, nil)
+
+		fetcher := userAttributeProfilesResourceFetcher{
+			api: &auth0.API{
+				UserAttributeProfile: userAttributeProfileAPI,
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 1)
+		assert.Equal(t, data[0].ResourceName, "auth0_user_attribute_profile.user_attribute_profile_1")
+		assert.Greater(t, len(data[0].ImportID), 0)
 	})
 }

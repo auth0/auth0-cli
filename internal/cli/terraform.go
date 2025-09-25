@@ -113,10 +113,14 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &resourceServerResourceFetcher{api})
 		case "auth0_role", "auth0_role_permissions":
 			fetchers = append(fetchers, &roleResourceFetcher{api})
+		case "auth0_self_service_profile":
+			fetchers = append(fetchers, &selfServiceProfileFetcher{api})
 		case "auth0_tenant":
 			fetchers = append(fetchers, &tenantResourceFetcher{})
 		case "auth0_trigger_actions":
 			fetchers = append(fetchers, &triggerActionsResourceFetcher{api})
+		case "auth0_user_attribute_profile":
+			fetchers = append(fetchers, &userAttributeProfilesResourceFetcher{api})
 		default:
 			err = errors.Join(err, fmt.Errorf("unsupported resource type: %s", resource))
 		}
