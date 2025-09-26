@@ -1399,6 +1399,19 @@ func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 				nil,
 			)
 
+		orgAPI.EXPECT().
+			DiscoveryDomains(gomock.Any(), gomock.Any()).
+			Return(
+				&management.DiscoveryDomainList{
+					Domains: []*management.OrganizationDiscoveryDomain{
+						{
+							Domain: auth0.String("example.com"),
+						},
+					},
+				},
+				nil,
+			).Times(4)
+
 		fetcher := organizationResourceFetcher{
 			api: &auth0.API{
 				Organization: orgAPI,
@@ -1415,11 +1428,19 @@ func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 				ImportID:     "org_1",
 			},
 			{
+				ResourceName: "auth0_organization_discovery_domains.organization_1",
+				ImportID:     "org_1",
+			},
+			{
 				ResourceName: "auth0_organization.organization_2",
 				ImportID:     "org_2",
 			},
 			{
 				ResourceName: "auth0_organization_connections.organization_2",
+				ImportID:     "org_2",
+			},
+			{
+				ResourceName: "auth0_organization_discovery_domains.organization_2",
 				ImportID:     "org_2",
 			},
 			{
@@ -1431,7 +1452,15 @@ func TestOrganizationResourceFetcher_FetchData(t *testing.T) {
 				ImportID:     "org_3",
 			},
 			{
+				ResourceName: "auth0_organization_discovery_domains.organization_3",
+				ImportID:     "org_3",
+			},
+			{
 				ResourceName: "auth0_organization.organization_4_no_connections",
+				ImportID:     "org_4",
+			},
+			{
+				ResourceName: "auth0_organization_discovery_domains.organization_4_no_connections",
 				ImportID:     "org_4",
 			},
 		}

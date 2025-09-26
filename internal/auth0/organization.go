@@ -48,4 +48,19 @@ type OrganizationAPI interface {
 	//
 	// See: https://auth0.com/docs/api/management/v2/#!/Organizations/get_enabled_connections
 	Connections(ctx context.Context, id string, opts ...management.RequestOption) (c *management.OrganizationConnectionList, err error)
+
+	// DiscoveryDomains retrieves the discovery domains for an organization.
+	DiscoveryDomains(ctx context.Context, id string, opts ...management.RequestOption) (d *management.DiscoveryDomainList, err error)
+
+	// CreateDiscoveryDomain creates a discovery domain for an organization.
+	CreateDiscoveryDomain(ctx context.Context, id string, d *management.OrganizationDiscoveryDomain, opts ...management.RequestOption) (err error)
+
+	// DiscoveryDomain retrieves a specific discovery domain for an organization.
+	DiscoveryDomain(ctx context.Context, id string, domainID string, opts ...management.RequestOption) (d *management.OrganizationDiscoveryDomain, err error)
+
+	// DeleteDiscoveryDomain deletes a specific discovery domain from an organization.
+	DeleteDiscoveryDomain(ctx context.Context, id string, domainID string, opts ...management.RequestOption) (err error)
+
+	// UpdateDiscoveryDomain updates a specific discovery domain for an organization.
+	UpdateDiscoveryDomain(ctx context.Context, id string, domainID string, d *management.OrganizationDiscoveryDomain, opts ...management.RequestOption) (err error)
 }
