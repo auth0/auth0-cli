@@ -74,6 +74,25 @@ func (mr *MockOrganizationAPIMockRecorder) Create(ctx, o interface{}, opts ...in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockOrganizationAPI)(nil).Create), varargs...)
 }
 
+// CreateDiscoveryDomain mocks base method.
+func (m *MockOrganizationAPI) CreateDiscoveryDomain(ctx context.Context, id string, d *management.OrganizationDiscoveryDomain, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id, d}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CreateDiscoveryDomain", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateDiscoveryDomain indicates an expected call of CreateDiscoveryDomain.
+func (mr *MockOrganizationAPIMockRecorder) CreateDiscoveryDomain(ctx, id, d interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id, d}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDiscoveryDomain", reflect.TypeOf((*MockOrganizationAPI)(nil).CreateDiscoveryDomain), varargs...)
+}
+
 // Delete mocks base method.
 func (m *MockOrganizationAPI) Delete(ctx context.Context, id string, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
@@ -91,6 +110,65 @@ func (mr *MockOrganizationAPIMockRecorder) Delete(ctx, id interface{}, opts ...i
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockOrganizationAPI)(nil).Delete), varargs...)
+}
+
+// DeleteDiscoveryDomain mocks base method.
+func (m *MockOrganizationAPI) DeleteDiscoveryDomain(ctx context.Context, id, domainID string, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id, domainID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteDiscoveryDomain", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteDiscoveryDomain indicates an expected call of DeleteDiscoveryDomain.
+func (mr *MockOrganizationAPIMockRecorder) DeleteDiscoveryDomain(ctx, id, domainID interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id, domainID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDiscoveryDomain", reflect.TypeOf((*MockOrganizationAPI)(nil).DeleteDiscoveryDomain), varargs...)
+}
+
+// DiscoveryDomain mocks base method.
+func (m *MockOrganizationAPI) DiscoveryDomain(ctx context.Context, id, domainID string, opts ...management.RequestOption) (*management.OrganizationDiscoveryDomain, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id, domainID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DiscoveryDomain", varargs...)
+	ret0, _ := ret[0].(*management.OrganizationDiscoveryDomain)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DiscoveryDomain indicates an expected call of DiscoveryDomain.
+func (mr *MockOrganizationAPIMockRecorder) DiscoveryDomain(ctx, id, domainID interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id, domainID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DiscoveryDomain", reflect.TypeOf((*MockOrganizationAPI)(nil).DiscoveryDomain), varargs...)
+}
+
+// DiscoveryDomains mocks base method.
+func (m *MockOrganizationAPI) DiscoveryDomains(ctx context.Context, id string, opts ...management.RequestOption) (*management.DiscoveryDomainList, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DiscoveryDomains", varargs...)
+	ret0, _ := ret[0].(*management.DiscoveryDomainList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DiscoveryDomains indicates an expected call of DiscoveryDomains.
+func (mr *MockOrganizationAPIMockRecorder) DiscoveryDomains(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DiscoveryDomains", reflect.TypeOf((*MockOrganizationAPI)(nil).DiscoveryDomains), varargs...)
 }
 
 // List mocks base method.
@@ -190,4 +268,23 @@ func (mr *MockOrganizationAPIMockRecorder) Update(ctx, id, o interface{}, opts .
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, id, o}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockOrganizationAPI)(nil).Update), varargs...)
+}
+
+// UpdateDiscoveryDomain mocks base method.
+func (m *MockOrganizationAPI) UpdateDiscoveryDomain(ctx context.Context, id, domainID string, d *management.OrganizationDiscoveryDomain, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id, domainID, d}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateDiscoveryDomain", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateDiscoveryDomain indicates an expected call of UpdateDiscoveryDomain.
+func (mr *MockOrganizationAPIMockRecorder) UpdateDiscoveryDomain(ctx, id, domainID, d interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id, domainID, d}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDiscoveryDomain", reflect.TypeOf((*MockOrganizationAPI)(nil).UpdateDiscoveryDomain), varargs...)
 }
