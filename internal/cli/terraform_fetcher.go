@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_phone_provider", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_log_stream", "auth0_network_acl", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_prompt_screen_renderer", "auth0_resource_server", "auth0_role", "auth0_tenant", "auth0_trigger_actions"}
+	defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_phone_provider", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_log_stream", "auth0_network_acl", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_prompt_screen_renderer", "auth0_resource_server", "auth0_role", "auth0_self_service_profile", "auth0_tenant", "auth0_trigger_actions"}
 )
 
 type (
@@ -104,6 +104,10 @@ type (
 	}
 
 	roleResourceFetcher struct {
+		api *auth0.API
+	}
+
+	selfServiceProfileFetcher struct {
 		api *auth0.API
 	}
 
@@ -605,6 +609,51 @@ func (f *roleResourceFetcher) FetchData(ctx context.Context) (importDataList, er
 		}
 
 		page++
+	}
+
+	return data, nil
+}
+
+var selfServiceProfileLanguages = []string{"en"}
+var selfServiceProfilePages = []string{"get-started"}
+
+func (f *selfServiceProfileFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	var page int
+	for {
+		profiles, err := f.api.SelfServiceProfile.List(ctx, management.Page(page))
+		if err != nil {
+			return nil, err
+		}
+
+		for _, profile := range profiles.SelfServiceProfile {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_self_service_profile." + sanitizeResourceName(profile.GetName()),
+				ImportID:     profile.GetID(),
+			})
+
+			for _, lang := range selfServiceProfileLanguages {
+				for _, page := range selfServiceProfilePages {
+					customText, err := f.api.SelfServiceProfile.GetCustomText(ctx, profile.GetID(), lang, page)
+					if err != nil {
+						return nil, err
+					}
+					if len(customText) == 0 {
+						continue
+					}
+
+					data = append(data, importDataItem{
+						ResourceName: "auth0_self_service_profile_custom_text." + sanitizeResourceName(profile.GetName()+"_"+lang+"_"+page),
+						ImportID:     profile.GetID() + "::" + lang + "::" + page,
+					})
+				}
+			}
+		}
+
+		if !profiles.HasNext() {
+			break
+		}
 	}
 
 	return data, nil
