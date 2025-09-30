@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.21.0](https://github.com/auth0/auth0-cli/tree/v1.21.0) (September 30, 2025)
+
+### Added
+- Add support for `auth0_self_service_profile` and `auth0_self_service_profile_custom_text` in `auth0 tf generate` [#1337]
+- Add support for `auth0_user_attribute_profile` in `auth0 ttf generate` [#1344]
+
+
 # [v.1.20.1](https://github.com/auth0/auth0-cli/tree/v1.20.1) (September 25, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.20.0...v1.20.1)
@@ -583,7 +590,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.20.1...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.21.0...HEAD
+[1344]: https://github.com/auth0/auth0-cli/pull/1344
+[1337]: https://github.com/auth0/auth0-cli/pull/1337
 [1343]: https://github.com/auth0/auth0-cli/issues/1343
 [1265]: https://github.com/auth0/auth0-cli/issues/1265
 [1317]: https://github.com/auth0/auth0-cli/issues/1317
