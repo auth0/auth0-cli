@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # [v.1.21.0](https://github.com/auth0/auth0-cli/tree/v1.21.0) (September 30, 2025)
 
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.20.1...v1.21.0)
+
 ### Added
 - Add support for `auth0_self_service_profile` and `auth0_self_service_profile_custom_text` in `auth0 tf generate` [#1337]
 - Add support for `auth0_user_attribute_profile` in `auth0 ttf generate` [#1344]
@@ -591,16 +593,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 [unreleased]: https://github.com/auth0/auth0-cli/compare/v1.21.0...HEAD
-[1344]: https://github.com/auth0/auth0-cli/pull/1344
-[1337]: https://github.com/auth0/auth0-cli/pull/1337
-[1343]: https://github.com/auth0/auth0-cli/issues/1343
-[1265]: https://github.com/auth0/auth0-cli/issues/1265
-[1317]: https://github.com/auth0/auth0-cli/issues/1317
-[1313]: https://github.com/auth0/auth0-cli/issues/1313
-[1306]: https://github.com/auth0/auth0-cli/issues/1306
-[1288]: https://github.com/auth0/auth0-cli/issues/1288
-[1283]: https://github.com/auth0/auth0-cli/issues/1283
-[1280]: https://github.com/auth0/auth0-cli/issues/1280
+[#1344]: https://github.com/auth0/auth0-cli/pull/1344
+[#1337]: https://github.com/auth0/auth0-cli/pull/1337
+[#1343]: https://github.com/auth0/auth0-cli/issues/1343
+[#1265]: https://github.com/auth0/auth0-cli/issues/1265
+[#1317]: https://github.com/auth0/auth0-cli/issues/1317
+[#1313]: https://github.com/auth0/auth0-cli/issues/1313
+[#1306]: https://github.com/auth0/auth0-cli/issues/1306
+[#1288]: https://github.com/auth0/auth0-cli/issues/1288
+[#1283]: https://github.com/auth0/auth0-cli/issues/1283
+[#1280]: https://github.com/auth0/auth0-cli/issues/1280
 [#1268]: https://github.com/auth0/auth0-cli/issues/1268
 [#1260]: https://github.com/auth0/auth0-cli/issues/1260
 [#1258]: https://github.com/auth0/auth0-cli/issues/1258
