@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.20.1](https://github.com/auth0/auth0-cli/tree/v1.20.1) (September 25, 2025)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.20.0...v1.20.1)
+
+### Fixed
+- Fixed tenant re-authentication invocation when logging in with additional scopes. [#1343]
+
+
+# [v.1.20.0](https://github.com/auth0/auth0-cli/tree/v1.20.0) (September 11, 2025)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.19.0...v1.20.0)
+
+### Added
+- Add support patch for network ACL update flow [#1265]
+
 # [v.1.19.0](https://github.com/auth0/auth0-cli/tree/v1.19.0) (September 9, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.18.0...v1.19.0)
@@ -568,7 +583,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.19.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.20.1...HEAD
+[1343]: https://github.com/auth0/auth0-cli/issues/1343
+[1265]: https://github.com/auth0/auth0-cli/issues/1265
 [1317]: https://github.com/auth0/auth0-cli/issues/1317
 [1313]: https://github.com/auth0/auth0-cli/issues/1313
 [1306]: https://github.com/auth0/auth0-cli/issues/1306
