@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Add support for `auth0_self_service_profile` and `auth0_self_service_profile_custom_text` in `auth0 tf generate` [#1337]
-- Add support for `auth0_user_attribute_profile` in `auth0 ttf generate` [#1344]
+- Add support for `auth0_user_attribute_profile` in `auth0 tf generate` [#1344]
 
 
 # [v.1.20.1](https://github.com/auth0/auth0-cli/tree/v1.20.1) (September 25, 2025)
