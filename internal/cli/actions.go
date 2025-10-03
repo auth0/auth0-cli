@@ -4,9 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
+	"github.com/pmezard/go-difflib/difflib"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 
@@ -94,6 +97,7 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(deleteActionCmd(cli))
 	cmd.AddCommand(deployActionCmd(cli))
 	cmd.AddCommand(openActionCmd(cli))
+	cmd.AddCommand(diffActionCmd(cli))
 
 	return cmd
 }
@@ -522,6 +526,85 @@ func openActionCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+func diffActionCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID       string
+		version1 int
+		version2 int
+	}
+
+	cmd := &cobra.Command{
+		Use:   "diff [action-id]",
+		Short: "Show diff between two versions of an Actions",
+		Args:  cobra.MaximumNArgs(1),
+		Long:  "Show code difference between two versions of an Actions",
+		Example: `auth0 actions diff
+  auth0 actions diff <action-id>`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.Background()
+			if len(args) == 0 {
+				if err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions); err != nil {
+					return err
+				}
+			} else {
+				inputs.ID = args[0]
+			}
+
+			// fetch all versions (paginate)
+			var allVersions []*management.ActionVersion
+			page := 0
+			perPage := 50
+			for {
+				queryParams := []management.RequestOption{
+					management.Parameter("page", fmt.Sprintf("%d", page)),
+					management.Parameter("per_page", fmt.Sprintf("%d", perPage)),
+				}
+
+				versionsResp, err := cli.api.Action.Versions(ctx, inputs.ID, queryParams...)
+				if err != nil {
+					return err
+				}
+
+				allVersions = append(allVersions, versionsResp.Versions...)
+
+				if len(versionsResp.Versions) < perPage {
+					break // no more pages
+				}
+				page++
+			}
+
+			var err error
+			inputs.version1, inputs.version2, err = pickTwoVersions(len(allVersions))
+			if err != nil {
+				return err
+			}
+
+			if inputs.version1 == inputs.version2 {
+				fmt.Printf("No diff between the same versions")
+			}
+
+			var code1, code2 string
+			for _, v := range allVersions {
+				if v.Number == inputs.version1 {
+					code1 = v.GetCode()
+				}
+				if v.Number == inputs.version2 {
+					code2 = v.GetCode()
+				}
+			}
+
+			if code1 == "" || code2 == "" {
+				return fmt.Errorf("There are %d versions for the action. "+
+					"\nCould not find one of the versions: %d or %d", len(allVersions), inputs.version1, inputs.version2)
+			}
+
+			printColorDiff(code1, code2, inputs.version1, inputs.version2)
+			return nil
+		},
+	}
+	return cmd
+}
+
 func (c *cli) actionPickerOptions(ctx context.Context) (pickerOptions, error) {
 	list, err := c.api.Action.List(ctx)
 	if err != nil {
@@ -634,4 +717,58 @@ func inputSecretsToActionSecrets(secrets map[string]string) *[]management.Action
 	}
 
 	return &actionSecrets
+}
+
+func printColorDiff(code1, code2 string, v1, v2 int) {
+	diff := difflib.UnifiedDiff{
+		A:        difflib.SplitLines(code1),
+		B:        difflib.SplitLines(code2),
+		FromFile: fmt.Sprintf("v%d", v1),
+		ToFile:   fmt.Sprintf("v%d", v2),
+		Context:  3,
+	}
+	text, _ := difflib.GetUnifiedDiffString(diff)
+
+	for _, line := range difflib.SplitLines(text) {
+		switch {
+		case len(line) > 0 && line[0] == '+':
+			fmt.Printf("\033[32m%s\033[0m\n", line) // green for additions
+		case len(line) > 0 && line[0] == '-':
+			fmt.Printf("\033[31m%s\033[0m\n", line) // red for deletions
+		case len(line) > 0 && line[0] == '@':
+			fmt.Printf("\033[36m%s\033[0m\n", line) // cyan for hunk headers
+		default:
+			fmt.Println(line) // default color
+		}
+	}
+}
+
+func pickTwoVersions(totalVersions int) (int, int, error) {
+	allowed := make([]string, totalVersions)
+	for i := 1; i <= totalVersions; i++ {
+		allowed[i-1] = fmt.Sprintf("%d", i)
+	}
+
+	var version1, version2 string
+
+	if err := prompt.AskOne(&survey.Question{
+		Name:     "version1",
+		Prompt:   &survey.Select{Message: "Select the first version to compare:", Options: allowed},
+		Validate: survey.Required,
+	}, &version1); err != nil {
+		return 0, 0, handleInputError(err)
+	}
+
+	if err := prompt.AskOne(&survey.Question{
+		Name:     "version2",
+		Prompt:   &survey.Select{Message: "Select the second version to compare:", Options: allowed},
+		Validate: survey.Required,
+	}, &version2); err != nil {
+		return 0, 0, handleInputError(err)
+	}
+
+	version1Int, _ := strconv.Atoi(version1)
+	version2Int, _ := strconv.Atoi(version2)
+
+	return version1Int, version2Int, nil
 }
