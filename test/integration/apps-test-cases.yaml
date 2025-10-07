@@ -313,3 +313,24 @@ tests:
   041 - given a test app, it successfully deletes the app:
     command: auth0 apps delete $(./test/integration/scripts/get-app-id.sh) --force
     exit-code: 0
+
+  042 - it successfully creates a resource server app with resource-server-identifier:
+    command: auth0 apps create --name integration-test-app-resourceserver1 --type resource_server --resource-server-identifier http://integration-test-api-newapi
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME                         integration-test-app-resourceserver1
+        - TYPE                         Resource Server
+        - RESOURCE SERVER IDENTIFIER   http://integration-test-api-newapi
+
+  043 - it shows resource server app with resource-server-identifier:
+    command: auth0 apps show $(./test/integration/scripts/get-resource-server-app-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - TYPE                         Resource Server
+        - RESOURCE SERVER IDENTIFIER   http://integration-test-api-newapi
+
+  044 - given a resource server app, it successfully deletes the app:
+    command: auth0 apps delete $(./test/integration/scripts/get-resource-server-app-id.sh) --force
+    exit-code: 0

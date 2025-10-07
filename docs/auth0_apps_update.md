@@ -22,13 +22,13 @@ auth0 apps update [flags]
   auth0 apps update
   auth0 apps update <app-id> --name myapp
   auth0 apps update <app-id> --name myapp --description <description>
-  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m]
-  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m] --reveal-secrets
-  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json
-  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json-compact
-  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar"
-  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
-  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"
+  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m|resource_server]
+  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m|resource_server] --reveal-secrets
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json-compact
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar"
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar,bazz=buzz"
 ```
 
 
@@ -52,6 +52,7 @@ auth0 apps update [flags]
                                   - spa (single page application): a JavaScript front-end app that uses an API.
                                   - regular: Traditional web app using redirects.
                                   - m2m (machine to machine): CLIs, daemons or services running on your backend.
+                                  - resource_server: A resource server client that can be linked to a resource server.
   -w, --web-origins strings       Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode.
 ```
 

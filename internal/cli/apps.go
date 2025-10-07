@@ -25,6 +25,7 @@ const (
 	appTypeSPA            = "spa"
 	appTypeRegularWeb     = "regular_web"
 	appTypeNonInteractive = "non_interactive"
+	appTypeResourceServer = "resource_server"
 	appDefaultURL         = "http://localhost:3000"
 	defaultPageSize       = 100
 )
@@ -55,7 +56,8 @@ var (
 			"- native: mobile, desktop, CLI and smart device apps running natively.\n" +
 			"- spa (single page application): a JavaScript front-end app that uses an API.\n" +
 			"- regular: Traditional web app using redirects.\n" +
-			"- m2m (machine to machine): CLIs, daemons or services running on your backend.",
+			"- m2m (machine to machine): CLIs, daemons or services running on your backend.\n" +
+			"- resource_server: A resource server client that can be linked to a resource server.",
 		IsRequired: true,
 	}
 	appTypeOptions = []string{
@@ -63,6 +65,7 @@ var (
 		"Single Page Web Application",
 		"Regular Web Application",
 		"Machine to Machine",
+		"Resource Server",
 	}
 	appDescription = Flag{
 		Name:       "Description",
@@ -121,6 +124,12 @@ var (
 		LongForm:   "grants",
 		ShortForm:  "g",
 		Help:       "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.",
+		IsRequired: false,
+	}
+	appResourceServerIdentifier = Flag{
+		Name:       "Resource Server Identifier",
+		LongForm:   "resource-server-identifier",
+		Help:       "The identifier of the resource server that this client is associated with. This property can only be sent when app_type=resource_server and cannot be changed once the client is created.",
 		IsRequired: false,
 	}
 	revealSecrets = Flag{
@@ -406,18 +415,19 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 
 func createAppCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Name              string
-		Type              string
-		Description       string
-		Callbacks         []string
-		AllowedOrigins    []string
-		AllowedWebOrigins []string
-		AllowedLogoutURLs []string
-		AuthMethod        string
-		Grants            []string
-		RevealSecrets     bool
-		Metadata          map[string]string
-		RefreshToken      string
+		Name                     string
+		Type                     string
+		Description              string
+		Callbacks                []string
+		AllowedOrigins           []string
+		AllowedWebOrigins        []string
+		AllowedLogoutURLs        []string
+		AuthMethod               string
+		Grants                   []string
+		RevealSecrets            bool
+		Metadata                 map[string]string
+		RefreshToken             string
+		ResourceServerIdentifier string
 	}
 	var oidcConformant = true
 	var algorithm = "RS256"
@@ -432,13 +442,14 @@ func createAppCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 apps create
   auth0 apps create --name myapp 
   auth0 apps create --name myapp --description <description>
-  auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m]
-  auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m] --reveal-secrets
-  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json
-  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json-compact
-  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar"
-  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
-  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"`,
+  auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m|resource_server]
+  auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m|resource_server] --reveal-secrets
+  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json
+  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json-compact
+  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar"
+  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
+  auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar,bazz=buzz"
+  auth0 apps create --name "My API Client" --type resource_server --resource-server-identifier "https://api.example.com"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -455,9 +466,10 @@ func createAppCmd(cli *cli) *cobra.Command {
 			appIsM2M := apiTypeFor(inputs.Type) == appTypeNonInteractive
 			appIsNative := apiTypeFor(inputs.Type) == appTypeNative
 			appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
+			appIsResourceServer := apiTypeFor(inputs.Type) == appTypeResourceServer
 
-			// Prompt for callback URLs if app is not m2m.
-			if !appIsM2M {
+			// Prompt for callback URLs if app is not m2m and not resource_server.
+			if !appIsM2M && !appIsResourceServer {
 				var defaultValue string
 
 				if !appIsNative {
@@ -469,8 +481,8 @@ func createAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			// Prompt for logout URLs if app is not m2m.
-			if !appIsM2M {
+			// Prompt for logout URLs if app is not m2m and not resource_server.
+			if !appIsM2M && !appIsResourceServer {
 				var defaultValue string
 
 				if !appIsNative {
@@ -500,6 +512,13 @@ func createAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			// Prompt for resource server identifier if app type is resource_server.
+			if appIsResourceServer {
+				if err := appResourceServerIdentifier.Ask(cmd, &inputs.ResourceServerIdentifier, nil); err != nil {
+					return err
+				}
+			}
+
 			clientMetadata := make(map[string]interface{}, len(inputs.Metadata))
 			for k, v := range inputs.Metadata {
 				clientMetadata[k] = v
@@ -507,16 +526,24 @@ func createAppCmd(cli *cli) *cobra.Command {
 
 			// Load values into a fresh app instance.
 			a := &management.Client{
-				Name:              &inputs.Name,
-				Description:       &inputs.Description,
-				AppType:           auth0.String(apiTypeFor(inputs.Type)),
-				Callbacks:         stringSliceToPtr(inputs.Callbacks),
-				AllowedOrigins:    stringSliceToPtr(inputs.AllowedOrigins),
-				WebOrigins:        stringSliceToPtr(inputs.AllowedWebOrigins),
-				AllowedLogoutURLs: stringSliceToPtr(inputs.AllowedLogoutURLs),
-				OIDCConformant:    &oidcConformant,
-				JWTConfiguration:  &management.ClientJWTConfiguration{Algorithm: &algorithm},
-				ClientMetadata:    &clientMetadata,
+				Name:             &inputs.Name,
+				Description:      &inputs.Description,
+				AppType:          auth0.String(apiTypeFor(inputs.Type)),
+				AllowedOrigins:   stringSliceToPtr(inputs.AllowedOrigins),
+				WebOrigins:       stringSliceToPtr(inputs.AllowedWebOrigins),
+				OIDCConformant:   &oidcConformant,
+				JWTConfiguration: &management.ClientJWTConfiguration{Algorithm: &algorithm},
+				ClientMetadata:   &clientMetadata,
+			}
+
+			// Only set for non-resource_server apps.
+			if !appIsResourceServer {
+				a.Callbacks = stringSliceToPtr(inputs.Callbacks)
+				a.AllowedLogoutURLs = stringSliceToPtr(inputs.AllowedLogoutURLs)
+			}
+
+			if appIsResourceServer && inputs.ResourceServerIdentifier != "" {
+				a.ResourceServerIdentifier = &inputs.ResourceServerIdentifier
 			}
 
 			if len(inputs.RefreshToken) != 0 {
@@ -568,6 +595,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 	appLogoutURLs.RegisterStringSlice(cmd, &inputs.AllowedLogoutURLs, nil)
 	appAuthMethod.RegisterString(cmd, &inputs.AuthMethod, "")
 	appGrants.RegisterStringSlice(cmd, &inputs.Grants, nil)
+	appResourceServerIdentifier.RegisterString(cmd, &inputs.ResourceServerIdentifier, "")
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 	refreshToken.RegisterString(cmd, &inputs.RefreshToken, "")
 
@@ -576,19 +604,20 @@ func createAppCmd(cli *cli) *cobra.Command {
 
 func updateAppCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID                string
-		Name              string
-		Type              string
-		Description       string
-		Callbacks         []string
-		AllowedOrigins    []string
-		AllowedWebOrigins []string
-		AllowedLogoutURLs []string
-		AuthMethod        string
-		Grants            []string
-		RevealSecrets     bool
-		Metadata          map[string]string
-		RefreshToken      string
+		ID                       string
+		Name                     string
+		Type                     string
+		Description              string
+		Callbacks                []string
+		AllowedOrigins           []string
+		AllowedWebOrigins        []string
+		AllowedLogoutURLs        []string
+		AuthMethod               string
+		Grants                   []string
+		RevealSecrets            bool
+		Metadata                 map[string]string
+		RefreshToken             string
+		ResourceServerIdentifier string
 	}
 
 	cmd := &cobra.Command{
@@ -602,13 +631,13 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 apps update
   auth0 apps update <app-id> --name myapp
   auth0 apps update <app-id> --name myapp --description <description>
-  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m]
-  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m] --reveal-secrets
-  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json
-  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json-compact
-  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar"
-  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
-  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"`,
+  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m|resource_server]
+  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m|resource_server] --reveal-secrets
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json-compact
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar"
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar,bazz=buzz"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Client
 
@@ -639,9 +668,10 @@ func updateAppCmd(cli *cli) *cobra.Command {
 			appIsM2M := apiTypeFor(inputs.Type) == appTypeNonInteractive
 			appIsNative := apiTypeFor(inputs.Type) == appTypeNative
 			appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
+			appIsResourceServer := apiTypeFor(inputs.Type) == appTypeResourceServer
 
-			// Prompt for callback URLs if app is not m2m.
-			if !appIsM2M {
+			// Prompt for callback URLs if app is not m2m and not resource_server.
+			if !appIsM2M && !appIsResourceServer {
 				var defaultValue string
 
 				if !appIsNative {
@@ -657,8 +687,8 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			// Prompt for logout URLs if app is not m2m.
-			if !appIsM2M {
+			// Prompt for logout URLs if app is not m2m and not resource_server.
+			if !appIsM2M && !appIsResourceServer {
 				var defaultValue string
 
 				if !appIsNative {
@@ -721,28 +751,31 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				a.AppType = auth0.String(apiTypeFor(inputs.Type))
 			}
 
-			if len(inputs.Callbacks) == 0 {
-				a.Callbacks = current.Callbacks
-			} else {
-				a.Callbacks = &inputs.Callbacks
-			}
+			// Only set callbacks and logout URLs for non-resource_server apps.
+			if !appIsResourceServer {
+				if len(inputs.Callbacks) == 0 {
+					a.Callbacks = current.Callbacks
+				} else {
+					a.Callbacks = &inputs.Callbacks
+				}
 
-			if len(inputs.AllowedOrigins) == 0 {
-				a.AllowedOrigins = current.AllowedOrigins
-			} else {
-				a.AllowedOrigins = &inputs.AllowedOrigins
-			}
+				if len(inputs.AllowedOrigins) == 0 {
+					a.AllowedOrigins = current.AllowedOrigins
+				} else {
+					a.AllowedOrigins = &inputs.AllowedOrigins
+				}
 
-			if len(inputs.AllowedWebOrigins) == 0 {
-				a.WebOrigins = current.WebOrigins
-			} else {
-				a.WebOrigins = &inputs.AllowedWebOrigins
-			}
+				if len(inputs.AllowedWebOrigins) == 0 {
+					a.WebOrigins = current.WebOrigins
+				} else {
+					a.WebOrigins = &inputs.AllowedWebOrigins
+				}
 
-			if len(inputs.AllowedLogoutURLs) == 0 {
-				a.AllowedLogoutURLs = current.AllowedLogoutURLs
-			} else {
-				a.AllowedLogoutURLs = &inputs.AllowedLogoutURLs
+				if len(inputs.AllowedLogoutURLs) == 0 {
+					a.AllowedLogoutURLs = current.AllowedLogoutURLs
+				} else {
+					a.AllowedLogoutURLs = &inputs.AllowedLogoutURLs
+				}
 			}
 
 			if len(inputs.AuthMethod) == 0 {
@@ -852,6 +885,8 @@ func apiTypeFor(v string) string {
 		return appTypeRegularWeb
 	case "m2m", "machine to machine":
 		return appTypeNonInteractive
+	case "resource server":
+		return appTypeResourceServer
 	default:
 		return v
 	}
@@ -921,6 +956,8 @@ func apiDefaultGrantsFor(t string) *[]string {
 		return &[]string{"implicit", "authorization_code", "refresh_token", "client_credentials"}
 	case appTypeNonInteractive:
 		return &[]string{"client_credentials"}
+	case appTypeResourceServer:
+		return &[]string{"urn:auth0:params:oauth:grant-type:token-exchange:federated-connection-access-token"}
 	default:
 		return nil
 	}
@@ -936,6 +973,8 @@ func typeFor(s *string) *string {
 		return auth0.String("Regular Web Application")
 	case appTypeNonInteractive:
 		return auth0.String("Machine to Machine")
+	case appTypeResourceServer:
+		return auth0.String("Resource Server")
 	default:
 		return nil
 	}
