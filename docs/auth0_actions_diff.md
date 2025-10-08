@@ -1,13 +1,38 @@
 ---
 layout: default
+parent: auth0 actions
 has_toc: false
-has_children: true
 ---
-# auth0 actions
+# auth0 actions diff
 
-Actions are secure, tenant-specific, versioned functions written in Node.js that execute at certain points within the Auth0 platform. Actions are used to customize and extend Auth0's capabilities with custom logic.
+Show code difference between two versions of an Actions
 
-## Commands
+## Usage
+```
+auth0 actions diff [action-id] [flags]
+```
+
+## Examples
+
+```
+auth0 actions diff
+  auth0 actions diff <action-id>
+```
+
+
+
+
+## Inherited Flags
+
+```
+      --debug           Enable debug mode.
+      --no-color        Disable colors.
+      --no-input        Disable interactivity.
+      --tenant string   Specific tenant to use.
+```
+
+
+## Related Commands
 
 - [auth0 actions create](auth0_actions_create.md) - Create a new action
 - [auth0 actions delete](auth0_actions_delete.md) - Delete an action
@@ -17,4 +42,5 @@ Actions are secure, tenant-specific, versioned functions written in Node.js that
 - [auth0 actions open](auth0_actions_open.md) - Open the settings page of an action
 - [auth0 actions show](auth0_actions_show.md) - Show an action
 - [auth0 actions update](auth0_actions_update.md) - Update an action
+
 

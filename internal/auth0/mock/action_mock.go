@@ -191,3 +191,23 @@ func (mr *MockActionAPIMockRecorder) Update(ctx, id, a interface{}, opts ...inte
 	varargs := append([]interface{}{ctx, id, a}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockActionAPI)(nil).Update), varargs...)
 }
+
+// Versions mocks base method.
+func (m *MockActionAPI) Versions(ctx context.Context, id string, opts ...management.RequestOption) (*management.ActionVersionList, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Versions", varargs...)
+	ret0, _ := ret[0].(*management.ActionVersionList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Versions indicates an expected call of Versions.
+func (mr *MockActionAPIMockRecorder) Versions(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Versions", reflect.TypeOf((*MockActionAPI)(nil).Versions), varargs...)
+}
