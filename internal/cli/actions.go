@@ -550,7 +550,7 @@ func diffActionCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			// Fetch all versions (paginate)
+			// Fetch all versions (paginate).
 			var allVersions []*management.ActionVersion
 			page := 0
 			perPage := 50
@@ -732,11 +732,11 @@ func printColorDiff(code1, code2 string, v1, v2 int) {
 	for _, line := range difflib.SplitLines(text) {
 		switch {
 		case len(line) > 0 && line[0] == '+':
-			fmt.Printf("\033[32m%s\033[0m\n", line) // Green for additions
+			fmt.Printf("\033[32m%s\033[0m\n", line) // Green for additions.
 		case len(line) > 0 && line[0] == '-':
-			fmt.Printf("\033[31m%s\033[0m\n", line) // Red for deletions
+			fmt.Printf("\033[31m%s\033[0m\n", line) // Red for deletions.
 		case len(line) > 0 && line[0] == '@':
-			fmt.Printf("\033[36m%s\033[0m\n", line) // Cyan for hunk headers
+			fmt.Printf("\033[36m%s\033[0m\n", line) // Cyan for hunk headers.
 		default:
 			fmt.Println(line) // default color
 		}
