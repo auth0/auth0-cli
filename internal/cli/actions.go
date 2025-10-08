@@ -738,7 +738,7 @@ func printColorDiff(code1, code2 string, v1, v2 int) {
 		case len(line) > 0 && line[0] == '@':
 			fmt.Printf("\033[36m%s\033[0m\n", line) // Cyan for hunk headers.
 		default:
-			fmt.Println(line) // default color
+			fmt.Println(line) // default color.
 		}
 	}
 }
