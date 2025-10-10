@@ -56,8 +56,7 @@ var (
 			"- native: mobile, desktop, CLI and smart device apps running natively.\n" +
 			"- spa (single page application): a JavaScript front-end app that uses an API.\n" +
 			"- regular: Traditional web app using redirects.\n" +
-			"- m2m (machine to machine): CLIs, daemons or services running on your backend.\n" +
-			"- resource_server: A resource server client that can be linked to a resource server.",
+			"- m2m (machine to machine): CLIs, daemons or services running on your backend.",
 		IsRequired: true,
 	}
 	appTypeOptions = []string{
