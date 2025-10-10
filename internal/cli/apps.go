@@ -536,10 +536,15 @@ func createAppCmd(cli *cli) *cobra.Command {
 				ClientMetadata:   &clientMetadata,
 			}
 
+			callback := stringSliceToPtr(inputs.Callbacks)
+			allowedLogoutURLs := stringSliceToPtr(inputs.AllowedLogoutURLs)
+
 			// Only set for non-resource_server apps.
-			if !appIsResourceServer {
-				a.Callbacks = stringSliceToPtr(inputs.Callbacks)
-				a.AllowedLogoutURLs = stringSliceToPtr(inputs.AllowedLogoutURLs)
+			if appIsResourceServer {
+				cli.renderer.Infof("Resource server apps do not support callbacks or logout URLs")
+			} else {
+				a.Callbacks = callback
+				a.AllowedLogoutURLs = allowedLogoutURLs
 			}
 
 			if appIsResourceServer && inputs.ResourceServerIdentifier != "" {
@@ -604,20 +609,19 @@ func createAppCmd(cli *cli) *cobra.Command {
 
 func updateAppCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID                       string
-		Name                     string
-		Type                     string
-		Description              string
-		Callbacks                []string
-		AllowedOrigins           []string
-		AllowedWebOrigins        []string
-		AllowedLogoutURLs        []string
-		AuthMethod               string
-		Grants                   []string
-		RevealSecrets            bool
-		Metadata                 map[string]string
-		RefreshToken             string
-		ResourceServerIdentifier string
+		ID                string
+		Name              string
+		Type              string
+		Description       string
+		Callbacks         []string
+		AllowedOrigins    []string
+		AllowedWebOrigins []string
+		AllowedLogoutURLs []string
+		AuthMethod        string
+		Grants            []string
+		RevealSecrets     bool
+		Metadata          map[string]string
+		RefreshToken      string
 	}
 
 	cmd := &cobra.Command{
@@ -631,13 +635,13 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 apps update
   auth0 apps update <app-id> --name myapp
   auth0 apps update <app-id> --name myapp --description <description>
-  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m|resource_server]
-  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m|resource_server] --reveal-secrets
-  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json
-  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json-compact
-  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar"
-  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
-  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar,bazz=buzz"`,
+  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m]
+  auth0 apps update <app-id> --name myapp --description <description> --type [native|spa|regular|m2m] --reveal-secrets
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json-compact
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar"
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Client
 
@@ -668,10 +672,9 @@ func updateAppCmd(cli *cli) *cobra.Command {
 			appIsM2M := apiTypeFor(inputs.Type) == appTypeNonInteractive
 			appIsNative := apiTypeFor(inputs.Type) == appTypeNative
 			appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
-			appIsResourceServer := apiTypeFor(inputs.Type) == appTypeResourceServer
 
 			// Prompt for callback URLs if app is not m2m and not resource_server.
-			if !appIsM2M && !appIsResourceServer {
+			if !appIsM2M {
 				var defaultValue string
 
 				if !appIsNative {
@@ -687,8 +690,8 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			// Prompt for logout URLs if app is not m2m and not resource_server.
-			if !appIsM2M && !appIsResourceServer {
+			// Prompt for logout URLs if app is not m2m.
+			if !appIsM2M {
 				var defaultValue string
 
 				if !appIsNative {
@@ -751,31 +754,28 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				a.AppType = auth0.String(apiTypeFor(inputs.Type))
 			}
 
-			// Only set callbacks and logout URLs for non-resource_server apps.
-			if !appIsResourceServer {
-				if len(inputs.Callbacks) == 0 {
-					a.Callbacks = current.Callbacks
-				} else {
-					a.Callbacks = &inputs.Callbacks
-				}
+			if len(inputs.Callbacks) == 0 {
+				a.Callbacks = current.Callbacks
+			} else {
+				a.Callbacks = &inputs.Callbacks
+			}
 
-				if len(inputs.AllowedOrigins) == 0 {
-					a.AllowedOrigins = current.AllowedOrigins
-				} else {
-					a.AllowedOrigins = &inputs.AllowedOrigins
-				}
+			if len(inputs.AllowedOrigins) == 0 {
+				a.AllowedOrigins = current.AllowedOrigins
+			} else {
+				a.AllowedOrigins = &inputs.AllowedOrigins
+			}
 
-				if len(inputs.AllowedWebOrigins) == 0 {
-					a.WebOrigins = current.WebOrigins
-				} else {
-					a.WebOrigins = &inputs.AllowedWebOrigins
-				}
+			if len(inputs.AllowedWebOrigins) == 0 {
+				a.WebOrigins = current.WebOrigins
+			} else {
+				a.WebOrigins = &inputs.AllowedWebOrigins
+			}
 
-				if len(inputs.AllowedLogoutURLs) == 0 {
-					a.AllowedLogoutURLs = current.AllowedLogoutURLs
-				} else {
-					a.AllowedLogoutURLs = &inputs.AllowedLogoutURLs
-				}
+			if len(inputs.AllowedLogoutURLs) == 0 {
+				a.AllowedLogoutURLs = current.AllowedLogoutURLs
+			} else {
+				a.AllowedLogoutURLs = &inputs.AllowedLogoutURLs
 			}
 
 			if len(inputs.AuthMethod) == 0 {
