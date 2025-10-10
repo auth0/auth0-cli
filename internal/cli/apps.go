@@ -672,7 +672,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 			appIsNative := apiTypeFor(inputs.Type) == appTypeNative
 			appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
 
-			// Prompt for callback URLs if app is not m2m and not resource_server.
+			// Prompt for callback URLs if app is not m2m.
 			if !appIsM2M {
 				var defaultValue string
 

@@ -54,7 +54,6 @@ auth0 apps create [flags]
                                             - spa (single page application): a JavaScript front-end app that uses an API.
                                             - regular: Traditional web app using redirects.
                                             - m2m (machine to machine): CLIs, daemons or services running on your backend.
-                                            - resource_server: A resource server client that can be linked to a resource server.
   -w, --web-origins strings                 Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode.
 ```
 
