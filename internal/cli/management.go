@@ -3,6 +3,7 @@ package cli
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -11,10 +12,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/auth0/auth0-cli/internal/ansi"
+
 	"github.com/PuerkitoBio/rehttp"
 	"github.com/auth0/go-auth0/management"
 
 	"github.com/auth0/auth0-cli/internal/buildinfo"
+	"github.com/auth0/auth0-cli/internal/config"
+	"github.com/auth0/auth0-cli/internal/keyring"
 )
 
 func initializeManagementClient(tenantDomain string, accessToken string) (*management.Management, error) {
@@ -28,6 +33,20 @@ func initializeManagementClient(tenantDomain string, accessToken string) (*manag
 	)
 
 	return client, err
+}
+
+// with enhanced error handling for corrupted tokens.
+func initializeManagementClientWithTokenValidation(tenant config.Tenant) (*management.Management, error) {
+	err := keyring.ValidateAccessToken(tenant.Domain)
+	if err != nil && errors.Is(err, keyring.ErrMalformedToken) {
+		return nil, fmt.Errorf("authentication token is corrupted, please run: %s\n\n%s",
+			ansi.Cyan("auth0 logout && auth0 login"),
+			ansi.Faint("Note: From version v1.18.0 onward, malformed tokens can no longer be generated due to improved token handling"),
+		)
+	}
+
+	accessToken := tenant.GetAccessToken()
+	return initializeManagementClient(tenant.Domain, accessToken)
 }
 
 func customClientWithRetries() *http.Client {

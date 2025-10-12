@@ -5,7 +5,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/lestrrat-go/jwx/v2/jwt"
 	"github.com/zalando/go-keyring"
+)
+
+var (
+	// ErrMalformedToken indicates a corrupted JWT token was found in keyring.
+	ErrMalformedToken = errors.New("corrupted authentication token detected")
 )
 
 const (
@@ -71,6 +77,12 @@ func DeleteSecretsForTenant(tenant string) error {
 }
 
 func StoreAccessToken(tenant, value string) error {
+	// First, clear any existing chunks to prevent concatenation issues.
+	for i := 0; i < secretAccessTokenMaxChunks; i++ {
+		_ = keyring.Delete(fmt.Sprintf("%s %d", secretAccessToken, i), tenant)
+	}
+
+	// Now store the new token in chunks.
 	chunks := chunk(value, secretAccessTokenChunkSizeInBytes)
 
 	for i := 0; i < len(chunks); i++ {
@@ -102,6 +114,26 @@ func GetAccessToken(tenant string) (string, error) {
 	return accessToken, nil
 }
 
+func ValidateAccessToken(tenant string) error {
+	accessToken, err := GetAccessToken(tenant)
+	if err != nil {
+		return err
+	}
+
+	// Validate that the reconstructed token looks like a JWT.
+	if accessToken == "" {
+		return nil
+	}
+
+	// Use actual JWT parsing to validate the token structure.
+	if !isValidJWT(accessToken) {
+		return ErrMalformedToken
+	}
+
+	// Token is valid.
+	return nil
+}
+
 func chunk(slice string, chunkSize int) []string {
 	var chunks []string
 	for i := 0; i < len(slice); i += chunkSize {
@@ -117,4 +149,11 @@ func chunk(slice string, chunkSize int) []string {
 	}
 
 	return chunks
+}
+
+// isValidJWT uses actual JWT parsing to validate the token.
+func isValidJWT(token string) bool {
+	// Just check if it's a valid JWT structure.
+	_, err := jwt.ParseInsecure([]byte(token))
+	return err == nil
 }
