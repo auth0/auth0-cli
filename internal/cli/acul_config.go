@@ -201,7 +201,7 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
   auth0 acul config generate login-id --file login-settings.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				cli.renderer.Infof("Please select a screen ")
+				cli.renderer.Output(ansi.Yellow("💡 Search Tip: Type any part of the screen name (e.g., 'login', 'mfa', 'signup') to filter results."))
 				if err := screenName.Select(cmd, &input.screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
 					return handleInputError(err)
 				}
@@ -225,7 +225,10 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
 			cli.renderer.Infof("Configuration successfully generated!\n"+
 				"      Your new config file is located at %s\n"+
 				"      Review the documentation for configuring screens to use ACUL\n"+
-				"      https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens\n", ansi.Green(input.filePath))
+				"      https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens\n"+
+				"      Tip: Try `auth0 acul config get` and `auth0 acul config set` to manage your config files.",
+				ansi.Green(input.filePath))
+
 			return nil
 		},
 	}
@@ -247,7 +250,7 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
   auth0 acul config get login-id -f ./login.json"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				cli.renderer.Infof("Please select a screen ")
+				cli.renderer.Output(ansi.Yellow("💡 Search Tip: Type any part of the screen name (e.g., 'login', 'mfa', 'signup') to filter results."))
 				if err := screenName.Select(cmd, &input.screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
 					return handleInputError(err)
 				}
@@ -261,21 +264,13 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to fetch the existing render settings: %w", err)
 			}
 
-			if input.filePath != "" {
-				if shouldOverwriteFile(cli, cmd, input.filePath, input.screenName) {
-					return nil
-				}
-			} else {
-				cli.renderer.Warnf("No configuration file exists for %s on %s", ansi.Green(input.screenName), ansi.Blue(input.filePath))
-
-				if !cli.force && canPrompt(cmd) {
-					message := fmt.Sprintf("Would you like to generate a local config file instead at %v.json? (Y/n)", input.screenName)
-					if confirmed := prompt.Confirm(message); !confirmed {
-						return nil
-					}
-				}
-
+			if input.filePath == "" {
+				cli.renderer.Warnf("No configuration file path provided; defaulting to ./%s.json.", input.screenName)
 				input.filePath = fmt.Sprintf("%s.json", input.screenName)
+			}
+
+			if shouldOverwriteFile(cli, cmd, input.filePath) {
+				return nil
 			}
 
 			data, err := json.MarshalIndent(existingRenderSettings, "", "  ")
@@ -287,7 +282,8 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to write render settings to file %q: %w", input.filePath, err)
 			}
 
-			cli.renderer.Infof("Configuration succcessfully downloaded and saved to %s", ansi.Green(input.filePath))
+			cli.renderer.Infof("Configuration succcessfully downloaded and saved to %s\n"+
+				"      Tip: Try `auth0 acul config set` and `auth0 acul config list` to manage your config files.", ansi.Green(input.filePath))
 			return nil
 		},
 	}
@@ -297,16 +293,14 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func shouldOverwriteFile(cli *cli, cmd *cobra.Command, filePath, screen string) bool {
+func shouldOverwriteFile(cli *cli, cmd *cobra.Command, filePath string) bool {
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
 		return false
 	}
 
-	cli.renderer.Warnf("A configuration file for %s already exists at %s", ansi.Green(screen), ansi.Blue(filePath))
-
 	if !cli.force && canPrompt(cmd) {
-		message := fmt.Sprintf("Overwrite this file with the data from %s? (y/N): ", ansi.Blue(cli.tenant))
+		message := fmt.Sprintf("Overwrite %s file with the data from %s? : ", ansi.Magenta(filePath), ansi.Blue(cli.tenant))
 		if confirmed := prompt.Confirm(message); !confirmed {
 			return true
 		}
@@ -327,7 +321,7 @@ func aculConfigSetCmd(cli *cli) *cobra.Command {
   auth0 acul config set login-id`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				cli.renderer.Infof("Please select a screen ")
+				cli.renderer.Output(ansi.Yellow("💡 Search Tip: Type any part of the screen name (e.g., 'login', 'mfa', 'signup') to filter results."))
 				if err := screenName.Select(cmd, &input.screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
 					return handleInputError(err)
 				}
@@ -369,11 +363,9 @@ func advanceCustomize(cmd *cobra.Command, cli *cli, input aculConfigInput) error
 	}
 
 	cli.renderer.Infof(
-		"Successfully updated the rendering settings.\n Current rendering mode for Prompt '%s' and Screen '%s': %s",
-		ansi.Green(ScreenPromptMap[input.screenName]),
-		ansi.Green(input.screenName),
-		ansi.Green(currMode),
-	)
+		"Successfully updated the rendering settings.\n Current rendering mode for Prompt '%s' and Screen '%s': %s\n"+
+			"      Tip: Try `auth0 acul config set` and `auth0 acul config list` to manage your config files.",
+		ansi.Green(ScreenPromptMap[input.screenName]), ansi.Green(input.screenName), ansi.Green(currMode))
 
 	return nil
 }

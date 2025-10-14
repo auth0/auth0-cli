@@ -2,6 +2,18 @@ package cli
 
 import "github.com/spf13/cobra"
 
+func aculCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "acul",
+		Short: "Advance Customize the Universal Login experience",
+		Long:  `Customize the Universal Login experience. This requires a custom domain to be configured for the tenant.`,
+	}
+
+	cmd.AddCommand(aculConfigureCmd(cli))
+
+	return cmd
+}
+
 func aculConfigureCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
