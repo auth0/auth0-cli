@@ -176,6 +176,21 @@ type aculConfigInput struct {
 	filePath   string
 }
 
+// ensureConfigFilePath sets a default config file path if none is provided and creates the config directory.
+func ensureConfigFilePath(input *aculConfigInput, cli *cli) error {
+	if input.filePath == "" {
+		cli.renderer.Warnf("No configuration file path provided; defaulting to ./config/%s.json.", input.screenName)
+		input.filePath = fmt.Sprintf("config/%s.json", input.screenName)
+	}
+
+	// Create config directory if it doesn't exist.
+	if err := os.MkdirAll("config", 0755); err != nil {
+		return fmt.Errorf("could not create config directory: %w", err)
+	}
+
+	return nil
+}
+
 // Generate default ACUL config stub.
 func defaultACULConfig() map[string]interface{} {
 	return map[string]interface{}{
@@ -209,8 +224,8 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
 				input.screenName = args[0]
 			}
 
-			if input.filePath == "" {
-				input.filePath = fmt.Sprintf("%s.json", input.screenName)
+			if err := ensureConfigFilePath(&input, cli); err != nil {
+				return err
 			}
 
 			config := defaultACULConfig()
@@ -225,9 +240,11 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
 			cli.renderer.Infof("Configuration successfully generated!\n"+
 				"      Your new config file is located at %s\n"+
 				"      Review the documentation for configuring screens to use ACUL\n"+
-				"      https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens\n"+
-				"      Tip: Try `auth0 acul config get` and `auth0 acul config set` to manage your config files.",
+				"      https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens\n",
 				ansi.Green(input.filePath))
+
+			cli.renderer.Output(ansi.Yellow("💡 Tip: Try `auth0 acul config get` to get the remote rendering settings for a specific screen\n" +
+				"       and `auth0 acul config set` to update your local screen configurations to remote."))
 
 			return nil
 		},
@@ -264,9 +281,13 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to fetch the existing render settings: %w", err)
 			}
 
-			if input.filePath == "" {
-				cli.renderer.Warnf("No configuration file path provided; defaulting to ./%s.json.", input.screenName)
-				input.filePath = fmt.Sprintf("%s.json", input.screenName)
+			if existingRenderSettings == nil {
+				cli.renderer.Warnf("No rendering settings found for screen %s. You can generate a stub config file using `auth0 acul config generate`.", input.screenName)
+				return nil
+			}
+
+			if err := ensureConfigFilePath(&input, cli); err != nil {
+				return err
 			}
 
 			if shouldOverwriteFile(cli, cmd, input.filePath) {
@@ -282,8 +303,9 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to write render settings to file %q: %w", input.filePath, err)
 			}
 
-			cli.renderer.Infof("Configuration succcessfully downloaded and saved to %s\n"+
-				"      Tip: Try `auth0 acul config set` and `auth0 acul config list` to manage your config files.", ansi.Green(input.filePath))
+			cli.renderer.Infof("Configuration succcessfully downloaded and saved to %s\n", ansi.Green(input.filePath))
+			cli.renderer.Output(ansi.Yellow("💡 Tip: Try `auth0 acul config set` to update your local screen configurations to remote.\n" +
+				"       and `auth0 acul config list` to list the configured ACUL screens."))
 			return nil
 		},
 	}
@@ -363,9 +385,11 @@ func advanceCustomize(cmd *cobra.Command, cli *cli, input aculConfigInput) error
 	}
 
 	cli.renderer.Infof(
-		"Successfully updated the rendering settings.\n Current rendering mode for Prompt '%s' and Screen '%s': %s\n"+
-			"      Tip: Try `auth0 acul config set` and `auth0 acul config list` to manage your config files.",
+		"Successfully updated the rendering settings.\n Current rendering mode for Prompt '%s' and Screen '%s': %s\n",
 		ansi.Green(ScreenPromptMap[input.screenName]), ansi.Green(input.screenName), ansi.Green(currMode))
+
+	cli.renderer.Output(ansi.Yellow("💡 Tip: Try `auth0 acul config set` to set the rendering settings of a screen\n " +
+		"       and `auth0 acul config list` to list the configured ACUL screens."))
 
 	return nil
 }
@@ -379,18 +403,41 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*
 	)
 
 	if input.filePath != "" {
+		// Case 1: File path is provided, use that file's content.
 		data, err := os.ReadFile(input.filePath)
 		if err != nil {
 			return nil, fmt.Errorf("unable to read file %q: %v", input.filePath, err)
 		}
 
-		// Validate JSON content.
 		if err := json.Unmarshal(data, &renderSettings); err != nil {
 			return nil, fmt.Errorf("file %q contains invalid JSON: %v", input.filePath, err)
 		}
 
 		return renderSettings, nil
 	}
+
+	// Case 2: No file path provided, default to config/<screen-name>.json.
+	defaultFilePath := fmt.Sprintf("config/%s.json", input.screenName)
+	data, err := os.ReadFile(defaultFilePath)
+	if err == nil {
+		cli.renderer.Warnf("No configuration file path provided; defaulting to ./config/%s.json.", input.screenName)
+
+		// Ask user if they want to use the existing default file.
+		if !cli.force && canPrompt(cmd) {
+			message := fmt.Sprintf("Do you want to use the default file to update the remote ACUL configurations for %s? : ", ansi.Blue(input.screenName))
+			if confirmed := prompt.Confirm(message); confirmed {
+				if err := json.Unmarshal(data, &renderSettings); err != nil {
+					return nil, fmt.Errorf("file %q contains invalid JSON: %v", defaultFilePath, err)
+				}
+
+				return renderSettings, nil
+			}
+		}
+	}
+
+	// Case 3: No file path provided and default file doesn't exist or user declined to use it, open editor.
+	cli.renderer.Infof("Opening editor to update the remote ACUL configurations for %s",
+		ansi.Green(input.screenName))
 
 	// Fetch existing render settings from the API.
 	existingRenderSettings, err := cli.api.Prompt.ReadRendering(cmd.Context(), management.PromptType(ScreenPromptMap[input.screenName]), management.ScreenName(input.screenName))

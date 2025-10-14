@@ -82,7 +82,7 @@ func _select(i commandInput, value interface{}, options []string, defaultValue *
 
 	var input *survey.Question
 
-	// Use paginated select for large option sets (>15 options)
+	// Use paginated select for large option sets (>15 options).
 	if len(options) > 15 {
 		input = prompt.PaginatedSelectInput("", i.GetLabel(), i.GetHelp(), options, auth0.StringValue(defaultValue), isRequired)
 	} else {

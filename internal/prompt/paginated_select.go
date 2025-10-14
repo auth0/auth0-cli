@@ -21,7 +21,7 @@ func PaginatedSelectInput(name string, message string, help string, options []st
 			Default:  defaultValue,
 
 			Filter: func(filterVal string, optionVal string, optionIndex int) bool {
-				// Case-insensitive search - matches if the search term appears anywhere in the option
+				// Case-insensitive search - matches if the search term appears anywhere in the option.
 				return strings.Contains(strings.ToLower(optionVal), strings.ToLower(filterVal))
 			},
 		},
