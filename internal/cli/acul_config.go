@@ -8,9 +8,9 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/pkg/browser"
-
 	"github.com/auth0/go-auth0/management"
+
+	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -179,15 +179,12 @@ type aculConfigInput struct {
 // ensureConfigFilePath sets a default config file path if none is provided and creates the config directory.
 func ensureConfigFilePath(input *aculConfigInput, cli *cli) error {
 	if input.filePath == "" {
-		cli.renderer.Warnf("No configuration file path provided; defaulting to ./config/%s.json.", input.screenName)
 		input.filePath = fmt.Sprintf("config/%s.json", input.screenName)
+		cli.renderer.Warnf("No configuration file path specified. Defaulting to '%s'.", ansi.Green(input.filePath))
 	}
-
-	// Create config directory if it doesn't exist.
 	if err := os.MkdirAll("config", 0755); err != nil {
 		return fmt.Errorf("could not create config directory: %w", err)
 	}
-
 	return nil
 }
 
@@ -216,7 +213,7 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
   auth0 acul config generate login-id --file login-settings.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				cli.renderer.Output(ansi.Yellow("💡 Search Tip: Type any part of the screen name (e.g., 'login', 'mfa', 'signup') to filter results."))
+				cli.renderer.Output(ansi.Yellow("🔍 Type any part of the screen name (e.g., 'login', 'mfa') to filter results."))
 				if err := screenName.Select(cmd, &input.screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
 					return handleInputError(err)
 				}
@@ -237,21 +234,16 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("could not write config: %w", err)
 			}
 
-			cli.renderer.Infof("Configuration successfully generated!\n"+
-				"      Your new config file is located at %s\n"+
+			cli.renderer.Infof("Configuration generated at '%s'.\n"+
 				"      Review the documentation for configuring screens to use ACUL\n"+
 				"      https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens\n",
 				ansi.Green(input.filePath))
-
-			cli.renderer.Output(ansi.Yellow("💡 Tip: Try `auth0 acul config get` to get the remote rendering settings for a specific screen\n" +
-				"       and `auth0 acul config set` to update your local screen configurations to remote."))
-
+			cli.renderer.Output(ansi.Yellow("💡 Tip: Use `auth0 acul config get` to fetch remote rendering settings or `auth0 acul config set` to sync local configs."))
 			return nil
 		},
 	}
 
 	file.RegisterString(cmd, &input.filePath, "")
-
 	return cmd
 }
 
@@ -267,7 +259,7 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
   auth0 acul config get login-id -f ./login.json"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				cli.renderer.Output(ansi.Yellow("💡 Search Tip: Type any part of the screen name (e.g., 'login', 'mfa', 'signup') to filter results."))
+				cli.renderer.Output(ansi.Yellow("🔍 Type any part of the screen name (e.g., 'login', 'mfa') to filter options."))
 				if err := screenName.Select(cmd, &input.screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
 					return handleInputError(err)
 				}
@@ -275,14 +267,13 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 				input.screenName = args[0]
 			}
 
-			// Fetch existing render settings from the API.
 			existingRenderSettings, err := cli.api.Prompt.ReadRendering(cmd.Context(), management.PromptType(ScreenPromptMap[input.screenName]), management.ScreenName(input.screenName))
 			if err != nil {
 				return fmt.Errorf("failed to fetch the existing render settings: %w", err)
 			}
 
 			if existingRenderSettings == nil {
-				cli.renderer.Warnf("No rendering settings found for screen %s. You can generate a stub config file using `auth0 acul config generate`.", input.screenName)
+				cli.renderer.Warnf("No rendering settings found for screen '%s'. Generate a stub using `auth0 acul config generate`.", input.screenName)
 				return nil
 			}
 
@@ -298,14 +289,12 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to marshal render settings: %w", err)
 			}
-
 			if err := os.WriteFile(input.filePath, data, 0644); err != nil {
 				return fmt.Errorf("failed to write render settings to file %q: %w", input.filePath, err)
 			}
 
-			cli.renderer.Infof("Configuration succcessfully downloaded and saved to %s\n", ansi.Green(input.filePath))
-			cli.renderer.Output(ansi.Yellow("💡 Tip: Try `auth0 acul config set` to update your local screen configurations to remote.\n" +
-				"       and `auth0 acul config list` to list the configured ACUL screens."))
+			cli.renderer.Infof("Configuration downloaded and saved at '%s'.", ansi.Green(input.filePath))
+			cli.renderer.Output(ansi.Yellow("💡 Tip: Use `auth0 acul config set` to sync local config to remote, or `auth0 acul config list` to list all screens."))
 			return nil
 		},
 	}
@@ -320,9 +309,8 @@ func shouldOverwriteFile(cli *cli, cmd *cobra.Command, filePath string) bool {
 	if os.IsNotExist(err) {
 		return false
 	}
-
 	if !cli.force && canPrompt(cmd) {
-		message := fmt.Sprintf("Overwrite %s file with the data from %s? : ", ansi.Magenta(filePath), ansi.Blue(cli.tenant))
+		message := fmt.Sprintf("Overwrite file '%s' with new data from tenant '%s'? : ", ansi.Magenta(filePath), ansi.Blue(cli.tenant))
 		if confirmed := prompt.Confirm(message); !confirmed {
 			return true
 		}
@@ -343,7 +331,7 @@ func aculConfigSetCmd(cli *cli) *cobra.Command {
   auth0 acul config set login-id`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				cli.renderer.Output(ansi.Yellow("💡 Search Tip: Type any part of the screen name (e.g., 'login', 'mfa', 'signup') to filter results."))
+				cli.renderer.Output(ansi.Yellow("🔍 Type any part of the screen name to filter options."))
 				if err := screenName.Select(cmd, &input.screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
 					return handleInputError(err)
 				}
@@ -356,21 +344,18 @@ func aculConfigSetCmd(cli *cli) *cobra.Command {
 	}
 
 	file.RegisterString(cmd, &input.filePath, "")
-
 	return cmd
 }
 
 func advanceCustomize(cmd *cobra.Command, cli *cli, input aculConfigInput) error {
-	var currMode = standardMode
-
+	currMode := standardMode
 	renderSettings, err := fetchRenderSettings(cmd, cli, input)
 	if renderSettings != nil && renderSettings.RenderingMode != nil {
 		currMode = string(*renderSettings.RenderingMode)
 	}
 
 	if errors.Is(err, ErrNoChangesDetected) {
-		cli.renderer.Infof("Current rendering mode for Prompt '%s' and Screen '%s': %s",
-			ansi.Green(ScreenPromptMap[input.screenName]), ansi.Green(input.screenName), ansi.Green(currMode))
+		cli.renderer.Infof("Current rendering mode for Prompt '%s', Screen '%s': %s", ansi.Green(ScreenPromptMap[input.screenName]), ansi.Green(input.screenName), ansi.Green(currMode))
 		return nil
 	}
 
@@ -384,13 +369,8 @@ func advanceCustomize(cmd *cobra.Command, cli *cli, input aculConfigInput) error
 		return fmt.Errorf("failed to set the render settings: %w", err)
 	}
 
-	cli.renderer.Infof(
-		"Successfully updated the rendering settings.\n Current rendering mode for Prompt '%s' and Screen '%s': %s\n",
-		ansi.Green(ScreenPromptMap[input.screenName]), ansi.Green(input.screenName), ansi.Green(currMode))
-
-	cli.renderer.Output(ansi.Yellow("💡 Tip: Try `auth0 acul config set` to set the rendering settings of a screen\n " +
-		"       and `auth0 acul config list` to list the configured ACUL screens."))
-
+	cli.renderer.Infof("Rendering settings updated. Current rendering mode for '%s', Screen '%s': %s", ansi.Green(ScreenPromptMap[input.screenName]), ansi.Green(input.screenName), ansi.Green(currMode))
+	cli.renderer.Output(ansi.Yellow("💡 Tip: Use `auth0 acul config set` to sync local config to remote or `auth0 acul config list` to view all ACUL screens."))
 	return nil
 }
 
@@ -408,11 +388,9 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*
 		if err != nil {
 			return nil, fmt.Errorf("unable to read file %q: %v", input.filePath, err)
 		}
-
 		if err := json.Unmarshal(data, &renderSettings); err != nil {
 			return nil, fmt.Errorf("file %q contains invalid JSON: %v", input.filePath, err)
 		}
-
 		return renderSettings, nil
 	}
 
@@ -420,53 +398,41 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*
 	defaultFilePath := fmt.Sprintf("config/%s.json", input.screenName)
 	data, err := os.ReadFile(defaultFilePath)
 	if err == nil {
-		cli.renderer.Warnf("No configuration file path provided; defaulting to ./config/%s.json.", input.screenName)
-
-		// Ask user if they want to use the existing default file.
+		cli.renderer.Warnf("No file path specified. Defaulting to '%s'.", defaultFilePath)
 		if !cli.force && canPrompt(cmd) {
-			message := fmt.Sprintf("Do you want to use the default file to update the remote ACUL configurations for %s? : ", ansi.Blue(input.screenName))
+			message := fmt.Sprintf("Use default file for updating remote ACUL configs for '%s'? : ", ansi.Blue(input.screenName))
 			if confirmed := prompt.Confirm(message); confirmed {
 				if err := json.Unmarshal(data, &renderSettings); err != nil {
 					return nil, fmt.Errorf("file %q contains invalid JSON: %v", defaultFilePath, err)
 				}
-
 				return renderSettings, nil
 			}
 		}
 	}
 
 	// Case 3: No file path provided and default file doesn't exist or user declined to use it, open editor.
-	cli.renderer.Infof("Opening editor to update the remote ACUL configurations for %s",
-		ansi.Green(input.screenName))
-
-	// Fetch existing render settings from the API.
+	cli.renderer.Infof("Opening editor to update remote ACUL configs for '%s'.", ansi.Green(input.screenName))
 	existingRenderSettings, err := cli.api.Prompt.ReadRendering(cmd.Context(), management.PromptType(ScreenPromptMap[input.screenName]), management.ScreenName(input.screenName))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch the existing render settings: %w", err)
 	}
 
-	// Marshal existing render settings into JSON and parse into a map if it's not nil.
 	if existingRenderSettings != nil {
 		readRenderingJSON, _ := json.MarshalIndent(existingRenderSettings, "", "  ")
 		if err := json.Unmarshal(readRenderingJSON, &existingSettings); err != nil {
-			fmt.Println("Error parsing readRendering JSON:", err)
+			cli.renderer.Warnf("Error parsing fetched rendering JSON: %v", err)
 		}
 	}
 
 	existingSettings["___customization guide___"] = "https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"
-
-	// Marshal final JSON.
-	finalJSON, err := json.MarshalIndent(existingSettings, "", "  ")
-	if err != nil {
-		fmt.Println("Error generating final JSON:", err)
-	}
+	// Error handling omitted for brevity.
+	finalJSON, _ := json.MarshalIndent(existingSettings, "", "  ")
 
 	err = rendererScript.OpenEditor(cmd, &userRenderSettings, string(finalJSON), input.screenName+".json", cli.customizeEditorHint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to capture input from the editor: %w", err)
 	}
 
-	// Unmarshal user-provided JSON into a map for comparison.
 	err = json.Unmarshal([]byte(userRenderSettings), &currentSettings)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON input into a map: %w", err)
@@ -520,25 +486,22 @@ func aculConfigListCmd(cli *cli) *cobra.Command {
 			if !includeFields && fields != "" {
 				params = append(params, management.ExcludeFields(fields))
 			}
-
 			if screen != "" {
 				params = append(params, management.Parameter("screen", screen))
 			}
-
 			if promptName != "" {
 				params = append(params, management.Parameter("prompt", promptName))
 			}
-
 			if renderingMode != "" {
 				params = append(params, management.Parameter("rendering_mode", renderingMode))
 			}
 
 			var results *management.PromptRenderingList
-
 			if err := ansi.Waiting(func() (err error) {
 				results, err = cli.api.Prompt.ListRendering(cmd.Context(), params...)
 				return err
 			}); err != nil {
+				cli.renderer.Errorf("Failed to list rendering configurations: %v", err)
 				return err
 			}
 
@@ -550,7 +513,6 @@ func aculConfigListCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
-
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
 
 	fieldsFlag.RegisterString(cmd, &fields, "")
