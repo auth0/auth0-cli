@@ -196,7 +196,7 @@ func defaultACULConfig() map[string]interface{} {
 		"use_page_template":          false,
 		"default_head_tags_disabled": false,
 		"head_tags":                  []interface{}{},
-		"filters":                    []interface{}{},
+		"filters":                    map[string]interface{}{},
 	}
 }
 
@@ -230,6 +230,11 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
 			// Error handling omitted for brevity.
 			data, _ := json.MarshalIndent(config, "", "  ")
 
+			message := fmt.Sprintf("Overwrite file '%s' with default config? : ", ansi.Green(input.filePath))
+			if shouldOverwriteFile(cli, cmd, input.filePath, message) {
+				return nil
+			}
+
 			if err := os.WriteFile(input.filePath, data, 0644); err != nil {
 				return fmt.Errorf("could not write config: %w", err)
 			}
@@ -239,6 +244,7 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
 				"      https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens\n",
 				ansi.Green(input.filePath))
 			cli.renderer.Output(ansi.Yellow("💡 Tip: Use `auth0 acul config get` to fetch remote rendering settings or `auth0 acul config set` to sync local configs."))
+			cli.renderer.Output(ansi.Cyan("📖 Customization Guide: https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"))
 			return nil
 		},
 	}
@@ -273,7 +279,7 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 			}
 
 			if existingRenderSettings == nil {
-				cli.renderer.Warnf("No rendering settings found for screen '%s'. Generate a stub using `auth0 acul config generate`.", input.screenName)
+				cli.renderer.Warnf("No rendering settings found for screen '%s' in tenant '%s'.", ansi.Green(input.screenName), ansi.Blue(cli.tenant))
 				return nil
 			}
 
@@ -281,7 +287,8 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if shouldOverwriteFile(cli, cmd, input.filePath) {
+			message := fmt.Sprintf("Overwrite file '%s' with new data from tenant '%s'? : ", ansi.Green(input.filePath), ansi.Blue(cli.tenant))
+			if shouldOverwriteFile(cli, cmd, input.filePath, message) {
 				return nil
 			}
 
@@ -294,7 +301,8 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 			}
 
 			cli.renderer.Infof("Configuration downloaded and saved at '%s'.", ansi.Green(input.filePath))
-			cli.renderer.Output(ansi.Yellow("💡 Tip: Use `auth0 acul config set` to sync local config to remote, or `auth0 acul config list` to list all screens."))
+			cli.renderer.Output(ansi.Yellow("💡 Tip: Use `auth0 acul config set` to sync local config to remote, or `auth0 acul config list` to view all ACUL screens."))
+			cli.renderer.Output(ansi.Cyan("📖 Customization Guide: https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"))
 			return nil
 		},
 	}
@@ -304,13 +312,12 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func shouldOverwriteFile(cli *cli, cmd *cobra.Command, filePath string) bool {
+func shouldOverwriteFile(cli *cli, cmd *cobra.Command, filePath, message string) bool {
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
 		return false
 	}
 	if !cli.force && canPrompt(cmd) {
-		message := fmt.Sprintf("Overwrite file '%s' with new data from tenant '%s'? : ", ansi.Magenta(filePath), ansi.Blue(cli.tenant))
 		if confirmed := prompt.Confirm(message); !confirmed {
 			return true
 		}
@@ -370,7 +377,8 @@ func advanceCustomize(cmd *cobra.Command, cli *cli, input aculConfigInput) error
 	}
 
 	cli.renderer.Infof("Rendering settings updated. Current rendering mode for '%s', Screen '%s': %s", ansi.Green(ScreenPromptMap[input.screenName]), ansi.Green(input.screenName), ansi.Green(currMode))
-	cli.renderer.Output(ansi.Yellow("💡 Tip: Use `auth0 acul config set` to sync local config to remote or `auth0 acul config list` to view all ACUL screens."))
+	cli.renderer.Output(ansi.Yellow("💡 Tip: Use `auth0 acul config get` to fetch remote rendering settings or `auth0 acul config list` to view all ACUL screens."))
+	cli.renderer.Output(ansi.Cyan("📖 Customization Guide: https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"))
 	return nil
 }
 
@@ -398,12 +406,12 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*
 	defaultFilePath := fmt.Sprintf("config/%s.json", input.screenName)
 	data, err := os.ReadFile(defaultFilePath)
 	if err == nil {
-		cli.renderer.Warnf("No file path specified. Defaulting to '%s'.", defaultFilePath)
+		cli.renderer.Warnf("No file path specified. Defaulting to '%s'.", ansi.Green(defaultFilePath))
 		if !cli.force && canPrompt(cmd) {
-			message := fmt.Sprintf("Use default file for updating remote ACUL configs for '%s'? : ", ansi.Blue(input.screenName))
+			message := fmt.Sprintf("Use file '%s' for updating remote ACUL configs for '%s'? : ", ansi.Green(defaultFilePath), ansi.Blue(input.screenName))
 			if confirmed := prompt.Confirm(message); confirmed {
 				if err := json.Unmarshal(data, &renderSettings); err != nil {
-					return nil, fmt.Errorf("file %q contains invalid JSON: %v", defaultFilePath, err)
+					return nil, fmt.Errorf("file %s contains invalid JSON: %v", defaultFilePath, err)
 				}
 				return renderSettings, nil
 			}
@@ -537,6 +545,7 @@ func aculConfigDocsCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			url := "https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens"
 			cli.renderer.Infof("Opening documentation: %s", url)
+			cli.renderer.Output(ansi.Cyan("📖 Customization Guide: https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"))
 			return browser.OpenURL(url)
 		},
 	}
