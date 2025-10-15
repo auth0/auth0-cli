@@ -113,10 +113,14 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &resourceServerResourceFetcher{api})
 		case "auth0_role", "auth0_role_permissions":
 			fetchers = append(fetchers, &roleResourceFetcher{api})
+		case "auth0_self_service_profile":
+			fetchers = append(fetchers, &selfServiceProfileFetcher{api})
 		case "auth0_tenant":
 			fetchers = append(fetchers, &tenantResourceFetcher{})
 		case "auth0_trigger_actions":
 			fetchers = append(fetchers, &triggerActionsResourceFetcher{api})
+		case "auth0_user_attribute_profile":
+			fetchers = append(fetchers, &userAttributeProfilesResourceFetcher{api})
 		default:
 			err = errors.Join(err, fmt.Errorf("unsupported resource type: %s", resource))
 		}
@@ -251,6 +255,11 @@ func fetchImportData(ctx context.Context, cli *cli, fetchers ...resourceDataFetc
 			// Checking for the forbidden scenario and skip.
 			if strings.Contains(err.Error(), "403 Forbidden") {
 				cli.renderer.Warnf("Skipping resource due to forbidden access: %s", err.Error())
+				continue
+			}
+
+			if strings.Contains(err.Error(), "402 Payment Required") {
+				cli.renderer.Warnf("Skipping resource due to payment required: %s", err.Error())
 				continue
 			}
 

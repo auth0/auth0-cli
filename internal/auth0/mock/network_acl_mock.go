@@ -93,6 +93,25 @@ func (mr *MockNetworkACLAPIMockRecorder) List(ctx interface{}, opts ...interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNetworkACLAPI)(nil).List), varargs...)
 }
 
+// Patch mocks base method.
+func (m *MockNetworkACLAPI) Patch(ctx context.Context, id string, n *management.NetworkACL, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id, n}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Patch", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Patch indicates an expected call of Patch.
+func (mr *MockNetworkACLAPIMockRecorder) Patch(ctx, id, n interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id, n}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockNetworkACLAPI)(nil).Patch), varargs...)
+}
+
 // Read mocks base method.
 func (m *MockNetworkACLAPI) Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.NetworkACL, error) {
 	m.ctrl.T.Helper()

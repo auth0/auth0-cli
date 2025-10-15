@@ -93,6 +93,26 @@ func (mr *MockEventStreamAPIMockRecorder) List(ctx interface{}, opts ...interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockEventStreamAPI)(nil).List), varargs...)
 }
 
+// ListDeliveries mocks base method.
+func (m *MockEventStreamAPI) ListDeliveries(ctx context.Context, id string, opts ...management.RequestOption) (*management.EventDeliveryList, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListDeliveries", varargs...)
+	ret0, _ := ret[0].(*management.EventDeliveryList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDeliveries indicates an expected call of ListDeliveries.
+func (mr *MockEventStreamAPIMockRecorder) ListDeliveries(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeliveries", reflect.TypeOf((*MockEventStreamAPI)(nil).ListDeliveries), varargs...)
+}
+
 // Read mocks base method.
 func (m *MockEventStreamAPI) Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.EventStream, error) {
 	m.ctrl.T.Helper()
@@ -111,6 +131,103 @@ func (mr *MockEventStreamAPIMockRecorder) Read(ctx, id interface{}, opts ...inte
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockEventStreamAPI)(nil).Read), varargs...)
+}
+
+// ReadDelivery mocks base method.
+func (m *MockEventStreamAPI) ReadDelivery(ctx context.Context, streamID, deliveryID string, opts ...management.RequestOption) (*management.EventDelivery, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, streamID, deliveryID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ReadDelivery", varargs...)
+	ret0, _ := ret[0].(*management.EventDelivery)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadDelivery indicates an expected call of ReadDelivery.
+func (mr *MockEventStreamAPIMockRecorder) ReadDelivery(ctx, streamID, deliveryID interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, streamID, deliveryID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadDelivery", reflect.TypeOf((*MockEventStreamAPI)(nil).ReadDelivery), varargs...)
+}
+
+// Redeliver mocks base method.
+func (m *MockEventStreamAPI) Redeliver(ctx context.Context, streamID, deliveryID string, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, streamID, deliveryID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Redeliver", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Redeliver indicates an expected call of Redeliver.
+func (mr *MockEventStreamAPIMockRecorder) Redeliver(ctx, streamID, deliveryID interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, streamID, deliveryID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Redeliver", reflect.TypeOf((*MockEventStreamAPI)(nil).Redeliver), varargs...)
+}
+
+// RedeliverMany mocks base method.
+func (m *MockEventStreamAPI) RedeliverMany(ctx context.Context, streamID string, req *management.BulkRedeliverRequest, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, streamID, req}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RedeliverMany", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RedeliverMany indicates an expected call of RedeliverMany.
+func (mr *MockEventStreamAPIMockRecorder) RedeliverMany(ctx, streamID, req interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, streamID, req}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RedeliverMany", reflect.TypeOf((*MockEventStreamAPI)(nil).RedeliverMany), varargs...)
+}
+
+// Stats mocks base method.
+func (m *MockEventStreamAPI) Stats(ctx context.Context, id string, opts ...management.RequestOption) (*management.EventStreamStats, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Stats", varargs...)
+	ret0, _ := ret[0].(*management.EventStreamStats)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Stats indicates an expected call of Stats.
+func (mr *MockEventStreamAPIMockRecorder) Stats(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stats", reflect.TypeOf((*MockEventStreamAPI)(nil).Stats), varargs...)
+}
+
+// Test mocks base method.
+func (m *MockEventStreamAPI) Test(ctx context.Context, id string, testEvent *management.TestEvent, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id, testEvent}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Test", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Test indicates an expected call of Test.
+func (mr *MockEventStreamAPIMockRecorder) Test(ctx, id, testEvent interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id, testEvent}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Test", reflect.TypeOf((*MockEventStreamAPI)(nil).Test), varargs...)
 }
 
 // Update mocks base method.
