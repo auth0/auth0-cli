@@ -71,6 +71,16 @@ func DeleteSecretsForTenant(tenant string) error {
 }
 
 func StoreAccessToken(tenant, value string) error {
+	// First, clear any existing chunks to prevent concatenation issues.
+	for i := 0; i < secretAccessTokenMaxChunks; i++ {
+		if err := keyring.Delete(secretClientSecret, tenant); err != nil {
+			if !errors.Is(err, keyring.ErrNotFound) {
+				return fmt.Errorf("failed to delete client secret from keyring: %s", err)
+			}
+		}
+	}
+
+	// Now store the new token in chunks.
 	chunks := chunk(value, secretAccessTokenChunkSizeInBytes)
 
 	for i := 0; i < len(chunks); i++ {
