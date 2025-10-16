@@ -12,56 +12,66 @@ import (
 )
 
 const (
-	quickstartsNative     = "https://auth0.com/docs/quickstart/native"
-	quickstartsSPA        = "https://auth0.com/docs/quickstart/spa"
-	quickstartsRegularWeb = "https://auth0.com/docs/quickstart/webapp"
-	quickstartsM2M        = "https://auth0.com/docs/quickstart/backend"
-	quickstartsGeneric    = "https://auth0.com/docs/quickstarts"
-	friendlyM2M           = "Machine to Machine"
-	friendlyNative        = "Native"
-	friendlySpa           = "Single Page Web Application"
-	friendlyReg           = "Regular Web Application"
+	quickstartsNative      = "https://auth0.com/docs/quickstart/native"
+	quickstartsSPA         = "https://auth0.com/docs/quickstart/spa"
+	quickstartsRegularWeb  = "https://auth0.com/docs/quickstart/webapp"
+	quickstartsM2M         = "https://auth0.com/docs/quickstart/backend"
+	quickstartsGeneric     = "https://auth0.com/docs/quickstarts"
+	friendlyM2M            = "Machine to Machine"
+	friendlyNative         = "Native"
+	friendlySpa            = "Single Page Web Application"
+	friendlyReg            = "Regular Web Application"
+	friendlyResourceServer = "Resource Server"
 )
 
 type applicationView struct {
-	Name              string
-	Description       string
-	Type              string
-	ClientID          string
-	ClientSecret      string
-	Callbacks         []string
-	AllowedOrigins    []string
-	AllowedWebOrigins []string
-	AllowedLogoutURLs []string
-	AuthMethod        string
-	Grants            []string
-	Metadata          []string
-	RefreshToken      string
-	revealSecret      bool
+	Name                     string
+	Description              string
+	Type                     string
+	ClientID                 string
+	ClientSecret             string
+	Callbacks                []string
+	AllowedOrigins           []string
+	AllowedWebOrigins        []string
+	AllowedLogoutURLs        []string
+	AuthMethod               string
+	Grants                   []string
+	Metadata                 []string
+	RefreshToken             string
+	ResourceServerIdentifier string
+	revealSecret             bool
 
 	raw interface{}
 }
 
 func (v *applicationView) AsTableHeader() []string {
 	if v.revealSecret {
-		return []string{"Client ID", "Name", "Type", "Client Secret"}
+		return []string{"Client ID", "Name", "Type", "Client Secret", "Resource Server"}
 	}
-	return []string{"Client ID", "Name", "Type"}
+	return []string{"Client ID", "Name", "Type", "Resource Server"}
 }
 
 func (v *applicationView) AsTableRow() []string {
+	// Show resource server identifier if present, otherwise empty.
+	resourceServerDisplay := ""
+	if v.ResourceServerIdentifier != "" {
+		resourceServerDisplay = v.ResourceServerIdentifier
+	}
+
 	if v.revealSecret {
 		return []string{
 			ansi.Faint(v.ClientID),
 			v.Name,
 			ApplyColorToFriendlyAppType(v.Type),
 			ansi.Italic(v.ClientSecret),
+			resourceServerDisplay,
 		}
 	}
 	return []string{
 		ansi.Faint(v.ClientID),
 		v.Name,
 		ApplyColorToFriendlyAppType(v.Type),
+		resourceServerDisplay,
 	}
 }
 
@@ -73,8 +83,10 @@ func (v *applicationView) KeyValues() [][]string {
 	grants := strings.Join(v.Grants, ", ")
 	metadata := strings.Join(v.Metadata, ", ")
 
+	var keyValues [][]string
+
 	if v.revealSecret {
-		return [][]string{
+		keyValues = [][]string{
 			{"CLIENT ID", ansi.Faint(v.ClientID)},
 			{"NAME", v.Name},
 			{"DESCRIPTION", v.Description},
@@ -89,22 +101,29 @@ func (v *applicationView) KeyValues() [][]string {
 			{"METADATA", metadata},
 			{"REFRESH TOKEN", v.RefreshToken},
 		}
+	} else {
+		keyValues = [][]string{
+			{"CLIENT ID", ansi.Faint(v.ClientID)},
+			{"NAME", v.Name},
+			{"DESCRIPTION", v.Description},
+			{"TYPE", ApplyColorToFriendlyAppType(v.Type)},
+			{"CALLBACKS", callbacks},
+			{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
+			{"ALLOWED ORIGINS", allowedOrigins},
+			{"ALLOWED WEB ORIGINS", allowedWebOrigins},
+			{"TOKEN ENDPOINT AUTH", v.AuthMethod},
+			{"GRANTS", grants},
+			{"METADATA", metadata},
+			{"REFRESH TOKEN", v.RefreshToken},
+		}
 	}
 
-	return [][]string{
-		{"CLIENT ID", ansi.Faint(v.ClientID)},
-		{"NAME", v.Name},
-		{"DESCRIPTION", v.Description},
-		{"TYPE", ApplyColorToFriendlyAppType(v.Type)},
-		{"CALLBACKS", callbacks},
-		{"ALLOWED LOGOUT URLS", allowedLogoutURLs},
-		{"ALLOWED ORIGINS", allowedOrigins},
-		{"ALLOWED WEB ORIGINS", allowedWebOrigins},
-		{"TOKEN ENDPOINT AUTH", v.AuthMethod},
-		{"GRANTS", grants},
-		{"METADATA", metadata},
-		{"REFRESH TOKEN", v.RefreshToken},
+	// Add resource server identifier if present.
+	if v.ResourceServerIdentifier != "" {
+		keyValues = append(keyValues, []string{"RESOURCE SERVER IDENTIFIER", v.ResourceServerIdentifier})
 	}
+
+	return keyValues
 }
 
 func (v *applicationView) Object() interface{} {
@@ -174,21 +193,22 @@ func makeApplicationView(client *management.Client, revealSecrets bool) *applica
 	jsonRefreshToken, _ := json.Marshal(client.GetRefreshToken())
 
 	return &applicationView{
-		revealSecret:      revealSecrets,
-		Name:              client.GetName(),
-		Description:       client.GetDescription(),
-		Type:              FriendlyAppType(client.GetAppType()),
-		ClientID:          client.GetClientID(),
-		ClientSecret:      client.GetClientSecret(),
-		Callbacks:         client.GetCallbacks(),
-		AllowedOrigins:    client.GetAllowedOrigins(),
-		AllowedWebOrigins: client.GetWebOrigins(),
-		AllowedLogoutURLs: client.GetAllowedLogoutURLs(),
-		AuthMethod:        client.GetTokenEndpointAuthMethod(),
-		Grants:            client.GetGrantTypes(),
-		Metadata:          mapPointerToArray(client.ClientMetadata),
-		raw:               client,
-		RefreshToken:      string(jsonRefreshToken),
+		revealSecret:             revealSecrets,
+		Name:                     client.GetName(),
+		Description:              client.GetDescription(),
+		Type:                     FriendlyAppType(client.GetAppType()),
+		ClientID:                 client.GetClientID(),
+		ClientSecret:             client.GetClientSecret(),
+		Callbacks:                client.GetCallbacks(),
+		AllowedOrigins:           client.GetAllowedOrigins(),
+		AllowedWebOrigins:        client.GetWebOrigins(),
+		AllowedLogoutURLs:        client.GetAllowedLogoutURLs(),
+		AuthMethod:               client.GetTokenEndpointAuthMethod(),
+		Grants:                   client.GetGrantTypes(),
+		Metadata:                 mapPointerToArray(client.ClientMetadata),
+		ResourceServerIdentifier: client.GetResourceServerIdentifier(),
+		raw:                      client,
+		RefreshToken:             string(jsonRefreshToken),
 	}
 }
 
@@ -204,6 +224,8 @@ func FriendlyAppType(appType string) string {
 		return friendlySpa
 	case appType == "regular_web":
 		return friendlyReg
+	case appType == "resource_server":
+		return friendlyResourceServer
 	default:
 		return appType
 	}
@@ -229,6 +251,8 @@ func quickstartsURIFor(appType string) string {
 		return quickstartsRegularWeb
 	case appType == "non_interactive":
 		return quickstartsM2M
+	case appType == "resource_server":
+		return quickstartsGeneric
 	default:
 		return quickstartsGeneric
 	}
@@ -244,6 +268,8 @@ func ApplyColorToFriendlyAppType(a string) string {
 		return ansi.Blue(a)
 	case a == friendlyReg:
 		return ansi.Magenta(a)
+	case a == friendlyResourceServer:
+		return ansi.Yellow(a)
 	default:
 		return a
 	}
