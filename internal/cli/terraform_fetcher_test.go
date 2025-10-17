@@ -1127,12 +1127,8 @@ func TestEmailTemplateResourceFetcher_FetchData(t *testing.T) {
 		defer ctrl.Finish()
 
 		emailTemplateAPI := mock.NewMockEmailTemplateAPI(ctrl)
-		templates := []string{
-			"verify_email", "reset_email", "welcome_email",
-			"blocked_account", "stolen_credentials",
-			"enrollment_email", "mfa_oob_code",
-			"change_password", "password_reset",
-		}
+		templates := []string{`verify_email`, `reset_email`, `welcome_email`, `blocked_account`, `stolen_credentials`, `enrollment_email`,
+			`mfa_oob_code`, `change_password`, `password_reset`, `verify_email_by_code`, `reset_email_by_code`, `user_invitation`, `async_approval`}
 
 		for _, tmpl := range templates {
 			emailTemplateAPI.EXPECT().
@@ -1183,6 +1179,22 @@ func TestEmailTemplateResourceFetcher_FetchData(t *testing.T) {
 				ResourceName: "auth0_email_template.password_reset",
 				ImportID:     "password_reset",
 			},
+			{
+				ResourceName: "auth0_email_template.verify_email_by_code",
+				ImportID:     "verify_email_by_code",
+			},
+			{
+				ResourceName: "auth0_email_template.reset_email_by_code",
+				ImportID:     "reset_email_by_code",
+			},
+			{
+				ResourceName: "auth0_email_template.user_invitation",
+				ImportID:     "user_invitation",
+			},
+			{
+				ResourceName: "auth0_email_template.async_approval",
+				ImportID:     "async_approval",
+			},
 		}
 
 		data, err := fetcher.FetchData(context.Background())
@@ -1196,12 +1208,8 @@ func TestEmailTemplateResourceFetcher_FetchData(t *testing.T) {
 
 		mErr := mockManagamentError{status: http.StatusNotFound}
 		emailTemplateAPI := mock.NewMockEmailTemplateAPI(ctrl)
-		templates := []string{
-			"verify_email", "reset_email", "welcome_email",
-			"blocked_account", "stolen_credentials",
-			"enrollment_email", "mfa_oob_code",
-			"change_password", "password_reset",
-		}
+		templates := []string{`verify_email`, `reset_email`, `welcome_email`, `blocked_account`, `stolen_credentials`, `enrollment_email`,
+			`mfa_oob_code`, `change_password`, `password_reset`, `verify_email_by_code`, `reset_email_by_code`, `user_invitation`, `async_approval`}
 
 		for _, tmpl := range templates {
 			emailTemplateAPI.EXPECT().
