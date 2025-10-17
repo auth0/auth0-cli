@@ -7,6 +7,7 @@
 [![Codecov](https://img.shields.io/codecov/c/github/auth0/auth0-cli?logo=codecov&style=flat-square)](https://codecov.io/gh/auth0/auth0-cli)
 [![License](https://img.shields.io/github/license/auth0/auth0-cli.svg?logo=fossa&style=flat-square)](https://github.com/auth0/auth0-cli/blob/main/LICENSE)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/auth0/auth0-cli/go.yml?branch=main&style=flat-square&logo=github)](https://github.com/auth0/auth0-cli/actions?query=branch%3Amain)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/auth0/auth0-cli)
 
 </div>
 
@@ -235,4 +236,3 @@ Please do not report security vulnerabilities on the public GitHub issue tracker
 <p align="center">Auth0 is an easy to implement, adaptable authentication and authorization platform. To learn more checkout <a href="https://auth0.com/why-auth0">Why Auth0?</a></p>
 <p align="center">
 This project is licensed under the MIT license. See the <a href="https://github.com/auth0/auth0-cli/blob/main/LICENSE"> LICENSE</a> file for more info.</p>
-
