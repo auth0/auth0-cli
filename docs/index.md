@@ -84,6 +84,7 @@ Authenticating as a user is not supported for **private cloud** tenants. Instead
 - [auth0 apis](auth0_apis.md) - Manage resources for APIs
 - [auth0 apps](auth0_apps.md) - Manage resources for applications
 - [auth0 completion](auth0_completion.md) - Setup autocomplete features for this CLI on your terminal
+- [auth0 config](auth0_config.md) - Configure Advanced Customizations for Universal Login screens.
 - [auth0 domains](auth0_domains.md) - Manage custom domains
 - [auth0 email](auth0_email.md) - Manage email settings and configure email providers
 - [auth0 event-streams](auth0_event-streams.md) - Manage Event Stream
