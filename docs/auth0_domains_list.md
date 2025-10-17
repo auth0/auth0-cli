@@ -26,9 +26,11 @@ auth0 domains list [flags]
 ## Flags
 
 ```
-      --csv            Output in csv format.
-      --json           Output in json format.
-      --json-compact   Output in compact json format.
+      --csv             Output in csv format.
+      --filter string   Filter custom domains (EA-only).
+      --json            Output in json format.
+      --json-compact    Output in compact json format.
+      --sort string     Sort by a field (EA-only). Only 'domain' is supported.
 ```
 
 
