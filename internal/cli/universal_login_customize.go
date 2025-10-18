@@ -19,8 +19,11 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/display"
+	"github.com/auth0/auth0-cli/internal/prompt"
+	"github.com/auth0/auth0-cli/internal/utils"
 )
 
 const (
@@ -35,6 +38,12 @@ const (
 	errorMessageType         = "ERROR"
 	successMessageType       = "SUCCESS"
 	standardMode             = "standard"
+	advancedMode             = "advanced"
+
+	// Deprecation timeline - 6 months deprecation period
+	DEPRECATION_START_DATE = "2025-10-18" // Today
+	SUNSET_DATE            = "2026-04-18" // 6 months from now
+	WARNING_PERIOD_DAYS    = 30           // Show urgent warnings 30 days before sunset
 )
 
 var (
@@ -42,6 +51,28 @@ var (
 	universalLoginPreviewAssets embed.FS
 
 	ErrNoChangesDetected = fmt.Errorf("no changes detected")
+)
+
+var (
+	renderingMode = Flag{
+		Name:      "Rendering Mode",
+		LongForm:  "rendering-mode",
+		ShortForm: "r",
+		Help: fmt.Sprintf(
+			"%s\n%s\n",
+			"standardMode is recommended for customizating consistent, branded experience for users.",
+			"Alternatively, advancedMode is recommended for full customization/granular control of the login experience and to integrate own component design system",
+		),
+		IsRequired: true,
+	}
+
+	promptName = Flag{
+		Name:       "Prompt Name",
+		LongForm:   "prompt",
+		ShortForm:  "p",
+		Help:       "Name of the prompt to to switch or customize.",
+		IsRequired: true,
+	}
 )
 
 var allowedPromptsWithPartials = []management.PromptType{
@@ -52,6 +83,45 @@ var allowedPromptsWithPartials = []management.PromptType{
 	management.PromptLoginID,
 	management.PromptLoginPassword,
 	management.PromptLoginPasswordLess,
+}
+
+var PromptScreenMap = map[string][]string{
+	"signup-id":                   {"signup-id"},
+	"signup-password":             {"signup-password"},
+	"login-id":                    {"login-id"},
+	"login-password":              {"login-password"},
+	"login-passwordless":          {"login-passwordless-email-code", "login-passwordless-sms-otp"},
+	"phone-identifier-enrollment": {"phone-identifier-enrollment"},
+	"phone-identifier-challenge":  {"phone-identifier-challenge"},
+	"email-identifier-challenge":  {"email-identifier-challenge"},
+	"passkeys":                    {"passkey-enrollment", "passkey-enrollment-local"},
+	"captcha":                     {"interstitial-captcha"},
+	"login":                       {"login"},
+	"signup":                      {"signup"},
+	"reset-password": {"reset-password-request", "reset-password-email", "reset-password", "reset-password-success", "reset-password-error",
+		"reset-password-mfa-email-challenge", "reset-password-mfa-otp-challenge", "reset-password-mfa-push-challenge-push",
+		"reset-password-mfa-sms-challenge", "reset-password-mfa-phone-challenge", "reset-password-mfa-voice-challenge",
+		"reset-password-mfa-recovery-code-challenge", "reset-password-mfa-webauthn-platform-challenge", "reset-password-mfa-webauthn-roaming-challenge"},
+	"mfa":                      {"mfa-detect-browser-capabilities", "mfa-enroll-result", "mfa-begin-enroll-options", "mfa-login-options"},
+	"mfa-email":                {"mfa-email-challenge", "mfa-email-list"},
+	"mfa-sms":                  {"mfa-country-codes", "mfa-sms-challenge", "mfa-sms-enrollment", "mfa-sms-list"},
+	"mfa-push":                 {"mfa-push-challenge-push", "mfa-push-enrollment-qr", "mfa-push-list", "mfa-push-welcome"},
+	"invitation":               {"accept-invitation"},
+	"organizations":            {"organization-selection", "organization-picker"},
+	"mfa-otp":                  {"mfa-otp-challenge", "mfa-otp-enrollment-code", "mfa-otp-enrollment-qr"},
+	"device-flow":              {"device-code-activation", "device-code-activation-allowed", "device-code-activation-denied", "device-code-confirmation"},
+	"mfa-phone":                {"mfa-phone-challenge", "mfa-phone-enrollment"},
+	"mfa-voice":                {"mfa-voice-challenge", "mfa-voice-enrollment"},
+	"mfa-recovery-code":        {"mfa-recovery-code-challenge", "mfa-recovery-code-enrollment", "mfa-recovery-code-challenge-new-code"},
+	"common":                   {"redeem-ticket"},
+	"email-verification":       {"email-verification-result"},
+	"login-email-verification": {"login-email-verification"},
+	"logout":                   {"logout", "logout-aborted", "logout-complete"},
+	"mfa-webauthn": {"mfa-webauthn-change-key-nickname", "mfa-webauthn-enrollment-success", "mfa-webauthn-error", "mfa-webauthn-platform-challenge",
+		"mfa-webauthn-platform-enrollment", "mfa-webauthn-roaming-challenge", "mfa-webauthn-roaming-enrollment", "mfa-webauthn-not-available-error"},
+	"consent":             {"consent"},
+	"customized-consent":  {"customized-consent"},
+	"email-otp-challenge": {"email-otp-challenge"},
 }
 
 type partialsData map[string]*management.PromptScreenPartials
@@ -179,15 +249,31 @@ func (m *webSocketMessage) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+type promptScreen struct {
+	filePath   string
+	promptName string
+	screenName string
+}
+
 func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
+	var (
+		selectedRenderingMode string
+		input                 promptScreen
+	)
+
 	cmd := &cobra.Command{
 		Use:   "customize",
 		Args:  cobra.NoArgs,
-		Short: "Customize the Universal Login experience",
-		Long: "Customize and preview changes to the Universal Login experience. This command will open a webpage " +
-			"within your browser where you can edit and preview your branding changes. For a comprehensive list of " +
-			"editable parameters and their values please visit the " +
-			"[Management API Documentation](https://auth0.com/docs/api/management/v2).",
+		Short: "⚠️ Customize Universal Login (Advanced mode DEPRECATED)",
+		Long: "\nCustomize your Universal Login Experience. Note that this requires a custom domain to be configured for the tenant. \n\n" +
+			"* Standard mode is recommended for creating a consistent, branded experience for users. Choosing Standard mode will open a webpage\n" +
+			"within your browser where you can edit and preview your branding changes.For a comprehensive list of editable parameters and their values,\n" +
+			"please visit the [Management API Documentation](https://auth0.com/docs/api/management/v2)\n\n" +
+			"⚠️  DEPRECATION NOTICE: Advanced mode will be deprecated on " + SUNSET_DATE + "\n" +
+			"   For future Advanced Customizations, use: auth0 acul config <command>\n" +
+			"* Advanced mode is recommended for full customization/granular control of the login experience and to integrate your own component design system. \n" +
+			"Choosing Advanced mode will open the default terminal editor, with the rendering configs:\n\n" +
+			"![storybook](settings.json)\n\nClosing the terminal editor will save the settings to your tenant.",
 		Example: `  auth0 universal-login customize
   auth0 ul customize`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -201,14 +287,62 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			cli.renderer.Infof("Tip : Use `auth0 ul switch` to switch the rendering-modes between standard and advanced mode")
+			if selectedRenderingMode == "" {
+				cli.renderer.Infof("Please select a rendering mode to customize:")
+				if err := renderingMode.Select(cmd, &selectedRenderingMode, []string{advancedMode, standardMode}, nil); err != nil {
+					return err
+				}
+			}
+
+			if selectedRenderingMode == advancedMode {
+				if err := showAdvancedModeDeprecationWarning(cli); err != nil {
+					return err
+				}
+
+				err := fetchPromptScreenInfo(cmd, cli, &input, "customize")
+				if err != nil {
+					return err
+				}
+
+				return advanceCustomize(cmd, cli, aculConfigInput{
+					screenName: input.screenName,
+					filePath:   input.filePath,
+				})
+			}
 
 			// RenderingMode as standard.
 			return startWebSocketServer(ctx, cli.api, cli.renderer, cli.tenant)
 		},
 	}
 
+	renderingMode.RegisterString(cmd, &selectedRenderingMode, "")
+	promptName.RegisterString(cmd, &input.promptName, "")
+	screenName.RegisterString(cmd, &input.screenName, "")
+	file.RegisterString(cmd, &input.filePath, "")
+
 	return cmd
+}
+
+func fetchPromptScreenInfo(cmd *cobra.Command, cli *cli, input *promptScreen, action string) error {
+	if input.promptName == "" {
+		cli.renderer.Infof("Please select a prompt to %s its rendering mode:", action)
+		if err := promptName.Select(cmd, &input.promptName, utils.FetchKeys(PromptScreenMap), nil); err != nil {
+			return handleInputError(err)
+		}
+	}
+
+	if input.screenName == "" {
+		if len(PromptScreenMap[input.promptName]) > 1 {
+			cli.renderer.Infof("Please select a screen to %s its rendering mode:", action)
+			if err := screenName.Select(cmd, &input.screenName, PromptScreenMap[input.promptName], nil); err != nil {
+				return handleInputError(err)
+			}
+		} else {
+			input.screenName = PromptScreenMap[input.promptName][0]
+		}
+	}
+
+	return nil
 }
 
 func ensureNewUniversalLoginExperienceIsActive(ctx context.Context, api *auth0.API) error {
@@ -225,6 +359,96 @@ func ensureNewUniversalLoginExperienceIsActive(ctx context.Context, api *auth0.A
 		"this feature requires the new Universal Login experience to be enabled for the tenant, " +
 			"use `auth0 api patch prompts --data '{\"universal_login_experience\":\"new\"}'` to enable it",
 	)
+}
+
+// showDeprecationStatus displays deprecation timeline information
+func showDeprecationStatus(cli *cli) {
+	// Parse dates
+	sunsetDate, _ := time.Parse("2006-01-02", SUNSET_DATE)
+	now := time.Now()
+	daysUntilSunset := int(sunsetDate.Sub(now).Hours() / 24)
+
+	// Show different messages based on timeline
+	if daysUntilSunset <= WARNING_PERIOD_DAYS && daysUntilSunset > 0 {
+		// Urgent warning period
+		cli.renderer.Warnf("🚨 URGENT DEPRECATION: Advanced rendering mode ends in %d days (%s)",
+			daysUntilSunset, sunsetDate.Format("Jan 2, 2006"))
+		cli.renderer.Warnf("   ⚠️  MIGRATE NOW: " + ansi.Red("auth0 acul config") + " commands available!")
+	} else if daysUntilSunset > 0 {
+		// Regular deprecation notice
+		cli.renderer.Warnf("� DEPRECATION WARNING: Advanced rendering mode ends %s (%d days)",
+			sunsetDate.Format("Jan 2, 2006"), daysUntilSunset)
+		cli.renderer.Warnf("   📋 MIGRATION AVAILABLE: " + ansi.Yellow("auth0 acul config") + " commands ready!")
+	} else {
+		// Post-sunset warning
+		cli.renderer.Errorf("❌ DEPRECATED: Advanced rendering mode ended on %s", sunsetDate.Format("Jan 2, 2006"))
+		cli.renderer.Errorf("   ✅ USE INSTEAD: " + ansi.Green("auth0 acul config") + " commands!")
+	}
+
+	// Show prominent link to new commands
+	cli.renderer.Warnf("   📖 LEARN MORE: " + ansi.Cyan("auth0 acul config --help"))
+	cli.renderer.Output("")
+}
+
+// showAdvancedModeDeprecationWarning shows specific warning for advanced mode usage
+func showAdvancedModeDeprecationWarning(cli *cli) error {
+	// Parse dates for timeline calculations
+	sunsetDate, _ := time.Parse("2006-01-02", SUNSET_DATE)
+	now := time.Now()
+	daysUntilSunset := int(sunsetDate.Sub(now).Hours() / 24)
+
+	// If we're past the sunset date, block usage
+	if daysUntilSunset <= 0 {
+		cli.renderer.Errorf("❌ SUNSET: Advanced rendering mode ended on %s", SUNSET_DATE)
+		cli.renderer.Errorf("   ✅ USE INSTEAD: " + ansi.Green("auth0 acul config") + " commands!")
+		return fmt.Errorf("advanced mode has been sunset - use 'auth0 acul config' instead")
+	}
+
+	cli.renderer.Warnf("⚠️  DEPRECATION WARNING: Advanced rendering mode ends %s (%d days)",
+		sunsetDate.Format("Jan 2, 2006"), daysUntilSunset)
+	cli.renderer.Output("")
+	cli.renderer.Warnf("🚀 MIGRATION READY: New ACUL config commands available:")
+	showMigrationCommands(cli)
+
+	// In the final 30 days, require explicit confirmation
+	if daysUntilSunset <= WARNING_PERIOD_DAYS {
+		cli.renderer.Errorf("🚨 FINAL WARNING: Only %d days left!", daysUntilSunset)
+		proceed := false
+		if err := prompt.AskBool("Continue with deprecated advanced mode?", &proceed, false); err != nil {
+			return err
+		}
+
+		if !proceed {
+			cli.renderer.Warnf("✅ MIGRATE: " + ansi.Green("auth0 acul config --help"))
+			return fmt.Errorf("please use ACUL config commands")
+		}
+
+		cli.renderer.Errorf("⚠️  PROCEEDING WITH DEPRECATED FUNCTIONALITY!")
+		cli.renderer.Output("")
+	} else {
+		// Earlier in deprecation period, just show the warning and continue
+		cli.renderer.Warnf("⏳ Continuing with advanced mode (deprecated)...")
+		cli.renderer.Output("")
+	}
+
+	return nil
+}
+
+// calculateDaysUntilSunset calculates days remaining until sunset date
+
+// showMigrationCommands displays the new ACUL commands
+func showMigrationCommands(cli *cli) {
+	cli.renderer.Warnf("  • " + ansi.Yellow("auth0 acul config generate <screen>") + " - Create config files")
+	cli.renderer.Warnf("  • " + ansi.Yellow("auth0 acul config get <screen>") + "      - Download current settings")
+	cli.renderer.Warnf("  • " + ansi.Yellow("auth0 acul config set <screen>") + "      - Upload customizations")
+	cli.renderer.Warnf("  • " + ansi.Yellow("auth0 acul config list") + "              - View available screens")
+	cli.renderer.Warnf("  • " + ansi.Yellow("auth0 acul config docs") + "              - Open documentation")
+	cli.renderer.Output("")
+	cli.renderer.Warnf("  " + ansi.Bold("Quick Start:"))
+	cli.renderer.Warnf("  1. " + ansi.Cyan("auth0 acul config generate login-id") + "      # Generate config template")
+	cli.renderer.Warnf("  2. Edit the generated JSON file with your customizations")
+	cli.renderer.Warnf("  3. " + ansi.Cyan("auth0 acul config set login-id --file login-id.json") + "  # Apply changes")
+	cli.renderer.Output("")
 }
 
 func startWebSocketServer(
@@ -821,4 +1045,79 @@ func saveUniversalLoginBrandingData(ctx context.Context, api *auth0.API, data *u
 	}
 
 	return group.Wait()
+}
+
+func switchUniversalLoginRendererModeCmd(cli *cli) *cobra.Command {
+	var (
+		selectedRenderingMode string
+		input                 promptScreen
+	)
+
+	cmd := &cobra.Command{
+		Use:   "switch",
+		Args:  cobra.NoArgs,
+		Short: "⚠️ Switch rendering mode (DEPRECATED)",
+		Long: `Switch the rendering mode for Universal Login. Note that this requires a custom domain to be configured for the tenant.
+
+🚨 DEPRECATION WARNING: The 'auth0 ul switch' command will be DEPRECATED on April 18, 2026
+    
+⚠️  Advanced rendering mode is also being deprecated!
+    
+✅ For Advanced Customizations, migrate to the new ACUL config commands:
+  • auth0 acul config generate <screen>
+  • auth0 acul config get <screen>  
+  • auth0 acul config set <screen>
+  • auth0 acul config list`,
+		Example: `  auth0 universal-login switch
+  auth0 universal-login switch --prompt login-id --screen login-id --rendering-mode standard
+  auth0 ul switch --prompt login-id --screen login-id --rendering-mode advanced
+  auth0 ul switch -p login-id -s login-id -r standard`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Show deprecation notice
+			showDeprecationStatus(cli)
+
+			err := fetchPromptScreenInfo(cmd, cli, &input, "switch")
+			if err != nil {
+				return err
+			}
+
+			if selectedRenderingMode == "" {
+				cli.renderer.Infof("Please select a rendering mode to switch:")
+				if err = renderingMode.Select(cmd, &selectedRenderingMode, []string{advancedMode, standardMode}, nil); err != nil {
+					return err
+				}
+			}
+
+			// Show warning if switching to advanced mode.
+			if selectedRenderingMode == advancedMode {
+				if err := showAdvancedModeDeprecationWarning(cli); err != nil {
+					return err
+				}
+			}
+
+			if err = ansi.Waiting(func() error {
+				rendererMode := management.RenderingMode(selectedRenderingMode)
+				return cli.api.Prompt.UpdateRendering(cmd.Context(), management.PromptType(input.promptName), management.ScreenName(input.screenName), &management.PromptRendering{RenderingMode: &rendererMode})
+			}); err != nil {
+				return fmt.Errorf("failed to switch the rendering mode for the prompt - %s, screen - %s : %w", ansi.Green(input.promptName), ansi.Green(input.screenName), err)
+			}
+
+			cli.renderer.Infof(
+				"Successfully switched the rendering mode to %s for Prompt: %s and Screen: %s\n",
+				ansi.Green(selectedRenderingMode),
+				ansi.Green(input.promptName),
+				ansi.Green(input.screenName),
+			)
+
+			cli.renderer.Infof("Use `auth0 universal-login customize` to customize the Universal Login Experience\n")
+
+			return nil
+		},
+	}
+
+	promptName.RegisterString(cmd, &input.promptName, "")
+	screenName.RegisterString(cmd, &input.screenName, "")
+	renderingMode.RegisterString(cmd, &selectedRenderingMode, "")
+
+	return cmd
 }
