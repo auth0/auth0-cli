@@ -302,7 +302,6 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 
 			cli.renderer.Infof("Configuration downloaded and saved at '%s'.", ansi.Green(input.filePath))
 			cli.renderer.Output(ansi.Yellow("💡 Tip: Use `auth0 acul config set` to sync local config to remote, or `auth0 acul config list` to view all ACUL screens."))
-			cli.renderer.Output(ansi.Cyan("📖 Customization Guide: https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"))
 			return nil
 		},
 	}
@@ -346,6 +345,8 @@ func aculConfigSetCmd(cli *cli) *cobra.Command {
 				input.screenName = args[0]
 			}
 
+			cli.renderer.Output(ansi.Yellow("📖 Customization Guide: https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"))
+
 			return advanceCustomize(cmd, cli, input)
 		},
 	}
@@ -378,7 +379,6 @@ func advanceCustomize(cmd *cobra.Command, cli *cli, input aculConfigInput) error
 
 	cli.renderer.Infof("Rendering settings updated. Current rendering mode for '%s', Screen '%s': %s", ansi.Green(ScreenPromptMap[input.screenName]), ansi.Green(input.screenName), ansi.Green(currMode))
 	cli.renderer.Output(ansi.Yellow("💡 Tip: Use `auth0 acul config get` to fetch remote rendering settings or `auth0 acul config list` to view all ACUL screens."))
-	cli.renderer.Output(ansi.Cyan("📖 Customization Guide: https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"))
 	return nil
 }
 
@@ -545,7 +545,6 @@ func aculConfigDocsCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			url := "https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens"
 			cli.renderer.Infof("Opening documentation: %s", url)
-			cli.renderer.Output(ansi.Cyan("📖 Customization Guide: https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"))
 			return browser.OpenURL(url)
 		},
 	}
