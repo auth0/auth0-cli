@@ -143,16 +143,19 @@ func (f *brandingResourceFetcher) FetchData(_ context.Context) (importDataList, 
 		},
 	}, nil
 }
-func (f *brandingThemeResourceFetcher) FetchData(_ context.Context) (importDataList, error) {
+func (f *brandingThemeResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	var data importDataList
 
-	theme, err := f.api.BrandingTheme.Default(context.Background())
+	theme, err := f.api.BrandingTheme.Default(ctx)
 	if err != nil {
+		if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusNotFound {
+			return nil, nil
+		}
 		return nil, err
 	}
 
 	data = append(data, importDataItem{
-		ResourceName: "auth0_branding_theme." + sanitizeResourceName(theme.GetDisplayName()),
+		ResourceName: "auth0_branding_theme.default",
 		ImportID:     theme.GetID(),
 	})
 

@@ -149,8 +149,7 @@ func TestBrandingThemeResourceFetcher_FetchData(t *testing.T) {
 		brandingThemeAPI.EXPECT().
 			Default(gomock.Any()).
 			Return(&management.BrandingTheme{
-				ID:          auth0.String("theme_123"),
-				DisplayName: auth0.String("My Theme"),
+				ID: auth0.String("theme_123"),
 			}, nil)
 
 		fetcher := brandingThemeResourceFetcher{
@@ -161,7 +160,7 @@ func TestBrandingThemeResourceFetcher_FetchData(t *testing.T) {
 
 		expectedData := importDataList{
 			{
-				ResourceName: "auth0_branding_theme.my_theme",
+				ResourceName: "auth0_branding_theme.default",
 				ImportID:     "theme_123",
 			},
 		}
@@ -188,6 +187,26 @@ func TestBrandingThemeResourceFetcher_FetchData(t *testing.T) {
 
 		_, err := fetcher.FetchData(context.Background())
 		assert.EqualError(t, err, "failed to get default theme")
+	})
+
+	t.Run("it returns nil data if branding theme is not found", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mErr := mockManagamentError{status: http.StatusNotFound}
+		brandingThemeAPI := mock.NewMockBrandingThemeAPI(ctrl)
+		brandingThemeAPI.EXPECT().
+			Default(gomock.Any()).
+			Return(nil, mErr)
+
+		fetcher := brandingThemeResourceFetcher{
+			api: &auth0.API{
+				BrandingTheme: brandingThemeAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
 	})
 }
 
