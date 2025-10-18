@@ -73,6 +73,8 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &attackProtectionResourceFetcher{})
 		case "auth0_branding":
 			fetchers = append(fetchers, &brandingResourceFetcher{})
+		case "auth0_branding_theme":
+			fetchers = append(fetchers, &brandingThemeResourceFetcher{api})
 		case "auth0_phone_provider":
 			fetchers = append(fetchers, &phoneProviderResourceFetcher{api})
 		case "auth0_client", "auth0_client_credentials":
