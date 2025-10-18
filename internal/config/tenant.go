@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/auth0/auth0-cli/internal/auth"
@@ -42,6 +43,19 @@ type (
 		ClientID     string    `json:"client_id"`
 	}
 )
+
+// GetMissingRequiredScopes returns a slice of required scopes
+// that are missing from the tenant's current scopes.
+func (t *Tenant) GetMissingRequiredScopes() []string {
+	var missingScopes []string
+	for _, requiredScope := range auth.RequiredScopes {
+		if !slices.Contains(t.Scopes, requiredScope) {
+			missingScopes = append(missingScopes, requiredScope)
+		}
+	}
+
+	return missingScopes
+}
 
 // GetExtraRequestedScopes retrieves any extra scopes requested
 // for the tenant when logging in through the device code flow.
@@ -96,8 +110,8 @@ func (t *Tenant) GetAccessToken() string {
 // CheckAuthenticationStatus checks to see if the tenant in the config
 // has all the required scopes and that the access token is not expired.
 func (t *Tenant) CheckAuthenticationStatus() error {
-	if extraScopes := t.GetExtraRequestedScopes(); len(extraScopes) > 0 && t.IsAuthenticatedWithDeviceCodeFlow() {
-		return ErrTokenMissingRequiredScopes{MissingScopes: extraScopes}
+	if missingScopes := t.GetMissingRequiredScopes(); len(missingScopes) > 0 && t.IsAuthenticatedWithDeviceCodeFlow() {
+		return ErrTokenMissingRequiredScopes{MissingScopes: missingScopes}
 	}
 
 	accessToken := t.GetAccessToken()

@@ -23,4 +23,22 @@ type EventStreamAPI interface {
 
 	// List Event Streams.
 	List(ctx context.Context, opts ...management.RequestOption) (e *management.EventStreamList, err error)
+
+	// Test triggers a test event on an Event Stream.
+	Test(ctx context.Context, id string, testEvent *management.TestEvent, opts ...management.RequestOption) error
+
+	// ReadDelivery returns delivery information for a specific event associated to an Event Stream.
+	ReadDelivery(ctx context.Context, streamID, deliveryID string, opts ...management.RequestOption) (ed *management.EventDelivery, err error)
+
+	// ListDeliveries returns delivery attempts for all events associated to an Event Stream.
+	ListDeliveries(ctx context.Context, id string, opts ...management.RequestOption) (edl *management.EventDeliveryList, err error)
+
+	// Stats returns event stream statistics.
+	Stats(ctx context.Context, id string, opts ...management.RequestOption) (stats *management.EventStreamStats, err error)
+
+	// Redeliver a single failed delivery by ID.
+	Redeliver(ctx context.Context, streamID, deliveryID string, opts ...management.RequestOption) error
+
+	// RedeliverMany retries multiple failed deliveries.
+	RedeliverMany(ctx context.Context, streamID string, req *management.BulkRedeliverRequest, opts ...management.RequestOption) error
 }
