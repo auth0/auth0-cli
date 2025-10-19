@@ -1,10 +1,7 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,62 +13,6 @@ import (
 	"github.com/auth0/auth0-cli/internal/utils"
 )
 
-type Manifest struct {
-	Templates map[string]Template `json:"templates"`
-	Metadata  Metadata            `json:"metadata"`
-}
-
-type Template struct {
-	Name            string   `json:"name"`
-	Description     string   `json:"description"`
-	Framework       string   `json:"framework"`
-	SDK             string   `json:"sdk"`
-	BaseFiles       []string `json:"base_files"`
-	BaseDirectories []string `json:"base_directories"`
-	Screens         []Screen `json:"screens"`
-}
-
-type Screen struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Path        string `json:"path"`
-}
-
-type Metadata struct {
-	Version     string `json:"version"`
-	Repository  string `json:"repository"`
-	LastUpdated string `json:"last_updated"`
-	Description string `json:"description"`
-}
-
-func fetchManifest() (*Manifest, error) {
-	// The URL to the raw JSON file in the repository.
-	url := "https://raw.githubusercontent.com/auth0-samples/auth0-acul-samples/monorepo-sample/manifest.json"
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("cannot fetch manifest: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch manifest: received status code %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("cannot read manifest body: %w", err)
-	}
-
-	var manifest Manifest
-	if err := json.Unmarshal(body, &manifest); err != nil {
-		return nil, fmt.Errorf("invalid manifest format: %w", err)
-	}
-
-	return &manifest, nil
-}
-
 // This logic goes inside your `RunE` function.
 func aculInitCmd1(_ *cli) *cobra.Command {
 	cmd := &cobra.Command{
@@ -79,15 +20,15 @@ func aculInitCmd1(_ *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Generate a new project from a template",
 		Long:  `Generate a new project from a template.`,
-		RunE:  runScaffold,
+		RunE:  runScaffold1,
 	}
 
 	return cmd
 }
 
-func runScaffold(cmd *cobra.Command, args []string) error {
+func runScaffold1(cmd *cobra.Command, args []string) error {
 	// Step 1: fetch manifest.json.
-	manifest, err := fetchManifest()
+	manifest, err := loadManifest()
 	if err != nil {
 		return err
 	}

@@ -16,6 +16,63 @@ import (
 	"github.com/auth0/auth0-cli/internal/utils"
 )
 
+type Manifest struct {
+	Templates map[string]Template `json:"templates"`
+	Metadata  Metadata            `json:"metadata"`
+}
+
+type Template struct {
+	Name            string    `json:"name"`
+	Description     string    `json:"description"`
+	Framework       string    `json:"framework"`
+	SDK             string    `json:"sdk"`
+	BaseFiles       []string  `json:"base_files"`
+	BaseDirectories []string  `json:"base_directories"`
+	Screens         []Screens `json:"screens"`
+}
+
+type Screens struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Path        string `json:"path"`
+}
+
+type Metadata struct {
+	Version     string `json:"version"`
+	Repository  string `json:"repository"`
+	LastUpdated string `json:"last_updated"`
+	Description string `json:"description"`
+}
+
+// loadManifest loads manifest.json once.
+func loadManifest() (*Manifest, error) {
+	url := "https://raw.githubusercontent.com/auth0-samples/auth0-acul-samples/monorepo-sample/manifest.json"
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("cannot fetch manifest: %w", err)
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch manifest: received status code %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read manifest body: %w", err)
+	}
+
+	var manifest Manifest
+	if err := json.Unmarshal(body, &manifest); err != nil {
+		return nil, fmt.Errorf("invalid manifest format: %w", err)
+	}
+
+	return &manifest, nil
+}
+
 var templateFlag = Flag{
 	Name:       "Template",
 	LongForm:   "template",
@@ -31,14 +88,16 @@ func aculInitCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Generate a new project from a template",
 		Long:  "Generate a new project from a template.",
+		Example: `  auth0 acul init <app_name>
+  auth0 acul init acul_app`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runScaffold2(cli, cmd, args)
+			return runScaffold(cli, cmd, args)
 		},
 	}
 }
 
-func runScaffold2(cli *cli, cmd *cobra.Command, args []string) error {
-	manifest, err := fetchManifest()
+func runScaffold(cli *cli, cmd *cobra.Command, args []string) error {
+	manifest, err := loadManifest()
 	if err != nil {
 		return err
 	}
@@ -48,7 +107,7 @@ func runScaffold2(cli *cli, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	selectedScreens, err := selectScreens(manifest.Templates[chosenTemplate])
+	selectedScreens, err := selectScreens(manifest.Templates[chosenTemplate].Screens)
 	if err != nil {
 		return err
 	}
@@ -101,13 +160,18 @@ func selectTemplate(cmd *cobra.Command, manifest *Manifest) (string, error) {
 	return chosenTemplate, nil
 }
 
-func selectScreens(template Template) ([]string, error) {
+func selectScreens(screens []Screens) ([]string, error) {
 	var screenOptions []string
-	for _, s := range template.Screens {
+	for _, s := range screens {
 		screenOptions = append(screenOptions, s.ID)
 	}
 	var selectedScreens []string
 	err := prompt.AskMultiSelect("Select screens to include:", &selectedScreens, screenOptions...)
+
+	if len(selectedScreens) == 0 {
+		return nil, fmt.Errorf("at least one screen must be selected")
+	}
+
 	return selectedScreens, err
 }
 
@@ -191,7 +255,7 @@ func copyProjectTemplateFiles(cli *cli, baseFiles []string, chosenTemplate, temp
 	return nil
 }
 
-func copyProjectScreens(cli *cli, screens []Screen, selectedScreens []string, chosenTemplate, tempUnzipDir, destDir string) error {
+func copyProjectScreens(cli *cli, screens []Screens, selectedScreens []string, chosenTemplate, tempUnzipDir, destDir string) error {
 	sourcePathPrefix := "auth0-acul-samples-monorepo-sample/" + chosenTemplate
 	screenInfo := createScreenMap(screens)
 	for _, s := range selectedScreens {
@@ -227,7 +291,7 @@ func copyProjectScreens(cli *cli, screens []Screen, selectedScreens []string, ch
 func writeAculConfig(destDir, chosenTemplate string, selectedScreens []string, manifestVersion string) error {
 	config := AculConfig{
 		ChosenTemplate:      chosenTemplate,
-		Screen:              selectedScreens,
+		Screens:             selectedScreens,
 		InitTimestamp:       time.Now().Format(time.RFC3339),
 		AculManifestVersion: manifestVersion,
 	}
@@ -325,8 +389,8 @@ func copyDir(src, dst string) error {
 	})
 }
 
-func createScreenMap(screens []Screen) map[string]Screen {
-	screenMap := make(map[string]Screen)
+func createScreenMap(screens []Screens) map[string]Screens {
+	screenMap := make(map[string]Screens)
 	for _, screen := range screens {
 		screenMap[screen.ID] = screen
 	}
@@ -335,7 +399,7 @@ func createScreenMap(screens []Screen) map[string]Screen {
 
 type AculConfig struct {
 	ChosenTemplate      string   `json:"chosen_template"`
-	Screen              []string `json:"screens"`
+	Screens             []string `json:"screens"`
 	InitTimestamp       string   `json:"init_timestamp"`
 	AculManifestVersion string   `json:"acul_manifest_version"`
 }
