@@ -157,17 +157,7 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string) error {
 		fmt.Printf("Failed to write config: %v\n", err)
 	}
 
-	if err := runNpmGenerateScreenLoader(destDir); err != nil {
-		cli.renderer.Warnf(
-			"⚠️  Screen asset setup failed: %v\n"+
-				"👉 Run manually: %s\n"+
-				"📄 Required for: %s\n"+
-				"💡 Tip: If it continues to fail, verify your Node setup and screen structure.",
-			err,
-			ansi.Bold(ansi.Cyan(fmt.Sprintf("cd %s && npm run generate:screenLoader", destDir))),
-			ansi.Faint(fmt.Sprintf("%s/src/utils/screen/screenLoader.ts", destDir)),
-		)
-	}
+	runNpmGenerateScreenLoader(cli, destDir)
 
 	fmt.Printf("\nProject successfully created in '%s'!\n\n", destDir)
 
@@ -476,25 +466,37 @@ func checkNodeVersion(cli *cli) {
 }
 
 // runNpmGenerateScreenLoader runs `npm run generate:screenLoader` in the given directory.
-// It captures npm output and surfaces a clear, concise error message if generation fails.
-func runNpmGenerateScreenLoader(destDir string) error {
+// Prints errors or warnings directly; silent if successful with no issues.
+func runNpmGenerateScreenLoader(cli *cli, destDir string) {
+	fmt.Println(ansi.Blue("🔄 Generating screen loader..."))
+
 	cmd := exec.Command("npm", "run", "generate:screenLoader")
 	cmd.Dir = destDir
 
 	output, err := cmd.CombinedOutput()
-	if err != nil {
-		// Capture a short preview of the npm output for better context.
-		lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-		summary := strings.Join(lines, "\n")
-		if len(lines) > 4 {
-			summary = strings.Join(lines[:4], "\n") + "\n..."
-		}
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
 
-		return fmt.Errorf(
-			"screen loader generation failed in %s:\n%v\n\n%s",
-			destDir, err, summary,
-		)
+	// Truncate long output for readability
+	summary := strings.Join(lines, "\n")
+	if len(lines) > 5 {
+		summary = strings.Join(lines[:5], "\n") + "\n..."
 	}
 
-	return nil
+	if err != nil {
+		cli.renderer.Warnf(
+			"⚠️  Screen loader generation failed: %v\n"+
+				"👉 Run manually: %s\n"+
+				"📄 Required for: %s\n"+
+				"💡 Tip: If it continues to fail, verify your Node setup and screen structure.",
+			err,
+			ansi.Bold(ansi.Cyan(fmt.Sprintf("cd %s && npm run generate:screenLoader", destDir))),
+			ansi.Faint(fmt.Sprintf("%s/src/utils/screen/screenLoader.ts", destDir)),
+		)
+		return
+	}
+
+	// Print npm output if there’s any (logs, warnings)
+	if len(summary) > 0 {
+		fmt.Println(summary)
+	}
 }
