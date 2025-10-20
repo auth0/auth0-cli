@@ -476,7 +476,6 @@ func runNpmGenerateScreenLoader(cli *cli, destDir string) {
 	output, err := cmd.CombinedOutput()
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
 
-	// Truncate long output for readability
 	summary := strings.Join(lines, "\n")
 	if len(lines) > 5 {
 		summary = strings.Join(lines[:5], "\n") + "\n..."
@@ -495,7 +494,6 @@ func runNpmGenerateScreenLoader(cli *cli, destDir string) {
 		return
 	}
 
-	// Print npm output if there’s any (logs, warnings)
 	if len(summary) > 0 {
 		fmt.Println(summary)
 	}
