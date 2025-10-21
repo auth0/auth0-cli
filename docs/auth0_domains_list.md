@@ -20,15 +20,18 @@ auth0 domains list [flags]
   auth0 domains ls --json
   auth0 domains ls --json-compact
   auth0 domains ls --csv
+  auth0 domains ls --filter "domain:demo* AND status:pending_verification"
 ```
 
 
 ## Flags
 
 ```
-      --csv            Output in csv format.
-      --json           Output in json format.
-      --json-compact   Output in compact json format.
+      --csv             Output in csv format.
+      --filter string   Filter custom domains (EA-only).
+      --json            Output in json format.
+      --json-compact    Output in compact json format.
+      --sort string     Sort by a field (EA-only). Only 'domain' is supported.
 ```
 
 
