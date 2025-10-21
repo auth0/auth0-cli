@@ -28,7 +28,7 @@ func aculInitCmd1(_ *cli) *cobra.Command {
 
 func runScaffold1(cmd *cobra.Command, args []string) error {
 	// Step 1: fetch manifest.json.
-	manifest, err := fetchManifest()
+	manifest, err := loadManifest()
 	if err != nil {
 		return err
 	}

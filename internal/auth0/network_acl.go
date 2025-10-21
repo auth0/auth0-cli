@@ -18,6 +18,9 @@ type NetworkACLAPI interface {
 	// Update an existing Network ACL.
 	Update(ctx context.Context, id string, n *management.NetworkACL, opts ...management.RequestOption) error
 
+	// Patch an existing Network ACL.
+	Patch(ctx context.Context, id string, n *management.NetworkACL, opts ...management.RequestOption) error
+
 	// Delete a Network ACL.
 	Delete(ctx context.Context, id string, opts ...management.RequestOption) error
 
