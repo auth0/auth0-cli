@@ -21,6 +21,7 @@ type apiView struct {
 	OfflineAccess       string
 	SigningAlgorithm    string
 	SubjectTypeAuthJSON string
+	ClientID            string
 
 	raw interface{}
 }
@@ -46,6 +47,10 @@ func (v *apiView) KeyValues() [][]string {
 
 	if len(v.SubjectTypeAuthJSON) > 0 {
 		kvs = append(kvs, []string{"SUBJECT TYPE AUTHORIZATION", v.SubjectTypeAuthJSON})
+	}
+
+	if len(v.ClientID) > 0 {
+		kvs = append(kvs, []string{"CLIENT ID", v.ClientID})
 	}
 
 	return kvs
@@ -136,6 +141,7 @@ func makeAPIView(api *management.ResourceServer) (*apiView, bool) {
 		OfflineAccess:       boolean(api.GetAllowOfflineAccess()),
 		SigningAlgorithm:    api.GetSigningAlgorithm(),
 		SubjectTypeAuthJSON: subjectTypeAuthJSON,
+		ClientID:            api.GetClientID(),
 		raw:                 api,
 	}
 	return view, scopesTruncated

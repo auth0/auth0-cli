@@ -140,6 +140,76 @@ func TestBrandingResourceFetcher_FetchData(t *testing.T) {
 	})
 }
 
+func TestBrandingThemeResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves branding theme data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		brandingThemeAPI := mock.NewMockBrandingThemeAPI(ctrl)
+		brandingThemeAPI.EXPECT().
+			Default(gomock.Any()).
+			Return(&management.BrandingTheme{
+				ID: auth0.String("theme_123"),
+			}, nil)
+
+		fetcher := brandingThemeResourceFetcher{
+			api: &auth0.API{
+				BrandingTheme: brandingThemeAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_branding_theme.default",
+				ImportID:     "theme_123",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		brandingThemeAPI := mock.NewMockBrandingThemeAPI(ctrl)
+		brandingThemeAPI.EXPECT().
+			Default(gomock.Any()).
+			Return(nil, fmt.Errorf("failed to get default theme"))
+
+		fetcher := brandingThemeResourceFetcher{
+			api: &auth0.API{
+				BrandingTheme: brandingThemeAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to get default theme")
+	})
+
+	t.Run("it returns nil data if branding theme is not found", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mErr := mockManagamentError{status: http.StatusNotFound}
+		brandingThemeAPI := mock.NewMockBrandingThemeAPI(ctrl)
+		brandingThemeAPI.EXPECT().
+			Default(gomock.Any()).
+			Return(nil, mErr)
+
+		fetcher := brandingThemeResourceFetcher{
+			api: &auth0.API{
+				BrandingTheme: brandingThemeAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+	})
+}
+
 func Test_phoneProviderResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves twilio's phone providers data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -1127,12 +1197,8 @@ func TestEmailTemplateResourceFetcher_FetchData(t *testing.T) {
 		defer ctrl.Finish()
 
 		emailTemplateAPI := mock.NewMockEmailTemplateAPI(ctrl)
-		templates := []string{
-			"verify_email", "reset_email", "welcome_email",
-			"blocked_account", "stolen_credentials",
-			"enrollment_email", "mfa_oob_code",
-			"change_password", "password_reset",
-		}
+		templates := []string{`verify_email`, `reset_email`, `welcome_email`, `blocked_account`, `stolen_credentials`, `enrollment_email`,
+			`mfa_oob_code`, `change_password`, `password_reset`, `verify_email_by_code`, `reset_email_by_code`, `user_invitation`, `async_approval`}
 
 		for _, tmpl := range templates {
 			emailTemplateAPI.EXPECT().
@@ -1183,6 +1249,22 @@ func TestEmailTemplateResourceFetcher_FetchData(t *testing.T) {
 				ResourceName: "auth0_email_template.password_reset",
 				ImportID:     "password_reset",
 			},
+			{
+				ResourceName: "auth0_email_template.verify_email_by_code",
+				ImportID:     "verify_email_by_code",
+			},
+			{
+				ResourceName: "auth0_email_template.reset_email_by_code",
+				ImportID:     "reset_email_by_code",
+			},
+			{
+				ResourceName: "auth0_email_template.user_invitation",
+				ImportID:     "user_invitation",
+			},
+			{
+				ResourceName: "auth0_email_template.async_approval",
+				ImportID:     "async_approval",
+			},
 		}
 
 		data, err := fetcher.FetchData(context.Background())
@@ -1196,12 +1278,8 @@ func TestEmailTemplateResourceFetcher_FetchData(t *testing.T) {
 
 		mErr := mockManagamentError{status: http.StatusNotFound}
 		emailTemplateAPI := mock.NewMockEmailTemplateAPI(ctrl)
-		templates := []string{
-			"verify_email", "reset_email", "welcome_email",
-			"blocked_account", "stolen_credentials",
-			"enrollment_email", "mfa_oob_code",
-			"change_password", "password_reset",
-		}
+		templates := []string{`verify_email`, `reset_email`, `welcome_email`, `blocked_account`, `stolen_credentials`, `enrollment_email`,
+			`mfa_oob_code`, `change_password`, `password_reset`, `verify_email_by_code`, `reset_email_by_code`, `user_invitation`, `async_approval`}
 
 		for _, tmpl := range templates {
 			emailTemplateAPI.EXPECT().
