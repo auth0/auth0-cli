@@ -80,11 +80,16 @@ func scaffoldAddScreen(cli *cli, args []string, destDir string) error {
 		return err
 	}
 
+	runNpmGenerateScreenLoader(cli, destDir)
+
 	if err = updateAculConfigFile(destDir, aculConfig, selectedScreens); err != nil {
 		return err
 	}
 
-	cli.renderer.Infof(ansi.Bold(ansi.Green("Screens added successfully")))
+	cli.renderer.Infof(ansi.Bold(ansi.Green("✅ Screens added successfully!")))
+
+	// Show related commands and next steps
+	showAculScreenCommands()
 
 	return nil
 }
@@ -438,4 +443,15 @@ func updateAculConfigFile(destDir string, aculConfig *AculConfig, selectedScreen
 		return fmt.Errorf("failed to write updated acul_config.json: %w", err)
 	}
 	return nil
+}
+
+// showAculScreenCommands displays available ACUL commands for user guidance
+func showAculScreenCommands() {
+	fmt.Println(ansi.Bold("📋 Available Commands:"))
+	fmt.Printf("  • %s - Add more screens\n", ansi.Green("auth0 acul screen add <screen-name>"))
+	fmt.Printf("  • %s - Generate configuration files\n", ansi.Green("auth0 acul config generate <screen>"))
+	fmt.Printf("  • %s - Download current settings\n", ansi.Green("auth0 acul config get <screen>"))
+	fmt.Printf("  • %s - Upload customizations\n", ansi.Green("auth0 acul config set <screen>"))
+	fmt.Printf("  • %s - View available screens\n", ansi.Green("auth0 acul config list"))
+	fmt.Println()
 }

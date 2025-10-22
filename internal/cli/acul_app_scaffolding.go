@@ -161,10 +161,21 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("\nProject successfully created in '%s'!\n\n", destDir)
 
-	fmt.Println("\n📖 Documentation:")
+	fmt.Println("📖 Documentation:")
 	fmt.Println("Explore the sample app: https://github.com/auth0-samples/auth0-acul-samples")
 
 	checkNodeVersion(cli)
+
+	// Show next steps and related commands
+	fmt.Println("\n" + ansi.Bold("🚀 Next Steps:"))
+	fmt.Printf("  1. %s\n", ansi.Cyan(fmt.Sprintf("cd %s", destDir)))
+	fmt.Printf("  2. %s\n", ansi.Cyan("npm install"))
+	fmt.Printf("  3. %s\n", ansi.Cyan("npm run dev"))
+	fmt.Println()
+
+	showAculCommands()
+
+	fmt.Printf("💡 %s: %s\n", ansi.Bold("Tip"), "Use 'auth0 acul --help' to see all available commands")
 
 	return nil
 }
@@ -423,6 +434,17 @@ func createScreenMap(screens []Screens) map[string]Screens {
 	return screenMap
 }
 
+// showAculCommands displays available ACUL commands for user guidance
+func showAculCommands() {
+	fmt.Println(ansi.Bold("📋 Available Commands:"))
+	fmt.Printf("  • %s - Add more screens to your project\n", ansi.Green("auth0 acul screen add <screen-name>"))
+	fmt.Printf("  • %s - Generate configuration files\n", ansi.Green("auth0 acul config generate <screen>"))
+	fmt.Printf("  • %s - Download current settings\n", ansi.Green("auth0 acul config get <screen>"))
+	fmt.Printf("  • %s - Upload customizations\n", ansi.Green("auth0 acul config set <screen>"))
+	fmt.Printf("  • %s - View available screens\n", ansi.Green("auth0 acul config list"))
+	fmt.Println()
+}
+
 type AculConfig struct {
 	ChosenTemplate      string   `json:"chosen_template"`
 	Screens             []string `json:"screens"`
@@ -468,7 +490,6 @@ func checkNodeVersion(cli *cli) {
 // runNpmGenerateScreenLoader runs `npm run generate:screenLoader` in the given directory.
 // Prints errors or warnings directly; silent if successful with no issues.
 func runNpmGenerateScreenLoader(cli *cli, destDir string) {
-	fmt.Println(ansi.Blue("🔄 Generating screen loader..."))
 
 	cmd := exec.Command("npm", "run", "generate:screenLoader")
 	cmd.Dir = destDir
@@ -491,10 +512,12 @@ func runNpmGenerateScreenLoader(cli *cli, destDir string) {
 			ansi.Bold(ansi.Cyan(fmt.Sprintf("cd %s && npm run generate:screenLoader", destDir))),
 			ansi.Faint(fmt.Sprintf("%s/src/utils/screen/screenLoader.ts", destDir)),
 		)
+
+		if len(summary) > 0 {
+			fmt.Println(summary)
+		}
+
 		return
 	}
 
-	if len(summary) > 0 {
-		fmt.Println(summary)
-	}
 }
