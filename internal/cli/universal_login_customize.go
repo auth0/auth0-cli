@@ -22,7 +22,6 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/display"
-	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/auth0/auth0-cli/internal/utils"
 )
 
@@ -40,10 +39,8 @@ const (
 	standardMode             = "standard"
 	advancedMode             = "advanced"
 
-	// Deprecation timeline - 6 months deprecation period
-	DEPRECATION_START_DATE = "2025-10-18" // Today
-	SUNSET_DATE            = "2026-04-18" // 6 months from now
-	WARNING_PERIOD_DAYS    = 30           // Show urgent warnings 30 days before sunset
+	sunsetDate        = "2026-04-30" // 6 months from GA
+	warningPeriodDays = 30           // Show urgent warnings 30 days before sunset
 )
 
 var (
@@ -269,7 +266,7 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 			"* Standard mode is recommended for creating a consistent, branded experience for users. Choosing Standard mode will open a webpage\n" +
 			"within your browser where you can edit and preview your branding changes.For a comprehensive list of editable parameters and their values,\n" +
 			"please visit the [Management API Documentation](https://auth0.com/docs/api/management/v2)\n\n" +
-			"⚠️  DEPRECATION NOTICE: Advanced mode will be deprecated on " + SUNSET_DATE + "\n" +
+			"⚠️  DEPRECATION NOTICE: Advanced mode will be deprecated on " + sunsetDate + "\n" +
 			"   For future Advanced Customizations, use: auth0 acul config <command>\n" +
 			"* Advanced mode is recommended for full customization/granular control of the login experience and to integrate your own component design system. \n" +
 			"Choosing Advanced mode will open the default terminal editor, with the rendering configs:\n\n" +
@@ -295,7 +292,7 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 			}
 
 			if selectedRenderingMode == advancedMode {
-				if err := showAdvancedModeDeprecationWarning(cli); err != nil {
+				if err := displayDeprecationStatus(cli, true); err != nil {
 					return err
 				}
 
@@ -361,93 +358,61 @@ func ensureNewUniversalLoginExperienceIsActive(ctx context.Context, api *auth0.A
 	)
 }
 
-// showDeprecationStatus displays deprecation timeline information
-func showDeprecationStatus(cli *cli) {
-	// Parse dates
-	sunsetDate, _ := time.Parse("2006-01-02", SUNSET_DATE)
+// displayDeprecationStatus displays timeline information.
+// The `showCommands` flag controls whether to display helpful usage examples.
+func displayDeprecationStatus(cli *cli, showCommands bool) error {
+	parsedSunset, _ := time.Parse("2006-01-02", sunsetDate)
 	now := time.Now()
-	daysUntilSunset := int(sunsetDate.Sub(now).Hours() / 24)
+	daysUntil := int(parsedSunset.Sub(now).Hours() / 24)
+	formattedDate := ansi.Bold(ansi.Cyan(parsedSunset.Format("Jan 2, 2006")))
 
-	// Show different messages based on timeline
-	if daysUntilSunset <= WARNING_PERIOD_DAYS && daysUntilSunset > 0 {
-		// Urgent warning period
-		cli.renderer.Warnf("🚨 URGENT DEPRECATION: Advanced rendering mode ends in %d days (%s)",
-			daysUntilSunset, sunsetDate.Format("Jan 2, 2006"))
-		cli.renderer.Warnf("   ⚠️  MIGRATE NOW: " + ansi.Red("auth0 acul config") + " commands available!")
-	} else if daysUntilSunset > 0 {
-		// Regular deprecation notice
-		cli.renderer.Warnf("� DEPRECATION WARNING: Advanced rendering mode ends %s (%d days)",
-			sunsetDate.Format("Jan 2, 2006"), daysUntilSunset)
-		cli.renderer.Warnf("   📋 MIGRATION AVAILABLE: " + ansi.Yellow("auth0 acul config") + " commands ready!")
-	} else {
-		// Post-sunset warning
-		cli.renderer.Errorf("❌ DEPRECATED: Advanced rendering mode ended on %s", sunsetDate.Format("Jan 2, 2006"))
-		cli.renderer.Errorf("   ✅ USE INSTEAD: " + ansi.Green("auth0 acul config") + " commands!")
-	}
+	switch {
+	case daysUntil <= 0:
+		cli.renderer.Errorf("Advanced rendering mode was retired on %s", formattedDate)
+		cli.renderer.Errorf("   Use instead: %s", ansi.Green("auth0 acul config"))
+		if showCommands {
+			showNewConfigExamples(cli)
+		}
+		return fmt.Errorf("advanced rendering mode is no longer supported")
 
-	// Show prominent link to new commands
-	cli.renderer.Warnf("   📖 LEARN MORE: " + ansi.Cyan("auth0 acul config --help"))
-	cli.renderer.Output("")
-}
+	case daysUntil <= warningPeriodDays:
+		cli.renderer.Warnf("⚠️  Advanced rendering mode will be retired soon (%d days left)", daysUntil)
+		cli.renderer.Warnf("   Switch to: %s", ansi.Bold(ansi.Cyan("auth0 acul config")))
 
-// showAdvancedModeDeprecationWarning shows specific warning for advanced mode usage
-func showAdvancedModeDeprecationWarning(cli *cli) error {
-	// Parse dates for timeline calculations
-	sunsetDate, _ := time.Parse("2006-01-02", SUNSET_DATE)
-	now := time.Now()
-	daysUntilSunset := int(sunsetDate.Sub(now).Hours() / 24)
-
-	// If we're past the sunset date, block usage
-	if daysUntilSunset <= 0 {
-		cli.renderer.Errorf("❌ SUNSET: Advanced rendering mode ended on %s", SUNSET_DATE)
-		cli.renderer.Errorf("   ✅ USE INSTEAD: " + ansi.Green("auth0 acul config") + " commands!")
-		return fmt.Errorf("advanced mode has been sunset - use 'auth0 acul config' instead")
-	}
-
-	cli.renderer.Warnf("⚠️  DEPRECATION WARNING: Advanced rendering mode ends %s (%d days)",
-		sunsetDate.Format("Jan 2, 2006"), daysUntilSunset)
-	cli.renderer.Output("")
-	cli.renderer.Warnf("🚀 MIGRATION READY: New ACUL config commands available:")
-	showMigrationCommands(cli)
-
-	// In the final 30 days, require explicit confirmation
-	if daysUntilSunset <= WARNING_PERIOD_DAYS {
-		cli.renderer.Errorf("🚨 FINAL WARNING: Only %d days left!", daysUntilSunset)
-		proceed := false
-		if err := prompt.AskBool("Continue with deprecated advanced mode?", &proceed, false); err != nil {
-			return err
+		if showCommands {
+			cli.renderer.Output("")
+			showNewConfigExamples(cli)
 		}
 
-		if !proceed {
-			cli.renderer.Warnf("✅ MIGRATE: " + ansi.Green("auth0 acul config --help"))
-			return fmt.Errorf("please use ACUL config commands")
-		}
+		cli.renderer.Warnf("⏳ Proceeding with advanced rendering mode (deprecated)")
 
-		cli.renderer.Errorf("⚠️  PROCEEDING WITH DEPRECATED FUNCTIONALITY!")
-		cli.renderer.Output("")
-	} else {
-		// Earlier in deprecation period, just show the warning and continue
-		cli.renderer.Warnf("⏳ Continuing with advanced mode (deprecated)...")
-		cli.renderer.Output("")
+	default:
+		cli.renderer.Warnf("ℹ️  Advanced rendering mode will be retired on %s (%d days remaining)", formattedDate, daysUntil)
+		cli.renderer.Warnf("   Try new commands: %s", ansi.Bold(ansi.Cyan("auth0 acul config")))
+		if showCommands {
+			cli.renderer.Output("")
+			showNewConfigExamples(cli)
+		}
 	}
+
+	cli.renderer.Output("")
+	cli.renderer.Warnf("   For help: %s", ansi.Bold(ansi.Cyan("auth0 acul config --help")))
+	cli.renderer.Output("")
 
 	return nil
 }
 
-// calculateDaysUntilSunset calculates days remaining until sunset date
-
-// showMigrationCommands displays the new ACUL commands
-func showMigrationCommands(cli *cli) {
-	cli.renderer.Warnf("  • " + ansi.Yellow("auth0 acul config generate <screen>") + " - Create config files")
-	cli.renderer.Warnf("  • " + ansi.Yellow("auth0 acul config get <screen>") + "      - Download current settings")
-	cli.renderer.Warnf("  • " + ansi.Yellow("auth0 acul config set <screen>") + "      - Upload customizations")
-	cli.renderer.Warnf("  • " + ansi.Yellow("auth0 acul config list") + "              - View available screens")
-	cli.renderer.Warnf("  • " + ansi.Yellow("auth0 acul config docs") + "              - Open documentation")
+// showNewConfigExamples displays example commands for managing ACUL configurations.
+func showNewConfigExamples(cli *cli) {
+	cli.renderer.Warnf("  • %s - Create config files", ansi.Yellow("auth0 acul config generate <screen>"))
+	cli.renderer.Warnf("  • %s - Download current settings", ansi.Yellow("auth0 acul config get <screen>"))
+	cli.renderer.Warnf("  • %s - Upload customizations", ansi.Yellow("auth0 acul config set <screen>"))
+	cli.renderer.Warnf("  • %s - View available screens", ansi.Yellow("auth0 acul config list"))
 	cli.renderer.Output("")
-	cli.renderer.Warnf("  " + ansi.Bold("Quick Start:"))
-	cli.renderer.Warnf("  1. " + ansi.Cyan("auth0 acul config generate login-id") + "      # Generate config template")
-	cli.renderer.Warnf("  2. Edit the generated JSON file with your customizations")
-	cli.renderer.Warnf("  3. " + ansi.Cyan("auth0 acul config set login-id --file login-id.json") + "  # Apply changes")
+	cli.renderer.Warnf("  %s", ansi.Bold("Quick Start:"))
+	cli.renderer.Warnf("  1. %s", ansi.Cyan("auth0 acul config generate login-id"))
+	cli.renderer.Warnf("  2. Edit the generated JSON file as needed")
+	cli.renderer.Warnf("  3. %s", ansi.Cyan("auth0 acul config set login-id --file login-id.json"))
 	cli.renderer.Output("")
 }
 
@@ -1059,10 +1024,8 @@ func switchUniversalLoginRendererModeCmd(cli *cli) *cobra.Command {
 		Short: "⚠️ Switch rendering mode (DEPRECATED)",
 		Long: `Switch the rendering mode for Universal Login. Note that this requires a custom domain to be configured for the tenant.
 
-🚨 DEPRECATION WARNING: The 'auth0 ul switch' command will be DEPRECATED on April 18, 2026
-    
-⚠️  Advanced rendering mode is also being deprecated!
-    
+🚨 DEPRECATION WARNING: The 'auth0 ul switch' command will be DEPRECATED on April 30, 2026
+        
 ✅ For Advanced Customizations, migrate to the new ACUL config commands:
   • auth0 acul config generate <screen>
   • auth0 acul config get <screen>  
@@ -1074,9 +1037,12 @@ func switchUniversalLoginRendererModeCmd(cli *cli) *cobra.Command {
   auth0 ul switch -p login-id -s login-id -r standard`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Show deprecation notice
-			showDeprecationStatus(cli)
+			err := displayDeprecationStatus(cli, false)
+			if err != nil {
+				return err
+			}
 
-			err := fetchPromptScreenInfo(cmd, cli, &input, "switch")
+			err = fetchPromptScreenInfo(cmd, cli, &input, "switch")
 			if err != nil {
 				return err
 			}
@@ -1084,13 +1050,6 @@ func switchUniversalLoginRendererModeCmd(cli *cli) *cobra.Command {
 			if selectedRenderingMode == "" {
 				cli.renderer.Infof("Please select a rendering mode to switch:")
 				if err = renderingMode.Select(cmd, &selectedRenderingMode, []string{advancedMode, standardMode}, nil); err != nil {
-					return err
-				}
-			}
-
-			// Show warning if switching to advanced mode.
-			if selectedRenderingMode == advancedMode {
-				if err := showAdvancedModeDeprecationWarning(cli); err != nil {
 					return err
 				}
 			}
