@@ -296,6 +296,14 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 					return err
 				}
 
+				// Add visual separation and brief pause to ensure users see the warning
+				cli.renderer.Output(ansi.Bold("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+				cli.renderer.Output("")
+
+				if !cli.noInput {
+					time.Sleep(2 * time.Second) // Brief pause to let users read
+				}
+
 				err := fetchPromptScreenInfo(cmd, cli, &input, "customize")
 				if err != nil {
 					return err
@@ -376,7 +384,10 @@ func displayDeprecationStatus(cli *cli, showCommands bool) error {
 		return fmt.Errorf("advanced rendering mode is no longer supported")
 
 	case daysUntil <= warningPeriodDays:
-		cli.renderer.Warnf("⚠️  Advanced rendering mode will be retired soon (%d days left)", daysUntil)
+		cli.renderer.Output("")
+		cli.renderer.Output(ansi.Bold(ansi.Red("🚨 URGENT: DEPRECATION NOTICE 🚨")))
+		cli.renderer.Warnf("%s will be retired soon (%d days left)",
+			ansi.Bold("Advanced rendering mode"), daysUntil)
 		cli.renderer.Warnf("   Switch to: %s", ansi.Bold(ansi.Cyan("auth0 acul config")))
 
 		if showCommands {
@@ -387,7 +398,10 @@ func displayDeprecationStatus(cli *cli, showCommands bool) error {
 		cli.renderer.Warnf("⏳ Proceeding with advanced rendering mode (deprecated)")
 
 	default:
-		cli.renderer.Warnf("ℹ️  Advanced rendering mode will be retired on %s (%d days remaining)", formattedDate, daysUntil)
+		cli.renderer.Output("")
+		cli.renderer.Output(ansi.Bold(ansi.Red("⚠️  DEPRECATION NOTICE ⚠️")))
+		cli.renderer.Warnf("%s will be retired on %s (%d days remaining)",
+			ansi.Bold("Advanced rendering mode"), formattedDate, daysUntil)
 		cli.renderer.Warnf("   Try new commands: %s", ansi.Bold(ansi.Cyan("auth0 acul config")))
 		if showCommands {
 			cli.renderer.Output("")
@@ -398,16 +412,18 @@ func displayDeprecationStatus(cli *cli, showCommands bool) error {
 	cli.renderer.Output("")
 	cli.renderer.Warnf("   For help: %s", ansi.Bold(ansi.Cyan("auth0 acul config --help")))
 	cli.renderer.Output("")
+	cli.renderer.Output(ansi.Bold(ansi.Yellow("⚠️  Please read the above deprecation notice carefully! ⚠️")))
+	cli.renderer.Output("")
 
 	return nil
 }
 
 // showNewConfigExamples displays example commands for managing ACUL configurations.
 func showNewConfigExamples(cli *cli) {
-	cli.renderer.Warnf("  • %s - Create config files", ansi.Yellow("auth0 acul config generate <screen>"))
-	cli.renderer.Warnf("  • %s - Download current settings", ansi.Yellow("auth0 acul config get <screen>"))
-	cli.renderer.Warnf("  • %s - Upload customizations", ansi.Yellow("auth0 acul config set <screen>"))
-	cli.renderer.Warnf("  • %s - View available screens", ansi.Yellow("auth0 acul config list"))
+	cli.renderer.Warnf("  %s - Create config files", ansi.Yellow("auth0 acul config generate <screen>"))
+	cli.renderer.Warnf("  %s - Download current settings", ansi.Yellow("auth0 acul config get <screen>"))
+	cli.renderer.Warnf("  %s - Upload customizations", ansi.Yellow("auth0 acul config set <screen>"))
+	cli.renderer.Warnf("  %s - View available screens", ansi.Yellow("auth0 acul config list"))
 	cli.renderer.Output("")
 	cli.renderer.Warnf("  %s", ansi.Bold("Quick Start:"))
 	cli.renderer.Warnf("  1. %s", ansi.Cyan("auth0 acul config generate login-id"))
