@@ -10,8 +10,6 @@ func aculCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.AddCommand(aculConfigureCmd(cli))
-	// Check out the ./acul_scaffolding_app.MD file for more information on the commands below.
-	cmd.AddCommand(aculInitCmd1(cli))
 	cmd.AddCommand(aculInitCmd(cli))
 
 	return cmd
