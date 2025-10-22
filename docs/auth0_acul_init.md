@@ -5,7 +5,9 @@ has_toc: false
 ---
 # auth0 acul init
 
-Generate a new project from a template.
+Generate a new Advanced Customizations for Universal Login (ACUL) project from a template.
+This command creates a new project with your choice of framework and authentication screens (login, signup, mfa, etc.). 
+The generated project includes all necessary configuration and boilerplate code to get started with ACUL customizations.
 
 ## Usage
 ```
@@ -35,8 +37,7 @@ auth0 acul init [flags]
 ## Related Commands
 
 - [auth0 acul config](auth0_acul_config.md) - Configure Advanced Customizations for Universal Login screens.
-- [auth0 acul init](auth0_acul_init.md) - Generate a new project from a template
-- [auth0 acul init1](auth0_acul_init1.md) - Generate a new project from a template
+- [auth0 acul init](auth0_acul_init.md) - Generate a new ACUL project from a template
 - [auth0 acul screen](auth0_acul_screen.md) - Manage individual screens for Advanced Customizations for Universal Login.
 
 
