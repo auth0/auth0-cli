@@ -159,23 +159,29 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string) error {
 
 	runNpmGenerateScreenLoader(cli, destDir)
 
-	fmt.Printf("\nProject successfully created in '%s'!\n\n", destDir)
+	cli.renderer.Output("")
+	cli.renderer.Infof("%s Project successfully created in %s!",
+		ansi.Bold(ansi.Green("🎉")), ansi.Bold(ansi.Cyan(fmt.Sprintf("'%s'", destDir))))
+	cli.renderer.Output("")
 
-	fmt.Println("📖 Documentation:")
-	fmt.Println("Explore the sample app: https://github.com/auth0-samples/auth0-acul-samples")
+	cli.renderer.Infof("%s Documentation:", ansi.Bold("📖"))
+	cli.renderer.Infof("   Explore the sample app: %s",
+		ansi.Blue("https://github.com/auth0-samples/auth0-acul-samples"))
+	cli.renderer.Output("")
 
 	checkNodeVersion(cli)
 
-	// Show next steps and related commands
-	fmt.Println("\n" + ansi.Bold("🚀 Next Steps:"))
-	fmt.Printf("  1. %s\n", ansi.Cyan(fmt.Sprintf("cd %s", destDir)))
-	fmt.Printf("  2. %s\n", ansi.Cyan("npm install"))
-	fmt.Printf("  3. %s\n", ansi.Cyan("npm run dev"))
-	fmt.Println()
+	// Show next steps and related commands.
+	cli.renderer.Infof("%s Next Steps:", ansi.Bold("🚀"))
+	cli.renderer.Infof("   1. %s", ansi.Bold(ansi.Cyan(fmt.Sprintf("cd %s", destDir))))
+	cli.renderer.Infof("   2. %s", ansi.Bold(ansi.Cyan("npm install")))
+	cli.renderer.Infof("   3. %s", ansi.Bold(ansi.Cyan("npm run dev")))
+	cli.renderer.Output("")
 
 	showAculCommands()
 
-	fmt.Printf("💡 %s: %s\n", ansi.Bold("Tip"), "Use 'auth0 acul --help' to see all available commands")
+	cli.renderer.Infof("%s %s: Use %s to see all available commands",
+		ansi.Bold("💡"), ansi.Bold("Tip"), ansi.Bold(ansi.Cyan("'auth0 acul --help'")))
 
 	return nil
 }
@@ -249,7 +255,8 @@ func copyTemplateBaseDirs(cli *cli, baseDirs []string, chosenTemplate, tempUnzip
 		destPath := filepath.Join(destDir, relPath)
 
 		if _, err = os.Stat(srcPath); os.IsNotExist(err) {
-			cli.renderer.Warnf("Warning: Source directory does not exist: %s", srcPath)
+			cli.renderer.Warnf("%s Source directory does not exist: %s",
+				ansi.Bold(ansi.Yellow("⚠️")), ansi.Faint(srcPath))
 			continue
 		}
 
@@ -274,13 +281,15 @@ func copyProjectTemplateFiles(cli *cli, baseFiles []string, chosenTemplate, temp
 		destPath := filepath.Join(destDir, relPath)
 
 		if _, err = os.Stat(srcPath); os.IsNotExist(err) {
-			cli.renderer.Warnf("Warning: Source file does not exist: %s", srcPath)
+			cli.renderer.Warnf("%s Source file does not exist: %s",
+				ansi.Bold(ansi.Yellow("⚠️")), ansi.Faint(srcPath))
 			continue
 		}
 
 		parentDir := filepath.Dir(destPath)
 		if err := os.MkdirAll(parentDir, 0755); err != nil {
-			cli.renderer.Warnf("Error creating parent directory for %s: %v", baseFile, err)
+			cli.renderer.Warnf("%s Error creating parent directory for %s: %v",
+				ansi.Bold(ansi.Red("❌")), ansi.Bold(baseFile), err)
 			continue
 		}
 
@@ -307,13 +316,15 @@ func copyProjectScreens(cli *cli, screens []Screens, selectedScreens []string, c
 		destPath := filepath.Join(destDir, relPath)
 
 		if _, err = os.Stat(srcPath); os.IsNotExist(err) {
-			cli.renderer.Warnf("Warning: Source directory does not exist: %s", srcPath)
+			cli.renderer.Warnf("%s Source directory does not exist: %s",
+				ansi.Bold(ansi.Yellow("⚠️")), ansi.Faint(srcPath))
 			continue
 		}
 
 		parentDir := filepath.Dir(destPath)
 		if err := os.MkdirAll(parentDir, 0755); err != nil {
-			cli.renderer.Warnf("Error creating parent directory for %s: %v", screen.Path, err)
+			cli.renderer.Warnf("%s Error creating parent directory for %s: %v",
+				ansi.Bold(ansi.Red("❌")), ansi.Bold(screen.Path), err)
 			continue
 		}
 
@@ -434,14 +445,19 @@ func createScreenMap(screens []Screens) map[string]Screens {
 	return screenMap
 }
 
-// showAculCommands displays available ACUL commands for user guidance
+// showAculCommands displays available ACUL commands for user guidance.
 func showAculCommands() {
-	fmt.Println(ansi.Bold("📋 Available Commands:"))
-	fmt.Printf("  • %s - Add more screens to your project\n", ansi.Green("auth0 acul screen add <screen-name>"))
-	fmt.Printf("  • %s - Generate configuration files\n", ansi.Green("auth0 acul config generate <screen>"))
-	fmt.Printf("  • %s - Download current settings\n", ansi.Green("auth0 acul config get <screen>"))
-	fmt.Printf("  • %s - Upload customizations\n", ansi.Green("auth0 acul config set <screen>"))
-	fmt.Printf("  • %s - View available screens\n", ansi.Green("auth0 acul config list"))
+	fmt.Printf("%s Available Commands:\n", ansi.Bold("📋"))
+	fmt.Printf("   %s - Add more screens to your project\n",
+		ansi.Bold(ansi.Green("auth0 acul screen add <screen-name>")))
+	fmt.Printf("   %s - Generate configuration files\n",
+		ansi.Bold(ansi.Green("auth0 acul config generate <screen>")))
+	fmt.Printf("   %s - Download current settings\n",
+		ansi.Bold(ansi.Green("auth0 acul config get <screen>")))
+	fmt.Printf("   %s - Upload customizations\n",
+		ansi.Bold(ansi.Green("auth0 acul config set <screen>")))
+	fmt.Printf("   %s - View available screens\n",
+		ansi.Bold(ansi.Green("auth0 acul config list")))
 	fmt.Println()
 }
 
@@ -456,7 +472,13 @@ type AculConfig struct {
 func checkNodeInstallation() error {
 	cmd := exec.Command("node", "--version")
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("node is required but not found. Please install Node v22 or higher and try again")
+		return fmt.Errorf("%s Node.js is required but not found.\n"+
+			"   %s Please install Node.js v22 or higher from: %s\n"+
+			"   %s Then try running this command again",
+			ansi.Bold(ansi.Red("❌")),
+			ansi.Yellow("→"),
+			ansi.Blue("https://nodejs.org/"),
+			ansi.Yellow("→"))
 	}
 	return nil
 }
@@ -466,7 +488,8 @@ func checkNodeVersion(cli *cli) {
 	cmd := exec.Command("node", "--version")
 	output, err := cmd.Output()
 	if err != nil {
-		cli.renderer.Warnf("Unable to detect Node version. Please ensure Node v22+ is installed.")
+		cli.renderer.Warnf("%s Unable to detect Node version. Please ensure Node v22+ is installed.",
+			ansi.Bold(ansi.Yellow("⚠️")))
 		return
 	}
 
@@ -474,50 +497,79 @@ func checkNodeVersion(cli *cli) {
 	re := regexp.MustCompile(`v?(\d+)\.`)
 	matches := re.FindStringSubmatch(version)
 	if len(matches) < 2 {
-		cli.renderer.Warnf("Unable to parse Node version: %s. Please ensure Node v22+ is installed.", version)
+		cli.renderer.Warnf("%s Unable to parse Node version: %s. Please ensure Node v22+ is installed.",
+			ansi.Bold(ansi.Yellow("⚠️")), ansi.Bold(version))
 		return
 	}
 
 	if major, _ := strconv.Atoi(matches[1]); major < 22 {
-		fmt.Printf(
-			"⚠️  Node %s detected. This project requires Node v22 or higher.\n"+
-				"   Please upgrade to Node v22+ to run the sample app and build assets successfully.\n",
-			version,
-		)
+		cli.renderer.Output("")
+		cli.renderer.Warnf("⚠️ Node %s detected. This project requires Node v22 or higher.",
+			ansi.Bold(version))
+		cli.renderer.Warnf("  Please upgrade to Node v22+ to run the sample app and build assets successfully.")
+		cli.renderer.Output("")
 	}
 }
 
 // runNpmGenerateScreenLoader runs `npm run generate:screenLoader` in the given directory.
-// Prints errors or warnings directly; silent if successful with no issues.
 func runNpmGenerateScreenLoader(cli *cli, destDir string) {
+	cli.renderer.Infof("%s Generating screen loader...", ansi.Blue("🔄"))
 
 	cmd := exec.Command("npm", "run", "generate:screenLoader")
 	cmd.Dir = destDir
 
 	output, err := cmd.CombinedOutput()
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-
-	summary := strings.Join(lines, "\n")
-	if len(lines) > 5 {
-		summary = strings.Join(lines[:5], "\n") + "\n..."
-	}
+	outputStr := strings.TrimSpace(string(output))
 
 	if err != nil {
-		cli.renderer.Warnf(
-			"⚠️  Screen loader generation failed: %v\n"+
-				"👉 Run manually: %s\n"+
-				"📄 Required for: %s\n"+
-				"💡 Tip: If it continues to fail, verify your Node setup and screen structure.",
-			err,
-			ansi.Bold(ansi.Cyan(fmt.Sprintf("cd %s && npm run generate:screenLoader", destDir))),
-			ansi.Faint(fmt.Sprintf("%s/src/utils/screen/screenLoader.ts", destDir)),
-		)
+		cli.renderer.Output("")
+		cli.renderer.Errorf("%s Screen loader generation failed", ansi.Bold(ansi.Red("❌")))
+		cli.renderer.Output("")
 
-		if len(summary) > 0 {
-			fmt.Println(summary)
+		cli.renderer.Warnf("%s Run manually:", ansi.Bold(ansi.Yellow("💡")))
+		cli.renderer.Infof("   %s", ansi.Bold(ansi.Cyan(fmt.Sprintf("cd %s && npm run generate:screenLoader", destDir))))
+		cli.renderer.Output("")
+
+		cli.renderer.Warnf("%s Required for:", ansi.Bold(ansi.Yellow("📄")))
+		cli.renderer.Infof("   %s", ansi.Faint(fmt.Sprintf("%s/src/utils/screen/screenLoader.ts", destDir)))
+		cli.renderer.Output("")
+
+		if outputStr != "" {
+			lines := strings.Split(outputStr, "\n")
+			cli.renderer.Warnf("%s Error details:", ansi.Bold(ansi.Yellow("⚠️")))
+			if len(lines) > 3 {
+				for i, line := range lines[:3] {
+					cli.renderer.Infof("   %d. %s", i+1, ansi.Faint(line))
+				}
+				cli.renderer.Infof("   %s", ansi.Faint("... (truncated)"))
+			} else {
+				for i, line := range lines {
+					cli.renderer.Infof("   %d. %s", i+1, ansi.Faint(line))
+				}
+			}
+			cli.renderer.Output("")
 		}
 
+		cli.renderer.Warnf("%s If it continues to fail, verify your Node setup and screen structure.",
+			ansi.Bold(ansi.Yellow("💡")))
+		cli.renderer.Output("")
 		return
 	}
 
+	// Success case.
+	cli.renderer.Infof("%s Screen loader generated successfully!", ansi.Bold(ansi.Green("✅")))
+
+	// Show any npm output as info.
+	if outputStr != "" && len(strings.TrimSpace(outputStr)) > 0 {
+		lines := strings.Split(outputStr, "\n")
+		for _, line := range lines {
+			if strings.TrimSpace(line) != "" {
+				if strings.Contains(line, "warn") || strings.Contains(line, "warning") {
+					cli.renderer.Warnf("   %s", ansi.Faint(line))
+				} else {
+					cli.renderer.Infof("   %s", ansi.Faint(line))
+				}
+			}
+		}
+	}
 }

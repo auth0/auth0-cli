@@ -88,7 +88,7 @@ func scaffoldAddScreen(cli *cli, args []string, destDir string) error {
 
 	cli.renderer.Infof(ansi.Bold(ansi.Green("✅ Screens added successfully!")))
 
-	// Show related commands and next steps
+	// Show related commands and next steps.
 	showAculScreenCommands()
 
 	return nil
@@ -445,7 +445,7 @@ func updateAculConfigFile(destDir string, aculConfig *AculConfig, selectedScreen
 	return nil
 }
 
-// showAculScreenCommands displays available ACUL commands for user guidance
+// showAculScreenCommands displays available ACUL commands for user guidance.
 func showAculScreenCommands() {
 	fmt.Println(ansi.Bold("📋 Available Commands:"))
 	fmt.Printf("  • %s - Add more screens\n", ansi.Green("auth0 acul screen add <screen-name>"))
