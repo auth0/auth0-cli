@@ -3,41 +3,36 @@ layout: default
 parent: auth0 universal-login
 has_toc: false
 ---
-# auth0 universal-login customize
+# auth0 universal-login switch
 
+Switch the rendering mode for Universal Login. Note that this requires a custom domain to be configured for the tenant.
 
-Customize your Universal Login Experience. Note that this requires a custom domain to be configured for the tenant. 
-
-* Standard mode is recommended for creating a consistent, branded experience for users. Choosing Standard mode will open a webpage
-within your browser where you can edit and preview your branding changes.For a comprehensive list of editable parameters and their values,
-please visit the [Management API Documentation](https://auth0.com/docs/api/management/v2)
-
-⚠️  DEPRECATION NOTICE: Advanced mode will be deprecated on 2026-04-30
-   For future Advanced Customizations, use: auth0 acul config <command>
-* Advanced mode is recommended for full customization/granular control of the login experience and to integrate your own component design system. 
-Choosing Advanced mode will open the default terminal editor, with the rendering configs:
-
-![storybook](settings.json)
-
-Closing the terminal editor will save the settings to your tenant.
+🚨 DEPRECATION WARNING: The 'auth0 ul switch' command will be DEPRECATED on April 30, 2026
+        
+✅ For Advanced Customizations, migrate to the new ACUL config commands:
+  • auth0 acul config generate <screen>
+  • auth0 acul config get <screen>  
+  • auth0 acul config set <screen>
+  • auth0 acul config list
 
 ## Usage
 ```
-auth0 universal-login customize [flags]
+auth0 universal-login switch [flags]
 ```
 
 ## Examples
 
 ```
-  auth0 universal-login customize
-  auth0 ul customize
+  auth0 universal-login switch
+  auth0 universal-login switch --prompt login-id --screen login-id --rendering-mode standard
+  auth0 ul switch --prompt login-id --screen login-id --rendering-mode advanced
+  auth0 ul switch -p login-id -s login-id -r standard
 ```
 
 
 ## Flags
 
 ```
-  -f, --file string             File to save the rendering configs to.
   -p, --prompt string           Name of the prompt to to switch or customize.
   -r, --rendering-mode string   standardMode is recommended for customizating consistent, branded experience for users.
                                 Alternatively, advancedMode is recommended for full customization/granular control of the login experience and to integrate own component design system
