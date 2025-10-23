@@ -18,7 +18,7 @@ auth0 acul config get [flags]
   auth0 acul config get <screen-name>
   auth0 acul config get <screen-name> --file settings.json
   auth0 acul config get signup-id
-  auth0 acul config get login-id -f ./login-id.json
+  auth0 acul config get login-id -f ./acul_config/login-id.json
 ```
 
 

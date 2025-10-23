@@ -450,7 +450,7 @@ func showAculCommands() {
 	fmt.Printf("%s Available Commands:\n", ansi.Bold("📋"))
 	fmt.Printf("   %s - Add more screens to your project\n",
 		ansi.Bold(ansi.Green("auth0 acul screen add <screen-name>")))
-	fmt.Printf("   %s - Generate configuration files\n",
+	fmt.Printf("   %s - Generate a stub config file\n",
 		ansi.Bold(ansi.Green("auth0 acul config generate <screen>")))
 	fmt.Printf("   %s - Download current settings\n",
 		ansi.Bold(ansi.Green("auth0 acul config get <screen>")))
@@ -487,7 +487,7 @@ func checkNodeVersion(cli *cli) {
 	cmd := exec.Command("node", "--version")
 	output, err := cmd.Output()
 	if err != nil {
-		cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf("Unable to detect Node version. Please ensure Node v22+ is installed.")))
+		cli.renderer.Warnf(ansi.Yellow("Unable to detect Node version. Please ensure Node v22+ is installed."))
 		return
 	}
 
@@ -537,5 +537,4 @@ func runNpmGenerateScreenLoader(cli *cli, destDir string) {
 
 		return
 	}
-
 }
