@@ -159,29 +159,7 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string) error {
 
 	runNpmGenerateScreenLoader(cli, destDir)
 
-	cli.renderer.Output("")
-	cli.renderer.Infof("%s Project successfully created in %s!",
-		ansi.Bold(ansi.Green("🎉")), ansi.Bold(ansi.Cyan(fmt.Sprintf("'%s'", destDir))))
-	cli.renderer.Output("")
-
-	cli.renderer.Infof("%s Documentation:", ansi.Bold("📖"))
-	cli.renderer.Infof("   Explore the sample app: %s",
-		ansi.Blue("https://github.com/auth0-samples/auth0-acul-samples"))
-	cli.renderer.Output("")
-
-	checkNodeVersion(cli)
-
-	// Show next steps and related commands.
-	cli.renderer.Infof("%s Next Steps: Navigate to %s and run: 🚀", ansi.Bold(ansi.Cyan(destDir)))
-	cli.renderer.Infof("   1. %s", ansi.Bold(ansi.Cyan("npm install")))
-	cli.renderer.Infof("   2. %s", ansi.Bold(ansi.Cyan("npm run build")))
-	cli.renderer.Infof("   3. %s", ansi.Bold(ansi.Cyan("npm run screen dev")))
-	cli.renderer.Output("")
-
-	showAculCommands()
-
-	cli.renderer.Infof("%s %s: Use %s to see all available commands",
-		ansi.Bold("💡"), ansi.Bold("Tip"), ansi.Bold(ansi.Cyan("'auth0 acul --help'")))
+	showPostScaffoldingOutput(cli, destDir, "Project successfully created")
 
 	return nil
 }
@@ -445,8 +423,28 @@ func createScreenMap(screens []Screens) map[string]Screens {
 	return screenMap
 }
 
-// showAculCommands displays available ACUL commands for user guidance.
-func showAculCommands() {
+// showPostScaffoldingOutput displays comprehensive post-scaffolding information including
+// success message, documentation, Node version check, next steps, and available commands.
+func showPostScaffoldingOutput(cli *cli, destDir, successMessage string) {
+	cli.renderer.Output("")
+	cli.renderer.Infof("%s  %s in %s!",
+		ansi.Bold(ansi.Green("🎉")), successMessage, ansi.Bold(ansi.Cyan(fmt.Sprintf("'%s'", destDir))))
+	cli.renderer.Output("")
+
+	cli.renderer.Infof("%s Documentation:", ansi.Bold("📖"))
+	cli.renderer.Infof("   Explore the sample app: %s",
+		ansi.Blue("https://github.com/auth0-samples/auth0-acul-samples"))
+	cli.renderer.Output("")
+
+	checkNodeVersion(cli)
+
+	// Show next steps and related commands.
+	cli.renderer.Infof("%s Next Steps: Navigate to %s and run:", ansi.Bold("🚀"), ansi.Bold(ansi.Cyan(destDir)))
+	cli.renderer.Infof("   1. %s", ansi.Bold(ansi.Cyan("npm install")))
+	cli.renderer.Infof("   2. %s", ansi.Bold(ansi.Cyan("npm run build")))
+	cli.renderer.Infof("   3. %s", ansi.Bold(ansi.Cyan("npm run screen dev")))
+	cli.renderer.Output("")
+
 	fmt.Printf("%s Available Commands:\n", ansi.Bold("📋"))
 	fmt.Printf("   %s - Add more screens to your project\n",
 		ansi.Bold(ansi.Green("auth0 acul screen add <screen-name>")))
@@ -459,6 +457,9 @@ func showAculCommands() {
 	fmt.Printf("   %s - View available screens\n",
 		ansi.Bold(ansi.Green("auth0 acul config list")))
 	fmt.Println()
+
+	fmt.Printf("%s %s: Use %s to see all available commands\n",
+		ansi.Bold("💡"), ansi.Bold("Tip"), ansi.Bold(ansi.Cyan("'auth0 acul --help'")))
 }
 
 type AculConfig struct {
