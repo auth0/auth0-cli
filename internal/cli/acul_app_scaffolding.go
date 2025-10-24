@@ -159,12 +159,7 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string) error {
 
 	runNpmGenerateScreenLoader(cli, destDir)
 
-	fmt.Printf("\nProject successfully created in '%s'!\n\n", destDir)
-
-	fmt.Println("\n📖 Documentation:")
-	fmt.Println("Explore the sample app: https://github.com/auth0-samples/auth0-acul-samples")
-
-	checkNodeVersion(cli)
+	showPostScaffoldingOutput(cli, destDir, "Project successfully created")
 
 	return nil
 }
@@ -238,7 +233,8 @@ func copyTemplateBaseDirs(cli *cli, baseDirs []string, chosenTemplate, tempUnzip
 		destPath := filepath.Join(destDir, relPath)
 
 		if _, err = os.Stat(srcPath); os.IsNotExist(err) {
-			cli.renderer.Warnf("Warning: Source directory does not exist: %s", srcPath)
+			cli.renderer.Warnf("%s Source directory does not exist: %s",
+				ansi.Bold(ansi.Yellow("⚠️")), ansi.Faint(srcPath))
 			continue
 		}
 
@@ -263,13 +259,15 @@ func copyProjectTemplateFiles(cli *cli, baseFiles []string, chosenTemplate, temp
 		destPath := filepath.Join(destDir, relPath)
 
 		if _, err = os.Stat(srcPath); os.IsNotExist(err) {
-			cli.renderer.Warnf("Warning: Source file does not exist: %s", srcPath)
+			cli.renderer.Warnf("%s Source file does not exist: %s",
+				ansi.Bold(ansi.Yellow("⚠️")), ansi.Faint(srcPath))
 			continue
 		}
 
 		parentDir := filepath.Dir(destPath)
 		if err := os.MkdirAll(parentDir, 0755); err != nil {
-			cli.renderer.Warnf("Error creating parent directory for %s: %v", baseFile, err)
+			cli.renderer.Warnf("%s Error creating parent directory for %s: %v",
+				ansi.Bold(ansi.Red("❌")), ansi.Bold(baseFile), err)
 			continue
 		}
 
@@ -296,13 +294,15 @@ func copyProjectScreens(cli *cli, screens []Screens, selectedScreens []string, c
 		destPath := filepath.Join(destDir, relPath)
 
 		if _, err = os.Stat(srcPath); os.IsNotExist(err) {
-			cli.renderer.Warnf("Warning: Source directory does not exist: %s", srcPath)
+			cli.renderer.Warnf("%s Source directory does not exist: %s",
+				ansi.Bold(ansi.Yellow("⚠️")), ansi.Faint(srcPath))
 			continue
 		}
 
 		parentDir := filepath.Dir(destPath)
 		if err := os.MkdirAll(parentDir, 0755); err != nil {
-			cli.renderer.Warnf("Error creating parent directory for %s: %v", screen.Path, err)
+			cli.renderer.Warnf("%s Error creating parent directory for %s: %v",
+				ansi.Bold(ansi.Red("❌")), ansi.Bold(screen.Path), err)
 			continue
 		}
 
@@ -423,6 +423,45 @@ func createScreenMap(screens []Screens) map[string]Screens {
 	return screenMap
 }
 
+// showPostScaffoldingOutput displays comprehensive post-scaffolding information including
+// success message, documentation, Node version check, next steps, and available commands.
+func showPostScaffoldingOutput(cli *cli, destDir, successMessage string) {
+	cli.renderer.Output("")
+	cli.renderer.Infof("%s  %s in %s!",
+		ansi.Bold(ansi.Green("🎉")), successMessage, ansi.Bold(ansi.Cyan(fmt.Sprintf("'%s'", destDir))))
+	cli.renderer.Output("")
+
+	cli.renderer.Infof("%s Documentation:", ansi.Bold("📖"))
+	cli.renderer.Infof("   Explore the sample app: %s",
+		ansi.Blue("https://github.com/auth0-samples/auth0-acul-samples"))
+	cli.renderer.Output("")
+
+	checkNodeVersion(cli)
+
+	// Show next steps and related commands.
+	cli.renderer.Infof("%s Next Steps: Navigate to %s and run:", ansi.Bold("🚀"), ansi.Bold(ansi.Cyan(destDir)))
+	cli.renderer.Infof("   1. %s", ansi.Bold(ansi.Cyan("npm install")))
+	cli.renderer.Infof("   2. %s", ansi.Bold(ansi.Cyan("npm run build")))
+	cli.renderer.Infof("   3. %s", ansi.Bold(ansi.Cyan("npm run screen dev")))
+	cli.renderer.Output("")
+
+	fmt.Printf("%s Available Commands:\n", ansi.Bold("📋"))
+	fmt.Printf("   %s - Add more screens to your project\n",
+		ansi.Bold(ansi.Green("auth0 acul screen add <screen-name>")))
+	fmt.Printf("   %s - Generate a stub config file\n",
+		ansi.Bold(ansi.Green("auth0 acul config generate <screen>")))
+	fmt.Printf("   %s - Download current settings\n",
+		ansi.Bold(ansi.Green("auth0 acul config get <screen>")))
+	fmt.Printf("   %s - Upload customizations\n",
+		ansi.Bold(ansi.Green("auth0 acul config set <screen>")))
+	fmt.Printf("   %s - View available screens\n",
+		ansi.Bold(ansi.Green("auth0 acul config list")))
+	fmt.Println()
+
+	fmt.Printf("%s %s: Use %s to see all available commands\n",
+		ansi.Bold("💡"), ansi.Bold("Tip"), ansi.Bold(ansi.Cyan("'auth0 acul --help'")))
+}
+
 type AculConfig struct {
 	ChosenTemplate      string   `json:"chosen_template"`
 	Screens             []string `json:"screens"`
@@ -434,7 +473,12 @@ type AculConfig struct {
 func checkNodeInstallation() error {
 	cmd := exec.Command("node", "--version")
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("node is required but not found. Please install Node v22 or higher and try again")
+		return fmt.Errorf("%s Node.js is required but not found.\n"+
+			"   %s Please install Node.js v22 or higher \n"+
+			"   %s Then try running this command again",
+			ansi.Bold(ansi.Red("❌")),
+			ansi.Yellow("→"),
+			ansi.Blue("→"))
 	}
 	return nil
 }
@@ -444,7 +488,7 @@ func checkNodeVersion(cli *cli) {
 	cmd := exec.Command("node", "--version")
 	output, err := cmd.Output()
 	if err != nil {
-		cli.renderer.Warnf("Unable to detect Node version. Please ensure Node v22+ is installed.")
+		cli.renderer.Warnf(ansi.Yellow("Unable to detect Node version. Please ensure Node v22+ is installed."))
 		return
 	}
 
@@ -452,24 +496,20 @@ func checkNodeVersion(cli *cli) {
 	re := regexp.MustCompile(`v?(\d+)\.`)
 	matches := re.FindStringSubmatch(version)
 	if len(matches) < 2 {
-		cli.renderer.Warnf("Unable to parse Node version: %s. Please ensure Node v22+ is installed.", version)
+		cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf("Unable to parse Node version: %s. Please ensure Node v22+ is installed.", version)))
 		return
 	}
 
 	if major, _ := strconv.Atoi(matches[1]); major < 22 {
-		fmt.Printf(
-			"⚠️  Node %s detected. This project requires Node v22 or higher.\n"+
-				"   Please upgrade to Node v22+ to run the sample app and build assets successfully.\n",
-			version,
-		)
+		cli.renderer.Output("")
+		cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf(" Node %s detected. This project requires Node %s or higher.",
+			version, "v22")))
+		cli.renderer.Output("")
 	}
 }
 
 // runNpmGenerateScreenLoader runs `npm run generate:screenLoader` in the given directory.
-// Prints errors or warnings directly; silent if successful with no issues.
 func runNpmGenerateScreenLoader(cli *cli, destDir string) {
-	fmt.Println(ansi.Blue("🔄 Generating screen loader..."))
-
 	cmd := exec.Command("npm", "run", "generate:screenLoader")
 	cmd.Dir = destDir
 
@@ -491,10 +531,11 @@ func runNpmGenerateScreenLoader(cli *cli, destDir string) {
 			ansi.Bold(ansi.Cyan(fmt.Sprintf("cd %s && npm run generate:screenLoader", destDir))),
 			ansi.Faint(fmt.Sprintf("%s/src/utils/screen/screenLoader.ts", destDir)),
 		)
-		return
-	}
 
-	if len(summary) > 0 {
-		fmt.Println(summary)
+		if len(summary) > 0 {
+			fmt.Println(summary)
+		}
+
+		return
 	}
 }
