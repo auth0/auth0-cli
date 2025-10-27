@@ -1,0 +1,28 @@
+{
+  "tenant": "dev-s2xt6l5qvounptri",
+  "prompt": "invitation",
+  "screen": "accept-invitation",
+  "rendering_mode": "advanced",
+  "context_configuration": [
+    "screen.texts"
+  ],
+  "default_head_tags_disabled": false,
+  "head_tags": [
+    {
+      "attributes": {
+        "async": true,
+        "defer": true,
+        "src": "https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.jss"
+      },
+      "tag": "script"
+    },
+    {
+      "attributes": {
+        "href": "https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js",
+        "rel": "stylesheet"
+      },
+      "tag": "link"
+    }
+  ],
+  "use_page_template": false
+}
