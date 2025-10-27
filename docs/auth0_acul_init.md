@@ -18,10 +18,18 @@ auth0 acul init [flags]
 
 ```
   auth0 acul init <app_name>
-auth0 acul init my_acul_app
+  auth0 acul init my_acul_app
+  auth0 acul init my_acul_app --template react --screens login,signup
+  auth0 acul init my_acul_app -t react -s login,mfa,signup
 ```
 
 
+## Flags
+
+```
+  -s, --screens strings   Comma-separated list of screens to include in your ACUL project.
+  -t, --template string   Template framework to use for your ACUL project.
+```
 
 
 ## Inherited Flags
