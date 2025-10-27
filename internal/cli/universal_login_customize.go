@@ -39,8 +39,8 @@ const (
 	standardMode             = "standard"
 	advancedMode             = "advanced"
 
-	sunsetDate        = "2026-04-30" // 6 months from GA
-	warningPeriodDays = 30           // Show urgent warnings 30 days before sunset
+	sunsetDate        = "2026-04-30" // 6 months from GA.
+	warningPeriodDays = 30           // Show urgent warnings 30 days before sunset.
 )
 
 var (
@@ -296,12 +296,12 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 					return err
 				}
 
-				// Add visual separation and brief pause to ensure users see the warning
+				// Add visual separation and brief pause to ensure users see the warning.
 				cli.renderer.Output(ansi.Bold("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
 				cli.renderer.Output("")
 
 				if !cli.noInput {
-					time.Sleep(2 * time.Second) // Brief pause to let users read
+					time.Sleep(2 * time.Second) // Brief pause to let users read.
 				}
 
 				err := fetchPromptScreenInfo(cmd, cli, &input, "customize")
@@ -1052,7 +1052,6 @@ func switchUniversalLoginRendererModeCmd(cli *cli) *cobra.Command {
   auth0 ul switch --prompt login-id --screen login-id --rendering-mode advanced
   auth0 ul switch -p login-id -s login-id -r standard`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Show deprecation notice
 			err := displayDeprecationStatus(cli, false)
 			if err != nil {
 				return err
