@@ -218,18 +218,21 @@ func selectTemplate(cmd *cobra.Command, manifest *Manifest, providedTemplate str
 }
 
 func selectScreens(cli *cli, screens []Screens, providedScreens []string) ([]string, error) {
+	return validateAndSelectScreens(cli, screens, providedScreens)
+}
+
+// validateAndSelectScreens is a common function for screen validation and selection.
+func validateAndSelectScreens(cli *cli, screens []Screens, providedScreens []string) ([]string, error) {
 	var availableScreenIDs []string
 	for _, s := range screens {
 		availableScreenIDs = append(availableScreenIDs, s.ID)
 	}
 
-	// If screens provided via flag, validate them.
 	if len(providedScreens) > 0 {
 		var validScreens []string
 		var invalidScreens []string
 
 		for _, providedScreen := range providedScreens {
-			// Skip empty strings.
 			if strings.TrimSpace(providedScreen) == "" {
 				continue
 			}
@@ -251,24 +254,24 @@ func selectScreens(cli *cli, screens []Screens, providedScreens []string) ([]str
 			cli.renderer.Warnf("%s The following screens are not supported for the chosen template: %s",
 				ansi.Bold(ansi.Yellow("⚠️")),
 				ansi.Bold(ansi.Red(strings.Join(invalidScreens, ", "))))
-			cli.renderer.Infof("%s %s",
-				ansi.Bold("Available screens:"),
+			cli.renderer.Infof("Available screens: %s",
 				ansi.Bold(ansi.Cyan(strings.Join(availableScreenIDs, ", "))))
-			cli.renderer.Infof("%s %s",
-				ansi.Bold(ansi.Blue("Note:")),
-				ansi.Faint("We're planning to support all screens in the future."))
+			cli.renderer.Infof("%s We're planning to support all screens in the future.",
+				ansi.Faint("Note:"))
 		}
 
 		if len(validScreens) == 0 {
-			cli.renderer.Warnf("%s %s",
-				ansi.Bold(ansi.Yellow("⚠️")),
-				ansi.Bold("None of the provided screens are valid for this template."))
+			cli.renderer.Warnf("%s None of the provided screens are valid for this template.",
+				ansi.Bold(ansi.Yellow("⚠️")))
+			cli.renderer.Infof("%s Please select from the available screens below:",
+				ansi.Bold(ansi.Blue("→")))
+			// Fall through to multi-select prompt.
 		} else {
 			return validScreens, nil
 		}
 	}
 
-	// If no screens provided via flag or no valid screens, prompt for multi-select.
+	// If no screens provided or no valid screens, prompt for multi-select.
 	var selectedScreens []string
 	err := prompt.AskMultiSelect("Select screens to include:", &selectedScreens, availableScreenIDs...)
 
@@ -549,7 +552,7 @@ func checkNodeVersion(cli *cli) {
 	cmd := exec.Command("node", "--version")
 	output, err := cmd.Output()
 	if err != nil {
-		cli.renderer.Warnf("Unable to detect Node version. Please ensure Node v22+ is installed.")
+		cli.renderer.Warnf(ansi.Yellow("Unable to detect Node version. Please ensure Node v22+ is installed."))
 		return
 	}
 
@@ -557,19 +560,14 @@ func checkNodeVersion(cli *cli) {
 	re := regexp.MustCompile(`v?(\d+)\.`)
 	matches := re.FindStringSubmatch(version)
 	if len(matches) < 2 {
-		cli.renderer.Warnf("Unable to parse Node version: %s. Please ensure Node v22+ is installed.", version)
+		cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf("Unable to parse Node version: %s. Please ensure Node v22+ is installed.", version)))
 		return
 	}
 
 	if major, _ := strconv.Atoi(matches[1]); major < 22 {
-		fmt.Println(
-			ansi.Yellow(fmt.Sprintf(
-				"⚠️  Node %s detected. This project requires Node v22 or higher.\n"+
-					"   Please upgrade to Node v22+ to run the sample app and build assets successfully.\n",
-				version,
-			)),
-		)
-
+		cli.renderer.Output("")
+		cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf(" Node %s detected. This project requires Node %s or higher.",
+			version, "v22")))
 		cli.renderer.Output("")
 	}
 }
