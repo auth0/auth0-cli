@@ -60,7 +60,7 @@ func scaffoldAddScreen(cli *cli, args []string, destDir string) error {
 		return err
 	}
 
-	aculConfig, err := loadAculConfig(cli, filepath.Join(destDir, "acul_config.json"))
+	aculConfig, err := loadAculConfig(filepath.Join(destDir, "acul_config.json"))
 
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -91,57 +91,33 @@ func scaffoldAddScreen(cli *cli, args []string, destDir string) error {
 	return nil
 }
 
-func screenExists(screens []string, target string) bool {
-	for _, screen := range screens {
-		if screen == target {
-			return true
-		}
-	}
-	return false
-}
-
 func selectAndFilterScreens(cli *cli, args []string, manifest *Manifest, chosenTemplate string, existingScreens []string) ([]string, error) {
-	var supportedScreens []string
-	for _, s := range manifest.Templates[chosenTemplate].Screens {
-		supportedScreens = append(supportedScreens, s.ID)
-	}
-
-	var initialSelected []string
-
-	if len(args) != 0 {
-		var invalidScreens []string
-		for _, s := range args {
-			if !screenExists(supportedScreens, s) {
-				invalidScreens = append(invalidScreens, s)
-			} else {
-				initialSelected = append(initialSelected, s)
-			}
-		}
-
-		if len(invalidScreens) > 0 {
-			cli.renderer.Warnf("The following screens are either not valid or not yet supported: %v. See https://github.com/auth0-samples/auth0-acul-samples for available screens.", invalidScreens)
-		}
-	} else {
-		selectedScreens, err := selectScreens(manifest.Templates[chosenTemplate].Screens)
-		if err != nil {
-			return nil, err
-		}
-		initialSelected = selectedScreens
-	}
-
-	if len(initialSelected) == 0 {
-		return nil, fmt.Errorf("no valid screens provided or selected. At least one valid screen is required to proceed")
+	selectedScreens, err := validateAndSelectScreens(cli, manifest.Templates[chosenTemplate].Screens, args)
+	if err != nil {
+		return nil, err
 	}
 
 	var finalScreens []string
-	for _, s := range initialSelected {
-		if screenExists(existingScreens, s) {
-			promptMsg := fmt.Sprintf("Screen '%s' already exists. Do you want to overwrite its directory? (y/N): ", s)
+	for _, s := range selectedScreens {
+		exists := false
+		for _, existing := range existingScreens {
+			if s == existing {
+				exists = true
+				break
+			}
+		}
+
+		if exists {
+			promptMsg := fmt.Sprintf("Screen '%s' already exists. Do you want to overwrite its directory? ", s)
 			if !prompt.Confirm(promptMsg) {
 				continue
 			}
 		}
 		finalScreens = append(finalScreens, s)
+	}
+
+	if len(finalScreens) == 0 {
+		return nil, fmt.Errorf("no valid screens selected after filtering existing screens")
 	}
 
 	return finalScreens, nil
@@ -154,17 +130,16 @@ func addScreensToProject(cli *cli, destDir, chosenTemplate string, selectedScree
 		return err
 	}
 
-	// TODO: Adjust this prefix based on the actual structure of the unzipped content(once main branch is used).
 	var sourcePrefix = "auth0-acul-samples-monorepo-sample/" + chosenTemplate
 	var sourceRoot = filepath.Join(tempUnzipDir, sourcePrefix)
 	var destRoot = destDir
 
-	missingFiles, editedFiles, err := processFiles(cli, selectedTemplate.BaseFiles, sourceRoot, destRoot, chosenTemplate)
+	missingFiles, editedFiles, err := processFiles(cli, selectedTemplate.BaseFiles, sourceRoot, destRoot)
 	if err != nil {
 		log.Printf("Error processing base files: %v", err)
 	}
 
-	missingDirFiles, editedDirFiles, err := processDirectories(cli, selectedTemplate.BaseDirectories, sourceRoot, destRoot, chosenTemplate)
+	missingDirFiles, editedDirFiles, err := processDirectories(cli, selectedTemplate.BaseDirectories, sourceRoot, destRoot)
 	if err != nil {
 		log.Printf("Error processing base directories: %v", err)
 	}
@@ -202,7 +177,7 @@ func handleEditedFiles(cli *cli, edited []string, sourceRoot, destRoot string) e
 		"Your added screen(s) may NOT work correctly without these updates.\n" +
 		"Proceeding without overwriting could lead to inconsistent or unstable behavior.")
 
-	if !prompt.Confirm("Proceed with overwrite and backup? (y/N): ") {
+	if !prompt.Confirm("Proceed with overwrite and backup? : ") {
 		cli.renderer.Warnf("User opted not to overwrite modified files.")
 		return nil
 	}
@@ -285,15 +260,9 @@ func backupAndOverwrite(cli *cli, edited []string, sourceRoot, destRoot string) 
 }
 
 // processDirectories processes files in all base directories relative to chosenTemplate.
-func processDirectories(cli *cli, baseDirs []string, sourceRoot, destRoot, chosenTemplate string) (missing, edited []string, err error) {
+func processDirectories(cli *cli, baseDirs []string, sourceRoot, destRoot string) (missing, edited []string, err error) {
 	for _, dir := range baseDirs {
-		// TODO: Remove chosenTemplate prefix from dir to get relative base directory.
-		baseDir, relErr := filepath.Rel(chosenTemplate, dir)
-		if relErr != nil {
-			return
-		}
-
-		sourceDir := filepath.Join(sourceRoot, baseDir)
+		sourceDir := filepath.Join(sourceRoot, dir)
 		files, listErr := listFilesInDir(sourceDir)
 		if listErr != nil {
 			return
@@ -336,26 +305,20 @@ func listFilesInDir(dir string) ([]string, error) {
 	return files, err
 }
 
-func processFiles(cli *cli, baseFiles []string, sourceRoot, destRoot, chosenTemplate string) (missing, edited []string, err error) {
+func processFiles(cli *cli, baseFiles []string, sourceRoot, destRoot string) (missing, edited []string, err error) {
 	for _, baseFile := range baseFiles {
-		// TODO: Remove hardcoding of removing the template - instead ensure to remove the template name in sourcePathPrefix.
-		relPath, err := filepath.Rel(chosenTemplate, baseFile)
-		if err != nil {
-			continue
-		}
-
-		sourcePath := filepath.Join(sourceRoot, relPath)
-		destPath := filepath.Join(destRoot, relPath)
+		sourcePath := filepath.Join(sourceRoot, baseFile)
+		destPath := filepath.Join(destRoot, baseFile)
 
 		editedFlag, err := isFileEdited(sourcePath, destPath)
 		switch {
 		case err != nil && os.IsNotExist(err):
-			missing = append(missing, relPath)
+			missing = append(missing, baseFile)
 		case err != nil:
 			cli.renderer.Warnf("Warning: failed to determine if file has been edited: %v", err)
 			continue
 		case editedFlag:
-			edited = append(edited, relPath)
+			edited = append(edited, baseFile)
 		}
 	}
 	return
@@ -418,7 +381,7 @@ func fileHash(path string) ([]byte, error) {
 }
 
 // LoadAculConfig loads acul_config.json from the specified directory.
-func loadAculConfig(cli *cli, configPath string) (*AculConfig, error) {
+func loadAculConfig(configPath string) (*AculConfig, error) {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, err

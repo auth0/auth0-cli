@@ -78,17 +78,32 @@ func loadManifest() (*Manifest, error) {
 	return &manifest, nil
 }
 
-var templateFlag = Flag{
-	Name:       "Template",
-	LongForm:   "template",
-	ShortForm:  "t",
-	Help:       "Template framework to use for your ACUL project.",
-	IsRequired: false,
-}
+var (
+	templateFlag = Flag{
+		Name:       "Template",
+		LongForm:   "template",
+		ShortForm:  "t",
+		Help:       "Template framework to use for your ACUL project.",
+		IsRequired: false,
+	}
 
-// aculInitCmd returns the cobra.Command for project initialization.
+	screensFlag = Flag{
+		Name:       "Screens",
+		LongForm:   "screens",
+		ShortForm:  "s",
+		Help:       "Comma-separated list of screens to include in your ACUL project.",
+		IsRequired: false,
+	}
+)
+
+// / aculInitCmd returns the cobra.Command for project initialization.
 func aculInitCmd(cli *cli) *cobra.Command {
-	return &cobra.Command{
+	var inputs struct {
+		Template string
+		Screens  []string
+	}
+
+	cmd := &cobra.Command{
 		Use:   "init",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Generate a new ACUL project from a template",
@@ -96,14 +111,24 @@ func aculInitCmd(cli *cli) *cobra.Command {
 This command creates a new project with your choice of framework and authentication screens (login, signup, mfa, etc.). 
 The generated project includes all necessary configuration and boilerplate code to get started with ACUL customizations.`,
 		Example: `  auth0 acul init <app_name>
-auth0 acul init my_acul_app`,
+  auth0 acul init my_acul_app
+  auth0 acul init my_acul_app --template react --screens login,signup
+  auth0 acul init my_acul_app -t react -s login,mfa,signup`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runScaffold(cli, cmd, args)
+			return runScaffold(cli, cmd, args, &inputs)
 		},
 	}
+
+	templateFlag.RegisterString(cmd, &inputs.Template, "")
+	screensFlag.RegisterStringSlice(cmd, &inputs.Screens, []string{})
+
+	return cmd
 }
 
-func runScaffold(cli *cli, cmd *cobra.Command, args []string) error {
+func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
+	Template string
+	Screens  []string
+}) error {
 	if err := checkNodeInstallation(); err != nil {
 		return err
 	}
@@ -113,12 +138,12 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	chosenTemplate, err := selectTemplate(cmd, manifest)
+	chosenTemplate, err := selectTemplate(cmd, manifest, inputs.Template)
 	if err != nil {
 		return err
 	}
 
-	selectedScreens, err := selectScreens(manifest.Templates[chosenTemplate].Screens)
+	selectedScreens, err := selectScreens(cli, manifest.Templates[chosenTemplate].Screens, inputs.Screens)
 	if err != nil {
 		return err
 	}
@@ -164,13 +189,24 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func selectTemplate(cmd *cobra.Command, manifest *Manifest) (string, error) {
+func selectTemplate(cmd *cobra.Command, manifest *Manifest, providedTemplate string) (string, error) {
 	var templateNames []string
 	nameToKey := make(map[string]string)
 
 	for key, template := range manifest.Templates {
 		templateNames = append(templateNames, template.Name)
 		nameToKey[template.Name] = key
+	}
+
+	// If template provided via flag, validate it.
+	if providedTemplate != "" {
+		for key, template := range manifest.Templates {
+			if template.Name == providedTemplate || key == providedTemplate {
+				return key, nil
+			}
+		}
+		return "", fmt.Errorf("invalid template '%s'. Available templates: %s",
+			providedTemplate, strings.Join(templateNames, ", "))
 	}
 
 	var chosenTemplateName string
@@ -181,13 +217,63 @@ func selectTemplate(cmd *cobra.Command, manifest *Manifest) (string, error) {
 	return nameToKey[chosenTemplateName], nil
 }
 
-func selectScreens(screens []Screens) ([]string, error) {
-	var screenOptions []string
+func selectScreens(cli *cli, screens []Screens, providedScreens []string) ([]string, error) {
+	return validateAndSelectScreens(cli, screens, providedScreens)
+}
+
+// validateAndSelectScreens is a common function for screen validation and selection.
+func validateAndSelectScreens(cli *cli, screens []Screens, providedScreens []string) ([]string, error) {
+	var availableScreenIDs []string
 	for _, s := range screens {
-		screenOptions = append(screenOptions, s.ID)
+		availableScreenIDs = append(availableScreenIDs, s.ID)
 	}
+
+	if len(providedScreens) > 0 {
+		var validScreens []string
+		var invalidScreens []string
+
+		for _, providedScreen := range providedScreens {
+			if strings.TrimSpace(providedScreen) == "" {
+				continue
+			}
+
+			found := false
+			for _, availableScreen := range availableScreenIDs {
+				if providedScreen == availableScreen {
+					validScreens = append(validScreens, providedScreen)
+					found = true
+					break
+				}
+			}
+			if !found {
+				invalidScreens = append(invalidScreens, providedScreen)
+			}
+		}
+
+		if len(invalidScreens) > 0 {
+			cli.renderer.Warnf("%s The following screens are not supported for the chosen template: %s",
+				ansi.Bold(ansi.Yellow("⚠️")),
+				ansi.Bold(ansi.Red(strings.Join(invalidScreens, ", "))))
+			cli.renderer.Infof("Available screens: %s",
+				ansi.Bold(ansi.Cyan(strings.Join(availableScreenIDs, ", "))))
+			cli.renderer.Infof("%s We're planning to support all screens in the future.",
+				ansi.Faint("Note:"))
+		}
+
+		if len(validScreens) == 0 {
+			cli.renderer.Warnf("%s None of the provided screens are valid for this template.",
+				ansi.Bold(ansi.Yellow("⚠️")))
+			cli.renderer.Infof("%s Please select from the available screens below:",
+				ansi.Bold(ansi.Blue("→")))
+			// Fall through to multi-select prompt.
+		} else {
+			return validScreens, nil
+		}
+	}
+
+	// If no screens provided or no valid screens, prompt for multi-select.
 	var selectedScreens []string
-	err := prompt.AskMultiSelect("Select screens to include:", &selectedScreens, screenOptions...)
+	err := prompt.AskMultiSelect("Select screens to include:", &selectedScreens, availableScreenIDs...)
 
 	if len(selectedScreens) == 0 {
 		return nil, fmt.Errorf("at least one screen must be selected")
@@ -221,25 +307,19 @@ func downloadAndUnzipSampleRepo() (string, error) {
 }
 
 func copyTemplateBaseDirs(cli *cli, baseDirs []string, chosenTemplate, tempUnzipDir, destDir string) error {
-	sourcePathPrefix := "auth0-acul-samples-monorepo-sample/" + chosenTemplate
-	for _, dir := range baseDirs {
-		// TODO: Remove hardcoding of removing the template - instead ensure to remove the template name in sourcePathPrefix.
-		relPath, err := filepath.Rel(chosenTemplate, dir)
-		if err != nil {
-			continue
-		}
+	sourcePathPrefix := filepath.Join("auth0-acul-samples-monorepo-sample", chosenTemplate)
+	for _, dirPath := range baseDirs {
+		srcPath := filepath.Join(tempUnzipDir, sourcePathPrefix, dirPath)
+		destPath := filepath.Join(destDir, dirPath)
 
-		srcPath := filepath.Join(tempUnzipDir, sourcePathPrefix, relPath)
-		destPath := filepath.Join(destDir, relPath)
-
-		if _, err = os.Stat(srcPath); os.IsNotExist(err) {
+		if _, err := os.Stat(srcPath); os.IsNotExist(err) {
 			cli.renderer.Warnf("%s Source directory does not exist: %s",
 				ansi.Bold(ansi.Yellow("⚠️")), ansi.Faint(srcPath))
 			continue
 		}
 
 		if err := copyDir(srcPath, destPath); err != nil {
-			return fmt.Errorf("error copying directory %s: %w", dir, err)
+			return fmt.Errorf("error copying directory %s: %w", dirPath, err)
 		}
 	}
 
@@ -247,18 +327,13 @@ func copyTemplateBaseDirs(cli *cli, baseDirs []string, chosenTemplate, tempUnzip
 }
 
 func copyProjectTemplateFiles(cli *cli, baseFiles []string, chosenTemplate, tempUnzipDir, destDir string) error {
-	sourcePathPrefix := "auth0-acul-samples-monorepo-sample/" + chosenTemplate
-	for _, baseFile := range baseFiles {
-		// TODO: Remove hardcoding of removing the template - instead ensure to remove the template name in sourcePathPrefix.
-		relPath, err := filepath.Rel(chosenTemplate, baseFile)
-		if err != nil {
-			continue
-		}
+	sourcePathPrefix := filepath.Join("auth0-acul-samples-monorepo-sample", chosenTemplate)
 
-		srcPath := filepath.Join(tempUnzipDir, sourcePathPrefix, relPath)
-		destPath := filepath.Join(destDir, relPath)
+	for _, filePath := range baseFiles {
+		srcPath := filepath.Join(tempUnzipDir, sourcePathPrefix, filePath)
+		destPath := filepath.Join(destDir, filePath)
 
-		if _, err = os.Stat(srcPath); os.IsNotExist(err) {
+		if _, err := os.Stat(srcPath); os.IsNotExist(err) {
 			cli.renderer.Warnf("%s Source file does not exist: %s",
 				ansi.Bold(ansi.Yellow("⚠️")), ansi.Faint(srcPath))
 			continue
@@ -267,12 +342,12 @@ func copyProjectTemplateFiles(cli *cli, baseFiles []string, chosenTemplate, temp
 		parentDir := filepath.Dir(destPath)
 		if err := os.MkdirAll(parentDir, 0755); err != nil {
 			cli.renderer.Warnf("%s Error creating parent directory for %s: %v",
-				ansi.Bold(ansi.Red("❌")), ansi.Bold(baseFile), err)
+				ansi.Bold(ansi.Red("❌")), ansi.Bold(filePath), err)
 			continue
 		}
 
 		if err := copyFile(srcPath, destPath); err != nil {
-			return fmt.Errorf("error copying file %s: %w", baseFile, err)
+			return fmt.Errorf("error copying file %s: %w", filePath, err)
 		}
 	}
 
@@ -285,15 +360,10 @@ func copyProjectScreens(cli *cli, screens []Screens, selectedScreens []string, c
 	for _, s := range selectedScreens {
 		screen := screenInfo[s]
 
-		relPath, err := filepath.Rel(chosenTemplate, screen.Path)
-		if err != nil {
-			continue
-		}
+		srcPath := filepath.Join(tempUnzipDir, sourcePathPrefix, screen.Path)
+		destPath := filepath.Join(destDir, screen.Path)
 
-		srcPath := filepath.Join(tempUnzipDir, sourcePathPrefix, relPath)
-		destPath := filepath.Join(destDir, relPath)
-
-		if _, err = os.Stat(srcPath); os.IsNotExist(err) {
+		if _, err := os.Stat(srcPath); os.IsNotExist(err) {
 			cli.renderer.Warnf("%s Source directory does not exist: %s",
 				ansi.Bold(ansi.Yellow("⚠️")), ansi.Faint(srcPath))
 			continue
@@ -431,8 +501,7 @@ func showPostScaffoldingOutput(cli *cli, destDir, successMessage string) {
 		ansi.Bold(ansi.Green("🎉")), successMessage, ansi.Bold(ansi.Cyan(fmt.Sprintf("'%s'", destDir))))
 	cli.renderer.Output("")
 
-	cli.renderer.Infof("%s Documentation:", ansi.Bold("📖"))
-	cli.renderer.Infof("   Explore the sample app: %s",
+	cli.renderer.Infof("📖  Explore the sample app: %s",
 		ansi.Blue("https://github.com/auth0-samples/auth0-acul-samples"))
 	cli.renderer.Output("")
 
@@ -473,12 +542,7 @@ type AculConfig struct {
 func checkNodeInstallation() error {
 	cmd := exec.Command("node", "--version")
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("%s Node.js is required but not found.\n"+
-			"   %s Please install Node.js v22 or higher \n"+
-			"   %s Then try running this command again",
-			ansi.Bold(ansi.Red("❌")),
-			ansi.Yellow("→"),
-			ansi.Blue("→"))
+		return fmt.Errorf("node is required but not found. Please install Node v22 or higher and try again")
 	}
 	return nil
 }
@@ -509,6 +573,7 @@ func checkNodeVersion(cli *cli) {
 }
 
 // runNpmGenerateScreenLoader runs `npm run generate:screenLoader` in the given directory.
+// Prints errors or warnings directly; silent if successful with no issues.
 func runNpmGenerateScreenLoader(cli *cli, destDir string) {
 	cmd := exec.Command("npm", "run", "generate:screenLoader")
 	cmd.Dir = destDir
