@@ -39,6 +39,5 @@ auth0 universal-login customize [flags]
 - [auth0 universal-login show](auth0_universal-login_show.md) - Display the custom branding settings for Universal Login
 - [auth0 universal-login templates](auth0_universal-login_templates.md) - Manage custom Universal Login templates
 - [auth0 universal-login update](auth0_universal-login_update.md) - Update the custom branding settings for Universal Login
-- [auth0 universal-login watch-assets](auth0_universal-login_watch-assets.md) - Watch dist folder and patch screen assets. We can watch for all or 1 or more screens.
 
 

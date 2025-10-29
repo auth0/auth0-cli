@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -17,53 +18,128 @@ import (
 )
 
 var (
-	watchFolder = Flag{
-		Name:       "Watch Folder",
-		LongForm:   "watch-folder",
-		ShortForm:  "w",
-		Help:       "Folder to watch for new builds. CLI will watch for changes in the folder and automatically update the assets.",
-		IsRequired: true,
+	// New flags for acul dev command
+	projectDirFlag = Flag{
+		Name:       "Project Directory",
+		LongForm:   "dir",
+		ShortForm:  "d",
+		Help:       "Path to the ACUL project directory (must contain package.json).",
+		IsRequired: false,
 	}
 
-	assetURL = Flag{
-		Name:       "Assets URL",
-		LongForm:   "assets-url",
-		ShortForm:  "u",
-		Help:       "Base URL for serving dist assets (e.g., http://localhost:5173).",
-		IsRequired: true,
-	}
-
-	screensFlag1 = Flag{
-		Name:         "screen",
-		LongForm:     "screens",
+	screenDevFlag = Flag{
+		Name:         "Screen",
+		LongForm:     "screen",
 		ShortForm:    "s",
-		Help:         "watching screens",
-		IsRequired:   true,
-		AlwaysPrompt: true,
+		Help:         "Specific screen to develop and watch. If not provided, will watch all screens in the dist/assets folder.",
+		IsRequired:   false,
+		AlwaysPrompt: false,
+	}
+
+	portFlag = Flag{
+		Name:       "Port",
+		LongForm:   "port",
+		ShortForm:  "p",
+		Help:       "Port for the local development server (default: 8080).",
+		IsRequired: false,
 	}
 )
 
-func newUpdateAssetsCmd(cli *cli) *cobra.Command {
-	var watchFolders, assetsURL string
-	var screens []string
+func aculDevCmd(cli *cli) *cobra.Command {
+	var projectDir, port string
+	var screenDirs []string
 
 	cmd := &cobra.Command{
-		Use:   "watch-assets",
-		Short: "Watch the dist folder and patch screen assets. You can watch all screens or one or more specific screens.",
-		Example: `  auth0 universal-login watch-assets --screens login-id,login,signup,email-identifier-challenge,login-passwordless-email-code --watch-folder "/dist" --assets-url "http://localhost:8080"
-  auth0 ul watch-assets --screens all -w "/dist" -u "http://localhost:8080"
-  auth0 ul watch-assets --screen login-id --watch-folder "/dist"" --assets-url "http://localhost:8080"
-  auth0 ul switch -p login-id -s login-id -r standard`,
+		Use:   "dev",
+		Short: "Start development mode for ACUL project with automatic building and asset watching.",
+		Long: `Start development mode for an ACUL project. This command:
+- Runs 'npm run build' to build the project initially
+- Watches the dist directory for asset changes
+- Automatically patches screen assets when new builds are created
+- Supports both single screen development and all screens
+
+The project directory must contain package.json with a build script.
+You need to run your own build process (e.g., npm run build, npm run screen <name>) 
+to generate new assets that will be automatically detected and patched.`,
+		Example: `  auth0 acul dev
+  auth0 acul dev --dir ./my_acul_project
+  auth0 acul dev --screen login-id --port 3000
+  auth0 acul dev -d ./project -s login-id -p 8080`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return watchAndPatch(context.Background(), cli, assetsURL, watchFolders, screens)
+			return runAculDev(cmd.Context(), cli, projectDir, port, screenDirs)
 		},
 	}
 
-	screensFlag1.RegisterStringSlice(cmd, &screens, nil)
-	watchFolder.RegisterString(cmd, &watchFolders, "")
-	assetURL.RegisterString(cmd, &assetsURL, "")
+	projectDirFlag.RegisterString(cmd, &projectDir, "")
+	screenDevFlag.RegisterStringSlice(cmd, &screenDirs, nil)
+	portFlag.RegisterString(cmd, &port, "8080")
 
 	return cmd
+}
+
+func runAculDev(ctx context.Context, cli *cli, projectDir, port string, screenDirs []string) error {
+	// Default to current directory
+	if projectDir == "" {
+		projectDir = "."
+	}
+
+	// Validate project structure
+	if err := validateAculProject(projectDir); err != nil {
+		return fmt.Errorf("invalid ACUL project: %w", err)
+	}
+
+	log.Printf("🚀 Starting ACUL development mode for project in %s", projectDir)
+
+	// Initial build
+	log.Println("🔨 Running initial build...")
+	if err := buildProject(projectDir); err != nil {
+		return fmt.Errorf("initial build failed: %w", err)
+	}
+
+	// Start asset watching and patching using existing logic
+	log.Println("👀 Starting asset watcher...")
+	log.Println("💡 Run 'npm run build' or 'npm run screen <name>' to generate new assets that will be automatically patched")
+
+	//ToDO: Add log that says: Host your own server to serve the built assets in the same port.(Ex: like using 'npx serve dist -l <port>')
+
+	assetsURL := fmt.Sprintf("http://localhost:%s", port)
+	distPath := filepath.Join(projectDir, "dist")
+
+	log.Printf("🌐 Assets URL: %s", assetsURL)
+	log.Printf("👀 Watching screens: %v", screenDirs)
+
+	// Reuse the existing watchAndPatch function
+	return watchAndPatch(ctx, cli, assetsURL, distPath, screenDirs)
+}
+
+func validateAculProject(projectDir string) error {
+	// Check for package.json
+	packagePath := filepath.Join(projectDir, "package.json")
+	if _, err := os.Stat(packagePath); os.IsNotExist(err) {
+		return fmt.Errorf("package.json not found. This doesn't appear to be a valid ACUL project")
+	}
+
+	// Check for src directory (typical for ACUL projects)
+	srcPath := filepath.Join(projectDir, "src")
+	if _, err := os.Stat(srcPath); os.IsNotExist(err) {
+		return fmt.Errorf("src directory not found. This doesn't appear to be a valid ACUL project structure")
+	}
+
+	return nil
+}
+
+func buildProject(projectDir string) error {
+	cmd := exec.Command("npm", "run", "build")
+	cmd.Dir = projectDir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("build failed: %w", err)
+	}
+
+	log.Println("✅ Build completed successfully")
+	return nil
 }
 
 func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, screenDirs []string) error {
@@ -90,13 +166,9 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 	} else {
 		for _, screen := range screenDirs {
 			path := filepath.Join(distAssetsPath, screen)
-			info, err := os.Stat(path)
+			_, err = os.Stat(path)
 			if err != nil {
 				log.Printf("Screen directory %q not found in dist/assets: %v", screen, err)
-				continue
-			}
-			if !info.IsDir() {
-				log.Printf("Screen path %q exists but is not a directory", path)
 				continue
 			}
 			screensToWatch = append(screensToWatch, screen)
@@ -120,7 +192,8 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 				return nil
 			}
 
-			if strings.HasSuffix(event.Name, "assets") && event.Op&(fsnotify.Create) != 0 {
+			// React to changes in dist/assets directory
+			if strings.HasSuffix(event.Name, "assets") && event.Op&fsnotify.Create != 0 {
 				now := time.Now()
 				if now.Sub(lastProcessTime) < debounceWindow {
 					log.Println("⏱️ Ignoring event due to debounce window")
@@ -129,58 +202,63 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 				lastProcessTime = now
 
 				time.Sleep(500 * time.Millisecond) // short delay to let writes settle
-				log.Println("📦 Change detected in assets folder. Rebuilding and patching...")
+				log.Println("📦 Change detected in assets folder. Rebuilding and patching assets...")
 
-				var wg sync.WaitGroup
-				errChan := make(chan error, len(screensToWatch))
-
-				for _, screen := range screensToWatch {
-					wg.Add(1)
-
-					go func(screen string) {
-						defer wg.Done()
-
-						headTags, err := buildHeadTagsFromDirs(filepath.Dir(distAssetsPath), assetsURL, screen)
-						if err != nil {
-							errChan <- fmt.Errorf("failed to build headTags for %s: %w", screen, err)
-							return
-						}
-
-						if reflect.DeepEqual(lastHeadTags[screen], headTags) {
-							log.Printf("🔁 Skipping patch for '%s' — headTags unchanged", screen)
-							return
-						}
-
-						log.Printf("📦 Detected changes for screen '%s'", screen)
-						lastHeadTags[screen] = headTags
-
-						var settings = &management.PromptRendering{
-							HeadTags: headTags,
-						}
-
-						if err = cli.api.Prompt.UpdateRendering(ctx, management.PromptType(ScreenPromptMap[screen]), management.ScreenName(screen), settings); err != nil {
-							errChan <- fmt.Errorf("failed to patch settings for %s: %w", screen, err)
-							return
-						}
-
-						log.Printf("✅ Successfully patched screen '%s'", screen)
-					}(screen)
-				}
-
-				wg.Wait()
-				close(errChan)
-
-				for err = range errChan {
-					log.Println(err)
-				}
+				// Patch the assets
+				patchAssets(ctx, cli, distPath, assetsURL, screensToWatch, lastHeadTags)
 			}
 
-		case err = <-watcher.Errors:
-			log.Println("Watcher error: ", err)
+		case err := <-watcher.Errors:
+			log.Printf("⚠️ Watcher error: %v", err)
 
 		case <-ctx.Done():
 			return ctx.Err()
 		}
+	}
+}
+
+func patchAssets(ctx context.Context, cli *cli, distPath, assetsURL string, screensToWatch []string, lastHeadTags map[string][]interface{}) {
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(screensToWatch))
+
+	for _, screen := range screensToWatch {
+		wg.Add(1)
+
+		go func(screen string) {
+			defer wg.Done()
+
+			headTags, err := buildHeadTagsFromDirs(distPath, assetsURL, screen)
+			if err != nil {
+				errChan <- fmt.Errorf("failed to build headTags for %s: %w", screen, err)
+				return
+			}
+
+			if reflect.DeepEqual(lastHeadTags[screen], headTags) {
+				log.Printf("🔁 Skipping patch for '%s' — headTags unchanged", screen)
+				return
+			}
+
+			log.Printf("📦 Detected changes for screen '%s'", screen)
+			lastHeadTags[screen] = headTags
+
+			settings := &management.PromptRendering{
+				HeadTags: headTags,
+			}
+
+			if err = cli.api.Prompt.UpdateRendering(ctx, management.PromptType(ScreenPromptMap[screen]), management.ScreenName(screen), settings); err != nil {
+				errChan <- fmt.Errorf("failed to patch settings for %s: %w", screen, err)
+				return
+			}
+
+			log.Printf("✅ Successfully patched screen '%s'", screen)
+		}(screen)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	for err := range errChan {
+		log.Println("Watcher error: ", err)
 	}
 }
 

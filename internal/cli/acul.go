@@ -12,6 +12,7 @@ func aculCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(aculConfigureCmd(cli))
 	cmd.AddCommand(aculInitCmd(cli))
 	cmd.AddCommand(aculScreenCmd(cli))
+	cmd.AddCommand(aculDevCmd(cli))
 
 	return cmd
 }
