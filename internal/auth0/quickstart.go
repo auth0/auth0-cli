@@ -9,7 +9,9 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 
+	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/go-auth0/management"
 
 	"github.com/auth0/auth0-cli/internal/utils"
@@ -62,6 +64,9 @@ func (q Quickstart) Download(ctx context.Context, downloadPath string, client *m
 	request.URL.RawQuery = params.Encode()
 	request.Header.Set("Content-Type", "application/json")
 
+	userAgent := "Auth0 CLI" // Set User-Agent header using the standard CLI format.
+	request.Header.Set("User-Agent", fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v")))
+
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
 		return err
@@ -69,6 +74,12 @@ func (q Quickstart) Download(ctx context.Context, downloadPath string, client *m
 
 	if response.StatusCode != http.StatusOK {
 		return fmt.Errorf("expected status %d, got %d", http.StatusOK, response.StatusCode)
+	}
+
+	// Check if we're getting a zip file or HTML response
+	contentType := response.Header.Get("Content-Type")
+	if contentType != "" && !strings.Contains(contentType, "application/zip") && !strings.Contains(contentType, "application/octet-stream") {
+		return fmt.Errorf("expected zip file but got content-type: %s. The quickstart endpoint may have returned an error page", contentType)
 	}
 
 	tmpFile, err := os.CreateTemp("", "auth0-quickstart*.zip")
