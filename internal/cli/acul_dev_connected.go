@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/auth0/go-auth0/management"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
@@ -43,11 +44,20 @@ var (
 		Help:       "Port for the local development server (default: 8080).",
 		IsRequired: false,
 	}
+
+	connectedFlag = Flag{
+		Name:       "Connected",
+		LongForm:   "connected",
+		ShortForm:  "c",
+		Help:       "Enable connected mode to update advance rendering settings of Auth0 tenant. Use only on stage/dev tenants.",
+		IsRequired: false,
+	}
 )
 
 func aculDevCmd(cli *cli) *cobra.Command {
 	var projectDir, port string
 	var screenDirs []string
+	var connected bool
 
 	cmd := &cobra.Command{
 		Use:   "dev",
@@ -59,56 +69,167 @@ func aculDevCmd(cli *cli) *cobra.Command {
 - Supports both single screen development and all screens
 
 The project directory must contain package.json with a build script.
-You need to run your own build process (e.g., npm run build, npm run screen <name>) 
-to generate new assets that will be automatically detected and patched.`,
+
+In normal mode, you need to run your own build process (e.g., npm run build, npm run screen <name>) 
+to generate new assets that will be automatically detected and patched.
+
+In connected mode (--connected), this command will:
+- Update the advance rendering settings of the chosen screens in your Auth0 tenant
+- Run initial build and ask you to host assets locally
+- Optionally run build:watch in the background for continuous asset updates
+- Watch and patch assets automatically when changes are detected
+
+⚠️  Connected mode should only be used on stage/dev tenants, not production!`,
 		Example: `  auth0 acul dev
   auth0 acul dev --dir ./my_acul_project
   auth0 acul dev --screen login-id --port 3000
-  auth0 acul dev -d ./project -s login-id -p 8080`,
+  auth0 acul dev -d ./project -s login-id -p 8080
+  auth0 acul dev --connected --screen login-id --port 8080`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runAculDev(cmd.Context(), cli, projectDir, port, screenDirs)
+			return runAculDev(cmd.Context(), cli, projectDir, port, screenDirs, connected)
 		},
 	}
 
-	projectDirFlag.RegisterString(cmd, &projectDir, "")
+	projectDirFlag.RegisterString(cmd, &projectDir, ".")
 	screenDevFlag.RegisterStringSlice(cmd, &screenDirs, nil)
 	portFlag.RegisterString(cmd, &port, "8080")
+	connectedFlag.RegisterBool(cmd, &connected, false)
 
 	return cmd
 }
 
-func runAculDev(ctx context.Context, cli *cli, projectDir, port string, screenDirs []string) error {
-	// Default to current directory
-	if projectDir == "" {
-		projectDir = "."
-	}
-
+func runAculDev(ctx context.Context, cli *cli, projectDir, port string, screenDirs []string, connected bool) error {
 	// Validate project structure
 	if err := validateAculProject(projectDir); err != nil {
 		return fmt.Errorf("invalid ACUL project: %w", err)
 	}
 
-	log.Printf("🚀 Starting ACUL development mode for project in %s", projectDir)
+	if connected {
+		return runConnectedMode(ctx, cli, projectDir, port, screenDirs)
+	}
 
-	// Initial build
-	log.Println("🔨 Running initial build...")
-	if err := buildProject(projectDir); err != nil {
+	return runNormalMode(projectDir, port, screenDirs)
+}
+
+func runNormalMode(projectDir, port string, screenDirs []string) error {
+	fmt.Printf("🚀  Starting ACUL development mode for project in %s\n", projectDir)
+	fmt.Printf("📋  Development server will typically be available at:  %s\n\n", fmt.Sprintf("http://localhost:%s", port))
+	fmt.Println("💡 Make changes to your code and view the live changes as we have HMR enabled!")
+
+	// Run npm run dev command
+	//cmd := exec.Command("npm", "run", "dev", "--", "--port", port)
+	//ToDo: change back to use cmd once run dev command gets supported
+	cmd := exec.Command("npm", "run", "screen", screenDirs[0])
+	cmd.Dir = projectDir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	// ToDo: update when changed to dev command
+	fmt.Printf("🔄 Executing: %s\n", ansi.Cyan("npm run screen "))
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to run 'npm run dev': %w", err)
+	}
+
+	return nil
+}
+
+func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, screenDirs []string) error {
+	// Show warning and ask for confirmation with highlighted text
+	cli.renderer.Warnf("")
+	cli.renderer.Warnf("⚠️  %s", ansi.Bold("🌟 CONNECTED MODE ENABLED 🌟"))
+	cli.renderer.Warnf("")
+	cli.renderer.Infof("📢 %s", ansi.Cyan("This connected mode updates the advanced rendering settings"))
+	cli.renderer.Infof("   %s", ansi.Cyan("of the chosen set of screens in your Auth0 tenant."))
+	cli.renderer.Warnf("")
+	cli.renderer.Errorf("🚨 %s", ansi.Bold("IMPORTANT: Use this ONLY on stage and dev tenants, NOT on production!"))
+	//ToDO: Highlight the reason: If used on prod tenants which leads to upgrade configs with the updated localHost served ASSETS URL and may lead the user to incur unexpected charges for the users on production tenants.
+
+	cli.renderer.Warnf("")
+
+	// // Give user time to read the warning
+	// cli.renderer.Infof("📖 Please take a moment to read the above warning carefully...")
+	// cli.renderer.Infof("   Press Enter to continue...")
+	// fmt.Scanln() // Wait for user to press Enter
+
+	// Ask for confirmation
+	if confirmed := prompt.Confirm("Do you want to proceed with connected mode?"); !confirmed {
+		cli.renderer.Warnf("❌ Connected mode cancelled.")
+		return nil
+	}
+
+	cli.renderer.Infof("")
+	cli.renderer.Infof("🚀 Starting ACUL connected development mode for project in %s", ansi.Green(projectDir))
+
+	// Step 1: Do initial build
+	cli.renderer.Infof("")
+	cli.renderer.Infof("🔨 %s", ansi.Bold("Step 1: Running initial build..."))
+	if err := buildProject(cli, projectDir); err != nil {
 		return fmt.Errorf("initial build failed: %w", err)
 	}
 
-	// Start asset watching and patching using existing logic
-	log.Println("👀 Starting asset watcher...")
-	log.Println("💡 Run 'npm run build' or 'npm run screen <name>' to generate new assets that will be automatically patched")
+	// Step 2: Ask user to host assets and get port confirmation
+	cli.renderer.Infof("")
+	cli.renderer.Infof("📡 %s", ansi.Bold("Step 2: Host your assets locally"))
+	cli.renderer.Infof("Please either run the following command in a separate terminal to serve your assets or host someway on your own")
+	cli.renderer.Infof("  %s", ansi.Cyan(fmt.Sprintf("npx serve dist -p %s --cors", port)))
+	cli.renderer.Infof("")
+	cli.renderer.Infof("This will serve your built assets at the specified port with CORS enabled.")
 
-	//ToDO: Add log that says: Host your own server to serve the built assets in the same port.(Ex: like using 'npx serve dist -l <port>')
+	assetsHosted := prompt.Confirm(fmt.Sprintf("Are you hosting the assets at http://localhost:%s?", port))
+	if !assetsHosted {
+		cli.renderer.Warnf("❌ Please host your assets first and run the command again.")
+		return nil
+	}
+
+	// Step 3: Ask about build:watch
+	cli.renderer.Infof("")
+	cli.renderer.Infof("🔧 %s", ansi.Bold("Step 3: Continuous build watching (optional)"))
+	cli.renderer.Infof("To ensure assets are updated with sample app code changes, you can:")
+	cli.renderer.Infof("1. Manually re-run %s when you make changes, OR", ansi.Cyan("'npm run build'"))
+	cli.renderer.Infof("2. Run %s in the background for continuous updates", ansi.Cyan("'npm run build:watch'"))
+	cli.renderer.Infof("")
+	cli.renderer.Infof("💡 Note: If you have auto-save enabled in your IDE, build:watch will rebuild")
+	cli.renderer.Infof("   assets frequently (potentially every 15 seconds with changes).")
+
+	runBuildWatch := prompt.Confirm("Would you like to run 'npm run build:watch' in the background?")
+
+	var buildWatchCmd *exec.Cmd
+	if runBuildWatch {
+		cli.renderer.Infof("🔄 Starting %s in the background...", ansi.Cyan("'npm run build:watch'"))
+		buildWatchCmd = exec.Command("npm", "run", "build:watch")
+		buildWatchCmd.Dir = projectDir
+		buildWatchCmd.Stdout = os.Stdout
+		buildWatchCmd.Stderr = os.Stderr
+
+		if err := buildWatchCmd.Start(); err != nil {
+			cli.renderer.Warnf("⚠️  Failed to start build:watch: %v", err)
+			cli.renderer.Infof("You can manually run %s when you make changes.", ansi.Cyan("'npm run build'"))
+		} else {
+			cli.renderer.Infof("✅ Build watch started successfully")
+			// Ensure the process is killed when the main process exits
+			defer func() {
+				if buildWatchCmd.Process != nil {
+					buildWatchCmd.Process.Kill()
+				}
+			}()
+		}
+	}
+
+	// Step 4: Start watching and patching
+	cli.renderer.Infof("")
+	cli.renderer.Infof("👀 %s", ansi.Bold("Step 4: Starting asset watcher and patching..."))
 
 	assetsURL := fmt.Sprintf("http://localhost:%s", port)
 	distPath := filepath.Join(projectDir, "dist")
 
-	log.Printf("🌐 Assets URL: %s", assetsURL)
-	log.Printf("👀 Watching screens: %v", screenDirs)
+	cli.renderer.Infof("🌐 Assets URL: %s", ansi.Green(assetsURL))
+	cli.renderer.Infof("👀 Watching screens: %v", screenDirs)
+	cli.renderer.Infof("💡 Assets will be automatically patched when changes are detected in the dist folder")
 
-	// Reuse the existing watchAndPatch function
+	//ToDO: Give the user a hint to trigger the `auth0 test login` command to see the changes in action in their tenant's application.
+
+	// Start watching and patching
 	return watchAndPatch(ctx, cli, assetsURL, distPath, screenDirs)
 }
 
@@ -119,16 +240,10 @@ func validateAculProject(projectDir string) error {
 		return fmt.Errorf("package.json not found. This doesn't appear to be a valid ACUL project")
 	}
 
-	// Check for src directory (typical for ACUL projects)
-	srcPath := filepath.Join(projectDir, "src")
-	if _, err := os.Stat(srcPath); os.IsNotExist(err) {
-		return fmt.Errorf("src directory not found. This doesn't appear to be a valid ACUL project structure")
-	}
-
 	return nil
 }
 
-func buildProject(projectDir string) error {
+func buildProject(cli *cli, projectDir string) error {
 	cmd := exec.Command("npm", "run", "build")
 	cmd.Dir = projectDir
 	cmd.Stdout = os.Stdout
@@ -138,7 +253,7 @@ func buildProject(projectDir string) error {
 		return fmt.Errorf("build failed: %w", err)
 	}
 
-	log.Println("✅ Build completed successfully")
+	cli.renderer.Infof("✅ Build completed successfully")
 	return nil
 }
 
@@ -168,7 +283,7 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 			path := filepath.Join(distAssetsPath, screen)
 			_, err = os.Stat(path)
 			if err != nil {
-				log.Printf("Screen directory %q not found in dist/assets: %v", screen, err)
+				cli.renderer.Warnf("Screen directory %q not found in dist/assets: %v", screen, err)
 				continue
 			}
 			screensToWatch = append(screensToWatch, screen)
@@ -176,9 +291,9 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 	}
 
 	if err := watcher.Add(distPath); err != nil {
-		log.Printf("Failed to watch %q: %v", distPath, err)
+		cli.renderer.Warnf("Failed to watch %q: %v", distPath, err)
 	} else {
-		log.Printf("👀 Watching: %d screen(s): %v", len(screensToWatch), screensToWatch)
+		cli.renderer.Infof("👀 Watching: %d screen(s): %v", len(screensToWatch), screensToWatch)
 	}
 
 	const debounceWindow = 5 * time.Second
@@ -196,20 +311,20 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 			if strings.HasSuffix(event.Name, "assets") && event.Op&fsnotify.Create != 0 {
 				now := time.Now()
 				if now.Sub(lastProcessTime) < debounceWindow {
-					log.Println("⏱️ Ignoring event due to debounce window")
+					cli.renderer.Infof("⏱️ Ignoring event due to debounce window")
 					continue
 				}
 				lastProcessTime = now
 
 				time.Sleep(500 * time.Millisecond) // short delay to let writes settle
-				log.Println("📦 Change detected in assets folder. Rebuilding and patching assets...")
+				cli.renderer.Infof("📦 Change detected in assets folder. Rebuilding and patching assets...")
 
 				// Patch the assets
 				patchAssets(ctx, cli, distPath, assetsURL, screensToWatch, lastHeadTags)
 			}
 
 		case err := <-watcher.Errors:
-			log.Printf("⚠️ Watcher error: %v", err)
+			cli.renderer.Warnf("⚠️ Watcher error: %v", err)
 
 		case <-ctx.Done():
 			return ctx.Err()
@@ -234,11 +349,11 @@ func patchAssets(ctx context.Context, cli *cli, distPath, assetsURL string, scre
 			}
 
 			if reflect.DeepEqual(lastHeadTags[screen], headTags) {
-				log.Printf("🔁 Skipping patch for '%s' — headTags unchanged", screen)
+				cli.renderer.Infof("🔁 Skipping patch for '%s' — headTags unchanged", screen)
 				return
 			}
 
-			log.Printf("📦 Detected changes for screen '%s'", screen)
+			cli.renderer.Infof("📦 Detected changes for screen '%s'", ansi.Cyan(screen))
 			lastHeadTags[screen] = headTags
 
 			settings := &management.PromptRendering{
@@ -250,7 +365,7 @@ func patchAssets(ctx context.Context, cli *cli, distPath, assetsURL string, scre
 				return
 			}
 
-			log.Printf("✅ Successfully patched screen '%s'", screen)
+			cli.renderer.Infof("✅ Successfully patched screen '%s'", ansi.Green(screen))
 		}(screen)
 	}
 
@@ -258,7 +373,7 @@ func patchAssets(ctx context.Context, cli *cli, distPath, assetsURL string, scre
 	close(errChan)
 
 	for err := range errChan {
-		log.Println("Watcher error: ", err)
+		cli.renderer.Errorf("⚠️ Watcher error: %v", err)
 	}
 }
 
