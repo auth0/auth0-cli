@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.22.0](https://github.com/auth0/auth0-cli/tree/v1.22.0) (October 21, 2025)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.21.0...v1.22.0)
+
+### Added
+- Add support for `auth0_branding_theme` in `auth0 tf generate` [#1366]
+- Add support for token vault in `auth0 apps create` and `auth0 apps show <client-id>` [#1352]
+- Add support for interactive support for comparing action versions in `auth0 actions diff <action-id>` [#1351]
+
+### Fixed
+- Fix missing email templates in terraform fetcher [#1362]
+- Fix prevent and recover from JWT token corruption in keyring storage [#1358]
+- Fix `auth apis create` subject type authorization validation [#1361]
+
+
 # [v.1.21.0](https://github.com/auth0/auth0-cli/tree/v1.21.0) (September 30, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.20.1...v1.21.0)
