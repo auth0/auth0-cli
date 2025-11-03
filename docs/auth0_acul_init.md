@@ -18,9 +18,9 @@ auth0 acul init [flags]
 
 ```
   auth0 acul init <app_name>
-  auth0 acul init my_acul_app
-  auth0 acul init my_acul_app --template react --screens login,signup
-  auth0 acul init my_acul_app -t react -s login,mfa,signup
+  auth0 acul init acul-sample-app
+  auth0 acul init acul-sample-app --template react --screens login,signup
+  auth0 acul init acul-sample-app -t react -s login,mfa,signup
 ```
 
 
