@@ -8,6 +8,8 @@ import (
 	"slices"
 	"time"
 
+	"github.com/lestrrat-go/jwx/v2/jwt"
+
 	"github.com/auth0/auth0-cli/internal/auth"
 	"github.com/auth0/auth0-cli/internal/keyring"
 )
@@ -17,6 +19,8 @@ const accessTokenExpThreshold = 5 * time.Minute
 var (
 	// ErrInvalidToken is thrown when the token is invalid.
 	ErrInvalidToken = errors.New("token is invalid")
+	// ErrMalformedToken indicates a corrupted JWT token was found in keyring.
+	ErrMalformedToken = errors.New("corrupted authentication token detected")
 )
 
 type ErrTokenMissingRequiredScopes struct {
@@ -115,11 +119,16 @@ func (t *Tenant) CheckAuthenticationStatus() error {
 	}
 
 	accessToken := t.GetAccessToken()
-	if accessToken != "" && !t.HasExpiredToken() {
-		return nil
+	if accessToken == "" || t.HasExpiredToken() {
+		return ErrInvalidToken
 	}
 
-	return ErrInvalidToken
+	// Validate that the access token is a well-formed JWT token.
+	if _, err := jwt.ParseInsecure([]byte(accessToken)); err != nil {
+		return ErrMalformedToken
+	}
+
+	return nil
 }
 
 // RegenerateAccessToken regenerates the access token for the tenant.
