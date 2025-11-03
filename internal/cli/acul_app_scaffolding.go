@@ -114,8 +114,7 @@ func getLatestReleaseTag() (string, error) {
 		return "", fmt.Errorf("no tags found in repository")
 	}
 
-	//return tags[0].Name, nil.
-
+	// TODO: return tags[0].Name, nil.
 	return "monorepo-sample", nil
 }
 
@@ -152,9 +151,9 @@ func aculInitCmd(cli *cli) *cobra.Command {
 This command creates a new project with your choice of framework and authentication screens (login, signup, mfa, etc.). 
 The generated project includes all necessary configuration and boilerplate code to get started with ACUL customizations.`,
 		Example: `  auth0 acul init <app_name>
-  auth0 acul init my_acul_app
-  auth0 acul init my_acul_app --template react --screens login,signup
-  auth0 acul init my_acul_app -t react -s login,mfa,signup`,
+  auth0 acul init acul-sample-app
+  auth0 acul init acul-sample-app --template react --screens login,signup
+  auth0 acul init acul-sample-app -t react -s login,mfa,signup`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runScaffold(cli, cmd, args, &inputs)
 		},
@@ -327,7 +326,7 @@ func selectScreens(cli *cli, screens []Screens, providedScreens []string) ([]str
 
 func getDestDir(args []string) string {
 	if len(args) < 1 {
-		return "my_acul_proj"
+		return "acul-sample-app"
 	}
 	return args[0]
 }
@@ -338,7 +337,7 @@ func downloadAndUnzipSampleRepo() (string, error) {
 		return "", fmt.Errorf("failed to get latest release tag: %w", err)
 	}
 
-	//repoURL := fmt.Sprintf("https://github.com/auth0-samples/auth0-acul-samples/archive/refs/tags/%s.zip", latestTag).
+	// TODO: repoURL := fmt.Sprintf("https://github.com/auth0-samples/auth0-acul-samples/archive/refs/tags/%s.zip", latestTag).
 	repoURL := "https://github.com/auth0-samples/auth0-acul-samples/archive/refs/heads/monorepo-sample.zip"
 	tempZipFile := downloadFile(repoURL)
 	defer os.Remove(tempZipFile) // Clean up the temp zip file.
