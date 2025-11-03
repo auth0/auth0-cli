@@ -11,8 +11,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/go-auth0/management"
+
+	"github.com/auth0/auth0-cli/internal/buildinfo"
 
 	"github.com/auth0/auth0-cli/internal/utils"
 )
@@ -76,7 +77,7 @@ func (q Quickstart) Download(ctx context.Context, downloadPath string, client *m
 		return fmt.Errorf("expected status %d, got %d", http.StatusOK, response.StatusCode)
 	}
 
-	// Check if we're getting a zip file or HTML response
+	// Check if we're getting a zip file or HTML response.
 	contentType := response.Header.Get("Content-Type")
 	if contentType != "" && !strings.Contains(contentType, "application/zip") && !strings.Contains(contentType, "application/octet-stream") {
 		return fmt.Errorf("expected zip file but got content-type: %s. The quickstart endpoint may have returned an error page", contentType)
