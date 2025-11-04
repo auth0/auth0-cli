@@ -183,7 +183,12 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
 		return err
 	}
 
-	selectedScreens, err := selectScreens(cli, manifest.Templates[chosenTemplate].Screens, inputs.Screens)
+	var availableScreenIDs []string
+	for _, s := range manifest.Templates[chosenTemplate].Screens {
+		availableScreenIDs = append(availableScreenIDs, s.ID)
+	}
+
+	selectedScreens, err := validateAndSelectScreens(cli, availableScreenIDs, inputs.Screens)
 	if err != nil {
 		return err
 	}
@@ -257,17 +262,8 @@ func selectTemplate(cmd *cobra.Command, manifest *Manifest, providedTemplate str
 	return nameToKey[chosenTemplateName], nil
 }
 
-func selectScreens(cli *cli, screens []Screens, providedScreens []string) ([]string, error) {
-	return validateAndSelectScreens(cli, screens, providedScreens)
-}
-
 // validateAndSelectScreens is a common function for screen validation and selection.
-func validateAndSelectScreens(cli *cli, screens []Screens, providedScreens []string) ([]string, error) {
-	var availableScreenIDs []string
-	for _, s := range screens {
-		availableScreenIDs = append(availableScreenIDs, s.ID)
-	}
-
+func validateAndSelectScreens(cli *cli, screenIDs []string, providedScreens []string) ([]string, error) {
 	if len(providedScreens) > 0 {
 		var validScreens []string
 		var invalidScreens []string
@@ -278,7 +274,7 @@ func validateAndSelectScreens(cli *cli, screens []Screens, providedScreens []str
 			}
 
 			found := false
-			for _, availableScreen := range availableScreenIDs {
+			for _, availableScreen := range screenIDs {
 				if providedScreen == availableScreen {
 					validScreens = append(validScreens, providedScreen)
 					found = true
@@ -295,7 +291,7 @@ func validateAndSelectScreens(cli *cli, screens []Screens, providedScreens []str
 				ansi.Bold(ansi.Yellow("⚠️")),
 				ansi.Bold(ansi.Red(strings.Join(invalidScreens, ", "))))
 			cli.renderer.Infof("Available screens: %s",
-				ansi.Bold(ansi.Cyan(strings.Join(availableScreenIDs, ", "))))
+				ansi.Bold(ansi.Cyan(strings.Join(screenIDs, ", "))))
 			cli.renderer.Infof("%s We're planning to support all screens in the future.",
 				ansi.Faint("Note:"))
 		}
@@ -313,7 +309,7 @@ func validateAndSelectScreens(cli *cli, screens []Screens, providedScreens []str
 
 	// If no screens provided or no valid screens, prompt for multi-select.
 	var selectedScreens []string
-	err := prompt.AskMultiSelect("Select screens to include:", &selectedScreens, availableScreenIDs...)
+	err := prompt.AskMultiSelect("Select screens to include:", &selectedScreens, screenIDs...)
 
 	if len(selectedScreens) == 0 {
 		return nil, fmt.Errorf("at least one screen must be selected")

@@ -11,11 +11,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/prompt"
 	"github.com/auth0/go-auth0/management"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
 var (
@@ -38,7 +40,7 @@ var (
 		Name:       "Port",
 		LongForm:   "port",
 		ShortForm:  "p",
-		Help:       "Port for the local development server. Used in dev mode only (default: 8080).",
+		Help:       "Port for the local development server.",
 		IsRequired: false,
 	}
 	connectedFlag = Flag{
@@ -89,11 +91,27 @@ CONNECTED MODE (--connected):
   auth0 acul dev --connected --screen login-id,signup
   auth0 acul dev -c -s login-id -s signup`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runAculDev(cmd.Context(), cli, projectDir, port, screenDirs, connected)
+			pwd, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("failed to get current directory: %v", err)
+			}
+
+			if projectDir == "" {
+				err = projectDirFlag.Ask(cmd, &projectDir, &pwd)
+				if err != nil {
+					return err
+				}
+			}
+
+			if err := validateAculProject(projectDir); err != nil {
+				return fmt.Errorf("invalid ACUL project: %w", err)
+			}
+
+			return runAculDev(cmd, cli, projectDir, port, screenDirs, connected)
 		},
 	}
 
-	projectDirFlag.RegisterString(cmd, &projectDir, ".")
+	projectDirFlag.RegisterString(cmd, &projectDir, "")
 	screenDevFlag.RegisterStringSlice(cmd, &screenDirs, nil)
 	portFlag.RegisterString(cmd, &port, "")
 	connectedFlag.RegisterBool(cmd, &connected, false)
@@ -101,39 +119,27 @@ CONNECTED MODE (--connected):
 	return cmd
 }
 
-func runAculDev(ctx context.Context, cli *cli, projectDir, port string, screenDirs []string, connected bool) error {
-	// TODO: If projDir is empty ensure to speak about defaulting to the current folder which is `.` if they don't want to use the curr Director with the use of dir flag
-
-	if err := validateAculProject(projectDir); err != nil {
-		return fmt.Errorf("invalid ACUL project: %w", err)
-	}
-
+func runAculDev(cmd *cobra.Command, cli *cli, projectDir, port string, screenDirs []string, connected bool) error {
 	if connected {
-		if len(screenDirs) == 0 {
-			// ToDO: Prompt to chose from the screens existing in projDir/src/screens by saying the available screens in the proj folder with the use of screens FLag
-		}
-
-		return runConnectedMode(ctx, cli, projectDir, port, screenDirs)
-	} else {
-		// Normal dev mode validation
-		if len(screenDirs) == 0 {
-			return fmt.Errorf("dev mode requires a screen to be specified with --screen flag")
-		}
-		if port == "" {
-			return fmt.Errorf("dev mode requires a port to be specified with --port flag")
-		}
-		return runNormalMode(cli, projectDir, port, screenDirs)
+		return runConnectedMode(cmd.Context(), cli, projectDir, port, screenDirs)
 	}
+
+	if port == "" {
+		err := portFlag.Ask(cmd, &projectDir, auth0.String("8080"))
+		if err != nil {
+			return err
+		}
+	}
+	return runNormalMode(cli, projectDir, screenDirs)
 }
 
-func runNormalMode(cli *cli, projectDir, port string, screenDirs []string) error {
+// ToDo : use the port logic;
+func runNormalMode(cli *cli, projectDir string, screenDirs []string) error {
 	fmt.Println(ansi.Bold("🚀 Starting ") + ansi.Cyan("ACUL Dev Mode"))
 
 	fmt.Printf("📂 Project: %s\n", ansi.Yellow(projectDir))
 
-	// Temporarily fixed port for dev mode
-	port = "3000" //ToDo : fix the port logic;
-	fmt.Printf("🖥️  Server: %s\n", ansi.Green(fmt.Sprintf("http://localhost:%s", port)))
+	fmt.Printf("🖥️  Server: %s\n", ansi.Green(fmt.Sprintf("http://localhost:%s", "3000")))
 	fmt.Println("💡 " + ansi.Italic("Edit your code and see live changes instantly (HMR enabled)"))
 
 	screen := screenDirs[0]
@@ -347,19 +353,35 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 	defer watcher.Close()
 
 	distAssetsPath := filepath.Join(distPath, "assets")
-	var screensToWatch []string
+	var (
+		screensToWatch []string
+		screensInProj  []string
+	)
+
+	dirs, err := os.ReadDir(distAssetsPath)
+	if err != nil {
+		return fmt.Errorf("failed to read assets dir: %w", err)
+	}
+
+	for _, d := range dirs {
+		if d.IsDir() && d.Name() != "shared" {
+			screensInProj = append(screensInProj, d.Name())
+		}
+	}
+
+	if len(screensInProj) == 0 {
+		return fmt.Errorf("no valid screen directories found in dist/assets for the specified screens: %v", screenDirs)
+	}
+
+	if len(screenDirs) == 0 {
+		screensToWatch, err = validateAndSelectScreens(cli, screensInProj, screenDirs)
+		if err != nil {
+			return err
+		}
+	}
 
 	if len(screenDirs) == 1 && screenDirs[0] == "all" {
-		dirs, err := os.ReadDir(distAssetsPath)
-		if err != nil {
-			return fmt.Errorf("failed to read assets dir: %w", err)
-		}
-
-		for _, d := range dirs {
-			if d.IsDir() && d.Name() != "shared" {
-				screensToWatch = append(screensToWatch, d.Name())
-			}
-		}
+		screensToWatch = screensInProj
 	} else {
 		for _, screen := range screenDirs {
 			path := filepath.Join(distAssetsPath, screen)

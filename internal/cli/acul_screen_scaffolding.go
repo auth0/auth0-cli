@@ -123,7 +123,12 @@ func scaffoldAddScreen(cli *cli, args []string, destDir string) error {
 }
 
 func selectAndFilterScreens(cli *cli, args []string, manifest *Manifest, chosenTemplate string, existingScreens []string) ([]string, error) {
-	selectedScreens, err := validateAndSelectScreens(cli, manifest.Templates[chosenTemplate].Screens, args)
+	var availableScreenIDs []string
+	for _, s := range manifest.Templates[chosenTemplate].Screens {
+		availableScreenIDs = append(availableScreenIDs, s.ID)
+	}
+
+	selectedScreens, err := validateAndSelectScreens(cli, availableScreenIDs, args)
 	if err != nil {
 		return nil, err
 	}
@@ -427,8 +432,22 @@ func loadAculConfig(configPath string) (*AculConfig, error) {
 	return &config, nil
 }
 
+func addUniqueScreens(aculConfig *AculConfig, selectedScreens []string) {
+	existingSet := make(map[string]bool)
+	for _, screen := range aculConfig.Screens {
+		existingSet[screen] = true
+	}
+
+	for _, screen := range selectedScreens {
+		if !existingSet[screen] {
+			aculConfig.Screens = append(aculConfig.Screens, screen)
+			existingSet[screen] = true
+		}
+	}
+}
+
 func updateAculConfigFile(destDir string, aculConfig *AculConfig, selectedScreens []string) error {
-	aculConfig.Screens = append(aculConfig.Screens, selectedScreens...)
+	addUniqueScreens(aculConfig, selectedScreens)
 	aculConfig.ModifiedAt = time.Now().UTC().Format(time.RFC3339)
 	configBytes, err := json.MarshalIndent(aculConfig, "", "  ")
 	if err != nil {

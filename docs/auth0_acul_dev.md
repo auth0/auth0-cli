@@ -12,8 +12,20 @@ Start development mode for an ACUL project. This command:
 - Supports both single screen development and all screens
 
 The project directory must contain package.json with a build script.
-You need to run your own build process (e.g., npm run build, npm run screen <name>) 
-to generate new assets that will be automatically detected and patched.
+
+DEV MODE (default):
+- Requires: --screen flag to specify which screens to develop
+- Requires: --port flag for the local development server
+- Runs your build process (e.g., npm run screen <name>) for HMR development
+
+CONNECTED MODE (--connected):
+- Requires: --screen flag to specify screens to patch in Auth0 tenant  
+- Updates advance rendering settings of the chosen screens in your Auth0 tenant
+- Runs initial build and expects you to host assets locally
+- Optionally runs build:watch in the background for continuous asset updates
+- Watches and patches assets automatically when changes are detected
+
+⚠️  Connected mode should only be used on stage/dev tenants, not production!
 
 ## Usage
 ```
@@ -23,19 +35,25 @@ auth0 acul dev [flags]
 ## Examples
 
 ```
-  auth0 acul dev
-  auth0 acul dev --dir ./my_acul_project
-  auth0 acul dev --screen login-id --port 3000
-  auth0 acul dev -d ./project -s login-id -p 8080
+  # Dev mode
+  auth0 acul dev --port 3000
+  auth0 acul dev --port 8080
+  auth0 acul dev -p 8080 --dir ./my_project
+  
+  # Connected mode (requires --screen)  
+  auth0 acul dev --connected --screen login-id
+  auth0 acul dev --connected --screen login-id,signup
+  auth0 acul dev -c -s login-id -s signup
 ```
 
 
 ## Flags
 
 ```
-  -d, --dir string       Path to the ACUL project directory (must contain package.json).
-  -p, --port string      Port for the local development server (default: 8080). (default "8080")
-  -s, --screen strings   Specific screen to develop and watch. If not provided, will watch all screens in the dist/assets folder.
+  -c, --connected        Enable connected mode to update advance rendering settings of Auth0 tenant. Use only on stage/dev tenants.
+  -d, --dir string       Path to the ACUL project directory (must contain package.json). (default ".")
+  -p, --port string      Port for the local development server.
+  -s, --screen strings   Specific screens to develop and watch. Required for both dev and connected modes. Can specify multiple screens.
 ```
 
 
