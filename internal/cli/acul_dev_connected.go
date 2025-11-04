@@ -32,7 +32,7 @@ var (
 		Name:         "Screens",
 		LongForm:     "screen",
 		ShortForm:    "s",
-		Help:         "Specific screens to develop and watch. Required for both dev and connected modes. Can specify multiple screens.",
+		Help:         "Specific screens to develop and watch.",
 		IsRequired:   false,
 		AlwaysPrompt: false,
 	}
@@ -69,7 +69,6 @@ func aculDevCmd(cli *cli) *cobra.Command {
 The project directory must contain package.json with a build script.
 
 DEV MODE (default):
-- Requires: --screen flag to specify which screens to develop
 - Requires: --port flag for the local development server
 - Runs your build process (e.g., npm run screen <name>) for HMR development
 
@@ -83,13 +82,15 @@ CONNECTED MODE (--connected):
 ⚠️  Connected mode should only be used on stage/dev tenants, not production!`,
 		Example: `  # Dev mode
   auth0 acul dev --port 3000
-  auth0 acul dev --port 8080
   auth0 acul dev -p 8080 --dir ./my_project
   
-  # Connected mode (requires --screen)  
+  # Connected mode
+  auth0 acul dev --connected
+  auth0 acul dev --connected --debug --dir ./my_project
+  auth0 acul dev --connected --screen all
+  auth0 acul dev -c --dir ./my_project
   auth0 acul dev --connected --screen login-id
-  auth0 acul dev --connected --screen login-id,signup
-  auth0 acul dev -c -s login-id -s signup`,
+  auth0 acul dev -c -s login-id,signup`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			pwd, err := os.Getwd()
 			if err != nil {
@@ -133,7 +134,7 @@ func runAculDev(cmd *cobra.Command, cli *cli, projectDir, port string, screenDir
 	return runNormalMode(cli, projectDir, screenDirs)
 }
 
-// ToDo : use the port logic;
+// ToDo : use the port logic.
 func runNormalMode(cli *cli, projectDir string, screenDirs []string) error {
 	fmt.Println(ansi.Bold("🚀 Starting ") + ansi.Cyan("ACUL Dev Mode"))
 
@@ -144,12 +145,11 @@ func runNormalMode(cli *cli, projectDir string, screenDirs []string) error {
 
 	screen := screenDirs[0]
 
-	//ToDo: change back to use cmd once run dev command gets supported
-	// Run npm run dev command
+	// ToDo: change back to use cmd once run dev command gets supported. Run npm run dev command.
 	cmd := exec.Command("npm", "run", "screen", screen)
 	cmd.Dir = projectDir
 
-	// Show output only in debug mode
+	// Show output only in debug mode.
 	if cli.debug {
 		fmt.Println("\n🔄 Running:", ansi.Cyan(fmt.Sprintf("npm run screen %s", screen)))
 		cmd.Stdout = os.Stdout
@@ -163,11 +163,11 @@ func runNormalMode(cli *cli, projectDir string, screenDirs []string) error {
 	return nil
 }
 
-func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, screenDirs []string) error {
+func showConnectedModeInformation() bool {
 	fmt.Println("")
 	fmt.Println("📢 " + ansi.Bold(ansi.Cyan("Connected Mode Information")))
 	fmt.Println("")
-	fmt.Println("�  " + ansi.Cyan("This mode updates advanced rendering settings for selected screens in your Auth0 tenant."))
+	fmt.Println("ℹ️  " + ansi.Cyan("This mode updates advanced rendering settings for selected screens in your Auth0 tenant."))
 	fmt.Println("🚨 " + ansi.Bold(ansi.Red("IMPORTANT: Never use on production tenants!")))
 	fmt.Println("    " + ansi.Yellow("Production may break sessions or incur unexpected charges with local assets."))
 	fmt.Println("    " + ansi.Yellow("Use ONLY for dev/stage tenants."))
@@ -186,16 +186,25 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 	fmt.Println("    " + ansi.Cyan("• Watches for changes and automatically re-patches when assets are rebuilt"))
 	fmt.Println("")
 
-	if confirmed := prompt.Confirm("Proceed with connected mode?"); !confirmed {
+	return prompt.Confirm("Proceed with connected mode?")
+}
+
+func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, screenDirs []string) error {
+	if confirmed := showConnectedModeInformation(); !confirmed {
 		fmt.Println(ansi.Red("❌ Connected mode cancelled."))
 		return nil
 	}
 
-	// Show confirmation banner after user agrees
 	fmt.Println("")
 	fmt.Println("⚠️  " + ansi.Bold(ansi.Yellow("🌟 CONNECTED MODE ENABLED 🌟")))
 	fmt.Println("")
 	fmt.Println("🚀 " + ansi.Green(fmt.Sprintf("ACUL connected dev mode started for %s", projectDir)))
+
+	// Determine screens to watch early after build.
+	screensToWatch, err := getScreensToWatch(cli, projectDir, screenDirs)
+	if err != nil {
+		return fmt.Errorf("failed to determine screens to watch: %w", err)
+	}
 
 	fmt.Println("")
 	fmt.Println("🔨 " + ansi.Bold(ansi.Blue("Step 1: Running initial build...")))
@@ -262,7 +271,7 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 
 	assetsURL := fmt.Sprintf("http://localhost:%s", port)
 
-	// Only ask confirmation if not started in background
+	// Only ask confirmation if not started in background.
 	if !serveStarted {
 		assetsHosted := prompt.Confirm(fmt.Sprintf("Are your assets hosted and accessible at %s?", assetsURL))
 		if !assetsHosted {
@@ -311,12 +320,12 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 	distPath := filepath.Join(projectDir, "dist")
 
 	fmt.Println("🌐 Assets URL: " + ansi.Green(assetsURL))
-	fmt.Println("👀 Watching screens: " + ansi.Cyan(strings.Join(screenDirs, ", ")))
+	fmt.Println("👀 Watching screens: " + ansi.Cyan(strings.Join(screensToWatch, ", ")))
 	fmt.Println("💡 " + ansi.Green("Assets will be patched automatically when changes are detected in the dist folder"))
 	fmt.Println("")
 	fmt.Println("🧪 " + ansi.Bold(ansi.Magenta("Tip: Run 'auth0 test login' to see your changes in action!")))
 
-	return watchAndPatch(ctx, cli, assetsURL, distPath, screenDirs)
+	return watchAndPatch(ctx, cli, assetsURL, distPath, screensToWatch)
 }
 
 func validateAculProject(projectDir string) error {
@@ -327,11 +336,59 @@ func validateAculProject(projectDir string) error {
 	return nil
 }
 
+// getScreensToWatch determines which screens to watch based on the provided screenDirs and available screens in the project.
+func getScreensToWatch(cli *cli, projectDir string, screenDirs []string) ([]string, error) {
+	distAssetsPath := filepath.Join(projectDir, "dist", "assets")
+
+	var (
+		screensToWatch []string
+		screensInProj  []string
+	)
+
+	dirs, err := os.ReadDir(distAssetsPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read assets dir: %w", err)
+	}
+
+	for _, d := range dirs {
+		if d.IsDir() && d.Name() != "shared" {
+			screensInProj = append(screensInProj, d.Name())
+		}
+	}
+
+	if len(screensInProj) == 0 {
+		return nil, fmt.Errorf("no valid screen directories found in dist/assets for the specified screens: %v", screenDirs)
+	}
+
+	switch {
+	case len(screenDirs) == 0:
+		screensToWatch, err = validateAndSelectScreens(cli, screensInProj, screenDirs)
+		if err != nil {
+			return nil, err
+		}
+
+	case len(screenDirs) == 1 && screenDirs[0] == "all":
+		screensToWatch = screensInProj
+
+	default:
+		for _, screen := range screenDirs {
+			path := filepath.Join(distAssetsPath, screen)
+			if _, err := os.Stat(path); err != nil {
+				fmt.Println("⚠️  " + ansi.Yellow(fmt.Sprintf("Screen directory '%s' not found in dist/assets: %v", screen, err)))
+				continue
+			}
+			screensToWatch = append(screensToWatch, screen)
+		}
+	}
+
+	return screensToWatch, nil
+}
+
 func buildProject(cli *cli, projectDir string) error {
 	cmd := exec.Command("npm", "run", "build")
 	cmd.Dir = projectDir
 
-	// Only show command output if debug mode is enabled
+	// Only show command output if debug mode is enabled.
 	if cli.debug {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -345,54 +402,12 @@ func buildProject(cli *cli, projectDir string) error {
 	return nil
 }
 
-func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, screenDirs []string) error {
+func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, screensToWatch []string) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return err
 	}
 	defer watcher.Close()
-
-	distAssetsPath := filepath.Join(distPath, "assets")
-	var (
-		screensToWatch []string
-		screensInProj  []string
-	)
-
-	dirs, err := os.ReadDir(distAssetsPath)
-	if err != nil {
-		return fmt.Errorf("failed to read assets dir: %w", err)
-	}
-
-	for _, d := range dirs {
-		if d.IsDir() && d.Name() != "shared" {
-			screensInProj = append(screensInProj, d.Name())
-		}
-	}
-
-	if len(screensInProj) == 0 {
-		return fmt.Errorf("no valid screen directories found in dist/assets for the specified screens: %v", screenDirs)
-	}
-
-	if len(screenDirs) == 0 {
-		screensToWatch, err = validateAndSelectScreens(cli, screensInProj, screenDirs)
-		if err != nil {
-			return err
-		}
-	}
-
-	if len(screenDirs) == 1 && screenDirs[0] == "all" {
-		screensToWatch = screensInProj
-	} else {
-		for _, screen := range screenDirs {
-			path := filepath.Join(distAssetsPath, screen)
-			_, err = os.Stat(path)
-			if err != nil {
-				fmt.Println("⚠️  " + ansi.Yellow(fmt.Sprintf("Screen directory '%s' not found in dist/assets: %v", screen, err)))
-				continue
-			}
-			screensToWatch = append(screensToWatch, screen)
-		}
-	}
 
 	if err := watcher.Add(distPath); err != nil {
 		fmt.Println("⚠️  " + ansi.Yellow("Failed to watch ") + ansi.Bold(distPath) + ": " + err.Error())
@@ -411,11 +426,11 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 				return nil
 			}
 
-			// React to changes in dist/assets directory
+			// React to changes in dist/assets directory.
 			if strings.HasSuffix(event.Name, "assets") && event.Op&fsnotify.Create != 0 {
 				now := time.Now()
 				if now.Sub(lastProcessTime) < debounceWindow {
-					// Only show debounce message in debug mode
+					// Only show debounce message in debug mode.
 					if cli.debug {
 						cli.renderer.Infof("⏱️ %s", ansi.Yellow("Ignoring event due to debounce window"))
 					}
@@ -423,7 +438,7 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 				}
 				lastProcessTime = now
 
-				time.Sleep(500 * time.Millisecond) // let writes settle
+				time.Sleep(500 * time.Millisecond) // Let writes settle.
 				fmt.Println("📦 " + ansi.Cyan("Change detected in assets. Rebuilding and patching..."))
 
 				patchAssets(ctx, cli, distPath, assetsURL, screensToWatch, lastHeadTags)
@@ -458,7 +473,9 @@ func patchAssets(ctx context.Context, cli *cli, distPath, assetsURL string, scre
 				return
 			}
 
-			fmt.Println("📦 " + ansi.Cyan(fmt.Sprintf("Detected changes for '%s'", screen)))
+			if cli.debug {
+				fmt.Println("📦 " + ansi.Cyan(fmt.Sprintf("Detected changes for '%s'", screen)))
+			}
 			lastHeadTags[screen] = headTags
 
 			settings := &management.PromptRendering{

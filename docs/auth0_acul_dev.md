@@ -14,7 +14,6 @@ Start development mode for an ACUL project. This command:
 The project directory must contain package.json with a build script.
 
 DEV MODE (default):
-- Requires: --screen flag to specify which screens to develop
 - Requires: --port flag for the local development server
 - Runs your build process (e.g., npm run screen <name>) for HMR development
 
@@ -37,13 +36,15 @@ auth0 acul dev [flags]
 ```
   # Dev mode
   auth0 acul dev --port 3000
-  auth0 acul dev --port 8080
   auth0 acul dev -p 8080 --dir ./my_project
   
-  # Connected mode (requires --screen)  
+  # Connected mode
+  auth0 acul dev --connected
+  auth0 acul dev --connected --debug --dir ./my_project
+  auth0 acul dev --connected --screen all
+  auth0 acul dev -c --dir ./my_project
   auth0 acul dev --connected --screen login-id
-  auth0 acul dev --connected --screen login-id,signup
-  auth0 acul dev -c -s login-id -s signup
+  auth0 acul dev -c -s login-id,signup
 ```
 
 
@@ -51,9 +52,9 @@ auth0 acul dev [flags]
 
 ```
   -c, --connected        Enable connected mode to update advance rendering settings of Auth0 tenant. Use only on stage/dev tenants.
-  -d, --dir string       Path to the ACUL project directory (must contain package.json). (default ".")
+  -d, --dir string       Path to the ACUL project directory (must contain package.json).
   -p, --port string      Port for the local development server.
-  -s, --screen strings   Specific screens to develop and watch. Required for both dev and connected modes. Can specify multiple screens.
+  -s, --screen strings   Specific screens to develop and watch.
 ```
 
 
