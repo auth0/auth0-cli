@@ -51,13 +51,8 @@ type Metadata struct {
 }
 
 // loadManifest loads manifest.json once.
-func loadManifest() (*Manifest, error) {
-	latestTag, err := getLatestReleaseTag()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get latest release tag: %w", err)
-	}
-
-	url := fmt.Sprintf("https://raw.githubusercontent.com/auth0-samples/auth0-acul-samples/%s/manifest.json", latestTag)
+func loadManifest(tag string) (*Manifest, error) {
+	url := fmt.Sprintf("https://raw.githubusercontent.com/auth0-samples/auth0-acul-samples/%s/manifest.json", tag)
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -178,7 +173,7 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
 		return fmt.Errorf("failed to get latest release tag: %w", err)
 	}
 
-	manifest, err := loadManifest()
+	manifest, err := loadManifest(latestTag)
 	if err != nil {
 		return err
 	}
@@ -470,7 +465,8 @@ func writeAculConfig(destDir, chosenTemplate string, selectedScreens []string, m
 	config := AculConfig{
 		ChosenTemplate:      chosenTemplate,
 		Screens:             selectedScreens,
-		InitTimestamp:       time.Now().Format(time.RFC3339),
+		CreatedAt:           time.Now().UTC().Format(time.RFC3339),
+		ModifiedAt:          time.Now().UTC().Format(time.RFC3339),
 		AculManifestVersion: manifestVersion,
 		AppVersion:          appVersion,
 	}
@@ -617,8 +613,9 @@ func showPostScaffoldingOutput(cli *cli, destDir, successMessage string) {
 type AculConfig struct {
 	ChosenTemplate      string   `json:"chosen_template"`
 	Screens             []string `json:"screens"`
-	InitTimestamp       string   `json:"init_timestamp"`
-	AppVersion          string   `json:"app_version,omitempty"`
+	CreatedAt           string   `json:"created_at"`
+	ModifiedAt          string   `json:"modified_at"`
+	AppVersion          string   `json:"app_version"`
 	AculManifestVersion string   `json:"acul_manifest_version"`
 }
 
