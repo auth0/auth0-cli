@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -54,12 +55,30 @@ func aculScreenAddCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func scaffoldAddScreen(cli *cli, args []string, destDir string) error {
-	manifest, err := loadManifest()
-	if err != nil {
-		return err
+// checkVersionCompatibility compares the user's ACUL config version with the latest available tag
+// and warns if the project version is missing or outdated.
+func checkVersionCompatibility(cli *cli, aculConfig *AculConfig, latestTag string) {
+	if aculConfig.AppVersion == "" {
+		cli.renderer.Warnf(
+			ansi.Yellow("⚠️  Missing app version in acul_config.json. Reinitialize your project with `auth0 acul init`."),
+		)
+		return
 	}
 
+	if aculConfig.AppVersion != latestTag {
+		compareLink := fmt.Sprintf(
+			"https://github.com/auth0-samples/auth0-acul-samples/compare/%s...%s",
+			aculConfig.AppVersion, latestTag,
+		)
+
+		cli.renderer.Warnf(
+			ansi.Yellow(fmt.Sprintf("⚠️  ACUL project version outdated (%s). Check updates: %s",
+				aculConfig.AppVersion, compareLink)),
+		)
+	}
+}
+
+func scaffoldAddScreen(cli *cli, args []string, destDir string) error {
 	aculConfig, err := loadAculConfig(filepath.Join(destDir, "acul_config.json"))
 
 	if err != nil {
@@ -70,6 +89,18 @@ func scaffoldAddScreen(cli *cli, args []string, destDir string) error {
 
 		return err
 	}
+
+	latestTag, err := getLatestReleaseTag()
+	if err != nil {
+		return fmt.Errorf("failed to get latest release tag: %w", err)
+	}
+
+	manifest, err := loadManifest(aculConfig.AppVersion)
+	if err != nil {
+		return err
+	}
+
+	checkVersionCompatibility(cli, aculConfig, latestTag)
 
 	selectedScreens, err := selectAndFilterScreens(cli, args, manifest, aculConfig.ChosenTemplate, aculConfig.Screens)
 	if err != nil {
@@ -398,6 +429,7 @@ func loadAculConfig(configPath string) (*AculConfig, error) {
 
 func updateAculConfigFile(destDir string, aculConfig *AculConfig, selectedScreens []string) error {
 	aculConfig.Screens = append(aculConfig.Screens, selectedScreens...)
+	aculConfig.ModifiedAt = time.Now().UTC().Format(time.RFC3339)
 	configBytes, err := json.MarshalIndent(aculConfig, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal updated acul_config.json: %w", err)

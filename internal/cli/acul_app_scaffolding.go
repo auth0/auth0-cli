@@ -51,8 +51,8 @@ type Metadata struct {
 }
 
 // loadManifest loads manifest.json once.
-func loadManifest() (*Manifest, error) {
-	url := "https://raw.githubusercontent.com/auth0-samples/auth0-acul-samples/monorepo-sample/manifest.json"
+func loadManifest(tag string) (*Manifest, error) {
+	url := fmt.Sprintf("https://raw.githubusercontent.com/auth0-samples/auth0-acul-samples/%s/manifest.json", tag)
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -76,6 +76,41 @@ func loadManifest() (*Manifest, error) {
 	}
 
 	return &manifest, nil
+}
+
+// getLatestReleaseTag fetches the latest tag from GitHub API.
+func getLatestReleaseTag() (string, error) {
+	url := "https://api.github.com/repos/auth0-samples/auth0-acul-samples/tags"
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch tags: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to fetch tags: received status code %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var tags []struct {
+		Name string `json:"name"`
+	}
+
+	if err := json.Unmarshal(body, &tags); err != nil {
+		return "", fmt.Errorf("failed to parse tags response: %w", err)
+	}
+
+	if len(tags) == 0 {
+		return "", fmt.Errorf("no tags found in repository")
+	}
+
+	// TODO: return tags[0].Name, nil.
+	return "monorepo-sample", nil
 }
 
 var (
@@ -111,9 +146,9 @@ func aculInitCmd(cli *cli) *cobra.Command {
 This command creates a new project with your choice of framework and authentication screens (login, signup, mfa, etc.). 
 The generated project includes all necessary configuration and boilerplate code to get started with ACUL customizations.`,
 		Example: `  auth0 acul init <app_name>
-  auth0 acul init my_acul_app
-  auth0 acul init my_acul_app --template react --screens login,signup
-  auth0 acul init my_acul_app -t react -s login,mfa,signup`,
+  auth0 acul init acul-sample-app
+  auth0 acul init acul-sample-app --template react --screens login,signup
+  auth0 acul init acul-sample-app -t react -s login,mfa,signup`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runScaffold(cli, cmd, args, &inputs)
 		},
@@ -133,7 +168,12 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
 		return err
 	}
 
-	manifest, err := loadManifest()
+	latestTag, err := getLatestReleaseTag()
+	if err != nil {
+		return fmt.Errorf("failed to get latest release tag: %w", err)
+	}
+
+	manifest, err := loadManifest(latestTag)
 	if err != nil {
 		return err
 	}
@@ -177,7 +217,7 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
 		return err
 	}
 
-	err = writeAculConfig(destDir, chosenTemplate, selectedScreens, manifest.Metadata.Version)
+	err = writeAculConfig(destDir, chosenTemplate, selectedScreens, manifest.Metadata.Version, latestTag)
 	if err != nil {
 		fmt.Printf("Failed to write config: %v\n", err)
 	}
@@ -284,12 +324,18 @@ func validateAndSelectScreens(cli *cli, screens []Screens, providedScreens []str
 
 func getDestDir(args []string) string {
 	if len(args) < 1 {
-		return "my_acul_proj"
+		return "acul-sample-app"
 	}
 	return args[0]
 }
 
 func downloadAndUnzipSampleRepo() (string, error) {
+	_, err := getLatestReleaseTag()
+	if err != nil {
+		return "", fmt.Errorf("failed to get latest release tag: %w", err)
+	}
+
+	// TODO: repoURL := fmt.Sprintf("https://github.com/auth0-samples/auth0-acul-samples/archive/refs/tags/%s.zip", latestTag).
 	repoURL := "https://github.com/auth0-samples/auth0-acul-samples/archive/refs/heads/monorepo-sample.zip"
 	tempZipFile := downloadFile(repoURL)
 	defer os.Remove(tempZipFile) // Clean up the temp zip file.
@@ -306,8 +352,29 @@ func downloadAndUnzipSampleRepo() (string, error) {
 	return tempUnzipDir, nil
 }
 
+// This supports any version tag (v1.0.0, v2.0.0, etc.) without hardcoding.
+func findExtractedRepoDir(tempUnzipDir string) (string, error) {
+	entries, err := os.ReadDir(tempUnzipDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to read temp directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() && strings.HasPrefix(entry.Name(), "auth0-acul-samples-") {
+			return entry.Name(), nil
+		}
+	}
+
+	return "", fmt.Errorf("could not find extracted auth0-acul-samples directory")
+}
+
 func copyTemplateBaseDirs(cli *cli, baseDirs []string, chosenTemplate, tempUnzipDir, destDir string) error {
-	sourcePathPrefix := filepath.Join("auth0-acul-samples-monorepo-sample", chosenTemplate)
+	extractedDir, err := findExtractedRepoDir(tempUnzipDir)
+	if err != nil {
+		return fmt.Errorf("failed to find extracted directory: %w", err)
+	}
+
+	sourcePathPrefix := filepath.Join(extractedDir, chosenTemplate)
 	for _, dirPath := range baseDirs {
 		srcPath := filepath.Join(tempUnzipDir, sourcePathPrefix, dirPath)
 		destPath := filepath.Join(destDir, dirPath)
@@ -327,7 +394,12 @@ func copyTemplateBaseDirs(cli *cli, baseDirs []string, chosenTemplate, tempUnzip
 }
 
 func copyProjectTemplateFiles(cli *cli, baseFiles []string, chosenTemplate, tempUnzipDir, destDir string) error {
-	sourcePathPrefix := filepath.Join("auth0-acul-samples-monorepo-sample", chosenTemplate)
+	extractedDir, err := findExtractedRepoDir(tempUnzipDir)
+	if err != nil {
+		return fmt.Errorf("failed to find extracted directory: %w", err)
+	}
+
+	sourcePathPrefix := filepath.Join(extractedDir, chosenTemplate)
 
 	for _, filePath := range baseFiles {
 		srcPath := filepath.Join(tempUnzipDir, sourcePathPrefix, filePath)
@@ -355,7 +427,12 @@ func copyProjectTemplateFiles(cli *cli, baseFiles []string, chosenTemplate, temp
 }
 
 func copyProjectScreens(cli *cli, screens []Screens, selectedScreens []string, chosenTemplate, tempUnzipDir, destDir string) error {
-	sourcePathPrefix := "auth0-acul-samples-monorepo-sample/" + chosenTemplate
+	extractedDir, err := findExtractedRepoDir(tempUnzipDir)
+	if err != nil {
+		return fmt.Errorf("failed to find extracted directory: %w", err)
+	}
+
+	sourcePathPrefix := extractedDir + "/" + chosenTemplate
 	screenInfo := createScreenMap(screens)
 	for _, s := range selectedScreens {
 		screen := screenInfo[s]
@@ -384,12 +461,14 @@ func copyProjectScreens(cli *cli, screens []Screens, selectedScreens []string, c
 	return nil
 }
 
-func writeAculConfig(destDir, chosenTemplate string, selectedScreens []string, manifestVersion string) error {
+func writeAculConfig(destDir, chosenTemplate string, selectedScreens []string, manifestVersion, appVersion string) error {
 	config := AculConfig{
 		ChosenTemplate:      chosenTemplate,
 		Screens:             selectedScreens,
-		InitTimestamp:       time.Now().Format(time.RFC3339),
+		CreatedAt:           time.Now().UTC().Format(time.RFC3339),
+		ModifiedAt:          time.Now().UTC().Format(time.RFC3339),
 		AculManifestVersion: manifestVersion,
+		AppVersion:          appVersion,
 	}
 
 	data, err := json.MarshalIndent(config, "", "  ")
@@ -534,7 +613,9 @@ func showPostScaffoldingOutput(cli *cli, destDir, successMessage string) {
 type AculConfig struct {
 	ChosenTemplate      string   `json:"chosen_template"`
 	Screens             []string `json:"screens"`
-	InitTimestamp       string   `json:"init_timestamp"`
+	CreatedAt           string   `json:"created_at"`
+	ModifiedAt          string   `json:"modified_at"`
+	AppVersion          string   `json:"app_version"`
 	AculManifestVersion string   `json:"acul_manifest_version"`
 }
 
