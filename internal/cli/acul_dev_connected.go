@@ -121,7 +121,12 @@ CONNECTED MODE (--connected):
 
 func runAculDev(cmd *cobra.Command, cli *cli, projectDir, port string, screenDirs []string, connected bool) error {
 	if connected {
-		return runConnectedMode(cmd.Context(), cli, projectDir, port, screenDirs)
+		screensToWatch, err := selectScreensSimple(cli, projectDir, screenDirs)
+		if err != nil {
+			return fmt.Errorf("failed to determine screens to watch: %w", err)
+		}
+
+		return runConnectedMode(cmd.Context(), cli, projectDir, port, screensToWatch)
 	}
 
 	if port == "" {
@@ -135,6 +140,7 @@ func runAculDev(cmd *cobra.Command, cli *cli, projectDir, port string, screenDir
 
 // ToDo : use the port logic.
 func runNormalMode(cli *cli, projectDir string, screenDirs []string) error {
+	var screen string
 	fmt.Println(ansi.Bold("🚀 Starting ") + ansi.Cyan("ACUL Dev Mode"))
 
 	fmt.Printf("📂 Project: %s\n", ansi.Yellow(projectDir))
@@ -142,9 +148,15 @@ func runNormalMode(cli *cli, projectDir string, screenDirs []string) error {
 	fmt.Printf("🖥️  Server: %s\n", ansi.Green(fmt.Sprintf("http://localhost:%s", "3000")))
 	fmt.Println("💡 " + ansi.Italic("Edit your code and see live changes instantly (HMR enabled)"))
 
-	screen := screenDirs[0]
+	if len(screenDirs) == 0 {
+		screen = "login-id"
+		// ToDo: change back to use cmd once run dev command gets supported. Run npm run dev command.
+		fmt.Println("Defaulting to running 'npm run screen login-id' for dev mode...")
+	} else {
+		screen = screenDirs[0]
+		fmt.Println("Running 'npm run screen " + screen + "' for dev mode...")
+	}
 
-	// ToDo: change back to use cmd once run dev command gets supported. Run npm run dev command.
 	cmd := exec.Command("npm", "run", "screen", screen)
 	cmd.Dir = projectDir
 
@@ -188,7 +200,7 @@ func showConnectedModeInformation() bool {
 	return prompt.Confirm("Proceed with connected mode?")
 }
 
-func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, screenDirs []string) error {
+func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, screensToWatch []string) error {
 	if confirmed := showConnectedModeInformation(); !confirmed {
 		fmt.Println(ansi.Red("❌ Connected mode cancelled."))
 		return nil
@@ -199,16 +211,16 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 	fmt.Println("")
 	fmt.Println("🚀 " + ansi.Green(fmt.Sprintf("ACUL connected dev mode started for %s", projectDir)))
 
-	// Determine screens to watch early after build.
-	screensToWatch, err := getScreensToWatch(cli, projectDir, screenDirs)
-	if err != nil {
-		return fmt.Errorf("failed to determine screens to watch: %w", err)
-	}
-
 	fmt.Println("")
 	fmt.Println("🔨 " + ansi.Bold(ansi.Blue("Step 1: Running initial build...")))
 	if err := buildProject(cli, projectDir); err != nil {
 		return fmt.Errorf("initial build failed: %w", err)
+	}
+
+	// Always validate screens after build to ensure they have actual built assets.
+	screensToWatch, err := validateScreensAfterBuild(projectDir, screensToWatch)
+	if err != nil {
+		return fmt.Errorf("screen validation failed after build: %w", err)
 	}
 
 	fmt.Println("")
@@ -255,6 +267,7 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 			serveStarted = true
 			fmt.Println("✅ " + ansi.Green("Local server started successfully at ") +
 				ansi.Cyan(fmt.Sprintf("http://localhost:%s", port)))
+			time.Sleep(2 * time.Second) // give server time to start.
 			defer func() {
 				if serveCmd.Process != nil {
 					serveCmd.Process.Kill()
@@ -335,54 +348,6 @@ func validateAculProject(projectDir string) error {
 	return nil
 }
 
-// getScreensToWatch determines which screens to watch based on the provided screenDirs and available screens in the project.
-func getScreensToWatch(cli *cli, projectDir string, screenDirs []string) ([]string, error) {
-	distAssetsPath := filepath.Join(projectDir, "dist", "assets")
-
-	var (
-		screensToWatch []string
-		screensInProj  []string
-	)
-
-	dirs, err := os.ReadDir(distAssetsPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read assets dir: %w", err)
-	}
-
-	for _, d := range dirs {
-		if d.IsDir() && d.Name() != "shared" {
-			screensInProj = append(screensInProj, d.Name())
-		}
-	}
-
-	if len(screensInProj) == 0 {
-		return nil, fmt.Errorf("no valid screen directories found in dist/assets for the specified screens: %v", screenDirs)
-	}
-
-	switch {
-	case len(screenDirs) == 0:
-		screensToWatch, err = validateAndSelectScreens(cli, screensInProj, screenDirs)
-		if err != nil {
-			return nil, err
-		}
-
-	case len(screenDirs) == 1 && screenDirs[0] == "all":
-		screensToWatch = screensInProj
-
-	default:
-		for _, screen := range screenDirs {
-			path := filepath.Join(distAssetsPath, screen)
-			if _, err := os.Stat(path); err != nil {
-				fmt.Println("⚠️  " + ansi.Yellow(fmt.Sprintf("Screen directory '%s' not found in dist/assets: %v", screen, err)))
-				continue
-			}
-			screensToWatch = append(screensToWatch, screen)
-		}
-	}
-
-	return screensToWatch, nil
-}
-
 func buildProject(cli *cli, projectDir string) error {
 	cmd := exec.Command("npm", "run", "build")
 	cmd.Dir = projectDir
@@ -401,10 +366,126 @@ func buildProject(cli *cli, projectDir string) error {
 	return nil
 }
 
+func selectScreensSimple(cli *cli, projectDir string, screenDirs []string) ([]string, error) {
+	// 1. Screens provided via --screen flag.
+	if len(screenDirs) > 0 {
+		if len(screenDirs) == 1 && screenDirs[0] == "all" {
+			cli.renderer.Infof(ansi.Cyan("📂  Selecting all screens from src/screens"))
+
+			return getScreensFromSrcFolder(filepath.Join(projectDir, "src", "screens"))
+		}
+
+		cli.renderer.Infof(ansi.Cyan(fmt.Sprintf("📂  Using specified screens: %s", strings.Join(screenDirs, ", "))))
+
+		return screenDirs, nil
+	}
+
+	// 2. No --screen flag: auto-detect from src/screens.
+	srcScreensPath := filepath.Join(projectDir, "src", "screens")
+
+	if availableScreens, err := getScreensFromSrcFolder(srcScreensPath); err == nil && len(availableScreens) > 0 {
+		cli.renderer.Infof(ansi.Cyan(fmt.Sprintf("📂  Detected screens in src/screens: %s", strings.Join(availableScreens, ", "))))
+
+		return validateAndSelectScreens(cli, availableScreens, nil)
+	}
+
+	return nil, fmt.Errorf(`no screens found in project.
+
+Please either:
+1. Specify screens using --screen flag: auth0 acul dev --connected --screen login-id,signup
+2. Create a new ACUL project: auth0 acul init
+3. Ensure your project has screens in src/screens/ folder`)
+}
+
+func validateScreensAfterBuild(projectDir string, selectedScreens []string) ([]string, error) {
+	distAssetsPath := filepath.Join(projectDir, "dist", "assets")
+
+	availableScreens, err := getScreensFromDistAssets(distAssetsPath)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to read available screens from dist/assets: %w", err)
+	}
+
+	if len(availableScreens) == 0 {
+		return nil, fmt.Errorf("no valid screens found in dist/assets after build")
+	}
+
+	availableScreensMap := make(map[string]bool)
+
+	for _, screen := range availableScreens {
+		availableScreensMap[screen] = true
+	}
+
+	var validScreens, missingScreens []string
+
+	for _, screen := range selectedScreens {
+		if availableScreensMap[screen] {
+			validScreens = append(validScreens, screen)
+		} else {
+			missingScreens = append(missingScreens, screen)
+		}
+	}
+
+	if len(missingScreens) > 0 {
+		return nil, fmt.Errorf("⚠️  Missing built assets for: %s", strings.Join(missingScreens, ", "))
+	}
+
+	if len(validScreens) == 0 {
+		return nil, fmt.Errorf(
+			"none of the selected screens were built. Available built screens: %s",
+			strings.Join(availableScreens, ", "),
+		)
+	}
+
+	return validScreens, nil
+}
+
+// getScreensFromDistAssets reads screen names from dist/assets folder.
+func getScreensFromDistAssets(distAssetsPath string) ([]string, error) {
+	if _, err := os.Stat(distAssetsPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("dist/assets not found")
+	}
+
+	dirs, err := os.ReadDir(distAssetsPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read dist/assets: %w", err)
+	}
+
+	var screens []string
+	for _, d := range dirs {
+		if d.IsDir() && d.Name() != "shared" {
+			screens = append(screens, d.Name())
+		}
+	}
+
+	return screens, nil
+}
+
+// getScreensFromSrcFolder reads screen names from src/screens folder.
+func getScreensFromSrcFolder(srcScreensPath string) ([]string, error) {
+	if _, err := os.Stat(srcScreensPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("src/screens not found")
+	}
+
+	entries, err := os.ReadDir(srcScreensPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read src/screens: %w", err)
+	}
+
+	var screens []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			screens = append(screens, entry.Name())
+		}
+	}
+
+	return screens, nil
+}
+
 func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, screensToWatch []string) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create watcher: %w", err)
 	}
 	defer watcher.Close()
 
@@ -415,7 +496,7 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 	}
 
 	const debounceWindow = 5 * time.Second
-	var lastProcessTime time.Time
+	var lastEventTime time.Time
 	lastHeadTags := make(map[string][]interface{})
 
 	for {
@@ -425,26 +506,29 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 				return nil
 			}
 
-			// React to changes in dist/assets directory.
-			if strings.HasSuffix(event.Name, "assets") && event.Op&fsnotify.Create != 0 {
-				now := time.Now()
-				if now.Sub(lastProcessTime) < debounceWindow {
-					// Only show debounce message in debug mode.
-					if cli.debug {
-						cli.renderer.Infof("⏱️ %s", ansi.Yellow("Ignoring event due to debounce window"))
-					}
-					continue
+			// Trigger only on changes inside dist/assets/
+			if !strings.Contains(event.Name, "assets") {
+				continue
+			}
+
+			now := time.Now()
+			if now.Sub(lastEventTime) < debounceWindow {
+				if cli.debug {
+					fmt.Println(ansi.Yellow("⏱️  Skipping duplicate event (debounce window)"))
 				}
-				lastProcessTime = now
+				continue
+			}
+			lastEventTime = now
 
-				time.Sleep(500 * time.Millisecond) // Let writes settle.
-				fmt.Println("📦 " + ansi.Cyan("Change detected in assets. Rebuilding and patching..."))
+			time.Sleep(500 * time.Millisecond) // let writes settle
+			fmt.Println(ansi.Cyan("📦  Change detected — rebuilding and patching assets..."))
 
-				patchAssets(ctx, cli, distPath, assetsURL, screensToWatch, lastHeadTags)
+			if err := patchAssets(ctx, cli, distPath, assetsURL, screensToWatch, lastHeadTags); err != nil {
+				cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf("⚠️  Patch failed: %v", err)))
 			}
 
 		case err := <-watcher.Errors:
-			fmt.Println("⚠️  " + ansi.Yellow("Watcher error: ") + ansi.Bold(err.Error()))
+			cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf("⚠️  Watcher error: %v", err)))
 
 		case <-ctx.Done():
 			return ctx.Err()
@@ -452,88 +536,92 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 	}
 }
 
-func patchAssets(ctx context.Context, cli *cli, distPath, assetsURL string, screensToWatch []string, lastHeadTags map[string][]interface{}) {
-	var promptRenderings []*management.PromptRendering
-	var updatedScreens []string
+func patchAssets(ctx context.Context, cli *cli, distPath, assetsURL string, screensToWatch []string, lastHeadTags map[string][]interface{}) error {
+	var (
+		renderings []*management.PromptRendering
+		updated    []string
+	)
 
 	for _, screen := range screensToWatch {
 		headTags, err := buildHeadTagsFromDirs(distPath, assetsURL, screen)
 		if err != nil {
-			fmt.Println("⚠️  " + ansi.Yellow("Failed to build headTags for ") + ansi.Bold(screen) + ": " + err.Error())
+			if cli.debug {
+				fmt.Println("⚠️  " + ansi.Yellow(fmt.Sprintf("Skipping '%s': %v", screen, err)))
+			}
 			continue
 		}
 
 		if reflect.DeepEqual(lastHeadTags[screen], headTags) {
-			fmt.Println("🔁 " + ansi.Cyan(fmt.Sprintf("Skipping patch for '%s' — headTags unchanged", screen)))
+			if cli.debug {
+				fmt.Println("🔁  " + ansi.Cyan(fmt.Sprintf("No changes detected for '%s'", screen)))
+			}
 			continue
-		}
-
-		if cli.debug {
-			fmt.Println("📦 " + ansi.Cyan(fmt.Sprintf("Detected changes for '%s'", screen)))
 		}
 		lastHeadTags[screen] = headTags
 
 		promptType := management.PromptType(ScreenPromptMap[screen])
-		screenName := management.ScreenName(screen)
+		screenType := management.ScreenName(screen)
 
-		settings := &management.PromptRendering{
+		renderings = append(renderings, &management.PromptRendering{
 			Prompt:        &promptType,
-			Screen:        &screenName,
+			Screen:        &screenType,
 			RenderingMode: &management.RenderingModeAdvanced,
 			HeadTags:      headTags,
-		}
-
-		promptRenderings = append(promptRenderings, settings)
-		updatedScreens = append(updatedScreens, screen)
+		})
+		updated = append(updated, screen)
 	}
 
-	// If no screens need updating, return early.
-	if len(promptRenderings) == 0 {
+	if len(renderings) == 0 {
 		if cli.debug {
-			fmt.Println("🔁 " + ansi.Cyan("No screens require updates"))
+			cli.renderer.Infof(ansi.Cyan("🔁  No screens to patch"))
 		}
-		return
+		return nil
 	}
 
-	bulkRequest := &management.PromptRenderingUpdateRequest{
-		PromptRenderings: promptRenderings,
+	req := &management.PromptRenderingUpdateRequest{PromptRenderings: renderings}
+	if err := cli.api.Prompt.BulkUpdateRendering(ctx, req); err != nil {
+		return fmt.Errorf("bulk patch error: %w", err)
 	}
 
-	if err := cli.api.Prompt.BulkUpdateRendering(ctx, bulkRequest); err != nil {
-		fmt.Println("⚠️  " + ansi.Yellow("Bulk patch error: ") + ansi.Bold(err.Error()))
-		return
+	if len(updated) == 1 {
+		fmt.Println(ansi.Green(fmt.Sprintf("✅  Patched screen: %s", updated[0])))
+	} else {
+		fmt.Println(ansi.Green(fmt.Sprintf("✅  Patched %d screens: %s", len(updated), strings.Join(updated, ", "))))
 	}
 
-	// Report success for all updated screens.
-	fmt.Println("✅ " + ansi.Green(fmt.Sprintf("Successfully patched screen '%s'", updatedScreens)))
+	return nil
 }
 
 func buildHeadTagsFromDirs(distPath, assetsURL, screen string) ([]interface{}, error) {
-	var tags []interface{}
-	screenPath := filepath.Join(distPath, "assets", screen)
-	sharedPath := filepath.Join(distPath, "assets", "shared")
-	mainPath := filepath.Join(distPath, "assets")
-	sources := []string{sharedPath, screenPath, mainPath}
+	searchDirs := []string{
+		filepath.Join(distPath, "assets", "shared"),
+		filepath.Join(distPath, "assets", screen),
+		filepath.Join(distPath, "assets"),
+	}
 
-	for _, dir := range sources {
+	var tags []interface{}
+	for _, dir := range searchDirs {
 		entries, err := os.ReadDir(dir)
 		if err != nil {
 			continue
 		}
-		for _, entry := range entries {
-			if entry.IsDir() {
+
+		for _, e := range entries {
+			if e.IsDir() {
 				continue
 			}
-			name := entry.Name()
+
+			ext := filepath.Ext(e.Name())
 			subDir := filepath.Base(dir)
 			if subDir == "assets" {
 				subDir = ""
 			}
-			src := fmt.Sprintf("%s/assets/%s%s", assetsURL, subDir, name)
+
+			src := fmt.Sprintf("%s/assets", assetsURL)
 			if subDir != "" {
-				src = fmt.Sprintf("%s/assets/%s/%s", assetsURL, subDir, name)
+				src = fmt.Sprintf("%s/%s", src, subDir)
 			}
-			ext := filepath.Ext(name)
+			src = fmt.Sprintf("%s/%s", src, e.Name())
 
 			switch ext {
 			case ".js":
@@ -555,6 +643,9 @@ func buildHeadTagsFromDirs(distPath, assetsURL, screen string) ([]interface{}, e
 				})
 			}
 		}
+	}
+	if len(tags) == 0 {
+		return nil, fmt.Errorf("no .js or .css assets found for '%s'", screen)
 	}
 	return tags, nil
 }
