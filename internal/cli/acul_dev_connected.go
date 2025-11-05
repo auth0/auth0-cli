@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/auth0/go-auth0/management"
@@ -454,50 +453,59 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 }
 
 func patchAssets(ctx context.Context, cli *cli, distPath, assetsURL string, screensToWatch []string, lastHeadTags map[string][]interface{}) {
-	var wg sync.WaitGroup
-	errChan := make(chan error, len(screensToWatch))
+	var promptRenderings []*management.PromptRendering
+	var updatedScreens []string
 
 	for _, screen := range screensToWatch {
-		wg.Add(1)
-		go func(screen string) {
-			defer wg.Done()
+		headTags, err := buildHeadTagsFromDirs(distPath, assetsURL, screen)
+		if err != nil {
+			fmt.Println("⚠️  " + ansi.Yellow("Failed to build headTags for ") + ansi.Bold(screen) + ": " + err.Error())
+			continue
+		}
 
-			headTags, err := buildHeadTagsFromDirs(distPath, assetsURL, screen)
-			if err != nil {
-				errChan <- fmt.Errorf("failed to build headTags for %s: %w", screen, err)
-				return
-			}
+		if reflect.DeepEqual(lastHeadTags[screen], headTags) {
+			fmt.Println("🔁 " + ansi.Cyan(fmt.Sprintf("Skipping patch for '%s' — headTags unchanged", screen)))
+			continue
+		}
 
-			if reflect.DeepEqual(lastHeadTags[screen], headTags) {
-				fmt.Println("🔁 " + ansi.Cyan(fmt.Sprintf("Skipping patch for '%s' — headTags unchanged", screen)))
-				return
-			}
+		if cli.debug {
+			fmt.Println("📦 " + ansi.Cyan(fmt.Sprintf("Detected changes for '%s'", screen)))
+		}
+		lastHeadTags[screen] = headTags
 
-			if cli.debug {
-				fmt.Println("📦 " + ansi.Cyan(fmt.Sprintf("Detected changes for '%s'", screen)))
-			}
-			lastHeadTags[screen] = headTags
+		promptType := management.PromptType(ScreenPromptMap[screen])
+		screenName := management.ScreenName(screen)
 
-			settings := &management.PromptRendering{
-				RenderingMode: &management.RenderingModeAdvanced,
-				HeadTags:      headTags,
-			}
+		settings := &management.PromptRendering{
+			Prompt:        &promptType,
+			Screen:        &screenName,
+			RenderingMode: &management.RenderingModeAdvanced,
+			HeadTags:      headTags,
+		}
 
-			if err = cli.api.Prompt.UpdateRendering(ctx, management.PromptType(ScreenPromptMap[screen]), management.ScreenName(screen), settings); err != nil {
-				errChan <- fmt.Errorf("failed to patch settings for %s: %w", screen, err)
-				return
-			}
-
-			fmt.Println("✅ " + ansi.Green(fmt.Sprintf("Successfully patched screen '%s'", screen)))
-		}(screen)
+		promptRenderings = append(promptRenderings, settings)
+		updatedScreens = append(updatedScreens, screen)
 	}
 
-	wg.Wait()
-	close(errChan)
-
-	for err := range errChan {
-		fmt.Println("⚠️  " + ansi.Yellow("Patch error: ") + ansi.Bold(err.Error()))
+	// If no screens need updating, return early.
+	if len(promptRenderings) == 0 {
+		if cli.debug {
+			fmt.Println("🔁 " + ansi.Cyan("No screens require updates"))
+		}
+		return
 	}
+
+	bulkRequest := &management.PromptRenderingUpdateRequest{
+		PromptRenderings: promptRenderings,
+	}
+
+	if err := cli.api.Prompt.BulkUpdateRendering(ctx, bulkRequest); err != nil {
+		fmt.Println("⚠️  " + ansi.Yellow("Bulk patch error: ") + ansi.Bold(err.Error()))
+		return
+	}
+
+	// Report success for all updated screens.
+	fmt.Println("✅ " + ansi.Green(fmt.Sprintf("Successfully patched screen '%s'", updatedScreens)))
 }
 
 func buildHeadTagsFromDirs(distPath, assetsURL, screen string) ([]interface{}, error) {
