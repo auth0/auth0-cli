@@ -295,7 +295,7 @@ func createAPICmd(cli *cli) *cobra.Command {
 				api.TokenLifetime = auth0.Int(inputs.TokenLifetime)
 			}
 
-			if inputs.SubjectTypeAuthorization != "{}" {
+			if inputs.SubjectTypeAuthorization != "{}" && inputs.SubjectTypeAuthorization != "" {
 				var subjectTypeAuth management.ResourceServerSubjectTypeAuthorization
 				if err := json.Unmarshal([]byte(inputs.SubjectTypeAuthorization), &subjectTypeAuth); err != nil {
 					return fmt.Errorf("invalid JSON for subject-type-authorization: %w", err)
