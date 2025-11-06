@@ -532,7 +532,7 @@ func restoreOriginalHeadTags(ctx context.Context, cli *cli, originalHeadTags map
 		})
 
 		if cli.debug {
-			fmt.Fprintln(os.Stderr, fmt.Sprintf("   🔄 Restoring '%s' with %d tags", screen, len(headTags)))
+			fmt.Fprintf(os.Stderr, "   🔄 Restoring '%s'\n", screen)
 		}
 	}
 
@@ -561,13 +561,12 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 
 	cli.renderer.Infof("Watching: %s", strings.Join(screensToWatch, ", "))
 
-	// Signal handling for graceful shutdown
-	// First, stop any existing global signal handlers (from root.go)
+	// First, stop any existing global signal handlers (from root.go).
 	signal.Reset(os.Interrupt, syscall.SIGTERM)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	defer signal.Stop(sigChan) // Clean up signal handler when function exits
+	defer signal.Stop(sigChan) // Clean up signal handler when function exits.
 
 	const debounceWindow = 5 * time.Second
 	var lastEventTime time.Time
@@ -603,8 +602,8 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 		case <-sigChan:
 			fmt.Fprintln(os.Stderr, "\nShutdown signal received, cleaning up...")
 
-			// Restore original head tags if available
-			if originalHeadTags != nil && len(originalHeadTags) > 0 {
+			// Restore original head tags if available.
+			if len(originalHeadTags) > 0 {
 				fmt.Fprintln(os.Stderr, "Restoring original settings...")
 
 				if err := restoreOriginalHeadTags(ctx, cli, originalHeadTags); err != nil {
@@ -614,7 +613,7 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 				}
 			}
 
-			// Stop background processes
+			// Stop background processes.
 			if buildWatchCmd != nil && buildWatchCmd.Process != nil {
 				fmt.Fprintln(os.Stderr, "Stopping build watcher...")
 				if err := buildWatchCmd.Process.Kill(); err != nil {
