@@ -50,20 +50,20 @@ type Metadata struct {
 	Description string `json:"description"`
 }
 
-// loadManifest loads manifest.json once.
+// loadManifest downloads and parses the manifest.json for the latest release.
 func loadManifest() (*Manifest, error) {
 	latestTag, err := getLatestReleaseTag()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest release tag: %w", err)
 	}
 
+	client := &http.Client{Timeout: 15 * time.Second}
 	url := fmt.Sprintf("https://raw.githubusercontent.com/auth0-samples/auth0-acul-samples/%s/manifest.json", latestTag)
 
-	resp, err := http.Get(url)
+	resp, err := client.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("cannot fetch manifest: %w", err)
 	}
-
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -85,9 +85,10 @@ func loadManifest() (*Manifest, error) {
 
 // getLatestReleaseTag fetches the latest tag from GitHub API.
 func getLatestReleaseTag() (string, error) {
+	client := &http.Client{Timeout: 15 * time.Second}
 	url := "https://api.github.com/repos/auth0-samples/auth0-acul-samples/tags"
 
-	resp, err := http.Get(url)
+	resp, err := client.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch tags: %w", err)
 	}
@@ -200,10 +201,11 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
 	}
 
 	tempUnzipDir, err := downloadAndUnzipSampleRepo()
-	defer os.RemoveAll(tempUnzipDir) // Clean up the entire temp directory.
 	if err != nil {
 		return err
 	}
+
+	defer os.RemoveAll(tempUnzipDir)
 
 	selectedTemplate := manifest.Templates[chosenTemplate]
 
@@ -225,6 +227,10 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
 	err = writeAculConfig(destDir, chosenTemplate, selectedScreens, manifest.Metadata.Version, latestTag)
 	if err != nil {
 		fmt.Printf("Failed to write config: %v\n", err)
+	}
+
+	if prompt.Confirm("Do you want to run npm install?") {
+		runNpmInstall(cli, destDir)
 	}
 
 	runNpmGenerateScreenLoader(cli, destDir)
@@ -259,6 +265,7 @@ func selectTemplate(cmd *cobra.Command, manifest *Manifest, providedTemplate str
 	if err != nil {
 		return "", handleInputError(err)
 	}
+
 	return nameToKey[chosenTemplateName], nil
 }
 
@@ -339,7 +346,7 @@ func downloadAndUnzipSampleRepo() (string, error) {
 
 	// TODO: repoURL := fmt.Sprintf("https://github.com/auth0-samples/auth0-acul-samples/archive/refs/tags/%s.zip", latestTag).
 	repoURL := "https://github.com/auth0-samples/auth0-acul-samples/archive/refs/heads/monorepo-sample.zip"
-	tempZipFile := downloadFile(repoURL)
+	tempZipFile, err := downloadFile(repoURL)
 	defer os.Remove(tempZipFile) // Clean up the temp zip file.
 
 	tempUnzipDir, err := os.MkdirTemp("", "unzipped-repo-*")
@@ -434,7 +441,7 @@ func copyProjectScreens(cli *cli, screens []Screens, selectedScreens []string, c
 		return fmt.Errorf("failed to find extracted directory: %w", err)
 	}
 
-	sourcePathPrefix := extractedDir + "/" + chosenTemplate
+	sourcePathPrefix := filepath.Join(extractedDir, chosenTemplate)
 	screenInfo := createScreenMap(screens)
 	for _, s := range selectedScreens {
 		screen := screenInfo[s]
@@ -493,23 +500,30 @@ func check(err error, msg string) {
 }
 
 // downloadFile downloads a file from a URL to a temporary file and returns its name.
-func downloadFile(url string) string {
-	tempFile, err := os.CreateTemp("", "github-zip-*.zip")
-	check(err, "Error creating temporary file")
+func downloadFile(url string) (string, error) {
+	client := &http.Client{Timeout: 15 * time.Second}
 
-	resp, err := http.Get(url)
-	check(err, "Error downloading file")
+	resp, err := client.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("failed to download %s: %w", url, err)
+	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("Bad status code: %s", resp.Status)
+		return "", fmt.Errorf("unexpected status code %d when downloading %s", resp.StatusCode, url)
 	}
 
-	_, err = io.Copy(tempFile, resp.Body)
-	check(err, "Error saving zip file")
-	tempFile.Close()
+	tempFile, err := os.CreateTemp("", "github-zip-*.zip")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer tempFile.Close()
 
-	return tempFile.Name()
+	if _, err := io.Copy(tempFile, resp.Body); err != nil {
+		return "", fmt.Errorf("failed to save zip file: %w", err)
+	}
+
+	return tempFile.Name(), nil
 }
 
 // Function to copy a file from a source path to a destination path.
@@ -689,4 +703,28 @@ func runNpmGenerateScreenLoader(cli *cli, destDir string) {
 
 		return
 	}
+}
+
+// runNpmInstall runs `npm install` in the given directory.
+// Prints concise logs; warns on failure, silent if successful.
+func runNpmInstall(cli *cli, destDir string) {
+	cmd := exec.Command("npm", "install")
+	cmd.Dir = destDir
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		cli.renderer.Warnf(
+			"⚠️  npm install failed: %v\n"+
+				"👉 Run manually: %s\n"+
+				"📦 Directory: %s\n"+
+				"💡 Tip: Check your Node.js and npm setup, or clear node_modules and retry.",
+			err,
+			ansi.Bold(ansi.Cyan(fmt.Sprintf("cd %s && npm install", destDir))),
+			ansi.Faint(destDir),
+		)
+	}
+
+	fmt.Println("✅ " + ansi.Green("All dependencies installed successfully"))
 }
