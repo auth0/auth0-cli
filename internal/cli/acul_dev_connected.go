@@ -121,6 +121,15 @@ CONNECTED MODE (--connected):
 
 func runAculDev(cmd *cobra.Command, cli *cli, projectDir, port string, screenDirs []string, connected bool) error {
 	if connected {
+		if confirmed := showConnectedModeInformation(); !confirmed {
+			fmt.Println(ansi.Red("❌ Connected mode cancelled."))
+			return nil
+		}
+
+		fmt.Println("")
+		fmt.Println("⚠️  " + ansi.Bold(ansi.Yellow("🌟 CONNECTED MODE ENABLED 🌟")))
+		fmt.Println("")
+
 		screensToWatch, err := selectScreensSimple(cli, projectDir, screenDirs)
 		if err != nil {
 			return fmt.Errorf("failed to determine screens to watch: %w", err)
@@ -201,14 +210,6 @@ func showConnectedModeInformation() bool {
 }
 
 func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, screensToWatch []string) error {
-	if confirmed := showConnectedModeInformation(); !confirmed {
-		fmt.Println(ansi.Red("❌ Connected mode cancelled."))
-		return nil
-	}
-
-	fmt.Println("")
-	fmt.Println("⚠️  " + ansi.Bold(ansi.Yellow("🌟 CONNECTED MODE ENABLED 🌟")))
-	fmt.Println("")
 	fmt.Println("🚀 " + ansi.Green(fmt.Sprintf("ACUL connected dev mode started for %s", projectDir)))
 
 	fmt.Println("")
@@ -267,7 +268,7 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 			serveStarted = true
 			fmt.Println("✅ " + ansi.Green("Local server started successfully at ") +
 				ansi.Cyan(fmt.Sprintf("http://localhost:%s", port)))
-			time.Sleep(2 * time.Second) // give server time to start.
+			time.Sleep(2 * time.Second) // Give server time to start.
 			defer func() {
 				if serveCmd.Process != nil {
 					serveCmd.Process.Kill()
@@ -506,7 +507,7 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 				return nil
 			}
 
-			// Trigger only on changes inside dist/assets/
+			// Trigger only on changes inside dist/assets/.
 			if !strings.Contains(event.Name, "assets") {
 				continue
 			}
@@ -520,7 +521,7 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 			}
 			lastEventTime = now
 
-			time.Sleep(500 * time.Millisecond) // let writes settle
+			time.Sleep(500 * time.Millisecond) // Let writes settle.
 			fmt.Println(ansi.Cyan("📦  Change detected — rebuilding and patching assets..."))
 
 			if err := patchAssets(ctx, cli, distPath, assetsURL, screensToWatch, lastHeadTags); err != nil {
@@ -582,12 +583,7 @@ func patchAssets(ctx context.Context, cli *cli, distPath, assetsURL string, scre
 	if err := cli.api.Prompt.BulkUpdateRendering(ctx, req); err != nil {
 		return fmt.Errorf("bulk patch error: %w", err)
 	}
-
-	if len(updated) == 1 {
-		fmt.Println(ansi.Green(fmt.Sprintf("✅  Patched screen: %s", updated[0])))
-	} else {
-		fmt.Println(ansi.Green(fmt.Sprintf("✅  Patched %d screens: %s", len(updated), strings.Join(updated, ", "))))
-	}
+	fmt.Println(ansi.Green(fmt.Sprintf("✅  Patched %d screen(s): %s", len(updated), strings.Join(updated, ", "))))
 
 	return nil
 }
