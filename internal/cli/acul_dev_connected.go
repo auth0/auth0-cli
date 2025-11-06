@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/auth0/go-auth0/management"
@@ -269,11 +271,6 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 			fmt.Println("✅ " + ansi.Green("Local server started successfully at ") +
 				ansi.Cyan(fmt.Sprintf("http://localhost:%s", port)))
 			time.Sleep(2 * time.Second) // Give server time to start.
-			defer func() {
-				if serveCmd.Process != nil {
-					serveCmd.Process.Kill()
-				}
-			}()
 		}
 	} else {
 		fmt.Println("📋 " + ansi.Cyan("Please host your assets manually using:"))
@@ -304,7 +301,7 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 
 	var buildWatchCmd *exec.Cmd
 	if runBuildWatch {
-		fmt.Println("🔄 " + ansi.Cyan("Starting 'npm run build:watch' in the background..."))
+		fmt.Println("🚀 " + ansi.Cyan("Starting 'npm run build:watch' in the background..."))
 		buildWatchCmd = exec.Command("npm", "run", "build:watch")
 		buildWatchCmd.Dir = projectDir
 
@@ -316,14 +313,9 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 
 		if err := buildWatchCmd.Start(); err != nil {
 			fmt.Println("⚠️  " + ansi.Yellow("Failed to start build:watch: ") + ansi.Bold(err.Error()))
-			fmt.Println("    You can manually run " + ansi.Cyan("'npm run build'") + " when changes are made.")
+			fmt.Println("    You can manually run " + ansi.Cyan("'npm run build'") + " whenever you update your code.")
 		} else {
 			fmt.Println("✅ " + ansi.Green("Build watch started successfully"))
-			defer func() {
-				if buildWatchCmd.Process != nil {
-					buildWatchCmd.Process.Kill()
-				}
-			}()
 		}
 	}
 
@@ -334,11 +326,25 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 
 	fmt.Println("🌐 Assets URL: " + ansi.Green(assetsURL))
 	fmt.Println("👀 Watching screens: " + ansi.Cyan(strings.Join(screensToWatch, ", ")))
+
+	// Fetch original head tags before starting watcher.
+	fmt.Println("💡 " + ansi.Cyan("Fetching original rendering settings for restoration on exit..."))
+	originalHeadTags, err := fetchOriginalHeadTags(ctx, cli, screensToWatch)
+	if err != nil {
+		fmt.Println("⚠️  " + ansi.Yellow(fmt.Sprintf("Warning: Could not fetch original settings: %v", err)))
+		fmt.Println("    " + ansi.Yellow("Original settings will not be restored on exit."))
+		originalHeadTags = nil // Continue without restoration capability.
+	} else {
+		fmt.Println("✅ " + ansi.Green(fmt.Sprintf("Original settings saved for %d screen(s)", len(originalHeadTags))))
+	}
+
+	fmt.Println("")
 	fmt.Println("💡 " + ansi.Green("Assets will be patched automatically when changes are detected in the dist folder"))
 	fmt.Println("")
-	fmt.Println("🧪 " + ansi.Bold(ansi.Magenta("Tip: Run 'auth0 test login' to see your changes in action!")))
+	fmt.Println(ansi.Bold(ansi.Magenta("Tip: Run 'auth0 test login' to see your changes in action!")))
+	fmt.Println(ansi.Cyan("Press Ctrl+C to stop and restore original settings"))
 
-	return watchAndPatch(ctx, cli, assetsURL, distPath, screensToWatch)
+	return watchAndPatch(ctx, cli, assetsURL, distPath, screensToWatch, buildWatchCmd, serveCmd, serveStarted, originalHeadTags)
 }
 
 func validateAculProject(projectDir string) error {
@@ -483,7 +489,66 @@ func getScreensFromSrcFolder(srcScreensPath string) ([]string, error) {
 	return screens, nil
 }
 
-func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, screensToWatch []string) error {
+// fetchOriginalHeadTags retrieves the current rendering settings for all screens before making changes.
+func fetchOriginalHeadTags(ctx context.Context, cli *cli, screensToWatch []string) (map[string][]interface{}, error) {
+	originalTags := make(map[string][]interface{})
+
+	for _, screen := range screensToWatch {
+		promptType := management.PromptType(ScreenPromptMap[screen])
+		screenType := management.ScreenName(screen)
+
+		rendering, err := cli.api.Prompt.ReadRendering(ctx, promptType, screenType)
+		if err != nil {
+			if cli.debug {
+				fmt.Println("⚠️  " + ansi.Yellow(fmt.Sprintf("Could not fetch original settings for '%s': %v", screen, err)))
+			}
+			continue
+		}
+
+		if rendering != nil && rendering.HeadTags != nil {
+			originalTags[screen] = rendering.HeadTags
+			if cli.debug {
+				fmt.Println("📥 " + ansi.Cyan(fmt.Sprintf("Saved original settings for '%s' (%d tags)", screen, len(rendering.HeadTags))))
+			}
+		}
+	}
+
+	return originalTags, nil
+}
+
+// restoreOriginalHeadTags restores the original rendering settings that were saved at startup.
+func restoreOriginalHeadTags(ctx context.Context, cli *cli, originalHeadTags map[string][]interface{}) error {
+	var renderings []*management.PromptRendering
+
+	for screen, headTags := range originalHeadTags {
+		promptType := management.PromptType(ScreenPromptMap[screen])
+		screenType := management.ScreenName(screen)
+
+		renderings = append(renderings, &management.PromptRendering{
+			Prompt:        &promptType,
+			Screen:        &screenType,
+			RenderingMode: &management.RenderingModeAdvanced,
+			HeadTags:      headTags,
+		})
+
+		if cli.debug {
+			fmt.Fprintln(os.Stderr, fmt.Sprintf("   🔄 Restoring '%s' with %d tags", screen, len(headTags)))
+		}
+	}
+
+	if len(renderings) == 0 {
+		return fmt.Errorf("no original settings to restore")
+	}
+
+	req := &management.PromptRenderingUpdateRequest{PromptRenderings: renderings}
+	if err := cli.api.Prompt.BulkUpdateRendering(ctx, req); err != nil {
+		return fmt.Errorf("bulk restore error: %w", err)
+	}
+
+	return nil
+}
+
+func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, screensToWatch []string, buildWatchCmd, serveCmd *exec.Cmd, serveStarted bool, originalHeadTags map[string][]interface{}) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return fmt.Errorf("failed to create watcher: %w", err)
@@ -491,10 +556,18 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 	defer watcher.Close()
 
 	if err := watcher.Add(distPath); err != nil {
-		fmt.Println("⚠️  " + ansi.Yellow("Failed to watch ") + ansi.Bold(distPath) + ": " + err.Error())
-	} else {
-		fmt.Println("👀 Watching: " + ansi.Cyan(fmt.Sprintf("%d screen(s): %v", len(screensToWatch), screensToWatch)))
+		cli.renderer.Warnf("Failed to watch %s: %v", distPath, err)
 	}
+
+	cli.renderer.Infof("Watching: %s", strings.Join(screensToWatch, ", "))
+
+	// Signal handling for graceful shutdown
+	// First, stop any existing global signal handlers (from root.go)
+	signal.Reset(os.Interrupt, syscall.SIGTERM)
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigChan) // Clean up signal handler when function exits
 
 	const debounceWindow = 5 * time.Second
 	var lastEventTime time.Time
@@ -514,22 +587,52 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 
 			now := time.Now()
 			if now.Sub(lastEventTime) < debounceWindow {
-				if cli.debug {
-					fmt.Println(ansi.Yellow("⏱️  Skipping duplicate event (debounce window)"))
-				}
 				continue
 			}
 			lastEventTime = now
 
 			time.Sleep(500 * time.Millisecond) // Let writes settle.
-			fmt.Println(ansi.Cyan("📦  Change detected — rebuilding and patching assets..."))
-
+			cli.renderer.Warnf(ansi.Cyan("Change detected, patching assets..."))
 			if err := patchAssets(ctx, cli, distPath, assetsURL, screensToWatch, lastHeadTags); err != nil {
-				cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf("⚠️  Patch failed: %v", err)))
+				cli.renderer.Errorf("Patch failed: %v", err)
 			}
 
 		case err := <-watcher.Errors:
-			cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf("⚠️  Watcher error: %v", err)))
+			cli.renderer.Warnf("Watcher error: %v", err)
+
+		case <-sigChan:
+			fmt.Fprintln(os.Stderr, "\nShutdown signal received, cleaning up...")
+
+			// Restore original head tags if available
+			if originalHeadTags != nil && len(originalHeadTags) > 0 {
+				fmt.Fprintln(os.Stderr, "Restoring original settings...")
+
+				if err := restoreOriginalHeadTags(ctx, cli, originalHeadTags); err != nil {
+					fmt.Fprintf(os.Stderr, " WARN  Could not restore: %v\n", err)
+				} else {
+					fmt.Fprintf(os.Stderr, " INFO  Restored settings for %d screen(s)\n", len(originalHeadTags))
+				}
+			}
+
+			// Stop background processes
+			if buildWatchCmd != nil && buildWatchCmd.Process != nil {
+				fmt.Fprintln(os.Stderr, "Stopping build watcher...")
+				if err := buildWatchCmd.Process.Kill(); err != nil {
+					fmt.Fprintf(os.Stderr, " Error stopping build watcher: %v\n", err)
+				}
+			}
+
+			if serveCmd != nil && serveCmd.Process != nil && serveStarted {
+				fmt.Fprintln(os.Stderr, "Stopping local server...")
+				if err := serveCmd.Process.Kill(); err != nil {
+					fmt.Fprintf(os.Stderr, "  Error stopping server: %v\n", err)
+				}
+			}
+
+			fmt.Fprintln(os.Stderr, "\nACUL connected mode stopped. Goodbye!")
+
+			watcher.Close()
+			return nil
 
 		case <-ctx.Done():
 			return ctx.Err()
@@ -547,14 +650,14 @@ func patchAssets(ctx context.Context, cli *cli, distPath, assetsURL string, scre
 		headTags, err := buildHeadTagsFromDirs(distPath, assetsURL, screen)
 		if err != nil {
 			if cli.debug {
-				fmt.Println("⚠️  " + ansi.Yellow(fmt.Sprintf("Skipping '%s': %v", screen, err)))
+				cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf("Skipping '%s': %v", screen, err)))
 			}
 			continue
 		}
 
 		if reflect.DeepEqual(lastHeadTags[screen], headTags) {
 			if cli.debug {
-				fmt.Println("🔁  " + ansi.Cyan(fmt.Sprintf("No changes detected for '%s'", screen)))
+				cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf("No changes detected for '%s'", screen)))
 			}
 			continue
 		}
@@ -574,7 +677,7 @@ func patchAssets(ctx context.Context, cli *cli, distPath, assetsURL string, scre
 
 	if len(renderings) == 0 {
 		if cli.debug {
-			cli.renderer.Infof(ansi.Cyan("🔁  No screens to patch"))
+			cli.renderer.Warnf(ansi.Cyan("No screens to patch"))
 		}
 		return nil
 	}
@@ -583,7 +686,8 @@ func patchAssets(ctx context.Context, cli *cli, distPath, assetsURL string, scre
 	if err := cli.api.Prompt.BulkUpdateRendering(ctx, req); err != nil {
 		return fmt.Errorf("bulk patch error: %w", err)
 	}
-	fmt.Println(ansi.Green(fmt.Sprintf("✅  Patched %d screen(s): %s", len(updated), strings.Join(updated, ", "))))
+
+	cli.renderer.Infof(ansi.Green(fmt.Sprintf("✅  Patched %d screen(s): %s", len(updated), strings.Join(updated, ", "))))
 
 	return nil
 }
