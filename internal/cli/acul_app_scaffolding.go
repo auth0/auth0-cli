@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -50,15 +49,15 @@ type Metadata struct {
 	Description string `json:"description"`
 }
 
-// loadManifest loads manifest.json once.
+// loadManifest downloads and parses the manifest.json for the latest release.
 func loadManifest(tag string) (*Manifest, error) {
+	client := &http.Client{Timeout: 15 * time.Second}
 	url := fmt.Sprintf("https://raw.githubusercontent.com/auth0-samples/auth0-acul-samples/%s/manifest.json", tag)
 
-	resp, err := http.Get(url)
+	resp, err := client.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("cannot fetch manifest: %w", err)
 	}
-
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -80,9 +79,10 @@ func loadManifest(tag string) (*Manifest, error) {
 
 // getLatestReleaseTag fetches the latest tag from GitHub API.
 func getLatestReleaseTag() (string, error) {
+	client := &http.Client{Timeout: 15 * time.Second}
 	url := "https://api.github.com/repos/auth0-samples/auth0-acul-samples/tags"
 
-	resp, err := http.Get(url)
+	resp, err := client.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch tags: %w", err)
 	}
@@ -183,7 +183,7 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
 		return err
 	}
 
-	selectedScreens, err := selectScreens(cli, manifest.Templates[chosenTemplate].Screens, inputs.Screens)
+	selectedScreens, err := validateAndSelectScreens(cli, manifest.Templates[chosenTemplate].Screens, inputs.Screens)
 	if err != nil {
 		return err
 	}
@@ -195,10 +195,11 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
 	}
 
 	tempUnzipDir, err := downloadAndUnzipSampleRepo()
-	defer os.RemoveAll(tempUnzipDir) // Clean up the entire temp directory.
 	if err != nil {
 		return err
 	}
+
+	defer os.RemoveAll(tempUnzipDir)
 
 	selectedTemplate := manifest.Templates[chosenTemplate]
 
@@ -223,6 +224,10 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
 	}
 
 	runNpmGenerateScreenLoader(cli, destDir)
+
+	if prompt.Confirm("Do you want to run npm install?") {
+		runNpmInstall(cli, destDir)
+	}
 
 	showPostScaffoldingOutput(cli, destDir, "Project successfully created")
 
@@ -254,14 +259,10 @@ func selectTemplate(cmd *cobra.Command, manifest *Manifest, providedTemplate str
 	if err != nil {
 		return "", handleInputError(err)
 	}
+
 	return nameToKey[chosenTemplateName], nil
 }
 
-func selectScreens(cli *cli, screens []Screens, providedScreens []string) ([]string, error) {
-	return validateAndSelectScreens(cli, screens, providedScreens)
-}
-
-// validateAndSelectScreens is a common function for screen validation and selection.
 func validateAndSelectScreens(cli *cli, screens []Screens, providedScreens []string) ([]string, error) {
 	var availableScreenIDs []string
 	for _, s := range screens {
@@ -301,17 +302,15 @@ func validateAndSelectScreens(cli *cli, screens []Screens, providedScreens []str
 		}
 
 		if len(validScreens) == 0 {
-			cli.renderer.Warnf("%s None of the provided screens are valid for this template.",
-				ansi.Bold(ansi.Yellow("⚠️")))
-			cli.renderer.Infof("%s Please select from the available screens below:",
-				ansi.Bold(ansi.Blue("→")))
-			// Fall through to multi-select prompt.
+			cli.renderer.Warnf("%s %s",
+				ansi.Bold(ansi.Yellow("⚠️")),
+				ansi.Bold("None of the provided screens are valid for this template."))
 		} else {
 			return validScreens, nil
 		}
 	}
 
-	// If no screens provided or no valid screens, prompt for multi-select.
+	// If no screens provided via flag or no valid screens, prompt for multi-select.
 	var selectedScreens []string
 	err := prompt.AskMultiSelect("Select screens to include:", &selectedScreens, availableScreenIDs...)
 
@@ -337,7 +336,11 @@ func downloadAndUnzipSampleRepo() (string, error) {
 
 	// TODO: repoURL := fmt.Sprintf("https://github.com/auth0-samples/auth0-acul-samples/archive/refs/tags/%s.zip", latestTag).
 	repoURL := "https://github.com/auth0-samples/auth0-acul-samples/archive/refs/heads/monorepo-sample.zip"
-	tempZipFile := downloadFile(repoURL)
+	tempZipFile, err := downloadFile(repoURL)
+	if err != nil {
+		return "", fmt.Errorf("error downloading sample repo: %w", err)
+	}
+
 	defer os.Remove(tempZipFile) // Clean up the temp zip file.
 
 	tempUnzipDir, err := os.MkdirTemp("", "unzipped-repo-*")
@@ -432,7 +435,7 @@ func copyProjectScreens(cli *cli, screens []Screens, selectedScreens []string, c
 		return fmt.Errorf("failed to find extracted directory: %w", err)
 	}
 
-	sourcePathPrefix := extractedDir + "/" + chosenTemplate
+	sourcePathPrefix := filepath.Join(extractedDir, chosenTemplate)
 	screenInfo := createScreenMap(screens)
 	for _, s := range selectedScreens {
 		screen := screenInfo[s]
@@ -484,31 +487,31 @@ func writeAculConfig(destDir, chosenTemplate string, selectedScreens []string, m
 	return nil
 }
 
-// Helper function to handle errors and log them, exiting the process.
-func check(err error, msg string) {
-	if err != nil {
-		log.Fatalf("%s: %v", msg, err)
-	}
-}
-
 // downloadFile downloads a file from a URL to a temporary file and returns its name.
-func downloadFile(url string) string {
-	tempFile, err := os.CreateTemp("", "github-zip-*.zip")
-	check(err, "Error creating temporary file")
+func downloadFile(url string) (string, error) {
+	client := &http.Client{Timeout: 15 * time.Second}
 
-	resp, err := http.Get(url)
-	check(err, "Error downloading file")
+	resp, err := client.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("failed to download %s: %w", url, err)
+	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("Bad status code: %s", resp.Status)
+		return "", fmt.Errorf("unexpected status code %d when downloading %s", resp.StatusCode, url)
 	}
 
-	_, err = io.Copy(tempFile, resp.Body)
-	check(err, "Error saving zip file")
-	tempFile.Close()
+	tempFile, err := os.CreateTemp("", "github-zip-*.zip")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer tempFile.Close()
 
-	return tempFile.Name()
+	if _, err := io.Copy(tempFile, resp.Body); err != nil {
+		return "", fmt.Errorf("failed to save zip file: %w", err)
+	}
+
+	return tempFile.Name(), nil
 }
 
 // Function to copy a file from a source path to a destination path.
@@ -588,21 +591,24 @@ func showPostScaffoldingOutput(cli *cli, destDir, successMessage string) {
 
 	// Show next steps and related commands.
 	cli.renderer.Infof("%s Next Steps: Navigate to %s and run:", ansi.Bold("🚀"), ansi.Bold(ansi.Cyan(destDir)))
-	cli.renderer.Infof("   1. %s", ansi.Bold(ansi.Cyan("npm install")))
-	cli.renderer.Infof("   2. %s", ansi.Bold(ansi.Cyan("npm run build")))
-	cli.renderer.Infof("   3. %s", ansi.Bold(ansi.Cyan("npm run screen dev")))
+	cli.renderer.Infof("    %s if not yet installed", ansi.Bold(ansi.Cyan("npm install")))
+	cli.renderer.Infof("    %s", ansi.Bold(ansi.Cyan("auth0 acul dev")))
 	cli.renderer.Output("")
 
 	fmt.Printf("%s Available Commands:\n", ansi.Bold("📋"))
-	fmt.Printf("   %s - Add more screens to your project\n",
+	fmt.Printf("   %s - Add authentication screens\n",
 		ansi.Bold(ansi.Green("auth0 acul screen add <screen-name>")))
-	fmt.Printf("   %s - Generate a stub config file\n",
+	fmt.Printf("   %s - Local development with hot-reload\n",
+		ansi.Bold(ansi.Green("auth0 acul dev")))
+	fmt.Printf("   %s - Live sync changes to Auth0 tenant\n",
+		ansi.Bold(ansi.Green("auth0 acul dev --connected")))
+	fmt.Printf("   %s - Create starter config template\n",
 		ansi.Bold(ansi.Green("auth0 acul config generate <screen>")))
-	fmt.Printf("   %s - Download current settings\n",
+	fmt.Printf("   %s - Pull current Auth0 settings\n",
 		ansi.Bold(ansi.Green("auth0 acul config get <screen>")))
-	fmt.Printf("   %s - Upload customizations\n",
+	fmt.Printf("   %s - Push local config to Auth0\n",
 		ansi.Bold(ansi.Green("auth0 acul config set <screen>")))
-	fmt.Printf("   %s - View available screens\n",
+	fmt.Printf("   %s - List all configurable screens\n",
 		ansi.Bold(ansi.Green("auth0 acul config list")))
 	fmt.Println()
 
@@ -641,14 +647,19 @@ func checkNodeVersion(cli *cli) {
 	re := regexp.MustCompile(`v?(\d+)\.`)
 	matches := re.FindStringSubmatch(version)
 	if len(matches) < 2 {
-		cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf("Unable to parse Node version: %s. Please ensure Node v22+ is installed.", version)))
+		cli.renderer.Warnf("Unable to parse Node version: %s. Please ensure Node v22+ is installed.", version)
 		return
 	}
 
 	if major, _ := strconv.Atoi(matches[1]); major < 22 {
-		cli.renderer.Output("")
-		cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf(" Node %s detected. This project requires Node %s or higher.",
-			version, "v22")))
+		fmt.Println(
+			ansi.Yellow(fmt.Sprintf(
+				"⚠️  Node %s detected. This project requires Node v22 or higher.\n"+
+					"   Please upgrade to Node v22+ to run the sample app and build assets successfully.\n",
+				version,
+			)),
+		)
+
 		cli.renderer.Output("")
 	}
 }
@@ -684,4 +695,28 @@ func runNpmGenerateScreenLoader(cli *cli, destDir string) {
 
 		return
 	}
+}
+
+// runNpmInstall runs `npm install` in the given directory.
+// Prints concise logs; warns on failure, silent if successful.
+func runNpmInstall(cli *cli, destDir string) {
+	cmd := exec.Command("npm", "install")
+	cmd.Dir = destDir
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		cli.renderer.Warnf(
+			"⚠️  npm install failed: %v\n"+
+				"👉 Run manually: %s\n"+
+				"📦 Directory: %s\n"+
+				"💡 Tip: Check your Node.js and npm setup, or clear node_modules and retry.",
+			err,
+			ansi.Bold(ansi.Cyan(fmt.Sprintf("cd %s && npm install", destDir))),
+			ansi.Faint(destDir),
+		)
+	}
+
+	fmt.Println("✅ " + ansi.Green("All dependencies installed successfully"))
 }

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -83,7 +84,7 @@ func scaffoldAddScreen(cli *cli, args []string, destDir string) error {
 
 	if err != nil {
 		if os.IsNotExist(err) {
-			cli.renderer.Warnf("couldn't find acul_config.json in destination directory. Please ensure you're in the right directory or have initialized the project using `auth0 acul init`\n")
+			cli.renderer.Warnf("couldn't find acul_config.json in destination directory. Please ensure you're in the right directory or have initialized the project using `auth0 acul init`")
 			return nil
 		}
 
@@ -156,10 +157,10 @@ func selectAndFilterScreens(cli *cli, args []string, manifest *Manifest, chosenT
 
 func addScreensToProject(cli *cli, destDir, chosenTemplate string, selectedScreens []string, selectedTemplate Template) error {
 	tempUnzipDir, err := downloadAndUnzipSampleRepo()
-	defer os.RemoveAll(tempUnzipDir) // Clean up the entire temp directory.
 	if err != nil {
 		return err
 	}
+	defer os.RemoveAll(tempUnzipDir) // Clean up the entire temp directory.
 
 	var sourcePrefix = "auth0-acul-samples-monorepo-sample/" + chosenTemplate
 	var sourceRoot = filepath.Join(tempUnzipDir, sourcePrefix)
@@ -226,24 +227,22 @@ func handleEditedFiles(cli *cli, edited []string, sourceRoot, destRoot string) e
 
 // Copy missing files from source to destination.
 func handleMissingFiles(cli *cli, missing []string, tempUnzipDir, sourcePrefix, destDir string) error {
-	if len(missing) > 0 {
-		for _, baseFile := range missing {
-			srcPath := filepath.Join(tempUnzipDir, sourcePrefix, baseFile)
-			destPath := filepath.Join(destDir, baseFile)
-			if _, err := os.Stat(srcPath); os.IsNotExist(err) {
-				cli.renderer.Warnf("Warning: Source file does not exist: %s", srcPath)
-				continue
-			}
+	for _, baseFile := range missing {
+		srcPath := filepath.Join(tempUnzipDir, sourcePrefix, baseFile)
+		destPath := filepath.Join(destDir, baseFile)
+		if _, err := os.Stat(srcPath); os.IsNotExist(err) {
+			cli.renderer.Warnf("Warning: Source file does not exist: %s", srcPath)
+			continue
+		}
 
-			parentDir := filepath.Dir(destPath)
-			if err := os.MkdirAll(parentDir, 0755); err != nil {
-				cli.renderer.Warnf("Error creating parent dir for %s: %v", baseFile, err)
-				continue
-			}
+		parentDir := filepath.Dir(destPath)
+		if err := os.MkdirAll(parentDir, 0755); err != nil {
+			cli.renderer.Warnf("Error creating parent dir for %s: %v", baseFile, err)
+			continue
+		}
 
-			if err := copyFile(srcPath, destPath); err != nil {
-				return fmt.Errorf("error copying file %s: %w", baseFile, err)
-			}
+		if err := copyFile(srcPath, destPath); err != nil {
+			return fmt.Errorf("error copying file %s: %w", baseFile, err)
 		}
 	}
 	return nil
@@ -362,8 +361,8 @@ func isFileEdited(source, dest string) (bool, error) {
 	}
 
 	destInfo, err := os.Stat(dest)
-	if err != nil && os.IsNotExist(err) {
-		return false, err
+	if os.IsNotExist(err) {
+		return true, nil
 	}
 
 	if err != nil {
@@ -382,19 +381,8 @@ func isFileEdited(source, dest string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return !equalByteSlices(hashSource, hashDest), nil
-}
 
-func equalByteSlices(a, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
+	return !bytes.Equal(hashSource, hashDest), nil
 }
 
 func fileHash(path string) ([]byte, error) {
@@ -427,16 +415,40 @@ func loadAculConfig(configPath string) (*AculConfig, error) {
 	return &config, nil
 }
 
-func updateAculConfigFile(destDir string, aculConfig *AculConfig, selectedScreens []string) error {
-	aculConfig.Screens = append(aculConfig.Screens, selectedScreens...)
-	aculConfig.ModifiedAt = time.Now().UTC().Format(time.RFC3339)
-	configBytes, err := json.MarshalIndent(aculConfig, "", "  ")
+// addUniqueScreens ensures selectedScreens are added uniquely to cfg.Screens.
+func addUniqueScreens(cfg *AculConfig, selected []string) {
+	seen := make(map[string]bool, len(cfg.Screens))
+	for _, s := range cfg.Screens {
+		seen[s] = true
+	}
+
+	for _, s := range selected {
+		if !seen[s] {
+			cfg.Screens = append(cfg.Screens, s)
+			seen[s] = true
+		}
+	}
+}
+
+// updateAculConfigFile merges new screens into acul_config.json and updates metadata.
+func updateAculConfigFile(destDir string, cfg *AculConfig, selectedScreens []string) error {
+	if cfg == nil {
+		return fmt.Errorf("aculConfig cannot be nil")
+	}
+
+	addUniqueScreens(cfg, selectedScreens)
+	cfg.ModifiedAt = time.Now().UTC().Format(time.RFC3339)
+
+	configPath := filepath.Join(destDir, "acul_config.json")
+	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
-		return fmt.Errorf("failed to marshal updated acul_config.json: %w", err)
+		return fmt.Errorf("failed to marshal acul_config.json: %w", err)
 	}
-	if err := os.WriteFile(filepath.Join(destDir, "acul_config.json"), configBytes, 0644); err != nil {
-		return fmt.Errorf("failed to write updated acul_config.json: %w", err)
+
+	if err := os.WriteFile(configPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write acul_config.json: %w", err)
 	}
+
 	return nil
 }
 
