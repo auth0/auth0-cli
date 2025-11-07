@@ -314,7 +314,7 @@ func (f *emailProviderResourceFetcher) FetchData(ctx context.Context) (importDat
 func (f *emailTemplateResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	var data importDataList
 
-	templates := []string{`verify_email`, `reset_email`, `welcome_email`, `blocked_account`, `stolen_credentials`, `enrollment_email`, `mfa_oob_code`, `change_password`, `password_reset`}
+	templates := []string{`verify_email`, `reset_email`, `welcome_email`, `blocked_account`, `stolen_credentials`, `enrollment_email`, `mfa_oob_code`, `change_password`, `password_reset`, `verify_email_by_code`, `reset_email_by_code`, `user_invitation`, `async_approval`}
 
 	for _, template := range templates {
 		emailTemplate, err := f.api.EmailTemplate.Read(ctx, template)

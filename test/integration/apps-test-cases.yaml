@@ -313,3 +313,35 @@ tests:
   041 - given a test app, it successfully deletes the app:
     command: auth0 apps delete $(./test/integration/scripts/get-app-id.sh) --force
     exit-code: 0
+
+  042 - it successfully creates a resource server app with resource-server-identifier:
+    command: ./test/integration/scripts/get-resource-server-app-id.sh
+    exit-code: 0
+
+  043 - it successfully creates a resource server app with resource-server-identifier and outputs in json:
+    command: auth0 apps show $(./test/integration/scripts/get-resource-server-app-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        name: integration-test-app-resourceserver1
+        app_type: resource_server
+        resource_server_identifier: http://integration-test-api-newapi
+
+  044 - it shows resource server app with resource-server-identifier:
+    command: auth0 apps show $(./test/integration/scripts/get-resource-server-app-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - TYPE                        Resource Server
+        - RESOURCE SERVER IDENTIFIER  http://integration-test-api-newapi
+
+  045 - it fails to update resource-server-identifier (immutable property):
+    command: auth0 apps update $(./test/integration/scripts/get-resource-server-app-id.sh) --resource-server-identifier http://new-api.localhost --json
+    exit-code: 1
+    stderr:
+      contains:
+        - "Unknown flag: --resource-server-identifier"
+
+  046 - given a resource server app, it successfully deletes the app:
+    command: auth0 apps delete $(./test/integration/scripts/get-resource-server-app-id.sh) --force
+    exit-code: 0

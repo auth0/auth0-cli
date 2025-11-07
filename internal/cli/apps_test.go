@@ -24,9 +24,9 @@ func TestAppsListCmd(t *testing.T) {
 			name: "happy path",
 			assertOutput: func(t testing.TB, out string) {
 				expectTable(t, out,
-					[]string{"CLIENT ID", "NAME", "TYPE"},
+					[]string{"CLIENT ID", "NAME", "TYPE", "RESOURCE SERVER"},
 					[][]string{
-						{"some-id", "some-name", "Generic"},
+						{"some-id", "some-name", "Generic", ""},
 					},
 				)
 			},
@@ -36,9 +36,9 @@ func TestAppsListCmd(t *testing.T) {
 			args: []string{"--reveal-secrets"},
 			assertOutput: func(t testing.TB, out string) {
 				expectTable(t, out,
-					[]string{"CLIENT ID", "NAME", "TYPE", "CLIENT SECRET"},
+					[]string{"CLIENT ID", "NAME", "TYPE", "CLIENT SECRET", "RESOURCE SERVER"},
 					[][]string{
-						{"some-id", "some-name", "Generic", "secret-here"},
+						{"some-id", "some-name", "Generic", "secret-here", ""},
 					},
 				)
 			},
@@ -110,6 +110,10 @@ func TestTypeFor(t *testing.T) {
 
 	testAppType = appTypeNonInteractive
 	expected = "Machine to Machine"
+	assert.Equal(t, &expected, typeFor(&testAppType))
+
+	testAppType = appTypeResourceServer
+	expected = "Resource Server"
 	assert.Equal(t, &expected, typeFor(&testAppType))
 
 	testAppType = "some-unknown-api-type"

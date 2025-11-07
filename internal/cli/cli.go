@@ -111,6 +111,13 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 		}
 	}
 
+	if errors.Is(err, config.ErrMalformedToken) {
+		return fmt.Errorf("authentication token is corrupted, please run: %s\n\n%s",
+			ansi.Cyan("auth0 logout && auth0 login"),
+			ansi.Yellow("Note: Token handling was enhanced in v1.18.0+ to prevent malformed tokens."),
+		)
+	}
+
 	api, err := initializeManagementClient(tenant.Domain, tenant.GetAccessToken())
 	if err != nil {
 		return err

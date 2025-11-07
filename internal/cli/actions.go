@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
+	"github.com/pmezard/go-difflib/difflib"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 
@@ -94,6 +96,7 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(deleteActionCmd(cli))
 	cmd.AddCommand(deployActionCmd(cli))
 	cmd.AddCommand(openActionCmd(cli))
+	cmd.AddCommand(diffActionCmd(cli))
 
 	return cmd
 }
@@ -522,6 +525,88 @@ func openActionCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+func diffActionCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID       string
+		version1 int
+		version2 int
+	}
+
+	cmd := &cobra.Command{
+		Use:   "diff [action-id]",
+		Short: "Show diff between two versions of an Actions",
+		Args:  cobra.MaximumNArgs(1),
+		Long:  "Show code difference between two versions of an Actions",
+		Example: `auth0 actions diff
+  auth0 actions diff <action-id>`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.Background()
+			if len(args) == 0 {
+				if err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions); err != nil {
+					return err
+				}
+			} else {
+				inputs.ID = args[0]
+			}
+
+			// Fetch all versions (paginate).
+			var allVersions []*management.ActionVersion
+			page := 0
+			perPage := 50
+			for {
+				queryParams := []management.RequestOption{
+					management.Parameter("page", fmt.Sprintf("%d", page)),
+					management.Parameter("per_page", fmt.Sprintf("%d", perPage)),
+				}
+
+				versionsResp, err := cli.api.Action.Versions(ctx, inputs.ID, queryParams...)
+				if err != nil {
+					return err
+				}
+
+				allVersions = append(allVersions, versionsResp.Versions...)
+
+				// Check if we've retrieved all available versions using the total count.
+				if len(allVersions) >= versionsResp.Total {
+					break
+				}
+				page++
+			}
+
+			var err error
+			inputs.version1, inputs.version2, err = pickTwoVersions(allVersions)
+			if err != nil {
+				return err
+			}
+
+			var code1, code2 string
+			for _, v := range allVersions {
+				if v.Number == inputs.version1 {
+					code1 = v.GetCode()
+				}
+				if v.Number == inputs.version2 {
+					code2 = v.GetCode()
+				}
+			}
+
+			if code1 == "" || code2 == "" {
+				return fmt.Errorf("There are %d versions for the action. "+
+					"\nCould not find one of the versions: %d or %d", len(allVersions), inputs.version1, inputs.version2)
+			}
+
+			// Check if the code is identical between versions.
+			if code1 == code2 {
+				fmt.Printf("No differences found between v%d and v%d - the code is identical\n", inputs.version1, inputs.version2)
+				return nil
+			}
+
+			printColorDiff(code1, code2, inputs.version1, inputs.version2)
+			return nil
+		},
+	}
+	return cmd
+}
+
 func (c *cli) actionPickerOptions(ctx context.Context) (pickerOptions, error) {
 	list, err := c.api.Action.List(ctx)
 	if err != nil {
@@ -634,4 +719,115 @@ func inputSecretsToActionSecrets(secrets map[string]string) *[]management.Action
 	}
 
 	return &actionSecrets
+}
+
+func printColorDiff(code1, code2 string, fromVersion, toVersion int) {
+	diff := difflib.UnifiedDiff{
+		A:        difflib.SplitLines(code1),
+		B:        difflib.SplitLines(code2),
+		FromFile: fmt.Sprintf("v%d", fromVersion),
+		ToFile:   fmt.Sprintf("v%d", toVersion),
+		Context:  3,
+	}
+	text, _ := difflib.GetUnifiedDiffString(diff)
+
+	if text == "" {
+		fmt.Printf("No differences found between v%d and v%d - the code is identical\n", fromVersion, toVersion)
+		return
+	}
+
+	fmt.Printf("Comparing v%d → v%d:\n\n", fromVersion, toVersion)
+
+	for _, line := range difflib.SplitLines(text) {
+		switch {
+		case len(line) > 0 && line[0] == '+':
+			fmt.Print(ansi.Green(line)) // Green for additions.
+		case len(line) > 0 && line[0] == '-':
+			fmt.Print(ansi.Red(line)) // Red for deletions.
+		case len(line) > 0 && line[0] == '@':
+			fmt.Print(ansi.Cyan(line)) // Cyan for hunk headers.
+		default:
+			fmt.Println(line) // Default color.
+		}
+	}
+}
+
+func pickTwoVersions(versions []*management.ActionVersion) (int, int, error) {
+	if len(versions) < 2 {
+		return 0, 0, fmt.Errorf("need at least 2 versions to compare, found only %d version. Create more versions to enable comparison", len(versions))
+	}
+
+	// Build version options with clear labels showing version numbers, IDs, and deployment status.
+	versionOptions := make([]string, len(versions))
+	versionNumbers := make([]int, len(versions))
+
+	for i, v := range versions {
+		versionNumbers[i] = v.Number
+		deployedStatus := ""
+		if v.Deployed {
+			deployedStatus = " [DEPLOYED]"
+		} else {
+			deployedStatus = " [DRAFT]"
+		}
+
+		versionID := *v.ID
+
+		versionOptions[i] = fmt.Sprintf("v%d (%s)%s", v.Number, versionID, deployedStatus)
+	}
+
+	var fromVersionStr, toVersionStr string
+
+	// Ask for first version (baseline).
+	if err := prompt.AskOne(&survey.Question{
+		Name: "fromVersion",
+		Prompt: &survey.Select{
+			Message: "Select the first version (baseline):",
+			Options: versionOptions,
+		},
+		Validate: survey.Required,
+	}, &fromVersionStr); err != nil {
+		return 0, 0, handleInputError(err)
+	}
+
+	// Find the selected "from" version number.
+	var selectedFromVersion int
+	for i, option := range versionOptions {
+		if option == fromVersionStr {
+			selectedFromVersion = versionNumbers[i]
+			break
+		}
+	}
+
+	// Build filtered options for "to" version (excluding the already selected "from" version).
+	var filteredToOptions []string
+	var filteredToNumbers []int
+	for i, option := range versionOptions {
+		if versionNumbers[i] != selectedFromVersion {
+			filteredToOptions = append(filteredToOptions, option)
+			filteredToNumbers = append(filteredToNumbers, versionNumbers[i])
+		}
+	}
+
+	// Ask for second version (comparison target) - only show remaining options.
+	if err := prompt.AskOne(&survey.Question{
+		Name: "toVersion",
+		Prompt: &survey.Select{
+			Message: "Select the second version (to compare against):",
+			Options: filteredToOptions,
+		},
+		Validate: survey.Required,
+	}, &toVersionStr); err != nil {
+		return 0, 0, handleInputError(err)
+	}
+
+	// Find the selected "to" version number from filtered options.
+	var selectedToVersion int
+	for i, option := range filteredToOptions {
+		if option == toVersionStr {
+			selectedToVersion = filteredToNumbers[i]
+			break
+		}
+	}
+
+	return selectedFromVersion, selectedToVersion, nil
 }
