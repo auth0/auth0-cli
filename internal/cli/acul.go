@@ -1,6 +1,12 @@
 package cli
 
-import "github.com/spf13/cobra"
+import (
+	"context"
+
+	"github.com/spf13/cobra"
+
+	"github.com/auth0/auth0-cli/internal/auth0"
+)
 
 func aculCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
@@ -43,4 +49,17 @@ func aculConfigureCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(aculConfigDocsCmd(cli))
 
 	return cmd
+}
+
+// ensureACULPrerequisites checks that custom domain and new UL are enabled.
+func ensureACULPrerequisites(ctx context.Context, api *auth0.API) error {
+	if err := ensureCustomDomainIsEnabled(ctx, api); err != nil {
+		return err
+	}
+
+	if err := ensureNewUniversalLoginExperienceIsActive(ctx, api); err != nil {
+		return err
+	}
+
+	return nil
 }

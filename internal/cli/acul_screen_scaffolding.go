@@ -35,6 +35,10 @@ func aculScreenAddCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 acul screen add <screen-name> <screen-name>... --dir <app-directory>
   auth0 acul screen add login-id login-password -d acul_app`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := ensureACULPrerequisites(cmd.Context(), cli.api); err != nil {
+				return err
+			}
+
 			pwd, err := os.Getwd()
 			if err != nil {
 				return fmt.Errorf("failed to get current directory: %v", err)
