@@ -15,6 +15,8 @@ auth0 acul config set [flags]
 ## Examples
 
 ```
+  auth0 acul config set <screen-name>
+  auth0 acul config set <screen-name> --file settings.json
   auth0 acul config set signup-id --file settings.json
   auth0 acul config set login-id
 ```

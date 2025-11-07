@@ -178,10 +178,10 @@ type aculConfigInput struct {
 // ensureConfigFilePath sets a default config file path if none is provided and creates the config directory.
 func ensureConfigFilePath(input *aculConfigInput, cli *cli) error {
 	if input.filePath == "" {
-		input.filePath = fmt.Sprintf("config/%s.json", input.screenName)
+		input.filePath = fmt.Sprintf("acul_config/%s.json", input.screenName)
 		cli.renderer.Warnf("No configuration file path specified. Defaulting to '%s'.", ansi.Green(input.filePath))
 	}
-	if err := os.MkdirAll("config", 0755); err != nil {
+	if err := os.MkdirAll("acul_config", 0755); err != nil {
 		return fmt.Errorf("could not create config directory: %w", err)
 	}
 	return nil
@@ -208,12 +208,12 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
 		Short: "Generate a stub config file for a Universal Login screen.",
 		Long: "Generate a stub config file for a Universal Login screen and save it to a file.\n" +
 			"If fileName is not provided, it will default to <screen-name>.json in the current directory.",
-		Example: `  auth0 acul config generate signup-id
+		Example: `  auth0 acul config generate <screen-name>
+  auth0 acul config generate <screen-name> --file settings.json
+  auth0 acul config generate signup-id
   auth0 acul config generate login-id --file login-settings.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-
-			if err := ensureACULPrerequisites(ctx, cli.api); err != nil {
+			if err := ensureACULPrerequisites(cmd.Context(), cli.api); err != nil {
 				return err
 			}
 
@@ -244,12 +244,11 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("could not write config: %w", err)
 			}
 
-			cli.renderer.Infof("Configuration generated at '%s'.\n"+
-				"      Review the documentation for configuring screens to use ACUL\n"+
-				"      https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens\n",
-				ansi.Green(input.filePath))
+			cli.renderer.Infof("Configuration generated at '%s'", ansi.Green(input.filePath))
+
+			cli.renderer.Output("Learn more about configuring ACUL screens https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens")
+
 			cli.renderer.Output(ansi.Yellow("💡 Tip: Use `auth0 acul config get` to fetch remote rendering settings or `auth0 acul config set` to sync local configs."))
-			cli.renderer.Output(ansi.Cyan("📖 Customization Guide: https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"))
 			return nil
 		},
 	}
@@ -266,11 +265,13 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Get the current rendering settings for a specific screen",
 		Long:  "Get the current rendering settings for a specific screen.",
-		Example: `  auth0 acul config get signup-id
-  auth0 acul config get login-id -f ./login.json"`,
+		Example: `  auth0 acul config get <screen-name>
+  auth0 acul config get <screen-name> --file settings.json
+  auth0 acul config get signup-id
+  auth0 acul config get login-id -f ./acul_config/login-id.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			if err := ensureACULPrerequisites(ctx, cli.api); err != nil {
+			if err := ensureACULPrerequisites(cmd.Context(), cli.api); err != nil {
 				return err
 			}
 
@@ -290,6 +291,8 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 
 			if existingRenderSettings == nil {
 				cli.renderer.Warnf("No rendering settings found for screen '%s' in tenant '%s'.", ansi.Green(input.screenName), ansi.Blue(cli.tenant))
+				cli.renderer.Output(ansi.Yellow("💡 Tip: Use `auth0 acul config generate` to generate a stub config file or `auth0 acul config set` to sync local configs."))
+				cli.renderer.Output(ansi.Cyan("📖 Customization Guide: https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"))
 				return nil
 			}
 
@@ -343,11 +346,12 @@ func aculConfigSetCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Set the rendering settings for a specific screen",
 		Long:  "Set the rendering settings for a specific screen.",
-		Example: `  auth0 acul config set signup-id --file settings.json
+		Example: `  auth0 acul config set <screen-name>
+  auth0 acul config set <screen-name> --file settings.json
+  auth0 acul config set signup-id --file settings.json
   auth0 acul config set login-id`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-			if err := ensureACULPrerequisites(ctx, cli.api); err != nil {
+			if err := ensureACULPrerequisites(cmd.Context(), cli.api); err != nil {
 				return err
 			}
 
@@ -418,7 +422,7 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*
 	}
 
 	// Case 2: No file path provided, default to config/<screen-name>.json.
-	defaultFilePath := fmt.Sprintf("config/%s.json", input.screenName)
+	defaultFilePath := fmt.Sprintf("acul_config/%s.json", input.screenName)
 	data, err := os.ReadFile(defaultFilePath)
 	if err == nil {
 		cli.renderer.Warnf("No file path specified. Defaulting to '%s'.", ansi.Green(defaultFilePath))
@@ -516,7 +520,8 @@ func aculConfigListCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Short:   "List Universal Login rendering configurations",
 		Long:    "List Universal Login rendering configurations with optional filters and pagination.",
-		Example: `  auth0 acul config list --prompt login-id --screen login --rendering-mode advanced --include-fields true --fields head_tags,context_configuration`,
+		Example: `  auth0 acul config list --prompt reset-password
+  auth0 acul config list --rendering-mode advanced --include-fields true --fields head_tags,context_configuration`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			if err := ensureACULPrerequisites(ctx, cli.api); err != nil {
