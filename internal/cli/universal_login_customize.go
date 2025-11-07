@@ -262,15 +262,16 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 		Use:   "customize",
 		Args:  cobra.NoArgs,
 		Short: "⚠️ Customize Universal Login (Advanced mode DEPRECATED)",
-		Long: "\nCustomize your Universal Login Experience. Note that this requires a custom domain to be configured for the tenant. \n\n" +
+		Long: "\nCustomize your Universal Login Experience. Note that this requires a custom domain to be configured for the tenant.\n\n" +
 			"* Standard mode is recommended for creating a consistent, branded experience for users. Choosing Standard mode will open a webpage\n" +
-			"within your browser where you can edit and preview your branding changes.For a comprehensive list of editable parameters and their values,\n" +
-			"please visit the [Management API Documentation](https://auth0.com/docs/api/management/v2)\n\n" +
+			"  in your browser where you can edit and preview your branding changes. For a comprehensive list of editable parameters and their values,\n" +
+			"  please visit the Management API documentation: https://auth0.com/docs/api/management/v2\n\n" +
 			"⚠️  DEPRECATION NOTICE: Advanced mode will be deprecated on " + sunsetDate + "\n" +
-			"   For future Advanced Customizations, use: auth0 acul config <command>\n" +
-			"* Advanced mode is recommended for full customization/granular control of the login experience and to integrate your own component design system. \n" +
-			"Choosing Advanced mode will open the default terminal editor, with the rendering configs:\n\n" +
-			"![storybook](settings.json)\n\nClosing the terminal editor will save the settings to your tenant.",
+			"   For future Advanced Customizations, use: auth0 acul config <command>\n\n" +
+			"* Advanced mode is recommended for full customization and granular control of the login experience, allowing integration of your own component design system.\n" +
+			"  Choosing Advanced mode will open the default terminal editor with rendering configurations in a settings.json file.\n\n" +
+			"  Closing the terminal editor will save the settings to your tenant.",
+
 		Example: `  auth0 universal-login customize
   auth0 ul customize`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -286,7 +287,7 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 
 			if selectedRenderingMode == "" {
 				cli.renderer.Infof("Please select a rendering mode to customize:")
-				if err := renderingMode.Select(cmd, &selectedRenderingMode, []string{advancedMode, standardMode}, nil); err != nil {
+				if err := renderingMode.Select(cmd, &selectedRenderingMode, []string{standardMode, advancedMode}, auth0.String(standardMode)); err != nil {
 					return err
 				}
 			}
@@ -301,7 +302,7 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 				cli.renderer.Output("")
 
 				if !cli.noInput {
-					time.Sleep(2 * time.Second) // Brief pause to let users read.
+					time.Sleep(1 * time.Second) // Brief pause to let users read.
 				}
 
 				err := fetchPromptScreenInfo(cmd, cli, &input, "customize")
@@ -411,8 +412,6 @@ func displayDeprecationStatus(cli *cli, showCommands bool) error {
 
 	cli.renderer.Output("")
 	cli.renderer.Warnf("   For help: %s", ansi.Bold(ansi.Cyan("auth0 acul config --help")))
-	cli.renderer.Output("")
-	cli.renderer.Output(ansi.Bold(ansi.Yellow("⚠️  Please read the above deprecation notice carefully! ⚠️")))
 	cli.renderer.Output("")
 
 	return nil
