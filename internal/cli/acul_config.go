@@ -1,11 +1,11 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
-	"reflect"
 	"strconv"
 
 	"github.com/auth0/go-auth0/management"
@@ -36,7 +36,6 @@ var (
 	rendererScript = Flag{
 		Name:       "Script",
 		LongForm:   "script",
-		ShortForm:  "s",
 		Help:       "Script contents for the rendering configs.",
 		IsRequired: true,
 	}
@@ -214,6 +213,10 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
   auth0 acul config generate signup-id
   auth0 acul config generate login-id --file login-settings.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := ensureACULPrerequisites(cmd.Context(), cli.api); err != nil {
+				return err
+			}
+
 			if len(args) == 0 {
 				cli.renderer.Output(ansi.Yellow("🔍 Type any part of the screen name (e.g., 'login', 'mfa') to filter results."))
 				if err := screenName.Select(cmd, &input.screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
@@ -233,7 +236,7 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
 			data, _ := json.MarshalIndent(config, "", "  ")
 
 			message := fmt.Sprintf("Overwrite file '%s' with default config? : ", ansi.Green(input.filePath))
-			if shouldOverwriteFile(cli, cmd, input.filePath, message) {
+			if shouldCancelOverwrite(cli, cmd, input.filePath, message) {
 				return nil
 			}
 
@@ -267,6 +270,11 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
   auth0 acul config get signup-id
   auth0 acul config get login-id -f ./acul_config/login-id.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			if err := ensureACULPrerequisites(cmd.Context(), cli.api); err != nil {
+				return err
+			}
+
 			if len(args) == 0 {
 				cli.renderer.Output(ansi.Yellow("🔍 Type any part of the screen name (e.g., 'login', 'mfa') to filter options."))
 				if err := screenName.Select(cmd, &input.screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
@@ -276,7 +284,7 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 				input.screenName = args[0]
 			}
 
-			existingRenderSettings, err := cli.api.Prompt.ReadRendering(cmd.Context(), management.PromptType(ScreenPromptMap[input.screenName]), management.ScreenName(input.screenName))
+			existingRenderSettings, err := cli.api.Prompt.ReadRendering(ctx, management.PromptType(ScreenPromptMap[input.screenName]), management.ScreenName(input.screenName))
 			if err != nil {
 				return fmt.Errorf("failed to fetch the existing render settings: %w", err)
 			}
@@ -293,7 +301,7 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 			}
 
 			message := fmt.Sprintf("Overwrite file '%s' with new data from tenant '%s'? : ", ansi.Green(input.filePath), ansi.Blue(cli.tenant))
-			if shouldOverwriteFile(cli, cmd, input.filePath, message) {
+			if shouldCancelOverwrite(cli, cmd, input.filePath, message) {
 				return nil
 			}
 
@@ -316,7 +324,7 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func shouldOverwriteFile(cli *cli, cmd *cobra.Command, filePath, message string) bool {
+func shouldCancelOverwrite(cli *cli, cmd *cobra.Command, filePath, message string) bool {
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
 		return false
@@ -343,6 +351,10 @@ func aculConfigSetCmd(cli *cli) *cobra.Command {
   auth0 acul config set signup-id --file settings.json
   auth0 acul config set login-id`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := ensureACULPrerequisites(cmd.Context(), cli.api); err != nil {
+				return err
+			}
+
 			if len(args) == 0 {
 				cli.renderer.Output(ansi.Yellow("🔍 Type any part of the screen name to filter options."))
 				if err := screenName.Select(cmd, &input.screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
@@ -454,7 +466,7 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*
 	}
 
 	// Compare the existing settings with the updated settings to detect changes.
-	if reflect.DeepEqual(existingSettings, currentSettings) {
+	if jsonEqual(existingSettings, currentSettings) {
 		cli.renderer.Warnf("No changes detected in the customization settings. This could be due to uncommitted configuration changes or no modifications being made to the configurations.")
 
 		return existingRenderSettings, ErrNoChangesDetected
@@ -465,6 +477,29 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*
 	}
 
 	return renderSettings, nil
+}
+
+// jsonEqual ignores the special "___customization guide___" key used for user reference.
+func jsonEqual(a, b map[string]interface{}) bool {
+	copyA := make(map[string]interface{}, len(a))
+	copyB := make(map[string]interface{}, len(b))
+	for k, v := range a {
+		if k != "___customization guide___" {
+			copyA[k] = v
+		}
+	}
+	for k, v := range b {
+		if k != "___customization guide___" {
+			copyB[k] = v
+		}
+	}
+
+	aj, err1 := json.Marshal(copyA)
+	bj, err2 := json.Marshal(copyB)
+	if err1 != nil || err2 != nil {
+		return false
+	}
+	return bytes.Equal(aj, bj)
 }
 
 func aculConfigListCmd(cli *cli) *cobra.Command {
@@ -488,6 +523,11 @@ func aculConfigListCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 acul config list --prompt reset-password
   auth0 acul config list --rendering-mode advanced --include-fields true --fields head_tags,context_configuration`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			if err := ensureACULPrerequisites(ctx, cli.api); err != nil {
+				return err
+			}
+
 			params := []management.RequestOption{
 				management.Parameter("page", strconv.Itoa(page)),
 				management.Parameter("per_page", strconv.Itoa(perPage)),

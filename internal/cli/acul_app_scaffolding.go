@@ -150,6 +150,10 @@ The generated project includes all necessary configuration and boilerplate code 
   auth0 acul init acul-sample-app --template react --screens login,signup
   auth0 acul init acul-sample-app -t react -s login,mfa,signup`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := ensureACULPrerequisites(cmd.Context(), cli.api); err != nil {
+				return err
+			}
+
 			return runScaffold(cli, cmd, args, &inputs)
 		},
 	}
@@ -225,7 +229,7 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
 
 	runNpmGenerateScreenLoader(cli, destDir)
 
-	if prompt.Confirm("Do you want to run npm install?") {
+	if prompt.Confirm("Would you like to proceed with installing the required dependencies using 'npm install'?") {
 		runNpmInstall(cli, destDir)
 	}
 
@@ -292,13 +296,12 @@ func validateAndSelectScreens(cli *cli, screens []Screens, providedScreens []str
 		}
 
 		if len(invalidScreens) > 0 {
-			cli.renderer.Warnf("%s The following screens are not supported for the chosen template: %s",
-				ansi.Bold(ansi.Yellow("⚠️")),
+			cli.renderer.Warnf("⚠️ The following screens are not supported for the chosen template: %s",
 				ansi.Bold(ansi.Red(strings.Join(invalidScreens, ", "))))
 			cli.renderer.Infof("Available screens: %s",
 				ansi.Bold(ansi.Cyan(strings.Join(availableScreenIDs, ", "))))
 			cli.renderer.Infof("%s We're planning to support all screens in the future.",
-				ansi.Faint("Note:"))
+				ansi.Blue("Note:"))
 		}
 
 		if len(validScreens) == 0 {

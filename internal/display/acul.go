@@ -1,6 +1,8 @@
 package display
 
-import "github.com/auth0/go-auth0/management"
+import (
+	"github.com/auth0/go-auth0/management"
+)
 
 type aculConfigView struct {
 	ScreenName    string
@@ -28,7 +30,7 @@ func (r *Renderer) ACULConfigList(aculConfigs *management.PromptRenderingList) {
 	r.Heading(resource)
 
 	if len(aculConfigs.PromptRenderings) == 0 {
-		r.EmptyState(resource, "Use 'auth0 config set' to configure acul settings for any screen")
+		r.EmptyState(resource, " Use 'auth0 acul config get' to fetch remote rendering settings or 'auth0 acul config set' to sync local configs.")
 	}
 
 	if r.Format == OutputFormatJSONCompact {
@@ -45,7 +47,7 @@ func (r *Renderer) ACULConfigList(aculConfigs *management.PromptRenderingList) {
 }
 
 func makeACULConfigView(aculConfig *management.PromptRenderingList) []View {
-	views := make([]View, 0, len(SupportedTenantSettings))
+	views := make([]View, 0, len(aculConfig.PromptRenderings))
 
 	for _, v := range aculConfig.PromptRenderings {
 		views = append(views, &aculConfigView{
