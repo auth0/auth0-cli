@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -51,14 +50,9 @@ type Metadata struct {
 }
 
 // loadManifest downloads and parses the manifest.json for the latest release.
-func loadManifest() (*Manifest, error) {
-	latestTag, err := getLatestReleaseTag()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get latest release tag: %w", err)
-	}
-
+func loadManifest(tag string) (*Manifest, error) {
 	client := &http.Client{Timeout: 15 * time.Second}
-	url := fmt.Sprintf("https://raw.githubusercontent.com/auth0-samples/auth0-acul-samples/%s/manifest.json", latestTag)
+	url := fmt.Sprintf("https://raw.githubusercontent.com/auth0-samples/auth0-acul-samples/%s/manifest.json", tag)
 
 	resp, err := client.Get(url)
 	if err != nil {
@@ -156,6 +150,12 @@ The generated project includes all necessary configuration and boilerplate code 
   auth0 acul init acul-sample-app --template react --screens login,signup
   auth0 acul init acul-sample-app -t react -s login,mfa,signup`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+
+			if err := ensureACULPrerequisites(ctx, cli.api); err != nil {
+				return err
+			}
+
 			return runScaffold(cli, cmd, args, &inputs)
 		},
 	}
@@ -179,7 +179,7 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
 		return fmt.Errorf("failed to get latest release tag: %w", err)
 	}
 
-	manifest, err := loadManifest()
+	manifest, err := loadManifest(latestTag)
 	if err != nil {
 		return err
 	}
@@ -189,7 +189,7 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
 		return err
 	}
 
-	selectedScreens, err := selectScreens(cli, manifest.Templates[chosenTemplate].Screens, inputs.Screens)
+	selectedScreens, err := validateAndSelectScreens(cli, manifest.Templates[chosenTemplate].Screens, inputs.Screens)
 	if err != nil {
 		return err
 	}
@@ -229,11 +229,11 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
 		fmt.Printf("Failed to write config: %v\n", err)
 	}
 
+	runNpmGenerateScreenLoader(cli, destDir)
+
 	if prompt.Confirm("Do you want to run npm install?") {
 		runNpmInstall(cli, destDir)
 	}
-
-	runNpmGenerateScreenLoader(cli, destDir)
 
 	showPostScaffoldingOutput(cli, destDir, "Project successfully created")
 
@@ -269,19 +269,17 @@ func selectTemplate(cmd *cobra.Command, manifest *Manifest, providedTemplate str
 	return nameToKey[chosenTemplateName], nil
 }
 
-func selectScreens(cli *cli, screens []Screens, providedScreens []string) ([]string, error) {
+func validateAndSelectScreens(cli *cli, screens []Screens, providedScreens []string) ([]string, error) {
 	var availableScreenIDs []string
 	for _, s := range screens {
 		availableScreenIDs = append(availableScreenIDs, s.ID)
 	}
 
-	// If screens provided via flag, validate them.
 	if len(providedScreens) > 0 {
 		var validScreens []string
 		var invalidScreens []string
 
 		for _, providedScreen := range providedScreens {
-			// Skip empty strings.
 			if strings.TrimSpace(providedScreen) == "" {
 				continue
 			}
@@ -300,15 +298,12 @@ func selectScreens(cli *cli, screens []Screens, providedScreens []string) ([]str
 		}
 
 		if len(invalidScreens) > 0 {
-			cli.renderer.Warnf("%s The following screens are not supported for the chosen template: %s",
-				ansi.Bold(ansi.Yellow("⚠️")),
+			cli.renderer.Warnf("⚠️ The following screens are not supported for the chosen template: %s",
 				ansi.Bold(ansi.Red(strings.Join(invalidScreens, ", "))))
-			cli.renderer.Infof("%s %s",
-				ansi.Bold("Available screens:"),
+			cli.renderer.Infof("Available screens: %s",
 				ansi.Bold(ansi.Cyan(strings.Join(availableScreenIDs, ", "))))
-			cli.renderer.Infof("%s %s",
-				ansi.Bold(ansi.Blue("Note:")),
-				ansi.Faint("We're planning to support all screens in the future."))
+			cli.renderer.Infof("%s We're planning to support all screens in the future.",
+				ansi.Blue("Note:"))
 		}
 
 		if len(validScreens) == 0 {
@@ -347,6 +342,10 @@ func downloadAndUnzipSampleRepo() (string, error) {
 	// TODO: repoURL := fmt.Sprintf("https://github.com/auth0-samples/auth0-acul-samples/archive/refs/tags/%s.zip", latestTag).
 	repoURL := "https://github.com/auth0-samples/auth0-acul-samples/archive/refs/heads/monorepo-sample.zip"
 	tempZipFile, err := downloadFile(repoURL)
+	if err != nil {
+		return "", fmt.Errorf("error downloading sample repo: %w", err)
+	}
+
 	defer os.Remove(tempZipFile) // Clean up the temp zip file.
 
 	tempUnzipDir, err := os.MkdirTemp("", "unzipped-repo-*")
@@ -474,7 +473,8 @@ func writeAculConfig(destDir, chosenTemplate string, selectedScreens []string, m
 	config := AculConfig{
 		ChosenTemplate:      chosenTemplate,
 		Screens:             selectedScreens,
-		InitTimestamp:       time.Now().Format(time.RFC3339),
+		CreatedAt:           time.Now().UTC().Format(time.RFC3339),
+		ModifiedAt:          time.Now().UTC().Format(time.RFC3339),
 		AculManifestVersion: manifestVersion,
 		AppVersion:          appVersion,
 	}
@@ -490,13 +490,6 @@ func writeAculConfig(destDir, chosenTemplate string, selectedScreens []string, m
 	}
 
 	return nil
-}
-
-// Helper function to handle errors and log them, exiting the process.
-func check(err error, msg string) {
-	if err != nil {
-		log.Fatalf("%s: %v", msg, err)
-	}
 }
 
 // downloadFile downloads a file from a URL to a temporary file and returns its name.
@@ -603,21 +596,24 @@ func showPostScaffoldingOutput(cli *cli, destDir, successMessage string) {
 
 	// Show next steps and related commands.
 	cli.renderer.Infof("%s Next Steps: Navigate to %s and run:", ansi.Bold("🚀"), ansi.Bold(ansi.Cyan(destDir)))
-	cli.renderer.Infof("   1. %s", ansi.Bold(ansi.Cyan("npm install")))
-	cli.renderer.Infof("   2. %s", ansi.Bold(ansi.Cyan("npm run build")))
-	cli.renderer.Infof("   3. %s", ansi.Bold(ansi.Cyan("npm run screen dev")))
+	cli.renderer.Infof("   %s if not yet installed", ansi.Bold(ansi.Cyan("npm install")))
+	cli.renderer.Infof("   %s", ansi.Bold(ansi.Cyan("auth0 acul dev")))
 	cli.renderer.Output("")
 
 	fmt.Printf("%s Available Commands:\n", ansi.Bold("📋"))
-	fmt.Printf("   %s - Add more screens to your project\n",
+	fmt.Printf("   %s - Add authentication screens\n",
 		ansi.Bold(ansi.Green("auth0 acul screen add <screen-name>")))
-	fmt.Printf("   %s - Generate a stub config file\n",
+	fmt.Printf("   %s - Local development with hot-reload\n",
+		ansi.Bold(ansi.Green("auth0 acul dev")))
+	fmt.Printf("   %s - Live sync changes to Auth0 tenant\n",
+		ansi.Bold(ansi.Green("auth0 acul dev --connected")))
+	fmt.Printf("   %s - Create starter config template\n",
 		ansi.Bold(ansi.Green("auth0 acul config generate <screen>")))
-	fmt.Printf("   %s - Download current settings\n",
+	fmt.Printf("   %s - Pull current Auth0 settings\n",
 		ansi.Bold(ansi.Green("auth0 acul config get <screen>")))
-	fmt.Printf("   %s - Upload customizations\n",
+	fmt.Printf("   %s - Push local config to Auth0\n",
 		ansi.Bold(ansi.Green("auth0 acul config set <screen>")))
-	fmt.Printf("   %s - View available screens\n",
+	fmt.Printf("   %s - List all configurable screens\n",
 		ansi.Bold(ansi.Green("auth0 acul config list")))
 	fmt.Println()
 
@@ -628,8 +624,9 @@ func showPostScaffoldingOutput(cli *cli, destDir, successMessage string) {
 type AculConfig struct {
 	ChosenTemplate      string   `json:"chosen_template"`
 	Screens             []string `json:"screens"`
-	InitTimestamp       string   `json:"init_timestamp"`
-	AppVersion          string   `json:"app_version,omitempty"`
+	CreatedAt           string   `json:"created_at"`
+	ModifiedAt          string   `json:"modified_at"`
+	AppVersion          string   `json:"app_version"`
 	AculManifestVersion string   `json:"acul_manifest_version"`
 }
 
@@ -647,7 +644,7 @@ func checkNodeVersion(cli *cli) {
 	cmd := exec.Command("node", "--version")
 	output, err := cmd.Output()
 	if err != nil {
-		cli.renderer.Warnf("Unable to detect Node version. Please ensure Node v22+ is installed.")
+		cli.renderer.Warnf(ansi.Yellow("Unable to detect Node version. Please ensure Node v22+ is installed."))
 		return
 	}
 
