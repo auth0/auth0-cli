@@ -93,6 +93,10 @@ CONNECTED MODE (--connected):
   auth0 acul dev --connected --screen login-id
   auth0 acul dev -c -s login-id,signup`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := ensureACULPrerequisites(cmd.Context(), cli.api); err != nil {
+				return err
+			}
+
 			pwd, err := os.Getwd()
 			if err != nil {
 				return fmt.Errorf("failed to get current directory: %v", err)
@@ -109,7 +113,31 @@ CONNECTED MODE (--connected):
 				return fmt.Errorf("invalid ACUL project: %w", err)
 			}
 
-			return runAculDev(cmd, cli, projectDir, port, screenDirs, connected)
+			if connected {
+				if confirmed := showConnectedModeInformation(); !confirmed {
+					fmt.Println(ansi.Red("❌ Connected mode cancelled."))
+					return nil
+				}
+
+				fmt.Println("")
+				fmt.Println("⚠️  " + ansi.Bold(ansi.Yellow("🌟 CONNECTED MODE ENABLED 🌟")))
+				fmt.Println("")
+
+				screensToWatch, err := selectScreensSimple(cli, projectDir, screenDirs)
+				if err != nil {
+					return fmt.Errorf("failed to determine screens to watch: %w", err)
+				}
+
+				return runConnectedMode(cmd.Context(), cli, projectDir, port, screensToWatch)
+			}
+
+			if port == "" {
+				err := portFlag.Ask(cmd, &projectDir, auth0.String("8080"))
+				if err != nil {
+					return err
+				}
+			}
+			return runNormalMode(cli, projectDir, screenDirs)
 		},
 	}
 
@@ -119,34 +147,6 @@ CONNECTED MODE (--connected):
 	connectedFlag.RegisterBool(cmd, &connected, false)
 
 	return cmd
-}
-
-func runAculDev(cmd *cobra.Command, cli *cli, projectDir, port string, screenDirs []string, connected bool) error {
-	if connected {
-		if confirmed := showConnectedModeInformation(); !confirmed {
-			fmt.Println(ansi.Red("❌ Connected mode cancelled."))
-			return nil
-		}
-
-		fmt.Println("")
-		fmt.Println("⚠️  " + ansi.Bold(ansi.Yellow("🌟 CONNECTED MODE ENABLED 🌟")))
-		fmt.Println("")
-
-		screensToWatch, err := selectScreensSimple(cli, projectDir, screenDirs)
-		if err != nil {
-			return fmt.Errorf("failed to determine screens to watch: %w", err)
-		}
-
-		return runConnectedMode(cmd.Context(), cli, projectDir, port, screensToWatch)
-	}
-
-	if port == "" {
-		err := portFlag.Ask(cmd, &projectDir, auth0.String("8080"))
-		if err != nil {
-			return err
-		}
-	}
-	return runNormalMode(cli, projectDir, screenDirs)
 }
 
 // ToDo : use the port logic.
