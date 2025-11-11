@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -37,6 +38,7 @@ var (
 		IsRequired:   false,
 		AlwaysPrompt: false,
 	}
+
 	portFlag = Flag{
 		Name:       "Port",
 		LongForm:   "port",
@@ -44,6 +46,7 @@ var (
 		Help:       "Port for the local development server.",
 		IsRequired: false,
 	}
+
 	connectedFlag = Flag{
 		Name:       "Connected",
 		LongForm:   "connected",
@@ -190,19 +193,20 @@ func showConnectedModeInformation() bool {
 	fmt.Println("📢 " + ansi.Bold(ansi.Cyan("Connected Mode Information")))
 	fmt.Println("")
 	fmt.Println("ℹ️  " + ansi.Cyan("This mode updates advanced rendering settings for selected screens in your Auth0 tenant."))
+	fmt.Println("")
 	fmt.Println("🚨 " + ansi.Bold(ansi.Red("IMPORTANT: Never use on production tenants!")))
-	fmt.Println("    " + ansi.Yellow("Production may break sessions or incur unexpected charges with local assets."))
-	fmt.Println("    " + ansi.Yellow("Use ONLY for dev/stage tenants."))
+	fmt.Println("    " + ansi.Yellow("• Production may break sessions or incur unexpected charges with local assets."))
+	fmt.Println("    " + ansi.Yellow("• Use ONLY for dev/stage tenants."))
 
 	fmt.Println("")
 	fmt.Println("⚙️  " + ansi.Bold(ansi.Magenta("Technical Requirements:")))
 	fmt.Println("    " + ansi.Cyan("• Requires sample apps with viteConfig.ts configured for asset building"))
 	fmt.Println("    " + ansi.Cyan("• Assets must be built in the following structure:"))
-	fmt.Println("      " + ansi.Green("assets/<screens>/"))
-	fmt.Println("      " + ansi.Green("assets/<shared>/"))
-	fmt.Println("      " + ansi.Green("assets/<main.*.js>"))
+	fmt.Println("      " + ansi.Green("	assets/<screens>/"))
+	fmt.Println("      " + ansi.Green("	assets/<shared>/"))
+	fmt.Println("      " + ansi.Green("	assets/<main.*.js>"))
 	fmt.Println("")
-	fmt.Println("🔄 " + ansi.Bold(ansi.Magenta("How it works:")))
+	fmt.Println("🔄  " + ansi.Bold(ansi.Magenta("How it works:")))
 	fmt.Println("    " + ansi.Cyan("• Combines files from screen-specific, shared, and main asset folders"))
 	fmt.Println("    " + ansi.Cyan("• Makes API patch calls to update rendering settings for each specified screen"))
 	fmt.Println("    " + ansi.Cyan("• Watches for changes and automatically re-patches when assets are rebuilt"))
@@ -212,8 +216,9 @@ func showConnectedModeInformation() bool {
 }
 
 func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, screensToWatch []string) error {
-	fmt.Println("🚀 " + ansi.Green(fmt.Sprintf("ACUL connected dev mode started for %s", projectDir)))
+	fmt.Println("\n🚀 " + ansi.Green("ACUL connected dev mode started for: "+ansi.Cyan(projectDir)))
 
+	// Step 1: Do initial build.
 	fmt.Println("")
 	fmt.Println("🔨 " + ansi.Bold(ansi.Blue("Step 1: Running initial build...")))
 	if err := buildProject(cli, projectDir); err != nil {
@@ -226,36 +231,34 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 		return fmt.Errorf("screen validation failed after build: %w", err)
 	}
 
+	// Step 2: Ask user to host assets and get port confirmation.
 	fmt.Println("")
 	fmt.Println("📡 " + ansi.Bold(ansi.Blue("Step 2: Host your assets locally")))
 
 	if port == "" {
 		var portInput string
-		portQuestion := prompt.TextInput(
-			"port",
-			"Enter the port for serving assets:",
-			"The port number where your assets will be hosted (e.g., 8080)",
-			"8080",
-			true,
-		)
+		portQuestion := prompt.TextInput("port", "Enter port to serve assets:", "Example: 8080", "8080", true)
 		if err := prompt.AskOne(portQuestion, &portInput); err != nil {
 			return fmt.Errorf("failed to get port: %w", err)
 		}
+
+		if _, err = strconv.Atoi(portInput); err != nil {
+			return fmt.Errorf("invalid port number: %s", portInput)
+		}
+
 		port = portInput
 	}
 
-	fmt.Println("💡 " + ansi.Yellow("Your assets need to be served locally with CORS enabled."))
+	fmt.Println("💡 " + ansi.Yellow("Your assets must be served locally with CORS enabled."))
 
 	runServe := prompt.Confirm(fmt.Sprintf("Would you like to host the assets by running 'npx serve dist -p %s --cors' in the background?", port))
 
-	var (
-		serveCmd     *exec.Cmd
-		serveStarted bool
-	)
+	var serveStarted bool
+
 	if runServe {
 		fmt.Println("🚀 " + ansi.Cyan("Starting local server in the background..."))
 
-		serveCmd = exec.Command("npx", "serve", "dist", "-p", port, "--cors")
+		serveCmd := exec.Command("npx", "serve", "dist", "-p", port, "--cors")
 		serveCmd.Dir = projectDir
 
 		if cli.debug {
@@ -273,10 +276,10 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 			time.Sleep(2 * time.Second) // Give server time to start.
 		}
 	} else {
-		fmt.Println("📋 " + ansi.Cyan("Please host your assets manually using:"))
+		fmt.Println("Please either run the following command in a separate terminal to serve your assets or host someway on your own")
 		fmt.Println("    " + ansi.Bold(ansi.Green(fmt.Sprintf("npx serve dist -p %s --cors", port))))
 		fmt.Println("")
-		fmt.Println("💡 " + ansi.Yellow("This will serve your built assets with CORS enabled."))
+		fmt.Println("This will serve your built assets at the specified port with CORS enabled.")
 	}
 
 	assetsURL := fmt.Sprintf("http://localhost:%s", port)
@@ -290,19 +293,19 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 		}
 	}
 
+	// Step 3: Ask about build:watch.
 	fmt.Println("")
 	fmt.Println("🔧 " + ansi.Bold(ansi.Blue("Step 3: Continuous build watching (optional)")))
 	fmt.Println("    " + ansi.Green("1. Manually run 'npm run build' after changes, OR"))
 	fmt.Println("    " + ansi.Green("2. Run 'npm run build:watch' for continuous updates"))
 	fmt.Println("")
-	fmt.Println("💡 " + ansi.Yellow("Note: If auto-save is enabled in your IDE, build:watch will rebuild frequently."))
+	fmt.Println("💡 " + ansi.Yellow("If auto-save is enabled in your IDE, build:watch will rebuild frequently."))
 
 	runBuildWatch := prompt.Confirm("Would you like to run 'npm run build:watch' in the background?")
 
-	var buildWatchCmd *exec.Cmd
 	if runBuildWatch {
 		fmt.Println("🚀 " + ansi.Cyan("Starting 'npm run build:watch' in the background..."))
-		buildWatchCmd = exec.Command("npm", "run", "build:watch")
+		buildWatchCmd := exec.Command("npm", "run", "build:watch")
 		buildWatchCmd.Dir = projectDir
 
 		// Only show command output if debug mode is enabled.
@@ -320,7 +323,7 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 	}
 
 	fmt.Println("")
-	fmt.Println("👀 " + ansi.Bold(ansi.Blue("Step 4: Starting asset watcher and patching...")))
+	fmt.Println("👀 " + ansi.Bold(ansi.Blue("Step 4: Start watching assets and auto-patching...")))
 
 	distPath := filepath.Join(projectDir, "dist")
 
@@ -328,23 +331,24 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 	fmt.Println("👀 Watching screens: " + ansi.Cyan(strings.Join(screensToWatch, ", ")))
 
 	// Fetch original head tags before starting watcher.
-	fmt.Println("💡 " + ansi.Cyan("Fetching original rendering settings for restoration on exit..."))
+	fmt.Println("💡 " + ansi.Yellow("Note: Original rendering settings will be automatically restored on exit."))
 	originalHeadTags, err := fetchOriginalHeadTags(ctx, cli, screensToWatch)
 	if err != nil {
-		fmt.Println("⚠️  " + ansi.Yellow(fmt.Sprintf("Warning: Could not fetch original settings: %v", err)))
-		fmt.Println("    " + ansi.Yellow("Original settings will not be restored on exit."))
+		fmt.Println("⚠️  " + ansi.Yellow(fmt.Sprintf("Could not fetch original settings: %v", err)))
+		fmt.Println("    " + ansi.Yellow("Restoration will be skipped since no previous settings could be retrieved."))
 		originalHeadTags = nil // Continue without restoration capability.
 	} else {
-		fmt.Println("✅ " + ansi.Green(fmt.Sprintf("Original settings saved for %d screen(s)", len(originalHeadTags))))
+		fmt.Println("✅ " + ansi.Green(fmt.Sprintf("Saved original settings for %d screen(s)", len(originalHeadTags))))
 	}
 
-	fmt.Println("")
-	fmt.Println("💡 " + ansi.Green("Assets will be patched automatically when changes are detected in the dist folder"))
-	fmt.Println("")
-	fmt.Println(ansi.Bold(ansi.Magenta("Tip: Run 'auth0 test login' to see your changes in action!")))
-	fmt.Println(ansi.Cyan("Press Ctrl+C to stop and restore original settings"))
+	fmt.Println()
+	fmt.Println(ansi.Magenta("💡 Tips:"))
+	fmt.Println(ansi.Cyan("  • Assets in '/dist/assets' are continuously monitored and patched when changes occur."))
+	fmt.Println(ansi.Cyan("  • Run 'auth0 test login' anytime to preview your changes in real-time."))
+	fmt.Println(ansi.Cyan("  • Press Ctrl+C to stop and restore your previous rendering settings."))
+	fmt.Println()
 
-	return watchAndPatch(ctx, cli, assetsURL, distPath, screensToWatch, buildWatchCmd, serveCmd, serveStarted, originalHeadTags)
+	return watchAndPatch(ctx, cli, assetsURL, distPath, screensToWatch, originalHeadTags)
 }
 
 func validateAculProject(projectDir string) error {
@@ -391,8 +395,6 @@ func selectScreensSimple(cli *cli, projectDir string, screenDirs []string) ([]st
 	srcScreensPath := filepath.Join(projectDir, "src", "screens")
 
 	if availableScreens, err := getScreensFromSrcFolder(srcScreensPath); err == nil && len(availableScreens) > 0 {
-		cli.renderer.Infof(ansi.Cyan(fmt.Sprintf("📂  Detected screens in src/screens: %s", strings.Join(availableScreens, ", "))))
-
 		return validateAndSelectScreens(cli, availableScreens, nil)
 	}
 
@@ -530,10 +532,6 @@ func restoreOriginalHeadTags(ctx context.Context, cli *cli, originalHeadTags map
 			RenderingMode: &management.RenderingModeAdvanced,
 			HeadTags:      headTags,
 		})
-
-		if cli.debug {
-			fmt.Fprintf(os.Stderr, "   🔄 Restoring '%s'\n", screen)
-		}
 	}
 
 	if len(renderings) == 0 {
@@ -548,7 +546,7 @@ func restoreOriginalHeadTags(ctx context.Context, cli *cli, originalHeadTags map
 	return nil
 }
 
-func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, screensToWatch []string, buildWatchCmd, serveCmd *exec.Cmd, serveStarted bool, originalHeadTags map[string][]interface{}) error {
+func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, screensToWatch []string, originalHeadTags map[string][]interface{}) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return fmt.Errorf("failed to create watcher: %w", err)
@@ -556,21 +554,36 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 	defer watcher.Close()
 
 	if err := watcher.Add(distPath); err != nil {
-		cli.renderer.Warnf("Failed to watch %s: %v", distPath, err)
+		return fmt.Errorf("failed to watch %s: %w", distPath, err)
 	}
 
-	cli.renderer.Infof("Watching: %s", strings.Join(screensToWatch, ", "))
+	fmt.Println("👀  Watching: " + ansi.Yellow(strings.Join(screensToWatch, ", ")))
 
 	// First, stop any existing global signal handlers (from root.go).
 	signal.Reset(os.Interrupt, syscall.SIGTERM)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	defer signal.Stop(sigChan) // Clean up signal handler when function exits.
+	defer signal.Stop(sigChan)
 
 	const debounceWindow = 5 * time.Second
-	var lastEventTime time.Time
-	lastHeadTags := make(map[string][]interface{})
+	var (
+		lastEventTime time.Time
+		lastHeadTags  = make(map[string][]interface{})
+	)
+
+	cleanup := func() {
+		fmt.Fprintln(os.Stderr, "\nShutting down...")
+		if len(originalHeadTags) > 0 {
+			fmt.Fprintln(os.Stderr, "Restoring original rendering settings...")
+			if err := restoreOriginalHeadTags(ctx, cli, originalHeadTags); err != nil {
+				fmt.Fprintf(os.Stderr, "Could not restore previous settings: %v\n", err)
+			} else {
+				fmt.Fprintf(os.Stderr, "Successfully restored rendering settings for %d screen(s).\n", len(originalHeadTags))
+			}
+		}
+		fmt.Fprintln(os.Stderr, "👋 ACUL connected mode stopped.")
+	}
 
 	for {
 		select {
@@ -579,8 +592,8 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 				return nil
 			}
 
-			// Trigger only on changes inside dist/assets/.
-			if !strings.Contains(event.Name, "assets") {
+			// Ignore non-asset events or irrelevant file ops.
+			if event.Op&(fsnotify.Write|fsnotify.Create) == 0 || !strings.Contains(event.Name, "assets") {
 				continue
 			}
 
@@ -591,106 +604,100 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 			lastEventTime = now
 
 			time.Sleep(500 * time.Millisecond) // Let writes settle.
-			cli.renderer.Warnf(ansi.Cyan("Change detected, patching assets..."))
-			if err := patchAssets(ctx, cli, distPath, assetsURL, screensToWatch, lastHeadTags); err != nil {
+
+			newHeadTags := make(map[string][]interface{})
+			changedScreens := make([]string, 0)
+
+			for _, screen := range screensToWatch {
+				headTags, err := buildHeadTagsFromDirs(distPath, assetsURL, screen)
+				if err != nil {
+					if cli.debug {
+						cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf("Skipping '%s': %v", screen, err)))
+					}
+					continue
+				}
+
+				// Compare with last known tags.
+				if reflect.DeepEqual(lastHeadTags[screen], headTags) {
+					continue
+				}
+
+				// Only record changed screens.
+				newHeadTags[screen] = headTags
+				changedScreens = append(changedScreens, screen)
+			}
+
+			if len(changedScreens) == 0 {
+				if cli.debug {
+					fmt.Println(ansi.Yellow("No effective asset changes detected and skipping patch."))
+				}
+				continue
+			}
+
+			if cli.debug {
+				fmt.Println(ansi.Cyan(fmt.Sprintf("🔄 Changes detected in %d screen(s): %s", len(changedScreens),
+					strings.Join(changedScreens, ", "))))
+			} else {
+				fmt.Println(ansi.Cyan("⚙️ Change detected, patching assets..."))
+			}
+
+			if err = patchChangedScreens(ctx, cli, changedScreens, newHeadTags); err != nil {
 				cli.renderer.Errorf("Patch failed: %v", err)
+			} else {
+				fmt.Println(ansi.Green("✅ Assets patched successfully!"))
+				for screen, headTags := range newHeadTags {
+					lastHeadTags[screen] = headTags
+				}
 			}
 
 		case err := <-watcher.Errors:
 			cli.renderer.Warnf("Watcher error: %v", err)
 
 		case <-sigChan:
-			fmt.Fprintln(os.Stderr, "\nShutdown signal received, cleaning up...")
-
-			// Restore original head tags if available.
-			if len(originalHeadTags) > 0 {
-				fmt.Fprintln(os.Stderr, "Restoring original settings...")
-
-				if err := restoreOriginalHeadTags(ctx, cli, originalHeadTags); err != nil {
-					fmt.Fprintf(os.Stderr, " WARN  Could not restore: %v\n", err)
-				} else {
-					fmt.Fprintf(os.Stderr, " INFO  Restored settings for %d screen(s)\n", len(originalHeadTags))
-				}
-			}
-
-			// Stop background processes.
-			if buildWatchCmd != nil && buildWatchCmd.Process != nil {
-				fmt.Fprintln(os.Stderr, "Stopping build watcher...")
-				if err := buildWatchCmd.Process.Kill(); err != nil {
-					fmt.Fprintf(os.Stderr, " Error stopping build watcher: %v\n", err)
-				}
-			}
-
-			if serveCmd != nil && serveCmd.Process != nil && serveStarted {
-				fmt.Fprintln(os.Stderr, "Stopping local server...")
-				if err := serveCmd.Process.Kill(); err != nil {
-					fmt.Fprintf(os.Stderr, "  Error stopping server: %v\n", err)
-				}
-			}
-
-			fmt.Fprintln(os.Stderr, "\nACUL connected mode stopped. Goodbye!")
-
-			watcher.Close()
+			cleanup()
+			printAvailableCommands()
 			return nil
 
 		case <-ctx.Done():
+			cleanup()
+			printAvailableCommands()
 			return ctx.Err()
 		}
 	}
 }
 
-func patchAssets(ctx context.Context, cli *cli, distPath, assetsURL string, screensToWatch []string, lastHeadTags map[string][]interface{}) error {
-	var (
-		renderings []*management.PromptRendering
-		updated    []string
-	)
+func patchChangedScreens(ctx context.Context, cli *cli, changedScreens []string, headTagsMap map[string][]interface{}) error {
+	var renderings []*management.PromptRendering
 
-	for _, screen := range screensToWatch {
-		headTags, err := buildHeadTagsFromDirs(distPath, assetsURL, screen)
-		if err != nil {
-			if cli.debug {
-				cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf("Skipping '%s': %v", screen, err)))
-			}
-			continue
-		}
-
-		if reflect.DeepEqual(lastHeadTags[screen], headTags) {
-			if cli.debug {
-				cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf("No changes detected for '%s'", screen)))
-			}
-			continue
-		}
-		lastHeadTags[screen] = headTags
-
+	for _, screen := range changedScreens {
 		promptType := management.PromptType(ScreenPromptMap[screen])
 		screenType := management.ScreenName(screen)
-
 		renderings = append(renderings, &management.PromptRendering{
 			Prompt:        &promptType,
 			Screen:        &screenType,
 			RenderingMode: &management.RenderingModeAdvanced,
-			HeadTags:      headTags,
+			HeadTags:      headTagsMap[screen],
 		})
-		updated = append(updated, screen)
-	}
-
-	if len(renderings) == 0 {
-		if cli.debug {
-			cli.renderer.Warnf(ansi.Cyan("No screens to patch"))
-		}
-		return nil
 	}
 
 	req := &management.PromptRenderingUpdateRequest{PromptRenderings: renderings}
+	if cli.debug {
+		fmt.Println(ansi.Cyan(fmt.Sprintf("Patching %d screen(s): %s", len(changedScreens), strings.Join(changedScreens, ", "))))
+	}
+
 	if err := cli.api.Prompt.BulkUpdateRendering(ctx, req); err != nil {
 		return fmt.Errorf("bulk patch error: %w", err)
 	}
 
-	cli.renderer.Infof(ansi.Green(fmt.Sprintf("✅  Patched %d screen(s): %s", len(updated), strings.Join(updated, ", "))))
+	if cli.debug {
+		fmt.Println(ansi.Green(fmt.Sprintf("Patched %d screen(s) successfully: %s",
+			len(changedScreens), strings.Join(changedScreens, ", "))))
+	}
 
 	return nil
 }
 
+// buildHeadTagsFromDirs collects <script> and <link> tags from shared, screen-specific, and common asset directories.
 func buildHeadTagsFromDirs(distPath, assetsURL, screen string) ([]interface{}, error) {
 	searchDirs := []string{
 		filepath.Join(distPath, "assets", "shared"),

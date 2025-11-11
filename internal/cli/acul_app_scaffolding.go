@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -272,57 +273,47 @@ func selectTemplate(cmd *cobra.Command, manifest *Manifest, providedTemplate str
 	return nameToKey[chosenTemplateName], nil
 }
 
-// validateAndSelectScreens is a common function for screen validation and selection.
+// validateAndSelectScreens validates provided screens or prompts for selection.
 func validateAndSelectScreens(cli *cli, screenIDs []string, providedScreens []string) ([]string, error) {
-	if len(providedScreens) > 0 {
-		var validScreens []string
-		var invalidScreens []string
-
-		for _, providedScreen := range providedScreens {
-			if strings.TrimSpace(providedScreen) == "" {
-				continue
-			}
-
-			found := false
-			for _, availableScreen := range screenIDs {
-				if providedScreen == availableScreen {
-					validScreens = append(validScreens, providedScreen)
-					found = true
-					break
-				}
-			}
-			if !found {
-				invalidScreens = append(invalidScreens, providedScreen)
-			}
-		}
-
-		if len(invalidScreens) > 0 {
-			cli.renderer.Warnf("⚠️ The following screens are not supported for the chosen template: %s",
-				ansi.Bold(ansi.Red(strings.Join(invalidScreens, ", "))))
-			cli.renderer.Infof("Available screens: %s",
-				ansi.Bold(ansi.Cyan(strings.Join(screenIDs, ", "))))
-			cli.renderer.Infof("%s We're planning to support all screens in the future.",
-				ansi.Blue("Note:"))
-		}
-
-		if len(validScreens) == 0 {
-			cli.renderer.Warnf("%s %s",
-				ansi.Bold(ansi.Yellow("⚠️")),
-				ansi.Bold("None of the provided screens are valid for this template."))
-		} else {
-			return validScreens, nil
-		}
+	if len(screenIDs) == 0 {
+		return nil, fmt.Errorf("no available screens found")
 	}
 
-	// If no screens provided or no valid screens, prompt for multi-select.
-	var selectedScreens []string
-	err := prompt.AskMultiSelect("Select screens to include:", &selectedScreens, screenIDs...)
+	if len(providedScreens) > 0 {
+		var valid, invalid []string
+		for _, s := range providedScreens {
+			trimmedScreen := strings.TrimSpace(s)
+			if trimmedScreen == "" {
+				continue
+			}
+			if slices.Contains(screenIDs, trimmedScreen) {
+				valid = append(valid, trimmedScreen)
+			} else {
+				invalid = append(invalid, trimmedScreen)
+			}
+		}
 
-	if len(selectedScreens) == 0 {
+		if len(invalid) > 0 {
+			cli.renderer.Warnf("Unsupported screens: %s", ansi.Red(strings.Join(invalid, ", ")))
+			cli.renderer.Infof("Available: %s", ansi.Cyan(strings.Join(screenIDs, ", ")))
+		}
+
+		if len(valid) > 0 {
+			return valid, nil
+		}
+
+		cli.renderer.Warnf("No valid screens found.")
+	}
+
+	var selected []string
+	if err := prompt.AskMultiSelect("Select screens:", &selected, screenIDs...); err != nil {
+		return nil, err
+	}
+	if len(selected) == 0 {
 		return nil, fmt.Errorf("at least one screen must be selected")
 	}
 
-	return selectedScreens, err
+	return selected, nil
 }
 
 func getDestDir(args []string) string {
@@ -584,40 +575,48 @@ func createScreenMap(screens []Screens) map[string]Screens {
 func showPostScaffoldingOutput(cli *cli, destDir, successMessage string) {
 	cli.renderer.Output("")
 	cli.renderer.Infof("%s  %s in %s!",
-		ansi.Bold(ansi.Green("🎉")), successMessage, ansi.Bold(ansi.Cyan(fmt.Sprintf("'%s'", destDir))))
+		"🎉", successMessage, ansi.Bold(ansi.Cyan(fmt.Sprintf("'%s'", destDir))))
 	cli.renderer.Output("")
 
 	cli.renderer.Infof("📖  Explore the sample app: %s",
 		ansi.Blue("https://github.com/auth0-samples/auth0-acul-samples"))
 	cli.renderer.Output("")
 
-	checkNodeVersion(cli)
-
 	// Show next steps and related commands.
-	cli.renderer.Infof("%s Next Steps: Navigate to %s and run:", ansi.Bold("🚀"), ansi.Bold(ansi.Cyan(destDir)))
-	cli.renderer.Infof("    %s if not yet installed", ansi.Bold(ansi.Cyan("npm install")))
-	cli.renderer.Infof("    %s", ansi.Bold(ansi.Cyan("auth0 acul dev")))
-	cli.renderer.Output("")
+	fmt.Println()
+	fmt.Println(ansi.Bold("Next Steps:"))
+	fmt.Printf("  Navigate to %s\n", ansi.Cyan(destDir))
+	fmt.Printf("  Run %s if dependencies are not installed\n", ansi.Cyan("npm install"))
+	fmt.Printf("  Start the local dev server using %s\n", ansi.Cyan("auth0 acul dev"))
 
-	fmt.Printf("%s Available Commands:\n", ansi.Bold("📋"))
-	fmt.Printf("   %s - Add authentication screens\n",
-		ansi.Bold(ansi.Green("auth0 acul screen add <screen-name>")))
-	fmt.Printf("   %s - Local development with hot-reload\n",
-		ansi.Bold(ansi.Green("auth0 acul dev")))
-	fmt.Printf("   %s - Live sync changes to Auth0 tenant\n",
-		ansi.Bold(ansi.Green("auth0 acul dev --connected")))
-	fmt.Printf("   %s - Create starter config template\n",
-		ansi.Bold(ansi.Green("auth0 acul config generate <screen>")))
-	fmt.Printf("   %s - Pull current Auth0 settings\n",
-		ansi.Bold(ansi.Green("auth0 acul config get <screen>")))
-	fmt.Printf("   %s - Push local config to Auth0\n",
-		ansi.Bold(ansi.Green("auth0 acul config set <screen>")))
-	fmt.Printf("   %s - List all configurable screens\n",
-		ansi.Bold(ansi.Green("auth0 acul config list")))
+	printAvailableCommands()
+	checkNodeVersion(cli)
+}
+
+func printAvailableCommands() {
+	fmt.Println()
+	fmt.Println(ansi.Bold("📋  Available Commands:"))
 	fmt.Println()
 
-	fmt.Printf("%s %s: Use %s to see all available commands\n",
-		ansi.Bold("💡"), ansi.Bold("Tip"), ansi.Bold(ansi.Cyan("'auth0 acul --help'")))
+	fmt.Printf("  %s - Add authentication screens\n",
+		ansi.Bold(ansi.Green("auth0 acul screen add <screen-name>")))
+	fmt.Printf("  %s - Local development with hot-reload\n",
+		ansi.Bold(ansi.Green("auth0 acul dev")))
+	fmt.Printf("  %s - Live sync changes to Auth0 tenant\n",
+		ansi.Bold(ansi.Green("auth0 acul dev --connected")))
+	fmt.Printf("  %s - Create starter config template\n",
+		ansi.Bold(ansi.Green("auth0 acul config generate <screen>")))
+	fmt.Printf("  %s - Pull current Auth0 settings\n",
+		ansi.Bold(ansi.Green("auth0 acul config get <screen>")))
+	fmt.Printf("  %s - Push local config to Auth0\n",
+		ansi.Bold(ansi.Green("auth0 acul config set <screen>")))
+	fmt.Printf("  %s - List all configurable screens\n",
+		ansi.Bold(ansi.Green("auth0 acul config list")))
+
+	fmt.Println()
+	fmt.Printf("%s  Use %s to see all available commands\n",
+		ansi.Yellow("💡 Tip:"), ansi.Cyan("auth0 acul --help"))
+	fmt.Println()
 }
 
 type AculConfig struct {
