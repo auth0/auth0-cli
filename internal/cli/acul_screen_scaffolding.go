@@ -128,7 +128,12 @@ func scaffoldAddScreen(cli *cli, args []string, destDir string) error {
 }
 
 func selectAndFilterScreens(cli *cli, args []string, manifest *Manifest, chosenTemplate string, existingScreens []string) ([]string, error) {
-	selectedScreens, err := validateAndSelectScreens(cli, manifest.Templates[chosenTemplate].Screens, args)
+	var availableScreenIDs []string
+	for _, s := range manifest.Templates[chosenTemplate].Screens {
+		availableScreenIDs = append(availableScreenIDs, s.ID)
+	}
+
+	selectedScreens, err := validateAndSelectScreens(cli, availableScreenIDs, args)
 	if err != nil {
 		return nil, err
 	}
@@ -299,6 +304,7 @@ func processDirectories(cli *cli, baseDirs []string, sourceRoot, destRoot string
 		sourceDir := filepath.Join(sourceRoot, dir)
 		files, listErr := listFilesInDir(sourceDir)
 		if listErr != nil {
+			err = fmt.Errorf("failed to list files in %s: %w", sourceDir, listErr)
 			return
 		}
 
@@ -421,15 +427,15 @@ func loadAculConfig(configPath string) (*AculConfig, error) {
 
 // addUniqueScreens ensures selectedScreens are added uniquely to cfg.Screens.
 func addUniqueScreens(cfg *AculConfig, selected []string) {
-	seen := make(map[string]bool, len(cfg.Screens))
+	existingSet := make(map[string]bool, len(cfg.Screens))
 	for _, s := range cfg.Screens {
-		seen[s] = true
+		existingSet[s] = true
 	}
 
 	for _, s := range selected {
-		if !seen[s] {
+		if !existingSet[s] {
 			cfg.Screens = append(cfg.Screens, s)
-			seen[s] = true
+			existingSet[s] = true
 		}
 	}
 }
