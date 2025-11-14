@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_phone_provider", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_log_stream", "auth0_network_acl", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_prompt_screen_renderer", "auth0_resource_server", "auth0_role", "auth0_self_service_profile", "auth0_tenant", "auth0_trigger_actions", "auth0_user_attribute_profile"}
+	defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_branding_theme", "auth0_phone_provider", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_log_stream", "auth0_network_acl", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_prompt_screen_renderer", "auth0_resource_server", "auth0_role", "auth0_self_service_profile", "auth0_tenant", "auth0_trigger_actions", "auth0_user_attribute_profile"}
 )
 
 type (
@@ -36,6 +36,10 @@ type (
 	attackProtectionResourceFetcher struct{}
 
 	brandingResourceFetcher struct{}
+
+	brandingThemeResourceFetcher struct {
+		api *auth0.API
+	}
 
 	phoneProviderResourceFetcher struct {
 		api *auth0.API
@@ -138,6 +142,24 @@ func (f *brandingResourceFetcher) FetchData(_ context.Context) (importDataList, 
 			ImportID:     uuid.NewString(),
 		},
 	}, nil
+}
+func (f *brandingThemeResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	theme, err := f.api.BrandingTheme.Default(ctx)
+	if err != nil {
+		if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	data = append(data, importDataItem{
+		ResourceName: "auth0_branding_theme.default",
+		ImportID:     theme.GetID(),
+	})
+
+	return data, nil
 }
 
 func (f *phoneProviderResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
@@ -451,6 +473,17 @@ func (f *organizationResourceFetcher) FetchData(ctx context.Context) (importData
 		if len(conns.OrganizationConnections) > 0 {
 			data = append(data, importDataItem{
 				ResourceName: "auth0_organization_connections." + sanitizeResourceName(organization.GetName()),
+				ImportID:     organization.GetID(),
+			})
+		}
+
+		discoveryDomains, err := f.api.Organization.DiscoveryDomains(ctx, organization.GetID())
+		if err != nil {
+			return data, err
+		}
+		if len(discoveryDomains.Domains) > 0 {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_organization_discovery_domains." + sanitizeResourceName(organization.GetName()),
 				ImportID:     organization.GetID(),
 			})
 		}
