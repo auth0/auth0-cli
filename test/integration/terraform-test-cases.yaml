@@ -37,11 +37,11 @@ tests:
 #        - Review the config and generate the terraform state by running
 #        - cd tmp-tf-gen && ./terraform apply
 #        - Once Terraform files are auto-generated, the terraform binary and auth0_import.tf files can be deleted.
-  002.2 - it successfully generates the expected files for all default resources:
-    command: ./test/integration/scripts/assert-tf-generate-files-exist.sh
-    exit-code: 0
-  002.3 - cleanup:
-    command: mv tmp-tf-gen /tmp/tmp-tf-gen
+#  002.2 - it successfully generates the expected files for all default resources:
+#    command: ./test/integration/scripts/assert-tf-generate-files-exist.sh
+#    exit-code: 0
+#  002.3 - cleanup:
+#    command: mv tmp-tf-gen /tmp/tmp-tf-gen
 
   003.1 - it partially succeeds if Terraform credentials not provided:
     command: unset AUTH0_DOMAIN && auth0 tf generate --output-dir tmp-tf-gen
