@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.23.0](https://github.com/auth0/auth0-cli/tree/v1.23.0) (November 14, 2025)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.22.0...v1.23.0)
+
+### Added
+- Add filter and paginated listing to `auth0 domains list` (EA-only) [#1378]
+- Add support for generating `auth0_organization_discovery_domains` in `auth0 tf generate` [#1371]
+
+### Fixed
+- Fixed quickstart download failures caused by invalid zip responses [#1375]
+
 # [v.1.22.0](https://github.com/auth0/auth0-cli/tree/v1.22.0) (October 21, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.21.0...v1.22.0)
@@ -608,6 +619,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 [unreleased]: https://github.com/auth0/auth0-cli/compare/v1.21.0...HEAD
+[1378]: https://github.com/auth0/auth0-cli/pull/1378
+[1375]: https://github.com/auth0/auth0-cli/pull/1375
+[1371]: https://github.com/auth0/auth0-cli/pull/1371
 [#1344]: https://github.com/auth0/auth0-cli/pull/1344
 [#1337]: https://github.com/auth0/auth0-cli/pull/1337
 [#1343]: https://github.com/auth0/auth0-cli/issues/1343
