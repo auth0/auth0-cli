@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/auth0/auth0-cli/internal/utils"
 	"github.com/auth0/go-auth0/management"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
@@ -331,7 +332,7 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 	fmt.Println("👀 Watching screens: " + ansi.Cyan(strings.Join(screensToWatch, ", ")))
 
 	// Fetch original head tags before starting watcher.
-	fmt.Println("💡 " + ansi.Yellow("Note: Original rendering settings will be automatically restored on exit."))
+	fmt.Println("💡 " + ansi.Yellow("Note: Your original rendering settings will be saved and can be restored on exit."))
 	originalHeadTags, err := fetchOriginalHeadTags(ctx, cli, screensToWatch)
 	if err != nil {
 		fmt.Println("⚠️  " + ansi.Yellow(fmt.Sprintf("Could not fetch original settings: %v", err)))
@@ -345,7 +346,7 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 	fmt.Println(ansi.Magenta("💡 Tips:"))
 	fmt.Println(ansi.Cyan("  • Assets in '/dist/assets' are continuously monitored and patched when changes occur."))
 	fmt.Println(ansi.Cyan("  • Run 'auth0 test login' anytime to preview your changes in real-time."))
-	fmt.Println(ansi.Cyan("  • Press Ctrl+C to stop and restore your previous rendering settings."))
+	fmt.Println(ansi.Cyan("  • Press Ctrl+C to stop. You'll be prompted to restore your original settings."))
 	fmt.Println()
 
 	return watchAndPatch(ctx, cli, assetsURL, distPath, screensToWatch, originalHeadTags)
@@ -518,11 +519,10 @@ func fetchOriginalHeadTags(ctx context.Context, cli *cli, screensToWatch []strin
 	return originalTags, nil
 }
 
-// restoreOriginalHeadTags restores the original rendering settings that were saved at startup.
-func restoreOriginalHeadTags(ctx context.Context, cli *cli, originalHeadTags map[string][]interface{}) error {
+func applyPromptRenderings(ctx context.Context, cli *cli, screenTagMap map[string][]interface{}, debugPrefix string) error {
 	var renderings []*management.PromptRendering
 
-	for screen, headTags := range originalHeadTags {
+	for screen, headTags := range screenTagMap {
 		promptType := management.PromptType(ScreenPromptMap[screen])
 		screenType := management.ScreenName(screen)
 
@@ -535,12 +535,21 @@ func restoreOriginalHeadTags(ctx context.Context, cli *cli, originalHeadTags map
 	}
 
 	if len(renderings) == 0 {
-		return fmt.Errorf("no original settings to restore")
+		return fmt.Errorf("no renderings to apply")
+	}
+
+	if cli.debug {
+		fmt.Println(ansi.Cyan(
+			fmt.Sprintf("%s %d screen(s): %s", debugPrefix, len(renderings), strings.Join(utils.FetchKeys(screenTagMap), ", "))))
 	}
 
 	req := &management.PromptRenderingUpdateRequest{PromptRenderings: renderings}
 	if err := cli.api.Prompt.BulkUpdateRendering(ctx, req); err != nil {
-		return fmt.Errorf("bulk restore error: %w", err)
+		return fmt.Errorf("%s error: %w", debugPrefix, err)
+	}
+
+	if cli.debug {
+		fmt.Println(ansi.Green(fmt.Sprintf("%s successful for %d screen(s).", debugPrefix, len(renderings))))
 	}
 
 	return nil
@@ -582,7 +591,7 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 			if restore {
 				fmt.Fprintln(os.Stdout, ansi.Cyan("Restoring original rendering settings..."))
 
-				if err := restoreOriginalHeadTags(ctx, cli, originalHeadTags); err != nil {
+				if err := applyPromptRenderings(ctx, cli, originalHeadTags, "Restoring"); err != nil {
 					fmt.Fprintln(os.Stdout, ansi.Yellow(fmt.Sprintf(
 						"Failed to restore previous settings: %v", err,
 					)))
@@ -599,6 +608,7 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 			}
 		}
 
+		fmt.Println()
 		fmt.Fprintln(os.Stdout, ansi.Green("👋 ACUL connected mode stopped."))
 	}
 
@@ -658,7 +668,7 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 				fmt.Println(ansi.Cyan("⚙️ Change detected, patching assets..."))
 			}
 
-			if err = patchChangedScreens(ctx, cli, changedScreens, newHeadTags); err != nil {
+			if err = applyPromptRenderings(ctx, cli, newHeadTags, "Patching"); err != nil {
 				cli.renderer.Errorf("Patch failed: %v", err)
 			} else {
 				fmt.Println(ansi.Green("✅ Assets patched successfully!"))
@@ -681,37 +691,6 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 			return ctx.Err()
 		}
 	}
-}
-
-func patchChangedScreens(ctx context.Context, cli *cli, changedScreens []string, headTagsMap map[string][]interface{}) error {
-	var renderings []*management.PromptRendering
-
-	for _, screen := range changedScreens {
-		promptType := management.PromptType(ScreenPromptMap[screen])
-		screenType := management.ScreenName(screen)
-		renderings = append(renderings, &management.PromptRendering{
-			Prompt:        &promptType,
-			Screen:        &screenType,
-			RenderingMode: &management.RenderingModeAdvanced,
-			HeadTags:      headTagsMap[screen],
-		})
-	}
-
-	req := &management.PromptRenderingUpdateRequest{PromptRenderings: renderings}
-	if cli.debug {
-		fmt.Println(ansi.Cyan(fmt.Sprintf("Patching %d screen(s): %s", len(changedScreens), strings.Join(changedScreens, ", "))))
-	}
-
-	if err := cli.api.Prompt.BulkUpdateRendering(ctx, req); err != nil {
-		return fmt.Errorf("bulk patch error: %w", err)
-	}
-
-	if cli.debug {
-		fmt.Println(ansi.Green(fmt.Sprintf("Patched %d screen(s) successfully: %s",
-			len(changedScreens), strings.Join(changedScreens, ", "))))
-	}
-
-	return nil
 }
 
 // buildHeadTagsFromDirs collects <script> and <link> tags from shared, screen-specific, and common asset directories.
