@@ -573,16 +573,33 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 	)
 
 	cleanup := func() {
-		fmt.Fprintln(os.Stderr, "\nShutting down...")
+		fmt.Fprintln(os.Stderr, ansi.Yellow("\nShutting down ACUL connected mode..."))
 		if len(originalHeadTags) > 0 {
-			fmt.Fprintln(os.Stderr, "Restoring original rendering settings...")
-			if err := restoreOriginalHeadTags(ctx, cli, originalHeadTags); err != nil {
-				fmt.Fprintf(os.Stderr, "Could not restore previous settings: %v\n", err)
+			restore := prompt.Confirm(
+				"Would you like to restore your original rendering settings?",
+			)
+
+			if restore {
+				fmt.Fprintln(os.Stdout, ansi.Cyan("Restoring original rendering settings..."))
+
+				if err := restoreOriginalHeadTags(ctx, cli, originalHeadTags); err != nil {
+					fmt.Fprintln(os.Stdout, ansi.Yellow(fmt.Sprintf(
+						"Failed to restore previous settings: %v", err,
+					)))
+				} else {
+					fmt.Fprintln(os.Stdout, ansi.Green(fmt.Sprintf(
+						"Successfully restored rendering settings for %d screen(s).",
+						len(originalHeadTags),
+					)))
+				}
 			} else {
-				fmt.Fprintf(os.Stderr, "Successfully restored rendering settings for %d screen(s).\n", len(originalHeadTags))
+				fmt.Fprintln(os.Stdout, ansi.Yellow(
+					"Restoration skipped. The patched assets will continue to remain active in your Auth0 tenant.",
+				))
 			}
 		}
-		fmt.Fprintln(os.Stderr, "👋 ACUL connected mode stopped.")
+
+		fmt.Fprintln(os.Stdout, ansi.Green("👋 ACUL connected mode stopped."))
 	}
 
 	for {
