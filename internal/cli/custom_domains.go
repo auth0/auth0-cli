@@ -140,6 +140,10 @@ func listCustomDomainsCmd(cli *cli) *cobra.Command {
 						options = append(options, management.Parameter("q", inputs.filter))
 					}
 
+					if inputs.sortBy != "" {
+						options = append(options, management.Parameter("q", inputs.sortBy))
+					}
+
 					result, e := cli.api.CustomDomain.ListWithPagination(cmd.Context(), options...)
 					if e != nil {
 						return fmt.Errorf("failed to list custom domains (EA-only): %w", e)
