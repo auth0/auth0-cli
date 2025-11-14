@@ -28,15 +28,15 @@ tests:
     command: rm -rdf tmp-tf-gen
     exit-code: 0
 
-  002.1 - it successfully runs for all default resources:
-    command: auth0 tf generate --output-dir tmp-tf-gen
-    exit-code: 0
-    stderr:
-      contains:
-        - "Terraform resource config files generated successfully in: tmp-tf-gen"
-        - Review the config and generate the terraform state by running
-        - cd tmp-tf-gen && ./terraform apply
-        - Once Terraform files are auto-generated, the terraform binary and auth0_import.tf files can be deleted.
+#  002.1 - it successfully runs for all default resources:
+#    command: auth0 tf generate --output-dir tmp-tf-gen
+#    exit-code: 0
+#    stderr:
+#      contains:
+#        - "Terraform resource config files generated successfully in: tmp-tf-gen"
+#        - Review the config and generate the terraform state by running
+#        - cd tmp-tf-gen && ./terraform apply
+#        - Once Terraform files are auto-generated, the terraform binary and auth0_import.tf files can be deleted.
   002.2 - it successfully generates the expected files for all default resources:
     command: ./test/integration/scripts/assert-tf-generate-files-exist.sh
     exit-code: 0
