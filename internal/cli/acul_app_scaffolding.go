@@ -193,7 +193,7 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
 		availableScreenIDs = append(availableScreenIDs, s.ID)
 	}
 
-	selectedScreens, err := validateAndSelectScreens(cli, availableScreenIDs, inputs.Screens)
+	selectedScreens, err := validateAndSelectScreens(cli, availableScreenIDs, inputs.Screens, true)
 	if err != nil {
 		return err
 	}
@@ -273,53 +273,72 @@ func selectTemplate(cmd *cobra.Command, manifest *Manifest, providedTemplate str
 	return nameToKey[chosenTemplateName], nil
 }
 
-// validateAndSelectScreens validates provided screens or prompts for selection.
-func validateAndSelectScreens(cli *cli, screenIDs []string, providedScreens []string) ([]string, error) {
+// ValidateAndSelectScreens validates provided screens or prompts for selection.
+func validateAndSelectScreens(cli *cli, screenIDs, providedScreens []string, multiSelect bool) ([]string, error) {
 	if len(screenIDs) == 0 {
 		return nil, fmt.Errorf("no available screens found")
 	}
 
-	if len(providedScreens) > 0 {
-		var valid, invalid []string
-		for _, s := range providedScreens {
-			trimmedScreen := strings.TrimSpace(s)
-			if trimmedScreen == "" {
-				continue
-			}
-			if slices.Contains(screenIDs, trimmedScreen) {
-				valid = append(valid, trimmedScreen)
-			} else {
-				invalid = append(invalid, trimmedScreen)
-			}
-		}
+	// Normalize provided screens.
+	var valid []string
+	var invalid []string
 
+	for _, s := range providedScreens {
+		screen := strings.TrimSpace(s)
+		if screen == "" {
+			continue
+		}
+		if slices.Contains(screenIDs, screen) {
+			valid = append(valid, screen)
+		} else {
+			invalid = append(invalid, screen)
+		}
+	}
+
+	// If user provided screens.
+	if len(providedScreens) > 0 {
 		if len(invalid) > 0 {
 			cli.renderer.Warnf("Unsupported screens: %s", ansi.Red(strings.Join(invalid, ", ")))
-			cli.renderer.Infof("Available: %s", ansi.Cyan(strings.Join(screenIDs, ", ")))
 		}
 
 		if len(valid) > 0 {
+			// If single-select, only return the first match.
+			if !multiSelect {
+				return []string{valid[0]}, nil
+			}
 			return valid, nil
 		}
 
-		cli.renderer.Warnf("No valid screens found.")
+		cli.renderer.Warnf("No valid screen(s) found. Please select from the available options.")
 	}
 
-	var selected []string
-	if err := prompt.AskMultiSelect("Select screens:", &selected, screenIDs...); err != nil {
+	// No valid provided screens — fall back to interactive selection.
+	if multiSelect {
+		var selected []string
+		if err := prompt.AskMultiSelect("Select screens:", &selected, screenIDs...); err != nil {
+			return nil, err
+		}
+		if len(selected) == 0 {
+			return nil, fmt.Errorf("at least one screen must be selected")
+		}
+		return selected, nil
+	}
+
+	// Single select.
+	var selected string
+	q := prompt.SelectInput("screen", "Select a screen:", "", screenIDs, screenIDs[0], true)
+	if err := prompt.AskOne(q, &selected); err != nil {
 		return nil, err
 	}
-	if len(selected) == 0 {
-		return nil, fmt.Errorf("at least one screen must be selected")
-	}
 
-	return selected, nil
+	return []string{selected}, nil
 }
 
 func getDestDir(args []string) string {
 	if len(args) < 1 {
 		return "acul-sample-app"
 	}
+
 	return args[0]
 }
 

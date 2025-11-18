@@ -13,7 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/auth0/auth0-cli/internal/utils"
 	"github.com/auth0/go-auth0/management"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
@@ -113,7 +112,7 @@ CONNECTED MODE (--connected):
 				}
 			}
 
-			if err := validateAculProject(projectDir); err != nil {
+			if err = validateAculProject(projectDir); err != nil {
 				return fmt.Errorf("invalid ACUL project: %w", err)
 			}
 
@@ -136,12 +135,12 @@ CONNECTED MODE (--connected):
 			}
 
 			if port == "" {
-				err := portFlag.Ask(cmd, &projectDir, auth0.String("8080"))
+				err = portFlag.Ask(cmd, &port, auth0.String("8080"))
 				if err != nil {
 					return err
 				}
 			}
-			return runNormalMode(cli, projectDir, screenDirs)
+			return runNormalMode(cli, projectDir, port)
 		},
 	}
 
@@ -154,36 +153,26 @@ CONNECTED MODE (--connected):
 }
 
 // ToDo : use the port logic.
-func runNormalMode(cli *cli, projectDir string, screenDirs []string) error {
+func runNormalMode(cli *cli, projectDir, port string) error {
 	var screen string
 	fmt.Println(ansi.Bold("🚀 Starting ") + ansi.Cyan("ACUL Dev Mode"))
 
 	fmt.Printf("📂 Project: %s\n", ansi.Yellow(projectDir))
+	fmt.Printf("🖥️  Server: %s\n", ansi.Green(fmt.Sprintf("http://localhost:%s", port)))
+	fmt.Println("💡 " + ansi.Italic("Make changes to your code and view the live changes as we have HMR enabled!"))
 
-	fmt.Printf("🖥️  Server: %s\n", ansi.Green(fmt.Sprintf("http://localhost:%s", "3000")))
-	fmt.Println("💡 " + ansi.Italic("Edit your code and see live changes instantly (HMR enabled)"))
-
-	if len(screenDirs) == 0 {
-		screen = "login-id"
-		// ToDo: change back to use cmd once run dev command gets supported. Run npm run dev command.
-		fmt.Println("Defaulting to running 'npm run screen login-id' for dev mode...")
-	} else {
-		screen = screenDirs[0]
-		fmt.Println("Running 'npm run screen " + screen + "' for dev mode...")
-	}
-
-	cmd := exec.Command("npm", "run", "screen", screen)
+	cmd := exec.Command("npm", "run", "dev", "--", "--port", port)
 	cmd.Dir = projectDir
 
 	// Show output only in debug mode.
 	if cli.debug {
-		fmt.Println("\n🔄 Running:", ansi.Cyan(fmt.Sprintf("npm run screen %s", screen)))
+		fmt.Println("\n🔄 Executing:", ansi.Cyan(fmt.Sprintf("npm run dev")))
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	}
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("❌ failed to run 'npm run screen %s': %w", screen, err)
+		return fmt.Errorf("❌ failed to run 'npm run dev %s': %w", screen, err)
 	}
 
 	return nil
@@ -396,7 +385,7 @@ func selectScreensSimple(cli *cli, projectDir string, screenDirs []string) ([]st
 	srcScreensPath := filepath.Join(projectDir, "src", "screens")
 
 	if availableScreens, err := getScreensFromSrcFolder(srcScreensPath); err == nil && len(availableScreens) > 0 {
-		return validateAndSelectScreens(cli, availableScreens, nil)
+		return validateAndSelectScreens(cli, availableScreens, nil, true)
 	}
 
 	return nil, fmt.Errorf(`no screens found in project.
@@ -496,23 +485,27 @@ func getScreensFromSrcFolder(srcScreensPath string) ([]string, error) {
 func fetchOriginalHeadTags(ctx context.Context, cli *cli, screensToWatch []string) (map[string][]interface{}, error) {
 	originalTags := make(map[string][]interface{})
 
+	existing, err := cli.api.Prompt.ListRendering(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	promptRenderingMap := make(map[string]*management.PromptRendering, len(existing.PromptRenderings))
+	for _, r := range existing.PromptRenderings {
+		if r.Prompt != nil && r.Screen != nil {
+			key := string(*r.Prompt) + "|" + string(*r.Screen)
+			promptRenderingMap[key] = r
+		}
+	}
+
+	// Collect only requested screens.
 	for _, screen := range screensToWatch {
 		promptType := management.PromptType(ScreenPromptMap[screen])
 		screenType := management.ScreenName(screen)
+		key := string(promptType) + "|" + string(screenType)
 
-		rendering, err := cli.api.Prompt.ReadRendering(ctx, promptType, screenType)
-		if err != nil {
-			if cli.debug {
-				fmt.Println("⚠️  " + ansi.Yellow(fmt.Sprintf("Could not fetch original settings for '%s': %v", screen, err)))
-			}
-			continue
-		}
-
-		if rendering != nil && rendering.HeadTags != nil {
-			originalTags[screen] = rendering.HeadTags
-			if cli.debug {
-				fmt.Println("📥 " + ansi.Cyan(fmt.Sprintf("Saved original settings for '%s' (%d tags)", screen, len(rendering.HeadTags))))
-			}
+		if r := promptRenderingMap[key]; r != nil && r.HeadTags != nil {
+			originalTags[screen] = r.HeadTags
 		}
 	}
 
@@ -520,36 +513,93 @@ func fetchOriginalHeadTags(ctx context.Context, cli *cli, screensToWatch []strin
 }
 
 func applyPromptRenderings(ctx context.Context, cli *cli, screenTagMap map[string][]interface{}, debugPrefix string) error {
-	var renderings []*management.PromptRendering
-
+	var updates []*management.PromptRendering
 	for screen, headTags := range screenTagMap {
-		promptType := management.PromptType(ScreenPromptMap[screen])
-		screenType := management.ScreenName(screen)
-
-		renderings = append(renderings, &management.PromptRendering{
-			Prompt:        &promptType,
-			Screen:        &screenType,
+		p := management.PromptType(ScreenPromptMap[screen])
+		s := management.ScreenName(screen)
+		updates = append(updates, &management.PromptRendering{
+			Prompt:        &p,
+			Screen:        &s,
 			RenderingMode: &management.RenderingModeAdvanced,
 			HeadTags:      headTags,
 		})
 	}
 
-	if len(renderings) == 0 {
+	if len(updates) == 0 {
 		return fmt.Errorf("no renderings to apply")
 	}
 
-	if cli.debug {
-		fmt.Println(ansi.Cyan(
-			fmt.Sprintf("%s %d screen(s): %s", debugPrefix, len(renderings), strings.Join(utils.FetchKeys(screenTagMap), ", "))))
+	// Snapshot originals
+	existing, err := cli.api.Prompt.ListRendering(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to fetch current renderings: %w", err)
 	}
 
-	req := &management.PromptRenderingUpdateRequest{PromptRenderings: renderings}
-	if err := cli.api.Prompt.BulkUpdateRendering(ctx, req); err != nil {
-		return fmt.Errorf("%s error: %w", debugPrefix, err)
+	promptRenderingMap := make(map[string]*management.PromptRendering, len(existing.PromptRenderings))
+	for _, r := range existing.PromptRenderings {
+		if r.Prompt != nil && r.Screen != nil {
+			promptRenderingMap[string(*r.Prompt)+"|"+string(*r.Screen)] = r
+		}
 	}
 
-	if cli.debug {
-		fmt.Println(ansi.Green(fmt.Sprintf("%s successful for %d screen(s).", debugPrefix, len(renderings))))
+	originals := make([]*management.PromptRendering, len(updates))
+	for i, u := range updates {
+		originals[i] = promptRenderingMap[string(*u.Prompt)+"|"+string(*u.Screen)]
+	}
+
+	const maxBatch = 20
+	doBatchedPatch := func(list []*management.PromptRendering) error {
+		return cli.api.Prompt.BulkUpdateRendering(ctx,
+			&management.PromptRenderingUpdateRequest{PromptRenderings: list})
+	}
+
+	// --- Batching loop with rollback awareness ---
+	for i := 0; i < len(updates); i += maxBatch {
+		end := i + maxBatch
+		if end > len(updates) {
+			end = len(updates)
+		}
+
+		if err := doBatchedPatch(updates[i:end]); err != nil {
+			if debugPrefix == "Restoring" {
+				return fmt.Errorf("restore failed: %w", err)
+			}
+
+			if cli.debug {
+				cli.renderer.Errorf("%s batch %d-%d failed: %v", debugPrefix, i+1, end, err)
+				cli.renderer.Infof("%s rollback starting for screens 1-%d...", debugPrefix, i)
+			} else {
+				cli.renderer.Errorf("patch failed; rolling back...")
+			}
+
+			// Rollback all fully-applied previous batches.
+			for r := 0; r < i; r += maxBatch {
+				rEnd := r + maxBatch
+				if rEnd > i {
+					rEnd = i
+				}
+
+				if rbErr := doBatchedPatch(originals[r:rEnd]); rbErr != nil {
+					if cli.debug {
+						cli.renderer.Warnf("%s rollback failed for screens %d-%d: %v", debugPrefix, r+1, rEnd, rbErr)
+					} else {
+						cli.renderer.Warnf("rollback failed")
+					}
+				} else {
+					if cli.debug {
+						cli.renderer.Infof("%s rollback restored screens %d-%d", debugPrefix, r+1, rEnd)
+					}
+				}
+			}
+
+			cli.renderer.Infof("rolled back for all screens")
+
+			if cli.debug {
+				return fmt.Errorf("%s update failed at batch %d-%d: %w", debugPrefix, i+1, end, err)
+			}
+
+			return fmt.Errorf("%s failed: %w", debugPrefix, err)
+		}
 	}
 
 	return nil
@@ -582,6 +632,7 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 	)
 
 	cleanup := func() {
+		time.Sleep(1 * time.Second)
 		fmt.Fprintln(os.Stderr, ansi.Yellow("\nShutting down ACUL connected mode..."))
 		if len(originalHeadTags) > 0 {
 			restore := prompt.Confirm(
@@ -592,19 +643,12 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 				fmt.Fprintln(os.Stdout, ansi.Cyan("Restoring original rendering settings..."))
 
 				if err := applyPromptRenderings(ctx, cli, originalHeadTags, "Restoring"); err != nil {
-					fmt.Fprintln(os.Stdout, ansi.Yellow(fmt.Sprintf(
-						"Failed to restore previous settings: %v", err,
-					)))
+					fmt.Fprintln(os.Stdout, ansi.Yellow(fmt.Sprintf("Failed to restore previous settings: %v", err)))
 				} else {
-					fmt.Fprintln(os.Stdout, ansi.Green(fmt.Sprintf(
-						"Successfully restored rendering settings for %d screen(s).",
-						len(originalHeadTags),
-					)))
+					fmt.Fprintln(os.Stdout, ansi.Green(fmt.Sprintf("Successfully restored rendering settings for %d screen(s).", len(originalHeadTags))))
 				}
 			} else {
-				fmt.Fprintln(os.Stdout, ansi.Yellow(
-					"Restoration skipped. The patched assets will continue to remain active in your Auth0 tenant.",
-				))
+				fmt.Fprintln(os.Stdout, ansi.Yellow("Restoration skipped. The patched assets will continue to remain active in your Auth0 tenant."))
 			}
 		}
 

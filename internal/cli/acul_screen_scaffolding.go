@@ -133,7 +133,7 @@ func selectAndFilterScreens(cli *cli, args []string, manifest *Manifest, chosenT
 		availableScreenIDs = append(availableScreenIDs, s.ID)
 	}
 
-	selectedScreens, err := validateAndSelectScreens(cli, availableScreenIDs, args)
+	selectedScreens, err := validateAndSelectScreens(cli, availableScreenIDs, args, true)
 	if err != nil {
 		return nil, err
 	}
