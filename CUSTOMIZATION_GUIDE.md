@@ -38,11 +38,7 @@ This document provides essential information on **configuring the rendering mode
   - When set to `false` or omitted, the default template is used.
   - The **default is `false`**.
 
-### 🔹 7. Updating Rendering Mode
-- Switching to `"standard"` **only updates the `rendering_mode`**.
-- All other fields remain unchanged.
-
-### 🔹 8. Partial Updates
+### 🔹 7. Partial Updates
 - Only **explicitly declared fields** are updated.
 - **Unspecified fields remain as they are**.
 
@@ -109,7 +105,6 @@ This document provides essential information on **configuring the rendering mode
 - **Use `"standard"` mode for creating a consistent, branded experience for users. Choosing Standard mode will open a webpage
   within your browser where you can edit and preview your branding changes.For a comprehensive list of editable parameters and their values
 - **Ensure `head_tags` includes at least one `<script>` tag** for proper functionality.
-- **When switching to `"standard"`, only update `rendering_mode`**—all other fields should remain unchanged.
 - **Use `context_configuration` values carefully** to avoid exposing sensitive data.
 - **Always validate your JSON** before applying changes to prevent syntax errors and unexpected behavior.
 

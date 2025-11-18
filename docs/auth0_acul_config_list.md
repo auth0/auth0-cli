@@ -15,7 +15,8 @@ auth0 acul config list [flags]
 ## Examples
 
 ```
-  auth0 acul config list --prompt login-id --screen login --rendering-mode advanced --include-fields true --fields head_tags,context_configuration
+  auth0 acul config list --prompt reset-password
+  auth0 acul config list --rendering-mode advanced --include-fields true --fields head_tags,context_configuration
 ```
 
 

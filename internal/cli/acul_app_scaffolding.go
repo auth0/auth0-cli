@@ -150,9 +150,7 @@ The generated project includes all necessary configuration and boilerplate code 
   auth0 acul init acul-sample-app --template react --screens login,signup
   auth0 acul init acul-sample-app -t react -s login,mfa,signup`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-
-			if err := ensureACULPrerequisites(ctx, cli.api); err != nil {
+			if err := ensureACULPrerequisites(cmd.Context(), cli.api); err != nil {
 				return err
 			}
 
@@ -231,7 +229,7 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
 
 	runNpmGenerateScreenLoader(cli, destDir)
 
-	if prompt.Confirm("Do you want to run npm install?") {
+	if prompt.Confirm("Would you like to proceed with installing the required dependencies using 'npm install'?") {
 		runNpmInstall(cli, destDir)
 	}
 
@@ -596,8 +594,8 @@ func showPostScaffoldingOutput(cli *cli, destDir, successMessage string) {
 
 	// Show next steps and related commands.
 	cli.renderer.Infof("%s Next Steps: Navigate to %s and run:", ansi.Bold("🚀"), ansi.Bold(ansi.Cyan(destDir)))
-	cli.renderer.Infof("   %s if not yet installed", ansi.Bold(ansi.Cyan("npm install")))
-	cli.renderer.Infof("   %s", ansi.Bold(ansi.Cyan("auth0 acul dev")))
+	cli.renderer.Infof("    %s if not yet installed", ansi.Bold(ansi.Cyan("npm install")))
+	cli.renderer.Infof("    %s", ansi.Bold(ansi.Cyan("auth0 acul dev")))
 	cli.renderer.Output("")
 
 	fmt.Printf("%s Available Commands:\n", ansi.Bold("📋"))
