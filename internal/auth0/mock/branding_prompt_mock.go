@@ -36,7 +36,7 @@ func (m *MockPromptAPI) EXPECT() *MockPromptAPIMockRecorder {
 }
 
 // BulkUpdateRendering mocks base method.
-func (m *MockPromptAPI) BulkUpdateRendering(ctx context.Context, c *management.PromptRenderingUpdateRequest, opts ...management.RequestOption) error {
+func (m *MockPromptAPI) BulkUpdateRendering(ctx context.Context, c *management.PromptRenderingBulkUpdate, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, c}
 	for _, a := range opts {

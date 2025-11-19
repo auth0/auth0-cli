@@ -166,7 +166,7 @@ func runNormalMode(cli *cli, projectDir, port string) error {
 
 	// Show output only in debug mode.
 	if cli.debug {
-		fmt.Println("\n🔄 Executing:", ansi.Cyan(fmt.Sprintf("npm run dev")))
+		fmt.Println("\n🔄 Executing:", ansi.Cyan("npm run dev"))
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	}
@@ -529,7 +529,7 @@ func applyPromptRenderings(ctx context.Context, cli *cli, screenTagMap map[strin
 		return fmt.Errorf("no renderings to apply")
 	}
 
-	// Snapshot originals
+	// Snapshot originals.
 	existing, err := cli.api.Prompt.ListRendering(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to fetch current renderings: %w", err)
@@ -550,10 +550,10 @@ func applyPromptRenderings(ctx context.Context, cli *cli, screenTagMap map[strin
 	const maxBatch = 20
 	doBatchedPatch := func(list []*management.PromptRendering) error {
 		return cli.api.Prompt.BulkUpdateRendering(ctx,
-			&management.PromptRenderingUpdateRequest{PromptRenderings: list})
+			&management.PromptRenderingBulkUpdate{PromptRenderings: list})
 	}
 
-	// --- Batching loop with rollback awareness ---
+	// --- Batching loop with rollback awareness ---.
 	for i := 0; i < len(updates); i += maxBatch {
 		end := i + maxBatch
 		if end > len(updates) {

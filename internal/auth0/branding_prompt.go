@@ -52,7 +52,7 @@ type PromptAPI interface {
 	// BulkUpdateRendering updates multiple rendering settings in a single operation.
 	//
 	// See: https://auth0.com/docs/api/management/v2/prompts/patch-bulk-rendering
-	BulkUpdateRendering(ctx context.Context, c *management.PromptRenderingUpdateRequest, opts ...management.RequestOption) error
+	BulkUpdateRendering(ctx context.Context, c *management.PromptRenderingBulkUpdate, opts ...management.RequestOption) error
 
 	// ListRendering retrieves the settings for the ACUL.
 	//
