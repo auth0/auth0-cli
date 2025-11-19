@@ -16,6 +16,8 @@ auth0 acul config generate [flags]
 ## Examples
 
 ```
+  auth0 acul config generate <screen-name>
+  auth0 acul config generate <screen-name> --file settings.json
   auth0 acul config generate signup-id
   auth0 acul config generate login-id --file login-settings.json
 ```
