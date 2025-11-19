@@ -48,7 +48,7 @@ var (
 	includeFieldsFlag = Flag{
 		Name:       "Include Fields",
 		LongForm:   "include-fields",
-		Help:       "Whether specified fields are to be included (default: true) or excluded (false).",
+		Help:       "Whether specified fields are to be included (true) or excluded (false).",
 		IsRequired: false,
 	}
 	includeTotalsFlag = Flag{
@@ -217,14 +217,12 @@ func aculConfigGenerateCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if len(args) == 0 {
-				cli.renderer.Output(ansi.Yellow("🔍 Type any part of the screen name (e.g., 'login', 'mfa') to filter results."))
-				if err := screenName.Select(cmd, &input.screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
-					return handleInputError(err)
-				}
-			} else {
-				input.screenName = args[0]
+			screens, err := validateAndSelectScreens(cli, utils.FetchKeys(ScreenPromptMap), args, false)
+			if err != nil {
+				return err
 			}
+
+			input.screenName = screens[0]
 
 			if err := ensureConfigFilePath(&input, cli); err != nil {
 				return err
@@ -275,14 +273,12 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if len(args) == 0 {
-				cli.renderer.Output(ansi.Yellow("🔍 Type any part of the screen name (e.g., 'login', 'mfa') to filter options."))
-				if err := screenName.Select(cmd, &input.screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
-					return handleInputError(err)
-				}
-			} else {
-				input.screenName = args[0]
+			screens, err := validateAndSelectScreens(cli, utils.FetchKeys(ScreenPromptMap), args, false)
+			if err != nil {
+				return err
 			}
+
+			input.screenName = screens[0]
 
 			existingRenderSettings, err := cli.api.Prompt.ReadRendering(ctx, management.PromptType(ScreenPromptMap[input.screenName]), management.ScreenName(input.screenName))
 			if err != nil {
@@ -314,7 +310,7 @@ func aculConfigGetCmd(cli *cli) *cobra.Command {
 			}
 
 			cli.renderer.Infof("Configuration downloaded and saved at '%s'.", ansi.Green(input.filePath))
-			cli.renderer.Output(ansi.Yellow("💡 Tip: Use `auth0 acul config set` to sync local config to remote, or `auth0 acul config list` to view all ACUL screens."))
+			cli.renderer.Output(ansi.Yellow("💡 Tip: Use `auth0 acul config set` to sync local config to remote or `auth0 acul config list` to view all ACUL screens."))
 			return nil
 		},
 	}
@@ -355,14 +351,12 @@ func aculConfigSetCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if len(args) == 0 {
-				cli.renderer.Output(ansi.Yellow("🔍 Type any part of the screen name to filter options."))
-				if err := screenName.Select(cmd, &input.screenName, utils.FetchKeys(ScreenPromptMap), nil); err != nil {
-					return handleInputError(err)
-				}
-			} else {
-				input.screenName = args[0]
+			screens, err := validateAndSelectScreens(cli, utils.FetchKeys(ScreenPromptMap), args, false)
+			if err != nil {
+				return err
 			}
+
+			input.screenName = screens[0]
 
 			cli.renderer.Output(ansi.Yellow("📖 Customization Guide: https://github.com/auth0/auth0-cli/blob/main/CUSTOMIZATION_GUIDE.md"))
 

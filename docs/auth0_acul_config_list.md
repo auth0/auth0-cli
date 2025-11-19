@@ -24,7 +24,7 @@ auth0 acul config list [flags]
 
 ```
       --fields string           Comma-separated list of fields to include or exclude in the result (based on value provided for include_fields) 
-      --include-fields          Whether specified fields are to be included (default: true) or excluded (false). (default true)
+      --include-fields          Whether specified fields are to be included (true) or excluded (false). (default true)
       --include-totals          Return results inside an object that contains the total result count (true) or as a direct array of results (false).
       --json                    Output in json format.
       --json-compact            Output in compact json format.
