@@ -476,6 +476,17 @@ func (f *organizationResourceFetcher) FetchData(ctx context.Context) (importData
 				ImportID:     organization.GetID(),
 			})
 		}
+
+		discoveryDomains, err := f.api.Organization.DiscoveryDomains(ctx, organization.GetID())
+		if err != nil {
+			return data, err
+		}
+		if len(discoveryDomains.Domains) > 0 {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_organization_discovery_domains." + sanitizeResourceName(organization.GetName()),
+				ImportID:     organization.GetID(),
+			})
+		}
 	}
 
 	return data, nil

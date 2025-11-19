@@ -99,7 +99,7 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &guardianResourceFetcher{})
 		case "auth0_log_stream":
 			fetchers = append(fetchers, &logStreamResourceFetcher{api})
-		case "auth0_organization", "auth0_organization_connections":
+		case "auth0_organization", "auth0_organization_connections", "auth0_organization_discovery_domains":
 			fetchers = append(fetchers, &organizationResourceFetcher{api})
 		case "auth0_network_acl":
 			fetchers = append(fetchers, &networkACLResourceFetcher{api})

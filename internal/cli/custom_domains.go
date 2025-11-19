@@ -104,6 +104,11 @@ func customDomainsCmd(cli *cli) *cobra.Command {
 }
 
 func listCustomDomainsCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		filter string
+		sortBy string
+	}
+
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
@@ -114,23 +119,54 @@ func listCustomDomainsCmd(cli *cli) *cobra.Command {
   auth0 domains ls
   auth0 domains ls --json
   auth0 domains ls --json-compact
-  auth0 domains ls --csv`,
+  auth0 domains ls --csv
+  auth0 domains ls --filter "domain:demo* AND status:pending_verification"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var list []*management.CustomDomain
-
-			if err := ansi.Waiting(func() (err error) {
-				list, err = cli.api.CustomDomain.List(cmd.Context())
-				return err
-			}); err != nil {
-				return fmt.Errorf("failed to list custom domains: %w", err)
+			// Validate EA-only flags.
+			if inputs.sortBy != "" && inputs.sortBy != "domain" {
+				return fmt.Errorf("sorting is only supported by domain at this time")
 			}
 
-			cli.renderer.CustomDomainList(list)
+			var domains []*management.CustomDomain
+			var err error
 
+			err = ansi.Waiting(func() error {
+				if inputs.filter != "" || inputs.sortBy != "" {
+					// EA-only path.
+					options := []management.RequestOption{
+						management.Take(100),
+					}
+					if inputs.filter != "" {
+						options = append(options, management.Parameter("q", inputs.filter))
+					}
+
+					if inputs.sortBy != "" {
+						options = append(options, management.Parameter("q", inputs.sortBy))
+					}
+
+					result, e := cli.api.CustomDomain.ListWithPagination(cmd.Context(), options...)
+					if e != nil {
+						return fmt.Errorf("failed to list custom domains (EA-only): %w", e)
+					}
+					domains = result.CustomDomains
+					return nil
+				}
+
+				// Non Paginated Path.
+				domains, err = cli.api.CustomDomain.List(cmd.Context())
+				return err
+			})
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.CustomDomainList(domains)
 			return nil
 		},
 	}
 
+	cmd.Flags().StringVar(&inputs.filter, "filter", "", "Filter custom domains (EA-only).")
+	cmd.Flags().StringVar(&inputs.sortBy, "sort", "", "Sort by a field (EA-only). Only 'domain' is supported.")
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")

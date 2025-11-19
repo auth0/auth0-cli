@@ -279,7 +279,6 @@ func validateAndSelectScreens(cli *cli, screenIDs, providedScreens []string, mul
 		return nil, fmt.Errorf("no available screens found")
 	}
 
-	// Normalize provided screens.
 	var valid []string
 	var invalid []string
 
@@ -593,8 +592,8 @@ func createScreenMap(screens []Screens) map[string]Screens {
 // success message, documentation, Node version check, next steps, and available commands.
 func showPostScaffoldingOutput(cli *cli, destDir, successMessage string) {
 	cli.renderer.Output("")
-	cli.renderer.Infof("%s  %s in %s!",
-		"🎉", successMessage, ansi.Bold(ansi.Cyan(fmt.Sprintf("'%s'", destDir))))
+	cli.renderer.Infof("🎉 %s in %s!",
+		successMessage, ansi.Bold(ansi.Cyan(fmt.Sprintf("'%s'", destDir))))
 	cli.renderer.Output("")
 
 	cli.renderer.Infof("📖  Explore the sample app: %s",
