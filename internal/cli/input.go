@@ -5,6 +5,7 @@ import (
 	"os"
 	"reflect"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/auth0/go-auth0"
 
@@ -79,7 +80,14 @@ func _select(i commandInput, value interface{}, options []string, defaultValue *
 		defaultValue = &(options[0])
 	}
 
-	input := prompt.SelectInput("", i.GetLabel(), i.GetHelp(), options, auth0.StringValue(defaultValue), isRequired)
+	var input *survey.Question
+
+	// Use paginated select for large option sets (>15 options).
+	if len(options) > 15 {
+		input = prompt.PaginatedSelectInput("", i.GetLabel(), i.GetHelp(), options, auth0.StringValue(defaultValue), isRequired)
+	} else {
+		input = prompt.SelectInput("", i.GetLabel(), i.GetHelp(), options, auth0.StringValue(defaultValue), isRequired)
+	}
 
 	if err := prompt.AskOne(input, value); err != nil {
 		return handleInputError(err)
