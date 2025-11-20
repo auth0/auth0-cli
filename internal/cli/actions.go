@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -10,7 +11,6 @@ import (
 	"github.com/auth0/go-auth0/management"
 	"github.com/pmezard/go-difflib/difflib"
 	"github.com/spf13/cobra"
-	"golang.org/x/net/context"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
