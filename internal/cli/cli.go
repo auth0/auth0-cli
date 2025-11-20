@@ -15,6 +15,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/iostream"
+	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
 const userAgent = "Auth0 CLI"
@@ -92,7 +93,7 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 						"secret in the keyring.\n\n"+
 						"Please re-authenticate by running: %s",
 					err,
-					ansi.Bold("auth0 login --domain <tenant-domain --client-id <client-id> --client-secret <client-secret>"),
+					ansi.Bold("auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>"),
 				)
 				return errorMessage
 			}
@@ -100,7 +101,15 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 			c.renderer.Warnf("Failed to renew access token: %s", err)
 			c.renderer.Warnf("Please log in to re-authorize the CLI.\n")
 
-			tenant, err = RunLoginAsUser(ctx, c, tenant.GetExtraRequestedScopes(), "")
+			// Determine tenant domain for login.
+			tenantDomain := ""
+			if c.Config.DefaultTenant != "" {
+				if prompt.Confirm(fmt.Sprintf("Continue login with default tenant '%s'?", c.Config.DefaultTenant)) {
+					tenantDomain = c.Config.DefaultTenant
+				}
+			}
+
+			tenant, err = RunLoginAsUser(ctx, c, tenant.GetExtraRequestedScopes(), tenantDomain)
 			if err != nil {
 				return err
 			}
