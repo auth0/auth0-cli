@@ -1,10 +1,10 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/net/context"
 )
 
 var tenantDomain = Argument{
