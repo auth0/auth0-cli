@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/fsnotify/fsnotify"
+	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -110,6 +112,8 @@ CONNECTED MODE (--connected):
 				if err != nil {
 					return err
 				}
+			} else {
+				fmt.Printf("📂 Project: %s\n", ansi.Yellow(projectDir))
 			}
 
 			if err = validateAculProject(projectDir); err != nil {
@@ -118,7 +122,7 @@ CONNECTED MODE (--connected):
 
 			if connected {
 				if confirmed := showConnectedModeInformation(); !confirmed {
-					fmt.Println(ansi.Red("❌ Connected mode cancelled."))
+					fmt.Println(ansi.Red("Connected mode cancelled."))
 					return nil
 				}
 
@@ -139,6 +143,8 @@ CONNECTED MODE (--connected):
 				if err != nil {
 					return err
 				}
+			} else {
+				fmt.Printf("🖥️ Server: " + ansi.Cyan(fmt.Sprintf("http://localhost:%s\n", port)))
 			}
 			return runNormalMode(cli, projectDir, port)
 		},
@@ -152,29 +158,65 @@ CONNECTED MODE (--connected):
 	return cmd
 }
 
-// ToDo : use the port logic.
 func runNormalMode(cli *cli, projectDir, port string) error {
-	var screen string
-	fmt.Println(ansi.Bold("🚀 Starting ") + ansi.Cyan("ACUL Dev Mode"))
-
-	fmt.Printf("📂 Project: %s\n", ansi.Yellow(projectDir))
-	fmt.Printf("🖥️  Server: %s\n", ansi.Green(fmt.Sprintf("http://localhost:%s", port)))
-	fmt.Println("💡 " + ansi.Italic("Make changes to your code and view the live changes as we have HMR enabled!"))
-
+	// 1. Set up the command.
 	cmd := exec.Command("npm", "run", "dev", "--", "--port", port)
 	cmd.Dir = projectDir
 
-	// Show output only in debug mode.
+	// 2. Set up output pipes/redirection.
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("failed to capture stdout: %w", err)
+	}
+
 	if cli.debug {
-		fmt.Println("\n🔄 Executing:", ansi.Cyan("npm run dev"))
-		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
+		fmt.Println("\n🔄 Executing:", ansi.Cyan("npm run dev -- --port "+port))
 	}
 
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("❌ failed to run 'npm run dev %s': %w", screen, err)
+	// 3. Start the command asynchronously.
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start 'npm run dev -- --port %s': %w", port, err)
 	}
 
+	// 4. Print the success/info logs immediately after starting the server process
+	server := fmt.Sprintf("http://localhost:%s", port)
+
+	fmt.Println("💡 " + ansi.Italic("Make changes to your code and view the live changes as we have HMR enabled!"))
+
+	// 5. Wait for the command to exit and handle intentional stops (Ctrl+C)
+	readyChan := make(chan struct{})
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			line := scanner.Text()
+			fmt.Println(line)
+			if strings.Contains(line, "Local:") && strings.Contains(line, "http") {
+				close(readyChan)
+				return
+			}
+		}
+	}()
+
+	select {
+	case <-readyChan:
+		_ = browser.OpenURL(server)
+
+	case <-time.After(20 * time.Second):
+		fmt.Println("⏳ Dev server is taking longer than expected to start...")
+		fmt.Println("ℹ️ You can manually open the browser if needed.")
+	}
+
+	if err = cmd.Wait(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 130 {
+			fmt.Println(ansi.Bold("\n👋 Server stopped intentionally (Ctrl+C)."))
+			return nil
+		}
+
+		return fmt.Errorf("dev server exited with an error")
+	}
+
+	fmt.Println(ansi.Bold("\n'npm run dev' finished gracefully."))
 	return nil
 }
 
