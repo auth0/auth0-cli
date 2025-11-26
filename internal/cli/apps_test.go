@@ -128,7 +128,7 @@ func TestAppsCreateCmd(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			cli := &cli{}
-			cli.noInput = true // non-interactive mode
+			cli.noInput = true // Non-interactive mode
 			cmd := createAppCmd(cli)
 			cmd.SetArgs(test.args)
 			err := cmd.Execute()
