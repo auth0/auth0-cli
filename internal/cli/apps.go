@@ -35,6 +35,10 @@ var (
 		Name: "Client ID",
 		Help: "Id of the application.",
 	}
+	apiIdentifierArg = Argument{
+		Name: "API Identifier",
+		Help: "Resource server that this client should be associated with.",
+	}
 	appName = Flag{
 		Name:       "Name",
 		LongForm:   "name",
@@ -513,8 +517,24 @@ func createAppCmd(cli *cli) *cobra.Command {
 
 			// Prompt for resource server identifier if app type is resource_server.
 			if appIsResourceServer {
-				if err := appResourceServerIdentifier.Ask(cmd, &inputs.ResourceServerIdentifier, nil); err != nil {
-					return err
+				if !appResourceServerIdentifier.IsSet(cmd) {
+					var selectedAPIID string
+					if err := apiIdentifierArg.Pick(cmd, &selectedAPIID, cli.apiPickerOptions); err != nil {
+						return err
+					}
+
+					var selectedAPI *management.ResourceServer
+					if err := ansi.Waiting(func() error {
+						var err error
+						selectedAPI, err = cli.api.ResourceServer.Read(cmd.Context(), selectedAPIID)
+						return err
+					}); err != nil {
+						return fmt.Errorf("failed to read selected API: %w", err)
+					}
+
+					inputs.ResourceServerIdentifier = selectedAPI.GetIdentifier()
+				} else if strings.TrimSpace(inputs.ResourceServerIdentifier) == "" {
+					return fmt.Errorf("resource-server-identifier cannot be empty for resource_server app type")
 				}
 			}
 
@@ -525,14 +545,15 @@ func createAppCmd(cli *cli) *cobra.Command {
 
 			// Load values into a fresh app instance.
 			a := &management.Client{
-				Name:             &inputs.Name,
-				Description:      &inputs.Description,
-				AppType:          auth0.String(apiTypeFor(inputs.Type)),
-				AllowedOrigins:   stringSliceToPtr(inputs.AllowedOrigins),
-				WebOrigins:       stringSliceToPtr(inputs.AllowedWebOrigins),
-				OIDCConformant:   &oidcConformant,
-				JWTConfiguration: &management.ClientJWTConfiguration{Algorithm: &algorithm},
-				ClientMetadata:   &clientMetadata,
+				Name:                     &inputs.Name,
+				Description:              &inputs.Description,
+				AppType:                  auth0.String(apiTypeFor(inputs.Type)),
+				AllowedOrigins:           stringSliceToPtr(inputs.AllowedOrigins),
+				WebOrigins:               stringSliceToPtr(inputs.AllowedWebOrigins),
+				OIDCConformant:           &oidcConformant,
+				JWTConfiguration:         &management.ClientJWTConfiguration{Algorithm: &algorithm},
+				ClientMetadata:           &clientMetadata,
+				ResourceServerIdentifier: &inputs.ResourceServerIdentifier,
 			}
 
 			callback := stringSliceToPtr(inputs.Callbacks)
@@ -544,10 +565,6 @@ func createAppCmd(cli *cli) *cobra.Command {
 			} else {
 				a.Callbacks = callback
 				a.AllowedLogoutURLs = allowedLogoutURLs
-			}
-
-			if appIsResourceServer && inputs.ResourceServerIdentifier != "" {
-				a.ResourceServerIdentifier = &inputs.ResourceServerIdentifier
 			}
 
 			if len(inputs.RefreshToken) != 0 {

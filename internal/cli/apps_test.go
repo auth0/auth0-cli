@@ -90,6 +90,54 @@ func TestAppsListCmd(t *testing.T) {
 	}
 }
 
+func TestAppsCreateCmd(t *testing.T) {
+	tests := []struct {
+		name          string
+		args          []string
+		expectedError string
+	}{
+		{
+			name: "Resource Server - resource-server-identifier is empty string",
+			args: []string{
+				"--name", "My Resource Server App",
+				"--type", "resource_server",
+				"--resource-server-identifier", "",
+			},
+			expectedError: "resource-server-identifier cannot be empty for resource_server app type",
+		},
+		{
+			name: "Resource Server - resource-server-identifier is whitespace only",
+			args: []string{
+				"--name", "My Resource Server App",
+				"--type", "resource_server",
+				"--resource-server-identifier", "   ",
+			},
+			expectedError: "resource-server-identifier cannot be empty for resource_server app type",
+		},
+		{
+			name: "Resource Server - resource-server-identifier is tab/newline",
+			args: []string{
+				"--name", "My Resource Server App",
+				"--type", "resource_server",
+				"--resource-server-identifier", "\t\n",
+			},
+			expectedError: "resource-server-identifier cannot be empty for resource_server app type",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cli := &cli{}
+			cli.noInput = true // non-interactive mode
+			cmd := createAppCmd(cli)
+			cmd.SetArgs(test.args)
+			err := cmd.Execute()
+
+			assert.EqualError(t, err, test.expectedError)
+		})
+	}
+}
+
 func TestFormatAppSettingsPath(t *testing.T) {
 	assert.Empty(t, formatAppSettingsPath(""))
 	assert.Equal(t, "applications/app-id-1/settings", formatAppSettingsPath("app-id-1"))
