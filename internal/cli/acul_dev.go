@@ -144,7 +144,7 @@ CONNECTED MODE (--connected):
 					return err
 				}
 			} else {
-				fmt.Printf("🖥️ Server: " + ansi.Cyan(fmt.Sprintf("http://localhost:%s\n", port)))
+				fmt.Printf("🖥️ Server: %s\n" + ansi.Cyan(fmt.Sprintf("http://localhost:%s", port)))
 			}
 			return runNormalMode(cli, projectDir, port)
 		},
@@ -179,12 +179,12 @@ func runNormalMode(cli *cli, projectDir, port string) error {
 		return fmt.Errorf("failed to start 'npm run dev -- --port %s': %w", port, err)
 	}
 
-	// 4. Print the success/info logs immediately after starting the server process
+	// 4. Print the success/info logs immediately after starting the server process.
 	server := fmt.Sprintf("http://localhost:%s", port)
 
 	fmt.Println("💡 " + ansi.Italic("Make changes to your code and view the live changes as we have HMR enabled!"))
 
-	// 5. Wait for the command to exit and handle intentional stops (Ctrl+C)
+	// 5. Wait for the command to exit and handle intentional stops (Ctrl+C).
 	readyChan := make(chan struct{})
 	go func() {
 		scanner := bufio.NewScanner(stdout)
