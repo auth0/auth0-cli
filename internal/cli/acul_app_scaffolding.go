@@ -37,10 +37,11 @@ type Template struct {
 }
 
 type Screens struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Path        string `json:"path"`
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Path        string   `json:"path"`
+	ExtraFiles  []string `json:"extra_files"`
 }
 
 type Metadata struct {
@@ -111,7 +112,7 @@ func getLatestReleaseTag() (string, error) {
 	}
 
 	// TODO: return tags[0].Name, nil.
-	return "monorepo-sample", nil
+	return "main", nil
 }
 
 var (
@@ -348,7 +349,7 @@ func downloadAndUnzipSampleRepo() (string, error) {
 	}
 
 	// TODO: repoURL := fmt.Sprintf("https://github.com/auth0-samples/auth0-acul-samples/archive/refs/tags/%s.zip", latestTag).
-	repoURL := "https://github.com/auth0-samples/auth0-acul-samples/archive/refs/heads/monorepo-sample.zip"
+	repoURL := "https://github.com/auth0-samples/auth0-acul-samples/archive/refs/heads/main.zip"
 	tempZipFile, err := downloadFile(repoURL)
 	if err != nil {
 		return "", fmt.Errorf("error downloading sample repo: %w", err)
@@ -471,6 +472,11 @@ func copyProjectScreens(cli *cli, screens []Screens, selectedScreens []string, c
 
 		if err := copyDir(srcPath, destPath); err != nil {
 			return fmt.Errorf("error copying screen directory %s: %w", screen.Path, err)
+		}
+
+		err = copyProjectTemplateFiles(cli, screen.ExtraFiles, chosenTemplate, tempUnzipDir, destDir)
+		if err != nil {
+			return err
 		}
 	}
 

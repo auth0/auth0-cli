@@ -171,7 +171,7 @@ func addScreensToProject(cli *cli, destDir, chosenTemplate string, selectedScree
 	}
 	defer os.RemoveAll(tempUnzipDir) // Clean up the entire temp directory.
 
-	var sourcePrefix = "auth0-acul-samples-monorepo-sample/" + chosenTemplate
+	var sourcePrefix = "auth0-acul-samples-main/" + chosenTemplate
 	var sourceRoot = filepath.Join(tempUnzipDir, sourcePrefix)
 	var destRoot = destDir
 
