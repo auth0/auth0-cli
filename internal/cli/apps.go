@@ -35,10 +35,6 @@ var (
 		Name: "Client ID",
 		Help: "Id of the application.",
 	}
-	apiIdentifierArg = Argument{
-		Name: "API Identifier",
-		Help: "Resource server that this client should be associated with.",
-	}
 	appName = Flag{
 		Name:       "Name",
 		LongForm:   "name",
@@ -519,7 +515,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 			if appIsResourceServer {
 				if !appResourceServerIdentifier.IsSet(cmd) {
 					var selectedAPIID string
-					if err := apiIdentifierArg.Pick(cmd, &selectedAPIID, cli.apiPickerOptions); err != nil {
+					if err := appResourceServerIdentifier.Pick(cmd, &selectedAPIID, cli.apiPickerOptions); err != nil {
 						return err
 					}
 
@@ -545,15 +541,14 @@ func createAppCmd(cli *cli) *cobra.Command {
 
 			// Load values into a fresh app instance.
 			a := &management.Client{
-				Name:                     &inputs.Name,
-				Description:              &inputs.Description,
-				AppType:                  auth0.String(apiTypeFor(inputs.Type)),
-				AllowedOrigins:           stringSliceToPtr(inputs.AllowedOrigins),
-				WebOrigins:               stringSliceToPtr(inputs.AllowedWebOrigins),
-				OIDCConformant:           &oidcConformant,
-				JWTConfiguration:         &management.ClientJWTConfiguration{Algorithm: &algorithm},
-				ClientMetadata:           &clientMetadata,
-				ResourceServerIdentifier: &inputs.ResourceServerIdentifier,
+				Name:             &inputs.Name,
+				Description:      &inputs.Description,
+				AppType:          auth0.String(apiTypeFor(inputs.Type)),
+				AllowedOrigins:   stringSliceToPtr(inputs.AllowedOrigins),
+				WebOrigins:       stringSliceToPtr(inputs.AllowedWebOrigins),
+				OIDCConformant:   &oidcConformant,
+				JWTConfiguration: &management.ClientJWTConfiguration{Algorithm: &algorithm},
+				ClientMetadata:   &clientMetadata,
 			}
 
 			callback := stringSliceToPtr(inputs.Callbacks)
@@ -565,6 +560,10 @@ func createAppCmd(cli *cli) *cobra.Command {
 			} else {
 				a.Callbacks = callback
 				a.AllowedLogoutURLs = allowedLogoutURLs
+			}
+
+			if appIsResourceServer && inputs.ResourceServerIdentifier != "" {
+				a.ResourceServerIdentifier = &inputs.ResourceServerIdentifier
 			}
 
 			if len(inputs.RefreshToken) != 0 {
