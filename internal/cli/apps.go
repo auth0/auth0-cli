@@ -515,7 +515,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 			if appIsResourceServer {
 				if !appResourceServerIdentifier.IsSet(cmd) {
 					var selectedAPIID string
-					if err := appResourceServerIdentifier.Pick(cmd, &selectedAPIID, cli.apiPickerOptions); err != nil {
+					if err := appResourceServerIdentifier.Pick(cmd, &selectedAPIID, cli.apiPickerOptionsWithoutAuth0); err != nil {
 						return err
 					}
 
