@@ -513,8 +513,24 @@ func createAppCmd(cli *cli) *cobra.Command {
 
 			// Prompt for resource server identifier if app type is resource_server.
 			if appIsResourceServer {
-				if err := appResourceServerIdentifier.Ask(cmd, &inputs.ResourceServerIdentifier, nil); err != nil {
-					return err
+				if !appResourceServerIdentifier.IsSet(cmd) {
+					var selectedAPIID string
+					if err := appResourceServerIdentifier.Pick(cmd, &selectedAPIID, cli.apiPickerOptionsWithoutAuth0); err != nil {
+						return err
+					}
+
+					var selectedAPI *management.ResourceServer
+					if err := ansi.Waiting(func() error {
+						var err error
+						selectedAPI, err = cli.api.ResourceServer.Read(cmd.Context(), selectedAPIID)
+						return err
+					}); err != nil {
+						return fmt.Errorf("failed to read selected API: %w", err)
+					}
+
+					inputs.ResourceServerIdentifier = selectedAPI.GetIdentifier()
+				} else if strings.TrimSpace(inputs.ResourceServerIdentifier) == "" {
+					return fmt.Errorf("resource-server-identifier cannot be empty for resource_server app type")
 				}
 			}
 
