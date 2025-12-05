@@ -111,8 +111,7 @@ func getLatestReleaseTag() (string, error) {
 		return "", fmt.Errorf("no tags found in repository")
 	}
 
-	// TODO: return tags[0].Name, nil.
-	return "main", nil
+	return tags[0].Name, nil
 }
 
 var (
@@ -343,13 +342,12 @@ func getDestDir(args []string) string {
 }
 
 func downloadAndUnzipSampleRepo() (string, error) {
-	_, err := getLatestReleaseTag()
+	latestTag, err := getLatestReleaseTag()
 	if err != nil {
 		return "", fmt.Errorf("failed to get latest release tag: %w", err)
 	}
 
-	// TODO: repoURL := fmt.Sprintf("https://github.com/auth0-samples/auth0-acul-samples/archive/refs/tags/%s.zip", latestTag).
-	repoURL := "https://github.com/auth0-samples/auth0-acul-samples/archive/refs/heads/main.zip"
+	repoURL := fmt.Sprintf("https://github.com/auth0-samples/auth0-acul-samples/archive/refs/tags/%s.zip", latestTag)
 	tempZipFile, err := downloadFile(repoURL)
 	if err != nil {
 		return "", fmt.Errorf("error downloading sample repo: %w", err)

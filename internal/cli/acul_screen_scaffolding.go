@@ -171,8 +171,13 @@ func addScreensToProject(cli *cli, destDir, chosenTemplate string, selectedScree
 	}
 	defer os.RemoveAll(tempUnzipDir) // Clean up the entire temp directory.
 
-	var sourcePrefix = "auth0-acul-samples-main/" + chosenTemplate
-	var sourceRoot = filepath.Join(tempUnzipDir, sourcePrefix)
+	extractedDir, err := findExtractedRepoDir(tempUnzipDir)
+	if err != nil {
+		return fmt.Errorf("failed to find extracted directory: %w", err)
+	}
+
+	sourcePathPrefix := filepath.Join(extractedDir, chosenTemplate)
+	var sourceRoot = filepath.Join(tempUnzipDir, sourcePathPrefix)
 	var destRoot = destDir
 
 	missingFiles, editedFiles, err := processFiles(cli, selectedTemplate.BaseFiles, sourceRoot, destRoot)
@@ -196,7 +201,7 @@ func addScreensToProject(cli *cli, destDir, chosenTemplate string, selectedScree
 		return fmt.Errorf("error during backup/overwrite: %w", err)
 	}
 
-	err = handleMissingFiles(cli, missingFiles, tempUnzipDir, sourcePrefix, destDir)
+	err = handleMissingFiles(cli, missingFiles, tempUnzipDir, sourcePathPrefix, destDir)
 	if err != nil {
 		return fmt.Errorf("error copying missing files: %w", err)
 	}

@@ -144,7 +144,7 @@ CONNECTED MODE (--connected):
 					return err
 				}
 			} else {
-				fmt.Printf("🖥️ Server: %s\n" + ansi.Cyan(fmt.Sprintf("http://localhost:%s", port)))
+				fmt.Printf("🖥️ Server: %s\n", ansi.Cyan(fmt.Sprintf("http://localhost:%s", port)))
 			}
 			return runNormalMode(cli, projectDir, port)
 		},
@@ -611,7 +611,8 @@ func applyPromptRenderings(ctx context.Context, cli *cli, screenTagMap map[strin
 				cli.renderer.Errorf("%s batch %d-%d failed: %v", debugPrefix, i+1, end, err)
 				cli.renderer.Infof("%s rollback starting for screens 1-%d...", debugPrefix, i)
 			} else {
-				cli.renderer.Errorf("patch failed; rolling back...")
+				// Removed the redundant log: cli.renderer.Errorf("patch failed; rolling back...").
+				cli.renderer.Warnf("Patch failed. Attempting rollback...")
 			}
 
 			// Rollback all fully-applied previous batches.
@@ -625,7 +626,7 @@ func applyPromptRenderings(ctx context.Context, cli *cli, screenTagMap map[strin
 					if cli.debug {
 						cli.renderer.Warnf("%s rollback failed for screens %d-%d: %v", debugPrefix, r+1, rEnd, rbErr)
 					} else {
-						cli.renderer.Warnf("rollback failed")
+						cli.renderer.Warnf("Partial rollback failed for screens %d-%d.", r+1, rEnd)
 					}
 				} else {
 					if cli.debug {
@@ -634,7 +635,7 @@ func applyPromptRenderings(ctx context.Context, cli *cli, screenTagMap map[strin
 				}
 			}
 
-			cli.renderer.Infof("rolled back for all screens")
+			cli.renderer.Infof("Rollback complete for all applied batches.")
 
 			if cli.debug {
 				return fmt.Errorf("%s update failed at batch %d-%d: %w", debugPrefix, i+1, end, err)
@@ -650,12 +651,12 @@ func applyPromptRenderings(ctx context.Context, cli *cli, screenTagMap map[strin
 func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, screensToWatch []string, originalHeadTags map[string][]interface{}) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return fmt.Errorf("failed to create watcher: %w", err)
+		return fmt.Errorf("failed to create file system watcher: %w", err)
 	}
 	defer watcher.Close()
 
 	if err := watcher.Add(distPath); err != nil {
-		return fmt.Errorf("failed to watch %s: %w", distPath, err)
+		return fmt.Errorf("failed to watch distribution path %s: %w", distPath, err)
 	}
 
 	fmt.Println("👀  Watching: " + ansi.Yellow(strings.Join(screensToWatch, ", ")))
@@ -677,25 +678,26 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 		time.Sleep(1 * time.Second)
 		fmt.Fprintln(os.Stderr, ansi.Yellow("\nShutting down ACUL connected mode..."))
 		if len(originalHeadTags) > 0 {
-			restore := prompt.Confirm(
-				"Would you like to restore your original rendering settings?",
-			)
+			restore := prompt.Confirm("Would you like to restore your original rendering settings?")
 
 			if restore {
-				fmt.Fprintln(os.Stdout, ansi.Cyan("Restoring original rendering settings..."))
+				fmt.Fprintln(os.Stderr, ansi.Cyan("Restoring original rendering settings..."))
 
 				if err := applyPromptRenderings(ctx, cli, originalHeadTags, "Restoring"); err != nil {
-					fmt.Fprintln(os.Stdout, ansi.Yellow(fmt.Sprintf("Failed to restore previous settings: %v", err)))
+					fmt.Fprintln(os.Stderr, ansi.Yellow(fmt.Sprintf("Restoration failed: %v", err)))
 				} else {
-					fmt.Fprintln(os.Stdout, ansi.Green(fmt.Sprintf("Successfully restored rendering settings for %d screen(s).", len(originalHeadTags))))
+					fmt.Fprintln(os.Stderr, ansi.Green(fmt.Sprintf("Successfully restored rendering settings for %d screen(s).", len(originalHeadTags))))
 				}
 			} else {
-				fmt.Fprintln(os.Stdout, ansi.Yellow("Restoration skipped. The patched assets will continue to remain active in your Auth0 tenant."))
+				fmt.Fprintln(os.Stderr, ansi.Yellow("Restoration skipped. The patched assets will continue to remain active in your Auth0 tenant."))
 			}
 		}
 
 		fmt.Println()
-		fmt.Fprintln(os.Stdout, ansi.Green("👋 ACUL connected mode stopped."))
+		fmt.Fprintln(os.Stderr, ansi.Green("👋 ACUL connected mode stopped."))
+
+		fmt.Fprintf(os.Stderr, "%s  Use %s to see all available commands\n\n",
+			ansi.Yellow("💡 Tip:"), ansi.Cyan("auth0 acul --help"))
 	}
 
 	for {
@@ -725,7 +727,7 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 				headTags, err := buildHeadTagsFromDirs(distPath, assetsURL, screen)
 				if err != nil {
 					if cli.debug {
-						cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf("Skipping '%s': %v", screen, err)))
+						cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf("Skipping '%s': failed to build head tags: %v", screen, err)))
 					}
 					continue
 				}
@@ -742,7 +744,7 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 
 			if len(changedScreens) == 0 {
 				if cli.debug {
-					fmt.Println(ansi.Yellow("No effective asset changes detected and skipping patch."))
+					fmt.Println(ansi.Yellow("No effective asset changes detected, skipping patch."))
 				}
 				continue
 			}
@@ -755,7 +757,7 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 			}
 
 			if err = applyPromptRenderings(ctx, cli, newHeadTags, "Patching"); err != nil {
-				cli.renderer.Errorf("Patch failed: %v", err)
+				cli.renderer.Errorf("Patching assets failed: %v", err)
 			} else {
 				fmt.Println(ansi.Green("✅ Assets patched successfully!"))
 				for screen, headTags := range newHeadTags {
@@ -764,16 +766,14 @@ func watchAndPatch(ctx context.Context, cli *cli, assetsURL, distPath string, sc
 			}
 
 		case err := <-watcher.Errors:
-			cli.renderer.Warnf("Watcher error: %v", err)
+			cli.renderer.Warnf("File watcher internal error: %v", err)
 
 		case <-sigChan:
 			cleanup()
-			printAvailableCommands()
 			return nil
 
 		case <-ctx.Done():
 			cleanup()
-			printAvailableCommands()
 			return ctx.Err()
 		}
 	}
