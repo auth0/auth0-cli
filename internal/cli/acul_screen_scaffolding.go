@@ -128,7 +128,12 @@ func scaffoldAddScreen(cli *cli, args []string, destDir string) error {
 }
 
 func selectAndFilterScreens(cli *cli, args []string, manifest *Manifest, chosenTemplate string, existingScreens []string) ([]string, error) {
-	selectedScreens, err := validateAndSelectScreens(cli, manifest.Templates[chosenTemplate].Screens, args)
+	var availableScreenIDs []string
+	for _, s := range manifest.Templates[chosenTemplate].Screens {
+		availableScreenIDs = append(availableScreenIDs, s.ID)
+	}
+
+	selectedScreens, err := validateAndSelectScreens(cli, availableScreenIDs, args, true)
 	if err != nil {
 		return nil, err
 	}
@@ -166,8 +171,13 @@ func addScreensToProject(cli *cli, destDir, chosenTemplate string, selectedScree
 	}
 	defer os.RemoveAll(tempUnzipDir) // Clean up the entire temp directory.
 
-	var sourcePrefix = "auth0-acul-samples-monorepo-sample/" + chosenTemplate
-	var sourceRoot = filepath.Join(tempUnzipDir, sourcePrefix)
+	extractedDir, err := findExtractedRepoDir(tempUnzipDir)
+	if err != nil {
+		return fmt.Errorf("failed to find extracted directory: %w", err)
+	}
+
+	sourcePathPrefix := filepath.Join(extractedDir, chosenTemplate)
+	var sourceRoot = filepath.Join(tempUnzipDir, sourcePathPrefix)
 	var destRoot = destDir
 
 	missingFiles, editedFiles, err := processFiles(cli, selectedTemplate.BaseFiles, sourceRoot, destRoot)
@@ -191,7 +201,7 @@ func addScreensToProject(cli *cli, destDir, chosenTemplate string, selectedScree
 		return fmt.Errorf("error during backup/overwrite: %w", err)
 	}
 
-	err = handleMissingFiles(cli, missingFiles, tempUnzipDir, sourcePrefix, destDir)
+	err = handleMissingFiles(cli, missingFiles, tempUnzipDir, sourcePathPrefix, destDir)
 	if err != nil {
 		return fmt.Errorf("error copying missing files: %w", err)
 	}
@@ -299,6 +309,7 @@ func processDirectories(cli *cli, baseDirs []string, sourceRoot, destRoot string
 		sourceDir := filepath.Join(sourceRoot, dir)
 		files, listErr := listFilesInDir(sourceDir)
 		if listErr != nil {
+			err = fmt.Errorf("failed to list files in %s: %w", sourceDir, listErr)
 			return
 		}
 
@@ -421,15 +432,15 @@ func loadAculConfig(configPath string) (*AculConfig, error) {
 
 // addUniqueScreens ensures selectedScreens are added uniquely to cfg.Screens.
 func addUniqueScreens(cfg *AculConfig, selected []string) {
-	seen := make(map[string]bool, len(cfg.Screens))
+	existingSet := make(map[string]bool, len(cfg.Screens))
 	for _, s := range cfg.Screens {
-		seen[s] = true
+		existingSet[s] = true
 	}
 
 	for _, s := range selected {
-		if !seen[s] {
+		if !existingSet[s] {
 			cfg.Screens = append(cfg.Screens, s)
-			seen[s] = true
+			existingSet[s] = true
 		}
 	}
 }
