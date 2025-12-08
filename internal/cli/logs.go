@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"time"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
-	"golang.org/x/net/context"
 )
 
 // Besides the limitation of 100 log events per request to retrieve logs,

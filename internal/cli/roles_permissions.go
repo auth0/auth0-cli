@@ -13,11 +13,12 @@ import (
 
 var (
 	roleAPIIdentifier = Flag{
-		Name:       "API",
-		LongForm:   "api-id",
-		ShortForm:  "a",
-		Help:       "API Identifier.",
-		IsRequired: true,
+		Name:        "API",
+		LongForm:    "api-id",
+		ShortForm:   "a",
+		Help:        "API Identifier.",
+		IsRequired:  true,
+		AlsoKnownAs: []string{"resource-server-identifier"},
 	}
 
 	roleAPIPermissions = Flag{
@@ -138,7 +139,8 @@ func addRolePermissionsCmd(cli *cli) *cobra.Command {
   auth0 roles permissions add <role-id>
   auth0 roles permissions add <role-id> --api-id <api-id>
   auth0 roles permissions add <role-id> --api-id <api-id> --permissions <permission-name>
-  auth0 roles permissions add <role-id> -a <api-id> -p <permission-name>`,
+  auth0 roles permissions add <role-id> -a <api-id> -p <permission-name>
+  auth0 roles permissions add <role-id> --resource-server-identifier <api-id> --permissions <permission-name>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions); err != nil {
@@ -203,7 +205,8 @@ func removeRolePermissionsCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 roles permissions remove
   auth0 roles permissions rm <role-id> --api-id <api-id>
   auth0 roles permissions rm <role-id> --api-id <api-id> --permissions <permission-name>
-  auth0 roles permissions rm <role-id> -a <api-id> -p <permission-name>`,
+  auth0 roles permissions rm <role-id> -a <api-id> -p <permission-name>
+  auth0 roles permissions rm <role-id> --resource-server-identifier <api-id> --permissions <permission-name>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions); err != nil {
