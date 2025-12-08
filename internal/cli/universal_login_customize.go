@@ -39,7 +39,7 @@ const (
 	standardMode             = "standard"
 	advancedMode             = "advanced"
 
-	sunsetDate        = "2026-04-30" // 6 months from GA.
+	sunsetDate        = "2026-06-15" // 6 months from GA.
 	warningPeriodDays = 30           // Show urgent warnings 30 days before sunset.
 )
 

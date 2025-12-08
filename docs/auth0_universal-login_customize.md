@@ -12,7 +12,7 @@ Customize your Universal Login Experience. Note that this requires a custom doma
   in your browser where you can edit and preview your branding changes. For a comprehensive list of editable parameters and their values,
   please visit the Management API documentation: https://auth0.com/docs/api/management/v2
 
-⚠️  DEPRECATION NOTICE: Advanced mode will be deprecated on 2026-04-30
+⚠️  DEPRECATION NOTICE: Advanced mode will be deprecated on 2026-06-15
    For future Advanced Customizations, use: auth0 acul config <command>
 
 * Advanced mode is recommended for full customization and granular control of the login experience, allowing integration of your own component design system.
