@@ -20,14 +20,16 @@ auth0 roles permissions add [flags]
   auth0 roles permissions add <role-id> --api-id <api-id>
   auth0 roles permissions add <role-id> --api-id <api-id> --permissions <permission-name>
   auth0 roles permissions add <role-id> -a <api-id> -p <permission-name>
+  auth0 roles permissions add <role-id> --resource-server-identifier <api-id> --permissions <permission-name>
 ```
 
 
 ## Flags
 
 ```
-  -a, --api-id string         API Identifier.
-  -p, --permissions strings   Permissions.
+  -a, --api-id string                       API Identifier.
+  -p, --permissions strings                 Permissions.
+      --resource-server-identifier string   API Identifier.
 ```
 
 
