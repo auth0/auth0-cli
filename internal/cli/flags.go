@@ -17,6 +17,7 @@ type Flag struct {
 	Help         string
 	IsRequired   bool
 	AlwaysPrompt bool
+	AlsoKnownAs  []string
 }
 
 func (f Flag) GetName() string {
@@ -36,7 +37,16 @@ func (f Flag) GetIsRequired() bool {
 }
 
 func (f *Flag) IsSet(cmd *cobra.Command) bool {
-	return cmd.Flags().Changed(f.LongForm)
+	if cmd.Flags().Changed(f.LongForm) {
+		return true
+	}
+	// Check if any alias is set.
+	for _, alias := range f.AlsoKnownAs {
+		if cmd.Flags().Changed(alias) {
+			return true
+		}
+	}
+	return false
 }
 
 func (f *Flag) Ask(cmd *cobra.Command, value interface{}, defaultValue *string) error {
@@ -254,6 +264,16 @@ func openEditorFlag(cmd *cobra.Command, f *Flag, value *string, defaultValue str
 func registerString(cmd *cobra.Command, f *Flag, value *string, defaultValue string, isUpdate bool) {
 	cmd.Flags().StringVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
 
+	// Set up flag aliases if specified.
+	if len(f.AlsoKnownAs) > 0 {
+		flag := cmd.Flags().Lookup(f.LongForm)
+		if flag != nil {
+			for _, alias := range f.AlsoKnownAs {
+				cmd.Flags().StringVar(value, alias, defaultValue, f.Help)
+			}
+		}
+	}
+
 	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
 		panic(auth0.Error(err, "failed to register string flag"))
 	}
@@ -261,6 +281,16 @@ func registerString(cmd *cobra.Command, f *Flag, value *string, defaultValue str
 
 func registerStringSlice(cmd *cobra.Command, f *Flag, value *[]string, defaultValue []string, isUpdate bool) {
 	cmd.Flags().StringSliceVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
+
+	// Set up flag aliases if specified.
+	if len(f.AlsoKnownAs) > 0 {
+		flag := cmd.Flags().Lookup(f.LongForm)
+		if flag != nil {
+			for _, alias := range f.AlsoKnownAs {
+				cmd.Flags().StringSliceVar(value, alias, defaultValue, f.Help)
+			}
+		}
+	}
 
 	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
 		panic(auth0.Error(err, "failed to register string slice flag"))
@@ -270,6 +300,16 @@ func registerStringSlice(cmd *cobra.Command, f *Flag, value *[]string, defaultVa
 func registerStringMap(cmd *cobra.Command, f *Flag, value *map[string]string, defaultValue map[string]string, isUpdate bool) {
 	cmd.Flags().StringToStringVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
 
+	// Set up flag aliases if specified.
+	if len(f.AlsoKnownAs) > 0 {
+		flag := cmd.Flags().Lookup(f.LongForm)
+		if flag != nil {
+			for _, alias := range f.AlsoKnownAs {
+				cmd.Flags().StringToStringVar(value, alias, defaultValue, f.Help)
+			}
+		}
+	}
+
 	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
 		panic(auth0.Error(err, "failed to register string map flag"))
 	}
@@ -278,6 +318,16 @@ func registerStringMap(cmd *cobra.Command, f *Flag, value *map[string]string, de
 func registerInt(cmd *cobra.Command, f *Flag, value *int, defaultValue int, isUpdate bool) {
 	cmd.Flags().IntVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
 
+	// Set up flag aliases if specified.
+	if len(f.AlsoKnownAs) > 0 {
+		flag := cmd.Flags().Lookup(f.LongForm)
+		if flag != nil {
+			for _, alias := range f.AlsoKnownAs {
+				cmd.Flags().IntVar(value, alias, defaultValue, f.Help)
+			}
+		}
+	}
+
 	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
 		panic(auth0.Error(err, "failed to register int flag"))
 	}
@@ -285,6 +335,16 @@ func registerInt(cmd *cobra.Command, f *Flag, value *int, defaultValue int, isUp
 
 func registerIntSlice(cmd *cobra.Command, f *Flag, value *[]int, defaultValue []int, isUpdate bool) {
 	cmd.Flags().IntSliceVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
+
+	// Set up flag aliases if specified.
+	if len(f.AlsoKnownAs) > 0 {
+		flag := cmd.Flags().Lookup(f.LongForm)
+		if flag != nil {
+			for _, alias := range f.AlsoKnownAs {
+				cmd.Flags().IntSliceVar(value, alias, defaultValue, f.Help)
+			}
+		}
+	}
 
 	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
 		panic(auth0.Error(err, "failed to register int slice flag"))
@@ -329,6 +389,16 @@ func askIntSlice(i commandInput, value *[]int, defaultValue *[]int) error {
 
 func registerBool(cmd *cobra.Command, f *Flag, value *bool, defaultValue bool, isUpdate bool) {
 	cmd.Flags().BoolVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
+
+	// Set up flag aliases if specified.
+	if len(f.AlsoKnownAs) > 0 {
+		flag := cmd.Flags().Lookup(f.LongForm)
+		if flag != nil {
+			for _, alias := range f.AlsoKnownAs {
+				cmd.Flags().BoolVar(value, alias, defaultValue, f.Help)
+			}
+		}
+	}
 
 	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
 		panic(auth0.Error(err, "failed to register bool flag"))

@@ -6,17 +6,17 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/PuerkitoBio/rehttp v1.4.0
 	github.com/atotto/clipboard v0.1.4
-	github.com/auth0/go-auth0 v1.31.1-0.20251119071149-054c1dbc2539
+	github.com/auth0/go-auth0 v1.32.0
 	github.com/briandowns/spinner v1.23.2
 	github.com/charmbracelet/glamour v0.10.0
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/getsentry/sentry-go v0.38.0
+	github.com/getsentry/sentry-go v0.40.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
-	github.com/hashicorp/go-version v1.7.0
+	github.com/hashicorp/go-version v1.8.0
 	github.com/hashicorp/hc-install v0.9.2
 	github.com/hashicorp/terraform-exec v0.24.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
@@ -31,7 +31,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/schollz/progressbar/v3 v3.17.1
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/pretty v1.2.1
