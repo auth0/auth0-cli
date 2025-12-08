@@ -34,7 +34,7 @@ var (
 	}
 	screenDevFlag = Flag{
 		Name:         "Screens",
-		LongForm:     "screen",
+		LongForm:     "screens",
 		ShortForm:    "s",
 		Help:         "Specific screens to develop and watch.",
 		IsRequired:   false,
@@ -79,7 +79,7 @@ DEV MODE (default):
 - Runs your build process (e.g., npm run screen <name>) for HMR development
 
 CONNECTED MODE (--connected):
-- Requires: --screen flag to specify screens to patch in Auth0 tenant  
+- Requires: --screens flag to specify screens to patch in Auth0 tenant  
 - Updates advance rendering settings of the chosen screens in your Auth0 tenant
 - Runs initial build and expects you to host assets locally
 - Optionally runs build:watch in the background for continuous asset updates
@@ -93,9 +93,9 @@ CONNECTED MODE (--connected):
   # Connected mode
   auth0 acul dev --connected
   auth0 acul dev --connected --debug --dir ./my_project
-  auth0 acul dev --connected --screen all
+  auth0 acul dev --connected --screens all
   auth0 acul dev -c --dir ./my_project
-  auth0 acul dev --connected --screen login-id
+  auth0 acul dev --connected --screens login-id
   auth0 acul dev -c -s login-id,signup`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := ensureACULPrerequisites(cmd.Context(), cli.api); err != nil {
@@ -410,7 +410,7 @@ func buildProject(cli *cli, projectDir string) error {
 }
 
 func selectScreensSimple(cli *cli, projectDir string, screenDirs []string) ([]string, error) {
-	// 1. Screens provided via --screen flag.
+	// 1. Screens provided via --screens flag.
 	if len(screenDirs) > 0 {
 		if len(screenDirs) == 1 && screenDirs[0] == "all" {
 			cli.renderer.Infof(ansi.Cyan("📂  Selecting all screens from src/screens"))
@@ -423,7 +423,7 @@ func selectScreensSimple(cli *cli, projectDir string, screenDirs []string) ([]st
 		return screenDirs, nil
 	}
 
-	// 2. No --screen flag: auto-detect from src/screens.
+	// 2. No --screens flag: auto-detect from src/screens.
 	srcScreensPath := filepath.Join(projectDir, "src", "screens")
 
 	if availableScreens, err := getScreensFromSrcFolder(srcScreensPath); err == nil && len(availableScreens) > 0 {
@@ -433,7 +433,7 @@ func selectScreensSimple(cli *cli, projectDir string, screenDirs []string) ([]st
 	return nil, fmt.Errorf(`no screens found in project.
 
 Please either:
-1. Specify screens using --screen flag: auth0 acul dev --connected --screen login-id,signup
+1. Specify screens using --screens flag: auth0 acul dev --connected --screens login-id,signup
 2. Create a new ACUL project: auth0 acul init
 3. Ensure your project has screens in src/screens/ folder`)
 }

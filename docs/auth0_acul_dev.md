@@ -18,7 +18,7 @@ DEV MODE (default):
 - Runs your build process (e.g., npm run screen <name>) for HMR development
 
 CONNECTED MODE (--connected):
-- Requires: --screen flag to specify screens to patch in Auth0 tenant  
+- Requires: --screens flag to specify screens to patch in Auth0 tenant  
 - Updates advance rendering settings of the chosen screens in your Auth0 tenant
 - Runs initial build and expects you to host assets locally
 - Optionally runs build:watch in the background for continuous asset updates
@@ -41,9 +41,9 @@ auth0 acul dev [flags]
   # Connected mode
   auth0 acul dev --connected
   auth0 acul dev --connected --debug --dir ./my_project
-  auth0 acul dev --connected --screen all
+  auth0 acul dev --connected --screens all
   auth0 acul dev -c --dir ./my_project
-  auth0 acul dev --connected --screen login-id
+  auth0 acul dev --connected --screens login-id
   auth0 acul dev -c -s login-id,signup
 ```
 
@@ -51,10 +51,10 @@ auth0 acul dev [flags]
 ## Flags
 
 ```
-  -c, --connected        Enable connected mode to update advance rendering settings of Auth0 tenant. Use only on stage/dev tenants.
-  -d, --dir string       Path to the ACUL project directory (must contain package.json).
-  -p, --port string      Port for the local development server.
-  -s, --screen strings   Specific screens to develop and watch.
+  -c, --connected         Enable connected mode to update advance rendering settings of Auth0 tenant. Use only on stage/dev tenants.
+  -d, --dir string        Path to the ACUL project directory (must contain package.json).
+  -p, --port string       Port for the local development server.
+  -s, --screens strings   Specific screens to develop and watch.
 ```
 
 
