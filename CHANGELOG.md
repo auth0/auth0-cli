@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.24.0](https://github.com/auth0/auth0-cli/tree/v1.23.0) (December 09, 2025)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.23.0...v1.24.0)
+
+### Added
+- Support new ACUL config commands [#1312]
+- Enhance login process by prompting for default tenant domain [#1388]
+- Add interactive api selection for resource server client creation [#1391]
+- Add resource server identifier flag alias for roles permissions commands [#1398]
+
+
+
 # [v.1.23.0](https://github.com/auth0/auth0-cli/tree/v1.23.0) (November 14, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.22.0...v1.23.0)
@@ -619,6 +631,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 [unreleased]: https://github.com/auth0/auth0-cli/compare/v1.21.0...HEAD
+[#1398]: https://github.com/auth0/auth0-cli/pull/1398
+[#1391]: https://github.com/auth0/auth0-cli/pull/1391
+[1388]:  https://github.com/auth0/auth0-cli/pull/1388
+[#1312]: https://github.com/auth0/auth0-cli/pull/1312
 [#1372]: https://github.com/auth0/auth0-cli/pull/1372
 [#1365]: https://github.com/auth0/auth0-cli/pull/1365
 [#1349]: https://github.com/auth0/auth0-cli/pull/1349
