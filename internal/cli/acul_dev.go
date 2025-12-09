@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -87,8 +88,8 @@ CONNECTED MODE (--connected):
 
 ⚠️  Connected mode should only be used on stage/dev tenants, not production!`,
 		Example: `  # Dev mode
-  auth0 acul dev --port 3000
-  auth0 acul dev -p 8080 --dir ./my_project
+  auth0 acul dev --port 55444
+  auth0 acul dev -p 55444 --dir ./my_project
   
   # Connected mode
   auth0 acul dev --connected
@@ -101,6 +102,8 @@ CONNECTED MODE (--connected):
 			if err := ensureACULPrerequisites(cmd.Context(), cli.api); err != nil {
 				return err
 			}
+
+			checkNodeVersion(cli)
 
 			pwd, err := os.Getwd()
 			if err != nil {
@@ -139,7 +142,7 @@ CONNECTED MODE (--connected):
 			}
 
 			if port == "" {
-				err = portFlag.Ask(cmd, &port, auth0.String("8080"))
+				err = portFlag.Ask(cmd, &port, auth0.String("55444"))
 				if err != nil {
 					return err
 				}
@@ -159,6 +162,10 @@ CONNECTED MODE (--connected):
 }
 
 func runNormalMode(cli *cli, projectDir, port string) error {
+	if !isPortFree(port) {
+		return fmt.Errorf("port %s is already in use; please free it or choose another port", port)
+	}
+
 	// 1. Set up the command.
 	cmd := exec.Command("npm", "run", "dev", "--", "--port", port)
 	cmd.Dir = projectDir
@@ -182,8 +189,6 @@ func runNormalMode(cli *cli, projectDir, port string) error {
 	// 4. Print the success/info logs immediately after starting the server process.
 	server := fmt.Sprintf("http://localhost:%s", port)
 
-	fmt.Println("💡 " + ansi.Italic("Make changes to your code and view the live changes as we have HMR enabled!"))
-
 	// 5. Wait for the command to exit and handle intentional stops (Ctrl+C).
 	readyChan := make(chan struct{})
 	go func() {
@@ -200,11 +205,11 @@ func runNormalMode(cli *cli, projectDir, port string) error {
 
 	select {
 	case <-readyChan:
+		fmt.Println("💡 " + ansi.Italic("Make changes to your code and view the live changes as we have HMR enabled!"))
 		_ = browser.OpenURL(server)
 
 	case <-time.After(20 * time.Second):
 		fmt.Println("⏳ Dev server is taking longer than expected to start...")
-		fmt.Println("ℹ️ You can manually open the browser if needed.")
 	}
 
 	if err = cmd.Wait(); err != nil {
@@ -213,7 +218,7 @@ func runNormalMode(cli *cli, projectDir, port string) error {
 			return nil
 		}
 
-		return fmt.Errorf("dev server exited with an error")
+		return fmt.Errorf("dev server exited with an error: %w", err)
 	}
 
 	fmt.Println(ansi.Bold("\n'npm run dev' finished gracefully."))
@@ -247,12 +252,25 @@ func showConnectedModeInformation() bool {
 	return prompt.Confirm("Proceed with connected mode?")
 }
 
+// isPortFree returns true if port is free (no TCP connection possible).
+func isPortFree(port string) bool {
+	addr := net.JoinHostPort("127.0.0.1", port)
+	conn, err := net.DialTimeout("tcp", addr, 250*time.Millisecond)
+	if err != nil {
+		return true
+	}
+
+	conn.Close()
+	// Dial succeeded -> something is listening -> not free.
+	return false
+}
+
 func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, screensToWatch []string) error {
 	fmt.Println("\n🚀 " + ansi.Green("ACUL connected dev mode started for: "+ansi.Cyan(projectDir)))
 
 	// Step 1: Do initial build.
 	fmt.Println("")
-	fmt.Println("🔨 " + ansi.Bold(ansi.Blue("Step 1: Running initial build...")))
+	fmt.Println("🔨 " + ansi.Bold(ansi.Blue("Step 1: Running initial build with 'npm run build'")))
 	if err := buildProject(cli, projectDir); err != nil {
 		return fmt.Errorf("initial build failed: %w", err)
 	}
@@ -269,7 +287,8 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 
 	if port == "" {
 		var portInput string
-		portQuestion := prompt.TextInput("port", "Enter port to serve assets:", "Example: 8080", "8080", true)
+
+		portQuestion := prompt.TextInput("port", "Enter port to serve assets:", "Example: 55444", "55444", true)
 		if err := prompt.AskOne(portQuestion, &portInput); err != nil {
 			return fmt.Errorf("failed to get port: %w", err)
 		}
@@ -279,6 +298,10 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 		}
 
 		port = portInput
+	}
+
+	if !isPortFree(port) {
+		return fmt.Errorf("port %s is already in use; please free it or choose another port", port)
 	}
 
 	fmt.Println("💡 " + ansi.Yellow("Your assets must be served locally with CORS enabled."))
@@ -417,8 +440,6 @@ func selectScreensSimple(cli *cli, projectDir string, screenDirs []string) ([]st
 
 			return getScreensFromSrcFolder(filepath.Join(projectDir, "src", "screens"))
 		}
-
-		cli.renderer.Infof(ansi.Cyan(fmt.Sprintf("📂  Using specified screens: %s", strings.Join(screenDirs, ", "))))
 
 		return screenDirs, nil
 	}

@@ -35,8 +35,8 @@ auth0 acul dev [flags]
 
 ```
   # Dev mode
-  auth0 acul dev --port 3000
-  auth0 acul dev -p 8080 --dir ./my_project
+  auth0 acul dev --port 55444
+  auth0 acul dev -p 55444 --dir ./my_project
   
   # Connected mode
   auth0 acul dev --connected
