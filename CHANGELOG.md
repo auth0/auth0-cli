@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-# [v.1.24.0](https://github.com/auth0/auth0-cli/tree/v1.23.0) (December 09, 2025)
+# [v.1.24.0](https://github.com/auth0/auth0-cli/tree/v1.24.0) (December 09, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.23.0...v1.24.0)
 
@@ -630,10 +630,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.21.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.24.0...HEAD
 [#1398]: https://github.com/auth0/auth0-cli/pull/1398
 [#1391]: https://github.com/auth0/auth0-cli/pull/1391
-[1388]:  https://github.com/auth0/auth0-cli/pull/1388
+[#1388]: https://github.com/auth0/auth0-cli/pull/1388
 [#1312]: https://github.com/auth0/auth0-cli/pull/1312
 [#1372]: https://github.com/auth0/auth0-cli/pull/1372
 [#1365]: https://github.com/auth0/auth0-cli/pull/1365
