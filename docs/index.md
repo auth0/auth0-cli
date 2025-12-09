@@ -80,7 +80,7 @@ Authenticating as a user is not supported for **private cloud** tenants. Instead
 ## Available Commands
 
 - [auth0 actions](auth0_actions.md) - Manage resources for actions
-- [auth0 acul](auth0_acul.md) - Advance Customize the Universal Login experience
+- [auth0 acul](auth0_acul.md) - Advanced Customization the Universal Login experience
 - [auth0 api](auth0_api.md) - Makes an authenticated HTTP request to the Auth0 Management API
 - [auth0 apis](auth0_apis.md) - Manage resources for APIs
 - [auth0 apps](auth0_apps.md) - Manage resources for applications

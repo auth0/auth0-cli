@@ -7,9 +7,9 @@ has_toc: false
 
 Switch the rendering mode for Universal Login. Note that this requires a custom domain to be configured for the tenant.
 
-🚨 DEPRECATION WARNING: The 'auth0 ul switch' command will be DEPRECATED on April 30, 2026
+🚨 DEPRECATION WARNING: The 'auth0 ul switch' command will be DEPRECATED on June 15, 2026
         
-✅ For Advanced Customizations, migrate to the new ACUL config commands:
+✅ For Advanced Customizations, Use new ACUL config commands:
   • auth0 acul config generate <screen>
   • auth0 acul config get <screen>  
   • auth0 acul config set <screen>
@@ -37,7 +37,7 @@ auth0 universal-login switch [flags]
   -r, --rendering-mode string   standardMode is recommended for customizating consistent, branded experience for users.
                                 Alternatively, advancedMode is recommended for full customization/granular control of the login experience and to integrate own component design system
                                 
-  -s, --screen string           Name of the screen to customize.
+  -s, --screen string           Name of the screen to to switch or customize.
 ```
 
 

@@ -236,6 +236,7 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
 	runNpmGenerateScreenLoader(cli, destDir)
 
 	if prompt.Confirm("Would you like to proceed with installing the required dependencies using 'npm install'?") {
+		fmt.Println(ansi.Cyan("Installing Dependencies... This may take a little while."))
 		runNpmInstall(cli, destDir)
 	}
 
@@ -395,8 +396,7 @@ func copyTemplateBaseDirs(cli *cli, baseDirs []string, chosenTemplate, tempUnzip
 		destPath := filepath.Join(destDir, dirPath)
 
 		if _, err := os.Stat(srcPath); os.IsNotExist(err) {
-			cli.renderer.Warnf("%s Source directory does not exist: %s",
-				ansi.Bold(ansi.Yellow("⚠️")), ansi.Faint(srcPath))
+			cli.renderer.Warnf("⚠️ Source directory does not exist: %s", ansi.Faint(srcPath))
 			continue
 		}
 
@@ -421,15 +421,13 @@ func copyProjectTemplateFiles(cli *cli, baseFiles []string, chosenTemplate, temp
 		destPath := filepath.Join(destDir, filePath)
 
 		if _, err := os.Stat(srcPath); os.IsNotExist(err) {
-			cli.renderer.Warnf("%s Source file does not exist: %s",
-				ansi.Bold(ansi.Yellow("⚠️")), ansi.Faint(srcPath))
+			cli.renderer.Warnf("⚠️ Source file does not exist: %s", ansi.Faint(srcPath))
 			continue
 		}
 
 		parentDir := filepath.Dir(destPath)
 		if err := os.MkdirAll(parentDir, 0755); err != nil {
-			cli.renderer.Warnf("%s Error creating parent directory for %s: %v",
-				ansi.Bold(ansi.Red("❌")), ansi.Bold(filePath), err)
+			cli.renderer.Warnf("❌ Error creating parent directory for %s: %v", ansi.Bold(filePath), err)
 			continue
 		}
 
@@ -463,8 +461,7 @@ func copyProjectScreens(cli *cli, screens []Screens, selectedScreens []string, c
 
 		parentDir := filepath.Dir(destPath)
 		if err := os.MkdirAll(parentDir, 0755); err != nil {
-			cli.renderer.Warnf("%s Error creating parent directory for %s: %v",
-				ansi.Bold(ansi.Red("❌")), ansi.Bold(screen.Path), err)
+			cli.renderer.Warnf("❌ Error creating parent directory for %s: %v", ansi.Bold(screen.Path), err)
 			continue
 		}
 
@@ -596,8 +593,7 @@ func createScreenMap(screens []Screens) map[string]Screens {
 // success message, documentation, Node version check, next steps, and available commands.
 func showPostScaffoldingOutput(cli *cli, destDir, successMessage string) {
 	cli.renderer.Output("")
-	cli.renderer.Infof("🎉 %s in %s!",
-		successMessage, ansi.Bold(ansi.Cyan(fmt.Sprintf("'%s'", destDir))))
+	cli.renderer.Infof("🎉 %s in %s!", successMessage, ansi.Bold(ansi.Cyan(fmt.Sprintf("'%s'", destDir))))
 	cli.renderer.Output("")
 
 	cli.renderer.Infof("📖  Explore the sample app: %s",
@@ -620,20 +616,13 @@ func printAvailableCommands() {
 	fmt.Println(ansi.Bold("📋  Available Commands:"))
 	fmt.Println()
 
-	fmt.Printf("  %s - Add authentication screens\n",
-		ansi.Bold(ansi.Green("auth0 acul screen add <screen-name>")))
-	fmt.Printf("  %s - Local development with hot-reload\n",
-		ansi.Bold(ansi.Green("auth0 acul dev")))
-	fmt.Printf("  %s - Live sync changes to Auth0 tenant\n",
-		ansi.Bold(ansi.Green("auth0 acul dev --connected")))
-	fmt.Printf("  %s - Create starter config template\n",
-		ansi.Bold(ansi.Green("auth0 acul config generate <screen>")))
-	fmt.Printf("  %s - Pull current Auth0 settings\n",
-		ansi.Bold(ansi.Green("auth0 acul config get <screen>")))
-	fmt.Printf("  %s - Push local config to Auth0\n",
-		ansi.Bold(ansi.Green("auth0 acul config set <screen>")))
-	fmt.Printf("  %s - List all configurable screens\n",
-		ansi.Bold(ansi.Green("auth0 acul config list")))
+	fmt.Printf("  %s - Add authentication screens\n", ansi.Bold(ansi.Green("auth0 acul screen add <screen-name>")))
+	fmt.Printf("  %s - Local development with hot-reload\n", ansi.Bold(ansi.Green("auth0 acul dev")))
+	fmt.Printf("  %s - Live sync changes to Auth0 tenant\n", ansi.Bold(ansi.Green("auth0 acul dev --connected")))
+	fmt.Printf("  %s - Create starter config template\n", ansi.Bold(ansi.Green("auth0 acul config generate <screen>")))
+	fmt.Printf("  %s - Pull current Auth0 settings\n", ansi.Bold(ansi.Green("auth0 acul config get <screen>")))
+	fmt.Printf("  %s - Push local config to Auth0\n", ansi.Bold(ansi.Green("auth0 acul config set <screen>")))
+	fmt.Printf("  %s - List all configurable screens\n", ansi.Bold(ansi.Green("auth0 acul config list")))
 
 	fmt.Println()
 	fmt.Printf("%s  Use %s to see all available commands\n",

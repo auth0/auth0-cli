@@ -11,7 +11,7 @@ import (
 func aculCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "acul",
-		Short: "Advance Customize the Universal Login experience",
+		Short: "Advanced Customization the Universal Login experience",
 		Long:  `Customize the Universal Login experience. This requires a custom domain to be configured for the tenant.`,
 	}
 

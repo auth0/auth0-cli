@@ -70,6 +70,22 @@ var (
 		Help:       "Name of the prompt to to switch or customize.",
 		IsRequired: true,
 	}
+
+	screenNameFlag = Flag{
+		Name:       "Screen Name",
+		LongForm:   "screen",
+		ShortForm:  "s",
+		Help:       "Name of the screen to to switch or customize.",
+		IsRequired: true,
+	}
+
+	fileFlag = Flag{
+		Name:       "File",
+		LongForm:   "settings-file",
+		ShortForm:  "f",
+		Help:       "File to save the rendering configs to.",
+		IsRequired: false,
+	}
 )
 
 var allowedPromptsWithPartials = []management.PromptType{
@@ -323,8 +339,8 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 
 	renderingMode.RegisterString(cmd, &selectedRenderingMode, "")
 	promptName.RegisterString(cmd, &input.promptName, "")
-	screenName.RegisterString(cmd, &input.screenName, "")
-	file.RegisterString(cmd, &input.filePath, "")
+	screenNameFlag.RegisterString(cmd, &input.screenName, "")
+	fileFlag.RegisterString(cmd, &input.filePath, "")
 
 	return cmd
 }
@@ -1039,9 +1055,9 @@ func switchUniversalLoginRendererModeCmd(cli *cli) *cobra.Command {
 		Short: "⚠️ Switch rendering mode (DEPRECATED)",
 		Long: `Switch the rendering mode for Universal Login. Note that this requires a custom domain to be configured for the tenant.
 
-🚨 DEPRECATION WARNING: The 'auth0 ul switch' command will be DEPRECATED on April 30, 2026
+🚨 DEPRECATION WARNING: The 'auth0 ul switch' command will be DEPRECATED on June 15, 2026
         
-✅ For Advanced Customizations, migrate to the new ACUL config commands:
+✅ For Advanced Customizations, Use new ACUL config commands:
   • auth0 acul config generate <screen>
   • auth0 acul config get <screen>  
   • auth0 acul config set <screen>
@@ -1089,7 +1105,7 @@ func switchUniversalLoginRendererModeCmd(cli *cli) *cobra.Command {
 	}
 
 	promptName.RegisterString(cmd, &input.promptName, "")
-	screenName.RegisterString(cmd, &input.screenName, "")
+	screenNameFlag.RegisterString(cmd, &input.screenName, "")
 	renderingMode.RegisterString(cmd, &selectedRenderingMode, "")
 
 	return cmd
