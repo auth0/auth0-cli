@@ -32,6 +32,7 @@ type API struct {
 	Role                 RoleAPI
 	Rule                 RuleAPI
 	Tenant               TenantAPI
+	TokenExchange        TokenExchangeAPI
 	User                 UserAPI
 	Jobs                 JobsAPI
 	SelfServiceProfile   SelfServiceProfileAPI
@@ -66,6 +67,7 @@ func NewAPI(m *management.Management) *API {
 		Role:                 m.Role,
 		Rule:                 m.Rule,
 		Tenant:               m.Tenant,
+		TokenExchange:        m.TokenExchangeProfile,
 		User:                 m.User,
 		Jobs:                 m.Job,
 		SelfServiceProfile:   m.SelfServiceProfile,

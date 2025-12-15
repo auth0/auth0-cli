@@ -29,6 +29,7 @@ delete_resources "roles" "integration-test-role" "id"
 delete_resources "rules" "integration-test-rule" "id"
 delete_resources "orgs" "integration-test-org" "id"
 delete_resources "actions" "integration-test-" "id"
+delete_resources "token-exchange" "integration-test-" "id"
 delete_resources "event-streams" "integration-test-" "id"
 delete_resources "logs streams" "integration-test-" "id"
 

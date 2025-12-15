@@ -164,7 +164,7 @@ func canPrompt(cmd *cobra.Command) bool {
 func shouldPromptWhenNoLocalFlagsSet(cmd *cobra.Command) bool {
 	localFlagIsSet := false
 	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
-		if f.Name != "json" && f.Name != "force" && f.Changed {
+		if f.Name != "json" && f.Name != "force" && f.Changed && f.Name != "json-compact" {
 			localFlagIsSet = true
 		}
 	})
