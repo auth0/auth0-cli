@@ -35,6 +35,25 @@ func (m *MockPromptAPI) EXPECT() *MockPromptAPIMockRecorder {
 	return m.recorder
 }
 
+// BulkUpdateRendering mocks base method.
+func (m *MockPromptAPI) BulkUpdateRendering(ctx context.Context, c *management.PromptRenderingBulkUpdate, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, c}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "BulkUpdateRendering", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// BulkUpdateRendering indicates an expected call of BulkUpdateRendering.
+func (mr *MockPromptAPIMockRecorder) BulkUpdateRendering(ctx, c interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, c}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BulkUpdateRendering", reflect.TypeOf((*MockPromptAPI)(nil).BulkUpdateRendering), varargs...)
+}
+
 // CustomText mocks base method.
 func (m *MockPromptAPI) CustomText(ctx context.Context, p, l string, opts ...management.RequestOption) (map[string]interface{}, error) {
 	m.ctrl.T.Helper()
