@@ -102,6 +102,7 @@ Authenticating as a user is not supported for **private cloud** tenants. Instead
 - [auth0 tenants](auth0_tenants.md) - Manage configured tenants
 - [auth0 terraform](auth0_terraform.md) - Manage terraform configuration for your Auth0 Tenant
 - [auth0 test](auth0_test.md) - Try your Universal Login box or get a token
+- [auth0 token-exchange](auth0_token-exchange.md) - Manage token exchange profiles
 - [auth0 universal-login](auth0_universal-login.md) - Manage the Universal Login experience
 - [auth0 users](auth0_users.md) - Manage resources for users
 
