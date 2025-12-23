@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.25.1](https://github.com/auth0/auth0-cli/tree/v1.25.1) (December 23, 2025)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.25.0...v1.25.1)
+
+### Fixed
+- Fix supported screens in advanced rendering flows [#1409]
+
+
 # [v.1.25.0](https://github.com/auth0/auth0-cli/tree/v1.25.0) (December 16, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.24.0...v1.25.0)
@@ -638,7 +646,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.25.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.25.1...HEAD
+[#1409]: https://github.com/auth0/auth0-cli/pull/1409
 [#1406]: https://github.com/auth0/auth0-cli/pull/1406
 [#1398]: https://github.com/auth0/auth0-cli/pull/1398
 [#1391]: https://github.com/auth0/auth0-cli/pull/1391
