@@ -150,6 +150,16 @@ auth0 login --domain <domain> --client-id <client-id> --client-secret <client-se
 auth0 login --domain <domain> --client-id <client-id> --client-assertion-private-key <path-to-private-key / private-key> --client-assertion-signing-alg <signing-algorithm>
 ```
 
+### Re-authentication
+
+When your access token expires, the CLI will prompt you to confirm whether to continue with your default tenant or select a different one:
+
+```
+Continue login with default tenant 'your-tenant.auth0.com'? [y/N]
+```
+
+Select **y** to proceed with your default tenant, or **N** to choose a different tenant.
+
 > **Note:**
 > Using the CLI will consume Management API rate limits according to the subscription plan. Ref [Rate limit Policy](https://auth0.com/docs/troubleshoot/customer-support/operational-policies/rate-limit-policy)
 
