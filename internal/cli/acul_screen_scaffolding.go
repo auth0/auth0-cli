@@ -62,24 +62,20 @@ func aculScreenAddCmd(cli *cli) *cobra.Command {
 
 // checkVersionCompatibility compares the user's ACUL config version with the latest available tag
 // and warns if the project version is missing or outdated.
-func checkVersionCompatibility(cli *cli, aculConfig *AculConfig, latestTag string) {
+func checkVersionCompatibility(cli *cli, aculConfig *AculConfig) {
+	latestTag, err := getLatestReleaseTag()
+	cli.renderer.Warnf(
+		ansi.Yellow(fmt.Sprintf("Unable to check for the latest ACUL version (%v).Skipping version check and continuing with the configured version.", err)))
+
 	if aculConfig.AppVersion == "" {
-		cli.renderer.Warnf(
-			ansi.Yellow("⚠️  Missing app version in acul_config.json. Reinitialize your project with `auth0 acul init`."),
-		)
+		cli.renderer.Warnf(ansi.Yellow("⚠️  Missing app version in acul_config.json. Reinitialize your project with `auth0 acul init`."))
 		return
 	}
 
 	if aculConfig.AppVersion != latestTag {
-		compareLink := fmt.Sprintf(
-			"https://github.com/auth0-samples/auth0-acul-samples/compare/%s...%s",
-			aculConfig.AppVersion, latestTag,
-		)
+		compareLink := fmt.Sprintf("https://github.com/auth0-samples/auth0-acul-samples/compare/%s...%s", aculConfig.AppVersion, latestTag)
 
-		cli.renderer.Warnf(
-			ansi.Yellow(fmt.Sprintf("⚠️  ACUL project version outdated (%s). Check updates: %s",
-				aculConfig.AppVersion, compareLink)),
-		)
+		cli.renderer.Warnf(ansi.Yellow(fmt.Sprintf("⚠️  ACUL project version outdated (%s). Check updates: %s", aculConfig.AppVersion, compareLink)))
 	}
 }
 
@@ -95,24 +91,19 @@ func scaffoldAddScreen(cli *cli, args []string, destDir string) error {
 		return err
 	}
 
-	latestTag, err := getLatestReleaseTag()
-	if err != nil {
-		return fmt.Errorf("failed to get latest release tag: %w", err)
-	}
-
 	manifest, err := loadManifest(aculConfig.AppVersion)
 	if err != nil {
 		return err
 	}
 
-	checkVersionCompatibility(cli, aculConfig, latestTag)
+	checkVersionCompatibility(cli, aculConfig)
 
 	selectedScreens, err := selectAndFilterScreens(cli, args, manifest, aculConfig.ChosenTemplate, aculConfig.Screens)
 	if err != nil {
 		return err
 	}
 
-	if err = addScreensToProject(cli, destDir, aculConfig.ChosenTemplate, selectedScreens, manifest.Templates[aculConfig.ChosenTemplate]); err != nil {
+	if err = addScreensToProject(cli, destDir, aculConfig, selectedScreens, manifest.Templates[aculConfig.ChosenTemplate]); err != nil {
 		return err
 	}
 
@@ -164,8 +155,8 @@ func selectAndFilterScreens(cli *cli, args []string, manifest *Manifest, chosenT
 	return finalScreens, nil
 }
 
-func addScreensToProject(cli *cli, destDir, chosenTemplate string, selectedScreens []string, selectedTemplate Template) error {
-	tempUnzipDir, err := downloadAndUnzipSampleRepo()
+func addScreensToProject(cli *cli, destDir string, aculConfig *AculConfig, selectedScreens []string, selectedTemplate Template) error {
+	tempUnzipDir, err := downloadAndUnzipSampleRepo(aculConfig.AppVersion)
 	if err != nil {
 		return err
 	}
@@ -176,7 +167,7 @@ func addScreensToProject(cli *cli, destDir, chosenTemplate string, selectedScree
 		return fmt.Errorf("failed to find extracted directory: %w", err)
 	}
 
-	sourcePathPrefix := filepath.Join(extractedDir, chosenTemplate)
+	sourcePathPrefix := filepath.Join(extractedDir, aculConfig.ChosenTemplate)
 	var sourceRoot = filepath.Join(tempUnzipDir, sourcePathPrefix)
 	var destRoot = destDir
 
@@ -206,7 +197,7 @@ func addScreensToProject(cli *cli, destDir, chosenTemplate string, selectedScree
 		return fmt.Errorf("error copying missing files: %w", err)
 	}
 
-	return copyProjectScreens(cli, selectedTemplate.Screens, selectedScreens, chosenTemplate, tempUnzipDir, destDir)
+	return copyProjectScreens(cli, selectedTemplate.Screens, selectedScreens, aculConfig.ChosenTemplate, tempUnzipDir, destDir)
 }
 
 func handleEditedFiles(cli *cli, edited []string, sourceRoot, destRoot string) error {
