@@ -51,6 +51,8 @@ type Metadata struct {
 	Description string `json:"description"`
 }
 
+const stableACULVersion = "v2.0.1"
+
 // loadManifest downloads and parses the manifest.json for the latest release.
 func loadManifest(tag string) (*Manifest, error) {
 	client := &http.Client{Timeout: 15 * time.Second}
@@ -175,7 +177,12 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
 
 	latestTag, err := getLatestReleaseTag()
 	if err != nil {
-		return fmt.Errorf("failed to get latest release tag: %w", err)
+		cli.renderer.Warnf(
+			"Unable to check the latest ACUL version (%v). Falling back to stable version %q.",
+			err,
+			stableACULVersion,
+		)
+		latestTag = stableACULVersion
 	}
 
 	manifest, err := loadManifest(latestTag)
@@ -204,7 +211,7 @@ func runScaffold(cli *cli, cmd *cobra.Command, args []string, inputs *struct {
 		return fmt.Errorf("failed to create project dir: %w", err)
 	}
 
-	tempUnzipDir, err := downloadAndUnzipSampleRepo()
+	tempUnzipDir, err := downloadAndUnzipSampleRepo(latestTag)
 	if err != nil {
 		return err
 	}
@@ -342,12 +349,7 @@ func getDestDir(args []string) string {
 	return args[0]
 }
 
-func downloadAndUnzipSampleRepo() (string, error) {
-	latestTag, err := getLatestReleaseTag()
-	if err != nil {
-		return "", fmt.Errorf("failed to get latest release tag: %w", err)
-	}
-
+func downloadAndUnzipSampleRepo(latestTag string) (string, error) {
 	repoURL := fmt.Sprintf("https://github.com/auth0-samples/auth0-acul-samples/archive/refs/tags/%s.zip", latestTag)
 	tempZipFile, err := downloadFile(repoURL)
 	if err != nil {
