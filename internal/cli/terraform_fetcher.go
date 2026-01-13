@@ -341,7 +341,7 @@ func (f *emailTemplateResourceFetcher) FetchData(ctx context.Context) (importDat
 	for _, template := range templates {
 		emailTemplate, err := f.api.EmailTemplate.Read(ctx, template)
 		if err != nil {
-			if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusNotFound {
+			if mErr, ok := err.(management.Error); ok && (mErr.Status() == http.StatusNotFound || mErr.Status() == http.StatusForbidden) {
 				continue
 			}
 			return nil, err
