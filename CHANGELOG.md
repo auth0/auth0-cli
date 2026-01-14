@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.26.0](https://github.com/auth0/auth0-cli/tree/v1.26.0) (January 14, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.25.1...v1.26.0)
+
+### Added
+- Handle forbidden error template fetching in `auth0 tf generate -r auth0_email_templates` [#1417]
+- Handle GitHub rate-limits in `auth0 acul commands` by falling back to stable versions [#1414]
+
+### Fixed
+- Updated ULP branding assets to fix template playground language dropdown [#1416]
+
+
 # [v.1.25.1](https://github.com/auth0/auth0-cli/tree/v1.25.1) (December 23, 2025)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.25.0...v1.25.1)
@@ -32,7 +44,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhance login process by prompting for default tenant domain [#1388]
 - Add interactive api selection for resource server client creation [#1391]
 - Add resource server identifier flag alias for roles permissions commands [#1398]
-
 
 
 # [v.1.23.0](https://github.com/auth0/auth0-cli/tree/v1.23.0) (November 14, 2025)
@@ -646,7 +657,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.25.1...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.26.0...HEAD
+[#1417]: https://github.com/auth0/auth0-cli/pull/1417
+[#1416]: https://github.com/auth0/auth0-cli/pull/1416
+[#1414]: https://github.com/auth0/auth0-cli/pull/1414
 [#1409]: https://github.com/auth0/auth0-cli/pull/1409
 [#1406]: https://github.com/auth0/auth0-cli/pull/1406
 [#1398]: https://github.com/auth0/auth0-cli/pull/1398
