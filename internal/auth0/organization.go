@@ -63,4 +63,9 @@ type OrganizationAPI interface {
 
 	// UpdateDiscoveryDomain updates a specific discovery domain for an organization.
 	UpdateDiscoveryDomain(ctx context.Context, id string, domainID string, d *management.OrganizationDiscoveryDomain, opts ...management.RequestOption) (err error)
+
+	// Invitations lists invitations for an organization.
+	//
+	// See: https://auth0.com/docs/api/management/v2#!/Organizations/get_invitations
+	Invitations(ctx context.Context, id string, opts ...management.RequestOption) (o *management.OrganizationInvitationList, err error)
 }
