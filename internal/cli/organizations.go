@@ -104,6 +104,7 @@ func organizationsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(openOrganizationCmd(cli))
 	cmd.AddCommand(membersOrganizationCmd(cli))
 	cmd.AddCommand(rolesOrganizationCmd(cli))
+	cmd.AddCommand(invitationsOrganizationCmd(cli))
 
 	return cmd
 }
@@ -918,4 +919,124 @@ func (cli *cli) getOrgRoleMembersWithSpinner(
 	})
 
 	return roleMembers, err
+}
+
+func invitationsOrganizationCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "invitations",
+		Short: "Manage invitations of an organization",
+		Long:  "Manage invitations of an organization.",
+	}
+
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(listInvitationsOrganizationCmd(cli))
+
+	return cmd
+}
+
+func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ID     string
+		Number int
+	}
+
+	cmd := &cobra.Command{
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "List invitations of an organization",
+		Long:    "List the invitations of an organization.",
+		Example: `  auth0 orgs invitations list
+  auth0 orgs invitations ls <org-id>
+  auth0 orgs invitations list <org-id> --number 100
+  auth0 orgs invitations ls <org-id> -n 100 --json
+  auth0 orgs invitations ls <org-id> -n 100 --json-compact
+  auth0 orgs invitations ls <org-id> --csv`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Number < 1 || inputs.Number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
+
+			if len(args) == 0 {
+				if err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions); err != nil {
+					return err
+				}
+			} else {
+				inputs.ID = args[0]
+			}
+
+			invitations, err := cli.getOrgInvitationsWithSpinner(cmd.Context(), inputs.ID, inputs.Number)
+			if err != nil {
+				return err
+			}
+
+			sortInvitations(invitations)
+
+			cli.renderer.InvitationsList(invitations)
+
+			return nil
+		},
+	}
+
+	organizationNumber.Help = "Number of organization invitations to retrieve. Minimum 1, maximum 1000."
+	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+
+	return cmd
+}
+
+func (cli *cli) getOrgInvitationsWithSpinner(context context.Context, orgID string, number int,
+) ([]management.OrganizationInvitation, error) {
+	var invitations []management.OrganizationInvitation
+
+	err := ansi.Waiting(func() (err error) {
+		invitations, err = cli.getOrgInvitations(context, orgID, number)
+		return err
+	})
+
+	return invitations, err
+}
+
+func (cli *cli) getOrgInvitations(
+	context context.Context,
+	orgID string,
+	number int,
+) ([]management.OrganizationInvitation, error) {
+	list, err := getWithPagination(
+		number,
+		func(opts ...management.RequestOption) (result []interface{}, hasNext bool, apiErr error) {
+			invitations, apiErr := cli.api.Organization.Invitations(context, url.PathEscape(orgID), opts...)
+			if apiErr != nil {
+				return nil, false, apiErr
+			}
+			var output []interface{}
+			for _, invitation := range invitations.OrganizationInvitations {
+				if invitation != nil {
+					output = append(output, *invitation)
+				}
+			}
+			return output, invitations.HasNext(), nil
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list invitations of organization with ID %q: %w", orgID, err)
+	}
+
+	var typedList []management.OrganizationInvitation
+	for _, item := range list {
+		typedList = append(typedList, item.(management.OrganizationInvitation))
+	}
+
+	return typedList, nil
+}
+
+func sortInvitations(invitations []management.OrganizationInvitation) {
+	sort.Slice(invitations, func(i, j int) bool {
+		return strings.ToLower(invitations[i].GetCreatedAt()) < strings.ToLower(invitations[j].GetCreatedAt())
+	})
 }
