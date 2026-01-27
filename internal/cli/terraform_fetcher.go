@@ -528,7 +528,20 @@ func (f *promptResourceFetcher) FetchData(_ context.Context) (importDataList, er
 	}, nil
 }
 
-var customTextPromptTypes = []string{"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password", "consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa", "status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common"}
+var customTextPromptTypes = []string{
+	"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password", "consent",
+	"mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa",
+	"status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common", "email_identifier_challenge", "passkeys",
+}
+
+/*
+TODO many missing among:
+login,login-id,login-password,login-passwordless,login-email-verification,signup,signup-id,signup-password,
+phone-identifier-enrollment,phone-identifier-challenge,email-identifier-challenge,reset-password,custom-form,
+consent,customized-consent,logout,mfa-push,mfa-otp,mfa-voice,mfa-phone,mfa-webauthn,mfa-sms,mfa-email,mfa-recovery-code,
+mfa,status,device-flow,email-verification,email-otp-challenge,organizations,invitation,common,passkeys,captcha,
+brute-force-protection,async-approval-flow,login-email-verification,phone-identifier-enrollment,phone-identifier-challenge,email-identifier-challenge
+*/
 
 func (f *promptCustomTextResourceFetcherResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	tenant, err := f.api.Tenant.Read(ctx)
