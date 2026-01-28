@@ -1694,12 +1694,7 @@ func TestPromptCustomTextResourceFetcher_FetchData(t *testing.T) {
 			},
 		}
 
-		promptTypes := []string{
-			"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password",
-			"consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa",
-			"status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common", "email-identifier-challenge", "passkeys",
-			"login-passwordless", "phone-identifier-enrollment", "phone-identifier-challenge", "custom-form", "customized-consent", "logout", "captcha", "brute-force-protection", "async-approval-flow",
-		}
+		promptTypes := []string{"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password", "consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa", "status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common", "email-identifier-challenge", "passkeys", "login-passwordless", "phone-identifier-enrollment", "phone-identifier-challenge", "custom-form", "customized-consent", "logout", "captcha", "brute-force-protection"}
 
 		expectedData := importDataList{}
 		for _, enabledLocale := range mockEnabledLocales {
