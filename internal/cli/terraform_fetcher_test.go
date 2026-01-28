@@ -1694,7 +1694,12 @@ func TestPromptCustomTextResourceFetcher_FetchData(t *testing.T) {
 			},
 		}
 
-		promptTypes := []string{"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password", "consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa", "status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common"}
+		promptTypes := []string{
+			"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password",
+			"consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa",
+			"status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common", "email-identifier-challenge", "passkeys",
+			"login-passwordless", "phone-identifier-enrollment", "phone-identifier-challenge", "custom-form", "customized-consent", "logout", "captcha", "brute-force-protection", "async-approval-flow",
+		}
 
 		expectedData := importDataList{}
 		for _, enabledLocale := range mockEnabledLocales {
@@ -2204,5 +2209,38 @@ func TestUserAttributeProfileResourceFetcher(t *testing.T) {
 		assert.Len(t, data, 1)
 		assert.Equal(t, data[0].ResourceName, "auth0_user_attribute_profile.user_attribute_profile_1")
 		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
+func Test_promptScreenPartialResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves screen partial prompts data", func(t *testing.T) {
+		fetcher := promptScreenPartialResourceFetcher{}
+
+		original := screenPartialPromptTypeToScreenMap
+		defer func() { screenPartialPromptTypeToScreenMap = original }()
+
+		screenPartialPromptTypeToScreenMap = map[string][]string{
+			"test1": {"test1"},
+			"test2": {"test2-a", "test2-b"},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_prompt_screen_partial.test1_test1",
+				ImportID:     "test1:test1",
+			},
+			{
+				ResourceName: "auth0_prompt_screen_partial.test2_test2_a",
+				ImportID:     "test2:test2-a",
+			},
+			{
+				ResourceName: "auth0_prompt_screen_partial.test2_test2_b",
+				ImportID:     "test2:test2-b",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
 	})
 }
