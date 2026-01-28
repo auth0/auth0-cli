@@ -107,6 +107,8 @@ type (
 		api *auth0.API
 	}
 
+	promptScreenPartialResourceFetcher struct{}
+
 	roleResourceFetcher struct {
 		api *auth0.API
 	}
@@ -555,6 +557,34 @@ func (f *promptCustomTextResourceFetcherResourceFetcher) FetchData(ctx context.C
 			data = append(data, importDataItem{
 				ResourceName: "auth0_prompt_custom_text." + sanitizeResourceName(language+"_"+promptType),
 				ImportID:     promptType + "::" + language,
+			})
+		}
+	}
+
+	return data, nil
+}
+
+// Referred from: https://tus.auth0.com/docs/customize/login-pages/universal-login/customize-signup-and-login-prompts#terminology
+// Referred from path prompt options in: https://auth0.com/docs/api/management/v2/prompts/get-partials
+var screenPartialPromptTypeToScreenMap = map[string][]string{
+	"login":              {"login"},
+	"login-id":           {"login-id"},
+	"login-password":     {"login-password"},
+	"login-passwordless": {"login-passwordless-sms-otp", "login-passwordless-email-code"},
+	"signup":             {"signup"},
+	"signup-id":          {"signup-id"},
+	"signup-password":    {"signup-password"},
+	"customized-consent": {"customized-consent"},
+}
+
+func (f *promptScreenPartialResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	for promptType, screens := range screenPartialPromptTypeToScreenMap {
+		for _, screen := range screens {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_prompt_screen_partial." + sanitizeResourceName(promptType+"_"+screen),
+				ImportID:     promptType + ":" + screen,
 			})
 		}
 	}
