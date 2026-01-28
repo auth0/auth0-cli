@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_branding_theme", "auth0_phone_provider", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_log_stream", "auth0_network_acl", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_prompt_screen_renderer", "auth0_resource_server", "auth0_role", "auth0_self_service_profile", "auth0_tenant", "auth0_trigger_actions", "auth0_user_attribute_profile"}
+	defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_branding_theme", "auth0_phone_provider", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_log_stream", "auth0_network_acl", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_prompt_screen_renderer", "auth0_resource_server", "auth0_role", "auth0_self_service_profile", "auth0_tenant", "auth0_trigger_actions", "auth0_user_attribute_profile", "auth0_prompt_screen_partial"}
 )
 
 type (
