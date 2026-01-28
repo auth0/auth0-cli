@@ -530,20 +530,14 @@ func (f *promptResourceFetcher) FetchData(_ context.Context) (importDataList, er
 	}, nil
 }
 
+// Referred from 'prompt' path options in: https://auth0.com/docs/api/management/v2/prompts/get-custom-text-by-language
 var customTextPromptTypes = []string{
-	"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password", "consent",
-	"mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa",
-	"status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common", "email_identifier_challenge", "passkeys",
+	"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password",
+	"consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa",
+	"status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common", "email-identifier-challenge", "passkeys",
+	"login-passwordless", "phone-identifier-enrollment", "phone-identifier-challenge", "custom-form", "customized-consent", "logout", "captcha", "brute-force-protection", "async-approval-flow",
 }
 
-/*
-TODO many missing among:
-login,login-id,login-password,login-passwordless,login-email-verification,signup,signup-id,signup-password,
-phone-identifier-enrollment,phone-identifier-challenge,email-identifier-challenge,reset-password,custom-form,
-consent,customized-consent,logout,mfa-push,mfa-otp,mfa-voice,mfa-phone,mfa-webauthn,mfa-sms,mfa-email,mfa-recovery-code,
-mfa,status,device-flow,email-verification,email-otp-challenge,organizations,invitation,common,passkeys,captcha,
-brute-force-protection,async-approval-flow,login-email-verification,phone-identifier-enrollment,phone-identifier-challenge,email-identifier-challenge
-*/
 
 func (f *promptCustomTextResourceFetcherResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	tenant, err := f.api.Tenant.Read(ctx)
@@ -565,7 +559,7 @@ func (f *promptCustomTextResourceFetcherResourceFetcher) FetchData(ctx context.C
 }
 
 // Referred from: https://tus.auth0.com/docs/customize/login-pages/universal-login/customize-signup-and-login-prompts#terminology
-// Referred from path prompt options in: https://auth0.com/docs/api/management/v2/prompts/get-partials
+// Referred from prompt 'path' options in: https://auth0.com/docs/api/management/v2/prompts/get-partials
 var screenPartialPromptTypeToScreenMap = map[string][]string{
 	"login":              {"login"},
 	"login-id":           {"login-id"},
