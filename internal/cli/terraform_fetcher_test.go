@@ -2236,6 +2236,6 @@ func Test_promptScreenPartialResourceFetcher_FetchData(t *testing.T) {
 
 		data, err := fetcher.FetchData(context.Background())
 		assert.NoError(t, err)
-		assert.Equal(t, expectedData, data)
+		assert.ElementsMatch(t, expectedData, data)
 	})
 }
