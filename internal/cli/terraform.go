@@ -23,6 +23,12 @@ import (
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
+const (
+	mainTFFileName      string = "auth0_main.tf"
+	importTFFileName    string = "auth0_import.tf"
+	generatedTFFileName string = "auth0_generated.tf"
+)
+
 var tfFlags = terraformFlags{
 	OutputDIR: Flag{
 		Name:      "Output Dir",
@@ -109,6 +115,8 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &promptResourceFetcher{})
 		case "auth0_prompt_custom_text":
 			fetchers = append(fetchers, &promptCustomTextResourceFetcherResourceFetcher{api})
+		case "auth0_prompt_screen_partial":
+			fetchers = append(fetchers, &promptScreenPartialResourceFetcher{})
 		case "auth0_prompt_screen_renderer":
 			fetchers = append(fetchers, &promptScreenRendererResourceFetcher{api})
 		case "auth0_resource_server", "auth0_resource_server_scopes":
@@ -220,7 +228,7 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 				cli.renderer.Warnf("Terraform resource config generated successfully but there was an error with terraform plan.\n\n")
 				cli.renderer.Warnf("Run " + ansi.Cyan(cdInstructions+"./terraform plan") + " to troubleshoot\n\n")
 				cli.renderer.Warnf("Once the plan succeeds, run " + ansi.Cyan("./terraform apply") + " to complete the import.\n\n")
-				cli.renderer.Infof("The terraform binary and auth0_import.tf files can be deleted afterwards.\n")
+				cli.renderer.Infof("The terraform binary and %s files can be deleted afterwards.\n", importTFFileName)
 				return nil
 			}
 
@@ -229,7 +237,7 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 				"Review the config and generate the terraform state by running: \n\n	" + ansi.Cyan(cdInstructions+"./terraform apply") + "\n",
 			)
 			cli.renderer.Infof(
-				"Once Terraform files are auto-generated, the terraform binary and auth0_import.tf files can be deleted.\n",
+				"Once Terraform files are auto-generated, the terraform binary and %s files can be deleted.\n", importTFFileName,
 			)
 
 			return nil
@@ -240,8 +248,8 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 			"Refer to following guide on how to create a dedicated Auth0 client and configure credentials: " +
 				ansi.URL("https://registry.terraform.io/providers/auth0/auth0/latest/docs/guides/quickstart") + "\n\n" +
 				"After provider credentials are set, run: \n\n" +
-				ansi.Cyan(cdInstructions+"terraform init && terraform plan -generate-config-out=auth0_generated.tf && terraform apply") + "\n\n" +
-				"Once the Terraform file is auto-generated, the auth0_import.tf file can be deleted.\n",
+				ansi.Cyan(cdInstructions+"terraform init && terraform plan -generate-config-out="+generatedTFFileName+" && terraform apply") + "\n\n" +
+				"Once the Terraform file is auto-generated, the " + importTFFileName + " file can be deleted.\n",
 		)
 
 		return nil
@@ -301,7 +309,7 @@ func createOutputDirectory(outputDIR string) error {
 }
 
 func createMainFile(input *terraformInputs) error {
-	filePath := path.Join(input.OutputDIR, "auth0_main.tf")
+	filePath := path.Join(input.OutputDIR, mainTFFileName)
 
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -331,7 +339,7 @@ provider "auth0" {
 }
 
 func createImportFile(outputDIR string, data importDataList) error {
-	filePath := path.Join(outputDIR, "auth0_import.tf")
+	filePath := path.Join(outputDIR, importTFFileName)
 
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -387,9 +395,29 @@ func generateTerraformResourceConfig(ctx context.Context, input *terraformInputs
 	}
 
 	// -generate-config-out flag is not supported by terraform-exec, so we do this through exec.Command.
-	cmd := exec.CommandContext(ctx, execPath, "plan", "-generate-config-out=auth0_generated.tf")
+	cmd := exec.CommandContext(ctx, execPath, "plan", "-generate-config-out="+generatedTFFileName)
 	cmd.Dir = absoluteOutputPath
-	return cmd.Run()
+
+	err = cmd.Run()
+	if err == nil {
+		return nil
+	}
+
+	if hasSensitiveNullValues(input.OutputDIR) {
+		if processErr := processSensitiveFieldsInConfig(input.OutputDIR); processErr != nil {
+			return errors.Join(err, processErr)
+		}
+
+		// Retry terraform plan after post-processing.
+		retryCmd := exec.CommandContext(ctx, execPath, "plan")
+		retryCmd.Dir = absoluteOutputPath
+		if retryErr := retryCmd.Run(); retryErr != nil {
+			return errors.Join(err, retryErr)
+		}
+		return nil
+	}
+
+	return err
 }
 
 func terraformProviderCredentialsAreAvailable() bool {
@@ -431,17 +459,17 @@ func checkOutputDirectoryIsEmpty(cli *cli, cmd *cobra.Command, outputDIR string)
 		return true
 	}
 
-	_, mainFileErr := os.Stat(path.Join(outputDIR, "auth0_main.tf"))
-	_, importFileErr := os.Stat(path.Join(outputDIR, "auth0_import.tf"))
-	_, generatedFileErr := os.Stat(path.Join(outputDIR, "auth0_generated.tf"))
+	_, mainFileErr := os.Stat(path.Join(outputDIR, mainTFFileName))
+	_, importFileErr := os.Stat(path.Join(outputDIR, importTFFileName))
+	_, generatedFileErr := os.Stat(path.Join(outputDIR, generatedTFFileName))
 	if os.IsNotExist(mainFileErr) && os.IsNotExist(importFileErr) && os.IsNotExist(generatedFileErr) {
 		return true
 	}
 
 	cli.renderer.Warnf(
 		"Output directory %q is not empty. "+
-			"Proceeding will overwrite the auth0_main.tf, auth0_import.tf and auth0_generated.tf files.",
-		outputDIR,
+			"Proceeding will overwrite the %s, %s and %s files.",
+		outputDIR, mainTFFileName, importTFFileName, generatedTFFileName,
 	)
 
 	if !cli.force && canPrompt(cmd) {
@@ -456,15 +484,15 @@ func checkOutputDirectoryIsEmpty(cli *cli, cmd *cobra.Command, outputDIR string)
 func cleanOutputDirectory(outputDIR string) error {
 	var joinedErrors error
 
-	if err := os.Remove(path.Join(outputDIR, "auth0_main.tf")); err != nil && !os.IsNotExist(err) {
+	if err := os.Remove(path.Join(outputDIR, mainTFFileName)); err != nil && !os.IsNotExist(err) {
 		joinedErrors = errors.Join(err)
 	}
 
-	if err := os.Remove(path.Join(outputDIR, "auth0_import.tf")); err != nil && !os.IsNotExist(err) {
+	if err := os.Remove(path.Join(outputDIR, importTFFileName)); err != nil && !os.IsNotExist(err) {
 		joinedErrors = errors.Join(err)
 	}
 
-	if err := os.Remove(path.Join(outputDIR, "auth0_generated.tf")); err != nil && !os.IsNotExist(err) {
+	if err := os.Remove(path.Join(outputDIR, generatedTFFileName)); err != nil && !os.IsNotExist(err) {
 		joinedErrors = errors.Join(err)
 	}
 
