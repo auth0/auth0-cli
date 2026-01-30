@@ -18,7 +18,7 @@ var (
 // any sensitive fields set to null. This is useful to determine if a
 // terraform plan failure might be due to missing sensitive values.
 func hasSensitiveNullValues(outputDIR string) bool {
-	generatedFilePath := path.Join(outputDIR, "auth0_generated.tf")
+	generatedFilePath := path.Join(outputDIR, generatedTFFileName)
 
 	content, err := os.ReadFile(generatedFilePath)
 	if err != nil {
@@ -32,7 +32,7 @@ func hasSensitiveNullValues(outputDIR string) bool {
 // (marked with `null # sensitive`) and replaces them with empty strings and a TODO comment
 // instructing users to provide the actual sensitive values.
 func processSensitiveFieldsInConfig(outputDIR string) error {
-	generatedFilePath := path.Join(outputDIR, "auth0_generated.tf")
+	generatedFilePath := path.Join(outputDIR, generatedTFFileName)
 
 	content, err := os.ReadFile(generatedFilePath)
 	if err != nil {
@@ -55,10 +55,12 @@ func replaceSensitiveNullWithEmptyString(content string) string {
 
 	for i, line := range lines {
 		if matches := sensitiveNullPattern.FindStringSubmatch(line); matches != nil {
-			// matches[1] = leading whitespace
-			// matches[2] = attribute name
-			// matches[3] = " = "
-			// matches[4] = "# sensitive" comment
+			/*
+				matches[1] = leading whitespace
+				matches[2] = attribute name
+				matches[3] = " = "
+				matches[4] = "# sensitive" comment
+			*/
 			lines[i] = fmt.Sprintf("%s%s%s\"\" # TODO: Add sensitive value for '%s'",
 				matches[1], matches[2], matches[3], matches[2])
 		}

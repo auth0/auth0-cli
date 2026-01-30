@@ -153,7 +153,7 @@ func TestGenerateTerraformImportConfig(t *testing.T) {
 		err := os.MkdirAll(input.OutputDIR, 0755)
 		require.NoError(t, err)
 
-		mainFilePath := path.Join(input.OutputDIR, "auth0_main.tf")
+		mainFilePath := path.Join(input.OutputDIR, mainTFFileName)
 		_, err = os.Create(mainFilePath)
 		require.NoError(t, err)
 
@@ -164,13 +164,13 @@ func TestGenerateTerraformImportConfig(t *testing.T) {
 		assert.EqualError(t, err, fmt.Sprintf("open %s: permission denied", mainFilePath))
 	})
 
-	t.Run("it fails to create the auth0_import.tf file if file is already created and read only", func(t *testing.T) {
+	t.Run("it fails to create the import terraform file if file is already created and read only", func(t *testing.T) {
 		input, importData := setupTestDIRAndImportData(t)
 
 		err := os.MkdirAll(input.OutputDIR, 0755)
 		require.NoError(t, err)
 
-		importFilePath := path.Join(input.OutputDIR, "auth0_import.tf")
+		importFilePath := path.Join(input.OutputDIR, importTFFileName)
 		_, err = os.Create(importFilePath)
 		require.NoError(t, err)
 
@@ -225,7 +225,7 @@ func assertTerraformMainFileWasGeneratedCorrectly(t *testing.T, outputDIR string
 	assert.NoError(t, err)
 
 	// Assert that the main.tf file was created with the correct content.
-	filePath := path.Join(outputDIR, "auth0_main.tf")
+	filePath := path.Join(outputDIR, mainTFFileName)
 	_, err = os.Stat(filePath)
 	assert.NoError(t, err)
 
@@ -254,8 +254,8 @@ func assertTerraformImportFileWasGeneratedCorrectly(t *testing.T, outputDIR stri
 	_, err := os.Stat(outputDIR)
 	assert.NoError(t, err)
 
-	// Assert that the auth0_import.tf file was created with the correct content.
-	filePath := path.Join(outputDIR, "auth0_import.tf")
+	// Assert that the import terraform file was created with the correct content.
+	filePath := path.Join(outputDIR, importTFFileName)
 	_, err = os.Stat(filePath)
 	assert.NoError(t, err)
 
@@ -389,7 +389,7 @@ func TestCheckOutputDirectoryIsEmpty(t *testing.T) {
 
 	t.Run("it returns true if the directory is not empty but we're forcing the command", func(t *testing.T) {
 		tempDIR := t.TempDir()
-		files := []string{"auth0_main.tf", "auth0_import.tf", "auth0_generated.tf"}
+		files := []string{mainTFFileName, importTFFileName, generatedTFFileName}
 
 		for _, file := range files {
 			filePath := path.Join(tempDIR, file)
@@ -409,14 +409,14 @@ func TestCheckOutputDirectoryIsEmpty(t *testing.T) {
 
 		isEmpty := checkOutputDirectoryIsEmpty(cli, &cobra.Command{}, tempDIR)
 		assert.True(t, isEmpty)
-		assert.Contains(t, stdout.String(), "Proceeding will overwrite the auth0_main.tf, auth0_import.tf and auth0_generated.tf files.")
+		assert.Contains(t, stdout.String(), fmt.Sprintf("Proceeding will overwrite the %s, %s and %s files.", mainTFFileName, importTFFileName, generatedTFFileName))
 	})
 }
 
 func TestCleanOutputDirectory(t *testing.T) {
 	t.Run("it can successfully clean the output directory from all generated files", func(t *testing.T) {
 		tempDIR := t.TempDir()
-		files := []string{"auth0_main.tf", "auth0_import.tf", "auth0_generated.tf"}
+		files := []string{mainTFFileName, importTFFileName, generatedTFFileName}
 
 		for _, file := range files {
 			filePath := path.Join(tempDIR, file)
@@ -435,7 +435,7 @@ func TestCleanOutputDirectory(t *testing.T) {
 	})
 
 	t.Run("it returns an error if it can't remove a file", func(t *testing.T) {
-		files := []string{"auth0_main.tf", "auth0_import.tf", "auth0_generated.tf"}
+		files := []string{mainTFFileName, importTFFileName, generatedTFFileName}
 
 		for _, file := range files {
 			t.Run(file, func(t *testing.T) {
