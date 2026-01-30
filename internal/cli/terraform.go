@@ -391,7 +391,27 @@ func generateTerraformResourceConfig(ctx context.Context, input *terraformInputs
 	// -generate-config-out flag is not supported by terraform-exec, so we do this through exec.Command.
 	cmd := exec.CommandContext(ctx, execPath, "plan", "-generate-config-out=auth0_generated.tf")
 	cmd.Dir = absoluteOutputPath
-	return cmd.Run()
+
+	err = cmd.Run()
+	if err == nil {
+		return nil
+	}
+
+	if hasSensitiveNullValues(input.OutputDIR) {
+		if processErr := processSensitiveFieldsInConfig(input.OutputDIR); processErr != nil {
+			return errors.Join(err, processErr)
+		}
+
+		// Retry terraform plan after post-processing.
+		retryCmd := exec.CommandContext(ctx, execPath, "plan")
+		retryCmd.Dir = absoluteOutputPath
+		if retryErr := retryCmd.Run(); retryErr != nil {
+			return errors.Join(err, retryErr)
+		}
+		return nil
+	}
+
+	return err
 }
 
 func terraformProviderCredentialsAreAvailable() bool {
