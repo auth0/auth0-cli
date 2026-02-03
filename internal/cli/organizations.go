@@ -22,7 +22,7 @@ const (
 
 var (
 	organizationID = Argument{
-		Name: "ID",
+		Name: "Org ID",
 		Help: "ID of the organization.",
 	}
 
@@ -83,6 +83,71 @@ var (
 		Name:      "Number",
 		LongForm:  "number",
 		ShortForm: "n",
+	}
+
+	inviterName = Flag{
+		Name:       "Inviter Name",
+		LongForm:   "inviter-name",
+		ShortForm:  "n",
+		Help:       "Name of the person sending the invitation.",
+		IsRequired: true,
+	}
+
+	inviteeEmail = Flag{
+		Name:       "Invitee Email",
+		LongForm:   "invitee-email",
+		ShortForm:  "e",
+		Help:       "Email address of the person being invited.",
+		IsRequired: true,
+	}
+
+	clientID = Flag{
+		Name:       "Client ID",
+		LongForm:   "client-id",
+		ShortForm:  "c",
+		Help:       "Auth0 client ID. Used to resolve the application's login initiation endpoint.",
+		IsRequired: true,
+	}
+
+	connectionID = Flag{
+		Name:     "Connection ID",
+		LongForm: "connection-id",
+		Help:     "The id of the connection to force invitee to authenticate with.",
+	}
+
+	ttlSeconds = Flag{
+		Name:      "TTL Seconds",
+		LongForm:  "ttl-sec",
+		ShortForm: "t",
+		Help:      "Number of seconds for which the invitation is valid before expiration.",
+	}
+
+	sendInvitationEmail = Flag{
+		Name:      "Send Invitation Email",
+		LongForm:  "send-email",
+		ShortForm: "s",
+		Help:      "Whether to send the invitation email to the invitee.",
+	}
+
+	organizationRoles = Flag{
+		Name:      "Roles",
+		LongForm:  "roles",
+		ShortForm: "r",
+		Help:      "Roles IDs to associate with the user.",
+	}
+
+	applicationMetadata = Flag{
+		Name:      "App Metadata",
+		LongForm:  "app-metadata",
+		ShortForm: "a",
+		Help:      "Application metadata for the invited user in key=value format.",
+	}
+
+	userMetadata = Flag{
+		Name:      "User Metadata",
+		LongForm:  "user-metadata",
+		ShortForm: "u",
+		Help:      "User metadata for the invited user in key=value format.",
 	}
 )
 
@@ -930,6 +995,7 @@ func invitationsOrganizationCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listInvitationsOrganizationCmd(cli))
+	cmd.AddCommand(createInvitationOrganizationCmd(cli))
 
 	return cmd
 }
@@ -1039,4 +1105,106 @@ func sortInvitations(invitations []management.OrganizationInvitation) {
 	sort.Slice(invitations, func(i, j int) bool {
 		return strings.ToLower(invitations[i].GetCreatedAt()) < strings.ToLower(invitations[j].GetCreatedAt())
 	})
+}
+
+func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		OrgID               string
+		InviterName         string
+		InviteeEmail        string
+		ClientID            string
+		ConnectionID        string
+		TTLSeconds          int
+		SendInvitationEmail bool
+		Roles               []string
+		AppMetadata         map[string]string
+		UserMetadata        map[string]string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "create",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Create a new invitation to an organization",
+		Long:  "Create a new invitation to an organization.",
+		Example: `  auth0 orgs invitations create
+	  auth0 orgs invitations create <org-id>
+	  auth0 orgs invitations create <org-id> --inviter-name "Inviter Name" --invitee-email "invitee@example.com" 
+	  auth0 orgs invitations create <org-id> --invitee-email "invitee@example.com" --client-id "client_id"
+	  auth0 orgs invitations create <org-id> -n "Inviter Name" -e "invitee@example.com" -c "client_id" -connection-id "connection_id" -t 86400
+	  auth0 orgs invitations create <org-id> --json --inviter-name "Inviter Name"`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				if err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
+					return err
+				}
+			} else {
+				inputs.OrgID = args[0]
+			}
+			if err := clientID.Pick(cmd, &inputs.ClientID, cli.appPickerOptions()); err != nil {
+				return err
+			}
+			if err := inviterName.Ask(cmd, &inputs.InviterName, nil); err != nil {
+				return err
+			}
+			if err := inviteeEmail.Ask(cmd, &inputs.InviteeEmail, nil); err != nil {
+				return err
+			}
+
+			invitation := &management.OrganizationInvitation{
+				Inviter:             &management.OrganizationInvitationInviter{Name: &inputs.InviterName},
+				Invitee:             &management.OrganizationInvitationInvitee{Email: &inputs.InviteeEmail},
+				ClientID:            &inputs.ClientID,
+				TTLSec:              &inputs.TTLSeconds,
+				SendInvitationEmail: &inputs.SendInvitationEmail,
+			}
+			if inputs.ConnectionID != "" {
+				invitation.ConnectionID = &inputs.ConnectionID
+			}
+			if len(inputs.AppMetadata) > 0 {
+				appMetadata := make(map[string]interface{}, len(inputs.AppMetadata))
+				for k, v := range inputs.AppMetadata {
+					appMetadata[k] = v
+				}
+				invitation.AppMetadata = appMetadata
+			}
+			if len(inputs.UserMetadata) > 0 {
+				userMetadata := make(map[string]interface{}, len(inputs.UserMetadata))
+				for k, v := range inputs.UserMetadata {
+					userMetadata[k] = v
+				}
+				invitation.UserMetadata = userMetadata
+			}
+			if len(inputs.Roles) > 0 {
+				invitation.Roles = inputs.Roles
+			}
+
+			if err := ansi.Waiting(func() error {
+				return cli.api.Organization.CreateInvitation(cmd.Context(), inputs.OrgID, invitation)
+			}); err != nil {
+				return fmt.Errorf("failed to create invitation for organization with ID %q: %w", inputs.OrgID, err)
+			}
+
+			cli.renderer.InvitationsCreate(*invitation)
+			return nil
+		},
+	}
+
+	inviterName.RegisterString(cmd, &inputs.InviterName, "")
+	inviteeEmail.RegisterString(cmd, &inputs.InviteeEmail, "")
+	clientID.RegisterString(cmd, &inputs.ClientID, "")
+	connectionID.RegisterString(cmd, &inputs.ConnectionID, "")
+	ttlSeconds.RegisterInt(cmd, &inputs.TTLSeconds, 0)
+	sendInvitationEmail.RegisterBool(cmd, &inputs.SendInvitationEmail, true)
+	organizationRoles.RegisterStringSlice(cmd, &inputs.Roles, nil)
+	applicationMetadata.RegisterStringMap(cmd, &inputs.AppMetadata, nil)
+	userMetadata.RegisterStringMap(cmd, &inputs.UserMetadata, nil)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+	// TODO shouldn't set csv?
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+
+	return cmd
 }

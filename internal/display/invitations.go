@@ -8,14 +8,14 @@ import (
 
 type invitationsView struct {
 	ID           string
-	ClientId     string
-	ConnectionId string
+	ClientID     string
+	ConnectionID string
 	InviterName  string
 	InviteeEmail string
 	CreatedAt    string
 	ExpiresAt    string
 	raw          interface{}
-	// TODO: Check if OrganizationId, InvitationURL, Role assignments are needed
+	// TODO: Check if OrganizationId, InvitationURL, Role assignments etc are needed.
 }
 
 func (v *invitationsView) AsTableHeader() []string {
@@ -23,7 +23,7 @@ func (v *invitationsView) AsTableHeader() []string {
 }
 
 func (v *invitationsView) AsTableRow() []string {
-	return []string{ansi.Faint(v.ID), v.ClientId, v.ConnectionId, v.InviterName, v.InviteeEmail, v.CreatedAt, v.ExpiresAt}
+	return []string{ansi.Faint(v.ID), v.ClientID, v.ConnectionID, v.InviterName, v.InviteeEmail, v.CreatedAt, v.ExpiresAt}
 }
 
 func (v *invitationsView) KeyValues() [][]string {
@@ -40,7 +40,7 @@ func (r *Renderer) InvitationsList(invitations []management.OrganizationInvitati
 	r.Heading(resource)
 
 	if len(invitations) == 0 {
-		r.EmptyState(resource, "")
+		r.EmptyState(resource, "Use 'auth0 orgs invitations create' to add one")
 		return
 	}
 
@@ -52,6 +52,11 @@ func (r *Renderer) InvitationsList(invitations []management.OrganizationInvitati
 	r.Results(res)
 }
 
+func (r *Renderer) InvitationsCreate(invitation management.OrganizationInvitation) {
+	r.Heading("organization invitation created")
+	r.Result(makeInvitationsView(invitation))
+}
+
 func makeInvitationsView(invitation management.OrganizationInvitation) *invitationsView {
 	return &invitationsView{
 		ID:           invitation.GetID(),
@@ -59,8 +64,8 @@ func makeInvitationsView(invitation management.OrganizationInvitation) *invitati
 		InviteeEmail: invitation.GetInvitee().GetEmail(),
 		CreatedAt:    invitation.GetCreatedAt(),
 		ExpiresAt:    invitation.GetExpiresAt(),
-		ClientId:     invitation.GetClientID(),
-		ConnectionId: invitation.GetConnectionID(),
+		ClientID:     invitation.GetClientID(),
+		ConnectionID: invitation.GetConnectionID(),
 		raw:          invitation,
 	}
 }

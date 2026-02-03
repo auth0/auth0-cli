@@ -1,0 +1,60 @@
+---
+layout: default
+parent: auth0 orgs invitations
+has_toc: false
+---
+# auth0 orgs invitations create
+
+Create a new invitation to an organization.
+
+## Usage
+```
+auth0 orgs invitations create [flags]
+```
+
+## Examples
+
+```
+  auth0 orgs invitations create
+	  auth0 orgs invitations create <org-id>
+	  auth0 orgs invitations create <org-id> --inviter-name "Inviter Name" --invitee-email "invitee@example.com" 
+	  auth0 orgs invitations create <org-id> --invitee-email "invitee@example.com" --client-id "client_id"
+	  auth0 orgs invitations create <org-id> -n "Inviter Name" -e "invitee@example.com" -c "client_id" -connection-id "connection_id" -t 86400
+	  auth0 orgs invitations create <org-id> --json --inviter-name "Inviter Name"
+```
+
+
+## Flags
+
+```
+  -a, --app-metadata stringToString    Application metadata for the invited user in key=value format. (default [])
+  -c, --client-id string               Auth0 client ID. Used to resolve the application's login initiation endpoint.
+      --connection-id string           The id of the connection to force invitee to authenticate with.
+      --csv                            Output in csv format.
+  -e, --invitee-email string           Email address of the person being invited.
+  -n, --inviter-name string            Name of the person sending the invitation.
+      --json                           Output in json format.
+      --json-compact                   Output in compact json format.
+  -r, --roles strings                  Roles IDs to associate with the user.
+  -s, --send-email                     Whether to send the invitation email to the invitee. (default true)
+  -t, --ttl-sec int                    Number of seconds for which the invitation is valid before expiration.
+  -u, --user-metadata stringToString   User metadata for the invited user in key=value format. (default [])
+```
+
+
+## Inherited Flags
+
+```
+      --debug           Enable debug mode.
+      --no-color        Disable colors.
+      --no-input        Disable interactivity.
+      --tenant string   Specific tenant to use.
+```
+
+
+## Related Commands
+
+- [auth0 orgs invitations create](auth0_orgs_invitations_create.md) - Create a new invitation to an organization
+- [auth0 orgs invitations list](auth0_orgs_invitations_list.md) - List invitations of an organization
+
+

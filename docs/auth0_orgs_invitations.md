@@ -9,5 +9,6 @@ Manage invitations of an organization.
 
 ## Commands
 
+- [auth0 orgs invitations create](auth0_orgs_invitations_create.md) - Create a new invitation to an organization
 - [auth0 orgs invitations list](auth0_orgs_invitations_list.md) - List invitations of an organization
 
