@@ -1,0 +1,20 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  001 - list quickstarts:
+    command: auth0 quickstarts list
+    exit-code: 0
+  
+  001 - list quickstarts as json:
+    command: auth0 quickstarts list --json
+    exit-code: 0
+
+  002 - download quickstart:
+    command: auth0 qs download $(./test/integration/scripts/get-quickstart-app-id.sh) --stack "React Native" --no-color --force
+    exit-code: 0
+    stderr:
+      contains:
+        - "Quickstart sample successfully downloaded at "
+        - "Hint: Start with `cd integration-test-app-qs/00-"
