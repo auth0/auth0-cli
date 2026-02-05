@@ -1020,8 +1020,62 @@ func invitationsOrganizationCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listInvitationsOrganizationCmd(cli))
+	cmd.AddCommand(showInvitationOrganizationCmd(cli))
 	cmd.AddCommand(createInvitationOrganizationCmd(cli))
 	cmd.AddCommand(deleteInvitationOrganizationCmd(cli))
+
+	return cmd
+}
+
+func showInvitationOrganizationCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		OrgID        string
+		InvitationID string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "show",
+		Args:  cobra.MaximumNArgs(2),
+		Short: "Show an organization invitation",
+		Long:  "Display information about an organization invitation.",
+		Example: `  auth0 orgs invitations show
+  auth0 orgs invitations show <org-id>
+  auth0 orgs invitations show <org-id> <invitation-id>
+  auth0 orgs invitations show <org-id> <invitation-id> --json`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				if err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
+					return err
+				}
+			} else {
+				inputs.OrgID = args[0]
+			}
+
+			if len(args) <= 1 {
+				if err := invitationID.Pick(cmd, &inputs.InvitationID, func(ctx context.Context) (pickerOptions, error) {
+					return cli.invitationPickerOptions(ctx, inputs.OrgID)
+				}); err != nil {
+					return err
+				}
+			} else {
+				inputs.InvitationID = args[1]
+			}
+
+			var invitation *management.OrganizationInvitation
+			if err := ansi.Waiting(func() (err error) {
+				invitation, err = cli.api.Organization.Invitation(cmd.Context(), inputs.OrgID, inputs.InvitationID)
+				return err
+			}); err != nil {
+				return fmt.Errorf("failed to read organization invitation %q: %w", inputs.InvitationID, err)
+			}
+
+			cli.renderer.InvitationsShow(*invitation)
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }

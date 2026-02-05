@@ -15,7 +15,7 @@ type invitationsView struct {
 	CreatedAt    string
 	ExpiresAt    string
 	raw          interface{}
-	// TODO: Check if OrganizationId, InvitationURL, Role assignments etc are needed.
+	// TODO: Check if OrganizationId, InvitationURL, Role assignments etc are needed to be displayed in table view.
 }
 
 func (v *invitationsView) AsTableHeader() []string {
@@ -27,7 +27,15 @@ func (v *invitationsView) AsTableRow() []string {
 }
 
 func (v *invitationsView) KeyValues() [][]string {
-	return [][]string{}
+	return [][]string{
+		{"ID", ansi.Faint(v.ID)},
+		{"CLIENT ID", v.ClientID},
+		{"CONNECTION ID", v.ConnectionID},
+		{"INVITER NAME", v.InviterName},
+		{"INVITEE EMAIL", v.InviteeEmail},
+		{"CREATED AT", v.CreatedAt},
+		{"EXPIRES AT", v.ExpiresAt},
+	}
 }
 
 func (v *invitationsView) Object() interface{} {
@@ -54,6 +62,11 @@ func (r *Renderer) InvitationsList(invitations []management.OrganizationInvitati
 
 func (r *Renderer) InvitationsCreate(invitation management.OrganizationInvitation) {
 	r.Heading("organization invitation created")
+	r.Result(makeInvitationsView(invitation))
+}
+
+func (r *Renderer) InvitationsShow(invitation management.OrganizationInvitation) {
+	r.Heading("organization invitation")
 	r.Result(makeInvitationsView(invitation))
 }
 

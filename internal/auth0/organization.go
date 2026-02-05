@@ -69,6 +69,11 @@ type OrganizationAPI interface {
 	// See: https://auth0.com/docs/api/management/v2#!/Organizations/get_invitations
 	Invitations(ctx context.Context, id string, opts ...management.RequestOption) (o *management.OrganizationInvitationList, err error)
 
+	// Invitation retrieves an invitation to an organization.
+	//
+	// See: https://auth0.com/docs/api/management/v2/#!/Organizations/get_invitations_by_invitation_id
+	Invitation(ctx context.Context, id string, invitationID string, opts ...management.RequestOption) (i *management.OrganizationInvitation, err error)
+
 	// CreateInvitation creates invitations to an organization.
 	//
 	// See: https://auth0.com/docs/api/management/v2/#!/Organizations/post_invitations
