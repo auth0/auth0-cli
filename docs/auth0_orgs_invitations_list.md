@@ -15,12 +15,12 @@ auth0 orgs invitations list [flags]
 ## Examples
 
 ```
-  auth0 orgs invitations list
-  auth0 orgs invitations ls <org-id>
-  auth0 orgs invitations list <org-id> --number 100
-  auth0 orgs invitations ls <org-id> -n 100 --json
-  auth0 orgs invitations ls <org-id> -n 100 --json-compact
-  auth0 orgs invitations ls <org-id> --csv
+  auth0 orgs invs list
+  auth0 orgs invs ls <org-id>
+  auth0 orgs invs list <org-id> --number 100
+  auth0 orgs invs ls <org-id> -n 100 --json
+  auth0 orgs invs ls <org-id> -n 100 --json-compact
+  auth0 orgs invs ls <org-id> --csv
 ```
 
 

@@ -15,12 +15,12 @@ auth0 orgs invitations create [flags]
 ## Examples
 
 ```
-  auth0 orgs invitations create
-  auth0 orgs invitations create <org-id>
-  auth0 orgs invitations create <org-id> --inviter-name "Inviter Name" --invitee-email "invitee@example.com" 
-  auth0 orgs invitations create <org-id> --invitee-email "invitee@example.com" --client-id "client_id"
-  auth0 orgs invitations create <org-id> -n "Inviter Name" -e "invitee@example.com" -c "client_id" -connection-id "connection_id" -t 86400
-  auth0 orgs invitations create <org-id> --json --inviter-name "Inviter Name"
+  auth0 orgs invs create
+  auth0 orgs invs create <org-id>
+  auth0 orgs invs create <org-id> --inviter-name "Inviter Name" --invitee-email "invitee@example.com" 
+  auth0 orgs invs create <org-id> --invitee-email "invitee@example.com" --client-id "client_id"
+  auth0 orgs invs create <org-id> -n "Inviter Name" -e "invitee@example.com" -c "client_id" -connection-id "connection_id" -t 86400
+  auth0 orgs invs create <org-id> --json --inviter-name "Inviter Name"
 ```
 
 

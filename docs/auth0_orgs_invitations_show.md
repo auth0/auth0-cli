@@ -15,10 +15,10 @@ auth0 orgs invitations show [flags]
 ## Examples
 
 ```
-  auth0 orgs invitations show
-  auth0 orgs invitations show <org-id>
-  auth0 orgs invitations show <org-id> <invitation-id>
-  auth0 orgs invitations show <org-id> <invitation-id> --json
+  auth0 orgs invs show
+  auth0 orgs invs show <org-id>
+  auth0 orgs invs show <org-id> <invitation-id>
+  auth0 orgs invs show <org-id> <invitation-id> --json
 ```
 
 

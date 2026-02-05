@@ -1013,9 +1013,10 @@ func (cli *cli) getOrgRoleMembersWithSpinner(
 
 func invitationsOrganizationCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "invitations",
-		Short: "Manage invitations of an organization",
-		Long:  "Manage invitations of an organization.",
+		Use:     "invitations",
+		Aliases: []string{"invs"},
+		Short:   "Manage invitations of an organization",
+		Long:    "Manage invitations of an organization.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -1038,10 +1039,10 @@ func showInvitationOrganizationCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(2),
 		Short: "Show an organization invitation",
 		Long:  "Display information about an organization invitation.",
-		Example: `  auth0 orgs invitations show
-  auth0 orgs invitations show <org-id>
-  auth0 orgs invitations show <org-id> <invitation-id>
-  auth0 orgs invitations show <org-id> <invitation-id> --json`,
+		Example: `  auth0 orgs invs show
+  auth0 orgs invs show <org-id>
+  auth0 orgs invs show <org-id> <invitation-id>
+  auth0 orgs invs show <org-id> <invitation-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
@@ -1092,12 +1093,12 @@ func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "List invitations of an organization",
 		Long:    "List the invitations of an organization.",
-		Example: `  auth0 orgs invitations list
-  auth0 orgs invitations ls <org-id>
-  auth0 orgs invitations list <org-id> --number 100
-  auth0 orgs invitations ls <org-id> -n 100 --json
-  auth0 orgs invitations ls <org-id> -n 100 --json-compact
-  auth0 orgs invitations ls <org-id> --csv`,
+		Example: `  auth0 orgs invs list
+  auth0 orgs invs ls <org-id>
+  auth0 orgs invs list <org-id> --number 100
+  auth0 orgs invs ls <org-id> -n 100 --json
+  auth0 orgs invs ls <org-id> -n 100 --json-compact
+  auth0 orgs invs ls <org-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
 				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
@@ -1203,12 +1204,12 @@ func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Create a new invitation to an organization",
 		Long:  "Create a new invitation to an organization.",
-		Example: `  auth0 orgs invitations create
-  auth0 orgs invitations create <org-id>
-  auth0 orgs invitations create <org-id> --inviter-name "Inviter Name" --invitee-email "invitee@example.com" 
-  auth0 orgs invitations create <org-id> --invitee-email "invitee@example.com" --client-id "client_id"
-  auth0 orgs invitations create <org-id> -n "Inviter Name" -e "invitee@example.com" -c "client_id" -connection-id "connection_id" -t 86400
-  auth0 orgs invitations create <org-id> --json --inviter-name "Inviter Name"`,
+		Example: `  auth0 orgs invs create
+  auth0 orgs invs create <org-id>
+  auth0 orgs invs create <org-id> --inviter-name "Inviter Name" --invitee-email "invitee@example.com" 
+  auth0 orgs invs create <org-id> --invitee-email "invitee@example.com" --client-id "client_id"
+  auth0 orgs invs create <org-id> -n "Inviter Name" -e "invitee@example.com" -c "client_id" -connection-id "connection_id" -t 86400
+  auth0 orgs invs create <org-id> --json --inviter-name "Inviter Name"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
@@ -1292,14 +1293,14 @@ func deleteInvitationOrganizationCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"rm"},
 		Short:   "Delete invitation(s) from an organization",
 		Long: "Delete invitation(s) from an organization.\n\n" +
-			"To delete interactively, use `auth0 orgs invitations delete` with no arguments.\n\n" +
+			"To delete interactively, use `auth0 orgs invs delete` with no arguments.\n\n" +
 			"To delete non-interactively, supply the organization id, invitation id(s) and " +
 			"the `--force` flag to skip confirmation.",
-		Example: `  auth0 orgs invitations delete
-  auth0 orgs invitations rm
-  auth0 orgs invitations delete <org-id> <invitation-id>
-  auth0 orgs invitations delete <org-id> <invitation-id> --force
-  auth0 orgs invitations delete <org-id> <inv-id1> <inv-id2> <inv-id3>`,
+		Example: `  auth0 orgs invs delete
+  auth0 orgs invs rm
+  auth0 orgs invs delete <org-id> <invitation-id>
+  auth0 orgs invs delete <org-id> <invitation-id> --force
+  auth0 orgs invs delete <org-id> <inv-id1> <inv-id2> <inv-id3>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
