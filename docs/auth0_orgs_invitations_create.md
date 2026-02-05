@@ -16,11 +16,11 @@ auth0 orgs invitations create [flags]
 
 ```
   auth0 orgs invitations create
-	  auth0 orgs invitations create <org-id>
-	  auth0 orgs invitations create <org-id> --inviter-name "Inviter Name" --invitee-email "invitee@example.com" 
-	  auth0 orgs invitations create <org-id> --invitee-email "invitee@example.com" --client-id "client_id"
-	  auth0 orgs invitations create <org-id> -n "Inviter Name" -e "invitee@example.com" -c "client_id" -connection-id "connection_id" -t 86400
-	  auth0 orgs invitations create <org-id> --json --inviter-name "Inviter Name"
+  auth0 orgs invitations create <org-id>
+  auth0 orgs invitations create <org-id> --inviter-name "Inviter Name" --invitee-email "invitee@example.com" 
+  auth0 orgs invitations create <org-id> --invitee-email "invitee@example.com" --client-id "client_id"
+  auth0 orgs invitations create <org-id> -n "Inviter Name" -e "invitee@example.com" -c "client_id" -connection-id "connection_id" -t 86400
+  auth0 orgs invitations create <org-id> --json --inviter-name "Inviter Name"
 ```
 
 
@@ -30,7 +30,6 @@ auth0 orgs invitations create [flags]
   -a, --app-metadata stringToString    Application metadata for the invited user in key=value format. (default [])
   -c, --client-id string               Auth0 client ID. Used to resolve the application's login initiation endpoint.
       --connection-id string           The id of the connection to force invitee to authenticate with.
-      --csv                            Output in csv format.
   -e, --invitee-email string           Email address of the person being invited.
   -n, --inviter-name string            Name of the person sending the invitation.
       --json                           Output in json format.
@@ -55,6 +54,7 @@ auth0 orgs invitations create [flags]
 ## Related Commands
 
 - [auth0 orgs invitations create](auth0_orgs_invitations_create.md) - Create a new invitation to an organization
+- [auth0 orgs invitations delete](auth0_orgs_invitations_delete.md) - Delete invitation(s) from an organization
 - [auth0 orgs invitations list](auth0_orgs_invitations_list.md) - List invitations of an organization
 
 

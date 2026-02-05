@@ -73,4 +73,9 @@ type OrganizationAPI interface {
 	//
 	// See: https://auth0.com/docs/api/management/v2/#!/Organizations/post_invitations
 	CreateInvitation(ctx context.Context, id string, i *management.OrganizationInvitation, opts ...management.RequestOption) (err error)
+
+	// DeleteInvitation deletes an invitation to an organization.
+	//
+	// See: https://auth0.com/docs/api/management/v2/#!/Organizations/delete_invitations_by_invitation_id
+	DeleteInvitation(ctx context.Context, id string, invitationID string, opts ...management.RequestOption) (err error)
 }

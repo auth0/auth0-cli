@@ -92,3 +92,89 @@ func TestOrganizationsPickerOptions(t *testing.T) {
 		})
 	}
 }
+
+func TestInvitationsPickerOptions(t *testing.T) {
+	tests := []struct {
+		name         string
+		invitations  []*management.OrganizationInvitation
+		apiError     error
+		assertOutput func(t testing.TB, options pickerOptions)
+		assertError  func(t testing.TB, err error)
+	}{
+		{
+			name: "happy path",
+			invitations: []*management.OrganizationInvitation{
+				{
+					ID: auth0.String("inv-id-1"),
+					Invitee: &management.OrganizationInvitationInvitee{
+						Email: auth0.String("user1@example.com"),
+					},
+				},
+				{
+					ID: auth0.String("inv-id-2"),
+					Invitee: &management.OrganizationInvitationInvitee{
+						Email: auth0.String("user2@example.com"),
+					},
+				},
+			},
+			assertOutput: func(t testing.TB, options pickerOptions) {
+				assert.Len(t, options, 2)
+				assert.Equal(t, "user1@example.com (inv-id-1)", options[0].label)
+				assert.Equal(t, "inv-id-1", options[0].value)
+				assert.Equal(t, "user2@example.com (inv-id-2)", options[1].label)
+				assert.Equal(t, "inv-id-2", options[1].value)
+			},
+			assertError: func(t testing.TB, err error) {
+				t.Fail()
+			},
+		},
+		{
+			name:        "no invitations",
+			invitations: []*management.OrganizationInvitation{},
+			assertOutput: func(t testing.TB, options pickerOptions) {
+				t.Fail()
+			},
+			assertError: func(t testing.TB, err error) {
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, "there are currently no invitations to choose from")
+			},
+		},
+		{
+			name:     "API error",
+			apiError: errors.New("api error"),
+			assertOutput: func(t testing.TB, options pickerOptions) {
+				t.Fail()
+			},
+			assertError: func(t testing.TB, err error) {
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, "api error")
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			organizationAPI := mock.NewMockOrganizationAPI(ctrl)
+			organizationAPI.EXPECT().
+				Invitations(gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(&management.OrganizationInvitationList{
+					OrganizationInvitations: test.invitations,
+				}, test.apiError)
+
+			cli := &cli{
+				api: &auth0.API{Organization: organizationAPI},
+			}
+
+			options, err := cli.invitationPickerOptions(context.Background(), "test-org-id")
+
+			if err != nil {
+				test.assertError(t, err)
+			} else {
+				test.assertOutput(t, options)
+			}
+		})
+	}
+}

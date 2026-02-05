@@ -26,6 +26,11 @@ var (
 		Help: "ID of the organization.",
 	}
 
+	invitationID = Argument{
+		Name: "Invitation ID",
+		Help: "ID of the invitation.",
+	}
+
 	organizationName = Flag{
 		Name:       "Name",
 		LongForm:   "name",
@@ -811,6 +816,26 @@ func (cli *cli) organizationPickerOptions(ctx context.Context) (pickerOptions, e
 	return opts, nil
 }
 
+func (cli *cli) invitationPickerOptions(ctx context.Context, orgID string) (pickerOptions, error) {
+	invitations, err := cli.getOrgInvitations(ctx, orgID, 1000)
+	if err != nil {
+		return nil, err
+	}
+
+	var opts pickerOptions
+	for _, inv := range invitations {
+		value := inv.GetID()
+		label := fmt.Sprintf("%s %s", inv.Invitee.GetEmail(), ansi.Faint("("+value+")"))
+		opts = append(opts, pickerOption{value: value, label: label})
+	}
+
+	if len(opts) == 0 {
+		return nil, errors.New("there are currently no invitations to choose from")
+	}
+
+	return opts, nil
+}
+
 func formatOrganizationDetailsPath(id string) string {
 	if len(id) == 0 {
 		return ""
@@ -996,6 +1021,7 @@ func invitationsOrganizationCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listInvitationsOrganizationCmd(cli))
 	cmd.AddCommand(createInvitationOrganizationCmd(cli))
+	cmd.AddCommand(deleteInvitationOrganizationCmd(cli))
 
 	return cmd
 }
@@ -1037,9 +1063,7 @@ func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
 			}
 
 			sortInvitations(invitations)
-
 			cli.renderer.InvitationsList(invitations)
-
 			return nil
 		},
 	}
@@ -1051,7 +1075,6 @@ func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
-	cmd.SetUsageTemplate(resourceUsageTemplate())
 
 	return cmd
 }
@@ -1127,11 +1150,11 @@ func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
 		Short: "Create a new invitation to an organization",
 		Long:  "Create a new invitation to an organization.",
 		Example: `  auth0 orgs invitations create
-	  auth0 orgs invitations create <org-id>
-	  auth0 orgs invitations create <org-id> --inviter-name "Inviter Name" --invitee-email "invitee@example.com" 
-	  auth0 orgs invitations create <org-id> --invitee-email "invitee@example.com" --client-id "client_id"
-	  auth0 orgs invitations create <org-id> -n "Inviter Name" -e "invitee@example.com" -c "client_id" -connection-id "connection_id" -t 86400
-	  auth0 orgs invitations create <org-id> --json --inviter-name "Inviter Name"`,
+  auth0 orgs invitations create <org-id>
+  auth0 orgs invitations create <org-id> --inviter-name "Inviter Name" --invitee-email "invitee@example.com" 
+  auth0 orgs invitations create <org-id> --invitee-email "invitee@example.com" --client-id "client_id"
+  auth0 orgs invitations create <org-id> -n "Inviter Name" -e "invitee@example.com" -c "client_id" -connection-id "connection_id" -t 86400
+  auth0 orgs invitations create <org-id> --json --inviter-name "Inviter Name"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
@@ -1201,10 +1224,71 @@ func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
-	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
-	// TODO shouldn't set csv?
-	cmd.SetUsageTemplate(resourceUsageTemplate())
+
+	return cmd
+}
+
+func deleteInvitationOrganizationCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		OrgID string
+	}
+
+	cmd := &cobra.Command{
+		Use:     "delete",
+		Aliases: []string{"rm"},
+		Short:   "Delete invitation(s) from an organization",
+		Long: "Delete invitation(s) from an organization.\n\n" +
+			"To delete interactively, use `auth0 orgs invitations delete` with no arguments.\n\n" +
+			"To delete non-interactively, supply the organization id, invitation id(s) and " +
+			"the `--force` flag to skip confirmation.",
+		Example: `  auth0 orgs invitations delete
+  auth0 orgs invitations rm
+  auth0 orgs invitations delete <org-id> <invitation-id>
+  auth0 orgs invitations delete <org-id> <invitation-id> --force
+  auth0 orgs invitations delete <org-id> <inv-id1> <inv-id2> <inv-id3>`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				if err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
+					return err
+				}
+			} else {
+				inputs.OrgID = args[0]
+				args = args[1:]
+			}
+
+			invitationIDs := make([]string, len(args))
+			if len(args) == 0 {
+				if err := invitationID.PickMany(
+					cmd,
+					&invitationIDs,
+					func(ctx context.Context) (pickerOptions, error) {
+						return cli.invitationPickerOptions(ctx, inputs.OrgID)
+					},
+				); err != nil {
+					return err
+				}
+			} else {
+				invitationIDs = append(invitationIDs, args...)
+			}
+
+			if !cli.force && canPrompt(cmd) {
+				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
+					return nil
+				}
+			}
+
+			return ansi.ProgressBar("Deleting invitation(s)", invitationIDs, func(_ int, invitationID string) error {
+				if invitationID != "" {
+					if err := cli.api.Organization.DeleteInvitation(cmd.Context(), inputs.OrgID, invitationID); err != nil {
+						return fmt.Errorf("failed to delete invitation with ID %q from organization %q: %w", invitationID, inputs.OrgID, err)
+					}
+				}
+				return nil
+			})
+		},
+	}
+
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 
 	return cmd
 }

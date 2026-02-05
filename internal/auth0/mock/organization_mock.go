@@ -150,6 +150,25 @@ func (mr *MockOrganizationAPIMockRecorder) DeleteDiscoveryDomain(ctx, id, domain
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDiscoveryDomain", reflect.TypeOf((*MockOrganizationAPI)(nil).DeleteDiscoveryDomain), varargs...)
 }
 
+// DeleteInvitation mocks base method.
+func (m *MockOrganizationAPI) DeleteInvitation(ctx context.Context, id, invitationID string, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id, invitationID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteInvitation", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteInvitation indicates an expected call of DeleteInvitation.
+func (mr *MockOrganizationAPIMockRecorder) DeleteInvitation(ctx, id, invitationID interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id, invitationID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteInvitation", reflect.TypeOf((*MockOrganizationAPI)(nil).DeleteInvitation), varargs...)
+}
+
 // DiscoveryDomain mocks base method.
 func (m *MockOrganizationAPI) DiscoveryDomain(ctx context.Context, id, domainID string, opts ...management.RequestOption) (*management.OrganizationDiscoveryDomain, error) {
 	m.ctrl.T.Helper()
