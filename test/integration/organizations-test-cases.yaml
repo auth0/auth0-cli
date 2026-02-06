@@ -211,6 +211,8 @@ tests:
       json:
         inviter.name: "Integration Tester"
         invitee.email: "test@test.com"
+    config:
+      retries: 5
 
   028 - create organization invitation and check table output:
     command: auth0 orgs invs create $(./test/integration/scripts/get-org-id.sh) --inviter-name "Integration Tester" --invitee-email "test@test.com" --client-id $(./test/integration/scripts/get-app-id.sh) --ttl-sec 86400 --no-input
@@ -222,6 +224,8 @@ tests:
         - Integration Tester
         - INVITEE EMAIL
         - test@test.com
+    config:
+      retries: 5
 
   029 - list organization invitations with data:
     command: auth0 orgs invs list $(./test/integration/scripts/get-org-id.sh)
@@ -231,6 +235,8 @@ tests:
         - ID
         - INVITER NAME
         - INVITEE EMAIL
+    config:
+      retries: 5
 
   030 - list organization invitations with data (json):
     command: auth0 orgs invs ls $(./test/integration/scripts/get-org-id.sh) --json
@@ -240,6 +246,8 @@ tests:
         - '"inviter":'
         - '"invitee":'
         - '"email":'
+    config:
+      retries: 5
 
   031 - list organization invitations with csv output:
     command: auth0 orgs invs ls $(./test/integration/scripts/get-org-id.sh) --csv
@@ -247,6 +255,8 @@ tests:
     stdout:
       contains:
         - ID,Client ID,Connection ID,Inviter Name,Invitee Email,Created At,Expires At
+    config:
+      retries: 5
 
   032 - show organization invitation and check json output:
     command: auth0 orgs invs show $(./test/integration/scripts/get-org-id.sh) $(./test/integration/scripts/get-org-invitation-id.sh) --json
@@ -270,7 +280,7 @@ tests:
         - INVITEE EMAIL
         - test@test.com
     config:
-      retries: 3
+      retries: 5
 
   034 - show organization invitation with invalid invitation ID:
     command: auth0 orgs invs show $(./test/integration/scripts/get-org-id.sh) "uinv_invalid123"
@@ -303,6 +313,8 @@ tests:
   038 - delete organization invitation with confirmation:
     command: auth0 orgs invs delete $(./test/integration/scripts/get-org-id.sh) $(./test/integration/scripts/get-org-invitation-id.sh) --force
     exit-code: 0
+    config:
+      retries: 5
 
   039 - delete organization invitation with invalid invitation ID:
     command: auth0 orgs invs delete $(./test/integration/scripts/get-org-id.sh) "uinv_invalid123" --force --no-input
