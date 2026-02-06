@@ -15,7 +15,6 @@ type invitationsView struct {
 	CreatedAt    string
 	ExpiresAt    string
 	raw          interface{}
-	// TODO: Check if OrganizationId, InvitationURL, Role assignments etc are needed to be displayed in table view.
 }
 
 func (v *invitationsView) AsTableHeader() []string {
