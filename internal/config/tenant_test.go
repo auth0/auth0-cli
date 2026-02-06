@@ -21,21 +21,17 @@ func TestTenant_GetExtraRequestedScopes(t *testing.T) {
 	})
 
 	t.Run("tenant has extra requested scopes", func(t *testing.T) {
+		extraScopes := []string{
+			"create:extra_scope1",
+			"read:extra_scope2",
+			"delete:extra_scope3",
+		}
+
 		tenant := &Tenant{
-			Scopes: []string{
-				"create:organization_invitations",
-				"read:organization_invitations",
-				"delete:organization_invitations",
-			},
+			Scopes: extraScopes,
 		}
 
-		expected := []string{
-			"create:organization_invitations",
-			"read:organization_invitations",
-			"delete:organization_invitations",
-		}
-
-		assert.ElementsMatch(t, expected, tenant.GetExtraRequestedScopes())
+		assert.ElementsMatch(t, extraScopes, tenant.GetExtraRequestedScopes())
 	})
 }
 
