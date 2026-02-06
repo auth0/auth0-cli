@@ -219,7 +219,7 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 			})
 
 			if err != nil {
-				cli.renderer.Warnf("Terraform resource config generated successfully but there was an error with terraform plan.\n\n")
+				cli.renderer.Warnf("Terraform resource config generated successfully but there was an error with terraform plan: %v\n\n", err)
 				cli.renderer.Warnf("Run " + ansi.Cyan(cdInstructions+"./terraform plan") + " to troubleshoot\n\n")
 				cli.renderer.Warnf("Once the plan succeeds, run " + ansi.Cyan("./terraform apply") + " to complete the import.\n\n")
 				cli.renderer.Infof("The terraform binary and auth0_import.tf files can be deleted afterwards.\n")
