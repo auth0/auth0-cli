@@ -311,7 +311,7 @@ tests:
         - DEVICE BINDING    asn
 
   041 - given a test app, it successfully deletes the app:
-    command: auth0 apps delete $(./test/integration/scripts/get-app-id.sh) --force
+    command: auth0 apps delete $(./test/integration/scripts/get-app-id.sh) --force && ./test/integration/scripts/delete-app-id.sh
     exit-code: 0
 
   042 - it successfully creates a resource server app with resource-server-identifier:
