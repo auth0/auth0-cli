@@ -48,7 +48,7 @@ func (r *Renderer) InvitationsList(invitations []management.OrganizationInvitati
 	r.Heading(resource)
 
 	if len(invitations) == 0 {
-		r.EmptyState(resource, "Use 'auth0 orgs invitations create' to add one")
+		r.EmptyState(resource, "Use 'auth0 orgs invs create' to add one")
 		return
 	}
 
