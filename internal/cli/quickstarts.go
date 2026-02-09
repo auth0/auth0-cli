@@ -66,6 +66,7 @@ func quickstartsCmd(cli *cli) *cobra.Command {
 
 	cmd.AddCommand(listQuickstartsCmd(cli))
 	cmd.AddCommand(downloadQuickstartCmd(cli))
+	cmd.AddCommand(setupQuickstartCmd(cli))
 
 	return cmd
 }
@@ -412,4 +413,190 @@ func (i *qsInputs) fromArgs(cmd *cobra.Command, args []string, cli *cli) error {
 	i.Quickstart = quickstart
 
 	return nil
+}
+
+var (
+	qsType = Flag{
+		Name:       "Type",
+		LongForm:   "type",
+		ShortForm:  "t",
+		Help:       "Type of quickstart (vite, nextjs)",
+		IsRequired: true,
+	}
+	qsAppName = Flag{
+		Name:      "Name",
+		LongForm:  "name",
+		ShortForm: "n",
+		Help:      "Name of the Auth0 application (defaults to current directory name)",
+	}
+	qsPort = Flag{
+		Name:      "Port",
+		LongForm:  "port",
+		ShortForm: "p",
+		Help:      "Port number for the application (default: 5173 for vite, 3000 for nextjs)",
+	}
+)
+
+func setupQuickstartCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		Type string
+		Name string
+		Port int
+	}
+
+	cmd := &cobra.Command{
+		Use:   "setup",
+		Args:  cobra.NoArgs,
+		Short: "Set up Auth0 for your quickstart application",
+		Long: "Creates an Auth0 application and generates a .env file with the necessary configuration.\n\n" +
+			"The command will:\n" +
+			"  1. Check if you are authenticated (and prompt for login if needed)\n" +
+			"  2. Create an Auth0 application based on the specified type\n" +
+			"  3. Generate a .env file with the appropriate environment variables\n\n" +
+			"Supported types:\n" +
+			"  - vite: For client-side SPAs (React, Vue, Svelte, etc.)\n" +
+			"  - nextjs: For Next.js server-side applications",
+		Example: `  auth0 quickstarts setup --type vite
+  auth0 quickstarts setup --type nextjs
+  auth0 quickstarts setup --type vite --name "My App"
+  auth0 quickstarts setup --type nextjs --port 8080
+  auth0 qs setup --type vite -n "My App" -p 5173`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+
+			// Validate type flag
+			if err := qsType.Select(cmd, &inputs.Type, []string{"vite (React, Svelte, Vue, Vanilla JS)", "nextjs"}, nil); err != nil {
+				return err
+			}
+
+			// Check authentication status and ensure we're authenticated
+			if err := cli.setupWithAuthentication(ctx); err != nil {
+				return fmt.Errorf("authentication required: %w", err)
+			}
+
+			// Set default app name
+			defaultName := "My App"
+
+			if err := qsAppName.Ask(cmd, &inputs.Name, &defaultName); err != nil {
+				return err
+			}
+
+			// Determine default port and base URL based on quickstart type
+			var appType, baseURL, envFileName string
+			var callbacks, logoutURLs, origins, webOrigins []string
+			var defaultPort int
+
+			switch inputs.Type {
+			case "vite":
+				appType = appTypeSPA
+				defaultPort = 5173
+				envFileName = ".env"
+
+			case "nextjs":
+				appType = appTypeRegularWeb
+				defaultPort = 3000
+				envFileName = ".env.local"
+			}
+
+			// Use provided port or default
+			if inputs.Port == 0 {
+				inputs.Port = defaultPort
+			}
+
+			baseURL = fmt.Sprintf("http://localhost:%d", inputs.Port)
+
+			// Configure URLs based on app type
+			if inputs.Type == "vite" {
+				callbacks = []string{baseURL}
+				logoutURLs = []string{baseURL}
+				origins = []string{baseURL}
+				webOrigins = []string{baseURL}
+			} else {
+				// nextjs
+				callbackURL := fmt.Sprintf("%s/auth/callback", baseURL)
+				callbacks = []string{callbackURL}
+				logoutURLs = []string{baseURL}
+			}
+
+			// Create the Auth0 application
+			cli.renderer.Infof("Creating Auth0 application '%s'...", inputs.Name)
+
+			oidcConformant := true
+			algorithm := "RS256"
+			metadata := map[string]interface{}{
+				"created_by": "quickstart-docs-manual",
+			}
+			a := &management.Client{
+				Name:              &inputs.Name,
+				AppType:           &appType,
+				Callbacks:         &callbacks,
+				AllowedLogoutURLs: &logoutURLs,
+				OIDCConformant:    &oidcConformant,
+				JWTConfiguration: &management.ClientJWTConfiguration{
+					Algorithm: &algorithm,
+				},
+				ClientMetadata: &metadata,
+			}
+
+			// Add origins for SPA
+			if inputs.Type == "vite" {
+				a.AllowedOrigins = &origins
+				a.WebOrigins = &webOrigins
+			}
+
+			// Create the application
+			if err := ansi.Waiting(func() error {
+				return cli.api.Client.Create(ctx, a)
+			}); err != nil {
+				return fmt.Errorf("failed to create application: %w", err)
+			}
+
+			cli.renderer.Infof("Application created successfully with Client ID: %s", a.GetClientID())
+
+			// Get the tenant domain
+			tenant, err := cli.Config.GetTenant(cli.tenant)
+			if err != nil {
+				return fmt.Errorf("failed to get tenant: %w", err)
+			}
+
+			// Generate .env file
+			var envContent strings.Builder
+
+			switch inputs.Type {
+			case "vite":
+				envContent.WriteString(fmt.Sprintf("VITE_AUTH0_DOMAIN=%s\n", tenant.Domain))
+				envContent.WriteString(fmt.Sprintf("VITE_AUTH0_CLIENT_ID=%s\n", a.GetClientID()))
+
+			case "nextjs":
+				// Generate a secure random string for AUTH0_SECRET (64-character hex)
+				secret, err := generateState(32)
+				if err != nil {
+					return fmt.Errorf("failed to generate AUTH0_SECRET: %w", err)
+				}
+
+				envContent.WriteString(fmt.Sprintf("AUTH0_DOMAIN=%s\n", tenant.Domain))
+				envContent.WriteString(fmt.Sprintf("AUTH0_CLIENT_ID=%s\n", a.GetClientID()))
+				envContent.WriteString(fmt.Sprintf("AUTH0_CLIENT_SECRET=%s\n", a.GetClientSecret()))
+				envContent.WriteString(fmt.Sprintf("AUTH0_SECRET=%s\n", secret))
+				envContent.WriteString(fmt.Sprintf("APP_BASE_URL=%s\n", baseURL))
+			}
+
+			// Write .env file
+			if err := os.WriteFile(envFileName, []byte(envContent.String()), 0600); err != nil {
+				return fmt.Errorf("failed to write .env file: %w", err)
+			}
+
+			cli.renderer.Infof("%s file created with your Auth0 details:", envFileName)
+			cli.renderer.Output(envContent.String())
+
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	qsType.RegisterString(cmd, &inputs.Type, "")
+	qsAppName.RegisterString(cmd, &inputs.Name, "")
+	qsPort.RegisterInt(cmd, &inputs.Port, 0)
+
+	return cmd
 }
