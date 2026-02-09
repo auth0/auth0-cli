@@ -5,7 +5,11 @@ has_toc: false
 ---
 # auth0 orgs invitations create
 
-Create a new invitation to an organization.
+Create a new invitation to an organization with required and optional parameters.
+
+To create interactively, use `auth0 orgs invs create` with no arguments and answer the prompts.
+
+To create non-interactively, supply the organization id through the arguments and the other parameters through flags.
 
 ## Usage
 ```

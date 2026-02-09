@@ -5,7 +5,7 @@ has_children: true
 ---
 # auth0 orgs invitations
 
-Manage invitations of an organization.
+Manage invitations of an organization. Invitations allow you to add users to an organization by sending them an email with a link to join. To learn more, read [Invite Members to Organizations](https://auth0.com/docs/manage-users/organizations/configure-organizations/invite-members).
 
 ## Commands
 

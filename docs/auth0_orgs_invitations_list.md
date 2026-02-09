@@ -7,6 +7,10 @@ has_toc: false
 
 List the invitations of an organization.
 
+To list interactively, use `auth0 orgs invs list` with no arguments.
+
+To list non-interactively, supply the organization id through the arguments.
+
 ## Usage
 ```
 auth0 orgs invitations list [flags]

@@ -1016,7 +1016,9 @@ func invitationsOrganizationCmd(cli *cli) *cobra.Command {
 		Use:     "invitations",
 		Aliases: []string{"invs"},
 		Short:   "Manage invitations of an organization",
-		Long:    "Manage invitations of an organization.",
+		Long: "Manage invitations of an organization. " +
+			"Invitations allow you to add users to an organization by sending them an email with a link to join. " +
+			"To learn more, read [Invite Members to Organizations](https://auth0.com/docs/manage-users/organizations/configure-organizations/invite-members).",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -1038,7 +1040,9 @@ func showInvitationOrganizationCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(2),
 		Short: "Show an organization invitation",
-		Long:  "Display information about an organization invitation.",
+		Long:  "Display information about an organization invitation.\n\n" +
+			"To show interactively, use `auth0 orgs invs show` with no arguments.\n\n" +
+			"To show non-interactively, supply the organization id and invitation id through the arguments.",
 		Example: `  auth0 orgs invs show
   auth0 orgs invs show <org-id>
   auth0 orgs invs show <org-id> <invitation-id>
@@ -1092,7 +1096,9 @@ func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "List invitations of an organization",
-		Long:    "List the invitations of an organization.",
+		Long:    "List the invitations of an organization.\n\n" +
+			"To list interactively, use `auth0 orgs invs list` with no arguments.\n\n" +
+			"To list non-interactively, supply the organization id through the arguments.",
 		Example: `  auth0 orgs invs list
   auth0 orgs invs ls <org-id>
   auth0 orgs invs list <org-id> --number 100
@@ -1203,7 +1209,9 @@ func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Create a new invitation to an organization",
-		Long:  "Create a new invitation to an organization.",
+		Long:  "Create a new invitation to an organization with required and optional parameters.\n\n" +
+			"To create interactively, use `auth0 orgs invs create` with no arguments and answer the prompts.\n\n" +
+			"To create non-interactively, supply the organization id through the arguments and the other parameters through flags.",
 		Example: `  auth0 orgs invs create
   auth0 orgs invs create <org-id>
   auth0 orgs invs create <org-id> --inviter-name "Inviter Name" --invitee-email "invitee@example.com" 

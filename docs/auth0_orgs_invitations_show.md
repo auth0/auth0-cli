@@ -7,6 +7,10 @@ has_toc: false
 
 Display information about an organization invitation.
 
+To show interactively, use `auth0 orgs invs show` with no arguments.
+
+To show non-interactively, supply the organization id and invitation id through the arguments.
+
 ## Usage
 ```
 auth0 orgs invitations show [flags]
