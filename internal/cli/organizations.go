@@ -816,16 +816,16 @@ func (cli *cli) organizationPickerOptions(ctx context.Context) (pickerOptions, e
 }
 
 func (cli *cli) invitationPickerOptions(ctx context.Context, orgID string) (pickerOptions, error) {
-	invitations, err := cli.getOrgInvitations(ctx, orgID, 1000)
+	orgInvitations, err := cli.api.Organization.Invitations(ctx, url.PathEscape(orgID))
 	if err != nil {
 		return nil, err
 	}
 
 	var opts pickerOptions
-	for _, inv := range invitations {
-		value := inv.GetID()
-		label := fmt.Sprintf("%s %s", inv.Invitee.GetEmail(), ansi.Faint("("+value+")"))
-		opts = append(opts, pickerOption{value: value, label: label})
+	for _, inv := range orgInvitations.OrganizationInvitations {
+		id := inv.GetID()
+		label := fmt.Sprintf("%s %s", inv.Invitee.GetEmail(), ansi.Faint("("+id+")"))
+		opts = append(opts, pickerOption{value: id, label: label})
 	}
 
 	if len(opts) == 0 {
