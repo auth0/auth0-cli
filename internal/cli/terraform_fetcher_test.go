@@ -2211,26 +2211,26 @@ func Test_promptScreenPartialResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves screen partial prompts data", func(t *testing.T) {
 		fetcher := promptScreenPartialResourceFetcher{}
 
-		original := screenPartialPromptTypeToScreenMap
-		defer func() { screenPartialPromptTypeToScreenMap = original }()
+		original := screenPartialPromptToScreenMap
+		defer func() { screenPartialPromptToScreenMap = original }()
 
-		screenPartialPromptTypeToScreenMap = map[string][]string{
-			"test1": {"test1"},
-			"test2": {"test2-a", "test2-b"},
+		screenPartialPromptToScreenMap = map[string][]string{
+			"login":              {"login"},
+			"login-passwordless": {"login-passwordless-sms-otp", "login-passwordless-email-code"},
 		}
 
 		expectedData := importDataList{
 			{
-				ResourceName: "auth0_prompt_screen_partial.test1_test1",
-				ImportID:     "test1:test1",
+				ResourceName: "auth0_prompt_screen_partial.login_login",
+				ImportID:     "login:login",
 			},
 			{
-				ResourceName: "auth0_prompt_screen_partial.test2_test2_a",
-				ImportID:     "test2:test2-a",
+				ResourceName: "auth0_prompt_screen_partial.login_passwordless_login_passwordless_sms_otp",
+				ImportID:     "login-passwordless:login-passwordless-sms-otp",
 			},
 			{
-				ResourceName: "auth0_prompt_screen_partial.test2_test2_b",
-				ImportID:     "test2:test2-b",
+				ResourceName: "auth0_prompt_screen_partial.login_passwordless_login_passwordless_email_code",
+				ImportID:     "login-passwordless:login-passwordless-email-code",
 			},
 		}
 

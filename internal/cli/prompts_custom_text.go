@@ -66,8 +66,8 @@ func universalLoginPromptsTextCmd(cli *cli) *cobra.Command {
 
 func customTextPromptOptions(_ context.Context) (pickerOptions, error) {
 	var opts pickerOptions
-	for _, promptType := range customTextPromptTypes {
-		opts = append(opts, pickerOption{value: promptType, label: promptType})
+	for _, prompt := range customTextPrompts {
+		opts = append(opts, pickerOption{value: prompt, label: prompt})
 	}
 	return opts, nil
 }

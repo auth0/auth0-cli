@@ -531,7 +531,7 @@ func (f *promptResourceFetcher) FetchData(_ context.Context) (importDataList, er
 }
 
 // Referred from 'prompt' path options in: https://auth0.com/docs/api/management/v2/prompts/get-custom-text-by-language
-var customTextPromptTypes = []string{"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password", "consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa", "status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common", "email-identifier-challenge", "passkeys", "login-passwordless", "phone-identifier-enrollment", "phone-identifier-challenge", "custom-form", "customized-consent", "logout", "captcha", "brute-force-protection"}
+var customTextPrompts = []string{"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password", "consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa", "status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common", "email-identifier-challenge", "passkeys", "login-passwordless", "phone-identifier-enrollment", "phone-identifier-challenge", "custom-form", "customized-consent", "logout", "captcha", "brute-force-protection"}
 
 func (f *promptCustomTextResourceFetcherResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	tenant, err := f.api.Tenant.Read(ctx)
@@ -541,10 +541,10 @@ func (f *promptCustomTextResourceFetcherResourceFetcher) FetchData(ctx context.C
 
 	var data importDataList
 	for _, language := range tenant.GetEnabledLocales() {
-		for _, promptType := range customTextPromptTypes {
+		for _, prompt := range customTextPrompts {
 			data = append(data, importDataItem{
-				ResourceName: "auth0_prompt_custom_text." + sanitizeResourceName(language+"_"+promptType),
-				ImportID:     promptType + "::" + language,
+				ResourceName: "auth0_prompt_custom_text." + sanitizeResourceName(language+"_"+prompt),
+				ImportID:     prompt + "::" + language,
 			})
 		}
 	}
@@ -552,9 +552,8 @@ func (f *promptCustomTextResourceFetcherResourceFetcher) FetchData(ctx context.C
 	return data, nil
 }
 
-// Referred from: https://tus.auth0.com/docs/customize/login-pages/universal-login/customize-signup-and-login-prompts#terminology
 // Referred from prompt 'path' options in: https://auth0.com/docs/api/management/v2/prompts/get-partials
-var screenPartialPromptTypeToScreenMap = map[string][]string{
+var screenPartialPromptToScreenMap = map[string][]string{
 	"login":              {"login"},
 	"login-id":           {"login-id"},
 	"login-password":     {"login-password"},
@@ -568,11 +567,11 @@ var screenPartialPromptTypeToScreenMap = map[string][]string{
 func (f *promptScreenPartialResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	var data importDataList
 
-	for promptType, screens := range screenPartialPromptTypeToScreenMap {
+	for prompt, screens := range screenPartialPromptToScreenMap {
 		for _, screen := range screens {
 			data = append(data, importDataItem{
-				ResourceName: "auth0_prompt_screen_partial." + sanitizeResourceName(promptType+"_"+screen),
-				ImportID:     promptType + ":" + screen,
+				ResourceName: "auth0_prompt_screen_partial." + sanitizeResourceName(prompt+"_"+screen),
+				ImportID:     prompt + ":" + screen,
 			})
 		}
 	}
