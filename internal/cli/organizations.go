@@ -109,7 +109,6 @@ var (
 	clientID = Flag{
 		Name:       "Client ID",
 		LongForm:   "client-id",
-		ShortForm:  "c",
 		Help:       "Auth0 client ID. Used to resolve the application's login initiation endpoint.",
 		IsRequired: true,
 	}
@@ -1208,7 +1207,7 @@ func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
   auth0 orgs invs create <org-id>
   auth0 orgs invs create <org-id> --inviter-name "Inviter Name" --invitee-email "invitee@example.com" 
   auth0 orgs invs create <org-id> --invitee-email "invitee@example.com" --client-id "client_id"
-  auth0 orgs invs create <org-id> -n "Inviter Name" -e "invitee@example.com" -c "client_id" -connection-id "connection_id" -t 86400
+  auth0 orgs invs create <org-id> -n "Inviter Name" -e "invitee@example.com" --client-id "client_id" -connection-id "connection_id" -t 86400
   auth0 orgs invs create <org-id> --json --inviter-name "Inviter Name"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {

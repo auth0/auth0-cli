@@ -19,7 +19,7 @@ auth0 orgs invitations create [flags]
   auth0 orgs invs create <org-id>
   auth0 orgs invs create <org-id> --inviter-name "Inviter Name" --invitee-email "invitee@example.com" 
   auth0 orgs invs create <org-id> --invitee-email "invitee@example.com" --client-id "client_id"
-  auth0 orgs invs create <org-id> -n "Inviter Name" -e "invitee@example.com" -c "client_id" -connection-id "connection_id" -t 86400
+  auth0 orgs invs create <org-id> -n "Inviter Name" -e "invitee@example.com" --client-id "client_id" -connection-id "connection_id" -t 86400
   auth0 orgs invs create <org-id> --json --inviter-name "Inviter Name"
 ```
 
@@ -28,7 +28,7 @@ auth0 orgs invitations create [flags]
 
 ```
   -a, --app-metadata stringToString    Application metadata for the invited user in key=value format. (default [])
-  -c, --client-id string               Auth0 client ID. Used to resolve the application's login initiation endpoint.
+      --client-id string               Auth0 client ID. Used to resolve the application's login initiation endpoint.
       --connection-id string           The id of the connection to force invitee to authenticate with.
   -e, --invitee-email string           Email address of the person being invited.
   -n, --inviter-name string            Name of the person sending the invitation.
