@@ -464,24 +464,20 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			// Validate type flag
 			if err := qsType.Select(cmd, &inputs.Type, []string{"vite (React, Svelte, Vue, Vanilla JS)", "nextjs"}, nil); err != nil {
 				return err
 			}
 
-			// Check authentication status and ensure we're authenticated
 			if err := cli.setupWithAuthentication(ctx); err != nil {
 				return fmt.Errorf("authentication required: %w", err)
 			}
 
-			// Set default app name
 			defaultName := "My App"
 
 			if err := qsAppName.Ask(cmd, &inputs.Name, &defaultName); err != nil {
 				return err
 			}
 
-			// Determine default port and base URL based on quickstart type
 			var appType, baseURL, envFileName string
 			var callbacks, logoutURLs, origins, webOrigins []string
 			var defaultPort int
@@ -498,27 +494,24 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				envFileName = ".env.local"
 			}
 
-			// Use provided port or default
 			if inputs.Port == 0 {
 				inputs.Port = defaultPort
 			}
 
 			baseURL = fmt.Sprintf("http://localhost:%d", inputs.Port)
 
-			// Configure URLs based on app type
+			// Configure URLs based on app type.
 			if inputs.Type == "vite" {
 				callbacks = []string{baseURL}
 				logoutURLs = []string{baseURL}
 				origins = []string{baseURL}
 				webOrigins = []string{baseURL}
 			} else {
-				// nextjs
 				callbackURL := fmt.Sprintf("%s/auth/callback", baseURL)
 				callbacks = []string{callbackURL}
 				logoutURLs = []string{baseURL}
 			}
 
-			// Create the Auth0 application
 			cli.renderer.Infof("Creating Auth0 application '%s'...", inputs.Name)
 
 			oidcConformant := true
@@ -526,6 +519,7 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 			metadata := map[string]interface{}{
 				"created_by": "quickstart-docs-manual",
 			}
+
 			a := &management.Client{
 				Name:              &inputs.Name,
 				AppType:           &appType,
@@ -538,13 +532,11 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				ClientMetadata: &metadata,
 			}
 
-			// Add origins for SPA
 			if inputs.Type == "vite" {
 				a.AllowedOrigins = &origins
 				a.WebOrigins = &webOrigins
 			}
 
-			// Create the application
 			if err := ansi.Waiting(func() error {
 				return cli.api.Client.Create(ctx, a)
 			}); err != nil {
@@ -553,13 +545,11 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 
 			cli.renderer.Infof("Application created successfully with Client ID: %s", a.GetClientID())
 
-			// Get the tenant domain
 			tenant, err := cli.Config.GetTenant(cli.tenant)
 			if err != nil {
 				return fmt.Errorf("failed to get tenant: %w", err)
 			}
 
-			// Generate .env file
 			var envContent strings.Builder
 
 			switch inputs.Type {
@@ -568,7 +558,6 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				envContent.WriteString(fmt.Sprintf("VITE_AUTH0_CLIENT_ID=%s\n", a.GetClientID()))
 
 			case "nextjs":
-				// Generate a secure random string for AUTH0_SECRET (64-character hex)
 				secret, err := generateState(32)
 				if err != nil {
 					return fmt.Errorf("failed to generate AUTH0_SECRET: %w", err)
@@ -581,7 +570,6 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				envContent.WriteString(fmt.Sprintf("APP_BASE_URL=%s\n", baseURL))
 			}
 
-			// Write .env file
 			if err := os.WriteFile(envFileName, []byte(envContent.String()), 0600); err != nil {
 				return fmt.Errorf("failed to write .env file: %w", err)
 			}
