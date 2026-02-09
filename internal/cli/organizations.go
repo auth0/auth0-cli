@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -133,7 +134,7 @@ var (
 		Help:      "Whether to send the invitation email to the invitee.",
 	}
 
-	organizationRoles = Flag{
+	roles = Flag{
 		Name:      "Roles",
 		LongForm:  "roles",
 		ShortForm: "r",
@@ -144,14 +145,14 @@ var (
 		Name:      "App Metadata",
 		LongForm:  "app-metadata",
 		ShortForm: "a",
-		Help:      "Application metadata for the invited user in key=value format.",
+		Help:      "Data related to the user that does affect the application's core functionality, formatted as JSON",
 	}
 
 	userMetadata = Flag{
 		Name:      "User Metadata",
 		LongForm:  "user-metadata",
 		ShortForm: "u",
-		Help:      "User metadata for the invited user in key=value format.",
+		Help:      "Data related to the user that does not affect the application's core functionality, formatted as JSON",
 	}
 )
 
@@ -1194,8 +1195,8 @@ func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
 		TTLSeconds          int
 		SendInvitationEmail bool
 		Roles               []string
-		AppMetadata         map[string]string
-		UserMetadata        map[string]string
+		AppMetadata         string
+		UserMetadata        string
 	}
 
 	cmd := &cobra.Command{
@@ -1237,19 +1238,19 @@ func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
 			if inputs.ConnectionID != "" {
 				invitation.ConnectionID = &inputs.ConnectionID
 			}
-			if len(inputs.AppMetadata) > 0 {
-				appMetadata := make(map[string]interface{}, len(inputs.AppMetadata))
-				for k, v := range inputs.AppMetadata {
-					appMetadata[k] = v
+			if inputs.AppMetadata != "" {
+				var metadata map[string]interface{}
+				if err := json.Unmarshal([]byte(inputs.AppMetadata), &metadata); err != nil {
+					return fmt.Errorf("invalid JSON for app metadata: %w", err)
 				}
-				invitation.AppMetadata = appMetadata
+				invitation.AppMetadata = metadata
 			}
-			if len(inputs.UserMetadata) > 0 {
-				userMetadata := make(map[string]interface{}, len(inputs.UserMetadata))
-				for k, v := range inputs.UserMetadata {
-					userMetadata[k] = v
+			if inputs.UserMetadata != "" {
+				var metadata map[string]interface{}
+				if err := json.Unmarshal([]byte(inputs.UserMetadata), &metadata); err != nil {
+					return fmt.Errorf("invalid JSON for user metadata: %w", err)
 				}
-				invitation.UserMetadata = userMetadata
+				invitation.UserMetadata = metadata
 			}
 			if len(inputs.Roles) > 0 {
 				invitation.Roles = inputs.Roles
@@ -1272,9 +1273,9 @@ func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
 	connectionID.RegisterString(cmd, &inputs.ConnectionID, "")
 	ttlSeconds.RegisterInt(cmd, &inputs.TTLSeconds, 0)
 	sendInvitationEmail.RegisterBool(cmd, &inputs.SendInvitationEmail, true)
-	organizationRoles.RegisterStringSlice(cmd, &inputs.Roles, nil)
-	applicationMetadata.RegisterStringMap(cmd, &inputs.AppMetadata, nil)
-	userMetadata.RegisterStringMap(cmd, &inputs.UserMetadata, nil)
+	roles.RegisterStringSlice(cmd, &inputs.Roles, nil)
+	applicationMetadata.RegisterString(cmd, &inputs.AppMetadata, "")
+	userMetadata.RegisterString(cmd, &inputs.UserMetadata, "")
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")

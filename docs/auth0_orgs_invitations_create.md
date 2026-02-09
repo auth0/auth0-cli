@@ -27,17 +27,17 @@ auth0 orgs invitations create [flags]
 ## Flags
 
 ```
-  -a, --app-metadata stringToString    Application metadata for the invited user in key=value format. (default [])
-      --client-id string               Auth0 client ID. Used to resolve the application's login initiation endpoint.
-      --connection-id string           The id of the connection to force invitee to authenticate with.
-  -e, --invitee-email string           Email address of the person being invited.
-  -n, --inviter-name string            Name of the person sending the invitation.
-      --json                           Output in json format.
-      --json-compact                   Output in compact json format.
-  -r, --roles strings                  Roles IDs to associate with the user.
-  -s, --send-email                     Whether to send the invitation email to the invitee. (default true)
-  -t, --ttl-sec int                    Number of seconds for which the invitation is valid before expiration.
-  -u, --user-metadata stringToString   User metadata for the invited user in key=value format. (default [])
+  -a, --app-metadata string    Data related to the user that does affect the application's core functionality, formatted as JSON
+      --client-id string       Auth0 client ID. Used to resolve the application's login initiation endpoint.
+      --connection-id string   The id of the connection to force invitee to authenticate with.
+  -e, --invitee-email string   Email address of the person being invited.
+  -n, --inviter-name string    Name of the person sending the invitation.
+      --json                   Output in json format.
+      --json-compact           Output in compact json format.
+  -r, --roles strings          Roles IDs to associate with the user.
+  -s, --send-email             Whether to send the invitation email to the invitee. (default true)
+  -t, --ttl-sec int            Number of seconds for which the invitation is valid before expiration.
+  -u, --user-metadata string   Data related to the user that does not affect the application's core functionality, formatted as JSON
 ```
 
 
