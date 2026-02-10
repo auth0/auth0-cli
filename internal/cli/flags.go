@@ -97,6 +97,10 @@ func (f *Flag) PickU(cmd *cobra.Command, result *string, fn pickerOptionsFunc) e
 	return pickFlag(cmd, f, result, fn, true)
 }
 
+func (f *Flag) PickMany(cmd *cobra.Command, result *[]string, fn pickerOptionsFunc) error {
+	return pickManyFlag(cmd, f, result, fn)
+}
+
 func (f *Flag) OpenEditor(cmd *cobra.Command, value *string, defaultValue, filename string, infoFn func()) error {
 	return openEditorFlag(cmd, f, value, defaultValue, filename, infoFn, nil, false)
 }
@@ -235,6 +239,30 @@ func pickFlag(cmd *cobra.Command, f *Flag, result *string, fn pickerOptionsFunc,
 		}
 
 		*result = opts.getValue(val)
+	}
+
+	return nil
+}
+
+func pickManyFlag(cmd *cobra.Command, f *Flag, result *[]string, fn pickerOptionsFunc) error {
+	if shouldAsk(cmd, f, false) {
+		var opts pickerOptions
+		err := ansi.Waiting(func() error {
+			var err error
+			opts, err = fn(cmd.Context())
+			return err
+		})
+
+		if err != nil {
+			return err
+		}
+
+		var values []string
+		if err := askMultiSelect(f, &values, opts.labels()...); err != nil {
+			return err
+		}
+
+		*result = opts.getValues(values...)
 	}
 
 	return nil

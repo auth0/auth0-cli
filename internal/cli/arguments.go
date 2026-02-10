@@ -37,6 +37,10 @@ func (a *Argument) Ask(cmd *cobra.Command, value interface{}) error {
 type pickerOptionsFunc func(ctx context.Context) (pickerOptions, error)
 
 func (a *Argument) Pick(cmd *cobra.Command, result *string, fn pickerOptionsFunc) error {
+	if !canPrompt(cmd) {
+		return fmt.Errorf("Missing a required argument: %s", a.GetName())
+	}
+
 	var opts pickerOptions
 	err := ansi.Waiting(func() error {
 		var err error
@@ -50,7 +54,7 @@ func (a *Argument) Pick(cmd *cobra.Command, result *string, fn pickerOptionsFunc
 
 	defaultLabel := opts.defaultLabel()
 	var val string
-	if err := selectArgument(cmd, a, &val, opts.labels(), &defaultLabel); err != nil {
+	if err := _select(a, &val, opts.labels(), &defaultLabel, false); err != nil {
 		return err
 	}
 
@@ -59,6 +63,10 @@ func (a *Argument) Pick(cmd *cobra.Command, result *string, fn pickerOptionsFunc
 }
 
 func (a *Argument) PickMany(cmd *cobra.Command, result *[]string, fn pickerOptionsFunc) error {
+	if !canPrompt(cmd) {
+		return fmt.Errorf("Missing a required argument: %s", a.GetName())
+	}
+
 	var opts pickerOptions
 	err := ansi.Waiting(func() error {
 		var err error
@@ -77,14 +85,6 @@ func (a *Argument) PickMany(cmd *cobra.Command, result *[]string, fn pickerOptio
 
 	*result = opts.getValues(values...)
 	return nil
-}
-
-func selectArgument(cmd *cobra.Command, a *Argument, value interface{}, options []string, defaultValue *string) error {
-	if canPrompt(cmd) {
-		return _select(a, value, options, defaultValue, false)
-	}
-
-	return fmt.Errorf("Missing a required argument: %s", a.GetName())
 }
 
 func askArgument(cmd *cobra.Command, i commandInput, value interface{}) error {
