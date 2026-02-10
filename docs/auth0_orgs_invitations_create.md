@@ -24,7 +24,7 @@ auth0 orgs invitations create [flags]
   auth0 orgs invs create --org-id <org-id> --inviter-name "Inviter Name" --invitee-email "invitee@example.com"
   auth0 orgs invs create --org-id <org-id> --invitee-email "invitee@example.com" --client-id "client_id"
   auth0 orgs invs create --org-id <org-id> -n "Inviter Name" -e "invitee@example.com" --client-id "client_id" --connection-id "connection_id" -t 86400
-  auth0 orgs invs create --org-id <org-id> --json --inviter-name "Inviter Name"
+  auth0 orgs invs create --org-id <org-id> --json --send-email=false --inviter-name "Inviter Name"
 ```
 
 
