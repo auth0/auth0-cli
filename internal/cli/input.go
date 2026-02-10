@@ -60,12 +60,26 @@ func askPassword(i commandInput, value interface{}, isUpdate bool) error {
 	return nil
 }
 
-func askMultiSelect(i commandInput, value interface{}, options ...string) error {
+func askMultiSelect(i commandInput, value interface{}, isUpdate bool, options ...string) error {
 	v := reflect.ValueOf(options)
 	if v.Kind() != reflect.Slice || v.Len() <= 0 {
 		return handleInputError(fmt.Errorf("there is not enough data to select from"))
 	}
-	if err := prompt.AskMultiSelect(i.GetLabel(), value, options...); err != nil {
+
+	isRequired := isInputRequired(i, isUpdate)
+
+	input := &survey.Question{
+		Prompt: &survey.MultiSelect{
+			Message: i.GetLabel(),
+			Options: options,
+		},
+	}
+
+	if isRequired {
+		input.Validate = survey.Required
+	}
+
+	if err := prompt.AskOne(input, value); err != nil {
 		return handleInputError(err)
 	}
 	return nil
