@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.27.0](https://github.com/auth0/auth0-cli/tree/v1.27.0) (February 10, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.26.0...v1.27.0)
+
+### Added
+- Support for managing organization invitations via `auth0 orgs invitations` (list, show, create, delete) [#1424]
+- New `auth0 quickstarts setup` command to scaffold Auth0 apps with `.env` generation (supports `vite`, `nextjs`) [#1428]
+- Support for `auth0_prompt_screen_partial` in `auth0 tf generate` [#1426]
+- Add missing custom text prompts in `auth0 tf generate -r auth0_prompt_custom_text` [#1426]
+- Add `pre-login-organization-picker` screen to organizations prompt [#1426]
+- Add required scopes for `organization_discovery_domains`, `self_service_profiles`, `user_attribute_profiles` [#1426]
+
+
 # [v.1.26.0](https://github.com/auth0/auth0-cli/tree/v1.26.0) (January 14, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.25.1...v1.26.0)
@@ -657,7 +670,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.26.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.27.0...HEAD
+[#1428]: https://github.com/auth0/auth0-cli/pull/1428
+[#1426]: https://github.com/auth0/auth0-cli/pull/1426
+[#1424]: https://github.com/auth0/auth0-cli/pull/1424
 [#1417]: https://github.com/auth0/auth0-cli/pull/1417
 [#1416]: https://github.com/auth0/auth0-cli/pull/1416
 [#1414]: https://github.com/auth0/auth0-cli/pull/1414
