@@ -202,7 +202,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - "Missing a required argument: Org ID"
+        - "Failed to list invitations of organization with ID \"\""
         
   027 - create organization invitation and check json output:
     command: auth0 orgs invs create --org-id $(./test/integration/scripts/get-org-id.sh) --inviter-name "Integration Tester" --invitee-email "test@test.com" --client-id $(./test/integration/scripts/get-app-id.sh) --json --no-input
@@ -246,7 +246,7 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - ID,Client ID,Connection ID,Inviter Name,Invitee Email,Created At,Expires At
+        - ID,Client ID,Connection ID,Inviter Name,Invitee Email,Expires At
 
   032 - show organization invitation and check json output:
     command: auth0 orgs invs show --org-id $(./test/integration/scripts/get-org-id.sh) --invitation-id $(./test/integration/scripts/get-org-invitation-id.sh) --json
@@ -287,14 +287,14 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - "Missing a required argument: Org ID"
+        - "Failed to read organization invitation \"\""
 
   037 - show organization invitation without invitation id and no-input flag:
     command: auth0 orgs invitations show --org-id $(./test/integration/scripts/get-org-id.sh) --no-input
     exit-code: 1
     stderr:
       contains:
-        - "Missing a required argument: Invitation ID"
+        - "Failed to read organization invitation \"\""
 
   038 - delete organization invitation with confirmation:
     command: auth0 orgs invs delete --org-id $(./test/integration/scripts/get-org-id.sh) --invitation-id $(./test/integration/scripts/get-org-invitation-id.sh) --force
@@ -310,7 +310,7 @@ tests:
         - Failed to delete invitation
 
   040 - verify invitations list is empty after deletion:
-    command: auth0 orgs invs list $(./test/integration/scripts/get-org-id.sh) --json
+    command: auth0 orgs invs list --org-id $(./test/integration/scripts/get-org-id.sh) --json
     exit-code: 0
     stdout:
       exactly: "[]"

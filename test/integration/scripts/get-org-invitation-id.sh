@@ -9,7 +9,7 @@ fi
 org_id=$(./test/integration/scripts/get-org-id.sh)
 app_id=$(./test/integration/scripts/get-app-id.sh)
 
-invitation=$( auth0 orgs invitations create "$org_id" \
+invitation=$( auth0 orgs invitations create --org-id "$org_id" \
   --inviter-name "Integration Tester" \
   --invitee-email "test@test.com" \
   --client-id "$app_id" \
