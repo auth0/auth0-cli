@@ -22,8 +22,8 @@ auth0 orgs invitations list [flags]
   auth0 orgs invs list
   auth0 orgs invs ls <org-id>
   auth0 orgs invs list <org-id> --number 100
-  auth0 orgs invs ls <org-id> -n 100 --json
-  auth0 orgs invs ls <org-id> -n 100 --json-compact
+  auth0 orgs invs ls <org-id> -n 50 --json
+  auth0 orgs invs ls <org-id> -n 500 --json-compact
   auth0 orgs invs ls <org-id> --csv
 ```
 

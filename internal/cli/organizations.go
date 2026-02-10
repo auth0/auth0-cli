@@ -1102,8 +1102,8 @@ func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 orgs invs list
   auth0 orgs invs ls <org-id>
   auth0 orgs invs list <org-id> --number 100
-  auth0 orgs invs ls <org-id> -n 100 --json
-  auth0 orgs invs ls <org-id> -n 100 --json-compact
+  auth0 orgs invs ls <org-id> -n 50 --json
+  auth0 orgs invs ls <org-id> -n 500 --json-compact
   auth0 orgs invs ls <org-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
@@ -1159,7 +1159,8 @@ func (cli *cli) getOrgInvitations(
 					output = append(output, *invitation)
 				}
 			}
-			return output, invitations.HasNext(), nil
+			// Invitations does not return total count yet, so we determine there is a next page if current page is not empty.
+			return output, !isEmptyInvitationList(invitations), nil
 		},
 	)
 	if err != nil {
@@ -1172,6 +1173,10 @@ func (cli *cli) getOrgInvitations(
 	}
 
 	return typedList, nil
+}
+
+func isEmptyInvitationList(invs *management.OrganizationInvitationList) bool {
+	return invs == nil || len(invs.OrganizationInvitations) == 0
 }
 
 func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
