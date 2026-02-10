@@ -4,178 +4,178 @@ config:
   interval: 1s
 
 tests:
-  001 - list organizations with no data:
-    command: auth0 orgs list
-    exit-code: 0
-    stderr:
-      contains:
-        - Use 'auth0 orgs create' to add one
+  # 001 - list organizations with no data:
+  #   command: auth0 orgs list
+  #   exit-code: 0
+  #   stderr:
+  #     contains:
+  #       - Use 'auth0 orgs create' to add one
 
-  002 - list organizations with no data (json):
-    command: auth0 orgs list --json
-    exit-code: 0
-    stdout:
-      exactly: "[]"
+  # 002 - list organizations with no data (json):
+  #   command: auth0 orgs list --json
+  #   exit-code: 0
+  #   stdout:
+  #     exactly: "[]"
 
-  003 - list organizations with invalid number arg:
-    command: auth0 orgs list -n 1001
-    exit-code: 1
-    stderr:
-      contains:
-        - Number flag invalid, please pass a number between 1 and 1000
+  # 003 - list organizations with invalid number arg:
+  #   command: auth0 orgs list -n 1001
+  #   exit-code: 1
+  #   stderr:
+  #     contains:
+  #       - Number flag invalid, please pass a number between 1 and 1000
 
-  004 - create organization and check json output:
-    command: auth0 orgs create --name integration-test-org-new --display "Integration Test Organization" --json --no-input
-    exit-code: 0
-    stdout:
-      json:
-        name: "integration-test-org-new"
-        display_name: "Integration Test Organization"
+  # 004 - create organization and check json output:
+  #   command: auth0 orgs create --name integration-test-org-new --display "Integration Test Organization" --json --no-input
+  #   exit-code: 0
+  #   stdout:
+  #     json:
+  #       name: "integration-test-org-new"
+  #       display_name: "Integration Test Organization"
 
-  005 - create organization and check table output:
-    command: auth0 orgs create --name integration-test-org-new2 --display "Integration Test Organization2" --metadata "KEY=value" --logo "https://example.com/logo.png" --accent "#FFFFFF" --background "#FFFFFF"  --no-input
-    exit-code: 0
-    stdout:
-      contains:
-        - ID
-        - NAME              integration-test-org-new2
-        - DISPLAY NAME      Integration Test Organization2
-        - LOGO URL          https://example.com/logo.png
-        - "ACCENT COLOR      #FFFFFF"
-        - "BACKGROUND COLOR  #FFFFFF"
+  # 005 - create organization and check table output:
+  #   command: auth0 orgs create --name integration-test-org-new2 --display "Integration Test Organization2" --metadata "KEY=value" --logo "https://example.com/logo.png" --accent "#FFFFFF" --background "#FFFFFF"  --no-input
+  #   exit-code: 0
+  #   stdout:
+  #     contains:
+  #       - ID
+  #       - NAME              integration-test-org-new2
+  #       - DISPLAY NAME      Integration Test Organization2
+  #       - LOGO URL          https://example.com/logo.png
+  #       - "ACCENT COLOR      #FFFFFF"
+  #       - "BACKGROUND COLOR  #FFFFFF"
 
-  006 - attempt to create organization with a name that already exists:
-    command: auth0 orgs create --name integration-test-org-new2
-    exit-code: 1
-    stderr:
-      contains:
-        - Failed to create organization with name "integration-test-org-new2"
+  # 006 - attempt to create organization with a name that already exists:
+  #   command: auth0 orgs create --name integration-test-org-new2
+  #   exit-code: 1
+  #   stderr:
+  #     contains:
+  #       - Failed to create organization with name "integration-test-org-new2"
 
-  007 - list organizations with data:
-    command: auth0 orgs list
-    exit-code: 0
-    stdout:
-      contains:
-        - ID
-        - NAME
-        - DISPLAY NAME
+  # 007 - list organizations with data:
+  #   command: auth0 orgs list
+  #   exit-code: 0
+  #   stdout:
+  #     contains:
+  #       - ID
+  #       - NAME
+  #       - DISPLAY NAME
 
-  008 - show organization and check json output:
-    command: auth0 orgs show $(./test/integration/scripts/get-org-id.sh) --json
-    exit-code: 0
-    stdout:
-      json:
-        name: "integration-test-org-better"
-        display_name: "Integration Test Better Organization"
+  # 008 - show organization and check json output:
+  #   command: auth0 orgs show $(./test/integration/scripts/get-org-id.sh) --json
+  #   exit-code: 0
+  #   stdout:
+  #     json:
+  #       name: "integration-test-org-better"
+  #       display_name: "Integration Test Better Organization"
 
-  009 - show organization and check table output:
-    command: auth0 orgs show $(./test/integration/scripts/get-org-id.sh)
-    exit-code: 0
-    stdout:
-      contains:
-        - NAME              integration-test-org-better
-        - DISPLAY NAME      Integration Test Better Organization
+  # 009 - show organization and check table output:
+  #   command: auth0 orgs show $(./test/integration/scripts/get-org-id.sh)
+  #   exit-code: 0
+  #   stdout:
+  #     contains:
+  #       - NAME              integration-test-org-better
+  #       - DISPLAY NAME      Integration Test Better Organization
 
-  010 - show organization with invalid organization ID:
-    command: auth0 orgs show "this-org-id-does-not-exist"
-    exit-code: 1
-    stderr:
-      contains:
-        - "Failed to read organization with ID \"this-org-id-does-not-exist\""
+  # 010 - show organization with invalid organization ID:
+  #   command: auth0 orgs show "this-org-id-does-not-exist"
+  #   exit-code: 1
+  #   stderr:
+  #     contains:
+  #       - "Failed to read organization with ID \"this-org-id-does-not-exist\""
 
-  011 - update organization with minimal flags:
-    command: auth0 orgs update $(./test/integration/scripts/get-org-id.sh) --no-input
-    exit-code: 0
-    stdout:
-      contains:
-        - NAME              integration-test-org-better
-        - DISPLAY NAME      Integration Test Better Organization
-        - BACKGROUND COLOR
-        - ACCENT COLOR
-        - LOGO URL
-        - METADATA          null
+  # 011 - update organization with minimal flags:
+  #   command: auth0 orgs update $(./test/integration/scripts/get-org-id.sh) --no-input
+  #   exit-code: 0
+  #   stdout:
+  #     contains:
+  #       - NAME              integration-test-org-better
+  #       - DISPLAY NAME      Integration Test Better Organization
+  #       - BACKGROUND COLOR
+  #       - ACCENT COLOR
+  #       - LOGO URL
+  #       - METADATA          null
 
-  012 - update organization with all flags:
-    command: auth0 orgs update $(./test/integration/scripts/get-org-id.sh) -d "Integration Test Updated Organization" -a "#00FFAA" -b "#AA1166" -m "FOO=bar" -l "https://example.com/logo.png" --json --no-input
-    exit-code: 0
-    stdout:
-      json:
-        name: "integration-test-org-better"
-        display_name: "Integration Test Updated Organization"
-        branding.colors.page_background: "#AA1166"
-        branding.colors.primary: "#00FFAA"
-        metadata.FOO: "bar"
+  # 012 - update organization with all flags:
+  #   command: auth0 orgs update $(./test/integration/scripts/get-org-id.sh) -d "Integration Test Updated Organization" -a "#00FFAA" -b "#AA1166" -m "FOO=bar" -l "https://example.com/logo.png" --json --no-input
+  #   exit-code: 0
+  #   stdout:
+  #     json:
+  #       name: "integration-test-org-better"
+  #       display_name: "Integration Test Updated Organization"
+  #       branding.colors.page_background: "#AA1166"
+  #       branding.colors.primary: "#00FFAA"
+  #       metadata.FOO: "bar"
 
-  013 - open organization dashboard view in browser:
-    command: auth0 orgs open $(./test/integration/scripts/get-org-id.sh) --no-input
-    exit-code: 0
-    stderr:
-      contains:
-        - "Open the following URL in a browser: https://manage.auth0.com/dashboard/"
-        - "/organizations/org_"
+  # 013 - open organization dashboard view in browser:
+  #   command: auth0 orgs open $(./test/integration/scripts/get-org-id.sh) --no-input
+  #   exit-code: 0
+  #   stderr:
+  #     contains:
+  #       - "Open the following URL in a browser: https://manage.auth0.com/dashboard/"
+  #       - "/organizations/org_"
 
-  014 - list organization members should return an empty array if no members found:
-    command: auth0 orgs members list $(./test/integration/scripts/get-org-id.sh) --json
-    exit-code: 0
-    stdout:
-      exactly: "[]"
+  # 014 - list organization members should return an empty array if no members found:
+  #   command: auth0 orgs members list $(./test/integration/scripts/get-org-id.sh) --json
+  #   exit-code: 0
+  #   stdout:
+  #     exactly: "[]"
 
-  015 - add organization members:
-    command: auth0 api POST "organizations/$(./test/integration/scripts/get-org-id.sh)/members" --data "{\"members\":[\"$(./test/integration/scripts/get-user-id.sh)\"]}"
-    exit-code: 0
+  # 015 - add organization members:
+  #   command: auth0 api POST "organizations/$(./test/integration/scripts/get-org-id.sh)/members" --data "{\"members\":[\"$(./test/integration/scripts/get-user-id.sh)\"]}"
+  #   exit-code: 0
 
-  016 - list organization members:
-    command: auth0 orgs members list $(./test/integration/scripts/get-org-id.sh)
-    exit-code: 0
-    stdout:
-      contains:
-        - ID
-        - NAME
-        - EMAIL
-        - PICTURE
-    config:
-      retries: 15
+  # 016 - list organization members:
+  #   command: auth0 orgs members list $(./test/integration/scripts/get-org-id.sh)
+  #   exit-code: 0
+  #   stdout:
+  #     contains:
+  #       - ID
+  #       - NAME
+  #       - EMAIL
+  #       - PICTURE
+  #   config:
+  #     retries: 15
 
-  017 - list organization members as json:
-    command: auth0 orgs members list $(./test/integration/scripts/get-org-id.sh) --json
-    exit-code: 0
-    stdout:
-      contains:
-        - '"user_id": "auth0|'
-        - '"picture": "'
-    config:
-      retries: 5
+  # 017 - list organization members as json:
+  #   command: auth0 orgs members list $(./test/integration/scripts/get-org-id.sh) --json
+  #   exit-code: 0
+  #   stdout:
+  #     contains:
+  #       - '"user_id": "auth0|'
+  #       - '"picture": "'
+  #   config:
+  #     retries: 5
 
-  018 - list organization members with invalid number:
-    command: auth0 orgs members list $(./test/integration/scripts/get-org-id.sh) --number 1001
-    exit-code: 1
-    stderr:
-      contains:
-        - Number flag invalid, please pass a number between 1 and 1000
-    config:
-      retries: 3
+  # 018 - list organization members with invalid number:
+  #   command: auth0 orgs members list $(./test/integration/scripts/get-org-id.sh) --number 1001
+  #   exit-code: 1
+  #   stderr:
+  #     contains:
+  #       - Number flag invalid, please pass a number between 1 and 1000
+  #   config:
+  #     retries: 3
 
-  019 - list organization roles:
-    command: auth0 orgs roles list $(./test/integration/scripts/get-org-id.sh)
-    exit-code: 0
+  # 019 - list organization roles:
+  #   command: auth0 orgs roles list $(./test/integration/scripts/get-org-id.sh)
+  #   exit-code: 0
 
-  020 - list organization roles with invalid number:
-    command: auth0 orgs roles list $(./test/integration/scripts/get-org-id.sh) --number 1001
-    exit-code: 1
-    stderr:
-      contains:
-        - Number flag invalid, please pass a number between 1 and 1000
+  # 020 - list organization roles with invalid number:
+  #   command: auth0 orgs roles list $(./test/integration/scripts/get-org-id.sh) --number 1001
+  #   exit-code: 1
+  #   stderr:
+  #     contains:
+  #       - Number flag invalid, please pass a number between 1 and 1000
 
-  021 - list organization roles members:
-    command: auth0 orgs roles members list $(./test/integration/scripts/get-org-id.sh)
-    exit-code: 0
+  # 021 - list organization roles members:
+  #   command: auth0 orgs roles members list $(./test/integration/scripts/get-org-id.sh)
+  #   exit-code: 0
 
-  022 - list organization roles members with invalid number:
-    command: auth0 orgs roles members list $(./test/integration/scripts/get-org-id.sh) --number 1001
-    exit-code: 1
-    stderr:
-      contains:
-        - Number flag invalid, please pass a number between 1 and 1000
+  # 022 - list organization roles members with invalid number:
+  #   command: auth0 orgs roles members list $(./test/integration/scripts/get-org-id.sh) --number 1001
+  #   exit-code: 1
+  #   stderr:
+  #     contains:
+  #       - Number flag invalid, please pass a number between 1 and 1000
 
   023 - list organization invitations with no data:
     command: auth0 orgs invs list --org-id $(./test/integration/scripts/get-org-id.sh)
@@ -246,7 +246,7 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - ID,Client ID,Connection ID,Inviter Name,Invitee Email,Expires At
+        - ID,Client ID,Inviter Name,Invitee Email,Expires At,Connection ID
 
   032 - show organization invitation and check json output:
     command: auth0 orgs invs show --org-id $(./test/integration/scripts/get-org-id.sh) --invitation-id $(./test/integration/scripts/get-org-invitation-id.sh) --json

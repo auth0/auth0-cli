@@ -9,29 +9,29 @@ import (
 type invitationsView struct {
 	ID           string
 	ClientID     string
-	ConnectionID string
 	InviterName  string
 	InviteeEmail string
 	ExpiresAt    string
+	ConnectionID string
 	raw          interface{}
 }
 
 func (v *invitationsView) AsTableHeader() []string {
-	return []string{"ID", "Client ID", "Connection ID", "Inviter Name", "Invitee Email", "Expires At"}
+	return []string{"ID", "Client ID", "Inviter Name", "Invitee Email", "Expires At", "Connection ID"}
 }
 
 func (v *invitationsView) AsTableRow() []string {
-	return []string{ansi.Faint(v.ID), v.ClientID, v.ConnectionID, v.InviterName, v.InviteeEmail, v.ExpiresAt}
+	return []string{ansi.Faint(v.ID), v.ClientID, v.InviterName, v.InviteeEmail, v.ExpiresAt, v.ConnectionID}
 }
 
 func (v *invitationsView) KeyValues() [][]string {
 	return [][]string{
 		{"ID", ansi.Faint(v.ID)},
 		{"CLIENT ID", v.ClientID},
-		{"CONNECTION ID", v.ConnectionID},
 		{"INVITER NAME", v.InviterName},
 		{"INVITEE EMAIL", v.InviteeEmail},
 		{"EXPIRES AT", v.ExpiresAt},
+		{"CONNECTION ID", v.ConnectionID},
 	}
 }
 

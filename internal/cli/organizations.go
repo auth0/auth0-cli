@@ -125,9 +125,10 @@ var (
 	}
 
 	connectionID = Flag{
-		Name:     "Connection ID",
-		LongForm: "connection-id",
-		Help:     "The id of the connection to force invitee to authenticate with.",
+		Name:         "Connection ID",
+		LongForm:     "connection-id",
+		Help:         "The id of the connection to force invitee to authenticate with.",
+		AlwaysPrompt: true,
 	}
 
 	ttlSeconds = Flag{

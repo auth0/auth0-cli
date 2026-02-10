@@ -10,39 +10,39 @@ import (
 func Test_invitationsView_AsTableHeader(t *testing.T) {
 	mockInvitationsView := invitationsView{}
 
-	assert.Equal(t, []string{"ID", "Client ID", "Connection ID", "Inviter Name", "Invitee Email", "Expires At"}, mockInvitationsView.AsTableHeader())
+	assert.Equal(t, []string{"ID", "Client ID", "Inviter Name", "Invitee Email", "Expires At", "Connection ID"}, mockInvitationsView.AsTableHeader())
 }
 
 func Test_invitationsView_AsTableRow(t *testing.T) {
 	mockInvitationsView := invitationsView{
 		ID:           "invitation-id",
 		ClientID:     "client-id",
-		ConnectionID: "connection-id",
 		InviterName:  "inviter-name",
 		InviteeEmail: "invitee-email",
 		ExpiresAt:    "expires-at",
+		ConnectionID: "connection-id",
 	}
 
-	assert.Equal(t, []string{"invitation-id", "client-id", "connection-id", "inviter-name", "invitee-email", "expires-at"}, mockInvitationsView.AsTableRow())
+	assert.Equal(t, []string{"invitation-id", "client-id", "inviter-name", "invitee-email", "expires-at", "connection-id"}, mockInvitationsView.AsTableRow())
 }
 
 func Test_invitationsView_KeyValues(t *testing.T) {
 	mockInvitationsView := invitationsView{
 		ID:           "invitation-id",
 		ClientID:     "client-id",
-		ConnectionID: "connection-id",
 		InviterName:  "inviter-name",
 		InviteeEmail: "invitee-email",
 		ExpiresAt:    "expires-at",
+		ConnectionID: "connection-id",
 	}
 
 	expected := [][]string{
 		{"ID", "invitation-id"},
 		{"CLIENT ID", "client-id"},
-		{"CONNECTION ID", "connection-id"},
 		{"INVITER NAME", "inviter-name"},
 		{"INVITEE EMAIL", "invitee-email"},
 		{"EXPIRES AT", "expires-at"},
+		{"CONNECTION ID", "connection-id"},
 	}
 
 	assert.Equal(t, expected, mockInvitationsView.KeyValues())
@@ -74,10 +74,10 @@ func Test_makeInvitationsView(t *testing.T) {
 
 	assert.Equal(t, "invitation-id", view.ID)
 	assert.Equal(t, "client-id", view.ClientID)
-	assert.Equal(t, "connection-id", view.ConnectionID)
 	assert.Equal(t, "inviter-name", view.InviterName)
 	assert.Equal(t, "invitee-email", view.InviteeEmail)
 	assert.Equal(t, "expires-at", view.ExpiresAt)
+	assert.Equal(t, "connection-id", view.ConnectionID)
 	assert.Equal(t, mockInvitation, view.raw)
 }
 
