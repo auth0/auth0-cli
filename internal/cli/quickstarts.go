@@ -464,6 +464,11 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
+			normalizedType := strings.ToLower(inputs.Type)
+			if normalizedType != "vite" && normalizedType != "nextjs" {
+				return fmt.Errorf("unsupported quickstart type: %s (supported types: vite, nextjs)", inputs.Type)
+			}
+
 			if err := qsType.Select(cmd, &inputs.Type, []string{"vite (React, Svelte, Vue, Vanilla JS)", "nextjs"}, nil); err != nil {
 				return err
 			}
@@ -498,6 +503,10 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				inputs.Port = defaultPort
 			}
 
+			if inputs.Port < 1024 || inputs.Port > 65535 {
+				return fmt.Errorf("invalid port number: %d (must be between 1024 and 65535)", inputs.Port)
+			}
+
 			baseURL = fmt.Sprintf("http://localhost:%d", inputs.Port)
 
 			// Configure URLs based on app type.
@@ -517,7 +526,7 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 			oidcConformant := true
 			algorithm := "RS256"
 			metadata := map[string]interface{}{
-				"created_by": "quickstart-docs-manual",
+				"created_by": "quickstart-docs-manual-cli",
 			}
 
 			a := &management.Client{
@@ -570,12 +579,23 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				envContent.WriteString(fmt.Sprintf("APP_BASE_URL=%s\n", baseURL))
 			}
 
-			if err := os.WriteFile(envFileName, []byte(envContent.String()), 0600); err != nil {
-				return fmt.Errorf("failed to write .env file: %w", err)
+			message := fmt.Sprintf("Proceed to overwrite '%s' file? : ", envFileName)
+			if shouldCancelOverwrite(cli, cmd, envFileName, message) {
+				cli.renderer.Warnf("Aborted creating %s file. Please create it manually using the following content:\n\n"+
+					"─────────────────────────────────────────────────────────────\n"+"%s"+
+					"─────────────────────────────────────────────────────────────\n", envFileName, envContent.String())
+			} else {
+				if err = os.WriteFile(envFileName, []byte(envContent.String()), 0600); err != nil {
+					return fmt.Errorf("failed to write .env file: %w", err)
+				}
+
+				cli.renderer.Infof("%s file created successfully with your Auth0 configuration\n", envFileName)
 			}
 
-			cli.renderer.Infof("%s file created with your Auth0 details:", envFileName)
-			cli.renderer.Output(envContent.String())
+			cli.renderer.Infof("Next steps: \n"+
+				"       1. Install dependencies: npm install \n"+
+				"       2. Start your application: npm run dev\n"+
+				"       3. Open your browser at %s", baseURL)
 
 			return nil
 		},
