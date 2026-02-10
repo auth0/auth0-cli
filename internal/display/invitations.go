@@ -12,17 +12,16 @@ type invitationsView struct {
 	ConnectionID string
 	InviterName  string
 	InviteeEmail string
-	CreatedAt    string
 	ExpiresAt    string
 	raw          interface{}
 }
 
 func (v *invitationsView) AsTableHeader() []string {
-	return []string{"ID", "Client ID", "Connection ID", "Inviter Name", "Invitee Email", "Created At", "Expires At"}
+	return []string{"ID", "Client ID", "Connection ID", "Inviter Name", "Invitee Email", "Expires At"}
 }
 
 func (v *invitationsView) AsTableRow() []string {
-	return []string{ansi.Faint(v.ID), v.ClientID, v.ConnectionID, v.InviterName, v.InviteeEmail, v.CreatedAt, v.ExpiresAt}
+	return []string{ansi.Faint(v.ID), v.ClientID, v.ConnectionID, v.InviterName, v.InviteeEmail, v.ExpiresAt}
 }
 
 func (v *invitationsView) KeyValues() [][]string {
@@ -32,7 +31,6 @@ func (v *invitationsView) KeyValues() [][]string {
 		{"CONNECTION ID", v.ConnectionID},
 		{"INVITER NAME", v.InviterName},
 		{"INVITEE EMAIL", v.InviteeEmail},
-		{"CREATED AT", v.CreatedAt},
 		{"EXPIRES AT", v.ExpiresAt},
 	}
 }
@@ -74,7 +72,6 @@ func makeInvitationsView(invitation management.OrganizationInvitation) *invitati
 		ID:           invitation.GetID(),
 		InviterName:  invitation.GetInviter().GetName(),
 		InviteeEmail: invitation.GetInvitee().GetEmail(),
-		CreatedAt:    invitation.GetCreatedAt(),
 		ExpiresAt:    invitation.GetExpiresAt(),
 		ClientID:     invitation.GetClientID(),
 		ConnectionID: invitation.GetConnectionID(),
