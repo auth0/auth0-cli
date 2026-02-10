@@ -11,11 +11,10 @@ tests:
     command: auth0 quickstarts list --json
     exit-code: 0
 
-  # Skipping download quickstart test (Should be enabled back once quickstart endpoint issue is fixed.)
-  # 002 - download quickstart:
-  #   command: auth0 qs download $(./test/integration/scripts/get-quickstart-app-id.sh) --stack "React Native" --no-color --force
-  #   exit-code: 0
-  #   stderr:
-  #     contains:
-  #       - "Quickstart sample successfully downloaded at "
-  #       - "Hint: Start with `cd integration-test-app-qs/00-"
+  002 - download quickstart:
+    command: auth0 qs download $(./test/integration/scripts/get-quickstart-app-id.sh) --stack "React Native" --no-color --force
+    exit-code: 0
+    stderr:
+      contains:
+        - "Quickstart sample successfully downloaded at "
+        - "Hint: Start with `cd integration-test-app-qs/00-"
