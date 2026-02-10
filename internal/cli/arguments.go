@@ -79,7 +79,7 @@ func (a *Argument) PickMany(cmd *cobra.Command, result *[]string, fn pickerOptio
 	}
 
 	var values []string
-	if err := askMultiSelect(a, &values, false, opts.labels()...); err != nil {
+	if err := askMultiSelect(a, &values, opts.labels()...); err != nil {
 		return err
 	}
 

@@ -98,11 +98,7 @@ func (f *Flag) PickU(cmd *cobra.Command, result *string, fn pickerOptionsFunc) e
 }
 
 func (f *Flag) PickMany(cmd *cobra.Command, result *[]string, fn pickerOptionsFunc) error {
-	return pickManyFlag(cmd, f, result, fn, false)
-}
-
-func (f *Flag) PickManyU(cmd *cobra.Command, result *[]string, fn pickerOptionsFunc) error {
-	return pickManyFlag(cmd, f, result, fn, true)
+	return pickManyFlag(cmd, f, result, fn)
 }
 
 func (f *Flag) OpenEditor(cmd *cobra.Command, value *string, defaultValue, filename string, infoFn func()) error {
@@ -248,8 +244,8 @@ func pickFlag(cmd *cobra.Command, f *Flag, result *string, fn pickerOptionsFunc,
 	return nil
 }
 
-func pickManyFlag(cmd *cobra.Command, f *Flag, result *[]string, fn pickerOptionsFunc, isUpdate bool) error {
-	if shouldAsk(cmd, f, isUpdate) {
+func pickManyFlag(cmd *cobra.Command, f *Flag, result *[]string, fn pickerOptionsFunc) error {
+	if shouldAsk(cmd, f, false) {
 		var opts pickerOptions
 		err := ansi.Waiting(func() error {
 			var err error
@@ -262,7 +258,7 @@ func pickManyFlag(cmd *cobra.Command, f *Flag, result *[]string, fn pickerOption
 		}
 
 		var values []string
-		if err := askMultiSelect(f, &values, isUpdate, opts.labels()...); err != nil {
+		if err := askMultiSelect(f, &values, opts.labels()...); err != nil {
 			return err
 		}
 
