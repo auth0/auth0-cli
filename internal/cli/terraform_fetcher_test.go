@@ -1694,7 +1694,7 @@ func TestPromptCustomTextResourceFetcher_FetchData(t *testing.T) {
 			},
 		}
 
-		promptTypes := []string{"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password", "consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa", "status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common"}
+		promptTypes := []string{"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password", "consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa", "status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common", "email-identifier-challenge", "passkeys", "login-passwordless", "phone-identifier-enrollment", "phone-identifier-challenge", "custom-form", "customized-consent", "logout", "captcha", "brute-force-protection"}
 
 		expectedData := importDataList{}
 		for _, enabledLocale := range mockEnabledLocales {
@@ -2204,5 +2204,38 @@ func TestUserAttributeProfileResourceFetcher(t *testing.T) {
 		assert.Len(t, data, 1)
 		assert.Equal(t, data[0].ResourceName, "auth0_user_attribute_profile.user_attribute_profile_1")
 		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
+func Test_promptScreenPartialResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves screen partial prompts data", func(t *testing.T) {
+		fetcher := promptScreenPartialResourceFetcher{}
+
+		original := screenPartialPromptToScreenMap
+		defer func() { screenPartialPromptToScreenMap = original }()
+
+		screenPartialPromptToScreenMap = map[string][]string{
+			"login":              {"login"},
+			"login-passwordless": {"login-passwordless-sms-otp", "login-passwordless-email-code"},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_prompt_screen_partial.login_login",
+				ImportID:     "login:login",
+			},
+			{
+				ResourceName: "auth0_prompt_screen_partial.login_passwordless_login_passwordless_sms_otp",
+				ImportID:     "login-passwordless:login-passwordless-sms-otp",
+			},
+			{
+				ResourceName: "auth0_prompt_screen_partial.login_passwordless_login_passwordless_email_code",
+				ImportID:     "login-passwordless:login-passwordless-email-code",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, expectedData, data)
 	})
 }

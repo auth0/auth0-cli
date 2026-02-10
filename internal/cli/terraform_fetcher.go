@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_branding_theme", "auth0_phone_provider", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_log_stream", "auth0_network_acl", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_prompt_screen_renderer", "auth0_resource_server", "auth0_role", "auth0_self_service_profile", "auth0_tenant", "auth0_trigger_actions", "auth0_user_attribute_profile"}
+	defaultResources = []string{"auth0_action", "auth0_attack_protection", "auth0_branding", "auth0_branding_theme", "auth0_phone_provider", "auth0_client", "auth0_client_grant", "auth0_connection", "auth0_custom_domain", "auth0_flow", "auth0_flow_vault_connection", "auth0_form", "auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_log_stream", "auth0_network_acl", "auth0_organization", "auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_prompt_screen_renderer", "auth0_resource_server", "auth0_role", "auth0_self_service_profile", "auth0_tenant", "auth0_trigger_actions", "auth0_user_attribute_profile", "auth0_prompt_screen_partial"}
 )
 
 type (
@@ -106,6 +106,8 @@ type (
 	promptCustomTextResourceFetcherResourceFetcher struct {
 		api *auth0.API
 	}
+
+	promptScreenPartialResourceFetcher struct{}
 
 	roleResourceFetcher struct {
 		api *auth0.API
@@ -528,7 +530,8 @@ func (f *promptResourceFetcher) FetchData(_ context.Context) (importDataList, er
 	}, nil
 }
 
-var customTextPromptTypes = []string{"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password", "consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa", "status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common"}
+// Referred from 'prompt' path options in: https://auth0.com/docs/api/management/v2/prompts/get-custom-text-by-language
+var customTextPrompts = []string{"login", "login-id", "login-password", "login-email-verification", "signup", "signup-id", "signup-password", "reset-password", "consent", "mfa-push", "mfa-otp", "mfa-voice", "mfa-phone", "mfa-webauthn", "mfa-sms", "mfa-email", "mfa-recovery-code", "mfa", "status", "device-flow", "email-verification", "email-otp-challenge", "organizations", "invitation", "common", "email-identifier-challenge", "passkeys", "login-passwordless", "phone-identifier-enrollment", "phone-identifier-challenge", "custom-form", "customized-consent", "logout", "captcha", "brute-force-protection"}
 
 func (f *promptCustomTextResourceFetcherResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	tenant, err := f.api.Tenant.Read(ctx)
@@ -538,10 +541,37 @@ func (f *promptCustomTextResourceFetcherResourceFetcher) FetchData(ctx context.C
 
 	var data importDataList
 	for _, language := range tenant.GetEnabledLocales() {
-		for _, promptType := range customTextPromptTypes {
+		for _, prompt := range customTextPrompts {
 			data = append(data, importDataItem{
-				ResourceName: "auth0_prompt_custom_text." + sanitizeResourceName(language+"_"+promptType),
-				ImportID:     promptType + "::" + language,
+				ResourceName: "auth0_prompt_custom_text." + sanitizeResourceName(language+"_"+prompt),
+				ImportID:     prompt + "::" + language,
+			})
+		}
+	}
+
+	return data, nil
+}
+
+// Referred from prompt 'path' options in: https://auth0.com/docs/api/management/v2/prompts/get-partials
+var screenPartialPromptToScreenMap = map[string][]string{
+	"login":              {"login"},
+	"login-id":           {"login-id"},
+	"login-password":     {"login-password"},
+	"login-passwordless": {"login-passwordless-sms-otp", "login-passwordless-email-code"},
+	"signup":             {"signup"},
+	"signup-id":          {"signup-id"},
+	"signup-password":    {"signup-password"},
+	"customized-consent": {"customized-consent"},
+}
+
+func (f *promptScreenPartialResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	for prompt, screens := range screenPartialPromptToScreenMap {
+		for _, screen := range screens {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_prompt_screen_partial." + sanitizeResourceName(prompt+"_"+screen),
+				ImportID:     prompt + ":" + screen,
 			})
 		}
 	}
