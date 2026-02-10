@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for managing organization invitations via `auth0 orgs invitations` (list, show, create, delete) [#1424]
 - New `auth0 quickstarts setup` command to scaffold Auth0 apps with `.env` generation (supports `vite`, `nextjs`) [#1428]
 - Support for `auth0_prompt_screen_partial` in `auth0 tf generate` [#1426]
-- Add missing custom text prompts: `email-identifier-challenge`, `passkeys`, `login-passwordless`, `phone-identifier-enrollment`, `phone-identifier-challenge`, `custom-form`, `customized-consent`, `logout`, `captcha`, `brute-force-protection` [#1426]
+- Add missing custom text prompts in `auth0 tf generate -r auth0_prompt_custom_text` [#1426]
 - Add `pre-login-organization-picker` screen to organizations prompt [#1426]
 - Add required scopes for `organization_discovery_domains`, `self_service_profiles`, `user_attribute_profiles` [#1426]
 
