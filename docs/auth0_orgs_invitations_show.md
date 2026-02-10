@@ -7,9 +7,9 @@ has_toc: false
 
 Display information about an organization invitation.
 
-To show interactively, use `auth0 orgs invs show` with no arguments.
+To show interactively, use `auth0 orgs invs show` with no flags.
 
-To show non-interactively, supply the organization id and invitation id through the arguments.
+To show non-interactively, supply the organization id and invitation id through the flags.
 
 ## Usage
 ```
@@ -20,17 +20,20 @@ auth0 orgs invitations show [flags]
 
 ```
   auth0 orgs invs show
-  auth0 orgs invs show <org-id>
-  auth0 orgs invs show <org-id> <invitation-id>
-  auth0 orgs invs show <org-id> <invitation-id> --json
+  auth0 orgs invs show --org-id <org-id>
+  auth0 orgs invs show --org-id <org-id> --invitation-id <invitation-id>
+  auth0 orgs invs show --org-id <org-id> --invitation-id <invitation-id> --json
+  auth0 orgs invs show --org-id <org-id> --i <invitation-id> --json-compact
 ```
 
 
 ## Flags
 
 ```
-      --json           Output in json format.
-      --json-compact   Output in compact json format.
+  -i, --invitation-id string   ID of the invitation.
+      --json                   Output in json format.
+      --json-compact           Output in compact json format.
+      --org-id string          ID of the organization.
 ```
 
 

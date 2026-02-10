@@ -32,6 +32,21 @@ var (
 		Help: "ID of the invitation.",
 	}
 
+	organizationIDFlag = Flag{
+		Name:       "Organization ID",
+		LongForm:   "org-id",
+		Help:       "ID of the organization.",
+		IsRequired: true,
+	}
+
+	invitationIDFlag = Flag{
+		Name:       "Invitation ID",
+		LongForm:   "invitation-id",
+		ShortForm:  "i",
+		Help:       "ID of the invitation.",
+		IsRequired: true,
+	}
+
 	organizationName = Flag{
 		Name:       "Name",
 		LongForm:   "name",
@@ -145,7 +160,7 @@ var (
 		Name:      "App Metadata",
 		LongForm:  "app-metadata",
 		ShortForm: "a",
-		Help:      "Data related to the user that does affect the application's core functionality, formatted as JSON",
+		Help:      "Data related to the user that affects the application's core functionality, formatted as JSON",
 	}
 
 	userMetadata = Flag{
@@ -1017,7 +1032,7 @@ func invitationsOrganizationCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"invs"},
 		Short:   "Manage invitations of an organization",
 		Long: "Manage invitations of an organization. " +
-			"Invitations allow you to add users to an organization by sending them an email with a link to join. " +
+			"Invitations enable adding users to an organization by sending an email containing the join link. " +
 			"To learn more, read [Invite Members to Organizations](https://auth0.com/docs/manage-users/organizations/configure-organizations/invite-members).",
 	}
 
@@ -1038,32 +1053,25 @@ func showInvitationOrganizationCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "show",
-		Args:  cobra.MaximumNArgs(2),
+		Args:  cobra.NoArgs,
 		Short: "Show an organization invitation",
 		Long: "Display information about an organization invitation.\n\n" +
-			"To show interactively, use `auth0 orgs invs show` with no arguments.\n\n" +
-			"To show non-interactively, supply the organization id and invitation id through the arguments.",
+			"To show interactively, use `auth0 orgs invs show` with no flags.\n\n" +
+			"To show non-interactively, supply the organization id and invitation id through the flags.",
 		Example: `  auth0 orgs invs show
-  auth0 orgs invs show <org-id>
-  auth0 orgs invs show <org-id> <invitation-id>
-  auth0 orgs invs show <org-id> <invitation-id> --json`,
+  auth0 orgs invs show --org-id <org-id>
+  auth0 orgs invs show --org-id <org-id> --invitation-id <invitation-id>
+  auth0 orgs invs show --org-id <org-id> --invitation-id <invitation-id> --json
+  auth0 orgs invs show --org-id <org-id> --i <invitation-id> --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				if err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
-					return err
-				}
-			} else {
-				inputs.OrgID = args[0]
+			if err := organizationIDFlag.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
+				return err
 			}
 
-			if len(args) <= 1 {
-				if err := invitationID.Pick(cmd, &inputs.InvitationID, func(ctx context.Context) (pickerOptions, error) {
-					return cli.invitationPickerOptions(ctx, inputs.OrgID)
-				}); err != nil {
-					return err
-				}
-			} else {
-				inputs.InvitationID = args[1]
+			if err := invitationIDFlag.Pick(cmd, &inputs.InvitationID, func(ctx context.Context) (pickerOptions, error) {
+				return cli.invitationPickerOptions(ctx, inputs.OrgID)
+			}); err != nil {
+				return err
 			}
 
 			var invitation *management.OrganizationInvitation
@@ -1079,6 +1087,8 @@ func showInvitationOrganizationCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	organizationIDFlag.RegisterString(cmd, &inputs.OrgID, "")
+	invitationIDFlag.RegisterString(cmd, &inputs.InvitationID, "")
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
@@ -1094,28 +1104,24 @@ func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
-		Args:    cobra.MaximumNArgs(1),
+		Args:    cobra.NoArgs,
 		Short:   "List invitations of an organization",
 		Long: "List the invitations of an organization.\n\n" +
-			"To list interactively, use `auth0 orgs invs list` with no arguments.\n\n" +
-			"To list non-interactively, supply the organization id through the arguments.",
+			"To list interactively, use `auth0 orgs invs list` with no flags.\n\n" +
+			"To list non-interactively, supply the organization id through the flags.",
 		Example: `  auth0 orgs invs list
-  auth0 orgs invs ls <org-id>
-  auth0 orgs invs list <org-id> --number 100
-  auth0 orgs invs ls <org-id> -n 50 --json
-  auth0 orgs invs ls <org-id> -n 500 --json-compact
-  auth0 orgs invs ls <org-id> --csv`,
+  auth0 orgs invs ls --org-id <org-id>
+  auth0 orgs invs list --org-id <org-id> --number 100
+  auth0 orgs invs ls --org-id <org-id> -n 50 --json
+  auth0 orgs invs ls --org-id <org-id> -n 500 --json-compact
+  auth0 orgs invs ls --org-id <org-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
 				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
 			}
 
-			if len(args) == 0 {
-				if err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
-					return err
-				}
-			} else {
-				inputs.OrgID = args[0]
+			if err := organizationIDFlag.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
+				return err
 			}
 
 			invitations, err := cli.getOrgInvitations(cmd.Context(), inputs.OrgID, inputs.Number)
@@ -1128,6 +1134,7 @@ func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	organizationIDFlag.RegisterString(cmd, &inputs.OrgID, "")
 	organizationNumber.Help = "Number of organization invitations to retrieve. Minimum 1, maximum 1000."
 	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
@@ -1195,24 +1202,20 @@ func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create",
-		Args:  cobra.MaximumNArgs(1),
+		Args:  cobra.NoArgs,
 		Short: "Create a new invitation to an organization",
 		Long: "Create a new invitation to an organization with required and optional parameters.\n\n" +
-			"To create interactively, use `auth0 orgs invs create` with no arguments and answer the prompts.\n\n" +
-			"To create non-interactively, supply the organization id through the arguments and the other parameters through flags.",
+			"To create interactively, use `auth0 orgs invs create` with no flags and answer the prompts.\n\n" +
+			"To create non-interactively, supply the organization id and the other parameters through flags.",
 		Example: `  auth0 orgs invs create
-  auth0 orgs invs create <org-id>
-  auth0 orgs invs create <org-id> --inviter-name "Inviter Name" --invitee-email "invitee@example.com" 
-  auth0 orgs invs create <org-id> --invitee-email "invitee@example.com" --client-id "client_id"
-  auth0 orgs invs create <org-id> -n "Inviter Name" -e "invitee@example.com" --client-id "client_id" -connection-id "connection_id" -t 86400
-  auth0 orgs invs create <org-id> --json --inviter-name "Inviter Name"`,
+  auth0 orgs invs create --org-id <org-id>
+  auth0 orgs invs create --org-id <org-id> --inviter-name "Inviter Name" --invitee-email "invitee@example.com"
+  auth0 orgs invs create --org-id <org-id> --invitee-email "invitee@example.com" --client-id "client_id"
+  auth0 orgs invs create --org-id <org-id> -n "Inviter Name" -e "invitee@example.com" --client-id "client_id" --connection-id "connection_id" -t 86400
+  auth0 orgs invs create --org-id <org-id> --json --inviter-name "Inviter Name"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				if err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
-					return err
-				}
-			} else {
-				inputs.OrgID = args[0]
+			if err := organizationIDFlag.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
+				return err
 			}
 			if err := clientID.Pick(cmd, &inputs.ClientID, cli.appPickerOptions()); err != nil {
 				return err
@@ -1263,12 +1266,13 @@ func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	organizationIDFlag.RegisterString(cmd, &inputs.OrgID, "")
 	inviterName.RegisterString(cmd, &inputs.InviterName, "")
 	inviteeEmail.RegisterString(cmd, &inputs.InviteeEmail, "")
 	clientID.RegisterString(cmd, &inputs.ClientID, "")
 	connectionID.RegisterString(cmd, &inputs.ConnectionID, "")
 	ttlSeconds.RegisterInt(cmd, &inputs.TTLSeconds, 0)
-	sendInvitationEmail.RegisterBool(cmd, &inputs.SendInvitationEmail, true)
+	sendInvitationEmail.RegisterBool(cmd, &inputs.SendInvitationEmail, false)
 	roles.RegisterStringSlice(cmd, &inputs.Roles, nil)
 	applicationMetadata.RegisterString(cmd, &inputs.AppMetadata, "")
 	userMetadata.RegisterString(cmd, &inputs.UserMetadata, "")

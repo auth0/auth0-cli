@@ -7,9 +7,9 @@ has_toc: false
 
 List the invitations of an organization.
 
-To list interactively, use `auth0 orgs invs list` with no arguments.
+To list interactively, use `auth0 orgs invs list` with no flags.
 
-To list non-interactively, supply the organization id through the arguments.
+To list non-interactively, supply the organization id through the flags.
 
 ## Usage
 ```
@@ -20,21 +20,22 @@ auth0 orgs invitations list [flags]
 
 ```
   auth0 orgs invs list
-  auth0 orgs invs ls <org-id>
-  auth0 orgs invs list <org-id> --number 100
-  auth0 orgs invs ls <org-id> -n 50 --json
-  auth0 orgs invs ls <org-id> -n 500 --json-compact
-  auth0 orgs invs ls <org-id> --csv
+  auth0 orgs invs ls --org-id <org-id>
+  auth0 orgs invs list --org-id <org-id> --number 100
+  auth0 orgs invs ls --org-id <org-id> -n 50 --json
+  auth0 orgs invs ls --org-id <org-id> -n 500 --json-compact
+  auth0 orgs invs ls --org-id <org-id> --csv
 ```
 
 
 ## Flags
 
 ```
-      --csv            Output in csv format.
-      --json           Output in json format.
-      --json-compact   Output in compact json format.
-  -n, --number int     Number of organization invitations to retrieve. Minimum 1, maximum 1000. (default 100)
+      --csv             Output in csv format.
+      --json            Output in json format.
+      --json-compact    Output in compact json format.
+  -n, --number int      Number of organization invitations to retrieve. Minimum 1, maximum 1000. (default 100)
+      --org-id string   ID of the organization.
 ```
 
 
