@@ -1040,7 +1040,7 @@ func showInvitationOrganizationCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(2),
 		Short: "Show an organization invitation",
-		Long:  "Display information about an organization invitation.\n\n" +
+		Long: "Display information about an organization invitation.\n\n" +
 			"To show interactively, use `auth0 orgs invs show` with no arguments.\n\n" +
 			"To show non-interactively, supply the organization id and invitation id through the arguments.",
 		Example: `  auth0 orgs invs show
@@ -1087,7 +1087,7 @@ func showInvitationOrganizationCmd(cli *cli) *cobra.Command {
 
 func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID     string
+		OrgID  string
 		Number int
 	}
 
@@ -1096,7 +1096,7 @@ func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "List invitations of an organization",
-		Long:    "List the invitations of an organization.\n\n" +
+		Long: "List the invitations of an organization.\n\n" +
 			"To list interactively, use `auth0 orgs invs list` with no arguments.\n\n" +
 			"To list non-interactively, supply the organization id through the arguments.",
 		Example: `  auth0 orgs invs list
@@ -1111,19 +1111,18 @@ func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
 			}
 
 			if len(args) == 0 {
-				if err := organizationID.Pick(cmd, &inputs.ID, cli.organizationPickerOptions); err != nil {
+				if err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
 					return err
 				}
 			} else {
-				inputs.ID = args[0]
+				inputs.OrgID = args[0]
 			}
 
-			invitations, err := cli.getOrgInvitationsWithSpinner(cmd.Context(), inputs.ID, inputs.Number)
+			invitations, err := cli.getOrgInvitations(cmd.Context(), inputs.OrgID, inputs.Number)
 			if err != nil {
 				return err
 			}
 
-			sortInvitations(invitations)
 			cli.renderer.InvitationsList(invitations)
 			return nil
 		},
@@ -1140,18 +1139,6 @@ func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func (cli *cli) getOrgInvitationsWithSpinner(context context.Context, orgID string, number int,
-) ([]management.OrganizationInvitation, error) {
-	var invitations []management.OrganizationInvitation
-
-	err := ansi.Waiting(func() (err error) {
-		invitations, err = cli.getOrgInvitations(context, orgID, number)
-		return err
-	})
-
-	return invitations, err
-}
-
 func (cli *cli) getOrgInvitations(
 	context context.Context,
 	orgID string,
@@ -1160,6 +1147,8 @@ func (cli *cli) getOrgInvitations(
 	list, err := getWithPagination(
 		number,
 		func(opts ...management.RequestOption) (result []interface{}, hasNext bool, apiErr error) {
+			// Add sort option to existing opts.
+			opts = append(opts, management.Sort("created_at:-1"))
 			invitations, apiErr := cli.api.Organization.Invitations(context, url.PathEscape(orgID), opts...)
 			if apiErr != nil {
 				return nil, false, apiErr
@@ -1185,12 +1174,6 @@ func (cli *cli) getOrgInvitations(
 	return typedList, nil
 }
 
-func sortInvitations(invitations []management.OrganizationInvitation) {
-	sort.Slice(invitations, func(i, j int) bool {
-		return strings.ToLower(invitations[i].GetCreatedAt()) < strings.ToLower(invitations[j].GetCreatedAt())
-	})
-}
-
 func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		OrgID               string
@@ -1209,7 +1192,7 @@ func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
 		Use:   "create",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Create a new invitation to an organization",
-		Long:  "Create a new invitation to an organization with required and optional parameters.\n\n" +
+		Long: "Create a new invitation to an organization with required and optional parameters.\n\n" +
 			"To create interactively, use `auth0 orgs invs create` with no arguments and answer the prompts.\n\n" +
 			"To create non-interactively, supply the organization id through the arguments and the other parameters through flags.",
 		Example: `  auth0 orgs invs create
