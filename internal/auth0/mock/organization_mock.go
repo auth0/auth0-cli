@@ -93,6 +93,25 @@ func (mr *MockOrganizationAPIMockRecorder) CreateDiscoveryDomain(ctx, id, d inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDiscoveryDomain", reflect.TypeOf((*MockOrganizationAPI)(nil).CreateDiscoveryDomain), varargs...)
 }
 
+// CreateInvitation mocks base method.
+func (m *MockOrganizationAPI) CreateInvitation(ctx context.Context, id string, i *management.OrganizationInvitation, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id, i}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CreateInvitation", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateInvitation indicates an expected call of CreateInvitation.
+func (mr *MockOrganizationAPIMockRecorder) CreateInvitation(ctx, id, i interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id, i}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInvitation", reflect.TypeOf((*MockOrganizationAPI)(nil).CreateInvitation), varargs...)
+}
+
 // Delete mocks base method.
 func (m *MockOrganizationAPI) Delete(ctx context.Context, id string, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
@@ -129,6 +148,25 @@ func (mr *MockOrganizationAPIMockRecorder) DeleteDiscoveryDomain(ctx, id, domain
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, id, domainID}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDiscoveryDomain", reflect.TypeOf((*MockOrganizationAPI)(nil).DeleteDiscoveryDomain), varargs...)
+}
+
+// DeleteInvitation mocks base method.
+func (m *MockOrganizationAPI) DeleteInvitation(ctx context.Context, id, invitationID string, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id, invitationID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteInvitation", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteInvitation indicates an expected call of DeleteInvitation.
+func (mr *MockOrganizationAPIMockRecorder) DeleteInvitation(ctx, id, invitationID interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id, invitationID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteInvitation", reflect.TypeOf((*MockOrganizationAPI)(nil).DeleteInvitation), varargs...)
 }
 
 // DiscoveryDomain mocks base method.
@@ -169,6 +207,46 @@ func (mr *MockOrganizationAPIMockRecorder) DiscoveryDomains(ctx, id interface{},
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DiscoveryDomains", reflect.TypeOf((*MockOrganizationAPI)(nil).DiscoveryDomains), varargs...)
+}
+
+// Invitation mocks base method.
+func (m *MockOrganizationAPI) Invitation(ctx context.Context, id, invitationID string, opts ...management.RequestOption) (*management.OrganizationInvitation, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id, invitationID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Invitation", varargs...)
+	ret0, _ := ret[0].(*management.OrganizationInvitation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Invitation indicates an expected call of Invitation.
+func (mr *MockOrganizationAPIMockRecorder) Invitation(ctx, id, invitationID interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id, invitationID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Invitation", reflect.TypeOf((*MockOrganizationAPI)(nil).Invitation), varargs...)
+}
+
+// Invitations mocks base method.
+func (m *MockOrganizationAPI) Invitations(ctx context.Context, id string, opts ...management.RequestOption) (*management.OrganizationInvitationList, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Invitations", varargs...)
+	ret0, _ := ret[0].(*management.OrganizationInvitationList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Invitations indicates an expected call of Invitations.
+func (mr *MockOrganizationAPIMockRecorder) Invitations(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Invitations", reflect.TypeOf((*MockOrganizationAPI)(nil).Invitations), varargs...)
 }
 
 // List mocks base method.

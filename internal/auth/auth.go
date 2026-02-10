@@ -149,6 +149,7 @@ var RequiredScopes = []string{
 	"read:event_streams", "create:event_streams", "update:event_streams", "delete:event_streams",
 	"read:network_acls", "create:network_acls", "update:network_acls", "delete:network_acls",
 	"read:token_exchange_profiles", "create:token_exchange_profiles", "update:token_exchange_profiles", "delete:token_exchange_profiles",
+	"read:organization_invitations", "create:organization_invitations", "delete:organization_invitations",
 	"read:organization_discovery_domains", "read:self_service_profiles", "read:user_attribute_profiles",
 }
 

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -22,7 +23,7 @@ const (
 
 var (
 	organizationID = Argument{
-		Name: "ID",
+		Name: "Org ID",
 		Help: "ID of the organization.",
 	}
 
@@ -84,6 +85,86 @@ var (
 		LongForm:  "number",
 		ShortForm: "n",
 	}
+
+	organizationIDFlag = Flag{
+		Name:       "Organization ID",
+		LongForm:   "org-id",
+		Help:       "ID of the organization.",
+		IsRequired: true,
+	}
+
+	invitationID = Flag{
+		Name:       "Invitation ID",
+		LongForm:   "invitation-id",
+		ShortForm:  "i",
+		Help:       "ID of the invitation.",
+		IsRequired: true,
+	}
+
+	inviterName = Flag{
+		Name:       "Inviter Name",
+		LongForm:   "inviter-name",
+		ShortForm:  "n",
+		Help:       "Name of the person sending the invitation.",
+		IsRequired: true,
+	}
+
+	inviteeEmail = Flag{
+		Name:       "Invitee Email",
+		LongForm:   "invitee-email",
+		ShortForm:  "e",
+		Help:       "Email address of the person being invited.",
+		IsRequired: true,
+	}
+
+	clientID = Flag{
+		Name:       "Client ID",
+		LongForm:   "client-id",
+		Help:       "Auth0 client ID. Used to resolve the application's login initiation endpoint.",
+		IsRequired: true,
+	}
+
+	connectionID = Flag{
+		Name:         "Connection ID",
+		LongForm:     "connection-id",
+		Help:         "The id of the connection to force invitee to authenticate with.",
+		AlwaysPrompt: true,
+	}
+
+	ttlSeconds = Flag{
+		Name:      "TTL Seconds",
+		LongForm:  "ttl-sec",
+		ShortForm: "t",
+		Help:      "Number of seconds for which the invitation is valid before expiration.",
+	}
+
+	sendInvitationEmail = Flag{
+		Name:      "Send Invitation Email",
+		LongForm:  "send-email",
+		ShortForm: "s",
+		Help:      "Whether to send the invitation email to the invitee.",
+	}
+
+	roles = Flag{
+		Name:      "Roles",
+		LongForm:  "roles",
+		ShortForm: "r",
+		Help:      "Roles IDs to associate with the user.",
+	}
+
+	applicationMetadata = Flag{
+		Name:      "App Metadata",
+		LongForm:  "app-metadata",
+		ShortForm: "a",
+		Help:      "Data related to the user that affects the application's core functionality, formatted as JSON",
+	}
+
+	userMetadata = Flag{
+		Name:      "User Metadata",
+		LongForm:  "user-metadata",
+		ShortForm: "u",
+		Help:      "Data related to the user that does not affect the application's core functionality, formatted as JSON",
+	}
 )
 
 func organizationsCmd(cli *cli) *cobra.Command {
@@ -104,6 +185,7 @@ func organizationsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(openOrganizationCmd(cli))
 	cmd.AddCommand(membersOrganizationCmd(cli))
 	cmd.AddCommand(rolesOrganizationCmd(cli))
+	cmd.AddCommand(invitationsOrganizationCmd(cli))
 
 	return cmd
 }
@@ -745,6 +827,26 @@ func (cli *cli) organizationPickerOptions(ctx context.Context) (pickerOptions, e
 	return opts, nil
 }
 
+func (cli *cli) invitationPickerOptions(ctx context.Context, orgID string) (pickerOptions, error) {
+	orgInvitations, err := cli.api.Organization.Invitations(ctx, url.PathEscape(orgID))
+	if err != nil {
+		return nil, err
+	}
+
+	var opts pickerOptions
+	for _, inv := range orgInvitations.OrganizationInvitations {
+		id := inv.GetID()
+		label := fmt.Sprintf("%s %s", inv.Invitee.GetEmail(), ansi.Faint("("+id+")"))
+		opts = append(opts, pickerOption{value: id, label: label})
+	}
+
+	if len(opts) == 0 {
+		return nil, errors.New("there are currently no invitations to choose from")
+	}
+
+	return opts, nil
+}
+
 func formatOrganizationDetailsPath(id string) string {
 	if len(id) == 0 {
 		return ""
@@ -918,4 +1020,316 @@ func (cli *cli) getOrgRoleMembersWithSpinner(
 	})
 
 	return roleMembers, err
+}
+
+func invitationsOrganizationCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "invitations",
+		Aliases: []string{"invs"},
+		Short:   "Manage invitations of an organization",
+		Long: "Manage invitations of an organization. " +
+			"Invitations enable adding users to an organization by sending an email containing the join link. " +
+			"To learn more, read [Invite Members to Organizations](https://auth0.com/docs/manage-users/organizations/configure-organizations/invite-members).",
+	}
+
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(listInvitationsOrganizationCmd(cli))
+	cmd.AddCommand(showInvitationOrganizationCmd(cli))
+	cmd.AddCommand(createInvitationOrganizationCmd(cli))
+	cmd.AddCommand(deleteInvitationOrganizationCmd(cli))
+
+	return cmd
+}
+
+func showInvitationOrganizationCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		OrgID        string
+		InvitationID string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "show",
+		Args:  cobra.NoArgs,
+		Short: "Show an organization invitation",
+		Long: "Display information about an organization invitation.\n\n" +
+			"To show interactively, use `auth0 orgs invs show` with no flags.\n\n" +
+			"To show non-interactively, supply the organization id and invitation id through the flags.",
+		Example: `  auth0 orgs invs show
+  auth0 orgs invs show --org-id <org-id>
+  auth0 orgs invs show --org-id <org-id> --invitation-id <invitation-id>
+  auth0 orgs invs show --org-id <org-id> --invitation-id <invitation-id> --json
+  auth0 orgs invs show --org-id <org-id> --i <invitation-id> --json-compact`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := organizationIDFlag.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
+				return err
+			}
+
+			if err := invitationID.Pick(cmd, &inputs.InvitationID, func(ctx context.Context) (pickerOptions, error) {
+				return cli.invitationPickerOptions(ctx, inputs.OrgID)
+			}); err != nil {
+				return err
+			}
+
+			var invitation *management.OrganizationInvitation
+			if err := ansi.Waiting(func() (err error) {
+				invitation, err = cli.api.Organization.Invitation(cmd.Context(), inputs.OrgID, inputs.InvitationID)
+				return err
+			}); err != nil {
+				return fmt.Errorf("failed to read organization invitation %q: %w", inputs.InvitationID, err)
+			}
+
+			cli.renderer.InvitationsShow(*invitation)
+			return nil
+		},
+	}
+
+	organizationIDFlag.RegisterString(cmd, &inputs.OrgID, "")
+	invitationID.RegisterString(cmd, &inputs.InvitationID, "")
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+
+	return cmd
+}
+
+func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		OrgID  string
+		Number int
+	}
+
+	cmd := &cobra.Command{
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Args:    cobra.NoArgs,
+		Short:   "List invitations of an organization",
+		Long: "List the invitations of an organization.\n\n" +
+			"To list interactively, use `auth0 orgs invs list` with no flags.\n\n" +
+			"To list non-interactively, supply the organization id through the flags.",
+		Example: `  auth0 orgs invs list
+  auth0 orgs invs ls --org-id <org-id>
+  auth0 orgs invs list --org-id <org-id> --number 100
+  auth0 orgs invs ls --org-id <org-id> -n 50 --json
+  auth0 orgs invs ls --org-id <org-id> -n 500 --json-compact
+  auth0 orgs invs ls --org-id <org-id> --csv`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Number < 1 || inputs.Number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
+
+			if err := organizationIDFlag.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
+				return err
+			}
+
+			invitations, err := cli.getOrgInvitations(cmd.Context(), inputs.OrgID, inputs.Number)
+			if err != nil {
+				return err
+			}
+
+			cli.renderer.InvitationsList(invitations)
+			return nil
+		},
+	}
+
+	organizationIDFlag.RegisterString(cmd, &inputs.OrgID, "")
+	organizationNumber.Help = "Number of organization invitations to retrieve. Minimum 1, maximum 1000."
+	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+
+	return cmd
+}
+
+func (cli *cli) getOrgInvitations(
+	context context.Context,
+	orgID string,
+	number int,
+) ([]management.OrganizationInvitation, error) {
+	list, err := getWithPagination(
+		number,
+		func(opts ...management.RequestOption) (result []interface{}, hasNext bool, apiErr error) {
+			// Add sort option to existing opts.
+			opts = append(opts, management.Sort("created_at:-1"))
+			invitations, apiErr := cli.api.Organization.Invitations(context, url.PathEscape(orgID), opts...)
+			if apiErr != nil {
+				return nil, false, apiErr
+			}
+			var output []interface{}
+			for _, invitation := range invitations.OrganizationInvitations {
+				if invitation != nil {
+					output = append(output, *invitation)
+				}
+			}
+			// Invitations does not return total count yet, so we determine there is a next page if current page is not empty.
+			return output, !isEmptyInvitationList(invitations), nil
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list invitations of organization with ID %q: %w", orgID, err)
+	}
+
+	var typedList []management.OrganizationInvitation
+	for _, item := range list {
+		typedList = append(typedList, item.(management.OrganizationInvitation))
+	}
+
+	return typedList, nil
+}
+
+func isEmptyInvitationList(invs *management.OrganizationInvitationList) bool {
+	return invs == nil || len(invs.OrganizationInvitations) == 0
+}
+
+func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		OrgID               string
+		InviterName         string
+		InviteeEmail        string
+		ClientID            string
+		ConnectionID        string
+		TTLSeconds          int
+		SendInvitationEmail bool
+		Roles               []string
+		AppMetadata         string
+		UserMetadata        string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "create",
+		Args:  cobra.NoArgs,
+		Short: "Create a new invitation to an organization",
+		Long: "Create a new invitation to an organization with required and optional parameters.\n\n" +
+			"To create interactively, use `auth0 orgs invs create` with no flags and answer the prompts.\n\n" +
+			"To create non-interactively, supply the organization id and the other parameters through flags.",
+		Example: `  auth0 orgs invs create
+  auth0 orgs invs create --org-id <org-id>
+  auth0 orgs invs create --org-id <org-id> --inviter-name "Inviter Name" --invitee-email "invitee@example.com"
+  auth0 orgs invs create --org-id <org-id> --invitee-email "invitee@example.com" --client-id "client_id"
+  auth0 orgs invs create --org-id <org-id> -n "Inviter Name" -e "invitee@example.com" --client-id "client_id" --connection-id "connection_id" -t 86400
+  auth0 orgs invs create --org-id <org-id> --json --send-email=false --inviter-name "Inviter Name"`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := organizationIDFlag.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
+				return err
+			}
+			if err := clientID.Pick(cmd, &inputs.ClientID, cli.appPickerOptions()); err != nil {
+				return err
+			}
+			if err := inviterName.Ask(cmd, &inputs.InviterName, nil); err != nil {
+				return err
+			}
+			if err := inviteeEmail.Ask(cmd, &inputs.InviteeEmail, nil); err != nil {
+				return err
+			}
+
+			invitation := &management.OrganizationInvitation{
+				Inviter:             &management.OrganizationInvitationInviter{Name: &inputs.InviterName},
+				Invitee:             &management.OrganizationInvitationInvitee{Email: &inputs.InviteeEmail},
+				ClientID:            &inputs.ClientID,
+				TTLSec:              &inputs.TTLSeconds,
+				SendInvitationEmail: &inputs.SendInvitationEmail,
+			}
+			if inputs.ConnectionID != "" {
+				invitation.ConnectionID = &inputs.ConnectionID
+			}
+			if inputs.AppMetadata != "" {
+				var metadata map[string]interface{}
+				if err := json.Unmarshal([]byte(inputs.AppMetadata), &metadata); err != nil {
+					return fmt.Errorf("invalid JSON for app metadata: %w", err)
+				}
+				invitation.AppMetadata = metadata
+			}
+			if inputs.UserMetadata != "" {
+				var metadata map[string]interface{}
+				if err := json.Unmarshal([]byte(inputs.UserMetadata), &metadata); err != nil {
+					return fmt.Errorf("invalid JSON for user metadata: %w", err)
+				}
+				invitation.UserMetadata = metadata
+			}
+			if len(inputs.Roles) > 0 {
+				invitation.Roles = inputs.Roles
+			}
+
+			if err := ansi.Waiting(func() error {
+				return cli.api.Organization.CreateInvitation(cmd.Context(), inputs.OrgID, invitation)
+			}); err != nil {
+				return fmt.Errorf("failed to create invitation for organization with ID %q: %w", inputs.OrgID, err)
+			}
+
+			cli.renderer.InvitationsCreate(*invitation)
+			return nil
+		},
+	}
+
+	organizationIDFlag.RegisterString(cmd, &inputs.OrgID, "")
+	inviterName.RegisterString(cmd, &inputs.InviterName, "")
+	inviteeEmail.RegisterString(cmd, &inputs.InviteeEmail, "")
+	clientID.RegisterString(cmd, &inputs.ClientID, "")
+	connectionID.RegisterString(cmd, &inputs.ConnectionID, "")
+	ttlSeconds.RegisterInt(cmd, &inputs.TTLSeconds, 0)
+	sendInvitationEmail.RegisterBool(cmd, &inputs.SendInvitationEmail, true)
+	roles.RegisterStringSlice(cmd, &inputs.Roles, nil)
+	applicationMetadata.RegisterString(cmd, &inputs.AppMetadata, "")
+	userMetadata.RegisterString(cmd, &inputs.UserMetadata, "")
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+
+	return cmd
+}
+
+func deleteInvitationOrganizationCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		OrgID         string
+		InvitationIDs []string
+	}
+
+	cmd := &cobra.Command{
+		Use:     "delete",
+		Aliases: []string{"rm"},
+		Args:    cobra.NoArgs,
+		Short:   "Delete invitation(s) from an organization",
+		Long: "Delete invitation(s) from an organization.\n\n" +
+			"To delete interactively, use `auth0 orgs invs delete` with no flags.\n\n" +
+			"To delete non-interactively, supply the organization id, invitation id(s) and " +
+			"the `--force` flag to skip confirmation.",
+		Example: `  auth0 orgs invs delete
+  auth0 orgs invs rm
+  auth0 orgs invs delete --org-id <org-id> --invitation-id <invitation-id>
+  auth0 orgs invs delete --org-id <org-id> --invitation-id <inv-id1>,<inv-id2>,<inv-id3>
+  auth0 orgs invs delete --org-id <org-id> --invitation-id <invitation-id> --force`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := organizationIDFlag.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
+				return err
+			}
+
+			if err := invitationID.PickMany(cmd, &inputs.InvitationIDs, func(ctx context.Context) (pickerOptions, error) {
+				return cli.invitationPickerOptions(ctx, inputs.OrgID)
+			}); err != nil {
+				return err
+			}
+
+			if !cli.force && canPrompt(cmd) {
+				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
+					return nil
+				}
+			}
+
+			return ansi.ProgressBar("Deleting invitation(s)", inputs.InvitationIDs, func(_ int, invitationID string) error {
+				if invitationID != "" {
+					if err := cli.api.Organization.DeleteInvitation(cmd.Context(), inputs.OrgID, invitationID); err != nil {
+						return fmt.Errorf("failed to delete invitation with ID %q from organization %q: %w", invitationID, inputs.OrgID, err)
+					}
+				}
+				return nil
+			})
+		},
+	}
+
+	organizationIDFlag.RegisterString(cmd, &inputs.OrgID, "")
+	invitationID.RegisterStringSlice(cmd, &inputs.InvitationIDs, nil)
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
+
+	return cmd
 }
