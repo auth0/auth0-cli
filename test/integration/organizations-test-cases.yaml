@@ -178,20 +178,20 @@ tests:
         - Number flag invalid, please pass a number between 1 and 1000
 
   023 - list organization invitations with no data:
-    command: auth0 orgs invs list $(./test/integration/scripts/get-org-id.sh)
+    command: auth0 orgs invs list --org-id $(./test/integration/scripts/get-org-id.sh)
     exit-code: 0
     stderr:
       contains:
         - Use 'auth0 orgs invs create' to add one
 
   024 - list organization invitations with no data (json):
-    command: auth0 orgs invs list $(./test/integration/scripts/get-org-id.sh) --json
+    command: auth0 orgs invs list --org-id $(./test/integration/scripts/get-org-id.sh) --json
     exit-code: 0
     stdout:
       exactly: "[]"
 
   025 - list organization invitations with invalid number arg:
-    command: auth0 orgs invs list $(./test/integration/scripts/get-org-id.sh) --number 1001
+    command: auth0 orgs invs list --org-id $(./test/integration/scripts/get-org-id.sh) --number 1001
     exit-code: 1
     stderr:
       contains:
@@ -205,7 +205,7 @@ tests:
         - "Missing a required argument: Org ID"
         
   027 - create organization invitation and check json output:
-    command: auth0 orgs invs create $(./test/integration/scripts/get-org-id.sh) --inviter-name "Integration Tester" --invitee-email "test@test.com" --client-id $(./test/integration/scripts/get-app-id.sh) --json --no-input
+    command: auth0 orgs invs create --org-id $(./test/integration/scripts/get-org-id.sh) --inviter-name "Integration Tester" --invitee-email "test@test.com" --client-id $(./test/integration/scripts/get-app-id.sh) --json --no-input
     exit-code: 0
     stdout:
       json:
@@ -213,7 +213,7 @@ tests:
         invitee.email: "test@test.com"
 
   028 - create organization invitation and check table output:
-    command: auth0 orgs invs create $(./test/integration/scripts/get-org-id.sh) --inviter-name "Integration Tester" --invitee-email "test@test.com" --client-id $(./test/integration/scripts/get-app-id.sh) --ttl-sec 86400 --no-input
+    command: auth0 orgs invs create --org-id $(./test/integration/scripts/get-org-id.sh) --inviter-name "Integration Tester" --invitee-email "test@test.com" --client-id $(./test/integration/scripts/get-app-id.sh) --ttl-sec 86400 --no-input
     exit-code: 0
     stdout:
       contains:
@@ -224,7 +224,7 @@ tests:
         - test@test.com
 
   029 - list organization invitations with data:
-    command: auth0 orgs invs list $(./test/integration/scripts/get-org-id.sh)
+    command: auth0 orgs invs list --org-id $(./test/integration/scripts/get-org-id.sh)
     exit-code: 0
     stdout:
       contains:
@@ -233,7 +233,7 @@ tests:
         - INVITEE EMAIL
 
   030 - list organization invitations with data (json):
-    command: auth0 orgs invs ls $(./test/integration/scripts/get-org-id.sh) --json
+    command: auth0 orgs invs ls --org-id $(./test/integration/scripts/get-org-id.sh) --json
     exit-code: 0
     stdout:
       contains:
@@ -242,14 +242,14 @@ tests:
         - '"email":'
 
   031 - list organization invitations with csv output:
-    command: auth0 orgs invs ls $(./test/integration/scripts/get-org-id.sh) --csv
+    command: auth0 orgs invs ls --org-id $(./test/integration/scripts/get-org-id.sh) --csv
     exit-code: 0
     stdout:
       contains:
         - ID,Client ID,Connection ID,Inviter Name,Invitee Email,Created At,Expires At
 
   032 - show organization invitation and check json output:
-    command: auth0 orgs invs show $(./test/integration/scripts/get-org-id.sh) $(./test/integration/scripts/get-org-invitation-id.sh) --json
+    command: auth0 orgs invs show --org-id $(./test/integration/scripts/get-org-id.sh) --invitation-id $(./test/integration/scripts/get-org-invitation-id.sh) --json
     exit-code: 0
     stdout:
       contains:
@@ -258,7 +258,7 @@ tests:
         invitee.email: "test@test.com"
 
   033 - show organization invitation and check table output:
-    command: auth0 orgs invs show $(./test/integration/scripts/get-org-id.sh) $(./test/integration/scripts/get-org-invitation-id.sh)
+    command: auth0 orgs invs show --org-id $(./test/integration/scripts/get-org-id.sh) --invitation-id $(./test/integration/scripts/get-org-invitation-id.sh)
     exit-code: 0
     stdout:
       contains:
@@ -269,14 +269,14 @@ tests:
         - test@test.com
 
   034 - show organization invitation with invalid invitation ID:
-    command: auth0 orgs invs show $(./test/integration/scripts/get-org-id.sh) "uinv_invalid123"
+    command: auth0 orgs invs show --org-id $(./test/integration/scripts/get-org-id.sh) --invitation-id "uinv_invalid123"
     exit-code: 1
     stderr:
       contains:
         - Failed to read organization invitation
 
   035 - show organization invitation with invalid organization ID:
-    command: auth0 orgs invs show "org_invalid123" "uinv_something"
+    command: auth0 orgs invs show --org-id "org_invalid123" --invitation-id "uinv_something"
     exit-code: 1
     stderr:
       contains:
@@ -290,20 +290,20 @@ tests:
         - "Missing a required argument: Org ID"
 
   037 - show organization invitation without invitation id and no-input flag:
-    command: auth0 orgs invitations show $(./test/integration/scripts/get-org-id.sh) --no-input
+    command: auth0 orgs invitations show --org-id $(./test/integration/scripts/get-org-id.sh) --no-input
     exit-code: 1
     stderr:
       contains:
         - "Missing a required argument: Invitation ID"
 
   038 - delete organization invitation with confirmation:
-    command: auth0 orgs invs delete $(./test/integration/scripts/get-org-id.sh) $(./test/integration/scripts/get-org-invitation-id.sh) --force
+    command: auth0 orgs invs delete --org-id $(./test/integration/scripts/get-org-id.sh) --invitation-id $(./test/integration/scripts/get-org-invitation-id.sh) --force
     exit-code: 0
     config:
       retries: 5
 
   039 - delete organization invitation with invalid invitation ID:
-    command: auth0 orgs invs delete $(./test/integration/scripts/get-org-id.sh) "uinv_invalid123" --force --no-input
+    command: auth0 orgs invs delete --org-id $(./test/integration/scripts/get-org-id.sh) --invitation-id "uinv_invalid123" --force --no-input
     exit-code: 1
     stderr:
       contains:
