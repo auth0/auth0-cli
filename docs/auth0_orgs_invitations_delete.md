@@ -7,7 +7,7 @@ has_toc: false
 
 Delete invitation(s) from an organization.
 
-To delete interactively, use `auth0 orgs invs delete` with no arguments.
+To delete interactively, use `auth0 orgs invs delete` with no flags.
 
 To delete non-interactively, supply the organization id, invitation id(s) and the `--force` flag to skip confirmation.
 
@@ -21,16 +21,18 @@ auth0 orgs invitations delete [flags]
 ```
   auth0 orgs invs delete
   auth0 orgs invs rm
-  auth0 orgs invs delete <org-id> <invitation-id>
-  auth0 orgs invs delete <org-id> <invitation-id> --force
-  auth0 orgs invs delete <org-id> <inv-id1> <inv-id2> <inv-id3>
+  auth0 orgs invs delete --org-id <org-id> --invitation-id <invitation-id>
+  auth0 orgs invs delete --org-id <org-id> --invitation-id <inv-id1>,<inv-id2>,<inv-id3>
+  auth0 orgs invs delete --org-id <org-id> --invitation-id <invitation-id> --force
 ```
 
 
 ## Flags
 
 ```
-      --force   Skip confirmation.
+      --force                   Skip confirmation.
+  -i, --invitation-id strings   ID of the invitation.
+      --org-id string           ID of the organization.
 ```
 
 

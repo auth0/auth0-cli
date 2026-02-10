@@ -40,7 +40,7 @@ auth0 orgs invitations create [flags]
       --json-compact           Output in compact json format.
       --org-id string          ID of the organization.
   -r, --roles strings          Roles IDs to associate with the user.
-  -s, --send-email             Whether to send the invitation email to the invitee.
+  -s, --send-email             Whether to send the invitation email to the invitee. (default true)
   -t, --ttl-sec int            Number of seconds for which the invitation is valid before expiration.
   -u, --user-metadata string   Data related to the user that does not affect the application's core functionality, formatted as JSON
 ```

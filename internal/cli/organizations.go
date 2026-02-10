@@ -27,26 +27,6 @@ var (
 		Help: "ID of the organization.",
 	}
 
-	invitationID = Argument{
-		Name: "Invitation ID",
-		Help: "ID of the invitation.",
-	}
-
-	organizationIDFlag = Flag{
-		Name:       "Organization ID",
-		LongForm:   "org-id",
-		Help:       "ID of the organization.",
-		IsRequired: true,
-	}
-
-	invitationIDFlag = Flag{
-		Name:       "Invitation ID",
-		LongForm:   "invitation-id",
-		ShortForm:  "i",
-		Help:       "ID of the invitation.",
-		IsRequired: true,
-	}
-
 	organizationName = Flag{
 		Name:       "Name",
 		LongForm:   "name",
@@ -104,6 +84,21 @@ var (
 		Name:      "Number",
 		LongForm:  "number",
 		ShortForm: "n",
+	}
+
+	organizationIDFlag = Flag{
+		Name:       "Organization ID",
+		LongForm:   "org-id",
+		Help:       "ID of the organization.",
+		IsRequired: true,
+	}
+
+	invitationID = Flag{
+		Name:       "Invitation ID",
+		LongForm:   "invitation-id",
+		ShortForm:  "i",
+		Help:       "ID of the invitation.",
+		IsRequired: true,
 	}
 
 	inviterName = Flag{
@@ -1068,7 +1063,7 @@ func showInvitationOrganizationCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := invitationIDFlag.Pick(cmd, &inputs.InvitationID, func(ctx context.Context) (pickerOptions, error) {
+			if err := invitationID.Pick(cmd, &inputs.InvitationID, func(ctx context.Context) (pickerOptions, error) {
 				return cli.invitationPickerOptions(ctx, inputs.OrgID)
 			}); err != nil {
 				return err
@@ -1088,7 +1083,7 @@ func showInvitationOrganizationCmd(cli *cli) *cobra.Command {
 	}
 
 	organizationIDFlag.RegisterString(cmd, &inputs.OrgID, "")
-	invitationIDFlag.RegisterString(cmd, &inputs.InvitationID, "")
+	invitationID.RegisterString(cmd, &inputs.InvitationID, "")
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
@@ -1272,7 +1267,7 @@ func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
 	clientID.RegisterString(cmd, &inputs.ClientID, "")
 	connectionID.RegisterString(cmd, &inputs.ConnectionID, "")
 	ttlSeconds.RegisterInt(cmd, &inputs.TTLSeconds, 0)
-	sendInvitationEmail.RegisterBool(cmd, &inputs.SendInvitationEmail, false)
+	sendInvitationEmail.RegisterBool(cmd, &inputs.SendInvitationEmail, true)
 	roles.RegisterStringSlice(cmd, &inputs.Roles, nil)
 	applicationMetadata.RegisterString(cmd, &inputs.AppMetadata, "")
 	userMetadata.RegisterString(cmd, &inputs.UserMetadata, "")
@@ -1285,45 +1280,33 @@ func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
 
 func deleteInvitationOrganizationCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		OrgID string
+		OrgID         string
+		InvitationIDs []string
 	}
 
 	cmd := &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"rm"},
+		Args:    cobra.NoArgs,
 		Short:   "Delete invitation(s) from an organization",
 		Long: "Delete invitation(s) from an organization.\n\n" +
-			"To delete interactively, use `auth0 orgs invs delete` with no arguments.\n\n" +
+			"To delete interactively, use `auth0 orgs invs delete` with no flags.\n\n" +
 			"To delete non-interactively, supply the organization id, invitation id(s) and " +
 			"the `--force` flag to skip confirmation.",
 		Example: `  auth0 orgs invs delete
   auth0 orgs invs rm
-  auth0 orgs invs delete <org-id> <invitation-id>
-  auth0 orgs invs delete <org-id> <invitation-id> --force
-  auth0 orgs invs delete <org-id> <inv-id1> <inv-id2> <inv-id3>`,
+  auth0 orgs invs delete --org-id <org-id> --invitation-id <invitation-id>
+  auth0 orgs invs delete --org-id <org-id> --invitation-id <inv-id1>,<inv-id2>,<inv-id3>
+  auth0 orgs invs delete --org-id <org-id> --invitation-id <invitation-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				if err := organizationID.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
-					return err
-				}
-			} else {
-				inputs.OrgID = args[0]
-				args = args[1:]
+			if err := organizationIDFlag.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
+				return err
 			}
 
-			invitationIDs := make([]string, len(args))
-			if len(args) == 0 {
-				if err := invitationID.PickMany(
-					cmd,
-					&invitationIDs,
-					func(ctx context.Context) (pickerOptions, error) {
-						return cli.invitationPickerOptions(ctx, inputs.OrgID)
-					},
-				); err != nil {
-					return err
-				}
-			} else {
-				invitationIDs = append(invitationIDs, args...)
+			if err := invitationID.PickMany(cmd, &inputs.InvitationIDs, func(ctx context.Context) (pickerOptions, error) {
+				return cli.invitationPickerOptions(ctx, inputs.OrgID)
+			}); err != nil {
+				return err
 			}
 
 			if !cli.force && canPrompt(cmd) {
@@ -1332,7 +1315,7 @@ func deleteInvitationOrganizationCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			return ansi.ProgressBar("Deleting invitation(s)", invitationIDs, func(_ int, invitationID string) error {
+			return ansi.ProgressBar("Deleting invitation(s)", inputs.InvitationIDs, func(_ int, invitationID string) error {
 				if invitationID != "" {
 					if err := cli.api.Organization.DeleteInvitation(cmd.Context(), inputs.OrgID, invitationID); err != nil {
 						return fmt.Errorf("failed to delete invitation with ID %q from organization %q: %w", invitationID, inputs.OrgID, err)
@@ -1343,6 +1326,8 @@ func deleteInvitationOrganizationCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	organizationIDFlag.RegisterString(cmd, &inputs.OrgID, "")
+	invitationID.RegisterStringSlice(cmd, &inputs.InvitationIDs, nil)
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 
 	return cmd
