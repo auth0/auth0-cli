@@ -3,7 +3,6 @@ package display
 import (
 	"testing"
 
-	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/go-auth0/management"
 	"github.com/stretchr/testify/assert"
 )
@@ -59,16 +58,16 @@ func Test_invitationsView_Object(t *testing.T) {
 
 func Test_makeInvitationsView(t *testing.T) {
 	mockInvitation := management.OrganizationInvitation{
-		ID: auth0.String("invitation-id"),
+		ID: pointer("invitation-id"),
 		Inviter: &management.OrganizationInvitationInviter{
-			Name: auth0.String("inviter-name"),
+			Name: pointer("inviter-name"),
 		},
 		Invitee: &management.OrganizationInvitationInvitee{
-			Email: auth0.String("invitee-email"),
+			Email: pointer("invitee-email"),
 		},
-		ExpiresAt:    auth0.String("expires-at"),
-		ClientID:     auth0.String("client-id"),
-		ConnectionID: auth0.String("connection-id"),
+		ExpiresAt:    pointer("expires-at"),
+		ClientID:     pointer("client-id"),
+		ConnectionID: pointer("connection-id"),
 	}
 
 	view := makeInvitationsView(mockInvitation)
@@ -80,4 +79,8 @@ func Test_makeInvitationsView(t *testing.T) {
 	assert.Equal(t, "invitee-email", view.InviteeEmail)
 	assert.Equal(t, "expires-at", view.ExpiresAt)
 	assert.Equal(t, mockInvitation, view.raw)
+}
+
+func pointer(s string) *string {
+	return &s
 }
