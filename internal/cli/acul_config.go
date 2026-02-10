@@ -158,6 +158,7 @@ var (
 		"accept-invitation":                              "invitation",
 		"organization-picker":                            "organizations",
 		"organization-selection":                         "organizations",
+		"pre-login-organization-picker":                  "organizations",
 		"device-code-activation":                         "device-flow",
 		"device-code-activation-allowed":                 "device-flow",
 		"device-code-activation-denied":                  "device-flow",

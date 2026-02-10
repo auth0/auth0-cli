@@ -120,7 +120,7 @@ var PromptScreenMap = map[string][]string{
 	"mfa-voice":                   {"mfa-voice-challenge", "mfa-voice-enrollment"},
 	"mfa-recovery-code":           {"mfa-recovery-code-challenge", "mfa-recovery-code-enrollment", "mfa-recovery-code-challenge-new-code"},
 	"invitation":                  {"accept-invitation"},
-	"organizations":               {"organization-picker", "organization-selection"},
+	"organizations":               {"organization-picker", "organization-selection", "pre-login-organization-picker"},
 	"device-flow":                 {"device-code-activation", "device-code-activation-allowed", "device-code-activation-denied", "device-code-confirmation"},
 	"common":                      {"redeem-ticket"},
 	"email-verification":          {"email-verification-result"},
