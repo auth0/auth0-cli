@@ -7,7 +7,7 @@ if [ -f "$FILE" ]; then
 fi
 
 org_id=$(./test/integration/scripts/get-org-id.sh)
-app_id=$(./test/integration/scripts/get-app-id.sh)
+app_id=$(./test/integration/scripts/get-org-inv-app-id.sh)
 
 invitation=$( auth0 orgs invitations create --org-id "$org_id" \
   --inviter-name "Integration Tester" \
