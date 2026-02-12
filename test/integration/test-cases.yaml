@@ -49,6 +49,18 @@ tests:
         - STAGE_PRE_USER_REGISTRATION_RATE
     exit-code: 0
 
+  attack protection bot detection show:
+    command: auth0 attack-protection bot-detection show
+    stdout:
+      contains:
+        - BOT_DETECTION_LEVEL
+        - CHALLENGE_PASSWORD_POLICY
+        - CHALLENGE_PASSWORDLESS_POLICY
+        - CHALLENGE_PASSWORD_RESET_POLICY
+        - ALLOW_LIST
+        - MONITORING_MODE_ENABLED
+    exit-code: 0
+
   attack protection suspicious ip throttling ips check:
     command: auth0 attack-protection suspicious-ip-throttling ips check 127.0.0.1
     stderr:
@@ -95,6 +107,18 @@ tests:
         - STAGE_PRE_LOGIN_RATE
         - STAGE_PRE_USER_REGISTRATION_MAX_ATTEMPTS
         - STAGE_PRE_USER_REGISTRATION_RATE
+    exit-code: 0
+
+  attack protection update bot detection:
+    command: auth0 attack-protection bot-detection update --bot-detection-level medium
+    stdout:
+      contains:
+        - BOT_DETECTION_LEVEL
+        - CHALLENGE_PASSWORD_POLICY
+        - CHALLENGE_PASSWORDLESS_POLICY
+        - CHALLENGE_PASSWORD_RESET_POLICY
+        - ALLOW_LIST
+        - MONITORING_MODE_ENABLED
     exit-code: 0
 
   tenants list:
