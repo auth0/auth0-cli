@@ -1,0 +1,110 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:  
+  001 - attack protection breached password detection show:
+    command: auth0 attack-protection breached-password-detection show
+    stdout:
+      contains:
+        - ENABLED
+        - SHIELDS
+        - ADMIN_NOTIFICATION_FREQUENCY
+        - METHOD
+    exit-code: 0
+
+  002 - attack protection brute force protection show:
+    command: auth0 attack-protection brute-force-protection show
+    stdout:
+      contains:
+        - ENABLED
+        - SHIELDS
+        - ALLOW_LIST
+        - MODE
+        - MAX_ATTEMPTS
+    exit-code: 0
+
+  003 - attack protection suspicious ip throttling show:
+    command: auth0 attack-protection suspicious-ip-throttling show
+    stdout:
+      contains:
+        - ENABLED
+        - SHIELDS
+        - ALLOW_LIST
+        - STAGE_PRE_LOGIN_MAX_ATTEMPTS
+        - STAGE_PRE_LOGIN_RATE
+        - STAGE_PRE_USER_REGISTRATION_MAX_ATTEMPTS
+        - STAGE_PRE_USER_REGISTRATION_RATE
+    exit-code: 0
+
+  004 - attack protection bot detection show:
+    command: auth0 attack-protection bot-detection show
+    stdout:
+      contains:
+        - BOT_DETECTION_LEVEL
+        - CHALLENGE_PASSWORD_POLICY
+        - CHALLENGE_PASSWORDLESS_POLICY
+        - CHALLENGE_PASSWORD_RESET_POLICY
+        - ALLOW_LIST
+        - MONITORING_MODE_ENABLED
+    exit-code: 0
+
+  005 - attack protection suspicious ip throttling ips check:
+    command: auth0 attack-protection suspicious-ip-throttling ips check 127.0.0.1
+    stderr:
+      contains:
+        - "The IP 127.0.0.1 is not blocked."
+    exit-code: 0
+
+  006 - attack protection suspicious ip throttling ips unblock:
+    command: auth0 attack-protection suspicious-ip-throttling ips unblock 127.0.0.1
+    stderr:
+      contains:
+        - "The IP 127.0.0.1 was unblocked."
+    exit-code: 0
+
+  007 - attack protection update breached password detection:
+    command: auth0 attack-protection breached-password-detection update --enabled
+    stdout:
+      contains:
+        - ENABLED
+        - SHIELDS
+        - ADMIN_NOTIFICATION_FREQUENCY
+        - METHOD
+    exit-code: 0
+
+  008 - attack protection update brute force protection:
+    command: auth0 attack-protection brute-force-protection update --enabled
+    stdout:
+      contains:
+        - ENABLED
+        - SHIELDS
+        - ALLOW_LIST
+        - MODE
+        - MAX_ATTEMPTS
+    exit-code: 0
+
+  009 - attack protection update suspicious ip throttling:
+    command: auth0 attack-protection suspicious-ip-throttling update --enabled
+    stdout:
+      contains:
+        - ENABLED
+        - SHIELDS
+        - ALLOW_LIST
+        - STAGE_PRE_LOGIN_MAX_ATTEMPTS
+        - STAGE_PRE_LOGIN_RATE
+        - STAGE_PRE_USER_REGISTRATION_MAX_ATTEMPTS
+        - STAGE_PRE_USER_REGISTRATION_RATE
+    exit-code: 0
+
+  010 - attack protection update bot detection:
+    command: auth0 attack-protection bot-detection update --bot-detection-level medium
+    stdout:
+      contains:
+        - BOT_DETECTION_LEVEL
+        - CHALLENGE_PASSWORD_POLICY
+        - CHALLENGE_PASSWORDLESS_POLICY
+        - CHALLENGE_PASSWORD_RESET_POLICY
+        - ALLOW_LIST
+        - MONITORING_MODE_ENABLED
+    exit-code: 0
