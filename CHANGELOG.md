@@ -7,12 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.27.2](https://github.com/auth0/auth0-cli/tree/v1.27.2) (February 14, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.27.1...v1.27.2)
+
+### Fixed
+- Fix `auth0 quickstarts setup` command's port assessment logic [#1440]
+
+
 # [v.1.27.1](https://github.com/auth0/auth0-cli/tree/v1.27.1) (February 13, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.27.0...v1.27.1)
 
 ### Fixed
 - Fix `auth0 quickstarts setup` command's interactive mode [#1437]
+
 
 # [v.1.27.0](https://github.com/auth0/auth0-cli/tree/v1.27.0) (February 10, 2026)
 
@@ -677,7 +686,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.27.1...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.27.2...HEAD
+[#1440]: https://github.com/auth0/auth0-cli/pull/1440
 [#1437]: https://github.com/auth0/auth0-cli/pull/1437
 [#1428]: https://github.com/auth0/auth0-cli/pull/1428
 [#1426]: https://github.com/auth0/auth0-cli/pull/1426
