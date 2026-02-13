@@ -502,7 +502,7 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := qsPort.Ask(cmd, &inputs.Port, &defaultPort); err != nil {
-
+				return err
 			}
 
 			if inputs.Port < 1024 || inputs.Port > 65535 {
