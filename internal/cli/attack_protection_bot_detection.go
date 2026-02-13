@@ -3,7 +3,7 @@ package cli
 import (
 	"strings"
 
-	"github.com/auth0/go-auth0/management"
+	managementv2 "github.com/auth0/go-auth0/v2/management"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -150,9 +150,9 @@ func updateBotDetectionCmd(cli *cli) *cobra.Command {
 
 func showBotDetectionCmdRun(cli *cli) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		var bd *management.BotDetection
+		var bd *managementv2.GetBotDetectionSettingsResponseContent
 		err := ansi.Waiting(func() (err error) {
-			bd, err = cli.api.AttackProtection.GetBotDetection(cmd.Context())
+			bd, err = cli.apiv2.AttackProtectionBotDetection.Get(cmd.Context())
 			return err
 		})
 		if err != nil {
@@ -170,68 +170,68 @@ func updateBotDetectionCmdRun(
 	inputs *botDetectionInputs,
 ) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		var bd *management.BotDetection
-		err := ansi.Waiting(func() (err error) {
-			bd, err = cli.api.AttackProtection.GetBotDetection(cmd.Context())
-			return err
-		})
-		if err != nil {
-			return err
-		}
+		// var bd *management.BotDetection
+		// err := ansi.Waiting(func() (err error) {
+		// 	bd, err = cli.api.AttackProtection.GetBotDetection(cmd.Context())
+		// 	return err
+		// })
+		// if err != nil {
+		// 	return err
+		// }
 
-		if err := bdFlags.BotDetectionLevel.AskU(cmd, &inputs.BotDetectionLevel, bd.BotDetectionLevel); err != nil {
-			return err
-		}
-		if inputs.BotDetectionLevel == "" {
-			inputs.BotDetectionLevel = bd.GetBotDetectionLevel()
-		}
-		bd.BotDetectionLevel = &inputs.BotDetectionLevel
+		// if err := bdFlags.BotDetectionLevel.AskU(cmd, &inputs.BotDetectionLevel, bd.BotDetectionLevel); err != nil {
+		// 	return err
+		// }
+		// if inputs.BotDetectionLevel == "" {
+		// 	inputs.BotDetectionLevel = bd.GetBotDetectionLevel()
+		// }
+		// bd.BotDetectionLevel = &inputs.BotDetectionLevel
 
-		if err := bdFlags.ChallengePasswordPolicy.AskU(cmd, &inputs.ChallengePasswordPolicy, bd.ChallengePasswordPolicy); err != nil {
-			return err
-		}
-		if inputs.ChallengePasswordPolicy == "" {
-			inputs.ChallengePasswordPolicy = bd.GetChallengePasswordPolicy()
-		}
-		bd.ChallengePasswordPolicy = &inputs.ChallengePasswordPolicy
+		// if err := bdFlags.ChallengePasswordPolicy.AskU(cmd, &inputs.ChallengePasswordPolicy, bd.ChallengePasswordPolicy); err != nil {
+		// 	return err
+		// }
+		// if inputs.ChallengePasswordPolicy == "" {
+		// 	inputs.ChallengePasswordPolicy = string(bd.GetChallengePasswordPolicy())
+		// }
+		// bd.ChallengePasswordPolicy = &inputs.ChallengePasswordPolicy
 
-		if err := bdFlags.ChallengePasswordlessPolicy.AskU(cmd, &inputs.ChallengePasswordlessPolicy, bd.ChallengePasswordlessPolicy); err != nil {
-			return err
-		}
-		if inputs.ChallengePasswordlessPolicy == "" {
-			inputs.ChallengePasswordlessPolicy = bd.GetChallengePasswordlessPolicy()
-		}
-		bd.ChallengePasswordlessPolicy = &inputs.ChallengePasswordlessPolicy
+		// if err := bdFlags.ChallengePasswordlessPolicy.AskU(cmd, &inputs.ChallengePasswordlessPolicy, bd.ChallengePasswordlessPolicy); err != nil {
+		// 	return err
+		// }
+		// if inputs.ChallengePasswordlessPolicy == "" {
+		// 	inputs.ChallengePasswordlessPolicy = bd.GetChallengePasswordlessPolicy()
+		// }
+		// bd.ChallengePasswordlessPolicy = &inputs.ChallengePasswordlessPolicy
 
-		if err := bdFlags.ChallengePasswordResetPolicy.AskU(cmd, &inputs.ChallengePasswordResetPolicy, bd.ChallengePasswordResetPolicy); err != nil {
-			return err
-		}
-		if inputs.ChallengePasswordResetPolicy == "" {
-			inputs.ChallengePasswordResetPolicy = bd.GetChallengePasswordResetPolicy()
-		}
-		bd.ChallengePasswordResetPolicy = &inputs.ChallengePasswordResetPolicy
+		// if err := bdFlags.ChallengePasswordResetPolicy.AskU(cmd, &inputs.ChallengePasswordResetPolicy, bd.ChallengePasswordResetPolicy); err != nil {
+		// 	return err
+		// }
+		// if inputs.ChallengePasswordResetPolicy == "" {
+		// 	inputs.ChallengePasswordResetPolicy = bd.GetChallengePasswordResetPolicy()
+		// }
+		// bd.ChallengePasswordResetPolicy = &inputs.ChallengePasswordResetPolicy
 
-		allowListString := strings.Join(bd.GetAllowList(), ",")
-		if err := bdFlags.AllowList.AskManyU(cmd, &inputs.AllowList, &allowListString); err != nil {
-			return err
-		}
-		if len(inputs.AllowList) == 0 {
-			inputs.AllowList = bd.GetAllowList()
-		}
-		bd.AllowList = &inputs.AllowList
+		// allowListString := strings.Join(bd.GetAllowList(), ",")
+		// if err := bdFlags.AllowList.AskManyU(cmd, &inputs.AllowList, &allowListString); err != nil {
+		// 	return err
+		// }
+		// if len(inputs.AllowList) == 0 {
+		// 	inputs.AllowList = bd.GetAllowList()
+		// }
+		// bd.AllowList = &inputs.AllowList
 
-		if err := bdFlags.MonitoringModeEnabled.AskBoolU(cmd, &inputs.MonitoringModeEnabled, bd.MonitoringModeEnabled); err != nil {
-			return err
-		}
-		bd.MonitoringModeEnabled = &inputs.MonitoringModeEnabled
+		// if err := bdFlags.MonitoringModeEnabled.AskBoolU(cmd, &inputs.MonitoringModeEnabled, bd.MonitoringModeEnabled); err != nil {
+		// 	return err
+		// }
+		// bd.MonitoringModeEnabled = &inputs.MonitoringModeEnabled
 
-		if err := ansi.Waiting(func() error {
-			return cli.api.AttackProtection.UpdateBotDetection(cmd.Context(), bd)
-		}); err != nil {
-			return err
-		}
+		// if err := ansi.Waiting(func() error {
+		// 	return cli.api.AttackProtection.UpdateBotDetection(cmd.Context(), bd)
+		// }); err != nil {
+		// 	return err
+		// }
 
-		cli.renderer.BotDetectionUpdate(bd)
+		// cli.renderer.BotDetectionUpdate(bd)
 
 		return nil
 	}

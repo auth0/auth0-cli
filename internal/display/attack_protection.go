@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
+	managementv2 "github.com/auth0/go-auth0/v2/management"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 )
@@ -221,23 +222,23 @@ func (bd *botDetectionView) Object() interface{} {
 	return bd.raw
 }
 
-func (r *Renderer) BotDetectionShow(bd *management.BotDetection) {
+func (r *Renderer) BotDetectionShow(bd *managementv2.GetBotDetectionSettingsResponseContent) {
 	r.Heading("bot detection")
 	r.Result(makeBotDetectionView(bd))
 }
 
-func (r *Renderer) BotDetectionUpdate(bd *management.BotDetection) {
+func (r *Renderer) BotDetectionUpdate(bd *managementv2.GetBotDetectionSettingsResponseContent) {
 	r.Heading("bot detection updated")
 	r.Result(makeBotDetectionView(bd))
 }
 
-func makeBotDetectionView(bd *management.BotDetection) *botDetectionView {
+func makeBotDetectionView(bd *managementv2.GetBotDetectionSettingsResponseContent) *botDetectionView {
 	return &botDetectionView{
-		BotDetectionLevel:            bd.GetBotDetectionLevel(),
-		ChallengePasswordPolicy:      bd.GetChallengePasswordPolicy(),
-		ChallengePasswordlessPolicy:  bd.GetChallengePasswordlessPolicy(),
-		ChallengePasswordResetPolicy: bd.GetChallengePasswordResetPolicy(),
-		AllowList:                    bd.GetAllowList(),
+		BotDetectionLevel:            string(bd.GetBotDetectionLevel()),
+		ChallengePasswordPolicy:      string(bd.GetChallengePasswordPolicy()),
+		ChallengePasswordlessPolicy:  string(bd.GetChallengePasswordlessPolicy()),
+		ChallengePasswordResetPolicy: string(bd.GetChallengePasswordResetPolicy()),
+		AllowList:                    bd.GetAllowlist(),
 		MonitoringModeEnabled:        boolean(bd.GetMonitoringModeEnabled()),
 
 		raw: bd,
