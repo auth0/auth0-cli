@@ -7,6 +7,7 @@ require (
 	github.com/PuerkitoBio/rehttp v1.4.0
 	github.com/atotto/clipboard v0.1.4
 	github.com/auth0/go-auth0 v1.33.1-0.20260211120643-ac1cfcb90495
+	github.com/auth0/go-auth0/v2 v2.5.0
 	github.com/briandowns/spinner v1.23.2
 	github.com/charmbracelet/glamour v0.10.0
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
