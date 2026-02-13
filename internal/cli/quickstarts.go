@@ -464,7 +464,7 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			// Normalize the type to lowercase for comparison
+			// Normalize the type to lowercase for comparison.
 			normalizedType := strings.ToLower(inputs.Type)
 
 			if inputs.Type != "" {
