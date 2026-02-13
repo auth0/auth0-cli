@@ -464,16 +464,14 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			// Normalize the type to lowercase for comparison.
-			normalizedType := strings.ToLower(inputs.Type)
-
 			if inputs.Type != "" {
+				normalizedType := strings.ToLower(inputs.Type)
 				if normalizedType != "vite" && normalizedType != "nextjs" {
 					return fmt.Errorf("unsupported quickstart type: %s (supported types: vite, nextjs)", inputs.Type)
 				}
 			}
 
-			if err := qsType.Select(cmd, &inputs.Type, []string{"vite (React, Svelte, Vue, Vanilla JS)", "nextjs"}, nil); err != nil {
+			if err := qsType.Select(cmd, &inputs.Type, []string{"vite", "nextjs"}, nil); err != nil {
 				return err
 			}
 
@@ -489,21 +487,22 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 
 			var appType, baseURL, envFileName string
 			var callbacks, logoutURLs, origins, webOrigins []string
+			var defaultPort string
 
-			switch {
-			case strings.HasPrefix(normalizedType, "vite"):
+			switch inputs.Type {
+			case "vite":
 				appType = appTypeSPA
-				if inputs.Port == 0 {
-					inputs.Port = 5173
-				}
+				defaultPort = "5173"
 				envFileName = ".env"
 
-			case strings.HasPrefix(normalizedType, "nextjs"):
+			case "nextjs":
 				appType = appTypeRegularWeb
-				if inputs.Port == 0 {
-					inputs.Port = 3000
-				}
+				defaultPort = "3000"
 				envFileName = ".env.local"
+			}
+
+			if err := qsPort.Ask(cmd, &inputs.Port, &defaultPort); err != nil {
+
 			}
 
 			if inputs.Port < 1024 || inputs.Port > 65535 {
@@ -513,7 +512,7 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 			baseURL = fmt.Sprintf("http://localhost:%d", inputs.Port)
 
 			// Configure URLs based on app type.
-			if strings.HasPrefix(normalizedType, "vite") {
+			if inputs.Type == "vite" {
 				callbacks = []string{baseURL}
 				logoutURLs = []string{baseURL}
 				origins = []string{baseURL}
@@ -544,7 +543,7 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				ClientMetadata: &metadata,
 			}
 
-			if strings.HasPrefix(normalizedType, "vite") {
+			if inputs.Type == "vite" {
 				a.AllowedOrigins = &origins
 				a.WebOrigins = &webOrigins
 			}
@@ -564,12 +563,12 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 
 			var envContent strings.Builder
 
-			switch {
-			case strings.HasPrefix(normalizedType, "vite"):
+			switch inputs.Type {
+			case "vite":
 				envContent.WriteString(fmt.Sprintf("VITE_AUTH0_DOMAIN=%s\n", tenant.Domain))
 				envContent.WriteString(fmt.Sprintf("VITE_AUTH0_CLIENT_ID=%s\n", a.GetClientID()))
 
-			case strings.HasPrefix(normalizedType, "nextjs"):
+			case "nextjs":
 				secret, err := generateState(32)
 				if err != nil {
 					return fmt.Errorf("failed to generate AUTH0_SECRET: %w", err)
