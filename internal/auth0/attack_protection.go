@@ -63,4 +63,18 @@ type AttackProtectionAPI interface {
 		ctx context.Context, sit *management.SuspiciousIPThrottling,
 		opts ...management.RequestOption,
 	) (err error)
+
+	// GetBotDetection retrieves bot detection settings.
+	//
+	// Required scope: `read:attack_protection`
+	//
+	// See: https://auth0.com/docs/api/management/v2#!/attack-protection/get-bot-detection
+	GetBotDetection(ctx context.Context, opts ...management.RequestOption) (bd *management.BotDetection, err error)
+
+	// UpdateBotDetection updates the bot detection settings.
+	//
+	// Required scope: `update:attack_protection`
+	//
+	// See: https://auth0.com/docs/api/management/v2#!/attack-protection/patch-bot-detection
+	UpdateBotDetection(ctx context.Context, bd *management.BotDetection, opts ...management.RequestOption) (err error)
 }

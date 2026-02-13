@@ -19,6 +19,7 @@ func attackProtectionCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(breachedPasswordDetectionCmd(cli))
 	cmd.AddCommand(bruteForceProtectionCmd(cli))
 	cmd.AddCommand(suspiciousIPThrottlingCmd(cli))
+	cmd.AddCommand(botDetectionCmd(cli))
 
 	return cmd
 }
