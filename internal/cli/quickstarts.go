@@ -464,12 +464,14 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			normalizedType := strings.ToLower(inputs.Type)
-			if normalizedType != "vite" && normalizedType != "nextjs" {
-				return fmt.Errorf("unsupported quickstart type: %s (supported types: vite, nextjs)", inputs.Type)
+			if inputs.Type != "" {
+				normalizedType := strings.ToLower(inputs.Type)
+				if normalizedType != "vite" && normalizedType != "nextjs" {
+					return fmt.Errorf("unsupported quickstart type: %s (supported types: vite, nextjs)", inputs.Type)
+				}
 			}
 
-			if err := qsType.Select(cmd, &inputs.Type, []string{"vite (React, Svelte, Vue, Vanilla JS)", "nextjs"}, nil); err != nil {
+			if err := qsType.Select(cmd, &inputs.Type, []string{"vite", "nextjs"}, nil); err != nil {
 				return err
 			}
 
@@ -485,22 +487,22 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 
 			var appType, baseURL, envFileName string
 			var callbacks, logoutURLs, origins, webOrigins []string
-			var defaultPort int
+			var defaultPort string
 
 			switch inputs.Type {
 			case "vite":
 				appType = appTypeSPA
-				defaultPort = 5173
+				defaultPort = "5173"
 				envFileName = ".env"
 
 			case "nextjs":
 				appType = appTypeRegularWeb
-				defaultPort = 3000
+				defaultPort = "3000"
 				envFileName = ".env.local"
 			}
 
-			if inputs.Port == 0 {
-				inputs.Port = defaultPort
+			if err := qsPort.Ask(cmd, &inputs.Port, &defaultPort); err != nil {
+				return err
 			}
 
 			if inputs.Port < 1024 || inputs.Port > 65535 {
@@ -579,7 +581,7 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				envContent.WriteString(fmt.Sprintf("APP_BASE_URL=%s\n", baseURL))
 			}
 
-			message := fmt.Sprintf("Proceed to overwrite '%s' file? : ", envFileName)
+			message := fmt.Sprintf("     Proceed to overwrite '%s' file? : ", envFileName)
 			if shouldCancelOverwrite(cli, cmd, envFileName, message) {
 				cli.renderer.Warnf("Aborted creating %s file. Please create it manually using the following content:\n\n"+
 					"─────────────────────────────────────────────────────────────\n"+"%s"+
