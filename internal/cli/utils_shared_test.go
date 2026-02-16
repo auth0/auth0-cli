@@ -17,7 +17,7 @@ import (
 func TestStringPtr(t *testing.T) {
 	t.Run("returns nil when input is nil", func(t *testing.T) {
 		type CustomString string
-		var nilPtr *CustomString = nil
+		var nilPtr *CustomString
 		result := stringPtr(nilPtr)
 		assert.Nil(t, result)
 	})

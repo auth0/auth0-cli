@@ -180,7 +180,7 @@ func shouldPromptWhenNoLocalFlagsSet(cmd *cobra.Command) bool {
 }
 
 // nonInputValueFlags is a set of flags that do not take any data input values but only control the command’s output or behavior.
-var nonInputValueFlags map[string]struct{} = map[string]struct{}{
+var nonInputValueFlags = map[string]struct{}{
 	"json": {}, "json-compact": {}, "csv": {}, "force": {}, "no-input": {}, "no-color": {}, "debug": {}, "tenant": {},
 }
 

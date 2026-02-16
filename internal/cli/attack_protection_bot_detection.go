@@ -178,7 +178,7 @@ func updateBotDetectionCmdRun(cli *cli, inputs *botDetectionInputs) func(cmd *co
 
 		bdUpdate := &managementv2.UpdateBotDetectionSettingsRequestContent{}
 
-		// set bot detection level
+		// Set bot detection level.
 		if err := bdFlags.BotDetectionLevel.AskU(cmd, &inputs.BotDetectionLevel, stringPtr(bd.BotDetectionLevel.Ptr())); err != nil {
 			return err
 		}
@@ -191,7 +191,7 @@ func updateBotDetectionCmdRun(cli *cli, inputs *botDetectionInputs) func(cmd *co
 		}
 		bdUpdate.SetBotDetectionLevel(&botDetectionLevel)
 
-		// set challenge password policy
+		// Set challenge password policy.
 		if err := bdFlags.ChallengePasswordPolicy.AskU(cmd, &inputs.ChallengePasswordPolicy, stringPtr(bd.ChallengePasswordPolicy.Ptr())); err != nil {
 			return err
 		}
@@ -204,7 +204,7 @@ func updateBotDetectionCmdRun(cli *cli, inputs *botDetectionInputs) func(cmd *co
 		}
 		bdUpdate.SetChallengePasswordPolicy(&challengePasswordPolicy)
 
-		// set challenge passwordless policy
+		// Set challenge passwordless policy.
 		if err := bdFlags.ChallengePasswordlessPolicy.AskU(cmd, &inputs.ChallengePasswordlessPolicy, stringPtr(bd.ChallengePasswordlessPolicy.Ptr())); err != nil {
 			return err
 		}
@@ -217,7 +217,7 @@ func updateBotDetectionCmdRun(cli *cli, inputs *botDetectionInputs) func(cmd *co
 		}
 		bdUpdate.SetChallengePasswordlessPolicy(&challengePasswordlessPolicy)
 
-		// set challenge password reset policy
+		// Set challenge password reset policy.
 		if err := bdFlags.ChallengePasswordResetPolicy.AskU(cmd, &inputs.ChallengePasswordResetPolicy, stringPtr(bd.ChallengePasswordResetPolicy.Ptr())); err != nil {
 			return err
 		}
@@ -230,7 +230,7 @@ func updateBotDetectionCmdRun(cli *cli, inputs *botDetectionInputs) func(cmd *co
 		}
 		bdUpdate.SetChallengePasswordResetPolicy(&challengePasswordResetPolicy)
 
-		// set allowlist
+		// Set allowlist.
 		allowListString := strings.Join(bd.GetAllowlist(), ",")
 		if err := bdFlags.AllowList.AskManyU(cmd, &inputs.AllowList, &allowListString); err != nil {
 			return err
@@ -238,10 +238,9 @@ func updateBotDetectionCmdRun(cli *cli, inputs *botDetectionInputs) func(cmd *co
 		if len(inputs.AllowList) == 0 {
 			inputs.AllowList = bd.GetAllowlist()
 		}
-		allowlist := managementv2.BotDetectionAllowlist(inputs.AllowList)
-		bdUpdate.SetAllowlist(&allowlist)
+		bdUpdate.SetAllowlist(&inputs.AllowList)
 
-		// set monitoring mode enabled
+		// Set monitoring mode enabled.
 		if err := bdFlags.MonitoringModeEnabled.AskBoolU(cmd, &inputs.MonitoringModeEnabled, &bd.MonitoringModeEnabled); err != nil {
 			return err
 		}
