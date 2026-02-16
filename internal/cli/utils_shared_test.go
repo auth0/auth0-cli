@@ -14,6 +14,30 @@ import (
 	"github.com/auth0/auth0-cli/internal/config"
 )
 
+func TestStringPtr(t *testing.T) {
+	t.Run("returns nil when input is nil", func(t *testing.T) {
+		type CustomString string
+		var nilPtr *CustomString = nil
+		result := stringPtr(nilPtr)
+		assert.Nil(t, result)
+	})
+
+	t.Run("converts custom string pointer to string pointer", func(t *testing.T) {
+		type CustomString string
+		value := CustomString("test-value")
+		result := stringPtr(&value)
+		assert.NotNil(t, result)
+		assert.Equal(t, "test-value", *result)
+	})
+
+	t.Run("converts regular string pointer to string pointer", func(t *testing.T) {
+		value := "regular-string"
+		result := stringPtr(&value)
+		assert.NotNil(t, result)
+		assert.Equal(t, "regular-string", *result)
+	})
+}
+
 func TestBuildOauthTokenURL(t *testing.T) {
 	url := BuildOauthTokenURL("cli-demo.us.auth0.com")
 	assert.Equal(t, "https://cli-demo.us.auth0.com/oauth/token", url)

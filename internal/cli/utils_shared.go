@@ -322,6 +322,16 @@ func formatManageTenantURL(tenant string, cfg *config.Config) string {
 	)
 }
 
+// stringPtr converts a pointer of string-derived type to pointer of string.
+// Returns nil if the input pointer is nil.
+func stringPtr[strPtrType ~string](ptr *strPtrType) *string {
+	if ptr == nil {
+		return nil
+	}
+	s := string(*ptr)
+	return &s
+}
+
 func parseFlexibleDate(input string) (string, error) {
 	now := time.Now().UTC()
 	input = strings.TrimSpace(input)

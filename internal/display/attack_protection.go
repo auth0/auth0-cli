@@ -224,15 +224,28 @@ func (bd *botDetectionView) Object() interface{} {
 
 func (r *Renderer) BotDetectionShow(bd *managementv2.GetBotDetectionSettingsResponseContent) {
 	r.Heading("bot detection")
-	r.Result(makeBotDetectionView(bd))
+	r.Result(makeBotDetectionShowView(bd))
 }
 
-func (r *Renderer) BotDetectionUpdate(bd *managementv2.GetBotDetectionSettingsResponseContent) {
+func (r *Renderer) BotDetectionUpdate(bd *managementv2.UpdateBotDetectionSettingsResponseContent) {
 	r.Heading("bot detection updated")
-	r.Result(makeBotDetectionView(bd))
+	r.Result(makeBotDetectionUpdateView(bd))
 }
 
-func makeBotDetectionView(bd *managementv2.GetBotDetectionSettingsResponseContent) *botDetectionView {
+func makeBotDetectionShowView(bd *managementv2.GetBotDetectionSettingsResponseContent) *botDetectionView {
+	return &botDetectionView{
+		BotDetectionLevel:            string(bd.GetBotDetectionLevel()),
+		ChallengePasswordPolicy:      string(bd.GetChallengePasswordPolicy()),
+		ChallengePasswordlessPolicy:  string(bd.GetChallengePasswordlessPolicy()),
+		ChallengePasswordResetPolicy: string(bd.GetChallengePasswordResetPolicy()),
+		AllowList:                    bd.GetAllowlist(),
+		MonitoringModeEnabled:        boolean(bd.GetMonitoringModeEnabled()),
+
+		raw: bd,
+	}
+}
+
+func makeBotDetectionUpdateView(bd *managementv2.UpdateBotDetectionSettingsResponseContent) *botDetectionView {
 	return &botDetectionView{
 		BotDetectionLevel:            string(bd.GetBotDetectionLevel()),
 		ChallengePasswordPolicy:      string(bd.GetChallengePasswordPolicy()),
