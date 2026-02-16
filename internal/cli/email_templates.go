@@ -247,6 +247,9 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			if !emailTemplateEnabled.IsSet(cmd) {
+				inputs.Enabled = auth0.BoolValue(oldTemplate.Enabled)
+			}
 			if err := emailTemplateEnabled.AskBoolU(cmd, &inputs.Enabled, oldTemplate.Enabled); err != nil {
 				return err
 			}
