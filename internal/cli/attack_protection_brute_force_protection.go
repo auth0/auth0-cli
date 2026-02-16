@@ -163,6 +163,9 @@ func updateBruteForceDetectionCmdRun(
 			return err
 		}
 
+		if !bfpFlags.Enabled.IsSet(cmd) {
+			inputs.Enabled = bfp.GetEnabled()
+		}
 		if err := bfpFlags.Enabled.AskBoolU(cmd, &inputs.Enabled, bfp.Enabled); err != nil {
 			return err
 		}
