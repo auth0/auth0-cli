@@ -228,6 +228,9 @@ func updateLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 			if err := splunkPort.AskU(cmd, &inputs.splunkPort, splunkSink.Port); err != nil {
 				return err
 			}
+			if !splunkVerifyTLS.IsSet(cmd) {
+				inputs.splunkVerifyTLS = auth0.BoolValue(splunkSink.Secure)
+			}
 			if err := splunkVerifyTLS.AskBoolU(cmd, &inputs.splunkVerifyTLS, splunkSink.Secure); err != nil {
 				return err
 			}
