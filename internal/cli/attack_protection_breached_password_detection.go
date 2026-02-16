@@ -152,6 +152,9 @@ func updateBreachedPasswordDetectionCmdRun(
 			return err
 		}
 
+		if !bpdFlags.Enabled.IsSet(cmd) {
+			inputs.Enabled = bpd.GetEnabled()
+		}
 		if err := bpdFlags.Enabled.AskBoolU(cmd, &inputs.Enabled, bpd.Enabled); err != nil {
 			return err
 		}
