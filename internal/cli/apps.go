@@ -1162,7 +1162,7 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 			}
 
 			if !appSTCanCreateToken.IsSet(cmd) {
-				inputs.CanCreateToken = auth0.BoolValue(current.SessionTransfer.CanCreateSessionTransferToken)
+				inputs.CanCreateToken = current.SessionTransfer.GetCanCreateSessionTransferToken()
 			}
 			if err := appSTCanCreateToken.AskBoolU(cmd, &inputs.CanCreateToken, current.SessionTransfer.CanCreateSessionTransferToken); err != nil {
 				return err

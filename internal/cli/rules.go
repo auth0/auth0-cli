@@ -364,7 +364,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 					return err
 				}
 				if !ruleEnabled.IsSet(cmd) {
-					inputs.Enabled = auth0.BoolValue(oldRule.Enabled)
+					inputs.Enabled = oldRule.GetEnabled()
 				}
 				if err := ruleEnabled.AskBoolU(cmd, &inputs.Enabled, oldRule.Enabled); err != nil {
 					return err

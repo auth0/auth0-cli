@@ -313,7 +313,7 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 			}
 
 			if !phoneProviderDisabled.IsSet(cmd) {
-				inputs.disabled = auth0.BoolValue(existingProvider.Disabled)
+				inputs.disabled = existingProvider.GetDisabled()
 			}
 			if err := phoneProviderDisabled.AskBoolU(cmd, &inputs.disabled, existingProvider.Disabled); err != nil {
 				return err

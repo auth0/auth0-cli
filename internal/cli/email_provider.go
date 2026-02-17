@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
 
@@ -304,7 +303,7 @@ func updateEmailProviderCmd(cli *cli) *cobra.Command {
 				return err
 			}
 			if !emailProviderEnabled.IsSet(cmd) {
-				inputs.enabled = auth0.BoolValue(currentProvider.Enabled)
+				inputs.enabled = currentProvider.GetEnabled()
 			}
 			if err := emailProviderEnabled.AskBoolU(cmd, &inputs.enabled, currentProvider.Enabled); err != nil {
 				return err
