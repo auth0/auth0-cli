@@ -3,6 +3,7 @@ package auth0
 import (
 	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
+	managementv2 "github.com/auth0/go-auth0/v2/management/client"
 )
 
 // API mimics `management.Management`s general interface, except it refers to
@@ -73,6 +74,16 @@ func NewAPI(m *management.Management) *API {
 		SelfServiceProfile:   m.SelfServiceProfile,
 		UserAttributeProfile: m.UserAttributeProfile,
 		HTTPClient:           m,
+	}
+}
+
+type APIV2 struct {
+	AttackProtectionBotDetection AttackProtectionBotDetectionAPIV2
+}
+
+func NewAPIV2(m *managementv2.Management) *APIV2 {
+	return &APIV2{
+		AttackProtectionBotDetection: m.AttackProtection.BotDetection,
 	}
 }
 

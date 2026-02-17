@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/auth0/go-auth0/management"
+	managementv2 "github.com/auth0/go-auth0/v2/management"
+	"github.com/auth0/go-auth0/v2/management/option"
 )
 
 type AttackProtectionAPI interface {
@@ -63,4 +65,20 @@ type AttackProtectionAPI interface {
 		ctx context.Context, sit *management.SuspiciousIPThrottling,
 		opts ...management.RequestOption,
 	) (err error)
+}
+
+type AttackProtectionBotDetectionAPIV2 interface {
+	// Get the Bot Detection configuration of tenant.
+	//
+	// Required scope: `read:attack_protection`
+	//
+	// See: https://auth0.com/docs/api/management/v2#!/attack-protection/get-bot-detection
+	Get(ctx context.Context, opts ...option.RequestOption) (*managementv2.GetBotDetectionSettingsResponseContent, error)
+
+	// Update the Bot Detection configuration of tenant.
+	//
+	// Required scope: `update:attack_protection`
+	//
+	// See: https://auth0.com/docs/api/management/v2#!/attack-protection/patch-bot-detection
+	Update(ctx context.Context, request *managementv2.UpdateBotDetectionSettingsRequestContent, opts ...option.RequestOption) (*managementv2.UpdateBotDetectionSettingsResponseContent, error)
 }
