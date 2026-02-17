@@ -1167,7 +1167,6 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 			if err := appSTCanCreateToken.AskBoolU(cmd, &inputs.CanCreateToken, current.SessionTransfer.CanCreateSessionTransferToken); err != nil {
 				return err
 			}
-			st.CanCreateSessionTransferToken = &inputs.CanCreateToken
 
 			defaultVal := stringSliceToCommaSeparatedString(current.SessionTransfer.GetAllowedAuthenticationMethods())
 			if err := appSTAllowedAuthMethods.AskManyU(cmd, &inputs.AllowedAuthMethods, &defaultVal); err != nil {
@@ -1177,6 +1176,8 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 			if err := appSTEnforceDeviceBinding.SelectU(cmd, &inputs.EnforceDeviceBinding, []string{"none", "ip", "asn"}, current.SessionTransfer.EnforceDeviceBinding); err != nil {
 				return err
 			}
+
+			st.CanCreateSessionTransferToken = &inputs.CanCreateToken
 
 			if len(inputs.AllowedAuthMethods) > 0 {
 				st.AllowedAuthenticationMethods = &inputs.AllowedAuthMethods
