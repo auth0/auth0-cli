@@ -53,7 +53,7 @@ var bdFlags = botDetectionFlags{
 	},
 	MonitoringModeEnabled: Flag{
 		Name:         "Monitoring Mode Enabled",
-		LongForm:     "monitoring-mode",
+		LongForm:     "monitoring-mode-enabled",
 		ShortForm:    "m",
 		Help:         "Enable (or disable) monitoring mode. When enabled, logs but does not block.",
 		AlwaysPrompt: true,
@@ -129,7 +129,7 @@ func updateBotDetectionCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 protection bot-detection update
   auth0 ap bd update --bot-detection-level medium --json-compact
   auth0 ap bd update --bot-detection-level low --challenge-password-policy never
-  auth0 ap bd update --monitoring-mode=true --allowlist "198.51.100.42,10.0.0.0/24"
+  auth0 ap bd update --monitoring-mode-enabled=true --allowlist "198.51.100.42,10.0.0.0/24"
   auth0 ap bd update -l high -a "198.51.100.42" -m=false --json`,
 		RunE: updateBotDetectionCmdRun(cli, &inputs),
 	}

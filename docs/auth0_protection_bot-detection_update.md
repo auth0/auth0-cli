@@ -18,7 +18,7 @@ auth0 protection bot-detection update [flags]
   auth0 protection bot-detection update
   auth0 ap bd update --bot-detection-level medium --json-compact
   auth0 ap bd update --bot-detection-level low --challenge-password-policy never
-  auth0 ap bd update --monitoring-mode=true --allowlist "198.51.100.42,10.0.0.0/24"
+  auth0 ap bd update --monitoring-mode-enabled=true --allowlist "198.51.100.42,10.0.0.0/24"
   auth0 ap bd update -l high -a "198.51.100.42" -m=false --json
 ```
 
@@ -33,7 +33,7 @@ auth0 protection bot-detection update [flags]
       --challenge-passwordless-policy string     Determines how often to challenge users with a CAPTCHA for passwordless login. Possible values: never, when_risky, always.
       --json                                     Output in json format.
       --json-compact                             Output in compact json format.
-  -m, --monitoring-mode                          Enable (or disable) monitoring mode. When enabled, logs but does not block.
+  -m, --monitoring-mode-enabled                  Enable (or disable) monitoring mode. When enabled, logs but does not block.
 ```
 
 
