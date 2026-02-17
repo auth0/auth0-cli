@@ -162,6 +162,14 @@ tests:
         sink.splunkPort: "8000"
         sink.splunkSecure: "true"
 
+  022.1 - given a splunk log stream, it successfully updates only specified value without affecting secure boolean value:
+    command: auth0 logs streams update splunk $(cat ./test/integration/identifiers/log-stream-splunk-id) --port 8088 --json
+    exit-code: 0
+    stdout:
+      json:
+        sink.splunkSecure: "true"
+        sink.splunkPort: "8088"
+
   023 - given a splunk log stream, it successfully deletes the log stream:
     command: auth0 logs streams delete $(cat ./test/integration/identifiers/log-stream-splunk-id) --force --no-input
     exit-code: 0
