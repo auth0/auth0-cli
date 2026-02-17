@@ -98,7 +98,8 @@ tests:
     exit-code: 0
 
   010 - attack protection update bot detection:
-    command: auth0 attack-protection bot-detection update --bot-detection-level medium
+    command: auth0 attack-protection bot-detection update --monitoring-mode-enabled --bot-detection-level medium
+    exit-code: 0
     stdout:
       contains:
         - BOT_DETECTION_LEVEL
@@ -107,4 +108,11 @@ tests:
         - CHALLENGE_PASSWORD_RESET_POLICY
         - ALLOW_LIST
         - MONITORING_MODE_ENABLED
+  
+  010.1 - attack protection update only specified value without affecting the monitoring-mode-enabled boolean value:
+    command: auth0 attack-protection bot-detection update --bot-detection-level high --json
     exit-code: 0
+    stdout:
+      json:
+        monitoring_mode_enabled: "true"
+        bot_detection_level: high
