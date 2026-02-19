@@ -300,6 +300,14 @@ tests:
         can_create_session_transfer_token: "true"
         allowed_authentication_methods: "[cookie query]"
         enforce_device_binding: asn
+  
+  039.1 - it successfully updates only specified value of the application session-transfer without affecting can_create_session_transfer_token boolean value:
+    command: auth0 apps session-transfer update $(./test/integration/scripts/get-app-id.sh) --enforce-device-binding=ip --json
+    exit-code: 0
+    stdout:
+      json:
+        can_create_session_transfer_token: "true"
+        enforce_device_binding: ip
 
   040 - it successfully renders the session-transfer of an application:
     command: auth0 apps session-transfer show $(./test/integration/scripts/get-app-id.sh)
@@ -308,7 +316,7 @@ tests:
       contains:
         - CAN CREATE TOKEN  ✓
         - ALLOWED METHODS   cookie, query
-        - DEVICE BINDING    asn
+        - DEVICE BINDING    ip
 
   041 - given a test app, it successfully deletes the app:
     command: auth0 apps delete $(./test/integration/scripts/get-app-id.sh) --force

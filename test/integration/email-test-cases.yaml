@@ -55,6 +55,14 @@ tests:
     command: auth0 email provider update --enabled --default-from-address='admin@auth0.invalid'
     exit-code: 0
 
+  011.1 - update only specified value without affecting the enabled boolean value:
+    command: auth0 email provider update --default-from-address='test@auth0.invalid' --json
+    exit-code: 0
+    stdout:
+      json:
+        enabled: "true"
+        default_from_address: "test@auth0.invalid"
+
   012 - it successfully shows the email provider:
     command: auth0 email provider show
     exit-code: 0
@@ -62,12 +70,20 @@ tests:
       contains:
         - PROVIDER              mandrill
         - ENABLED               ✓
-        - DEFAULT FROM ADDRESS  admin@auth0.invalid
+        - DEFAULT FROM ADDRESS  test@auth0.invalid
         - SETTINGS              {"message":{"view_content_link":false}}
 
   100 - it successfully updates welcome email template:
     command: auth0 email templates update welcome --enabled --body "<h1>Welcome!</h1>" --from "welcome@travel0.com" --lifetime 6100 --subject "Welcome to Travel0" --url "travel0.com" --force
     exit-code: 0
+
+  100.1 - it successfully updates only specified value without affecting the enabled boolean flag:
+    command: auth0 email templates update welcome --url "test.travel0.com" --json
+    exit-code: 0
+    stdout:
+      json:
+        enabled: "true"
+        resultUrl: "test.travel0.com"
 
   101 - it successfully shows welcome email template:
     command: auth0 email templates show welcome
@@ -77,7 +93,7 @@ tests:
         - TEMPLATE             Welcome Email
         - FROM                 welcome@travel0.com
         - SUBJECT              Welcome to Travel0
-        - RESULT URL           travel0.com
+        - RESULT URL           test.travel0.com
         - RESULT URL LIFETIME  6100
         - ENABLED              ✓
 

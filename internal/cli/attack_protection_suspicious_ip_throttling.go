@@ -186,6 +186,9 @@ func updateSuspiciousIPThrottlingCmdRun(
 			return err
 		}
 
+		if !sitFlags.Enabled.IsSet(cmd) {
+			inputs.Enabled = sit.GetEnabled()
+		}
 		if err := sitFlags.Enabled.AskBoolU(cmd, &inputs.Enabled, sit.Enabled); err != nil {
 			return err
 		}

@@ -59,12 +59,20 @@ tests:
     command: auth0 phone provider update $(./test/integration/scripts/get-custom-phone-provider-id.sh) --provider=custom --disabled --configuration '{ "delivery_methods":["text", "voice"] }'
     exit-code: 0
 
+  010.1 - update only the specified value without affecting the disabled boolean flag:
+    command: auth0 phone provider update $(./test/integration/scripts/get-custom-phone-provider-id.sh) --provider=twilio --json
+    exit-code: 0
+    stdout:
+      json:
+        disabled: "true"
+        name: "twilio"
+
   011 - it successfully shows the phone provider:
     command: auth0 phone provider show $(./test/integration/scripts/get-custom-phone-provider-id.sh)
     exit-code: 0
     stdout:
       contains:
-        - PROVIDER       custom
+        - PROVIDER       twilio
         - DISABLED       ✓
         - CONFIGURATION  {"delivery_methods":["text","voice"]}
 
