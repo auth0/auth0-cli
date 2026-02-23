@@ -437,6 +437,174 @@ var (
 	}
 )
 
+type QuickstartSetupInputs struct {
+	Name string
+	Port int
+}
+
+// QuickstartSetupStrategy defines the interface for type-specific setup workflows.
+// Each quickstart type implements this interface to define its complete setup procedure.
+type QuickstartSetupStrategy interface {
+	// GetDefaultPort returns the default port for this quickstart type.
+	GetDefaultPort() int
+
+	// GetEnvFileName returns the environment file name for this quickstart type.
+	GetEnvFileName() string
+
+	// SetupResources creates all necessary Auth0 resources (clients, APIs, resource servers, etc.).
+	// This method encapsulates the complete resource creation workflow for the quickstart type.
+	// Complex types can create multiple resources here.
+	SetupResources(ctx context.Context, cli *cli, inputs QuickstartSetupInputs) error
+
+	// GenerateEnvFile generates the environment file content.
+	// Returns the file content that should be written to the env file.
+	GenerateEnvFile(cli *cli, inputs QuickstartSetupInputs) (string, error)
+}
+
+func validatePort(port int) error {
+	if port < 1024 || port > 65535 {
+		return fmt.Errorf("invalid port number: %d (must be between 1024 and 65535)", port)
+	}
+	return nil
+}
+
+var supportedQuickstartTypes = []string{"vite", "nextjs"}
+
+func quickstartStrategy(typeStr string) (QuickstartSetupStrategy, error) {
+	switch strings.ToLower(typeStr) {
+	case "vite":
+		return &ViteSetupStrategy{}, nil
+	case "nextjs":
+		return &NextjsSetupStrategy{}, nil
+	default:
+		return nil, fmt.Errorf("unsupported quickstart type: %s (supported types: %s)", typeStr, strings.Join(supportedQuickstartTypes, ", "))
+	}
+}
+
+// ViteSetupStrategy implements the setup workflow for Vite applications.
+type ViteSetupStrategy struct {
+	createdAppId string
+}
+
+func (s *ViteSetupStrategy) GetDefaultPort() int {
+	return 5173
+}
+
+func (s *ViteSetupStrategy) GetEnvFileName() string {
+	return ".env"
+}
+
+func (s *ViteSetupStrategy) SetupResources(ctx context.Context, cli *cli, inputs QuickstartSetupInputs) error {
+	baseURL := fmt.Sprintf("http://localhost:%d", inputs.Port)
+
+	// Create Auth0 application with customized settings for Vite quickstart.
+	client := &management.Client{
+		Name:              &inputs.Name,
+		AppType:           auth0.String(appTypeSPA),
+		Callbacks:         &[]string{baseURL},
+		AllowedLogoutURLs: &[]string{baseURL},
+		AllowedOrigins:    &[]string{baseURL},
+		WebOrigins:        &[]string{baseURL},
+		OIDCConformant:    auth0.Bool(true),
+		JWTConfiguration: &management.ClientJWTConfiguration{
+			Algorithm: auth0.String("RS256"),
+		},
+		ClientMetadata: &map[string]interface{}{
+			"created_by": "quickstart-docs-manual-cli",
+		},
+	}
+	if err := cli.api.Client.Create(ctx, client); err != nil {
+		return fmt.Errorf("failed to create application: %w", err)
+	}
+	cli.renderer.Infof("Application created successfully with Client ID: %s", client.GetClientID())
+	s.createdAppId = client.GetClientID()
+	return nil
+}
+
+func (s *ViteSetupStrategy) GenerateEnvFile(cli *cli, inputs QuickstartSetupInputs) (string, error) {
+	if s.createdAppId == "" {
+		return "", fmt.Errorf("no client created")
+	}
+	tenant, err := cli.Config.GetTenant(cli.tenant)
+	if err != nil {
+		return "", fmt.Errorf("failed to get tenant: %w", err)
+	}
+
+	var envContent strings.Builder
+	fmt.Fprintf(&envContent, "VITE_AUTH0_DOMAIN=%s\n", tenant.Domain)
+	fmt.Fprintf(&envContent, "VITE_AUTH0_CLIENT_ID=%s\n", s.createdAppId)
+
+	return envContent.String(), nil
+}
+
+// NextjsSetupStrategy implements the setup workflow for Next.js applications.
+type NextjsSetupStrategy struct {
+	createdAppId        string
+	createdClientSecret string
+}
+
+func (s *NextjsSetupStrategy) GetDefaultPort() int {
+	return 3000
+}
+
+func (s *NextjsSetupStrategy) GetEnvFileName() string {
+	return ".env.local"
+}
+
+func (s *NextjsSetupStrategy) SetupResources(ctx context.Context, cli *cli, inputs QuickstartSetupInputs) error {
+	baseURL := fmt.Sprintf("http://localhost:%d", inputs.Port)
+	callbackURL := fmt.Sprintf("%s/auth/callback", baseURL)
+
+	// Create Auth0 application with customized settings for Next.js quickstart.
+	client := &management.Client{
+		Name:              &inputs.Name,
+		AppType:           auth0.String(appTypeRegularWeb),
+		Callbacks:         &[]string{callbackURL},
+		AllowedLogoutURLs: &[]string{baseURL},
+		OIDCConformant:    auth0.Bool(true),
+		JWTConfiguration: &management.ClientJWTConfiguration{
+			Algorithm: auth0.String("RS256"),
+		},
+		ClientMetadata: &map[string]interface{}{
+			"created_by": "quickstart-docs-manual-cli",
+		},
+	}
+	if err := cli.api.Client.Create(ctx, client); err != nil {
+		return fmt.Errorf("failed to create application: %w", err)
+	}
+	cli.renderer.Infof("Application created successfully with Client ID: %s", client.GetClientID())
+	s.createdAppId = client.GetClientID()
+	s.createdClientSecret = client.GetClientSecret()
+	return nil
+}
+
+func (s *NextjsSetupStrategy) GenerateEnvFile(cli *cli, inputs QuickstartSetupInputs) (string, error) {
+	if s.createdAppId == "" {
+		return "", fmt.Errorf("no client created")
+	}
+
+	tenant, err := cli.Config.GetTenant(cli.tenant)
+	if err != nil {
+		return "", fmt.Errorf("failed to get tenant: %w", err)
+	}
+
+	secret, err := generateState(32)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate AUTH0_SECRET: %w", err)
+	}
+
+	baseURL := fmt.Sprintf("http://localhost:%d", inputs.Port)
+
+	var envContent strings.Builder
+	fmt.Fprintf(&envContent, "AUTH0_DOMAIN=%s\n", tenant.Domain)
+	fmt.Fprintf(&envContent, "AUTH0_CLIENT_ID=%s\n", s.createdAppId)
+	fmt.Fprintf(&envContent, "AUTH0_CLIENT_SECRET=%s\n", s.createdClientSecret)
+	fmt.Fprintf(&envContent, "AUTH0_SECRET=%s\n", secret)
+	fmt.Fprintf(&envContent, "APP_BASE_URL=%s\n", baseURL)
+
+	return envContent.String(), nil
+}
+
 func setupQuickstartCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Type string
@@ -465,13 +633,12 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 			ctx := cmd.Context()
 
 			if inputs.Type != "" {
-				normalizedType := strings.ToLower(inputs.Type)
-				if normalizedType != "vite" && normalizedType != "nextjs" {
-					return fmt.Errorf("unsupported quickstart type: %s (supported types: vite, nextjs)", inputs.Type)
+				if _, err := quickstartStrategy(inputs.Type); err != nil {
+					return err
 				}
 			}
 
-			if err := qsType.Select(cmd, &inputs.Type, []string{"vite", "nextjs"}, nil); err != nil {
+			if err := qsType.Select(cmd, &inputs.Type, supportedQuickstartTypes, nil); err != nil {
 				return err
 			}
 
@@ -485,115 +652,57 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			var appType, baseURL, envFileName string
-			var callbacks, logoutURLs, origins, webOrigins []string
-			var defaultPort string
-
-			switch inputs.Type {
-			case "vite":
-				appType = appTypeSPA
-				defaultPort = "5173"
-				envFileName = ".env"
-
-			case "nextjs":
-				appType = appTypeRegularWeb
-				defaultPort = "3000"
-				envFileName = ".env.local"
+			strategy, err := quickstartStrategy(inputs.Type)
+			if err != nil {
+				return err
 			}
 
+			defaultPort := fmt.Sprintf("%d", strategy.GetDefaultPort())
 			if err := qsPort.Ask(cmd, &inputs.Port, &defaultPort); err != nil {
 				return err
 			}
 
-			if inputs.Port < 1024 || inputs.Port > 65535 {
-				return fmt.Errorf("invalid port number: %d (must be between 1024 and 65535)", inputs.Port)
+			// Validate port using common validation logic.
+			if err := validatePort(inputs.Port); err != nil {
+				return err
 			}
 
-			baseURL = fmt.Sprintf("http://localhost:%d", inputs.Port)
-
-			// Configure URLs based on app type.
-			if inputs.Type == "vite" {
-				callbacks = []string{baseURL}
-				logoutURLs = []string{baseURL}
-				origins = []string{baseURL}
-				webOrigins = []string{baseURL}
-			} else {
-				callbackURL := fmt.Sprintf("%s/auth/callback", baseURL)
-				callbacks = []string{callbackURL}
-				logoutURLs = []string{baseURL}
+			// Prepare inputs for strategy.
+			setupInputs := QuickstartSetupInputs{
+				Name: inputs.Name,
+				Port: inputs.Port,
 			}
 
-			cli.renderer.Infof("Creating Auth0 application '%s'...", inputs.Name)
-
-			oidcConformant := true
-			algorithm := "RS256"
-			metadata := map[string]interface{}{
-				"created_by": "quickstart-docs-manual-cli",
-			}
-
-			a := &management.Client{
-				Name:              &inputs.Name,
-				AppType:           &appType,
-				Callbacks:         &callbacks,
-				AllowedLogoutURLs: &logoutURLs,
-				OIDCConformant:    &oidcConformant,
-				JWTConfiguration: &management.ClientJWTConfiguration{
-					Algorithm: &algorithm,
-				},
-				ClientMetadata: &metadata,
-			}
-
-			if inputs.Type == "vite" {
-				a.AllowedOrigins = &origins
-				a.WebOrigins = &webOrigins
-			}
-
+			// Create Auth0 resources using the strategy.
+			cli.renderer.Infof("Creating Auth0 resources for '%s'...", inputs.Name)
 			if err := ansi.Waiting(func() error {
-				return cli.api.Client.Create(ctx, a)
+				return strategy.SetupResources(ctx, cli, setupInputs)
 			}); err != nil {
-				return fmt.Errorf("failed to create application: %w", err)
+				return err
 			}
 
-			cli.renderer.Infof("Application created successfully with Client ID: %s", a.GetClientID())
-
-			tenant, err := cli.Config.GetTenant(cli.tenant)
+			// Generate environment file content.
+			envContent, err := strategy.GenerateEnvFile(cli, setupInputs)
 			if err != nil {
-				return fmt.Errorf("failed to get tenant: %w", err)
+				return err
 			}
 
-			var envContent strings.Builder
-
-			switch inputs.Type {
-			case "vite":
-				envContent.WriteString(fmt.Sprintf("VITE_AUTH0_DOMAIN=%s\n", tenant.Domain))
-				envContent.WriteString(fmt.Sprintf("VITE_AUTH0_CLIENT_ID=%s\n", a.GetClientID()))
-
-			case "nextjs":
-				secret, err := generateState(32)
-				if err != nil {
-					return fmt.Errorf("failed to generate AUTH0_SECRET: %w", err)
-				}
-
-				envContent.WriteString(fmt.Sprintf("AUTH0_DOMAIN=%s\n", tenant.Domain))
-				envContent.WriteString(fmt.Sprintf("AUTH0_CLIENT_ID=%s\n", a.GetClientID()))
-				envContent.WriteString(fmt.Sprintf("AUTH0_CLIENT_SECRET=%s\n", a.GetClientSecret()))
-				envContent.WriteString(fmt.Sprintf("AUTH0_SECRET=%s\n", secret))
-				envContent.WriteString(fmt.Sprintf("APP_BASE_URL=%s\n", baseURL))
-			}
-
+			// Write or display environment file.
+			envFileName := strategy.GetEnvFileName()
 			message := fmt.Sprintf("     Proceed to overwrite '%s' file? : ", envFileName)
 			if shouldCancelOverwrite(cli, cmd, envFileName, message) {
 				cli.renderer.Warnf("Aborted creating %s file. Please create it manually using the following content:\n\n"+
 					"─────────────────────────────────────────────────────────────\n"+"%s"+
-					"─────────────────────────────────────────────────────────────\n", envFileName, envContent.String())
+					"─────────────────────────────────────────────────────────────\n", envFileName, envContent)
 			} else {
-				if err = os.WriteFile(envFileName, []byte(envContent.String()), 0600); err != nil {
-					return fmt.Errorf("failed to write .env file: %w", err)
+				if err = os.WriteFile(envFileName, []byte(envContent), 0600); err != nil {
+					return fmt.Errorf("failed to write %s file: %w", envFileName, err)
 				}
 
 				cli.renderer.Infof("%s file created successfully with your Auth0 configuration\n", envFileName)
 			}
 
+			baseURL := fmt.Sprintf("http://localhost:%d", inputs.Port)
 			cli.renderer.Infof("Next steps: \n"+
 				"       1. Install dependencies: npm install \n"+
 				"       2. Start your application: npm run dev\n"+
