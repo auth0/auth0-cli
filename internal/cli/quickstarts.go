@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -671,6 +672,9 @@ func (s *JHipsterSetupStrategy) SetupResources(ctx context.Context, cli *cli, in
 	if err := s.createApplication(ctx, cli, inputs); err != nil {
 		return err
 	}
+	if err := s.enableConnectionForClient(ctx, cli); err != nil {
+		return err
+	}
 	roles, err := s.createRoles(ctx, cli)
 	if err != nil {
 		return err
@@ -691,7 +695,7 @@ func (s *JHipsterSetupStrategy) SetupResources(ctx context.Context, cli *cli, in
 
 func (s *JHipsterSetupStrategy) createApplication(ctx context.Context, cli *cli, inputs QuickstartSetupInputs) error {
 	baseURL := fmt.Sprintf("http://localhost:%d/", inputs.Port)
-	callbackURL := fmt.Sprintf("%s/login/oauth2/code/oidc", baseURL)
+	callbackURL := fmt.Sprintf("%slogin/oauth2/code/oidc", baseURL)
 
 	client := &management.Client{
 		Name:              &inputs.Name,
@@ -712,6 +716,41 @@ func (s *JHipsterSetupStrategy) createApplication(ctx context.Context, cli *cli,
 	cli.renderer.Infof("Application created successfully with Client ID: %s", client.GetClientID())
 	s.createdAppId = client.GetClientID()
 	s.createdClientSecret = client.GetClientSecret()
+
+	return nil
+}
+
+func (s *JHipsterSetupStrategy) enableConnectionForClient(ctx context.Context, cli *cli) error {
+	connectionName := "Username-Password-Authentication"
+	connection, err := cli.api.Connection.ReadByName(ctx, connectionName)
+	if err != nil {
+		mErr, ok := err.(management.Error)
+		if !ok || mErr.Status() != http.StatusNotFound {
+			return fmt.Errorf("failed to read connection %q: %w", connectionName, err)
+		}
+
+		// Connection doesn't exist, create it with the client enabled.
+		connection = &management.Connection{
+			Name:           auth0.String(connectionName),
+			Strategy:       auth0.String(management.ConnectionStrategyAuth0),
+			EnabledClients: &[]string{s.createdAppId},
+		}
+		if err := cli.api.Connection.Create(ctx, connection); err != nil {
+			return fmt.Errorf("failed to create connection %q: %w", connectionName, err)
+		}
+		cli.renderer.Infof("Connection '%s' created and enabled for application", connectionName)
+		return nil
+	}
+
+	enabledClients := connection.GetEnabledClients()
+	enabledClients = append(enabledClients, s.createdAppId)
+
+	if err := cli.api.Connection.Update(ctx, connection.GetID(), &management.Connection{
+		EnabledClients: &enabledClients,
+	}); err != nil {
+		return fmt.Errorf("failed to enable connection for application: %w", err)
+	}
+	cli.renderer.Infof("Connection '%s' enabled for application", connectionName)
 
 	return nil
 }
