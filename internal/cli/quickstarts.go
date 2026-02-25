@@ -448,8 +448,16 @@ type QuickstartSetupStrategy interface {
 	// GetDefaultPort returns the default port for this quickstart type.
 	GetDefaultPort() int
 
+	// GetDefaultAppName returns the default application name for this quickstart type.
+	GetDefaultAppName() string
+
 	// GetEnvFileName returns the environment file name for this quickstart type.
 	GetEnvFileName() string
+
+	// GatherAdditionalInputs prompts for any strategy-specific inputs beyond name and port.
+	// Called after name/port are collected, before SetupResources.
+	// Strategies that need no extra inputs should return nil.
+	GatherAdditionalInputs(cmd *cobra.Command, cli *cli) error
 
 	// SetupResources creates all necessary Auth0 resources (clients, APIs, resource servers, etc.).
 	// This method encapsulates the complete resource creation workflow for the quickstart type.
@@ -490,8 +498,16 @@ func (s *ViteSetupStrategy) GetDefaultPort() int {
 	return 5173
 }
 
+func (s *ViteSetupStrategy) GetDefaultAppName() string {
+	return "My App"
+}
+
 func (s *ViteSetupStrategy) GetEnvFileName() string {
 	return ".env"
+}
+
+func (s *ViteSetupStrategy) GatherAdditionalInputs(_ *cobra.Command, _ *cli) error {
+	return nil
 }
 
 func (s *ViteSetupStrategy) SetupResources(ctx context.Context, cli *cli, inputs QuickstartSetupInputs) error {
@@ -547,8 +563,16 @@ func (s *NextjsSetupStrategy) GetDefaultPort() int {
 	return 3000
 }
 
+func (s *NextjsSetupStrategy) GetDefaultAppName() string {
+	return "My App"
+}
+
 func (s *NextjsSetupStrategy) GetEnvFileName() string {
 	return ".env.local"
+}
+
+func (s *NextjsSetupStrategy) GatherAdditionalInputs(_ *cobra.Command, _ *cli) error {
+	return nil
 }
 
 func (s *NextjsSetupStrategy) SetupResources(ctx context.Context, cli *cli, inputs QuickstartSetupInputs) error {
@@ -642,18 +666,18 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
+			strategy, err := quickstartStrategy(inputs.Type)
+			if err != nil {
+				return err
+			}
+
 			if err := cli.setupWithAuthentication(ctx); err != nil {
 				return fmt.Errorf("authentication required: %w", err)
 			}
 
-			defaultName := "My App"
+			defaultName := strategy.GetDefaultAppName()
 
 			if err := qsAppName.Ask(cmd, &inputs.Name, &defaultName); err != nil {
-				return err
-			}
-
-			strategy, err := quickstartStrategy(inputs.Type)
-			if err != nil {
 				return err
 			}
 
@@ -664,6 +688,11 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 
 			// Validate port using common validation logic.
 			if err := validatePort(inputs.Port); err != nil {
+				return err
+			}
+
+			// Gather any strategy-specific inputs (e.g. user email/password for JHipster).
+			if err := strategy.GatherAdditionalInputs(cmd, cli); err != nil {
 				return err
 			}
 
