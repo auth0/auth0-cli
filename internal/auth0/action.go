@@ -45,6 +45,11 @@ type (
 		// See: https://auth0.com/docs/api/management/v2/#!/Actions/get_bindings
 		Bindings(ctx context.Context, triggerID string, opts ...management.RequestOption) (bl *management.ActionBindingList, err error)
 
+		// UpdateBindings of a trigger.
+		//
+		// See: https://auth0.com/docs/api/management/v2/#!/Actions/patch_bindings
+		UpdateBindings(ctx context.Context, triggerID string, bl []*management.ActionBinding, opts ...management.RequestOption) error
+
 		// Deploy an action.
 		//
 		// See: https://auth0.com/docs/api/management/v2/#!/Actions/post_deploy_action

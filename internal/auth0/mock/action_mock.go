@@ -192,6 +192,25 @@ func (mr *MockActionAPIMockRecorder) Update(ctx, id, a interface{}, opts ...inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockActionAPI)(nil).Update), varargs...)
 }
 
+// UpdateBindings mocks base method.
+func (m *MockActionAPI) UpdateBindings(ctx context.Context, triggerID string, bl []*management.ActionBinding, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, triggerID, bl}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateBindings", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateBindings indicates an expected call of UpdateBindings.
+func (mr *MockActionAPIMockRecorder) UpdateBindings(ctx, triggerID, bl interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, triggerID, bl}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateBindings", reflect.TypeOf((*MockActionAPI)(nil).UpdateBindings), varargs...)
+}
+
 // Versions mocks base method.
 func (m *MockActionAPI) Versions(ctx context.Context, id string, opts ...management.RequestOption) (*management.ActionVersionList, error) {
 	m.ctrl.T.Helper()
