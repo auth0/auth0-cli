@@ -420,7 +420,7 @@ var (
 		Name:       "Type",
 		LongForm:   "type",
 		ShortForm:  "t",
-		Help:       "Type of quickstart (vite, nextjs)",
+		Help:       "Type of quickstart: " + strings.Join(supportedQuickstartTypes, ", "),
 		IsRequired: true,
 	}
 	qsAppName = Flag{
@@ -433,7 +433,8 @@ var (
 		Name:      "Port",
 		LongForm:  "port",
 		ShortForm: "p",
-		Help:      "Port number for the application (default: 5173 for vite, 3000 for nextjs)",
+		Help: fmt.Sprintf("Port number for the application (default: %d for vite, %d for nextjs, %d for jhipster)",
+			(&ViteSetupStrategy{}).GetDefaultPort(), (&NextjsSetupStrategy{}).GetDefaultPort(), (&JHipsterSetupStrategy{}).GetDefaultPort()),
 	}
 )
 
@@ -454,11 +455,6 @@ type QuickstartSetupStrategy interface {
 	// GetEnvFileName returns the environment file name for this quickstart type.
 	GetEnvFileName() string
 
-	// GatherAdditionalInputs prompts for any strategy-specific inputs beyond name and port.
-	// Called after name/port are collected, before SetupResources.
-	// Strategies that need no extra inputs should return nil.
-	GatherAdditionalInputs(cmd *cobra.Command, cli *cli) error
-
 	// SetupResources creates all necessary Auth0 resources (clients, APIs, resource servers, etc.).
 	// This method encapsulates the complete resource creation workflow for the quickstart type.
 	// Complex types can create multiple resources here.
@@ -467,6 +463,9 @@ type QuickstartSetupStrategy interface {
 	// GenerateEnvFile generates the environment file content.
 	// Returns the file content that should be written to the env file.
 	GenerateEnvFile(cli *cli, inputs QuickstartSetupInputs) (string, error)
+
+	// PrintNextSteps prints the post-setup instructions for the user.
+	PrintNextSteps(cli *cli, inputs QuickstartSetupInputs)
 }
 
 func validatePort(port int) error {
@@ -476,7 +475,7 @@ func validatePort(port int) error {
 	return nil
 }
 
-var supportedQuickstartTypes = []string{"vite", "nextjs"}
+var supportedQuickstartTypes = []string{"vite", "nextjs", "jhipster"}
 
 func quickstartStrategy(typeStr string) (QuickstartSetupStrategy, error) {
 	switch strings.ToLower(typeStr) {
@@ -484,6 +483,8 @@ func quickstartStrategy(typeStr string) (QuickstartSetupStrategy, error) {
 		return &ViteSetupStrategy{}, nil
 	case "nextjs":
 		return &NextjsSetupStrategy{}, nil
+	case "jhipster":
+		return &JHipsterSetupStrategy{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported quickstart type: %s (supported types: %s)", typeStr, strings.Join(supportedQuickstartTypes, ", "))
 	}
@@ -506,8 +507,12 @@ func (s *ViteSetupStrategy) GetEnvFileName() string {
 	return ".env"
 }
 
-func (s *ViteSetupStrategy) GatherAdditionalInputs(_ *cobra.Command, _ *cli) error {
-	return nil
+func (s *ViteSetupStrategy) PrintNextSteps(cli *cli, inputs QuickstartSetupInputs) {
+	baseURL := fmt.Sprintf("http://localhost:%d", inputs.Port)
+	cli.renderer.Infof("Next steps: \n"+
+		"       1. Install dependencies: npm install \n"+
+		"       2. Start your application: npm run dev\n"+
+		"       3. Open your browser at %s", baseURL)
 }
 
 func (s *ViteSetupStrategy) SetupResources(ctx context.Context, cli *cli, inputs QuickstartSetupInputs) error {
@@ -571,8 +576,12 @@ func (s *NextjsSetupStrategy) GetEnvFileName() string {
 	return ".env.local"
 }
 
-func (s *NextjsSetupStrategy) GatherAdditionalInputs(_ *cobra.Command, _ *cli) error {
-	return nil
+func (s *NextjsSetupStrategy) PrintNextSteps(cli *cli, inputs QuickstartSetupInputs) {
+	baseURL := fmt.Sprintf("http://localhost:%d", inputs.Port)
+	cli.renderer.Infof("Next steps: \n"+
+		"       1. Install dependencies: npm install \n"+
+		"       2. Start your application: npm run dev\n"+
+		"       3. Open your browser at %s", baseURL)
 }
 
 func (s *NextjsSetupStrategy) SetupResources(ctx context.Context, cli *cli, inputs QuickstartSetupInputs) error {
@@ -629,6 +638,203 @@ func (s *NextjsSetupStrategy) GenerateEnvFile(cli *cli, inputs QuickstartSetupIn
 	return envContent.String(), nil
 }
 
+// JHipsterSetupStrategy implements the setup workflow for JHipster applications.
+// It creates a Regular Web Application, ROLE_ADMIN and ROLE_USER roles,
+// and an "Add Roles" post-login Action attached to the Login flow.
+type JHipsterSetupStrategy struct {
+	createdAppId        string
+	createdClientSecret string
+}
+
+func (s *JHipsterSetupStrategy) GetDefaultPort() int {
+	return 8080
+}
+
+func (s *JHipsterSetupStrategy) GetDefaultAppName() string {
+	return "JHipster"
+}
+
+func (s *JHipsterSetupStrategy) GetEnvFileName() string {
+	return ".auth0.env"
+}
+
+func (s *JHipsterSetupStrategy) PrintNextSteps(cli *cli, inputs QuickstartSetupInputs) {
+	baseURL := fmt.Sprintf("http://localhost:%d", inputs.Port)
+	cli.renderer.Infof("Next steps: \n"+
+		"       1. Source the env file: source .auth0.env\n"+
+		"       2. Start your application: ./mvnw\n"+
+		"       3. Open your browser at %s\n"+
+		"       4. Login with email: admin@jhipster.com and password: Admin@jhipster8080", baseURL)
+}
+
+func (s *JHipsterSetupStrategy) SetupResources(ctx context.Context, cli *cli, inputs QuickstartSetupInputs) error {
+	if err := s.createApplication(ctx, cli, inputs); err != nil {
+		return err
+	}
+	roles, err := s.createRoles(ctx, cli)
+	if err != nil {
+		return err
+	}
+	if err := s.createUserAndAssignRoles(ctx, cli, roles); err != nil {
+		return err
+	}
+	action, err := s.createAndDeployAddRolesAction(ctx, cli)
+	if err != nil {
+		return err
+	}
+	if err := s.attachActionToPostLoginFlow(ctx, cli, action.GetID(), action.GetName()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *JHipsterSetupStrategy) createApplication(ctx context.Context, cli *cli, inputs QuickstartSetupInputs) error {
+	baseURL := fmt.Sprintf("http://localhost:%d/", inputs.Port)
+	callbackURL := fmt.Sprintf("%s/login/oauth2/code/oidc", baseURL)
+
+	client := &management.Client{
+		Name:              &inputs.Name,
+		AppType:           auth0.String(appTypeRegularWeb),
+		Callbacks:         &[]string{callbackURL},
+		AllowedLogoutURLs: &[]string{baseURL},
+		OIDCConformant:    auth0.Bool(true),
+		JWTConfiguration: &management.ClientJWTConfiguration{
+			Algorithm: auth0.String("RS256"),
+		},
+		ClientMetadata: &map[string]interface{}{
+			"created_by": "quickstart-docs-manual-cli",
+		},
+	}
+	if err := cli.api.Client.Create(ctx, client); err != nil {
+		return fmt.Errorf("failed to create application: %w", err)
+	}
+	cli.renderer.Infof("Application created successfully with Client ID: %s", client.GetClientID())
+	s.createdAppId = client.GetClientID()
+	s.createdClientSecret = client.GetClientSecret()
+
+	return nil
+}
+
+func (s *JHipsterSetupStrategy) createRoles(ctx context.Context, cli *cli) ([]*management.Role, error) {
+	var roles []*management.Role
+	for _, roleName := range []string{"ROLE_ADMIN", "ROLE_USER"} {
+		name := roleName
+		role := &management.Role{Name: &name}
+		if err := cli.api.Role.Create(ctx, role); err != nil {
+			return nil, fmt.Errorf("failed to create role %s: %w", roleName, err)
+		}
+		cli.renderer.Infof("Role '%s' created successfully", roleName)
+		roles = append(roles, role)
+	}
+
+	return roles, nil
+}
+
+func (s *JHipsterSetupStrategy) createUserAndAssignRoles(ctx context.Context, cli *cli, roles []*management.Role) error {
+	email := "admin@jhipster.com"
+	password := "Admin@jhipster8080"
+	connection := "Username-Password-Authentication"
+	user := &management.User{
+		Email:      &email,
+		Password:   &password,
+		Connection: &connection,
+	}
+	if err := cli.api.User.Create(ctx, user); err != nil {
+		return fmt.Errorf("failed to create user: %w", err)
+	}
+	cli.renderer.Infof("User '%s' created successfully", email)
+
+	if err := cli.api.User.AssignRoles(ctx, user.GetID(), roles); err != nil {
+		return fmt.Errorf("failed to assign roles to user: %w", err)
+	}
+	cli.renderer.Infof("Roles assigned to user '%s'", email)
+
+	return nil
+}
+
+func (s *JHipsterSetupStrategy) createAndDeployAddRolesAction(ctx context.Context, cli *cli) (*management.Action, error) {
+	triggerID := "post-login"
+	triggerVersion := "v3"
+	actionName := "Add Roles"
+	actionCode := `exports.onExecutePostLogin = async (event, api) => {
+  const namespace = 'https://www.jhipster.tech';
+  if (event.authorization) {
+    api.idToken.setCustomClaim('preferred_username', event.user.email);
+    api.idToken.setCustomClaim(` + "`${namespace}/roles`" + `, event.authorization.roles);
+    api.accessToken.setCustomClaim(` + "`${namespace}/roles`" + `, event.authorization.roles);
+  }
+};`
+
+	action := &management.Action{
+		Name: &actionName,
+		SupportedTriggers: []management.ActionTrigger{
+			{
+				ID:      &triggerID,
+				Version: &triggerVersion,
+			},
+		},
+		Code:    &actionCode,
+		Runtime: auth0.String("node22"),
+		Deploy:  auth0.Bool(true),
+	}
+	if err := cli.api.Action.Create(ctx, action); err != nil {
+		return nil, fmt.Errorf("failed to create action: %w", err)
+	}
+	cli.renderer.Infof("Action 'Add Roles' created successfully")
+
+	if _, err := cli.api.Action.Deploy(ctx, action.GetID()); err != nil {
+		return nil, fmt.Errorf("failed to deploy action: %w", err)
+	}
+	cli.renderer.Infof("Action 'Add Roles' deployed successfully")
+
+	return action, nil
+}
+
+func (s *JHipsterSetupStrategy) attachActionToPostLoginFlow(ctx context.Context, cli *cli, actionID string, actionName string) error {
+	triggerID := "post-login"
+
+	existingBindings, err := cli.api.Action.Bindings(ctx, triggerID)
+	if err != nil {
+		return fmt.Errorf("failed to read post-login flow bindings: %w", err)
+	}
+
+	newBinding := &management.ActionBinding{
+		Ref: &management.ActionBindingReference{
+			Type:  auth0.String("action_id"),
+			Value: auth0.String(actionID),
+		},
+		DisplayName: &actionName,
+	}
+	updatedBindings := append(existingBindings.Bindings, newBinding)
+
+	if err := cli.api.Action.UpdateBindings(ctx, triggerID, updatedBindings); err != nil {
+		return fmt.Errorf("failed to attach action to post-login flow: %w", err)
+	}
+	cli.renderer.Infof("Action '%s' added to PostLogin flow", actionName)
+
+	return nil
+}
+
+func (s *JHipsterSetupStrategy) GenerateEnvFile(cli *cli, inputs QuickstartSetupInputs) (string, error) {
+	if s.createdAppId == "" {
+		return "", fmt.Errorf("no client created")
+	}
+
+	tenant, err := cli.Config.GetTenant(cli.tenant)
+	if err != nil {
+		return "", fmt.Errorf("failed to get tenant: %w", err)
+	}
+
+	var envContent strings.Builder
+	fmt.Fprintf(&envContent, "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_OIDC_ISSUER_URI=\"https://%s/\"\n", tenant.Domain)
+	fmt.Fprintf(&envContent, "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_ID=\"%s\"\n", s.createdAppId)
+	fmt.Fprintf(&envContent, "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET=\"%s\"\n", s.createdClientSecret)
+	fmt.Fprintf(&envContent, "JHIPSTER_SECURITY_OAUTH2_AUDIENCE=\"https://%s/api/v2/\"\n", tenant.Domain)
+
+	return envContent.String(), nil
+}
+
 func setupQuickstartCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Type string
@@ -647,11 +853,14 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 			"  3. Generate a .env file with the appropriate environment variables\n\n" +
 			"Supported types:\n" +
 			"  - vite: For client-side SPAs (React, Vue, Svelte, etc.)\n" +
-			"  - nextjs: For Next.js server-side applications",
+			"  - nextjs: For Next.js server-side applications\n" +
+			"  - jhipster: For JHipster applications (creates app, roles, user, and login action)",
 		Example: `  auth0 quickstarts setup --type vite
   auth0 quickstarts setup --type nextjs
+  auth0 quickstarts setup --type jhipster
   auth0 quickstarts setup --type vite --name "My App"
   auth0 quickstarts setup --type nextjs --port 8080
+  auth0 quickstarts setup --type jhipster --name "JHipster" --port 8080
   auth0 qs setup --type vite -n "My App" -p 5173`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -676,7 +885,6 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 			}
 
 			defaultName := strategy.GetDefaultAppName()
-
 			if err := qsAppName.Ask(cmd, &inputs.Name, &defaultName); err != nil {
 				return err
 			}
@@ -688,11 +896,6 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 
 			// Validate port using common validation logic.
 			if err := validatePort(inputs.Port); err != nil {
-				return err
-			}
-
-			// Gather any strategy-specific inputs (e.g. user email/password for JHipster).
-			if err := strategy.GatherAdditionalInputs(cmd, cli); err != nil {
 				return err
 			}
 
@@ -731,11 +934,7 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				cli.renderer.Infof("%s file created successfully with your Auth0 configuration\n", envFileName)
 			}
 
-			baseURL := fmt.Sprintf("http://localhost:%d", inputs.Port)
-			cli.renderer.Infof("Next steps: \n"+
-				"       1. Install dependencies: npm install \n"+
-				"       2. Start your application: npm run dev\n"+
-				"       3. Open your browser at %s", baseURL)
+			strategy.PrintNextSteps(cli, setupInputs)
 
 			return nil
 		},
