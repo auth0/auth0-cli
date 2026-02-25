@@ -16,6 +16,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -453,17 +454,13 @@ type QuickstartSetupStrategy interface {
 	// GetDefaultAppName returns the default application name for this quickstart type.
 	GetDefaultAppName() string
 
-	// GetEnvFileName returns the environment file name for this quickstart type.
-	GetEnvFileName() string
-
 	// SetupResources creates all necessary Auth0 resources (clients, APIs, resource servers, etc.).
 	// This method encapsulates the complete resource creation workflow for the quickstart type.
 	// Complex types can create multiple resources here.
 	SetupResources(ctx context.Context, cli *cli, inputs QuickstartSetupInputs) error
 
-	// GenerateEnvFile generates the environment file content.
-	// Returns the file content that should be written to the env file.
-	GenerateEnvFile(cli *cli, inputs QuickstartSetupInputs) (string, error)
+	// BuildEnvFileContent prepares the environment file content and returns the file name and content.
+	BuildEnvFileContent(cli *cli, inputs QuickstartSetupInputs, tenant config.Tenant) (fileName string, content string, err error)
 
 	// PrintNextSteps prints the post-setup instructions for the user.
 	PrintNextSteps(cli *cli, inputs QuickstartSetupInputs)
@@ -504,10 +501,6 @@ func (s *ViteSetupStrategy) GetDefaultAppName() string {
 	return "My App"
 }
 
-func (s *ViteSetupStrategy) GetEnvFileName() string {
-	return ".env"
-}
-
 func (s *ViteSetupStrategy) PrintNextSteps(cli *cli, inputs QuickstartSetupInputs) {
 	baseURL := fmt.Sprintf("http://localhost:%d", inputs.Port)
 	cli.renderer.Infof("Next steps: \n"+
@@ -543,20 +536,16 @@ func (s *ViteSetupStrategy) SetupResources(ctx context.Context, cli *cli, inputs
 	return nil
 }
 
-func (s *ViteSetupStrategy) GenerateEnvFile(cli *cli, inputs QuickstartSetupInputs) (string, error) {
+func (s *ViteSetupStrategy) BuildEnvFileContent(cli *cli, inputs QuickstartSetupInputs, tenant config.Tenant) (string, string, error) {
 	if s.createdAppId == "" {
-		return "", fmt.Errorf("no client created")
-	}
-	tenant, err := cli.Config.GetTenant(cli.tenant)
-	if err != nil {
-		return "", fmt.Errorf("failed to get tenant: %w", err)
+		return "", "", fmt.Errorf("no client created")
 	}
 
 	var envContent strings.Builder
 	fmt.Fprintf(&envContent, "VITE_AUTH0_DOMAIN=%s\n", tenant.Domain)
 	fmt.Fprintf(&envContent, "VITE_AUTH0_CLIENT_ID=%s\n", s.createdAppId)
 
-	return envContent.String(), nil
+	return ".env", envContent.String(), nil
 }
 
 // NextjsSetupStrategy implements the setup workflow for Next.js applications.
@@ -571,10 +560,6 @@ func (s *NextjsSetupStrategy) GetDefaultPort() int {
 
 func (s *NextjsSetupStrategy) GetDefaultAppName() string {
 	return "My App"
-}
-
-func (s *NextjsSetupStrategy) GetEnvFileName() string {
-	return ".env.local"
 }
 
 func (s *NextjsSetupStrategy) PrintNextSteps(cli *cli, inputs QuickstartSetupInputs) {
@@ -612,19 +597,14 @@ func (s *NextjsSetupStrategy) SetupResources(ctx context.Context, cli *cli, inpu
 	return nil
 }
 
-func (s *NextjsSetupStrategy) GenerateEnvFile(cli *cli, inputs QuickstartSetupInputs) (string, error) {
+func (s *NextjsSetupStrategy) BuildEnvFileContent(cli *cli, inputs QuickstartSetupInputs, tenant config.Tenant) (string, string, error) {
 	if s.createdAppId == "" {
-		return "", fmt.Errorf("no client created")
-	}
-
-	tenant, err := cli.Config.GetTenant(cli.tenant)
-	if err != nil {
-		return "", fmt.Errorf("failed to get tenant: %w", err)
+		return "", "", fmt.Errorf("no client created")
 	}
 
 	secret, err := generateState(32)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate AUTH0_SECRET: %w", err)
+		return "", "", fmt.Errorf("failed to generate AUTH0_SECRET: %w", err)
 	}
 
 	baseURL := fmt.Sprintf("http://localhost:%d", inputs.Port)
@@ -636,7 +616,7 @@ func (s *NextjsSetupStrategy) GenerateEnvFile(cli *cli, inputs QuickstartSetupIn
 	fmt.Fprintf(&envContent, "AUTH0_SECRET=%s\n", secret)
 	fmt.Fprintf(&envContent, "APP_BASE_URL=%s\n", baseURL)
 
-	return envContent.String(), nil
+	return ".env.local", envContent.String(), nil
 }
 
 // JHipsterSetupStrategy implements the setup workflow for JHipster applications.
@@ -653,10 +633,6 @@ func (s *JHipsterSetupStrategy) GetDefaultPort() int {
 
 func (s *JHipsterSetupStrategy) GetDefaultAppName() string {
 	return "JHipster"
-}
-
-func (s *JHipsterSetupStrategy) GetEnvFileName() string {
-	return ".auth0.env"
 }
 
 func (s *JHipsterSetupStrategy) PrintNextSteps(cli *cli, inputs QuickstartSetupInputs) {
@@ -855,23 +831,18 @@ func (s *JHipsterSetupStrategy) attachActionToPostLoginFlow(ctx context.Context,
 	return nil
 }
 
-func (s *JHipsterSetupStrategy) GenerateEnvFile(cli *cli, inputs QuickstartSetupInputs) (string, error) {
+func (s *JHipsterSetupStrategy) BuildEnvFileContent(cli *cli, inputs QuickstartSetupInputs, tenant config.Tenant) (string, string, error) {
 	if s.createdAppId == "" {
-		return "", fmt.Errorf("no client created")
-	}
-
-	tenant, err := cli.Config.GetTenant(cli.tenant)
-	if err != nil {
-		return "", fmt.Errorf("failed to get tenant: %w", err)
+		return "", "", fmt.Errorf("no client created")
 	}
 
 	var envContent strings.Builder
-	fmt.Fprintf(&envContent, "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_OIDC_ISSUER_URI=\"https://%s/\"\n", tenant.Domain)
-	fmt.Fprintf(&envContent, "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_ID=\"%s\"\n", s.createdAppId)
-	fmt.Fprintf(&envContent, "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET=\"%s\"\n", s.createdClientSecret)
-	fmt.Fprintf(&envContent, "JHIPSTER_SECURITY_OAUTH2_AUDIENCE=\"https://%s/api/v2/\"\n", tenant.Domain)
+	fmt.Fprintf(&envContent, "export SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_OIDC_ISSUER_URI=\"https://%s/\"\n", tenant.Domain)
+	fmt.Fprintf(&envContent, "export SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_ID=\"%s\"\n", s.createdAppId)
+	fmt.Fprintf(&envContent, "export SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET=\"%s\"\n", s.createdClientSecret)
+	fmt.Fprintf(&envContent, "export JHIPSTER_SECURITY_OAUTH2_AUDIENCE=\"https://%s/api/v2/\"\n", tenant.Domain)
 
-	return envContent.String(), nil
+	return ".auth0.env", envContent.String(), nil
 }
 
 func setupQuickstartCmd(cli *cli) *cobra.Command {
@@ -952,14 +923,16 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			// Generate environment file content.
-			envContent, err := strategy.GenerateEnvFile(cli, setupInputs)
+			tenant, err := cli.Config.GetTenant(cli.tenant)
+			if err != nil {
+				return fmt.Errorf("failed to get tenant: %w", err)
+			}
+
+			// Generate environment file name and content.
+			envFileName, envContent, err := strategy.BuildEnvFileContent(cli, setupInputs, tenant)
 			if err != nil {
 				return err
 			}
-
-			// Write or display environment file.
-			envFileName := strategy.GetEnvFileName()
 			message := fmt.Sprintf("     Proceed to overwrite '%s' file? : ", envFileName)
 			if shouldCancelOverwrite(cli, cmd, envFileName, message) {
 				cli.renderer.Warnf("Aborted creating %s file. Please create it manually using the following content:\n\n"+

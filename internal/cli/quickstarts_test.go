@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/auth0/auth0-cli/internal/config"
 )
 
 func TestQuickstartsTypeFor(t *testing.T) {
@@ -30,12 +32,22 @@ func TestUrlPromptFor(t *testing.T) {
 }
 
 func TestQuickstartStrategy(t *testing.T) {
+	tenant := config.Tenant{Domain: "test.auth0.com"}
+
 	t.Run("vite strategy", func(t *testing.T) {
 		strategy, err := quickstartStrategy("vite")
 		assert.NoError(t, err)
 		assert.NotNil(t, strategy)
 		assert.Equal(t, 5173, strategy.GetDefaultPort())
-		assert.Equal(t, ".env", strategy.GetEnvFileName())
+		assert.Equal(t, "My App", strategy.GetDefaultAppName())
+
+		vite := strategy.(*ViteSetupStrategy)
+		vite.createdAppId = "test-client-id"
+		envFileName, envContent, err := vite.BuildEnvFileContent(nil, QuickstartSetupInputs{Port: 5173}, tenant)
+		assert.NoError(t, err)
+		assert.Equal(t, ".env", envFileName)
+		assert.Contains(t, envContent, "VITE_AUTH0_DOMAIN=test.auth0.com")
+		assert.Contains(t, envContent, "VITE_AUTH0_CLIENT_ID=test-client-id")
 	})
 
 	t.Run("nextjs strategy", func(t *testing.T) {
@@ -43,7 +55,37 @@ func TestQuickstartStrategy(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, strategy)
 		assert.Equal(t, 3000, strategy.GetDefaultPort())
-		assert.Equal(t, ".env.local", strategy.GetEnvFileName())
+		assert.Equal(t, "My App", strategy.GetDefaultAppName())
+
+		nextjs := strategy.(*NextjsSetupStrategy)
+		nextjs.createdAppId = "test-client-id"
+		nextjs.createdClientSecret = "test-client-secret"
+		envFileName, envContent, err := nextjs.BuildEnvFileContent(nil, QuickstartSetupInputs{Port: 3000}, tenant)
+		assert.NoError(t, err)
+		assert.Equal(t, ".env.local", envFileName)
+		assert.Contains(t, envContent, "AUTH0_DOMAIN=test.auth0.com")
+		assert.Contains(t, envContent, "AUTH0_CLIENT_ID=test-client-id")
+		assert.Contains(t, envContent, "AUTH0_CLIENT_SECRET=test-client-secret")
+		assert.Contains(t, envContent, "APP_BASE_URL=http://localhost:3000")
+	})
+
+	t.Run("jhipster strategy", func(t *testing.T) {
+		strategy, err := quickstartStrategy("jhipster")
+		assert.NoError(t, err)
+		assert.NotNil(t, strategy)
+		assert.Equal(t, 8080, strategy.GetDefaultPort())
+		assert.Equal(t, "JHipster", strategy.GetDefaultAppName())
+
+		jhipster := strategy.(*JHipsterSetupStrategy)
+		jhipster.createdAppId = "test-client-id"
+		jhipster.createdClientSecret = "test-client-secret"
+		envFileName, envContent, err := jhipster.BuildEnvFileContent(nil, QuickstartSetupInputs{Port: 8080}, tenant)
+		assert.NoError(t, err)
+		assert.Equal(t, ".auth0.env", envFileName)
+		assert.Contains(t, envContent, "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_OIDC_ISSUER_URI=\"https://test.auth0.com/\"")
+		assert.Contains(t, envContent, "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_ID=\"test-client-id\"")
+		assert.Contains(t, envContent, "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET=\"test-client-secret\"")
+		assert.Contains(t, envContent, "JHIPSTER_SECURITY_OAUTH2_AUDIENCE=\"https://test.auth0.com/api/v2/\"")
 	})
 
 	t.Run("case insensitive", func(t *testing.T) {
@@ -54,6 +96,10 @@ func TestQuickstartStrategy(t *testing.T) {
 		strategy, err = quickstartStrategy("NextJS")
 		assert.NoError(t, err)
 		assert.Equal(t, 3000, strategy.GetDefaultPort())
+
+		strategy, err = quickstartStrategy("JHipster")
+		assert.NoError(t, err)
+		assert.Equal(t, 8080, strategy.GetDefaultPort())
 	})
 
 	t.Run("unsupported type", func(t *testing.T) {
