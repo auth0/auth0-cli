@@ -4,7 +4,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -619,9 +618,13 @@ func (s *NextjsSetupStrategy) BuildEnvFileContent(cli *cli, inputs QuickstartSet
 	return ".env.local", envContent.String(), nil
 }
 
+var (
+	usernamePasswordConnection = "Username-Password-Authentication"
+	postLoginTriggerId      = "post-login"
+)
+
 // JHipsterSetupStrategy implements the setup workflow for JHipster applications.
-// It creates a Regular Web Application, ROLE_ADMIN and ROLE_USER roles,
-// and an "Add Roles" post-login Action attached to the Login flow.
+// It creates a application, enables the database connection, creates roles, a user and assigns the roles to the user.
 type JHipsterSetupStrategy struct {
 	createdAppId        string
 	createdClientSecret string
@@ -697,25 +700,10 @@ func (s *JHipsterSetupStrategy) createApplication(ctx context.Context, cli *cli,
 }
 
 func (s *JHipsterSetupStrategy) enableConnectionForClient(ctx context.Context, cli *cli) error {
-	connectionName := "Username-Password-Authentication"
+	connectionName := usernamePasswordConnection
 	connection, err := cli.api.Connection.ReadByName(ctx, connectionName)
 	if err != nil {
-		mErr, ok := err.(management.Error)
-		if !ok || mErr.Status() != http.StatusNotFound {
-			return fmt.Errorf("failed to read connection %q: %w", connectionName, err)
-		}
-
-		// Connection doesn't exist, create it with the client enabled.
-		connection = &management.Connection{
-			Name:           auth0.String(connectionName),
-			Strategy:       auth0.String(management.ConnectionStrategyAuth0),
-			EnabledClients: &[]string{s.createdAppId},
-		}
-		if err := cli.api.Connection.Create(ctx, connection); err != nil {
-			return fmt.Errorf("failed to create connection %q: %w", connectionName, err)
-		}
-		cli.renderer.Infof("Connection '%s' created and enabled for application", connectionName)
-		return nil
+		return fmt.Errorf("failed to read connection %q: %w", connectionName, err)
 	}
 
 	enabledClients := connection.GetEnabledClients()
@@ -749,7 +737,7 @@ func (s *JHipsterSetupStrategy) createRoles(ctx context.Context, cli *cli) ([]*m
 func (s *JHipsterSetupStrategy) createUserAndAssignRoles(ctx context.Context, cli *cli, roles []*management.Role) error {
 	email := "admin@jhipster.com"
 	password := "Admin@jhipster8080"
-	connection := "Username-Password-Authentication"
+	connection := usernamePasswordConnection
 	user := &management.User{
 		Email:      &email,
 		Password:   &password,
@@ -769,7 +757,6 @@ func (s *JHipsterSetupStrategy) createUserAndAssignRoles(ctx context.Context, cl
 }
 
 func (s *JHipsterSetupStrategy) createAndDeployAddRolesAction(ctx context.Context, cli *cli) (*management.Action, error) {
-	triggerID := "post-login"
 	triggerVersion := "v3"
 	actionName := "Add Roles"
 	actionCode := `exports.onExecutePostLogin = async (event, api) => {
@@ -785,7 +772,7 @@ func (s *JHipsterSetupStrategy) createAndDeployAddRolesAction(ctx context.Contex
 		Name: &actionName,
 		SupportedTriggers: []management.ActionTrigger{
 			{
-				ID:      &triggerID,
+				ID:      &postLoginTriggerId,
 				Version: &triggerVersion,
 			},
 		},
@@ -807,11 +794,9 @@ func (s *JHipsterSetupStrategy) createAndDeployAddRolesAction(ctx context.Contex
 }
 
 func (s *JHipsterSetupStrategy) attachActionToPostLoginFlow(ctx context.Context, cli *cli, actionID string, actionName string) error {
-	triggerID := "post-login"
-
-	existingBindings, err := cli.api.Action.Bindings(ctx, triggerID)
+	existingBindings, err := cli.api.Action.Bindings(ctx, postLoginTriggerId)
 	if err != nil {
-		return fmt.Errorf("failed to read post-login flow bindings: %w", err)
+		return fmt.Errorf("failed to read action trigger flow bindings: %w", err)
 	}
 
 	newBinding := &management.ActionBinding{
@@ -823,8 +808,8 @@ func (s *JHipsterSetupStrategy) attachActionToPostLoginFlow(ctx context.Context,
 	}
 	updatedBindings := append(existingBindings.Bindings, newBinding)
 
-	if err := cli.api.Action.UpdateBindings(ctx, triggerID, updatedBindings); err != nil {
-		return fmt.Errorf("failed to attach action to post-login flow: %w", err)
+	if err := cli.api.Action.UpdateBindings(ctx, postLoginTriggerId, updatedBindings); err != nil {
+		return fmt.Errorf("failed to attach action to trigger flow: %w", err)
 	}
 	cli.renderer.Infof("Action '%s' added to PostLogin flow", actionName)
 
