@@ -497,25 +497,20 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				defaultPort = "5173"
 				envFileName = ".env"
 
-			case "nextjs":
-				appType = appTypeRegularWeb
-				defaultPort = "3000"
-				envFileName = ".env.local"
-
-			case "fastify":
+			case "nextjs", "fastify":
 				appType = appTypeRegularWeb
 				defaultPort = "3000"
 				envFileName = ".env"
 			}
 
-			// If port is not explicitly set (is 0), ask for it or use default
+			// If port is not explicitly set (is 0), ask for it or use default.
 			if inputs.Port == 0 {
 				if err := qsPort.Ask(cmd, &inputs.Port, &defaultPort); err != nil {
 					return err
 				}
 			}
 
-			// If port is still 0 after asking (e.g., in non-interactive mode), use the default
+			// If port is still 0 after asking (e.g., in non-interactive mode), use the default.
 			if inputs.Port == 0 {
 				switch inputs.Type {
 				case "vite":
@@ -532,16 +527,17 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 			baseURL = fmt.Sprintf("http://localhost:%d", inputs.Port)
 
 			// Configure URLs based on app type.
-			if inputs.Type == "vite" {
+			switch inputs.Type {
+			case "vite":
 				callbacks = []string{baseURL}
 				logoutURLs = []string{baseURL}
 				origins = []string{baseURL}
 				webOrigins = []string{baseURL}
-			} else if inputs.Type == "nextjs" {
+			case "nextjs":
 				callbackURL := fmt.Sprintf("%s/api/auth/callback", baseURL)
 				callbacks = []string{callbackURL}
 				logoutURLs = []string{baseURL}
-			} else if inputs.Type == "fastify" {
+			case "fastify":
 				callbackURL := fmt.Sprintf("%s/auth/callback", baseURL)
 				callbacks = []string{callbackURL}
 				logoutURLs = []string{baseURL}
