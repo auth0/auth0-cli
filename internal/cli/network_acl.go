@@ -982,13 +982,13 @@ Use --all flag to delete all network ACLs at once.`,
 			}
 
 			// Regular single or multiple ACL delete flow.
-			ids := make([]string, len(args))
+			var ids []string
 			if len(args) == 0 {
 				if err := networkACLID.PickMany(cmd, &ids, cli.networkACLPickerOptions); err != nil {
 					return err
 				}
 			} else {
-				ids = append(ids, args...)
+				ids = args
 			}
 
 			if !cli.force && canPrompt(cmd) {

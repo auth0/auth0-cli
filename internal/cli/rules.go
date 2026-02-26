@@ -275,13 +275,13 @@ func deleteRuleCmd(cli *cli) *cobra.Command {
   auth0 rules delete <rule-id> <rule-id2> <rule-idn>
   auth0 rules delete <rule-id> <rule-id2> <rule-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ids := make([]string, len(args))
+			var ids []string
 			if len(args) == 0 {
 				if err := ruleID.PickMany(cmd, &ids, cli.rulePickerOptions); err != nil {
 					return err
 				}
 			} else {
-				ids = append(ids, args...)
+				ids = args
 			}
 
 			if !cli.force && canPrompt(cmd) {
