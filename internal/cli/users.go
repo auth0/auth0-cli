@@ -631,7 +631,7 @@ func deleteUserCmd(cli *cli) *cobra.Command {
   auth0 users delete <user-id> <user-id2> <user-idn>
   auth0 users delete <user-id> <user-id2> <user-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ids := make([]string, len(args))
+			var ids []string
 			if len(args) == 0 {
 				var id string
 				if err := userID.Ask(cmd, &id); err != nil {
@@ -639,7 +639,7 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 				}
 				ids = append(ids, id)
 			} else {
-				ids = append(ids, args...)
+				ids = args
 			}
 
 			if !cli.force && canPrompt(cmd) {
