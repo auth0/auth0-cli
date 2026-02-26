@@ -438,7 +438,7 @@ func shouldAsk(cmd *cobra.Command, f *Flag, isUpdate bool) bool {
 		if !f.IsRequired && !f.AlwaysPrompt {
 			return false
 		}
-		return shouldPromptWhenNoLocalFlagsSet(cmd)
+		return canPrompt(cmd) && noLocalFlagSet(cmd)
 	}
 
 	return canPrompt(cmd) && !f.IsSet(cmd)

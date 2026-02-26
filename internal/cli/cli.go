@@ -35,6 +35,7 @@ const userAgent = "Auth0 CLI"
 type cli struct {
 	// Core primitives exposed to command builders.
 	api      *auth0.API
+	apiv2    *auth0.APIV2
 	renderer *display.Renderer
 	tracker  *analytics.Tracker
 
@@ -132,7 +133,13 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 		return err
 	}
 
+	apiv2, err := initializeManagementClientV2(tenant.Domain, tenant.GetAccessToken())
+	if err != nil {
+		return err
+	}
+
 	c.api = auth0.NewAPI(api)
+	c.apiv2 = auth0.NewAPIV2(apiv2)
 	return nil
 }
 
@@ -161,15 +168,17 @@ func canPrompt(cmd *cobra.Command) bool {
 	return iostream.IsInputTerminal() && iostream.IsOutputTerminal() && !noInput
 }
 
-func shouldPromptWhenNoLocalFlagsSet(cmd *cobra.Command) bool {
+// noLocalFlagSet returns true if no local flags (excluding global flags) are set for the command.
+func noLocalFlagSet(cmd *cobra.Command) bool {
 	localFlagIsSet := false
 	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
-		if f.Name != "json" && f.Name != "force" && f.Changed && f.Name != "json-compact" {
+		if f.Changed && f.Name != "json" && f.Name != "json-compact" && f.Name != "tenant" && f.Name != "force" && f.Name != "debug" && f.Name != "no-color" {
 			localFlagIsSet = true
+			return
 		}
 	})
 
-	return canPrompt(cmd) && !localFlagIsSet
+	return !localFlagIsSet
 }
 
 func prepareInteractivity(cmd *cobra.Command) {
