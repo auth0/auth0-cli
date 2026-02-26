@@ -60,7 +60,7 @@ tests:
     exit-code: 0
 
   011 - update only the specified value without affecting the disabled boolean flag:
-    command: auth0 phone provider update $(./test/integration/scripts/get-custom-phone-provider-id.sh) --provider=twilio --json
+    command: auth0 phone provider update $(./test/integration/scripts/get-custom-phone-provider-id.sh) --provider=twilio
     exit-code: 0
     stdout:
       contains:

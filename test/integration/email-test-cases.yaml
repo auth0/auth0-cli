@@ -56,7 +56,7 @@ tests:
     exit-code: 0
 
   012 - update only specified value without affecting the enabled boolean value:
-    command: auth0 email provider update --default-from-address='test@auth0.invalid' --json
+    command: auth0 email provider update --default-from-address='test@auth0.invalid'
     exit-code: 0
     stdout:
       contains:
@@ -78,7 +78,7 @@ tests:
     exit-code: 0
 
   101 - it successfully updates only specified value without affecting the enabled boolean flag:
-    command: auth0 email templates update welcome --url "test.travel0.com" --json
+    command: auth0 email templates update welcome --url "test.travel0.com"
     exit-code: 0
     stdout:
       contains:
