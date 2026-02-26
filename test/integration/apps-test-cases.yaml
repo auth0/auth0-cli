@@ -301,7 +301,7 @@ tests:
         allowed_authentication_methods: "[cookie query]"
         enforce_device_binding: asn
   
-  039.1 - it successfully updates only specified value of the application session-transfer without affecting can_create_session_transfer_token boolean value:
+  040 - it successfully updates only specified value of the application session-transfer without affecting can_create_session_transfer_token boolean value:
     command: auth0 apps session-transfer update $(./test/integration/scripts/get-app-id.sh) --enforce-device-binding=ip --json
     exit-code: 0
     stdout:
@@ -309,7 +309,7 @@ tests:
         can_create_session_transfer_token: "true"
         enforce_device_binding: ip
 
-  040 - it successfully renders the session-transfer of an application:
+  041 - it successfully renders the session-transfer of an application:
     command: auth0 apps session-transfer show $(./test/integration/scripts/get-app-id.sh)
     exit-code: 0
     stdout:
@@ -318,15 +318,15 @@ tests:
         - ALLOWED METHODS   cookie, query
         - DEVICE BINDING    ip
 
-  041 - given a test app, it successfully deletes the app:
+  042 - given a test app, it successfully deletes the app:
     command: auth0 apps delete $(./test/integration/scripts/get-app-id.sh) --force
     exit-code: 0
 
-  042 - it successfully creates a resource server app with resource-server-identifier:
+  043 - it successfully creates a resource server app with resource-server-identifier:
     command: ./test/integration/scripts/get-resource-server-app-id.sh
     exit-code: 0
 
-  043 - it successfully creates a resource server app with resource-server-identifier and outputs in json:
+  044 - it successfully creates a resource server app with resource-server-identifier and outputs in json:
     command: auth0 apps show $(./test/integration/scripts/get-resource-server-app-id.sh) --json
     exit-code: 0
     stdout:
@@ -335,7 +335,7 @@ tests:
         app_type: resource_server
         resource_server_identifier: http://integration-test-api-newapi
 
-  044 - it shows resource server app with resource-server-identifier:
+  045 - it shows resource server app with resource-server-identifier:
     command: auth0 apps show $(./test/integration/scripts/get-resource-server-app-id.sh)
     exit-code: 0
     stdout:
@@ -343,13 +343,13 @@ tests:
         - TYPE                        Resource Server
         - RESOURCE SERVER IDENTIFIER  http://integration-test-api-newapi
 
-  045 - it fails to update resource-server-identifier (immutable property):
+  046 - it fails to update resource-server-identifier (immutable property):
     command: auth0 apps update $(./test/integration/scripts/get-resource-server-app-id.sh) --resource-server-identifier http://new-api.localhost --json
     exit-code: 1
     stderr:
       contains:
         - "Unknown flag: --resource-server-identifier"
 
-  046 - given a resource server app, it successfully deletes the app:
+  047 - given a resource server app, it successfully deletes the app:
     command: auth0 apps delete $(./test/integration/scripts/get-resource-server-app-id.sh) --force
     exit-code: 0
