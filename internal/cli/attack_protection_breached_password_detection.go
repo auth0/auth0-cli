@@ -152,13 +152,12 @@ func updateBreachedPasswordDetectionCmdRun(
 			return err
 		}
 
-		if !bpdFlags.Enabled.IsSet(cmd) {
-			inputs.Enabled = bpd.GetEnabled()
-		}
 		if err := bpdFlags.Enabled.AskBoolU(cmd, &inputs.Enabled, bpd.Enabled); err != nil {
 			return err
 		}
-		bpd.Enabled = &inputs.Enabled
+		if bpdFlags.Enabled.IsSet(cmd) || noLocalFlagSet(cmd) {
+			bpd.Enabled = &inputs.Enabled
+		}
 
 		shieldsString := strings.Join(bpd.GetShields(), ",")
 		if err := bpdFlags.Shields.AskManyU(cmd, &inputs.Shields, &shieldsString); err != nil {

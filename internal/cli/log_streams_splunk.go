@@ -228,9 +228,6 @@ func updateLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 			if err := splunkPort.AskU(cmd, &inputs.splunkPort, splunkSink.Port); err != nil {
 				return err
 			}
-			if !splunkVerifyTLS.IsSet(cmd) {
-				inputs.splunkVerifyTLS = splunkSink.GetSecure()
-			}
 			if err := splunkVerifyTLS.AskBoolU(cmd, &inputs.splunkVerifyTLS, splunkSink.Secure); err != nil {
 				return err
 			}
@@ -250,7 +247,9 @@ func updateLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 			if inputs.splunkPort != "" {
 				splunkSink.Port = &inputs.splunkPort
 			}
-			splunkSink.Secure = &inputs.splunkVerifyTLS
+			if splunkVerifyTLS.IsSet(cmd) || noLocalFlagSet(cmd) {
+				splunkSink.Secure = &inputs.splunkVerifyTLS
+			}
 			updatedLogStream.Sink = splunkSink
 
 			if inputs.piiConfig != "{}" {

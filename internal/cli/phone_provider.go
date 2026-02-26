@@ -312,9 +312,6 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if !phoneProviderDisabled.IsSet(cmd) {
-				inputs.disabled = existingProvider.GetDisabled()
-			}
 			if err := phoneProviderDisabled.AskBoolU(cmd, &inputs.disabled, existingProvider.Disabled); err != nil {
 				return err
 			}
@@ -345,7 +342,10 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			phoneProvider.Disabled = &inputs.disabled
+			// Set the flag if it was supplied or entered by the prompt.
+			if phoneProviderDisabled.IsSet(cmd) || noLocalFlagSet(cmd) {
+				phoneProvider.Disabled = &inputs.disabled
+			}
 
 			if credentials != nil {
 				phoneProvider.Credentials = credentials

@@ -363,9 +363,6 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 				if err := ruleName.AskU(cmd, &inputs.Name, oldRule.Name); err != nil {
 					return err
 				}
-				if !ruleEnabled.IsSet(cmd) {
-					inputs.Enabled = oldRule.GetEnabled()
-				}
 				if err := ruleEnabled.AskBoolU(cmd, &inputs.Enabled, oldRule.Enabled); err != nil {
 					return err
 				}
@@ -390,7 +387,9 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 					}
 				}
 
-				updatedRule.Enabled = &inputs.Enabled
+				if ruleEnabled.IsSet(cmd) || noLocalFlagSet(cmd) {
+					updatedRule.Enabled = &inputs.Enabled
+				}
 				if inputs.Name != "" {
 					updatedRule.Name = &inputs.Name
 				}

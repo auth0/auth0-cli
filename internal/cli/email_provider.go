@@ -302,9 +302,6 @@ func updateEmailProviderCmd(cli *cli) *cobra.Command {
 			if err := emailProviderFrom.AskU(cmd, &inputs.defaultFromAddress, currentProvider.DefaultFromAddress); err != nil {
 				return err
 			}
-			if !emailProviderEnabled.IsSet(cmd) {
-				inputs.enabled = currentProvider.GetEnabled()
-			}
 			if err := emailProviderEnabled.AskBoolU(cmd, &inputs.enabled, currentProvider.Enabled); err != nil {
 				return err
 			}
@@ -357,7 +354,11 @@ func updateEmailProviderCmd(cli *cli) *cobra.Command {
 					return fmt.Errorf("unknown provider: %s", inputs.name)
 				}
 			}
-			emailProvider.Enabled = &inputs.enabled
+
+			// Set the flag if it was supplied or entered by the prompt.
+			if emailProviderEnabled.IsSet(cmd) || noLocalFlagSet(cmd) {
+				emailProvider.Enabled = &inputs.enabled
+			}
 
 			if len(inputs.defaultFromAddress) > 0 {
 				emailProvider.DefaultFromAddress = &inputs.defaultFromAddress

@@ -1161,9 +1161,6 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			if !appSTCanCreateToken.IsSet(cmd) {
-				inputs.CanCreateToken = current.SessionTransfer.GetCanCreateSessionTransferToken()
-			}
 			if err := appSTCanCreateToken.AskBoolU(cmd, &inputs.CanCreateToken, current.SessionTransfer.CanCreateSessionTransferToken); err != nil {
 				return err
 			}
@@ -1177,7 +1174,10 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			st.CanCreateSessionTransferToken = &inputs.CanCreateToken
+			// Set the flag if it was supplied or entered by the prompt.
+			if appSTCanCreateToken.IsSet(cmd) || noLocalFlagSet(cmd) {
+				st.CanCreateSessionTransferToken = &inputs.CanCreateToken
+			}
 
 			if len(inputs.AllowedAuthMethods) > 0 {
 				st.AllowedAuthenticationMethods = &inputs.AllowedAuthMethods

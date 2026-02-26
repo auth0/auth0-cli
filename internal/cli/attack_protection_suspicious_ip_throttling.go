@@ -186,13 +186,12 @@ func updateSuspiciousIPThrottlingCmdRun(
 			return err
 		}
 
-		if !sitFlags.Enabled.IsSet(cmd) {
-			inputs.Enabled = sit.GetEnabled()
-		}
 		if err := sitFlags.Enabled.AskBoolU(cmd, &inputs.Enabled, sit.Enabled); err != nil {
 			return err
 		}
-		sit.Enabled = &inputs.Enabled
+		if sitFlags.Enabled.IsSet(cmd) || noLocalFlagSet(cmd) {
+			sit.Enabled = &inputs.Enabled
+		}
 
 		shieldsString := strings.Join(sit.GetShields(), ",")
 		if err := sitFlags.Shields.AskManyU(cmd, &inputs.Shields, &shieldsString); err != nil {

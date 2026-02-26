@@ -247,18 +247,17 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			if !emailTemplateEnabled.IsSet(cmd) {
-				inputs.Enabled = oldTemplate.GetEnabled()
-			}
 			if err := emailTemplateEnabled.AskBoolU(cmd, &inputs.Enabled, oldTemplate.Enabled); err != nil {
 				return err
 			}
 
 			template := apiEmailTemplateFor(inputs.Template)
 			emailTemplate := &management.EmailTemplate{
-				Enabled:  &inputs.Enabled,
 				Template: &template,
 				Syntax:   oldTemplate.Syntax,
+			}
+			if emailTemplateEnabled.IsSet(cmd) || noLocalFlagSet(cmd) {
+				emailTemplate.Enabled = &inputs.Enabled
 			}
 			if inputs.Body != "" {
 				emailTemplate.Body = &inputs.Body
