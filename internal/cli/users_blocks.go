@@ -86,7 +86,7 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
   auth0 users blocks unblock "frederik@travel0.com" "poovam@travel0.com"
 		`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ids := make([]string, len(args))
+			var ids []string
 			if len(args) == 0 {
 				var id string
 				if err := userIdentifier.Ask(cmd, &id); err != nil {
@@ -94,7 +94,7 @@ func deleteUserBlocksCmd(cli *cli) *cobra.Command {
 				}
 				ids = append(ids, id)
 			} else {
-				ids = append(ids, args...)
+				ids = args
 			}
 
 			return ansi.ProgressBar("Unblocking user(s)", ids, func(_ int, id string) error {

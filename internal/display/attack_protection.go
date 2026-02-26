@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
+	managementv2 "github.com/auth0/go-auth0/v2/management"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 )
@@ -181,4 +182,78 @@ func makeSuspiciousIPThrottlingView(sit *management.SuspiciousIPThrottling) *sus
 	}
 
 	return view
+}
+
+type botDetectionView struct {
+	BotDetectionLevel            string
+	ChallengePasswordPolicy      string
+	ChallengePasswordlessPolicy  string
+	ChallengePasswordResetPolicy string
+	AllowList                    []string
+	MonitoringModeEnabled        string
+
+	raw interface{}
+}
+
+func (bd *botDetectionView) AsTableHeader() []string {
+	// There is no list command for this resource, hence this func never gets called.
+	// Dummy implementation to satisfy View interface.
+	return []string{}
+}
+
+func (bd *botDetectionView) AsTableRow() []string {
+	// There is no list command for this resource, hence this func never gets called.
+	// Dummy implementation to satisfy View interface.
+	return []string{}
+}
+
+func (bd *botDetectionView) KeyValues() [][]string {
+	return [][]string{
+		{ansi.Bold("BOT_DETECTION_LEVEL"), bd.BotDetectionLevel},
+		{ansi.Bold("CHALLENGE_PASSWORD_POLICY"), bd.ChallengePasswordPolicy},
+		{ansi.Bold("CHALLENGE_PASSWORDLESS_POLICY"), bd.ChallengePasswordlessPolicy},
+		{ansi.Bold("CHALLENGE_PASSWORD_RESET_POLICY"), bd.ChallengePasswordResetPolicy},
+		{ansi.Bold("ALLOW_LIST"), strings.Join(bd.AllowList, ", ")},
+		{ansi.Bold("MONITORING_MODE_ENABLED"), bd.MonitoringModeEnabled},
+	}
+}
+
+func (bd *botDetectionView) Object() interface{} {
+	return bd.raw
+}
+
+func (r *Renderer) BotDetectionShow(bd *managementv2.GetBotDetectionSettingsResponseContent) {
+	r.Heading("bot detection")
+	r.Result(makeBotDetectionShowView(bd))
+}
+
+func (r *Renderer) BotDetectionUpdate(bd *managementv2.UpdateBotDetectionSettingsResponseContent) {
+	r.Heading("bot detection updated")
+	r.Result(makeBotDetectionUpdateView(bd))
+}
+
+func makeBotDetectionShowView(bd *managementv2.GetBotDetectionSettingsResponseContent) *botDetectionView {
+	return &botDetectionView{
+		BotDetectionLevel:            string(bd.GetBotDetectionLevel()),
+		ChallengePasswordPolicy:      string(bd.GetChallengePasswordPolicy()),
+		ChallengePasswordlessPolicy:  string(bd.GetChallengePasswordlessPolicy()),
+		ChallengePasswordResetPolicy: string(bd.GetChallengePasswordResetPolicy()),
+		AllowList:                    bd.GetAllowlist(),
+		MonitoringModeEnabled:        boolean(bd.GetMonitoringModeEnabled()),
+
+		raw: bd,
+	}
+}
+
+func makeBotDetectionUpdateView(bd *managementv2.UpdateBotDetectionSettingsResponseContent) *botDetectionView {
+	return &botDetectionView{
+		BotDetectionLevel:            string(bd.GetBotDetectionLevel()),
+		ChallengePasswordPolicy:      string(bd.GetChallengePasswordPolicy()),
+		ChallengePasswordlessPolicy:  string(bd.GetChallengePasswordlessPolicy()),
+		ChallengePasswordResetPolicy: string(bd.GetChallengePasswordResetPolicy()),
+		AllowList:                    bd.GetAllowlist(),
+		MonitoringModeEnabled:        boolean(bd.GetMonitoringModeEnabled()),
+
+		raw: bd,
+	}
 }

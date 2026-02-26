@@ -427,13 +427,13 @@ func deleteCustomDomainCmd(cli *cli) *cobra.Command {
   auth0 domains delete <domain-id> <domain-id2>
   auth0 domains delete <domain-id> <domain-id2> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ids := make([]string, len(args))
+			var ids []string
 			if len(args) == 0 {
 				if err := customDomainID.PickMany(cmd, &ids, cli.customDomainsPickerOptions); err != nil {
 					return err
 				}
 			} else {
-				ids = append(ids, args...)
+				ids = args
 			}
 
 			if !cli.force && canPrompt(cmd) {

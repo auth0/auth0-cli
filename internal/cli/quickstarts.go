@@ -433,7 +433,7 @@ var (
 		Name:      "Port",
 		LongForm:  "port",
 		ShortForm: "p",
-		Help:      "Port number for the application (default: 5173 for vite, 3000 for nextjs)",
+		Help:      "Port number for the application (default: 5173 for vite, 3000 for nextjs/fastify)",
 	}
 )
 
@@ -455,23 +455,25 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 			"  3. Generate a .env file with the appropriate environment variables\n\n" +
 			"Supported types:\n" +
 			"  - vite: For client-side SPAs (React, Vue, Svelte, etc.)\n" +
-			"  - nextjs: For Next.js server-side applications",
+			"  - nextjs: For Next.js server-side applications\n" +
+			"  - fastify: For Fastify web applications",
 		Example: `  auth0 quickstarts setup --type vite
   auth0 quickstarts setup --type nextjs
+  auth0 quickstarts setup --type fastify
   auth0 quickstarts setup --type vite --name "My App"
   auth0 quickstarts setup --type nextjs --port 8080
-  auth0 qs setup --type vite -n "My App" -p 5173`,
+  auth0 qs setup --type fastify -n "My App" -p 3000`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
 			if inputs.Type != "" {
 				normalizedType := strings.ToLower(inputs.Type)
-				if normalizedType != "vite" && normalizedType != "nextjs" {
-					return fmt.Errorf("unsupported quickstart type: %s (supported types: vite, nextjs)", inputs.Type)
+				if normalizedType != "vite" && normalizedType != "nextjs" && normalizedType != "fastify" {
+					return fmt.Errorf("unsupported quickstart type: %s (supported types: vite, nextjs, fastify)", inputs.Type)
 				}
 			}
 
-			if err := qsType.Select(cmd, &inputs.Type, []string{"vite", "nextjs"}, nil); err != nil {
+			if err := qsType.Select(cmd, &inputs.Type, []string{"vite", "nextjs", "fastify"}, nil); err != nil {
 				return err
 			}
 
@@ -495,14 +497,27 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				defaultPort = "5173"
 				envFileName = ".env"
 
-			case "nextjs":
+			case "nextjs", "fastify":
 				appType = appTypeRegularWeb
 				defaultPort = "3000"
-				envFileName = ".env.local"
+				envFileName = ".env"
 			}
 
-			if err := qsPort.Ask(cmd, &inputs.Port, &defaultPort); err != nil {
-				return err
+			// If port is not explicitly set (is 0), ask for it or use default.
+			if inputs.Port == 0 {
+				if err := qsPort.Ask(cmd, &inputs.Port, &defaultPort); err != nil {
+					return err
+				}
+			}
+
+			// If port is still 0 after asking (e.g., in non-interactive mode), use the default.
+			if inputs.Port == 0 {
+				switch inputs.Type {
+				case "vite":
+					inputs.Port = 5173
+				case "nextjs", "fastify":
+					inputs.Port = 3000
+				}
 			}
 
 			if inputs.Port < 1024 || inputs.Port > 65535 {
@@ -512,12 +527,17 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 			baseURL = fmt.Sprintf("http://localhost:%d", inputs.Port)
 
 			// Configure URLs based on app type.
-			if inputs.Type == "vite" {
+			switch inputs.Type {
+			case "vite":
 				callbacks = []string{baseURL}
 				logoutURLs = []string{baseURL}
 				origins = []string{baseURL}
 				webOrigins = []string{baseURL}
-			} else {
+			case "nextjs":
+				callbackURL := fmt.Sprintf("%s/api/auth/callback", baseURL)
+				callbacks = []string{callbackURL}
+				logoutURLs = []string{baseURL}
+			case "fastify":
 				callbackURL := fmt.Sprintf("%s/auth/callback", baseURL)
 				callbacks = []string{callbackURL}
 				logoutURLs = []string{baseURL}
@@ -578,6 +598,18 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				envContent.WriteString(fmt.Sprintf("AUTH0_CLIENT_ID=%s\n", a.GetClientID()))
 				envContent.WriteString(fmt.Sprintf("AUTH0_CLIENT_SECRET=%s\n", a.GetClientSecret()))
 				envContent.WriteString(fmt.Sprintf("AUTH0_SECRET=%s\n", secret))
+				envContent.WriteString(fmt.Sprintf("APP_BASE_URL=%s\n", baseURL))
+
+			case "fastify":
+				sessionSecret, err := generateState(64)
+				if err != nil {
+					return fmt.Errorf("failed to generate SESSION_SECRET: %w", err)
+				}
+
+				envContent.WriteString(fmt.Sprintf("AUTH0_DOMAIN=%s\n", tenant.Domain))
+				envContent.WriteString(fmt.Sprintf("AUTH0_CLIENT_ID=%s\n", a.GetClientID()))
+				envContent.WriteString(fmt.Sprintf("AUTH0_CLIENT_SECRET=%s\n", a.GetClientSecret()))
+				envContent.WriteString(fmt.Sprintf("SESSION_SECRET=%s\n", sessionSecret))
 				envContent.WriteString(fmt.Sprintf("APP_BASE_URL=%s\n", baseURL))
 			}
 

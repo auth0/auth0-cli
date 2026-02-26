@@ -409,13 +409,13 @@ func deleteActionCmd(cli *cli) *cobra.Command {
   auth0 actions delete <action-id> <action-id2> <action-idn>
   auth0 actions delete <action-id> <action-id2> <action-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ids := make([]string, len(args))
+			var ids []string
 			if len(args) == 0 {
 				if err := actionID.PickMany(cmd, &ids, cli.actionPickerOptions); err != nil {
 					return err
 				}
 			} else {
-				ids = append(ids, args...)
+				ids = args
 			}
 
 			if !cli.force && canPrompt(cmd) {

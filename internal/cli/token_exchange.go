@@ -309,13 +309,13 @@ func deleteTokenExchangeProfileCmd(cli *cli) *cobra.Command {
   auth0 token-exchange delete <profile-id> <profile-id2> <profile-idn>
   auth0 token-exchange delete <profile-id> <profile-id2> <profile-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ids := make([]string, len(args))
+			var ids []string
 			if len(args) == 0 {
 				if err := tokenExchangeProfileID.PickMany(cmd, &ids, cli.tokenExchangeProfilePickerOptions); err != nil {
 					return err
 				}
 			} else {
-				ids = append(ids, args...)
+				ids = args
 			}
 
 			if !cli.force && canPrompt(cmd) {

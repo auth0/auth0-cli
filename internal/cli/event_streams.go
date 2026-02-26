@@ -376,13 +376,13 @@ func deleteEventStreamCmd(cli *cli) *cobra.Command {
   auth0 event-streams delete <event-id> <event-id2> <event-idn>
   auth0 event-streams delete <event-id> <event-id2> <event-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ids := make([]string, len(args))
+			var ids []string
 			if len(args) == 0 {
 				if err := eventStreamID.PickMany(cmd, &ids, cli.eventStreamPickerOptions); err != nil {
 					return err
 				}
 			} else {
-				ids = append(ids, args...)
+				ids = args
 			}
 
 			if !cli.force && canPrompt(cmd) {
