@@ -168,86 +168,95 @@ func showBotDetectionCmdRun(cli *cli) func(cmd *cobra.Command, args []string) er
 func updateBotDetectionCmdRun(cli *cli, inputs *botDetectionInputs) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		var current *managementv2.GetBotDetectionSettingsResponseContent
-		err := ansi.Waiting(func() (err error) {
+		if err := ansi.Waiting(func() (err error) {
 			current, err = cli.apiv2.AttackProtectionBotDetection.Get(cmd.Context())
 			return err
-		})
-		if err != nil {
+		}); err != nil {
 			return err
 		}
 
 		bdUpdate := &managementv2.UpdateBotDetectionSettingsRequestContent{}
+		noLocalFlagSet := noLocalFlagSet(cmd)
 
 		// Set bot detection level.
-		if err := bdFlags.BotDetectionLevel.AskU(cmd, &inputs.BotDetectionLevel, stringPtr(current.BotDetectionLevel.Ptr())); err != nil {
-			return err
+		if bdFlags.BotDetectionLevel.IsSet(cmd) || noLocalFlagSet {
+			if err := bdFlags.BotDetectionLevel.AskU(cmd, &inputs.BotDetectionLevel, stringPtr(current.BotDetectionLevel.Ptr())); err != nil {
+				return err
+			}
+			if inputs.BotDetectionLevel == "" {
+				inputs.BotDetectionLevel = string(current.GetBotDetectionLevel())
+			}
+			botDetectionLevel, err := managementv2.NewBotDetectionLevelEnumFromString(inputs.BotDetectionLevel)
+			if err != nil {
+				return err
+			}
+			bdUpdate.SetBotDetectionLevel(&botDetectionLevel)
 		}
-		if inputs.BotDetectionLevel == "" {
-			inputs.BotDetectionLevel = string(current.GetBotDetectionLevel())
-		}
-		botDetectionLevel, err := managementv2.NewBotDetectionLevelEnumFromString(inputs.BotDetectionLevel)
-		if err != nil {
-			return err
-		}
-		bdUpdate.SetBotDetectionLevel(&botDetectionLevel)
 
 		// Set challenge password policy.
-		if err := bdFlags.ChallengePasswordPolicy.AskU(cmd, &inputs.ChallengePasswordPolicy, stringPtr(current.ChallengePasswordPolicy.Ptr())); err != nil {
-			return err
+		if bdFlags.ChallengePasswordPolicy.IsSet(cmd) || noLocalFlagSet {
+			if err := bdFlags.ChallengePasswordPolicy.AskU(cmd, &inputs.ChallengePasswordPolicy, stringPtr(current.ChallengePasswordPolicy.Ptr())); err != nil {
+				return err
+			}
+			if inputs.ChallengePasswordPolicy == "" {
+				inputs.ChallengePasswordPolicy = string(current.GetChallengePasswordPolicy())
+			}
+			challengePasswordPolicy, err := managementv2.NewBotDetectionChallengePolicyPasswordFlowEnumFromString(inputs.ChallengePasswordPolicy)
+			if err != nil {
+				return err
+			}
+			bdUpdate.SetChallengePasswordPolicy(&challengePasswordPolicy)
 		}
-		if inputs.ChallengePasswordPolicy == "" {
-			inputs.ChallengePasswordPolicy = string(current.GetChallengePasswordPolicy())
-		}
-		challengePasswordPolicy, err := managementv2.NewBotDetectionChallengePolicyPasswordFlowEnumFromString(inputs.ChallengePasswordPolicy)
-		if err != nil {
-			return err
-		}
-		bdUpdate.SetChallengePasswordPolicy(&challengePasswordPolicy)
 
 		// Set challenge passwordless policy.
-		if err := bdFlags.ChallengePasswordlessPolicy.AskU(cmd, &inputs.ChallengePasswordlessPolicy, stringPtr(current.ChallengePasswordlessPolicy.Ptr())); err != nil {
-			return err
+		if bdFlags.ChallengePasswordlessPolicy.IsSet(cmd) || noLocalFlagSet {
+			if err := bdFlags.ChallengePasswordlessPolicy.AskU(cmd, &inputs.ChallengePasswordlessPolicy, stringPtr(current.ChallengePasswordlessPolicy.Ptr())); err != nil {
+				return err
+			}
+			if inputs.ChallengePasswordlessPolicy == "" {
+				inputs.ChallengePasswordlessPolicy = string(current.GetChallengePasswordlessPolicy())
+			}
+			challengePasswordlessPolicy, err := managementv2.NewBotDetectionChallengePolicyPasswordlessFlowEnumFromString(inputs.ChallengePasswordlessPolicy)
+			if err != nil {
+				return err
+			}
+			bdUpdate.SetChallengePasswordlessPolicy(&challengePasswordlessPolicy)
 		}
-		if inputs.ChallengePasswordlessPolicy == "" {
-			inputs.ChallengePasswordlessPolicy = string(current.GetChallengePasswordlessPolicy())
-		}
-		challengePasswordlessPolicy, err := managementv2.NewBotDetectionChallengePolicyPasswordlessFlowEnumFromString(inputs.ChallengePasswordlessPolicy)
-		if err != nil {
-			return err
-		}
-		bdUpdate.SetChallengePasswordlessPolicy(&challengePasswordlessPolicy)
 
 		// Set challenge password reset policy.
-		if err := bdFlags.ChallengePasswordResetPolicy.AskU(cmd, &inputs.ChallengePasswordResetPolicy, stringPtr(current.ChallengePasswordResetPolicy.Ptr())); err != nil {
-			return err
+		if bdFlags.ChallengePasswordResetPolicy.IsSet(cmd) || noLocalFlagSet {
+			if err := bdFlags.ChallengePasswordResetPolicy.AskU(cmd, &inputs.ChallengePasswordResetPolicy, stringPtr(current.ChallengePasswordResetPolicy.Ptr())); err != nil {
+				return err
+			}
+			if inputs.ChallengePasswordResetPolicy == "" {
+				inputs.ChallengePasswordResetPolicy = string(current.GetChallengePasswordResetPolicy())
+			}
+			challengePasswordResetPolicy, err := managementv2.NewBotDetectionChallengePolicyPasswordResetFlowEnumFromString(inputs.ChallengePasswordResetPolicy)
+			if err != nil {
+				return err
+			}
+			bdUpdate.SetChallengePasswordResetPolicy(&challengePasswordResetPolicy)
 		}
-		if inputs.ChallengePasswordResetPolicy == "" {
-			inputs.ChallengePasswordResetPolicy = string(current.GetChallengePasswordResetPolicy())
-		}
-		challengePasswordResetPolicy, err := managementv2.NewBotDetectionChallengePolicyPasswordResetFlowEnumFromString(inputs.ChallengePasswordResetPolicy)
-		if err != nil {
-			return err
-		}
-		bdUpdate.SetChallengePasswordResetPolicy(&challengePasswordResetPolicy)
 
 		// Set allowlist.
-		allowListString := strings.Join(current.GetAllowlist(), ",")
-		if err := bdFlags.AllowList.AskManyU(cmd, &inputs.AllowList, &allowListString); err != nil {
-			return err
+		if bdFlags.AllowList.IsSet(cmd) || noLocalFlagSet {
+			allowListString := strings.Join(current.GetAllowlist(), ",")
+			if err := bdFlags.AllowList.AskManyU(cmd, &inputs.AllowList, &allowListString); err != nil {
+				return err
+			}
+			if len(inputs.AllowList) == 0 {
+				inputs.AllowList = current.GetAllowlist()
+			}
+			bdUpdate.SetAllowlist(&inputs.AllowList)
 		}
-		if len(inputs.AllowList) == 0 {
-			inputs.AllowList = current.GetAllowlist()
-		}
-		bdUpdate.SetAllowlist(&inputs.AllowList)
 
 		// Set monitoring mode enabled.
-		if !bdFlags.MonitoringModeEnabled.IsSet(cmd) {
-			inputs.MonitoringModeEnabled = current.GetMonitoringModeEnabled()
+		if bdFlags.MonitoringModeEnabled.IsSet(cmd) || noLocalFlagSet {
+			if err := bdFlags.MonitoringModeEnabled.AskBoolU(cmd, &inputs.MonitoringModeEnabled, &current.MonitoringModeEnabled); err != nil {
+				return err
+			}
+			bdUpdate.SetMonitoringModeEnabled(&inputs.MonitoringModeEnabled)
 		}
-		if err := bdFlags.MonitoringModeEnabled.AskBoolU(cmd, &inputs.MonitoringModeEnabled, &current.MonitoringModeEnabled); err != nil {
-			return err
-		}
-		bdUpdate.SetMonitoringModeEnabled(&inputs.MonitoringModeEnabled)
 
 		var updatedBD *managementv2.UpdateBotDetectionSettingsResponseContent
 		if err := ansi.Waiting(func() error {
@@ -257,9 +266,7 @@ func updateBotDetectionCmdRun(cli *cli, inputs *botDetectionInputs) func(cmd *co
 		}); err != nil {
 			return err
 		}
-
 		cli.renderer.BotDetectionUpdate(updatedBD)
-
 		return nil
 	}
 }

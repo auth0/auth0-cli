@@ -1175,7 +1175,7 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 			}
 
 			// Set the flag if it was supplied or entered by the prompt.
-			if appSTCanCreateToken.IsSet(cmd) || shouldPromptWhenNoLocalFlagsSet(cmd) {
+			if appSTCanCreateToken.IsSet(cmd) || noLocalFlagSet(cmd) {
 				st.CanCreateSessionTransferToken = &inputs.CanCreateToken
 			}
 

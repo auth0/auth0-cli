@@ -168,15 +168,17 @@ func canPrompt(cmd *cobra.Command) bool {
 	return iostream.IsInputTerminal() && iostream.IsOutputTerminal() && !noInput
 }
 
-func shouldPromptWhenNoLocalFlagsSet(cmd *cobra.Command) bool {
+// noLocalFlagSet returns true if no local flags (excluding global flags) are set for the command.
+func noLocalFlagSet(cmd *cobra.Command) bool {
 	localFlagIsSet := false
 	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
-		if f.Name != "json" && f.Name != "force" && f.Changed && f.Name != "json-compact" {
+		if f.Changed && f.Name != "json" && f.Name != "json-compact" && f.Name != "tenant" && f.Name != "force" && f.Name != "debug" && f.Name != "no-color" {
 			localFlagIsSet = true
+			return
 		}
 	})
 
-	return canPrompt(cmd) && !localFlagIsSet
+	return !localFlagIsSet
 }
 
 func prepareInteractivity(cmd *cobra.Command) {
