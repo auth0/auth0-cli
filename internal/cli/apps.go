@@ -374,13 +374,13 @@ func deleteAppCmd(cli *cli) *cobra.Command {
   auth0 apps delete <app-id> <app-id2> <app-idn>
   auth0 apps delete <app-id> <app-id2> <app-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ids := make([]string, len(args))
+			var ids []string
 			if len(args) == 0 {
 				if err := appID.PickMany(cmd, &ids, cli.appPickerOptions()); err != nil {
 					return err
 				}
 			} else {
-				ids = append(ids, args...)
+				ids = args
 			}
 
 			if !cli.force && canPrompt(cmd) {

@@ -208,14 +208,14 @@ func deleteLogStreamCmd(cli *cli) *cobra.Command {
   auth0 logs streams delete <log-stream-id> <log-stream-id2>
   auth0 logs streams delete <log-stream-id> <log-stream-id2> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ids := make([]string, len(args))
+			var ids []string
 			if len(args) == 0 {
 				err := logStreamID.PickMany(cmd, &ids, cli.allLogStreamsPickerOptions)
 				if err != nil {
 					return err
 				}
 			} else {
-				ids = append(ids, args...)
+				ids = args
 			}
 
 			if !cli.force && canPrompt(cmd) {

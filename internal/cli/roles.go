@@ -303,13 +303,13 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
   auth0 roles delete <role-id> <role-id2> <role-idn>
   auth0 roles delete <role-id> <role-id2> <role-idn> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ids := make([]string, len(args))
+			var ids []string
 			if len(args) == 0 {
 				if err := roleID.PickMany(cmd, &ids, cli.rolePickerOptions); err != nil {
 					return err
 				}
 			} else {
-				ids = append(ids, args...)
+				ids = args
 			}
 
 			if !cli.force && canPrompt(cmd) {
