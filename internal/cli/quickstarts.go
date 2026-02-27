@@ -487,9 +487,7 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			var appType, baseURL, envFileName string
-			var callbacks, logoutURLs, origins, webOrigins []string
-			var defaultPort string
+			var appType, defaultPort, envFileName string
 
 			switch inputs.Type {
 			case "vite":
@@ -524,7 +522,8 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("invalid port number: %d (must be between 1024 and 65535)", inputs.Port)
 			}
 
-			baseURL = fmt.Sprintf("http://localhost:%d", inputs.Port)
+			baseURL := fmt.Sprintf("http://localhost:%d", inputs.Port)
+			var callbacks, logoutURLs, origins, webOrigins []string
 
 			// Configure URLs based on app type.
 			switch inputs.Type {
@@ -585,8 +584,8 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 
 			switch inputs.Type {
 			case "vite":
-				envContent.WriteString(fmt.Sprintf("VITE_AUTH0_DOMAIN=%s\n", tenant.Domain))
-				envContent.WriteString(fmt.Sprintf("VITE_AUTH0_CLIENT_ID=%s\n", a.GetClientID()))
+				fmt.Fprintf(&envContent, "VITE_AUTH0_DOMAIN=%s\n", tenant.Domain)
+				fmt.Fprintf(&envContent, "VITE_AUTH0_CLIENT_ID=%s\n", a.GetClientID())
 
 			case "nextjs":
 				secret, err := generateState(32)
@@ -594,11 +593,11 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 					return fmt.Errorf("failed to generate AUTH0_SECRET: %w", err)
 				}
 
-				envContent.WriteString(fmt.Sprintf("AUTH0_DOMAIN=%s\n", tenant.Domain))
-				envContent.WriteString(fmt.Sprintf("AUTH0_CLIENT_ID=%s\n", a.GetClientID()))
-				envContent.WriteString(fmt.Sprintf("AUTH0_CLIENT_SECRET=%s\n", a.GetClientSecret()))
-				envContent.WriteString(fmt.Sprintf("AUTH0_SECRET=%s\n", secret))
-				envContent.WriteString(fmt.Sprintf("APP_BASE_URL=%s\n", baseURL))
+				fmt.Fprintf(&envContent, "AUTH0_DOMAIN=%s\n", tenant.Domain)
+				fmt.Fprintf(&envContent, "AUTH0_CLIENT_ID=%s\n", a.GetClientID())
+				fmt.Fprintf(&envContent, "AUTH0_CLIENT_SECRET=%s\n", a.GetClientSecret())
+				fmt.Fprintf(&envContent, "AUTH0_SECRET=%s\n", secret)
+				fmt.Fprintf(&envContent, "APP_BASE_URL=%s\n", baseURL)
 
 			case "fastify":
 				sessionSecret, err := generateState(64)
@@ -606,11 +605,11 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 					return fmt.Errorf("failed to generate SESSION_SECRET: %w", err)
 				}
 
-				envContent.WriteString(fmt.Sprintf("AUTH0_DOMAIN=%s\n", tenant.Domain))
-				envContent.WriteString(fmt.Sprintf("AUTH0_CLIENT_ID=%s\n", a.GetClientID()))
-				envContent.WriteString(fmt.Sprintf("AUTH0_CLIENT_SECRET=%s\n", a.GetClientSecret()))
-				envContent.WriteString(fmt.Sprintf("SESSION_SECRET=%s\n", sessionSecret))
-				envContent.WriteString(fmt.Sprintf("APP_BASE_URL=%s\n", baseURL))
+				fmt.Fprintf(&envContent, "AUTH0_DOMAIN=%s\n", tenant.Domain)
+				fmt.Fprintf(&envContent, "AUTH0_CLIENT_ID=%s\n", a.GetClientID())
+				fmt.Fprintf(&envContent, "AUTH0_CLIENT_SECRET=%s\n", a.GetClientSecret())
+				fmt.Fprintf(&envContent, "SESSION_SECRET=%s\n", sessionSecret)
+				fmt.Fprintf(&envContent, "APP_BASE_URL=%s\n", baseURL)
 			}
 
 			message := fmt.Sprintf("     Proceed to overwrite '%s' file? : ", envFileName)
