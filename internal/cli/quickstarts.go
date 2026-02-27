@@ -428,7 +428,7 @@ var (
 		Name:      "Name",
 		LongForm:  "name",
 		ShortForm: "n",
-		Help:      "Name of the Auth0 application (defaults to current directory name)",
+		Help:      "Name of the Auth0 application (default: 'My App' for vite, nextjs and fastify, 'JHipster' for jhipster-rwa)",
 	}
 	qsPort = Flag{
 		Name:      "Port",
