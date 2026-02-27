@@ -640,7 +640,19 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 
 			switch inputs.Type {
 			case "jhipster-rwa":
-				cli.renderer.Infof("Created Jhipster RWA application")
+				cli.renderer.Infof("Next steps: \n" +
+					"       Utilize generated envs to set JHipster OAUTH2 params\n" +
+					"       Refer to the JHipster documentation https://www.jhipster.tech/security/#auth0 to configure additional resources required for integration.\n" +
+					"       Here are some commands that might be helpful :\n\n" +
+					"       	`auth0 api connections` to list available connections. Look for connection-id of the required connection by name (eg:Username-Password-Authentication).\n" +
+					"       	`auth0 api patch \"connections/<CONNECTION_ID>/clients\" --data '[{\"client_id\": \"<CLIENT_ID>\",\"status\": true}]'` to enable connection for the application.\n" +
+					"       	`auth0 roles create --name <ROLE_NAME> --description <DESCRIPTION>` to create new role.\n" +
+					"       	`auth0 users create --email <EMAIL> --password <PASSWORD> --connection-name <CONNECTION_NAME(eg:Username-Password-Authentication)>` to create a user.\n" +
+					"       	`auth0 users roles add <USER_ID> --roles <ROLE_ID>` to assign roles to a user.\n" +
+					"       	`auth0 actions create --name <ACTION_NAME> --trigger <TRIGGER(eg:post-login)> --code <CODE>` to create a new action.\n" +
+					"       	`auth0 actions deploy <ACTION_ID>` to deploy the action.\n" +
+					"       	`auth0 api patch \"actions/triggers/<TRIGGER(eg:post-login)>/bindings\" --data '{\"bindings\":[{\"ref\":{\"type\":\"action_id\",\"value\":\"<ACTION_ID>\"}}]}'` to bind the action to post-login trigger.\n")
+				return nil
 			default:
 				cli.renderer.Infof("Next steps: \n"+
 					"       1. Install dependencies: npm install \n"+
