@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
@@ -420,7 +421,7 @@ var (
 		Name:       "Type",
 		LongForm:   "type",
 		ShortForm:  "t",
-		Help:       "Type of quickstart (vite, nextjs)",
+		Help:       "Type of quickstart (vite, nextjs, fastify, jhipster-rwa)",
 		IsRequired: true,
 	}
 	qsAppName = Flag{
@@ -433,7 +434,7 @@ var (
 		Name:      "Port",
 		LongForm:  "port",
 		ShortForm: "p",
-		Help:      "Port number for the application (default: 5173 for vite, 3000 for nextjs/fastify)",
+		Help:      "Port number for the application (default: 5173 for vite, 3000 for nextjs/fastify, 8080 for jhipster-rwa)",
 	}
 )
 
@@ -456,24 +457,26 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 			"Supported types:\n" +
 			"  - vite: For client-side SPAs (React, Vue, Svelte, etc.)\n" +
 			"  - nextjs: For Next.js server-side applications\n" +
-			"  - fastify: For Fastify web applications",
+			"  - fastify: For Fastify web applications\n" +
+			"  - jhipster-rwa: For JHipster regular web applications",
 		Example: `  auth0 quickstarts setup --type vite
   auth0 quickstarts setup --type nextjs
   auth0 quickstarts setup --type fastify
   auth0 quickstarts setup --type vite --name "My App"
   auth0 quickstarts setup --type nextjs --port 8080
+  auth0 quickstarts setup --type jhipster-rwa
   auth0 qs setup --type fastify -n "My App" -p 3000`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
 			if inputs.Type != "" {
 				normalizedType := strings.ToLower(inputs.Type)
-				if normalizedType != "vite" && normalizedType != "nextjs" && normalizedType != "fastify" {
-					return fmt.Errorf("unsupported quickstart type: %s (supported types: vite, nextjs, fastify)", inputs.Type)
+				if normalizedType != "vite" && normalizedType != "nextjs" && normalizedType != "fastify" && normalizedType != "jhipster-rwa" {
+					return fmt.Errorf("unsupported quickstart type: %s (supported types: vite, nextjs, fastify, jhipster-rwa)", inputs.Type)
 				}
 			}
 
-			if err := qsType.Select(cmd, &inputs.Type, []string{"vite", "nextjs", "fastify"}, nil); err != nil {
+			if err := qsType.Select(cmd, &inputs.Type, []string{"vite", "nextjs", "fastify", "jhipster-rwa"}, nil); err != nil {
 				return err
 			}
 
@@ -481,40 +484,35 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("authentication required: %w", err)
 			}
 
-			defaultName := "My App"
-
-			if err := qsAppName.Ask(cmd, &inputs.Name, &defaultName); err != nil {
-				return err
-			}
-
-			var appType, defaultPort, envFileName string
+			var defaultName string
+			var defaultPort int
 
 			switch inputs.Type {
 			case "vite":
-				appType = appTypeSPA
-				defaultPort = "5173"
-				envFileName = ".env"
-
+				defaultName = "My App"
+				defaultPort = 5173
 			case "nextjs", "fastify":
-				appType = appTypeRegularWeb
-				defaultPort = "3000"
-				envFileName = ".env"
+				defaultName = "My App"
+				defaultPort = 3000
+			case "jhipster-rwa":
+				defaultName = "JHipster"
+				defaultPort = 8080
 			}
 
-			// If port is not explicitly set (is 0), ask for it or use default.
-			if inputs.Port == 0 {
-				if err := qsPort.Ask(cmd, &inputs.Port, &defaultPort); err != nil {
+			// If name is not explicitly set, ask for it or use default.
+			if inputs.Name == "" {
+				inputs.Name = defaultName
+				if err := qsAppName.Ask(cmd, &inputs.Name, &defaultName); err != nil {
 					return err
 				}
 			}
 
-			// If port is still 0 after asking (e.g., in non-interactive mode), use the default.
+			// If port is not explicitly set (is 0), ask for it or use default.
 			if inputs.Port == 0 {
-				switch inputs.Type {
-				case "vite":
-					inputs.Port = 5173
-				case "nextjs", "fastify":
-					inputs.Port = 3000
+				inputs.Port = defaultPort
+				defaultPortStr := strconv.Itoa(defaultPort)
+				if err := qsPort.Ask(cmd, &inputs.Port, &defaultPortStr); err != nil {
+					return err
 				}
 			}
 
@@ -523,21 +521,30 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 			}
 
 			baseURL := fmt.Sprintf("http://localhost:%d", inputs.Port)
+			var appType string
 			var callbacks, logoutURLs, origins, webOrigins []string
 
 			// Configure URLs based on app type.
 			switch inputs.Type {
 			case "vite":
+				appType = appTypeSPA
 				callbacks = []string{baseURL}
 				logoutURLs = []string{baseURL}
 				origins = []string{baseURL}
 				webOrigins = []string{baseURL}
 			case "nextjs":
+				appType = appTypeRegularWeb
 				callbackURL := fmt.Sprintf("%s/api/auth/callback", baseURL)
 				callbacks = []string{callbackURL}
 				logoutURLs = []string{baseURL}
 			case "fastify":
+				appType = appTypeRegularWeb
 				callbackURL := fmt.Sprintf("%s/auth/callback", baseURL)
+				callbacks = []string{callbackURL}
+				logoutURLs = []string{baseURL}
+			case "jhipster-rwa":
+				appType = appTypeRegularWeb
+				callbackURL := fmt.Sprintf("%s/login/oauth2/code/oidc", baseURL)
 				callbacks = []string{callbackURL}
 				logoutURLs = []string{baseURL}
 			}
@@ -610,8 +617,14 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				fmt.Fprintf(&envContent, "AUTH0_CLIENT_SECRET=%s\n", a.GetClientSecret())
 				fmt.Fprintf(&envContent, "SESSION_SECRET=%s\n", sessionSecret)
 				fmt.Fprintf(&envContent, "APP_BASE_URL=%s\n", baseURL)
+
+			case "jhipster-rwa":
+				fmt.Fprintf(&envContent, "AUTH0_DOMAIN=%s\n", tenant.Domain)
+				fmt.Fprintf(&envContent, "AUTH0_CLIENT_ID=%s\n", a.GetClientID())
+				fmt.Fprintf(&envContent, "AUTH0_CLIENT_SECRET=%s\n", a.GetClientSecret())
 			}
 
+			envFileName := ".env"
 			message := fmt.Sprintf("     Proceed to overwrite '%s' file? : ", envFileName)
 			if shouldCancelOverwrite(cli, cmd, envFileName, message) {
 				cli.renderer.Warnf("Aborted creating %s file. Please create it manually using the following content:\n\n"+
@@ -625,10 +638,15 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				cli.renderer.Infof("%s file created successfully with your Auth0 configuration\n", envFileName)
 			}
 
-			cli.renderer.Infof("Next steps: \n"+
-				"       1. Install dependencies: npm install \n"+
-				"       2. Start your application: npm run dev\n"+
-				"       3. Open your browser at %s", baseURL)
+			switch inputs.Type {
+			case "jhipster-rwa":
+				cli.renderer.Infof("Created Jhipster RWA application")
+			default:
+				cli.renderer.Infof("Next steps: \n"+
+					"       1. Install dependencies: npm install \n"+
+					"       2. Start your application: npm run dev\n"+
+					"       3. Open your browser at %s", baseURL)
+			}
 
 			return nil
 		},
