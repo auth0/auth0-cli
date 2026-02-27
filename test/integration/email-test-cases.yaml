@@ -55,21 +55,37 @@ tests:
     command: auth0 email provider update --enabled --default-from-address='admin@auth0.invalid'
     exit-code: 0
 
-  012 - it successfully shows the email provider:
+  012 - update only specified value without affecting the enabled boolean value:
+    command: auth0 email provider update --default-from-address='test@auth0.invalid'
+    exit-code: 0
+    stdout:
+      contains:
+        - ENABLED               ✓
+        - DEFAULT FROM ADDRESS  test@auth0.invalid
+
+  013 - it successfully shows the email provider:
     command: auth0 email provider show
     exit-code: 0
     stdout:
       contains:
         - PROVIDER              mandrill
         - ENABLED               ✓
-        - DEFAULT FROM ADDRESS  admin@auth0.invalid
+        - DEFAULT FROM ADDRESS  test@auth0.invalid
         - SETTINGS              {"message":{"view_content_link":false}}
 
   100 - it successfully updates welcome email template:
     command: auth0 email templates update welcome --enabled --body "<h1>Welcome!</h1>" --from "welcome@travel0.com" --lifetime 6100 --subject "Welcome to Travel0" --url "travel0.com" --force
     exit-code: 0
 
-  101 - it successfully shows welcome email template:
+  101 - it successfully updates only specified value without affecting the enabled boolean flag:
+    command: auth0 email templates update welcome --url "test.travel0.com"
+    exit-code: 0
+    stdout:
+      contains:
+        - RESULT URL           test.travel0.com
+        - ENABLED              ✓
+
+  102 - it successfully shows welcome email template:
     command: auth0 email templates show welcome
     exit-code: 0
     stdout:
@@ -77,15 +93,15 @@ tests:
         - TEMPLATE             Welcome Email
         - FROM                 welcome@travel0.com
         - SUBJECT              Welcome to Travel0
-        - RESULT URL           travel0.com
+        - RESULT URL           test.travel0.com
         - RESULT URL LIFETIME  6100
         - ENABLED              ✓
 
-  102 - it successfully updates verify-link email template:
+  103 - it successfully updates verify-link email template:
     command: auth0 email templates update verify-link --enabled --body "<h1>Verify link</h1>" --from "verify@travel0.com" --lifetime 6100 --subject "Verify link" --url "travel0.com" --force
     exit-code: 0
 
-  103 - it successfully shows verify-link email template:
+  104 - it successfully shows verify-link email template:
     command: auth0 email templates show verify-link
     exit-code: 0
     stdout:
@@ -96,11 +112,11 @@ tests:
         - RESULT URL           travel0.com
         - RESULT URL LIFETIME  6100
         - ENABLED              ✓
-  104 - it successfully updates verify-code email template:
+  105 - it successfully updates verify-code email template:
     command: auth0 email templates update verify-code --enabled --body "<h1>Verify code</h1>" --from "verify@travel0.com" --lifetime 6100 --subject "Verify code" --url "travel0.com" --force
     exit-code: 0
 
-  105 - it successfully shows verify-code email template:
+  106 - it successfully shows verify-code email template:
     command: auth0 email templates show verify-code
     exit-code: 0
     stdout:
@@ -111,11 +127,11 @@ tests:
         - RESULT URL           travel0.com
         - RESULT URL LIFETIME  6100
         - ENABLED              ✓
-  106 - it successfully updates change-password email template:
+  107 - it successfully updates change-password email template:
     command: auth0 email templates update change-password --enabled --body "<h1>Change password</h1>" --from "change-password@travel0.com" --lifetime 6100 --subject "Change password" --url "travel0.com" --force
     exit-code: 0
 
-  107 - it successfully shows change-password email template:
+  108 - it successfully shows change-password email template:
     command: auth0 email templates show change-password
     exit-code: 0
     stdout:
@@ -126,11 +142,11 @@ tests:
         - RESULT URL           travel0.com
         - RESULT URL LIFETIME  6100
         - ENABLED              ✓
-  108 - it successfully updates blocked-account email template:
+  109 - it successfully updates blocked-account email template:
     command: auth0 email templates update blocked-account --enabled --body "<h1>Change password</h1>" --from "blocked@travel0.com" --lifetime 6100 --subject "Blocked!" --url "travel0.com" --force
     exit-code: 0
 
-  109 - it successfully shows blocked-account email template:
+  110 - it successfully shows blocked-account email template:
     command: auth0 email templates show blocked-account
     exit-code: 0
     stdout:
@@ -141,11 +157,11 @@ tests:
         - RESULT URL           travel0.com
         - RESULT URL LIFETIME  6100
         - ENABLED              ✓
-  110 - it successfully updates password-breach email template:
+  111 - it successfully updates password-breach email template:
     command: auth0 email templates update password-breach --enabled --body "<h1>Password breached</h1>" --from "security@travel0.com" --lifetime 6100 --subject "Breached Password!" --url "travel0.com" --force
     exit-code: 0
 
-  111 - it successfully shows password-breach email template:
+  112 - it successfully shows password-breach email template:
     command: auth0 email templates show password-breach
     exit-code: 0
     stdout:
@@ -156,11 +172,11 @@ tests:
         - RESULT URL           travel0.com
         - RESULT URL LIFETIME  6100
         - ENABLED              ✓
-  112 - it successfully updates mfa-enrollment email template:
+  113 - it successfully updates mfa-enrollment email template:
     command: auth0 email templates update mfa-enrollment --enabled --body "<h1>Enroll in MFA</h1>" --from "security@travel0.com" --lifetime 6100 --subject "Enroll in MFA!" --url "travel0.com" --force
     exit-code: 0
 
-  113 - it successfully shows mfa-enrollment email template:
+  114 - it successfully shows mfa-enrollment email template:
     command: auth0 email templates show mfa-enrollment
     exit-code: 0
     stdout:
@@ -171,11 +187,11 @@ tests:
         - RESULT URL           travel0.com
         - RESULT URL LIFETIME  6100
         - ENABLED              ✓
-  114 - it successfully updates mfa-code email template:
+  115 - it successfully updates mfa-code email template:
     command: auth0 email templates update mfa-code --enabled --body "<h1>MFA Enrollment code</h1>" --from "security@travel0.com" --lifetime 6100 --subject "MFA Enrollment Code" --url "travel0.com" --force
     exit-code: 0
 
-  115 - it successfully shows mfa-code email template:
+  116 - it successfully shows mfa-code email template:
     command: auth0 email templates show mfa-code
     exit-code: 0
     stdout:
@@ -186,11 +202,11 @@ tests:
         - RESULT URL           travel0.com
         - RESULT URL LIFETIME  6100
         - ENABLED              ✓
-  116 - it successfully updates user-invitation email template:
+  117 - it successfully updates user-invitation email template:
     command: auth0 email templates update user-invitation --enabled --body "<h1>You are invited!</h1>" --from "invited@travel0.com" --lifetime 6100 --subject "You are invited!" --url "travel0.com" --force
     exit-code: 0
 
-  117 - it successfully shows user-invitation email template:
+  118 - it successfully shows user-invitation email template:
     command: auth0 email templates show user-invitation
     exit-code: 0
     stdout:
@@ -201,7 +217,7 @@ tests:
         - RESULT URL           travel0.com
         - RESULT URL LIFETIME  6100
         - ENABLED              ✓
-  118 - it successfully shows user-invitation email template (json):
+  119 - it successfully shows user-invitation email template (json):
     command: "auth0 email templates show user-invitation --json | jq ."
     exit-code: 0
     stdout:
@@ -214,11 +230,11 @@ tests:
         syntax: "liquid"
         urlLifetimeInSeconds: "6100"
         enabled: "true"
-  119 - it successfully updates async-approval email template:
+  120 - it successfully updates async-approval email template:
     command: auth0 email templates update async-approval --enabled --body "<h1>Async Approval Required</h1>" --from "approval@travel0.com" --lifetime 6100 --subject "Approval Required" --url "travel0.com" --force
     exit-code: 0
 
-  120 - it successfully shows async-approval email template:
+  121 - it successfully shows async-approval email template:
     command: auth0 email templates show async-approval
     exit-code: 0
     stdout:

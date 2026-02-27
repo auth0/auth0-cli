@@ -6,7 +6,7 @@ if [ -f "$FILE" ]; then
     exit 0
 fi
 
-app=$( auth0 apps create -n integration-test-org-inv-app -t native --description NewApp --json --no-input )
+app=$( auth0 apps create -n integration-test-app-org-inv -t native --description NewApp --json --no-input )
 
 client_id=$( echo "$app" | jq -r '.["client_id"]' )
 

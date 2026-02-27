@@ -247,7 +247,9 @@ func updateLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 			if inputs.splunkPort != "" {
 				splunkSink.Port = &inputs.splunkPort
 			}
-			splunkSink.Secure = &inputs.splunkVerifyTLS
+			if splunkVerifyTLS.IsSet(cmd) || noLocalFlagSet(cmd) {
+				splunkSink.Secure = &inputs.splunkVerifyTLS
+			}
 			updatedLogStream.Sink = splunkSink
 
 			if inputs.piiConfig != "{}" {
