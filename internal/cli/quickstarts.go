@@ -641,7 +641,7 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 
 			switch inputs.Type {
 			case "jhipster-rwa":
-				cli.renderer.Infof("Created Jhipster RWA application")
+				cli.renderer.Infof("Please refer to the JHipster documentation https://www.jhipster.tech/security/#auth0 to complete the setup")
 			default:
 				cli.renderer.Infof("Next steps: \n"+
 					"       1. Install dependencies: npm install \n"+
