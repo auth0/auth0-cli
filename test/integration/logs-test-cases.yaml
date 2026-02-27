@@ -162,15 +162,23 @@ tests:
         sink.splunkPort: "8000"
         sink.splunkSecure: "true"
 
-  023 - given a splunk log stream, it successfully deletes the log stream:
+  023 - given a splunk log stream, it successfully updates only specified value without affecting secure boolean value:
+    command: auth0 logs streams update splunk $(cat ./test/integration/identifiers/log-stream-splunk-id) --port 8088 --json
+    exit-code: 0
+    stdout:
+      json:
+        sink.splunkSecure: "true"
+        sink.splunkPort: "8088"
+
+  024 - given a splunk log stream, it successfully deletes the log stream:
     command: auth0 logs streams delete $(cat ./test/integration/identifiers/log-stream-splunk-id) --force --no-input
     exit-code: 0
 
-  024 - it successfully creates a sumo log stream:
+  025 - it successfully creates a sumo log stream:
     command: ./test/integration/scripts/create-log-stream-sumo-id.sh
     exit-code: 0
 
-  025 - given a sumo log stream, it successfully updates the log stream's details:
+  026 - given a sumo log stream, it successfully updates the log stream's details:
     command: auth0 logs streams update sumo $(cat ./test/integration/identifiers/log-stream-sumo-id) --name integration-test-updated-sumo --source "https://collectors.sumologic.com/receiver/v1/http/update" --json --no-input
     exit-code: 0
     stdout:
@@ -180,6 +188,6 @@ tests:
         status: "active"
         sink.sumoSourceAddress: "https://collectors.sumologic.com/receiver/v1/http/update"
 
-  026 - given a sumo log stream, it successfully deletes the log stream:
+  027 - given a sumo log stream, it successfully deletes the log stream:
     command: auth0 logs streams delete $(cat ./test/integration/identifiers/log-stream-sumo-id) --force --no-input
     exit-code: 0

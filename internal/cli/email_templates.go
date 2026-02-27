@@ -253,9 +253,11 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 
 			template := apiEmailTemplateFor(inputs.Template)
 			emailTemplate := &management.EmailTemplate{
-				Enabled:  &inputs.Enabled,
 				Template: &template,
 				Syntax:   oldTemplate.Syntax,
+			}
+			if emailTemplateEnabled.IsSet(cmd) || noLocalFlagSet(cmd) {
+				emailTemplate.Enabled = &inputs.Enabled
 			}
 			if inputs.Body != "" {
 				emailTemplate.Body = &inputs.Body

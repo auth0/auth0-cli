@@ -343,7 +343,7 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 			}
 
 			// Set the flag if it was supplied or entered by the prompt.
-			if canPrompt(cmd) || phoneProviderDisabled.IsSet(cmd) {
+			if phoneProviderDisabled.IsSet(cmd) || noLocalFlagSet(cmd) {
 				phoneProvider.Disabled = &inputs.disabled
 			}
 

@@ -356,7 +356,7 @@ func updateEmailProviderCmd(cli *cli) *cobra.Command {
 			}
 
 			// Set the flag if it was supplied or entered by the prompt.
-			if canPrompt(cmd) || emailProviderEnabled.IsSet(cmd) {
+			if emailProviderEnabled.IsSet(cmd) || noLocalFlagSet(cmd) {
 				emailProvider.Enabled = &inputs.enabled
 			}
 

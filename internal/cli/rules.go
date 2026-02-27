@@ -387,7 +387,9 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 					}
 				}
 
-				updatedRule.Enabled = &inputs.Enabled
+				if ruleEnabled.IsSet(cmd) || noLocalFlagSet(cmd) {
+					updatedRule.Enabled = &inputs.Enabled
+				}
 				if inputs.Name != "" {
 					updatedRule.Name = &inputs.Name
 				}
