@@ -484,22 +484,20 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("authentication required: %w", err)
 			}
 
-			var defaultName string
+			defaultName := "My App"
 			var defaultPort int
 
 			switch inputs.Type {
 			case "vite":
-				defaultName = "My App"
 				defaultPort = 5173
 			case "nextjs", "fastify":
-				defaultName = "My App"
 				defaultPort = 3000
 			case "jhipster-rwa":
 				defaultName = "JHipster"
 				defaultPort = 8080
 			}
 
-			// If name is not explicitly set, ask for it or use default.
+			// If name is not explicitly set (is empty), ask for it or use default.
 			if inputs.Name == "" {
 				inputs.Name = defaultName
 				if err := qsAppName.Ask(cmd, &inputs.Name, &defaultName); err != nil {
@@ -521,7 +519,7 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 			}
 
 			baseURL := fmt.Sprintf("http://localhost:%d", inputs.Port)
-			var appType string
+			appType := appTypeRegularWeb
 			var callbacks, logoutURLs, origins, webOrigins []string
 
 			// Configure URLs based on app type.
@@ -533,17 +531,14 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				origins = []string{baseURL}
 				webOrigins = []string{baseURL}
 			case "nextjs":
-				appType = appTypeRegularWeb
 				callbackURL := fmt.Sprintf("%s/api/auth/callback", baseURL)
 				callbacks = []string{callbackURL}
 				logoutURLs = []string{baseURL}
 			case "fastify":
-				appType = appTypeRegularWeb
 				callbackURL := fmt.Sprintf("%s/auth/callback", baseURL)
 				callbacks = []string{callbackURL}
 				logoutURLs = []string{baseURL}
 			case "jhipster-rwa":
-				appType = appTypeRegularWeb
 				callbackURL := fmt.Sprintf("%s/login/oauth2/code/oidc", baseURL)
 				callbacks = []string{callbackURL}
 				logoutURLs = []string{baseURL}
@@ -587,6 +582,7 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to get tenant: %w", err)
 			}
 
+			envFileName := ".env"
 			var envContent strings.Builder
 
 			switch inputs.Type {
@@ -619,13 +615,13 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 				fmt.Fprintf(&envContent, "APP_BASE_URL=%s\n", baseURL)
 
 			case "jhipster-rwa":
+				envFileName = ".auth0.env"
 				fmt.Fprintf(&envContent, "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_OIDC_ISSUER_URI=https://%s/\n", tenant.Domain)
 				fmt.Fprintf(&envContent, "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_ID=%s\n", a.GetClientID())
 				fmt.Fprintf(&envContent, "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET=%s\n", a.GetClientSecret())
 				fmt.Fprintf(&envContent, "JHIPSTER_SECURITY_OAUTH2_AUDIENCE=https://%s/api/v2/\n", tenant.Domain)
 			}
 
-			envFileName := ".env"
 			message := fmt.Sprintf("     Proceed to overwrite '%s' file? : ", envFileName)
 			if shouldCancelOverwrite(cli, cmd, envFileName, message) {
 				cli.renderer.Warnf("Aborted creating %s file. Please create it manually using the following content:\n\n"+
