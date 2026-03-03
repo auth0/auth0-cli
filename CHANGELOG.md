@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Add JHipster support in `auth0 quickstarts setup` command [#1452]
 - Add bot detection commands via `auth0 protection bot-detection` (show, update) [#1435]
++ Add bot detection commands via `auth0 protection bot-detection`[#1435]
 - Add Fastify support in `auth0 quickstarts setup` command [#1449]
 
 ### Fixed
