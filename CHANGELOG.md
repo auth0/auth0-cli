@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.28.0](https://github.com/auth0/auth0-cli/tree/v1.28.0) (March 03, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.27.2...v1.28.0)
+
+### Added
+- Add JHipster support in `auth0 quickstarts setup` command [#1452]
+- Add bot detection `auth0 protection bot-detection` in attack protection [#1435]
+- Add Fastify support in `auth0 quickstarts setup` command [#1449]
+
+### Fixed
+- Fix unintended boolean values clearing in update commands [#1442]
+- Fix empty string elements from IDs slice in delete commands [#1451]
+
+
 # [v.1.27.2](https://github.com/auth0/auth0-cli/tree/v1.27.2) (February 14, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.27.1...v1.27.2)
@@ -686,7 +700,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.27.2...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.28.0...HEAD
+[#1452]: https://github.com/auth0/auth0-cli/pull/1452
+[#1451]: https://github.com/auth0/auth0-cli/pull/1451
+[#1449]: https://github.com/auth0/auth0-cli/pull/1449
+[#1442]: https://github.com/auth0/auth0-cli/pull/1442
+[#1435]: https://github.com/auth0/auth0-cli/pull/1435
 [#1440]: https://github.com/auth0/auth0-cli/pull/1440
 [#1437]: https://github.com/auth0/auth0-cli/pull/1437
 [#1428]: https://github.com/auth0/auth0-cli/pull/1428
