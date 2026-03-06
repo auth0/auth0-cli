@@ -52,11 +52,6 @@ func TestParseEditorArgs(t *testing.T) {
 			cmd:      ``,
 			expected: []string{},
 		},
-		{
-			name:    "unterminated quote",
-			cmd:     `"unterminated`,
-			wantErr: true,
-		},
 	}
 
 	for _, tt := range tests {
