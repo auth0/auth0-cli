@@ -212,8 +212,8 @@ export EDITOR="vim"
 ```powershell
 # PowerShell (current session).
 $env:EDITOR = "code --wait"
-$env:EDITOR = '"C:\Program Files\Notepad++\notepad++.exe" --wait'
-$env:EDITOR = '"C:\Program Files\Microsoft VS Code\code.exe" --wait --new-window'
+$env:EDITOR = '"C:\Path To\bin\code" --wait'
+$env:EDITOR = '"C:\Path To\notepad++.exe" --wait'
 
 # PowerShell (persistent, across sessions).
 [System.Environment]::SetEnvironmentVariable("EDITOR", "code --wait", "User")
