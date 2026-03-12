@@ -1,13 +1,13 @@
 module github.com/auth0/auth0-cli
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/PuerkitoBio/rehttp v1.4.0
 	github.com/atotto/clipboard v0.1.4
 	github.com/auth0/go-auth0 v1.36.0
-	github.com/auth0/go-auth0/v2 v2.6.0
+	github.com/auth0/go-auth0/v2 v2.7.0
 	github.com/briandowns/spinner v1.23.2
 	github.com/charmbracelet/glamour v0.10.0
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
@@ -37,7 +37,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/pretty v1.2.1
 	github.com/zalando/go-keyring v0.2.6
-	golang.org/x/oauth2 v0.35.0
+	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.19.0
 	golang.org/x/sys v0.41.0
 	golang.org/x/term v0.40.0
