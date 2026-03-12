@@ -96,6 +96,7 @@ var allowedPromptsWithPartials = []management.PromptType{
 	management.PromptLoginID,
 	management.PromptLoginPassword,
 	management.PromptLoginPasswordLess,
+	management.PromptPasskeys,
 }
 
 var PromptScreenMap = map[string][]string{
@@ -1003,6 +1004,10 @@ func fetchAllPartials(ctx context.Context, api *auth0.API) ([]partialsData, erro
 				continue
 			}
 			return nil, err
+		}
+
+		if partial == nil {
+			partial = &management.PromptScreenPartials{}
 		}
 
 		constructedPartial := partialsData{
