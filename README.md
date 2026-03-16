@@ -188,11 +188,11 @@ Select **y** to proceed with your default tenant, or **N** to choose a different
 
 ## Customization
 
-To change the text editor used for editing templates, rules, and actions, set the environment variable `EDITOR` to your
-preferred editor. If choosing a non-terminal editor, ensure that the command starts the editor and waits for the files
-to be closed before returning.
+The default text editor is `vim` on Linux/macOS and `notepad` on Windows. To change that for editing templates, rules, and actions, set the environment variable `EDITOR` to your
+preferred editor. If choosing a non-terminal editor, ensure that the command starts the editor and waits for the files to be closed before returning.
 
-Examples:
+### Examples:
+#### Linux / macOS
 
 ```shell
 # Uses vscode with the --wait flag.
@@ -206,6 +206,28 @@ export EDITOR="nano"
 
 # Uses vim, a terminal based editor.
 export EDITOR="vim"
+```
+
+#### Windows
+
+```powershell
+# PowerShell (current session):
+$env:EDITOR = "code --wait"
+$env:EDITOR = 'subl --wait'
+$env:EDITOR = 'notepad'
+$env:EDITOR = '"C:\Path To\executable++.exe" --wait'
+# PowerShell (persistent, across sessions):
+[System.Environment]::SetEnvironmentVariable("EDITOR", "code --wait", "User")
+```
+
+```cmd
+REM Command Prompt (current session):
+set EDITOR=code --wait
+set EDITOR=subl --wait
+set EDITOR=notepad
+set EDITOR="C:\Path To\executable++.exe" --wait
+REM Command Prompt (persistent, across sessions):
+setx EDITOR "code --wait"
 ```
 
 ## Anonymized Analytics Disclosure

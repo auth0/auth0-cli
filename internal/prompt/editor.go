@@ -7,8 +7,6 @@ import (
 	"os/exec"
 	"runtime"
 
-	"github.com/kballard/go-shellquote"
-
 	"github.com/auth0/auth0-cli/internal/iostream"
 )
 
@@ -40,7 +38,7 @@ type editorPrompt struct {
 // openFile opens filename in the preferred text editor, resolving the
 // arguments with editor specific logic.
 func (p *editorPrompt) openFile(filename string, infoFn func()) error {
-	args, err := shellquote.Split(p.cmd)
+	args, err := parseEditorArgs(p.cmd)
 	if err != nil {
 		return err
 	}
