@@ -68,6 +68,7 @@ func quickstartsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(listQuickstartsCmd(cli))
 	cmd.AddCommand(downloadQuickstartCmd(cli))
 	cmd.AddCommand(setupQuickstartCmd(cli))
+	cmd.AddCommand(setupQuickstartCmdExperimental(cli))
 
 	return cmd
 }
@@ -655,4 +656,305 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 	qsPort.RegisterInt(cmd, &inputs.Port, 0)
 
 	return cmd
+}
+
+func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
+	var inputs struct {
+		Name          string
+		App           bool
+		Type          string
+		Framework     string
+		BuildTool     string
+		Port          int
+		CallbackURL   string
+		LogoutURL     string
+		WebOriginURL  string
+		API           bool
+		Identifier    string
+		Audience      string
+		SigningAlg    string
+		Scopes        string
+		TokenLifetime string
+		OfflineAccess bool
+	}
+
+	cmd := &cobra.Command{
+		Use:   "setup-experimental",
+		Args:  cobra.NoArgs,
+		Short: "Set up Auth0 for your quickstart application",
+		Long: "Creates an Auth0 application and generates a .env file with the necessary configuration.\n\n" +
+			"The command will:\n" +
+			"  1. Check if you are authenticated (and prompt for login if needed)\n" +
+			"  2. Create an Auth0 application based on the specified type\n" +
+			"  3. Generate a .env file with the appropriate environment variables\n\n" +
+			"Supported types are dynamically loaded from the `QuickstartConfigs` map in the codebase.",
+		Example: `  auth0 quickstarts setup-experimental --type spa:react:vite
+  auth0 quickstarts setup-experimental --type regular:nextjs:none
+  auth0 quickstarts setup-experimental --type native:react-native:none`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+
+			if err := cli.setupWithAuthentication(ctx); err != nil {
+				return fmt.Errorf("authentication required: %w", err)
+			}
+
+			qsConfigKey, updatedInputs, err := getQuickstartConfigKey(inputs)
+			if err != nil {
+				inputs = updatedInputs
+				return fmt.Errorf("failed to get quickstart configuration: %w", err)
+			}
+
+			// Validate the input type against QuickstartConfigs
+			config, exists := auth0.QuickstartConfigs[qsConfigKey]
+			if !exists {
+				return fmt.Errorf("unsupported quickstart arguments: %s. Supported types: %v", qsConfigKey, getSupportedQuickstartTypes())
+			}
+
+			// Set default values based on the selected quickstart type
+			if inputs.Name == "" {
+				inputs.Name = "My App"
+			}
+			if inputs.Port == 0 {
+				inputs.Port = 3000 // Default port, can be adjusted based on the type if needed
+			}
+
+			baseURL := fmt.Sprintf("http://localhost:%d", inputs.Port)
+
+			// Create the Auth0 application
+			cli.renderer.Infof("Creating Auth0 application '%s'...", inputs.Name)
+			appType := config.RequestParams.AppType
+			callbacks := config.RequestParams.Callbacks
+			logoutURLs := config.RequestParams.AllowedLogoutURLs
+
+			oidcConformant := true
+			algorithm := "RS256"
+			metadata := map[string]interface{}{
+				"created_by": "quickstart-docs-manual-cli",
+			}
+
+			a := &management.Client{
+				Name:              &inputs.Name,
+				AppType:           &appType,
+				Callbacks:         &callbacks,
+				AllowedLogoutURLs: &logoutURLs,
+				OIDCConformant:    &oidcConformant,
+				JWTConfiguration: &management.ClientJWTConfiguration{
+					Algorithm: &algorithm,
+				},
+				ClientMetadata: &metadata,
+			}
+
+			if err := ansi.Waiting(func() error {
+				return cli.api.Client.Create(ctx, a)
+			}); err != nil {
+				return fmt.Errorf("failed to create application: %w", err)
+			}
+
+			cli.renderer.Infof("Application created successfully with Client ID: %s", a.GetClientID())
+
+			// Generate the .env file
+			envFileName := ".env"
+			var envContent strings.Builder
+			for key, value := range config.EnvValues {
+				fmt.Fprintf(&envContent, "%s=%s\n", key, value)
+			}
+
+			if err := os.WriteFile(envFileName, []byte(envContent.String()), 0600); err != nil {
+				return fmt.Errorf("failed to write .env file: %w", err)
+			}
+
+			cli.renderer.Infof("%s file created successfully with your Auth0 configuration\n", envFileName)
+			cli.renderer.Infof("Next steps: \n"+
+				"       1. Install dependencies: npm install \n"+
+				"       2. Start your application: npm run dev\n"+
+				"       3. Open your browser at %s", baseURL)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&inputs.Type, "type", "", "Type of the quickstart application (e.g., spa:react:vite, regular:nextjs:none)")
+	cmd.Flags().StringVar(&inputs.Name, "name", "", "Name of the Auth0 application")
+	cmd.Flags().IntVar(&inputs.Port, "port", 0, "Port number for the application")
+
+	return cmd
+}
+
+// Helper function to get supported quickstart types
+func getSupportedQuickstartTypes() []string {
+	var types []string
+	for key := range auth0.QuickstartConfigs {
+		types = append(types, key)
+	}
+	return types
+}
+
+// For cleaner readability, you might consider extracting this anonymous struct into a named type (e.g., type SetupInputs struct {...})
+func getQuickstartConfigKey(inputs struct {
+	Name          string
+	App           bool
+	Type          string
+	Framework     string
+	BuildTool     string
+	Port          int
+	CallbackURL   string
+	LogoutURL     string
+	WebOriginURL  string
+	API           bool
+	Identifier    string
+	Audience      string
+	SigningAlg    string
+	Scopes        string
+	TokenLifetime string
+	OfflineAccess bool
+}) (string, struct {
+	Name          string
+	App           bool
+	Type          string
+	Framework     string
+	BuildTool     string
+	Port          int
+	CallbackURL   string
+	LogoutURL     string
+	WebOriginURL  string
+	API           bool
+	Identifier    string
+	Audience      string
+	SigningAlg    string
+	Scopes        string
+	TokenLifetime string
+	OfflineAccess bool
+}, error) {
+
+	// Prompt for target resource(s) when neither flag is provided.
+	if !inputs.App && !inputs.API {
+		var selections []string
+
+		err := prompt.AskMultiSelect(
+			"What do you want to create? (select whatever applies)",
+			&selections,
+			"App",
+			"API",
+		)
+		if err != nil {
+			return "", inputs, fmt.Errorf("failed to select target resource(s): %v", err)
+		}
+
+		for _, selection := range selections {
+			switch strings.ToLower(selection) {
+			case "app":
+				inputs.App = true
+			case "api":
+				inputs.API = true
+			}
+		}
+
+		if !inputs.App && !inputs.API {
+			return "", inputs, fmt.Errorf("please select at least one option: App and/or API")
+		}
+	}
+
+	// Handle application creation inputs
+	if inputs.App {
+		// Prompt for --type if not provided
+		if inputs.Type == "" {
+			types := []string{"spa", "regular", "native", "m2m"}
+			// name, message, help, options, defaultValue, required
+			q := prompt.SelectInput("type", "Select the application type", "", types, "m2m", true)
+			if err := prompt.AskOne(q, &inputs.Type); err != nil {
+				return "", inputs, fmt.Errorf("failed to select application type: %v", err)
+			}
+		}
+
+		// Prompt for --framework if not provided
+		if inputs.Framework == "" {
+			frameworks := []string{"react", "angular", "vue", "svelte", "nextjs", "nuxt", "flutter", "express", "django", "spring-boot", "none"}
+			q := prompt.SelectInput("framework", "Select the framework", "", frameworks, "none", true)
+			if err := prompt.AskOne(q, &inputs.Framework); err != nil {
+				return "", inputs, fmt.Errorf("failed to select framework: %v", err)
+			}
+		}
+
+		// Prompt for --build-tool if not provided (optional)
+		if inputs.BuildTool == "" {
+			buildTools := []string{"vite", "webpack", "cra", "none"}
+			q := prompt.SelectInput("build-tool", "Select the build tool (optional)", "", buildTools, "none", false)
+			if err := prompt.AskOne(q, &inputs.BuildTool); err != nil {
+				return "", inputs, fmt.Errorf("failed to select build tool: %v", err)
+			}
+		}
+
+		// Set default values
+		if inputs.Name == "" {
+			inputs.Name = "My App"
+		}
+		if inputs.Port == 0 {
+			inputs.Port = 3000
+		}
+		if inputs.CallbackURL == "" {
+			inputs.CallbackURL = fmt.Sprintf("http://localhost:%d/callback", inputs.Port)
+		}
+		if inputs.LogoutURL == "" {
+			inputs.LogoutURL = fmt.Sprintf("http://localhost:%d/logout", inputs.Port)
+		}
+		if inputs.WebOriginURL == "" {
+			inputs.WebOriginURL = fmt.Sprintf("http://localhost:%d", inputs.Port)
+		}
+	}
+
+	// Handle API creation inputs
+	if inputs.API {
+		// Prompt for --identifier or --audience if not provided
+		if inputs.Identifier == "" && inputs.Audience == "" {
+			// name, message, help, defaultValue, required
+			q := prompt.TextInput("identifier", "Enter the API identifier (or audience)", "", "", true)
+			if err := prompt.AskOne(q, &inputs.Identifier); err != nil {
+				return "", inputs, fmt.Errorf("failed to enter API identifier: %v", err)
+			}
+		}
+
+		// Use --audience as an alias for --identifier if provided
+		if inputs.Identifier == "" {
+			inputs.Identifier = inputs.Audience
+		}
+
+		// Prompt for --signing-alg if not provided
+		if inputs.SigningAlg == "" {
+			signingAlgs := []string{"RS256", "PS256", "HS256"}
+			q := prompt.SelectInput("signing-alg", "Select the signing algorithm", "", signingAlgs, "RS256", true)
+			if err := prompt.AskOne(q, &inputs.SigningAlg); err != nil {
+				return "", inputs, fmt.Errorf("failed to select signing algorithm: %v", err)
+			}
+		}
+
+		// Prompt for --scopes if not provided
+		if inputs.Scopes == "" {
+			q := prompt.TextInput("scopes", "Enter the scopes (comma-separated)", "", "", false)
+			if err := prompt.AskOne(q, &inputs.Scopes); err != nil {
+				return "", inputs, fmt.Errorf("failed to enter scopes: %v", err)
+			}
+		}
+
+		// Prompt for --token-lifetime if not provided
+		if inputs.TokenLifetime == "" {
+			q := prompt.TextInput("token-lifetime", "Enter the token lifetime (in seconds)", "", "86400", true)
+			if err := prompt.AskOne(q, &inputs.TokenLifetime); err != nil {
+				return "", inputs, fmt.Errorf("failed to enter token lifetime: %v", err)
+			}
+		}
+
+		if !inputs.OfflineAccess {
+			inputs.OfflineAccess = false
+		}
+	}
+
+	// Construct the key to query QuickstartConfigs
+	// Fallback to "none" if build tool wasn't asked/selected to match the config map keys
+	buildToolKey := inputs.BuildTool
+	if buildToolKey == "" {
+		buildToolKey = "none"
+	}
+
+	configKey := fmt.Sprintf("%s:%s:%s", inputs.Type, inputs.Framework, buildToolKey)
+	return configKey, inputs, nil
 }
