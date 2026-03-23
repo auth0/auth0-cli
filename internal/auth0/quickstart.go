@@ -174,3 +174,433 @@ func (q Quickstarts) Stacks() []string {
 
 	return stacks
 }
+
+const DETECTION_SUB = "DETECTION_SUB"
+
+type RequestParams struct {
+	AppType           string
+	Callbacks         []string
+	AllowedLogoutURLs []string
+	WebOrigins        []string
+}
+
+type AppConfig struct {
+	EnvValues     map[string]string
+	RequestParams RequestParams
+}
+
+// Map key format: "type:framework:build_tool"
+var QuickstartConfigs = map[string]AppConfig{
+
+	// ==========================================
+	// Single Page Applications (SPA)
+	// ==========================================
+	"spa:react:vite": {
+		EnvValues: map[string]string{
+			"VITE_AUTH0_DOMAIN":    DETECTION_SUB,
+			"VITE_AUTH0_CLIENT_ID": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "spa",
+			Callbacks:         []string{DETECTION_SUB}, // e.g., http://localhost:5173
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+			WebOrigins:        []string{DETECTION_SUB},
+		},
+	},
+	"spa:angular:none": {
+		EnvValues: map[string]string{
+			"domain":   DETECTION_SUB,
+			"clientId": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "spa",
+			Callbacks:         []string{DETECTION_SUB}, // e.g., http://localhost:4200
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+			WebOrigins:        []string{DETECTION_SUB},
+		},
+	},
+	"spa:vue:vite": {
+		EnvValues: map[string]string{
+			"VITE_AUTH0_DOMAIN":    DETECTION_SUB,
+			"VITE_AUTH0_CLIENT_ID": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "spa",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+			WebOrigins:        []string{DETECTION_SUB},
+		},
+	},
+	"spa:svelte:vite": {
+		EnvValues: map[string]string{
+			"VITE_AUTH0_DOMAIN":    DETECTION_SUB,
+			"VITE_AUTH0_CLIENT_ID": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "spa",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+			WebOrigins:        []string{DETECTION_SUB},
+		},
+	},
+	"spa:vanilla-javascript:vite": {
+		EnvValues: map[string]string{
+			"VITE_AUTH0_DOMAIN":    DETECTION_SUB,
+			"VITE_AUTH0_CLIENT_ID": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "spa",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+			WebOrigins:        []string{DETECTION_SUB},
+		},
+	},
+	"spa:flutter-web:none": {
+		EnvValues: map[string]string{
+			"domain":   DETECTION_SUB,
+			"clientId": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "spa",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+			WebOrigins:        []string{DETECTION_SUB},
+		},
+	},
+
+	// ==========================================
+	// Regular Web Applications
+	// ==========================================
+	"regular:nextjs:none": {
+		EnvValues: map[string]string{
+			"AUTH0_DOMAIN":        DETECTION_SUB,
+			"AUTH0_CLIENT_ID":     DETECTION_SUB,
+			"AUTH0_CLIENT_SECRET": DETECTION_SUB,
+			"AUTH0_SECRET":        DETECTION_SUB,
+			"APP_BASE_URL":        DETECTION_SUB, // e.g., http://localhost:3000
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DETECTION_SUB}, // e.g., http://localhost:3000/api/auth/callback
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"regular:nuxt:none": {
+		EnvValues: map[string]string{
+			"NUXT_AUTH0_DOMAIN":         DETECTION_SUB,
+			"NUXT_AUTH0_CLIENT_ID":      DETECTION_SUB,
+			"NUXT_AUTH0_CLIENT_SECRET":  DETECTION_SUB,
+			"NUXT_AUTH0_SESSION_SECRET": DETECTION_SUB,
+			"NUXT_AUTH0_APP_BASE_URL":   DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"regular:fastify:none": {
+		EnvValues: map[string]string{
+			"AUTH0_DOMAIN":        DETECTION_SUB,
+			"AUTH0_CLIENT_ID":     DETECTION_SUB,
+			"AUTH0_CLIENT_SECRET": DETECTION_SUB,
+			"SESSION_SECRET":      DETECTION_SUB,
+			"APP_BASE_URL":        DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"regular:sveltekit:none": {
+		EnvValues: map[string]string{
+			"VITE_AUTH0_DOMAIN":    DETECTION_SUB,
+			"VITE_AUTH0_CLIENT_ID": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"regular:express:none": {
+		EnvValues: map[string]string{
+			"ISSUER_BASE_URL": DETECTION_SUB,
+			"CLIENT_ID":       DETECTION_SUB,
+			"SECRET":          DETECTION_SUB,
+			"BASE_URL":        DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"regular:hono:none": {
+		EnvValues: map[string]string{
+			"AUTH0_DOMAIN":                 DETECTION_SUB,
+			"AUTH0_CLIENT_ID":              DETECTION_SUB,
+			"AUTH0_CLIENT_SECRET":          DETECTION_SUB,
+			"AUTH0_SESSION_ENCRYPTION_KEY": DETECTION_SUB,
+			"BASE_URL":                     DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"regular:vanilla-python:none": {
+		EnvValues: map[string]string{
+			"AUTH0_DOMAIN":        DETECTION_SUB,
+			"AUTH0_CLIENT_ID":     DETECTION_SUB,
+			"AUTH0_CLIENT_SECRET": DETECTION_SUB,
+			"AUTH0_SECRET":        DETECTION_SUB,
+			"AUTH0_REDIRECT_URI":  DETECTION_SUB, // e.g., http://localhost:3000/callback
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"regular:django:none": {
+		EnvValues: map[string]string{
+			"AUTH0_DOMAIN":        DETECTION_SUB,
+			"AUTH0_CLIENT_ID":     DETECTION_SUB,
+			"AUTH0_CLIENT_SECRET": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"regular:vanilla-go:none": {
+		EnvValues: map[string]string{
+			"AUTH0_DOMAIN":        DETECTION_SUB,
+			"AUTH0_CLIENT_ID":     DETECTION_SUB,
+			"AUTH0_CLIENT_SECRET": DETECTION_SUB,
+			"AUTH0_CALLBACK_URL":  DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"regular:vanilla-java:maven": {
+		EnvValues: map[string]string{
+			"auth0.domain":       DETECTION_SUB,
+			"auth0.clientId":     DETECTION_SUB,
+			"auth0.clientSecret": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"regular:java-ee:maven": {
+		EnvValues: map[string]string{
+			"auth0.domain":       DETECTION_SUB,
+			"auth0.clientId":     DETECTION_SUB,
+			"auth0.clientSecret": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"regular:spring-boot:maven": {
+		EnvValues: map[string]string{
+			"okta.oauth2.issuer":        DETECTION_SUB,
+			"okta.oauth2.client-id":     DETECTION_SUB,
+			"okta.oauth2.client-secret": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DETECTION_SUB}, // e.g., http://localhost:8080/login/oauth2/code/okta
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"regular:aspnet-mvc:none": {
+		EnvValues: map[string]string{
+			"Auth0:Domain":       DETECTION_SUB,
+			"Auth0:ClientId":     DETECTION_SUB,
+			"Auth0:ClientSecret": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"regular:aspnet-blazor:none": {
+		EnvValues: map[string]string{
+			"Auth0:Domain":   DETECTION_SUB,
+			"Auth0:ClientId": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"regular:aspnet-owin:none": {
+		EnvValues: map[string]string{
+			"auth0:Domain":       DETECTION_SUB,
+			"auth0:ClientId":     DETECTION_SUB,
+			"auth0:ClientSecret": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"regular:vanilla-php:composer": {
+		EnvValues: map[string]string{
+			"AUTH0_DOMAIN":        DETECTION_SUB,
+			"AUTH0_CLIENT_ID":     DETECTION_SUB,
+			"AUTH0_CLIENT_SECRET": DETECTION_SUB,
+			"AUTH0_COOKIE_SECRET": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"regular:laravel:composer": {
+		EnvValues: map[string]string{
+			"AUTH0_DOMAIN":        DETECTION_SUB,
+			"AUTH0_CLIENT_ID":     DETECTION_SUB,
+			"AUTH0_CLIENT_SECRET": DETECTION_SUB,
+			"AUTH0_COOKIE_SECRET": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"regular:rails:none": {
+		EnvValues: map[string]string{
+			"auth0_domain":        DETECTION_SUB,
+			"auth0_client_id":     DETECTION_SUB,
+			"auth0_client_secret": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+
+	// ==========================================
+	// Native / Mobile Applications
+	// ==========================================
+	"native:flutter:none": {
+		EnvValues: map[string]string{
+			"domain":   DETECTION_SUB,
+			"clientId": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "native",
+			Callbacks:         []string{DETECTION_SUB}, // Native intent, usually a custom scheme like YOUR_BUNDLE_ID://login-callback
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"native:react-native:none": {
+		EnvValues: map[string]string{
+			"AUTH0_DOMAIN":    DETECTION_SUB,
+			"AUTH0_CLIENT_ID": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "native",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"native:expo:none": {
+		EnvValues: map[string]string{
+			"EXPO_PUBLIC_AUTH0_DOMAIN":    DETECTION_SUB,
+			"EXPO_PUBLIC_AUTH0_CLIENT_ID": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "native",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"native:ionic-angular:none": {
+		EnvValues: map[string]string{
+			"domain":   DETECTION_SUB,
+			"clientId": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "native",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"native:ionic-react:vite": {
+		EnvValues: map[string]string{
+			"VITE_AUTH0_DOMAIN":    DETECTION_SUB,
+			"VITE_AUTH0_CLIENT_ID": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "native",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"native:ionic-vue:vite": {
+		EnvValues: map[string]string{
+			"VITE_AUTH0_DOMAIN":    DETECTION_SUB,
+			"VITE_AUTH0_CLIENT_ID": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "native",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"native:dotnet-mobile:none": {
+		EnvValues: map[string]string{
+			"Auth0:Domain":   DETECTION_SUB,
+			"Auth0:ClientId": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "native",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"native:maui:none": {
+		EnvValues: map[string]string{
+			"Auth0:Domain":   DETECTION_SUB,
+			"Auth0:ClientId": DETECTION_SUB,
+		},
+		RequestParams: RequestParams{
+			AppType:           "native",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+	"native:wpf-winforms:none": {
+		EnvValues: map[string]string{
+			"Auth0:Domain":       DETECTION_SUB,
+			"Auth0:ClientId":     DETECTION_SUB,
+			"Auth0:ClientSecret": DETECTION_SUB, // Wait, native app with a secret? Mapped as requested.
+		},
+		RequestParams: RequestParams{
+			AppType:           "native",
+			Callbacks:         []string{DETECTION_SUB},
+			AllowedLogoutURLs: []string{DETECTION_SUB},
+		},
+	},
+}
