@@ -705,7 +705,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to get quickstart configuration: %w", err)
 			}
 
-			// Validate the input type against QuickstartConfigs
+			// Validate the input type against QuickstartConfigs.
 			config, exists := auth0.QuickstartConfigs[qsConfigKey]
 			if !exists {
 				return fmt.Errorf("unsupported quickstart arguments: %s. Supported types: %v", qsConfigKey, getSupportedQuickstartTypes())
@@ -732,7 +732,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					if err != nil {
 						return fmt.Errorf("failed to get tenant: %w", err)
 					}
-					// Generate the .env file
+					// Generate the .env file.
 					envFileName, _, err := GenerateAndWriteQuickstartConfig(&config.Strategy, config.EnvValues, tenant.Domain, client)
 					if err != nil {
 						return fmt.Errorf("failed to generate .env file: %w", err)
@@ -753,20 +753,20 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 
 func printClientDetails(client *management.Client, port int, configFileLocation string, isAPI bool) {
 	if isAPI {
-		// Print API-related messages
+				// Print API-related messages.
 		fmt.Printf("  An API application \"%s\" has been created and registered\n\n", *client.Name)
 		fmt.Println("  You can manage your API from here:")
 		fmt.Printf("     https://manage.auth0.com/dashboard/#/apis/%s/settings\n", client.GetClientID())
 	} else {
-		// Print application-related messages
+				// Print application-related messages.
 		fmt.Printf("  An application \"%s\" has been created in the management console\n", *client.Name)
 		fmt.Printf("     Client ID: %s\n\n", client.GetClientID())
 
-		// Print management console link
+				// Print management console link.
 		fmt.Println("  You can manage your application from here:")
 		fmt.Printf("     https://manage.auth0.com/dashboard/#/applications/%s/settings\n\n", client.GetClientID())
 
-		// Print callback URLs
+				// Print callback URLs.
 		if client.Callbacks != nil && len(client.GetCallbacks()) > 0 {
 			fmt.Println("  Callback URLs registered in Auth0 Dashboard:")
 			for _, callback := range client.GetCallbacks() {
@@ -775,7 +775,7 @@ func printClientDetails(client *management.Client, port int, configFileLocation 
 			fmt.Println()
 		}
 
-		// Print logout URLs
+				// Print logout URLs.
 		if client.AllowedLogoutURLs != nil && len(client.GetAllowedLogoutURLs()) > 0 {
 			fmt.Println("✓  Logout URLs registered:")
 			for _, logoutURL := range client.GetAllowedLogoutURLs() {
@@ -784,12 +784,12 @@ func printClientDetails(client *management.Client, port int, configFileLocation 
 			fmt.Println()
 		}
 
-		// Print config file location
+				// Print config file location.
 		fmt.Printf("✓  Config file created: %s\n\n", configFileLocation)
 	}
 }
 
-// Helper function to get supported quickstart types
+// Helper function to get supported quickstart types.
 func getSupportedQuickstartTypes() []string {
 	var types []string
 	for key := range auth0.QuickstartConfigs {
@@ -798,7 +798,7 @@ func getSupportedQuickstartTypes() []string {
 	return types
 }
 
-// For cleaner readability, you might consider extracting this anonymous struct into a named type (e.g., type SetupInputs struct {...})
+// For cleaner readability, you might consider extracting this anonymous struct into a named type (e.g., type SetupInputs struct {...}).
 func getQuickstartConfigKey(inputs struct {
 	Name          string
 	App           bool
@@ -864,9 +864,9 @@ func getQuickstartConfigKey(inputs struct {
 		}
 	}
 
-	// Handle application creation inputs
+		// Handle application creation inputs.
 	if inputs.App {
-		// Prompt for --type if not provided
+				// Prompt for --type if not provided.
 		if inputs.Type == "" {
 			types := []string{"spa", "regular", "native", "m2m"}
 			q := prompt.SelectInput("type", "Select the application type", "", types, "m2m", true)
@@ -875,7 +875,7 @@ func getQuickstartConfigKey(inputs struct {
 			}
 		}
 
-		// Prompt for --framework if not provided
+				// Prompt for --framework if not provided.
 		if inputs.Framework == "" {
 			frameworks := []string{"react", "angular", "vue", "svelte", "nextjs", "nuxt", "flutter", "express", "django", "spring-boot", "none"}
 			q := prompt.SelectInput("framework", "Select the framework", "", frameworks, "none", true)
@@ -884,7 +884,7 @@ func getQuickstartConfigKey(inputs struct {
 			}
 		}
 
-		// Prompt for --build-tool if not provided (optional)
+				// Prompt for --build-tool if not provided (optional).
 		if inputs.BuildTool == "" {
 			buildTools := []string{"vite", "webpack", "cra", "none"}
 			q := prompt.SelectInput("build-tool", "Select the build tool (optional)", "", buildTools, "none", false)
@@ -892,42 +892,25 @@ func getQuickstartConfigKey(inputs struct {
 				return "", inputs, fmt.Errorf("failed to select build tool: %v", err)
 			}
 		}
-
-		// // Set default values
-		// if inputs.Name == "" {
-		// 	inputs.Name = "My App"
-		// }
-		// if inputs.Port == 0 {
-		// 	inputs.Port = 3000
-		// }
-		// if inputs.CallbackURL == "" {
-		// 	inputs.CallbackURL = fmt.Sprintf("http://localhost:%d/callback", inputs.Port)
-		// }
-		// if inputs.LogoutURL == "" {
-		// 	inputs.LogoutURL = fmt.Sprintf("http://localhost:%d/logout", inputs.Port)
-		// }
-		// if inputs.WebOriginURL == "" {
-		// 	inputs.WebOriginURL = fmt.Sprintf("http://localhost:%d", inputs.Port)
-		// }
 	}
 
-	// Handle API creation inputs
+		// Handle API creation inputs.
 	if inputs.API {
-		// Prompt for --identifier or --audience if not provided
+				// Prompt for --identifier or --audience if not provided.
 		if inputs.Identifier == "" && inputs.Audience == "" {
-			// name, message, help, defaultValue, required
+			// Name, message, help, defaultValue, required.
 			q := prompt.TextInput("identifier", "Enter the API identifier (or audience)", "", "", true)
 			if err := prompt.AskOne(q, &inputs.Identifier); err != nil {
 				return "", inputs, fmt.Errorf("failed to enter API identifier: %v", err)
 			}
 		}
 
-		// Use --audience as an alias for --identifier if provided
+				// Use --audience as an alias for --identifier if provided.
 		if inputs.Identifier == "" {
 			inputs.Identifier = inputs.Audience
 		}
 
-		// Prompt for --signing-alg if not provided
+				// Prompt for --signing-alg if not provided.
 		if inputs.SigningAlg == "" {
 			signingAlgs := []string{"RS256", "PS256", "HS256"}
 			q := prompt.SelectInput("signing-alg", "Select the signing algorithm", "", signingAlgs, "RS256", true)
@@ -936,7 +919,7 @@ func getQuickstartConfigKey(inputs struct {
 			}
 		}
 
-		// Prompt for --scopes if not provided
+				// Prompt for --scopes if not provided.
 		if inputs.Scopes == "" {
 			q := prompt.TextInput("scopes", "Enter the scopes (comma-separated)", "", "", false)
 			if err := prompt.AskOne(q, &inputs.Scopes); err != nil {
@@ -944,7 +927,7 @@ func getQuickstartConfigKey(inputs struct {
 			}
 		}
 
-		// Prompt for --token-lifetime if not provided
+				// Prompt for --token-lifetime if not provided.
 		if inputs.TokenLifetime == "" {
 			q := prompt.TextInput("token-lifetime", "Enter the token lifetime (in seconds)", "", "86400", true)
 			if err := prompt.AskOne(q, &inputs.TokenLifetime); err != nil {
@@ -957,8 +940,7 @@ func getQuickstartConfigKey(inputs struct {
 		}
 	}
 
-	// Construct the key to query QuickstartConfigs
-	// Fallback to "none" if build tool wasn't asked/selected to match the config map keys
+		// Fallback to "none" if build tool wasn't asked/selected to match the config map keys.
 	buildToolKey := inputs.BuildTool
 	if buildToolKey == "" {
 		buildToolKey = "none"
@@ -987,7 +969,7 @@ func generateClients(input struct {
 	OfflineAccess bool
 	MetaData      map[string]interface{}
 }, reqParams auth0.RequestParams) ([]*management.Client, error) {
-	// Prompt for the Name field if missing
+		// Prompt for the Name field if missing.
 
 	if input.Name == "" {
 		input.Name = "My App"
@@ -998,7 +980,7 @@ func generateClients(input struct {
 		return nil, fmt.Errorf("failed to enter application name: %v", err)
 	}
 
-	// Default values for the client
+		// Default values for the client.
 	input.SigningAlg = "RS256"
 	if input.MetaData == nil {
 		input.MetaData = map[string]interface{}{
@@ -1007,7 +989,7 @@ func generateClients(input struct {
 	}
 
 	oidcConformant := true
-	// Create the base client
+		// Create the base client.
 	baseClient := &management.Client{
 		Name:              &input.Name,
 		AppType:           &reqParams.AppType,
@@ -1020,11 +1002,11 @@ func generateClients(input struct {
 		ClientMetadata: &input.MetaData,
 	}
 
-	// Generate the list of clients
+		// Generate the list of clients.
 	var clients []*management.Client
 	clients = append(clients, baseClient)
 
-	// Add an additional client if both App and Api are true
+		// Add an additional client if both App and Api are true.
 	if input.API {
 		resourceServerAppType := "resource_server"
 		q := prompt.TextInput("api_identifier", "Enter API identifier(audience)", "", "", true)
@@ -1049,72 +1031,59 @@ func generateClients(input struct {
 }
 
 func replaceDetectionSub(envValues map[string]string, tenantDomain string, client *management.Client) map[string]string {
-	// Create a new map to store the updated values
+		// Create a new map to store the updated values.
 	updatedEnvValues := make(map[string]string)
 
 	for key, value := range envValues {
-		// If the value is not DETECTION_SUB, keep it as is and continue
+				// If the value is not DETECTION_SUB, keep it as is and continue.
 		if value != "DETECTION_SUB" {
 			updatedEnvValues[key] = value
 			continue
 		}
 
-		// Group keys by the type of replacement they require
+				// Group keys by the type of replacement they require.
 		switch key {
-
-		// ==========================================
-		// Tenant Domain Replacements
-		// ==========================================
+		// ==========================================.
 		case "VITE_AUTH0_DOMAIN", "AUTH0_DOMAIN", "domain", "NUXT_AUTH0_DOMAIN",
 			"auth0.domain", "Auth0:Domain", "auth0:Domain", "auth0_domain",
 			"EXPO_PUBLIC_AUTH0_DOMAIN":
 			updatedEnvValues[key] = tenantDomain
 
-		// Express SDK specifically requires the https:// prefix
+				// Express SDK specifically requires the https:// prefix.
 		case "ISSUER_BASE_URL":
 			updatedEnvValues[key] = "https://" + tenantDomain
 
-		// Spring Boot okta issuer specifically requires https:// and a trailing slash
+				// Spring Boot okta issuer specifically requires https:// and a trailing slash.
 		case "okta.oauth2.issuer":
 			updatedEnvValues[key] = "https://" + tenantDomain + "/"
 
-		// ==========================================
-		// Client ID Replacements
-		// ==========================================
+				// ==========================================.
 		case "VITE_AUTH0_CLIENT_ID", "AUTH0_CLIENT_ID", "clientId", "NUXT_AUTH0_CLIENT_ID",
 			"CLIENT_ID", "auth0.clientId", "okta.oauth2.client-id", "Auth0:ClientId",
 			"auth0:ClientId", "auth0_client_id", "EXPO_PUBLIC_AUTH0_CLIENT_ID":
 			updatedEnvValues[key] = client.GetClientID()
 
-		// ==========================================
-		// Client Secret Replacements
-		// ==========================================
+				// ==========================================.
 		case "AUTH0_CLIENT_SECRET", "NUXT_AUTH0_CLIENT_SECRET", "auth0.clientSecret",
 			"okta.oauth2.client-secret", "Auth0:ClientSecret", "auth0:ClientSecret",
 			"auth0_client_secret":
 			updatedEnvValues[key] = client.GetClientSecret()
 
-		// ==========================================
-		// App Secrets / Session Cookies (Placeholders)
-		// ==========================================
+				// ==========================================.
 		case "AUTH0_SECRET", "NUXT_AUTH0_SESSION_SECRET", "SESSION_SECRET",
 			"SECRET", "AUTH0_SESSION_ENCRYPTION_KEY", "AUTH0_COOKIE_SECRET":
 			// Inject a dummy secret placeholder for the user to replace,
 			// or replace this string with a crypto/rand generator if preferred.
 			updatedEnvValues[key] = "a_long_random_secret_string_replace_me"
 
-		// ==========================================
-		// App Base URLs and Redirect URIs
-		// ==========================================
+				// ==========================================.
 		case "APP_BASE_URL", "NUXT_AUTH0_APP_BASE_URL", "BASE_URL":
-			updatedEnvValues[key] = "http://localhost:3000" // Default backend port
+			updatedEnvValues[key] = "http://localhost:3000" 			updatedEnvValues[key] = "http://localhost:3000" // Default backend port.
 
 		case "AUTH0_REDIRECT_URI", "AUTH0_CALLBACK_URL":
 			updatedEnvValues[key] = "http://localhost:3000/callback"
 
-		// ==========================================
-		// Fallback
-		// ==========================================
+				// ==========================================.
 		default:
 			updatedEnvValues[key] = value
 		}
@@ -1123,8 +1092,7 @@ func replaceDetectionSub(envValues map[string]string, tenantDomain string, clien
 	return updatedEnvValues
 }
 
-// FileOutputStrategy defines where and how a config file should be written
-// Map the config keys to their required file output definitions based on the matrix
+// Map the config keys to their required file output definitions based on the matrix.
 
 // GenerateAndWriteQuickstartConfig takes the selected stack, resolves the dynamic values,
 // and writes them to the appropriate file in the Current Working Directory (CWD).
@@ -1132,16 +1100,16 @@ func replaceDetectionSub(envValues map[string]string, tenantDomain string, clien
 // and writes them to the appropriate file in the Current Working Directory (CWD).
 // It returns the generated file name, the file path, and an error (if any).
 func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envValues map[string]string, tenantDomain string, client *management.Client) (string, string, error) {
-	// 1. Resolve the environment variables using the previously defined function
+		// 1. Resolve the environment variables using the previously defined function.
 	resolvedEnv := replaceDetectionSub(envValues, tenantDomain, client)
 
-	// 2. Determine output file path and format
+		// 2. Determine output file path and format.
 	if strategy == nil {
-		// Fallback to a standard .env in the project root if for some reason it's missing
+				// Fallback to a standard .env in the project root if for some reason it's missing.
 		strategy = &auth0.FileOutputStrategy{Path: ".env", Format: "dotenv"}
 	}
 
-	// 3. Ensure the directory path exists (e.g., creating src/environments/ if it doesn't exist)
+		// 3. Ensure the directory path exists (e.g., creating src/environments/ if it doesn't exist).
 	dir := filepath.Dir(strategy.Path)
 	if dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {
@@ -1149,7 +1117,7 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		}
 	}
 
-	// 4. Format the file content based on the target framework's requirement
+		// 4. Format the file content based on the target framework's requirement.
 	var contentBuilder strings.Builder
 
 	switch strategy.Format {
@@ -1178,10 +1146,10 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		contentBuilder.WriteString("};\n")
 
 	case "json":
-		// C# appsettings.json expects nested JSON: {"Auth0": {"Domain": "...", "ClientId": "..."}}
+				// C# appsettings.json expects nested JSON: {"Auth0": {"Domain": "...", "ClientId": "..."}}.
 		auth0Section := make(map[string]string)
 		for key, val := range resolvedEnv {
-			// Strip the "Auth0:" prefix used in the map to create clean JSON keys
+						// Strip the "Auth0:" prefix used in the map to create clean JSON keys.
 			cleanKey := strings.TrimPrefix(key, "Auth0:")
 			auth0Section[cleanKey] = val
 		}
@@ -1197,7 +1165,7 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		contentBuilder.Write(bytes)
 
 	case "xml":
-		// ASP.NET OWIN Web.config
+				// ASP.NET OWIN Web.config.
 		contentBuilder.WriteString("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
 		contentBuilder.WriteString("<configuration>\n")
 		contentBuilder.WriteString("  <appSettings>\n")
@@ -1208,12 +1176,12 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		contentBuilder.WriteString("</configuration>\n")
 	}
 
-	// 5. Write the generated content to disk
+		// 5. Write the generated content to disk.
 	if err := os.WriteFile(strategy.Path, []byte(contentBuilder.String()), 0600); err != nil {
 		return "", "", fmt.Errorf("failed to write config file %s: %w", strategy.Path, err)
 	}
 
-	// 6. Extract the base file name from the path and return both
+		// 6. Extract the base file name from the path and return both.
 	fileName := filepath.Base(strategy.Path)
 
 	return fileName, strategy.Path, nil

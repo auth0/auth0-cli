@@ -553,9 +553,9 @@ var QuickstartConfigs = map[string]AppConfig{
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 
-	// ==========================================
+	// ==========================================.
 	// Native / Mobile Applications
-	// ==========================================
+	// ==========================================.
 	"native:flutter:none": {
 		EnvValues: map[string]string{
 			"domain":   DetectionSub,
