@@ -14,9 +14,6 @@ import (
 	"github.com/auth0/go-auth0/management"
 
 	"github.com/auth0/auth0-cli/internal/buildinfo"
-	// "github.com/auth0/auth0-cli/internal/prompt"
-	// "github.com/auth0/auth0-cli/internal/prompt"
-
 	"github.com/auth0/auth0-cli/internal/utils"
 )
 
@@ -202,7 +199,7 @@ var QuickstartConfigs = map[string]AppConfig{
 
 	// ==========================================
 	// Single Page Applications (SPA)
-	// ==========================================
+	// ==========================================.
 	"spa:react:vite": {
 		EnvValues: map[string]string{
 			"VITE_AUTH0_DOMAIN":    DetectionSub,
@@ -290,7 +287,7 @@ var QuickstartConfigs = map[string]AppConfig{
 
 	// ==========================================
 	// Regular Web Applications
-	// ==========================================
+	// ==========================================.
 	"regular:nextjs:none": {
 		EnvValues: map[string]string{
 			"AUTH0_DOMAIN":        DetectionSub,
