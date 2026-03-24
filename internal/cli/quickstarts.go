@@ -12,11 +12,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
+
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
-	"github.com/auth0/go-auth0/management"
-	"github.com/spf13/cobra"
 )
 
 // QuickStart app types and defaults.
