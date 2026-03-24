@@ -756,24 +756,24 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func printClientDetails(client *management.Client, port int, configFileLocation string, isApi bool) {
-	if isApi {
+func printClientDetails(client *management.Client, port int, configFileLocation string, isAPI bool) {
+	if isAPI {
 		// Print API-related messages
-		fmt.Printf("✓  An API application \"%s\" has been created and registered\n\n", *client.Name)
-		fmt.Println("✓  You can manage your API from here:")
+		fmt.Printf("  An API application \"%s\" has been created and registered\n\n", *client.Name)
+		fmt.Println("  You can manage your API from here:")
 		fmt.Printf("     https://manage.auth0.com/dashboard/#/apis/%s/settings\n", client.GetClientID())
 	} else {
 		// Print application-related messages
-		fmt.Printf("✓  An application \"%s\" has been created in the management console\n", *client.Name)
+		fmt.Printf("  An application \"%s\" has been created in the management console\n", *client.Name)
 		fmt.Printf("     Client ID: %s\n\n", client.GetClientID())
 
 		// Print management console link
-		fmt.Println("✓  You can manage your application from here:")
+		fmt.Println("  You can manage your application from here:")
 		fmt.Printf("     https://manage.auth0.com/dashboard/#/applications/%s/settings\n\n", client.GetClientID())
 
 		// Print callback URLs
 		if client.Callbacks != nil && len(client.GetCallbacks()) > 0 {
-			fmt.Println("✓  Callback URLs registered in Auth0 Dashboard:")
+			fmt.Println("  Callback URLs registered in Auth0 Dashboard:")
 			for _, callback := range client.GetCallbacks() {
 				fmt.Printf("     %s\n", callback)
 			}
