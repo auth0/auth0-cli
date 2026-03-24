@@ -202,8 +202,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "spa",
-			Callbacks:         []string{DETECTION_SUB}, // e.g., http://localhost:5173
-			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Callbacks:         []string{"http://localhost:5173/callback"},
+			AllowedLogoutURLs: []string{"http://localhost:5173"},
 			WebOrigins:        []string{DETECTION_SUB},
 		},
 	},
@@ -214,8 +214,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "spa",
-			Callbacks:         []string{DETECTION_SUB}, // e.g., http://localhost:4200
-			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Callbacks:         []string{"http://localhost:4200/callback"},
+			AllowedLogoutURLs: []string{"http://localhost:4200"},
 			WebOrigins:        []string{DETECTION_SUB},
 		},
 	},
@@ -226,8 +226,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "spa",
-			Callbacks:         []string{DETECTION_SUB},
-			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Callbacks:         []string{"http://localhost:5173/callback"},
+			AllowedLogoutURLs: []string{"http://localhost:5173"},
 			WebOrigins:        []string{DETECTION_SUB},
 		},
 	},
@@ -238,8 +238,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "spa",
-			Callbacks:         []string{DETECTION_SUB},
-			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Callbacks:         []string{"http://localhost:5173/callback"},
+			AllowedLogoutURLs: []string{"http://localhost:5173"},
 			WebOrigins:        []string{DETECTION_SUB},
 		},
 	},
@@ -250,8 +250,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "spa",
-			Callbacks:         []string{DETECTION_SUB},
-			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Callbacks:         []string{"http://localhost:5173/callback"},
+			AllowedLogoutURLs: []string{"http://localhost:5173"},
 			WebOrigins:        []string{DETECTION_SUB},
 		},
 	},
@@ -277,12 +277,12 @@ var QuickstartConfigs = map[string]AppConfig{
 			"AUTH0_CLIENT_ID":     DETECTION_SUB,
 			"AUTH0_CLIENT_SECRET": DETECTION_SUB,
 			"AUTH0_SECRET":        DETECTION_SUB,
-			"APP_BASE_URL":        DETECTION_SUB, // e.g., http://localhost:3000
+			"APP_BASE_URL":        DETECTION_SUB,
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
-			Callbacks:         []string{DETECTION_SUB}, // e.g., http://localhost:3000/api/auth/callback
-			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Callbacks:         []string{"http://localhost:3000/callback"},
+			AllowedLogoutURLs: []string{"http://localhost:3000"},
 		},
 	},
 	"regular:nuxt:none": {
@@ -295,8 +295,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
-			Callbacks:         []string{DETECTION_SUB},
-			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Callbacks:         []string{"http://localhost:3000/callback"},
+			AllowedLogoutURLs: []string{"http://localhost:3000"},
 		},
 	},
 	"regular:fastify:none": {
@@ -309,8 +309,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
-			Callbacks:         []string{DETECTION_SUB},
-			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Callbacks:         []string{"http://localhost:3000/callback"},
+			AllowedLogoutURLs: []string{"http://localhost:3000"},
 		},
 	},
 	"regular:sveltekit:none": {
@@ -333,8 +333,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
-			Callbacks:         []string{DETECTION_SUB},
-			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Callbacks:         []string{"http://localhost:3000/callback"},
+			AllowedLogoutURLs: []string{"http://localhost:3000"},
 		},
 	},
 	"regular:hono:none": {
@@ -347,8 +347,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
-			Callbacks:         []string{DETECTION_SUB},
-			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Callbacks:         []string{"http://localhost:3000/callback"},
+			AllowedLogoutURLs: []string{"http://localhost:3000"},
 		},
 	},
 	"regular:vanilla-python:none": {
@@ -357,12 +357,12 @@ var QuickstartConfigs = map[string]AppConfig{
 			"AUTH0_CLIENT_ID":     DETECTION_SUB,
 			"AUTH0_CLIENT_SECRET": DETECTION_SUB,
 			"AUTH0_SECRET":        DETECTION_SUB,
-			"AUTH0_REDIRECT_URI":  DETECTION_SUB, // e.g., http://localhost:3000/callback
+			"AUTH0_REDIRECT_URI":  DETECTION_SUB,
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
-			Callbacks:         []string{DETECTION_SUB},
-			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Callbacks:         []string{"http://localhost:5000/callback"},
+			AllowedLogoutURLs: []string{"http://localhost:5000"},
 		},
 	},
 	"regular:django:none": {
@@ -422,8 +422,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
-			Callbacks:         []string{DETECTION_SUB}, // e.g., http://localhost:8080/login/oauth2/code/okta
-			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Callbacks:         []string{"http://localhost:8000/callback"},
+			AllowedLogoutURLs: []string{"http://localhost:8000"},
 		},
 	},
 	"regular:aspnet-mvc:none": {
@@ -483,8 +483,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
-			Callbacks:         []string{DETECTION_SUB},
-			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Callbacks:         []string{"http://localhost:8000/callback"},
+			AllowedLogoutURLs: []string{"http://localhost:8000"},
 		},
 	},
 	"regular:rails:none": {
@@ -495,8 +495,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
-			Callbacks:         []string{DETECTION_SUB},
-			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Callbacks:         []string{"http://localhost:3000/callback"},
+			AllowedLogoutURLs: []string{"http://localhost:3000"},
 		},
 	},
 
@@ -510,7 +510,7 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "native",
-			Callbacks:         []string{DETECTION_SUB}, // Native intent, usually a custom scheme like YOUR_BUNDLE_ID://login-callback
+			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 		},
 	},
@@ -595,7 +595,7 @@ var QuickstartConfigs = map[string]AppConfig{
 		EnvValues: map[string]string{
 			"Auth0:Domain":       DETECTION_SUB,
 			"Auth0:ClientId":     DETECTION_SUB,
-			"Auth0:ClientSecret": DETECTION_SUB, // Wait, native app with a secret? Mapped as requested.
+			"Auth0:ClientSecret": DETECTION_SUB,
 		},
 		RequestParams: RequestParams{
 			AppType:           "native",
