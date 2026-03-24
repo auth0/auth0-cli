@@ -3,7 +3,7 @@ layout: default
 parent: auth0 quickstarts
 has_toc: false
 ---
-# auth0 quickstarts setup
+# auth0 quickstarts setup-experimental
 
 Creates an Auth0 application and generates a .env file with the necessary configuration.
 
@@ -12,37 +12,28 @@ The command will:
   2. Create an Auth0 application based on the specified type
   3. Generate a .env file with the appropriate environment variables
 
-Supported types:
-  - vite: For client-side SPAs (React, Vue, Svelte, etc.)
-  - nextjs: For Next.js server-side applications
-  - fastify: For Fastify web applications
-  - jhipster-rwa: For JHipster regular web applications
+Supported types are dynamically loaded from the `QuickstartConfigs` map in the codebase.
 
 ## Usage
 ```
-auth0 quickstarts setup [flags]
+auth0 quickstarts setup-experimental [flags]
 ```
 
 ## Examples
 
 ```
-  auth0 quickstarts setup --type vite
-  auth0 quickstarts setup --type nextjs
-  auth0 quickstarts setup --type fastify
-  auth0 quickstarts setup --type vite --name "My App"
-  auth0 quickstarts setup --type nextjs --port 8080
-  auth0 quickstarts setup --type jhipster-rwa
-  auth0 qs setup --type fastify -n "My App" -p 3000
+  auth0 quickstarts setup-experimental --type spa:react:vite
+  auth0 quickstarts setup-experimental --type regular:nextjs:none
+  auth0 quickstarts setup-experimental --type native:react-native:none
 ```
 
 
 ## Flags
 
 ```
-      --json          Output in json format.
-  -n, --name string   Name of the Auth0 application (default: 'My App' for vite, nextjs and fastify, 'JHipster' for jhipster-rwa)
-  -p, --port int      Port number for the application (default: 5173 for vite, 3000 for nextjs/fastify, 8080 for jhipster-rwa)
-  -t, --type string   Type of quickstart (vite, nextjs, fastify, jhipster-rwa)
+      --name string   Name of the Auth0 application
+      --port int      Port number for the application
+      --type string   Type of the quickstart application (e.g., spa:react:vite, regular:nextjs:none)
 ```
 
 
