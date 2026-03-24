@@ -14,6 +14,8 @@ import (
 	"github.com/auth0/go-auth0/management"
 
 	"github.com/auth0/auth0-cli/internal/buildinfo"
+	// "github.com/auth0/auth0-cli/internal/prompt"
+	// "github.com/auth0/auth0-cli/internal/prompt"
 
 	"github.com/auth0/auth0-cli/internal/utils"
 )
@@ -182,6 +184,7 @@ type RequestParams struct {
 	Callbacks         []string
 	AllowedLogoutURLs []string
 	WebOrigins        []string
+	Name              string
 }
 
 type AppConfig struct {
@@ -217,6 +220,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			Callbacks:         []string{"http://localhost:4200/callback"},
 			AllowedLogoutURLs: []string{"http://localhost:4200"},
 			WebOrigins:        []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"spa:vue:vite": {
@@ -229,6 +233,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			Callbacks:         []string{"http://localhost:5173/callback"},
 			AllowedLogoutURLs: []string{"http://localhost:5173"},
 			WebOrigins:        []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"spa:svelte:vite": {
@@ -241,6 +246,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			Callbacks:         []string{"http://localhost:5173/callback"},
 			AllowedLogoutURLs: []string{"http://localhost:5173"},
 			WebOrigins:        []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"spa:vanilla-javascript:vite": {
@@ -253,6 +259,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			Callbacks:         []string{"http://localhost:5173/callback"},
 			AllowedLogoutURLs: []string{"http://localhost:5173"},
 			WebOrigins:        []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"spa:flutter-web:none": {
@@ -265,6 +272,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 			WebOrigins:        []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 
@@ -283,6 +291,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "regular_web",
 			Callbacks:         []string{"http://localhost:3000/callback"},
 			AllowedLogoutURLs: []string{"http://localhost:3000"},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"regular:nuxt:none": {
@@ -297,6 +306,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "regular_web",
 			Callbacks:         []string{"http://localhost:3000/callback"},
 			AllowedLogoutURLs: []string{"http://localhost:3000"},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"regular:fastify:none": {
@@ -311,6 +321,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "regular_web",
 			Callbacks:         []string{"http://localhost:3000/callback"},
 			AllowedLogoutURLs: []string{"http://localhost:3000"},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"regular:sveltekit:none": {
@@ -322,6 +333,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "regular_web",
 			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"regular:express:none": {
@@ -335,6 +347,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "regular_web",
 			Callbacks:         []string{"http://localhost:3000/callback"},
 			AllowedLogoutURLs: []string{"http://localhost:3000"},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"regular:hono:none": {
@@ -349,6 +362,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "regular_web",
 			Callbacks:         []string{"http://localhost:3000/callback"},
 			AllowedLogoutURLs: []string{"http://localhost:3000"},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"regular:vanilla-python:none": {
@@ -363,6 +377,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "regular_web",
 			Callbacks:         []string{"http://localhost:5000/callback"},
 			AllowedLogoutURLs: []string{"http://localhost:5000"},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"regular:django:none": {
@@ -375,6 +390,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "regular_web",
 			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"regular:vanilla-go:none": {
@@ -388,6 +404,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "regular_web",
 			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"regular:vanilla-java:maven": {
@@ -400,6 +417,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "regular_web",
 			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"regular:java-ee:maven": {
@@ -412,6 +430,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "regular_web",
 			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"regular:spring-boot:maven": {
@@ -424,6 +443,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "regular_web",
 			Callbacks:         []string{"http://localhost:8000/callback"},
 			AllowedLogoutURLs: []string{"http://localhost:8000"},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"regular:aspnet-mvc:none": {
@@ -436,6 +456,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "regular_web",
 			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"regular:aspnet-blazor:none": {
@@ -447,6 +468,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "regular_web",
 			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"regular:aspnet-owin:none": {
@@ -459,6 +481,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "regular_web",
 			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"regular:vanilla-php:composer": {
@@ -472,6 +495,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "regular_web",
 			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"regular:laravel:composer": {
@@ -485,6 +509,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "regular_web",
 			Callbacks:         []string{"http://localhost:8000/callback"},
 			AllowedLogoutURLs: []string{"http://localhost:8000"},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"regular:rails:none": {
@@ -497,6 +522,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "regular_web",
 			Callbacks:         []string{"http://localhost:3000/callback"},
 			AllowedLogoutURLs: []string{"http://localhost:3000"},
+			Name:              DETECTION_SUB,
 		},
 	},
 
@@ -512,6 +538,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "native",
 			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"native:react-native:none": {
@@ -523,6 +550,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "native",
 			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"native:expo:none": {
@@ -534,6 +562,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "native",
 			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"native:ionic-angular:none": {
@@ -545,6 +574,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "native",
 			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"native:ionic-react:vite": {
@@ -555,6 +585,7 @@ var QuickstartConfigs = map[string]AppConfig{
 		RequestParams: RequestParams{
 			AppType:           "native",
 			Callbacks:         []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 		},
 	},
@@ -567,6 +598,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "native",
 			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"native:dotnet-mobile:none": {
@@ -578,6 +610,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "native",
 			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"native:maui:none": {
@@ -589,6 +622,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "native",
 			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 	"native:wpf-winforms:none": {
@@ -601,6 +635,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AppType:           "native",
 			Callbacks:         []string{DETECTION_SUB},
 			AllowedLogoutURLs: []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
 	},
 }
