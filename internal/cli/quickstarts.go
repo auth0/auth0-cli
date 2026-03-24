@@ -676,6 +676,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 		Scopes        string
 		TokenLifetime string
 		OfflineAccess bool
+		MetaData      map[string]interface{}
 	}
 
 	cmd := &cobra.Command{
@@ -711,63 +712,87 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 			}
 
 			// Set default values based on the selected quickstart type
-			if inputs.Name == "" {
-				inputs.Name = "My App"
-			}
-			if inputs.Port == 0 {
-				inputs.Port = 3000 // Default port, can be adjusted based on the type if needed
-			}
+			// if inputs.Name == "" {
+			// 	inputs.Name = "My App"
+			// }
+			// if inputs.Port == 0 {
+			// 	inputs.Port = 3000 // Default port, can be adjusted based on the type if needed
+			// }
 
-			baseURL := fmt.Sprintf("http://localhost:%d", inputs.Port)
+			// baseURL := fmt.Sprintf("http://localhost:%d", inputs.Port)
 
 			// Create the Auth0 application
-			cli.renderer.Infof("Creating Auth0 application '%s'...", inputs.Name)
-			appType := config.RequestParams.AppType
-			callbacks := config.RequestParams.Callbacks
-			logoutURLs := config.RequestParams.AllowedLogoutURLs
 
-			oidcConformant := true
-			algorithm := "RS256"
-			metadata := map[string]interface{}{
-				"created_by": "quickstart-docs-manual-cli",
+			// cli.renderer.Infof("Creating Auth0 application '%s'...", inputs.Name)
+			// appType := config.RequestParams.AppType
+			// callbacks := config.RequestParams.Callbacks
+			// logoutURLs := config.RequestParams.AllowedLogoutURLs
+
+			// oidcConformant := true
+			// algorithm := "RS256"
+			// metadata := map[string]interface{}{
+			// 	"created_by": "quickstart-docs-manual-cli",
+			// }
+
+			// a := &management.Client{
+			// 	Name:              &inputs.Name,
+			// 	AppType:           &appType,
+			// 	Callbacks:         &callbacks,
+			// 	AllowedLogoutURLs: &logoutURLs,
+			// 	OIDCConformant:    &oidcConformant,
+			// 	JWTConfiguration: &management.ClientJWTConfiguration{
+			// 		Algorithm: &algorithm,
+			// 	},
+			// 	ClientMetadata: &metadata,
+			// }
+
+			clients, err := generateClients(inputs, config.RequestParams)
+			if err != nil {
+				return fmt.Errorf("failed to generate clients: %w", err)
 			}
 
-			a := &management.Client{
-				Name:              &inputs.Name,
-				AppType:           &appType,
-				Callbacks:         &callbacks,
-				AllowedLogoutURLs: &logoutURLs,
-				OIDCConformant:    &oidcConformant,
-				JWTConfiguration: &management.ClientJWTConfiguration{
-					Algorithm: &algorithm,
-				},
-				ClientMetadata: &metadata,
+			for _, client := range clients {
+				err := ansi.Waiting(func() error {
+					return cli.api.Client.Create(ctx, client)
+				})
+
+				if err != nil {
+					return fmt.Errorf("failed to create application: %w", err)
+				} else {
+					if client.GetAppType() == "resource_server" {
+						printClientDetails(client, inputs.Port, "", true)
+					} else {
+						// cli.renderer.Infof("Application created successfully with Client ID: %s", client.GetClientID())
+
+						// Generate the .env file
+						envFileName := ".env"
+						var envContent strings.Builder
+						for key, value := range config.EnvValues {
+							fmt.Fprintf(&envContent, "%s=%s\n", key, value)
+						}
+
+						if err := os.WriteFile(envFileName, []byte(envContent.String()), 0600); err != nil {
+							return fmt.Errorf("failed to write .env file: %w", err)
+						}
+
+						// cli.renderer.Infof("%s file created successfully with your Auth0 configuration\n", envFileName)
+
+						printClientDetails(client, inputs.Port, envFileName, false)
+					}
+				}
+
 			}
 
-			if err := ansi.Waiting(func() error {
-				return cli.api.Client.Create(ctx, a)
-			}); err != nil {
-				return fmt.Errorf("failed to create application: %w", err)
-			}
+			// if err := ansi.Waiting(func() error {
+			// 	return cli.api.Client.Create(ctx, a)
+			// }); err != nil {
+			// 	return fmt.Errorf("failed to create application: %w", err)
+			// }
 
-			cli.renderer.Infof("Application created successfully with Client ID: %s", a.GetClientID())
-
-			// Generate the .env file
-			envFileName := ".env"
-			var envContent strings.Builder
-			for key, value := range config.EnvValues {
-				fmt.Fprintf(&envContent, "%s=%s\n", key, value)
-			}
-
-			if err := os.WriteFile(envFileName, []byte(envContent.String()), 0600); err != nil {
-				return fmt.Errorf("failed to write .env file: %w", err)
-			}
-
-			cli.renderer.Infof("%s file created successfully with your Auth0 configuration\n", envFileName)
-			cli.renderer.Infof("Next steps: \n"+
-				"       1. Install dependencies: npm install \n"+
-				"       2. Start your application: npm run dev\n"+
-				"       3. Open your browser at %s", baseURL)
+			// cli.renderer.Infof("Next steps: \n"+
+			// 	"       1. Install dependencies: npm install \n"+
+			// 	"       2. Start your application: npm run dev\n"+
+			// 	"       3. Open your browser at %s", baseURL)
 
 			return nil
 		},
@@ -778,6 +803,44 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 	cmd.Flags().IntVar(&inputs.Port, "port", 0, "Port number for the application")
 
 	return cmd
+}
+
+func printClientDetails(client *management.Client, port int, configFileLocation string, isApi bool) {
+	if isApi {
+		// Print API-related messages
+		fmt.Printf("✓  An API application \"%s\" has been created and registered\n\n", *client.Name)
+		fmt.Println("✓  You can manage your API from here:")
+		fmt.Printf("     https://manage.auth0.com/dashboard/#/apis/%s/settings\n", client.GetClientID())
+	} else {
+		// Print application-related messages
+		fmt.Printf("✓  An application \"%s\" has been created in the management console\n", *client.Name)
+		fmt.Printf("     Client ID: %s\n\n", client.GetClientID())
+
+		// Print management console link
+		fmt.Println("✓  You can manage your application from here:")
+		fmt.Printf("     https://manage.auth0.com/dashboard/#/applications/%s/settings\n\n", client.GetClientID())
+
+		// Print callback URLs
+		if client.Callbacks != nil && len(client.GetCallbacks()) > 0 {
+			fmt.Println("✓  Callback URLs registered in Auth0 Dashboard:")
+			for _, callback := range client.GetCallbacks() {
+				fmt.Printf("     %s\n", callback)
+			}
+			fmt.Println()
+		}
+
+		// Print logout URLs
+		if client.AllowedLogoutURLs != nil && len(client.GetAllowedLogoutURLs()) > 0 {
+			fmt.Println("✓  Logout URLs registered:")
+			for _, logoutURL := range client.GetAllowedLogoutURLs() {
+				fmt.Printf("     %s\n", logoutURL)
+			}
+			fmt.Println()
+		}
+
+		// Print config file location
+		fmt.Printf("✓  Config file created: %s\n\n", configFileLocation)
+	}
 }
 
 // Helper function to get supported quickstart types
@@ -807,6 +870,7 @@ func getQuickstartConfigKey(inputs struct {
 	Scopes        string
 	TokenLifetime string
 	OfflineAccess bool
+	MetaData      map[string]interface{}
 }) (string, struct {
 	Name          string
 	App           bool
@@ -824,6 +888,7 @@ func getQuickstartConfigKey(inputs struct {
 	Scopes        string
 	TokenLifetime string
 	OfflineAccess bool
+	MetaData      map[string]interface{}
 }, error) {
 
 	// Prompt for target resource(s) when neither flag is provided.
@@ -884,22 +949,22 @@ func getQuickstartConfigKey(inputs struct {
 			}
 		}
 
-		// Set default values
-		if inputs.Name == "" {
-			inputs.Name = "My App"
-		}
-		if inputs.Port == 0 {
-			inputs.Port = 3000
-		}
-		if inputs.CallbackURL == "" {
-			inputs.CallbackURL = fmt.Sprintf("http://localhost:%d/callback", inputs.Port)
-		}
-		if inputs.LogoutURL == "" {
-			inputs.LogoutURL = fmt.Sprintf("http://localhost:%d/logout", inputs.Port)
-		}
-		if inputs.WebOriginURL == "" {
-			inputs.WebOriginURL = fmt.Sprintf("http://localhost:%d", inputs.Port)
-		}
+		// // Set default values
+		// if inputs.Name == "" {
+		// 	inputs.Name = "My App"
+		// }
+		// if inputs.Port == 0 {
+		// 	inputs.Port = 3000
+		// }
+		// if inputs.CallbackURL == "" {
+		// 	inputs.CallbackURL = fmt.Sprintf("http://localhost:%d/callback", inputs.Port)
+		// }
+		// if inputs.LogoutURL == "" {
+		// 	inputs.LogoutURL = fmt.Sprintf("http://localhost:%d/logout", inputs.Port)
+		// }
+		// if inputs.WebOriginURL == "" {
+		// 	inputs.WebOriginURL = fmt.Sprintf("http://localhost:%d", inputs.Port)
+		// }
 	}
 
 	// Handle API creation inputs
@@ -957,4 +1022,84 @@ func getQuickstartConfigKey(inputs struct {
 
 	configKey := fmt.Sprintf("%s:%s:%s", inputs.Type, inputs.Framework, buildToolKey)
 	return configKey, inputs, nil
+}
+
+func generateClients(input struct {
+	Name          string
+	App           bool
+	Type          string
+	Framework     string
+	BuildTool     string
+	Port          int
+	CallbackURL   string
+	LogoutURL     string
+	WebOriginURL  string
+	API           bool
+	Identifier    string
+	Audience      string
+	SigningAlg    string
+	Scopes        string
+	TokenLifetime string
+	OfflineAccess bool
+	MetaData      map[string]interface{}
+}, reqParams auth0.RequestParams) ([]*management.Client, error) {
+	// Prompt for the Name field if missing
+
+	if input.Name == "" {
+		input.Name = "My App"
+	}
+
+	q := prompt.TextInput("name", "Application Name", input.Name, "", true)
+	if err := prompt.AskOne(q, &input.Name); err != nil {
+		return nil, fmt.Errorf("failed to enter application name: %v", err)
+	}
+
+	// Default values for the client
+	input.SigningAlg = "RS256"
+	if input.MetaData == nil {
+		input.MetaData = map[string]interface{}{
+			"created_by": "quickstart-docs-manual-cli",
+		}
+	}
+
+	oidcConformant := true
+	// Create the base client
+	baseClient := &management.Client{
+		Name:              &input.Name,
+		AppType:           &reqParams.AppType,
+		Callbacks:         &reqParams.Callbacks,
+		AllowedLogoutURLs: &reqParams.AllowedLogoutURLs,
+		OIDCConformant:    &oidcConformant,
+		JWTConfiguration: &management.ClientJWTConfiguration{
+			Algorithm: &input.SigningAlg,
+		},
+		ClientMetadata: &input.MetaData,
+	}
+
+	// Generate the list of clients
+	var clients []*management.Client
+	clients = append(clients, baseClient)
+
+	// Add an additional client if both App and Api are true
+	if input.API {
+		resourceServerAppType := "resource_server"
+		q := prompt.TextInput("api_identifier", "Enter API identifier(audience)", "", "", true)
+		if err := prompt.AskOne(q, &input.Name); err != nil {
+			return nil, fmt.Errorf("failed to enter application identifier: %v", err)
+		}
+		apiClient := &management.Client{
+			Name:              &input.Name,
+			AppType:           &resourceServerAppType,
+			Callbacks:         &reqParams.Callbacks,
+			AllowedLogoutURLs: &reqParams.AllowedLogoutURLs,
+			OIDCConformant:    &oidcConformant,
+			JWTConfiguration: &management.ClientJWTConfiguration{
+				Algorithm: &input.SigningAlg,
+			},
+			ClientMetadata: &input.MetaData,
+		}
+		clients = append(clients, apiClient)
+	}
+
+	return clients, nil
 }
