@@ -51,6 +51,13 @@ func TestAPICmdInputs_FromArgs(t *testing.T) {
 			expectedError: "invalid method given: ABRACADABRA, accepting only GET, POST, PUT, PATCH, DELETE",
 		},
 		{
+			name:           "it can correctly parse delete with data flag",
+			givenArgs:      []string{"delete", "organizations/org_123/members"},
+			givenDataFlag:  `{"members":["user_123"]}`,
+			expectedMethod: http.MethodDelete,
+			expectedURL:    "https://" + testDomain + "/api/v2/organizations/org_123/members",
+		},
+		{
 			name:          "it fails to parse input arguments when data is not a valid JSON",
 			givenArgs:     []string{"patch", "clients"},
 			givenDataFlag: "{",
