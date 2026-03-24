@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -711,41 +712,6 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				return fmt.Errorf("unsupported quickstart arguments: %s. Supported types: %v", qsConfigKey, getSupportedQuickstartTypes())
 			}
 
-			// Set default values based on the selected quickstart type
-			// if inputs.Name == "" {
-			// 	inputs.Name = "My App"
-			// }
-			// if inputs.Port == 0 {
-			// 	inputs.Port = 3000 // Default port, can be adjusted based on the type if needed
-			// }
-
-			// baseURL := fmt.Sprintf("http://localhost:%d", inputs.Port)
-
-			// Create the Auth0 application
-
-			// cli.renderer.Infof("Creating Auth0 application '%s'...", inputs.Name)
-			// appType := config.RequestParams.AppType
-			// callbacks := config.RequestParams.Callbacks
-			// logoutURLs := config.RequestParams.AllowedLogoutURLs
-
-			// oidcConformant := true
-			// algorithm := "RS256"
-			// metadata := map[string]interface{}{
-			// 	"created_by": "quickstart-docs-manual-cli",
-			// }
-
-			// a := &management.Client{
-			// 	Name:              &inputs.Name,
-			// 	AppType:           &appType,
-			// 	Callbacks:         &callbacks,
-			// 	AllowedLogoutURLs: &logoutURLs,
-			// 	OIDCConformant:    &oidcConformant,
-			// 	JWTConfiguration: &management.ClientJWTConfiguration{
-			// 		Algorithm: &algorithm,
-			// 	},
-			// 	ClientMetadata: &metadata,
-			// }
-
 			clients, err := generateClients(inputs, config.RequestParams)
 			if err != nil {
 				return fmt.Errorf("failed to generate clients: %w", err)
@@ -763,36 +729,21 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						printClientDetails(client, inputs.Port, "", true)
 					} else {
 						// cli.renderer.Infof("Application created successfully with Client ID: %s", client.GetClientID())
-
+						tenant, err := cli.Config.GetTenant(cli.tenant)
+						if err != nil {
+							return fmt.Errorf("failed to get tenant: %w", err)
+						}
 						// Generate the .env file
-						envFileName := ".env"
-						var envContent strings.Builder
-						for key, value := range config.EnvValues {
-							fmt.Fprintf(&envContent, "%s=%s\n", key, value)
+						envFileName, _, err := GenerateAndWriteQuickstartConfig(&config.Strategy, config.EnvValues, tenant.Domain, client)
+						if err != nil {
+							return fmt.Errorf("failed to generate .env file: %w", err)
 						}
-
-						if err := os.WriteFile(envFileName, []byte(envContent.String()), 0600); err != nil {
-							return fmt.Errorf("failed to write .env file: %w", err)
-						}
-
 						// cli.renderer.Infof("%s file created successfully with your Auth0 configuration\n", envFileName)
-
 						printClientDetails(client, inputs.Port, envFileName, false)
 					}
 				}
 
 			}
-
-			// if err := ansi.Waiting(func() error {
-			// 	return cli.api.Client.Create(ctx, a)
-			// }); err != nil {
-			// 	return fmt.Errorf("failed to create application: %w", err)
-			// }
-
-			// cli.renderer.Infof("Next steps: \n"+
-			// 	"       1. Install dependencies: npm install \n"+
-			// 	"       2. Start your application: npm run dev\n"+
-			// 	"       3. Open your browser at %s", baseURL)
 
 			return nil
 		},
@@ -1102,4 +1053,175 @@ func generateClients(input struct {
 	}
 
 	return clients, nil
+}
+
+func replaceDetectionSub(envValues map[string]string, tenantDomain string, client *management.Client) map[string]string {
+	// Create a new map to store the updated values
+	updatedEnvValues := make(map[string]string)
+
+	for key, value := range envValues {
+		// If the value is not DETECTION_SUB, keep it as is and continue
+		if value != "DETECTION_SUB" {
+			updatedEnvValues[key] = value
+			continue
+		}
+
+		// Group keys by the type of replacement they require
+		switch key {
+
+		// ==========================================
+		// Tenant Domain Replacements
+		// ==========================================
+		case "VITE_AUTH0_DOMAIN", "AUTH0_DOMAIN", "domain", "NUXT_AUTH0_DOMAIN",
+			"auth0.domain", "Auth0:Domain", "auth0:Domain", "auth0_domain",
+			"EXPO_PUBLIC_AUTH0_DOMAIN":
+			updatedEnvValues[key] = tenantDomain
+
+		// Express SDK specifically requires the https:// prefix
+		case "ISSUER_BASE_URL":
+			updatedEnvValues[key] = "https://" + tenantDomain
+
+		// Spring Boot okta issuer specifically requires https:// and a trailing slash
+		case "okta.oauth2.issuer":
+			updatedEnvValues[key] = "https://" + tenantDomain + "/"
+
+		// ==========================================
+		// Client ID Replacements
+		// ==========================================
+		case "VITE_AUTH0_CLIENT_ID", "AUTH0_CLIENT_ID", "clientId", "NUXT_AUTH0_CLIENT_ID",
+			"CLIENT_ID", "auth0.clientId", "okta.oauth2.client-id", "Auth0:ClientId",
+			"auth0:ClientId", "auth0_client_id", "EXPO_PUBLIC_AUTH0_CLIENT_ID":
+			updatedEnvValues[key] = client.GetClientID()
+
+		// ==========================================
+		// Client Secret Replacements
+		// ==========================================
+		case "AUTH0_CLIENT_SECRET", "NUXT_AUTH0_CLIENT_SECRET", "auth0.clientSecret",
+			"okta.oauth2.client-secret", "Auth0:ClientSecret", "auth0:ClientSecret",
+			"auth0_client_secret":
+			updatedEnvValues[key] = client.GetClientSecret()
+
+		// ==========================================
+		// App Secrets / Session Cookies (Placeholders)
+		// ==========================================
+		case "AUTH0_SECRET", "NUXT_AUTH0_SESSION_SECRET", "SESSION_SECRET",
+			"SECRET", "AUTH0_SESSION_ENCRYPTION_KEY", "AUTH0_COOKIE_SECRET":
+			// Inject a dummy secret placeholder for the user to replace,
+			// or replace this string with a crypto/rand generator if preferred.
+			updatedEnvValues[key] = "a_long_random_secret_string_replace_me"
+
+		// ==========================================
+		// App Base URLs and Redirect URIs
+		// ==========================================
+		case "APP_BASE_URL", "NUXT_AUTH0_APP_BASE_URL", "BASE_URL":
+			updatedEnvValues[key] = "http://localhost:3000" // Default backend port
+
+		case "AUTH0_REDIRECT_URI", "AUTH0_CALLBACK_URL":
+			updatedEnvValues[key] = "http://localhost:3000/callback"
+
+		// ==========================================
+		// Fallback
+		// ==========================================
+		default:
+			updatedEnvValues[key] = value
+		}
+	}
+
+	return updatedEnvValues
+}
+
+// FileOutputStrategy defines where and how a config file should be written
+// Map the config keys to their required file output definitions based on the matrix
+
+// GenerateAndWriteQuickstartConfig takes the selected stack, resolves the dynamic values,
+// and writes them to the appropriate file in the Current Working Directory (CWD).
+// GenerateAndWriteQuickstartConfig takes the selected stack, resolves the dynamic values,
+// and writes them to the appropriate file in the Current Working Directory (CWD).
+// It returns the generated file name, the file path, and an error (if any).
+func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envValues map[string]string, tenantDomain string, client *management.Client) (string, string, error) {
+	// 1. Resolve the environment variables using the previously defined function
+	resolvedEnv := replaceDetectionSub(envValues, tenantDomain, client)
+
+	// 2. Determine output file path and format
+	if strategy == nil {
+		// Fallback to a standard .env in the project root if for some reason it's missing
+		strategy = &auth0.FileOutputStrategy{Path: ".env", Format: "dotenv"}
+	}
+
+	// 3. Ensure the directory path exists (e.g., creating src/environments/ if it doesn't exist)
+	dir := filepath.Dir(strategy.Path)
+	if dir != "." {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return "", "", fmt.Errorf("failed to create directory structure %s: %w", dir, err)
+		}
+	}
+
+	// 4. Format the file content based on the target framework's requirement
+	var contentBuilder strings.Builder
+
+	switch strategy.Format {
+	case "dotenv", "properties":
+		for key, val := range resolvedEnv {
+			contentBuilder.WriteString(fmt.Sprintf("%s=%s\n", key, val))
+		}
+
+	case "yaml":
+		for key, val := range resolvedEnv {
+			contentBuilder.WriteString(fmt.Sprintf("%s: %s\n", key, val))
+		}
+
+	case "ts":
+		contentBuilder.WriteString("export const environment = {\n")
+		for key, val := range resolvedEnv {
+			contentBuilder.WriteString(fmt.Sprintf("  %s: '%s',\n", key, val))
+		}
+		contentBuilder.WriteString("};\n")
+
+	case "dart":
+		contentBuilder.WriteString("const Map<String, String> authConfig = {\n")
+		for key, val := range resolvedEnv {
+			contentBuilder.WriteString(fmt.Sprintf("  '%s': '%s',\n", key, val))
+		}
+		contentBuilder.WriteString("};\n")
+
+	case "json":
+		// C# appsettings.json expects nested JSON: {"Auth0": {"Domain": "...", "ClientId": "..."}}
+		auth0Section := make(map[string]string)
+		for key, val := range resolvedEnv {
+			// Strip the "Auth0:" prefix used in the map to create clean JSON keys
+			cleanKey := strings.TrimPrefix(key, "Auth0:")
+			auth0Section[cleanKey] = val
+		}
+
+		jsonBody := map[string]interface{}{
+			"Auth0": auth0Section,
+		}
+
+		bytes, err := json.MarshalIndent(jsonBody, "", "  ")
+		if err != nil {
+			return "", "", fmt.Errorf("failed to marshal JSON for %s: %w", strategy.Path, err)
+		}
+		contentBuilder.Write(bytes)
+
+	case "xml":
+		// ASP.NET OWIN Web.config
+		contentBuilder.WriteString("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
+		contentBuilder.WriteString("<configuration>\n")
+		contentBuilder.WriteString("  <appSettings>\n")
+		for key, val := range resolvedEnv {
+			contentBuilder.WriteString(fmt.Sprintf("    <add key=\"%s\" value=\"%s\" />\n", key, val))
+		}
+		contentBuilder.WriteString("  </appSettings>\n")
+		contentBuilder.WriteString("</configuration>\n")
+	}
+
+	// 5. Write the generated content to disk
+	if err := os.WriteFile(strategy.Path, []byte(contentBuilder.String()), 0600); err != nil {
+		return "", "", fmt.Errorf("failed to write config file %s: %w", strategy.Path, err)
+	}
+
+	// 6. Extract the base file name from the path and return both
+	fileName := filepath.Base(strategy.Path)
+
+	return fileName, strategy.Path, nil
 }

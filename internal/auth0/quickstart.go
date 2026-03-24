@@ -179,6 +179,11 @@ func (q Quickstarts) Stacks() []string {
 
 const DETECTION_SUB = "DETECTION_SUB"
 
+type FileOutputStrategy struct {
+	Path   string
+	Format string
+}
+
 type RequestParams struct {
 	AppType           string
 	Callbacks         []string
@@ -190,9 +195,9 @@ type RequestParams struct {
 type AppConfig struct {
 	EnvValues     map[string]string
 	RequestParams RequestParams
+	Strategy      FileOutputStrategy
 }
 
-// Map key format: "type:framework:build_tool"
 var QuickstartConfigs = map[string]AppConfig{
 
 	// ==========================================
@@ -208,7 +213,9 @@ var QuickstartConfigs = map[string]AppConfig{
 			Callbacks:         []string{"http://localhost:5173/callback"},
 			AllowedLogoutURLs: []string{"http://localhost:5173"},
 			WebOrigins:        []string{DETECTION_SUB},
+			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"spa:angular:none": {
 		EnvValues: map[string]string{
@@ -222,6 +229,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			WebOrigins:        []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: "src/environments/environment.ts", Format: "ts"},
 	},
 	"spa:vue:vite": {
 		EnvValues: map[string]string{
@@ -235,6 +243,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			WebOrigins:        []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"spa:svelte:vite": {
 		EnvValues: map[string]string{
@@ -248,6 +257,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			WebOrigins:        []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"spa:vanilla-javascript:vite": {
 		EnvValues: map[string]string{
@@ -261,6 +271,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			WebOrigins:        []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"spa:flutter-web:none": {
 		EnvValues: map[string]string{
@@ -274,6 +285,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			WebOrigins:        []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: "lib/auth_config.dart", Format: "dart"},
 	},
 
 	// ==========================================
@@ -293,6 +305,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{"http://localhost:3000"},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"regular:nuxt:none": {
 		EnvValues: map[string]string{
@@ -308,6 +321,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{"http://localhost:3000"},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"regular:fastify:none": {
 		EnvValues: map[string]string{
@@ -323,6 +337,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{"http://localhost:3000"},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"regular:sveltekit:none": {
 		EnvValues: map[string]string{
@@ -335,6 +350,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"regular:express:none": {
 		EnvValues: map[string]string{
@@ -349,6 +365,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{"http://localhost:3000"},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"regular:hono:none": {
 		EnvValues: map[string]string{
@@ -364,6 +381,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{"http://localhost:3000"},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"regular:vanilla-python:none": {
 		EnvValues: map[string]string{
@@ -379,6 +397,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{"http://localhost:5000"},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"regular:django:none": {
 		EnvValues: map[string]string{
@@ -392,6 +411,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"regular:vanilla-go:none": {
 		EnvValues: map[string]string{
@@ -406,6 +426,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"regular:vanilla-java:maven": {
 		EnvValues: map[string]string{
@@ -419,6 +440,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: "src/main/resources/application.properties", Format: "properties"},
 	},
 	"regular:java-ee:maven": {
 		EnvValues: map[string]string{
@@ -432,6 +454,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: "src/main/resources/META-INF/microprofile-config.properties", Format: "properties"},
 	},
 	"regular:spring-boot:maven": {
 		EnvValues: map[string]string{
@@ -445,6 +468,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{"http://localhost:8000"},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: "src/main/resources/application.yml", Format: "yaml"},
 	},
 	"regular:aspnet-mvc:none": {
 		EnvValues: map[string]string{
@@ -458,6 +482,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: "appsettings.json", Format: "json"},
 	},
 	"regular:aspnet-blazor:none": {
 		EnvValues: map[string]string{
@@ -470,6 +495,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: "appsettings.json", Format: "json"},
 	},
 	"regular:aspnet-owin:none": {
 		EnvValues: map[string]string{
@@ -483,6 +509,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: "Web.config", Format: "xml"},
 	},
 	"regular:vanilla-php:composer": {
 		EnvValues: map[string]string{
@@ -497,6 +524,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"regular:laravel:composer": {
 		EnvValues: map[string]string{
@@ -511,6 +539,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{"http://localhost:8000"},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"regular:rails:none": {
 		EnvValues: map[string]string{
@@ -524,6 +553,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{"http://localhost:3000"},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 
 	// ==========================================
@@ -540,6 +570,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: "lib/auth_config.dart", Format: "dart"},
 	},
 	"native:react-native:none": {
 		EnvValues: map[string]string{
@@ -552,6 +583,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"native:expo:none": {
 		EnvValues: map[string]string{
@@ -564,6 +596,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"native:ionic-angular:none": {
 		EnvValues: map[string]string{
@@ -576,6 +609,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: "src/environments/environment.ts", Format: "ts"},
 	},
 	"native:ionic-react:vite": {
 		EnvValues: map[string]string{
@@ -588,6 +622,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			Name:              DETECTION_SUB,
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"native:ionic-vue:vite": {
 		EnvValues: map[string]string{
@@ -600,6 +635,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"native:dotnet-mobile:none": {
 		EnvValues: map[string]string{
@@ -612,6 +648,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: "appsettings.json", Format: "json"},
 	},
 	"native:maui:none": {
 		EnvValues: map[string]string{
@@ -624,6 +661,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: "appsettings.json", Format: "json"},
 	},
 	"native:wpf-winforms:none": {
 		EnvValues: map[string]string{
@@ -637,5 +675,6 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DETECTION_SUB},
 			Name:              DETECTION_SUB,
 		},
+		Strategy: FileOutputStrategy{Path: "appsettings.json", Format: "json"},
 	},
 }
