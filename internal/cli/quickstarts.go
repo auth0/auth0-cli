@@ -12,12 +12,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/auth0/go-auth0/management"
-	"github.com/spf13/cobra"
-
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
+	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
 )
 
 // QuickStart app types and defaults.
@@ -724,27 +723,23 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 
 				if err != nil {
 					return fmt.Errorf("failed to create application: %w", err)
-				} else {
-					if client.GetAppType() == "resource_server" {
-						printClientDetails(client, inputs.Port, "", true)
-					} else {
-						// cli.renderer.Infof("Application created successfully with Client ID: %s", client.GetClientID())
-						tenant, err := cli.Config.GetTenant(cli.tenant)
-						if err != nil {
-							return fmt.Errorf("failed to get tenant: %w", err)
-						}
-						// Generate the .env file
-						envFileName, _, err := GenerateAndWriteQuickstartConfig(&config.Strategy, config.EnvValues, tenant.Domain, client)
-						if err != nil {
-							return fmt.Errorf("failed to generate .env file: %w", err)
-						}
-						// cli.renderer.Infof("%s file created successfully with your Auth0 configuration\n", envFileName)
-						printClientDetails(client, inputs.Port, envFileName, false)
-					}
 				}
 
+				if client.GetAppType() == "resource_server" {
+					printClientDetails(client, inputs.Port, "", true)
+				} else {
+					tenant, err := cli.Config.GetTenant(cli.tenant)
+					if err != nil {
+						return fmt.Errorf("failed to get tenant: %w", err)
+					}
+					// Generate the .env file
+					envFileName, _, err := GenerateAndWriteQuickstartConfig(&config.Strategy, config.EnvValues, tenant.Domain, client)
+					if err != nil {
+						return fmt.Errorf("failed to generate .env file: %w", err)
+					}
+					printClientDetails(client, inputs.Port, envFileName, false)
+				}
 			}
-
 			return nil
 		},
 	}
@@ -841,7 +836,6 @@ func getQuickstartConfigKey(inputs struct {
 	OfflineAccess bool
 	MetaData      map[string]interface{}
 }, error) {
-
 	// Prompt for target resource(s) when neither flag is provided.
 	if !inputs.App && !inputs.API {
 		var selections []string
@@ -875,7 +869,6 @@ func getQuickstartConfigKey(inputs struct {
 		// Prompt for --type if not provided
 		if inputs.Type == "" {
 			types := []string{"spa", "regular", "native", "m2m"}
-			// name, message, help, options, defaultValue, required
 			q := prompt.SelectInput("type", "Select the application type", "", types, "m2m", true)
 			if err := prompt.AskOne(q, &inputs.Type); err != nil {
 				return "", inputs, fmt.Errorf("failed to select application type: %v", err)
