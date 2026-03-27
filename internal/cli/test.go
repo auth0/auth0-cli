@@ -149,12 +149,6 @@ func testLoginCmd(cli *cli) *cobra.Command {
 				return nil
 			}
 
-			if inputs.Audience != "" && (client.GetAppType() == appTypeNonInteractive) {
-				if err := checkClientIsAuthorizedForAPI(cmd.Context(), cli, client, inputs.Audience); err != nil {
-					return err
-				}
-			}
-
 			if inputs.Organization != "" {
 				if inputs.CustomParams != nil {
 					inputs.CustomParams["organization"] = inputs.Organization
@@ -257,12 +251,14 @@ func testTokenCmd(cli *cli) *cobra.Command {
 				}
 			}()
 
+			var managementAPI = "https://" + cli.tenant + "/api/v2/"
+
 			if client.GetAppType() == appTypeNonInteractive {
 				if len(inputs.Scopes) != 0 {
 					cli.renderer.Warnf("Passed in scopes do not apply to Machine to Machine applications.\n")
 				}
 
-				tokenResponse, err = runClientCredentialsFlow(cmd.Context(), cli, client, inputs.Audience, cli.tenant)
+				tokenResponse, err = runClientCredentialsFlow(cmd.Context(), cli, client, inputs.Audience, cli.tenant, inputs.Organization)
 				if err != nil {
 					return fmt.Errorf(
 						"failed to log in with client credentials for client with ID %q: %w",
@@ -273,8 +269,6 @@ func testTokenCmd(cli *cli) *cobra.Command {
 
 				return nil
 			}
-
-			var managementAPI = "https://" + cli.tenant + "/api/v2/"
 
 			if len(inputs.Scopes) == 0 && inputs.Audience != managementAPI {
 				if err := cli.pickTokenScopes(cmd.Context(), &inputs); err != nil {
@@ -504,33 +498,4 @@ func (c *cli) pickTokenScopes(ctx context.Context, inputs *testCmdInputs) error 
 	return survey.AskOne(scopesPrompt, &inputs.Scopes)
 }
 
-func checkClientIsAuthorizedForAPI(ctx context.Context, cli *cli, client *management.Client, audience string) error {
-	var list *management.ClientGrantList
-	if err := ansi.Waiting(func() (err error) {
-		list, err = cli.api.ClientGrant.List(
-			ctx,
-			management.Parameter("audience", audience),
-			management.Parameter("client_id", client.GetClientID()),
-		)
-		return err
-	}); err != nil {
-		return fmt.Errorf(
-			"failed to find client grants for API identifier %q and client ID %q: %w",
-			audience,
-			client.GetClientID(),
-			err,
-		)
-	}
 
-	if len(list.ClientGrants) < 1 {
-		return fmt.Errorf(
-			"the %s application is not authorized to request access tokens for this API %s.\n\n"+
-				"Run: 'auth0 apps open %s' to open the dashboard and authorize the application.",
-			ansi.Bold(client.GetName()),
-			ansi.Bold(audience),
-			client.GetClientID(),
-		)
-	}
-
-	return nil
-}
