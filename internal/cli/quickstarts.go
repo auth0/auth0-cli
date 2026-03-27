@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -68,6 +69,7 @@ func quickstartsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(listQuickstartsCmd(cli))
 	cmd.AddCommand(downloadQuickstartCmd(cli))
 	cmd.AddCommand(setupQuickstartCmd(cli))
+	cmd.AddCommand(setupQuickstartCmdExperimental(cli))
 
 	return cmd
 }
@@ -655,4 +657,533 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 	qsPort.RegisterInt(cmd, &inputs.Port, 0)
 
 	return cmd
+}
+
+func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
+	var inputs struct {
+		Name          string
+		App           bool
+		Type          string
+		Framework     string
+		BuildTool     string
+		Port          int
+		CallbackURL   string
+		LogoutURL     string
+		WebOriginURL  string
+		API           bool
+		Identifier    string
+		Audience      string
+		SigningAlg    string
+		Scopes        string
+		TokenLifetime string
+		OfflineAccess bool
+		MetaData      map[string]interface{}
+	}
+
+	cmd := &cobra.Command{
+		Use:   "setup-experimental",
+		Args:  cobra.NoArgs,
+		Short: "Set up Auth0 for your quickstart application",
+		Long: "Creates an Auth0 application and generates a .env file with the necessary configuration.\n\n" +
+			"The command will:\n" +
+			"  1. Check if you are authenticated (and prompt for login if needed)\n" +
+			"  2. Create an Auth0 application based on the specified type\n" +
+			"  3. Generate a .env file with the appropriate environment variables\n\n" +
+			"Supported types are dynamically loaded from the `QuickstartConfigs` map in the codebase.",
+		Example: `  auth0 quickstarts setup-experimental --type spa:react:vite
+  auth0 quickstarts setup-experimental --type regular:nextjs:none
+  auth0 quickstarts setup-experimental --type native:react-native:none`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+
+			if err := cli.setupWithAuthentication(ctx); err != nil {
+				return fmt.Errorf("authentication required: %w", err)
+			}
+
+			qsConfigKey, updatedInputs, err := getQuickstartConfigKey(inputs)
+			if err != nil {
+				inputs = updatedInputs
+				return fmt.Errorf("failed to get quickstart configuration: %w", err)
+			}
+
+			// Validate the input type against QuickstartConfigs.
+			config, exists := auth0.QuickstartConfigs[qsConfigKey]
+			if !exists {
+				return fmt.Errorf("unsupported quickstart arguments: %s. Supported types: %v", qsConfigKey, getSupportedQuickstartTypes())
+			}
+
+			clients, err := generateClients(inputs, config.RequestParams)
+			if err != nil {
+				return fmt.Errorf("failed to generate clients: %w", err)
+			}
+
+			for _, client := range clients {
+				err := ansi.Waiting(func() error {
+					return cli.api.Client.Create(ctx, client)
+				})
+
+				if err != nil {
+					return fmt.Errorf("failed to create application: %w", err)
+				}
+
+				if client.GetAppType() == "resource_server" {
+					printClientDetails(client, inputs.Port, "", true)
+				} else {
+					tenant, err := cli.Config.GetTenant(cli.tenant)
+					if err != nil {
+						return fmt.Errorf("failed to get tenant: %w", err)
+					}
+					// Generate the .env file.
+					envFileName, _, err := GenerateAndWriteQuickstartConfig(&config.Strategy, config.EnvValues, tenant.Domain, client)
+					if err != nil {
+						return fmt.Errorf("failed to generate .env file: %w", err)
+					}
+					printClientDetails(client, inputs.Port, envFileName, false)
+				}
+			}
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&inputs.Type, "type", "", "Type of the quickstart application (e.g., spa:react:vite, regular:nextjs:none)")
+	cmd.Flags().StringVar(&inputs.Name, "name", "", "Name of the Auth0 application")
+	cmd.Flags().IntVar(&inputs.Port, "port", 0, "Port number for the application")
+
+	return cmd
+}
+
+func printClientDetails(client *management.Client, port int, configFileLocation string, isAPI bool) {
+	if isAPI {
+		// Print API-related messages.
+		fmt.Printf("  An API application \"%s\" has been created and registered\n\n", *client.Name)
+		fmt.Println("  You can manage your API from here:")
+		fmt.Printf("     https://manage.auth0.com/dashboard/#/apis/%s/settings\n", client.GetClientID())
+	} else {
+		// Print application-related messages.
+		fmt.Printf("  An application \"%s\" has been created in the management console\n", *client.Name)
+		fmt.Printf("     Client ID: %s\n\n", client.GetClientID())
+
+		// Print management console link.
+		fmt.Println("  You can manage your application from here:")
+		fmt.Printf("     https://manage.auth0.com/dashboard/#/applications/%s/settings\n\n", client.GetClientID())
+
+		// Print callback URLs.
+		if client.Callbacks != nil && len(client.GetCallbacks()) > 0 {
+			fmt.Println("  Callback URLs registered in Auth0 Dashboard:")
+			for _, callback := range client.GetCallbacks() {
+				fmt.Printf("     %s\n", callback)
+			}
+			fmt.Println()
+		}
+
+		// Print logout URLs.
+		if client.AllowedLogoutURLs != nil && len(client.GetAllowedLogoutURLs()) > 0 {
+			fmt.Println("✓  Logout URLs registered:")
+			for _, logoutURL := range client.GetAllowedLogoutURLs() {
+				fmt.Printf("     %s\n", logoutURL)
+			}
+			fmt.Println()
+		}
+
+		// Print config file location.
+		fmt.Printf("✓  Config file created: %s\n\n", configFileLocation)
+	}
+}
+
+// Helper function to get supported quickstart types.
+func getSupportedQuickstartTypes() []string {
+	var types []string
+	for key := range auth0.QuickstartConfigs {
+		types = append(types, key)
+	}
+	return types
+}
+
+// For cleaner readability, you might consider extracting this anonymous struct into a named type (e.g., type SetupInputs struct {...}).
+func getQuickstartConfigKey(inputs struct {
+	Name          string
+	App           bool
+	Type          string
+	Framework     string
+	BuildTool     string
+	Port          int
+	CallbackURL   string
+	LogoutURL     string
+	WebOriginURL  string
+	API           bool
+	Identifier    string
+	Audience      string
+	SigningAlg    string
+	Scopes        string
+	TokenLifetime string
+	OfflineAccess bool
+	MetaData      map[string]interface{}
+}) (string, struct {
+	Name          string
+	App           bool
+	Type          string
+	Framework     string
+	BuildTool     string
+	Port          int
+	CallbackURL   string
+	LogoutURL     string
+	WebOriginURL  string
+	API           bool
+	Identifier    string
+	Audience      string
+	SigningAlg    string
+	Scopes        string
+	TokenLifetime string
+	OfflineAccess bool
+	MetaData      map[string]interface{}
+}, error) {
+	// Prompt for target resource(s) when neither flag is provided.
+	if !inputs.App && !inputs.API {
+		var selections []string
+
+		err := prompt.AskMultiSelect(
+			"What do you want to create? (select whatever applies)",
+			&selections,
+			"App",
+			"API",
+		)
+		if err != nil {
+			return "", inputs, fmt.Errorf("failed to select target resource(s): %v", err)
+		}
+
+		for _, selection := range selections {
+			switch strings.ToLower(selection) {
+			case "app":
+				inputs.App = true
+			case "api":
+				inputs.API = true
+			}
+		}
+
+		if !inputs.App && !inputs.API {
+			return "", inputs, fmt.Errorf("please select at least one option: App and/or API")
+		}
+	}
+
+	// Handle application creation inputs.
+	if inputs.App {
+		// Prompt for --type if not provided.
+		if inputs.Type == "" {
+			types := []string{"spa", "regular", "native", "m2m"}
+			q := prompt.SelectInput("type", "Select the application type", "", types, "m2m", true)
+			if err := prompt.AskOne(q, &inputs.Type); err != nil {
+				return "", inputs, fmt.Errorf("failed to select application type: %v", err)
+			}
+		}
+
+		// Prompt for --framework if not provided.
+		if inputs.Framework == "" {
+			frameworks := []string{"react", "angular", "vue", "svelte", "nextjs", "nuxt", "flutter", "express", "django", "spring-boot", "none"}
+			q := prompt.SelectInput("framework", "Select the framework", "", frameworks, "none", true)
+			if err := prompt.AskOne(q, &inputs.Framework); err != nil {
+				return "", inputs, fmt.Errorf("failed to select framework: %v", err)
+			}
+		}
+
+		// Prompt for --build-tool if not provided (optional).
+		if inputs.BuildTool == "" {
+			buildTools := []string{"vite", "webpack", "cra", "none"}
+			q := prompt.SelectInput("build-tool", "Select the build tool (optional)", "", buildTools, "none", false)
+			if err := prompt.AskOne(q, &inputs.BuildTool); err != nil {
+				return "", inputs, fmt.Errorf("failed to select build tool: %v", err)
+			}
+		}
+	}
+
+	// Handle API creation inputs.
+	if inputs.API {
+		// Prompt for --identifier or --audience if not provided.
+		if inputs.Identifier == "" && inputs.Audience == "" {
+			// Name, message, help, defaultValue, required.
+			q := prompt.TextInput("identifier", "Enter the API identifier (or audience)", "", "", true)
+			if err := prompt.AskOne(q, &inputs.Identifier); err != nil {
+				return "", inputs, fmt.Errorf("failed to enter API identifier: %v", err)
+			}
+		}
+
+		// Use --audience as an alias for --identifier if provided.
+		if inputs.Identifier == "" {
+			inputs.Identifier = inputs.Audience
+		}
+
+		// Prompt for --signing-alg if not provided.
+		if inputs.SigningAlg == "" {
+			signingAlgs := []string{"RS256", "PS256", "HS256"}
+			q := prompt.SelectInput("signing-alg", "Select the signing algorithm", "", signingAlgs, "RS256", true)
+			if err := prompt.AskOne(q, &inputs.SigningAlg); err != nil {
+				return "", inputs, fmt.Errorf("failed to select signing algorithm: %v", err)
+			}
+		}
+
+		// Prompt for --scopes if not provided.
+		if inputs.Scopes == "" {
+			q := prompt.TextInput("scopes", "Enter the scopes (comma-separated)", "", "", false)
+			if err := prompt.AskOne(q, &inputs.Scopes); err != nil {
+				return "", inputs, fmt.Errorf("failed to enter scopes: %v", err)
+			}
+		}
+
+		// Prompt for --token-lifetime if not provided.
+		if inputs.TokenLifetime == "" {
+			q := prompt.TextInput("token-lifetime", "Enter the token lifetime (in seconds)", "", "86400", true)
+			if err := prompt.AskOne(q, &inputs.TokenLifetime); err != nil {
+				return "", inputs, fmt.Errorf("failed to enter token lifetime: %v", err)
+			}
+		}
+
+		if !inputs.OfflineAccess {
+			inputs.OfflineAccess = false
+		}
+	}
+
+	// Fallback to "none" if build tool wasn't asked/selected to match the config map keys.
+	buildToolKey := inputs.BuildTool
+	if buildToolKey == "" {
+		buildToolKey = "none"
+	}
+
+	configKey := fmt.Sprintf("%s:%s:%s", inputs.Type, inputs.Framework, buildToolKey)
+	return configKey, inputs, nil
+}
+
+func generateClients(input struct {
+	Name          string
+	App           bool
+	Type          string
+	Framework     string
+	BuildTool     string
+	Port          int
+	CallbackURL   string
+	LogoutURL     string
+	WebOriginURL  string
+	API           bool
+	Identifier    string
+	Audience      string
+	SigningAlg    string
+	Scopes        string
+	TokenLifetime string
+	OfflineAccess bool
+	MetaData      map[string]interface{}
+}, reqParams auth0.RequestParams) ([]*management.Client, error) {
+	// Prompt for the Name field if missing.
+
+	if input.Name == "" {
+		input.Name = "My App"
+	}
+
+	q := prompt.TextInput("name", "Application Name", input.Name, "", true)
+	if err := prompt.AskOne(q, &input.Name); err != nil {
+		return nil, fmt.Errorf("failed to enter application name: %v", err)
+	}
+
+	// Default values for the client.
+	input.SigningAlg = "RS256"
+	if input.MetaData == nil {
+		input.MetaData = map[string]interface{}{
+			"created_by": "quickstart-docs-manual-cli",
+		}
+	}
+
+	oidcConformant := true
+	// Create the base client.
+	baseClient := &management.Client{
+		Name:              &input.Name,
+		AppType:           &reqParams.AppType,
+		Callbacks:         &reqParams.Callbacks,
+		AllowedLogoutURLs: &reqParams.AllowedLogoutURLs,
+		OIDCConformant:    &oidcConformant,
+		JWTConfiguration: &management.ClientJWTConfiguration{
+			Algorithm: &input.SigningAlg,
+		},
+		ClientMetadata: &input.MetaData,
+	}
+
+	// Generate the list of clients.
+	var clients []*management.Client
+	clients = append(clients, baseClient)
+
+	// Add an additional client if both App and Api are true.
+	if input.API {
+		resourceServerAppType := "resource_server"
+		q := prompt.TextInput("api_identifier", "Enter API identifier(audience)", "", "", true)
+		if err := prompt.AskOne(q, &input.Name); err != nil {
+			return nil, fmt.Errorf("failed to enter application identifier: %v", err)
+		}
+		apiClient := &management.Client{
+			Name:              &input.Name,
+			AppType:           &resourceServerAppType,
+			Callbacks:         &reqParams.Callbacks,
+			AllowedLogoutURLs: &reqParams.AllowedLogoutURLs,
+			OIDCConformant:    &oidcConformant,
+			JWTConfiguration: &management.ClientJWTConfiguration{
+				Algorithm: &input.SigningAlg,
+			},
+			ClientMetadata: &input.MetaData,
+		}
+		clients = append(clients, apiClient)
+	}
+
+	return clients, nil
+}
+
+func replaceDetectionSub(envValues map[string]string, tenantDomain string, client *management.Client) map[string]string {
+	// Create a new map to store the updated values.
+	updatedEnvValues := make(map[string]string)
+
+	for key, value := range envValues {
+		// If the value is not DETECTION_SUB, keep it as is and continue.
+		if value != "DETECTION_SUB" {
+			updatedEnvValues[key] = value
+			continue
+		}
+
+		// Group keys by the type of replacement they require.
+		switch key {
+		// ==========================================.
+		case "VITE_AUTH0_DOMAIN", "AUTH0_DOMAIN", "domain", "NUXT_AUTH0_DOMAIN",
+			"auth0.domain", "Auth0:Domain", "auth0:Domain", "auth0_domain",
+			"EXPO_PUBLIC_AUTH0_DOMAIN":
+			updatedEnvValues[key] = tenantDomain
+
+			// Express SDK specifically requires the https:// prefix.
+		case "ISSUER_BASE_URL":
+			updatedEnvValues[key] = "https://" + tenantDomain
+
+			// Spring Boot okta issuer specifically requires https:// and a trailing slash.
+		case "okta.oauth2.issuer":
+			updatedEnvValues[key] = "https://" + tenantDomain + "/"
+
+			// ==========================================.
+		case "VITE_AUTH0_CLIENT_ID", "AUTH0_CLIENT_ID", "clientId", "NUXT_AUTH0_CLIENT_ID",
+			"CLIENT_ID", "auth0.clientId", "okta.oauth2.client-id", "Auth0:ClientId",
+			"auth0:ClientId", "auth0_client_id", "EXPO_PUBLIC_AUTH0_CLIENT_ID":
+			updatedEnvValues[key] = client.GetClientID()
+
+			// ==========================================.
+		case "AUTH0_CLIENT_SECRET", "NUXT_AUTH0_CLIENT_SECRET", "auth0.clientSecret",
+			"okta.oauth2.client-secret", "Auth0:ClientSecret", "auth0:ClientSecret",
+			"auth0_client_secret":
+			updatedEnvValues[key] = client.GetClientSecret()
+
+			// ==========================================.
+		case "AUTH0_SECRET", "NUXT_AUTH0_SESSION_SECRET", "SESSION_SECRET",
+			"SECRET", "AUTH0_SESSION_ENCRYPTION_KEY", "AUTH0_COOKIE_SECRET":
+			// Inject a dummy secret placeholder for the user to replace,
+			// or replace this string with a crypto/rand generator if preferred.
+			updatedEnvValues[key] = "a_long_random_secret_string_replace_me"
+
+			// ==========================================.
+		case "APP_BASE_URL", "NUXT_AUTH0_APP_BASE_URL", "BASE_URL":
+			updatedEnvValues[key] = "http://localhost:3000"
+
+		case "AUTH0_REDIRECT_URI", "AUTH0_CALLBACK_URL":
+			updatedEnvValues[key] = "http://localhost:3000/callback"
+
+			// ==========================================.
+		default:
+			updatedEnvValues[key] = value
+		}
+	}
+
+	return updatedEnvValues
+}
+
+// Map the config keys to their required file output definitions based on the matrix.
+
+// GenerateAndWriteQuickstartConfig takes the selected stack, resolves the dynamic values,
+// and writes them to the appropriate file in the Current Working Directory (CWD).
+// GenerateAndWriteQuickstartConfig takes the selected stack, resolves the dynamic values,
+// and writes them to the appropriate file in the Current Working Directory (CWD).
+// It returns the generated file name, the file path, and an error (if any).
+func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envValues map[string]string, tenantDomain string, client *management.Client) (string, string, error) {
+	// 1. Resolve the environment variables using the previously defined function.
+	resolvedEnv := replaceDetectionSub(envValues, tenantDomain, client)
+
+	// 2. Determine output file path and format.
+	if strategy == nil {
+		// Fallback to a standard .env in the project root if for some reason it's missing.
+		strategy = &auth0.FileOutputStrategy{Path: ".env", Format: "dotenv"}
+	}
+
+	// 3. Ensure the directory path exists (e.g., creating src/environments/ if it doesn't exist).
+	dir := filepath.Dir(strategy.Path)
+	if dir != "." {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return "", "", fmt.Errorf("failed to create directory structure %s: %w", dir, err)
+		}
+	}
+
+	// 4. Format the file content based on the target framework's requirement.
+	var contentBuilder strings.Builder
+
+	switch strategy.Format {
+	case "dotenv", "properties":
+		for key, val := range resolvedEnv {
+			contentBuilder.WriteString(fmt.Sprintf("%s=%s\n", key, val))
+		}
+
+	case "yaml":
+		for key, val := range resolvedEnv {
+			contentBuilder.WriteString(fmt.Sprintf("%s: %s\n", key, val))
+		}
+
+	case "ts":
+		contentBuilder.WriteString("export const environment = {\n")
+		for key, val := range resolvedEnv {
+			contentBuilder.WriteString(fmt.Sprintf("  %s: '%s',\n", key, val))
+		}
+		contentBuilder.WriteString("};\n")
+
+	case "dart":
+		contentBuilder.WriteString("const Map<String, String> authConfig = {\n")
+		for key, val := range resolvedEnv {
+			contentBuilder.WriteString(fmt.Sprintf("  '%s': '%s',\n", key, val))
+		}
+		contentBuilder.WriteString("};\n")
+
+	case "json":
+		// C# appsettings.json expects nested JSON: {"Auth0": {"Domain": "...", "ClientId": "..."}}.
+		auth0Section := make(map[string]string)
+		for key, val := range resolvedEnv {
+			// Strip the "Auth0:" prefix used in the map to create clean JSON keys.
+			cleanKey := strings.TrimPrefix(key, "Auth0:")
+			auth0Section[cleanKey] = val
+		}
+
+		jsonBody := map[string]interface{}{
+			"Auth0": auth0Section,
+		}
+
+		bytes, err := json.MarshalIndent(jsonBody, "", "  ")
+		if err != nil {
+			return "", "", fmt.Errorf("failed to marshal JSON for %s: %w", strategy.Path, err)
+		}
+		contentBuilder.Write(bytes)
+
+	case "xml":
+		// ASP.NET OWIN Web.config.
+		contentBuilder.WriteString("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
+		contentBuilder.WriteString("<configuration>\n")
+		contentBuilder.WriteString("  <appSettings>\n")
+		for key, val := range resolvedEnv {
+			contentBuilder.WriteString(fmt.Sprintf("    <add key=\"%s\" value=\"%s\" />\n", key, val))
+		}
+		contentBuilder.WriteString("  </appSettings>\n")
+		contentBuilder.WriteString("</configuration>\n")
+	}
+
+	// 5. Write the generated content to disk.
+	if err := os.WriteFile(strategy.Path, []byte(contentBuilder.String()), 0600); err != nil {
+		return "", "", fmt.Errorf("failed to write config file %s: %w", strategy.Path, err)
+	}
+
+	// 6. Extract the base file name from the path and return both.
+	fileName := filepath.Base(strategy.Path)
+
+	return fileName, strategy.Path, nil
 }
