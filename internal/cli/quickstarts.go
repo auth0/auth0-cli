@@ -689,15 +689,17 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 		Use:   "setup-experimental",
 		Args:  cobra.NoArgs,
 		Short: "Set up Auth0 for your quickstart application",
-		Long: "Creates an Auth0 application and generates a .env file with the necessary configuration.\n\n" +
+		Long: "Creates an Auth0 application and/or API and generates a config file with the necessary Auth0 settings.\n\n" +
 			"The command will:\n" +
 			"  1. Check if you are authenticated (and prompt for login if needed)\n" +
-			"  2. Create an Auth0 application based on the specified type\n" +
-			"  3. Generate a .env file with the appropriate environment variables\n\n" +
-			"Supported types are dynamically loaded from the `QuickstartConfigs` map in the codebase.",
-		Example: `  auth0 quickstarts setup-experimental --type spa:react:vite
-  auth0 quickstarts setup-experimental --type regular:nextjs:none
-  auth0 quickstarts setup-experimental --type native:react-native:none`,
+			"  2. Auto-detect your project framework from the current directory\n" +
+			"  3. Create an Auth0 application and/or API resource server\n" +
+			"  4. Generate a config file with the appropriate environment variables\n\n" +
+			"Supported frameworks are dynamically loaded from the QuickstartConfigs map.",
+		Example: `  auth0 quickstarts setup-experimental
+  auth0 quickstarts setup-experimental --app --framework react --type spa
+  auth0 quickstarts setup-experimental --api --identifier https://my-api
+  auth0 quickstarts setup-experimental --app --api --name "My App"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
@@ -705,15 +707,88 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				return fmt.Errorf("authentication required: %w", err)
 			}
 
+			// ── Step 1: Decide what to create (App / API / both) ─────────────
+			if !inputs.App && !inputs.API {
+				var selections []string
+				if err := prompt.AskMultiSelect(
+					"What do you want to set up? (select whatever applies)",
+					&selections,
+					"App", "API",
+				); err != nil {
+					return fmt.Errorf("failed to select target resource(s): %v", err)
+				}
+				for _, s := range selections {
+					switch strings.ToLower(s) {
+					case "app":
+						inputs.App = true
+					case "api":
+						inputs.API = true
+					}
+				}
+				if !inputs.App && !inputs.API {
+					return fmt.Errorf("please select at least one option: App and/or API")
+				}
+			}
+
+			// ── Step 2: Auto-detect project framework ─────────────────────────
+			if inputs.App {
+				cwd, err := os.Getwd()
+				if err != nil {
+					return fmt.Errorf("failed to get working directory: %w", err)
+				}
+				detection := DetectProject(cwd)
+
+				if detection.Detected {
+					if len(detection.AmbiguousCandidates) > 1 {
+						// Multiple package.json deps matched — ask user to disambiguate.
+						cli.renderer.Infof("Multiple frameworks detected in package.json: %s", strings.Join(detection.AmbiguousCandidates, ", "))
+						if inputs.Framework == "" {
+							q := prompt.SelectInput("framework", "Select the framework", "",
+								detection.AmbiguousCandidates, detection.AmbiguousCandidates[0], true)
+							if err := prompt.AskOne(q, &inputs.Framework); err != nil {
+								return fmt.Errorf("failed to select framework: %v", err)
+							}
+						}
+					} else if detection.Framework != "" {
+						// Single clear detection — show summary and confirm.
+						cli.renderer.Infof("Detected project: %s (%s)", detection.Framework, friendlyAppType(detection.Type))
+						if detection.BuildTool != "" {
+							cli.renderer.Infof("  Build tool : %s", detection.BuildTool)
+						}
+						if detection.Port > 0 {
+							cli.renderer.Infof("  Port       : %d", detection.Port)
+						}
+
+						if prompt.Confirm("Use these detected settings?") {
+							if inputs.Type == "" {
+								inputs.Type = detection.Type
+							}
+							if inputs.Framework == "" {
+								inputs.Framework = detection.Framework
+							}
+							if inputs.BuildTool == "" {
+								inputs.BuildTool = detection.BuildTool
+							}
+							if inputs.Port == 0 {
+								inputs.Port = detection.Port
+							}
+							if inputs.Name == "" {
+								inputs.Name = detection.AppName
+							}
+						}
+					}
+				}
+			}
+
+			// ── Step 3: Resolve remaining prompts for App / API ───────────────
 			qsConfigKey, updatedInputs, err := getQuickstartConfigKey(inputs)
 			if err != nil {
 				return fmt.Errorf("failed to get quickstart configuration: %w", err)
 			}
 			inputs = updatedInputs
 
-			// Create the Auth0 application client if requested.
+			// ── Step 4: Create the Auth0 application client ───────────────────
 			if inputs.App {
-				// Validate the config key only when an app is being created.
 				config, exists := auth0.QuickstartConfigs[qsConfigKey]
 				if !exists {
 					return fmt.Errorf("unsupported quickstart arguments: %s. Supported types: %v", qsConfigKey, getSupportedQuickstartTypes())
@@ -740,10 +815,80 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					return fmt.Errorf("failed to generate config file: %w", err)
 				}
 				printClientDetails(cli, client, inputs.Port, envFileName)
+
+				// Derive API name / identifier from the newly created app.
+				if inputs.API {
+					if inputs.Name == "" {
+						inputs.Name = client.GetName()
+					}
+					if inputs.Identifier == "" && inputs.Audience == "" {
+						slug := strings.ToLower(strings.ReplaceAll(inputs.Name, " ", "-"))
+						inputs.Identifier = "https://" + slug
+					}
+				}
 			}
 
-			// Create the Auth0 API resource server if requested.
+			// ── Step 5: For API-only flows — let user pick an existing app ────
+			if inputs.API && !inputs.App {
+				var appID string
+				if err := qsClientID.Pick(
+					cmd,
+					&appID,
+					cli.appPickerOptions(management.Parameter("app_type", "native,spa,regular_web")),
+				); err == nil && appID != "" {
+					// Fetch the selected app to get its name.
+					var selectedApp *management.Client
+					if fetchErr := ansi.Waiting(func() error {
+						var e error
+						selectedApp, e = cli.api.Client.Read(ctx, appID)
+						return e
+					}); fetchErr == nil && selectedApp != nil {
+						appName := selectedApp.GetName()
+						if inputs.Name == "" {
+							inputs.Name = appName
+						}
+						if inputs.Identifier == "" && inputs.Audience == "" {
+							slug := strings.ToLower(strings.ReplaceAll(appName, " ", "-"))
+							inputs.Identifier = "https://" + slug
+						}
+					}
+				}
+			}
+
+			// ── Step 6: Create the Auth0 API resource server ──────────────────
 			if inputs.API {
+				// Prompt for identifier if still unset.
+				if inputs.Identifier == "" && inputs.Audience == "" {
+					defaultID := ""
+					if inputs.Name != "" {
+						slug := strings.ToLower(strings.ReplaceAll(inputs.Name, " ", "-"))
+						defaultID = "https://" + slug
+					}
+					q := prompt.TextInput("identifier", "Enter the API identifier (audience URL)", "", defaultID, true)
+					if err := prompt.AskOne(q, &inputs.Identifier); err != nil {
+						return fmt.Errorf("failed to enter API identifier: %v", err)
+					}
+				}
+				if inputs.Identifier == "" {
+					inputs.Identifier = inputs.Audience
+				}
+
+				// API name = "<app-name>-API", fallback to identifier.
+				apiName := inputs.Identifier
+				if inputs.Name != "" {
+					apiName = inputs.Name + "-API"
+				}
+
+				fmt.Printf(apiName)
+
+				if inputs.SigningAlg == "" {
+					signingAlgs := []string{"RS256", "PS256", "HS256"}
+					q := prompt.SelectInput("signing-alg", "Select the signing algorithm", "", signingAlgs, "RS256", true)
+					if err := prompt.AskOne(q, &inputs.SigningAlg); err != nil {
+						return fmt.Errorf("failed to select signing algorithm: %v", err)
+					}
+				}
+
 				tokenLifetime, _ := strconv.Atoi(inputs.TokenLifetime)
 				if tokenLifetime <= 0 {
 					tokenLifetime = 86400
@@ -772,9 +917,25 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&inputs.Type, "type", "", "Type of the quickstart application (e.g., spa:react:vite, regular:nextjs:none)")
+	// App flags.
+	cmd.Flags().BoolVar(&inputs.App, "app", false, "Create an Auth0 application")
 	cmd.Flags().StringVar(&inputs.Name, "name", "", "Name of the Auth0 application")
-	cmd.Flags().IntVar(&inputs.Port, "port", 0, "Port number for the application")
+	cmd.Flags().StringVar(&inputs.Type, "type", "", "Application type (spa, regular, native)")
+	cmd.Flags().StringVar(&inputs.Framework, "framework", "", "Framework (e.g., react, nextjs, vue)")
+	cmd.Flags().StringVar(&inputs.BuildTool, "build-tool", "", "Build tool (e.g., vite, webpack, none)")
+	cmd.Flags().IntVar(&inputs.Port, "port", 0, "Local port the app runs on")
+	cmd.Flags().StringVar(&inputs.CallbackURL, "callback-url", "", "Allowed callback URL")
+	cmd.Flags().StringVar(&inputs.LogoutURL, "logout-url", "", "Allowed logout URL")
+	cmd.Flags().StringVar(&inputs.WebOriginURL, "web-origin-url", "", "Allowed web origin URL")
+
+	// API flags.
+	cmd.Flags().BoolVar(&inputs.API, "api", false, "Create an Auth0 API resource server")
+	cmd.Flags().StringVar(&inputs.Identifier, "identifier", "", "API identifier (audience URL)")
+	cmd.Flags().StringVar(&inputs.Audience, "audience", "", "Alias for --identifier")
+	cmd.Flags().StringVar(&inputs.SigningAlg, "signing-alg", "", "Signing algorithm (RS256, PS256, HS256)")
+	cmd.Flags().StringVar(&inputs.Scopes, "scopes", "", "Comma-separated list of API scopes")
+	cmd.Flags().StringVar(&inputs.TokenLifetime, "token-lifetime", "", "Token lifetime in seconds (default 86400)")
+	cmd.Flags().BoolVar(&inputs.OfflineAccess, "offline-access", false, "Allow offline access (refresh tokens)")
 
 	return cmd
 }
@@ -825,35 +986,10 @@ func frameworksForType(qsType string) []string {
 	return frameworks
 }
 
+// getQuickstartConfigKey resolves remaining missing prompts for App and API creation
+// and returns the config map key for the selected framework.
+// App/API selection and project detection are handled by the caller before this is invoked.
 func getQuickstartConfigKey(inputs SetupInputs) (string, SetupInputs, error) {
-	// Prompt for target resource(s) when neither flag is provided.
-	if !inputs.App && !inputs.API {
-		var selections []string
-
-		err := prompt.AskMultiSelect(
-			"What do you want to create? (select whatever applies)",
-			&selections,
-			"App",
-			"API",
-		)
-		if err != nil {
-			return "", inputs, fmt.Errorf("failed to select target resource(s): %v", err)
-		}
-
-		for _, selection := range selections {
-			switch strings.ToLower(selection) {
-			case "app":
-				inputs.App = true
-			case "api":
-				inputs.API = true
-			}
-		}
-
-		if !inputs.App && !inputs.API {
-			return "", inputs, fmt.Errorf("please select at least one option: App and/or API")
-		}
-	}
-
 	// Handle application creation inputs.
 	if inputs.App {
 		// Prompt for --type if not provided.
@@ -877,7 +1013,7 @@ func getQuickstartConfigKey(inputs SetupInputs) (string, SetupInputs, error) {
 			}
 		}
 
-		// Prompt for --build-tool if not provided (optional).
+		// Prompt for --build-tool if not provided.
 		if inputs.BuildTool == "" {
 			buildTools := []string{"vite", "webpack", "cra", "none"}
 			q := prompt.SelectInput("build-tool", "Select the build tool (optional)", "", buildTools, "none", false)
@@ -885,46 +1021,21 @@ func getQuickstartConfigKey(inputs SetupInputs) (string, SetupInputs, error) {
 				return "", inputs, fmt.Errorf("failed to select build tool: %v", err)
 			}
 		}
-	}
 
-	// Handle API creation inputs.
-	if inputs.API {
-		// Prompt for --identifier or --audience if not provided.
-		if inputs.Identifier == "" && inputs.Audience == "" {
-			q := prompt.TextInput("identifier", "Enter the API identifier (or audience)", "", "", true)
-			if err := prompt.AskOne(q, &inputs.Identifier); err != nil {
-				return "", inputs, fmt.Errorf("failed to enter API identifier: %v", err)
+		// Prompt for --port if not set (needed to generate correct callback/logout URLs).
+		if inputs.Port == 0 {
+			defaultPort := defaultPortForFramework(inputs.Framework)
+			defaultPortStr := strconv.Itoa(defaultPort)
+			q := prompt.TextInput("port", "Enter the local port your app runs on", "", defaultPortStr, true)
+			var portStr string
+			if err := prompt.AskOne(q, &portStr); err != nil {
+				return "", inputs, fmt.Errorf("failed to enter port: %v", err)
 			}
-		}
-
-		// Use --audience as an alias for --identifier if provided.
-		if inputs.Identifier == "" {
-			inputs.Identifier = inputs.Audience
-		}
-
-		// Prompt for --signing-alg if not provided.
-		if inputs.SigningAlg == "" {
-			signingAlgs := []string{"RS256", "PS256", "HS256"}
-			q := prompt.SelectInput("signing-alg", "Select the signing algorithm", "", signingAlgs, "RS256", true)
-			if err := prompt.AskOne(q, &inputs.SigningAlg); err != nil {
-				return "", inputs, fmt.Errorf("failed to select signing algorithm: %v", err)
+			p, err := strconv.Atoi(portStr)
+			if err != nil || p <= 0 {
+				return "", inputs, fmt.Errorf("invalid port: %s", portStr)
 			}
-		}
-
-		// Prompt for --scopes if not provided.
-		if inputs.Scopes == "" {
-			q := prompt.TextInput("scopes", "Enter the scopes (comma-separated)", "", "", false)
-			if err := prompt.AskOne(q, &inputs.Scopes); err != nil {
-				return "", inputs, fmt.Errorf("failed to enter scopes: %v", err)
-			}
-		}
-
-		// Prompt for --token-lifetime if not provided.
-		if inputs.TokenLifetime == "" {
-			q := prompt.TextInput("token-lifetime", "Enter the token lifetime (in seconds)", "", "86400", true)
-			if err := prompt.AskOne(q, &inputs.TokenLifetime); err != nil {
-				return "", inputs, fmt.Errorf("failed to enter token lifetime: %v", err)
-			}
+			inputs.Port = p
 		}
 	}
 
@@ -941,6 +1052,24 @@ func getQuickstartConfigKey(inputs SetupInputs) (string, SetupInputs, error) {
 
 	configKey := fmt.Sprintf("%s:%s:%s", inputs.Type, inputs.Framework, buildToolKey)
 	return configKey, inputs, nil
+}
+
+// defaultPortForFramework returns the conventional port for a given framework name.
+func defaultPortForFramework(framework string) int {
+	switch framework {
+	case "react", "vue", "svelte", "vanilla-javascript":
+		return 5173 // Vite default
+	case "angular":
+		return 4200
+	case "flask", "vanilla-python":
+		return 5000
+	case "laravel":
+		return 8000
+	case "spring-boot", "java-ee", "vanilla-java":
+		return 8080
+	default:
+		return 3000
+	}
 }
 
 func generateClient(input SetupInputs, reqParams auth0.RequestParams) (*management.Client, error) {
