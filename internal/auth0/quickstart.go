@@ -199,7 +199,7 @@ var QuickstartConfigs = map[string]AppConfig{
 
 	// ==========================================
 	// Single Page Applications (SPA)
-	// ==========================================.
+	// ==========================================
 	"spa:react:vite": {
 		EnvValues: map[string]string{
 			"VITE_AUTH0_DOMAIN":    DetectionSub,
@@ -287,7 +287,7 @@ var QuickstartConfigs = map[string]AppConfig{
 
 	// ==========================================
 	// Regular Web Applications
-	// ==========================================.
+	// ==========================================
 	"regular:nextjs:none": {
 		EnvValues: map[string]string{
 			"AUTH0_DOMAIN":        DetectionSub,
@@ -553,9 +553,9 @@ var QuickstartConfigs = map[string]AppConfig{
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 
-	// ==========================================.
+	// ==========================================
 	// Native / Mobile Applications
-	// ==========================================.
+	// ==========================================
 	"native:flutter:none": {
 		EnvValues: map[string]string{
 			"domain":   DetectionSub,
