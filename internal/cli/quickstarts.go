@@ -456,7 +456,7 @@ type SetupInputs struct {
 	API           bool
 	Identifier    string
 	Audience      string
-	SigningAlg     string
+	SigningAlg    string
 	Scopes        string
 	TokenLifetime string
 	OfflineAccess bool
@@ -750,10 +750,10 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 
 				rs := &management.ResourceServer{
-					Name:            &inputs.Identifier,
-					Identifier:      &inputs.Identifier,
+					Name:             &inputs.Identifier,
+					Identifier:       &inputs.Identifier,
 					SigningAlgorithm: &inputs.SigningAlg,
-					TokenLifetime:   &tokenLifetime,
+					TokenLifetime:    &tokenLifetime,
 				}
 				if inputs.OfflineAccess {
 					allow := true
@@ -796,6 +796,7 @@ func printAPIDetails(cli *cli, rs *management.ResourceServer) {
 	cli.renderer.Infof("API %q registered (Identifier: %s)", rs.GetName(), rs.GetIdentifier())
 	cli.renderer.Infof("Manage: https://manage.auth0.com/dashboard/#/apis/%s/settings", rs.GetID())
 }
+
 // Helper function to get supported quickstart types.
 func getSupportedQuickstartTypes() []string {
 	var types []string
