@@ -34,6 +34,9 @@ func DetectProject(dir string) DetectionResult {
 	result := DetectionResult{
 		AppName: filepath.Base(dir),
 	}
+	if name := readProjectName(dir); name != "" {
+		result.AppName = name
+	}
 
 	// ── 1. angular.json ─────────────────────────────────────────────────────
 	if fileExists(dir, "angular.json") {
@@ -325,6 +328,143 @@ func readPackageJSONDeps(dir string) map[string]bool {
 	return deps
 }
 
+// readPackageJSONName reads the "name" field from package.json in dir.
+// Returns empty string if not found or on any error.
+func readPackageJSONName(dir string) string {
+	data, err := os.ReadFile(filepath.Join(dir, "package.json"))
+	if err != nil {
+		return ""
+	}
+	var pkg struct {
+		Name string `json:"name"`
+	}
+	if err := json.Unmarshal(data, &pkg); err != nil {
+		return ""
+	}
+	return pkg.Name
+}
+
+// readProjectName tries to extract a meaningful project name from language-specific
+// manifest files. It falls back to empty string if none are found; the caller then
+// uses filepath.Base(dir).
+func readProjectName(dir string) string {
+	if name := readPackageJSONName(dir); name != "" {
+		return name
+	}
+	if name := readGoModuleName(dir); name != "" {
+		return name
+	}
+	if name := readPyprojectName(dir); name != "" {
+		return name
+	}
+	if name := readPubspecName(dir); name != "" {
+		return name
+	}
+	if name := readComposerName(dir); name != "" {
+		return name
+	}
+	if name := readPomArtifactID(dir); name != "" {
+		return name
+	}
+	return ""
+}
+
+// readGoModuleName reads the module path from go.mod and returns its last path segment.
+func readGoModuleName(dir string) string {
+	data, ok := readFileContent(dir, "go.mod")
+	if !ok {
+		return ""
+	}
+	for _, line := range strings.SplitN(data, "\n", 20) {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "module ") {
+			modulePath := strings.TrimSpace(strings.TrimPrefix(line, "module "))
+			return filepath.Base(modulePath)
+		}
+	}
+	return ""
+}
+
+// readPyprojectName reads the project name from pyproject.toml ([project] or [tool.poetry] section).
+func readPyprojectName(dir string) string {
+	data, ok := readFileContent(dir, "pyproject.toml")
+	if !ok {
+		return ""
+	}
+	for _, line := range strings.Split(data, "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "name ") && !strings.HasPrefix(line, "name=") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		val := strings.TrimSpace(parts[1])
+		val = strings.Trim(val, `"'`)
+		if val != "" {
+			return val
+		}
+	}
+	return ""
+}
+
+// readPubspecName reads the name field from pubspec.yaml.
+func readPubspecName(dir string) string {
+	data, ok := readFileContent(dir, "pubspec.yaml")
+	if !ok {
+		return ""
+	}
+	for _, line := range strings.Split(data, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "name:") {
+			val := strings.TrimSpace(strings.TrimPrefix(trimmed, "name:"))
+			if val != "" {
+				return val
+			}
+		}
+	}
+	return ""
+}
+
+// readComposerName reads the package name from composer.json and returns the part after "/".
+func readComposerName(dir string) string {
+	data, err := os.ReadFile(filepath.Join(dir, "composer.json"))
+	if err != nil {
+		return ""
+	}
+	var pkg struct {
+		Name string `json:"name"`
+	}
+	if err := json.Unmarshal(data, &pkg); err != nil || pkg.Name == "" {
+		return ""
+	}
+	if idx := strings.LastIndex(pkg.Name, "/"); idx >= 0 {
+		return pkg.Name[idx+1:]
+	}
+	return pkg.Name
+}
+
+// readPomArtifactID reads the first <artifactId> value from pom.xml.
+func readPomArtifactID(dir string) string {
+	data, ok := readFileContent(dir, "pom.xml")
+	if !ok {
+		return ""
+	}
+	const open = "<artifactId>"
+	const close = "</artifactId>"
+	start := strings.Index(data, open)
+	if start == -1 {
+		return ""
+	}
+	start += len(open)
+	end := strings.Index(data[start:], close)
+	if end == -1 {
+		return ""
+	}
+	return strings.TrimSpace(data[start : start+end])
+}
+
 // hasDep returns true if the named dependency is in the deps set.
 func hasDep(deps map[string]bool, name string) bool {
 	return deps[name]
@@ -360,13 +500,13 @@ func findJavaBuildContent(dir string) (content, buildTool string, ok bool) {
 	return "", "", false
 }
 
-// friendlyAppType returns the human-readable label for an app type key.
-func friendlyAppType(qsType string) string {
+// detectionFriendlyAppType returns a concise label for the detection summary display.
+func detectionFriendlyAppType(qsType string) string {
 	switch qsType {
 	case "spa":
-		return "Single Page App (SPA)"
+		return "Single Page App"
 	case "regular":
-		return "Regular Web App / API / Backend"
+		return "Regular Web App"
 	case "native":
 		return "Native / Mobile"
 	case "m2m":
