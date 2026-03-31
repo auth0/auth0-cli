@@ -251,8 +251,6 @@ func testTokenCmd(cli *cli) *cobra.Command {
 				}
 			}()
 
-			var managementAPI = "https://" + cli.tenant + "/api/v2/"
-
 			if client.GetAppType() == appTypeNonInteractive {
 				if len(inputs.Scopes) != 0 {
 					cli.renderer.Warnf("Passed in scopes do not apply to Machine to Machine applications.\n")
@@ -269,6 +267,8 @@ func testTokenCmd(cli *cli) *cobra.Command {
 
 				return nil
 			}
+
+			var managementAPI = "https://" + cli.tenant + "/api/v2/"
 
 			if len(inputs.Scopes) == 0 && inputs.Audience != managementAPI {
 				if err := cli.pickTokenScopes(cmd.Context(), &inputs); err != nil {
