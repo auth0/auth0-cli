@@ -452,13 +452,13 @@ func readPomArtifactID(dir string) string {
 		return ""
 	}
 	const open = "<artifactId>"
-	const close = "</artifactId>"
+	const closeTag = "</artifactId>"
 	start := strings.Index(data, open)
 	if start == -1 {
 		return ""
 	}
 	start += len(open)
-	end := strings.Index(data[start:], close)
+	end := strings.Index(data[start:], closeTag)
 	if end == -1 {
 		return ""
 	}
