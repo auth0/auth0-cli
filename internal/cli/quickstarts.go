@@ -709,7 +709,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				return fmt.Errorf("authentication required: %w", err)
 			}
 
-			// ── Step 1: Decide what to create (App / API / both) ─────────────
+			// ── Step 1: Decide what to create (App / API / both) ─────────────.
 			if !inputs.App && !inputs.API {
 				var selections []string
 				if err := prompt.AskMultiSelect(
@@ -732,7 +732,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 			}
 
-			// ── Step 2: Auto-detect project framework ─────────────────────────
+			// ── Step 2: Auto-detect project framework ─────────────────────────.
 			if inputs.App {
 				cwd, err := os.Getwd()
 				if err != nil {
@@ -790,7 +790,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 			}
 
-			// ── Step 3: Resolve remaining prompts for App / API ───────────────
+			// ── Step 3: Resolve remaining prompts for App / API ───────────────.
 			qsConfigKey, updatedInputs, wasAutoSelected, err := getQuickstartConfigKey(inputs)
 			if err != nil {
 				return fmt.Errorf("failed to get quickstart configuration: %w", err)
@@ -800,7 +800,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				cli.renderer.Infof("Auto-selected build tool %q for %s/%s (no exact match for 'none')", inputs.BuildTool, inputs.Type, inputs.Framework)
 			}
 
-			// ── Step 3b: Collect application name ────────────────────────────
+			// ── Step 3b: Collect application name ────────────────────────────.
 			if inputs.App {
 				if !cmd.Flags().Changed("name") {
 					defaultName := inputs.Name
@@ -820,7 +820,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 			}
 
-			// ── Step 3c: Collect API data ─────────────────────────────────────
+			// ── Step 3c: Collect API data ─────────────────────────────────────.
 			if inputs.API && !inputs.App {
 				// For API-only: let user pick an existing application.
 				var appID string
@@ -903,7 +903,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 			}
 
-			// ── Step 4: Create the Auth0 application client ───────────────────
+			// ── Step 4: Create the Auth0 application client ───────────────────.
 			if inputs.App {
 				config, exists := auth0.QuickstartConfigs[qsConfigKey]
 				if !exists {
@@ -933,7 +933,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				printClientDetails(cli, client, inputs.Port, envFileName)
 			}
 
-			// ── Step 5: Create the Auth0 API resource server ──────────────────
+			// ── Step 5: Create the Auth0 API resource server ──────────────────.
 			if inputs.API {
 				// API name = "<app-name>-API", fallback to identifier.
 				apiName := inputs.Identifier
@@ -1148,7 +1148,7 @@ func getQuickstartConfigKey(inputs SetupInputs) (string, SetupInputs, bool, erro
 func defaultPortForFramework(framework string) int {
 	switch framework {
 	case "react", "vue", "svelte", "vanilla-javascript":
-		return 5173 // Vite default
+		return 5173 // Vite default.
 	case "angular":
 		return 4200
 	case "flask", "vanilla-python":
@@ -1301,7 +1301,7 @@ func replaceDetectionSub(envValues map[string]string, tenantDomain string, clien
 }
 
 // buildNestedMap converts a flat map with dot-delimited keys into a nested map.
-// e.g. {"okta.oauth2.issuer": "x"} -> {"okta": {"oauth2": {"issuer": "x"}}}
+// E.g. {"okta.oauth2.issuer": "x"} -> {"okta": {"oauth2": {"issuer": "x"}}}.
 func buildNestedMap(flat map[string]string) map[string]interface{} {
 	result := make(map[string]interface{})
 	for key, value := range flat {

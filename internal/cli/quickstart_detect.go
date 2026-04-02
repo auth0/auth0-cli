@@ -38,7 +38,7 @@ func DetectProject(dir string) DetectionResult {
 		result.AppName = name
 	}
 
-	// ── 1. angular.json ─────────────────────────────────────────────────────
+	// ── 1. Angular.json ────────────────────────────────────────────────────.
 	if fileExists(dir, "angular.json") {
 		result.Framework = "angular"
 		result.Type = "spa"
@@ -47,7 +47,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 2. pubspec.yaml (Flutter) ────────────────────────────────────────────
+	// ── 2. Pubspec.yaml (Flutter) ───────────────────────────────────────────.
 	if data, ok := readFileContent(dir, "pubspec.yaml"); ok {
 		if strings.Contains(data, "sdk: flutter") {
 			result.Detected = true
@@ -62,7 +62,7 @@ func DetectProject(dir string) DetectionResult {
 		}
 	}
 
-	// ── 3. vite.config.[ts|js] + package.json deps ───────────────────────────
+	// ── 3. Vite.config.[ts|js] + package.json deps ──────────────────────────.
 	if fileExistsAny(dir, "vite.config.ts", "vite.config.js") {
 		deps := readPackageJSONDeps(dir)
 		result.Type = "spa"
@@ -82,7 +82,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 4. next.config.[js|ts|mjs] ──────────────────────────────────────────
+	// ── 4. Next.config.[js|ts|mjs] ─────────────────────────────────────────.
 	if fileExistsAny(dir, "next.config.js", "next.config.ts", "next.config.mjs") {
 		result.Framework = "nextjs"
 		result.Type = "regular"
@@ -91,7 +91,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 5. nuxt.config.[ts|js] ───────────────────────────────────────────────
+	// ── 5. Nuxt.config.[ts|js] ──────────────────────────────────────────────.
 	if fileExistsAny(dir, "nuxt.config.ts", "nuxt.config.js") {
 		result.Framework = "nuxt"
 		result.Type = "regular"
@@ -100,7 +100,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 6. svelte.config.[js|ts] ─────────────────────────────────────────────
+	// ── 6. Svelte.config.[js|ts] ────────────────────────────────────────────.
 	if fileExistsAny(dir, "svelte.config.js", "svelte.config.ts") {
 		result.Framework = "sveltekit"
 		result.Type = "regular"
@@ -108,7 +108,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 7. expo.json ─────────────────────────────────────────────────────────
+	// ── 7. Expo.json ────────────────────────────────────────────────────────.
 	if fileExists(dir, "expo.json") {
 		result.Framework = "expo"
 		result.Type = "native"
@@ -116,7 +116,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 8. .csproj ───────────────────────────────────────────────────────────
+	// ── 8. .csproj ──────────────────────────────────────────────────────────.
 	if content, ok := findCsprojContent(dir); ok {
 		if fw, qsType, found := detectFromCsproj(content); found {
 			result.Framework = fw
@@ -126,7 +126,7 @@ func DetectProject(dir string) DetectionResult {
 		}
 	}
 
-	// ── 9. pom.xml / build.gradle (Java) ─────────────────────────────────────
+	// ── 9. Pom.xml / build.gradle (Java) ────────────────────────────────────.
 	if content, buildTool, ok := findJavaBuildContent(dir); ok {
 		fw, port := detectJavaFramework(content)
 		result.Framework = fw
@@ -137,7 +137,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 10. composer.json (PHP) ───────────────────────────────────────────────
+	// ── 10. Composer.json (PHP) ──────────────────────────────────────────────.
 	if data, ok := readFileContent(dir, "composer.json"); ok {
 		result.BuildTool = "composer"
 		result.Type = "regular"
@@ -151,7 +151,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 11. go.mod ───────────────────────────────────────────────────────────
+	// ── 11. Go.mod ──────────────────────────────────────────────────────────.
 	if fileExists(dir, "go.mod") {
 		result.Framework = "vanilla-go"
 		result.Type = "regular"
@@ -159,7 +159,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 12. Gemfile (Ruby on Rails) ──────────────────────────────────────────
+	// ── 12. Gemfile (Ruby on Rails) ─────────────────────────────────────────.
 	if data, ok := readFileContent(dir, "Gemfile"); ok {
 		if strings.Contains(data, "rails") {
 			result.Framework = "rails"
@@ -170,7 +170,7 @@ func DetectProject(dir string) DetectionResult {
 		}
 	}
 
-	// ── 13. requirements.txt / pyproject.toml (Python / Flask) ───────────────
+	// ── 13. Requirements.txt / pyproject.toml (Python / Flask) ──────────────.
 	for _, pyFile := range []string{"requirements.txt", "pyproject.toml"} {
 		if data, ok := readFileContent(dir, pyFile); ok {
 			if strings.Contains(strings.ToLower(data), "flask") {
@@ -183,7 +183,7 @@ func DetectProject(dir string) DetectionResult {
 		}
 	}
 
-	// ── 14. package.json dep scanning (lowest priority) ──────────────────────
+	// ── 14. Package.json dep scanning (lowest priority) ─────────────────────.
 	deps := readPackageJSONDeps(dir)
 	if len(deps) > 0 {
 		candidates := collectPackageJSONCandidates(deps)
@@ -197,7 +197,7 @@ func DetectProject(dir string) DetectionResult {
 			result.Detected = true
 		default:
 			if len(candidates) > 1 {
-				result.Type = "regular" // all package.json web deps are regular/native
+				result.Type = "regular" // All package.json web deps are regular/native.
 				result.Detected = true
 				for _, c := range candidates {
 					result.AmbiguousCandidates = append(result.AmbiguousCandidates, c.framework)
@@ -221,7 +221,7 @@ func collectPackageJSONCandidates(deps map[string]bool) []detectionCandidate {
 	if hasDep(deps, "@ionic/vue") {
 		candidates = append(candidates, detectionCandidate{framework: "ionic-vue", qsType: "native", buildTool: "vite"})
 	}
-	// react-native without expo (expo.json would have matched earlier)
+	// React-native without expo (expo.json would have matched earlier).
 	if hasDep(deps, "react-native") {
 		candidates = append(candidates, detectionCandidate{framework: "react-native", qsType: "native"})
 	}
