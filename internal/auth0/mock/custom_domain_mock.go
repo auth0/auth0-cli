@@ -171,3 +171,43 @@ func (mr *MockCustomDomainAPIMockRecorder) Verify(ctx, id interface{}, opts ...i
 	varargs := append([]interface{}{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verify", reflect.TypeOf((*MockCustomDomainAPI)(nil).Verify), varargs...)
 }
+
+// ReadDefault mocks base method.
+func (m *MockCustomDomainAPI) ReadDefault(ctx context.Context, opts ...management.RequestOption) (*management.CustomDomainDefault, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ReadDefault", varargs...)
+	ret0, _ := ret[0].(*management.CustomDomainDefault)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadDefault indicates an expected call of ReadDefault.
+func (mr *MockCustomDomainAPIMockRecorder) ReadDefault(ctx interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadDefault", reflect.TypeOf((*MockCustomDomainAPI)(nil).ReadDefault), varargs...)
+}
+
+// UpdateDefault mocks base method.
+func (m *MockCustomDomainAPI) UpdateDefault(ctx context.Context, c *management.CustomDomainDefault, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, c}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateDefault", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateDefault indicates an expected call of UpdateDefault.
+func (mr *MockCustomDomainAPIMockRecorder) UpdateDefault(ctx, c interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, c}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDefault", reflect.TypeOf((*MockCustomDomainAPI)(nil).UpdateDefault), varargs...)
+}
+
