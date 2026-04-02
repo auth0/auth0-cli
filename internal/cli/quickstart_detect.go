@@ -12,12 +12,12 @@ import (
 // multiple package.json deps match and the framework cannot be determined uniquely.
 type DetectionResult struct {
 	Framework           string
-	Type                string   // "spa" | "regular" | "native"
-	BuildTool           string   // "vite" | "maven" | "gradle" | "composer" | "" (NA)
-	Port                int      // 0 means no applicable default
-	AppName             string   // basename of the working directory
-	Detected            bool     // true if any signal file matched
-	AmbiguousCandidates []string // set when >1 package.json dep matched
+	Type                string   // "spa" | "regular" | "native".
+	BuildTool           string   // "vite" | "maven" | "gradle" | "composer" | "" (NA).
+	Port                int      // 0 means no applicable default.
+	AppName             string   // Basename of the working directory.
+	Detected            bool     // True if any signal file matched.
+	AmbiguousCandidates []string // Set when >1 package.json dep matched.
 }
 
 // detectionCandidate is used internally during package.json dep scanning.
