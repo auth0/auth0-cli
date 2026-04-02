@@ -6,10 +6,11 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/go-auth0/management"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
 // ── test helpers ──────────────────────────────────────────────────────────────
@@ -23,8 +24,6 @@ func mkTestDir(t *testing.T, dir, sub string) {
 	t.Helper()
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, sub), 0755))
 }
-
-func strPtr(s string) *string { return &s }
 
 // ── DetectProject – no signal ─────────────────────────────────────────────────
 
