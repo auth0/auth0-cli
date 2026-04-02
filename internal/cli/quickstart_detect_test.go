@@ -13,7 +13,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-// ── test helpers ──────────────────────────────────────────────────────────────
+// ── test helpers ─────────────────────────────────────────────────────────────.
 
 func writeTestFile(t *testing.T, dir, name, content string) {
 	t.Helper()
@@ -25,7 +25,7 @@ func mkTestDir(t *testing.T, dir, sub string) {
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, sub), 0755))
 }
 
-// ── DetectProject – no signal ─────────────────────────────────────────────────
+// ── DetectProject – no signal ────────────────────────────────────────────────.
 
 func TestDetectProject_NoDetection(t *testing.T) {
 	dir := t.TempDir()
@@ -35,9 +35,9 @@ func TestDetectProject_NoDetection(t *testing.T) {
 	assert.Empty(t, got.Type)
 }
 
-// ── DetectProject – SPA ───────────────────────────────────────────────────────
+// ── DetectProject – SPA ──────────────────────────────────────────────────────.
 
-// auth0 qs setup --app --type spa --framework react --build-tool vite
+// Auth0 qs setup --app --type spa --framework react --build-tool vite.
 func TestDetectProject_React(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "vite.config.ts", "")
@@ -52,7 +52,7 @@ func TestDetectProject_React(t *testing.T) {
 	assert.Equal(t, "my-react-app", got.AppName)
 }
 
-// auth0 qs setup --app --type spa --framework angular
+// Auth0 qs setup --app --type spa --framework angular.
 func TestDetectProject_Angular(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "angular.json", `{}`)
@@ -65,7 +65,7 @@ func TestDetectProject_Angular(t *testing.T) {
 	assert.Equal(t, 4200, got.Port)
 }
 
-// auth0 qs setup --app --type spa --framework vue --build-tool vite
+// Auth0 qs setup --app --type spa --framework vue --build-tool vite.
 func TestDetectProject_Vue(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "vite.config.js", "")
@@ -79,7 +79,7 @@ func TestDetectProject_Vue(t *testing.T) {
 	assert.Equal(t, 5173, got.Port)
 }
 
-// auth0 qs setup --app --type spa --framework svelte --build-tool vite
+// Auth0 qs setup --app --type spa --framework svelte --build-tool vite.
 func TestDetectProject_Svelte(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "vite.config.ts", "")
@@ -92,7 +92,7 @@ func TestDetectProject_Svelte(t *testing.T) {
 	assert.Equal(t, "vite", got.BuildTool)
 }
 
-// auth0 qs setup --app --type spa --framework vanilla-javascript --build-tool vite
+// Auth0 qs setup --app --type spa --framework vanilla-javascript --build-tool vite.
 func TestDetectProject_VanillaJavaScript(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "vite.config.ts", "")
@@ -108,7 +108,7 @@ func TestDetectProject_VanillaJavaScript(t *testing.T) {
 func TestDetectProject_VanillaJavaScript_NoPackageJSON(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "vite.config.js", "")
-	// no package.json -> deps are empty -> falls through to vanilla-javascript
+	// No package.json -> deps are empty -> falls through to vanilla-javascript.
 
 	got := DetectProject(dir)
 	assert.True(t, got.Detected)
@@ -116,7 +116,7 @@ func TestDetectProject_VanillaJavaScript_NoPackageJSON(t *testing.T) {
 	assert.Equal(t, "spa", got.Type)
 }
 
-// auth0 qs setup --app --type spa --framework flutter-web
+// Auth0 qs setup --app --type spa --framework flutter-web.
 func TestDetectProject_FlutterWeb(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "pubspec.yaml", "name: my_flutter_web\nflutter:\n  sdk: flutter\n")
@@ -129,11 +129,11 @@ func TestDetectProject_FlutterWeb(t *testing.T) {
 	assert.Equal(t, "spa", got.Type)
 }
 
-// pubspec.yaml without web/ dir -> native flutter
+// pubspec.yaml without web/ dir -> native flutter.
 func TestDetectProject_Flutter_WithoutWeb(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "pubspec.yaml", "name: my_flutter_app\nflutter:\n  sdk: flutter\n")
-	// no web/index.html
+	// No web/index.html.
 
 	got := DetectProject(dir)
 	assert.True(t, got.Detected)
@@ -141,7 +141,7 @@ func TestDetectProject_Flutter_WithoutWeb(t *testing.T) {
 	assert.Equal(t, "native", got.Type)
 }
 
-// pubspec.yaml without sdk: flutter is not detected
+// pubspec.yaml without sdk: flutter is not detected.
 func TestDetectProject_PubspecWithoutFlutter(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "pubspec.yaml", "name: dart_only\nversion: 1.0.0\n")
@@ -150,9 +150,9 @@ func TestDetectProject_PubspecWithoutFlutter(t *testing.T) {
 	assert.False(t, got.Detected)
 }
 
-// ── DetectProject – Regular Web Apps ─────────────────────────────────────────
+// ── DetectProject – Regular Web Apps ────────────────────────────────────────.
 
-// auth0 qs setup --app --type regular --framework nextjs
+// Auth0 qs setup --app --type regular --framework nextjs.
 func TestDetectProject_NextJS_ConfigJS(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "next.config.js", "")
@@ -181,7 +181,7 @@ func TestDetectProject_NextJS_ConfigMJS(t *testing.T) {
 	assert.Equal(t, "nextjs", got.Framework)
 }
 
-// auth0 qs setup --app --type regular --framework nuxt
+// Auth0 qs setup --app --type regular --framework nuxt.
 func TestDetectProject_Nuxt_ConfigTS(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "nuxt.config.ts", "")
@@ -201,7 +201,7 @@ func TestDetectProject_Nuxt_ConfigJS(t *testing.T) {
 	assert.Equal(t, "nuxt", got.Framework)
 }
 
-// auth0 qs setup --app --type regular --framework sveltekit
+// Auth0 qs setup --app --type regular --framework sveltekit.
 func TestDetectProject_SvelteKit_ConfigJS(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "svelte.config.js", "")
@@ -221,7 +221,7 @@ func TestDetectProject_SvelteKit_ConfigTS(t *testing.T) {
 	assert.Equal(t, "regular", got.Type)
 }
 
-// auth0 qs setup --app --type regular --framework fastify
+// Auth0 qs setup --app --type regular --framework fastify.
 func TestDetectProject_Fastify(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "package.json", `{"dependencies":{"fastify":"^4"}}`)
@@ -233,7 +233,7 @@ func TestDetectProject_Fastify(t *testing.T) {
 	assert.Equal(t, 3000, got.Port)
 }
 
-// auth0 qs setup --name express-app --api ... --app --type regular --framework express
+// Auth0 qs setup --name express-app --api ... --app --type regular --framework express.
 func TestDetectProject_Express(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "package.json", `{"dependencies":{"express":"^4"}}`)
@@ -245,7 +245,7 @@ func TestDetectProject_Express(t *testing.T) {
 	assert.Equal(t, 3000, got.Port)
 }
 
-// auth0 qs setup --app --type regular --framework hono
+// Auth0 qs setup --app --type regular --framework hono.
 func TestDetectProject_Hono(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "package.json", `{"dependencies":{"hono":"^3"}}`)
@@ -257,7 +257,7 @@ func TestDetectProject_Hono(t *testing.T) {
 	assert.Equal(t, 3000, got.Port)
 }
 
-// auth0 qs setup --app --type regular --framework vanilla-python
+// Auth0 qs setup --app --type regular --framework vanilla-python.
 func TestDetectProject_VanillaPython_RequirementsTxt(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "requirements.txt", "flask==2.0\nwerkzeug\n")
@@ -287,7 +287,7 @@ func TestDetectProject_VanillaPython_CaseInsensitive(t *testing.T) {
 	assert.Equal(t, "vanilla-python", got.Framework)
 }
 
-// auth0 qs setup --app --type regular --framework vanilla-go
+// Auth0 qs setup --app --type regular --framework vanilla-go.
 func TestDetectProject_VanillaGo(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "go.mod", "module github.com/my-org/my-service\n\ngo 1.21\n")
@@ -298,7 +298,7 @@ func TestDetectProject_VanillaGo(t *testing.T) {
 	assert.Equal(t, "regular", got.Type)
 }
 
-// auth0 qs setup --app --type regular --framework rails
+// Auth0 qs setup --app --type regular --framework rails.
 func TestDetectProject_Rails(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "Gemfile", "source 'https://rubygems.org'\ngem 'rails', '~> 7.0'\n")
@@ -318,7 +318,7 @@ func TestDetectProject_GemfileWithoutRails(t *testing.T) {
 	assert.False(t, got.Detected)
 }
 
-// auth0 qs setup --app --type regular --framework vanilla-java (pom.xml)
+// Auth0 qs setup --app --type regular --framework vanilla-java (pom.xml).
 func TestDetectProject_VanillaJava_Maven(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "pom.xml", `<project><artifactId>my-app</artifactId></project>`)
@@ -330,7 +330,7 @@ func TestDetectProject_VanillaJava_Maven(t *testing.T) {
 	assert.Equal(t, "maven", got.BuildTool)
 }
 
-// auth0 qs setup --app --type regular --framework java-ee
+// Auth0 qs setup --app --type regular --framework java-ee.
 func TestDetectProject_JavaEE_JaxServlet(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "pom.xml", `<project><dependency><groupId>javax.servlet</groupId></dependency></project>`)
@@ -366,7 +366,7 @@ func TestDetectProject_JavaEE_JaxEE(t *testing.T) {
 	assert.Equal(t, "java-ee", got.Framework)
 }
 
-// auth0 qs setup --app --type regular --framework spring-boot
+// Auth0 qs setup --app --type regular --framework spring-boot.
 func TestDetectProject_SpringBoot_Maven(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "pom.xml", `<project><parent><artifactId>spring-boot-starter-parent</artifactId></parent></project>`)
@@ -398,7 +398,7 @@ func TestDetectProject_VanillaJava_GradleKts(t *testing.T) {
 	assert.Equal(t, "gradle", got.BuildTool)
 }
 
-// auth0 qs setup --app --type regular --framework aspnet-mvc
+// Auth0 qs setup --app --type regular --framework aspnet-mvc.
 func TestDetectProject_AspnetMVC(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "MyApp.csproj",
@@ -410,7 +410,7 @@ func TestDetectProject_AspnetMVC(t *testing.T) {
 	assert.Equal(t, "regular", got.Type)
 }
 
-// auth0 qs setup --app --type regular --framework aspnet-blazor
+// Auth0 qs setup --app --type regular --framework aspnet-blazor.
 func TestDetectProject_AspnetBlazor(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "MyApp.csproj",
@@ -422,7 +422,7 @@ func TestDetectProject_AspnetBlazor(t *testing.T) {
 	assert.Equal(t, "regular", got.Type)
 }
 
-// auth0 qs setup --app --type regular --framework aspnet-owin
+// Auth0 qs setup --app --type regular --framework aspnet-owin.
 func TestDetectProject_AspnetOwin(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "MyApp.csproj",
@@ -434,7 +434,7 @@ func TestDetectProject_AspnetOwin(t *testing.T) {
 	assert.Equal(t, "regular", got.Type)
 }
 
-// auth0 qs setup --app --type regular --framework vanilla-php
+// Auth0 qs setup --app --type regular --framework vanilla-php.
 func TestDetectProject_VanillaPHP(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "composer.json", `{"name":"my/app","require":{"php":"^8.0"}}`)
@@ -446,7 +446,7 @@ func TestDetectProject_VanillaPHP(t *testing.T) {
 	assert.Equal(t, "composer", got.BuildTool)
 }
 
-// auth0 qs setup --app --type regular --framework laravel
+// Auth0 qs setup --app --type regular --framework laravel.
 func TestDetectProject_Laravel(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "composer.json", `{"name":"my/laravel-app","require":{"laravel/framework":"^10.0"}}`)
@@ -459,13 +459,13 @@ func TestDetectProject_Laravel(t *testing.T) {
 	assert.Equal(t, 8000, got.Port)
 }
 
-// ── DetectProject – Native / Mobile ──────────────────────────────────────────
+// ── DetectProject – Native / Mobile ─────────────────────────────────────────.
 
-// auth0 qs setup --app --type native --framework flutter
+// Auth0 qs setup --app --type native --framework flutter.
 func TestDetectProject_Flutter(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "pubspec.yaml", "name: my_flutter_app\nflutter:\n  sdk: flutter\n")
-	// no web/index.html -> native
+	// No web/index.html -> native.
 
 	got := DetectProject(dir)
 	assert.True(t, got.Detected)
@@ -473,7 +473,7 @@ func TestDetectProject_Flutter(t *testing.T) {
 	assert.Equal(t, "native", got.Type)
 }
 
-// auth0 qs setup --app --type native --framework react-native
+// Auth0 qs setup --app --type native --framework react-native.
 func TestDetectProject_ReactNative(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "package.json", `{"dependencies":{"react-native":"^0.72"}}`)
@@ -484,7 +484,7 @@ func TestDetectProject_ReactNative(t *testing.T) {
 	assert.Equal(t, "native", got.Type)
 }
 
-// auth0 qs setup --app --type native --framework expo
+// Auth0 qs setup --app --type native --framework expo.
 func TestDetectProject_Expo(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "expo.json", `{"expo":{"name":"my-expo-app"}}`)
@@ -495,7 +495,7 @@ func TestDetectProject_Expo(t *testing.T) {
 	assert.Equal(t, "native", got.Type)
 }
 
-// expo.json takes priority over react-native in package.json
+// expo.json takes priority over react-native in package.json.
 func TestDetectProject_ExpoBeatsReactNative(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "expo.json", `{"expo":{}}`)
@@ -505,7 +505,7 @@ func TestDetectProject_ExpoBeatsReactNative(t *testing.T) {
 	assert.Equal(t, "expo", got.Framework)
 }
 
-// auth0 qs setup --app --type native --framework ionic-angular
+// Auth0 qs setup --app --type native --framework ionic-angular.
 func TestDetectProject_IonicAngular(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "package.json", `{"dependencies":{"@ionic/angular":"^7"}}`)
@@ -517,7 +517,7 @@ func TestDetectProject_IonicAngular(t *testing.T) {
 	assert.Empty(t, got.BuildTool)
 }
 
-// auth0 qs setup --app --type native --framework ionic-react --build-tool vite
+// Auth0 qs setup --app --type native --framework ionic-react --build-tool vite.
 func TestDetectProject_IonicReact(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "package.json", `{"dependencies":{"@ionic/react":"^7"}}`)
@@ -529,7 +529,7 @@ func TestDetectProject_IonicReact(t *testing.T) {
 	assert.Equal(t, "vite", got.BuildTool)
 }
 
-// auth0 qs setup --app --type native --framework ionic-vue --build-tool vite
+// Auth0 qs setup --app --type native --framework ionic-vue --build-tool vite.
 func TestDetectProject_IonicVue(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "package.json", `{"dependencies":{"@ionic/vue":"^7"}}`)
@@ -541,7 +541,7 @@ func TestDetectProject_IonicVue(t *testing.T) {
 	assert.Equal(t, "vite", got.BuildTool)
 }
 
-// auth0 qs setup --app --type native --framework maui (.NET Android/iOS)
+// Auth0 qs setup --app --type native --framework maui (.NET Android/iOS).
 func TestDetectProject_MAUI_AndroidIOS(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "MyApp.csproj",
@@ -563,7 +563,7 @@ func TestDetectProject_MAUI_ExplicitSDK(t *testing.T) {
 	assert.Equal(t, "native", got.Type)
 }
 
-// auth0 qs setup --app --type native --framework wpf-winforms
+// Auth0 qs setup --app --type native --framework wpf-winforms.
 func TestDetectProject_WPFWinforms(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "MyApp.csproj",
@@ -575,9 +575,9 @@ func TestDetectProject_WPFWinforms(t *testing.T) {
 	assert.Equal(t, "native", got.Type)
 }
 
-// ── DetectProject – priority rules ───────────────────────────────────────────
+// ── DetectProject – priority rules ──────────────────────────────────────────.
 
-// angular.json beats package.json deps (checked first)
+// angular.json beats package.json deps (checked first).
 func TestDetectProject_AngularPriorityOverPackageJSON(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "angular.json", `{}`)
@@ -587,19 +587,19 @@ func TestDetectProject_AngularPriorityOverPackageJSON(t *testing.T) {
 	assert.Equal(t, "angular", got.Framework)
 }
 
-// vite config beats package.json dep-only scan (step 3 < step 14)
+// vite config beats package.json dep-only scan (step 3 < step 14).
 func TestDetectProject_ViteConfigBeatsPackageJSONScan(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "vite.config.ts", "")
 	writeTestFile(t, dir, "package.json", `{"dependencies":{"express":"^4","react":"^18"}}`)
 
-	// vite.config.ts found first; react dep wins over express
+	// Vite.config.ts found first; react dep wins over express.
 	got := DetectProject(dir)
 	assert.Equal(t, "react", got.Framework)
 	assert.Equal(t, "spa", got.Type)
 }
 
-// Ambiguous: multiple package.json web deps with no config file
+// Ambiguous: multiple package.json web deps with no config file.
 func TestDetectProject_AmbiguousPackageJSON(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "package.json", `{"dependencies":{"express":"^4","hono":"^3"}}`)
@@ -612,7 +612,7 @@ func TestDetectProject_AmbiguousPackageJSON(t *testing.T) {
 	assert.Contains(t, got.AmbiguousCandidates, "hono")
 }
 
-// ── DetectProject – app name detection ───────────────────────────────────────
+// ── DetectProject – app name detection ──────────────────────────────────────.
 
 func TestDetectProject_AppNameFromPackageJSON(t *testing.T) {
 	dir := t.TempDir()
@@ -655,7 +655,7 @@ func TestDetectProject_AppNameFromPomArtifactID(t *testing.T) {
 	assert.Equal(t, "my-java-app", got.AppName)
 }
 
-// ── detectFromCsproj ──────────────────────────────────────────────────────────
+// ── detectFromCsproj ─────────────────────────────────────────────────────────.
 
 func TestDetectFromCsproj(t *testing.T) {
 	tests := []struct {
@@ -740,7 +740,7 @@ func TestDetectFromCsproj(t *testing.T) {
 	}
 }
 
-// ── detectJavaFramework ───────────────────────────────────────────────────────
+// ── detectJavaFramework ──────────────────────────────────────────────────────.
 
 func TestDetectJavaFramework(t *testing.T) {
 	tests := []struct {
@@ -802,7 +802,7 @@ func TestDetectJavaFramework(t *testing.T) {
 	}
 }
 
-// ── collectPackageJSONCandidates ──────────────────────────────────────────────
+// ── collectPackageJSONCandidates ─────────────────────────────────────────────.
 
 func TestCollectPackageJSONCandidates(t *testing.T) {
 	t.Run("ionic_angular", func(t *testing.T) {
@@ -876,7 +876,7 @@ func TestCollectPackageJSONCandidates(t *testing.T) {
 	})
 }
 
-// ── detectionFriendlyAppType ──────────────────────────────────────────────────
+// ── detectionFriendlyAppType ─────────────────────────────────────────────────.
 
 func TestDetectionFriendlyAppType(t *testing.T) {
 	assert.Equal(t, "Single Page App", detectionFriendlyAppType("spa"))
@@ -887,7 +887,7 @@ func TestDetectionFriendlyAppType(t *testing.T) {
 	assert.Equal(t, "", detectionFriendlyAppType(""))
 }
 
-// ── readGoModuleName ──────────────────────────────────────────────────────────
+// ── readGoModuleName ─────────────────────────────────────────────────────────.
 
 func TestReadGoModuleName(t *testing.T) {
 	t.Run("returns last path segment", func(t *testing.T) {
@@ -907,7 +907,7 @@ func TestReadGoModuleName(t *testing.T) {
 	})
 }
 
-// ── readPyprojectName ─────────────────────────────────────────────────────────
+// ── readPyprojectName ────────────────────────────────────────────────────────.
 
 func TestReadPyprojectName(t *testing.T) {
 	t.Run("reads project name", func(t *testing.T) {
@@ -921,7 +921,7 @@ func TestReadPyprojectName(t *testing.T) {
 	})
 }
 
-// ── readPubspecName ───────────────────────────────────────────────────────────
+// ── readPubspecName ──────────────────────────────────────────────────────────.
 
 func TestReadPubspecName(t *testing.T) {
 	t.Run("reads name field", func(t *testing.T) {
@@ -935,7 +935,7 @@ func TestReadPubspecName(t *testing.T) {
 	})
 }
 
-// ── readComposerName ──────────────────────────────────────────────────────────
+// ── readComposerName ─────────────────────────────────────────────────────────.
 
 func TestReadComposerName(t *testing.T) {
 	t.Run("returns part after slash", func(t *testing.T) {
@@ -955,7 +955,7 @@ func TestReadComposerName(t *testing.T) {
 	})
 }
 
-// ── readPomArtifactID ─────────────────────────────────────────────────────────
+// ── readPomArtifactID ────────────────────────────────────────────────────────.
 
 func TestReadPomArtifactID(t *testing.T) {
 	t.Run("reads first artifactId", func(t *testing.T) {
@@ -976,7 +976,7 @@ func TestReadPomArtifactID(t *testing.T) {
 	})
 }
 
-// ── readPackageJSONName ───────────────────────────────────────────────────────
+// ── readPackageJSONName ──────────────────────────────────────────────────────.
 
 func TestReadPackageJSONName(t *testing.T) {
 	t.Run("reads name field", func(t *testing.T) {
@@ -996,30 +996,30 @@ func TestReadPackageJSONName(t *testing.T) {
 	})
 }
 
-// ── defaultPortForFramework ───────────────────────────────────────────────────
+// ── defaultPortForFramework ──────────────────────────────────────────────────.
 
 func TestDefaultPortForFramework(t *testing.T) {
 	tests := []struct {
 		framework string
 		wantPort  int
 	}{
-		// SPA vite frameworks
+		// SPA vite frameworks.
 		{"react", 5173},
 		{"vue", 5173},
 		{"svelte", 5173},
 		{"vanilla-javascript", 5173},
-		// SPA non-vite
+		// SPA non-vite.
 		{"angular", 4200},
-		// Regular – Python
+		// Regular – Python.
 		{"vanilla-python", 5000},
 		{"flask", 5000},
-		// Regular – PHP
+		// Regular – PHP.
 		{"laravel", 8000},
-		// Regular – Java
+		// Regular – Java.
 		{"spring-boot", 8080},
 		{"java-ee", 8080},
 		{"vanilla-java", 8080},
-		// Regular – default 3000
+		// Regular – default 3000.
 		{"nextjs", 3000},
 		{"nuxt", 3000},
 		{"express", 3000},
@@ -1029,11 +1029,11 @@ func TestDefaultPortForFramework(t *testing.T) {
 		{"rails", 3000},
 		{"vanilla-go", 3000},
 		{"django", 3000},
-		// Native – default 3000
+		// Native – default 3000.
 		{"flutter", 3000},
 		{"react-native", 3000},
 		{"expo", 3000},
-		// Catch-all
+		// Catch-all.
 		{"unknown-framework", 3000},
 	}
 
@@ -1044,7 +1044,7 @@ func TestDefaultPortForFramework(t *testing.T) {
 	}
 }
 
-// ── frameworksForType ─────────────────────────────────────────────────────────
+// ── frameworksForType ────────────────────────────────────────────────────────.
 
 func TestFrameworksForType(t *testing.T) {
 	t.Run("spa", func(t *testing.T) {
@@ -1055,7 +1055,7 @@ func TestFrameworksForType(t *testing.T) {
 		assert.Contains(t, fws, "svelte")
 		assert.Contains(t, fws, "vanilla-javascript")
 		assert.Contains(t, fws, "flutter-web")
-		// SPA frameworks must be sorted
+		// SPA frameworks must be sorted.
 		assert.Equal(t, sort.StringsAreSorted(fws), true)
 	})
 
@@ -1112,8 +1112,8 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 		wantBuildTool  string
 		wantAutoSelect bool
 	}{
-		// ── SPA ──────────────────────────────────────────────────────────────
-		// auth0 qs setup --app --type spa --framework react --build-tool vite
+		// ── SPA ─────────────────────────────────────────────────────────────.
+		// Auth0 qs setup --app --type spa --framework react --build-tool vite.
 		{
 			name:          "spa react vite",
 			inputs:        SetupInputs{App: true, Type: "spa", Framework: "react", BuildTool: "vite", Port: 5173},
@@ -1127,35 +1127,35 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 			wantBuildTool:  "vite",
 			wantAutoSelect: true,
 		},
-		// auth0 qs setup --app --type spa --framework angular
+		// Auth0 qs setup --app --type spa --framework angular.
 		{
 			name:          "spa angular none",
 			inputs:        SetupInputs{App: true, Type: "spa", Framework: "angular", BuildTool: "none", Port: 4200},
 			wantKey:       "spa:angular:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --app --type spa --framework vue --build-tool vite
+		// Auth0 qs setup --app --type spa --framework vue --build-tool vite.
 		{
 			name:          "spa vue vite",
 			inputs:        SetupInputs{App: true, Type: "spa", Framework: "vue", BuildTool: "vite", Port: 5173},
 			wantKey:       "spa:vue:vite",
 			wantBuildTool: "vite",
 		},
-		// auth0 qs setup --app --type spa --framework svelte --build-tool vite
+		// Auth0 qs setup --app --type spa --framework svelte --build-tool vite.
 		{
 			name:          "spa svelte vite",
 			inputs:        SetupInputs{App: true, Type: "spa", Framework: "svelte", BuildTool: "vite", Port: 5173},
 			wantKey:       "spa:svelte:vite",
 			wantBuildTool: "vite",
 		},
-		// auth0 qs setup --app --type spa --framework vanilla-javascript --build-tool vite
+		// Auth0 qs setup --app --type spa --framework vanilla-javascript --build-tool vite.
 		{
 			name:          "spa vanilla-javascript vite",
 			inputs:        SetupInputs{App: true, Type: "spa", Framework: "vanilla-javascript", BuildTool: "vite", Port: 5173},
 			wantKey:       "spa:vanilla-javascript:vite",
 			wantBuildTool: "vite",
 		},
-		// auth0 qs setup --app --type spa --framework flutter-web
+		// Auth0 qs setup --app --type spa --framework flutter-web.
 		{
 			name:          "spa flutter-web none",
 			inputs:        SetupInputs{App: true, Type: "spa", Framework: "flutter-web", BuildTool: "none", Port: 3000},
@@ -1164,126 +1164,126 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 		},
 
 		// ── Regular ──────────────────────────────────────────────────────────
-		// auth0 qs setup --app --type regular --framework nextjs
+		// Auth0 qs setup --app --type regular --framework nextjs.
 		{
 			name:          "regular nextjs none",
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "nextjs", BuildTool: "none", Port: 3000},
 			wantKey:       "regular:nextjs:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --app --type regular --framework nuxt
+		// Auth0 qs setup --app --type regular --framework nuxt.
 		{
 			name:          "regular nuxt none",
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "nuxt", BuildTool: "none", Port: 3000},
 			wantKey:       "regular:nuxt:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --app --type regular --framework fastify
+		// Auth0 qs setup --app --type regular --framework fastify.
 		{
 			name:          "regular fastify none",
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "fastify", BuildTool: "none", Port: 3000},
 			wantKey:       "regular:fastify:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --app --type regular --framework sveltekit
+		// Auth0 qs setup --app --type regular --framework sveltekit.
 		{
 			name:          "regular sveltekit none",
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "sveltekit", BuildTool: "none", Port: 3000},
 			wantKey:       "regular:sveltekit:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --name express-app --api ... --app --type regular --framework express
+		// Auth0 qs setup --name express-app --api ... --app --type regular --framework express.
 		{
 			name:          "regular express none",
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "express", BuildTool: "none", Port: 3000},
 			wantKey:       "regular:express:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --app --type regular --framework hono
+		// Auth0 qs setup --app --type regular --framework hono.
 		{
 			name:          "regular hono none",
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "hono", BuildTool: "none", Port: 3000},
 			wantKey:       "regular:hono:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --app --type regular --framework vanilla-python
+		// Auth0 qs setup --app --type regular --framework vanilla-python.
 		{
 			name:          "regular vanilla-python none",
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "vanilla-python", BuildTool: "none", Port: 5000},
 			wantKey:       "regular:vanilla-python:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --app --type regular --framework django
+		// Auth0 qs setup --app --type regular --framework django.
 		{
 			name:          "regular django none",
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "django", BuildTool: "none", Port: 3000},
 			wantKey:       "regular:django:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --app --type regular --framework vanilla-go
+		// Auth0 qs setup --app --type regular --framework vanilla-go.
 		{
 			name:          "regular vanilla-go none",
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "vanilla-go", BuildTool: "none", Port: 3000},
 			wantKey:       "regular:vanilla-go:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --app --type regular --framework vanilla-java
+		// Auth0 qs setup --app --type regular --framework vanilla-java.
 		{
 			name:          "regular vanilla-java maven",
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "vanilla-java", BuildTool: "maven", Port: 8080},
 			wantKey:       "regular:vanilla-java:maven",
 			wantBuildTool: "maven",
 		},
-		// auth0 qs setup --app --type regular --framework java-ee
+		// Auth0 qs setup --app --type regular --framework java-ee.
 		{
 			name:          "regular java-ee maven",
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "java-ee", BuildTool: "maven", Port: 8080},
 			wantKey:       "regular:java-ee:maven",
 			wantBuildTool: "maven",
 		},
-		// auth0 qs setup --app --type regular --framework spring-boot
+		// Auth0 qs setup --app --type regular --framework spring-boot.
 		{
 			name:          "regular spring-boot maven",
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "spring-boot", BuildTool: "maven", Port: 8080},
 			wantKey:       "regular:spring-boot:maven",
 			wantBuildTool: "maven",
 		},
-		// auth0 qs setup --app --type regular --framework aspnet-mvc
+		// Auth0 qs setup --app --type regular --framework aspnet-mvc.
 		{
 			name:          "regular aspnet-mvc none",
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "aspnet-mvc", BuildTool: "none", Port: 3000},
 			wantKey:       "regular:aspnet-mvc:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --app --type regular --framework aspnet-blazor
+		// Auth0 qs setup --app --type regular --framework aspnet-blazor.
 		{
 			name:          "regular aspnet-blazor none",
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "aspnet-blazor", BuildTool: "none", Port: 3000},
 			wantKey:       "regular:aspnet-blazor:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --app --type regular --framework aspnet-owin
+		// Auth0 qs setup --app --type regular --framework aspnet-owin.
 		{
 			name:          "regular aspnet-owin none",
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "aspnet-owin", BuildTool: "none", Port: 3000},
 			wantKey:       "regular:aspnet-owin:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --app --type regular --framework vanilla-php
+		// Auth0 qs setup --app --type regular --framework vanilla-php.
 		{
 			name:          "regular vanilla-php composer",
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "vanilla-php", BuildTool: "composer", Port: 3000},
 			wantKey:       "regular:vanilla-php:composer",
 			wantBuildTool: "composer",
 		},
-		// auth0 qs setup --app --type regular --framework laravel
+		// Auth0 qs setup --app --type regular --framework laravel.
 		{
 			name:          "regular laravel composer",
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "laravel", BuildTool: "composer", Port: 8000},
 			wantKey:       "regular:laravel:composer",
 			wantBuildTool: "composer",
 		},
-		// auth0 qs setup --app --type regular --framework rails
+		// Auth0 qs setup --app --type regular --framework rails.
 		{
 			name:          "regular rails none",
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "rails", BuildTool: "none", Port: 3000},
@@ -1292,63 +1292,63 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 		},
 
 		// ── Native ───────────────────────────────────────────────────────────
-		// auth0 qs setup --app --type native --framework flutter
+		// Auth0 qs setup --app --type native --framework flutter.
 		{
 			name:          "native flutter none",
 			inputs:        SetupInputs{App: true, Type: "native", Framework: "flutter", BuildTool: "none", Port: 3000},
 			wantKey:       "native:flutter:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --app --type native --framework react-native
+		// Auth0 qs setup --app --type native --framework react-native.
 		{
 			name:          "native react-native none",
 			inputs:        SetupInputs{App: true, Type: "native", Framework: "react-native", BuildTool: "none", Port: 3000},
 			wantKey:       "native:react-native:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --app --type native --framework expo
+		// Auth0 qs setup --app --type native --framework expo.
 		{
 			name:          "native expo none",
 			inputs:        SetupInputs{App: true, Type: "native", Framework: "expo", BuildTool: "none", Port: 3000},
 			wantKey:       "native:expo:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --app --type native --framework ionic-angular
+		// Auth0 qs setup --app --type native --framework ionic-angular.
 		{
 			name:          "native ionic-angular none",
 			inputs:        SetupInputs{App: true, Type: "native", Framework: "ionic-angular", BuildTool: "none", Port: 3000},
 			wantKey:       "native:ionic-angular:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --app --type native --framework ionic-react --build-tool vite
+		// Auth0 qs setup --app --type native --framework ionic-react --build-tool vite.
 		{
 			name:          "native ionic-react vite",
 			inputs:        SetupInputs{App: true, Type: "native", Framework: "ionic-react", BuildTool: "vite", Port: 3000},
 			wantKey:       "native:ionic-react:vite",
 			wantBuildTool: "vite",
 		},
-		// auth0 qs setup --app --type native --framework ionic-vue --build-tool vite
+		// Auth0 qs setup --app --type native --framework ionic-vue --build-tool vite.
 		{
 			name:          "native ionic-vue vite",
 			inputs:        SetupInputs{App: true, Type: "native", Framework: "ionic-vue", BuildTool: "vite", Port: 3000},
 			wantKey:       "native:ionic-vue:vite",
 			wantBuildTool: "vite",
 		},
-		// auth0 qs setup --app --type native --framework dotnet-mobile
+		// Auth0 qs setup --app --type native --framework dotnet-mobile.
 		{
 			name:          "native dotnet-mobile none",
 			inputs:        SetupInputs{App: true, Type: "native", Framework: "dotnet-mobile", BuildTool: "none", Port: 3000},
 			wantKey:       "native:dotnet-mobile:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --app --type native --framework maui
+		// Auth0 qs setup --app --type native --framework maui.
 		{
 			name:          "native maui none",
 			inputs:        SetupInputs{App: true, Type: "native", Framework: "maui", BuildTool: "none", Port: 3000},
 			wantKey:       "native:maui:none",
 			wantBuildTool: "none",
 		},
-		// auth0 qs setup --app --type native --framework wpf-winforms
+		// Auth0 qs setup --app --type native --framework wpf-winforms.
 		{
 			name:          "native wpf-winforms none",
 			inputs:        SetupInputs{App: true, Type: "native", Framework: "wpf-winforms", BuildTool: "none", Port: 3000},
@@ -1356,7 +1356,7 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 			wantBuildTool: "none",
 		},
 
-		// ── API-only: no app ─────────────────────────────────────────────────
+		// ── API-only: no app ────────────────────────────────────────────────.
 		{
 			name:    "api-only returns empty key",
 			inputs:  SetupInputs{App: false, API: true},
@@ -1378,14 +1378,14 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 }
 
 func TestGetQuickstartConfigKey_EmptyBuildToolTreatedAsNone(t *testing.T) {
-	// BuildTool == "" should be normalised to "none" internally
+	// BuildTool == "" should be normalised to "none" internally.
 	inputs := SetupInputs{App: true, Type: "regular", Framework: "nextjs", BuildTool: "", Port: 3000}
 	key, _, _, err := getQuickstartConfigKey(inputs)
 	require.NoError(t, err)
 	assert.Equal(t, "regular:nextjs:none", key)
 }
 
-// ── resolveRequestParams ──────────────────────────────────────────────────────
+// ── resolveRequestParams ─────────────────────────────────────────────────────.
 
 func TestResolveRequestParams(t *testing.T) {
 	const sub = auth0.DetectionSub
@@ -1436,7 +1436,7 @@ func TestResolveRequestParams(t *testing.T) {
 	})
 }
 
-// ── replaceDetectionSub ───────────────────────────────────────────────────────
+// ── replaceDetectionSub ──────────────────────────────────────────────────────.
 
 func TestReplaceDetectionSub(t *testing.T) {
 	const sub = auth0.DetectionSub
@@ -1576,7 +1576,7 @@ func TestReplaceDetectionSub(t *testing.T) {
 	})
 }
 
-// ── buildNestedMap ────────────────────────────────────────────────────────────
+// ── buildNestedMap ───────────────────────────────────────────────────────────.
 
 func TestBuildNestedMap(t *testing.T) {
 	t.Run("dot-delimited keys produce nested structure", func(t *testing.T) {
@@ -1609,7 +1609,7 @@ func TestBuildNestedMap(t *testing.T) {
 	})
 }
 
-// ── sortedKeys ────────────────────────────────────────────────────────────────
+// ── sortedKeys ───────────────────────────────────────────────────────────────.
 
 func TestSortedKeys(t *testing.T) {
 	m := map[string]string{"beta": "b", "alpha": "a", "gamma": "g", "delta": "d"}
@@ -1621,7 +1621,7 @@ func TestSortedKeys_EmptyMap(t *testing.T) {
 	assert.Empty(t, sortedKeys(map[string]string{}))
 }
 
-// ── GenerateAndWriteQuickstartConfig ──────────────────────────────────────────
+// ── GenerateAndWriteQuickstartConfig ─────────────────────────────────────────.
 
 func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 	clientID := "cid-123"
@@ -1639,7 +1639,7 @@ func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 		port         int
 		checkContent func(t *testing.T, content string)
 	}{
-		// dotenv – covers React, Vue, Svelte, Vanilla JS, Next.js, Nuxt, etc.
+		// Dotenv – covers React, Vue, Svelte, Vanilla JS, Next.js, Nuxt, etc.
 		{
 			name:     "dotenv format",
 			strategy: auth0.FileOutputStrategy{Format: "dotenv"},
@@ -1653,7 +1653,7 @@ func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 				assert.Contains(t, content, "AUTH0_CLIENT_ID=cid-123")
 			},
 		},
-		// TypeScript environment file – covers Angular, Ionic Angular
+		// TypeScript environment file – covers Angular, Ionic Angular.
 		{
 			name:     "ts format",
 			strategy: auth0.FileOutputStrategy{Format: "ts"},
@@ -1668,7 +1668,7 @@ func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 				assert.Contains(t, content, "clientId: 'cid-123'")
 			},
 		},
-		// Dart – covers Flutter and Flutter Web
+		// Dart – covers Flutter and Flutter Web.
 		{
 			name:     "dart format",
 			strategy: auth0.FileOutputStrategy{Format: "dart"},
@@ -1683,7 +1683,7 @@ func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 				assert.Contains(t, content, "'clientId': 'cid-123'")
 			},
 		},
-		// YAML – covers Spring Boot (application.yml)
+		// YAML – covers Spring Boot (application.yml).
 		{
 			name:     "yaml format",
 			strategy: auth0.FileOutputStrategy{Format: "yaml"},
@@ -1700,7 +1700,7 @@ func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 				assert.Contains(t, content, "cid-123")
 			},
 		},
-		// JSON – covers ASP.NET Core MVC, Blazor, dotnet-mobile, MAUI, WPF
+		// JSON – covers ASP.NET Core MVC, Blazor, dotnet-mobile, MAUI, WPF.
 		{
 			name:     "json format",
 			strategy: auth0.FileOutputStrategy{Format: "json"},
@@ -1717,7 +1717,7 @@ func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 				assert.Contains(t, content, `"cid-123"`)
 			},
 		},
-		// XML – covers ASP.NET OWIN (Web.config)
+		// XML – covers ASP.NET OWIN (Web.config).
 		{
 			name:     "xml format",
 			strategy: auth0.FileOutputStrategy{Format: "xml"},
@@ -1737,7 +1737,7 @@ func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 				assert.Contains(t, content, `value="csecret-456"`)
 			},
 		},
-		// Properties format – covers vanilla-java, java-ee (application.properties)
+		// Properties format – covers vanilla-java, java-ee (application.properties).
 		{
 			name:     "properties format",
 			strategy: auth0.FileOutputStrategy{Format: "properties"},
@@ -1795,7 +1795,7 @@ func TestGenerateAndWriteQuickstartConfig_CreatesSubdirectory(t *testing.T) {
 	assert.NoError(t, statErr, "subdirectory should have been created")
 }
 
-// ── generateClient ────────────────────────────────────────────────────────────
+// ── generateClient ───────────────────────────────────────────────────────────.
 
 func TestGenerateClient(t *testing.T) {
 	const sub = auth0.DetectionSub
@@ -1808,12 +1808,12 @@ func TestGenerateClient(t *testing.T) {
 		wantAppType     string
 		wantCallbacks   []string
 		wantLogouts     []string
-		wantWebOrigins  *[]string // nil means no WebOrigins field set
+		wantWebOrigins  *[]string // Nil means no WebOrigins field set.
 		wantOIDC        bool
 		wantAlgorithm   string
 		wantMetadataKey string
 	}{
-		// auth0 qs setup --app --type spa --framework react --build-tool vite
+		// Auth0 qs setup --app --type spa --framework react --build-tool vite.
 		{
 			name:  "spa react vite",
 			input: SetupInputs{Name: "React App", Port: 5173},
@@ -1833,7 +1833,7 @@ func TestGenerateClient(t *testing.T) {
 			wantAlgorithm:   "RS256",
 			wantMetadataKey: "created_by",
 		},
-		// auth0 qs setup --app --type spa --framework angular
+		// Auth0 qs setup --app --type spa --framework angular.
 		{
 			name:  "spa angular no web-origins",
 			input: SetupInputs{Name: "Angular App", Port: 4200},
@@ -1842,7 +1842,7 @@ func TestGenerateClient(t *testing.T) {
 				Callbacks:         []string{sub},
 				AllowedLogoutURLs: []string{sub},
 				Name:              sub,
-				// No WebOrigins — angular doesn't need them
+				// No WebOrigins — angular doesn't need them.
 			},
 			wantName:       "Angular App",
 			wantAppType:    "spa",
@@ -1852,7 +1852,7 @@ func TestGenerateClient(t *testing.T) {
 			wantOIDC:       true,
 			wantAlgorithm:  "RS256",
 		},
-		// auth0 qs setup --app --type regular --framework nextjs
+		// Auth0 qs setup --app --type regular --framework nextjs.
 		{
 			name:  "regular nextjs",
 			input: SetupInputs{Name: "Next App", Port: 3000},
@@ -1870,7 +1870,7 @@ func TestGenerateClient(t *testing.T) {
 			wantOIDC:       true,
 			wantAlgorithm:  "RS256",
 		},
-		// auth0 qs setup --app --type native --framework flutter
+		// Auth0 qs setup --app --type native --framework flutter.
 		{
 			name:  "native flutter",
 			input: SetupInputs{Name: "Flutter App", Port: 3000},
@@ -1888,7 +1888,7 @@ func TestGenerateClient(t *testing.T) {
 			wantOIDC:       true,
 			wantAlgorithm:  "RS256",
 		},
-		// auth0 qs setup --app --type regular --framework spring-boot (port 8080)
+		// Auth0 qs setup --app --type regular --framework spring-boot (port 8080).
 		{
 			name:  "regular spring-boot port 8080",
 			input: SetupInputs{Name: "Spring App", Port: 8080},
@@ -1904,7 +1904,7 @@ func TestGenerateClient(t *testing.T) {
 			wantOIDC:      true,
 			wantAlgorithm: "RS256",
 		},
-		// Name defaults to "My App" when empty
+		// Name defaults to "My App" when empty.
 		{
 			name:  "empty name defaults to My App",
 			input: SetupInputs{Port: 3000},
@@ -1916,7 +1916,7 @@ func TestGenerateClient(t *testing.T) {
 			wantOIDC:      true,
 			wantAlgorithm: "RS256",
 		},
-		// Port 0 defaults to 3000
+		// Port 0 defaults to 3000.
 		{
 			name:  "port 0 defaults to 3000",
 			input: SetupInputs{Name: "App", Port: 0},
@@ -1930,7 +1930,7 @@ func TestGenerateClient(t *testing.T) {
 			wantOIDC:      true,
 			wantAlgorithm: "RS256",
 		},
-		// Custom metadata is preserved (not overwritten by default)
+		// Custom metadata is preserved (not overwritten by default).
 		{
 			name: "custom metadata preserved",
 			input: SetupInputs{
@@ -2005,7 +2005,7 @@ func TestGenerateClient_CustomMetadataNotOverwritten(t *testing.T) {
 	assert.NotContains(t, *client.ClientMetadata, "created_by")
 }
 
-// ── getSupportedQuickstartTypes ───────────────────────────────────────────────
+// ── getSupportedQuickstartTypes ──────────────────────────────────────────────.
 
 func TestGetSupportedQuickstartTypes(t *testing.T) {
 	types := getSupportedQuickstartTypes()
@@ -2015,14 +2015,14 @@ func TestGetSupportedQuickstartTypes(t *testing.T) {
 
 	// Spot-check representative keys from each app-type bucket.
 	requiredKeys := []string{
-		// SPA
+		// SPA.
 		"spa:react:vite",
 		"spa:angular:none",
 		"spa:vue:vite",
 		"spa:svelte:vite",
 		"spa:vanilla-javascript:vite",
 		"spa:flutter-web:none",
-		// Regular
+		// Regular.
 		"regular:nextjs:none",
 		"regular:nuxt:none",
 		"regular:fastify:none",
@@ -2041,7 +2041,7 @@ func TestGetSupportedQuickstartTypes(t *testing.T) {
 		"regular:vanilla-php:composer",
 		"regular:laravel:composer",
 		"regular:rails:none",
-		// Native
+		// Native.
 		"native:flutter:none",
 		"native:react-native:none",
 		"native:expo:none",
@@ -2065,7 +2065,7 @@ func TestGetSupportedQuickstartTypes(t *testing.T) {
 // HOME to a fresh temp dir so every test starts from a clean, unauthenticated
 // state and gets a deterministic "config.json file is missing" error.
 
-// flow 1: --app with all flags set (no interactive prompts needed)
+// flow 1: --app with all flags set (no interactive prompts needed).
 func TestSetupQuickstartCmdExperimental_AppAllFlagsAuthRequired(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
@@ -2083,7 +2083,7 @@ func TestSetupQuickstartCmdExperimental_AppAllFlagsAuthRequired(t *testing.T) {
 	assert.EqualError(t, err, "authentication required: config.json file is missing")
 }
 
-// flow 2: --api only (no --app)
+// flow 2: --api only (no --app).
 func TestSetupQuickstartCmdExperimental_APIOnlyAuthRequired(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
@@ -2098,7 +2098,7 @@ func TestSetupQuickstartCmdExperimental_APIOnlyAuthRequired(t *testing.T) {
 	assert.EqualError(t, err, "authentication required: config.json file is missing")
 }
 
-// flow 3: --app and --api together (creates both resources)
+// flow 3: --app and --api together (creates both resources).
 func TestSetupQuickstartCmdExperimental_AppAndAPIAuthRequired(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
@@ -2118,7 +2118,7 @@ func TestSetupQuickstartCmdExperimental_AppAndAPIAuthRequired(t *testing.T) {
 	assert.EqualError(t, err, "authentication required: config.json file is missing")
 }
 
-// flow 4: SPA frameworks – each framework/build-tool combo requires auth
+// flow 4: SPA frameworks – each framework/build-tool combo requires auth.
 func TestSetupQuickstartCmdExperimental_SPAFrameworks(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
@@ -2154,7 +2154,7 @@ func TestSetupQuickstartCmdExperimental_SPAFrameworks(t *testing.T) {
 	}
 }
 
-// flow 5: Regular web frameworks
+// flow 5: Regular web frameworks.
 func TestSetupQuickstartCmdExperimental_RegularFrameworks(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
@@ -2202,7 +2202,7 @@ func TestSetupQuickstartCmdExperimental_RegularFrameworks(t *testing.T) {
 	}
 }
 
-// flow 6: Native / Mobile frameworks
+// flow 6: Native / Mobile frameworks.
 func TestSetupQuickstartCmdExperimental_NativeFrameworks(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
