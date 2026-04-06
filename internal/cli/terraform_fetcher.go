@@ -562,6 +562,7 @@ var screenPartialPromptToScreenMap = map[string][]string{
 	"signup-id":          {"signup-id"},
 	"signup-password":    {"signup-password"},
 	"customized-consent": {"customized-consent"},
+	"passkeys":           {"passkey-enrollment", "passkey-enrollment-local"},
 }
 
 func (f *promptScreenPartialResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
