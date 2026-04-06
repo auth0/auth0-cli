@@ -713,7 +713,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 			if !inputs.App && !inputs.API {
 				var selections []string
 				if err := prompt.AskMultiSelect(
-					"What do you want to set up? (select whatever applies)",
+					"What do you want to create? (select whatever applies)",
 					&selections,
 					"App", "API",
 				); err != nil {
@@ -742,17 +742,31 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 
 				if detection.Detected {
 					if len(detection.AmbiguousCandidates) > 1 {
-						// Multiple package.json deps matched — ask user to disambiguate.
-						cli.renderer.Infof("Multiple frameworks detected in package.json: %s", strings.Join(detection.AmbiguousCandidates, ", "))
-						if inputs.Framework == "" {
-							q := prompt.SelectInput("framework", "Select the framework", "",
-								detection.AmbiguousCandidates, detection.AmbiguousCandidates[0], true)
-							if err := prompt.AskOne(q, &inputs.Framework); err != nil {
-								return fmt.Errorf("failed to select framework: %v", err)
-							}
+						// Multiple package.json deps matched — show partial summary and ask user to disambiguate.
+						cli.renderer.Infof("Detected in current directory")
+						cli.renderer.Infof("%-12s%s", "Framework", "Could not be determined")
+						cli.renderer.Infof("%-12s%s", "App type", detectionFriendlyAppType(detection.Type))
+						cli.renderer.Infof("%-12s%s", "App name", detection.AppName)
+						if detection.Port > 0 {
+							cli.renderer.Infof("%-12s%d", "Port", detection.Port)
 						}
-						if inputs.Name == "" {
-							inputs.Name = detection.AppName
+						if prompt.Confirm("Do you want to proceed with the detected values?") {
+							if inputs.Type == "" {
+								inputs.Type = detection.Type
+							}
+							if inputs.Port == 0 {
+								inputs.Port = detection.Port
+							}
+							if inputs.Name == "" {
+								inputs.Name = detection.AppName
+							}
+							if inputs.Framework == "" {
+								q := prompt.SelectInput("framework", "Select your framework", "",
+									detection.AmbiguousCandidates, detection.AmbiguousCandidates[0], true)
+								if err := prompt.AskOne(q, &inputs.Framework); err != nil {
+									return fmt.Errorf("failed to select framework: %v", err)
+								}
+							}
 						}
 					} else if detection.Framework != "" {
 						// Single clear detection — show summary and confirm.
@@ -786,6 +800,12 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 								inputs.Name = detection.AppName
 							}
 						}
+					}
+				} else {
+					// No detection signal found — notify the user and pre-fill name from directory.
+					cli.renderer.Warnf("Auto detection Failed: Unable to auto detect application")
+					if inputs.Name == "" {
+						inputs.Name = detection.AppName
 					}
 				}
 			}
