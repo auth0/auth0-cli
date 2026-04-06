@@ -20,8 +20,8 @@ github.com/apparentlymart/go-textseg/v15 v15.0.0 h1:uYvfpb3DyLSCGWnctWKGj857c6ew
 github.com/apparentlymart/go-textseg/v15 v15.0.0/go.mod h1:K8XmNZdhEBkdlyDdvbmmsvpAG721bKi0joRfFdHIWJ4=
 github.com/atotto/clipboard v0.1.4 h1:EH0zSVneZPSuFR11BlR9YppQTVDbh5+16AmcJi4g1z4=
 github.com/atotto/clipboard v0.1.4/go.mod h1:ZY9tmq7sm5xIbd9bOK4onWV4S6X0u6GY7Vn0Yu86PYI=
-github.com/auth0/go-auth0 v1.36.0 h1:B3gxl26i4HLKoUmpEF4KrtsEA0Tx0Quxci+9f8/Lvfg=
-github.com/auth0/go-auth0 v1.36.0/go.mod h1:32sQB1uAn+99fJo6N819EniKq8h785p0ag0lMWhiTaE=
+github.com/auth0/go-auth0 v1.37.0 h1:Zd0KH0I0Sye984lOyH7vNHKPLlSpV1LsnmZu7vzMCG8=
+github.com/auth0/go-auth0 v1.37.0/go.mod h1:32sQB1uAn+99fJo6N819EniKq8h785p0ag0lMWhiTaE=
 github.com/auth0/go-auth0/v2 v2.7.0 h1:uwY9yWGbtuU+M5z8GtK+smgUleu7+gfCA8hIpbxxd+Y=
 github.com/auth0/go-auth0/v2 v2.7.0/go.mod h1:Q/Y3VZVoI3sw87VyTPhx2TQL6Sq4Q/iCP67rW2gcn+M=
 github.com/aybabtme/iocontrol v0.0.0-20150809002002-ad15bcfc95a0 h1:0NmehRCgyk5rljDQLKUO+cRJCnduDyn11+zGZIc9Z48=
