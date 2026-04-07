@@ -482,14 +482,14 @@ func (c *cli) audiencePickerOptions(client *management.Client) func(ctx context.
 // audience requires an organization. If it does and no organization has been
 // specified, it either fails with a descriptive error (if no organizations exist
 // on the tenant) or opens an interactive picker to let the user select one.
-func (cli *cli) pickOrganizationForGrantIfRequired(cmd *cobra.Command, client *management.Client, audience string, organization *string) error {
+func (c *cli) pickOrganizationForGrantIfRequired(cmd *cobra.Command, client *management.Client, audience string, organization *string) error {
 	if *organization != "" {
 		return nil
 	}
 
 	var list *management.ClientGrantList
 	if err := ansi.Waiting(func() (err error) {
-		list, err = cli.api.ClientGrant.List(
+		list, err = c.api.ClientGrant.List(
 			cmd.Context(),
 			management.Parameter("audience", audience),
 			management.Parameter("client_id", client.GetClientID()),
@@ -503,12 +503,12 @@ func (cli *cli) pickOrganizationForGrantIfRequired(cmd *cobra.Command, client *m
 		return nil
 	}
 
-	return testOrganization.Pick(cmd, organization, cli.organizationPickerOptionsForGrant(audience))
+	return testOrganization.Pick(cmd, organization, c.organizationPickerOptionsForGrant(audience))
 }
 
-func (cli *cli) organizationPickerOptionsForGrant(audience string) pickerOptionsFunc {
+func (c *cli) organizationPickerOptionsForGrant(audience string) pickerOptionsFunc {
 	return func(ctx context.Context) (pickerOptions, error) {
-		orgList, err := cli.api.Organization.List(ctx)
+		orgList, err := c.api.Organization.List(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -553,5 +553,3 @@ func (c *cli) pickTokenScopes(ctx context.Context, inputs *testCmdInputs) error 
 
 	return survey.AskOne(scopesPrompt, &inputs.Scopes)
 }
-
-
