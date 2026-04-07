@@ -1017,21 +1017,32 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 }
 
 func printClientDetails(cli *cli, client *management.Client, port int, configFileLocation string) {
-	cli.renderer.Infof("Application %q created (Client ID: %s)", client.GetName(), client.GetClientID())
-	cli.renderer.Infof("Manage: https://manage.auth0.com/dashboard/#/applications/%s/settings", client.GetClientID())
+	cli.renderer.Successf("An application %q has been created in the management console", client.GetName())
+	cli.renderer.Detailf("Client ID: %s", client.GetClientID())
+	cli.renderer.Newline()
+
+	cli.renderer.Successf("You can manage your application from here:")
+	cli.renderer.Detailf("https://manage.auth0.com/dashboard/#/applications/%s/settings", client.GetClientID())
+	cli.renderer.Newline()
 
 	if client.Callbacks != nil && len(client.GetCallbacks()) > 0 {
-		cli.renderer.Infof("Callback URLs: %s", strings.Join(client.GetCallbacks(), ", "))
+		cli.renderer.Successf("Callback URLs registered in Auth0 Dashboard:")
+		cli.renderer.Detailf("%s", strings.Join(client.GetCallbacks(), ", "))
+		cli.renderer.Newline()
 	}
 	if client.AllowedLogoutURLs != nil && len(client.GetAllowedLogoutURLs()) > 0 {
-		cli.renderer.Infof("Logout URLs: %s", strings.Join(client.GetAllowedLogoutURLs(), ", "))
+		cli.renderer.Successf("Logout URLs registered:")
+		cli.renderer.Detailf("%s", strings.Join(client.GetAllowedLogoutURLs(), ", "))
+		cli.renderer.Newline()
 	}
-	cli.renderer.Infof("Config file created: %s", configFileLocation)
+	cli.renderer.Successf("Config file created: %s", configFileLocation)
 }
 
 func printAPIDetails(cli *cli, rs *management.ResourceServer) {
-	cli.renderer.Infof("API %q registered (Identifier: %s)", rs.GetName(), rs.GetIdentifier())
-	cli.renderer.Infof("Manage: https://manage.auth0.com/dashboard/#/apis/%s/settings", rs.GetID())
+	cli.renderer.Successf("An API application %q has been created and registered", rs.GetName())
+	cli.renderer.Newline()
+	cli.renderer.Successf("You can manage your API from here:")
+	cli.renderer.Detailf("https://manage.auth0.com/dashboard/#/apis/%s/settings", rs.GetID())
 }
 
 // Helper function to get supported quickstart types.

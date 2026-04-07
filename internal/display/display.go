@@ -65,6 +65,15 @@ func (r *Renderer) Infof(format string, a ...interface{}) {
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
+func (r *Renderer) Successf(format string, a ...interface{}) {
+	fmt.Fprint(r.MessageWriter, ansi.Green("✓  "))
+	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
+}
+
+func (r *Renderer) Detailf(format string, a ...interface{}) {
+	fmt.Fprintf(r.MessageWriter, "     "+format+"\n", a...)
+}
+
 func (r *Renderer) Warnf(format string, a ...interface{}) {
 	fmt.Fprint(r.MessageWriter, ansi.Yellow(" ▸    "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
