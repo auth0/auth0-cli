@@ -740,7 +740,15 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 				detection := DetectProject(cwd)
 
-				if detection.Detected {
+				typeFromFlag := cmd.Flags().Changed("type")
+				frameworkFromFlag := cmd.Flags().Changed("framework")
+
+				if typeFromFlag && frameworkFromFlag {
+					// User explicitly specified type and framework via flags; skip detection UI.
+					if inputs.Name == "" {
+						inputs.Name = detection.AppName
+					}
+				} else if detection.Detected {
 					if len(detection.AmbiguousCandidates) > 1 {
 						// Multiple package.json deps matched — show partial summary and ask user to disambiguate.
 						cli.renderer.Infof("Detected in current directory")
@@ -831,45 +839,50 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					if err := prompt.AskOne(q, &inputs.Name); err != nil {
 						return fmt.Errorf("failed to enter application name: %v", err)
 					}
+					if inputs.Name == "" {
+						return fmt.Errorf("application name cannot be empty")
+					}
+					if !prompt.Confirm(fmt.Sprintf("Create application with name %q?", inputs.Name)) {
+						return fmt.Errorf("setup cancelled: no resources were created")
+					}
 				}
 				if inputs.Name == "" {
 					return fmt.Errorf("application name cannot be empty")
-				}
-				if !prompt.Confirm(fmt.Sprintf("Create application with name %q?", inputs.Name)) {
-					return fmt.Errorf("setup cancelled: no resources were created")
 				}
 			}
 
 			// ── Step 3c: Collect API data ─────────────────────────────────────.
 			if inputs.API && !inputs.App {
-				// For API-only: let user pick an existing application.
-				var appID string
-				if err := qsClientID.Pick(
-					cmd,
-					&appID,
-					cli.appPickerOptions(management.Parameter("app_type", "native,spa,regular_web")),
-				); err == nil && appID != "" {
-					var selectedApp *management.Client
-					if fetchErr := ansi.Waiting(func() error {
-						var e error
-						selectedApp, e = cli.api.Client.Read(ctx, appID)
-						return e
-					}); fetchErr == nil && selectedApp != nil {
-						appName := selectedApp.GetName()
-						if inputs.Name == "" {
-							inputs.Name = appName
+				if !cmd.Flags().Changed("name") {
+					// For API-only: let user pick an existing application.
+					var appID string
+					if err := qsClientID.Pick(
+						cmd,
+						&appID,
+						cli.appPickerOptions(management.Parameter("app_type", "native,spa,regular_web")),
+					); err == nil && appID != "" {
+						var selectedApp *management.Client
+						if fetchErr := ansi.Waiting(func() error {
+							var e error
+							selectedApp, e = cli.api.Client.Read(ctx, appID)
+							return e
+						}); fetchErr == nil && selectedApp != nil {
+							appName := selectedApp.GetName()
+							if inputs.Name == "" {
+								inputs.Name = appName
+							}
 						}
 					}
-				}
-				if inputs.Name == "" {
-					defaultName := "My App"
-					q := prompt.TextInput("name", "Application name", "Name for the Auth0 application", defaultName, true)
-					if err := prompt.AskOne(q, &inputs.Name); err != nil {
-						return fmt.Errorf("failed to enter application name: %v", err)
+					if inputs.Name == "" {
+						defaultName := "My App"
+						q := prompt.TextInput("name", "Application name", "Name for the Auth0 application", defaultName, true)
+						if err := prompt.AskOne(q, &inputs.Name); err != nil {
+							return fmt.Errorf("failed to enter application name: %v", err)
+						}
 					}
-				}
-				if !prompt.Confirm(fmt.Sprintf("Use existing application %q for API association?", inputs.Name)) {
-					return fmt.Errorf("setup cancelled: no resources were created")
+					if !prompt.Confirm(fmt.Sprintf("Use existing application %q for API association?", inputs.Name)) {
+						return fmt.Errorf("setup cancelled: no resources were created")
+					}
 				}
 			}
 
@@ -895,13 +908,12 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					if err := prompt.AskOne(q, &inputs.Identifier); err != nil {
 						return fmt.Errorf("failed to enter API identifier: %v", err)
 					}
+					// Confirm the API identifier (uniqueness reminder included in the prompt).
+					if !prompt.Confirm(fmt.Sprintf("Register API with identifier %q? (identifiers must be unique within your tenant)", inputs.Identifier)) {
+						return fmt.Errorf("setup cancelled: no resources were created")
+					}
 				} else if inputs.Identifier == "" {
 					inputs.Identifier = inputs.Audience
-				}
-
-				// Confirm the API identifier (uniqueness reminder included in the prompt).
-				if !prompt.Confirm(fmt.Sprintf("Register API with identifier %q? (identifiers must be unique within your tenant)", inputs.Identifier)) {
-					return fmt.Errorf("setup cancelled: no resources were created")
 				}
 
 				// Prompt for signing algorithm if not provided via flag.
