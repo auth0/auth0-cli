@@ -6,7 +6,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/PuerkitoBio/rehttp v1.4.0
 	github.com/atotto/clipboard v0.1.4
-	github.com/auth0/go-auth0 v1.36.0
+	github.com/auth0/go-auth0 v1.37.0
 	github.com/auth0/go-auth0/v2 v2.7.0
 	github.com/briandowns/spinner v1.23.2
 	github.com/charmbracelet/glamour v1.0.0
@@ -17,7 +17,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
-	github.com/hashicorp/go-version v1.8.0
+	github.com/hashicorp/go-version v1.9.0
 	github.com/hashicorp/hc-install v0.9.3
 	github.com/hashicorp/terraform-exec v0.25.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
