@@ -129,11 +129,15 @@ func TestDetectProject_FlutterWeb(t *testing.T) {
 	assert.Equal(t, "spa", got.Type)
 }
 
-// pubspec.yaml without web/ dir -> native flutter.
+// pubspec.yaml with android/ dir -> native flutter (android/ is the reliable native signal).
 func TestDetectProject_Flutter_WithoutWeb(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "pubspec.yaml", "name: my_flutter_app\nflutter:\n  sdk: flutter\n")
-	// No web/index.html.
+	// Simulate default `flutter create` output: has android/ and ios/ (and web/ too, but native wins).
+	mkTestDir(t, dir, "android")
+	mkTestDir(t, dir, "ios")
+	mkTestDir(t, dir, "web")
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "web", "index.html"), []byte("<html></html>"), 0600))
 
 	got := DetectProject(dir)
 	assert.True(t, got.Detected)
@@ -465,7 +469,8 @@ func TestDetectProject_Laravel(t *testing.T) {
 func TestDetectProject_Flutter(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "pubspec.yaml", "name: my_flutter_app\nflutter:\n  sdk: flutter\n")
-	// No web/index.html -> native.
+	// android/ present -> native (reliable signal for native intent).
+	mkTestDir(t, dir, "android")
 
 	got := DetectProject(dir)
 	assert.True(t, got.Detected)

@@ -668,4 +668,21 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		Strategy: FileOutputStrategy{Path: "appsettings.json", Format: "json"},
 	},
+
+	// ==========================================.
+	// M2M apps use the client_credentials flow — no frontend, no port, no callback URLs.
+	"m2m:none:none": {
+		EnvValues: map[string]string{
+			"AUTH0_DOMAIN":        DetectionSub,
+			"AUTH0_CLIENT_ID":     DetectionSub,
+			"AUTH0_CLIENT_SECRET": DetectionSub,
+		},
+		RequestParams: RequestParams{
+			AppType:           "non_interactive",
+			Callbacks:         []string{},
+			AllowedLogoutURLs: []string{},
+			Name:              DetectionSub,
+		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
+	},
 }

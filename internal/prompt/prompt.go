@@ -59,6 +59,22 @@ func Confirm(message string) bool {
 	return result
 }
 
+// ConfirmWithDefault prompts with the given default value (Y/n when true, y/N when false).
+// On EOF (e.g. --no-input mode) the default value is returned instead of false.
+func ConfirmWithDefault(message string, defaultValue bool) bool {
+	result := defaultValue
+	prompt := &survey.Confirm{
+		Message: message,
+		Default: defaultValue,
+	}
+
+	if err := askOne(prompt, &result); err != nil {
+		return defaultValue
+	}
+
+	return result
+}
+
 func TextInput(name string, message string, help string, defaultValue string, required bool) *survey.Question {
 	input := &survey.Question{
 		Name:   name,

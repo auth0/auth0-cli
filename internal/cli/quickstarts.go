@@ -762,7 +762,8 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						if detection.Port > 0 {
 							cli.renderer.Infof("%-12s%d", "Port", detection.Port)
 						}
-						if prompt.Confirm("Do you want to proceed with the detected values?") {
+						noInputMode := !canPrompt(cmd)
+						if noInputMode || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
 							if inputs.Type == "" {
 								inputs.Type = detection.Type
 							}
@@ -795,7 +796,8 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 							cli.renderer.Infof("%-12s%d", "Port", detection.Port)
 						}
 
-						if prompt.Confirm("Do you want to proceed with the detected values?") {
+						noInputModeSingle := !canPrompt(cmd)
+						if noInputModeSingle || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
 							if inputs.Type == "" {
 								inputs.Type = detection.Type
 							}
@@ -903,15 +905,20 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 
 				// Prompt for signing algorithm if not provided via flag.
 				if inputs.SigningAlg == "" {
-					signingAlgs := []string{"RS256", "PS256", "HS256"}
-					q := prompt.SelectInput("signing-alg", "Select the signing algorithm", "", signingAlgs, "RS256", true)
-					if err := prompt.AskOne(q, &inputs.SigningAlg); err != nil {
-						return fmt.Errorf("failed to select signing algorithm: %v", err)
+					if canPrompt(cmd) {
+						signingAlgs := []string{"RS256", "PS256", "HS256"}
+						q := prompt.SelectInput("signing-alg", "Select the signing algorithm", "", signingAlgs, "RS256", true)
+						if err := prompt.AskOne(q, &inputs.SigningAlg); err != nil {
+							return fmt.Errorf("failed to select signing algorithm: %v", err)
+						}
+					} else {
+						inputs.SigningAlg = "RS256"
 					}
 				}
 
 				// Prompt for token lifetime if not provided via flag.
-				if !cmd.Flags().Changed("token-lifetime") {
+				// inputs.TokenLifetime already has "86400" from flag default; only prompt interactively.
+				if !cmd.Flags().Changed("token-lifetime") && canPrompt(cmd) {
 					defaultLifetime := "86400"
 					q := prompt.TextInput("token-lifetime", "Access token lifetime (seconds)", "How long access tokens remain valid (default: 86400 = 24 hours)", defaultLifetime, true)
 					if err := prompt.AskOne(q, &inputs.TokenLifetime); err != nil {
@@ -1011,7 +1018,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 
 				rs := &management.ResourceServer{
-					Name:             &inputs.Identifier,
+					Name:             &apiName,
 					Identifier:       &inputs.Identifier,
 					SigningAlgorithm: &inputs.SigningAlg,
 					TokenLifetime:    &tokenLifetime,
@@ -1134,13 +1141,35 @@ func frameworksForType(qsType string) []string {
 func getQuickstartConfigKey(inputs SetupInputs) (string, SetupInputs, bool, error) {
 	// Handle application creation inputs.
 	if inputs.App {
+		// Validate --type if provided (Bug 12).
+		validTypes := []string{"spa", "regular", "native", "m2m"}
+		if inputs.Type != "" {
+			valid := false
+			for _, t := range validTypes {
+				if inputs.Type == t {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				return "", inputs, false, fmt.Errorf(
+					"invalid --type %q: must be one of %s",
+					inputs.Type, strings.Join(validTypes, ", "),
+				)
+			}
+		}
+
 		// Prompt for --type if not provided.
 		if inputs.Type == "" {
-			types := []string{"spa", "regular", "native"}
-			q := prompt.SelectInput("type", "Select the application type", "", types, "spa", true)
+			q := prompt.SelectInput("type", "Select the application type", "", validTypes, "spa", true)
 			if err := prompt.AskOne(q, &inputs.Type); err != nil {
 				return "", inputs, false, fmt.Errorf("failed to select application type: %v", err)
 			}
+		}
+
+		// M2M apps have no framework, port, or callback URLs (Bug 6).
+		if inputs.Type == "m2m" {
+			return "m2m:none:none", inputs, false, nil
 		}
 
 		// Prompt for --framework filtered to the selected type.
@@ -1155,20 +1184,11 @@ func getQuickstartConfigKey(inputs SetupInputs) (string, SetupInputs, bool, erro
 			}
 		}
 
-		// Prompt for --port if not set (needed to generate correct callback/logout URLs).
+		// Resolve port from framework default before prompting (Bug 11).
+		// The spec says "--port: default value used if not given", so we never prompt.
 		if inputs.Port == 0 {
-			defaultPort := defaultPortForFramework(inputs.Framework)
-			defaultPortStr := strconv.Itoa(defaultPort)
-			q := prompt.TextInput("port", "Enter the local port your app runs on", "", defaultPortStr, true)
-			var portStr string
-			if err := prompt.AskOne(q, &portStr); err != nil {
-				return "", inputs, false, fmt.Errorf("failed to enter port: %v", err)
-			}
-			p, err := strconv.Atoi(portStr)
-			if err != nil || p <= 0 {
-				return "", inputs, false, fmt.Errorf("invalid port: %s", portStr)
-			}
-			inputs.Port = p
+			inputs.Port = defaultPortForFramework(inputs.Framework)
+			// Port stays 0 for native apps (react-native, expo, flutter) — no port needed.
 		}
 	}
 
@@ -1260,6 +1280,17 @@ func generateClient(input SetupInputs, reqParams auth0.RequestParams) (*manageme
 	}
 
 	resolved := resolveRequestParams(reqParams, input.Name, input.Port)
+
+	// Override URL fields with explicit flag values when provided (Bug 7).
+	if input.CallbackURL != "" {
+		resolved.Callbacks = []string{input.CallbackURL}
+	}
+	if input.LogoutURL != "" {
+		resolved.AllowedLogoutURLs = []string{input.LogoutURL}
+	}
+	if input.WebOriginURL != "" {
+		resolved.WebOrigins = []string{input.WebOriginURL}
+	}
 
 	algorithm := "RS256"
 	oidcConformant := true
