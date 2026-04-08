@@ -38,7 +38,32 @@ func DetectProject(dir string) DetectionResult {
 		result.AppName = name
 	}
 
-	// ── 1. Angular.json ────────────────────────────────────────────────────.
+	// Read package.json deps early — needed for checks that must precede file-based signals.
+	earlyDeps := readPackageJSONDeps(dir)
+
+	// ── 1. Ionic (package.json deps — must check BEFORE angular.json and vite.config) ──.
+	if hasDep(earlyDeps, "@ionic/angular") {
+		result.Framework = "ionic-angular"
+		result.Type = "native"
+		result.Detected = true
+		return result
+	}
+	if hasDep(earlyDeps, "@ionic/react") {
+		result.Framework = "ionic-react"
+		result.Type = "native"
+		result.BuildTool = "vite"
+		result.Detected = true
+		return result
+	}
+	if hasDep(earlyDeps, "@ionic/vue") {
+		result.Framework = "ionic-vue"
+		result.Type = "native"
+		result.BuildTool = "vite"
+		result.Detected = true
+		return result
+	}
+
+	// ── 2. Angular.json ────────────────────────────────────────────────────.
 	if fileExists(dir, "angular.json") {
 		result.Framework = "angular"
 		result.Type = "spa"
@@ -47,97 +72,27 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 2. Pubspec.yaml (Flutter) ───────────────────────────────────────────.
+	// ── 3. Pubspec.yaml (Flutter) ───────────────────────────────────────────.
 	if data, ok := readFileContent(dir, "pubspec.yaml"); ok {
 		if strings.Contains(data, "sdk: flutter") {
 			result.Detected = true
-			if isFlutterWeb(dir) {
-				result.Framework = "flutter-web"
-				result.Type = "spa"
-			} else {
+			// android/ or ios/ present means a native project regardless of web/ directory.
+			// flutter create (default) has included web/ since Flutter 2.10, so web/ alone
+			// is not a reliable signal for web-only intent.
+			if dirExists(dir, "android") || dirExists(dir, "ios") {
 				result.Framework = "flutter"
 				result.Type = "native"
+			} else {
+				result.Framework = "flutter-web"
+				result.Type = "spa"
 			}
 			return result
 		}
 	}
 
-	// ── 3. Vite.config.[ts|js] + package.json deps ──────────────────────────.
-	if fileExistsAny(dir, "vite.config.ts", "vite.config.js") {
-		deps := readPackageJSONDeps(dir)
-		result.Type = "spa"
-		result.BuildTool = "vite"
-		result.Port = 5173
-		result.Detected = true
-		switch {
-		case hasDep(deps, "react"):
-			result.Framework = "react"
-		case hasDep(deps, "vue"):
-			result.Framework = "vue"
-		case hasDep(deps, "svelte"):
-			result.Framework = "svelte"
-		default:
-			result.Framework = "vanilla-javascript"
-		}
-		return result
-	}
-
-	// ── 4. Next.config.[js|ts|mjs] ─────────────────────────────────────────.
-	if fileExistsAny(dir, "next.config.js", "next.config.ts", "next.config.mjs") {
-		result.Framework = "nextjs"
-		result.Type = "regular"
-		result.Port = 3000
-		result.Detected = true
-		return result
-	}
-
-	// ── 5. Nuxt.config.[ts|js] ──────────────────────────────────────────────.
-	if fileExistsAny(dir, "nuxt.config.ts", "nuxt.config.js") {
-		result.Framework = "nuxt"
-		result.Type = "regular"
-		result.Port = 3000
-		result.Detected = true
-		return result
-	}
-
-	// ── 6. Svelte.config.[js|ts] ────────────────────────────────────────────.
-	if fileExistsAny(dir, "svelte.config.js", "svelte.config.ts") {
-		result.Framework = "sveltekit"
-		result.Type = "regular"
-		result.Detected = true
-		return result
-	}
-
-	// ── 7. Expo.json ────────────────────────────────────────────────────────.
-	if fileExists(dir, "expo.json") {
-		result.Framework = "expo"
-		result.Type = "native"
-		result.Detected = true
-		return result
-	}
-
-	// ── 8. .csproj ──────────────────────────────────────────────────────────.
-	if content, ok := findCsprojContent(dir); ok {
-		if fw, qsType, found := detectFromCsproj(content); found {
-			result.Framework = fw
-			result.Type = qsType
-			result.Detected = true
-			return result
-		}
-	}
-
-	// ── 9. Pom.xml / build.gradle (Java) ────────────────────────────────────.
-	if content, buildTool, ok := findJavaBuildContent(dir); ok {
-		fw, port := detectJavaFramework(content)
-		result.Framework = fw
-		result.Type = "regular"
-		result.BuildTool = buildTool
-		result.Port = port
-		result.Detected = true
-		return result
-	}
-
-	// ── 10. Composer.json (PHP) ──────────────────────────────────────────────.
+	// ── 4. Composer.json (PHP) — BEFORE vite.config to prevent Laravel misdetection ──.
+	// Laravel 10+ ships with vite.config.js; checking composer.json first avoids a
+	// false-positive Vanilla-JavaScript match for Laravel projects.
 	if data, ok := readFileContent(dir, "composer.json"); ok {
 		result.BuildTool = "composer"
 		result.Type = "regular"
@@ -151,7 +106,93 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 11. Go.mod ──────────────────────────────────────────────────────────.
+	// ── 5. SvelteKit (@sveltejs/kit dep — BEFORE vite.config) ───────────────.
+	// Plain Svelte+Vite also creates svelte.config.js and vite.config.ts, so
+	// @sveltejs/kit in package.json is the only reliable distinguishing signal.
+	if hasDep(earlyDeps, "@sveltejs/kit") {
+		result.Framework = "sveltekit"
+		result.Type = "regular"
+		result.Detected = true
+		return result
+	}
+
+	// ── 6. Vite.config.[ts|js] + package.json deps ──────────────────────────.
+	if fileExistsAny(dir, "vite.config.ts", "vite.config.js") {
+		result.Type = "spa"
+		result.BuildTool = "vite"
+		result.Port = 5173
+		result.Detected = true
+		switch {
+		case hasDep(earlyDeps, "react"):
+			result.Framework = "react"
+		case hasDep(earlyDeps, "vue"):
+			result.Framework = "vue"
+		case hasDep(earlyDeps, "svelte"):
+			result.Framework = "svelte"
+		default:
+			result.Framework = "vanilla-javascript"
+		}
+		return result
+	}
+
+	// ── 7. Next.config.[js|ts|mjs] ─────────────────────────────────────────.
+	if fileExistsAny(dir, "next.config.js", "next.config.ts", "next.config.mjs") {
+		result.Framework = "nextjs"
+		result.Type = "regular"
+		result.Port = 3000
+		result.Detected = true
+		return result
+	}
+
+	// ── 8. Nuxt.config.[ts|js] ──────────────────────────────────────────────.
+	if fileExistsAny(dir, "nuxt.config.ts", "nuxt.config.js") {
+		result.Framework = "nuxt"
+		result.Type = "regular"
+		result.Port = 3000
+		result.Detected = true
+		return result
+	}
+
+	// ── 9. Svelte.config.[js|ts] ────────────────────────────────────────────.
+	if fileExistsAny(dir, "svelte.config.js", "svelte.config.ts") {
+		result.Framework = "sveltekit"
+		result.Type = "regular"
+		result.Detected = true
+		return result
+	}
+
+	// ── 10. Expo: app.json with top-level "expo" key, or legacy expo.json ────.
+	// create-expo-app has generated app.json (not expo.json) since SDK 46 (2022).
+	// Check app.json first; fall back to expo.json for legacy projects.
+	if isExpoProject(dir) || fileExists(dir, "expo.json") {
+		result.Framework = "expo"
+		result.Type = "native"
+		result.Detected = true
+		return result
+	}
+
+	// ── 11. .csproj ──────────────────────────────────────────────────────────.
+	if content, ok := findCsprojContent(dir); ok {
+		if fw, qsType, found := detectFromCsproj(content); found {
+			result.Framework = fw
+			result.Type = qsType
+			result.Detected = true
+			return result
+		}
+	}
+
+	// ── 12. Pom.xml / build.gradle (Java) ────────────────────────────────────.
+	if content, buildTool, ok := findJavaBuildContent(dir); ok {
+		fw, port := detectJavaFramework(content)
+		result.Framework = fw
+		result.Type = "regular"
+		result.BuildTool = buildTool
+		result.Port = port
+		result.Detected = true
+		return result
+	}
+
+	// ── 13. Go.mod ──────────────────────────────────────────────────────────.
 	if fileExists(dir, "go.mod") {
 		result.Framework = "vanilla-go"
 		result.Type = "regular"
@@ -159,7 +200,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 12. Gemfile (Ruby on Rails) ─────────────────────────────────────────.
+	// ── 14. Gemfile (Ruby on Rails) ─────────────────────────────────────────.
 	if data, ok := readFileContent(dir, "Gemfile"); ok {
 		if strings.Contains(data, "rails") {
 			result.Framework = "rails"
@@ -170,7 +211,7 @@ func DetectProject(dir string) DetectionResult {
 		}
 	}
 
-	// ── 13. Requirements.txt / pyproject.toml (Python / Flask) ──────────────.
+	// ── 15. Requirements.txt / pyproject.toml (Python / Flask) ──────────────.
 	for _, pyFile := range []string{"requirements.txt", "pyproject.toml"} {
 		if data, ok := readFileContent(dir, pyFile); ok {
 			if strings.Contains(strings.ToLower(data), "flask") {
@@ -183,10 +224,10 @@ func DetectProject(dir string) DetectionResult {
 		}
 	}
 
-	// ── 14. Package.json dep scanning (lowest priority) ─────────────────────.
-	deps := readPackageJSONDeps(dir)
-	if len(deps) > 0 {
-		candidates := collectPackageJSONCandidates(deps)
+	// ── 16. Package.json dep scanning (lowest priority) ─────────────────────.
+	// Note: Ionic deps are already handled above (step 1).
+	if len(earlyDeps) > 0 {
+		candidates := collectPackageJSONCandidates(earlyDeps)
 		switch len(candidates) {
 		case 1:
 			c := candidates[0]
@@ -199,6 +240,15 @@ func DetectProject(dir string) DetectionResult {
 			if len(candidates) > 1 {
 				result.Type = "regular" // All package.json web deps are regular/native.
 				result.Detected = true
+				// Use the common port if all candidates agree (e.g. express + hono both use 3000).
+				commonPort := candidates[0].port
+				for _, c := range candidates {
+					if c.port != commonPort {
+						commonPort = 0
+						break
+					}
+				}
+				result.Port = commonPort
 				for _, c := range candidates {
 					result.AmbiguousCandidates = append(result.AmbiguousCandidates, c.framework)
 				}
@@ -221,7 +271,7 @@ func collectPackageJSONCandidates(deps map[string]bool) []detectionCandidate {
 	if hasDep(deps, "@ionic/vue") {
 		candidates = append(candidates, detectionCandidate{framework: "ionic-vue", qsType: "native", buildTool: "vite"})
 	}
-	// React-native without expo (expo.json would have matched earlier).
+	// React-native without expo (expo check would have matched earlier in DetectProject).
 	if hasDep(deps, "react-native") {
 		candidates = append(candidates, detectionCandidate{framework: "react-native", qsType: "native"})
 	}
@@ -242,10 +292,14 @@ func detectFromCsproj(content string) (framework, qsType string, found bool) {
 	switch {
 	case strings.Contains(content, "Microsoft.AspNetCore.Components"):
 		return "aspnet-blazor", "regular", true
-	case strings.Contains(content, "Microsoft.AspNetCore.Mvc"):
-		return "aspnet-mvc", "regular", true
 	case strings.Contains(content, "Microsoft.Owin"):
 		return "aspnet-owin", "regular", true
+	case strings.Contains(content, "Microsoft.AspNetCore.Mvc"):
+		return "aspnet-mvc", "regular", true
+	// .NET 6+: MVC is built-in via Microsoft.NET.Sdk.Web — no PackageReference generated.
+	// Check this after Blazor (AspNetCore.Components) and OWIN to avoid false positives.
+	case strings.Contains(content, `Sdk="Microsoft.NET.Sdk.Web"`):
+		return "aspnet-mvc", "regular", true
 	case strings.Contains(content, "Microsoft.Maui") ||
 		strings.Contains(content, "-android") ||
 		strings.Contains(content, "-ios"):
@@ -265,15 +319,38 @@ func detectJavaFramework(content string) (framework string, port int) {
 	case strings.Contains(lower, "javax.ee") ||
 		strings.Contains(lower, "jakarta.ee") ||
 		strings.Contains(lower, "javax.servlet") ||
-		strings.Contains(lower, "jakarta.servlet"):
+		strings.Contains(lower, "jakarta.servlet") ||
+		// jakarta.platform:jakarta.jakartaee-api is the standard BOM for Jakarta EE 9+.
+		strings.Contains(lower, "jakarta.platform"):
 		return "java-ee", 0
 	default:
 		return "vanilla-java", 0
 	}
 }
 
+// isExpoProject returns true if app.json contains a top-level "expo" key.
+// create-expo-app has generated app.json (not expo.json) since SDK 46 in 2022.
+func isExpoProject(dir string) bool {
+	data, err := os.ReadFile(filepath.Join(dir, "app.json"))
+	if err != nil {
+		return false
+	}
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return false
+	}
+	_, hasExpoKey := obj["expo"]
+	return hasExpoKey
+}
+
+// dirExists returns true if the named entry in dir is a directory.
+func dirExists(dir, name string) bool {
+	info, err := os.Stat(filepath.Join(dir, name))
+	return err == nil && info.IsDir()
+}
+
 // isFlutterWeb returns true if the project has web platform support enabled.
-// It checks for the standard web/ directory that Flutter creates for web targets.
+// Kept for backwards compatibility; DetectProject uses dirExists for android/ios instead.
 func isFlutterWeb(dir string) bool {
 	_, err := os.Stat(filepath.Join(dir, "web", "index.html"))
 	return err == nil
