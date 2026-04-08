@@ -709,6 +709,10 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				return fmt.Errorf("authentication required: %w", err)
 			}
 
+			// linkedAppClientID tracks which app client ID to link to the API
+			// (either a newly created app or one selected from the tenant).
+			var linkedAppClientID string
+
 			// ── Step 1: Decide what to create (App / API / both) ─────────────.
 			if !inputs.App && !inputs.API {
 				var selections []string
@@ -851,37 +855,18 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 			}
 
-			// ── Step 3c: Collect API data ─────────────────────────────────────.
+			// ── Step 3c: Collect API name for API-only flow ───────────────────.
 			if inputs.API && !inputs.App {
-				if !cmd.Flags().Changed("name") {
-					// For API-only: let user pick an existing application.
-					var appID string
-					if err := qsClientID.Pick(
-						cmd,
-						&appID,
-						cli.appPickerOptions(management.Parameter("app_type", "native,spa,regular_web")),
-					); err == nil && appID != "" {
-						var selectedApp *management.Client
-						if fetchErr := ansi.Waiting(func() error {
-							var e error
-							selectedApp, e = cli.api.Client.Read(ctx, appID)
-							return e
-						}); fetchErr == nil && selectedApp != nil {
-							appName := selectedApp.GetName()
-							if inputs.Name == "" {
-								inputs.Name = appName
-							}
-						}
+				// Collect API name if not already set (pre-fill from CWD folder name).
+				if inputs.Name == "" && !cmd.Flags().Changed("name") {
+					cwd, _ := os.Getwd()
+					defaultName := filepath.Base(cwd)
+					if defaultName == "" || defaultName == "." {
+						defaultName = "my-api"
 					}
-					if inputs.Name == "" {
-						defaultName := "My App"
-						q := prompt.TextInput("name", "Application name", "Name for the Auth0 application", defaultName, true)
-						if err := prompt.AskOne(q, &inputs.Name); err != nil {
-							return fmt.Errorf("failed to enter application name: %v", err)
-						}
-					}
-					if !prompt.Confirm(fmt.Sprintf("Use existing application %q for API association?", inputs.Name)) {
-						return fmt.Errorf("setup cancelled: no resources were created")
+					q := prompt.TextInput("name", "Application Name", "Name for the Auth0 API", defaultName, true)
+					if err := prompt.AskOne(q, &inputs.Name); err != nil {
+						return fmt.Errorf("failed to enter application name: %v", err)
 					}
 				}
 			}
@@ -933,6 +918,46 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						return fmt.Errorf("failed to enter token lifetime: %v", err)
 					}
 				}
+
+				// For API-only: fetch existing apps and let the user select one to link.
+				if !inputs.App {
+					var appList *management.ClientList
+					_ = ansi.Waiting(func() error {
+						var e error
+						appList, e = cli.api.Client.List(
+							ctx,
+							management.Parameter("app_type", "native,spa,regular_web"),
+							management.Parameter("is_global", "false"),
+						)
+						return e
+					})
+					if appList != nil && len(appList.Clients) > 0 {
+						appOptions := make([]string, 0, len(appList.Clients)+1)
+						appIDByName := make(map[string]string)
+						for _, c := range appList.Clients {
+							name := c.GetName()
+							appOptions = append(appOptions, name)
+							appIDByName[name] = c.GetClientID()
+						}
+						appOptions = append(appOptions, "Skip")
+
+						var selectedAppName string
+						q := prompt.SelectInput(
+							"link-app",
+							"Select App to register API",
+							"Select an existing application to authorize for this API, or skip",
+							appOptions,
+							appOptions[0],
+							true,
+						)
+						if err := prompt.AskOne(q, &selectedAppName); err != nil {
+							return fmt.Errorf("failed to select app: %v", err)
+						}
+						if selectedAppName != "Skip" {
+							linkedAppClientID = appIDByName[selectedAppName]
+						}
+					}
+				}
 			}
 
 			// ── Step 4: Create the Auth0 application client ───────────────────.
@@ -963,6 +988,9 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					return fmt.Errorf("failed to generate config file: %w", err)
 				}
 				printClientDetails(cli, client, inputs.Port, envFileName)
+
+				// Track the created app's client ID so we can link it to the API below.
+				linkedAppClientID = client.GetClientID()
 			}
 
 			// ── Step 5: Create the Auth0 API resource server ──────────────────.
@@ -999,6 +1027,21 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					return fmt.Errorf("failed to create API: %w", err)
 				}
 				printAPIDetails(cli, rs)
+
+				// Link the app to the API via a client grant if an app was selected/created.
+				if linkedAppClientID != "" {
+					emptyScopes := []string{}
+					grant := &management.ClientGrant{
+						ClientID: &linkedAppClientID,
+						Audience: &inputs.Identifier,
+						Scope:    &emptyScopes,
+					}
+					if grantErr := ansi.Waiting(func() error {
+						return cli.api.ClientGrant.Create(ctx, grant)
+					}); grantErr != nil {
+						cli.renderer.Warnf("Failed to link application to API: %v", grantErr)
+					}
+				}
 			}
 
 			return nil
