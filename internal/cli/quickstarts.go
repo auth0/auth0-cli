@@ -709,7 +709,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				return fmt.Errorf("authentication required: %w", err)
 			}
 
-			// linkedAppClientID tracks which app client ID to link to the API
+			// LinkedAppClientID tracks which app client ID to link to the API
 			// (either a newly created app or one selected from the tenant).
 			var linkedAppClientID string
 
@@ -747,12 +747,13 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				typeFromFlag := cmd.Flags().Changed("type")
 				frameworkFromFlag := cmd.Flags().Changed("framework")
 
-				if typeFromFlag && frameworkFromFlag {
+				switch {
+				case typeFromFlag && frameworkFromFlag:
 					// User explicitly specified type and framework via flags; skip detection UI.
 					if inputs.Name == "" {
 						inputs.Name = detection.AppName
 					}
-				} else if detection.Detected {
+				case detection.Detected:
 					if len(detection.AmbiguousCandidates) > 1 {
 						// Multiple package.json deps matched — show partial summary and ask user to disambiguate.
 						cli.renderer.Infof("Detected in current directory")
@@ -815,7 +816,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 							}
 						}
 					}
-				} else {
+				default:
 					// No detection signal found — notify the user and pre-fill name from directory.
 					cli.renderer.Warnf("Auto detection Failed: Unable to auto detect application")
 					if inputs.Name == "" {
@@ -916,8 +917,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					}
 				}
 
-				// Prompt for token lifetime if not provided via flag.
-				// inputs.TokenLifetime already has "86400" from flag default; only prompt interactively.
+				// Inputs.TokenLifetime already has "86400" from flag default; only prompt interactively.
 				if !cmd.Flags().Changed("token-lifetime") && canPrompt(cmd) {
 					defaultLifetime := "86400"
 					q := prompt.TextInput("token-lifetime", "Access token lifetime (seconds)", "How long access tokens remain valid (default: 86400 = 24 hours)", defaultLifetime, true)
@@ -951,7 +951,8 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 							named = append(named, name)
 							appIDByName[name] = c.GetClientID()
 						}
-						appOptions = append(named, "Skip")
+						named = append(named, "Skip")
+						appOptions = named
 					}
 
 					var selectedAppName string
