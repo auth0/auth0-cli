@@ -376,6 +376,13 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 							},
 						},
 					},
+					{
+						"passkeys": {
+							management.ScreenName("passkeys"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
+					},
 				},
 				Prompts: []*promptData{
 					{
@@ -597,6 +604,13 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					{
 						"login-passwordless": {
 							management.ScreenName("login-passwordless"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
+					},
+					{
+						"passkeys": {
+							management.ScreenName("passkeys"): {
 								management.InsertionPointFormContentEnd: "<form>",
 							},
 						},
@@ -824,6 +838,13 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					{
 						"login-passwordless": {
 							management.ScreenName("login-passwordless"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
+					},
+					{
+						"passkeys": {
+							management.ScreenName("passkeys"): {
 								management.InsertionPointFormContentEnd: "<form>",
 							},
 						},
@@ -1132,6 +1153,13 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 					{
 						"login-passwordless": {
 							management.ScreenName("login-passwordless"): {
+								management.InsertionPointFormContentEnd: "<form>",
+							},
+						},
+					},
+					{
+						"passkeys": {
+							management.ScreenName("passkeys"): {
 								management.InsertionPointFormContentEnd: "<form>",
 							},
 						},
@@ -2072,6 +2100,13 @@ func TestFetchAllPartials(t *testing.T) {
 						},
 					},
 				},
+				{
+					"passkeys": {
+						management.ScreenName("passkeys"): {
+							management.InsertionPointFormContentEnd: "<form>",
+						},
+					},
+				},
 			},
 			mockedAPI: func() *auth0.API {
 				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
@@ -2131,6 +2166,9 @@ func TestFetchAllPartials(t *testing.T) {
 				},
 				{
 					"login-passwordless": {},
+				},
+				{
+					"passkeys": {},
 				},
 			},
 			mockedAPI: func() *auth0.API {
