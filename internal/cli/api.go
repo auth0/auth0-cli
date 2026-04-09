@@ -219,7 +219,7 @@ func (i *apiCmdInputs) validateAndSetMethod() error {
 }
 
 func (i *apiCmdInputs) validateAndSetData() error {
-	if i.Method == http.MethodDelete || i.Method == http.MethodGet {
+	if i.Method == http.MethodGet {
 		return nil
 	}
 

@@ -149,12 +149,6 @@ func testLoginCmd(cli *cli) *cobra.Command {
 				return nil
 			}
 
-			if inputs.Audience != "" && (client.GetAppType() == appTypeNonInteractive) {
-				if err := checkClientIsAuthorizedForAPI(cmd.Context(), cli, client, inputs.Audience); err != nil {
-					return err
-				}
-			}
-
 			if inputs.Organization != "" {
 				if inputs.CustomParams != nil {
 					inputs.CustomParams["organization"] = inputs.Organization
@@ -262,7 +256,11 @@ func testTokenCmd(cli *cli) *cobra.Command {
 					cli.renderer.Warnf("Passed in scopes do not apply to Machine to Machine applications.\n")
 				}
 
-				tokenResponse, err = runClientCredentialsFlow(cmd.Context(), cli, client, inputs.Audience, cli.tenant)
+				if err := cli.pickOrganizationForGrantIfRequired(cmd, client, inputs.Audience, &inputs.Organization); err != nil {
+					return err
+				}
+
+				tokenResponse, err = runClientCredentialsFlow(cmd.Context(), cli, client, inputs.Audience, cli.tenant, inputs.Organization)
 				if err != nil {
 					return fmt.Errorf(
 						"failed to log in with client credentials for client with ID %q: %w",
@@ -480,6 +478,58 @@ func (c *cli) audiencePickerOptions(client *management.Client) func(ctx context.
 	}
 }
 
+// pickOrganizationForGrantIfRequired checks if the client grant for the given
+// audience requires an organization. If it does and no organization has been
+// specified, it either fails with a descriptive error (if no organizations exist
+// on the tenant) or opens an interactive picker to let the user select one.
+func (c *cli) pickOrganizationForGrantIfRequired(cmd *cobra.Command, client *management.Client, audience string, organization *string) error {
+	if *organization != "" {
+		return nil
+	}
+
+	var list *management.ClientGrantList
+	if err := ansi.Waiting(func() (err error) {
+		list, err = c.api.ClientGrant.List(
+			cmd.Context(),
+			management.Parameter("audience", audience),
+			management.Parameter("client_id", client.GetClientID()),
+		)
+		return err
+	}); err != nil {
+		return err
+	}
+
+	if len(list.ClientGrants) == 0 || list.ClientGrants[0].GetOrganizationUsage() != "require" {
+		return nil
+	}
+
+	return testOrganization.Pick(cmd, organization, c.organizationPickerOptionsForGrant(audience))
+}
+
+func (c *cli) organizationPickerOptionsForGrant(audience string) pickerOptionsFunc {
+	return func(ctx context.Context) (pickerOptions, error) {
+		orgList, err := c.api.Organization.List(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(orgList.Organizations) == 0 {
+			return nil, fmt.Errorf(
+				"the client grant for %s requires an organization, but no organizations exist on this tenant.\n\n"+
+					"Create one by running: 'auth0 orgs create'",
+				ansi.Bold(audience),
+			)
+		}
+
+		var opts pickerOptions
+		for _, org := range orgList.Organizations {
+			label := fmt.Sprintf("%s %s", org.GetName(), ansi.Faint("("+org.GetID()+")"))
+			opts = append(opts, pickerOption{value: org.GetID(), label: label})
+		}
+		return opts, nil
+	}
+}
+
 func (c *cli) pickTokenScopes(ctx context.Context, inputs *testCmdInputs) error {
 	resourceServer, err := c.api.ResourceServer.Read(ctx, inputs.Audience)
 	if err != nil {
@@ -502,35 +552,4 @@ func (c *cli) pickTokenScopes(ctx context.Context, inputs *testCmdInputs) error 
 	}
 
 	return survey.AskOne(scopesPrompt, &inputs.Scopes)
-}
-
-func checkClientIsAuthorizedForAPI(ctx context.Context, cli *cli, client *management.Client, audience string) error {
-	var list *management.ClientGrantList
-	if err := ansi.Waiting(func() (err error) {
-		list, err = cli.api.ClientGrant.List(
-			ctx,
-			management.Parameter("audience", audience),
-			management.Parameter("client_id", client.GetClientID()),
-		)
-		return err
-	}); err != nil {
-		return fmt.Errorf(
-			"failed to find client grants for API identifier %q and client ID %q: %w",
-			audience,
-			client.GetClientID(),
-			err,
-		)
-	}
-
-	if len(list.ClientGrants) < 1 {
-		return fmt.Errorf(
-			"the %s application is not authorized to request access tokens for this API %s.\n\n"+
-				"Run: 'auth0 apps open %s' to open the dashboard and authorize the application.",
-			ansi.Bold(client.GetName()),
-			ansi.Bold(audience),
-			client.GetClientID(),
-		)
-	}
-
-	return nil
 }
