@@ -76,8 +76,7 @@ func DetectProject(dir string) DetectionResult {
 	if data, ok := readFileContent(dir, "pubspec.yaml"); ok {
 		if strings.Contains(data, "sdk: flutter") {
 			result.Detected = true
-			// android/ or ios/ present means a native project regardless of web/ directory.
-			// flutter create (default) has included web/ since Flutter 2.10, so web/ alone
+			// Flutter create (default) has included web/ since Flutter 2.10, so web/ alone
 			// is not a reliable signal for web-only intent.
 			if dirExists(dir, "android") || dirExists(dir, "ios") {
 				result.Framework = "flutter"
@@ -161,8 +160,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 10. Expo: app.json with top-level "expo" key, or legacy expo.json ────.
-	// create-expo-app has generated app.json (not expo.json) since SDK 46 (2022).
+	// Create-expo-app has generated app.json (not expo.json) since SDK 46 (2022).
 	// Check app.json first; fall back to expo.json for legacy projects.
 	if isExpoProject(dir) || fileExists(dir, "expo.json") {
 		result.Framework = "expo"
@@ -320,7 +318,7 @@ func detectJavaFramework(content string) (framework string, port int) {
 		strings.Contains(lower, "jakarta.ee") ||
 		strings.Contains(lower, "javax.servlet") ||
 		strings.Contains(lower, "jakarta.servlet") ||
-		// jakarta.platform:jakarta.jakartaee-api is the standard BOM for Jakarta EE 9+.
+		// Jakarta.platform:jakarta.jakartaee-api is the standard BOM for Jakarta EE 9+.
 		strings.Contains(lower, "jakarta.platform"):
 		return "java-ee", 0
 	default:
@@ -328,8 +326,7 @@ func detectJavaFramework(content string) (framework string, port int) {
 	}
 }
 
-// isExpoProject returns true if app.json contains a top-level "expo" key.
-// create-expo-app has generated app.json (not expo.json) since SDK 46 in 2022.
+// Create-expo-app has generated app.json (not expo.json) since SDK 46 in 2022.
 func isExpoProject(dir string) bool {
 	data, err := os.ReadFile(filepath.Join(dir, "app.json"))
 	if err != nil {
@@ -347,13 +344,6 @@ func isExpoProject(dir string) bool {
 func dirExists(dir, name string) bool {
 	info, err := os.Stat(filepath.Join(dir, name))
 	return err == nil && info.IsDir()
-}
-
-// isFlutterWeb returns true if the project has web platform support enabled.
-// Kept for backwards compatibility; DetectProject uses dirExists for android/ios instead.
-func isFlutterWeb(dir string) bool {
-	_, err := os.Stat(filepath.Join(dir, "web", "index.html"))
-	return err == nil
 }
 
 // fileExists returns true if the named file exists in dir.
