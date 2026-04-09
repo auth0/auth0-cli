@@ -469,7 +469,7 @@ func TestDetectProject_Laravel(t *testing.T) {
 func TestDetectProject_Flutter(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "pubspec.yaml", "name: my_flutter_app\nflutter:\n  sdk: flutter\n")
-	// android/ present -> native (reliable signal for native intent).
+	// Android/ present -> native (reliable signal for native intent).
 	mkTestDir(t, dir, "android")
 
 	got := DetectProject(dir)
