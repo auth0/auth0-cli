@@ -929,40 +929,45 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				// For API-only: fetch existing apps and let the user select one to link.
 				if !inputs.App {
 					var appList *management.ClientList
+					var appListErr error
 					_ = ansi.Waiting(func() error {
-						var e error
-						appList, e = cli.api.Client.List(
+						appList, appListErr = cli.api.Client.List(
 							ctx,
 							management.Parameter("app_type", "native,spa,regular_web"),
 							management.Parameter("is_global", "false"),
 						)
-						return e
+						return appListErr
 					})
+					if appListErr != nil {
+						cli.renderer.Warnf("Could not fetch existing applications: %v. You can link the API to an app manually.", appListErr)
+					}
+
+					appOptions := []string{"Skip"}
+					appIDByName := make(map[string]string)
 					if appList != nil && len(appList.Clients) > 0 {
-						appOptions := make([]string, 0, len(appList.Clients)+1)
-						appIDByName := make(map[string]string)
+						named := make([]string, 0, len(appList.Clients))
 						for _, c := range appList.Clients {
 							name := c.GetName()
-							appOptions = append(appOptions, name)
+							named = append(named, name)
 							appIDByName[name] = c.GetClientID()
 						}
-						appOptions = append(appOptions, "Skip")
+						appOptions = append(named, "Skip")
+					}
 
-						var selectedAppName string
-						q := prompt.SelectInput(
-							"link-app",
-							"Select App to register API",
-							"Select an existing application to authorize for this API, or skip",
-							appOptions,
-							appOptions[0],
-							true,
-						)
-						if err := prompt.AskOne(q, &selectedAppName); err != nil {
-							return fmt.Errorf("failed to select app: %v", err)
-						}
-						if selectedAppName != "Skip" {
-							linkedAppClientID = appIDByName[selectedAppName]
-						}
+					var selectedAppName string
+					q := prompt.SelectInput(
+						"link-app",
+						"Select App to register API",
+						"Select an existing application to authorize for this API, or skip",
+						appOptions,
+						appOptions[0],
+						true,
+					)
+					if err := prompt.AskOne(q, &selectedAppName); err != nil {
+						return fmt.Errorf("failed to select app: %v", err)
+					}
+					if selectedAppName != "Skip" {
+						linkedAppClientID = appIDByName[selectedAppName]
 					}
 				}
 			}
