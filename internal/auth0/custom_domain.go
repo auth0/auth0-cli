@@ -31,8 +31,8 @@ type CustomDomainAPI interface {
 	ListWithPagination(ctx context.Context, opts ...management.RequestOption) (c *management.CustomDomainList, err error)
 
 	// ReadDefault retrieves the default domain configuration for the tenant.
-	ReadDefault(ctx context.Context, opts ...management.RequestOption) (c *management.CustomDomainDefault, err error)
+	ReadDefault(ctx context.Context, opts ...management.RequestOption) (c *management.CustomDomain, err error)
 
 	// UpdateDefault updates the default domain for the tenant.
-	UpdateDefault(ctx context.Context, c *management.CustomDomainDefault, opts ...management.RequestOption) error
+	UpdateDefault(ctx context.Context, c *management.CustomDomain, opts ...management.RequestOption) error
 }

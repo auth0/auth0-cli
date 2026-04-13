@@ -129,12 +129,12 @@ func (r *Renderer) CustomDomainUpdate(customDomain *management.CustomDomain) {
 	r.Result(makeCustomDomainView(customDomain))
 }
 
-func (r *Renderer) CustomDomainDefaultShow(defaultDomain *management.CustomDomainDefault) {
+func (r *Renderer) CustomDomainDefaultShow(defaultDomain *management.CustomDomain) {
 	r.Heading("default custom domain")
 	r.Result(makeCustomDomainDefaultView(defaultDomain))
 }
 
-func (r *Renderer) CustomDomainDefaultUpdate(defaultDomain *management.CustomDomainDefault) {
+func (r *Renderer) CustomDomainDefaultUpdate(defaultDomain *management.CustomDomain) {
 	r.Heading("default custom domain updated")
 	r.Result(makeCustomDomainDefaultView(defaultDomain))
 }
@@ -217,7 +217,7 @@ func (v *customDomainDefaultView) Object() interface{} {
 	return v.raw
 }
 
-func makeCustomDomainDefaultView(defaultDomain *management.CustomDomainDefault) *customDomainDefaultView {
+func makeCustomDomainDefaultView(defaultDomain *management.CustomDomain) *customDomainDefaultView {
 	domain := ""
 	if defaultDomain.Domain != nil {
 		domain = *defaultDomain.Domain

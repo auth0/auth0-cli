@@ -542,7 +542,7 @@ func showDefaultCustomDomainCmd(cli *cli) *cobra.Command {
   auth0 domains default show --json
   auth0 domains default show --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var defaultDomain *management.CustomDomainDefault
+			var defaultDomain *management.CustomDomain
 
 			if err := ansi.Waiting(func() (err error) {
 				defaultDomain, err = cli.api.CustomDomain.ReadDefault(cmd.Context())
@@ -590,7 +590,7 @@ func setDefaultCustomDomainCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			defaultDomain := &management.CustomDomainDefault{
+			defaultDomain := &management.CustomDomain{
 				Domain: &inputs.Domain,
 			}
 
