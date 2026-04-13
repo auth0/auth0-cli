@@ -29,4 +29,10 @@ type CustomDomainAPI interface {
 
 	// ListWithPagination lists all custom domains with support for pagination.
 	ListWithPagination(ctx context.Context, opts ...management.RequestOption) (c *management.CustomDomainList, err error)
+
+	// ReadDefault retrieves the default domain configuration for the tenant.
+	ReadDefault(ctx context.Context, opts ...management.RequestOption) (c *management.CustomDomain, err error)
+
+	// UpdateDefault updates the default domain for the tenant.
+	UpdateDefault(ctx context.Context, c *management.CustomDomain, opts ...management.RequestOption) error
 }

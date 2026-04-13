@@ -99,6 +99,7 @@ func customDomainsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(updateCustomDomainCmd(cli))
 	cmd.AddCommand(deleteCustomDomainCmd(cli))
 	cmd.AddCommand(verifyCustomDomainCmd(cli))
+	cmd.AddCommand(defaultCustomDomainCmd(cli))
 
 	return cmd
 }
@@ -517,6 +518,101 @@ func apiProvisioningTypeFor(v string) *string {
 	}
 }
 
+func defaultCustomDomainCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "default",
+		Short: "Manage the default custom domain",
+		Long:  "Manage the default custom domain for the tenant. Use sub-commands to show or set the default domain.",
+	}
+
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(showDefaultCustomDomainCmd(cli))
+	cmd.AddCommand(setDefaultCustomDomainCmd(cli))
+
+	return cmd
+}
+
+func showDefaultCustomDomainCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "show",
+		Args:  cobra.NoArgs,
+		Short: "Show the default custom domain",
+		Long:  "Display the default custom domain configuration for the tenant.",
+		Example: `  auth0 domains default show
+  auth0 domains default show --json
+  auth0 domains default show --json-compact`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var defaultDomain *management.CustomDomain
+
+			if err := ansi.Waiting(func() (err error) {
+				defaultDomain, err = cli.api.CustomDomain.ReadDefault(cmd.Context())
+				return err
+			}); err != nil {
+				return fmt.Errorf("failed to read default custom domain: %w", err)
+			}
+
+			cli.renderer.CustomDomainDefaultShow(defaultDomain)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+
+	return cmd
+}
+
+func setDefaultCustomDomainCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		Domain string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "set",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Set the default custom domain",
+		Long: "Set the default custom domain for the tenant.\n\n" +
+			"To set interactively, use `auth0 domains default set` with no arguments.\n\n" +
+			"To set non-interactively, supply the domain name as an argument or through the flag.",
+		Example: `  auth0 domains default set
+  auth0 domains default set <domain>
+  auth0 domains default set --domain <domain>
+  auth0 domains default set --domain <domain> --json`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				inputs.Domain = args[0]
+			}
+
+			if inputs.Domain == "" {
+				if err := customDomainDomain.Pick(cmd, &inputs.Domain, cli.customDomainNamePickerOptions); err != nil {
+					return err
+				}
+			}
+
+			defaultDomain := &management.CustomDomain{
+				Domain: &inputs.Domain,
+			}
+
+			if err := ansi.Waiting(func() error {
+				return cli.api.CustomDomain.UpdateDefault(cmd.Context(), defaultDomain)
+			}); err != nil {
+				return fmt.Errorf("failed to set default custom domain to %q: %w", inputs.Domain, err)
+			}
+
+			cli.renderer.CustomDomainDefaultUpdate(defaultDomain)
+
+			return nil
+		},
+	}
+
+	customDomainDomain.RegisterString(cmd, &inputs.Domain, "")
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+
+	return cmd
+}
+
 func apiVerificationMethodFor(v string) *string {
 	switch v {
 	case "txt":
@@ -557,6 +653,35 @@ func (c *cli) customDomainsPickerOptions(ctx context.Context) (pickerOptions, er
 		value := d.GetID()
 		label := fmt.Sprintf("%s %s", d.GetDomain(), ansi.Faint("("+value+")"))
 		opts = append(opts, pickerOption{value: value, label: label})
+	}
+
+	if len(opts) == 0 {
+		return nil, errNoCustomDomains
+	}
+
+	return opts, nil
+}
+
+func (c *cli) customDomainNamePickerOptions(ctx context.Context) (pickerOptions, error) {
+	var opts pickerOptions
+
+	domains, err := c.api.CustomDomain.List(ctx)
+	if err != nil {
+		var errStatus management.Error
+		errors.As(err, &errStatus)
+		// 403 is a valid response for free tenants that don't have
+		// custom domains enabled.
+		if errStatus != nil && errStatus.Status() == 403 {
+			return nil, errNoCustomDomains
+		}
+
+		return nil, fmt.Errorf("failed to list custom domains: %w", err)
+	}
+
+	for _, d := range domains {
+		domain := d.GetDomain()
+		label := fmt.Sprintf("%s %s", domain, ansi.Faint("("+d.GetID()+")"))
+		opts = append(opts, pickerOption{value: domain, label: label})
 	}
 
 	if len(opts) == 0 {
