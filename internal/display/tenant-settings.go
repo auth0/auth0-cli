@@ -35,6 +35,7 @@ var SupportedTenantSettings = map[string]string{
 	"CustomizeMFAInPostLoginAction":                  "customize_mfa_in_postlogin_action",
 	"AllowOrgNameInAuthAPI":                          "allow_organization_name_in_authentication_api",
 	"PushedAuthorizationRequestsSupported":           "pushed_authorization_requests_supported",
+	"ClientIDMetadataDocumentSupported":              "client_id_metadata_document_supported",
 	"OIDCLogout.RPLogoutEndSessionEndpointDiscovery": "oidc_logout.rp_logout_end_session_endpoint_discovery",
 	"MTLS.EnableEndpointAliases":                     "mtls.enable_endpoint_aliases",
 }
@@ -155,6 +156,8 @@ func makeTenantSettings(tenant *management.Tenant) []View {
 			addSetting(settingName, friendlyFlagName, tenant.AllowOrgNameInAuthAPI)
 		case "PushedAuthorizationRequestsSupported":
 			addSetting(settingName, friendlyFlagName, tenant.PushedAuthorizationRequestsSupported)
+		case "ClientIDMetadataDocumentSupported":
+			addSetting(settingName, friendlyFlagName, tenant.ClientIDMetadataDocumentSupported)
 		case "OIDCLogout.RPLogoutEndSessionEndpointDiscovery":
 			if tenant.OIDCLogout != nil {
 				addSetting(settingName, friendlyFlagName, tenant.OIDCLogout.OIDCResourceProviderLogoutEndSessionEndpointDiscovery)
