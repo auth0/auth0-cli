@@ -753,15 +753,20 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					if inputs.Name == "" {
 						inputs.Name = detection.AppName
 					}
+					// If build tool was not explicitly provided, read it from detected config
+					// files (e.g. vite.config.ts) rather than defaulting to "none" statically.
+					if !cmd.Flags().Changed("build-tool") && detection.BuildTool != "" {
+						inputs.BuildTool = detection.BuildTool
+					}
 				case detection.Detected:
 					if len(detection.AmbiguousCandidates) > 1 {
 						// Multiple package.json deps matched — show partial summary and ask user to disambiguate.
 						cli.renderer.Infof("Detected in current directory")
-						cli.renderer.Infof("%-12s%s", "Framework", "Could not be determined")
-						cli.renderer.Infof("%-12s%s", "App type", detectionFriendlyAppType(detection.Type))
-						cli.renderer.Infof("%-12s%s", "App name", detection.AppName)
+						cli.renderer.Infof("%-12s %s", "Framework:", "Could not be determined")
+						cli.renderer.Infof("%-12s %s", "App type:", detectionFriendlyAppType(detection.Type))
+						cli.renderer.Infof("%-12s %s", "App name:", detection.AppName)
 						if detection.Port > 0 {
-							cli.renderer.Infof("%-12s%d", "Port", detection.Port)
+							cli.renderer.Infof("%-12s %d", "Port:", detection.Port)
 						}
 						noInputMode := !canPrompt(cmd)
 						if noInputMode || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
@@ -790,11 +795,11 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 							frameworkDisplay += " \u00b7 " + titleCaser.String(detection.BuildTool)
 						}
 						cli.renderer.Infof("Detected in current directory")
-						cli.renderer.Infof("%-12s%s", "Framework", frameworkDisplay)
-						cli.renderer.Infof("%-12s%s", "App type", detectionFriendlyAppType(detection.Type))
-						cli.renderer.Infof("%-12s%s", "App name", detection.AppName)
+						cli.renderer.Infof("%-12s %s", "Framework:", frameworkDisplay)
+						cli.renderer.Infof("%-12s %s", "App type:", detectionFriendlyAppType(detection.Type))
+						cli.renderer.Infof("%-12s %s", "App name:", detection.AppName)
 						if detection.Port > 0 {
-							cli.renderer.Infof("%-12s%d", "Port", detection.Port)
+							cli.renderer.Infof("%-12s %d", "Port:", detection.Port)
 						}
 
 						noInputModeSingle := !canPrompt(cmd)
@@ -849,12 +854,43 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					if inputs.Name == "" {
 						return fmt.Errorf("application name cannot be empty")
 					}
-					if !prompt.Confirm(fmt.Sprintf("Create application with name %q?", inputs.Name)) {
-						return fmt.Errorf("setup cancelled: no resources were created")
-					}
+					// if canPrompt(cmd) && !prompt.Confirm(fmt.Sprintf("Create application with name %q?", inputs.Name)) {
+					// 	return fmt.Errorf("setup cancelled: no resources were created")
+					// }
 				}
 				if inputs.Name == "" {
 					return fmt.Errorf("application name cannot be empty")
+				}
+			}
+
+			// ── Step 3d: Prompt for port if not explicitly set ──────────────────.
+			if inputs.App && inputs.Type != "native" && !cmd.Flags().Changed("port") && canPrompt(cmd) {
+				if inputs.Port == 0 {
+					// Use a sensible framework-based default when detection found no port.
+					switch inputs.Framework {
+					case "react", "vue", "svelte", "vanilla-javascript":
+						inputs.Port = 5173
+					case "angular", "flutter-web":
+						inputs.Port = 4200
+					case "spring-boot", "vanilla-java", "java-ee":
+						inputs.Port = 8080
+					default:
+						inputs.Port = 3000
+					}
+				}
+				portStr := strconv.Itoa(inputs.Port)
+				q := prompt.TextInput("port", "Port number", "Port the application runs on", portStr, true)
+				if err := prompt.AskOne(q, &portStr); err != nil {
+					return fmt.Errorf("failed to enter port: %v", err)
+				}
+				if p, err := strconv.Atoi(portStr); err == nil && p > 0 {
+					inputs.Port = p
+				}
+				if inputs.Port < 1024 || inputs.Port > 65535 {
+					return fmt.Errorf("invalid port number: %d (must be between 1024 and 65535)", inputs.Port)
+				}
+				if canPrompt(cmd) && !prompt.Confirm(fmt.Sprintf("Use port %d for callback URL?", inputs.Port)) {
+					return fmt.Errorf("setup cancelled: no resources were created")
 				}
 			}
 
@@ -888,7 +924,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					}
 					q := prompt.TextInput(
 						"identifier",
-						"Enter API Identifier (audience URL)",
+						"Enter API Identifier (audience URL, identifiers must be unique within your tenant)",
 						"A unique URL that identifies your API. Must be unique across your Auth0 tenant.",
 						defaultID,
 						true,
@@ -897,9 +933,9 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						return fmt.Errorf("failed to enter API identifier: %v", err)
 					}
 					// Confirm the API identifier (uniqueness reminder included in the prompt).
-					if !prompt.Confirm(fmt.Sprintf("Register API with identifier %q? (identifiers must be unique within your tenant)", inputs.Identifier)) {
-						return fmt.Errorf("setup cancelled: no resources were created")
-					}
+					// if !prompt.Confirm(fmt.Sprintf("Register API with identifier %q? (identifiers must be unique within your tenant)", inputs.Identifier)) {
+					// 	return fmt.Errorf("setup cancelled: no resources were created")
+					// }
 				} else if inputs.Identifier == "" {
 					inputs.Identifier = inputs.Audience
 				}
@@ -1076,9 +1112,9 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&inputs.API, "api", false, "Create an Auth0 API resource server")
 	cmd.Flags().StringVar(&inputs.Identifier, "identifier", "", "Unique URL identifier for the API (audience), e.g. https://my-api")
 	cmd.Flags().StringVar(&inputs.Audience, "audience", "", "Alias for --identifier (unique audience URL for the API)")
-	cmd.Flags().StringVar(&inputs.SigningAlg, "signing-alg", "", "Token signing algorithm: RS256, PS256, or HS256 (leave blank to be prompted interactively)")
-	cmd.Flags().StringVar(&inputs.Scopes, "scopes", "", "Comma-separated list of permission scopes for the API")
-	cmd.Flags().StringVar(&inputs.TokenLifetime, "token-lifetime", "86400", "Access token lifetime in seconds (default: 86400 = 24 hours)")
+	cmd.Flags().StringVar(&inputs.SigningAlg, "signing-alg", "", "[API] Token signing algorithm: RS256, PS256, or HS256 (leave blank to be prompted interactively)")
+	cmd.Flags().StringVar(&inputs.Scopes, "scopes", "", "[API] Comma-separated list of permission scopes for the API")
+	cmd.Flags().StringVar(&inputs.TokenLifetime, "token-lifetime", "86400", "[API] Access token lifetime in seconds (default: 86400 = 24 hours)")
 	cmd.Flags().BoolVar(&inputs.OfflineAccess, "offline-access", false, "Allow offline access (enables refresh tokens)")
 
 	return cmd
@@ -1086,31 +1122,32 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 
 func printClientDetails(cli *cli, client *management.Client, port int, configFileLocation string) {
 	cli.renderer.Successf("An application %q has been created in the management console", client.GetName())
-	cli.renderer.Detailf("Client ID: %s", client.GetClientID())
+	cli.renderer.Detailf("Client ID: %s", ansi.Magenta(client.GetClientID()))
 	cli.renderer.Newline()
 
 	cli.renderer.Successf("You can manage your application from here:")
-	cli.renderer.Detailf("https://manage.auth0.com/dashboard/#/applications/%s/settings", client.GetClientID())
+	cli.renderer.Detailf("%s", ansi.Magenta(fmt.Sprintf("https://manage.auth0.com/dashboard/#/applications/%s/settings", client.GetClientID())))
 	cli.renderer.Newline()
 
 	if client.Callbacks != nil && len(client.GetCallbacks()) > 0 {
 		cli.renderer.Successf("Callback URLs registered in Auth0 Dashboard:")
-		cli.renderer.Detailf("%s", strings.Join(client.GetCallbacks(), ", "))
+		cli.renderer.Detailf("%s", ansi.Magenta(strings.Join(client.GetCallbacks(), ", ")))
 		cli.renderer.Newline()
 	}
 	if client.AllowedLogoutURLs != nil && len(client.GetAllowedLogoutURLs()) > 0 {
 		cli.renderer.Successf("Logout URLs registered:")
-		cli.renderer.Detailf("%s", strings.Join(client.GetAllowedLogoutURLs(), ", "))
+		cli.renderer.Detailf("%s", ansi.Magenta(strings.Join(client.GetAllowedLogoutURLs(), ", ")))
 		cli.renderer.Newline()
 	}
-	cli.renderer.Successf("Config file created: %s", configFileLocation)
+	cli.renderer.Successf("Config file created: %s", ansi.Magenta(configFileLocation))
 }
 
 func printAPIDetails(cli *cli, rs *management.ResourceServer) {
 	cli.renderer.Successf("An API application %q has been created and registered", rs.GetName())
+	cli.renderer.Detailf("Identifier: %s", ansi.Magenta(rs.GetIdentifier()))
 	cli.renderer.Newline()
 	cli.renderer.Successf("You can manage your API from here:")
-	cli.renderer.Detailf("https://manage.auth0.com/dashboard/#/apis/%s/settings", rs.GetID())
+	cli.renderer.Detailf("%s", ansi.Magenta(fmt.Sprintf("https://manage.auth0.com/dashboard/#/apis/%s/settings", rs.GetID())))
 }
 
 // Helper function to get supported quickstart types.
@@ -1338,18 +1375,25 @@ func resolveRequestParams(reqParams auth0.RequestParams, name string, port int) 
 	if resolvedName == auth0.DetectionSub {
 		resolvedName = name
 	}
+	callbackPath := "/callback"
+	if reqParams.CallbackPath != "" {
+		callbackPath = reqParams.CallbackPath
+	}
 	for i, cb := range callbacks {
-		if cb == auth0.DetectionSub {
-			callbacks[i] = baseURL + "/callback"
+		switch cb {
+		case auth0.DetectionSub:
+			callbacks[i] = baseURL + callbackPath
+		case auth0.DetectionSubBase:
+			callbacks[i] = baseURL
 		}
 	}
 	for i, u := range logoutURLs {
-		if u == auth0.DetectionSub {
+		if u == auth0.DetectionSub || u == auth0.DetectionSubBase {
 			logoutURLs[i] = baseURL
 		}
 	}
 	for i, u := range webOrigins {
-		if u == auth0.DetectionSub {
+		if u == auth0.DetectionSub || u == auth0.DetectionSubBase {
 			webOrigins[i] = baseURL
 		}
 	}
@@ -1360,6 +1404,7 @@ func resolveRequestParams(reqParams auth0.RequestParams, name string, port int) 
 		AllowedLogoutURLs: logoutURLs,
 		WebOrigins:        webOrigins,
 		Name:              resolvedName,
+		CallbackPath:      reqParams.CallbackPath,
 	}
 }
 
@@ -1372,7 +1417,7 @@ func replaceDetectionSub(envValues map[string]string, tenantDomain string, clien
 	updatedEnvValues := make(map[string]string)
 
 	for key, value := range envValues {
-		if value != auth0.DetectionSub {
+		if value != auth0.DetectionSub && value != auth0.DetectionSubBase {
 			updatedEnvValues[key] = value
 			continue
 		}
@@ -1416,7 +1461,7 @@ func replaceDetectionSub(envValues map[string]string, tenantDomain string, clien
 			updatedEnvValues[key] = baseURL + "/callback"
 
 		default:
-			updatedEnvValues[key] = value
+			return nil, fmt.Errorf("unhandled placeholder for env key %q: add it to replaceDetectionSub", key)
 		}
 	}
 
