@@ -239,6 +239,8 @@ func setSelectTenantSettings(tenant *management.Tenant, selectedFlags []string, 
 			tenant.AllowOrgNameInAuthAPI = val
 		case "pushed_authorization_requests_supported", "PushedAuthorizationRequestsSupported":
 			tenant.PushedAuthorizationRequestsSupported = val
+		case "client_id_metadata_document_supported", "ClientIDMetadataDocumentSupported":
+			tenant.ClientIDMetadataDocumentSupported = val
 		case "oidc_logout.rp_logout_end_session_endpoint_discovery", "OIDCLogout.RPLogoutEndSessionEndpointDiscovery":
 			if tenant.OIDCLogout == nil {
 				tenant.OIDCLogout = &management.TenantOIDCLogout{}
