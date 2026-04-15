@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -51,14 +53,14 @@ func DetectProject(dir string) DetectionResult {
 	if hasDep(earlyDeps, "@ionic/react") {
 		result.Framework = "ionic-react"
 		result.Type = "native"
-		result.BuildTool = "vite"
+		result.BuildTool = detectBuildToolFromFiles(dir, "ionic-react")
 		result.Detected = true
 		return result
 	}
 	if hasDep(earlyDeps, "@ionic/vue") {
 		result.Framework = "ionic-vue"
 		result.Type = "native"
-		result.BuildTool = "vite"
+		result.BuildTool = detectBuildToolFromFiles(dir, "ionic-vue")
 		result.Detected = true
 		return result
 	}
@@ -67,7 +69,7 @@ func DetectProject(dir string) DetectionResult {
 	if fileExists(dir, "angular.json") {
 		result.Framework = "angular"
 		result.Type = "spa"
-		result.Port = 4200
+		result.Port = detectPortFromConfig(dir, "angular", 4200)
 		result.Detected = true
 		return result
 	}
@@ -111,6 +113,8 @@ func DetectProject(dir string) DetectionResult {
 	if hasDep(earlyDeps, "@sveltejs/kit") {
 		result.Framework = "sveltekit"
 		result.Type = "regular"
+		result.BuildTool = detectBuildToolFromFiles(dir, "sveltekit")
+		result.Port = detectPortFromConfig(dir, "sveltekit", 3000)
 		result.Detected = true
 		return result
 	}
@@ -119,7 +123,7 @@ func DetectProject(dir string) DetectionResult {
 	if fileExistsAny(dir, "vite.config.ts", "vite.config.js") {
 		result.Type = "spa"
 		result.BuildTool = "vite"
-		result.Port = 5173
+		result.Port = detectPortFromConfig(dir, "vite", 5173)
 		result.Detected = true
 		switch {
 		case hasDep(earlyDeps, "react"):
@@ -138,7 +142,7 @@ func DetectProject(dir string) DetectionResult {
 	if fileExistsAny(dir, "next.config.js", "next.config.ts", "next.config.mjs") {
 		result.Framework = "nextjs"
 		result.Type = "regular"
-		result.Port = 3000
+		result.Port = detectPortFromConfig(dir, "nextjs", 3000)
 		result.Detected = true
 		return result
 	}
@@ -156,6 +160,8 @@ func DetectProject(dir string) DetectionResult {
 	if fileExistsAny(dir, "svelte.config.js", "svelte.config.ts") {
 		result.Framework = "sveltekit"
 		result.Type = "regular"
+		result.BuildTool = detectBuildToolFromFiles(dir, "sveltekit")
+		result.Port = detectPortFromConfig(dir, "sveltekit", 3000)
 		result.Detected = true
 		return result
 	}
@@ -551,6 +557,85 @@ func findCsprojContent(dir string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// portPattern matches port assignments in config files, e.g. `port: 3001` or `"port": 3001`.
+var portPattern = regexp.MustCompile(`"?port"?\s*:\s*(\d{4,5})`)
+
+// extractPortFromContent returns the first port number found in content, or 0 if none found.
+func extractPortFromContent(content string) int {
+	matches := portPattern.FindStringSubmatch(content)
+	if len(matches) < 2 {
+		return 0
+	}
+	p, err := strconv.Atoi(matches[1])
+	if err != nil || p < 1024 || p > 65535 {
+		return 0
+	}
+	return p
+}
+
+// detectPortFromConfig tries to read the port from a project config file.
+// It checks framework-specific files (vite.config.ts/js for vite-based projects,
+// angular.json for Angular, next.config.* for Next.js). Falls back to defaultPort.
+func detectPortFromConfig(dir, hint string, defaultPort int) int {
+	switch hint {
+	case "angular":
+		if data, ok := readFileContent(dir, "angular.json"); ok {
+			if p := extractPortFromContent(data); p > 0 {
+				return p
+			}
+		}
+	case "nextjs":
+		for _, name := range []string{"next.config.ts", "next.config.js", "next.config.mjs"} {
+			if data, ok := readFileContent(dir, name); ok {
+				if p := extractPortFromContent(data); p > 0 {
+					return p
+				}
+			}
+		}
+	case "django", "rails", "vanilla-go", "vanilla-python", "aspnet-mvc", "aspnet-blazor",
+		"aspnet-owin", "vanilla-php", "vanilla-java", "java-ee", "spring-boot", "laravel",
+		"express", "hono", "fastify", "nuxt":
+		// Backend-only or non-vite frameworks: no config file to inspect, use default directly.
+	default:
+		// For vite-based projects (react, vue, svelte, sveltekit, ionic-*, etc.)
+		for _, name := range []string{"vite.config.ts", "vite.config.js"} {
+			if data, ok := readFileContent(dir, name); ok {
+				if p := extractPortFromContent(data); p > 0 {
+					return p
+				}
+			}
+		}
+	}
+	return defaultPort
+}
+
+// detectBuildToolFromFiles detects the build tool by checking for config files in dir.
+// Falls back to the conventional default for the framework if no relevant file is found.
+func detectBuildToolFromFiles(dir, framework string) string {
+	if fileExistsAny(dir, "vite.config.ts", "vite.config.js") {
+		return "vite"
+	}
+	if fileExists(dir, "pom.xml") {
+		return "maven"
+	}
+	if fileExistsAny(dir, "build.gradle", "build.gradle.kts") {
+		return "gradle"
+	}
+	if fileExists(dir, "composer.json") {
+		return "composer"
+	}
+	// Framework-specific defaults as fallback.
+	switch framework {
+	case "ionic-react", "ionic-vue", "sveltekit":
+		return "vite"
+	case "spring-boot", "vanilla-java", "java-ee":
+		return "maven"
+	case "laravel", "vanilla-php":
+		return "composer"
+	}
+	return ""
 }
 
 // findJavaBuildContent finds pom.xml or build.gradle and returns content + build tool name.
