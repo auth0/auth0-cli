@@ -174,7 +174,13 @@ func (q Quickstarts) Stacks() []string {
 	return stacks
 }
 
-const DetectionSub = "DETECTION_SUB"
+const (
+	// DetectionSub is replaced at runtime with baseURL+CallbackPath ("/callback" by default).
+	DetectionSub = "DETECTION_SUB"
+	// DetectionSubBase is replaced at runtime with just the baseURL (no path suffix).
+	// Use this for SPA callback/logout URLs where the path is the app root.
+	DetectionSubBase = "DETECTION_SUB_BASE"
+)
 
 type FileOutputStrategy struct {
 	Path   string
@@ -187,6 +193,11 @@ type RequestParams struct {
 	AllowedLogoutURLs []string
 	WebOrigins        []string
 	Name              string
+	// CallbackPath is the path suffix appended to baseURL when resolving DetectionSub
+	// in Callbacks. Leave empty to use the default "/callback". Examples:
+	//   "/api/auth/callback"  (Next.js)
+	//   "/auth/callback"      (Fastify)
+	CallbackPath string
 }
 
 type AppConfig struct {
@@ -205,8 +216,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "spa",
-			Callbacks:         []string{"http://localhost:5173/callback"},
-			AllowedLogoutURLs: []string{"http://localhost:5173"},
+			Callbacks:         []string{DetectionSubBase},
+			AllowedLogoutURLs: []string{DetectionSub},
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
 		},
@@ -219,8 +230,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "spa",
-			Callbacks:         []string{"http://localhost:4200/callback"},
-			AllowedLogoutURLs: []string{"http://localhost:4200"},
+			Callbacks:         []string{DetectionSubBase},
+			AllowedLogoutURLs: []string{DetectionSub},
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
 		},
@@ -233,8 +244,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "spa",
-			Callbacks:         []string{"http://localhost:5173/callback"},
-			AllowedLogoutURLs: []string{"http://localhost:5173"},
+			Callbacks:         []string{DetectionSubBase},
+			AllowedLogoutURLs: []string{DetectionSub},
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
 		},
@@ -247,8 +258,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "spa",
-			Callbacks:         []string{"http://localhost:5173/callback"},
-			AllowedLogoutURLs: []string{"http://localhost:5173"},
+			Callbacks:         []string{DetectionSubBase},
+			AllowedLogoutURLs: []string{DetectionSub},
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
 		},
@@ -261,8 +272,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "spa",
-			Callbacks:         []string{"http://localhost:5173/callback"},
-			AllowedLogoutURLs: []string{"http://localhost:5173"},
+			Callbacks:         []string{DetectionSubBase},
+			AllowedLogoutURLs: []string{DetectionSub},
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
 		},
@@ -275,7 +286,7 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "spa",
-			Callbacks:         []string{DetectionSub},
+			Callbacks:         []string{DetectionSubBase},
 			AllowedLogoutURLs: []string{DetectionSub},
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
@@ -294,9 +305,10 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
-			Callbacks:         []string{"http://localhost:3000/callback"},
-			AllowedLogoutURLs: []string{"http://localhost:3000"},
+			Callbacks:         []string{DetectionSub},
+			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
+			CallbackPath:      "/api/auth/callback",
 		},
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
@@ -310,8 +322,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
-			Callbacks:         []string{"http://localhost:3000/callback"},
-			AllowedLogoutURLs: []string{"http://localhost:3000"},
+			Callbacks:         []string{DetectionSub},
+			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
 		},
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
@@ -326,9 +338,10 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
-			Callbacks:         []string{"http://localhost:3000/callback"},
-			AllowedLogoutURLs: []string{"http://localhost:3000"},
+			Callbacks:         []string{DetectionSub},
+			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
+			CallbackPath:      "/auth/callback",
 		},
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
@@ -342,6 +355,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			Callbacks:         []string{DetectionSub},
 			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
+			CallbackPath:      "/auth/callback",
 		},
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
@@ -354,8 +368,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
-			Callbacks:         []string{"http://localhost:3000/callback"},
-			AllowedLogoutURLs: []string{"http://localhost:3000"},
+			Callbacks:         []string{DetectionSub},
+			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
 		},
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
@@ -370,8 +384,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
-			Callbacks:         []string{"http://localhost:3000/callback"},
-			AllowedLogoutURLs: []string{"http://localhost:3000"},
+			Callbacks:         []string{DetectionSub},
+			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
 		},
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
@@ -386,8 +400,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
-			Callbacks:         []string{"http://localhost:5000/callback"},
-			AllowedLogoutURLs: []string{"http://localhost:5000"},
+			Callbacks:         []string{DetectionSub},
+			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
 		},
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
@@ -457,8 +471,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
-			Callbacks:         []string{"http://localhost:8000/callback"},
-			AllowedLogoutURLs: []string{"http://localhost:8000"},
+			Callbacks:         []string{DetectionSub},
+			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
 		},
 		Strategy: FileOutputStrategy{Path: "src/main/resources/application.yml", Format: "yaml"},
@@ -528,8 +542,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
-			Callbacks:         []string{"http://localhost:8000/callback"},
-			AllowedLogoutURLs: []string{"http://localhost:8000"},
+			Callbacks:         []string{DetectionSub},
+			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
 		},
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
@@ -542,8 +556,8 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
-			Callbacks:         []string{"http://localhost:3000/callback"},
-			AllowedLogoutURLs: []string{"http://localhost:3000"},
+			Callbacks:         []string{DetectionSub},
+			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
 		},
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
