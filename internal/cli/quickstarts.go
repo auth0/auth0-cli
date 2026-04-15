@@ -854,9 +854,6 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					if inputs.Name == "" {
 						return fmt.Errorf("application name cannot be empty")
 					}
-					// if canPrompt(cmd) && !prompt.Confirm(fmt.Sprintf("Create application with name %q?", inputs.Name)) {
-					// 	return fmt.Errorf("setup cancelled: no resources were created")
-					// }
 				}
 				if inputs.Name == "" {
 					return fmt.Errorf("application name cannot be empty")
@@ -932,10 +929,6 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					if err := prompt.AskOne(q, &inputs.Identifier); err != nil {
 						return fmt.Errorf("failed to enter API identifier: %v", err)
 					}
-					// Confirm the API identifier (uniqueness reminder included in the prompt).
-					// if !prompt.Confirm(fmt.Sprintf("Register API with identifier %q? (identifiers must be unique within your tenant)", inputs.Identifier)) {
-					// 	return fmt.Errorf("setup cancelled: no resources were created")
-					// }
 				} else if inputs.Identifier == "" {
 					inputs.Identifier = inputs.Audience
 				}
