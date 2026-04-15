@@ -44,9 +44,9 @@ auth0 quickstarts setup-experimental [flags]
       --name string             Name of the Auth0 application
       --offline-access          Allow offline access (enables refresh tokens)
       --port int                Local port the application runs on (default varies by framework, e.g. 3000, 5173)
-      --scopes string           Comma-separated list of permission scopes for the API
-      --signing-alg string      Token signing algorithm: RS256, PS256, or HS256 (leave blank to be prompted interactively)
-      --token-lifetime string   Access token lifetime in seconds (default: 86400 = 24 hours) (default "86400")
+      --scopes string           [API] Comma-separated list of permission scopes for the API
+      --signing-alg string      [API] Token signing algorithm: RS256, PS256, or HS256 (leave blank to be prompted interactively)
+      --token-lifetime string   [API] Access token lifetime in seconds (default: 86400 = 24 hours) (default "86400")
       --type string             Application type: spa, regular, or native
       --web-origin-url string   Override the allowed web origin URL for the application
 ```

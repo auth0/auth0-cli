@@ -14,7 +14,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-// ── DetectionSubBase ──────────────────────────────────────────────────────────
+// ── DetectionSubBase ──────────────────────────────────────────────────────────.
 
 // TestResolveRequestParams_DetectionSubBase verifies that DetectionSubBase in
 // callbacks resolves to baseURL with no path suffix (unlike DetectionSub which
@@ -61,7 +61,7 @@ func TestResolveRequestParams_CallbackPath(t *testing.T) {
 		{"/api/auth/callback", 3000, "http://localhost:3000/api/auth/callback"},
 		{"/auth/callback", 3000, "http://localhost:3000/auth/callback"},
 		{"/login/oauth2/code/oidc", 8080, "http://localhost:8080/login/oauth2/code/oidc"},
-		{"", 3000, "http://localhost:3000/callback"}, // default when empty
+		{"", 3000, "http://localhost:3000/callback"}, // Default when empty.
 	}
 
 	for _, tc := range cases {
@@ -79,7 +79,7 @@ func TestResolveRequestParams_CallbackPath(t *testing.T) {
 	}
 }
 
-// ── resolveRequestParams with QuickstartConfigs ───────────────────────────────
+// ── resolveRequestParams with QuickstartConfigs ───────────────────────────────.
 
 // TestResolveRequestParams_AllQuickstartConfigs verifies that each entry in
 // auth0.QuickstartConfigs produces the correct resolved callback and logout URLs
@@ -95,7 +95,7 @@ func TestResolveRequestParams_AllQuickstartConfigs(t *testing.T) {
 		wantWebOrigins []string
 		wantAppType    string
 	}{
-		// SPA: callback = just baseURL (no /callback suffix per Auth0 SPA SDK usage)
+		// SPA: callback = just baseURL (no /callback suffix per Auth0 SPA SDK usage).
 		{"spa:react:vite", 5173,
 			[]string{"http://localhost:5173"},
 			[]string{"http://localhost:5173"},
@@ -120,7 +120,7 @@ func TestResolveRequestParams_AllQuickstartConfigs(t *testing.T) {
 			[]string{"http://localhost:3000"},
 			[]string{"http://localhost:3000"},
 			[]string{"http://localhost:3000"}, "spa"},
-		// Regular web: framework-specific callback paths
+		// Regular web: framework-specific callback paths.
 		{"regular:nextjs:none", 3000,
 			[]string{"http://localhost:3000/api/auth/callback"},
 			[]string{"http://localhost:3000"}, nil, "regular_web"},
@@ -175,9 +175,9 @@ func TestResolveRequestParams_AllQuickstartConfigs(t *testing.T) {
 		{"regular:java-ee:maven", 8080,
 			[]string{"http://localhost:8080/callback"},
 			[]string{"http://localhost:8080"}, nil, "regular_web"},
-		// M2M: no URLs
+		// M2M: no URLs.
 		{"m2m:none:none", 0, []string{}, []string{}, nil, "non_interactive"},
-		// Custom port propagates
+		// Custom port propagates.
 		{"spa:react:vite", 8080,
 			[]string{"http://localhost:8080"},
 			[]string{"http://localhost:8080"},
@@ -206,7 +206,7 @@ func TestResolveRequestParams_AllQuickstartConfigs(t *testing.T) {
 	}
 }
 
-// ── GenerateAndWriteQuickstartConfig with QuickstartConfigs ──────────────────
+// ── GenerateAndWriteQuickstartConfig with QuickstartConfigs ──────────────────.
 
 // TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs verifies the env
 // file content generated for every application type in auth0.QuickstartConfigs.
@@ -226,7 +226,7 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 		wantKeys     []string
 		wantValues   map[string]string
 	}{
-		// SPA
+		// SPA.
 		{"spa:react:vite", 5173, ".env",
 			[]string{"VITE_AUTH0_DOMAIN", "VITE_AUTH0_CLIENT_ID"},
 			map[string]string{"VITE_AUTH0_DOMAIN": domain, "VITE_AUTH0_CLIENT_ID": cidVal}},
@@ -245,7 +245,7 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 		{"spa:flutter-web:none", 3000, "auth_config.dart",
 			[]string{"domain", "clientId"},
 			map[string]string{"domain": domain, "clientId": cidVal}},
-		// Regular web
+		// Regular web.
 		{"regular:nextjs:none", 3000, ".env",
 			[]string{"AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET", "AUTH0_SECRET", "APP_BASE_URL"},
 			map[string]string{"AUTH0_DOMAIN": domain, "AUTH0_CLIENT_ID": cidVal, "AUTH0_CLIENT_SECRET": csecVal, "APP_BASE_URL": "http://localhost:3000"}},
@@ -264,7 +264,7 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 		{"regular:vanilla-python:none", 5000, ".env",
 			[]string{"AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET", "AUTH0_SECRET", "AUTH0_REDIRECT_URI"},
 			map[string]string{"AUTH0_DOMAIN": domain, "AUTH0_REDIRECT_URI": "http://localhost:5000/callback"}},
-		// spring-boot uses YAML: dot-keys are nested, so check for YAML-format terms
+		// Spring-boot uses YAML: dot-keys are nested, so check for YAML-format terms.
 		{"regular:spring-boot:maven", 8080, "application.yml",
 			[]string{"okta:", "oauth2:", "issuer:", "client-id:", "client-secret:"},
 			nil},
@@ -298,7 +298,7 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 		{"regular:vanilla-go:none", 3000, ".env",
 			[]string{"AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET", "AUTH0_CALLBACK_URL"},
 			map[string]string{"AUTH0_DOMAIN": domain, "AUTH0_CALLBACK_URL": "http://localhost:3000/callback"}},
-		// Native
+		// Native.
 		{"native:flutter:none", 0, "auth_config.dart",
 			[]string{"domain", "clientId"},
 			map[string]string{"domain": domain, "clientId": cidVal}},
@@ -320,7 +320,7 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 			[]string{"Domain", "ClientId"}, nil},
 		{"native:wpf-winforms:none", 0, "appsettings.json",
 			[]string{"Domain", "ClientId", "ClientSecret"}, nil},
-		// M2M
+		// M2M.
 		{"m2m:none:none", 0, ".env",
 			[]string{"AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET"},
 			map[string]string{"AUTH0_DOMAIN": domain, "AUTH0_CLIENT_ID": cidVal, "AUTH0_CLIENT_SECRET": csecVal}},
@@ -365,7 +365,7 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 	}
 }
 
-// ── generateClient with QuickstartConfigs ────────────────────────────────────
+// ── generateClient with QuickstartConfigs ────────────────────────────────────.
 
 // TestGenerateClient_AllQuickstartConfigs verifies the management.Client fields
 // produced by generateClient for every app type in auth0.QuickstartConfigs.
@@ -381,21 +381,21 @@ func TestGenerateClient_AllQuickstartConfigs(t *testing.T) {
 		wantLogoutURLsLen int
 		wantWebOriginsLen int
 	}{
-		// SPA: callback = baseURL (no /callback suffix)
+		// SPA: callback = baseURL (no /callback suffix).
 		{"spa:react:vite", 5173, "spa", 1, "http://localhost:5173", 1, 1},
 		{"spa:vue:vite", 5173, "spa", 1, "http://localhost:5173", 1, 1},
 		{"spa:svelte:vite", 5173, "spa", 1, "http://localhost:5173", 1, 1},
 		{"spa:vanilla-javascript:vite", 5173, "spa", 1, "http://localhost:5173", 1, 1},
 		{"spa:angular:none", 4200, "spa", 1, "http://localhost:4200", 1, 1},
 		{"spa:flutter-web:none", 3000, "spa", 1, "http://localhost:3000", 1, 1},
-		// Regular web: framework-specific paths
+		// Regular web: framework-specific paths.
 		{"regular:nextjs:none", 3000, "regular_web", 1, "http://localhost:3000/api/auth/callback", 1, 0},
 		{"regular:fastify:none", 3000, "regular_web", 1, "http://localhost:3000/auth/callback", 1, 0},
 		{"regular:express:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
 		{"regular:hono:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
 		{"regular:rails:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
 		{"regular:spring-boot:maven", 8080, "regular_web", 1, "http://localhost:8080/callback", 1, 0},
-		// M2M: no callbacks
+		// M2M: no callbacks.
 		{"m2m:none:none", 0, "non_interactive", 0, "", 0, 0},
 	}
 
@@ -425,7 +425,7 @@ func TestGenerateClient_AllQuickstartConfigs(t *testing.T) {
 	}
 }
 
-// ── APP_BASE_URL reflects the user-specified port ────────────────────────────
+// ── APP_BASE_URL reflects the user-specified port ────────────────────────────.
 
 func TestGenerateAndWriteQuickstartConfig_PortInBaseURL(t *testing.T) {
 	t.Parallel()
@@ -451,7 +451,7 @@ func TestGenerateAndWriteQuickstartConfig_PortInBaseURL(t *testing.T) {
 	}
 }
 
-// ── Generated secrets (AUTH0_SECRET / SESSION_SECRET) are non-empty ──────────
+// ── Generated secrets (AUTH0_SECRET / SESSION_SECRET) are non-empty ──────────.
 
 func TestGenerateAndWriteQuickstartConfig_SecretsNonEmpty(t *testing.T) {
 	t.Parallel()
