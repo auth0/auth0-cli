@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-# [v.1.29.0](https://github.com/auth0/auth0-cli/tree/v1.29.0) (April 13, 2026)
+# [v.1.29.0](https://github.com/auth0/auth0-cli/tree/v1.29.0) (April 16, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.28.0...v1.29.0)
 
@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add passkeys prompt support in `auth0 ul customize` and `auth0 tf generate` [#1462]
 - Add organization support to `auth0 test token` command for M2M applications [#1475]
 - Add default editor setting support on Windows [#1454]
+- Add support for client_id_metadata_document_supported tenant settings in `auth0 tenant-settings update` [#1491]
 
 ### Fixed
 - Fix `auth0 api` to allow passing data with DELETE calls [#1471]
@@ -715,6 +716,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 [unreleased]: https://github.com/auth0/auth0-cli/compare/v1.29.0...HEAD
+[#1491]: https://github.com/auth0/auth0-cli/pull/1491
 [#1475]: https://github.com/auth0/auth0-cli/pull/1475
 [#1471]: https://github.com/auth0/auth0-cli/pull/1471
 [#1470]: https://github.com/auth0/auth0-cli/pull/1470
