@@ -136,6 +136,10 @@ func TestResolveRequestParams_AllQuickstartConfigs(t *testing.T) {
 		{"regular:hono:none", 3000,
 			[]string{"http://localhost:3000/callback"},
 			[]string{"http://localhost:3000"}, nil, "regular_web"},
+		{"regular:vanilla-python:none", 3000,
+			[]string{"http://localhost:3000/callback"},
+			[]string{"http://localhost:3000"}, nil, "regular_web"},
+		// Flask detection sets port 5000 (Flask's historical default).
 		{"regular:vanilla-python:none", 5000,
 			[]string{"http://localhost:5000/callback"},
 			[]string{"http://localhost:5000"}, nil, "regular_web"},
@@ -145,11 +149,18 @@ func TestResolveRequestParams_AllQuickstartConfigs(t *testing.T) {
 		{"regular:django:none", 3000,
 			[]string{"http://localhost:3000/callback"},
 			[]string{"http://localhost:3000"}, nil, "regular_web"},
+		// Django detection (manage.py or requirements.txt) sets port 8000 (Django dev server default).
+		{"regular:django:none", 8000,
+			[]string{"http://localhost:8000/callback"},
+			[]string{"http://localhost:8000"}, nil, "regular_web"},
 		{"regular:vanilla-go:none", 3000,
 			[]string{"http://localhost:3000/callback"},
 			[]string{"http://localhost:3000"}, nil, "regular_web"},
 		{"regular:spring-boot:maven", 8080,
-			[]string{"http://localhost:8080/callback"},
+			[]string{"http://localhost:8080/login/oauth2/code/oidc"},
+			[]string{"http://localhost:8080"}, nil, "regular_web"},
+		{"regular:spring-boot:gradle", 8080,
+			[]string{"http://localhost:8080/login/oauth2/code/oidc"},
 			[]string{"http://localhost:8080"}, nil, "regular_web"},
 		{"regular:laravel:composer", 8000,
 			[]string{"http://localhost:8000/callback"},
@@ -175,6 +186,38 @@ func TestResolveRequestParams_AllQuickstartConfigs(t *testing.T) {
 		{"regular:java-ee:maven", 8080,
 			[]string{"http://localhost:8080/callback"},
 			[]string{"http://localhost:8080"}, nil, "regular_web"},
+		// Native: custom URI scheme apps; port 0 falls back to 3000. All native
+		// configs currently use DetectionSub in callbacks, producing a localhost
+		// URL. This is a known limitation — native apps should use custom URI
+		// scheme callbacks (e.g. com.example.app://callback) rather than
+		// localhost URLs for production Auth0 registration.
+		{"native:flutter:none", 0,
+			[]string{"http://localhost:3000/callback"},
+			[]string{"http://localhost:3000"}, nil, "native"},
+		{"native:react-native:none", 0,
+			[]string{"http://localhost:3000/callback"},
+			[]string{"http://localhost:3000"}, nil, "native"},
+		{"native:expo:none", 0,
+			[]string{"http://localhost:3000/callback"},
+			[]string{"http://localhost:3000"}, nil, "native"},
+		{"native:ionic-angular:none", 0,
+			[]string{"http://localhost:3000/callback"},
+			[]string{"http://localhost:3000"}, nil, "native"},
+		{"native:ionic-react:vite", 0,
+			[]string{"http://localhost:3000/callback"},
+			[]string{"http://localhost:3000"}, nil, "native"},
+		{"native:ionic-vue:vite", 0,
+			[]string{"http://localhost:3000/callback"},
+			[]string{"http://localhost:3000"}, nil, "native"},
+		{"native:dotnet-mobile:none", 0,
+			[]string{"http://localhost:3000/callback"},
+			[]string{"http://localhost:3000"}, nil, "native"},
+		{"native:maui:none", 0,
+			[]string{"http://localhost:3000/callback"},
+			[]string{"http://localhost:3000"}, nil, "native"},
+		{"native:wpf-winforms:none", 0,
+			[]string{"http://localhost:3000/callback"},
+			[]string{"http://localhost:3000"}, nil, "native"},
 		// M2M: no URLs.
 		{"m2m:none:none", 0, []string{}, []string{}, nil, "non_interactive"},
 		// Custom port propagates.
@@ -261,12 +304,15 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 		{"regular:hono:none", 3000, ".env",
 			[]string{"AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET", "AUTH0_SESSION_ENCRYPTION_KEY", "BASE_URL"},
 			map[string]string{"AUTH0_DOMAIN": domain, "AUTH0_CLIENT_ID": cidVal, "BASE_URL": "http://localhost:3000"}},
-		{"regular:vanilla-python:none", 5000, ".env",
+		{"regular:vanilla-python:none", 3000, ".env",
 			[]string{"AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET", "AUTH0_SECRET", "AUTH0_REDIRECT_URI"},
-			map[string]string{"AUTH0_DOMAIN": domain, "AUTH0_REDIRECT_URI": "http://localhost:5000/callback"}},
-		// Spring-boot uses YAML: dot-keys are nested, so check for YAML-format terms.
+			map[string]string{"AUTH0_DOMAIN": domain, "AUTH0_REDIRECT_URI": "http://localhost:3000/callback"}},
+		// Spring-boot uses YAML: dot-keys are nested; verify both structure and value.
 		{"regular:spring-boot:maven", 8080, "application.yml",
-			[]string{"okta:", "oauth2:", "issuer:", "client-id:", "client-secret:"},
+			[]string{"okta:", "oauth2:", "issuer: https://", "client-id:", "client-secret:"},
+			nil},
+		{"regular:spring-boot:gradle", 8080, "application.yml",
+			[]string{"okta:", "oauth2:", "issuer: https://", "client-id:", "client-secret:"},
 			nil},
 		{"regular:laravel:composer", 8000, ".env",
 			[]string{"AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET", "AUTH0_COOKIE_SECRET"},
@@ -391,10 +437,41 @@ func TestGenerateClient_AllQuickstartConfigs(t *testing.T) {
 		// Regular web: framework-specific paths.
 		{"regular:nextjs:none", 3000, "regular_web", 1, "http://localhost:3000/api/auth/callback", 1, 0},
 		{"regular:fastify:none", 3000, "regular_web", 1, "http://localhost:3000/auth/callback", 1, 0},
+		{"regular:nuxt:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
 		{"regular:express:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
 		{"regular:hono:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
+		{"regular:vanilla-python:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
+		// Flask detection sets port 5000 (Flask's historical default).
+		{"regular:vanilla-python:none", 5000, "regular_web", 1, "http://localhost:5000/callback", 1, 0},
+		{"regular:sveltekit:none", 3000, "regular_web", 1, "http://localhost:3000/auth/callback", 1, 0},
+		{"regular:sveltekit:vite", 3000, "regular_web", 1, "http://localhost:3000/auth/callback", 1, 0},
+		{"regular:django:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
+		// Django detection (manage.py or requirements.txt) sets port 8000 (Django dev server default).
+		{"regular:django:none", 8000, "regular_web", 1, "http://localhost:8000/callback", 1, 0},
+		{"regular:vanilla-go:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
+		{"regular:laravel:composer", 8000, "regular_web", 1, "http://localhost:8000/callback", 1, 0},
 		{"regular:rails:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
-		{"regular:spring-boot:maven", 8080, "regular_web", 1, "http://localhost:8080/callback", 1, 0},
+		{"regular:aspnet-mvc:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
+		{"regular:aspnet-blazor:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
+		{"regular:aspnet-owin:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
+		{"regular:vanilla-php:composer", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
+		{"regular:vanilla-java:maven", 8080, "regular_web", 1, "http://localhost:8080/callback", 1, 0},
+		{"regular:java-ee:maven", 8080, "regular_web", 1, "http://localhost:8080/callback", 1, 0},
+		{"regular:spring-boot:maven", 8080, "regular_web", 1, "http://localhost:8080/login/oauth2/code/oidc", 1, 0},
+		{"regular:spring-boot:gradle", 8080, "regular_web", 1, "http://localhost:8080/login/oauth2/code/oidc", 1, 0},
+		// Native: port 0 falls back to 3000 in resolveRequestParams. The localhost
+		// callback URL is a known limitation — native apps should use custom URI
+		// scheme callbacks for production Auth0 registration, but the current
+		// configs use DetectionSub and produce a localhost URL.
+		{"native:flutter:none", 0, "native", 1, "http://localhost:3000/callback", 1, 0},
+		{"native:react-native:none", 0, "native", 1, "http://localhost:3000/callback", 1, 0},
+		{"native:expo:none", 0, "native", 1, "http://localhost:3000/callback", 1, 0},
+		{"native:ionic-angular:none", 0, "native", 1, "http://localhost:3000/callback", 1, 0},
+		{"native:ionic-react:vite", 0, "native", 1, "http://localhost:3000/callback", 1, 0},
+		{"native:ionic-vue:vite", 0, "native", 1, "http://localhost:3000/callback", 1, 0},
+		{"native:dotnet-mobile:none", 0, "native", 1, "http://localhost:3000/callback", 1, 0},
+		{"native:maui:none", 0, "native", 1, "http://localhost:3000/callback", 1, 0},
+		{"native:wpf-winforms:none", 0, "native", 1, "http://localhost:3000/callback", 1, 0},
 		// M2M: no callbacks.
 		{"m2m:none:none", 0, "non_interactive", 0, "", 0, 0},
 	}
@@ -416,9 +493,7 @@ func TestGenerateClient_AllQuickstartConfigs(t *testing.T) {
 				assert.Equal(t, tc.wantCallback, c.GetCallbacks()[0])
 			}
 			assert.Len(t, c.GetAllowedLogoutURLs(), tc.wantLogoutURLsLen)
-			if tc.wantWebOriginsLen > 0 {
-				assert.Len(t, c.GetWebOrigins(), tc.wantWebOriginsLen)
-			}
+			assert.Len(t, c.GetWebOrigins(), tc.wantWebOriginsLen)
 			assert.True(t, c.GetOIDCConformant())
 			assert.NotNil(t, c.ClientMetadata)
 		})
@@ -483,6 +558,35 @@ func TestGenerateAndWriteQuickstartConfig_SecretsNonEmpty(t *testing.T) {
 					assert.NotEmpty(t, val, "key %q should be non-empty", key)
 				}
 			}
+		})
+	}
+}
+
+// TestReplaceDetectionSub_AllQuickstartConfigsCovered verifies that every env
+// key used in any QuickstartConfig (including those added via init()) is handled
+// by replaceDetectionSub. This test is intentionally dynamic — it iterates over
+// auth0.QuickstartConfigs at runtime so that newly added configs are automatically
+// covered without requiring a change to the test itself.
+//
+// If this test fails, a new env key was added to quickstart.go without a
+// corresponding case in the replaceDetectionSub switch in quickstarts.go.
+func TestReplaceDetectionSub_AllQuickstartConfigsCovered(t *testing.T) {
+	t.Parallel()
+
+	cid, csec := "cid", "csec"
+	client := &management.Client{ClientID: &cid, ClientSecret: &csec}
+
+	for configKey, config := range auth0.QuickstartConfigs {
+		configKey := configKey
+		config := config
+		t.Run(configKey, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := replaceDetectionSub(config.EnvValues, "example.auth0.com", client, 3000)
+			require.NoError(t, err,
+				"config %q: env key not covered by replaceDetectionSub switch — add a case for it in quickstarts.go",
+				configKey,
+			)
 		})
 	}
 }

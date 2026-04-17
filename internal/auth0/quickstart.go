@@ -474,6 +474,25 @@ var QuickstartConfigs = map[string]AppConfig{
 			Callbacks:         []string{DetectionSub},
 			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
+			// Spring Boot OAuth2 login registers the redirect URI under the OIDC
+			// registration ID. The okta-spring-boot-starter uses "oidc" by default.
+			CallbackPath: "/login/oauth2/code/oidc",
+		},
+		Strategy: FileOutputStrategy{Path: "src/main/resources/application.yml", Format: "yaml"},
+	},
+	// Spring Boot Gradle produces the same application.yml config as Maven.
+	"regular:spring-boot:gradle": {
+		EnvValues: map[string]string{
+			"okta.oauth2.issuer":        DetectionSub,
+			"okta.oauth2.client-id":     DetectionSub,
+			"okta.oauth2.client-secret": DetectionSub,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DetectionSub},
+			AllowedLogoutURLs: []string{DetectionSub},
+			Name:              DetectionSub,
+			CallbackPath:      "/login/oauth2/code/oidc",
 		},
 		Strategy: FileOutputStrategy{Path: "src/main/resources/application.yml", Format: "yaml"},
 	},
@@ -699,4 +718,12 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
+}
+
+func init() {
+	// SvelteKit uses Vite internally; detection appends the :vite suffix.
+	// This is a value copy made at startup — Go maps store structs by value,
+	// not by reference. If regular:sveltekit:none is updated in the future,
+	// regular:sveltekit:vite must be updated separately (they will diverge).
+	QuickstartConfigs["regular:sveltekit:vite"] = QuickstartConfigs["regular:sveltekit:none"]
 }

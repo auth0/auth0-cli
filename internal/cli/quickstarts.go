@@ -748,6 +748,12 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				frameworkFromFlag := cmd.Flags().Changed("framework")
 
 				switch {
+				case inputs.Type == "m2m":
+					// M2M apps have no framework or port; skip detection entirely so that
+					// signal files in the directory cannot override the explicit --type flag.
+					if inputs.Name == "" {
+						inputs.Name = detection.AppName
+					}
 				case typeFromFlag && frameworkFromFlag:
 					// User explicitly specified type and framework via flags; skip detection UI.
 					if inputs.Name == "" {
@@ -847,9 +853,14 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					if defaultName == "" {
 						defaultName = "My App"
 					}
-					q := prompt.TextInput("name", "Application name", "Name for the Auth0 application", defaultName, true)
-					if err := prompt.AskOne(q, &inputs.Name); err != nil {
-						return fmt.Errorf("failed to enter application name: %v", err)
+					if canPrompt(cmd) {
+						q := prompt.TextInput("name", "Application name", "Name for the Auth0 application", defaultName, true)
+						if err := prompt.AskOne(q, &inputs.Name); err != nil {
+							return fmt.Errorf("failed to enter application name: %v", err)
+						}
+					} else {
+						// In --no-input mode use the resolved default (directory name or "My App").
+						inputs.Name = defaultName
 					}
 					if inputs.Name == "" {
 						return fmt.Errorf("application name cannot be empty")
@@ -861,7 +872,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 			}
 
 			// ── Step 3d: Prompt for port if not explicitly set ──────────────────.
-			if inputs.App && inputs.Type != "native" && !cmd.Flags().Changed("port") && canPrompt(cmd) {
+			if inputs.App && inputs.Type != "native" && inputs.Type != "m2m" && !cmd.Flags().Changed("port") && canPrompt(cmd) {
 				if inputs.Port == 0 {
 					// Use a sensible framework-based default when detection found no port.
 					switch inputs.Framework {
@@ -880,9 +891,11 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				if err := prompt.AskOne(q, &portStr); err != nil {
 					return fmt.Errorf("failed to enter port: %v", err)
 				}
-				if p, err := strconv.Atoi(portStr); err == nil && p > 0 {
-					inputs.Port = p
+				p, atoiErr := strconv.Atoi(portStr)
+				if atoiErr != nil {
+					return fmt.Errorf("invalid port %q: must be a number", portStr)
 				}
+				inputs.Port = p
 				if inputs.Port < 1024 || inputs.Port > 65535 {
 					return fmt.Errorf("invalid port number: %d (must be between 1024 and 65535)", inputs.Port)
 				}
@@ -933,7 +946,20 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					inputs.Identifier = inputs.Audience
 				}
 
-				// Prompt for signing algorithm if not provided via flag.
+				// If the flag was not set, prompt interactively; fall back to 86400 in non-interactive mode.
+				if inputs.TokenLifetime == "" {
+					if canPrompt(cmd) {
+						defaultLifetime := "86400"
+						q := prompt.TextInput("token-lifetime", "Access token lifetime (seconds)",
+							"How long access tokens remain valid (default: 86400 = 24 hours)", defaultLifetime, true)
+						if err := prompt.AskOne(q, &inputs.TokenLifetime); err != nil {
+							return fmt.Errorf("failed to enter token lifetime: %v", err)
+						}
+					} else {
+						inputs.TokenLifetime = "86400"
+					}
+				}
+
 				if inputs.SigningAlg == "" {
 					if canPrompt(cmd) {
 						signingAlgs := []string{"RS256", "PS256", "HS256"}
@@ -946,13 +972,8 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					}
 				}
 
-				// Inputs.TokenLifetime already has "86400" from flag default; only prompt interactively.
-				if !cmd.Flags().Changed("token-lifetime") && canPrompt(cmd) {
-					defaultLifetime := "86400"
-					q := prompt.TextInput("token-lifetime", "Access token lifetime (seconds)", "How long access tokens remain valid (default: 86400 = 24 hours)", defaultLifetime, true)
-					if err := prompt.AskOne(q, &inputs.TokenLifetime); err != nil {
-						return fmt.Errorf("failed to enter token lifetime: %v", err)
-					}
+				if alg := inputs.SigningAlg; alg != "RS256" && alg != "PS256" && alg != "HS256" {
+					return fmt.Errorf("invalid signing algorithm %q: must be RS256, PS256, or HS256", alg)
 				}
 
 				// For API-only: fetch existing apps and let the user select one to link.
@@ -984,20 +1005,25 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						appOptions = named
 					}
 
-					var selectedAppName string
-					q := prompt.SelectInput(
-						"link-app",
-						"Select App to register API",
-						"Select an existing application to authorize for this API, or skip",
-						appOptions,
-						appOptions[0],
-						true,
-					)
-					if err := prompt.AskOne(q, &selectedAppName); err != nil {
-						return fmt.Errorf("failed to select app: %v", err)
-					}
-					if selectedAppName != "Skip" {
-						linkedAppClientID = appIDByName[selectedAppName]
+					if !canPrompt(cmd) {
+						// In --no-input mode automatically skip app association.
+						// The user can link an app manually via the Auth0 dashboard.
+					} else {
+						var selectedAppName string
+						q := prompt.SelectInput(
+							"link-app",
+							"Select App to register API",
+							"Select an existing application to authorize for this API, or skip",
+							appOptions,
+							appOptions[0],
+							true,
+						)
+						if err := prompt.AskOne(q, &selectedAppName); err != nil {
+							return fmt.Errorf("failed to select app: %v", err)
+						}
+						if selectedAppName != "Skip" {
+							linkedAppClientID = appIDByName[selectedAppName]
+						}
 					}
 				}
 			}
@@ -1061,6 +1087,20 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				if inputs.OfflineAccess {
 					allow := true
 					rs.AllowOfflineAccess = &allow
+				}
+				if inputs.Scopes != "" {
+					scopeList := strings.Split(inputs.Scopes, ",")
+					apiScopes := make([]management.ResourceServerScope, 0, len(scopeList))
+					for _, s := range scopeList {
+						s = strings.TrimSpace(s)
+						if s != "" {
+							v := s
+							apiScopes = append(apiScopes, management.ResourceServerScope{Value: &v})
+						}
+					}
+					if len(apiScopes) > 0 {
+						rs.Scopes = &apiScopes
+					}
 				}
 
 				if err := ansi.Waiting(func() error {
@@ -1136,7 +1176,7 @@ func printClientDetails(cli *cli, client *management.Client, port int, configFil
 }
 
 func printAPIDetails(cli *cli, rs *management.ResourceServer) {
-	cli.renderer.Successf("An API application %q has been created and registered", rs.GetName())
+	cli.renderer.Successf("An API %q has been created and registered", rs.GetName())
 	cli.renderer.Detailf("Identifier: %s", ansi.Magenta(rs.GetIdentifier()))
 	cli.renderer.Newline()
 	cli.renderer.Successf("You can manage your API from here:")
@@ -1447,7 +1487,7 @@ func replaceDetectionSub(envValues map[string]string, tenantDomain string, clien
 			}
 			updatedEnvValues[key] = secret
 
-		case "APP_BASE_URL", "NUXT_AUTH0_APP_BASE_URL", "BASE_URL":
+		case "APP_BASE_URL", "NUXT_AUTH0_APP_BASE_URL", "BASE_URL", "AUTH0_BASE_URL":
 			updatedEnvValues[key] = baseURL
 
 		case "AUTH0_REDIRECT_URI", "AUTH0_CALLBACK_URL":
