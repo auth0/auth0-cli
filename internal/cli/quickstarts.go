@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -904,6 +905,13 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 			}
 
+			// Validate explicitly-passed --port value.
+			if inputs.App && inputs.Type != "native" && inputs.Type != "m2m" && cmd.Flags().Changed("port") {
+				if inputs.Port < 1024 || inputs.Port > 65535 {
+					return fmt.Errorf("invalid port number: %d (must be between 1024 and 65535)", inputs.Port)
+				}
+			}
+
 			// ── Step 3c: Collect API name for API-only flow ───────────────────.
 			if inputs.API && !inputs.App {
 				// Collect API name if not already set (pre-fill from CWD folder name).
@@ -913,9 +921,13 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					if defaultName == "" || defaultName == "." {
 						defaultName = "my-api"
 					}
-					q := prompt.TextInput("name", "Application Name", "Name for the Auth0 API", defaultName, true)
-					if err := prompt.AskOne(q, &inputs.Name); err != nil {
-						return fmt.Errorf("failed to enter application name: %v", err)
+					if canPrompt(cmd) {
+						q := prompt.TextInput("name", "Application Name", "Name for the Auth0 API", defaultName, true)
+						if err := prompt.AskOne(q, &inputs.Name); err != nil {
+							return fmt.Errorf("failed to enter application name: %v", err)
+						}
+					} else {
+						inputs.Name = defaultName
 					}
 				}
 			}
@@ -932,18 +944,33 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						slug := strings.ToLower(strings.ReplaceAll(inputs.Name, " ", "-"))
 						defaultID = "https://" + slug
 					}
-					q := prompt.TextInput(
-						"identifier",
-						"Enter API Identifier (audience URL, identifiers must be unique within your tenant)",
-						"A unique URL that identifies your API. Must be unique across your Auth0 tenant.",
-						defaultID,
-						true,
-					)
-					if err := prompt.AskOne(q, &inputs.Identifier); err != nil {
-						return fmt.Errorf("failed to enter API identifier: %v", err)
+					if canPrompt(cmd) {
+						q := prompt.TextInput(
+							"identifier",
+							"Enter API Identifier (audience URL, identifiers must be unique within your tenant)",
+							"A unique URL that identifies your API. Must be unique across your Auth0 tenant.",
+							defaultID,
+							true,
+						)
+						if err := prompt.AskOne(q, &inputs.Identifier); err != nil {
+							return fmt.Errorf("failed to enter API identifier: %v", err)
+						}
+					} else {
+						inputs.Identifier = defaultID
+						if inputs.Identifier == "" {
+							return fmt.Errorf("identifier is required in non-interactive mode: use --identifier or --audience flag")
+						}
 					}
 				} else if inputs.Identifier == "" {
 					inputs.Identifier = inputs.Audience
+				}
+
+				if inputs.Identifier == "" {
+					return fmt.Errorf("API identifier cannot be empty: use --identifier or --audience flag")
+				}
+
+				if err := validateAPIIdentifier(inputs.Identifier); err != nil {
+					return err
 				}
 
 				// If the flag was not set, prompt interactively; fall back to 86400 in non-interactive mode.
@@ -1144,7 +1171,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 	cmd.Flags().StringVar(&inputs.Audience, "audience", "", "Alias for --identifier (unique audience URL for the API)")
 	cmd.Flags().StringVar(&inputs.SigningAlg, "signing-alg", "", "[API] Token signing algorithm: RS256, PS256, or HS256 (leave blank to be prompted interactively)")
 	cmd.Flags().StringVar(&inputs.Scopes, "scopes", "", "[API] Comma-separated list of permission scopes for the API")
-	cmd.Flags().StringVar(&inputs.TokenLifetime, "token-lifetime", "86400", "[API] Access token lifetime in seconds (default: 86400 = 24 hours)")
+	cmd.Flags().StringVar(&inputs.TokenLifetime, "token-lifetime", "", "[API] Access token lifetime in seconds (default: 86400 = 24 hours)")
 	cmd.Flags().BoolVar(&inputs.OfflineAccess, "offline-access", false, "Allow offline access (enables refresh tokens)")
 
 	return cmd
@@ -1339,6 +1366,17 @@ func defaultPortForFramework(framework string) int {
 	default:
 		return 3000
 	}
+}
+
+// validateAPIIdentifier returns an error if identifier is not a valid http:// or https:// URL.
+func validateAPIIdentifier(identifier string) error {
+	// err != nil from url.Parse only fires on malformed percent-encoding; the
+	// host check catches bare schemes like "http://" that Parse accepts without error.
+	u, err := url.Parse(identifier)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return fmt.Errorf("invalid API identifier %q: must be a valid URL beginning with http:// or https://", identifier)
+	}
+	return nil
 }
 
 func generateClient(input SetupInputs, reqParams auth0.RequestParams) (*management.Client, error) {
