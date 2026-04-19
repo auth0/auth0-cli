@@ -369,9 +369,10 @@ func generateTerraformResourceConfig(ctx context.Context, input *terraformInputs
 	}
 
 	installer := &releases.ExactVersion{
-		Product:    product.Terraform,
-		Version:    version.Must(version.NewVersion(input.TerraformVersion)),
-		InstallDir: absoluteOutputPath,
+		Product:                  product.Terraform,
+		Version:                  version.Must(version.NewVersion(input.TerraformVersion)),
+		InstallDir:               absoluteOutputPath,
+		SkipChecksumVerification: true,
 	}
 
 	execPath, err := installer.Install(ctx)
