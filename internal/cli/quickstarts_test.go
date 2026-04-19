@@ -590,3 +590,67 @@ func TestReplaceDetectionSub_AllQuickstartConfigsCovered(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateAPIIdentifier(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		identifier string
+		wantErr    bool
+	}{
+		{
+			name:       "valid http URL",
+			identifier: "http://example.com/api",
+			wantErr:    false,
+		},
+		{
+			name:       "valid https URL",
+			identifier: "https://my-api.example.com",
+			wantErr:    false,
+		},
+		{
+			name:       "bare http scheme no host",
+			identifier: "http://",
+			wantErr:    true,
+		},
+		{
+			name:       "bare https scheme no host",
+			identifier: "https://",
+			wantErr:    true,
+		},
+		{
+			name:       "no scheme",
+			identifier: "example.com/api",
+			wantErr:    true,
+		},
+		{
+			name:       "wrong scheme",
+			identifier: "ftp://example.com/api",
+			wantErr:    true,
+		},
+		{
+			name:       "empty string",
+			identifier: "",
+			wantErr:    true,
+		},
+		{
+			name:       "plain string no URL",
+			identifier: "not-a-url",
+			wantErr:    true,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			err := validateAPIIdentifier(tc.identifier)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
