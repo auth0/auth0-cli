@@ -1005,10 +1005,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						appOptions = named
 					}
 
-					if !canPrompt(cmd) {
-						// In --no-input mode automatically skip app association.
-						// The user can link an app manually via the Auth0 dashboard.
-					} else {
+					if canPrompt(cmd) {
 						var selectedAppName string
 						q := prompt.SelectInput(
 							"link-app",
