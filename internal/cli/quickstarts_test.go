@@ -146,6 +146,9 @@ func TestResolveRequestParams_AllQuickstartConfigs(t *testing.T) {
 		{"regular:sveltekit:none", 3000,
 			[]string{"http://localhost:3000/auth/callback"},
 			[]string{"http://localhost:3000"}, nil, "regular_web"},
+		{"regular:sveltekit:vite", 3000,
+			[]string{"http://localhost:3000/auth/callback"},
+			[]string{"http://localhost:3000"}, nil, "regular_web"},
 		{"regular:django:none", 3000,
 			[]string{"http://localhost:3000/callback"},
 			[]string{"http://localhost:3000"}, nil, "regular_web"},
@@ -186,38 +189,40 @@ func TestResolveRequestParams_AllQuickstartConfigs(t *testing.T) {
 		{"regular:java-ee:maven", 8080,
 			[]string{"http://localhost:8080/callback"},
 			[]string{"http://localhost:8080"}, nil, "regular_web"},
-		// Native: custom URI scheme apps; port 0 falls back to 3000. All native
-		// configs currently use DetectionSub in callbacks, producing a localhost
-		// URL. This is a known limitation — native apps should use custom URI
-		// scheme callbacks (e.g. com.example.app://callback) rather than
-		// localhost URLs for production Auth0 registration.
+		// Native: static callback URLs — no DetectionSub substitution.
+		// Flutter and React Native use custom URI scheme callbacks (bundle-ID-specific);
+		// the bundle identifier is unknown at setup time so callbacks are empty.
 		{"native:flutter:none", 0,
-			[]string{"http://localhost:3000/callback"},
-			[]string{"http://localhost:3000"}, nil, "native"},
+			[]string{},
+			[]string{}, nil, "native"},
 		{"native:react-native:none", 0,
-			[]string{"http://localhost:3000/callback"},
-			[]string{"http://localhost:3000"}, nil, "native"},
+			[]string{},
+			[]string{}, nil, "native"},
+		// Expo uses the standard Expo Go redirect URI.
 		{"native:expo:none", 0,
-			[]string{"http://localhost:3000/callback"},
-			[]string{"http://localhost:3000"}, nil, "native"},
+			[]string{"exp://localhost:19000"},
+			[]string{"exp://localhost:19000"}, nil, "native"},
+		// Ionic (Capacitor) intercepts http://localhost redirects in the WebView.
 		{"native:ionic-angular:none", 0,
-			[]string{"http://localhost:3000/callback"},
-			[]string{"http://localhost:3000"}, nil, "native"},
+			[]string{"http://localhost"},
+			[]string{"http://localhost"}, nil, "native"},
 		{"native:ionic-react:vite", 0,
-			[]string{"http://localhost:3000/callback"},
-			[]string{"http://localhost:3000"}, nil, "native"},
+			[]string{"http://localhost"},
+			[]string{"http://localhost"}, nil, "native"},
 		{"native:ionic-vue:vite", 0,
-			[]string{"http://localhost:3000/callback"},
-			[]string{"http://localhost:3000"}, nil, "native"},
+			[]string{"http://localhost"},
+			[]string{"http://localhost"}, nil, "native"},
+		// .NET Mobile and MAUI use custom URI scheme callbacks (bundle-ID-specific).
 		{"native:dotnet-mobile:none", 0,
-			[]string{"http://localhost:3000/callback"},
-			[]string{"http://localhost:3000"}, nil, "native"},
+			[]string{},
+			[]string{}, nil, "native"},
 		{"native:maui:none", 0,
-			[]string{"http://localhost:3000/callback"},
-			[]string{"http://localhost:3000"}, nil, "native"},
+			[]string{},
+			[]string{}, nil, "native"},
+		// WPF/WinForms uses the bare loopback http://localhost per Auth0 docs.
 		{"native:wpf-winforms:none", 0,
-			[]string{"http://localhost:3000/callback"},
-			[]string{"http://localhost:3000"}, nil, "native"},
+			[]string{"http://localhost"},
+			[]string{"http://localhost"}, nil, "native"},
 		// M2M: no URLs.
 		{"m2m:none:none", 0, []string{}, []string{}, nil, "non_interactive"},
 		// Custom port propagates.
@@ -336,8 +341,12 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 			[]string{"auth0.domain", "auth0.clientId", "auth0.clientSecret"},
 			map[string]string{"auth0.domain": domain, "auth0.clientId": cidVal}},
 		{"regular:sveltekit:none", 3000, ".env",
-			[]string{"VITE_AUTH0_DOMAIN", "VITE_AUTH0_CLIENT_ID"},
-			map[string]string{"VITE_AUTH0_DOMAIN": domain, "VITE_AUTH0_CLIENT_ID": cidVal}},
+			[]string{"AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET", "AUTH0_SECRET", "APP_BASE_URL"},
+			map[string]string{"AUTH0_DOMAIN": domain, "AUTH0_CLIENT_ID": cidVal, "AUTH0_CLIENT_SECRET": csecVal, "APP_BASE_URL": "http://localhost:3000"}},
+		// SvelteKit + Vite uses the same server-side config as sveltekit:none.
+		{"regular:sveltekit:vite", 3000, ".env",
+			[]string{"AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET", "AUTH0_SECRET", "APP_BASE_URL"},
+			map[string]string{"AUTH0_DOMAIN": domain, "AUTH0_CLIENT_ID": cidVal, "AUTH0_CLIENT_SECRET": csecVal, "APP_BASE_URL": "http://localhost:3000"}},
 		{"regular:django:none", 3000, ".env",
 			[]string{"AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET"},
 			map[string]string{"AUTH0_DOMAIN": domain, "AUTH0_CLIENT_ID": cidVal}},
@@ -364,8 +373,9 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 			[]string{"Domain", "ClientId"}, nil},
 		{"native:maui:none", 0, "appsettings.json",
 			[]string{"Domain", "ClientId"}, nil},
+		// WPF/WinForms are public native clients (PKCE) — no client secret is written.
 		{"native:wpf-winforms:none", 0, "appsettings.json",
-			[]string{"Domain", "ClientId", "ClientSecret"}, nil},
+			[]string{"Domain", "ClientId"}, nil},
 		// M2M.
 		{"m2m:none:none", 0, ".env",
 			[]string{"AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET"},
@@ -459,19 +469,21 @@ func TestGenerateClient_AllQuickstartConfigs(t *testing.T) {
 		{"regular:java-ee:maven", 8080, "regular_web", 1, "http://localhost:8080/callback", 1, 0},
 		{"regular:spring-boot:maven", 8080, "regular_web", 1, "http://localhost:8080/login/oauth2/code/oidc", 1, 0},
 		{"regular:spring-boot:gradle", 8080, "regular_web", 1, "http://localhost:8080/login/oauth2/code/oidc", 1, 0},
-		// Native: port 0 falls back to 3000 in resolveRequestParams. The localhost
-		// callback URL is a known limitation — native apps should use custom URI
-		// scheme callbacks for production Auth0 registration, but the current
-		// configs use DetectionSub and produce a localhost URL.
-		{"native:flutter:none", 0, "native", 1, "http://localhost:3000/callback", 1, 0},
-		{"native:react-native:none", 0, "native", 1, "http://localhost:3000/callback", 1, 0},
-		{"native:expo:none", 0, "native", 1, "http://localhost:3000/callback", 1, 0},
-		{"native:ionic-angular:none", 0, "native", 1, "http://localhost:3000/callback", 1, 0},
-		{"native:ionic-react:vite", 0, "native", 1, "http://localhost:3000/callback", 1, 0},
-		{"native:ionic-vue:vite", 0, "native", 1, "http://localhost:3000/callback", 1, 0},
-		{"native:dotnet-mobile:none", 0, "native", 1, "http://localhost:3000/callback", 1, 0},
-		{"native:maui:none", 0, "native", 1, "http://localhost:3000/callback", 1, 0},
-		{"native:wpf-winforms:none", 0, "native", 1, "http://localhost:3000/callback", 1, 0},
+		// Native: static callback URLs appropriate per framework.
+		// Flutter and React Native use bundle-ID-specific custom URI schemes; unknown at setup time.
+		{"native:flutter:none", 0, "native", 0, "", 0, 0},
+		{"native:react-native:none", 0, "native", 0, "", 0, 0},
+		// Expo uses the standard Expo Go redirect URI.
+		{"native:expo:none", 0, "native", 1, "exp://localhost:19000", 1, 0},
+		// Ionic (Capacitor) intercepts http://localhost redirects.
+		{"native:ionic-angular:none", 0, "native", 1, "http://localhost", 1, 0},
+		{"native:ionic-react:vite", 0, "native", 1, "http://localhost", 1, 0},
+		{"native:ionic-vue:vite", 0, "native", 1, "http://localhost", 1, 0},
+		// .NET Mobile and MAUI use bundle-ID-specific custom URI schemes; unknown at setup time.
+		{"native:dotnet-mobile:none", 0, "native", 0, "", 0, 0},
+		{"native:maui:none", 0, "native", 0, "", 0, 0},
+		// WPF/WinForms uses the bare loopback http://localhost per Auth0 docs.
+		{"native:wpf-winforms:none", 0, "native", 1, "http://localhost", 1, 0},
 		// M2M: no callbacks.
 		{"m2m:none:none", 0, "non_interactive", 0, "", 0, 0},
 	}
@@ -534,7 +546,7 @@ func TestGenerateAndWriteQuickstartConfig_SecretsNonEmpty(t *testing.T) {
 	cid, csec := "cid", "csec"
 	client := &management.Client{ClientID: &cid, ClientSecret: &csec}
 
-	for _, configKey := range []string{"regular:nextjs:none", "regular:fastify:none"} {
+	for _, configKey := range []string{"regular:nextjs:none", "regular:fastify:none", "regular:sveltekit:none", "regular:sveltekit:vite"} {
 		t.Run(configKey, func(t *testing.T) {
 			t.Parallel()
 
@@ -637,6 +649,11 @@ func TestValidateAPIIdentifier(t *testing.T) {
 		{
 			name:       "plain string no URL",
 			identifier: "not-a-url",
+			wantErr:    true,
+		},
+		{
+			name:       "URL with userinfo credentials",
+			identifier: "http://user:pass@host.com",
 			wantErr:    true,
 		},
 	}
