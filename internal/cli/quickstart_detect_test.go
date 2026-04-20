@@ -25,6 +25,36 @@ func mkTestDir(t *testing.T, dir, sub string) {
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, sub), 0755))
 }
 
+// ── QuickstartConfig invariants ───────────────────────────────────────────────.
+
+// TestSvelteKitViteAndNoneShareConfig verifies that regular:sveltekit:vite and
+// regular:sveltekit:none use the same server-side env var keys. Both configs
+// target SvelteKit SSR which requires a client secret regardless of build tool.
+func TestSvelteKitViteAndNoneShareConfig(t *testing.T) {
+	viteConfig, ok := auth0.QuickstartConfigs["regular:sveltekit:vite"]
+	require.True(t, ok, "regular:sveltekit:vite must exist in QuickstartConfigs")
+	noneConfig, ok := auth0.QuickstartConfigs["regular:sveltekit:none"]
+	require.True(t, ok, "regular:sveltekit:none must exist in QuickstartConfigs")
+
+	assert.Equal(t, noneConfig.EnvValues, viteConfig.EnvValues,
+		"regular:sveltekit:vite and regular:sveltekit:none must share the same env var keys")
+	assert.Equal(t, noneConfig.RequestParams, viteConfig.RequestParams,
+		"regular:sveltekit:vite and regular:sveltekit:none must share the same RequestParams")
+	assert.Equal(t, noneConfig.Strategy, viteConfig.Strategy,
+		"regular:sveltekit:vite and regular:sveltekit:none must share the same Strategy")
+}
+
+// TestWPFWinformsConfigHasNoClientSecret verifies that the WPF/WinForms config does
+// not include Auth0:ClientSecret. WPF/WinForms apps are public native clients using
+// PKCE; Auth0 returns an empty/placeholder secret for native app types.
+func TestWPFWinformsConfigHasNoClientSecret(t *testing.T) {
+	wpfConfig, ok := auth0.QuickstartConfigs["native:wpf-winforms:none"]
+	require.True(t, ok, "native:wpf-winforms:none must exist in QuickstartConfigs")
+
+	_, hasSecret := wpfConfig.EnvValues["Auth0:ClientSecret"]
+	assert.False(t, hasSecret, "native:wpf-winforms:none must not have Auth0:ClientSecret")
+}
+
 // ── DetectProject – no signal ────────────────────────────────────────────────.
 
 func TestDetectProject_NoDetection(t *testing.T) {
@@ -544,6 +574,7 @@ func TestDetectProject_IonicVue(t *testing.T) {
 	assert.Equal(t, "ionic-vue", got.Framework)
 	assert.Equal(t, "native", got.Type)
 	assert.Equal(t, "vite", got.BuildTool)
+	assert.Empty(t, got.BundleID)
 }
 
 // Auth0 qs setup --app --type native --framework maui (.NET Android/iOS).
@@ -598,6 +629,21 @@ func TestDetectProject_WPFWinforms(t *testing.T) {
 func TestDetectProject_Django_ManagePy(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "manage.py", `#!/usr/bin/env python`)
+
+	got := DetectProject(dir)
+	assert.True(t, got.Detected)
+	assert.Equal(t, "django", got.Framework)
+	assert.Equal(t, "regular", got.Type)
+	assert.Equal(t, 8000, got.Port)
+}
+
+// manage.py must beat @ionic/angular in a Django+Ionic monorepo.
+// Before the fix, the Ionic dep check fired first and returned early, causing
+// the project to be detected as Ionic instead of Django.
+func TestDetectProject_Django_ManagePy_BeatsIonic(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "manage.py", `#!/usr/bin/env python`)
+	writeTestFile(t, dir, "package.json", `{"dependencies":{"@ionic/angular":"^7"}}`)
 
 	got := DetectProject(dir)
 	assert.True(t, got.Detected)
@@ -870,6 +916,56 @@ func TestDetectProject_AppNameFromPomArtifactID(t *testing.T) {
 
 	got := DetectProject(dir)
 	assert.Equal(t, "my-java-app", got.AppName)
+}
+
+// ── readExpoScheme ────────────────────────────────────────────────────────────.
+
+func TestReadExpoScheme(t *testing.T) {
+	t.Run("reads scheme field", func(t *testing.T) {
+		dir := t.TempDir()
+		writeTestFile(t, dir, "app.json", `{"expo":{"name":"my-app","slug":"my-app","scheme":"myapp"}}`)
+		assert.Equal(t, "myapp", readExpoScheme(dir))
+	})
+
+	t.Run("no scheme field returns empty", func(t *testing.T) {
+		dir := t.TempDir()
+		writeTestFile(t, dir, "app.json", `{"expo":{"name":"my-app","slug":"my-app"}}`)
+		assert.Empty(t, readExpoScheme(dir))
+	})
+
+	t.Run("no app.json returns empty", func(t *testing.T) {
+		assert.Empty(t, readExpoScheme(t.TempDir()))
+	})
+
+	t.Run("invalid json returns empty", func(t *testing.T) {
+		dir := t.TempDir()
+		writeTestFile(t, dir, "app.json", `not valid json`)
+		assert.Empty(t, readExpoScheme(dir))
+	})
+
+	t.Run("scheme starting with digit is rejected", func(t *testing.T) {
+		dir := t.TempDir()
+		writeTestFile(t, dir, "app.json", `{"expo":{"scheme":"1app"}}`)
+		assert.Empty(t, readExpoScheme(dir))
+	})
+
+	t.Run("scheme with space is rejected", func(t *testing.T) {
+		dir := t.TempDir()
+		writeTestFile(t, dir, "app.json", `{"expo":{"scheme":"my app"}}`)
+		assert.Empty(t, readExpoScheme(dir))
+	})
+
+	t.Run("scheme with underscore is rejected", func(t *testing.T) {
+		dir := t.TempDir()
+		writeTestFile(t, dir, "app.json", `{"expo":{"scheme":"my_app"}}`)
+		assert.Empty(t, readExpoScheme(dir))
+	})
+
+	t.Run("valid scheme with plus dot dash is accepted", func(t *testing.T) {
+		dir := t.TempDir()
+		writeTestFile(t, dir, "app.json", `{"expo":{"scheme":"my+app-v1.0"}}`)
+		assert.Equal(t, "my+app-v1.0", readExpoScheme(dir))
+	})
 }
 
 // ── detectFromCsproj ─────────────────────────────────────────────────────────.
@@ -2523,4 +2619,394 @@ func TestGenerateAndWriteQuickstartConfig_NilStrategyDefaultsToDotenv(t *testing
 	fileName, _, err := GenerateAndWriteQuickstartConfig(nil, map[string]string{"AUTH0_DOMAIN": "example.com"}, "tenant.auth0.com", client, 3000)
 	require.NoError(t, err)
 	assert.Equal(t, ".env", fileName)
+}
+
+// ── readMobileBundleID ───────────────────────────────────────────────────────.
+
+func TestReadMobileBundleID(t *testing.T) {
+	t.Run("reads applicationId from android/app/build.gradle (double quotes)", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "android", "app"), 0755))
+		writeTestFile(t, dir, filepath.Join("android", "app", "build.gradle"),
+			`android {
+    defaultConfig {
+        applicationId "com.example.myapp"
+        minSdkVersion 21
+    }
+}`)
+		assert.Equal(t, "com.example.myapp", readMobileBundleID(dir))
+	})
+
+	t.Run("reads applicationId with single quotes (Groovy DSL style)", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "android", "app"), 0755))
+		writeTestFile(t, dir, filepath.Join("android", "app", "build.gradle"),
+			`android {
+    defaultConfig {
+        applicationId 'com.example.singlequote'
+        minSdkVersion 21
+    }
+}`)
+		assert.Equal(t, "com.example.singlequote", readMobileBundleID(dir))
+	})
+
+	t.Run("falls back to project.pbxproj for iOS-only project", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "ios", "Runner.xcodeproj"), 0755))
+		writeTestFile(t, dir, filepath.Join("ios", "Runner.xcodeproj", "project.pbxproj"),
+			`PRODUCT_BUNDLE_IDENTIFIER = com.example.iosonly;`)
+		assert.Equal(t, "com.example.iosonly", readMobileBundleID(dir))
+	})
+
+	t.Run("falls back to Info.plist when project.pbxproj absent", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "ios", "Runner"), 0755))
+		writeTestFile(t, dir, filepath.Join("ios", "Runner", "Info.plist"),
+			`<key>CFBundleIdentifier</key><string>com.example.infoplist</string>`)
+		assert.Equal(t, "com.example.infoplist", readMobileBundleID(dir))
+	})
+
+	t.Run("Info.plist with Xcode variable reference returns empty (falls through)", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "ios", "Runner"), 0755))
+		writeTestFile(t, dir, filepath.Join("ios", "Runner", "Info.plist"),
+			`<key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>`)
+		assert.Empty(t, readMobileBundleID(dir))
+	})
+
+	t.Run("no build.gradle and no iOS files returns empty", func(t *testing.T) {
+		assert.Empty(t, readMobileBundleID(t.TempDir()))
+	})
+
+	t.Run("build.gradle without applicationId falls back to iOS", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "android", "app"), 0755))
+		writeTestFile(t, dir, filepath.Join("android", "app", "build.gradle"),
+			`android { defaultConfig { minSdkVersion 21 } }`)
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "ios", "Runner.xcodeproj"), 0755))
+		writeTestFile(t, dir, filepath.Join("ios", "Runner.xcodeproj", "project.pbxproj"),
+			`PRODUCT_BUNDLE_IDENTIFIER = com.example.iosfallback;`)
+		assert.Equal(t, "com.example.iosfallback", readMobileBundleID(dir))
+	})
+}
+
+// ── extractGradleApplicationID single-quote support ───────────────────────────.
+
+func TestExtractGradleApplicationID_SingleQuotes(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{"double quotes", `applicationId "com.example.double"`, "com.example.double"},
+		{"single quotes", `applicationId 'com.example.single'`, "com.example.single"},
+		{"with whitespace", `applicationId  "com.example.space"`, "com.example.space"},
+		{"not present", `minSdkVersion 21`, ""},
+		{"mixed — double wins (first match)", `applicationId "com.example.first"
+applicationId 'com.example.second'`, "com.example.first"},
+	}
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, extractGradleApplicationID(tc.content))
+		})
+	}
+}
+
+// ── readIOSBundleID ───────────────────────────────────────────────────────────.
+
+func TestReadIOSBundleID(t *testing.T) {
+	t.Run("reads PRODUCT_BUNDLE_IDENTIFIER from project.pbxproj", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "ios", "Runner.xcodeproj"), 0755))
+		writeTestFile(t, dir, filepath.Join("ios", "Runner.xcodeproj", "project.pbxproj"),
+			`PRODUCT_BUNDLE_IDENTIFIER = com.example.pbxproj;`)
+		assert.Equal(t, "com.example.pbxproj", readIOSBundleID(dir))
+	})
+
+	t.Run("falls back to Info.plist when project.pbxproj missing", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "ios", "Runner"), 0755))
+		writeTestFile(t, dir, filepath.Join("ios", "Runner", "Info.plist"),
+			`<key>CFBundleIdentifier</key>
+<string>com.example.plist</string>`)
+		assert.Equal(t, "com.example.plist", readIOSBundleID(dir))
+	})
+
+	t.Run("Info.plist variable reference returns empty", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "ios", "Runner"), 0755))
+		writeTestFile(t, dir, filepath.Join("ios", "Runner", "Info.plist"),
+			`<key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>`)
+		assert.Empty(t, readIOSBundleID(dir))
+	})
+
+	t.Run("no iOS files returns empty", func(t *testing.T) {
+		assert.Empty(t, readIOSBundleID(t.TempDir()))
+	})
+}
+
+// ── extractPbxprojBundleID ────────────────────────────────────────────────────.
+
+func TestExtractPbxprojBundleID(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{
+			name:    "single app target returns it",
+			content: `PRODUCT_BUNDLE_IDENTIFIER = com.example.app;`,
+			want:    "com.example.app",
+		},
+		{
+			name: "test target appears first — skipped, app target returned",
+			content: `PRODUCT_BUNDLE_IDENTIFIER = com.example.app.RunnerTests;
+PRODUCT_BUNDLE_IDENTIFIER = com.example.app;`,
+			want: "com.example.app",
+		},
+		{
+			name: ".Tests suffix skipped",
+			content: `PRODUCT_BUNDLE_IDENTIFIER = com.example.app.Tests;
+PRODUCT_BUNDLE_IDENTIFIER = com.example.app;`,
+			want: "com.example.app",
+		},
+		{
+			name: ".UITests suffix skipped",
+			content: `PRODUCT_BUNDLE_IDENTIFIER = com.example.app.UITests;
+PRODUCT_BUNDLE_IDENTIFIER = com.example.app;`,
+			want: "com.example.app",
+		},
+		{
+			name:    "no match returns empty",
+			content: `OTHER_KEY = some.value;`,
+			want:    "",
+		},
+		{
+			name: "all test targets — returns empty",
+			content: `PRODUCT_BUNDLE_IDENTIFIER = com.example.app.RunnerTests;
+PRODUCT_BUNDLE_IDENTIFIER = com.example.app.UITests;`,
+			want: "",
+		},
+		{
+			// com.example.appTests (no dot) previously passed the filter.
+			name: "no-dot Tests suffix skipped",
+			content: `PRODUCT_BUNDLE_IDENTIFIER = com.example.appTests;
+PRODUCT_BUNDLE_IDENTIFIER = com.example.app;`,
+			want: "com.example.app",
+		},
+		{
+			name: "no-dot UITests suffix skipped",
+			content: `PRODUCT_BUNDLE_IDENTIFIER = com.example.appUITests;
+PRODUCT_BUNDLE_IDENTIFIER = com.example.app;`,
+			want: "com.example.app",
+		},
+	}
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, extractPbxprojBundleID(tc.content))
+		})
+	}
+}
+
+// ── readCapacitorAppID ────────────────────────────────────────────────────────.
+
+func TestReadCapacitorAppID(t *testing.T) {
+	t.Run("reads appId from capacitor.config.json", func(t *testing.T) {
+		dir := t.TempDir()
+		writeTestFile(t, dir, "capacitor.config.json", `{"appId":"com.example.ionic","appName":"MyApp"}`)
+		assert.Equal(t, "com.example.ionic", readCapacitorAppID(dir))
+	})
+
+	t.Run("missing file returns empty", func(t *testing.T) {
+		assert.Empty(t, readCapacitorAppID(t.TempDir()))
+	})
+
+	t.Run("malformed JSON returns empty", func(t *testing.T) {
+		dir := t.TempDir()
+		writeTestFile(t, dir, "capacitor.config.json", `not valid json`)
+		assert.Empty(t, readCapacitorAppID(dir))
+	})
+
+	t.Run("missing appId field returns empty", func(t *testing.T) {
+		dir := t.TempDir()
+		writeTestFile(t, dir, "capacitor.config.json", `{"appName":"MyApp"}`)
+		assert.Empty(t, readCapacitorAppID(dir))
+	})
+
+	t.Run("reads appId from capacitor.config.ts (Capacitor v3+ default)", func(t *testing.T) {
+		dir := t.TempDir()
+		writeTestFile(t, dir, "capacitor.config.ts", `import { CapacitorConfig } from '@capacitor/cli';
+const config: CapacitorConfig = {
+  appId: 'com.example.tsapp',
+  appName: 'MyApp',
+  webDir: 'www',
+};
+export default config;`)
+		assert.Equal(t, "com.example.tsapp", readCapacitorAppID(dir))
+	})
+
+	t.Run("reads double-quoted appId from capacitor.config.ts", func(t *testing.T) {
+		dir := t.TempDir()
+		writeTestFile(t, dir, "capacitor.config.ts", `import { CapacitorConfig } from '@capacitor/cli';
+const config: CapacitorConfig = {
+  appId: "com.example.dqapp",
+  appName: 'MyApp',
+};
+export default config;`)
+		assert.Equal(t, "com.example.dqapp", readCapacitorAppID(dir))
+	})
+
+	t.Run("skips commented appId line in capacitor.config.ts", func(t *testing.T) {
+		dir := t.TempDir()
+		writeTestFile(t, dir, "capacitor.config.ts", `import { CapacitorConfig } from '@capacitor/cli';
+const config: CapacitorConfig = {
+  // appId: 'com.example.old',
+  appId: 'com.example.actual',
+};
+export default config;`)
+		assert.Equal(t, "com.example.actual", readCapacitorAppID(dir))
+	})
+
+	t.Run("json config takes priority over ts config", func(t *testing.T) {
+		dir := t.TempDir()
+		writeTestFile(t, dir, "capacitor.config.json", `{"appId":"com.example.json"}`)
+		writeTestFile(t, dir, "capacitor.config.ts", `const config = { appId: 'com.example.ts' };`)
+		assert.Equal(t, "com.example.json", readCapacitorAppID(dir))
+	})
+
+	t.Run("ts config fallback when json has no appId", func(t *testing.T) {
+		dir := t.TempDir()
+		writeTestFile(t, dir, "capacitor.config.json", `{"appName":"NoID"}`)
+		writeTestFile(t, dir, "capacitor.config.ts", `const config = { appId: 'com.example.tsfallback' };`)
+		assert.Equal(t, "com.example.tsfallback", readCapacitorAppID(dir))
+	})
+}
+
+// ── readDotnetMobileBundleID ──────────────────────────────────────────────────.
+
+func TestReadDotnetMobileBundleID(t *testing.T) {
+	t.Run("reads ApplicationId from csproj content", func(t *testing.T) {
+		content := `<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ApplicationId>com.example.myapp</ApplicationId>
+    <TargetFrameworks>net8.0-android;net8.0-ios</TargetFrameworks>
+  </PropertyGroup>
+</Project>`
+		assert.Equal(t, "com.example.myapp", readDotnetMobileBundleID(content))
+	})
+
+	t.Run("no ApplicationId returns empty", func(t *testing.T) {
+		content := `<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup></PropertyGroup></Project>`
+		assert.Empty(t, readDotnetMobileBundleID(content))
+	})
+
+	t.Run("ApplicationId with whitespace is trimmed", func(t *testing.T) {
+		content := `<ApplicationId>  com.example.app  </ApplicationId>`
+		assert.Equal(t, "com.example.app", readDotnetMobileBundleID(content))
+	})
+}
+
+// ── DetectProject BundleID population ────────────────────────────────────────.
+
+func TestDetectProject_ReactNativePopulatesBundleID(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "package.json", `{"dependencies":{"react-native":"^0.72"}}`)
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "android", "app"), 0755))
+	writeTestFile(t, dir, filepath.Join("android", "app", "build.gradle"),
+		`android { defaultConfig { applicationId "com.example.rn" } }`)
+
+	got := DetectProject(dir)
+	assert.Equal(t, "react-native", got.Framework)
+	assert.Equal(t, "com.example.rn", got.BundleID)
+}
+
+func TestDetectProject_FlutterPopulatesBundleID(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "pubspec.yaml", "name: my_app\nflutter:\n  sdk: flutter")
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "android", "app"), 0755))
+	writeTestFile(t, dir, filepath.Join("android", "app", "build.gradle"),
+		`android { defaultConfig { applicationId "com.example.flutter" } }`)
+
+	got := DetectProject(dir)
+	assert.Equal(t, "flutter", got.Framework)
+	assert.Equal(t, "com.example.flutter", got.BundleID)
+}
+
+func TestDetectProject_MAUIPopulatesBundleID(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "MyApp.csproj",
+		`<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ApplicationId>com.example.maui</ApplicationId>
+    <UseMaui>true</UseMaui>
+    <PackageReference Include="Microsoft.Maui" />
+  </PropertyGroup>
+</Project>`)
+
+	got := DetectProject(dir)
+	assert.Equal(t, "maui", got.Framework)
+	assert.Equal(t, "com.example.maui", got.BundleID)
+}
+
+func TestDetectProject_DotnetMobilePopulatesBundleID(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "MyApp.csproj",
+		`<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ApplicationId>com.example.mobile</ApplicationId>
+    <TargetFrameworks>net8.0-android;net8.0-ios</TargetFrameworks>
+  </PropertyGroup>
+</Project>`)
+
+	got := DetectProject(dir)
+	assert.Equal(t, "dotnet-mobile", got.Framework)
+	assert.Equal(t, "com.example.mobile", got.BundleID)
+}
+
+func TestDetectProject_IonicAngularPopulatesBundleID(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "package.json", `{"dependencies":{"@ionic/angular":"^7.0.0"}}`)
+	writeTestFile(t, dir, "capacitor.config.json", `{"appId":"com.example.ionic","appName":"MyIonicApp"}`)
+
+	got := DetectProject(dir)
+	assert.Equal(t, "ionic-angular", got.Framework)
+	assert.Equal(t, "com.example.ionic", got.BundleID)
+}
+
+func TestDetectProject_IonicReactPopulatesBundleID(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "package.json", `{"dependencies":{"@ionic/react":"^7.0.0"}}`)
+	writeTestFile(t, dir, "capacitor.config.json", `{"appId":"com.example.ionicreact","appName":"MyIonicReactApp"}`)
+
+	got := DetectProject(dir)
+	assert.Equal(t, "ionic-react", got.Framework)
+	assert.Equal(t, "com.example.ionicreact", got.BundleID)
+}
+
+func TestDetectProject_IonicVuePopulatesBundleID(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "package.json", `{"dependencies":{"@ionic/vue":"^7.0.0"}}`)
+	writeTestFile(t, dir, "capacitor.config.json", `{"appId":"com.example.ionicvue","appName":"MyIonicVueApp"}`)
+
+	got := DetectProject(dir)
+	assert.Equal(t, "ionic-vue", got.Framework)
+	assert.Equal(t, "com.example.ionicvue", got.BundleID)
+}
+
+func TestDetectProject_IonicVue_CapacitorTS(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "package.json", `{"dependencies":{"@ionic/vue":"^7.0.0"}}`)
+	writeTestFile(t, dir, "capacitor.config.ts", `import { CapacitorConfig } from '@capacitor/cli';
+const config: CapacitorConfig = {
+  appId: 'com.example.ionicvuets',
+  appName: 'MyIonicVueApp',
+  webDir: 'dist',
+};
+export default config;`)
+
+	got := DetectProject(dir)
+	assert.Equal(t, "ionic-vue", got.Framework)
+	assert.Equal(t, "com.example.ionicvuets", got.BundleID)
 }

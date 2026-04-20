@@ -347,8 +347,30 @@ var QuickstartConfigs = map[string]AppConfig{
 	},
 	"regular:sveltekit:none": {
 		EnvValues: map[string]string{
-			"VITE_AUTH0_DOMAIN":    DetectionSub,
-			"VITE_AUTH0_CLIENT_ID": DetectionSub,
+			"AUTH0_DOMAIN":        DetectionSub,
+			"AUTH0_CLIENT_ID":     DetectionSub,
+			"AUTH0_CLIENT_SECRET": DetectionSub,
+			"AUTH0_SECRET":        DetectionSub,
+			"APP_BASE_URL":        DetectionSub,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DetectionSub},
+			AllowedLogoutURLs: []string{DetectionSub},
+			Name:              DetectionSub,
+			CallbackPath:      "/auth/callback",
+		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
+	},
+	// SvelteKit with Vite uses the same server-side config as regular:sveltekit:none.
+	// SvelteKit SSR requires a client secret regardless of the underlying build tool.
+	"regular:sveltekit:vite": {
+		EnvValues: map[string]string{
+			"AUTH0_DOMAIN":        DetectionSub,
+			"AUTH0_CLIENT_ID":     DetectionSub,
+			"AUTH0_CLIENT_SECRET": DetectionSub,
+			"AUTH0_SECRET":        DetectionSub,
+			"APP_BASE_URL":        DetectionSub,
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
@@ -588,10 +610,13 @@ var QuickstartConfigs = map[string]AppConfig{
 			"domain":   DetectionSub,
 			"clientId": DetectionSub,
 		},
+		// Flutter uses custom URI scheme callbacks (e.g. com.example.app://domain/ios/.../callback).
+		// The bundle identifier is not known at setup time, so callbacks are left empty;
+		// the user must add their specific callback URL in the Auth0 dashboard.
 		RequestParams: RequestParams{
 			AppType:           "native",
-			Callbacks:         []string{DetectionSub},
-			AllowedLogoutURLs: []string{DetectionSub},
+			Callbacks:         []string{},
+			AllowedLogoutURLs: []string{},
 			Name:              DetectionSub,
 		},
 		Strategy: FileOutputStrategy{Path: "lib/auth_config.dart", Format: "dart"},
@@ -601,10 +626,13 @@ var QuickstartConfigs = map[string]AppConfig{
 			"AUTH0_DOMAIN":    DetectionSub,
 			"AUTH0_CLIENT_ID": DetectionSub,
 		},
+		// React Native uses custom URI scheme callbacks based on the bundle identifier.
+		// The bundle identifier is not known at setup time, so callbacks are left empty;
+		// the user must add their specific callback URL in the Auth0 dashboard.
 		RequestParams: RequestParams{
 			AppType:           "native",
-			Callbacks:         []string{DetectionSub},
-			AllowedLogoutURLs: []string{DetectionSub},
+			Callbacks:         []string{},
+			AllowedLogoutURLs: []string{},
 			Name:              DetectionSub,
 		},
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
@@ -614,10 +642,11 @@ var QuickstartConfigs = map[string]AppConfig{
 			"EXPO_PUBLIC_AUTH0_DOMAIN":    DetectionSub,
 			"EXPO_PUBLIC_AUTH0_CLIENT_ID": DetectionSub,
 		},
+		// Expo Go uses exp://localhost:19000 as the standard redirect URI.
 		RequestParams: RequestParams{
 			AppType:           "native",
-			Callbacks:         []string{DetectionSub},
-			AllowedLogoutURLs: []string{DetectionSub},
+			Callbacks:         []string{"exp://localhost:19000"},
+			AllowedLogoutURLs: []string{"exp://localhost:19000"},
 			Name:              DetectionSub,
 		},
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
@@ -627,10 +656,11 @@ var QuickstartConfigs = map[string]AppConfig{
 			"domain":   DetectionSub,
 			"clientId": DetectionSub,
 		},
+		// Capacitor (used by Ionic) intercepts http://localhost redirects in the WebView.
 		RequestParams: RequestParams{
 			AppType:           "native",
-			Callbacks:         []string{DetectionSub},
-			AllowedLogoutURLs: []string{DetectionSub},
+			Callbacks:         []string{"http://localhost"},
+			AllowedLogoutURLs: []string{"http://localhost"},
 			Name:              DetectionSub,
 		},
 		Strategy: FileOutputStrategy{Path: "src/environments/environment.ts", Format: "ts"},
@@ -640,11 +670,12 @@ var QuickstartConfigs = map[string]AppConfig{
 			"VITE_AUTH0_DOMAIN":    DetectionSub,
 			"VITE_AUTH0_CLIENT_ID": DetectionSub,
 		},
+		// Capacitor (used by Ionic) intercepts http://localhost redirects in the WebView.
 		RequestParams: RequestParams{
 			AppType:           "native",
-			Callbacks:         []string{DetectionSub},
+			Callbacks:         []string{"http://localhost"},
+			AllowedLogoutURLs: []string{"http://localhost"},
 			Name:              DetectionSub,
-			AllowedLogoutURLs: []string{DetectionSub},
 		},
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
@@ -653,10 +684,11 @@ var QuickstartConfigs = map[string]AppConfig{
 			"VITE_AUTH0_DOMAIN":    DetectionSub,
 			"VITE_AUTH0_CLIENT_ID": DetectionSub,
 		},
+		// Capacitor (used by Ionic) intercepts http://localhost redirects in the WebView.
 		RequestParams: RequestParams{
 			AppType:           "native",
-			Callbacks:         []string{DetectionSub},
-			AllowedLogoutURLs: []string{DetectionSub},
+			Callbacks:         []string{"http://localhost"},
+			AllowedLogoutURLs: []string{"http://localhost"},
 			Name:              DetectionSub,
 		},
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
@@ -666,10 +698,13 @@ var QuickstartConfigs = map[string]AppConfig{
 			"Auth0:Domain":   DetectionSub,
 			"Auth0:ClientId": DetectionSub,
 		},
+		// .NET Mobile (Android/iOS) uses custom URI scheme callbacks based on the bundle identifier.
+		// The bundle identifier is not known at setup time, so callbacks are left empty;
+		// the user must add their specific callback URL in the Auth0 dashboard.
 		RequestParams: RequestParams{
 			AppType:           "native",
-			Callbacks:         []string{DetectionSub},
-			AllowedLogoutURLs: []string{DetectionSub},
+			Callbacks:         []string{},
+			AllowedLogoutURLs: []string{},
 			Name:              DetectionSub,
 		},
 		Strategy: FileOutputStrategy{Path: "appsettings.json", Format: "json"},
@@ -679,24 +714,30 @@ var QuickstartConfigs = map[string]AppConfig{
 			"Auth0:Domain":   DetectionSub,
 			"Auth0:ClientId": DetectionSub,
 		},
+		// MAUI uses custom URI scheme callbacks based on the bundle identifier.
+		// The bundle identifier is not known at setup time, so callbacks are left empty;
+		// the user must add their specific callback URL in the Auth0 dashboard.
 		RequestParams: RequestParams{
 			AppType:           "native",
-			Callbacks:         []string{DetectionSub},
-			AllowedLogoutURLs: []string{DetectionSub},
+			Callbacks:         []string{},
+			AllowedLogoutURLs: []string{},
 			Name:              DetectionSub,
 		},
 		Strategy: FileOutputStrategy{Path: "appsettings.json", Format: "json"},
 	},
 	"native:wpf-winforms:none": {
 		EnvValues: map[string]string{
-			"Auth0:Domain":       DetectionSub,
-			"Auth0:ClientId":     DetectionSub,
-			"Auth0:ClientSecret": DetectionSub,
+			"Auth0:Domain":   DetectionSub,
+			"Auth0:ClientId": DetectionSub,
+			// No Auth0:ClientSecret — WPF/WinForms apps are public native clients
+			// that use Authorization Code + PKCE; the client secret is unused and
+			// Auth0 returns an empty/placeholder value for native app types.
 		},
+		// WPF/WinForms uses the bare loopback http://localhost (no port, no path) per Auth0 docs.
 		RequestParams: RequestParams{
 			AppType:           "native",
-			Callbacks:         []string{DetectionSub},
-			AllowedLogoutURLs: []string{DetectionSub},
+			Callbacks:         []string{"http://localhost"},
+			AllowedLogoutURLs: []string{"http://localhost"},
 			Name:              DetectionSub,
 		},
 		Strategy: FileOutputStrategy{Path: "appsettings.json", Format: "json"},
@@ -720,10 +761,3 @@ var QuickstartConfigs = map[string]AppConfig{
 	},
 }
 
-func init() {
-	// SvelteKit uses Vite internally; detection appends the :vite suffix.
-	// This is a value copy made at startup — Go maps store structs by value,
-	// not by reference. If regular:sveltekit:none is updated in the future,
-	// regular:sveltekit:vite must be updated separately (they will diverge).
-	QuickstartConfigs["regular:sveltekit:vite"] = QuickstartConfigs["regular:sveltekit:none"]
-}

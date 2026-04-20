@@ -453,6 +453,7 @@ type SetupInputs struct {
 	Framework     string
 	BuildTool     string
 	Port          int
+	BundleID      string // package/bundle ID for native apps, populated from detection
 	CallbackURL   string
 	LogoutURL     string
 	WebOriginURL  string
@@ -765,6 +766,9 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					if !cmd.Flags().Changed("build-tool") && detection.BuildTool != "" {
 						inputs.BuildTool = detection.BuildTool
 					}
+					if inputs.BundleID == "" && detection.BundleID != "" {
+						inputs.BundleID = detection.BundleID
+					}
 				case detection.Detected:
 					if len(detection.AmbiguousCandidates) > 1 {
 						// Multiple package.json deps matched — show partial summary and ask user to disambiguate.
@@ -785,6 +789,9 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 							}
 							if inputs.Name == "" {
 								inputs.Name = detection.AppName
+							}
+							if inputs.BundleID == "" && detection.BundleID != "" {
+								inputs.BundleID = detection.BundleID
 							}
 							if inputs.Framework == "" {
 								q := prompt.SelectInput("framework", "Select your framework", "",
@@ -825,6 +832,9 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 							}
 							if inputs.Name == "" {
 								inputs.Name = detection.AppName
+							}
+							if inputs.BundleID == "" && detection.BundleID != "" {
+								inputs.BundleID = detection.BundleID
 							}
 						}
 					}
@@ -982,6 +992,10 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						if err := prompt.AskOne(q, &inputs.TokenLifetime); err != nil {
 							return fmt.Errorf("failed to enter token lifetime: %v", err)
 						}
+						if inputs.TokenLifetime == "" {
+							cli.renderer.Warnf("Token lifetime left blank; using default 86400 seconds (24 hours)")
+							inputs.TokenLifetime = "86400"
+						}
 					} else {
 						inputs.TokenLifetime = "86400"
 					}
@@ -1059,6 +1073,47 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					return fmt.Errorf("unsupported quickstart arguments: %s. Supported types: %v", qsConfigKey, getSupportedQuickstartTypes())
 				}
 
+				// For Expo, read the production URI scheme from app.json (expo.scheme).
+				// If found, register it alongside exp://localhost:19000 so that both
+				// Expo Go (development) and EAS/production builds work without a manual
+				// dashboard update.
+				var expoScheme string
+				if inputs.Framework == "expo" {
+					if cwd, cwdErr := os.Getwd(); cwdErr == nil {
+						expoScheme = readExpoScheme(cwd)
+					}
+					if expoScheme != "" {
+						schemeURI := expoScheme + "://"
+						config.RequestParams.Callbacks = append([]string{schemeURI}, config.RequestParams.Callbacks...)
+						config.RequestParams.AllowedLogoutURLs = append([]string{schemeURI}, config.RequestParams.AllowedLogoutURLs...)
+					}
+				}
+
+				// Resolve the bundle/package ID for native app guidance output.
+				// The callback URL includes the Auth0 domain, so it can only be constructed after
+				// the tenant config is fetched below.
+				// Prefer the BundleID already populated by DetectProject to avoid re-reading disk.
+				var nativeBundleID string
+				if inputs.BundleID != "" {
+					nativeBundleID = inputs.BundleID
+				} else if inputs.Framework == "flutter" || inputs.Framework == "react-native" {
+					// Fallback for when framework was specified via --framework flag (detection not run).
+					if cwd, cwdErr := os.Getwd(); cwdErr == nil {
+						nativeBundleID = readMobileBundleID(cwd)
+					}
+				} else if inputs.Framework == "maui" || inputs.Framework == "dotnet-mobile" {
+					if cwd, cwdErr := os.Getwd(); cwdErr == nil {
+						if csprojContent, ok := findCsprojContent(cwd); ok {
+							nativeBundleID = readDotnetMobileBundleID(csprojContent)
+						}
+					}
+				} else if inputs.Framework == "ionic-angular" || inputs.Framework == "ionic-react" || inputs.Framework == "ionic-vue" {
+					// Fallback for when framework was specified via --framework flag (detection not run).
+					if cwd, cwdErr := os.Getwd(); cwdErr == nil {
+						nativeBundleID = readCapacitorAppID(cwd)
+					}
+				}
+
 				client, err := generateClient(inputs, config.RequestParams)
 				if err != nil {
 					return fmt.Errorf("failed to generate client: %w", err)
@@ -1080,6 +1135,50 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					return fmt.Errorf("failed to generate config file: %w", err)
 				}
 				printClientDetails(cli, client, inputs.Port, envFileName)
+
+				// Post-setup guidance for Expo: exp://localhost:19000 only covers Expo Go.
+				// Inform the user about EAS/production build requirements.
+				if inputs.Framework == "expo" {
+					if expoScheme != "" {
+						cli.renderer.Infof("Registered %s:// (production scheme from app.json) and exp://localhost:19000 (Expo Go) as Allowed Callback URLs.", expoScheme)
+						cli.renderer.Infof("For EAS production builds, ensure your app.json scheme matches %s.", expoScheme)
+					} else {
+						cli.renderer.Infof("Note: exp://localhost:19000 is for Expo Go development only.")
+						cli.renderer.Infof("For EAS/production builds, add your custom scheme URI (e.g., myapp://) to Allowed Callback URLs in the Auth0 Dashboard.")
+					}
+				}
+
+				// Post-setup guidance for Flutter and .NET Mobile apps: show the
+				// callback URLs to register in the Auth0 Dashboard. These use the
+				// app's bundle/package ID and the tenant domain, both of which are
+				// now available.
+				switch inputs.Framework {
+				case "flutter", "react-native":
+					if nativeBundleID != "" {
+						// The bundle ID is used directly as the URI scheme. RFC 3986 permits
+						// hyphens in URI schemes, and both iOS CFBundleURLSchemes and Android
+						// intent filters support them natively.
+						cli.renderer.Infof("Add these Allowed Callback URLs in the Auth0 Dashboard:")
+						cli.renderer.Infof("  Android: %s://%s/android/%s/callback", nativeBundleID, tenant.Domain, nativeBundleID)
+						cli.renderer.Infof("  iOS:     %s://%s/ios/%s/callback", nativeBundleID, tenant.Domain, nativeBundleID)
+					}
+				case "maui", "dotnet-mobile":
+					if nativeBundleID != "" {
+						cli.renderer.Infof("Add this Allowed Callback URL in the Auth0 Dashboard:")
+						cli.renderer.Infof("  %s://callback", nativeBundleID)
+					}
+				case "ionic-angular", "ionic-react", "ionic-vue":
+					if nativeBundleID != "" {
+						// Capacitor intercepts http://localhost in the WebView (already registered).
+						// Surface the appId so the user can configure deep links if needed.
+						cli.renderer.Infof("Capacitor app ID: %s", nativeBundleID)
+						cli.renderer.Infof("http://localhost is registered as the Allowed Callback URL (Capacitor WebView).")
+					} else {
+						// No Capacitor config found — remind the user where it should be.
+						cli.renderer.Warnf("Could not read Capacitor app ID. Ensure capacitor.config.json or capacitor.config.ts is present in your project root.")
+						cli.renderer.Infof("http://localhost is registered as the Allowed Callback URL (Capacitor WebView).")
+					}
+				}
 
 				// Track the created app's client ID so we can link it to the API below.
 				linkedAppClientID = client.GetClientID()
@@ -1372,8 +1471,9 @@ func defaultPortForFramework(framework string) int {
 func validateAPIIdentifier(identifier string) error {
 	// err != nil from url.Parse only fires on malformed percent-encoding; the
 	// host check catches bare schemes like "http://" that Parse accepts without error.
+	// u.User != nil rejects URLs with embedded credentials (e.g. http://user:pass@host).
 	u, err := url.Parse(identifier)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil {
 		return fmt.Errorf("invalid API identifier %q: must be a valid URL beginning with http:// or https://", identifier)
 	}
 	return nil
