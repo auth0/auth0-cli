@@ -384,6 +384,24 @@ func isExpoProject(dir string) bool {
 	return hasExpoKey
 }
 
+// readRawExpoScheme reads the "expo.scheme" field from app.json without validating it.
+// Returns the raw string value (may be empty or invalid).
+func readRawExpoScheme(dir string) string {
+	data, err := os.ReadFile(filepath.Join(dir, "app.json"))
+	if err != nil {
+		return ""
+	}
+	var obj struct {
+		Expo struct {
+			Scheme string `json:"scheme"`
+		} `json:"expo"`
+	}
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return ""
+	}
+	return obj.Expo.Scheme
+}
+
 // readExpoScheme reads the "expo.scheme" field from app.json if present.
 // The scheme is used as the custom URI prefix for EAS/production builds
 // (e.g. "myapp" → callback URL "myapp://").

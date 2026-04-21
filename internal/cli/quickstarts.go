@@ -773,11 +773,11 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					if len(detection.AmbiguousCandidates) > 1 {
 						// Multiple package.json deps matched — show partial summary and ask user to disambiguate.
 						cli.renderer.Infof("Detected in current directory")
-						cli.renderer.Infof("%-12s %s", "Framework:", "Could not be determined")
-						cli.renderer.Infof("%-12s %s", "App type:", detectionFriendlyAppType(detection.Type))
-						cli.renderer.Infof("%-12s %s", "App name:", detection.AppName)
+						cli.renderer.Infof("Framework: %s", "Could not be determined")
+						cli.renderer.Infof("App type: %s", detectionFriendlyAppType(detection.Type))
+						cli.renderer.Infof("App name: %s", detection.AppName)
 						if detection.Port > 0 {
-							cli.renderer.Infof("%-12s %d", "Port:", detection.Port)
+							cli.renderer.Infof("Port: %d", detection.Port)
 						}
 						noInputMode := !canPrompt(cmd)
 						if noInputMode || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
@@ -809,11 +809,11 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 							frameworkDisplay += " \u00b7 " + titleCaser.String(detection.BuildTool)
 						}
 						cli.renderer.Infof("Detected in current directory")
-						cli.renderer.Infof("%-12s %s", "Framework:", frameworkDisplay)
-						cli.renderer.Infof("%-12s %s", "App type:", detectionFriendlyAppType(detection.Type))
-						cli.renderer.Infof("%-12s %s", "App name:", detection.AppName)
+						cli.renderer.Infof("Framework: %s", frameworkDisplay)
+						cli.renderer.Infof("App type: %s", detectionFriendlyAppType(detection.Type))
+						cli.renderer.Infof("App name: %s", detection.AppName)
 						if detection.Port > 0 {
-							cli.renderer.Infof("%-12s %d", "Port:", detection.Port)
+							cli.renderer.Infof("Port: %d", detection.Port)
 						}
 
 						noInputModeSingle := !canPrompt(cmd)
@@ -840,6 +840,9 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					}
 				default:
 					// No detection signal found — notify the user and pre-fill name from directory.
+					if !canPrompt(cmd) && inputs.Type == "" {
+						return fmt.Errorf("auto-detection failed: provide --type to use --no-input mode")
+					}
 					cli.renderer.Warnf("Auto detection Failed: Unable to auto detect application")
 					if inputs.Name == "" {
 						inputs.Name = detection.AppName
@@ -848,6 +851,10 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 			}
 
 			// ── Step 3: Resolve remaining prompts for App / API ───────────────.
+			// In non-interactive mode, --type alone is not enough; --framework is also required.
+			if !canPrompt(cmd) && inputs.App && inputs.Type != "" && inputs.Type != "m2m" && inputs.Framework == "" {
+				return fmt.Errorf("--framework is required in non-interactive mode when --type is %s: use --framework flag", inputs.Type)
+			}
 			qsConfigKey, updatedInputs, wasAutoSelected, err := getQuickstartConfigKey(inputs)
 			if err != nil {
 				return fmt.Errorf("failed to get quickstart configuration: %w", err)
@@ -1081,11 +1088,18 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				if inputs.Framework == "expo" {
 					if cwd, cwdErr := os.Getwd(); cwdErr == nil {
 						expoScheme = readExpoScheme(cwd)
+						if expoScheme == "" {
+							// Warn when app.json has a scheme that is not a valid RFC 3986 URI scheme.
+							if raw := readRawExpoScheme(cwd); raw != "" {
+								cli.renderer.Warnf("app.json expo.scheme %q is not a valid URI scheme (must start with a letter and contain only letters, digits, +, -, .); scheme will be ignored.", raw)
+							}
+						}
 					}
 					if expoScheme != "" {
-						schemeURI := expoScheme + "://"
-						config.RequestParams.Callbacks = append([]string{schemeURI}, config.RequestParams.Callbacks...)
-						config.RequestParams.AllowedLogoutURLs = append([]string{schemeURI}, config.RequestParams.AllowedLogoutURLs...)
+						callbackURI := expoScheme + "://"
+						logoutURI := expoScheme + ":///"
+						config.RequestParams.Callbacks = append([]string{callbackURI}, config.RequestParams.Callbacks...)
+						config.RequestParams.AllowedLogoutURLs = append([]string{logoutURI}, config.RequestParams.AllowedLogoutURLs...)
 					}
 				}
 
@@ -1142,7 +1156,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				if inputs.Framework == "expo" {
 					if expoScheme != "" {
 						cli.renderer.Infof("Registered %s:// (production scheme from app.json) and exp://localhost:19000 (Expo Go) as Allowed Callback URLs.", expoScheme)
-						cli.renderer.Infof("For EAS production builds, ensure your app.json scheme matches %s.", expoScheme)
+						cli.renderer.Infof("For EAS production builds, ensure your app.json scheme matches %q.", expoScheme)
 					} else {
 						cli.renderer.Infof("Note: exp://localhost:19000 is for Expo Go development only.")
 						cli.renderer.Infof("For EAS/production builds, add your custom scheme URI (e.g., myapp://) to Allowed Callback URLs in the Auth0 Dashboard.")
@@ -1257,7 +1271,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 	// App flags.
 	cmd.Flags().BoolVar(&inputs.App, "app", false, "Create an Auth0 application (SPA, regular web, or native)")
 	cmd.Flags().StringVar(&inputs.Name, "name", "", "Name of the Auth0 application")
-	cmd.Flags().StringVar(&inputs.Type, "type", "", "Application type: spa, regular, or native")
+	cmd.Flags().StringVar(&inputs.Type, "type", "", "Application type: spa, regular, native, or m2m")
 	cmd.Flags().StringVar(&inputs.Framework, "framework", "", "Framework to configure (e.g., react, nextjs, vue, express)")
 	cmd.Flags().StringVar(&inputs.BuildTool, "build-tool", "none", "Build tool used by the project (vite, webpack, cra, none)")
 	cmd.Flags().IntVar(&inputs.Port, "port", 0, "Local port the application runs on (default varies by framework, e.g. 3000, 5173)")

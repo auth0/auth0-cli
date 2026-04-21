@@ -3010,3 +3010,52 @@ export default config;`)
 	assert.Equal(t, "ionic-vue", got.Framework)
 	assert.Equal(t, "com.example.ionicvuets", got.BundleID)
 }
+
+// ── readRawExpoScheme ─────────────────────────────────────────────────────────.
+
+func TestReadRawExpoScheme(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns valid scheme unchanged", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		writeTestFile(t, dir, "app.json", `{"expo":{"scheme":"myapp"}}`)
+		assert.Equal(t, "myapp", readRawExpoScheme(dir))
+	})
+
+	t.Run("returns invalid scheme without validation", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		writeTestFile(t, dir, "app.json", `{"expo":{"scheme":"my app"}}`)
+		assert.Equal(t, "my app", readRawExpoScheme(dir))
+	})
+
+	t.Run("returns scheme starting with digit", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		writeTestFile(t, dir, "app.json", `{"expo":{"scheme":"1invalid"}}`)
+		assert.Equal(t, "1invalid", readRawExpoScheme(dir))
+	})
+
+	t.Run("returns empty when no scheme field", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		writeTestFile(t, dir, "app.json", `{"expo":{"name":"my-app"}}`)
+		assert.Empty(t, readRawExpoScheme(dir))
+	})
+
+	t.Run("returns empty when no app.json", func(t *testing.T) {
+		t.Parallel()
+		assert.Empty(t, readRawExpoScheme(t.TempDir()))
+	})
+
+	t.Run("readRawExpoScheme returns value that readExpoScheme rejects", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		writeTestFile(t, dir, "app.json", `{"expo":{"scheme":"my_app"}}`)
+		// readRawExpoScheme returns the raw invalid value.
+		assert.Equal(t, "my_app", readRawExpoScheme(dir))
+		// readExpoScheme rejects it because underscore is not valid in RFC 3986 schemes.
+		assert.Empty(t, readExpoScheme(dir))
+	})
+}
