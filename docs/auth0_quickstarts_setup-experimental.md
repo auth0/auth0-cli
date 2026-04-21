@@ -47,7 +47,7 @@ auth0 quickstarts setup-experimental [flags]
       --scopes string           [API] Comma-separated list of permission scopes for the API
       --signing-alg string      [API] Token signing algorithm: RS256, PS256, or HS256 (leave blank to be prompted interactively)
       --token-lifetime string   [API] Access token lifetime in seconds (default: 86400 = 24 hours)
-      --type string             Application type: spa, regular, or native
+      --type string             Application type: spa, regular, native, or m2m
       --web-origin-url string   Override the allowed web origin URL for the application
 ```
 

@@ -3053,9 +3053,9 @@ func TestReadRawExpoScheme(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
 		writeTestFile(t, dir, "app.json", `{"expo":{"scheme":"my_app"}}`)
-		// readRawExpoScheme returns the raw invalid value.
+		// ReadRawExpoScheme returns the raw invalid value.
 		assert.Equal(t, "my_app", readRawExpoScheme(dir))
-		// readExpoScheme rejects it because underscore is not valid in RFC 3986 schemes.
+		// ReadExpoScheme rejects it because underscore is not valid in RFC 3986 schemes.
 		assert.Empty(t, readExpoScheme(dir))
 	})
 }
