@@ -652,7 +652,7 @@ func TestNoInputWithTypeRequiresFramework(t *testing.T) {
 			}
 			_, _, _, err := getQuickstartConfigKey(inputs)
 			if tc.wantErr {
-				// getQuickstartConfigKey itself will try to prompt and fail with EOF in
+				// GetQuickstartConfigKey itself will try to prompt and fail with EOF in
 				// test (no TTY). The real command guards against this with a canPrompt
 				// check before calling getQuickstartConfigKey.
 				assert.Error(t, err)
