@@ -2789,7 +2789,7 @@ PRODUCT_BUNDLE_IDENTIFIER = com.example.app.UITests;`,
 			want: "",
 		},
 		{
-			// com.example.appTests (no dot) previously passed the filter.
+			// Com.example.appTests (no dot) previously passed the filter.
 			name: "no-dot Tests suffix skipped",
 			content: `PRODUCT_BUNDLE_IDENTIFIER = com.example.appTests;
 PRODUCT_BUNDLE_IDENTIFIER = com.example.app;`,
