@@ -453,7 +453,7 @@ type SetupInputs struct {
 	Framework     string
 	BuildTool     string
 	Port          int
-	BundleID      string // package/bundle ID for native apps, populated from detection
+	BundleID      string // Package/bundle ID for native apps, populated from detection.
 	CallbackURL   string
 	LogoutURL     string
 	WebOriginURL  string
@@ -1094,20 +1094,21 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				// the tenant config is fetched below.
 				// Prefer the BundleID already populated by DetectProject to avoid re-reading disk.
 				var nativeBundleID string
-				if inputs.BundleID != "" {
+				switch {
+				case inputs.BundleID != "":
 					nativeBundleID = inputs.BundleID
-				} else if inputs.Framework == "flutter" || inputs.Framework == "react-native" {
+				case inputs.Framework == "flutter" || inputs.Framework == "react-native":
 					// Fallback for when framework was specified via --framework flag (detection not run).
 					if cwd, cwdErr := os.Getwd(); cwdErr == nil {
 						nativeBundleID = readMobileBundleID(cwd)
 					}
-				} else if inputs.Framework == "maui" || inputs.Framework == "dotnet-mobile" {
+				case inputs.Framework == "maui" || inputs.Framework == "dotnet-mobile":
 					if cwd, cwdErr := os.Getwd(); cwdErr == nil {
 						if csprojContent, ok := findCsprojContent(cwd); ok {
 							nativeBundleID = readDotnetMobileBundleID(csprojContent)
 						}
 					}
-				} else if inputs.Framework == "ionic-angular" || inputs.Framework == "ionic-react" || inputs.Framework == "ionic-vue" {
+				case inputs.Framework == "ionic-angular" || inputs.Framework == "ionic-react" || inputs.Framework == "ionic-vue":
 					// Fallback for when framework was specified via --framework flag (detection not run).
 					if cwd, cwdErr := os.Getwd(); cwdErr == nil {
 						nativeBundleID = readCapacitorAppID(cwd)
@@ -1469,7 +1470,7 @@ func defaultPortForFramework(framework string) int {
 
 // validateAPIIdentifier returns an error if identifier is not a valid http:// or https:// URL.
 func validateAPIIdentifier(identifier string) error {
-	// err != nil from url.Parse only fires on malformed percent-encoding; the
+	// Err != nil from url.Parse only fires on malformed percent-encoding; the
 	// host check catches bare schemes like "http://" that Parse accepts without error.
 	// u.User != nil rejects URLs with embedded credentials (e.g. http://user:pass@host).
 	u, err := url.Parse(identifier)

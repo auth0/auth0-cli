@@ -760,4 +760,3 @@ var QuickstartConfigs = map[string]AppConfig{
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 }
-
