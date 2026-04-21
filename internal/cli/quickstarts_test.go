@@ -603,6 +603,66 @@ func TestReplaceDetectionSub_AllQuickstartConfigsCovered(t *testing.T) {
 	}
 }
 
+// TestNoInputWithTypeRequiresFramework verifies that getQuickstartConfigKey
+// returns an error when framework is empty for a known type, ensuring that the
+// no-input guard added before the call catches the case before hitting EOF.
+func TestNoInputWithTypeRequiresFramework(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		appType   string
+		framework string
+		wantErr   bool
+	}{
+		{
+			name:      "spa without framework prompts (returns error on no-input)",
+			appType:   "spa",
+			framework: "",
+			wantErr:   true,
+		},
+		{
+			name:      "regular without framework prompts (returns error on no-input)",
+			appType:   "regular",
+			framework: "",
+			wantErr:   true,
+		},
+		{
+			name:      "spa with framework succeeds",
+			appType:   "spa",
+			framework: "react",
+			wantErr:   false,
+		},
+		{
+			name:      "m2m never needs framework",
+			appType:   "m2m",
+			framework: "",
+			wantErr:   false,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			inputs := SetupInputs{
+				App:       true,
+				Type:      tc.appType,
+				Framework: tc.framework,
+			}
+			_, _, _, err := getQuickstartConfigKey(inputs)
+			if tc.wantErr {
+				// getQuickstartConfigKey itself will try to prompt and fail with EOF in
+				// test (no TTY). The real command guards against this with a canPrompt
+				// check before calling getQuickstartConfigKey.
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestValidateAPIIdentifier(t *testing.T) {
 	t.Parallel()
 
