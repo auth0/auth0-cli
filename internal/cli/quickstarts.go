@@ -772,12 +772,12 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				case detection.Detected:
 					if len(detection.AmbiguousCandidates) > 1 {
 						// Multiple package.json deps matched — show partial summary and ask user to disambiguate.
-						cli.renderer.Infof("Detected in current directory")
-						cli.renderer.Infof("Framework: %s", "Could not be determined")
-						cli.renderer.Infof("App type: %s", detectionFriendlyAppType(detection.Type))
-						cli.renderer.Infof("App name: %s", detection.AppName)
+						cli.renderer.InfofNoSpace("Detected in current directory")
+						cli.renderer.InfofNoSpace("Framework: %s", "Could not be determined")
+						cli.renderer.InfofNoSpace("App type: %s", detectionFriendlyAppType(detection.Type))
+						cli.renderer.InfofNoSpace("App name: %s", detection.AppName)
 						if detection.Port > 0 {
-							cli.renderer.Infof("Port: %d", detection.Port)
+							cli.renderer.InfofNoSpace("Port: %d", detection.Port)
 						}
 						noInputMode := !canPrompt(cmd)
 						if noInputMode || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
@@ -808,12 +808,12 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						if detection.BuildTool != "" && detection.BuildTool != "none" {
 							frameworkDisplay += " \u00b7 " + titleCaser.String(detection.BuildTool)
 						}
-						cli.renderer.Infof("Detected in current directory")
-						cli.renderer.Infof("Framework: %s", frameworkDisplay)
-						cli.renderer.Infof("App type: %s", detectionFriendlyAppType(detection.Type))
-						cli.renderer.Infof("App name: %s", detection.AppName)
+						cli.renderer.InfofNoSpace("Detected in current directory")
+						cli.renderer.InfofNoSpace("Framework: %s", frameworkDisplay)
+						cli.renderer.InfofNoSpace("App type: %s", detectionFriendlyAppType(detection.Type))
+						cli.renderer.InfofNoSpace("App name: %s", detection.AppName)
 						if detection.Port > 0 {
-							cli.renderer.Infof("Port: %d", detection.Port)
+							cli.renderer.InfofNoSpace("Port: %d", detection.Port)
 						}
 
 						noInputModeSingle := !canPrompt(cmd)
