@@ -1608,7 +1608,7 @@ func replaceDetectionSub(envValues map[string]string, tenantDomain string, clien
 		switch key {
 		case "VITE_AUTH0_DOMAIN", "AUTH0_DOMAIN", "domain", "NUXT_AUTH0_DOMAIN",
 			"auth0.domain", "Auth0:Domain", "auth0:Domain", "auth0_domain",
-			"EXPO_PUBLIC_AUTH0_DOMAIN":
+			"EXPO_PUBLIC_AUTH0_DOMAIN", "com.auth0.domain":
 			updatedEnvValues[key] = tenantDomain
 
 		// Express SDK specifically requires the https:// prefix.
@@ -1621,12 +1621,12 @@ func replaceDetectionSub(envValues map[string]string, tenantDomain string, clien
 
 		case "VITE_AUTH0_CLIENT_ID", "AUTH0_CLIENT_ID", "clientId", "NUXT_AUTH0_CLIENT_ID",
 			"CLIENT_ID", "auth0.clientId", "okta.oauth2.client-id", "Auth0:ClientId",
-			"auth0:ClientId", "auth0_client_id", "EXPO_PUBLIC_AUTH0_CLIENT_ID":
+			"auth0:ClientId", "auth0_client_id", "EXPO_PUBLIC_AUTH0_CLIENT_ID", "com.auth0.clientId":
 			updatedEnvValues[key] = client.GetClientID()
 
 		case "AUTH0_CLIENT_SECRET", "NUXT_AUTH0_CLIENT_SECRET", "auth0.clientSecret",
 			"okta.oauth2.client-secret", "Auth0:ClientSecret", "auth0:ClientSecret",
-			"auth0_client_secret":
+			"auth0_client_secret", "com.auth0.clientSecret":
 			updatedEnvValues[key] = client.GetClientSecret()
 
 		case "AUTH0_SECRET", "NUXT_AUTH0_SESSION_SECRET", "SESSION_SECRET",
@@ -1761,6 +1761,15 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		}
 		contentBuilder.WriteString("  </appSettings>\n")
 		contentBuilder.WriteString("</configuration>\n")
+
+	case "webxml":
+		// Java servlet web.xml context-param entries (mvc-auth-commons).
+		for _, key := range sortedKeys(resolvedEnv) {
+			contentBuilder.WriteString("<context-param>\n")
+			contentBuilder.WriteString(fmt.Sprintf("  <param-name>%s</param-name>\n", key))
+			contentBuilder.WriteString(fmt.Sprintf("  <param-value>%s</param-value>\n", resolvedEnv[key]))
+			contentBuilder.WriteString("</context-param>\n")
+		}
 	}
 
 	// 5. Write the generated content to disk.

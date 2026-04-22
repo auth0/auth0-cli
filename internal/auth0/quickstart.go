@@ -459,9 +459,9 @@ var QuickstartConfigs = map[string]AppConfig{
 	},
 	"regular:vanilla-java:maven": {
 		EnvValues: map[string]string{
-			"auth0.domain":       DetectionSub,
-			"auth0.clientId":     DetectionSub,
-			"auth0.clientSecret": DetectionSub,
+			"com.auth0.domain":       DetectionSub,
+			"com.auth0.clientId":     DetectionSub,
+			"com.auth0.clientSecret": DetectionSub,
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
@@ -469,7 +469,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
 		},
-		Strategy: FileOutputStrategy{Path: "src/main/resources/application.properties", Format: "properties"},
+		Strategy: FileOutputStrategy{Path: "src/main/webapp/WEB-INF/web.xml", Format: "webxml"},
 	},
 	"regular:java-ee:maven": {
 		EnvValues: map[string]string{
@@ -565,6 +565,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			"AUTH0_CLIENT_ID":     DetectionSub,
 			"AUTH0_CLIENT_SECRET": DetectionSub,
 			"AUTH0_COOKIE_SECRET": DetectionSub,
+			"AUTH0_BASE_URL":      DetectionSub,
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
@@ -580,6 +581,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			"AUTH0_CLIENT_ID":     DetectionSub,
 			"AUTH0_CLIENT_SECRET": DetectionSub,
 			"AUTH0_COOKIE_SECRET": DetectionSub,
+			"AUTH0_BASE_URL":      DetectionSub,
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
