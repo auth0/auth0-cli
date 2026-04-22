@@ -136,7 +136,19 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 7. Vite.config.[ts|js] + package.json deps ──────────────────────────.
+	// ── 7. Nuxt.config.[ts|js] — BEFORE vite.config ─────────────────────────.
+	// Nuxt uses Vite internally, so Nuxt projects commonly contain vite.config.ts
+	// alongside nuxt.config.ts. Checking nuxt.config first prevents a Nuxt project
+	// from being misdetected as a Vite SPA.
+	if fileExistsAny(dir, "nuxt.config.ts", "nuxt.config.js") {
+		result.Framework = "nuxt"
+		result.Type = "regular"
+		result.Port = 3000
+		result.Detected = true
+		return result
+	}
+
+	// ── 8. Vite.config.[ts|js] + package.json deps ──────────────────────────.
 	if fileExistsAny(dir, "vite.config.ts", "vite.config.js") {
 		result.Type = "spa"
 		result.BuildTool = "vite"
@@ -155,20 +167,11 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 8. Next.config.[js|ts|mjs] ─────────────────────────────────────────.
+	// ── 9. Next.config.[js|ts|mjs] ─────────────────────────────────────────.
 	if fileExistsAny(dir, "next.config.js", "next.config.ts", "next.config.mjs") {
 		result.Framework = "nextjs"
 		result.Type = "regular"
 		result.Port = detectPortFromConfig(dir, "nextjs", 3000)
-		result.Detected = true
-		return result
-	}
-
-	// ── 9. Nuxt.config.[ts|js] ──────────────────────────────────────────────.
-	if fileExistsAny(dir, "nuxt.config.ts", "nuxt.config.js") {
-		result.Framework = "nuxt"
-		result.Type = "regular"
-		result.Port = 3000
 		result.Detected = true
 		return result
 	}
@@ -205,7 +208,33 @@ func DetectProject(dir string) DetectionResult {
 		}
 	}
 
-	// ── 13. Pom.xml / build.gradle (Java) ────────────────────────────────────.
+	// ── 13. Android (native Java/Kotlin) — BEFORE Java build files ──────────.
+	// AndroidManifest.xml is required by every Android project and is absent from
+	// Java server-side apps. Checking it here prevents an Android project from
+	// being misdetected as vanilla-java when build.gradle is present.
+	// React Native projects also have app/src/main/AndroidManifest.xml in their
+	// Android sub-project; guard against that by checking for the react-native dep.
+	if fileExists(dir, filepath.Join("app", "src", "main", "AndroidManifest.xml")) && !hasDep(earlyDeps, "react-native") {
+		result.Framework = "android"
+		result.Type = "native"
+		result.BuildTool = "gradle"
+		result.BundleID = readAndroidApplicationID(dir)
+		result.Detected = true
+		return result
+	}
+
+	// ── 14. iOS Swift — xcodeproj directory or Package.swift ─────────────────.
+	// Vapor (server-side Swift) also uses Package.swift. Guard against it by
+	// checking for a Vapor dependency before classifying as ios-swift.
+	if hasXcodeprojDir(dir) || (fileExists(dir, "Package.swift") && !isVaporSwiftPackage(dir)) {
+		result.Framework = "ios-swift"
+		result.Type = "native"
+		result.BundleID = readIOSBundleID(dir)
+		result.Detected = true
+		return result
+	}
+
+	// ── 15. Pom.xml / build.gradle (Java) ────────────────────────────────────.
 	if content, buildTool, ok := findJavaBuildContent(dir); ok {
 		fw, port := detectJavaFramework(content)
 		result.Framework = fw
@@ -216,7 +245,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 14. Go.mod ──────────────────────────────────────────────────────────.
+	// ── 16. Go.mod ──────────────────────────────────────────────────────────.
 	if fileExists(dir, "go.mod") {
 		result.Framework = "vanilla-go"
 		result.Type = "regular"
@@ -224,7 +253,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 15. Gemfile (Ruby on Rails) ─────────────────────────────────────────.
+	// ── 17. Gemfile (Ruby on Rails) ─────────────────────────────────────────.
 	if data, ok := readFileContent(dir, "Gemfile"); ok {
 		if strings.Contains(data, "rails") {
 			result.Framework = "rails"
@@ -235,7 +264,7 @@ func DetectProject(dir string) DetectionResult {
 		}
 	}
 
-	// ── 16. Requirements.txt / pyproject.toml / Pipfile (Python) ───────────────.
+	// ── 18. Requirements.txt / pyproject.toml / Pipfile (Python) ───────────────.
 	// Pipfile and Pipfile.lock are also checked so that Pipenv-based projects
 	// (which have no requirements.txt) are detected correctly.
 	for _, pyFile := range []string{"requirements.txt", "pyproject.toml", "Pipfile", "Pipfile.lock"} {
@@ -258,7 +287,7 @@ func DetectProject(dir string) DetectionResult {
 		}
 	}
 
-	// ── 17. Package.json dep scanning (lowest priority) ─────────────────────.
+	// ── 19. Package.json dep scanning (lowest priority) ─────────────────────.
 	// Note: Ionic deps are already handled above (step 1).
 	if len(earlyDeps) > 0 {
 		candidates := collectPackageJSONCandidates(earlyDeps)
@@ -702,7 +731,7 @@ func detectPortFromConfig(dir, hint string, defaultPort int) int {
 		}
 	case "django", "rails", "vanilla-go", "vanilla-python", "aspnet-mvc", "aspnet-blazor",
 		"aspnet-owin", "vanilla-php", "vanilla-java", "java-ee", "spring-boot", "laravel",
-		"express", "hono", "fastify", "nuxt":
+		"express", "hono", "fastify", "nuxt", "android", "ios-swift":
 		// Backend-only or non-vite frameworks: no config file to inspect, use default directly.
 	default:
 		// For vite-based projects (react, vue, svelte, sveltekit, ionic-*, etc.)
@@ -780,12 +809,30 @@ func readMobileBundleID(dir string) string {
 }
 
 // readIOSBundleID reads the bundle identifier from iOS project files.
-// It tries ios/Runner.xcodeproj/project.pbxproj first, then ios/Runner/Info.plist.
-// Returns empty string if neither file contains a concrete (non-variable) bundle ID.
+// It checks, in order:
+//  1. ios/Runner.xcodeproj/project.pbxproj (Flutter path)
+//  2. Any root-level *.xcodeproj/project.pbxproj (native Xcode projects)
+//  3. ios/Runner/Info.plist (Flutter fallback)
+//
+// Returns empty string if no concrete (non-variable) bundle ID is found.
 func readIOSBundleID(dir string) string {
+	// Flutter path.
 	if data, err := os.ReadFile(filepath.Join(dir, "ios", "Runner.xcodeproj", "project.pbxproj")); err == nil {
 		if id := extractPbxprojBundleID(string(data)); id != "" {
 			return id
+		}
+	}
+	// Native Xcode projects place the .xcodeproj at the root of the repo.
+	if entries, err := os.ReadDir(dir); err == nil {
+		for _, e := range entries {
+			if e.IsDir() && strings.HasSuffix(e.Name(), ".xcodeproj") {
+				pbx := filepath.Join(dir, e.Name(), "project.pbxproj")
+				if data, err := os.ReadFile(pbx); err == nil {
+					if id := extractPbxprojBundleID(string(data)); id != "" {
+						return id
+					}
+				}
+			}
 		}
 	}
 	if data, err := os.ReadFile(filepath.Join(dir, "ios", "Runner", "Info.plist")); err == nil {
@@ -843,8 +890,9 @@ func extractInfoPlistBundleID(content string) string {
 
 // gradleAppIDRegex matches applicationId in build.gradle files.
 // Supports both double-quoted ("com.example.app") and single-quoted ('com.example.app')
-// forms, since Groovy DSL allows either quote style.
-var gradleAppIDRegex = regexp.MustCompile(`applicationId\s+["']([a-zA-Z][a-zA-Z0-9._-]*)["']`)
+// forms (Groovy DSL), as well as the Kotlin DSL assignment form
+// applicationId = "com.example.app".
+var gradleAppIDRegex = regexp.MustCompile(`applicationId\s*=?\s*["']([a-zA-Z][a-zA-Z0-9._-]*)["']`)
 
 // extractGradleApplicationID extracts the applicationId value from build.gradle content.
 func extractGradleApplicationID(content string) string {
@@ -901,6 +949,46 @@ func readDotnetMobileBundleID(content string) string {
 
 // csprojAppIDRegex matches the <ApplicationId> element in a .csproj file.
 var csprojAppIDRegex = regexp.MustCompile(`<ApplicationId>\s*([a-zA-Z][a-zA-Z0-9._-]*)\s*</ApplicationId>`)
+
+// isVaporSwiftPackage returns true if Package.swift in dir contains a Vapor dependency.
+// Vapor's Package.swift references "vapor/vapor.git" or the package URL contains "vapor/vapor".
+func isVaporSwiftPackage(dir string) bool {
+	data, ok := readFileContent(dir, "Package.swift")
+	if !ok {
+		return false
+	}
+	return strings.Contains(data, "vapor/vapor")
+}
+
+// hasXcodeprojDir returns true if any directory entry in dir ends with ".xcodeproj".
+// An .xcodeproj bundle is the primary signal file for Xcode-based iOS/macOS Swift projects.
+func hasXcodeprojDir(dir string) bool {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		if e.IsDir() && strings.HasSuffix(e.Name(), ".xcodeproj") {
+			return true
+		}
+	}
+	return false
+}
+
+// readAndroidApplicationID reads the applicationId from app/build.gradle or app/build.gradle.kts.
+func readAndroidApplicationID(dir string) string {
+	for _, name := range []string{
+		filepath.Join("app", "build.gradle"),
+		filepath.Join("app", "build.gradle.kts"),
+	} {
+		if data, err := os.ReadFile(filepath.Join(dir, name)); err == nil {
+			if id := extractGradleApplicationID(string(data)); id != "" {
+				return id
+			}
+		}
+	}
+	return ""
+}
 
 // detectionFriendlyAppType returns a concise label for the detection summary display.
 func detectionFriendlyAppType(qsType string) string {

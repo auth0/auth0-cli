@@ -325,6 +325,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			Callbacks:         []string{DetectionSub},
 			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
+			CallbackPath:      "/auth/callback",
 		},
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
@@ -602,8 +603,9 @@ var QuickstartConfigs = map[string]AppConfig{
 			Callbacks:         []string{DetectionSub},
 			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
+			CallbackPath:      "/auth/auth0/callback",
 		},
-		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
+		Strategy: FileOutputStrategy{Path: "config/auth0.yml", Format: "rails-yaml"},
 	},
 
 	// ==========================================.
@@ -743,6 +745,41 @@ var QuickstartConfigs = map[string]AppConfig{
 			Name:              DetectionSub,
 		},
 		Strategy: FileOutputStrategy{Path: "appsettings.json", Format: "json"},
+	},
+
+	"native:android:gradle": {
+		EnvValues: map[string]string{
+			"com_auth0_domain":    DetectionSub,
+			"com_auth0_client_id": DetectionSub,
+			// com_auth0_scheme is always "https" for App Links (HTTPS callback scheme).
+			"com_auth0_scheme": "https",
+		},
+		// Android uses App Links (https://<domain>/android/<packageName>/callback).
+		// The package name is not known at setup time, so callbacks are left empty;
+		// the user must add the full App Link URL in the Auth0 dashboard.
+		RequestParams: RequestParams{
+			AppType:           "native",
+			Callbacks:         []string{},
+			AllowedLogoutURLs: []string{},
+			Name:              DetectionSub,
+		},
+		Strategy: FileOutputStrategy{Path: "app/src/main/res/values/strings.xml", Format: "android-strings"},
+	},
+	"native:ios-swift:none": {
+		EnvValues: map[string]string{
+			"ClientId": DetectionSub,
+			"Domain":   DetectionSub,
+		},
+		// iOS Swift uses universal links or custom URI scheme callbacks based on the
+		// bundle identifier. The bundle identifier is not known at setup time, so
+		// callbacks are left empty; the user must add the callback URL in the Auth0 dashboard.
+		RequestParams: RequestParams{
+			AppType:           "native",
+			Callbacks:         []string{},
+			AllowedLogoutURLs: []string{},
+			Name:              DetectionSub,
+		},
+		Strategy: FileOutputStrategy{Path: "Auth0.plist", Format: "plist"},
 	},
 
 	// ==========================================.
