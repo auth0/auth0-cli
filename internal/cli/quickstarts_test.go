@@ -128,7 +128,7 @@ func TestResolveRequestParams_AllQuickstartConfigs(t *testing.T) {
 			[]string{"http://localhost:3000/auth/callback"},
 			[]string{"http://localhost:3000"}, nil, "regular_web"},
 		{"regular:nuxt:none", 3000,
-			[]string{"http://localhost:3000/callback"},
+			[]string{"http://localhost:3000/auth/callback"},
 			[]string{"http://localhost:3000"}, nil, "regular_web"},
 		{"regular:express:none", 3000,
 			[]string{"http://localhost:3000/callback"},
@@ -169,7 +169,7 @@ func TestResolveRequestParams_AllQuickstartConfigs(t *testing.T) {
 			[]string{"http://localhost:8000/callback"},
 			[]string{"http://localhost:8000"}, nil, "regular_web"},
 		{"regular:rails:none", 3000,
-			[]string{"http://localhost:3000/callback"},
+			[]string{"http://localhost:3000/auth/auth0/callback"},
 			[]string{"http://localhost:3000"}, nil, "regular_web"},
 		{"regular:aspnet-mvc:none", 3000,
 			[]string{"http://localhost:3000/callback"},
@@ -223,6 +223,9 @@ func TestResolveRequestParams_AllQuickstartConfigs(t *testing.T) {
 		{"native:wpf-winforms:none", 0,
 			[]string{"http://localhost"},
 			[]string{"http://localhost"}, nil, "native"},
+		// Android and iOS Swift: custom URI scheme callbacks; unknown at setup time.
+		{"native:android:gradle", 0, []string{}, []string{}, nil, "native"},
+		{"native:ios-swift:none", 0, []string{}, []string{}, nil, "native"},
 		// M2M: no URLs.
 		{"m2m:none:none", 0, []string{}, []string{}, nil, "non_interactive"},
 		// Custom port propagates.
@@ -322,8 +325,8 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 		{"regular:laravel:composer", 8000, ".env",
 			[]string{"AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET", "AUTH0_COOKIE_SECRET", "AUTH0_BASE_URL"},
 			map[string]string{"AUTH0_DOMAIN": domain, "AUTH0_CLIENT_ID": cidVal, "AUTH0_BASE_URL": "http://localhost:8000"}},
-		{"regular:rails:none", 3000, ".env",
-			[]string{"auth0_domain", "auth0_client_id", "auth0_client_secret"},
+		{"regular:rails:none", 3000, "auth0.yml",
+			[]string{"development:", "auth0_domain:", "auth0_client_id:", "auth0_client_secret:"},
 			map[string]string{"auth0_domain": domain, "auth0_client_id": cidVal}},
 		{"regular:aspnet-mvc:none", 3000, "appsettings.json",
 			[]string{"Domain", "ClientId", "ClientSecret"}, nil},
@@ -349,7 +352,7 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 			map[string]string{"AUTH0_DOMAIN": domain, "AUTH0_CLIENT_ID": cidVal, "AUTH0_CLIENT_SECRET": csecVal, "APP_BASE_URL": "http://localhost:3000"}},
 		{"regular:django:none", 3000, ".env",
 			[]string{"AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET"},
-			map[string]string{"AUTH0_DOMAIN": domain, "AUTH0_CLIENT_ID": cidVal}},
+			map[string]string{"AUTH0_DOMAIN": domain, "AUTH0_CLIENT_ID": cidVal, "AUTH0_CLIENT_SECRET": csecVal}},
 		{"regular:vanilla-go:none", 3000, ".env",
 			[]string{"AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET", "AUTH0_CALLBACK_URL"},
 			map[string]string{"AUTH0_DOMAIN": domain, "AUTH0_CALLBACK_URL": "http://localhost:3000/callback"}},
@@ -376,6 +379,12 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 		// WPF/WinForms are public native clients (PKCE) — no client secret is written.
 		{"native:wpf-winforms:none", 0, "appsettings.json",
 			[]string{"Domain", "ClientId"}, nil},
+		{"native:android:gradle", 0, "strings.xml",
+			[]string{"com_auth0_domain", "com_auth0_client_id", "com_auth0_scheme"},
+			map[string]string{"com_auth0_domain": domain, "com_auth0_client_id": cidVal, "com_auth0_scheme": "https"}},
+		{"native:ios-swift:none", 0, "Auth0.plist",
+			[]string{"ClientId", "Domain"},
+			map[string]string{"ClientId": cidVal, "Domain": domain}},
 		// M2M.
 		{"m2m:none:none", 0, ".env",
 			[]string{"AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET"},
@@ -447,7 +456,7 @@ func TestGenerateClient_AllQuickstartConfigs(t *testing.T) {
 		// Regular web: framework-specific paths.
 		{"regular:nextjs:none", 3000, "regular_web", 1, "http://localhost:3000/api/auth/callback", 1, 0},
 		{"regular:fastify:none", 3000, "regular_web", 1, "http://localhost:3000/auth/callback", 1, 0},
-		{"regular:nuxt:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
+		{"regular:nuxt:none", 3000, "regular_web", 1, "http://localhost:3000/auth/callback", 1, 0},
 		{"regular:express:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
 		{"regular:hono:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
 		{"regular:vanilla-python:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
@@ -460,7 +469,7 @@ func TestGenerateClient_AllQuickstartConfigs(t *testing.T) {
 		{"regular:django:none", 8000, "regular_web", 1, "http://localhost:8000/callback", 1, 0},
 		{"regular:vanilla-go:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
 		{"regular:laravel:composer", 8000, "regular_web", 1, "http://localhost:8000/callback", 1, 0},
-		{"regular:rails:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
+		{"regular:rails:none", 3000, "regular_web", 1, "http://localhost:3000/auth/auth0/callback", 1, 0},
 		{"regular:aspnet-mvc:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
 		{"regular:aspnet-blazor:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
 		{"regular:aspnet-owin:none", 3000, "regular_web", 1, "http://localhost:3000/callback", 1, 0},
@@ -484,6 +493,9 @@ func TestGenerateClient_AllQuickstartConfigs(t *testing.T) {
 		{"native:maui:none", 0, "native", 0, "", 0, 0},
 		// WPF/WinForms uses the bare loopback http://localhost per Auth0 docs.
 		{"native:wpf-winforms:none", 0, "native", 1, "http://localhost", 1, 0},
+		// Android and iOS Swift use bundle-ID-specific custom URI schemes; unknown at setup time.
+		{"native:android:gradle", 0, "native", 0, "", 0, 0},
+		{"native:ios-swift:none", 0, "native", 0, "", 0, 0},
 		// M2M: no callbacks.
 		{"m2m:none:none", 0, "non_interactive", 0, "", 0, 0},
 	}

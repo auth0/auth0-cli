@@ -1608,7 +1608,8 @@ func replaceDetectionSub(envValues map[string]string, tenantDomain string, clien
 		switch key {
 		case "VITE_AUTH0_DOMAIN", "AUTH0_DOMAIN", "domain", "NUXT_AUTH0_DOMAIN",
 			"auth0.domain", "Auth0:Domain", "auth0:Domain", "auth0_domain",
-			"EXPO_PUBLIC_AUTH0_DOMAIN", "com.auth0.domain":
+			"EXPO_PUBLIC_AUTH0_DOMAIN", "com.auth0.domain",
+			"com_auth0_domain", "Domain":
 			updatedEnvValues[key] = tenantDomain
 
 		// Express SDK specifically requires the https:// prefix.
@@ -1621,7 +1622,8 @@ func replaceDetectionSub(envValues map[string]string, tenantDomain string, clien
 
 		case "VITE_AUTH0_CLIENT_ID", "AUTH0_CLIENT_ID", "clientId", "NUXT_AUTH0_CLIENT_ID",
 			"CLIENT_ID", "auth0.clientId", "okta.oauth2.client-id", "Auth0:ClientId",
-			"auth0:ClientId", "auth0_client_id", "EXPO_PUBLIC_AUTH0_CLIENT_ID", "com.auth0.clientId":
+			"auth0:ClientId", "auth0_client_id", "EXPO_PUBLIC_AUTH0_CLIENT_ID", "com.auth0.clientId",
+			"com_auth0_client_id", "ClientId":
 			updatedEnvValues[key] = client.GetClientID()
 
 		case "AUTH0_CLIENT_SECRET", "NUXT_AUTH0_CLIENT_SECRET", "auth0.clientSecret",
@@ -1723,6 +1725,19 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		}
 		contentBuilder.Write(yamlBytes)
 
+	case "rails-yaml":
+		// Rails config/auth0.yml wraps credentials under the "development" environment key.
+		devSection := make(map[string]interface{}, len(resolvedEnv))
+		for k, v := range resolvedEnv {
+			devSection[k] = v
+		}
+		wrapped := map[string]interface{}{"development": devSection}
+		yamlBytes, err := yaml.Marshal(wrapped)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to marshal YAML for %s: %w", strategy.Path, err)
+		}
+		contentBuilder.Write(yamlBytes)
+
 	case "ts":
 		contentBuilder.WriteString("export const environment = {\n")
 		for _, key := range sortedKeys(resolvedEnv) {
@@ -1770,6 +1785,28 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 			contentBuilder.WriteString(fmt.Sprintf("  <param-value>%s</param-value>\n", resolvedEnv[key]))
 			contentBuilder.WriteString("</context-param>\n")
 		}
+
+	case "android-strings":
+		// Android res/values/strings.xml — Auth0 SDK reads credentials via string resources.
+		contentBuilder.WriteString("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
+		contentBuilder.WriteString("<resources>\n")
+		for _, key := range sortedKeys(resolvedEnv) {
+			contentBuilder.WriteString(fmt.Sprintf("    <string name=\"%s\">%s</string>\n", key, resolvedEnv[key]))
+		}
+		contentBuilder.WriteString("</resources>\n")
+
+	case "plist":
+		// iOS Auth0.plist — Auth0 Swift SDK reads ClientId and Domain from this plist.
+		contentBuilder.WriteString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+		contentBuilder.WriteString("<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n")
+		contentBuilder.WriteString("<plist version=\"1.0\">\n")
+		contentBuilder.WriteString("<dict>\n")
+		for _, key := range sortedKeys(resolvedEnv) {
+			contentBuilder.WriteString(fmt.Sprintf("    <key>%s</key>\n", key))
+			contentBuilder.WriteString(fmt.Sprintf("    <string>%s</string>\n", resolvedEnv[key]))
+		}
+		contentBuilder.WriteString("</dict>\n")
+		contentBuilder.WriteString("</plist>\n")
 	}
 
 	// 5. Write the generated content to disk.

@@ -235,6 +235,21 @@ func TestDetectProject_Nuxt_ConfigJS(t *testing.T) {
 	assert.Equal(t, "nuxt", got.Framework)
 }
 
+// Nuxt uses Vite internally so real Nuxt projects often contain vite.config.ts.
+// Nuxt must be detected as nuxt (regular), not as a Vite SPA.
+func TestDetectProject_Nuxt_WithViteConfig(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "nuxt.config.ts", "")
+	writeTestFile(t, dir, "vite.config.ts", "")
+	writeTestFile(t, dir, "package.json", `{"dependencies":{"nuxt":"^3","vue":"^3"}}`)
+
+	got := DetectProject(dir)
+	assert.True(t, got.Detected)
+	assert.Equal(t, "nuxt", got.Framework)
+	assert.Equal(t, "regular", got.Type)
+	assert.Equal(t, 3000, got.Port)
+}
+
 // Auth0 qs setup --app --type regular --framework sveltekit.
 func TestDetectProject_SvelteKit_ConfigJS(t *testing.T) {
 	dir := t.TempDir()
@@ -622,6 +637,56 @@ func TestDetectProject_WPFWinforms(t *testing.T) {
 	got := DetectProject(dir)
 	assert.True(t, got.Detected)
 	assert.Equal(t, "wpf-winforms", got.Framework)
+	assert.Equal(t, "native", got.Type)
+}
+
+// Auth0 qs setup --app --type native --framework android.
+func TestDetectProject_Android(t *testing.T) {
+	dir := t.TempDir()
+	// Create the AndroidManifest.xml in its standard location.
+	mkTestDir(t, dir, filepath.Join("app", "src", "main"))
+	writeTestFile(t, filepath.Join(dir, "app", "src", "main"), "AndroidManifest.xml",
+		`<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.example.app"/>`)
+
+	got := DetectProject(dir)
+	assert.True(t, got.Detected)
+	assert.Equal(t, "android", got.Framework)
+	assert.Equal(t, "native", got.Type)
+	assert.Equal(t, "gradle", got.BuildTool)
+}
+
+// Android must win over the Java build.gradle check when AndroidManifest.xml is present.
+func TestDetectProject_Android_BeatsVanillaJava(t *testing.T) {
+	dir := t.TempDir()
+	mkTestDir(t, dir, filepath.Join("app", "src", "main"))
+	writeTestFile(t, filepath.Join(dir, "app", "src", "main"), "AndroidManifest.xml", "")
+	writeTestFile(t, dir, "build.gradle", `plugins { id 'com.android.application' }`)
+
+	got := DetectProject(dir)
+	assert.Equal(t, "android", got.Framework)
+	assert.Equal(t, "native", got.Type)
+}
+
+// Auth0 qs setup --app --type native --framework ios-swift (xcodeproj).
+func TestDetectProject_IOSSwift_Xcodeproj(t *testing.T) {
+	dir := t.TempDir()
+	// .xcodeproj is a directory (bundle) in Xcode projects.
+	mkTestDir(t, dir, "MyApp.xcodeproj")
+
+	got := DetectProject(dir)
+	assert.True(t, got.Detected)
+	assert.Equal(t, "ios-swift", got.Framework)
+	assert.Equal(t, "native", got.Type)
+}
+
+// Auth0 qs setup --app --type native --framework ios-swift (Swift Package Manager).
+func TestDetectProject_IOSSwift_PackageSwift(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "Package.swift", "// swift-tools-version:5.9\nimport PackageDescription\n")
+
+	got := DetectProject(dir)
+	assert.True(t, got.Detected)
+	assert.Equal(t, "ios-swift", got.Framework)
 	assert.Equal(t, "native", got.Type)
 }
 
@@ -3058,4 +3123,60 @@ func TestReadRawExpoScheme(t *testing.T) {
 		// ReadExpoScheme rejects it because underscore is not valid in RFC 3986 schemes.
 		assert.Empty(t, readExpoScheme(dir))
 	})
+}
+
+// ── Negative detection edge-case tests ───────────────────────────────────────.
+
+// React Native projects include app/src/main/AndroidManifest.xml as part of their
+// Android sub-project. Ensure they are detected as react-native, not android.
+func TestDetectProject_ReactNativeWithAndroidManifest_NotDetectedAsAndroid(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "package.json", `{"dependencies":{"react-native":"^0.72"}}`)
+	mkTestDir(t, dir, filepath.Join("app", "src", "main"))
+	writeTestFile(t, filepath.Join(dir, "app", "src", "main"), "AndroidManifest.xml",
+		`<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.example.rn"/>`)
+
+	got := DetectProject(dir)
+	assert.Equal(t, "react-native", got.Framework)
+	assert.Equal(t, "native", got.Type)
+}
+
+// Vapor is a server-side Swift framework that uses Package.swift.
+// It must NOT be detected as ios-swift.
+func TestDetectProject_VaporPackageSwift_NotDetectedAsIOSSwift(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "Package.swift", `// swift-tools-version:5.9
+import PackageDescription
+let package = Package(
+    name: "MyVaporApp",
+    dependencies: [
+        .package(url: "https://github.com/vapor/vapor.git", from: "4.0.0"),
+    ]
+)`)
+
+	got := DetectProject(dir)
+	assert.False(t, got.Detected, "Vapor project should not be detected as ios-swift")
+	assert.NotEqual(t, "ios-swift", got.Framework)
+}
+
+// Kotlin DSL build.gradle.kts uses `applicationId = "..."` (with assignment operator).
+// Ensure extractGradleApplicationID handles this form.
+func TestExtractGradleApplicationID_KotlinDSL(t *testing.T) {
+	content := `android {
+    defaultConfig {
+        applicationId = "com.example.kotlindsl"
+        minSdk = 21
+    }
+}`
+	assert.Equal(t, "com.example.kotlindsl", extractGradleApplicationID(content))
+}
+
+// readIOSBundleID should read PRODUCT_BUNDLE_IDENTIFIER from a root-level .xcodeproj
+// (native Xcode project layout, not Flutter).
+func TestReadIOSBundleID_RootXcodeproj(t *testing.T) {
+	dir := t.TempDir()
+	mkTestDir(t, dir, "MyApp.xcodeproj")
+	writeTestFile(t, dir, filepath.Join("MyApp.xcodeproj", "project.pbxproj"),
+		`PRODUCT_BUNDLE_IDENTIFIER = com.example.native;`)
+	assert.Equal(t, "com.example.native", readIOSBundleID(dir))
 }
