@@ -96,13 +96,21 @@ func DetectProject(dir string) DetectionResult {
 			result.Detected = true
 			// Flutter create (default) has included web/ since Flutter 2.10, so web/ alone
 			// is not a reliable signal for web-only intent.
+			// Native intent is signalled by android/ or ios/ platform directories.
+			// Web intent is signalled by a "web:" key nested under the "flutter:" section
+			// in pubspec.yaml. Absence of both signals defaults to native.
 			if dirExists(dir, "android") || dirExists(dir, "ios") {
 				result.Framework = "flutter"
 				result.Type = "native"
 				result.BundleID = readMobileBundleID(dir)
-			} else {
+			} else if pubspecHasFlutterWebTarget(data) {
 				result.Framework = "flutter-web"
 				result.Type = "spa"
+			} else {
+				// No native platform dirs and no web target in pubspec — default to native.
+				result.Framework = "flutter"
+				result.Type = "native"
+				result.BundleID = readMobileBundleID(dir)
 			}
 			return result
 		}
@@ -474,6 +482,29 @@ func isValidURIScheme(s string) bool {
 		}
 	}
 	return true
+}
+
+// pubspecHasFlutterWebTarget returns true if pubspec.yaml content contains a "web:"
+// key nested under the top-level "flutter:" section. This indicates the project
+// explicitly targets Flutter Web (e.g. via "flutter create --platforms=web").
+func pubspecHasFlutterWebTarget(data string) bool {
+	inFlutterSection := false
+	for _, line := range strings.Split(data, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		// A line with no leading whitespace is a top-level YAML key.
+		isTopLevel := len(line) > 0 && line[0] != ' ' && line[0] != '\t'
+		if isTopLevel {
+			inFlutterSection = strings.HasPrefix(line, "flutter:")
+			continue
+		}
+		if inFlutterSection && strings.HasPrefix(trimmed, "web:") {
+			return true
+		}
+	}
+	return false
 }
 
 // dirExists returns true if the named entry in dir is a directory.
