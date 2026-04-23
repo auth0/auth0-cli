@@ -149,14 +149,24 @@ func TestDetectProject_VanillaJavaScript_NoPackageJSON(t *testing.T) {
 // Auth0 qs setup --app --type spa --framework flutter-web.
 func TestDetectProject_FlutterWeb(t *testing.T) {
 	dir := t.TempDir()
-	writeTestFile(t, dir, "pubspec.yaml", "name: my_flutter_web\nflutter:\n  sdk: flutter\n")
-	mkTestDir(t, dir, "web")
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "web", "index.html"), []byte("<html></html>"), 0600))
+	// "web:" nested under "flutter:" is the signal for Flutter Web intent.
+	writeTestFile(t, dir, "pubspec.yaml", "name: my_flutter_web\nflutter:\n  sdk: flutter\n  web:\n    renderer: auto\n")
 
 	got := DetectProject(dir)
 	assert.True(t, got.Detected)
 	assert.Equal(t, "flutter-web", got.Framework)
 	assert.Equal(t, "spa", got.Type)
+}
+
+// pubspec.yaml with sdk: flutter but no web: target and no platform dirs -> native flutter.
+func TestDetectProject_FlutterNativeNoPlatformDirs(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "pubspec.yaml", "name: my_flutter_native\nflutter:\n  sdk: flutter\n")
+
+	got := DetectProject(dir)
+	assert.True(t, got.Detected)
+	assert.Equal(t, "flutter", got.Framework)
+	assert.Equal(t, "native", got.Type)
 }
 
 // pubspec.yaml with android/ dir -> native flutter (android/ is the reliable native signal).
