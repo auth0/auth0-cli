@@ -751,7 +751,7 @@ var QuickstartConfigs = map[string]AppConfig{
 		EnvValues: map[string]string{
 			"com_auth0_domain":    DetectionSub,
 			"com_auth0_client_id": DetectionSub,
-			// com_auth0_scheme is always "https" for App Links (HTTPS callback scheme).
+			// Com_auth0_scheme is always "https" for App Links (HTTPS callback scheme).
 			"com_auth0_scheme": "https",
 		},
 		// Android uses App Links (https://<domain>/android/<packageName>/callback).
@@ -770,7 +770,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			"ClientId": DetectionSub,
 			"Domain":   DetectionSub,
 		},
-		// iOS Swift uses universal links or custom URI scheme callbacks based on the
+		// IOS Swift uses universal links or custom URI scheme callbacks based on the
 		// bundle identifier. The bundle identifier is not known at setup time, so
 		// callbacks are left empty; the user must add the callback URL in the Auth0 dashboard.
 		RequestParams: RequestParams{
