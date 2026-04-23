@@ -223,7 +223,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 14. iOS Swift — xcodeproj directory or Package.swift ─────────────────.
+	// ── 14. IOS Swift — xcodeproj directory or Package.swift ─────────────────.
 	// Vapor (server-side Swift) also uses Package.swift. Guard against it by
 	// checking for a Vapor dependency before classifying as ios-swift.
 	if hasXcodeprojDir(dir) || (fileExists(dir, "Package.swift") && !isVaporSwiftPackage(dir)) {
