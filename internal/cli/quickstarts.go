@@ -841,6 +841,9 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				default:
 					// No detection signal found — notify the user and pre-fill name from directory.
 					if !canPrompt(cmd) && inputs.Type == "" {
+						if inputs.API {
+							return fmt.Errorf("auto-detection failed: when using --app and --api together with --no-input, --type must be specified")
+						}
 						return fmt.Errorf("auto-detection failed: provide --type to use --no-input mode")
 					}
 					cli.renderer.Warnf("Auto detection Failed: Unable to auto detect application")

@@ -385,7 +385,8 @@ func detectFromCsproj(content string) (framework, qsType string, found bool) {
 func detectJavaFramework(content string) (framework string, port int) {
 	lower := strings.ToLower(content)
 	switch {
-	case strings.Contains(lower, "spring-boot"):
+	case strings.Contains(lower, "spring-boot") ||
+		strings.Contains(lower, "springframework.boot"):
 		return "spring-boot", 8080
 	case strings.Contains(lower, "javax.ee") ||
 		strings.Contains(lower, "jakarta.ee") ||
@@ -647,11 +648,19 @@ func readComposerName(dir string) string {
 	return pkg.Name
 }
 
-// readPomArtifactID reads the first <artifactId> value from pom.xml.
+// readPomArtifactID reads the project <artifactId> value from pom.xml.
+// It strips the <parent>...</parent> block first so the parent's artifactId
+// (e.g. spring-boot-starter-parent) is not returned instead of the project's own.
 func readPomArtifactID(dir string) string {
 	data, ok := readFileContent(dir, "pom.xml")
 	if !ok {
 		return ""
+	}
+	// Strip <parent>...</parent> so we don't accidentally pick up the parent artifactId.
+	if ps := strings.Index(data, "<parent>"); ps != -1 {
+		if pe := strings.Index(data[ps:], "</parent>"); pe != -1 {
+			data = data[:ps] + data[ps+pe+len("</parent>"):]
+		}
 	}
 	const open = "<artifactId>"
 	const closeTag = "</artifactId>"
