@@ -1796,7 +1796,7 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		contentBuilder.WriteString("</resources>\n")
 
 	case "plist":
-		// iOS Auth0.plist — Auth0 Swift SDK reads ClientId and Domain from this plist.
+		// IOS Auth0.plist — Auth0 Swift SDK reads ClientId and Domain from this plist.
 		contentBuilder.WriteString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
 		contentBuilder.WriteString("<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n")
 		contentBuilder.WriteString("<plist version=\"1.0\">\n")
