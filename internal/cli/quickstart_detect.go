@@ -99,14 +99,15 @@ func DetectProject(dir string) DetectionResult {
 			// Native intent is signalled by android/ or ios/ platform directories.
 			// Web intent is signalled by a "web:" key nested under the "flutter:" section
 			// in pubspec.yaml. Absence of both signals defaults to native.
-			if dirExists(dir, "android") || dirExists(dir, "ios") {
+			switch {
+			case dirExists(dir, "android") || dirExists(dir, "ios"):
 				result.Framework = "flutter"
 				result.Type = "native"
 				result.BundleID = readMobileBundleID(dir)
-			} else if pubspecHasFlutterWebTarget(data) {
+			case pubspecHasFlutterWebTarget(data):
 				result.Framework = "flutter-web"
 				result.Type = "spa"
-			} else {
+			default:
 				// No native platform dirs and no web target in pubspec — default to native.
 				result.Framework = "flutter"
 				result.Type = "native"
