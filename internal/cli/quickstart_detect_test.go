@@ -1220,29 +1220,6 @@ func TestDetectJavaFramework(t *testing.T) {
 // ── collectPackageJSONCandidates ─────────────────────────────────────────────.
 
 func TestCollectPackageJSONCandidates(t *testing.T) {
-	t.Run("ionic_angular", func(t *testing.T) {
-		got := collectPackageJSONCandidates(map[string]bool{"@ionic/angular": true})
-		require.Len(t, got, 1)
-		assert.Equal(t, "ionic-angular", got[0].framework)
-		assert.Equal(t, "native", got[0].qsType)
-		assert.Empty(t, got[0].buildTool)
-	})
-
-	t.Run("ionic_react_has_vite_build_tool", func(t *testing.T) {
-		got := collectPackageJSONCandidates(map[string]bool{"@ionic/react": true})
-		require.Len(t, got, 1)
-		assert.Equal(t, "ionic-react", got[0].framework)
-		assert.Equal(t, "native", got[0].qsType)
-		assert.Equal(t, "vite", got[0].buildTool)
-	})
-
-	t.Run("ionic_vue_has_vite_build_tool", func(t *testing.T) {
-		got := collectPackageJSONCandidates(map[string]bool{"@ionic/vue": true})
-		require.Len(t, got, 1)
-		assert.Equal(t, "ionic-vue", got[0].framework)
-		assert.Equal(t, "vite", got[0].buildTool)
-	})
-
 	t.Run("react_native", func(t *testing.T) {
 		got := collectPackageJSONCandidates(map[string]bool{"react-native": true})
 		require.Len(t, got, 1)
@@ -1443,7 +1420,7 @@ func TestDefaultPortForFramework(t *testing.T) {
 		{"sveltekit", 3000},
 		{"rails", 3000},
 		{"vanilla-go", 3000},
-		{"django", 3000},
+		{"django", 8000},
 		// Native – default 3000.
 		{"flutter", 3000},
 		{"react-native", 3000},

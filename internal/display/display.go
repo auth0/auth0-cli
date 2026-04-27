@@ -65,18 +65,23 @@ func (r *Renderer) Infof(format string, a ...interface{}) {
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
-func (r *Renderer) InfofNoSpace(format string, a ...interface{}) {
-	fmt.Fprint(r.MessageWriter, ansi.Green("▸"))
+// InfofBullet writes an info line with a compact green bullet prefix (no padding),
+// used for condensed detection-summary output where the extra indentation of
+// Infof would be visually noisy.
+func (r *Renderer) InfofBullet(format string, a ...interface{}) {
+	fmt.Fprint(r.MessageWriter, ansi.Green("▸ "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
 func (r *Renderer) Successf(format string, a ...interface{}) {
-	fmt.Fprint(r.MessageWriter, ansi.Green("✓  "))
+	fmt.Fprint(r.MessageWriter, ansi.Green("✓ "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
+const detailIndent = "  "
+
 func (r *Renderer) Detailf(format string, a ...interface{}) {
-	fmt.Fprintf(r.MessageWriter, "     "+format+"\n", a...)
+	fmt.Fprintf(r.MessageWriter, detailIndent+format+"\n", a...)
 }
 
 func (r *Renderer) Warnf(format string, a ...interface{}) {
