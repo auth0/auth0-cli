@@ -202,7 +202,6 @@ func (f *clientResourceFetcher) FetchData(ctx context.Context) (importDataList, 
 		}
 
 		for _, client := range clients.Clients {
-
 			if client.GetExternalMetadataType() == "cimd" {
 				data = append(data, importDataItem{
 					ResourceName: "auth0_client_cimd." + sanitizeResourceName(client.GetName()),
