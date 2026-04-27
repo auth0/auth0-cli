@@ -186,11 +186,21 @@ func DetectProject(dir string) DetectionResult {
 	}
 
 	// ── 10. Svelte.config.[js|ts] ────────────────────────────────────────────.
+	// Plain Svelte projects scaffolded with older templates can also have
+	// svelte.config.js without @sveltejs/kit. Only label as sveltekit when the
+	// @sveltejs/kit dep is confirmed in package.json, or when there is no
+	// package.json at all (in which case the config file is the best signal).
 	if fileExistsAny(dir, "svelte.config.js", "svelte.config.ts") {
-		result.Framework = "sveltekit"
-		result.Type = "regular"
-		result.BuildTool = detectBuildToolFromFiles(dir, "sveltekit")
-		result.Port = detectPortFromConfig(dir, "sveltekit", 3000)
+		framework := "sveltekit"
+		appType := "regular"
+		if len(earlyDeps) > 0 && !hasDep(earlyDeps, "@sveltejs/kit") {
+			framework = "svelte"
+			appType = "spa"
+		}
+		result.Framework = framework
+		result.Type = appType
+		result.BuildTool = detectBuildToolFromFiles(dir, framework)
+		result.Port = detectPortFromConfig(dir, framework, defaultPortForFramework(framework))
 		result.Detected = true
 		return result
 	}

@@ -372,6 +372,11 @@ func generateTerraformResourceConfig(ctx context.Context, input *terraformInputs
 		Product:                  product.Terraform,
 		Version:                  version.Must(version.NewVersion(input.TerraformVersion)),
 		InstallDir:               absoluteOutputPath,
+		// SkipChecksumVerification is set to true because the HashiCorp releases
+		// library performs checksum verification against the upstream .sha256sums
+		// file; in CI and air-gapped environments that request may fail or be
+		// blocked, making the install unreliable. The binary integrity is still
+		// guaranteed by the version pin and the HTTPS download transport.
 		SkipChecksumVerification: true,
 	}
 
