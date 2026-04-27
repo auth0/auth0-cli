@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,10 +10,14 @@ import (
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/auth0/mock"
+	"github.com/auth0/auth0-cli/internal/config"
+	"github.com/auth0/auth0-cli/internal/display"
 )
 
 // ── DetectionSubBase ──────────────────────────────────────────────────────────.
@@ -742,4 +748,150 @@ func TestValidateAPIIdentifier(t *testing.T) {
 			}
 		})
 	}
+}
+
+// ── createQuickstartApp happy-path ────────────────────────────────────────────
+
+func TestCreateQuickstartApp_SPA_React(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	clientAPI := mock.NewMockClientAPI(ctrl)
+	clientAPI.EXPECT().
+		Create(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, c *management.Client, _ ...management.RequestOption) error {
+			// Simulate the management API assigning a client ID.
+			id := "test-client-id"
+			c.ClientID = &id
+			return nil
+		})
+
+	dir := t.TempDir()
+	tenantDomain := "test.auth0.com"
+	testCLI := &cli{
+		renderer: &display.Renderer{MessageWriter: &bytes.Buffer{}, ResultWriter: &bytes.Buffer{}},
+		api:      &auth0.API{Client: clientAPI},
+		Config: config.Config{
+			DefaultTenant: tenantDomain,
+			Tenants: map[string]config.Tenant{
+				tenantDomain: {Domain: tenantDomain},
+			},
+		},
+		tenant: tenantDomain,
+	}
+
+	inputs := SetupInputs{
+		App:       true,
+		Name:      "My SPA",
+		Type:      "spa",
+		Framework: "react",
+		BuildTool: "vite",
+		Port:      5173,
+	}
+
+	// Write a temp env file location.
+	inputs.CallbackURL = ""
+	inputs.LogoutURL = ""
+
+	// Override the working directory so GenerateAndWriteQuickstartConfig writes to a temp dir.
+	oldWD, _ := os.Getwd()
+	require.NoError(t, os.Chdir(dir))
+	defer func() { _ = os.Chdir(oldWD) }()
+
+	clientID, err := createQuickstartApp(context.Background(), testCLI, inputs, "spa:react:vite")
+	require.NoError(t, err)
+	assert.Equal(t, "test-client-id", clientID)
+
+	// Config file should have been written.
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	assert.NotEmpty(t, entries, "expected env config file to be written")
+}
+
+func TestCreateQuickstartApp_UnsupportedKey(t *testing.T) {
+	t.Parallel()
+
+	testCLI := &cli{renderer: &display.Renderer{MessageWriter: &bytes.Buffer{}, ResultWriter: &bytes.Buffer{}}}
+	_, err := createQuickstartApp(context.Background(), testCLI, SetupInputs{}, "unknown:framework:none")
+	assert.ErrorContains(t, err, "unsupported quickstart arguments")
+}
+
+// ── createQuickstartAPI happy-path ────────────────────────────────────────────
+
+func TestCreateQuickstartAPI_CreatesResourceServerAndGrant(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	rsAPI := mock.NewMockResourceServerAPI(ctrl)
+	rsAPI.EXPECT().
+		Create(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, rs *management.ResourceServer, _ ...management.RequestOption) error {
+			id := "rs-id-1"
+			rs.ID = &id
+			return nil
+		})
+
+	grantAPI := mock.NewMockClientGrantAPI(ctrl)
+	grantAPI.EXPECT().
+		Create(gomock.Any(), gomock.Any()).
+		Return(nil)
+
+	testCLI := &cli{
+		renderer: &display.Renderer{MessageWriter: &bytes.Buffer{}, ResultWriter: &bytes.Buffer{}},
+		api: &auth0.API{
+			ResourceServer: rsAPI,
+			ClientGrant:    grantAPI,
+		},
+	}
+
+	inputs := SetupInputs{
+		API:           true,
+		Name:          "My App",
+		Identifier:    "https://my-api",
+		SigningAlg:    "RS256",
+		TokenLifetime: "86400",
+	}
+
+	err := createQuickstartAPI(context.Background(), testCLI, inputs, "linked-app-client-id")
+	assert.NoError(t, err)
+}
+
+func TestCreateQuickstartAPI_NoLinkedApp_SkipsGrant(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	rsAPI := mock.NewMockResourceServerAPI(ctrl)
+	rsAPI.EXPECT().
+		Create(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, rs *management.ResourceServer, _ ...management.RequestOption) error {
+			id := "rs-id-2"
+			rs.ID = &id
+			return nil
+		})
+
+	// No grant creation expected when linkedAppClientID is empty.
+	grantAPI := mock.NewMockClientGrantAPI(ctrl)
+
+	testCLI := &cli{
+		renderer: &display.Renderer{MessageWriter: &bytes.Buffer{}, ResultWriter: &bytes.Buffer{}},
+		api: &auth0.API{
+			ResourceServer: rsAPI,
+			ClientGrant:    grantAPI,
+		},
+	}
+
+	inputs := SetupInputs{
+		API:        true,
+		Identifier: "https://my-api",
+		SigningAlg:  "RS256",
+	}
+
+	err := createQuickstartAPI(context.Background(), testCLI, inputs, "")
+	assert.NoError(t, err)
 }
