@@ -56,7 +56,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 2. Ionic (package.json deps — must check BEFORE angular.json and vite.config) ──
+	// ── 2. Ionic (package.json deps — must check BEFORE angular.json and vite.config) ──.
 	if hasDep(earlyDeps, "@ionic/angular") {
 		result.Framework = "ionic-angular"
 		result.Type = "native"
@@ -81,7 +81,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 3. Angular.json ────────────────────────────────────────────────────
+	// ── 3. Angular.json ────────────────────────────────────────────────────.
 	if fileExists(dir, "angular.json") {
 		result.Framework = "angular"
 		result.Type = "spa"
@@ -90,7 +90,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 4. Pubspec.yaml (Flutter) ───────────────────────────────────────────
+	// ── 4. Pubspec.yaml (Flutter) ───────────────────────────────────────────.
 	if data, ok := readFileContent(dir, "pubspec.yaml"); ok {
 		if strings.Contains(data, "sdk: flutter") {
 			result.Detected = true
@@ -157,7 +157,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 8. Vite.config.[ts|js] + package.json deps ──────────────────────────
+	// ── 8. Vite.config.[ts|js] + package.json deps ──────────────────────────.
 	if fileExistsAny(dir, "vite.config.ts", "vite.config.js") {
 		result.Type = "spa"
 		result.BuildTool = "vite"
@@ -176,7 +176,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 9. Next.config.[js|ts|mjs] ─────────────────────────────────────────
+	// ── 9. Next.config.[js|ts|mjs] ─────────────────────────────────────────.
 	if fileExistsAny(dir, "next.config.js", "next.config.ts", "next.config.mjs") {
 		result.Framework = "nextjs"
 		result.Type = "regular"
@@ -214,7 +214,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 12. .csproj ──────────────────────────────────────────────────────────
+	// ── 12. .csproj ──────────────────────────────────────────────────────────.
 	if content, ok := findCsprojContent(dir); ok {
 		if fw, qsType, found := detectFromCsproj(content); found {
 			result.Framework = fw
@@ -253,7 +253,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 15. Pom.xml / build.gradle (Java) ────────────────────────────────────
+	// ── 15. Pom.xml / build.gradle (Java) ────────────────────────────────────.
 	if content, buildTool, ok := findJavaBuildContent(dir); ok {
 		fw, port := detectJavaFramework(content)
 		result.Framework = fw
@@ -264,7 +264,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 16. Go.mod ──────────────────────────────────────────────────────────
+	// ── 16. Go.mod ──────────────────────────────────────────────────────────.
 	if fileExists(dir, "go.mod") {
 		result.Framework = "vanilla-go"
 		result.Type = "regular"
@@ -272,7 +272,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// ── 17. Gemfile (Ruby on Rails) ─────────────────────────────────────────
+	// ── 17. Gemfile (Ruby on Rails) ─────────────────────────────────────────.
 	if data, ok := readFileContent(dir, "Gemfile"); ok {
 		if strings.Contains(data, "rails") {
 			result.Framework = "rails"
