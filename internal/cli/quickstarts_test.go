@@ -750,7 +750,7 @@ func TestValidateAPIIdentifier(t *testing.T) {
 	}
 }
 
-// ── createQuickstartApp happy-path ────────────────────────────────────────────
+// ── createQuickstartApp happy-path ────────────────────────────────────────────.
 
 func TestCreateQuickstartApp_SPA_React(t *testing.T) {
 	t.Parallel()
@@ -818,7 +818,7 @@ func TestCreateQuickstartApp_UnsupportedKey(t *testing.T) {
 	assert.ErrorContains(t, err, "unsupported quickstart arguments")
 }
 
-// ── createQuickstartAPI happy-path ────────────────────────────────────────────
+// ── createQuickstartAPI happy-path ────────────────────────────────────────────.
 
 func TestCreateQuickstartAPI_CreatesResourceServerAndGrant(t *testing.T) {
 	t.Parallel()
@@ -889,7 +889,7 @@ func TestCreateQuickstartAPI_NoLinkedApp_SkipsGrant(t *testing.T) {
 	inputs := SetupInputs{
 		API:        true,
 		Identifier: "https://my-api",
-		SigningAlg:  "RS256",
+		SigningAlg: "RS256",
 	}
 
 	err := createQuickstartAPI(context.Background(), testCLI, inputs, "")
