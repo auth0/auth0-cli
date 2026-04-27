@@ -2064,8 +2064,8 @@ func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 			},
 			port: 3000,
 			checkContent: func(t *testing.T, content string) {
-				assert.Contains(t, content, "AUTH0_DOMAIN=tenant.auth0.com")
-				assert.Contains(t, content, "AUTH0_CLIENT_ID=cid-123")
+				assert.Contains(t, content, `AUTH0_DOMAIN="tenant.auth0.com"`)
+				assert.Contains(t, content, `AUTH0_CLIENT_ID="cid-123"`)
 			},
 		},
 		// TypeScript environment file – covers Angular, Ionic Angular.

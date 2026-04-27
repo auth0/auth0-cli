@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/auth0/go-auth0/management"
 
@@ -22,6 +23,8 @@ const (
 	quickstartsOrg                = "auth0-samples"
 	quickstartsDefaultCallbackURL = "https://YOUR_APP/callback"
 )
+
+var quickstartHTTPClient = &http.Client{Timeout: 30 * time.Second}
 
 type Quickstarts []Quickstart
 
@@ -67,7 +70,7 @@ func (q Quickstart) Download(ctx context.Context, downloadPath string, client *m
 	userAgent := "Auth0 CLI" // Set User-Agent header using the standard CLI format.
 	request.Header.Set("User-Agent", fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v")))
 
-	response, err := http.DefaultClient.Do(request)
+	response, err := quickstartHTTPClient.Do(request)
 	if err != nil {
 		return err
 	}
@@ -87,7 +90,7 @@ func (q Quickstart) Download(ctx context.Context, downloadPath string, client *m
 		return err
 	}
 
-	_, err = io.Copy(tmpFile, response.Body)
+	_, err = io.Copy(tmpFile, io.LimitReader(response.Body, 100*1024*1024))
 	if err != nil {
 		return err
 	}
@@ -116,7 +119,7 @@ func GetQuickstarts(ctx context.Context) (Quickstarts, error) {
 		return nil, err
 	}
 
-	response, err := http.DefaultClient.Do(request)
+	response, err := quickstartHTTPClient.Do(request)
 	if err != nil {
 		return nil, err
 	}

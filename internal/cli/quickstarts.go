@@ -723,7 +723,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					&selections,
 					"App", "API",
 				); err != nil {
-					return fmt.Errorf("failed to select target resource(s): %v", err)
+					return fmt.Errorf("failed to select target resource(s): %w", err)
 				}
 				for _, s := range selections {
 					switch strings.ToLower(s) {
@@ -770,6 +770,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						inputs.BundleID = detection.BundleID
 					}
 				case detection.Detected:
+					noInputMode := !canPrompt(cmd)
 					if len(detection.AmbiguousCandidates) > 1 {
 						// Multiple package.json deps matched — show partial summary and ask user to disambiguate.
 						cli.renderer.InfofNoSpace("Detected in current directory")
@@ -779,7 +780,6 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						if detection.Port > 0 {
 							cli.renderer.InfofNoSpace("Port: %d", detection.Port)
 						}
-						noInputMode := !canPrompt(cmd)
 						if noInputMode || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
 							if inputs.Type == "" {
 								inputs.Type = detection.Type
@@ -794,10 +794,14 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 								inputs.BundleID = detection.BundleID
 							}
 							if inputs.Framework == "" {
-								q := prompt.SelectInput("framework", "Select your framework", "",
-									detection.AmbiguousCandidates, detection.AmbiguousCandidates[0], true)
-								if err := prompt.AskOne(q, &inputs.Framework); err != nil {
-									return fmt.Errorf("failed to select framework: %v", err)
+								if noInputMode {
+									inputs.Framework = detection.AmbiguousCandidates[0]
+								} else {
+									q := prompt.SelectInput("framework", "Select your framework", "",
+										detection.AmbiguousCandidates, detection.AmbiguousCandidates[0], true)
+									if err := prompt.AskOne(q, &inputs.Framework); err != nil {
+										return fmt.Errorf("failed to select framework: %w", err)
+									}
 								}
 							}
 						}
@@ -816,8 +820,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 							cli.renderer.InfofNoSpace("Port: %d", detection.Port)
 						}
 
-						noInputModeSingle := !canPrompt(cmd)
-						if noInputModeSingle || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
+						if noInputMode || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
 							if inputs.Type == "" {
 								inputs.Type = detection.Type
 							}
@@ -846,7 +849,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						}
 						return fmt.Errorf("auto-detection failed: provide --type to use --no-input mode")
 					}
-					cli.renderer.Warnf("Auto detection Failed: Unable to auto detect application")
+					cli.renderer.Warnf("auto-detection failed: unable to auto detect application")
 					if inputs.Name == "" {
 						inputs.Name = detection.AppName
 					}
@@ -877,7 +880,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					if canPrompt(cmd) {
 						q := prompt.TextInput("name", "Application name", "Name for the Auth0 application", defaultName, true)
 						if err := prompt.AskOne(q, &inputs.Name); err != nil {
-							return fmt.Errorf("failed to enter application name: %v", err)
+							return fmt.Errorf("failed to enter application name: %w", err)
 						}
 					} else {
 						// In --no-input mode use the resolved default (directory name or "My App").
@@ -910,7 +913,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				portStr := strconv.Itoa(inputs.Port)
 				q := prompt.TextInput("port", "Port number", "Port the application runs on", portStr, true)
 				if err := prompt.AskOne(q, &portStr); err != nil {
-					return fmt.Errorf("failed to enter port: %v", err)
+					return fmt.Errorf("failed to enter port: %w", err)
 				}
 				p, atoiErr := strconv.Atoi(portStr)
 				if atoiErr != nil {
@@ -944,7 +947,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					if canPrompt(cmd) {
 						q := prompt.TextInput("name", "Application Name", "Name for the Auth0 API", defaultName, true)
 						if err := prompt.AskOne(q, &inputs.Name); err != nil {
-							return fmt.Errorf("failed to enter application name: %v", err)
+							return fmt.Errorf("failed to enter application name: %w", err)
 						}
 					} else {
 						inputs.Name = defaultName
@@ -973,7 +976,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 							true,
 						)
 						if err := prompt.AskOne(q, &inputs.Identifier); err != nil {
-							return fmt.Errorf("failed to enter API identifier: %v", err)
+							return fmt.Errorf("failed to enter API identifier: %w", err)
 						}
 					} else {
 						inputs.Identifier = defaultID
@@ -1000,7 +1003,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						q := prompt.TextInput("token-lifetime", "Access token lifetime (seconds)",
 							"How long access tokens remain valid (default: 86400 = 24 hours)", defaultLifetime, true)
 						if err := prompt.AskOne(q, &inputs.TokenLifetime); err != nil {
-							return fmt.Errorf("failed to enter token lifetime: %v", err)
+							return fmt.Errorf("failed to enter token lifetime: %w", err)
 						}
 						if inputs.TokenLifetime == "" {
 							cli.renderer.Warnf("Token lifetime left blank; using default 86400 seconds (24 hours)")
@@ -1016,7 +1019,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						signingAlgs := []string{"RS256", "PS256", "HS256"}
 						q := prompt.SelectInput("signing-alg", "Select the signing algorithm", "", signingAlgs, "RS256", true)
 						if err := prompt.AskOne(q, &inputs.SigningAlg); err != nil {
-							return fmt.Errorf("failed to select signing algorithm: %v", err)
+							return fmt.Errorf("failed to select signing algorithm: %w", err)
 						}
 					} else {
 						inputs.SigningAlg = "RS256"
@@ -1067,7 +1070,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 							true,
 						)
 						if err := prompt.AskOne(q, &selectedAppName); err != nil {
-							return fmt.Errorf("failed to select app: %v", err)
+							return fmt.Errorf("failed to select app: %w", err)
 						}
 						if selectedAppName != "Skip" {
 							linkedAppClientID = appIDByName[selectedAppName]
@@ -1380,7 +1383,7 @@ func getQuickstartConfigKey(inputs SetupInputs) (string, SetupInputs, bool, erro
 		if inputs.Type == "" {
 			q := prompt.SelectInput("type", "Select the application type", "", validTypes, "spa", true)
 			if err := prompt.AskOne(q, &inputs.Type); err != nil {
-				return "", inputs, false, fmt.Errorf("failed to select application type: %v", err)
+				return "", inputs, false, fmt.Errorf("failed to select application type: %w", err)
 			}
 		}
 
@@ -1397,7 +1400,7 @@ func getQuickstartConfigKey(inputs SetupInputs) (string, SetupInputs, bool, erro
 			}
 			q := prompt.SelectInput("framework", "Select the framework", "", frameworks, frameworks[0], true)
 			if err := prompt.AskOne(q, &inputs.Framework); err != nil {
-				return "", inputs, false, fmt.Errorf("failed to select framework: %v", err)
+				return "", inputs, false, fmt.Errorf("failed to select framework: %w", err)
 			}
 		}
 
@@ -1667,14 +1670,30 @@ func buildNestedMap(flat map[string]string) map[string]interface{} {
 			if i == len(parts)-1 {
 				current[part] = value
 			} else {
-				if _, exists := current[part]; !exists {
-					current[part] = make(map[string]interface{})
+				next, ok := current[part].(map[string]interface{})
+				if !ok {
+					next = make(map[string]interface{})
+					current[part] = next
 				}
-				current = current[part].(map[string]interface{})
+				current = next
 			}
 		}
 	}
 	return result
+}
+
+// xmlEscape replaces XML/HTML special characters with their entity equivalents
+// so that generated XML config files are well-formed even when values contain
+// characters like &, <, >, " or '.
+func xmlEscape(s string) string {
+	replacer := strings.NewReplacer(
+		"&", "&amp;",
+		"<", "&lt;",
+		">", "&gt;",
+		`"`, "&quot;",
+		"'", "&#39;",
+	)
+	return replacer.Replace(s)
 }
 
 // sortedKeys returns the keys of a map in sorted order.
@@ -1714,7 +1733,12 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 	var contentBuilder strings.Builder
 
 	switch strategy.Format {
-	case "dotenv", "properties":
+	case "dotenv":
+		for _, key := range sortedKeys(resolvedEnv) {
+			contentBuilder.WriteString(fmt.Sprintf("%s=\"%s\"\n", key, resolvedEnv[key]))
+		}
+
+	case "properties":
 		for _, key := range sortedKeys(resolvedEnv) {
 			contentBuilder.WriteString(fmt.Sprintf("%s=%s\n", key, resolvedEnv[key]))
 		}
@@ -1744,14 +1768,14 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 	case "ts":
 		contentBuilder.WriteString("export const environment = {\n")
 		for _, key := range sortedKeys(resolvedEnv) {
-			contentBuilder.WriteString(fmt.Sprintf("  %s: '%s',\n", key, resolvedEnv[key]))
+			contentBuilder.WriteString(fmt.Sprintf("  %s: '%s',\n", key, strings.ReplaceAll(resolvedEnv[key], "'", "\\'")))
 		}
 		contentBuilder.WriteString("};\n")
 
 	case "dart":
 		contentBuilder.WriteString("const Map<String, String> authConfig = {\n")
 		for _, key := range sortedKeys(resolvedEnv) {
-			contentBuilder.WriteString(fmt.Sprintf("  '%s': '%s',\n", key, resolvedEnv[key]))
+			contentBuilder.WriteString(fmt.Sprintf("  '%s': '%s',\n", strings.ReplaceAll(key, "'", "\\'"), strings.ReplaceAll(resolvedEnv[key], "'", "\\'")))
 		}
 		contentBuilder.WriteString("};\n")
 
@@ -1775,7 +1799,7 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		contentBuilder.WriteString("<configuration>\n")
 		contentBuilder.WriteString("  <appSettings>\n")
 		for _, key := range sortedKeys(resolvedEnv) {
-			contentBuilder.WriteString(fmt.Sprintf("    <add key=\"%s\" value=\"%s\" />\n", key, resolvedEnv[key]))
+			contentBuilder.WriteString(fmt.Sprintf("    <add key=\"%s\" value=\"%s\" />\n", xmlEscape(key), xmlEscape(resolvedEnv[key])))
 		}
 		contentBuilder.WriteString("  </appSettings>\n")
 		contentBuilder.WriteString("</configuration>\n")
@@ -1784,8 +1808,8 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		// Java servlet web.xml context-param entries (mvc-auth-commons).
 		for _, key := range sortedKeys(resolvedEnv) {
 			contentBuilder.WriteString("<context-param>\n")
-			contentBuilder.WriteString(fmt.Sprintf("  <param-name>%s</param-name>\n", key))
-			contentBuilder.WriteString(fmt.Sprintf("  <param-value>%s</param-value>\n", resolvedEnv[key]))
+			contentBuilder.WriteString(fmt.Sprintf("  <param-name>%s</param-name>\n", xmlEscape(key)))
+			contentBuilder.WriteString(fmt.Sprintf("  <param-value>%s</param-value>\n", xmlEscape(resolvedEnv[key])))
 			contentBuilder.WriteString("</context-param>\n")
 		}
 
@@ -1794,7 +1818,7 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		contentBuilder.WriteString("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
 		contentBuilder.WriteString("<resources>\n")
 		for _, key := range sortedKeys(resolvedEnv) {
-			contentBuilder.WriteString(fmt.Sprintf("    <string name=\"%s\">%s</string>\n", key, resolvedEnv[key]))
+			contentBuilder.WriteString(fmt.Sprintf("    <string name=\"%s\">%s</string>\n", xmlEscape(key), xmlEscape(resolvedEnv[key])))
 		}
 		contentBuilder.WriteString("</resources>\n")
 
@@ -1806,7 +1830,7 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		contentBuilder.WriteString("<dict>\n")
 		for _, key := range sortedKeys(resolvedEnv) {
 			contentBuilder.WriteString(fmt.Sprintf("    <key>%s</key>\n", key))
-			contentBuilder.WriteString(fmt.Sprintf("    <string>%s</string>\n", resolvedEnv[key]))
+			contentBuilder.WriteString(fmt.Sprintf("    <string>%s</string>\n", xmlEscape(resolvedEnv[key])))
 		}
 		contentBuilder.WriteString("</dict>\n")
 		contentBuilder.WriteString("</plist>\n")
