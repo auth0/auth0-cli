@@ -1196,6 +1196,13 @@ func createQuickstartApp(ctx context.Context, cli *cli, inputs SetupInputs, qsCo
 		}
 	}
 
+	// For dotnet-mobile and MAUI, the custom URI scheme callback is derived from the
+	// ApplicationId in the .csproj. Register it in Auth0 when the bundle ID is known
+	// so the developer does not need a manual dashboard update.
+	if (inputs.Framework == "dotnet-mobile" || inputs.Framework == "maui") && nativeBundleID != "" {
+		config.RequestParams.Callbacks = []string{nativeBundleID + "://callback"}
+	}
+
 	client, err := generateClient(inputs, config.RequestParams)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate client: %w", err)
@@ -1241,8 +1248,7 @@ func createQuickstartApp(ctx context.Context, cli *cli, inputs SetupInputs, qsCo
 		}
 	case "maui", "dotnet-mobile":
 		if nativeBundleID != "" {
-			cli.renderer.Infof("Add this Allowed Callback URL in the Auth0 Dashboard:")
-			cli.renderer.Infof("  %s://callback", nativeBundleID)
+			cli.renderer.Infof("Registered %s://callback as the Allowed Callback URL.", nativeBundleID)
 		}
 	case "ionic-angular", "ionic-react", "ionic-vue":
 		if nativeBundleID != "" {
@@ -1474,7 +1480,7 @@ func getQuickstartConfigKey(inputs SetupInputs) (string, SetupInputs, bool, erro
 // defaultPortForFramework returns the conventional port for a given framework name.
 func defaultPortForFramework(framework string) int {
 	switch framework {
-	case "react", "vue", "svelte", "vanilla-javascript":
+	case "react", "vue", "svelte", "sveltekit", "vanilla-javascript":
 		return 5173 // Vite default.
 	case "angular":
 		return 4200

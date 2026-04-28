@@ -140,7 +140,7 @@ func DetectProject(dir string) DetectionResult {
 		result.Framework = "sveltekit"
 		result.Type = "regular"
 		result.BuildTool = detectBuildToolFromFiles(dir, "sveltekit")
-		result.Port = detectPortFromConfig(dir, "sveltekit", 3000)
+		result.Port = detectPortFromConfig(dir, "sveltekit", defaultPortForFramework("sveltekit"))
 		result.Detected = true
 		return result
 	}
