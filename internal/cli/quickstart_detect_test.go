@@ -1417,7 +1417,7 @@ func TestDefaultPortForFramework(t *testing.T) {
 		{"express", 3000},
 		{"fastify", 3000},
 		{"hono", 3000},
-		{"sveltekit", 3000},
+		{"sveltekit", 5173},
 		{"rails", 3000},
 		{"vanilla-go", 3000},
 		{"django", 8000},
