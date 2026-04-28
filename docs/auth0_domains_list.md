@@ -48,6 +48,7 @@ auth0 domains list [flags]
 ## Related Commands
 
 - [auth0 domains create](auth0_domains_create.md) - Create a custom domain
+- [auth0 domains default](auth0_domains_default.md) - Manage the default custom domain
 - [auth0 domains delete](auth0_domains_delete.md) - Delete a custom domain
 - [auth0 domains list](auth0_domains_list.md) - List your custom domains
 - [auth0 domains show](auth0_domains_show.md) - Show a custom domain

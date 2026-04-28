@@ -22,6 +22,7 @@ type customDomainView struct {
 	CertificateErrorMsg     string
 	CertificateAuthority    string
 	CertificateRenewsBefore string
+	IsDefault               string
 	raw                     interface{}
 }
 
@@ -85,6 +86,9 @@ func (v *customDomainView) KeyValues() [][]string {
 	if v.CertificateRenewsBefore != "" {
 		keyValues = append(keyValues, []string{ansi.Yellow(ansi.Bold("CERTIFICATE RENEWS BEFORE")), ansi.Yellow(ansi.Bold(v.CertificateRenewsBefore))})
 	}
+	if v.IsDefault != "" {
+		keyValues = append(keyValues, []string{ansi.Yellow(ansi.Bold("IS DEFAULT")), ansi.Yellow(ansi.Bold(v.IsDefault))})
+	}
 	return keyValues
 }
 
@@ -125,6 +129,16 @@ func (r *Renderer) CustomDomainUpdate(customDomain *management.CustomDomain) {
 	r.Result(makeCustomDomainView(customDomain))
 }
 
+func (r *Renderer) CustomDomainDefaultShow(defaultDomain *management.CustomDomain) {
+	r.Heading("default custom domain")
+	r.Result(makeCustomDomainDefaultView(defaultDomain))
+}
+
+func (r *Renderer) CustomDomainDefaultUpdate(defaultDomain *management.CustomDomain) {
+	r.Heading("default custom domain updated")
+	r.Result(makeCustomDomainDefaultView(defaultDomain))
+}
+
 func makeCustomDomainView(customDomain *management.CustomDomain) *customDomainView {
 	metadata, err := toJSONString(customDomain.GetDomainMetadata())
 	if err != nil {
@@ -143,6 +157,7 @@ func makeCustomDomainView(customDomain *management.CustomDomain) *customDomainVi
 		CertificateStatus:       customDomain.GetCertificate().GetStatus(),
 		CertificateAuthority:    customDomain.GetCertificate().GetCertificateAuthority(),
 		CertificateRenewsBefore: customDomain.GetCertificate().GetRenewsBefore(),
+		IsDefault:               boolean(customDomain.GetIsDefault()),
 		raw:                     customDomain,
 	}
 
@@ -172,5 +187,44 @@ func customDomainStatusColor(v string) string {
 		return ansi.Green(v)
 	default:
 		return v
+	}
+}
+
+type customDomainDefaultView struct {
+	Domain string
+	raw    interface{}
+}
+
+func (v *customDomainDefaultView) AsTableHeader() []string {
+	return []string{"Domain"}
+}
+
+func (v *customDomainDefaultView) AsTableRow() []string {
+	return []string{v.Domain}
+}
+
+func (v *customDomainDefaultView) KeyValues() [][]string {
+	var keyValues [][]string
+
+	if v.Domain != "" {
+		keyValues = append(keyValues, []string{"DOMAIN", v.Domain})
+	}
+
+	return keyValues
+}
+
+func (v *customDomainDefaultView) Object() interface{} {
+	return v.raw
+}
+
+func makeCustomDomainDefaultView(defaultDomain *management.CustomDomain) *customDomainDefaultView {
+	domain := ""
+	if defaultDomain.Domain != nil {
+		domain = *defaultDomain.Domain
+	}
+
+	return &customDomainDefaultView{
+		Domain: domain,
+		raw:    defaultDomain,
 	}
 }

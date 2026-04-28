@@ -195,17 +195,24 @@ func (f *clientResourceFetcher) FetchData(ctx context.Context) (importDataList, 
 			ctx,
 			management.Page(page),
 			management.Parameter("is_global", "false"),
-			management.IncludeFields("client_id", "name"),
+			management.IncludeFields("client_id", "name", "external_metadata_type"),
 		)
 		if err != nil {
 			return nil, err
 		}
 
 		for _, client := range clients.Clients {
-			data = append(data, importDataItem{
-				ResourceName: "auth0_client." + sanitizeResourceName(client.GetName()),
-				ImportID:     client.GetClientID(),
-			})
+			if client.GetExternalMetadataType() == "cimd" {
+				data = append(data, importDataItem{
+					ResourceName: "auth0_client_cimd." + sanitizeResourceName(client.GetName()),
+					ImportID:     client.GetClientID(),
+				})
+			} else {
+				data = append(data, importDataItem{
+					ResourceName: "auth0_client." + sanitizeResourceName(client.GetName()),
+					ImportID:     client.GetClientID(),
+				})
+			}
 
 			data = append(data, importDataItem{
 				ResourceName: "auth0_client_credentials." + sanitizeResourceName(client.GetName()),
@@ -562,6 +569,7 @@ var screenPartialPromptToScreenMap = map[string][]string{
 	"signup-id":          {"signup-id"},
 	"signup-password":    {"signup-password"},
 	"customized-consent": {"customized-consent"},
+	"passkeys":           {"passkey-enrollment", "passkey-enrollment-local"},
 }
 
 func (f *promptScreenPartialResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
