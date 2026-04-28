@@ -1207,12 +1207,7 @@ func createQuickstartApp(ctx context.Context, cli *cli, inputs SetupInputs, qsCo
 		return "", fmt.Errorf("failed to create application: %w", err)
 	}
 
-	tenant, err := cli.Config.GetTenant(cli.tenant)
-	if err != nil {
-		return "", fmt.Errorf("failed to get tenant: %w", err)
-	}
-
-	envFileName, _, err := GenerateAndWriteQuickstartConfig(&config.Strategy, config.EnvValues, tenant.Domain, client, inputs.Port)
+	envFileName, _, err := GenerateAndWriteQuickstartConfig(&config.Strategy, config.EnvValues, cli.tenant, client, inputs.Port)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate config file: %w", err)
 	}
@@ -1241,8 +1236,8 @@ func createQuickstartApp(ctx context.Context, cli *cli, inputs SetupInputs, qsCo
 			// hyphens in URI schemes, and both iOS CFBundleURLSchemes and Android
 			// intent filters support them natively.
 			cli.renderer.Infof("Add these Allowed Callback URLs in the Auth0 Dashboard:")
-			cli.renderer.Infof("  Android: %s://%s/android/%s/callback", nativeBundleID, tenant.Domain, nativeBundleID)
-			cli.renderer.Infof("  iOS:     %s://%s/ios/%s/callback", nativeBundleID, tenant.Domain, nativeBundleID)
+			cli.renderer.Infof("  Android: %s://%s/android/%s/callback", nativeBundleID, cli.tenant, nativeBundleID)
+			cli.renderer.Infof("  iOS:     %s://%s/ios/%s/callback", nativeBundleID, cli.tenant, nativeBundleID)
 		}
 	case "maui", "dotnet-mobile":
 		if nativeBundleID != "" {
