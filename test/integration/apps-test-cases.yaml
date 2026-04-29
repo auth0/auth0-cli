@@ -318,15 +318,38 @@ tests:
         - ALLOWED METHODS   cookie, query
         - DEVICE BINDING    ip
 
-  042 - given a test app, it successfully deletes the app:
+  042 - it successfully creates a m2m app with allow-any-profile-of-type and outputs in json:
+    command: auth0 apps create --name integration-test-app-te1 --type m2m --description TEApp1 --allow-any-profile-of-type custom_authentication --json
+    exit-code: 0
+    stdout:
+      json:
+        name: integration-test-app-te1
+        app_type: non_interactive
+        token_exchange.allow_any_profile_of_type: "[custom_authentication]"
+
+  043 - it successfully updates token exchange types on an app and outputs in json:
+    command: auth0 apps update $(./test/integration/scripts/get-app-id.sh) --allow-any-profile-of-type custom_authentication --json
+    exit-code: 0
+    stdout:
+      json:
+        token_exchange.allow_any_profile_of_type: "[custom_authentication]"
+
+  044 - it successfully shows token exchange types on an app:
+    command: auth0 apps show $(./test/integration/scripts/get-app-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - TOKEN EXCHANGE TYPES  custom_authentication
+
+  045 - given a test app, it successfully deletes the app:
     command: auth0 apps delete $(./test/integration/scripts/get-app-id.sh) --force
     exit-code: 0
 
-  043 - it successfully creates a resource server app with resource-server-identifier:
+  046 - it successfully creates a resource server app with resource-server-identifier:
     command: ./test/integration/scripts/get-resource-server-app-id.sh
     exit-code: 0
 
-  044 - it successfully creates a resource server app with resource-server-identifier and outputs in json:
+  047 - it successfully creates a resource server app with resource-server-identifier and outputs in json:
     command: auth0 apps show $(./test/integration/scripts/get-resource-server-app-id.sh) --json
     exit-code: 0
     stdout:
@@ -335,7 +358,7 @@ tests:
         app_type: resource_server
         resource_server_identifier: http://integration-test-api-newapi
 
-  045 - it shows resource server app with resource-server-identifier:
+  048 - it shows resource server app with resource-server-identifier:
     command: auth0 apps show $(./test/integration/scripts/get-resource-server-app-id.sh)
     exit-code: 0
     stdout:
@@ -343,13 +366,13 @@ tests:
         - TYPE                        Resource Server
         - RESOURCE SERVER IDENTIFIER  http://integration-test-api-newapi
 
-  046 - it fails to update resource-server-identifier (immutable property):
+  049 - it fails to update resource-server-identifier (immutable property):
     command: auth0 apps update $(./test/integration/scripts/get-resource-server-app-id.sh) --resource-server-identifier http://new-api.localhost --json
     exit-code: 1
     stderr:
       contains:
         - "Unknown flag: --resource-server-identifier"
 
-  047 - given a resource server app, it successfully deletes the app:
+  050 - given a resource server app, it successfully deletes the app:
     command: auth0 apps delete $(./test/integration/scripts/get-resource-server-app-id.sh) --force
     exit-code: 0
