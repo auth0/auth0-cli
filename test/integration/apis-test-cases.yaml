@@ -203,14 +203,14 @@ tests:
 
   # Test 'apis create' --enforce-policies flag
   024 - apis create with enforce-policies true and check data:
-    command: auth0 apis create --name integration-test-api-enfpol1 --identifier http://integration-test-api-enfpol1 --scopes read:todos --enforce-policies --json
+    command: auth0 apis create --name integration-test-api-enfpol1 --identifier http://integration-test-api-enfpol1 --enforce-policies --json
     exit-code: 0
     stdout:
       json:
         enforce_policies: "true"
 
   025 - apis create with enforce-policies false and check data:
-    command: auth0 apis create --name integration-test-api-enfpol2 --identifier http://integration-test-api-enfpol2 --scopes read:todos --enforce-policies=false --json
+    command: auth0 apis create --name integration-test-api-enfpol2 --identifier http://integration-test-api-enfpol2 --enforce-policies=false --json
     exit-code: 0
     stdout:
       json:
@@ -218,7 +218,7 @@ tests:
 
   # Test 'apis create' --token-dialect flag
   026 - apis create with token-dialect access_token_authz and check data:
-    command: auth0 apis create --name integration-test-api-tokdial1 --identifier http://integration-test-api-tokdial1 --scopes read:todos --enforce-policies --token-dialect access_token_authz --json
+    command: auth0 apis create --name integration-test-api-tokdial1 --identifier http://integration-test-api-tokdial1 --enforce-policies --token-dialect access_token_authz --json
     exit-code: 0
     stdout:
       json:
@@ -226,21 +226,21 @@ tests:
         enforce_policies: "true"
 
   027 - apis create with token-dialect rfc9068_profile and check data:
-    command: auth0 apis create --name integration-test-api-tokdial2 --identifier http://integration-test-api-tokdial2 --scopes read:todos --token-dialect rfc9068_profile --json
+    command: auth0 apis create --name integration-test-api-tokdial2 --identifier http://integration-test-api-tokdial2 --token-dialect rfc9068_profile --json
     exit-code: 0
     stdout:
       json:
         token_dialect: rfc9068_profile
 
   028 - apis create with enforce-policies and token-dialect and check output:
-    command: auth0 apis create --name integration-test-api-enfpol3 --identifier http://integration-test-api-enfpol3 --scopes read:todos --enforce-policies --token-dialect access_token_authz
+    command: auth0 apis create --name integration-test-api-enfpol3 --identifier http://integration-test-api-enfpol3 --enforce-policies --token-dialect access_token_authz --json
     exit-code: 0
     stdout:
-      contains:
-        - NAME                        integration-test-api-enfpol3
-        - IDENTIFIER                  http://integration-test-api-enfpol3
-        - ENFORCE POLICIES            ✓
-        - TOKEN DIALECT               access_token_authz
+      json:
+        name: integration-test-api-enfpol3
+        identifier: http://integration-test-api-enfpol3
+        enforce_policies: "true"
+        token_dialect: access_token_authz
 
   # Test 'apis update' --enforce-policies flag
   029 - apis update enforce-policies to true:
