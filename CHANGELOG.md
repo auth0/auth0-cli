@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v.1.30.0](https://github.com/auth0/auth0-cli/tree/v1.30.0) (April 30, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.29.0...v1.30.0)
+
+### Added
+- Add `--enforce-policies` and `--token-dialect` flags in `auth0 apis create` and `auth0 apis update` [#1504]
+- Add `--allow-any-profile-of-type` flag for token exchange types in `auth0 apps create` and `auth0 apps update` [#1504]
+- Add support for `auth0_client_cimd` resource generation in `auth0 tf generate` [#1501]
+
+
 # [v.1.29.0](https://github.com/auth0/auth0-cli/tree/v1.29.0) (April 16, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.28.0...v1.29.0)
@@ -715,7 +725,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.29.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.30.0...HEAD
+[#1504]: https://github.com/auth0/auth0-cli/pull/1504
+[#1501]: https://github.com/auth0/auth0-cli/pull/1501
 [#1491]: https://github.com/auth0/auth0-cli/pull/1491
 [#1475]: https://github.com/auth0/auth0-cli/pull/1475
 [#1471]: https://github.com/auth0/auth0-cli/pull/1471
