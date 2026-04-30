@@ -201,7 +201,79 @@ tests:
         subject_type_authorization: "map[client:map[policy:deny_all] user:map[policy:require_client_grant]]"
     exit-code: 0
 
-  024 - it successfully prints out a URL to open:
+  # Test 'apis create' --enforce-policies flag
+  024 - apis create with enforce-policies true and check data:
+    command: auth0 apis create --name integration-test-api-enfpol1 --identifier http://integration-test-api-enfpol1 --enforce-policies --json
+    exit-code: 0
+    stdout:
+      json:
+        enforce_policies: "true"
+
+  025 - apis create with enforce-policies false and check data:
+    command: auth0 apis create --name integration-test-api-enfpol2 --identifier http://integration-test-api-enfpol2 --enforce-policies=false --json
+    exit-code: 0
+    stdout:
+      json:
+        enforce_policies: "false"
+
+  # Test 'apis create' --token-dialect flag
+  026 - apis create with token-dialect access_token_authz and check data:
+    command: auth0 apis create --name integration-test-api-tokdial1 --identifier http://integration-test-api-tokdial1 --enforce-policies --token-dialect access_token_authz --json
+    exit-code: 0
+    stdout:
+      json:
+        token_dialect: access_token_authz
+        enforce_policies: "true"
+
+  027 - apis create with token-dialect rfc9068_profile and check data:
+    command: auth0 apis create --name integration-test-api-tokdial2 --identifier http://integration-test-api-tokdial2 --token-dialect rfc9068_profile --json
+    exit-code: 0
+    stdout:
+      json:
+        token_dialect: rfc9068_profile
+
+  028 - apis create with enforce-policies and token-dialect and check output:
+    command: auth0 apis create --name integration-test-api-enfpol3 --identifier http://integration-test-api-enfpol3 --enforce-policies --token-dialect access_token_authz --json
+    exit-code: 0
+    stdout:
+      json:
+        name: integration-test-api-enfpol3
+        identifier: http://integration-test-api-enfpol3
+        enforce_policies: "true"
+        token_dialect: access_token_authz
+
+  # Test 'apis update' --enforce-policies flag
+  029 - apis update enforce-policies to true:
+    command: auth0 apis update $(./test/integration/scripts/get-api-id.sh) --enforce-policies --json
+    stdout:
+      json:
+        enforce_policies: "true"
+    exit-code: 0
+
+  030 - apis update enforce-policies to false:
+    command: auth0 apis update $(./test/integration/scripts/get-api-id.sh) --enforce-policies=false --json
+    stdout:
+      json:
+        enforce_policies: "false"
+    exit-code: 0
+
+  # Test 'apis update' --token-dialect flag
+  031 - apis update token-dialect:
+    command: auth0 apis update $(./test/integration/scripts/get-api-id.sh) --enforce-policies --token-dialect access_token_authz --json
+    stdout:
+      json:
+        token_dialect: access_token_authz
+        enforce_policies: "true"
+    exit-code: 0
+
+  032 - apis update token-dialect to rfc9068_profile_authz:
+    command: auth0 apis update $(./test/integration/scripts/get-api-id.sh) --enforce-policies --token-dialect rfc9068_profile_authz --json
+    stdout:
+      json:
+        token_dialect: rfc9068_profile_authz
+    exit-code: 0
+
+  034 - it successfully prints out a URL to open:
     command: auth0 apis open $(./test/integration/scripts/get-api-id.sh) --no-input
     exit-code: 0
     stderr:

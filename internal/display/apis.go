@@ -20,6 +20,8 @@ type apiView struct {
 	TokenLifetime       int
 	OfflineAccess       string
 	SigningAlgorithm    string
+	EnforcePolicies     string
+	TokenDialect        string
 	SubjectTypeAuthJSON string
 	ClientID            string
 
@@ -43,6 +45,11 @@ func (v *apiView) KeyValues() [][]string {
 		{"TOKEN LIFETIME", strconv.Itoa(v.TokenLifetime)},
 		{"ALLOW OFFLINE ACCESS", v.OfflineAccess},
 		{"SIGNING ALGORITHM", v.SigningAlgorithm},
+		{"ENFORCE POLICIES", v.EnforcePolicies},
+	}
+
+	if len(v.TokenDialect) > 0 {
+		kvs = append(kvs, []string{"TOKEN DIALECT", v.TokenDialect})
 	}
 
 	if len(v.SubjectTypeAuthJSON) > 0 {
@@ -140,6 +147,8 @@ func makeAPIView(api *management.ResourceServer) (*apiView, bool) {
 		TokenLifetime:       api.GetTokenLifetime(),
 		OfflineAccess:       boolean(api.GetAllowOfflineAccess()),
 		SigningAlgorithm:    api.GetSigningAlgorithm(),
+		EnforcePolicies:     boolean(api.GetEnforcePolicies()),
+		TokenDialect:        api.GetTokenDialect(),
 		SubjectTypeAuthJSON: subjectTypeAuthJSON,
 		ClientID:            api.GetClientID(),
 		raw:                 api,
