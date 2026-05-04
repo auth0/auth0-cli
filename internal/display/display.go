@@ -73,6 +73,7 @@ func (r *Renderer) InfofBullet(format string, a ...interface{}) {
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
+// Successf writes a success line with a green check-mark prefix.
 func (r *Renderer) Successf(format string, a ...interface{}) {
 	fmt.Fprint(r.MessageWriter, ansi.Green("✓ "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
@@ -80,6 +81,8 @@ func (r *Renderer) Successf(format string, a ...interface{}) {
 
 const detailIndent = "  "
 
+// Detailf writes an indented detail line with no prefix symbol, used for
+// supplementary information displayed beneath a success or info message.
 func (r *Renderer) Detailf(format string, a ...interface{}) {
 	fmt.Fprintf(r.MessageWriter, detailIndent+format+"\n", a...)
 }

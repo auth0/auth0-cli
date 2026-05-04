@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -715,7 +716,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 			// (either a newly created app or one selected from the tenant).
 			var linkedAppClientID string
 
-			// ── Step 1: Decide what to create (App / API / both) ─────────────.
+			// -- Step 1: Decide what to create (App / API / both) --
 			if !inputs.App && !inputs.API {
 				var selections []string
 				if err := prompt.AskMultiSelect(
@@ -738,7 +739,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 			}
 
-			// ── Step 2: Auto-detect project framework ─────────────────────────.
+			// -- Step 2: Auto-detect project framework --
 			if inputs.App {
 				cwd, err := os.Getwd()
 				if err != nil {
@@ -772,7 +773,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				case detection.Detected:
 					noInputMode := !canPrompt(cmd)
 					if len(detection.AmbiguousCandidates) > 1 {
-						// Multiple package.json deps matched — show partial summary and ask user to disambiguate.
+						// Multiple package.json deps matched - show partial summary and ask user to disambiguate.
 						cli.renderer.InfofBullet("Detected in current directory")
 						cli.renderer.InfofBullet("Framework: %s", "Could not be determined")
 						cli.renderer.InfofBullet("App type: %s", detectionFriendlyAppType(detection.Type))
@@ -781,18 +782,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 							cli.renderer.InfofBullet("Port: %d", detection.Port)
 						}
 						if noInputMode || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
-							if inputs.Type == "" {
-								inputs.Type = detection.Type
-							}
-							if inputs.Port == 0 {
-								inputs.Port = detection.Port
-							}
-							if inputs.Name == "" {
-								inputs.Name = detection.AppName
-							}
-							if inputs.BundleID == "" && detection.BundleID != "" {
-								inputs.BundleID = detection.BundleID
-							}
+							inputs = applyDetectionToInputs(inputs, detection)
 							if inputs.Framework == "" {
 								if noInputMode {
 									inputs.Framework = detection.AmbiguousCandidates[0]
@@ -806,11 +796,11 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 							}
 						}
 					} else if detection.Framework != "" {
-						// Single clear detection — show summary and confirm.
+						// Single clear detection - show summary and confirm.
 						titleCaser := cases.Title(language.English)
 						frameworkDisplay := titleCaser.String(detection.Framework)
 						if detection.BuildTool != "" && detection.BuildTool != "none" {
-							frameworkDisplay += " \u00b7 " + titleCaser.String(detection.BuildTool)
+							frameworkDisplay += " - " + titleCaser.String(detection.BuildTool)
 						}
 						cli.renderer.InfofBullet("Detected in current directory")
 						cli.renderer.InfofBullet("Framework: %s", frameworkDisplay)
@@ -821,28 +811,14 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						}
 
 						if noInputMode || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
-							if inputs.Type == "" {
-								inputs.Type = detection.Type
-							}
+							inputs = applyDetectionToInputs(inputs, detection)
 							if inputs.Framework == "" {
 								inputs.Framework = detection.Framework
-							}
-							if inputs.BuildTool == "" || inputs.BuildTool == "none" {
-								inputs.BuildTool = detection.BuildTool
-							}
-							if inputs.Port == 0 {
-								inputs.Port = detection.Port
-							}
-							if inputs.Name == "" {
-								inputs.Name = detection.AppName
-							}
-							if inputs.BundleID == "" && detection.BundleID != "" {
-								inputs.BundleID = detection.BundleID
 							}
 						}
 					}
 				default:
-					// No detection signal found — notify the user and pre-fill name from directory.
+					// No detection signal found - notify the user and pre-fill name from directory.
 					if !canPrompt(cmd) && inputs.Type == "" {
 						if inputs.API {
 							return fmt.Errorf("auto-detection failed: when using --app and --api together with --no-input, --type must be specified")
@@ -856,7 +832,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 			}
 
-			// ── Step 3: Resolve remaining prompts for App / API ───────────────
+			// -- Step 3: Resolve remaining prompts for App / API --
 			// In non-interactive mode, --type alone is not enough; --framework is also required.
 			if !canPrompt(cmd) && inputs.App && inputs.Type != "" && inputs.Type != "m2m" && inputs.Framework == "" {
 				return fmt.Errorf("--framework is required in non-interactive mode when --type is %s: use --framework flag", inputs.Type)
@@ -870,7 +846,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				cli.renderer.Infof("Auto-selected build tool %q for %s/%s (no exact match for 'none')", inputs.BuildTool, inputs.Type, inputs.Framework)
 			}
 
-			// ── Step 3b: Collect application name ────────────────────────────.
+			// -- Step 3b: Collect application name --
 			if inputs.App {
 				if !cmd.Flags().Changed("name") {
 					defaultName := inputs.Name
@@ -895,7 +871,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 			}
 
-			// ── Step 3d: Prompt for port if not explicitly set ──────────────────.
+			// -- Step 3d: Prompt for port if not explicitly set --
 			if inputs.App && inputs.Type != "native" && inputs.Type != "m2m" && !cmd.Flags().Changed("port") && canPrompt(cmd) {
 				if inputs.Port == 0 {
 					inputs.Port = defaultPortForFramework(inputs.Framework)
@@ -922,7 +898,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 			}
 
-			// ── Step 3c: Collect API name for API-only flow ───────────────────.
+			// -- Step 3c: Collect API name for API-only flow --
 			if inputs.API && !inputs.App {
 				// Collect API name if not already set (pre-fill from CWD folder name).
 				if inputs.Name == "" && !cmd.Flags().Changed("name") {
@@ -1066,7 +1042,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 			}
 
-			// ── Step 4: Create the Auth0 application client ───────────────────.
+			// -- Step 4: Create the Auth0 application client --
 			if inputs.App {
 				clientID, err := createQuickstartApp(ctx, cli, inputs, qsConfigKey)
 				if err != nil {
@@ -1075,7 +1051,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				linkedAppClientID = clientID
 			}
 
-			// ── Step 5: Create the Auth0 API resource server ──────────────────.
+			// -- Step 5: Create the Auth0 API resource server --
 			if inputs.API {
 				if err := createQuickstartAPI(ctx, cli, inputs, linkedAppClientID); err != nil {
 					return err
@@ -1257,7 +1233,7 @@ func createQuickstartApp(ctx context.Context, cli *cli, inputs SetupInputs, qsCo
 			cli.renderer.Infof("Capacitor app ID: %s", nativeBundleID)
 			cli.renderer.Infof("http://localhost is registered as the Allowed Callback URL (Capacitor WebView).")
 		} else {
-			// No Capacitor config found — remind the user where it should be.
+			// No Capacitor config found - remind the user where it should be.
 			cli.renderer.Warnf("Could not read Capacitor app ID. Ensure capacitor.config.json or capacitor.config.ts is present in your project root.")
 			cli.renderer.Infof("http://localhost is registered as the Allowed Callback URL (Capacitor WebView).")
 		}
@@ -1334,7 +1310,6 @@ func createQuickstartAPI(ctx context.Context, cli *cli, inputs SetupInputs, link
 	return nil
 }
 
-// Helper function to get supported quickstart types.
 func getSupportedQuickstartTypes() []string {
 	var types []string
 	for key := range auth0.QuickstartConfigs {
@@ -1370,20 +1345,11 @@ func getQuickstartConfigKey(inputs SetupInputs) (string, SetupInputs, bool, erro
 	if inputs.App {
 		// Validate --type if provided (Bug 12).
 		validTypes := []string{"spa", "regular", "native", "m2m"}
-		if inputs.Type != "" {
-			valid := false
-			for _, t := range validTypes {
-				if inputs.Type == t {
-					valid = true
-					break
-				}
-			}
-			if !valid {
-				return "", inputs, false, fmt.Errorf(
-					"invalid --type %q: must be one of %s",
-					inputs.Type, strings.Join(validTypes, ", "),
-				)
-			}
+		if inputs.Type != "" && !slices.Contains(validTypes, inputs.Type) {
+			return "", inputs, false, fmt.Errorf(
+				"invalid --type %q: must be one of %s",
+				inputs.Type, strings.Join(validTypes, ", "),
+			)
 		}
 
 		// Prompt for --type if not provided.
@@ -1415,7 +1381,7 @@ func getQuickstartConfigKey(inputs SetupInputs) (string, SetupInputs, bool, erro
 		// The spec says "--port: default value used if not given", so we never prompt.
 		if inputs.Port == 0 {
 			inputs.Port = defaultPortForFramework(inputs.Framework)
-			// Port stays 0 for native apps (react-native, expo, flutter) — no port needed.
+			// Port stays 0 for native apps (react-native, expo, flutter) - no port needed.
 		}
 	}
 
@@ -1475,6 +1441,28 @@ func getQuickstartConfigKey(inputs SetupInputs) (string, SetupInputs, bool, erro
 	}
 
 	return configKey, inputs, wasAutoSelected, nil
+}
+
+// applyDetectionToInputs copies fields from a DetectionResult into inputs, skipping
+// any field that was already explicitly set. The framework field is NOT copied here
+// because the ambiguous-candidate path requires a prompt before it can be resolved.
+func applyDetectionToInputs(inputs SetupInputs, d DetectionResult) SetupInputs {
+	if inputs.Type == "" {
+		inputs.Type = d.Type
+	}
+	if inputs.BuildTool == "" || inputs.BuildTool == "none" {
+		inputs.BuildTool = d.BuildTool
+	}
+	if inputs.Port == 0 {
+		inputs.Port = d.Port
+	}
+	if inputs.Name == "" {
+		inputs.Name = d.AppName
+	}
+	if inputs.BundleID == "" && d.BundleID != "" {
+		inputs.BundleID = d.BundleID
+	}
+	return inputs
 }
 
 // defaultPortForFramework returns the conventional port for a given framework name.
@@ -1668,8 +1656,8 @@ func replaceDetectionSub(envValues map[string]string, tenantDomain string, clien
 	return updatedEnvValues, nil
 }
 
-// buildNestedMap converts a flat map with dot-delimited keys into a nested map.
-// E.g. {"okta.oauth2.issuer": "x"} -> {"okta": {"oauth2": {"issuer": "x"}}}.
+// buildNestedMap converts a flat map with dot-delimited keys into a nested map,
+// e.g. {"okta.oauth2.issuer": "x"} -> {"okta": {"oauth2": {"issuer": "x"}}}.
 func buildNestedMap(flat map[string]string) map[string]interface{} {
 	result := make(map[string]interface{})
 	for key, value := range flat {
@@ -1705,7 +1693,6 @@ func xmlEscape(s string) string {
 	return replacer.Replace(s)
 }
 
-// sortedKeys returns the keys of a map in sorted order.
 func sortedKeys(m map[string]string) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
@@ -1719,18 +1706,15 @@ func sortedKeys(m map[string]string) []string {
 // and writes them to the appropriate file in the Current Working Directory (CWD).
 // It returns the generated file name, the file path, and an error (if any).
 func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envValues map[string]string, tenantDomain string, client *management.Client, port int) (string, string, error) {
-	// 1. Resolve the environment variables.
 	resolvedEnv, err := replaceDetectionSub(envValues, tenantDomain, client, port)
 	if err != nil {
 		return "", "", err
 	}
 
-	// 2. Determine output file path and format.
 	if strategy == nil {
 		strategy = &auth0.FileOutputStrategy{Path: ".env", Format: "dotenv"}
 	}
 
-	// 3. Ensure the directory path exists.
 	dir := filepath.Dir(strategy.Path)
 	if dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {
@@ -1738,7 +1722,6 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		}
 	}
 
-	// 4. Format the file content based on the target framework's requirement.
 	var contentBuilder strings.Builder
 
 	switch strategy.Format {
@@ -1826,7 +1809,7 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		}
 
 	case "android-strings":
-		// Android res/values/strings.xml — Auth0 SDK reads credentials via string resources.
+		// Android res/values/strings.xml - Auth0 SDK reads credentials via string resources.
 		contentBuilder.WriteString("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
 		contentBuilder.WriteString("<resources>\n")
 		for _, key := range sortedKeys(resolvedEnv) {
@@ -1835,7 +1818,7 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		contentBuilder.WriteString("</resources>\n")
 
 	case "plist":
-		// IOS Auth0.plist — Auth0 Swift SDK reads ClientId and Domain from this plist.
+		// IOS Auth0.plist - Auth0 Swift SDK reads ClientId and Domain from this plist.
 		contentBuilder.WriteString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
 		contentBuilder.WriteString("<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n")
 		contentBuilder.WriteString("<plist version=\"1.0\">\n")
@@ -1848,12 +1831,10 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		contentBuilder.WriteString("</plist>\n")
 	}
 
-	// 5. Write the generated content to disk.
 	if err := os.WriteFile(strategy.Path, []byte(contentBuilder.String()), 0600); err != nil {
 		return "", "", fmt.Errorf("failed to write config file %s: %w", strategy.Path, err)
 	}
 
-	// 6. Return the base file name and full path.
 	fileName := filepath.Base(strategy.Path)
 	return fileName, strategy.Path, nil
 }

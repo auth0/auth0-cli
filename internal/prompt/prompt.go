@@ -46,6 +46,8 @@ func AskBool(message string, value *bool, defaultValue bool) error {
 	return err
 }
 
+// Confirm prompts the user with a yes/no question and returns their response.
+// On EOF (e.g. piped input or --no-input mode) it returns false.
 func Confirm(message string) bool {
 	result := false
 	prompt := &survey.Confirm{
