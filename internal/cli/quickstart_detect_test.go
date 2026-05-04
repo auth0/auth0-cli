@@ -1391,6 +1391,22 @@ func TestReadPackageJSONName(t *testing.T) {
 	})
 }
 
+// -- readFileContent --
+
+func TestReadFileContent_SizeLimit(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	// Write a file slightly over maxDetectionFileSize (10 MB).
+	oversizedFile := filepath.Join(dir, "big.xml")
+	data := make([]byte, maxDetectionFileSize+1)
+	require.NoError(t, os.WriteFile(oversizedFile, data, 0600))
+
+	content, ok := readFileContent(dir, "big.xml")
+	assert.False(t, ok, "readFileContent should reject files over maxDetectionFileSize")
+	assert.Empty(t, content)
+}
+
 // -- defaultPortForFramework --
 
 func TestDefaultPortForFramework(t *testing.T) {

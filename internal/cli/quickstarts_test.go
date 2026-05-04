@@ -878,6 +878,65 @@ func TestAmbiguousDetection_NoInputMode_UsesFirstCandidate(t *testing.T) {
 	assert.Equal(t, 3000, inputs.Port)
 }
 
+// TestAmbiguousDetection_NoInput_IntegrationFlow verifies the full flow:
+// real package.json with two candidates -> ambiguous detection -> no-input mode
+// selects the first candidate -> createQuickstartApp succeeds with the resolved inputs.
+func TestAmbiguousDetection_NoInput_IntegrationFlow(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	clientAPI := mock.NewMockClientAPI(ctrl)
+	clientAPI.EXPECT().
+		Create(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, c *management.Client, _ ...management.RequestOption) error {
+			id := "test-client-id"
+			c.ClientID = &id
+			return nil
+		})
+
+	dir := t.TempDir()
+	pkgJSON := `{"name":"my-app","dependencies":{"express":"^4","hono":"^3"}}`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "package.json"), []byte(pkgJSON), 0600))
+
+	// Step 1: DetectProject finds ambiguous candidates from the real filesystem.
+	detection := DetectProject(dir)
+	require.True(t, detection.Detected, "detection should have fired")
+	require.Greater(t, len(detection.AmbiguousCandidates), 1, "should have multiple candidates")
+
+	// Step 2: In no-input mode, pick the first candidate (same logic as RunE).
+	inputs := applyDetectionToInputs(SetupInputs{App: true}, detection)
+	if inputs.Framework == "" {
+		inputs.Framework = detection.AmbiguousCandidates[0]
+	}
+
+	// Step 3: Resolve the config key.
+	qsConfigKey, inputs, _, err := getQuickstartConfigKey(inputs)
+	require.NoError(t, err)
+
+	// Step 4: Verify the resolved framework is the first ambiguous candidate.
+	assert.Equal(t, detection.AmbiguousCandidates[0], inputs.Framework)
+	assert.Equal(t, "regular", inputs.Type)
+
+	// Step 5: Create the app end-to-end using the resolved inputs.
+	tenantDomain := "test.auth0.com"
+	testCLI := &cli{
+		renderer: &display.Renderer{MessageWriter: &bytes.Buffer{}, ResultWriter: &bytes.Buffer{}},
+		api:      &auth0.API{Client: clientAPI},
+		tenant:   tenantDomain,
+	}
+
+	origDir, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(dir))
+	defer func() { _ = os.Chdir(origDir) }()
+
+	clientID, err := createQuickstartApp(context.Background(), testCLI, inputs, qsConfigKey)
+	require.NoError(t, err)
+	assert.Equal(t, "test-client-id", clientID)
+}
+
 // -- createQuickstartAPI happy-path --
 
 func TestCreateQuickstartAPI_CreatesResourceServerAndGrant(t *testing.T) {
