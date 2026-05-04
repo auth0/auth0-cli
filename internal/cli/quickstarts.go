@@ -446,6 +446,90 @@ var (
 	}
 )
 
+// Flags for the setup-experimental command.
+var (
+	setupExpApp = Flag{
+		Name:     "App",
+		LongForm: "app",
+		Help:     "Create an Auth0 application (SPA, regular web, or native)",
+	}
+	setupExpName = Flag{
+		Name:     "Name",
+		LongForm: "name",
+		Help:     "Name of the Auth0 application",
+	}
+	setupExpType = Flag{
+		Name:     "Type",
+		LongForm: "type",
+		Help:     "Application type: spa, regular, native, or m2m",
+	}
+	setupExpFramework = Flag{
+		Name:     "Framework",
+		LongForm: "framework",
+		Help:     "Framework to configure (e.g., react, nextjs, vue, express)",
+	}
+	setupExpBuildTool = Flag{
+		Name:     "Build Tool",
+		LongForm: "build-tool",
+		Help:     "Build tool used by the project (vite, webpack, cra, none)",
+	}
+	setupExpPort = Flag{
+		Name:     "Port",
+		LongForm: "port",
+		Help:     "Local port the application runs on (default varies by framework, e.g. 3000, 5173)",
+	}
+	setupExpCallbackURL = Flag{
+		Name:     "Callback URL",
+		LongForm: "callback-url",
+		Help:     "Override the allowed callback URL for the application",
+	}
+	setupExpLogoutURL = Flag{
+		Name:     "Logout URL",
+		LongForm: "logout-url",
+		Help:     "Override the allowed logout URL for the application",
+	}
+	setupExpWebOriginURL = Flag{
+		Name:     "Web Origin URL",
+		LongForm: "web-origin-url",
+		Help:     "Override the allowed web origin URL for the application",
+	}
+	setupExpAPI = Flag{
+		Name:     "API",
+		LongForm: "api",
+		Help:     "Create an Auth0 API resource server",
+	}
+	setupExpIdentifier = Flag{
+		Name:     "Identifier",
+		LongForm: "identifier",
+		Help:     "Unique URL identifier for the API (audience), e.g. https://my-api",
+	}
+	setupExpAudience = Flag{
+		Name:     "Audience",
+		LongForm: "audience",
+		Help:     "Alias for --identifier (unique audience URL for the API)",
+	}
+	setupExpSigningAlg = Flag{
+		Name:     "Signing Algorithm",
+		LongForm: "signing-alg",
+		Help:     "[API] Token signing algorithm: RS256, PS256, or HS256 (leave blank to be prompted interactively)",
+	}
+	setupExpScopes = Flag{
+		Name:     "Scopes",
+		LongForm: "scopes",
+		Help:     "[API] Comma-separated list of permission scopes for the API",
+	}
+	setupExpTokenLifetime = Flag{
+		Name:     "Token Lifetime",
+		LongForm: "token-lifetime",
+		Help:     "[API] Access token lifetime in seconds (default: 86400 = 24 hours)",
+	}
+	setupExpOfflineAccess = Flag{
+		Name:     "Offline Access",
+		LongForm: "offline-access",
+		Help:     "Allow offline access (enables refresh tokens)",
+	}
+)
+
 // SetupInputs holds the user-provided inputs for the setup-experimental command.
 type SetupInputs struct {
 	Name          string
@@ -715,6 +799,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 			// LinkedAppClientID tracks which app client ID to link to the API
 			// (either a newly created app or one selected from the tenant).
 			var linkedAppClientID string
+			canPromptFlag := canPrompt(cmd)
 
 			// -- Step 1: Decide what to create (App / API / both) --
 			if !inputs.App && !inputs.API {
@@ -771,7 +856,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						inputs.BundleID = detection.BundleID
 					}
 				case detection.Detected:
-					noInputMode := !canPrompt(cmd)
+					noInputMode := !canPromptFlag
 					if len(detection.AmbiguousCandidates) > 1 {
 						// Multiple package.json deps matched - show partial summary and ask user to disambiguate.
 						cli.renderer.InfofBullet("Detected in current directory")
@@ -819,7 +904,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					}
 				default:
 					// No detection signal found - notify the user and pre-fill name from directory.
-					if !canPrompt(cmd) && inputs.Type == "" {
+					if !canPromptFlag && inputs.Type == "" {
 						if inputs.API {
 							return fmt.Errorf("auto-detection failed: when using --app and --api together with --no-input, --type must be specified")
 						}
@@ -834,7 +919,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 
 			// -- Step 3: Resolve remaining prompts for App / API --
 			// In non-interactive mode, --type alone is not enough; --framework is also required.
-			if !canPrompt(cmd) && inputs.App && inputs.Type != "" && inputs.Type != "m2m" && inputs.Framework == "" {
+			if !canPromptFlag && inputs.App && inputs.Type != "" && inputs.Type != "m2m" && inputs.Framework == "" {
 				return fmt.Errorf("--framework is required in non-interactive mode when --type is %s: use --framework flag", inputs.Type)
 			}
 			qsConfigKey, updatedInputs, wasAutoSelected, err := getQuickstartConfigKey(inputs)
@@ -853,7 +938,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					if defaultName == "" {
 						defaultName = "My App"
 					}
-					if canPrompt(cmd) {
+					if canPromptFlag {
 						q := prompt.TextInput("name", "Application name", "Name for the Auth0 application", defaultName, true)
 						if err := prompt.AskOne(q, &inputs.Name); err != nil {
 							return fmt.Errorf("failed to enter application name: %w", err)
@@ -872,7 +957,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 			}
 
 			// -- Step 3d: Prompt for port if not explicitly set --
-			if inputs.App && inputs.Type != "native" && inputs.Type != "m2m" && !cmd.Flags().Changed("port") && canPrompt(cmd) {
+			if inputs.App && inputs.Type != "native" && inputs.Type != "m2m" && !cmd.Flags().Changed("port") && canPromptFlag {
 				if inputs.Port == 0 {
 					inputs.Port = defaultPortForFramework(inputs.Framework)
 				}
@@ -907,7 +992,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					if defaultName == "" || defaultName == "." {
 						defaultName = "my-api"
 					}
-					if canPrompt(cmd) {
+					if canPromptFlag {
 						q := prompt.TextInput("name", "Application Name", "Name for the Auth0 API", defaultName, true)
 						if err := prompt.AskOne(q, &inputs.Name); err != nil {
 							return fmt.Errorf("failed to enter application name: %w", err)
@@ -930,7 +1015,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						slug := strings.ToLower(strings.ReplaceAll(inputs.Name, " ", "-"))
 						defaultID = "https://" + slug
 					}
-					if canPrompt(cmd) {
+					if canPromptFlag {
 						q := prompt.TextInput(
 							"identifier",
 							"Enter API Identifier (audience URL, identifiers must be unique within your tenant)",
@@ -961,7 +1046,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 
 				// If the flag was not set, prompt interactively; fall back to 86400 in non-interactive mode.
 				if inputs.TokenLifetime == "" {
-					if canPrompt(cmd) {
+					if canPromptFlag {
 						defaultLifetime := "86400"
 						q := prompt.TextInput("token-lifetime", "Access token lifetime (seconds)",
 							"How long access tokens remain valid (default: 86400 = 24 hours)", defaultLifetime, true)
@@ -978,7 +1063,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 
 				if inputs.SigningAlg == "" {
-					if canPrompt(cmd) {
+					if canPromptFlag {
 						signingAlgs := []string{"RS256", "PS256", "HS256"}
 						q := prompt.SelectInput("signing-alg", "Select the signing algorithm", "", signingAlgs, "RS256", true)
 						if err := prompt.AskOne(q, &inputs.SigningAlg); err != nil {
@@ -1022,7 +1107,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						appOptions = named
 					}
 
-					if canPrompt(cmd) {
+					if canPromptFlag {
 						var selectedAppName string
 						q := prompt.SelectInput(
 							"link-app",
@@ -1063,24 +1148,24 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 	}
 
 	// App flags.
-	cmd.Flags().BoolVar(&inputs.App, "app", false, "Create an Auth0 application (SPA, regular web, or native)")
-	cmd.Flags().StringVar(&inputs.Name, "name", "", "Name of the Auth0 application")
-	cmd.Flags().StringVar(&inputs.Type, "type", "", "Application type: spa, regular, native, or m2m")
-	cmd.Flags().StringVar(&inputs.Framework, "framework", "", "Framework to configure (e.g., react, nextjs, vue, express)")
-	cmd.Flags().StringVar(&inputs.BuildTool, "build-tool", "none", "Build tool used by the project (vite, webpack, cra, none)")
-	cmd.Flags().IntVar(&inputs.Port, "port", 0, "Local port the application runs on (default varies by framework, e.g. 3000, 5173)")
-	cmd.Flags().StringVar(&inputs.CallbackURL, "callback-url", "", "Override the allowed callback URL for the application")
-	cmd.Flags().StringVar(&inputs.LogoutURL, "logout-url", "", "Override the allowed logout URL for the application")
-	cmd.Flags().StringVar(&inputs.WebOriginURL, "web-origin-url", "", "Override the allowed web origin URL for the application")
+	setupExpApp.RegisterBool(cmd, &inputs.App, false)
+	setupExpName.RegisterString(cmd, &inputs.Name, "")
+	setupExpType.RegisterString(cmd, &inputs.Type, "")
+	setupExpFramework.RegisterString(cmd, &inputs.Framework, "")
+	setupExpBuildTool.RegisterString(cmd, &inputs.BuildTool, "none")
+	setupExpPort.RegisterInt(cmd, &inputs.Port, 0)
+	setupExpCallbackURL.RegisterString(cmd, &inputs.CallbackURL, "")
+	setupExpLogoutURL.RegisterString(cmd, &inputs.LogoutURL, "")
+	setupExpWebOriginURL.RegisterString(cmd, &inputs.WebOriginURL, "")
 
 	// API flags.
-	cmd.Flags().BoolVar(&inputs.API, "api", false, "Create an Auth0 API resource server")
-	cmd.Flags().StringVar(&inputs.Identifier, "identifier", "", "Unique URL identifier for the API (audience), e.g. https://my-api")
-	cmd.Flags().StringVar(&inputs.Audience, "audience", "", "Alias for --identifier (unique audience URL for the API)")
-	cmd.Flags().StringVar(&inputs.SigningAlg, "signing-alg", "", "[API] Token signing algorithm: RS256, PS256, or HS256 (leave blank to be prompted interactively)")
-	cmd.Flags().StringVar(&inputs.Scopes, "scopes", "", "[API] Comma-separated list of permission scopes for the API")
-	cmd.Flags().StringVar(&inputs.TokenLifetime, "token-lifetime", "", "[API] Access token lifetime in seconds (default: 86400 = 24 hours)")
-	cmd.Flags().BoolVar(&inputs.OfflineAccess, "offline-access", false, "Allow offline access (enables refresh tokens)")
+	setupExpAPI.RegisterBool(cmd, &inputs.API, false)
+	setupExpIdentifier.RegisterString(cmd, &inputs.Identifier, "")
+	setupExpAudience.RegisterString(cmd, &inputs.Audience, "")
+	setupExpSigningAlg.RegisterString(cmd, &inputs.SigningAlg, "")
+	setupExpScopes.RegisterString(cmd, &inputs.Scopes, "")
+	setupExpTokenLifetime.RegisterString(cmd, &inputs.TokenLifetime, "")
+	setupExpOfflineAccess.RegisterBool(cmd, &inputs.OfflineAccess, false)
 
 	return cmd
 }
