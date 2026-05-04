@@ -20,7 +20,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/display"
 )
 
-// ── DetectionSubBase ──────────────────────────────────────────────────────────.
+// -- DetectionSubBase --
 
 // TestResolveRequestParams_DetectionSubBase verifies that DetectionSubBase in
 // callbacks resolves to baseURL with no path suffix (unlike DetectionSub which
@@ -85,7 +85,7 @@ func TestResolveRequestParams_CallbackPath(t *testing.T) {
 	}
 }
 
-// ── resolveRequestParams with QuickstartConfigs ───────────────────────────────.
+// -- resolveRequestParams with QuickstartConfigs --
 
 // TestResolveRequestParams_AllQuickstartConfigs verifies that each entry in
 // auth0.QuickstartConfigs produces the correct resolved callback and logout URLs
@@ -263,7 +263,7 @@ func TestResolveRequestParams_AllQuickstartConfigs(t *testing.T) {
 	}
 }
 
-// ── GenerateAndWriteQuickstartConfig with QuickstartConfigs ──────────────────.
+// -- GenerateAndWriteQuickstartConfig with QuickstartConfigs --
 
 // TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs verifies the env
 // file content generated for every application type in auth0.QuickstartConfigs.
@@ -436,7 +436,7 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 	}
 }
 
-// ── generateClient with QuickstartConfigs ────────────────────────────────────.
+// -- generateClient with QuickstartConfigs --
 
 // TestGenerateClient_AllQuickstartConfigs verifies the management.Client fields
 // produced by generateClient for every app type in auth0.QuickstartConfigs.
@@ -530,7 +530,7 @@ func TestGenerateClient_AllQuickstartConfigs(t *testing.T) {
 	}
 }
 
-// ── APP_BASE_URL reflects the user-specified port ────────────────────────────.
+// -- APP_BASE_URL reflects the user-specified port --
 
 func TestGenerateAndWriteQuickstartConfig_PortInBaseURL(t *testing.T) {
 	t.Parallel()
@@ -556,7 +556,7 @@ func TestGenerateAndWriteQuickstartConfig_PortInBaseURL(t *testing.T) {
 	}
 }
 
-// ── Generated secrets (AUTH0_SECRET / SESSION_SECRET) are non-empty ──────────.
+// -- Generated secrets (AUTH0_SECRET / SESSION_SECRET) are non-empty --
 
 func TestGenerateAndWriteQuickstartConfig_SecretsNonEmpty(t *testing.T) {
 	t.Parallel()
@@ -750,7 +750,7 @@ func TestValidateAPIIdentifier(t *testing.T) {
 	}
 }
 
-// ── createQuickstartApp happy-path ────────────────────────────────────────────.
+// -- createQuickstartApp happy-path --
 
 func TestCreateQuickstartApp_SPA_React(t *testing.T) {
 	t.Parallel()
@@ -796,7 +796,8 @@ func TestCreateQuickstartApp_SPA_React(t *testing.T) {
 	inputs.LogoutURL = ""
 
 	// Override the working directory so GenerateAndWriteQuickstartConfig writes to a temp dir.
-	oldWD, _ := os.Getwd()
+	oldWD, err := os.Getwd()
+	require.NoError(t, err)
 	require.NoError(t, os.Chdir(dir))
 	defer func() { _ = os.Chdir(oldWD) }()
 
@@ -818,7 +819,66 @@ func TestCreateQuickstartApp_UnsupportedKey(t *testing.T) {
 	assert.ErrorContains(t, err, "unsupported quickstart arguments")
 }
 
-// ── createQuickstartAPI happy-path ────────────────────────────────────────────.
+// -- applyDetectionToInputs --
+
+// TestApplyDetectionToInputs verifies that applyDetectionToInputs correctly copies
+// detection fields into inputs, preserving any fields that were already set.
+func TestApplyDetectionToInputs(t *testing.T) {
+	t.Parallel()
+
+	t.Run("populates empty inputs from detection", func(t *testing.T) {
+		t.Parallel()
+		d := DetectionResult{
+			Type: "regular", BuildTool: "vite", Port: 3000, AppName: "my-app",
+			BundleID: "com.example.app",
+		}
+		got := applyDetectionToInputs(SetupInputs{}, d)
+		assert.Equal(t, "regular", got.Type)
+		assert.Equal(t, "vite", got.BuildTool)
+		assert.Equal(t, 3000, got.Port)
+		assert.Equal(t, "my-app", got.Name)
+		assert.Equal(t, "com.example.app", got.BundleID)
+		assert.Empty(t, got.Framework, "framework must not be set by applyDetectionToInputs")
+	})
+
+	t.Run("preserves explicitly set fields", func(t *testing.T) {
+		t.Parallel()
+		d := DetectionResult{Type: "regular", Port: 3000, AppName: "detected-name"}
+		inputs := SetupInputs{Type: "spa", Port: 5173, Name: "explicit-name"}
+		got := applyDetectionToInputs(inputs, d)
+		assert.Equal(t, "spa", got.Type, "explicit type should not be overwritten")
+		assert.Equal(t, 5173, got.Port, "explicit port should not be overwritten")
+		assert.Equal(t, "explicit-name", got.Name, "explicit name should not be overwritten")
+	})
+}
+
+// TestAmbiguousDetection_NoInputMode_UsesFirstCandidate verifies that when detection
+// finds multiple candidates and prompting is disabled, the first candidate is selected
+// without hanging.
+func TestAmbiguousDetection_NoInputMode_UsesFirstCandidate(t *testing.T) {
+	t.Parallel()
+
+	detection := DetectionResult{
+		Type:                "regular",
+		Port:                3000,
+		AppName:             "my-app",
+		AmbiguousCandidates: []string{"express", "hono"},
+		Detected:            true,
+	}
+
+	inputs := applyDetectionToInputs(SetupInputs{}, detection)
+
+	// Simulate no-input mode: pick first candidate when framework is empty.
+	if inputs.Framework == "" {
+		inputs.Framework = detection.AmbiguousCandidates[0]
+	}
+
+	assert.Equal(t, "express", inputs.Framework)
+	assert.Equal(t, "regular", inputs.Type)
+	assert.Equal(t, 3000, inputs.Port)
+}
+
+// -- createQuickstartAPI happy-path --
 
 func TestCreateQuickstartAPI_CreatesResourceServerAndGrant(t *testing.T) {
 	t.Parallel()

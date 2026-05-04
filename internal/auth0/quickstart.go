@@ -24,7 +24,12 @@ const (
 	quickstartsDefaultCallbackURL = "https://YOUR_APP/callback"
 )
 
-var quickstartHTTPClient = &http.Client{Timeout: 30 * time.Second}
+const (
+	quickstartHTTPTimeout = 30 * time.Second
+	maxDownloadSize       = 100 * 1024 * 1024 // 100 MB
+)
+
+var quickstartHTTPClient = &http.Client{Timeout: quickstartHTTPTimeout}
 
 type Quickstarts []Quickstart
 
@@ -75,6 +80,10 @@ func (q Quickstart) Download(ctx context.Context, downloadPath string, client *m
 		return err
 	}
 
+	defer func() {
+		_ = response.Body.Close()
+	}()
+
 	if response.StatusCode != http.StatusOK {
 		return fmt.Errorf("expected status %d, got %d", http.StatusOK, response.StatusCode)
 	}
@@ -90,7 +99,7 @@ func (q Quickstart) Download(ctx context.Context, downloadPath string, client *m
 		return err
 	}
 
-	_, err = io.Copy(tmpFile, io.LimitReader(response.Body, 100*1024*1024))
+	_, err = io.Copy(tmpFile, io.LimitReader(response.Body, maxDownloadSize))
 	if err != nil {
 		return err
 	}
@@ -211,7 +220,7 @@ type AppConfig struct {
 
 var QuickstartConfigs = map[string]AppConfig{
 
-	// ==========================================.
+	// ==========================================
 	"spa:react:vite": {
 		EnvValues: map[string]string{
 			"VITE_AUTH0_DOMAIN":    DetectionSub,
@@ -297,7 +306,7 @@ var QuickstartConfigs = map[string]AppConfig{
 		Strategy: FileOutputStrategy{Path: "lib/auth_config.dart", Format: "dart"},
 	},
 
-	// ==========================================.
+	// ==========================================
 	"regular:nextjs:none": {
 		EnvValues: map[string]string{
 			"AUTH0_DOMAIN":        DetectionSub,
@@ -611,15 +620,18 @@ var QuickstartConfigs = map[string]AppConfig{
 		Strategy: FileOutputStrategy{Path: "config/auth0.yml", Format: "rails-yaml"},
 	},
 
-	// ==========================================.
+	// ==========================================
+	// Native/mobile apps: most use custom URI scheme callbacks derived from the bundle
+	// identifier, which is not known at setup time. For those, Callbacks and
+	// AllowedLogoutURLs are left empty so Auth0 does not register an incorrect URL;
+	// the user must add the correct callback URL in the Auth0 Dashboard after setup.
+	// Exceptions: Expo uses exp://localhost:19000 (Expo Go), and Ionic/Capacitor uses
+	// http://localhost (Capacitor WebView intercept).
 	"native:flutter:none": {
 		EnvValues: map[string]string{
 			"domain":   DetectionSub,
 			"clientId": DetectionSub,
 		},
-		// Flutter uses custom URI scheme callbacks (e.g. com.example.app://domain/ios/.../callback).
-		// The bundle identifier is not known at setup time, so callbacks are left empty;
-		// the user must add their specific callback URL in the Auth0 dashboard.
 		RequestParams: RequestParams{
 			AppType:           "native",
 			Callbacks:         []string{},
@@ -633,9 +645,6 @@ var QuickstartConfigs = map[string]AppConfig{
 			"AUTH0_DOMAIN":    DetectionSub,
 			"AUTH0_CLIENT_ID": DetectionSub,
 		},
-		// React Native uses custom URI scheme callbacks based on the bundle identifier.
-		// The bundle identifier is not known at setup time, so callbacks are left empty;
-		// the user must add their specific callback URL in the Auth0 dashboard.
 		RequestParams: RequestParams{
 			AppType:           "native",
 			Callbacks:         []string{},
@@ -663,7 +672,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			"domain":   DetectionSub,
 			"clientId": DetectionSub,
 		},
-		// Capacitor (used by Ionic) intercepts http://localhost redirects in the WebView.
+		// Capacitor intercepts http://localhost redirects in the WebView.
 		RequestParams: RequestParams{
 			AppType:           "native",
 			Callbacks:         []string{"http://localhost"},
@@ -677,7 +686,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			"VITE_AUTH0_DOMAIN":    DetectionSub,
 			"VITE_AUTH0_CLIENT_ID": DetectionSub,
 		},
-		// Capacitor (used by Ionic) intercepts http://localhost redirects in the WebView.
+		// Capacitor intercepts http://localhost redirects in the WebView.
 		RequestParams: RequestParams{
 			AppType:           "native",
 			Callbacks:         []string{"http://localhost"},
@@ -691,7 +700,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			"VITE_AUTH0_DOMAIN":    DetectionSub,
 			"VITE_AUTH0_CLIENT_ID": DetectionSub,
 		},
-		// Capacitor (used by Ionic) intercepts http://localhost redirects in the WebView.
+		// Capacitor intercepts http://localhost redirects in the WebView.
 		RequestParams: RequestParams{
 			AppType:           "native",
 			Callbacks:         []string{"http://localhost"},
@@ -705,9 +714,6 @@ var QuickstartConfigs = map[string]AppConfig{
 			"Auth0:Domain":   DetectionSub,
 			"Auth0:ClientId": DetectionSub,
 		},
-		// .NET Mobile (Android/iOS) uses custom URI scheme callbacks based on the bundle identifier.
-		// The bundle identifier is not known at setup time, so callbacks are left empty;
-		// the user must add their specific callback URL in the Auth0 dashboard.
 		RequestParams: RequestParams{
 			AppType:           "native",
 			Callbacks:         []string{},
@@ -721,9 +727,6 @@ var QuickstartConfigs = map[string]AppConfig{
 			"Auth0:Domain":   DetectionSub,
 			"Auth0:ClientId": DetectionSub,
 		},
-		// MAUI uses custom URI scheme callbacks based on the bundle identifier.
-		// The bundle identifier is not known at setup time, so callbacks are left empty;
-		// the user must add their specific callback URL in the Auth0 dashboard.
 		RequestParams: RequestParams{
 			AppType:           "native",
 			Callbacks:         []string{},
@@ -754,12 +757,11 @@ var QuickstartConfigs = map[string]AppConfig{
 		EnvValues: map[string]string{
 			"com_auth0_domain":    DetectionSub,
 			"com_auth0_client_id": DetectionSub,
-			// Com_auth0_scheme is always "https" for App Links (HTTPS callback scheme).
+			// com_auth0_scheme is always "https" for App Links (HTTPS callback scheme).
 			"com_auth0_scheme": "https",
 		},
 		// Android uses App Links (https://<domain>/android/<packageName>/callback).
-		// The package name is not known at setup time, so callbacks are left empty;
-		// the user must add the full App Link URL in the Auth0 dashboard.
+		// Package name is not known at setup time; user must add the URL in the Auth0 Dashboard.
 		RequestParams: RequestParams{
 			AppType:           "native",
 			Callbacks:         []string{},
@@ -773,9 +775,8 @@ var QuickstartConfigs = map[string]AppConfig{
 			"ClientId": DetectionSub,
 			"Domain":   DetectionSub,
 		},
-		// IOS Swift uses universal links or custom URI scheme callbacks based on the
-		// bundle identifier. The bundle identifier is not known at setup time, so
-		// callbacks are left empty; the user must add the callback URL in the Auth0 dashboard.
+		// iOS Swift uses universal links or custom URI scheme callbacks based on the bundle
+		// identifier. Bundle ID is not known at setup time; user must add URL in Auth0 Dashboard.
 		RequestParams: RequestParams{
 			AppType:           "native",
 			Callbacks:         []string{},
@@ -785,7 +786,7 @@ var QuickstartConfigs = map[string]AppConfig{
 		Strategy: FileOutputStrategy{Path: "Auth0.plist", Format: "plist"},
 	},
 
-	// ==========================================.
+	// ==========================================
 	// M2M apps use the client_credentials flow — no frontend, no port, no callback URLs.
 	"m2m:none:none": {
 		EnvValues: map[string]string{

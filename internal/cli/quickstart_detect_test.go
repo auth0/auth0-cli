@@ -13,7 +13,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-// ── test helpers ─────────────────────────────────────────────────────────────.
+// -- test helpers --
 
 func writeTestFile(t *testing.T, dir, name, content string) {
 	t.Helper()
@@ -25,7 +25,7 @@ func mkTestDir(t *testing.T, dir, sub string) {
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, sub), 0755))
 }
 
-// ── QuickstartConfig invariants ───────────────────────────────────────────────.
+// -- QuickstartConfig invariants --
 
 // TestSvelteKitViteAndNoneShareConfig verifies that regular:sveltekit:vite and
 // regular:sveltekit:none use the same server-side env var keys. Both configs
@@ -55,7 +55,7 @@ func TestWPFWinformsConfigHasNoClientSecret(t *testing.T) {
 	assert.False(t, hasSecret, "native:wpf-winforms:none must not have Auth0:ClientSecret")
 }
 
-// ── DetectProject – no signal ────────────────────────────────────────────────.
+// -- DetectProject - no signal --
 
 func TestDetectProject_NoDetection(t *testing.T) {
 	dir := t.TempDir()
@@ -65,7 +65,7 @@ func TestDetectProject_NoDetection(t *testing.T) {
 	assert.Empty(t, got.Type)
 }
 
-// ── DetectProject – SPA ──────────────────────────────────────────────────────.
+// -- DetectProject - SPA --
 
 // Auth0 qs setup --app --type spa --framework react --build-tool vite.
 func TestDetectProject_React(t *testing.T) {
@@ -194,7 +194,7 @@ func TestDetectProject_PubspecWithoutFlutter(t *testing.T) {
 	assert.False(t, got.Detected)
 }
 
-// ── DetectProject – Regular Web Apps ────────────────────────────────────────.
+// -- DetectProject - Regular Web Apps --
 
 // Auth0 qs setup --app --type regular --framework nextjs.
 func TestDetectProject_NextJS_ConfigJS(t *testing.T) {
@@ -213,6 +213,7 @@ func TestDetectProject_NextJS_ConfigTS(t *testing.T) {
 	writeTestFile(t, dir, "next.config.ts", "")
 
 	got := DetectProject(dir)
+	assert.True(t, got.Detected)
 	assert.Equal(t, "nextjs", got.Framework)
 	assert.Equal(t, "regular", got.Type)
 }
@@ -222,6 +223,7 @@ func TestDetectProject_NextJS_ConfigMJS(t *testing.T) {
 	writeTestFile(t, dir, "next.config.mjs", "")
 
 	got := DetectProject(dir)
+	assert.True(t, got.Detected)
 	assert.Equal(t, "nextjs", got.Framework)
 }
 
@@ -242,6 +244,7 @@ func TestDetectProject_Nuxt_ConfigJS(t *testing.T) {
 	writeTestFile(t, dir, "nuxt.config.js", "")
 
 	got := DetectProject(dir)
+	assert.True(t, got.Detected)
 	assert.Equal(t, "nuxt", got.Framework)
 }
 
@@ -518,7 +521,7 @@ func TestDetectProject_Laravel(t *testing.T) {
 	assert.Equal(t, 8000, got.Port)
 }
 
-// ── DetectProject – Native / Mobile ─────────────────────────────────────────.
+// -- DetectProject - Native / Mobile --
 
 // Auth0 qs setup --app --type native --framework flutter.
 func TestDetectProject_Flutter(t *testing.T) {
@@ -810,7 +813,7 @@ func TestDetectProject_FlaskTakesPriorityOverDjango(t *testing.T) {
 	assert.Equal(t, "vanilla-python", got.Framework)
 }
 
-// ── DetectProject – priority rules ──────────────────────────────────────────.
+// -- DetectProject - priority rules --
 
 // angular.json beats package.json deps (checked first).
 func TestDetectProject_AngularPriorityOverPackageJSON(t *testing.T) {
@@ -927,7 +930,7 @@ func TestDetectProject_JavaEE_JakartaPlatform(t *testing.T) {
 }
 
 // Bug 10: dotnet new mvc on .NET 6+ does NOT generate a Microsoft.AspNetCore.Mvc
-// PackageReference — it only sets Sdk="Microsoft.NET.Sdk.Web". Must still detect as aspnet-mvc.
+// PackageReference - it only sets Sdk="Microsoft.NET.Sdk.Web". Must still detect as aspnet-mvc.
 func TestDetectProject_AspnetMVC_DotNet6NoPkgRef(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "MyApp.csproj",
@@ -950,7 +953,7 @@ func TestDetectProject_LaravelBeatsViteConfig(t *testing.T) {
 	assert.Equal(t, "regular", got.Type)
 }
 
-// ── DetectProject – app name detection ──────────────────────────────────────.
+// -- DetectProject - app name detection --
 
 func TestDetectProject_AppNameFromPackageJSON(t *testing.T) {
 	dir := t.TempDir()
@@ -993,7 +996,7 @@ func TestDetectProject_AppNameFromPomArtifactID(t *testing.T) {
 	assert.Equal(t, "my-java-app", got.AppName)
 }
 
-// ── readExpoScheme ────────────────────────────────────────────────────────────.
+// -- readExpoScheme --
 
 func TestReadExpoScheme(t *testing.T) {
 	t.Run("reads scheme field", func(t *testing.T) {
@@ -1043,7 +1046,7 @@ func TestReadExpoScheme(t *testing.T) {
 	})
 }
 
-// ── detectFromCsproj ─────────────────────────────────────────────────────────.
+// -- detectFromCsproj --
 
 func TestDetectFromCsproj(t *testing.T) {
 	tests := []struct {
@@ -1155,7 +1158,7 @@ func TestDetectFromCsproj(t *testing.T) {
 	}
 }
 
-// ── detectJavaFramework ──────────────────────────────────────────────────────.
+// -- detectJavaFramework --
 
 func TestDetectJavaFramework(t *testing.T) {
 	tests := []struct {
@@ -1217,7 +1220,7 @@ func TestDetectJavaFramework(t *testing.T) {
 	}
 }
 
-// ── collectPackageJSONCandidates ─────────────────────────────────────────────.
+// -- collectPackageJSONCandidates --
 
 func TestCollectPackageJSONCandidates(t *testing.T) {
 	t.Run("react_native", func(t *testing.T) {
@@ -1268,7 +1271,7 @@ func TestCollectPackageJSONCandidates(t *testing.T) {
 	})
 }
 
-// ── detectionFriendlyAppType ─────────────────────────────────────────────────.
+// -- detectionFriendlyAppType --
 
 func TestDetectionFriendlyAppType(t *testing.T) {
 	assert.Equal(t, "Single Page App", detectionFriendlyAppType("spa"))
@@ -1279,7 +1282,7 @@ func TestDetectionFriendlyAppType(t *testing.T) {
 	assert.Equal(t, "", detectionFriendlyAppType(""))
 }
 
-// ── readGoModuleName ─────────────────────────────────────────────────────────.
+// -- readGoModuleName --
 
 func TestReadGoModuleName(t *testing.T) {
 	t.Run("returns last path segment", func(t *testing.T) {
@@ -1299,7 +1302,7 @@ func TestReadGoModuleName(t *testing.T) {
 	})
 }
 
-// ── readPyprojectName ────────────────────────────────────────────────────────.
+// -- readPyprojectName --
 
 func TestReadPyprojectName(t *testing.T) {
 	t.Run("reads project name", func(t *testing.T) {
@@ -1313,7 +1316,7 @@ func TestReadPyprojectName(t *testing.T) {
 	})
 }
 
-// ── readPubspecName ──────────────────────────────────────────────────────────.
+// -- readPubspecName --
 
 func TestReadPubspecName(t *testing.T) {
 	t.Run("reads name field", func(t *testing.T) {
@@ -1327,7 +1330,7 @@ func TestReadPubspecName(t *testing.T) {
 	})
 }
 
-// ── readComposerName ─────────────────────────────────────────────────────────.
+// -- readComposerName --
 
 func TestReadComposerName(t *testing.T) {
 	t.Run("returns part after slash", func(t *testing.T) {
@@ -1347,7 +1350,7 @@ func TestReadComposerName(t *testing.T) {
 	})
 }
 
-// ── readPomArtifactID ────────────────────────────────────────────────────────.
+// -- readPomArtifactID --
 
 func TestReadPomArtifactID(t *testing.T) {
 	t.Run("reads first artifactId", func(t *testing.T) {
@@ -1368,7 +1371,7 @@ func TestReadPomArtifactID(t *testing.T) {
 	})
 }
 
-// ── readPackageJSONName ──────────────────────────────────────────────────────.
+// -- readPackageJSONName --
 
 func TestReadPackageJSONName(t *testing.T) {
 	t.Run("reads name field", func(t *testing.T) {
@@ -1388,7 +1391,7 @@ func TestReadPackageJSONName(t *testing.T) {
 	})
 }
 
-// ── defaultPortForFramework ──────────────────────────────────────────────────.
+// -- defaultPortForFramework --
 
 func TestDefaultPortForFramework(t *testing.T) {
 	tests := []struct {
@@ -1402,16 +1405,16 @@ func TestDefaultPortForFramework(t *testing.T) {
 		{"vanilla-javascript", 5173},
 		// SPA non-vite.
 		{"angular", 4200},
-		// Regular – Python.
+		// Regular - Python.
 		{"vanilla-python", 5000},
 		{"flask", 5000},
-		// Regular – PHP.
+		// Regular - PHP.
 		{"laravel", 8000},
-		// Regular – Java.
+		// Regular - Java.
 		{"spring-boot", 8080},
 		{"java-ee", 8080},
 		{"vanilla-java", 8080},
-		// Regular – default 3000.
+		// Regular - default 3000.
 		{"nextjs", 3000},
 		{"nuxt", 3000},
 		{"express", 3000},
@@ -1421,7 +1424,7 @@ func TestDefaultPortForFramework(t *testing.T) {
 		{"rails", 3000},
 		{"vanilla-go", 3000},
 		{"django", 8000},
-		// Native – default 3000.
+		// Native - default 3000.
 		{"flutter", 3000},
 		{"react-native", 3000},
 		{"expo", 3000},
@@ -1436,7 +1439,7 @@ func TestDefaultPortForFramework(t *testing.T) {
 	}
 }
 
-// ── frameworksForType ────────────────────────────────────────────────────────.
+// -- frameworksForType --
 
 func TestFrameworksForType(t *testing.T) {
 	t.Run("spa", func(t *testing.T) {
@@ -1491,7 +1494,7 @@ func TestFrameworksForType(t *testing.T) {
 	})
 }
 
-// ── getQuickstartConfigKey ────────────────────────────────────────────────────
+// getQuickstartConfigKey 
 //
 // Tests cover all framework/type/buildTool combinations from the requirements
 // table. All inputs are fully populated to avoid interactive prompts.
@@ -1504,7 +1507,7 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 		wantBuildTool  string
 		wantAutoSelect bool
 	}{
-		// ── SPA ─────────────────────────────────────────────────────────────.
+		//SPA .
 		// Auth0 qs setup --app --type spa --framework react --build-tool vite.
 		{
 			name:          "spa react vite",
@@ -1555,7 +1558,7 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 			wantBuildTool: "none",
 		},
 
-		// ── Regular ──────────────────────────────────────────────────────────
+		//Regular 
 		// Auth0 qs setup --app --type regular --framework nextjs.
 		{
 			name:          "regular nextjs none",
@@ -1683,7 +1686,7 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 			wantBuildTool: "none",
 		},
 
-		// ── Native ───────────────────────────────────────────────────────────
+		//Native 
 		// Auth0 qs setup --app --type native --framework flutter.
 		{
 			name:          "native flutter none",
@@ -1748,7 +1751,7 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 			wantBuildTool: "none",
 		},
 
-		// ── API-only: no app ────────────────────────────────────────────────.
+		//API-only: no app .
 		{
 			name:    "api-only returns empty key",
 			inputs:  SetupInputs{App: false, API: true},
@@ -1777,7 +1780,7 @@ func TestGetQuickstartConfigKey_EmptyBuildToolTreatedAsNone(t *testing.T) {
 	assert.Equal(t, "regular:nextjs:none", key)
 }
 
-// ── resolveRequestParams ─────────────────────────────────────────────────────.
+// -- resolveRequestParams --
 
 func TestResolveRequestParams(t *testing.T) {
 	const sub = auth0.DetectionSub
@@ -1828,7 +1831,7 @@ func TestResolveRequestParams(t *testing.T) {
 	})
 }
 
-// ── replaceDetectionSub ──────────────────────────────────────────────────────.
+// -- replaceDetectionSub --
 
 func TestReplaceDetectionSub(t *testing.T) {
 	const sub = auth0.DetectionSub
@@ -1968,7 +1971,7 @@ func TestReplaceDetectionSub(t *testing.T) {
 	})
 }
 
-// ── buildNestedMap ───────────────────────────────────────────────────────────.
+// -- buildNestedMap --
 
 func TestBuildNestedMap(t *testing.T) {
 	t.Run("dot-delimited keys produce nested structure", func(t *testing.T) {
@@ -1999,9 +2002,24 @@ func TestBuildNestedMap(t *testing.T) {
 		got := buildNestedMap(map[string]string{})
 		assert.Empty(t, got)
 	})
+
+	t.Run("leaf key and nested key under same prefix do not panic", func(t *testing.T) {
+		// "a" is a leaf (string) but "a.b" tries to descend into "a". The guarded
+		// type assertion must recover and create a new nested map rather than panic.
+		flat := map[string]string{
+			"a":   "leaf-value",
+			"a.b": "nested-value",
+		}
+		// Must not panic; result should at minimum contain the nested key.
+		got := buildNestedMap(flat)
+		require.NotNil(t, got)
+		aVal, ok := got["a"].(map[string]interface{})
+		require.True(t, ok, "expected 'a' to be promoted to a nested map")
+		assert.Equal(t, "nested-value", aVal["b"])
+	})
 }
 
-// ── sortedKeys ───────────────────────────────────────────────────────────────.
+// -- sortedKeys --
 
 func TestSortedKeys(t *testing.T) {
 	m := map[string]string{"beta": "b", "alpha": "a", "gamma": "g", "delta": "d"}
@@ -2013,7 +2031,7 @@ func TestSortedKeys_EmptyMap(t *testing.T) {
 	assert.Empty(t, sortedKeys(map[string]string{}))
 }
 
-// ── GenerateAndWriteQuickstartConfig ─────────────────────────────────────────.
+// -- GenerateAndWriteQuickstartConfig --
 
 func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 	clientID := "cid-123"
@@ -2031,7 +2049,7 @@ func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 		port         int
 		checkContent func(t *testing.T, content string)
 	}{
-		// Dotenv – covers React, Vue, Svelte, Vanilla JS, Next.js, Nuxt, etc.
+		// Dotenv - covers React, Vue, Svelte, Vanilla JS, Next.js, Nuxt, etc.
 		{
 			name:     "dotenv format",
 			strategy: auth0.FileOutputStrategy{Format: "dotenv"},
@@ -2045,7 +2063,7 @@ func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 				assert.Contains(t, content, `AUTH0_CLIENT_ID="cid-123"`)
 			},
 		},
-		// TypeScript environment file – covers Angular, Ionic Angular.
+		// TypeScript environment file - covers Angular, Ionic Angular.
 		{
 			name:     "ts format",
 			strategy: auth0.FileOutputStrategy{Format: "ts"},
@@ -2060,7 +2078,7 @@ func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 				assert.Contains(t, content, "clientId: 'cid-123'")
 			},
 		},
-		// Dart – covers Flutter and Flutter Web.
+		// Dart - covers Flutter and Flutter Web.
 		{
 			name:     "dart format",
 			strategy: auth0.FileOutputStrategy{Format: "dart"},
@@ -2075,7 +2093,7 @@ func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 				assert.Contains(t, content, "'clientId': 'cid-123'")
 			},
 		},
-		// YAML – covers Spring Boot (application.yml).
+		// YAML - covers Spring Boot (application.yml).
 		{
 			name:     "yaml format",
 			strategy: auth0.FileOutputStrategy{Format: "yaml"},
@@ -2092,7 +2110,7 @@ func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 				assert.Contains(t, content, "cid-123")
 			},
 		},
-		// JSON – covers ASP.NET Core MVC, Blazor, dotnet-mobile, MAUI, WPF.
+		// JSON - covers ASP.NET Core MVC, Blazor, dotnet-mobile, MAUI, WPF.
 		{
 			name:     "json format",
 			strategy: auth0.FileOutputStrategy{Format: "json"},
@@ -2109,7 +2127,7 @@ func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 				assert.Contains(t, content, `"cid-123"`)
 			},
 		},
-		// XML – covers ASP.NET OWIN (Web.config).
+		// XML - covers ASP.NET OWIN (Web.config).
 		{
 			name:     "xml format",
 			strategy: auth0.FileOutputStrategy{Format: "xml"},
@@ -2129,7 +2147,7 @@ func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 				assert.Contains(t, content, `value="csecret-456"`)
 			},
 		},
-		// Properties format – covers vanilla-java, java-ee (application.properties).
+		// Properties format - covers vanilla-java, java-ee (application.properties).
 		{
 			name:     "properties format",
 			strategy: auth0.FileOutputStrategy{Format: "properties"},
@@ -2187,7 +2205,92 @@ func TestGenerateAndWriteQuickstartConfig_CreatesSubdirectory(t *testing.T) {
 	assert.NoError(t, statErr, "subdirectory should have been created")
 }
 
-// ── generateClient ───────────────────────────────────────────────────────────.
+// TestGenerateAndWriteQuickstartConfig_SpecialChars verifies that special characters
+// in resolved values are properly escaped in XML, TS, and Dart output formats.
+func TestGenerateAndWriteQuickstartConfig_SpecialChars(t *testing.T) {
+	t.Parallel()
+
+	// Use a client whose secret contains XML/quote special characters to exercise escaping.
+	clientID := "cid&<>\"'"
+	clientSecret := "secret&<>\"'"
+	client := &management.Client{
+		ClientID:     &clientID,
+		ClientSecret: &clientSecret,
+	}
+	const domain = "tenant.auth0.com"
+
+	t.Run("xml format escapes special characters", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		strategy := auth0.FileOutputStrategy{
+			Path:   filepath.Join(dir, "Web.config"),
+			Format: "xml",
+		}
+		envValues := map[string]string{
+			"auth0:Domain":       auth0.DetectionSub,
+			"auth0:ClientId":     auth0.DetectionSub,
+			"auth0:ClientSecret": auth0.DetectionSub,
+		}
+		_, _, err := GenerateAndWriteQuickstartConfig(&strategy, envValues, domain, client, 3000)
+		require.NoError(t, err)
+
+		data, err := os.ReadFile(strategy.Path)
+		require.NoError(t, err)
+		content := string(data)
+		// The raw special characters must not appear unescaped in the XML value.
+		assert.NotContains(t, content, `value="cid&<>"`)
+		// Proper XML entities should be present.
+		assert.Contains(t, content, "cid&amp;&lt;&gt;")
+	})
+
+	t.Run("ts format escapes single quotes in values", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		strategy := auth0.FileOutputStrategy{
+			Path:   filepath.Join(dir, "environment.ts"),
+			Format: "ts",
+		}
+		// Inject a value that contains a single quote.
+		clientIDWithQuote := "cid-with'-quote"
+		clientWithQuote := &management.Client{ClientID: &clientIDWithQuote}
+		envValues := map[string]string{
+			"domain":   auth0.DetectionSub,
+			"clientId": auth0.DetectionSub,
+		}
+		_, _, err := GenerateAndWriteQuickstartConfig(&strategy, envValues, domain, clientWithQuote, 4200)
+		require.NoError(t, err)
+
+		data, err := os.ReadFile(strategy.Path)
+		require.NoError(t, err)
+		content := string(data)
+		// Single quote in the value must be escaped so the TS file remains valid.
+		assert.Contains(t, content, `cid-with\'-quote`)
+	})
+
+	t.Run("dart format escapes single quotes in values", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		strategy := auth0.FileOutputStrategy{
+			Path:   filepath.Join(dir, "auth_config.dart"),
+			Format: "dart",
+		}
+		clientIDWithQuote := "cid-with'-quote"
+		clientWithQuote := &management.Client{ClientID: &clientIDWithQuote}
+		envValues := map[string]string{
+			"domain":   auth0.DetectionSub,
+			"clientId": auth0.DetectionSub,
+		}
+		_, _, err := GenerateAndWriteQuickstartConfig(&strategy, envValues, domain, clientWithQuote, 3000)
+		require.NoError(t, err)
+
+		data, err := os.ReadFile(strategy.Path)
+		require.NoError(t, err)
+		content := string(data)
+		assert.Contains(t, content, `cid-with\'-quote`)
+	})
+}
+
+// -- generateClient --
 
 func TestGenerateClient(t *testing.T) {
 	const sub = auth0.DetectionSub
@@ -2234,7 +2337,7 @@ func TestGenerateClient(t *testing.T) {
 				Callbacks:         []string{sub},
 				AllowedLogoutURLs: []string{sub},
 				Name:              sub,
-				// No WebOrigins — angular doesn't need them.
+				// No WebOrigins - angular doesn't need them.
 			},
 			wantName:       "Angular App",
 			wantAppType:    "spa",
@@ -2397,7 +2500,7 @@ func TestGenerateClient_CustomMetadataNotOverwritten(t *testing.T) {
 	assert.NotContains(t, *client.ClientMetadata, "created_by")
 }
 
-// ── getSupportedQuickstartTypes ──────────────────────────────────────────────.
+// -- getSupportedQuickstartTypes --
 
 func TestGetSupportedQuickstartTypes(t *testing.T) {
 	types := getSupportedQuickstartTypes()
@@ -2452,7 +2555,7 @@ func TestGetSupportedQuickstartTypes(t *testing.T) {
 	}
 }
 
-// ── setupQuickstartCmdExperimental – command-level interaction flows ───────────
+// setupQuickstartCmdExperimental - command-level interaction flows 
 //
 // These tests exercise the RunE handler to verify the 7 top-level interaction
 // flow paths. Because setupWithAuthentication reads ~/ config, we redirect
@@ -2512,7 +2615,7 @@ func TestSetupQuickstartCmdExperimental_AppAndAPIAuthRequired(t *testing.T) {
 	assert.EqualError(t, err, "authentication required: config.json file is missing")
 }
 
-// flow 4: SPA frameworks – each framework/build-tool combo requires auth.
+// flow 4: SPA frameworks - each framework/build-tool combo requires auth.
 func TestSetupQuickstartCmdExperimental_SPAFrameworks(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
@@ -2634,7 +2737,7 @@ func TestSetupQuickstartCmdExperimental_NativeFrameworks(t *testing.T) {
 	}
 }
 
-// flow 7: auto-detection path – the command reads from CWD, which is controlled
+// flow 7: auto-detection path - the command reads from CWD, which is controlled
 // by the caller; with no auth config the command still fails at auth before
 // attempting detection.
 func TestSetupQuickstartCmdExperimental_DetectionPathAuthRequired(t *testing.T) {
@@ -2673,7 +2776,7 @@ func TestGenerateAndWriteQuickstartConfig_NilStrategyDefaultsToDotenv(t *testing
 	assert.Equal(t, ".env", fileName)
 }
 
-// ── readMobileBundleID ───────────────────────────────────────────────────────.
+// -- readMobileBundleID --
 
 func TestReadMobileBundleID(t *testing.T) {
 	t.Run("reads applicationId from android/app/build.gradle (double quotes)", func(t *testing.T) {
@@ -2742,7 +2845,7 @@ func TestReadMobileBundleID(t *testing.T) {
 	})
 }
 
-// ── extractGradleApplicationID single-quote support ───────────────────────────.
+// -- extractGradleApplicationID single-quote support --
 
 func TestExtractGradleApplicationID_SingleQuotes(t *testing.T) {
 	tests := []struct {
@@ -2754,7 +2857,7 @@ func TestExtractGradleApplicationID_SingleQuotes(t *testing.T) {
 		{"single quotes", `applicationId 'com.example.single'`, "com.example.single"},
 		{"with whitespace", `applicationId  "com.example.space"`, "com.example.space"},
 		{"not present", `minSdkVersion 21`, ""},
-		{"mixed — double wins (first match)", `applicationId "com.example.first"
+		{"mixed - double wins (first match)", `applicationId "com.example.first"
 applicationId 'com.example.second'`, "com.example.first"},
 	}
 	for _, tc := range tests {
@@ -2765,7 +2868,7 @@ applicationId 'com.example.second'`, "com.example.first"},
 	}
 }
 
-// ── readIOSBundleID ───────────────────────────────────────────────────────────.
+// -- readIOSBundleID --
 
 func TestReadIOSBundleID(t *testing.T) {
 	t.Run("reads PRODUCT_BUNDLE_IDENTIFIER from project.pbxproj", func(t *testing.T) {
@@ -2798,7 +2901,7 @@ func TestReadIOSBundleID(t *testing.T) {
 	})
 }
 
-// ── extractPbxprojBundleID ────────────────────────────────────────────────────.
+// -- extractPbxprojBundleID --
 
 func TestExtractPbxprojBundleID(t *testing.T) {
 	tests := []struct {
@@ -2812,7 +2915,7 @@ func TestExtractPbxprojBundleID(t *testing.T) {
 			want:    "com.example.app",
 		},
 		{
-			name: "test target appears first — skipped, app target returned",
+			name: "test target appears first - skipped, app target returned",
 			content: `PRODUCT_BUNDLE_IDENTIFIER = com.example.app.RunnerTests;
 PRODUCT_BUNDLE_IDENTIFIER = com.example.app;`,
 			want: "com.example.app",
@@ -2835,7 +2938,7 @@ PRODUCT_BUNDLE_IDENTIFIER = com.example.app;`,
 			want:    "",
 		},
 		{
-			name: "all test targets — returns empty",
+			name: "all test targets - returns empty",
 			content: `PRODUCT_BUNDLE_IDENTIFIER = com.example.app.RunnerTests;
 PRODUCT_BUNDLE_IDENTIFIER = com.example.app.UITests;`,
 			want: "",
@@ -2862,7 +2965,7 @@ PRODUCT_BUNDLE_IDENTIFIER = com.example.app;`,
 	}
 }
 
-// ── readCapacitorAppID ────────────────────────────────────────────────────────.
+// -- readCapacitorAppID --
 
 func TestReadCapacitorAppID(t *testing.T) {
 	t.Run("reads appId from capacitor.config.json", func(t *testing.T) {
@@ -2936,7 +3039,7 @@ export default config;`)
 	})
 }
 
-// ── readDotnetMobileBundleID ──────────────────────────────────────────────────.
+// -- readDotnetMobileBundleID --
 
 func TestReadDotnetMobileBundleID(t *testing.T) {
 	t.Run("reads ApplicationId from csproj content", func(t *testing.T) {
@@ -2960,7 +3063,7 @@ func TestReadDotnetMobileBundleID(t *testing.T) {
 	})
 }
 
-// ── DetectProject BundleID population ────────────────────────────────────────.
+// -- DetectProject BundleID population --
 
 func TestDetectProject_ReactNativePopulatesBundleID(t *testing.T) {
 	dir := t.TempDir()
@@ -3063,7 +3166,7 @@ export default config;`)
 	assert.Equal(t, "com.example.ionicvuets", got.BundleID)
 }
 
-// ── readRawExpoScheme ─────────────────────────────────────────────────────────.
+// -- readRawExpoScheme --
 
 func TestReadRawExpoScheme(t *testing.T) {
 	t.Parallel()
@@ -3112,7 +3215,7 @@ func TestReadRawExpoScheme(t *testing.T) {
 	})
 }
 
-// ── Negative detection edge-case tests ───────────────────────────────────────.
+// -- Negative detection edge-case tests --
 
 // React Native projects include app/src/main/AndroidManifest.xml as part of their
 // Android sub-project. Ensure they are detected as react-native, not android.
