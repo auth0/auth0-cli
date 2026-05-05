@@ -26,7 +26,7 @@ const (
 
 const (
 	quickstartHTTPTimeout = 30 * time.Second
-	maxDownloadSize       = 100 * 1024 * 1024 // 100 MB
+	maxDownloadSize       = 100 * 1024 * 1024 // 100 MB.
 )
 
 var quickstartHTTPClient = &http.Client{Timeout: quickstartHTTPTimeout}
@@ -220,7 +220,7 @@ type AppConfig struct {
 
 var QuickstartConfigs = map[string]AppConfig{
 
-	// ==========================================
+	// ==========================================.
 	"spa:react:vite": {
 		EnvValues: map[string]string{
 			"VITE_AUTH0_DOMAIN":    DetectionSub,
@@ -306,7 +306,7 @@ var QuickstartConfigs = map[string]AppConfig{
 		Strategy: FileOutputStrategy{Path: "lib/auth_config.dart", Format: "dart"},
 	},
 
-	// ==========================================
+	// ==========================================.
 	"regular:nextjs:none": {
 		EnvValues: map[string]string{
 			"AUTH0_DOMAIN":        DetectionSub,
@@ -757,7 +757,7 @@ var QuickstartConfigs = map[string]AppConfig{
 		EnvValues: map[string]string{
 			"com_auth0_domain":    DetectionSub,
 			"com_auth0_client_id": DetectionSub,
-			// com_auth0_scheme is always "https" for App Links (HTTPS callback scheme).
+			// Com_auth0_scheme is always "https" for App Links (HTTPS callback scheme).
 			"com_auth0_scheme": "https",
 		},
 		// Android uses App Links (https://<domain>/android/<packageName>/callback).
@@ -775,7 +775,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			"ClientId": DetectionSub,
 			"Domain":   DetectionSub,
 		},
-		// iOS Swift uses universal links or custom URI scheme callbacks based on the bundle
+		// IOS Swift uses universal links or custom URI scheme callbacks based on the bundle
 		// identifier. Bundle ID is not known at setup time; user must add URL in Auth0 Dashboard.
 		RequestParams: RequestParams{
 			AppType:           "native",

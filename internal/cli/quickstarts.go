@@ -801,7 +801,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 			var linkedAppClientID string
 			canPromptFlag := canPrompt(cmd)
 
-			// -- Step 1: Decide what to create (App / API / both) --
+			// -- Step 1: Decide what to create (App / API / both) --.
 			if !inputs.App && !inputs.API {
 				var selections []string
 				if err := prompt.AskMultiSelect(
@@ -824,7 +824,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 			}
 
-			// -- Step 2: Auto-detect project framework --
+			// -- Step 2: Auto-detect project framework --.
 			if inputs.App {
 				cwd, err := os.Getwd()
 				if err != nil {
@@ -931,7 +931,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				cli.renderer.Infof("Auto-selected build tool %q for %s/%s (no exact match for 'none')", inputs.BuildTool, inputs.Type, inputs.Framework)
 			}
 
-			// -- Step 3b: Collect application name --
+			// -- Step 3b: Collect application name --.
 			if inputs.App {
 				if !cmd.Flags().Changed("name") {
 					defaultName := inputs.Name
@@ -956,7 +956,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 			}
 
-			// -- Step 3d: Prompt for port if not explicitly set --
+			// -- Step 3d: Prompt for port if not explicitly set --.
 			if inputs.App && inputs.Type != "native" && inputs.Type != "m2m" && !cmd.Flags().Changed("port") && canPromptFlag {
 				if inputs.Port == 0 {
 					inputs.Port = defaultPortForFramework(inputs.Framework)
@@ -983,7 +983,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 			}
 
-			// -- Step 3c: Collect API name for API-only flow --
+			// -- Step 3c: Collect API name for API-only flow --.
 			if inputs.API && !inputs.App {
 				// Collect API name if not already set (pre-fill from CWD folder name).
 				if inputs.Name == "" && !cmd.Flags().Changed("name") {
@@ -1127,7 +1127,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				}
 			}
 
-			// -- Step 4: Create the Auth0 application client --
+			// -- Step 4: Create the Auth0 application client --.
 			if inputs.App {
 				clientID, err := createQuickstartApp(ctx, cli, inputs, qsConfigKey)
 				if err != nil {
@@ -1136,7 +1136,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				linkedAppClientID = clientID
 			}
 
-			// -- Step 5: Create the Auth0 API resource server --
+			// -- Step 5: Create the Auth0 API resource server --.
 			if inputs.API {
 				if err := createQuickstartAPI(ctx, cli, inputs, linkedAppClientID); err != nil {
 					return err
