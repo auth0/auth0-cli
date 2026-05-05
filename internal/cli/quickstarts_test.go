@@ -20,7 +20,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/display"
 )
 
-// -- DetectionSubBase --
+// -- DetectionSubBase --.
 
 // TestResolveRequestParams_DetectionSubBase verifies that DetectionSubBase in
 // callbacks resolves to baseURL with no path suffix (unlike DetectionSub which
@@ -85,7 +85,7 @@ func TestResolveRequestParams_CallbackPath(t *testing.T) {
 	}
 }
 
-// -- resolveRequestParams with QuickstartConfigs --
+// -- resolveRequestParams with QuickstartConfigs --.
 
 // TestResolveRequestParams_AllQuickstartConfigs verifies that each entry in
 // auth0.QuickstartConfigs produces the correct resolved callback and logout URLs
@@ -263,7 +263,7 @@ func TestResolveRequestParams_AllQuickstartConfigs(t *testing.T) {
 	}
 }
 
-// -- GenerateAndWriteQuickstartConfig with QuickstartConfigs --
+// -- GenerateAndWriteQuickstartConfig with QuickstartConfigs --.
 
 // TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs verifies the env
 // file content generated for every application type in auth0.QuickstartConfigs.
@@ -436,7 +436,7 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 	}
 }
 
-// -- generateClient with QuickstartConfigs --
+// -- generateClient with QuickstartConfigs --.
 
 // TestGenerateClient_AllQuickstartConfigs verifies the management.Client fields
 // produced by generateClient for every app type in auth0.QuickstartConfigs.
@@ -530,7 +530,7 @@ func TestGenerateClient_AllQuickstartConfigs(t *testing.T) {
 	}
 }
 
-// -- APP_BASE_URL reflects the user-specified port --
+// -- APP_BASE_URL reflects the user-specified port --.
 
 func TestGenerateAndWriteQuickstartConfig_PortInBaseURL(t *testing.T) {
 	t.Parallel()
@@ -556,7 +556,7 @@ func TestGenerateAndWriteQuickstartConfig_PortInBaseURL(t *testing.T) {
 	}
 }
 
-// -- Generated secrets (AUTH0_SECRET / SESSION_SECRET) are non-empty --
+// -- Generated secrets (AUTH0_SECRET / SESSION_SECRET) are non-empty --.
 
 func TestGenerateAndWriteQuickstartConfig_SecretsNonEmpty(t *testing.T) {
 	t.Parallel()
@@ -750,7 +750,7 @@ func TestValidateAPIIdentifier(t *testing.T) {
 	}
 }
 
-// -- createQuickstartApp happy-path --
+// -- createQuickstartApp happy-path --.
 
 func TestCreateQuickstartApp_SPA_React(t *testing.T) {
 	t.Parallel()
@@ -819,7 +819,7 @@ func TestCreateQuickstartApp_UnsupportedKey(t *testing.T) {
 	assert.ErrorContains(t, err, "unsupported quickstart arguments")
 }
 
-// -- applyDetectionToInputs --
+// -- applyDetectionToInputs --.
 
 // TestApplyDetectionToInputs verifies that applyDetectionToInputs correctly copies
 // detection fields into inputs, preserving any fields that were already set.
@@ -937,7 +937,7 @@ func TestAmbiguousDetection_NoInput_IntegrationFlow(t *testing.T) {
 	assert.Equal(t, "test-client-id", clientID)
 }
 
-// -- createQuickstartAPI happy-path --
+// -- createQuickstartAPI happy-path --.
 
 func TestCreateQuickstartAPI_CreatesResourceServerAndGrant(t *testing.T) {
 	t.Parallel()

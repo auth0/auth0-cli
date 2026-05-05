@@ -13,7 +13,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-// -- test helpers --
+// -- test helpers --.
 
 func writeTestFile(t *testing.T, dir, name, content string) {
 	t.Helper()
@@ -25,7 +25,7 @@ func mkTestDir(t *testing.T, dir, sub string) {
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, sub), 0755))
 }
 
-// -- QuickstartConfig invariants --
+// -- QuickstartConfig invariants --.
 
 // TestSvelteKitViteAndNoneShareConfig verifies that regular:sveltekit:vite and
 // regular:sveltekit:none use the same server-side env var keys. Both configs
@@ -55,7 +55,7 @@ func TestWPFWinformsConfigHasNoClientSecret(t *testing.T) {
 	assert.False(t, hasSecret, "native:wpf-winforms:none must not have Auth0:ClientSecret")
 }
 
-// -- DetectProject - no signal --
+// -- DetectProject - no signal --.
 
 func TestDetectProject_NoDetection(t *testing.T) {
 	dir := t.TempDir()
@@ -65,7 +65,7 @@ func TestDetectProject_NoDetection(t *testing.T) {
 	assert.Empty(t, got.Type)
 }
 
-// -- DetectProject - SPA --
+// -- DetectProject - SPA --.
 
 // Auth0 qs setup --app --type spa --framework react --build-tool vite.
 func TestDetectProject_React(t *testing.T) {
@@ -194,7 +194,7 @@ func TestDetectProject_PubspecWithoutFlutter(t *testing.T) {
 	assert.False(t, got.Detected)
 }
 
-// -- DetectProject - Regular Web Apps --
+// -- DetectProject - Regular Web Apps --.
 
 // Auth0 qs setup --app --type regular --framework nextjs.
 func TestDetectProject_NextJS_ConfigJS(t *testing.T) {
@@ -521,7 +521,7 @@ func TestDetectProject_Laravel(t *testing.T) {
 	assert.Equal(t, 8000, got.Port)
 }
 
-// -- DetectProject - Native / Mobile --
+// -- DetectProject - Native / Mobile --.
 
 // Auth0 qs setup --app --type native --framework flutter.
 func TestDetectProject_Flutter(t *testing.T) {
@@ -813,7 +813,7 @@ func TestDetectProject_FlaskTakesPriorityOverDjango(t *testing.T) {
 	assert.Equal(t, "vanilla-python", got.Framework)
 }
 
-// -- DetectProject - priority rules --
+// -- DetectProject - priority rules --.
 
 // angular.json beats package.json deps (checked first).
 func TestDetectProject_AngularPriorityOverPackageJSON(t *testing.T) {
@@ -953,7 +953,7 @@ func TestDetectProject_LaravelBeatsViteConfig(t *testing.T) {
 	assert.Equal(t, "regular", got.Type)
 }
 
-// -- DetectProject - app name detection --
+// -- DetectProject - app name detection --.
 
 func TestDetectProject_AppNameFromPackageJSON(t *testing.T) {
 	dir := t.TempDir()
@@ -996,7 +996,7 @@ func TestDetectProject_AppNameFromPomArtifactID(t *testing.T) {
 	assert.Equal(t, "my-java-app", got.AppName)
 }
 
-// -- readExpoScheme --
+// -- readExpoScheme --.
 
 func TestReadExpoScheme(t *testing.T) {
 	t.Run("reads scheme field", func(t *testing.T) {
@@ -1046,7 +1046,7 @@ func TestReadExpoScheme(t *testing.T) {
 	})
 }
 
-// -- detectFromCsproj --
+// -- detectFromCsproj --.
 
 func TestDetectFromCsproj(t *testing.T) {
 	tests := []struct {
@@ -1158,7 +1158,7 @@ func TestDetectFromCsproj(t *testing.T) {
 	}
 }
 
-// -- detectJavaFramework --
+// -- detectJavaFramework --.
 
 func TestDetectJavaFramework(t *testing.T) {
 	tests := []struct {
@@ -1220,7 +1220,7 @@ func TestDetectJavaFramework(t *testing.T) {
 	}
 }
 
-// -- collectPackageJSONCandidates --
+// -- collectPackageJSONCandidates --.
 
 func TestCollectPackageJSONCandidates(t *testing.T) {
 	t.Run("react_native", func(t *testing.T) {
@@ -1271,7 +1271,7 @@ func TestCollectPackageJSONCandidates(t *testing.T) {
 	})
 }
 
-// -- detectionFriendlyAppType --
+// -- detectionFriendlyAppType --.
 
 func TestDetectionFriendlyAppType(t *testing.T) {
 	assert.Equal(t, "Single Page App", detectionFriendlyAppType("spa"))
@@ -1282,7 +1282,7 @@ func TestDetectionFriendlyAppType(t *testing.T) {
 	assert.Equal(t, "", detectionFriendlyAppType(""))
 }
 
-// -- readGoModuleName --
+// -- readGoModuleName --.
 
 func TestReadGoModuleName(t *testing.T) {
 	t.Run("returns last path segment", func(t *testing.T) {
@@ -1302,7 +1302,7 @@ func TestReadGoModuleName(t *testing.T) {
 	})
 }
 
-// -- readPyprojectName --
+// -- readPyprojectName --.
 
 func TestReadPyprojectName(t *testing.T) {
 	t.Run("reads project name", func(t *testing.T) {
@@ -1316,7 +1316,7 @@ func TestReadPyprojectName(t *testing.T) {
 	})
 }
 
-// -- readPubspecName --
+// -- readPubspecName --.
 
 func TestReadPubspecName(t *testing.T) {
 	t.Run("reads name field", func(t *testing.T) {
@@ -1330,7 +1330,7 @@ func TestReadPubspecName(t *testing.T) {
 	})
 }
 
-// -- readComposerName --
+// -- readComposerName --.
 
 func TestReadComposerName(t *testing.T) {
 	t.Run("returns part after slash", func(t *testing.T) {
@@ -1350,7 +1350,7 @@ func TestReadComposerName(t *testing.T) {
 	})
 }
 
-// -- readPomArtifactID --
+// -- readPomArtifactID --.
 
 func TestReadPomArtifactID(t *testing.T) {
 	t.Run("reads first artifactId", func(t *testing.T) {
@@ -1371,7 +1371,7 @@ func TestReadPomArtifactID(t *testing.T) {
 	})
 }
 
-// -- readPackageJSONName --
+// -- readPackageJSONName --.
 
 func TestReadPackageJSONName(t *testing.T) {
 	t.Run("reads name field", func(t *testing.T) {
@@ -1391,7 +1391,7 @@ func TestReadPackageJSONName(t *testing.T) {
 	})
 }
 
-// -- readFileContent --
+// -- readFileContent --.
 
 func TestReadFileContent_SizeLimit(t *testing.T) {
 	t.Parallel()
@@ -1407,7 +1407,7 @@ func TestReadFileContent_SizeLimit(t *testing.T) {
 	assert.Empty(t, content)
 }
 
-// -- defaultPortForFramework --
+// -- defaultPortForFramework --.
 
 func TestDefaultPortForFramework(t *testing.T) {
 	tests := []struct {
@@ -1455,7 +1455,7 @@ func TestDefaultPortForFramework(t *testing.T) {
 	}
 }
 
-// -- frameworksForType --
+// -- frameworksForType --.
 
 func TestFrameworksForType(t *testing.T) {
 	t.Run("spa", func(t *testing.T) {
@@ -1510,7 +1510,7 @@ func TestFrameworksForType(t *testing.T) {
 	})
 }
 
-// getQuickstartConfigKey 
+// GetQuickstartConfigKey
 //
 // Tests cover all framework/type/buildTool combinations from the requirements
 // table. All inputs are fully populated to avoid interactive prompts.
@@ -1523,7 +1523,7 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 		wantBuildTool  string
 		wantAutoSelect bool
 	}{
-		//SPA .
+		// SPA .
 		// Auth0 qs setup --app --type spa --framework react --build-tool vite.
 		{
 			name:          "spa react vite",
@@ -1574,7 +1574,7 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 			wantBuildTool: "none",
 		},
 
-		//Regular 
+		// Regular
 		// Auth0 qs setup --app --type regular --framework nextjs.
 		{
 			name:          "regular nextjs none",
@@ -1702,7 +1702,7 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 			wantBuildTool: "none",
 		},
 
-		//Native 
+		// Native
 		// Auth0 qs setup --app --type native --framework flutter.
 		{
 			name:          "native flutter none",
@@ -1796,7 +1796,7 @@ func TestGetQuickstartConfigKey_EmptyBuildToolTreatedAsNone(t *testing.T) {
 	assert.Equal(t, "regular:nextjs:none", key)
 }
 
-// -- resolveRequestParams --
+// -- resolveRequestParams --.
 
 func TestResolveRequestParams(t *testing.T) {
 	const sub = auth0.DetectionSub
@@ -1847,7 +1847,7 @@ func TestResolveRequestParams(t *testing.T) {
 	})
 }
 
-// -- replaceDetectionSub --
+// -- replaceDetectionSub --.
 
 func TestReplaceDetectionSub(t *testing.T) {
 	const sub = auth0.DetectionSub
@@ -1987,7 +1987,7 @@ func TestReplaceDetectionSub(t *testing.T) {
 	})
 }
 
-// -- buildNestedMap --
+// -- buildNestedMap --.
 
 func TestBuildNestedMap(t *testing.T) {
 	t.Run("dot-delimited keys produce nested structure", func(t *testing.T) {
@@ -2035,7 +2035,7 @@ func TestBuildNestedMap(t *testing.T) {
 	})
 }
 
-// -- sortedKeys --
+// -- sortedKeys --.
 
 func TestSortedKeys(t *testing.T) {
 	m := map[string]string{"beta": "b", "alpha": "a", "gamma": "g", "delta": "d"}
@@ -2047,7 +2047,7 @@ func TestSortedKeys_EmptyMap(t *testing.T) {
 	assert.Empty(t, sortedKeys(map[string]string{}))
 }
 
-// -- GenerateAndWriteQuickstartConfig --
+// -- GenerateAndWriteQuickstartConfig --.
 
 func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 	clientID := "cid-123"
@@ -2306,7 +2306,7 @@ func TestGenerateAndWriteQuickstartConfig_SpecialChars(t *testing.T) {
 	})
 }
 
-// -- generateClient --
+// -- generateClient --.
 
 func TestGenerateClient(t *testing.T) {
 	const sub = auth0.DetectionSub
@@ -2516,7 +2516,7 @@ func TestGenerateClient_CustomMetadataNotOverwritten(t *testing.T) {
 	assert.NotContains(t, *client.ClientMetadata, "created_by")
 }
 
-// -- getSupportedQuickstartTypes --
+// -- getSupportedQuickstartTypes --.
 
 func TestGetSupportedQuickstartTypes(t *testing.T) {
 	types := getSupportedQuickstartTypes()
@@ -2571,7 +2571,7 @@ func TestGetSupportedQuickstartTypes(t *testing.T) {
 	}
 }
 
-// setupQuickstartCmdExperimental - command-level interaction flows 
+// SetupQuickstartCmdExperimental - command-level interaction flows
 //
 // These tests exercise the RunE handler to verify the 7 top-level interaction
 // flow paths. Because setupWithAuthentication reads ~/ config, we redirect
@@ -2792,7 +2792,7 @@ func TestGenerateAndWriteQuickstartConfig_NilStrategyDefaultsToDotenv(t *testing
 	assert.Equal(t, ".env", fileName)
 }
 
-// -- readMobileBundleID --
+// -- readMobileBundleID --.
 
 func TestReadMobileBundleID(t *testing.T) {
 	t.Run("reads applicationId from android/app/build.gradle (double quotes)", func(t *testing.T) {
@@ -2861,7 +2861,7 @@ func TestReadMobileBundleID(t *testing.T) {
 	})
 }
 
-// -- extractGradleApplicationID single-quote support --
+// -- extractGradleApplicationID single-quote support --.
 
 func TestExtractGradleApplicationID_SingleQuotes(t *testing.T) {
 	tests := []struct {
@@ -2884,7 +2884,7 @@ applicationId 'com.example.second'`, "com.example.first"},
 	}
 }
 
-// -- readIOSBundleID --
+// -- readIOSBundleID --.
 
 func TestReadIOSBundleID(t *testing.T) {
 	t.Run("reads PRODUCT_BUNDLE_IDENTIFIER from project.pbxproj", func(t *testing.T) {
@@ -2917,7 +2917,7 @@ func TestReadIOSBundleID(t *testing.T) {
 	})
 }
 
-// -- extractPbxprojBundleID --
+// -- extractPbxprojBundleID --.
 
 func TestExtractPbxprojBundleID(t *testing.T) {
 	tests := []struct {
@@ -2981,7 +2981,7 @@ PRODUCT_BUNDLE_IDENTIFIER = com.example.app;`,
 	}
 }
 
-// -- readCapacitorAppID --
+// -- readCapacitorAppID --.
 
 func TestReadCapacitorAppID(t *testing.T) {
 	t.Run("reads appId from capacitor.config.json", func(t *testing.T) {
@@ -3055,7 +3055,7 @@ export default config;`)
 	})
 }
 
-// -- readDotnetMobileBundleID --
+// -- readDotnetMobileBundleID --.
 
 func TestReadDotnetMobileBundleID(t *testing.T) {
 	t.Run("reads ApplicationId from csproj content", func(t *testing.T) {
@@ -3079,7 +3079,7 @@ func TestReadDotnetMobileBundleID(t *testing.T) {
 	})
 }
 
-// -- DetectProject BundleID population --
+// -- DetectProject BundleID population --.
 
 func TestDetectProject_ReactNativePopulatesBundleID(t *testing.T) {
 	dir := t.TempDir()
@@ -3182,7 +3182,7 @@ export default config;`)
 	assert.Equal(t, "com.example.ionicvuets", got.BundleID)
 }
 
-// -- readRawExpoScheme --
+// -- readRawExpoScheme --.
 
 func TestReadRawExpoScheme(t *testing.T) {
 	t.Parallel()
@@ -3231,7 +3231,7 @@ func TestReadRawExpoScheme(t *testing.T) {
 	})
 }
 
-// -- Negative detection edge-case tests --
+// -- Negative detection edge-case tests --.
 
 // React Native projects include app/src/main/AndroidManifest.xml as part of their
 // Android sub-project. Ensure they are detected as react-native, not android.
