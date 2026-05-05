@@ -65,6 +65,28 @@ func (r *Renderer) Infof(format string, a ...interface{}) {
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
+// InfofBullet writes an info line with a compact green bullet prefix (no padding),
+// used for condensed detection-summary output where the extra indentation of
+// Infof would be visually noisy.
+func (r *Renderer) InfofBullet(format string, a ...interface{}) {
+	fmt.Fprint(r.MessageWriter, ansi.Green("▸ "))
+	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
+}
+
+// Successf writes a success line with a green check-mark prefix.
+func (r *Renderer) Successf(format string, a ...interface{}) {
+	fmt.Fprint(r.MessageWriter, ansi.Green("✓ "))
+	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
+}
+
+const detailIndent = "  "
+
+// Detailf writes an indented detail line with no prefix symbol, used for
+// supplementary information displayed beneath a success or info message.
+func (r *Renderer) Detailf(format string, a ...interface{}) {
+	fmt.Fprintf(r.MessageWriter, detailIndent+format+"\n", a...)
+}
+
 func (r *Renderer) Warnf(format string, a ...interface{}) {
 	fmt.Fprint(r.MessageWriter, ansi.Yellow(" ▸    "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)

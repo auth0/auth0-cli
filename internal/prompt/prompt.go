@@ -46,6 +46,8 @@ func AskBool(message string, value *bool, defaultValue bool) error {
 	return err
 }
 
+// Confirm prompts the user with a yes/no question and returns their response.
+// On EOF (e.g. piped input or --no-input mode) it returns false.
 func Confirm(message string) bool {
 	result := false
 	prompt := &survey.Confirm{
@@ -54,6 +56,22 @@ func Confirm(message string) bool {
 
 	if err := askOne(prompt, &result); err != nil {
 		return false
+	}
+
+	return result
+}
+
+// ConfirmWithDefault prompts with the given default value (Y/n when true, y/N when false).
+// On EOF (e.g. --no-input mode) the default value is returned instead of false.
+func ConfirmWithDefault(message string, defaultValue bool) bool {
+	result := defaultValue
+	prompt := &survey.Confirm{
+		Message: message,
+		Default: defaultValue,
+	}
+
+	if err := askOne(prompt, &result); err != nil {
+		return defaultValue
 	}
 
 	return result
