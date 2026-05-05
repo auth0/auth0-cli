@@ -216,6 +216,10 @@ type AppConfig struct {
 	EnvValues     map[string]string
 	RequestParams RequestParams
 	Strategy      FileOutputStrategy
+	// AudienceVar is the env variable name to add when --api is also specified.
+	// It receives the API identifier (audience URL) as its value.
+	// Leave empty for frameworks where the audience is not configured via an env file.
+	AudienceVar string
 }
 
 var QuickstartConfigs = map[string]AppConfig{
@@ -233,7 +237,8 @@ var QuickstartConfigs = map[string]AppConfig{
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
 		},
-		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
+		Strategy:    FileOutputStrategy{Path: ".env", Format: "dotenv"},
+		AudienceVar: "VITE_AUTH0_AUDIENCE",
 	},
 	"spa:angular:none": {
 		EnvValues: map[string]string{
@@ -247,7 +252,9 @@ var QuickstartConfigs = map[string]AppConfig{
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
 		},
-		Strategy: FileOutputStrategy{Path: "src/environments/environment.ts", Format: "ts"},
+		// angular-ts wraps domain/clientId under an auth0:{} object matching the
+		// official Angular quickstart structure: environment.auth0.domain / environment.auth0.clientId.
+		Strategy: FileOutputStrategy{Path: "src/environments/environment.ts", Format: "angular-ts"},
 	},
 	"spa:vue:vite": {
 		EnvValues: map[string]string{
@@ -261,7 +268,8 @@ var QuickstartConfigs = map[string]AppConfig{
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
 		},
-		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
+		Strategy:    FileOutputStrategy{Path: ".env", Format: "dotenv"},
+		AudienceVar: "VITE_AUTH0_AUDIENCE",
 	},
 	"spa:svelte:vite": {
 		EnvValues: map[string]string{
@@ -275,7 +283,8 @@ var QuickstartConfigs = map[string]AppConfig{
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
 		},
-		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
+		Strategy:    FileOutputStrategy{Path: ".env", Format: "dotenv"},
+		AudienceVar: "VITE_AUTH0_AUDIENCE",
 	},
 	"spa:vanilla-javascript:vite": {
 		EnvValues: map[string]string{
@@ -289,7 +298,8 @@ var QuickstartConfigs = map[string]AppConfig{
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
 		},
-		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
+		Strategy:    FileOutputStrategy{Path: ".env", Format: "dotenv"},
+		AudienceVar: "VITE_AUTH0_AUDIENCE",
 	},
 	"spa:flutter-web:none": {
 		EnvValues: map[string]string{
@@ -322,7 +332,8 @@ var QuickstartConfigs = map[string]AppConfig{
 			Name:              DetectionSub,
 			CallbackPath:      "/api/auth/callback",
 		},
-		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
+		Strategy:    FileOutputStrategy{Path: ".env", Format: "dotenv"},
+		AudienceVar: "AUTH0_AUDIENCE",
 	},
 	"regular:nuxt:none": {
 		EnvValues: map[string]string{
@@ -489,6 +500,8 @@ var QuickstartConfigs = map[string]AppConfig{
 			"auth0.domain":       DetectionSub,
 			"auth0.clientId":     DetectionSub,
 			"auth0.clientSecret": DetectionSub,
+			// auth0.scope is a fixed value read by Auth0AuthenticationConfig via JNDI lookup.
+			"auth0.scope": "openid profile email",
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
@@ -496,7 +509,9 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
 		},
-		Strategy: FileOutputStrategy{Path: "src/main/resources/META-INF/microprofile-config.properties", Format: "properties"},
+		// javaee-webxml writes JNDI env-entry elements to web.xml, matching the
+		// official Auth0 Java EE quickstart (auth0.com/docs/quickstart/webapp/java-ee).
+		Strategy: FileOutputStrategy{Path: "src/main/webapp/WEB-INF/web.xml", Format: "javaee-webxml"},
 	},
 	"regular:spring-boot:maven": {
 		EnvValues: map[string]string{
@@ -547,8 +562,9 @@ var QuickstartConfigs = map[string]AppConfig{
 	},
 	"regular:aspnet-blazor:none": {
 		EnvValues: map[string]string{
-			"Auth0:Domain":   DetectionSub,
-			"Auth0:ClientId": DetectionSub,
+			"Auth0:Domain":       DetectionSub,
+			"Auth0:ClientId":     DetectionSub,
+			"Auth0:ClientSecret": DetectionSub,
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",
