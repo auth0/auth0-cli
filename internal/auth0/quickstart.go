@@ -497,11 +497,11 @@ var QuickstartConfigs = map[string]AppConfig{
 	},
 	"regular:java-ee:maven": {
 		EnvValues: map[string]string{
-			"auth0.domain":       DetectionSub,
-			"auth0.clientId":     DetectionSub,
-			"auth0.clientSecret": DetectionSub,
-			// auth0.scope is a fixed value read by Auth0AuthenticationConfig via JNDI lookup.
-			"auth0.scope": "openid profile email",
+			"auth0/domain":       DetectionSub,
+			"auth0/clientId":     DetectionSub,
+			"auth0/clientSecret": DetectionSub,
+			// auth0/scope is a fixed value read by Auth0AuthenticationConfig via JNDI lookup.
+			"auth0/scope": "openid profile email",
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",

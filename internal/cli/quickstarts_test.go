@@ -349,8 +349,9 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 			map[string]string{"com.auth0.domain": domain, "com.auth0.clientId": cidVal}},
 		{"regular:java-ee:maven", 8080, "web.xml",
 			// javaee-webxml writes JNDI env-entry elements matching the official Java EE quickstart.
-			[]string{"env-entry", "auth0.domain", "auth0.clientId", "auth0.clientSecret", "auth0.scope"},
-			map[string]string{"auth0.domain": domain, "auth0.clientId": cidVal}},
+			// Keys use slash separators (auth0/domain) per the Java EE JNDI naming convention.
+			[]string{"env-entry", "auth0/domain", "auth0/clientId", "auth0/clientSecret", "auth0/scope"},
+			map[string]string{"auth0/domain": domain, "auth0/clientId": cidVal}},
 		{"regular:sveltekit:none", 3000, ".env",
 			[]string{"AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET", "AUTH0_SECRET", "APP_BASE_URL"},
 			map[string]string{"AUTH0_DOMAIN": domain, "AUTH0_CLIENT_ID": cidVal, "AUTH0_CLIENT_SECRET": csecVal, "APP_BASE_URL": "http://localhost:3000"}},
