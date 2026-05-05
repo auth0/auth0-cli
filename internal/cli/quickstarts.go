@@ -883,7 +883,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					} else if detection.Framework != "" {
 						// Single clear detection - show summary and confirm.
 						titleCaser := cases.Title(language.English)
-						frameworkDisplay := titleCaser.String(detection.Framework)
+						frameworkDisplay := frameworkDisplayName(detection.Framework)
 						if detection.BuildTool != "" && detection.BuildTool != "none" {
 							frameworkDisplay += " - " + titleCaser.String(detection.BuildTool)
 						}
@@ -1561,6 +1561,27 @@ func applyDetectionToInputs(inputs SetupInputs, d DetectionResult) SetupInputs {
 	return inputs
 }
 
+// frameworkDisplayName returns a human-friendly display name for a framework key.
+// It handles cases where the internal key (e.g. "vanilla-python") differs from the
+// name a developer would expect to see (e.g. "Flask").
+func frameworkDisplayName(framework string) string {
+	switch framework {
+	case "vanilla-python":
+		return "Flask"
+	case "vanilla-go":
+		return "Go"
+	case "vanilla-php":
+		return "PHP"
+	case "vanilla-javascript":
+		return "Vanilla JS"
+	case "vanilla-java":
+		return "Java"
+	default:
+		titleCaser := cases.Title(language.English)
+		return titleCaser.String(framework)
+	}
+}
+
 // defaultPortForFramework returns the conventional port for a given framework name.
 func defaultPortForFramework(framework string) int {
 	switch framework {
@@ -1706,7 +1727,7 @@ func replaceDetectionSub(envValues map[string]string, tenantDomain string, clien
 
 		switch key {
 		case "VITE_AUTH0_DOMAIN", "AUTH0_DOMAIN", "domain", "NUXT_AUTH0_DOMAIN",
-			"auth0.domain", "Auth0:Domain", "auth0:Domain", "auth0_domain",
+			"auth0.domain", "auth0/domain", "Auth0:Domain", "auth0:Domain", "auth0_domain",
 			"EXPO_PUBLIC_AUTH0_DOMAIN", "com.auth0.domain",
 			"com_auth0_domain", "Domain":
 			updatedEnvValues[key] = tenantDomain
@@ -1720,12 +1741,12 @@ func replaceDetectionSub(envValues map[string]string, tenantDomain string, clien
 			updatedEnvValues[key] = "https://" + tenantDomain + "/"
 
 		case "VITE_AUTH0_CLIENT_ID", "AUTH0_CLIENT_ID", "clientId", "NUXT_AUTH0_CLIENT_ID",
-			"CLIENT_ID", "auth0.clientId", "okta.oauth2.client-id", "Auth0:ClientId",
+			"CLIENT_ID", "auth0.clientId", "auth0/clientId", "okta.oauth2.client-id", "Auth0:ClientId",
 			"auth0:ClientId", "auth0_client_id", "EXPO_PUBLIC_AUTH0_CLIENT_ID", "com.auth0.clientId",
 			"com_auth0_client_id", "ClientId":
 			updatedEnvValues[key] = client.GetClientID()
 
-		case "AUTH0_CLIENT_SECRET", "NUXT_AUTH0_CLIENT_SECRET", "auth0.clientSecret",
+		case "AUTH0_CLIENT_SECRET", "NUXT_AUTH0_CLIENT_SECRET", "auth0.clientSecret", "auth0/clientSecret",
 			"okta.oauth2.client-secret", "Auth0:ClientSecret", "auth0:ClientSecret",
 			"auth0_client_secret", "com.auth0.clientSecret":
 			updatedEnvValues[key] = client.GetClientSecret()
