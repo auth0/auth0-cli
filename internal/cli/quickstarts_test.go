@@ -297,7 +297,7 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 			[]string{"VITE_AUTH0_DOMAIN", "VITE_AUTH0_CLIENT_ID"},
 			map[string]string{"VITE_AUTH0_DOMAIN": domain, "VITE_AUTH0_CLIENT_ID": cidVal}},
 		{"spa:angular:none", 4200, "environment.ts",
-			// angular-ts wraps values under auth0:{} matching the official Angular quickstart.
+			// Angular-ts wraps values under auth0:{} matching the official Angular quickstart.
 			[]string{"auth0:", "domain:", "clientId:", "production:"},
 			map[string]string{domain: domain, cidVal: cidVal}},
 		{"spa:flutter-web:none", 3000, "auth_config.dart",
@@ -348,7 +348,7 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 			[]string{"com.auth0.domain", "com.auth0.clientId", "com.auth0.clientSecret"},
 			map[string]string{"com.auth0.domain": domain, "com.auth0.clientId": cidVal}},
 		{"regular:java-ee:maven", 8080, "web.xml",
-			// javaee-webxml writes JNDI env-entry elements matching the official Java EE quickstart.
+			// Javaee-webxml writes JNDI env-entry elements matching the official Java EE quickstart.
 			// Keys use slash separators (auth0/domain) per the Java EE JNDI naming convention.
 			[]string{"env-entry", "auth0/domain", "auth0/clientId", "auth0/clientSecret", "auth0/scope"},
 			map[string]string{"auth0/domain": domain, "auth0/clientId": cidVal}},
