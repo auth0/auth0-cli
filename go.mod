@@ -11,7 +11,7 @@ require (
 	github.com/briandowns/spinner v1.23.2
 	github.com/charmbracelet/glamour v1.0.0
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
-	github.com/fsnotify/fsnotify v1.10.0
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/getsentry/sentry-go v0.46.1
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.7.0
