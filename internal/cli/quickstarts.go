@@ -905,10 +905,11 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				default:
 					// No detection signal found - notify the user and pre-fill name from directory.
 					if !canPromptFlag && inputs.Type == "" {
-						if inputs.API {
-							return fmt.Errorf("auto-detection failed: when using --app and --api together with --no-input, --type must be specified")
-						}
-						return fmt.Errorf("auto-detection failed: provide --type to use --no-input mode")
+						return fmt.Errorf(
+							"auto-detection failed: unable to auto detect application. " +
+								"In --no-input mode provide --type, --framework, and optionally --build-tool " +
+								"(e.g. --type spa --framework react --build-tool vite)",
+						)
 					}
 					cli.renderer.Warnf("auto-detection failed: unable to auto detect application")
 					if inputs.Name == "" {
@@ -920,7 +921,12 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 			// -- Step 3: Resolve remaining prompts for App / API --
 			// In non-interactive mode, --type alone is not enough; --framework is also required.
 			if !canPromptFlag && inputs.App && inputs.Type != "" && inputs.Type != "m2m" && inputs.Framework == "" {
-				return fmt.Errorf("--framework is required in non-interactive mode when --type is %s: use --framework flag", inputs.Type)
+				return fmt.Errorf(
+				"--framework is required in non-interactive mode when --type is %s: "+
+					"use --framework and optionally --build-tool flags "+
+					"(e.g. --framework react --build-tool vite)",
+				inputs.Type,
+			)
 			}
 			qsConfigKey, updatedInputs, wasAutoSelected, err := getQuickstartConfigKey(inputs)
 			if err != nil {
@@ -1209,9 +1215,9 @@ func createQuickstartApp(ctx context.Context, cli *cli, inputs SetupInputs, qsCo
 	}
 
 	// For Expo, read the production URI scheme from app.json (expo.scheme).
-	// If found, register it alongside exp://localhost:19000 so that both
-	// Expo Go (development) and EAS/production builds work without a manual
-	// dashboard update.
+	// Custom schemes like "myapp://" are not registered automatically because
+	// Auth0 API rejects bare custom-scheme URIs (no host component). Instead,
+	// the scheme is surfaced in post-setup guidance so the user can add it manually.
 	var expoScheme string
 	if inputs.Framework == "expo" {
 		if cwd, cwdErr := os.Getwd(); cwdErr == nil {
@@ -1222,12 +1228,6 @@ func createQuickstartApp(ctx context.Context, cli *cli, inputs SetupInputs, qsCo
 					cli.renderer.Warnf("app.json expo.scheme %q is not a valid URI scheme (must start with a letter and contain only letters, digits, +, -, .); scheme will be ignored.", raw)
 				}
 			}
-		}
-		if expoScheme != "" {
-			callbackURI := expoScheme + "://"
-			logoutURI := expoScheme + ":///"
-			config.RequestParams.Callbacks = append([]string{callbackURI}, config.RequestParams.Callbacks...)
-			config.RequestParams.AllowedLogoutURLs = append([]string{logoutURI}, config.RequestParams.AllowedLogoutURLs...)
 		}
 	}
 
@@ -1275,7 +1275,18 @@ func createQuickstartApp(ctx context.Context, cli *cli, inputs SetupInputs, qsCo
 		return "", fmt.Errorf("failed to create application: %w", err)
 	}
 
-	envFileName, _, err := GenerateAndWriteQuickstartConfig(&config.Strategy, config.EnvValues, cli.tenant, client, inputs.Port)
+	// When an API is also being created, inject the audience variable so the
+	// config file contains the API identifier the app should request tokens for.
+	envValues := config.EnvValues
+	if inputs.API && inputs.Identifier != "" && config.AudienceVar != "" {
+		envValues = make(map[string]string, len(config.EnvValues)+1)
+		for k, v := range config.EnvValues {
+			envValues[k] = v
+		}
+		envValues[config.AudienceVar] = inputs.Identifier
+	}
+
+	envFileName, _, err := GenerateAndWriteQuickstartConfig(&config.Strategy, envValues, cli.tenant, client, inputs.Port)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate config file: %w", err)
 	}
@@ -1285,8 +1296,8 @@ func createQuickstartApp(ctx context.Context, cli *cli, inputs SetupInputs, qsCo
 	// Inform the user about EAS/production build requirements.
 	if inputs.Framework == "expo" {
 		if expoScheme != "" {
-			cli.renderer.Infof("Registered %s:// (production scheme from app.json) and exp://localhost:19000 (Expo Go) as Allowed Callback URLs.", expoScheme)
-			cli.renderer.Infof("For EAS production builds, ensure your app.json scheme matches %q.", expoScheme)
+			cli.renderer.Infof("Note: exp://localhost:19000 is registered for Expo Go development.")
+			cli.renderer.Infof("For EAS/production builds, add %s:// to Allowed Callback URLs in the Auth0 Dashboard.", expoScheme)
 		} else {
 			cli.renderer.Infof("Note: exp://localhost:19000 is for Expo Go development only.")
 			cli.renderer.Infof("For EAS/production builds, add your custom scheme URI (e.g., myapp://) to Allowed Callback URLs in the Auth0 Dashboard.")
@@ -1849,6 +1860,18 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		}
 		contentBuilder.WriteString("};\n")
 
+	case "angular-ts":
+		// Angular SPA environment.ts nests domain and clientId under an auth0 object,
+		// matching the official Angular quickstart: environment.auth0.domain / .clientId.
+		contentBuilder.WriteString("export const environment = {\n")
+		contentBuilder.WriteString("  production: false,\n")
+		contentBuilder.WriteString("  auth0: {\n")
+		for _, key := range sortedKeys(resolvedEnv) {
+			contentBuilder.WriteString(fmt.Sprintf("    %s: '%s',\n", key, strings.ReplaceAll(resolvedEnv[key], "'", "\\'")))
+		}
+		contentBuilder.WriteString("  },\n")
+		contentBuilder.WriteString("};\n")
+
 	case "dart":
 		contentBuilder.WriteString("const Map<String, String> authConfig = {\n")
 		for _, key := range sortedKeys(resolvedEnv) {
@@ -1891,6 +1914,17 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 			contentBuilder.WriteString(fmt.Sprintf("  <param-name>%s</param-name>\n", xmlEscape(key)))
 			contentBuilder.WriteString(fmt.Sprintf("  <param-value>%s</param-value>\n", xmlEscape(resolvedEnv[key])))
 			contentBuilder.WriteString("</context-param>\n")
+		}
+
+	case "javaee-webxml":
+		// Java EE web.xml JNDI env-entry elements (auth0-java-mvc-commons).
+		// Values are looked up via InitialContext.lookup("auth0.domain") etc.
+		for _, key := range sortedKeys(resolvedEnv) {
+			contentBuilder.WriteString("<env-entry>\n")
+			contentBuilder.WriteString(fmt.Sprintf("  <env-entry-name>%s</env-entry-name>\n", xmlEscape(key)))
+			contentBuilder.WriteString("  <env-entry-type>java.lang.String</env-entry-type>\n")
+			contentBuilder.WriteString(fmt.Sprintf("  <env-entry-value>%s</env-entry-value>\n", xmlEscape(resolvedEnv[key])))
+			contentBuilder.WriteString("</env-entry>\n")
 		}
 
 	case "android-strings":
