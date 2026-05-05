@@ -922,11 +922,11 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 			// In non-interactive mode, --type alone is not enough; --framework is also required.
 			if !canPromptFlag && inputs.App && inputs.Type != "" && inputs.Type != "m2m" && inputs.Framework == "" {
 				return fmt.Errorf(
-				"--framework is required in non-interactive mode when --type is %s: "+
-					"use --framework and optionally --build-tool flags "+
-					"(e.g. --framework react --build-tool vite)",
-				inputs.Type,
-			)
+					"--framework is required in non-interactive mode when --type is %s: "+
+						"use --framework and optionally --build-tool flags "+
+						"(e.g. --framework react --build-tool vite)",
+					inputs.Type,
+				)
 			}
 			qsConfigKey, updatedInputs, wasAutoSelected, err := getQuickstartConfigKey(inputs)
 			if err != nil {

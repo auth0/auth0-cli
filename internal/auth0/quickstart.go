@@ -252,7 +252,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
 		},
-		// angular-ts wraps domain/clientId under an auth0:{} object matching the
+		// Angular-ts wraps domain/clientId under an auth0:{} object matching the
 		// official Angular quickstart structure: environment.auth0.domain / environment.auth0.clientId.
 		Strategy: FileOutputStrategy{Path: "src/environments/environment.ts", Format: "angular-ts"},
 	},
@@ -500,7 +500,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			"auth0/domain":       DetectionSub,
 			"auth0/clientId":     DetectionSub,
 			"auth0/clientSecret": DetectionSub,
-			// auth0/scope is a fixed value read by Auth0AuthenticationConfig via JNDI lookup.
+			// Auth0/scope is a fixed value read by Auth0AuthenticationConfig via JNDI lookup.
 			"auth0/scope": "openid profile email",
 		},
 		RequestParams: RequestParams{
@@ -509,7 +509,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
 		},
-		// javaee-webxml writes JNDI env-entry elements to web.xml, matching the
+		// Javaee-webxml writes JNDI env-entry elements to web.xml, matching the
 		// official Auth0 Java EE quickstart (auth0.com/docs/quickstart/webapp/java-ee).
 		Strategy: FileOutputStrategy{Path: "src/main/webapp/WEB-INF/web.xml", Format: "javaee-webxml"},
 	},
