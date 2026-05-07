@@ -205,10 +205,12 @@ func (f *phoneNotificationTemplateResourceFetcher) FetchData(ctx context.Context
 
 	var data importDataList
 	for _, template := range phoneNotificationTemplateList.GetTemplates() {
-		data = append(data, importDataItem{
-			ResourceName: "auth0_phone_notification_template." + sanitizeResourceName(string(template.GetType())),
-			ImportID:     template.GetID(),
-		})
+		if template.GetID() != "" {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_phone_notification_template." + sanitizeResourceName(string(template.GetType())),
+				ImportID:     template.GetID(),
+			})
+		}
 	}
 
 	return data, nil
