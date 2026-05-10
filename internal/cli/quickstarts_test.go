@@ -11,6 +11,7 @@ import (
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/golang/mock/gomock"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -20,19 +21,19 @@ import (
 	"github.com/auth0/auth0-cli/internal/display"
 )
 
-// -- DetectionSubBase --.
+// -- DetectionSubAsBase --.
 
-// TestResolveRequestParams_DetectionSubBase verifies that DetectionSubBase in
+// TestResolveRequestParams_DetectionSubAsBase verifies that DetectionSubAsBase in
 // callbacks resolves to baseURL with no path suffix (unlike DetectionSub which
 // appends "/callback").
-func TestResolveRequestParams_DetectionSubBase(t *testing.T) {
+func TestResolveRequestParams_DetectionSubAsBase(t *testing.T) {
 	t.Parallel()
 
 	t.Run("callback resolves to baseURL only", func(t *testing.T) {
 		t.Parallel()
 		req := auth0.RequestParams{
 			AppType:           "spa",
-			Callbacks:         []string{auth0.DetectionSubBase},
+			Callbacks:         []string{auth0.DetectionSubAsBase},
 			AllowedLogoutURLs: []string{auth0.DetectionSub},
 			WebOrigins:        []string{auth0.DetectionSub},
 			Name:              auth0.DetectionSub,
@@ -43,13 +44,13 @@ func TestResolveRequestParams_DetectionSubBase(t *testing.T) {
 		assert.Equal(t, []string{"http://localhost:5173"}, got.WebOrigins)
 	})
 
-	t.Run("DetectionSubBase in logoutURLs resolves to baseURL", func(t *testing.T) {
+	t.Run("DetectionSubAsBase in logoutURLs is not substituted (only DetectionSub is)", func(t *testing.T) {
 		t.Parallel()
 		req := auth0.RequestParams{
-			AllowedLogoutURLs: []string{auth0.DetectionSubBase},
+			AllowedLogoutURLs: []string{auth0.DetectionSubAsBase},
 		}
 		got := resolveRequestParams(req, "App", 3000)
-		assert.Equal(t, []string{"http://localhost:3000"}, got.AllowedLogoutURLs)
+		assert.Equal(t, []string{auth0.DetectionSubAsBase}, got.AllowedLogoutURLs)
 	})
 }
 
@@ -625,8 +626,10 @@ func TestReplaceDetectionSub_AllQuickstartConfigsCovered(t *testing.T) {
 }
 
 // TestNoInputWithTypeRequiresFramework verifies that getQuickstartConfigKey
-// returns an error when framework is empty for a known type, ensuring that the
-// no-input guard added before the call catches the case before hitting EOF.
+// does not error on missing framework in non-interactive mode — the framework
+// prompt is skipped by the Flag wrapper (shouldAsk returns false when canPrompt
+// is false). The guard that prevents a missing framework from reaching this
+// function lives in the command's RunE, not here.
 func TestNoInputWithTypeRequiresFramework(t *testing.T) {
 	t.Parallel()
 
@@ -637,16 +640,16 @@ func TestNoInputWithTypeRequiresFramework(t *testing.T) {
 		wantErr   bool
 	}{
 		{
-			name:      "spa without framework prompts (returns error on no-input)",
+			name:      "spa without framework skips prompt and returns no error",
 			appType:   "spa",
 			framework: "",
-			wantErr:   true,
+			wantErr:   false,
 		},
 		{
-			name:      "regular without framework prompts (returns error on no-input)",
+			name:      "regular without framework skips prompt and returns no error",
 			appType:   "regular",
 			framework: "",
-			wantErr:   true,
+			wantErr:   false,
 		},
 		{
 			name:      "spa with framework succeeds",
@@ -671,11 +674,8 @@ func TestNoInputWithTypeRequiresFramework(t *testing.T) {
 				Type:      tc.appType,
 				Framework: tc.framework,
 			}
-			_, _, _, err := getQuickstartConfigKey(inputs)
+			_, _, _, err := getQuickstartConfigKey(&cobra.Command{}, inputs)
 			if tc.wantErr {
-				// GetQuickstartConfigKey itself will try to prompt and fail with EOF in
-				// test (no TTY). The real command guards against this with a canPrompt
-				// check before calling getQuickstartConfigKey.
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
@@ -915,7 +915,7 @@ func TestAmbiguousDetection_NoInput_IntegrationFlow(t *testing.T) {
 	}
 
 	// Step 3: Resolve the config key.
-	qsConfigKey, inputs, _, err := getQuickstartConfigKey(inputs)
+	qsConfigKey, inputs, _, err := getQuickstartConfigKey(&cobra.Command{}, inputs)
 	require.NoError(t, err)
 
 	// Step 4: Verify the resolved framework is the first ambiguous candidate.

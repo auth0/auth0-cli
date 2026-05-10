@@ -190,9 +190,9 @@ func (q Quickstarts) Stacks() []string {
 const (
 	// DetectionSub is replaced at runtime with baseURL+CallbackPath ("/callback" by default).
 	DetectionSub = "DETECTION_SUB"
-	// DetectionSubBase is replaced at runtime with just the baseURL (no path suffix).
+	// DetectionSubAsBase is replaced at runtime with just the baseURL (no path suffix).
 	// Use this for SPA callback/logout URLs where the path is the app root.
-	DetectionSubBase = "DETECTION_SUB_BASE"
+	DetectionSubAsBase = "DETECTION_SUB_AS_BASE"
 )
 
 type FileOutputStrategy struct {
@@ -254,7 +254,7 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "spa",
-			Callbacks:         []string{DetectionSubBase},
+			Callbacks:         []string{DetectionSubAsBase},
 			AllowedLogoutURLs: []string{DetectionSub},
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
@@ -269,7 +269,7 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "spa",
-			Callbacks:         []string{DetectionSubBase},
+			Callbacks:         []string{DetectionSubAsBase},
 			AllowedLogoutURLs: []string{DetectionSub},
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
@@ -285,7 +285,7 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "spa",
-			Callbacks:         []string{DetectionSubBase},
+			Callbacks:         []string{DetectionSubAsBase},
 			AllowedLogoutURLs: []string{DetectionSub},
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
@@ -300,7 +300,7 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "spa",
-			Callbacks:         []string{DetectionSubBase},
+			Callbacks:         []string{DetectionSubAsBase},
 			AllowedLogoutURLs: []string{DetectionSub},
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
@@ -315,7 +315,7 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "spa",
-			Callbacks:         []string{DetectionSubBase},
+			Callbacks:         []string{DetectionSubAsBase},
 			AllowedLogoutURLs: []string{DetectionSub},
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
@@ -330,7 +330,7 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		RequestParams: RequestParams{
 			AppType:           "spa",
-			Callbacks:         []string{DetectionSubBase},
+			Callbacks:         []string{DetectionSubAsBase},
 			AllowedLogoutURLs: []string{DetectionSub},
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
