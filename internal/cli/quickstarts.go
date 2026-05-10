@@ -876,9 +876,8 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 									if noInputMode {
 										inputs.Framework = detection.AmbiguousFrameworks[0]
 									} else {
-										q := prompt.SelectInput("framework", "Select your framework", "",
-											detection.AmbiguousFrameworks, detection.AmbiguousFrameworks[0], true)
-										if err := prompt.AskOne(q, &inputs.Framework); err != nil {
+										defaultFramework := detection.AmbiguousFrameworks[0]
+										if err := setupExpFramework.Select(cmd, &inputs.Framework, detection.AmbiguousFrameworks, &defaultFramework); err != nil {
 											return fmt.Errorf("failed to select framework: %w", err)
 										}
 									}
@@ -933,7 +932,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					inputs.Type,
 				)
 			}
-			qsConfigKey, updatedInputs, wasAutoSelected, err := getQuickstartConfigKey(inputs)
+			qsConfigKey, updatedInputs, wasAutoSelected, err := getQuickstartConfigKey(cmd, inputs)
 			if err != nil {
 				return fmt.Errorf("failed to get quickstart configuration: %w", err)
 			}
@@ -949,14 +948,9 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					if defaultName == "" {
 						defaultName = "My App"
 					}
-					if canPromptFlag {
-						q := prompt.TextInput("name", "Application name", "Name for the Auth0 application", defaultName, true)
-						if err := prompt.AskOne(q, &inputs.Name); err != nil {
-							return fmt.Errorf("failed to enter application name: %w", err)
-						}
-					} else {
-						// In --no-input mode use the resolved default (directory name or "My App").
-						inputs.Name = defaultName
+					inputs.Name = defaultName
+					if err := setupExpName.Ask(cmd, &inputs.Name, &defaultName); err != nil {
+						return fmt.Errorf("failed to enter application name: %w", err)
 					}
 					if inputs.Name == "" {
 						return fmt.Errorf("application name cannot be empty")
@@ -968,24 +962,11 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 			}
 
 			// -- Step 3d: Prompt for port if not explicitly set --.
-			if inputs.App && inputs.Type != "native" && inputs.Type != "m2m" && !setupExpPort.IsSet(cmd) && canPromptFlag {
+			if inputs.App && inputs.Type != "native" && inputs.Type != "m2m" {
 				portStr := strconv.Itoa(inputs.Port)
-				q := prompt.TextInput("port", "Port number", "Port the application runs on", portStr, true)
-				if err := prompt.AskOne(q, &portStr); err != nil {
+				if err := setupExpPort.AskInt(cmd, &inputs.Port, &portStr); err != nil {
 					return fmt.Errorf("failed to enter port: %w", err)
 				}
-				p, atoiErr := strconv.Atoi(portStr)
-				if atoiErr != nil {
-					return fmt.Errorf("invalid port %q: must be a number", portStr)
-				}
-				inputs.Port = p
-				if inputs.Port < 1024 || inputs.Port > 65535 {
-					return fmt.Errorf("invalid port number: %d (must be between 1024 and 65535)", inputs.Port)
-				}
-			}
-
-			// Validate explicitly-passed --port value.
-			if inputs.App && inputs.Type != "native" && inputs.Type != "m2m" && setupExpPort.IsSet(cmd) {
 				if inputs.Port < 1024 || inputs.Port > 65535 {
 					return fmt.Errorf("invalid port number: %d (must be between 1024 and 65535)", inputs.Port)
 				}
@@ -1000,13 +981,9 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					if defaultName == "" || defaultName == "." {
 						defaultName = "my-api"
 					}
-					if canPromptFlag {
-						q := prompt.TextInput("name", "Application Name", "Name for the Auth0 API", defaultName, true)
-						if err := prompt.AskOne(q, &inputs.Name); err != nil {
-							return fmt.Errorf("failed to enter application name: %w", err)
-						}
-					} else {
-						inputs.Name = defaultName
+					inputs.Name = defaultName
+					if err := setupExpName.Ask(cmd, &inputs.Name, &defaultName); err != nil {
+						return fmt.Errorf("failed to enter application name: %w", err)
 					}
 				}
 			}
@@ -1023,22 +1000,9 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 						slug := strings.ToLower(strings.ReplaceAll(inputs.Name, " ", "-"))
 						defaultID = "https://" + slug
 					}
-					if canPromptFlag {
-						q := prompt.TextInput(
-							"identifier",
-							"Enter API Identifier (audience URL, identifiers must be unique within your tenant)",
-							"A unique URL that identifies your API. Must be unique across your Auth0 tenant.",
-							defaultID,
-							true,
-						)
-						if err := prompt.AskOne(q, &inputs.Identifier); err != nil {
-							return fmt.Errorf("failed to enter API identifier: %w", err)
-						}
-					} else {
-						inputs.Identifier = defaultID
-						if inputs.Identifier == "" {
-							return fmt.Errorf("identifier is required in non-interactive mode: use --identifier or --audience flag")
-						}
+					inputs.Identifier = defaultID
+					if err := setupExpIdentifier.Ask(cmd, &inputs.Identifier, &defaultID); err != nil {
+						return fmt.Errorf("failed to enter API identifier: %w", err)
 					}
 				} else if inputs.Identifier == "" {
 					inputs.Identifier = inputs.Audience
@@ -1054,31 +1018,23 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 
 				// If the flag was not set, prompt interactively; fall back to 86400 in non-interactive mode.
 				if inputs.TokenLifetime == "" {
-					if canPromptFlag {
-						defaultLifetime := "86400"
-						q := prompt.TextInput("token-lifetime", "Access token lifetime (seconds)",
-							"How long access tokens remain valid (default: 86400 = 24 hours)", defaultLifetime, true)
-						if err := prompt.AskOne(q, &inputs.TokenLifetime); err != nil {
-							return fmt.Errorf("failed to enter token lifetime: %w", err)
-						}
-						if inputs.TokenLifetime == "" {
-							cli.renderer.Warnf("Token lifetime left blank; using default 86400 seconds (24 hours)")
-							inputs.TokenLifetime = "86400"
-						}
-					} else {
-						inputs.TokenLifetime = "86400"
+					defaultLifetime := "86400"
+					inputs.TokenLifetime = defaultLifetime
+					if err := setupExpTokenLifetime.Ask(cmd, &inputs.TokenLifetime, &defaultLifetime); err != nil {
+						return fmt.Errorf("failed to enter token lifetime: %w", err)
+					}
+					if inputs.TokenLifetime == "" {
+						cli.renderer.Warnf("Token lifetime left blank; using default 86400 seconds (24 hours)")
+						inputs.TokenLifetime = defaultLifetime
 					}
 				}
 
 				if inputs.SigningAlg == "" {
-					if canPromptFlag {
-						signingAlgs := []string{"RS256", "PS256", "HS256"}
-						q := prompt.SelectInput("signing-alg", "Select the signing algorithm", "", signingAlgs, "RS256", true)
-						if err := prompt.AskOne(q, &inputs.SigningAlg); err != nil {
-							return fmt.Errorf("failed to select signing algorithm: %w", err)
-						}
-					} else {
-						inputs.SigningAlg = "RS256"
+					signingAlgs := []string{"RS256", "PS256", "HS256"}
+					defaultAlg := "RS256"
+					inputs.SigningAlg = defaultAlg
+					if err := setupExpSigningAlg.Select(cmd, &inputs.SigningAlg, signingAlgs, &defaultAlg); err != nil {
+						return fmt.Errorf("failed to select signing algorithm: %w", err)
 					}
 				}
 
@@ -1438,12 +1394,12 @@ func frameworksForType(qsType string) []string {
 // getQuickstartConfigKey resolves remaining missing prompts for App and API creation
 // and returns the config map key for the selected framework.
 // App/API selection and project detection are handled by the caller before this is invoked.
-func getQuickstartConfigKey(inputs SetupInputs) (string, SetupInputs, bool, error) {
+func getQuickstartConfigKey(cmd *cobra.Command, inputs SetupInputs) (string, SetupInputs, bool, error) {
 	if !inputs.App {
 		return "", inputs, false, nil
 	}
 
-	inputs, wasAutoSelected, err := resolveSetupInputs(inputs)
+	inputs, wasAutoSelected, err := resolveSetupInputs(cmd, inputs)
 	if err != nil {
 		return "", inputs, false, err
 	}
@@ -1460,7 +1416,7 @@ func getQuickstartConfigKey(inputs SetupInputs) (string, SetupInputs, bool, erro
 // resolveSetupInputs validates and fills missing fields on inputs by prompting the user
 // where needed. It returns the updated inputs, whether a build tool was auto-selected,
 // and any error encountered.
-func resolveSetupInputs(inputs SetupInputs) (SetupInputs, bool, error) {
+func resolveSetupInputs(cmd *cobra.Command, inputs SetupInputs) (SetupInputs, bool, error) {
 	// Validate --type if provided.
 	validTypes := []string{"spa", "regular", "native", "m2m"}
 	if inputs.Type != "" && !slices.Contains(validTypes, inputs.Type) {
@@ -1472,8 +1428,8 @@ func resolveSetupInputs(inputs SetupInputs) (SetupInputs, bool, error) {
 
 	// Prompt for --type if not provided.
 	if inputs.Type == "" {
-		q := prompt.SelectInput("type", "Select the application type", "", validTypes, "spa", true)
-		if err := prompt.AskOne(q, &inputs.Type); err != nil {
+		defaultType := "spa"
+		if err := setupExpType.Select(cmd, &inputs.Type, validTypes, &defaultType); err != nil {
 			return inputs, false, fmt.Errorf("failed to select application type: %w", err)
 		}
 	}
@@ -1489,8 +1445,7 @@ func resolveSetupInputs(inputs SetupInputs) (SetupInputs, bool, error) {
 		if len(frameworks) == 0 {
 			return inputs, false, fmt.Errorf("no frameworks available for type %q", inputs.Type)
 		}
-		q := prompt.SelectInput("framework", "Select the framework", "", frameworks, frameworks[0], true)
-		if err := prompt.AskOne(q, &inputs.Framework); err != nil {
+		if err := setupExpFramework.Select(cmd, &inputs.Framework, frameworks, &frameworks[0]); err != nil {
 			return inputs, false, fmt.Errorf("failed to select framework: %w", err)
 		}
 	}
@@ -1504,7 +1459,7 @@ func resolveSetupInputs(inputs SetupInputs) (SetupInputs, bool, error) {
 	// If no explicit build tool and the "none" variant doesn't exist, resolve the best
 	// supported build tool from the pre-built FrameworkBuildTools map.
 	wasAutoSelected := false
-	if inputs.BuildTool == "" {
+	if inputs.BuildTool == "" || inputs.BuildTool == "none" {
 		if _, exists := auth0.QuickstartConfigs[fmt.Sprintf("%s:%s:none", inputs.Type, inputs.Framework)]; !exists {
 			if tools := auth0.FrameworkBuildTools[inputs.Type+":"+inputs.Framework]; len(tools) > 0 {
 				inputs.BuildTool = tools[0]
@@ -1667,17 +1622,17 @@ func resolveRequestParams(reqParams auth0.RequestParams, name string, port int) 
 		switch cb {
 		case auth0.DetectionSub:
 			callbacks[i] = baseURL + callbackPath
-		case auth0.DetectionSubBase:
+		case auth0.DetectionSubAsBase:
 			callbacks[i] = baseURL
 		}
 	}
 	for i, u := range logoutURLs {
-		if u == auth0.DetectionSub || u == auth0.DetectionSubBase {
+		if u == auth0.DetectionSub {
 			logoutURLs[i] = baseURL
 		}
 	}
 	for i, u := range webOrigins {
-		if u == auth0.DetectionSub || u == auth0.DetectionSubBase {
+		if u == auth0.DetectionSub {
 			webOrigins[i] = baseURL
 		}
 	}
@@ -1701,7 +1656,7 @@ func replaceDetectionSub(envValues map[string]string, tenantDomain string, clien
 	updatedEnvValues := make(map[string]string)
 
 	for key, value := range envValues {
-		if value != auth0.DetectionSub && value != auth0.DetectionSubBase {
+		if value != auth0.DetectionSub && value != auth0.DetectionSubAsBase {
 			updatedEnvValues[key] = value
 			continue
 		}

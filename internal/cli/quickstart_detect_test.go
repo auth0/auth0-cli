@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -1774,7 +1775,7 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			key, updated, wasAuto, err := getQuickstartConfigKey(tc.inputs)
+			key, updated, wasAuto, err := getQuickstartConfigKey(&cobra.Command{}, tc.inputs)
 			require.NoError(t, err)
 			assert.Equal(t, tc.wantKey, key)
 			assert.Equal(t, tc.wantAutoSelect, wasAuto)
@@ -1788,7 +1789,7 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 func TestGetQuickstartConfigKey_EmptyBuildToolTreatedAsNone(t *testing.T) {
 	// BuildTool == "" should be normalised to "none" internally.
 	inputs := SetupInputs{App: true, Type: "regular", Framework: "nextjs", BuildTool: "", Port: 3000}
-	key, _, _, err := getQuickstartConfigKey(inputs)
+	key, _, _, err := getQuickstartConfigKey(&cobra.Command{}, inputs)
 	require.NoError(t, err)
 	assert.Equal(t, "regular:nextjs:none", key)
 }
