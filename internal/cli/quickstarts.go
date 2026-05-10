@@ -803,6 +803,9 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 
 			// -- Step 1: Decide what to create (App / API / both) --.
 			if !inputs.App && !inputs.API {
+				if !canPromptFlag {
+					return fmt.Errorf("in --no-input mode, specify at least one of --app or --api")
+				}
 				var selections []string
 				if err := prompt.AskMultiSelect(
 					"What do you want to create? (select whatever applies)",
@@ -830,90 +833,92 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("failed to get working directory: %w", err)
 				}
-				detection := DetectProject(cwd)
 
-				typeFromFlag := cmd.Flags().Changed("type")
-				frameworkFromFlag := cmd.Flags().Changed("framework")
+				// M2M apps have no framework or port; skip DetectProject entirely.
+				if inputs.Type == "m2m" {
+					if inputs.Name == "" {
+						inputs.Name = filepath.Base(cwd)
+					}
+				} else {
+					detection := DetectProject(cwd)
 
-				switch {
-				case inputs.Type == "m2m":
-					// M2M apps have no framework or port; skip detection entirely so that
-					// signal files in the directory cannot override the explicit --type flag.
-					if inputs.Name == "" {
-						inputs.Name = detection.AppName
-					}
-				case typeFromFlag && frameworkFromFlag:
-					// User explicitly specified type and framework via flags; skip detection UI.
-					if inputs.Name == "" {
-						inputs.Name = detection.AppName
-					}
-					// If build tool was not explicitly provided, read it from detected config
-					// files (e.g. vite.config.ts) rather than defaulting to "none" statically.
-					if !cmd.Flags().Changed("build-tool") && detection.BuildTool != "" {
-						inputs.BuildTool = detection.BuildTool
-					}
-					if inputs.BundleID == "" && detection.BundleID != "" {
-						inputs.BundleID = detection.BundleID
-					}
-				case detection.Detected:
-					noInputMode := !canPromptFlag
-					if len(detection.AmbiguousCandidates) > 1 {
-						// Multiple package.json deps matched - show partial summary and ask user to disambiguate.
-						cli.renderer.InfofBullet("Detected in current directory")
-						cli.renderer.InfofBullet("Framework: %s", "Could not be determined")
-						cli.renderer.InfofBullet("App type: %s", detectionFriendlyAppType(detection.Type))
-						cli.renderer.InfofBullet("App name: %s", detection.AppName)
-						if detection.Port > 0 {
-							cli.renderer.InfofBullet("Port: %d", detection.Port)
+					typeFromFlag := setupExpType.IsSet(cmd)
+					frameworkFromFlag := setupExpFramework.IsSet(cmd)
+
+					switch {
+					case typeFromFlag && frameworkFromFlag:
+						// User explicitly specified type and framework via flags; skip detection UI.
+						if inputs.Name == "" {
+							inputs.Name = detection.AppName
 						}
-						if noInputMode || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
-							inputs = applyDetectionToInputs(inputs, detection)
-							if inputs.Framework == "" {
-								if noInputMode {
-									inputs.Framework = detection.AmbiguousCandidates[0]
-								} else {
-									q := prompt.SelectInput("framework", "Select your framework", "",
-										detection.AmbiguousCandidates, detection.AmbiguousCandidates[0], true)
-									if err := prompt.AskOne(q, &inputs.Framework); err != nil {
-										return fmt.Errorf("failed to select framework: %w", err)
+						// If build tool was not explicitly provided, read it from detected config
+						// files (e.g. vite.config.ts) rather than defaulting to "none" statically.
+						if !setupExpBuildTool.IsSet(cmd) && detection.BuildTool != "" {
+							inputs.BuildTool = detection.BuildTool
+						}
+						if inputs.BundleID == "" && detection.BundleID != "" {
+							inputs.BundleID = detection.BundleID
+						}
+					case detection.Detected:
+						noInputMode := !canPromptFlag
+						if len(detection.AmbiguousFrameworks) > 1 {
+							// Multiple package.json deps matched - show partial summary and ask user to disambiguate.
+							cli.renderer.InfofBullet("Detected in current directory")
+							cli.renderer.InfofBullet("Framework: %s", "Could not be determined")
+							cli.renderer.InfofBullet("App type: %s", detectionFriendlyAppType(detection.Type))
+							// cli.renderer.InfofBullet("App name: %s", detection.AppName)
+							// if detection.Port > 0 {
+							// 	cli.renderer.InfofBullet("Port: %d", detection.Port)
+							// }
+							if noInputMode || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
+								inputs = applyDetectionToInputs(inputs, detection)
+								if inputs.Framework == "" {
+									if noInputMode {
+										inputs.Framework = detection.AmbiguousFrameworks[0]
+									} else {
+										q := prompt.SelectInput("framework", "Select your framework", "",
+											detection.AmbiguousFrameworks, detection.AmbiguousFrameworks[0], true)
+										if err := prompt.AskOne(q, &inputs.Framework); err != nil {
+											return fmt.Errorf("failed to select framework: %w", err)
+										}
 									}
 								}
 							}
-						}
-					} else if detection.Framework != "" {
-						// Single clear detection - show summary and confirm.
-						titleCaser := cases.Title(language.English)
-						frameworkDisplay := frameworkDisplayName(detection.Framework)
-						if detection.BuildTool != "" && detection.BuildTool != "none" {
-							frameworkDisplay += " - " + titleCaser.String(detection.BuildTool)
-						}
-						cli.renderer.InfofBullet("Detected in current directory")
-						cli.renderer.InfofBullet("Framework: %s", frameworkDisplay)
-						cli.renderer.InfofBullet("App type: %s", detectionFriendlyAppType(detection.Type))
-						cli.renderer.InfofBullet("App name: %s", detection.AppName)
-						if detection.Port > 0 {
-							cli.renderer.InfofBullet("Port: %d", detection.Port)
-						}
+						} else if detection.Framework != "" {
+							// Single clear detection - show summary and confirm.
+							titleCaser := cases.Title(language.English)
+							frameworkDisplay := frameworkDisplayName(detection.Framework)
+							if detection.BuildTool != "" && detection.BuildTool != "none" {
+								frameworkDisplay += " - " + titleCaser.String(detection.BuildTool)
+							}
+							cli.renderer.InfofBullet("Detected in current directory")
+							cli.renderer.InfofBullet("Framework: %s", frameworkDisplay)
+							cli.renderer.InfofBullet("App type: %s", detectionFriendlyAppType(detection.Type))
+							cli.renderer.InfofBullet("App name: %s", detection.AppName)
+							if detection.Port > 0 {
+								cli.renderer.InfofBullet("Port: %d", detection.Port)
+							}
 
-						if noInputMode || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
-							inputs = applyDetectionToInputs(inputs, detection)
-							if inputs.Framework == "" {
-								inputs.Framework = detection.Framework
+							if noInputMode || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
+								inputs = applyDetectionToInputs(inputs, detection)
+								if inputs.Framework == "" {
+									inputs.Framework = detection.Framework
+								}
 							}
 						}
-					}
-				default:
-					// No detection signal found - notify the user and pre-fill name from directory.
-					if !canPromptFlag && inputs.Type == "" {
-						return fmt.Errorf(
-							"auto-detection failed: unable to auto detect application. " +
-								"In --no-input mode provide --type, --framework, and optionally --build-tool " +
-								"(e.g. --type spa --framework react --build-tool vite)",
-						)
-					}
-					cli.renderer.Warnf("auto-detection failed: unable to auto detect application")
-					if inputs.Name == "" {
-						inputs.Name = detection.AppName
+					default:
+						// No detection signal found - notify the user and pre-fill name from directory.
+						if !canPromptFlag && inputs.Type == "" {
+							return fmt.Errorf(
+								"auto-detection failed: unable to auto detect application. " +
+									"In --no-input mode provide --type, --framework, and optionally --build-tool " +
+									"(e.g. --type spa --framework react --build-tool vite)",
+							)
+						}
+						cli.renderer.Warnf("auto-detection failed: unable to auto detect application")
+						if inputs.Name == "" {
+							inputs.Name = detection.AppName
+						}
 					}
 				}
 			}
@@ -939,7 +944,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 
 			// -- Step 3b: Collect application name --.
 			if inputs.App {
-				if !cmd.Flags().Changed("name") {
+				if !setupExpName.IsSet(cmd) {
 					defaultName := inputs.Name
 					if defaultName == "" {
 						defaultName = "My App"
@@ -963,10 +968,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 			}
 
 			// -- Step 3d: Prompt for port if not explicitly set --.
-			if inputs.App && inputs.Type != "native" && inputs.Type != "m2m" && !cmd.Flags().Changed("port") && canPromptFlag {
-				if inputs.Port == 0 {
-					inputs.Port = defaultPortForFramework(inputs.Framework)
-				}
+			if inputs.App && inputs.Type != "native" && inputs.Type != "m2m" && !setupExpPort.IsSet(cmd) && canPromptFlag {
 				portStr := strconv.Itoa(inputs.Port)
 				q := prompt.TextInput("port", "Port number", "Port the application runs on", portStr, true)
 				if err := prompt.AskOne(q, &portStr); err != nil {
@@ -983,7 +985,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 			}
 
 			// Validate explicitly-passed --port value.
-			if inputs.App && inputs.Type != "native" && inputs.Type != "m2m" && cmd.Flags().Changed("port") {
+			if inputs.App && inputs.Type != "native" && inputs.Type != "m2m" && setupExpPort.IsSet(cmd) {
 				if inputs.Port < 1024 || inputs.Port > 65535 {
 					return fmt.Errorf("invalid port number: %d (must be between 1024 and 65535)", inputs.Port)
 				}
@@ -992,7 +994,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 			// -- Step 3c: Collect API name for API-only flow --.
 			if inputs.API && !inputs.App {
 				// Collect API name if not already set (pre-fill from CWD folder name).
-				if inputs.Name == "" && !cmd.Flags().Changed("name") {
+				if inputs.Name == "" && !setupExpName.IsSet(cmd) {
 					cwd, _ := os.Getwd()
 					defaultName := filepath.Base(cwd)
 					if defaultName == "" || defaultName == "." {
@@ -1011,7 +1013,7 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 
 			if inputs.API {
 				// Prompt for the identifier if not explicitly provided via flag.
-				if !cmd.Flags().Changed("identifier") && !cmd.Flags().Changed("audience") {
+				if !setupExpIdentifier.IsSet(cmd) && !setupExpAudience.IsSet(cmd) {
 					// Compute a suggested default without pre-populating inputs.Identifier.
 					defaultID := inputs.Identifier
 					if defaultID == "" {
@@ -1437,106 +1439,85 @@ func frameworksForType(qsType string) []string {
 // and returns the config map key for the selected framework.
 // App/API selection and project detection are handled by the caller before this is invoked.
 func getQuickstartConfigKey(inputs SetupInputs) (string, SetupInputs, bool, error) {
-	// Handle application creation inputs.
-	if inputs.App {
-		// Validate --type if provided (Bug 12).
-		validTypes := []string{"spa", "regular", "native", "m2m"}
-		if inputs.Type != "" && !slices.Contains(validTypes, inputs.Type) {
-			return "", inputs, false, fmt.Errorf(
-				"invalid --type %q: must be one of %s",
-				inputs.Type, strings.Join(validTypes, ", "),
-			)
-		}
-
-		// Prompt for --type if not provided.
-		if inputs.Type == "" {
-			q := prompt.SelectInput("type", "Select the application type", "", validTypes, "spa", true)
-			if err := prompt.AskOne(q, &inputs.Type); err != nil {
-				return "", inputs, false, fmt.Errorf("failed to select application type: %w", err)
-			}
-		}
-
-		// M2M apps have no framework, port, or callback URLs (Bug 6).
-		if inputs.Type == "m2m" {
-			return "m2m:none:none", inputs, false, nil
-		}
-
-		// Prompt for --framework filtered to the selected type.
-		if inputs.Framework == "" {
-			frameworks := frameworksForType(inputs.Type)
-			if len(frameworks) == 0 {
-				return "", inputs, false, fmt.Errorf("no frameworks available for type %q", inputs.Type)
-			}
-			q := prompt.SelectInput("framework", "Select the framework", "", frameworks, frameworks[0], true)
-			if err := prompt.AskOne(q, &inputs.Framework); err != nil {
-				return "", inputs, false, fmt.Errorf("failed to select framework: %w", err)
-			}
-		}
-
-		// Resolve port from framework default before prompting (Bug 11).
-		// The spec says "--port: default value used if not given", so we never prompt.
-		if inputs.Port == 0 {
-			inputs.Port = defaultPortForFramework(inputs.Framework)
-			// Port stays 0 for native apps (react-native, expo, flutter) - no port needed.
-		}
-	}
-
-	// Config key is only meaningful when an app is being created.
 	if !inputs.App {
 		return "", inputs, false, nil
 	}
 
-	// Fallback to "none" if build tool wasn't asked/selected to match the config map keys.
-	buildToolKey := inputs.BuildTool
-	if buildToolKey == "" {
-		buildToolKey = "none"
+	inputs, wasAutoSelected, err := resolveSetupInputs(inputs)
+	if err != nil {
+		return "", inputs, false, err
 	}
 
-	configKey := fmt.Sprintf("%s:%s:%s", inputs.Type, inputs.Framework, buildToolKey)
-
-	// When build tool is "none" and no exact match exists, find the first available config
-	// for this type+framework combination (e.g. spa:react only has a :vite variant).
-	wasAutoSelected := false
-	if _, exists := auth0.QuickstartConfigs[configKey]; !exists && buildToolKey == "none" {
-		prefix := fmt.Sprintf("%s:%s:", inputs.Type, inputs.Framework)
-		var candidates []string
-		for k := range auth0.QuickstartConfigs {
-			if strings.HasPrefix(k, prefix) {
-				candidates = append(candidates, k)
-			}
-		}
-		if len(candidates) > 0 {
-			// Sort by priority (vite > webpack > cra > others alphabetically) so modern
-			// build tools are preferred over legacy ones.
-			buildToolPriority := map[string]int{"vite": 0, "webpack": 1, "cra": 2}
-			sort.Slice(candidates, func(i, j int) bool {
-				pi, pj := len(buildToolPriority)+1, len(buildToolPriority)+1
-				if parts := strings.SplitN(candidates[i], ":", 3); len(parts) == 3 {
-					if p, ok := buildToolPriority[parts[2]]; ok {
-						pi = p
-					}
-				}
-				if parts := strings.SplitN(candidates[j], ":", 3); len(parts) == 3 {
-					if p, ok := buildToolPriority[parts[2]]; ok {
-						pj = p
-					}
-				}
-				if pi != pj {
-					return pi < pj
-				}
-				return candidates[i] < candidates[j]
-			})
-			configKey = candidates[0]
-			// Update inputs.BuildTool so the caller can notify the user of the auto-selection.
-			parts := strings.SplitN(configKey, ":", 3)
-			if len(parts) == 3 {
-				inputs.BuildTool = parts[2]
-			}
-			wasAutoSelected = true
-		}
+	if inputs.Type == "m2m" {
+		return "m2m:none:none", inputs, false, nil
 	}
+
+	configKey := fmt.Sprintf("%s:%s:%s", inputs.Type, inputs.Framework, inputs.BuildTool)
 
 	return configKey, inputs, wasAutoSelected, nil
+}
+
+// resolveSetupInputs validates and fills missing fields on inputs by prompting the user
+// where needed. It returns the updated inputs, whether a build tool was auto-selected,
+// and any error encountered.
+func resolveSetupInputs(inputs SetupInputs) (SetupInputs, bool, error) {
+	// Validate --type if provided.
+	validTypes := []string{"spa", "regular", "native", "m2m"}
+	if inputs.Type != "" && !slices.Contains(validTypes, inputs.Type) {
+		return inputs, false, fmt.Errorf(
+			"invalid --type %q: must be one of %s",
+			inputs.Type, strings.Join(validTypes, ", "),
+		)
+	}
+
+	// Prompt for --type if not provided.
+	if inputs.Type == "" {
+		q := prompt.SelectInput("type", "Select the application type", "", validTypes, "spa", true)
+		if err := prompt.AskOne(q, &inputs.Type); err != nil {
+			return inputs, false, fmt.Errorf("failed to select application type: %w", err)
+		}
+	}
+
+	// M2M apps have no framework, port, or callback URLs.
+	if inputs.Type == "m2m" {
+		return inputs, false, nil
+	}
+
+	// Prompt for --framework filtered to the selected type.
+	if inputs.Framework == "" {
+		frameworks := frameworksForType(inputs.Type)
+		if len(frameworks) == 0 {
+			return inputs, false, fmt.Errorf("no frameworks available for type %q", inputs.Type)
+		}
+		q := prompt.SelectInput("framework", "Select the framework", "", frameworks, frameworks[0], true)
+		if err := prompt.AskOne(q, &inputs.Framework); err != nil {
+			return inputs, false, fmt.Errorf("failed to select framework: %w", err)
+		}
+	}
+
+	// Resolve port from framework default before prompting.
+	// Port stays 0 for native apps (react-native, expo, flutter) - no port needed.
+	if inputs.Port == 0 {
+		inputs.Port = defaultPortForFramework(inputs.Framework)
+	}
+
+	// If no explicit build tool and the "none" variant doesn't exist, resolve the best
+	// supported build tool from the pre-built FrameworkBuildTools map.
+	wasAutoSelected := false
+	if inputs.BuildTool == "" {
+		if _, exists := auth0.QuickstartConfigs[fmt.Sprintf("%s:%s:none", inputs.Type, inputs.Framework)]; !exists {
+			if tools := auth0.FrameworkBuildTools[inputs.Type+":"+inputs.Framework]; len(tools) > 0 {
+				inputs.BuildTool = tools[0]
+				wasAutoSelected = true
+			} else {
+				inputs.BuildTool = "none"
+			}
+		} else {
+			inputs.BuildTool = "none"
+		}
+	}
+
+	return inputs, wasAutoSelected, nil
 }
 
 // applyDetectionToInputs copies fields from a DetectionResult into inputs, skipping
@@ -1627,7 +1608,7 @@ func generateClient(input SetupInputs, reqParams auth0.RequestParams) (*manageme
 
 	resolved := resolveRequestParams(reqParams, input.Name, input.Port)
 
-	// Override URL fields with explicit flag values when provided (Bug 7).
+	// Override URL fields with explicit flag values when provided.
 	if input.CallbackURL != "" {
 		resolved.Callbacks = []string{input.CallbackURL}
 	}

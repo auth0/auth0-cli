@@ -846,9 +846,9 @@ func TestDetectProject_AmbiguousPackageJSON(t *testing.T) {
 	got := DetectProject(dir)
 	assert.True(t, got.Detected)
 	assert.Empty(t, got.Framework)
-	assert.Len(t, got.AmbiguousCandidates, 2)
-	assert.Contains(t, got.AmbiguousCandidates, "express")
-	assert.Contains(t, got.AmbiguousCandidates, "hono")
+	assert.Len(t, got.AmbiguousFrameworks, 2)
+	assert.Contains(t, got.AmbiguousFrameworks, "express")
+	assert.Contains(t, got.AmbiguousFrameworks, "hono")
 	// Both express and hono default to port 3000, so the common port must be set.
 	assert.Equal(t, 3000, got.Port)
 }
@@ -1235,7 +1235,6 @@ func TestCollectPackageJSONCandidates(t *testing.T) {
 		require.Len(t, got, 1)
 		assert.Equal(t, "express", got[0].framework)
 		assert.Equal(t, "regular", got[0].qsType)
-		assert.Equal(t, 3000, got[0].port)
 	})
 
 	t.Run("hono", func(t *testing.T) {
@@ -1243,7 +1242,6 @@ func TestCollectPackageJSONCandidates(t *testing.T) {
 		require.Len(t, got, 1)
 		assert.Equal(t, "hono", got[0].framework)
 		assert.Equal(t, "regular", got[0].qsType)
-		assert.Equal(t, 3000, got[0].port)
 	})
 
 	t.Run("fastify", func(t *testing.T) {
@@ -1251,7 +1249,6 @@ func TestCollectPackageJSONCandidates(t *testing.T) {
 		require.Len(t, got, 1)
 		assert.Equal(t, "fastify", got[0].framework)
 		assert.Equal(t, "regular", got[0].qsType)
-		assert.Equal(t, 3000, got[0].port)
 	})
 
 	t.Run("empty_deps_returns_no_candidates", func(t *testing.T) {

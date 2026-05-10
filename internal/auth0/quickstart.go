@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"sort"
 	"strings"
 	"time"
 
@@ -221,6 +222,27 @@ type AppConfig struct {
 	// Leave empty for frameworks where the audience is not configured via an env file.
 	AudienceVar string
 }
+
+// FrameworkBuildTools maps "type:framework" to the alphabetically ordered list of supported
+// build tools derived from QuickstartConfigs.
+var FrameworkBuildTools = func() map[string][]string {
+	raw := map[string][]string{}
+	for k := range QuickstartConfigs {
+		parts := strings.SplitN(k, ":", 3)
+		if len(parts) != 3 {
+			continue
+		}
+		tf := parts[0] + ":" + parts[1]
+		raw[tf] = append(raw[tf], parts[2])
+	}
+	for tf, tools := range raw {
+		if len(tools) > 1 {
+			sort.Strings(tools)
+		}
+		raw[tf] = tools
+	}
+	return raw
+}()
 
 var QuickstartConfigs = map[string]AppConfig{
 
