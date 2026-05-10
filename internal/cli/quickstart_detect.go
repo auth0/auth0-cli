@@ -5,12 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
 // DetectionResult holds the values resolved by scanning the working directory.
-// Fields are empty/zero when not detected. AmbiguousCandidates is populated when
+// Fields are empty/zero when not detected. AmbiguousFrameworks is populated when
 // multiple package.json deps match and the framework cannot be determined uniquely.
 type DetectionResult struct {
 	Framework           string
@@ -20,7 +19,7 @@ type DetectionResult struct {
 	AppName             string   // Basename of the working directory.
 	BundleID            string   // Package/bundle ID for native apps (e.g. "com.example.myapp"); empty if not found.
 	Detected            bool     // True if any signal file matched.
-	AmbiguousCandidates []string // Set when >1 package.json dep matched.
+	AmbiguousFrameworks []string // Set when >1 package.json dep matched.
 }
 
 // detectionCandidate is used internally during package.json dep scanning.
@@ -28,7 +27,6 @@ type detectionCandidate struct {
 	framework string
 	qsType    string
 	buildTool string
-	port      int
 }
 
 // DetectProject scans dir for framework signal files and returns a DetectionResult.
@@ -85,7 +83,7 @@ func DetectProject(dir string) DetectionResult {
 	if fileExists(dir, "angular.json") {
 		result.Framework = "angular"
 		result.Type = "spa"
-		result.Port = detectPortFromConfig(dir, "angular", 4200)
+		result.Port = defaultPortForFramework("angular")
 		result.Detected = true
 		return result
 	}
@@ -140,7 +138,7 @@ func DetectProject(dir string) DetectionResult {
 		result.Framework = "sveltekit"
 		result.Type = "regular"
 		result.BuildTool = detectBuildToolFromFiles(dir, "sveltekit")
-		result.Port = detectPortFromConfig(dir, "sveltekit", defaultPortForFramework("sveltekit"))
+		result.Port = defaultPortForFramework("sveltekit")
 		result.Detected = true
 		return result
 	}
@@ -161,7 +159,6 @@ func DetectProject(dir string) DetectionResult {
 	if fileExistsAny(dir, "vite.config.ts", "vite.config.js") {
 		result.Type = "spa"
 		result.BuildTool = "vite"
-		result.Port = detectPortFromConfig(dir, "vite", 5173)
 		result.Detected = true
 		switch {
 		case hasDep(earlyDeps, "react"):
@@ -173,6 +170,7 @@ func DetectProject(dir string) DetectionResult {
 		default:
 			result.Framework = "vanilla-javascript"
 		}
+		result.Port = defaultPortForFramework(result.Framework)
 		return result
 	}
 
@@ -180,7 +178,7 @@ func DetectProject(dir string) DetectionResult {
 	if fileExistsAny(dir, "next.config.js", "next.config.ts", "next.config.mjs") {
 		result.Framework = "nextjs"
 		result.Type = "regular"
-		result.Port = detectPortFromConfig(dir, "nextjs", 3000)
+		result.Port = defaultPortForFramework("nextjs")
 		result.Detected = true
 		return result
 	}
@@ -200,7 +198,7 @@ func DetectProject(dir string) DetectionResult {
 		result.Framework = framework
 		result.Type = appType
 		result.BuildTool = detectBuildToolFromFiles(dir, framework)
-		result.Port = detectPortFromConfig(dir, framework, defaultPortForFramework(framework))
+		result.Port = defaultPortForFramework(framework)
 		result.Detected = true
 		return result
 	}
@@ -316,7 +314,7 @@ func DetectProject(dir string) DetectionResult {
 			result.Framework = c.framework
 			result.Type = c.qsType
 			result.BuildTool = c.buildTool
-			result.Port = c.port
+			result.Port = defaultPortForFramework(c.framework)
 			result.Detected = true
 			// React Native uses the same android/app/build.gradle structure as Flutter.
 			if c.framework == "react-native" {
@@ -327,16 +325,16 @@ func DetectProject(dir string) DetectionResult {
 				result.Type = "regular" // All package.json web deps are regular/native.
 				result.Detected = true
 				// Use the common port if all candidates agree (e.g. express + hono both use 3000).
-				commonPort := candidates[0].port
+				commonPort := defaultPortForFramework(candidates[0].framework)
 				for _, c := range candidates {
-					if c.port != commonPort {
+					if defaultPortForFramework(c.framework) != commonPort {
 						commonPort = 0
 						break
 					}
 				}
 				result.Port = commonPort
 				for _, c := range candidates {
-					result.AmbiguousCandidates = append(result.AmbiguousCandidates, c.framework)
+					result.AmbiguousFrameworks = append(result.AmbiguousFrameworks, c.framework)
 				}
 			}
 		}
@@ -356,13 +354,13 @@ func collectPackageJSONCandidates(deps map[string]bool) []detectionCandidate {
 		candidates = append(candidates, detectionCandidate{framework: "react-native", qsType: "native"})
 	}
 	if hasDep(deps, "express") {
-		candidates = append(candidates, detectionCandidate{framework: "express", qsType: "regular", port: 3000})
+		candidates = append(candidates, detectionCandidate{framework: "express", qsType: "regular"})
 	}
 	if hasDep(deps, "hono") {
-		candidates = append(candidates, detectionCandidate{framework: "hono", qsType: "regular", port: 3000})
+		candidates = append(candidates, detectionCandidate{framework: "hono", qsType: "regular"})
 	}
 	if hasDep(deps, "fastify") {
-		candidates = append(candidates, detectionCandidate{framework: "fastify", qsType: "regular", port: 3000})
+		candidates = append(candidates, detectionCandidate{framework: "fastify", qsType: "regular"})
 	}
 	return candidates
 }
@@ -719,63 +717,11 @@ func findCsprojContent(dir string) (string, bool) {
 	return "", false
 }
 
-// portPattern matches port assignments in config files, e.g. `port: 3001` or `"port": 3001`.
-var portPattern = regexp.MustCompile(`"?port"?\s*:\s*(\d{4,5})`)
-
 // mobileTFMRegex matches .NET mobile Target Framework Monikers (net*-android or net*-ios).
 // A bare substring match on "-android" / "-ios" can produce false positives on package
 // names such as "Newtonsoft.Json-ios" or condition attributes. Requiring the leading
 // net<major>.<minor> prefix eliminates those false positives.
 var mobileTFMRegex = regexp.MustCompile(`net\d+\.\d+-(?:android|ios)`)
-
-// extractPortFromContent returns the first port number found in content, or 0 if none found.
-func extractPortFromContent(content string) int {
-	matches := portPattern.FindStringSubmatch(content)
-	if len(matches) < 2 {
-		return 0
-	}
-	p, err := strconv.Atoi(matches[1])
-	if err != nil || p < 1024 || p > 65535 {
-		return 0
-	}
-	return p
-}
-
-// detectPortFromConfig tries to read the port from a project config file.
-// It checks framework-specific files (vite.config.ts/js for vite-based projects,
-// angular.json for Angular, next.config.* for Next.js). Falls back to defaultPort.
-func detectPortFromConfig(dir, hint string, defaultPort int) int {
-	switch hint {
-	case "angular":
-		if data, ok := readFileContent(dir, "angular.json"); ok {
-			if p := extractPortFromContent(data); p > 0 {
-				return p
-			}
-		}
-	case "nextjs":
-		for _, name := range []string{"next.config.ts", "next.config.js", "next.config.mjs"} {
-			if data, ok := readFileContent(dir, name); ok {
-				if p := extractPortFromContent(data); p > 0 {
-					return p
-				}
-			}
-		}
-	case "django", "rails", "vanilla-go", "vanilla-python", "aspnet-mvc", "aspnet-blazor",
-		"aspnet-owin", "vanilla-php", "vanilla-java", "java-ee", "spring-boot", "laravel",
-		"express", "hono", "fastify", "nuxt", "android", "ios-swift":
-		// Backend-only or non-vite frameworks: no config file to inspect, use default directly.
-	default:
-		// For vite-based projects (react, vue, svelte, sveltekit, ionic-*, etc.)
-		for _, name := range []string{"vite.config.ts", "vite.config.js"} {
-			if data, ok := readFileContent(dir, name); ok {
-				if p := extractPortFromContent(data); p > 0 {
-					return p
-				}
-			}
-		}
-	}
-	return defaultPort
-}
 
 // detectBuildToolFromFiles detects the build tool by checking for config files in dir.
 // Falls back to the conventional default for the framework if no relevant file is found.

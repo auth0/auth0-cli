@@ -865,7 +865,7 @@ func TestAmbiguousDetection_NoInputMode_UsesFirstCandidate(t *testing.T) {
 		Type:                "regular",
 		Port:                3000,
 		AppName:             "my-app",
-		AmbiguousCandidates: []string{"express", "hono"},
+		AmbiguousFrameworks: []string{"express", "hono"},
 		Detected:            true,
 	}
 
@@ -873,7 +873,7 @@ func TestAmbiguousDetection_NoInputMode_UsesFirstCandidate(t *testing.T) {
 
 	// Simulate no-input mode: pick first candidate when framework is empty.
 	if inputs.Framework == "" {
-		inputs.Framework = detection.AmbiguousCandidates[0]
+		inputs.Framework = detection.AmbiguousFrameworks[0]
 	}
 
 	assert.Equal(t, "express", inputs.Framework)
@@ -906,12 +906,12 @@ func TestAmbiguousDetection_NoInput_IntegrationFlow(t *testing.T) {
 	// Step 1: DetectProject finds ambiguous candidates from the real filesystem.
 	detection := DetectProject(dir)
 	require.True(t, detection.Detected, "detection should have fired")
-	require.Greater(t, len(detection.AmbiguousCandidates), 1, "should have multiple candidates")
+	require.Greater(t, len(detection.AmbiguousFrameworks), 1, "should have multiple candidates")
 
 	// Step 2: In no-input mode, pick the first candidate (same logic as RunE).
 	inputs := applyDetectionToInputs(SetupInputs{App: true}, detection)
 	if inputs.Framework == "" {
-		inputs.Framework = detection.AmbiguousCandidates[0]
+		inputs.Framework = detection.AmbiguousFrameworks[0]
 	}
 
 	// Step 3: Resolve the config key.
@@ -919,7 +919,7 @@ func TestAmbiguousDetection_NoInput_IntegrationFlow(t *testing.T) {
 	require.NoError(t, err)
 
 	// Step 4: Verify the resolved framework is the first ambiguous candidate.
-	assert.Equal(t, detection.AmbiguousCandidates[0], inputs.Framework)
+	assert.Equal(t, detection.AmbiguousFrameworks[0], inputs.Framework)
 	assert.Equal(t, "regular", inputs.Type)
 
 	// Step 5: Create the app end-to-end using the resolved inputs.
