@@ -866,10 +866,6 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 							cli.renderer.InfofBullet("Detected in current directory")
 							cli.renderer.InfofBullet("Framework: %s", "Could not be determined")
 							cli.renderer.InfofBullet("App type: %s", detectionFriendlyAppType(detection.Type))
-							// cli.renderer.InfofBullet("App name: %s", detection.AppName)
-							// if detection.Port > 0 {
-							// 	cli.renderer.InfofBullet("Port: %d", detection.Port)
-							// }
 							if noInputMode || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
 								inputs = applyDetectionToInputs(inputs, detection)
 								if inputs.Framework == "" {
@@ -1724,7 +1720,9 @@ func buildNestedMap(flat map[string]string) map[string]interface{} {
 		current := result
 		for i, part := range parts {
 			if i == len(parts)-1 {
-				current[part] = value
+				if _, alreadyMap := current[part].(map[string]interface{}); !alreadyMap {
+					current[part] = value
+				}
 			} else {
 				next, ok := current[part].(map[string]interface{})
 				if !ok {

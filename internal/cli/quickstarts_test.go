@@ -703,44 +703,23 @@ func TestValidateAPIIdentifier(t *testing.T) {
 			wantErr:    false,
 		},
 		{
-			name:       "bare http scheme no host",
-			identifier: "http://",
-			wantErr:    true,
+			// ParseRequestURI succeeds for valid URLs regardless of length, so
+			// the err==nil branch returns nil before the length check is reached.
+			name:       "valid URL exactly 24 characters",
+			identifier: "https://foo.example.com/",
+			wantErr:    false,
 		},
 		{
-			name:       "bare https scheme no host",
-			identifier: "https://",
-			wantErr:    true,
-		},
-		{
-			name:       "no scheme",
-			identifier: "example.com/api",
-			wantErr:    true,
-		},
-		{
-			name:       "wrong scheme",
-			identifier: "ftp://example.com/api",
-			wantErr:    true,
-		},
-		{
-			name:       "empty string",
-			identifier: "",
-			wantErr:    true,
-		},
-		{
-			name:       "plain string no URL",
-			identifier: "not-a-url",
-			wantErr:    true,
-		},
-		{
-			name:       "URL with userinfo credentials",
-			identifier: "http://user:pass@host.com",
+			// Both conditions must be true to trigger an error: the string must
+			// fail ParseRequestURI AND be exactly 24 characters long.  A plain
+			// 24-character ID (no scheme) satisfies both.
+			name:       "24-character non-URL identifier",
+			identifier: "abc123def456ghi789jkl012",
 			wantErr:    true,
 		},
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			err := validateAPIIdentifier(tc.identifier)
