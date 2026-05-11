@@ -17,6 +17,7 @@ func TestAPICmdInputs_FromArgs(t *testing.T) {
 		givenDataFlag  string
 		expectedMethod string
 		expectedURL    string
+		expectedData   any
 		expectedError  string
 	}{
 		{
@@ -31,6 +32,7 @@ func TestAPICmdInputs_FromArgs(t *testing.T) {
 			givenDataFlag:  `{"name":"genericTest"}`,
 			expectedMethod: http.MethodPost,
 			expectedURL:    "https://" + testDomain + "/api/v2/clients",
+			expectedData:   map[string]any{"name": "genericTest"},
 		},
 		{
 			name:           "it can correctly parse input arguments when get method is missing",
@@ -44,11 +46,20 @@ func TestAPICmdInputs_FromArgs(t *testing.T) {
 			givenDataFlag:  `{"name":"genericTest"}`,
 			expectedMethod: http.MethodPost,
 			expectedURL:    "https://" + testDomain + "/api/v2/clients",
+			expectedData:   map[string]any{"name": "genericTest"},
 		},
 		{
 			name:          "it fails to parse input arguments when method is invalid",
 			givenArgs:     []string{"abracadabra", "/clients"},
 			expectedError: "invalid method given: ABRACADABRA, accepting only GET, POST, PUT, PATCH, DELETE",
+		},
+		{
+			name:           "it can correctly parse delete with data flag",
+			givenArgs:      []string{"delete", "organizations/org_123/members"},
+			givenDataFlag:  `{"members":["user_123"]}`,
+			expectedMethod: http.MethodDelete,
+			expectedURL:    "https://" + testDomain + "/api/v2/organizations/org_123/members",
+			expectedData:   map[string]any{"members": []any{"user_123"}},
 		},
 		{
 			name:          "it fails to parse input arguments when data is not a valid JSON",
@@ -83,6 +94,9 @@ func TestAPICmdInputs_FromArgs(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, testCase.expectedMethod, actualInputs.Method)
 			assert.Equal(t, testCase.expectedURL, actualInputs.URL.String())
+			if testCase.expectedData != nil {
+				assert.Equal(t, testCase.expectedData, actualInputs.Data)
+			}
 		})
 	}
 }

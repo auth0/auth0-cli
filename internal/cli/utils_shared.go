@@ -46,12 +46,15 @@ func BuildOauthTokenURL(domain string) string {
 	return u.String()
 }
 
-func BuildOauthTokenParams(clientID, clientSecret, audience string) url.Values {
+func BuildOauthTokenParams(clientID, clientSecret, audience, organization string) url.Values {
 	q := url.Values{
 		"audience":      {audience},
 		"client_id":     {clientID},
 		"client_secret": {clientSecret},
 		"grant_type":    {"client_credentials"},
+	}
+	if organization != "" {
+		q.Set("organization", organization)
 	}
 	return q
 }
@@ -64,13 +67,14 @@ func runClientCredentialsFlow(
 	client *management.Client,
 	audience string,
 	tenantDomain string,
+	organization string,
 ) (*authutil.TokenResponse, error) {
-	if err := checkClientIsAuthorizedForAPI(ctx, cli, client, audience); err != nil {
+	if err := checkClientIsAuthorizedForAPI(ctx, cli, client, audience, organization); err != nil {
 		return nil, err
 	}
 
 	tokenURL := BuildOauthTokenURL(tenantDomain)
-	payload := BuildOauthTokenParams(client.GetClientID(), client.GetClientSecret(), audience)
+	payload := BuildOauthTokenParams(client.GetClientID(), client.GetClientSecret(), audience, organization)
 
 	var tokenResponse *authutil.TokenResponse
 	err := ansi.Spinner("Waiting for token", func() error {
@@ -90,6 +94,46 @@ func runClientCredentialsFlow(
 	})
 
 	return tokenResponse, err
+}
+
+func checkClientIsAuthorizedForAPI(ctx context.Context, cli *cli, client *management.Client, audience, organization string) error {
+	var list *management.ClientGrantList
+	if err := ansi.Waiting(func() (err error) {
+		list, err = cli.api.ClientGrant.List(
+			ctx,
+			management.Parameter("audience", audience),
+			management.Parameter("client_id", client.GetClientID()),
+		)
+		return err
+	}); err != nil {
+		return fmt.Errorf(
+			"failed to find client grants for API identifier %q and client ID %q: %w",
+			audience,
+			client.GetClientID(),
+			err,
+		)
+	}
+
+	if len(list.ClientGrants) < 1 {
+		return fmt.Errorf(
+			"the %s application is not authorized to request access tokens for this API %s.\n\n"+
+				"Run: 'auth0 apps open %s' to open the dashboard and authorize the application.",
+			ansi.Bold(client.GetName()),
+			ansi.Bold(audience),
+			client.GetClientID(),
+		)
+	}
+
+	grant := list.ClientGrants[0]
+	if grant.GetOrganizationUsage() == "require" && organization == "" {
+		return fmt.Errorf(
+			"the client grant for %s requires an organization.\n\n"+
+				"Use the --organization flag to specify one.",
+			ansi.Bold(audience),
+		)
+	}
+
+	return nil
 }
 
 // runLoginFlowPreflightChecks checks if we need to make any updates
