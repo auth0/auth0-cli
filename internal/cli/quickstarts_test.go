@@ -735,8 +735,6 @@ func TestValidateAPIIdentifier(t *testing.T) {
 // -- createQuickstartApp happy-path --.
 
 func TestCreateQuickstartApp_SPA_React(t *testing.T) {
-	t.Parallel()
-
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -864,8 +862,6 @@ func TestAmbiguousDetection_NoInputMode_UsesFirstCandidate(t *testing.T) {
 // real package.json with two candidates -> ambiguous detection -> no-input mode
 // selects the first candidate -> createQuickstartApp succeeds with the resolved inputs.
 func TestAmbiguousDetection_NoInput_IntegrationFlow(t *testing.T) {
-	t.Parallel()
-
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
