@@ -35,7 +35,7 @@ auth0 quickstarts setup-experimental [flags]
 ```
       --api                     Create an Auth0 API resource server
       --app                     Create an Auth0 application (SPA, regular web, or native)
-      --audience string         Alias for --identifier (unique audience URL for the API)
+      --audience string         Unique URL identifier for the API (audience), e.g. https://my-api
       --build-tool string       Build tool used by the project (vite, webpack, cra, none) (default "none")
       --callback-url string     Override the allowed callback URL for the application
       --framework string        Framework to configure (e.g., react, nextjs, vue, express)
