@@ -499,14 +499,10 @@ var (
 		Help:     "Create an Auth0 API resource server",
 	}
 	setupExpIdentifier = Flag{
-		Name:     "Identifier",
-		LongForm: "identifier",
-		Help:     "Unique URL identifier for the API (audience), e.g. https://my-api",
-	}
-	setupExpAudience = Flag{
-		Name:     "Audience",
-		LongForm: "audience",
-		Help:     "Alias for --identifier (unique audience URL for the API)",
+		Name:        "Identifier",
+		LongForm:    "identifier",
+		Help:        "Unique URL identifier for the API (audience), e.g. https://my-api",
+		AlsoKnownAs: []string{"audience"},
 	}
 	setupExpSigningAlg = Flag{
 		Name:     "Signing Algorithm",
@@ -544,7 +540,6 @@ type SetupInputs struct {
 	WebOriginURL  string
 	API           bool
 	Identifier    string
-	Audience      string
 	SigningAlg    string
 	Scopes        string
 	TokenLifetime string
@@ -986,12 +981,9 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 
 			if inputs.API {
 				// Prompt for the identifier if not explicitly provided via flag.
-				if !setupExpIdentifier.IsSet(cmd) && !setupExpAudience.IsSet(cmd) {
+				if !setupExpIdentifier.IsSet(cmd) {
 					// Compute a suggested default without pre-populating inputs.Identifier.
 					defaultID := inputs.Identifier
-					if defaultID == "" {
-						defaultID = inputs.Audience
-					}
 					if defaultID == "" && inputs.Name != "" {
 						slug := strings.ToLower(strings.ReplaceAll(inputs.Name, " ", "-"))
 						defaultID = "https://" + slug
@@ -1000,12 +992,10 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 					if err := setupExpIdentifier.Ask(cmd, &inputs.Identifier, &defaultID); err != nil {
 						return fmt.Errorf("failed to enter API identifier: %w", err)
 					}
-				} else if inputs.Identifier == "" {
-					inputs.Identifier = inputs.Audience
 				}
 
 				if inputs.Identifier == "" {
-					return fmt.Errorf("API identifier cannot be empty: use --identifier or --audience flag")
+					return fmt.Errorf("API identifier cannot be empty: use --identifier flag")
 				}
 
 				if err := validateAPIIdentifier(inputs.Identifier); err != nil {
@@ -1121,7 +1111,6 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 	// API flags.
 	setupExpAPI.RegisterBool(cmd, &inputs.API, false)
 	setupExpIdentifier.RegisterString(cmd, &inputs.Identifier, "")
-	setupExpAudience.RegisterString(cmd, &inputs.Audience, "")
 	setupExpSigningAlg.RegisterString(cmd, &inputs.SigningAlg, "")
 	setupExpScopes.RegisterString(cmd, &inputs.Scopes, "")
 	setupExpTokenLifetime.RegisterString(cmd, &inputs.TokenLifetime, "")
@@ -1240,11 +1229,11 @@ func createQuickstartApp(ctx context.Context, cli *cli, inputs SetupInputs, qsCo
 		envValues[config.AudienceVar] = inputs.Identifier
 	}
 
-	envFileName, _, err := GenerateAndWriteQuickstartConfig(&config.Strategy, envValues, cli.tenant, client, inputs.Port)
+	envFilePath, err := GenerateAndWriteQuickstartConfig(&config.Strategy, envValues, cli.tenant, client, inputs.Port)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate config file: %w", err)
 	}
-	printClientDetails(cli, client, inputs.Port, envFileName)
+	printClientDetails(cli, client, inputs.Port, filepath.Base(envFilePath))
 
 	// Post-setup guidance for Expo: exp://localhost:19000 only covers Expo Go.
 	// Inform the user about EAS/production build requirements.
@@ -1761,11 +1750,11 @@ func sortedKeys(m map[string]string) []string {
 
 // GenerateAndWriteQuickstartConfig takes the selected stack, resolves the dynamic values,
 // and writes them to the appropriate file in the Current Working Directory (CWD).
-// It returns the generated file name, the file path, and an error (if any).
-func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envValues map[string]string, tenantDomain string, client *management.Client, port int) (string, string, error) {
+// It returns the file path and an error (if any).
+func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envValues map[string]string, tenantDomain string, client *management.Client, port int) (string, error) {
 	resolvedEnv, err := replaceDetectionSub(envValues, tenantDomain, client, port)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 
 	if strategy == nil {
@@ -1775,7 +1764,7 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 	dir := filepath.Dir(strategy.Path)
 	if dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			return "", "", fmt.Errorf("failed to create directory structure %s: %w", dir, err)
+			return "", fmt.Errorf("failed to create directory structure %s: %w", dir, err)
 		}
 	}
 
@@ -1797,7 +1786,7 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		nested := buildNestedMap(resolvedEnv)
 		yamlBytes, err := yaml.Marshal(nested)
 		if err != nil {
-			return "", "", fmt.Errorf("failed to marshal YAML for %s: %w", strategy.Path, err)
+			return "", fmt.Errorf("failed to marshal YAML for %s: %w", strategy.Path, err)
 		}
 		contentBuilder.Write(yamlBytes)
 
@@ -1810,7 +1799,7 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		wrapped := map[string]interface{}{"development": devSection}
 		yamlBytes, err := yaml.Marshal(wrapped)
 		if err != nil {
-			return "", "", fmt.Errorf("failed to marshal YAML for %s: %w", strategy.Path, err)
+			return "", fmt.Errorf("failed to marshal YAML for %s: %w", strategy.Path, err)
 		}
 		contentBuilder.Write(yamlBytes)
 
@@ -1845,7 +1834,7 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		auth0Section := make(map[string]string)
 		for key, val := range resolvedEnv {
 			if !strings.HasPrefix(key, "Auth0:") {
-				return "", "", fmt.Errorf("json formatter: key %q is missing required \"Auth0:\" prefix", key)
+				return "", fmt.Errorf("json formatter: key %q is missing required \"Auth0:\" prefix", key)
 			}
 			cleanKey := strings.TrimPrefix(key, "Auth0:")
 			auth0Section[cleanKey] = val
@@ -1853,7 +1842,7 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		jsonBody := map[string]interface{}{"Auth0": auth0Section}
 		jsonBytes, err := json.MarshalIndent(jsonBody, "", "  ")
 		if err != nil {
-			return "", "", fmt.Errorf("failed to marshal JSON for %s: %w", strategy.Path, err)
+			return "", fmt.Errorf("failed to marshal JSON for %s: %w", strategy.Path, err)
 		}
 		contentBuilder.Write(jsonBytes)
 
@@ -1912,9 +1901,8 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 	}
 
 	if err := os.WriteFile(strategy.Path, []byte(contentBuilder.String()), 0600); err != nil {
-		return "", "", fmt.Errorf("failed to write config file %s: %w", strategy.Path, err)
+		return "", fmt.Errorf("failed to write config file %s: %w", strategy.Path, err)
 	}
 
-	fileName := filepath.Base(strategy.Path)
-	return fileName, strategy.Path, nil
+	return strategy.Path, nil
 }

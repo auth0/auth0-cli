@@ -2189,9 +2189,9 @@ func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 			// Place the output file inside the temp dir so we don't pollute CWD.
 			strategy.Path = filepath.Join(dir, "output_file")
 
-			fileName, filePath, err := GenerateAndWriteQuickstartConfig(&strategy, tc.envValues, domain, client, tc.port)
+			filePath, err := GenerateAndWriteQuickstartConfig(&strategy, tc.envValues, domain, client, tc.port)
 			require.NoError(t, err)
-			assert.NotEmpty(t, fileName)
+			assert.NotEmpty(t, filepath.Base(filePath))
 			assert.Equal(t, strategy.Path, filePath)
 
 			data, err := os.ReadFile(filePath)
@@ -2215,7 +2215,7 @@ func TestGenerateAndWriteQuickstartConfig_CreatesSubdirectory(t *testing.T) {
 		"clientId": auth0.DetectionSub,
 	}
 
-	_, filePath, err := GenerateAndWriteQuickstartConfig(&strategy, envValues, "tenant.auth0.com", client, 4200)
+	filePath, err := GenerateAndWriteQuickstartConfig(&strategy, envValues, "tenant.auth0.com", client, 4200)
 	require.NoError(t, err)
 
 	_, statErr := os.Stat(filepath.Dir(filePath))
@@ -2248,7 +2248,7 @@ func TestGenerateAndWriteQuickstartConfig_SpecialChars(t *testing.T) {
 			"auth0:ClientId":     auth0.DetectionSub,
 			"auth0:ClientSecret": auth0.DetectionSub,
 		}
-		_, _, err := GenerateAndWriteQuickstartConfig(&strategy, envValues, domain, client, 3000)
+		_, err := GenerateAndWriteQuickstartConfig(&strategy, envValues, domain, client, 3000)
 		require.NoError(t, err)
 
 		data, err := os.ReadFile(strategy.Path)
@@ -2274,7 +2274,7 @@ func TestGenerateAndWriteQuickstartConfig_SpecialChars(t *testing.T) {
 			"domain":   auth0.DetectionSub,
 			"clientId": auth0.DetectionSub,
 		}
-		_, _, err := GenerateAndWriteQuickstartConfig(&strategy, envValues, domain, clientWithQuote, 4200)
+		_, err := GenerateAndWriteQuickstartConfig(&strategy, envValues, domain, clientWithQuote, 4200)
 		require.NoError(t, err)
 
 		data, err := os.ReadFile(strategy.Path)
@@ -2297,7 +2297,7 @@ func TestGenerateAndWriteQuickstartConfig_SpecialChars(t *testing.T) {
 			"domain":   auth0.DetectionSub,
 			"clientId": auth0.DetectionSub,
 		}
-		_, _, err := GenerateAndWriteQuickstartConfig(&strategy, envValues, domain, clientWithQuote, 3000)
+		_, err := GenerateAndWriteQuickstartConfig(&strategy, envValues, domain, clientWithQuote, 3000)
 		require.NoError(t, err)
 
 		data, err := os.ReadFile(strategy.Path)
@@ -2788,9 +2788,9 @@ func TestGenerateAndWriteQuickstartConfig_NilStrategyDefaultsToDotenv(t *testing
 	clientID := "cid"
 	client := &management.Client{ClientID: &clientID}
 
-	fileName, _, err := GenerateAndWriteQuickstartConfig(nil, map[string]string{"AUTH0_DOMAIN": "example.com"}, "tenant.auth0.com", client, 3000)
+	filePath, err := GenerateAndWriteQuickstartConfig(nil, map[string]string{"AUTH0_DOMAIN": "example.com"}, "tenant.auth0.com", client, 3000)
 	require.NoError(t, err)
-	assert.Equal(t, ".env", fileName)
+	assert.Equal(t, ".env", filepath.Base(filePath))
 }
 
 // -- readMobileBundleID --.
