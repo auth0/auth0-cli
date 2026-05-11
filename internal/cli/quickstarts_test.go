@@ -419,9 +419,10 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 				require.NoError(t, os.MkdirAll(subDir, 0755))
 			}
 
-			fileName, filePath, err := GenerateAndWriteQuickstartConfig(&strategy, config.EnvValues, domain, client, tc.port)
+			filePath, err := GenerateAndWriteQuickstartConfig(&strategy, config.EnvValues, domain, client, tc.port)
 			require.NoError(t, err)
 
+			fileName := filepath.Base(filePath)
 			assert.Equal(t, tc.wantFileName, fileName)
 			assert.FileExists(t, filePath)
 
@@ -549,7 +550,7 @@ func TestGenerateAndWriteQuickstartConfig_PortInBaseURL(t *testing.T) {
 			cid, csec := "cid", "csec"
 			client := &management.Client{ClientID: &cid, ClientSecret: &csec}
 
-			_, _, err := GenerateAndWriteQuickstartConfig(&strategy, config.EnvValues, "example.auth0.com", client, 8080)
+			_, err := GenerateAndWriteQuickstartConfig(&strategy, config.EnvValues, "example.auth0.com", client, 8080)
 			require.NoError(t, err)
 
 			content, err := os.ReadFile(strategy.Path)
@@ -576,7 +577,7 @@ func TestGenerateAndWriteQuickstartConfig_SecretsNonEmpty(t *testing.T) {
 			dir := t.TempDir()
 			strategy := auth0.FileOutputStrategy{Path: filepath.Join(dir, ".env"), Format: "dotenv"}
 
-			_, _, err := GenerateAndWriteQuickstartConfig(&strategy, config.EnvValues, "example.auth0.com", client, 3000)
+			_, err := GenerateAndWriteQuickstartConfig(&strategy, config.EnvValues, "example.auth0.com", client, 3000)
 			require.NoError(t, err)
 
 			content, err := os.ReadFile(strategy.Path)
