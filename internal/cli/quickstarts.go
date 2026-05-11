@@ -1324,18 +1324,16 @@ func createQuickstartAPI(ctx context.Context, cli *cli, inputs SetupInputs, link
 		allow := true
 		rs.AllowOfflineAccess = &allow
 	}
+
 	if inputs.Scopes != "" {
-		scopeList := strings.Split(inputs.Scopes, ",")
-		apiScopes := make([]management.ResourceServerScope, 0, len(scopeList))
-		for _, s := range scopeList {
-			s = strings.TrimSpace(s)
-			if s != "" {
-				v := s
-				apiScopes = append(apiScopes, management.ResourceServerScope{Value: &v})
+		var scopeList []string
+		for _, s := range strings.Split(inputs.Scopes, ",") {
+			if s = strings.TrimSpace(s); s != "" {
+				scopeList = append(scopeList, s)
 			}
 		}
-		if len(apiScopes) > 0 {
-			rs.Scopes = &apiScopes
+		if len(scopeList) > 0 {
+			rs.Scopes = apiScopesFor(scopeList)
 		}
 	}
 
@@ -1540,14 +1538,14 @@ func defaultPortForFramework(framework string) int {
 
 // validateAPIIdentifier returns an error if identifier is not a valid http:// or https:// URL.
 func validateAPIIdentifier(identifier string) error {
-	// Err != nil from url.Parse only fires on malformed percent-encoding; the
-	// host check catches bare schemes like "http://" that Parse accepts without error.
-	// u.User != nil rejects URLs with embedded credentials (e.g. http://user:pass@host).
-	u, err := url.Parse(identifier)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil {
-		return fmt.Errorf("invalid API identifier %q: must be a valid URL beginning with http:// or https://", identifier)
+	// ParseRequestURI is stricter than Parse: it rejects relative URLs, fragments,
+	// and empty strings. The host check still catches bare schemes like "http://"
+	// that ParseRequestURI accepts without error.
+	_, err := url.ParseRequestURI(identifier)
+	if err == nil || len(identifier) != 24 {
+		return nil
 	}
-	return nil
+	return fmt.Errorf("invalid API identifier %q: must be a valid URL beginning with http:// or https://", identifier)
 }
 
 func generateClient(input SetupInputs, reqParams auth0.RequestParams) (*management.Client, error) {
@@ -1660,53 +1658,61 @@ func replaceDetectionSub(envValues map[string]string, tenantDomain string, clien
 			updatedEnvValues[key] = value
 			continue
 		}
-
-		switch key {
-		case "VITE_AUTH0_DOMAIN", "AUTH0_DOMAIN", "domain", "NUXT_AUTH0_DOMAIN",
-			"auth0.domain", "auth0/domain", "Auth0:Domain", "auth0:Domain", "auth0_domain",
-			"EXPO_PUBLIC_AUTH0_DOMAIN", "com.auth0.domain",
-			"com_auth0_domain", "Domain":
-			updatedEnvValues[key] = tenantDomain
-
-		// Express SDK specifically requires the https:// prefix.
-		case "ISSUER_BASE_URL":
-			updatedEnvValues[key] = "https://" + tenantDomain
-
-		// Spring Boot okta issuer specifically requires https:// and a trailing slash.
-		case "okta.oauth2.issuer":
-			updatedEnvValues[key] = "https://" + tenantDomain + "/"
-
-		case "VITE_AUTH0_CLIENT_ID", "AUTH0_CLIENT_ID", "clientId", "NUXT_AUTH0_CLIENT_ID",
-			"CLIENT_ID", "auth0.clientId", "auth0/clientId", "okta.oauth2.client-id", "Auth0:ClientId",
-			"auth0:ClientId", "auth0_client_id", "EXPO_PUBLIC_AUTH0_CLIENT_ID", "com.auth0.clientId",
-			"com_auth0_client_id", "ClientId":
-			updatedEnvValues[key] = client.GetClientID()
-
-		case "AUTH0_CLIENT_SECRET", "NUXT_AUTH0_CLIENT_SECRET", "auth0.clientSecret", "auth0/clientSecret",
-			"okta.oauth2.client-secret", "Auth0:ClientSecret", "auth0:ClientSecret",
-			"auth0_client_secret", "com.auth0.clientSecret":
-			updatedEnvValues[key] = client.GetClientSecret()
-
-		case "AUTH0_SECRET", "NUXT_AUTH0_SESSION_SECRET", "SESSION_SECRET",
-			"SECRET", "AUTH0_SESSION_ENCRYPTION_KEY", "AUTH0_COOKIE_SECRET":
-			secret, err := generateState(32)
-			if err != nil {
-				return nil, fmt.Errorf("failed to generate secret for %s: %w", key, err)
-			}
-			updatedEnvValues[key] = secret
-
-		case "APP_BASE_URL", "NUXT_AUTH0_APP_BASE_URL", "BASE_URL", "AUTH0_BASE_URL":
-			updatedEnvValues[key] = baseURL
-
-		case "AUTH0_REDIRECT_URI", "AUTH0_CALLBACK_URL":
-			updatedEnvValues[key] = baseURL + "/callback"
-
-		default:
-			return nil, fmt.Errorf("unhandled placeholder for env key %q: add it to replaceDetectionSub", key)
+		resolved, err := resolveDetectionSubValue(key, tenantDomain, baseURL, client)
+		if err != nil {
+			return nil, err
 		}
+		updatedEnvValues[key] = resolved
 	}
 
 	return updatedEnvValues, nil
+}
+
+// resolveDetectionSubValue maps a single env key to its runtime value.
+func resolveDetectionSubValue(key, tenantDomain, baseURL string, client *management.Client) (string, error) {
+	switch key {
+	case "VITE_AUTH0_DOMAIN", "AUTH0_DOMAIN", "domain", "NUXT_AUTH0_DOMAIN",
+		"auth0.domain", "auth0/domain", "Auth0:Domain", "auth0:Domain", "auth0_domain",
+		"EXPO_PUBLIC_AUTH0_DOMAIN", "com.auth0.domain",
+		"com_auth0_domain", "Domain":
+		return tenantDomain, nil
+
+	// Express SDK specifically requires the https:// prefix.
+	case "ISSUER_BASE_URL":
+		return "https://" + tenantDomain, nil
+
+	// Spring Boot okta issuer specifically requires https:// and a trailing slash.
+	case "okta.oauth2.issuer":
+		return "https://" + tenantDomain + "/", nil
+
+	case "VITE_AUTH0_CLIENT_ID", "AUTH0_CLIENT_ID", "clientId", "NUXT_AUTH0_CLIENT_ID",
+		"CLIENT_ID", "auth0.clientId", "auth0/clientId", "okta.oauth2.client-id", "Auth0:ClientId",
+		"auth0:ClientId", "auth0_client_id", "EXPO_PUBLIC_AUTH0_CLIENT_ID", "com.auth0.clientId",
+		"com_auth0_client_id", "ClientId":
+		return client.GetClientID(), nil
+
+	case "AUTH0_CLIENT_SECRET", "NUXT_AUTH0_CLIENT_SECRET", "auth0.clientSecret", "auth0/clientSecret",
+		"okta.oauth2.client-secret", "Auth0:ClientSecret", "auth0:ClientSecret",
+		"auth0_client_secret", "com.auth0.clientSecret":
+		return client.GetClientSecret(), nil
+
+	case "AUTH0_SECRET", "NUXT_AUTH0_SESSION_SECRET", "SESSION_SECRET",
+		"SECRET", "AUTH0_SESSION_ENCRYPTION_KEY", "AUTH0_COOKIE_SECRET":
+		secret, err := generateState(32)
+		if err != nil {
+			return "", fmt.Errorf("failed to generate secret for %s: %w", key, err)
+		}
+		return secret, nil
+
+	case "APP_BASE_URL", "NUXT_AUTH0_APP_BASE_URL", "BASE_URL", "AUTH0_BASE_URL":
+		return baseURL, nil
+
+	case "AUTH0_REDIRECT_URI", "AUTH0_CALLBACK_URL":
+		return baseURL + "/callback", nil
+
+	default:
+		return "", fmt.Errorf("unhandled placeholder for env key %q: add it to replaceDetectionSub", key)
+	}
 }
 
 // buildNestedMap converts a flat map with dot-delimited keys into a nested map,
