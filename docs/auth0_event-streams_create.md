@@ -9,7 +9,8 @@ Create a new event stream.
 
 To create interactively, use `auth0 event-streams create` with no flags.
 
-To create non-interactively, supply the event stream name, type, subscriptions and configuration through the flags.
+To create non-interactively, supply the event stream name, type, subscriptions and configuration through the flags. 
+Only deployed actions can be used for action configuration
 
 ## Usage
 ```

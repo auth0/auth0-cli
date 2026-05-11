@@ -9,7 +9,7 @@ Update an event stream.
 
 To update interactively, use `auth0 event-streams update` with no arguments.
 
-To update non-interactively, supply the event id, name, status, subscriptions and configuration through the flags. An event stream type CANNOT be updated hence the configuration should match the schema based on the type of event stream. Configuration for `eventbridge` streams cannot be updated.
+To update non-interactively, supply the event id, name, status, subscriptions and configuration through the flags. An event stream type CANNOT be updated hence the configuration should match the schema based on the type of event stream. Configuration for `eventbridge` streams cannot be updated.Only deployed actions can be used for action configuration
 
 ## Usage
 ```
