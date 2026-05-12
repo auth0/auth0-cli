@@ -657,6 +657,22 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		Strategy: FileOutputStrategy{Path: "config/auth0.yml", Format: "rails-yaml"},
 	},
+	"regular:jhipster:none": {
+		EnvValues: map[string]string{
+			"SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_OIDC_ISSUER_URI":       DetectionSub,
+			"SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_ID":    DetectionSub,
+			"SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET": DetectionSub,
+			"JHIPSTER_SECURITY_OAUTH2_AUDIENCE":                            DetectionSub,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DetectionSub},
+			AllowedLogoutURLs: []string{DetectionSub},
+			Name:              DetectionSub,
+			CallbackPath:      "/login/oauth2/code/oidc",
+		},
+		Strategy: FileOutputStrategy{Path: ".auth0.env", Format: "dotenv"},
+	},
 
 	// ==========================================
 	// Native/mobile apps: most use custom URI scheme callbacks derived from the bundle
