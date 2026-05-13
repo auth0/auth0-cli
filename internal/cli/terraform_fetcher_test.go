@@ -402,6 +402,112 @@ func TestClientResourceFetcher_FetchData(t *testing.T) {
 		assert.Equal(t, expectedData, data)
 	})
 
+	t.Run("it successfully retrieves cimd client data with auth0_client_cimd resource name", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		clientAPI := mock.NewMockClientAPI(ctrl)
+		clientAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&management.ClientList{
+					List: management.List{
+						Start: 0,
+						Limit: 2,
+						Total: 2,
+					},
+					Clients: []*management.Client{
+						{
+							ClientID:             auth0.String("clientID_cimd_1"),
+							Name:                 auth0.String("My CIMD Client"),
+							ExternalMetadataType: auth0.String("cimd"),
+						},
+					},
+				},
+				nil,
+			)
+
+		fetcher := clientResourceFetcher{
+			api: &auth0.API{
+				Client: clientAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_client_cimd.my_cimd_client",
+				ImportID:     "clientID_cimd_1",
+			},
+			{
+				ResourceName: "auth0_client_credentials.my_cimd_client",
+				ImportID:     "clientID_cimd_1",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it successfully retrieves mixed regular and cimd client data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		clientAPI := mock.NewMockClientAPI(ctrl)
+		clientAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&management.ClientList{
+					List: management.List{
+						Start: 0,
+						Limit: 2,
+						Total: 2,
+					},
+					Clients: []*management.Client{
+						{
+							ClientID: auth0.String("clientID_1"),
+							Name:     auth0.String("Regular Client"),
+						},
+						{
+							ClientID:             auth0.String("clientID_2"),
+							Name:                 auth0.String("CIMD Client"),
+							ExternalMetadataType: auth0.String("cimd"),
+						},
+					},
+				},
+				nil,
+			)
+
+		fetcher := clientResourceFetcher{
+			api: &auth0.API{
+				Client: clientAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_client.regular_client",
+				ImportID:     "clientID_1",
+			},
+			{
+				ResourceName: "auth0_client_credentials.regular_client",
+				ImportID:     "clientID_1",
+			},
+			{
+				ResourceName: "auth0_client_cimd.cimd_client",
+				ImportID:     "clientID_2",
+			},
+			{
+				ResourceName: "auth0_client_credentials.cimd_client",
+				ImportID:     "clientID_2",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
 	t.Run("it returns an error if api call fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()

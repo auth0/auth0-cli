@@ -170,6 +170,12 @@ var (
 		ShortForm: "z",
 		Help:      "Refresh Token Config for the application, formatted as JSON.",
 	}
+	appTEAllowAnyProfileOfType = Flag{
+		Name:      "Allow Any Profile Of Type",
+		LongForm:  "allow-any-profile-of-type",
+		ShortForm: "p",
+		Help:      "Comma-separated list of enabled token exchange types for this client. Possible values: custom_authentication, on_behalf_of_token_exchange.",
+	}
 )
 
 func appsCmd(cli *cli) *cobra.Command {
@@ -427,6 +433,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 		Metadata                 map[string]string
 		RefreshToken             string
 		ResourceServerIdentifier string
+		AllowAnyProfileOfType    []string
 	}
 	var oidcConformant = true
 	var algorithm = "RS256"
@@ -439,7 +446,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 			"To create interactively, use `auth0 apps create` with no arguments.\n\n" +
 			"To create non-interactively, supply at least the application name, and type through the flags.",
 		Example: `  auth0 apps create
-  auth0 apps create --name myapp 
+  auth0 apps create --name myapp
   auth0 apps create --name myapp --description <description>
   auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m|resource_server]
   auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m|resource_server] --reveal-secrets
@@ -448,7 +455,8 @@ func createAppCmd(cli *cli) *cobra.Command {
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar"
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar,bazz=buzz"
-  auth0 apps create --name "My API Client" --type resource_server --resource-server-identifier "https://api.example.com"`,
+  auth0 apps create --name "My API Client" --type resource_server --resource-server-identifier "https://api.example.com"
+  auth0 apps create --name myapp --type resource_server --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -572,6 +580,12 @@ func createAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			if len(inputs.AllowAnyProfileOfType) > 0 {
+				a.TokenExchange = &management.ClientTokenExchange{
+					AllowAnyProfileOfType: &inputs.AllowAnyProfileOfType,
+				}
+			}
+
 			// Set token endpoint auth method.
 			if len(inputs.AuthMethod) == 0 {
 				a.TokenEndpointAuthMethod = apiDefaultAuthMethodFor(inputs.Type)
@@ -616,6 +630,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 	appAuthMethod.RegisterString(cmd, &inputs.AuthMethod, "")
 	appGrants.RegisterStringSlice(cmd, &inputs.Grants, nil)
 	appResourceServerIdentifier.RegisterString(cmd, &inputs.ResourceServerIdentifier, "")
+	appTEAllowAnyProfileOfType.RegisterStringSlice(cmd, &inputs.AllowAnyProfileOfType, nil)
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 	refreshToken.RegisterString(cmd, &inputs.RefreshToken, "")
 
@@ -624,19 +639,20 @@ func createAppCmd(cli *cli) *cobra.Command {
 
 func updateAppCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID                string
-		Name              string
-		Type              string
-		Description       string
-		Callbacks         []string
-		AllowedOrigins    []string
-		AllowedWebOrigins []string
-		AllowedLogoutURLs []string
-		AuthMethod        string
-		Grants            []string
-		RevealSecrets     bool
-		Metadata          map[string]string
-		RefreshToken      string
+		ID                    string
+		Name                  string
+		Type                  string
+		Description           string
+		Callbacks             []string
+		AllowedOrigins        []string
+		AllowedWebOrigins     []string
+		AllowedLogoutURLs     []string
+		AuthMethod            string
+		Grants                []string
+		RevealSecrets         bool
+		Metadata              map[string]string
+		RefreshToken          string
+		AllowAnyProfileOfType []string
 	}
 
 	cmd := &cobra.Command{
@@ -656,7 +672,8 @@ func updateAppCmd(cli *cli) *cobra.Command {
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json-compact
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar"
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
-  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"`,
+  auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"
+  auth0 apps update <app-id> --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Client
 
@@ -823,6 +840,13 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			if appTEAllowAnyProfileOfType.IsSet(cmd) {
+				nonEmptyProfileTypes := excludeEmptyEntries(inputs.AllowAnyProfileOfType)
+				a.TokenExchange = &management.ClientTokenExchange{
+					AllowAnyProfileOfType: &nonEmptyProfileTypes,
+				}
+			}
+
 			if err := ansi.Waiting(func() error {
 				return cli.api.Client.Update(cmd.Context(), inputs.ID, a)
 			}); err != nil {
@@ -847,6 +871,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 	appLogoutURLs.RegisterStringSliceU(cmd, &inputs.AllowedLogoutURLs, nil)
 	appAuthMethod.RegisterStringU(cmd, &inputs.AuthMethod, "")
 	appGrants.RegisterStringSliceU(cmd, &inputs.Grants, nil)
+	appTEAllowAnyProfileOfType.RegisterStringSliceU(cmd, &inputs.AllowAnyProfileOfType, nil)
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 	refreshToken.RegisterString(cmd, &inputs.RefreshToken, "")
 
@@ -1012,6 +1037,17 @@ func stringSliceToPtr(s []string) *[]string {
 		return nil
 	}
 	return &s
+}
+
+func excludeEmptyEntries(s []string) []string {
+	result := make([]string, 0, len(s))
+	for _, v := range s {
+		if v != "" {
+			result = append(result, v)
+		}
+	}
+
+	return result
 }
 
 func (c *cli) appPickerOptions(requestOpts ...management.RequestOption) pickerOptionsFunc {

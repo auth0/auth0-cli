@@ -74,6 +74,27 @@ var (
 		LongForm: "subject-type-authorization",
 		Help:     "JSON object defining access policies for user and client flows. Example: '{\"user\":{\"policy\":\"require_client_grant\"},\"client\":{\"policy\":\"deny_all\"}}'",
 	}
+	apiEnforcePolicies = Flag{
+		Name:     "Enforce Policies",
+		LongForm: "enforce-policies",
+		Help:     "If true, authorization policies will be enforced for this API.",
+	}
+	apiTokenDialect = Flag{
+		Name:     "Token Dialect",
+		LongForm: "token-dialect",
+		Help:     "Dialect of access tokens for this API. Can be one of access_token, access_token_authz, rfc9068_profile, or rfc9068_profile_authz.",
+	}
+)
+
+var (
+	apiTokenDialectNone    = "<NONE>"
+	apiTokenDialectOptions = []string{
+		apiTokenDialectNone,
+		"access_token",
+		"access_token_authz",
+		"rfc9068_profile",
+		"rfc9068_profile_authz",
+	}
 )
 
 func apisCmd(cli *cli) *cobra.Command {
@@ -227,6 +248,8 @@ func createAPICmd(cli *cli) *cobra.Command {
 		AllowOfflineAccess       bool
 		SigningAlgorithm         string
 		SubjectTypeAuthorization string
+		EnforcePolicies          bool
+		TokenDialect             string
 	}
 
 	cmd := &cobra.Command{
@@ -237,7 +260,7 @@ func createAPICmd(cli *cli) *cobra.Command {
 			"To create interactively, use `auth0 apis create` with no flags.\n\n" +
 			"To create non-interactively, supply the name, identifier, scopes, " +
 			"token lifetime and whether to allow offline access through the flags.",
-		Example: `  auth0 apis create 
+		Example: `  auth0 apis create
   auth0 apis create --name myapi
   auth0 apis create --name myapi --identifier http://my-api
   auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100
@@ -246,7 +269,8 @@ func createAPICmd(cli *cli) *cobra.Command {
   auth0 apis create --name myapi --identifier http://my-api --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read" --signing-alg "RS256"
   auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json
   auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json-compact
-  auth0 apis create --name myapi --identifier http://my-api --subject-type-authorization '{"user":{"policy":"allow_all"},"client":{"policy":"deny_all"}}'`,
+  auth0 apis create --name myapi --identifier http://my-api --subject-type-authorization '{"user":{"policy":"allow_all"},"client":{"policy":"deny_all"}}'
+  auth0 apis create --name myapi --identifier http://my-api --enforce-policies --token-dialect access_token_authz`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := apiName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -277,12 +301,17 @@ func createAPICmd(cli *cli) *cobra.Command {
 				return err
 			}
 
+			if err := apiEnforcePolicies.AskBool(cmd, &inputs.EnforcePolicies, nil); err != nil {
+				return err
+			}
+
 			api := &management.ResourceServer{
 				Name:               &inputs.Name,
 				Identifier:         &inputs.Identifier,
 				AllowOfflineAccess: &inputs.AllowOfflineAccess,
 				TokenLifetime:      &inputs.TokenLifetime,
 				SigningAlgorithm:   &inputs.SigningAlgorithm,
+				EnforcePolicies:    &inputs.EnforcePolicies,
 			}
 
 			if len(inputs.Scopes) > 0 {
@@ -301,6 +330,14 @@ func createAPICmd(cli *cli) *cobra.Command {
 					return fmt.Errorf("invalid JSON for subject-type-authorization: %w", err)
 				}
 				api.SubjectTypeAuthorization = &subjectTypeAuth
+			}
+
+			if err := apiTokenDialect.Select(cmd, &inputs.TokenDialect, apiTokenDialectOptions, nil); err != nil {
+				return err
+			}
+
+			if inputs.TokenDialect != "" && inputs.TokenDialect != apiTokenDialectNone {
+				api.TokenDialect = &inputs.TokenDialect
 			}
 
 			if err := ansi.Waiting(func() error {
@@ -329,6 +366,8 @@ func createAPICmd(cli *cli) *cobra.Command {
 	apiTokenLifetime.RegisterInt(cmd, &inputs.TokenLifetime, 0)
 	apiSigningAlgorithm.RegisterString(cmd, &inputs.SigningAlgorithm, "RS256")
 	apiSubjectTypeAuthorization.RegisterString(cmd, &inputs.SubjectTypeAuthorization, "{}")
+	apiEnforcePolicies.RegisterBool(cmd, &inputs.EnforcePolicies, false)
+	apiTokenDialect.RegisterString(cmd, &inputs.TokenDialect, "")
 
 	return cmd
 }
@@ -342,6 +381,8 @@ func updateAPICmd(cli *cli) *cobra.Command {
 		AllowOfflineAccess       bool
 		SigningAlgorithm         string
 		SubjectTypeAuthorization string
+		EnforcePolicies          bool
+		TokenDialect             string
 	}
 
 	cmd := &cobra.Command{
@@ -352,7 +393,7 @@ func updateAPICmd(cli *cli) *cobra.Command {
 			"To update interactively, use `auth0 apis update` with no arguments.\n\n" +
 			"To update non-interactively, supply the name, identifier, scopes, " +
 			"token lifetime and whether to allow offline access through the flags.",
-		Example: `  auth0 apis update 
+		Example: `  auth0 apis update
   auth0 apis update <api-id|api-audience>
   auth0 apis update <api-id|api-audience> --name myapi
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100
@@ -360,7 +401,8 @@ func updateAPICmd(cli *cli) *cobra.Command {
   auth0 apis update <api-id|api-audience> --name myapi --token-lifetime 6100 --offline-access=false --scopes "letter:write,letter:read" --signing-alg "RS256"
   auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json
   auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json-compact
-  auth0 apis update <api-id|api-audience> --subject-type-authorization '{"user":{"policy":"require_client_grant"},"client":{"policy":"deny_all"}}'`,
+  auth0 apis update <api-id|api-audience> --subject-type-authorization '{"user":{"policy":"require_client_grant"},"client":{"policy":"deny_all"}}'
+  auth0 apis update <api-id|api-audience> --enforce-policies=false --token-dialect rfc9068_profile_authz`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions); err != nil {
@@ -399,7 +441,19 @@ func updateAPICmd(cli *cli) *cobra.Command {
 				return err
 			}
 
+			if !apiEnforcePolicies.IsSet(cmd) {
+				inputs.EnforcePolicies = current.GetEnforcePolicies()
+			}
+
+			if err := apiEnforcePolicies.AskBoolU(cmd, &inputs.EnforcePolicies, current.EnforcePolicies); err != nil {
+				return err
+			}
+
 			if err := apiSigningAlgorithm.AskU(cmd, &inputs.SigningAlgorithm, current.SigningAlgorithm); err != nil {
+				return err
+			}
+
+			if err := apiTokenDialect.SelectU(cmd, &inputs.TokenDialect, apiTokenDialectOptions, current.TokenDialect); err != nil {
 				return err
 			}
 
@@ -417,6 +471,7 @@ func updateAPICmd(cli *cli) *cobra.Command {
 
 			api := &management.ResourceServer{
 				AllowOfflineAccess: &inputs.AllowOfflineAccess,
+				EnforcePolicies:    &inputs.EnforcePolicies,
 			}
 
 			api.Name = current.Name
@@ -437,6 +492,10 @@ func updateAPICmd(cli *cli) *cobra.Command {
 			api.SigningAlgorithm = current.SigningAlgorithm
 			if inputs.SigningAlgorithm != "" {
 				api.SigningAlgorithm = &inputs.SigningAlgorithm
+			}
+
+			if inputs.TokenDialect != "" && inputs.TokenDialect != apiTokenDialectNone {
+				api.TokenDialect = &inputs.TokenDialect
 			}
 
 			api.SubjectTypeAuthorization = current.SubjectTypeAuthorization
@@ -468,6 +527,8 @@ func updateAPICmd(cli *cli) *cobra.Command {
 	apiTokenLifetime.RegisterIntU(cmd, &inputs.TokenLifetime, 0)
 	apiSigningAlgorithm.RegisterStringU(cmd, &inputs.SigningAlgorithm, "RS256")
 	apiSubjectTypeAuthorization.RegisterStringU(cmd, &inputs.SubjectTypeAuthorization, "{}")
+	apiEnforcePolicies.RegisterBoolU(cmd, &inputs.EnforcePolicies, false)
+	apiTokenDialect.RegisterStringU(cmd, &inputs.TokenDialect, "")
 
 	return cmd
 }

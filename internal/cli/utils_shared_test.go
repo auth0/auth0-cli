@@ -44,8 +44,96 @@ func TestBuildOauthTokenURL(t *testing.T) {
 }
 
 func TestBuildOauthTokenParams(t *testing.T) {
-	params := BuildOauthTokenParams("some-client-id", "some-client-secret", "https://cli-demo.auth0.us.auth0.com/api/v2/")
+	params := BuildOauthTokenParams("some-client-id", "some-client-secret", "https://cli-demo.auth0.us.auth0.com/api/v2/", "")
 	assert.Equal(t, "audience=https%3A%2F%2Fcli-demo.auth0.us.auth0.com%2Fapi%2Fv2%2F&client_id=some-client-id&client_secret=some-client-secret&grant_type=client_credentials", params.Encode())
+
+	params = BuildOauthTokenParams("some-client-id", "some-client-secret", "https://cli-demo.auth0.us.auth0.com/api/v2/", "org_abc123")
+	assert.Equal(t, "audience=https%3A%2F%2Fcli-demo.auth0.us.auth0.com%2Fapi%2Fv2%2F&client_id=some-client-id&client_secret=some-client-secret&grant_type=client_credentials&organization=org_abc123", params.Encode())
+}
+
+func TestCheckClientIsAuthorizedForAPI(t *testing.T) {
+	const audience = "https://cli-demo.us.auth0.com/api/v2/"
+
+	client := &management.Client{
+		ClientID: auth0.String("some-client-id"),
+		Name:     auth0.String("some-client-name"),
+	}
+
+	tests := []struct {
+		name          string
+		organization  string
+		grantList     *management.ClientGrantList
+		apiError      error
+		expectedError string
+	}{
+		{
+			name:         "no grant exists",
+			organization: "",
+			grantList:    &management.ClientGrantList{},
+			expectedError: "the some-client-name application is not authorized to request access tokens for this API " +
+				audience,
+		},
+		{
+			name:         "api error",
+			organization: "",
+			apiError:     errors.New("unexpected error"),
+			expectedError: "failed to find client grants for API identifier " +
+				"\"" + audience + "\" and client ID \"some-client-id\": unexpected error",
+		},
+		{
+			name:         "grant exists, no org required",
+			organization: "",
+			grantList: &management.ClientGrantList{
+				ClientGrants: []*management.ClientGrant{
+					{OrganizationUsage: auth0.String("allow")},
+				},
+			},
+		},
+		{
+			name:         "grant requires org, org provided",
+			organization: "org_abc123",
+			grantList: &management.ClientGrantList{
+				ClientGrants: []*management.ClientGrant{
+					{OrganizationUsage: auth0.String("require")},
+				},
+			},
+		},
+		{
+			name:         "grant requires org, no org provided",
+			organization: "",
+			grantList: &management.ClientGrantList{
+				ClientGrants: []*management.ClientGrant{
+					{OrganizationUsage: auth0.String("require")},
+				},
+			},
+			expectedError: "the client grant for " + audience + " requires an organization.\n\n" +
+				"Use the --organization flag to specify one.",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			clientGrantAPI := mock.NewMockClientGrantAPI(ctrl)
+			clientGrantAPI.EXPECT().
+				List(gomock.Any(), gomock.Any()).
+				Return(test.grantList, test.apiError)
+
+			cli := &cli{
+				api: &auth0.API{ClientGrant: clientGrantAPI},
+			}
+
+			err := checkClientIsAuthorizedForAPI(context.Background(), cli, client, audience, test.organization)
+
+			if test.expectedError != "" {
+				assert.ErrorContains(t, err, test.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
 func TestHasLocalCallbackURL(t *testing.T) {

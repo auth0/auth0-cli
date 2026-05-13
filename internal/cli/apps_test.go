@@ -172,3 +172,11 @@ func TestCommaSeparatedStringToSlice(t *testing.T) {
 	assert.Equal(t, []string{}, commaSeparatedStringToSlice(""))
 	assert.Equal(t, []string{"foo", "bar", "baz"}, commaSeparatedStringToSlice(" foo  , bar , baz "))
 }
+
+func TestFilterEmptyStrings(t *testing.T) {
+	assert.Equal(t, []string{}, excludeEmptyEntries([]string{}))
+	assert.Equal(t, []string{}, excludeEmptyEntries([]string{""}))
+	assert.Equal(t, []string{}, excludeEmptyEntries([]string{"", ""}))
+	assert.Equal(t, []string{"a"}, excludeEmptyEntries([]string{"a"}))
+	assert.Equal(t, []string{"a", "b"}, excludeEmptyEntries([]string{"a", "", "b"}))
+}
