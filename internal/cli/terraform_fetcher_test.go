@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
+	managementv2 "github.com/auth0/go-auth0/v2/management"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
@@ -302,6 +303,97 @@ func Test_phoneProviderResourceFetcher_FetchData(t *testing.T) {
 
 		_, err := fetcher.FetchData(context.Background())
 		assert.EqualError(t, err, "failed to list phone providers")
+	})
+}
+
+func Test_phoneNotificationTemplateResourceFetcher_FetchData(t *testing.T) {
+	t.Run("it successfully retrieves phone notification templates data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		phoneNotificationTemplateAPI := mock.NewMockPhoneNotificationTemplateAPI(ctrl)
+		phoneNotificationTemplateAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&managementv2.ListPhoneTemplatesResponseContent{
+					Templates: []*managementv2.PhoneTemplate{
+						{
+							ID:   "pnt_abc123",
+							Type: managementv2.PhoneTemplateNotificationTypeEnumOtpVerify,
+						},
+						{
+							ID:   "pnt_def456",
+							Type: managementv2.PhoneTemplateNotificationTypeEnumOtpEnroll,
+						},
+					},
+				},
+				nil,
+			)
+
+		fetcher := phoneNotificationTemplateResourceFetcher{
+			apiv2: &auth0.APIV2{
+				PhoneNotificationTemplate: phoneNotificationTemplateAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_phone_notification_template.otp_verify",
+				ImportID:     "pnt_abc123",
+			},
+			{
+				ResourceName: "auth0_phone_notification_template.otp_enroll",
+				ImportID:     "pnt_def456",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
+
+	t.Run("it returns nil when no templates exist", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		phoneNotificationTemplateAPI := mock.NewMockPhoneNotificationTemplateAPI(ctrl)
+		phoneNotificationTemplateAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(
+				&managementv2.ListPhoneTemplatesResponseContent{
+					Templates: []*managementv2.PhoneTemplate{},
+				},
+				nil,
+			)
+
+		fetcher := phoneNotificationTemplateResourceFetcher{
+			apiv2: &auth0.APIV2{
+				PhoneNotificationTemplate: phoneNotificationTemplateAPI,
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Nil(t, data)
+	})
+
+	t.Run("it returns an error if api call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		phoneNotificationTemplateAPI := mock.NewMockPhoneNotificationTemplateAPI(ctrl)
+		phoneNotificationTemplateAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil, fmt.Errorf("failed to list phone notification templates"))
+
+		fetcher := phoneNotificationTemplateResourceFetcher{
+			apiv2: &auth0.APIV2{
+				PhoneNotificationTemplate: phoneNotificationTemplateAPI,
+			},
+		}
+
+		_, err := fetcher.FetchData(context.Background())
+		assert.EqualError(t, err, "failed to list phone notification templates")
 	})
 }
 

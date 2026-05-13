@@ -79,11 +79,13 @@ func NewAPI(m *management.Management) *API {
 
 type APIV2 struct {
 	AttackProtectionBotDetection AttackProtectionBotDetectionAPIV2
+	PhoneNotificationTemplate    PhoneNotificationTemplateAPI
 }
 
 func NewAPIV2(m *managementv2.Management) *APIV2 {
 	return &APIV2{
 		AttackProtectionBotDetection: m.AttackProtection.BotDetection,
+		PhoneNotificationTemplate:    m.Branding.Phone.Templates,
 	}
 }
 
