@@ -20,7 +20,7 @@ auth0 apps create [flags]
 
 ```
   auth0 apps create
-  auth0 apps create --name myapp 
+  auth0 apps create --name myapp
   auth0 apps create --name myapp --description <description>
   auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m|resource_server]
   auth0 apps create --name myapp --description <description> --type [native|spa|regular|m2m|resource_server] --reveal-secrets
@@ -30,12 +30,14 @@ auth0 apps create [flags]
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar,bazz=buzz"
   auth0 apps create --name "My API Client" --type resource_server --resource-server-identifier "https://api.example.com"
+  auth0 apps create --name myapp --type resource_server --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
 ```
 
 
 ## Flags
 
 ```
+  -p, --allow-any-profile-of-type strings   Comma-separated list of enabled token exchange types for this client. Possible values: custom_authentication, on_behalf_of_token_exchange.
   -a, --auth-method string                  Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).
   -c, --callbacks strings                   After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.
   -d, --description string                  Description of the application. Max character count is 140.

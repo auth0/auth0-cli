@@ -39,6 +39,7 @@ type applicationView struct {
 	Metadata                 []string
 	RefreshToken             string
 	ResourceServerIdentifier string
+	AllowAnyProfileOfType    []string
 	revealSecret             bool
 
 	raw interface{}
@@ -121,6 +122,10 @@ func (v *applicationView) KeyValues() [][]string {
 	// Add resource server identifier if present.
 	if v.ResourceServerIdentifier != "" {
 		keyValues = append(keyValues, []string{"RESOURCE SERVER IDENTIFIER", v.ResourceServerIdentifier})
+	}
+
+	if len(v.AllowAnyProfileOfType) > 0 {
+		keyValues = append(keyValues, []string{"TOKEN EXCHANGE TYPES", strings.Join(v.AllowAnyProfileOfType, ", ")})
 	}
 
 	return keyValues
@@ -207,6 +212,7 @@ func makeApplicationView(client *management.Client, revealSecrets bool) *applica
 		Grants:                   client.GetGrantTypes(),
 		Metadata:                 mapPointerToArray(client.ClientMetadata),
 		ResourceServerIdentifier: client.GetResourceServerIdentifier(),
+		AllowAnyProfileOfType:    client.GetTokenExchange().GetAllowAnyProfileOfType(),
 		raw:                      client,
 		RefreshToken:             string(jsonRefreshToken),
 	}

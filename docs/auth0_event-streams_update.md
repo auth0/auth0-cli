@@ -9,7 +9,7 @@ Update an event stream.
 
 To update interactively, use `auth0 event-streams update` with no arguments.
 
-To update non-interactively, supply the event id, name, status, subscriptions and configuration through the flags. An event stream type CANNOT be updated hence the configuration should match the schema based on the type of event stream. Configuration for `eventbridge` streams cannot be updated.
+To update non-interactively, supply the event id, name, status, subscriptions and configuration through the flags. An event stream type CANNOT be updated hence the configuration should match the schema based on the type of event stream. Configuration for `eventbridge` streams cannot be updated.Only deployed actions can be used for action configuration
 
 ## Usage
 ```
@@ -24,7 +24,8 @@ auth0 event-streams update [flags]
   auth0 event-streams update <event-id> --name my-event-stream --status enabled
   auth0 event-streams update <event-id> --name my-event-stream --status enabled --subscriptions "user.created,user.updated"
   auth0 event-streams update <event-id> --name my-event-stream --status disabled --subscriptions "user.deleted" --configuration '{"aws_account_id":"325235643634","aws_region":"us-east-2"}'
-  auth0 event-streams update <event-id> --name my-event-stream --status enabled --subscriptions "user.created" --configuration '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"0909090909"}}
+  auth0 event-streams update <event-id> --name my-event-stream --status enabled --subscriptions "user.created" --configuration '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"0909090909"}}'
+  auth0 event-streams create <event-id> --name my-event-stream --subscriptions "user.updated" --configuration '{"action_id":"b053e4ca-8b14-4233-b615-bd3bdb353977"}'
   auth0 event-streams update <event-id> -n my-event-stream --status enabled -s "user.created" -c '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"987654321"}}
 ```
 
