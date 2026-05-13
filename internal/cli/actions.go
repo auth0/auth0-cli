@@ -76,6 +76,7 @@ var (
 		"send-phone-message":     actionTemplateSendPhoneMessage,
 		"custom-email-provider":  actionTemplateCustomEmailProvider,
 		"custom-phone-provider":  actionTemplateCustomPhoneProvider,
+		"event-stream":           actionTemplateEventStream,
 	}
 )
 
@@ -201,7 +202,7 @@ func createActionCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 actions create
   auth0 actions create --name myaction
   auth0 actions create --name myaction --trigger post-login
-  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js) --runtime node18
+  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --runtime node18
   auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
   auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
   auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
