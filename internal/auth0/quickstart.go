@@ -659,10 +659,10 @@ var QuickstartConfigs = map[string]AppConfig{
 	},
 	"regular:jhipster:none": {
 		EnvValues: map[string]string{
-			"SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_OIDC_ISSUER_URI":       DetectionSub,
-			"SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_ID":    DetectionSub,
+			"SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_OIDC_ISSUER_URI":        DetectionSub,
+			"SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_ID":     DetectionSub,
 			"SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET": DetectionSub,
-			"JHIPSTER_SECURITY_OAUTH2_AUDIENCE":                            DetectionSub,
+			"JHIPSTER_SECURITY_OAUTH2_AUDIENCE":                             DetectionSub,
 		},
 		RequestParams: RequestParams{
 			AppType:           "regular_web",

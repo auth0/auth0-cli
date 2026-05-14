@@ -342,10 +342,10 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 		{"regular:jhipster:none", 8080, ".auth0.env",
 			[]string{"SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_OIDC_ISSUER_URI", "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_ID", "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET", "JHIPSTER_SECURITY_OAUTH2_AUDIENCE"},
 			map[string]string{
-				"SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_OIDC_ISSUER_URI":       "https://" + domain + "/",
-				"SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_ID":    cidVal,
+				"SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_OIDC_ISSUER_URI":        "https://" + domain + "/",
+				"SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_ID":     cidVal,
 				"SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET": csecVal,
-				"JHIPSTER_SECURITY_OAUTH2_AUDIENCE":                            "https://" + domain + "/api/v2/",
+				"JHIPSTER_SECURITY_OAUTH2_AUDIENCE":                             "https://" + domain + "/api/v2/",
 			}},
 		{"regular:aspnet-mvc:none", 3000, "appsettings.json",
 			[]string{"Domain", "ClientId", "ClientSecret"}, nil},
