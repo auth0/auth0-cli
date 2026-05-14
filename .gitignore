@@ -43,3 +43,6 @@ out/
 
 # Copilot instructions
 .github/copilot-instructions.md
+
+# LLM files
+.remember/
