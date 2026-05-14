@@ -209,11 +209,11 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 			for {
 				event, err := stream.Recv()
 				if err != nil {
-					// Treat as graceful shutdown if:
-					// - EOF (server closed)
-					// - context cancelled
-					// - we closed the stream ourselves (Ctrl+C)
-					// - http2 body closed error (result of stream.Close())
+					/* Treat as graceful shutdown if
+					- EOF (server closed)
+					- context cancelled
+					- we closed the stream ourselves (Ctrl+C)
+					- http2 body closed error (result of stream.Close()) */
 					isGraceful := errors.Is(err, io.EOF) ||
 						errors.Is(err, cmd.Context().Err()) ||
 						cmd.Context().Err() != nil ||
