@@ -55,6 +55,7 @@ auth0 event-streams delete [flags]
 - [auth0 event-streams redeliver-many](auth0_event-streams_redeliver-many.md) - Bulk retry failed event deliveries using filters
 - [auth0 event-streams show](auth0_event-streams_show.md) - Show an event stream
 - [auth0 event-streams stats](auth0_event-streams_stats.md) - View delivery stats for an event stream
+- [auth0 event-streams subscribe](auth0_event-streams_subscribe.md) - Subscribe to live events via Server-Sent Events (SSE)
 - [auth0 event-streams trigger](auth0_event-streams_trigger.md) - Trigger a test event for an event stream
 - [auth0 event-streams update](auth0_event-streams_update.md) - Update an event stream
 
