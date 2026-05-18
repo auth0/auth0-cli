@@ -274,8 +274,14 @@ func (f *clientGrantResourceFetcher) FetchData(ctx context.Context) (importDataL
 		}
 
 		for _, grant := range grants.ClientGrants {
+			var resourceName string
+			if grant.GetDefaultFor() != "" {
+				resourceName = "auth0_client_grant." + sanitizeResourceName("default_for_"+grant.GetDefaultFor()+"_"+grant.GetAudience())
+			} else {
+				resourceName = "auth0_client_grant." + sanitizeResourceName(grant.GetClientID()+"_"+grant.GetAudience())
+			}
 			data = append(data, importDataItem{
-				ResourceName: "auth0_client_grant." + sanitizeResourceName(grant.GetClientID()+"_"+grant.GetAudience()),
+				ResourceName: resourceName,
 				ImportID:     grant.GetID(),
 			})
 		}
