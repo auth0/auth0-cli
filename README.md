@@ -29,6 +29,7 @@ Build, manage and test your [Auth0](https://auth0.com/) integrations from the co
 - [Authenticating to Your Tenant](#authenticating-to-your-tenant)
 - [Available Commands](#available-commands)
 - [Customization](#customization)
+- [Agent Integration](#agent-integration)
 - [Anonymous Analytics](#anonymized-analytics-disclosure)
 
 ## Installation
@@ -229,6 +230,41 @@ set EDITOR="C:\Path To\executable++.exe" --wait
 REM Command Prompt (persistent, across sessions):
 setx EDITOR "code --wait"
 ```
+
+## Agent Integration
+
+The CLI has an [AgentSkills-compatible](https://agentskills.io/) skill for AI agents (Claude Code, OpenClaw, etc.), available from the [Auth0 Agent Skills](https://github.com/auth0/agent-skills) repository.
+
+### Install via Auth0 Agent Skills (Recommended)
+
+The `auth0-cli` skill is part of the [auth0/agent-skills](https://github.com/auth0/agent-skills) collection. Install the full Auth0 skills suite to get it along with other Auth0 skills:
+
+**Claude Code plugin marketplace:**
+
+```
+/plugin marketplace add auth0/agent-skills
+/plugin install auth0@auth0-agent-skills
+```
+
+**Skills CLI:**
+
+```bash
+npx skills add auth0/agent-skills
+```
+
+**Manual installation (Claude Code, OpenClaw):**
+
+```bash
+git clone https://github.com/auth0/agent-skills.git
+
+# Claude Code
+cp -r agent-skills/plugins/auth0/skills/auth0-cli ~/.claude/skills/
+
+# OpenClaw
+cp -r agent-skills/plugins/auth0/skills/auth0-cli ~/.openclaw/skills/
+```
+
+> **Note:** The `auth0` binary must be installed and available on your `$PATH` for agents to use this skill.
 
 ## Anonymized Analytics Disclosure
 

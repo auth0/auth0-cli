@@ -31,4 +31,7 @@ var (
 
 	//go:embed data/action-template-empty.js
 	actionTemplateEmpty string
+
+	//go:embed data/action-template-event-stream.js
+	actionTemplateEventStream string
 )

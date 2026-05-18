@@ -185,10 +185,12 @@ func createEventStreamCmd(cli *cli) *cobra.Command {
 		Short: "Create a new event stream",
 		Long: "Create a new event stream.\n\n" +
 			"To create interactively, use `auth0 event-streams create` with no flags.\n\n" +
-			"To create non-interactively, supply the event stream name, type, subscriptions and configuration through the flags.",
+			"To create non-interactively, supply the event stream name, type, subscriptions and configuration through the flags. \n" +
+			"Only deployed actions can be used for action configuration",
 		Example: `  auth0 event-streams create
   auth0 event-streams create --name my-event-stream --type eventbridge --subscriptions "user.created,user.updated" --configuration '{"aws_account_id":"325235643634","aws_region":"us-east-2"}'
   auth0 event-streams create --name my-event-stream --type webhook --subscriptions "user.created,user.deleted" --configuration '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'
+  auth0 event-streams create --name my-event-stream --type action --subscriptions "user.created" --configuration '{"action_id":"b053e4ca-8b14-4233-b615-bd3bdb353977"}'
   auth0 event-streams create -n my-event-stream -t webhook -s "user.created,user.deleted" -c '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := eventStreamName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -269,13 +271,15 @@ func updateEventStreamCmd(cli *cli) *cobra.Command {
 			"To update non-interactively, supply the event id, name, status, subscriptions and " +
 			"configuration through the flags. An event stream type CANNOT be updated hence the configuration " +
 			"should match the schema based on the type of event stream. Configuration for `eventbridge` streams " +
-			"cannot be updated.",
+			"cannot be updated." +
+			"Only deployed actions can be used for action configuration",
 		Example: `  auth0 event-streams update <event-id>
   auth0 event-streams update <event-id> --name my-event-stream
   auth0 event-streams update <event-id> --name my-event-stream --status enabled
   auth0 event-streams update <event-id> --name my-event-stream --status enabled --subscriptions "user.created,user.updated"
   auth0 event-streams update <event-id> --name my-event-stream --status disabled --subscriptions "user.deleted" --configuration '{"aws_account_id":"325235643634","aws_region":"us-east-2"}'
-  auth0 event-streams update <event-id> --name my-event-stream --status enabled --subscriptions "user.created" --configuration '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"0909090909"}}
+  auth0 event-streams update <event-id> --name my-event-stream --status enabled --subscriptions "user.created" --configuration '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"0909090909"}}'
+  auth0 event-streams create <event-id> --name my-event-stream --subscriptions "user.updated" --configuration '{"action_id":"b053e4ca-8b14-4233-b615-bd3bdb353977"}'
   auth0 event-streams update <event-id> -n my-event-stream --status enabled -s "user.created" -c '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"987654321"}}`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {

@@ -61,7 +61,7 @@ type (
 	}
 )
 
-func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataFetcher, error) {
+func (i *terraformInputs) parseResourceFetchers(api *auth0.API, apiv2 *auth0.APIV2) ([]resourceDataFetcher, error) {
 	fetchers := make([]resourceDataFetcher, 0)
 	var err error
 
@@ -77,6 +77,8 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API) ([]resourceDataF
 			fetchers = append(fetchers, &brandingThemeResourceFetcher{api})
 		case "auth0_phone_provider":
 			fetchers = append(fetchers, &phoneProviderResourceFetcher{api})
+		case "auth0_phone_notification_template":
+			fetchers = append(fetchers, &phoneNotificationTemplateResourceFetcher{apiv2})
 		case "auth0_client", "auth0_client_credentials":
 			fetchers = append(fetchers, &clientResourceFetcher{api})
 		case "auth0_client_grant":
@@ -177,7 +179,7 @@ func generateTerraformCmd(cli *cli) *cobra.Command {
 
 func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		resources, err := inputs.parseResourceFetchers(cli.api)
+		resources, err := inputs.parseResourceFetchers(cli.api, cli.apiv2)
 		if err != nil {
 			return err
 		}

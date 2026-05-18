@@ -1125,6 +1125,8 @@ func createQuickstartApp(cmd *cobra.Command, cli *cli, inputs SetupInputs, qsCon
 			cli.renderer.Warnf("Could not read Capacitor app ID. Ensure capacitor.config.json or capacitor.config.ts is present in your project root.")
 			cli.renderer.Infof("http://localhost is registered as the Allowed Callback URL (Capacitor WebView).")
 		}
+	case "jhipster":
+		cli.renderer.Infof("Refer to JHipster documentation to complete the setup: https://www.jhipster.tech/security/#auth0")
 	}
 
 	return client.GetClientID(), nil
@@ -1355,7 +1357,7 @@ func defaultPortForFramework(framework string) int {
 		return 8000
 	case "laravel":
 		return 8000
-	case "spring-boot", "java-ee", "vanilla-java":
+	case "spring-boot", "java-ee", "vanilla-java", "jhipster":
 		return 8080
 	default:
 		return 3000
@@ -1535,6 +1537,18 @@ func resolveDetectionSubValue(key, tenantDomain, baseURL string, client *managem
 
 	case "AUTH0_REDIRECT_URI", "AUTH0_CALLBACK_URL":
 		return baseURL + "/callback", nil
+
+	case "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_OIDC_ISSUER_URI":
+		return "https://" + tenantDomain + "/", nil
+
+	case "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_ID":
+		return client.GetClientID(), nil
+
+	case "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET":
+		return client.GetClientSecret(), nil
+
+	case "JHIPSTER_SECURITY_OAUTH2_AUDIENCE":
+		return "https://" + tenantDomain + "/api/v2/", nil
 
 	default:
 		return "", fmt.Errorf("unhandled placeholder for env key %q: add it to replaceDetectionSub", key)
