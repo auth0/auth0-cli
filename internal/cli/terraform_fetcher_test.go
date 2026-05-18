@@ -745,14 +745,14 @@ func TestClientGrantResourceFetcher_FetchData(t *testing.T) {
 							Audience: auth0.String("https://travel0.com/api"),
 						},
 						{
-							ID:        auth0.String("cgr_2"),
+							ID:         auth0.String("cgr_2"),
 							DefaultFor: auth0.String("third_party_clients"),
-							Audience:  auth0.String("https://travel0.com/api"),
+							Audience:   auth0.String("https://travel0.com/api"),
 						},
 						{
-							ID:        auth0.String("cgr_3"),
+							ID:         auth0.String("cgr_3"),
 							DefaultFor: auth0.String("third_party_clients"),
-							Audience:  auth0.String("https://partner-api.example.com"),
+							Audience:   auth0.String("https://partner-api.example.com"),
 						},
 					},
 				},
