@@ -75,7 +75,6 @@ func quickstartsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(listQuickstartsCmd(cli))
 	cmd.AddCommand(downloadQuickstartCmd(cli))
 	cmd.AddCommand(setupQuickstartCmd(cli))
-	cmd.AddCommand(setupQuickstartCmdExperimental(cli))
 
 	return cmd
 }
@@ -446,7 +445,7 @@ var (
 	}
 )
 
-// Flags for the setup-experimental command.
+// Flags for the setup command.
 var (
 	setupExpApp = Flag{
 		Name:     "App",
@@ -526,7 +525,7 @@ var (
 	}
 )
 
-// SetupInputs holds the user-provided inputs for the setup-experimental command.
+// SetupInputs holds the user-provided inputs for the setup command.
 type SetupInputs struct {
 	Name          string
 	App           bool
@@ -548,229 +547,10 @@ type SetupInputs struct {
 }
 
 func setupQuickstartCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		Type string
-		Name string
-		Port int
-	}
-
-	cmd := &cobra.Command{
-		Use:   "setup",
-		Args:  cobra.NoArgs,
-		Short: "Set up Auth0 for your quickstart application",
-		Long: "Creates an Auth0 application and generates a .env file with the necessary configuration.\n\n" +
-			"The command will:\n" +
-			"  1. Check if you are authenticated (and prompt for login if needed)\n" +
-			"  2. Create an Auth0 application based on the specified type\n" +
-			"  3. Generate a .env file with the appropriate environment variables\n\n" +
-			"Supported types:\n" +
-			"  - vite: For client-side SPAs (React, Vue, Svelte, etc.)\n" +
-			"  - nextjs: For Next.js server-side applications\n" +
-			"  - fastify: For Fastify web applications\n" +
-			"  - jhipster-rwa: For JHipster regular web applications",
-		Example: `  auth0 quickstarts setup --type vite
-  auth0 quickstarts setup --type nextjs
-  auth0 quickstarts setup --type fastify
-  auth0 quickstarts setup --type vite --name "My App"
-  auth0 quickstarts setup --type nextjs --port 8080
-  auth0 quickstarts setup --type jhipster-rwa
-  auth0 qs setup --type fastify -n "My App" -p 3000`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-
-			if inputs.Type != "" {
-				normalizedType := strings.ToLower(inputs.Type)
-				if normalizedType != "vite" && normalizedType != "nextjs" && normalizedType != "fastify" && normalizedType != "jhipster-rwa" {
-					return fmt.Errorf("unsupported quickstart type: %s (supported types: vite, nextjs, fastify, jhipster-rwa)", inputs.Type)
-				}
-			}
-
-			if err := qsType.Select(cmd, &inputs.Type, []string{"vite", "nextjs", "fastify", "jhipster-rwa"}, nil); err != nil {
-				return err
-			}
-
-			if err := cli.setupWithAuthentication(ctx); err != nil {
-				return fmt.Errorf("authentication required: %w", err)
-			}
-
-			defaultName := "My App"
-			var defaultPort int
-
-			switch inputs.Type {
-			case "vite":
-				defaultPort = 5173
-			case "nextjs", "fastify":
-				defaultPort = 3000
-			case "jhipster-rwa":
-				defaultName = "JHipster"
-				defaultPort = 8080
-			}
-
-			// If name is not explicitly set (is empty), ask for it or use default.
-			if inputs.Name == "" {
-				inputs.Name = defaultName
-				if err := qsAppName.Ask(cmd, &inputs.Name, &defaultName); err != nil {
-					return err
-				}
-			}
-
-			// If port is not explicitly set (is 0), ask for it or use default.
-			if inputs.Port == 0 {
-				inputs.Port = defaultPort
-				defaultPortStr := strconv.Itoa(defaultPort)
-				if err := qsPort.Ask(cmd, &inputs.Port, &defaultPortStr); err != nil {
-					return err
-				}
-			}
-
-			if inputs.Port < 1024 || inputs.Port > 65535 {
-				return fmt.Errorf("invalid port number: %d (must be between 1024 and 65535)", inputs.Port)
-			}
-
-			baseURL := fmt.Sprintf("http://localhost:%d", inputs.Port)
-			appType := appTypeRegularWeb
-			var callbacks, logoutURLs, origins, webOrigins []string
-
-			// Configure URLs based on app type.
-			switch inputs.Type {
-			case "vite":
-				appType = appTypeSPA
-				callbacks = []string{baseURL}
-				logoutURLs = []string{baseURL}
-				origins = []string{baseURL}
-				webOrigins = []string{baseURL}
-			case "nextjs":
-				callbackURL := fmt.Sprintf("%s/api/auth/callback", baseURL)
-				callbacks = []string{callbackURL}
-				logoutURLs = []string{baseURL}
-			case "fastify":
-				callbackURL := fmt.Sprintf("%s/auth/callback", baseURL)
-				callbacks = []string{callbackURL}
-				logoutURLs = []string{baseURL}
-			case "jhipster-rwa":
-				callbackURL := fmt.Sprintf("%s/login/oauth2/code/oidc", baseURL)
-				callbacks = []string{callbackURL}
-				logoutURLs = []string{baseURL}
-			}
-
-			cli.renderer.Infof("Creating Auth0 application '%s'...", inputs.Name)
-
-			oidcConformant := true
-			algorithm := "RS256"
-			metadata := map[string]interface{}{
-				"created_by": "quickstart-docs-manual-cli",
-			}
-
-			a := &management.Client{
-				Name:              &inputs.Name,
-				AppType:           &appType,
-				Callbacks:         &callbacks,
-				AllowedLogoutURLs: &logoutURLs,
-				OIDCConformant:    &oidcConformant,
-				JWTConfiguration: &management.ClientJWTConfiguration{
-					Algorithm: &algorithm,
-				},
-				ClientMetadata: &metadata,
-			}
-
-			if inputs.Type == "vite" {
-				a.AllowedOrigins = &origins
-				a.WebOrigins = &webOrigins
-			}
-
-			if err := ansi.Waiting(func() error {
-				return cli.api.Client.Create(ctx, a)
-			}); err != nil {
-				return fmt.Errorf("failed to create application: %w", err)
-			}
-
-			cli.renderer.Infof("Application created successfully with Client ID: %s", a.GetClientID())
-
-			tenant, err := cli.Config.GetTenant(cli.tenant)
-			if err != nil {
-				return fmt.Errorf("failed to get tenant: %w", err)
-			}
-
-			envFileName := ".env"
-			var envContent strings.Builder
-
-			switch inputs.Type {
-			case "vite":
-				fmt.Fprintf(&envContent, "VITE_AUTH0_DOMAIN=%s\n", tenant.Domain)
-				fmt.Fprintf(&envContent, "VITE_AUTH0_CLIENT_ID=%s\n", a.GetClientID())
-
-			case "nextjs":
-				secret, err := generateState(32)
-				if err != nil {
-					return fmt.Errorf("failed to generate AUTH0_SECRET: %w", err)
-				}
-
-				fmt.Fprintf(&envContent, "AUTH0_DOMAIN=%s\n", tenant.Domain)
-				fmt.Fprintf(&envContent, "AUTH0_CLIENT_ID=%s\n", a.GetClientID())
-				fmt.Fprintf(&envContent, "AUTH0_CLIENT_SECRET=%s\n", a.GetClientSecret())
-				fmt.Fprintf(&envContent, "AUTH0_SECRET=%s\n", secret)
-				fmt.Fprintf(&envContent, "APP_BASE_URL=%s\n", baseURL)
-
-			case "fastify":
-				sessionSecret, err := generateState(64)
-				if err != nil {
-					return fmt.Errorf("failed to generate SESSION_SECRET: %w", err)
-				}
-
-				fmt.Fprintf(&envContent, "AUTH0_DOMAIN=%s\n", tenant.Domain)
-				fmt.Fprintf(&envContent, "AUTH0_CLIENT_ID=%s\n", a.GetClientID())
-				fmt.Fprintf(&envContent, "AUTH0_CLIENT_SECRET=%s\n", a.GetClientSecret())
-				fmt.Fprintf(&envContent, "SESSION_SECRET=%s\n", sessionSecret)
-				fmt.Fprintf(&envContent, "APP_BASE_URL=%s\n", baseURL)
-
-			case "jhipster-rwa":
-				envFileName = ".auth0.env"
-				fmt.Fprintf(&envContent, "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_OIDC_ISSUER_URI=https://%s/\n", tenant.Domain)
-				fmt.Fprintf(&envContent, "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_ID=%s\n", a.GetClientID())
-				fmt.Fprintf(&envContent, "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET=%s\n", a.GetClientSecret())
-				fmt.Fprintf(&envContent, "JHIPSTER_SECURITY_OAUTH2_AUDIENCE=https://%s/api/v2/\n", tenant.Domain)
-			}
-
-			message := fmt.Sprintf("     Proceed to overwrite '%s' file? : ", envFileName)
-			if shouldCancelOverwrite(cli, cmd, envFileName, message) {
-				cli.renderer.Warnf("Aborted creating %s file. Please create it manually using the following content:\n\n"+
-					"─────────────────────────────────────────────────────────────\n"+"%s"+
-					"─────────────────────────────────────────────────────────────\n", envFileName, envContent.String())
-			} else {
-				if err = os.WriteFile(envFileName, []byte(envContent.String()), 0600); err != nil {
-					return fmt.Errorf("failed to write .env file: %w", err)
-				}
-
-				cli.renderer.Infof("%s file created successfully with your Auth0 configuration\n", envFileName)
-			}
-
-			switch inputs.Type {
-			case "jhipster-rwa":
-				cli.renderer.Infof("Please refer to the JHipster documentation https://www.jhipster.tech/security/#auth0 to complete the setup")
-			default:
-				cli.renderer.Infof("Next steps: \n"+
-					"       1. Install dependencies: npm install \n"+
-					"       2. Start your application: npm run dev\n"+
-					"       3. Open your browser at %s", baseURL)
-			}
-
-			return nil
-		},
-	}
-
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
-	qsType.RegisterString(cmd, &inputs.Type, "")
-	qsAppName.RegisterString(cmd, &inputs.Name, "")
-	qsPort.RegisterInt(cmd, &inputs.Port, 0)
-
-	return cmd
-}
-
-func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 	var inputs SetupInputs
 
 	cmd := &cobra.Command{
-		Use:   "setup-experimental",
+		Use:   "setup",
 		Args:  cobra.NoArgs,
 		Short: "Set up Auth0 for your quickstart application",
 		Long: "Creates an Auth0 application and/or API and generates a config file with the necessary Auth0 settings.\n\n" +
@@ -780,320 +560,12 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 			"  3. Create an Auth0 application and/or API resource server\n" +
 			"  4. Generate a config file with the appropriate environment variables\n\n" +
 			"Supported frameworks are dynamically loaded from the QuickstartConfigs map.",
-		Example: `  auth0 quickstarts setup-experimental
-  auth0 quickstarts setup-experimental --app --framework react --type spa
-  auth0 quickstarts setup-experimental --api --identifier https://my-api
-  auth0 quickstarts setup-experimental --app --api --name "My App"`,
+		Example: `  auth0 quickstarts setup
+  auth0 quickstarts setup --app --framework react --type spa
+  auth0 quickstarts setup --api --identifier https://my-api
+  auth0 quickstarts setup --app --api --name "My App"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-
-			if err := cli.setupWithAuthentication(ctx); err != nil {
-				return fmt.Errorf("authentication required: %w", err)
-			}
-
-			// LinkedAppClientID tracks which app client ID to link to the API
-			// (either a newly created app or one selected from the tenant).
-			var linkedAppClientID string
-			canPromptFlag := canPrompt(cmd)
-
-			// -- Step 1: Decide what to create (App / API / both) --.
-			if !inputs.App && !inputs.API {
-				if !canPromptFlag {
-					return fmt.Errorf("in --no-input mode, specify at least one of --app or --api")
-				}
-				var selections []string
-				if err := prompt.AskMultiSelect(
-					"What do you want to create? (select whatever applies)",
-					&selections,
-					"App", "API",
-				); err != nil {
-					return fmt.Errorf("failed to select target resource(s): %w", err)
-				}
-				for _, s := range selections {
-					switch strings.ToLower(s) {
-					case "app":
-						inputs.App = true
-					case "api":
-						inputs.API = true
-					}
-				}
-				if !inputs.App && !inputs.API {
-					return fmt.Errorf("please select at least one option: App and/or API")
-				}
-			}
-
-			// -- Step 2: Auto-detect project framework --.
-			if inputs.App {
-				cwd, err := os.Getwd()
-				if err != nil {
-					return fmt.Errorf("failed to get working directory: %w", err)
-				}
-
-				// M2M apps have no framework or port; skip DetectProject entirely.
-				if inputs.Type == "m2m" {
-					if inputs.Name == "" {
-						inputs.Name = filepath.Base(cwd)
-					}
-				} else {
-					detection := DetectProject(cwd)
-
-					typeFromFlag := setupExpType.IsSet(cmd)
-					frameworkFromFlag := setupExpFramework.IsSet(cmd)
-
-					switch {
-					case typeFromFlag && frameworkFromFlag:
-						// User explicitly specified type and framework via flags; skip detection UI.
-						if inputs.Name == "" {
-							inputs.Name = detection.AppName
-						}
-						// If build tool was not explicitly provided, read it from detected config
-						// files (e.g. vite.config.ts) rather than defaulting to "none" statically.
-						if !setupExpBuildTool.IsSet(cmd) && detection.BuildTool != "" {
-							inputs.BuildTool = detection.BuildTool
-						}
-						if inputs.BundleID == "" && detection.BundleID != "" {
-							inputs.BundleID = detection.BundleID
-						}
-					case detection.Detected:
-						noInputMode := !canPromptFlag
-						if len(detection.AmbiguousFrameworks) > 1 {
-							// Multiple package.json deps matched - show partial summary and ask user to disambiguate.
-							cli.renderer.InfofBullet("Detected in current directory")
-							cli.renderer.InfofBullet("Framework: %s", "Could not be determined")
-							cli.renderer.InfofBullet("App type: %s", detectionFriendlyAppType(detection.Type))
-							if noInputMode || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
-								inputs = applyDetectionToInputs(inputs, detection)
-								if inputs.Framework == "" {
-									if noInputMode {
-										inputs.Framework = detection.AmbiguousFrameworks[0]
-									} else {
-										defaultFramework := detection.AmbiguousFrameworks[0]
-										if err := setupExpFramework.Select(cmd, &inputs.Framework, detection.AmbiguousFrameworks, &defaultFramework); err != nil {
-											return fmt.Errorf("failed to select framework: %w", err)
-										}
-									}
-								}
-							}
-						} else if detection.Framework != "" {
-							// Single clear detection - show summary and confirm.
-							titleCaser := cases.Title(language.English)
-							frameworkDisplay := frameworkDisplayName(detection.Framework)
-							if detection.BuildTool != "" && detection.BuildTool != "none" {
-								frameworkDisplay += " - " + titleCaser.String(detection.BuildTool)
-							}
-							cli.renderer.InfofBullet("Detected in current directory")
-							cli.renderer.InfofBullet("Framework: %s", frameworkDisplay)
-							cli.renderer.InfofBullet("App type: %s", detectionFriendlyAppType(detection.Type))
-							cli.renderer.InfofBullet("App name: %s", detection.AppName)
-							if detection.Port > 0 {
-								cli.renderer.InfofBullet("Port: %d", detection.Port)
-							}
-
-							if noInputMode || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
-								inputs = applyDetectionToInputs(inputs, detection)
-								if inputs.Framework == "" {
-									inputs.Framework = detection.Framework
-								}
-							}
-						}
-					default:
-						// No detection signal found - notify the user and pre-fill name from directory.
-						if !canPromptFlag && inputs.Type == "" {
-							return fmt.Errorf(
-								"auto-detection failed: unable to auto detect application. " +
-									"In --no-input mode provide --type, --framework, and optionally --build-tool " +
-									"(e.g. --type spa --framework react --build-tool vite)",
-							)
-						}
-						cli.renderer.Warnf("auto-detection failed: unable to auto detect application")
-						if inputs.Name == "" {
-							inputs.Name = detection.AppName
-						}
-					}
-				}
-			}
-
-			// -- Step 3: Resolve remaining prompts for App / API --
-			// In non-interactive mode, --type alone is not enough; --framework is also required.
-			if !canPromptFlag && inputs.App && inputs.Type != "" && inputs.Type != "m2m" && inputs.Framework == "" {
-				return fmt.Errorf(
-					"--framework is required in non-interactive mode when --type is %s: "+
-						"use --framework and optionally --build-tool flags "+
-						"(e.g. --framework react --build-tool vite)",
-					inputs.Type,
-				)
-			}
-			qsConfigKey, updatedInputs, wasAutoSelected, err := getQuickstartConfigKey(cmd, inputs)
-			if err != nil {
-				return fmt.Errorf("failed to get quickstart configuration: %w", err)
-			}
-			inputs = updatedInputs
-			if inputs.App && wasAutoSelected {
-				cli.renderer.Infof("Auto-selected build tool %q for %s/%s (no exact match for 'none')", inputs.BuildTool, inputs.Type, inputs.Framework)
-			}
-
-			// -- Step 3b: Collect application name --.
-			if inputs.App {
-				if !setupExpName.IsSet(cmd) {
-					defaultName := inputs.Name
-					if defaultName == "" {
-						defaultName = "My App"
-					}
-					inputs.Name = defaultName
-					if err := setupExpName.Ask(cmd, &inputs.Name, &defaultName); err != nil {
-						return fmt.Errorf("failed to enter application name: %w", err)
-					}
-					if inputs.Name == "" {
-						return fmt.Errorf("application name cannot be empty")
-					}
-				}
-				if inputs.Name == "" {
-					return fmt.Errorf("application name cannot be empty")
-				}
-			}
-
-			// -- Step 3d: Prompt for port if not explicitly set --.
-			if inputs.App && inputs.Type != "native" && inputs.Type != "m2m" {
-				portStr := strconv.Itoa(inputs.Port)
-				if err := setupExpPort.AskInt(cmd, &inputs.Port, &portStr); err != nil {
-					return fmt.Errorf("failed to enter port: %w", err)
-				}
-				if inputs.Port < 1024 || inputs.Port > 65535 {
-					return fmt.Errorf("invalid port number: %d (must be between 1024 and 65535)", inputs.Port)
-				}
-			}
-
-			// -- Step 3c: Collect API name for API-only flow --.
-			if inputs.API && !inputs.App {
-				// Collect API name if not already set (pre-fill from CWD folder name).
-				if inputs.Name == "" && !setupExpName.IsSet(cmd) {
-					cwd, _ := os.Getwd()
-					defaultName := filepath.Base(cwd)
-					if defaultName == "" || defaultName == "." {
-						defaultName = "my-api"
-					}
-					inputs.Name = defaultName
-					if err := setupExpName.Ask(cmd, &inputs.Name, &defaultName); err != nil {
-						return fmt.Errorf("failed to enter application name: %w", err)
-					}
-				}
-			}
-
-			if inputs.API {
-				// Prompt for the identifier if not explicitly provided via flag.
-				if !setupExpIdentifier.IsSet(cmd) {
-					// Compute a suggested default without pre-populating inputs.Identifier.
-					defaultID := inputs.Identifier
-					if defaultID == "" && inputs.Name != "" {
-						slug := strings.ToLower(strings.ReplaceAll(inputs.Name, " ", "-"))
-						defaultID = "https://" + slug
-					}
-					inputs.Identifier = defaultID
-					if err := setupExpIdentifier.Ask(cmd, &inputs.Identifier, &defaultID); err != nil {
-						return fmt.Errorf("failed to enter API identifier: %w", err)
-					}
-				}
-
-				if inputs.Identifier == "" {
-					return fmt.Errorf("API identifier cannot be empty: use --identifier flag")
-				}
-
-				if err := validateAPIIdentifier(inputs.Identifier); err != nil {
-					return err
-				}
-
-				// If the flag was not set, prompt interactively; fall back to 86400 in non-interactive mode.
-				if inputs.TokenLifetime == "" {
-					defaultLifetime := "86400"
-					inputs.TokenLifetime = defaultLifetime
-					if err := setupExpTokenLifetime.Ask(cmd, &inputs.TokenLifetime, &defaultLifetime); err != nil {
-						return fmt.Errorf("failed to enter token lifetime: %w", err)
-					}
-					if inputs.TokenLifetime == "" {
-						cli.renderer.Warnf("Token lifetime left blank; using default 86400 seconds (24 hours)")
-						inputs.TokenLifetime = defaultLifetime
-					}
-				}
-
-				if inputs.SigningAlg == "" {
-					signingAlgs := []string{"RS256", "PS256", "HS256"}
-					defaultAlg := "RS256"
-					inputs.SigningAlg = defaultAlg
-					if err := setupExpSigningAlg.Select(cmd, &inputs.SigningAlg, signingAlgs, &defaultAlg); err != nil {
-						return fmt.Errorf("failed to select signing algorithm: %w", err)
-					}
-				}
-
-				if alg := inputs.SigningAlg; alg != "RS256" && alg != "PS256" && alg != "HS256" {
-					return fmt.Errorf("invalid signing algorithm %q: must be RS256, PS256, or HS256", alg)
-				}
-
-				// For API-only: fetch existing apps and let the user select one to link.
-				if !inputs.App {
-					var appList *management.ClientList
-					var appListErr error
-					_ = ansi.Waiting(func() error {
-						appList, appListErr = cli.api.Client.List(
-							ctx,
-							management.Parameter("app_type", "native,spa,regular_web"),
-							management.Parameter("is_global", "false"),
-						)
-						return appListErr
-					})
-					if appListErr != nil {
-						cli.renderer.Warnf("Could not fetch existing applications: %v. You can link the API to an app manually.", appListErr)
-					}
-
-					appOptions := []string{"Skip"}
-					appIDByName := make(map[string]string)
-					if appList != nil && len(appList.Clients) > 0 {
-						named := make([]string, 0, len(appList.Clients))
-						for _, c := range appList.Clients {
-							name := c.GetName()
-							named = append(named, name)
-							appIDByName[name] = c.GetClientID()
-						}
-						named = append(named, "Skip")
-						appOptions = named
-					}
-
-					if canPromptFlag {
-						var selectedAppName string
-						q := prompt.SelectInput(
-							"link-app",
-							"Select App to register API",
-							"Select an existing application to authorize for this API, or skip",
-							appOptions,
-							appOptions[0],
-							true,
-						)
-						if err := prompt.AskOne(q, &selectedAppName); err != nil {
-							return fmt.Errorf("failed to select app: %w", err)
-						}
-						if selectedAppName != "Skip" {
-							linkedAppClientID = appIDByName[selectedAppName]
-						}
-					}
-				}
-			}
-
-			// -- Step 4: Create the Auth0 application client --.
-			if inputs.App {
-				clientID, err := createQuickstartApp(ctx, cli, inputs, qsConfigKey)
-				if err != nil {
-					return err
-				}
-				linkedAppClientID = clientID
-			}
-
-			// -- Step 5: Create the Auth0 API resource server --.
-			if inputs.API {
-				if err := createQuickstartAPI(ctx, cli, inputs, linkedAppClientID); err != nil {
-					return err
-				}
-			}
-
-			return nil
+			return runSetupQuickstart(cmd, cli, &inputs)
 		},
 	}
 
@@ -1119,39 +591,412 @@ func setupQuickstartCmdExperimental(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func printClientDetails(cli *cli, client *management.Client, port int, configFileLocation string) {
-	cli.renderer.Successf("An application %q has been created in the management console", client.GetName())
-	cli.renderer.Detailf("Client ID: %s", ansi.Magenta(client.GetClientID()))
-	cli.renderer.Newline()
+// runSetupQuickstart is the orchestration entry point for `quickstarts setup`.
+func runSetupQuickstart(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error {
+	ctx := cmd.Context()
 
-	cli.renderer.Successf("You can manage your application from here:")
-	cli.renderer.Detailf("%s", ansi.Magenta(fmt.Sprintf("https://manage.auth0.com/dashboard/#/applications/%s/settings", client.GetClientID())))
+	if err := cli.setupWithAuthentication(ctx); err != nil {
+		return fmt.Errorf("authentication required: %w", err)
+	}
+
+	// LinkedAppClientID tracks which app client ID to link to the API
+	// (either a newly created app or one selected from the tenant).
+	var linkedAppClientID string
+	canPromptFlag := canPrompt(cmd)
+
+	// -- Step 1: Decide what to create (App / API / both) --.
+	if err := resolveSetupTargets(inputs, canPromptFlag); err != nil {
+		return err
+	}
+
+	// -- Step 1b: API-only flow — decide whether to link a new or existing app --.
+	// If the user picks "Create new app", we flip inputs.App=true so the rest of the
+	// flow runs the App prompts and Step 4 auto-links the newly created client.
+	if err := resolveAPIAppLink(cmd, cli, inputs, &linkedAppClientID, canPromptFlag); err != nil {
+		return err
+	}
+
+	// -- Step 2: Auto-detect project framework --.
+	if err := handleProjectDetection(cmd, cli, inputs, canPromptFlag); err != nil {
+		return err
+	}
+
+	// -- Step 3: Resolve remaining prompts for App / API --.
+	if err := validateNonInteractiveRequirements(*inputs, canPromptFlag); err != nil {
+		return err
+	}
+
+	qsConfigKey, wasAutoSelected, err := getQuickstartConfigKey(cmd, inputs)
+	if err != nil {
+		return fmt.Errorf("failed to get quickstart configuration: %w", err)
+	}
+	if inputs.App && wasAutoSelected {
+		cli.renderer.Infof("Auto-selected build tool %q for %s/%s", inputs.BuildTool, inputs.Type, inputs.Framework)
+	}
+
+	// -- Step 3b: Collect application name --.
+	if inputs.App {
+		if !setupExpName.IsSet(cmd) {
+			defaultName := inputs.Name
+			if defaultName == "" {
+				defaultName = "My App"
+			}
+			inputs.Name = defaultName
+			if err := setupExpName.Ask(cmd, &inputs.Name, &defaultName); err != nil {
+				return fmt.Errorf("failed to enter application name: %w", err)
+			}
+			if inputs.Name == "" {
+				return fmt.Errorf("application name cannot be empty")
+			}
+		}
+		if inputs.Name == "" {
+			return fmt.Errorf("application name cannot be empty")
+		}
+	}
+
+	// -- Step 3d: Prompt for port if not explicitly set --.
+	if inputs.App && inputs.Type != "native" && inputs.Type != "m2m" {
+		portStr := strconv.Itoa(inputs.Port)
+		if err := setupExpPort.AskInt(cmd, &inputs.Port, &portStr); err != nil {
+			return fmt.Errorf("failed to enter port: %w", err)
+		}
+		if inputs.Port < 1024 || inputs.Port > 65535 {
+			return fmt.Errorf("invalid port number: %d (must be between 1024 and 65535)", inputs.Port)
+		}
+	}
+
+	// -- Step 3c: Collect API name for API-only flow --.
+	if inputs.API && !inputs.App {
+		// Collect API name if not already set (pre-fill from CWD folder name).
+		if inputs.Name == "" && !setupExpName.IsSet(cmd) {
+			cwd, _ := os.Getwd()
+			defaultName := filepath.Base(cwd)
+			if defaultName == "" || defaultName == "." {
+				defaultName = "my-api"
+			}
+			inputs.Name = defaultName
+			if err := setupExpName.Ask(cmd, &inputs.Name, &defaultName); err != nil {
+				return fmt.Errorf("failed to enter application name: %w", err)
+			}
+		}
+	}
+
+	if inputs.API {
+		// Prompt for the identifier if not explicitly provided via flag.
+		if !setupExpIdentifier.IsSet(cmd) {
+			// Compute a suggested default without pre-populating inputs.Identifier.
+			defaultID := inputs.Identifier
+			if defaultID == "" && inputs.Name != "" {
+				slug := strings.ToLower(strings.ReplaceAll(inputs.Name, " ", "-"))
+				defaultID = "https://" + slug
+			}
+			inputs.Identifier = defaultID
+			if err := setupExpIdentifier.Ask(cmd, &inputs.Identifier, &defaultID); err != nil {
+				return fmt.Errorf("failed to enter API identifier: %w", err)
+			}
+		}
+
+		if inputs.Identifier == "" {
+			return fmt.Errorf("API identifier cannot be empty: use --identifier flag")
+		}
+
+		if err := validateAPIIdentifier(inputs.Identifier); err != nil {
+			return err
+		}
+
+		// If the flag was not set, prompt interactively; fall back to 86400 in non-interactive mode.
+		if inputs.TokenLifetime == "" {
+			defaultLifetime := "86400"
+			inputs.TokenLifetime = defaultLifetime
+			if err := setupExpTokenLifetime.Ask(cmd, &inputs.TokenLifetime, &defaultLifetime); err != nil {
+				return fmt.Errorf("failed to enter token lifetime: %w", err)
+			}
+			if inputs.TokenLifetime == "" {
+				cli.renderer.Warnf("Token lifetime left blank; using default 86400 seconds (24 hours)")
+				inputs.TokenLifetime = defaultLifetime
+			}
+		}
+
+		if inputs.SigningAlg == "" {
+			signingAlgs := []string{"RS256", "PS256", "HS256"}
+			defaultAlg := "RS256"
+			inputs.SigningAlg = defaultAlg
+			if err := setupExpSigningAlg.Select(cmd, &inputs.SigningAlg, signingAlgs, &defaultAlg); err != nil {
+				return fmt.Errorf("failed to select signing algorithm: %w", err)
+			}
+		}
+
+		if alg := inputs.SigningAlg; alg != "RS256" && alg != "PS256" && alg != "HS256" {
+			return fmt.Errorf("invalid signing algorithm %q: must be RS256, PS256, or HS256", alg)
+		}
+
+	}
+
+	// -- Step 4: Create the Auth0 application client --.
+	if inputs.App {
+		clientID, err := createQuickstartApp(cmd, cli, *inputs, qsConfigKey)
+		if err != nil {
+			return err
+		}
+		linkedAppClientID = clientID
+	}
+
+	// -- Step 5: Create the Auth0 API resource server --.
+	if inputs.API {
+		if err := createQuickstartAPI(ctx, cli, *inputs, linkedAppClientID); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// resolveSetupTargets resolves the App/API selection, prompting when allowed.
+func resolveSetupTargets(inputs *SetupInputs, canPromptFlag bool) error {
+	if inputs.App || inputs.API {
+		return nil
+	}
+	if !canPromptFlag {
+		return fmt.Errorf("in --no-input mode, specify at least one of --app or --api")
+	}
+	var selections []string
+	if err := prompt.AskMultiSelect(
+		"What do you want to create? ",
+		&selections,
+		"App Only", "API (Associate with an App)",
+	); err != nil {
+		return fmt.Errorf("failed to select target resource(s): %w", err)
+	}
+	for _, s := range selections {
+		switch strings.ToLower(s) {
+		case "app only":
+			inputs.App = true
+		case "api (associate with an app)":
+			inputs.API = true
+		}
+	}
+	if !inputs.App && !inputs.API {
+		return fmt.Errorf("please select at least one option: App and/or API")
+	}
+	return nil
+}
+
+// resolveAPIAppLink handles the API-only flow's app-linking decision.
+// It prompts the user to either create a new app (flips inputs.App so the
+// regular App-creation flow runs) or link an existing app (sets
+// *linkedAppClientID via the standard app picker).
+// It is a no-op when the user already chose to create an app, when API was
+// not requested, or when prompts are disabled.
+func resolveAPIAppLink(
+	cmd *cobra.Command,
+	cli *cli,
+	inputs *SetupInputs,
+	linkedAppClientID *string,
+	canPromptFlag bool,
+) error {
+	if !inputs.API || inputs.App || !canPromptFlag {
+		return nil
+	}
+
+	const (
+		actionCreateNew = "Create a new app"
+		actionLink      = "Link to an existing app"
+	)
+
+	var action string
+	actionQ := prompt.SelectInput(
+		"link-app-action",
+		"How should this API be associated with an app?",
+		"Create a new app to link with the API, or link to an existing one in the tenant.",
+		[]string{actionCreateNew, actionLink},
+		actionCreateNew,
+		true,
+	)
+	if err := prompt.AskOne(actionQ, &action); err != nil {
+		return fmt.Errorf("failed to select link action: %w", err)
+	}
+
+	if action == actionCreateNew {
+		inputs.App = true
+		return nil
+	}
+
+	// Link to an existing app via the standard app picker.
+	appPicker := Argument{
+		Name: "Application",
+		Help: "Select an existing application to authorize for this API.",
+	}
+	return appPicker.Pick(
+		cmd,
+		linkedAppClientID,
+		cli.appPickerOptions(management.Parameter("app_type", "native,spa,regular_web")),
+	)
+}
+
+// handleProjectDetection runs project auto-detection for app flows and reconciles
+// the detected values with explicit flags.
+func handleProjectDetection(cmd *cobra.Command, cli *cli, inputs *SetupInputs, canPromptFlag bool) error {
+	if !inputs.App {
+		return nil
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	// Default to working-directory basename; DetectProject may override below.
+	if inputs.Name == "" {
+		inputs.Name = filepath.Base(cwd)
+	}
+
+	switch {
+	case inputs.Type == "m2m":
+		return nil
+
+	case setupExpType.IsSet(cmd) && setupExpFramework.IsSet(cmd):
+		// Skip the disk scan unless BuildTool or BundleID is needed.
+		typeFramework := inputs.Type + ":" + inputs.Framework
+		needsBuildTool := !setupExpBuildTool.IsSet(cmd) && auth0.FrameworkBuildToolRequired(typeFramework)
+		needsBundleID := inputs.BundleID == "" && auth0.IsBundleIDRequired(typeFramework)
+
+		if needsBuildTool || needsBundleID {
+			detection := DetectProject(cwd)
+			if needsBuildTool && detection.BuildTool != "" {
+				inputs.BuildTool = detection.BuildTool
+			}
+			if needsBundleID && detection.BundleID != "" {
+				inputs.BundleID = detection.BundleID
+			}
+		}
+		return nil
+	}
+
+	detection := DetectProject(cwd)
+
+	switch {
+	case detection.Detected:
+		noInputMode := !canPromptFlag
+		if len(detection.AmbiguousFrameworks) > 1 {
+			renderAmbiguousDetectionSummary(cli, detection)
+			if noInputMode || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
+				applyDetectionToInputs(inputs, detection)
+				if inputs.Framework == "" {
+					if noInputMode {
+						inputs.Framework = detection.AmbiguousFrameworks[0]
+					} else {
+						if err := setupExpFramework.Select(cmd, &inputs.Framework, detection.AmbiguousFrameworks, auth0.String(detection.AmbiguousFrameworks[0])); err != nil {
+							return fmt.Errorf("failed to select framework: %w", err)
+						}
+					}
+				}
+			}
+		} else if detection.Framework != "" {
+			renderClearDetectionSummary(cli, detection)
+			if noInputMode || prompt.ConfirmWithDefault("Do you want to proceed with the detected values?", true) {
+				applyDetectionToInputs(inputs, detection)
+				if inputs.Framework == "" {
+					inputs.Framework = detection.Framework
+				}
+			}
+		}
+	default:
+		if !canPromptFlag && inputs.Type == "" {
+			return fmt.Errorf(
+				"auto-detection failed: unable to auto detect application. " +
+					"In --no-input mode provide --type, --framework, and optionally --build-tool " +
+					"(e.g. --type spa --framework react --build-tool vite)",
+			)
+		}
+		cli.renderer.Warnf("auto-detection failed: unable to auto detect application")
+	}
+	return nil
+}
+
+// renderClearDetectionSummary prints the bullet-list summary for an unambiguous detection.
+func renderClearDetectionSummary(cli *cli, detection DetectionResult) {
+	titleCaser := cases.Title(language.English)
+	frameworkDisplay := frameworkDisplayName(detection.Framework)
+	if detection.BuildTool != "" && detection.BuildTool != "none" {
+		frameworkDisplay += " - " + titleCaser.String(detection.BuildTool)
+	}
+
+	const labelWidth = 9
+	cli.renderer.Output("Detected in current directory:")
+	cli.renderer.Detailf("%-*s : %s", labelWidth, "Framework", frameworkDisplay)
+	cli.renderer.Detailf("%-*s : %s", labelWidth, "App type", detectionFriendlyAppType(detection.Type))
+}
+
+// renderAmbiguousDetectionSummary prints the summary when multiple package.json deps matched.
+// It lists the candidate frameworks so the user has context for the framework-selection
+// prompt that follows.
+func renderAmbiguousDetectionSummary(cli *cli, detection DetectionResult) {
+	candidates := make([]string, len(detection.AmbiguousFrameworks))
+	for i, f := range detection.AmbiguousFrameworks {
+		candidates[i] = frameworkDisplayName(f)
+	}
+
+	const labelWidth = 19
+	cli.renderer.Output("Detected in current directory:")
+	cli.renderer.Detailf("%-*s : %s", labelWidth, "Possible frameworks", strings.Join(candidates, ", "))
+	cli.renderer.Detailf("%-*s : %s", labelWidth, "App type", detectionFriendlyAppType(detection.Type))
+}
+
+// validateNonInteractiveRequirements enforces flag requirements that apply only when prompts are disabled.
+func validateNonInteractiveRequirements(inputs SetupInputs, canPromptFlag bool) error {
+	if canPromptFlag {
+		return nil
+	}
+	if inputs.App && inputs.Type != "" && inputs.Type != "m2m" && inputs.Framework == "" {
+		return fmt.Errorf(
+			"--framework is required in non-interactive mode when --type is %s: "+
+				"use --framework and optionally --build-tool flags "+
+				"(e.g. --framework react --build-tool vite)",
+			inputs.Type,
+		)
+	}
+	return nil
+}
+
+// printClientDetails prints post-creation guidance for the new Auth0 application.
+// The config-file outcome is reported by WriteQuickstartConfig itself (success
+// message or aborted-with-content warning), so it is intentionally not echoed here.
+func printClientDetails(cli *cli, client *management.Client) {
+	cli.renderer.Successf("App %s has been created in the management console", ansi.Magenta(client.GetName()))
+	cli.renderer.Newline()
+	manageTenantURL := formatManageTenantURL(cli.Config.DefaultTenant, &cli.Config)
+
+	settingsURL := fmt.Sprintf("%s%s", manageTenantURL, formatAppSettingsPath(client.GetClientID()))
+	cli.renderer.Successf("You can manage your application %s(%s) from here:", client.GetName(), ansi.Magenta(client.GetClientID()))
+	cli.renderer.Detailf(ansi.Magenta(settingsURL))
 	cli.renderer.Newline()
 
 	if client.Callbacks != nil && len(client.GetCallbacks()) > 0 {
-		cli.renderer.Successf("Callback URLs registered in Auth0 Dashboard:")
-		cli.renderer.Detailf("%s", ansi.Magenta(strings.Join(client.GetCallbacks(), ", ")))
+		cli.renderer.Successf("Callback URLs registered in Auth0 Dashboard: %s", ansi.Magenta(strings.Join(client.GetCallbacks(), ", ")))
 		cli.renderer.Newline()
 	}
 	if client.AllowedLogoutURLs != nil && len(client.GetAllowedLogoutURLs()) > 0 {
-		cli.renderer.Successf("Logout URLs registered:")
-		cli.renderer.Detailf("%s", ansi.Magenta(strings.Join(client.GetAllowedLogoutURLs(), ", ")))
+		cli.renderer.Successf("Logout URLs registered: %s", ansi.Magenta(strings.Join(client.GetAllowedLogoutURLs(), ", ")))
 		cli.renderer.Newline()
 	}
-	cli.renderer.Successf("Config file created: %s", ansi.Magenta(configFileLocation))
 }
 
 func printAPIDetails(cli *cli, rs *management.ResourceServer) {
-	cli.renderer.Successf("An API %q has been created and registered", rs.GetName())
+	cli.renderer.Newline()
+	cli.renderer.Successf("An API %s has been created and registered", ansi.Magenta(rs.GetName()))
 	cli.renderer.Detailf("Identifier: %s", ansi.Magenta(rs.GetIdentifier()))
 	cli.renderer.Newline()
+
+	manageTenantURL := formatManageTenantURL(cli.Config.DefaultTenant, &cli.Config)
+	settingsURL := fmt.Sprintf("%s%s", manageTenantURL, formatAPISettingsPath(rs.GetID()))
+
 	cli.renderer.Successf("You can manage your API from here:")
-	cli.renderer.Detailf("%s", ansi.Magenta(fmt.Sprintf("https://manage.auth0.com/dashboard/#/apis/%s/settings", rs.GetID())))
+	cli.renderer.Detailf("%s", ansi.Magenta(settingsURL))
 }
 
 // createQuickstartApp creates an Auth0 application client for the given quickstart config key,
 // writes the env config file, and prints setup guidance. It returns the newly created client ID.
-func createQuickstartApp(ctx context.Context, cli *cli, inputs SetupInputs, qsConfigKey string) (string, error) {
+func createQuickstartApp(cmd *cobra.Command, cli *cli, inputs SetupInputs, qsConfigKey string) (string, error) {
 	config, exists := auth0.QuickstartConfigs[qsConfigKey]
 	if !exists {
 		return "", fmt.Errorf("unsupported quickstart arguments: %s. Supported types: %v", qsConfigKey, getSupportedQuickstartTypes())
@@ -1213,7 +1058,7 @@ func createQuickstartApp(ctx context.Context, cli *cli, inputs SetupInputs, qsCo
 	}
 
 	if err := ansi.Waiting(func() error {
-		return cli.api.Client.Create(ctx, client)
+		return cli.api.Client.Create(cmd.Context(), client)
 	}); err != nil {
 		return "", fmt.Errorf("failed to create application: %w", err)
 	}
@@ -1229,11 +1074,15 @@ func createQuickstartApp(ctx context.Context, cli *cli, inputs SetupInputs, qsCo
 		envValues[config.AudienceVar] = inputs.Identifier
 	}
 
-	envFilePath, err := GenerateAndWriteQuickstartConfig(&config.Strategy, envValues, cli.tenant, client, inputs.Port)
+	resolvedEnv, err := replaceDetectionSub(envValues, cli.tenant, client, inputs.Port)
 	if err != nil {
+		return "", err
+	}
+
+	if err := cli.WriteQuickstartConfig(cmd, resolvedEnv, &config.Strategy); err != nil {
 		return "", fmt.Errorf("failed to generate config file: %w", err)
 	}
-	printClientDetails(cli, client, inputs.Port, filepath.Base(envFilePath))
+	printClientDetails(cli, client)
 
 	// Post-setup guidance for Expo: exp://localhost:19000 only covers Expo Go.
 	// Inform the user about EAS/production build requirements.
@@ -1290,7 +1139,6 @@ func createQuickstartAPI(ctx context.Context, cli *cli, inputs SetupInputs, link
 		apiName = inputs.Name + "-API"
 	}
 
-	cli.renderer.Infof("Creating API resource server %q with identifier %q...", apiName, inputs.Identifier)
 	tokenLifetime, tokenErr := strconv.Atoi(inputs.TokenLifetime)
 	if tokenErr != nil || tokenLifetime <= 0 {
 		if inputs.TokenLifetime != "" && inputs.TokenLifetime != "86400" {
@@ -1377,33 +1225,33 @@ func frameworksForType(qsType string) []string {
 // getQuickstartConfigKey resolves remaining missing prompts for App and API creation
 // and returns the config map key for the selected framework.
 // App/API selection and project detection are handled by the caller before this is invoked.
-func getQuickstartConfigKey(cmd *cobra.Command, inputs SetupInputs) (string, SetupInputs, bool, error) {
+func getQuickstartConfigKey(cmd *cobra.Command, inputs *SetupInputs) (string, bool, error) {
 	if !inputs.App {
-		return "", inputs, false, nil
+		return "", false, nil
 	}
 
-	inputs, wasAutoSelected, err := resolveSetupInputs(cmd, inputs)
+	wasAutoSelected, err := resolveSetupInputs(cmd, inputs)
 	if err != nil {
-		return "", inputs, false, err
+		return "", false, err
 	}
 
 	if inputs.Type == "m2m" {
-		return "m2m:none:none", inputs, false, nil
+		return "m2m:none:none", false, nil
 	}
 
 	configKey := fmt.Sprintf("%s:%s:%s", inputs.Type, inputs.Framework, inputs.BuildTool)
 
-	return configKey, inputs, wasAutoSelected, nil
+	return configKey, wasAutoSelected, nil
 }
 
 // resolveSetupInputs validates and fills missing fields on inputs by prompting the user
 // where needed. It returns the updated inputs, whether a build tool was auto-selected,
 // and any error encountered.
-func resolveSetupInputs(cmd *cobra.Command, inputs SetupInputs) (SetupInputs, bool, error) {
+func resolveSetupInputs(cmd *cobra.Command, inputs *SetupInputs) (bool, error) {
 	// Validate --type if provided.
 	validTypes := []string{"spa", "regular", "native", "m2m"}
 	if inputs.Type != "" && !slices.Contains(validTypes, inputs.Type) {
-		return inputs, false, fmt.Errorf(
+		return false, fmt.Errorf(
 			"invalid --type %q: must be one of %s",
 			inputs.Type, strings.Join(validTypes, ", "),
 		)
@@ -1413,23 +1261,23 @@ func resolveSetupInputs(cmd *cobra.Command, inputs SetupInputs) (SetupInputs, bo
 	if inputs.Type == "" {
 		defaultType := "spa"
 		if err := setupExpType.Select(cmd, &inputs.Type, validTypes, &defaultType); err != nil {
-			return inputs, false, fmt.Errorf("failed to select application type: %w", err)
+			return false, fmt.Errorf("failed to select application type: %w", err)
 		}
 	}
 
 	// M2M apps have no framework, port, or callback URLs.
 	if inputs.Type == "m2m" {
-		return inputs, false, nil
+		return false, nil
 	}
 
 	// Prompt for --framework filtered to the selected type.
 	if inputs.Framework == "" {
 		frameworks := frameworksForType(inputs.Type)
 		if len(frameworks) == 0 {
-			return inputs, false, fmt.Errorf("no frameworks available for type %q", inputs.Type)
+			return false, fmt.Errorf("no frameworks available for type %q", inputs.Type)
 		}
 		if err := setupExpFramework.Select(cmd, &inputs.Framework, frameworks, &frameworks[0]); err != nil {
-			return inputs, false, fmt.Errorf("failed to select framework: %w", err)
+			return false, fmt.Errorf("failed to select framework: %w", err)
 		}
 	}
 
@@ -1455,29 +1303,22 @@ func resolveSetupInputs(cmd *cobra.Command, inputs SetupInputs) (SetupInputs, bo
 		}
 	}
 
-	return inputs, wasAutoSelected, nil
+	return wasAutoSelected, nil
 }
 
 // applyDetectionToInputs copies fields from a DetectionResult into inputs, skipping
 // any field that was already explicitly set. The framework field is NOT copied here
 // because the ambiguous-candidate path requires a prompt before it can be resolved.
-func applyDetectionToInputs(inputs SetupInputs, d DetectionResult) SetupInputs {
+func applyDetectionToInputs(inputs *SetupInputs, d DetectionResult) {
 	if inputs.Type == "" {
 		inputs.Type = d.Type
 	}
 	if inputs.BuildTool == "" || inputs.BuildTool == "none" {
 		inputs.BuildTool = d.BuildTool
 	}
-	if inputs.Port == 0 {
-		inputs.Port = d.Port
-	}
-	if inputs.Name == "" {
-		inputs.Name = d.AppName
-	}
 	if inputs.BundleID == "" && d.BundleID != "" {
 		inputs.BundleID = d.BundleID
 	}
-	return inputs
 }
 
 // frameworkDisplayName returns a human-friendly display name for a framework key.
@@ -1748,15 +1589,7 @@ func sortedKeys(m map[string]string) []string {
 	return keys
 }
 
-// GenerateAndWriteQuickstartConfig takes the selected stack, resolves the dynamic values,
-// and writes them to the appropriate file in the Current Working Directory (CWD).
-// It returns the file path and an error (if any).
-func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envValues map[string]string, tenantDomain string, client *management.Client, port int) (string, error) {
-	resolvedEnv, err := replaceDetectionSub(envValues, tenantDomain, client, port)
-	if err != nil {
-		return "", err
-	}
-
+func (cli *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string]string, strategy *auth0.FileOutputStrategy) error {
 	if strategy == nil {
 		strategy = &auth0.FileOutputStrategy{Path: ".env", Format: "dotenv"}
 	}
@@ -1764,7 +1597,7 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 	dir := filepath.Dir(strategy.Path)
 	if dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			return "", fmt.Errorf("failed to create directory structure %s: %w", dir, err)
+			return fmt.Errorf("failed to create directory structure %s: %w", dir, err)
 		}
 	}
 
@@ -1786,7 +1619,7 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		nested := buildNestedMap(resolvedEnv)
 		yamlBytes, err := yaml.Marshal(nested)
 		if err != nil {
-			return "", fmt.Errorf("failed to marshal YAML for %s: %w", strategy.Path, err)
+			return fmt.Errorf("failed to marshal YAML for %s: %w", strategy.Path, err)
 		}
 		contentBuilder.Write(yamlBytes)
 
@@ -1799,7 +1632,7 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		wrapped := map[string]interface{}{"development": devSection}
 		yamlBytes, err := yaml.Marshal(wrapped)
 		if err != nil {
-			return "", fmt.Errorf("failed to marshal YAML for %s: %w", strategy.Path, err)
+			return fmt.Errorf("failed to marshal YAML for %s: %w", strategy.Path, err)
 		}
 		contentBuilder.Write(yamlBytes)
 
@@ -1834,7 +1667,7 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		auth0Section := make(map[string]string)
 		for key, val := range resolvedEnv {
 			if !strings.HasPrefix(key, "Auth0:") {
-				return "", fmt.Errorf("json formatter: key %q is missing required \"Auth0:\" prefix", key)
+				return fmt.Errorf("json formatter: key %q is missing required \"Auth0:\" prefix", key)
 			}
 			cleanKey := strings.TrimPrefix(key, "Auth0:")
 			auth0Section[cleanKey] = val
@@ -1842,7 +1675,7 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		jsonBody := map[string]interface{}{"Auth0": auth0Section}
 		jsonBytes, err := json.MarshalIndent(jsonBody, "", "  ")
 		if err != nil {
-			return "", fmt.Errorf("failed to marshal JSON for %s: %w", strategy.Path, err)
+			return fmt.Errorf("failed to marshal JSON for %s: %w", strategy.Path, err)
 		}
 		contentBuilder.Write(jsonBytes)
 
@@ -1900,9 +1733,26 @@ func GenerateAndWriteQuickstartConfig(strategy *auth0.FileOutputStrategy, envVal
 		contentBuilder.WriteString("</plist>\n")
 	}
 
-	if err := os.WriteFile(strategy.Path, []byte(contentBuilder.String()), 0600); err != nil {
-		return "", fmt.Errorf("failed to write config file %s: %w", strategy.Path, err)
+	message := fmt.Sprintf("Proceed to overwrite '%s' file?", ansi.Bold(strategy.Path))
+	if shouldCancelOverwrite(cli, cmd, strategy.Path, message) {
+		cli.renderer.Warnf("Aborted creating %s. Please create it manually using the following content:", ansi.Cyan(strategy.Path))
+		cli.renderer.Newline()
+
+		const border = "─────────────────────────────────────────────────────────────"
+		cli.renderer.Detailf("%s", border)
+		for _, line := range strings.Split(strings.TrimRight(contentBuilder.String(), "\n"), "\n") {
+			cli.renderer.Detailf("%s", line)
+		}
+		cli.renderer.Detailf("%s", border)
+		cli.renderer.Newline()
+	} else {
+		if err := os.WriteFile(strategy.Path, []byte(contentBuilder.String()), 0600); err != nil {
+			return fmt.Errorf("failed to write .env file: %w", err)
+		}
+
+		cli.renderer.Newline()
+		cli.renderer.Successf("%s file created successfully with your Auth0 configuration", ansi.Cyan(strategy.Path))
 	}
 
-	return strategy.Path, nil
+	return nil
 }

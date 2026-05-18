@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -12,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/display"
 )
 
 // -- test helpers --.
@@ -24,6 +26,28 @@ func writeTestFile(t *testing.T, dir, name, content string) {
 func mkTestDir(t *testing.T, dir, sub string) {
 	t.Helper()
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, sub), 0755))
+}
+
+// generateAndWriteQuickstartConfig bridges the old test signature to
+// replaceDetectionSub + (*cli).WriteQuickstartConfig.
+func generateAndWriteQuickstartConfig(
+	strategy *auth0.FileOutputStrategy,
+	envValues map[string]string,
+	domain string,
+	client *management.Client,
+	port int,
+) error {
+	resolved, err := replaceDetectionSub(envValues, domain, client, port)
+	if err != nil {
+		return err
+	}
+	cliObj := &cli{
+		renderer: &display.Renderer{
+			MessageWriter: io.Discard,
+			ResultWriter:  io.Discard,
+		},
+	}
+	return cliObj.WriteQuickstartConfig(&cobra.Command{}, resolved, strategy)
 }
 
 // -- QuickstartConfig invariants --.
@@ -79,8 +103,6 @@ func TestDetectProject_React(t *testing.T) {
 	assert.Equal(t, "react", got.Framework)
 	assert.Equal(t, "spa", got.Type)
 	assert.Equal(t, "vite", got.BuildTool)
-	assert.Equal(t, 5173, got.Port)
-	assert.Equal(t, "my-react-app", got.AppName)
 }
 
 // Auth0 qs setup --app --type spa --framework angular.
@@ -93,7 +115,6 @@ func TestDetectProject_Angular(t *testing.T) {
 	assert.Equal(t, "angular", got.Framework)
 	assert.Equal(t, "spa", got.Type)
 	assert.Empty(t, got.BuildTool)
-	assert.Equal(t, 4200, got.Port)
 }
 
 // Auth0 qs setup --app --type spa --framework vue --build-tool vite.
@@ -107,7 +128,6 @@ func TestDetectProject_Vue(t *testing.T) {
 	assert.Equal(t, "vue", got.Framework)
 	assert.Equal(t, "spa", got.Type)
 	assert.Equal(t, "vite", got.BuildTool)
-	assert.Equal(t, 5173, got.Port)
 }
 
 // Auth0 qs setup --app --type spa --framework svelte --build-tool vite.
@@ -206,7 +226,6 @@ func TestDetectProject_NextJS_ConfigJS(t *testing.T) {
 	assert.True(t, got.Detected)
 	assert.Equal(t, "nextjs", got.Framework)
 	assert.Equal(t, "regular", got.Type)
-	assert.Equal(t, 3000, got.Port)
 }
 
 func TestDetectProject_NextJS_ConfigTS(t *testing.T) {
@@ -237,7 +256,6 @@ func TestDetectProject_Nuxt_ConfigTS(t *testing.T) {
 	assert.True(t, got.Detected)
 	assert.Equal(t, "nuxt", got.Framework)
 	assert.Equal(t, "regular", got.Type)
-	assert.Equal(t, 3000, got.Port)
 }
 
 func TestDetectProject_Nuxt_ConfigJS(t *testing.T) {
@@ -261,7 +279,6 @@ func TestDetectProject_Nuxt_WithViteConfig(t *testing.T) {
 	assert.True(t, got.Detected)
 	assert.Equal(t, "nuxt", got.Framework)
 	assert.Equal(t, "regular", got.Type)
-	assert.Equal(t, 3000, got.Port)
 }
 
 // Auth0 qs setup --app --type regular --framework sveltekit.
@@ -293,7 +310,6 @@ func TestDetectProject_Fastify(t *testing.T) {
 	assert.True(t, got.Detected)
 	assert.Equal(t, "fastify", got.Framework)
 	assert.Equal(t, "regular", got.Type)
-	assert.Equal(t, 3000, got.Port)
 }
 
 // Auth0 qs setup --name express-app --api ... --app --type regular --framework express.
@@ -305,7 +321,6 @@ func TestDetectProject_Express(t *testing.T) {
 	assert.True(t, got.Detected)
 	assert.Equal(t, "express", got.Framework)
 	assert.Equal(t, "regular", got.Type)
-	assert.Equal(t, 3000, got.Port)
 }
 
 // Auth0 qs setup --app --type regular --framework hono.
@@ -317,7 +332,6 @@ func TestDetectProject_Hono(t *testing.T) {
 	assert.True(t, got.Detected)
 	assert.Equal(t, "hono", got.Framework)
 	assert.Equal(t, "regular", got.Type)
-	assert.Equal(t, 3000, got.Port)
 }
 
 // Auth0 qs setup --app --type regular --framework vanilla-python.
@@ -329,7 +343,6 @@ func TestDetectProject_VanillaPython_RequirementsTxt(t *testing.T) {
 	assert.True(t, got.Detected)
 	assert.Equal(t, "vanilla-python", got.Framework)
 	assert.Equal(t, "regular", got.Type)
-	assert.Equal(t, 5000, got.Port)
 }
 
 func TestDetectProject_VanillaPython_Pyproject(t *testing.T) {
@@ -370,7 +383,6 @@ func TestDetectProject_Rails(t *testing.T) {
 	assert.True(t, got.Detected)
 	assert.Equal(t, "rails", got.Framework)
 	assert.Equal(t, "regular", got.Type)
-	assert.Equal(t, 3000, got.Port)
 }
 
 func TestDetectProject_GemfileWithoutRails(t *testing.T) {
@@ -439,7 +451,6 @@ func TestDetectProject_SpringBoot_Maven(t *testing.T) {
 	assert.Equal(t, "spring-boot", got.Framework)
 	assert.Equal(t, "regular", got.Type)
 	assert.Equal(t, "maven", got.BuildTool)
-	assert.Equal(t, 8080, got.Port)
 }
 
 func TestDetectProject_SpringBoot_Gradle(t *testing.T) {
@@ -519,7 +530,6 @@ func TestDetectProject_Laravel(t *testing.T) {
 	assert.Equal(t, "laravel", got.Framework)
 	assert.Equal(t, "regular", got.Type)
 	assert.Equal(t, "composer", got.BuildTool)
-	assert.Equal(t, 8000, got.Port)
 }
 
 // -- DetectProject - Native / Mobile --.
@@ -713,7 +723,6 @@ func TestDetectProject_Django_ManagePy(t *testing.T) {
 	assert.True(t, got.Detected)
 	assert.Equal(t, "django", got.Framework)
 	assert.Equal(t, "regular", got.Type)
-	assert.Equal(t, 8000, got.Port)
 }
 
 // manage.py must beat @ionic/angular in a Django+Ionic monorepo.
@@ -728,7 +737,6 @@ func TestDetectProject_Django_ManagePy_BeatsIonic(t *testing.T) {
 	assert.True(t, got.Detected)
 	assert.Equal(t, "django", got.Framework)
 	assert.Equal(t, "regular", got.Type)
-	assert.Equal(t, 8000, got.Port)
 }
 
 // manage.py must be detected as Django even when a vite.config.ts is present
@@ -743,7 +751,6 @@ func TestDetectProject_Django_ManagePy_BeatsViteConfig(t *testing.T) {
 	assert.True(t, got.Detected)
 	assert.Equal(t, "django", got.Framework)
 	assert.Equal(t, "regular", got.Type)
-	assert.Equal(t, 8000, got.Port)
 }
 
 // Django in requirements.txt (no manage.py) is detected as django.
@@ -755,7 +762,6 @@ func TestDetectProject_Django_RequirementsTxt(t *testing.T) {
 	assert.True(t, got.Detected)
 	assert.Equal(t, "django", got.Framework)
 	assert.Equal(t, "regular", got.Type)
-	assert.Equal(t, 8000, got.Port)
 }
 
 // Django in pyproject.toml (no manage.py) is detected as django.
@@ -767,7 +773,6 @@ func TestDetectProject_Django_Pyproject(t *testing.T) {
 	assert.True(t, got.Detected)
 	assert.Equal(t, "django", got.Framework)
 	assert.Equal(t, "regular", got.Type)
-	assert.Equal(t, 8000, got.Port)
 }
 
 // Flask in Pipfile is detected as vanilla-python.
@@ -779,7 +784,6 @@ func TestDetectProject_Flask_Pipfile(t *testing.T) {
 	assert.True(t, got.Detected)
 	assert.Equal(t, "vanilla-python", got.Framework)
 	assert.Equal(t, "regular", got.Type)
-	assert.Equal(t, 5000, got.Port)
 }
 
 // Django in Pipfile is detected as django.
@@ -851,7 +855,6 @@ func TestDetectProject_AmbiguousPackageJSON(t *testing.T) {
 	assert.Contains(t, got.AmbiguousFrameworks, "express")
 	assert.Contains(t, got.AmbiguousFrameworks, "hono")
 	// Both express and hono default to port 3000, so the common port must be set.
-	assert.Equal(t, 3000, got.Port)
 }
 
 // Bug 1: @sveltejs/kit dep must override vite.config.ts + svelte dep → sveltekit (regular),
@@ -952,49 +955,6 @@ func TestDetectProject_LaravelBeatsViteConfig(t *testing.T) {
 	got := DetectProject(dir)
 	assert.Equal(t, "laravel", got.Framework)
 	assert.Equal(t, "regular", got.Type)
-}
-
-// -- DetectProject - app name detection --.
-
-func TestDetectProject_AppNameFromPackageJSON(t *testing.T) {
-	dir := t.TempDir()
-	writeTestFile(t, dir, "vite.config.ts", "")
-	writeTestFile(t, dir, "package.json", `{"name":"my-awesome-app","dependencies":{"react":"^18"}}`)
-
-	got := DetectProject(dir)
-	assert.Equal(t, "my-awesome-app", got.AppName)
-}
-
-func TestDetectProject_AppNameFromGoMod(t *testing.T) {
-	dir := t.TempDir()
-	writeTestFile(t, dir, "go.mod", "module github.com/org/myapp\n\ngo 1.21\n")
-
-	got := DetectProject(dir)
-	assert.Equal(t, "myapp", got.AppName)
-}
-
-func TestDetectProject_AppNameFromPubspec(t *testing.T) {
-	dir := t.TempDir()
-	writeTestFile(t, dir, "pubspec.yaml", "name: flutter_app\nflutter:\n  sdk: flutter\n")
-
-	got := DetectProject(dir)
-	assert.Equal(t, "flutter_app", got.AppName)
-}
-
-func TestDetectProject_AppNameFromComposer(t *testing.T) {
-	dir := t.TempDir()
-	writeTestFile(t, dir, "composer.json", `{"name":"vendor/my-php-app","require":{"php":"^8"}}`)
-
-	got := DetectProject(dir)
-	assert.Equal(t, "my-php-app", got.AppName)
-}
-
-func TestDetectProject_AppNameFromPomArtifactID(t *testing.T) {
-	dir := t.TempDir()
-	writeTestFile(t, dir, "pom.xml", `<project><groupId>com.example</groupId><artifactId>my-java-app</artifactId></project>`)
-
-	got := DetectProject(dir)
-	assert.Equal(t, "my-java-app", got.AppName)
 }
 
 // -- readExpoScheme --.
@@ -1163,60 +1123,50 @@ func TestDetectFromCsproj(t *testing.T) {
 
 func TestDetectJavaFramework(t *testing.T) {
 	tests := []struct {
-		name     string
-		content  string
-		wantFw   string
-		wantPort int
+		name    string
+		content string
+		wantFw  string
 	}{
 		{
-			name:     "spring_boot",
-			content:  `<parent><artifactId>spring-boot-starter-parent</artifactId></parent>`,
-			wantFw:   "spring-boot",
-			wantPort: 8080,
+			name:    "spring_boot",
+			content: `<parent><artifactId>spring-boot-starter-parent</artifactId></parent>`,
+			wantFw:  "spring-boot",
 		},
 		{
-			name:     "javax_ee",
-			content:  `<dependency><groupId>javax.ee</groupId></dependency>`,
-			wantFw:   "java-ee",
-			wantPort: 0,
+			name:    "javax_ee",
+			content: `<dependency><groupId>javax.ee</groupId></dependency>`,
+			wantFw:  "java-ee",
 		},
 		{
-			name:     "jakarta_ee",
-			content:  `<dependency><groupId>jakarta.ee</groupId></dependency>`,
-			wantFw:   "java-ee",
-			wantPort: 0,
+			name:    "jakarta_ee",
+			content: `<dependency><groupId>jakarta.ee</groupId></dependency>`,
+			wantFw:  "java-ee",
 		},
 		{
-			name:     "javax_servlet",
-			content:  `<dependency><groupId>javax.servlet</groupId></dependency>`,
-			wantFw:   "java-ee",
-			wantPort: 0,
+			name:    "javax_servlet",
+			content: `<dependency><groupId>javax.servlet</groupId></dependency>`,
+			wantFw:  "java-ee",
 		},
 		{
-			name:     "jakarta_servlet",
-			content:  `<dependency><groupId>jakarta.servlet</groupId></dependency>`,
-			wantFw:   "java-ee",
-			wantPort: 0,
+			name:    "jakarta_servlet",
+			content: `<dependency><groupId>jakarta.servlet</groupId></dependency>`,
+			wantFw:  "java-ee",
 		},
 		{
-			name:     "vanilla_java_plain_pom",
-			content:  `<project><artifactId>plain-java</artifactId></project>`,
-			wantFw:   "vanilla-java",
-			wantPort: 0,
+			name:    "vanilla_java_plain_pom",
+			content: `<project><artifactId>plain-java</artifactId></project>`,
+			wantFw:  "vanilla-java",
 		},
 		{
-			name:     "spring_boot_gradle_dependency",
-			content:  `implementation("org.springframework.boot:spring-boot-starter-web")`,
-			wantFw:   "spring-boot",
-			wantPort: 8080,
+			name:    "spring_boot_gradle_dependency",
+			content: `implementation("org.springframework.boot:spring-boot-starter-web")`,
+			wantFw:  "spring-boot",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			fw, port := detectJavaFramework(tc.content)
-			assert.Equal(t, tc.wantFw, fw)
-			assert.Equal(t, tc.wantPort, port)
+			assert.Equal(t, tc.wantFw, detectJavaFramework(tc.content))
 		})
 	}
 }
@@ -1278,115 +1228,6 @@ func TestDetectionFriendlyAppType(t *testing.T) {
 	assert.Equal(t, "Machine to Machine", detectionFriendlyAppType("m2m"))
 	assert.Equal(t, "unknown-type", detectionFriendlyAppType("unknown-type"))
 	assert.Equal(t, "", detectionFriendlyAppType(""))
-}
-
-// -- readGoModuleName --.
-
-func TestReadGoModuleName(t *testing.T) {
-	t.Run("returns last path segment", func(t *testing.T) {
-		dir := t.TempDir()
-		writeTestFile(t, dir, "go.mod", "module github.com/org/my-service\n\ngo 1.21\n")
-		assert.Equal(t, "my-service", readGoModuleName(dir))
-	})
-
-	t.Run("bare module name", func(t *testing.T) {
-		dir := t.TempDir()
-		writeTestFile(t, dir, "go.mod", "module myapp\n\ngo 1.21\n")
-		assert.Equal(t, "myapp", readGoModuleName(dir))
-	})
-
-	t.Run("no go.mod returns empty", func(t *testing.T) {
-		assert.Empty(t, readGoModuleName(t.TempDir()))
-	})
-}
-
-// -- readPyprojectName --.
-
-func TestReadPyprojectName(t *testing.T) {
-	t.Run("reads project name", func(t *testing.T) {
-		dir := t.TempDir()
-		writeTestFile(t, dir, "pyproject.toml", "[project]\nname = \"my-python-app\"\nversion = \"0.1\"\n")
-		assert.Equal(t, "my-python-app", readPyprojectName(dir))
-	})
-
-	t.Run("no pyproject.toml returns empty", func(t *testing.T) {
-		assert.Empty(t, readPyprojectName(t.TempDir()))
-	})
-}
-
-// -- readPubspecName --.
-
-func TestReadPubspecName(t *testing.T) {
-	t.Run("reads name field", func(t *testing.T) {
-		dir := t.TempDir()
-		writeTestFile(t, dir, "pubspec.yaml", "name: flutter_app\nversion: 1.0.0\n")
-		assert.Equal(t, "flutter_app", readPubspecName(dir))
-	})
-
-	t.Run("no pubspec.yaml returns empty", func(t *testing.T) {
-		assert.Empty(t, readPubspecName(t.TempDir()))
-	})
-}
-
-// -- readComposerName --.
-
-func TestReadComposerName(t *testing.T) {
-	t.Run("returns part after slash", func(t *testing.T) {
-		dir := t.TempDir()
-		writeTestFile(t, dir, "composer.json", `{"name":"vendor/my-php-app"}`)
-		assert.Equal(t, "my-php-app", readComposerName(dir))
-	})
-
-	t.Run("name without slash", func(t *testing.T) {
-		dir := t.TempDir()
-		writeTestFile(t, dir, "composer.json", `{"name":"myapp"}`)
-		assert.Equal(t, "myapp", readComposerName(dir))
-	})
-
-	t.Run("no composer.json returns empty", func(t *testing.T) {
-		assert.Empty(t, readComposerName(t.TempDir()))
-	})
-}
-
-// -- readPomArtifactID --.
-
-func TestReadPomArtifactID(t *testing.T) {
-	t.Run("reads first artifactId", func(t *testing.T) {
-		dir := t.TempDir()
-		writeTestFile(t, dir, "pom.xml",
-			`<project><groupId>com.example</groupId><artifactId>my-java-app</artifactId></project>`)
-		assert.Equal(t, "my-java-app", readPomArtifactID(dir))
-	})
-
-	t.Run("no pom.xml returns empty", func(t *testing.T) {
-		assert.Empty(t, readPomArtifactID(t.TempDir()))
-	})
-
-	t.Run("pom without artifactId returns empty", func(t *testing.T) {
-		dir := t.TempDir()
-		writeTestFile(t, dir, "pom.xml", `<project><groupId>com.example</groupId></project>`)
-		assert.Empty(t, readPomArtifactID(dir))
-	})
-}
-
-// -- readPackageJSONName --.
-
-func TestReadPackageJSONName(t *testing.T) {
-	t.Run("reads name field", func(t *testing.T) {
-		dir := t.TempDir()
-		writeTestFile(t, dir, "package.json", `{"name":"my-js-app","version":"1.0.0"}`)
-		assert.Equal(t, "my-js-app", readPackageJSONName(dir))
-	})
-
-	t.Run("no package.json returns empty", func(t *testing.T) {
-		assert.Empty(t, readPackageJSONName(t.TempDir()))
-	})
-
-	t.Run("invalid json returns empty", func(t *testing.T) {
-		dir := t.TempDir()
-		writeTestFile(t, dir, "package.json", `not valid json`)
-		assert.Empty(t, readPackageJSONName(dir))
-	})
 }
 
 // -- readFileContent --.
@@ -1775,12 +1616,12 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			key, updated, wasAuto, err := getQuickstartConfigKey(&cobra.Command{}, tc.inputs)
+			key, wasAuto, err := getQuickstartConfigKey(&cobra.Command{}, &tc.inputs)
 			require.NoError(t, err)
 			assert.Equal(t, tc.wantKey, key)
 			assert.Equal(t, tc.wantAutoSelect, wasAuto)
 			if tc.inputs.App {
-				assert.Equal(t, tc.wantBuildTool, updated.BuildTool)
+				assert.Equal(t, tc.wantBuildTool, tc.inputs.BuildTool)
 			}
 		})
 	}
@@ -1789,7 +1630,7 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 func TestGetQuickstartConfigKey_EmptyBuildToolTreatedAsNone(t *testing.T) {
 	// BuildTool == "" should be normalised to "none" internally.
 	inputs := SetupInputs{App: true, Type: "regular", Framework: "nextjs", BuildTool: "", Port: 3000}
-	key, _, _, err := getQuickstartConfigKey(&cobra.Command{}, inputs)
+	key, _, err := getQuickstartConfigKey(&cobra.Command{}, &inputs)
 	require.NoError(t, err)
 	assert.Equal(t, "regular:nextjs:none", key)
 }
@@ -2048,7 +1889,7 @@ func TestSortedKeys_EmptyMap(t *testing.T) {
 	assert.Empty(t, sortedKeys(map[string]string{}))
 }
 
-// -- GenerateAndWriteQuickstartConfig --.
+// -- generateAndWriteQuickstartConfig --.
 
 func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 	clientID := "cid-123"
@@ -2189,12 +2030,10 @@ func TestGenerateAndWriteQuickstartConfig(t *testing.T) {
 			// Place the output file inside the temp dir so we don't pollute CWD.
 			strategy.Path = filepath.Join(dir, "output_file")
 
-			filePath, err := GenerateAndWriteQuickstartConfig(&strategy, tc.envValues, domain, client, tc.port)
+			err := generateAndWriteQuickstartConfig(&strategy, tc.envValues, domain, client, tc.port)
 			require.NoError(t, err)
-			assert.NotEmpty(t, filepath.Base(filePath))
-			assert.Equal(t, strategy.Path, filePath)
 
-			data, err := os.ReadFile(filePath)
+			data, err := os.ReadFile(strategy.Path)
 			require.NoError(t, err)
 			tc.checkContent(t, string(data))
 		})
@@ -2215,10 +2054,10 @@ func TestGenerateAndWriteQuickstartConfig_CreatesSubdirectory(t *testing.T) {
 		"clientId": auth0.DetectionSub,
 	}
 
-	filePath, err := GenerateAndWriteQuickstartConfig(&strategy, envValues, "tenant.auth0.com", client, 4200)
+	err := generateAndWriteQuickstartConfig(&strategy, envValues, "tenant.auth0.com", client, 4200)
 	require.NoError(t, err)
 
-	_, statErr := os.Stat(filepath.Dir(filePath))
+	_, statErr := os.Stat(filepath.Dir(strategy.Path))
 	assert.NoError(t, statErr, "subdirectory should have been created")
 }
 
@@ -2248,7 +2087,7 @@ func TestGenerateAndWriteQuickstartConfig_SpecialChars(t *testing.T) {
 			"auth0:ClientId":     auth0.DetectionSub,
 			"auth0:ClientSecret": auth0.DetectionSub,
 		}
-		_, err := GenerateAndWriteQuickstartConfig(&strategy, envValues, domain, client, 3000)
+		err := generateAndWriteQuickstartConfig(&strategy, envValues, domain, client, 3000)
 		require.NoError(t, err)
 
 		data, err := os.ReadFile(strategy.Path)
@@ -2274,7 +2113,7 @@ func TestGenerateAndWriteQuickstartConfig_SpecialChars(t *testing.T) {
 			"domain":   auth0.DetectionSub,
 			"clientId": auth0.DetectionSub,
 		}
-		_, err := GenerateAndWriteQuickstartConfig(&strategy, envValues, domain, clientWithQuote, 4200)
+		err := generateAndWriteQuickstartConfig(&strategy, envValues, domain, clientWithQuote, 4200)
 		require.NoError(t, err)
 
 		data, err := os.ReadFile(strategy.Path)
@@ -2297,7 +2136,7 @@ func TestGenerateAndWriteQuickstartConfig_SpecialChars(t *testing.T) {
 			"domain":   auth0.DetectionSub,
 			"clientId": auth0.DetectionSub,
 		}
-		_, err := GenerateAndWriteQuickstartConfig(&strategy, envValues, domain, clientWithQuote, 3000)
+		err := generateAndWriteQuickstartConfig(&strategy, envValues, domain, clientWithQuote, 3000)
 		require.NoError(t, err)
 
 		data, err := os.ReadFile(strategy.Path)
@@ -2572,7 +2411,7 @@ func TestGetSupportedQuickstartTypes(t *testing.T) {
 	}
 }
 
-// SetupQuickstartCmdExperimental - command-level interaction flows
+// SetupQuickstartCmd - command-level interaction flows
 //
 // These tests exercise the RunE handler to verify the 7 top-level interaction
 // flow paths. Because setupWithAuthentication reads ~/ config, we redirect
@@ -2580,11 +2419,11 @@ func TestGetSupportedQuickstartTypes(t *testing.T) {
 // state and gets a deterministic "config.json file is missing" error.
 
 // flow 1: --app with all flags set (no interactive prompts needed).
-func TestSetupQuickstartCmdExperimental_AppAllFlagsAuthRequired(t *testing.T) {
+func TestSetupQuickstartCmd_AppAllFlagsAuthRequired(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	cliObj := &cli{}
-	cmd := setupQuickstartCmdExperimental(cliObj)
+	cmd := setupQuickstartCmd(cliObj)
 	cmd.SetArgs([]string{
 		"--app",
 		"--name", "My App",
@@ -2598,11 +2437,11 @@ func TestSetupQuickstartCmdExperimental_AppAllFlagsAuthRequired(t *testing.T) {
 }
 
 // flow 2: --api only (no --app).
-func TestSetupQuickstartCmdExperimental_APIOnlyAuthRequired(t *testing.T) {
+func TestSetupQuickstartCmd_APIOnlyAuthRequired(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	cliObj := &cli{}
-	cmd := setupQuickstartCmdExperimental(cliObj)
+	cmd := setupQuickstartCmd(cliObj)
 	cmd.SetArgs([]string{
 		"--api",
 		"--identifier", "https://my-api.example.com",
@@ -2613,11 +2452,11 @@ func TestSetupQuickstartCmdExperimental_APIOnlyAuthRequired(t *testing.T) {
 }
 
 // flow 3: --app and --api together (creates both resources).
-func TestSetupQuickstartCmdExperimental_AppAndAPIAuthRequired(t *testing.T) {
+func TestSetupQuickstartCmd_AppAndAPIAuthRequired(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	cliObj := &cli{}
-	cmd := setupQuickstartCmdExperimental(cliObj)
+	cmd := setupQuickstartCmd(cliObj)
 	cmd.SetArgs([]string{
 		"--app",
 		"--name", "Express App",
@@ -2633,7 +2472,7 @@ func TestSetupQuickstartCmdExperimental_AppAndAPIAuthRequired(t *testing.T) {
 }
 
 // flow 4: SPA frameworks - each framework/build-tool combo requires auth.
-func TestSetupQuickstartCmdExperimental_SPAFrameworks(t *testing.T) {
+func TestSetupQuickstartCmd_SPAFrameworks(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	spaTests := []struct {
@@ -2652,7 +2491,7 @@ func TestSetupQuickstartCmdExperimental_SPAFrameworks(t *testing.T) {
 	for _, tc := range spaTests {
 		t.Run(tc.framework, func(t *testing.T) {
 			cliObj := &cli{}
-			cmd := setupQuickstartCmdExperimental(cliObj)
+			cmd := setupQuickstartCmd(cliObj)
 			cmd.SetArgs([]string{
 				"--app",
 				"--name", tc.framework + "-app",
@@ -2669,7 +2508,7 @@ func TestSetupQuickstartCmdExperimental_SPAFrameworks(t *testing.T) {
 }
 
 // flow 5: Regular web frameworks.
-func TestSetupQuickstartCmdExperimental_RegularFrameworks(t *testing.T) {
+func TestSetupQuickstartCmd_RegularFrameworks(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	regularTests := []struct {
@@ -2700,7 +2539,7 @@ func TestSetupQuickstartCmdExperimental_RegularFrameworks(t *testing.T) {
 	for _, tc := range regularTests {
 		t.Run(tc.framework, func(t *testing.T) {
 			cliObj := &cli{}
-			cmd := setupQuickstartCmdExperimental(cliObj)
+			cmd := setupQuickstartCmd(cliObj)
 			cmd.SetArgs([]string{
 				"--app",
 				"--name", tc.framework + "-app",
@@ -2717,7 +2556,7 @@ func TestSetupQuickstartCmdExperimental_RegularFrameworks(t *testing.T) {
 }
 
 // flow 6: Native / Mobile frameworks.
-func TestSetupQuickstartCmdExperimental_NativeFrameworks(t *testing.T) {
+func TestSetupQuickstartCmd_NativeFrameworks(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	nativeTests := []struct {
@@ -2738,7 +2577,7 @@ func TestSetupQuickstartCmdExperimental_NativeFrameworks(t *testing.T) {
 	for _, tc := range nativeTests {
 		t.Run(tc.framework, func(t *testing.T) {
 			cliObj := &cli{}
-			cmd := setupQuickstartCmdExperimental(cliObj)
+			cmd := setupQuickstartCmd(cliObj)
 			cmd.SetArgs([]string{
 				"--app",
 				"--name", tc.framework + "-app",
@@ -2757,7 +2596,7 @@ func TestSetupQuickstartCmdExperimental_NativeFrameworks(t *testing.T) {
 // flow 7: auto-detection path - the command reads from CWD, which is controlled
 // by the caller; with no auth config the command still fails at auth before
 // attempting detection.
-func TestSetupQuickstartCmdExperimental_DetectionPathAuthRequired(t *testing.T) {
+func TestSetupQuickstartCmd_DetectionPathAuthRequired(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	// Create a React project in a temp dir so detection would fire if auth passed.
@@ -2772,7 +2611,7 @@ func TestSetupQuickstartCmdExperimental_DetectionPathAuthRequired(t *testing.T) 
 	t.Cleanup(func() { _ = os.Chdir(origDir) })
 
 	cliObj := &cli{}
-	cmd := setupQuickstartCmdExperimental(cliObj)
+	cmd := setupQuickstartCmd(cliObj)
 	cmd.SetArgs([]string{"--app"})
 	err = cmd.Execute()
 	assert.EqualError(t, err, "authentication required: config.json file is missing")
@@ -2788,9 +2627,9 @@ func TestGenerateAndWriteQuickstartConfig_NilStrategyDefaultsToDotenv(t *testing
 	clientID := "cid"
 	client := &management.Client{ClientID: &clientID}
 
-	filePath, err := GenerateAndWriteQuickstartConfig(nil, map[string]string{"AUTH0_DOMAIN": "example.com"}, "tenant.auth0.com", client, 3000)
+	err = generateAndWriteQuickstartConfig(nil, map[string]string{"AUTH0_DOMAIN": "example.com"}, "tenant.auth0.com", client, 3000)
 	require.NoError(t, err)
-	assert.Equal(t, ".env", filepath.Base(filePath))
+	assert.FileExists(t, ".env")
 }
 
 // -- readMobileBundleID --.

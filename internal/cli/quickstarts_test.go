@@ -264,7 +264,7 @@ func TestResolveRequestParams_AllQuickstartConfigs(t *testing.T) {
 	}
 }
 
-// -- GenerateAndWriteQuickstartConfig with QuickstartConfigs --.
+// -- generateAndWriteQuickstartConfig with QuickstartConfigs --.
 
 // TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs verifies the env
 // file content generated for every application type in auth0.QuickstartConfigs.
@@ -419,14 +419,14 @@ func TestGenerateAndWriteQuickstartConfig_AllQuickstartConfigs(t *testing.T) {
 				require.NoError(t, os.MkdirAll(subDir, 0755))
 			}
 
-			filePath, err := GenerateAndWriteQuickstartConfig(&strategy, config.EnvValues, domain, client, tc.port)
+			err := generateAndWriteQuickstartConfig(&strategy, config.EnvValues, domain, client, tc.port)
 			require.NoError(t, err)
 
-			fileName := filepath.Base(filePath)
+			fileName := filepath.Base(strategy.Path)
 			assert.Equal(t, tc.wantFileName, fileName)
-			assert.FileExists(t, filePath)
+			assert.FileExists(t, strategy.Path)
 
-			content, err := os.ReadFile(filePath)
+			content, err := os.ReadFile(strategy.Path)
 			require.NoError(t, err)
 			contentStr := string(content)
 
@@ -550,7 +550,7 @@ func TestGenerateAndWriteQuickstartConfig_PortInBaseURL(t *testing.T) {
 			cid, csec := "cid", "csec"
 			client := &management.Client{ClientID: &cid, ClientSecret: &csec}
 
-			_, err := GenerateAndWriteQuickstartConfig(&strategy, config.EnvValues, "example.auth0.com", client, 8080)
+			err := generateAndWriteQuickstartConfig(&strategy, config.EnvValues, "example.auth0.com", client, 8080)
 			require.NoError(t, err)
 
 			content, err := os.ReadFile(strategy.Path)
@@ -577,7 +577,7 @@ func TestGenerateAndWriteQuickstartConfig_SecretsNonEmpty(t *testing.T) {
 			dir := t.TempDir()
 			strategy := auth0.FileOutputStrategy{Path: filepath.Join(dir, ".env"), Format: "dotenv"}
 
-			_, err := GenerateAndWriteQuickstartConfig(&strategy, config.EnvValues, "example.auth0.com", client, 3000)
+			err := generateAndWriteQuickstartConfig(&strategy, config.EnvValues, "example.auth0.com", client, 3000)
 			require.NoError(t, err)
 
 			content, err := os.ReadFile(strategy.Path)
@@ -675,7 +675,7 @@ func TestNoInputWithTypeRequiresFramework(t *testing.T) {
 				Type:      tc.appType,
 				Framework: tc.framework,
 			}
-			_, _, _, err := getQuickstartConfigKey(&cobra.Command{}, inputs)
+			_, _, err := getQuickstartConfigKey(&cobra.Command{}, &inputs)
 			if tc.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -776,13 +776,13 @@ func TestCreateQuickstartApp_SPA_React(t *testing.T) {
 	inputs.CallbackURL = ""
 	inputs.LogoutURL = ""
 
-	// Override the working directory so GenerateAndWriteQuickstartConfig writes to a temp dir.
+	// Override the working directory so generateAndWriteQuickstartConfig writes to a temp dir.
 	oldWD, err := os.Getwd()
 	require.NoError(t, err)
 	require.NoError(t, os.Chdir(dir))
 	defer func() { _ = os.Chdir(oldWD) }()
 
-	clientID, err := createQuickstartApp(context.Background(), testCLI, inputs, "spa:react:vite")
+	clientID, err := createQuickstartApp(&cobra.Command{}, testCLI, inputs, "spa:react:vite")
 	require.NoError(t, err)
 	assert.Equal(t, "test-client-id", clientID)
 
@@ -796,7 +796,7 @@ func TestCreateQuickstartApp_UnsupportedKey(t *testing.T) {
 	t.Parallel()
 
 	testCLI := &cli{renderer: &display.Renderer{MessageWriter: &bytes.Buffer{}, ResultWriter: &bytes.Buffer{}}}
-	_, err := createQuickstartApp(context.Background(), testCLI, SetupInputs{}, "unknown:framework:none")
+	_, err := createQuickstartApp(&cobra.Command{}, testCLI, SetupInputs{}, "unknown:framework:none")
 	assert.ErrorContains(t, err, "unsupported quickstart arguments")
 }
 
@@ -810,23 +810,22 @@ func TestApplyDetectionToInputs(t *testing.T) {
 	t.Run("populates empty inputs from detection", func(t *testing.T) {
 		t.Parallel()
 		d := DetectionResult{
-			Type: "regular", BuildTool: "vite", Port: 3000, AppName: "my-app",
+			Type: "regular", BuildTool: "vite",
 			BundleID: "com.example.app",
 		}
-		got := applyDetectionToInputs(SetupInputs{}, d)
+		got := SetupInputs{}
+		applyDetectionToInputs(&got, d)
 		assert.Equal(t, "regular", got.Type)
 		assert.Equal(t, "vite", got.BuildTool)
-		assert.Equal(t, 3000, got.Port)
-		assert.Equal(t, "my-app", got.Name)
 		assert.Equal(t, "com.example.app", got.BundleID)
 		assert.Empty(t, got.Framework, "framework must not be set by applyDetectionToInputs")
 	})
 
 	t.Run("preserves explicitly set fields", func(t *testing.T) {
 		t.Parallel()
-		d := DetectionResult{Type: "regular", Port: 3000, AppName: "detected-name"}
-		inputs := SetupInputs{Type: "spa", Port: 5173, Name: "explicit-name"}
-		got := applyDetectionToInputs(inputs, d)
+		d := DetectionResult{Type: "regular"}
+		got := SetupInputs{Type: "spa", Port: 5173, Name: "explicit-name"}
+		applyDetectionToInputs(&got, d)
 		assert.Equal(t, "spa", got.Type, "explicit type should not be overwritten")
 		assert.Equal(t, 5173, got.Port, "explicit port should not be overwritten")
 		assert.Equal(t, "explicit-name", got.Name, "explicit name should not be overwritten")
@@ -841,13 +840,12 @@ func TestAmbiguousDetection_NoInputMode_UsesFirstCandidate(t *testing.T) {
 
 	detection := DetectionResult{
 		Type:                "regular",
-		Port:                3000,
-		AppName:             "my-app",
 		AmbiguousFrameworks: []string{"express", "hono"},
 		Detected:            true,
 	}
 
-	inputs := applyDetectionToInputs(SetupInputs{}, detection)
+	var inputs SetupInputs
+	applyDetectionToInputs(&inputs, detection)
 
 	// Simulate no-input mode: pick first candidate when framework is empty.
 	if inputs.Framework == "" {
@@ -856,7 +854,6 @@ func TestAmbiguousDetection_NoInputMode_UsesFirstCandidate(t *testing.T) {
 
 	assert.Equal(t, "express", inputs.Framework)
 	assert.Equal(t, "regular", inputs.Type)
-	assert.Equal(t, 3000, inputs.Port)
 }
 
 // TestAmbiguousDetection_NoInput_IntegrationFlow verifies the full flow:
@@ -885,13 +882,14 @@ func TestAmbiguousDetection_NoInput_IntegrationFlow(t *testing.T) {
 	require.Greater(t, len(detection.AmbiguousFrameworks), 1, "should have multiple candidates")
 
 	// Step 2: In no-input mode, pick the first candidate (same logic as RunE).
-	inputs := applyDetectionToInputs(SetupInputs{App: true}, detection)
+	inputs := SetupInputs{App: true}
+	applyDetectionToInputs(&inputs, detection)
 	if inputs.Framework == "" {
 		inputs.Framework = detection.AmbiguousFrameworks[0]
 	}
 
 	// Step 3: Resolve the config key.
-	qsConfigKey, inputs, _, err := getQuickstartConfigKey(&cobra.Command{}, inputs)
+	qsConfigKey, _, err := getQuickstartConfigKey(&cobra.Command{}, &inputs)
 	require.NoError(t, err)
 
 	// Step 4: Verify the resolved framework is the first ambiguous candidate.
@@ -911,7 +909,7 @@ func TestAmbiguousDetection_NoInput_IntegrationFlow(t *testing.T) {
 	require.NoError(t, os.Chdir(dir))
 	defer func() { _ = os.Chdir(origDir) }()
 
-	clientID, err := createQuickstartApp(context.Background(), testCLI, inputs, qsConfigKey)
+	clientID, err := createQuickstartApp(&cobra.Command{}, testCLI, inputs, qsConfigKey)
 	require.NoError(t, err)
 	assert.Equal(t, "test-client-id", clientID)
 }

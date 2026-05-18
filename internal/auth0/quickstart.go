@@ -223,30 +223,84 @@ type AppConfig struct {
 	AudienceVar string
 }
 
-// FrameworkBuildTools maps "type:framework" to the alphabetically ordered list of supported
-// build tools derived from QuickstartConfigs.
-var FrameworkBuildTools = func() map[string][]string {
-	raw := map[string][]string{}
-	for k := range QuickstartConfigs {
+// FrameworkBuildTools maps "type:framework" to the sorted list of build-tool
+// variants from QuickstartConfigs (including the "none" sentinel).
+// FrameworkSupportedBuildTools is the same map with "none" stripped, so it
+// only contains frameworks that accept a --build-tool flag.
+var (
+	FrameworkBuildTools          map[string][]string
+	FrameworkSupportedBuildTools map[string][]string
+)
+
+func init() {
+	FrameworkBuildTools, FrameworkSupportedBuildTools = buildFrameworkBuildToolMaps(QuickstartConfigs)
+}
+
+// buildFrameworkBuildToolMaps walks configs once and returns FrameworkBuildTools
+// (all variants) and FrameworkSupportedBuildTools (without the "none" sentinel).
+// Malformed keys (not "type:framework:tool") are skipped.
+func buildFrameworkBuildToolMaps(configs map[string]AppConfig) (all, supported map[string][]string) {
+	all = make(map[string][]string, len(configs))
+	supported = make(map[string][]string, len(configs))
+
+	for k := range configs {
 		parts := strings.SplitN(k, ":", 3)
 		if len(parts) != 3 {
 			continue
 		}
-		tf := parts[0] + ":" + parts[1]
-		raw[tf] = append(raw[tf], parts[2])
+		tf, tool := parts[0]+":"+parts[1], parts[2]
+		all[tf] = append(all[tf], tool)
+		if tool != "none" {
+			supported[tf] = append(supported[tf], tool)
+		}
 	}
-	for tf, tools := range raw {
+
+	for tf, tools := range all {
 		if len(tools) > 1 {
 			sort.Strings(tools)
 		}
-		raw[tf] = tools
+		all[tf] = tools
 	}
-	return raw
-}()
+	for tf, tools := range supported {
+		if len(tools) > 1 {
+			sort.Strings(tools)
+		}
+		supported[tf] = tools
+	}
+	return all, supported
+}
+
+// FrameworkBuildToolRequired reports whether a "type:framework" key requires
+// --build-tool, i.e. is present in FrameworkSupportedBuildTools.
+func FrameworkBuildToolRequired(typeFramework string) bool {
+	_, ok := FrameworkSupportedBuildTools[typeFramework]
+	return ok
+}
+
+// FrameworkBundleIDRequired lists native frameworks that need a resolved
+// bundle/application ID (for example, "com.example.myapp") during project
+// detection. Keep in sync with DetectProject BundleID assignments.
+var FrameworkBundleIDRequired = map[string]bool{
+	"native:flutter":       true,
+	"native:react-native":  true,
+	"native:android":       true,
+	"native:ios-swift":     true,
+	"native:ionic-angular": true,
+	"native:ionic-react":   true,
+	"native:ionic-vue":     true,
+	"native:maui":          true,
+	"native:dotnet-mobile": true,
+}
+
+// IsBundleIDRequired reports whether a "type:framework" key needs a native
+// bundle / application identifier resolved during project detection or setup.
+func IsBundleIDRequired(typeFramework string) bool {
+	return FrameworkBundleIDRequired[typeFramework]
+}
 
 var QuickstartConfigs = map[string]AppConfig{
 
-	// ==========================================.
+	// SPA (Single Page Applications).
 	"spa:react:vite": {
 		EnvValues: map[string]string{
 			"VITE_AUTH0_DOMAIN":    DetectionSub,
@@ -274,8 +328,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			WebOrigins:        []string{DetectionSub},
 			Name:              DetectionSub,
 		},
-		// Angular-ts wraps domain/clientId under an auth0:{} object matching the
-		// official Angular quickstart structure: environment.auth0.domain / environment.auth0.clientId.
+		// Nests domain/clientId under auth0:{} (environment.auth0.domain / .clientId).
 		Strategy: FileOutputStrategy{Path: "src/environments/environment.ts", Format: "angular-ts"},
 	},
 	"spa:vue:vite": {
@@ -338,7 +391,7 @@ var QuickstartConfigs = map[string]AppConfig{
 		Strategy: FileOutputStrategy{Path: "lib/auth_config.dart", Format: "dart"},
 	},
 
-	// ==========================================.
+	// Regular Web Applications.
 	"regular:nextjs:none": {
 		EnvValues: map[string]string{
 			"AUTH0_DOMAIN":        DetectionSub,
@@ -408,8 +461,7 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
-	// SvelteKit with Vite uses the same server-side config as regular:sveltekit:none.
-	// SvelteKit SSR requires a client secret regardless of the underlying build tool.
+	// SvelteKit with Vite: SSR requires a client secret regardless of build tool.
 	"regular:sveltekit:vite": {
 		EnvValues: map[string]string{
 			"AUTH0_DOMAIN":        DetectionSub,
@@ -522,7 +574,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			"auth0/domain":       DetectionSub,
 			"auth0/clientId":     DetectionSub,
 			"auth0/clientSecret": DetectionSub,
-			// Auth0/scope is a fixed value read by Auth0AuthenticationConfig via JNDI lookup.
+			// Fixed value for JNDI lookup by Auth0AuthenticationConfig.
 			"auth0/scope": "openid profile email",
 		},
 		RequestParams: RequestParams{
@@ -531,8 +583,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
 		},
-		// Javaee-webxml writes JNDI env-entry elements to web.xml, matching the
-		// official Auth0 Java EE quickstart (auth0.com/docs/quickstart/webapp/java-ee).
+		// JNDI env-entry elements in web.xml.
 		Strategy: FileOutputStrategy{Path: "src/main/webapp/WEB-INF/web.xml", Format: "javaee-webxml"},
 	},
 	"regular:spring-boot:maven": {
@@ -546,13 +597,12 @@ var QuickstartConfigs = map[string]AppConfig{
 			Callbacks:         []string{DetectionSub},
 			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
-			// Spring Boot OAuth2 login registers the redirect URI under the OIDC
-			// registration ID. The okta-spring-boot-starter uses "oidc" by default.
+			// okta-spring-boot-starter registers redirect under "oidc" registration ID.
 			CallbackPath: "/login/oauth2/code/oidc",
 		},
 		Strategy: FileOutputStrategy{Path: "src/main/resources/application.yml", Format: "yaml"},
 	},
-	// Spring Boot Gradle produces the same application.yml config as Maven.
+	// Spring Boot with Gradle: generates application.yml with okta.oauth2.* properties.
 	"regular:spring-boot:gradle": {
 		EnvValues: map[string]string{
 			"okta.oauth2.issuer":        DetectionSub,
@@ -658,13 +708,10 @@ var QuickstartConfigs = map[string]AppConfig{
 		Strategy: FileOutputStrategy{Path: "config/auth0.yml", Format: "rails-yaml"},
 	},
 
-	// ==========================================
-	// Native/mobile apps: most use custom URI scheme callbacks derived from the bundle
-	// identifier, which is not known at setup time. For those, Callbacks and
-	// AllowedLogoutURLs are left empty so Auth0 does not register an incorrect URL;
-	// the user must add the correct callback URL in the Auth0 Dashboard after setup.
-	// Exceptions: Expo uses exp://localhost:19000 (Expo Go), and Ionic/Capacitor uses
-	// http://localhost (Capacitor WebView intercept).
+	// Native / Mobile Applications.
+	// Callbacks are left empty when the custom URI scheme depends on a bundle ID
+	// not known at setup time. Exceptions: Expo (exp://localhost:19000) and
+	// Ionic/Capacitor (http://localhost).
 	"native:flutter:none": {
 		EnvValues: map[string]string{
 			"domain":   DetectionSub,
