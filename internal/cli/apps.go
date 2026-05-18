@@ -176,6 +176,18 @@ var (
 		ShortForm: "p",
 		Help:      "Comma-separated list of enabled token exchange types for this client. Possible values: custom_authentication, on_behalf_of_token_exchange.",
 	}
+	appThirdPartySecurityMode = Flag{
+		Name:      "Third Party Security Mode",
+		LongForm:  "third-party-security-mode",
+		ShortForm: "s",
+		Help:      "Security mode for third-party clients: 'strict' or 'permissive'.",
+	}
+	appRedirectionPolicy = Flag{
+		Name:      "Redirection Policy",
+		LongForm:  "redirection-policy",
+		ShortForm: "y",
+		Help:      "Controls whether Auth0 redirects users to the application's callback URL on authentication errors or in email verification flows: 'allow_always' or 'open_redirect_protection'.",
+	}
 )
 
 func appsCmd(cli *cli) *cobra.Command {
@@ -434,6 +446,8 @@ func createAppCmd(cli *cli) *cobra.Command {
 		RefreshToken             string
 		ResourceServerIdentifier string
 		AllowAnyProfileOfType    []string
+		ThirdPartySecurityMode   string
+		RedirectionPolicy        string
 	}
 	var oidcConformant = true
 	var algorithm = "RS256"
@@ -456,7 +470,8 @@ func createAppCmd(cli *cli) *cobra.Command {
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar,bazz=buzz"
   auth0 apps create --name "My API Client" --type resource_server --resource-server-identifier "https://api.example.com"
-  auth0 apps create --name myapp --type resource_server --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange`,
+  auth0 apps create --name myapp --type resource_server --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
+  auth0 apps create --name "My 3P App" --type regular --third-party-security-mode strict --redirection-policy open_redirect_protection`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -474,6 +489,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 			appIsNative := apiTypeFor(inputs.Type) == appTypeNative
 			appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
 			appIsResourceServer := apiTypeFor(inputs.Type) == appTypeResourceServer
+			isThirdPartyApp := inputs.ThirdPartySecurityMode != "" || inputs.RedirectionPolicy != ""
 
 			// Prompt for callback URLs if app is not m2m and not resource_server.
 			if !appIsM2M && !appIsResourceServer {
@@ -488,8 +504,8 @@ func createAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			// Prompt for logout URLs if app is not m2m and not resource_server.
-			if !appIsM2M && !appIsResourceServer {
+			// Prompt for logout URLs if app is not m2m and not resource_server and not a third-party app.
+			if !appIsM2M && !appIsResourceServer && !isThirdPartyApp {
 				var defaultValue string
 
 				if !appIsNative {
@@ -593,11 +609,21 @@ func createAppCmd(cli *cli) *cobra.Command {
 				a.TokenEndpointAuthMethod = apiAuthMethodFor(inputs.AuthMethod)
 			}
 
+			if inputs.ThirdPartySecurityMode != "" {
+				a.ThirdPartySecurityMode = &inputs.ThirdPartySecurityMode
+			}
+			if inputs.RedirectionPolicy != "" {
+				a.RedirectionPolicy = &inputs.RedirectionPolicy
+			}
+			if isThirdPartyApp {
+				a.IsFirstParty = auth0.Bool(false)
+			}
+
 			// Set grants.
-			if len(inputs.Grants) == 0 {
-				a.GrantTypes = apiDefaultGrantsFor(inputs.Type)
-			} else {
+			if len(inputs.Grants) > 0 {
 				a.GrantTypes = apiGrantsFor(inputs.Grants)
+			} else if !isThirdPartyApp {
+				a.GrantTypes = apiDefaultGrantsFor(inputs.Type)
 			}
 
 			// Create app.
@@ -633,26 +659,30 @@ func createAppCmd(cli *cli) *cobra.Command {
 	appTEAllowAnyProfileOfType.RegisterStringSlice(cmd, &inputs.AllowAnyProfileOfType, nil)
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 	refreshToken.RegisterString(cmd, &inputs.RefreshToken, "")
+	appThirdPartySecurityMode.RegisterString(cmd, &inputs.ThirdPartySecurityMode, "")
+	appRedirectionPolicy.RegisterString(cmd, &inputs.RedirectionPolicy, "")
 
 	return cmd
 }
 
 func updateAppCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID                    string
-		Name                  string
-		Type                  string
-		Description           string
-		Callbacks             []string
-		AllowedOrigins        []string
-		AllowedWebOrigins     []string
-		AllowedLogoutURLs     []string
-		AuthMethod            string
-		Grants                []string
-		RevealSecrets         bool
-		Metadata              map[string]string
-		RefreshToken          string
-		AllowAnyProfileOfType []string
+		ID                     string
+		Name                   string
+		Type                   string
+		Description            string
+		Callbacks              []string
+		AllowedOrigins         []string
+		AllowedWebOrigins      []string
+		AllowedLogoutURLs      []string
+		AuthMethod             string
+		Grants                 []string
+		RevealSecrets          bool
+		Metadata               map[string]string
+		RefreshToken           string
+		AllowAnyProfileOfType  []string
+		ThirdPartySecurityMode string
+		RedirectionPolicy      string
 	}
 
 	cmd := &cobra.Command{
@@ -673,7 +703,9 @@ func updateAppCmd(cli *cli) *cobra.Command {
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar"
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"
-  auth0 apps update <app-id> --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange`,
+  auth0 apps update <app-id> --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
+  auth0 apps update <app-id> --redirection-policy allow_always
+  auth0 apps update <app-id> --third-party-security-mode strict --redirection-policy open_redirect_protection`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Client
 
@@ -847,6 +879,14 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			if appThirdPartySecurityMode.IsSet(cmd) {
+				a.ThirdPartySecurityMode = &inputs.ThirdPartySecurityMode
+			}
+
+			if appRedirectionPolicy.IsSet(cmd) {
+				a.RedirectionPolicy = &inputs.RedirectionPolicy
+			}
+
 			if err := ansi.Waiting(func() error {
 				return cli.api.Client.Update(cmd.Context(), inputs.ID, a)
 			}); err != nil {
@@ -874,6 +914,8 @@ func updateAppCmd(cli *cli) *cobra.Command {
 	appTEAllowAnyProfileOfType.RegisterStringSliceU(cmd, &inputs.AllowAnyProfileOfType, nil)
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 	refreshToken.RegisterString(cmd, &inputs.RefreshToken, "")
+	appThirdPartySecurityMode.RegisterStringU(cmd, &inputs.ThirdPartySecurityMode, "")
+	appRedirectionPolicy.RegisterStringU(cmd, &inputs.RedirectionPolicy, "")
 
 	return cmd
 }
