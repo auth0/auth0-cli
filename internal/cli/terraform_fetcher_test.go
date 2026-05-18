@@ -723,6 +723,67 @@ func TestClientGrantResourceFetcher_FetchData(t *testing.T) {
 		_, err := fetcher.FetchData(context.Background())
 		assert.EqualError(t, err, "failed to list clients")
 	})
+
+	t.Run("it handles default_for grants correctly", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		clientGrantAPI := mock.NewMockClientGrantAPI(ctrl)
+		clientGrantAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).
+			Return(
+				&management.ClientGrantList{
+					List: management.List{
+						Start: 0,
+						Limit: 3,
+						Total: 3,
+					},
+					ClientGrants: []*management.ClientGrant{
+						{
+							ID:       auth0.String("cgr_1"),
+							ClientID: auth0.String("client-id-1"),
+							Audience: auth0.String("https://travel0.com/api"),
+						},
+						{
+							ID:        auth0.String("cgr_2"),
+							DefaultFor: auth0.String("third_party_clients"),
+							Audience:  auth0.String("https://travel0.com/api"),
+						},
+						{
+							ID:        auth0.String("cgr_3"),
+							DefaultFor: auth0.String("third_party_clients"),
+							Audience:  auth0.String("https://partner-api.example.com"),
+						},
+					},
+				},
+				nil,
+			)
+
+		fetcher := clientGrantResourceFetcher{
+			api: &auth0.API{
+				ClientGrant: clientGrantAPI,
+			},
+		}
+
+		expectedData := importDataList{
+			{
+				ResourceName: "auth0_client_grant.client_id_1_https_travel0_com_api",
+				ImportID:     "cgr_1",
+			},
+			{
+				ResourceName: "auth0_client_grant.default_for_third_party_clients_https_travel0_com_api",
+				ImportID:     "cgr_2",
+			},
+			{
+				ResourceName: "auth0_client_grant.default_for_third_party_clients_https_partner_api_example_com",
+				ImportID:     "cgr_3",
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedData, data)
+	})
 }
 
 func TestConnectionResourceFetcher_FetchData(t *testing.T) {
