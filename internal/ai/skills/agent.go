@@ -13,8 +13,8 @@ type AgentConfig struct {
 	DisplayName      string
 	GlobalSkillsDir  string
 	ProjectSkillsDir string
-	DetectMarkers    []string // paths whose existence indicates the agent is installed (any one match is sufficient)
-	DetectBinaries   []string // binary names to look up in PATH (any one match is sufficient)
+	DetectMarkers    []string // Paths whose existence indicates the agent is installed (any one match is sufficient).
+	DetectBinaries   []string // Binary names to look up in PATH (any one match is sufficient).
 }
 
 // IsInstalled reports whether the agent appears to be installed on this machine.

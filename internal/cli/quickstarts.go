@@ -423,28 +423,6 @@ func (i *qsInputs) fromArgs(cmd *cobra.Command, args []string, cli *cli) error {
 	return nil
 }
 
-var (
-	qsType = Flag{
-		Name:       "Type",
-		LongForm:   "type",
-		ShortForm:  "t",
-		Help:       "Type of quickstart (vite, nextjs, fastify, jhipster-rwa)",
-		IsRequired: true,
-	}
-	qsAppName = Flag{
-		Name:      "Name",
-		LongForm:  "name",
-		ShortForm: "n",
-		Help:      "Name of the Auth0 application (default: 'My App' for vite, nextjs and fastify, 'JHipster' for jhipster-rwa)",
-	}
-	qsPort = Flag{
-		Name:      "Port",
-		LongForm:  "port",
-		ShortForm: "p",
-		Help:      "Port number for the application (default: 5173 for vite, 3000 for nextjs/fastify, 8080 for jhipster-rwa)",
-	}
-)
-
 // Flags for the setup command.
 var (
 	setupApp = Flag{
