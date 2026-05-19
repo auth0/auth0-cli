@@ -217,8 +217,8 @@ func init() {
 }
 
 var (
-	detectedAgentsOnce   sync.Once
-	detectedAgentsCache  []AgentConfig
+	detectedAgentsOnce  sync.Once
+	detectedAgentsCache []AgentConfig
 )
 
 // DetectedAgents returns the subset of SupportedAgents that are installed on this machine.
