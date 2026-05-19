@@ -362,54 +362,6 @@ func isExpoProject(dir string) bool {
 	return hasExpoKey
 }
 
-// readRawExpoScheme reads the "expo.scheme" field from app.json without validating it.
-// Returns the raw string value (may be empty or invalid).
-func readRawExpoScheme(dir string) string {
-	data, err := os.ReadFile(filepath.Join(dir, "app.json"))
-	if err != nil {
-		return ""
-	}
-	var obj struct {
-		Expo struct {
-			Scheme string `json:"scheme"`
-		} `json:"expo"`
-	}
-	if err := json.Unmarshal(data, &obj); err != nil {
-		return ""
-	}
-	return obj.Expo.Scheme
-}
-
-// readExpoScheme reads the "expo.scheme" from app.json and validates it per RFC 3986.
-// Returns empty string if absent, invalid, or on any error.
-func readExpoScheme(dir string) string {
-	scheme := readRawExpoScheme(dir)
-	if !isValidURIScheme(scheme) {
-		return ""
-	}
-	return scheme
-}
-
-// scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." ).
-func isValidURIScheme(s string) bool {
-	if len(s) == 0 {
-		return false
-	}
-	for i, r := range s {
-		if i == 0 {
-			if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')) {
-				return false
-			}
-		} else {
-			if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
-				(r >= '0' && r <= '9') || r == '+' || r == '-' || r == '.') {
-				return false
-			}
-		}
-	}
-	return true
-}
-
 // pubspecHasFlutterWebTarget returns true if "web:" is nested under "flutter:" in pubspec.yaml.
 func pubspecHasFlutterWebTarget(data string) bool {
 	inFlutterSection := false

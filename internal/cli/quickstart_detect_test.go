@@ -957,56 +957,6 @@ func TestDetectProject_LaravelBeatsViteConfig(t *testing.T) {
 	assert.Equal(t, "regular", got.Type)
 }
 
-// -- readExpoScheme --.
-
-func TestReadExpoScheme(t *testing.T) {
-	t.Run("reads scheme field", func(t *testing.T) {
-		dir := t.TempDir()
-		writeTestFile(t, dir, "app.json", `{"expo":{"name":"my-app","slug":"my-app","scheme":"myapp"}}`)
-		assert.Equal(t, "myapp", readExpoScheme(dir))
-	})
-
-	t.Run("no scheme field returns empty", func(t *testing.T) {
-		dir := t.TempDir()
-		writeTestFile(t, dir, "app.json", `{"expo":{"name":"my-app","slug":"my-app"}}`)
-		assert.Empty(t, readExpoScheme(dir))
-	})
-
-	t.Run("no app.json returns empty", func(t *testing.T) {
-		assert.Empty(t, readExpoScheme(t.TempDir()))
-	})
-
-	t.Run("invalid json returns empty", func(t *testing.T) {
-		dir := t.TempDir()
-		writeTestFile(t, dir, "app.json", `not valid json`)
-		assert.Empty(t, readExpoScheme(dir))
-	})
-
-	t.Run("scheme starting with digit is rejected", func(t *testing.T) {
-		dir := t.TempDir()
-		writeTestFile(t, dir, "app.json", `{"expo":{"scheme":"1app"}}`)
-		assert.Empty(t, readExpoScheme(dir))
-	})
-
-	t.Run("scheme with space is rejected", func(t *testing.T) {
-		dir := t.TempDir()
-		writeTestFile(t, dir, "app.json", `{"expo":{"scheme":"my app"}}`)
-		assert.Empty(t, readExpoScheme(dir))
-	})
-
-	t.Run("scheme with underscore is rejected", func(t *testing.T) {
-		dir := t.TempDir()
-		writeTestFile(t, dir, "app.json", `{"expo":{"scheme":"my_app"}}`)
-		assert.Empty(t, readExpoScheme(dir))
-	})
-
-	t.Run("valid scheme with plus dot dash is accepted", func(t *testing.T) {
-		dir := t.TempDir()
-		writeTestFile(t, dir, "app.json", `{"expo":{"scheme":"my+app-v1.0"}}`)
-		assert.Equal(t, "my+app-v1.0", readExpoScheme(dir))
-	})
-}
-
 // -- detectFromCsproj --.
 
 func TestDetectFromCsproj(t *testing.T) {
@@ -3020,55 +2970,6 @@ export default config;`)
 	got := DetectProject(dir)
 	assert.Equal(t, "ionic-vue", got.Framework)
 	assert.Equal(t, "com.example.ionicvuets", got.BundleID)
-}
-
-// -- readRawExpoScheme --.
-
-func TestReadRawExpoScheme(t *testing.T) {
-	t.Parallel()
-
-	t.Run("returns valid scheme unchanged", func(t *testing.T) {
-		t.Parallel()
-		dir := t.TempDir()
-		writeTestFile(t, dir, "app.json", `{"expo":{"scheme":"myapp"}}`)
-		assert.Equal(t, "myapp", readRawExpoScheme(dir))
-	})
-
-	t.Run("returns invalid scheme without validation", func(t *testing.T) {
-		t.Parallel()
-		dir := t.TempDir()
-		writeTestFile(t, dir, "app.json", `{"expo":{"scheme":"my app"}}`)
-		assert.Equal(t, "my app", readRawExpoScheme(dir))
-	})
-
-	t.Run("returns scheme starting with digit", func(t *testing.T) {
-		t.Parallel()
-		dir := t.TempDir()
-		writeTestFile(t, dir, "app.json", `{"expo":{"scheme":"1invalid"}}`)
-		assert.Equal(t, "1invalid", readRawExpoScheme(dir))
-	})
-
-	t.Run("returns empty when no scheme field", func(t *testing.T) {
-		t.Parallel()
-		dir := t.TempDir()
-		writeTestFile(t, dir, "app.json", `{"expo":{"name":"my-app"}}`)
-		assert.Empty(t, readRawExpoScheme(dir))
-	})
-
-	t.Run("returns empty when no app.json", func(t *testing.T) {
-		t.Parallel()
-		assert.Empty(t, readRawExpoScheme(t.TempDir()))
-	})
-
-	t.Run("readRawExpoScheme returns value that readExpoScheme rejects", func(t *testing.T) {
-		t.Parallel()
-		dir := t.TempDir()
-		writeTestFile(t, dir, "app.json", `{"expo":{"scheme":"my_app"}}`)
-		// ReadRawExpoScheme returns the raw invalid value.
-		assert.Equal(t, "my_app", readRawExpoScheme(dir))
-		// ReadExpoScheme rejects it because underscore is not valid in RFC 3986 schemes.
-		assert.Empty(t, readExpoScheme(dir))
-	})
 }
 
 // -- Negative detection edge-case tests --.

@@ -447,81 +447,86 @@ var (
 
 // Flags for the setup command.
 var (
-	setupExpApp = Flag{
+	setupApp = Flag{
 		Name:     "App",
 		LongForm: "app",
 		Help:     "Create an Auth0 application (SPA, regular web, or native)",
 	}
-	setupExpName = Flag{
+	setupName = Flag{
 		Name:     "Name",
 		LongForm: "name",
 		Help:     "Name of the Auth0 application",
 	}
-	setupExpType = Flag{
+	setupType = Flag{
 		Name:     "Type",
 		LongForm: "type",
 		Help:     "Application type: spa, regular, native, or m2m",
 	}
-	setupExpFramework = Flag{
+	setupFramework = Flag{
 		Name:     "Framework",
 		LongForm: "framework",
 		Help:     "Framework to configure (e.g., react, nextjs, vue, express)",
 	}
-	setupExpBuildTool = Flag{
+	setupBuildTool = Flag{
 		Name:     "Build Tool",
 		LongForm: "build-tool",
 		Help:     "Build tool used by the project (vite, webpack, cra, none)",
 	}
-	setupExpPort = Flag{
+	setupPort = Flag{
 		Name:     "Port",
 		LongForm: "port",
 		Help:     "Local port the application runs on (default varies by framework, e.g. 3000, 5173)",
 	}
-	setupExpCallbackURL = Flag{
+	setupCallbackURL = Flag{
 		Name:     "Callback URL",
 		LongForm: "callback-url",
 		Help:     "Override the allowed callback URL for the application",
 	}
-	setupExpLogoutURL = Flag{
+	setupLogoutURL = Flag{
 		Name:     "Logout URL",
 		LongForm: "logout-url",
 		Help:     "Override the allowed logout URL for the application",
 	}
-	setupExpWebOriginURL = Flag{
+	setupWebOriginURL = Flag{
 		Name:     "Web Origin URL",
 		LongForm: "web-origin-url",
 		Help:     "Override the allowed web origin URL for the application",
 	}
-	setupExpAPI = Flag{
+	setupAPI = Flag{
 		Name:     "API",
 		LongForm: "api",
 		Help:     "Create an Auth0 API resource server",
 	}
-	setupExpIdentifier = Flag{
+	setupIdentifier = Flag{
 		Name:        "Identifier",
 		LongForm:    "identifier",
 		Help:        "Unique URL identifier for the API (audience), e.g. https://my-api",
 		AlsoKnownAs: []string{"audience"},
 	}
-	setupExpSigningAlg = Flag{
+	setupSigningAlg = Flag{
 		Name:     "Signing Algorithm",
 		LongForm: "signing-alg",
 		Help:     "[API] Token signing algorithm: RS256, PS256, or HS256 (leave blank to be prompted interactively)",
 	}
-	setupExpScopes = Flag{
+	setupScopes = Flag{
 		Name:     "Scopes",
 		LongForm: "scopes",
 		Help:     "[API] Comma-separated list of permission scopes for the API",
 	}
-	setupExpTokenLifetime = Flag{
+	setupTokenLifetime = Flag{
 		Name:     "Token Lifetime",
 		LongForm: "token-lifetime",
 		Help:     "[API] Access token lifetime in seconds (default: 86400 = 24 hours)",
 	}
-	setupExpOfflineAccess = Flag{
+	setupOfflineAccess = Flag{
 		Name:     "Offline Access",
 		LongForm: "offline-access",
 		Help:     "Allow offline access (enables refresh tokens)",
+	}
+	setupLinkedAppID = Flag{
+		Name:     "Linked App ID",
+		LongForm: "linked-app-id",
+		Help:     "[API] Client ID of an existing application to link to the API (skips app creation)",
 	}
 )
 
@@ -543,6 +548,7 @@ type SetupInputs struct {
 	Scopes        string
 	TokenLifetime string
 	OfflineAccess bool
+	LinkedAppID   string // Client ID of an existing app to link to the API.
 	MetaData      map[string]interface{}
 }
 
@@ -553,42 +559,63 @@ func setupQuickstartCmd(cli *cli) *cobra.Command {
 		Use:   "setup",
 		Args:  cobra.NoArgs,
 		Short: "Set up Auth0 for your quickstart application",
-		Long: "Creates an Auth0 application and/or API and generates a config file with the necessary Auth0 settings.\n\n" +
-			"The command will:\n" +
-			"  1. Check if you are authenticated (and prompt for login if needed)\n" +
-			"  2. Auto-detect your project framework from the current directory\n" +
-			"  3. Create an Auth0 application and/or API resource server\n" +
-			"  4. Generate a config file with the appropriate environment variables\n\n" +
-			"Supported frameworks are dynamically loaded from the QuickstartConfigs map.",
-		Example: `  auth0 quickstarts setup
-  auth0 quickstarts setup --app --framework react --type spa
-  auth0 quickstarts setup --api --identifier https://my-api
-  auth0 quickstarts setup --app --api --name "My App"`,
+		Long: `Auto-detects your project, creates an Auth0 application and/or API, and generates a config file.
+
+Workflows:
+  --app                          Create an application (auto-detects framework).
+  --api                          Create an API (prompts to create or link an app).
+  --api --linked-app-id <id>     Create an API linked to an existing application.`,
+		Example: `  # Interactive setup:
+  auth0 quickstarts setup
+
+  # App only:
+  auth0 quickstarts setup --app --type spa --framework react
+
+  # App with all options:
+  auth0 quickstarts setup --app --type spa --framework react --build-tool vite --name "My SPA" --port 5173
+
+  # API + new app:
+  auth0 quickstarts setup --api --app --type regular --framework express --identifier https://my-api
+
+  # API + existing app:
+  auth0 quickstarts setup --api --linked-app-id <client-id> --identifier https://my-api
+
+  # API with custom settings:
+  auth0 quickstarts setup --api --linked-app-id <client-id> --identifier https://my-api --scopes "read:data,write:data"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSetupQuickstart(cmd, cli, &inputs)
 		},
 	}
 
 	// App flags.
-	setupExpApp.RegisterBool(cmd, &inputs.App, false)
-	setupExpName.RegisterString(cmd, &inputs.Name, "")
-	setupExpType.RegisterString(cmd, &inputs.Type, "")
-	setupExpFramework.RegisterString(cmd, &inputs.Framework, "")
-	setupExpBuildTool.RegisterString(cmd, &inputs.BuildTool, "none")
-	setupExpPort.RegisterInt(cmd, &inputs.Port, 0)
-	setupExpCallbackURL.RegisterString(cmd, &inputs.CallbackURL, "")
-	setupExpLogoutURL.RegisterString(cmd, &inputs.LogoutURL, "")
-	setupExpWebOriginURL.RegisterString(cmd, &inputs.WebOriginURL, "")
+	registerSetupFlags(cmd, &inputs)
 
-	// API flags.
-	setupExpAPI.RegisterBool(cmd, &inputs.API, false)
-	setupExpIdentifier.RegisterString(cmd, &inputs.Identifier, "")
-	setupExpSigningAlg.RegisterString(cmd, &inputs.SigningAlg, "")
-	setupExpScopes.RegisterString(cmd, &inputs.Scopes, "")
-	setupExpTokenLifetime.RegisterString(cmd, &inputs.TokenLifetime, "")
-	setupExpOfflineAccess.RegisterBool(cmd, &inputs.OfflineAccess, false)
+	cmd.MarkFlagsMutuallyExclusive("app", "linked-app-id")
 
 	return cmd
+}
+
+// registerSetupFlags registers all flags for the setup command.
+func registerSetupFlags(cmd *cobra.Command, inputs *SetupInputs) {
+	// App flags.
+	setupApp.RegisterBool(cmd, &inputs.App, false)
+	setupName.RegisterString(cmd, &inputs.Name, "")
+	setupType.RegisterString(cmd, &inputs.Type, "")
+	setupFramework.RegisterString(cmd, &inputs.Framework, "")
+	setupBuildTool.RegisterString(cmd, &inputs.BuildTool, "none")
+	setupPort.RegisterInt(cmd, &inputs.Port, 0)
+	setupCallbackURL.RegisterString(cmd, &inputs.CallbackURL, "")
+	setupLogoutURL.RegisterString(cmd, &inputs.LogoutURL, "")
+	setupWebOriginURL.RegisterString(cmd, &inputs.WebOriginURL, "")
+
+	// API flags.
+	setupAPI.RegisterBool(cmd, &inputs.API, false)
+	setupIdentifier.RegisterString(cmd, &inputs.Identifier, "")
+	setupSigningAlg.RegisterString(cmd, &inputs.SigningAlg, "")
+	setupScopes.RegisterString(cmd, &inputs.Scopes, "")
+	setupTokenLifetime.RegisterString(cmd, &inputs.TokenLifetime, "")
+	setupOfflineAccess.RegisterBool(cmd, &inputs.OfflineAccess, false)
+	setupLinkedAppID.RegisterString(cmd, &inputs.LinkedAppID, "")
 }
 
 // runSetupQuickstart is the orchestration entry point for `quickstarts setup`.
@@ -599,29 +626,29 @@ func runSetupQuickstart(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error
 		return fmt.Errorf("authentication required: %w", err)
 	}
 
-	// LinkedAppClientID tracks which app client ID to link to the API
-	// (either a newly created app or one selected from the tenant).
-	var linkedAppClientID string
+	// Validate that --linked-app-id is only used with --api.
+	if inputs.LinkedAppID != "" && !inputs.API {
+		return fmt.Errorf("--linked-app-id requires --api")
+	}
+
 	canPromptFlag := canPrompt(cmd)
 
-	// -- Step 1: Decide what to create (App / API / both) --.
+	// -- Step 1: Decide what to create (App / API) --.
 	if err := resolveSetupTargets(inputs, canPromptFlag); err != nil {
 		return err
 	}
 
-	// -- Step 1b: API-only flow — decide whether to link a new or existing app --.
-	// If the user picks "Create new app", we flip inputs.App=true so the rest of the
-	// flow runs the App prompts and Step 4 auto-links the newly created client.
-	if err := resolveAPIAppLink(cmd, cli, inputs, &linkedAppClientID, canPromptFlag); err != nil {
+	// -- Step 2: API flow — decide whether to create a new app or link an existing one --.
+	if err := resolveAPIAppLink(cmd, cli, inputs, canPromptFlag); err != nil {
 		return err
 	}
 
-	// -- Step 2: Auto-detect project framework --.
+	// -- Step 3: Auto-detect project framework --.
 	if err := handleProjectDetection(cmd, cli, inputs, canPromptFlag); err != nil {
 		return err
 	}
 
-	// -- Step 3: Resolve remaining prompts for App / API --.
+	// -- Step 4: Resolve remaining prompts (type, framework, build tool) --.
 	if err := validateNonInteractiveRequirements(*inputs, canPromptFlag); err != nil {
 		return err
 	}
@@ -634,30 +661,15 @@ func runSetupQuickstart(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error
 		cli.renderer.Infof("Auto-selected build tool %q for %s/%s", inputs.BuildTool, inputs.Type, inputs.Framework)
 	}
 
-	// -- Step 3b: Collect application name --.
-	if inputs.App {
-		if !setupExpName.IsSet(cmd) {
-			defaultName := inputs.Name
-			if defaultName == "" {
-				defaultName = "My App"
-			}
-			inputs.Name = defaultName
-			if err := setupExpName.Ask(cmd, &inputs.Name, &defaultName); err != nil {
-				return fmt.Errorf("failed to enter application name: %w", err)
-			}
-			if inputs.Name == "" {
-				return fmt.Errorf("application name cannot be empty")
-			}
-		}
-		if inputs.Name == "" {
-			return fmt.Errorf("application name cannot be empty")
-		}
+	// -- Step 5: Collect application/API name --.
+	if err = collectName(cmd, inputs); err != nil {
+		return err
 	}
 
-	// -- Step 3d: Prompt for port if not explicitly set --.
+	// -- Step 6: Prompt for port if not explicitly set --.
 	if inputs.App && inputs.Type != "native" && inputs.Type != "m2m" {
 		portStr := strconv.Itoa(inputs.Port)
-		if err := setupExpPort.AskInt(cmd, &inputs.Port, &portStr); err != nil {
+		if err := setupPort.AskInt(cmd, &inputs.Port, &portStr); err != nil {
 			return fmt.Errorf("failed to enter port: %w", err)
 		}
 		if inputs.Port < 1024 || inputs.Port > 65535 {
@@ -665,85 +677,26 @@ func runSetupQuickstart(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error
 		}
 	}
 
-	// -- Step 3c: Collect API name for API-only flow --.
-	if inputs.API && !inputs.App {
-		// Collect API name if not already set (pre-fill from CWD folder name).
-		if inputs.Name == "" && !setupExpName.IsSet(cmd) {
-			cwd, _ := os.Getwd()
-			defaultName := filepath.Base(cwd)
-			if defaultName == "" || defaultName == "." {
-				defaultName = "my-api"
-			}
-			inputs.Name = defaultName
-			if err := setupExpName.Ask(cmd, &inputs.Name, &defaultName); err != nil {
-				return fmt.Errorf("failed to enter application name: %w", err)
-			}
-		}
-	}
-
+	// -- Step 7: Collect API-specific inputs (identifier, signing alg, token lifetime) --.
 	if inputs.API {
-		// Prompt for the identifier if not explicitly provided via flag.
-		if !setupExpIdentifier.IsSet(cmd) {
-			// Compute a suggested default without pre-populating inputs.Identifier.
-			defaultID := inputs.Identifier
-			if defaultID == "" && inputs.Name != "" {
-				slug := strings.ToLower(strings.ReplaceAll(inputs.Name, " ", "-"))
-				defaultID = "https://" + slug
-			}
-			inputs.Identifier = defaultID
-			if err := setupExpIdentifier.Ask(cmd, &inputs.Identifier, &defaultID); err != nil {
-				return fmt.Errorf("failed to enter API identifier: %w", err)
-			}
-		}
-
-		if inputs.Identifier == "" {
-			return fmt.Errorf("API identifier cannot be empty: use --identifier flag")
-		}
-
-		if err := validateAPIIdentifier(inputs.Identifier); err != nil {
+		if err := collectAPIInputs(cmd, cli, inputs); err != nil {
 			return err
 		}
-
-		// If the flag was not set, prompt interactively; fall back to 86400 in non-interactive mode.
-		if inputs.TokenLifetime == "" {
-			defaultLifetime := "86400"
-			inputs.TokenLifetime = defaultLifetime
-			if err := setupExpTokenLifetime.Ask(cmd, &inputs.TokenLifetime, &defaultLifetime); err != nil {
-				return fmt.Errorf("failed to enter token lifetime: %w", err)
-			}
-			if inputs.TokenLifetime == "" {
-				cli.renderer.Warnf("Token lifetime left blank; using default 86400 seconds (24 hours)")
-				inputs.TokenLifetime = defaultLifetime
-			}
-		}
-
-		if inputs.SigningAlg == "" {
-			signingAlgs := []string{"RS256", "PS256", "HS256"}
-			defaultAlg := "RS256"
-			inputs.SigningAlg = defaultAlg
-			if err := setupExpSigningAlg.Select(cmd, &inputs.SigningAlg, signingAlgs, &defaultAlg); err != nil {
-				return fmt.Errorf("failed to select signing algorithm: %w", err)
-			}
-		}
-
-		if alg := inputs.SigningAlg; alg != "RS256" && alg != "PS256" && alg != "HS256" {
-			return fmt.Errorf("invalid signing algorithm %q: must be RS256, PS256, or HS256", alg)
-		}
-
 	}
 
-	// -- Step 4: Create the Auth0 application client --.
+	// -- Step 8: Create the Auth0 application client --.
 	if inputs.App {
 		clientID, err := createQuickstartApp(cmd, cli, *inputs, qsConfigKey)
 		if err != nil {
 			return err
 		}
-		linkedAppClientID = clientID
+		// Store the new client ID so Step 9 can link it to the API via a client grant.
+		inputs.LinkedAppID = clientID
 	}
 
-	// -- Step 5: Create the Auth0 API resource server --.
+	// -- Step 9: Create the Auth0 API resource server --.
 	if inputs.API {
-		if err := createQuickstartAPI(ctx, cli, *inputs, linkedAppClientID); err != nil {
+		if err := createQuickstartAPI(ctx, cli, *inputs); err != nil {
 			return err
 		}
 	}
@@ -759,43 +712,61 @@ func resolveSetupTargets(inputs *SetupInputs, canPromptFlag bool) error {
 	if !canPromptFlag {
 		return fmt.Errorf("in --no-input mode, specify at least one of --app or --api")
 	}
-	var selections []string
-	if err := prompt.AskMultiSelect(
-		"What do you want to create? ",
-		&selections,
-		"App Only", "API (Associate with an App)",
-	); err != nil {
-		return fmt.Errorf("failed to select target resource(s): %w", err)
+
+	const (
+		optApp = "App Only"
+		optAPI = "API (Associate with an App)"
+	)
+
+	var selection string
+	q := prompt.SelectInput(
+		"setup-target",
+		"What do you want to create?",
+		"Select App to create an application, or API to create an API linked to an app.",
+		[]string{optApp, optAPI},
+		optApp,
+		true,
+	)
+	if err := prompt.AskOne(q, &selection); err != nil {
+		return fmt.Errorf("failed to select target resource: %w", err)
 	}
-	for _, s := range selections {
-		switch strings.ToLower(s) {
-		case "app only":
-			inputs.App = true
-		case "api (associate with an app)":
-			inputs.API = true
-		}
-	}
-	if !inputs.App && !inputs.API {
-		return fmt.Errorf("please select at least one option: App and/or API")
+
+	switch selection {
+	case optApp:
+		inputs.App = true
+	case optAPI:
+		inputs.API = true
+	default:
+		return fmt.Errorf("unexpected selection: %q", selection)
 	}
 	return nil
 }
 
-// resolveAPIAppLink handles the API-only flow's app-linking decision.
-// It prompts the user to either create a new app (flips inputs.App so the
-// regular App-creation flow runs) or link an existing app (sets
-// *linkedAppClientID via the standard app picker).
-// It is a no-op when the user already chose to create an app, when API was
-// not requested, or when prompts are disabled.
+// resolveAPIAppLink handles the API flow's app-linking decision.
+// It either sets inputs.LinkedAppID (via picker or flag) or flips inputs.App=true
+// so the regular App-creation flow runs and the new client ID is assigned later.
 func resolveAPIAppLink(
 	cmd *cobra.Command,
 	cli *cli,
 	inputs *SetupInputs,
-	linkedAppClientID *string,
 	canPromptFlag bool,
 ) error {
-	if !inputs.API || inputs.App || !canPromptFlag {
+	if !inputs.API {
 		return nil
+	}
+
+	// --app and --api both set: create a new app and link it.
+	if inputs.App {
+		return nil
+	}
+
+	// --linked-app-id flag already provided.
+	if inputs.LinkedAppID != "" {
+		return nil
+	}
+
+	if !canPromptFlag {
+		return fmt.Errorf("in --no-input mode with --api, specify --app to create a new app or --linked-app-id <client-id> to link an existing one")
 	}
 
 	const (
@@ -828,9 +799,96 @@ func resolveAPIAppLink(
 	}
 	return appPicker.Pick(
 		cmd,
-		linkedAppClientID,
+		&inputs.LinkedAppID,
 		cli.appPickerOptions(management.Parameter("app_type", "native,spa,regular_web")),
 	)
+}
+
+// collectName prompts for the application/API name if not already provided.
+func collectName(cmd *cobra.Command, inputs *SetupInputs) error {
+	if setupName.IsSet(cmd) {
+		if inputs.Name == "" {
+			return fmt.Errorf("application name cannot be empty")
+		}
+		return nil
+	}
+
+	switch {
+	case inputs.App:
+		defaultName := inputs.Name
+		if defaultName == "" {
+			defaultName = "My App"
+		}
+		inputs.Name = defaultName
+		if err := setupName.Ask(cmd, &inputs.Name, &defaultName); err != nil {
+			return fmt.Errorf("failed to enter application name: %w", err)
+		}
+		if inputs.Name == "" {
+			return fmt.Errorf("application name cannot be empty")
+		}
+
+	case inputs.API && inputs.Name == "":
+		cwd, _ := os.Getwd()
+		defaultName := filepath.Base(cwd)
+		if defaultName == "" || defaultName == "." {
+			defaultName = "my-api"
+		}
+		inputs.Name = defaultName
+		if err := setupName.Ask(cmd, &inputs.Name, &defaultName); err != nil {
+			return fmt.Errorf("failed to enter API name: %w", err)
+		}
+	}
+	return nil
+}
+
+// collectAPIInputs prompts for identifier, token lifetime, and signing algorithm.
+func collectAPIInputs(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error {
+	// Identifier.
+	if !setupIdentifier.IsSet(cmd) {
+		defaultID := inputs.Identifier
+		if defaultID == "" && inputs.Name != "" {
+			slug := strings.ToLower(strings.ReplaceAll(inputs.Name, " ", "-"))
+			defaultID = "https://" + slug
+		}
+		inputs.Identifier = defaultID
+		if err := setupIdentifier.Ask(cmd, &inputs.Identifier, &defaultID); err != nil {
+			return fmt.Errorf("failed to enter API identifier: %w", err)
+		}
+	}
+	if inputs.Identifier == "" {
+		return fmt.Errorf("API identifier cannot be empty: use --identifier flag")
+	}
+	if err := validateAPIIdentifier(inputs.Identifier); err != nil {
+		return err
+	}
+
+	// Token lifetime.
+	if inputs.TokenLifetime == "" {
+		defaultLifetime := strconv.Itoa(apiDefaultTokenLifetime)
+		inputs.TokenLifetime = defaultLifetime
+		if err := setupTokenLifetime.Ask(cmd, &inputs.TokenLifetime, &defaultLifetime); err != nil {
+			return fmt.Errorf("failed to enter token lifetime: %w", err)
+		}
+		if inputs.TokenLifetime == "" {
+			cli.renderer.Warnf("Token lifetime left blank; using default %d seconds (24 hours)", apiDefaultTokenLifetime)
+			inputs.TokenLifetime = strconv.Itoa(apiDefaultTokenLifetime)
+		}
+	}
+
+	// Signing algorithm.
+	if inputs.SigningAlg == "" {
+		signingAlgs := []string{"RS256", "PS256", "HS256"}
+		defaultAlg := "RS256"
+		inputs.SigningAlg = defaultAlg
+		if err := setupSigningAlg.Select(cmd, &inputs.SigningAlg, signingAlgs, &defaultAlg); err != nil {
+			return fmt.Errorf("failed to select signing algorithm: %w", err)
+		}
+	}
+	if alg := inputs.SigningAlg; alg != "RS256" && alg != "PS256" && alg != "HS256" {
+		return fmt.Errorf("invalid signing algorithm %q: must be RS256, PS256, or HS256", alg)
+	}
+
+	return nil
 }
 
 // handleProjectDetection runs project auto-detection for app flows and reconciles
@@ -854,18 +912,30 @@ func handleProjectDetection(cmd *cobra.Command, cli *cli, inputs *SetupInputs, c
 	case inputs.Type == "m2m":
 		return nil
 
-	case setupExpType.IsSet(cmd) && setupExpFramework.IsSet(cmd):
-		// Skip the disk scan unless BuildTool or BundleID is needed.
+	case setupType.IsSet(cmd) && setupFramework.IsSet(cmd):
 		typeFramework := inputs.Type + ":" + inputs.Framework
-		needsBuildTool := !setupExpBuildTool.IsSet(cmd) && auth0.FrameworkBuildToolRequired(typeFramework)
-		needsBundleID := inputs.BundleID == "" && auth0.IsBundleIDRequired(typeFramework)
 
-		if needsBuildTool || needsBundleID {
-			detection := DetectProject(cwd)
-			if needsBuildTool && detection.BuildTool != "" {
-				inputs.BuildTool = detection.BuildTool
+		// Resolve build tool from the known supported values when not explicitly set.
+		if !setupBuildTool.IsSet(cmd) {
+			if tools := auth0.FrameworkSupportedBuildTools[typeFramework]; len(tools) == 1 {
+				inputs.BuildTool = tools[0]
+				cli.renderer.Warnf("Auto-selected build tool %q for %s/%s", inputs.BuildTool, inputs.Type, inputs.Framework)
+			} else if len(tools) > 1 {
+				if !canPromptFlag {
+					inputs.BuildTool = tools[0]
+					cli.renderer.Warnf("Multiple build tools available for %s/%s; auto-selected %q (use --build-tool to override)", inputs.Type, inputs.Framework, inputs.BuildTool)
+				} else {
+					if err := setupBuildTool.Select(cmd, &inputs.BuildTool, tools, &tools[0]); err != nil {
+						return fmt.Errorf("failed to select build tool: %w", err)
+					}
+				}
 			}
-			if needsBundleID && detection.BundleID != "" {
+		}
+
+		// Only do a disk scan if the bundle ID is still needed.
+		if inputs.BundleID == "" && auth0.IsBundleIDRequired(typeFramework) {
+			detection := DetectProject(cwd)
+			if detection.BundleID != "" {
 				inputs.BundleID = detection.BundleID
 			}
 		}
@@ -885,7 +955,7 @@ func handleProjectDetection(cmd *cobra.Command, cli *cli, inputs *SetupInputs, c
 					if noInputMode {
 						inputs.Framework = detection.AmbiguousFrameworks[0]
 					} else {
-						if err := setupExpFramework.Select(cmd, &inputs.Framework, detection.AmbiguousFrameworks, auth0.String(detection.AmbiguousFrameworks[0])); err != nil {
+						if err := setupFramework.Select(cmd, &inputs.Framework, detection.AmbiguousFrameworks, auth0.String(detection.AmbiguousFrameworks[0])); err != nil {
 							return fmt.Errorf("failed to select framework: %w", err)
 						}
 					}
@@ -971,11 +1041,11 @@ func printClientDetails(cli *cli, client *management.Client) {
 	cli.renderer.Detailf(ansi.Magenta(settingsURL))
 	cli.renderer.Newline()
 
-	if client.Callbacks != nil && len(client.GetCallbacks()) > 0 {
+	if len(client.GetCallbacks()) > 0 {
 		cli.renderer.Successf("Callback URLs registered in Auth0 Dashboard: %s", ansi.Magenta(strings.Join(client.GetCallbacks(), ", ")))
 		cli.renderer.Newline()
 	}
-	if client.AllowedLogoutURLs != nil && len(client.GetAllowedLogoutURLs()) > 0 {
+	if len(client.GetAllowedLogoutURLs()) > 0 {
 		cli.renderer.Successf("Logout URLs registered: %s", ansi.Magenta(strings.Join(client.GetAllowedLogoutURLs(), ", ")))
 		cli.renderer.Newline()
 	}
@@ -1002,52 +1072,10 @@ func createQuickstartApp(cmd *cobra.Command, cli *cli, inputs SetupInputs, qsCon
 		return "", fmt.Errorf("unsupported quickstart arguments: %s. Supported types: %v", qsConfigKey, getSupportedQuickstartTypes())
 	}
 
-	// For Expo, read the production URI scheme from app.json (expo.scheme).
-	// Custom schemes like "myapp://" are not registered automatically because
-	// Auth0 API rejects bare custom-scheme URIs (no host component). Instead,
-	// the scheme is surfaced in post-setup guidance so the user can add it manually.
-	var expoScheme string
-	if inputs.Framework == "expo" {
-		if cwd, cwdErr := os.Getwd(); cwdErr == nil {
-			expoScheme = readExpoScheme(cwd)
-			if expoScheme == "" {
-				// Warn when app.json has a scheme that is not a valid RFC 3986 URI scheme.
-				if raw := readRawExpoScheme(cwd); raw != "" {
-					cli.renderer.Warnf("app.json expo.scheme %q is not a valid URI scheme (must start with a letter and contain only letters, digits, +, -, .); scheme will be ignored.", raw)
-				}
-			}
-		}
-	}
+	expoScheme := readExpoScheme(inputs.Framework)
+	nativeBundleID := resolveNativeBundleID(inputs)
 
-	// Resolve the bundle/package ID for native app guidance output.
-	// The callback URL includes the Auth0 domain, so it can only be constructed after
-	// the tenant config is fetched below.
-	// Prefer the BundleID already populated by DetectProject to avoid re-reading disk.
-	var nativeBundleID string
-	switch {
-	case inputs.BundleID != "":
-		nativeBundleID = inputs.BundleID
-	case inputs.Framework == "flutter" || inputs.Framework == "react-native":
-		// Fallback for when framework was specified via --framework flag (detection not run).
-		if cwd, cwdErr := os.Getwd(); cwdErr == nil {
-			nativeBundleID = readMobileBundleID(cwd)
-		}
-	case inputs.Framework == "maui" || inputs.Framework == "dotnet-mobile":
-		if cwd, cwdErr := os.Getwd(); cwdErr == nil {
-			if csprojContent, ok := findCsprojContent(cwd); ok {
-				nativeBundleID = readDotnetMobileBundleID(csprojContent)
-			}
-		}
-	case inputs.Framework == "ionic-angular" || inputs.Framework == "ionic-react" || inputs.Framework == "ionic-vue":
-		// Fallback for when framework was specified via --framework flag (detection not run).
-		if cwd, cwdErr := os.Getwd(); cwdErr == nil {
-			nativeBundleID = readCapacitorAppID(cwd)
-		}
-	}
-
-	// For dotnet-mobile and MAUI, the custom URI scheme callback is derived from the
-	// ApplicationId in the .csproj. Register it in Auth0 when the bundle ID is known
-	// so the developer does not need a manual dashboard update.
+	// For dotnet-mobile/MAUI, register the custom URI scheme callback.
 	if (inputs.Framework == "dotnet-mobile" || inputs.Framework == "maui") && nativeBundleID != "" {
 		config.RequestParams.Callbacks = []string{nativeBundleID + "://callback"}
 	}
@@ -1063,8 +1091,7 @@ func createQuickstartApp(cmd *cobra.Command, cli *cli, inputs SetupInputs, qsCon
 		return "", fmt.Errorf("failed to create application: %w", err)
 	}
 
-	// When an API is also being created, inject the audience variable so the
-	// config file contains the API identifier the app should request tokens for.
+	// Inject the audience variable when an API is also being created.
 	envValues := config.EnvValues
 	if inputs.API && inputs.Identifier != "" && config.AudienceVar != "" {
 		envValues = make(map[string]string, len(config.EnvValues)+1)
@@ -1082,11 +1109,66 @@ func createQuickstartApp(cmd *cobra.Command, cli *cli, inputs SetupInputs, qsCon
 	if err := cli.WriteQuickstartConfig(cmd, resolvedEnv, &config.Strategy); err != nil {
 		return "", fmt.Errorf("failed to generate config file: %w", err)
 	}
-	printClientDetails(cli, client)
 
-	// Post-setup guidance for Expo: exp://localhost:19000 only covers Expo Go.
-	// Inform the user about EAS/production build requirements.
-	if inputs.Framework == "expo" {
+	printClientDetails(cli, client)
+	printNativeGuidance(cli, inputs.Framework, expoScheme, nativeBundleID)
+
+	return client.GetClientID(), nil
+}
+
+// readExpoScheme reads the "expo.scheme" field from app.json in the working directory.
+// Returns the raw string value, or empty if the framework is not expo or the file is missing.
+func readExpoScheme(framework string) string {
+	if framework != "expo" {
+		return ""
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	data, err := os.ReadFile(filepath.Join(cwd, "app.json"))
+	if err != nil {
+		return ""
+	}
+	var obj struct {
+		Expo struct {
+			Scheme string `json:"scheme"`
+		} `json:"expo"`
+	}
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return ""
+	}
+	return obj.Expo.Scheme
+}
+
+// resolveNativeBundleID determines the bundle/package ID for native frameworks.
+func resolveNativeBundleID(inputs SetupInputs) string {
+	if inputs.BundleID != "" {
+		return inputs.BundleID
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+
+	switch inputs.Framework {
+	case "flutter", "react-native":
+		return readMobileBundleID(cwd)
+	case "maui", "dotnet-mobile":
+		if content, ok := findCsprojContent(cwd); ok {
+			return readDotnetMobileBundleID(content)
+		}
+	case "ionic-angular", "ionic-react", "ionic-vue":
+		return readCapacitorAppID(cwd)
+	}
+	return ""
+}
+
+// printNativeGuidance prints post-setup callback URL guidance for native frameworks.
+func printNativeGuidance(cli *cli, framework, expoScheme, bundleID string) {
+	switch framework {
+	case "expo":
 		if expoScheme != "" {
 			cli.renderer.Infof("Note: exp://localhost:19000 is registered for Expo Go development.")
 			cli.renderer.Infof("For EAS/production builds, add %s:// to Allowed Callback URLs in the Auth0 Dashboard.", expoScheme)
@@ -1094,47 +1176,32 @@ func createQuickstartApp(cmd *cobra.Command, cli *cli, inputs SetupInputs, qsCon
 			cli.renderer.Infof("Note: exp://localhost:19000 is for Expo Go development only.")
 			cli.renderer.Infof("For EAS/production builds, add your custom scheme URI (e.g., myapp://) to Allowed Callback URLs in the Auth0 Dashboard.")
 		}
-	}
-
-	// Post-setup guidance for Flutter and .NET Mobile apps: show the
-	// callback URLs to register in the Auth0 Dashboard. These use the
-	// app's bundle/package ID and the tenant domain, both of which are
-	// now available.
-	switch inputs.Framework {
 	case "flutter", "react-native":
-		if nativeBundleID != "" {
-			// The bundle ID is used directly as the URI scheme. RFC 3986 permits
-			// hyphens in URI schemes, and both iOS CFBundleURLSchemes and Android
-			// intent filters support them natively.
+		if bundleID != "" {
 			cli.renderer.Infof("Add these Allowed Callback URLs in the Auth0 Dashboard:")
-			cli.renderer.Infof("  Android: %s://%s/android/%s/callback", nativeBundleID, cli.tenant, nativeBundleID)
-			cli.renderer.Infof("  iOS:     %s://%s/ios/%s/callback", nativeBundleID, cli.tenant, nativeBundleID)
+			cli.renderer.Infof("  Android: %s://%s/android/%s/callback", bundleID, cli.tenant, bundleID)
+			cli.renderer.Infof("  iOS:     %s://%s/ios/%s/callback", bundleID, cli.tenant, bundleID)
 		}
 	case "maui", "dotnet-mobile":
-		if nativeBundleID != "" {
-			cli.renderer.Infof("Registered %s://callback as the Allowed Callback URL.", nativeBundleID)
+		if bundleID != "" {
+			cli.renderer.Infof("Registered %s://callback as the Allowed Callback URL.", bundleID)
 		}
 	case "ionic-angular", "ionic-react", "ionic-vue":
-		if nativeBundleID != "" {
-			// Capacitor intercepts http://localhost in the WebView (already registered).
-			// Surface the appId so the user can configure deep links if needed.
-			cli.renderer.Infof("Capacitor app ID: %s", nativeBundleID)
+		if bundleID != "" {
+			cli.renderer.Infof("Capacitor app ID: %s", bundleID)
 			cli.renderer.Infof("http://localhost is registered as the Allowed Callback URL (Capacitor WebView).")
 		} else {
-			// No Capacitor config found - remind the user where it should be.
 			cli.renderer.Warnf("Could not read Capacitor app ID. Ensure capacitor.config.json or capacitor.config.ts is present in your project root.")
 			cli.renderer.Infof("http://localhost is registered as the Allowed Callback URL (Capacitor WebView).")
 		}
 	case "jhipster":
 		cli.renderer.Infof("Refer to JHipster documentation to complete the setup: https://www.jhipster.tech/security/#auth0")
 	}
-
-	return client.GetClientID(), nil
 }
 
 // createQuickstartAPI creates an Auth0 API resource server and optionally links it to an
 // existing application client via a client grant.
-func createQuickstartAPI(ctx context.Context, cli *cli, inputs SetupInputs, linkedAppClientID string) error {
+func createQuickstartAPI(ctx context.Context, cli *cli, inputs SetupInputs) error {
 	// API name = "<app-name>-API", fallback to identifier.
 	apiName := inputs.Identifier
 	if inputs.Name != "" {
@@ -1143,21 +1210,18 @@ func createQuickstartAPI(ctx context.Context, cli *cli, inputs SetupInputs, link
 
 	tokenLifetime, tokenErr := strconv.Atoi(inputs.TokenLifetime)
 	if tokenErr != nil || tokenLifetime <= 0 {
-		if inputs.TokenLifetime != "" && inputs.TokenLifetime != "86400" {
-			cli.renderer.Warnf("Invalid token lifetime %q, using default 86400 seconds", inputs.TokenLifetime)
+		if inputs.TokenLifetime != "" && inputs.TokenLifetime != strconv.Itoa(apiDefaultTokenLifetime) {
+			cli.renderer.Warnf("Invalid token lifetime %q, using default %d seconds", inputs.TokenLifetime, apiDefaultTokenLifetime)
 		}
-		tokenLifetime = 86400
+		tokenLifetime = apiDefaultTokenLifetime
 	}
 
 	rs := &management.ResourceServer{
-		Name:             &apiName,
-		Identifier:       &inputs.Identifier,
-		SigningAlgorithm: &inputs.SigningAlg,
-		TokenLifetime:    &tokenLifetime,
-	}
-	if inputs.OfflineAccess {
-		allow := true
-		rs.AllowOfflineAccess = &allow
+		Name:               &apiName,
+		Identifier:         &inputs.Identifier,
+		SigningAlgorithm:   &inputs.SigningAlg,
+		TokenLifetime:      &tokenLifetime,
+		AllowOfflineAccess: &inputs.OfflineAccess,
 	}
 
 	if inputs.Scopes != "" {
@@ -1175,15 +1239,15 @@ func createQuickstartAPI(ctx context.Context, cli *cli, inputs SetupInputs, link
 	if err := ansi.Waiting(func() error {
 		return cli.api.ResourceServer.Create(ctx, rs)
 	}); err != nil {
-		return fmt.Errorf("failed to create API: %w", err)
+		return fmt.Errorf("failed to create API with name %q and identifier %q: %w", apiName, inputs.Identifier, err)
 	}
 	printAPIDetails(cli, rs)
 
 	// Link the app to the API via a client grant if an app was selected/created.
-	if linkedAppClientID != "" {
+	if inputs.LinkedAppID != "" {
 		emptyScopes := []string{}
 		grant := &management.ClientGrant{
-			ClientID: &linkedAppClientID,
+			ClientID: &inputs.LinkedAppID,
 			Audience: &inputs.Identifier,
 			Scope:    &emptyScopes,
 		}
@@ -1262,7 +1326,7 @@ func resolveSetupInputs(cmd *cobra.Command, inputs *SetupInputs) (bool, error) {
 	// Prompt for --type if not provided.
 	if inputs.Type == "" {
 		defaultType := "spa"
-		if err := setupExpType.Select(cmd, &inputs.Type, validTypes, &defaultType); err != nil {
+		if err := setupType.Select(cmd, &inputs.Type, validTypes, &defaultType); err != nil {
 			return false, fmt.Errorf("failed to select application type: %w", err)
 		}
 	}
@@ -1278,7 +1342,7 @@ func resolveSetupInputs(cmd *cobra.Command, inputs *SetupInputs) (bool, error) {
 		if len(frameworks) == 0 {
 			return false, fmt.Errorf("no frameworks available for type %q", inputs.Type)
 		}
-		if err := setupExpFramework.Select(cmd, &inputs.Framework, frameworks, &frameworks[0]); err != nil {
+		if err := setupFramework.Select(cmd, &inputs.Framework, frameworks, &frameworks[0]); err != nil {
 			return false, fmt.Errorf("failed to select framework: %w", err)
 		}
 	}
@@ -1366,14 +1430,14 @@ func defaultPortForFramework(framework string) int {
 
 // validateAPIIdentifier returns an error if identifier is not a valid http:// or https:// URL.
 func validateAPIIdentifier(identifier string) error {
-	// ParseRequestURI is stricter than Parse: it rejects relative URLs, fragments,
-	// and empty strings. The host check still catches bare schemes like "http://"
-	// that ParseRequestURI accepts without error.
-	_, err := url.ParseRequestURI(identifier)
-	if err == nil || len(identifier) != 24 {
-		return nil
+	u, err := url.ParseRequestURI(identifier)
+	if err != nil {
+		return fmt.Errorf("invalid API identifier %q: must be a valid URI (e.g. https://my-api)", identifier)
 	}
-	return fmt.Errorf("invalid API identifier %q: must be a valid URL beginning with http:// or https://", identifier)
+	if u.Scheme == "" || u.Host == "" {
+		return fmt.Errorf("invalid API identifier %q: must include a scheme and host (e.g. https://my-api)", identifier)
+	}
+	return nil
 }
 
 func generateClient(input SetupInputs, reqParams auth0.RequestParams) (*management.Client, error) {

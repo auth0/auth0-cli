@@ -962,9 +962,10 @@ func TestCreateQuickstartAPI_CreatesResourceServerAndGrant(t *testing.T) {
 		Identifier:    "https://my-api",
 		SigningAlg:    "RS256",
 		TokenLifetime: "86400",
+		LinkedAppID:   "linked-app-client-id",
 	}
 
-	err := createQuickstartAPI(context.Background(), testCLI, inputs, "linked-app-client-id")
+	err := createQuickstartAPI(context.Background(), testCLI, inputs)
 	assert.NoError(t, err)
 }
 
@@ -1000,6 +1001,6 @@ func TestCreateQuickstartAPI_NoLinkedApp_SkipsGrant(t *testing.T) {
 		SigningAlg: "RS256",
 	}
 
-	err := createQuickstartAPI(context.Background(), testCLI, inputs, "")
+	err := createQuickstartAPI(context.Background(), testCLI, inputs)
 	assert.NoError(t, err)
 }

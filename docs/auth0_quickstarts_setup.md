@@ -5,15 +5,12 @@ has_toc: false
 ---
 # auth0 quickstarts setup
 
-Creates an Auth0 application and/or API and generates a config file with the necessary Auth0 settings.
+Auto-detects your project, creates an Auth0 application and/or API, and generates a config file.
 
-The command will:
-  1. Check if you are authenticated (and prompt for login if needed)
-  2. Auto-detect your project framework from the current directory
-  3. Create an Auth0 application and/or API resource server
-  4. Generate a config file with the appropriate environment variables
-
-Supported frameworks are dynamically loaded from the QuickstartConfigs map.
+Workflows:
+  --app                          Create an application (auto-detects framework).
+  --api                          Create an API (prompts to create or link an app).
+  --api --linked-app-id <id>     Create an API linked to an existing application.
 
 ## Usage
 ```
@@ -23,10 +20,23 @@ auth0 quickstarts setup [flags]
 ## Examples
 
 ```
+  # Interactive setup:
   auth0 quickstarts setup
-  auth0 quickstarts setup --app --framework react --type spa
-  auth0 quickstarts setup --api --identifier https://my-api
-  auth0 quickstarts setup --app --api --name "My App"
+
+  # App only:
+  auth0 quickstarts setup --app --type spa --framework react
+
+  # App with all options:
+  auth0 quickstarts setup --app --type spa --framework react --build-tool vite --name "My SPA" --port 5173
+
+  # API + new app:
+  auth0 quickstarts setup --api --app --type regular --framework express --identifier https://my-api
+
+  # API + existing app:
+  auth0 quickstarts setup --api --linked-app-id <client-id> --identifier https://my-api
+
+  # API with custom settings:
+  auth0 quickstarts setup --api --linked-app-id <client-id> --identifier https://my-api --scopes "read:data,write:data"
 ```
 
 
@@ -40,6 +50,7 @@ auth0 quickstarts setup [flags]
       --callback-url string     Override the allowed callback URL for the application
       --framework string        Framework to configure (e.g., react, nextjs, vue, express)
       --identifier string       Unique URL identifier for the API (audience), e.g. https://my-api
+      --linked-app-id string    [API] Client ID of an existing application to link to the API (skips app creation)
       --logout-url string       Override the allowed logout URL for the application
       --name string             Name of the Auth0 application
       --offline-access          Allow offline access (enables refresh tokens)
