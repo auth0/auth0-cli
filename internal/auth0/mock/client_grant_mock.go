@@ -35,6 +35,25 @@ func (m *MockClientGrantAPI) EXPECT() *MockClientGrantAPIMockRecorder {
 	return m.recorder
 }
 
+// Create mocks base method.
+func (m *MockClientGrantAPI) Create(ctx context.Context, g *management.ClientGrant, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, g}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Create", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockClientGrantAPIMockRecorder) Create(ctx, g interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, g}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockClientGrantAPI)(nil).Create), varargs...)
+}
+
 // List mocks base method.
 func (m *MockClientGrantAPI) List(ctx context.Context, opts ...management.RequestOption) (*management.ClientGrantList, error) {
 	m.ctrl.T.Helper()
