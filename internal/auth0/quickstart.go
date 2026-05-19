@@ -597,7 +597,7 @@ var QuickstartConfigs = map[string]AppConfig{
 			Callbacks:         []string{DetectionSub},
 			AllowedLogoutURLs: []string{DetectionSub},
 			Name:              DetectionSub,
-			// okta-spring-boot-starter registers redirect under "oidc" registration ID.
+			// Okta-spring-boot-starter registers redirect under "oidc" registration ID.
 			CallbackPath: "/login/oauth2/code/oidc",
 		},
 		Strategy: FileOutputStrategy{Path: "src/main/resources/application.yml", Format: "yaml"},
