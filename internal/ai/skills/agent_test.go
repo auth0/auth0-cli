@@ -115,7 +115,7 @@ func TestSupportedAgents(t *testing.T) {
 	})
 
 	t.Run("agents with no detection are detectable-never", func(t *testing.T) {
-		// openhands, trae, and universal have nil markers/binaries meaning IsInstalled always
+		// Openhands, trae, and universal have nil markers/binaries meaning IsInstalled always
 		// returns false for them; they are included through explicit ID checks instead.
 		noDetectIDs := []string{"openhands", "trae", "universal"}
 		byID := make(map[string]AgentConfig)
