@@ -275,6 +275,7 @@ func (f *clientGrantResourceFetcher) FetchData(ctx context.Context) (importDataL
 
 		for _, grant := range grants.ClientGrants {
 			var resourceName string
+			// Grants with default_for have no client_id; use the default_for value as prefix instead.
 			if grant.GetDefaultFor() != "" {
 				resourceName = "auth0_client_grant." + sanitizeResourceName("default_for_"+grant.GetDefaultFor()+"_"+grant.GetAudience())
 			} else {
