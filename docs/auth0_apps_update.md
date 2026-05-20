@@ -31,7 +31,6 @@ auth0 apps update [flags]
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"
   auth0 apps update <app-id> --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
   auth0 apps update <app-id> --redirection-policy allow_always
-  auth0 apps update <app-id> --third-party-security-mode strict --redirection-policy open_redirect_protection
 ```
 
 
@@ -43,6 +42,7 @@ auth0 apps update [flags]
   -c, --callbacks strings                   After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.
   -d, --description string                  Description of the application. Max character count is 140.
   -g, --grants strings                      List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.
+  -f, --is-first-party                      Whether the application is a first-party client (true) or third-party client (false). (default true)
       --json                                Output in json format.
       --json-compact                        Output in compact json format.
   -l, --logout-urls strings                 Comma-separated list of URLs that are valid to redirect to after logout from Auth0. Wildcards are allowed for subdomains.

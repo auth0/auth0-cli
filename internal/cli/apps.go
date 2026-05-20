@@ -176,6 +176,12 @@ var (
 		ShortForm: "p",
 		Help:      "Comma-separated list of enabled token exchange types for this client. Possible values: custom_authentication, on_behalf_of_token_exchange.",
 	}
+	appIsFirstParty = Flag{
+		Name:      "Is First Party",
+		LongForm:  "is-first-party",
+		ShortForm: "f",
+		Help:      "Whether the application is a first-party client (true) or third-party client (false).",
+	}
 	appThirdPartySecurityMode = Flag{
 		Name:      "Third Party Security Mode",
 		LongForm:  "third-party-security-mode",
@@ -446,6 +452,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 		RefreshToken             string
 		ResourceServerIdentifier string
 		AllowAnyProfileOfType    []string
+		IsFirstParty             bool
 		ThirdPartySecurityMode   string
 		RedirectionPolicy        string
 	}
@@ -471,7 +478,7 @@ func createAppCmd(cli *cli) *cobra.Command {
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar,bazz=buzz"
   auth0 apps create --name "My API Client" --type resource_server --resource-server-identifier "https://api.example.com"
   auth0 apps create --name myapp --type resource_server --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
-  auth0 apps create --name "My 3P App" --type regular --third-party-security-mode strict --redirection-policy open_redirect_protection`,
+  auth0 apps create --name "My 3P App" --type regular --is-first-party=false --third-party-security-mode strict --redirection-policy open_redirect_protection`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -489,7 +496,9 @@ func createAppCmd(cli *cli) *cobra.Command {
 			appIsNative := apiTypeFor(inputs.Type) == appTypeNative
 			appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
 			appIsResourceServer := apiTypeFor(inputs.Type) == appTypeResourceServer
-			isThirdPartyApp := inputs.ThirdPartySecurityMode != "" || inputs.RedirectionPolicy != ""
+
+			// IsFirstParty flag is explisitly set to false
+			isThirdPartyApp := appIsFirstParty.IsSet(cmd) && !inputs.IsFirstParty
 
 			// Prompt for callback URLs if app is not m2m and not resource_server.
 			if !appIsM2M && !appIsResourceServer {
@@ -609,14 +618,15 @@ func createAppCmd(cli *cli) *cobra.Command {
 				a.TokenEndpointAuthMethod = apiAuthMethodFor(inputs.AuthMethod)
 			}
 
+			// Set first and third party fields.
+			if appIsFirstParty.IsSet(cmd) {
+				a.IsFirstParty = auth0.Bool(inputs.IsFirstParty)
+			}
 			if inputs.ThirdPartySecurityMode != "" {
 				a.ThirdPartySecurityMode = &inputs.ThirdPartySecurityMode
 			}
 			if inputs.RedirectionPolicy != "" {
 				a.RedirectionPolicy = &inputs.RedirectionPolicy
-			}
-			if isThirdPartyApp {
-				a.IsFirstParty = auth0.Bool(false)
 			}
 
 			// Set grants.
@@ -659,6 +669,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 	appTEAllowAnyProfileOfType.RegisterStringSlice(cmd, &inputs.AllowAnyProfileOfType, nil)
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 	refreshToken.RegisterString(cmd, &inputs.RefreshToken, "")
+	appIsFirstParty.RegisterBool(cmd, &inputs.IsFirstParty, true)
 	appThirdPartySecurityMode.RegisterString(cmd, &inputs.ThirdPartySecurityMode, "")
 	appRedirectionPolicy.RegisterString(cmd, &inputs.RedirectionPolicy, "")
 
@@ -681,6 +692,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		Metadata               map[string]string
 		RefreshToken           string
 		AllowAnyProfileOfType  []string
+		IsFirstParty           bool
 		ThirdPartySecurityMode string
 		RedirectionPolicy      string
 	}
@@ -704,8 +716,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"
   auth0 apps update <app-id> --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
-  auth0 apps update <app-id> --redirection-policy allow_always
-  auth0 apps update <app-id> --third-party-security-mode strict --redirection-policy open_redirect_protection`,
+  auth0 apps update <app-id> --redirection-policy allow_always`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.Client
 
@@ -879,6 +890,10 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			if appIsFirstParty.IsSet(cmd) {
+				a.IsFirstParty = auth0.Bool(inputs.IsFirstParty)
+			}
+
 			if appThirdPartySecurityMode.IsSet(cmd) {
 				a.ThirdPartySecurityMode = &inputs.ThirdPartySecurityMode
 			}
@@ -914,6 +929,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 	appTEAllowAnyProfileOfType.RegisterStringSliceU(cmd, &inputs.AllowAnyProfileOfType, nil)
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 	refreshToken.RegisterString(cmd, &inputs.RefreshToken, "")
+	appIsFirstParty.RegisterBoolU(cmd, &inputs.IsFirstParty, true)
 	appThirdPartySecurityMode.RegisterStringU(cmd, &inputs.ThirdPartySecurityMode, "")
 	appRedirectionPolicy.RegisterStringU(cmd, &inputs.RedirectionPolicy, "")
 

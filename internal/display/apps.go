@@ -40,6 +40,7 @@ type applicationView struct {
 	RefreshToken             string
 	ResourceServerIdentifier string
 	AllowAnyProfileOfType    []string
+	IsFirstParty             *bool
 	ThirdPartySecurityMode   string
 	RedirectionPolicy        string
 	revealSecret             bool
@@ -128,6 +129,10 @@ func (v *applicationView) KeyValues() [][]string {
 
 	if len(v.AllowAnyProfileOfType) > 0 {
 		keyValues = append(keyValues, []string{"TOKEN EXCHANGE TYPES", strings.Join(v.AllowAnyProfileOfType, ", ")})
+	}
+
+	if v.IsFirstParty != nil {
+		keyValues = append(keyValues, []string{"IS FIRST PARTY", boolean(*v.IsFirstParty)})
 	}
 
 	if v.ThirdPartySecurityMode != "" {
@@ -223,6 +228,7 @@ func makeApplicationView(client *management.Client, revealSecrets bool) *applica
 		Metadata:                 mapPointerToArray(client.ClientMetadata),
 		ResourceServerIdentifier: client.GetResourceServerIdentifier(),
 		AllowAnyProfileOfType:    client.GetTokenExchange().GetAllowAnyProfileOfType(),
+		IsFirstParty:             client.IsFirstParty,
 		ThirdPartySecurityMode:   client.GetThirdPartySecurityMode(),
 		RedirectionPolicy:        client.GetRedirectionPolicy(),
 		raw:                      client,
