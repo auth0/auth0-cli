@@ -497,7 +497,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 			appIsSPA := apiTypeFor(inputs.Type) == appTypeSPA
 			appIsResourceServer := apiTypeFor(inputs.Type) == appTypeResourceServer
 
-			// IsFirstParty flag is explisitly set to false
+			// IsFirstParty flag is explisitly set to false.
 			isThirdPartyApp := appIsFirstParty.IsSet(cmd) && !inputs.IsFirstParty
 
 			// Prompt for callback URLs if app is not m2m and not resource_server.
