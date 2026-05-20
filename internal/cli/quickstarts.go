@@ -2,7 +2,9 @@ package cli
 
 import (
 	"context"
+	"crypto/rand"
 	_ "embed"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -14,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
@@ -423,28 +426,6 @@ func (i *qsInputs) fromArgs(cmd *cobra.Command, args []string, cli *cli) error {
 	return nil
 }
 
-var (
-	qsType = Flag{
-		Name:       "Type",
-		LongForm:   "type",
-		ShortForm:  "t",
-		Help:       "Type of quickstart (vite, nextjs, fastify, jhipster-rwa)",
-		IsRequired: true,
-	}
-	qsAppName = Flag{
-		Name:      "Name",
-		LongForm:  "name",
-		ShortForm: "n",
-		Help:      "Name of the Auth0 application (default: 'My App' for vite, nextjs and fastify, 'JHipster' for jhipster-rwa)",
-	}
-	qsPort = Flag{
-		Name:      "Port",
-		LongForm:  "port",
-		ShortForm: "p",
-		Help:      "Port number for the application (default: 5173 for vite, 3000 for nextjs/fastify, 8080 for jhipster-rwa)",
-	}
-)
-
 // Flags for the setup command.
 var (
 	setupApp = Flag{
@@ -849,6 +830,14 @@ func collectAPIInputs(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error {
 		if defaultID == "" && inputs.Name != "" {
 			slug := strings.ToLower(strings.ReplaceAll(inputs.Name, " ", "-"))
 			defaultID = "https://" + slug
+
+			// Check once if the clean slug is taken; if so, append a random suffix
+			// so the rerun doesn't collide. Respects user input — only suggests, doesn't force.
+			if _, err := cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(defaultID)); err == nil {
+				suffixed := fmt.Sprintf("%s-%s", defaultID, randomSlugSuffix(4))
+				cli.renderer.Warnf("API identifier %q is already in use. Generated a new identifier %q to avoid conflict.", defaultID, suffixed)
+				defaultID = suffixed
+			}
 		}
 		inputs.Identifier = defaultID
 		if err := setupIdentifier.Ask(cmd, &inputs.Identifier, &defaultID); err != nil {
@@ -860,6 +849,11 @@ func collectAPIInputs(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error {
 	}
 	if err := validateAPIIdentifier(inputs.Identifier); err != nil {
 		return err
+	}
+
+	// Fail fast if the (possibly user-overridden) identifier is already taken — avoids creating an orphaned app.
+	if _, err := cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(inputs.Identifier)); err == nil {
+		return fmt.Errorf("an API with identifier %q already exists; use a different identifier or delete the existing API first", inputs.Identifier)
 	}
 
 	// Token lifetime.
@@ -1421,8 +1415,10 @@ func defaultPortForFramework(framework string) int {
 		return 8000
 	case "laravel":
 		return 8000
-	case "spring-boot", "java-ee", "vanilla-java", "jhipster":
+	case "java-ee", "vanilla-java", "jhipster":
 		return 8080
+	case "aspnet-mvc", "aspnet-owin":
+		return 5000
 	default:
 		return 3000
 	}
@@ -1438,6 +1434,17 @@ func validateAPIIdentifier(identifier string) error {
 		return fmt.Errorf("invalid API identifier %q: must include a scheme and host (e.g. https://my-api)", identifier)
 	}
 	return nil
+}
+
+// randomSlugSuffix returns a lowercase hex string of the requested byte length
+// (each byte expands to 2 hex chars). Falls back to a timestamp-based suffix if
+// the crypto source fails, which should not happen in practice.
+func randomSlugSuffix(n int) string {
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		return strconv.FormatInt(time.Now().UnixNano(), 36)
+	}
+	return hex.EncodeToString(b)
 }
 
 func generateClient(input SetupInputs, reqParams auth0.RequestParams) (*management.Client, error) {

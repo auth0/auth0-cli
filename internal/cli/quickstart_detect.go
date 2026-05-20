@@ -35,7 +35,7 @@ func DetectProject(dir string) DetectionResult {
 	// Read package.json deps early - needed for checks that must precede file-based signals.
 	earlyDeps := readPackageJSONDeps(dir)
 
-	// -- 1. manage.py (Django) — checked before Ionic to prevent monorepo misdetection.
+	// -- 1. Manage.py (Django) — checked before Ionic to prevent monorepo misdetection.
 	if fileExists(dir, "manage.py") {
 		result.Framework = "django"
 		result.Type = "regular"
@@ -76,7 +76,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// -- 4. pubspec.yaml (Flutter) --.
+	// -- 4. Pubspec.yaml (Flutter) --.
 	if data, ok := readFileContent(dir, "pubspec.yaml"); ok {
 		if strings.Contains(data, "sdk: flutter") {
 			result.Detected = true

@@ -1216,7 +1216,7 @@ func TestDefaultPortForFramework(t *testing.T) {
 		// Regular - PHP.
 		{"laravel", 8000},
 		// Regular - Java.
-		{"spring-boot", 8080},
+		{"spring-boot", 3000},
 		{"java-ee", 8080},
 		{"vanilla-java", 8080},
 		// Regular - default 3000.
@@ -1230,6 +1230,8 @@ func TestDefaultPortForFramework(t *testing.T) {
 		{"vanilla-go", 3000},
 		{"django", 8000},
 		// Native - default 3000.
+		{"aspnet-mvc", 5000},
+		{"aspnet-owin", 5000},
 		{"flutter", 3000},
 		{"react-native", 3000},
 		{"expo", 3000},
