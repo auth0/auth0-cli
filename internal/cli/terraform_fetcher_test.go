@@ -771,11 +771,11 @@ func TestClientGrantResourceFetcher_FetchData(t *testing.T) {
 				ImportID:     "cgr_1",
 			},
 			{
-				ResourceName: "auth0_client_grant.default_for_third_party_clients_https_travel0_com_api",
+				ResourceName: "auth0_client_grant.third_party_clients_https_travel0_com_api",
 				ImportID:     "cgr_2",
 			},
 			{
-				ResourceName: "auth0_client_grant.default_for_third_party_clients_https_partner_api_example_com",
+				ResourceName: "auth0_client_grant.third_party_clients_https_partner_api_example_com",
 				ImportID:     "cgr_3",
 			},
 		}
