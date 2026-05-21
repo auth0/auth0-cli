@@ -102,6 +102,13 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 			c.renderer.Warnf("Failed to renew access token: %s", err)
 			c.renderer.Warnf("Please log in to re-authorize the CLI.\n")
 
+			// In --no-input mode, fail immediately instead of hanging on an interactive prompt.
+			if c.noInput {
+				return fmt.Errorf(
+					"auth token expired and --no-input is set; run 'auth0 login' to re-authenticate",
+				)
+			}
+
 			// Determine tenant domain for login.
 			tenantDomain := ""
 			if c.Config.DefaultTenant != "" {

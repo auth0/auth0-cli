@@ -35,18 +35,20 @@ var (
 	}
 
 	testAudience = Flag{
-		Name:      "Audience",
-		LongForm:  "audience",
-		ShortForm: "a",
-		Help:      "The unique identifier of the target API you want to access. For Machine to Machine Applications, only the enabled APIs will be shown within the interactive prompt.",
+		Name:        "Identifier",
+		LongForm:    "identifier",
+		ShortForm:   "a",
+		Help:        "The unique identifier of the target API you want to access. For Machine to Machine Applications, only the enabled APIs will be shown within the interactive prompt.",
+		AlsoKnownAs: []string{"audience"},
 	}
 
 	testAudienceRequired = Flag{
-		Name:       testAudience.Name,
-		LongForm:   testAudience.LongForm,
-		ShortForm:  testAudience.ShortForm,
-		Help:       testAudience.Help,
-		IsRequired: true,
+		Name:        testAudience.Name,
+		LongForm:    testAudience.LongForm,
+		ShortForm:   testAudience.ShortForm,
+		Help:        testAudience.Help,
+		IsRequired:  true,
+		AlsoKnownAs: testAudience.AlsoKnownAs,
 	}
 
 	testScopes = Flag{
@@ -115,16 +117,16 @@ func testLoginCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 test login
   auth0 test login <client-id>
   auth0 test login <client-id> --connection-name <connection-name>
-  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience>
-  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --organization <org-id>
-  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --domain <domain> --params "foo=bar"
-  auth0 test login <client-id> --connection-name <connection-name> --audience <api-identifier|api-audience> --domain <domain> --scopes <scope1,scope2>
-  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --force
-  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --json
-  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --json-compact
-  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -o <org-id> -s <scope1,scope2> -p "foo=bar" -p "bazz=buzz" --json
-  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -o <org-id> -s <scope1,scope2> -p "foo=bar","bazz=buzz" --json
-  auth0 test login <client-id> -c <connection-name> -a <api-identifier|api-audience> -d <domain> -s <scope1,scope2> --force --json`,
+  auth0 test login <client-id> --connection-name <connection-name> --identifier <api-identifier>
+  auth0 test login <client-id> --connection-name <connection-name> --identifier <api-identifier> --organization <org-id>
+  auth0 test login <client-id> --connection-name <connection-name> --identifier <api-identifier> --domain <domain> --params "foo=bar"
+  auth0 test login <client-id> --connection-name <connection-name> --identifier <api-identifier> --domain <domain> --scopes <scope1,scope2>
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier> -d <domain> -s <scope1,scope2> --force
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier> -d <domain> -s <scope1,scope2> --json
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier> -d <domain> -s <scope1,scope2> --json-compact
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier> -d <domain> -o <org-id> -s <scope1,scope2> -p "foo=bar" -p "bazz=buzz" --json
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier> -d <domain> -o <org-id> -s <scope1,scope2> -p "foo=bar","bazz=buzz" --json
+  auth0 test login <client-id> -c <connection-name> -a <api-identifier> -d <domain> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := selectClientToUseForTestsAndValidateExistence(cli, cmd, args, &inputs)
 			if err != nil {
@@ -207,17 +209,17 @@ func testTokenCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Request an access token for a given application and API",
 		Long: "Request an access token for a given application. " +
-			"Specify the API you want this token for with `--audience` (API Identifier). " +
+			"Specify the API you want this token for with `--identifier` (API Identifier). " +
 			"Additionally, you can also specify the `--scopes` to grant.",
 		Example: `  auth0 test token
-  auth0 test token <client-id> --audience <api-audience|api-identifier> --organization <org-id> --scopes <scope1,scope2> --params "foo=bar"
-  auth0 test token <client-id> -a <api-audience|api-identifier> -o <org-id> -s <scope1,scope2>
-  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --force
-  auth0 test token <client-id> -a <api-audience|api-identifier> -o <org-id> -s <scope1,scope2> -p "foo=bar" -p "bazz=buzz" --force
-  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --json
-  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --json-compact
-  auth0 test token <client-id> -a <api-audience|api-identifier> -o <org-id> -s <scope1,scope2> -p "foo=bar","bazz=buzz" --json
-  auth0 test token <client-id> -a <api-audience|api-identifier> -s <scope1,scope2> --force --json`,
+  auth0 test token <client-id> --identifier <api-identifier> --organization <org-id> --scopes <scope1,scope2> --params "foo=bar"
+  auth0 test token <client-id> -a <api-identifier> -o <org-id> -s <scope1,scope2>
+  auth0 test token <client-id> -a <api-identifier> -s <scope1,scope2> --force
+  auth0 test token <client-id> -a <api-identifier> -o <org-id> -s <scope1,scope2> -p "foo=bar" -p "bazz=buzz" --force
+  auth0 test token <client-id> -a <api-identifier> -s <scope1,scope2> --json
+  auth0 test token <client-id> -a <api-identifier> -s <scope1,scope2> --json-compact
+  auth0 test token <client-id> -a <api-identifier> -o <org-id> -s <scope1,scope2> -p "foo=bar","bazz=buzz" --json
+  auth0 test token <client-id> -a <api-identifier> -s <scope1,scope2> --force --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var tokenResponse *authutil.TokenResponse
 
