@@ -92,6 +92,7 @@ func eventStreamsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(redeliverEventStreamCmd(cli))
 	cmd.AddCommand(redeliverManyEventStreamCmd(cli))
 	cmd.AddCommand(statsEventStreamCmd(cli))
+	cmd.AddCommand(subscribeEventStreamCmd(cli))
 	return cmd
 }
 
