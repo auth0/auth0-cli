@@ -31,6 +31,7 @@ auth0 apps create [flags]
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar,bazz=buzz"
   auth0 apps create --name "My API Client" --type resource_server --resource-server-identifier "https://api.example.com"
   auth0 apps create --name myapp --type resource_server --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
+  auth0 apps create --name "My 3P App" --type regular --is-first-party=false --third-party-security-mode strict --redirection-policy open_redirect_protection
 ```
 
 
@@ -42,15 +43,18 @@ auth0 apps create [flags]
   -c, --callbacks strings                   After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.
   -d, --description string                  Description of the application. Max character count is 140.
   -g, --grants strings                      List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.
+  -f, --is-first-party                      Whether the application is a first-party client (true) or third-party client (false). (default true)
       --json                                Output in json format.
       --json-compact                        Output in compact json format.
   -l, --logout-urls strings                 Comma-separated list of URLs that are valid to redirect to after logout from Auth0. Wildcards are allowed for subdomains.
       --metadata stringToString             Arbitrary keys-value pairs (max 255 characters each), that  can be assigned to each application. More about application metadata: https://auth0.com/docs/get-started/applications/configure-application-metadata (default [])
   -n, --name string                         Name of the application.
   -o, --origins strings                     Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.
+  -y, --redirection-policy string           Controls whether Auth0 redirects users to the application's callback URL on authentication errors or in email verification flows: 'allow_always' or 'open_redirect_protection'. Require --is-first-party=false
   -z, --refresh-token string                Refresh Token Config for the application, formatted as JSON.
       --resource-server-identifier string   The identifier of the resource server that this client is associated with. This property can only be sent when app_type=resource_server and cannot be changed once the client is created.
   -r, --reveal-secrets                      Display the application secrets ('signing_keys', 'client_secret') as part of the command output.
+  -s, --third-party-security-mode string    Security mode for third-party clients: 'strict' or 'permissive'. Require --is-first-party=false
   -t, --type string                         Type of application:
                                             - native: mobile, desktop, CLI and smart device apps running natively.
                                             - spa (single page application): a JavaScript front-end app that uses an API.
