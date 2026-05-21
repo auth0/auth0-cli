@@ -87,6 +87,42 @@ func TestSecrets(t *testing.T) {
 		assert.Equal(t, expectedAccessToken, actualAccessToken)
 	})
 
+	t.Run("it overwrites a previously stored token without leaving stale chunks", func(t *testing.T) {
+		keyring.MockInit()
+
+		// Store a long token spanning several chunks.
+		longToken := randomStringOfLength((2048 * 5) + 1)
+		err := StoreAccessToken(testTenantName, longToken)
+		assert.NoError(t, err)
+
+		// Overwrite with a token that fits in a single chunk.
+		shortToken := "short-token"
+		err = StoreAccessToken(testTenantName, shortToken)
+		assert.NoError(t, err)
+
+		// Must return exactly the short token, with no trailing chunks
+		// left over from the longer one (which would corrupt the JWT).
+		actualAccessToken, err := GetAccessToken(testTenantName)
+		assert.NoError(t, err)
+		assert.Equal(t, shortToken, actualAccessToken)
+	})
+
+	t.Run("it does not delete the client secret when storing an access token", func(t *testing.T) {
+		keyring.MockInit()
+
+		err := StoreClientSecret(testTenantName, "the-client-secret")
+		assert.NoError(t, err)
+
+		err = StoreAccessToken(testTenantName, "an-access-token")
+		assert.NoError(t, err)
+
+		// Storing the access token must not clobber the client secret,
+		// otherwise machine logins cannot refresh their token.
+		actualClientSecret, err := GetClientSecret(testTenantName)
+		assert.NoError(t, err)
+		assert.Equal(t, "the-client-secret", actualClientSecret)
+	})
+
 	t.Run("it successfully retrieves an access token split up into multiple chunks", func(t *testing.T) {
 		keyring.MockInit()
 
