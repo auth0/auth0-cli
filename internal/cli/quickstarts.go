@@ -2,9 +2,7 @@ package cli
 
 import (
 	"context"
-	"crypto/rand"
 	_ "embed"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -16,7 +14,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
@@ -822,7 +819,6 @@ func collectName(cmd *cobra.Command, inputs *SetupInputs) error {
 	return nil
 }
 
-// collectAPIInputs prompts for identifier, token lifetime, and signing algorithm.
 func collectAPIInputs(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error {
 	// Identifier.
 	if !setupIdentifier.IsSet(cmd) {
@@ -830,14 +826,6 @@ func collectAPIInputs(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error {
 		if defaultID == "" && inputs.Name != "" {
 			slug := strings.ToLower(strings.ReplaceAll(inputs.Name, " ", "-"))
 			defaultID = "https://" + slug
-
-			// Check once if the clean slug is taken; if so, append a random suffix
-			// so the rerun doesn't collide. Respects user input — only suggests, doesn't force.
-			if _, err := cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(defaultID)); err == nil {
-				suffixed := fmt.Sprintf("%s-%s", defaultID, randomSlugSuffix(4))
-				cli.renderer.Warnf("API identifier %q is already in use. Generated a new identifier %q to avoid conflict.", defaultID, suffixed)
-				defaultID = suffixed
-			}
 		}
 		inputs.Identifier = defaultID
 		if err := setupIdentifier.Ask(cmd, &inputs.Identifier, &defaultID); err != nil {
@@ -1434,17 +1422,6 @@ func validateAPIIdentifier(identifier string) error {
 		return fmt.Errorf("invalid API identifier %q: must include a scheme and host (e.g. https://my-api)", identifier)
 	}
 	return nil
-}
-
-// randomSlugSuffix returns a lowercase hex string of the requested byte length
-// (each byte expands to 2 hex chars). Falls back to a timestamp-based suffix if
-// the crypto source fails, which should not happen in practice.
-func randomSlugSuffix(n int) string {
-	b := make([]byte, n)
-	if _, err := rand.Read(b); err != nil {
-		return strconv.FormatInt(time.Now().UnixNano(), 36)
-	}
-	return hex.EncodeToString(b)
 }
 
 func generateClient(input SetupInputs, reqParams auth0.RequestParams) (*management.Client, error) {
