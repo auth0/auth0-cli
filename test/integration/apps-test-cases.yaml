@@ -376,3 +376,29 @@ tests:
   050 - given a resource server app, it successfully deletes the app:
     command: auth0 apps delete $(./test/integration/scripts/get-resource-server-app-id.sh) --force
     exit-code: 0
+
+  051 - it successfully creates a third-party app with strict security mode:
+    command: ./test/integration/scripts/get-3p-app-id.sh
+    exit-code: 0
+
+  052 - it successfully shows a third-party app with security mode and redirection policy in json:
+    command: auth0 apps show $(./test/integration/scripts/get-3p-app-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        name: integration-test-app-3p-strict
+        app_type: regular_web
+        is_first_party: "false"
+        third_party_security_mode: strict
+        redirection_policy: open_redirect_protection
+
+  053 - it successfully updates the redirection-policy of a third-party app and outputs in json:
+    command: auth0 apps update $(./test/integration/scripts/get-3p-app-id.sh) --redirection-policy allow_always --json
+    exit-code: 0
+    stdout:
+      json:
+        redirection_policy: allow_always
+
+  054 - given a third-party app, it successfully deletes the app:
+    command: auth0 apps delete $(./test/integration/scripts/get-3p-app-id.sh) --force
+    exit-code: 0
