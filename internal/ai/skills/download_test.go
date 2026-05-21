@@ -80,7 +80,7 @@ func assertFileContent(t *testing.T, path, want string) {
 	assert.Equal(t, want, string(data))
 }
 
-// --- extractEntry ---
+// --- extractEntry ---.
 
 func TestExtractEntry(t *testing.T) {
 	open := func(content string) func() (io.ReadCloser, error) {
@@ -137,7 +137,7 @@ func TestExtractEntry(t *testing.T) {
 	})
 }
 
-// --- extractTarGzSubtree ---
+// --- extractTarGzSubtree ---.
 
 func TestExtractTarGzSubtree(t *testing.T) {
 	const prefix = "repo-main/plugins/auth0/"
@@ -171,7 +171,7 @@ func TestExtractTarGzSubtree(t *testing.T) {
 	})
 }
 
-// --- extractZipSubtree ---
+// --- extractZipSubtree ---.
 
 func TestExtractZipSubtree(t *testing.T) {
 	const prefix = "repo-main/plugins/auth0/"
@@ -203,7 +203,7 @@ func TestExtractZipSubtree(t *testing.T) {
 	})
 }
 
-// --- mergeDir ---
+// --- mergeDir ---.
 
 func TestMergeDir(t *testing.T) {
 	t.Run("copies flat files", func(t *testing.T) {
@@ -230,7 +230,7 @@ func TestMergeDir(t *testing.T) {
 	})
 }
 
-// --- fetchToTempFile ---
+// --- fetchToTempFile ---.
 
 func TestFetchToTempFile(t *testing.T) {
 	t.Run("returns open seeked file and byte count on 200", func(t *testing.T) {
@@ -265,7 +265,7 @@ func TestFetchToTempFile(t *testing.T) {
 	})
 }
 
-// --- fetchCommitSHA ---
+// --- fetchCommitSHA ---.
 
 func TestFetchCommitSHA(t *testing.T) {
 	shaResponse := func(sha string) roundTripFunc {

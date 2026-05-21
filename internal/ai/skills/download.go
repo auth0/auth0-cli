@@ -20,7 +20,7 @@ const (
 	agentSkillsAPI    = "https://api.github.com/repos/auth0/agent-skills/commits/"
 	pluginSubtreePath = "plugins/auth0"
 	skillsHTTPTimeout = 60 * time.Second
-	maxSkillsDownload = 100 * 1024 * 1024 // 100 MB
+	maxSkillsDownload = 100 * 1024 * 1024 // 100 MB.
 )
 
 var skillsHTTPClient = &http.Client{Timeout: skillsHTTPTimeout}
@@ -192,9 +192,7 @@ func downloadViaZip(targetDir, ref string) (string, error) {
 	return fetchCommitSHA(ref)
 }
 
-// extractTarGzSubtree reads a .tar.gz from r and copies entries whose name starts with
-// prefix into destDir (stripping the prefix from the output path).
-// extractEntry writes a single archive entry to destDir. isDir and mode describe the entry;
+// ExtractEntry writes a single archive entry to destDir. IsDir and mode describe the entry;
 // open returns a reader for its content (ignored when isDir is true). The name is checked
 // against prefix and any path-traversal attempt is rejected.
 func extractEntry(name string, isDir bool, mode os.FileMode, open func() (io.ReadCloser, error), prefix, destDir string) error {
@@ -260,7 +258,7 @@ func extractTarGzSubtree(r io.Reader, prefix, destDir string) error {
 // extractZipSubtree opens the ZIP at zipPath (with known size) and copies entries whose
 // name starts with prefix into destDir (stripping the prefix).
 func extractZipSubtree(zipPath string, size int64, prefix, destDir string) error {
-	// zip.NewReader needs an io.ReaderAt, so we re-open the file.
+	// Zip.NewReader needs an io.ReaderAt, so we re-open the file.
 	f, err := os.Open(zipPath)
 	if err != nil {
 		return err
