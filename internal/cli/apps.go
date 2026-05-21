@@ -186,13 +186,13 @@ var (
 		Name:      "Third Party Security Mode",
 		LongForm:  "third-party-security-mode",
 		ShortForm: "s",
-		Help:      "Security mode for third-party clients: 'strict' or 'permissive'.",
+		Help:      "Security mode for third-party clients: 'strict' or 'permissive'. Require --is-first-party=false",
 	}
 	appRedirectionPolicy = Flag{
 		Name:      "Redirection Policy",
 		LongForm:  "redirection-policy",
 		ShortForm: "y",
-		Help:      "Controls whether Auth0 redirects users to the application's callback URL on authentication errors or in email verification flows: 'allow_always' or 'open_redirect_protection'.",
+		Help:      "Controls whether Auth0 redirects users to the application's callback URL on authentication errors or in email verification flows: 'allow_always' or 'open_redirect_protection'. Require --is-first-party=false",
 	}
 )
 

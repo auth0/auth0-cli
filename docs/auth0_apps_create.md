@@ -50,11 +50,11 @@ auth0 apps create [flags]
       --metadata stringToString             Arbitrary keys-value pairs (max 255 characters each), that  can be assigned to each application. More about application metadata: https://auth0.com/docs/get-started/applications/configure-application-metadata (default [])
   -n, --name string                         Name of the application.
   -o, --origins strings                     Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.
-  -y, --redirection-policy string           Controls whether Auth0 redirects users to the application's callback URL on authentication errors or in email verification flows: 'allow_always' or 'open_redirect_protection'.
+  -y, --redirection-policy string           Controls whether Auth0 redirects users to the application's callback URL on authentication errors or in email verification flows: 'allow_always' or 'open_redirect_protection'. Require --is-first-party=false
   -z, --refresh-token string                Refresh Token Config for the application, formatted as JSON.
       --resource-server-identifier string   The identifier of the resource server that this client is associated with. This property can only be sent when app_type=resource_server and cannot be changed once the client is created.
   -r, --reveal-secrets                      Display the application secrets ('signing_keys', 'client_secret') as part of the command output.
-  -s, --third-party-security-mode string    Security mode for third-party clients: 'strict' or 'permissive'.
+  -s, --third-party-security-mode string    Security mode for third-party clients: 'strict' or 'permissive'. Require --is-first-party=false
   -t, --type string                         Type of application:
                                             - native: mobile, desktop, CLI and smart device apps running natively.
                                             - spa (single page application): a JavaScript front-end app that uses an API.
