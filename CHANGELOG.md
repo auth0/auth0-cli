@@ -5,7 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## [Unreleased]
+
+# [v1.31.0](https://github.com/auth0/auth0-cli/tree/v1.31.0) (May 22, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.30.0...v1.31.0)
+
+### Added
+- Add project detection support for `auth0 quickstarts setup` [#1476]
+- Add support for streaming of live subscribed events in `auth0 event-streams` [#1518]
+- Add support for third party app security params in `auth0 clients`  [#1522]
+- Add phone notification template support in `auth0 tf generate -r auth0_phone_notification_template` [#1514]
+- Add support for Action Configuration on Event Streams in `auth0 actions`  [#1474]
+
+### Fixed
+- Fix keyring: clear stale access-token chunks instead of deleting the client secret [#1527]
 
 # [v.1.30.0](https://github.com/auth0/auth0-cli/tree/v1.30.0) (April 30, 2026)
 
@@ -725,11 +740,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating of action triggers which inevitably results in error [#597]
 
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.30.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.31.0...HEAD
+[#1527]: https://github.com/auth0/auth0-cli/pull/1527
+[#1522]: https://github.com/auth0/auth0-cli/pull/1522
+[#1518]: https://github.com/auth0/auth0-cli/pull/1518
+[#1514]: https://github.com/auth0/auth0-cli/pull/1514
 [#1504]: https://github.com/auth0/auth0-cli/pull/1504
 [#1501]: https://github.com/auth0/auth0-cli/pull/1501
 [#1491]: https://github.com/auth0/auth0-cli/pull/1491
+[#1476]: https://github.com/auth0/auth0-cli/pull/1476
 [#1475]: https://github.com/auth0/auth0-cli/pull/1475
+[#1474]: https://github.com/auth0/auth0-cli/pull/1474
 [#1471]: https://github.com/auth0/auth0-cli/pull/1471
 [#1470]: https://github.com/auth0/auth0-cli/pull/1470
 [#1462]: https://github.com/auth0/auth0-cli/pull/1462
