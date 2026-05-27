@@ -404,7 +404,10 @@ func createUserCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to find connection with name %q: %w", inputs.connectionName, err)
 			}
 
-			if len(connection.GetEnabledClients()) == 0 {
+			// A nil slice means enabled_clients was null in the API response,
+			// which means the connection is enabled for all applications.
+			// Only reject if explicitly set to an empty slice (disabled for all).
+			if enabledClients := connection.GetEnabledClients(); enabledClients != nil && len(enabledClients) == 0 {
 				return fmt.Errorf(
 					"failed to continue due to the connection with name %q being disabled, enable an application on this connection and try again",
 					inputs.connectionName,
@@ -894,7 +897,10 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 				return fmt.Errorf("failed to read connection with name %q: %w", inputs.ConnectionName, err)
 			}
 
-			if len(connection.GetEnabledClients()) == 0 {
+			// A nil slice means enabled_clients was null in the API response,
+			// which means the connection is enabled for all applications.
+			// Only reject if explicitly set to an empty slice (disabled for all).
+			if enabledClients := connection.GetEnabledClients(); enabledClients != nil && len(enabledClients) == 0 {
 				return fmt.Errorf(
 					"failed to continue due to the connection with name %q being disabled, enable an application on this connection and try again",
 					inputs.ConnectionName,
@@ -996,7 +1002,10 @@ func (c *cli) databaseAndPasswordlessConnectionOptions(ctx context.Context) ([]s
 
 	var connectionNames []string
 	for _, connection := range connectionList.Connections {
-		if len(connection.GetEnabledClients()) == 0 {
+		// A nil slice means enabled_clients was null in the API response,
+		// which means the connection is enabled for all applications.
+		// Only skip if explicitly set to an empty slice (disabled for all).
+		if enabledClients := connection.GetEnabledClients(); enabledClients != nil && len(enabledClients) == 0 {
 			continue
 		}
 
