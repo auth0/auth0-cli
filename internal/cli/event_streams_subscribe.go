@@ -15,6 +15,7 @@ import (
 	"time"
 
 	managementv2 "github.com/auth0/go-auth0/v2/management"
+	managementoption "github.com/auth0/go-auth0/v2/management/option"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -66,7 +67,58 @@ var (
 		Help: "Append every received event as a JSON line to this file (raw payload). " +
 			"Independent of the stdout format.",
 	}
+
+	eventSubscribeNoReconnect = Flag{
+		Name:     "No Reconnect",
+		LongForm: "no-reconnect",
+		Help: "Disable transparent mid-stream reconnection. By default the SDK " +
+			"reconnects up to 5 times when the connection drops, preserving " +
+			"the cursor so no events are missed.",
+	}
+
+	eventSubscribeMaxReconnects = Flag{
+		Name:     "Max Reconnects",
+		LongForm: "max-reconnects",
+		Help: "Maximum number of transparent mid-stream reconnect attempts. " +
+			"0 keeps the SDK default (5). Ignored when --no-reconnect is set.",
+	}
+
+	eventSubscribeListEventTypes = Flag{
+		Name:     "List Event Types",
+		LongForm: "list-event-types",
+		Help: "Print every event type accepted by --event-type and exit, " +
+			"without opening a subscription.",
+	}
 )
+
+// supportedEventTypes drives --list-event-types and validates --event-type
+// values up front so all bad values can be reported in one error. Sourced from
+// SDK enum constants so a rename or removal in go-auth0 is a compile-time
+// failure here. New types added to the SDK still need a manual append.
+var supportedEventTypes = []string{
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumGroupCreated),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumGroupDeleted),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumGroupMemberAdded),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumGroupMemberDeleted),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumGroupRoleAssigned),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumGroupRoleDeleted),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumGroupUpdated),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationConnectionAdded),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationConnectionRemoved),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationConnectionUpdated),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationCreated),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationDeleted),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationGroupRoleAssigned),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationGroupRoleDeleted),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationMemberAdded),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationMemberDeleted),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationMemberRoleAssigned),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationMemberRoleDeleted),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationUpdated),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumUserCreated),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumUserDeleted),
+	string(managementv2.EventStreamSubscribeEventsEventTypeEnumUserUpdated),
+}
 
 type subscribeInputs struct {
 	From           string
@@ -75,6 +127,9 @@ type subscribeInputs struct {
 	Verbose        bool
 	ShowHeartbeats bool
 	OutputFile     string
+	NoReconnect    bool
+	MaxReconnects  int
+	ListEventTypes bool
 }
 
 func subscribeEventStreamCmd(cli *cli) *cobra.Command {
@@ -92,8 +147,10 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 			"Heartbeat (`offset-only`) messages are suppressed by default and surfaced via " +
 			"a periodic faint indicator and a final cursor on disconnect; pass --show-heartbeats " +
 			"to render each one. Press Ctrl+C to disconnect; a per-type summary and the " +
-			"latest cursor will be printed so you can resume with --from.",
+			"latest cursor will be printed so you can resume with --from.\n\n" +
+			"Run with --list-event-types to print every value accepted by --event-type.",
 		Example: `  auth0 event-streams subscribe
+  auth0 event-streams subscribe --list-event-types
   auth0 event-streams subscribe --event-type user.created
   auth0 event-streams subscribe --event-type user.created --event-type user.updated
   auth0 event-streams subscribe --from-timestamp 2026-05-01T00:00:00Z
@@ -103,6 +160,14 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
   auth0 event-streams subscribe --output-file events.jsonl
   auth0 event-streams subscribe --json | jq .`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.ListEventTypes {
+				cli.renderer.Infof(ansi.Bold("Supported event types:"))
+				for _, t := range supportedEventTypes {
+					cli.renderer.Output("  " + t)
+				}
+				return nil
+			}
+
 			req := &managementv2.SubscribeEventsRequestParameters{}
 
 			if inputs.From != "" {
@@ -113,6 +178,7 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 			}
 			if len(inputs.EventTypes) > 0 {
 				eventTypes := make([]*managementv2.EventStreamSubscribeEventsEventTypeEnum, 0, len(inputs.EventTypes))
+				var invalid []string
 				for _, t := range inputs.EventTypes {
 					t = strings.TrimSpace(t)
 					if t == "" {
@@ -120,9 +186,13 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 					}
 					enum, err := managementv2.NewEventStreamSubscribeEventsEventTypeEnumFromString(t)
 					if err != nil {
-						return fmt.Errorf("invalid --event-type value %q: %w", t, err)
+						invalid = append(invalid, t)
+						continue
 					}
 					eventTypes = append(eventTypes, enum.Ptr())
+				}
+				if len(invalid) > 0 {
+					return invalidEventTypesError(invalid)
 				}
 				req.EventType = eventTypes
 			}
@@ -137,7 +207,14 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 				outFile = f
 			}
 
-			stream, err := cli.apiv2.Events.Subscribe(cmd.Context(), req)
+			var subscribeOpts []managementoption.RequestOption
+			if inputs.NoReconnect {
+				subscribeOpts = append(subscribeOpts, managementoption.WithoutStreamReconnection())
+			} else if inputs.MaxReconnects > 0 {
+				subscribeOpts = append(subscribeOpts, managementoption.WithMaxStreamReconnectAttempts(uint(inputs.MaxReconnects)))
+			}
+
+			stream, err := cli.apiv2.Events.Subscribe(cmd.Context(), req, subscribeOpts...)
 			if err != nil {
 				return fmt.Errorf("failed to subscribe to events: %w", err)
 			}
@@ -151,12 +228,14 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 			counts := map[string]int{}
 			var (
 				totalEvents     uint64
+				errorEvents     uint64
 				heartbeats      uint64
 				lastOffset      string
 				lastHeartbeatAt time.Time
 				countsMu        sync.Mutex
 				summaryOnce     sync.Once
 				streamClosed    atomic.Bool
+				startedAt       = time.Now()
 			)
 
 			flushSummary := func() {
@@ -167,23 +246,50 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 					countsMu.Lock()
 					defer countsMu.Unlock()
 
+					total := atomic.LoadUint64(&totalEvents)
+					errs := atomic.LoadUint64(&errorEvents)
+					hbs := atomic.LoadUint64(&heartbeats)
+					duration := time.Since(startedAt).Round(time.Second)
+
 					cli.renderer.Newline()
 					cli.renderer.Infof(ansi.Bold("Disconnected. Summary:"))
-					cli.renderer.Infof("  Events received: %d", atomic.LoadUint64(&totalEvents))
-					cli.renderer.Infof("  Heartbeats:      %d", atomic.LoadUint64(&heartbeats))
+					cli.renderer.Infof("  Duration:        %s", duration)
+					cli.renderer.Infof("  Events received: %d", total)
+					if errs > 0 {
+						cli.renderer.Infof("  Errors:          %s", ansi.BrightRed(fmt.Sprintf("%d", errs)))
+					}
+					cli.renderer.Infof("  Heartbeats:      %d", hbs)
 					if len(counts) > 0 {
 						types := make([]string, 0, len(counts))
+						maxLen := 0
 						for t := range counts {
 							types = append(types, t)
+							if len(t) > maxLen {
+								maxLen = len(t)
+							}
 						}
-						sort.Strings(types)
+						// Sort by count desc; tie-break alphabetically so output is stable.
+						sort.Slice(types, func(i, j int) bool {
+							if counts[types[i]] != counts[types[j]] {
+								return counts[types[i]] > counts[types[j]]
+							}
+							return types[i] < types[j]
+						})
+						cli.renderer.Newline()
+						cli.renderer.Infof("  By type:")
 						for _, t := range types {
-							cli.renderer.Infof("  %s %s %d", ansi.Faint("·"), t, counts[t])
+							cli.renderer.Infof("    %s   %d", padRight(t, maxLen), counts[t])
 						}
 					}
 					if lastOffset != "" {
+						// The cursor is opaque and often very long; print the
+						// command and cursor on separate lines so the cursor
+						// wraps cleanly and is easy to select / copy in a
+						// terminal.
 						cli.renderer.Newline()
-						cli.renderer.Infof("Resume with: %s", ansi.Cyan(fmt.Sprintf("auth0 event-streams subscribe --from %s", lastOffset)))
+						cli.renderer.Infof("Resume from cursor %s:", ansi.Faint(shortOffset(lastOffset)))
+						cli.renderer.Output("  " + ansi.Cyan("auth0 event-streams subscribe --from \\"))
+						cli.renderer.Output("    " + ansi.Cyan(lastOffset))
 					}
 				})
 			}
@@ -209,16 +315,14 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 			for {
 				event, err := stream.Recv()
 				if err != nil {
-					/* Treat as graceful shutdown if
-					- EOF (server closed)
-					- context cancelled
-					- we closed the stream ourselves (Ctrl+C)
-					- http2 body closed error (result of stream.Close()) */
+					// The SDK auto-reconnects on mid-stream disconnects, so a
+					// transient body close no longer surfaces here. Treat as
+					// graceful only on EOF (terminator or reconnect attempts
+					// exhausted), context cancellation, or our own Ctrl+C.
+					// Everything else is a real error to show to the user.
 					isGraceful := errors.Is(err, io.EOF) ||
-						errors.Is(err, cmd.Context().Err()) ||
 						cmd.Context().Err() != nil ||
-						streamClosed.Load() ||
-						strings.Contains(err.Error(), "response body closed")
+						streamClosed.Load()
 					if isGraceful {
 						flushSummary()
 						return nil
@@ -230,6 +334,14 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 
 				if summary.offset != "" {
 					lastOffset = summary.offset
+				}
+
+				// Connection_timeout is emitted by the server right before it
+				// drops the SSE connection; the SDK transparently reconnects
+				// using the cursor, so it's a protocol artifact and should
+				// not surface in any output sink (rendered, JSON, or file).
+				if summary.isError && summary.errorCode == "connection_timeout" {
+					continue
 				}
 
 				// Always persist raw payload to file if requested.
@@ -262,12 +374,16 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 					continue
 				}
 
-				atomic.AddUint64(&totalEvents, 1)
-				countsMu.Lock()
-				counts[summary.eventType]++
-				countsMu.Unlock()
-
-				renderEventSummary(cli, summary)
+				if summary.isError {
+					atomic.AddUint64(&errorEvents, 1)
+					renderErrorEvent(cli, summary)
+				} else {
+					atomic.AddUint64(&totalEvents, 1)
+					countsMu.Lock()
+					counts[summary.eventType]++
+					countsMu.Unlock()
+					renderEventSummary(cli, summary)
+				}
 
 				if inputs.Verbose {
 					payload, mErr := json.MarshalIndent(&event, "", "  ")
@@ -287,6 +403,10 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 	eventSubscribeVerbose.RegisterBool(cmd, &inputs.Verbose, false)
 	eventSubscribeShowHeartbeats.RegisterBool(cmd, &inputs.ShowHeartbeats, false)
 	eventSubscribeOutputFile.RegisterString(cmd, &inputs.OutputFile, "")
+	eventSubscribeNoReconnect.RegisterBool(cmd, &inputs.NoReconnect, false)
+	eventSubscribeMaxReconnects.RegisterInt(cmd, &inputs.MaxReconnects, 0)
+	eventSubscribeListEventTypes.RegisterBool(cmd, &inputs.ListEventTypes, false)
+	cmd.MarkFlagsMutuallyExclusive("no-reconnect", "max-reconnects")
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output each event as JSON (one indented object per event).")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output each event as compact, single-line JSON (newline-delimited).")
@@ -299,12 +419,15 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 // extracted by re-marshalling the SDK union type and pulling the standard
 // CloudEvents envelope fields.
 type eventSummary struct {
-	eventType   string
-	isHeartbeat bool
-	offset      string
-	id          string
-	source      string
-	time        time.Time
+	eventType    string
+	isHeartbeat  bool
+	isError      bool
+	offset       string
+	id           string
+	source       string
+	time         time.Time
+	errorCode    string
+	errorMessage string
 }
 
 func summarizeEvent(ev *managementv2.EventStreamSubscribeEventsResponseContent) eventSummary {
@@ -313,6 +436,20 @@ func summarizeEvent(ev *managementv2.EventStreamSubscribeEventsResponseContent) 
 		s.isHeartbeat = true
 		if oo := ev.GetOffsetOnly(); oo != nil {
 			s.offset = oo.GetOffset()
+		}
+		return s
+	}
+
+	if s.eventType == "error" {
+		s.isError = true
+		if em := ev.GetError(); em != nil {
+			if d := em.GetError(); d != nil {
+				s.errorCode = string(d.GetCode())
+				s.errorMessage = d.GetMessage()
+				if o := d.Offset; o != nil {
+					s.offset = *o
+				}
+			}
 		}
 		return s
 	}
@@ -343,6 +480,15 @@ func summarizeEvent(ev *managementv2.EventStreamSubscribeEventsResponseContent) 
 	return s
 }
 
+// Column widths for the rendered event line. Padded before coloring so that
+// ANSI escape sequences don't throw off visual alignment. Values that exceed
+// the width are kept full-length (we never truncate forensic data like event
+// IDs or sources); only that one row jitters.
+const (
+	eventTypeColWidth   = 32
+	eventSourceColWidth = 32
+)
+
 func renderEventSummary(cli *cli, s eventSummary) {
 	ts := s.time
 	if ts.IsZero() {
@@ -351,11 +497,51 @@ func renderEventSummary(cli *cli, s eventSummary) {
 	line := fmt.Sprintf(
 		"%s  %s  %s  %s",
 		ansi.Faint(ts.Local().Format("15:04:05")),
-		ansi.Bold(colorForEventType(s.eventType)),
-		s.source,
+		ansi.Bold(colorForEventType(padRight(s.eventType, eventTypeColWidth))),
+		padRight(s.source, eventSourceColWidth),
 		ansi.Faint(s.id),
 	)
 	cli.renderer.Output(line)
+}
+
+func renderErrorEvent(cli *cli, s eventSummary) {
+	ts := time.Now()
+	line := fmt.Sprintf(
+		"%s  %s  %s  %s",
+		ansi.Faint(ts.Local().Format("15:04:05")),
+		ansi.Bold(colorForEventType(padRight("error", eventTypeColWidth))),
+		ansi.BrightRed(padRight(s.errorCode, eventSourceColWidth)),
+		s.errorMessage,
+	)
+	cli.renderer.Output(line)
+}
+
+// padRight pads s with spaces to width, or returns s unchanged if it already
+// exceeds width.
+func padRight(s string, width int) string {
+	if len(s) >= width {
+		return s
+	}
+	return s + strings.Repeat(" ", width-len(s))
+}
+
+// invalidEventTypesError builds a user-friendly error for one or more unknown
+// --event-type values and points to --list-event-types for the full list. The
+// SDK's underlying error mentions internal Go type names, so we don't surface
+// it.
+func invalidEventTypesError(values []string) error {
+	var b strings.Builder
+	if len(values) == 1 {
+		fmt.Fprintf(&b, "invalid --event-type value %q", values[0])
+	} else {
+		quoted := make([]string, 0, len(values))
+		for _, v := range values {
+			quoted = append(quoted, fmt.Sprintf("%q", v))
+		}
+		fmt.Fprintf(&b, "invalid --event-type values: %s", strings.Join(quoted, ", "))
+	}
+	b.WriteString("\nRun `auth0 event-streams subscribe --list-event-types` to see all supported types")
+	return errors.New(b.String())
 }
 
 func renderHeartbeatLine(cli *cli, s eventSummary) {
