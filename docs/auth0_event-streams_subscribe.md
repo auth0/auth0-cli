@@ -14,6 +14,8 @@ Use --verbose to also print the full JSON payload after each summary, or --json 
 
 Heartbeat (`offset-only`) messages are suppressed by default and surfaced via a periodic faint indicator and a final cursor on disconnect; pass --show-heartbeats to render each one. Press Ctrl+C to disconnect; a per-type summary and the latest cursor will be printed so you can resume with --from.
 
+Run with --list-event-types to print every value accepted by --event-type.
+
 ## Usage
 ```
 auth0 event-streams subscribe [flags]
@@ -23,6 +25,7 @@ auth0 event-streams subscribe [flags]
 
 ```
   auth0 event-streams subscribe
+  auth0 event-streams subscribe --list-event-types
   auth0 event-streams subscribe --event-type user.created
   auth0 event-streams subscribe --event-type user.created --event-type user.updated
   auth0 event-streams subscribe --from-timestamp 2026-05-01T00:00:00Z
@@ -42,6 +45,9 @@ auth0 event-streams subscribe [flags]
       --from-timestamp string         RFC-3339 timestamp indicating where to start streaming events from. Use this on the initial query when no cursor (--from) is available; prefer --from on subsequent runs as it is more accurate.
       --json                          Output each event as JSON (one indented object per event).
       --json-compact                  Output each event as compact, single-line JSON (newline-delimited).
+      --list-event-types              Print every event type accepted by --event-type and exit, without opening a subscription.
+      --max-reconnects int            Maximum number of transparent mid-stream reconnect attempts. 0 keeps the SDK default (5). Ignored when --no-reconnect is set.
+      --no-reconnect                  Disable transparent mid-stream reconnection. By default the SDK reconnects up to 5 times when the connection drops, preserving the cursor so no events are missed.
       --output-file string            Append every received event as a JSON line to this file (raw payload). Independent of the stdout format.
       --show-heartbeats offset-only   Show every offset-only heartbeat as its own line. By default heartbeats are silently tracked and only the latest cursor is reported on disconnect.
   -v, --verbose                       Print the full JSON payload after each event summary line.
