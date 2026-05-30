@@ -1,10 +1,12 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"os"
 	"os/signal"
 	"sort"
@@ -19,6 +21,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
 var (
@@ -71,16 +74,17 @@ var (
 	eventSubscribeNoReconnect = Flag{
 		Name:     "No Reconnect",
 		LongForm: "no-reconnect",
-		Help: "Disable transparent mid-stream reconnection. By default the SDK " +
-			"reconnects up to 5 times when the connection drops, preserving " +
-			"the cursor so no events are missed.",
+		Help: "Disable automatic reconnection. By default the stream resumes from " +
+			"the last cursor after the server drops the connection, so no events " +
+			"are missed. With this flag the command exits when the stream ends.",
 	}
 
 	eventSubscribeMaxReconnects = Flag{
 		Name:     "Max Reconnects",
 		LongForm: "max-reconnects",
-		Help: "Maximum number of transparent mid-stream reconnect attempts. " +
-			"0 keeps the SDK default (5). Ignored when --no-reconnect is set.",
+		Help: "Maximum number of consecutive failed reconnect attempts before " +
+			"giving up. 0 (default) keeps retrying as long as the stream is " +
+			"making progress. Ignored when --no-reconnect is set.",
 	}
 
 	eventSubscribeListEventTypes = Flag{
@@ -146,8 +150,12 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 			"or --json / --json-compact to emit raw JSON suitable for piping into `jq`.\n\n" +
 			"Heartbeat (`offset-only`) messages are suppressed by default and surfaced via " +
 			"a periodic faint indicator and a final cursor on disconnect; pass --show-heartbeats " +
-			"to render each one. Press Ctrl+C to disconnect; a per-type summary and the " +
-			"latest cursor will be printed so you can resume with --from.\n\n" +
+			"to render each one.\n\n" +
+			"The server rotates long-lived connections every few minutes; the command " +
+			"transparently resumes from the last cursor so the session stays continuous. " +
+			"Use --no-reconnect to exit when the connection ends, or --max-reconnects to cap " +
+			"the number of consecutive failed reconnect attempts. Press Ctrl+C to disconnect; " +
+			"a per-type summary and the latest cursor are printed so you can resume with --from.\n\n" +
 			"Run with --list-event-types to print every value accepted by --event-type.",
 		Example: `  auth0 event-streams subscribe
   auth0 event-streams subscribe --list-event-types
@@ -207,19 +215,6 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 				outFile = f
 			}
 
-			var subscribeOpts []managementoption.RequestOption
-			if inputs.NoReconnect {
-				subscribeOpts = append(subscribeOpts, managementoption.WithoutStreamReconnection())
-			} else if inputs.MaxReconnects > 0 {
-				subscribeOpts = append(subscribeOpts, managementoption.WithMaxStreamReconnectAttempts(uint(inputs.MaxReconnects)))
-			}
-
-			stream, err := cli.apiv2.Events.Subscribe(cmd.Context(), req, subscribeOpts...)
-			if err != nil {
-				return fmt.Errorf("failed to subscribe to events: %w", err)
-			}
-			defer func() { _ = stream.Close() }()
-
 			useJSON := cli.json || cli.jsonCompact
 			if !useJSON {
 				cli.renderer.Infof(ansi.Faint("Subscribed to event stream. Press Ctrl+C to disconnect."))
@@ -234,7 +229,7 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 				lastHeartbeatAt time.Time
 				countsMu        sync.Mutex
 				summaryOnce     sync.Once
-				streamClosed    atomic.Bool
+				userInterrupted atomic.Bool
 				startedAt       = time.Now()
 			)
 
@@ -282,22 +277,18 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 						}
 					}
 					if lastOffset != "" {
-						// The cursor is opaque and often very long; print the
-						// command and cursor on separate lines so the cursor
-						// wraps cleanly and is easy to select / copy in a
-						// terminal.
 						cli.renderer.Newline()
-						cli.renderer.Infof("Resume from cursor %s:", ansi.Faint(shortOffset(lastOffset)))
-						cli.renderer.Output("  " + ansi.Cyan("auth0 event-streams subscribe --from \\"))
-						cli.renderer.Output("    " + ansi.Cyan(lastOffset))
+						cli.renderer.Infof("Resume with: %s", ansi.Cyan(fmt.Sprintf("auth0 event-streams subscribe --from %s", lastOffset)))
 					}
 				})
 			}
 
 			// The root command installs a SIGINT handler that calls os.Exit(0)
 			// from a goroutine, which would skip our deferred summary. Reset
-			// it first so only our handler runs, then print the summary and
-			// exit cleanly ourselves.
+			// it first so only our handler runs: it cancels the stream context
+			// so the resume loop unwinds cleanly, prints the summary, and exits.
+			ctx, cancel := context.WithCancel(cmd.Context())
+			defer cancel()
 			signal.Reset(os.Interrupt, syscall.SIGTERM)
 			sigCh := make(chan os.Signal, 1)
 			signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
@@ -306,30 +297,14 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 				if _, ok := <-sigCh; !ok {
 					return
 				}
-				streamClosed.Store(true)
-				_ = stream.Close()
-				flushSummary()
-				os.Exit(0)
+				userInterrupted.Store(true)
+				cancel()
 			}()
 
-			for {
-				event, err := stream.Recv()
-				if err != nil {
-					// The SDK auto-reconnects on mid-stream disconnects, so a
-					// transient body close no longer surfaces here. Treat as
-					// graceful only on EOF (terminator or reconnect attempts
-					// exhausted), context cancellation, or our own Ctrl+C.
-					// Everything else is a real error to show to the user.
-					isGraceful := errors.Is(err, io.EOF) ||
-						cmd.Context().Err() != nil ||
-						streamClosed.Load()
-					if isGraceful {
-						flushSummary()
-						return nil
-					}
-					return fmt.Errorf("error receiving event: %w", err)
-				}
-
+			// Per-event handler shared across reconnects. Returns true when an
+			// event counts as forward progress (a real event or heartbeat),
+			// which resets the reconnect backoff.
+			handleEvent := func(event managementv2.EventStreamSubscribeEventsResponseContent) bool {
 				summary := summarizeEvent(&event)
 
 				if summary.offset != "" {
@@ -337,11 +312,10 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 				}
 
 				// Connection_timeout is emitted by the server right before it
-				// drops the SSE connection; the SDK transparently reconnects
-				// using the cursor, so it's a protocol artifact and should
-				// not surface in any output sink (rendered, JSON, or file).
+				// drops the SSE connection; we resume from the cursor, so it's
+				// a protocol artifact and must not surface in any output sink.
 				if summary.isError && summary.errorCode == "connection_timeout" {
-					continue
+					return false
 				}
 
 				// Always persist raw payload to file if requested.
@@ -359,7 +333,7 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 					} else {
 						cli.renderer.JSONResult(&event)
 					}
-					continue
+					return true
 				}
 
 				if summary.isHeartbeat {
@@ -371,7 +345,7 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 						lastHeartbeatAt = time.Now()
 						renderHeartbeatPulse(cli, summary)
 					}
-					continue
+					return true
 				}
 
 				if summary.isError {
@@ -392,6 +366,76 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 					} else {
 						cli.renderer.Output(ansi.ColorizeJSON(string(payload)))
 					}
+				}
+				return true
+			}
+
+			// Outer resume loop. The server drops long-lived SSE connections
+			// every few minutes by design; rather than treating that as the
+			// end of the stream, we transparently re-subscribe from the last
+			// cursor so the session feels continuous (the same model used by
+			// `stripe listen`, `kubectl logs -f`, and `aws logs tail --follow`).
+			//
+			// Backoff only kicks in for consecutive failures that made zero
+			// progress. Any forward progress resets it, so a healthy stream
+			// that simply rotates connections reconnects instantly. We give up
+			// only after --max-reconnects consecutive zero-progress failures
+			// (0 = retry indefinitely while progress is being made).
+			consecutiveFailures := 0
+			for {
+				if ctx.Err() != nil {
+					flushSummary()
+					return nil
+				}
+
+				progressed, serverRetry, err := runStreamSession(ctx, cli.apiv2, req, lastOffset, handleEvent)
+
+				// Ctrl+C or parent cancellation: always a graceful exit.
+				if userInterrupted.Load() || errors.Is(err, context.Canceled) || ctx.Err() != nil {
+					flushSummary()
+					return nil
+				}
+
+				if inputs.NoReconnect {
+					if err != nil {
+						return fmt.Errorf("error receiving event: %w", err)
+					}
+					flushSummary()
+					return nil
+				}
+
+				// A clean end-of-stream (err == nil) or any session that made
+				// forward progress resets the backoff so connection rotations
+				// reconnect instantly. Only consecutive zero-progress failures
+				// accrue toward the --max-reconnects ceiling.
+				if err == nil || progressed {
+					consecutiveFailures = 0
+				} else {
+					consecutiveFailures++
+				}
+
+				if inputs.MaxReconnects > 0 && consecutiveFailures > inputs.MaxReconnects {
+					flushSummary()
+					if !useJSON {
+						cli.renderer.Errorf("Giving up after %d consecutive reconnect attempts without progress.", inputs.MaxReconnects)
+					}
+					return fmt.Errorf("stream reconnection failed after %d consecutive attempts: %w", inputs.MaxReconnects, err)
+				}
+
+				delay := reconnectBackoff(consecutiveFailures, serverRetry)
+				// Healthy connection rotations resume silently (even when the
+				// server asks for a short `retry:` wait) so a normal long-lived
+				// session looks seamless. Only surface a notice once we're
+				// actually backing off real, consecutive failures.
+				if !useJSON && consecutiveFailures > 0 {
+					cli.renderer.Infof(ansi.Faint(fmt.Sprintf("· connection lost, reconnecting in %s…", delay.Round(time.Millisecond))))
+				}
+
+				select {
+				case <-ctx.Done():
+					flushSummary()
+					return nil
+				case <-time.After(delay):
 				}
 			}
 		},
@@ -414,6 +458,82 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 
 	return cmd
 }
+
+// runStreamSession opens a single SSE subscription and pumps events through
+// handleEvent until the connection ends or ctx is cancelled. SDK-internal
+// reconnection is disabled so this function owns exactly one connection; the
+// caller's outer loop is the single source of truth for reconnection. When
+// resumeFrom is set it overrides req.From so each reconnect picks up exactly
+// where the last delivered event left off. It returns whether the session made
+// any forward progress (used to reset the caller's backoff), the server's most
+// recently advertised SSE `retry:` interval (0 if none) so the caller never
+// reconnects faster than the server asked, and the terminating error (nil on a
+// clean server close).
+func runStreamSession(
+	ctx context.Context,
+	api *auth0.APIV2,
+	req *managementv2.SubscribeEventsRequestParameters,
+	resumeFrom string,
+	handleEvent func(managementv2.EventStreamSubscribeEventsResponseContent) bool,
+) (progressed bool, serverRetry time.Duration, err error) {
+	if resumeFrom != "" {
+		req.From = &resumeFrom
+	}
+
+	stream, err := api.Events.Subscribe(ctx, req, managementoption.WithoutStreamReconnection())
+	if err != nil {
+		return false, 0, err
+	}
+	defer func() { _ = stream.Close() }()
+
+	for {
+		event, recvErr := stream.Recv()
+		if recvErr != nil {
+			// The server may advertise an SSE `retry:` directive telling
+			// clients how long to wait before reconnecting; honor it as a
+			// floor so we respect server-side load shedding.
+			retry := time.Duration(stream.LastRetryMs()) * time.Millisecond
+			// EOF means the server closed the stream normally (including the
+			// periodic connection rotation); surface it as a clean end so the
+			// caller resumes without counting it as a failure.
+			if errors.Is(recvErr, io.EOF) {
+				return progressed, retry, nil
+			}
+			return progressed, retry, recvErr
+		}
+		if handleEvent(event) {
+			progressed = true
+		}
+	}
+}
+
+// reconnectBackoff returns the delay before the next reconnect attempt. It is
+// the larger of the server-advertised SSE `retry:` interval (serverRetry) and
+// our own exponential backoff with full jitter, so we never reconnect faster
+// than the server asked. With no consecutive failures and no server directive
+// the delay is 0 (a healthy connection rotation reconnects instantly). Each
+// subsequent consecutive failure doubles the jitter ceiling up to
+// reconnectMaxBackoff; the actual jitter is a random value in [0, ceiling) to
+// avoid thundering-herd reconnects across many clients.
+func reconnectBackoff(consecutiveFailures int, serverRetry time.Duration) time.Duration {
+	var jittered time.Duration
+	if consecutiveFailures > 0 {
+		ceiling := reconnectBaseBackoff << (consecutiveFailures - 1)
+		if ceiling > reconnectMaxBackoff || ceiling <= 0 {
+			ceiling = reconnectMaxBackoff
+		}
+		jittered = time.Duration(rand.Int64N(int64(ceiling)))
+	}
+	if serverRetry > jittered {
+		return serverRetry
+	}
+	return jittered
+}
+
+const (
+	reconnectBaseBackoff = 500 * time.Millisecond
+	reconnectMaxBackoff  = 30 * time.Second
+)
 
 // eventSummary is a generic, payload-agnostic projection of an SSE message
 // extracted by re-marshalling the SDK union type and pulling the standard

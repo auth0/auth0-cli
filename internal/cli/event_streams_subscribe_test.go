@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	managementv2 "github.com/auth0/go-auth0/v2/management"
 	"github.com/stretchr/testify/assert"
@@ -154,6 +155,38 @@ func TestInvalidEventTypesError_Multiple(t *testing.T) {
 	require.Contains(msg, "invalid --event-type values")
 	require.Contains(msg, "--list-event-types")
 	require.NotContains(msg, "EventStreamSubscribeEventsEventTypeEnum")
+}
+
+func TestReconnectBackoff(t *testing.T) {
+	// Attempt 0 with no server directive (a healthy connection rotation)
+	// reconnects immediately.
+	assert.Equal(t, time.Duration(0), reconnectBackoff(0, 0))
+	assert.Equal(t, time.Duration(0), reconnectBackoff(-3, 0))
+
+	// With full jitter the delay is always in [0, ceiling) and the ceiling
+	// grows exponentially but never exceeds reconnectMaxBackoff.
+	for attempt := 1; attempt <= 20; attempt++ {
+		ceiling := reconnectBaseBackoff << (attempt - 1)
+		if ceiling > reconnectMaxBackoff || ceiling <= 0 {
+			ceiling = reconnectMaxBackoff
+		}
+		for range 100 {
+			d := reconnectBackoff(attempt, 0)
+			assert.GreaterOrEqual(t, d, time.Duration(0), "attempt %d delay must be non-negative", attempt)
+			assert.Less(t, d, ceiling, "attempt %d delay must be below its ceiling", attempt)
+			assert.LessOrEqual(t, d, reconnectMaxBackoff, "attempt %d delay must never exceed the max", attempt)
+		}
+	}
+
+	// A server-advertised retry acts as a floor: even on a healthy rotation
+	// (attempt 0) we never reconnect faster than the server asked.
+	assert.Equal(t, 3*time.Second, reconnectBackoff(0, 3*time.Second))
+
+	// When the server retry exceeds the jitter ceiling, it always wins.
+	for range 100 {
+		assert.GreaterOrEqual(t, reconnectBackoff(2, time.Minute), time.Minute,
+			"server retry must act as a floor regardless of jitter")
+	}
 }
 
 func TestColorForEventType(t *testing.T) {
