@@ -388,7 +388,9 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 					return nil
 				}
 
+				attemptStart := time.Now()
 				progressed, serverRetry, err := runStreamSession(ctx, cli.apiv2, req, lastOffset, handleEvent)
+				sessionDuration := time.Since(attemptStart)
 
 				// Ctrl+C or parent cancellation: always a graceful exit.
 				if userInterrupted.Load() || errors.Is(err, context.Canceled) || ctx.Err() != nil {
@@ -423,6 +425,14 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 				}
 
 				delay := reconnectBackoff(consecutiveFailures, serverRetry)
+				// Guard against a flapping connection that delivers a frame and
+				// dies immediately: each such session "progresses" and resets
+				// the backoff, which would otherwise spin in a tight reconnect
+				// loop. Enforce a minimum spacing between attempts based on how
+				// long the session actually lasted, regardless of progress.
+				if remaining := reconnectMinInterval - sessionDuration; remaining > delay {
+					delay = remaining
+				}
 				// Healthy connection rotations resume silently (even when the
 				// server asks for a short `retry:` wait) so a normal long-lived
 				// session looks seamless. Only surface a notice once we're
@@ -533,6 +543,10 @@ func reconnectBackoff(consecutiveFailures int, serverRetry time.Duration) time.D
 const (
 	reconnectBaseBackoff = 500 * time.Millisecond
 	reconnectMaxBackoff  = 30 * time.Second
+	// Floor between consecutive reconnect attempts regardless of progress, so a
+	// connection that flaps (delivers a frame then dies immediately) can't spin
+	// in a tight reconnect loop.
+	reconnectMinInterval = 1 * time.Second
 )
 
 // eventSummary is a generic, payload-agnostic projection of an SSE message
