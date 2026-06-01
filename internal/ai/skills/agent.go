@@ -7,18 +7,26 @@ import (
 	"sync"
 )
 
-// AgentConfig describes a single AI coding agent and where it reads skills from.
 type AgentConfig struct {
-	ID               string
-	DisplayName      string
-	GlobalSkillsDir  string
-	ProjectSkillsDir string
-	DetectMarkers    []string // Paths whose existence indicates the agent is installed (any one match is sufficient).
-	DetectBinaries   []string // Binary names to look up in PATH (any one match is sufficient).
+	ID                   string
+	DisplayName          string
+	GlobalSkillsDir       string
+	GlobalSkillsDirEnvVar string
+	ProjectSkillsDir      string
+	DetectMarkers         []string
+	DetectMarkerEnvVars   []string
+	DetectBinaries        []string
 }
 
-// IsInstalled reports whether the agent appears to be installed on this machine.
-// It returns true if any marker path exists or any binary is found in PATH.
+func (a AgentConfig) ResolvedGlobalSkillsDir() string {
+	if a.GlobalSkillsDirEnvVar != "" {
+		if v := os.Getenv(a.GlobalSkillsDirEnvVar); v != "" {
+			return filepath.Join(v, "skills")
+		}
+	}
+	return a.GlobalSkillsDir
+}
+
 func (a AgentConfig) IsInstalled() bool {
 	for _, marker := range a.DetectMarkers {
 		if marker == "" {
@@ -26,6 +34,16 @@ func (a AgentConfig) IsInstalled() bool {
 		}
 		if _, err := os.Stat(marker); err == nil {
 			return true
+		}
+	}
+	for _, envVar := range a.DetectMarkerEnvVars {
+		if envVar == "" {
+			continue
+		}
+		if v := os.Getenv(envVar); v != "" {
+			if _, err := os.Stat(v); err == nil {
+				return true
+			}
 		}
 	}
 	for _, binary := range a.DetectBinaries {
@@ -39,12 +57,14 @@ func (a AgentConfig) IsInstalled() bool {
 	return false
 }
 
-// SupportedAgents is the full list of AI coding agents that support the agentskills spec.
 var SupportedAgents []AgentConfig
 
 func init() {
 	home, _ := os.UserHomeDir()
 	if home == "" {
+		SupportedAgents = []AgentConfig{
+			{ID: "universal", DisplayName: "Universal", ProjectSkillsDir: filepath.Join(".agents", "skills")},
+		}
 		return
 	}
 
@@ -73,9 +93,8 @@ func init() {
 			DetectMarkers: []string{
 				filepath.Join(home, ".copilot"),
 				filepath.Join(home, ".config", "github-copilot"),
-				filepath.Join(home, ".config", "gh"),
 			},
-			DetectBinaries: []string{"gh"},
+			DetectBinaries: []string{"code"},
 		},
 		{
 			ID:               "gemini-cli",
@@ -86,12 +105,18 @@ func init() {
 			DetectBinaries:   []string{"gemini"},
 		},
 		{
+			ID:               "antigravity",
+			DisplayName:      "Antigravity",
+			GlobalSkillsDir:  filepath.Join(home, ".gemini", "antigravity", "skills"),
+			ProjectSkillsDir: filepath.Join(".agents", "skills"),
+			DetectMarkers:    []string{filepath.Join(home, ".gemini", "antigravity")},
+		},
+		{
 			ID:               "roo",
 			DisplayName:      "Roo Code",
 			GlobalSkillsDir:  filepath.Join(home, ".roo", "skills"),
 			ProjectSkillsDir: filepath.Join(".roo", "skills"),
 			DetectMarkers:    []string{filepath.Join(home, ".roo")},
-			DetectBinaries:   nil,
 		},
 		{
 			ID:               "goose",
@@ -99,7 +124,6 @@ func init() {
 			GlobalSkillsDir:  filepath.Join(home, ".config", "goose", "skills"),
 			ProjectSkillsDir: filepath.Join(".goose", "skills"),
 			DetectMarkers:    []string{filepath.Join(home, ".config", "goose")},
-			DetectBinaries:   nil,
 		},
 		{
 			ID:               "opencode",
@@ -107,15 +131,15 @@ func init() {
 			GlobalSkillsDir:  filepath.Join(home, ".config", "opencode", "skills"),
 			ProjectSkillsDir: filepath.Join(".agents", "skills"),
 			DetectMarkers:    []string{filepath.Join(home, ".config", "opencode")},
-			DetectBinaries:   nil,
 		},
 		{
-			ID:               "codex",
-			DisplayName:      "Codex (OpenAI)",
-			GlobalSkillsDir:  filepath.Join(home, ".codex", "skills"),
-			ProjectSkillsDir: filepath.Join(".agents", "skills"),
-			DetectMarkers:    []string{os.Getenv("CODEX_HOME")},
-			DetectBinaries:   nil,
+			ID:                   "codex",
+			DisplayName:          "Codex (OpenAI)",
+			GlobalSkillsDir:      filepath.Join(home, ".codex", "skills"),
+			GlobalSkillsDirEnvVar: "CODEX_HOME",
+			ProjectSkillsDir:     filepath.Join(".agents", "skills"),
+			DetectMarkers:        []string{"/etc/codex"},
+			DetectMarkerEnvVars:  []string{"CODEX_HOME"},
 		},
 		{
 			ID:               "windsurf",
@@ -123,7 +147,6 @@ func init() {
 			GlobalSkillsDir:  filepath.Join(home, ".windsurf", "skills"),
 			ProjectSkillsDir: filepath.Join(".windsurf", "skills"),
 			DetectMarkers:    []string{filepath.Join(home, ".windsurf")},
-			DetectBinaries:   nil,
 		},
 		{
 			ID:               "continue",
@@ -131,7 +154,6 @@ func init() {
 			GlobalSkillsDir:  filepath.Join(home, ".continue", "skills"),
 			ProjectSkillsDir: filepath.Join(".continue", "skills"),
 			DetectMarkers:    []string{filepath.Join(home, ".continue")},
-			DetectBinaries:   nil,
 		},
 		{
 			ID:               "amp",
@@ -139,7 +161,6 @@ func init() {
 			GlobalSkillsDir:  filepath.Join(home, ".config", "agents", "skills"),
 			ProjectSkillsDir: filepath.Join(".agents", "skills"),
 			DetectMarkers:    []string{filepath.Join(home, ".config", "amp")},
-			DetectBinaries:   nil,
 		},
 		{
 			ID:               "junie",
@@ -147,7 +168,6 @@ func init() {
 			GlobalSkillsDir:  filepath.Join(home, ".junie", "skills"),
 			ProjectSkillsDir: filepath.Join(".junie", "skills"),
 			DetectMarkers:    []string{filepath.Join(home, ".junie")},
-			DetectBinaries:   nil,
 		},
 		{
 			ID:               "kiro-cli",
@@ -155,7 +175,6 @@ func init() {
 			GlobalSkillsDir:  filepath.Join(home, ".kiro", "skills"),
 			ProjectSkillsDir: filepath.Join(".kiro", "skills"),
 			DetectMarkers:    []string{filepath.Join(home, ".kiro")},
-			DetectBinaries:   nil,
 		},
 		{
 			ID:               "cline",
@@ -163,7 +182,6 @@ func init() {
 			GlobalSkillsDir:  filepath.Join(home, ".agents", "skills"),
 			ProjectSkillsDir: filepath.Join(".agents", "skills"),
 			DetectMarkers:    []string{filepath.Join(home, ".cline")},
-			DetectBinaries:   nil,
 		},
 		{
 			ID:               "augment",
@@ -171,7 +189,6 @@ func init() {
 			GlobalSkillsDir:  filepath.Join(home, ".augment", "skills"),
 			ProjectSkillsDir: filepath.Join(".augment", "skills"),
 			DetectMarkers:    []string{filepath.Join(home, ".augment")},
-			DetectBinaries:   nil,
 		},
 		{
 			ID:               "aider-desk",
@@ -179,7 +196,6 @@ func init() {
 			GlobalSkillsDir:  filepath.Join(home, ".aider-desk", "skills"),
 			ProjectSkillsDir: filepath.Join(".aider-desk", "skills"),
 			DetectMarkers:    []string{filepath.Join(home, ".aider-desk")},
-			DetectBinaries:   nil,
 		},
 		{
 			ID:               "warp",
@@ -187,31 +203,45 @@ func init() {
 			GlobalSkillsDir:  filepath.Join(home, ".config", "agents", "skills"),
 			ProjectSkillsDir: filepath.Join(".agents", "skills"),
 			DetectMarkers:    []string{filepath.Join(home, ".warp")},
-			DetectBinaries:   nil,
+		},
+		{
+			ID:               "devin",
+			DisplayName:      "Devin",
+			GlobalSkillsDir:  filepath.Join(home, ".config", "devin", "skills"),
+			ProjectSkillsDir: filepath.Join(".agents", "skills"),
+			DetectMarkers:    []string{filepath.Join(home, ".config", "devin")},
+		},
+		{
+			ID:                   "mistral-vibe",
+			DisplayName:          "Mistral Vibe",
+			GlobalSkillsDir:      filepath.Join(home, ".mistral-vibe", "skills"),
+			GlobalSkillsDirEnvVar: "VIBE_HOME",
+			ProjectSkillsDir:     filepath.Join(".agents", "skills"),
+			DetectMarkerEnvVars:  []string{"VIBE_HOME"},
 		},
 		{
 			ID:               "openhands",
 			DisplayName:      "OpenHands",
 			GlobalSkillsDir:  filepath.Join(home, ".openhands", "skills"),
 			ProjectSkillsDir: filepath.Join(".openhands", "skills"),
-			DetectMarkers:    nil,
-			DetectBinaries:   nil,
 		},
 		{
 			ID:               "trae",
 			DisplayName:      "Trae",
 			GlobalSkillsDir:  filepath.Join(home, ".trae", "skills"),
 			ProjectSkillsDir: filepath.Join(".trae", "skills"),
-			DetectMarkers:    nil,
-			DetectBinaries:   nil,
+		},
+		{
+			ID:               "mux",
+			DisplayName:      "Mux",
+			GlobalSkillsDir:  filepath.Join(home, ".mux", "skills"),
+			ProjectSkillsDir: filepath.Join(".mux", "skills"),
 		},
 		{
 			ID:               "universal",
 			DisplayName:      "Universal",
 			GlobalSkillsDir:  filepath.Join(home, ".agents", "skills"),
 			ProjectSkillsDir: filepath.Join(".agents", "skills"),
-			DetectMarkers:    nil,
-			DetectBinaries:   nil,
 		},
 	}
 }
@@ -221,8 +251,6 @@ var (
 	detectedAgentsCache []AgentConfig
 )
 
-// DetectedAgents returns the subset of SupportedAgents that are installed on this machine.
-// The universal agent is always included. Result is cached after the first call.
 func DetectedAgents() []AgentConfig {
 	detectedAgentsOnce.Do(func() {
 		for _, a := range SupportedAgents {
@@ -234,9 +262,11 @@ func DetectedAgents() []AgentConfig {
 	return detectedAgentsCache
 }
 
-// FastPriorityAgents returns detected agents in the priority order used by --fast mode:
-// claude-code, cursor, github-copilot, gemini-cli, then all other detected agents,
-// with universal always appended last.
+func ResetDetectedAgentsCache() {
+	detectedAgentsOnce = sync.Once{}
+	detectedAgentsCache = nil
+}
+
 func FastPriorityAgents() []AgentConfig {
 	detected := DetectedAgents()
 
