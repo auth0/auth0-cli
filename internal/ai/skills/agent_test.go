@@ -74,6 +74,55 @@ func TestIsInstalled(t *testing.T) {
 		}
 		assert.True(t, a.IsInstalled())
 	})
+
+	t.Run("DetectMarkerEnvVars: returns true when env var points to existing path", func(t *testing.T) {
+		dir := t.TempDir()
+		t.Setenv("AUTH0_TEST_DETECT_HOME", dir)
+		a := AgentConfig{DetectMarkerEnvVars: []string{"AUTH0_TEST_DETECT_HOME"}}
+		assert.True(t, a.IsInstalled())
+	})
+
+	t.Run("DetectMarkerEnvVars: returns false when env var is unset", func(t *testing.T) {
+		t.Setenv("AUTH0_TEST_DETECT_HOME_UNSET", "")
+		a := AgentConfig{DetectMarkerEnvVars: []string{"AUTH0_TEST_DETECT_HOME_UNSET"}}
+		assert.False(t, a.IsInstalled())
+	})
+
+	t.Run("DetectMarkerEnvVars: returns false when env var points to non-existent path", func(t *testing.T) {
+		t.Setenv("AUTH0_TEST_DETECT_HOME", "/does/not/exist/for/sure/99999")
+		a := AgentConfig{DetectMarkerEnvVars: []string{"AUTH0_TEST_DETECT_HOME"}}
+		assert.False(t, a.IsInstalled())
+	})
+
+	t.Run("DetectMarkerEnvVars: skips empty env var names", func(t *testing.T) {
+		a := AgentConfig{DetectMarkerEnvVars: []string{"", "ALSO_NOT_SET_SKIPS_99999"}}
+		assert.False(t, a.IsInstalled())
+	})
+}
+
+func TestResolvedGlobalSkillsDir(t *testing.T) {
+	t.Run("returns GlobalSkillsDir when env var is unset", func(t *testing.T) {
+		t.Setenv("AUTH0_TEST_SKILLS_HOME", "")
+		a := AgentConfig{
+			GlobalSkillsDir:       "/fallback/skills",
+			GlobalSkillsDirEnvVar: "AUTH0_TEST_SKILLS_HOME",
+		}
+		assert.Equal(t, "/fallback/skills", a.ResolvedGlobalSkillsDir())
+	})
+
+	t.Run("returns env var path when set", func(t *testing.T) {
+		t.Setenv("AUTH0_TEST_SKILLS_HOME", "/custom/home")
+		a := AgentConfig{
+			GlobalSkillsDir:       "/fallback/skills",
+			GlobalSkillsDirEnvVar: "AUTH0_TEST_SKILLS_HOME",
+		}
+		assert.Equal(t, filepath.Join("/custom/home", "skills"), a.ResolvedGlobalSkillsDir())
+	})
+
+	t.Run("returns GlobalSkillsDir when GlobalSkillsDirEnvVar is empty", func(t *testing.T) {
+		a := AgentConfig{GlobalSkillsDir: "/fallback/skills"}
+		assert.Equal(t, "/fallback/skills", a.ResolvedGlobalSkillsDir())
+	})
 }
 
 func TestSupportedAgents(t *testing.T) {
@@ -114,10 +163,25 @@ func TestSupportedAgents(t *testing.T) {
 		assert.True(t, found)
 	})
 
+	t.Run("required agents are present", func(t *testing.T) {
+		required := []string{
+			"claude-code", "cursor", "github-copilot", "gemini-cli",
+			"antigravity", "devin", "mistral-vibe", "mux",
+			"codex", "universal",
+		}
+		byID := make(map[string]bool, len(SupportedAgents))
+		for _, a := range SupportedAgents {
+			byID[a.ID] = true
+		}
+		for _, id := range required {
+			assert.Truef(t, byID[id], "agent %s must be in SupportedAgents", id)
+		}
+	})
+
 	t.Run("agents with no detection are detectable-never", func(t *testing.T) {
-		// Openhands, trae, and universal have nil markers/binaries meaning IsInstalled always
-		// returns false for them; they are included through explicit ID checks instead.
-		noDetectIDs := []string{"openhands", "trae", "universal"}
+		// openhands, trae, mux, and universal have nil markers/binaries meaning IsInstalled
+		// always returns false; they are included via explicit ID checks or --agent flag.
+		noDetectIDs := []string{"openhands", "trae", "mux", "universal"}
 		byID := make(map[string]AgentConfig)
 		for _, a := range SupportedAgents {
 			byID[a.ID] = a
@@ -127,7 +191,40 @@ func TestSupportedAgents(t *testing.T) {
 			require.Truef(t, ok, "agent %s must be in SupportedAgents", id)
 			assert.Nilf(t, a.DetectMarkers, "agent %s should have nil DetectMarkers", id)
 			assert.Nilf(t, a.DetectBinaries, "agent %s should have nil DetectBinaries", id)
+			assert.Nilf(t, a.DetectMarkerEnvVars, "agent %s should have nil DetectMarkerEnvVars", id)
 		}
+	})
+
+	t.Run("codex uses CODEX_HOME env var for detection and skills dir", func(t *testing.T) {
+		byID := make(map[string]AgentConfig)
+		for _, a := range SupportedAgents {
+			byID[a.ID] = a
+		}
+		codex := byID["codex"]
+		assert.Equal(t, "CODEX_HOME", codex.GlobalSkillsDirEnvVar)
+		assert.Contains(t, codex.DetectMarkerEnvVars, "CODEX_HOME")
+		assert.Contains(t, codex.DetectMarkers, "/etc/codex")
+	})
+
+	t.Run("github-copilot does not use gh binary for detection", func(t *testing.T) {
+		byID := make(map[string]AgentConfig)
+		for _, a := range SupportedAgents {
+			byID[a.ID] = a
+		}
+		copilot := byID["github-copilot"]
+		for _, b := range copilot.DetectBinaries {
+			assert.NotEqual(t, "gh", b, "gh is the GitHub CLI, not Copilot; must not be used as a detection proxy")
+		}
+	})
+
+	t.Run("mistral-vibe uses VIBE_HOME env var", func(t *testing.T) {
+		byID := make(map[string]AgentConfig)
+		for _, a := range SupportedAgents {
+			byID[a.ID] = a
+		}
+		mv := byID["mistral-vibe"]
+		assert.Equal(t, "VIBE_HOME", mv.GlobalSkillsDirEnvVar)
+		assert.Contains(t, mv.DetectMarkerEnvVars, "VIBE_HOME")
 	})
 }
 
@@ -158,6 +255,58 @@ func TestDetectedAgents(t *testing.T) {
 		for _, a := range DetectedAgents() {
 			assert.Truef(t, supported[a.ID], "detected agent %s is not in SupportedAgents", a.ID)
 		}
+	})
+}
+
+func TestResetDetectedAgentsCache(t *testing.T) {
+	t.Run("subsequent call after reset re-evaluates detection", func(t *testing.T) {
+		// Prime the cache.
+		first := DetectedAgents()
+		require.NotNil(t, first)
+
+		// Reset should clear the cached result.
+		ResetDetectedAgentsCache()
+
+		// A second call after reset should return a fresh (equal) result.
+		second := DetectedAgents()
+		assert.Equal(t, first, second)
+	})
+
+	t.Run("reset allows new filesystem state to be detected", func(t *testing.T) {
+		// Temporarily inject a fake agent that detects a temp dir.
+		dir := t.TempDir()
+		fake := AgentConfig{
+			ID:              "test-reset-agent",
+			DisplayName:     "Test Reset Agent",
+			GlobalSkillsDir: filepath.Join(dir, "skills"),
+			ProjectSkillsDir: filepath.Join(".agents", "skills"),
+			DetectMarkers:   []string{filepath.Join(dir, "marker")},
+		}
+		original := SupportedAgents
+		t.Cleanup(func() {
+			SupportedAgents = original
+			ResetDetectedAgentsCache()
+		})
+
+		// Without the marker, fake agent should not be detected.
+		ResetDetectedAgentsCache()
+		SupportedAgents = append(SupportedAgents, fake)
+		withoutMarker := DetectedAgents()
+		for _, a := range withoutMarker {
+			assert.NotEqual(t, "test-reset-agent", a.ID)
+		}
+
+		// Create the marker and reset — fake agent should now be detected.
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "marker"), 0o755))
+		ResetDetectedAgentsCache()
+		withMarker := DetectedAgents()
+		found := false
+		for _, a := range withMarker {
+			if a.ID == "test-reset-agent" {
+				found = true
+			}
+		}
+		assert.True(t, found, "agent should be detected after marker is created and cache is reset")
 	})
 }
 
