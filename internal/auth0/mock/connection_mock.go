@@ -133,6 +133,26 @@ func (mr *MockConnectionAPIMockRecorder) ReadByName(ctx, id interface{}, opts ..
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadByName", reflect.TypeOf((*MockConnectionAPI)(nil).ReadByName), varargs...)
 }
 
+// ReadEnabledClients mocks base method.
+func (m *MockConnectionAPI) ReadEnabledClients(ctx context.Context, id string, opts ...management.RequestOption) (*management.ConnectionEnabledClientList, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ReadEnabledClients", varargs...)
+	ret0, _ := ret[0].(*management.ConnectionEnabledClientList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadEnabledClients indicates an expected call of ReadEnabledClients.
+func (mr *MockConnectionAPIMockRecorder) ReadEnabledClients(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadEnabledClients", reflect.TypeOf((*MockConnectionAPI)(nil).ReadEnabledClients), varargs...)
+}
+
 // Update mocks base method.
 func (m *MockConnectionAPI) Update(ctx context.Context, id string, c *management.Connection, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
