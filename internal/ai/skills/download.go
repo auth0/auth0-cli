@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -20,8 +22,14 @@ const (
 	agentSkillsAPI    = "https://api.github.com/repos/auth0/agent-skills/commits/"
 	pluginSubtreePath = "plugins/auth0"
 	skillsHTTPTimeout = 60 * time.Second
-	maxSkillsDownload = 100 * 1024 * 1024 // 100 MB.
+	gitCmdTimeout     = 120 * time.Second
+	minGitMajor       = 2
+	minGitMinor       = 25
 )
+
+// maxSkillsDownload is the per-archive byte limit for HTTP downloads. Declared as a var so
+// tests can override it without allocating a 100 MB body.
+var maxSkillsDownload int64 = 100 * 1024 * 1024 // 100 MB.
 
 var skillsHTTPClient = &http.Client{Timeout: skillsHTTPTimeout}
 
@@ -32,19 +40,62 @@ func DownloadPlugin(targetDir, ref string) (string, error) {
 		ref = "main"
 	}
 
-	if _, err := exec.LookPath("git"); err == nil {
-		sha, err := downloadViaGit(targetDir, ref)
-		if err == nil {
-			return sha, nil
+	if err := os.MkdirAll(targetDir, 0o755); err != nil {
+		return "", fmt.Errorf("create target dir: %w", err)
+	}
+
+	if _, err := exec.LookPath("git"); err == nil && checkGitVersion() == nil {
+		if sha, err := downloadViaGit(targetDir, ref); err == nil {
+			return sha, checkNonEmpty(targetDir)
 		}
 	}
 
-	sha, err := downloadViaTarGz(targetDir, ref)
-	if err == nil {
-		return sha, nil
+	if sha, err := downloadViaTarGz(targetDir, ref); err == nil {
+		return sha, checkNonEmpty(targetDir)
 	}
 
-	return downloadViaZip(targetDir, ref)
+	sha, err := downloadViaZip(targetDir, ref)
+	if err != nil {
+		return "", err
+	}
+	return sha, checkNonEmpty(targetDir)
+}
+
+// checkNonEmpty returns an error if dir contains no entries.
+func checkNonEmpty(dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return fmt.Errorf("check extraction result: %w", err)
+	}
+	if len(entries) == 0 {
+		return fmt.Errorf("extraction produced no files in %s (archive prefix may not match)", dir)
+	}
+	return nil
+}
+
+// checkGitVersion returns an error if git is not found or is older than 2.25.
+func checkGitVersion() error {
+	out, err := exec.Command("git", "--version").Output()
+	if err != nil {
+		return fmt.Errorf("git --version: %w", err)
+	}
+	fields := strings.Fields(strings.TrimSpace(string(out)))
+	if len(fields) < 3 {
+		return fmt.Errorf("unexpected git --version output: %s", strings.TrimSpace(string(out)))
+	}
+	vParts := strings.SplitN(fields[2], ".", 3)
+	if len(vParts) < 2 {
+		return fmt.Errorf("cannot parse git version: %s", fields[2])
+	}
+	major, err1 := strconv.Atoi(vParts[0])
+	minor, err2 := strconv.Atoi(vParts[1])
+	if err1 != nil || err2 != nil {
+		return fmt.Errorf("cannot parse git version: %s", fields[2])
+	}
+	if major < minGitMajor || (major == minGitMajor && minor < minGitMinor) {
+		return fmt.Errorf("git >= %d.%d required, found %s", minGitMajor, minGitMinor, fields[2])
+	}
+	return nil
 }
 
 // fetchCommitSHA fetches the latest commit SHA for ref from the GitHub API.
@@ -54,6 +105,9 @@ func fetchCommitSHA(ref string) (string, error) {
 		return "", err
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
 
 	resp, err := skillsHTTPClient.Do(req)
 	if err != nil {
@@ -77,25 +131,24 @@ func fetchCommitSHA(ref string) (string, error) {
 	return payload.SHA, nil
 }
 
-// downloadViaGit uses git sparse-checkout to download only plugins/auth0.
+// downloadViaGit uses git sparse-checkout to download only plugins/auth0 directly into targetDir.
 func downloadViaGit(targetDir, ref string) (string, error) {
-	tmpDir, err := os.MkdirTemp("", "auth0-agent-skills-*")
-	if err != nil {
-		return "", fmt.Errorf("failed to create temp dir: %w", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
 	run := func(args ...string) (string, error) {
-		cmd := exec.Command("git", args...)
-		cmd.Dir = tmpDir
+		ctx, cancel := context.WithTimeout(context.Background(), gitCmdTimeout)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, "git", args...)
+		cmd.Dir = targetDir
 		out, err := cmd.CombinedOutput()
 		if err != nil {
+			if ctx.Err() != nil {
+				return "", fmt.Errorf("git %s: timed out after %s", strings.Join(args, " "), gitCmdTimeout)
+			}
 			return "", fmt.Errorf("git %s: %w\n%s", strings.Join(args, " "), err, out)
 		}
 		return strings.TrimSpace(string(out)), nil
 	}
 
-	if _, err := run("clone", "--no-checkout", "--depth", "1", "--filter=blob:none",
+	if _, err := run("clone", "--no-checkout", "--depth", "1", "--filter=blob:none", "--branch", ref,
 		agentSkillsRepo+".git", "."); err != nil {
 		return "", err
 	}
@@ -108,17 +161,7 @@ func downloadViaGit(targetDir, ref string) (string, error) {
 		return "", err
 	}
 
-	sha, err := run("rev-parse", "HEAD")
-	if err != nil {
-		return "", err
-	}
-
-	srcDir := filepath.Join(tmpDir, pluginSubtreePath)
-	if err := mergeDir(srcDir, targetDir); err != nil {
-		return "", err
-	}
-
-	return sha, nil
+	return run("rev-parse", "HEAD")
 }
 
 // fetchToTempFile downloads url into a new temp file and returns it open and seeked to the
@@ -145,6 +188,12 @@ func fetchToTempFile(url, pattern, label string) (*os.File, int64, error) {
 		_ = f.Close()
 		_ = os.Remove(f.Name())
 		return nil, 0, fmt.Errorf("failed to save %s: %w", label, err)
+	}
+
+	if size == maxSkillsDownload {
+		_ = f.Close()
+		_ = os.Remove(f.Name())
+		return nil, 0, fmt.Errorf("%s: archive exceeds size limit of %d bytes", label, maxSkillsDownload)
 	}
 
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
@@ -279,40 +328,3 @@ func extractZipSubtree(zipPath string, size int64, prefix, destDir string) error
 	return nil
 }
 
-// mergeDir copies all files from src into dst, creating directories as needed.
-func mergeDir(src, dst string) error {
-	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		rel, err := filepath.Rel(src, path)
-		if err != nil {
-			return err
-		}
-
-		target := filepath.Join(dst, rel)
-
-		if info.IsDir() {
-			return os.MkdirAll(target, 0o755)
-		}
-
-		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-			return err
-		}
-
-		in, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		out, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, info.Mode())
-		if err != nil {
-			_ = in.Close()
-			return err
-		}
-		_, copyErr := io.Copy(out, in)
-		_ = in.Close()
-		_ = out.Close()
-		return copyErr
-	})
-}
