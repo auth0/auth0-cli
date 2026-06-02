@@ -1,6 +1,7 @@
 package skills
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -8,8 +9,8 @@ import (
 )
 
 type AgentConfig struct {
-	ID                   string
-	DisplayName          string
+	ID                    string
+	DisplayName           string
 	GlobalSkillsDir       string
 	GlobalSkillsDirEnvVar string
 	ProjectSkillsDir      string
@@ -18,13 +19,16 @@ type AgentConfig struct {
 	DetectBinaries        []string
 }
 
-func (a AgentConfig) ResolvedGlobalSkillsDir() string {
+func (a AgentConfig) ResolvedGlobalSkillsDir() (string, error) {
 	if a.GlobalSkillsDirEnvVar != "" {
 		if v := os.Getenv(a.GlobalSkillsDirEnvVar); v != "" {
-			return filepath.Join(v, "skills")
+			return filepath.Join(v, "skills"), nil
 		}
 	}
-	return a.GlobalSkillsDir
+	if a.GlobalSkillsDir == "" {
+		return "", errors.New("GlobalSkillsDirEnvVar must be set for: " + a.ID)
+	}
+	return a.GlobalSkillsDir, nil
 }
 
 func (a AgentConfig) IsInstalled() bool {
@@ -94,7 +98,6 @@ func init() {
 				filepath.Join(home, ".copilot"),
 				filepath.Join(home, ".config", "github-copilot"),
 			},
-			DetectBinaries: []string{"code"},
 		},
 		{
 			ID:               "gemini-cli",
@@ -133,13 +136,13 @@ func init() {
 			DetectMarkers:    []string{filepath.Join(home, ".config", "opencode")},
 		},
 		{
-			ID:                   "codex",
-			DisplayName:          "Codex (OpenAI)",
-			GlobalSkillsDir:      filepath.Join(home, ".codex", "skills"),
+			ID:                    "codex",
+			DisplayName:           "Codex (OpenAI)",
+			GlobalSkillsDir:       filepath.Join(home, ".codex", "skills"),
 			GlobalSkillsDirEnvVar: "CODEX_HOME",
-			ProjectSkillsDir:     filepath.Join(".agents", "skills"),
-			DetectMarkers:        []string{"/etc/codex"},
-			DetectMarkerEnvVars:  []string{"CODEX_HOME"},
+			ProjectSkillsDir:      filepath.Join(".agents", "skills"),
+			DetectMarkers:         []string{"/etc/codex"},
+			DetectMarkerEnvVars:   []string{"CODEX_HOME"},
 		},
 		{
 			ID:               "windsurf",
@@ -212,12 +215,11 @@ func init() {
 			DetectMarkers:    []string{filepath.Join(home, ".config", "devin")},
 		},
 		{
-			ID:                   "mistral-vibe",
-			DisplayName:          "Mistral Vibe",
-			GlobalSkillsDir:      filepath.Join(home, ".mistral-vibe", "skills"),
+			ID:                    "mistral-vibe",
+			DisplayName:           "Mistral Vibe",
 			GlobalSkillsDirEnvVar: "VIBE_HOME",
-			ProjectSkillsDir:     filepath.Join(".agents", "skills"),
-			DetectMarkerEnvVars:  []string{"VIBE_HOME"},
+			ProjectSkillsDir:      filepath.Join(".agents", "skills"),
+			DetectMarkerEnvVars:   []string{"VIBE_HOME"},
 		},
 		{
 			ID:               "openhands",
@@ -247,23 +249,37 @@ func init() {
 }
 
 var (
-	detectedAgentsOnce  sync.Once
+	detectedAgentsMu    sync.RWMutex
+	detectedAgentsDone  bool
 	detectedAgentsCache []AgentConfig
 )
 
 func DetectedAgents() []AgentConfig {
-	detectedAgentsOnce.Do(func() {
+	detectedAgentsMu.RLock()
+	if detectedAgentsDone {
+		result := detectedAgentsCache
+		detectedAgentsMu.RUnlock()
+		return result
+	}
+	detectedAgentsMu.RUnlock()
+
+	detectedAgentsMu.Lock()
+	defer detectedAgentsMu.Unlock()
+	if !detectedAgentsDone {
 		for _, a := range SupportedAgents {
 			if a.ID == "universal" || a.IsInstalled() {
 				detectedAgentsCache = append(detectedAgentsCache, a)
 			}
 		}
-	})
+		detectedAgentsDone = true
+	}
 	return detectedAgentsCache
 }
 
 func ResetDetectedAgentsCache() {
-	detectedAgentsOnce = sync.Once{}
+	detectedAgentsMu.Lock()
+	defer detectedAgentsMu.Unlock()
+	detectedAgentsDone = false
 	detectedAgentsCache = nil
 }
 

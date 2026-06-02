@@ -107,7 +107,9 @@ func TestResolvedGlobalSkillsDir(t *testing.T) {
 			GlobalSkillsDir:       "/fallback/skills",
 			GlobalSkillsDirEnvVar: "AUTH0_TEST_SKILLS_HOME",
 		}
-		assert.Equal(t, "/fallback/skills", a.ResolvedGlobalSkillsDir())
+		got, err := a.ResolvedGlobalSkillsDir()
+		assert.NoError(t, err)
+		assert.Equal(t, "/fallback/skills", got)
 	})
 
 	t.Run("returns env var path when set", func(t *testing.T) {
@@ -116,12 +118,43 @@ func TestResolvedGlobalSkillsDir(t *testing.T) {
 			GlobalSkillsDir:       "/fallback/skills",
 			GlobalSkillsDirEnvVar: "AUTH0_TEST_SKILLS_HOME",
 		}
-		assert.Equal(t, filepath.Join("/custom/home", "skills"), a.ResolvedGlobalSkillsDir())
+		got, err := a.ResolvedGlobalSkillsDir()
+		assert.NoError(t, err)
+		assert.Equal(t, filepath.Join("/custom/home", "skills"), got)
 	})
 
 	t.Run("returns GlobalSkillsDir when GlobalSkillsDirEnvVar is empty", func(t *testing.T) {
 		a := AgentConfig{GlobalSkillsDir: "/fallback/skills"}
-		assert.Equal(t, "/fallback/skills", a.ResolvedGlobalSkillsDir())
+		got, err := a.ResolvedGlobalSkillsDir()
+		assert.NoError(t, err)
+		assert.Equal(t, "/fallback/skills", got)
+	})
+
+	t.Run("returns error when GlobalSkillsDir is empty and env var unset", func(t *testing.T) {
+		a := AgentConfig{ID: "test-agent"}
+		_, err := a.ResolvedGlobalSkillsDir()
+		assert.EqualError(t, err, "GlobalSkillsDirEnvVar must be set for: test-agent")
+	})
+
+	t.Run("returns env var path when GlobalSkillsDir is empty but env var is set", func(t *testing.T) {
+		t.Setenv("AUTH0_TEST_SKILLS_HOME", "/custom/home")
+		a := AgentConfig{
+			ID:                    "test-agent",
+			GlobalSkillsDirEnvVar: "AUTH0_TEST_SKILLS_HOME",
+		}
+		got, err := a.ResolvedGlobalSkillsDir()
+		assert.NoError(t, err)
+		assert.Equal(t, filepath.Join("/custom/home", "skills"), got)
+	})
+
+	t.Run("mistral-vibe returns error when VIBE_HOME is not set", func(t *testing.T) {
+		t.Setenv("VIBE_HOME", "")
+		a := AgentConfig{
+			ID:                    "mistral-vibe",
+			GlobalSkillsDirEnvVar: "VIBE_HOME",
+		}
+		_, err := a.ResolvedGlobalSkillsDir()
+		assert.EqualError(t, err, "GlobalSkillsDirEnvVar must be set for: mistral-vibe")
 	})
 }
 
@@ -139,7 +172,8 @@ func TestSupportedAgents(t *testing.T) {
 
 	t.Run("all agents have non-empty skill dirs", func(t *testing.T) {
 		for _, a := range SupportedAgents {
-			assert.NotEmptyf(t, a.GlobalSkillsDir, "agent %s GlobalSkillsDir must not be empty", a.ID)
+			hasGlobalDir := a.GlobalSkillsDir != "" || a.GlobalSkillsDirEnvVar != ""
+			assert.Truef(t, hasGlobalDir, "agent %s must have GlobalSkillsDir or GlobalSkillsDirEnvVar", a.ID)
 			assert.NotEmptyf(t, a.ProjectSkillsDir, "agent %s ProjectSkillsDir must not be empty", a.ID)
 		}
 	})
