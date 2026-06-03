@@ -35,30 +35,57 @@ var skillsHTTPClient = &http.Client{Timeout: skillsHTTPTimeout}
 
 // DownloadPlugin downloads the auth0 agent-skills plugin into targetDir using the best
 // available strategy: git sparse-checkout > tar.gz > ZIP. Returns the commit SHA.
+// All intermediate work happens in a system temp directory; targetDir is only written
+// once everything succeeds.
 func DownloadPlugin(targetDir, ref string) (string, error) {
 	if ref == "" {
 		ref = "main"
 	}
 
+	tmpDir, err := os.MkdirTemp("", "auth0-skills-*")
+	if err != nil {
+		return "", fmt.Errorf("create temp dir: %w", err)
+	}
+	defer os.RemoveAll(tmpDir) // no-op if renamed to targetDir below
+
+	sha, dlErr := func() (string, error) {
+		if _, err := exec.LookPath("git"); err == nil && checkGitVersion() == nil {
+			if sha, err := downloadViaGit(tmpDir, ref); err == nil {
+				return sha, nil
+			}
+		}
+		if sha, err := downloadViaTarGz(tmpDir, ref); err == nil {
+			return sha, nil
+		}
+		return downloadViaZip(tmpDir, ref)
+	}()
+	if dlErr != nil {
+		return "", dlErr
+	}
+
+	if err := checkNonEmpty(tmpDir); err != nil {
+		return "", err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(targetDir), 0o755); err != nil {
+		return "", fmt.Errorf("create parent dir: %w", err)
+	}
+
+	os.RemoveAll(targetDir)
+
+	// Attempt atomic rename (succeeds when /tmp and targetDir share a filesystem).
+	if err := os.Rename(tmpDir, targetDir); err == nil {
+		return sha, nil
+	}
+
+	// Cross-filesystem fallback: copy content into a freshly created targetDir.
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {
 		return "", fmt.Errorf("create target dir: %w", err)
 	}
-
-	if _, err := exec.LookPath("git"); err == nil && checkGitVersion() == nil {
-		if sha, err := downloadViaGit(targetDir, ref); err == nil {
-			return sha, checkNonEmpty(targetDir)
-		}
+	if err := mergeDir(tmpDir, targetDir); err != nil {
+		return "", fmt.Errorf("install to target dir: %w", err)
 	}
-
-	if sha, err := downloadViaTarGz(targetDir, ref); err == nil {
-		return sha, checkNonEmpty(targetDir)
-	}
-
-	sha, err := downloadViaZip(targetDir, ref)
-	if err != nil {
-		return "", err
-	}
-	return sha, checkNonEmpty(targetDir)
+	return sha, nil
 }
 
 // checkNonEmpty returns an error if dir contains no entries.
@@ -75,7 +102,9 @@ func checkNonEmpty(dir string) error {
 
 // checkGitVersion returns an error if git is not found or is older than 2.25.
 func checkGitVersion() error {
-	out, err := exec.Command("git", "--version").Output()
+	ctx, cancel := context.WithTimeout(context.Background(), gitCmdTimeout)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "git", "--version").Output()
 	if err != nil {
 		return fmt.Errorf("git --version: %w", err)
 	}
@@ -131,13 +160,20 @@ func fetchCommitSHA(ref string) (string, error) {
 	return payload.SHA, nil
 }
 
-// downloadViaGit uses git sparse-checkout to download only plugins/auth0 directly into targetDir.
+// downloadViaGit clones into a temp directory, then promotes the contents of
+// plugins/auth0/ into targetDir so the layout matches the tar.gz/ZIP strategies.
 func downloadViaGit(targetDir, ref string) (string, error) {
+	cloneDir, err := os.MkdirTemp("", "auth0-agent-skills-git-*")
+	if err != nil {
+		return "", fmt.Errorf("create git clone dir: %w", err)
+	}
+	defer os.RemoveAll(cloneDir)
+
 	run := func(args ...string) (string, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), gitCmdTimeout)
 		defer cancel()
 		cmd := exec.CommandContext(ctx, "git", args...)
-		cmd.Dir = targetDir
+		cmd.Dir = cloneDir
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			if ctx.Err() != nil {
@@ -161,7 +197,24 @@ func downloadViaGit(targetDir, ref string) (string, error) {
 		return "", err
 	}
 
-	return run("rev-parse", "HEAD")
+	sha, err := run("rev-parse", "HEAD")
+	if err != nil {
+		return "", err
+	}
+
+	// Promote plugins/auth0 into targetDir by rename within /tmp — no data copy.
+	// targetDir was created empty by the caller; remove it so the rename can take its path.
+	subtreeSrc := filepath.Join(cloneDir, filepath.FromSlash(pluginSubtreePath))
+	if err := os.Remove(targetDir); err != nil {
+		return "", fmt.Errorf("clear temp dir for promotion: %w", err)
+	}
+	if err := os.Rename(subtreeSrc, targetDir); err != nil {
+		// Restore the empty dir so fallback strategies in the caller can still use this path.
+		_ = os.MkdirAll(targetDir, 0o755)
+		return "", fmt.Errorf("promote git subtree: %w", err)
+	}
+
+	return sha, nil
 }
 
 // fetchToTempFile downloads url into a new temp file and returns it open and seeked to the
@@ -205,9 +258,14 @@ func fetchToTempFile(url, pattern, label string) (*os.File, int64, error) {
 	return f, size, nil
 }
 
-// downloadViaTarGz downloads the archive from codeload.github.com and extracts the subtree.
+// downloadViaTarGz fetches the commit SHA first, then downloads and extracts the tar.gz archive.
 func downloadViaTarGz(targetDir, ref string) (string, error) {
-	url := fmt.Sprintf("https://codeload.github.com/auth0/agent-skills/tar.gz/refs/heads/%s", ref)
+	sha, err := fetchCommitSHA(ref)
+	if err != nil {
+		return "", err
+	}
+
+	url := fmt.Sprintf("https://codeload.github.com/auth0/agent-skills/tar.gz/%s", ref)
 	f, _, err := fetchToTempFile(url, "auth0-agent-skills-*.tar.gz", "tar.gz")
 	if err != nil {
 		return "", err
@@ -220,12 +278,17 @@ func downloadViaTarGz(targetDir, ref string) (string, error) {
 		return "", err
 	}
 
-	return fetchCommitSHA(ref)
+	return sha, nil
 }
 
-// downloadViaZip downloads the ZIP archive from github.com and extracts the subtree.
+// downloadViaZip fetches the commit SHA first, then downloads and extracts the ZIP archive.
 func downloadViaZip(targetDir, ref string) (string, error) {
-	url := fmt.Sprintf("%s/archive/refs/heads/%s.zip", agentSkillsRepo, ref)
+	sha, err := fetchCommitSHA(ref)
+	if err != nil {
+		return "", err
+	}
+
+	url := fmt.Sprintf("%s/archive/%s.zip", agentSkillsRepo, ref)
 	f, size, err := fetchToTempFile(url, "auth0-agent-skills-*.zip", "ZIP")
 	if err != nil {
 		return "", err
@@ -238,7 +301,58 @@ func downloadViaZip(targetDir, ref string) (string, error) {
 		return "", err
 	}
 
-	return fetchCommitSHA(ref)
+	return sha, nil
+}
+
+// mergeDir recursively copies the contents of src into dst.
+func mergeDir(src, dst string) error {
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+		if entry.IsDir() {
+			if err := os.MkdirAll(dstPath, 0o755); err != nil {
+				return err
+			}
+			if err := mergeDir(srcPath, dstPath); err != nil {
+				return err
+			}
+		} else {
+			info, err := entry.Info()
+			if err != nil {
+				return err
+			}
+			if err := copyFile(srcPath, dstPath, info.Mode()); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// copyFile copies src to dst with the given permission mode.
+func copyFile(src, dst string, mode os.FileMode) error {
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
+	if err != nil {
+		return err
+	}
+	_, copyErr := io.Copy(out, in)
+	closeErr := out.Close()
+	if copyErr != nil {
+		return copyErr
+	}
+	return closeErr
 }
 
 // ExtractEntry writes a single archive entry to destDir. IsDir and mode describe the entry;
