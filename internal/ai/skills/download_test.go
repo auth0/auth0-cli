@@ -340,7 +340,7 @@ func TestFetchToTempFile_Truncation(t *testing.T) {
 		maxSkillsDownload = 10
 		t.Cleanup(func() { maxSkillsDownload = orig })
 
-		body := strings.Repeat("x", 9) // 9 < 10
+		body := strings.Repeat("x", 9) // 9 < 10.
 		setHTTPClient(t, func(_ *http.Request) (*http.Response, error) {
 			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(body))}, nil
 		})
@@ -517,7 +517,7 @@ func TestDownloadPlugin_EmptyExtraction(t *testing.T) {
 	base := t.TempDir()
 	targetDir := filepath.Join(base, "auth0")
 	_, err = DownloadPlugin(targetDir, ref)
-	// tar.gz and ZIP extract nothing; checkHasSkills rejects the empty result.
+	// Tar.gz and ZIP extract nothing; checkHasSkills rejects the empty result.
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no skills found")
 }
@@ -554,7 +554,7 @@ func TestDownloadPlugin_CreatesMissingTargetDir(t *testing.T) {
 		}
 	})
 
-	// targetDir is deeply nested and does not exist yet.
+	// TargetDir is deeply nested and does not exist yet.
 	targetDir := filepath.Join(t.TempDir(), "deep", "nested", "auth0")
 	gotSHA, err := DownloadPlugin(targetDir, ref)
 	require.NoError(t, err)
@@ -648,7 +648,7 @@ func TestDownloadViaGit_CloneFailure(t *testing.T) {
 	_, err := downloadViaGit(targetDir, "main")
 	require.Error(t, err, "clone of non-existent repo should fail")
 
-	// targetDir must still exist and be empty so the caller can fall back to HTTP strategies.
+	// TargetDir must still exist and be empty so the caller can fall back to HTTP strategies.
 	entries, readErr := os.ReadDir(targetDir)
 	require.NoError(t, readErr, "targetDir should still exist after clone failure")
 	assert.Empty(t, entries, "targetDir should be empty after clone failure")

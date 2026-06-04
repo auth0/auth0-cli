@@ -213,7 +213,7 @@ func TestSupportedAgents(t *testing.T) {
 	})
 
 	t.Run("agents with no detection are detectable-never", func(t *testing.T) {
-		// openhands, trae, mux, and universal have nil markers/binaries meaning IsInstalled
+		// Openhands, trae, mux, and universal have nil markers/binaries meaning IsInstalled
 		// always returns false; they are included via explicit ID checks or --agent flag.
 		noDetectIDs := []string{"openhands", "trae", "mux", "universal"}
 		byID := make(map[string]AgentConfig)
@@ -310,11 +310,11 @@ func TestResetDetectedAgentsCache(t *testing.T) {
 		// Temporarily inject a fake agent that detects a temp dir.
 		dir := t.TempDir()
 		fake := AgentConfig{
-			ID:              "test-reset-agent",
-			DisplayName:     "Test Reset Agent",
-			GlobalSkillsDir: filepath.Join(dir, "skills"),
+			ID:               "test-reset-agent",
+			DisplayName:      "Test Reset Agent",
+			GlobalSkillsDir:  filepath.Join(dir, "skills"),
 			ProjectSkillsDir: filepath.Join(".agents", "skills"),
-			DetectMarkers:   []string{filepath.Join(dir, "marker")},
+			DetectMarkers:    []string{filepath.Join(dir, "marker")},
 		}
 		original := SupportedAgents
 		t.Cleanup(func() {
