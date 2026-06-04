@@ -1,10 +1,11 @@
 package skills
 
 import (
+	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -18,12 +19,21 @@ type SkillMeta struct {
 // ParseSkillMeta reads SKILL.md from skillDir and extracts the YAML frontmatter.
 // Returns an empty SkillMeta (no error) when the file has no valid frontmatter delimiters.
 func ParseSkillMeta(skillDir string) (SkillMeta, error) {
-	data, err := os.ReadFile(filepath.Join(skillDir, "SKILL.md"))
+	f, err := os.Open(filepath.Join(skillDir, "SKILL.md"))
+
+	if err != nil {
+		return SkillMeta{}, err
+	}
+	defer f.Close()
+
+	data, err := io.ReadAll(io.LimitReader(f, 1024*1024))
+
 	if err != nil {
 		return SkillMeta{}, err
 	}
 
-	parts := strings.SplitN(string(data), "---", 3)
+	re := regexp.MustCompile(`(?m)^---[ \t]*$`)
+	parts := re.Split(string(data), 3)
 	if len(parts) < 3 {
 		return SkillMeta{}, nil
 	}
@@ -39,11 +49,11 @@ func ParseSkillMeta(skillDir string) (SkillMeta, error) {
 // subdirectory that contains a valid SKILL.md, sorted alphabetically by name.
 func ListAvailableSkills(pluginSkillsDir string) ([]SkillMeta, error) {
 	entries, err := os.ReadDir(pluginSkillsDir)
+	var skills []SkillMeta
 	if err != nil {
-		return nil, err
+		return skills, err
 	}
 
-	var skills []SkillMeta
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
