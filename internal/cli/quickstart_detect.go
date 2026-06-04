@@ -35,7 +35,7 @@ func DetectProject(dir string) DetectionResult {
 	// Read package.json deps early - needed for checks that must precede file-based signals.
 	earlyDeps := readPackageJSONDeps(dir)
 
-	// -- 1. Manage.py (Django) — checked before Ionic to prevent monorepo misdetection.
+	// -- 1. Manage.py (Django) — Checked before Ionic to prevent monorepo misdetection.
 	if fileExists(dir, "manage.py") {
 		result.Framework = "django"
 		result.Type = "regular"
@@ -80,7 +80,7 @@ func DetectProject(dir string) DetectionResult {
 	if data, ok := readFileContent(dir, "pubspec.yaml"); ok {
 		if strings.Contains(data, "sdk: flutter") {
 			result.Detected = true
-			// Android/ios dirs signal native; flutter.web key signals web SPA; default native.
+			// Android/iOS dirs signal native; flutter.web key signals web SPA; default native.
 			switch {
 			case dirExists(dir, "android") || dirExists(dir, "ios"):
 				result.Framework = "flutter"
@@ -99,7 +99,7 @@ func DetectProject(dir string) DetectionResult {
 		}
 	}
 
-	// -- 5. Composer.json (PHP) — before vite.config to avoid Laravel misdetection.
+	// -- 5. Composer.json (PHP) — Before vite.config to avoid Laravel misdetection.
 	if data, ok := readFileContent(dir, "composer.json"); ok {
 		result.BuildTool = "composer"
 		result.Type = "regular"
@@ -121,7 +121,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// -- 7. Nuxt.config.[ts|js] — before vite.config (Nuxt uses Vite internally).
+	// -- 7. Nuxt.config.[ts|js] — Before vite.config (Nuxt uses Vite internally).
 	if fileExistsAny(dir, "nuxt.config.ts", "nuxt.config.js") {
 		result.Framework = "nuxt"
 		result.Type = "regular"
@@ -155,7 +155,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// -- 10. Svelte.config.[js|ts] — only label as sveltekit when @sveltejs/kit dep is confirmed.
+	// -- 10. Svelte.config.[js|ts] — Only label as sveltekit when @sveltejs/kit dep is confirmed.
 	if fileExistsAny(dir, "svelte.config.js", "svelte.config.ts") {
 		framework := "sveltekit"
 		appType := "regular"
@@ -203,7 +203,7 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// -- 14. IOS Swift — .xcodeproj or Package.swift (excludes Vapor server-side Swift).
+	// -- 14. IOS Swift — .xcodeproj or Package.swift (Excludes Vapor server-side Swift).
 	if hasXcodeprojDir(dir) || (fileExists(dir, "Package.swift") && !isVaporSwiftPackage(dir)) {
 		result.Framework = "ios-swift"
 		result.Type = "native"
