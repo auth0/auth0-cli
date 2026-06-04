@@ -62,7 +62,7 @@ func TestParseSkillMeta(t *testing.T) {
 		dir := t.TempDir()
 		skillDir := filepath.Join(dir, "bad-yaml")
 		require.NoError(t, os.MkdirAll(skillDir, 0o755))
-		// Indentation error creates invalid YAML
+		// Indentation error creates invalid YAML.
 		content := "---\nname: foo\n  bad: indent: here\n---\n"
 		require.NoError(t, os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(content), 0o644))
 

@@ -53,27 +53,27 @@ func DownloadPlugin(targetDir, ref string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("create temp dir: %w", err)
 	}
-	defer os.RemoveAll(tmpDir) // no-op if renamed to targetDir below
+	defer os.RemoveAll(tmpDir) // No-op if renamed to targetDir below.
 
 	sha, dlErr := func() (string, error) {
 		var errs []string
 		if _, err := gitLookPath("git"); err == nil && checkGitVersion() == nil {
-			if sha, err := downloadViaGit(tmpDir, ref); err == nil {
+			sha, err := downloadViaGit(tmpDir, ref)
+			if err == nil {
 				return sha, nil
-			} else {
-				errs = append(errs, "git: "+err.Error())
 			}
+			errs = append(errs, "git: "+err.Error())
 		}
-		if sha, err := downloadViaTarGz(tmpDir, ref); err == nil {
+		sha, err := downloadViaTarGz(tmpDir, ref)
+		if err == nil {
 			return sha, nil
-		} else {
-			errs = append(errs, "tar.gz: "+err.Error())
 		}
-		if sha, err := downloadViaZip(tmpDir, ref); err == nil {
+		errs = append(errs, "tar.gz: "+err.Error())
+		sha, err = downloadViaZip(tmpDir, ref)
+		if err == nil {
 			return sha, nil
-		} else {
-			errs = append(errs, "zip: "+err.Error())
 		}
+		errs = append(errs, "zip: "+err.Error())
 		return "", fmt.Errorf("all download strategies failed: %s", strings.Join(errs, "; "))
 	}()
 	if dlErr != nil {
@@ -469,4 +469,3 @@ func extractZipSubtree(zipPath string, size int64, prefix, destDir string) error
 	}
 	return nil
 }
-

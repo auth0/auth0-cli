@@ -74,7 +74,7 @@ func TestWriteLock(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "skills-lock.json")
 
-		lock := &SkillsLock{
+		lock := &Lock{
 			Repo:          "https://github.com/auth0/agent-skills.git",
 			Ref:           "main",
 			CommitSHA:     "deadbeef",
@@ -102,7 +102,7 @@ func TestWriteLock(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "nested", "deep", "skills-lock.json")
 
-		require.NoError(t, WriteLock(path, &SkillsLock{Scope: ScopeGlobal}))
+		require.NoError(t, WriteLock(path, &Lock{Scope: ScopeGlobal}))
 
 		got, err := ReadLock(path)
 		require.NoError(t, err)
@@ -114,8 +114,8 @@ func TestWriteLock(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "skills-lock.json")
 
-		require.NoError(t, WriteLock(path, &SkillsLock{CommitSHA: "first", Scope: ScopeGlobal}))
-		require.NoError(t, WriteLock(path, &SkillsLock{CommitSHA: "second", Scope: ScopeGlobal}))
+		require.NoError(t, WriteLock(path, &Lock{CommitSHA: "first", Scope: ScopeGlobal}))
+		require.NoError(t, WriteLock(path, &Lock{CommitSHA: "second", Scope: ScopeGlobal}))
 
 		got, err := ReadLock(path)
 		require.NoError(t, err)
@@ -126,7 +126,7 @@ func TestWriteLock(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "skills-lock.json")
 
-		original := &SkillsLock{
+		original := &Lock{
 			Repo:          "https://github.com/auth0/agent-skills.git",
 			Ref:           "v1.2.3",
 			CommitSHA:     "cafebabe",

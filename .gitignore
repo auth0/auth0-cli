@@ -46,3 +46,5 @@ out/
 
 # LLM files
 .remember/
+
+.gopath
