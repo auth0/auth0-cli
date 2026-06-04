@@ -584,7 +584,8 @@ func setupLocalGitRepo(t *testing.T, branch string, files map[string]string) str
 		}
 	}
 
-	runSetup(workDir, "init", "-b", branch)
+	runSetup(workDir, "init")
+	runSetup(workDir, "symbolic-ref", "HEAD", "refs/heads/"+branch)
 	runSetup(workDir, "config", "user.email", "test@example.com")
 	runSetup(workDir, "config", "user.name", "Test")
 	runSetup(workDir, "config", "commit.gpgsign", "false")
@@ -597,7 +598,8 @@ func setupLocalGitRepo(t *testing.T, branch string, files map[string]string) str
 
 	runSetup(workDir, "add", ".")
 	runSetup(workDir, "commit", "-m", "init")
-	runSetup(bareDir, "init", "--bare", "-b", branch)
+	runSetup(bareDir, "init", "--bare")
+	runSetup(bareDir, "symbolic-ref", "HEAD", "refs/heads/"+branch)
 	runSetup(workDir, "remote", "add", "origin", bareDir)
 	runSetup(workDir, "push", "origin", branch)
 
