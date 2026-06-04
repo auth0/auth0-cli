@@ -41,7 +41,7 @@ func TestReadLock(t *testing.T) {
 		assert.Equal(t, "abc123", lock.CommitSHA)
 		assert.Equal(t, []string{"auth0-react", "auth0-nextjs"}, lock.Skills)
 		assert.Equal(t, []string{"claude-code"}, lock.Agents)
-		assert.Equal(t, "global", lock.Scope)
+		assert.Equal(t, ScopeGlobal, lock.Scope)
 	})
 
 	t.Run("returns error for invalid JSON", func(t *testing.T) {
@@ -74,7 +74,7 @@ func TestWriteLock(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "skills-lock.json")
 
-		lock := &Lock{
+		lock := &SkillsLock{
 			Repo:          "https://github.com/auth0/agent-skills.git",
 			Ref:           "main",
 			CommitSHA:     "deadbeef",
@@ -83,7 +83,7 @@ func TestWriteLock(t *testing.T) {
 			LastCheckedAt: now,
 			Skills:        []string{"auth0-react"},
 			Agents:        []string{"cursor"},
-			Scope:         "local",
+			Scope:         ScopeLocal,
 		}
 		require.NoError(t, WriteLock(path, lock))
 
@@ -102,20 +102,20 @@ func TestWriteLock(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "nested", "deep", "skills-lock.json")
 
-		require.NoError(t, WriteLock(path, &Lock{Scope: "global"}))
+		require.NoError(t, WriteLock(path, &SkillsLock{Scope: ScopeGlobal}))
 
 		got, err := ReadLock(path)
 		require.NoError(t, err)
 		require.NotNil(t, got)
-		assert.Equal(t, "global", got.Scope)
+		assert.Equal(t, ScopeGlobal, got.Scope)
 	})
 
 	t.Run("overwrites existing lock file", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "skills-lock.json")
 
-		require.NoError(t, WriteLock(path, &Lock{CommitSHA: "first"}))
-		require.NoError(t, WriteLock(path, &Lock{CommitSHA: "second"}))
+		require.NoError(t, WriteLock(path, &SkillsLock{CommitSHA: "first", Scope: ScopeGlobal}))
+		require.NoError(t, WriteLock(path, &SkillsLock{CommitSHA: "second", Scope: ScopeGlobal}))
 
 		got, err := ReadLock(path)
 		require.NoError(t, err)
@@ -126,7 +126,7 @@ func TestWriteLock(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "skills-lock.json")
 
-		original := &Lock{
+		original := &SkillsLock{
 			Repo:          "https://github.com/auth0/agent-skills.git",
 			Ref:           "v1.2.3",
 			CommitSHA:     "cafebabe",
@@ -135,7 +135,7 @@ func TestWriteLock(t *testing.T) {
 			LastCheckedAt: now.Add(2 * time.Hour),
 			Skills:        []string{"auth0-react", "auth0-nextjs", "auth0-vue"},
 			Agents:        []string{"claude-code", "cursor", "gemini-cli"},
-			Scope:         "global",
+			Scope:         ScopeGlobal,
 		}
 
 		require.NoError(t, WriteLock(path, original))
