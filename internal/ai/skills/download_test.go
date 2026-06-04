@@ -351,24 +351,34 @@ func TestFetchToTempFile_Truncation(t *testing.T) {
 	})
 }
 
-// --- checkNonEmpty ---.
+// --- checkHasSkills ---.
 
-func TestCheckNonEmpty(t *testing.T) {
-	t.Run("returns error for empty directory", func(t *testing.T) {
+func TestCheckHasSkills(t *testing.T) {
+	t.Run("returns error when skills subdirectory is absent", func(t *testing.T) {
 		dir := t.TempDir()
-		err := checkNonEmpty(dir)
+		err := checkHasSkills(dir)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "no files")
+		assert.Contains(t, err.Error(), "no skills found")
 	})
 
-	t.Run("returns nil for directory with at least one entry", func(t *testing.T) {
+	t.Run("returns error when skills subdirectory is empty", func(t *testing.T) {
 		dir := t.TempDir()
-		require.NoError(t, os.WriteFile(filepath.Join(dir, "file.txt"), []byte("x"), 0o644))
-		assert.NoError(t, checkNonEmpty(dir))
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "skills"), 0o755))
+		err := checkHasSkills(dir)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "no skills found")
+	})
+
+	t.Run("returns nil when skills subdirectory has at least one entry", func(t *testing.T) {
+		dir := t.TempDir()
+		skillDir := filepath.Join(dir, "skills", "my-skill")
+		require.NoError(t, os.MkdirAll(skillDir, 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("x"), 0o644))
+		assert.NoError(t, checkHasSkills(dir))
 	})
 
 	t.Run("returns error for non-existent directory", func(t *testing.T) {
-		err := checkNonEmpty(filepath.Join(t.TempDir(), "does-not-exist"))
+		err := checkHasSkills(filepath.Join(t.TempDir(), "does-not-exist"))
 		require.Error(t, err)
 	})
 }
@@ -473,13 +483,11 @@ func TestDownloadViaZip(t *testing.T) {
 // --- DownloadPlugin ---.
 
 func TestDownloadPlugin_EmptyExtraction(t *testing.T) {
-	// When the archive contains no entries matching the expected prefix, checkNonEmpty
-	// should cause the strategy to fail, and DownloadPlugin returns an error.
-	// Skip when git is usable: DownloadPlugin will clone from the real repo and succeed,
-	// bypassing the HTTP mock strategies entirely.
-	if _, err := exec.LookPath("git"); err == nil && checkGitVersion() == nil {
-		t.Skip("git is available; DownloadPlugin uses git strategy which bypasses HTTP mock")
-	}
+	// Force HTTP strategies by disabling git lookup so the test is not skipped
+	// in environments where git >= 2.25 is available.
+	orig := gitLookPath
+	gitLookPath = func(string) (string, error) { return "", errors.New("git not found") }
+	t.Cleanup(func() { gitLookPath = orig })
 
 	const ref = "main"
 
@@ -501,7 +509,6 @@ func TestDownloadPlugin_EmptyExtraction(t *testing.T) {
 		case "github.com":
 			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(wrongPrefixZipData))}, nil
 		default:
-			// SHA API — shouldn't be reached if extraction fails.
 			body, _ := json.Marshal(map[string]string{"sha": "abc"})
 			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(body))}, nil
 		}
@@ -510,20 +517,27 @@ func TestDownloadPlugin_EmptyExtraction(t *testing.T) {
 	base := t.TempDir()
 	targetDir := filepath.Join(base, "auth0")
 	_, err = DownloadPlugin(targetDir, ref)
-	// All three strategies should fail (git is skipped if not in PATH or fails network;
-	// tar.gz and ZIP produce empty dirs which checkNonEmpty rejects).
+	// tar.gz and ZIP extract nothing; checkHasSkills rejects the empty result.
 	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no skills found")
 }
 
 func TestDownloadPlugin_CreatesMissingTargetDir(t *testing.T) {
+	// Force HTTP strategies so the test is deterministic regardless of git availability.
+	orig := gitLookPath
+	gitLookPath = func(string) (string, error) { return "", errors.New("git not found") }
+	t.Cleanup(func() { gitLookPath = orig })
+
 	const ref = "main"
 	const wantSHA = "abc123"
 	prefix := fmt.Sprintf("auth0-agent-skills-%s/%s/", ref, pluginSubtreePath)
+	// Archive paths include the skills/ subdirectory to match the real repo layout and
+	// satisfy checkHasSkills which verifies targetDir/skills/ is non-empty.
 	tarData := makeTarGz(t, map[string]string{
-		prefix + "skill-a/SKILL.md": "# skill-a",
+		prefix + "skills/skill-a/SKILL.md": "# skill-a",
 	})
 	zipPath, _ := makeZip(t, map[string]string{
-		prefix + "skill-a/SKILL.md": "# skill-a",
+		prefix + "skills/skill-a/SKILL.md": "# skill-a",
 	})
 	zipData, err := os.ReadFile(zipPath)
 	require.NoError(t, err)
@@ -542,13 +556,98 @@ func TestDownloadPlugin_CreatesMissingTargetDir(t *testing.T) {
 
 	// targetDir is deeply nested and does not exist yet.
 	targetDir := filepath.Join(t.TempDir(), "deep", "nested", "auth0")
-	_, err = DownloadPlugin(targetDir, ref)
-	// If git is available and succeeds via real network, sha may differ; we just check
-	// that the call succeeded and targetDir was created with at least one entry.
-	if err == nil {
-		entries, readErr := os.ReadDir(targetDir)
-		require.NoError(t, readErr)
-		assert.NotEmpty(t, entries, "targetDir must contain extracted files")
+	gotSHA, err := DownloadPlugin(targetDir, ref)
+	require.NoError(t, err)
+	assert.Equal(t, wantSHA, gotSHA)
+	entries, readErr := os.ReadDir(targetDir)
+	require.NoError(t, readErr)
+	assert.NotEmpty(t, entries, "targetDir must contain extracted files")
+}
+
+// --- downloadViaGit ---.
+
+// setupLocalGitRepo creates a local bare repository seeded with the given file tree under
+// the specified branch. Returns the path of the bare repository.
+func setupLocalGitRepo(t *testing.T, branch string, files map[string]string) string {
+	t.Helper()
+
+	workDir := t.TempDir()
+	bareDir := t.TempDir()
+
+	runSetup := func(dir string, args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("setup git %v: %v\n%s", args, err, out)
+		}
 	}
-	// If git fails in test environment (no network), tar.gz or ZIP mock should succeed.
+
+	runSetup(workDir, "init", "-b", branch)
+	runSetup(workDir, "config", "user.email", "test@example.com")
+	runSetup(workDir, "config", "user.name", "Test")
+	runSetup(workDir, "config", "commit.gpgsign", "false")
+
+	for name, content := range files {
+		path := filepath.Join(workDir, filepath.FromSlash(name))
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
+	}
+
+	runSetup(workDir, "add", ".")
+	runSetup(workDir, "commit", "-m", "init")
+	runSetup(bareDir, "init", "--bare", "-b", branch)
+	runSetup(workDir, "remote", "add", "origin", bareDir)
+	runSetup(workDir, "push", "origin", branch)
+
+	return bareDir
+}
+
+func TestDownloadViaGit_Layout(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	if err := checkGitVersion(); err != nil {
+		t.Skip("git too old: " + err.Error())
+	}
+
+	bareDir := setupLocalGitRepo(t, "main", map[string]string{
+		"plugins/auth0/skills/skill-test/SKILL.md": "---\nname: test\n---\n# Test Skill",
+		"plugins/auth0/skills/skill-b/SKILL.md":    "---\nname: b\n---\n# B",
+	})
+
+	orig := agentSkillsGitURL
+	agentSkillsGitURL = bareDir
+	t.Cleanup(func() { agentSkillsGitURL = orig })
+
+	targetDir := t.TempDir()
+	sha, err := downloadViaGit(targetDir, "main")
+	require.NoError(t, err)
+	assert.NotEmpty(t, sha, "returned SHA should be non-empty")
+
+	assertFileContent(t, filepath.Join(targetDir, "skills", "skill-test", "SKILL.md"), "---\nname: test\n---\n# Test Skill")
+	assertFileContent(t, filepath.Join(targetDir, "skills", "skill-b", "SKILL.md"), "---\nname: b\n---\n# B")
+}
+
+func TestDownloadViaGit_CloneFailure(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	if err := checkGitVersion(); err != nil {
+		t.Skip("git too old: " + err.Error())
+	}
+
+	orig := agentSkillsGitURL
+	agentSkillsGitURL = "/nonexistent/does/not/exist"
+	t.Cleanup(func() { agentSkillsGitURL = orig })
+
+	targetDir := t.TempDir()
+	_, err := downloadViaGit(targetDir, "main")
+	require.Error(t, err, "clone of non-existent repo should fail")
+
+	// targetDir must still exist and be empty so the caller can fall back to HTTP strategies.
+	entries, readErr := os.ReadDir(targetDir)
+	require.NoError(t, readErr, "targetDir should still exist after clone failure")
+	assert.Empty(t, entries, "targetDir should be empty after clone failure")
 }
