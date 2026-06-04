@@ -31,6 +31,13 @@ const (
 // tests can override it without allocating a 100 MB body.
 var maxSkillsDownload int64 = 100 * 1024 * 1024 // 100 MB.
 
+// agentSkillsGitURL is the URL used by downloadViaGit. Declared as a var so tests can
+// point it at a local bare repository instead of the real GitHub remote.
+var agentSkillsGitURL = agentSkillsRepo + ".git"
+
+// gitLookPath is exec.LookPath by default; tests override it to force HTTP fallback strategies.
+var gitLookPath = exec.LookPath
+
 var skillsHTTPClient = &http.Client{Timeout: skillsHTTPTimeout}
 
 // DownloadPlugin downloads the auth0 agent-skills plugin into targetDir using the best
@@ -49,21 +56,31 @@ func DownloadPlugin(targetDir, ref string) (string, error) {
 	defer os.RemoveAll(tmpDir) // no-op if renamed to targetDir below
 
 	sha, dlErr := func() (string, error) {
-		if _, err := exec.LookPath("git"); err == nil && checkGitVersion() == nil {
+		var errs []string
+		if _, err := gitLookPath("git"); err == nil && checkGitVersion() == nil {
 			if sha, err := downloadViaGit(tmpDir, ref); err == nil {
 				return sha, nil
+			} else {
+				errs = append(errs, "git: "+err.Error())
 			}
 		}
 		if sha, err := downloadViaTarGz(tmpDir, ref); err == nil {
 			return sha, nil
+		} else {
+			errs = append(errs, "tar.gz: "+err.Error())
 		}
-		return downloadViaZip(tmpDir, ref)
+		if sha, err := downloadViaZip(tmpDir, ref); err == nil {
+			return sha, nil
+		} else {
+			errs = append(errs, "zip: "+err.Error())
+		}
+		return "", fmt.Errorf("all download strategies failed: %s", strings.Join(errs, "; "))
 	}()
 	if dlErr != nil {
 		return "", dlErr
 	}
 
-	if err := checkNonEmpty(tmpDir); err != nil {
+	if err := checkHasSkills(tmpDir); err != nil {
 		return "", err
 	}
 
@@ -88,14 +105,11 @@ func DownloadPlugin(targetDir, ref string) (string, error) {
 	return sha, nil
 }
 
-// checkNonEmpty returns an error if dir contains no entries.
-func checkNonEmpty(dir string) error {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return fmt.Errorf("check extraction result: %w", err)
-	}
-	if len(entries) == 0 {
-		return fmt.Errorf("extraction produced no files in %s (archive prefix may not match)", dir)
+// checkHasSkills returns an error if dir/skills/ does not exist or contains no entries.
+func checkHasSkills(dir string) error {
+	entries, err := os.ReadDir(filepath.Join(dir, "skills"))
+	if err != nil || len(entries) == 0 {
+		return fmt.Errorf("no skills found under %s/skills/ (archive prefix may not match)", dir)
 	}
 	return nil
 }
@@ -185,7 +199,7 @@ func downloadViaGit(targetDir, ref string) (string, error) {
 	}
 
 	if _, err := run("clone", "--no-checkout", "--depth", "1", "--filter=blob:none", "--branch", ref,
-		agentSkillsRepo+".git", "."); err != nil {
+		agentSkillsGitURL, "."); err != nil {
 		return "", err
 	}
 
@@ -202,10 +216,10 @@ func downloadViaGit(targetDir, ref string) (string, error) {
 		return "", err
 	}
 
-	// Promote plugins/auth0 into targetDir by rename within /tmp — no data copy.
-	// targetDir was created empty by the caller; remove it so the rename can take its path.
+	// Promote plugins/auth0/ into targetDir (the DownloadPlugin temp directory) by rename.
+	// Remove targetDir first so the rename can take its place.
 	subtreeSrc := filepath.Join(cloneDir, filepath.FromSlash(pluginSubtreePath))
-	if err := os.Remove(targetDir); err != nil {
+	if err := os.RemoveAll(targetDir); err != nil {
 		return "", fmt.Errorf("clear temp dir for promotion: %w", err)
 	}
 	if err := os.Rename(subtreeSrc, targetDir); err != nil {
@@ -273,7 +287,9 @@ func downloadViaTarGz(targetDir, ref string) (string, error) {
 	defer os.Remove(f.Name())
 	defer f.Close()
 
-	prefix := fmt.Sprintf("auth0-agent-skills-%s/%s/", ref, pluginSubtreePath)
+	// GitHub flattens "/" in ref names to "-" in archive root directory names.
+	archiveRef := strings.ReplaceAll(ref, "/", "-")
+	prefix := fmt.Sprintf("auth0-agent-skills-%s/%s/", archiveRef, pluginSubtreePath)
 	if err := extractTarGzSubtree(f, prefix, targetDir); err != nil {
 		return "", err
 	}
@@ -296,7 +312,9 @@ func downloadViaZip(targetDir, ref string) (string, error) {
 	defer os.Remove(f.Name())
 	defer f.Close()
 
-	prefix := fmt.Sprintf("auth0-agent-skills-%s/%s/", ref, pluginSubtreePath)
+	// GitHub flattens "/" in ref names to "-" in archive root directory names.
+	archiveRef := strings.ReplaceAll(ref, "/", "-")
+	prefix := fmt.Sprintf("auth0-agent-skills-%s/%s/", archiveRef, pluginSubtreePath)
 	if err := extractZipSubtree(f.Name(), size, prefix, targetDir); err != nil {
 		return "", err
 	}
@@ -304,7 +322,8 @@ func downloadViaZip(targetDir, ref string) (string, error) {
 	return sha, nil
 }
 
-// mergeDir recursively copies the contents of src into dst.
+// mergeDir recursively copies the contents of src into dst. Symlinks are preserved
+// (not dereferenced) so the layout matches what git sparse-checkout produces.
 func mergeDir(src, dst string) error {
 	entries, err := os.ReadDir(src)
 	if err != nil {
@@ -313,14 +332,23 @@ func mergeDir(src, dst string) error {
 	for _, entry := range entries {
 		srcPath := filepath.Join(src, entry.Name())
 		dstPath := filepath.Join(dst, entry.Name())
-		if entry.IsDir() {
+		switch {
+		case entry.Type()&os.ModeSymlink != 0:
+			target, err := os.Readlink(srcPath)
+			if err != nil {
+				return err
+			}
+			if err := os.Symlink(target, dstPath); err != nil {
+				return err
+			}
+		case entry.IsDir():
 			if err := os.MkdirAll(dstPath, 0o755); err != nil {
 				return err
 			}
 			if err := mergeDir(srcPath, dstPath); err != nil {
 				return err
 			}
-		} else {
+		default:
 			info, err := entry.Info()
 			if err != nil {
 				return err
