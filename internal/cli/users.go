@@ -1030,11 +1030,7 @@ func connectionHasEnabledClients(ctx context.Context, api auth0.ConnectionAPI, c
 		return false, err
 	}
 
-	if clients.Clients == nil {
-		return true, nil
-	}
-
-	return len(*clients.Clients) > 0, nil
+	return clients.Clients != nil && len(*clients.Clients) > 0, nil
 }
 
 func (c *cli) getUserConnection(users *management.User) []string {
