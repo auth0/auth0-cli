@@ -404,7 +404,11 @@ func createUserCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to find connection with name %q: %w", inputs.connectionName, err)
 			}
 
-			if len(connection.GetEnabledClients()) == 0 {
+			hasClients, err := connectionHasEnabledClients(cmd.Context(), cli.api.Connection, connection.GetID())
+			if err != nil {
+				return fmt.Errorf("failed to check enabled clients for connection %q: %w", inputs.connectionName, err)
+			}
+			if !hasClients {
 				return fmt.Errorf(
 					"failed to continue due to the connection with name %q being disabled, enable an application on this connection and try again",
 					inputs.connectionName,
@@ -894,14 +898,18 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 				return fmt.Errorf("failed to read connection with name %q: %w", inputs.ConnectionName, err)
 			}
 
-			if len(connection.GetEnabledClients()) == 0 {
+			inputs.ConnectionID = connection.GetID()
+
+			hasClients, err := connectionHasEnabledClients(cmd.Context(), cli.api.Connection, inputs.ConnectionID)
+			if err != nil {
+				return fmt.Errorf("failed to check enabled clients for connection %q: %w", inputs.ConnectionName, err)
+			}
+			if !hasClients {
 				return fmt.Errorf(
 					"failed to continue due to the connection with name %q being disabled, enable an application on this connection and try again",
 					inputs.ConnectionName,
 				)
 			}
-
-			inputs.ConnectionID = connection.GetID()
 
 			pipedUsersBody := iostream.PipedInput()
 			if len(pipedUsersBody) > 0 && inputs.UsersBody == "" {
@@ -996,7 +1004,11 @@ func (c *cli) databaseAndPasswordlessConnectionOptions(ctx context.Context) ([]s
 
 	var connectionNames []string
 	for _, connection := range connectionList.Connections {
-		if len(connection.GetEnabledClients()) == 0 {
+		hasClients, err := connectionHasEnabledClients(ctx, c.api.Connection, connection.GetID())
+		if err != nil {
+			continue
+		}
+		if !hasClients {
 			continue
 		}
 
@@ -1008,6 +1020,17 @@ func (c *cli) databaseAndPasswordlessConnectionOptions(ctx context.Context) ([]s
 	}
 
 	return connectionNames, nil
+}
+
+// connectionHasEnabledClients checks if a connection has any enabled clients
+// using the dedicated endpoint (replaces deprecated enabled_clients field).
+func connectionHasEnabledClients(ctx context.Context, api auth0.ConnectionAPI, connectionID string) (bool, error) {
+	clients, err := api.ReadEnabledClients(ctx, connectionID)
+	if err != nil {
+		return false, err
+	}
+
+	return clients.Clients != nil && len(*clients.Clients) > 0, nil
 }
 
 func (c *cli) getUserConnection(users *management.User) []string {

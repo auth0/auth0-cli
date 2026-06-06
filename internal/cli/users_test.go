@@ -16,35 +16,26 @@ import (
 
 func TestConnectionsPickerOptions(t *testing.T) {
 	tests := []struct {
-		name         string
-		connections  []*management.Connection
-		apiError     error
-		assertOutput func(t testing.TB, options []string)
-		assertError  func(t testing.TB, err error)
+		name           string
+		connections    []*management.Connection
+		enabledClients map[string]*management.ConnectionEnabledClientList // Keyed by connection ID.
+		apiError       error
+		assertOutput   func(t testing.TB, options []string)
+		assertError    func(t testing.TB, err error)
 	}{
 		{
 			name: "happy path",
 			connections: []*management.Connection{
-				{
-					Name:           auth0.String("some-name-1"),
-					Strategy:       auth0.String("auth0"),
-					EnabledClients: &[]string{"1"},
-				},
-				{
-					Name:           auth0.String("some-name-2"),
-					Strategy:       auth0.String("auth0"),
-					EnabledClients: &[]string{"1"},
-				},
-				{
-					Name:           auth0.String("some-name-3"),
-					Strategy:       auth0.String("sms"),
-					EnabledClients: &[]string{"1"},
-				},
-				{
-					Name:           auth0.String("some-name-4"),
-					Strategy:       auth0.String("email"),
-					EnabledClients: &[]string{"1"},
-				},
+				{ID: auth0.String("conn-1"), Name: auth0.String("some-name-1"), Strategy: auth0.String("auth0")},
+				{ID: auth0.String("conn-2"), Name: auth0.String("some-name-2"), Strategy: auth0.String("auth0")},
+				{ID: auth0.String("conn-3"), Name: auth0.String("some-name-3"), Strategy: auth0.String("sms")},
+				{ID: auth0.String("conn-4"), Name: auth0.String("some-name-4"), Strategy: auth0.String("email")},
+			},
+			enabledClients: map[string]*management.ConnectionEnabledClientList{
+				"conn-1": {Clients: &[]management.ConnectionEnabledClient{{ClientID: auth0.String("app-1")}}},
+				"conn-2": {Clients: &[]management.ConnectionEnabledClient{{ClientID: auth0.String("app-1")}}},
+				"conn-3": {Clients: &[]management.ConnectionEnabledClient{{ClientID: auth0.String("app-1")}}},
+				"conn-4": {Clients: &[]management.ConnectionEnabledClient{{ClientID: auth0.String("app-1")}}},
 			},
 			assertOutput: func(t testing.TB, options []string) {
 				assert.Len(t, options, 4)
@@ -60,24 +51,16 @@ func TestConnectionsPickerOptions(t *testing.T) {
 		{
 			name: "happy path: returning only active connections",
 			connections: []*management.Connection{
-				{
-					Name:           auth0.String("some-name-1"),
-					Strategy:       auth0.String("auth0"),
-					EnabledClients: &[]string{"1"},
-				},
-				{
-					Name:           auth0.String("some-name-2"),
-					Strategy:       auth0.String("auth0"),
-					EnabledClients: &[]string{"1"},
-				},
-				{
-					Name:     auth0.String("some-name-3"),
-					Strategy: auth0.String("sms"),
-				},
-				{
-					Name:     auth0.String("some-name-4"),
-					Strategy: auth0.String("email"),
-				},
+				{ID: auth0.String("conn-1"), Name: auth0.String("some-name-1"), Strategy: auth0.String("auth0")},
+				{ID: auth0.String("conn-2"), Name: auth0.String("some-name-2"), Strategy: auth0.String("auth0")},
+				{ID: auth0.String("conn-3"), Name: auth0.String("some-name-3"), Strategy: auth0.String("sms")},
+				{ID: auth0.String("conn-4"), Name: auth0.String("some-name-4"), Strategy: auth0.String("email")},
+			},
+			enabledClients: map[string]*management.ConnectionEnabledClientList{
+				"conn-1": {Clients: &[]management.ConnectionEnabledClient{{ClientID: auth0.String("app-1")}}},
+				"conn-2": {Clients: &[]management.ConnectionEnabledClient{{ClientID: auth0.String("app-1")}}},
+				"conn-3": {Clients: &[]management.ConnectionEnabledClient{}},
+				"conn-4": {Clients: &[]management.ConnectionEnabledClient{}},
 			},
 			assertOutput: func(t testing.TB, options []string) {
 				assert.Len(t, options, 2)
@@ -126,6 +109,18 @@ func TestConnectionsPickerOptions(t *testing.T) {
 					},
 					test.apiError,
 				)
+
+			// Set up ReadEnabledClients expectations for each connection.
+			if test.enabledClients != nil {
+				for _, conn := range test.connections {
+					id := conn.GetID()
+					if clients, ok := test.enabledClients[id]; ok {
+						connectionAPI.EXPECT().
+							ReadEnabledClients(ctx, id).
+							Return(clients, nil)
+					}
+				}
+			}
 
 			cli := &cli{
 				api: &auth0.API{

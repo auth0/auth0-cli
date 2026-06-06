@@ -27,4 +27,7 @@ type ConnectionAPI interface {
 
 	// List all connections.
 	List(ctx context.Context, opts ...management.RequestOption) (ul *management.ConnectionList, err error)
+
+	// ReadEnabledClients retrieves the enabled clients for a connection.
+	ReadEnabledClients(ctx context.Context, id string, opts ...management.RequestOption) (c *management.ConnectionEnabledClientList, err error)
 }
