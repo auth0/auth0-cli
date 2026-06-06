@@ -18,7 +18,7 @@ func TestConnectionsPickerOptions(t *testing.T) {
 	tests := []struct {
 		name           string
 		connections    []*management.Connection
-		enabledClients map[string]*management.ConnectionEnabledClientList // keyed by connection ID
+		enabledClients map[string]*management.ConnectionEnabledClientList // Keyed by connection ID.
 		apiError       error
 		assertOutput   func(t testing.TB, options []string)
 		assertError    func(t testing.TB, err error)
@@ -110,7 +110,7 @@ func TestConnectionsPickerOptions(t *testing.T) {
 					test.apiError,
 				)
 
-			// Set up ReadEnabledClients expectations for each connection
+			// Set up ReadEnabledClients expectations for each connection.
 			if test.enabledClients != nil {
 				for _, conn := range test.connections {
 					id := conn.GetID()
