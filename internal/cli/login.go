@@ -329,11 +329,6 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string, do
 		Scopes:    append(auth.RequiredScopes, additionalScopes...),
 	}
 
-	if err := keyring.StoreRefreshToken(result.Domain, result.RefreshToken); err != nil {
-		cli.renderer.Warnf("Could not store the access token and the refresh token to the keyring: %s", err)
-		cli.renderer.Warnf("Expect to login again when your access token expires.")
-	}
-
 	if err := keyring.StoreAccessToken(result.Domain, result.AccessToken); err != nil {
 		// In case we don't have a keyring, we want the
 		// access token to be saved in the config file.

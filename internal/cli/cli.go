@@ -85,21 +85,8 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 	}
 
 	if errors.Is(err, config.ErrInvalidToken) {
-		if err := tenant.RegenerateAccessToken(ctx); err != nil {
-			if tenant.IsAuthenticatedWithClientCredentials() {
-				errorMessage := fmt.Errorf(
-					"failed to fetch access token using client credentials: %w\n\n"+
-						"This may occur if the designated Auth0 application has been deleted, "+
-						"the client secret has been rotated or previous failure to store client "+
-						"secret in the keyring.\n\n"+
-						"Please re-authenticate by running: %s",
-					err,
-					ansi.Bold("auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>"),
-				)
-				return errorMessage
-			}
-
-			c.renderer.Warnf("Failed to renew access token: %s", err)
+		if tenant.IsAuthenticatedWithDeviceCodeFlow() {
+			c.renderer.Warnf("Your user login session has expired.")
 			c.renderer.Warnf("Please log in to re-authorize the CLI.\n")
 
 			// In --no-input mode, fail immediately instead of hanging on an interactive prompt.
@@ -121,6 +108,17 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
+		} else if err := tenant.RegenerateAccessToken(ctx); err != nil {
+			errorMessage := fmt.Errorf(
+				"failed to fetch access token using client credentials: %w\n\n"+
+					"This may occur if the designated Auth0 application has been deleted, "+
+					"the client secret has been rotated or previous failure to store client "+
+					"secret in the keyring.\n\n"+
+					"Please re-authenticate by running: %s",
+				err,
+				ansi.Bold("auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>"),
+			)
+			return errorMessage
 		}
 
 		if err := c.Config.AddTenant(tenant); err != nil {

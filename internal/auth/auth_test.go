@@ -27,7 +27,6 @@ func TestWaitUntilUserLogsIn(t *testing.T) {
 		tokenResponse := `{
 			"access_token": "Zm9v.eyJhdWQiOiBbImh0dHBzOi8vYXV0aDAtY2xpLXRlc3QudXMuYXV0aDAuY29tL2FwaS92Mi8iXX0",
 			"id_token": "id-token-here",
-			"refresh_token": "refresh-token-here",
 			"scope": "scope-here",
 			"token_type": "token-type-here",
 			"expires_in": 1000
