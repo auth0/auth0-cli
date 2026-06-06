@@ -19,16 +19,6 @@ const (
 	secretAccessTokenMaxChunks = 50
 )
 
-// StoreRefreshToken stores a tenant's refresh token in the system keyring.
-func StoreRefreshToken(tenant, value string) error {
-	return keyring.Set(secretRefreshToken, tenant, value)
-}
-
-// GetRefreshToken retrieves a tenant's refresh token from the system keyring.
-func GetRefreshToken(tenant string) (string, error) {
-	return keyring.Get(secretRefreshToken, tenant)
-}
-
 // StoreClientSecret stores a tenant's client secret in the system keyring.
 func StoreClientSecret(tenant, value string) error {
 	return keyring.Set(secretClientSecret, tenant, value)
@@ -43,6 +33,7 @@ func GetClientSecret(tenant string) (string, error) {
 func DeleteSecretsForTenant(tenant string) error {
 	var multiErrors []string
 
+	// Refresh tokens aren't supported anymore; this remains to clear existing ones.
 	if err := keyring.Delete(secretRefreshToken, tenant); err != nil {
 		if !errors.Is(err, keyring.ErrNotFound) {
 			multiErrors = append(multiErrors, fmt.Sprintf("failed to delete refresh token from keyring: %s", err))

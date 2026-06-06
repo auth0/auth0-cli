@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"slices"
 	"time"
 
@@ -133,37 +132,25 @@ func (t *Tenant) CheckAuthenticationStatus() error {
 
 // RegenerateAccessToken regenerates the access token for the tenant.
 func (t *Tenant) RegenerateAccessToken(ctx context.Context) error {
-	if t.IsAuthenticatedWithClientCredentials() {
-		clientSecret, err := keyring.GetClientSecret(t.Domain)
-		if err != nil {
-			return fmt.Errorf("failed to retrieve client secret from keyring: %w", err)
-		}
-
-		token, err := auth.GetAccessTokenFromClientCreds(
-			ctx,
-			auth.ClientCredentials{
-				ClientID:     t.ClientID,
-				ClientSecret: clientSecret,
-				Domain:       t.Domain,
-			},
-		)
-		if err != nil {
-			return err
-		}
-
-		t.AccessToken = token.AccessToken
-		t.ExpiresAt = token.ExpiresAt
+	clientSecret, err := keyring.GetClientSecret(t.Domain)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve client secret from keyring: %w", err)
 	}
 
-	if t.IsAuthenticatedWithDeviceCodeFlow() {
-		tokenResponse, err := auth.RefreshAccessToken(http.DefaultClient, t.Domain)
-		if err != nil {
-			return err
-		}
-
-		t.AccessToken = tokenResponse.AccessToken
-		t.ExpiresAt = time.Now().Add(time.Duration(tokenResponse.ExpiresIn) * time.Second)
+	token, err := auth.GetAccessTokenFromClientCreds(
+		ctx,
+		auth.ClientCredentials{
+			ClientID:     t.ClientID,
+			ClientSecret: clientSecret,
+			Domain:       t.Domain,
+		},
+	)
+	if err != nil {
+		return err
 	}
+
+	t.AccessToken = token.AccessToken
+	t.ExpiresAt = token.ExpiresAt
 
 	if err := keyring.StoreAccessToken(t.Domain, t.AccessToken); err == nil {
 		t.AccessToken = ""

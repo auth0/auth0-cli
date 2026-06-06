@@ -35,11 +35,10 @@ type Credentials struct {
 }
 
 type Result struct {
-	Tenant       string
-	Domain       string
-	RefreshToken string
-	AccessToken  string
-	ExpiresAt    time.Time
+	Tenant      string
+	Domain      string
+	AccessToken string
+	ExpiresAt   time.Time
 }
 
 type State struct {
@@ -85,7 +84,6 @@ func WaitUntilUserLogsIn(ctx context.Context, httpClient *http.Client, state Sta
 			var res struct {
 				AccessToken      string  `json:"access_token"`
 				IDToken          string  `json:"id_token"`
-				RefreshToken     string  `json:"refresh_token"`
 				Scope            string  `json:"scope"`
 				ExpiresIn        int64   `json:"expires_in"`
 				TokenType        string  `json:"token_type"`
@@ -111,8 +109,7 @@ func WaitUntilUserLogsIn(ctx context.Context, httpClient *http.Client, state Sta
 			}
 
 			return Result{
-				RefreshToken: res.RefreshToken,
-				AccessToken:  res.AccessToken,
+				AccessToken: res.AccessToken,
 				ExpiresAt: time.Now().Add(
 					time.Duration(res.ExpiresIn) * time.Second,
 				),
@@ -125,7 +122,6 @@ func WaitUntilUserLogsIn(ctx context.Context, httpClient *http.Client, state Sta
 
 var RequiredScopes = []string{
 	"openid",
-	"offline_access", // For retrieving refresh token.
 	"create:clients", "delete:clients", "read:clients", "update:clients",
 	"create:client_grants", "read:client_grants",
 	"create:resource_servers", "delete:resource_servers", "read:resource_servers", "update:resource_servers",
