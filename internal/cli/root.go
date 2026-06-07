@@ -88,6 +88,11 @@ func buildRootCmd(cli *cli) *cobra.Command {
 			prepareInteractivity(cmd)
 			cli.configureRenderer()
 
+			if cmd.CommandPath() != "auth0 ai skills post-install-hook" && !skillsSentinelExists() {
+				fmt.Fprintln(os.Stdout, skillsInstallTip)
+				writeSkillsSentinel()
+			}
+
 			if !commandRequiresAuthentication(cmd.CommandPath()) {
 				return nil
 			}
@@ -121,6 +126,7 @@ func commandRequiresAuthentication(invokedCommandName string) bool {
 		"auth0 logout",
 		"auth0 tenants use",
 		"auth0 tenants list",
+		"auth0 ai skills post-install-hook",
 	}
 
 	for _, cmd := range commandsWithNoAuthRequired {
@@ -175,6 +181,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(networkACLCmd(cli))
 	rootCmd.AddCommand(tenantSettingsCmd(cli))
 	rootCmd.AddCommand(tokenExchangeCmd(cli))
+	rootCmd.AddCommand(aiCmd(cli))
 
 	// Keep completion at the bottom.
 	rootCmd.AddCommand(completionCmd(cli))
