@@ -74,6 +74,20 @@ func TestCheckSkillLink(t *testing.T) {
 
 		assert.Equal(t, "copy", CheckSkillLink(agentDir, "my-skill", "/any/source"))
 	})
+
+	t.Run("broken on permission error (not missing)", func(t *testing.T) {
+		if os.Getuid() == 0 {
+			t.Skip("root bypasses permission checks")
+		}
+		parent := t.TempDir()
+		agentDir := filepath.Join(parent, "locked")
+		require.NoError(t, os.MkdirAll(filepath.Join(agentDir, "my-skill"), 0o755))
+		require.NoError(t, os.Chmod(agentDir, 0o000))
+		t.Cleanup(func() { _ = os.Chmod(agentDir, 0o755) })
+
+		result := CheckSkillLink(agentDir, "my-skill", "/any/source")
+		assert.Equal(t, "broken", result)
+	})
 }
 
 // --- CreateSkillLink ---
@@ -168,18 +182,51 @@ func TestCreateSkillLink(t *testing.T) {
 		assert.Equal(t, "copy", CheckSkillLink(agentDir, "my-skill", src))
 	})
 
-	t.Run("skips real directory when useCopy is false", func(t *testing.T) {
+	t.Run("warns and skips real directory when useCopy is false", func(t *testing.T) {
 		agentDir := t.TempDir()
 		linkPath := filepath.Join(agentDir, "my-skill")
 		require.NoError(t, os.MkdirAll(linkPath, 0o755))
 		require.NoError(t, os.WriteFile(filepath.Join(linkPath, "SKILL.md"), []byte("original"), 0o644))
 
 		src := makeSkillSource(t)
+		// Should succeed (skip) but warn to stderr.
 		require.NoError(t, CreateSkillLink(src, agentDir, "my-skill", false))
 
+		// Original directory content must be preserved.
 		data, err := os.ReadFile(filepath.Join(linkPath, "SKILL.md"))
 		require.NoError(t, err)
 		assert.Equal(t, "original", string(data), "original directory should be preserved")
+		// Entry must still be a real directory, not a symlink.
+		info, err := os.Lstat(linkPath)
+		require.NoError(t, err)
+		assert.Zero(t, info.Mode()&os.ModeSymlink, "entry should remain a directory")
+	})
+
+	t.Run("errors on regular file at linkPath", func(t *testing.T) {
+		agentDir := t.TempDir()
+		linkPath := filepath.Join(agentDir, "my-skill")
+		require.NoError(t, os.WriteFile(linkPath, []byte("not a dir"), 0o644))
+
+		src := makeSkillSource(t)
+		err := CreateSkillLink(src, agentDir, "my-skill", false)
+		assert.Error(t, err)
+	})
+
+	t.Run("copy is replaced on re-install (replace semantics)", func(t *testing.T) {
+		src := makeSkillSource(t)
+		agentDir := t.TempDir()
+
+		require.NoError(t, CreateSkillLink(src, agentDir, "my-skill", true))
+
+		// Add a stale file directly into the copy.
+		staleFile := filepath.Join(agentDir, "my-skill", "stale.txt")
+		require.NoError(t, os.WriteFile(staleFile, []byte("stale"), 0o644))
+
+		// Re-run copy install; the stale file should be gone.
+		require.NoError(t, CreateSkillLink(src, agentDir, "my-skill", true))
+
+		_, err := os.Stat(staleFile)
+		assert.True(t, os.IsNotExist(err), "stale file should be removed after re-install")
 	})
 }
 

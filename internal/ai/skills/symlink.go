@@ -28,8 +28,15 @@ func CreateSkillLink(sourceSkillDir, agentSkillsDir, skillName string, useCopy b
 				return fmt.Errorf("remove existing symlink %s: %w", linkPath, rmErr)
 			}
 		} else if info.IsDir() {
-			// Prior --copy install. Skip: replacing a real dir silently is unsafe.
-			return nil
+			if !useCopy {
+				fmt.Fprintf(os.Stderr,
+					"warning: %s is a copied directory; remove it manually to switch to symlink mode\n",
+					linkPath)
+				return nil
+			}
+			// useCopy=true: fall through to re-copy with replace semantics.
+		} else {
+			return fmt.Errorf("%s exists as a regular file; remove it before installing skill %q", linkPath, skillName)
 		}
 	} else if !os.IsNotExist(err) {
 		return fmt.Errorf("lstat %s: %w", linkPath, err)
@@ -80,12 +87,35 @@ func createSymlink(sourceSkillDir, agentSkillsDir, linkPath string) error {
 	return copyDir(sourceSkillDir, linkPath)
 }
 
-// copyDir recursively copies src into a newly created dst directory.
+// copyDir replaces dst with an exact copy of src.
+// Any files in dst that no longer exist in src are removed, so the installed copy
+// stays in sync with the canonical source on skill updates.
 func copyDir(src, dst string) error {
-	if err := os.MkdirAll(dst, 0o755); err != nil {
-		return fmt.Errorf("create copy dir: %w", err)
+	tmpDst, err := os.MkdirTemp(filepath.Dir(dst), ".skill-copy-*")
+	if err != nil {
+		return fmt.Errorf("create temp copy dir: %w", err)
 	}
-	return mergeDir(src, dst)
+	if err := mergeDir(src, tmpDst); err != nil {
+		_ = os.RemoveAll(tmpDst)
+		return err
+	}
+	if err := os.RemoveAll(dst); err != nil {
+		_ = os.RemoveAll(tmpDst)
+		return fmt.Errorf("remove stale copy dir: %w", err)
+	}
+	if err := os.Rename(tmpDst, dst); err != nil {
+		// Cross-filesystem fallback: re-create dst from the temp copy.
+		if mkErr := os.MkdirAll(dst, 0o755); mkErr != nil {
+			_ = os.RemoveAll(tmpDst)
+			return fmt.Errorf("create copy dir: %w", mkErr)
+		}
+		if mergeErr := mergeDir(tmpDst, dst); mergeErr != nil {
+			_ = os.RemoveAll(tmpDst)
+			return mergeErr
+		}
+		_ = os.RemoveAll(tmpDst)
+	}
+	return nil
 }
 
 // RemoveSkillLink removes the skill entry (symlink or copied directory) at agentSkillsDir/skillName.
@@ -111,7 +141,10 @@ func CheckSkillLink(agentSkillsDir, skillName, expectedSourceDir string) string 
 	linkPath := filepath.Join(agentSkillsDir, skillName)
 	info, err := os.Lstat(linkPath)
 	if err != nil {
-		return "missing"
+		if os.IsNotExist(err) {
+			return "missing"
+		}
+		return "broken"
 	}
 
 	if info.Mode()&os.ModeSymlink == 0 {
