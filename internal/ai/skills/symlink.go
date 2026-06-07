@@ -2,11 +2,15 @@ package skills
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 )
+
+// stderrWriter is the target for diagnostic output. Replaced in tests.
+var stderrWriter io.Writer = os.Stderr
 
 // CreateSkillLink installs skillName from sourceSkillDir into agentSkillsDir.
 // useCopy=true copies files recursively; useCopy=false creates a symlink.
@@ -21,7 +25,9 @@ func CreateSkillLink(sourceSkillDir, agentSkillsDir, skillName string, useCopy b
 	info, err := os.Lstat(linkPath)
 	if err == nil {
 		if info.Mode()&os.ModeSymlink != 0 {
-			if isSymlinkCorrect(linkPath, agentSkillsDir, sourceSkillDir) {
+			// For useCopy=false: skip if already pointing to the right place.
+			// For useCopy=true: remove the symlink so we can replace it with a copy.
+			if !useCopy && isSymlinkCorrect(linkPath, sourceSkillDir) {
 				return nil
 			}
 			if rmErr := os.Remove(linkPath); rmErr != nil {
@@ -29,7 +35,7 @@ func CreateSkillLink(sourceSkillDir, agentSkillsDir, skillName string, useCopy b
 			}
 		} else if info.IsDir() {
 			if !useCopy {
-				fmt.Fprintf(os.Stderr,
+				fmt.Fprintf(stderrWriter,
 					"warning: %s is a copied directory; remove it manually to switch to symlink mode\n",
 					linkPath)
 				return nil
@@ -49,19 +55,17 @@ func CreateSkillLink(sourceSkillDir, agentSkillsDir, skillName string, useCopy b
 }
 
 // isSymlinkCorrect returns true if linkPath is a non-broken symlink resolving to sourceSkillDir.
-func isSymlinkCorrect(linkPath, agentSkillsDir, sourceSkillDir string) bool {
-	target, err := os.Readlink(linkPath)
+// os.SameFile is used instead of string comparison to handle case-insensitive filesystems (e.g. macOS APFS).
+func isSymlinkCorrect(linkPath, sourceSkillDir string) bool {
+	linkInfo, err := os.Stat(linkPath)
+	if err != nil {
+		return false // broken symlink
+	}
+	srcInfo, err := os.Stat(sourceSkillDir)
 	if err != nil {
 		return false
 	}
-	if !filepath.IsAbs(target) {
-		target = filepath.Join(agentSkillsDir, target)
-	}
-	if filepath.Clean(target) != filepath.Clean(sourceSkillDir) {
-		return false
-	}
-	_, err = os.Stat(linkPath)
-	return err == nil
+	return os.SameFile(linkInfo, srcInfo)
 }
 
 // createSymlink creates a symlink at linkPath pointing to sourceSkillDir.
@@ -83,7 +87,7 @@ func createSymlink(sourceSkillDir, agentSkillsDir, linkPath string) error {
 	if err := exec.Command("cmd", "/C", "mklink", "/J", linkPath, sourceSkillDir).Run(); err == nil {
 		return nil
 	}
-	fmt.Fprintf(os.Stderr, "warning: symlink and junction unavailable; copying %s to %s\n", sourceSkillDir, linkPath)
+	fmt.Fprintf(stderrWriter, "warning: symlink and junction unavailable; copying %s to %s\n", sourceSkillDir, linkPath)
 	return copyDir(sourceSkillDir, linkPath)
 }
 
@@ -95,25 +99,31 @@ func copyDir(src, dst string) error {
 	if err != nil {
 		return fmt.Errorf("create temp copy dir: %w", err)
 	}
+	// Always clean up the temp dir so it is never left as an orphan in agentSkillsDir.
+	tmpRemoved := false
+	defer func() {
+		if !tmpRemoved {
+			_ = os.RemoveAll(tmpDst)
+		}
+	}()
+
 	if err := mergeDir(src, tmpDst); err != nil {
-		_ = os.RemoveAll(tmpDst)
 		return err
 	}
 	if err := os.RemoveAll(dst); err != nil {
-		_ = os.RemoveAll(tmpDst)
 		return fmt.Errorf("remove stale copy dir: %w", err)
 	}
 	if err := os.Rename(tmpDst, dst); err != nil {
 		// Cross-filesystem fallback: re-create dst from the temp copy.
+		fmt.Fprintf(stderrWriter, "warning: rename %s → %s failed (%v); falling back to copy\n", tmpDst, dst, err)
 		if mkErr := os.MkdirAll(dst, 0o755); mkErr != nil {
-			_ = os.RemoveAll(tmpDst)
 			return fmt.Errorf("create copy dir: %w", mkErr)
 		}
 		if mergeErr := mergeDir(tmpDst, dst); mergeErr != nil {
-			_ = os.RemoveAll(tmpDst)
 			return mergeErr
 		}
-		_ = os.RemoveAll(tmpDst)
+	} else {
+		tmpRemoved = true // rename succeeded; temp dir is now dst
 	}
 	return nil
 }
@@ -151,20 +161,18 @@ func CheckSkillLink(agentSkillsDir, skillName, expectedSourceDir string) string 
 		return "copy"
 	}
 
-	// It's a symlink. Verify the target exists.
-	if _, err := os.Stat(linkPath); err != nil {
-		return "broken"
-	}
-
-	// Target exists. Check if it points to the expected place.
-	target, err := os.Readlink(linkPath)
+	// It's a symlink. Verify the target exists by following the link.
+	resolvedInfo, err := os.Stat(linkPath)
 	if err != nil {
 		return "broken"
 	}
-	if !filepath.IsAbs(target) {
-		target = filepath.Join(agentSkillsDir, target)
+
+	// Use os.SameFile to handle case-insensitive filesystems (e.g. macOS APFS).
+	srcInfo, err := os.Stat(expectedSourceDir)
+	if err != nil {
+		return "wrong_target"
 	}
-	if filepath.Clean(target) == filepath.Clean(expectedSourceDir) {
+	if os.SameFile(resolvedInfo, srcInfo) {
 		return "ok"
 	}
 	return "wrong_target"
