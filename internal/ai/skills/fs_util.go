@@ -22,7 +22,7 @@ func mergeDir(src, dst string) error {
 			if err != nil {
 				return err
 			}
-			// os.Symlink is not idempotent (returns EEXIST). Remove any existing
+			// Os.Symlink is not idempotent (returns EEXIST). Remove any existing
 			// entry so the call is safe under concurrent writes or repeated merges.
 			_ = os.Remove(dstPath)
 			if err := os.Symlink(target, dstPath); err != nil {

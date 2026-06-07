@@ -13,7 +13,7 @@ import (
 var stderrWriter io.Writer = os.Stderr
 
 // CreateSkillLink installs skillName from sourceSkillDir into agentSkillsDir.
-// useCopy=true copies files recursively; useCopy=false creates a symlink.
+// When useCopy is true the directory is copied recursively; otherwise a symlink is created.
 // The operation is idempotent: a correct existing symlink or copy is left unchanged.
 func CreateSkillLink(sourceSkillDir, agentSkillsDir, skillName string, useCopy bool) error {
 	if err := os.MkdirAll(agentSkillsDir, 0o755); err != nil {
@@ -24,7 +24,8 @@ func CreateSkillLink(sourceSkillDir, agentSkillsDir, skillName string, useCopy b
 
 	info, err := os.Lstat(linkPath)
 	if err == nil {
-		if info.Mode()&os.ModeSymlink != 0 {
+		switch {
+		case info.Mode()&os.ModeSymlink != 0:
 			// For useCopy=false: skip if already pointing to the right place.
 			// For useCopy=true: remove the symlink so we can replace it with a copy.
 			if !useCopy && isSymlinkCorrect(linkPath, sourceSkillDir) {
@@ -33,15 +34,15 @@ func CreateSkillLink(sourceSkillDir, agentSkillsDir, skillName string, useCopy b
 			if rmErr := os.Remove(linkPath); rmErr != nil {
 				return fmt.Errorf("remove existing symlink %s: %w", linkPath, rmErr)
 			}
-		} else if info.IsDir() {
+		case info.IsDir():
 			if !useCopy {
 				fmt.Fprintf(stderrWriter,
 					"warning: %s is a copied directory; remove it manually to switch to symlink mode\n",
 					linkPath)
 				return nil
 			}
-			// useCopy=true: fall through to re-copy with replace semantics.
-		} else {
+			// UseCopy=true: fall through to re-copy with replace semantics.
+		default:
 			return fmt.Errorf("%s exists as a regular file; remove it before installing skill %q", linkPath, skillName)
 		}
 	} else if !os.IsNotExist(err) {
@@ -55,11 +56,11 @@ func CreateSkillLink(sourceSkillDir, agentSkillsDir, skillName string, useCopy b
 }
 
 // isSymlinkCorrect returns true if linkPath is a non-broken symlink resolving to sourceSkillDir.
-// os.SameFile is used instead of string comparison to handle case-insensitive filesystems (e.g. macOS APFS).
+// Uses os.SameFile instead of string comparison to handle case-insensitive filesystems (e.g. macOS APFS).
 func isSymlinkCorrect(linkPath, sourceSkillDir string) bool {
 	linkInfo, err := os.Stat(linkPath)
 	if err != nil {
-		return false // broken symlink
+		return false // Broken symlink.
 	}
 	srcInfo, err := os.Stat(sourceSkillDir)
 	if err != nil {
@@ -123,7 +124,7 @@ func copyDir(src, dst string) error {
 			return mergeErr
 		}
 	} else {
-		tmpRemoved = true // rename succeeded; temp dir is now dst
+		tmpRemoved = true // Rename succeeded; temp dir is now dst.
 	}
 	return nil
 }

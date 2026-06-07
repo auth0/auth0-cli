@@ -196,7 +196,7 @@ func TestValidateInstall_MultipleSkills(t *testing.T) {
 	if err := CreateSkillLink(filepath.Join(sourcePluginDir, "skill-a"), agentSkillsDir, "skill-a", false); err != nil {
 		t.Fatal(err)
 	}
-	// skill-b intentionally not installed.
+	// Skill-b intentionally not installed.
 
 	statuses := ValidateInstall("claude-code", agentSkillsDir, sourcePluginDir, []string{"skill-a", "skill-b"})
 	if len(statuses) != 2 {
@@ -240,7 +240,7 @@ func TestValidateInstall_EmptySkillsList(t *testing.T) {
 func TestValidateInstall_AbsentAgentSkillsDir(t *testing.T) {
 	tmp := t.TempDir()
 	sourcePluginDir := filepath.Join(tmp, "plugins")
-	// agentSkillsDir does not exist — all requested skills should return "missing".
+	// AgentSkillsDir does not exist — all requested skills should return "missing".
 	agentSkillsDir := filepath.Join(tmp, "nonexistent", "agent", "skills")
 
 	statuses := ValidateInstall("claude-code", agentSkillsDir, sourcePluginDir, []string{"auth0-react", "auth0-nextjs"})

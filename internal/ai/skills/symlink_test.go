@@ -30,7 +30,7 @@ func makeSkillSource(t *testing.T) string {
 	return dir
 }
 
-// --- CheckSkillLink ---
+// --- CheckSkillLink ---.
 
 func TestCheckSkillLink(t *testing.T) {
 	if runtime.GOOS == "windows" {
@@ -102,7 +102,7 @@ func TestCheckSkillLink(t *testing.T) {
 	})
 }
 
-// --- CreateSkillLink ---
+// --- CreateSkillLink ---.
 
 func TestCreateSkillLink(t *testing.T) {
 	if runtime.GOOS == "windows" {
@@ -265,10 +265,9 @@ func TestCreateSkillLink(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "# skill", string(data))
 	})
-
 }
 
-// --- RemoveSkillLink ---
+// --- RemoveSkillLink ---.
 
 func TestRemoveSkillLink(t *testing.T) {
 	if runtime.GOOS == "windows" {

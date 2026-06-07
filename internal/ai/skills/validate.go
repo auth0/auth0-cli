@@ -11,12 +11,12 @@ type SkillInstallStatus struct {
 	SkillName string
 	AgentID   string
 	LinkPath  string
-	Status    string // "ok" | "missing" | "broken_symlink" | "invalid_skill" | "copy" | "unknown"
+	Status    string // "ok" | "missing" | "broken_symlink" | "invalid_skill" | "copy" | "unknown".
 	Error     string
 }
 
-// ValidateInstall checks each skill in skills for the given agent.
-// sourcePluginDir is the directory containing skill subdirectories (pluginDir/skills/).
+// ValidateInstall checks the installation state of each skill in agentSkillsDir.
+// The sourcePluginDir parameter is the directory containing skill subdirectories (pluginDir/skills/).
 func ValidateInstall(agentID, agentSkillsDir, sourcePluginDir string, skills []string) []SkillInstallStatus {
 	out := make([]SkillInstallStatus, 0, len(skills))
 	for _, skillName := range skills {
