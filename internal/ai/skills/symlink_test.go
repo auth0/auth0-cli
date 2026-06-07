@@ -1,14 +1,26 @@
 package skills
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// captureStderr replaces stderrWriter with a buffer for the duration of the test.
+func captureStderr(t *testing.T) *bytes.Buffer {
+	t.Helper()
+	buf := &bytes.Buffer{}
+	orig := stderrWriter
+	stderrWriter = buf
+	t.Cleanup(func() { stderrWriter = orig })
+	return buf
+}
 
 // makeSkillSource creates a temporary directory with a SKILL.md file inside.
 func makeSkillSource(t *testing.T) string {
@@ -183,6 +195,7 @@ func TestCreateSkillLink(t *testing.T) {
 	})
 
 	t.Run("warns and skips real directory when useCopy is false", func(t *testing.T) {
+		buf := captureStderr(t)
 		agentDir := t.TempDir()
 		linkPath := filepath.Join(agentDir, "my-skill")
 		require.NoError(t, os.MkdirAll(linkPath, 0o755))
@@ -200,6 +213,8 @@ func TestCreateSkillLink(t *testing.T) {
 		info, err := os.Lstat(linkPath)
 		require.NoError(t, err)
 		assert.Zero(t, info.Mode()&os.ModeSymlink, "entry should remain a directory")
+		// Warning must be emitted to stderr.
+		assert.True(t, strings.Contains(buf.String(), "warning:"), "expected warning on stderr, got: %q", buf.String())
 	})
 
 	t.Run("errors on regular file at linkPath", func(t *testing.T) {
@@ -228,6 +243,29 @@ func TestCreateSkillLink(t *testing.T) {
 		_, err := os.Stat(staleFile)
 		assert.True(t, os.IsNotExist(err), "stale file should be removed after re-install")
 	})
+
+	t.Run("converts existing correct symlink to copy when useCopy switches to true", func(t *testing.T) {
+		src := makeSkillSource(t)
+		agentDir := t.TempDir()
+
+		// Install as symlink first.
+		require.NoError(t, CreateSkillLink(src, agentDir, "my-skill", false))
+		assert.Equal(t, "ok", CheckSkillLink(agentDir, "my-skill", src))
+		info, err := os.Lstat(filepath.Join(agentDir, "my-skill"))
+		require.NoError(t, err)
+		assert.NotZero(t, info.Mode()&os.ModeSymlink, "should be a symlink after first install")
+
+		// Re-install with useCopy=true; the symlink must be replaced by a real directory.
+		require.NoError(t, CreateSkillLink(src, agentDir, "my-skill", true))
+		assert.Equal(t, "copy", CheckSkillLink(agentDir, "my-skill", src))
+		info, err = os.Lstat(filepath.Join(agentDir, "my-skill"))
+		require.NoError(t, err)
+		assert.Zero(t, info.Mode()&os.ModeSymlink, "should be a real directory after copy install")
+		data, err := os.ReadFile(filepath.Join(agentDir, "my-skill", "SKILL.md"))
+		require.NoError(t, err)
+		assert.Equal(t, "# skill", string(data))
+	})
+
 }
 
 // --- RemoveSkillLink ---
