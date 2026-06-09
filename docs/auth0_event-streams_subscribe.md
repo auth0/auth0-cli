@@ -12,7 +12,11 @@ By default, every received event is rendered as a single, color-coded summary li
 
 Use --verbose to also print the full JSON payload after each summary, or --json / --json-compact to emit raw JSON suitable for piping into `jq`.
 
-Heartbeat (`offset-only`) messages are suppressed by default and surfaced via a periodic faint indicator and a final cursor on disconnect; pass --show-heartbeats to render each one. Press Ctrl+C to disconnect; a per-type summary and the latest cursor will be printed so you can resume with --from.
+Heartbeat (`offset-only`) messages are suppressed by default and surfaced via a periodic faint indicator and a final cursor on disconnect; pass --show-heartbeats to render each one.
+
+The server rotates long-lived connections every few minutes; the command transparently resumes from the last cursor so the session stays continuous. Use --no-reconnect to exit when the connection ends, or --max-reconnects to cap the number of consecutive failed reconnect attempts. Press Ctrl+C to disconnect; a per-type summary and the latest cursor are printed so you can resume with --from.
+
+Run with --list-event-types to print every value accepted by --event-type.
 
 ## Usage
 ```
@@ -23,6 +27,7 @@ auth0 event-streams subscribe [flags]
 
 ```
   auth0 event-streams subscribe
+  auth0 event-streams subscribe --list-event-types
   auth0 event-streams subscribe --event-type user.created
   auth0 event-streams subscribe --event-type user.created --event-type user.updated
   auth0 event-streams subscribe --from-timestamp 2026-05-01T00:00:00Z
@@ -42,6 +47,9 @@ auth0 event-streams subscribe [flags]
       --from-timestamp string         RFC-3339 timestamp indicating where to start streaming events from. Use this on the initial query when no cursor (--from) is available; prefer --from on subsequent runs as it is more accurate.
       --json                          Output each event as JSON (one indented object per event).
       --json-compact                  Output each event as compact, single-line JSON (newline-delimited).
+      --list-event-types              Print every event type accepted by --event-type and exit, without opening a subscription.
+      --max-reconnects int            Maximum number of consecutive failed reconnect attempts before giving up. 0 (default) keeps retrying as long as the stream is making progress. Ignored when --no-reconnect is set.
+      --no-reconnect                  Disable automatic reconnection. By default the stream resumes from the last cursor after the server drops the connection, so no events are missed. With this flag the command exits when the stream ends.
       --output-file string            Append every received event as a JSON line to this file (raw payload). Independent of the stdout format.
       --show-heartbeats offset-only   Show every offset-only heartbeat as its own line. By default heartbeats are silently tracked and only the latest cursor is reported on disconnect.
   -v, --verbose                       Print the full JSON payload after each event summary line.
