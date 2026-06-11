@@ -141,8 +141,8 @@ func checkGitVersion() error {
 	return nil
 }
 
-// fetchCommitSHA fetches the latest commit SHA for ref from the GitHub API.
-func fetchCommitSHA(ref string) (string, error) {
+// FetchCommitSHA fetches the latest commit SHA for ref from the GitHub API.
+func FetchCommitSHA(ref string) (string, error) {
 	req, err := http.NewRequest(http.MethodGet, agentSkillsAPI+ref, nil)
 	if err != nil {
 		return "", err
@@ -274,7 +274,7 @@ func fetchToTempFile(url, pattern, label string) (*os.File, int64, error) {
 
 // downloadViaTarGz fetches the commit SHA first, then downloads and extracts the tar.gz archive.
 func downloadViaTarGz(targetDir, ref string) (string, error) {
-	sha, err := fetchCommitSHA(ref)
+	sha, err := FetchCommitSHA(ref)
 	if err != nil {
 		return "", err
 	}
@@ -299,7 +299,7 @@ func downloadViaTarGz(targetDir, ref string) (string, error) {
 
 // downloadViaZip fetches the commit SHA first, then downloads and extracts the ZIP archive.
 func downloadViaZip(targetDir, ref string) (string, error) {
-	sha, err := fetchCommitSHA(ref)
+	sha, err := FetchCommitSHA(ref)
 	if err != nil {
 		return "", err
 	}
