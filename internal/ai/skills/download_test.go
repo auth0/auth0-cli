@@ -576,7 +576,7 @@ func setupLocalGitRepo(t *testing.T, branch string, files map[string]string) str
 
 	runSetup := func(dir string, args ...string) {
 		t.Helper()
-		cmd := exec.Command("git", args...)
+		cmd := exec.Command("git", append([]string{"-c", "safe.bareRepository=all"}, args...)...)
 		cmd.Dir = dir
 		out, err := cmd.CombinedOutput()
 		if err != nil {
