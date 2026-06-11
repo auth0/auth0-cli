@@ -17,7 +17,7 @@ import (
 
 const (
 	skillsSentinelPath = ".config/auth0/agents/.post-install-ran"
-	skillsInstallTip   = "Run 'auth0 ai skills install' any time to set up Auth0 skills for your AI assistant."
+	skillsInstallTip   = "Tip: run 'auth0 ai skills install' to set up Auth0 skills for your AI assistant."
 
 	skillsPluginRepo = "https://github.com/auth0/agent-skills"
 	skillsPluginRef  = "main"
@@ -86,8 +86,8 @@ func postInstallHookCmd(cli *cli) *cobra.Command {
 			}
 
 			if !iostream.IsInputTerminal() || !iostream.IsOutputTerminal() {
-				fmt.Fprintln(os.Stdout, skillsInstallTip)
-				writeSkillsSentinel()
+				fmt.Fprintln(os.Stderr, skillsInstallTip)
+				// writeSkillsSentinel()
 				return nil
 			}
 
@@ -109,22 +109,26 @@ func postInstallHookCmd(cli *cli) *cobra.Command {
 
 			if err := survey.AskOne(prompt, &choice); err != nil {
 				// User pressed Ctrl+C or closed the terminal — skip gracefully.
-				fmt.Fprintln(os.Stdout, skillsInstallTip)
-				writeSkillsSentinel()
+				fmt.Fprintln(os.Stderr, skillsInstallTip)
+				// writeSkillsSentinel()
+				return nil
+			}
+
+			switch choice {
+			case choiceAuto:
+				if err := runInstallFast(cli); err != nil {
+					return err
+				}
+			case choiceManual:
+				if err := runInstallInteractive(cli); err != nil {
+					return err
+				}
+			default:
+				fmt.Fprintln(os.Stderr, skillsInstallTip)
 				return nil
 			}
 
 			writeSkillsSentinel()
-
-			switch choice {
-			case choiceAuto:
-				return runInstallFast(cli)
-			case choiceManual:
-				return runInstallInteractive(cli)
-			default:
-				fmt.Fprintln(os.Stdout, skillsInstallTip)
-			}
-
 			return nil
 		},
 	}
@@ -205,16 +209,20 @@ func runInstallFast(_ *cli) error {
 }
 
 // downloadSkillsIfNeeded downloads the skills plugin if the lock file is absent or
-// records a different commit SHA than the remote. Returns the commit SHA in use.
+// the local commit SHA differs from the remote HEAD of main. Returns the commit SHA in use.
 func downloadSkillsIfNeeded(targetDir, lockPath string) (string, error) {
+	remoteSHA, err := skills.FetchCommitSHA(skillsPluginRef)
+	if err != nil {
+		return "", fmt.Errorf("fetch remote commit SHA: %w", err)
+	}
+
 	lock, err := skills.ReadLock(lockPath)
 	if err != nil {
 		return "", fmt.Errorf("read lock file: %w", err)
 	}
 
-	if lock != nil && lock.CommitSHA != "" {
-		// Already installed — reuse the cached SHA.
-		return lock.CommitSHA, nil
+	if lock != nil && lock.CommitSHA == remoteSHA {
+		return remoteSHA, nil
 	}
 
 	return skills.DownloadPlugin(targetDir, skillsPluginRef)
@@ -223,7 +231,7 @@ func downloadSkillsIfNeeded(targetDir, lockPath string) (string, error) {
 // runInstallInteractive runs the full interactive install flow.
 // Skills install customization coming soon.
 func runInstallInteractive(_ *cli) error {
-	fmt.Fprintln(os.Stdout, "Skills install customization coming soon.")
-	fmt.Fprintln(os.Stdout, skillsInstallTip)
+	fmt.Fprintln(os.Stderr, "Skills install customization coming soon.")
+	fmt.Fprintln(os.Stderr, skillsInstallTip)
 	return nil
 }
