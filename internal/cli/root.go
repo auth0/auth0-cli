@@ -90,7 +90,6 @@ func buildRootCmd(cli *cli) *cobra.Command {
 
 			if cmd.CommandPath() != "auth0 ai skills post-install-hook" && !skillsSentinelExists() {
 				fmt.Fprintln(os.Stderr, skillsInstallTip)
-				// writeSkillsSentinel()
 			}
 
 			if !commandRequiresAuthentication(cmd.CommandPath()) {
