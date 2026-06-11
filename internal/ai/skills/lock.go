@@ -42,6 +42,9 @@ func openFlockFile(path string) (*os.File, error) {
 func ReadLock(path string) (*Lock, error) {
 	fl, err := openFlockFile(path)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	defer func() {
