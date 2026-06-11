@@ -252,7 +252,7 @@ func TestFetchCommitSHA(t *testing.T) {
 
 	t.Run("returns SHA from valid response", func(t *testing.T) {
 		setHTTPClient(t, shaResponse("abc123def456"))
-		sha, err := fetchCommitSHA("main")
+		sha, err := FetchCommitSHA("main")
 		require.NoError(t, err)
 		assert.Equal(t, "abc123def456", sha)
 	})
@@ -261,14 +261,14 @@ func TestFetchCommitSHA(t *testing.T) {
 		setHTTPClient(t, func(_ *http.Request) (*http.Response, error) {
 			return &http.Response{StatusCode: http.StatusForbidden, Body: io.NopCloser(strings.NewReader(""))}, nil
 		})
-		_, err := fetchCommitSHA("main")
+		_, err := FetchCommitSHA("main")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "403")
 	})
 
 	t.Run("returns error when SHA field is empty", func(t *testing.T) {
 		setHTTPClient(t, shaResponse(""))
-		_, err := fetchCommitSHA("main")
+		_, err := FetchCommitSHA("main")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "empty SHA")
 	})
@@ -277,7 +277,7 @@ func TestFetchCommitSHA(t *testing.T) {
 		setHTTPClient(t, func(_ *http.Request) (*http.Response, error) {
 			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader("not json"))}, nil
 		})
-		_, err := fetchCommitSHA("main")
+		_, err := FetchCommitSHA("main")
 		require.Error(t, err)
 	})
 
@@ -285,7 +285,7 @@ func TestFetchCommitSHA(t *testing.T) {
 		setHTTPClient(t, func(_ *http.Request) (*http.Response, error) {
 			return nil, errors.New("network error")
 		})
-		_, err := fetchCommitSHA("main")
+		_, err := FetchCommitSHA("main")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "github API request failed")
 	})
@@ -298,7 +298,7 @@ func TestFetchCommitSHA(t *testing.T) {
 			body, _ := json.Marshal(map[string]string{"sha": "abc123"})
 			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(body))}, nil
 		})
-		_, err := fetchCommitSHA("main")
+		_, err := FetchCommitSHA("main")
 		require.NoError(t, err)
 		assert.Equal(t, "Bearer test-token-xyz", capturedAuth)
 	})
@@ -311,7 +311,7 @@ func TestFetchCommitSHA(t *testing.T) {
 			body, _ := json.Marshal(map[string]string{"sha": "abc123"})
 			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(body))}, nil
 		})
-		_, err := fetchCommitSHA("main")
+		_, err := FetchCommitSHA("main")
 		require.NoError(t, err)
 		assert.Empty(t, capturedAuth)
 	})
