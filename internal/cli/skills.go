@@ -87,7 +87,6 @@ func postInstallHookCmd(cli *cli) *cobra.Command {
 
 			if !iostream.IsInputTerminal() || !iostream.IsOutputTerminal() {
 				fmt.Fprintln(os.Stderr, skillsInstallTip)
-				// writeSkillsSentinel()
 				return nil
 			}
 
@@ -110,7 +109,6 @@ func postInstallHookCmd(cli *cli) *cobra.Command {
 			if err := survey.AskOne(prompt, &choice); err != nil {
 				// User pressed Ctrl+C or closed the terminal — skip gracefully.
 				fmt.Fprintln(os.Stderr, skillsInstallTip)
-				// writeSkillsSentinel()
 				return nil
 			}
 
