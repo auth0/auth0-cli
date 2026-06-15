@@ -252,10 +252,10 @@ func removeUserRolesCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func (cli *cli) getUserRoles(ctx context.Context, inputs *userRolesInput, fetchUserRoles userRolesFetcher, selectUserRoles userRolesSelector) error {
+func (c *cli) getUserRoles(ctx context.Context, inputs *userRolesInput, fetchUserRoles userRolesFetcher, selectUserRoles userRolesSelector) error {
 	var options []string
 	if err := ansi.Waiting(func() (err error) {
-		options, err = fetchUserRoles(ctx, cli, inputs.ID)
+		options, err = fetchUserRoles(ctx, c, inputs.ID)
 		return err
 	}); err != nil {
 		return err

@@ -237,18 +237,18 @@ func makeApplicationView(client *management.Client, revealSecrets bool) *applica
 }
 
 func FriendlyAppType(appType string) string {
-	switch {
-	case appType == "":
+	switch appType {
+	case "":
 		return "Generic"
-	case appType == "non_interactive":
+	case "non_interactive":
 		return friendlyM2M
-	case appType == "native":
+	case "native":
 		return friendlyNative
-	case appType == "spa":
+	case "spa":
 		return friendlySpa
-	case appType == "regular_web":
+	case "regular_web":
 		return friendlyReg
-	case appType == "resource_server":
+	case "resource_server":
 		return friendlyResourceServer
 	default:
 		return appType
@@ -266,16 +266,16 @@ func mapPointerToArray(m *map[string]interface{}) []string {
 }
 
 func quickstartsURIFor(appType string) string {
-	switch {
-	case appType == "native":
+	switch appType {
+	case "native":
 		return quickstartsNative
-	case appType == "spa":
+	case "spa":
 		return quickstartsSPA
-	case appType == "regular_web":
+	case "regular_web":
 		return quickstartsRegularWeb
-	case appType == "non_interactive":
+	case "non_interactive":
 		return quickstartsM2M
-	case appType == "resource_server":
+	case "resource_server":
 		return quickstartsGeneric
 	default:
 		return quickstartsGeneric
@@ -283,16 +283,16 @@ func quickstartsURIFor(appType string) string {
 }
 
 func ApplyColorToFriendlyAppType(a string) string {
-	switch {
-	case a == friendlyM2M:
+	switch a {
+	case friendlyM2M:
 		return ansi.Green(a)
-	case a == friendlyNative:
+	case friendlyNative:
 		return ansi.Cyan(a)
-	case a == friendlySpa:
+	case friendlySpa:
 		return ansi.Blue(a)
-	case a == friendlyReg:
+	case friendlyReg:
 		return ansi.Magenta(a)
-	case a == friendlyResourceServer:
+	case friendlyResourceServer:
 		return ansi.Yellow(a)
 	default:
 		return a

@@ -38,7 +38,7 @@ type pickerOptionsFunc func(ctx context.Context) (pickerOptions, error)
 
 func (a *Argument) Pick(cmd *cobra.Command, result *string, fn pickerOptionsFunc) error {
 	if !canPrompt(cmd) {
-		return fmt.Errorf("Missing a required argument: %s", a.GetName())
+		return fmt.Errorf("missing a required argument: %s", a.GetName())
 	}
 
 	var opts pickerOptions
@@ -64,7 +64,7 @@ func (a *Argument) Pick(cmd *cobra.Command, result *string, fn pickerOptionsFunc
 
 func (a *Argument) PickMany(cmd *cobra.Command, result *[]string, fn pickerOptionsFunc) error {
 	if !canPrompt(cmd) {
-		return fmt.Errorf("Missing a required argument: %s", a.GetName())
+		return fmt.Errorf("missing a required argument: %s", a.GetName())
 	}
 
 	var opts pickerOptions
@@ -92,5 +92,5 @@ func askArgument(cmd *cobra.Command, i commandInput, value interface{}) error {
 		return ask(i, value, nil, false)
 	}
 
-	return fmt.Errorf("Missing a required argument: %s", i.GetName())
+	return fmt.Errorf("missing a required argument: %s", i.GetName())
 }

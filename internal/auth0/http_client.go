@@ -15,4 +15,11 @@ type HTTPClientAPI interface {
 	// Do triggers an HTTP request and returns an HTTP response,
 	// handling any context cancellations or timeouts.
 	Do(req *http.Request) (*http.Response, error)
+
+	// Request combines NewRequest and Do, encoding the payload as JSON and
+	// returning an error for any non-2xx response.
+	Request(ctx context.Context, method, uri string, payload interface{}, options ...management.RequestOption) error
+
+	// URI builds a fully-qualified Management API URL from the given path segments.
+	URI(path ...string) string
 }

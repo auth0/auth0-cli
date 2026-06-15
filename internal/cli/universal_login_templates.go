@@ -203,39 +203,39 @@ func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func (cli *cli) fetchTemplateData(ctx context.Context) (*TemplateData, error) {
+func (c *cli) fetchTemplateData(ctx context.Context) (*TemplateData, error) {
 	group, ctx := errgroup.WithContext(ctx)
 	group.Go(func() (err error) {
-		return ensureCustomDomainIsEnabled(ctx, cli.api)
+		return ensureCustomDomainIsEnabled(ctx, c.api)
 	})
 
 	var promptSettings *management.Prompt
 	group.Go(func() (err error) {
-		promptSettings, err = cli.api.Prompt.Read(ctx)
+		promptSettings, err = c.api.Prompt.Read(ctx)
 		return err
 	})
 
 	var clientList *management.ClientList
 	group.Go(func() (err error) {
-		clientList, err = cli.api.Client.List(ctx, management.PerPage(100)) // Capping the clients retrieved to 100 for now.
+		clientList, err = c.api.Client.List(ctx, management.PerPage(100)) // Capping the clients retrieved to 100 for now.
 		return err
 	})
 
 	var brandingSettings *management.Branding
 	group.Go(func() (err error) {
-		brandingSettings = fetchBrandingSettingsOrUseDefaults(ctx, cli.api)
+		brandingSettings = fetchBrandingSettingsOrUseDefaults(ctx, c.api)
 		return nil
 	})
 
 	var currentTemplate *management.BrandingUniversalLogin
 	group.Go(func() (err error) {
-		currentTemplate = fetchBrandingTemplateOrUseEmpty(ctx, cli.api)
+		currentTemplate = fetchBrandingTemplateOrUseEmpty(ctx, c.api)
 		return nil
 	})
 
 	var tenant *management.Tenant
 	group.Go(func() (err error) {
-		tenant, err = cli.api.Tenant.Read(ctx)
+		tenant, err = c.api.Tenant.Read(ctx)
 		return err
 	})
 
@@ -312,15 +312,15 @@ func fetchBrandingTemplateOrUseEmpty(ctx context.Context, api *auth0.API) *manag
 	return currentTemplate
 }
 
-func (cli *cli) editTemplateAndPreviewChanges(ctx context.Context, cmd *cobra.Command, templateData *TemplateData) error {
+func (c *cli) editTemplateAndPreviewChanges(ctx context.Context, cmd *cobra.Command, templateData *TemplateData) error {
 	onInfo := func() {
-		cli.renderer.Infof("%s Once you close the editor, you'll be prompted to save your changes. To cancel, press CTRL+C.", ansi.Faint("Hint:"))
+		c.renderer.Infof("%s Once you close the editor, you'll be prompted to save your changes. To cancel, press CTRL+C.", ansi.Faint("Hint:"))
 	}
 
 	onFileCreated := func(filename string) {
 		templateData.Filename = filename
 		if err := previewTemplate(ctx, templateData); err != nil {
-			cli.renderer.Errorf("failed to preview the universal login template: %w", err)
+			c.renderer.Errorf("failed to preview the universal login template: %w", err)
 		}
 	}
 

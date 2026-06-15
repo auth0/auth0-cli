@@ -453,5 +453,5 @@ func markFlagRequired(cmd *cobra.Command, f *Flag, isUpdate bool) error {
 }
 
 func unexpectedError(err error) error {
-	return fmt.Errorf("An unexpected error occurred: %w", err)
+	return fmt.Errorf("an unexpected error occurred: %w", err)
 }

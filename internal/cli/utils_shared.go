@@ -117,7 +117,7 @@ func checkClientIsAuthorizedForAPI(ctx context.Context, cli *cli, client *manage
 	if len(list.ClientGrants) < 1 {
 		return fmt.Errorf(
 			"the %s application is not authorized to request access tokens for this API %s.\n\n"+
-				"Run: 'auth0 apps open %s' to open the dashboard and authorize the application.",
+				"Run: 'auth0 apps open %s' to open the dashboard and authorize the application",
 			ansi.Bold(client.GetName()),
 			ansi.Bold(audience),
 			client.GetClientID(),
@@ -128,7 +128,7 @@ func checkClientIsAuthorizedForAPI(ctx context.Context, cli *cli, client *manage
 	if grant.GetOrganizationUsage() == "require" && organization == "" {
 		return fmt.Errorf(
 			"the client grant for %s requires an organization.\n\n"+
-				"Use the --organization flag to specify one.",
+				"Use the --organization flag to specify one",
 			ansi.Bold(audience),
 		)
 	}

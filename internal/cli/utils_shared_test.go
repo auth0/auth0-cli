@@ -107,7 +107,7 @@ func TestCheckClientIsAuthorizedForAPI(t *testing.T) {
 				},
 			},
 			expectedError: "the client grant for " + audience + " requires an organization.\n\n" +
-				"Use the --organization flag to specify one.",
+				"Use the --organization flag to specify one",
 		},
 	}
 

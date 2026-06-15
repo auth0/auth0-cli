@@ -1,0 +1,46 @@
+run:
+  timeout: 5m
+  allow-parallel-runners: true
+
+linters:
+  disable-all: true
+  enable:
+    - unused
+    - gofmt
+    - staticcheck
+    - revive
+    - godot
+    - whitespace
+    - goimports
+    - gosimple
+    - errcheck
+    - unconvert
+    - gocritic
+#    - gosec
+#    - gocyclo
+
+linters-settings:
+  gofmt:
+    simplify: true
+  staticcheck:
+    checks: [ "all" ]
+  godot:
+    scope: all
+    capital: true
+    period: true
+  goimports:
+    local-prefixes: "github.com/auth0/auth0-cli"
+
+issues:
+  exclude-use-default: false
+  # We are excluding a couple of them,
+  # so we can fix them one at a time
+  # as the effort is non-trivial.
+  exclude:
+    - "should have a package comment"
+    - "package comment should be of the form"
+    - "should have comment"
+    - "be unexported"
+    - "blank-imports"
+    - "unused-parameter"
+    - "Error return value of (.+) is not checked"
