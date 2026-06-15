@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strconv"
 
@@ -378,7 +379,7 @@ func aculConfigSetCmd(cli *cli) *cobra.Command {
 
 func advanceCustomize(cmd *cobra.Command, cli *cli, input aculConfigInput) error {
 	currMode := standardMode
-	renderSettings, err := fetchRenderSettings(cmd, cli, input)
+	renderSettings, headTagsClearValue, shouldClearHeadTags, err := fetchRenderSettings(cmd, cli, input)
 	if renderSettings != nil && renderSettings.RenderingMode != nil {
 		currMode = string(*renderSettings.RenderingMode)
 	}
@@ -398,12 +399,32 @@ func advanceCustomize(cmd *cobra.Command, cli *cli, input aculConfigInput) error
 		return fmt.Errorf("failed to set the render settings: %w", err)
 	}
 
+	// UpdateRendering can't clear head_tags due to `omitempty`; issue an explicit
+	// PATCH that forwards the user's value (null or []) so the intent is honored.
+	if shouldClearHeadTags {
+		if err = ansi.Waiting(func() error {
+			return clearHeadTags(cmd, cli, input.screenName, headTagsClearValue)
+		}); err != nil {
+			return fmt.Errorf("failed to clear head_tags: %w", err)
+		}
+	}
+
 	cli.renderer.Infof("Rendering settings updated. Current rendering mode for '%s', Screen '%s': %s", ansi.Green(ScreenPromptMap[input.screenName]), ansi.Green(input.screenName), ansi.Green(currMode))
 	cli.renderer.Output(ansi.Yellow("💡 Tip: Use `auth0 acul config get` to fetch remote rendering settings or `auth0 acul config list` to view all ACUL screens."))
 	return nil
 }
 
-func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*management.PromptRendering, error) {
+// clearHeadTags sends a raw PATCH that explicitly sets head_tags to the given
+// value (null or []), bypassing the SDK's `omitempty` handling that would
+// otherwise drop the field from the request body.
+func clearHeadTags(cmd *cobra.Command, cli *cli, screenName string, headTagsValue interface{}) error {
+	uri := cli.api.HTTPClient.URI("prompts", ScreenPromptMap[screenName], "screen", screenName, "rendering")
+	payload := map[string]interface{}{"head_tags": headTagsValue}
+
+	return cli.api.HTTPClient.Request(cmd.Context(), http.MethodPatch, uri, payload)
+}
+
+func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*management.PromptRendering, interface{}, bool, error) {
 	var (
 		userRenderSettings string
 		renderSettings     = &management.PromptRendering{}
@@ -415,12 +436,13 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*
 		// Case 1: File path is provided, use that file's content.
 		data, err := os.ReadFile(input.filePath)
 		if err != nil {
-			return nil, fmt.Errorf("unable to read file %q: %v", input.filePath, err)
+			return nil, nil, false, fmt.Errorf("unable to read file %q: %v", input.filePath, err)
 		}
 		if err := json.Unmarshal(data, &renderSettings); err != nil {
-			return nil, fmt.Errorf("file %q contains invalid JSON: %v", input.filePath, err)
+			return nil, nil, false, fmt.Errorf("file %q contains invalid JSON: %v", input.filePath, err)
 		}
-		return renderSettings, nil
+		clearValue, shouldClear := detectHeadTagsClear(data)
+		return renderSettings, clearValue, shouldClear, nil
 	}
 
 	// Case 2: No file path provided, default to config/<screen-name>.json.
@@ -432,9 +454,10 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*
 			message := fmt.Sprintf("Use file '%s' for updating remote ACUL configs for '%s'? : ", ansi.Green(defaultFilePath), ansi.Blue(input.screenName))
 			if confirmed := prompt.Confirm(message); confirmed {
 				if err := json.Unmarshal(data, &renderSettings); err != nil {
-					return nil, fmt.Errorf("file %s contains invalid JSON: %v", defaultFilePath, err)
+					return nil, nil, false, fmt.Errorf("file %s contains invalid JSON: %v", defaultFilePath, err)
 				}
-				return renderSettings, nil
+				clearValue, shouldClear := detectHeadTagsClear(data)
+				return renderSettings, clearValue, shouldClear, nil
 			}
 		}
 	}
@@ -443,7 +466,7 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*
 	cli.renderer.Infof("Opening editor to update remote ACUL configs for '%s'.", ansi.Green(input.screenName))
 	existingRenderSettings, err := cli.api.Prompt.ReadRendering(cmd.Context(), management.PromptType(ScreenPromptMap[input.screenName]), management.ScreenName(input.screenName))
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch the existing render settings: %w", err)
+		return nil, nil, false, fmt.Errorf("failed to fetch the existing render settings: %w", err)
 	}
 
 	if existingRenderSettings != nil {
@@ -459,26 +482,61 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*
 
 	err = rendererScript.OpenEditor(cmd, &userRenderSettings, string(finalJSON), input.screenName+".json", cli.customizeEditorHint)
 	if err != nil {
-		return nil, fmt.Errorf("failed to capture input from the editor: %w", err)
+		return nil, nil, false, fmt.Errorf("failed to capture input from the editor: %w", err)
 	}
 
 	err = json.Unmarshal([]byte(userRenderSettings), &currentSettings)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON input into a map: %w", err)
+		return nil, nil, false, fmt.Errorf("failed to unmarshal JSON input into a map: %w", err)
 	}
 
 	// Compare the existing settings with the updated settings to detect changes.
 	if jsonEqual(existingSettings, currentSettings) {
 		cli.renderer.Warnf("No changes detected in the customization settings. This could be due to uncommitted configuration changes or no modifications being made to the configurations.")
 
-		return existingRenderSettings, ErrNoChangesDetected
+		return existingRenderSettings, nil, false, ErrNoChangesDetected
 	}
 
 	if err := json.Unmarshal([]byte(userRenderSettings), &renderSettings); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON input: %w", err)
+		return nil, nil, false, fmt.Errorf("failed to unmarshal JSON input: %w", err)
 	}
 
-	return renderSettings, nil
+	clearValue, shouldClear := detectHeadTagsClear([]byte(userRenderSettings))
+	return renderSettings, clearValue, shouldClear, nil
+}
+
+// detectHeadTagsClear checks if the JSON data explicitly sets head_tags to null or []
+// and returns the PATCH value to send (nil for null, []interface{}{} for []) and a bool.
+// This detects user intent since PromptRendering.HeadTags uses `omitempty` and can't
+// distinguish between absent and explicitly empty/null fields.
+func detectHeadTagsClear(data []byte) (interface{}, bool) {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, false
+	}
+
+	rawValue, ok := raw["head_tags"]
+	if !ok {
+		return nil, false
+	}
+
+	// Explicit null.
+	if bytes.Equal(bytes.TrimSpace(rawValue), []byte("null")) {
+		return nil, true
+	}
+
+	// Try to unmarshal as array.
+	var headTags []interface{}
+	if err := json.Unmarshal(rawValue, &headTags); err != nil {
+		return nil, false
+	}
+
+	// Explicit empty array.
+	if len(headTags) == 0 {
+		return []interface{}{}, true
+	}
+
+	return nil, false
 }
 
 // jsonEqual ignores the special "___customization guide___" key used for user reference.
