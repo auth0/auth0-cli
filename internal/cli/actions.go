@@ -591,7 +591,7 @@ func diffActionCmd(cli *cli) *cobra.Command {
 			}
 
 			if code1 == "" || code2 == "" {
-				return fmt.Errorf("There are %d versions for the action. "+
+				return fmt.Errorf("there are %d versions for the action. "+
 					"\nCould not find one of the versions: %d or %d", len(allVersions), inputs.version1, inputs.version2)
 			}
 

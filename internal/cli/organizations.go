@@ -807,8 +807,8 @@ func listMembersRolesOrganizationCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func (cli *cli) organizationPickerOptions(ctx context.Context) (pickerOptions, error) {
-	list, err := cli.api.Organization.List(ctx)
+func (c *cli) organizationPickerOptions(ctx context.Context) (pickerOptions, error) {
+	list, err := c.api.Organization.List(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -827,8 +827,8 @@ func (cli *cli) organizationPickerOptions(ctx context.Context) (pickerOptions, e
 	return opts, nil
 }
 
-func (cli *cli) invitationPickerOptions(ctx context.Context, orgID string) (pickerOptions, error) {
-	orgInvitations, err := cli.api.Organization.Invitations(ctx, url.PathEscape(orgID))
+func (c *cli) invitationPickerOptions(ctx context.Context, orgID string) (pickerOptions, error) {
+	orgInvitations, err := c.api.Organization.Invitations(ctx, url.PathEscape(orgID))
 	if err != nil {
 		return nil, err
 	}
@@ -893,7 +893,7 @@ func getWithPagination(
 	return list, nil
 }
 
-func (cli *cli) getOrgMembers(
+func (c *cli) getOrgMembers(
 	context context.Context,
 	orgID string,
 	number int,
@@ -901,7 +901,7 @@ func (cli *cli) getOrgMembers(
 	list, err := getWithPagination(
 		number,
 		func(opts ...management.RequestOption) (result []interface{}, hasNext bool, apiErr error) {
-			members, apiErr := cli.api.Organization.Members(context, url.PathEscape(orgID), opts...)
+			members, apiErr := c.api.Organization.Members(context, url.PathEscape(orgID), opts...)
 			if apiErr != nil {
 				return nil, false, apiErr
 			}
@@ -930,19 +930,19 @@ func sortMembers(members []management.OrganizationMember) {
 	})
 }
 
-func (cli *cli) getOrgMembersWithSpinner(context context.Context, orgID string, number int,
+func (c *cli) getOrgMembersWithSpinner(context context.Context, orgID string, number int,
 ) ([]management.OrganizationMember, error) {
 	var members []management.OrganizationMember
 
 	err := ansi.Waiting(func() (err error) {
-		members, err = cli.getOrgMembers(context, orgID, number)
+		members, err = c.getOrgMembers(context, orgID, number)
 		return err
 	})
 
 	return members, err
 }
 
-func (cli *cli) getOrgMemberRolesWithSpinner(
+func (c *cli) getOrgMemberRolesWithSpinner(
 	ctx context.Context,
 	orgID string,
 	members []management.OrganizationMember,
@@ -953,7 +953,7 @@ func (cli *cli) getOrgMemberRolesWithSpinner(
 		for _, member := range members {
 			userID := member.GetUserID()
 
-			roleList, err := cli.api.Organization.MemberRoles(ctx, orgID, userID)
+			roleList, err := c.api.Organization.MemberRoles(ctx, orgID, userID)
 			if err != nil {
 				return err
 			}
@@ -972,7 +972,7 @@ func (cli *cli) getOrgMemberRolesWithSpinner(
 	return roleMap, err
 }
 
-func (cli *cli) convertOrgRolesToManagementRoles(
+func (c *cli) convertOrgRolesToManagementRoles(
 	roleMap map[string]management.OrganizationMemberRole,
 ) []*management.Role {
 	var roles []*management.Role
@@ -991,7 +991,7 @@ func (cli *cli) convertOrgRolesToManagementRoles(
 	return roles
 }
 
-func (cli *cli) getOrgRoleMembersWithSpinner(
+func (c *cli) getOrgRoleMembersWithSpinner(
 	ctx context.Context,
 	orgID string,
 	roleID string,
@@ -1003,7 +1003,7 @@ func (cli *cli) getOrgRoleMembersWithSpinner(
 		for _, member := range members {
 			userID := member.GetUserID()
 
-			roleList, err := cli.api.Organization.MemberRoles(ctx, orgID, userID)
+			roleList, err := c.api.Organization.MemberRoles(ctx, orgID, userID)
 			if err != nil {
 				return err
 			}
@@ -1142,7 +1142,7 @@ func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func (cli *cli) getOrgInvitations(
+func (c *cli) getOrgInvitations(
 	context context.Context,
 	orgID string,
 	number int,
@@ -1152,7 +1152,7 @@ func (cli *cli) getOrgInvitations(
 		func(opts ...management.RequestOption) (result []interface{}, hasNext bool, apiErr error) {
 			// Add sort option to existing opts.
 			opts = append(opts, management.Sort("created_at:-1"))
-			invitations, apiErr := cli.api.Organization.Invitations(context, url.PathEscape(orgID), opts...)
+			invitations, apiErr := c.api.Organization.Invitations(context, url.PathEscape(orgID), opts...)
 			if apiErr != nil {
 				return nil, false, apiErr
 			}

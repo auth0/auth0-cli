@@ -228,14 +228,14 @@ func computeQuickstartPathFromClientName(clientName string) (quickstartPath stri
 }
 
 func quickstartsTypeFor(v string) string {
-	switch {
-	case v == "native":
+	switch v {
+	case "native":
 		return qsNative
-	case v == "spa":
+	case "spa":
 		return qsSpa
-	case v == "regular_web":
+	case "regular_web":
 		return qsWebApp
-	case v == "non_interactive":
+	case "non_interactive":
 		return qsBackend
 	default:
 		return "generic"
@@ -1651,7 +1651,7 @@ func sortedKeys(m map[string]string) []string {
 	return keys
 }
 
-func (cli *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string]string, strategy *auth0.FileOutputStrategy) error {
+func (c *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string]string, strategy *auth0.FileOutputStrategy) error {
 	if strategy == nil {
 		strategy = &auth0.FileOutputStrategy{Path: ".env", Format: "dotenv"}
 	}
@@ -1668,12 +1668,12 @@ func (cli *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string
 	switch strategy.Format {
 	case "dotenv":
 		for _, key := range sortedKeys(resolvedEnv) {
-			contentBuilder.WriteString(fmt.Sprintf("%s=\"%s\"\n", key, resolvedEnv[key]))
+			fmt.Fprintf(&contentBuilder, "%s=\"%s\"\n", key, resolvedEnv[key])
 		}
 
 	case "properties":
 		for _, key := range sortedKeys(resolvedEnv) {
-			contentBuilder.WriteString(fmt.Sprintf("%s=%s\n", key, resolvedEnv[key]))
+			fmt.Fprintf(&contentBuilder, "%s=%s\n", key, resolvedEnv[key])
 		}
 
 	case "yaml":
@@ -1701,7 +1701,7 @@ func (cli *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string
 	case "ts":
 		contentBuilder.WriteString("export const environment = {\n")
 		for _, key := range sortedKeys(resolvedEnv) {
-			contentBuilder.WriteString(fmt.Sprintf("  %s: '%s',\n", key, strings.ReplaceAll(resolvedEnv[key], "'", "\\'")))
+			fmt.Fprintf(&contentBuilder, "  %s: '%s',\n", key, strings.ReplaceAll(resolvedEnv[key], "'", "\\'"))
 		}
 		contentBuilder.WriteString("};\n")
 
@@ -1712,7 +1712,7 @@ func (cli *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string
 		contentBuilder.WriteString("  production: false,\n")
 		contentBuilder.WriteString("  auth0: {\n")
 		for _, key := range sortedKeys(resolvedEnv) {
-			contentBuilder.WriteString(fmt.Sprintf("    %s: '%s',\n", key, strings.ReplaceAll(resolvedEnv[key], "'", "\\'")))
+			fmt.Fprintf(&contentBuilder, "    %s: '%s',\n", key, strings.ReplaceAll(resolvedEnv[key], "'", "\\'"))
 		}
 		contentBuilder.WriteString("  },\n")
 		contentBuilder.WriteString("};\n")
@@ -1720,7 +1720,7 @@ func (cli *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string
 	case "dart":
 		contentBuilder.WriteString("const Map<String, String> authConfig = {\n")
 		for _, key := range sortedKeys(resolvedEnv) {
-			contentBuilder.WriteString(fmt.Sprintf("  '%s': '%s',\n", strings.ReplaceAll(key, "'", "\\'"), strings.ReplaceAll(resolvedEnv[key], "'", "\\'")))
+			fmt.Fprintf(&contentBuilder, "  '%s': '%s',\n", strings.ReplaceAll(key, "'", "\\'"), strings.ReplaceAll(resolvedEnv[key], "'", "\\'"))
 		}
 		contentBuilder.WriteString("};\n")
 
@@ -1747,7 +1747,7 @@ func (cli *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string
 		contentBuilder.WriteString("<configuration>\n")
 		contentBuilder.WriteString("  <appSettings>\n")
 		for _, key := range sortedKeys(resolvedEnv) {
-			contentBuilder.WriteString(fmt.Sprintf("    <add key=\"%s\" value=\"%s\" />\n", xmlEscape(key), xmlEscape(resolvedEnv[key])))
+			fmt.Fprintf(&contentBuilder, "    <add key=\"%s\" value=\"%s\" />\n", xmlEscape(key), xmlEscape(resolvedEnv[key]))
 		}
 		contentBuilder.WriteString("  </appSettings>\n")
 		contentBuilder.WriteString("</configuration>\n")
@@ -1756,8 +1756,8 @@ func (cli *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string
 		// Java servlet web.xml context-param entries (mvc-auth-commons).
 		for _, key := range sortedKeys(resolvedEnv) {
 			contentBuilder.WriteString("<context-param>\n")
-			contentBuilder.WriteString(fmt.Sprintf("  <param-name>%s</param-name>\n", xmlEscape(key)))
-			contentBuilder.WriteString(fmt.Sprintf("  <param-value>%s</param-value>\n", xmlEscape(resolvedEnv[key])))
+			fmt.Fprintf(&contentBuilder, "  <param-name>%s</param-name>\n", xmlEscape(key))
+			fmt.Fprintf(&contentBuilder, "  <param-value>%s</param-value>\n", xmlEscape(resolvedEnv[key]))
 			contentBuilder.WriteString("</context-param>\n")
 		}
 
@@ -1766,9 +1766,9 @@ func (cli *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string
 		// Values are looked up via InitialContext.lookup("auth0.domain") etc.
 		for _, key := range sortedKeys(resolvedEnv) {
 			contentBuilder.WriteString("<env-entry>\n")
-			contentBuilder.WriteString(fmt.Sprintf("  <env-entry-name>%s</env-entry-name>\n", xmlEscape(key)))
+			fmt.Fprintf(&contentBuilder, "  <env-entry-name>%s</env-entry-name>\n", xmlEscape(key))
 			contentBuilder.WriteString("  <env-entry-type>java.lang.String</env-entry-type>\n")
-			contentBuilder.WriteString(fmt.Sprintf("  <env-entry-value>%s</env-entry-value>\n", xmlEscape(resolvedEnv[key])))
+			fmt.Fprintf(&contentBuilder, "  <env-entry-value>%s</env-entry-value>\n", xmlEscape(resolvedEnv[key]))
 			contentBuilder.WriteString("</env-entry>\n")
 		}
 
@@ -1777,7 +1777,7 @@ func (cli *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string
 		contentBuilder.WriteString("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
 		contentBuilder.WriteString("<resources>\n")
 		for _, key := range sortedKeys(resolvedEnv) {
-			contentBuilder.WriteString(fmt.Sprintf("    <string name=\"%s\">%s</string>\n", xmlEscape(key), xmlEscape(resolvedEnv[key])))
+			fmt.Fprintf(&contentBuilder, "    <string name=\"%s\">%s</string>\n", xmlEscape(key), xmlEscape(resolvedEnv[key]))
 		}
 		contentBuilder.WriteString("</resources>\n")
 
@@ -1788,32 +1788,32 @@ func (cli *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string
 		contentBuilder.WriteString("<plist version=\"1.0\">\n")
 		contentBuilder.WriteString("<dict>\n")
 		for _, key := range sortedKeys(resolvedEnv) {
-			contentBuilder.WriteString(fmt.Sprintf("    <key>%s</key>\n", key))
-			contentBuilder.WriteString(fmt.Sprintf("    <string>%s</string>\n", xmlEscape(resolvedEnv[key])))
+			fmt.Fprintf(&contentBuilder, "    <key>%s</key>\n", key)
+			fmt.Fprintf(&contentBuilder, "    <string>%s</string>\n", xmlEscape(resolvedEnv[key]))
 		}
 		contentBuilder.WriteString("</dict>\n")
 		contentBuilder.WriteString("</plist>\n")
 	}
 
 	message := fmt.Sprintf("Proceed to overwrite '%s' file?", ansi.Bold(strategy.Path))
-	if shouldCancelOverwrite(cli, cmd, strategy.Path, message) {
-		cli.renderer.Warnf("Aborted creating %s. Please create it manually using the following content:", ansi.Cyan(strategy.Path))
-		cli.renderer.Newline()
+	if shouldCancelOverwrite(c, cmd, strategy.Path, message) {
+		c.renderer.Warnf("Aborted creating %s. Please create it manually using the following content:", ansi.Cyan(strategy.Path))
+		c.renderer.Newline()
 
 		const border = "─────────────────────────────────────────────────────────────"
-		cli.renderer.Detailf("%s", border)
+		c.renderer.Detailf("%s", border)
 		for _, line := range strings.Split(strings.TrimRight(contentBuilder.String(), "\n"), "\n") {
-			cli.renderer.Detailf("%s", line)
+			c.renderer.Detailf("%s", line)
 		}
-		cli.renderer.Detailf("%s", border)
-		cli.renderer.Newline()
+		c.renderer.Detailf("%s", border)
+		c.renderer.Newline()
 	} else {
 		if err := os.WriteFile(strategy.Path, []byte(contentBuilder.String()), 0600); err != nil {
 			return fmt.Errorf("failed to write .env file: %w", err)
 		}
 
-		cli.renderer.Newline()
-		cli.renderer.Successf("%s file created successfully with your Auth0 configuration", ansi.Cyan(strategy.Path))
+		c.renderer.Newline()
+		c.renderer.Successf("%s file created successfully with your Auth0 configuration", ansi.Cyan(strategy.Path))
 	}
 
 	return nil
