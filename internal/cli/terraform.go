@@ -61,6 +61,8 @@ type (
 	}
 )
 
+var errTerraformInstallFailed = errors.New("failed to install terraform")
+
 func (i *terraformInputs) parseResourceFetchers(api *auth0.API, apiv2 *auth0.APIV2) ([]resourceDataFetcher, error) {
 	fetchers := make([]resourceDataFetcher, 0)
 	var err error
@@ -221,7 +223,11 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 			})
 
 			if err != nil {
-				cli.renderer.Warnf("Terraform resource config generated successfully but there was an error: %s\n\n", err)
+				if errors.Is(err, errTerraformInstallFailed) {
+					cli.renderer.Warnf("%s\n\n", err)
+				} else {
+					cli.renderer.Warnf("Terraform resource config generated successfully but there was an error with terraform plan.\n\n")
+				}
 				cli.renderer.Warnf("Run " + ansi.Cyan(cdInstructions+"./terraform plan") + " to troubleshoot\n\n")
 				cli.renderer.Warnf("Once the plan succeeds, run " + ansi.Cyan("./terraform apply") + " to complete the import.\n\n")
 				cli.renderer.Infof("The terraform binary and auth0_import.tf files can be deleted afterwards.\n")
@@ -378,7 +384,7 @@ func generateTerraformResourceConfig(ctx context.Context, input *terraformInputs
 
 	execPath, err := installer.Install(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %s", errTerraformInstallFailed, err)
 	}
 
 	tf, err := tfexec.NewTerraform(absoluteOutputPath, execPath)
