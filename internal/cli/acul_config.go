@@ -399,8 +399,7 @@ func advanceCustomize(cmd *cobra.Command, cli *cli, input aculConfigInput) error
 		return fmt.Errorf("failed to set the render settings: %w", err)
 	}
 
-	// UpdateRendering can't clear head_tags due to `omitempty`; issue an explicit
-	// PATCH that forwards the user's value (null or []) so the intent is honored.
+	// Send an explicit PATCH with `null` or `[]` to preserve user intent.
 	if shouldClearHeadTags {
 		if err = ansi.Waiting(func() error {
 			return clearHeadTags(cmd, cli, input.screenName, headTagsClearValue)
@@ -414,9 +413,7 @@ func advanceCustomize(cmd *cobra.Command, cli *cli, input aculConfigInput) error
 	return nil
 }
 
-// clearHeadTags sends a raw PATCH that explicitly sets head_tags to the given
-// value (null or []), bypassing the SDK's `omitempty` handling that would
-// otherwise drop the field from the request body.
+// clearHeadTags sends a raw PATCH that explicitly sets `head_tags` to `null` or `[]`, bypassing SDK `omitempty`.
 func clearHeadTags(cmd *cobra.Command, cli *cli, screenName string, headTagsValue interface{}) error {
 	uri := cli.api.HTTPClient.URI("prompts", ScreenPromptMap[screenName], "screen", screenName, "rendering")
 	payload := map[string]interface{}{"head_tags": headTagsValue}
@@ -505,10 +502,8 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*
 	return renderSettings, clearValue, shouldClear, nil
 }
 
-// detectHeadTagsClear checks if the JSON data explicitly sets head_tags to null or []
-// and returns the PATCH value to send (nil for null, []interface{}{} for []) and a bool.
-// This detects user intent since PromptRendering.HeadTags uses `omitempty` and can't
-// distinguish between absent and explicitly empty/null fields.
+// detectHeadTagsClear checks if JSON explicitly sets head_tags to null or [] and returns
+// the PATCH value to send, detecting user intent since PromptRendering.HeadTags uses `omitempty`.
 func detectHeadTagsClear(data []byte) (interface{}, bool) {
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(data, &raw); err != nil {

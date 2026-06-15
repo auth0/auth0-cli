@@ -190,6 +190,6 @@ func TestLogStreamsPickerOptionsByType(t *testing.T) {
 func TestErrInvalidLogStreamType(t *testing.T) {
 	err := errInvalidLogStreamType("some-id", "actual-type", "expected-type")
 
-	assert.ErrorContains(t, err, "The log stream with ID \"some-id\" is of type \"actual-type\" instead of \"expected-type\", "+
-		"use 'auth0 logs streams update actual-type' to update it instead.")
+	assert.ErrorContains(t, err, "the log stream with ID \"some-id\" is of type \"actual-type\" instead of \"expected-type\", "+
+		"use 'auth0 logs streams update actual-type' to update it instead")
 }
