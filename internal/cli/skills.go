@@ -91,9 +91,8 @@ func postInstallHookCmd(cli *cli) *cobra.Command {
 			}
 
 			const (
-				choiceAuto   = "Auto   — Detect installed AI agents and install all skills globally"
-				choiceManual = "Manual  — Choose which skills, agents, and scope to configure"
-				choiceSkip   = "Skip    — I will run 'auth0 ai skills install' later"
+				choiceInstall = "Install   — Detect installed AI agents and install all skills globally"
+				choiceSkip    = "Skip    — I will run 'auth0 ai skills install' later"
 			)
 
 			fmt.Fprintln(os.Stdout, "\nAuth0 AI skills add Auth0-specific guidance to your AI coding assistant.")
@@ -102,8 +101,8 @@ func postInstallHookCmd(cli *cli) *cobra.Command {
 			var choice string
 			prompt := &survey.Select{
 				Message: "How would you like to install them?",
-				Options: []string{choiceAuto, choiceManual, choiceSkip},
-				Default: choiceAuto,
+				Options: []string{choiceInstall, choiceSkip},
+				Default: choiceInstall,
 			}
 
 			if err := survey.AskOne(prompt, &choice); err != nil {
@@ -113,12 +112,8 @@ func postInstallHookCmd(cli *cli) *cobra.Command {
 			}
 
 			switch choice {
-			case choiceAuto:
+			case choiceInstall:
 				if err := runInstallFast(cli); err != nil {
-					return err
-				}
-			case choiceManual:
-				if err := runInstallInteractive(cli); err != nil {
 					return err
 				}
 			default:
@@ -199,6 +194,15 @@ func runInstallFast(_ *cli) error {
 	}
 
 	fmt.Fprintf(os.Stdout, "\nInstalled %d Auth0 skill(s) for %d agent(s).\n", len(skillNames), len(installedAgents))
+
+	fmt.Fprintf(os.Stdout, "\nAGENTS: \n")
+
+	for _, agentID := range installedAgents {
+		fmt.Fprintf(os.Stdout, "  - %s\n", agentID)
+	}
+
+	fmt.Fprintf(os.Stdout, "\nSKILLS: \n")
+
 	for _, s := range available {
 		fmt.Fprintf(os.Stdout, "  - %s\n", s.Name)
 	}
@@ -224,12 +228,4 @@ func downloadSkillsIfNeeded(targetDir, lockPath string) (string, error) {
 	}
 
 	return skills.DownloadPlugin(targetDir, skillsPluginRef)
-}
-
-// runInstallInteractive runs the full interactive install flow.
-// Skills install customization coming soon.
-func runInstallInteractive(_ *cli) error {
-	fmt.Fprintln(os.Stderr, "Skills install customization coming soon.")
-	fmt.Fprintln(os.Stderr, skillsInstallTip)
-	return nil
 }

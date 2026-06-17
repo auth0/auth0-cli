@@ -98,7 +98,7 @@ func checkHasSkills(dir string) error {
 	return nil
 }
 
-// fetchCommitSHA fetches the latest commit SHA for ref from the GitHub API.
+// FetchCommitSHA fetches the latest commit SHA for ref from the GitHub API.
 func FetchCommitSHA(ref string) (string, error) {
 	req, err := http.NewRequest(http.MethodGet, agentSkillsAPI+ref, nil)
 	if err != nil {

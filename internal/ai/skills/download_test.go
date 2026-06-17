@@ -245,7 +245,7 @@ func makeZipTransport(t *testing.T, zipData []byte, sha string) roundTripFunc {
 func TestDownloadViaZip(t *testing.T) {
 	const ref = "main"
 	const wantSHA = "cafebabe1234"
-	prefix := fmt.Sprintf("auth0-agent-skills-%s/%s/", ref, pluginSubtreePath)
+	prefix := fmt.Sprintf("agent-skills-%s/%s/", ref, pluginSubtreePath)
 
 	t.Run("extracts subtree and returns commit SHA", func(t *testing.T) {
 		zipData := makeZipBytes(t, map[string]string{
@@ -294,7 +294,7 @@ func TestDownloadViaZip(t *testing.T) {
 	t.Run("handles slash-containing ref by flattening to dash", func(t *testing.T) {
 		const slashRef = "release/1.0"
 		const flatRef = "release-1.0"
-		prefix := fmt.Sprintf("auth0-agent-skills-%s/%s/", flatRef, pluginSubtreePath)
+		prefix := fmt.Sprintf("agent-skills-%s/%s/", flatRef, pluginSubtreePath)
 		zipData := makeZipBytes(t, map[string]string{
 			prefix + "skills/skill-y/SKILL.md": "# skill-y",
 		})
@@ -329,7 +329,7 @@ func TestDownloadPlugin_EmptyExtraction(t *testing.T) {
 func TestDownloadPlugin_CreatesMissingTargetDir(t *testing.T) {
 	const ref = "main"
 	const wantSHA = "abc123"
-	prefix := fmt.Sprintf("auth0-agent-skills-%s/%s/", ref, pluginSubtreePath)
+	prefix := fmt.Sprintf("agent-skills-%s/%s/", ref, pluginSubtreePath)
 
 	zipData := makeZipBytes(t, map[string]string{
 		prefix + "skills/skill-a/SKILL.md": "# skill-a",
@@ -347,7 +347,7 @@ func TestDownloadPlugin_CreatesMissingTargetDir(t *testing.T) {
 
 func TestDownloadPlugin_DefaultsRefToMain(t *testing.T) {
 	const wantSHA = "mainsha"
-	prefix := fmt.Sprintf("auth0-agent-skills-main/%s/", pluginSubtreePath)
+	prefix := fmt.Sprintf("agent-skills-main/%s/", pluginSubtreePath)
 
 	zipData := makeZipBytes(t, map[string]string{
 		prefix + "skills/skill-a/SKILL.md": "# skill-a",
