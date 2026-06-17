@@ -2,17 +2,20 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
 	"time"
 	"unicode"
 
+	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/analytics"
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
+	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/instrumentation"
 )
@@ -62,17 +65,19 @@ func Execute() {
 	ansi.InitConsole()
 
 	cancelCtx := contextWithCancel()
-	if err := rootCmd.ExecuteContext(cancelCtx); err != nil {
+	err := rootCmd.ExecuteContext(cancelCtx)
+	trackCommandOutcome(cli, err)
+
+	timeoutCtx, cancel := context.WithTimeout(cancelCtx, 3*time.Second)
+	defer cancel()
+	cli.tracker.Wait(timeoutCtx) // No event should be tracked after this has run.
+
+	if err != nil {
 		renderErrorMessage(cli.renderer, err.Error())
 
 		instrumentation.ReportException(err)
 		os.Exit(1) // nolint:gocritic
 	}
-
-	timeoutCtx, cancel := context.WithTimeout(cancelCtx, 3*time.Second)
-	// Defers are executed in LIFO order.
-	defer cancel()
-	defer cli.tracker.Wait(timeoutCtx) // No event should be tracked after this has run, or it will panic e.g. in earlier deferred functions.
 }
 
 func buildRootCmd(cli *cli) *cobra.Command {
@@ -84,6 +89,8 @@ func buildRootCmd(cli *cli) *cobra.Command {
 		Long:          rootShort + "\n" + getLogin(cli),
 		Version:       buildinfo.GetVersionWithCommit(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			cli.executedCommandPath = cmd.CommandPath()
+
 			ansi.Initialize(cli.noColor)
 			prepareInteractivity(cmd)
 			cli.configureRenderer()
@@ -91,16 +98,6 @@ func buildRootCmd(cli *cli) *cobra.Command {
 			if !commandRequiresAuthentication(cmd.CommandPath()) {
 				return nil
 			}
-
-			// We're tracking the login command in its Run method, so
-			// we'll only add this defer if the command is not login.
-			defer func() {
-				if cli.tracker != nil &&
-					cmd.CommandPath() != "auth0 login" &&
-					cli.Config.IsLoggedInWithTenant(cli.tenant) {
-					cli.tracker.TrackCommandRun(cmd, cli.Config.InstallID)
-				}
-			}()
 
 			if err := cli.setupWithAuthentication(cmd.Context()); err != nil {
 				return err
@@ -224,4 +221,78 @@ func renderErrorMessage(display *display.Renderer, errorMessage string) {
 
 	display.Errorf(humanReadableErrorMessage)
 	display.Newline()
+}
+
+func trackCommandOutcome(cli *cli, executionErr error) {
+	if cli.tracker == nil {
+		return
+	}
+
+	installID := resolveInstallIDForTracking(cli)
+	if installID == "" {
+		return
+	}
+
+	if cli.executedCommandPath == "" {
+		cli.executedCommandPath = "auth0"
+	}
+
+	if executionErr != nil {
+		cli.tracker.TrackCommandFailed(cli.executedCommandPath, installID, classifyCommandFailure(executionErr))
+		return
+	}
+
+	cli.tracker.TrackCommandSucceeded(cli.executedCommandPath, installID)
+}
+
+func resolveInstallIDForTracking(cli *cli) string {
+	if cli.Config.InstallID != "" {
+		return cli.Config.InstallID
+	}
+
+	if err := cli.Config.Initialize(); err != nil {
+		if errors.Is(err, config.ErrConfigFileMissing) {
+			return ""
+		}
+		return ""
+	}
+
+	return cli.Config.InstallID
+}
+
+func classifyCommandFailure(err error) map[string]string {
+	properties := map[string]string{
+		"success":     "false",
+		"error_class": "unknown",
+	}
+
+	if errors.Is(err, config.ErrInvalidToken) || errors.Is(err, config.ErrMalformedToken) {
+		properties["error_class"] = "auth"
+		return properties
+	}
+
+	var missingScopesErr config.ErrTokenMissingRequiredScopes
+	if errors.As(err, &missingScopesErr) {
+		properties["error_class"] = "auth"
+		return properties
+	}
+
+	var managementErr management.Error
+	if errors.As(err, &managementErr) {
+		status := managementErr.Status()
+		switch {
+		case status == 401 || status == 403:
+			properties["error_class"] = "auth"
+		case status == 400 || status == 422:
+			properties["error_class"] = "validation"
+		case status == 404:
+			properties["error_class"] = "not_found"
+		case status == 429:
+			properties["error_class"] = "rate_limit"
+		case status >= 500:
+			properties["error_class"] = "api"
+		}
+	}
+
+	return properties
 }

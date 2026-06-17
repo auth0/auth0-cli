@@ -40,14 +40,15 @@ type cli struct {
 	tracker  *analytics.Tracker
 
 	// Set of flags which are user specified.
-	debug       bool
-	tenant      string
-	json        bool
-	jsonCompact bool
-	csv         bool
-	force       bool
-	noInput     bool
-	noColor     bool
+	debug               bool
+	tenant              string
+	json                bool
+	jsonCompact         bool
+	csv                 bool
+	force               bool
+	noInput             bool
+	noColor             bool
+	executedCommandPath string
 
 	Config config.Config
 }

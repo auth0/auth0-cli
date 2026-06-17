@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/spf13/cobra"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
@@ -46,15 +45,20 @@ func NewTracker() *Tracker {
 
 func (t *Tracker) TrackFirstLogin(id string, loginType string) {
 	eventName := fmt.Sprintf("%s - Auth0 - First Login", eventNamePrefix)
-	t.track(eventName, id)
+	t.track(eventName, id, nil)
 
 	eventName = fmt.Sprintf("%s - Auth0 - First Login - %s", eventNamePrefix, loginType)
-	t.track(eventName, id)
+	t.track(eventName, id, nil)
 }
 
-func (t *Tracker) TrackCommandRun(cmd *cobra.Command, id string) {
-	eventName := generateRunEventName(cmd.CommandPath())
-	t.track(eventName, id)
+func (t *Tracker) TrackCommandSucceeded(commandPath string, id string) {
+	eventName := generateSucceededEventName(commandPath)
+	t.track(eventName, id, map[string]string{"success": "true", "error_class": "none"})
+}
+
+func (t *Tracker) TrackCommandFailed(commandPath string, id string, properties map[string]string) {
+	eventName := generateFailedEventName(commandPath)
+	t.track(eventName, id, properties)
 }
 
 func (t *Tracker) Wait(ctx context.Context) {
@@ -73,12 +77,12 @@ func (t *Tracker) Wait(ctx context.Context) {
 	}
 }
 
-func (t *Tracker) track(eventName string, id string) {
+func (t *Tracker) track(eventName string, id string, properties map[string]string) {
 	if !shouldTrack() {
 		return
 	}
 
-	event := newEvent(eventName, id)
+	event := newEvent(eventName, id, properties)
 
 	t.wg.Add(1)
 	go t.sendEvent(event)
@@ -111,22 +115,32 @@ func (t *Tracker) sendEvent(event *event) {
 	}()
 }
 
-func newEvent(eventName string, id string) *event {
+func newEvent(eventName string, id string, properties map[string]string) *event {
+	eventProperties := map[string]string{
+		versionKey: buildinfo.Version,
+		osKey:      runtime.GOOS,
+		archKey:    runtime.GOARCH,
+	}
+
+	for k, v := range properties {
+		eventProperties[k] = v
+	}
+
 	return &event{
-		App:       appID,
-		ID:        id,
-		Event:     eventName,
-		Timestamp: timestamp(),
-		Properties: map[string]string{
-			versionKey: buildinfo.Version,
-			osKey:      runtime.GOOS,
-			archKey:    runtime.GOARCH,
-		},
+		App:        appID,
+		ID:         id,
+		Event:      eventName,
+		Timestamp:  timestamp(),
+		Properties: eventProperties,
 	}
 }
 
-func generateRunEventName(command string) string {
-	return generateEventName(command, "Run")
+func generateSucceededEventName(command string) string {
+	return generateEventName(command, "Succeeded")
+}
+
+func generateFailedEventName(command string) string {
+	return generateEventName(command, "Failed")
 }
 
 func generateEventName(command string, action string) string {
