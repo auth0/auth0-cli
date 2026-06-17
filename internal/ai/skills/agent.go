@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sync"
 )
 
 type AgentConfig struct {
@@ -248,38 +247,21 @@ func init() {
 	}
 }
 
-var (
-	detectedAgentsMu    sync.RWMutex
-	detectedAgentsDone  bool
-	detectedAgentsCache []AgentConfig
-)
+var detectedAgentsCache []AgentConfig
 
 func DetectedAgents() []AgentConfig {
-	detectedAgentsMu.RLock()
-	if detectedAgentsDone {
-		result := detectedAgentsCache
-		detectedAgentsMu.RUnlock()
-		return result
+	if detectedAgentsCache != nil {
+		return detectedAgentsCache
 	}
-	detectedAgentsMu.RUnlock()
-
-	detectedAgentsMu.Lock()
-	defer detectedAgentsMu.Unlock()
-	if !detectedAgentsDone {
-		for _, a := range SupportedAgents {
-			if a.ID == "universal" || a.IsInstalled() {
-				detectedAgentsCache = append(detectedAgentsCache, a)
-			}
+	for _, a := range SupportedAgents {
+		if a.ID == "universal" || a.IsInstalled() {
+			detectedAgentsCache = append(detectedAgentsCache, a)
 		}
-		detectedAgentsDone = true
 	}
 	return detectedAgentsCache
 }
 
 func ResetDetectedAgentsCache() {
-	detectedAgentsMu.Lock()
-	defer detectedAgentsMu.Unlock()
-	detectedAgentsDone = false
 	detectedAgentsCache = nil
 }
 

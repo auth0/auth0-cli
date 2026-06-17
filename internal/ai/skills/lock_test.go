@@ -12,12 +12,12 @@ import (
 
 func TestReadLock(t *testing.T) {
 	t.Run("returns nil nil when file does not exist", func(t *testing.T) {
-		lock, err := ReadLock(filepath.Join(t.TempDir(), "skills-lock.json"))
+		cfg, err := ReadLock(filepath.Join(t.TempDir(), "skills-lock.json"))
 		require.NoError(t, err)
-		assert.Nil(t, lock)
+		assert.Nil(t, cfg)
 	})
 
-	t.Run("returns parsed lock for valid file", func(t *testing.T) {
+	t.Run("returns parsed config for valid file", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "skills-lock.json")
 		content := `{
@@ -33,15 +33,15 @@ func TestReadLock(t *testing.T) {
 }`
 		require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
 
-		lock, err := ReadLock(path)
+		cfg, err := ReadLock(path)
 		require.NoError(t, err)
-		require.NotNil(t, lock)
-		assert.Equal(t, "https://github.com/auth0/agent-skills.git", lock.Repo)
-		assert.Equal(t, "main", lock.Ref)
-		assert.Equal(t, "abc123", lock.CommitSHA)
-		assert.Equal(t, []string{"auth0-react", "auth0-nextjs"}, lock.Skills)
-		assert.Equal(t, []string{"claude-code"}, lock.Agents)
-		assert.Equal(t, ScopeGlobal, lock.Scope)
+		require.NotNil(t, cfg)
+		assert.Equal(t, "https://github.com/auth0/agent-skills.git", cfg.Repo)
+		assert.Equal(t, "main", cfg.Ref)
+		assert.Equal(t, "abc123", cfg.CommitSHA)
+		assert.Equal(t, []string{"auth0-react", "auth0-nextjs"}, cfg.Skills)
+		assert.Equal(t, []string{"claude-code"}, cfg.Agents)
+		assert.Equal(t, ScopeGlobal, cfg.Scope)
 	})
 
 	t.Run("returns error for invalid JSON", func(t *testing.T) {
@@ -74,7 +74,7 @@ func TestWriteLock(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "skills-lock.json")
 
-		lock := &Lock{
+		cfg := &SkillsVersionConfig{
 			Repo:          "https://github.com/auth0/agent-skills.git",
 			Ref:           "main",
 			CommitSHA:     "deadbeef",
@@ -85,24 +85,24 @@ func TestWriteLock(t *testing.T) {
 			Agents:        []string{"cursor"},
 			Scope:         ScopeLocal,
 		}
-		require.NoError(t, WriteLock(path, lock))
+		require.NoError(t, WriteLock(path, cfg))
 
 		got, err := ReadLock(path)
 		require.NoError(t, err)
 		require.NotNil(t, got)
-		assert.Equal(t, lock.Repo, got.Repo)
-		assert.Equal(t, lock.CommitSHA, got.CommitSHA)
-		assert.Equal(t, lock.Skills, got.Skills)
-		assert.Equal(t, lock.Scope, got.Scope)
-		assert.Equal(t, lock.InstalledAt.UTC(), got.InstalledAt.UTC())
-		assert.Equal(t, lock.LastCheckedAt.UTC(), got.LastCheckedAt.UTC())
+		assert.Equal(t, cfg.Repo, got.Repo)
+		assert.Equal(t, cfg.CommitSHA, got.CommitSHA)
+		assert.Equal(t, cfg.Skills, got.Skills)
+		assert.Equal(t, cfg.Scope, got.Scope)
+		assert.Equal(t, cfg.InstalledAt.UTC(), got.InstalledAt.UTC())
+		assert.Equal(t, cfg.LastCheckedAt.UTC(), got.LastCheckedAt.UTC())
 	})
 
 	t.Run("creates parent directories when they do not exist", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "nested", "deep", "skills-lock.json")
 
-		require.NoError(t, WriteLock(path, &Lock{Scope: ScopeGlobal}))
+		require.NoError(t, WriteLock(path, &SkillsVersionConfig{Scope: ScopeGlobal}))
 
 		got, err := ReadLock(path)
 		require.NoError(t, err)
@@ -114,8 +114,8 @@ func TestWriteLock(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "skills-lock.json")
 
-		require.NoError(t, WriteLock(path, &Lock{CommitSHA: "first", Scope: ScopeGlobal}))
-		require.NoError(t, WriteLock(path, &Lock{CommitSHA: "second", Scope: ScopeGlobal}))
+		require.NoError(t, WriteLock(path, &SkillsVersionConfig{CommitSHA: "first", Scope: ScopeGlobal}))
+		require.NoError(t, WriteLock(path, &SkillsVersionConfig{CommitSHA: "second", Scope: ScopeGlobal}))
 
 		got, err := ReadLock(path)
 		require.NoError(t, err)
@@ -126,7 +126,7 @@ func TestWriteLock(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "skills-lock.json")
 
-		original := &Lock{
+		original := &SkillsVersionConfig{
 			Repo:          "https://github.com/auth0/agent-skills.git",
 			Ref:           "v1.2.3",
 			CommitSHA:     "cafebabe",
@@ -152,5 +152,13 @@ func TestWriteLock(t *testing.T) {
 		assert.Equal(t, original.Skills, got.Skills)
 		assert.Equal(t, original.Agents, got.Agents)
 		assert.Equal(t, original.Scope, got.Scope)
+	})
+
+	t.Run("returns error for invalid scope", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "skills-lock.json")
+		err := WriteLock(path, &SkillsVersionConfig{Scope: "invalid"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid scope")
 	})
 }

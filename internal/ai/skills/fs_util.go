@@ -1,9 +1,10 @@
 package skills
 
 import (
-	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/auth0/auth0-cli/internal/utils"
 )
 
 // mergeDir recursively copies the contents of src into dst. Symlinks are preserved
@@ -36,36 +37,10 @@ func mergeDir(src, dst string) error {
 				return err
 			}
 		default:
-			info, err := entry.Info()
-			if err != nil {
-				return err
-			}
-			if err := copyFile(srcPath, dstPath, info.Mode()); err != nil {
+			if err := utils.CopyFile(srcPath, dstPath); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
-}
-
-// copyFile copies src to dst with the given permission mode.
-func copyFile(src, dst string, mode os.FileMode) error {
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return err
-	}
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
-	if err != nil {
-		return err
-	}
-	_, copyErr := io.Copy(out, in)
-	closeErr := out.Close()
-	if copyErr != nil {
-		return copyErr
-	}
-	return closeErr
 }

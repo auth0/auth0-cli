@@ -1,17 +1,14 @@
 package skills
 
 import (
-	"archive/tar"
 	"archive/zip"
 	"bytes"
-	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -33,35 +30,11 @@ func setHTTPClient(t *testing.T, fn roundTripFunc) {
 	t.Cleanup(func() { skillsHTTPClient = orig })
 }
 
-// makeTarGz builds an in-memory .tar.gz from name→content pairs.
-// A name ending in "/" is written as a directory entry.
-func makeTarGz(t *testing.T, entries map[string]string) []byte {
+// makeZipBytes builds an in-memory ZIP archive from name→content pairs and returns the bytes.
+func makeZipBytes(t *testing.T, entries map[string]string) []byte {
 	t.Helper()
 	var buf bytes.Buffer
-	gw := gzip.NewWriter(&buf)
-	tw := tar.NewWriter(gw)
-	for name, content := range entries {
-		if strings.HasSuffix(name, "/") {
-			require.NoError(t, tw.WriteHeader(&tar.Header{Name: name, Typeflag: tar.TypeDir, Mode: 0o755}))
-		} else {
-			require.NoError(t, tw.WriteHeader(&tar.Header{Name: name, Typeflag: tar.TypeReg, Mode: 0o644, Size: int64(len(content))}))
-			_, err := tw.Write([]byte(content))
-			require.NoError(t, err)
-		}
-	}
-	require.NoError(t, tw.Close())
-	require.NoError(t, gw.Close())
-	return buf.Bytes()
-}
-
-// makeZip writes a ZIP archive to a temp file and returns its path and byte size.
-func makeZip(t *testing.T, entries map[string]string) (path string, size int64) {
-	t.Helper()
-	f, err := os.CreateTemp("", "test-*.zip")
-	require.NoError(t, err)
-	t.Cleanup(func() { os.Remove(f.Name()) })
-
-	zw := zip.NewWriter(f)
+	zw := zip.NewWriter(&buf)
 	for name, content := range entries {
 		w, err := zw.Create(name)
 		require.NoError(t, err)
@@ -69,10 +42,7 @@ func makeZip(t *testing.T, entries map[string]string) (path string, size int64) 
 		require.NoError(t, err)
 	}
 	require.NoError(t, zw.Close())
-	size, err = f.Seek(0, io.SeekEnd)
-	require.NoError(t, err)
-	require.NoError(t, f.Close())
-	return f.Name(), size
+	return buf.Bytes()
 }
 
 func assertFileContent(t *testing.T, path, want string) {
@@ -80,129 +50,6 @@ func assertFileContent(t *testing.T, path, want string) {
 	data, err := os.ReadFile(path)
 	require.NoError(t, err)
 	assert.Equal(t, want, string(data))
-}
-
-// --- extractEntry ---.
-
-func TestExtractEntry(t *testing.T) {
-	open := func(content string) func() (io.ReadCloser, error) {
-		return func() (io.ReadCloser, error) {
-			return io.NopCloser(strings.NewReader(content)), nil
-		}
-	}
-
-	t.Run("skips entry not under prefix", func(t *testing.T) {
-		dest := t.TempDir()
-		require.NoError(t, extractEntry("other/file.txt", false, 0o644, open("x"), "prefix/", dest))
-		entries, _ := os.ReadDir(dest)
-		assert.Empty(t, entries)
-	})
-
-	t.Run("skips root entry with empty rel", func(t *testing.T) {
-		dest := t.TempDir()
-		require.NoError(t, extractEntry("prefix/", false, 0o644, open("x"), "prefix/", dest))
-		entries, _ := os.ReadDir(dest)
-		assert.Empty(t, entries)
-	})
-
-	t.Run("creates directory", func(t *testing.T) {
-		dest := t.TempDir()
-		require.NoError(t, extractEntry("prefix/subdir/", true, 0o755, nil, "prefix/", dest))
-		info, err := os.Stat(filepath.Join(dest, "subdir"))
-		require.NoError(t, err)
-		assert.True(t, info.IsDir())
-	})
-
-	t.Run("writes file content", func(t *testing.T) {
-		dest := t.TempDir()
-		require.NoError(t, extractEntry("prefix/file.txt", false, 0o644, open("hello"), "prefix/", dest))
-		assertFileContent(t, filepath.Join(dest, "file.txt"), "hello")
-	})
-
-	t.Run("creates parent directories for nested file", func(t *testing.T) {
-		dest := t.TempDir()
-		require.NoError(t, extractEntry("prefix/a/b/c.txt", false, 0o644, open("nested"), "prefix/", dest))
-		assertFileContent(t, filepath.Join(dest, "a", "b", "c.txt"), "nested")
-	})
-
-	t.Run("rejects path traversal", func(t *testing.T) {
-		dest := t.TempDir()
-		err := extractEntry("prefix/../../etc/passwd", false, 0o644, open("evil"), "prefix/", dest)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "illegal path")
-	})
-
-	t.Run("propagates open error", func(t *testing.T) {
-		dest := t.TempDir()
-		boom := func() (io.ReadCloser, error) { return nil, errors.New("open failed") }
-		require.Error(t, extractEntry("prefix/file.txt", false, 0o644, boom, "prefix/", dest))
-	})
-}
-
-// --- extractTarGzSubtree ---.
-
-func TestExtractTarGzSubtree(t *testing.T) {
-	const prefix = "repo-main/plugins/auth0/"
-
-	t.Run("extracts files under prefix and skips others", func(t *testing.T) {
-		data := makeTarGz(t, map[string]string{
-			prefix + "skill-a/SKILL.md": "# skill-a",
-			prefix + "skill-b/SKILL.md": "# skill-b",
-			"unrelated/ignored.txt":     "ignored",
-		})
-		dest := t.TempDir()
-		require.NoError(t, extractTarGzSubtree(bytes.NewReader(data), prefix, dest))
-		assertFileContent(t, filepath.Join(dest, "skill-a", "SKILL.md"), "# skill-a")
-		assertFileContent(t, filepath.Join(dest, "skill-b", "SKILL.md"), "# skill-b")
-		_, err := os.Stat(filepath.Join(dest, "unrelated"))
-		assert.True(t, os.IsNotExist(err))
-	})
-
-	t.Run("creates directory entries", func(t *testing.T) {
-		data := makeTarGz(t, map[string]string{prefix + "skill-c/": ""})
-		dest := t.TempDir()
-		require.NoError(t, extractTarGzSubtree(bytes.NewReader(data), prefix, dest))
-		info, err := os.Stat(filepath.Join(dest, "skill-c"))
-		require.NoError(t, err)
-		assert.True(t, info.IsDir())
-	})
-
-	t.Run("returns error on invalid gzip data", func(t *testing.T) {
-		err := extractTarGzSubtree(strings.NewReader("not gzip"), prefix, t.TempDir())
-		require.Error(t, err)
-	})
-}
-
-// --- extractZipSubtree ---.
-
-func TestExtractZipSubtree(t *testing.T) {
-	const prefix = "repo-main/plugins/auth0/"
-
-	t.Run("extracts files under prefix and skips others", func(t *testing.T) {
-		zipPath, size := makeZip(t, map[string]string{
-			prefix + "skill-x/SKILL.md": "# skill-x",
-			"unrelated/ignored.txt":     "ignored",
-		})
-		dest := t.TempDir()
-		require.NoError(t, extractZipSubtree(zipPath, size, prefix, dest))
-		assertFileContent(t, filepath.Join(dest, "skill-x", "SKILL.md"), "# skill-x")
-		_, err := os.Stat(filepath.Join(dest, "unrelated"))
-		assert.True(t, os.IsNotExist(err))
-	})
-
-	t.Run("returns error on invalid zip data", func(t *testing.T) {
-		f, err := os.CreateTemp("", "bad-*.zip")
-		require.NoError(t, err)
-		t.Cleanup(func() { os.Remove(f.Name()) })
-		_, _ = f.WriteString("not a zip")
-		size, _ := f.Seek(0, io.SeekEnd)
-		require.NoError(t, f.Close())
-		require.Error(t, extractZipSubtree(f.Name(), size, prefix, t.TempDir()))
-	})
-
-	t.Run("returns error when zip file does not exist", func(t *testing.T) {
-		require.Error(t, extractZipSubtree("/does/not/exist.zip", 0, prefix, t.TempDir()))
-	})
 }
 
 // --- fetchToTempFile ---.
@@ -237,6 +84,39 @@ func TestFetchToTempFile(t *testing.T) {
 		_, _, err := fetchToTempFile("http://example.com/f", "test-*", "mylabel")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "download failed")
+	})
+}
+
+// --- fetchToTempFile truncation ---.
+
+func TestFetchToTempFile_Truncation(t *testing.T) {
+	t.Run("returns error when response body hits size limit", func(t *testing.T) {
+		orig := maxSkillsDownload
+		maxSkillsDownload = 10
+		t.Cleanup(func() { maxSkillsDownload = orig })
+
+		body := strings.Repeat("x", 20)
+		setHTTPClient(t, func(_ *http.Request) (*http.Response, error) {
+			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(body))}, nil
+		})
+		_, _, err := fetchToTempFile("http://example.com/f", "test-*", "test")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "exceeds size limit")
+	})
+
+	t.Run("succeeds when response body is exactly one byte under limit", func(t *testing.T) {
+		orig := maxSkillsDownload
+		maxSkillsDownload = 10
+		t.Cleanup(func() { maxSkillsDownload = orig })
+
+		body := strings.Repeat("x", 9)
+		setHTTPClient(t, func(_ *http.Request) (*http.Response, error) {
+			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(body))}, nil
+		})
+		f, size, err := fetchToTempFile("http://example.com/f", "test-*", "test")
+		require.NoError(t, err)
+		t.Cleanup(func() { f.Close(); os.Remove(f.Name()) })
+		assert.Equal(t, int64(9), size)
 	})
 }
 
@@ -317,40 +197,6 @@ func TestFetchCommitSHA(t *testing.T) {
 	})
 }
 
-// --- fetchToTempFile truncation ---.
-
-func TestFetchToTempFile_Truncation(t *testing.T) {
-	t.Run("returns error when response body hits size limit", func(t *testing.T) {
-		orig := maxSkillsDownload
-		maxSkillsDownload = 10
-		t.Cleanup(func() { maxSkillsDownload = orig })
-
-		// Body has more bytes than the limit; LimitReader will stop at exactly 10 bytes.
-		body := strings.Repeat("x", 20)
-		setHTTPClient(t, func(_ *http.Request) (*http.Response, error) {
-			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(body))}, nil
-		})
-		_, _, err := fetchToTempFile("http://example.com/f", "test-*", "test")
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "exceeds size limit")
-	})
-
-	t.Run("succeeds when response body is exactly one byte under limit", func(t *testing.T) {
-		orig := maxSkillsDownload
-		maxSkillsDownload = 10
-		t.Cleanup(func() { maxSkillsDownload = orig })
-
-		body := strings.Repeat("x", 9) // 9 < 10.
-		setHTTPClient(t, func(_ *http.Request) (*http.Response, error) {
-			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(body))}, nil
-		})
-		f, size, err := fetchToTempFile("http://example.com/f", "test-*", "test")
-		require.NoError(t, err)
-		t.Cleanup(func() { f.Close(); os.Remove(f.Name()) })
-		assert.Equal(t, int64(9), size)
-	})
-}
-
 // --- checkHasSkills ---.
 
 func TestCheckHasSkills(t *testing.T) {
@@ -383,92 +229,47 @@ func TestCheckHasSkills(t *testing.T) {
 	})
 }
 
-// --- downloadViaTarGz ---.
-
-func TestDownloadViaTarGz(t *testing.T) {
-	const ref = "main"
-	const wantSHA = "deadbeefcafe"
-	prefix := fmt.Sprintf("auth0-agent-skills-%s/%s/", ref, pluginSubtreePath)
-
-	makeMockTransport := func(tarData []byte, sha string) roundTripFunc {
-		return func(r *http.Request) (*http.Response, error) {
-			if r.URL.Host == "codeload.github.com" {
-				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(tarData))}, nil
-			}
-			body, _ := json.Marshal(map[string]string{"sha": sha})
-			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(body))}, nil
-		}
-	}
-
-	t.Run("extracts subtree and returns commit SHA", func(t *testing.T) {
-		tarData := makeTarGz(t, map[string]string{
-			prefix + "skill-a/SKILL.md": "# skill-a",
-			prefix + "skill-b/SKILL.md": "# skill-b",
-		})
-		setHTTPClient(t, makeMockTransport(tarData, wantSHA))
-
-		dest := t.TempDir()
-		gotSHA, err := downloadViaTarGz(dest, ref)
-		require.NoError(t, err)
-		assert.Equal(t, wantSHA, gotSHA)
-		assertFileContent(t, filepath.Join(dest, "skill-a", "SKILL.md"), "# skill-a")
-		assertFileContent(t, filepath.Join(dest, "skill-b", "SKILL.md"), "# skill-b")
-	})
-
-	t.Run("returns error when SHA API call fails", func(t *testing.T) {
-		tarData := makeTarGz(t, map[string]string{prefix + "skill-a/SKILL.md": "x"})
-		setHTTPClient(t, func(r *http.Request) (*http.Response, error) {
-			if r.URL.Host == "codeload.github.com" {
-				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(tarData))}, nil
-			}
-			return &http.Response{StatusCode: http.StatusForbidden, Body: io.NopCloser(strings.NewReader(""))}, nil
-		})
-		_, err := downloadViaTarGz(t.TempDir(), ref)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "403")
-	})
-
-	t.Run("returns error when download fails", func(t *testing.T) {
-		setHTTPClient(t, func(_ *http.Request) (*http.Response, error) {
-			return &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(strings.NewReader(""))}, nil
-		})
-		_, err := downloadViaTarGz(t.TempDir(), ref)
-		require.Error(t, err)
-	})
-}
-
 // --- downloadViaZip ---.
+
+func makeZipTransport(t *testing.T, zipData []byte, sha string) roundTripFunc {
+	t.Helper()
+	return func(r *http.Request) (*http.Response, error) {
+		if r.URL.Host == "github.com" {
+			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(zipData))}, nil
+		}
+		body, _ := json.Marshal(map[string]string{"sha": sha})
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(body))}, nil
+	}
+}
 
 func TestDownloadViaZip(t *testing.T) {
 	const ref = "main"
 	const wantSHA = "cafebabe1234"
 	prefix := fmt.Sprintf("auth0-agent-skills-%s/%s/", ref, pluginSubtreePath)
 
-	makeMockTransport := func(zipPath string, sha string) roundTripFunc {
-		zipData, err := os.ReadFile(zipPath)
-		if err != nil {
-			panic(err)
-		}
-		return func(r *http.Request) (*http.Response, error) {
-			if r.URL.Host == "github.com" {
-				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(zipData))}, nil
-			}
-			body, _ := json.Marshal(map[string]string{"sha": sha})
-			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(body))}, nil
-		}
-	}
-
 	t.Run("extracts subtree and returns commit SHA", func(t *testing.T) {
-		zipPath, _ := makeZip(t, map[string]string{
-			prefix + "skill-x/SKILL.md": "# skill-x",
+		zipData := makeZipBytes(t, map[string]string{
+			prefix + "skills/skill-x/SKILL.md": "# skill-x",
 		})
-		setHTTPClient(t, makeMockTransport(zipPath, wantSHA))
+		setHTTPClient(t, makeZipTransport(t, zipData, wantSHA))
 
 		dest := t.TempDir()
 		gotSHA, err := downloadViaZip(dest, ref)
 		require.NoError(t, err)
 		assert.Equal(t, wantSHA, gotSHA)
-		assertFileContent(t, filepath.Join(dest, "skill-x", "SKILL.md"), "# skill-x")
+		assertFileContent(t, filepath.Join(dest, "skills", "skill-x", "SKILL.md"), "# skill-x")
+	})
+
+	t.Run("returns error when SHA API call fails", func(t *testing.T) {
+		setHTTPClient(t, func(r *http.Request) (*http.Response, error) {
+			if r.URL.Host == "github.com" {
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
+			}
+			return &http.Response{StatusCode: http.StatusForbidden, Body: io.NopCloser(strings.NewReader(""))}, nil
+		})
+		_, err := downloadViaZip(t.TempDir(), ref)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "403")
 	})
 
 	t.Run("returns error when download fails", func(t *testing.T) {
@@ -478,83 +279,63 @@ func TestDownloadViaZip(t *testing.T) {
 		_, err := downloadViaZip(t.TempDir(), ref)
 		require.Error(t, err)
 	})
+
+	t.Run("returns error when archive has wrong prefix", func(t *testing.T) {
+		zipData := makeZipBytes(t, map[string]string{
+			"completely-wrong-prefix/file.txt": "content",
+		})
+		setHTTPClient(t, makeZipTransport(t, zipData, wantSHA))
+
+		_, err := downloadViaZip(t.TempDir(), ref)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "no skills found")
+	})
+
+	t.Run("handles slash-containing ref by flattening to dash", func(t *testing.T) {
+		const slashRef = "release/1.0"
+		const flatRef = "release-1.0"
+		prefix := fmt.Sprintf("auth0-agent-skills-%s/%s/", flatRef, pluginSubtreePath)
+		zipData := makeZipBytes(t, map[string]string{
+			prefix + "skills/skill-y/SKILL.md": "# skill-y",
+		})
+		setHTTPClient(t, makeZipTransport(t, zipData, wantSHA))
+
+		dest := t.TempDir()
+		gotSHA, err := downloadViaZip(dest, slashRef)
+		require.NoError(t, err)
+		assert.Equal(t, wantSHA, gotSHA)
+		assertFileContent(t, filepath.Join(dest, "skills", "skill-y", "SKILL.md"), "# skill-y")
+	})
 }
 
 // --- DownloadPlugin ---.
 
 func TestDownloadPlugin_EmptyExtraction(t *testing.T) {
-	// Force HTTP strategies by disabling git lookup so the test is not skipped
-	// in environments where git >= 2.25 is available.
-	orig := gitLookPath
-	gitLookPath = func(string) (string, error) { return "", errors.New("git not found") }
-	t.Cleanup(func() { gitLookPath = orig })
-
 	const ref = "main"
+	const wantSHA = "abc"
 
-	// Tar.gz with wrong prefix (no matching subtree).
-	wrongPrefixTar := makeTarGz(t, map[string]string{
+	zipData := makeZipBytes(t, map[string]string{
 		"completely-wrong-prefix/file.txt": "content",
 	})
-	// ZIP with wrong prefix.
-	wrongPrefixZip, _ := makeZip(t, map[string]string{
-		"completely-wrong-prefix/file.txt": "content",
-	})
-	wrongPrefixZipData, err := os.ReadFile(wrongPrefixZip)
-	require.NoError(t, err)
-
-	setHTTPClient(t, func(r *http.Request) (*http.Response, error) {
-		switch r.URL.Host {
-		case "codeload.github.com":
-			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(wrongPrefixTar))}, nil
-		case "github.com":
-			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(wrongPrefixZipData))}, nil
-		default:
-			body, _ := json.Marshal(map[string]string{"sha": "abc"})
-			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(body))}, nil
-		}
-	})
+	setHTTPClient(t, makeZipTransport(t, zipData, wantSHA))
 
 	base := t.TempDir()
 	targetDir := filepath.Join(base, "auth0")
-	_, err = DownloadPlugin(targetDir, ref)
-	// Tar.gz and ZIP extract nothing; checkHasSkills rejects the empty result.
+	_, err := DownloadPlugin(targetDir, ref)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no skills found")
 }
 
 func TestDownloadPlugin_CreatesMissingTargetDir(t *testing.T) {
-	// Force HTTP strategies so the test is deterministic regardless of git availability.
-	orig := gitLookPath
-	gitLookPath = func(string) (string, error) { return "", errors.New("git not found") }
-	t.Cleanup(func() { gitLookPath = orig })
-
 	const ref = "main"
 	const wantSHA = "abc123"
 	prefix := fmt.Sprintf("auth0-agent-skills-%s/%s/", ref, pluginSubtreePath)
-	// Archive paths include the skills/ subdirectory to match the real repo layout and
-	// satisfy checkHasSkills which verifies targetDir/skills/ is non-empty.
-	tarData := makeTarGz(t, map[string]string{
+
+	zipData := makeZipBytes(t, map[string]string{
 		prefix + "skills/skill-a/SKILL.md": "# skill-a",
 	})
-	zipPath, _ := makeZip(t, map[string]string{
-		prefix + "skills/skill-a/SKILL.md": "# skill-a",
-	})
-	zipData, err := os.ReadFile(zipPath)
-	require.NoError(t, err)
+	setHTTPClient(t, makeZipTransport(t, zipData, wantSHA))
 
-	setHTTPClient(t, func(r *http.Request) (*http.Response, error) {
-		switch r.URL.Host {
-		case "codeload.github.com":
-			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(tarData))}, nil
-		case "github.com":
-			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(zipData))}, nil
-		default:
-			body, _ := json.Marshal(map[string]string{"sha": wantSHA})
-			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(body))}, nil
-		}
-	})
-
-	// TargetDir is deeply nested and does not exist yet.
 	targetDir := filepath.Join(t.TempDir(), "deep", "nested", "auth0")
 	gotSHA, err := DownloadPlugin(targetDir, ref)
 	require.NoError(t, err)
@@ -564,92 +345,27 @@ func TestDownloadPlugin_CreatesMissingTargetDir(t *testing.T) {
 	assert.NotEmpty(t, entries, "targetDir must contain extracted files")
 }
 
-// --- downloadViaGit ---.
+func TestDownloadPlugin_DefaultsRefToMain(t *testing.T) {
+	const wantSHA = "mainsha"
+	prefix := fmt.Sprintf("auth0-agent-skills-main/%s/", pluginSubtreePath)
 
-// setupLocalGitRepo creates a local bare repository seeded with the given file tree under
-// the specified branch. Returns the path of the bare repository.
-func setupLocalGitRepo(t *testing.T, branch string, files map[string]string) string {
-	t.Helper()
-
-	workDir := t.TempDir()
-	bareDir := t.TempDir()
-
-	runSetup := func(dir string, args ...string) {
-		t.Helper()
-		cmd := exec.Command("git", append([]string{"-c", "safe.bareRepository=all"}, args...)...)
-		cmd.Dir = dir
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Fatalf("setup git %v: %v\n%s", args, err, out)
-		}
-	}
-
-	runSetup(workDir, "init")
-	runSetup(workDir, "symbolic-ref", "HEAD", "refs/heads/"+branch)
-	runSetup(workDir, "config", "user.email", "test@example.com")
-	runSetup(workDir, "config", "user.name", "Test")
-	runSetup(workDir, "config", "commit.gpgsign", "false")
-
-	for name, content := range files {
-		path := filepath.Join(workDir, filepath.FromSlash(name))
-		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
-		require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
-	}
-
-	runSetup(workDir, "add", ".")
-	runSetup(workDir, "commit", "-m", "init")
-	runSetup(bareDir, "init", "--bare")
-	runSetup(bareDir, "symbolic-ref", "HEAD", "refs/heads/"+branch)
-	runSetup(workDir, "remote", "add", "origin", bareDir)
-	runSetup(workDir, "push", "origin", branch)
-
-	return bareDir
-}
-
-func TestDownloadViaGit_Layout(t *testing.T) {
-	if _, err := exec.LookPath("git"); err != nil {
-		t.Skip("git not available")
-	}
-	if err := checkGitVersion(); err != nil {
-		t.Skip("git too old: " + err.Error())
-	}
-
-	bareDir := setupLocalGitRepo(t, "main", map[string]string{
-		"plugins/auth0/skills/skill-test/SKILL.md": "---\nname: test\n---\n# Test Skill",
-		"plugins/auth0/skills/skill-b/SKILL.md":    "---\nname: b\n---\n# B",
+	zipData := makeZipBytes(t, map[string]string{
+		prefix + "skills/skill-a/SKILL.md": "# skill-a",
 	})
 
-	orig := agentSkillsGitURL
-	agentSkillsGitURL = bareDir
-	t.Cleanup(func() { agentSkillsGitURL = orig })
+	var capturedURL string
+	setHTTPClient(t, func(r *http.Request) (*http.Response, error) {
+		if r.URL.Host == "github.com" {
+			capturedURL = r.URL.String()
+			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(zipData))}, nil
+		}
+		body, _ := json.Marshal(map[string]string{"sha": wantSHA})
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(body))}, nil
+	})
 
-	targetDir := t.TempDir()
-	sha, err := downloadViaGit(targetDir, "main")
+	targetDir := filepath.Join(t.TempDir(), "auth0")
+	gotSHA, err := DownloadPlugin(targetDir, "")
 	require.NoError(t, err)
-	assert.NotEmpty(t, sha, "returned SHA should be non-empty")
-
-	assertFileContent(t, filepath.Join(targetDir, "skills", "skill-test", "SKILL.md"), "---\nname: test\n---\n# Test Skill")
-	assertFileContent(t, filepath.Join(targetDir, "skills", "skill-b", "SKILL.md"), "---\nname: b\n---\n# B")
-}
-
-func TestDownloadViaGit_CloneFailure(t *testing.T) {
-	if _, err := exec.LookPath("git"); err != nil {
-		t.Skip("git not available")
-	}
-	if err := checkGitVersion(); err != nil {
-		t.Skip("git too old: " + err.Error())
-	}
-
-	orig := agentSkillsGitURL
-	agentSkillsGitURL = "/nonexistent/does/not/exist"
-	t.Cleanup(func() { agentSkillsGitURL = orig })
-
-	targetDir := t.TempDir()
-	_, err := downloadViaGit(targetDir, "main")
-	require.Error(t, err, "clone of non-existent repo should fail")
-
-	// TargetDir must still exist and be empty so the caller can fall back to HTTP strategies.
-	entries, readErr := os.ReadDir(targetDir)
-	require.NoError(t, readErr, "targetDir should still exist after clone failure")
-	assert.Empty(t, entries, "targetDir should be empty after clone failure")
+	assert.Equal(t, wantSHA, gotSHA)
+	assert.Contains(t, capturedURL, "main", "empty ref should default to main")
 }

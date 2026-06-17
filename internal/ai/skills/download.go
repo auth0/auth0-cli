@@ -1,20 +1,16 @@
 package skills
 
 import (
-	"archive/tar"
-	"archive/zip"
-	"compress/gzip"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/auth0/auth0-cli/internal/utils"
 )
 
 const (
@@ -22,65 +18,54 @@ const (
 	agentSkillsAPI    = "https://api.github.com/repos/auth0/agent-skills/commits/"
 	pluginSubtreePath = "plugins/auth0"
 	skillsHTTPTimeout = 60 * time.Second
-	gitCmdTimeout     = 120 * time.Second
-	minGitMajor       = 2
-	minGitMinor       = 25
 )
 
 // maxSkillsDownload is the per-archive byte limit for HTTP downloads. Declared as a var so
 // tests can override it without allocating a 100 MB body.
 var maxSkillsDownload int64 = 100 * 1024 * 1024 // 100 MB.
 
-// agentSkillsGitURL is the URL used by downloadViaGit. Declared as a var so tests can
-// point it at a local bare repository instead of the real GitHub remote.
-var agentSkillsGitURL = agentSkillsRepo + ".git"
-
-// gitLookPath is exec.LookPath by default; tests override it to force HTTP fallback strategies.
-var gitLookPath = exec.LookPath
-
 var skillsHTTPClient = &http.Client{Timeout: skillsHTTPTimeout}
 
-// DownloadPlugin downloads the auth0 agent-skills plugin into targetDir using the best
-// available strategy: git sparse-checkout > tar.gz > ZIP. Returns the commit SHA.
-// All intermediate work happens in a system temp directory; targetDir is only written
-// once everything succeeds.
+// DownloadPlugin downloads the auth0 agent-skills plugin into targetDir via ZIP.
+// Returns the commit SHA. targetDir is only written once everything succeeds.
 func DownloadPlugin(targetDir, ref string) (string, error) {
 	if ref == "" {
 		ref = "main"
 	}
+	return downloadViaZip(targetDir, ref)
+}
 
-	tmpDir, err := os.MkdirTemp("", "auth0-skills-*")
+// downloadViaZip fetches the commit SHA first, downloads and extracts the ZIP archive,
+// then promotes the plugins/auth0 subtree into targetDir.
+func downloadViaZip(targetDir, ref string) (string, error) {
+	sha, err := fetchCommitSHA(ref)
 	if err != nil {
-		return "", fmt.Errorf("create temp dir: %w", err)
-	}
-	defer os.RemoveAll(tmpDir) // No-op if renamed to targetDir below.
-
-	sha, dlErr := func() (string, error) {
-		var errs []string
-		if _, err := gitLookPath("git"); err == nil && checkGitVersion() == nil {
-			sha, err := downloadViaGit(tmpDir, ref)
-			if err == nil {
-				return sha, nil
-			}
-			errs = append(errs, "git: "+err.Error())
-		}
-		sha, err := downloadViaTarGz(tmpDir, ref)
-		if err == nil {
-			return sha, nil
-		}
-		errs = append(errs, "tar.gz: "+err.Error())
-		sha, err = downloadViaZip(tmpDir, ref)
-		if err == nil {
-			return sha, nil
-		}
-		errs = append(errs, "zip: "+err.Error())
-		return "", fmt.Errorf("all download strategies failed: %s", strings.Join(errs, "; "))
-	}()
-	if dlErr != nil {
-		return "", dlErr
+		return "", err
 	}
 
-	if err := checkHasSkills(tmpDir); err != nil {
+	url := fmt.Sprintf("%s/archive/%s.zip", agentSkillsRepo, ref)
+	f, _, err := fetchToTempFile(url, "auth0-agent-skills-*.zip", "ZIP")
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(f.Name())
+	defer f.Close()
+
+	tmpUnzipDir, err := os.MkdirTemp("", "auth0-skills-unzip-*")
+	if err != nil {
+		return "", fmt.Errorf("create unzip dir: %w", err)
+	}
+	defer os.RemoveAll(tmpUnzipDir)
+
+	if err := utils.Unzip(f.Name(), tmpUnzipDir); err != nil {
+		return "", fmt.Errorf("unzip plugin: %w", err)
+	}
+
+	// GitHub flattens "/" in ref names to "-" in archive root directory names.
+	archiveRef := strings.ReplaceAll(ref, "/", "-")
+	subtreeSrc := filepath.Join(tmpUnzipDir, "auth0-agent-skills-"+archiveRef, filepath.FromSlash(pluginSubtreePath))
+
+	if err := checkHasSkills(subtreeSrc); err != nil {
 		return "", err
 	}
 
@@ -90,18 +75,17 @@ func DownloadPlugin(targetDir, ref string) (string, error) {
 
 	os.RemoveAll(targetDir)
 
-	// Attempt atomic rename (succeeds when /tmp and targetDir share a filesystem).
-	if err := os.Rename(tmpDir, targetDir); err == nil {
-		return sha, nil
+	// Attempt atomic rename (succeeds when tmpUnzipDir and targetDir share a filesystem).
+	if err := os.Rename(subtreeSrc, targetDir); err != nil {
+		// Cross-filesystem fallback: copy content into a freshly created targetDir.
+		if err := os.MkdirAll(targetDir, 0o755); err != nil {
+			return "", fmt.Errorf("create target dir: %w", err)
+		}
+		if err := mergeDir(subtreeSrc, targetDir); err != nil {
+			return "", fmt.Errorf("install to target dir: %w", err)
+		}
 	}
 
-	// Cross-filesystem fallback: copy content into a freshly created targetDir.
-	if err := os.MkdirAll(targetDir, 0o755); err != nil {
-		return "", fmt.Errorf("create target dir: %w", err)
-	}
-	if err := mergeDir(tmpDir, targetDir); err != nil {
-		return "", fmt.Errorf("install to target dir: %w", err)
-	}
 	return sha, nil
 }
 
@@ -110,33 +94,6 @@ func checkHasSkills(dir string) error {
 	entries, err := os.ReadDir(filepath.Join(dir, "skills"))
 	if err != nil || len(entries) == 0 {
 		return fmt.Errorf("no skills found under %s/skills/ (archive prefix may not match)", dir)
-	}
-	return nil
-}
-
-// checkGitVersion returns an error if git is not found or is older than 2.25.
-func checkGitVersion() error {
-	ctx, cancel := context.WithTimeout(context.Background(), gitCmdTimeout)
-	defer cancel()
-	out, err := exec.CommandContext(ctx, "git", "--version").Output()
-	if err != nil {
-		return fmt.Errorf("git --version: %w", err)
-	}
-	fields := strings.Fields(strings.TrimSpace(string(out)))
-	if len(fields) < 3 {
-		return fmt.Errorf("unexpected git --version output: %s", strings.TrimSpace(string(out)))
-	}
-	vParts := strings.SplitN(fields[2], ".", 3)
-	if len(vParts) < 2 {
-		return fmt.Errorf("cannot parse git version: %s", fields[2])
-	}
-	major, err1 := strconv.Atoi(vParts[0])
-	minor, err2 := strconv.Atoi(vParts[1])
-	if err1 != nil || err2 != nil {
-		return fmt.Errorf("cannot parse git version: %s", fields[2])
-	}
-	if major < minGitMajor || (major == minGitMajor && minor < minGitMinor) {
-		return fmt.Errorf("git >= %d.%d required, found %s", minGitMajor, minGitMinor, fields[2])
 	}
 	return nil
 }
@@ -172,63 +129,6 @@ func fetchCommitSHA(ref string) (string, error) {
 		return "", fmt.Errorf("github API returned empty SHA")
 	}
 	return payload.SHA, nil
-}
-
-// downloadViaGit clones into a temp directory, then promotes the contents of
-// plugins/auth0/ into targetDir so the layout matches the tar.gz/ZIP strategies.
-func downloadViaGit(targetDir, ref string) (string, error) {
-	cloneDir, err := os.MkdirTemp("", "auth0-agent-skills-git-*")
-	if err != nil {
-		return "", fmt.Errorf("create git clone dir: %w", err)
-	}
-	defer os.RemoveAll(cloneDir)
-
-	run := func(args ...string) (string, error) {
-		ctx, cancel := context.WithTimeout(context.Background(), gitCmdTimeout)
-		defer cancel()
-		cmd := exec.CommandContext(ctx, "git", args...)
-		cmd.Dir = cloneDir
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			if ctx.Err() != nil {
-				return "", fmt.Errorf("git %s: timed out after %s", strings.Join(args, " "), gitCmdTimeout)
-			}
-			return "", fmt.Errorf("git %s: %w\n%s", strings.Join(args, " "), err, out)
-		}
-		return strings.TrimSpace(string(out)), nil
-	}
-
-	if _, err := run("clone", "--no-checkout", "--depth", "1", "--filter=blob:none", "--branch", ref,
-		agentSkillsGitURL, "."); err != nil {
-		return "", err
-	}
-
-	if _, err := run("sparse-checkout", "set", pluginSubtreePath); err != nil {
-		return "", err
-	}
-
-	if _, err := run("checkout"); err != nil {
-		return "", err
-	}
-
-	sha, err := run("rev-parse", "HEAD")
-	if err != nil {
-		return "", err
-	}
-
-	// Promote plugins/auth0/ into targetDir (the DownloadPlugin temp directory) by rename.
-	// Remove targetDir first so the rename can take its place.
-	subtreeSrc := filepath.Join(cloneDir, filepath.FromSlash(pluginSubtreePath))
-	if err := os.RemoveAll(targetDir); err != nil {
-		return "", fmt.Errorf("clear temp dir for promotion: %w", err)
-	}
-	if err := os.Rename(subtreeSrc, targetDir); err != nil {
-		// Restore the empty dir so fallback strategies in the caller can still use this path.
-		_ = os.MkdirAll(targetDir, 0o755)
-		return "", fmt.Errorf("promote git subtree: %w", err)
-	}
-
-	return sha, nil
 }
 
 // fetchToTempFile downloads url into a new temp file and returns it open and seeked to the
@@ -270,141 +170,4 @@ func fetchToTempFile(url, pattern, label string) (*os.File, int64, error) {
 	}
 
 	return f, size, nil
-}
-
-// downloadViaTarGz fetches the commit SHA first, then downloads and extracts the tar.gz archive.
-func downloadViaTarGz(targetDir, ref string) (string, error) {
-	sha, err := fetchCommitSHA(ref)
-	if err != nil {
-		return "", err
-	}
-
-	url := fmt.Sprintf("https://codeload.github.com/auth0/agent-skills/tar.gz/%s", ref)
-	f, _, err := fetchToTempFile(url, "auth0-agent-skills-*.tar.gz", "tar.gz")
-	if err != nil {
-		return "", err
-	}
-	defer os.Remove(f.Name())
-	defer f.Close()
-
-	// GitHub flattens "/" in ref names to "-" in archive root directory names.
-	archiveRef := strings.ReplaceAll(ref, "/", "-")
-	prefix := fmt.Sprintf("auth0-agent-skills-%s/%s/", archiveRef, pluginSubtreePath)
-	if err := extractTarGzSubtree(f, prefix, targetDir); err != nil {
-		return "", err
-	}
-
-	return sha, nil
-}
-
-// downloadViaZip fetches the commit SHA first, then downloads and extracts the ZIP archive.
-func downloadViaZip(targetDir, ref string) (string, error) {
-	sha, err := fetchCommitSHA(ref)
-	if err != nil {
-		return "", err
-	}
-
-	url := fmt.Sprintf("%s/archive/%s.zip", agentSkillsRepo, ref)
-	f, size, err := fetchToTempFile(url, "auth0-agent-skills-*.zip", "ZIP")
-	if err != nil {
-		return "", err
-	}
-	defer os.Remove(f.Name())
-	defer f.Close()
-
-	// GitHub flattens "/" in ref names to "-" in archive root directory names.
-	archiveRef := strings.ReplaceAll(ref, "/", "-")
-	prefix := fmt.Sprintf("auth0-agent-skills-%s/%s/", archiveRef, pluginSubtreePath)
-	if err := extractZipSubtree(f.Name(), size, prefix, targetDir); err != nil {
-		return "", err
-	}
-
-	return sha, nil
-}
-
-// ExtractEntry writes a single archive entry to destDir. IsDir and mode describe the entry;
-// open returns a reader for its content (ignored when isDir is true). The name is checked
-// against prefix and any path-traversal attempt is rejected.
-func extractEntry(name string, isDir bool, mode os.FileMode, open func() (io.ReadCloser, error), prefix, destDir string) error {
-	if !strings.HasPrefix(name, prefix) {
-		return nil
-	}
-	rel := strings.TrimPrefix(name, prefix)
-	if rel == "" {
-		return nil
-	}
-	dest := filepath.Join(destDir, filepath.FromSlash(rel))
-	if !strings.HasPrefix(dest, filepath.Clean(destDir)+string(os.PathSeparator)) {
-		return fmt.Errorf("illegal path in archive: %s", name)
-	}
-	if isDir {
-		return os.MkdirAll(dest, 0o755)
-	}
-	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
-		return err
-	}
-	rc, err := open()
-	if err != nil {
-		return err
-	}
-	outFile, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
-	if err != nil {
-		_ = rc.Close()
-		return err
-	}
-	_, copyErr := io.Copy(outFile, rc)
-	_ = rc.Close()
-	_ = outFile.Close()
-	return copyErr
-}
-
-// extractTarGzSubtree reads a .tar.gz from r and copies entries whose name starts with
-// prefix into destDir (stripping the prefix from the output path).
-func extractTarGzSubtree(r io.Reader, prefix, destDir string) error {
-	gz, err := gzip.NewReader(r)
-	if err != nil {
-		return fmt.Errorf("gzip open: %w", err)
-	}
-	defer gz.Close()
-
-	tr := tar.NewReader(gz)
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("tar read: %w", err)
-		}
-		if err := extractEntry(hdr.Name, hdr.Typeflag == tar.TypeDir, hdr.FileInfo().Mode(),
-			func() (io.ReadCloser, error) { return io.NopCloser(tr), nil },
-			prefix, destDir); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// extractZipSubtree opens the ZIP at zipPath (with known size) and copies entries whose
-// name starts with prefix into destDir (stripping the prefix).
-func extractZipSubtree(zipPath string, size int64, prefix, destDir string) error {
-	// Zip.NewReader needs an io.ReaderAt, so we re-open the file.
-	f, err := os.Open(zipPath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	zr, err := zip.NewReader(f, size)
-	if err != nil {
-		return fmt.Errorf("zip open: %w", err)
-	}
-
-	for _, entry := range zr.File {
-		if err := extractEntry(entry.Name, entry.FileInfo().IsDir(), entry.Mode(),
-			entry.Open, prefix, destDir); err != nil {
-			return err
-		}
-	}
-	return nil
 }
