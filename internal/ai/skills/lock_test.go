@@ -74,7 +74,7 @@ func TestWriteLock(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "skills-lock.json")
 
-		cfg := &SkillsVersionConfig{
+		cfg := &VersionConfig{
 			Repo:          "https://github.com/auth0/agent-skills.git",
 			Ref:           "main",
 			CommitSHA:     "deadbeef",
@@ -102,7 +102,7 @@ func TestWriteLock(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "nested", "deep", "skills-lock.json")
 
-		require.NoError(t, WriteLock(path, &SkillsVersionConfig{Scope: ScopeGlobal}))
+		require.NoError(t, WriteLock(path, &VersionConfig{Scope: ScopeGlobal}))
 
 		got, err := ReadLock(path)
 		require.NoError(t, err)
@@ -114,8 +114,8 @@ func TestWriteLock(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "skills-lock.json")
 
-		require.NoError(t, WriteLock(path, &SkillsVersionConfig{CommitSHA: "first", Scope: ScopeGlobal}))
-		require.NoError(t, WriteLock(path, &SkillsVersionConfig{CommitSHA: "second", Scope: ScopeGlobal}))
+		require.NoError(t, WriteLock(path, &VersionConfig{CommitSHA: "first", Scope: ScopeGlobal}))
+		require.NoError(t, WriteLock(path, &VersionConfig{CommitSHA: "second", Scope: ScopeGlobal}))
 
 		got, err := ReadLock(path)
 		require.NoError(t, err)
@@ -126,7 +126,7 @@ func TestWriteLock(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "skills-lock.json")
 
-		original := &SkillsVersionConfig{
+		original := &VersionConfig{
 			Repo:          "https://github.com/auth0/agent-skills.git",
 			Ref:           "v1.2.3",
 			CommitSHA:     "cafebabe",
@@ -157,7 +157,7 @@ func TestWriteLock(t *testing.T) {
 	t.Run("returns error for invalid scope", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "skills-lock.json")
-		err := WriteLock(path, &SkillsVersionConfig{Scope: "invalid"})
+		err := WriteLock(path, &VersionConfig{Scope: "invalid"})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid scope")
 	})

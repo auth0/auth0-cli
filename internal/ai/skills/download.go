@@ -27,7 +27,7 @@ var maxSkillsDownload int64 = 100 * 1024 * 1024 // 100 MB.
 var skillsHTTPClient = &http.Client{Timeout: skillsHTTPTimeout}
 
 // DownloadPlugin downloads the auth0 agent-skills plugin into targetDir via ZIP.
-// Returns the commit SHA. targetDir is only written once everything succeeds.
+// Returns the commit SHA. TargetDir is only written once everything succeeds.
 func DownloadPlugin(targetDir, ref string) (string, error) {
 	if ref == "" {
 		ref = "main"

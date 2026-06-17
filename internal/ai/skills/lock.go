@@ -19,8 +19,8 @@ func (s Scope) Valid() bool {
 	return s == ScopeGlobal || s == ScopeLocal
 }
 
-// SkillsVersionConfig records the installed state of the auth0 agent-skills plugin.
-type SkillsVersionConfig struct {
+// VersionConfig records the installed state of the auth0 agent-skills plugin.
+type VersionConfig struct {
 	Repo          string    `json:"repo"`
 	Ref           string    `json:"ref"`
 	CommitSHA     string    `json:"commitSHA"`
@@ -33,7 +33,7 @@ type SkillsVersionConfig struct {
 }
 
 // ReadLock reads the skills-lock.json at path. Returns nil, nil when the file does not exist.
-func ReadLock(path string) (*SkillsVersionConfig, error) {
+func ReadLock(path string) (*VersionConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -41,7 +41,7 @@ func ReadLock(path string) (*SkillsVersionConfig, error) {
 		}
 		return nil, err
 	}
-	var cfg SkillsVersionConfig
+	var cfg VersionConfig
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func ReadLock(path string) (*SkillsVersionConfig, error) {
 }
 
 // WriteLock serialises cfg as JSON and writes it to path, creating parent directories as needed.
-func WriteLock(path string, cfg *SkillsVersionConfig) error {
+func WriteLock(path string, cfg *VersionConfig) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
