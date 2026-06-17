@@ -183,7 +183,7 @@ func runInstallFast(_ *cli) error {
 
 	// Write the global lock file.
 	now := time.Now()
-	lock := &skills.Lock{
+	versionConfig := &skills.VersionConfig{
 		Repo:          skillsPluginRepo,
 		Ref:           skillsPluginRef,
 		CommitSHA:     commitSHA,
@@ -194,7 +194,7 @@ func runInstallFast(_ *cli) error {
 		Agents:        installedAgents,
 		Scope:         skills.ScopeGlobal,
 	}
-	if writeErr := skills.WriteLock(lockPath, lock); writeErr != nil {
+	if writeErr := skills.WriteLock(lockPath, versionConfig); writeErr != nil {
 		fmt.Fprintf(os.Stderr, "warning: could not write lock file: %v\n", writeErr)
 	}
 
