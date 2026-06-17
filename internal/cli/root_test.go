@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/auth0/auth0-cli/internal/config"
+	"github.com/auth0/auth0-cli/internal/display"
 )
 
 type testManagementError struct {
@@ -104,4 +105,66 @@ func TestClassifyCommandFailure(t *testing.T) {
 
 func TestTestManagementErrorSatisfiesManagementError(t *testing.T) {
 	var _ management.Error = testManagementError{}
+}
+
+func TestOutputFormatForTracking(t *testing.T) {
+	t.Run("returns table for nil renderer", func(t *testing.T) {
+		assert.Equal(t, "table", outputFormatForTracking(nil))
+	})
+
+	t.Run("returns table for default renderer format", func(t *testing.T) {
+		renderer := &display.Renderer{}
+		assert.Equal(t, "table", outputFormatForTracking(renderer))
+	})
+
+	t.Run("returns configured renderer format", func(t *testing.T) {
+		renderer := &display.Renderer{Format: display.OutputFormatJSONCompact}
+		assert.Equal(t, "json-compact", outputFormatForTracking(renderer))
+	})
+}
+
+func TestIsCIEnvironment(t *testing.T) {
+	t.Run("returns false when no CI vars are set", func(t *testing.T) {
+		assert.False(t, isCIEnvironment(func(string) string { return "" }))
+	})
+
+	t.Run("returns true when CI var is truthy", func(t *testing.T) {
+		getEnv := func(k string) string {
+			if k == "CI" {
+				return "true"
+			}
+			return ""
+		}
+		assert.True(t, isCIEnvironment(getEnv))
+	})
+
+	t.Run("returns false when CI var is explicit false", func(t *testing.T) {
+		getEnv := func(k string) string {
+			if k == "CI" {
+				return "false"
+			}
+			return ""
+		}
+		assert.False(t, isCIEnvironment(getEnv))
+	})
+
+	t.Run("returns true for other known CI providers", func(t *testing.T) {
+		getEnv := func(k string) string {
+			if k == "GITHUB_ACTIONS" {
+				return "1"
+			}
+			return ""
+		}
+		assert.True(t, isCIEnvironment(getEnv))
+	})
+}
+
+func TestMergeProperties(t *testing.T) {
+	base := map[string]string{"interactive": "true", "success": "true"}
+	override := map[string]string{"success": "false", "error_class": "auth"}
+	merged := mergeProperties(base, override)
+
+	assert.Equal(t, "true", merged["interactive"])
+	assert.Equal(t, "false", merged["success"])
+	assert.Equal(t, "auth", merged["error_class"])
 }

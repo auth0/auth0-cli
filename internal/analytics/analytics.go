@@ -51,9 +51,9 @@ func (t *Tracker) TrackFirstLogin(id string, loginType string) {
 	t.track(eventName, id, nil)
 }
 
-func (t *Tracker) TrackCommandSucceeded(commandPath string, id string) {
+func (t *Tracker) TrackCommandSucceeded(commandPath string, id string, properties map[string]string) {
 	eventName := generateSucceededEventName(commandPath)
-	t.track(eventName, id, map[string]string{"success": "true", "error_class": "none"})
+	t.track(eventName, id, properties)
 }
 
 func (t *Tracker) TrackCommandFailed(commandPath string, id string, properties map[string]string) {
