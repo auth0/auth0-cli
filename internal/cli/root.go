@@ -15,6 +15,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/instrumentation"
+	"github.com/auth0/auth0-cli/internal/iostream"
 )
 
 const rootShort = "Build, manage and test your Auth0 integrations from the command line."
@@ -88,7 +89,7 @@ func buildRootCmd(cli *cli) *cobra.Command {
 			prepareInteractivity(cmd)
 			cli.configureRenderer()
 
-			if cmd.CommandPath() != "auth0 ai skills post-install-hook" && !skillsSentinelExists() {
+			if cmd.CommandPath() != "auth0 ai skills post-install-hook" && !skillsSentinelExists() && iostream.IsOutputTerminal() {
 				fmt.Fprintln(os.Stderr, skillsInstallTip)
 			}
 

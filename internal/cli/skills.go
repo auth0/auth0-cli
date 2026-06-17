@@ -23,6 +23,12 @@ const (
 	skillsPluginRef  = "main"
 )
 
+var postInstallHookAuto = Flag{
+	Name:     "Auto",
+	LongForm: "auto",
+	Help:     "Skip the interactive prompt and install all skills automatically.",
+}
+
 func pluginTargetDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -40,10 +46,15 @@ func skillsSentinel() string {
 	return filepath.Join(home, skillsSentinelPath)
 }
 
-func writeSkillsSentinel() {
+func writeSkillsSentinel() error {
 	sentinel := skillsSentinel()
-	_ = os.MkdirAll(filepath.Dir(sentinel), 0o755)
-	_ = os.WriteFile(sentinel, []byte{}, 0o644)
+	if err := os.MkdirAll(filepath.Dir(sentinel), 0o755); err != nil {
+		return fmt.Errorf("create sentinel directory %s: %w", filepath.Dir(sentinel), err)
+	}
+	if err := os.WriteFile(sentinel, []byte{}, 0o644); err != nil {
+		return fmt.Errorf("write sentinel %s: %w", sentinel, err)
+	}
+	return nil
 }
 
 func skillsSentinelExists() bool {
@@ -76,13 +87,24 @@ func aiSkillsCmd(cli *cli) *cobra.Command {
 }
 
 func postInstallHookCmd(cli *cli) *cobra.Command {
-	return &cobra.Command{
+	var inputs struct {
+		Auto bool
+	}
+
+	cmd := &cobra.Command{
 		Use:    "post-install-hook",
 		Hidden: true,
 		Short:  "Run post-install setup for Auth0 AI skills",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if skillsSentinelExists() {
 				return nil
+			}
+
+			if inputs.Auto {
+				if err := runInstallFast(cli); err != nil {
+					return err
+				}
+				return writeSkillsSentinel()
 			}
 
 			if !iostream.IsInputTerminal() || !iostream.IsOutputTerminal() {
@@ -121,10 +143,13 @@ func postInstallHookCmd(cli *cli) *cobra.Command {
 				return nil
 			}
 
-			writeSkillsSentinel()
-			return nil
+			return writeSkillsSentinel()
 		},
 	}
+
+	postInstallHookAuto.RegisterBool(cmd, &inputs.Auto, false)
+
+	return cmd
 }
 
 // runInstallFast detects all installed AI agents and installs all available Auth0
@@ -161,19 +186,26 @@ func runInstallFast(_ *cli) error {
 	// Install into every detected agent.
 	agents := skills.FastPriorityAgents()
 	var installedAgents []string
+	installedSkills := make(map[string]struct{})
 
 	for _, agent := range agents {
 		agentSkillsDir, resolveErr := agent.ResolvedGlobalSkillsDir()
 		if resolveErr != nil {
 			continue
 		}
+		var linked int
 		for _, skillName := range skillNames {
 			sourceSkillDir := filepath.Join(skillsDir, skillName)
 			if linkErr := skills.CreateSkillLink(sourceSkillDir, agentSkillsDir, skillName, false); linkErr != nil {
 				fmt.Fprintf(os.Stderr, "warning: could not install skill %q for %s: %v\n", skillName, agent.DisplayName, linkErr)
+			} else {
+				linked++
+				installedSkills[skillName] = struct{}{}
 			}
 		}
-		installedAgents = append(installedAgents, agent.ID)
+		if linked > 0 {
+			installedAgents = append(installedAgents, agent.ID)
+		}
 	}
 
 	// Write the global lock file.
@@ -193,7 +225,7 @@ func runInstallFast(_ *cli) error {
 		fmt.Fprintf(os.Stderr, "warning: could not write lock file: %v\n", writeErr)
 	}
 
-	fmt.Fprintf(os.Stdout, "\nInstalled %d Auth0 skill(s) for %d agent(s).\n", len(skillNames), len(installedAgents))
+	fmt.Fprintf(os.Stdout, "\nInstalled %d Auth0 skill(s) for %d agent(s).\n", len(installedSkills), len(installedAgents))
 
 	fmt.Fprintf(os.Stdout, "\nAGENTS: \n")
 
@@ -203,8 +235,10 @@ func runInstallFast(_ *cli) error {
 
 	fmt.Fprintf(os.Stdout, "\nSKILLS: \n")
 
-	for _, s := range available {
-		fmt.Fprintf(os.Stdout, "  - %s\n", s.Name)
+	for _, skillName := range skillNames {
+		if _, ok := installedSkills[skillName]; ok {
+			fmt.Fprintf(os.Stdout, "  - %s\n", skillName)
+		}
 	}
 
 	return nil

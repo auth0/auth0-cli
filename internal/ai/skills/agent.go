@@ -4,7 +4,9 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
+	"strconv"
 )
 
 type AgentConfig struct {
@@ -62,8 +64,18 @@ func (a AgentConfig) IsInstalled() bool {
 
 var SupportedAgents []AgentConfig
 
+func homeDir() string {
+	if u, err := user.LookupId(strconv.Itoa(os.Getuid())); err == nil && u.HomeDir != "" {
+		return u.HomeDir
+	}
+	if h, err := os.UserHomeDir(); err == nil && h != "" {
+		return h
+	}
+	return ""
+}
+
 func init() {
-	home, _ := os.UserHomeDir()
+	home := homeDir()
 	if home == "" {
 		SupportedAgents = []AgentConfig{
 			{ID: "universal", DisplayName: "Universal", ProjectSkillsDir: filepath.Join(".agents", "skills")},
