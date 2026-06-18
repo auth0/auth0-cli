@@ -57,6 +57,7 @@ execute() {
     log_info "installed ${BINDIR}/${binexe}"
   done
   rm -rf "${tmpdir}"
+  "${BINDIR}/auth0" ai skills post-install-hook --auto || true
 }
 get_binaries() {
   case "$PLATFORM" in

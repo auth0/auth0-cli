@@ -132,7 +132,7 @@ func TestFetchCommitSHA(t *testing.T) {
 
 	t.Run("returns SHA from valid response", func(t *testing.T) {
 		setHTTPClient(t, shaResponse("abc123def456"))
-		sha, err := fetchCommitSHA("main")
+		sha, err := FetchCommitSHA("main")
 		require.NoError(t, err)
 		assert.Equal(t, "abc123def456", sha)
 	})
@@ -141,14 +141,14 @@ func TestFetchCommitSHA(t *testing.T) {
 		setHTTPClient(t, func(_ *http.Request) (*http.Response, error) {
 			return &http.Response{StatusCode: http.StatusForbidden, Body: io.NopCloser(strings.NewReader(""))}, nil
 		})
-		_, err := fetchCommitSHA("main")
+		_, err := FetchCommitSHA("main")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "403")
 	})
 
 	t.Run("returns error when SHA field is empty", func(t *testing.T) {
 		setHTTPClient(t, shaResponse(""))
-		_, err := fetchCommitSHA("main")
+		_, err := FetchCommitSHA("main")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "empty SHA")
 	})
@@ -157,7 +157,7 @@ func TestFetchCommitSHA(t *testing.T) {
 		setHTTPClient(t, func(_ *http.Request) (*http.Response, error) {
 			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader("not json"))}, nil
 		})
-		_, err := fetchCommitSHA("main")
+		_, err := FetchCommitSHA("main")
 		require.Error(t, err)
 	})
 
@@ -165,7 +165,7 @@ func TestFetchCommitSHA(t *testing.T) {
 		setHTTPClient(t, func(_ *http.Request) (*http.Response, error) {
 			return nil, errors.New("network error")
 		})
-		_, err := fetchCommitSHA("main")
+		_, err := FetchCommitSHA("main")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "github API request failed")
 	})
@@ -178,7 +178,7 @@ func TestFetchCommitSHA(t *testing.T) {
 			body, _ := json.Marshal(map[string]string{"sha": "abc123"})
 			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(body))}, nil
 		})
-		_, err := fetchCommitSHA("main")
+		_, err := FetchCommitSHA("main")
 		require.NoError(t, err)
 		assert.Equal(t, "Bearer test-token-xyz", capturedAuth)
 	})
@@ -191,7 +191,7 @@ func TestFetchCommitSHA(t *testing.T) {
 			body, _ := json.Marshal(map[string]string{"sha": "abc123"})
 			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(body))}, nil
 		})
-		_, err := fetchCommitSHA("main")
+		_, err := FetchCommitSHA("main")
 		require.NoError(t, err)
 		assert.Empty(t, capturedAuth)
 	})
@@ -245,7 +245,7 @@ func makeZipTransport(t *testing.T, zipData []byte, sha string) roundTripFunc {
 func TestDownloadViaZip(t *testing.T) {
 	const ref = "main"
 	const wantSHA = "cafebabe1234"
-	prefix := fmt.Sprintf("auth0-agent-skills-%s/%s/", ref, pluginSubtreePath)
+	prefix := fmt.Sprintf("agent-skills-%s/%s/", ref, pluginSubtreePath)
 
 	t.Run("extracts subtree and returns commit SHA", func(t *testing.T) {
 		zipData := makeZipBytes(t, map[string]string{
@@ -294,7 +294,7 @@ func TestDownloadViaZip(t *testing.T) {
 	t.Run("handles slash-containing ref by flattening to dash", func(t *testing.T) {
 		const slashRef = "release/1.0"
 		const flatRef = "release-1.0"
-		prefix := fmt.Sprintf("auth0-agent-skills-%s/%s/", flatRef, pluginSubtreePath)
+		prefix := fmt.Sprintf("agent-skills-%s/%s/", flatRef, pluginSubtreePath)
 		zipData := makeZipBytes(t, map[string]string{
 			prefix + "skills/skill-y/SKILL.md": "# skill-y",
 		})
@@ -329,7 +329,7 @@ func TestDownloadPlugin_EmptyExtraction(t *testing.T) {
 func TestDownloadPlugin_CreatesMissingTargetDir(t *testing.T) {
 	const ref = "main"
 	const wantSHA = "abc123"
-	prefix := fmt.Sprintf("auth0-agent-skills-%s/%s/", ref, pluginSubtreePath)
+	prefix := fmt.Sprintf("agent-skills-%s/%s/", ref, pluginSubtreePath)
 
 	zipData := makeZipBytes(t, map[string]string{
 		prefix + "skills/skill-a/SKILL.md": "# skill-a",
@@ -347,7 +347,7 @@ func TestDownloadPlugin_CreatesMissingTargetDir(t *testing.T) {
 
 func TestDownloadPlugin_DefaultsRefToMain(t *testing.T) {
 	const wantSHA = "mainsha"
-	prefix := fmt.Sprintf("auth0-agent-skills-main/%s/", pluginSubtreePath)
+	prefix := fmt.Sprintf("agent-skills-main/%s/", pluginSubtreePath)
 
 	zipData := makeZipBytes(t, map[string]string{
 		prefix + "skills/skill-a/SKILL.md": "# skill-a",

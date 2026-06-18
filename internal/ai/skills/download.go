@@ -38,7 +38,7 @@ func DownloadPlugin(targetDir, ref string) (string, error) {
 // downloadViaZip fetches the commit SHA first, downloads and extracts the ZIP archive,
 // then promotes the plugins/auth0 subtree into targetDir.
 func downloadViaZip(targetDir, ref string) (string, error) {
-	sha, err := fetchCommitSHA(ref)
+	sha, err := FetchCommitSHA(ref)
 	if err != nil {
 		return "", err
 	}
@@ -63,7 +63,7 @@ func downloadViaZip(targetDir, ref string) (string, error) {
 
 	// GitHub flattens "/" in ref names to "-" in archive root directory names.
 	archiveRef := strings.ReplaceAll(ref, "/", "-")
-	subtreeSrc := filepath.Join(tmpUnzipDir, "auth0-agent-skills-"+archiveRef, filepath.FromSlash(pluginSubtreePath))
+	subtreeSrc := filepath.Join(tmpUnzipDir, "agent-skills-"+archiveRef, filepath.FromSlash(pluginSubtreePath))
 
 	if err := checkHasSkills(subtreeSrc); err != nil {
 		return "", err
@@ -98,8 +98,8 @@ func checkHasSkills(dir string) error {
 	return nil
 }
 
-// fetchCommitSHA fetches the latest commit SHA for ref from the GitHub API.
-func fetchCommitSHA(ref string) (string, error) {
+// FetchCommitSHA fetches the latest commit SHA for ref from the GitHub API.
+func FetchCommitSHA(ref string) (string, error) {
 	req, err := http.NewRequest(http.MethodGet, agentSkillsAPI+ref, nil)
 	if err != nil {
 		return "", err
