@@ -239,11 +239,14 @@ func trackCommandOutcome(cli *cli, executionErr error) {
 	}
 
 	if executionErr != nil {
-		cli.tracker.TrackCommandFailed(cli.executedCommandPath, installID, classifyCommandFailure(executionErr))
+		cli.tracker.TrackCommandRun(cli.executedCommandPath, installID, classifyCommandFailure(executionErr))
 		return
 	}
 
-	cli.tracker.TrackCommandSucceeded(cli.executedCommandPath, installID)
+	cli.tracker.TrackCommandRun(cli.executedCommandPath, installID, map[string]string{
+		"success":     "true",
+		"error_class": "none",
+	})
 }
 
 func resolveInstallIDForTracking(cli *cli) string {

@@ -284,10 +284,8 @@ func (i *apiCmdInputs) parseRaw(args []string) {
 	i.RawURI = args[lenArgs-1]
 }
 
-// newAPIResponseError builds a go-auth0 v2 management error from a non-2xx raw
-// `auth0 api` response. Using the real management error type (rather than a
-// bespoke one) means classifyCommandFailure maps the status to an error_class
-// through the same path as the typed SDK commands.
+// newAPIResponseError turns non-2xx `auth0 api` responses into SDK management errors.
+// This keeps `error_class` handling consistent with typed SDK commands.
 func newAPIResponseError(statusCode int, header http.Header, body []byte) error {
 	message := strings.TrimSpace(string(body))
 	if message == "" {
