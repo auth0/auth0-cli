@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/auth0/go-auth0/v2/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -171,6 +172,10 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 			return err
 		}
 
+		if response.StatusCode >= http.StatusBadRequest {
+			return newAPIResponseError(response.StatusCode, response.Header, rawBodyJSON)
+		}
+
 		if len(rawBodyJSON) == 0 {
 			if cli.debug {
 				cli.renderer.Infof("Response body is empty.")
@@ -277,6 +282,19 @@ func (i *apiCmdInputs) parseRaw(args []string) {
 	}
 
 	i.RawURI = args[lenArgs-1]
+}
+
+// newAPIResponseError builds a go-auth0 v2 management error from a non-2xx raw
+// `auth0 api` response. Using the real management error type (rather than a
+// bespoke one) means classifyCommandFailure maps the status to an error_class
+// through the same path as the typed SDK commands.
+func newAPIResponseError(statusCode int, header http.Header, body []byte) error {
+	message := strings.TrimSpace(string(body))
+	if message == "" {
+		message = http.StatusText(statusCode)
+	}
+
+	return core.NewAPIError(statusCode, header, fmt.Errorf("API request failed: %s", message))
 }
 
 func isInsufficientScopeError(r *http.Response) error {
