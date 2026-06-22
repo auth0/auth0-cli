@@ -68,6 +68,26 @@ func TestDetectAgent_ClaudeCode_CLAUDECODE(t *testing.T) {
 	assert.Equal(t, "claude-code", agent)
 }
 
+func TestDetectAgent_ClaudeCode_SessionID(t *testing.T) {
+	agent := detectAgentFull(func(k string) string {
+		if k == "CLAUDE_CODE_SESSION_ID" {
+			return "session_123"
+		}
+		return ""
+	}, noProc, false)
+	assert.Equal(t, "claude-code", agent)
+}
+
+func TestDetectAgent_ClaudeCode_Entrypoint(t *testing.T) {
+	agent := detectAgentFull(func(k string) string {
+		if k == "CLAUDE_CODE_ENTRYPOINT" {
+			return "cli"
+		}
+		return ""
+	}, noProc, false)
+	assert.Equal(t, "claude-code", agent)
+}
+
 func TestDetectAgent_ClaudeCode_AIAgent(t *testing.T) {
 	agent := detectAgentFull(func(k string) string {
 		if k == "AI_AGENT" {
@@ -84,11 +104,8 @@ func TestDetectAgent_Cursor(t *testing.T) {
 		value  string
 	}{
 		{"CURSOR_AGENT", "1"},
-		{"CURSOR_CONVERSATION_ID", "04bb112f-88b6-47ce-b23c-2fb28b9b98e3"},
 		{"CURSOR_TRACE_ID", "abc123"},
-		{"CURSOR_SESSION_ID", "sess-123"},
-		{"CURSOR_EXTENSION_HOST_ROLE", "agent-exec"},
-		{"TERM_PROGRAM", "cursor"},
+		{"CURSOR_CONVERSATION_ID", "04bb112f-88b6-47ce-b23c-2fb28b9b98e3"},
 	} {
 		t.Run(tc.envVar, func(t *testing.T) {
 			agent := detectAgentFull(func(k string) string {
@@ -100,6 +117,18 @@ func TestDetectAgent_Cursor(t *testing.T) {
 			assert.Equal(t, "cursor", agent)
 		})
 	}
+}
+
+func TestDetectAgent_CursorTraceIDBeatsWildcard(t *testing.T) {
+	agent := detectAgentWithEnv(func(k string) string {
+		if k == "CURSOR_TRACE_ID" {
+			return "abc123"
+		}
+		return ""
+	}, func() []string {
+		return []string{"CURSOR_TRACE_ID=abc123"}
+	}, dummyPPID, noProcInfo, false)
+	assert.Equal(t, "cursor", agent)
 }
 
 func TestDetectAgent_CursorConversationIDBeatsWildcard(t *testing.T) {
@@ -121,30 +150,10 @@ func TestDetectAgent_UnlistedCursorInfraIgnoredByWildcard(t *testing.T) {
 	assert.Equal(t, "unknown", agent)
 }
 
-func TestDetectAgent_GitHubCopilot_SessionID(t *testing.T) {
-	agent := detectAgentFull(func(k string) string {
-		if k == "COPILOT_AGENT_SESSION_ID" {
-			return "abc123"
-		}
-		return ""
-	}, noProc, false)
-	assert.Equal(t, "github-copilot", agent)
-}
-
 func TestDetectAgent_Codex_ThreadID(t *testing.T) {
 	agent := detectAgentFull(func(k string) string {
 		if k == "CODEX_THREAD_ID" {
 			return "thr_123"
-		}
-		return ""
-	}, noProc, false)
-	assert.Equal(t, "codex", agent)
-}
-
-func TestDetectAgent_Codex_Sandbox(t *testing.T) {
-	agent := detectAgentFull(func(k string) string {
-		if k == "CODEX_SANDBOX" {
-			return "seatbelt"
 		}
 		return ""
 	}, noProc, false)
@@ -162,14 +171,18 @@ func TestDetectAgent_Gemini(t *testing.T) {
 }
 
 func TestDetectAgent_Antigravity(t *testing.T) {
-	for _, envVar := range []string{
-		"ANTIGRAVITY_CONVERSATION_ID",
-		"AGY_CONVERSATION_ID",
+	for _, tc := range []struct {
+		name   string
+		envVar string
+		value  string
+	}{
+		{name: "Alias", envVar: "ANTIGRAVITY_CLI_ALIAS", value: "agy"},
+		{name: "ConversationID", envVar: "ANTIGRAVITY_CONVERSATION_ID", value: "conv_123"},
 	} {
-		t.Run(envVar, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			agent := detectAgentFull(func(k string) string {
-				if k == envVar {
-					return "test-val"
+				if k == tc.envVar {
+					return tc.value
 				}
 				return ""
 			}, noProc, false)
@@ -213,6 +226,16 @@ func TestDetectAgent_ProcessWalk_Cursor(t *testing.T) {
 		return ""
 	}), false)
 	assert.Equal(t, "cursor", agent)
+}
+
+func TestDetectAgent_ProcessWalk_GitHubCopilot(t *testing.T) {
+	agent := detectAgentWithEnv(noEnv, noEnviron, dummyPPID, procInfoName(func(pid int) string {
+		if pid == 9999 {
+			return "copilot"
+		}
+		return ""
+	}), false)
+	assert.Equal(t, "github-copilot", agent)
 }
 
 func TestDetectAgent_ProcessWalk_MCPServer(t *testing.T) {

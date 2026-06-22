@@ -21,22 +21,20 @@ type agentEnvEntry struct {
 var agentEnvTable = []agentEnvEntry{
 	// Claude Code.
 	{envVar: "CLAUDECODE", agentName: "claude-code"},
+	{envVar: "CLAUDE_CODE_SESSION_ID", agentName: "claude-code"},
 	{envVar: "CLAUDE_CODE_ENTRYPOINT", agentName: "claude-code"},
 	{envVar: "AI_AGENT", requiredPrefix: "claude-code", agentName: "claude-code"},
-	// Cursor — redundant signals for resilience across agent exec, integrated
-	// terminal, and future Cursor versions. First match wins; CURSOR_AGENT is primary.
+	// Cursor.
 	{envVar: "CURSOR_AGENT", agentName: "cursor"},
-	{envVar: "CURSOR_CONVERSATION_ID", agentName: "cursor"},
 	{envVar: "CURSOR_TRACE_ID", agentName: "cursor"},
-	{envVar: "CURSOR_SESSION_ID", agentName: "cursor"},
-	{envVar: "CURSOR_EXTENSION_HOST_ROLE", requiredPrefix: "agent", agentName: "cursor"},
-	{envVar: "TERM_PROGRAM", requiredPrefix: "cursor", agentName: "cursor"},
-	{envVar: "COPILOT_AGENT_SESSION_ID", agentName: "github-copilot"},
+	{envVar: "CURSOR_CONVERSATION_ID", agentName: "cursor"},
+	// Codex.
 	{envVar: "CODEX_THREAD_ID", agentName: "codex"},
-	{envVar: "CODEX_SANDBOX", agentName: "codex"},
+	// Gemini-cli.
 	{envVar: "GEMINI_CLI_VERSION", agentName: "gemini"},
+	// AntiGravity.
+	{envVar: "ANTIGRAVITY_CLI_ALIAS", agentName: "antigravity"},
 	{envVar: "ANTIGRAVITY_CONVERSATION_ID", agentName: "antigravity"},
-	{envVar: "AGY_CONVERSATION_ID", agentName: "antigravity"},
 	// AI_AGENT catch-all (must be last).
 	{envVar: "AI_AGENT", agentName: "unknown-agent"},
 }
