@@ -6,10 +6,11 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 )
 
 // agentEnvEntry maps an env var to a canonical agent_client name.
-// requiredPrefix restricts matching to values with that prefix (case-insensitive).
+// The requiredPrefix field restricts matching to values with that prefix (case-insensitive).
 type agentEnvEntry struct {
 	envVar         string
 	requiredPrefix string
@@ -18,22 +19,24 @@ type agentEnvEntry struct {
 
 // agentEnvTable is the ordered allow-list of agent env signals. First match wins.
 var agentEnvTable = []agentEnvEntry{
-	// Claude Code
+	// Claude Code.
 	{envVar: "CLAUDECODE", agentName: "claude-code"},
 	{envVar: "CLAUDE_CODE_ENTRYPOINT", agentName: "claude-code"},
 	{envVar: "AI_AGENT", requiredPrefix: "claude-code", agentName: "claude-code"},
-	// Cursor
+	// Cursor — redundant signals for resilience across agent exec, integrated
+	// terminal, and future Cursor versions. First match wins; CURSOR_AGENT is primary.
+	{envVar: "CURSOR_AGENT", agentName: "cursor"},
+	{envVar: "CURSOR_CONVERSATION_ID", agentName: "cursor"},
 	{envVar: "CURSOR_TRACE_ID", agentName: "cursor"},
 	{envVar: "CURSOR_SESSION_ID", agentName: "cursor"},
+	{envVar: "CURSOR_EXTENSION_HOST_ROLE", requiredPrefix: "agent", agentName: "cursor"},
 	{envVar: "TERM_PROGRAM", requiredPrefix: "cursor", agentName: "cursor"},
-	// GitHub Copilot (token is a credential, not an agent signal; use COPILOT_AGENT only)
-	{envVar: "COPILOT_AGENT", agentName: "github-copilot"},
-	// Codex
-	{envVar: "OPENAI_CODEX", agentName: "codex"},
-	// Gemini (agent-runtime marker only; GEMINI_API_KEY is a credential, not an agent signal)
+	{envVar: "COPILOT_AGENT_SESSION_ID", agentName: "github-copilot"},
+	{envVar: "CODEX_THREAD_ID", agentName: "codex"},
+	{envVar: "CODEX_SANDBOX", agentName: "codex"},
 	{envVar: "GEMINI_CLI_VERSION", agentName: "gemini"},
-	// VS Code terminal — TERM_PROGRAM is set by the integrated terminal.
-	{envVar: "TERM_PROGRAM", requiredPrefix: "vscode", agentName: "vscode-terminal"},
+	{envVar: "ANTIGRAVITY_CONVERSATION_ID", agentName: "antigravity"},
+	{envVar: "AGY_CONVERSATION_ID", agentName: "antigravity"},
 	// AI_AGENT catch-all (must be last).
 	{envVar: "AI_AGENT", agentName: "unknown-agent"},
 }
@@ -41,28 +44,37 @@ var agentEnvTable = []agentEnvEntry{
 // agentProcessNames maps parent process names (partial, lower-cased) to agent names.
 // Covers both AI agent binaries and CLI surfaces that spawn auth0-cli as a subprocess.
 var agentProcessNames = map[string]string{
-	// AI agents
+	// AI agents.
 	"claude":  "claude-code",
 	"cursor":  "cursor",
 	"copilot": "github-copilot",
 	"codex":   "codex",
 	"gemini":  "gemini",
-	// Auth0 first-party CLI surfaces
-	"auth0-mcp-server": "mcp-server", // fallback; handshake is preferred (node removed: too broad)
+	"agy":     "antigravity",
+	// Auth0 first-party CLI surfaces.
+	"auth0-mcp-server": "mcp-server",
 }
 
 // detectAgent resolves agent_client via a waterfall:
-// 1. AUTH0_CLI_CLIENT handshake, 2. env allow-list, 3. parent-process walk, 4. fallback.
+// Tier 1 AUTH0_CLI_CLIENT handshake, Tier 2 env allow-list, Tier 3 parent-process walk, Tier 4 fallback.
 func detectAgent(interactive bool) string {
-	return detectAgentWithEnv(os.Getenv, os.Getppid, readProcessName, readParentPID, interactive)
+	return detectAgentWithEnv(os.Getenv, os.Environ, os.Getppid, getProcInfo, interactive)
+}
+
+// agentEnvSuffixes are naming conventions shared across agent CLIs. Matching any of
+// these on an env var key signals an agent we don't yet have a named entry for.
+var agentEnvSuffixes = []string{
+	"_CONVERSATION_ID",
+	"_THREAD_ID",
+	"_AGENT_SESSION_ID",
 }
 
 // detectAgentWithEnv is the testable form, accepting injected env/process readers.
 func detectAgentWithEnv(
 	getEnv func(string) string,
+	environ func() []string,
 	getppid func() int,
-	procName func(int) string,
-	readParentPIDFn func(int) int,
+	procInfo func(int) (string, int),
 	interactive bool,
 ) string {
 	// Tier 1: Handshake — AUTH0_CLI_CLIENT set by our own surfaces.
@@ -86,12 +98,36 @@ func detectAgentWithEnv(
 		return entry.agentName
 	}
 
+	// Tier 2b: Wildcard sweep for unknown future agents. Catches the shared
+	// naming conventions (*_CONVERSATION_ID / *_THREAD_ID / *_AGENT_SESSION_ID)
+	// without a per-agent code change. Returns the generic "unknown-agent".
+	for _, kv := range environ() {
+		key, val, ok := strings.Cut(kv, "=")
+		if !ok || strings.TrimSpace(val) == "" {
+			continue
+		}
+
+		upperKey := strings.ToUpper(key)
+		// Unlisted CURSOR_* infra vars share generic agent suffixes; skip them here
+		// so they don't false-positive as unknown-agent. Named CURSOR_* entries are
+		// matched in Tier 2 above.
+		if strings.HasPrefix(upperKey, "CURSOR_") {
+			continue
+		}
+		for _, suffix := range agentEnvSuffixes {
+			if strings.HasSuffix(upperKey, suffix) {
+				return "unknown-agent"
+			}
+		}
+	}
+
 	// Tier 3: Parent-process walk (up to 3 levels).
 	// Note: Tier 2 may return "unknown-agent" (env matched but no specific agent),
 	// which is distinct from Tier 4 fallback "unknown" (no signal found).
 	pid := getppid()
 	for depth := 0; depth < 3 && pid > 1; depth++ {
-		name := strings.ToLower(strings.TrimSpace(procName(pid)))
+		rawName, nextPPID := procInfo(pid)
+		name := strings.ToLower(strings.TrimSpace(rawName))
 		if name == "" {
 			break
 		}
@@ -102,7 +138,6 @@ func detectAgentWithEnv(
 			}
 		}
 
-		nextPPID := readParentPIDFn(pid)
 		if nextPPID <= 1 {
 			break
 		}
@@ -118,69 +153,89 @@ func detectAgentWithEnv(
 	return "human"
 }
 
-// readProcessName returns the comm name for a PID. Uses /proc on Linux, ps(1) elsewhere.
-func readProcessName(pid int) string {
-	switch runtime.GOOS {
-	case "linux":
-		data, err := os.ReadFile(fmt.Sprintf("/proc/%d/comm", pid))
-		if err == nil {
-			return strings.TrimSpace(string(data))
-		}
-	}
-
-	// macOS and fallback: ps -p <pid> -o comm=
-	out, err := exec.Command("ps", "-p", fmt.Sprintf("%d", pid), "-o", "comm=").Output()
-	if err == nil {
-		return strings.TrimSpace(string(out))
-	}
-
-	return ""
+type procInfo struct {
+	ppid int
+	name string
 }
 
-// readParentPID returns the PPID for a given PID.
-// Supports Linux (/proc) and macOS (ps). Windows: not implemented, returns 0 (process walk degrades to env-only).
-func readParentPID(pid int) int {
+var (
+	procCache   = make(map[int]procInfo)
+	procCacheMu sync.Mutex
+)
+
+// getProcInfo returns the process name and parent PID for a PID, cached to avoid
+// repeat lookups. Linux and macOS only; elsewhere returns ("", 0).
+func getProcInfo(pid int) (string, int) {
+	procCacheMu.Lock()
+	defer procCacheMu.Unlock()
+
+	if info, ok := procCache[pid]; ok {
+		return info.name, info.ppid
+	}
+
+	var name string
+	var ppid int
+
 	switch runtime.GOOS {
 	case "linux":
-		data, err := os.ReadFile(fmt.Sprintf("/proc/%d/status", pid))
-		if err != nil {
-			return 0
+		commData, err := os.ReadFile(fmt.Sprintf("/proc/%d/comm", pid))
+		if err == nil {
+			name = strings.TrimSpace(string(commData))
 		}
 
-		for _, line := range strings.Split(string(data), "\n") {
-			if strings.HasPrefix(line, "PPid:") {
-				var ppid int
-				if _, err := fmt.Sscanf(strings.TrimPrefix(line, "PPid:"), "%d", &ppid); err == nil {
-					return ppid
+		statusData, err := os.ReadFile(fmt.Sprintf("/proc/%d/status", pid))
+		if err == nil {
+			for _, line := range strings.Split(string(statusData), "\n") {
+				if strings.HasPrefix(line, "PPid:") {
+					var parsedPPID int
+					if _, err := fmt.Sscanf(strings.TrimPrefix(line, "PPid:"), "%d", &parsedPPID); err == nil {
+						ppid = parsedPPID
+						break
+					}
 				}
 			}
 		}
 	case "darwin":
-		// macOS: ppid via ps(1)
-		out, err := exec.Command("ps", "-p", fmt.Sprintf("%d", pid), "-o", "ppid=").Output()
+		// On macOS, query PPID and command name in a single ps invocation to avoid an extra process spawn.
+		out, err := exec.Command("ps", "-p", fmt.Sprintf("%d", pid), "-o", "ppid=", "-o", "comm=").Output()
 		if err == nil {
-			var ppid int
-			if _, err := fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &ppid); err == nil {
-				return ppid
+			fields := strings.Fields(strings.TrimSpace(string(out)))
+			if len(fields) >= 2 {
+				var parsedPPID int
+				if _, err := fmt.Sscanf(fields[0], "%d", &parsedPPID); err == nil {
+					ppid = parsedPPID
+				}
+				name = strings.Join(fields[1:], " ")
 			}
 		}
 	}
 
-	return 0
+	procCache[pid] = procInfo{name: name, ppid: ppid}
+	return name, ppid
+}
+
+// readProcessName returns the process name for a PID from cached proc info.
+func readProcessName(pid int) string {
+	name, _ := getProcInfo(pid)
+	return name
+}
+
+// readParentPID returns the parent PID for a PID from cached proc info.
+func readParentPID(pid int) int {
+	_, ppid := getProcInfo(pid)
+	return ppid
 }
 
 // knownAgentClients is the allow-list for AUTH0_CLI_CLIENT. Extend when adding new surfaces.
 var knownAgentClients = []string{
-	// Auth0 first-party surfaces
+	// Auth0 first-party surfaces.
 	"mcp-server",
-	// AI agents
 	"claude-code",
 	"cursor",
 	"github-copilot",
 	"codex",
 	"gemini",
-	// CLI/terminal surfaces
-	"vscode-terminal",
+	"antigravity",
 }
 
 // sanitizeAgentName restricts AUTH0_CLI_CLIENT to the allow-list; unknown values are prefixed with "client-".
