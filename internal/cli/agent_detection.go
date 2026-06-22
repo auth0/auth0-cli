@@ -214,18 +214,6 @@ func getProcInfo(pid int) (string, int) {
 	return name, ppid
 }
 
-// readProcessName returns the process name for a PID from cached proc info.
-func readProcessName(pid int) string {
-	name, _ := getProcInfo(pid)
-	return name
-}
-
-// readParentPID returns the parent PID for a PID from cached proc info.
-func readParentPID(pid int) int {
-	_, ppid := getProcInfo(pid)
-	return ppid
-}
-
 // knownAgentClients is the allow-list for AUTH0_CLI_CLIENT. Extend when adding new surfaces.
 var knownAgentClients = []string{
 	// Auth0 first-party surfaces.
