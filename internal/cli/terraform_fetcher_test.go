@@ -318,11 +318,11 @@ func Test_phoneNotificationTemplateResourceFetcher_FetchData(t *testing.T) {
 				&managementv2.ListPhoneTemplatesResponseContent{
 					Templates: []*managementv2.PhoneTemplate{
 						{
-							ID:   "pnt_abc123",
+							ID:   auth0.String("pnt_abc123"),
 							Type: managementv2.PhoneTemplateNotificationTypeEnumOtpVerify,
 						},
 						{
-							ID:   "pnt_def456",
+							ID:   auth0.String("pnt_def456"),
 							Type: managementv2.PhoneTemplateNotificationTypeEnumOtpEnroll,
 						},
 					},
