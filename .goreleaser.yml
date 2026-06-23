@@ -32,6 +32,8 @@ snapshot:
   version_template: "{{ .Tag }}-SNAPSHOT-{{.ShortCommit}}"
 changelog:
   disable: true
+release:
+  replace_existing_draft: true
 brews:
   - name: auth0
     repository:
