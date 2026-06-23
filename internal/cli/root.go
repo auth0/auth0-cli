@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 	"unicode"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/instrumentation"
+	"github.com/auth0/auth0-cli/internal/iostream"
 )
 
 const rootShort = "Build, manage and test your Auth0 integrations from the command line."
@@ -29,6 +31,23 @@ const panicMessage = `
 !!
 !!     https://github.com/auth0/auth0-cli/issues/new/choose
 `
+
+var ciEnvironmentVariables = []string{
+	"CI",
+	"GITHUB_ACTIONS",
+	"GITLAB_CI",
+	"BUILDKITE",
+	"CIRCLECI",
+	"BUILD_ID",
+	"JENKINS_URL",
+	"TEAMCITY_VERSION",
+	"TRAVIS",
+	"TF_BUILD",
+	"BITBUCKET_BUILD_NUMBER",
+	"APPVEYOR",
+	"DRONE",
+	"CODEBUILD_BUILD_ID",
+}
 
 // Execute is the primary entrypoint of the CLI app.
 func Execute() {
@@ -238,15 +257,78 @@ func trackCommandOutcome(cli *cli, executionErr error) {
 		cli.executedCommandPath = "auth0"
 	}
 
+	properties := commandTrackingProperties(cli)
+
 	if executionErr != nil {
-		cli.tracker.TrackCommandRun(cli.executedCommandPath, installID, classifyCommandFailure(executionErr))
+		failureProperties := mergeProperties(properties, classifyCommandFailure(executionErr))
+		cli.tracker.TrackCommandRun(cli.executedCommandPath, installID, failureProperties)
 		return
 	}
 
-	cli.tracker.TrackCommandRun(cli.executedCommandPath, installID, map[string]string{
+	successProperties := mergeProperties(properties, map[string]string{
 		"success":     "true",
 		"error_class": "none",
 	})
+	cli.tracker.TrackCommandRun(cli.executedCommandPath, installID, successProperties)
+}
+
+func commandTrackingProperties(cli *cli) map[string]string {
+	interactive := iostream.IsInputTerminal() && iostream.IsOutputTerminal()
+
+	return map[string]string{
+		"interactive":   boolString(interactive),
+		"ci":            boolString(isCIEnvironment(os.Getenv)),
+		"no_input":      boolString(cli.noInput),
+		"output_format": outputFormatForTracking(cli.renderer),
+		"forced":        boolString(cli.force),
+		"agent_client":  detectAgent(interactive),
+	}
+}
+
+func outputFormatForTracking(renderer *display.Renderer) string {
+	if renderer == nil || renderer.Format == "" {
+		return "table"
+	}
+
+	return string(renderer.Format)
+}
+
+func isCIEnvironment(getEnv func(string) string) bool {
+	for _, envVar := range ciEnvironmentVariables {
+		rawValue := strings.TrimSpace(getEnv(envVar))
+		if rawValue == "" {
+			continue
+		}
+
+		lowerValue := strings.ToLower(rawValue)
+		if lowerValue != "false" && lowerValue != "0" {
+			return true
+		}
+	}
+
+	return false
+}
+
+func boolString(value bool) string {
+	if value {
+		return "true"
+	}
+
+	return "false"
+}
+
+func mergeProperties(base map[string]string, override map[string]string) map[string]string {
+	merged := make(map[string]string, len(base)+len(override))
+
+	for k, v := range base {
+		merged[k] = v
+	}
+
+	for k, v := range override {
+		merged[k] = v
+	}
+
+	return merged
 }
 
 func resolveInstallIDForTracking(cli *cli) string {
