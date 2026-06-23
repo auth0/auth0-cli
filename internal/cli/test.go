@@ -136,7 +136,7 @@ func testLoginCmd(cli *cli) *cobra.Command {
 			if client.GetAppType() == appTypeNonInteractive {
 				return fmt.Errorf(
 					"cannot test the Universal Login with a %s application.\n\n"+
-						"Run 'auth0 test token %s' to fetch an access token instead.",
+						"Run 'auth0 test token %s' to fetch an access token instead",
 					ansi.Bold("Machine to Machine"),
 					client.GetClientID(),
 				)
@@ -434,7 +434,7 @@ func (c *cli) audiencePickerOptions(client *management.Client) func(ctx context.
 			if len(clientGrants.ClientGrants) == 0 {
 				return nil, fmt.Errorf(
 					"the %s application is not authorized to request access tokens for any APIs.\n\n"+
-						"Run: 'auth0 apps open %s' to open the dashboard and authorize the application.",
+						"Run: 'auth0 apps open %s' to open the dashboard and authorize the application",
 					ansi.Bold(client.GetName()),
 					client.GetClientID(),
 				)

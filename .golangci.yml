@@ -1,46 +1,59 @@
+version: "2"
 run:
-  timeout: 5m
   allow-parallel-runners: true
-
 linters:
-  disable-all: true
+  default: none
   enable:
-    - unused
-    - gofmt
-    - staticcheck
-    - revive
-    - godot
-    - whitespace
-    - goimports
-    - gosimple
     - errcheck
-    - unconvert
     - gocritic
-#    - gosec
-#    - gocyclo
-
-linters-settings:
-  gofmt:
-    simplify: true
-  staticcheck:
-    checks: [ "all" ]
-  godot:
-    scope: all
-    capital: true
-    period: true
-  goimports:
-    local-prefixes: "github.com/auth0/auth0-cli"
-
-issues:
-  exclude-use-default: false
-  # We are excluding a couple of them,
-  # so we can fix them one at a time
-  # as the effort is non-trivial.
-  exclude:
-    - "should have a package comment"
-    - "package comment should be of the form"
-    - "should have comment"
-    - "be unexported"
-    - "blank-imports"
-    - "unused-parameter"
-    - "Error return value of (.+) is not checked"
+    - godot
+    - revive
+    - staticcheck
+    - unconvert
+    - unused
+    - whitespace
+  settings:
+    godot:
+      scope: all
+      capital: true
+      period: true
+    staticcheck:
+      checks:
+        - all
+  exclusions:
+    generated: lax
+    rules:
+      - path: (.+)\.go$
+        text: should have a package comment
+      - path: (.+)\.go$
+        text: package comment should be of the form
+      - path: (.+)\.go$
+        text: should have comment
+      - path: (.+)\.go$
+        text: be unexported
+      - path: (.+)\.go$
+        text: blank-imports
+      - path: (.+)\.go$
+        text: unused-parameter
+      - path: (.+)\.go$
+        text: Error return value of (.+) is not checked
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes:
+        - github.com/auth0/auth0-cli
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
