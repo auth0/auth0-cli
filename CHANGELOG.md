@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v1.32.0](https://github.com/auth0/auth0-cli/tree/v1.32.0) (June 23, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.31.0...v1.32.0)
+
+### Added
+- Add agent-aware command analytics with success/failure tracking and AI agent detection [#1551]
+- Improve subscribe UX in `auth0 event-streams` [#1534]
+
+### Fixed
+- Fix `auth0 clients` to fetch `enabled_clients` from the dedicated endpoint [#1532]
+- Fix user login flow to skip refresh token support and avoid requesting `offline_access` [#1536]
+- Fix head tag clearing in `auth0 acul config set` [#1548]
+- Improve terraform plan failure error messaging [#1549]
+
 # [v1.31.0](https://github.com/auth0/auth0-cli/tree/v1.31.0) (May 22, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.30.0...v1.31.0)
@@ -739,8 +753,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
-
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.31.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.32.0...HEAD
+[#1551]: https://github.com/auth0/auth0-cli/pull/1551
+[#1549]: https://github.com/auth0/auth0-cli/pull/1549
+[#1548]: https://github.com/auth0/auth0-cli/pull/1548
+[#1536]: https://github.com/auth0/auth0-cli/pull/1536
+[#1534]: https://github.com/auth0/auth0-cli/pull/1534
+[#1532]: https://github.com/auth0/auth0-cli/pull/1532
 [#1527]: https://github.com/auth0/auth0-cli/pull/1527
 [#1522]: https://github.com/auth0/auth0-cli/pull/1522
 [#1518]: https://github.com/auth0/auth0-cli/pull/1518
