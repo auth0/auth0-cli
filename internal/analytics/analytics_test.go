@@ -34,30 +34,22 @@ func TestGenerateEventName(t *testing.T) {
 	})
 }
 
-func TestGenerateSucceededEventName(t *testing.T) {
+func TestGenerateRunEventName(t *testing.T) {
 	t.Run("generates from root command", func(t *testing.T) {
-		want := "CLI - Auth0 - Succeeded"
-		got := generateSucceededEventName("auth0")
+		want := "CLI - Auth0 - Run"
+		got := generateRunEventName("auth0")
 		assert.Equal(t, want, got)
 	})
 
 	t.Run("generates from top-level command", func(t *testing.T) {
-		want := "CLI - Auth0 - Apps - Succeeded"
-		got := generateSucceededEventName("auth0 apps")
-		assert.Equal(t, want, got)
-	})
-}
-
-func TestGenerateFailedEventName(t *testing.T) {
-	t.Run("generates from root command", func(t *testing.T) {
-		want := "CLI - Auth0 - Failed"
-		got := generateFailedEventName("auth0")
+		want := "CLI - Auth0 - Apps - Run"
+		got := generateRunEventName("auth0 apps")
 		assert.Equal(t, want, got)
 	})
 
 	t.Run("generates from subcommand", func(t *testing.T) {
-		want := "CLI - Apps - List - Failed"
-		got := generateFailedEventName("auth0 apps list")
+		want := "CLI - Apps - List - Run"
+		got := generateRunEventName("auth0 apps list")
 		assert.Equal(t, want, got)
 	})
 }

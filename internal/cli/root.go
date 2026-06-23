@@ -11,6 +11,7 @@ import (
 	"unicode"
 
 	"github.com/auth0/go-auth0/management"
+	"github.com/auth0/go-auth0/v2/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/analytics"
@@ -260,7 +261,7 @@ func trackCommandOutcome(cli *cli, executionErr error) {
 
 	if executionErr != nil {
 		failureProperties := mergeProperties(properties, classifyCommandFailure(executionErr))
-		cli.tracker.TrackCommandFailed(cli.executedCommandPath, installID, failureProperties)
+		cli.tracker.TrackCommandRun(cli.executedCommandPath, installID, failureProperties)
 		return
 	}
 
@@ -268,7 +269,7 @@ func trackCommandOutcome(cli *cli, executionErr error) {
 		"success":     "true",
 		"error_class": "none",
 	})
-	cli.tracker.TrackCommandSucceeded(cli.executedCommandPath, installID, successProperties)
+	cli.tracker.TrackCommandRun(cli.executedCommandPath, installID, successProperties)
 }
 
 func commandTrackingProperties(cli *cli) map[string]string {
@@ -361,22 +362,43 @@ func classifyCommandFailure(err error) map[string]string {
 		return properties
 	}
 
-	var managementErr management.Error
-	if errors.As(err, &managementErr) {
-		status := managementErr.Status()
-		switch {
-		case status == 401 || status == 403:
-			properties["error_class"] = "auth"
-		case status == 400 || status == 422:
-			properties["error_class"] = "validation"
-		case status == 404:
-			properties["error_class"] = "not_found"
-		case status == 429:
-			properties["error_class"] = "rate_limit"
-		case status >= 500:
-			properties["error_class"] = "api"
-		}
+	if status, ok := managementHTTPStatus(err); ok {
+		properties["error_class"] = errorClassForHTTPStatus(status)
 	}
 
 	return properties
+}
+
+// managementHTTPStatus extracts the HTTP status from a go-auth0 management API
+// error anywhere in the error chain, supporting both the v1 (management.Error)
+// and v2 (*core.APIError) SDK error types.
+func managementHTTPStatus(err error) (int, bool) {
+	var v1 management.Error
+	if errors.As(err, &v1) {
+		return v1.Status(), true
+	}
+
+	var v2 *core.APIError
+	if errors.As(err, &v2) {
+		return v2.StatusCode, true
+	}
+
+	return 0, false
+}
+
+func errorClassForHTTPStatus(status int) string {
+	switch {
+	case status == 401 || status == 403:
+		return "auth"
+	case status == 400 || status == 422:
+		return "validation"
+	case status == 404:
+		return "not_found"
+	case status == 429:
+		return "rate_limit"
+	case status >= 500:
+		return "api"
+	default:
+		return "unknown"
+	}
 }
