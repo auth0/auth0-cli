@@ -31,7 +31,7 @@ jobs:
           args: release --clean
           workdir: 'auth0-cli'
         env:
-          GITHUB_TOKEN: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
       # Homebrew Tap Process
