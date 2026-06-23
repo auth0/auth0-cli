@@ -2,19 +2,25 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 	"unicode"
 
+	"github.com/auth0/go-auth0/management"
+	"github.com/auth0/go-auth0/v2/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/analytics"
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
+	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/instrumentation"
+	"github.com/auth0/auth0-cli/internal/iostream"
 )
 
 const rootShort = "Build, manage and test your Auth0 integrations from the command line."
@@ -25,6 +31,23 @@ const panicMessage = `
 !!
 !!     https://github.com/auth0/auth0-cli/issues/new/choose
 `
+
+var ciEnvironmentVariables = []string{
+	"CI",
+	"GITHUB_ACTIONS",
+	"GITLAB_CI",
+	"BUILDKITE",
+	"CIRCLECI",
+	"BUILD_ID",
+	"JENKINS_URL",
+	"TEAMCITY_VERSION",
+	"TRAVIS",
+	"TF_BUILD",
+	"BITBUCKET_BUILD_NUMBER",
+	"APPVEYOR",
+	"DRONE",
+	"CODEBUILD_BUILD_ID",
+}
 
 // Execute is the primary entrypoint of the CLI app.
 func Execute() {
@@ -62,17 +85,19 @@ func Execute() {
 	ansi.InitConsole()
 
 	cancelCtx := contextWithCancel()
-	if err := rootCmd.ExecuteContext(cancelCtx); err != nil {
+	err := rootCmd.ExecuteContext(cancelCtx)
+	trackCommandOutcome(cli, err)
+
+	timeoutCtx, cancel := context.WithTimeout(cancelCtx, 3*time.Second)
+	defer cancel()
+	cli.tracker.Wait(timeoutCtx) // No event should be tracked after this has run.
+
+	if err != nil {
 		renderErrorMessage(cli.renderer, err.Error())
 
 		instrumentation.ReportException(err)
 		os.Exit(1) // nolint:gocritic
 	}
-
-	timeoutCtx, cancel := context.WithTimeout(cancelCtx, 3*time.Second)
-	// Defers are executed in LIFO order.
-	defer cancel()
-	defer cli.tracker.Wait(timeoutCtx) // No event should be tracked after this has run, or it will panic e.g. in earlier deferred functions.
 }
 
 func buildRootCmd(cli *cli) *cobra.Command {
@@ -84,6 +109,8 @@ func buildRootCmd(cli *cli) *cobra.Command {
 		Long:          rootShort + "\n" + getLogin(cli),
 		Version:       buildinfo.GetVersionWithCommit(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			cli.executedCommandPath = cmd.CommandPath()
+
 			ansi.Initialize(cli.noColor)
 			prepareInteractivity(cmd)
 			cli.configureRenderer()
@@ -91,16 +118,6 @@ func buildRootCmd(cli *cli) *cobra.Command {
 			if !commandRequiresAuthentication(cmd.CommandPath()) {
 				return nil
 			}
-
-			// We're tracking the login command in its Run method, so
-			// we'll only add this defer if the command is not login.
-			defer func() {
-				if cli.tracker != nil &&
-					cmd.CommandPath() != "auth0 login" &&
-					cli.Config.IsLoggedInWithTenant(cli.tenant) {
-					cli.tracker.TrackCommandRun(cmd, cli.Config.InstallID)
-				}
-			}()
 
 			if err := cli.setupWithAuthentication(cmd.Context()); err != nil {
 				return err
@@ -224,4 +241,165 @@ func renderErrorMessage(display *display.Renderer, errorMessage string) {
 
 	display.Errorf(humanReadableErrorMessage)
 	display.Newline()
+}
+
+func trackCommandOutcome(cli *cli, executionErr error) {
+	if cli.tracker == nil {
+		return
+	}
+
+	installID := resolveInstallIDForTracking(cli)
+	if installID == "" {
+		return
+	}
+
+	if cli.executedCommandPath == "" {
+		cli.executedCommandPath = "auth0"
+	}
+
+	properties := commandTrackingProperties(cli)
+
+	if executionErr != nil {
+		failureProperties := mergeProperties(properties, classifyCommandFailure(executionErr))
+		cli.tracker.TrackCommandRun(cli.executedCommandPath, installID, failureProperties)
+		return
+	}
+
+	successProperties := mergeProperties(properties, map[string]string{
+		"success":     "true",
+		"error_class": "none",
+	})
+	cli.tracker.TrackCommandRun(cli.executedCommandPath, installID, successProperties)
+}
+
+func commandTrackingProperties(cli *cli) map[string]string {
+	interactive := iostream.IsInputTerminal() && iostream.IsOutputTerminal()
+
+	return map[string]string{
+		"interactive":   boolString(interactive),
+		"ci":            boolString(isCIEnvironment(os.Getenv)),
+		"no_input":      boolString(cli.noInput),
+		"output_format": outputFormatForTracking(cli.renderer),
+		"forced":        boolString(cli.force),
+		"agent_client":  detectAgent(interactive),
+	}
+}
+
+func outputFormatForTracking(renderer *display.Renderer) string {
+	if renderer == nil || renderer.Format == "" {
+		return "table"
+	}
+
+	return string(renderer.Format)
+}
+
+func isCIEnvironment(getEnv func(string) string) bool {
+	for _, envVar := range ciEnvironmentVariables {
+		rawValue := strings.TrimSpace(getEnv(envVar))
+		if rawValue == "" {
+			continue
+		}
+
+		lowerValue := strings.ToLower(rawValue)
+		if lowerValue != "false" && lowerValue != "0" {
+			return true
+		}
+	}
+
+	return false
+}
+
+func boolString(value bool) string {
+	if value {
+		return "true"
+	}
+
+	return "false"
+}
+
+func mergeProperties(base map[string]string, override map[string]string) map[string]string {
+	merged := make(map[string]string, len(base)+len(override))
+
+	for k, v := range base {
+		merged[k] = v
+	}
+
+	for k, v := range override {
+		merged[k] = v
+	}
+
+	return merged
+}
+
+func resolveInstallIDForTracking(cli *cli) string {
+	if cli.Config.InstallID != "" {
+		return cli.Config.InstallID
+	}
+
+	if err := cli.Config.Initialize(); err != nil {
+		if errors.Is(err, config.ErrConfigFileMissing) {
+			return ""
+		}
+		return ""
+	}
+
+	return cli.Config.InstallID
+}
+
+func classifyCommandFailure(err error) map[string]string {
+	properties := map[string]string{
+		"success":     "false",
+		"error_class": "unknown",
+	}
+
+	if errors.Is(err, config.ErrInvalidToken) || errors.Is(err, config.ErrMalformedToken) {
+		properties["error_class"] = "auth"
+		return properties
+	}
+
+	var missingScopesErr config.ErrTokenMissingRequiredScopes
+	if errors.As(err, &missingScopesErr) {
+		properties["error_class"] = "auth"
+		return properties
+	}
+
+	if status, ok := managementHTTPStatus(err); ok {
+		properties["error_class"] = errorClassForHTTPStatus(status)
+	}
+
+	return properties
+}
+
+// managementHTTPStatus extracts the HTTP status from a go-auth0 management API
+// error anywhere in the error chain, supporting both the v1 (management.Error)
+// and v2 (*core.APIError) SDK error types.
+func managementHTTPStatus(err error) (int, bool) {
+	var v1 management.Error
+	if errors.As(err, &v1) {
+		return v1.Status(), true
+	}
+
+	var v2 *core.APIError
+	if errors.As(err, &v2) {
+		return v2.StatusCode, true
+	}
+
+	return 0, false
+}
+
+func errorClassForHTTPStatus(status int) string {
+	switch {
+	case status == 401 || status == 403:
+		return "auth"
+	case status == 400 || status == 422:
+		return "validation"
+	case status == 404:
+		return "not_found"
+	case status == 429:
+		return "rate_limit"
+	case status >= 500:
+		return "api"
+	default:
+		return "unknown"
+	}
 }
