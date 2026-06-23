@@ -281,6 +281,7 @@ func commandTrackingProperties(cli *cli) map[string]string {
 		"no_input":      boolString(cli.noInput),
 		"output_format": outputFormatForTracking(cli.renderer),
 		"forced":        boolString(cli.force),
+		"agent_client":  detectAgent(interactive),
 	}
 }
 
