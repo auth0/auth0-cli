@@ -7,7 +7,13 @@ import (
 	"github.com/getsentry/sentry-go"
 )
 
-var SentryDSN string
+// SentryDSN is the destination for crash reports. A Sentry DSN is a public,
+// write-only key that is safe to ship inside client binaries, so we hardcode a
+// default here. This ensures crash reporting works for builds that are not
+// produced by our release pipeline (for example Homebrew Core, which builds
+// from source and cannot inject build-time values). Release builds may still
+// override this via ldflags.
+var SentryDSN = "https://370df87d33df46cb90182dd80a50fdc4@o27592.ingest.sentry.io/5694458"
 
 // ReportException is designed to be called once as the CLI exits. We're
 // purposefully initializing a client all the time given this context.

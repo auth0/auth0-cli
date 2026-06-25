@@ -32,7 +32,6 @@ jobs:
           workdir: 'auth0-cli'
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
       # Homebrew Tap Process
       - name: Checkout Homebrew Tap Repo
