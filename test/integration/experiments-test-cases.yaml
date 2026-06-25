@@ -7,7 +7,7 @@ tests:
 
   001 - it successfully lists all segments with no data:
     command: auth0 segments list
-    exit-code: 1
+    exit-code: 0
     stderr:
       contains:
         - "Use 'auth0 segments create' to add one"
@@ -19,7 +19,7 @@ tests:
       exactly: "[]"
 
   003 - it successfully creates a segment:
-    command: auth0 segments create -n "integration-test-segment1" -r '[{"match":{"contains":["@beta.example.com"]}}]' --no-input
+    command: auth0 segments create -n "integration-test-segment1" -r '[{"match":{"domain":["example.com"]}}]' --no-input
     exit-code: 0
     stdout:
       contains:
@@ -36,7 +36,7 @@ tests:
         - UPDATED
 
   005 - it successfully creates a segment and outputs in json:
-    command: auth0 segments create -n "integration-test-segment2" -r '[{"match":{"ends_with":["@mycompany.com"]}}]' --json --no-input
+    command: auth0 segments create -n "integration-test-segment2" -r '[{"match":{"browser":["chrome"]}}]' --json --no-input
     exit-code: 0
     stdout:
       json:
