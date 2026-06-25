@@ -88,6 +88,8 @@ Authenticating as a user is not supported for **private cloud** tenants. Instead
 - [auth0 domains](auth0_domains.md) - Manage custom domains
 - [auth0 email](auth0_email.md) - Manage email settings and configure email providers
 - [auth0 event-streams](auth0_event-streams.md) - Manage Event Stream
+- [auth0 experiments](auth0_experiments.md) - Manage experimentation experiments
+- [auth0 feature-flags](auth0_feature-flags.md) - Manage experimentation feature flags
 - [auth0 login](auth0_login.md) - Authenticate the Auth0 CLI
 - [auth0 logout](auth0_logout.md) - Log out of a tenant's session
 - [auth0 logs](auth0_logs.md) - View tenant logs
@@ -98,6 +100,7 @@ Authenticating as a user is not supported for **private cloud** tenants. Instead
 - [auth0 quickstarts](auth0_quickstarts.md) - Quickstart support for getting bootstrapped
 - [auth0 roles](auth0_roles.md) - Manage resources for roles
 - [auth0 rules](auth0_rules.md) - Manage resources for rules
+- [auth0 segments](auth0_segments.md) - Manage experimentation segments
 - [auth0 tenant-settings](auth0_tenant-settings.md) - Manage tenant settings
 - [auth0 tenants](auth0_tenants.md) - Manage configured tenants
 - [auth0 terraform](auth0_terraform.md) - Manage terraform configuration for your Auth0 Tenant
