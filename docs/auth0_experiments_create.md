@@ -28,7 +28,7 @@ auth0 experiments create [flags]
 
 ```
   -s, --allocation-strategy string   Allocation strategy: percentage or segment.
-  -A, --allocations string           Allocations as JSON array. Example: '[{"variation_id":"vid","weight":1.0,"is_control":true}]'
+      --allocations string           JSON array of allocation items ({variation_id, weight, is_control} for percentage; {variation_id, segment_id, is_control} for segment).
   -a, --authentication-flow string   Authentication flow this experiment applies to (e.g. login, signup).
   -d, --description string           Description of the experiment.
   -f, --feature-flag-id string       ID of the feature flag to experiment on.

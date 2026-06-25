@@ -30,7 +30,7 @@ auth0 experiments update [flags]
 ## Flags
 
 ```
-  -A, --allocations string          Allocations as JSON array. Example: '[{"variation_id":"vid","weight":1.0,"is_control":true}]'
+      --allocations string          JSON array of allocation items ({variation_id, weight, is_control} for percentage; {variation_id, segment_id, is_control} for segment).
       --assignment-subject string   Subject used for variation assignment (e.g. device).
   -d, --description string          Description of the experiment.
       --json                        Output in json format.
