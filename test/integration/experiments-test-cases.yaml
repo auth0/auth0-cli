@@ -1,0 +1,222 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  # ─── Segments ─────────────────────────────────────────────────────────────────
+
+  001 - it successfully lists all segments with no data:
+    command: auth0 segments list
+    exit-code: 1
+    stderr:
+      contains:
+        - "Use 'auth0 segments create' to add one"
+
+  002 - it successfully lists all segments with no data (json):
+    command: auth0 segments list --json
+    exit-code: 0
+    stdout:
+      exactly: "[]"
+
+  003 - it successfully creates a segment:
+    command: auth0 segments create -n "integration-test-segment1" -r '[{"match":{"contains":["@beta.example.com"]}}]' --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME     integration-test"
+        - "TYPE     self"
+
+  004 - it successfully lists all segments with data:
+    command: auth0 segments list
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME
+        - RULES
+        - UPDATED
+
+  005 - it successfully creates a segment and outputs in json:
+    command: auth0 segments create -n "integration-test-segment2" -r '[{"match":{"ends_with":["@mycompany.com"]}}]' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-segment2"
+
+  006 - given a test segment, it successfully shows the segment details:
+    command: auth0 segments show $(./test/integration/scripts/get-segment-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME     integration-test-segment"
+        - "TYPE     self"
+
+  007 - given a test segment, it successfully shows the segment details in json:
+    command: auth0 segments show $(./test/integration/scripts/get-segment-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-segment"
+
+  008 - given a test segment, it successfully updates the name:
+    command: auth0 segments update $(./test/integration/scripts/get-segment-id.sh) --name "integration-test-segment-updated" --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME     integration-test-segment-updated"
+        - "TYPE     self"
+
+  009 - given a test segment, it successfully updates in json:
+    command: auth0 segments update $(./test/integration/scripts/get-segment-id.sh) --name "integration-test-segment-updated-again" --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-segment-updated-again"
+
+  010 - it returns an error when --rules is invalid json:
+    command: auth0 segments create -n "integration-test-bad" -r 'not-json' --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "invalid JSON for --rules"
+
+  # ─── Experiments ──────────────────────────────────────────────────────────────
+
+  020 - it successfully lists all experiments with no data:
+    command: auth0 experiments list
+    exit-code: 0
+    stderr:
+      contains:
+        - "Use 'auth0 experiments create' to add one"
+
+  021 - it successfully lists all experiments with no data (json):
+    command: auth0 experiments list --json
+    exit-code: 0
+    stdout:
+      exactly: "[]"
+
+  022 - given prerequisites, it successfully creates an experiment:
+    command: auth0 experiments create -n "integration-test-experiment1" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "login" -s "percentage" -A "[{\"variation_id\":\"$(./test/integration/scripts/get-variation-id.sh)\",\"weight\":1.0,\"is_control\":true}]" --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME          integration-test-experiment1"
+        - "STATUS        draft"
+
+  023 - it successfully lists all experiments with data:
+    command: auth0 experiments list
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME
+        - STATUS
+        - AUTH FLOW
+
+  024 - it successfully creates an experiment and outputs in json:
+    command: auth0 experiments create -n "integration-test-experiment2" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "login" -s "percentage" -A "[{\"variation_id\":\"$(./test/integration/scripts/get-variation-id.sh)\",\"weight\":1.0,\"is_control\":true}]" --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-experiment2"
+        status: "draft"
+        authentication_flow: "login"
+        allocation_strategy: "percentage"
+
+  025 - given a test experiment, it successfully shows the experiment details:
+    command: auth0 experiments show $(./test/integration/scripts/get-experiment-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME          integration-test-experiment"
+        - "STATUS        draft"
+
+  026 - given a test experiment, it successfully shows the experiment details in json:
+    command: auth0 experiments show $(./test/integration/scripts/get-experiment-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-experiment"
+        status: "draft"
+        authentication_flow: "login"
+        allocation_strategy: "percentage"
+
+  027 - given a test experiment, it successfully updates the name:
+    command: auth0 experiments update $(./test/integration/scripts/get-experiment-id.sh) --name "integration-test-experiment-updated" --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME     integration-test-experiment-updated"
+        - "STATUS   draft"
+
+  028 - given a test experiment, it successfully updates in json:
+    command: auth0 experiments update $(./test/integration/scripts/get-experiment-id.sh) --name "integration-test-experiment-updated-again" --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-experiment-updated-again"
+
+  029 - given a test experiment, it successfully validates the experiment:
+    command: auth0 experiments validate $(./test/integration/scripts/get-experiment-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - VALID
+
+  030 - it successfully filters experiments by status:
+    command: auth0 experiments list --status draft
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME
+        - STATUS
+
+  031 - it returns an error when --allocations is invalid json:
+    command: auth0 experiments create -n "bad-experiment" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "login" -s "percentage" -A 'not-json' --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "invalid JSON for --allocations"
+
+  032 - given a test experiment, it successfully starts the experiment:
+    command: auth0 experiments start $(./test/integration/scripts/get-experiment-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - "STATUS   active"
+
+  033 - given a running experiment, it successfully pauses it:
+    command: auth0 experiments pause $(./test/integration/scripts/get-experiment-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - "STATUS   paused"
+
+  034 - given a paused experiment, it successfully resumes it:
+    command: auth0 experiments start $(./test/integration/scripts/get-experiment-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - "STATUS   active"
+
+  035 - given a running experiment, it successfully completes it:
+    command: auth0 experiments complete $(./test/integration/scripts/get-experiment-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - "STATUS   completed"
+
+  036 - given a completed experiment, it successfully archives it:
+    command: auth0 experiments archive $(./test/integration/scripts/get-experiment-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - "STATUS   archived"
+
+  # ─── Cleanup ──────────────────────────────────────────────────────────────────
+
+  040 - it successfully deletes the test experiment:
+    command: auth0 experiments delete $(./test/integration/scripts/get-experiment-id.sh) --force
+    exit-code: 0
+
+  041 - it successfully deletes the test segment:
+    command: auth0 segments delete $(./test/integration/scripts/get-segment-id.sh) --force
+    exit-code: 0

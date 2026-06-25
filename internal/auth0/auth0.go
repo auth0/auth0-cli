@@ -81,6 +81,10 @@ type APIV2 struct {
 	AttackProtectionBotDetection AttackProtectionBotDetectionAPIV2
 	Events                       EventsAPIV2
 	PhoneNotificationTemplate    PhoneNotificationTemplateAPI
+	Experiments                  ExperimentsAPI
+	FeatureFlags                 FeatureFlagsAPI
+	Variations                   VariationsAPI
+	Segments                     SegmentsAPI
 }
 
 func NewAPIV2(m *managementv2.Management) *APIV2 {
@@ -88,6 +92,10 @@ func NewAPIV2(m *managementv2.Management) *APIV2 {
 		AttackProtectionBotDetection: m.AttackProtection.BotDetection,
 		Events:                       m.Events,
 		PhoneNotificationTemplate:    m.Branding.Phone.Templates,
+		Experiments:                  m.Experimentation.Experiments,
+		FeatureFlags:                 m.Experimentation.FeatureFlags,
+		Variations:                   m.Experimentation.FeatureFlags.Variations,
+		Segments:                     m.Experimentation.Segments,
 	}
 }
 
