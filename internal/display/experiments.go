@@ -92,11 +92,13 @@ func formatAllocations(allocations []*management.AllocationItem) string {
 		} else if a.GetIsFallback() {
 			role = " (fallback)"
 		}
-		if a.GetWeight() > 0 {
+
+		switch {
+		case a.GetWeight() > 0:
 			part = fmt.Sprintf("%s%s %.0f%%", a.GetVariationID(), role, a.GetWeight()*100)
-		} else if a.GetSegmentID() != "" {
+		case a.GetSegmentID() != "":
 			part = fmt.Sprintf("%s%s → segment:%s", a.GetVariationID(), role, a.GetSegmentID())
-		} else {
+		default:
 			part = a.GetVariationID() + role
 		}
 		parts = append(parts, part)

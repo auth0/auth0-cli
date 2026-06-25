@@ -29,10 +29,10 @@ var (
 	}
 
 	segmentDescription = Flag{
-		Name:     "Description",
-		LongForm: "description",
+		Name:      "Description",
+		LongForm:  "description",
 		ShortForm: "d",
-		Help:     "Description of the segment.",
+		Help:      "Description of the segment.",
 	}
 
 	segmentRules = Flag{

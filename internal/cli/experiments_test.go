@@ -29,18 +29,18 @@ func TestExperimentsListCmd(t *testing.T) {
 			name: "it successfully lists experiments",
 			experiments: []*management.ExperimentListItem{
 				{
-					ID:             "exp_001",
-					Name:           "button-color",
-					Status:         management.ExperimentStatusEnumDraft,
-					FeatureFlagID:  "ff_001",
-					IsValid:        false,
+					ID:            "exp_001",
+					Name:          "button-color",
+					Status:        management.ExperimentStatusEnumDraft,
+					FeatureFlagID: "ff_001",
+					IsValid:       false,
 				},
 				{
-					ID:             "exp_002",
-					Name:           "checkout-flow",
-					Status:         management.ExperimentStatusEnumActive,
-					FeatureFlagID:  "ff_002",
-					IsValid:        true,
+					ID:            "exp_002",
+					Name:          "checkout-flow",
+					Status:        management.ExperimentStatusEnumActive,
+					FeatureFlagID: "ff_002",
+					IsValid:       true,
 				},
 			},
 			assertOutput: func(t testing.TB, out string) {

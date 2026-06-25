@@ -278,8 +278,8 @@ func TestFeatureFlagsUpdateCmd(t *testing.T) {
 			expectedError: "nothing to update",
 		},
 		{
-			name: "it returns an error when --parameters is invalid JSON",
-			args: []string{flagID, "--parameters", "not-json"},
+			name:          "it returns an error when --parameters is invalid JSON",
+			args:          []string{flagID, "--parameters", "not-json"},
 			expectedError: "invalid JSON for --parameters",
 		},
 		{

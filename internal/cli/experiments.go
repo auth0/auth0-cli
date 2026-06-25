@@ -29,10 +29,10 @@ var (
 	}
 
 	experimentDescription = Flag{
-		Name:     "Description",
-		LongForm: "description",
+		Name:      "Description",
+		LongForm:  "description",
 		ShortForm: "d",
-		Help:     "Description of the experiment.",
+		Help:      "Description of the experiment.",
 	}
 
 	experimentFeatureFlagID = Flag{
@@ -60,17 +60,9 @@ var (
 	}
 
 	experimentAllocations = Flag{
-		Name:       "Allocations",
-		LongForm:   "allocations",
-		ShortForm:  "A",
-		Help:       `Allocations as JSON array. Example: '[{"variation_id":"vid","weight":1.0,"is_control":true}]'`,
-		IsRequired: true,
-	}
-
-	experimentStatusFilter = Flag{
-		Name:     "Status",
-		LongForm: "status",
-		Help:     "Filter by status (draft, active, paused, completed, archived).",
+		Name:     "Allocations",
+		LongForm: "allocations",
+		Help:     "JSON array of allocation items ({variation_id, weight, is_control} for percentage; {variation_id, segment_id, is_control} for segment).",
 	}
 )
 
@@ -104,8 +96,8 @@ func experimentsCmd(cli *cli) *cobra.Command {
 
 func listExperimentsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Status            string
-		FeatureFlagID     string
+		Status             string
+		FeatureFlagID      string
 		AuthenticationFlow string
 	}
 
@@ -675,7 +667,8 @@ func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID st
 			IsControl:   isControl,
 		}
 
-		if strategy == "percentage" {
+		switch strategy {
+		case "percentage":
 			defaultWeight := fmt.Sprintf("%.4f", 1.0/float64(len(variations.GetVariations())))
 			var weightStr string
 			q := prompt.TextInput(
@@ -696,8 +689,8 @@ func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID st
 				return nil, fmt.Errorf("invalid weight %q: must be a decimal between 0.0 and 1.0", weightStr)
 			}
 			alloc.Weight = &weight
-		} else if strategy == "segment" {
-			// segment_id is optional — fetch available segments and offer a picker
+		case "segment":
+			// Segment_id is optional — fetch available segments and offer a picker
 			// with a "No segment" escape hatch. If no segments exist at all, skip silently.
 			segOpts, err := c.segmentPickerOptions(ctx)
 			if err != nil {
