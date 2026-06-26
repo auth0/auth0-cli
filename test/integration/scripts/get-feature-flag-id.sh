@@ -7,7 +7,7 @@ if [ -f "$FILE" ]; then
 fi
 
 ff=$( auth0 feature-flags create \
-  -n "integration-test-flag" \
+  -n "integration-test-ff-flag" \
   -p '{"color":{"type":"string","value":"blue"}}' \
   --json --no-input )
 

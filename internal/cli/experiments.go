@@ -60,9 +60,16 @@ var (
 	}
 
 	experimentAllocations = Flag{
-		Name:     "Allocations",
-		LongForm: "allocations",
-		Help:     "JSON array of allocation items ({variation_id, weight, is_control} for percentage; {variation_id, segment_id, is_control} for segment).",
+		Name:      "Allocations",
+		LongForm:  "allocations",
+		ShortForm: "A",
+		Help:      "JSON array of allocation items ({variation_id, weight, is_control} for percentage; {variation_id, segment_id, is_control} for segment).",
+	}
+
+	experimentAssignmentConfig = Flag{
+		Name:     "Assignment Config",
+		LongForm: "assignment-config",
+		Help:     `JSON object configuring how users are assigned to variations (e.g. '{"subject":"device"}').`,
 	}
 )
 
@@ -214,6 +221,7 @@ func createExperimentCmd(cli *cli) *cobra.Command {
 		AuthenticationFlow string
 		AllocationStrategy string
 		Allocations        string
+		AssignmentConfig   string
 	}
 
 	cmd := &cobra.Command{
@@ -224,7 +232,7 @@ func createExperimentCmd(cli *cli) *cobra.Command {
 			"To create interactively, use `auth0 experiments create` with no flags.\n\n" +
 			"To create non-interactively, supply all required flags.",
 		Example: `  auth0 experiments create
-  auth0 experiments create --name "button-color" --feature-flag-id ff_abc --authentication-flow login --allocation-strategy percentage --allocations '[{"variation_id":"vid_1","weight":0.5,"is_control":true},{"variation_id":"vid_2","weight":0.5,"is_control":false}]'`,
+  auth0 experiments create --name "button-color" --feature-flag-id ff_abc --authentication-flow login --allocation-strategy percentage --assignment-config '{"subject":"device"}' --allocations '[{"variation_id":"vid_1","weight":0.5,"is_control":true},{"variation_id":"vid_2","weight":0.5,"is_control":false}]'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := experimentName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -272,6 +280,23 @@ func createExperimentCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("--allocations is required")
 			}
 
+			// Assignment config — required. Prompt interactively if not provided via flag.
+			if inputs.AssignmentConfig == "" && canPrompt(cmd) {
+				subjectOptions := []string{"device"}
+				var chosen string
+				if err := experimentAssignmentConfig.Select(cmd, &chosen, subjectOptions, nil); err != nil {
+					return err
+				}
+				inputs.AssignmentConfig = fmt.Sprintf(`{"subject":%q}`, chosen)
+			} else if inputs.AssignmentConfig == "" {
+				return fmt.Errorf("--assignment-config is required")
+			}
+
+			var ac management.AssignmentConfig
+			if err := json.Unmarshal([]byte(inputs.AssignmentConfig), &ac); err != nil {
+				return fmt.Errorf("invalid JSON for --assignment-config: %w", err)
+			}
+
 			var allocations []*management.AllocationRequestItem
 			if err := json.Unmarshal([]byte(inputs.Allocations), &allocations); err != nil {
 				return fmt.Errorf("invalid JSON for --allocations (ensure the value is quoted in your shell): %w", err)
@@ -283,6 +308,7 @@ func createExperimentCmd(cli *cli) *cobra.Command {
 				FeatureFlagID:      inputs.FeatureFlagID,
 				AuthenticationFlow: inputs.AuthenticationFlow,
 				AllocationStrategy: strategy,
+				AssignmentConfig:   &ac,
 				Allocations:        allocations,
 			}
 			if inputs.Description != "" {
@@ -309,23 +335,18 @@ func createExperimentCmd(cli *cli) *cobra.Command {
 	experimentAuthFlow.RegisterString(cmd, &inputs.AuthenticationFlow, "")
 	experimentAllocationStrategy.RegisterString(cmd, &inputs.AllocationStrategy, "")
 	experimentAllocations.RegisterString(cmd, &inputs.Allocations, "")
+	experimentAssignmentConfig.RegisterString(cmd, &inputs.AssignmentConfig, "")
 
 	return cmd
 }
 
-var experimentAssignmentSubject = Flag{
-	Name:     "Assignment Subject",
-	LongForm: "assignment-subject",
-	Help:     "Subject used for variation assignment (e.g. device).",
-}
-
 func updateExperimentCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID                string
-		Name              string
-		Description       string
-		Allocations       string
-		AssignmentSubject string
+		ID               string
+		Name             string
+		Description      string
+		Allocations      string
+		AssignmentConfig string
 	}
 
 	cmd := &cobra.Command{
@@ -338,7 +359,7 @@ func updateExperimentCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 experiments update
   auth0 experiments update <experiment-id>
   auth0 experiments update <experiment-id> --name "new-name"
-  auth0 experiments update <experiment-id> --assignment-subject device
+  auth0 experiments update <experiment-id> --assignment-config '{"subject":"device"}'
   auth0 experiments update <experiment-id> --allocations '[{"variation_id":"vid","weight":1.0,"is_control":true}]'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
@@ -370,10 +391,12 @@ func updateExperimentCmd(cli *cli) *cobra.Command {
 				req.Description = &inputs.Description
 				updated = true
 			}
-			if inputs.AssignmentSubject != "" {
-				req.AssignmentConfig = &management.AssignmentConfig{
-					Subject: management.SubjectEnum(inputs.AssignmentSubject),
+			if inputs.AssignmentConfig != "" {
+				var ac management.AssignmentConfig
+				if err := json.Unmarshal([]byte(inputs.AssignmentConfig), &ac); err != nil {
+					return fmt.Errorf("invalid JSON for --assignment-config: %w", err)
 				}
+				req.AssignmentConfig = &ac
 				updated = true
 			}
 			if inputs.Allocations != "" {
@@ -386,7 +409,7 @@ func updateExperimentCmd(cli *cli) *cobra.Command {
 			}
 
 			if !updated {
-				return fmt.Errorf("nothing to update — provide at least one flag (--name, --description, --assignment-subject, --allocations)")
+				return fmt.Errorf("nothing to update — provide at least one flag (--name, --description, --assignment-config, --allocations)")
 			}
 
 			var result *management.UpdateExperimentResponseContent
@@ -406,7 +429,7 @@ func updateExperimentCmd(cli *cli) *cobra.Command {
 	experimentName.RegisterStringU(cmd, &inputs.Name, "")
 	experimentDescription.RegisterStringU(cmd, &inputs.Description, "")
 	experimentAllocations.RegisterStringU(cmd, &inputs.Allocations, "")
-	experimentAssignmentSubject.RegisterStringU(cmd, &inputs.AssignmentSubject, "")
+	experimentAssignmentConfig.RegisterStringU(cmd, &inputs.AssignmentConfig, "")
 
 	return cmd
 }
