@@ -162,7 +162,7 @@ func (r *Renderer) FeatureFlagUpdate(ff *management.UpdateFeatureFlagResponseCon
 	return nil
 }
 
-// variationView -----------------------------------------------------------------
+// VariationView -----------------------------------------------------------------
 
 type variationView struct {
 	ID            string
