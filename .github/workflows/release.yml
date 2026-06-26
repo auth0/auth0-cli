@@ -3,7 +3,10 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      # Stable releases only, e.g. v1.2.3. Prerelease tags such as
+      # v1.2.3-beta.1 are handled by release-beta.yml.
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
 
 permissions:
   contents: write
@@ -32,7 +35,6 @@ jobs:
           workdir: 'auth0-cli'
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
       # Homebrew Tap Process
       - name: Checkout Homebrew Tap Repo
