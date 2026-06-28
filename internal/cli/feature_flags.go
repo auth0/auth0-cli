@@ -29,10 +29,11 @@ var (
 	}
 
 	featureFlagDescription = Flag{
-		Name:      "Description",
-		LongForm:  "description",
-		ShortForm: "d",
-		Help:      "Description of the feature flag.",
+		Name:         "Description",
+		LongForm:     "description",
+		ShortForm:    "d",
+		AlwaysPrompt: true,
+		Help:         "Description of the feature flag.",
 	}
 
 	featureFlagParameters = Flag{

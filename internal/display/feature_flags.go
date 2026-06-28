@@ -148,6 +148,12 @@ func (r *Renderer) FeatureFlagCreate(ff *management.CreateFeatureFlagResponseCon
 }
 
 func (r *Renderer) FeatureFlagUpdate(ff *management.UpdateFeatureFlagResponseContent) error {
+	params := ""
+	if ff.Parameters != nil {
+		if b, err := json.Marshal(ff.Parameters); err == nil {
+			params = string(b)
+		}
+	}
 	r.Heading("feature flag updated")
 	view := &featureFlagView{
 		ID:          ff.GetID(),
@@ -155,7 +161,9 @@ func (r *Renderer) FeatureFlagUpdate(ff *management.UpdateFeatureFlagResponseCon
 		Description: ff.GetDescription(),
 		Type:        string(ff.GetType()),
 		Status:      featureFlagStatus(string(ff.GetStatus())),
+		Parameters:  params,
 		UpdatedAt:   timeAgo(ff.GetUpdatedAt()),
+		CreatedAt:   timeAgo(ff.GetCreatedAt()),
 		raw:         ff,
 	}
 	r.Result(view)
@@ -286,6 +294,7 @@ func (r *Renderer) VariationUpdate(v *management.UpdateVariationResponseContent)
 		Name:        v.GetName(),
 		Description: v.GetDescription(),
 		Overrides:   formatOverrides(v.GetOverrides()),
+		CreatedAt:   timeAgo(v.GetCreatedAt()),
 		UpdatedAt:   timeAgo(v.GetUpdatedAt()),
 		raw:         v,
 	}
