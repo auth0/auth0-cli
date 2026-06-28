@@ -17,7 +17,6 @@ builds:
       - -X 'github.com/auth0/auth0-cli/internal/buildinfo.Revision={{.Commit}}'
       - -X 'github.com/auth0/auth0-cli/internal/buildinfo.BuildUser=goreleaser'
       - -X 'github.com/auth0/auth0-cli/internal/buildinfo.BuildDate={{.Date}}'
-      - -X 'github.com/auth0/auth0-cli/internal/instrumentation.SentryDSN={{.Env.SENTRY_DSN}}'
 archives:
   - name_template: '{{ .ProjectName }}_{{ .Version }}_{{ title .Os }}_{{ if eq .Arch "arm64" }}arm64{{ else }}x86_64{{ end }}'
     files:
