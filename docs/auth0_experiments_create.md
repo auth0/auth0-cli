@@ -20,7 +20,7 @@ auth0 experiments create [flags]
 
 ```
   auth0 experiments create
-  auth0 experiments create --name "button-color" --feature-flag-id ff_abc --authentication-flow login --allocation-strategy percentage --allocations '[{"variation_id":"vid_1","weight":0.5,"is_control":true},{"variation_id":"vid_2","weight":0.5,"is_control":false}]'
+  auth0 experiments create --name "button-color" --feature-flag-id ff_abc --authentication-flow login --allocation-strategy percentage --assignment-config '{"subject":"device"}' --allocations '[{"variation_id":"vid_1","weight":0.5,"is_control":true},{"variation_id":"vid_2","weight":0.5,"is_control":false}]'
 ```
 
 
@@ -28,7 +28,8 @@ auth0 experiments create [flags]
 
 ```
   -s, --allocation-strategy string   Allocation strategy: percentage or segment.
-      --allocations string           JSON array of allocation items ({variation_id, weight, is_control} for percentage; {variation_id, segment_id, is_control} for segment).
+  -A, --allocations string           JSON array of allocation items ({variation_id, weight, is_control} for percentage; {variation_id, segment_id, is_control} for segment).
+      --assignment-config string     JSON object configuring how users are assigned to variations (e.g. '{"subject":"device"}').
   -a, --authentication-flow string   Authentication flow this experiment applies to (e.g. login, signup).
   -d, --description string           Description of the experiment.
   -f, --feature-flag-id string       ID of the feature flag to experiment on.

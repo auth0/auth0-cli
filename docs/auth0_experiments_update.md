@@ -22,7 +22,7 @@ auth0 experiments update [flags]
   auth0 experiments update
   auth0 experiments update <experiment-id>
   auth0 experiments update <experiment-id> --name "new-name"
-  auth0 experiments update <experiment-id> --assignment-subject device
+  auth0 experiments update <experiment-id> --assignment-config '{"subject":"device"}'
   auth0 experiments update <experiment-id> --allocations '[{"variation_id":"vid","weight":1.0,"is_control":true}]'
 ```
 
@@ -30,12 +30,12 @@ auth0 experiments update [flags]
 ## Flags
 
 ```
-      --allocations string          JSON array of allocation items ({variation_id, weight, is_control} for percentage; {variation_id, segment_id, is_control} for segment).
-      --assignment-subject string   Subject used for variation assignment (e.g. device).
-  -d, --description string          Description of the experiment.
-      --json                        Output in json format.
-      --json-compact                Output in compact json format.
-  -n, --name string                 Name of the experiment.
+  -A, --allocations string         JSON array of allocation items ({variation_id, weight, is_control} for percentage; {variation_id, segment_id, is_control} for segment).
+      --assignment-config string   JSON object configuring how users are assigned to variations (e.g. '{"subject":"device"}').
+  -d, --description string         Description of the experiment.
+      --json                       Output in json format.
+      --json-compact               Output in compact json format.
+  -n, --name string                Name of the experiment.
 ```
 
 
