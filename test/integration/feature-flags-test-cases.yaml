@@ -97,7 +97,7 @@ tests:
         - "nothing to update"
 
   013 - given a test feature flag, it successfully activates it:
-    command: auth0 feature-flags activate $(./test/integration/scripts/get-feature-flag-id.sh)
+    command: auth0 feature-flags status $(./test/integration/scripts/get-feature-flag-id.sh) active
     exit-code: 0
     stderr:
       contains:

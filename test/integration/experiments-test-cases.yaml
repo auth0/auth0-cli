@@ -95,7 +95,7 @@ tests:
       exactly: "[]"
 
   022 - given prerequisites, it successfully creates an experiment:
-    command: auth0 experiments create -n "integration-test-experiment1" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "login" -s "percentage" --assignment-config "{\"subject\":\"device\"}" -A "[{\"variation_id\":\"$(./test/integration/scripts/get-variation-id.sh)\",\"weight\":1.0,\"is_control\":true}]" --no-input
+    command: auth0 experiments create -n "integration-test-experiment1" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "login" -s "percentage" --assignment-config "{\"subject\":\"device\"}" -A "[{\"variation_id\":\"$(./test/integration/scripts/get-variation-id.sh)\",\"weight\":100,\"is_control\":true}]" --no-input
     exit-code: 0
     stdout:
       contains:
@@ -112,7 +112,7 @@ tests:
         - AUTH FLOW
 
   024 - it successfully creates an experiment and outputs in json:
-    command: auth0 experiments create -n "integration-test-experiment" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "login" -s "percentage" --assignment-config "{\"subject\":\"device\"}" -A "[{\"variation_id\":\"$(./test/integration/scripts/get-variation-id.sh)\",\"weight\":1.0,\"is_control\":true}]" --json --no-input
+    command: auth0 experiments create -n "integration-test-experiment" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "login" -s "percentage" --assignment-config "{\"subject\":\"device\"}" -A "[{\"variation_id\":\"$(./test/integration/scripts/get-variation-id.sh)\",\"weight\":100,\"is_control\":true}]" --json --no-input
     exit-code: 0
     stdout:
       json:
@@ -177,49 +177,49 @@ tests:
         - "invalid JSON for --allocations"
 
   031b - it returns an error when --assignment-config is missing:
-    command: auth0 experiments create -n "bad-experiment" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "login" -s "percentage" -A "[{\"variation_id\":\"vid\",\"weight\":1.0,\"is_control\":true}]" --no-input
+    command: auth0 experiments create -n "bad-experiment" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "login" -s "percentage" -A "[{\"variation_id\":\"vid\",\"weight\":100,\"is_control\":true}]" --no-input
     exit-code: 1
     stderr:
       contains:
         - "--assignment-config is required"
 
   031c - it returns an error when --assignment-config is invalid json:
-    command: auth0 experiments create -n "bad-experiment" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "login" -s "percentage" --assignment-config 'not-json' -A "[{\"variation_id\":\"vid\",\"weight\":1.0,\"is_control\":true}]" --no-input
+    command: auth0 experiments create -n "bad-experiment" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "login" -s "percentage" --assignment-config 'not-json' -A "[{\"variation_id\":\"vid\",\"weight\":100,\"is_control\":true}]" --no-input
     exit-code: 1
     stderr:
       contains:
         - "invalid JSON for --assignment-config"
 
   032 - given a test experiment, it successfully starts the experiment:
-    command: auth0 experiments start $(./test/integration/scripts/get-experiment-id.sh)
+    command: auth0 experiments status $(./test/integration/scripts/get-experiment-id.sh) active
     exit-code: 0
     stdout:
       contains:
         - "STATUS   active"
 
   033 - given a running experiment, it successfully pauses it:
-    command: auth0 experiments pause $(./test/integration/scripts/get-experiment-id.sh)
+    command: auth0 experiments status $(./test/integration/scripts/get-experiment-id.sh) paused
     exit-code: 0
     stdout:
       contains:
         - "STATUS   paused"
 
   034 - given a paused experiment, it successfully resumes it:
-    command: auth0 experiments start $(./test/integration/scripts/get-experiment-id.sh)
+    command: auth0 experiments status $(./test/integration/scripts/get-experiment-id.sh) active
     exit-code: 0
     stdout:
       contains:
         - "STATUS   active"
 
   035 - given a running experiment, it successfully completes it:
-    command: auth0 experiments complete $(./test/integration/scripts/get-experiment-id.sh)
+    command: auth0 experiments status $(./test/integration/scripts/get-experiment-id.sh) completed
     exit-code: 0
     stdout:
       contains:
         - "STATUS   completed"
 
   036 - given a completed experiment, it successfully archives it:
-    command: auth0 experiments archive $(./test/integration/scripts/get-experiment-id.sh)
+    command: auth0 experiments status $(./test/integration/scripts/get-experiment-id.sh) archived
     exit-code: 0
     stdout:
       contains:

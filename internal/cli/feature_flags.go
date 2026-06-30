@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 
-	management "github.com/auth0/go-auth0/v2/management"
+	"github.com/auth0/go-auth0/v2/management"
 	managementcore "github.com/auth0/go-auth0/v2/management/core"
 	"github.com/spf13/cobra"
 
@@ -71,6 +73,12 @@ var (
 		Help:       `Parameter overrides as JSON. Example: '{"color":{"value":"red"}}'`,
 		IsRequired: true,
 	}
+
+	featureFlagStatus = Flag{
+		Name:     "Status",
+		LongForm: "status",
+		Help:     "Transition the feature flag to a new status (active, archived).",
+	}
 )
 
 func featureFlagsCmd(cli *cli) *cobra.Command {
@@ -86,8 +94,7 @@ func featureFlagsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(showFeatureFlagCmd(cli))
 	cmd.AddCommand(updateFeatureFlagCmd(cli))
 	cmd.AddCommand(deleteFeatureFlagCmd(cli))
-	cmd.AddCommand(activateFeatureFlagCmd(cli))
-	cmd.AddCommand(archiveFeatureFlagCmd(cli))
+	cmd.AddCommand(statusFeatureFlagCmd(cli))
 	cmd.AddCommand(variationsCmd(cli))
 
 	return cmd
@@ -399,83 +406,77 @@ func deleteFeatureFlagCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func activateFeatureFlagCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ID string
+// resolveStatusTarget fills id and status for a `status` command: each is taken from a positional arg, else an interactive picker, then status is validated against validStatuses.
+func resolveStatusTarget(cmd *cobra.Command, args []string, idArg *Argument, picker pickerOptionsFunc, statusFlag *Flag, validStatuses []string, id, status *string) error {
+	if len(args) > 0 {
+		*id = args[0]
+	} else if err := idArg.Pick(cmd, id, picker); err != nil {
+		return err
 	}
 
-	cmd := &cobra.Command{
-		Use:   "activate",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Activate a feature flag",
-		Long:  "Transition a feature flag from draft to active status.",
-		Example: `  auth0 feature-flags activate
-  auth0 feature-flags activate <feature-flag-id>`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				inputs.ID = args[0]
-			} else {
-				if err := featureFlagID.Pick(cmd, &inputs.ID, cli.featureFlagPickerOptions); err != nil {
-					return err
-				}
-			}
-
-			status := management.FeatureFlagStatusEnumActive
-			if err := ansi.Waiting(func() error {
-				_, err := cli.apiv2.FeatureFlags.UpdateStatus(cmd.Context(), inputs.ID, &management.UpdateFeatureFlagStatusRequestContent{
-					Status: status,
-				})
-				return err
-			}); err != nil {
-				return fmt.Errorf("failed to activate feature flag %q: %w", inputs.ID, err)
-			}
-
-			cli.renderer.Infof("Feature flag %s is now active.", ansi.Faint(inputs.ID))
-			return nil
-		},
+	switch {
+	case len(args) > 1:
+		*status = args[1]
+	case canPrompt(cmd):
+		if err := statusFlag.Select(cmd, status, validStatuses, nil); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("a target status is required (one of: %s)", strings.Join(validStatuses, ", "))
 	}
 
-	return cmd
+	if !slices.Contains(validStatuses, *status) {
+		return fmt.Errorf("invalid status %q: must be one of %s", *status, strings.Join(validStatuses, ", "))
+	}
+
+	return nil
 }
 
-func archiveFeatureFlagCmd(cli *cli) *cobra.Command {
+// statusFeatureFlagCmd transitions a feature flag to a target status (active or archived), confirming the irreversible archive.
+func statusFeatureFlagCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID string
+		ID     string
+		Status string
 	}
 
+	// ValidStatuses are the states a feature flag can be transitioned to (draft is the initial state only).
+	validStatuses := []string{"active", "archived"}
+
 	cmd := &cobra.Command{
-		Use:   "archive",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Archive a feature flag",
-		Long:  "Transition a feature flag to archived status.",
-		Example: `  auth0 feature-flags archive
-  auth0 feature-flags archive <feature-flag-id>`,
+		Use:   "status",
+		Args:  cobra.MaximumNArgs(2),
+		Short: "Change a feature flag's status",
+		Long: "Transition a feature flag to a new status: active or archived.\n\n" +
+			"  • active   — activate the feature flag (from draft)\n" +
+			"  • archived — archive the feature flag (irreversible)\n\n" +
+			"To set the status interactively, run `auth0 feature-flags status` with no arguments.",
+		Example: `  auth0 feature-flags status
+  auth0 feature-flags status <feature-flag-id>
+  auth0 feature-flags status <feature-flag-id> active
+  auth0 feature-flags status <feature-flag-id> archived`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				inputs.ID = args[0]
-			} else {
-				if err := featureFlagID.Pick(cmd, &inputs.ID, cli.featureFlagPickerOptions); err != nil {
-					return err
-				}
+			if err := resolveStatusTarget(cmd, args, &featureFlagID, cli.featureFlagPickerOptions, &featureFlagStatus, validStatuses, &inputs.ID, &inputs.Status); err != nil {
+				return err
 			}
 
-			if !cli.force && canPrompt(cmd) {
+			// Archiving is irreversible — confirm unless --force or non-interactive.
+			if inputs.Status == "archived" && !cli.force && canPrompt(cmd) {
 				if confirmed := prompt.Confirm("Archiving is irreversible. Are you sure?"); !confirmed {
 					return nil
 				}
 			}
 
-			status := management.FeatureFlagStatusEnumArchived
+			status := management.FeatureFlagStatusEnum(inputs.Status)
 			if err := ansi.Waiting(func() error {
 				_, err := cli.apiv2.FeatureFlags.UpdateStatus(cmd.Context(), inputs.ID, &management.UpdateFeatureFlagStatusRequestContent{
 					Status: status,
 				})
 				return err
 			}); err != nil {
-				return fmt.Errorf("failed to archive feature flag %q: %w", inputs.ID, err)
+				return fmt.Errorf("failed to set feature flag %q to %s: %w", inputs.ID, inputs.Status, err)
 			}
 
-			cli.renderer.Infof("Feature flag %s has been archived.", ansi.Faint(inputs.ID))
+			cli.renderer.Infof("Feature flag %s is now %s.", ansi.Faint(inputs.ID), inputs.Status)
 			return nil
 		},
 	}
@@ -702,10 +703,10 @@ func updateVariationCmd(cli *cli) *cobra.Command {
   auth0 feature-flags variations update <feature-flag-id> <variation-id>
   auth0 feature-flags variations update <feature-flag-id> <variation-id> --name "new-name"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) >= 1 {
+			if len(args) > 0 {
 				inputs.FeatureFlagID = args[0]
 			}
-			if len(args) == 2 {
+			if len(args) > 1 {
 				inputs.VariationID = args[1]
 			}
 

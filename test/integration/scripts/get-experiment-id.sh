@@ -22,7 +22,7 @@ experiment=$( auth0 experiments create \
   -f "$FF_ID" \
   -a "login" \
   -s "percentage" \
-  -A "[{\"variation_id\":\"$CONTROL_ID\",\"weight\":0.5,\"is_control\":true},{\"variation_id\":\"$TREATMENT_ID\",\"weight\":0.5,\"is_control\":false}]" \
+  -A "[{\"variation_id\":\"$CONTROL_ID\",\"weight\":50,\"is_control\":true},{\"variation_id\":\"$TREATMENT_ID\",\"weight\":50,\"is_control\":false}]" \
   --json --no-input )
 
 mkdir -p ./test/integration/identifiers

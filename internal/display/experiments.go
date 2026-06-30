@@ -95,7 +95,7 @@ func formatAllocations(allocations []*management.AllocationItem) string {
 
 		switch {
 		case a.GetWeight() > 0:
-			part = fmt.Sprintf("%s%s %.0f%%", a.GetVariationID(), role, a.GetWeight()*100)
+			part = fmt.Sprintf("%s%s %.0f%%", a.GetVariationID(), role, a.GetWeight())
 		case a.GetSegmentID() != "":
 			part = fmt.Sprintf("%s%s → segment:%s", a.GetVariationID(), role, a.GetSegmentID())
 		default:
@@ -223,11 +223,11 @@ func (r *Renderer) ExperimentStatusUpdate(e *management.UpdateExperimentStatusRe
 	r.Newline()
 	switch e.GetStatus() {
 	case "active":
-		r.Infof("Experiment is now running. To pause it, run: auth0 experiments pause %s", e.GetID())
+		r.Infof("Experiment is now running. To pause it, run: auth0 experiments status %s paused", e.GetID())
 	case "paused":
-		r.Infof("Experiment paused. To resume, run: auth0 experiments start %s", e.GetID())
+		r.Infof("Experiment paused. To resume, run: auth0 experiments status %s active", e.GetID())
 	case "completed":
-		r.Infof("Experiment completed. To archive it, run: auth0 experiments archive %s", e.GetID())
+		r.Infof("Experiment completed. To archive it, run: auth0 experiments status %s archived", e.GetID())
 	}
 	return nil
 }
@@ -239,7 +239,7 @@ func (r *Renderer) ExperimentValidate(id string, v *management.ValidateExperimen
 	r.Result(view)
 	r.Newline()
 	if v.GetIsValid() {
-		r.Infof("Experiment is ready to start. Run: auth0 experiments start %s", id)
+		r.Infof("Experiment is ready to start. Run: auth0 experiments status %s active", id)
 	} else {
 		r.Warnf("Fix the validation errors above before starting the experiment.")
 	}

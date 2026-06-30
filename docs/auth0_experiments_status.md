@@ -3,21 +3,29 @@ layout: default
 parent: auth0 experiments
 has_toc: false
 ---
-# auth0 experiments show
+# auth0 experiments status
 
-Display details about an experiment including its allocations and validation status.
+Transition an experiment to a new lifecycle status: active, paused, completed, or archived.
+
+  • active    — start (or resume) the experiment; runs full validation before activating
+  • paused    — pause a running experiment; it can be resumed by setting it active again
+  • completed — mark the experiment as finished; it can then be archived
+  • archived  — archive a completed experiment
+
+To set the status interactively, run `auth0 experiments status` with no arguments.
 
 ## Usage
 ```
-auth0 experiments show [flags]
+auth0 experiments status [flags]
 ```
 
 ## Examples
 
 ```
-  auth0 experiments show
-  auth0 experiments show <experiment-id>
-  auth0 experiments show <experiment-id> --json
+  auth0 experiments status
+  auth0 experiments status <experiment-id>
+  auth0 experiments status <experiment-id> active
+  auth0 experiments status <experiment-id> paused
 ```
 
 

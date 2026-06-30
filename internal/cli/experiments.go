@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 
-	management "github.com/auth0/go-auth0/v2/management"
+	"github.com/auth0/go-auth0/v2/management"
 	managementcore "github.com/auth0/go-auth0/v2/management/core"
 	"github.com/spf13/cobra"
 
@@ -60,16 +61,21 @@ var (
 	}
 
 	experimentAllocations = Flag{
-		Name:      "Allocations",
-		LongForm:  "allocations",
-		ShortForm: "A",
-		Help:      "JSON array of allocation items ({variation_id, weight, is_control} for percentage; {variation_id, segment_id, is_control} for segment).",
+		Name:     "Allocations",
+		LongForm: "allocations",
+		Help:     "JSON array of allocation items ({variation_id, weight, is_control} for percentage, where weight is an integer percentage from 1 to 100; {variation_id, segment_id, is_control} for segment).",
 	}
 
 	experimentAssignmentConfig = Flag{
 		Name:     "Assignment Config",
 		LongForm: "assignment-config",
 		Help:     `JSON object configuring how users are assigned to variations (e.g. '{"subject":"device"}').`,
+	}
+
+	experimentStatus = Flag{
+		Name:     "Status",
+		LongForm: "status",
+		Help:     "Transition the experiment to a new status (active, paused, completed, archived).",
 	}
 )
 
@@ -93,10 +99,7 @@ func experimentsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(updateExperimentCmd(cli))
 	cmd.AddCommand(deleteExperimentCmd(cli))
 	cmd.AddCommand(validateExperimentCmd(cli))
-	cmd.AddCommand(startExperimentCmd(cli))
-	cmd.AddCommand(pauseExperimentCmd(cli))
-	cmd.AddCommand(completeExperimentCmd(cli))
-	cmd.AddCommand(archiveExperimentCmd(cli))
+	cmd.AddCommand(statusExperimentCmd(cli))
 
 	return cmd
 }
@@ -232,7 +235,7 @@ func createExperimentCmd(cli *cli) *cobra.Command {
 			"To create interactively, use `auth0 experiments create` with no flags.\n\n" +
 			"To create non-interactively, supply all required flags.",
 		Example: `  auth0 experiments create
-  auth0 experiments create --name "button-color" --feature-flag-id ff_abc --authentication-flow login --allocation-strategy percentage --assignment-config '{"subject":"device"}' --allocations '[{"variation_id":"vid_1","weight":0.5,"is_control":true},{"variation_id":"vid_2","weight":0.5,"is_control":false}]'`,
+  auth0 experiments create --name "button-color" --feature-flag-id ff_abc --authentication-flow login --allocation-strategy percentage --assignment-config '{"subject":"device"}' --allocations '[{"variation_id":"vid_1","weight":50,"is_control":true},{"variation_id":"vid_2","weight":50,"is_control":false}]'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := experimentName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -301,6 +304,9 @@ func createExperimentCmd(cli *cli) *cobra.Command {
 			if err := json.Unmarshal([]byte(inputs.Allocations), &allocations); err != nil {
 				return fmt.Errorf("invalid JSON for --allocations (ensure the value is quoted in your shell): %w", err)
 			}
+			if err := validateAllocationWeights(allocations); err != nil {
+				return err
+			}
 
 			strategy := management.AllocationStrategyEnum(inputs.AllocationStrategy)
 			req := &management.CreateExperimentRequestContent{
@@ -354,13 +360,14 @@ func updateExperimentCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an experiment",
 		Long: "Update an experiment.\n\n" +
-			"Note: feature flag, authentication flow, and allocation strategy cannot be changed after creation.\n\n" +
+			"Note: feature flag, authentication flow, and allocation strategy cannot be changed after creation. " +
+			"To change an experiment's status, use `auth0 experiments status`.\n\n" +
 			"To update interactively, use `auth0 experiments update` with no arguments.",
 		Example: `  auth0 experiments update
   auth0 experiments update <experiment-id>
   auth0 experiments update <experiment-id> --name "new-name"
   auth0 experiments update <experiment-id> --assignment-config '{"subject":"device"}'
-  auth0 experiments update <experiment-id> --allocations '[{"variation_id":"vid","weight":1.0,"is_control":true}]'`,
+  auth0 experiments update <experiment-id> --allocations '[{"variation_id":"vid","weight":100,"is_control":true}]'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -403,6 +410,9 @@ func updateExperimentCmd(cli *cli) *cobra.Command {
 				var allocations []*management.AllocationRequestItem
 				if err := json.Unmarshal([]byte(inputs.Allocations), &allocations); err != nil {
 					return fmt.Errorf("invalid JSON for --allocations: %w", err)
+				}
+				if err := validateAllocationWeights(allocations); err != nil {
+					return err
 				}
 				req.Allocations = allocations
 				updated = true
@@ -518,107 +528,54 @@ func validateExperimentCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-func startExperimentCmd(cli *cli) *cobra.Command {
+// statusExperimentCmd transitions an experiment to a target lifecycle status (active, paused, completed, or archived).
+func statusExperimentCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID string
+		ID     string
+		Status string
 	}
 
+	// ValidStatuses are the lifecycle states an experiment can be transitioned to.
+	validStatuses := []string{"active", "paused", "completed", "archived"}
+
 	cmd := &cobra.Command{
-		Use:   "start",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Start an experiment",
-		Long:  "Transition an experiment from draft to active. Runs full validation before activating.",
-		Example: `  auth0 experiments start
-  auth0 experiments start <experiment-id>`,
+		Use:   "status",
+		Args:  cobra.MaximumNArgs(2),
+		Short: "Change an experiment's status",
+		Long: "Transition an experiment to a new lifecycle status: active, paused, completed, or archived.\n\n" +
+			"  • active    — start (or resume) the experiment; runs full validation before activating\n" +
+			"  • paused    — pause a running experiment; it can be resumed by setting it active again\n" +
+			"  • completed — mark the experiment as finished; it can then be archived\n" +
+			"  • archived  — archive a completed experiment\n\n" +
+			"To set the status interactively, run `auth0 experiments status` with no arguments.",
+		Example: `  auth0 experiments status
+  auth0 experiments status <experiment-id>
+  auth0 experiments status <experiment-id> active
+  auth0 experiments status <experiment-id> paused`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return updateExperimentStatus(cmd, cli, args, &inputs.ID, "active")
+			if err := resolveStatusTarget(cmd, args, &experimentID, cli.experimentPickerOptions, &experimentStatus, validStatuses, &inputs.ID, &inputs.Status); err != nil {
+				return err
+			}
+
+			status := management.ExperimentTransitionStatusEnum(inputs.Status)
+			var result *management.UpdateExperimentStatusResponseContent
+			if err := ansi.Waiting(func() (err error) {
+				result, err = cli.apiv2.Experiments.UpdateStatus(cmd.Context(), inputs.ID, &management.UpdateExperimentStatusRequestContent{
+					Status: status,
+				})
+				return err
+			}); err != nil {
+				return fmt.Errorf("failed to set experiment %q to %s: %w", inputs.ID, inputs.Status, err)
+			}
+
+			return cli.renderer.ExperimentStatusUpdate(result)
 		},
 	}
 
-	return cmd
-}
-
-func pauseExperimentCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ID string
-	}
-
-	cmd := &cobra.Command{
-		Use:   "pause",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Pause an experiment",
-		Long:  "Pause a running experiment. It can be resumed with `auth0 experiments start`.",
-		Example: `  auth0 experiments pause
-  auth0 experiments pause <experiment-id>`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return updateExperimentStatus(cmd, cli, args, &inputs.ID, "paused")
-		},
-	}
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
-}
-
-func completeExperimentCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ID string
-	}
-
-	cmd := &cobra.Command{
-		Use:   "complete",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Complete an experiment",
-		Long:  "Mark an experiment as completed. It can then be archived.",
-		Example: `  auth0 experiments complete
-  auth0 experiments complete <experiment-id>`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return updateExperimentStatus(cmd, cli, args, &inputs.ID, "completed")
-		},
-	}
-
-	return cmd
-}
-
-func archiveExperimentCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ID string
-	}
-
-	cmd := &cobra.Command{
-		Use:   "archive",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Archive an experiment",
-		Long:  "Archive a completed experiment.",
-		Example: `  auth0 experiments archive
-  auth0 experiments archive <experiment-id>`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return updateExperimentStatus(cmd, cli, args, &inputs.ID, "archived")
-		},
-	}
-
-	return cmd
-}
-
-func updateExperimentStatus(cmd *cobra.Command, cli *cli, args []string, idDst *string, targetStatus string) error {
-	if len(args) > 0 {
-		*idDst = args[0]
-	} else {
-		if err := experimentID.Pick(cmd, idDst, cli.experimentPickerOptions); err != nil {
-			return err
-		}
-	}
-
-	status := management.ExperimentTransitionStatusEnum(targetStatus)
-	var result *management.UpdateExperimentStatusResponseContent
-	if err := ansi.Waiting(func() (err error) {
-		result, err = cli.apiv2.Experiments.UpdateStatus(cmd.Context(), *idDst, &management.UpdateExperimentStatusRequestContent{
-			Status: status,
-		})
-		return err
-	}); err != nil {
-		return fmt.Errorf("failed to set experiment %q to %s: %w", *idDst, targetStatus, err)
-	}
-
-	return cli.renderer.ExperimentStatusUpdate(result)
 }
 
 // Picker helpers.
@@ -657,8 +614,7 @@ func statusBadge(status string) string {
 	}
 }
 
-// buildAllocationsInteractively guides the user through picking variations
-// and entering weights/segments for each one.
+// buildAllocationsInteractively prompts for each variation's weight or segment and returns the assembled allocations.
 func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID string, strategy string) ([]*management.AllocationRequestItem, error) {
 	ctx := cmd.Context()
 	variations, err := c.apiv2.Variations.List(ctx, featureFlagID)
@@ -692,25 +648,26 @@ func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID st
 
 		switch strategy {
 		case "percentage":
-			defaultWeight := fmt.Sprintf("%.4f", 1.0/float64(len(variations.GetVariations())))
+			defaultWeight := strconv.Itoa(100 / len(variations.GetVariations()))
 			var weightStr string
 			q := prompt.TextInput(
 				"weight",
-				fmt.Sprintf("Weight for %q (0.0–1.0)", v.GetName()),
-				"Proportion of traffic assigned to this variation. All weights must sum to 1.0.",
+				fmt.Sprintf("Weight for %q (1–100)", v.GetName()),
+				"Integer percentage of traffic assigned to this variation (1–100).",
 				defaultWeight,
 				true,
 			)
 			if err := prompt.AskOne(q, &weightStr); err != nil {
 				return nil, err
 			}
-			if weightStr == "" {
-				weightStr = defaultWeight
+			weightInt, err := strconv.Atoi(weightStr)
+			if err != nil {
+				return nil, fmt.Errorf("invalid weight %q: must be a whole number", weightStr)
 			}
-			var weight float64
-			if _, err := fmt.Sscanf(weightStr, "%f", &weight); err != nil {
-				return nil, fmt.Errorf("invalid weight %q: must be a decimal between 0.0 and 1.0", weightStr)
+			if weightInt < 1 || weightInt > 100 {
+				return nil, fmt.Errorf("invalid weight %d: must be between 1 and 100", weightInt)
 			}
+			weight := float64(weightInt)
 			alloc.Weight = &weight
 		case "segment":
 			// Segment_id is optional — fetch available segments and offer a picker
@@ -739,4 +696,14 @@ func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID st
 	}
 
 	return allocations, nil
+}
+
+// validateAllocationWeights enforces that each --allocations JSON weight is a percentage between 1 and 100.
+func validateAllocationWeights(allocations []*management.AllocationRequestItem) error {
+	for _, a := range allocations {
+		if a.Weight != nil && (*a.Weight < 1 || *a.Weight > 100) {
+			return fmt.Errorf("invalid weight %g: must be between 1 and 100", *a.Weight)
+		}
+	}
+	return nil
 }

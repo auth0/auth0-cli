@@ -377,6 +377,87 @@ func TestFeatureFlagsDeleteCmd(t *testing.T) {
 	})
 }
 
+func TestFeatureFlagsStatusCmd(t *testing.T) {
+	const flagID = "ff_abc123"
+
+	t.Run("it successfully sets the status to active", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		featureFlagAPI := mock.NewMockFeatureFlagsAPI(ctrl)
+		featureFlagAPI.EXPECT().
+			UpdateStatus(gomock.Any(), flagID, &management.UpdateFeatureFlagStatusRequestContent{
+				Status: management.FeatureFlagStatusEnum("active"),
+			}).
+			Return(&management.UpdateFeatureFlagStatusResponseContent{}, nil)
+
+		cli := &cli{
+			renderer: &display.Renderer{
+				MessageWriter: io.Discard,
+				ResultWriter:  io.Discard,
+			},
+			apiv2: &auth0.APIV2{FeatureFlags: featureFlagAPI},
+		}
+
+		cmd := statusFeatureFlagCmd(cli)
+		cmd.SetArgs([]string{flagID, "active"})
+		err := cmd.Execute()
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("it successfully archives with --force", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		featureFlagAPI := mock.NewMockFeatureFlagsAPI(ctrl)
+		featureFlagAPI.EXPECT().
+			UpdateStatus(gomock.Any(), flagID, &management.UpdateFeatureFlagStatusRequestContent{
+				Status: management.FeatureFlagStatusEnum("archived"),
+			}).
+			Return(&management.UpdateFeatureFlagStatusResponseContent{}, nil)
+
+		cli := &cli{
+			renderer: &display.Renderer{
+				MessageWriter: io.Discard,
+				ResultWriter:  io.Discard,
+			},
+			apiv2: &auth0.APIV2{FeatureFlags: featureFlagAPI},
+			force: true,
+		}
+
+		cmd := statusFeatureFlagCmd(cli)
+		cmd.SetArgs([]string{flagID, "archived"})
+		err := cmd.Execute()
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("it returns an error if the API call fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		featureFlagAPI := mock.NewMockFeatureFlagsAPI(ctrl)
+		featureFlagAPI.EXPECT().
+			UpdateStatus(gomock.Any(), flagID, gomock.Any()).
+			Return(nil, errors.New("400 Bad Request"))
+
+		cli := &cli{
+			renderer: &display.Renderer{
+				MessageWriter: io.Discard,
+				ResultWriter:  io.Discard,
+			},
+			apiv2: &auth0.APIV2{FeatureFlags: featureFlagAPI},
+		}
+
+		cmd := statusFeatureFlagCmd(cli)
+		cmd.SetArgs([]string{flagID, "active"})
+		err := cmd.Execute()
+
+		assert.EqualError(t, err, `failed to set feature flag "ff_abc123" to active: 400 Bad Request`)
+	})
+}
+
 func TestFeatureFlagPickerOptions(t *testing.T) {
 	tests := []struct {
 		name         string

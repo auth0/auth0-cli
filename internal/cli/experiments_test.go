@@ -7,7 +7,7 @@ import (
 	"io"
 	"testing"
 
-	management "github.com/auth0/go-auth0/v2/management"
+	"github.com/auth0/go-auth0/v2/management"
 	managementcore "github.com/auth0/go-auth0/v2/management/core"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -182,7 +182,7 @@ func TestExperimentsCreateCmd(t *testing.T) {
 				"--authentication-flow", "login",
 				"--allocation-strategy", "percentage",
 				"--assignment-config", `{"subject":"device"}`,
-				"--allocations", `[{"variation_id":"vid_001","weight":0.5,"is_control":true},{"variation_id":"vid_002","weight":0.5,"is_control":false}]`,
+				"--allocations", `[{"variation_id":"vid_001","weight":50,"is_control":true},{"variation_id":"vid_002","weight":50,"is_control":false}]`,
 			},
 			apiResponse: &management.CreateExperimentResponseContent{
 				ID:                 "exp_new",
@@ -204,7 +204,7 @@ func TestExperimentsCreateCmd(t *testing.T) {
 				"--feature-flag-id", "ff_001",
 				"--authentication-flow", "login",
 				"--allocation-strategy", "percentage",
-				"--allocations", `[{"variation_id":"vid_001","weight":1.0,"is_control":true}]`,
+				"--allocations", `[{"variation_id":"vid_001","weight":100,"is_control":true}]`,
 			},
 			expectedError: "--assignment-config is required",
 		},
@@ -216,7 +216,7 @@ func TestExperimentsCreateCmd(t *testing.T) {
 				"--authentication-flow", "login",
 				"--allocation-strategy", "percentage",
 				"--assignment-config", "not-json",
-				"--allocations", `[{"variation_id":"vid_001","weight":1.0,"is_control":true}]`,
+				"--allocations", `[{"variation_id":"vid_001","weight":100,"is_control":true}]`,
 			},
 			expectedError: "invalid JSON for --assignment-config",
 		},
@@ -245,6 +245,18 @@ func TestExperimentsCreateCmd(t *testing.T) {
 			expectedError: "invalid JSON for --allocations",
 		},
 		{
+			name: "it returns an error when --allocations weight is out of range",
+			args: []string{
+				"--name", "button-color",
+				"--feature-flag-id", "ff_001",
+				"--authentication-flow", "login",
+				"--allocation-strategy", "percentage",
+				"--assignment-config", `{"subject":"device"}`,
+				"--allocations", `[{"variation_id":"vid_001","weight":0,"is_control":true}]`,
+			},
+			expectedError: "must be between 1 and 100",
+		},
+		{
 			name: "it returns an error if the API call fails",
 			args: []string{
 				"--name", "button-color",
@@ -252,7 +264,7 @@ func TestExperimentsCreateCmd(t *testing.T) {
 				"--authentication-flow", "login",
 				"--allocation-strategy", "percentage",
 				"--assignment-config", `{"subject":"device"}`,
-				"--allocations", `[{"variation_id":"vid_001","weight":1.0,"is_control":true}]`,
+				"--allocations", `[{"variation_id":"vid_001","weight":100,"is_control":true}]`,
 			},
 			apiError:      errors.New("400 Bad Request"),
 			expectedError: "failed to create experiment: 400 Bad Request",
@@ -505,10 +517,10 @@ func TestExperimentsValidateCmd(t *testing.T) {
 	})
 }
 
-func TestExperimentsStartCmd(t *testing.T) {
+func TestExperimentsStatusCmd(t *testing.T) {
 	const expID = "exp_abc123"
 
-	t.Run("it successfully starts an experiment", func(t *testing.T) {
+	t.Run("it successfully sets the status to active", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -532,8 +544,8 @@ func TestExperimentsStartCmd(t *testing.T) {
 			apiv2: &auth0.APIV2{Experiments: experimentAPI},
 		}
 
-		cmd := startExperimentCmd(cli)
-		cmd.SetArgs([]string{expID})
+		cmd := statusExperimentCmd(cli)
+		cmd.SetArgs([]string{expID, "active"})
 		err := cmd.Execute()
 
 		assert.NoError(t, err)
@@ -556,8 +568,8 @@ func TestExperimentsStartCmd(t *testing.T) {
 			apiv2: &auth0.APIV2{Experiments: experimentAPI},
 		}
 
-		cmd := startExperimentCmd(cli)
-		cmd.SetArgs([]string{expID})
+		cmd := statusExperimentCmd(cli)
+		cmd.SetArgs([]string{expID, "active"})
 		err := cmd.Execute()
 
 		assert.EqualError(t, err, `failed to set experiment "exp_abc123" to active: 400 Bad Request`)
