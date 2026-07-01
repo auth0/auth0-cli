@@ -31,7 +31,7 @@ require (
 	github.com/pkg/browser v0.0.0-20210706143420-7d21f8c997e2
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
-	github.com/schollz/progressbar/v3 v3.19.0
+	github.com/schollz/progressbar/v3 v3.19.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
@@ -40,7 +40,7 @@ require (
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.21.0
 	golang.org/x/sys v0.46.0
-	golang.org/x/term v0.43.0
+	golang.org/x/term v0.44.0
 	golang.org/x/text v0.38.0
 	gopkg.in/yaml.v2 v2.4.0
 )
