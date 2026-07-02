@@ -1,9 +1,18 @@
 package cli
 
 import (
+	"bytes"
+	"errors"
+	"io"
 	"testing"
 
+	management "github.com/auth0/go-auth0/v2/management"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/auth0/mock"
+	"github.com/auth0/auth0-cli/internal/display"
 )
 
 func TestSegmentAttributesAndConditions(t *testing.T) {
@@ -115,4 +124,116 @@ func TestParseSegmentRules_Invalid(t *testing.T) {
 			assert.Contains(t, err.Error(), tt.wantErr)
 		})
 	}
+}
+
+func TestSegmentsUpdateCmd(t *testing.T) {
+	const segID = "seg_abc123"
+
+	// The mocked Get returns this name; update cases diff against it.
+	const currentName = "old-segment"
+
+	tests := []struct {
+		name          string
+		args          []string
+		apiResponse   *management.UpdateSegmentResponseContent
+		apiError      error
+		expectedError string
+	}{
+		{
+			name:        "it successfully updates the name",
+			args:        []string{segID, "--name", "new-segment"},
+			apiResponse: &management.UpdateSegmentResponseContent{ID: segID, Name: "new-segment"},
+		},
+		{
+			name:          "it returns an error when no flags are provided",
+			args:          []string{segID},
+			expectedError: "nothing to update",
+		},
+		{
+			name:          "it returns an error when --rules is invalid JSON",
+			args:          []string{segID, "--rules", "not-json"},
+			expectedError: "invalid JSON for --rules",
+		},
+		{
+			name:          "it returns an error if the API call fails",
+			args:          []string{segID, "--name", "new-segment"},
+			apiError:      errors.New("500 Internal Server Error"),
+			expectedError: `failed to update segment "seg_abc123": 500 Internal Server Error`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			segmentsAPI := mock.NewMockSegmentsAPI(ctrl)
+			// Update reads the current segment first to pre-fill values and diff.
+			segmentsAPI.EXPECT().
+				Get(gomock.Any(), segID).
+				Return(&management.GetSegmentResponseContent{ID: segID, Name: currentName}, nil)
+			if test.apiResponse != nil || test.apiError != nil {
+				segmentsAPI.EXPECT().
+					Update(gomock.Any(), segID, gomock.Any()).
+					Return(test.apiResponse, test.apiError)
+			}
+
+			cli := &cli{
+				renderer: &display.Renderer{
+					MessageWriter: io.Discard,
+					ResultWriter:  io.Discard,
+				},
+				apiv2: &auth0.APIV2{Segments: segmentsAPI},
+			}
+
+			cmd := updateSegmentCmd(cli)
+			cmd.SetArgs(test.args)
+			err := cmd.Execute()
+
+			if test.expectedError != "" {
+				assert.ErrorContains(t, err, test.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestSegmentsUpdateCmdRendersFullResponse(t *testing.T) {
+	const segID = "seg_abc123"
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	segmentsAPI := mock.NewMockSegmentsAPI(ctrl)
+	segmentsAPI.EXPECT().
+		Get(gomock.Any(), segID).
+		Return(&management.GetSegmentResponseContent{ID: segID, Name: "old-segment"}, nil)
+	segmentsAPI.EXPECT().
+		Update(gomock.Any(), segID, gomock.Any()).
+		Return(&management.UpdateSegmentResponseContent{
+			ID:          segID,
+			Name:        "new-segment",
+			Description: auth0.String("desc"),
+			Type:        management.SegmentTypeEnumSelf,
+		}, nil)
+
+	stdout := &bytes.Buffer{}
+	cli := &cli{
+		renderer: &display.Renderer{
+			MessageWriter: io.Discard,
+			ResultWriter:  stdout,
+		},
+		apiv2: &auth0.APIV2{Segments: segmentsAPI},
+	}
+
+	cmd := updateSegmentCmd(cli)
+	cmd.SetArgs([]string{segID, "--name", "new-segment"})
+	err := cmd.Execute()
+
+	assert.NoError(t, err)
+	out := stdout.String()
+	assert.Contains(t, out, "new-segment")
+	// Description should be rendered on the update view.
+	assert.Contains(t, out, "desc")
 }

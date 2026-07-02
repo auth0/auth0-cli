@@ -15,6 +15,15 @@ import (
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
+const (
+	// Caps how many variations (allocations) a single experiment can be created with.
+	maxExperimentAllocations = 20
+
+	// Number of variations shown at once in the interactive multi-select;
+	// longer lists are paged/scrolled.
+	variationPickerPageSize = 10
+)
+
 var (
 	experimentID = Argument{
 		Name: "Experiment ID",
@@ -30,10 +39,11 @@ var (
 	}
 
 	experimentDescription = Flag{
-		Name:      "Description",
-		LongForm:  "description",
-		ShortForm: "d",
-		Help:      "Description of the experiment.",
+		Name:         "Description",
+		LongForm:     "description",
+		ShortForm:    "d",
+		AlwaysPrompt: true,
+		Help:         "Description of the experiment.",
 	}
 
 	experimentFeatureFlagID = Flag{
@@ -116,12 +126,12 @@ func listExperimentsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your experiments",
-		Long:    "List all experiments. To create one, run: `auth0 experiments create`.",
-		Example: `  auth0 experiments list
-  auth0 experiments ls
-  auth0 experiments list --json
-  auth0 experiments list --status active
-  auth0 experiments list --feature-flag-id <id>`,
+		Long:    "List all experiments. To create one, run: `auth0 experimentation experiments create`.",
+		Example: `  auth0 experimentation experiments list
+  auth0 experimentation experiments ls
+  auth0 experimentation experiments list --json
+  auth0 experimentation experiments list --status active
+  auth0 experimentation experiments list --feature-flag-id <id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			req := &management.ListExperimentsRequestParameters{}
 			if inputs.Status != "" {
@@ -185,9 +195,9 @@ func showExperimentCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an experiment",
 		Long:  "Display details about an experiment including its allocations and validation status.",
-		Example: `  auth0 experiments show
-  auth0 experiments show <experiment-id>
-  auth0 experiments show <experiment-id> --json`,
+		Example: `  auth0 experimentation experiments show
+  auth0 experimentation experiments show <experiment-id>
+  auth0 experimentation experiments show <experiment-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := experimentID.Pick(cmd, &inputs.ID, cli.experimentPickerOptions); err != nil {
@@ -232,10 +242,10 @@ func createExperimentCmd(cli *cli) *cobra.Command {
 		Args:  cobra.NoArgs,
 		Short: "Create a new experiment",
 		Long: "Create a new experiment.\n\n" +
-			"To create interactively, use `auth0 experiments create` with no flags.\n\n" +
+			"To create interactively, use `auth0 experimentation experiments create` with no flags.\n\n" +
 			"To create non-interactively, supply all required flags.",
-		Example: `  auth0 experiments create
-  auth0 experiments create --name "button-color" --feature-flag-id ff_abc --authentication-flow login --allocation-strategy percentage --assignment-config '{"subject":"device"}' --allocations '[{"variation_id":"vid_1","weight":50,"is_control":true},{"variation_id":"vid_2","weight":50,"is_control":false}]'`,
+		Example: `  auth0 experimentation experiments create
+  auth0 experimentation experiments create --name "button-color" --feature-flag-id ff_abc --authentication-flow login --allocation-strategy percentage --assignment-config '{"subject":"device"}' --allocations '[{"variation_id":"vid_1","weight":50,"is_control":true},{"variation_id":"vid_2","weight":50,"is_control":false}]'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := experimentName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -304,6 +314,9 @@ func createExperimentCmd(cli *cli) *cobra.Command {
 			if err := json.Unmarshal([]byte(inputs.Allocations), &allocations); err != nil {
 				return fmt.Errorf("invalid JSON for --allocations (ensure the value is quoted in your shell): %w", err)
 			}
+			if err := validateAllocationCount(allocations); err != nil {
+				return err
+			}
 			if err := validateAllocationWeights(allocations); err != nil {
 				return err
 			}
@@ -361,13 +374,13 @@ func updateExperimentCmd(cli *cli) *cobra.Command {
 		Short: "Update an experiment",
 		Long: "Update an experiment.\n\n" +
 			"Note: feature flag, authentication flow, and allocation strategy cannot be changed after creation. " +
-			"To change an experiment's status, use `auth0 experiments status`.\n\n" +
-			"To update interactively, use `auth0 experiments update` with no arguments.",
-		Example: `  auth0 experiments update
-  auth0 experiments update <experiment-id>
-  auth0 experiments update <experiment-id> --name "new-name"
-  auth0 experiments update <experiment-id> --assignment-config '{"subject":"device"}'
-  auth0 experiments update <experiment-id> --allocations '[{"variation_id":"vid","weight":100,"is_control":true}]'`,
+			"To change an experiment's status, use `auth0 experimentation experiments status`.\n\n" +
+			"To update interactively, use `auth0 experimentation experiments update` with no arguments.",
+		Example: `  auth0 experimentation experiments update
+  auth0 experimentation experiments update <experiment-id>
+  auth0 experimentation experiments update <experiment-id> --name "new-name"
+  auth0 experimentation experiments update <experiment-id> --assignment-config '{"subject":"device"}'
+  auth0 experimentation experiments update <experiment-id> --allocations '[{"variation_id":"vid","weight":100,"is_control":true}]'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -377,24 +390,91 @@ func updateExperimentCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			if err := experimentName.AskU(cmd, &inputs.Name, nil); err != nil {
+			// Read the current experiment so interactive prompts can be pre-filled
+			// with the existing values. Pressing Enter then keeps the current value
+			// rather than clearing it, so only the fields the user actually changes
+			// are updated.
+			var current *management.GetExperimentResponseContent
+			if err := ansi.Waiting(func() (err error) {
+				current, err = cli.apiv2.Experiments.Get(cmd.Context(), inputs.ID)
+				return err
+			}); err != nil {
+				return fmt.Errorf("failed to get experiment %q: %w", inputs.ID, err)
+			}
+
+			currentName := current.GetName()
+			currentDescription := current.GetDescription()
+
+			// Seed inputs with the current values so untouched fields keep their
+			// existing value. Only seed when the flag wasn't explicitly passed,
+			// otherwise we'd clobber the value the user set on the command line.
+			if !experimentName.IsSet(cmd) {
+				inputs.Name = currentName
+			}
+			if !experimentDescription.IsSet(cmd) {
+				inputs.Description = currentDescription
+			}
+
+			if err := experimentName.AskU(cmd, &inputs.Name, &currentName); err != nil {
 				return err
 			}
-			if err := experimentDescription.AskU(cmd, &inputs.Description, nil); err != nil {
-				return err
-			}
-			if err := experimentAllocations.AskU(cmd, &inputs.Allocations, nil); err != nil {
+			if err := experimentDescription.AskU(cmd, &inputs.Description, &currentDescription); err != nil {
 				return err
 			}
 
+			// Assignment config and allocations aren't simple text fields, so
+			// (when not supplied via flags) offer to edit them interactively behind
+			// a confirmation rather than always prompting.
+			if inputs.AssignmentConfig == "" && !experimentAssignmentConfig.IsSet(cmd) && canPrompt(cmd) {
+				currentSubject := ""
+				if ac := current.GetAssignmentConfig(); ac != nil {
+					currentSubject = string(ac.GetSubject())
+				}
+				if prompt.Confirm(fmt.Sprintf("Change the assignment config? (current subject: %q)", currentSubject)) {
+					subjectOptions := []string{"device"}
+					var chosen string
+					if err := experimentAssignmentConfig.Select(cmd, &chosen, subjectOptions, nil); err != nil {
+						return err
+					}
+					inputs.AssignmentConfig = fmt.Sprintf(`{"subject":%q}`, chosen)
+				}
+			}
+
+			if inputs.Allocations == "" && !experimentAllocations.IsSet(cmd) && canPrompt(cmd) {
+				if prompt.Confirm("Change the traffic allocations?") {
+					// Mirror create: let the user pick the allocation strategy,
+					// defaulting to the experiment's current one.
+					strategy := string(current.GetAllocationStrategy())
+					strategyOptions := []string{"percentage", "segment"}
+					if err := experimentAllocationStrategy.Select(cmd, &strategy, strategyOptions, &strategy); err != nil {
+						return err
+					}
+
+					allocs, err := cli.buildAllocationsInteractively(cmd, current.GetFeatureFlagID(), strategy)
+					if err != nil {
+						return err
+					}
+					b, err := json.Marshal(allocs)
+					if err != nil {
+						return err
+					}
+					inputs.Allocations = string(b)
+				}
+			} else if err := experimentAllocations.AskU(cmd, &inputs.Allocations, nil); err != nil {
+				return err
+			}
+
+			// Build a request containing only the fields the user actually
+			// changed. Scalar fields are diffed against the current experiment;
+			// allocations are replaced wholesale (PUT-like) whenever provided.
 			req := &management.UpdateExperimentRequestParameters{}
 			updated := false
 
-			if inputs.Name != "" {
+			if inputs.Name != currentName {
 				req.Name = &inputs.Name
 				updated = true
 			}
-			if inputs.Description != "" {
+			if inputs.Description != currentDescription {
 				req.Description = &inputs.Description
 				updated = true
 			}
@@ -403,17 +483,25 @@ func updateExperimentCmd(cli *cli) *cobra.Command {
 				if err := json.Unmarshal([]byte(inputs.AssignmentConfig), &ac); err != nil {
 					return fmt.Errorf("invalid JSON for --assignment-config: %w", err)
 				}
-				req.AssignmentConfig = &ac
-				updated = true
+				// Only send it if the subject actually changed.
+				if ac.GetSubject() != current.GetAssignmentConfig().GetSubject() {
+					req.AssignmentConfig = &ac
+					updated = true
+				}
 			}
 			if inputs.Allocations != "" {
 				var allocations []*management.AllocationRequestItem
 				if err := json.Unmarshal([]byte(inputs.Allocations), &allocations); err != nil {
 					return fmt.Errorf("invalid JSON for --allocations: %w", err)
 				}
+				if err := validateAllocationCount(allocations); err != nil {
+					return err
+				}
 				if err := validateAllocationWeights(allocations); err != nil {
 					return err
 				}
+				// Allocations are PUT-like: whenever the user opts in (via the flag
+				// or by confirming the interactive prompt) we send the whole array.
 				req.Allocations = allocations
 				updated = true
 			}
@@ -452,9 +540,9 @@ func deleteExperimentCmd(cli *cli) *cobra.Command {
 		Long: "Delete an experiment.\n\n" +
 			"Active experiments must be paused or completed before deleting.\n\n" +
 			"To delete non-interactively, supply the experiment ID and use `--force` to skip confirmation.",
-		Example: `  auth0 experiments delete
-  auth0 experiments delete <experiment-id>
-  auth0 experiments delete <experiment-id> --force`,
+		Example: `  auth0 experimentation experiments delete
+  auth0 experimentation experiments delete <experiment-id>
+  auth0 experimentation experiments delete <experiment-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var ids []string
 			if len(args) == 0 {
@@ -497,9 +585,9 @@ func validateExperimentCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Validate an experiment",
 		Long:  "Check whether an experiment is ready to be activated. Returns validation status and any blocking errors.",
-		Example: `  auth0 experiments validate
-  auth0 experiments validate <experiment-id>
-  auth0 experiments validate <experiment-id> --json`,
+		Example: `  auth0 experimentation experiments validate
+  auth0 experimentation experiments validate <experiment-id>
+  auth0 experimentation experiments validate <experiment-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := experimentID.Pick(cmd, &inputs.ID, cli.experimentPickerOptions); err != nil {
@@ -547,11 +635,11 @@ func statusExperimentCmd(cli *cli) *cobra.Command {
 			"  • paused    — pause a running experiment; it can be resumed by setting it active again\n" +
 			"  • completed — mark the experiment as finished; it can then be archived\n" +
 			"  • archived  — archive a completed experiment\n\n" +
-			"To set the status interactively, run `auth0 experiments status` with no arguments.",
-		Example: `  auth0 experiments status
-  auth0 experiments status <experiment-id>
-  auth0 experiments status <experiment-id> active
-  auth0 experiments status <experiment-id> paused`,
+			"To set the status interactively, run `auth0 experimentation experiments status` with no arguments.",
+		Example: `  auth0 experimentation experiments status
+  auth0 experimentation experiments status <experiment-id>
+  auth0 experimentation experiments status <experiment-id> active
+  auth0 experimentation experiments status <experiment-id> paused`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := resolveStatusTarget(cmd, args, &experimentID, cli.experimentPickerOptions, &experimentStatus, validStatuses, &inputs.ID, &inputs.Status); err != nil {
 				return err
@@ -593,7 +681,7 @@ func (c *cli) experimentPickerOptions(ctx context.Context) (pickerOptions, error
 	}
 
 	if len(opts) == 0 {
-		return nil, errors.New("no experiments available. Create one by running: `auth0 experiments create`")
+		return nil, errors.New("no experiments available. Create one by running: `auth0 experimentation experiments create`")
 	}
 
 	return opts, nil
@@ -622,17 +710,57 @@ func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID st
 		return nil, fmt.Errorf("failed to list variations: %w", err)
 	}
 
-	if len(variations.GetVariations()) == 0 {
-		return nil, fmt.Errorf("no variations found for feature flag %q. Create some first with `auth0 feature-flags variations create %s`", featureFlagID, featureFlagID)
+	allVariations := variations.GetVariations()
+	if len(allVariations) == 0 {
+		return nil, fmt.Errorf("no variations found for feature flag %q. Create some first with `auth0 experimentation feature-flags variations create %s`", featureFlagID, featureFlagID)
 	}
 
-	c.renderer.Infof("Found %d variation(s). You will be prompted to configure each one.", len(variations.GetVariations()))
+	// Let the user pick which variations to include in the experiment. A feature
+	// flag can have more variations than an experiment accepts (or than fit on
+	// screen), so the picker is paged and the selection is capped: choose at
+	// least one and at most maxExperimentAllocations.
+	labels := make([]string, 0, len(allVariations))
+	for _, v := range allVariations {
+		labels = append(labels, variationOptionLabel(v))
+	}
+
+	upperBound := min(len(allVariations), maxExperimentAllocations)
+
+	var selectedLabels []string
+	if err := prompt.AskMultiSelectWithPageSize(
+		fmt.Sprintf("Select the variations to include (choose 1–%d; use arrows/space, type to filter)", upperBound),
+		&selectedLabels,
+		variationPickerPageSize,
+		labels...,
+	); err != nil {
+		return nil, err
+	}
+	if len(selectedLabels) == 0 {
+		return nil, fmt.Errorf("select at least one variation to include in the experiment")
+	}
+	if len(selectedLabels) > maxExperimentAllocations {
+		return nil, fmt.Errorf("selected %d variations but an experiment accepts at most %d", len(selectedLabels), maxExperimentAllocations)
+	}
+
+	// Preserve the original variation order for the variations that were selected.
+	selectedSet := make(map[string]bool, len(selectedLabels))
+	for _, l := range selectedLabels {
+		selectedSet[l] = true
+	}
+	selectedVariations := make([]*management.Variation, 0, len(selectedLabels))
+	for _, v := range allVariations {
+		if selectedSet[variationOptionLabel(v)] {
+			selectedVariations = append(selectedVariations, v)
+		}
+	}
+
+	c.renderer.Infof("Selected %d variation(s). You will be prompted to configure each one.", len(selectedVariations))
 	c.renderer.Newline()
 
 	var allocations []*management.AllocationRequestItem
 
-	for i, v := range variations.GetVariations() {
-		c.renderer.Infof("Variation %d/%d: %s %s", i+1, len(variations.GetVariations()), v.GetName(), ansi.Faint("("+v.GetID()+")"))
+	for i, v := range selectedVariations {
+		c.renderer.Infof("Variation %d/%d: %s %s", i+1, len(selectedVariations), v.GetName(), ansi.Faint("("+v.GetID()+")"))
 
 		var isControl bool
 		if err := prompt.AskBool("Is control", &isControl, false); err != nil {
@@ -646,7 +774,7 @@ func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID st
 
 		switch strategy {
 		case "percentage":
-			defaultWeight := strconv.Itoa(100 / len(variations.GetVariations()))
+			defaultWeight := strconv.Itoa(100 / len(selectedVariations))
 			var weightStr string
 			q := prompt.TextInput(
 				"weight",
@@ -670,7 +798,7 @@ func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID st
 			segOpts, err := c.segmentPickerOptions(ctx)
 			if err != nil {
 				// No segments exist — warn and continue without assigning one.
-				c.renderer.Warnf("No segments available for variation %q (segment_id left unset). Create segments with `auth0 segments create`.", v.GetName())
+				c.renderer.Warnf("No segments available for variation %q (segment_id left unset). Create segments with `auth0 experimentation segments create`.", v.GetName())
 			} else {
 				// Prepend a skip option so the user can leave segment_id blank.
 				skipLabel := "No segment (unassigned)"
@@ -691,6 +819,25 @@ func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID st
 	}
 
 	return allocations, nil
+}
+
+// variationOptionLabel renders a variation as a picker option label ("name (id)").
+func variationOptionLabel(v *management.Variation) string {
+	return fmt.Sprintf("%s %s", v.GetName(), ansi.Faint("("+v.GetID()+")"))
+}
+
+// validateAllocationCount enforces that the number of allocations is within the
+// bounds an experiment accepts: at least one, and no more than
+// maxExperimentAllocations. It applies to the non-interactive --allocations
+// flag; the interactive picker enforces the same bounds at selection time.
+func validateAllocationCount(allocations []*management.AllocationRequestItem) error {
+	switch {
+	case len(allocations) == 0:
+		return fmt.Errorf("--allocations must contain at least one variation")
+	case len(allocations) > maxExperimentAllocations:
+		return fmt.Errorf("--allocations contains %d variations but an experiment accepts at most %d", len(allocations), maxExperimentAllocations)
+	}
+	return nil
 }
 
 // validateAllocationWeights enforces that each --allocations JSON weight is a whole-number percentage between 1 and 100.

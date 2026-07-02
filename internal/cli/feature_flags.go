@@ -111,11 +111,11 @@ func listFeatureFlagsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your feature flags",
-		Long:    "List all feature flags. To create one, run: `auth0 feature-flags create`.",
-		Example: `  auth0 feature-flags list
-  auth0 feature-flags ls
-  auth0 feature-flags list --json
-  auth0 feature-flags list --status active`,
+		Long:    "List all feature flags. To create one, run: `auth0 experimentation feature-flags create`.",
+		Example: `  auth0 experimentation feature-flags list
+  auth0 experimentation feature-flags ls
+  auth0 experimentation feature-flags list --json
+  auth0 experimentation feature-flags list --status active`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			req := &management.ListFeatureFlagsRequestParameters{}
 			if inputs.Status != "" {
@@ -176,9 +176,9 @@ func showFeatureFlagCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show a feature flag",
 		Long:  "Display details about a feature flag including its parameters.",
-		Example: `  auth0 feature-flags show
-  auth0 feature-flags show <feature-flag-id>
-  auth0 feature-flags show <feature-flag-id> --json`,
+		Example: `  auth0 experimentation feature-flags show
+  auth0 experimentation feature-flags show <feature-flag-id>
+  auth0 experimentation feature-flags show <feature-flag-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := featureFlagID.Pick(cmd, &inputs.ID, cli.featureFlagPickerOptions); err != nil {
@@ -219,11 +219,11 @@ func createFeatureFlagCmd(cli *cli) *cobra.Command {
 		Args:  cobra.NoArgs,
 		Short: "Create a new feature flag",
 		Long: "Create a new feature flag.\n\n" +
-			"To create interactively, use `auth0 feature-flags create` with no flags.\n\n" +
+			"To create interactively, use `auth0 experimentation feature-flags create` with no flags.\n\n" +
 			"To create non-interactively, supply name and parameters through the flags.",
-		Example: `  auth0 feature-flags create
-  auth0 feature-flags create --name "dark-mode" --parameters '{"enabled":{"type":"boolean","value":false}}'
-  auth0 feature-flags create -n "checkout-flow" -p '{"variant":{"type":"string","value":"control"}}'`,
+		Example: `  auth0 experimentation feature-flags create
+  auth0 experimentation feature-flags create --name "dark-mode" --parameters '{"enabled":{"type":"boolean","value":false}}'
+  auth0 experimentation feature-flags create -n "checkout-flow" -p '{"variant":{"type":"string","value":"control"}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := featureFlagName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -293,12 +293,12 @@ func updateFeatureFlagCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a feature flag",
 		Long: "Update a feature flag.\n\n" +
-			"To update interactively, use `auth0 feature-flags update` with no arguments.\n\n" +
+			"To update interactively, use `auth0 experimentation feature-flags update` with no arguments.\n\n" +
 			"To update non-interactively, supply the feature flag ID and fields to change through the flags.",
-		Example: `  auth0 feature-flags update
-  auth0 feature-flags update <feature-flag-id>
-  auth0 feature-flags update <feature-flag-id> --name "new-name"
-  auth0 feature-flags update <feature-flag-id> --parameters '{"enabled":{"type":"boolean","value":true}}'`,
+		Example: `  auth0 experimentation feature-flags update
+  auth0 experimentation feature-flags update <feature-flag-id>
+  auth0 experimentation feature-flags update <feature-flag-id> --name "new-name"
+  auth0 experimentation feature-flags update <feature-flag-id> --parameters '{"enabled":{"type":"boolean","value":true}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -308,28 +308,62 @@ func updateFeatureFlagCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			if err := featureFlagName.AskU(cmd, &inputs.Name, nil); err != nil {
+			// Read the current feature flag so untouched fields keep their existing
+			// value and only changed fields are sent.
+			var current *management.GetFeatureFlagResponseContent
+			if err := ansi.Waiting(func() (err error) {
+				current, err = cli.apiv2.FeatureFlags.Get(cmd.Context(), inputs.ID)
+				return err
+			}); err != nil {
+				return fmt.Errorf("failed to get feature flag %q: %w", inputs.ID, err)
+			}
+
+			currentName := current.GetName()
+			currentDescription := current.GetDescription()
+
+			if !featureFlagName.IsSet(cmd) {
+				inputs.Name = currentName
+			}
+			if !featureFlagDescription.IsSet(cmd) {
+				inputs.Description = currentDescription
+			}
+
+			if err := featureFlagName.AskU(cmd, &inputs.Name, &currentName); err != nil {
 				return err
 			}
-			if err := featureFlagDescription.AskU(cmd, &inputs.Description, nil); err != nil {
-				return err
-			}
-			if err := featureFlagParameters.AskU(cmd, &inputs.Parameters, nil); err != nil {
+			if err := featureFlagDescription.AskU(cmd, &inputs.Description, &currentDescription); err != nil {
 				return err
 			}
 
+			// Open the editor pre-filled with the current parameters (same as
+			// create), unless the value was supplied via the flag. Keeping the
+			// content unchanged leaves the parameters as-is.
+			currentParameters := marshalToJSON(current.GetParameters())
+			if !featureFlagParameters.IsSet(cmd) {
+				if err := featureFlagParameters.OpenEditorU(
+					cmd,
+					&inputs.Parameters,
+					currentParameters,
+					"feature-flag-params.*.json",
+				); err != nil {
+					return err
+				}
+			}
+
+			// Diff scalar fields against the current flag; parameters are replaced
+			// wholesale only when they actually changed.
 			req := &management.UpdateFeatureFlagRequestContent{}
 			updated := false
 
-			if inputs.Name != "" {
+			if inputs.Name != currentName {
 				req.Name = &inputs.Name
 				updated = true
 			}
-			if inputs.Description != "" {
+			if inputs.Description != currentDescription {
 				req.Description = &inputs.Description
 				updated = true
 			}
-			if inputs.Parameters != "" {
+			if inputs.Parameters != "" && inputs.Parameters != currentParameters {
 				var params management.UpdateFeatureFlagParameters
 				if err := json.Unmarshal([]byte(inputs.Parameters), &params); err != nil {
 					return fmt.Errorf("invalid JSON for --parameters (ensure the value is quoted in your shell): %w", err)
@@ -369,11 +403,11 @@ func deleteFeatureFlagCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"rm"},
 		Short:   "Delete a feature flag",
 		Long: "Delete a feature flag.\n\n" +
-			"To delete interactively, use `auth0 feature-flags delete` with no arguments.\n\n" +
+			"To delete interactively, use `auth0 experimentation feature-flags delete` with no arguments.\n\n" +
 			"To delete non-interactively, supply the feature flag ID and use `--force` to skip confirmation.",
-		Example: `  auth0 feature-flags delete
-  auth0 feature-flags delete <feature-flag-id>
-  auth0 feature-flags delete <feature-flag-id> --force`,
+		Example: `  auth0 experimentation feature-flags delete
+  auth0 experimentation feature-flags delete <feature-flag-id>
+  auth0 experimentation feature-flags delete <feature-flag-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var ids []string
 			if len(args) == 0 {
@@ -449,11 +483,11 @@ func statusFeatureFlagCmd(cli *cli) *cobra.Command {
 		Long: "Transition a feature flag to a new status: active or archived.\n\n" +
 			"  • active   — activate the feature flag (from draft)\n" +
 			"  • archived — archive the feature flag (irreversible)\n\n" +
-			"To set the status interactively, run `auth0 feature-flags status` with no arguments.",
-		Example: `  auth0 feature-flags status
-  auth0 feature-flags status <feature-flag-id>
-  auth0 feature-flags status <feature-flag-id> active
-  auth0 feature-flags status <feature-flag-id> archived`,
+			"To set the status interactively, run `auth0 experimentation feature-flags status` with no arguments.",
+		Example: `  auth0 experimentation feature-flags status
+  auth0 experimentation feature-flags status <feature-flag-id>
+  auth0 experimentation feature-flags status <feature-flag-id> active
+  auth0 experimentation feature-flags status <feature-flag-id> archived`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := resolveStatusTarget(cmd, args, &featureFlagID, cli.featureFlagPickerOptions, &featureFlagStatus, validStatuses, &inputs.ID, &inputs.Status); err != nil {
 				return err
@@ -515,9 +549,9 @@ func listVariationsCmd(cli *cli) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "List variations of a feature flag",
 		Long:    "List all variations for a given feature flag.",
-		Example: `  auth0 feature-flags variations list
-  auth0 feature-flags variations list <feature-flag-id>
-  auth0 feature-flags variations list <feature-flag-id> --json`,
+		Example: `  auth0 experimentation feature-flags variations list
+  auth0 experimentation feature-flags variations list <feature-flag-id>
+  auth0 experimentation feature-flags variations list <feature-flag-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.FeatureFlagID = args[0]
@@ -559,9 +593,9 @@ func showVariationCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(2),
 		Short: "Show a variation",
 		Long:  "Display details about a specific variation.",
-		Example: `  auth0 feature-flags variations show
-  auth0 feature-flags variations show <feature-flag-id> <variation-id>
-  auth0 feature-flags variations show <feature-flag-id> <variation-id> --json`,
+		Example: `  auth0 experimentation feature-flags variations show
+  auth0 experimentation feature-flags variations show <feature-flag-id> <variation-id>
+  auth0 experimentation feature-flags variations show <feature-flag-id> <variation-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) >= 1 {
 				inputs.FeatureFlagID = args[0]
@@ -614,11 +648,11 @@ func createVariationCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Create a new variation",
 		Long: "Create a new variation for a feature flag.\n\n" +
-			"To create interactively, use `auth0 feature-flags variations create` with no flags.\n\n" +
+			"To create interactively, use `auth0 experimentation feature-flags variations create` with no flags.\n\n" +
 			"To create non-interactively, supply the feature flag ID, name, and overrides through the flags.",
-		Example: `  auth0 feature-flags variations create
-  auth0 feature-flags variations create <feature-flag-id>
-  auth0 feature-flags variations create <feature-flag-id> --name "treatment" --overrides '{"color":{"value":"red"}}'`,
+		Example: `  auth0 experimentation feature-flags variations create
+  auth0 experimentation feature-flags variations create <feature-flag-id>
+  auth0 experimentation feature-flags variations create <feature-flag-id> --name "treatment" --overrides '{"color":{"value":"red"}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.FeatureFlagID = args[0]
@@ -697,11 +731,11 @@ func updateVariationCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(2),
 		Short: "Update a variation",
 		Long: "Update a variation.\n\n" +
-			"To update interactively, use `auth0 feature-flags variations update` with no arguments.\n\n" +
+			"To update interactively, use `auth0 experimentation feature-flags variations update` with no arguments.\n\n" +
 			"To update non-interactively, supply the IDs and fields to change through the flags.",
-		Example: `  auth0 feature-flags variations update
-  auth0 feature-flags variations update <feature-flag-id> <variation-id>
-  auth0 feature-flags variations update <feature-flag-id> <variation-id> --name "new-name"`,
+		Example: `  auth0 experimentation feature-flags variations update
+  auth0 experimentation feature-flags variations update <feature-flag-id> <variation-id>
+  auth0 experimentation feature-flags variations update <feature-flag-id> <variation-id> --name "new-name"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.FeatureFlagID = args[0]
@@ -722,28 +756,62 @@ func updateVariationCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			if err := variationName.AskU(cmd, &inputs.Name, nil); err != nil {
+			// Read the current variation so untouched fields keep their existing
+			// value and only changed fields are sent.
+			var current *management.GetVariationResponseContent
+			if err := ansi.Waiting(func() (err error) {
+				current, err = cli.apiv2.Variations.Get(cmd.Context(), inputs.FeatureFlagID, inputs.VariationID)
+				return err
+			}); err != nil {
+				return fmt.Errorf("failed to get variation %q: %w", inputs.VariationID, err)
+			}
+
+			currentName := current.GetName()
+			currentDescription := current.GetDescription()
+
+			if !variationName.IsSet(cmd) {
+				inputs.Name = currentName
+			}
+			if !variationDescription.IsSet(cmd) {
+				inputs.Description = currentDescription
+			}
+
+			if err := variationName.AskU(cmd, &inputs.Name, &currentName); err != nil {
 				return err
 			}
-			if err := variationDescription.AskU(cmd, &inputs.Description, nil); err != nil {
-				return err
-			}
-			if err := variationOverrides.AskU(cmd, &inputs.Overrides, nil); err != nil {
+			if err := variationDescription.AskU(cmd, &inputs.Description, &currentDescription); err != nil {
 				return err
 			}
 
+			// Open the editor pre-filled with the current overrides (same as
+			// create), unless supplied via the flag. Leaving it unchanged keeps
+			// the overrides as-is.
+			currentOverrides := marshalToJSON(current.GetOverrides())
+			if !variationOverrides.IsSet(cmd) {
+				if err := variationOverrides.OpenEditorU(
+					cmd,
+					&inputs.Overrides,
+					currentOverrides,
+					"variation-overrides.*.json",
+				); err != nil {
+					return err
+				}
+			}
+
+			// Diff scalar fields against the current variation; overrides are
+			// replaced wholesale only when they actually changed.
 			req := &management.UpdateVariationRequestContent{}
 			updated := false
 
-			if inputs.Name != "" {
+			if inputs.Name != currentName {
 				req.Name = &inputs.Name
 				updated = true
 			}
-			if inputs.Description != "" {
+			if inputs.Description != currentDescription {
 				req.Description = &inputs.Description
 				updated = true
 			}
-			if inputs.Overrides != "" {
+			if inputs.Overrides != "" && inputs.Overrides != currentOverrides {
 				var overrides management.UpdateVariationOverridesMap
 				if err := json.Unmarshal([]byte(inputs.Overrides), &overrides); err != nil {
 					return fmt.Errorf("invalid JSON for --overrides (ensure the value is quoted in your shell): %w", err)
@@ -788,10 +856,10 @@ func deleteVariationCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"rm"},
 		Short:   "Delete a variation",
 		Long: "Delete a variation.\n\n" +
-			"To delete interactively, use `auth0 feature-flags variations delete` with no arguments.",
-		Example: `  auth0 feature-flags variations delete
-  auth0 feature-flags variations delete <feature-flag-id> <variation-id>
-  auth0 feature-flags variations delete <feature-flag-id> <variation-id> --force`,
+			"To delete interactively, use `auth0 experimentation feature-flags variations delete` with no arguments.",
+		Example: `  auth0 experimentation feature-flags variations delete
+  auth0 experimentation feature-flags variations delete <feature-flag-id> <variation-id>
+  auth0 experimentation feature-flags variations delete <feature-flag-id> <variation-id> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) >= 1 {
 				inputs.FeatureFlagID = args[0]
@@ -849,7 +917,7 @@ func (c *cli) featureFlagPickerOptions(ctx context.Context) (pickerOptions, erro
 	}
 
 	if len(opts) == 0 {
-		return nil, errors.New("no feature flags available. Create one by running: `auth0 feature-flags create`")
+		return nil, errors.New("no feature flags available. Create one by running: `auth0 experimentation feature-flags create`")
 	}
 
 	return opts, nil
@@ -869,11 +937,25 @@ func (c *cli) variationPickerOptions(featureFlagID string) func(ctx context.Cont
 		}
 
 		if len(opts) == 0 {
-			return nil, fmt.Errorf("no variations for feature flag %q. Create one by running: `auth0 feature-flags variations create %s`", featureFlagID, featureFlagID)
+			return nil, fmt.Errorf("no variations for feature flag %q. Create one by running: `auth0 experimentation feature-flags variations create %s`", featureFlagID, featureFlagID)
 		}
 
 		return opts, nil
 	}
+}
+
+// marshalToJSON renders a value as a compact JSON string for pre-filling an
+// editor on update. It returns an empty string if the value is nil or can't be
+// marshaled, so the editor simply opens blank.
+func marshalToJSON(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return ""
+	}
+	return string(b)
 }
 
 // Editor hints.

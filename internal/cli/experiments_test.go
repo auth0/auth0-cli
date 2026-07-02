@@ -3,8 +3,10 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
+	"strconv"
 	"testing"
 
 	"github.com/auth0/go-auth0/v2/management"
@@ -318,8 +320,28 @@ func TestExperimentsCreateCmd(t *testing.T) {
 	}
 }
 
+// overLimitAllocationsJSON builds a valid JSON array of 21 allocations, one
+// past the maximum an experiment accepts, for testing the count validation.
+func overLimitAllocationsJSON(t *testing.T) string {
+	t.Helper()
+	var items []*management.AllocationRequestItem
+	for i := range maxExperimentAllocations + 1 {
+		w := 5.0
+		items = append(items, &management.AllocationRequestItem{
+			VariationID: "v" + strconv.Itoa(i),
+			Weight:      &w,
+		})
+	}
+	b, err := json.Marshal(items)
+	assert.NoError(t, err)
+	return string(b)
+}
+
 func TestExperimentsUpdateCmd(t *testing.T) {
 	const expID = "exp_abc123"
+
+	// The mocked Get returns this name; update cases diff against it.
+	const currentName = "old-name"
 
 	tests := []struct {
 		name          string
@@ -344,6 +366,21 @@ func TestExperimentsUpdateCmd(t *testing.T) {
 			expectedError: "invalid JSON for --allocations",
 		},
 		{
+			name:          "it returns an error when --allocations is empty",
+			args:          []string{expID, "--allocations", "[]"},
+			expectedError: "--allocations must contain at least one variation",
+		},
+		{
+			name:          "it returns an error when --allocations exceeds the maximum",
+			args:          []string{expID, "--allocations", overLimitAllocationsJSON(t)},
+			expectedError: "an experiment accepts at most 20",
+		},
+		{
+			name:          "it returns an error when an allocation weight is out of range",
+			args:          []string{expID, "--allocations", `[{"variation_id":"v1","weight":150,"is_control":true}]`},
+			expectedError: "must be a whole number between 1 and 100",
+		},
+		{
 			name:          "it returns an error if the API call fails",
 			args:          []string{expID, "--name", "new-name"},
 			apiError:      errors.New("500 Internal Server Error"),
@@ -357,6 +394,11 @@ func TestExperimentsUpdateCmd(t *testing.T) {
 			defer ctrl.Finish()
 
 			experimentAPI := mock.NewMockExperimentsAPI(ctrl)
+			// Update always reads the current experiment first to pre-fill values
+			// and compute the diff.
+			experimentAPI.EXPECT().
+				Get(gomock.Any(), expID).
+				Return(&management.GetExperimentResponseContent{ID: expID, Name: currentName}, nil)
 			if test.apiResponse != nil || test.apiError != nil {
 				experimentAPI.EXPECT().
 					Update(gomock.Any(), expID, gomock.Any()).
@@ -382,6 +424,49 @@ func TestExperimentsUpdateCmd(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExperimentsUpdateCmdRendersFullResponse(t *testing.T) {
+	const expID = "exp_abc123"
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	experimentAPI := mock.NewMockExperimentsAPI(ctrl)
+	experimentAPI.EXPECT().
+		Get(gomock.Any(), expID).
+		Return(&management.GetExperimentResponseContent{ID: expID, Name: "old-name"}, nil)
+	experimentAPI.EXPECT().
+		Update(gomock.Any(), expID, gomock.Any()).
+		Return(&management.UpdateExperimentResponseContent{
+			ID:                 expID,
+			Name:               "new-name",
+			Status:             management.ExperimentStatusEnumDraft,
+			FeatureFlagID:      "ff_001",
+			AuthenticationFlow: "login",
+			AllocationStrategy: management.AllocationStrategyEnumPercentage,
+		}, nil)
+
+	stdout := &bytes.Buffer{}
+	cli := &cli{
+		renderer: &display.Renderer{
+			MessageWriter: io.Discard,
+			ResultWriter:  stdout,
+		},
+		apiv2: &auth0.APIV2{Experiments: experimentAPI},
+	}
+
+	cmd := updateExperimentCmd(cli)
+	cmd.SetArgs([]string{expID, "--name", "new-name"})
+	err := cmd.Execute()
+
+	assert.NoError(t, err)
+	// The update output should include the fields returned by the API, not just
+	// the name/status. This guards against the update view dropping fields.
+	out := stdout.String()
+	assert.Contains(t, out, "ff_001")
+	assert.Contains(t, out, "login")
+	assert.Contains(t, out, "percentage")
 }
 
 func TestExperimentsDeleteCmd(t *testing.T) {

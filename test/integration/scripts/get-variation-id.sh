@@ -9,7 +9,7 @@ fi
 # Ensure the feature flag exists first.
 FF_ID=$(./test/integration/scripts/get-feature-flag-id.sh)
 
-variation=$( auth0 feature-flags variations create "$FF_ID" \
+variation=$( auth0 experimentation feature-flags variations create "$FF_ID" \
   -n "integration-test-control" \
   -o '{"color":{"value":"blue"}}' \
   --json --no-input )

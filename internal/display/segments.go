@@ -93,7 +93,7 @@ func makeSegmentViewFromGet(s *management.GetSegmentResponseContent) *segmentVie
 func (r *Renderer) SegmentList(segments []*management.Segment) {
 	r.Heading("segments")
 	if len(segments) == 0 {
-		r.EmptyState("segments", "Use 'auth0 segments create' to add one")
+		r.EmptyState("segments", "Use 'auth0 experimentation segments create' to add one")
 		return
 	}
 	var res []View
@@ -122,19 +122,21 @@ func (r *Renderer) SegmentCreate(s *management.CreateSegmentResponseContent) err
 	}
 	r.Result(view)
 	r.Newline()
-	r.Infof("To use this segment in an experiment, run: auth0 experiments create")
+	r.Infof("To use this segment in an experiment, run: auth0 experimentation experiments create")
 	return nil
 }
 
 func (r *Renderer) SegmentUpdate(s *management.UpdateSegmentResponseContent) error {
 	r.Heading("segment updated")
 	view := &segmentView{
-		ID:        s.GetID(),
-		Name:      s.GetName(),
-		Type:      strings.ToLower(string(s.GetType())),
-		Rules:     formatRules(s.GetRules()),
-		UpdatedAt: timeAgo(s.GetUpdatedAt()),
-		raw:       s,
+		ID:          s.GetID(),
+		Name:        s.GetName(),
+		Description: s.GetDescription(),
+		Type:        strings.ToLower(string(s.GetType())),
+		Rules:       formatRules(s.GetRules()),
+		CreatedAt:   timeAgo(s.GetCreatedAt()),
+		UpdatedAt:   timeAgo(s.GetUpdatedAt()),
+		raw:         s,
 	}
 	r.Result(view)
 	return nil

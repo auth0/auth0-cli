@@ -296,6 +296,10 @@ func TestFeatureFlagsUpdateCmd(t *testing.T) {
 			defer ctrl.Finish()
 
 			featureFlagAPI := mock.NewMockFeatureFlagsAPI(ctrl)
+			// Update reads the current flag first to pre-fill values and diff.
+			featureFlagAPI.EXPECT().
+				Get(gomock.Any(), flagID).
+				Return(&management.GetFeatureFlagResponseContent{ID: flagID, Name: "old-name"}, nil)
 			if test.apiResponse != nil || test.apiError != nil {
 				featureFlagAPI.EXPECT().
 					Update(gomock.Any(), flagID, gomock.Any()).
@@ -321,6 +325,80 @@ func TestFeatureFlagsUpdateCmd(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFeatureFlagsUpdateCmdRendersFullResponse(t *testing.T) {
+	const flagID = "ff_abc123"
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	featureFlagAPI := mock.NewMockFeatureFlagsAPI(ctrl)
+	featureFlagAPI.EXPECT().
+		Get(gomock.Any(), flagID).
+		Return(&management.GetFeatureFlagResponseContent{ID: flagID, Name: "old-name"}, nil)
+	featureFlagAPI.EXPECT().
+		Update(gomock.Any(), flagID, gomock.Any()).
+		Return(&management.UpdateFeatureFlagResponseContent{
+			ID:     flagID,
+			Name:   "new-name",
+			Type:   management.FeatureFlagTypeEnumSelf,
+			Status: management.FeatureFlagStatusEnumDraft,
+		}, nil)
+
+	stdout := &bytes.Buffer{}
+	cli := &cli{
+		renderer: &display.Renderer{
+			MessageWriter: io.Discard,
+			ResultWriter:  stdout,
+		},
+		apiv2: &auth0.APIV2{FeatureFlags: featureFlagAPI},
+	}
+
+	cmd := updateFeatureFlagCmd(cli)
+	cmd.SetArgs([]string{flagID, "--name", "new-name"})
+	err := cmd.Execute()
+
+	assert.NoError(t, err)
+	out := stdout.String()
+	assert.Contains(t, out, "new-name")
+	assert.Contains(t, out, "self")
+}
+
+func TestFeatureFlagsUpdateCmdSkipsUnchangedParameters(t *testing.T) {
+	const flagID = "ff_abc123"
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// Build a flag with parameters, then pass --parameters equal to the current
+	// value. The command should diff it out and NOT send parameters, but since
+	// nothing else changed it should report "nothing to update".
+	params := management.FeatureFlagConfigParams{
+		"color": &management.FeatureFlagConfigParam{Type: "string", Value: "blue"},
+	}
+	current := &management.GetFeatureFlagResponseContent{ID: flagID, Name: "old-name", Parameters: &params}
+	currentJSON := marshalToJSON(current.GetParameters())
+
+	featureFlagAPI := mock.NewMockFeatureFlagsAPI(ctrl)
+	featureFlagAPI.EXPECT().
+		Get(gomock.Any(), flagID).
+		Return(current, nil)
+	// Update must NOT be called — no EXPECT() for it.
+
+	cli := &cli{
+		renderer: &display.Renderer{
+			MessageWriter: io.Discard,
+			ResultWriter:  io.Discard,
+		},
+		apiv2: &auth0.APIV2{FeatureFlags: featureFlagAPI},
+	}
+
+	cmd := updateFeatureFlagCmd(cli)
+	cmd.SetArgs([]string{flagID, "--parameters", currentJSON})
+	err := cmd.Execute()
+
+	assert.ErrorContains(t, err, "nothing to update")
 }
 
 func TestFeatureFlagsDeleteCmd(t *testing.T) {
@@ -823,6 +901,10 @@ func TestVariationsUpdateCmd(t *testing.T) {
 			defer ctrl.Finish()
 
 			variationsAPI := mock.NewMockVariationsAPI(ctrl)
+			// Update reads the current variation first to pre-fill values and diff.
+			variationsAPI.EXPECT().
+				Get(gomock.Any(), flagID, varID).
+				Return(&management.GetVariationResponseContent{ID: varID, Name: "old-treatment"}, nil)
 			if test.apiResponse != nil || test.apiError != nil {
 				variationsAPI.EXPECT().
 					Update(gomock.Any(), flagID, varID, gomock.Any()).
@@ -848,4 +930,43 @@ func TestVariationsUpdateCmd(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestVariationsUpdateCmdRendersFullResponse(t *testing.T) {
+	const flagID = "ff_abc123"
+	const varID = "vid_001"
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	variationsAPI := mock.NewMockVariationsAPI(ctrl)
+	variationsAPI.EXPECT().
+		Get(gomock.Any(), flagID, varID).
+		Return(&management.GetVariationResponseContent{ID: varID, Name: "old-treatment"}, nil)
+	variationsAPI.EXPECT().
+		Update(gomock.Any(), flagID, varID, gomock.Any()).
+		Return(&management.UpdateVariationResponseContent{
+			ID:            varID,
+			FeatureFlagID: flagID,
+			Name:          "new-treatment",
+		}, nil)
+
+	stdout := &bytes.Buffer{}
+	cli := &cli{
+		renderer: &display.Renderer{
+			MessageWriter: io.Discard,
+			ResultWriter:  stdout,
+		},
+		apiv2: &auth0.APIV2{Variations: variationsAPI},
+	}
+
+	cmd := updateVariationCmd(cli)
+	cmd.SetArgs([]string{flagID, varID, "--name", "new-treatment"})
+	err := cmd.Execute()
+
+	assert.NoError(t, err)
+	out := stdout.String()
+	assert.Contains(t, out, "new-treatment")
+	// FeatureFlagID should be rendered on the update view.
+	assert.Contains(t, out, flagID)
 }
