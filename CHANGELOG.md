@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v1.33.0-beta.0](https://github.com/auth0/auth0-cli/tree/v1.33.0-beta.0) (July 02, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.32.0...v1.33.0-beta.0)
+
+### Added
+- Add `auth0 experimentation` namespace grouping feature flags, segments, and experiments (Beta) [#1575]
+- Add support to manage feature flags in `auth0 experimentation feature-flags` (create, list, show, update, status, delete) (Beta) [#1575]
+- Add support to manage feature flag variations in `auth0 experimentation feature-flags variations` (create, list, show, update, delete) (Beta) [#1575]
+- Add support to manage user segments in `auth0 experimentation segments` (create, list, show, update, delete) (Beta) [#1575]
+- Add support to run A/B tests in `auth0 experimentation experiments` (create, list, show, update, status, validate, delete) (Beta) [#1575]
+
+
 # [v1.32.0](https://github.com/auth0/auth0-cli/tree/v1.32.0) (June 23, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.31.0...v1.32.0)
@@ -753,7 +765,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.32.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.33.0-beta.0...HEAD
+[#1575]: https://github.com/auth0/auth0-cli/pull/1575
 [#1551]: https://github.com/auth0/auth0-cli/pull/1551
 [#1549]: https://github.com/auth0/auth0-cli/pull/1549
 [#1548]: https://github.com/auth0/auth0-cli/pull/1548
