@@ -43,7 +43,6 @@ func initializeManagementClientV2(tenantDomain string, accessToken string) (*man
 		// TODO: confirm this assumption, or check if this needs to be excluded like terraform provider.
 		option.WithMaxAttempts(1),
 		option.WithHTTPClient(customClientWithRetries()),
-		option.WithDebug(true),
 	)
 	return client, err
 }

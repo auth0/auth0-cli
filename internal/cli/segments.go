@@ -440,10 +440,7 @@ func (c *cli) segmentRulesEditorHint() {
 	c.renderer.Infof(`Example: [{"match":{"domain":{"ends_with":["example.com"]}}}]`)
 }
 
-// parseSegmentRules unmarshals the raw --rules JSON into SDK rules and validates
-// that every attribute and condition is one the API recognizes. The SDK silently
-// drops unknown keys on unmarshal, so without this a typo like {"match":{"contains":[...]}}
-// would be accepted locally and only fail server-side with an opaque error.
+// parseSegmentRules decodes --rules and validates attributes/conditions early because SDK unmarshal drops unknown keys.
 func parseSegmentRules(raw string) ([]*management.SegmentRule, error) {
 	var rules []*management.SegmentRule
 	if err := json.Unmarshal([]byte(raw), &rules); err != nil {
