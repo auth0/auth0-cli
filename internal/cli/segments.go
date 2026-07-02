@@ -5,14 +5,62 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
+	"strings"
 
-	management "github.com/auth0/go-auth0/v2/management"
+	"github.com/auth0/go-auth0/v2/management"
 	managementcore "github.com/auth0/go-auth0/v2/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
+
+// segmentAttributes and segmentConditions are derived at startup from the SDK
+// types via reflection, so they stay in sync with go-auth0 automatically
+// instead of needing manual updates whenever the API adds a field. They are the
+// single source of truth for both the help text and the client-side validation.
+var (
+	// Attributes are the JSON field names of SegmentMatchConditions
+	// (client_id, domain, country, ...).
+	segmentAttributes = jsonFieldNames(reflect.TypeOf(management.SegmentMatchConditions{}))
+
+	// Conditions are the JSON field names of the expression structs the SDK
+	// unions over (contains, starts_with, ends_with, exists).
+	segmentConditions = jsonFieldNames(
+		reflect.TypeOf(management.SegmentContainsExpression{}),
+		reflect.TypeOf(management.SegmentStartsWithExpression{}),
+		reflect.TypeOf(management.SegmentEndsWithExpression{}),
+		reflect.TypeOf(management.SegmentExistsExpression{}),
+	)
+
+	segmentRulesHelp = "Rules for matching users, as a JSON array. Each rule has a `match` and/or `not_match` object that maps an attribute to a condition.\n" +
+		"Attributes: " + strings.Join(segmentAttributes, ", ") + ".\n" +
+		"Conditions: " + strings.Join(segmentConditions, ", ") + `, or a plain list ["a","b"] for an exact match.` + "\n" +
+		`Example: '[{"match":{"domain":{"ends_with":["example.com"]}}}]'`
+)
+
+// jsonFieldNames returns the JSON tag names of the exported fields of the given
+// struct types, in declaration order, skipping fields tagged "-" or without a
+// tag. It is used to derive the set of valid segment attributes and conditions
+// directly from the SDK types.
+func jsonFieldNames(types ...reflect.Type) []string {
+	var names []string
+	for _, t := range types {
+		for i := 0; i < t.NumField(); i++ {
+			tag := t.Field(i).Tag.Get("json")
+			if tag == "" || tag == "-" {
+				continue
+			}
+			name := strings.Split(tag, ",")[0]
+			if name == "" {
+				continue
+			}
+			names = append(names, name)
+		}
+	}
+	return names
+}
 
 var (
 	segmentID = Argument{
@@ -39,7 +87,7 @@ var (
 		Name:       "Rules",
 		LongForm:   "rules",
 		ShortForm:  "r",
-		Help:       `Rules for matching users. JSON array. Example: '[{"match":{"contains":["@example.com"]}}]'`,
+		Help:       segmentRulesHelp,
 		IsRequired: true,
 	}
 )
@@ -166,8 +214,10 @@ func createSegmentCmd(cli *cli) *cobra.Command {
 			"To create interactively, use `auth0 segments create` with no flags.\n\n" +
 			"To create non-interactively, supply name and rules through the flags.",
 		Example: `  auth0 segments create
-  auth0 segments create --name "Beta Users" --rules '[{"match":{"contains":["@beta.example.com"]}}]'
-  auth0 segments create -n "Internal" -r '[{"match":{"ends_with":["@mycompany.com"]}}]'`,
+  auth0 segments create --name "Beta Users" --rules '[{"match":{"domain":{"contains":["beta.example.com"]}}}]'
+  auth0 segments create -n "Internal" -r '[{"match":{"domain":{"ends_with":["mycompany.com"]}}}]'
+  auth0 segments create -n "US Chrome" -r '[{"match":{"country":["US"],"browser":{"contains":["Chrome"]}}}]'
+  auth0 segments create -n "External non-US" -r '[{"match":{"domain":{"ends_with":["example.com"]}},"not_match":{"country":["US"]}}]'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := segmentName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -180,7 +230,7 @@ func createSegmentCmd(cli *cli) *cobra.Command {
 			if err := segmentRules.OpenEditor(
 				cmd,
 				&inputs.Rules,
-				`[{"match":{"contains":["@example.com"]}}]`,
+				`[{"match":{"domain":{"ends_with":["example.com"]}}}]`,
 				"segment.*.json",
 				cli.segmentRulesEditorHint,
 			); err != nil {
@@ -188,11 +238,11 @@ func createSegmentCmd(cli *cli) *cobra.Command {
 			}
 
 			if inputs.Rules == "" {
-				return fmt.Errorf("--rules is required (e.g. --rules '[{\"match\":{\"contains\":[\"@example.com\"]}}]')")
+				return fmt.Errorf("--rules is required (e.g. --rules '[{\"match\":{\"domain\":{\"ends_with\":[\"example.com\"]}}}]')")
 			}
-			var rules []*management.SegmentRule
-			if err := json.Unmarshal([]byte(inputs.Rules), &rules); err != nil {
-				return fmt.Errorf("invalid JSON for --rules (ensure the value is quoted in your shell): %w", err)
+			rules, err := parseSegmentRules(inputs.Rules)
+			if err != nil {
+				return err
 			}
 
 			req := &management.CreateSegmentRequestContent{
@@ -242,7 +292,7 @@ func updateSegmentCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 segments update
   auth0 segments update <segment-id>
   auth0 segments update <segment-id> --name "New Name"
-  auth0 segments update <segment-id> --rules '[{"match":{"contains":["@newdomain.com"]}}]'`,
+  auth0 segments update <segment-id> --rules '[{"match":{"domain":{"contains":["newdomain.com"]}}}]'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -284,9 +334,9 @@ func updateSegmentCmd(cli *cli) *cobra.Command {
 				updated = true
 			}
 			if inputs.Rules != "" {
-				var rules []*management.SegmentRule
-				if err := json.Unmarshal([]byte(inputs.Rules), &rules); err != nil {
-					return fmt.Errorf("invalid JSON for --rules (ensure the value is quoted in your shell): %w", err)
+				rules, err := parseSegmentRules(inputs.Rules)
+				if err != nil {
+					return err
 				}
 				req.Rules = rules
 				updated = true
@@ -384,6 +434,63 @@ func (c *cli) segmentPickerOptions(ctx context.Context) (pickerOptions, error) {
 }
 
 func (c *cli) segmentRulesEditorHint() {
-	c.renderer.Infof("Enter the segment rules as a JSON array. Each rule has a `match` and/or `not_match` block.")
-	c.renderer.Infof(`Example: [{"match":{"contains":["@example.com"]}}]`)
+	c.renderer.Infof("Enter the segment rules as a JSON array. Each rule has a `match` and/or `not_match` object mapping an attribute to a condition.")
+	c.renderer.Infof("Attributes: %s.", strings.Join(segmentAttributes, ", "))
+	c.renderer.Infof(`Conditions: %s, or a plain list ["a","b"] for an exact match.`, strings.Join(segmentConditions, ", "))
+	c.renderer.Infof(`Example: [{"match":{"domain":{"ends_with":["example.com"]}}}]`)
+}
+
+// parseSegmentRules unmarshals the raw --rules JSON into SDK rules and validates
+// that every attribute and condition is one the API recognizes. The SDK silently
+// drops unknown keys on unmarshal, so without this a typo like {"match":{"contains":[...]}}
+// would be accepted locally and only fail server-side with an opaque error.
+func parseSegmentRules(raw string) ([]*management.SegmentRule, error) {
+	var rules []*management.SegmentRule
+	if err := json.Unmarshal([]byte(raw), &rules); err != nil {
+		return nil, fmt.Errorf("invalid JSON for --rules (ensure the value is quoted in your shell): %w", err)
+	}
+
+	// Re-decode as a generic structure so we can inspect the keys the user
+	// actually wrote, which the typed unmarshal above discards.
+	var generic []map[string]map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &generic); err != nil {
+		return nil, fmt.Errorf("--rules must be a JSON array of rule objects: %w", err)
+	}
+
+	attrSet := sliceToSet(segmentAttributes)
+	condSet := sliceToSet(segmentConditions)
+
+	for i, rule := range generic {
+		for block, conditions := range rule {
+			if block != "match" && block != "not_match" {
+				return nil, fmt.Errorf("rule[%d].%s: unknown key — each rule may only have \"match\" and/or \"not_match\"", i, block)
+			}
+			for attr, expr := range conditions {
+				if !attrSet[attr] {
+					return nil, fmt.Errorf("rule[%d].%s.%s: unknown attribute — valid attributes are: %s", i, block, attr, strings.Join(segmentAttributes, ", "))
+				}
+				// A bare list ["a","b"] is a valid exact-match condition; only
+				// object conditions carry an operator to check.
+				var opObj map[string]json.RawMessage
+				if err := json.Unmarshal(expr, &opObj); err != nil {
+					continue
+				}
+				for op := range opObj {
+					if !condSet[op] {
+						return nil, fmt.Errorf("rule[%d].%s.%s.%s: unknown condition — valid conditions are: %s, or a plain list for an exact match", i, block, attr, op, strings.Join(segmentConditions, ", "))
+					}
+				}
+			}
+		}
+	}
+
+	return rules, nil
+}
+
+func sliceToSet(items []string) map[string]bool {
+	set := make(map[string]bool, len(items))
+	for _, item := range items {
+		set[item] = true
+	}
+	return set
 }

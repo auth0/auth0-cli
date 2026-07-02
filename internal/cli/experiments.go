@@ -634,12 +634,10 @@ func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID st
 	for i, v := range variations.GetVariations() {
 		c.renderer.Infof("Variation %d/%d: %s %s", i+1, len(variations.GetVariations()), v.GetName(), ansi.Faint("("+v.GetID()+")"))
 
-		isControl := i == 0
-		isControlStr := "false"
-		if isControl {
-			isControlStr = "true (first variation is control by default)"
+		var isControl bool
+		if err := prompt.AskBool("Is control", &isControl, false); err != nil {
+			return nil, err
 		}
-		c.renderer.Detailf("Is control: %s", isControlStr)
 
 		alloc := &management.AllocationRequestItem{
 			VariationID: v.GetID(),
@@ -663,9 +661,6 @@ func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID st
 			weightInt, err := strconv.Atoi(weightStr)
 			if err != nil {
 				return nil, fmt.Errorf("invalid weight %q: must be a whole number", weightStr)
-			}
-			if weightInt < 1 || weightInt > 100 {
-				return nil, fmt.Errorf("invalid weight %d: must be between 1 and 100", weightInt)
 			}
 			weight := float64(weightInt)
 			alloc.Weight = &weight
@@ -698,11 +693,15 @@ func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID st
 	return allocations, nil
 }
 
-// validateAllocationWeights enforces that each --allocations JSON weight is a percentage between 1 and 100.
+// validateAllocationWeights enforces that each --allocations JSON weight is a whole-number percentage between 1 and 100.
 func validateAllocationWeights(allocations []*management.AllocationRequestItem) error {
 	for _, a := range allocations {
-		if a.Weight != nil && (*a.Weight < 1 || *a.Weight > 100) {
-			return fmt.Errorf("invalid weight %g: must be between 1 and 100", *a.Weight)
+		if a.Weight == nil {
+			continue
+		}
+		w := *a.Weight
+		if w != float64(int(w)) || w < 1 || w > 100 {
+			return fmt.Errorf("invalid weight %g: must be a whole number between 1 and 100", w)
 		}
 	}
 	return nil

@@ -20,8 +20,10 @@ auth0 segments create [flags]
 
 ```
   auth0 segments create
-  auth0 segments create --name "Beta Users" --rules '[{"match":{"contains":["@beta.example.com"]}}]'
-  auth0 segments create -n "Internal" -r '[{"match":{"ends_with":["@mycompany.com"]}}]'
+  auth0 segments create --name "Beta Users" --rules '[{"match":{"domain":{"contains":["beta.example.com"]}}}]'
+  auth0 segments create -n "Internal" -r '[{"match":{"domain":{"ends_with":["mycompany.com"]}}}]'
+  auth0 segments create -n "US Chrome" -r '[{"match":{"country":["US"],"browser":{"contains":["Chrome"]}}}]'
+  auth0 segments create -n "External non-US" -r '[{"match":{"domain":{"ends_with":["example.com"]}},"not_match":{"country":["US"]}}]'
 ```
 
 
@@ -32,7 +34,10 @@ auth0 segments create [flags]
       --json                 Output in json format.
       --json-compact         Output in compact json format.
   -n, --name string          Name of the segment.
-  -r, --rules string         Rules for matching users. JSON array. Example: '[{"match":{"contains":["@example.com"]}}]'
+  -r, --rules match          Rules for matching users, as a JSON array. Each rule has a match and/or `not_match` object that maps an attribute to a condition.
+                             Attributes: client_id, connection, connection_type, organization_id, domain, device_type, browser, platform, user_agent, country, region.
+                             Conditions: contains, starts_with, ends_with, exists, or a plain list ["a","b"] for an exact match.
+                             Example: '[{"match":{"domain":{"ends_with":["example.com"]}}}]'
 ```
 
 

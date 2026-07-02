@@ -254,7 +254,19 @@ func TestExperimentsCreateCmd(t *testing.T) {
 				"--assignment-config", `{"subject":"device"}`,
 				"--allocations", `[{"variation_id":"vid_001","weight":0,"is_control":true}]`,
 			},
-			expectedError: "must be between 1 and 100",
+			expectedError: "must be a whole number between 1 and 100",
+		},
+		{
+			name: "it returns an error when --allocations weight is fractional",
+			args: []string{
+				"--name", "button-color",
+				"--feature-flag-id", "ff_001",
+				"--authentication-flow", "login",
+				"--allocation-strategy", "percentage",
+				"--assignment-config", `{"subject":"device"}`,
+				"--allocations", `[{"variation_id":"vid_001","weight":50.5,"is_control":true}]`,
+			},
+			expectedError: "must be a whole number between 1 and 100",
 		},
 		{
 			name: "it returns an error if the API call fails",

@@ -22,7 +22,7 @@ auth0 segments update [flags]
   auth0 segments update
   auth0 segments update <segment-id>
   auth0 segments update <segment-id> --name "New Name"
-  auth0 segments update <segment-id> --rules '[{"match":{"contains":["@newdomain.com"]}}]'
+  auth0 segments update <segment-id> --rules '[{"match":{"domain":{"contains":["newdomain.com"]}}}]'
 ```
 
 
@@ -33,7 +33,10 @@ auth0 segments update [flags]
       --json                 Output in json format.
       --json-compact         Output in compact json format.
   -n, --name string          Name of the segment.
-  -r, --rules string         Rules for matching users. JSON array. Example: '[{"match":{"contains":["@example.com"]}}]'
+  -r, --rules match          Rules for matching users, as a JSON array. Each rule has a match and/or `not_match` object that maps an attribute to a condition.
+                             Attributes: client_id, connection, connection_type, organization_id, domain, device_type, browser, platform, user_agent, country, region.
+                             Conditions: contains, starts_with, ends_with, exists, or a plain list ["a","b"] for an exact match.
+                             Example: '[{"match":{"domain":{"ends_with":["example.com"]}}}]'
 ```
 
 
