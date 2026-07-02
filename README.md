@@ -126,6 +126,93 @@ go install github.com/auth0/auth0-cli/cmd/auth0@latest
 > [!TIP]
 > Autocompletion instructions for supported platforms available by running `auth0 completion -h`
 
+### Installing the Beta
+
+<details>
+<summary>Want to try pre-release features? Install the beta build here.</summary>
+
+<br>
+
+> [!WARNING]
+> This is a **beta release** of the Auth0 CLI and is not yet generally available. Features and behavior may change before the final release.
+
+> [!WARNING]
+> The beta release does not fully support the interactive **device authorization** login flow (`auth0 login` as a user). We recommend authenticating with **machine-to-machine (M2M)** client credentials while using the beta. See [Authenticating to Your Tenant](#authenticating-to-your-tenant) for details.
+
+#### Linux and macOS
+
+Install via [Homebrew](https://brew.sh/):
+
+```bash
+brew tap auth0/auth0-cli && brew install auth0-beta
+```
+
+> [!NOTE]
+> The `auth0-beta` formula installs the beta build as the `auth0` binary. Run it with `auth0` once installed.
+
+Install via [cURL](https://curl.se/):
+
+1. Download the binary. It will be placed in `./auth0`:
+  ```bash
+  curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/beta/install.sh | sh -s -- -b .
+  ```
+2. Optionally, if you want to be able to run the binary from any directory, make sure you move it to a place in your $PATH:
+  ```bash
+  sudo mv ./auth0 /usr/local/bin
+  ```
+
+#### Windows
+
+Install via [Scoop](https://scoop.sh/):
+
+```bash
+scoop bucket add auth0 https://github.com/auth0/scoop-auth0-cli.git
+scoop install auth0-beta
+```
+
+> [!NOTE]
+> The `auth0-beta` manifest installs the beta build as the `auth0` binary. Run it with `auth0` once installed.
+
+Install via [Powershell](https://learn.microsoft.com/en-us/powershell/):
+
+1. Fetch the latest beta release information with the following commands:
+  ```powershell
+  $latestRelease = (Invoke-RestMethod -Uri "https://api.github.com/repos/auth0/auth0-cli/releases") | Where-Object { $_.prerelease -eq $true } | Select-Object -First 1
+  $latestVersion = $latestRelease.tag_name
+  $version = $latestVersion -replace "^v"
+  ```
+2. Download the binary to the current folder:
+  ```powershell
+  Invoke-WebRequest -Uri "https://github.com/auth0/auth0-cli/releases/download/${latestVersion}/auth0-cli_${version}_Windows_x86_64.zip" -OutFile ".\auth0.zip"
+  Expand-Archive ".\auth0.zip" .\
+  ```
+
+#### Go
+
+Install via [Go](https://go.dev/):
+
+```bash
+# Make sure your $GOPATH/bin is exported on your $PATH
+# to be able to run the binary from any directory.
+
+# Latest beta code (tip of the beta branch):
+go install github.com/auth0/auth0-cli/cmd/auth0@beta
+
+# Or a specific published beta release (reproducible):
+# See https://github.com/auth0/auth0-cli/releases for available tags.
+go install github.com/auth0/auth0-cli/cmd/auth0@v1.33.0-beta.0
+```
+
+> [!NOTE]
+> Do not use `@latest` for the beta. Go's `@latest` skips pre-release versions, so it always resolves to the stable release instead of a beta.
+
+#### Manual
+
+1. Download the appropriate binary for your environment from the [releases page](https://github.com/auth0/auth0-cli/releases) — select the most recent pre-release.
+2. Follow the same extraction and `PATH`/`HOME` setup steps described in the [Manual](#manual) installation section above.
+
+</details>
+
 ## Authenticating to Your Tenant
 
 Authenticating to your Auth0 tenant is required for most functions of the CLI. It can be initiated by running:
