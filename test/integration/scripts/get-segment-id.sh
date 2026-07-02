@@ -6,7 +6,7 @@ if [ -f "$FILE" ]; then
     exit 0
 fi
 
-segment=$( auth0 segments create \
+segment=$( auth0 experimentation segments create \
   -n "integration-test-segment" \
   -r '[{"match":{"connection":["MyConn"]}}]' \
   --json --no-input )

@@ -35,6 +35,22 @@ func AskMultiSelect(message string, response interface{}, options ...string) err
 	return err
 }
 
+// AskMultiSelectWithPageSize is like AskMultiSelect but shows at most pageSize
+// options at a time, letting the user scroll/page through longer lists (e.g.
+// when a feature flag has more variations than fit on screen). A pageSize <= 0
+// falls back to survey's default page size.
+func AskMultiSelectWithPageSize(message string, response interface{}, pageSize int, options ...string) error {
+	prompt := &survey.MultiSelect{
+		Message: message,
+		Options: options,
+	}
+	if pageSize > 0 {
+		prompt.PageSize = pageSize
+	}
+
+	return askOne(prompt, response)
+}
+
 func AskBool(message string, value *bool, defaultValue bool) error {
 	prompt := &survey.Confirm{
 		Message: message,

@@ -11,13 +11,13 @@ FF_ID=$(./test/integration/scripts/get-feature-flag-id.sh)
 CONTROL_ID=$(./test/integration/scripts/get-variation-id.sh)
 
 # Create a second (treatment) variation for the allocation pair.
-treatment=$( auth0 feature-flags variations create "$FF_ID" \
+treatment=$( auth0 experimentation feature-flags variations create "$FF_ID" \
   -n "integration-test-treatment" \
   -o '{"color":{"value":"red"}}' \
   --json --no-input )
 TREATMENT_ID=$(echo "$treatment" | jq -r '.["id"]')
 
-experiment=$( auth0 experiments create \
+experiment=$( auth0 experimentation experiments create \
   -n "integration-test-experiment" \
   -f "$FF_ID" \
   -a "login" \

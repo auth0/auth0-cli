@@ -108,7 +108,7 @@ func makeFeatureFlagViewFromGet(ff *management.GetFeatureFlagResponseContent) *f
 func (r *Renderer) FeatureFlagList(flags []*management.FeatureFlag) {
 	r.Heading("feature flags")
 	if len(flags) == 0 {
-		r.EmptyState("feature flags", "Use 'auth0 feature-flags create' to add one")
+		r.EmptyState("feature flags", "Use 'auth0 experimentation feature-flags create' to add one")
 		return
 	}
 	var res []View
@@ -143,7 +143,7 @@ func (r *Renderer) FeatureFlagCreate(ff *management.CreateFeatureFlagResponseCon
 	}
 	r.Result(view)
 	r.Newline()
-	r.Infof("To manage variations, run: auth0 feature-flags variations list %s", ff.GetID())
+	r.Infof("To manage variations, run: auth0 experimentation feature-flags variations list %s", ff.GetID())
 	return nil
 }
 
@@ -256,7 +256,7 @@ func makeVariationViewFromGet(v *management.GetVariationResponseContent) *variat
 func (r *Renderer) VariationList(variations []*management.Variation) {
 	r.Heading("variations")
 	if len(variations) == 0 {
-		r.EmptyState("variations", "Use 'auth0 feature-flags variations create <feature-flag-id>' to add one")
+		r.EmptyState("variations", "Use 'auth0 experimentation feature-flags variations create <feature-flag-id>' to add one")
 		return
 	}
 	var res []View
@@ -290,13 +290,14 @@ func (r *Renderer) VariationCreate(v *management.CreateVariationResponseContent)
 func (r *Renderer) VariationUpdate(v *management.UpdateVariationResponseContent) error {
 	r.Heading("variation updated")
 	view := &variationView{
-		ID:          v.GetID(),
-		Name:        v.GetName(),
-		Description: v.GetDescription(),
-		Overrides:   formatOverrides(v.GetOverrides()),
-		CreatedAt:   timeAgo(v.GetCreatedAt()),
-		UpdatedAt:   timeAgo(v.GetUpdatedAt()),
-		raw:         v,
+		ID:            v.GetID(),
+		FeatureFlagID: v.GetFeatureFlagID(),
+		Name:          v.GetName(),
+		Description:   v.GetDescription(),
+		Overrides:     formatOverrides(v.GetOverrides()),
+		CreatedAt:     timeAgo(v.GetCreatedAt()),
+		UpdatedAt:     timeAgo(v.GetUpdatedAt()),
+		raw:           v,
 	}
 	r.Result(view)
 	return nil

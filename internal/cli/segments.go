@@ -115,11 +115,11 @@ func listSegmentsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your segments",
-		Long:    "List all segments. To create one, run: `auth0 segments create`.",
-		Example: `  auth0 segments list
-  auth0 segments ls
-  auth0 segments list --json
-  auth0 segments list --csv`,
+		Long:    "List all segments. To create one, run: `auth0 experimentation segments create`.",
+		Example: `  auth0 experimentation segments list
+  auth0 experimentation segments ls
+  auth0 experimentation segments list --json
+  auth0 experimentation segments list --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var allSegments []*management.Segment
 
@@ -168,9 +168,9 @@ func showSegmentCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show a segment",
 		Long:  "Display details about a segment including its rules.",
-		Example: `  auth0 segments show
-  auth0 segments show <segment-id>
-  auth0 segments show <segment-id> --json`,
+		Example: `  auth0 experimentation segments show
+  auth0 experimentation segments show <segment-id>
+  auth0 experimentation segments show <segment-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := segmentID.Pick(cmd, &inputs.ID, cli.segmentPickerOptions); err != nil {
@@ -211,13 +211,13 @@ func createSegmentCmd(cli *cli) *cobra.Command {
 		Args:  cobra.NoArgs,
 		Short: "Create a new segment",
 		Long: "Create a new segment.\n\n" +
-			"To create interactively, use `auth0 segments create` with no flags.\n\n" +
+			"To create interactively, use `auth0 experimentation segments create` with no flags.\n\n" +
 			"To create non-interactively, supply name and rules through the flags.",
-		Example: `  auth0 segments create
-  auth0 segments create --name "Beta Users" --rules '[{"match":{"domain":{"contains":["beta.example.com"]}}}]'
-  auth0 segments create -n "Internal" -r '[{"match":{"domain":{"ends_with":["mycompany.com"]}}}]'
-  auth0 segments create -n "US Chrome" -r '[{"match":{"country":["US"],"browser":{"contains":["Chrome"]}}}]'
-  auth0 segments create -n "External non-US" -r '[{"match":{"domain":{"ends_with":["example.com"]}},"not_match":{"country":["US"]}}]'`,
+		Example: `  auth0 experimentation segments create
+  auth0 experimentation segments create --name "Beta Users" --rules '[{"match":{"domain":{"contains":["beta.example.com"]}}}]'
+  auth0 experimentation segments create -n "Internal" -r '[{"match":{"domain":{"ends_with":["mycompany.com"]}}}]'
+  auth0 experimentation segments create -n "US Chrome" -r '[{"match":{"country":["US"],"browser":{"contains":["Chrome"]}}}]'
+  auth0 experimentation segments create -n "External non-US" -r '[{"match":{"domain":{"ends_with":["example.com"]}},"not_match":{"country":["US"]}}]'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := segmentName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
@@ -287,12 +287,12 @@ func updateSegmentCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a segment",
 		Long: "Update a segment.\n\n" +
-			"To update interactively, use `auth0 segments update` with no arguments.\n\n" +
+			"To update interactively, use `auth0 experimentation segments update` with no arguments.\n\n" +
 			"To update non-interactively, supply the segment ID and fields to change through the flags.",
-		Example: `  auth0 segments update
-  auth0 segments update <segment-id>
-  auth0 segments update <segment-id> --name "New Name"
-  auth0 segments update <segment-id> --rules '[{"match":{"domain":{"contains":["newdomain.com"]}}}]'`,
+		Example: `  auth0 experimentation segments update
+  auth0 experimentation segments update <segment-id>
+  auth0 experimentation segments update <segment-id> --name "New Name"
+  auth0 experimentation segments update <segment-id> --rules '[{"match":{"domain":{"contains":["newdomain.com"]}}}]'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -302,6 +302,8 @@ func updateSegmentCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			// Read the current segment so untouched fields keep their existing
+			// value and only changed fields are sent.
 			var existing *management.GetSegmentResponseContent
 			if err := ansi.Waiting(func() (err error) {
 				existing, err = cli.apiv2.Segments.Get(cmd.Context(), inputs.ID)
@@ -310,30 +312,53 @@ func updateSegmentCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to get segment %q: %w", inputs.ID, err)
 			}
 
-			if err := segmentName.AskU(cmd, &inputs.Name, nil); err != nil {
+			currentName := existing.GetName()
+			currentDescription := existing.GetDescription()
+
+			if !segmentName.IsSet(cmd) {
+				inputs.Name = currentName
+			}
+			if !segmentDescription.IsSet(cmd) {
+				inputs.Description = currentDescription
+			}
+
+			if err := segmentName.AskU(cmd, &inputs.Name, &currentName); err != nil {
 				return err
 			}
 
-			if err := segmentDescription.AskU(cmd, &inputs.Description, nil); err != nil {
+			if err := segmentDescription.AskU(cmd, &inputs.Description, &currentDescription); err != nil {
 				return err
 			}
 
-			if err := segmentRules.AskU(cmd, &inputs.Rules, nil); err != nil {
-				return err
+			// Open the editor pre-filled with the current rules (same as create),
+			// unless supplied via the flag. Leaving it unchanged keeps the rules
+			// as-is.
+			currentRules := marshalToJSON(existing.GetRules())
+			if !segmentRules.IsSet(cmd) {
+				if err := segmentRules.OpenEditorU(
+					cmd,
+					&inputs.Rules,
+					currentRules,
+					"segment.*.json",
+				); err != nil {
+					return err
+				}
 			}
 
+			// Diff scalar fields against the current segment; rules are replaced
+			// wholesale only when they actually changed.
 			req := &management.UpdateSegmentRequestContent{}
 			updated := false
 
-			if inputs.Name != "" {
+			if inputs.Name != currentName {
 				req.Name = &inputs.Name
 				updated = true
 			}
-			if inputs.Description != "" {
+			if inputs.Description != currentDescription {
 				req.Description = &inputs.Description
 				updated = true
 			}
-			if inputs.Rules != "" {
+			if inputs.Rules != "" && inputs.Rules != currentRules {
 				rules, err := parseSegmentRules(inputs.Rules)
 				if err != nil {
 					return err
@@ -345,8 +370,6 @@ func updateSegmentCmd(cli *cli) *cobra.Command {
 			if !updated {
 				return fmt.Errorf("nothing to update — provide at least one flag")
 			}
-
-			_ = existing
 
 			var result *management.UpdateSegmentResponseContent
 			if err := ansi.Waiting(func() (err error) {
@@ -375,13 +398,13 @@ func deleteSegmentCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"rm"},
 		Short:   "Delete a segment",
 		Long: "Delete a segment.\n\n" +
-			"To delete interactively, use `auth0 segments delete` with no arguments.\n\n" +
+			"To delete interactively, use `auth0 experimentation segments delete` with no arguments.\n\n" +
 			"To delete non-interactively, supply the segment ID and use `--force` to skip confirmation.",
-		Example: `  auth0 segments delete
-  auth0 segments rm
-  auth0 segments delete <segment-id>
-  auth0 segments delete <segment-id> --force
-  auth0 segments delete <segment-id> <segment-id2> --force`,
+		Example: `  auth0 experimentation segments delete
+  auth0 experimentation segments rm
+  auth0 experimentation segments delete <segment-id>
+  auth0 experimentation segments delete <segment-id> --force
+  auth0 experimentation segments delete <segment-id> <segment-id2> --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var ids []string
 			if len(args) == 0 {
@@ -427,7 +450,7 @@ func (c *cli) segmentPickerOptions(ctx context.Context) (pickerOptions, error) {
 	}
 
 	if len(opts) == 0 {
-		return nil, errors.New("no segments available. Create one by running: `auth0 segments create`")
+		return nil, errors.New("no segments available. Create one by running: `auth0 experimentation segments create`")
 	}
 
 	return opts, nil
