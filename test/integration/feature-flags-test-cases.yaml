@@ -1,0 +1,189 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  # ─── Feature Flags ────────────────────────────────────────────────────────────
+
+  001 - it successfully lists all feature flags with no data:
+    command: auth0 feature-flags list
+    exit-code: 0
+    stderr:
+      contains:
+        - "Use 'auth0 feature-flags create' to add one"
+
+  002 - it successfully lists all feature flags with no data (json):
+    command: auth0 feature-flags list --json
+    exit-code: 0
+    stdout:
+      exactly: "[]"
+
+  003 - it successfully creates a feature flag and outputs in json:
+    command: auth0 feature-flags create -n "integration-test-flag1" -p '{"color":{"type":"string","value":"blue"}}' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-flag1"
+        status: "draft"
+
+  004 - it successfully creates a second feature flag:
+    command: auth0 feature-flags create -n "integration-test-flag2" -p '{"enabled":{"type":"boolean","value":false}}' --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME        integration-test-flag2"
+        - "STATUS      draft"
+
+  005 - it successfully lists all feature flags with data:
+    command: auth0 feature-flags list
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME
+        - TYPE
+        - STATUS
+        - UPDATED
+
+  006 - given a test feature flag, it successfully shows the feature flag details in json:
+    command: auth0 feature-flags show $(./test/integration/scripts/get-feature-flag-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-flag"
+        status: "draft"
+
+  007 - given a test feature flag, it successfully shows the feature flag details:
+    command: auth0 feature-flags show $(./test/integration/scripts/get-feature-flag-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME        integration-test-flag"
+        - "STATUS      draft"
+
+  008 - given a test feature flag, it successfully updates the name in json:
+    command: auth0 feature-flags update $(./test/integration/scripts/get-feature-flag-id.sh) --name "integration-test-flag-updated" --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-flag-updated"
+
+  009 - given a test feature flag, it successfully updates the name:
+    command: auth0 feature-flags update $(./test/integration/scripts/get-feature-flag-id.sh) --name "integration-test-flag-updated-again" --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME          integration-test-flag-updated-again"
+        - "STATUS        draft"
+
+  010 - given a test feature flag, it successfully updates the description:
+    command: auth0 feature-flags update $(./test/integration/scripts/get-feature-flag-id.sh) --description "updated description" --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        description: "updated description"
+
+  011 - it returns an error when --parameters is invalid json:
+    command: auth0 feature-flags create -n "integration-test-bad" -p 'not-json' --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "invalid JSON for --parameters"
+
+  012 - it returns an error when nothing to update is provided:
+    command: auth0 feature-flags update $(./test/integration/scripts/get-feature-flag-id.sh) --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "nothing to update"
+
+  013 - given a test feature flag, it successfully activates it:
+    command: auth0 feature-flags status $(./test/integration/scripts/get-feature-flag-id.sh) active
+    exit-code: 0
+    stderr:
+      contains:
+        - "is now active"
+
+  # ─── Variations ───────────────────────────────────────────────────────────────
+
+  020 - it successfully lists variations with no data:
+    command: auth0 feature-flags variations list $(./test/integration/scripts/get-feature-flag-id.sh)
+    exit-code: 0
+    stderr:
+      contains:
+        - "Use 'auth0 feature-flags variations create"
+
+  021 - it successfully creates a control variation in json:
+    command: auth0 feature-flags variations create $(./test/integration/scripts/get-feature-flag-id.sh) -n "integration-test-control" -o '{"color":{"value":"blue"}}' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-control"
+
+  022 - it successfully creates a treatment variation:
+    command: auth0 feature-flags variations create $(./test/integration/scripts/get-feature-flag-id.sh) -n "integration-test-treatment" -o '{"color":{"value":"red"}}' --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME          integration-test-treatment"
+
+  023 - it successfully lists variations with data:
+    command: auth0 feature-flags variations list $(./test/integration/scripts/get-feature-flag-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME
+        - OVERRIDES
+        - UPDATED
+
+  024 - given a test variation, it successfully shows the variation details in json:
+    command: auth0 feature-flags variations show $(./test/integration/scripts/get-feature-flag-id.sh) $(./test/integration/scripts/get-variation-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-control"
+
+  025 - given a test variation, it successfully shows the variation details:
+    command: auth0 feature-flags variations show $(./test/integration/scripts/get-feature-flag-id.sh) $(./test/integration/scripts/get-variation-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME          integration-test-control"
+        - "OVERRIDES     color=blue"
+
+  026 - given a test variation, it successfully updates the name in json:
+    command: auth0 feature-flags variations update $(./test/integration/scripts/get-feature-flag-id.sh) $(./test/integration/scripts/get-variation-id.sh) --name "integration-test-control-updated" --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-control-updated"
+
+  027 - given a test variation, it successfully updates the overrides in json:
+    command: auth0 feature-flags variations update $(./test/integration/scripts/get-feature-flag-id.sh) $(./test/integration/scripts/get-variation-id.sh) --overrides '{"color":{"value":"green"}}' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-control-updated"
+
+  028 - it returns an error when --overrides is invalid json:
+    command: auth0 feature-flags variations create $(./test/integration/scripts/get-feature-flag-id.sh) -n "bad-variation" -o 'not-json' --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "invalid JSON for --overrides"
+
+  029 - it returns an error when nothing to update is provided for a variation:
+    command: auth0 feature-flags variations update $(./test/integration/scripts/get-feature-flag-id.sh) $(./test/integration/scripts/get-variation-id.sh) --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "nothing to update"
+
+  030 - given a test variation, it successfully deletes the variation:
+    command: auth0 feature-flags variations delete $(./test/integration/scripts/get-feature-flag-id.sh) $(./test/integration/scripts/get-variation-id.sh) --force
+    exit-code: 0
+
+  # ─── Feature flag cleanup ─────────────────────────────────────────────────────
+
+  # 031 - given a test feature flag, it successfully deletes the feature flag:
+  #   command: auth0 feature-flags delete $(./test/integration/scripts/get-feature-flag-id.sh) --force
+  #   exit-code: 0

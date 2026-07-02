@@ -32,6 +32,9 @@ delete_resources "actions" "integration-test-" "id"
 delete_resources "token-exchange" "integration-test-" "id"
 delete_resources "event-streams" "integration-test-" "id"
 delete_resources "logs streams" "integration-test-" "id"
+delete_resources "experiments" "integration-test-" "id"
+delete_resources "segments" "integration-test-" "id"
+delete_resources "feature-flags" "integration-test-" "id"
 
 auth0 domains delete $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
 
