@@ -5,13 +5,19 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/auth0/auth0-cli?style=flat-square)](https://goreportcard.com/report/github.com/auth0/auth0-cli)
 [![Release](https://img.shields.io/github/v/release/auth0/auth0-cli?logo=auth0&include_prereleases&style=flat-square)](https://github.com/auth0/auth0-cli/releases)
 [![Codecov](https://img.shields.io/codecov/c/github/auth0/auth0-cli?logo=codecov&style=flat-square)](https://codecov.io/gh/auth0/auth0-cli)
-[![License](https://img.shields.io/github/license/auth0/auth0-cli.svg?logo=fossa&style=flat-square)](https://github.com/auth0/auth0-cli/blob/main/LICENSE)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/auth0/auth0-cli/go.yml?branch=main&style=flat-square&logo=github)](https://github.com/auth0/auth0-cli/actions?query=branch%3Amain)
+[![License](https://img.shields.io/github/license/auth0/auth0-cli.svg?logo=fossa&style=flat-square)](https://github.com/auth0/auth0-cli/blob/beta/LICENSE)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/auth0/auth0-cli/go.yml?branch=beta&style=flat-square&logo=github)](https://github.com/auth0/auth0-cli/actions?query=branch%3Abeta)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/auth0/auth0-cli)
 
 </div>
 
 ---
+
+> [!WARNING]
+> This is a **beta release** of the Auth0 CLI and is not yet generally available. Features and behavior may change before the final release.
+
+> [!WARNING]
+> The beta release does not fully support the interactive **device authorization** login flow (`auth0 login` as a user). We recommend authenticating with **machine-to-machine (M2M)** client credentials while using the beta. See [Authenticating to Your Tenant](#authenticating-to-your-tenant) for details.
 
 Build, manage and test your [Auth0](https://auth0.com/) integrations from the command line.
 
@@ -39,14 +45,17 @@ Build, manage and test your [Auth0](https://auth0.com/) integrations from the co
 Install via [Homebrew](https://brew.sh/):
 
 ```bash
-brew tap auth0/auth0-cli && brew install auth0
+brew tap auth0/auth0-cli && brew install auth0-beta
 ```
+
+> [!NOTE]
+> The `auth0-beta` formula installs the beta build as the `auth0` binary. Run it with `auth0` once installed.
 
 Install via [cURL](https://curl.se/):
 
 1. Download the binary. It will be placed in `./auth0`:
   ```bash
-  curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | sh -s -- -b .
+  curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/beta/install.sh | sh -s -- -b .
   ```
 2. Optionally, if you want to be able to run the binary from any directory, make sure you move it to a place in your $PATH:
   ```bash
@@ -61,15 +70,17 @@ Install via [Scoop](https://scoop.sh/):
 
 ```bash
 scoop bucket add auth0 https://github.com/auth0/scoop-auth0-cli.git
-scoop install auth0
+scoop install auth0-beta
 ```
 
+> [!NOTE]
+> The `auth0-beta` manifest installs the beta build as the `auth0` binary. Run it with `auth0` once installed.
 
 Install via [Powershell](https://learn.microsoft.com/en-us/powershell/):
 
-1. Fetch latest release information with the following commands:
+1. Fetch the latest beta release information with the following commands:
   ```powershell
-  $latestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/auth0/auth0-cli/releases/latest"
+  $latestRelease = (Invoke-RestMethod -Uri "https://api.github.com/repos/auth0/auth0-cli/releases") | Where-Object { $_.prerelease -eq $true } | Select-Object -First 1
   $latestVersion = $latestRelease.tag_name
   $version = $latestVersion -replace "^v"
   ```
@@ -91,12 +102,14 @@ Install via [Go](https://go.dev/):
 ```bash
 # Make sure your $GOPATH/bin is exported on your $PATH
 # to be able to run the binary from any directory.
-go install github.com/auth0/auth0-cli/cmd/auth0@latest
+# Replace <beta-tag> with the latest beta release tag (e.g. v1.33.0-beta.1).
+# See https://github.com/auth0/auth0-cli/releases for available tags.
+go install github.com/auth0/auth0-cli/cmd/auth0@<beta-tag>
 ```
 
 ### Manual
 
-1. Download the appropriate binary for your environment from the [latest release](https://github.com/auth0/auth0-cli/releases/latest/)
+1. Download the appropriate binary for your environment from the [releases page](https://github.com/auth0/auth0-cli/releases) — select the most recent pre-release
 2. Extract the archive
    - **macOS**: `$ tar -xf auth0-cli_{version}_Darwin_{architecture}.tar.gz`
    - **Linux**: `$ tar -xf auth0-cli_{version}_Linux_{architecture}.tar.gz`
@@ -138,8 +151,6 @@ There are two ways to authenticate:
 
 - **As a user** - Recommended when invoking on a personal machine or other interactive environment. Facilitated by [device authorization](https://auth0.com/docs/get-started/authentication-and-authorization-flow/device-authorization-flow) flow and cannot be used for private cloud tenants.
 - **As a machine** - Recommended when running on a server or non-interactive environments (ex: CI, authenticating to a **private cloud**).  Facilitated by [client credentials](https://auth0.com/docs/get-started/authentication-and-authorization-flow/client-credentials-flow) flow. Flags available for bypassing interactive shell.
-
-
 
 > **Warning**
 > Authenticating as a user is not supported for **private cloud** tenants. 
@@ -282,7 +293,7 @@ We appreciate feedback and contribution to this repo! Before you get started, pl
 
 - [Auth0's general contribution guidelines](https://github.com/auth0/open-source-template/blob/master/GENERAL-CONTRIBUTING.md)
 - [Auth0's code of conduct guidelines](https://github.com/auth0/open-source-template/blob/master/CODE-OF-CONDUCT.md)
-- [This repo's contribution guide](https://github.com/auth0/auth0-cli/blob/main/CONTRIBUTING.md)
+- [This repo's contribution guide](https://github.com/auth0/auth0-cli/blob/beta/CONTRIBUTING.md)
 
 ### Raise an issue
 
@@ -303,4 +314,4 @@ Please do not report security vulnerabilities on the public GitHub issue tracker
 </p>
 <p align="center">Auth0 is an easy to implement, adaptable authentication and authorization platform. To learn more checkout <a href="https://auth0.com/why-auth0">Why Auth0?</a></p>
 <p align="center">
-This project is licensed under the MIT license. See the <a href="https://github.com/auth0/auth0-cli/blob/main/LICENSE"> LICENSE</a> file for more info.</p>
+This project is licensed under the MIT license. See the <a href="https://github.com/auth0/auth0-cli/blob/beta/LICENSE"> LICENSE</a> file for more info.</p>

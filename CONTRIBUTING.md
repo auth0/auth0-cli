@@ -34,8 +34,8 @@ $ ./out/auth0 --help
 
 This part is not fully fleshed out yet, but here are the steps:
 
-1. Create a command (example: https://github.com/auth0/auth0-cli/blob/main/internal/cli/login.go)
-2. Add the command constructor to the root command: (e.g. somewhere here: https://github.com/auth0/auth0-cli/blob/main/internal/cli/root.go)
+1. Create a command (example: https://github.com/auth0/auth0-cli/blob/beta/internal/cli/login.go)
+2. Add the command constructor to the root command: (e.g. somewhere here: https://github.com/auth0/auth0-cli/blob/beta/internal/cli/root.go)
 
 Test it out by doing:
 
@@ -60,22 +60,23 @@ We use vendoring, so the last step is required.
 > This is only possible if you're a repository maintainer.
 
 The release is driven by a GitHub **workflow** triggered when a new **tag** is **created**. The workflow will run the checks and trigger _Goreleaser_ to:
-- create the Release with the proper description (changelog)
+- create the pre-release with the proper description (changelog)
 - upload the binaries for the different architectures
-- update https://github.com/auth0/homebrew-auth0-cli with the latest binary reference
 
-To release a new version:
+> **Note:** Homebrew and Scoop are not updated for beta releases.
+
+To release a new beta version:
 
 1. pull the latest changes: 
-   - `$ git checkout main`
-   - `$ git pull origin main`
+   - `$ git checkout beta`
+   - `$ git pull origin beta`
 2. check the latest tag: 
    - `$ git fetch`
-   - `$ git tags`
-3. create the **new** tag for the new release. For example, if the latest tag is `v0.1.1` and you want to release a patch version, you should create `v0.1.2`:
-   - `$ git tag v0.1.2`
+   - `$ git tag --list`
+3. create the **new** beta tag. Beta releases use the format `vX.Y.Z-beta.N`. For example, if the latest tag is `v1.32.0-beta.1` and you want the next beta, create `v1.32.0-beta.2`:
+   - `$ git tag v1.32.0-beta.2`
 4. push the new tag: 
-   - `$ git push origin v0.1.2`
+   - `$ git push origin v1.32.0-beta.2`
 
 The rest of the process will take place in the github action: https://github.com/auth0/auth0-cli/actions/workflows/goreleaser.yml.
 Once the workflow finishes, a new release will be available for the newly created tag.
