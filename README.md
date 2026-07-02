@@ -14,7 +14,10 @@
 ---
 
 > [!WARNING]
-> This is a **beta release** of the Auth0 CLI and is not yet generally available. Features and behavior may change before the final release. Installation via Homebrew and Scoop is not supported for beta — use cURL, PowerShell, Go, or Manual installation instead.
+> This is a **beta release** of the Auth0 CLI and is not yet generally available. Features and behavior may change before the final release.
+
+> [!WARNING]
+> The beta release does not fully support the interactive **device authorization** login flow (`auth0 login` as a user). We recommend authenticating with **machine-to-machine (M2M)** client credentials while using the beta. See [Authenticating to Your Tenant](#authenticating-to-your-tenant) for details.
 
 Build, manage and test your [Auth0](https://auth0.com/) integrations from the command line.
 
@@ -39,6 +42,15 @@ Build, manage and test your [Auth0](https://auth0.com/) integrations from the co
 
 ### Linux and macOS
 
+Install via [Homebrew](https://brew.sh/):
+
+```bash
+brew tap auth0/auth0-cli && brew install auth0-beta
+```
+
+> [!NOTE]
+> The `auth0-beta` formula installs the beta build as the `auth0` binary. Run it with `auth0` once installed.
+
 Install via [cURL](https://curl.se/):
 
 1. Download the binary. It will be placed in `./auth0`:
@@ -53,6 +65,16 @@ Install via [cURL](https://curl.se/):
   > On macOS, depending on the state of your current development environment you may have to first create the directory with `sudo mkdir -p /usr/local/bin` in order for the above command to work. Alternatively, you can move it to a directory of your choice and then add that directory to your $PATH instead.
 
 ### Windows
+
+Install via [Scoop](https://scoop.sh/):
+
+```bash
+scoop bucket add auth0 https://github.com/auth0/scoop-auth0-cli.git
+scoop install auth0-beta
+```
+
+> [!NOTE]
+> The `auth0-beta` manifest installs the beta build as the `auth0` binary. Run it with `auth0` once installed.
 
 Install via [Powershell](https://learn.microsoft.com/en-us/powershell/):
 
@@ -129,8 +151,6 @@ There are two ways to authenticate:
 
 - **As a user** - Recommended when invoking on a personal machine or other interactive environment. Facilitated by [device authorization](https://auth0.com/docs/get-started/authentication-and-authorization-flow/device-authorization-flow) flow and cannot be used for private cloud tenants.
 - **As a machine** - Recommended when running on a server or non-interactive environments (ex: CI, authenticating to a **private cloud**).  Facilitated by [client credentials](https://auth0.com/docs/get-started/authentication-and-authorization-flow/client-credentials-flow) flow. Flags available for bypassing interactive shell.
-
-
 
 > **Warning**
 > Authenticating as a user is not supported for **private cloud** tenants. 

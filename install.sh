@@ -301,7 +301,7 @@ github_release() {
     apiurl="https://api.github.com/repos/${owner_repo}/releases"
     json=$(http_copy "$apiurl" "Accept:application/json")
     test -z "$json" && return 1
-    version=$(echo "$json" | tr -s '\n' ' ' | grep -o '"tag_name":"[^"]*","[^"]*":[^,]*,"prerelease":true' | head -1 | sed 's/"tag_name":"//;s/".*//')
+    version=$(echo "$json" | tr -s '\n' ' ' | grep -o '"tag_name": *"[^"]*"[^{]*"prerelease": *true' | head -1 | sed 's/.*"tag_name": *"//;s/".*//')
     if test -z "$version"; then
       log_crit "unable to find a pre-release - see https://github.com/${owner_repo}/releases for available beta releases"
       return 1
@@ -312,7 +312,7 @@ github_release() {
   giturl="https://github.com/${owner_repo}/releases/${version}"
   json=$(http_copy "$giturl" "Accept:application/json")
   test -z "$json" && return 1
-  version=$(echo "$json" | tr -s '\n' ' ' | sed 's/.*"tag_name":"//' | sed 's/".*//')
+  version=$(echo "$json" | tr -s '\n' ' ' | sed 's/.*"tag_name": *"//' | sed 's/".*//')
   test -z "$version" && return 1
   echo "$version"
 }
