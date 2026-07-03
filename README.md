@@ -39,8 +39,15 @@ Build, manage and test your [Auth0](https://auth0.com/) integrations from the co
 Install via [Homebrew](https://brew.sh/):
 
 ```bash
-brew tap auth0/auth0-cli && brew install auth0
+brew install auth0
 ```
+
+> [!NOTE]
+> The CLI is now available in the official Homebrew core, so a custom tap is no longer needed. If you previously installed via the `auth0/auth0-cli` tap, migrate with:
+> ```bash
+> brew uninstall auth0 && brew untap auth0/auth0-cli
+> brew install auth0
+> ```
 
 Install via [cURL](https://curl.se/):
 
@@ -60,10 +67,15 @@ Install via [cURL](https://curl.se/):
 Install via [Scoop](https://scoop.sh/):
 
 ```bash
-scoop bucket add auth0 https://github.com/auth0/scoop-auth0-cli.git
 scoop install auth0
 ```
 
+> [!NOTE]
+> The CLI is now available in the official Scoop `main` bucket (enabled by default), so a custom bucket is no longer needed. If you previously installed from the `auth0/scoop-auth0-cli` bucket, migrate with:
+> ```bash
+> scoop uninstall auth0 && scoop bucket rm auth0
+> scoop install auth0
+> ```
 
 Install via [Powershell](https://learn.microsoft.com/en-us/powershell/):
 
