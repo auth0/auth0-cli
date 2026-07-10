@@ -84,6 +84,7 @@ Authenticating as a user is not supported for **private cloud** tenants. Instead
 - [auth0 api](auth0_api.md) - Makes an authenticated HTTP request to the Auth0 Management API
 - [auth0 apis](auth0_apis.md) - Manage resources for APIs
 - [auth0 apps](auth0_apps.md) - Manage resources for applications
+- [auth0 commands](auth0_commands.md) - List all commands in a tree structure
 - [auth0 completion](auth0_completion.md) - Setup autocomplete features for this CLI on your terminal
 - [auth0 domains](auth0_domains.md) - Manage custom domains
 - [auth0 email](auth0_email.md) - Manage email settings and configure email providers

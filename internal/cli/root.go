@@ -132,6 +132,7 @@ func buildRootCmd(cli *cli) *cobra.Command {
 
 func commandRequiresAuthentication(invokedCommandName string) bool {
 	commandsWithNoAuthRequired := []string{
+		"auth0 commands",
 		"auth0 completion",
 		"auth0 help",
 		"auth0 login",
@@ -192,6 +193,8 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(networkACLCmd(cli))
 	rootCmd.AddCommand(tenantSettingsCmd(cli))
 	rootCmd.AddCommand(tokenExchangeCmd(cli))
+
+	rootCmd.AddCommand(commandsCmd(cli))
 
 	// Keep completion at the bottom.
 	rootCmd.AddCommand(completionCmd(cli))
