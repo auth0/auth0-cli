@@ -318,7 +318,17 @@ tests:
         - ALLOWED METHODS   cookie, query
         - DEVICE BINDING    ip
 
-  042 - it successfully creates a m2m app with allow-any-profile-of-type and outputs in json:
+  # Delegation is an Early Access sub-feature gated behind the
+  # `cte_session_transfer_token` tenant flag. So this case only covers the client-side validation, which
+  # runs before any API call and is therefore safe on any tenant.
+  042 - it rejects an invalid delegation device binding value:
+    command: auth0 apps session-transfer update $(./test/integration/scripts/get-app-id.sh) --delegation-enforce-device-binding=none --json
+    exit-code: 1
+    stderr:
+      contains:
+        - "must be one of 'ip' or 'asn'"
+
+  043 - it successfully creates a m2m app with allow-any-profile-of-type and outputs in json:
     command: auth0 apps create --name integration-test-app-te1 --type m2m --description TEApp1 --allow-any-profile-of-type custom_authentication --json
     exit-code: 0
     stdout:
@@ -327,29 +337,29 @@ tests:
         app_type: non_interactive
         token_exchange.allow_any_profile_of_type: "[custom_authentication]"
 
-  043 - it successfully updates token exchange types on an app and outputs in json:
+  044 - it successfully updates token exchange types on an app and outputs in json:
     command: auth0 apps update $(./test/integration/scripts/get-app-id.sh) --allow-any-profile-of-type custom_authentication --json
     exit-code: 0
     stdout:
       json:
         token_exchange.allow_any_profile_of_type: "[custom_authentication]"
 
-  044 - it successfully shows token exchange types on an app:
+  045 - it successfully shows token exchange types on an app:
     command: auth0 apps show $(./test/integration/scripts/get-app-id.sh)
     exit-code: 0
     stdout:
       contains:
         - TOKEN EXCHANGE TYPES  custom_authentication
 
-  045 - given a test app, it successfully deletes the app:
+  046 - given a test app, it successfully deletes the app:
     command: auth0 apps delete $(./test/integration/scripts/get-app-id.sh) --force
     exit-code: 0
 
-  046 - it successfully creates a resource server app with resource-server-identifier:
+  047 - it successfully creates a resource server app with resource-server-identifier:
     command: ./test/integration/scripts/get-resource-server-app-id.sh
     exit-code: 0
 
-  047 - it successfully creates a resource server app with resource-server-identifier and outputs in json:
+  048 - it successfully creates a resource server app with resource-server-identifier and outputs in json:
     command: auth0 apps show $(./test/integration/scripts/get-resource-server-app-id.sh) --json
     exit-code: 0
     stdout:
@@ -358,7 +368,7 @@ tests:
         app_type: resource_server
         resource_server_identifier: http://integration-test-api-newapi
 
-  048 - it shows resource server app with resource-server-identifier:
+  049 - it shows resource server app with resource-server-identifier:
     command: auth0 apps show $(./test/integration/scripts/get-resource-server-app-id.sh)
     exit-code: 0
     stdout:
@@ -366,22 +376,22 @@ tests:
         - TYPE                        Resource Server
         - RESOURCE SERVER IDENTIFIER  http://integration-test-api-newapi
 
-  049 - it fails to update resource-server-identifier (immutable property):
+  050 - it fails to update resource-server-identifier (immutable property):
     command: auth0 apps update $(./test/integration/scripts/get-resource-server-app-id.sh) --resource-server-identifier http://new-api.localhost --json
     exit-code: 1
     stderr:
       contains:
         - "Unknown flag: --resource-server-identifier"
 
-  050 - given a resource server app, it successfully deletes the app:
+  051 - given a resource server app, it successfully deletes the app:
     command: auth0 apps delete $(./test/integration/scripts/get-resource-server-app-id.sh) --force
     exit-code: 0
 
-  051 - it successfully creates a third-party app with strict security mode:
+  052 - it successfully creates a third-party app with strict security mode:
     command: ./test/integration/scripts/get-3p-app-id.sh
     exit-code: 0
 
-  052 - it successfully shows a third-party app with security mode and redirection policy in json:
+  053 - it successfully shows a third-party app with security mode and redirection policy in json:
     command: auth0 apps show $(./test/integration/scripts/get-3p-app-id.sh) --json
     exit-code: 0
     stdout:
@@ -392,13 +402,13 @@ tests:
         third_party_security_mode: strict
         redirection_policy: open_redirect_protection
 
-  053 - it successfully updates the redirection-policy of a third-party app and outputs in json:
+  054 - it successfully updates the redirection-policy of a third-party app and outputs in json:
     command: auth0 apps update $(./test/integration/scripts/get-3p-app-id.sh) --redirection-policy allow_always --json
     exit-code: 0
     stdout:
       json:
         redirection_policy: allow_always
 
-  054 - given a third-party app, it successfully deletes the app:
+  055 - given a third-party app, it successfully deletes the app:
     command: auth0 apps delete $(./test/integration/scripts/get-3p-app-id.sh) --force
     exit-code: 0

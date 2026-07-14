@@ -18,6 +18,7 @@ auth0 apps session-transfer update [flags]
  auth0 apps session-transfer update 
   auth0 apps session-transfer update <app-id>
   auth0 apps session-transfer update <app-id> --can-create-token --json
+  auth0 apps session-transfer update <app-id> --delegation-allow-delegated-access=true --delegation-enforce-device-binding=asn
   auth0 apps session-transfer update <app-id> --can-create-token=true --allowed-auth-methods=cookie,query --enforce-device-binding=ip
 ```
 
@@ -25,11 +26,13 @@ auth0 apps session-transfer update [flags]
 ## Flags
 
 ```
-  -m, --allowed-auth-methods strings    Comma-separated list of authentication methods (e.g., cookie, query).
-  -t, --can-create-token                Allow creation of session transfer tokens.
-  -e, --enforce-device-binding string   Device binding enforcement: 'none', 'ip', or 'asn'.
-      --json                            Output in json format.
-      --json-compact                    Output in compact json format.
+  -m, --allowed-auth-methods strings               Comma-separated list of authentication methods (e.g., cookie, query).
+  -t, --can-create-token                           Allow creation of session transfer tokens.
+      --delegation-allow-delegated-access          (Early Access) Allow the application to accept Session Transfer Tokens containing an Actor, enabling delegated (impersonation) access. Defaults to false.
+      --delegation-enforce-device-binding string   (Early Access) Device binding enforcement for delegated (impersonation) access: 'ip' or 'asn'. Defaults to 'ip'.
+  -e, --enforce-device-binding string              Device binding enforcement: 'none', 'ip', or 'asn'.
+      --json                                       Output in json format.
+      --json-compact                               Output in compact json format.
 ```
 
 
