@@ -165,14 +165,16 @@ var (
 		AlwaysPrompt: true,
 	}
 	appSTDelegationAllowAccess = Flag{
-		Name:     "Allow Delegated Access",
-		LongForm: "delegation-allow-delegated-access",
+		Name:      "Allow Delegated Access",
+		LongForm:  "delegation-allow-delegated-access",
+		ShortForm: "d",
 		Help: "(Early Access) Allow the application to accept Session Transfer Tokens containing an Actor, " +
 			"enabling delegated (impersonation) access. Defaults to false.",
 	}
 	appSTDelegationDeviceBinding = Flag{
-		Name:     "Delegation Enforce Device Binding",
-		LongForm: "delegation-enforce-device-binding",
+		Name:      "Delegation Enforce Device Binding",
+		LongForm:  "delegation-enforce-device-binding",
+		ShortForm: "b",
 		Help: "(Early Access) Device binding enforcement for delegated (impersonation) access: 'ip' or 'asn'. " +
 			"Defaults to 'ip'.",
 	}
@@ -1248,16 +1250,6 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 				}
 			} else {
 				inputs.ID = args[0]
-			}
-
-			// Validate the delegation device binding before any API call.
-			if appSTDelegationDeviceBinding.IsSet(cmd) &&
-				inputs.DelegationDeviceBinding != "ip" && inputs.DelegationDeviceBinding != "asn" {
-				return fmt.Errorf(
-					"invalid value %q for --%s: must be one of 'ip' or 'asn'",
-					inputs.DelegationDeviceBinding,
-					appSTDelegationDeviceBinding.LongForm,
-				)
 			}
 
 			var (

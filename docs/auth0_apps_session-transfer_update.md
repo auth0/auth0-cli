@@ -28,8 +28,8 @@ auth0 apps session-transfer update [flags]
 ```
   -m, --allowed-auth-methods strings               Comma-separated list of authentication methods (e.g., cookie, query).
   -t, --can-create-token                           Allow creation of session transfer tokens.
-      --delegation-allow-delegated-access          (Early Access) Allow the application to accept Session Transfer Tokens containing an Actor, enabling delegated (impersonation) access. Defaults to false.
-      --delegation-enforce-device-binding string   (Early Access) Device binding enforcement for delegated (impersonation) access: 'ip' or 'asn'. Defaults to 'ip'.
+  -d, --delegation-allow-delegated-access          (Early Access) Allow the application to accept Session Transfer Tokens containing an Actor, enabling delegated (impersonation) access. Defaults to false.
+  -b, --delegation-enforce-device-binding string   (Early Access) Device binding enforcement for delegated (impersonation) access: 'ip' or 'asn'. Defaults to 'ip'.
   -e, --enforce-device-binding string              Device binding enforcement: 'none', 'ip', or 'asn'.
       --json                                       Output in json format.
       --json-compact                               Output in compact json format.
