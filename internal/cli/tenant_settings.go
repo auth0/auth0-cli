@@ -2,7 +2,10 @@ package cli
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
 
+	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/utils"
 
@@ -14,6 +17,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	// Country Codes flags.
+	countryCodesList = Flag{
+		Name:         "Country Codes List",
+		LongForm:     "list",
+		Help:         "Comma-separated ISO 3166-1 alpha-2 country codes (e.g., US,GB,CA).",
+		IsRequired:   false,
+		AlwaysPrompt: false,
+	}
+	countryCodesMode = Flag{
+		Name:         "Country Codes Mode",
+		LongForm:     "mode",
+		Help:         "Filter mode for country codes. One of allow or deny.",
+		IsRequired:   false,
+		AlwaysPrompt: false,
+	}
+)
+
 func tenantSettingsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tenant-settings",
@@ -22,6 +43,7 @@ func tenantSettingsCmd(cli *cli) *cobra.Command {
 
 	cmd.AddCommand(show(cli))
 	cmd.AddCommand(update(cli))
+	cmd.AddCommand(countryCodesCmd(cli))
 
 	return cmd
 }
@@ -253,4 +275,132 @@ func setSelectTenantSettings(tenant *management.Tenant, selectedFlags []string, 
 			tenant.MTLS.EnableEndpointAliases = val
 		}
 	}
+}
+
+func countryCodesCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "country-codes",
+		Aliases: []string{"cc"},
+		Short:   "Manage country codes filtering for the tenant",
+		Long:    "Manage the country codes filtering configured for the tenant.",
+	}
+
+	cmd.AddCommand(showCountryCodesCmd(cli))
+	cmd.AddCommand(updateCountryCodesCmd(cli))
+	cmd.AddCommand(removeCountryCodesCmd(cli))
+
+	return cmd
+}
+
+func removeCountryCodesCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "remove",
+		Aliases: []string{"rm"},
+		Short:   "Remove country codes filtering from the tenant",
+		Long: "Remove country codes filtering from the tenant.\n\n" +
+			"This clears any configured allow/deny list by setting country_codes to null.",
+		Example: `  auth0 tenant-settings country-codes remove`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Send null via the raw HTTP client, since `omitempty` omits nil pointers and prevents the PATCH API from clearing the filter.
+			payload := map[string]interface{}{"country_codes": nil}
+			uri := cli.api.HTTPClient.URI("tenants", "settings")
+
+			if err := ansi.Waiting(func() error {
+				return cli.api.HTTPClient.Request(cmd.Context(), http.MethodPatch, uri, payload)
+			}); err != nil {
+				return fmt.Errorf("failed to remove tenant country codes: %w", err)
+			}
+
+			cli.renderer.TenantCountryCodesRemove()
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func showCountryCodesCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "show",
+		Short: "Display the tenant's country codes filtering",
+		Long:  "Display the country codes filtering configured for the tenant.",
+		Example: `  auth0 tenant-settings country-codes show
+  auth0 tenant-settings country-codes show --json`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var tenant *management.Tenant
+			if err := ansi.Waiting(func() error {
+				var err error
+				tenant, err = cli.api.Tenant.Read(cmd.Context())
+				return err
+			}); err != nil {
+				return fmt.Errorf("failed to fetch tenant settings: %w", err)
+			}
+
+			cli.renderer.TenantCountryCodesShow(tenant.CountryCodes)
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
+
+	return cmd
+}
+
+func updateCountryCodesCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		List string
+		Mode string
+	}
+
+	cmd := &cobra.Command{
+		Use:     "update",
+		Short:   "Set country codes filtering for the tenant",
+		Long:    "Set country codes filtering for the tenant.\n\nTo set country codes interactively, omit the flags.",
+		Example: `  auth0 tenant-settings country-codes update --list US,GB,CA --mode allow`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := countryCodesList.Ask(cmd, &inputs.List, nil); err != nil {
+				return err
+			}
+			if err := countryCodesMode.Ask(cmd, &inputs.Mode, nil); err != nil {
+				return err
+			}
+
+			countryCodes := &management.TenantCountryCodes{
+				List: parseCountryCodesList(inputs.List),
+				Mode: inputs.Mode,
+			}
+
+			if err := ansi.Waiting(func() error {
+				return cli.api.Tenant.Update(cmd.Context(), &management.Tenant{
+					CountryCodes: countryCodes,
+				})
+			}); err != nil {
+				return fmt.Errorf("failed to update tenant country codes: %w", err)
+			}
+
+			cli.renderer.TenantCountryCodesUpdate(countryCodes)
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	countryCodesList.RegisterString(cmd, &inputs.List, "")
+	countryCodesMode.RegisterString(cmd, &inputs.Mode, "")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
+	return cmd
+}
+
+// parseCountryCodesList splits a comma-separated list of country codes into a
+// slice, trimming whitespace and dropping empty entries.
+func parseCountryCodesList(list string) []string {
+	var codes []string
+	for _, code := range strings.Split(list, ",") {
+		if c := strings.TrimSpace(code); c != "" {
+			codes = append(codes, c)
+		}
+	}
+	return codes
 }

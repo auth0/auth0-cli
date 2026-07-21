@@ -110,3 +110,56 @@ tests:
         - DisableClickjackProtectionHeaders     flags.disable_clickjack_protection_headers     ✗
         - UseScopeDescriptionsForConsent        flags.use_scope_descriptions_for_consent       ✗
         - DisableFieldsMapFix                   flags.disable_fields_map_fix                   ✗
+
+  010 - tenant-settings country-codes update with valid list and allow mode:
+    command: auth0 tenant-settings country-codes update --list US,GB,CA --mode allow --json
+    exit-code: 0
+    stdout:
+      json:
+        mode: allow
+        list:
+          - US
+          - GB
+          - CA
+
+  011 - tenant-settings country-codes update with valid list and deny mode:
+    command: auth0 tenant-settings country-codes update --list DE,FR --mode deny --json
+    exit-code: 0
+    stdout:
+      json:
+        mode: deny
+        list:
+          - DE
+          - FR
+
+  012 - tenant-settings country-codes show displays configured filtering:
+    command: auth0 tenant-settings country-codes show
+    exit-code: 0
+    stdout:
+      contains:
+        - MODE
+        - LIST
+
+  013 - tenant-settings country-codes show as json:
+    command: auth0 tenant-settings country-codes show --json
+    exit-code: 0
+    stdout:
+      json:
+        mode: deny
+        list:
+          - DE
+          - FR
+
+  014 - tenant-settings country-codes remove clears filtering:
+    command: auth0 tenant-settings country-codes remove
+    exit-code: 0
+    stdout:
+      contains:
+        - removed
+
+  015 - tenant-settings country-codes show after remove reports none:
+    command: auth0 tenant-settings country-codes show
+    exit-code: 0
+    stdout:
+      contains:
+        - No country codes filtering is configured

@@ -1,6 +1,9 @@
 package display
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
 )
@@ -63,6 +66,31 @@ func (v *TenantSettingsView) Object() interface{} {
 	return v.raw
 }
 
+type CountryCodesView struct {
+	List []string
+	Mode string
+	raw  interface{}
+}
+
+func (v *CountryCodesView) AsTableHeader() []string {
+	return []string{"SETTING", "VALUE"}
+}
+
+func (v *CountryCodesView) AsTableRow() []string {
+	return []string{"COUNTRY CODES", fmt.Sprintf("mode=%s, list=%v", v.Mode, v.List)}
+}
+
+func (v *CountryCodesView) KeyValues() [][]string {
+	kvs := make([][]string, 0)
+	kvs = append(kvs, []string{"MODE", v.Mode})
+	kvs = append(kvs, []string{"LIST", strings.Join(v.List, ", ")})
+	return kvs
+}
+
+func (v *CountryCodesView) Object() interface{} {
+	return v.raw
+}
+
 func (r *Renderer) TenantSettingsShow(tenant *management.Tenant) {
 	r.Heading("tenant settings")
 
@@ -82,6 +110,50 @@ func (r *Renderer) TenantSettingsShow(tenant *management.Tenant) {
 func (r *Renderer) TenantSettingsUpdate(tenant *management.Tenant) {
 	r.Heading("tenant settings updated")
 	r.Results(makeTenantSettings(tenant))
+}
+
+func (r *Renderer) TenantCountryCodesUpdate(cc *management.TenantCountryCodes) {
+	r.Heading("tenant country codes updated")
+
+	if cc == nil {
+		return
+	}
+
+	r.Result(makeCountryCodesView(cc))
+}
+
+func (r *Renderer) TenantCountryCodesShow(cc *management.TenantCountryCodes) {
+	r.Heading("tenant country codes")
+
+	if r.Format == OutputFormatJSONCompact {
+		r.JSONCompactResult(cc)
+		return
+	}
+
+	if r.Format == OutputFormatJSON {
+		r.JSONResult(cc)
+		return
+	}
+
+	if cc == nil {
+		r.Output("No country codes filtering is configured for this tenant.")
+		return
+	}
+
+	r.Result(makeCountryCodesView(cc))
+}
+
+func (r *Renderer) TenantCountryCodesRemove() {
+	r.Heading("tenant country codes removed")
+	r.Output("Country codes filtering has been removed from the tenant.")
+}
+
+func makeCountryCodesView(cc *management.TenantCountryCodes) *CountryCodesView {
+	return &CountryCodesView{
+		List: cc.List,
+		Mode: cc.Mode,
+		raw:  cc,
+	}
 }
 
 func makeTenantSettings(tenant *management.Tenant) []View {
