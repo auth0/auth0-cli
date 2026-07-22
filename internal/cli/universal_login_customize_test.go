@@ -1101,6 +1101,14 @@ func TestFetchUniversalLoginBrandingData(t *testing.T) {
 						LogoURL:             "",
 						SocialButtonsLayout: "bottom",
 					},
+					Identifiers: &management.BrandingThemeIdentifiers{
+						LoginDisplay:    "unified",
+						OTPAutocomplete: true,
+						PhoneDisplay: management.BrandingThemePhoneDisplay{
+							Formatting: "international",
+							Masking:    "mask_digits",
+						},
+					},
 				},
 				Tenant: &tenantData{
 					FriendlyName:   "My Test Tenant",
@@ -1773,6 +1781,102 @@ func TestSaveUniversalLoginBrandingData(t *testing.T) {
 					}, nil)
 				mockBrandingThemeAPI.EXPECT().
 					Update(gomock.Any(), "111", &management.BrandingTheme{}).
+					Return(nil)
+
+				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
+				mockPromptAPI.EXPECT().
+					SetCustomText(gomock.Any(), "login", "en", map[string]interface{}{"key": "value"}).
+					Return(nil)
+				mockPromptAPI.EXPECT().
+					SetPartials(gomock.Any(), management.PromptLogin, &management.PromptScreenPartials{
+						management.ScreenLogin: {
+							management.InsertionPointFormContentStart: "<div>Updated Form Content Start</div>",
+						},
+					}).
+					Return(nil)
+				mockAPI := &auth0.API{
+					Branding:      mockBrandingAPI,
+					BrandingTheme: mockBrandingThemeAPI,
+					Prompt:        mockPromptAPI,
+				}
+
+				return mockAPI
+			},
+		},
+		{
+			name: "it submits theme identifiers to the theme endpoint",
+			input: &universalLoginBrandingData{
+				Settings: &management.Branding{
+					Colors: &management.BrandingColors{
+						Primary:        auth0.String("#33ddff"),
+						PageBackground: auth0.String("#99aacc"),
+					},
+				},
+				Template: &management.BrandingUniversalLogin{
+					Body: auth0.String("<html></html>"),
+				},
+				Theme: &management.BrandingTheme{
+					Identifiers: &management.BrandingThemeIdentifiers{
+						LoginDisplay:    "separate",
+						OTPAutocomplete: false,
+						PhoneDisplay: management.BrandingThemePhoneDisplay{
+							Masking:    "show_all",
+							Formatting: "regional",
+						},
+					},
+				},
+				Partials: []partialsData{
+					{
+						"login": {
+							management.ScreenName("login"): {
+								management.InsertionPointFormContentStart: "<div>Updated Form Content Start</div>",
+							},
+						},
+					},
+				},
+				Prompts: []*promptData{
+					{
+						Language:   "en",
+						Prompt:     "login",
+						CustomText: map[string]interface{}{"key": "value"},
+					},
+				},
+			},
+			mockedAPI: func() *auth0.API {
+				mockBrandingAPI := mock.NewMockBrandingAPI(ctrl)
+				mockBrandingAPI.EXPECT().
+					Update(gomock.Any(), &management.Branding{
+						Colors: &management.BrandingColors{
+							Primary:        auth0.String("#33ddff"),
+							PageBackground: auth0.String("#99aacc"),
+						},
+					}).
+					Return(nil)
+				mockBrandingAPI.EXPECT().
+					SetUniversalLogin(gomock.Any(), &management.BrandingUniversalLogin{
+						Body: auth0.String("<html></html>"),
+					}).
+					Return(nil)
+
+				mockBrandingThemeAPI := mock.NewMockBrandingThemeAPI(ctrl)
+				mockBrandingThemeAPI.EXPECT().
+					Default(gomock.Any()).
+					Return(&management.BrandingTheme{
+						ID: auth0.String("111"),
+					}, nil)
+				// The theme (including the identifiers block) is submitted
+				// verbatim to the theme endpoint.
+				mockBrandingThemeAPI.EXPECT().
+					Update(gomock.Any(), "111", &management.BrandingTheme{
+						Identifiers: &management.BrandingThemeIdentifiers{
+							LoginDisplay:    "separate",
+							OTPAutocomplete: false,
+							PhoneDisplay: management.BrandingThemePhoneDisplay{
+								Masking:    "show_all",
+								Formatting: "regional",
+							},
+						},
+					}).
 					Return(nil)
 
 				mockPromptAPI := mock.NewMockPromptAPI(ctrl)
