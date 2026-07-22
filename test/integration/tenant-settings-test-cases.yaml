@@ -117,10 +117,9 @@ tests:
     stdout:
       json:
         mode: allow
-        list:
-          - US
-          - GB
-          - CA
+        list.0: US
+        list.1: GB
+        list.2: CA
 
   011 - tenant-settings country-codes update with valid list and deny mode:
     command: auth0 tenant-settings country-codes update --list DE,FR --mode deny --json
@@ -128,9 +127,8 @@ tests:
     stdout:
       json:
         mode: deny
-        list:
-          - DE
-          - FR
+        list.0: DE
+        list.1: FR
 
   012 - tenant-settings country-codes show displays configured filtering:
     command: auth0 tenant-settings country-codes show
@@ -146,9 +144,8 @@ tests:
     stdout:
       json:
         mode: deny
-        list:
-          - DE
-          - FR
+        list.0: DE
+        list.1: FR
 
   014 - tenant-settings country-codes remove clears filtering:
     command: auth0 tenant-settings country-codes remove
