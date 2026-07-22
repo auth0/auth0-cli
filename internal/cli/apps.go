@@ -1237,11 +1237,13 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update session transfer settings for an app",
-		Example: ` auth0 apps session-transfer update 
+		Example: ` auth0 apps session-transfer update
   auth0 apps session-transfer update <app-id>
   auth0 apps session-transfer update <app-id> --can-create-token --json
-  auth0 apps session-transfer update <app-id> --delegation-allow-delegated-access=true --delegation-enforce-device-binding=asn
-  auth0 apps session-transfer update <app-id> --can-create-token=true --allowed-auth-methods=cookie,query --enforce-device-binding=ip`,
+  auth0 apps session-transfer update <app-id> --can-create-token=true --allowed-auth-methods=cookie,query --enforce-device-binding=ip
+
+  # Delegation (Early Access): impersonation via Session Transfer
+  auth0 apps session-transfer update <app-id> --delegation-allow-delegated-access=true --delegation-enforce-device-binding=asn`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				err := appID.Pick(cmd, &inputs.ID, cli.appPickerOptions())
