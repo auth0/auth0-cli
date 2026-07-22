@@ -332,23 +332,34 @@ setx EDITOR "code --wait"
 
 ## Agent Integration
 
-The CLI has an [AgentSkills-compatible](https://agentskills.io/) skill for AI agents (Claude Code, OpenClaw, etc.), available from the [Auth0 Agent Skills](https://github.com/auth0/agent-skills) repository.
+CLI guidance for AI agents (Claude Code, Cursor, OpenClaw, etc.) ships as part of the [AgentSkills-compatible](https://agentskills.io/) `auth0` skill in the [Auth0 Agent Skills](https://github.com/auth0/agent-skills) repository. The `auth0` skill routes across all Auth0 SDKs, features, and tooling — including this CLI.
 
 ### Install via Auth0 Agent Skills (Recommended)
 
-The `auth0-cli` skill is part of the [auth0/agent-skills](https://github.com/auth0/agent-skills) collection. Install the full Auth0 skills suite to get it along with other Auth0 skills:
-
-**Claude Code plugin marketplace:**
+**Claude Code (official plugins marketplace):**
 
 ```
-/plugin marketplace add auth0/agent-skills
-/plugin install auth0@auth0-agent-skills
+/plugin install auth0@claude-plugins-official
 ```
 
-**Skills CLI:**
+From the terminal (no session needed):
+
+```bash
+claude plugin install auth0@claude-plugins-official
+```
+
+**Any agent (Skills CLI):**
+
+The [Skills CLI](https://github.com/vercel-labs/skills) works with Claude Code, Cursor, Copilot, Codex, and [40+ other agents](https://agentskills.io/clients):
 
 ```bash
 npx skills add auth0/agent-skills
+```
+
+Target specific agents with `--agent`:
+
+```bash
+npx skills add auth0/agent-skills --agent claude-code cursor
 ```
 
 **Manual installation (Claude Code, OpenClaw):**
@@ -357,13 +368,13 @@ npx skills add auth0/agent-skills
 git clone https://github.com/auth0/agent-skills.git
 
 # Claude Code
-cp -r agent-skills/plugins/auth0/skills/auth0-cli ~/.claude/skills/
+cp -r agent-skills/plugins/auth0/skills/auth0 ~/.claude/skills/
 
 # OpenClaw
-cp -r agent-skills/plugins/auth0/skills/auth0-cli ~/.openclaw/skills/
+cp -r agent-skills/plugins/auth0/skills/auth0 ~/.openclaw/skills/
 ```
 
-> **Note:** The `auth0` binary must be installed and available on your `$PATH` for agents to use this skill.
+> **Note:** The `auth0` binary must be installed and available on your `$PATH` for agents to use the CLI guidance in this skill.
 
 ## Anonymized Analytics Disclosure
 
