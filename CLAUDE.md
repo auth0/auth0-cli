@@ -142,8 +142,6 @@ See [references/pitfalls.md](references/pitfalls.md) for the full list. Read it 
 
 ## Docs Update Rules
 
-> Treat documentation as a first-class deliverable. A PR that changes the command surface, flags, or supported workflows is **not complete** until the relevant docs are updated in the same PR.
-
 The `docs/` command reference is **generated** — never hand-edit it; run `make docs`. Prose docs (`README.md`, guides) are hand-maintained.
 
 See [references/docs-update.md](references/docs-update.md) for the tracked-docs inventory and the code-to-docs mapping. Read it when your change touches user-facing behavior.

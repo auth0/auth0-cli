@@ -59,3 +59,21 @@ func loginCmd(cli *cli) *cobra.Command {
 - **Dependency injection via the `cli` struct** (`internal/cli/cli.go`) — carries the renderer, analytics tracker, config, and API client; passed to every command constructor.
 - **`RunE` returning errors** rather than `Run` + `os.Exit`; errors bubble to the root command.
 - **Rendering through `internal/display`** — never `fmt.Println` results directly; use the renderer so JSON/table/format flags work.
+
+## Machine-readable output
+
+Every result-producing command supports mutually-exclusive output flags (`--json`, `--json-compact`, `--csv`) via the shared `cli` struct — wire them the same way existing commands do (see `roles.go`, `users.go`):
+
+```go
+cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+```
+
+`--json-compact` emits single-line JSON, ideal for piping to `jq` in scripts and command examples:
+
+```bash
+auth0 apps list --json-compact | jq '.[] | {client_id, name}'
+auth0 users show <user-id> --json-compact | jq '{id: .user_id, email: .email}'
+```
+
+Prefer `--json-compact | jq ...` over hand-parsing table output when documenting or scripting against the CLI.

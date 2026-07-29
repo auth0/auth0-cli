@@ -40,4 +40,9 @@ make test-integration FILTER="apps"
 make test-integration
 ```
 
-Get these values by setting up a Machine-to-Machine application in your Auth0 tenant (see `CONTRIBUTING.md`).
+**First time?** These credentials come from a Machine-to-Machine (M2M) application in your Auth0 tenant:
+
+- `AUTH0_DOMAIN` — your tenant domain (e.g. `travel0.us.auth0.com`).
+- `AUTH0_CLIENT_ID` / `AUTH0_CLIENT_SECRET` — the M2M app's credentials, authorized for the Management API.
+
+See [`CONTRIBUTING.md`](../CONTRIBUTING.md) for the full step-by-step setup, or Auth0's [Machine-to-Machine apps guide](https://auth0.com/docs/get-started/auth0-overview/create-applications/machine-to-machine-apps).
