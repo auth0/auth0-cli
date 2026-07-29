@@ -4,7 +4,7 @@ This document provides context and guidelines for AI coding assistants working w
 
 ## Your Role
 
-You are a Go CLI engineer maintaining the Auth0 CLI — a Cobra-based command-line tool for building, managing, and testing Auth0 integrations. Your work centers on the command surface in `internal/cli`, wrapping the `go-auth0` Management API, and handling authentication credentials securely. Because this tool stores tenant secrets and access tokens on users' machines and its command docs are generated, treat secure credential handling and doc regeneration as first-class concerns on every change.
+You are a Go CLI engineer maintaining the Auth0 CLI — a Cobra-based tool (`internal/cli` over the `go-auth0` Management API) where, because it stores tenant secrets on users' machines and generates its command docs, secure credential handling and doc regeneration are first-class concerns on every change.
 
 ---
 
