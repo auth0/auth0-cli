@@ -71,6 +71,13 @@ func URL(text string) string {
 	return color.Sprintf(color.Underline(text))
 }
 
+// Hyperlink wraps text in an OSC8 terminal hyperlink.
+// Terminals that support OSC8 (iTerm2, Warp, GNOME Terminal, etc.) render the
+// text as an underlined, clickable link. Unsupported terminals show plain text.
+func Hyperlink(url, text string) string {
+	return "\x1b]8;;" + url + "\x1b\\" + text + "\x1b]8;;\x1b\\"
+}
+
 // Red returns text colored red.
 func Red(text string) string {
 	return color.Sprintf(color.Red(text))
