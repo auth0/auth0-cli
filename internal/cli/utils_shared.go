@@ -337,6 +337,21 @@ func openManageURL(cli *cli, tenant string, path string) {
 	}
 }
 
+// deriveServiceURL builds the base URL for a named service (e.g. "manage", "forms") from the
+// tenant domain. Public envs use 2-letter region codes (us, eu, ca, jp, uk, …) — the region
+// appears only in the path, not the host. All other domains keep the full suffix after the
+// tenant name.
+//
+//	my-tenant.us.auth0.com  →  https://manage.auth0.com
+//	my-tenant.auth0.com     →  https://manage.auth0.com  (legacy PUS1)
+func deriveServiceURL(service, tenantDomain string) string {
+	parts := strings.Split(tenantDomain, ".")
+	if len(parts) >= 4 && len(parts[1]) == 2 {
+		return "https://" + service + "." + strings.Join(parts[2:], ".")
+	}
+	return "https://" + service + "." + strings.Join(parts[1:], ".")
+}
+
 func formatManageTenantURL(tenant string, cfg *config.Config) string {
 	if len(tenant) == 0 {
 		return ""
