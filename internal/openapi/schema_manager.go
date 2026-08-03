@@ -129,8 +129,9 @@ func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*Val
 		return result, nil
 	}
 
-	// Validate against schema.
-	if err := requestSchema.Value.VisitJSON(data); err != nil {
+	// Validate against schema. MultiErrors collects every validation failure
+	// instead of stopping at the first, so the caller sees all issues at once.
+	if err := requestSchema.Value.VisitJSON(data, openapi3.MultiErrors()); err != nil {
 		result.Valid = false
 		result.Errors = append(result.Errors, formatValidationError(err)...)
 		return result, nil

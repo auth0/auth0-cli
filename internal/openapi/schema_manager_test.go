@@ -213,6 +213,22 @@ func TestValidateRequestErrorsAreResolved(t *testing.T) {
 	}
 }
 
+func TestValidateRequestReportsAllErrors(t *testing.T) {
+	manager, err := NewSchemaManager()
+	require.NoError(t, err)
+
+	// An empty body is missing both required fields; validation must report
+	// all of them, not stop at the first.
+	result, err := manager.ValidateRequest("POST", "/actions/actions", []byte(`{}`))
+	require.NoError(t, err)
+	require.False(t, result.Valid)
+
+	assert.GreaterOrEqual(t, len(result.Errors), 2)
+	joined := strings.Join(result.Errors, "\n")
+	assert.Contains(t, joined, "name")
+	assert.Contains(t, joined, "supported_triggers")
+}
+
 func TestGetResourceOperations(t *testing.T) {
 	manager, err := NewSchemaManager()
 	require.NoError(t, err)

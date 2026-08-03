@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -102,15 +103,11 @@ func (h *InputJSONHandler) readJSONInput(input string) ([]byte, error) {
 
 // formatValidationErrors formats validation errors in a user-friendly way.
 func formatValidationErrors(errors []string) string {
-	if len(errors) == 0 {
-		return ""
-	}
-
-	result := ""
+	lines := make([]string, len(errors))
 	for i, err := range errors {
-		result += fmt.Sprintf("%d. %s\n", i+1, err)
+		lines[i] = fmt.Sprintf("%d. %s", i+1, err)
 	}
-	return result
+	return strings.Join(lines, "\n")
 }
 
 // HasInputJSON checks if the --input-json flag is set.
