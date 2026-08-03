@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,46 +12,46 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth0"
 )
 
-// myAccountAPIScopes are the scopes granted to the portal client for the My Account API.
-var myAccountAPIScopes = []string{
-	"read:me:authentication_methods",
-	"delete:me:authentication_methods",
-	"update:me:authentication_methods",
-	"read:me:factors",
-	"create:me:authentication_methods",
-}
+// Scopes granted to the portal client per audience.
+var (
+	myAccountAPIScopes = []string{
+		"read:me:authentication_methods",
+		"delete:me:authentication_methods",
+		"update:me:authentication_methods",
+		"read:me:factors",
+		"create:me:authentication_methods",
+	}
 
-// myOrgAPIScopes are the scopes granted to the portal client for the My Organization API.
-var myOrgAPIScopes = []string{
-	"read:my_org:configuration",
-	"read:my_org:details",
-	"update:my_org:details",
-}
+	myOrgAPIScopes = []string{
+		"read:my_org:configuration",
+		"read:my_org:details",
+		"update:my_org:details",
+	}
 
-// managementAPIScopes are the scopes granted to the portal client for the Management API.
-var managementAPIScopes = []string{
-	"read:branding",
-	"read:organizations_summary",
-	"read:organizations",
-}
+	managementAPIScopes = []string{
+		"read:branding",
+		"read:organizations_summary",
+		"read:organizations",
+	}
 
-// portalGrantTypes are the grant types enabled on the portal client.
-var portalGrantTypes = []string{
-	"authorization_code",
-	"refresh_token",
-	"client_credentials",
-	"http://auth0.com/oauth/grant-type/mfa-oob",
-	"http://auth0.com/oauth/grant-type/mfa-otp",
-	"http://auth0.com/oauth/grant-type/mfa-recovery-code",
-}
+	portalGrantTypes = []string{
+		"authorization_code",
+		"refresh_token",
+		"client_credentials",
+		"http://auth0.com/oauth/grant-type/mfa-oob",
+		"http://auth0.com/oauth/grant-type/mfa-otp",
+		"http://auth0.com/oauth/grant-type/mfa-recovery-code",
+	}
+)
 
 var upName = Flag{
-	Name:     "Name",
-	LongForm: "name",
+	Name:      "Name",
+	LongForm:  "name",
 	ShortForm: "n",
-	Help:     "Name of the Universal Portals application.",
+	Help:      "Name of the Universal Portals application.",
 }
 
 // universalPortalsCmd groups Universal Portals management commands.
@@ -96,14 +97,17 @@ func universalPortalsSetupCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-// runUniversalPortalsSetup is the orchestration entry point for `universal-portals setup`.
+// runUniversalPortalsSetup orchestrates the provisioning flow.
+// It owns all display logic; business functions only return (value, error).
 func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, name string) error {
 	if err := cli.setupWithAuthentication(cmd.Context()); err != nil {
 		return fmt.Errorf("authentication required: %w", err)
 	}
 
+	ctx := cmd.Context()
+
 	// Resolve the portal domain: default custom domain, or fall back to the tenant domain.
-	domain, isCustom := resolvePortalDomain(cmd, cli)
+	domain, isCustom := resolvePortalDomain(ctx, cli.api.CustomDomain, cli.tenant)
 	if isCustom {
 		cli.renderer.Infof("Domain: %s  (custom domain)", ansi.Cyan(domain))
 	} else {
@@ -126,20 +130,29 @@ func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, name string) error {
 	tenant := cli.tenant
 
 	// Ensure the resource servers required by Universal Portals exist.
-	if err := ensurePortalResourceServer(cmd, cli, "Auth0 My Account API", "https://"+tenant+"/me/"); err != nil {
-		return err
-	}
-	if err := ensurePortalResourceServer(cmd, cli, "Auth0 My Organization API", "https://"+tenant+"/my-org/"); err != nil {
-		return err
+	for _, rs := range portalResourceServers(tenant) {
+		existed, err := ensurePortalResourceServer(ctx, cli.api.ResourceServer, rs.name, rs.identifier)
+		if err != nil {
+			return err
+		}
+		if existed {
+			cli.renderer.Infof("%s %s", rs.name, ansi.Faint("(already exists)"))
+		} else {
+			cli.renderer.Successf(rs.name)
+		}
 	}
 
 	// Create the portal application client.
-	client, err := createPortalClient(cmd, cli, name, domain, tenant)
-	if err != nil {
+	var client portalClientResult
+	if err := ansi.Waiting(func() error {
+		var err error
+		client, err = createPortalClient(ctx, cli.api.HTTPClient, name, domain, tenant)
 		return err
+	}); err != nil {
+		return fmt.Errorf("failed to create application: %w", err)
 	}
 
-	clientURL := portalManageClientURL(cli, client.ClientID)
+	clientURL := portalManageClientURL(cli.tenant, cli.Config.Tenants[cli.tenant].Name, client.ClientID)
 	maskedSecret := client.ClientSecret[:4] + strings.Repeat("•", len(client.ClientSecret)-4)
 
 	cli.renderer.Successf("Application %q created", name)
@@ -148,8 +161,14 @@ func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, name string) error {
 	cli.renderer.Newline()
 
 	// Create the three client grants.
-	if err := createPortalClientGrants(cmd, cli, client.ClientID, tenant); err != nil {
-		return err
+	for _, grant := range buildPortalGrants(client.ClientID, tenant) {
+		g := grant
+		if err := ansi.Waiting(func() error {
+			return createPortalGrant(ctx, cli.api.HTTPClient, g)
+		}); err != nil {
+			return fmt.Errorf("failed to create client grant for %q: %w", g.Audience, err)
+		}
+		cli.renderer.Successf("Client grant  %s", grant.Audience)
 	}
 
 	// TODO: Create Form (payload TBD).
@@ -177,55 +196,55 @@ func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, name string) error {
 	return nil
 }
 
-// resolvePortalDomain returns the domain to use for portal URLs.
-// Uses the default custom domain if one is active; falls back to the tenant domain.
-func resolvePortalDomain(cmd *cobra.Command, cli *cli) (domain string, isCustom bool) {
-	cd, err := cli.api.CustomDomain.ReadDefault(cmd.Context())
+// portalResourceServer describes a resource server that Universal Portals requires.
+type portalResourceServer struct {
+	name       string
+	identifier string
+}
+
+// portalResourceServers returns the two resource servers required by Universal Portals.
+func portalResourceServers(tenant string) []portalResourceServer {
+	return []portalResourceServer{
+		{name: "Auth0 My Account API", identifier: "https://" + tenant + "/me/"},
+		{name: "Auth0 My Organization API", identifier: "https://" + tenant + "/my-org/"},
+	}
+}
+
+// resolvePortalDomain returns the domain for portal URLs.
+// Uses the default custom domain if active; falls back to tenantDomain.
+func resolvePortalDomain(ctx context.Context, api auth0.CustomDomainAPI, tenantDomain string) (domain string, isCustom bool) {
+	cd, err := api.ReadDefault(ctx)
 	if err == nil && cd.GetStatus() == "ready" {
 		return cd.GetDomain(), true
 	}
-	return cli.tenant, false
+	return tenantDomain, false
 }
 
 // ensurePortalResourceServer creates a resource server idempotently.
-// A 409 Conflict (already exists) is treated as success.
-func ensurePortalResourceServer(cmd *cobra.Command, cli *cli, name, identifier string) error {
+// Returns (true, nil) when the server already existed, (false, nil) when created.
+func ensurePortalResourceServer(ctx context.Context, api auth0.ResourceServerAPI, name, identifier string) (alreadyExisted bool, err error) {
 	skipConsent := true
 	tokenDialect := "rfc9068_profile"
 
-	var alreadyExists bool
-
-	if err := ansi.Waiting(func() error {
-		err := cli.api.ResourceServer.Create(cmd.Context(), &management.ResourceServer{
-			Name:                                      &name,
-			Identifier:                                &identifier,
-			SkipConsentForVerifiableFirstPartyClients: &skipConsent,
-			TokenDialect:                              &tokenDialect,
-		})
-		if err == nil {
-			return nil
-		}
-		if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusConflict {
-			alreadyExists = true
-			return nil
-		}
-		return err
-	}); err != nil {
-		return fmt.Errorf("failed to ensure resource server %q: %w", name, err)
+	err = api.Create(ctx, &management.ResourceServer{
+		Name:                                      &name,
+		Identifier:                                &identifier,
+		SkipConsentForVerifiableFirstPartyClients: &skipConsent,
+		TokenDialect:                              &tokenDialect,
+	})
+	if err == nil {
+		return false, nil
 	}
-
-	if alreadyExists {
-		cli.renderer.Infof("%s %s", name, ansi.Faint("(already exists)"))
-	} else {
-		cli.renderer.Successf(name)
+	if mErr, ok := err.(management.Error); ok && mErr.Status() == http.StatusConflict {
+		return true, nil
 	}
-
-	return nil
+	return false, fmt.Errorf("failed to ensure resource server %q: %w", name, err)
 }
 
-// portalClientPayload is the full request body for creating the portal application.
-// Uses a local struct because several fields (session_transfer, refresh_token.policies)
-// are not present in the vendored go-auth0 management.Client.
+// ---- Client payload types ----
+// Local structs are used because session_transfer and refresh_token.policies
+// are absent from the vendored go-auth0 management.Client.
+
 type portalClientPayload struct {
 	Name                        string                  `json:"name"`
 	IsFirstParty                bool                    `json:"is_first_party"`
@@ -276,16 +295,14 @@ type portalBackchannelInitiators struct {
 	SelectedInitiators []string `json:"selected_initiators"`
 }
 
-// portalClientResult holds the fields read back from the create-client response.
 type portalClientResult struct {
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
 }
 
-// createPortalClient creates the Universal Portals application client.
-// Uses the raw HTTP client because session_transfer and refresh_token.policies
-// are not present in the vendored management.Client struct.
-func createPortalClient(cmd *cobra.Command, cli *cli, name, domain, tenant string) (*portalClientResult, error) {
+// createPortalClient builds and POSTs the portal application client.
+// Takes only what it needs: an HTTP client, not the full *cli.
+func createPortalClient(ctx context.Context, h auth0.HTTPClientAPI, name, domain, tenant string) (portalClientResult, error) {
 	payload := portalClientPayload{
 		Name:                        name,
 		IsFirstParty:                true,
@@ -305,14 +322,8 @@ func createPortalClient(cmd *cobra.Command, cli *cli, name, domain, tenant strin
 			IdleTokenLifetime:         86399,
 			RotationType:              "non-rotating",
 			Policies: []portalRefreshTokenPolicy{
-				{
-					Audience: "https://" + tenant + "/me/",
-					Scope:    myAccountAPIScopes,
-				},
-				{
-					Audience: "https://" + tenant + "/my-org/",
-					Scope:    myOrgAPIScopes,
-				},
+				{Audience: "https://" + tenant + "/me/", Scope: myAccountAPIScopes},
+				{Audience: "https://" + tenant + "/my-org/", Scope: myOrgAPIScopes},
 			},
 		},
 		SessionTransfer: portalSessionTransfer{
@@ -340,43 +351,15 @@ func createPortalClient(cmd *cobra.Command, cli *cli, name, domain, tenant strin
 	}
 
 	var result portalClientResult
-
-	if err := ansi.Waiting(func() error {
-		req, err := cli.api.HTTPClient.NewRequest(
-			cmd.Context(),
-			http.MethodPost,
-			cli.api.HTTPClient.URI("clients"),
-			payload,
-		)
-		if err != nil {
-			return err
-		}
-
-		resp, err := cli.api.HTTPClient.Do(req)
-		if err != nil {
-			return err
-		}
-		defer func() { _ = resp.Body.Close() }()
-
-		if resp.StatusCode >= http.StatusBadRequest {
-			var apiErr struct {
-				StatusCode int    `json:"statusCode"`
-				Message    string `json:"message"`
-			}
-			_ = json.NewDecoder(resp.Body).Decode(&apiErr)
-			return fmt.Errorf("API error %d: %s", resp.StatusCode, apiErr.Message)
-		}
-
-		return json.NewDecoder(resp.Body).Decode(&result)
-	}); err != nil {
-		return nil, fmt.Errorf("failed to create application: %w", err)
+	if err := rawAPIPost(ctx, h, "clients", payload, &result); err != nil {
+		return portalClientResult{}, err
 	}
-
-	return &result, nil
+	return result, nil
 }
 
-// portalGrantPayload is the request body for creating a client grant with subject_type,
-// which is absent from the vendored management.ClientGrant struct.
+// ---- Grant payload types ----
+// subject_type is absent from the vendored management.ClientGrant struct.
+
 type portalGrantPayload struct {
 	ClientID    string   `json:"client_id"`
 	Audience    string   `json:"audience"`
@@ -384,10 +367,10 @@ type portalGrantPayload struct {
 	Scope       []string `json:"scope"`
 }
 
-// createPortalClientGrants creates the three client grants required by the portal.
-// Uses the raw HTTP client because subject_type is not in the vendored ClientGrant struct.
-func createPortalClientGrants(cmd *cobra.Command, cli *cli, clientID, tenant string) error {
-	grants := []portalGrantPayload{
+// buildPortalGrants returns the three grants required by Universal Portals.
+// Pure function: no I/O, fully testable.
+func buildPortalGrants(clientID, tenant string) []portalGrantPayload {
+	return []portalGrantPayload{
 		{
 			ClientID:    clientID,
 			Audience:    "https://" + tenant + "/me/",
@@ -407,60 +390,50 @@ func createPortalClientGrants(cmd *cobra.Command, cli *cli, clientID, tenant str
 			Scope:       managementAPIScopes,
 		},
 	}
+}
 
-	for _, grant := range grants {
-		g := grant
-		if err := ansi.Waiting(func() error {
-			req, err := cli.api.HTTPClient.NewRequest(
-				cmd.Context(),
-				http.MethodPost,
-				cli.api.HTTPClient.URI("client-grants"),
-				g,
-			)
-			if err != nil {
-				return err
-			}
+// createPortalGrant POSTs a single client grant.
+func createPortalGrant(ctx context.Context, h auth0.HTTPClientAPI, grant portalGrantPayload) error {
+	return rawAPIPost(ctx, h, "client-grants", grant, nil)
+}
 
-			resp, err := cli.api.HTTPClient.Do(req)
-			if err != nil {
-				return err
-			}
-			defer func() { _ = resp.Body.Close() }()
-
-			if resp.StatusCode >= http.StatusBadRequest {
-				var apiErr struct {
-					StatusCode int    `json:"statusCode"`
-					Message    string `json:"message"`
-				}
-				_ = json.NewDecoder(resp.Body).Decode(&apiErr)
-				return fmt.Errorf("API error %d: %s", resp.StatusCode, apiErr.Message)
-			}
-
-			return nil
-		}); err != nil {
-			return fmt.Errorf("failed to create client grant for %q: %w", g.Audience, err)
-		}
-
-		cli.renderer.Successf("Client grant  %s", g.Audience)
+// rawAPIPost is a deep helper that hides the New/Do/decode HTTP pattern.
+// Pass a non-nil result to decode the response body into it.
+func rawAPIPost(ctx context.Context, h auth0.HTTPClientAPI, path string, payload, result any) error {
+	req, err := h.NewRequest(ctx, http.MethodPost, h.URI(path), payload)
+	if err != nil {
+		return err
 	}
 
+	resp, err := h.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode >= http.StatusBadRequest {
+		var apiErr struct {
+			StatusCode int    `json:"statusCode"`
+			Message    string `json:"message"`
+		}
+		_ = json.NewDecoder(resp.Body).Decode(&apiErr)
+		return fmt.Errorf("API error %d: %s", resp.StatusCode, apiErr.Message)
+	}
+
+	if result != nil {
+		return json.NewDecoder(resp.Body).Decode(result)
+	}
 	return nil
 }
 
-// portalManageClientURL returns the Management Dashboard URL for the given client.
-func portalManageClientURL(cli *cli, clientID string) string {
-	parts := strings.Split(cli.tenant, ".")
-
-	var region string
-	if len(parts) == 3 {
-		region = "us"
-	} else {
+// portalManageClientURL builds the Management Dashboard URL for the given client.
+// Pure function: takes only the values it needs, no struct access.
+func portalManageClientURL(tenantDomain, tenantName, clientID string) string {
+	parts := strings.Split(tenantDomain, ".")
+	region := "us"
+	if len(parts) > 3 {
 		region = parts[1]
 	}
-
-	tenantName := cli.Config.Tenants[cli.tenant].Name
-	base := deriveServiceURL("manage", cli.tenant)
-
 	return fmt.Sprintf("%s/dashboard/%s/%s/applications/%s/settings",
-		base, region, tenantName, clientID)
+		deriveServiceURL("manage", tenantDomain), region, tenantName, clientID)
 }
