@@ -84,9 +84,21 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "actions",
 		Short: "Manage resources for actions",
-		Long: "Actions are secure, tenant-specific, versioned functions written in Node.js that execute " +
-			"at certain points within the Auth0 platform. Actions are used to customize and extend Auth0's " +
-			"capabilities with custom logic.",
+		Long: `Actions are secure, tenant-specific, versioned functions written in Node.js that execute
+at certain points within the Auth0 platform. Actions are used to customize and extend Auth0's
+capabilities with custom logic.
+
+## Schema Discovery & JSON Input
+
+Use '--schema' on a command to print its request payload schema, and '--input-json'
+to provide that payload programmatically (validated against the schema before the call).
+
+Examples:
+  auth0 actions create --schema                        # Show the create payload schema
+  auth0 actions create --input-json @action.json       # Create from JSON file
+  auth0 actions create --input-json '{"name":"..."}'   # Create from inline JSON
+
+For more details: https://auth0.com/docs/api/management/v2`,
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -190,25 +202,57 @@ func createActionCmd(cli *cli) *cobra.Command {
 		Dependencies map[string]string
 		Secrets      map[string]string
 		Runtime      string
+		InputJSON    string
+		Schema       bool
 	}
 
 	cmd := &cobra.Command{
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new action",
-		Long: "Create a new action.\n\n" +
-			"To create interactively, use `auth0 actions create` with no flags.\n\n" +
-			"To create non-interactively, supply the action name, trigger, code, secrets and dependencies through the flags.",
-		Example: `  auth0 actions create
-  auth0 actions create --name myaction
+		Long: `Create a new action.
+
+To create interactively, use 'auth0 actions create' with no flags.
+
+To create non-interactively, supply the action name, trigger, code, secrets and dependencies through the flags.
+
+## JSON Input (for agents and automation)
+
+Use '--schema' to print the request payload schema, then '--input-json' to provide
+action data as JSON:
+  - Inline JSON: --input-json '{"name":"my-action",...}'
+  - From file: --input-json @action.json
+  - From stdin: --input-json - (or pipe data in)
+
+The JSON is validated against the OpenAPI schema before sending to the API.`,
+		Example: `  # Interactive mode
+  auth0 actions create
+
+  # Flag-based mode
   auth0 actions create --name myaction --trigger post-login
-  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --runtime node18
-  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
-  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
-  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
-  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json
-  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json-compact`,
+  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -r node18
+  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -d "lodash=4.0.0" -s "API_KEY=value"
+
+  # Discover the payload schema (add --json for machine-readable output)
+  auth0 actions create --schema
+  auth0 actions create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 actions create --input-json '{"name":"my-action","supported_triggers":[{"id":"post-login","version":"v3"}]}'
+  auth0 actions create --input-json @action.json
+  cat action.json | auth0 actions create --input-json -
+  auth0 actions create --input-json @action.json --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Schema discovery mode: print the request payload and exit.
+			if inputs.Schema {
+				return printOperationSchema(cli, "POST", "/actions/actions")
+			}
+
+			// JSON input mode (for agents and automation).
+			if HasInputJSON(cmd) {
+				return createActionFromJSON(cli, cmd, inputs.InputJSON)
+			}
+
 			if err := actionName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
@@ -279,6 +323,12 @@ func createActionCmd(cli *cli) *cobra.Command {
 	actionDependency.RegisterStringMap(cmd, &inputs.Dependencies, nil)
 	actionSecret.RegisterStringMap(cmd, &inputs.Secrets, nil)
 	actionRuntime.RegisterString(cmd, &inputs.Runtime, "")
+	inputJSON.RegisterString(cmd, &inputs.InputJSON, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+
+	// --input-json supplies the whole payload, so it cannot be combined with the
+	// granular input flags. Output flags (--json) and --schema are not affected.
+	markInputJSONExclusive(cmd, "name", "trigger", "code", "dependency", "secret", "runtime")
 
 	return cmd
 }
@@ -291,32 +341,64 @@ func updateActionCmd(cli *cli) *cobra.Command {
 		Dependencies map[string]string
 		Secrets      map[string]string
 		Runtime      string
+		InputJSON    string
+		Schema       bool
 	}
 
 	cmd := &cobra.Command{
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an action",
-		Long: "Update an action.\n\n" +
-			"To update interactively, use `auth0 actions update` with no arguments.\n\n" +
-			"To update non-interactively, supply the action id, name, code, secrets and " +
-			"dependencies through the flags.",
-		Example: `  auth0 actions update <action-id>
+		Long: `Update an action.
+
+To update interactively, use 'auth0 actions update' with no arguments.
+
+To update non-interactively, supply the action id, name, code, secrets and dependencies through the flags.
+
+## JSON Input (for agents and automation)
+
+Use '--schema' to print the request payload schema, then '--input-json' to provide
+update data as JSON:
+  - Inline JSON: --input-json '{"name":"updated-name","runtime":"node22"}'
+  - From file: --input-json @update.json
+  - From stdin: --input-json - (or pipe data in)
+
+The JSON is validated against the OpenAPI schema before sending to the API.`,
+		Example: `  # Interactive mode
+  auth0 actions update
+  auth0 actions update <action-id>
+
+  # Flag-based mode
   auth0 actions update <action-id> --runtime node18
-  auth0 actions update <action-id> --name myaction --runtime node18
-  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js) --r node18"
-  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
-  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
-  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
-  auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json
-  auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json-compact`,
+  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)"
+  auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -d "lodash=4.0.0"
+
+  # Discover the payload schema (add --json for machine-readable output)
+  auth0 actions update --schema
+  auth0 actions update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 actions update <action-id> --input-json '{"name":"updated-name","runtime":"node22"}'
+  auth0 actions update <action-id> --input-json @update.json
+  cat update.json | auth0 actions update <action-id> --input-json -`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Schema discovery mode: print the request payload and exit.
+			// This does not require an action ID.
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/actions/actions/{id}")
+			}
+
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
 				if err := actionID.Pick(cmd, &inputs.ID, cli.actionPickerOptions); err != nil {
 					return err
 				}
+			}
+
+			// JSON input mode (for agents and automation).
+			if HasInputJSON(cmd) {
+				return updateActionFromJSON(cli, cmd, inputs.ID, inputs.InputJSON)
 			}
 
 			var oldAction *management.Action
@@ -391,6 +473,12 @@ func updateActionCmd(cli *cli) *cobra.Command {
 	actionDependency.RegisterStringMapU(cmd, &inputs.Dependencies, nil)
 	actionSecret.RegisterStringMapU(cmd, &inputs.Secrets, nil)
 	actionRuntime.RegisterStringU(cmd, &inputs.Runtime, "")
+	inputJSON.RegisterString(cmd, &inputs.InputJSON, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+
+	// --input-json supplies the whole payload, so it cannot be combined with the
+	// granular input flags. Output flags (--json) and --schema are not affected.
+	markInputJSONExclusive(cmd, "name", "code", "dependency", "secret", "runtime")
 
 	return cmd
 }

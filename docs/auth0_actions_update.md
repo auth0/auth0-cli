@@ -7,9 +7,19 @@ has_toc: false
 
 Update an action.
 
-To update interactively, use `auth0 actions update` with no arguments.
+To update interactively, use 'auth0 actions update' with no arguments.
 
 To update non-interactively, supply the action id, name, code, secrets and dependencies through the flags.
+
+## JSON Input (for agents and automation)
+
+Use '--schema' to print the request payload schema, then '--input-json' to provide
+update data as JSON:
+  - Inline JSON: --input-json '{"name":"updated-name","runtime":"node22"}'
+  - From file: --input-json @update.json
+  - From stdin: --input-json - (or pipe data in)
+
+The JSON is validated against the OpenAPI schema before sending to the API.
 
 ## Usage
 ```
@@ -19,15 +29,23 @@ auth0 actions update [flags]
 ## Examples
 
 ```
+  # Interactive mode
+  auth0 actions update
   auth0 actions update <action-id>
+
+  # Flag-based mode
   auth0 actions update <action-id> --runtime node18
-  auth0 actions update <action-id> --name myaction --runtime node18
-  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js) --r node18"
-  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
-  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
-  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
-  auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json
-  auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json-compact
+  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)"
+  auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -d "lodash=4.0.0"
+
+  # Discover the payload schema (add --json for machine-readable output)
+  auth0 actions update --schema
+  auth0 actions update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 actions update <action-id> --input-json '{"name":"updated-name","runtime":"node22"}'
+  auth0 actions update <action-id> --input-json @update.json
+  cat update.json | auth0 actions update <action-id> --input-json -
 ```
 
 
@@ -37,10 +55,12 @@ auth0 actions update [flags]
   -c, --code string                 Code content for the action.
   -d, --dependency stringToString   Third party npm module, and its version, that the action depends on. (default [])
       --force                       Skip confirmation.
+  -j, --input-json string           JSON input for the operation. Can be a JSON string, file path (@file.json), or '-' for stdin.
       --json                        Output in json format.
       --json-compact                Output in compact json format.
   -n, --name string                 Name of the action.
   -r, --runtime string              Runtime to be used in the action.  Possible values are: node22(recommended), node18, node16, node12
+      --schema                      Print the request payload schema for this command and exit. Use with --json for machine-readable output.
   -s, --secret stringToString       Secrets to be used in the action. (default [])
 ```
 
