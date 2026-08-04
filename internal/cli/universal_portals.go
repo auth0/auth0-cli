@@ -171,10 +171,28 @@ func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, name string) error {
 		cli.renderer.Successf("Client grant  %s", grant.Audience)
 	}
 
-	// TODO: Create Form (payload TBD).
-	// TODO: Create Portal (payload TBD — needs client.ClientID and form ID).
+	// TODO: Create the three Forms and capture their IDs.
+	// forms := portalFormIDs{
+	// 	PersonalInfo:             "<id of personal info form>",
+	// 	PrivacyConsent:           "<id of privacy consent form>",
+	// 	CommunicationPreferences: "<id of communication preferences form>",
+	// }
 
-	portalURL := "https://" + domain + "/portals"
+	// Create the portal.
+	slug := toPortalSlug(name)
+	var portal portalResult
+	if err := ansi.Waiting(func() error {
+		var err error
+		portal, err = createPortal(ctx, cli.api.HTTPClient, slug, name, client.ClientID, client.ClientSecret, portalFormIDs{
+			// TODO: replace with real form IDs from the Form provisioning steps above.
+		})
+		return err
+	}); err != nil {
+		return fmt.Errorf("failed to create portal: %w", err)
+	}
+	cli.renderer.Successf("Portal %q created", portal.Name)
+
+	portalURL := "https://" + domain + "/portals/" + portal.Slug
 
 	cli.renderer.Newline()
 	cli.renderer.Infof("Portal: %s", ansi.Cyan(portalURL))
@@ -424,6 +442,217 @@ func rawAPIPost(ctx context.Context, h auth0.HTTPClientAPI, path string, payload
 		return json.NewDecoder(resp.Body).Decode(result)
 	}
 	return nil
+}
+
+// ---- Portal payload types ----
+
+type portalPayload struct {
+	Slug       string            `json:"slug"`
+	Name       string            `json:"name"`
+	Client     portalClientRef   `json:"client"`
+	Navigation *portalNavigation `json:"navigation,omitempty"`
+	Pages      *portalPages      `json:"pages,omitempty"`
+}
+
+type portalClientRef struct {
+	TokenEndpointAuthMethod string `json:"token_endpoint_auth_method"`
+	ClientID                string `json:"client_id"`
+	ClientSecret            string `json:"client_secret"`
+}
+
+type portalNavigation struct {
+	Sidebar portalSidebar `json:"sidebar"`
+}
+
+type portalSidebar struct {
+	Components []portalComponent `json:"components"`
+}
+
+type portalPages struct {
+	Default string       `json:"default,omitempty"`
+	Content []portalPage `json:"content"`
+}
+
+type portalPage struct {
+	Title      string            `json:"title"`
+	Slug       string            `json:"slug"`
+	Components []portalComponent `json:"components,omitempty"`
+}
+
+// portalComponent covers both sidebar and page components.
+// Config is map[string]any because component types have heterogeneous shapes.
+type portalComponent struct {
+	Type   string         `json:"type"`
+	Config map[string]any `json:"config,omitempty"`
+}
+
+// portalResult holds the fields read back from the create-portal response.
+type portalResult struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Slug string `json:"slug"`
+}
+
+// toPortalSlug derives a URL-safe kebab-case slug from a portal name.
+// Pure function: no I/O.
+func toPortalSlug(name string) string {
+	var b strings.Builder
+	prevHyphen := false
+	for _, r := range strings.ToLower(name) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+			prevHyphen = false
+		case b.Len() > 0 && !prevHyphen:
+			b.WriteByte('-')
+			prevHyphen = true
+		}
+	}
+	slug := strings.TrimRight(b.String(), "-")
+	if slug == "" {
+		return "my-portal"
+	}
+	return slug
+}
+
+// portalFormIDs holds the IDs of the three Forms required by the portal.
+// All three will be populated once Form provisioning is implemented.
+type portalFormIDs struct {
+	PersonalInfo             string // form_id for the "Personal information" section
+	PrivacyConsent           string // form_id for the "Privacy & data consent" section
+	CommunicationPreferences string // form_id for the "Communication preferences" section
+}
+
+// buildDefaultPortal returns the full portal payload matching the Universal Portals
+// template: four pages with all sections, including form-backed ones.
+// Pure function: no I/O.
+func buildDefaultPortal(slug, name, clientID, clientSecret string, forms portalFormIDs) portalPayload {
+	section := func(title, description string, children ...portalComponent) portalComponent {
+		return portalComponent{
+			Type: "page:component:auth0:structure:section",
+			Config: map[string]any{
+				"title":       title,
+				"description": description,
+				"variant":     "card",
+				"children":    children,
+			},
+		}
+	}
+	builtin := func(componentType string) portalComponent {
+		return portalComponent{Type: componentType}
+	}
+	form := func(formID, completionMessage string) portalComponent {
+		return portalComponent{
+			Type: "page:component:auth0:form",
+			Config: map[string]any{
+				"form_id":            formID,
+				"completion_message": completionMessage,
+			},
+		}
+	}
+	navLink := func(label, to, icon string) portalComponent {
+		return portalComponent{
+			Type:   "sidebar:component:auth0:internal_link",
+			Config: map[string]any{"label": label, "to": to, "icon": icon},
+		}
+	}
+
+	return portalPayload{
+		Slug: slug,
+		Name: name,
+		Client: portalClientRef{
+			TokenEndpointAuthMethod: "client_secret_post",
+			ClientID:                clientID,
+			ClientSecret:            clientSecret,
+		},
+		Navigation: &portalNavigation{
+			Sidebar: portalSidebar{
+				Components: []portalComponent{
+					navLink("Profile", "profile", "user"),
+					navLink("Security", "security", "shield"),
+					navLink("Organization", "organization", "building"),
+					navLink("Legal & privacy", "legal-privacy", "file-text"),
+				},
+			},
+		},
+		Pages: &portalPages{
+			Default: "profile",
+			Content: []portalPage{
+				{
+					Title: "Profile",
+					Slug:  "profile",
+					Components: []portalComponent{
+						section(
+							"Personal information",
+							"Basic info about you, like your name and contact details, that you use across services.",
+							form(forms.PersonalInfo, "Your personal information has been updated."),
+						),
+						section(
+							"Passkeys",
+							"Use your fingerprint, face, or screen lock instead of a password to sign in quickly and more securely.",
+							builtin("page:component:auth0:my_account:passkey_management"),
+						),
+					},
+				},
+				{
+					Title: "Security",
+					Slug:  "security",
+					Components: []portalComponent{
+						section(
+							"Multi-factor authentication",
+							"Add an extra layer of protection to your account by requiring a second verification step each time you sign in.",
+							builtin("page:component:auth0:my_account:mfa_management"),
+						),
+						section(
+							"Sessions & devices",
+							"Review the devices and sessions that are currently signed in to your account.",
+							portalComponent{
+								Type:   "page:component:auth0:typography:rich_text",
+								Config: map[string]any{"content": "<p><em>Sessions &amp; devices management coming soon.</em></p>"},
+							},
+						),
+					},
+				},
+				{
+					Title: "Organization",
+					Slug:  "organization",
+					Components: []portalComponent{
+						section(
+							"Organization details",
+							"Update your organization's name and other details visible to its members.",
+							builtin("page:component:auth0:my_organization:details_edit"),
+						),
+					},
+				},
+				{
+					Title: "Legal & privacy",
+					Slug:  "legal-privacy",
+					Components: []portalComponent{
+						section(
+							"Privacy & data consent",
+							"Control how your personal data is collected and used across our services.",
+							form(forms.PrivacyConsent, "Your privacy preferences have been saved."),
+						),
+						section(
+							"Communication preferences",
+							"Choose which emails and notifications you'd like to receive from us.",
+							form(forms.CommunicationPreferences, "Your communication preferences have been updated."),
+						),
+					},
+				},
+			},
+		},
+	}
+}
+
+// createPortal POSTs a new portal with the full default page structure.
+func createPortal(ctx context.Context, h auth0.HTTPClientAPI, slug, name, clientID, clientSecret string, forms portalFormIDs) (portalResult, error) {
+	payload := buildDefaultPortal(slug, name, clientID, clientSecret, forms)
+	var result portalResult
+	if err := rawAPIPost(ctx, h, "portals", payload, &result); err != nil {
+		return portalResult{}, err
+	}
+	return result, nil
 }
 
 // portalManageClientURL builds the Management Dashboard URL for the given client.
