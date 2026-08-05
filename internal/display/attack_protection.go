@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
-	managementv2 "github.com/auth0/go-auth0/v2/management"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 )
@@ -222,17 +222,17 @@ func (bd *botDetectionView) Object() interface{} {
 	return bd.raw
 }
 
-func (r *Renderer) BotDetectionShow(bd *managementv2.GetBotDetectionSettingsResponseContent) {
+func (r *Renderer) BotDetectionShow(bd *managementv3.GetBotDetectionSettingsResponseContent) {
 	r.Heading("bot detection")
 	r.Result(makeBotDetectionShowView(bd))
 }
 
-func (r *Renderer) BotDetectionUpdate(bd *managementv2.UpdateBotDetectionSettingsResponseContent) {
+func (r *Renderer) BotDetectionUpdate(bd *managementv3.UpdateBotDetectionSettingsResponseContent) {
 	r.Heading("bot detection updated")
 	r.Result(makeBotDetectionUpdateView(bd))
 }
 
-func makeBotDetectionShowView(bd *managementv2.GetBotDetectionSettingsResponseContent) *botDetectionView {
+func makeBotDetectionShowView(bd *managementv3.GetBotDetectionSettingsResponseContent) *botDetectionView {
 	return &botDetectionView{
 		BotDetectionLevel:            string(bd.GetBotDetectionLevel()),
 		ChallengePasswordPolicy:      string(bd.GetChallengePasswordPolicy()),
@@ -245,7 +245,7 @@ func makeBotDetectionShowView(bd *managementv2.GetBotDetectionSettingsResponseCo
 	}
 }
 
-func makeBotDetectionUpdateView(bd *managementv2.UpdateBotDetectionSettingsResponseContent) *botDetectionView {
+func makeBotDetectionUpdateView(bd *managementv3.UpdateBotDetectionSettingsResponseContent) *botDetectionView {
 	return &botDetectionView{
 		BotDetectionLevel:            string(bd.GetBotDetectionLevel()),
 		ChallengePasswordPolicy:      string(bd.GetChallengePasswordPolicy()),
