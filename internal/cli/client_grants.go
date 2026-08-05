@@ -317,7 +317,7 @@ func createClientGrantCmd(cli *cli) *cobra.Command {
 			// show a multi-select scoped to the chosen audience so the user
 			// only picks from scopes that API actually defines.
 			if !clientGrantAllowAllScopes.IsSet(cmd) && shouldAsk(cmd, &clientGrantScopes, false) {
-				if err := cli.pickClientGrantScopes(cmd.Context(), inputs.Audience, &inputs.Scopes, &inputs.AllowAllScopes, nil, false, true); err != nil {
+				if err := cli.pickClientGrantScopes(cmd.Context(), inputs.Audience, &inputs.Scopes, &inputs.AllowAllScopes, nil, nil, false, true); err != nil {
 					return err
 				}
 			}
@@ -432,6 +432,7 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
 		ID                   string
 		Scopes               []string
 		AllowAllScopes       bool
+		NoScopes             bool
 		OrganizationUsage    string
 		AllowAnyOrganization bool
 	}
@@ -453,7 +454,7 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
   auth0 client-grants update <client-grant-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if err := clientGrantID.Pick(cmd, &inputs.ID, cli.clientGrantPickerOptions); err != nil {
+				if err := clientGrantID.Pick(cmd, &inputs.ID, cli.mutableClientGrantPickerOptions); err != nil {
 					return err
 				}
 			} else {
@@ -468,11 +469,17 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to find client grant with ID %q: %w", inputs.ID, err)
 			}
 
+			// Auth0 rejects updating a system grant, so fail before running the
+			// interactive flow rather than after the user has clicked through it.
+			if current.GetIsSystem() {
+				return fmt.Errorf("client grant with ID %q is a system grant and cannot be updated", inputs.ID)
+			}
+
 			// Audience is immutable, so resolve the scopes picker from the
 			// grant's existing audience, defaulting the mode and selection to
 			// the grant's current state, keeping the flow in sync with create.
 			if !clientGrantAllowAllScopes.IsSet(cmd) && shouldAsk(cmd, &clientGrantScopes, true) {
-				if err := cli.pickClientGrantScopes(cmd.Context(), current.GetAudience(), &inputs.Scopes, &inputs.AllowAllScopes, current.GetScope(), current.GetAllowAllScopes(), false); err != nil {
+				if err := cli.pickClientGrantScopes(cmd.Context(), current.GetAudience(), &inputs.Scopes, &inputs.AllowAllScopes, &inputs.NoScopes, current.GetScope(), current.GetAllowAllScopes(), true); err != nil {
 					return err
 				}
 			}
@@ -509,12 +516,23 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
 				AllowAnyOrganization: &inputs.AllowAnyOrganization,
 			}
 
-			grant.Scope, grant.AllowAllScopes = resolveUpdateClientGrantScopes(
-				inputs.Scopes,
-				inputs.AllowAllScopes,
-				current.GetScope(),
-				current.GetAllowAllScopes(),
-			)
+			if inputs.NoScopes {
+				// The user explicitly cleared the scopes. Send them with SetScope
+				// so an empty list serializes as "scope": [] rather than being
+				// omitted (which would leave the existing scopes untouched). A nil
+				// slice marshals to null, so normalize it to a non-nil empty slice.
+				grant.SetScope([]string{})
+				if current.GetAllowAllScopes() {
+					grant.AllowAllScopes = auth0.Bool(false)
+				}
+			} else {
+				grant.Scope, grant.AllowAllScopes = resolveUpdateClientGrantScopes(
+					inputs.Scopes,
+					inputs.AllowAllScopes,
+					current.GetScope(),
+					current.GetAllowAllScopes(),
+				)
+			}
 
 			if inputs.OrganizationUsage != "" {
 				organizationUsage, err := managementv3.NewClientGrantOrganizationNullableUsageEnumFromString(inputs.OrganizationUsage)
@@ -569,7 +587,7 @@ func deleteClientGrantCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var ids []string
 			if len(args) == 0 {
-				if err := clientGrantID.PickMany(cmd, &ids, cli.clientGrantPickerOptions); err != nil {
+				if err := clientGrantID.PickMany(cmd, &ids, cli.mutableClientGrantPickerOptions); err != nil {
 					return err
 				}
 			} else {
@@ -583,8 +601,15 @@ func deleteClientGrantCmd(cli *cli) *cobra.Command {
 			}
 
 			return ansi.ProgressBar("Deleting client grant(s)", ids, func(_ int, id string) error {
-				if _, err := cli.apiv3.ClientGrant.Get(cmd.Context(), id); err != nil {
+				current, err := cli.apiv3.ClientGrant.Get(cmd.Context(), id)
+				if err != nil {
 					return fmt.Errorf("failed to delete client grant with ID %q: %w", id, err)
+				}
+
+				// Auth0 rejects deleting a system grant, so surface a clear
+				// message rather than the raw API error.
+				if current.GetIsSystem() {
+					return fmt.Errorf("client grant with ID %q is a system grant and cannot be deleted", id)
 				}
 
 				if err := cli.apiv3.ClientGrant.Delete(cmd.Context(), id); err != nil {
@@ -601,6 +626,18 @@ func deleteClientGrantCmd(cli *cli) *cobra.Command {
 }
 
 func (c *cli) clientGrantPickerOptions(ctx context.Context) (pickerOptions, error) {
+	return c.clientGrantPickerOptionsFiltered(ctx, false)
+}
+
+// mutableClientGrantPickerOptions lists only the grants that can actually be
+// changed, dropping system grants. Auth0 rejects updating or deleting a system
+// grant, so offering them in the update/delete pickers would only lead to a
+// late API error on a grant the user can never modify.
+func (c *cli) mutableClientGrantPickerOptions(ctx context.Context) (pickerOptions, error) {
+	return c.clientGrantPickerOptionsFiltered(ctx, true)
+}
+
+func (c *cli) clientGrantPickerOptionsFiltered(ctx context.Context, excludeSystem bool) (pickerOptions, error) {
 	// Fetch only the first page, matching the apis/apps pickers. This keeps the
 	// picker fast to open on large tenants; if a grant is not on the first page,
 	// the user can pass its id directly.
@@ -611,6 +648,10 @@ func (c *cli) clientGrantPickerOptions(ctx context.Context) (pickerOptions, erro
 
 	var opts pickerOptions
 	for _, grant := range page.Results {
+		if excludeSystem && grant.GetIsSystem() {
+			continue
+		}
+
 		identifier := grant.GetClientID()
 		if identifier == "" {
 			identifier = string(grant.GetDefaultFor())
@@ -727,7 +768,7 @@ const (
 // never silently drops a scope already on the grant. When the API has no scopes
 // at all, it warns and leaves the inputs untouched (an empty scope list, which
 // the API accepts).
-func (c *cli) pickClientGrantScopes(ctx context.Context, audience string, result *[]string, allowAllScopes *bool, currentScopes []string, currentAllowAll, allowNone bool) error {
+func (c *cli) pickClientGrantScopes(ctx context.Context, audience string, result *[]string, allowAllScopes, noScopes *bool, currentScopes []string, currentAllowAll, allowNone bool) error {
 	var resourceServer *management.ResourceServer
 	if err := ansi.Waiting(func() (err error) {
 		resourceServer, err = c.api.ResourceServer.Read(ctx, audience)
@@ -779,6 +820,9 @@ func (c *cli) pickClientGrantScopes(ctx context.Context, audience string, result
 		return nil
 	case clientGrantScopesModeNone:
 		*result = nil
+		if noScopes != nil {
+			*noScopes = true
+		}
 		return nil
 	}
 

@@ -118,6 +118,63 @@ func TestClientGrantsPickerOptions(t *testing.T) {
 	}
 }
 
+func TestMutableClientGrantPickerOptions(t *testing.T) {
+	page := &auth0.ClientGrantPage{Results: []*managementv3.ClientGrantResponseContent{
+		{
+			ID:       auth0.String("cgr_1"),
+			ClientID: auth0.String("client-id-1"),
+			Audience: auth0.String("https://travel0.com/api"),
+		},
+		{
+			ID:       auth0.String("cgr_system"),
+			ClientID: auth0.String("client-id-system"),
+			Audience: auth0.String("https://travel0.com/api"),
+			IsSystem: auth0.Bool(true),
+		},
+	}}
+
+	t.Run("excludes system grants", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		clientGrantAPI := mock.NewMockClientGrantAPIV3(ctrl)
+		clientGrantAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).
+			Return(page, nil)
+
+		cli := &cli{apiv3: &auth0.APIV3{ClientGrant: clientGrantAPI}}
+
+		options, err := cli.mutableClientGrantPickerOptions(context.Background())
+
+		assert.NoError(t, err)
+		assert.Len(t, options, 1)
+		assert.Equal(t, "cgr_1", options[0].value)
+	})
+
+	t.Run("errors when only system grants exist", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		clientGrantAPI := mock.NewMockClientGrantAPIV3(ctrl)
+		clientGrantAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).
+			Return(&auth0.ClientGrantPage{Results: []*managementv3.ClientGrantResponseContent{
+				{
+					ID:       auth0.String("cgr_system"),
+					ClientID: auth0.String("client-id-system"),
+					Audience: auth0.String("https://travel0.com/api"),
+					IsSystem: auth0.Bool(true),
+				},
+			}}, nil)
+
+		cli := &cli{apiv3: &auth0.APIV3{ClientGrant: clientGrantAPI}}
+
+		_, err := cli.mutableClientGrantPickerOptions(context.Background())
+
+		assert.ErrorContains(t, err, "there are currently no client grants to choose from")
+	})
+}
+
 func TestValidateClientGrantSubjectType(t *testing.T) {
 	tests := []struct {
 		name                 string
