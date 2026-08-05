@@ -54,8 +54,8 @@ tests:
     exit-code: 0
     stdout:
       contains:
-        - AUDIENCE   http://integration-test-api-client-grant
-        - SCOPES     read:todos
+        - AUDIENCE      http://integration-test-api-client-grant
+        - SCOPES        read:todos
 
   009 - show client grant with invalid id:
     command: auth0 client-grants show this-client-grant-id-does-not-exist --no-input
