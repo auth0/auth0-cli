@@ -1,0 +1,112 @@
+config:
+  inherit-env: true
+  retries: 1
+  interval: 1s
+
+tests:
+  001 - list client grants:
+    command: auth0 client-grants list
+    exit-code: 0
+
+  002 - list client grants with invalid number:
+    command: auth0 client-grants list --number 1001
+    exit-code: 1
+    stderr:
+      contains:
+        - Number flag invalid, please pass a number between 1 and 1000
+
+  003 - create client grant with specific scopes and check json output:
+    command: auth0 client-grants create --client-id $(./test/integration/scripts/get-m2m-app-id.sh) --audience $(./test/integration/scripts/get-api-identifier.sh) --scopes read:todos --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        audience: http://integration-test-api-client-grant
+        scope: "[read:todos]"
+
+  004 - create client grant that already exists should fail:
+    command: auth0 client-grants create --client-id $(./test/integration/scripts/get-m2m-app-id.sh) --audience $(./test/integration/scripts/get-api-identifier.sh) --scopes read:todos --no-input
+    exit-code: 1
+
+  005 - create client grant with allow-any-organization on deny usage should fail:
+    command: auth0 client-grants create --client-id $(./test/integration/scripts/get-m2m-app-id.sh) --audience $(./test/integration/scripts/get-api-identifier.sh) --allow-all-scopes --organization-usage deny --allow-any-organization=true --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "--allow-any-organization can only be enabled when --organization-usage is 'allow' or 'require'"
+
+  006 - create client grant with user subject type and organization usage should fail:
+    command: auth0 client-grants create --client-id $(./test/integration/scripts/get-m2m-app-id.sh) --audience $(./test/integration/scripts/get-api-identifier.sh) --subject-type user --organization-usage allow --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "cannot be set when --subject-type is"
+
+  007 - show client grant json output:
+    command: auth0 client-grants show $(./test/integration/scripts/get-client-grant-id.sh) --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        audience: http://integration-test-api-client-grant
+        scope: "[read:todos]"
+
+  008 - show client grant table output:
+    command: auth0 client-grants show $(./test/integration/scripts/get-client-grant-id.sh) --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - AUDIENCE   http://integration-test-api-client-grant
+        - SCOPES     read:todos
+
+  009 - show client grant with invalid id:
+    command: auth0 client-grants show this-client-grant-id-does-not-exist --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "Failed to read client grant with ID \"this-client-grant-id-does-not-exist\""
+
+  010 - update client grant scopes json output:
+    command: auth0 client-grants update $(./test/integration/scripts/get-client-grant-id.sh) --scopes read:todos,write:todos --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        scope: "[read:todos write:todos]"
+
+  011 - update client grant to allow all scopes:
+    command: auth0 client-grants update $(./test/integration/scripts/get-client-grant-id.sh) --allow-all-scopes --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        allow_all_scopes: "true"
+
+  012 - update client grant organization settings:
+    command: auth0 client-grants update $(./test/integration/scripts/get-client-grant-id.sh) --organization-usage allow --allow-any-organization=true --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        organization_usage: allow
+        allow_any_organization: "true"
+
+  013 - update client grant back to specific scopes clears allow all scopes:
+    command: auth0 client-grants update $(./test/integration/scripts/get-client-grant-id.sh) --scopes read:todos --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        scope: "[read:todos]"
+
+  014 - update client grant with allow-any-organization on deny usage should fail:
+    command: auth0 client-grants update $(./test/integration/scripts/get-client-grant-id.sh) --organization-usage deny --allow-any-organization=true --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "--allow-any-organization can only be enabled when --organization-usage is 'allow' or 'require'"
+
+  015 - delete client grant:
+    command: auth0 client-grants delete $(./test/integration/scripts/get-client-grant-id.sh) --force --no-input
+    exit-code: 0
+
+  016 - delete client grant with invalid id:
+    command: auth0 client-grants delete this-client-grant-id-does-not-exist --force --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "Failed to delete client grant with ID \"this-client-grant-id-does-not-exist\""

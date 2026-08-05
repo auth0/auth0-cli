@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
 	"github.com/google/uuid"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -57,7 +58,7 @@ type (
 	}
 
 	clientGrantResourceFetcher struct {
-		api *auth0.API
+		apiv3 *auth0.APIV3
 	}
 
 	connectionResourceFetcher struct {
@@ -263,32 +264,25 @@ func (f *clientResourceFetcher) FetchData(ctx context.Context) (importDataList, 
 func (f *clientGrantResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	var data importDataList
 
-	var page int
-	for {
-		grants, err := f.api.ClientGrant.List(
-			ctx,
-			management.Page(page),
-		)
-		if err != nil {
-			return nil, err
-		}
+	grants, err := f.apiv3.ClientGrant.List(ctx, &managementv3.ListClientGrantsRequestParameters{})
+	if err != nil {
+		return nil, err
+	}
 
-		for _, grant := range grants.ClientGrants {
-			identifier := grant.GetClientID()
-			if identifier == "" {
-				identifier = grant.GetDefaultFor()
-			}
-			data = append(data, importDataItem{
-				ResourceName: "auth0_client_grant." + sanitizeResourceName(identifier+"_"+grant.GetAudience()),
-				ImportID:     grant.GetID(),
-			})
+	iter := grants.Iterator()
+	for iter.Next(ctx) {
+		grant := iter.Current()
+		identifier := grant.GetClientID()
+		if identifier == "" {
+			identifier = string(grant.GetDefaultFor())
 		}
-
-		if !grants.HasNext() {
-			break
-		}
-
-		page++
+		data = append(data, importDataItem{
+			ResourceName: "auth0_client_grant." + sanitizeResourceName(identifier+"_"+grant.GetAudience()),
+			ImportID:     grant.GetID(),
+		})
+	}
+	if err := iter.Err(); err != nil {
+		return nil, err
 	}
 
 	return data, nil

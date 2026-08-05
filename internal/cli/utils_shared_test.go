@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
@@ -62,14 +63,14 @@ func TestCheckClientIsAuthorizedForAPI(t *testing.T) {
 	tests := []struct {
 		name          string
 		organization  string
-		grantList     *management.ClientGrantList
+		grantList     *auth0.ClientGrantPage
 		apiError      error
 		expectedError string
 	}{
 		{
 			name:         "no grant exists",
 			organization: "",
-			grantList:    &management.ClientGrantList{},
+			grantList:    &auth0.ClientGrantPage{},
 			expectedError: "the some-client-name application is not authorized to request access tokens for this API " +
 				audience,
 		},
@@ -83,27 +84,27 @@ func TestCheckClientIsAuthorizedForAPI(t *testing.T) {
 		{
 			name:         "grant exists, no org required",
 			organization: "",
-			grantList: &management.ClientGrantList{
-				ClientGrants: []*management.ClientGrant{
-					{OrganizationUsage: auth0.String("allow")},
+			grantList: &auth0.ClientGrantPage{
+				Results: []*managementv3.ClientGrantResponseContent{
+					{OrganizationUsage: managementv3.ClientGrantOrganizationUsageEnumAllow.Ptr()},
 				},
 			},
 		},
 		{
 			name:         "grant requires org, org provided",
 			organization: "org_abc123",
-			grantList: &management.ClientGrantList{
-				ClientGrants: []*management.ClientGrant{
-					{OrganizationUsage: auth0.String("require")},
+			grantList: &auth0.ClientGrantPage{
+				Results: []*managementv3.ClientGrantResponseContent{
+					{OrganizationUsage: managementv3.ClientGrantOrganizationUsageEnumRequire.Ptr()},
 				},
 			},
 		},
 		{
 			name:         "grant requires org, no org provided",
 			organization: "",
-			grantList: &management.ClientGrantList{
-				ClientGrants: []*management.ClientGrant{
-					{OrganizationUsage: auth0.String("require")},
+			grantList: &auth0.ClientGrantPage{
+				Results: []*managementv3.ClientGrantResponseContent{
+					{OrganizationUsage: managementv3.ClientGrantOrganizationUsageEnumRequire.Ptr()},
 				},
 			},
 			expectedError: "the client grant for " + audience + " requires an organization.\n\n" +
@@ -116,13 +117,13 @@ func TestCheckClientIsAuthorizedForAPI(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			clientGrantAPI := mock.NewMockClientGrantAPI(ctrl)
+			clientGrantAPI := mock.NewMockClientGrantAPIV3(ctrl)
 			clientGrantAPI.EXPECT().
 				List(gomock.Any(), gomock.Any()).
 				Return(test.grantList, test.apiError)
 
 			cli := &cli{
-				api: &auth0.API{ClientGrant: clientGrantAPI},
+				apiv3: &auth0.APIV3{ClientGrant: clientGrantAPI},
 			}
 
 			err := checkClientIsAuthorizedForAPI(context.Background(), cli, client, audience, test.organization)
