@@ -484,37 +484,48 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			if err := clientGrantOrganizationUsage.SelectU(cmd, &inputs.OrganizationUsage, clientGrantOrganizationUsageOptions, stringPtr(current.OrganizationUsage)); err != nil {
-				return err
-			}
+			// Organizations cannot be used with the user or anonymous_user
+			// subject types, so skip the organization prompts entirely for them.
+			// The subject type is immutable, so it comes from the existing grant.
+			subjectType := string(current.GetSubjectType())
+			if clientGrantSubjectTypeAllowsOrganizations(subjectType) {
+				if err := clientGrantOrganizationUsage.SelectU(cmd, &inputs.OrganizationUsage, clientGrantOrganizationUsageOptions, stringPtr(current.OrganizationUsage)); err != nil {
+					return err
+				}
 
-			if !clientGrantAllowAnyOrganization.IsSet(cmd) {
-				inputs.AllowAnyOrganization = current.GetAllowAnyOrganization()
-			}
+				if !clientGrantAllowAnyOrganization.IsSet(cmd) {
+					inputs.AllowAnyOrganization = current.GetAllowAnyOrganization()
+				}
 
-			// The effective organization usage is the new value when supplied,
-			// otherwise whatever the grant already has (which we leave untouched).
-			effectiveOrganizationUsage := inputs.OrganizationUsage
-			if effectiveOrganizationUsage == "" {
-				effectiveOrganizationUsage = string(current.GetOrganizationUsage())
-			}
+				// The effective organization usage is the new value when supplied,
+				// otherwise whatever the grant already has (which we leave untouched).
+				effectiveOrganizationUsage := inputs.OrganizationUsage
+				if effectiveOrganizationUsage == "" {
+					effectiveOrganizationUsage = string(current.GetOrganizationUsage())
+				}
 
-			// Allowing any organization only applies when organizations can be
-			// used with the grant, so only ask for it when organization usage
-			// is allow or require. On deny it must stay false.
-			if clientGrantOrganizationAllowsAny(effectiveOrganizationUsage) {
-				if err := clientGrantAllowAnyOrganization.AskBoolU(cmd, &inputs.AllowAnyOrganization, current.AllowAnyOrganization); err != nil {
+				// Allowing any organization only applies when organizations can be
+				// used with the grant, so only ask for it when organization usage
+				// is allow or require. On deny it must stay false.
+				if clientGrantOrganizationAllowsAny(effectiveOrganizationUsage) {
+					if err := clientGrantAllowAnyOrganization.AskBoolU(cmd, &inputs.AllowAnyOrganization, current.AllowAnyOrganization); err != nil {
+						return err
+					}
+				}
+
+				if err := validateClientGrantOrganization(effectiveOrganizationUsage, inputs.AllowAnyOrganization); err != nil {
 					return err
 				}
 			}
 
-			if err := validateClientGrantOrganization(effectiveOrganizationUsage, inputs.AllowAnyOrganization); err != nil {
+			// Catch organization flags passed for a subject type that cannot use
+			// organizations (matching create), turning the API 400 into a clear
+			// message on the non-interactive path.
+			if err := validateClientGrantSubjectType(subjectType, inputs.OrganizationUsage, inputs.AllowAnyOrganization); err != nil {
 				return err
 			}
 
-			grant := &managementv3.UpdateClientGrantRequestContent{
-				AllowAnyOrganization: &inputs.AllowAnyOrganization,
-			}
+			grant := &managementv3.UpdateClientGrantRequestContent{}
 
 			if inputs.NoScopes {
 				// The user explicitly cleared the scopes. Send them with SetScope
@@ -534,12 +545,18 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
 				)
 			}
 
-			if inputs.OrganizationUsage != "" {
-				organizationUsage, err := managementv3.NewClientGrantOrganizationNullableUsageEnumFromString(inputs.OrganizationUsage)
-				if err != nil {
-					return err
+			// Organization settings cannot be sent for the user or anonymous_user
+			// subject types, so only attach them when the subject type allows it.
+			if clientGrantSubjectTypeAllowsOrganizations(subjectType) {
+				grant.AllowAnyOrganization = &inputs.AllowAnyOrganization
+
+				if inputs.OrganizationUsage != "" {
+					organizationUsage, err := managementv3.NewClientGrantOrganizationNullableUsageEnumFromString(inputs.OrganizationUsage)
+					if err != nil {
+						return err
+					}
+					grant.OrganizationUsage = &organizationUsage
 				}
-				grant.OrganizationUsage = &organizationUsage
 			}
 
 			var updated *managementv3.UpdateClientGrantResponseContent
@@ -795,7 +812,12 @@ func (c *cli) pickClientGrantScopes(ctx context.Context, audience string, result
 		return nil
 	}
 
-	modeOptions := []string{clientGrantScopesModeSpecific, clientGrantScopesModeAll}
+	// Auth0 rejects allow_all_scopes on a system API, so only offer that mode
+	// for regular APIs. System APIs still support specific scopes and none.
+	modeOptions := []string{clientGrantScopesModeSpecific}
+	if !resourceServer.GetIsSystem() {
+		modeOptions = append(modeOptions, clientGrantScopesModeAll)
+	}
 	if allowNone {
 		modeOptions = append(modeOptions, clientGrantScopesModeNone)
 	}
