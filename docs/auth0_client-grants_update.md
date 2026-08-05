@@ -11,6 +11,8 @@ To update interactively, use `auth0 client-grants update` with no arguments.
 
 The client id and audience of a grant cannot be changed. To update non-interactively, supply the scopes or organization settings through the flags. Pass `--allow-all-scopes` to grant every scope on the API instead of a specific list.
 
+Note: for the Auth0 Management API with `--subject-type user`, scopes must be a subset of the fixed current_user set and cannot be listed dynamically, so pass them inline, for example: `--scopes "read:current_user,update:current_user_metadata,delete:current_user_metadata,create:current_user_metadata,create:current_user_device_credentials,delete:current_user_device_credentials,update:current_user_identities"`.
+
 ## Usage
 ```
 auth0 client-grants update [flags]

@@ -11,6 +11,8 @@ To create interactively, use `auth0 client-grants create` with no flags.
 
 To create non-interactively, supply the client id, audience and any optional scopes or organization settings through the flags. A grant can authorize specific scopes (`--scopes`), every scope on the API (`--allow-all-scopes`), or no scopes at all.
 
+Note: for the Auth0 Management API with `--subject-type user`, scopes must be a subset of the fixed current_user set and cannot be listed dynamically, so pass them inline, for example: `--scopes "read:current_user,update:current_user_metadata,delete:current_user_metadata,create:current_user_metadata,create:current_user_device_credentials,delete:current_user_device_credentials,update:current_user_identities"`.
+
 ## Usage
 ```
 auth0 client-grants create [flags]

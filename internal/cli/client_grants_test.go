@@ -175,6 +175,89 @@ func TestMutableClientGrantPickerOptions(t *testing.T) {
 	})
 }
 
+func TestUpdateClientGrantCmd(t *testing.T) {
+	tests := []struct {
+		name          string
+		args          []string
+		grant         *managementv3.GetClientGrantResponseContent
+		expectedError string
+	}{
+		{
+			name: "fails fast on a system grant",
+			args: []string{"cgr_system", "--scopes", "read:todos"},
+			grant: &managementv3.GetClientGrantResponseContent{
+				ID:       auth0.String("cgr_system"),
+				Audience: auth0.String("https://travel0.com/api"),
+				IsSystem: auth0.Bool(true),
+			},
+			expectedError: `client grant with ID "cgr_system" is a system grant and cannot be updated`,
+		},
+		{
+			name: "rejects organization settings for a user subject type",
+			args: []string{"cgr_user", "--organization-usage", "allow"},
+			grant: &managementv3.GetClientGrantResponseContent{
+				ID:          auth0.String("cgr_user"),
+				Audience:    auth0.String("https://travel0.com/api"),
+				SubjectType: managementv3.ClientGrantSubjectTypeEnumUser.Ptr(),
+			},
+			expectedError: `--organization-usage and --allow-any-organization cannot be set when --subject-type is "user"`,
+		},
+		{
+			name: "rejects allow-any-organization for an anonymous_user subject type",
+			args: []string{"cgr_anon", "--allow-any-organization=true"},
+			grant: &managementv3.GetClientGrantResponseContent{
+				ID:          auth0.String("cgr_anon"),
+				Audience:    auth0.String("https://travel0.com/api"),
+				SubjectType: managementv3.ClientGrantSubjectTypeEnumAnonymousUser.Ptr(),
+			},
+			expectedError: `--organization-usage and --allow-any-organization cannot be set when --subject-type is "anonymous_user"`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			clientGrantAPI := mock.NewMockClientGrantAPIV3(ctrl)
+			clientGrantAPI.EXPECT().
+				Get(gomock.Any(), test.grant.GetID()).
+				Return(test.grant, nil)
+
+			cli := &cli{apiv3: &auth0.APIV3{ClientGrant: clientGrantAPI}}
+			cli.noInput = true // Non-interactive mode.
+
+			cmd := updateClientGrantCmd(cli)
+			cmd.SetArgs(test.args)
+
+			assert.EqualError(t, cmd.Execute(), test.expectedError)
+		})
+	}
+}
+
+func TestDeleteClientGrantCmd(t *testing.T) {
+	t.Run("fails fast on a system grant", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		clientGrantAPI := mock.NewMockClientGrantAPIV3(ctrl)
+		clientGrantAPI.EXPECT().
+			Get(gomock.Any(), "cgr_system").
+			Return(&managementv3.GetClientGrantResponseContent{
+				ID:       auth0.String("cgr_system"),
+				IsSystem: auth0.Bool(true),
+			}, nil)
+
+		cli := &cli{apiv3: &auth0.APIV3{ClientGrant: clientGrantAPI}}
+		cli.noInput = true // Non-interactive mode.
+
+		cmd := deleteClientGrantCmd(cli)
+		cmd.SetArgs([]string{"cgr_system", "--force"})
+
+		assert.EqualError(t, cmd.Execute(), `client grant with ID "cgr_system" is a system grant and cannot be deleted`)
+	})
+}
+
 func TestValidateClientGrantSubjectType(t *testing.T) {
 	tests := []struct {
 		name                 string

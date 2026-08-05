@@ -105,6 +105,16 @@ var (
 
 var clientGrantSubjectTypeOptions = []string{"client", "user", "anonymous_user"}
 
+// managementAPIUserScopesNote explains that, for a user subject type against the
+// Auth0 Management API, the scopes are a fixed current_user set that the API
+// does not expose for dynamic discovery, so they have to be passed inline with
+// --scopes rather than picked interactively.
+const managementAPIUserScopesNote = "Note: for the Auth0 Management API with `--subject-type user`, scopes must be a " +
+	"subset of the fixed current_user set and cannot be listed dynamically, so pass them inline, " +
+	"for example: `--scopes \"read:current_user,update:current_user_metadata,delete:current_user_metadata," +
+	"create:current_user_metadata,create:current_user_device_credentials,delete:current_user_device_credentials," +
+	"update:current_user_identities\"`."
+
 func clientGrantsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "client-grants",
@@ -290,7 +300,8 @@ func createClientGrantCmd(cli *cli) *cobra.Command {
 			"To create interactively, use `auth0 client-grants create` with no flags.\n\n" +
 			"To create non-interactively, supply the client id, audience and any optional " +
 			"scopes or organization settings through the flags. A grant can authorize specific " +
-			"scopes (`--scopes`), every scope on the API (`--allow-all-scopes`), or no scopes at all.",
+			"scopes (`--scopes`), every scope on the API (`--allow-all-scopes`), or no scopes at all.\n\n" +
+			managementAPIUserScopesNote,
 		Example: `  auth0 client-grants create
   auth0 client-grants create --client-id <client-id> --audience <api-identifier>
   auth0 client-grants create --client-id <client-id> --audience <api-identifier> --scopes "read:users,update:users"
@@ -445,7 +456,8 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
 			"To update interactively, use `auth0 client-grants update` with no arguments.\n\n" +
 			"The client id and audience of a grant cannot be changed. To update non-interactively, " +
 			"supply the scopes or organization settings through the flags. Pass `--allow-all-scopes` " +
-			"to grant every scope on the API instead of a specific list.",
+			"to grant every scope on the API instead of a specific list.\n\n" +
+			managementAPIUserScopesNote,
 		Example: `  auth0 client-grants update
   auth0 client-grants update <client-grant-id>
   auth0 client-grants update <client-grant-id> --scopes "read:users,update:users"
