@@ -20,15 +20,16 @@ auth0 universal-portals setup [flags]
 
 ```
   auth0 universal-portals setup
-  auth0 universal-portals setup --name "My Portal"
-  auth0 up setup -n "My Portal"
+  auth0 universal-portals setup --name "Acme" --slug "acme"
+  auth0 up setup -n "Acme" -s "acme"
 ```
 
 
 ## Flags
 
 ```
-  -n, --name string   Name of the Universal Portals application.
+  -n, --name string   Display name of the portal.
+  -s, --slug string   URL-friendly identifier for the portal (e.g. my-portal).
 ```
 
 
