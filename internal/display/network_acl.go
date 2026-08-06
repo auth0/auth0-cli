@@ -100,12 +100,15 @@ func (v *networkACLView) KeyValues() [][]string {
 			if match.UserAgents != nil && len(*match.UserAgents) > 0 {
 				keyValues = append(keyValues, []string{"USER AGENTS", strings.Join(*match.UserAgents, ", ")})
 			}
+
+			if match.Auth0Managed != nil && len(*match.Auth0Managed) > 0 {
+				keyValues = append(keyValues, []string{"AUTH0 MANAGED", strings.Join(*match.Auth0Managed, ", ")})
+			}
 		}
 
 		// Add not_match criteria if present.
 		if acl.Rule.NotMatch != nil {
 			notMatch := acl.Rule.NotMatch
-			keyValues = append(keyValues, []string{"NOT MATCH", "true"})
 
 			if len(notMatch.Asns) > 0 {
 				asns := make([]string, len(notMatch.Asns))
@@ -141,6 +144,10 @@ func (v *networkACLView) KeyValues() [][]string {
 
 			if notMatch.UserAgents != nil && len(*notMatch.UserAgents) > 0 {
 				keyValues = append(keyValues, []string{"NOT USER AGENTS", strings.Join(*notMatch.UserAgents, ", ")})
+			}
+
+			if notMatch.Auth0Managed != nil && len(*notMatch.Auth0Managed) > 0 {
+				keyValues = append(keyValues, []string{"NOT AUTH0 MANAGED", strings.Join(*notMatch.Auth0Managed, ", ")})
 			}
 		}
 	}
@@ -192,7 +199,7 @@ func makeNetworkACLView(acl *management.NetworkACL) *networkACLView {
 		Active:      fmt.Sprintf("%v", active),
 		Action:      action,
 		Rule:        string(ruleJSON),
-		raw:         rawData,
+		raw:         &rawData,
 	}
 }
 
