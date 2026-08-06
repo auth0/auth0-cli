@@ -97,3 +97,131 @@ func TestNetworkACLPickerOptions(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildNetworkACLRule_Auth0Managed(t *testing.T) {
+	tests := []struct {
+		name        string
+		inputs      *ruleInputs
+		assertRule  func(t testing.TB, rule *management.NetworkACLRule)
+		expectError bool
+	}{
+		{
+			name: "auth0_managed on match",
+			inputs: &ruleInputs{
+				Scope:        "tenant",
+				Action:       "block",
+				Auth0Managed: []string{"auth0.low_reputation", "auth0.icloud_relay_proxy"},
+				IsMatchRule:  true,
+			},
+			assertRule: func(t testing.TB, rule *management.NetworkACLRule) {
+				assert.Nil(t, rule.NotMatch)
+				assert.NotNil(t, rule.Match)
+				assert.NotNil(t, rule.Match.Auth0Managed)
+				assert.Equal(t, []string{"auth0.low_reputation", "auth0.icloud_relay_proxy"}, *rule.Match.Auth0Managed)
+			},
+		},
+		{
+			name: "auth0_managed on not_match",
+			inputs: &ruleInputs{
+				Scope:        "tenant",
+				Action:       "block",
+				Auth0Managed: []string{"auth0.low_reputation"},
+				IsMatchRule:  false,
+			},
+			assertRule: func(t testing.TB, rule *management.NetworkACLRule) {
+				assert.Nil(t, rule.Match)
+				assert.NotNil(t, rule.NotMatch)
+				assert.NotNil(t, rule.NotMatch.Auth0Managed)
+				assert.Equal(t, []string{"auth0.low_reputation"}, *rule.NotMatch.Auth0Managed)
+			},
+		},
+		{
+			name: "auth0_managed coexists with other criteria",
+			inputs: &ruleInputs{
+				Scope:        "tenant",
+				Action:       "block",
+				IPv4CIDRs:    []string{"192.168.1.0/24"},
+				Auth0Managed: []string{"auth0.low_reputation"},
+				IsMatchRule:  true,
+			},
+			assertRule: func(t testing.TB, rule *management.NetworkACLRule) {
+				assert.NotNil(t, rule.Match)
+				assert.NotNil(t, rule.Match.IPv4Cidrs)
+				assert.NotNil(t, rule.Match.Auth0Managed)
+				assert.Equal(t, []string{"auth0.low_reputation"}, *rule.Match.Auth0Managed)
+			},
+		},
+		{
+			name: "auth0_managed empty is not set",
+			inputs: &ruleInputs{
+				Scope:       "tenant",
+				Action:      "block",
+				IsMatchRule: true,
+			},
+			expectError: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			rule, err := buildNetworkACLRule(test.inputs)
+
+			if test.expectError {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			test.assertRule(t, rule)
+		})
+	}
+}
+
+func TestExtractCurrentRuleDefaults_Auth0Managed(t *testing.T) {
+	tests := []struct {
+		name             string
+		acl              *management.NetworkACL
+		wantAuth0Managed []string
+	}{
+		{
+			name: "extracts auth0_managed from match",
+			acl: &management.NetworkACL{
+				Rule: &management.NetworkACLRule{
+					Match: &management.NetworkACLRuleMatch{
+						Auth0Managed: &[]string{"auth0.low_reputation", "auth0.icloud_relay_proxy"},
+					},
+				},
+			},
+			wantAuth0Managed: []string{"auth0.low_reputation", "auth0.icloud_relay_proxy"},
+		},
+		{
+			name: "extracts auth0_managed from not_match",
+			acl: &management.NetworkACL{
+				Rule: &management.NetworkACLRule{
+					NotMatch: &management.NetworkACLRuleMatch{
+						Auth0Managed: &[]string{"auth0.low_reputation"},
+					},
+				},
+			},
+			wantAuth0Managed: []string{"auth0.low_reputation"},
+		},
+		{
+			name: "no auth0_managed set",
+			acl: &management.NetworkACL{
+				Rule: &management.NetworkACLRule{
+					Match: &management.NetworkACLRuleMatch{
+						IPv4Cidrs: &[]string{"192.168.1.0/24"},
+					},
+				},
+			},
+			wantAuth0Managed: nil,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			defaults := extractCurrentRuleDefaults(test.acl)
+			assert.Equal(t, test.wantAuth0Managed, defaults.Auth0Managed)
+		})
+	}
+}
