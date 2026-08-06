@@ -35,6 +35,8 @@ var (
 		"read:branding",
 		"read:organizations_summary",
 		"read:organizations",
+		"update:users",
+		"update:users_app_metadata",
 	}
 
 	portalGrantTypes = []string{
@@ -171,21 +173,51 @@ func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, name string) error {
 		cli.renderer.Successf("Client grant  %s", grant.Audience)
 	}
 
-	// TODO: Create the three Forms and capture their IDs.
-	// forms := portalFormIDs{
-	// 	PersonalInfo:             "<id of personal info form>",
-	// 	PrivacyConsent:           "<id of privacy consent form>",
-	// 	CommunicationPreferences: "<id of communication preferences form>",
-	// }
+	// Create the vault connection used by the portal forms to call the Management API.
+	var vaultConnID string
+	if err := ansi.Waiting(func() error {
+		setup := map[string]interface{}{
+			"domain":        tenant,
+			"client_id":     client.ClientID,
+			"client_secret": client.ClientSecret,
+			"type":          "OAUTH_APP",
+		}
+		appID := "AUTH0"
+		connName := name + " (Universal Portals)"
+		conn := &management.FlowVaultConnection{
+			AppID: &appID,
+			Name:  &connName,
+			Setup: &setup,
+		}
+		if err := cli.api.FlowVaultConnection.CreateConnection(ctx, conn); err != nil {
+			return err
+		}
+		if conn.ID != nil {
+			vaultConnID = *conn.ID
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to create vault connection: %w", err)
+	}
+	cli.renderer.Successf("Vault connection %q created", name+" (Universal Portals)")
+
+	// Import the portal forms.
+	var forms portalFormIDs
+	if err := ansi.Waiting(func() error {
+		var err error
+		forms, err = createPortalForms(ctx, cli.api.HTTPClient, vaultConnID)
+		return err
+	}); err != nil {
+		return fmt.Errorf("failed to create forms: %w", err)
+	}
+	cli.renderer.Successf("Forms created")
 
 	// Create the portal.
 	slug := toPortalSlug(name)
 	var portal portalResult
 	if err := ansi.Waiting(func() error {
 		var err error
-		portal, err = createPortal(ctx, cli.api.HTTPClient, slug, name, client.ClientID, client.ClientSecret, portalFormIDs{
-			// TODO: replace with real form IDs from the Form provisioning steps above.
-		})
+		portal, err = createPortal(ctx, cli.api.HTTPClient, slug, name, client.ClientID, client.ClientSecret, forms)
 		return err
 	}); err != nil {
 		return fmt.Errorf("failed to create portal: %w", err)
@@ -442,6 +474,315 @@ func rawAPIPost(ctx context.Context, h auth0.HTTPClientAPI, path string, payload
 		return json.NewDecoder(resp.Body).Decode(result)
 	}
 	return nil
+}
+
+// ---- Form provisioning ----
+
+type portalFormResult struct {
+	ID string `json:"id"`
+}
+
+// buildCommunicationPreferencesFormPayload returns the form document for the
+// "Marketing communication preferences" form with connID injected.
+func buildCommunicationPreferencesFormPayload(connID string) map[string]any {
+	return map[string]any{
+		"version": "4.0.0",
+		"form": map[string]any{
+			"name":      "Marketing communication preferences (Universal Portals)",
+			"languages": map[string]any{"primary": "en"},
+			"nodes": []any{
+				map[string]any{
+					"id":   "step_4Td2",
+					"type": "STEP",
+					"coordinates": map[string]any{"x": 217, "y": -218},
+					"config": map[string]any{
+						"components": []any{
+							map[string]any{
+								"id":        "communication_preferences",
+								"category":  "FIELD",
+								"type":      "CHOICE",
+								"required":  false,
+								"sensitive": false,
+								"config": map[string]any{
+									"multiple": true,
+									"options": []any{
+										map[string]any{"label": "Product Announcements", "value": "Product Announcements"},
+										map[string]any{"label": "Featured Content", "value": "Featured Content"},
+										map[string]any{"label": "Digest News", "value": "Digest News"},
+										map[string]any{"label": "Events", "value": "Events"},
+									},
+								},
+							},
+							map[string]any{
+								"id":       "next_button_US5N",
+								"category": "BLOCK",
+								"type":     "NEXT_BUTTON",
+								"config":   map[string]any{"text": "Update"},
+							},
+						},
+						"next_node": "flow_etvH",
+					},
+				},
+				map[string]any{
+					"id":          "flow_etvH",
+					"type":        "FLOW",
+					"coordinates": map[string]any{"x": 791, "y": -81},
+					"config":      map[string]any{"flow_id": "#FLOW-1#", "next_node": "$ending"},
+				},
+			},
+			"start":  map[string]any{"next_node": "step_4Td2", "coordinates": map[string]any{"x": -25, "y": -98}},
+			"ending": map[string]any{"resume_flow": true, "coordinates": map[string]any{"x": 1194, "y": -59}},
+		},
+		"flows": map[string]any{
+			"#FLOW-1#": map[string]any{
+				"name": "Update preferences",
+				"actions": []any{
+					map[string]any{
+						"id":            "update_user_HitP",
+						"type":          "AUTH0",
+						"action":        "UPDATE_USER",
+						"allow_failure": false,
+						"mask_output":   false,
+						"params": map[string]any{
+							"connection_id": "#CONN-1#",
+							"user_id":       "{{context.user.user_id}}",
+							"changes": map[string]any{
+								"app_metadata": map[string]any{
+									"communication_preferences": "{{fields.communication_preferences}}",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"connections": map[string]any{
+			"#CONN-1#": map[string]any{"id": connID},
+		},
+	}
+}
+
+// buildPersonalInfoFormPayload returns the form document for the
+// "Profile update" form with connID injected.
+func buildPersonalInfoFormPayload(connID string) map[string]any {
+	textField := func(id, label string) map[string]any {
+		return map[string]any{
+			"id":        id,
+			"category":  "FIELD",
+			"type":      "TEXT",
+			"label":     label,
+			"required":  false,
+			"sensitive": false,
+			"config":    map[string]any{"multiline": false},
+		}
+	}
+	return map[string]any{
+		"version": "4.0.0",
+		"form": map[string]any{
+			"name":      "Profile update (Universal Portals)",
+			"languages": map[string]any{"primary": "en"},
+			"nodes": []any{
+				map[string]any{
+					"id":          "step_BL3V",
+					"type":        "STEP",
+					"coordinates": map[string]any{"x": 346, "y": -221},
+					"config": map[string]any{
+						"components": []any{
+							textField("full_name", "Full name"),
+							textField("job_title", "Job title"),
+							map[string]any{
+								"id":        "mobile_number",
+								"category":  "FIELD",
+								"type":      "TEL",
+								"label":     "Mobile number",
+								"required":  false,
+								"sensitive": false,
+								"config":    map[string]any{"country_picker": true},
+							},
+							map[string]any{
+								"id":        "date_of_birth",
+								"category":  "FIELD",
+								"type":      "DATE",
+								"label":     "Date of birth",
+								"required":  false,
+								"sensitive": false,
+								"config":    map[string]any{"format": "DATE"},
+							},
+							map[string]any{
+								"id":        "linkedin",
+								"category":  "FIELD",
+								"type":      "URL",
+								"label":     "LinkedIn",
+								"required":  false,
+								"sensitive": false,
+							},
+							map[string]any{
+								"id":       "next_button_UmEY",
+								"category": "BLOCK",
+								"type":     "NEXT_BUTTON",
+								"config":   map[string]any{"text": "Update"},
+							},
+						},
+						"next_node": "flow_DcHK",
+					},
+				},
+				map[string]any{
+					"id":          "flow_DcHK",
+					"type":        "FLOW",
+					"coordinates": map[string]any{"x": 988, "y": 9},
+					"config":      map[string]any{"flow_id": "#FLOW-1#", "next_node": "$ending"},
+				},
+			},
+			"start":  map[string]any{"next_node": "step_BL3V", "coordinates": map[string]any{"x": 0, "y": 0}},
+			"ending": map[string]any{"resume_flow": true, "coordinates": map[string]any{"x": 1367, "y": -7}},
+		},
+		"flows": map[string]any{
+			"#FLOW-1#": map[string]any{
+				"name": "Update profile",
+				"actions": []any{
+					map[string]any{
+						"id":            "update_user_v4C0",
+						"type":          "AUTH0",
+						"action":        "UPDATE_USER",
+						"allow_failure": false,
+						"mask_output":   false,
+						"params": map[string]any{
+							"connection_id": "#CONN-1#",
+							"user_id":       "{{context.user.user_id}}",
+							"changes": map[string]any{
+								"user_metadata": map[string]any{
+									"linkedin":       "{{fields.linkedin}}",
+									"full_name":      "{{fields.full_name}}",
+									"job_title":      "{{fields.job_title}}",
+									"date_of_birth":  "{{fields.date_of_birth}}",
+									"mobile_number":  "{{fields.mobile_number.international_number}}",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"connections": map[string]any{
+			"#CONN-1#": map[string]any{"id": connID},
+		},
+	}
+}
+
+// buildPrivacySettingsFormPayload returns the form document for the
+// "Privacy settings" form with connID injected.
+func buildPrivacySettingsFormPayload(connID string) map[string]any {
+	boolField := func(id, label, hint string) map[string]any {
+		return map[string]any{
+			"id":        id,
+			"category":  "FIELD",
+			"type":      "BOOLEAN",
+			"label":     label,
+			"hint":      hint,
+			"required":  true,
+			"sensitive": false,
+			"config":    map[string]any{"default_value": false},
+		}
+	}
+	return map[string]any{
+		"version": "4.0.0",
+		"form": map[string]any{
+			"name":      "Privacy settings (Universal Portals)",
+			"languages": map[string]any{"primary": "en"},
+			"nodes": []any{
+				map[string]any{
+					"id":          "step_y0Ri",
+					"type":        "STEP",
+					"coordinates": map[string]any{"x": 500, "y": 0},
+					"config": map[string]any{
+						"components": []any{
+							boolField("data_sharing", "Data sharing", `<p>Allow app usage data to improve features. <a href="https://auth0.com" target="_blank">Learn more.</a></p>`),
+							boolField("profile_visibility", "Profile visibility", `<p>Show my profile in search results. <a href="https://auth0.com" target="_blank">Learn more.</a></p>`),
+							boolField("location_tracking", "Location tracking", `<p>Allow location tracking for personalized recommendations. <a href="https://auth0.com" target="_blank">Learn more.</a></p>`),
+							boolField("ad_personalization", "Ad personalization", `<p>Use my data to personalize ads. <a href="https://auth0.com" target="_blank">Learn more.</a></p>`),
+							map[string]any{
+								"id":       "next_button_aB8e",
+								"category": "BLOCK",
+								"type":     "NEXT_BUTTON",
+								"config":   map[string]any{"text": "Update"},
+							},
+						},
+						"next_node": "flow_AB1r",
+					},
+				},
+				map[string]any{
+					"id":          "flow_AB1r",
+					"type":        "FLOW",
+					"coordinates": map[string]any{"x": 1043, "y": 261},
+					"config":      map[string]any{"flow_id": "#FLOW-1#", "next_node": "$ending"},
+				},
+			},
+			"start":  map[string]any{"next_node": "step_y0Ri", "coordinates": map[string]any{"x": 202, "y": 247}},
+			"ending": map[string]any{"resume_flow": true, "coordinates": map[string]any{"x": 1445, "y": 247}},
+		},
+		"flows": map[string]any{
+			"#FLOW-1#": map[string]any{
+				"name": "Update privacy settings",
+				"actions": []any{
+					map[string]any{
+						"id":            "update_user_uOZW",
+						"type":          "AUTH0",
+						"action":        "UPDATE_USER",
+						"allow_failure": false,
+						"mask_output":   false,
+						"params": map[string]any{
+							"connection_id": "#CONN-1#",
+							"user_id":       "{{context.user.user_id}}",
+							"changes": map[string]any{
+								"app_metadata": map[string]any{
+									"data_sharing":       "{{fields.data_sharing}}",
+									"location_tracking":  "{{fields.location_tracking}}",
+									"ad_personalization": "{{fields.ad_personalization}}",
+									"profile_visibility": "{{fields.profile_visibility}}",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"connections": map[string]any{
+			"#CONN-1#": map[string]any{"id": connID},
+		},
+	}
+}
+
+// createPortalForms imports the two available forms and returns their IDs.
+// PersonalInfo is left empty until the template is available.
+func createPortalForms(ctx context.Context, h auth0.HTTPClientAPI, vaultConnID string) (portalFormIDs, error) {
+	importForm := func(payload map[string]any) (string, error) {
+		var result portalFormResult
+		if err := rawAPIPost(ctx, h, "forms/import", payload, &result); err != nil {
+			return "", err
+		}
+		return result.ID, nil
+	}
+
+	personalInfoID, err := importForm(buildPersonalInfoFormPayload(vaultConnID))
+	if err != nil {
+		return portalFormIDs{}, fmt.Errorf("failed to create personal info form: %w", err)
+	}
+
+	commPrefID, err := importForm(buildCommunicationPreferencesFormPayload(vaultConnID))
+	if err != nil {
+		return portalFormIDs{}, fmt.Errorf("failed to create communication preferences form: %w", err)
+	}
+
+	privacyID, err := importForm(buildPrivacySettingsFormPayload(vaultConnID))
+	if err != nil {
+		return portalFormIDs{}, fmt.Errorf("failed to create privacy settings form: %w", err)
+	}
+
+	return portalFormIDs{
+		PersonalInfo:             personalInfoID,
+		CommunicationPreferences: commPrefID,
+		PrivacyConsent:           privacyID,
+	}, nil
 }
 
 // ---- Portal payload types ----
