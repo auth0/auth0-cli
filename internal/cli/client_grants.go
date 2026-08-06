@@ -24,11 +24,21 @@ var (
 		Help: "Id of the client grant.",
 	}
 	clientGrantClientID = Flag{
-		Name:       "Client ID",
-		LongForm:   "client-id",
-		ShortForm:  "c",
-		Help:       "Client ID of the application to authorize. Cannot be changed once set.",
-		IsRequired: true,
+		Name:      "Client ID",
+		LongForm:  "client-id",
+		ShortForm: "c",
+		Help:      "Client ID of the application to authorize. Cannot be changed once set. Mutually exclusive with --default-for.",
+	}
+	clientGrantDefaultFor = Flag{
+		Name:     "Default For",
+		LongForm: "default-for",
+		Help:     "Make this the default grant for a group of clients instead of authorizing a specific client. Mutually exclusive with --client-id. Possible value: third_party_clients.",
+	}
+	clientGrantAuthorizationDetailsTypes = Flag{
+		Name:         "Authorization Details Types",
+		LongForm:     "authorization-details-types",
+		Help:         "Comma-separated list of authorization_details types allowed for this grant (Rich Authorization Requests).",
+		AlwaysPrompt: true,
 	}
 	clientGrantAudience = Flag{
 		Name:       "Audience",
@@ -104,6 +114,8 @@ var (
 )
 
 var clientGrantSubjectTypeOptions = []string{"client", "user", "anonymous_user"}
+
+var clientGrantDefaultForOptions = []string{"third_party_clients"}
 
 // managementAPIUserScopesNote explains that, for a user subject type against the
 // Auth0 Management API, the scopes are a fixed current_user set that the API
@@ -281,15 +293,23 @@ func showClientGrantCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+// Target-selection modes offered before the client-id or default-for prompt.
+const (
+	clientGrantTargetClient  = "A specific client"
+	clientGrantTargetDefault = "Default for a group of clients"
+)
+
 func createClientGrantCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ClientID             string
-		Audience             string
-		Scopes               []string
-		AllowAllScopes       bool
-		OrganizationUsage    string
-		AllowAnyOrganization bool
-		SubjectType          string
+		ClientID                  string
+		DefaultFor                string
+		Audience                  string
+		Scopes                    []string
+		AllowAllScopes            bool
+		OrganizationUsage         string
+		AllowAnyOrganization      bool
+		SubjectType               string
+		AuthorizationDetailsTypes []string
 	}
 
 	cmd := &cobra.Command{
@@ -298,44 +318,106 @@ func createClientGrantCmd(cli *cli) *cobra.Command {
 		Short: "Create a new client grant",
 		Long: "Create a new client grant.\n\n" +
 			"To create interactively, use `auth0 client-grants create` with no flags.\n\n" +
-			"To create non-interactively, supply the client id, audience and any optional " +
+			"To create non-interactively, supply the audience and either a client id (`--client-id`) " +
+			"or a default group (`--default-for`), which are mutually exclusive, along with any optional " +
 			"scopes or organization settings through the flags. A grant can authorize specific " +
 			"scopes (`--scopes`), every scope on the API (`--allow-all-scopes`), or no scopes at all.\n\n" +
 			managementAPIUserScopesNote,
 		Example: `  auth0 client-grants create
   auth0 client-grants create --client-id <client-id> --audience <api-identifier>
+  auth0 client-grants create --default-for third_party_clients --audience <api-identifier>
   auth0 client-grants create --client-id <client-id> --audience <api-identifier> --scopes "read:users,update:users"
   auth0 client-grants create --client-id <client-id> --audience <api-identifier> --allow-all-scopes
+  auth0 client-grants create --client-id <client-id> --audience <api-identifier> --authorization-details-types "payment,transfer"
   auth0 client-grants create -c <client-id> -a <api-identifier> -s "read:users" -o require --allow-any-organization=false
   auth0 client-grants create -c <client-id> -a <api-identifier> --subject-type user
   auth0 client-grants create -c <client-id> -a <api-identifier> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := clientGrantClientID.Ask(cmd, &inputs.ClientID, nil); err != nil {
-				return err
-			}
-
-			if err := clientGrantAudience.Pick(cmd, &inputs.Audience, cli.apiIdentifierPickerOptions); err != nil {
-				return err
-			}
-
-			defaultSubjectType := clientGrantSubjectTypeOptions[0]
-			if err := clientGrantSubjectType.Select(cmd, &inputs.SubjectType, clientGrantSubjectTypeOptions, &defaultSubjectType); err != nil {
-				return err
-			}
-
-			// When neither scope flag was passed, ask how to grant scopes
-			// (all of them, a specific set, or none) and, for a specific set,
-			// show a multi-select scoped to the chosen audience so the user
-			// only picks from scopes that API actually defines.
-			if !clientGrantAllowAllScopes.IsSet(cmd) && shouldAsk(cmd, &clientGrantScopes, false) {
-				if err := cli.pickClientGrantScopes(cmd.Context(), inputs.Audience, &inputs.Scopes, &inputs.AllowAllScopes, nil, nil, false, true); err != nil {
+			// A grant authorizes either a specific client or a default group,
+			// never both. When neither flag was passed and we can prompt, ask
+			// which the grant should target, then prompt for that target. When a
+			// flag was passed we skip the prompts and honor it directly.
+			if !clientGrantClientID.IsSet(cmd) && !clientGrantDefaultFor.IsSet(cmd) && canPrompt(cmd) {
+				if err := cli.pickClientGrantTarget(cmd, &inputs.ClientID, &inputs.DefaultFor); err != nil {
 					return err
 				}
 			}
 
-			// Organizations cannot be used with the user or anonymous_user
-			// subject types, so skip the organization prompts entirely for them.
-			if clientGrantSubjectTypeAllowsOrganizations(inputs.SubjectType) {
+			if inputs.ClientID == "" && inputs.DefaultFor == "" {
+				return errors.New("one of --client-id or --default-for must be set")
+			}
+
+			// A default grant is a template for a group of clients rather than an
+			// authorization for a specific client, so subject type and organization
+			// settings do not apply to it. The API rejects them, so skip those
+			// prompts and never send those fields for a default grant.
+			isDefaultGrant := inputs.DefaultFor != ""
+
+			// Auth0 rejects a default grant against a system API, so hide system
+			// APIs from the audience picker for a default grant.
+			audiencePicker := cli.apiIdentifierPickerOptions
+			if isDefaultGrant {
+				audiencePicker = cli.nonSystemAPIIdentifierPickerOptions
+			}
+			if err := clientGrantAudience.Pick(cmd, &inputs.Audience, audiencePicker); err != nil {
+				return err
+			}
+
+			// Reject subject type or organization flags passed for a default grant
+			// (matching the API) rather than silently dropping them.
+			if isDefaultGrant {
+				for _, f := range []*Flag{&clientGrantSubjectType, &clientGrantOrganizationUsage, &clientGrantAllowAnyOrganization} {
+					if f.IsSet(cmd) {
+						return fmt.Errorf("--%s cannot be set with --default-for", f.LongForm)
+					}
+				}
+			}
+
+			if !isDefaultGrant {
+				defaultSubjectType := clientGrantSubjectTypeOptions[0]
+				if err := clientGrantSubjectType.Select(cmd, &inputs.SubjectType, clientGrantSubjectTypeOptions, &defaultSubjectType); err != nil {
+					return err
+				}
+			}
+
+			// The scope and authorization_details pickers both read the audience
+			// API, so read it once here and share it between them rather than
+			// hitting the API twice. The same read tells us whether the audience
+			// is a system API, which cannot carry organization settings.
+			askScopes := !clientGrantAllowAllScopes.IsSet(cmd) && shouldAsk(cmd, &clientGrantScopes, false)
+			askAuthDetailsTypes := shouldAsk(cmd, &clientGrantAuthorizationDetailsTypes, false)
+			var audienceIsSystemAPI bool
+			if askScopes || askAuthDetailsTypes {
+				audienceAPI, err := cli.readClientGrantAudienceAPI(cmd.Context(), inputs.Audience)
+				if err != nil {
+					return err
+				}
+				audienceIsSystemAPI = audienceAPI.GetIsSystem()
+
+				// When neither scope flag was passed, ask how to grant scopes
+				// (all of them, a specific set, or none) and, for a specific set,
+				// show a multi-select scoped to the chosen audience so the user
+				// only picks from scopes that API actually defines.
+				if askScopes {
+					if err := cli.pickClientGrantScopes(audienceAPI, &inputs.Scopes, &inputs.AllowAllScopes, nil, nil, false, true); err != nil {
+						return err
+					}
+				}
+
+				// The authorization_details types are defined on the audience API,
+				// so offer a multi-select of them (skipping silently when the API
+				// has none) rather than making the user recall the exact strings.
+				if askAuthDetailsTypes {
+					if err := cli.pickClientGrantAuthorizationDetailsTypes(audienceAPI, &inputs.AuthorizationDetailsTypes, nil); err != nil {
+						return err
+					}
+				}
+			}
+
+			// Organizations cannot be used with a default grant, with the user or
+			// anonymous_user subject types, or against a system API (which rejects
+			// any organization settings), so skip the organization prompts for them.
+			if !isDefaultGrant && !audienceIsSystemAPI && clientGrantSubjectTypeAllowsOrganizations(inputs.SubjectType) {
 				if err := clientGrantOrganizationUsage.Select(cmd, &inputs.OrganizationUsage, clientGrantOrganizationUsageOptions, nil); err != nil {
 					return err
 				}
@@ -359,8 +441,24 @@ func createClientGrantCmd(cli *cli) *cobra.Command {
 			}
 
 			grant := &managementv3.CreateClientGrantRequestContent{
-				ClientID: &inputs.ClientID,
 				Audience: inputs.Audience,
+			}
+
+			// A grant targets either a specific client or a default group, so
+			// only send the one that was provided.
+			if inputs.ClientID != "" {
+				grant.ClientID = &inputs.ClientID
+			}
+			if inputs.DefaultFor != "" {
+				defaultFor, err := managementv3.NewClientGrantDefaultForEnumFromString(inputs.DefaultFor)
+				if err != nil {
+					return err
+				}
+				grant.DefaultFor = &defaultFor
+			}
+
+			if len(inputs.AuthorizationDetailsTypes) > 0 {
+				grant.AuthorizationDetailsTypes = inputs.AuthorizationDetailsTypes
 			}
 
 			if inputs.AllowAllScopes {
@@ -385,9 +483,11 @@ func createClientGrantCmd(cli *cli) *cobra.Command {
 				grant.SubjectType = &subjectType
 			}
 
-			// Organization settings cannot be sent for the user or anonymous_user
-			// subject types, so only attach them when the subject type allows it.
-			if clientGrantSubjectTypeAllowsOrganizations(inputs.SubjectType) {
+			// Organization settings cannot be sent for a default grant, for the
+			// user or anonymous_user subject types, or against a system API, so
+			// only attach them when the grant targets a specific client with a
+			// subject type that allows it.
+			if !isDefaultGrant && !audienceIsSystemAPI && clientGrantSubjectTypeAllowsOrganizations(inputs.SubjectType) {
 				if inputs.OrganizationUsage != "" {
 					organizationUsage, err := managementv3.NewClientGrantOrganizationUsageEnumFromString(inputs.OrganizationUsage)
 					if err != nil {
@@ -396,10 +496,22 @@ func createClientGrantCmd(cli *cli) *cobra.Command {
 					grant.OrganizationUsage = &organizationUsage
 				}
 
-				// Always send the value: it is the flag when passed, the prompt
-				// answer when asked, otherwise the default (false, matching the
-				// API). Guarding on IsSet dropped the interactive answer.
-				grant.AllowAnyOrganization = &inputs.AllowAnyOrganization
+				// Send allow_any_organization only when the user engaged with
+				// organization settings, either by passing the flag or by choosing
+				// an organization usage (which is what the interactive prompt sets,
+				// so the answer is not dropped). A grant that never touches
+				// organizations must not carry a stray false, which the API rejects
+				// for reserved-identifier audiences.
+				if inputs.OrganizationUsage != "" || clientGrantAllowAnyOrganization.IsSet(cmd) {
+					grant.AllowAnyOrganization = &inputs.AllowAnyOrganization
+				}
+			}
+
+			// Describe the grant by whichever target it authorizes, so the error
+			// reads sensibly for both a specific client and a default group.
+			target := fmt.Sprintf("client %q", inputs.ClientID)
+			if inputs.ClientID == "" {
+				target = fmt.Sprintf("default group %q", inputs.DefaultFor)
 			}
 
 			var created *managementv3.CreateClientGrantResponseContent
@@ -408,8 +520,8 @@ func createClientGrantCmd(cli *cli) *cobra.Command {
 				return err
 			}); err != nil {
 				return fmt.Errorf(
-					"failed to create client grant for client %q and audience %q: %w",
-					inputs.ClientID,
+					"failed to create client grant for %s and audience %q: %w",
+					target,
 					inputs.Audience,
 					err,
 				)
@@ -425,27 +537,33 @@ func createClientGrantCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
 	clientGrantClientID.RegisterString(cmd, &inputs.ClientID, "")
+	clientGrantDefaultFor.RegisterString(cmd, &inputs.DefaultFor, "")
 	clientGrantAudience.RegisterString(cmd, &inputs.Audience, "")
 	clientGrantScopes.RegisterStringSlice(cmd, &inputs.Scopes, nil)
 	clientGrantAllowAllScopes.RegisterBool(cmd, &inputs.AllowAllScopes, false)
 	clientGrantOrganizationUsage.RegisterString(cmd, &inputs.OrganizationUsage, "")
 	clientGrantAllowAnyOrganization.RegisterBool(cmd, &inputs.AllowAnyOrganization, false)
 	clientGrantSubjectType.RegisterString(cmd, &inputs.SubjectType, "")
+	clientGrantAuthorizationDetailsTypes.RegisterStringSlice(cmd, &inputs.AuthorizationDetailsTypes, nil)
 
 	// A grant authorizes either specific scopes or all of them, never both.
 	cmd.MarkFlagsMutuallyExclusive("scopes", "allow-all-scopes")
+
+	// A grant targets either a specific client or a default group, never both.
+	cmd.MarkFlagsMutuallyExclusive("client-id", "default-for")
 
 	return cmd
 }
 
 func updateClientGrantCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID                   string
-		Scopes               []string
-		AllowAllScopes       bool
-		NoScopes             bool
-		OrganizationUsage    string
-		AllowAnyOrganization bool
+		ID                        string
+		Scopes                    []string
+		AllowAllScopes            bool
+		NoScopes                  bool
+		OrganizationUsage         string
+		AllowAnyOrganization      bool
+		AuthorizationDetailsTypes []string
 	}
 
 	cmd := &cobra.Command{
@@ -462,6 +580,7 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
   auth0 client-grants update <client-grant-id>
   auth0 client-grants update <client-grant-id> --scopes "read:users,update:users"
   auth0 client-grants update <client-grant-id> --allow-all-scopes
+  auth0 client-grants update <client-grant-id> --authorization-details-types "payment,transfer"
   auth0 client-grants update <client-grant-id> -s "read:users" -o require --allow-any-organization=false
   auth0 client-grants update <client-grant-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -487,20 +606,45 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("client grant with ID %q is a system grant and cannot be updated", inputs.ID)
 			}
 
-			// Audience is immutable, so resolve the scopes picker from the
-			// grant's existing audience, defaulting the mode and selection to
-			// the grant's current state, keeping the flow in sync with create.
-			if !clientGrantAllowAllScopes.IsSet(cmd) && shouldAsk(cmd, &clientGrantScopes, true) {
-				if err := cli.pickClientGrantScopes(cmd.Context(), current.GetAudience(), &inputs.Scopes, &inputs.AllowAllScopes, &inputs.NoScopes, current.GetScope(), current.GetAllowAllScopes(), true); err != nil {
+			// Audience is immutable, so the scope and authorization_details
+			// pickers both read the grant's existing audience API. Read it once
+			// here and share it between them rather than hitting the API twice.
+			// The same read tells us whether the audience is a system API, which
+			// cannot carry organization settings.
+			askScopes := !clientGrantAllowAllScopes.IsSet(cmd) && shouldAsk(cmd, &clientGrantScopes, true)
+			askAuthDetailsTypes := shouldAsk(cmd, &clientGrantAuthorizationDetailsTypes, true)
+			var audienceIsSystemAPI bool
+			if askScopes || askAuthDetailsTypes {
+				audienceAPI, err := cli.readClientGrantAudienceAPI(cmd.Context(), current.GetAudience())
+				if err != nil {
 					return err
+				}
+				audienceIsSystemAPI = audienceAPI.GetIsSystem()
+
+				// Default the scopes mode and selection to the grant's current
+				// state, keeping the flow in sync with create.
+				if askScopes {
+					if err := cli.pickClientGrantScopes(audienceAPI, &inputs.Scopes, &inputs.AllowAllScopes, &inputs.NoScopes, current.GetScope(), current.GetAllowAllScopes(), true); err != nil {
+						return err
+					}
+				}
+
+				// Offer the authorization_details types defined on the API
+				// (skipping silently when it has none), pre-selecting the grant's
+				// current types.
+				if askAuthDetailsTypes {
+					if err := cli.pickClientGrantAuthorizationDetailsTypes(audienceAPI, &inputs.AuthorizationDetailsTypes, current.GetAuthorizationDetailsTypes()); err != nil {
+						return err
+					}
 				}
 			}
 
-			// Organizations cannot be used with the user or anonymous_user
-			// subject types, so skip the organization prompts entirely for them.
-			// The subject type is immutable, so it comes from the existing grant.
+			// Organizations cannot be used with the user or anonymous_user subject
+			// types, or against a system API (which rejects any organization
+			// settings), so skip the organization prompts entirely for them. The
+			// subject type is immutable, so it comes from the existing grant.
 			subjectType := string(current.GetSubjectType())
-			if clientGrantSubjectTypeAllowsOrganizations(subjectType) {
+			if !audienceIsSystemAPI && clientGrantSubjectTypeAllowsOrganizations(subjectType) {
 				if err := clientGrantOrganizationUsage.SelectU(cmd, &inputs.OrganizationUsage, clientGrantOrganizationUsageOptions, stringPtr(current.OrganizationUsage)); err != nil {
 					return err
 				}
@@ -558,8 +702,9 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
 			}
 
 			// Organization settings cannot be sent for the user or anonymous_user
-			// subject types, so only attach them when the subject type allows it.
-			if clientGrantSubjectTypeAllowsOrganizations(subjectType) {
+			// subject types, or against a system API, so only attach them when the
+			// subject type allows it and the audience is not a system API.
+			if !audienceIsSystemAPI && clientGrantSubjectTypeAllowsOrganizations(subjectType) {
 				grant.AllowAnyOrganization = &inputs.AllowAnyOrganization
 
 				if inputs.OrganizationUsage != "" {
@@ -569,6 +714,10 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
 					}
 					grant.OrganizationUsage = &organizationUsage
 				}
+			}
+
+			if len(inputs.AuthorizationDetailsTypes) > 0 {
+				grant.AuthorizationDetailsTypes = inputs.AuthorizationDetailsTypes
 			}
 
 			var updated *managementv3.UpdateClientGrantResponseContent
@@ -592,6 +741,7 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
 	clientGrantAllowAllScopes.RegisterBoolU(cmd, &inputs.AllowAllScopes, false)
 	clientGrantOrganizationUsage.RegisterStringU(cmd, &inputs.OrganizationUsage, "")
 	clientGrantAllowAnyOrganization.RegisterBoolU(cmd, &inputs.AllowAnyOrganization, false)
+	clientGrantAuthorizationDetailsTypes.RegisterStringSliceU(cmd, &inputs.AuthorizationDetailsTypes, nil)
 
 	// A grant authorizes either specific scopes or all of them, never both.
 	cmd.MarkFlagsMutuallyExclusive("scopes", "allow-all-scopes")
@@ -758,6 +908,18 @@ func resolveUpdateClientGrantScopes(newScopes []string, newAllowAll bool, curren
 // client grant's audience is the API identifier, so the picker value is the
 // identifier rather than the API id used by the apis command's own picker.
 func (c *cli) apiIdentifierPickerOptions(ctx context.Context) (pickerOptions, error) {
+	return c.apiIdentifierPickerOptionsFiltered(ctx, false)
+}
+
+// nonSystemAPIIdentifierPickerOptions lists only non-system tenant APIs for the
+// audience picker. Auth0 rejects a default client grant that targets a system
+// API, so offering one in the default-grant flow would only lead to a late API
+// error on an audience that can never be used for a default grant.
+func (c *cli) nonSystemAPIIdentifierPickerOptions(ctx context.Context) (pickerOptions, error) {
+	return c.apiIdentifierPickerOptionsFiltered(ctx, true)
+}
+
+func (c *cli) apiIdentifierPickerOptionsFiltered(ctx context.Context, excludeSystem bool) (pickerOptions, error) {
 	list, err := c.api.ResourceServer.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list APIs: %w", err)
@@ -765,6 +927,10 @@ func (c *cli) apiIdentifierPickerOptions(ctx context.Context) (pickerOptions, er
 
 	var opts pickerOptions
 	for _, r := range list.ResourceServers {
+		if excludeSystem && r.GetIsSystem() {
+			continue
+		}
+
 		// Some APIs have no name, so fall back to a placeholder so the row
 		// keeps the same "name (identifier)" shape as every other option.
 		name := r.GetName()
@@ -782,12 +948,52 @@ func (c *cli) apiIdentifierPickerOptions(ctx context.Context) (pickerOptions, er
 	return opts, nil
 }
 
+// pickClientGrantTarget drives the interactive choice of what a new grant
+// authorizes: a specific client or a default group of clients. It first asks
+// which of the two to target and then prompts for that target, writing the
+// answer into clientID or defaultFor. The default-group values come from
+// clientGrantDefaultForOptions, so new groups become selectable here without
+// touching this flow.
+func (c *cli) pickClientGrantTarget(cmd *cobra.Command, clientID, defaultFor *string) error {
+	var target string
+	targetPrompt := &survey.Select{
+		Message: "What should this grant authorize?",
+		Options: []string{clientGrantTargetClient, clientGrantTargetDefault},
+		Default: clientGrantTargetClient,
+	}
+	if err := survey.AskOne(targetPrompt, &target); err != nil {
+		return err
+	}
+
+	if target == clientGrantTargetDefault {
+		defaultDefaultFor := clientGrantDefaultForOptions[0]
+		return clientGrantDefaultFor.Select(cmd, defaultFor, clientGrantDefaultForOptions, &defaultDefaultFor)
+	}
+
+	return clientGrantClientID.Ask(cmd, clientID, nil)
+}
+
 // Scope-selection modes offered before the scopes multi-select.
 const (
 	clientGrantScopesModeSpecific = "Select specific scopes"
 	clientGrantScopesModeAll      = "Always grant all permissions"
 	clientGrantScopesModeNone     = "No scopes (grant a token with no permissions)"
 )
+
+// readClientGrantAudienceAPI reads the API (resource server) a grant's audience
+// points at. The scope and authorization_details pickers both draw their options
+// from this same API, so the caller reads it once and passes it to both, keeping
+// the interactive flow to a single API read instead of one per picker.
+func (c *cli) readClientGrantAudienceAPI(ctx context.Context, audience string) (*management.ResourceServer, error) {
+	var resourceServer *management.ResourceServer
+	if err := ansi.Waiting(func() (err error) {
+		resourceServer, err = c.api.ResourceServer.Read(ctx, audience)
+		return err
+	}); err != nil {
+		return nil, fmt.Errorf("failed to read the API %q: %w", audience, err)
+	}
+	return resourceServer, nil
+}
 
 // pickClientGrantScopes drives the interactive scope selection for a grant. It
 // first asks how to grant scopes (every scope on the API, a specific set, or
@@ -797,15 +1003,7 @@ const (
 // never silently drops a scope already on the grant. When the API has no scopes
 // at all, it warns and leaves the inputs untouched (an empty scope list, which
 // the API accepts).
-func (c *cli) pickClientGrantScopes(ctx context.Context, audience string, result *[]string, allowAllScopes, noScopes *bool, currentScopes []string, currentAllowAll, allowNone bool) error {
-	var resourceServer *management.ResourceServer
-	if err := ansi.Waiting(func() (err error) {
-		resourceServer, err = c.api.ResourceServer.Read(ctx, audience)
-		return err
-	}); err != nil {
-		return fmt.Errorf("failed to read the API %q: %w", audience, err)
-	}
-
+func (c *cli) pickClientGrantScopes(resourceServer *management.ResourceServer, result *[]string, allowAllScopes, noScopes *bool, currentScopes []string, currentAllowAll, allowNone bool) error {
 	options := make([]string, 0, len(resourceServer.GetScopes()))
 	seen := make(map[string]bool)
 	for _, scope := range resourceServer.GetScopes() {
@@ -867,4 +1065,40 @@ func (c *cli) pickClientGrantScopes(ctx context.Context, audience string, result
 	}
 
 	return survey.AskOne(scopesPrompt, result)
+}
+
+// pickClientGrantAuthorizationDetailsTypes drives the interactive selection of
+// authorization_details types for a grant. The allowed types are defined on the
+// audience API, so it shows a multi-select of them, writing the chosen types
+// into result. Any current types not (or no longer) defined by the API are still
+// offered (and pre-selected) so an update never silently drops a type already on
+// the grant. When neither the API nor the grant has any types, it leaves result
+// untouched (no prompt) since there is nothing to choose.
+func (c *cli) pickClientGrantAuthorizationDetailsTypes(resourceServer *management.ResourceServer, result *[]string, currentTypes []string) error {
+	options := make([]string, 0, len(resourceServer.GetAuthorizationDetails()))
+	seen := make(map[string]bool)
+	for _, detail := range resourceServer.GetAuthorizationDetails() {
+		if t := detail.GetType(); t != "" && !seen[t] {
+			options = append(options, t)
+			seen[t] = true
+		}
+	}
+	for _, t := range currentTypes {
+		if !seen[t] {
+			options = append(options, t)
+			seen[t] = true
+		}
+	}
+
+	if len(options) == 0 {
+		return nil
+	}
+
+	typesPrompt := &survey.MultiSelect{
+		Message: "Authorization details types",
+		Options: options,
+		Default: currentTypes,
+	}
+
+	return survey.AskOne(typesPrompt, result)
 }

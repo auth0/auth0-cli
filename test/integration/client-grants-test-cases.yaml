@@ -110,3 +110,36 @@ tests:
     stderr:
       contains:
         - "Failed to delete client grant with ID \"this-client-grant-id-does-not-exist\""
+
+  017 - create client grant with neither client-id nor default-for should fail:
+    command: auth0 client-grants create --audience $(./test/integration/scripts/get-api-identifier.sh) --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "of --client-id or --default-for must be set"
+
+  018 - create client grant with both client-id and default-for should fail:
+    command: auth0 client-grants create --client-id $(./test/integration/scripts/get-m2m-app-id.sh) --default-for third_party_clients --audience $(./test/integration/scripts/get-api-identifier.sh) --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "[client-id default-for]"
+
+  019 - create default client grant with organization usage should fail:
+    command: auth0 client-grants create --default-for third_party_clients --audience $(./test/integration/scripts/get-api-identifier.sh) --organization-usage allow --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "--organization-usage cannot be set with --default-for"
+
+  020 - create default client grant and check json output:
+    command: auth0 client-grants create --default-for third_party_clients --audience $(./test/integration/scripts/get-api-identifier.sh) --scopes read:todos --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        audience: http://integration-test-api-client-grant
+        default_for: third_party_clients
+
+  021 - delete default client grant:
+    command: auth0 client-grants delete $(auth0 client-grants list --default-for third_party_clients --audience $(./test/integration/scripts/get-api-identifier.sh) --json --no-input | jq -r '.[0].id') --force --no-input
+    exit-code: 0

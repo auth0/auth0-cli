@@ -25,6 +25,7 @@ auth0 client-grants update [flags]
   auth0 client-grants update <client-grant-id>
   auth0 client-grants update <client-grant-id> --scopes "read:users,update:users"
   auth0 client-grants update <client-grant-id> --allow-all-scopes
+  auth0 client-grants update <client-grant-id> --authorization-details-types "payment,transfer"
   auth0 client-grants update <client-grant-id> -s "read:users" -o require --allow-any-organization=false
   auth0 client-grants update <client-grant-id> --json
 ```
@@ -33,12 +34,13 @@ auth0 client-grants update [flags]
 ## Flags
 
 ```
-      --allow-all-scopes            Grant every scope configured on the API. Mutually exclusive with --scopes.
-      --allow-any-organization      Whether any organization can be used with this grant (true) or only explicitly assigned organizations (false).
-      --json                        Output in json format.
-      --json-compact                Output in compact json format.
-  -o, --organization-usage string   Whether organizations can be used with this grant. Possible values: deny, allow, require.
-  -s, --scopes strings              Comma-separated list of scopes (permissions) to grant.
+      --allow-all-scopes                      Grant every scope configured on the API. Mutually exclusive with --scopes.
+      --allow-any-organization                Whether any organization can be used with this grant (true) or only explicitly assigned organizations (false).
+      --authorization-details-types strings   Comma-separated list of authorization_details types allowed for this grant (Rich Authorization Requests).
+      --json                                  Output in json format.
+      --json-compact                          Output in compact json format.
+  -o, --organization-usage string             Whether organizations can be used with this grant. Possible values: deny, allow, require.
+  -s, --scopes strings                        Comma-separated list of scopes (permissions) to grant.
 ```
 
 

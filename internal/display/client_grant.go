@@ -25,19 +25,21 @@ type clientGrantResponse interface {
 	GetDefaultFor() managementv3.ClientGrantDefaultForEnum
 	GetIsSystem() bool
 	GetSubjectType() managementv3.ClientGrantSubjectTypeEnum
+	GetAuthorizationDetailsTypes() []string
 }
 
 // clientGrantView renders a single client grant as a key-value detail view
 // (show, create and update). It carries the full scope list because the user
 // asked for that one grant specifically.
 type clientGrantView struct {
-	ID                   string
-	ClientID             string
-	Audience             string
-	Scopes               string
-	SubjectType          string
-	OrganizationUsage    string
-	AllowAnyOrganization string
+	ID                        string
+	ClientID                  string
+	Audience                  string
+	Scopes                    string
+	SubjectType               string
+	OrganizationUsage         string
+	AllowAnyOrganization      string
+	AuthorizationDetailsTypes string
 
 	raw interface{}
 }
@@ -66,6 +68,15 @@ func (v *clientGrantView) KeyValues() [][]string {
 		keyValues = append(keyValues,
 			[]string{"ORGANIZATION USAGE", v.OrganizationUsage},
 			[]string{"ALLOW ANY ORGANIZATION", v.AllowAnyOrganization},
+		)
+	}
+
+	// Only show the authorization_details types when the grant carries any,
+	// since most grants do not use Rich Authorization Requests and an empty
+	// row would just be noise.
+	if v.AuthorizationDetailsTypes != "" {
+		keyValues = append(keyValues,
+			[]string{"AUTHORIZATION DETAILS TYPES", v.AuthorizationDetailsTypes},
 		)
 	}
 
@@ -123,35 +134,35 @@ func (r *Renderer) ClientGrantList(grants []*managementv3.ClientGrantResponseCon
 
 func (r *Renderer) ClientGrantShow(grant *managementv3.GetClientGrantResponseContent) {
 	r.Heading("client grant")
-	view, scopesTruncated := makeClientGrantView(grant)
+	view, truncated := makeClientGrantView(grant)
 	r.Result(view)
-	r.hintClientGrantScopesTruncated(grant.GetID(), scopesTruncated)
+	r.hintClientGrantValuesTruncated(grant.GetID(), truncated)
 }
 
 func (r *Renderer) ClientGrantCreate(grant *managementv3.CreateClientGrantResponseContent) {
 	r.Heading("client grant created")
-	view, scopesTruncated := makeClientGrantView(grant)
+	view, truncated := makeClientGrantView(grant)
 	r.Result(view)
-	r.hintClientGrantScopesTruncated(grant.GetID(), scopesTruncated)
+	r.hintClientGrantValuesTruncated(grant.GetID(), truncated)
 }
 
 func (r *Renderer) ClientGrantUpdate(grant *managementv3.UpdateClientGrantResponseContent) {
 	r.Heading("client grant updated")
-	view, scopesTruncated := makeClientGrantView(grant)
+	view, truncated := makeClientGrantView(grant)
 	r.Result(view)
-	r.hintClientGrantScopesTruncated(grant.GetID(), scopesTruncated)
+	r.hintClientGrantValuesTruncated(grant.GetID(), truncated)
 }
 
-func (r *Renderer) hintClientGrantScopesTruncated(id string, scopesTruncated bool) {
-	if !scopesTruncated || r.Format == OutputFormatJSON || r.Format == OutputFormatJSONCompact {
+func (r *Renderer) hintClientGrantValuesTruncated(id string, truncated bool) {
+	if !truncated || r.Format == OutputFormatJSON || r.Format == OutputFormatJSONCompact {
 		return
 	}
 	r.Newline()
-	r.Infof("Scopes truncated for display. To see the full list, run %s", ansi.Faint(fmt.Sprintf("client-grants show %s --json", id)))
+	r.Infof("Some values were truncated for display. To see the full list, run %s", ansi.Faint(fmt.Sprintf("client-grants show %s --json", id)))
 }
 
 func makeClientGrantView(grant clientGrantResponse) (*clientGrantView, bool) {
-	scopes, scopesTruncated := clientGrantScopesForDisplay(grant.GetScope())
+	scopes, scopesTruncated := clientGrantValuesForDisplay(grant.GetScope())
 
 	// A grant with allow_all_scopes carries no explicit scope list, so show
 	// that it authorizes everything rather than rendering a blank field.
@@ -166,17 +177,22 @@ func makeClientGrantView(grant clientGrantResponse) (*clientGrantView, bool) {
 		subjectType = "client"
 	}
 
+	// Authorization details types can be a long list too, so truncate them the
+	// same way as scopes rather than blowing the value column up.
+	authorizationDetailsTypes, authDetailsTruncated := clientGrantValuesForDisplay(grant.GetAuthorizationDetailsTypes())
+
 	view := &clientGrantView{
-		ID:                   grant.GetID(),
-		ClientID:             clientGrantIdentifier(grant),
-		Audience:             grant.GetAudience(),
-		Scopes:               scopes,
-		SubjectType:          subjectType,
-		OrganizationUsage:    string(grant.GetOrganizationUsage()),
-		AllowAnyOrganization: boolean(grant.GetAllowAnyOrganization()),
-		raw:                  grant,
+		ID:                        grant.GetID(),
+		ClientID:                  clientGrantIdentifier(grant),
+		Audience:                  grant.GetAudience(),
+		Scopes:                    scopes,
+		SubjectType:               subjectType,
+		OrganizationUsage:         string(grant.GetOrganizationUsage()),
+		AllowAnyOrganization:      boolean(grant.GetAllowAnyOrganization()),
+		AuthorizationDetailsTypes: authorizationDetailsTypes,
+		raw:                       grant,
 	}
-	return view, scopesTruncated
+	return view, scopesTruncated || authDetailsTruncated
 }
 
 func makeClientGrantTableView(grant clientGrantResponse) *clientGrantTableView {
@@ -203,15 +219,15 @@ func clientGrantIdentifier(grant clientGrantResponse) string {
 	return string(grant.GetDefaultFor())
 }
 
-// clientGrantScopesForDisplay joins the scopes into a single line for the
-// detail view, truncating to the terminal width so a grant with hundreds of
-// scopes does not blow the value column up. It returns the display string and
-// whether truncation happened.
-func clientGrantScopesForDisplay(scopes []string) (string, bool) {
+// clientGrantValuesForDisplay joins a list of values (scopes or authorization
+// details types) into a single line for the detail view, truncating to the
+// terminal width so a grant with hundreds of values does not blow the value
+// column up. It returns the display string and whether truncation happened.
+func clientGrantValuesForDisplay(values []string) (string, bool) {
 	const (
 		ellipsis  = "..."
 		separator = ", "
-		padding   = 24 // The longest clientGrantView key plus surrounding spaces in the label column.
+		padding   = 32 // The longest clientGrantView key plus surrounding spaces in the label column.
 	)
 
 	terminalWidth, _, err := term.GetSize(int(iostream.Input.Fd()))
@@ -219,7 +235,7 @@ func clientGrantScopesForDisplay(scopes []string) (string, bool) {
 		terminalWidth = 80
 	}
 
-	joined := strings.Join(scopes, separator)
+	joined := strings.Join(values, separator)
 	maxCharacters := terminalWidth - padding
 
 	if len(joined) <= maxCharacters {

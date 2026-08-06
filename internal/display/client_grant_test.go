@@ -100,6 +100,37 @@ func TestClientGrantView_KeyValues(t *testing.T) {
 		)
 	})
 
+	t.Run("includes the authorization details types row when the grant has any", func(t *testing.T) {
+		grant := &managementv3.ClientGrantResponseContent{
+			ID:                        auth0.String("cgr_5"),
+			ClientID:                  auth0.String("client-id-5"),
+			Audience:                  auth0.String("https://travel0.com/api"),
+			Scope:                     []string{"read:users"},
+			AuthorizationDetailsTypes: []string{"payment", "transfer"},
+		}
+
+		view, _ := makeClientGrantView(grant)
+
+		assert.Equal(t, "payment, transfer", view.AuthorizationDetailsTypes)
+		assert.Equal(t,
+			[]string{"ID", "CLIENT ID", "AUDIENCE", "SCOPES", "SUBJECT TYPE", "AUTHORIZATION DETAILS TYPES"},
+			keys(view.KeyValues()),
+		)
+	})
+
+	t.Run("omits the authorization details types row when the grant has none", func(t *testing.T) {
+		grant := &managementv3.ClientGrantResponseContent{
+			ID:       auth0.String("cgr_6"),
+			ClientID: auth0.String("client-id-6"),
+			Audience: auth0.String("https://travel0.com/api"),
+			Scope:    []string{"read:users"},
+		}
+
+		view, _ := makeClientGrantView(grant)
+
+		assert.NotContains(t, keys(view.KeyValues()), "AUTHORIZATION DETAILS TYPES")
+	})
+
 	t.Run("shows the subject type for a non-client subject type", func(t *testing.T) {
 		grant := &managementv3.ClientGrantResponseContent{
 			ID:          auth0.String("cgr_3"),

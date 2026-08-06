@@ -1,17 +1,20 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
 	managementv3 "github.com/auth0/go-auth0/v3/management"
+	"github.com/auth0/go-auth0/v3/management/option"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
+	"github.com/auth0/auth0-cli/internal/display"
 )
 
 func TestClientGrantsPickerOptions(t *testing.T) {
@@ -233,6 +236,152 @@ func TestUpdateClientGrantCmd(t *testing.T) {
 			assert.EqualError(t, cmd.Execute(), test.expectedError)
 		})
 	}
+}
+
+func TestCreateClientGrantCmd(t *testing.T) {
+	t.Run("errors when neither client-id nor default-for is set", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		cli := &cli{apiv3: &auth0.APIV3{ClientGrant: mock.NewMockClientGrantAPIV3(ctrl)}}
+		cli.noInput = true // Non-interactive mode.
+
+		cmd := createClientGrantCmd(cli)
+		cmd.SetArgs([]string{"--audience", "https://travel0.com/api"})
+
+		assert.EqualError(t, cmd.Execute(), "one of --client-id or --default-for must be set")
+	})
+
+	t.Run("errors when client-id and default-for are both set", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		cli := &cli{apiv3: &auth0.APIV3{ClientGrant: mock.NewMockClientGrantAPIV3(ctrl)}}
+		cli.noInput = true // Non-interactive mode.
+
+		cmd := createClientGrantCmd(cli)
+		cmd.SetArgs([]string{
+			"--audience", "https://travel0.com/api",
+			"--client-id", "client-id-1",
+			"--default-for", "third_party_clients",
+		})
+
+		assert.ErrorContains(t, cmd.Execute(), "[client-id default-for]")
+	})
+
+	t.Run("sends default_for when --default-for is set", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		var captured *managementv3.CreateClientGrantRequestContent
+		clientGrantAPI := mock.NewMockClientGrantAPIV3(ctrl)
+		clientGrantAPI.EXPECT().
+			Create(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *managementv3.CreateClientGrantRequestContent, _ ...option.RequestOption) (*managementv3.CreateClientGrantResponseContent, error) {
+				captured = req
+				return &managementv3.CreateClientGrantResponseContent{ID: auth0.String("cgr_1")}, nil
+			})
+
+		cli := &cli{
+			apiv3:    &auth0.APIV3{ClientGrant: clientGrantAPI},
+			renderer: &display.Renderer{MessageWriter: &bytes.Buffer{}, ResultWriter: &bytes.Buffer{}},
+		}
+		cli.noInput = true // Non-interactive mode.
+
+		cmd := createClientGrantCmd(cli)
+		cmd.SetArgs([]string{
+			"--audience", "https://travel0.com/api",
+			"--default-for", "third_party_clients",
+		})
+
+		assert.NoError(t, cmd.Execute())
+		assert.Nil(t, captured.ClientID)
+		assert.Equal(t, managementv3.ClientGrantDefaultForEnumThirdPartyClients, *captured.DefaultFor)
+		// Organization and subject-type settings do not apply to a default grant
+		// and the API rejects them, so they must never be sent.
+		assert.Nil(t, captured.SubjectType)
+		assert.Nil(t, captured.OrganizationUsage)
+		assert.Nil(t, captured.AllowAnyOrganization)
+	})
+
+	t.Run("rejects organization flags with --default-for", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		cli := &cli{apiv3: &auth0.APIV3{ClientGrant: mock.NewMockClientGrantAPIV3(ctrl)}}
+		cli.noInput = true // Non-interactive mode.
+
+		cmd := createClientGrantCmd(cli)
+		cmd.SetArgs([]string{
+			"--audience", "https://travel0.com/api",
+			"--default-for", "third_party_clients",
+			"--organization-usage", "allow",
+		})
+
+		assert.EqualError(t, cmd.Execute(), "--organization-usage cannot be set with --default-for")
+	})
+
+	t.Run("sends authorization_details_types when --authorization-details-types is set", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		var captured *managementv3.CreateClientGrantRequestContent
+		clientGrantAPI := mock.NewMockClientGrantAPIV3(ctrl)
+		clientGrantAPI.EXPECT().
+			Create(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *managementv3.CreateClientGrantRequestContent, _ ...option.RequestOption) (*managementv3.CreateClientGrantResponseContent, error) {
+				captured = req
+				return &managementv3.CreateClientGrantResponseContent{ID: auth0.String("cgr_1")}, nil
+			})
+
+		cli := &cli{
+			apiv3:    &auth0.APIV3{ClientGrant: clientGrantAPI},
+			renderer: &display.Renderer{MessageWriter: &bytes.Buffer{}, ResultWriter: &bytes.Buffer{}},
+		}
+		cli.noInput = true // Non-interactive mode.
+
+		cmd := createClientGrantCmd(cli)
+		cmd.SetArgs([]string{
+			"--client-id", "client-id-1",
+			"--audience", "https://travel0.com/api",
+			"--authorization-details-types", "payment,transfer",
+		})
+
+		assert.NoError(t, cmd.Execute())
+		assert.Equal(t, []string{"payment", "transfer"}, captured.AuthorizationDetailsTypes)
+	})
+
+	t.Run("does not send organization settings when no organization flags are passed", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		var captured *managementv3.CreateClientGrantRequestContent
+		clientGrantAPI := mock.NewMockClientGrantAPIV3(ctrl)
+		clientGrantAPI.EXPECT().
+			Create(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *managementv3.CreateClientGrantRequestContent, _ ...option.RequestOption) (*managementv3.CreateClientGrantResponseContent, error) {
+				captured = req
+				return &managementv3.CreateClientGrantResponseContent{ID: auth0.String("cgr_1")}, nil
+			})
+
+		cli := &cli{
+			apiv3:    &auth0.APIV3{ClientGrant: clientGrantAPI},
+			renderer: &display.Renderer{MessageWriter: &bytes.Buffer{}, ResultWriter: &bytes.Buffer{}},
+		}
+		cli.noInput = true // Non-interactive mode.
+
+		cmd := createClientGrantCmd(cli)
+		cmd.SetArgs([]string{
+			"--client-id", "client-id-1",
+			"--audience", "https://travel0.com/api",
+		})
+
+		// A grant that never touches organizations must not carry a stray
+		// allow_any_organization, which the API rejects for system APIs.
+		assert.NoError(t, cmd.Execute())
+		assert.Nil(t, captured.OrganizationUsage)
+		assert.Nil(t, captured.AllowAnyOrganization)
+	})
 }
 
 func TestDeleteClientGrantCmd(t *testing.T) {
@@ -505,4 +654,61 @@ func TestAPIIdentifierPickerOptions(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNonSystemAPIIdentifierPickerOptions(t *testing.T) {
+	apis := []*management.ResourceServer{
+		{
+			ID:         auth0.String("api-id-1"),
+			Identifier: auth0.String("https://travel0.com/api"),
+			Name:       auth0.String("Travel0 API"),
+		},
+		{
+			ID:         auth0.String("api-id-mgmt"),
+			Identifier: auth0.String("https://travel0.us.auth0.com/api/v2/"),
+			Name:       auth0.String("Auth0 Management API"),
+			IsSystem:   auth0.Bool(true),
+		},
+	}
+
+	t.Run("excludes system APIs", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		apiAPI := mock.NewMockResourceServerAPI(ctrl)
+		apiAPI.EXPECT().
+			List(gomock.Any()).
+			Return(&management.ResourceServerList{ResourceServers: apis}, nil)
+
+		cli := &cli{api: &auth0.API{ResourceServer: apiAPI}}
+
+		options, err := cli.nonSystemAPIIdentifierPickerOptions(context.Background())
+
+		assert.NoError(t, err)
+		assert.Len(t, options, 1)
+		assert.Equal(t, "https://travel0.com/api", options[0].value)
+	})
+
+	t.Run("errors when only system APIs exist", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		apiAPI := mock.NewMockResourceServerAPI(ctrl)
+		apiAPI.EXPECT().
+			List(gomock.Any()).
+			Return(&management.ResourceServerList{ResourceServers: []*management.ResourceServer{
+				{
+					ID:         auth0.String("api-id-mgmt"),
+					Identifier: auth0.String("https://travel0.us.auth0.com/api/v2/"),
+					Name:       auth0.String("Auth0 Management API"),
+					IsSystem:   auth0.Bool(true),
+				},
+			}}, nil)
+
+		cli := &cli{api: &auth0.API{ResourceServer: apiAPI}}
+
+		_, err := cli.nonSystemAPIIdentifierPickerOptions(context.Background())
+
+		assert.ErrorContains(t, err, "there are currently no APIs to choose from")
+	})
 }
