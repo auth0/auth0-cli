@@ -382,6 +382,7 @@ type portalClientPayload struct {
 	Name                        string                  `json:"name"`
 	IsFirstParty                bool                    `json:"is_first_party"`
 	AppType                     string                  `json:"app_type"`
+	OIDCConformant              bool                    `json:"oidc_conformant"`
 	TokenEndpointAuthMethod     string                  `json:"token_endpoint_auth_method"`
 	Callbacks                   []string                `json:"callbacks"`
 	AllowedLogoutURLs           []string                `json:"allowed_logout_urls"`
@@ -432,6 +433,7 @@ func createPortalClient(ctx context.Context, h auth0.HTTPClientAPI, name, domain
 		Name:                        name,
 		IsFirstParty:                true,
 		AppType:                     "regular_web",
+		OIDCConformant:              true,
 		TokenEndpointAuthMethod:     "client_secret_post",
 		Callbacks:                   []string{"https://" + domain + "/portals/auth/callback"},
 		AllowedLogoutURLs:           []string{"https://" + domain},
