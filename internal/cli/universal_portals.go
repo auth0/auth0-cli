@@ -106,6 +106,25 @@ func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, name string) error {
 		return fmt.Errorf("authentication required: %w", err)
 	}
 
+	// Verify the token carries the scopes required by the EA setup endpoints.
+	// These are intentionally not in RequiredScopes to avoid breaking login for
+	// tenants without the feature flag.
+	//   create:flows_vault_connections — POST /api/v2/flows/vault/connections
+	//   create:forms, create:flows     — POST /api/v2/forms/import
+	//   create:portals                 — POST /api/v2/portals
+	upRequiredScopes := []string{
+		"create:flows_vault_connections",
+		"create:forms",
+		"create:flows",
+		"create:portals",
+	}
+	if missing := missingScopes(cli.Config.Tenants[cli.tenant].Scopes, upRequiredScopes); len(missing) > 0 {
+		return fmt.Errorf(
+			"insufficient scopes to provision Universal Portals\nMissing: %s\nRe-authenticate to continue: auth0 login",
+			strings.Join(missing, ", "),
+		)
+	}
+
 	ctx := cmd.Context()
 
 	// Resolve the portal domain: default custom domain, or fall back to the tenant domain.

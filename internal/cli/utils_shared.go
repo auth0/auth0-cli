@@ -344,6 +344,23 @@ func openManageURL(cli *cli, tenant string, path string) {
 //
 //	my-tenant.us.auth0.com  →  https://manage.auth0.com
 //	my-tenant.auth0.com     →  https://manage.auth0.com  (legacy PUS1)
+// missingScopes returns elements of required that are absent from granted.
+// Used to surface a clear re-authentication prompt before API calls that need
+// scopes not in RequiredScopes (e.g. feature-flagged EA endpoints).
+func missingScopes(granted, required []string) []string {
+	have := make(map[string]struct{}, len(granted))
+	for _, s := range granted {
+		have[s] = struct{}{}
+	}
+	var missing []string
+	for _, s := range required {
+		if _, ok := have[s]; !ok {
+			missing = append(missing, s)
+		}
+	}
+	return missing
+}
+
 func deriveServiceURL(service, tenantDomain string) string {
 	parts := strings.Split(tenantDomain, ".")
 	if len(parts) >= 4 && len(parts[1]) == 2 {
