@@ -361,6 +361,28 @@ func missingScopes(granted, required []string) []string {
 	return missing
 }
 
+// scopesFromToken extracts the granted scopes from a JWT access token by
+// base64-decoding the payload. Returns nil if the token is malformed or
+// carries no scope claim, in which case the caller should skip the scope
+// pre-flight check and let the API surface a 403 instead.
+func scopesFromToken(tokenStr string) []string {
+	parts := strings.SplitN(tokenStr, ".", 3)
+	if len(parts) != 3 {
+		return nil
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil
+	}
+	var claims struct {
+		Scope string `json:"scope"`
+	}
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return nil
+	}
+	return strings.Fields(claims.Scope)
+}
+
 func deriveServiceURL(service, tenantDomain string) string {
 	parts := strings.Split(tenantDomain, ".")
 	if len(parts) >= 4 && len(parts[1]) == 2 {

@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -49,12 +50,20 @@ var (
 	}
 )
 
-var upName = Flag{
-	Name:      "Name",
-	LongForm:  "name",
-	ShortForm: "n",
-	Help:      "Name of the Universal Portals application.",
-}
+var (
+	upPortalName = Flag{
+		Name:      "Name",
+		LongForm:  "name",
+		ShortForm: "n",
+		Help:      "Display name of the portal.",
+	}
+	upPortalSlug = Flag{
+		Name:      "Slug",
+		LongForm:  "slug",
+		ShortForm: "s",
+		Help:      "URL-friendly identifier for the portal (e.g. my-portal).",
+	}
+)
 
 // universalPortalsCmd groups Universal Portals management commands.
 func universalPortalsCmd(cli *cli) *cobra.Command {
@@ -74,7 +83,8 @@ func universalPortalsCmd(cli *cli) *cobra.Command {
 // universalPortalsSetupCmd provisions all Auth0 resources required by a Universal Portals application.
 func universalPortalsSetupCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Name string
+		PortalName string
+		Slug       string
 	}
 
 	cmd := &cobra.Command{
@@ -87,21 +97,22 @@ func universalPortalsSetupCmd(cli *cli) *cobra.Command {
   - A Regular Web App client with the required configuration
   - Client grants for My Account API, My Organization API, and the Management API`,
 		Example: `  auth0 universal-portals setup
-  auth0 universal-portals setup --name "My Portal"
-  auth0 up setup -n "My Portal"`,
+  auth0 universal-portals setup --name "Acme" --slug "acme"
+  auth0 up setup -n "Acme" -s "acme"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runUniversalPortalsSetup(cmd, cli, inputs.Name)
+			return runUniversalPortalsSetup(cmd, cli, inputs.PortalName, inputs.Slug)
 		},
 	}
 
-	upName.RegisterString(cmd, &inputs.Name, "")
+	upPortalName.RegisterString(cmd, &inputs.PortalName, "")
+	upPortalSlug.RegisterString(cmd, &inputs.Slug, "")
 
 	return cmd
 }
 
 // runUniversalPortalsSetup orchestrates the provisioning flow.
 // It owns all display logic; business functions only return (value, error).
-func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, name string) error {
+func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, portalName, slug string) error {
 	if err := cli.setupWithAuthentication(cmd.Context()); err != nil {
 		return fmt.Errorf("authentication required: %w", err)
 	}
@@ -112,17 +123,24 @@ func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, name string) error {
 	//   create:flows_vault_connections — POST /api/v2/flows/vault/connections
 	//   create:forms, create:flows     — POST /api/v2/forms/import
 	//   create:portals                 — POST /api/v2/portals
+	//
+	// Scopes are read from the JWT directly so this works regardless of auth
+	// method (device code, client secret, etc.).
 	upRequiredScopes := []string{
 		"create:flows_vault_connections",
 		"create:forms",
 		"create:flows",
 		"create:portals",
 	}
-	if missing := missingScopes(cli.Config.Tenants[cli.tenant].Scopes, upRequiredScopes); len(missing) > 0 {
-		return fmt.Errorf(
-			"insufficient scopes to provision Universal Portals\nMissing: %s\nRe-authenticate to continue: auth0 login",
-			strings.Join(missing, ", "),
-		)
+	if tenant, err := cli.Config.GetTenant(cli.tenant); err == nil {
+		if granted := scopesFromToken(tenant.GetAccessToken()); granted != nil {
+			if missing := missingScopes(granted, upRequiredScopes); len(missing) > 0 {
+				return fmt.Errorf(
+					"insufficient scopes to provision Universal Portals\nMissing: %s\nRe-authenticate to continue: auth0 login",
+					strings.Join(missing, ", "),
+				)
+			}
+		}
 	}
 
 	ctx := cmd.Context()
@@ -136,30 +154,53 @@ func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, name string) error {
 	}
 	cli.renderer.Newline()
 
-	// Collect the application name.
-	defaultName := name
-	if defaultName == "" {
-		defaultName = "Universal Portals"
+	// Collect portal name.
+	defaultPortalName := portalName
+	if defaultPortalName == "" {
+		defaultPortalName = "My Portal"
 	}
-	if err := upName.Ask(cmd, &name, &defaultName); err != nil {
-		return fmt.Errorf("failed to enter application name: %w", err)
+	if err := upPortalName.Ask(cmd, &portalName, &defaultPortalName); err != nil {
+		return fmt.Errorf("failed to enter portal name: %w", err)
 	}
-	if name == "" {
-		return fmt.Errorf("application name cannot be empty")
+	if portalName == "" {
+		return fmt.Errorf("portal name cannot be empty")
 	}
+
+	// Collect portal slug, defaulting to a slugified version of the portal name.
+	if slug == "" {
+		slug = toPortalSlug(portalName)
+	}
+	if err := upPortalSlug.Ask(cmd, &slug, &slug); err != nil {
+		return fmt.Errorf("failed to enter portal slug: %w", err)
+	}
+	if slug == "" {
+		return fmt.Errorf("portal slug cannot be empty")
+	}
+
+	// The application name is derived automatically from the portal name.
+	appName := portalName + " (Universal Portals)"
 
 	tenant := cli.tenant
 
 	// Ensure the resource servers required by Universal Portals exist.
+	type rsResult struct {
+		name    string
+		existed bool
+	}
+	var rsResults []rsResult
 	for _, rs := range portalResourceServers(tenant) {
 		existed, err := ensurePortalResourceServer(ctx, cli.api.ResourceServer, rs.name, rs.identifier)
 		if err != nil {
 			return err
 		}
-		if existed {
-			cli.renderer.Infof("%s %s", rs.name, ansi.Faint("(already exists)"))
+		rsResults = append(rsResults, rsResult{name: rs.name, existed: existed})
+	}
+	cli.renderer.Successf("Resource servers ready")
+	for _, rs := range rsResults {
+		if rs.existed {
+			cli.renderer.Detailf("%s", ansi.Faint(rs.name+" (already exists)"))
 		} else {
-			cli.renderer.Successf(rs.name)
+			cli.renderer.Detailf("%s", ansi.Faint(rs.name))
 		}
 	}
 
@@ -167,7 +208,7 @@ func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, name string) error {
 	var client portalClientResult
 	if err := ansi.Waiting(func() error {
 		var err error
-		client, err = createPortalClient(ctx, cli.api.HTTPClient, name, domain, tenant)
+		client, err = createPortalClient(ctx, cli.api.HTTPClient, appName, domain, tenant, isCustom)
 		return err
 	}); err != nil {
 		return fmt.Errorf("failed to create application: %w", err)
@@ -176,21 +217,26 @@ func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, name string) error {
 	clientURL := portalManageClientURL(cli.tenant, cli.Config.Tenants[cli.tenant].Name, client.ClientID)
 	maskedSecret := client.ClientSecret[:4] + strings.Repeat("•", len(client.ClientSecret)-4)
 
-	cli.renderer.Successf("Application %q created", name)
+	cli.renderer.Successf("Application %q created", appName)
 	cli.renderer.Detailf("Client ID:     %s", ansi.Hyperlink(clientURL, ansi.Magenta(client.ClientID)))
 	cli.renderer.Detailf("Client secret: %s", ansi.Faint(maskedSecret))
 	cli.renderer.Newline()
 
 	// Create the three client grants.
-	for _, grant := range buildPortalGrants(client.ClientID, tenant) {
-		g := grant
+	grants := buildPortalGrants(client.ClientID, tenant)
+	for _, g := range grants {
+		g := g
 		if err := ansi.Waiting(func() error {
 			return createPortalGrant(ctx, cli.api.HTTPClient, g)
 		}); err != nil {
 			return fmt.Errorf("failed to create client grant for %q: %w", g.Audience, err)
 		}
-		cli.renderer.Successf("Client grant  %s", grant.Audience)
 	}
+	cli.renderer.Successf("Client grants created")
+	for _, g := range grants {
+		cli.renderer.Detailf("%s", ansi.Faint(g.Audience))
+	}
+	cli.renderer.Newline()
 
 	// Create the vault connection used by the portal forms to call the Management API.
 	var vaultConnID string
@@ -202,7 +248,7 @@ func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, name string) error {
 			"type":          "OAUTH_APP",
 		}
 		appID := "AUTH0"
-		connName := name + " (Universal Portals)"
+		connName := appName
 		conn := &management.FlowVaultConnection{
 			AppID: &appID,
 			Name:  &connName,
@@ -218,7 +264,9 @@ func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, name string) error {
 	}); err != nil {
 		return fmt.Errorf("failed to create vault connection: %w", err)
 	}
-	cli.renderer.Successf("Vault connection %q created", name+" (Universal Portals)")
+	cli.renderer.Successf("Vault connection created")
+	cli.renderer.Detailf("%s", ansi.Faint(appName))
+	cli.renderer.Newline()
 
 	// Import the portal forms.
 	var forms portalFormIDs
@@ -230,16 +278,32 @@ func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, name string) error {
 		return fmt.Errorf("failed to create forms: %w", err)
 	}
 	cli.renderer.Successf("Forms created")
+	cli.renderer.Detailf("%s", ansi.Faint("Profile update (Universal Portals)"))
+	cli.renderer.Detailf("%s", ansi.Faint("Marketing communication preferences (Universal Portals)"))
+	cli.renderer.Detailf("%s", ansi.Faint("Privacy settings (Universal Portals)"))
+	cli.renderer.Newline()
 
-	// Create the portal.
-	slug := toPortalSlug(name)
+	// Create the portal. On slug conflict, re-prompt and retry this step only.
 	var portal portalResult
-	if err := ansi.Waiting(func() error {
-		var err error
-		portal, err = createPortal(ctx, cli.api.HTTPClient, slug, name, client.ClientID, client.ClientSecret, forms)
-		return err
-	}); err != nil {
-		return fmt.Errorf("failed to create portal: %w", err)
+	for {
+		err := ansi.Waiting(func() error {
+			var err error
+			portal, err = createPortal(ctx, cli.api.HTTPClient, slug, portalName, client.ClientID, client.ClientSecret, forms)
+			return err
+		})
+		if err == nil {
+			break
+		}
+		var conflict *errAPIConflict
+		if !errors.As(err, &conflict) {
+			return fmt.Errorf("failed to create portal: %w", err)
+		}
+		cli.renderer.Warnf("Slug %q is already taken.", slug)
+		prevSlug := slug
+		slug = ""
+		if err := upPortalSlug.Ask(cmd, &slug, &prevSlug); err != nil {
+			return fmt.Errorf("failed to enter portal slug: %w", err)
+		}
 	}
 	cli.renderer.Successf("Portal %q created", portal.Name)
 
@@ -325,8 +389,7 @@ type portalClientPayload struct {
 	OrganizationUsage           string                  `json:"organization_usage"`
 	GrantTypes                  []string                `json:"grant_types"`
 	RefreshToken                portalRefreshToken      `json:"refresh_token"`
-	SessionTransfer             portalSessionTransfer   `json:"session_transfer"`
-	OIDCBackchannelLogout       portalBackchannelLogout `json:"oidc_backchannel_logout"`
+	OIDCBackchannelLogout       *portalBackchannelLogout `json:"oidc_backchannel_logout,omitempty"`
 }
 
 type portalRefreshToken struct {
@@ -343,15 +406,6 @@ type portalRefreshToken struct {
 type portalRefreshTokenPolicy struct {
 	Audience string   `json:"audience"`
 	Scope    []string `json:"scope"`
-}
-
-type portalSessionTransfer struct {
-	AllowRefreshToken             bool     `json:"allow_refresh_token"`
-	AllowedAuthenticationMethods  []string `json:"allowed_authentication_methods"`
-	CanCreateSessionTransferToken bool     `json:"can_create_session_transfer_token"`
-	EnforceCascadeRevocation      bool     `json:"enforce_cascade_revocation"`
-	EnforceDeviceBinding          string   `json:"enforce_device_binding"`
-	EnforceOnlineRefreshTokens    bool     `json:"enforce_online_refresh_tokens"`
 }
 
 type portalBackchannelLogout struct {
@@ -371,7 +425,9 @@ type portalClientResult struct {
 
 // createPortalClient builds and POSTs the portal application client.
 // Takes only what it needs: an HTTP client, not the full *cli.
-func createPortalClient(ctx context.Context, h auth0.HTTPClientAPI, name, domain, tenant string) (portalClientResult, error) {
+// Backchannel logout is omitted when isCustomDomain is false because
+// Auth0 domains are rejected by the payload validation.
+func createPortalClient(ctx context.Context, h auth0.HTTPClientAPI, name, domain, tenant string, isCustomDomain bool) (portalClientResult, error) {
 	payload := portalClientPayload{
 		Name:                        name,
 		IsFirstParty:                true,
@@ -395,15 +451,10 @@ func createPortalClient(ctx context.Context, h auth0.HTTPClientAPI, name, domain
 				{Audience: "https://" + tenant + "/my-org/", Scope: myOrgAPIScopes},
 			},
 		},
-		SessionTransfer: portalSessionTransfer{
-			AllowRefreshToken:             true,
-			AllowedAuthenticationMethods:  []string{"query"},
-			CanCreateSessionTransferToken: false,
-			EnforceCascadeRevocation:      true,
-			EnforceDeviceBinding:          "ip",
-			EnforceOnlineRefreshTokens:    true,
-		},
-		OIDCBackchannelLogout: portalBackchannelLogout{
+	}
+
+	if isCustomDomain {
+		payload.OIDCBackchannelLogout = &portalBackchannelLogout{
 			BackchannelLogoutInitiators: portalBackchannelInitiators{
 				Mode: "custom",
 				SelectedInitiators: []string{
@@ -416,11 +467,11 @@ func createPortalClient(ctx context.Context, h auth0.HTTPClientAPI, name, domain
 				},
 			},
 			BackchannelLogoutURLs: []string{"https://" + domain + "/portals/auth/backchannel-logout"},
-		},
+		}
 	}
 
 	var result portalClientResult
-	if err := rawAPIPost(ctx, h, "clients", payload, &result); err != nil {
+	if err := rawAPIPost(ctx, h, payload, &result, "clients"); err != nil {
 		return portalClientResult{}, err
 	}
 	return result, nil
@@ -463,13 +514,21 @@ func buildPortalGrants(clientID, tenant string) []portalGrantPayload {
 
 // createPortalGrant POSTs a single client grant.
 func createPortalGrant(ctx context.Context, h auth0.HTTPClientAPI, grant portalGrantPayload) error {
-	return rawAPIPost(ctx, h, "client-grants", grant, nil)
+	return rawAPIPost(ctx, h, grant, nil, "client-grants")
 }
 
+// errAPIConflict is returned by rawAPIPost when the server responds 409.
+// Callers that want to handle conflicts (e.g. slug already taken) can use
+// errors.As to detect and recover from this case.
+type errAPIConflict struct{ message string }
+
+func (e *errAPIConflict) Error() string { return e.message }
+
 // rawAPIPost is a deep helper that hides the New/Do/decode HTTP pattern.
-// Pass a non-nil result to decode the response body into it.
-func rawAPIPost(ctx context.Context, h auth0.HTTPClientAPI, path string, payload, result any) error {
-	req, err := h.NewRequest(ctx, http.MethodPost, h.URI(path), payload)
+// Pass path as one or more segments — they are joined by the URI builder so
+// slashes are not URL-encoded. Pass a non-nil result to decode the response.
+func rawAPIPost(ctx context.Context, h auth0.HTTPClientAPI, payload, result any, path ...string) error {
+	req, err := h.NewRequest(ctx, http.MethodPost, h.URI(path...), payload)
 	if err != nil {
 		return err
 	}
@@ -486,6 +545,9 @@ func rawAPIPost(ctx context.Context, h auth0.HTTPClientAPI, path string, payload
 			Message    string `json:"message"`
 		}
 		_ = json.NewDecoder(resp.Body).Decode(&apiErr)
+		if resp.StatusCode == http.StatusConflict {
+			return &errAPIConflict{message: apiErr.Message}
+		}
 		return fmt.Errorf("API error %d: %s", resp.StatusCode, apiErr.Message)
 	}
 
@@ -498,7 +560,9 @@ func rawAPIPost(ctx context.Context, h auth0.HTTPClientAPI, path string, payload
 // ---- Form provisioning ----
 
 type portalFormResult struct {
-	ID string `json:"id"`
+	Form struct {
+		ID string `json:"id"`
+	} `json:"form"`
 }
 
 // buildCommunicationPreferencesFormPayload returns the form document for the
@@ -771,15 +835,17 @@ func buildPrivacySettingsFormPayload(connID string) map[string]any {
 	}
 }
 
-// createPortalForms imports the two available forms and returns their IDs.
-// PersonalInfo is left empty until the template is available.
+// createPortalForms imports the portal forms and returns their IDs.
+// Uses POST /api/v2/forms/import which accepts the full form document
+// (version, form, flows, connections). The URI is built with two segments
+// to avoid h.URI encoding the slash as %2F.
 func createPortalForms(ctx context.Context, h auth0.HTTPClientAPI, vaultConnID string) (portalFormIDs, error) {
 	importForm := func(payload map[string]any) (string, error) {
 		var result portalFormResult
-		if err := rawAPIPost(ctx, h, "forms/import", payload, &result); err != nil {
+		if err := rawAPIPost(ctx, h, payload, &result, "forms", "import"); err != nil {
 			return "", err
 		}
-		return result.ID, nil
+		return result.Form.ID, nil
 	}
 
 	personalInfoID, err := importForm(buildPersonalInfoFormPayload(vaultConnID))
@@ -1009,7 +1075,7 @@ func buildDefaultPortal(slug, name, clientID, clientSecret string, forms portalF
 func createPortal(ctx context.Context, h auth0.HTTPClientAPI, slug, name, clientID, clientSecret string, forms portalFormIDs) (portalResult, error) {
 	payload := buildDefaultPortal(slug, name, clientID, clientSecret, forms)
 	var result portalResult
-	if err := rawAPIPost(ctx, h, "portals", payload, &result); err != nil {
+	if err := rawAPIPost(ctx, h, payload, &result, "portals"); err != nil {
 		return portalResult{}, err
 	}
 	return result, nil
