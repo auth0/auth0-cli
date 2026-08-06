@@ -38,7 +38,7 @@ func TestRequiredScopes(t *testing.T) {
 			"read:custom_domains", "create:custom_domains", "update:custom_domains", "delete:custom_domains",
 			"read:client_keys", "read:logs", "read:tenant_settings",
 			"read:anomaly_blocks", "delete:anomaly_blocks",
-			"read:organization_members", "read:organization_member_roles",
+			"read:organization_members", "read:organization_member_roles", "read:organization_client_grants",
 			"read:prompts", "update:prompts",
 			"read:attack_protection", "update:attack_protection",
 		}

@@ -135,3 +135,46 @@ func (mr *MockClientGrantAPIV3MockRecorder) Update(ctx, id, request interface{},
 	varargs := append([]interface{}{ctx, id, request}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockClientGrantAPIV3)(nil).Update), varargs...)
 }
+
+// MockClientGrantOrganizationAPIV3 is a mock of ClientGrantOrganizationAPIV3 interface.
+type MockClientGrantOrganizationAPIV3 struct {
+	ctrl     *gomock.Controller
+	recorder *MockClientGrantOrganizationAPIV3MockRecorder
+}
+
+// MockClientGrantOrganizationAPIV3MockRecorder is the mock recorder for MockClientGrantOrganizationAPIV3.
+type MockClientGrantOrganizationAPIV3MockRecorder struct {
+	mock *MockClientGrantOrganizationAPIV3
+}
+
+// NewMockClientGrantOrganizationAPIV3 creates a new mock instance.
+func NewMockClientGrantOrganizationAPIV3(ctrl *gomock.Controller) *MockClientGrantOrganizationAPIV3 {
+	mock := &MockClientGrantOrganizationAPIV3{ctrl: ctrl}
+	mock.recorder = &MockClientGrantOrganizationAPIV3MockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockClientGrantOrganizationAPIV3) EXPECT() *MockClientGrantOrganizationAPIV3MockRecorder {
+	return m.recorder
+}
+
+// List mocks base method.
+func (m *MockClientGrantOrganizationAPIV3) List(ctx context.Context, id string, request *management.ListClientGrantOrganizationsRequestParameters, opts ...option.RequestOption) (*auth0.ClientGrantOrganizationPage, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "List", varargs...)
+	ret0, _ := ret[0].(*auth0.ClientGrantOrganizationPage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockClientGrantOrganizationAPIV3MockRecorder) List(ctx, id, request interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockClientGrantOrganizationAPIV3)(nil).List), varargs...)
+}

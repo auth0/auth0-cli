@@ -130,11 +130,22 @@ tests:
       contains:
         - "--allow-any-organization can only be enabled when --organization-usage is 'allow' or 'require'"
 
-  015 - delete client grant:
+  015 - list client grant organizations:
+    command: auth0 client-grants organizations list $(./test/integration/scripts/get-client-grant-id.sh) --no-input
+    exit-code: 0
+
+  016 - list client grant organizations with invalid number:
+    command: auth0 client-grants organizations list $(./test/integration/scripts/get-client-grant-id.sh) --number 1001 --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - number flag invalid, please pass a number between 1 and 1000
+
+  017 - delete client grant:
     command: auth0 client-grants delete $(./test/integration/scripts/get-client-grant-id.sh) --force --no-input
     exit-code: 0
 
-  016 - delete client grant with invalid id:
+  018 - delete client grant with invalid id:
     command: auth0 client-grants delete this-client-grant-id-does-not-exist --force --no-input
     exit-code: 1
     stderr:

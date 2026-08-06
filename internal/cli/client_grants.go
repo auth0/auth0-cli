@@ -146,6 +146,7 @@ func clientGrantsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(showClientGrantCmd(cli))
 	cmd.AddCommand(updateClientGrantCmd(cli))
 	cmd.AddCommand(deleteClientGrantCmd(cli))
+	cmd.AddCommand(organizationsClientGrantCmd(cli))
 
 	return cmd
 }
@@ -841,10 +842,13 @@ func (c *cli) mutableClientGrantPickerOptions(ctx context.Context) (pickerOption
 }
 
 func (c *cli) clientGrantPickerOptionsFiltered(ctx context.Context, excludeSystem bool) (pickerOptions, error) {
-	// Fetch only the first page, matching the apis/apps pickers. This keeps the
-	// picker fast to open on large tenants; if a grant is not on the first page,
-	// the user can pass its id directly.
-	page, err := c.apiv3.ClientGrant.List(ctx, &managementv3.ListClientGrantsRequestParameters{})
+	// Fetch a single page of up to 100 grants. The API defaults to 50 per page,
+	// which silently drops grants past that on busy tenants; taking 100 keeps the
+	// common case selectable while still opening fast. If a grant is not on this
+	// page, the user can pass its id directly.
+	page, err := c.apiv3.ClientGrant.List(ctx, &managementv3.ListClientGrantsRequestParameters{
+		Take: auth0.Int(100),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list client grants: %w", err)
 	}
