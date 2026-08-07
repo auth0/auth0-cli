@@ -208,7 +208,7 @@ func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, portalName, slug str
 	var client portalClientResult
 	if err := ansi.Waiting(func() error {
 		var err error
-		client, err = createPortalClient(ctx, cli.api.HTTPClient, appName, domain, tenant, isCustom)
+		client, err = createPortalClient(ctx, cli.api.Client, appName, domain, tenant, isCustom)
 		return err
 	}); err != nil {
 		return fmt.Errorf("failed to create application: %w", err)
@@ -227,14 +227,14 @@ func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, portalName, slug str
 	for _, g := range grants {
 		g := g
 		if err := ansi.Waiting(func() error {
-			return createPortalGrant(ctx, cli.api.HTTPClient, g)
+			return createPortalGrant(ctx, cli.api.ClientGrant, g)
 		}); err != nil {
-			return fmt.Errorf("failed to create client grant for %q: %w", g.Audience, err)
+			return fmt.Errorf("failed to create client grant for %q: %w", g.GetAudience(), err)
 		}
 	}
 	cli.renderer.Successf("Client grants created")
 	for _, g := range grants {
-		cli.renderer.Detailf("%s", ansi.Faint(g.Audience))
+		cli.renderer.Detailf("%s", ansi.Faint(g.GetAudience()))
 	}
 	cli.renderer.Newline()
 
@@ -374,149 +374,109 @@ func ensurePortalResourceServer(ctx context.Context, api auth0.ResourceServerAPI
 	return false, fmt.Errorf("failed to ensure resource server %q: %w", name, err)
 }
 
-// ---- Client payload types ----
-// Local structs are used because session_transfer and refresh_token.policies
-// are absent from the vendored go-auth0 management.Client.
-
-type portalClientPayload struct {
-	Name                        string                  `json:"name"`
-	IsFirstParty                bool                    `json:"is_first_party"`
-	AppType                     string                  `json:"app_type"`
-	OIDCConformant              bool                    `json:"oidc_conformant"`
-	TokenEndpointAuthMethod     string                  `json:"token_endpoint_auth_method"`
-	Callbacks                   []string                `json:"callbacks"`
-	AllowedLogoutURLs           []string                `json:"allowed_logout_urls"`
-	OrganizationRequireBehavior string                  `json:"organization_require_behavior"`
-	OrganizationUsage           string                  `json:"organization_usage"`
-	GrantTypes                  []string                `json:"grant_types"`
-	RefreshToken                portalRefreshToken      `json:"refresh_token"`
-	OIDCBackchannelLogout       *portalBackchannelLogout `json:"oidc_backchannel_logout,omitempty"`
-}
-
-type portalRefreshToken struct {
-	ExpirationType            string                     `json:"expiration_type"`
-	Leeway                    int                        `json:"leeway"`
-	InfiniteTokenLifetime     bool                       `json:"infinite_token_lifetime"`
-	InfiniteIdleTokenLifetime bool                       `json:"infinite_idle_token_lifetime"`
-	TokenLifetime             int                        `json:"token_lifetime"`
-	IdleTokenLifetime         int                        `json:"idle_token_lifetime"`
-	RotationType              string                     `json:"rotation_type"`
-	Policies                  []portalRefreshTokenPolicy `json:"policies"`
-}
-
-type portalRefreshTokenPolicy struct {
-	Audience string   `json:"audience"`
-	Scope    []string `json:"scope"`
-}
-
-type portalBackchannelLogout struct {
-	BackchannelLogoutInitiators portalBackchannelInitiators `json:"backchannel_logout_initiators"`
-	BackchannelLogoutURLs       []string                    `json:"backchannel_logout_urls"`
-}
-
-type portalBackchannelInitiators struct {
-	Mode               string   `json:"mode"`
-	SelectedInitiators []string `json:"selected_initiators"`
-}
-
 type portalClientResult struct {
-	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
+	ClientID     string
+	ClientSecret string
 }
 
-// createPortalClient builds and POSTs the portal application client.
-// Takes only what it needs: an HTTP client, not the full *cli.
+// createPortalClient creates the portal application client via the typed SDK.
 // Backchannel logout is omitted when isCustomDomain is false because
 // Auth0 domains are rejected by the payload validation.
-func createPortalClient(ctx context.Context, h auth0.HTTPClientAPI, name, domain, tenant string, isCustomDomain bool) (portalClientResult, error) {
-	payload := portalClientPayload{
-		Name:                        name,
-		IsFirstParty:                true,
-		AppType:                     "regular_web",
-		OIDCConformant:              true,
-		TokenEndpointAuthMethod:     "client_secret_post",
-		Callbacks:                   []string{"https://" + domain + "/portals/auth/callback"},
-		AllowedLogoutURLs:           []string{"https://" + domain},
-		OrganizationRequireBehavior: "no_prompt",
-		OrganizationUsage:           "allow",
-		GrantTypes:                  portalGrantTypes,
-		RefreshToken: portalRefreshToken{
-			ExpirationType:            "expiring",
-			Leeway:                    0,
-			InfiniteTokenLifetime:     false,
-			InfiniteIdleTokenLifetime: true,
-			TokenLifetime:             86400,
-			IdleTokenLifetime:         86399,
-			RotationType:              "non-rotating",
-			Policies: []portalRefreshTokenPolicy{
-				{Audience: "https://" + tenant + "/me/", Scope: myAccountAPIScopes},
-				{Audience: "https://" + tenant + "/my-org/", Scope: myOrgAPIScopes},
+func createPortalClient(ctx context.Context, api auth0.ClientAPI, name, domain, tenant string, isCustomDomain bool) (portalClientResult, error) {
+	appType := "regular_web"
+	isFirstParty := true
+	oidcConformant := true
+	tokenEndpointAuthMethod := "client_secret_post"
+	callbacks := []string{"https://" + domain + "/portals/auth/callback"}
+	allowedLogoutURLs := []string{"https://" + domain}
+	orgRequireBehavior := "no_prompt"
+	orgUsage := "allow"
+	grantTypes := portalGrantTypes
+	leeway := 0
+	infiniteTokenLifetime := false
+	infiniteIdleTokenLifetime := true
+	tokenLifetime := 86400
+	idleTokenLifetime := 86399
+	rotationType := "non-rotating"
+	expirationType := "expiring"
+	meAudience := "https://" + tenant + "/me/"
+	myOrgAudience := "https://" + tenant + "/my-org/"
+	myAccountScopes := myAccountAPIScopes
+	myOrgScopes := myOrgAPIScopes
+
+	c := &management.Client{
+		Name:                        &name,
+		IsFirstParty:                &isFirstParty,
+		AppType:                     &appType,
+		OIDCConformant:              &oidcConformant,
+		TokenEndpointAuthMethod:     &tokenEndpointAuthMethod,
+		Callbacks:                   &callbacks,
+		AllowedLogoutURLs:           &allowedLogoutURLs,
+		OrganizationRequireBehavior: &orgRequireBehavior,
+		OrganizationUsage:           &orgUsage,
+		GrantTypes:                  &grantTypes,
+		RefreshToken: &management.ClientRefreshToken{
+			ExpirationType:            &expirationType,
+			Leeway:                    &leeway,
+			InfiniteTokenLifetime:     &infiniteTokenLifetime,
+			InfiniteIdleTokenLifetime: &infiniteIdleTokenLifetime,
+			TokenLifetime:             &tokenLifetime,
+			IdleTokenLifetime:         &idleTokenLifetime,
+			RotationType:              &rotationType,
+			Policies: &[]management.ClientRefreshTokenPolicy{
+				{Audience: &meAudience, Scope: &myAccountScopes},
+				{Audience: &myOrgAudience, Scope: &myOrgScopes},
 			},
 		},
 	}
 
 	if isCustomDomain {
-		payload.OIDCBackchannelLogout = &portalBackchannelLogout{
-			BackchannelLogoutInitiators: portalBackchannelInitiators{
-				Mode: "custom",
-				SelectedInitiators: []string{
-					"idp-logout",
-					"rp-logout",
-					"session-expired",
-					"session-revoked",
-					"account-deleted",
-					"account-deactivated",
-				},
+		mode := "custom"
+		initiators := []string{
+			"idp-logout", "rp-logout", "session-expired",
+			"session-revoked", "account-deleted", "account-deactivated",
+		}
+		backchannelURLs := []string{"https://" + domain + "/portals/auth/backchannel-logout"}
+		c.OIDCLogout = &management.OIDCLogout{
+			BackChannelLogoutURLs: &backchannelURLs,
+			BackChannelLogoutInitiators: &management.BackChannelLogoutInitiators{
+				Mode:               &mode,
+				SelectedInitiators: &initiators,
 			},
-			BackchannelLogoutURLs: []string{"https://" + domain + "/portals/auth/backchannel-logout"},
 		}
 	}
 
-	var result portalClientResult
-	if err := rawAPIPost(ctx, h, payload, &result, "clients"); err != nil {
+	if err := api.Create(ctx, c); err != nil {
 		return portalClientResult{}, err
 	}
-	return result, nil
-}
-
-// ---- Grant payload types ----
-// subject_type is absent from the vendored management.ClientGrant struct.
-
-type portalGrantPayload struct {
-	ClientID    string   `json:"client_id"`
-	Audience    string   `json:"audience"`
-	SubjectType string   `json:"subject_type"`
-	Scope       []string `json:"scope"`
+	return portalClientResult{
+		ClientID:     c.GetClientID(),
+		ClientSecret: c.GetClientSecret(),
+	}, nil
 }
 
 // buildPortalGrants returns the three grants required by Universal Portals.
 // Pure function: no I/O, fully testable.
-func buildPortalGrants(clientID, tenant string) []portalGrantPayload {
-	return []portalGrantPayload{
-		{
-			ClientID:    clientID,
-			Audience:    "https://" + tenant + "/me/",
-			SubjectType: "user",
-			Scope:       myAccountAPIScopes,
-		},
-		{
-			ClientID:    clientID,
-			Audience:    "https://" + tenant + "/my-org/",
-			SubjectType: "user",
-			Scope:       myOrgAPIScopes,
-		},
-		{
-			ClientID:    clientID,
-			Audience:    "https://" + tenant + "/api/v2/",
-			SubjectType: "client",
-			Scope:       managementAPIScopes,
-		},
+func buildPortalGrants(clientID, tenant string) []*management.ClientGrant {
+	userSubject := "user"
+	clientSubject := "client"
+	meAudience := "https://" + tenant + "/me/"
+	myOrgAudience := "https://" + tenant + "/my-org/"
+	mgmtAudience := "https://" + tenant + "/api/v2/"
+	myAccountScopes := myAccountAPIScopes
+	myOrgScopes := myOrgAPIScopes
+	mgmtScopes := managementAPIScopes
+
+	return []*management.ClientGrant{
+		{ClientID: &clientID, Audience: &meAudience, SubjectType: &userSubject, Scope: &myAccountScopes},
+		{ClientID: &clientID, Audience: &myOrgAudience, SubjectType: &userSubject, Scope: &myOrgScopes},
+		{ClientID: &clientID, Audience: &mgmtAudience, SubjectType: &clientSubject, Scope: &mgmtScopes},
 	}
 }
 
-// createPortalGrant POSTs a single client grant.
-func createPortalGrant(ctx context.Context, h auth0.HTTPClientAPI, grant portalGrantPayload) error {
-	return rawAPIPost(ctx, h, grant, nil, "client-grants")
+// createPortalGrant creates a single client grant via the typed SDK.
+func createPortalGrant(ctx context.Context, api auth0.ClientGrantAPI, grant *management.ClientGrant) error {
+	return api.Create(ctx, grant)
 }
 
 // errAPIConflict is returned by rawAPIPost when the server responds 409.
