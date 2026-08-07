@@ -360,10 +360,10 @@ func ensurePortalResourceServer(ctx context.Context, api auth0.ResourceServerAPI
 	tokenDialect := "rfc9068_profile"
 
 	err = api.Create(ctx, &management.ResourceServer{
-		Name:                                      &name,
-		Identifier:                                &identifier,
+		Name:       &name,
+		Identifier: &identifier,
 		SkipConsentForVerifiableFirstPartyClients: &skipConsent,
-		TokenDialect:                              &tokenDialect,
+		TokenDialect: &tokenDialect,
 	})
 	if err == nil {
 		return false, nil
@@ -519,8 +519,6 @@ func rawAPIPost(ctx context.Context, h auth0.HTTPClientAPI, payload, result any,
 	return nil
 }
 
-// ---- Form provisioning ----
-
 type portalFormResult struct {
 	Form struct {
 		ID string `json:"id"`
@@ -537,8 +535,8 @@ func buildCommunicationPreferencesFormPayload(connID string) map[string]any {
 			"languages": map[string]any{"primary": "en"},
 			"nodes": []any{
 				map[string]any{
-					"id":   "step_4Td2",
-					"type": "STEP",
+					"id":          "step_4Td2",
+					"type":        "STEP",
 					"coordinates": map[string]any{"x": 217, "y": -218},
 					"config": map[string]any{
 						"components": []any{
@@ -696,11 +694,11 @@ func buildPersonalInfoFormPayload(connID string) map[string]any {
 							"user_id":       "{{context.user.user_id}}",
 							"changes": map[string]any{
 								"user_metadata": map[string]any{
-									"linkedin":       "{{fields.linkedin}}",
-									"full_name":      "{{fields.full_name}}",
-									"job_title":      "{{fields.job_title}}",
-									"date_of_birth":  "{{fields.date_of_birth}}",
-									"mobile_number":  "{{fields.mobile_number.international_number}}",
+									"linkedin":      "{{fields.linkedin}}",
+									"full_name":     "{{fields.full_name}}",
+									"job_title":     "{{fields.job_title}}",
+									"date_of_birth": "{{fields.date_of_birth}}",
+									"mobile_number": "{{fields.mobile_number.international_number}}",
 								},
 							},
 						},
@@ -832,8 +830,6 @@ func createPortalForms(ctx context.Context, h auth0.HTTPClientAPI, vaultConnID s
 	}, nil
 }
 
-// ---- Portal payload types ----
-
 type portalPayload struct {
 	Slug       string            `json:"slug"`
 	Name       string            `json:"name"`
@@ -903,12 +899,11 @@ func toPortalSlug(name string) string {
 	return slug
 }
 
-// portalFormIDs holds the IDs of the three Forms required by the portal.
-// All three will be populated once Form provisioning is implemented.
+// portalFormIDs holds the IDs of the three forms required by the portal.
 type portalFormIDs struct {
-	PersonalInfo             string // form_id for the "Personal information" section
-	PrivacyConsent           string // form_id for the "Privacy & data consent" section
-	CommunicationPreferences string // form_id for the "Communication preferences" section
+	PersonalInfo             string
+	PrivacyConsent           string
+	CommunicationPreferences string
 }
 
 // buildDefaultPortal returns the full portal payload matching the Universal Portals
