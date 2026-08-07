@@ -383,64 +383,44 @@ type portalClientResult struct {
 // Backchannel logout is omitted when isCustomDomain is false because
 // Auth0 domains are rejected by the payload validation.
 func createPortalClient(ctx context.Context, api auth0.ClientAPI, name, domain, tenant string, isCustomDomain bool) (portalClientResult, error) {
-	appType := "regular_web"
-	isFirstParty := true
-	oidcConformant := true
-	tokenEndpointAuthMethod := "client_secret_post"
-	callbacks := []string{"https://" + domain + "/portals/auth/callback"}
-	allowedLogoutURLs := []string{"https://" + domain}
-	orgRequireBehavior := "no_prompt"
-	orgUsage := "allow"
-	grantTypes := portalGrantTypes
-	leeway := 0
-	infiniteTokenLifetime := false
-	infiniteIdleTokenLifetime := true
-	tokenLifetime := 86400
-	idleTokenLifetime := 86399
-	rotationType := "non-rotating"
-	expirationType := "expiring"
-	meAudience := "https://" + tenant + "/me/"
-	myOrgAudience := "https://" + tenant + "/my-org/"
 	myAccountScopes := myAccountAPIScopes
 	myOrgScopes := myOrgAPIScopes
 
 	c := &management.Client{
-		Name:                        &name,
-		IsFirstParty:                &isFirstParty,
-		AppType:                     &appType,
-		OIDCConformant:              &oidcConformant,
-		TokenEndpointAuthMethod:     &tokenEndpointAuthMethod,
-		Callbacks:                   &callbacks,
-		AllowedLogoutURLs:           &allowedLogoutURLs,
-		OrganizationRequireBehavior: &orgRequireBehavior,
-		OrganizationUsage:           &orgUsage,
-		GrantTypes:                  &grantTypes,
+		Name:                        auth0.String(name),
+		IsFirstParty:                auth0.Bool(true),
+		AppType:                     auth0.String("regular_web"),
+		OIDCConformant:              auth0.Bool(true),
+		TokenEndpointAuthMethod:     auth0.String("client_secret_post"),
+		Callbacks:                   &[]string{"https://" + domain + "/portals/auth/callback"},
+		AllowedLogoutURLs:           &[]string{"https://" + domain},
+		OrganizationRequireBehavior: auth0.String("no_prompt"),
+		OrganizationUsage:           auth0.String("allow"),
+		GrantTypes:                  &portalGrantTypes,
 		RefreshToken: &management.ClientRefreshToken{
-			ExpirationType:            &expirationType,
-			Leeway:                    &leeway,
-			InfiniteTokenLifetime:     &infiniteTokenLifetime,
-			InfiniteIdleTokenLifetime: &infiniteIdleTokenLifetime,
-			TokenLifetime:             &tokenLifetime,
-			IdleTokenLifetime:         &idleTokenLifetime,
-			RotationType:              &rotationType,
+			ExpirationType:            auth0.String("expiring"),
+			Leeway:                    auth0.Int(0),
+			InfiniteTokenLifetime:     auth0.Bool(false),
+			InfiniteIdleTokenLifetime: auth0.Bool(true),
+			TokenLifetime:             auth0.Int(86400),
+			IdleTokenLifetime:         auth0.Int(86399),
+			RotationType:              auth0.String("non-rotating"),
 			Policies: &[]management.ClientRefreshTokenPolicy{
-				{Audience: &meAudience, Scope: &myAccountScopes},
-				{Audience: &myOrgAudience, Scope: &myOrgScopes},
+				{Audience: auth0.String("https://" + tenant + "/me/"), Scope: &myAccountScopes},
+				{Audience: auth0.String("https://" + tenant + "/my-org/"), Scope: &myOrgScopes},
 			},
 		},
 	}
 
 	if isCustomDomain {
-		mode := "custom"
 		initiators := []string{
 			"idp-logout", "rp-logout", "session-expired",
 			"session-revoked", "account-deleted", "account-deactivated",
 		}
-		backchannelURLs := []string{"https://" + domain + "/portals/auth/backchannel-logout"}
 		c.OIDCLogout = &management.OIDCLogout{
-			BackChannelLogoutURLs: &backchannelURLs,
+			BackChannelLogoutURLs: &[]string{"https://" + domain + "/portals/auth/backchannel-logout"},
 			BackChannelLogoutInitiators: &management.BackChannelLogoutInitiators{
-				Mode:               &mode,
+				Mode:               auth0.String("custom"),
 				SelectedInitiators: &initiators,
 			},
 		}
@@ -458,19 +438,14 @@ func createPortalClient(ctx context.Context, api auth0.ClientAPI, name, domain, 
 // buildPortalGrants returns the three grants required by Universal Portals.
 // Pure function: no I/O, fully testable.
 func buildPortalGrants(clientID, tenant string) []*management.ClientGrant {
-	userSubject := "user"
-	clientSubject := "client"
-	meAudience := "https://" + tenant + "/me/"
-	myOrgAudience := "https://" + tenant + "/my-org/"
-	mgmtAudience := "https://" + tenant + "/api/v2/"
 	myAccountScopes := myAccountAPIScopes
 	myOrgScopes := myOrgAPIScopes
 	mgmtScopes := managementAPIScopes
 
 	return []*management.ClientGrant{
-		{ClientID: &clientID, Audience: &meAudience, SubjectType: &userSubject, Scope: &myAccountScopes},
-		{ClientID: &clientID, Audience: &myOrgAudience, SubjectType: &userSubject, Scope: &myOrgScopes},
-		{ClientID: &clientID, Audience: &mgmtAudience, SubjectType: &clientSubject, Scope: &mgmtScopes},
+		{ClientID: auth0.String(clientID), Audience: auth0.String("https://" + tenant + "/me/"), SubjectType: auth0.String("user"), Scope: &myAccountScopes},
+		{ClientID: auth0.String(clientID), Audience: auth0.String("https://" + tenant + "/my-org/"), SubjectType: auth0.String("user"), Scope: &myOrgScopes},
+		{ClientID: auth0.String(clientID), Audience: auth0.String("https://" + tenant + "/api/v2/"), SubjectType: auth0.String("client"), Scope: &mgmtScopes},
 	}
 }
 
