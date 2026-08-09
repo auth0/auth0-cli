@@ -1,265 +1,189 @@
 package cli
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 
+	"github.com/auth0/auth0-cli/internal/agent/skills"
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/iostream"
-
-	"github.com/auth0/auth0-cli/internal/ai/skills"
 )
 
 const (
-	skillsSentinelPath = ".config/auth0/agents/.post-install-ran"
-	skillsInstallTip   = "Tip: run 'auth0 ai skills install' to set up Auth0 skills for your AI assistant."
-
-	skillsPluginRepo = "https://github.com/auth0/agent-skills"
-	skillsPluginRef  = "main"
+	skillConfigFileName = "skillConfig.json"
+	skillsScopeGlobal   = "global"
 )
 
-var postInstallHookAuto = Flag{
-	Name:     "Auto",
-	LongForm: "auto",
-	Help:     "Skip the interactive prompt and install all skills automatically.",
+// skillConfig records the installed state of the auth0 agent-skills, persisted as
+// skillConfigFileName and read back to skip re-downloading when the ETag still matches.
+type skillConfig struct {
+	ETag        string    `json:"etag"`
+	InstalledAt time.Time `json:"installedAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
+	Agents      []string  `json:"agents"`
+	Scope       string    `json:"scope"`
 }
 
-func pluginTargetDir() (string, error) {
+// readSkillConfig reads skillConfig.json at path. Returns nil, nil when the file does not exist.
+func readSkillConfig(path string) (*skillConfig, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var cfg skillConfig
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
+// writeSkillConfig serialises cfg as JSON and writes it to path, creating parent directories as needed.
+func writeSkillConfig(path string, cfg *skillConfig) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0o644)
+}
+
+// skillsRootDir holds the downloaded skills/ tree and the skill config file.
+func skillsRootDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".config", "auth0", "agents", "plugins", "auth0"), nil
+	return filepath.Join(home, "agents"), nil
 }
 
-func globalLockPath(targetDir string) string {
-	return filepath.Join(targetDir, "skills-lock.json")
+func localSkillsDir(rootDir string) string {
+	return filepath.Join(rootDir, "skills")
 }
 
-func skillsSentinel() string {
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, skillsSentinelPath)
+func authSkillDir(rootDir string) string {
+	return filepath.Join(localSkillsDir(rootDir), "auth0")
 }
 
-func writeSkillsSentinel() error {
-	sentinel := skillsSentinel()
-	if err := os.MkdirAll(filepath.Dir(sentinel), 0o755); err != nil {
-		return fmt.Errorf("create sentinel directory %s: %w", filepath.Dir(sentinel), err)
-	}
-	if err := os.WriteFile(sentinel, []byte{}, 0o644); err != nil {
-		return fmt.Errorf("write sentinel %s: %w", sentinel, err)
-	}
-	return nil
+func skillConfigPath(rootDir string) string {
+	return filepath.Join(rootDir, skillConfigFileName)
 }
 
-func skillsSentinelExists() bool {
-	_, err := os.Stat(skillsSentinel())
-	return err == nil
-}
-
-func aiCmd(cli *cli) *cobra.Command {
+func agentCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "ai",
+		Use:   "agent",
 		Short: "Manage Auth0 AI capabilities",
 		Long:  "Manage Auth0 AI capabilities including skills for your AI coding assistants.",
 	}
 
-	cmd.AddCommand(aiSkillsCmd(cli))
+	cmd.AddCommand(agentSkillsCmd(cli))
 
 	return cmd
 }
 
-func aiSkillsCmd(cli *cli) *cobra.Command {
+func agentSkillsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "skills",
 		Short: "Manage Auth0 AI skills for coding assistants",
 		Long:  "Manage Auth0 AI skills that provide Auth0-specific guidance to your AI coding assistants.",
 	}
 
-	cmd.AddCommand(postInstallHookCmd(cli))
+	cmd.AddCommand(installCmd(cli))
 
 	return cmd
 }
 
-func postInstallHookCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		Auto bool
-	}
-
+func installCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:    "post-install-hook",
-		Hidden: true,
-		Short:  "Run post-install setup for Auth0 AI skills",
+		Use:   "install",
+		Short: "Install the Auth0 skill for your AI coding assistants",
+		Long: "Download the Auth0 skill and install it globally into every detected AI " +
+			"coding assistant on this machine.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if skillsSentinelExists() {
-				return nil
-			}
-
-			if inputs.Auto {
-				if err := runInstallFast(cli); err != nil {
-					return err
-				}
-				return writeSkillsSentinel()
-			}
-
-			if !iostream.IsInputTerminal() || !iostream.IsOutputTerminal() {
-				fmt.Fprintln(os.Stderr, skillsInstallTip)
-				return nil
-			}
-
-			const (
-				choiceInstall = "Install   — Detect installed AI agents and install all skills globally"
-				choiceSkip    = "Skip    — I will run 'auth0 ai skills install' later"
-			)
-
-			fmt.Fprintln(os.Stdout, "\nAuth0 AI skills add Auth0-specific guidance to your AI coding assistant.")
-			fmt.Fprintln(os.Stdout, "")
-
-			var choice string
-			prompt := &survey.Select{
-				Message: "How would you like to install them?",
-				Options: []string{choiceInstall, choiceSkip},
-				Default: choiceInstall,
-			}
-
-			if err := survey.AskOne(prompt, &choice); err != nil {
-				// User pressed Ctrl+C or closed the terminal — skip gracefully.
-				fmt.Fprintln(os.Stderr, skillsInstallTip)
-				return nil
-			}
-
-			switch choice {
-			case choiceInstall:
-				if err := runInstallFast(cli); err != nil {
-					return err
-				}
-			default:
-				fmt.Fprintln(os.Stderr, skillsInstallTip)
-				return nil
-			}
-
-			return writeSkillsSentinel()
+			return runInstall(cli)
 		},
 	}
 
-	postInstallHookAuto.RegisterBool(cmd, &inputs.Auto, false)
-
 	return cmd
 }
 
-// runInstallFast detects all installed AI agents and installs all available Auth0
-// skills globally into each one. Equivalent to `auth0 ai skills install --fast`.
-func runInstallFast(_ *cli) error {
-	targetDir, err := pluginTargetDir()
+// runInstall downloads the "auth0" skill and installs it globally into every detected AI agent.
+func runInstall(_ *cli) error {
+	rootDir, err := skillsRootDir()
 	if err != nil {
-		return fmt.Errorf("resolve plugin directory: %w", err)
+		return fmt.Errorf("resolve skills directory: %w", err)
 	}
 
-	lockPath := globalLockPath(targetDir)
+	sourceSkillDir := authSkillDir(rootDir)
+	configPath := skillConfigPath(rootDir)
 
-	// Download (or skip if already up-to-date).
-	var commitSHA string
+	prev, err := readSkillConfig(configPath)
+	if err != nil {
+		return fmt.Errorf("read skill config file: %w", err)
+	}
+	prevETag := ""
+	if prev != nil {
+		prevETag = prev.ETag
+	}
+
+	// Conditionally download: a 304 leaves the local skills untouched.
+	var etag string
 	if err := ansi.Waiting(func() error {
-		commitSHA, err = downloadSkillsIfNeeded(targetDir, lockPath)
+		etag, _, err = skills.DownloadSkills(localSkillsDir(rootDir), prevETag)
 		return err
 	}); err != nil {
-		return fmt.Errorf("download Auth0 skills: %w", err)
+		return fmt.Errorf("download Auth0 skill: %w", err)
 	}
 
-	// List skills that were downloaded.
-	skillsDir := filepath.Join(targetDir, "skills")
-	available, err := skills.ListAvailableSkills(skillsDir)
-	if err != nil || len(available) == 0 {
-		return fmt.Errorf("no skills found in %s", skillsDir)
+	if _, err = os.Stat(sourceSkillDir); err != nil {
+		return fmt.Errorf("skill %q not found in %s", "auth0", filepath.Dir(sourceSkillDir))
 	}
 
-	skillNames := make([]string, len(available))
-	for i, s := range available {
-		skillNames[i] = s.Name
-	}
+	installedAgents := installSkillIntoAgents(sourceSkillDir)
 
-	// Install into every detected agent.
-	agents := skills.FastPriorityAgents()
-	var installedAgents []string
-	installedSkills := make(map[string]struct{})
-
-	for _, agent := range agents {
-		agentSkillsDir, resolveErr := agent.ResolvedGlobalSkillsDir()
-		if resolveErr != nil {
-			continue
-		}
-		var linked int
-		for _, skillName := range skillNames {
-			sourceSkillDir := filepath.Join(skillsDir, skillName)
-			if linkErr := skills.CreateSkillLink(sourceSkillDir, agentSkillsDir, skillName, false); linkErr != nil {
-				fmt.Fprintf(os.Stderr, "warning: could not install skill %q for %s: %v\n", skillName, agent.DisplayName, linkErr)
-			} else {
-				linked++
-				installedSkills[skillName] = struct{}{}
-			}
-		}
-		if linked > 0 {
-			installedAgents = append(installedAgents, agent.ID)
-		}
-	}
-
-	// Write the global lock file.
 	now := time.Now()
-	versionConfig := &skills.VersionConfig{
-		Repo:          skillsPluginRepo,
-		Ref:           skillsPluginRef,
-		CommitSHA:     commitSHA,
-		InstalledAt:   now,
-		UpdatedAt:     now,
-		LastCheckedAt: now,
-		Skills:        skillNames,
-		Agents:        installedAgents,
-		Scope:         skills.ScopeGlobal,
+	cfg := &skillConfig{
+		ETag:        etag,
+		InstalledAt: now,
+		UpdatedAt:   now,
+		Agents:      installedAgents,
+		Scope:       skillsScopeGlobal,
 	}
-	if writeErr := skills.WriteLock(lockPath, versionConfig); writeErr != nil {
-		fmt.Fprintf(os.Stderr, "warning: could not write lock file: %v\n", writeErr)
+	if writeErr := writeSkillConfig(configPath, cfg); writeErr != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not write skill config file: %v\n", writeErr)
 	}
 
-	fmt.Fprintf(os.Stdout, "\nInstalled %d Auth0 skill(s) for %d agent(s).\n", len(installedSkills), len(installedAgents))
-
-	fmt.Fprintf(os.Stdout, "\nAGENTS: \n")
-
+	fmt.Fprintf(os.Stdout, "\nInstalled the Auth0 skill for %d agent(s):\n", len(installedAgents))
 	for _, agentID := range installedAgents {
 		fmt.Fprintf(os.Stdout, "  - %s\n", agentID)
-	}
-
-	fmt.Fprintf(os.Stdout, "\nSKILLS: \n")
-
-	for _, skillName := range skillNames {
-		if _, ok := installedSkills[skillName]; ok {
-			fmt.Fprintf(os.Stdout, "  - %s\n", skillName)
-		}
 	}
 
 	return nil
 }
 
-// downloadSkillsIfNeeded downloads the skills plugin if the lock file is absent or
-// the local commit SHA differs from the remote HEAD of main. Returns the commit SHA in use.
-func downloadSkillsIfNeeded(targetDir, lockPath string) (string, error) {
-	remoteSHA, err := skills.FetchCommitSHA(skillsPluginRef)
-	if err != nil {
-		return "", fmt.Errorf("fetch remote commit SHA: %w", err)
+// installSkillIntoAgents links the skill at sourceSkillDir into every detected AI agent's
+// global skills directory, returning the IDs of the agents it was successfully installed into.
+func installSkillIntoAgents(sourceSkillDir string) []string {
+	var installedAgents []string
+	for _, agent := range skills.DetectedAgents() {
+		agentSkillsDir, err := agent.ResolvedGlobalSkillsDir()
+		if err != nil {
+			continue
+		}
+		if err := skills.CreateSkillLink(sourceSkillDir, agentSkillsDir, "auth0"); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not install skill %q for %s: %v\n", "auth0", agent.DisplayName, err)
+			continue
+		}
+		installedAgents = append(installedAgents, agent.ID)
 	}
-
-	lock, err := skills.ReadLock(lockPath)
-	if err != nil {
-		return "", fmt.Errorf("read lock file: %w", err)
-	}
-
-	if lock != nil && lock.CommitSHA == remoteSHA {
-		return remoteSHA, nil
-	}
-
-	return skills.DownloadPlugin(targetDir, skillsPluginRef)
+	return installedAgents
 }
