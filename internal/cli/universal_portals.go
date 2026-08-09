@@ -135,10 +135,32 @@ func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, portalName, slug str
 	if tenant, err := cli.Config.GetTenant(cli.tenant); err == nil {
 		if granted := scopesFromToken(tenant.GetAccessToken()); granted != nil {
 			if missing := missingScopes(granted, upRequiredScopes); len(missing) > 0 {
-				return fmt.Errorf(
-					"insufficient scopes to provision Universal Portals\nMissing: %s\nRe-authenticate to continue: auth0 login",
+				// In --no-input mode we can't launch the interactive login,
+				// so surface the exact command the user needs to run.
+				if cli.noInput {
+					return fmt.Errorf(
+						"insufficient scopes to provision Universal Portals\nMissing: %s\nRe-authenticate to continue: auth0 login --scopes %s",
+						strings.Join(missing, ", "),
+						strings.Join(upRequiredScopes, ","),
+					)
+				}
+
+				// RunLoginAsUser gates on a "Press Enter / ^C" prompt before
+				// opening the browser, so warn here instead of double-confirming.
+				cli.renderer.Warnf(
+					"Universal Portals needs additional scopes (missing: %s).\nYou'll be asked to log in again to grant them.\n",
 					strings.Join(missing, ", "),
 				)
+
+				// Request the full scope set so one login grants everything.
+				if _, err := RunLoginAsUser(cmd.Context(), cli, upRequiredScopes, ""); err != nil {
+					return fmt.Errorf("failed to re-authenticate with the required scopes: %w", err)
+				}
+
+				// Rebuild the API clients so subsequent calls use the new token.
+				if err := cli.setupWithAuthentication(cmd.Context()); err != nil {
+					return fmt.Errorf("authentication required: %w", err)
+				}
 			}
 		}
 	}

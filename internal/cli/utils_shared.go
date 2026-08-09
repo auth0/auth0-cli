@@ -337,17 +337,7 @@ func openManageURL(cli *cli, tenant string, path string) {
 	}
 }
 
-// deriveServiceURL builds the base URL for a named service (e.g. "manage", "forms") from the
-// tenant domain. Public envs use 2-letter region codes (us, eu, ca, jp, uk, …) — the region
-// appears only in the path, not the host. All other domains keep the full suffix after the
-// tenant name.
-//
-//	my-tenant.us.auth0.com  →  https://manage.auth0.com
-//	my-tenant.auth0.com     →  https://manage.auth0.com  (legacy PUS1)
-//
-// missingScopes returns elements of required that are absent from granted.
-// Used to surface a clear re-authentication prompt before API calls that need
-// scopes not in RequiredScopes (e.g. feature-flagged EA endpoints).
+// missingScopes returns the elements of required absent from granted.
 func missingScopes(granted, required []string) []string {
 	have := make(map[string]struct{}, len(granted))
 	for _, s := range granted {
@@ -362,10 +352,9 @@ func missingScopes(granted, required []string) []string {
 	return missing
 }
 
-// scopesFromToken extracts the granted scopes from a JWT access token by
-// base64-decoding the payload. Returns nil if the token is malformed or
-// carries no scope claim, in which case the caller should skip the scope
-// pre-flight check and let the API surface a 403 instead.
+// scopesFromToken returns the granted scopes decoded from a JWT access token's
+// payload, or nil if the token is malformed or carries no scope claim (callers
+// then skip the pre-flight check and let the API surface a 403).
 func scopesFromToken(tokenStr string) []string {
 	parts := strings.SplitN(tokenStr, ".", 3)
 	if len(parts) != 3 {
@@ -384,6 +373,8 @@ func scopesFromToken(tokenStr string) []string {
 	return strings.Fields(claims.Scope)
 }
 
+// deriveServiceURL returns the base URL for a service (e.g. "manage") from the
+// tenant domain, dropping the 2-letter region code that public envs carry.
 func deriveServiceURL(service, tenantDomain string) string {
 	parts := strings.Split(tenantDomain, ".")
 	if len(parts) >= 4 && len(parts[1]) == 2 {

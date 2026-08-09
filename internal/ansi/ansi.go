@@ -75,6 +75,9 @@ func URL(text string) string {
 // Terminals that support OSC8 (iTerm2, Warp, GNOME Terminal, etc.) render the
 // text as an underlined, clickable link. Unsupported terminals show plain text.
 func Hyperlink(url, text string) string {
+	if !shouldUseColors() {
+		return text
+	}
 	return "\x1b]8;;" + url + "\x1b\\" + text + "\x1b]8;;\x1b\\"
 }
 
