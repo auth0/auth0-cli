@@ -139,7 +139,7 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - number flag invalid, please pass a number between 1 and 1000
+        - Number flag invalid, please pass a number between 1 and 1000
 
   016a - list client grant organizations rejects json and csv together:
     command: auth0 client-grants organizations list $(./test/integration/scripts/get-client-grant-id.sh) --json --csv --no-input
