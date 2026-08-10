@@ -116,6 +116,26 @@ func (mr *MockActionModuleAPIV3MockRecorder) List(ctx, request interface{}, opts
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockActionModuleAPIV3)(nil).List), varargs...)
 }
 
+// ListActions mocks base method.
+func (m *MockActionModuleAPIV3) ListActions(ctx context.Context, id string, request *management.GetActionModuleActionsRequestParameters, opts ...option.RequestOption) (*auth0.ActionModuleActionPage, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListActions", varargs...)
+	ret0, _ := ret[0].(*auth0.ActionModuleActionPage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListActions indicates an expected call of ListActions.
+func (mr *MockActionModuleAPIV3MockRecorder) ListActions(ctx, id, request interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActions", reflect.TypeOf((*MockActionModuleAPIV3)(nil).ListActions), varargs...)
+}
+
 // Update mocks base method.
 func (m *MockActionModuleAPIV3) Update(ctx context.Context, id string, request *management.UpdateActionModuleRequestContent, opts ...option.RequestOption) (*management.UpdateActionModuleResponseContent, error) {
 	m.ctrl.T.Helper()

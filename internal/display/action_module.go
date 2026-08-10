@@ -200,6 +200,71 @@ func makeActionModuleView(module actionModuleResponse) *actionModuleView {
 	}
 }
 
+type actionModuleActionView struct {
+	ActionID      string
+	ActionName    string
+	ModuleVersion string
+
+	raw interface{}
+}
+
+func (v *actionModuleActionView) AsTableHeader() []string {
+	return []string{"Action ID", "Action Name", "Module Version"}
+}
+
+func (v *actionModuleActionView) AsTableRow() []string {
+	return []string{
+		ansi.Faint(v.ActionID),
+		v.ActionName,
+		v.ModuleVersion,
+	}
+}
+
+func (v *actionModuleActionView) KeyValues() [][]string {
+	return [][]string{
+		{"ACTION ID", ansi.Faint(v.ActionID)},
+		{"ACTION NAME", v.ActionName},
+		{"MODULE VERSION", v.ModuleVersion},
+	}
+}
+
+func (v *actionModuleActionView) Object() interface{} {
+	return v.raw
+}
+
+func (r *Renderer) ActionModuleActionsList(actions []*managementv3.ActionModuleAction) {
+	resource := "actions using module"
+
+	r.Heading(resource)
+
+	if len(actions) == 0 {
+		r.EmptyState(resource, "No actions are using this module")
+		return
+	}
+
+	var results []View
+	for _, a := range actions {
+		results = append(results, makeActionModuleActionView(a))
+	}
+
+	r.Results(results)
+}
+
+func makeActionModuleActionView(action *managementv3.ActionModuleAction) *actionModuleActionView {
+	number := action.GetModuleVersionNumber()
+	version := "-"
+	if number != 0 {
+		version = "v" + strconv.Itoa(number)
+	}
+
+	return &actionModuleActionView{
+		ActionID:      action.GetActionID(),
+		ActionName:    action.GetActionName(),
+		ModuleVersion: version,
+		raw:           action,
+	}
+}
+
 func formatActionModuleDependencies(dependencies []*managementv3.ActionModuleDependency) string {
 	if len(dependencies) == 0 {
 		return ""

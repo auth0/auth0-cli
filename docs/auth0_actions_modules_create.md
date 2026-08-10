@@ -54,6 +54,7 @@ auth0 actions modules create [flags]
 
 ## Related Commands
 
+- [auth0 actions modules actions](auth0_actions_modules_actions.md) - Manage the actions using an action module
 - [auth0 actions modules create](auth0_actions_modules_create.md) - Create a new action module
 - [auth0 actions modules delete](auth0_actions_modules_delete.md) - Delete an action module
 - [auth0 actions modules list](auth0_actions_modules_list.md) - List your action modules

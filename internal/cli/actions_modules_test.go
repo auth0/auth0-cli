@@ -101,6 +101,71 @@ func TestListActionModulesCmd(t *testing.T) {
 	})
 }
 
+func actionModuleActionPage(results ...*managementv3.ActionModuleAction) *auth0.ActionModuleActionPage {
+	return &auth0.ActionModuleActionPage{
+		Results: results,
+		NextPageFunc: func(context.Context) (*auth0.ActionModuleActionPage, error) {
+			return nil, core.ErrNoPages
+		},
+	}
+}
+
+func TestListActionsUsingModuleCmd(t *testing.T) {
+	t.Run("lists the actions using the module supplied positionally", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		api := mock.NewMockActionModuleAPIV3(ctrl)
+		api.EXPECT().
+			ListActions(gomock.Any(), "am_1", gomock.Any()).
+			Return(actionModuleActionPage(
+				&managementv3.ActionModuleAction{ActionID: auth0.String("act_1"), ActionName: auth0.String("login"), ModuleVersionNumber: auth0.Int(2)},
+			), nil)
+
+		cli := &cli{
+			apiv3:    &auth0.APIV3{ActionModule: api},
+			renderer: testRenderer(),
+		}
+
+		cmd := listActionsUsingModuleCmd(cli)
+		cmd.SetArgs([]string{"am_1"})
+
+		assert.NoError(t, cmd.Execute())
+	})
+
+	t.Run("rejects an out-of-range number flag", func(t *testing.T) {
+		cli := &cli{
+			apiv3:    &auth0.APIV3{ActionModule: mock.NewMockActionModuleAPIV3(gomock.NewController(t))},
+			renderer: testRenderer(),
+		}
+
+		cmd := listActionsUsingModuleCmd(cli)
+		cmd.SetArgs([]string{"am_1", "--number", "0"})
+
+		assert.EqualError(t, cmd.Execute(), "number flag invalid, please pass a number between 1 and 1000")
+	})
+
+	t.Run("wraps the API error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		api := mock.NewMockActionModuleAPIV3(ctrl)
+		api.EXPECT().
+			ListActions(gomock.Any(), "am_1", gomock.Any()).
+			Return(nil, errors.New("boom"))
+
+		cli := &cli{
+			apiv3:    &auth0.APIV3{ActionModule: api},
+			renderer: testRenderer(),
+		}
+
+		cmd := listActionsUsingModuleCmd(cli)
+		cmd.SetArgs([]string{"am_1"})
+
+		assert.EqualError(t, cmd.Execute(), `failed to list actions using action module with ID "am_1": boom`)
+	})
+}
+
 func TestShowActionModuleCmd(t *testing.T) {
 	t.Run("shows the module supplied positionally", func(t *testing.T) {
 		ctrl := gomock.NewController(t)

@@ -85,6 +85,7 @@ func actionsModulesCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(createActionModuleCmd(cli))
 	cmd.AddCommand(updateActionModuleCmd(cli))
 	cmd.AddCommand(deleteActionModuleCmd(cli))
+	cmd.AddCommand(actionsModulesActionsCmd(cli))
 
 	return cmd
 }
@@ -531,6 +532,72 @@ func deleteActionModuleCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
+
+	return cmd
+}
+
+func actionsModulesActionsCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "actions",
+		Short: "Manage the actions using an action module",
+		Long:  "Inspect which actions import an action module.",
+	}
+
+	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(listActionsUsingModuleCmd(cli))
+
+	return cmd
+}
+
+func listActionsUsingModuleCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		ModuleID string
+		Number   int
+	}
+
+	cmd := &cobra.Command{
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "List the actions using an action module",
+		Long:    "List the actions that import an action module, along with the module version each action is using.",
+		Example: `  auth0 actions modules actions list
+  auth0 actions modules actions ls <module-id>
+  auth0 actions modules actions list <module-id> --number 100
+  auth0 actions modules actions list <module-id> --json`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Number < 1 || inputs.Number > 1000 {
+				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+			}
+
+			if len(args) == 0 {
+				if err := actionModuleID.Pick(cmd, &inputs.ModuleID, cli.actionModulePickerOptions); err != nil {
+					return err
+				}
+			} else {
+				inputs.ModuleID = args[0]
+			}
+
+			actions, err := collectV3Pages(cmd.Context(), inputs.Number,
+				func(ctx context.Context) (*auth0.ActionModuleActionPage, error) {
+					return cli.apiv3.ActionModule.ListActions(ctx, inputs.ModuleID, &managementv3.GetActionModuleActionsRequestParameters{})
+				})
+			if err != nil {
+				return fmt.Errorf("failed to list actions using action module with ID %q: %w", inputs.ModuleID, err)
+			}
+
+			cli.renderer.ActionModuleActionsList(actions)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+
+	actionModuleNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 
 	return cmd
 }

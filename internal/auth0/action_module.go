@@ -15,6 +15,11 @@ import (
 // instantiated generic types) sees a plain named type in the interface.
 type ActionModulePage = core.Page[*int, *managementv3.ActionModuleListItem, *managementv3.GetActionModulesResponseContent]
 
+// ActionModuleActionPage is the paginated response returned by the action
+// module actions list endpoint. It is aliased here for the same reason as
+// ActionModulePage.
+type ActionModuleActionPage = core.Page[*int, *managementv3.ActionModuleAction, *managementv3.GetActionModuleActionsResponseContent]
+
 // ActionModuleAPIV3 is the V3 SDK interface for the /actions/modules endpoint.
 // Action modules are reusable code libraries that actions can import; they are
 // keyed by module ID.
@@ -45,6 +50,12 @@ type ActionModuleAPIV3 interface {
 	//
 	// Required scope: `delete:actions`.
 	Delete(ctx context.Context, id string, opts ...option.RequestOption) error
+
+	// ListActions retrieves the actions that use an action module. The results
+	// are offset-paginated via the Page/PerPage request parameters.
+	//
+	// Required scope: `read:actions`.
+	ListActions(ctx context.Context, id string, request *managementv3.GetActionModuleActionsRequestParameters, opts ...option.RequestOption) (*ActionModuleActionPage, error)
 }
 
 // ActionModuleVersionAPIV3 is the V3 SDK interface for the
