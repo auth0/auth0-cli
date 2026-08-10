@@ -85,6 +85,8 @@ type APIV3 struct {
 	RefreshToken                 RefreshTokenAPIV3
 	UserSession                  UserSessionAPIV3
 	UserRefreshToken             UserRefreshTokenAPIV3
+	ActionModule                 ActionModuleAPIV3
+	ActionModuleVersion          ActionModuleVersionAPIV3
 }
 
 func NewAPIV3(m *managementv3.Management) *APIV3 {
@@ -98,6 +100,8 @@ func NewAPIV3(m *managementv3.Management) *APIV3 {
 		RefreshToken:                 m.RefreshTokens,
 		UserSession:                  m.Users.Sessions,
 		UserRefreshToken:             m.Users.RefreshToken,
+		ActionModule:                 m.Actions.Modules,
+		ActionModuleVersion:          m.Actions.Modules.Versions,
 	}
 }
 
