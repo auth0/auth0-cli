@@ -29,3 +29,10 @@ tests:
     stderr:
       contains:
         - Failed to read session with ID "does-not-exist"
+
+  005 - users sessions list rejects json and csv together:
+    command: auth0 users sessions list $(./test/integration/scripts/get-user-id.sh) --json --csv
+    exit-code: 1
+    stderr:
+      contains:
+        - "if any flags in the group [json json-compact csv] are set none of the others can be"

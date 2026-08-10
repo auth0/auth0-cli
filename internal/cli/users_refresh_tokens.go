@@ -47,7 +47,8 @@ func listUserRefreshTokensCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 users refresh-tokens list
   auth0 users refresh-tokens list <user-id>
   auth0 users refresh-tokens list <user-id> --number 100
-  auth0 users refresh-tokens list <user-id> -n 100 --json`,
+  auth0 users refresh-tokens list <user-id> -n 100 --json
+  auth0 users refresh-tokens list <user-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &inputs.ID); err != nil {
@@ -77,7 +78,8 @@ func listUserRefreshTokensCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	userRefreshTokensNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 

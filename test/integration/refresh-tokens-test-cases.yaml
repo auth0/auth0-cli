@@ -50,3 +50,10 @@ tests:
     stderr:
       contains:
         - either a token id or --user-id, not both
+
+  008 - users refresh-tokens list rejects json and csv together:
+    command: auth0 users refresh-tokens list $(./test/integration/scripts/get-user-id.sh) --json --csv
+    exit-code: 1
+    stderr:
+      contains:
+        - "if any flags in the group [json json-compact csv] are set none of the others can be"
