@@ -850,8 +850,8 @@ type portalSidebar struct {
 }
 
 type portalPages struct {
-	Default string       `json:"default,omitempty"`
-	Content []portalPage `json:"content"`
+	Default  string       `json:"default,omitempty"`
+	Standard []portalPage `json:"standard"`
 }
 
 type portalPage struct {
@@ -957,7 +957,7 @@ func buildDefaultPortal(slug, name, clientID, clientSecret string, forms portalF
 		},
 		Pages: &portalPages{
 			Default: "profile",
-			Content: []portalPage{
+			Standard: []portalPage{
 				{
 					Title: "Profile",
 					Slug:  "profile",
