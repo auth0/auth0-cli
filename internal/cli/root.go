@@ -11,7 +11,7 @@ import (
 	"unicode"
 
 	"github.com/auth0/go-auth0/management"
-	"github.com/auth0/go-auth0/v2/management/core"
+	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/analytics"
@@ -379,16 +379,16 @@ func classifyCommandFailure(err error) map[string]string {
 
 // managementHTTPStatus extracts the HTTP status from a go-auth0 management API
 // error anywhere in the error chain, supporting both the v1 (management.Error)
-// and v2 (*core.APIError) SDK error types.
+// and v3 (*core.APIError) SDK error types.
 func managementHTTPStatus(err error) (int, bool) {
 	var v1 management.Error
 	if errors.As(err, &v1) {
 		return v1.Status(), true
 	}
 
-	var v2 *core.APIError
-	if errors.As(err, &v2) {
-		return v2.StatusCode, true
+	var v3 *core.APIError
+	if errors.As(err, &v3) {
+		return v3.StatusCode, true
 	}
 
 	return 0, false
