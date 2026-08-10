@@ -132,6 +132,56 @@ func TestActionsDeployCmd(t *testing.T) {
 	})
 }
 
+func TestActionsUpdateCmd(t *testing.T) {
+	t.Run("it carries the existing name forward on a module-only update", func(t *testing.T) {
+		actionID := "1221c74c-cfd6-40db-af13-7bc9bb1c38db"
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		actionAPI := mock.NewMockActionAPI(ctrl)
+		actionAPI.EXPECT().
+			Read(context.Background(), actionID).
+			Return(&management.Action{
+				ID:   auth0.String(actionID),
+				Name: auth0.String("existing-name"),
+				SupportedTriggers: []management.ActionTrigger{
+					{ID: auth0.String("post-login")},
+				},
+				Code: auth0.String("function () {}"),
+			}, nil)
+
+		var captured *management.Action
+		actionAPI.EXPECT().
+			Update(context.Background(), actionID, gomock.Any()).
+			DoAndReturn(func(_ context.Context, _ string, a *management.Action, _ ...management.RequestOption) error {
+				captured = a
+				return nil
+			})
+
+		stdout := &bytes.Buffer{}
+		cli := &cli{
+			renderer: &display.Renderer{
+				MessageWriter: io.Discard,
+				ResultWriter:  stdout,
+			},
+			api: &auth0.API{Action: actionAPI},
+		}
+
+		cmd := updateActionCmd(cli)
+		cmd.SetArgs([]string{
+			actionID,
+			"--module", "module_id=mod_123,module_version_id=ver_456",
+		})
+		err := cmd.Execute()
+
+		assert.NoError(t, err)
+		assert.Equal(t, "existing-name", captured.GetName())
+		assert.Equal(t, []management.ActionModules{
+			{ModuleID: auth0.String("mod_123"), ModuleVersionID: auth0.String("ver_456")},
+		}, *captured.Modules)
+	})
+}
+
 func TestActionsPickerOptions(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -352,5 +402,56 @@ func TestActionsInputDependenciesToActionDependencies(t *testing.T) {
 		expected := []management.ActionDependency{}
 		assert.Len(t, *res, 0)
 		assert.Equal(t, expected, *res)
+	})
+}
+
+func TestActionsInputModulesToActionModules(t *testing.T) {
+	t.Run("it maps a single module with id and version id", func(t *testing.T) {
+		res, err := inputModulesToActionModules([]string{"module_id=mod_123,module_version_id=ver_456"})
+
+		assert.NoError(t, err)
+		assert.Equal(t, []management.ActionModules{
+			{ModuleID: auth0.String("mod_123"), ModuleVersionID: auth0.String("ver_456")},
+		}, *res)
+	})
+
+	t.Run("it maps multiple modules", func(t *testing.T) {
+		res, err := inputModulesToActionModules([]string{
+			"module_id=mod_123,module_version_id=ver_456",
+			"module_id=mod_789,module_version_id=ver_abc",
+		})
+
+		assert.NoError(t, err)
+		assert.Equal(t, []management.ActionModules{
+			{ModuleID: auth0.String("mod_123"), ModuleVersionID: auth0.String("ver_456")},
+			{ModuleID: auth0.String("mod_789"), ModuleVersionID: auth0.String("ver_abc")},
+		}, *res)
+	})
+
+	t.Run("it handles empty input modules", func(t *testing.T) {
+		res, err := inputModulesToActionModules([]string{})
+		expected := []management.ActionModules{}
+		assert.NoError(t, err)
+		assert.Equal(t, &expected, res)
+	})
+
+	t.Run("it errors on a malformed pair", func(t *testing.T) {
+		_, err := inputModulesToActionModules([]string{"mod_123"})
+		assert.ErrorContains(t, err, "expected comma-separated key=value pairs")
+	})
+
+	t.Run("it errors when module_id is missing", func(t *testing.T) {
+		_, err := inputModulesToActionModules([]string{"module_version_id=ver_456"})
+		assert.ErrorContains(t, err, "module_id is required")
+	})
+
+	t.Run("it errors when module_version_id is missing", func(t *testing.T) {
+		_, err := inputModulesToActionModules([]string{"module_id=mod_123"})
+		assert.ErrorContains(t, err, "module_version_id is required")
+	})
+
+	t.Run("it errors on an unknown key", func(t *testing.T) {
+		_, err := inputModulesToActionModules([]string{"module_id=mod_123,foo=bar"})
+		assert.ErrorContains(t, err, "unknown key")
 	})
 }
