@@ -25,6 +25,7 @@ auth0 client-grants list [flags]
   auth0 client-grants ls --default-for third_party_clients
   auth0 client-grants ls --allow-any-organization=true
   auth0 client-grants ls -n 100 --json
+  auth0 client-grants ls --csv
 ```
 
 
@@ -34,6 +35,7 @@ auth0 client-grants list [flags]
       --allow-any-organization   Filter by whether any organization can be used with the grant (true) or only explicitly assigned organizations (false).
   -a, --audience string          Filter by audience (API identifier).
   -c, --client-id string         Filter by client ID. Mutually exclusive with --default-for.
+      --csv                      Output in csv format.
       --default-for string       Filter by the group this grant is the default for. Possible value: third_party_clients. Mutually exclusive with --client-id.
       --json                     Output in json format.
       --json-compact             Output in compact json format.

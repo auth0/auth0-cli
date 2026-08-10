@@ -15,6 +15,13 @@ tests:
       contains:
         - Number flag invalid, please pass a number between 1 and 1000
 
+  002a - list client grants rejects json and csv together:
+    command: auth0 client-grants list --json --csv
+    exit-code: 1
+    stderr:
+      contains:
+        - "any flags in the group [json json-compact csv] are set none of the others can be"
+
   003 - create client grant with specific scopes and check json output:
     command: auth0 client-grants create --client-id $(./test/integration/scripts/get-m2m-app-id.sh) --audience $(./test/integration/scripts/get-api-identifier.sh) --scopes read:todos --json --no-input
     exit-code: 0

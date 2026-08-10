@@ -170,7 +170,8 @@ func listClientGrantsCmd(cli *cli) *cobra.Command {
   auth0 client-grants ls --client-id <client-id> --subject-type client
   auth0 client-grants ls --default-for third_party_clients
   auth0 client-grants ls --allow-any-organization=true
-  auth0 client-grants ls -n 100 --json`,
+  auth0 client-grants ls -n 100 --json
+  auth0 client-grants ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
 				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
@@ -234,7 +235,8 @@ func listClientGrantsCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	clientGrantNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 	clientGrantFilterClientID.RegisterString(cmd, &inputs.ClientID, "")
