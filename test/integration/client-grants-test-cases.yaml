@@ -141,6 +141,13 @@ tests:
       contains:
         - number flag invalid, please pass a number between 1 and 1000
 
+  016a - list client grant organizations rejects json and csv together:
+    command: auth0 client-grants organizations list $(./test/integration/scripts/get-client-grant-id.sh) --json --csv --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "any flags in the group [json json-compact csv] are set none of the others can be"
+
   017 - delete client grant:
     command: auth0 client-grants delete $(./test/integration/scripts/get-client-grant-id.sh) --force --no-input
     exit-code: 0

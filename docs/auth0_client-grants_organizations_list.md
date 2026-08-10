@@ -19,12 +19,14 @@ auth0 client-grants organizations list [flags]
   auth0 client-grants organizations ls <client-grant-id>
   auth0 client-grants organizations list <client-grant-id> --number 100
   auth0 client-grants organizations ls <client-grant-id> -n 100 --json
+  auth0 client-grants organizations list <client-grant-id> --csv
 ```
 
 
 ## Flags
 
 ```
+      --csv            Output in csv format.
       --json           Output in json format.
       --json-compact   Output in compact json format.
   -n, --number int     Number of organizations to retrieve. Minimum 1, maximum 1000. (default 100)

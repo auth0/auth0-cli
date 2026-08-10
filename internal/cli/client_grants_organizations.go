@@ -37,7 +37,8 @@ func listOrganizationsClientGrantCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 client-grants organizations list
   auth0 client-grants organizations ls <client-grant-id>
   auth0 client-grants organizations list <client-grant-id> --number 100
-  auth0 client-grants organizations ls <client-grant-id> -n 100 --json`,
+  auth0 client-grants organizations ls <client-grant-id> -n 100 --json
+  auth0 client-grants organizations list <client-grant-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
 				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
@@ -81,7 +82,8 @@ func listOrganizationsClientGrantCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
-	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	return cmd
 }
