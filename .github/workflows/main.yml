@@ -66,9 +66,8 @@ jobs:
 
     # Skip running if the PR is coming from a fork or is created by dependabot or snyk due to missing repo secrets.
     # Only run on pushes to main or PRs targeting main.
-    # TEMPORARY: also run on PRs targeting feat/go-auth0-v3-migration to verify the client-grants suite. Revert before merge.
     if: github.event.pull_request.head.repo.fork == false && (github.actor != 'dependabot[bot]' && github.actor != 'snyk-bot') &&
-        (github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.base_ref == 'feat/go-auth0-v3-migration')
+        (github.ref == 'refs/heads/main' || github.base_ref == 'main')
 
     steps:
       - name: Check out the code
