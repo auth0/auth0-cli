@@ -337,6 +337,52 @@ func openManageURL(cli *cli, tenant string, path string) {
 	}
 }
 
+// missingScopes returns the elements of required absent from granted.
+func missingScopes(granted, required []string) []string {
+	have := make(map[string]struct{}, len(granted))
+	for _, s := range granted {
+		have[s] = struct{}{}
+	}
+	var missing []string
+	for _, s := range required {
+		if _, ok := have[s]; !ok {
+			missing = append(missing, s)
+		}
+	}
+	return missing
+}
+
+// scopesFromToken returns the granted scopes decoded from a JWT access token's
+// payload, or nil if the token is malformed or carries no scope claim (callers
+// then skip the pre-flight check and let the API surface a 403).
+func scopesFromToken(tokenStr string) []string {
+	parts := strings.SplitN(tokenStr, ".", 3)
+	if len(parts) != 3 {
+		return nil
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil
+	}
+	var claims struct {
+		Scope string `json:"scope"`
+	}
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return nil
+	}
+	return strings.Fields(claims.Scope)
+}
+
+// deriveServiceURL returns the base URL for a service (e.g. "manage") from the
+// tenant domain, dropping the 2-letter region code that public envs carry.
+func deriveServiceURL(service, tenantDomain string) string {
+	parts := strings.Split(tenantDomain, ".")
+	if len(parts) >= 4 && len(parts[1]) == 2 {
+		return "https://" + service + "." + strings.Join(parts[2:], ".")
+	}
+	return "https://" + service + "." + strings.Join(parts[1:], ".")
+}
+
 func formatManageTenantURL(tenant string, cfg *config.Config) string {
 	if len(tenant) == 0 {
 		return ""
