@@ -193,6 +193,8 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(networkACLCmd(cli))
 	rootCmd.AddCommand(tenantSettingsCmd(cli))
 	rootCmd.AddCommand(tokenExchangeCmd(cli))
+	rootCmd.AddCommand(sessionsCmd(cli))
+	rootCmd.AddCommand(refreshTokensCmd(cli))
 
 	// Keep completion at the bottom.
 	rootCmd.AddCommand(completionCmd(cli))

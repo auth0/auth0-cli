@@ -81,6 +81,10 @@ type APIV3 struct {
 	ClientGrantOrganization      ClientGrantOrganizationAPIV3
 	Events                       EventsAPIV3
 	PhoneNotificationTemplate    PhoneNotificationTemplateAPI
+	Session                      SessionAPIV3
+	RefreshToken                 RefreshTokenAPIV3
+	UserSession                  UserSessionAPIV3
+	UserRefreshToken             UserRefreshTokenAPIV3
 }
 
 func NewAPIV3(m *managementv3.Management) *APIV3 {
@@ -90,6 +94,10 @@ func NewAPIV3(m *managementv3.Management) *APIV3 {
 		ClientGrantOrganization:      m.ClientGrants.Organizations,
 		Events:                       m.Events,
 		PhoneNotificationTemplate:    m.Branding.Phone.Templates,
+		Session:                      m.Sessions,
+		RefreshToken:                 m.RefreshTokens,
+		UserSession:                  m.Users.Sessions,
+		UserRefreshToken:             m.Users.RefreshToken,
 	}
 }
 
