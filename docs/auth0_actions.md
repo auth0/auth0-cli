@@ -11,13 +11,13 @@ capabilities with custom logic.
 
 ## Schema Discovery & JSON Input
 
-Use '--schema' on a command to print its request payload schema, and '--input-json'
+Use '--schema' on a command to print its request payload schema, and '--data'
 to provide that payload programmatically (validated against the schema before the call).
 
 Examples:
-  auth0 actions create --schema                        # Show the create payload schema
-  auth0 actions create --input-json @action.json       # Create from JSON file
-  auth0 actions create --input-json '{"name":"..."}'   # Create from inline JSON
+  auth0 actions create --schema                    # Show the create payload schema
+  auth0 actions create --data @action.json         # Create from JSON file
+  auth0 actions create --data '{"name":"..."}'     # Create from inline JSON
 
 For more details: https://auth0.com/docs/api/management/v2
 

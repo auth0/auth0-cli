@@ -13,11 +13,11 @@ To create non-interactively, supply the action name, trigger, code, secrets and 
 
 ## JSON Input (for agents and automation)
 
-Use '--schema' to print the request payload schema, then '--input-json' to provide
+Use '--schema' to print the request payload schema, then '--data' to provide
 action data as JSON:
-  - Inline JSON: --input-json '{"name":"my-action",...}'
-  - From file: --input-json @action.json
-  - From stdin: --input-json - (or pipe data in)
+  - Inline JSON: --data '{"name":"my-action",...}'
+  - From file: --data @action.json
+  - From stdin: pipe data in (e.g. cat action.json | auth0 actions create), or --data -
 
 The JSON is validated against the OpenAPI schema before sending to the API.
 
@@ -42,10 +42,10 @@ auth0 actions create [flags]
   auth0 actions create --schema --json
 
   # JSON input mode (for agents and automation)
-  auth0 actions create --input-json '{"name":"my-action","supported_triggers":[{"id":"post-login","version":"v3"}]}'
-  auth0 actions create --input-json @action.json
-  cat action.json | auth0 actions create --input-json -
-  auth0 actions create --input-json @action.json --json
+  auth0 actions create --data '{"name":"my-action","supported_triggers":[{"id":"post-login","version":"v3"}]}'
+  auth0 actions create --data @action.json
+  cat action.json | auth0 actions create
+  auth0 actions create --data @action.json --json
 ```
 
 
@@ -53,8 +53,8 @@ auth0 actions create [flags]
 
 ```
   -c, --code string                 Code content for the action.
+      --data string                 JSON payload for the operation. Can be a JSON string, file path (@file.json), or '-' for stdin.
   -d, --dependency stringToString   Third party npm module, and its version, that the action depends on. (default [])
-  -j, --input-json string           JSON input for the operation. Can be a JSON string, file path (@file.json), or '-' for stdin.
       --json                        Output in json format.
       --json-compact                Output in compact json format.
   -n, --name string                 Name of the action.

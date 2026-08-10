@@ -13,11 +13,11 @@ To update non-interactively, supply the action id, name, code, secrets and depen
 
 ## JSON Input (for agents and automation)
 
-Use '--schema' to print the request payload schema, then '--input-json' to provide
+Use '--schema' to print the request payload schema, then '--data' to provide
 update data as JSON:
-  - Inline JSON: --input-json '{"name":"updated-name","runtime":"node22"}'
-  - From file: --input-json @update.json
-  - From stdin: --input-json - (or pipe data in)
+  - Inline JSON: --data '{"name":"updated-name","runtime":"node22"}'
+  - From file: --data @update.json
+  - From stdin: pipe data in (e.g. cat update.json | auth0 actions update <id>), or --data -
 
 The JSON is validated against the OpenAPI schema before sending to the API.
 
@@ -43,9 +43,9 @@ auth0 actions update [flags]
   auth0 actions update --schema --json
 
   # JSON input mode (for agents and automation)
-  auth0 actions update <action-id> --input-json '{"name":"updated-name","runtime":"node22"}'
-  auth0 actions update <action-id> --input-json @update.json
-  cat update.json | auth0 actions update <action-id> --input-json -
+  auth0 actions update <action-id> --data '{"name":"updated-name","runtime":"node22"}'
+  auth0 actions update <action-id> --data @update.json
+  cat update.json | auth0 actions update <action-id>
 ```
 
 
@@ -53,9 +53,9 @@ auth0 actions update [flags]
 
 ```
   -c, --code string                 Code content for the action.
+      --data string                 JSON payload for the operation. Can be a JSON string, file path (@file.json), or '-' for stdin.
   -d, --dependency stringToString   Third party npm module, and its version, that the action depends on. (default [])
       --force                       Skip confirmation.
-  -j, --input-json string           JSON input for the operation. Can be a JSON string, file path (@file.json), or '-' for stdin.
       --json                        Output in json format.
       --json-compact                Output in compact json format.
   -n, --name string                 Name of the action.

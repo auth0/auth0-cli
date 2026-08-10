@@ -146,11 +146,8 @@ type ValidationResult struct {
 	Errors []string
 }
 
-// formatValidationError turns a kin-openapi validation error into concise,
-// user-facing messages. It reads the structured fields of *openapi3.SchemaError
-// (field pointer + reason) instead of the default Error(), which dumps the raw
-// schema — including unresolved "$ref" entries. Direct the user to '--schema'
-// for the fully resolved schema.
+// formatValidationError turns a kin-openapi validation error into concise messages,
+// reading SchemaError's structured fields so raw "$ref" entries never leak.
 func formatValidationError(err error) []string {
 	var messages []string
 
@@ -164,15 +161,71 @@ func formatValidationError(err error) []string {
 
 	var schemaErr *openapi3.SchemaError
 	if errors.As(err, &schemaErr) {
-		location := "/" + strings.Join(schemaErr.JSONPointer(), "/")
+		location := jsonPath(schemaErr.JSONPointer())
 		reason := schemaErr.Reason
 		if reason == "" {
 			reason = fmt.Sprintf("does not match schema constraint %q", schemaErr.SchemaField)
 		}
-		return []string{fmt.Sprintf("Field %q: %s", location, reason)}
+		return []string{fmt.Sprintf("%s: %s", location, reason)}
 	}
 
 	return []string{err.Error()}
+}
+
+// jsonPath renders JSON Pointer segments as a JSONPath-style query, e.g.
+// ["supported_triggers","0","id"] → "supported_triggers[0].id" ("payload" if empty).
+func jsonPath(segments []string) string {
+	if len(segments) == 0 {
+		return "payload"
+	}
+	var sb strings.Builder
+	for i, seg := range segments {
+		switch {
+		case isArrayIndex(seg):
+			fmt.Fprintf(&sb, "[%s]", seg)
+		case isSimpleIdentifier(seg):
+			if i > 0 {
+				sb.WriteByte('.')
+			}
+			sb.WriteString(seg)
+		default:
+			// Keys with dots, spaces, etc. use bracket-quoted notation.
+			fmt.Fprintf(&sb, "[%q]", seg)
+		}
+	}
+	return sb.String()
+}
+
+// isArrayIndex reports whether seg is a non-negative integer (an array index).
+func isArrayIndex(seg string) bool {
+	if seg == "" {
+		return false
+	}
+	for _, r := range seg {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+// isSimpleIdentifier reports whether seg can be written with dot notation
+// (letters, digits, underscores; not starting with a digit).
+func isSimpleIdentifier(seg string) bool {
+	if seg == "" {
+		return false
+	}
+	for i, r := range seg {
+		isLetter := (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '_'
+		isDigit := r >= '0' && r <= '9'
+		if i == 0 && !isLetter {
+			return false
+		}
+		if !isLetter && !isDigit {
+			return false
+		}
+	}
+	return true
 }
 
 // schemaToMap converts an OpenAPI schema to a map for JSON serialization.

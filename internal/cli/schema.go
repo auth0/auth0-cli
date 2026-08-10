@@ -4,10 +4,20 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/openapi"
 )
+
+// outputFlags control output or behavior, not input, so they may be combined
+// with --data. Every other input flag conflicts with a whole-payload --data.
+var outputFlags = map[string]bool{
+	"json":         true,
+	"json-compact": true,
+	"csv":          true,
+	"force":        true,
+}
 
 var schemaFlag = Flag{
 	Name:     "Schema",
@@ -15,10 +25,8 @@ var schemaFlag = Flag{
 	Help:     "Print the request payload schema for this command and exit. Use with --json for machine-readable output.",
 }
 
-// printOperationSchema loads the OpenAPI schema and prints the request payload
-// for the given operation. Output is JSON when cli.json is set, text otherwise.
-// Commands pass their own method and path, which are the single source of truth
-// for the endpoint they call.
+// printOperationSchema prints the request payload schema for an operation, as
+// JSON when cli.json is set and text otherwise.
 func printOperationSchema(cli *cli, method, path string) error {
 	var manager *openapi.SchemaManager
 	if err := ansi.Waiting(func() (err error) {
@@ -46,11 +54,42 @@ func printOperationSchema(cli *cli, method, path string) error {
 	return nil
 }
 
-// markInputJSONExclusive marks --input-json as mutually exclusive with each of
-// the given granular input flags. The pairings are individual so the granular
-// flags can still be combined with one another, only not with --input-json.
-func markInputJSONExclusive(cmd *cobra.Command, flags ...string) {
-	for _, f := range flags {
-		cmd.MarkFlagsMutuallyExclusive("input-json", f)
+// markDataExclusive rejects combining a whole-payload --data with any granular
+// input flag. Call after all flags are registered.
+func markDataExclusive(cmd *cobra.Command) {
+	if cmd.Flags().Lookup("data") == nil {
+		return
 	}
+	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+		if isInputFlag(f.Name) {
+			cmd.MarkFlagsMutuallyExclusive("data", f.Name)
+		}
+	})
+}
+
+// isInputFlag reports whether a flag supplies request input, as opposed to
+// delivery (--data, --schema) or output (--json, --csv, --force).
+func isInputFlag(name string) bool {
+	switch {
+	case name == "data": // How input is delivered, not input itself.
+		return false
+	case name == schemaFlag.LongForm: // Help-class; exits before RunE.
+		return false
+	case outputFlags[name]: // Output/meta.
+		return false
+	default:
+		return true
+	}
+}
+
+// setInputFlagNames returns the input flags the user explicitly set — used to
+// detect conflicts with a stdin payload, which MarkFlagsMutuallyExclusive can't see.
+func setInputFlagNames(cmd *cobra.Command) []string {
+	var names []string
+	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+		if f.Changed && isInputFlag(f.Name) {
+			names = append(names, f.Name)
+		}
+	})
+	return names
 }

@@ -90,13 +90,13 @@ capabilities with custom logic.
 
 ## Schema Discovery & JSON Input
 
-Use '--schema' on a command to print its request payload schema, and '--input-json'
+Use '--schema' on a command to print its request payload schema, and '--data'
 to provide that payload programmatically (validated against the schema before the call).
 
 Examples:
-  auth0 actions create --schema                        # Show the create payload schema
-  auth0 actions create --input-json @action.json       # Create from JSON file
-  auth0 actions create --input-json '{"name":"..."}'   # Create from inline JSON
+  auth0 actions create --schema                    # Show the create payload schema
+  auth0 actions create --data @action.json         # Create from JSON file
+  auth0 actions create --data '{"name":"..."}'     # Create from inline JSON
 
 For more details: https://auth0.com/docs/api/management/v2`,
 	}
@@ -202,7 +202,7 @@ func createActionCmd(cli *cli) *cobra.Command {
 		Dependencies map[string]string
 		Secrets      map[string]string
 		Runtime      string
-		InputJSON    string
+		Data         string
 		Schema       bool
 	}
 
@@ -218,11 +218,11 @@ To create non-interactively, supply the action name, trigger, code, secrets and 
 
 ## JSON Input (for agents and automation)
 
-Use '--schema' to print the request payload schema, then '--input-json' to provide
+Use '--schema' to print the request payload schema, then '--data' to provide
 action data as JSON:
-  - Inline JSON: --input-json '{"name":"my-action",...}'
-  - From file: --input-json @action.json
-  - From stdin: --input-json - (or pipe data in)
+  - Inline JSON: --data '{"name":"my-action",...}'
+  - From file: --data @action.json
+  - From stdin: pipe data in (e.g. cat action.json | auth0 actions create), or --data -
 
 The JSON is validated against the OpenAPI schema before sending to the API.`,
 		Example: `  # Interactive mode
@@ -238,19 +238,23 @@ The JSON is validated against the OpenAPI schema before sending to the API.`,
   auth0 actions create --schema --json
 
   # JSON input mode (for agents and automation)
-  auth0 actions create --input-json '{"name":"my-action","supported_triggers":[{"id":"post-login","version":"v3"}]}'
-  auth0 actions create --input-json @action.json
-  cat action.json | auth0 actions create --input-json -
-  auth0 actions create --input-json @action.json --json`,
+  auth0 actions create --data '{"name":"my-action","supported_triggers":[{"id":"post-login","version":"v3"}]}'
+  auth0 actions create --data @action.json
+  cat action.json | auth0 actions create
+  auth0 actions create --data @action.json --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Schema discovery mode: print the request payload and exit.
 			if inputs.Schema {
 				return printOperationSchema(cli, "POST", "/actions/actions")
 			}
 
-			// JSON input mode (for agents and automation).
-			if HasInputJSON(cmd) {
-				return createActionFromJSON(cli, cmd, inputs.InputJSON)
+			// JSON input mode (for agents and automation): explicit --data or piped stdin.
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createActionFromJSON(cli, cmd, payload)
 			}
 
 			if err := actionName.Ask(cmd, &inputs.Name, nil); err != nil {
@@ -323,12 +327,12 @@ The JSON is validated against the OpenAPI schema before sending to the API.`,
 	actionDependency.RegisterStringMap(cmd, &inputs.Dependencies, nil)
 	actionSecret.RegisterStringMap(cmd, &inputs.Secrets, nil)
 	actionRuntime.RegisterString(cmd, &inputs.Runtime, "")
-	inputJSON.RegisterString(cmd, &inputs.InputJSON, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 
-	// --input-json supplies the whole payload, so it cannot be combined with the
+	// --data supplies the whole payload, so it cannot be combined with the
 	// granular input flags. Output flags (--json) and --schema are not affected.
-	markInputJSONExclusive(cmd, "name", "trigger", "code", "dependency", "secret", "runtime")
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -341,7 +345,7 @@ func updateActionCmd(cli *cli) *cobra.Command {
 		Dependencies map[string]string
 		Secrets      map[string]string
 		Runtime      string
-		InputJSON    string
+		Data         string
 		Schema       bool
 	}
 
@@ -357,11 +361,11 @@ To update non-interactively, supply the action id, name, code, secrets and depen
 
 ## JSON Input (for agents and automation)
 
-Use '--schema' to print the request payload schema, then '--input-json' to provide
+Use '--schema' to print the request payload schema, then '--data' to provide
 update data as JSON:
-  - Inline JSON: --input-json '{"name":"updated-name","runtime":"node22"}'
-  - From file: --input-json @update.json
-  - From stdin: --input-json - (or pipe data in)
+  - Inline JSON: --data '{"name":"updated-name","runtime":"node22"}'
+  - From file: --data @update.json
+  - From stdin: pipe data in (e.g. cat update.json | auth0 actions update <id>), or --data -
 
 The JSON is validated against the OpenAPI schema before sending to the API.`,
 		Example: `  # Interactive mode
@@ -378,9 +382,9 @@ The JSON is validated against the OpenAPI schema before sending to the API.`,
   auth0 actions update --schema --json
 
   # JSON input mode (for agents and automation)
-  auth0 actions update <action-id> --input-json '{"name":"updated-name","runtime":"node22"}'
-  auth0 actions update <action-id> --input-json @update.json
-  cat update.json | auth0 actions update <action-id> --input-json -`,
+  auth0 actions update <action-id> --data '{"name":"updated-name","runtime":"node22"}'
+  auth0 actions update <action-id> --data @update.json
+  cat update.json | auth0 actions update <action-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Schema discovery mode: print the request payload and exit.
 			// This does not require an action ID.
@@ -396,13 +400,17 @@ The JSON is validated against the OpenAPI schema before sending to the API.`,
 				}
 			}
 
-			// JSON input mode (for agents and automation).
-			if HasInputJSON(cmd) {
-				return updateActionFromJSON(cli, cmd, inputs.ID, inputs.InputJSON)
+			// JSON input mode (for agents and automation): explicit --data or piped stdin.
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateActionFromJSON(cli, cmd, inputs.ID, payload)
 			}
 
 			var oldAction *management.Action
-			err := ansi.Waiting(func() (err error) {
+			err = ansi.Waiting(func() (err error) {
 				oldAction, err = cli.api.Action.Read(cmd.Context(), inputs.ID)
 				return err
 			})
@@ -473,12 +481,12 @@ The JSON is validated against the OpenAPI schema before sending to the API.`,
 	actionDependency.RegisterStringMapU(cmd, &inputs.Dependencies, nil)
 	actionSecret.RegisterStringMapU(cmd, &inputs.Secrets, nil)
 	actionRuntime.RegisterStringU(cmd, &inputs.Runtime, "")
-	inputJSON.RegisterString(cmd, &inputs.InputJSON, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 
-	// --input-json supplies the whole payload, so it cannot be combined with the
+	// --data supplies the whole payload, so it cannot be combined with the
 	// granular input flags. Output flags (--json) and --schema are not affected.
-	markInputJSONExclusive(cmd, "name", "code", "dependency", "secret", "runtime")
+	markDataExclusive(cmd)
 
 	return cmd
 }

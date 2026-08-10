@@ -10,9 +10,9 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 )
 
-// createActionFromJSON creates an action from --input-json input.
+// createActionFromJSON creates an action from --data input.
 // The JSON is validated against the OpenAPI schema before the API call.
-func createActionFromJSON(cli *cli, cmd *cobra.Command, inputJSONStr string) error {
+func createActionFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
 	handler, err := NewInputJSONHandler(cli)
 	if err != nil {
 		return fmt.Errorf("failed to initialize JSON handler: %w", err)
@@ -20,7 +20,7 @@ func createActionFromJSON(cli *cli, cmd *cobra.Command, inputJSONStr string) err
 
 	// Parse and validate JSON against the schema.
 	var rawData map[string]interface{}
-	if err := handler.ParseAndValidate(inputJSONStr, "POST", "/actions/actions", &rawData); err != nil {
+	if err := handler.ParseAndValidate(dataStr, "POST", "/actions/actions", &rawData); err != nil {
 		cli.renderer.Infof("Run 'auth0 actions create --schema' to see the expected schema.")
 		return err
 	}
@@ -47,9 +47,9 @@ func createActionFromJSON(cli *cli, cmd *cobra.Command, inputJSONStr string) err
 	return nil
 }
 
-// updateActionFromJSON updates an action from --input-json input.
+// updateActionFromJSON updates an action from --data input.
 // The JSON is validated against the OpenAPI schema before the API call.
-func updateActionFromJSON(cli *cli, cmd *cobra.Command, id, inputJSONStr string) error {
+func updateActionFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
 	handler, err := NewInputJSONHandler(cli)
 	if err != nil {
 		return fmt.Errorf("failed to initialize JSON handler: %w", err)
@@ -58,7 +58,7 @@ func updateActionFromJSON(cli *cli, cmd *cobra.Command, id, inputJSONStr string)
 	// Parse and validate JSON against the schema.
 	var rawData map[string]interface{}
 	path := fmt.Sprintf("/actions/actions/%s", id)
-	if err := handler.ParseAndValidate(inputJSONStr, "PATCH", path, &rawData); err != nil {
+	if err := handler.ParseAndValidate(dataStr, "PATCH", path, &rawData); err != nil {
 		cli.renderer.Infof("Run 'auth0 actions update --schema' to see the expected schema.")
 		return err
 	}

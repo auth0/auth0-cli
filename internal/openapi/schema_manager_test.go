@@ -182,7 +182,7 @@ func TestValidateRequestErrorsAreResolved(t *testing.T) {
 		{
 			name:         "Wrong type on a $ref array field",
 			body:         `{"name": "x", "supported_triggers": "not-an-array"}`,
-			wantContains: `/supported_triggers`,
+			wantContains: `supported_triggers`,
 		},
 		{
 			name:         "Missing required field",
@@ -190,9 +190,9 @@ func TestValidateRequestErrorsAreResolved(t *testing.T) {
 			wantContains: "supported_triggers",
 		},
 		{
-			name:         "Bad enum inside a nested $ref item",
+			name:         "Bad enum inside a nested $ref item — JSONPath location",
 			body:         `{"name": "x", "supported_triggers": [{"id": "not-a-trigger", "version": "v3"}]}`,
-			wantContains: `/supported_triggers/0/id`,
+			wantContains: `supported_triggers[0].id`,
 		},
 	}
 
@@ -209,6 +209,27 @@ func TestValidateRequestErrorsAreResolved(t *testing.T) {
 			assert.NotContains(t, joined, "$ref")
 			assert.NotContains(t, joined, "#/components/schemas")
 			assert.Contains(t, joined, tt.wantContains)
+		})
+	}
+}
+
+func TestJSONPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		segments []string
+		want     string
+	}{
+		{name: "root", segments: nil, want: "payload"},
+		{name: "single key", segments: []string{"name"}, want: "name"},
+		{name: "nested keys", segments: []string{"config", "url"}, want: "config.url"},
+		{name: "array index", segments: []string{"supported_triggers", "0", "id"}, want: "supported_triggers[0].id"},
+		{name: "index then object", segments: []string{"items", "2", "meta", "key"}, want: "items[2].meta.key"},
+		{name: "non-identifier key", segments: []string{"a.b"}, want: `["a.b"]`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, jsonPath(tt.segments))
 		})
 	}
 }

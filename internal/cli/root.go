@@ -35,11 +35,11 @@ The Auth0 CLI now includes features for AI agents and automation:
     its request payload schema. Add '--json' for machine-readable output.
     Example: auth0 actions create --schema --json
 
-  • JSON Input: Use '--input-json' flag for programmatic resource creation/updates
-    Example: auth0 actions create --input-json @action.json
+  • JSON Input: Use '--data' flag for programmatic resource creation/updates
+    Example: auth0 actions create --data @action.json
 
   • Schema Validation: JSON inputs are validated locally before API calls
-    Example: auth0 actions create --input-json '{"name":"my-action",...}'
+    Example: auth0 actions create --data '{"name":"my-action",...}'
 
 See 'auth0 <resource> --help' for details on specific resources.
 For agent integration guide, visit: https://github.com/auth0/auth0-cli`
