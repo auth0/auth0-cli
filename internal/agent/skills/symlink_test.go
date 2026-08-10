@@ -30,8 +30,6 @@ func makeSkillSource(t *testing.T) string {
 	return dir
 }
 
-// --- CheckSkillLink ---
-
 func TestCheckSkillLink(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("symlink tests skipped on windows")
@@ -101,8 +99,6 @@ func TestCheckSkillLink(t *testing.T) {
 		assert.Equal(t, "broken", result)
 	})
 }
-
-// --- CreateSkillLink ---
 
 func TestCreateSkillLink(t *testing.T) {
 	if runtime.GOOS == "windows" {
@@ -201,8 +197,6 @@ func TestCreateSkillLink(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
-
-// --- copyDir ---
 
 func TestCopyDir(t *testing.T) {
 	t.Run("copies the source directory contents", func(t *testing.T) {

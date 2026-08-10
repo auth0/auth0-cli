@@ -15,7 +15,7 @@ import (
 const (
 	agentSkillsRepo = "https://github.com/auth0/agent-skills"
 
-	// pluginSubtreePath is the path, within the repo, to the skills folder we install:
+	// PluginSubtreePath is the path, within the repo, to the skills folder we install:
 	// https://github.com/auth0/agent-skills/tree/main/plugins/auth0/skills
 	pluginSubtreePath = "plugins/auth0/skills"
 
