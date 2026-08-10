@@ -159,6 +159,25 @@ func TestIsCIEnvironment(t *testing.T) {
 	})
 }
 
+func TestIsAPICommand(t *testing.T) {
+	tests := []struct {
+		name        string
+		commandPath string
+		expected    bool
+	}{
+		{"api command", "auth0 api", true},
+		{"root command", "auth0", false},
+		{"apis command is not the api command", "auth0 apis list", false},
+		{"empty command path", "", false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, isAPICommand(test.commandPath))
+		})
+	}
+}
+
 func TestMergeProperties(t *testing.T) {
 	base := map[string]string{"interactive": "true", "success": "true"}
 	override := map[string]string{"success": "false", "error_class": "auth"}
