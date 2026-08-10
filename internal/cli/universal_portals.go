@@ -851,7 +851,7 @@ type portalSidebar struct {
 
 type portalPages struct {
 	Default string       `json:"default,omitempty"`
-	Content []portalPage `json:"content"`
+	Content []portalPage `json:"standard"`
 }
 
 type portalPage struct {
