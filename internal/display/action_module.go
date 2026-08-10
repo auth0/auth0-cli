@@ -265,6 +265,125 @@ func makeActionModuleActionView(action *managementv3.ActionModuleAction) *action
 	}
 }
 
+// actionModuleVersionResponse is satisfied by both the version list item and
+// the single-version get response, which share the same getter surface. It lets
+// one view constructor serve both.
+type actionModuleVersionResponse interface {
+	GetID() string
+	GetModuleID() string
+	GetVersionNumber() int
+	GetCode() string
+	GetDependencies() []*managementv3.ActionModuleDependency
+	GetSecrets() []*managementv3.ActionModuleSecret
+	GetCreatedAt() time.Time
+}
+
+type actionModuleVersionView struct {
+	ID           string
+	ModuleID     string
+	Version      string
+	CreatedAt    string
+	Dependencies string
+	Secrets      string
+	Code         string
+
+	raw interface{}
+}
+
+func (v *actionModuleVersionView) AsTableHeader() []string {
+	return []string{"ID", "Version", "Created At"}
+}
+
+func (v *actionModuleVersionView) AsTableRow() []string {
+	return []string{
+		ansi.Faint(v.ID),
+		v.Version,
+		v.CreatedAt,
+	}
+}
+
+func (v *actionModuleVersionView) KeyValues() [][]string {
+	keyValues := [][]string{
+		{"ID", ansi.Faint(v.ID)},
+		{"MODULE ID", ansi.Faint(v.ModuleID)},
+		{"VERSION", v.Version},
+		{"CREATED AT", v.CreatedAt},
+	}
+
+	if v.Dependencies != "" {
+		keyValues = append(keyValues, []string{"DEPENDENCIES", v.Dependencies})
+	}
+	if v.Secrets != "" {
+		keyValues = append(keyValues, []string{"SECRETS", v.Secrets})
+	}
+
+	// CODE is rendered as a separate block below the table, matching the module
+	// show output.
+
+	return keyValues
+}
+
+func (v *actionModuleVersionView) Object() interface{} {
+	return v.raw
+}
+
+func (r *Renderer) ActionModuleVersionList(versions []*managementv3.ActionModuleVersion) {
+	resource := "action module versions"
+
+	r.Heading(resource)
+
+	if len(versions) == 0 {
+		r.EmptyState(resource, "Publish one with 'auth0 actions modules versions publish'")
+		return
+	}
+
+	var results []View
+	for _, v := range versions {
+		results = append(results, makeActionModuleVersionView(v))
+	}
+
+	r.Results(results)
+}
+
+func (r *Renderer) ActionModuleVersionShow(version *managementv3.GetActionModuleVersionResponseContent) {
+	r.Heading("action module version")
+	view := makeActionModuleVersionView(version)
+	r.Result(view)
+	r.actionModuleVersionCode(view)
+}
+
+// actionModuleVersionCode prints the version's source as its own labelled block
+// beneath the key/value table, matching actionModuleCode.
+func (r *Renderer) actionModuleVersionCode(view *actionModuleVersionView) {
+	if r.Format == OutputFormatJSON || r.Format == OutputFormatJSONCompact {
+		return
+	}
+	if view.Code == "" {
+		return
+	}
+
+	fmt.Fprintf(r.ResultWriter, "\n%s\n%s", ansi.Faint("CODE"), highlightJavaScript(view.Code))
+}
+
+func makeActionModuleVersionView(version actionModuleVersionResponse) *actionModuleVersionView {
+	number := version.GetVersionNumber()
+	label := "-"
+	if number != 0 {
+		label = "v" + strconv.Itoa(number)
+	}
+
+	return &actionModuleVersionView{
+		ID:           version.GetID(),
+		ModuleID:     version.GetModuleID(),
+		Version:      label,
+		CreatedAt:    timeAgo(version.GetCreatedAt()),
+		Dependencies: formatActionModuleDependencies(version.GetDependencies()),
+		Secrets:      formatActionModuleSecrets(version.GetSecrets()),
+		Code:         version.GetCode(),
+		raw:          version,
+	}
+}
+
 func formatActionModuleDependencies(dependencies []*managementv3.ActionModuleDependency) string {
 	if len(dependencies) == 0 {
 		return ""

@@ -86,6 +86,7 @@ func actionsModulesCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(updateActionModuleCmd(cli))
 	cmd.AddCommand(deleteActionModuleCmd(cli))
 	cmd.AddCommand(actionsModulesActionsCmd(cli))
+	cmd.AddCommand(actionsModulesVersionsCmd(cli))
 
 	return cmd
 }
