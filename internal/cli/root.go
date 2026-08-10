@@ -282,7 +282,14 @@ func commandTrackingProperties(cli *cli) map[string]string {
 		"output_format": outputFormatForTracking(cli.renderer),
 		"forced":        boolString(cli.force),
 		"agent_client":  detectAgent(interactive),
+		"is_api":        boolString(isAPICommand(cli.executedCommandPath)),
 	}
+}
+
+// isAPICommand reports whether the executed command is the raw
+// `auth0 api` Management API passthrough command.
+func isAPICommand(commandPath string) bool {
+	return commandPath == "auth0 api"
 }
 
 func outputFormatForTracking(renderer *display.Renderer) string {
