@@ -35,4 +35,4 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - "if any flags in the group [json json-compact csv] are set none of the others can be"
+        - "any flags in the group [json json-compact csv] are set none of the others can be"
