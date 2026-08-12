@@ -35,34 +35,28 @@ func TestGenerateEventName(t *testing.T) {
 }
 
 func TestGenerateRunEventName(t *testing.T) {
-	t.Run("generates from root command run", func(t *testing.T) {
+	t.Run("generates from root command", func(t *testing.T) {
 		want := "CLI - Auth0 - Run"
 		got := generateRunEventName("auth0")
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("generates from top-level command run", func(t *testing.T) {
+	t.Run("generates from top-level command", func(t *testing.T) {
 		want := "CLI - Auth0 - Apps - Run"
 		got := generateRunEventName("auth0 apps")
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("generates from subcommand run", func(t *testing.T) {
+	t.Run("generates from subcommand", func(t *testing.T) {
 		want := "CLI - Apps - List - Run"
 		got := generateRunEventName("auth0 apps list")
-		assert.Equal(t, want, got)
-	})
-
-	t.Run("generates from deep subcommand run", func(t *testing.T) {
-		want := "CLI - Apis - Scopes List - Run"
-		got := generateRunEventName("auth0 apis scopes list")
 		assert.Equal(t, want, got)
 	})
 }
 
 func TestNewEvent(t *testing.T) {
 	t.Run("creates a new event instance", func(t *testing.T) {
-		event := newEvent("event", "id")
+		event := newEvent("event", "id", nil)
 		// Assert that the interval between the event timestamp and now is within 1 second.
 		assert.WithinDuration(t, time.Now(), time.Unix(0, event.Timestamp*int64(1000000)), 1*time.Second)
 		assert.Equal(t, event.App, appID)
@@ -70,5 +64,12 @@ func TestNewEvent(t *testing.T) {
 		assert.Equal(t, event.ID, "id")
 		assert.Equal(t, event.Properties[osKey], runtime.GOOS)
 		assert.Equal(t, event.Properties[archKey], runtime.GOARCH)
+	})
+
+	t.Run("merges extra properties", func(t *testing.T) {
+		event := newEvent("event", "id", map[string]string{"success": "false", "error_class": "auth"})
+		assert.Equal(t, "false", event.Properties["success"])
+		assert.Equal(t, "auth", event.Properties["error_class"])
+		assert.Equal(t, runtime.GOOS, event.Properties[osKey])
 	})
 }

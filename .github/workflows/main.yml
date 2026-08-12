@@ -3,7 +3,7 @@ name: Main Workflow
 on:
   pull_request: {}
   push:
-    branches: [ "main" ]
+    branches: [ "main", "beta" ]
 
 
 concurrency:
@@ -65,7 +65,9 @@ jobs:
     needs: unit-tests
 
     # Skip running if the PR is coming from a fork or is created by dependabot or snyk due to missing repo secrets.
-    if: github.event.pull_request.head.repo.fork == false && (github.actor != 'dependabot[bot]' && github.actor != 'snyk-bot')
+    # Only run on pushes to main or PRs targeting main.
+    if: github.event.pull_request.head.repo.fork == false && (github.actor != 'dependabot[bot]' && github.actor != 'snyk-bot') &&
+        (github.ref == 'refs/heads/main' || github.base_ref == 'main')
 
     steps:
       - name: Check out the code

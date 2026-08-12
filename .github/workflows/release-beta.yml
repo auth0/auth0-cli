@@ -1,0 +1,39 @@
+name: Release Beta
+
+on:
+  push:
+    tags:
+      # Prerelease tags only, e.g. v1.2.3-beta.1. Stable releases such as
+      # v1.2.3 are handled by release.yml.
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+        with:
+          fetch-depth: 0 # This ensures all history and tags are fetched
+          path: auth0-cli
+
+      - name: Set up Go
+        uses: actions/setup-go@be3c94b385c4f180051c996d336f57a34c397495 # v3.6.1
+        with:
+          go-version-file: auth0-cli/go.mod
+          check-latest: true
+
+      # GoReleaser automatically marks SemVer prerelease tags (those with a
+      # "-suffix") as GitHub prereleases. Homebrew and Scoop PRs are
+      # intentionally omitted so beta builds never reach package managers.
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@90a3faa9d0182683851fbfa97ca1a2cb983bfca3 # pin@6.2.1
+        with:
+          version: "2.7.0"
+          args: release --clean
+          workdir: 'auth0-cli'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

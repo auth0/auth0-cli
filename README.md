@@ -39,8 +39,15 @@ Build, manage and test your [Auth0](https://auth0.com/) integrations from the co
 Install via [Homebrew](https://brew.sh/):
 
 ```bash
-brew tap auth0/auth0-cli && brew install auth0
+brew install auth0
 ```
+
+> [!NOTE]
+> The CLI is now available in the official Homebrew core, so a custom tap is no longer needed. If you previously installed via the `auth0/auth0-cli` tap, migrate with:
+> ```bash
+> brew uninstall auth0 && brew untap auth0/auth0-cli
+> brew install auth0
+> ```
 
 Install via [cURL](https://curl.se/):
 
@@ -60,10 +67,15 @@ Install via [cURL](https://curl.se/):
 Install via [Scoop](https://scoop.sh/):
 
 ```bash
-scoop bucket add auth0 https://github.com/auth0/scoop-auth0-cli.git
 scoop install auth0
 ```
 
+> [!NOTE]
+> The CLI is now available in the official Scoop `main` bucket (enabled by default), so a custom bucket is no longer needed. If you previously installed from the `auth0/scoop-auth0-cli` bucket, migrate with:
+> ```bash
+> scoop uninstall auth0 && scoop bucket rm auth0
+> scoop install auth0
+> ```
 
 Install via [Powershell](https://learn.microsoft.com/en-us/powershell/):
 
@@ -125,6 +137,93 @@ go install github.com/auth0/auth0-cli/cmd/auth0@latest
 
 > [!TIP]
 > Autocompletion instructions for supported platforms available by running `auth0 completion -h`
+
+### Installing the Beta
+
+<details>
+<summary>Want to try pre-release features? Install the beta build here.</summary>
+
+<br>
+
+> [!WARNING]
+> This is a **beta release** of the Auth0 CLI and is not yet generally available. Features and behavior may change before the final release.
+
+> [!WARNING]
+> The beta release does not fully support the interactive **device authorization** login flow (`auth0 login` as a user). We recommend authenticating with **machine-to-machine (M2M)** client credentials while using the beta. See [Authenticating to Your Tenant](#authenticating-to-your-tenant) for details.
+
+#### Linux and macOS
+
+Install via [Homebrew](https://brew.sh/):
+
+```bash
+brew tap auth0/auth0-cli && brew install auth0-beta
+```
+
+> [!NOTE]
+> The `auth0-beta` formula installs the beta build as the `auth0` binary. Run it with `auth0` once installed.
+
+Install via [cURL](https://curl.se/):
+
+1. Download the binary. It will be placed in `./auth0`:
+  ```bash
+  curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/beta/install.sh | sh -s -- -b .
+  ```
+2. Optionally, if you want to be able to run the binary from any directory, make sure you move it to a place in your $PATH:
+  ```bash
+  sudo mv ./auth0 /usr/local/bin
+  ```
+
+#### Windows
+
+Install via [Scoop](https://scoop.sh/):
+
+```bash
+scoop bucket add auth0 https://github.com/auth0/scoop-auth0-cli.git
+scoop install auth0-beta
+```
+
+> [!NOTE]
+> The `auth0-beta` manifest installs the beta build as the `auth0` binary. Run it with `auth0` once installed.
+
+Install via [Powershell](https://learn.microsoft.com/en-us/powershell/):
+
+1. Fetch the latest beta release information with the following commands:
+  ```powershell
+  $latestRelease = (Invoke-RestMethod -Uri "https://api.github.com/repos/auth0/auth0-cli/releases") | Where-Object { $_.prerelease -eq $true } | Select-Object -First 1
+  $latestVersion = $latestRelease.tag_name
+  $version = $latestVersion -replace "^v"
+  ```
+2. Download the binary to the current folder:
+  ```powershell
+  Invoke-WebRequest -Uri "https://github.com/auth0/auth0-cli/releases/download/${latestVersion}/auth0-cli_${version}_Windows_x86_64.zip" -OutFile ".\auth0.zip"
+  Expand-Archive ".\auth0.zip" .\
+  ```
+
+#### Go
+
+Install via [Go](https://go.dev/):
+
+```bash
+# Make sure your $GOPATH/bin is exported on your $PATH
+# to be able to run the binary from any directory.
+
+# Latest beta code (tip of the beta branch):
+go install github.com/auth0/auth0-cli/cmd/auth0@beta
+
+# Or a specific published beta release (reproducible):
+# See https://github.com/auth0/auth0-cli/releases for available tags.
+go install github.com/auth0/auth0-cli/cmd/auth0@v1.33.0-beta.0
+```
+
+> [!NOTE]
+> Do not use `@latest` for the beta. Go's `@latest` skips pre-release versions, so it always resolves to the stable release instead of a beta.
+
+#### Manual
+
+1. Download the appropriate binary for your environment from the [releases page](https://github.com/auth0/auth0-cli/releases) — select the most recent pre-release.
+2. Follow the same extraction and `PATH`/`HOME` setup steps described in the [Manual](#manual) installation section above.
+
+</details>
 
 ## Authenticating to Your Tenant
 
@@ -233,23 +332,34 @@ setx EDITOR "code --wait"
 
 ## Agent Integration
 
-The CLI has an [AgentSkills-compatible](https://agentskills.io/) skill for AI agents (Claude Code, OpenClaw, etc.), available from the [Auth0 Agent Skills](https://github.com/auth0/agent-skills) repository.
+CLI guidance for AI agents (Claude Code, Cursor, OpenClaw, etc.) ships as part of the [AgentSkills-compatible](https://agentskills.io/) `auth0` skill in the [Auth0 Agent Skills](https://github.com/auth0/agent-skills) repository. The `auth0` skill routes across all Auth0 SDKs, features, and tooling — including this CLI.
 
 ### Install via Auth0 Agent Skills (Recommended)
 
-The `auth0-cli` skill is part of the [auth0/agent-skills](https://github.com/auth0/agent-skills) collection. Install the full Auth0 skills suite to get it along with other Auth0 skills:
-
-**Claude Code plugin marketplace:**
+**Claude Code (official plugins marketplace):**
 
 ```
-/plugin marketplace add auth0/agent-skills
-/plugin install auth0@auth0-agent-skills
+/plugin install auth0@claude-plugins-official
 ```
 
-**Skills CLI:**
+From the terminal (no session needed):
+
+```bash
+claude plugin install auth0@claude-plugins-official
+```
+
+**Any agent (Skills CLI):**
+
+The [Skills CLI](https://github.com/vercel-labs/skills) works with Claude Code, Cursor, Copilot, Codex, and [40+ other agents](https://agentskills.io/clients):
 
 ```bash
 npx skills add auth0/agent-skills
+```
+
+Target specific agents with `--agent`:
+
+```bash
+npx skills add auth0/agent-skills --agent claude-code cursor
 ```
 
 **Manual installation (Claude Code, OpenClaw):**
@@ -258,13 +368,13 @@ npx skills add auth0/agent-skills
 git clone https://github.com/auth0/agent-skills.git
 
 # Claude Code
-cp -r agent-skills/plugins/auth0/skills/auth0-cli ~/.claude/skills/
+cp -r agent-skills/plugins/auth0/skills/auth0 ~/.claude/skills/
 
 # OpenClaw
-cp -r agent-skills/plugins/auth0/skills/auth0-cli ~/.openclaw/skills/
+cp -r agent-skills/plugins/auth0/skills/auth0 ~/.openclaw/skills/
 ```
 
-> **Note:** The `auth0` binary must be installed and available on your `$PATH` for agents to use this skill.
+> **Note:** The `auth0` binary must be installed and available on your `$PATH` for agents to use the CLI guidance in this skill.
 
 ## Anonymized Analytics Disclosure
 

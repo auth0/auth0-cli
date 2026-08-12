@@ -223,8 +223,6 @@ func loginCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			cli.tracker.TrackCommandRun(cmd, cli.Config.InstallID)
-
 			if len(cli.Config.Tenants) > 1 {
 				cli.renderer.Infof("%s Switch between authenticated tenants with `auth0 tenants use <tenant>`",
 					ansi.Faint("Hint:"),

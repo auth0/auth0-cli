@@ -57,6 +57,7 @@ execute() {
     log_info "installed ${BINDIR}/${binexe}"
   done
   rm -rf "${tmpdir}"
+  log_info "Tip: run 'auth0 agent skills install' to install the Auth0 skill for your AI coding assistants."
 }
 get_binaries() {
   case "$PLATFORM" in

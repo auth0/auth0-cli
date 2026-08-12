@@ -17,7 +17,6 @@ builds:
       - -X 'github.com/auth0/auth0-cli/internal/buildinfo.Revision={{.Commit}}'
       - -X 'github.com/auth0/auth0-cli/internal/buildinfo.BuildUser=goreleaser'
       - -X 'github.com/auth0/auth0-cli/internal/buildinfo.BuildDate={{.Date}}'
-      - -X 'github.com/auth0/auth0-cli/internal/instrumentation.SentryDSN={{.Env.SENTRY_DSN}}'
 archives:
   - name_template: '{{ .ProjectName }}_{{ .Version }}_{{ title .Os }}_{{ if eq .Arch "arm64" }}arm64{{ else }}x86_64{{ end }}'
     files:
@@ -32,6 +31,8 @@ snapshot:
   version_template: "{{ .Tag }}-SNAPSHOT-{{.ShortCommit}}"
 changelog:
   disable: true
+release:
+  replace_existing_draft: true
 brews:
   - name: auth0
     repository:
@@ -52,7 +53,7 @@ brews:
       (bash_completion/"auth0").write `#{bin}/auth0 completion bash`
       (fish_completion/"auth0.fish").write `#{bin}/auth0 completion fish`
       (zsh_completion/"_auth0").write `#{bin}/auth0 completion zsh`
-    caveats: "Thanks for installing the Auth0 CLI"
+    caveats: "Thanks for installing the Auth0 CLI\n\nTip: run 'auth0 agent skills install' to install the Auth0 skill for your AI coding assistants."
 
 scoops:
   - name: auth0
@@ -68,4 +69,4 @@ scoops:
     description: Build, manage and test your Auth0 integrations from the command line
     license: MIT
     skip_upload: true
-    post_install: ["Write-Host 'Thanks for installing the Auth0 CLI'"]
+    post_install: ["Write-Host 'Thanks for installing the Auth0 CLI'", "Write-Host \"Tip: run 'auth0 agent skills install' to install the Auth0 skill for your AI coding assistants.\""]

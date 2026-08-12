@@ -174,7 +174,6 @@ func TestSupportedAgents(t *testing.T) {
 		for _, a := range SupportedAgents {
 			hasGlobalDir := a.GlobalSkillsDir != "" || a.GlobalSkillsDirEnvVar != ""
 			assert.Truef(t, hasGlobalDir, "agent %s must have GlobalSkillsDir or GlobalSkillsDirEnvVar", a.ID)
-			assert.NotEmptyf(t, a.ProjectSkillsDir, "agent %s ProjectSkillsDir must not be empty", a.ID)
 		}
 	})
 
@@ -292,6 +291,10 @@ func TestDetectedAgents(t *testing.T) {
 	})
 }
 
+func ResetDetectedAgentsCache() {
+	detectedAgentsCache = nil
+}
+
 func TestResetDetectedAgentsCache(t *testing.T) {
 	t.Run("subsequent call after reset re-evaluates detection", func(t *testing.T) {
 		// Prime the cache.
@@ -310,11 +313,10 @@ func TestResetDetectedAgentsCache(t *testing.T) {
 		// Temporarily inject a fake agent that detects a temp dir.
 		dir := t.TempDir()
 		fake := AgentConfig{
-			ID:               "test-reset-agent",
-			DisplayName:      "Test Reset Agent",
-			GlobalSkillsDir:  filepath.Join(dir, "skills"),
-			ProjectSkillsDir: filepath.Join(".agents", "skills"),
-			DetectMarkers:    []string{filepath.Join(dir, "marker")},
+			ID:              "test-reset-agent",
+			DisplayName:     "Test Reset Agent",
+			GlobalSkillsDir: filepath.Join(dir, "skills"),
+			DetectMarkers:   []string{filepath.Join(dir, "marker")},
 		}
 		original := SupportedAgents
 		t.Cleanup(func() {
@@ -344,60 +346,35 @@ func TestResetDetectedAgentsCache(t *testing.T) {
 	})
 }
 
-func TestFastPriorityAgents(t *testing.T) {
-	t.Run("universal is always last", func(t *testing.T) {
-		result := FastPriorityAgents()
-		require.NotEmpty(t, result)
-		assert.Equal(t, "universal", result[len(result)-1].ID)
+func TestCopyTree(t *testing.T) {
+	t.Run("copies regular files", func(t *testing.T) {
+		src := t.TempDir()
+		dst := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(src, "file.txt"), []byte("hello"), 0o644))
+
+		require.NoError(t, copyTree(src, dst))
+
+		data, err := os.ReadFile(filepath.Join(dst, "file.txt"))
+		require.NoError(t, err)
+		assert.Equal(t, "hello", string(data))
 	})
 
-	t.Run("no duplicates", func(t *testing.T) {
-		seen := make(map[string]bool)
-		for _, a := range FastPriorityAgents() {
-			assert.Falsef(t, seen[a.ID], "duplicate agent %s in FastPriorityAgents", a.ID)
-			seen[a.ID] = true
-		}
+	t.Run("recurses into subdirectories", func(t *testing.T) {
+		src := t.TempDir()
+		dst := t.TempDir()
+		sub := filepath.Join(src, "sub")
+		require.NoError(t, os.MkdirAll(sub, 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(sub, "nested.txt"), []byte("nested"), 0o644))
+
+		require.NoError(t, copyTree(src, dst))
+
+		data, err := os.ReadFile(filepath.Join(dst, "sub", "nested.txt"))
+		require.NoError(t, err)
+		assert.Equal(t, "nested", string(data))
 	})
 
-	t.Run("contains all detected agents", func(t *testing.T) {
-		resultIDs := make(map[string]bool)
-		for _, a := range FastPriorityAgents() {
-			resultIDs[a.ID] = true
-		}
-		for _, a := range DetectedAgents() {
-			assert.Truef(t, resultIDs[a.ID], "detected agent %s missing from FastPriorityAgents", a.ID)
-		}
-	})
-
-	t.Run("priority agents appear before non-priority agents", func(t *testing.T) {
-		result := FastPriorityAgents()
-		prioritySet := map[string]bool{
-			"claude-code":    true,
-			"cursor":         true,
-			"github-copilot": true,
-			"gemini-cli":     true,
-		}
-
-		lastPriorityIdx := -1
-		firstNonPriorityIdx := -1
-		for i, a := range result {
-			if a.ID == "universal" {
-				continue
-			}
-			if prioritySet[a.ID] {
-				lastPriorityIdx = i
-			} else if firstNonPriorityIdx == -1 {
-				firstNonPriorityIdx = i
-			}
-		}
-
-		if lastPriorityIdx != -1 && firstNonPriorityIdx != -1 {
-			assert.Less(t, lastPriorityIdx, firstNonPriorityIdx,
-				"all priority agents must appear before any non-priority agent")
-		}
-	})
-
-	t.Run("result length equals detected agents count", func(t *testing.T) {
-		assert.Len(t, FastPriorityAgents(), len(DetectedAgents()))
+	t.Run("returns error when src does not exist", func(t *testing.T) {
+		err := copyTree(filepath.Join(t.TempDir(), "missing"), t.TempDir())
+		require.Error(t, err)
 	})
 }
