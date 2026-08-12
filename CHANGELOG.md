@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v1.33.0-beta.1](https://github.com/auth0/auth0-cli/tree/v1.33.0-beta.1) (August 12, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.33.0-beta.0...v1.33.0-beta.1)
+
+### Added
+- Add `auth0 universal-portals setup` command to scaffold Universal Portals (Beta) [#1595]
+- Add session-transfer delegation flags in `auth0 apps` (EA only) [#1587]
+- Add `is_api` telemetry property to distinguish raw `auth0 api` calls from native commands [#1602]
+
+
 # [v1.33.0-beta.0](https://github.com/auth0/auth0-cli/tree/v1.33.0-beta.0) (July 02, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.32.0...v1.33.0-beta.0)
@@ -765,7 +775,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.33.0-beta.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.33.0-beta.1...HEAD
+[#1602]: https://github.com/auth0/auth0-cli/pull/1602
+[#1595]: https://github.com/auth0/auth0-cli/pull/1595
+[#1587]: https://github.com/auth0/auth0-cli/pull/1587
 [#1575]: https://github.com/auth0/auth0-cli/pull/1575
 [#1551]: https://github.com/auth0/auth0-cli/pull/1551
 [#1549]: https://github.com/auth0/auth0-cli/pull/1549
