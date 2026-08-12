@@ -71,7 +71,7 @@ func commandsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "commands [command]",
 		Args:  cobra.ArbitraryArgs,
-		Short: "List all commands in a tree structure",
+		Short: "Discover every CLI command in one place, for humans and AI agents",
 		Long: "List every command in a compact tree, along with a short description of what it does.\n\n" +
 			"This gives you (or an AI agent) a single overview of the whole CLI surface, so the right " +
 			"command can be found without inspecting each `--help` page individually.\n\n" +
