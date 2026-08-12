@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	management "github.com/auth0/go-auth0/v2/management"
+	management "github.com/auth0/go-auth0/v3/management"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 )

@@ -5,10 +5,10 @@ package auth0
 import (
 	"context"
 
-	managementv2 "github.com/auth0/go-auth0/v2/management"
-	"github.com/auth0/go-auth0/v2/management/option"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
+	"github.com/auth0/go-auth0/v3/management/option"
 )
 
 type PhoneNotificationTemplateAPI interface {
-	List(ctx context.Context, request *managementv2.ListPhoneTemplatesRequestParameters, opts ...option.RequestOption) (*managementv2.ListPhoneTemplatesResponseContent, error)
+	List(ctx context.Context, request *managementv3.ListPhoneTemplatesRequestParameters, opts ...option.RequestOption) (*managementv3.ListPhoneTemplatesResponseContent, error)
 }

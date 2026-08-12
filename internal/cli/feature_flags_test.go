@@ -7,8 +7,8 @@ import (
 	"io"
 	"testing"
 
-	management "github.com/auth0/go-auth0/v2/management"
-	managementcore "github.com/auth0/go-auth0/v2/management/core"
+	management "github.com/auth0/go-auth0/v3/management"
+	managementcore "github.com/auth0/go-auth0/v3/management/core"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
@@ -91,7 +91,7 @@ func TestFeatureFlagsListCmd(t *testing.T) {
 					MessageWriter: io.Discard,
 					ResultWriter:  stdout,
 				},
-				apiv2: &auth0.APIV2{FeatureFlags: featureFlagAPI},
+				apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
 			}
 
 			cmd := listFeatureFlagsCmd(cli)
@@ -130,7 +130,7 @@ func TestFeatureFlagsShowCmd(t *testing.T) {
 				MessageWriter: io.Discard,
 				ResultWriter:  stdout,
 			},
-			apiv2: &auth0.APIV2{FeatureFlags: featureFlagAPI},
+			apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
 		}
 
 		cmd := showFeatureFlagCmd(cli)
@@ -156,7 +156,7 @@ func TestFeatureFlagsShowCmd(t *testing.T) {
 				MessageWriter: io.Discard,
 				ResultWriter:  io.Discard,
 			},
-			apiv2: &auth0.APIV2{FeatureFlags: featureFlagAPI},
+			apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
 		}
 
 		cmd := showFeatureFlagCmd(cli)
@@ -237,7 +237,7 @@ func TestFeatureFlagsCreateCmd(t *testing.T) {
 					MessageWriter: io.Discard,
 					ResultWriter:  stdout,
 				},
-				apiv2: &auth0.APIV2{FeatureFlags: featureFlagAPI},
+				apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
 			}
 
 			cmd := createFeatureFlagCmd(cli)
@@ -311,7 +311,7 @@ func TestFeatureFlagsUpdateCmd(t *testing.T) {
 					MessageWriter: io.Discard,
 					ResultWriter:  io.Discard,
 				},
-				apiv2: &auth0.APIV2{FeatureFlags: featureFlagAPI},
+				apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
 			}
 
 			cmd := updateFeatureFlagCmd(cli)
@@ -352,7 +352,7 @@ func TestFeatureFlagsUpdateCmdRendersFullResponse(t *testing.T) {
 			MessageWriter: io.Discard,
 			ResultWriter:  stdout,
 		},
-		apiv2: &auth0.APIV2{FeatureFlags: featureFlagAPI},
+		apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
 	}
 
 	cmd := updateFeatureFlagCmd(cli)
@@ -391,7 +391,7 @@ func TestFeatureFlagsUpdateCmdSkipsUnchangedParameters(t *testing.T) {
 			MessageWriter: io.Discard,
 			ResultWriter:  io.Discard,
 		},
-		apiv2: &auth0.APIV2{FeatureFlags: featureFlagAPI},
+		apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
 	}
 
 	cmd := updateFeatureFlagCmd(cli)
@@ -418,7 +418,7 @@ func TestFeatureFlagsDeleteCmd(t *testing.T) {
 				MessageWriter: io.Discard,
 				ResultWriter:  io.Discard,
 			},
-			apiv2: &auth0.APIV2{FeatureFlags: featureFlagAPI},
+			apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
 			force: true,
 		}
 
@@ -443,7 +443,7 @@ func TestFeatureFlagsDeleteCmd(t *testing.T) {
 				MessageWriter: io.Discard,
 				ResultWriter:  io.Discard,
 			},
-			apiv2: &auth0.APIV2{FeatureFlags: featureFlagAPI},
+			apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
 			force: true,
 		}
 
@@ -474,7 +474,7 @@ func TestFeatureFlagsStatusCmd(t *testing.T) {
 				MessageWriter: io.Discard,
 				ResultWriter:  io.Discard,
 			},
-			apiv2: &auth0.APIV2{FeatureFlags: featureFlagAPI},
+			apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
 		}
 
 		cmd := statusFeatureFlagCmd(cli)
@@ -500,7 +500,7 @@ func TestFeatureFlagsStatusCmd(t *testing.T) {
 				MessageWriter: io.Discard,
 				ResultWriter:  io.Discard,
 			},
-			apiv2: &auth0.APIV2{FeatureFlags: featureFlagAPI},
+			apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
 			force: true,
 		}
 
@@ -525,7 +525,7 @@ func TestFeatureFlagsStatusCmd(t *testing.T) {
 				MessageWriter: io.Discard,
 				ResultWriter:  io.Discard,
 			},
-			apiv2: &auth0.APIV2{FeatureFlags: featureFlagAPI},
+			apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
 		}
 
 		cmd := statusFeatureFlagCmd(cli)
@@ -602,7 +602,7 @@ func TestFeatureFlagPickerOptions(t *testing.T) {
 				)
 
 			cli := &cli{
-				apiv2: &auth0.APIV2{FeatureFlags: featureFlagAPI},
+				apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
 			}
 
 			options, err := cli.featureFlagPickerOptions(context.Background())
@@ -681,7 +681,7 @@ func TestVariationPickerOptions(t *testing.T) {
 				}, test.apiError)
 
 			cli := &cli{
-				apiv2: &auth0.APIV2{Variations: variationsAPI},
+				apiv3: &auth0.APIV3{Variations: variationsAPI},
 			}
 
 			pickerFn := cli.variationPickerOptions(flagID)
@@ -751,7 +751,7 @@ func TestVariationsListCmd(t *testing.T) {
 					MessageWriter: io.Discard,
 					ResultWriter:  stdout,
 				},
-				apiv2: &auth0.APIV2{Variations: variationsAPI},
+				apiv3: &auth0.APIV3{Variations: variationsAPI},
 			}
 
 			cmd := listVariationsCmd(cli)
@@ -844,7 +844,7 @@ func TestVariationsCreateCmd(t *testing.T) {
 					MessageWriter: io.Discard,
 					ResultWriter:  stdout,
 				},
-				apiv2: &auth0.APIV2{Variations: variationsAPI},
+				apiv3: &auth0.APIV3{Variations: variationsAPI},
 			}
 
 			cmd := createVariationCmd(cli)
@@ -916,7 +916,7 @@ func TestVariationsUpdateCmd(t *testing.T) {
 					MessageWriter: io.Discard,
 					ResultWriter:  io.Discard,
 				},
-				apiv2: &auth0.APIV2{Variations: variationsAPI},
+				apiv3: &auth0.APIV3{Variations: variationsAPI},
 			}
 
 			cmd := updateVariationCmd(cli)
@@ -957,7 +957,7 @@ func TestVariationsUpdateCmdRendersFullResponse(t *testing.T) {
 			MessageWriter: io.Discard,
 			ResultWriter:  stdout,
 		},
-		apiv2: &auth0.APIV2{Variations: variationsAPI},
+		apiv3: &auth0.APIV3{Variations: variationsAPI},
 	}
 
 	cmd := updateVariationCmd(cli)

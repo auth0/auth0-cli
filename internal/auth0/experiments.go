@@ -5,9 +5,9 @@ package auth0
 import (
 	"context"
 
-	management "github.com/auth0/go-auth0/v2/management"
-	managementcore "github.com/auth0/go-auth0/v2/management/core"
-	managementoption "github.com/auth0/go-auth0/v2/management/option"
+	management "github.com/auth0/go-auth0/v3/management"
+	managementcore "github.com/auth0/go-auth0/v3/management/core"
+	managementoption "github.com/auth0/go-auth0/v3/management/option"
 )
 
 // ExperimentsAPI describes the interface for experiment operations.

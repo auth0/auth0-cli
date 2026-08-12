@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/auth0/go-auth0/v2/management"
-	managementcore "github.com/auth0/go-auth0/v2/management/core"
+	"github.com/auth0/go-auth0/v3/management"
+	managementcore "github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -124,7 +124,7 @@ func listSegmentsCmd(cli *cli) *cobra.Command {
 			var allSegments []*management.Segment
 
 			if err := ansi.Waiting(func() error {
-				page, err := cli.apiv2.Segments.List(cmd.Context(), &management.ListSegmentsRequestParameters{})
+				page, err := cli.apiv3.Segments.List(cmd.Context(), &management.ListSegmentsRequestParameters{})
 				if err != nil {
 					return err
 				}
@@ -182,7 +182,7 @@ func showSegmentCmd(cli *cli) *cobra.Command {
 
 			var segment *management.GetSegmentResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				segment, err = cli.apiv2.Segments.Get(cmd.Context(), inputs.ID)
+				segment, err = cli.apiv3.Segments.Get(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to get segment %q: %w", inputs.ID, err)
@@ -255,7 +255,7 @@ func createSegmentCmd(cli *cli) *cobra.Command {
 
 			var result *management.CreateSegmentResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				result, err = cli.apiv2.Segments.Create(cmd.Context(), req)
+				result, err = cli.apiv3.Segments.Create(cmd.Context(), req)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to create segment: %w", err)
@@ -306,7 +306,7 @@ func updateSegmentCmd(cli *cli) *cobra.Command {
 			// value and only changed fields are sent.
 			var existing *management.GetSegmentResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				existing, err = cli.apiv2.Segments.Get(cmd.Context(), inputs.ID)
+				existing, err = cli.apiv3.Segments.Get(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to get segment %q: %w", inputs.ID, err)
@@ -373,7 +373,7 @@ func updateSegmentCmd(cli *cli) *cobra.Command {
 
 			var result *management.UpdateSegmentResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				result, err = cli.apiv2.Segments.Update(cmd.Context(), inputs.ID, req)
+				result, err = cli.apiv3.Segments.Update(cmd.Context(), inputs.ID, req)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to update segment %q: %w", inputs.ID, err)
@@ -423,7 +423,7 @@ func deleteSegmentCmd(cli *cli) *cobra.Command {
 
 			return ansi.ProgressBar("Deleting segment(s)", ids, func(_ int, id string) error {
 				if id != "" {
-					if err := cli.apiv2.Segments.Delete(cmd.Context(), id); err != nil {
+					if err := cli.apiv3.Segments.Delete(cmd.Context(), id); err != nil {
 						return fmt.Errorf("failed to delete segment %q: %w", id, err)
 					}
 				}
@@ -438,7 +438,7 @@ func deleteSegmentCmd(cli *cli) *cobra.Command {
 }
 
 func (c *cli) segmentPickerOptions(ctx context.Context) (pickerOptions, error) {
-	page, err := c.apiv2.Segments.List(ctx, &management.ListSegmentsRequestParameters{})
+	page, err := c.apiv3.Segments.List(ctx, &management.ListSegmentsRequestParameters{})
 	if err != nil {
 		return nil, err
 	}

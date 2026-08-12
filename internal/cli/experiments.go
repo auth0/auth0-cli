@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/auth0/go-auth0/v2/management"
-	managementcore "github.com/auth0/go-auth0/v2/management/core"
+	"github.com/auth0/go-auth0/v3/management"
+	managementcore "github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -148,7 +148,7 @@ func listExperimentsCmd(cli *cli) *cobra.Command {
 			var allExperiments []*management.ExperimentListItem
 
 			if err := ansi.Waiting(func() error {
-				page, err := cli.apiv2.Experiments.List(cmd.Context(), req)
+				page, err := cli.apiv3.Experiments.List(cmd.Context(), req)
 				if err != nil {
 					return err
 				}
@@ -209,7 +209,7 @@ func showExperimentCmd(cli *cli) *cobra.Command {
 
 			var exp *management.GetExperimentResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				exp, err = cli.apiv2.Experiments.Get(cmd.Context(), inputs.ID)
+				exp, err = cli.apiv3.Experiments.Get(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to get experiment %q: %w", inputs.ID, err)
@@ -336,7 +336,7 @@ func createExperimentCmd(cli *cli) *cobra.Command {
 
 			var result *management.CreateExperimentResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				result, err = cli.apiv2.Experiments.Create(cmd.Context(), req)
+				result, err = cli.apiv3.Experiments.Create(cmd.Context(), req)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to create experiment: %w", err)
@@ -396,7 +396,7 @@ func updateExperimentCmd(cli *cli) *cobra.Command {
 			// are updated.
 			var current *management.GetExperimentResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				current, err = cli.apiv2.Experiments.Get(cmd.Context(), inputs.ID)
+				current, err = cli.apiv3.Experiments.Get(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to get experiment %q: %w", inputs.ID, err)
@@ -512,7 +512,7 @@ func updateExperimentCmd(cli *cli) *cobra.Command {
 
 			var result *management.UpdateExperimentResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				result, err = cli.apiv2.Experiments.Update(cmd.Context(), inputs.ID, req)
+				result, err = cli.apiv3.Experiments.Update(cmd.Context(), inputs.ID, req)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to update experiment %q: %w", inputs.ID, err)
@@ -561,7 +561,7 @@ func deleteExperimentCmd(cli *cli) *cobra.Command {
 
 			return ansi.ProgressBar("Deleting experiment(s)", ids, func(_ int, id string) error {
 				if id != "" {
-					if err := cli.apiv2.Experiments.Delete(cmd.Context(), id); err != nil {
+					if err := cli.apiv3.Experiments.Delete(cmd.Context(), id); err != nil {
 						return fmt.Errorf("failed to delete experiment %q: %w", id, err)
 					}
 				}
@@ -599,7 +599,7 @@ func validateExperimentCmd(cli *cli) *cobra.Command {
 
 			var result *management.ValidateExperimentResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				result, err = cli.apiv2.Experiments.Validate(cmd.Context(), inputs.ID)
+				result, err = cli.apiv3.Experiments.Validate(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to validate experiment %q: %w", inputs.ID, err)
@@ -648,7 +648,7 @@ func statusExperimentCmd(cli *cli) *cobra.Command {
 			status := management.ExperimentTransitionStatusEnum(inputs.Status)
 			var result *management.UpdateExperimentStatusResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				result, err = cli.apiv2.Experiments.UpdateStatus(cmd.Context(), inputs.ID, &management.UpdateExperimentStatusRequestContent{
+				result, err = cli.apiv3.Experiments.UpdateStatus(cmd.Context(), inputs.ID, &management.UpdateExperimentStatusRequestContent{
 					Status: status,
 				})
 				return err
@@ -669,7 +669,7 @@ func statusExperimentCmd(cli *cli) *cobra.Command {
 // Picker helpers.
 
 func (c *cli) experimentPickerOptions(ctx context.Context) (pickerOptions, error) {
-	page, err := c.apiv2.Experiments.List(ctx, &management.ListExperimentsRequestParameters{})
+	page, err := c.apiv3.Experiments.List(ctx, &management.ListExperimentsRequestParameters{})
 	if err != nil {
 		return nil, err
 	}
@@ -705,7 +705,7 @@ func statusBadge(status string) string {
 // buildAllocationsInteractively prompts for each variation's weight or segment and returns the assembled allocations.
 func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID string, strategy string) ([]*management.AllocationRequestItem, error) {
 	ctx := cmd.Context()
-	variations, err := c.apiv2.Variations.List(ctx, featureFlagID)
+	variations, err := c.apiv3.Variations.List(ctx, featureFlagID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list variations: %w", err)
 	}
@@ -790,8 +790,7 @@ func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID st
 			if err != nil {
 				return nil, fmt.Errorf("invalid weight %q: must be a whole number", weightStr)
 			}
-			weight := float64(weightInt)
-			alloc.Weight = &weight
+			alloc.Weight = &weightInt
 		case "segment":
 			// Segment_id is optional — fetch available segments and offer a picker
 			// with a "No segment" escape hatch. If no segments exist at all, skip silently.
@@ -847,8 +846,8 @@ func validateAllocationWeights(allocations []*management.AllocationRequestItem) 
 			continue
 		}
 		w := *a.Weight
-		if w != float64(int(w)) || w < 1 || w > 100 {
-			return fmt.Errorf("invalid weight %g: must be a whole number between 1 and 100", w)
+		if w < 1 || w > 100 {
+			return fmt.Errorf("invalid weight %d: must be a whole number between 1 and 100", w)
 		}
 	}
 	return nil

@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
-	managementv2 "github.com/auth0/go-auth0/v2/management"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
@@ -315,15 +315,15 @@ func Test_phoneNotificationTemplateResourceFetcher_FetchData(t *testing.T) {
 		phoneNotificationTemplateAPI.EXPECT().
 			List(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(
-				&managementv2.ListPhoneTemplatesResponseContent{
-					Templates: []*managementv2.PhoneTemplate{
+				&managementv3.ListPhoneTemplatesResponseContent{
+					Templates: []*managementv3.PhoneTemplate{
 						{
 							ID:   auth0.String("pnt_abc123"),
-							Type: managementv2.PhoneTemplateNotificationTypeEnumOtpVerify,
+							Type: managementv3.PhoneTemplateNotificationTypeEnumOtpVerify,
 						},
 						{
 							ID:   auth0.String("pnt_def456"),
-							Type: managementv2.PhoneTemplateNotificationTypeEnumOtpEnroll,
+							Type: managementv3.PhoneTemplateNotificationTypeEnumOtpEnroll,
 						},
 					},
 				},
@@ -331,7 +331,7 @@ func Test_phoneNotificationTemplateResourceFetcher_FetchData(t *testing.T) {
 			)
 
 		fetcher := phoneNotificationTemplateResourceFetcher{
-			apiv2: &auth0.APIV2{
+			apiv3: &auth0.APIV3{
 				PhoneNotificationTemplate: phoneNotificationTemplateAPI,
 			},
 		}
@@ -360,14 +360,14 @@ func Test_phoneNotificationTemplateResourceFetcher_FetchData(t *testing.T) {
 		phoneNotificationTemplateAPI.EXPECT().
 			List(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(
-				&managementv2.ListPhoneTemplatesResponseContent{
-					Templates: []*managementv2.PhoneTemplate{},
+				&managementv3.ListPhoneTemplatesResponseContent{
+					Templates: []*managementv3.PhoneTemplate{},
 				},
 				nil,
 			)
 
 		fetcher := phoneNotificationTemplateResourceFetcher{
-			apiv2: &auth0.APIV2{
+			apiv3: &auth0.APIV3{
 				PhoneNotificationTemplate: phoneNotificationTemplateAPI,
 			},
 		}
@@ -387,7 +387,7 @@ func Test_phoneNotificationTemplateResourceFetcher_FetchData(t *testing.T) {
 			Return(nil, fmt.Errorf("failed to list phone notification templates"))
 
 		fetcher := phoneNotificationTemplateResourceFetcher{
-			apiv2: &auth0.APIV2{
+			apiv3: &auth0.APIV3{
 				PhoneNotificationTemplate: phoneNotificationTemplateAPI,
 			},
 		}

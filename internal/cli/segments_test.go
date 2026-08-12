@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	management "github.com/auth0/go-auth0/v2/management"
+	management "github.com/auth0/go-auth0/v3/management"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
@@ -183,7 +183,7 @@ func TestSegmentsUpdateCmd(t *testing.T) {
 					MessageWriter: io.Discard,
 					ResultWriter:  io.Discard,
 				},
-				apiv2: &auth0.APIV2{Segments: segmentsAPI},
+				apiv3: &auth0.APIV3{Segments: segmentsAPI},
 			}
 
 			cmd := updateSegmentCmd(cli)
@@ -224,7 +224,7 @@ func TestSegmentsUpdateCmdRendersFullResponse(t *testing.T) {
 			MessageWriter: io.Discard,
 			ResultWriter:  stdout,
 		},
-		apiv2: &auth0.APIV2{Segments: segmentsAPI},
+		apiv3: &auth0.APIV3{Segments: segmentsAPI},
 	}
 
 	cmd := updateSegmentCmd(cli)

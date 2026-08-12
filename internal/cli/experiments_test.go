@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/auth0/go-auth0/v2/management"
-	managementcore "github.com/auth0/go-auth0/v2/management/core"
+	"github.com/auth0/go-auth0/v3/management"
+	managementcore "github.com/auth0/go-auth0/v3/management/core"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
@@ -88,7 +88,7 @@ func TestExperimentsListCmd(t *testing.T) {
 					MessageWriter: io.Discard,
 					ResultWriter:  stdout,
 				},
-				apiv2: &auth0.APIV2{Experiments: experimentAPI},
+				apiv3: &auth0.APIV3{Experiments: experimentAPI},
 			}
 
 			cmd := listExperimentsCmd(cli)
@@ -130,7 +130,7 @@ func TestExperimentsShowCmd(t *testing.T) {
 				MessageWriter: io.Discard,
 				ResultWriter:  stdout,
 			},
-			apiv2: &auth0.APIV2{Experiments: experimentAPI},
+			apiv3: &auth0.APIV3{Experiments: experimentAPI},
 		}
 
 		cmd := showExperimentCmd(cli)
@@ -156,7 +156,7 @@ func TestExperimentsShowCmd(t *testing.T) {
 				MessageWriter: io.Discard,
 				ResultWriter:  io.Discard,
 			},
-			apiv2: &auth0.APIV2{Experiments: experimentAPI},
+			apiv3: &auth0.APIV3{Experiments: experimentAPI},
 		}
 
 		cmd := showExperimentCmd(cli)
@@ -268,7 +268,7 @@ func TestExperimentsCreateCmd(t *testing.T) {
 				"--assignment-config", `{"subject":"device"}`,
 				"--allocations", `[{"variation_id":"vid_001","weight":50.5,"is_control":true}]`,
 			},
-			expectedError: "must be a whole number between 1 and 100",
+			expectedError: "cannot unmarshal number 50.5",
 		},
 		{
 			name: "it returns an error if the API call fails",
@@ -303,7 +303,7 @@ func TestExperimentsCreateCmd(t *testing.T) {
 					MessageWriter: io.Discard,
 					ResultWriter:  stdout,
 				},
-				apiv2: &auth0.APIV2{Experiments: experimentAPI},
+				apiv3: &auth0.APIV3{Experiments: experimentAPI},
 			}
 
 			cmd := createExperimentCmd(cli)
@@ -326,7 +326,7 @@ func overLimitAllocationsJSON(t *testing.T) string {
 	t.Helper()
 	var items []*management.AllocationRequestItem
 	for i := range maxExperimentAllocations + 1 {
-		w := 5.0
+		w := 5
 		items = append(items, &management.AllocationRequestItem{
 			VariationID: "v" + strconv.Itoa(i),
 			Weight:      &w,
@@ -410,7 +410,7 @@ func TestExperimentsUpdateCmd(t *testing.T) {
 					MessageWriter: io.Discard,
 					ResultWriter:  io.Discard,
 				},
-				apiv2: &auth0.APIV2{Experiments: experimentAPI},
+				apiv3: &auth0.APIV3{Experiments: experimentAPI},
 			}
 
 			cmd := updateExperimentCmd(cli)
@@ -453,7 +453,7 @@ func TestExperimentsUpdateCmdRendersFullResponse(t *testing.T) {
 			MessageWriter: io.Discard,
 			ResultWriter:  stdout,
 		},
-		apiv2: &auth0.APIV2{Experiments: experimentAPI},
+		apiv3: &auth0.APIV3{Experiments: experimentAPI},
 	}
 
 	cmd := updateExperimentCmd(cli)
@@ -486,7 +486,7 @@ func TestExperimentsDeleteCmd(t *testing.T) {
 				MessageWriter: io.Discard,
 				ResultWriter:  io.Discard,
 			},
-			apiv2: &auth0.APIV2{Experiments: experimentAPI},
+			apiv3: &auth0.APIV3{Experiments: experimentAPI},
 			force: true,
 		}
 
@@ -511,7 +511,7 @@ func TestExperimentsDeleteCmd(t *testing.T) {
 				MessageWriter: io.Discard,
 				ResultWriter:  io.Discard,
 			},
-			apiv2: &auth0.APIV2{Experiments: experimentAPI},
+			apiv3: &auth0.APIV3{Experiments: experimentAPI},
 			force: true,
 		}
 
@@ -543,7 +543,7 @@ func TestExperimentsValidateCmd(t *testing.T) {
 				MessageWriter: io.Discard,
 				ResultWriter:  stdout,
 			},
-			apiv2: &auth0.APIV2{Experiments: experimentAPI},
+			apiv3: &auth0.APIV3{Experiments: experimentAPI},
 		}
 
 		cmd := validateExperimentCmd(cli)
@@ -577,7 +577,7 @@ func TestExperimentsValidateCmd(t *testing.T) {
 				MessageWriter: io.Discard,
 				ResultWriter:  stdout,
 			},
-			apiv2: &auth0.APIV2{Experiments: experimentAPI},
+			apiv3: &auth0.APIV3{Experiments: experimentAPI},
 		}
 
 		cmd := validateExperimentCmd(cli)
@@ -603,7 +603,7 @@ func TestExperimentsValidateCmd(t *testing.T) {
 				MessageWriter: io.Discard,
 				ResultWriter:  io.Discard,
 			},
-			apiv2: &auth0.APIV2{Experiments: experimentAPI},
+			apiv3: &auth0.APIV3{Experiments: experimentAPI},
 		}
 
 		cmd := validateExperimentCmd(cli)
@@ -638,7 +638,7 @@ func TestExperimentsStatusCmd(t *testing.T) {
 				MessageWriter: io.Discard,
 				ResultWriter:  stdout,
 			},
-			apiv2: &auth0.APIV2{Experiments: experimentAPI},
+			apiv3: &auth0.APIV3{Experiments: experimentAPI},
 		}
 
 		cmd := statusExperimentCmd(cli)
@@ -662,7 +662,7 @@ func TestExperimentsStatusCmd(t *testing.T) {
 				MessageWriter: io.Discard,
 				ResultWriter:  io.Discard,
 			},
-			apiv2: &auth0.APIV2{Experiments: experimentAPI},
+			apiv3: &auth0.APIV3{Experiments: experimentAPI},
 		}
 
 		cmd := statusExperimentCmd(cli)
@@ -739,7 +739,7 @@ func TestExperimentPickerOptions(t *testing.T) {
 				)
 
 			cli := &cli{
-				apiv2: &auth0.APIV2{Experiments: experimentAPI},
+				apiv3: &auth0.APIV3{Experiments: experimentAPI},
 			}
 
 			options, err := cli.experimentPickerOptions(context.Background())
