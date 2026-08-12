@@ -8,8 +8,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	management "github.com/auth0/go-auth0/v2/management"
-	option "github.com/auth0/go-auth0/v2/management/option"
+	management "github.com/auth0/go-auth0/v3/management"
+	option "github.com/auth0/go-auth0/v3/management/option"
 	gomock "github.com/golang/mock/gomock"
 )
 

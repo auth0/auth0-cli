@@ -12,6 +12,11 @@ type SessionTransferView struct {
 	AllowedMethods string
 	DeviceBinding  string
 
+	// Delegation (EA) fields, shown only when hasDelegation is true.
+	hasDelegation           bool
+	DelegationAllowAccess   string
+	DelegationDeviceBinding string
+
 	raw interface{}
 }
 
@@ -29,12 +34,21 @@ func (v *SessionTransferView) AsTableRow() []string {
 }
 
 func (v *SessionTransferView) KeyValues() [][]string {
-	return [][]string{
+	keyValues := [][]string{
 		{"CLIENT ID", v.ID},
 		{"CAN CREATE TOKEN", v.CanCreateTOKEN},
 		{"ALLOWED METHODS", v.AllowedMethods},
 		{"DEVICE BINDING", v.DeviceBinding},
 	}
+
+	if v.hasDelegation {
+		keyValues = append(keyValues,
+			[]string{"ALLOW DELEGATED ACCESS", v.DelegationAllowAccess},
+			[]string{"DELEGATION DEVICE BINDING", v.DelegationDeviceBinding},
+		)
+	}
+
+	return keyValues
 }
 
 func (v *SessionTransferView) Object() interface{} {
@@ -54,11 +68,19 @@ func (r *Renderer) SessionTransferUpdate(client *management.Client, id string) {
 }
 
 func MakeSessionTransferView(client *management.Client) *SessionTransferView {
-	return &SessionTransferView{
+	view := &SessionTransferView{
 		ID:             client.GetClientID(),
 		CanCreateTOKEN: boolean(client.SessionTransfer.GetCanCreateSessionTransferToken()),
 		AllowedMethods: stringSliceToCommaSeparatedString(client.SessionTransfer.GetAllowedAuthenticationMethods()),
 		DeviceBinding:  client.SessionTransfer.GetEnforceDeviceBinding(),
 		raw:            client.SessionTransfer,
 	}
+
+	if delegation := client.GetSessionTransfer().GetDelegation(); delegation != nil {
+		view.hasDelegation = true
+		view.DelegationAllowAccess = boolean(delegation.GetAllowDelegatedAccess())
+		view.DelegationDeviceBinding = delegation.GetEnforceDeviceBinding()
+	}
+
+	return view
 }
