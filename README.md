@@ -45,7 +45,7 @@ Build, manage and test your [Auth0](https://auth0.com/) integrations from the co
 Install via [Homebrew](https://brew.sh/):
 
 ```bash
-brew install auth0-beta
+brew tap auth0/auth0-cli && brew install auth0-beta
 ```
 
 > [!NOTE]
@@ -69,7 +69,7 @@ Install via [cURL](https://curl.se/):
 Install via [Scoop](https://scoop.sh/):
 
 ```bash
-scoop install auth0-beta
+scoop bucket add auth0 https://github.com/auth0/scoop-auth0-cli.git
 ```
 
 > [!NOTE]
