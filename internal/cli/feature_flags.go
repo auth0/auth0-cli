@@ -8,8 +8,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/auth0/go-auth0/v2/management"
-	managementcore "github.com/auth0/go-auth0/v2/management/core"
+	"github.com/auth0/go-auth0/v3/management"
+	managementcore "github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -130,7 +130,7 @@ func listFeatureFlagsCmd(cli *cli) *cobra.Command {
 			var allFlags []*management.FeatureFlag
 
 			if err := ansi.Waiting(func() error {
-				page, err := cli.apiv2.FeatureFlags.List(cmd.Context(), req)
+				page, err := cli.apiv3.FeatureFlags.List(cmd.Context(), req)
 				if err != nil {
 					return err
 				}
@@ -190,7 +190,7 @@ func showFeatureFlagCmd(cli *cli) *cobra.Command {
 
 			var ff *management.GetFeatureFlagResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				ff, err = cli.apiv2.FeatureFlags.Get(cmd.Context(), inputs.ID)
+				ff, err = cli.apiv3.FeatureFlags.Get(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to get feature flag %q: %w", inputs.ID, err)
@@ -261,7 +261,7 @@ func createFeatureFlagCmd(cli *cli) *cobra.Command {
 
 			var result *management.CreateFeatureFlagResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				result, err = cli.apiv2.FeatureFlags.Create(cmd.Context(), req)
+				result, err = cli.apiv3.FeatureFlags.Create(cmd.Context(), req)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to create feature flag: %w", err)
@@ -312,7 +312,7 @@ func updateFeatureFlagCmd(cli *cli) *cobra.Command {
 			// value and only changed fields are sent.
 			var current *management.GetFeatureFlagResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				current, err = cli.apiv2.FeatureFlags.Get(cmd.Context(), inputs.ID)
+				current, err = cli.apiv3.FeatureFlags.Get(cmd.Context(), inputs.ID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to get feature flag %q: %w", inputs.ID, err)
@@ -378,7 +378,7 @@ func updateFeatureFlagCmd(cli *cli) *cobra.Command {
 
 			var result *management.UpdateFeatureFlagResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				result, err = cli.apiv2.FeatureFlags.Update(cmd.Context(), inputs.ID, req)
+				result, err = cli.apiv3.FeatureFlags.Update(cmd.Context(), inputs.ID, req)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to update feature flag %q: %w", inputs.ID, err)
@@ -426,7 +426,7 @@ func deleteFeatureFlagCmd(cli *cli) *cobra.Command {
 
 			return ansi.ProgressBar("Deleting feature flag(s)", ids, func(_ int, id string) error {
 				if id != "" {
-					if err := cli.apiv2.FeatureFlags.Delete(cmd.Context(), id); err != nil {
+					if err := cli.apiv3.FeatureFlags.Delete(cmd.Context(), id); err != nil {
 						return fmt.Errorf("failed to delete feature flag %q: %w", id, err)
 					}
 				}
@@ -502,7 +502,7 @@ func statusFeatureFlagCmd(cli *cli) *cobra.Command {
 
 			status := management.FeatureFlagStatusEnum(inputs.Status)
 			if err := ansi.Waiting(func() error {
-				_, err := cli.apiv2.FeatureFlags.UpdateStatus(cmd.Context(), inputs.ID, &management.UpdateFeatureFlagStatusRequestContent{
+				_, err := cli.apiv3.FeatureFlags.UpdateStatus(cmd.Context(), inputs.ID, &management.UpdateFeatureFlagStatusRequestContent{
 					Status: status,
 				})
 				return err
@@ -563,7 +563,7 @@ func listVariationsCmd(cli *cli) *cobra.Command {
 
 			var result *management.ListVariationsResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				result, err = cli.apiv2.Variations.List(cmd.Context(), inputs.FeatureFlagID)
+				result, err = cli.apiv3.Variations.List(cmd.Context(), inputs.FeatureFlagID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to list variations for feature flag %q: %w", inputs.FeatureFlagID, err)
@@ -618,7 +618,7 @@ func showVariationCmd(cli *cli) *cobra.Command {
 
 			var v *management.GetVariationResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				v, err = cli.apiv2.Variations.Get(cmd.Context(), inputs.FeatureFlagID, inputs.VariationID)
+				v, err = cli.apiv3.Variations.Get(cmd.Context(), inputs.FeatureFlagID, inputs.VariationID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to get variation %q: %w", inputs.VariationID, err)
@@ -698,7 +698,7 @@ func createVariationCmd(cli *cli) *cobra.Command {
 
 			var result *management.CreateVariationResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				result, err = cli.apiv2.Variations.Create(cmd.Context(), inputs.FeatureFlagID, req)
+				result, err = cli.apiv3.Variations.Create(cmd.Context(), inputs.FeatureFlagID, req)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to create variation: %w", err)
@@ -760,7 +760,7 @@ func updateVariationCmd(cli *cli) *cobra.Command {
 			// value and only changed fields are sent.
 			var current *management.GetVariationResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				current, err = cli.apiv2.Variations.Get(cmd.Context(), inputs.FeatureFlagID, inputs.VariationID)
+				current, err = cli.apiv3.Variations.Get(cmd.Context(), inputs.FeatureFlagID, inputs.VariationID)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to get variation %q: %w", inputs.VariationID, err)
@@ -826,7 +826,7 @@ func updateVariationCmd(cli *cli) *cobra.Command {
 
 			var result *management.UpdateVariationResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				result, err = cli.apiv2.Variations.Update(cmd.Context(), inputs.FeatureFlagID, inputs.VariationID, req)
+				result, err = cli.apiv3.Variations.Update(cmd.Context(), inputs.FeatureFlagID, inputs.VariationID, req)
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to update variation %q: %w", inputs.VariationID, err)
@@ -887,7 +887,7 @@ func deleteVariationCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := ansi.Waiting(func() error {
-				return cli.apiv2.Variations.Delete(cmd.Context(), inputs.FeatureFlagID, inputs.VariationID)
+				return cli.apiv3.Variations.Delete(cmd.Context(), inputs.FeatureFlagID, inputs.VariationID)
 			}); err != nil {
 				return fmt.Errorf("failed to delete variation %q: %w", inputs.VariationID, err)
 			}
@@ -905,7 +905,7 @@ func deleteVariationCmd(cli *cli) *cobra.Command {
 // Picker helpers.
 
 func (c *cli) featureFlagPickerOptions(ctx context.Context) (pickerOptions, error) {
-	page, err := c.apiv2.FeatureFlags.List(ctx, &management.ListFeatureFlagsRequestParameters{})
+	page, err := c.apiv3.FeatureFlags.List(ctx, &management.ListFeatureFlagsRequestParameters{})
 	if err != nil {
 		return nil, err
 	}
@@ -925,7 +925,7 @@ func (c *cli) featureFlagPickerOptions(ctx context.Context) (pickerOptions, erro
 
 func (c *cli) variationPickerOptions(featureFlagID string) func(ctx context.Context) (pickerOptions, error) {
 	return func(ctx context.Context) (pickerOptions, error) {
-		result, err := c.apiv2.Variations.List(ctx, featureFlagID)
+		result, err := c.apiv3.Variations.List(ctx, featureFlagID)
 		if err != nil {
 			return nil, err
 		}

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	management "github.com/auth0/go-auth0/v2/management"
+	management "github.com/auth0/go-auth0/v3/management"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 )
@@ -95,7 +95,7 @@ func formatAllocations(allocations []*management.AllocationItem) string {
 
 		switch {
 		case a.GetWeight() > 0:
-			part = fmt.Sprintf("%s%s %.0f%%", a.GetVariationID(), role, a.GetWeight())
+			part = fmt.Sprintf("%s%s %d%%", a.GetVariationID(), role, a.GetWeight())
 		case a.GetSegmentID() != "":
 			part = fmt.Sprintf("%s%s → segment:%s", a.GetVariationID(), role, a.GetSegmentID())
 		default:

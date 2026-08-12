@@ -35,7 +35,7 @@ const userAgent = "Auth0 CLI"
 type cli struct {
 	// Core primitives exposed to command builders.
 	api      *auth0.API
-	apiv2    *auth0.APIV2
+	apiv3    *auth0.APIV3
 	renderer *display.Renderer
 	tracker  *analytics.Tracker
 
@@ -139,13 +139,13 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 		return err
 	}
 
-	apiv2, err := initializeManagementClientV2(tenant.Domain, tenant.GetAccessToken())
+	apiv3, err := initializeManagementClientV3(tenant.Domain, tenant.GetAccessToken())
 	if err != nil {
 		return err
 	}
 
 	c.api = auth0.NewAPI(api)
-	c.apiv2 = auth0.NewAPIV2(apiv2)
+	c.apiv3 = auth0.NewAPIV3(apiv3)
 	return nil
 }
 
