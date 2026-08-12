@@ -79,6 +79,13 @@ func Execute() {
 		}
 	}()
 
+	// Intercept `<command> --help` with JSON requested (via --json or agent mode)
+	// before Cobra parses flags, so it works for every command, including the root
+	// and namespace commands that don't define their own --json flag.
+	if renderJSONHelpIfRequested(rootCmd, os.Args[1:]) {
+		return
+	}
+
 	// Platform specific terminal initialization:
 	// this should run for all commands,
 	// for most of the architectures there's no requirements.

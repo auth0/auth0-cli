@@ -3,7 +3,10 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"regexp"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -22,12 +25,8 @@ type commandFlag struct {
 	Default   string `json:"default,omitempty"`
 }
 
-// commandNode is a serializable representation of a command in the tree.
-//
-// It is intentionally structured so that an AI agent can, from a single
-// call, discover which command does what and learn enough to invoke it
-// (usage line, flags, whether authentication is needed) without having to
-// call `--help` on each command individually.
+// commandNode is a serializable representation of a command in the tree,
+// carrying enough detail (usage, flags, auth) for an agent to invoke it.
 type commandNode struct {
 	Path         string        `json:"path"`
 	Name         string        `json:"name"`
@@ -41,7 +40,25 @@ type commandNode struct {
 	Runnable     bool          `json:"runnable"`
 	RequiresAuth bool          `json:"requiresAuth"`
 	Flags        []commandFlag `json:"flags,omitempty"`
+	Note         string        `json:"note,omitempty"`
 	Subcommands  []commandNode `json:"subcommands,omitempty"`
+}
+
+// rawAPIFallbackNote points an agent to `auth0 api` when the listed flags don't
+// cover what it needs, instead of guessing.
+const rawAPIFallbackNote = "The flags above are everything this command supports. " +
+	"If a parameter or field you need is not listed, don't guess: use `auth0 api` to make a raw " +
+	"Auth0 Management API request instead (for example `auth0 api get \"clients/{id}\"` or " +
+	"`auth0 api patch \"clients/{id}\" --data '{...}'`). Run `auth0 api --help` and see " +
+	"https://auth0.com/docs/api/management/v2 for the available endpoints and fields."
+
+// annotateWithRawAPINote sets the fallback note on each given node.
+func annotateWithRawAPINote(nodes []commandNode) []commandNode {
+	for i := range nodes {
+		nodes[i].Note = rawAPIFallbackNote
+	}
+
+	return nodes
 }
 
 func commandsCmd(cli *cli) *cobra.Command {
@@ -101,6 +118,10 @@ func commandsCmd(cli *cli) *cobra.Command {
 				var tree []commandNode
 				if scoped {
 					tree = []commandNode{buildNode(start, 1, depth, detailed)}
+					// Only add the note for a specific command, not the full dump.
+					if detailed {
+						tree = annotateWithRawAPINote(tree)
+					}
 				} else {
 					tree = buildCommandTree(start, depth, detailed)
 				}
@@ -120,8 +141,7 @@ func commandsCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-// buildCommandTree converts the cobra command tree into a slice of
-// commandNode, honoring the requested depth (0 means unlimited).
+// buildCommandTree returns the children of cmd as nodes (depth 0 means unlimited).
 func buildCommandTree(cmd *cobra.Command, maxDepth int, detailed bool) []commandNode {
 	return collectChildren(cmd, 1, maxDepth, detailed)
 }
@@ -136,8 +156,7 @@ func collectChildren(cmd *cobra.Command, level, maxDepth int, detailed bool) []c
 	return nodes
 }
 
-// buildNode builds a commandNode for a single command, recursing into its
-// subcommands until maxDepth is reached (0 means unlimited).
+// buildNode builds a node for cmd, recursing into subcommands up to maxDepth.
 func buildNode(cmd *cobra.Command, level, maxDepth int, detailed bool) commandNode {
 	node := commandNode{
 		Path:         cmd.CommandPath(),
@@ -167,10 +186,8 @@ func buildNode(cmd *cobra.Command, level, maxDepth int, detailed bool) commandNo
 	return node
 }
 
-// flattenCommands returns every runnable (leaf) command under start as a flat
-// list, without nesting. This is the easiest shape for scanning or matching an
-// intent against, since each command is a single self-contained entry. When
-// scoped is true and start itself is runnable, it is included as well.
+// flattenCommands returns every runnable command under start as a flat list.
+// When scoped is true and start is itself runnable, it is included too.
 func flattenCommands(start *cobra.Command, scoped, detailed bool) []commandNode {
 	var nodes []commandNode
 
@@ -196,7 +213,7 @@ func flattenCommands(start *cobra.Command, scoped, detailed bool) []commandNode 
 	return nodes
 }
 
-// renderCommandsFlatText prints one command per line as "path — short".
+// renderCommandsFlatText prints one command per line as "path  short".
 func renderCommandsFlatText(nodes []commandNode) {
 	for _, node := range nodes {
 		line := ansi.Bold(node.Path)
@@ -207,14 +224,12 @@ func renderCommandsFlatText(nodes []commandNode) {
 	}
 }
 
-// collectFlags returns the command's local (non-inherited) flags, so an
-// agent sees only the flags meaningful to that specific command.
+// collectFlags returns the command's local (non-inherited) flags.
 func collectFlags(cmd *cobra.Command) []commandFlag {
 	var flags []commandFlag
 
 	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
-		// Skip hidden flags and the ubiquitous --help flag, which are
-		// noise for an agent trying to construct an invocation.
+		// Skip hidden and --help flags; they're noise for an agent.
 		if f.Hidden || f.Name == "help" {
 			return
 		}
@@ -235,19 +250,12 @@ func collectFlags(cmd *cobra.Command) []commandFlag {
 	return flags
 }
 
-// argumentPlaceholder matches positional argument placeholders written as
-// <app-id> or [app-id]. The CLI documents positional arguments this way in
-// its Use and Example lines, so we surface them as an explicit list.
+// argumentPlaceholder matches positional placeholders like <app-id> or [app-id].
 var argumentPlaceholder = regexp.MustCompile(`^[<\[][a-zA-Z][a-zA-Z0-9_-]*[>\]]$`)
 
-// extractArguments discovers the positional arguments a command accepts by
-// scanning its Use line and examples for <name> / [name] placeholders. This
-// gives an agent an explicit, deduplicated list instead of forcing it to
-// parse free-form example text.
-//
-// A placeholder only counts as positional when it is not the value of a flag
-// (for example `--description <description>` is a flag value, not a positional
-// argument), so we skip any token that directly follows a flag.
+// extractArguments returns the positional arguments a command accepts by scanning
+// its Use line and examples for <name>/[name] placeholders. Tokens that follow a
+// flag are skipped, since they are flag values rather than positional arguments.
 func extractArguments(cmd *cobra.Command) []string {
 	seen := make(map[string]bool)
 	var args []string
@@ -274,6 +282,69 @@ func extractArguments(cmd *cobra.Command) []string {
 	}
 
 	return args
+}
+
+// renderJSONHelpIfRequested emits a command's help as JSON and returns true when
+// help is requested with --json (or in agent mode). It runs before Cobra parses
+// flags, so it also works for the root and namespace commands that have no --json
+// flag of their own. A specific command is described in detail; the root is a
+// compact overview.
+func renderJSONHelpIfRequested(root *cobra.Command, args []string) bool {
+	if !hasHelpRequest(args) || (!hasJSONRequest(args) && !agentModeEnabled()) {
+		return false
+	}
+
+	// Drop the help/json tokens and let Cobra find the target from the rest.
+	var findArgs []string
+	for _, arg := range args {
+		switch arg {
+		case "help", "--help", "-h", "--json":
+			continue
+		}
+		findArgs = append(findArgs, arg)
+	}
+
+	target, _, err := root.Find(findArgs)
+	if err != nil || target == nil {
+		target = root
+	}
+
+	detailed := target != root
+
+	nodes := []commandNode{buildNode(target, 1, 0, detailed)}
+	if detailed {
+		nodes = annotateWithRawAPINote(nodes)
+	}
+
+	_ = renderCommandTreeJSON(nodes)
+	return true
+}
+
+// hasHelpRequest reports whether args request help via --help/-h or the `help`
+// subcommand. A bare "help" only counts in first position, not as a flag value.
+func hasHelpRequest(args []string) bool {
+	for _, arg := range args {
+		if arg == "--help" || arg == "-h" {
+			return true
+		}
+	}
+
+	return len(args) > 0 && args[0] == "help"
+}
+
+// hasJSONRequest reports whether the args contain the `--json` flag.
+func hasJSONRequest(args []string) bool {
+	return slices.Contains(args, "--json")
+}
+
+// agentModeEnvVar enables agent mode when set to a truthy value (e.g. 1 or true).
+// In agent mode, `--help` emits JSON without needing an explicit --json flag.
+const agentModeEnvVar = "AUTH0_AGENT_MODE"
+
+// agentModeEnabled reports whether agent mode is enabled via AUTH0_AGENT_MODE.
+func agentModeEnabled() bool {
+	enabled, _ := strconv.ParseBool(strings.TrimSpace(os.Getenv(agentModeEnvVar)))
+	return enabled
 }
 
 func renderCommandTreeJSON(tree []commandNode) error {
