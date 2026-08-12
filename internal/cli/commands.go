@@ -79,9 +79,9 @@ func commandsCmd(cli *cli) *cobra.Command {
 			"`auth0 commands apps` or `auth0 commands apps create`. This keeps the output focused when " +
 			"you only care about one area.\n\n" +
 			"Use `--flat` to list every runnable command on its own line, which is the easiest form to " +
-			"scan or match an intent against. Use `--json` for a machine-readable representation, and add " +
-			"`--detailed` to include usage lines, flags, arguments and whether authentication is required, " +
-			"which is enough for an agent to construct a valid invocation on its own.",
+			"scan or match an intent against. Add `--detailed` to include usage lines, flags, arguments and " +
+			"whether authentication is required for each command, so you (or an agent) can construct a valid " +
+			"invocation without opening each `--help` page. Use `--json` for a machine-readable representation.",
 		Example: `  auth0 commands
   auth0 commands --flat
   auth0 commands apps
@@ -110,7 +110,7 @@ func commandsCmd(cli *cli) *cobra.Command {
 				if cli.json {
 					return renderCommandTreeJSON(nodes)
 				}
-				renderCommandsFlatText(nodes)
+				renderCommandsFlatText(nodes, detailed)
 				return nil
 			}
 
@@ -128,14 +128,14 @@ func commandsCmd(cli *cli) *cobra.Command {
 				return renderCommandTreeJSON(tree)
 			}
 
-			renderCommandTreeText(start, depth)
+			renderCommandTreeText(start, depth, detailed)
 			return nil
 		},
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&flat, "flat", false, "List every runnable command on its own line, best for scanning or intent matching.")
-	cmd.Flags().BoolVar(&detailed, "detailed", false, "Include usage, flags, arguments and auth requirements. Best used with --json.")
+	cmd.Flags().BoolVar(&detailed, "detailed", false, "Include usage, flags, arguments and auth requirements for each command.")
 	cmd.Flags().IntVar(&depth, "depth", 0, "Maximum depth to display. 0 shows all levels. Ignored with --flat.")
 
 	return cmd
@@ -213,14 +213,19 @@ func flattenCommands(start *cobra.Command, scoped, detailed bool) []commandNode 
 	return nodes
 }
 
-// renderCommandsFlatText prints one command per line as "path  short".
-func renderCommandsFlatText(nodes []commandNode) {
+// renderCommandsFlatText prints one command per line as "path  short". When
+// detailed is set, each command's invocation detail is printed underneath.
+func renderCommandsFlatText(nodes []commandNode, detailed bool) {
 	for _, node := range nodes {
 		line := ansi.Bold(node.Path)
 		if node.Short != "" {
 			line += "  " + ansi.Faint(node.Short)
 		}
 		fmt.Fprintln(iostream.Output, line)
+
+		if detailed {
+			printNodeDetail("    ", node)
+		}
 	}
 }
 
@@ -354,13 +359,14 @@ func renderCommandTreeJSON(tree []commandNode) error {
 }
 
 // renderCommandTreeText prints the tree with box-drawing connectors,
-// keeping command names aligned with their short descriptions.
-func renderCommandTreeText(root *cobra.Command, maxDepth int) {
+// keeping command names aligned with their short descriptions. When detailed
+// is set, each runnable command's invocation detail is printed underneath.
+func renderCommandTreeText(root *cobra.Command, maxDepth int, detailed bool) {
 	fmt.Fprintln(iostream.Output, ansi.Bold(root.CommandPath()))
-	printChildren(root, "", 1, maxDepth)
+	printChildren(root, "", 1, maxDepth, detailed)
 }
 
-func printChildren(cmd *cobra.Command, prefix string, level, maxDepth int) {
+func printChildren(cmd *cobra.Command, prefix string, level, maxDepth int, detailed bool) {
 	children := availableChildren(cmd)
 
 	for i, child := range children {
@@ -379,10 +385,67 @@ func printChildren(cmd *cobra.Command, prefix string, level, maxDepth int) {
 		}
 		fmt.Fprintln(iostream.Output, line)
 
+		if detailed && child.Runnable() {
+			node := buildNode(child, 1, 1, true)
+			printNodeDetail(childPrefix, node)
+		}
+
 		if maxDepth == 0 || level < maxDepth {
-			printChildren(child, childPrefix, level+1, maxDepth)
+			printChildren(child, childPrefix, level+1, maxDepth, detailed)
 		}
 	}
+}
+
+// printNodeDetail prints a runnable command's invocation detail (usage,
+// arguments, aliases, auth and flags), each line indented under prefix and
+// dimmed so it reads as secondary to the command name above it. A blank line
+// closes the block so consecutive commands stay easy to scan.
+func printNodeDetail(prefix string, node commandNode) {
+	writeLine := func(text string) {
+		fmt.Fprintln(iostream.Output, prefix+ansi.Faint(text))
+	}
+
+	if node.Usage != "" {
+		writeLine("usage: " + node.Usage)
+	}
+	if len(node.Arguments) > 0 {
+		writeLine("args:  " + strings.Join(node.Arguments, " "))
+	}
+	if len(node.Aliases) > 0 {
+		writeLine("alias: " + strings.Join(node.Aliases, ", "))
+	}
+
+	auth := "not required"
+	if node.RequiresAuth {
+		auth = "required"
+	}
+	writeLine("auth:  " + auth)
+
+	if len(node.Flags) > 0 {
+		writeLine("flags:")
+		for _, flag := range node.Flags {
+			name := "--" + flag.Name
+			if flag.Shorthand != "" {
+				name = "-" + flag.Shorthand + ", --" + flag.Name
+			}
+			// A bool flag takes no value, so its type adds only noise.
+			if flag.Type != "" && flag.Type != "bool" {
+				name += " " + flag.Type
+			}
+
+			detail := "  " + name
+			// Flag usage can span multiple lines (see `apps create --type`);
+			// collapse it to one so it doesn't break out of the tree.
+			if usage := strings.Join(strings.Fields(flag.Usage), " "); usage != "" {
+				detail += "  " + usage
+			}
+
+			writeLine(detail)
+		}
+	}
+
+	// Blank (prefix-only) line to separate this command from the next.
+	writeLine("")
 }
 
 func availableChildren(cmd *cobra.Command) []*cobra.Command {

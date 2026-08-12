@@ -288,3 +288,48 @@ func TestRenderJSONHelpIfRequested(t *testing.T) {
 		assert.Empty(t, nodes[0].Note, "the root overview should not carry the note")
 	})
 }
+
+func TestRenderCommandTreeTextDetailed(t *testing.T) {
+	root := newTestCommandTree()
+
+	t.Run("without --detailed the tree omits invocation detail", func(t *testing.T) {
+		out := captureOutput(t, func() {
+			renderCommandTreeText(root, 0, false)
+		})
+		assert.Contains(t, out, "show")
+		assert.NotContains(t, out, "usage:")
+		assert.NotContains(t, out, "reveal-secrets")
+	})
+
+	t.Run("with --detailed each runnable command shows usage, args, auth and flags", func(t *testing.T) {
+		out := captureOutput(t, func() {
+			renderCommandTreeText(root, 0, true)
+		})
+		assert.Contains(t, out, "usage: auth0 apps show [flags]")
+		assert.Contains(t, out, "args:  <app-id>")
+		assert.Contains(t, out, "auth:  required")
+		assert.Contains(t, out, "--reveal-secrets")
+	})
+}
+
+func TestRenderCommandsFlatTextDetailed(t *testing.T) {
+	root := newTestCommandTree()
+	nodes := flattenCommands(root, false, true)
+
+	t.Run("without --detailed only path and short are printed", func(t *testing.T) {
+		out := captureOutput(t, func() {
+			renderCommandsFlatText(nodes, false)
+		})
+		assert.Contains(t, out, "auth0 apps show")
+		assert.NotContains(t, out, "usage:")
+	})
+
+	t.Run("with --detailed the invocation detail is printed under each command", func(t *testing.T) {
+		out := captureOutput(t, func() {
+			renderCommandsFlatText(nodes, true)
+		})
+		assert.Contains(t, out, "auth0 apps show")
+		assert.Contains(t, out, "usage: auth0 apps show [flags]")
+		assert.Contains(t, out, "--reveal-secrets")
+	})
+}
