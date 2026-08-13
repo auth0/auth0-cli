@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	managementv2 "github.com/auth0/go-auth0/v2/management"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
 	"github.com/stretchr/testify/assert"
 )
 
-func unmarshalSubscribeEvent(t *testing.T, raw string) *managementv2.EventStreamSubscribeEventsResponseContent {
+func unmarshalSubscribeEvent(t *testing.T, raw string) *managementv3.EventStreamSubscribeEventsResponseContent {
 	t.Helper()
-	var ev managementv2.EventStreamSubscribeEventsResponseContent
+	var ev managementv3.EventStreamSubscribeEventsResponseContent
 	if err := json.Unmarshal([]byte(raw), &ev); err != nil {
 		t.Fatalf("unmarshal subscribe event: %v", err)
 	}
