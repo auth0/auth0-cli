@@ -3,7 +3,7 @@ package auth0
 import (
 	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
-	managementv2 "github.com/auth0/go-auth0/v2/management/client"
+	managementv3 "github.com/auth0/go-auth0/v3/management/client"
 )
 
 // API mimics `management.Management`s general interface, except it refers to
@@ -77,14 +77,14 @@ func NewAPI(m *management.Management) *API {
 	}
 }
 
-type APIV2 struct {
-	AttackProtectionBotDetection AttackProtectionBotDetectionAPIV2
-	Events                       EventsAPIV2
+type APIV3 struct {
+	AttackProtectionBotDetection AttackProtectionBotDetectionAPIV3
+	Events                       EventsAPIV3
 	PhoneNotificationTemplate    PhoneNotificationTemplateAPI
 }
 
-func NewAPIV2(m *managementv2.Management) *APIV2 {
-	return &APIV2{
+func NewAPIV3(m *managementv3.Management) *APIV3 {
+	return &APIV3{
 		AttackProtectionBotDetection: m.AttackProtection.BotDetection,
 		Events:                       m.Events,
 		PhoneNotificationTemplate:    m.Branding.Phone.Templates,

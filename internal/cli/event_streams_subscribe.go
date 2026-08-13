@@ -16,8 +16,8 @@ import (
 	"syscall"
 	"time"
 
-	managementv2 "github.com/auth0/go-auth0/v2/management"
-	managementoption "github.com/auth0/go-auth0/v2/management/option"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
+	managementoption "github.com/auth0/go-auth0/v3/management/option"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -100,28 +100,28 @@ var (
 // SDK enum constants so a rename or removal in go-auth0 is a compile-time
 // failure here. New types added to the SDK still need a manual append.
 var supportedEventTypes = []string{
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumGroupCreated),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumGroupDeleted),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumGroupMemberAdded),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumGroupMemberDeleted),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumGroupRoleAssigned),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumGroupRoleDeleted),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumGroupUpdated),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationConnectionAdded),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationConnectionRemoved),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationConnectionUpdated),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationCreated),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationDeleted),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationGroupRoleAssigned),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationGroupRoleDeleted),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationMemberAdded),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationMemberDeleted),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationMemberRoleAssigned),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationMemberRoleDeleted),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumOrganizationUpdated),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumUserCreated),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumUserDeleted),
-	string(managementv2.EventStreamSubscribeEventsEventTypeEnumUserUpdated),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumGroupCreated),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumGroupDeleted),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumGroupMemberAdded),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumGroupMemberDeleted),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumGroupRoleAssigned),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumGroupRoleDeleted),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumGroupUpdated),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumOrganizationConnectionAdded),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumOrganizationConnectionRemoved),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumOrganizationConnectionUpdated),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumOrganizationCreated),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumOrganizationDeleted),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumOrganizationGroupRoleAssigned),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumOrganizationGroupRoleDeleted),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumOrganizationMemberAdded),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumOrganizationMemberDeleted),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumOrganizationMemberRoleAssigned),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumOrganizationMemberRoleDeleted),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumOrganizationUpdated),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumUserCreated),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumUserDeleted),
+	string(managementv3.EventStreamSubscribeEventsEventTypeEnumUserUpdated),
 }
 
 type subscribeInputs struct {
@@ -176,7 +176,7 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 				return nil
 			}
 
-			req := &managementv2.SubscribeEventsRequestParameters{}
+			req := &managementv3.SubscribeEventsRequestParameters{}
 
 			if inputs.From != "" {
 				req.From = &inputs.From
@@ -185,14 +185,14 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 				req.FromTimestamp = &inputs.FromTimestamp
 			}
 			if len(inputs.EventTypes) > 0 {
-				eventTypes := make([]*managementv2.EventStreamSubscribeEventsEventTypeEnum, 0, len(inputs.EventTypes))
+				eventTypes := make([]*managementv3.EventStreamSubscribeEventsEventTypeEnum, 0, len(inputs.EventTypes))
 				var invalid []string
 				for _, t := range inputs.EventTypes {
 					t = strings.TrimSpace(t)
 					if t == "" {
 						continue
 					}
-					enum, err := managementv2.NewEventStreamSubscribeEventsEventTypeEnumFromString(t)
+					enum, err := managementv3.NewEventStreamSubscribeEventsEventTypeEnumFromString(t)
 					if err != nil {
 						invalid = append(invalid, t)
 						continue
@@ -304,7 +304,7 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 			// Per-event handler shared across reconnects. Returns true when an
 			// event counts as forward progress (a real event or heartbeat),
 			// which resets the reconnect backoff.
-			handleEvent := func(event managementv2.EventStreamSubscribeEventsResponseContent) bool {
+			handleEvent := func(event managementv3.EventStreamSubscribeEventsResponseContent) bool {
 				summary := summarizeEvent(&event)
 
 				if summary.offset != "" {
@@ -389,7 +389,7 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 				}
 
 				attemptStart := time.Now()
-				progressed, serverRetry, err := runStreamSession(ctx, cli.apiv2, req, lastOffset, handleEvent)
+				progressed, serverRetry, err := runStreamSession(ctx, cli.apiv3, req, lastOffset, handleEvent)
 				sessionDuration := time.Since(attemptStart)
 
 				// Ctrl+C or parent cancellation: always a graceful exit.
@@ -481,10 +481,10 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 // clean server close).
 func runStreamSession(
 	ctx context.Context,
-	api *auth0.APIV2,
-	req *managementv2.SubscribeEventsRequestParameters,
+	api *auth0.APIV3,
+	req *managementv3.SubscribeEventsRequestParameters,
 	resumeFrom string,
-	handleEvent func(managementv2.EventStreamSubscribeEventsResponseContent) bool,
+	handleEvent func(managementv3.EventStreamSubscribeEventsResponseContent) bool,
 ) (progressed bool, serverRetry time.Duration, err error) {
 	if resumeFrom != "" {
 		req.From = &resumeFrom
@@ -564,7 +564,7 @@ type eventSummary struct {
 	errorMessage string
 }
 
-func summarizeEvent(ev *managementv2.EventStreamSubscribeEventsResponseContent) eventSummary {
+func summarizeEvent(ev *managementv3.EventStreamSubscribeEventsResponseContent) eventSummary {
 	s := eventSummary{eventType: ev.GetType()}
 	if s.eventType == "offset-only" {
 		s.isHeartbeat = true

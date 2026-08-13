@@ -3,7 +3,7 @@ package cli
 import (
 	"strings"
 
-	managementv2 "github.com/auth0/go-auth0/v2/management"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -150,9 +150,9 @@ func updateBotDetectionCmd(cli *cli) *cobra.Command {
 
 func showBotDetectionCmdRun(cli *cli) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		var bd *managementv2.GetBotDetectionSettingsResponseContent
+		var bd *managementv3.GetBotDetectionSettingsResponseContent
 		err := ansi.Waiting(func() (err error) {
-			bd, err = cli.apiv2.AttackProtectionBotDetection.Get(cmd.Context())
+			bd, err = cli.apiv3.AttackProtectionBotDetection.Get(cmd.Context())
 			return err
 		})
 		if err != nil {
@@ -167,15 +167,15 @@ func showBotDetectionCmdRun(cli *cli) func(cmd *cobra.Command, args []string) er
 
 func updateBotDetectionCmdRun(cli *cli, inputs *botDetectionInputs) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		var current *managementv2.GetBotDetectionSettingsResponseContent
+		var current *managementv3.GetBotDetectionSettingsResponseContent
 		if err := ansi.Waiting(func() (err error) {
-			current, err = cli.apiv2.AttackProtectionBotDetection.Get(cmd.Context())
+			current, err = cli.apiv3.AttackProtectionBotDetection.Get(cmd.Context())
 			return err
 		}); err != nil {
 			return err
 		}
 
-		bdUpdate := &managementv2.UpdateBotDetectionSettingsRequestContent{}
+		bdUpdate := &managementv3.UpdateBotDetectionSettingsRequestContent{}
 		noLocalFlagSet := noLocalFlagSet(cmd)
 
 		// Set bot detection level.
@@ -186,7 +186,7 @@ func updateBotDetectionCmdRun(cli *cli, inputs *botDetectionInputs) func(cmd *co
 			if inputs.BotDetectionLevel == "" {
 				inputs.BotDetectionLevel = string(current.GetBotDetectionLevel())
 			}
-			botDetectionLevel, err := managementv2.NewBotDetectionLevelEnumFromString(inputs.BotDetectionLevel)
+			botDetectionLevel, err := managementv3.NewBotDetectionLevelEnumFromString(inputs.BotDetectionLevel)
 			if err != nil {
 				return err
 			}
@@ -201,7 +201,7 @@ func updateBotDetectionCmdRun(cli *cli, inputs *botDetectionInputs) func(cmd *co
 			if inputs.ChallengePasswordPolicy == "" {
 				inputs.ChallengePasswordPolicy = string(current.GetChallengePasswordPolicy())
 			}
-			challengePasswordPolicy, err := managementv2.NewBotDetectionChallengePolicyPasswordFlowEnumFromString(inputs.ChallengePasswordPolicy)
+			challengePasswordPolicy, err := managementv3.NewBotDetectionChallengePolicyPasswordFlowEnumFromString(inputs.ChallengePasswordPolicy)
 			if err != nil {
 				return err
 			}
@@ -216,7 +216,7 @@ func updateBotDetectionCmdRun(cli *cli, inputs *botDetectionInputs) func(cmd *co
 			if inputs.ChallengePasswordlessPolicy == "" {
 				inputs.ChallengePasswordlessPolicy = string(current.GetChallengePasswordlessPolicy())
 			}
-			challengePasswordlessPolicy, err := managementv2.NewBotDetectionChallengePolicyPasswordlessFlowEnumFromString(inputs.ChallengePasswordlessPolicy)
+			challengePasswordlessPolicy, err := managementv3.NewBotDetectionChallengePolicyPasswordlessFlowEnumFromString(inputs.ChallengePasswordlessPolicy)
 			if err != nil {
 				return err
 			}
@@ -231,7 +231,7 @@ func updateBotDetectionCmdRun(cli *cli, inputs *botDetectionInputs) func(cmd *co
 			if inputs.ChallengePasswordResetPolicy == "" {
 				inputs.ChallengePasswordResetPolicy = string(current.GetChallengePasswordResetPolicy())
 			}
-			challengePasswordResetPolicy, err := managementv2.NewBotDetectionChallengePolicyPasswordResetFlowEnumFromString(inputs.ChallengePasswordResetPolicy)
+			challengePasswordResetPolicy, err := managementv3.NewBotDetectionChallengePolicyPasswordResetFlowEnumFromString(inputs.ChallengePasswordResetPolicy)
 			if err != nil {
 				return err
 			}
@@ -258,10 +258,10 @@ func updateBotDetectionCmdRun(cli *cli, inputs *botDetectionInputs) func(cmd *co
 			bdUpdate.SetMonitoringModeEnabled(&inputs.MonitoringModeEnabled)
 		}
 
-		var updatedBD *managementv2.UpdateBotDetectionSettingsResponseContent
+		var updatedBD *managementv3.UpdateBotDetectionSettingsResponseContent
 		if err := ansi.Waiting(func() error {
 			var err error
-			updatedBD, err = cli.apiv2.AttackProtectionBotDetection.Update(cmd.Context(), bdUpdate)
+			updatedBD, err = cli.apiv3.AttackProtectionBotDetection.Update(cmd.Context(), bdUpdate)
 			return err
 		}); err != nil {
 			return err
