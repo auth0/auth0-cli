@@ -48,6 +48,7 @@ type cli struct {
 	force               bool
 	noInput             bool
 	noColor             bool
+	agentMode           bool
 	executedCommandPath string
 
 	Config config.Config

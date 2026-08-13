@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/auth0/auth0-cli/internal/config"
@@ -186,4 +188,48 @@ func TestMergeProperties(t *testing.T) {
 	assert.Equal(t, "true", merged["interactive"])
 	assert.Equal(t, "false", merged["success"])
 	assert.Equal(t, "auth", merged["error_class"])
+}
+
+func TestResolveAgentMode(t *testing.T) {
+	// The newCmd helper builds a command carrying the --agent-mode flag,
+	// optionally marking it as explicitly set to a given value.
+	newCmd := func(flagSet bool, flagValue bool) *cobra.Command {
+		cmd := &cobra.Command{Use: "list"}
+		cmd.Flags().Bool("agent-mode", false, "")
+		if flagSet {
+			_ = cmd.Flags().Set("agent-mode", strconv.FormatBool(flagValue))
+		}
+		return cmd
+	}
+
+	envStub := func(value string) func(string) string {
+		return func(key string) string {
+			if key == agentModeEnvVar {
+				return value
+			}
+			return ""
+		}
+	}
+
+	tests := []struct {
+		name      string
+		env       string
+		flagSet   bool
+		flagValue bool
+		expected  bool
+	}{
+		{name: "env true wins over flag false", env: "true", flagSet: true, flagValue: false, expected: true},
+		{name: "env false wins over flag true", env: "false", flagSet: true, flagValue: true, expected: false},
+		{name: "invalid env falls through to flag", env: "notabool", flagSet: true, flagValue: true, expected: true},
+		{name: "flag true when env unset", env: "", flagSet: true, flagValue: true, expected: true},
+		{name: "flag false when env unset", env: "", flagSet: true, flagValue: false, expected: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cmd := newCmd(test.flagSet, test.flagValue)
+			// Interactive is true so the detectAgent fallback (unreached here) would be "human".
+			assert.Equal(t, test.expected, resolveAgentMode(cmd, envStub(test.env), true))
+		})
+	}
 }

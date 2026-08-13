@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -111,6 +112,8 @@ func buildRootCmd(cli *cli) *cobra.Command {
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			cli.executedCommandPath = cmd.CommandPath()
 
+			applyAgentModeDefaults(cli, cmd)
+
 			ansi.Initialize(cli.noColor)
 			prepareInteractivity(cmd)
 			cli.configureRenderer()
@@ -149,6 +152,72 @@ func commandRequiresAuthentication(invokedCommandName string) bool {
 	return true
 }
 
+// agentModeEnvVar toggles agent mode explicitly, overriding auto-detection.
+// Set it to "false" to opt out even when running inside a detected agent.
+const agentModeEnvVar = "AUTH0_AGENT_MODE"
+
+// applyAgentModeDefaults resolves agent mode and, when enabled, sets structured
+// JSON output, disables interactive prompts, and disables color codes. It only
+// sets a default when the corresponding flag was not explicitly passed, so
+// explicit flags always win.
+func applyAgentModeDefaults(cli *cli, cmd *cobra.Command) {
+	if !resolveAgentMode(cmd, os.Getenv, iostream.IsInputTerminal() && iostream.IsOutputTerminal()) {
+		return
+	}
+
+	cli.agentMode = true
+
+	if !anyFlagChanged(cmd, "json", "json-compact", "csv") {
+		cli.json = true
+	}
+	if !flagChanged(cmd, "no-input") {
+		cli.noInput = true
+	}
+	if !flagChanged(cmd, "no-color") {
+		cli.noColor = true
+	}
+
+	cli.renderer.Infof("Agent mode on: JSON output, prompts and colors off. Disable with --agent-mode=false or %s=false.", agentModeEnvVar)
+}
+
+// resolveAgentMode decides whether agent mode is active. Precedence:
+// explicit AUTH0_AGENT_MODE env value, then the --agent-mode flag, then
+// auto-detection of a real (non-human, non-unknown) agent client.
+func resolveAgentMode(cmd *cobra.Command, getEnv func(string) string, interactive bool) bool {
+	if raw := strings.TrimSpace(getEnv(agentModeEnvVar)); raw != "" {
+		if enabled, err := strconv.ParseBool(raw); err == nil {
+			return enabled
+		}
+	}
+
+	if flagChanged(cmd, "agent-mode") {
+		if enabled, err := cmd.Flags().GetBool("agent-mode"); err == nil {
+			return enabled
+		}
+	}
+
+	switch detectAgent(interactive) {
+	case "human", "unknown":
+		return false
+	default:
+		return true
+	}
+}
+
+func flagChanged(cmd *cobra.Command, name string) bool {
+	f := cmd.Flags().Lookup(name)
+	return f != nil && f.Changed
+}
+
+func anyFlagChanged(cmd *cobra.Command, names ...string) bool {
+	for _, name := range names {
+		if flagChanged(cmd, name) {
+			return true
+		}
+	}
+	return false
+}
+
 func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.PersistentFlags().StringVar(&cli.tenant,
 		"tenant", cli.Config.DefaultTenant, "Specific tenant to use.")
@@ -161,6 +230,10 @@ func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
 
 	rootCmd.PersistentFlags().BoolVar(&cli.noColor,
 		"no-color", false, "Disable colors.")
+
+	rootCmd.PersistentFlags().BoolVar(&cli.agentMode,
+		"agent-mode", false,
+		"Output JSON, disable prompts and colors. Auto-enabled for AI agents; set AUTH0_AGENT_MODE=false to disable.")
 }
 
 func addSubCommands(rootCmd *cobra.Command, cli *cli) {
