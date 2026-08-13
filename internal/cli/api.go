@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/auth0/go-auth0/v2/management/core"
+	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"

@@ -13,8 +13,8 @@ import (
 
 	"github.com/PuerkitoBio/rehttp"
 	"github.com/auth0/go-auth0/management"
-	managementv2 "github.com/auth0/go-auth0/v2/management/client"
-	"github.com/auth0/go-auth0/v2/management/option"
+	managementv3 "github.com/auth0/go-auth0/v3/management/client"
+	"github.com/auth0/go-auth0/v3/management/option"
 
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 )
@@ -32,8 +32,8 @@ func initializeManagementClient(tenantDomain string, accessToken string) (*manag
 	return client, err
 }
 
-func initializeManagementClientV2(tenantDomain string, accessToken string) (*managementv2.Management, error) {
-	client, err := managementv2.New(
+func initializeManagementClientV3(tenantDomain string, accessToken string) (*managementv3.Management, error) {
+	client, err := managementv3.New(
 		tenantDomain,
 		option.WithToken(accessToken),
 		option.WithUserAgent(fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v"))),

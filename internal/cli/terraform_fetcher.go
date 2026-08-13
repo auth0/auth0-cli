@@ -135,7 +135,7 @@ type (
 	}
 
 	phoneNotificationTemplateResourceFetcher struct {
-		apiv2 *auth0.APIV2
+		apiv3 *auth0.APIV3
 	}
 )
 
@@ -198,7 +198,7 @@ func (f *phoneProviderResourceFetcher) FetchData(ctx context.Context) (importDat
 }
 
 func (f *phoneNotificationTemplateResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
-	phoneNotificationTemplateList, err := f.apiv2.PhoneNotificationTemplate.List(ctx, nil)
+	phoneNotificationTemplateList, err := f.apiv3.PhoneNotificationTemplate.List(ctx, nil)
 	if err != nil {
 		return nil, err
 	}

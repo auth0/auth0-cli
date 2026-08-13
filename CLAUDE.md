@@ -21,14 +21,17 @@ Apply these on every task in this repo — they keep changes correct, small, and
 
 ## Project Overview
 
-**auth0-cli** is the official command-line interface for Auth0 — build, manage, and test Auth0 integrations from the terminal.
+**auth0-cli** is the official command-line interface for Auth0, used to build, manage, and test Auth0 integrations from the terminal.
 
 - **Language:** Go 1.25.8
-- **Tech Stack:** Cobra (commands) + pflag, go-auth0 Management SDK (v1 `management` and v2), Sentry crash reporting, zalando/go-keyring for secret storage, terraform-exec (Terraform export), charmbracelet/glamour (markdown rendering)
-- **Package Manager:** Go modules — **vendored** (`vendor/` is committed; run `go mod tidy && go mod vendor` after dependency changes)
-- **Minimum Platform Version:** Go 1.25.8 (from `go.mod`)
-- **Dependencies:** go-auth0 v1.44.0 + v2.14.0, spf13/cobra 1.10.2, getsentry/sentry-go 0.47.0, zalando/go-keyring 0.2.8 · test: stretchr/testify 1.11.1, golang/mock (gomock) 1.6.0
-
+- **Package Manager:** Go modules (vendored). Run `go mod tidy && go mod vendor` after dependency changes.
+- **Command Framework:** Cobra (`spf13/cobra`) with `pflag`
+- **Auth0 APIs:** `go-auth0` Management SDK (v1 and v3)
+- **Secret Storage:** `zalando/go-keyring`
+- **Crash Reporting:** Sentry (`sentry-go`)
+- **Terraform:** `terraform-exec` for Terraform export functionality
+- **Markdown Rendering:** `charmbracelet/glamour`
+- **Testing:** Go `testing`, `stretchr/testify`, and `gomock`
 ---
 
 ## Project Structure
@@ -136,7 +139,7 @@ See [references/git-workflow.md](references/git-workflow.md) for branch, commit,
 
 ## Common Pitfalls
 
-The top one: forgetting `make docs` after a command/flag change fails CI (`make check-docs`). Others involve vendoring, mock regeneration, and the v1/v2 go-auth0 split.
+The top one: forgetting `make docs` after a command/flag change fails CI (`make check-docs`). Others involve vendoring, mock regeneration, and the v1/3 go-auth0 split.
 
 See [references/pitfalls.md](references/pitfalls.md) for the full list. Read it when a build/CI step fails unexpectedly.
 

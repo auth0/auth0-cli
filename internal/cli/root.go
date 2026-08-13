@@ -11,7 +11,7 @@ import (
 	"unicode"
 
 	"github.com/auth0/go-auth0/management"
-	"github.com/auth0/go-auth0/v2/management/core"
+	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/analytics"
@@ -284,7 +284,14 @@ func commandTrackingProperties(cli *cli) map[string]string {
 		"output_format": outputFormatForTracking(cli.renderer),
 		"forced":        boolString(cli.force),
 		"agent_client":  detectAgent(interactive),
+		"is_api":        boolString(isAPICommand(cli.executedCommandPath)),
 	}
+}
+
+// isAPICommand reports whether the executed command is the raw
+// `auth0 api` Management API passthrough command.
+func isAPICommand(commandPath string) bool {
+	return commandPath == "auth0 api"
 }
 
 func outputFormatForTracking(renderer *display.Renderer) string {
