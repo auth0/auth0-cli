@@ -1,6 +1,7 @@
 package display
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
@@ -75,6 +76,77 @@ func TestNetworkACLView_KeyValues_Auth0Managed(t *testing.T) {
 			// redundant marker row is emitted.
 			_, hasMarker := keyValue(kvs, "NOT MATCH")
 			assert.False(t, hasMarker, "unexpected redundant \"NOT MATCH\" row")
+		})
+	}
+}
+
+// TestNetworkACLView_Object_IncludesID guards against a regression where storing
+// a *management.NetworkACL in the view's raw field engaged that type's pointer
+// receiver MarshalJSON, which emits only the writable subset of fields and drops
+// "id". The integration tests read the id out of `network-acl create --json`, so
+// losing it breaks every command that consumes a created ACL's identifier.
+func TestNetworkACLView_Object_IncludesID(t *testing.T) {
+	tests := []struct {
+		name string
+		acl  *management.NetworkACL
+		want map[string]interface{}
+	}{
+		{
+			name: "fully populated ACL",
+			acl: &management.NetworkACL{
+				ID:          strPtr("acl_6wZqimFkPpMFvqXRwjsq9J"),
+				Description: strPtr("integration-test-acl"),
+				Priority:    intPtr(9),
+				Active:      boolPtr(false),
+				Rule: &management.NetworkACLRule{
+					Scope:  strPtr("tenant"),
+					Action: &management.NetworkACLRuleAction{Log: boolPtr(true)},
+					Match: &management.NetworkACLRuleMatch{
+						IPv4Cidrs: &[]string{"192.168.1.5/24"},
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"id":          "acl_6wZqimFkPpMFvqXRwjsq9J",
+				"description": "integration-test-acl",
+				"priority":    float64(9),
+				"active":      false,
+			},
+		},
+		{
+			name: "ACL with an empty description still reports its id",
+			acl: &management.NetworkACL{
+				ID:       strPtr("acl_2"),
+				Priority: intPtr(1),
+				Active:   boolPtr(true),
+				Rule: &management.NetworkACLRule{
+					Scope:  strPtr("tenant"),
+					Action: &management.NetworkACLRuleAction{Block: boolPtr(true)},
+				},
+			},
+			want: map[string]interface{}{
+				"id":       "acl_2",
+				"priority": float64(1),
+				"active":   true,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			b, err := json.Marshal(makeNetworkACLView(test.acl).Object())
+			assert.NoError(t, err)
+
+			var got map[string]interface{}
+			assert.NoError(t, json.Unmarshal(b, &got))
+
+			for key, want := range test.want {
+				value, ok := got[key]
+				assert.True(t, ok, "expected %q to be present in --json output, got: %s", key, b)
+				assert.Equal(t, want, value)
+			}
+
+			assert.Contains(t, got, "rule", "expected the rule to survive marshalling")
 		})
 	}
 }

@@ -48,7 +48,7 @@ func (v *networkACLView) KeyValues() [][]string {
 		return keyValues
 	}
 
-	acl, ok := v.raw.(*management.NetworkACL)
+	acl, ok := v.raw.(management.NetworkACL)
 	if !ok {
 		return keyValues
 	}
@@ -199,7 +199,11 @@ func makeNetworkACLView(acl *management.NetworkACL) *networkACLView {
 		Active:      fmt.Sprintf("%v", active),
 		Action:      action,
 		Rule:        string(ruleJSON),
-		raw:         &rawData,
+		// Stored as a value, never a pointer. (*management.NetworkACL).MarshalJSON
+		// emits only the writable subset of fields, so a pointer here would silently
+		// drop "id" from --json output. Keeping it a value leaves that method out of
+		// the method set, so encoding/json falls back to reflecting over the struct.
+		raw: rawData,
 	}
 }
 
