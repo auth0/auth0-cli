@@ -47,9 +47,9 @@ func TestClientGrantsPickerOptions(t *testing.T) {
 			}),
 			assertOutput: func(t testing.TB, options pickerOptions) {
 				assert.Len(t, options, 2)
-				assert.Equal(t, "client-id-1 (https://travel0.com/api)", options[0].label)
+				assert.Equal(t, "cgr_1 (client-id-1, https://travel0.com/api)", options[0].label)
 				assert.Equal(t, "cgr_1", options[0].value)
-				assert.Equal(t, "client-id-2 (https://travel0.com/api)", options[1].label)
+				assert.Equal(t, "cgr_2 (client-id-2, https://travel0.com/api)", options[1].label)
 				assert.Equal(t, "cgr_2", options[1].value)
 			},
 			assertError: func(t testing.TB, err error) {
@@ -67,7 +67,7 @@ func TestClientGrantsPickerOptions(t *testing.T) {
 			}),
 			assertOutput: func(t testing.TB, options pickerOptions) {
 				assert.Len(t, options, 1)
-				assert.Equal(t, "third_party_clients (https://travel0.com/api)", options[0].label)
+				assert.Equal(t, "cgr_3 (third_party_clients, https://travel0.com/api)", options[0].label)
 				assert.Equal(t, "cgr_3", options[0].value)
 			},
 			assertError: func(t testing.TB, err error) {
@@ -564,6 +564,228 @@ func TestResolveUpdateClientGrantScopes(t *testing.T) {
 			assert.Equal(t, test.wantAllowAll, allowAll)
 		})
 	}
+}
+
+func TestValidateClientGrantScopes(t *testing.T) {
+	apiWithScopes := &management.ResourceServer{
+		Identifier: auth0.String("https://travel0.com/api"),
+		Scopes: &[]management.ResourceServerScope{
+			{Value: auth0.String("read:users")},
+			{Value: auth0.String("update:users")},
+		},
+	}
+	apiWithoutScopes := &management.ResourceServer{
+		Identifier: auth0.String("https://travel0.us.auth0.com/api/v2/"),
+	}
+
+	tests := []struct {
+		name           string
+		resourceServer *management.ResourceServer
+		scopes         []string
+		currentScopes  []string
+		subjectType    string
+		wantErr        string
+	}{
+		{
+			name:           "scopes defined on the API are accepted",
+			resourceServer: apiWithScopes,
+			scopes:         []string{"read:users", "update:users"},
+		},
+		{
+			name:           "an unknown scope is rejected",
+			resourceServer: apiWithScopes,
+			scopes:         []string{"read:users", "delete:users"},
+			wantErr:        `the following scopes are not defined on the API "https://travel0.com/api": delete:users`,
+		},
+		{
+			name:           "a scope already on the grant is accepted even if the API no longer defines it",
+			resourceServer: apiWithScopes,
+			scopes:         []string{"legacy:scope"},
+			currentScopes:  []string{"legacy:scope"},
+		},
+		{
+			name:           "an API with no scopes rejects specific scopes for the client subject type",
+			resourceServer: apiWithoutScopes,
+			scopes:         []string{"read:current_user"},
+			subjectType:    "client",
+			wantErr:        `the API "https://travel0.us.auth0.com/api/v2/" does not define any scopes`,
+		},
+		{
+			name:           "an API with no scopes accepts inline scopes for the user subject type",
+			resourceServer: apiWithoutScopes,
+			scopes:         []string{"read:current_user"},
+			subjectType:    "user",
+		},
+		{
+			name:           "an API with no scopes accepts inline scopes for the anonymous_user subject type",
+			resourceServer: apiWithoutScopes,
+			scopes:         []string{"read:current_user"},
+			subjectType:    "anonymous_user",
+		},
+		{
+			name:           "no scopes passed is always valid",
+			resourceServer: apiWithoutScopes,
+			subjectType:    "client",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := validateClientGrantScopes(test.resourceServer, test.scopes, test.currentScopes, test.subjectType)
+			if test.wantErr != "" {
+				assert.ErrorContains(t, err, test.wantErr)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestCreateClientGrantScopeValidation(t *testing.T) {
+	t.Run("rejects a scope not defined on the API", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		resourceServerAPI := mock.NewMockResourceServerAPI(ctrl)
+		resourceServerAPI.EXPECT().
+			Read(gomock.Any(), gomock.Any()).
+			Return(&management.ResourceServer{
+				Identifier: auth0.String("https://travel0.com/api"),
+				Scopes: &[]management.ResourceServerScope{
+					{Value: auth0.String("read:users")},
+				},
+			}, nil)
+
+		cli := &cli{
+			api:      &auth0.API{ResourceServer: resourceServerAPI},
+			apiv3:    &auth0.APIV3{ClientGrant: mock.NewMockClientGrantAPIV3(ctrl)},
+			renderer: &display.Renderer{MessageWriter: &bytes.Buffer{}, ResultWriter: &bytes.Buffer{}},
+		}
+		cli.noInput = true // Non-interactive mode.
+
+		cmd := createClientGrantCmd(cli)
+		cmd.SetArgs([]string{
+			"--client-id", "client-id-1",
+			"--audience", "https://travel0.com/api",
+			"--scopes", "read:users,delete:users",
+		})
+
+		assert.ErrorContains(t, cmd.Execute(), `the following scopes are not defined on the API "https://travel0.com/api": delete:users`)
+	})
+
+	t.Run("sends scopes defined on the API", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		resourceServerAPI := mock.NewMockResourceServerAPI(ctrl)
+		resourceServerAPI.EXPECT().
+			Read(gomock.Any(), gomock.Any()).
+			Return(&management.ResourceServer{
+				Identifier: auth0.String("https://travel0.com/api"),
+				Scopes: &[]management.ResourceServerScope{
+					{Value: auth0.String("read:users")},
+					{Value: auth0.String("update:users")},
+				},
+			}, nil)
+
+		var captured *managementv3.CreateClientGrantRequestContent
+		clientGrantAPI := mock.NewMockClientGrantAPIV3(ctrl)
+		clientGrantAPI.EXPECT().
+			Create(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *managementv3.CreateClientGrantRequestContent, _ ...option.RequestOption) (*managementv3.CreateClientGrantResponseContent, error) {
+				captured = req
+				return &managementv3.CreateClientGrantResponseContent{ID: auth0.String("cgr_1")}, nil
+			})
+
+		cli := &cli{
+			api:      &auth0.API{ResourceServer: resourceServerAPI},
+			apiv3:    &auth0.APIV3{ClientGrant: clientGrantAPI},
+			renderer: &display.Renderer{MessageWriter: &bytes.Buffer{}, ResultWriter: &bytes.Buffer{}},
+		}
+		cli.noInput = true // Non-interactive mode.
+
+		cmd := createClientGrantCmd(cli)
+		cmd.SetArgs([]string{
+			"--client-id", "client-id-1",
+			"--audience", "https://travel0.com/api",
+			"--scopes", "read:users,update:users",
+		})
+
+		assert.NoError(t, cmd.Execute())
+		assert.Equal(t, []string{"read:users", "update:users"}, captured.Scope)
+	})
+}
+
+func TestUpdateClientGrantScopes(t *testing.T) {
+	t.Run("--no-scopes clears scopes to an empty array", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		var captured *managementv3.UpdateClientGrantRequestContent
+		clientGrantAPI := mock.NewMockClientGrantAPIV3(ctrl)
+		clientGrantAPI.EXPECT().
+			Get(gomock.Any(), "cgr_1").
+			Return(&managementv3.GetClientGrantResponseContent{
+				ID:       auth0.String("cgr_1"),
+				Audience: auth0.String("https://travel0.com/api"),
+				Scope:    []string{"read:users"},
+			}, nil)
+		clientGrantAPI.EXPECT().
+			Update(gomock.Any(), "cgr_1", gomock.Any()).
+			DoAndReturn(func(_ context.Context, _ string, req *managementv3.UpdateClientGrantRequestContent, _ ...option.RequestOption) (*managementv3.UpdateClientGrantResponseContent, error) {
+				captured = req
+				return &managementv3.UpdateClientGrantResponseContent{ID: auth0.String("cgr_1")}, nil
+			})
+
+		cli := &cli{
+			apiv3:    &auth0.APIV3{ClientGrant: clientGrantAPI},
+			renderer: &display.Renderer{MessageWriter: &bytes.Buffer{}, ResultWriter: &bytes.Buffer{}},
+		}
+		cli.noInput = true // Non-interactive mode.
+
+		cmd := updateClientGrantCmd(cli)
+		cmd.SetArgs([]string{"cgr_1", "--no-scopes"})
+
+		assert.NoError(t, cmd.Execute())
+		assert.NotNil(t, captured.Scope)
+		assert.Empty(t, captured.Scope)
+	})
+
+	t.Run("rejects a scope not defined on the API", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		clientGrantAPI := mock.NewMockClientGrantAPIV3(ctrl)
+		clientGrantAPI.EXPECT().
+			Get(gomock.Any(), "cgr_1").
+			Return(&managementv3.GetClientGrantResponseContent{
+				ID:       auth0.String("cgr_1"),
+				Audience: auth0.String("https://travel0.com/api"),
+				Scope:    []string{"read:users"},
+			}, nil)
+
+		resourceServerAPI := mock.NewMockResourceServerAPI(ctrl)
+		resourceServerAPI.EXPECT().
+			Read(gomock.Any(), gomock.Any()).
+			Return(&management.ResourceServer{
+				Identifier: auth0.String("https://travel0.com/api"),
+				Scopes: &[]management.ResourceServerScope{
+					{Value: auth0.String("read:users")},
+				},
+			}, nil)
+
+		cli := &cli{
+			api:      &auth0.API{ResourceServer: resourceServerAPI},
+			apiv3:    &auth0.APIV3{ClientGrant: clientGrantAPI},
+			renderer: &display.Renderer{MessageWriter: &bytes.Buffer{}, ResultWriter: &bytes.Buffer{}},
+		}
+		cli.noInput = true // Non-interactive mode.
+
+		cmd := updateClientGrantCmd(cli)
+		cmd.SetArgs([]string{"cgr_1", "--scopes", "read:users,delete:users"})
+
+		assert.ErrorContains(t, cmd.Execute(), `the following scopes are not defined on the API "https://travel0.com/api": delete:users`)
+	})
 }
 
 func TestAPIIdentifierPickerOptions(t *testing.T) {

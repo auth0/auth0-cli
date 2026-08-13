@@ -30,6 +30,13 @@ tests:
         audience: http://integration-test-api-client-grant
         scope: "[read:todos]"
 
+  003a - create client grant rejects a scope not defined on the API:
+    command: auth0 client-grants create --client-id $(./test/integration/scripts/get-m2m-app-id.sh) --audience $(./test/integration/scripts/get-api-identifier.sh) --scopes read:nonexistent --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "are not defined on the API"
+
   004 - create client grant that already exists should fail:
     command: auth0 client-grants create --client-id $(./test/integration/scripts/get-m2m-app-id.sh) --audience $(./test/integration/scripts/get-api-identifier.sh) --scopes read:todos --no-input
     exit-code: 1
@@ -99,6 +106,22 @@ tests:
     stdout:
       json:
         scope: "[read:todos]"
+
+  013a - update client grant rejects a scope not defined on the API:
+    command: auth0 client-grants update $(./test/integration/scripts/get-client-grant-id.sh) --scopes read:nonexistent --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "are not defined on the API"
+
+  013b - update client grant with no-scopes clears scopes:
+    command: auth0 client-grants update $(./test/integration/scripts/get-client-grant-id.sh) --no-scopes --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        audience: http://integration-test-api-client-grant
+      not-contains:
+        - '"scope"'
 
   014 - update client grant with allow-any-organization on deny usage should fail:
     command: auth0 client-grants update $(./test/integration/scripts/get-client-grant-id.sh) --organization-usage deny --allow-any-organization=true --no-input

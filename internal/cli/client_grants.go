@@ -59,6 +59,11 @@ var (
 		LongForm: "allow-all-scopes",
 		Help:     "Grant every scope configured on the API. Mutually exclusive with --scopes.",
 	}
+	clientGrantNoScopes = Flag{
+		Name:     "No Scopes",
+		LongForm: "no-scopes",
+		Help:     "Clear all scopes on the grant, authorizing a token with no permissions. Mutually exclusive with --scopes and --allow-all-scopes.",
+	}
 	clientGrantOrganizationUsage = Flag{
 		Name:         "Organization Usage",
 		LongForm:     "organization-usage",
@@ -388,8 +393,11 @@ func createClientGrantCmd(cli *cli) *cobra.Command {
 			// is a system API, which cannot carry organization settings.
 			askScopes := !clientGrantAllowAllScopes.IsSet(cmd) && shouldAsk(cmd, &clientGrantScopes, false)
 			askAuthDetailsTypes := shouldAsk(cmd, &clientGrantAuthorizationDetailsTypes, false)
+			// Scopes passed by flag skip the picker, so validate them against the
+			// audience API here (reading it if the pickers above did not already).
+			validateScopes := clientGrantScopes.IsSet(cmd)
 			var audienceIsSystemAPI bool
-			if askScopes || askAuthDetailsTypes {
+			if askScopes || askAuthDetailsTypes || validateScopes {
 				audienceAPI, err := cli.readClientGrantAudienceAPI(cmd.Context(), inputs.Audience)
 				if err != nil {
 					return err
@@ -402,6 +410,10 @@ func createClientGrantCmd(cli *cli) *cobra.Command {
 				// only picks from scopes that API actually defines.
 				if askScopes {
 					if err := cli.pickClientGrantScopes(audienceAPI, &inputs.Scopes, &inputs.AllowAllScopes, nil, nil, false, true); err != nil {
+						return err
+					}
+				} else if validateScopes {
+					if err := validateClientGrantScopes(audienceAPI, inputs.Scopes, nil, inputs.SubjectType); err != nil {
 						return err
 					}
 				}
@@ -576,12 +588,14 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
 			"To update interactively, use `auth0 client-grants update` with no arguments.\n\n" +
 			"The client id and audience of a grant cannot be changed. To update non-interactively, " +
 			"supply the scopes or organization settings through the flags. Pass `--allow-all-scopes` " +
-			"to grant every scope on the API instead of a specific list.\n\n" +
+			"to grant every scope on the API instead of a specific list, or `--no-scopes` to clear all " +
+			"scopes and authorize a token with no permissions.\n\n" +
 			managementAPIUserScopesNote,
 		Example: `  auth0 client-grants update
   auth0 client-grants update <client-grant-id>
   auth0 client-grants update <client-grant-id> --scopes "read:users,update:users"
   auth0 client-grants update <client-grant-id> --allow-all-scopes
+  auth0 client-grants update <client-grant-id> --no-scopes
   auth0 client-grants update <client-grant-id> --authorization-details-types "payment,transfer"
   auth0 client-grants update <client-grant-id> -s "read:users" -o require --allow-any-organization=false
   auth0 client-grants update <client-grant-id> --json`,
@@ -615,8 +629,12 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
 			// cannot carry organization settings.
 			askScopes := !clientGrantAllowAllScopes.IsSet(cmd) && shouldAsk(cmd, &clientGrantScopes, true)
 			askAuthDetailsTypes := shouldAsk(cmd, &clientGrantAuthorizationDetailsTypes, true)
+			// Scopes passed by flag skip the picker, so validate them against the
+			// audience API here (reading it if the pickers above did not already).
+			validateScopes := clientGrantScopes.IsSet(cmd)
+			subjectType := string(current.GetSubjectType())
 			var audienceIsSystemAPI bool
-			if askScopes || askAuthDetailsTypes {
+			if askScopes || askAuthDetailsTypes || validateScopes {
 				audienceAPI, err := cli.readClientGrantAudienceAPI(cmd.Context(), current.GetAudience())
 				if err != nil {
 					return err
@@ -627,6 +645,10 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
 				// state, keeping the flow in sync with create.
 				if askScopes {
 					if err := cli.pickClientGrantScopes(audienceAPI, &inputs.Scopes, &inputs.AllowAllScopes, &inputs.NoScopes, current.GetScope(), current.GetAllowAllScopes(), true); err != nil {
+						return err
+					}
+				} else if validateScopes {
+					if err := validateClientGrantScopes(audienceAPI, inputs.Scopes, current.GetScope(), subjectType); err != nil {
 						return err
 					}
 				}
@@ -645,7 +667,6 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
 			// types, or against a system API (which rejects any organization
 			// settings), so skip the organization prompts entirely for them. The
 			// subject type is immutable, so it comes from the existing grant.
-			subjectType := string(current.GetSubjectType())
 			if !audienceIsSystemAPI && clientGrantSubjectTypeAllowsOrganizations(subjectType) {
 				if err := clientGrantOrganizationUsage.SelectU(cmd, &inputs.OrganizationUsage, clientGrantOrganizationUsageOptions, stringPtr(current.OrganizationUsage)); err != nil {
 					return err
@@ -741,12 +762,13 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
 	clientGrantScopes.RegisterStringSliceU(cmd, &inputs.Scopes, nil)
 	clientGrantAllowAllScopes.RegisterBoolU(cmd, &inputs.AllowAllScopes, false)
+	clientGrantNoScopes.RegisterBoolU(cmd, &inputs.NoScopes, false)
 	clientGrantOrganizationUsage.RegisterStringU(cmd, &inputs.OrganizationUsage, "")
 	clientGrantAllowAnyOrganization.RegisterBoolU(cmd, &inputs.AllowAnyOrganization, false)
 	clientGrantAuthorizationDetailsTypes.RegisterStringSliceU(cmd, &inputs.AuthorizationDetailsTypes, nil)
 
-	// A grant authorizes either specific scopes or all of them, never both.
-	cmd.MarkFlagsMutuallyExclusive("scopes", "allow-all-scopes")
+	// A grant authorizes specific scopes, all of them, or none, never a mix.
+	cmd.MarkFlagsMutuallyExclusive("scopes", "allow-all-scopes", "no-scopes")
 
 	return cmd
 }
@@ -838,7 +860,7 @@ func (c *cli) clientGrantPickerOptionsFiltered(ctx context.Context, excludeSyste
 			identifier = string(grant.GetDefaultFor())
 		}
 
-		label := fmt.Sprintf("%s %s", identifier, ansi.Faint("("+grant.GetAudience()+")"))
+		label := fmt.Sprintf("%s %s", grant.GetID(), ansi.Faint("("+identifier+", "+grant.GetAudience()+")"))
 		opts = append(opts, pickerOption{value: grant.GetID(), label: label})
 	}
 
@@ -881,6 +903,57 @@ func validateClientGrantOrganization(organizationUsage string, allowAnyOrganizat
 	if allowAnyOrganization && !clientGrantOrganizationAllowsAny(organizationUsage) {
 		return errors.New("--allow-any-organization can only be enabled when --organization-usage is 'allow' or 'require'")
 	}
+	return nil
+}
+
+// validateClientGrantScopes checks scopes passed via --scopes against the
+// audience API, turning a typo or an unsupported grant into a clear error rather
+// than a raw API 400.
+//
+// When the API defines scopes, every passed scope must be one of them (or, for an
+// update, already on the grant). When the API exposes no scopes at all, the
+// meaning depends on the subject type: the user and anonymous_user subject types
+// against the Auth0 Management API carry a fixed current_user scope set the API
+// does not expose for dynamic discovery, so those cannot be validated and are
+// left for the API to decide; any other subject type has nothing to grant, so
+// setting --scopes is rejected outright.
+func validateClientGrantScopes(resourceServer *management.ResourceServer, scopes, currentScopes []string, subjectType string) error {
+	defined := make(map[string]bool)
+	for _, scope := range resourceServer.GetScopes() {
+		defined[scope.GetValue()] = true
+	}
+
+	if len(defined) == 0 {
+		if len(scopes) > 0 && clientGrantSubjectTypeAllowsOrganizations(subjectType) {
+			return fmt.Errorf(
+				"the API %q does not define any scopes, so --scopes cannot be set; use --allow-all-scopes or grant no scopes instead",
+				resourceServer.GetIdentifier(),
+			)
+		}
+		return nil
+	}
+
+	// Scopes already on the grant are always valid, so an update that re-sends
+	// or trims them never trips on a scope the API no longer advertises.
+	for _, scope := range currentScopes {
+		defined[scope] = true
+	}
+
+	var unknown []string
+	for _, scope := range scopes {
+		if !defined[scope] {
+			unknown = append(unknown, scope)
+		}
+	}
+
+	if len(unknown) > 0 {
+		return fmt.Errorf(
+			"the following scopes are not defined on the API %q: %s",
+			resourceServer.GetIdentifier(),
+			strings.Join(unknown, ", "),
+		)
+	}
+
 	return nil
 }
 
