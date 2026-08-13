@@ -27,6 +27,8 @@ tests:
         - PRIORITY     2
         - ACTIVE       false
         - ACTION       log
+        - SCOPE        management
+        - IPV4 CIDRS   192.168.1.5/24
 
   004 - list network ACLs with data:
     command: auth0 network-acl list
@@ -65,10 +67,12 @@ tests:
     stdout:
       contains:
         - ID
-        - DESCRIPTION  Integration Test ACL Updated
-        - PRIORITY     8
-        - ACTIVE       false
-        - ACTION       log
+        - DESCRIPTION    Integration Test ACL Updated
+        - PRIORITY       8
+        - ACTIVE         false
+        - ACTION         log
+        - SCOPE          management
+        - COUNTRY CODES  US
 
   008 - update network ACL and output in json:
     command: auth0 network-acl update $(./test/integration/scripts/get-network-acl-id.sh) --description "Integration Test ACL Updated Again" --active false --priority 4 --rule '{"action":{"redirect":true,"redirect_uri":"https://example.com"},"scope":"tenant","match":{"geo_country_codes":["US","CA"]}}' --json --no-input
