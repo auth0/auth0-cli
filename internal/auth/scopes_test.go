@@ -6,6 +6,7 @@ func TestRequiredScopes(t *testing.T) {
 	t.Run("Verify CRUD scopes", func(t *testing.T) {
 		crudResources := []string{
 			"clients",
+			"client_grants",
 			"log_streams",
 			"resource_servers",
 			"roles",

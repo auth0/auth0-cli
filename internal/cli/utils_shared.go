@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/auth0/go-auth0/management"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
+	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/pkg/browser"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -97,12 +99,14 @@ func runClientCredentialsFlow(
 }
 
 func checkClientIsAuthorizedForAPI(ctx context.Context, cli *cli, client *management.Client, audience, organization string) error {
-	var list *management.ClientGrantList
+	var list *core.Page[*string, *managementv3.ClientGrantResponseContent, *managementv3.ListClientGrantPaginatedResponseContent]
 	if err := ansi.Waiting(func() (err error) {
-		list, err = cli.api.ClientGrant.List(
+		list, err = cli.apiv3.ClientGrant.List(
 			ctx,
-			management.Parameter("audience", audience),
-			management.Parameter("client_id", client.GetClientID()),
+			&managementv3.ListClientGrantsRequestParameters{
+				Audience: auth0.String(audience),
+				ClientID: auth0.String(client.GetClientID()),
+			},
 		)
 		return err
 	}); err != nil {
@@ -114,7 +118,7 @@ func checkClientIsAuthorizedForAPI(ctx context.Context, cli *cli, client *manage
 		)
 	}
 
-	if len(list.ClientGrants) < 1 {
+	if len(list.Results) < 1 {
 		return fmt.Errorf(
 			"the %s application is not authorized to request access tokens for this API %s.\n\n"+
 				"Run: 'auth0 apps open %s' to open the dashboard and authorize the application",
@@ -124,8 +128,8 @@ func checkClientIsAuthorizedForAPI(ctx context.Context, cli *cli, client *manage
 		)
 	}
 
-	grant := list.ClientGrants[0]
-	if grant.GetOrganizationUsage() == "require" && organization == "" {
+	grant := list.Results[0]
+	if grant.GetOrganizationUsage() == managementv3.ClientGrantOrganizationUsageEnumRequire && organization == "" {
 		return fmt.Errorf(
 			"the client grant for %s requires an organization.\n\n"+
 				"Use the --organization flag to specify one",

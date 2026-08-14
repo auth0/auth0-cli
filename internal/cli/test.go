@@ -9,6 +9,8 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/atotto/clipboard"
 	"github.com/auth0/go-auth0/management"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
+	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -422,16 +424,18 @@ func (c *cli) audiencePickerOptions(client *management.Client) func(ctx context.
 
 		switch client.GetAppType() {
 		case "non_interactive":
-			clientGrants, err := c.api.ClientGrant.List(
+			clientGrants, err := c.apiv3.ClientGrant.List(
 				ctx,
-				management.PerPage(100),
-				management.Parameter("client_id", client.GetClientID()),
+				&managementv3.ListClientGrantsRequestParameters{
+					Take:     auth0.Int(100),
+					ClientID: auth0.String(client.GetClientID()),
+				},
 			)
 			if err != nil {
 				return nil, err
 			}
 
-			if len(clientGrants.ClientGrants) == 0 {
+			if len(clientGrants.Results) == 0 {
 				return nil, fmt.Errorf(
 					"the %s application is not authorized to request access tokens for any APIs.\n\n"+
 						"Run: 'auth0 apps open %s' to open the dashboard and authorize the application",
@@ -440,7 +444,7 @@ func (c *cli) audiencePickerOptions(client *management.Client) func(ctx context.
 				)
 			}
 
-			for _, grant := range clientGrants.ClientGrants {
+			for _, grant := range clientGrants.Results {
 				resourceServer, err := c.api.ResourceServer.Read(ctx, grant.GetAudience())
 				if err != nil {
 					return nil, err
@@ -489,19 +493,21 @@ func (c *cli) pickOrganizationForGrantIfRequired(cmd *cobra.Command, client *man
 		return nil
 	}
 
-	var list *management.ClientGrantList
+	var list *core.Page[*string, *managementv3.ClientGrantResponseContent, *managementv3.ListClientGrantPaginatedResponseContent]
 	if err := ansi.Waiting(func() (err error) {
-		list, err = c.api.ClientGrant.List(
+		list, err = c.apiv3.ClientGrant.List(
 			cmd.Context(),
-			management.Parameter("audience", audience),
-			management.Parameter("client_id", client.GetClientID()),
+			&managementv3.ListClientGrantsRequestParameters{
+				Audience: auth0.String(audience),
+				ClientID: auth0.String(client.GetClientID()),
+			},
 		)
 		return err
 	}); err != nil {
 		return err
 	}
 
-	if len(list.ClientGrants) == 0 || list.ClientGrants[0].GetOrganizationUsage() != "require" {
+	if len(list.Results) == 0 || list.Results[0].GetOrganizationUsage() != managementv3.ClientGrantOrganizationUsageEnumRequire {
 		return nil
 	}
 
