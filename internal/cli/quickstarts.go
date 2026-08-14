@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
 	"github.com/spf13/cobra"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -1227,14 +1228,14 @@ func createQuickstartAPI(ctx context.Context, cli *cli, inputs SetupInputs) erro
 
 	// Link the app to the API via a client grant if an app was selected/created.
 	if inputs.LinkedAppID != "" {
-		emptyScopes := []string{}
-		grant := &management.ClientGrant{
+		grant := &managementv3.CreateClientGrantRequestContent{
 			ClientID: &inputs.LinkedAppID,
-			Audience: &inputs.Identifier,
-			Scope:    &emptyScopes,
+			Audience: inputs.Identifier,
+			Scope:    []string{},
 		}
 		if grantErr := ansi.Waiting(func() error {
-			return cli.api.ClientGrant.Create(ctx, grant)
+			_, err := cli.apiv3.ClientGrant.Create(ctx, grant)
+			return err
 		}); grantErr != nil {
 			cli.renderer.Warnf("Failed to link application to API: %v", grantErr)
 		}
