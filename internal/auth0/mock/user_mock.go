@@ -8,7 +8,10 @@ import (
 	context "context"
 	reflect "reflect"
 
+	auth0 "github.com/auth0/auth0-cli/internal/auth0"
 	management "github.com/auth0/go-auth0/management"
+	management0 "github.com/auth0/go-auth0/v3/management"
+	option "github.com/auth0/go-auth0/v3/management/option"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -306,4 +309,128 @@ func (mr *MockUserAPIMockRecorder) Update(ctx, id, u interface{}, opts ...interf
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, id, u}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockUserAPI)(nil).Update), varargs...)
+}
+
+// MockUserSessionAPIV3 is a mock of UserSessionAPIV3 interface.
+type MockUserSessionAPIV3 struct {
+	ctrl     *gomock.Controller
+	recorder *MockUserSessionAPIV3MockRecorder
+}
+
+// MockUserSessionAPIV3MockRecorder is the mock recorder for MockUserSessionAPIV3.
+type MockUserSessionAPIV3MockRecorder struct {
+	mock *MockUserSessionAPIV3
+}
+
+// NewMockUserSessionAPIV3 creates a new mock instance.
+func NewMockUserSessionAPIV3(ctrl *gomock.Controller) *MockUserSessionAPIV3 {
+	mock := &MockUserSessionAPIV3{ctrl: ctrl}
+	mock.recorder = &MockUserSessionAPIV3MockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockUserSessionAPIV3) EXPECT() *MockUserSessionAPIV3MockRecorder {
+	return m.recorder
+}
+
+// Delete mocks base method.
+func (m *MockUserSessionAPIV3) Delete(ctx context.Context, userID string, opts ...option.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, userID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Delete", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockUserSessionAPIV3MockRecorder) Delete(ctx, userID interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, userID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockUserSessionAPIV3)(nil).Delete), varargs...)
+}
+
+// List mocks base method.
+func (m *MockUserSessionAPIV3) List(ctx context.Context, userID string, request *management0.ListUserSessionsRequestParameters, opts ...option.RequestOption) (*auth0.UserSessionPage, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, userID, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "List", varargs...)
+	ret0, _ := ret[0].(*auth0.UserSessionPage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockUserSessionAPIV3MockRecorder) List(ctx, userID, request interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, userID, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockUserSessionAPIV3)(nil).List), varargs...)
+}
+
+// MockUserRefreshTokenAPIV3 is a mock of UserRefreshTokenAPIV3 interface.
+type MockUserRefreshTokenAPIV3 struct {
+	ctrl     *gomock.Controller
+	recorder *MockUserRefreshTokenAPIV3MockRecorder
+}
+
+// MockUserRefreshTokenAPIV3MockRecorder is the mock recorder for MockUserRefreshTokenAPIV3.
+type MockUserRefreshTokenAPIV3MockRecorder struct {
+	mock *MockUserRefreshTokenAPIV3
+}
+
+// NewMockUserRefreshTokenAPIV3 creates a new mock instance.
+func NewMockUserRefreshTokenAPIV3(ctrl *gomock.Controller) *MockUserRefreshTokenAPIV3 {
+	mock := &MockUserRefreshTokenAPIV3{ctrl: ctrl}
+	mock.recorder = &MockUserRefreshTokenAPIV3MockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockUserRefreshTokenAPIV3) EXPECT() *MockUserRefreshTokenAPIV3MockRecorder {
+	return m.recorder
+}
+
+// Delete mocks base method.
+func (m *MockUserRefreshTokenAPIV3) Delete(ctx context.Context, userID string, opts ...option.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, userID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Delete", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockUserRefreshTokenAPIV3MockRecorder) Delete(ctx, userID interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, userID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockUserRefreshTokenAPIV3)(nil).Delete), varargs...)
+}
+
+// List mocks base method.
+func (m *MockUserRefreshTokenAPIV3) List(ctx context.Context, userID string, request *management0.ListRefreshTokensRequestParameters, opts ...option.RequestOption) (*auth0.UserRefreshTokenPage, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, userID, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "List", varargs...)
+	ret0, _ := ret[0].(*auth0.UserRefreshTokenPage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockUserRefreshTokenAPIV3MockRecorder) List(ctx, userID, request interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, userID, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockUserRefreshTokenAPIV3)(nil).List), varargs...)
 }

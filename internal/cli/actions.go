@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/go-auth0"
@@ -65,6 +66,13 @@ var (
 		LongForm:  "runtime",
 		ShortForm: "r",
 		Help:      "Runtime to be used in the action.  Possible values are: node22(recommended), node18, node16, node12",
+	}
+
+	actionModule = Flag{
+		Name:      "Module",
+		LongForm:  "module",
+		ShortForm: "m",
+		Help:      "Action module to associate with the action, as comma-separated key=value pairs matching the API fields: module_id and module_version_id (both required, UUIDs). Can be passed multiple times to associate several modules.",
 	}
 
 	actionTemplates = map[string]string{
@@ -190,6 +198,7 @@ func createActionCmd(cli *cli) *cobra.Command {
 		Dependencies map[string]string
 		Secrets      map[string]string
 		Runtime      string
+		Modules      []string
 	}
 
 	cmd := &cobra.Command{
@@ -206,6 +215,7 @@ func createActionCmd(cli *cli) *cobra.Command {
   auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
   auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
   auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
+  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --module "module_id=mod_123,module_version_id=ver_456"
   auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json
   auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -259,6 +269,14 @@ func createActionCmd(cli *cli) *cobra.Command {
 				Secrets:      inputSecretsToActionSecrets(inputs.Secrets),
 			}
 
+			if len(inputs.Modules) != 0 {
+				modules, err := inputModulesToActionModules(inputs.Modules)
+				if err != nil {
+					return err
+				}
+				action.Modules = modules
+			}
+
 			if err := ansi.Waiting(func() error {
 				return cli.api.Action.Create(cmd.Context(), action)
 			}); err != nil {
@@ -279,6 +297,7 @@ func createActionCmd(cli *cli) *cobra.Command {
 	actionDependency.RegisterStringMap(cmd, &inputs.Dependencies, nil)
 	actionSecret.RegisterStringMap(cmd, &inputs.Secrets, nil)
 	actionRuntime.RegisterString(cmd, &inputs.Runtime, "")
+	actionModule.RegisterStringArray(cmd, &inputs.Modules, nil)
 
 	return cmd
 }
@@ -291,6 +310,7 @@ func updateActionCmd(cli *cli) *cobra.Command {
 		Dependencies map[string]string
 		Secrets      map[string]string
 		Runtime      string
+		Modules      []string
 	}
 
 	cmd := &cobra.Command{
@@ -308,6 +328,7 @@ func updateActionCmd(cli *cli) *cobra.Command {
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
+  auth0 actions update <action-id> --module "module_id=mod_123,module_version_id=ver_456"
   auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json
   auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -332,26 +353,33 @@ func updateActionCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := actionCode.OpenEditorU(
-				cmd,
-				&inputs.Code,
-				oldAction.GetCode(),
-				inputs.Name+".*.js",
-			); err != nil {
-				return fmt.Errorf("failed to capture input from the editor: %w", err)
-			}
-
-			if !cli.force && canPrompt(cmd) {
-				var confirmed bool
-				if err := prompt.AskBool("Do you want to save the action code?", &confirmed, true); err != nil {
-					return fmt.Errorf("failed to capture prompt input: %w", err)
+			// When the update is driven purely by non-code flags (e.g. --module),
+			// skip the interactive code editor and its save confirmation so those
+			// changes aren't discarded by answering "No".
+			editingCode := actionCode.IsSet(cmd) || !hasNonCodeFlagSet(cmd)
+			if editingCode {
+				if err := actionCode.OpenEditorU(
+					cmd,
+					&inputs.Code,
+					oldAction.GetCode(),
+					inputs.Name+".*.js",
+				); err != nil {
+					return fmt.Errorf("failed to capture input from the editor: %w", err)
 				}
-				if !confirmed {
-					return nil
+
+				if !cli.force && canPrompt(cmd) {
+					var confirmed bool
+					if err := prompt.AskBool("Do you want to save the action code?", &confirmed, true); err != nil {
+						return fmt.Errorf("failed to capture prompt input: %w", err)
+					}
+					if !confirmed {
+						return nil
+					}
 				}
 			}
 
 			updatedAction := &management.Action{
+				Name:              oldAction.Name,
 				SupportedTriggers: oldAction.SupportedTriggers,
 			}
 			if inputs.Name != "" {
@@ -365,6 +393,14 @@ func updateActionCmd(cli *cli) *cobra.Command {
 			}
 			if len(inputs.Secrets) != 0 {
 				updatedAction.Secrets = inputSecretsToActionSecrets(inputs.Secrets)
+			}
+
+			if len(inputs.Modules) != 0 {
+				modules, err := inputModulesToActionModules(inputs.Modules)
+				if err != nil {
+					return err
+				}
+				updatedAction.Modules = modules
 			}
 
 			if inputs.Runtime != "" {
@@ -391,8 +427,19 @@ func updateActionCmd(cli *cli) *cobra.Command {
 	actionDependency.RegisterStringMapU(cmd, &inputs.Dependencies, nil)
 	actionSecret.RegisterStringMapU(cmd, &inputs.Secrets, nil)
 	actionRuntime.RegisterStringU(cmd, &inputs.Runtime, "")
+	actionModule.RegisterStringArrayU(cmd, &inputs.Modules, nil)
 
 	return cmd
+}
+
+// hasNonCodeFlagSet reports whether the user set any update flag other than the
+// action code, so a non-code update (e.g. --module) can skip the code editor.
+func hasNonCodeFlagSet(cmd *cobra.Command) bool {
+	return actionName.IsSet(cmd) ||
+		actionDependency.IsSet(cmd) ||
+		actionSecret.IsSet(cmd) ||
+		actionRuntime.IsSet(cmd) ||
+		actionModule.IsSet(cmd)
 }
 
 func deleteActionCmd(cli *cli) *cobra.Command {
@@ -720,6 +767,49 @@ func inputSecretsToActionSecrets(secrets map[string]string) *[]management.Action
 	}
 
 	return &actionSecrets
+}
+
+// inputModulesToActionModules parses repeatable --module flag values into the
+// action's Modules payload. Each value is a comma-separated set of key=value
+// pairs whose keys mirror the Management API field names: module_id and
+// module_version_id, both required. The API identifies the version to attach by
+// its UUID (module_version_id); the version number is derived server-side and
+// returned on read, so it is not accepted as input here.
+func inputModulesToActionModules(modules []string) (*[]management.ActionModules, error) {
+	actionModules := make([]management.ActionModules, 0, len(modules))
+
+	for _, raw := range modules {
+		var module management.ActionModules
+
+		for _, pair := range strings.Split(raw, ",") {
+			key, value, found := strings.Cut(pair, "=")
+			key = strings.TrimSpace(key)
+			value = strings.TrimSpace(value)
+			if !found || key == "" || value == "" {
+				return nil, fmt.Errorf("invalid --module value %q: expected comma-separated key=value pairs (e.g. \"module_id=<uuid>,module_version_id=<uuid>\")", raw)
+			}
+
+			switch key {
+			case "module_id":
+				module.ModuleID = auth0.String(value)
+			case "module_version_id":
+				module.ModuleVersionID = auth0.String(value)
+			default:
+				return nil, fmt.Errorf("invalid --module value %q: unknown key %q (supported keys: module_id, module_version_id)", raw, key)
+			}
+		}
+
+		if module.ModuleID == nil {
+			return nil, fmt.Errorf("invalid --module value %q: module_id is required", raw)
+		}
+		if module.ModuleVersionID == nil {
+			return nil, fmt.Errorf("invalid --module value %q: module_version_id is required (the UUID of a specific module version)", raw)
+		}
+
+		actionModules = append(actionModules, module)
+	}
+
+	return &actionModules, nil
 }
 
 func printColorDiff(code1, code2 string, fromVersion, toVersion int) {

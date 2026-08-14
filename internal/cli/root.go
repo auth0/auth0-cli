@@ -184,6 +184,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(rulesCmd(cli))
 	rootCmd.AddCommand(actionsCmd(cli))
 	rootCmd.AddCommand(apisCmd(cli))
+	rootCmd.AddCommand(clientGrantsCmd(cli))
 	rootCmd.AddCommand(rolesCmd(cli))
 	rootCmd.AddCommand(organizationsCmd(cli))
 	rootCmd.AddCommand(universalLoginCmd(cli))
@@ -200,6 +201,8 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(networkACLCmd(cli))
 	rootCmd.AddCommand(tenantSettingsCmd(cli))
 	rootCmd.AddCommand(tokenExchangeCmd(cli))
+	rootCmd.AddCommand(sessionsCmd(cli))
+	rootCmd.AddCommand(refreshTokensCmd(cli))
 
 	rootCmd.AddCommand(commandsCmd(cli))
 
