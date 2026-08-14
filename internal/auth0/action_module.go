@@ -20,6 +20,11 @@ type ActionModulePage = core.Page[*int, *managementv3.ActionModuleListItem, *man
 // ActionModulePage.
 type ActionModuleActionPage = core.Page[*int, *managementv3.ActionModuleAction, *managementv3.GetActionModuleActionsResponseContent]
 
+// ActionModuleVersionPage is the paginated response returned by the action
+// module versions list endpoint. It is aliased here for the same reason as
+// ActionModulePage.
+type ActionModuleVersionPage = core.Page[*int, *managementv3.ActionModuleVersion, *managementv3.GetActionModuleVersionsResponseContent]
+
 // ActionModuleAPIV3 is the V3 SDK interface for the /actions/modules endpoint.
 // Action modules are reusable code libraries that actions can import; they are
 // keyed by module ID.
@@ -56,6 +61,12 @@ type ActionModuleAPIV3 interface {
 	//
 	// Required scope: `read:actions`.
 	ListActions(ctx context.Context, id string, request *managementv3.GetActionModuleActionsRequestParameters, opts ...option.RequestOption) (*ActionModuleActionPage, error)
+
+	// Rollback copies the code, dependencies, and secrets of a past version
+	// back into the module's draft.
+	//
+	// Required scope: `update:actions`.
+	Rollback(ctx context.Context, id string, request *managementv3.RollbackActionModuleRequestParameters, opts ...option.RequestOption) (*managementv3.RollbackActionModuleResponseContent, error)
 }
 
 // ActionModuleVersionAPIV3 is the V3 SDK interface for the
@@ -66,4 +77,15 @@ type ActionModuleVersionAPIV3 interface {
 	//
 	// Required scope: `update:actions`.
 	Create(ctx context.Context, id string, opts ...option.RequestOption) (*managementv3.CreateActionModuleVersionResponseContent, error)
+
+	// List retrieves the immutable versions of an action module. The results
+	// are offset-paginated via the Page/PerPage request parameters.
+	//
+	// Required scope: `read:actions`.
+	List(ctx context.Context, id string, request *managementv3.GetActionModuleVersionsRequestParameters, opts ...option.RequestOption) (*ActionModuleVersionPage, error)
+
+	// Get retrieves a specific immutable version of an action module.
+	//
+	// Required scope: `read:actions`.
+	Get(ctx context.Context, id string, versionID string, opts ...option.RequestOption) (*managementv3.GetActionModuleVersionResponseContent, error)
 }

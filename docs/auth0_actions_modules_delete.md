@@ -55,5 +55,6 @@ auth0 actions modules delete [flags]
 - [auth0 actions modules list](auth0_actions_modules_list.md) - List your action modules
 - [auth0 actions modules show](auth0_actions_modules_show.md) - Show an action module
 - [auth0 actions modules update](auth0_actions_modules_update.md) - Update an action module
+- [auth0 actions modules versions](auth0_actions_modules_versions.md) - Manage action module versions
 
 

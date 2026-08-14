@@ -136,6 +136,26 @@ func (mr *MockActionModuleAPIV3MockRecorder) ListActions(ctx, id, request interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActions", reflect.TypeOf((*MockActionModuleAPIV3)(nil).ListActions), varargs...)
 }
 
+// Rollback mocks base method.
+func (m *MockActionModuleAPIV3) Rollback(ctx context.Context, id string, request *management.RollbackActionModuleRequestParameters, opts ...option.RequestOption) (*management.RollbackActionModuleResponseContent, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Rollback", varargs...)
+	ret0, _ := ret[0].(*management.RollbackActionModuleResponseContent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Rollback indicates an expected call of Rollback.
+func (mr *MockActionModuleAPIV3MockRecorder) Rollback(ctx, id, request interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rollback", reflect.TypeOf((*MockActionModuleAPIV3)(nil).Rollback), varargs...)
+}
+
 // Update mocks base method.
 func (m *MockActionModuleAPIV3) Update(ctx context.Context, id string, request *management.UpdateActionModuleRequestContent, opts ...option.RequestOption) (*management.UpdateActionModuleResponseContent, error) {
 	m.ctrl.T.Helper()
@@ -197,4 +217,44 @@ func (mr *MockActionModuleVersionAPIV3MockRecorder) Create(ctx, id interface{}, 
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockActionModuleVersionAPIV3)(nil).Create), varargs...)
+}
+
+// Get mocks base method.
+func (m *MockActionModuleVersionAPIV3) Get(ctx context.Context, id, versionID string, opts ...option.RequestOption) (*management.GetActionModuleVersionResponseContent, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id, versionID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Get", varargs...)
+	ret0, _ := ret[0].(*management.GetActionModuleVersionResponseContent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockActionModuleVersionAPIV3MockRecorder) Get(ctx, id, versionID interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id, versionID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockActionModuleVersionAPIV3)(nil).Get), varargs...)
+}
+
+// List mocks base method.
+func (m *MockActionModuleVersionAPIV3) List(ctx context.Context, id string, request *management.GetActionModuleVersionsRequestParameters, opts ...option.RequestOption) (*auth0.ActionModuleVersionPage, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, id, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "List", varargs...)
+	ret0, _ := ret[0].(*auth0.ActionModuleVersionPage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockActionModuleVersionAPIV3MockRecorder) List(ctx, id, request interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, id, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockActionModuleVersionAPIV3)(nil).List), varargs...)
 }
