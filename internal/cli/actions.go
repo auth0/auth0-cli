@@ -106,6 +106,7 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(deployActionCmd(cli))
 	cmd.AddCommand(openActionCmd(cli))
 	cmd.AddCommand(diffActionCmd(cli))
+	cmd.AddCommand(actionsModulesCmd(cli))
 
 	return cmd
 }

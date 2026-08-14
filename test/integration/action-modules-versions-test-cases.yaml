@@ -1,0 +1,58 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  001 - given a test action module, it successfully publishes a version:
+    command: auth0 actions modules versions publish $(./test/integration/scripts/get-action-module-versions-module-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-module-versions"
+        all_changes_published: "true"
+
+  002 - given a fully published module, publish reports there is nothing to publish:
+    command: auth0 actions modules versions publish $(./test/integration/scripts/get-action-module-versions-module-id.sh)
+    exit-code: 0
+    stderr:
+      contains:
+        - "already fully published"
+
+  003 - given a published module, it successfully lists the versions:
+    command: auth0 actions modules versions list $(./test/integration/scripts/get-action-module-versions-module-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - ID
+        - VERSION
+        - CREATED AT
+
+  004 - given a published module, it successfully lists the versions in json:
+    command: auth0 actions modules versions list $(./test/integration/scripts/get-action-module-versions-module-id.sh) --json
+    exit-code: 0
+    stdout:
+      contains:
+        - "version_number"
+
+  005 - given a published module version, it successfully shows the version details:
+    command: auth0 actions modules versions show $(./test/integration/scripts/get-action-module-versions-module-id.sh) $(./test/integration/scripts/get-action-module-version-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - VERSION
+        - CREATED AT
+
+  006 - given a published module version, it successfully shows the version details in json:
+    command: auth0 actions modules versions show $(./test/integration/scripts/get-action-module-versions-module-id.sh) $(./test/integration/scripts/get-action-module-version-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        code: "module.exports = {}"
+        version_number: "1"
+
+  007 - given a published module version, it successfully rolls the draft back:
+    command: auth0 actions modules versions rollback $(./test/integration/scripts/get-action-module-versions-module-id.sh) $(./test/integration/scripts/get-action-module-version-id.sh) --force
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME            integration-test-module-versions"
