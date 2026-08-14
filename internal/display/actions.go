@@ -20,6 +20,7 @@ type actionView struct {
 	UpdatedAt       string
 	CreatedAt       string
 	Code            string
+	Modules         string
 	raw             interface{}
 }
 
@@ -32,7 +33,7 @@ func (v *actionView) AsTableRow() []string {
 }
 
 func (v *actionView) KeyValues() [][]string {
-	return [][]string{
+	keyValues := [][]string{
 		{"ID", ansi.Faint(v.ID)},
 		{"NAME", v.Name},
 		{"TYPE", v.Type},
@@ -41,8 +42,15 @@ func (v *actionView) KeyValues() [][]string {
 		{"LAST DEPLOYED", v.BuiltAt},
 		{"LAST UPDATED", v.UpdatedAt},
 		{"CREATED", v.CreatedAt},
-		{"CODE", v.Code},
 	}
+
+	if v.Modules != "" {
+		keyValues = append(keyValues, []string{"MODULES", v.Modules})
+	}
+
+	keyValues = append(keyValues, []string{"CODE", v.Code})
+
+	return keyValues
 }
 
 func (v *actionView) Object() interface{} {
@@ -118,8 +126,29 @@ func makeActionView(action *management.Action) *actionView {
 		CreatedAt:       timeAgo(action.GetCreatedAt()),
 		UpdatedAt:       timeAgo(action.GetUpdatedAt()),
 		Code:            action.GetCode(),
+		Modules:         formatActionModules(action.Modules),
 		raw:             action,
 	}
+}
+
+func formatActionModules(modules *[]management.ActionModules) string {
+	if modules == nil || len(*modules) == 0 {
+		return ""
+	}
+
+	formatted := make([]string, 0, len(*modules))
+	for _, m := range *modules {
+		entry := m.GetModuleID()
+		if name := m.GetModuleName(); name != "" {
+			entry = name + " (" + m.GetModuleID() + ")"
+		}
+		if version := m.GetModuleVersionNumber(); version != 0 {
+			entry += " v" + strconv.Itoa(version)
+		}
+		formatted = append(formatted, entry)
+	}
+
+	return strings.Join(formatted, ", ")
 }
 
 func actionStatus(v string) string {

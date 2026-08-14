@@ -26,6 +26,7 @@ auth0 actions update [flags]
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
+  auth0 actions update <action-id> --module "module_id=mod_123,module_version_id=ver_456"
   auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json
   auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json-compact
 ```
@@ -39,6 +40,7 @@ auth0 actions update [flags]
       --force                       Skip confirmation.
       --json                        Output in json format.
       --json-compact                Output in compact json format.
+  -m, --module stringArray          Action module to associate with the action, as comma-separated key=value pairs matching the API fields: module_id and module_version_id (both required, UUIDs). Can be passed multiple times to associate several modules.
   -n, --name string                 Name of the action.
   -r, --runtime string              Runtime to be used in the action.  Possible values are: node22(recommended), node18, node16, node12
   -s, --secret stringToString       Secrets to be used in the action. (default [])
