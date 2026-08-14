@@ -79,6 +79,13 @@ func Execute() {
 		}
 	}()
 
+	// Intercept `<command> --help` with JSON requested (via --json or agent mode)
+	// before Cobra parses flags, so it works for every command, including the root
+	// and namespace commands that don't define their own --json flag.
+	if renderJSONHelpIfRequested(rootCmd, os.Args[1:]) {
+		return
+	}
+
 	// Platform specific terminal initialization:
 	// this should run for all commands,
 	// for most of the architectures there's no requirements.
@@ -132,6 +139,7 @@ func buildRootCmd(cli *cli) *cobra.Command {
 
 func commandRequiresAuthentication(invokedCommandName string) bool {
 	commandsWithNoAuthRequired := []string{
+		"auth0 commands",
 		"auth0 completion",
 		"auth0 help",
 		"auth0 login",
@@ -195,6 +203,8 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(tokenExchangeCmd(cli))
 	rootCmd.AddCommand(sessionsCmd(cli))
 	rootCmd.AddCommand(refreshTokensCmd(cli))
+
+	rootCmd.AddCommand(commandsCmd(cli))
 
 	// Keep completion at the bottom.
 	rootCmd.AddCommand(completionCmd(cli))
