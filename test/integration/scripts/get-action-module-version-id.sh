@@ -6,7 +6,7 @@ if [ -f "$FILE" ]; then
     exit 0
 fi
 
-module_id=$( ./test/integration/scripts/get-action-module-id.sh )
+module_id=$( ./test/integration/scripts/get-action-module-versions-module-id.sh )
 
 # Ensure the module has at least one published version to inspect.
 auth0 actions modules versions publish "$module_id" >/dev/null 2>&1
