@@ -73,3 +73,25 @@ type ClientGrantAPIV3 interface {
 		opts ...option.RequestOption,
 	) error
 }
+
+// ClientGrantOrganizationPage is the paginated response returned by the
+// client-grant organizations endpoint. It is aliased here so the mock generator
+// (which cannot parse instantiated generic types) sees a plain named type in the
+// interface.
+type ClientGrantOrganizationPage = core.Page[*string, *managementv3.Organization, *managementv3.ListClientGrantOrganizationsPaginatedResponseContent]
+
+// ClientGrantOrganizationAPIV3 is the interface for the
+// /client-grants/{id}/organizations endpoint.
+type ClientGrantOrganizationAPIV3 interface {
+	// List the organizations associated with a client grant.
+	//
+	// Required scope: `read:organization_client_grants`
+	//
+	// See: https://auth0.com/docs/api/management/v2/client-grants/get-client-grant-organizations
+	List(
+		ctx context.Context,
+		id string,
+		request *managementv3.ListClientGrantOrganizationsRequestParameters,
+		opts ...option.RequestOption,
+	) (*ClientGrantOrganizationPage, error)
+}
