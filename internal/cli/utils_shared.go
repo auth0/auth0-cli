@@ -420,3 +420,51 @@ func parseFlexibleDate(input string) (string, error) {
 
 	return "", fmt.Errorf("invalid date format: use RFC3339, 'YYYY-MM-DD', or formats like 'yesterday', '-2d'")
 }
+
+// stringMapToAny converts a string-keyed string map (as produced by a
+// StringToString flag) into the map[string]any shape the v3 SDK uses for
+// free-form metadata fields. A nil or empty input yields a non-nil empty map so
+// the caller sends "{}" (clear) rather than omitting the field.
+func stringMapToAny(in map[string]string) map[string]any {
+	out := make(map[string]any, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
+}
+
+// collectV3Pages drains a go-auth0 v3 cursor/offset-paginated endpoint into a
+// single slice, following pages until limit items are collected or the results
+// are exhausted. A limit <= 0 collects every page. The initial request and all
+// page fetches run inside the waiting spinner, so callers get one loading state
+// for the whole operation.
+//
+// It exists because the v1 getWithPagination helper is built on offset options
+// (management.Page/PerPage) and []interface{}, which are incompatible with the
+// generic core.Page[Cursor, T, R] iterator that every v3 list endpoint returns.
+func collectV3Pages[C comparable, T any, R any](
+	ctx context.Context,
+	limit int,
+	list func(ctx context.Context) (*core.Page[C, T, R], error),
+) ([]T, error) {
+	var items []T
+
+	err := ansi.Waiting(func() error {
+		page, err := list(ctx)
+		if err != nil {
+			return err
+		}
+
+		iter := page.Iterator()
+		for iter.Next(ctx) {
+			items = append(items, iter.Current())
+			if limit > 0 && len(items) >= limit {
+				break
+			}
+		}
+
+		return iter.Err()
+	})
+
+	return items, err
+}

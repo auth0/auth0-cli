@@ -97,8 +97,10 @@ Authenticating as a user is not supported for **private cloud** tenants. Instead
 - [auth0 phone](auth0_phone.md) - Manage phone providers
 - [auth0 protection](auth0_protection.md) - Manage resources for attack protection
 - [auth0 quickstarts](auth0_quickstarts.md) - Quickstart support for getting bootstrapped
+- [auth0 refresh-tokens](auth0_refresh-tokens.md) - Manage resources for refresh tokens
 - [auth0 roles](auth0_roles.md) - Manage resources for roles
 - [auth0 rules](auth0_rules.md) - Manage resources for rules
+- [auth0 sessions](auth0_sessions.md) - Manage resources for sessions
 - [auth0 tenant-settings](auth0_tenant-settings.md) - Manage tenant settings
 - [auth0 tenants](auth0_tenants.md) - Manage configured tenants
 - [auth0 terraform](auth0_terraform.md) - Manage terraform configuration for your Auth0 Tenant

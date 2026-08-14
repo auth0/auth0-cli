@@ -148,6 +148,8 @@ var RequiredScopes = []string{
 	"read:token_exchange_profiles", "create:token_exchange_profiles", "update:token_exchange_profiles", "delete:token_exchange_profiles",
 	"read:organization_invitations", "create:organization_invitations", "delete:organization_invitations",
 	"read:organization_discovery_domains", "read:self_service_profiles", "read:user_attribute_profiles",
+	"read:sessions", "update:sessions", "delete:sessions",
+	"read:refresh_tokens", "update:refresh_tokens", "delete:refresh_tokens",
 }
 
 // GetDeviceCode kicks-off the device authentication flow by requesting

@@ -279,8 +279,10 @@ Select **y** to proceed with your default tenant, or **N** to choose a different
 - [auth0 orgs](https://auth0.github.io/auth0-cli/auth0_orgs.html) - Manage resources for organizations
 - [auth0 protection](https://auth0.github.io/auth0-cli/auth0_protection.html) - Manage resources for attack protection
 - [auth0 quickstarts](https://auth0.github.io/auth0-cli/auth0_quickstarts.html) - Quickstart support for getting bootstrapped
+- [auth0 refresh-tokens](https://auth0.github.io/auth0-cli/auth0_refresh-tokens.html) - Manage resources for refresh tokens
 - [auth0 roles](https://auth0.github.io/auth0-cli/auth0_roles.html) - Manage resources for roles
 - [auth0 rules](https://auth0.github.io/auth0-cli/auth0_rules.html) - Manage resources for rules
+- [auth0 sessions](https://auth0.github.io/auth0-cli/auth0_sessions.html) - Manage resources for sessions
 - [auth0 tenants](https://auth0.github.io/auth0-cli/auth0_tenants.html) - Manage configured tenants
 - [auth0 test](https://auth0.github.io/auth0-cli/auth0_test.html) - Try your Universal Login box or get a token
 - [auth0 terraform generate](https://auth0.github.io/auth0-cli/auth0_terraform_generate.html) - Generate terraform configuration for your Auth0 Tenant

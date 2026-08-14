@@ -6,7 +6,20 @@ import (
 	"context"
 
 	"github.com/auth0/go-auth0/management"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
+	"github.com/auth0/go-auth0/v3/management/core"
+	"github.com/auth0/go-auth0/v3/management/option"
 )
+
+// UserSessionPage is the paginated response returned by the user sessions list
+// endpoint. It is aliased here so the mock generator (which cannot parse
+// instantiated generic types) sees a plain named type in the interface.
+type UserSessionPage = core.Page[*string, *managementv3.SessionResponseContent, *managementv3.ListUserSessionsPaginatedResponseContent]
+
+// UserRefreshTokenPage is the paginated response returned by the user refresh
+// tokens list endpoint. It is aliased here so the mock generator (which cannot
+// parse instantiated generic types) sees a plain named type in the interface.
+type UserRefreshTokenPage = core.Page[*string, *managementv3.RefreshTokenResponseContent, *managementv3.ListRefreshTokensPaginatedResponseContent]
 
 type UserAPI interface {
 	// Blocks retrieves a list of blocked IP addresses of a particular user.
@@ -51,4 +64,32 @@ type UserAPI interface {
 
 	// ListByEmail lists all users by email in all the connections.
 	ListByEmail(ctx context.Context, email string, opts ...management.RequestOption) (us []*management.User, err error)
+}
+
+// UserSessionAPIV3 is the V3 SDK interface for user-scoped sessions
+// (/users/{id}/sessions).
+type UserSessionAPIV3 interface {
+	// List a user's sessions (cursor-paginated).
+	//
+	// Required scope: `read:sessions`.
+	List(ctx context.Context, userID string, request *managementv3.ListUserSessionsRequestParameters, opts ...option.RequestOption) (*UserSessionPage, error)
+
+	// Delete all sessions for a user.
+	//
+	// Required scope: `delete:sessions`.
+	Delete(ctx context.Context, userID string, opts ...option.RequestOption) error
+}
+
+// UserRefreshTokenAPIV3 is the V3 SDK interface for user-scoped refresh tokens
+// (/users/{id}/refresh-tokens).
+type UserRefreshTokenAPIV3 interface {
+	// List a user's refresh tokens (cursor-paginated).
+	//
+	// Required scope: `read:refresh_tokens`.
+	List(ctx context.Context, userID string, request *managementv3.ListRefreshTokensRequestParameters, opts ...option.RequestOption) (*UserRefreshTokenPage, error)
+
+	// Delete all refresh tokens for a user.
+	//
+	// Required scope: `delete:refresh_tokens`.
+	Delete(ctx context.Context, userID string, opts ...option.RequestOption) error
 }
