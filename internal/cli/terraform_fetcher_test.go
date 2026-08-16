@@ -9,6 +9,7 @@ import (
 
 	"github.com/auth0/go-auth0/management"
 	managementv3 "github.com/auth0/go-auth0/v3/management"
+	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
@@ -621,62 +622,50 @@ func TestClientResourceFetcher_FetchData(t *testing.T) {
 }
 
 func TestClientGrantResourceFetcher_FetchData(t *testing.T) {
+	terminalPage := func(grants []*managementv3.ClientGrantResponseContent) *auth0.ClientGrantPage {
+		return &auth0.ClientGrantPage{
+			Results: grants,
+			NextPageFunc: func(context.Context) (*auth0.ClientGrantPage, error) {
+				return nil, core.ErrNoPages
+			},
+		}
+	}
+
 	t.Run("it successfully retrieves client grant data", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		clientGrantAPI := mock.NewMockClientGrantAPI(ctrl)
+		clientGrantAPI := mock.NewMockClientGrantAPIV3(ctrl)
 		clientGrantAPI.EXPECT().
 			List(gomock.Any(), gomock.Any()).
 			Return(
-				&management.ClientGrantList{
-					List: management.List{
-						Start: 0,
-						Limit: 2,
-						Total: 4,
+				terminalPage([]*managementv3.ClientGrantResponseContent{
+					{
+						ID:       auth0.String("cgr_1"),
+						ClientID: auth0.String("client-id-1"),
+						Audience: auth0.String("https://travel0.com/api"),
 					},
-					ClientGrants: []*management.ClientGrant{
-						{
-							ID:       auth0.String("cgr_1"),
-							ClientID: auth0.String("client-id-1"),
-							Audience: auth0.String("https://travel0.com/api"),
-						},
-						{
-							ID:       auth0.String("cgr_2"),
-							ClientID: auth0.String("client-id-2"),
-							Audience: auth0.String("https://travel0.com/api"),
-						},
+					{
+						ID:       auth0.String("cgr_2"),
+						ClientID: auth0.String("client-id-2"),
+						Audience: auth0.String("https://travel0.com/api"),
 					},
-				},
-				nil,
-			)
-		clientGrantAPI.EXPECT().
-			List(gomock.Any(), gomock.Any()).
-			Return(
-				&management.ClientGrantList{
-					List: management.List{
-						Start: 2,
-						Limit: 4,
-						Total: 4,
+					{
+						ID:       auth0.String("cgr_3"),
+						ClientID: auth0.String("client-id-1"),
+						Audience: auth0.String("https://travel0.us.auth0.com/api/v2/"),
 					},
-					ClientGrants: []*management.ClientGrant{
-						{
-							ID:       auth0.String("cgr_3"),
-							ClientID: auth0.String("client-id-1"),
-							Audience: auth0.String("https://travel0.us.auth0.com/api/v2/"),
-						},
-						{
-							ID:       auth0.String("cgr_4"),
-							ClientID: auth0.String("client-id-2"),
-							Audience: auth0.String("https://travel0.us.auth0.com/api/v2/"),
-						},
+					{
+						ID:       auth0.String("cgr_4"),
+						ClientID: auth0.String("client-id-2"),
+						Audience: auth0.String("https://travel0.us.auth0.com/api/v2/"),
 					},
-				},
+				}),
 				nil,
 			)
 
 		fetcher := clientGrantResourceFetcher{
-			api: &auth0.API{
+			apiv3: &auth0.APIV3{
 				ClientGrant: clientGrantAPI,
 			},
 		}
@@ -709,13 +698,13 @@ func TestClientGrantResourceFetcher_FetchData(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		clientGrantAPI := mock.NewMockClientGrantAPI(ctrl)
+		clientGrantAPI := mock.NewMockClientGrantAPIV3(ctrl)
 		clientGrantAPI.EXPECT().
 			List(gomock.Any(), gomock.Any()).
 			Return(nil, fmt.Errorf("failed to list clients"))
 
 		fetcher := clientGrantResourceFetcher{
-			api: &auth0.API{
+			apiv3: &auth0.APIV3{
 				ClientGrant: clientGrantAPI,
 			},
 		}
@@ -728,39 +717,32 @@ func TestClientGrantResourceFetcher_FetchData(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		clientGrantAPI := mock.NewMockClientGrantAPI(ctrl)
+		clientGrantAPI := mock.NewMockClientGrantAPIV3(ctrl)
 		clientGrantAPI.EXPECT().
 			List(gomock.Any(), gomock.Any()).
 			Return(
-				&management.ClientGrantList{
-					List: management.List{
-						Start: 0,
-						Limit: 3,
-						Total: 3,
+				terminalPage([]*managementv3.ClientGrantResponseContent{
+					{
+						ID:       auth0.String("cgr_1"),
+						ClientID: auth0.String("client-id-1"),
+						Audience: auth0.String("https://travel0.com/api"),
 					},
-					ClientGrants: []*management.ClientGrant{
-						{
-							ID:       auth0.String("cgr_1"),
-							ClientID: auth0.String("client-id-1"),
-							Audience: auth0.String("https://travel0.com/api"),
-						},
-						{
-							ID:         auth0.String("cgr_2"),
-							DefaultFor: auth0.String("third_party_clients"),
-							Audience:   auth0.String("https://travel0.com/api"),
-						},
-						{
-							ID:         auth0.String("cgr_3"),
-							DefaultFor: auth0.String("third_party_clients"),
-							Audience:   auth0.String("https://partner-api.example.com"),
-						},
+					{
+						ID:         auth0.String("cgr_2"),
+						DefaultFor: managementv3.ClientGrantDefaultForEnumThirdPartyClients.Ptr(),
+						Audience:   auth0.String("https://travel0.com/api"),
 					},
-				},
+					{
+						ID:         auth0.String("cgr_3"),
+						DefaultFor: managementv3.ClientGrantDefaultForEnumThirdPartyClients.Ptr(),
+						Audience:   auth0.String("https://partner-api.example.com"),
+					},
+				}),
 				nil,
 			)
 
 		fetcher := clientGrantResourceFetcher{
-			api: &auth0.API{
+			apiv3: &auth0.APIV3{
 				ClientGrant: clientGrantAPI,
 			},
 		}

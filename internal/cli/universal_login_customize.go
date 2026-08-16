@@ -902,6 +902,14 @@ func fetchBrandingThemeOrUseDefault(ctx context.Context, api *auth0.API) *manage
 			LogoURL:             "",
 			SocialButtonsLayout: "bottom",
 		},
+		Identifiers: &management.BrandingThemeIdentifiers{
+			LoginDisplay:    "unified",
+			OTPAutocomplete: true,
+			PhoneDisplay: management.BrandingThemePhoneDisplay{
+				Masking:    "mask_digits",
+				Formatting: "international",
+			},
+		},
 	}
 }
 

@@ -73,7 +73,8 @@ func namespaceUsageTemplate() string {
 %s{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
   {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
 
-Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
+Use "{{.CommandPath}} [command] --help" for more information about a command.
+Use "auth0 commands" for an overview of every command, and add --json to any --help for machine-readable output.{{end}}
 `,
 		ansi.Bold("Usage:"),
 		ansi.Bold("Aliases:"),
@@ -108,7 +109,8 @@ func resourceUsageTemplate() string {
 %s{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
   {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
 
-Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
+Use "{{.CommandPath}} [command] --help" for more information about a command.
+Use "auth0 commands" for an overview of every command, and add --json to any --help for machine-readable output.{{end}}
 `,
 		ansi.Bold("Usage:"),
 		ansi.Bold("Aliases:"),

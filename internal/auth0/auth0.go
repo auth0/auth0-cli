@@ -15,7 +15,6 @@ type API struct {
 	Branding             BrandingAPI
 	BrandingTheme        BrandingThemeAPI
 	Client               ClientAPI
-	ClientGrant          ClientGrantAPI
 	Connection           ConnectionAPI
 	CustomDomain         CustomDomainAPI
 	EmailTemplate        EmailTemplateAPI
@@ -50,7 +49,6 @@ func NewAPI(m *management.Management) *API {
 		Branding:             m.Branding,
 		BrandingTheme:        m.BrandingTheme,
 		Client:               m.Client,
-		ClientGrant:          m.ClientGrant,
 		Connection:           m.Connection,
 		CustomDomain:         m.CustomDomain,
 		EmailTemplate:        m.EmailTemplate,
@@ -79,15 +77,31 @@ func NewAPI(m *management.Management) *API {
 
 type APIV3 struct {
 	AttackProtectionBotDetection AttackProtectionBotDetectionAPIV3
+	ClientGrant                  ClientGrantAPIV3
+	ClientGrantOrganization      ClientGrantOrganizationAPIV3
 	Events                       EventsAPIV3
 	PhoneNotificationTemplate    PhoneNotificationTemplateAPI
+	Session                      SessionAPIV3
+	RefreshToken                 RefreshTokenAPIV3
+	UserSession                  UserSessionAPIV3
+	UserRefreshToken             UserRefreshTokenAPIV3
+	ActionModule                 ActionModuleAPIV3
+	ActionModuleVersion          ActionModuleVersionAPIV3
 }
 
 func NewAPIV3(m *managementv3.Management) *APIV3 {
 	return &APIV3{
 		AttackProtectionBotDetection: m.AttackProtection.BotDetection,
+		ClientGrant:                  m.ClientGrants,
+		ClientGrantOrganization:      m.ClientGrants.Organizations,
 		Events:                       m.Events,
 		PhoneNotificationTemplate:    m.Branding.Phone.Templates,
+		Session:                      m.Sessions,
+		RefreshToken:                 m.RefreshTokens,
+		UserSession:                  m.Users.Sessions,
+		UserRefreshToken:             m.Users.RefreshToken,
+		ActionModule:                 m.Actions.Modules,
+		ActionModuleVersion:          m.Actions.Modules.Versions,
 	}
 }
 
