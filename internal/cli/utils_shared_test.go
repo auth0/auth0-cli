@@ -7,6 +7,7 @@ import (
 
 	"github.com/auth0/go-auth0/management"
 	managementv3 "github.com/auth0/go-auth0/v3/management"
+	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
@@ -14,6 +15,82 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
 	"github.com/auth0/auth0-cli/internal/config"
 )
+
+// newPageChain builds a linked list of *core.Page from the given page contents,
+// wiring each page's NextPageFunc to the following page. The final page returns
+// core.ErrNoPages, mirroring the real SDK's terminal behavior.
+func newPageChain(pages ...[]int) *core.Page[*string, int, any] {
+	var build func(i int) *core.Page[*string, int, any]
+	build = func(i int) *core.Page[*string, int, any] {
+		return &core.Page[*string, int, any]{
+			Results: pages[i],
+			NextPageFunc: func(context.Context) (*core.Page[*string, int, any], error) {
+				if i+1 >= len(pages) {
+					return nil, core.ErrNoPages
+				}
+				return build(i + 1), nil
+			},
+		}
+	}
+
+	return build(0)
+}
+
+func TestCollectV3Pages(t *testing.T) {
+	t.Run("collects every item across multiple pages when limit is 0", func(t *testing.T) {
+		items, err := collectV3Pages(context.Background(), 0, func(context.Context) (*core.Page[*string, int, any], error) {
+			return newPageChain([]int{1, 2}, []int{3, 4}, []int{5}), nil
+		})
+
+		assert.NoError(t, err)
+		assert.Equal(t, []int{1, 2, 3, 4, 5}, items)
+	})
+
+	t.Run("stops once the limit is reached mid-page", func(t *testing.T) {
+		items, err := collectV3Pages(context.Background(), 3, func(context.Context) (*core.Page[*string, int, any], error) {
+			return newPageChain([]int{1, 2}, []int{3, 4}, []int{5}), nil
+		})
+
+		assert.NoError(t, err)
+		assert.Equal(t, []int{1, 2, 3}, items)
+	})
+
+	t.Run("returns the initial request error", func(t *testing.T) {
+		wantErr := errors.New("boom")
+		items, err := collectV3Pages(context.Background(), 0, func(context.Context) (*core.Page[*string, int, any], error) {
+			return nil, wantErr
+		})
+
+		assert.ErrorIs(t, err, wantErr)
+		assert.Nil(t, items)
+	})
+
+	t.Run("surfaces an error raised while fetching a later page", func(t *testing.T) {
+		wantErr := errors.New("page 2 failed")
+		first := &core.Page[*string, int, any]{
+			Results: []int{1, 2},
+			NextPageFunc: func(context.Context) (*core.Page[*string, int, any], error) {
+				return nil, wantErr
+			},
+		}
+
+		items, err := collectV3Pages(context.Background(), 0, func(context.Context) (*core.Page[*string, int, any], error) {
+			return first, nil
+		})
+
+		assert.ErrorIs(t, err, wantErr)
+		assert.Equal(t, []int{1, 2}, items)
+	})
+
+	t.Run("returns no items for an empty first page", func(t *testing.T) {
+		items, err := collectV3Pages(context.Background(), 0, func(context.Context) (*core.Page[*string, int, any], error) {
+			return newPageChain([]int{}), nil
+		})
+
+		assert.NoError(t, err)
+		assert.Empty(t, items)
+	})
+}
 
 func TestStringPtr(t *testing.T) {
 	t.Run("returns nil when input is nil", func(t *testing.T) {

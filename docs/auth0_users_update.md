@@ -68,9 +68,11 @@ auth0 users update [flags]
 - [auth0 users delete](auth0_users_delete.md) - Delete a user
 - [auth0 users import](auth0_users_import.md) - Import users from schema
 - [auth0 users open](auth0_users_open.md) - Open the user's settings page
+- [auth0 users refresh-tokens](auth0_users_refresh-tokens.md) - Manage a user's refresh tokens
 - [auth0 users roles](auth0_users_roles.md) - Manage a user's roles
 - [auth0 users search](auth0_users_search.md) - Search for users
 - [auth0 users search-by-email](auth0_users_search-by-email.md) - Search for users
+- [auth0 users sessions](auth0_users_sessions.md) - Manage a user's sessions
 - [auth0 users show](auth0_users_show.md) - Show an existing user
 - [auth0 users update](auth0_users_update.md) - Update a user
 

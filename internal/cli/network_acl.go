@@ -100,6 +100,12 @@ var (
 		LongForm: "user-agents",
 		Help:     "Comma-separated list of user agents to match (Eg. badbot/*,malicious/*)",
 	}
+
+	networkACLAuth0Managed = Flag{
+		Name:     "Auth0Managed",
+		LongForm: "auth0-managed",
+		Help:     "Comma-separated list of Auth0-curated blocklists to match (Eg. auth0.icloud_relay_proxy,auth0.low_reputation). (EA only).",
+	}
 )
 
 // validateAndSetBasicFields handles the common validation and patch building logic for basic fields.
@@ -121,6 +127,7 @@ func validateAndSetBasicFields(inputs *struct {
 	JA3          []string
 	JA4          []string
 	UserAgents   []string
+	Auth0Managed []string
 	MatchRule    bool
 	NoMatchRule  bool
 }, patch *management.NetworkACL, cmd *cobra.Command) error {
@@ -183,6 +190,7 @@ func selectNetworkACLParams(cmd *cobra.Command) (map[string]bool, error) {
 		"JA3Fingerprints",
 		"JA4Fingerprints",
 		"User Agents",
+		"Auth0 Managed",
 	}
 
 	var selected []string
@@ -221,6 +229,7 @@ type ruleDefaults struct {
 	JA3          []string
 	JA4          []string
 	UserAgents   []string
+	Auth0Managed []string
 	IsMatchRule  bool
 	HasMatchRule bool
 	HasNotMatch  bool
@@ -295,6 +304,9 @@ func extractCurrentRuleDefaults(currentACL *management.NetworkACL) *ruleDefaults
 		if match.UserAgents != nil {
 			defaults.UserAgents = *match.UserAgents
 		}
+		if match.Auth0Managed != nil {
+			defaults.Auth0Managed = *match.Auth0Managed
+		}
 	}
 
 	return defaults
@@ -313,6 +325,7 @@ type ruleInputs struct {
 	JA3          []string
 	JA4          []string
 	UserAgents   []string
+	Auth0Managed []string
 	IsMatchRule  bool
 	MatchRule    bool
 	NoMatchRule  bool
@@ -373,7 +386,7 @@ func promptForRuleDetails(cmd *cobra.Command, cli *cli, defaults *ruleDefaults, 
 		var selectedMatchOption string
 		if err := (&Flag{
 			Name: "What kind of rule do you want to create?",
-			Help: "Match or Not Match rule (ASNs, Country Codes, Subdivision Codes, IPv4 CIDRs, IPv6 CIDRs, JA3/JA4 Fingerprints, User Agents)",
+			Help: "Match or Not Match rule (ASNs, Country Codes, Subdivision Codes, IPv4 CIDRs, IPv6 CIDRs, JA3/JA4 Fingerprints, User Agents, Auth0 Managed)",
 		}).Select(cmd, &selectedMatchOption, matchOptions, nil); err != nil {
 			return nil, err
 		}
@@ -451,6 +464,13 @@ func promptForMatchCriteria(cmd *cobra.Command, selectedParams map[string]bool, 
 		}
 	}
 
+	if selectedParams["Auth0 Managed"] {
+		currentAuth0ManagedStr := strings.Join(defaults.Auth0Managed, ",")
+		if err := networkACLAuth0Managed.AskMany(cmd, &inputs.Auth0Managed, &currentAuth0ManagedStr); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -508,6 +528,10 @@ func buildNetworkACLRule(inputs *ruleInputs) (*management.NetworkACLRule, error)
 	}
 	if len(inputs.UserAgents) > 0 {
 		match.UserAgents = &inputs.UserAgents
+		matchProvided = true
+	}
+	if len(inputs.Auth0Managed) > 0 {
+		match.Auth0Managed = &inputs.Auth0Managed
 		matchProvided = true
 	}
 
@@ -628,6 +652,7 @@ func createNetworkACLCmd(cli *cli) *cobra.Command {
 		JA3          []string
 		JA4          []string
 		UserAgents   []string
+		Auth0Managed []string
 		Scope        string
 		isMatchRule  bool
 	}
@@ -645,7 +670,11 @@ The --rule parameter is required and must contain a valid JSON object with actio
   auth0 network-acl create --description "Geo Block" --priority 2 --active true --rule '{"action":{"block":true},"scope":"authentication","match":{"geo_country_codes":["US","CA"]}}'
   auth0 network-acl create --description "Redirect Traffic" --priority 3 --active true --rule '{"action":{"redirect":true,"redirect_uri":"https://example.com"},"scope":"management","match":{"ipv4_cidrs":["192.168.1.0/24"]}}'
   auth0 network-acl create -d "Block Bots" -p 4 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"user_agents":["badbot/*","malicious/*"],"ja3_fingerprints":["deadbeef","cafebabe"]}}'
-  auth0 network-acl create --description "Complex Rule" --priority 5 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'`,
+  auth0 network-acl create --description "Complex Rule" --priority 5 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
+  
+  # Early Access (auth0_managed match/not_match value):
+  auth0 network-acl create -d "Curated Blocklist" -p 6 --active true --rule '{"action":{"log":true},"scope":"tenant","not_match":{"auth0_managed":["auth0.vpn","auth0.proxy"]}}'
+  `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Check if we're in non-interactive mode (flags provided) but rule JSON is missing.
 			if !canPrompt(cmd) && !cmd.Flags().Changed("rule") {
@@ -770,7 +799,9 @@ The --rule parameter is required and must contain a valid JSON object with actio
 	networkACLJA3Fingerprints.RegisterStringSlice(cmd, &inputs.JA3, nil)
 	networkACLJA4Fingerprints.RegisterStringSlice(cmd, &inputs.JA4, nil)
 	networkACLUserAgents.RegisterStringSlice(cmd, &inputs.UserAgents, nil)
+	networkACLAuth0Managed.RegisterStringSlice(cmd, &inputs.Auth0Managed, nil)
 
+	// These flags must be passed in non-interactive mode.
 	cmd.MarkFlagRequired("description")
 	cmd.MarkFlagRequired("active")
 	cmd.MarkFlagRequired("priority")
@@ -797,6 +828,7 @@ func updateNetworkACLCmd(cli *cli) *cobra.Command {
 		JA3          []string
 		JA4          []string
 		UserAgents   []string
+		Auth0Managed []string
 		MatchRule    bool
 		NoMatchRule  bool
 	}
@@ -814,7 +846,11 @@ To update non-interactively, supply the description, active, priority, and rule 
   auth0 network-acl update <id> --active true
   auth0 network-acl update <id> --description "Updated description"
   auth0 network-acl update <id> --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"]}}'
-  auth0 network-acl update <id> --description "Complex Rule updated" --priority 1 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'`,
+  auth0 network-acl update <id> --description "Complex Rule updated" --priority 1 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
+  
+  # Early Access (auth0_managed match/not_match value):
+  auth0 network-acl update <id> --rule '{"action":{"allow":true},"scope":"tenant","match":{"auth0_managed":["auth0.low_reputation"]}}'
+  `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get the network ACL ID.
 			if len(args) > 0 {
@@ -924,6 +960,7 @@ To update non-interactively, supply the description, active, priority, and rule 
 	networkACLJA3Fingerprints.RegisterStringSlice(cmd, &inputs.JA3, nil)
 	networkACLJA4Fingerprints.RegisterStringSlice(cmd, &inputs.JA4, nil)
 	networkACLUserAgents.RegisterStringSlice(cmd, &inputs.UserAgents, nil)
+	networkACLAuth0Managed.RegisterStringSlice(cmd, &inputs.Auth0Managed, nil)
 
 	return cmd
 }
