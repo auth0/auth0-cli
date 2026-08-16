@@ -377,6 +377,16 @@ cp -r agent-skills/plugins/auth0/skills/auth0 ~/.openclaw/skills/
 
 > **Note:** The `auth0` binary must be installed and available on your `$PATH` for agents to use the CLI guidance in this skill.
 
+### Agent Mode
+
+For AI agents and automation, **agent mode** makes output machine-friendly: structured JSON, no interactive prompts, and no color codes.
+
+- **Env var:** `AUTH0_AGENT_MODE=true`
+- **Flag:** `--agent-mode`
+- **Auto-enabled** when a known agent (Claude Code, Cursor, Codex, Gemini, etc.) is detected.
+
+Precedence: `--agent-mode` flag > `AUTH0_AGENT_MODE` env var > auto-detection (set `--agent-mode=false` to opt out). Destructive commands still require `--force`; without it (and with prompts disabled) they fail with an error rather than proceeding.
+
 ## Anonymized Analytics Disclosure
 
 Anonymized data points are collected during the use of this CLI. This data includes the CLI version, operating system, timestamp, and other technical details that do not personally identify you.

@@ -49,6 +49,7 @@ type cli struct {
 	noInput             bool
 	noColor             bool
 	agentMode           bool
+	detectedAgent       string
 	executedCommandPath string
 
 	Config config.Config
@@ -174,6 +175,13 @@ func canPrompt(cmd *cobra.Command) bool {
 
 	return iostream.IsInputTerminal() && iostream.IsOutputTerminal() && !noInput
 }
+
+// errDestructiveNoConfirm is returned when a destructive command cannot show a
+// confirmation prompt (e.g. --no-input or agent mode) and --force was not
+// passed. Destructive actions fail closed instead of proceeding silently.
+var errDestructiveNoConfirm = errors.New(
+	"this is a destructive command; re-run with --force to proceed without a confirmation prompt",
+)
 
 // noLocalFlagSet returns true if no local flags (excluding global flags) are set for the command.
 func noLocalFlagSet(cmd *cobra.Command) bool {

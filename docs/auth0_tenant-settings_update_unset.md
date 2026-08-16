@@ -22,9 +22,16 @@ auth0 tenant-settings update unset [flags]
 auth0 tenant-settings update unset
 auth0 tenant-settings update unset <setting1> <setting2> <setting3>
 auth0 tenant-settings update unset customize_mfa_in_postlogin_action flags.enable_pipeline2
+auth0 tenant-settings update unset flags.enable_pipeline2 --json
 ```
 
 
+## Flags
+
+```
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
+```
 
 
 ## Inherited Flags

@@ -202,34 +202,28 @@ func TestResolveAgentMode(t *testing.T) {
 		return cmd
 	}
 
-	envStub := func(value string) func(string) string {
-		return func(key string) string {
-			if key == agentModeEnvVar {
-				return value
-			}
-			return ""
-		}
-	}
-
+	// Precedence: flag > env > detection.
 	tests := []struct {
 		name      string
 		env       string
 		flagSet   bool
 		flagValue bool
+		detected  string
 		expected  bool
 	}{
-		{name: "env true wins over flag false", env: "true", flagSet: true, flagValue: false, expected: true},
-		{name: "env false wins over flag true", env: "false", flagSet: true, flagValue: true, expected: false},
-		{name: "invalid env falls through to flag", env: "notabool", flagSet: true, flagValue: true, expected: true},
-		{name: "flag true when env unset", env: "", flagSet: true, flagValue: true, expected: true},
-		{name: "flag false when env unset", env: "", flagSet: true, flagValue: false, expected: false},
+		{name: "flag false wins over env true", env: "true", flagSet: true, flagValue: false, detected: "claude-code", expected: false},
+		{name: "flag true wins over env false", env: "false", flagSet: true, flagValue: true, detected: "human", expected: true},
+		{name: "env truthy enables when flag unset", env: "1", detected: "human", expected: true},
+		{name: "detected agent enables when flag and env unset", env: "", detected: "claude-code", expected: true},
+		{name: "human is not agent mode", env: "", detected: "human", expected: false},
+		{name: "unknown is not agent mode", env: "", detected: "unknown", expected: false},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Setenv(agentModeEnvVar, test.env)
 			cmd := newCmd(test.flagSet, test.flagValue)
-			// Interactive is true so the detectAgent fallback (unreached here) would be "human".
-			assert.Equal(t, test.expected, resolveAgentMode(cmd, envStub(test.env), true))
+			assert.Equal(t, test.expected, resolveAgentMode(cmd, test.detected))
 		})
 	}
 }

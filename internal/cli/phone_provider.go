@@ -393,6 +393,10 @@ auth0 phone provider delete <phone-provider-id> --force
 auth0 phone provider delete <phone-provider-id>
 auth0 phone provider rm --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if !cli.force && !canPrompt(cmd) {
+				return errDestructiveNoConfirm
+			}
+
 			if !cli.force && canPrompt(cmd) {
 				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
 					return nil

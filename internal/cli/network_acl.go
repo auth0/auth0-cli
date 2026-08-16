@@ -966,6 +966,10 @@ Use --all flag to delete all network ACLs at once.`,
 				}
 
 				// Confirm deletion.
+				if !cli.force && !canPrompt(cmd) {
+					return errDestructiveNoConfirm
+				}
+
 				if !cli.force && canPrompt(cmd) {
 					if confirmed := prompt.Confirm(fmt.Sprintf("Are you sure you want to delete ALL %d network ACLs?", len(list))); !confirmed {
 						return nil
@@ -989,6 +993,10 @@ Use --all flag to delete all network ACLs at once.`,
 				}
 			} else {
 				ids = args
+			}
+
+			if !cli.force && !canPrompt(cmd) {
+				return errDestructiveNoConfirm
 			}
 
 			if !cli.force && canPrompt(cmd) {

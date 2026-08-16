@@ -22,9 +22,16 @@ auth0 tenant-settings update set [flags]
 auth0 tenant-settings update set
 auth0 tenant-settings update set <setting1> <setting2> <setting3>
 auth0 tenant-settings update set flags.enable_client_connections mtls.enable_endpoint_aliases pushed_authorization_requests_supported
+auth0 tenant-settings update set flags.enable_sso --json
 ```
 
 
+## Flags
+
+```
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
+```
 
 
 ## Inherited Flags

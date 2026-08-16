@@ -118,6 +118,11 @@ func buildRootCmd(cli *cli) *cobra.Command {
 			prepareInteractivity(cmd)
 			cli.configureRenderer()
 
+			// Emitted after ansi.Initialize so the notice respects the color setting.
+			if cli.agentMode {
+				cli.renderer.Infof("Agent mode on: JSON output, prompts and colors off. Disable with --agent-mode=false.")
+			}
+
 			if !commandRequiresAuthentication(cmd.CommandPath()) {
 				return nil
 			}
@@ -152,16 +157,23 @@ func commandRequiresAuthentication(invokedCommandName string) bool {
 	return true
 }
 
-// agentModeEnvVar toggles agent mode explicitly, overriding auto-detection.
-// Set it to "false" to opt out even when running inside a detected agent.
+// agentModeEnvVar enables agent mode when set to a truthy value (e.g. 1 or true).
+// In agent mode, `--help` emits JSON without needing an explicit --json flag.
 const agentModeEnvVar = "AUTH0_AGENT_MODE"
 
-// applyAgentModeDefaults resolves agent mode and, when enabled, sets structured
-// JSON output, disables interactive prompts, and disables color codes. It only
-// sets a default when the corresponding flag was not explicitly passed, so
-// explicit flags always win.
+// agentClientName resolves detectAgent once per invocation and caches it so
+// agent-mode resolution and telemetry share a single lookup.
+func (c *cli) agentClientName() string {
+	if c.detectedAgent == "" {
+		c.detectedAgent = detectAgent(iostream.IsInputTerminal() && iostream.IsOutputTerminal())
+	}
+	return c.detectedAgent
+}
+
+// applyAgentModeDefaults enables agent mode when resolved, defaulting to JSON
+// output with prompts and colors off unless those flags were explicitly set.
 func applyAgentModeDefaults(cli *cli, cmd *cobra.Command) {
-	if !resolveAgentMode(cmd, os.Getenv, iostream.IsInputTerminal() && iostream.IsOutputTerminal()) {
+	if !resolveAgentMode(cmd, cli.agentClientName()) {
 		return
 	}
 
@@ -176,27 +188,23 @@ func applyAgentModeDefaults(cli *cli, cmd *cobra.Command) {
 	if !flagChanged(cmd, "no-color") {
 		cli.noColor = true
 	}
-
-	cli.renderer.Infof("Agent mode on: JSON output, prompts and colors off. Disable with --agent-mode=false or %s=false.", agentModeEnvVar)
 }
 
 // resolveAgentMode decides whether agent mode is active. Precedence:
-// explicit AUTH0_AGENT_MODE env value, then the --agent-mode flag, then
-// auto-detection of a real (non-human, non-unknown) agent client.
-func resolveAgentMode(cmd *cobra.Command, getEnv func(string) string, interactive bool) bool {
-	if raw := strings.TrimSpace(getEnv(agentModeEnvVar)); raw != "" {
-		if enabled, err := strconv.ParseBool(raw); err == nil {
-			return enabled
-		}
-	}
-
+// an explicit --agent-mode flag (highest), then a truthy AUTH0_AGENT_MODE env
+// value, then a detected (non-human, non-unknown) agent client.
+func resolveAgentMode(cmd *cobra.Command, agentClient string) bool {
 	if flagChanged(cmd, "agent-mode") {
 		if enabled, err := cmd.Flags().GetBool("agent-mode"); err == nil {
 			return enabled
 		}
 	}
 
-	switch detectAgent(interactive) {
+	if enabled, _ := strconv.ParseBool(strings.TrimSpace(os.Getenv(agentModeEnvVar))); enabled {
+		return true
+	}
+
+	switch agentClient {
 	case "human", "unknown":
 		return false
 	default:
@@ -355,7 +363,7 @@ func commandTrackingProperties(cli *cli) map[string]string {
 		"no_input":      boolString(cli.noInput),
 		"output_format": outputFormatForTracking(cli.renderer),
 		"forced":        boolString(cli.force),
-		"agent_client":  detectAgent(interactive),
+		"agent_client":  cli.agentClientName(),
 		"is_api":        boolString(isAPICommand(cli.executedCommandPath)),
 	}
 }

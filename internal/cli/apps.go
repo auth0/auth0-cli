@@ -421,6 +421,10 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 				ids = args
 			}
 
+			if !cli.force && !canPrompt(cmd) {
+				return errDestructiveNoConfirm
+			}
+
 			if !cli.force && canPrompt(cmd) {
 				if tenant, _ := cli.Config.GetTenant(cli.tenant); slices.Contains(ids, tenant.ClientID) {
 					cli.renderer.Warnf("Warning: You're about to delete the client used to authenticate the CLI. If deleted, the CLI will cease to operate once the access token has expired.")
