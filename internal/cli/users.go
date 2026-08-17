@@ -648,7 +648,7 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 				ids = args
 			}
 
-			if !cli.force && !canPrompt(cmd) {
+			if !cli.force && cli.agentMode {
 				return errDestructiveNoConfirm
 			}
 

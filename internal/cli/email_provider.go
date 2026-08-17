@@ -409,7 +409,7 @@ func deleteEmailProviderCmd(cli *cli) *cobra.Command {
   auth0 email provider delete --force
   auth0 email provider rm --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if !cli.force && !canPrompt(cmd) {
+			if !cli.force && cli.agentMode {
 				return errDestructiveNoConfirm
 			}
 

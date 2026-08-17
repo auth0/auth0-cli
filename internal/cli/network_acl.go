@@ -1003,7 +1003,7 @@ Use --all flag to delete all network ACLs at once.`,
 				}
 
 				// Confirm deletion.
-				if !cli.force && !canPrompt(cmd) {
+				if !cli.force && cli.agentMode {
 					return errDestructiveNoConfirm
 				}
 
@@ -1032,7 +1032,7 @@ Use --all flag to delete all network ACLs at once.`,
 				ids = args
 			}
 
-			if !cli.force && !canPrompt(cmd) {
+			if !cli.force && cli.agentMode {
 				return errDestructiveNoConfirm
 			}
 

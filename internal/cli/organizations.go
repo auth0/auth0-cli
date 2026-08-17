@@ -523,7 +523,7 @@ func deleteOrganizationCmd(cli *cli) *cobra.Command {
 				ids = args
 			}
 
-			if !cli.force && !canPrompt(cmd) {
+			if !cli.force && cli.agentMode {
 				return errDestructiveNoConfirm
 			}
 
@@ -1314,7 +1314,7 @@ func deleteInvitationOrganizationCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if !cli.force && !canPrompt(cmd) {
+			if !cli.force && cli.agentMode {
 				return errDestructiveNoConfirm
 			}
 

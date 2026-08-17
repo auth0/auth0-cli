@@ -557,7 +557,7 @@ func deleteAPICmd(cli *cli) *cobra.Command {
 				ids = append(ids, args...)
 			}
 
-			if !cli.force && !canPrompt(cmd) {
+			if !cli.force && cli.agentMode {
 				return errDestructiveNoConfirm
 			}
 
