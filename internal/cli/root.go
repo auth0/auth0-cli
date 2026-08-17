@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -79,10 +80,10 @@ func Execute() {
 		}
 	}()
 
-	// Intercept `<command> --help` with JSON requested (via --json or agent mode)
-	// before Cobra parses flags, so it works for every command, including the root
-	// and namespace commands that don't define their own --json flag.
-	if renderJSONHelpIfRequested(rootCmd, os.Args[1:]) {
+	// Resolve agent mode for the pre-parse `--help` path; real commands re-apply the parsed flag in applyAgentModeDefaults.
+	cli.agentMode = resolveAgentMode(cli.agentClientName(), os.Args[1:])
+
+	if renderJSONHelpIfRequested(cli, rootCmd, os.Args[1:]) {
 		return
 	}
 
@@ -118,9 +119,16 @@ func buildRootCmd(cli *cli) *cobra.Command {
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			cli.executedCommandPath = cmd.CommandPath()
 
+			applyAgentModeDefaults(cli, cmd)
+
 			ansi.Initialize(cli.noColor)
 			prepareInteractivity(cmd)
 			cli.configureRenderer()
+
+			// Emitted after ansi.Initialize so the notice respects the color setting.
+			if cli.agentMode {
+				cli.renderer.Infof("Agent mode on: JSON output, prompts and colors off. Disable with --agent-mode=false.")
+			}
 
 			if !commandRequiresAuthentication(cmd.CommandPath()) {
 				return nil
@@ -157,6 +165,75 @@ func commandRequiresAuthentication(invokedCommandName string) bool {
 	return true
 }
 
+// agentClientName caches detectAgent so mode resolution and telemetry share one lookup.
+func (c *cli) agentClientName() string {
+	if c.detectedAgent == "" {
+		c.detectedAgent = detectAgent(iostream.IsInputTerminal() && iostream.IsOutputTerminal())
+	}
+	return c.detectedAgent
+}
+
+// applyAgentModeDefaults, when agent mode is on, defaults to JSON output with prompts and colors off unless those flags were explicitly set.
+func applyAgentModeDefaults(cli *cli, cmd *cobra.Command) {
+	if !cli.agentMode {
+		return
+	}
+
+	if !anyFlagChanged(cmd, "json", "json-compact", "csv") {
+		cli.json = true
+	}
+	if !flagChanged(cmd, "no-input") {
+		cli.noInput = true
+	}
+	if !flagChanged(cmd, "no-color") {
+		cli.noColor = true
+	}
+}
+
+// agentModeEnvVar explicitly enables (true) or disables (false) agent mode, overriding auto-detection.
+const agentModeEnvVar = "AUTH0_AGENT_MODE"
+
+// resolveAgentMode reports agent mode: an explicit --agent-mode flag wins, then AUTH0_AGENT_MODE (true/false), then a detected agent client.
+func resolveAgentMode(agentClient string, args []string) bool {
+	for _, arg := range args {
+		if arg == "--agent-mode" {
+			return true
+		}
+		if value, found := strings.CutPrefix(arg, "--agent-mode="); found {
+			if enabled, err := strconv.ParseBool(value); err == nil {
+				return enabled
+			}
+		}
+	}
+
+	if raw := strings.TrimSpace(os.Getenv(agentModeEnvVar)); raw != "" {
+		if enabled, err := strconv.ParseBool(raw); err == nil {
+			return enabled
+		}
+	}
+
+	switch agentClient {
+	case "human", "unknown":
+		return false
+	default:
+		return true
+	}
+}
+
+func flagChanged(cmd *cobra.Command, name string) bool {
+	f := cmd.Flags().Lookup(name)
+	return f != nil && f.Changed
+}
+
+func anyFlagChanged(cmd *cobra.Command, names ...string) bool {
+	for _, name := range names {
+		if flagChanged(cmd, name) {
+			return true
+		}
+	}
+	return false
+}
+
 func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.PersistentFlags().StringVar(&cli.tenant,
 		"tenant", cli.Config.DefaultTenant, "Specific tenant to use.")
@@ -169,6 +246,10 @@ func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
 
 	rootCmd.PersistentFlags().BoolVar(&cli.noColor,
 		"no-color", false, "Disable colors.")
+
+	rootCmd.PersistentFlags().BoolVar(&cli.agentMode,
+		"agent-mode", false,
+		"Output JSON, disable prompts and colors. Auto-enabled for AI agents; set AUTH0_AGENT_MODE=false to disable.")
 }
 
 func addSubCommands(rootCmd *cobra.Command, cli *cli) {
@@ -294,7 +375,7 @@ func commandTrackingProperties(cli *cli) map[string]string {
 		"no_input":      boolString(cli.noInput),
 		"output_format": outputFormatForTracking(cli.renderer),
 		"forced":        boolString(cli.force),
-		"agent_client":  detectAgent(interactive),
+		"agent_client":  cli.agentClientName(),
 		"is_api":        boolString(isAPICommand(cli.executedCommandPath)),
 	}
 }

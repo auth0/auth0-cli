@@ -170,27 +170,6 @@ func TestHasJSONRequest(t *testing.T) {
 	assert.False(t, hasJSONRequest(nil))
 }
 
-func TestAgentModeEnabled(t *testing.T) {
-	tests := []struct {
-		value string
-		want  bool
-	}{
-		{"1", true},
-		{"true", true},
-		{"  true  ", true},
-		{"0", false},
-		{"false", false},
-		{"", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.value, func(t *testing.T) {
-			t.Setenv(agentModeEnvVar, tt.value)
-			assert.Equal(t, tt.want, agentModeEnabled())
-		})
-	}
-}
-
 func TestAnnotateWithRawAPINote(t *testing.T) {
 	nodes := annotateWithRawAPINote([]commandNode{{Path: "auth0 apps"}, {Path: "auth0 users"}})
 
@@ -227,7 +206,7 @@ func TestRenderJSONHelpIfRequested(t *testing.T) {
 		t.Setenv(agentModeEnvVar, "")
 		var fired bool
 		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(root, []string{"apps", "create"})
+			fired = renderJSONHelpIfRequested(&cli{}, root, []string{"apps", "create"})
 		})
 		assert.False(t, fired)
 		assert.Empty(t, out)
@@ -237,7 +216,7 @@ func TestRenderJSONHelpIfRequested(t *testing.T) {
 		t.Setenv(agentModeEnvVar, "")
 		var fired bool
 		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(root, []string{"apps", "create", "--help"})
+			fired = renderJSONHelpIfRequested(&cli{}, root, []string{"apps", "create", "--help"})
 		})
 		assert.False(t, fired)
 		assert.Empty(t, out)
@@ -247,7 +226,7 @@ func TestRenderJSONHelpIfRequested(t *testing.T) {
 		t.Setenv(agentModeEnvVar, "")
 		var fired bool
 		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(root, []string{"apps", "create", "--help", "--json"})
+			fired = renderJSONHelpIfRequested(&cli{}, root, []string{"apps", "create", "--help", "--json"})
 		})
 		assert.True(t, fired)
 
@@ -260,10 +239,9 @@ func TestRenderJSONHelpIfRequested(t *testing.T) {
 	})
 
 	t.Run("agent mode help needs no --json flag", func(t *testing.T) {
-		t.Setenv(agentModeEnvVar, "1")
 		var fired bool
 		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(root, []string{"apps", "create", "--help"})
+			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps", "create", "--help"})
 		})
 		assert.True(t, fired)
 
@@ -276,7 +254,7 @@ func TestRenderJSONHelpIfRequested(t *testing.T) {
 		t.Setenv(agentModeEnvVar, "")
 		var fired bool
 		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(root, []string{"--help", "--json"})
+			fired = renderJSONHelpIfRequested(&cli{}, root, []string{"--help", "--json"})
 		})
 		assert.True(t, fired)
 

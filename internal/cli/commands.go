@@ -3,10 +3,8 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -294,8 +292,8 @@ func extractArguments(cmd *cobra.Command) []string {
 // flags, so it also works for the root and namespace commands that have no --json
 // flag of their own. A specific command is described in detail; the root is a
 // compact overview.
-func renderJSONHelpIfRequested(root *cobra.Command, args []string) bool {
-	if !hasHelpRequest(args) || (!hasJSONRequest(args) && !agentModeEnabled()) {
+func renderJSONHelpIfRequested(cli *cli, root *cobra.Command, args []string) bool {
+	if !hasHelpRequest(args) || (!hasJSONRequest(args) && !cli.agentMode) {
 		return false
 	}
 
@@ -340,16 +338,6 @@ func hasHelpRequest(args []string) bool {
 // hasJSONRequest reports whether the args contain the `--json` flag.
 func hasJSONRequest(args []string) bool {
 	return slices.Contains(args, "--json")
-}
-
-// agentModeEnvVar enables agent mode when set to a truthy value (e.g. 1 or true).
-// In agent mode, `--help` emits JSON without needing an explicit --json flag.
-const agentModeEnvVar = "AUTH0_AGENT_MODE"
-
-// agentModeEnabled reports whether agent mode is enabled via AUTH0_AGENT_MODE.
-func agentModeEnabled() bool {
-	enabled, _ := strconv.ParseBool(strings.TrimSpace(os.Getenv(agentModeEnvVar)))
-	return enabled
 }
 
 func renderCommandTreeJSON(tree []commandNode) error {
