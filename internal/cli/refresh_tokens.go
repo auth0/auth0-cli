@@ -174,6 +174,10 @@ func deleteRefreshTokenCmd(cli *cli) *cobra.Command {
 				id = args[0]
 			}
 
+			if !cli.force && cli.agentMode {
+				return errDestructiveNoConfirm
+			}
+
 			if !cli.force && canPrompt(cmd) {
 				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
 					return nil
@@ -253,6 +257,10 @@ func revokeRefreshTokenCmd(cli *cli) *cobra.Command {
 				}
 				body.IDs = []string{id}
 				target = fmt.Sprintf("refresh token with ID %q", id)
+			}
+
+			if !cli.force && cli.agentMode {
+				return errDestructiveNoConfirm
 			}
 
 			if !cli.force && canPrompt(cmd) {

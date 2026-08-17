@@ -148,6 +148,10 @@ func rollbackActionModuleVersionCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
+			if !cli.force && cli.agentMode {
+				return errDestructiveNoConfirm
+			}
+
 			if !cli.force && canPrompt(cmd) {
 				if confirmed := prompt.Confirm("This replaces the module's draft with the selected version. Are you sure you want to proceed?"); !confirmed {
 					return nil

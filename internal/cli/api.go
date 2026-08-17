@@ -127,6 +127,10 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 			return fmt.Errorf("failed to parse command inputs: %w", err)
 		}
 
+		if inputs.Method == http.MethodDelete && !cli.force && cli.agentMode {
+			return errDestructiveNoConfirm
+		}
+
 		if inputs.Method == http.MethodDelete && !cli.force && canPrompt(cmd) {
 			message := "Are you sure you want to proceed? Deleting is a destructive action."
 			if confirmed := prompt.Confirm(message); !confirmed {

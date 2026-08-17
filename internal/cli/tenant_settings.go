@@ -72,7 +72,8 @@ func set(cli *cli) *cobra.Command {
 			"To enable non-interactively, supply the flags.",
 		Example: `auth0 tenant-settings update set
 auth0 tenant-settings update set <setting1> <setting2> <setting3>
-auth0 tenant-settings update set flags.enable_client_connections mtls.enable_endpoint_aliases pushed_authorization_requests_supported`,
+auth0 tenant-settings update set flags.enable_client_connections mtls.enable_endpoint_aliases pushed_authorization_requests_supported
+auth0 tenant-settings update set flags.enable_sso --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var (
 				tenant        = &management.Tenant{}
@@ -104,6 +105,9 @@ auth0 tenant-settings update set flags.enable_client_connections mtls.enable_end
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+
 	return cmd
 }
 
@@ -116,7 +120,8 @@ func unset(cli *cli) *cobra.Command {
 			"To disable non-interactively, supply the flags.",
 		Example: `auth0 tenant-settings update unset
 auth0 tenant-settings update unset <setting1> <setting2> <setting3>
-auth0 tenant-settings update unset customize_mfa_in_postlogin_action flags.enable_pipeline2`,
+auth0 tenant-settings update unset customize_mfa_in_postlogin_action flags.enable_pipeline2
+auth0 tenant-settings update unset flags.enable_pipeline2 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var (
 				tenant        = &management.Tenant{}
@@ -147,6 +152,9 @@ auth0 tenant-settings update unset customize_mfa_in_postlogin_action flags.enabl
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }

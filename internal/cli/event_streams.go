@@ -390,6 +390,10 @@ func deleteEventStreamCmd(cli *cli) *cobra.Command {
 				ids = args
 			}
 
+			if !cli.force && cli.agentMode {
+				return errDestructiveNoConfirm
+			}
+
 			if !cli.force && canPrompt(cmd) {
 				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
 					return nil

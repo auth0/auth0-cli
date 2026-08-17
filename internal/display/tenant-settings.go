@@ -81,6 +81,17 @@ func (r *Renderer) TenantSettingsShow(tenant *management.Tenant) {
 
 func (r *Renderer) TenantSettingsUpdate(tenant *management.Tenant) {
 	r.Heading("tenant settings updated")
+
+	if r.Format == OutputFormatJSONCompact {
+		r.JSONCompactResult(tenant)
+		return
+	}
+
+	if r.Format == OutputFormatJSON {
+		r.JSONResult(tenant)
+		return
+	}
+
 	r.Results(makeTenantSettings(tenant))
 }
 
