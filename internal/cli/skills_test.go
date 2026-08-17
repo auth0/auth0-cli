@@ -6,9 +6,40 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestSelectAgents(t *testing.T) {
+	cmd := &cobra.Command{}
+
+	t.Run("accepts a supported agent even if undetected", func(t *testing.T) {
+		got, err := selectAgents(cmd, []string{"trae"})
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		assert.Equal(t, "trae", got[0].ID)
+	})
+
+	t.Run("rejects an unknown agent, listing supported IDs", func(t *testing.T) {
+		_, err := selectAgents(cmd, []string{"definitely-not-an-agent"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unknown assistant(s): definitely-not-an-agent")
+		assert.Contains(t, err.Error(), "claude-code")
+	})
+
+	t.Run("all resolves to the detected set", func(t *testing.T) {
+		got, err := selectAgents(cmd, []string{"all"})
+		require.NoError(t, err)
+		found := false
+		for _, a := range got {
+			if a.ID == "universal" {
+				found = true
+			}
+		}
+		assert.True(t, found, "all should include the always-present universal agent")
+	})
+}
 
 func TestReadSkillConfig(t *testing.T) {
 	t.Run("returns nil nil when file does not exist", func(t *testing.T) {

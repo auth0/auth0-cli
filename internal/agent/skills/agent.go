@@ -237,16 +237,19 @@ func supportedAgents(home string) []AgentConfig {
 			ID:              "openhands",
 			DisplayName:     "OpenHands",
 			GlobalSkillsDir: filepath.Join(home, ".agents", "skills"),
+			DetectMarkers:   []string{filepath.Join(home, ".openhands")},
 		},
 		{
 			ID:              "trae",
 			DisplayName:     "Trae",
 			GlobalSkillsDir: filepath.Join(home, ".trae", "skills"),
+			DetectMarkers:   []string{filepath.Join(home, ".trae")},
 		},
 		{
 			ID:              "mux",
 			DisplayName:     "Mux",
 			GlobalSkillsDir: filepath.Join(home, ".mux", "skills"),
+			DetectMarkers:   []string{filepath.Join(home, ".mux")},
 		},
 		{
 			ID:              "universal",
@@ -254,6 +257,11 @@ func supportedAgents(home string) []AgentConfig {
 			GlobalSkillsDir: filepath.Join(home, ".agents", "skills"),
 		},
 	}
+}
+
+// SupportedAgents returns every assistant the CLI can install into, rooted at the user's home.
+func SupportedAgents() []AgentConfig {
+	return supportedAgents(homeDir())
 }
 
 // DetectedAgents returns the supported assistants installed on this machine, plus universal.

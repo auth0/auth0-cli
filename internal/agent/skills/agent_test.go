@@ -202,20 +202,15 @@ func TestSupportedAgents(t *testing.T) {
 		}
 	})
 
-	t.Run("agents with no detection are detectable-never", func(t *testing.T) {
-		// These have nil markers/binaries, so IsInstalled always returns false; they are reached
-		// via explicit --agent selection or the universal default.
-		noDetectIDs := []string{"openhands", "trae", "mux", "universal"}
-		byID := make(map[string]AgentConfig)
+	t.Run("every non-universal agent has a detection signal", func(t *testing.T) {
+		// The universal agent is force-included by DetectedAgents, so it needs no signal; every other
+		// agent must declare at least one, or it can never be auto-detected (the openhands/trae/mux gap).
 		for _, a := range agents {
-			byID[a.ID] = a
-		}
-		for _, id := range noDetectIDs {
-			a, ok := byID[id]
-			require.Truef(t, ok, "agent %s must be supported", id)
-			assert.Nilf(t, a.DetectMarkers, "agent %s should have nil DetectMarkers", id)
-			assert.Nilf(t, a.DetectBinaries, "agent %s should have nil DetectBinaries", id)
-			assert.Nilf(t, a.DetectMarkerEnvVars, "agent %s should have nil DetectMarkerEnvVars", id)
+			if a.ID == "universal" {
+				continue
+			}
+			hasSignal := len(a.DetectMarkers) > 0 || len(a.DetectMarkerEnvVars) > 0 || len(a.DetectBinaries) > 0
+			assert.Truef(t, hasSignal, "agent %s must declare at least one detection signal", a.ID)
 		}
 	})
 
@@ -283,6 +278,17 @@ func TestDetectedAgents(t *testing.T) {
 			assert.Truef(t, supported[a.ID], "detected agent %s is not supported", a.ID)
 		}
 	})
+}
+
+func TestSupportedAgentsAccessor(t *testing.T) {
+	ids := make(map[string]bool)
+	for _, a := range SupportedAgents() {
+		ids[a.ID] = true
+	}
+	// The three agents that were previously unreachable must now be in the supported set.
+	for _, id := range []string{"openhands", "trae", "mux", "universal", "claude-code"} {
+		assert.Truef(t, ids[id], "SupportedAgents() must include %s", id)
+	}
 }
 
 func TestCopyTree(t *testing.T) {

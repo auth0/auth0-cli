@@ -9,6 +9,8 @@ Download the Auth0 skill and install it into your detected AI coding assistants.
 
 With no flags it prompts for which assistants to set up. Use --agent to select them non-interactively.
 
+Supported assistants (24): claude-code, cursor, github-copilot, gemini-cli, antigravity, roo, goose, opencode, codex, windsurf, continue, amp, junie, kiro-cli, cline, augment, aider-desk, warp, devin, mistral-vibe, openhands, trae, mux, universal.
+
 ## Usage
 ```
 auth0 agent skills install [flags]
@@ -43,6 +45,7 @@ auth0 agent skills install [flags]
 ## Inherited Flags
 
 ```
+      --agent-mode      Output JSON, disable prompts and colors. Auto-enabled for AI agents; set AUTH0_AGENT_MODE=false to disable.
       --debug           Enable debug mode.
       --no-color        Disable colors.
       --no-input        Disable interactivity.

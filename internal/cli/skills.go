@@ -114,13 +114,19 @@ func installCmd(_ *cli) *cobra.Command {
 		Force  bool
 	}
 
+	supportedIDs := make([]string, 0)
+	for _, a := range skills.SupportedAgents() {
+		supportedIDs = append(supportedIDs, a.ID)
+	}
+
 	cmd := &cobra.Command{
 		Use:   "install",
 		Args:  cobra.NoArgs,
 		Short: "Install the Auth0 skill for your AI coding assistants",
 		Long: "Download the Auth0 skill and install it into your detected AI coding assistants.\n\n" +
 			"With no flags it prompts for which assistants to set up. Use --agent to select " +
-			"them non-interactively.",
+			"them non-interactively.\n\n" +
+			fmt.Sprintf("Supported assistants (%d): %s.", len(supportedIDs), strings.Join(supportedIDs, ", ")),
 		Example: `  # Choose assistants interactively
   auth0 agent skills install
 
@@ -255,15 +261,17 @@ func reportInstallOutcome(outcome installOutcome, notModified bool) {
 func selectAgents(cmd *cobra.Command, agentIDs []string) ([]skills.AgentConfig, error) {
 	detected := skills.DetectedAgents()
 
-	byID := make(map[string]skills.AgentConfig, len(detected))
-	ids := make([]string, 0, len(detected))
-	for _, a := range detected {
-		byID[a.ID] = a
-		ids = append(ids, a.ID)
-	}
-
-	// Explicit selection: validate every ID against the detected set, all-or-nothing.
+	// Explicit --agent: validate against the full supported set (all-or-nothing). A supported but
+	// undetected agent is accepted here; the parent-exists guard skips it later if its dir is absent.
 	if len(agentIDs) > 0 {
+		supported := skills.SupportedAgents()
+		byID := make(map[string]skills.AgentConfig, len(supported))
+		supportedIDs := make([]string, 0, len(supported))
+		for _, a := range supported {
+			byID[a.ID] = a
+			supportedIDs = append(supportedIDs, a.ID)
+		}
+
 		var selected []skills.AgentConfig
 		var unknown []string
 		for _, id := range agentIDs {
@@ -278,10 +286,18 @@ func selectAgents(cmd *cobra.Command, agentIDs []string) ([]skills.AgentConfig, 
 		}
 		if len(unknown) > 0 {
 			return nil, fmt.Errorf(
-				"unknown or undetected assistant(s): %s (available: %s)",
-				strings.Join(unknown, ", "), strings.Join(ids, ", "))
+				"unknown assistant(s): %s (available: %s)",
+				strings.Join(unknown, ", "), strings.Join(supportedIDs, ", "))
 		}
 		return selected, nil
+	}
+
+	// The interactive picker and the no-flag default operate on auto-detected agents only.
+	detectedIDs := make([]string, 0, len(detected))
+	byDetectedID := make(map[string]skills.AgentConfig, len(detected))
+	for _, a := range detected {
+		detectedIDs = append(detectedIDs, a.ID)
+		byDetectedID[a.ID] = a
 	}
 
 	// No --agent and not interactive: default to all detected.
@@ -290,7 +306,7 @@ func selectAgents(cmd *cobra.Command, agentIDs []string) ([]skills.AgentConfig, 
 	}
 
 	// Interactive multi-select: "All" first, at least one required.
-	options := append([]string{allAgentsOption}, ids...)
+	options := append([]string{allAgentsOption}, detectedIDs...)
 	var chosen []string
 	if err := prompt.AskMultiSelect(
 		"Select the AI assistants to install the Auth0 skill into", &chosen, options...,
@@ -307,7 +323,7 @@ func selectAgents(cmd *cobra.Command, agentIDs []string) ([]skills.AgentConfig, 
 	}
 	selected := make([]skills.AgentConfig, 0, len(chosen))
 	for _, c := range chosen {
-		selected = append(selected, byID[c])
+		selected = append(selected, byDetectedID[c])
 	}
 	return selected, nil
 }
