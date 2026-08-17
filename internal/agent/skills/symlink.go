@@ -34,9 +34,7 @@ func CreateSkillLink(sourceSkillDir, agentSkillsDir, skillName string) error {
 		case info.IsDir():
 			// A real directory here is a prior copy (e.g. from the Windows fallback);
 			// leave it untouched rather than destroy it.
-			fmt.Fprintf(stderrWriter,
-				"warning: %s is a copied directory; remove it manually to switch to a symlink\n",
-				linkPath)
+			fmt.Fprintf(stderrWriter, "warning: %s is a copied directory; remove it manually to switch to a symlink\n", linkPath)
 			return nil
 		default:
 			return fmt.Errorf("%s exists as a regular file; remove it before installing skill %q", linkPath, skillName)

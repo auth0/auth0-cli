@@ -1,7 +1,7 @@
 package skills
 
 import (
-	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"os/user"
@@ -53,7 +53,7 @@ func (a AgentConfig) ResolvedGlobalSkillsDir() (string, error) {
 		}
 	}
 	if a.GlobalSkillsDir == "" {
-		return "", errors.New("GlobalSkillsDirEnvVar must be set for: " + a.ID)
+		return "", fmt.Errorf("no skills directory resolved for %q (GlobalSkillsDir or GlobalSkillsDirEnvVar required)", a.ID)
 	}
 	return a.GlobalSkillsDir, nil
 }
@@ -88,8 +88,6 @@ func (a AgentConfig) IsInstalled() bool {
 	return false
 }
 
-var SupportedAgents []AgentConfig
-
 func homeDir() string {
 	if u, err := user.LookupId(strconv.Itoa(os.Getuid())); err == nil && u.HomeDir != "" {
 		return u.HomeDir
@@ -100,16 +98,13 @@ func homeDir() string {
 	return ""
 }
 
-func init() {
-	home := homeDir()
+// supportedAgents returns every assistant the CLI knows about, rooted at home.
+func supportedAgents(home string) []AgentConfig {
 	if home == "" {
-		SupportedAgents = []AgentConfig{
-			{ID: "universal", DisplayName: "Universal"},
-		}
-		return
+		return []AgentConfig{{ID: "universal", DisplayName: "Universal"}}
 	}
 
-	SupportedAgents = []AgentConfig{
+	return []AgentConfig{
 		{
 			ID:              "claude-code",
 			DisplayName:     "Claude Code",
@@ -143,7 +138,7 @@ func init() {
 		{
 			ID:              "antigravity",
 			DisplayName:     "Antigravity",
-			GlobalSkillsDir: filepath.Join(home, ".gemini", "antigravity", "skills"),
+			GlobalSkillsDir: filepath.Join(home, ".gemini", "config", "skills"),
 			DetectMarkers:   []string{filepath.Join(home, ".gemini", "antigravity")},
 		},
 		{
@@ -155,7 +150,7 @@ func init() {
 		{
 			ID:              "goose",
 			DisplayName:     "Goose",
-			GlobalSkillsDir: filepath.Join(home, ".config", "goose", "skills"),
+			GlobalSkillsDir: filepath.Join(home, ".agents", "skills"),
 			DetectMarkers:   []string{filepath.Join(home, ".config", "goose")},
 		},
 		{
@@ -169,7 +164,7 @@ func init() {
 			DisplayName:           "Codex (OpenAI)",
 			GlobalSkillsDir:       filepath.Join(home, ".codex", "skills"),
 			GlobalSkillsDirEnvVar: "CODEX_HOME",
-			DetectMarkers:         []string{"/etc/codex"},
+			DetectMarkers:         []string{filepath.Join(home, ".codex"), "/etc/codex"},
 			DetectMarkerEnvVars:   []string{"CODEX_HOME"},
 		},
 		{
@@ -205,7 +200,7 @@ func init() {
 		{
 			ID:              "cline",
 			DisplayName:     "Cline",
-			GlobalSkillsDir: filepath.Join(home, ".agents", "skills"),
+			GlobalSkillsDir: filepath.Join(home, ".cline", "skills"),
 			DetectMarkers:   []string{filepath.Join(home, ".cline")},
 		},
 		{
@@ -223,7 +218,7 @@ func init() {
 		{
 			ID:              "warp",
 			DisplayName:     "Warp",
-			GlobalSkillsDir: filepath.Join(home, ".config", "agents", "skills"),
+			GlobalSkillsDir: filepath.Join(home, ".agents", "skills"),
 			DetectMarkers:   []string{filepath.Join(home, ".warp")},
 		},
 		{
@@ -241,7 +236,7 @@ func init() {
 		{
 			ID:              "openhands",
 			DisplayName:     "OpenHands",
-			GlobalSkillsDir: filepath.Join(home, ".openhands", "skills"),
+			GlobalSkillsDir: filepath.Join(home, ".agents", "skills"),
 		},
 		{
 			ID:              "trae",
@@ -261,16 +256,13 @@ func init() {
 	}
 }
 
-var detectedAgentsCache []AgentConfig
-
+// DetectedAgents returns the supported assistants installed on this machine, plus universal.
 func DetectedAgents() []AgentConfig {
-	if detectedAgentsCache != nil {
-		return detectedAgentsCache
-	}
-	for _, a := range SupportedAgents {
+	var detected []AgentConfig
+	for _, a := range supportedAgents(homeDir()) {
 		if a.ID == "universal" || a.IsInstalled() {
-			detectedAgentsCache = append(detectedAgentsCache, a)
+			detected = append(detected, a)
 		}
 	}
-	return detectedAgentsCache
+	return detected
 }

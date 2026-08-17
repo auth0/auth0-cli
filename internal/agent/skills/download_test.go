@@ -108,21 +108,21 @@ func TestCheckHasSkills(t *testing.T) {
 // --- DownloadSkills ---.
 
 func TestDownloadSkills(t *testing.T) {
-	// The archive root GitHub produces for the main branch, plus the skills subtree path.
+	// The archive root GitHub produces for the main branch, plus the auth0 skill subtree path.
 	prefix := fmt.Sprintf("agent-skills-main/%s/", pluginSubtreePath)
 
-	t.Run("extracts the skills folder and returns the ETag", func(t *testing.T) {
+	t.Run("extracts the auth0 skill and returns the ETag", func(t *testing.T) {
 		zipData := makeZipBytes(t, map[string]string{
-			prefix + "auth0/SKILL.md": "# auth0",
+			prefix + "SKILL.md": "# auth0",
 		})
 		setHTTPClient(t, zipResponder(zipData, `"v1"`))
 
-		skillsDir := filepath.Join(t.TempDir(), "deep", "nested", "skills")
-		etag, notModified, err := DownloadSkills(skillsDir, "")
+		skillDir := filepath.Join(t.TempDir(), "deep", "nested", "auth0")
+		etag, notModified, err := DownloadSkills(skillDir, "")
 		require.NoError(t, err)
 		assert.False(t, notModified)
 		assert.Equal(t, `"v1"`, etag)
-		assertFileContent(t, filepath.Join(skillsDir, "auth0", "SKILL.md"), "# auth0")
+		assertFileContent(t, filepath.Join(skillDir, "SKILL.md"), "# auth0")
 	})
 
 	t.Run("sends If-None-Match and skips on 304", func(t *testing.T) {

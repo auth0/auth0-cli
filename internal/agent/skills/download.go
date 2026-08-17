@@ -14,19 +14,18 @@ import (
 
 const (
 	agentSkillsRepo = "https://github.com/auth0/agent-skills"
-
-	// PluginSubtreePath is the path, within the repo, to the skills folder we install:
-	// https://github.com/auth0/agent-skills/tree/main/plugins/auth0/skills
-	pluginSubtreePath = "plugins/auth0/skills"
+	// Path within the repo to the auth0 skill we install:
+	// https://github.com/auth0/agent-skills/tree/main/plugins/auth0/skills/auth0
+	pluginSubtreePath = "plugins/auth0/skills/auth0"
 
 	skillsHTTPTimeout = 60 * time.Second
 )
 
 var skillsHTTPClient = &http.Client{Timeout: skillsHTTPTimeout}
 
-// DownloadSkills installs the auth0 skills folder into skillsDir, skipping the download
-// when prevETag still matches the server (notModified=true) and returning the new ETag otherwise.
-func DownloadSkills(skillsDir, prevETag string) (etag string, notModified bool, err error) {
+// DownloadSkills installs the auth0 skill into skillDir, skipping the download when
+// prevETag still matches the server (notModified=true) and returning the new ETag otherwise.
+func DownloadSkills(skillDir, prevETag string) (etag string, notModified bool, err error) {
 	zipFile, etag, notModified, err := downloadArchive(prevETag)
 	if err != nil {
 		return "", false, err
@@ -51,12 +50,13 @@ func DownloadSkills(skillsDir, prevETag string) (etag string, notModified bool, 
 		return "", false, err
 	}
 
-	skillsSrc := filepath.Join(tempUnzipDir, extractedDir, filepath.FromSlash(pluginSubtreePath))
-	if err := checkHasSkills(skillsSrc); err != nil {
+	skillSrc := filepath.Join(tempUnzipDir, extractedDir, filepath.FromSlash(pluginSubtreePath))
+	if err := checkHasSkills(skillSrc); err != nil {
 		return "", false, err
 	}
 
-	if err := replaceDir(skillsSrc, skillsDir); err != nil {
+	// Swaps atomically and only touches skillDir, so sibling skills are safe.
+	if err := copyDir(skillSrc, skillDir); err != nil {
 		return "", false, err
 	}
 
@@ -124,27 +124,5 @@ func checkHasSkills(skillsDir string) error {
 	if err != nil || len(entries) == 0 {
 		return fmt.Errorf("no skills found under %s (archive layout may have changed)", skillsDir)
 	}
-	return nil
-}
-
-// replaceDir replaces skillsDir with src via an atomic rename, falling back to a
-// recursive copy when they are on different filesystems.
-func replaceDir(src, skillsDir string) error {
-	if err := os.MkdirAll(filepath.Dir(skillsDir), 0o755); err != nil {
-		return fmt.Errorf("create parent dir: %w", err)
-	}
-
-	os.RemoveAll(skillsDir)
-
-	if err := os.Rename(src, skillsDir); err != nil {
-		// Cross-filesystem fallback: copy content into a freshly created skillsDir.
-		if err := os.MkdirAll(skillsDir, 0o755); err != nil {
-			return fmt.Errorf("create target dir: %w", err)
-		}
-		if err := copyTree(src, skillsDir); err != nil {
-			return fmt.Errorf("install to target dir: %w", err)
-		}
-	}
-
 	return nil
 }

@@ -133,7 +133,7 @@ func TestResolvedGlobalSkillsDir(t *testing.T) {
 	t.Run("returns error when GlobalSkillsDir is empty and env var unset", func(t *testing.T) {
 		a := AgentConfig{ID: "test-agent"}
 		_, err := a.ResolvedGlobalSkillsDir()
-		assert.EqualError(t, err, "GlobalSkillsDirEnvVar must be set for: test-agent")
+		assert.EqualError(t, err, `no skills directory resolved for "test-agent" (GlobalSkillsDir or GlobalSkillsDirEnvVar required)`)
 	})
 
 	t.Run("returns env var path when GlobalSkillsDir is empty but env var is set", func(t *testing.T) {
@@ -154,24 +154,26 @@ func TestResolvedGlobalSkillsDir(t *testing.T) {
 			GlobalSkillsDirEnvVar: "VIBE_HOME",
 		}
 		_, err := a.ResolvedGlobalSkillsDir()
-		assert.EqualError(t, err, "GlobalSkillsDirEnvVar must be set for: mistral-vibe")
+		assert.EqualError(t, err, `no skills directory resolved for "mistral-vibe" (GlobalSkillsDir or GlobalSkillsDirEnvVar required)`)
 	})
 }
 
 func TestSupportedAgents(t *testing.T) {
+	agents := supportedAgents(t.TempDir())
+
 	t.Run("is non-empty", func(t *testing.T) {
-		assert.NotEmpty(t, SupportedAgents)
+		assert.NotEmpty(t, agents)
 	})
 
 	t.Run("all agents have non-empty ID and DisplayName", func(t *testing.T) {
-		for _, a := range SupportedAgents {
+		for _, a := range agents {
 			assert.NotEmptyf(t, a.ID, "agent ID must not be empty")
 			assert.NotEmptyf(t, a.DisplayName, "agent %s DisplayName must not be empty", a.ID)
 		}
 	})
 
 	t.Run("all agents have non-empty skill dirs", func(t *testing.T) {
-		for _, a := range SupportedAgents {
+		for _, a := range agents {
 			hasGlobalDir := a.GlobalSkillsDir != "" || a.GlobalSkillsDirEnvVar != ""
 			assert.Truef(t, hasGlobalDir, "agent %s must have GlobalSkillsDir or GlobalSkillsDirEnvVar", a.ID)
 		}
@@ -179,21 +181,10 @@ func TestSupportedAgents(t *testing.T) {
 
 	t.Run("all agent IDs are unique", func(t *testing.T) {
 		seen := make(map[string]bool)
-		for _, a := range SupportedAgents {
+		for _, a := range agents {
 			assert.Falsef(t, seen[a.ID], "duplicate agent ID: %s", a.ID)
 			seen[a.ID] = true
 		}
-	})
-
-	t.Run("universal agent is present", func(t *testing.T) {
-		found := false
-		for _, a := range SupportedAgents {
-			if a.ID == "universal" {
-				found = true
-				break
-			}
-		}
-		assert.True(t, found)
 	})
 
 	t.Run("required agents are present", func(t *testing.T) {
@@ -202,26 +193,26 @@ func TestSupportedAgents(t *testing.T) {
 			"antigravity", "devin", "mistral-vibe", "mux",
 			"codex", "universal",
 		}
-		byID := make(map[string]bool, len(SupportedAgents))
-		for _, a := range SupportedAgents {
+		byID := make(map[string]bool, len(agents))
+		for _, a := range agents {
 			byID[a.ID] = true
 		}
 		for _, id := range required {
-			assert.Truef(t, byID[id], "agent %s must be in SupportedAgents", id)
+			assert.Truef(t, byID[id], "agent %s must be supported", id)
 		}
 	})
 
 	t.Run("agents with no detection are detectable-never", func(t *testing.T) {
-		// Openhands, trae, mux, and universal have nil markers/binaries meaning IsInstalled
-		// always returns false; they are included via explicit ID checks or --agent flag.
+		// These have nil markers/binaries, so IsInstalled always returns false; they are reached
+		// via explicit --agent selection or the universal default.
 		noDetectIDs := []string{"openhands", "trae", "mux", "universal"}
 		byID := make(map[string]AgentConfig)
-		for _, a := range SupportedAgents {
+		for _, a := range agents {
 			byID[a.ID] = a
 		}
 		for _, id := range noDetectIDs {
 			a, ok := byID[id]
-			require.Truef(t, ok, "agent %s must be in SupportedAgents", id)
+			require.Truef(t, ok, "agent %s must be supported", id)
 			assert.Nilf(t, a.DetectMarkers, "agent %s should have nil DetectMarkers", id)
 			assert.Nilf(t, a.DetectBinaries, "agent %s should have nil DetectBinaries", id)
 			assert.Nilf(t, a.DetectMarkerEnvVars, "agent %s should have nil DetectMarkerEnvVars", id)
@@ -230,7 +221,7 @@ func TestSupportedAgents(t *testing.T) {
 
 	t.Run("codex uses CODEX_HOME env var for detection and skills dir", func(t *testing.T) {
 		byID := make(map[string]AgentConfig)
-		for _, a := range SupportedAgents {
+		for _, a := range agents {
 			byID[a.ID] = a
 		}
 		codex := byID["codex"]
@@ -241,7 +232,7 @@ func TestSupportedAgents(t *testing.T) {
 
 	t.Run("github-copilot does not use gh binary for detection", func(t *testing.T) {
 		byID := make(map[string]AgentConfig)
-		for _, a := range SupportedAgents {
+		for _, a := range agents {
 			byID[a.ID] = a
 		}
 		copilot := byID["github-copilot"]
@@ -252,20 +243,25 @@ func TestSupportedAgents(t *testing.T) {
 
 	t.Run("mistral-vibe uses VIBE_HOME env var", func(t *testing.T) {
 		byID := make(map[string]AgentConfig)
-		for _, a := range SupportedAgents {
+		for _, a := range agents {
 			byID[a.ID] = a
 		}
 		mv := byID["mistral-vibe"]
 		assert.Equal(t, "VIBE_HOME", mv.GlobalSkillsDirEnvVar)
 		assert.Contains(t, mv.DetectMarkerEnvVars, "VIBE_HOME")
 	})
+
+	t.Run("falls back to only universal when home is empty", func(t *testing.T) {
+		fallback := supportedAgents("")
+		require.Len(t, fallback, 1)
+		assert.Equal(t, "universal", fallback[0].ID)
+	})
 }
 
 func TestDetectedAgents(t *testing.T) {
 	t.Run("always includes universal", func(t *testing.T) {
-		detected := DetectedAgents()
 		found := false
-		for _, a := range detected {
+		for _, a := range DetectedAgents() {
 			if a.ID == "universal" {
 				found = true
 				break
@@ -275,74 +271,17 @@ func TestDetectedAgents(t *testing.T) {
 	})
 
 	t.Run("returns consistent results on repeated calls", func(t *testing.T) {
-		first := DetectedAgents()
-		second := DetectedAgents()
-		assert.Equal(t, first, second)
+		assert.Equal(t, DetectedAgents(), DetectedAgents())
 	})
 
-	t.Run("all returned agents come from SupportedAgents", func(t *testing.T) {
-		supported := make(map[string]bool, len(SupportedAgents))
-		for _, a := range SupportedAgents {
+	t.Run("all detected agents are supported", func(t *testing.T) {
+		supported := make(map[string]bool)
+		for _, a := range supportedAgents(homeDir()) {
 			supported[a.ID] = true
 		}
 		for _, a := range DetectedAgents() {
-			assert.Truef(t, supported[a.ID], "detected agent %s is not in SupportedAgents", a.ID)
+			assert.Truef(t, supported[a.ID], "detected agent %s is not supported", a.ID)
 		}
-	})
-}
-
-func ResetDetectedAgentsCache() {
-	detectedAgentsCache = nil
-}
-
-func TestResetDetectedAgentsCache(t *testing.T) {
-	t.Run("subsequent call after reset re-evaluates detection", func(t *testing.T) {
-		// Prime the cache.
-		first := DetectedAgents()
-		require.NotNil(t, first)
-
-		// Reset should clear the cached result.
-		ResetDetectedAgentsCache()
-
-		// A second call after reset should return a fresh (equal) result.
-		second := DetectedAgents()
-		assert.Equal(t, first, second)
-	})
-
-	t.Run("reset allows new filesystem state to be detected", func(t *testing.T) {
-		// Temporarily inject a fake agent that detects a temp dir.
-		dir := t.TempDir()
-		fake := AgentConfig{
-			ID:              "test-reset-agent",
-			DisplayName:     "Test Reset Agent",
-			GlobalSkillsDir: filepath.Join(dir, "skills"),
-			DetectMarkers:   []string{filepath.Join(dir, "marker")},
-		}
-		original := SupportedAgents
-		t.Cleanup(func() {
-			SupportedAgents = original
-			ResetDetectedAgentsCache()
-		})
-
-		// Without the marker, fake agent should not be detected.
-		ResetDetectedAgentsCache()
-		SupportedAgents = append(SupportedAgents, fake)
-		withoutMarker := DetectedAgents()
-		for _, a := range withoutMarker {
-			assert.NotEqual(t, "test-reset-agent", a.ID)
-		}
-
-		// Create the marker and reset — fake agent should now be detected.
-		require.NoError(t, os.MkdirAll(filepath.Join(dir, "marker"), 0o755))
-		ResetDetectedAgentsCache()
-		withMarker := DetectedAgents()
-		found := false
-		for _, a := range withMarker {
-			if a.ID == "test-reset-agent" {
-				found = true
-			}
-		}
-		assert.True(t, found, "agent should be detected after marker is created and cache is reset")
 	})
 }
 

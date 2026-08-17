@@ -53,6 +53,7 @@ func TestWriteSkillConfig(t *testing.T) {
 
 		original := &skillConfig{
 			ETag:        `"etag-v1"`,
+			Skills:      []string{"auth0"},
 			InstalledAt: now,
 			UpdatedAt:   now.Add(time.Hour),
 			Agents:      []string{"claude-code", "cursor"},
@@ -64,6 +65,7 @@ func TestWriteSkillConfig(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, got)
 		assert.Equal(t, original.ETag, got.ETag)
+		assert.Equal(t, original.Skills, got.Skills)
 		assert.Equal(t, original.InstalledAt.UTC(), got.InstalledAt.UTC())
 		assert.Equal(t, original.UpdatedAt.UTC(), got.UpdatedAt.UTC())
 		assert.Equal(t, original.Agents, got.Agents)
