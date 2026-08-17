@@ -80,10 +80,10 @@ func Execute() {
 		}
 	}()
 
-	// Intercept `<command> --help` with JSON requested (via --json or agent mode)
-	// before Cobra parses flags, so it works for every command, including the root
-	// and namespace commands that don't define their own --json flag.
-	if renderJSONHelpIfRequested(rootCmd, os.Args[1:]) {
+	// Resolve agent mode for the pre-parse `--help` path; real commands re-apply the parsed flag in applyAgentModeDefaults.
+	cli.agentMode = resolveAgentMode(cli.agentClientName(), os.Args[1:])
+
+	if renderJSONHelpIfRequested(cli, rootCmd, os.Args[1:]) {
 		return
 	}
 
@@ -165,12 +165,7 @@ func commandRequiresAuthentication(invokedCommandName string) bool {
 	return true
 }
 
-// agentModeEnvVar enables agent mode when set to a truthy value (e.g. 1 or true).
-// In agent mode, `--help` emits JSON without needing an explicit --json flag.
-const agentModeEnvVar = "AUTH0_AGENT_MODE"
-
-// agentClientName resolves detectAgent once per invocation and caches it so
-// agent-mode resolution and telemetry share a single lookup.
+// agentClientName caches detectAgent so mode resolution and telemetry share one lookup.
 func (c *cli) agentClientName() string {
 	if c.detectedAgent == "" {
 		c.detectedAgent = detectAgent(iostream.IsInputTerminal() && iostream.IsOutputTerminal())
@@ -178,14 +173,11 @@ func (c *cli) agentClientName() string {
 	return c.detectedAgent
 }
 
-// applyAgentModeDefaults enables agent mode when resolved, defaulting to JSON
-// output with prompts and colors off unless those flags were explicitly set.
+// applyAgentModeDefaults, when agent mode is on, defaults to JSON output with prompts and colors off unless those flags were explicitly set.
 func applyAgentModeDefaults(cli *cli, cmd *cobra.Command) {
-	if !resolveAgentMode(cmd, cli.agentClientName()) {
+	if !cli.agentMode {
 		return
 	}
-
-	cli.agentMode = true
 
 	if !anyFlagChanged(cmd, "json", "json-compact", "csv") {
 		cli.json = true
@@ -198,17 +190,20 @@ func applyAgentModeDefaults(cli *cli, cmd *cobra.Command) {
 	}
 }
 
-// resolveAgentMode decides whether agent mode is active. Precedence:
-// an explicit --agent-mode flag (highest), then a truthy AUTH0_AGENT_MODE env
-// value, then a detected (non-human, non-unknown) agent client.
-func resolveAgentMode(cmd *cobra.Command, agentClient string) bool {
-	if flagChanged(cmd, "agent-mode") {
-		if enabled, err := cmd.Flags().GetBool("agent-mode"); err == nil {
-			return enabled
+// resolveAgentMode reports agent mode: an explicit --agent-mode flag wins, then AUTH0_AGENT_MODE, then a detected agent client.
+func resolveAgentMode(agentClient string, args []string) bool {
+	for _, arg := range args {
+		if arg == "--agent-mode" {
+			return true
+		}
+		if value, found := strings.CutPrefix(arg, "--agent-mode="); found {
+			if enabled, err := strconv.ParseBool(value); err == nil {
+				return enabled
+			}
 		}
 	}
 
-	if enabled, _ := strconv.ParseBool(strings.TrimSpace(os.Getenv(agentModeEnvVar))); enabled {
+	if agentModeEnabled() {
 		return true
 	}
 

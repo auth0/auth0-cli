@@ -294,8 +294,8 @@ func extractArguments(cmd *cobra.Command) []string {
 // flags, so it also works for the root and namespace commands that have no --json
 // flag of their own. A specific command is described in detail; the root is a
 // compact overview.
-func renderJSONHelpIfRequested(root *cobra.Command, args []string) bool {
-	if !hasHelpRequest(args) || (!hasJSONRequest(args) && !agentModeEnabled()) {
+func renderJSONHelpIfRequested(cli *cli, root *cobra.Command, args []string) bool {
+	if !hasHelpRequest(args) || (!hasJSONRequest(args) && !cli.agentMode) {
 		return false
 	}
 
