@@ -136,12 +136,14 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 		)
 	}
 
-	api, err := initializeManagementClient(tenant.Domain, tenant.GetAccessToken())
+	invokerMetadata := c.invokerMetadataHeaderValue()
+
+	api, err := initializeManagementClient(tenant.Domain, tenant.GetAccessToken(), invokerMetadata)
 	if err != nil {
 		return err
 	}
 
-	apiv3, err := initializeManagementClientV3(tenant.Domain, tenant.GetAccessToken())
+	apiv3, err := initializeManagementClientV3(tenant.Domain, tenant.GetAccessToken(), invokerMetadata)
 	if err != nil {
 		return err
 	}
