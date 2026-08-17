@@ -170,27 +170,6 @@ func TestHasJSONRequest(t *testing.T) {
 	assert.False(t, hasJSONRequest(nil))
 }
 
-func TestAgentModeEnabled(t *testing.T) {
-	tests := []struct {
-		value string
-		want  bool
-	}{
-		{"1", true},
-		{"true", true},
-		{"  true  ", true},
-		{"0", false},
-		{"false", false},
-		{"", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.value, func(t *testing.T) {
-			t.Setenv(agentModeEnvVar, tt.value)
-			assert.Equal(t, tt.want, agentModeEnabled())
-		})
-	}
-}
-
 func TestAnnotateWithRawAPINote(t *testing.T) {
 	nodes := annotateWithRawAPINote([]commandNode{{Path: "auth0 apps"}, {Path: "auth0 users"}})
 

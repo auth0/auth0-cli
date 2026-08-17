@@ -159,6 +159,10 @@ func deleteSessionCmd(cli *cli) *cobra.Command {
 				id = args[0]
 			}
 
+			if !cli.force && cli.agentMode {
+				return errDestructiveNoConfirm
+			}
+
 			if !cli.force && canPrompt(cmd) {
 				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
 					return nil
@@ -198,6 +202,10 @@ func revokeSessionCmd(cli *cli) *cobra.Command {
 				}
 			} else {
 				id = args[0]
+			}
+
+			if !cli.force && cli.agentMode {
+				return errDestructiveNoConfirm
 			}
 
 			if !cli.force && canPrompt(cmd) {

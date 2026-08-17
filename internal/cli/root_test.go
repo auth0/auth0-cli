@@ -203,6 +203,7 @@ func TestResolveAgentMode(t *testing.T) {
 		{name: "flag=true enables", args: []string{"--agent-mode=true"}, detected: "human", expected: true},
 		{name: "unparseable flag falls through to env", args: []string{"--agent-mode=maybe"}, env: "1", detected: "human", expected: true},
 		{name: "env truthy when no flag", env: "1", detected: "human", expected: true},
+		{name: "env false disables even when detected", env: "false", detected: "claude-code", expected: false},
 		{name: "detected agent when no flag or env", detected: "claude-code", expected: true},
 		{name: "human is not agent mode", detected: "human", expected: false},
 		{name: "unknown is not agent mode", detected: "unknown", expected: false},

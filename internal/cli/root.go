@@ -190,7 +190,10 @@ func applyAgentModeDefaults(cli *cli, cmd *cobra.Command) {
 	}
 }
 
-// resolveAgentMode reports agent mode: an explicit --agent-mode flag wins, then AUTH0_AGENT_MODE, then a detected agent client.
+// agentModeEnvVar explicitly enables (true) or disables (false) agent mode, overriding auto-detection.
+const agentModeEnvVar = "AUTH0_AGENT_MODE"
+
+// resolveAgentMode reports agent mode: an explicit --agent-mode flag wins, then AUTH0_AGENT_MODE (true/false), then a detected agent client.
 func resolveAgentMode(agentClient string, args []string) bool {
 	for _, arg := range args {
 		if arg == "--agent-mode" {
@@ -203,8 +206,10 @@ func resolveAgentMode(agentClient string, args []string) bool {
 		}
 	}
 
-	if agentModeEnabled() {
-		return true
+	if raw := strings.TrimSpace(os.Getenv(agentModeEnvVar)); raw != "" {
+		if enabled, err := strconv.ParseBool(raw); err == nil {
+			return enabled
+		}
 	}
 
 	switch agentClient {

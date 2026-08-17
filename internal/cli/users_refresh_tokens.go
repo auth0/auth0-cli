@@ -112,6 +112,10 @@ func deleteUserRefreshTokensCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
+			if !cli.force && cli.agentMode {
+				return errDestructiveNoConfirm
+			}
+
 			if !cli.force && canPrompt(cmd) {
 				if confirmed := prompt.Confirm("Are you sure you want to proceed? This deletes ALL refresh tokens for the user."); !confirmed {
 					return nil
