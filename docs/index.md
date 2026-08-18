@@ -87,6 +87,7 @@ The help for any command can also be emitted as JSON by combining `--help` with 
 
 - [auth0 actions](auth0_actions.md) - Manage resources for actions
 - [auth0 acul](auth0_acul.md) - Advanced Customization the Universal Login experience
+- [auth0 agent](auth0_agent.md) - Manage Auth0 AI capabilities
 - [auth0 api](auth0_api.md) - Makes an authenticated HTTP request to the Auth0 Management API
 - [auth0 apis](auth0_apis.md) - Manage resources for APIs
 - [auth0 apps](auth0_apps.md) - Manage resources for applications
