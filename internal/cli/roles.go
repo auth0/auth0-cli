@@ -87,6 +87,9 @@ func listRolesCmd(cli *cli) *cobra.Command {
 					if err != nil {
 						return nil, false, err
 					}
+					if roleList == nil {
+						return result, false, nil
+					}
 
 					for _, role := range roleList.Roles {
 						result = append(result, role)
@@ -349,6 +352,10 @@ func (c *cli) rolePickerOptions(ctx context.Context) (pickerOptions, error) {
 	}
 
 	var opts pickerOptions
+
+	if list == nil {
+		return nil, errors.New("there are currently no roles to choose from. Create one by running: `auth0 roles create`")
+	}
 
 	for _, c := range list.Roles {
 		value := c.GetID()

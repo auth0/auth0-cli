@@ -91,6 +91,9 @@ func listRolePermissionsCmd(cli *cli) *cobra.Command {
 					if err != nil {
 						return nil, false, err
 					}
+					if permissionsList == nil {
+						return result, false, nil
+					}
 
 					for _, role := range permissionsList.Permissions {
 						result = append(result, role)
