@@ -5,11 +5,9 @@ has_toc: false
 ---
 # auth0 agent skills install
 
-Download the Auth0 skill and install it into your detected AI coding assistants.
+Install the Auth0 skill into your AI coding assistants.
 
-With no flags it prompts for which assistants to set up. Use --agent to select them non-interactively.
-
-Supported assistants (24): claude-code, cursor, github-copilot, gemini-cli, antigravity, roo, goose, opencode, codex, windsurf, continue, amp, junie, kiro-cli, cline, augment, aider-desk, warp, devin, mistral-vibe, openhands, trae, mux, universal.
+Delegates to the skills CLI (https://github.com/vercel-labs/skills) via npx, so it requires Node.js (with npx) on your PATH. With no flags it opens the interactive picker; use --agent to target assistants non-interactively.
 
 ## Usage
 ```
@@ -26,10 +24,10 @@ auth0 agent skills install [flags]
   auth0 agent skills install --agent claude-code,cursor
   auth0 agent skills install --agent claude-code --agent cursor
 
-  # Install into every detected assistant
+  # Install into every supported assistant
   auth0 agent skills install --agent all
 
-  # Re-download even if already up to date
+  # Reinstall without prompting
   auth0 agent skills install --force
 ```
 
@@ -38,7 +36,7 @@ auth0 agent skills install [flags]
 
 ```
       --agent strings   Assistant ID(s) to install into: comma-separated or repeatable, or 'all'. Defaults to prompting.
-      --force           Re-download the skill even if it is already up to date.
+      --force           Reinstall without prompting (skills always fetches the latest).
 ```
 
 
