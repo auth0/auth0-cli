@@ -9,6 +9,10 @@ import (
 	"sync"
 )
 
+// agentClientUnknownAgent is returned when an agent was detected but could not be named.
+// It is distinct from "unknown", which means no invoker signal was found at all.
+const agentClientUnknownAgent = "unknown-agent"
+
 // agentEnvEntry maps an env var to a canonical agent_client name.
 // The requiredPrefix field restricts matching to values with that prefix (case-insensitive).
 type agentEnvEntry struct {
@@ -36,7 +40,7 @@ var agentEnvTable = []agentEnvEntry{
 	{envVar: "ANTIGRAVITY_CLI_ALIAS", agentName: "antigravity"},
 	{envVar: "ANTIGRAVITY_CONVERSATION_ID", agentName: "antigravity"},
 	// AI_AGENT catch-all (must be last).
-	{envVar: "AI_AGENT", agentName: "unknown-agent"},
+	{envVar: "AI_AGENT", agentName: agentClientUnknownAgent},
 }
 
 // agentProcessNames maps parent process names (partial, lower-cased) to agent names.
@@ -114,7 +118,7 @@ func detectAgentWithEnv(
 		}
 		for _, suffix := range agentEnvSuffixes {
 			if strings.HasSuffix(upperKey, suffix) {
-				return "unknown-agent"
+				return agentClientUnknownAgent
 			}
 		}
 	}
