@@ -19,8 +19,6 @@ auth0 apps session-transfer update [flags]
   auth0 apps session-transfer update <app-id>
   auth0 apps session-transfer update <app-id> --can-create-token --json
   auth0 apps session-transfer update <app-id> --can-create-token=true --allowed-auth-methods=cookie,query --enforce-device-binding=ip
-
-  # Delegation (Early Access): impersonation via Session Transfer
   auth0 apps session-transfer update <app-id> --delegation-allow-delegated-access=true --delegation-enforce-device-binding=asn
 ```
 

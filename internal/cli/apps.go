@@ -1245,8 +1245,6 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
   auth0 apps session-transfer update <app-id>
   auth0 apps session-transfer update <app-id> --can-create-token --json
   auth0 apps session-transfer update <app-id> --can-create-token=true --allowed-auth-methods=cookie,query --enforce-device-binding=ip
-
-  # Delegation (Early Access): impersonation via Session Transfer
   auth0 apps session-transfer update <app-id> --delegation-allow-delegated-access=true --delegation-enforce-device-binding=asn`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -1306,8 +1304,6 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 				st.EnforceDeviceBinding = current.SessionTransfer.EnforceDeviceBinding
 			}
 
-			// Delegation (EA) is sent only when a flag is set, leaving it untouched for
-			// others. The API merges sub-fields, so sending just the changed one is enough.
 			if appSTDelegationAllowAccess.IsSet(cmd) || appSTDelegationDeviceBinding.IsSet(cmd) {
 				delegation := &management.SessionTransferDelegation{}
 

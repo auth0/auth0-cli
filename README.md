@@ -162,6 +162,12 @@ brew tap auth0/auth0-cli && brew install auth0-beta
 > [!NOTE]
 > The `auth0-beta` formula installs the beta build as the `auth0` binary. Run it with `auth0` once installed.
 
+> [!IMPORTANT]
+> Already have the stable `auth0` CLI? It shadows the beta binary. Add this alias to your shell config so `auth0-beta` runs the beta:
+> ```bash
+> alias auth0-beta="$(brew --prefix auth0-beta)/bin/auth0"
+> ```
+
 Install via [cURL](https://curl.se/):
 
 1. Download the binary. It will be placed in `./auth0`:

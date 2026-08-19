@@ -51,7 +51,7 @@ type Metadata struct {
 	Description string `json:"description"`
 }
 
-const stableACULVersion = "v2.0.1"
+const stableACULVersion = "v3.0.0"
 
 // loadManifest downloads and parses the manifest.json for the latest release.
 func loadManifest(tag string) (*Manifest, error) {
