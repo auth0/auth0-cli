@@ -8,6 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v1.33.0](https://github.com/auth0/auth0-cli/tree/v1.33.0) (August 19, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.32.0...v1.33.0)
+
+### Added
+- Add `auth0 client-grants` command resource [#1598]
+- Add `auth0 client-grants organizations list` command [#1599]
+- Add `auth0 sessions` and `auth0 refresh-tokens` command resource [#1603]
+- Add `auth0 users sessions` and `auth0 users refresh-tokens` command resource [#1603]
+- Add `auth0 actions modules` command resource [#1606]
+- Add `auth0 actions modules versions` commands resource [#1609]
+- Add `--module` flag to associate action modules in `auth0 actions` [#1605]
+- Add `auth0 commands` to list the command tree for easier discovery [#1585]
+- Add `auth0 agent skills install` command to install the Auth0 skill [#1555]
+- Add `--agent-mode` flag and `AUTH0_AGENT_MODE` environment variable [#1612]
+- Add `auth0_managed` curated blocklists to network ACL rules (EA only) [#1600]
+- Add session-transfer delegation flags in `auth0 apps session-transfer update` [#1587]
+- Add support for Universal Login theme identifiers and tenant country codes [#1592]
+- Add `is_api` telemetry property for raw `auth0 api` commands [#1602]
+- Send `Auth0-CLI-Metadata` header on Management API requests [#1616]
+
+### Fixed
+- Fix handling of nil role and permissions lists in `auth0 roles` commands [#1617]
+
+
 # [v1.32.0](https://github.com/auth0/auth0-cli/tree/v1.32.0) (June 23, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.31.0...v1.32.0)
@@ -753,7 +778,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.32.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.33.0...HEAD
+[#1617]: https://github.com/auth0/auth0-cli/pull/1617
+[#1616]: https://github.com/auth0/auth0-cli/pull/1616
+[#1612]: https://github.com/auth0/auth0-cli/pull/1612
+[#1609]: https://github.com/auth0/auth0-cli/pull/1609
+[#1606]: https://github.com/auth0/auth0-cli/pull/1606
+[#1605]: https://github.com/auth0/auth0-cli/pull/1605
+[#1603]: https://github.com/auth0/auth0-cli/pull/1603
+[#1602]: https://github.com/auth0/auth0-cli/pull/1602
+[#1600]: https://github.com/auth0/auth0-cli/pull/1600
+[#1599]: https://github.com/auth0/auth0-cli/pull/1599
+[#1598]: https://github.com/auth0/auth0-cli/pull/1598
+[#1592]: https://github.com/auth0/auth0-cli/pull/1592
+[#1587]: https://github.com/auth0/auth0-cli/pull/1587
+[#1585]: https://github.com/auth0/auth0-cli/pull/1585
+[#1555]: https://github.com/auth0/auth0-cli/pull/1555
 [#1551]: https://github.com/auth0/auth0-cli/pull/1551
 [#1549]: https://github.com/auth0/auth0-cli/pull/1549
 [#1548]: https://github.com/auth0/auth0-cli/pull/1548
