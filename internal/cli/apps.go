@@ -168,15 +168,17 @@ var (
 		Name:      "Allow Delegated Access",
 		LongForm:  "delegation-allow-delegated-access",
 		ShortForm: "d",
-		Help: "(Early Access) Allow the application to accept Session Transfer Tokens containing an Actor, " +
+		Help: "Allow the application to accept Session Transfer Tokens containing an Actor, " +
 			"enabling delegated (impersonation) access. Defaults to false.",
+		AlwaysPrompt: true,
 	}
 	appSTDelegationDeviceBinding = Flag{
 		Name:      "Delegation Enforce Device Binding",
 		LongForm:  "delegation-enforce-device-binding",
 		ShortForm: "b",
-		Help: "(Early Access) Device binding enforcement for delegated (impersonation) access: 'ip' or 'asn'. " +
+		Help: "Device binding enforcement for delegated (impersonation) access: 'ip' or 'asn'. " +
 			"Defaults to 'ip'.",
+		AlwaysPrompt: true,
 	}
 	refreshToken = Flag{
 		Name:      "Refresh Token",
@@ -1276,6 +1278,13 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			if current.SessionTransfer.Delegation == nil {
+				current.SessionTransfer.Delegation = &management.SessionTransferDelegation{
+					AllowDelegatedAccess: auth0.Bool(false),
+					EnforceDeviceBinding: auth0.String("ip"),
+				}
+			}
+
 			if err := appSTCanCreateToken.AskBoolU(cmd, &inputs.CanCreateToken, current.SessionTransfer.CanCreateSessionTransferToken); err != nil {
 				return err
 			}
@@ -1286,6 +1295,14 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := appSTEnforceDeviceBinding.SelectU(cmd, &inputs.EnforceDeviceBinding, []string{"none", "ip", "asn"}, current.SessionTransfer.EnforceDeviceBinding); err != nil {
+				return err
+			}
+
+			if err := appSTDelegationAllowAccess.AskBoolU(cmd, &inputs.DelegationAllowAccess, current.SessionTransfer.Delegation.AllowDelegatedAccess); err != nil {
+				return err
+			}
+
+			if err := appSTDelegationDeviceBinding.SelectU(cmd, &inputs.DelegationDeviceBinding, []string{"ip", "asn"}, current.SessionTransfer.Delegation.EnforceDeviceBinding); err != nil {
 				return err
 			}
 
@@ -1304,14 +1321,17 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 				st.EnforceDeviceBinding = current.SessionTransfer.EnforceDeviceBinding
 			}
 
-			if appSTDelegationAllowAccess.IsSet(cmd) || appSTDelegationDeviceBinding.IsSet(cmd) {
-				delegation := &management.SessionTransferDelegation{}
+			if appSTDelegationAllowAccess.IsSet(cmd) || appSTDelegationDeviceBinding.IsSet(cmd) || noLocalFlagSet(cmd) {
+				delegation := &management.SessionTransferDelegation{
+					AllowDelegatedAccess: current.SessionTransfer.Delegation.AllowDelegatedAccess,
+					EnforceDeviceBinding: current.SessionTransfer.Delegation.EnforceDeviceBinding,
+				}
 
-				if appSTDelegationAllowAccess.IsSet(cmd) {
+				if appSTDelegationAllowAccess.IsSet(cmd) || noLocalFlagSet(cmd) {
 					delegation.AllowDelegatedAccess = &inputs.DelegationAllowAccess
 				}
 
-				if appSTDelegationDeviceBinding.IsSet(cmd) {
+				if appSTDelegationDeviceBinding.IsSet(cmd) || noLocalFlagSet(cmd) {
 					delegation.EnforceDeviceBinding = &inputs.DelegationDeviceBinding
 				}
 
