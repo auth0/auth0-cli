@@ -15,6 +15,10 @@ const (
 	auth0SkillSource = "https://github.com/auth0/agent-skills/tree/main/plugins/auth0/skills/auth0"
 	allAgentsInput   = "all"
 	allAgentsToken   = "*"
+
+	// Pinned Vercel `skills` npm package version so npx never pulls an untested/compromised release.
+	skillsCLIVersion = "1.5.23"
+	skillsCLISpec    = "skills@" + skillsCLIVersion
 )
 
 // agentCmd groups the Auth0 AI capability commands.
@@ -56,10 +60,8 @@ func installCmd(_ *cli) *cobra.Command {
 		Use:   "install",
 		Args:  cobra.NoArgs,
 		Short: "Install the Auth0 skill for your AI coding assistants",
-		Long: "Install the Auth0 skill into your AI coding assistants.\n\n" +
-			"Delegates to the skills CLI (https://github.com/vercel-labs/skills) via npx, so it " +
-			"requires Node.js (with npx) on your PATH. With no flags it opens the interactive " +
-			"picker; use --agent to target assistants non-interactively.",
+		Long: "Install the Auth0 skill into your AI coding assistants via the pinned skills CLI (" +
+			skillsCLISpec + "), run through npx (requires Node.js).",
 		Example: `  # Choose assistants interactively
   auth0 agent skills install
 
@@ -92,7 +94,7 @@ func runInstall(cmd *cobra.Command, agents []string, force bool) error {
 		return errors.New(
 			"npx not found on PATH; installing the Auth0 skill needs Node.js (>= 22.20). " +
 				"Install Node.js, or run it directly:\n" +
-				"  npx skills add " + auth0SkillSource + " --global --skill " + skillName)
+				"  npx " + skillsCLISpec + " add " + auth0SkillSource + " --global --skill " + skillName)
 	}
 
 	args := buildSkillsAddArgs(agents, force, canPrompt(cmd))
@@ -108,7 +110,7 @@ func runInstall(cmd *cobra.Command, agents []string, force bool) error {
 // buildSkillsAddArgs builds the npx args for `skills add`. The leading --yes is npx's own; a
 // second --yes is added when the run must not prompt (explicit --agent, --force, or non-interactive).
 func buildSkillsAddArgs(agents []string, force, interactive bool) []string {
-	args := []string{"--yes", "skills", "add", auth0SkillSource, "--global", "--skill", skillName}
+	args := []string{"--yes", skillsCLISpec, "add", auth0SkillSource, "--global", "--skill", skillName}
 
 	nonInteractive := force || !interactive
 	for _, agent := range agents {

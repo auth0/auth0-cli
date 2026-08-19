@@ -5,9 +5,7 @@ has_toc: false
 ---
 # auth0 agent skills install
 
-Install the Auth0 skill into your AI coding assistants.
-
-Delegates to the skills CLI (https://github.com/vercel-labs/skills) via npx, so it requires Node.js (with npx) on your PATH. With no flags it opens the interactive picker; use --agent to target assistants non-interactively.
+Install the Auth0 skill into your AI coding assistants via the pinned skills CLI (skills@1.5.23), run through npx (requires Node.js).
 
 ## Usage
 ```

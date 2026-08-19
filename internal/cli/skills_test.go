@@ -17,11 +17,14 @@ func countArg(args []string, want string) int {
 }
 
 func TestBuildSkillsAddArgs(t *testing.T) {
-	t.Run("base invocation targets the auth0 subtree, globally", func(t *testing.T) {
+	t.Run("base invocation targets the auth0 subtree, globally, with a pinned skills version", func(t *testing.T) {
 		got := buildSkillsAddArgs(nil, false, true)
 		assert.Equal(t, []string{
-			"--yes", "skills", "add", auth0SkillSource, "--global", "--skill", skillName,
+			"--yes", skillsCLISpec, "add", auth0SkillSource, "--global", "--skill", skillName,
 		}, got)
+		// The skills CLI must be version-pinned (skills@x.y.z), never bare "skills".
+		assert.Contains(t, got, skillsCLISpec)
+		assert.Contains(t, skillsCLISpec, "@")
 		// Interactive, no --agent, no --force: only npx's own --yes, so the picker still runs.
 		assert.Equal(t, 1, countArg(got, "--yes"))
 	})

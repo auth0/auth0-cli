@@ -261,10 +261,6 @@ func assertMetadataHeader(t *testing.T, captured capturedRequest, expected invok
 
 	// The header name must survive Go's canonicalization exactly as spelled.
 	assert.Contains(t, captured.headerKeys, invokerMetadataHeader)
-
-	// Sanity check that this is a genuine SDK request and that our header rides
-	// alongside the existing telemetry rather than displacing it.
-	assert.Contains(t, captured.userAgent, userAgent)
 }
 
 // TestManagementClientV1SendsInvokerMetadata drives the real v1 client constructor
@@ -283,6 +279,8 @@ func TestManagementClientV1SendsInvokerMetadata(t *testing.T) {
 	require.NoError(t, err)
 
 	assertMetadataHeader(t, captured, metadata)
+	// The v1 client keeps the CLI's own User-Agent.
+	assert.Contains(t, captured.userAgent, userAgent)
 	assert.NotEmpty(t, captured.auth0Cli, "Auth0-Client should still be sent alongside it")
 }
 
@@ -303,11 +301,8 @@ func TestManagementClientV3SendsInvokerMetadata(t *testing.T) {
 
 	assertMetadataHeader(t, captured, metadata)
 
-	// Note: unlike v1, the v3 client does not send Auth0-Client here despite
-	// option.WithAuth0ClientEnvEntry being configured. Passing option.WithHTTPClient
-	// replaces the client the SDK built, discarding its Auth0-Client transport. That is
-	// pre-existing SDK behaviour, unrelated to this header, and recorded for visibility.
-	t.Logf("v3 Auth0-Client: %q", captured.auth0Cli)
+	// Since v3.3.0 the SDK forces its own User-Agent; it can't be overridden.
+	assert.Contains(t, captured.userAgent, "Go-Auth0")
 }
 
 // TestManagementClientSendsMetadataOnRetries proves the header is present on retried
