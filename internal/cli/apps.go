@@ -168,15 +168,17 @@ var (
 		Name:      "Allow Delegated Access",
 		LongForm:  "delegation-allow-delegated-access",
 		ShortForm: "d",
-		Help: "(Early Access) Allow the application to accept Session Transfer Tokens containing an Actor, " +
+		Help: "Allow the application to accept Session Transfer Tokens containing an Actor, " +
 			"enabling delegated (impersonation) access. Defaults to false.",
+		AlwaysPrompt: true,
 	}
 	appSTDelegationDeviceBinding = Flag{
 		Name:      "Delegation Enforce Device Binding",
 		LongForm:  "delegation-enforce-device-binding",
 		ShortForm: "b",
-		Help: "(Early Access) Device binding enforcement for delegated (impersonation) access: 'ip' or 'asn'. " +
+		Help: "Device binding enforcement for delegated (impersonation) access: 'ip' or 'asn'. " +
 			"Defaults to 'ip'.",
+		AlwaysPrompt: true,
 	}
 	refreshToken = Flag{
 		Name:      "Refresh Token",
@@ -1245,8 +1247,6 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
   auth0 apps session-transfer update <app-id>
   auth0 apps session-transfer update <app-id> --can-create-token --json
   auth0 apps session-transfer update <app-id> --can-create-token=true --allowed-auth-methods=cookie,query --enforce-device-binding=ip
-
-  # Delegation (Early Access): impersonation via Session Transfer
   auth0 apps session-transfer update <app-id> --delegation-allow-delegated-access=true --delegation-enforce-device-binding=asn`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -1278,6 +1278,13 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			if current.SessionTransfer.Delegation == nil {
+				current.SessionTransfer.Delegation = &management.SessionTransferDelegation{
+					AllowDelegatedAccess: auth0.Bool(false),
+					EnforceDeviceBinding: auth0.String("ip"),
+				}
+			}
+
 			if err := appSTCanCreateToken.AskBoolU(cmd, &inputs.CanCreateToken, current.SessionTransfer.CanCreateSessionTransferToken); err != nil {
 				return err
 			}
@@ -1288,6 +1295,14 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := appSTEnforceDeviceBinding.SelectU(cmd, &inputs.EnforceDeviceBinding, []string{"none", "ip", "asn"}, current.SessionTransfer.EnforceDeviceBinding); err != nil {
+				return err
+			}
+
+			if err := appSTDelegationAllowAccess.AskBoolU(cmd, &inputs.DelegationAllowAccess, current.SessionTransfer.Delegation.AllowDelegatedAccess); err != nil {
+				return err
+			}
+
+			if err := appSTDelegationDeviceBinding.SelectU(cmd, &inputs.DelegationDeviceBinding, []string{"ip", "asn"}, current.SessionTransfer.Delegation.EnforceDeviceBinding); err != nil {
 				return err
 			}
 
@@ -1306,16 +1321,17 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 				st.EnforceDeviceBinding = current.SessionTransfer.EnforceDeviceBinding
 			}
 
-			// Delegation (EA) is sent only when a flag is set, leaving it untouched for
-			// others. The API merges sub-fields, so sending just the changed one is enough.
-			if appSTDelegationAllowAccess.IsSet(cmd) || appSTDelegationDeviceBinding.IsSet(cmd) {
-				delegation := &management.SessionTransferDelegation{}
+			if appSTDelegationAllowAccess.IsSet(cmd) || appSTDelegationDeviceBinding.IsSet(cmd) || noLocalFlagSet(cmd) {
+				delegation := &management.SessionTransferDelegation{
+					AllowDelegatedAccess: current.SessionTransfer.Delegation.AllowDelegatedAccess,
+					EnforceDeviceBinding: current.SessionTransfer.Delegation.EnforceDeviceBinding,
+				}
 
-				if appSTDelegationAllowAccess.IsSet(cmd) {
+				if appSTDelegationAllowAccess.IsSet(cmd) || noLocalFlagSet(cmd) {
 					delegation.AllowDelegatedAccess = &inputs.DelegationAllowAccess
 				}
 
-				if appSTDelegationDeviceBinding.IsSet(cmd) {
+				if appSTDelegationDeviceBinding.IsSet(cmd) || noLocalFlagSet(cmd) {
 					delegation.EnforceDeviceBinding = &inputs.DelegationDeviceBinding
 				}
 
