@@ -22,8 +22,8 @@ github.com/atotto/clipboard v0.1.4 h1:EH0zSVneZPSuFR11BlR9YppQTVDbh5+16AmcJi4g1z
 github.com/atotto/clipboard v0.1.4/go.mod h1:ZY9tmq7sm5xIbd9bOK4onWV4S6X0u6GY7Vn0Yu86PYI=
 github.com/auth0/go-auth0 v1.47.0 h1:HQvw0oOgMKFfncRqpab/5eP2ZmzpvxoIydSLxcDrzEs=
 github.com/auth0/go-auth0 v1.47.0/go.mod h1:32sQB1uAn+99fJo6N819EniKq8h785p0ag0lMWhiTaE=
-github.com/auth0/go-auth0/v3 v3.2.0 h1:/6kg5IXrsJcrWxOtfk8H2FHESeBbYvlFsHFwfLV65/E=
-github.com/auth0/go-auth0/v3 v3.2.0/go.mod h1:0a8Yg46Et2wJICZZt5ihpnN/Q53GGiV8fSWkIhEK5x4=
+github.com/auth0/go-auth0/v3 v3.3.0 h1:p/OxyycZNUtFekO6uXGBqrVXtnJ92gO7ikXtVDuT0ZA=
+github.com/auth0/go-auth0/v3 v3.3.0/go.mod h1:wb20iE6T4wCGWtMXAZTWTTxx1/T1aHfVK+dOWleQvlg=
 github.com/aybabtme/iocontrol v0.0.0-20150809002002-ad15bcfc95a0 h1:0NmehRCgyk5rljDQLKUO+cRJCnduDyn11+zGZIc9Z48=
 github.com/aybabtme/iocontrol v0.0.0-20150809002002-ad15bcfc95a0/go.mod h1:6L7zgvqo0idzI7IO8de6ZC051AfXb5ipkIJ7bIA2tGA=
 github.com/aymanbagabas/go-osc52/v2 v2.0.1 h1:HwpRHbFMcZLEVr42D4p7XBqjyuxQH5SMiErDT4WkJ2k=
