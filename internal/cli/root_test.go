@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/auth0/auth0-cli/internal/config"
@@ -159,6 +160,25 @@ func TestIsCIEnvironment(t *testing.T) {
 	})
 }
 
+func TestIsAPICommand(t *testing.T) {
+	tests := []struct {
+		name        string
+		commandPath string
+		expected    bool
+	}{
+		{"api command", "auth0 api", true},
+		{"root command", "auth0", false},
+		{"apis command is not the api command", "auth0 apis list", false},
+		{"empty command path", "", false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, isAPICommand(test.commandPath))
+		})
+	}
+}
+
 func TestMergeProperties(t *testing.T) {
 	base := map[string]string{"interactive": "true", "success": "true"}
 	override := map[string]string{"success": "false", "error_class": "auth"}
@@ -167,4 +187,60 @@ func TestMergeProperties(t *testing.T) {
 	assert.Equal(t, "true", merged["interactive"])
 	assert.Equal(t, "false", merged["success"])
 	assert.Equal(t, "auth", merged["error_class"])
+}
+
+func TestResolveAgentMode(t *testing.T) {
+	// Precedence: an explicit --agent-mode flag in args > AUTH0_AGENT_MODE > detection.
+	tests := []struct {
+		name     string
+		env      string
+		args     []string
+		detected string
+		expected bool
+	}{
+		{name: "bare flag wins over env false", args: []string{"--agent-mode"}, env: "false", detected: "human", expected: true},
+		{name: "flag=false wins over env true and detection", args: []string{"--agent-mode=false"}, env: "true", detected: "claude-code", expected: false},
+		{name: "flag=true enables", args: []string{"--agent-mode=true"}, detected: "human", expected: true},
+		{name: "unparseable flag falls through to env", args: []string{"--agent-mode=maybe"}, env: "1", detected: "human", expected: true},
+		{name: "env truthy when no flag", env: "1", detected: "human", expected: true},
+		{name: "env false disables even when detected", env: "false", detected: "claude-code", expected: false},
+		{name: "detected agent when no flag or env", detected: "claude-code", expected: true},
+		{name: "human is not agent mode", detected: "human", expected: false},
+		{name: "unknown is not agent mode", detected: "unknown", expected: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv(agentModeEnvVar, test.env)
+			assert.Equal(t, test.expected, resolveAgentMode(test.detected, test.args))
+		})
+	}
+}
+
+func TestApplyAgentModeDefaults(t *testing.T) {
+	t.Run("disabled sets nothing", func(t *testing.T) {
+		c := &cli{agentMode: false}
+		applyAgentModeDefaults(c, &cobra.Command{Use: "list"})
+		assert.False(t, c.json)
+		assert.False(t, c.noInput)
+		assert.False(t, c.noColor)
+	})
+
+	t.Run("enabled sets json/no-input/no-color", func(t *testing.T) {
+		c := &cli{agentMode: true}
+		applyAgentModeDefaults(c, &cobra.Command{Use: "list"})
+		assert.True(t, c.json)
+		assert.True(t, c.noInput)
+		assert.True(t, c.noColor)
+	})
+
+	t.Run("explicit output flag is not overridden", func(t *testing.T) {
+		cmd := &cobra.Command{Use: "list"}
+		cmd.Flags().Bool("csv", false, "")
+		_ = cmd.Flags().Set("csv", "true")
+
+		c := &cli{agentMode: true}
+		applyAgentModeDefaults(c, cmd)
+		assert.False(t, c.json) // JSON not forced because --csv was explicit.
+	})
 }

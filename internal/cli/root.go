@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
 
 	"github.com/auth0/go-auth0/management"
-	"github.com/auth0/go-auth0/v2/management/core"
+	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/analytics"
@@ -98,6 +99,13 @@ func Execute() {
 		}
 	}()
 
+	// Resolve agent mode for the pre-parse `--help` path; real commands re-apply the parsed flag in applyAgentModeDefaults.
+	cli.agentMode = resolveAgentMode(cli.agentClientName(), os.Args[1:])
+
+	if renderJSONHelpIfRequested(cli, rootCmd, os.Args[1:]) {
+		return
+	}
+
 	// Platform specific terminal initialization:
 	// this should run for all commands,
 	// for most of the architectures there's no requirements.
@@ -130,9 +138,16 @@ func buildRootCmd(cli *cli) *cobra.Command {
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			cli.executedCommandPath = cmd.CommandPath()
 
+			applyAgentModeDefaults(cli, cmd)
+
 			ansi.Initialize(cli.noColor)
 			prepareInteractivity(cmd)
 			cli.configureRenderer()
+
+			// Emitted after ansi.Initialize so the notice respects the color setting.
+			if cli.agentMode {
+				cli.renderer.Infof("Agent mode on: JSON output, prompts and colors off. Disable with --agent-mode=false.")
+			}
 
 			if !commandRequiresAuthentication(cmd.CommandPath()) {
 				return nil
@@ -151,12 +166,14 @@ func buildRootCmd(cli *cli) *cobra.Command {
 
 func commandRequiresAuthentication(invokedCommandName string) bool {
 	commandsWithNoAuthRequired := []string{
+		"auth0 commands",
 		"auth0 completion",
 		"auth0 help",
 		"auth0 login",
 		"auth0 logout",
 		"auth0 tenants use",
 		"auth0 tenants list",
+		"auth0 agent skills install",
 	}
 
 	for _, cmd := range commandsWithNoAuthRequired {
@@ -166,6 +183,75 @@ func commandRequiresAuthentication(invokedCommandName string) bool {
 	}
 
 	return true
+}
+
+// agentClientName caches detectAgent so mode resolution and telemetry share one lookup.
+func (c *cli) agentClientName() string {
+	if c.detectedAgent == "" {
+		c.detectedAgent = detectAgent(iostream.IsInputTerminal() && iostream.IsOutputTerminal())
+	}
+	return c.detectedAgent
+}
+
+// applyAgentModeDefaults, when agent mode is on, defaults to JSON output with prompts and colors off unless those flags were explicitly set.
+func applyAgentModeDefaults(cli *cli, cmd *cobra.Command) {
+	if !cli.agentMode {
+		return
+	}
+
+	if !anyFlagChanged(cmd, "json", "json-compact", "csv") {
+		cli.json = true
+	}
+	if !flagChanged(cmd, "no-input") {
+		cli.noInput = true
+	}
+	if !flagChanged(cmd, "no-color") {
+		cli.noColor = true
+	}
+}
+
+// agentModeEnvVar explicitly enables (true) or disables (false) agent mode, overriding auto-detection.
+const agentModeEnvVar = "AUTH0_AGENT_MODE"
+
+// resolveAgentMode reports agent mode: an explicit --agent-mode flag wins, then AUTH0_AGENT_MODE (true/false), then a detected agent client.
+func resolveAgentMode(agentClient string, args []string) bool {
+	for _, arg := range args {
+		if arg == "--agent-mode" {
+			return true
+		}
+		if value, found := strings.CutPrefix(arg, "--agent-mode="); found {
+			if enabled, err := strconv.ParseBool(value); err == nil {
+				return enabled
+			}
+		}
+	}
+
+	if raw := strings.TrimSpace(os.Getenv(agentModeEnvVar)); raw != "" {
+		if enabled, err := strconv.ParseBool(raw); err == nil {
+			return enabled
+		}
+	}
+
+	switch agentClient {
+	case "human", "unknown":
+		return false
+	default:
+		return true
+	}
+}
+
+func flagChanged(cmd *cobra.Command, name string) bool {
+	f := cmd.Flags().Lookup(name)
+	return f != nil && f.Changed
+}
+
+func anyFlagChanged(cmd *cobra.Command, names ...string) bool {
+	for _, name := range names {
+		if flagChanged(cmd, name) {
+			return true
+		}
+	}
+	return false
 }
 
 func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
@@ -180,6 +266,10 @@ func addPersistentFlags(rootCmd *cobra.Command, cli *cli) {
 
 	rootCmd.PersistentFlags().BoolVar(&cli.noColor,
 		"no-color", false, "Disable colors.")
+
+	rootCmd.PersistentFlags().BoolVar(&cli.agentMode,
+		"agent-mode", false,
+		"Output JSON, disable prompts and colors. Auto-enabled for AI agents; set AUTH0_AGENT_MODE=false to disable.")
 }
 
 func addSubCommands(rootCmd *cobra.Command, cli *cli) {
@@ -195,6 +285,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(rulesCmd(cli))
 	rootCmd.AddCommand(actionsCmd(cli))
 	rootCmd.AddCommand(apisCmd(cli))
+	rootCmd.AddCommand(clientGrantsCmd(cli))
 	rootCmd.AddCommand(rolesCmd(cli))
 	rootCmd.AddCommand(organizationsCmd(cli))
 	rootCmd.AddCommand(universalLoginCmd(cli))
@@ -211,6 +302,11 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(networkACLCmd(cli))
 	rootCmd.AddCommand(tenantSettingsCmd(cli))
 	rootCmd.AddCommand(tokenExchangeCmd(cli))
+	rootCmd.AddCommand(sessionsCmd(cli))
+	rootCmd.AddCommand(refreshTokensCmd(cli))
+
+	rootCmd.AddCommand(commandsCmd(cli))
+	rootCmd.AddCommand(agentCmd(cli))
 
 	// Keep completion at the bottom.
 	rootCmd.AddCommand(completionCmd(cli))
@@ -300,8 +396,15 @@ func commandTrackingProperties(cli *cli) map[string]string {
 		"no_input":      boolString(cli.noInput),
 		"output_format": outputFormatForTracking(cli.renderer),
 		"forced":        boolString(cli.force),
-		"agent_client":  detectAgent(interactive),
+		"agent_client":  cli.agentClientName(),
+		"is_api":        boolString(isAPICommand(cli.executedCommandPath)),
 	}
+}
+
+// isAPICommand reports whether the executed command is the raw
+// `auth0 api` Management API passthrough command.
+func isAPICommand(commandPath string) bool {
+	return commandPath == "auth0 api"
 }
 
 func outputFormatForTracking(renderer *display.Renderer) string {
@@ -391,16 +494,16 @@ func classifyCommandFailure(err error) map[string]string {
 
 // managementHTTPStatus extracts the HTTP status from a go-auth0 management API
 // error anywhere in the error chain, supporting both the v1 (management.Error)
-// and v2 (*core.APIError) SDK error types.
+// and v3 (*core.APIError) SDK error types.
 func managementHTTPStatus(err error) (int, bool) {
 	var v1 management.Error
 	if errors.As(err, &v1) {
 		return v1.Status(), true
 	}
 
-	var v2 *core.APIError
-	if errors.As(err, &v2) {
-		return v2.StatusCode, true
+	var v3 *core.APIError
+	if errors.As(err, &v3) {
+		return v3.StatusCode, true
 	}
 
 	return 0, false

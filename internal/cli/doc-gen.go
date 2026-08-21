@@ -104,6 +104,12 @@ There are two ways to authenticate:
 {: .warning }
 Authenticating as a user is not supported for **private cloud** tenants. Instead, those users should authenticate with client credentials.
 
+## Discovering and Scripting Commands
+
+Run ` + "`auth0 commands`" + ` to see every command in a tree, or ` + "`auth0 commands --flat`" + ` for a flat list that is easy to scan. Add ` + "`--json`" + ` (optionally with ` + "`--detailed`" + `) for a machine-readable representation.
+
+The help for any command can also be emitted as JSON by combining ` + "`--help`" + ` with ` + "`--json`" + `, for example ` + "`auth0 apps create --help --json`" + `. Setting the ` + "`AUTH0_AGENT_MODE=1`" + ` environment variable makes help emit JSON without needing to pass ` + "`--json`" + `, which is convenient for scripts and AI agents.
+
 ## Available Commands
 
 %s

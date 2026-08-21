@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/auth0/go-auth0/v2/management/core"
+	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -125,6 +125,10 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 
 		if err := inputs.fromArgs(args, cli.tenant); err != nil {
 			return fmt.Errorf("failed to parse command inputs: %w", err)
+		}
+
+		if inputs.Method == http.MethodDelete && !cli.force && cli.agentMode {
+			return errDestructiveNoConfirm
 		}
 
 		if inputs.Method == http.MethodDelete && !cli.force && canPrompt(cmd) {

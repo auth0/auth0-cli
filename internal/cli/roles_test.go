@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"errors"
+	"io"
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
@@ -12,7 +13,49 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
+	"github.com/auth0/auth0-cli/internal/display"
 )
+
+func TestListRolesCmd(t *testing.T) {
+	tests := []struct {
+		name     string
+		roleList *management.RoleList
+	}{
+		{
+			name:     "nil role list (no results)",
+			roleList: nil,
+		},
+		{
+			name:     "empty role list",
+			roleList: &management.RoleList{Roles: []*management.Role{}},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			roleAPI := mock.NewMockRoleAPI(ctrl)
+			roleAPI.EXPECT().
+				List(gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(test.roleList, nil)
+
+			cli := &cli{
+				renderer: &display.Renderer{
+					MessageWriter: io.Discard,
+					ResultWriter:  io.Discard,
+				},
+				api: &auth0.API{Role: roleAPI},
+			}
+
+			cmd := listRolesCmd(cli)
+			cmd.SetArgs([]string{})
+
+			assert.NoError(t, cmd.Execute())
+		})
+	}
+}
 
 func TestRolesPickerOptions(t *testing.T) {
 	tests := []struct {

@@ -35,7 +35,7 @@ const userAgent = "Auth0 CLI"
 type cli struct {
 	// Core primitives exposed to command builders.
 	api      *auth0.API
-	apiv2    *auth0.APIV2
+	apiv3    *auth0.APIV3
 	renderer *display.Renderer
 	tracker  *analytics.Tracker
 
@@ -48,6 +48,8 @@ type cli struct {
 	force               bool
 	noInput             bool
 	noColor             bool
+	agentMode           bool
+	detectedAgent       string
 	executedCommandPath string
 
 	Config config.Config
@@ -134,18 +136,20 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 		)
 	}
 
-	api, err := initializeManagementClient(tenant.Domain, tenant.GetAccessToken())
+	invokerMetadata := c.invokerMetadataHeaderValue()
+
+	api, err := initializeManagementClient(tenant.Domain, tenant.GetAccessToken(), invokerMetadata)
 	if err != nil {
 		return err
 	}
 
-	apiv2, err := initializeManagementClientV2(tenant.Domain, tenant.GetAccessToken())
+	apiv3, err := initializeManagementClientV3(tenant.Domain, tenant.GetAccessToken(), invokerMetadata)
 	if err != nil {
 		return err
 	}
 
 	c.api = auth0.NewAPI(api)
-	c.apiv2 = auth0.NewAPIV2(apiv2)
+	c.apiv3 = auth0.NewAPIV3(apiv3)
 	return nil
 }
 
@@ -173,6 +177,12 @@ func canPrompt(cmd *cobra.Command) bool {
 
 	return iostream.IsInputTerminal() && iostream.IsOutputTerminal() && !noInput
 }
+
+// errDestructiveNoConfirm is returned when a destructive command is run in agent
+// mode without --force, so agents must opt in explicitly instead of deleting silently.
+var errDestructiveNoConfirm = errors.New(
+	"this is a destructive command; re-run with --force to proceed without a confirmation prompt",
+)
 
 // noLocalFlagSet returns true if no local flags (excluding global flags) are set for the command.
 func noLocalFlagSet(cmd *cobra.Command) bool {

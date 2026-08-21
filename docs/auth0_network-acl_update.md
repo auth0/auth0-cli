@@ -24,6 +24,10 @@ auth0 network-acl update [flags]
   auth0 network-acl update <id> --description "Updated description"
   auth0 network-acl update <id> --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"]}}'
   auth0 network-acl update <id> --description "Complex Rule updated" --priority 1 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
+  
+  # Early Access (auth0_managed match/not_match value):
+  auth0 network-acl update <id> --rule '{"action":{"allow":true},"scope":"tenant","match":{"auth0_managed":["auth0.low_reputation"]}}'
+  
 ```
 
 
@@ -33,6 +37,7 @@ auth0 network-acl update [flags]
       --action string               Action for the rule (block, allow, log, redirect)
       --active string               Whether the network ACL is active ('true' or 'false')
       --asns ints                   Comma-separated list of ASNs to match (Eg. 64496,64497,64498)
+      --auth0-managed strings       Comma-separated list of Auth0-curated blocklists to match (Eg. auth0.icloud_relay_proxy,auth0.low_reputation). (EA only).
       --country-codes strings       Comma-separated list of country codes to match (Eg. US,CA,MX)
   -d, --description string          Description of the network ACL
       --ipv4-cidrs strings          Comma-separated list of IPv4 CIDR ranges (Eg. 192.168.1.0/24,10.0.0.0/8)
@@ -52,6 +57,7 @@ auth0 network-acl update [flags]
 ## Inherited Flags
 
 ```
+      --agent-mode      Output JSON, disable prompts and colors. Auto-enabled for AI agents; set AUTH0_AGENT_MODE=false to disable.
       --debug           Enable debug mode.
       --no-color        Disable colors.
       --no-input        Disable interactivity.

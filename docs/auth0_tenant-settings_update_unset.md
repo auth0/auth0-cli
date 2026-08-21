@@ -22,14 +22,22 @@ auth0 tenant-settings update unset [flags]
 auth0 tenant-settings update unset
 auth0 tenant-settings update unset <setting1> <setting2> <setting3>
 auth0 tenant-settings update unset customize_mfa_in_postlogin_action flags.enable_pipeline2
+auth0 tenant-settings update unset flags.enable_pipeline2 --json
 ```
 
 
+## Flags
+
+```
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
+```
 
 
 ## Inherited Flags
 
 ```
+      --agent-mode      Output JSON, disable prompts and colors. Auto-enabled for AI agents; set AUTH0_AGENT_MODE=false to disable.
       --debug           Enable debug mode.
       --no-color        Disable colors.
       --no-input        Disable interactivity.

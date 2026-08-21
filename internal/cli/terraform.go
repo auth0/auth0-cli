@@ -63,7 +63,7 @@ type (
 
 var errTerraformInstallFailed = errors.New("failed to install terraform")
 
-func (i *terraformInputs) parseResourceFetchers(api *auth0.API, apiv2 *auth0.APIV2) ([]resourceDataFetcher, error) {
+func (i *terraformInputs) parseResourceFetchers(api *auth0.API, apiv3 *auth0.APIV3) ([]resourceDataFetcher, error) {
 	fetchers := make([]resourceDataFetcher, 0)
 	var err error
 
@@ -80,11 +80,11 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API, apiv2 *auth0.API
 		case "auth0_phone_provider":
 			fetchers = append(fetchers, &phoneProviderResourceFetcher{api})
 		case "auth0_phone_notification_template":
-			fetchers = append(fetchers, &phoneNotificationTemplateResourceFetcher{apiv2})
+			fetchers = append(fetchers, &phoneNotificationTemplateResourceFetcher{apiv3})
 		case "auth0_client", "auth0_client_credentials":
 			fetchers = append(fetchers, &clientResourceFetcher{api})
 		case "auth0_client_grant":
-			fetchers = append(fetchers, &clientGrantResourceFetcher{api})
+			fetchers = append(fetchers, &clientGrantResourceFetcher{apiv3})
 		case "auth0_connection", "auth0_connection_clients":
 			fetchers = append(fetchers, &connectionResourceFetcher{api})
 		case "auth0_custom_domain":
@@ -181,7 +181,7 @@ func generateTerraformCmd(cli *cli) *cobra.Command {
 
 func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		resources, err := inputs.parseResourceFetchers(cli.api, cli.apiv2)
+		resources, err := inputs.parseResourceFetchers(cli.api, cli.apiv3)
 		if err != nil {
 			return err
 		}

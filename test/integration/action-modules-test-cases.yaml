@@ -1,0 +1,129 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  001 - it successfully lists all action modules with no data (json):
+    command: auth0 actions modules list --json
+    exit-code: 0
+    stdout:
+      exactly: "[]"
+
+  002 - it successfully creates an action module:
+    command: auth0 actions modules create -n "integration-test-module1" -c "module.exports = {}" -d "lodash=4.0.0" -s "SECRET=value"
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME            integration-test-module1"
+        - "ACTIONS USING   0"
+        - "PUBLISHED       ✗"
+        - "CREATED AT      0 seconds ago"
+        - "UPDATED AT      0 seconds ago"
+        - "DEPENDENCIES    lodash@4.0.0"
+        - "SECRETS         SECRET"
+
+  003 - it successfully creates an action module and outputs in json:
+    command: auth0 actions modules create -n "integration-test-module2" -c "module.exports = {}" -d "lodash=4.0.0" -s "SECRET=value" --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-module2"
+        code: "module.exports = {}"
+        dependencies.0.name: "lodash"
+        dependencies.0.version: "4.0.0"
+        secrets.0.name: "SECRET"
+        all_changes_published: "false"
+
+  004 - it successfully creates and publishes an action module in json:
+    command: auth0 actions modules create -n "integration-test-module3" -c "module.exports = {}" --publish --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-module3"
+        all_changes_published: "true"
+
+  005 - it successfully lists all action modules with data:
+    command: auth0 actions modules list
+    exit-code: 0
+    stdout:
+      contains:
+        - ID
+        - NAME
+        - LATEST VERSION
+        - ACTIONS USING
+        - PUBLISHED
+        - UPDATED AT
+
+  006 - given a test action module, it successfully gets the module's details:
+    command: auth0 actions modules show $(./test/integration/scripts/get-action-module-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - "NAME            integration-test-module"
+        - "ACTIONS USING   0"
+        - "PUBLISHED"
+        - "CREATED AT"
+        - "UPDATED AT"
+        - "DEPENDENCIES    lodash@4.0.0"
+        - "SECRETS         SECRET"
+
+  007 - given a test action module, it successfully gets the module's details and outputs in json:
+    command: auth0 actions modules show $(./test/integration/scripts/get-action-module-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-module"
+        code: "module.exports = {}"
+        dependencies.0.name: "lodash"
+        dependencies.0.version: "4.0.0"
+        secrets.0.name: "SECRET"
+
+  008 - given a test action module, it successfully updates the module's code:
+    command: auth0 actions modules update $(./test/integration/scripts/get-action-module-id.sh) -c "module.exports = {v:2}" --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-module"
+        code: "module.exports = {v:2}"
+
+  009 - given a test action module, it successfully replaces the module's dependencies:
+    command: auth0 actions modules update $(./test/integration/scripts/get-action-module-id.sh) -d "uuid=9.0.0" --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-module"
+        dependencies.0.name: "uuid"
+        dependencies.0.version: "9.0.0"
+
+  010 - given a test action module, it preserves the existing secret when only the code changes:
+    command: auth0 actions modules update $(./test/integration/scripts/get-action-module-id.sh) -c "module.exports = {v:3}" --json
+    exit-code: 0
+    stdout:
+      json:
+        secrets.0.name: "SECRET"
+
+  011 - given a test action module, it successfully publishes the draft:
+    command: auth0 actions modules update $(./test/integration/scripts/get-action-module-id.sh) --publish --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-module"
+        all_changes_published: "true"
+
+  012 - given a fully published module, it reports there is nothing to publish:
+    command: auth0 actions modules update $(./test/integration/scripts/get-action-module-id.sh) --publish
+    exit-code: 0
+    stderr:
+      contains:
+        - "already fully published"
+
+  013 - it fails to create a module with an invalid name:
+    command: auth0 actions modules create -n "Invalid Name" -c "module.exports = {}" --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "Invalid name"
+
+  014 - given a test action module, it successfully deletes the module:
+    command: auth0 actions modules delete $(./test/integration/scripts/get-action-module-id.sh) --force
+    exit-code: 0

@@ -38,6 +38,7 @@ auth0 actions delete [flags]
 ## Inherited Flags
 
 ```
+      --agent-mode      Output JSON, disable prompts and colors. Auto-enabled for AI agents; set AUTH0_AGENT_MODE=false to disable.
       --debug           Enable debug mode.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
@@ -52,6 +53,7 @@ auth0 actions delete [flags]
 - [auth0 actions deploy](auth0_actions_deploy.md) - Deploy an action
 - [auth0 actions diff](auth0_actions_diff.md) - Show diff between two versions of an Actions
 - [auth0 actions list](auth0_actions_list.md) - List your actions
+- [auth0 actions modules](auth0_actions_modules.md) - Manage action modules
 - [auth0 actions open](auth0_actions_open.md) - Open the settings page of an action
 - [auth0 actions show](auth0_actions_show.md) - Show an action
 - [auth0 actions update](auth0_actions_update.md) - Update an action

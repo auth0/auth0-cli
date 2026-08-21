@@ -269,6 +269,7 @@ Select **y** to proceed with your default tenant, or **N** to choose a different
 - [auth0 api](https://auth0.github.io/auth0-cli/auth0_api.html) - Makes an authenticated HTTP request to the Auth0 Management API
 - [auth0 apis](https://auth0.github.io/auth0-cli/auth0_apis.html) - Manage resources for APIs
 - [auth0 apps](https://auth0.github.io/auth0-cli/auth0_apps.html) - Manage resources for applications
+- [auth0 client-grants](https://auth0.github.io/auth0-cli/auth0_client-grants.html) - Manage client grants
 - [auth0 completion](https://auth0.github.io/auth0-cli/auth0_completion.html) - Setup autocomplete features for this CLI on your terminal
 - [auth0 domains](https://auth0.github.io/auth0-cli/auth0_domains.html) - Manage custom domains
 - [auth0 email](https://auth0.github.io/auth0-cli/auth0_email.html) - Manage email settings
@@ -278,8 +279,10 @@ Select **y** to proceed with your default tenant, or **N** to choose a different
 - [auth0 orgs](https://auth0.github.io/auth0-cli/auth0_orgs.html) - Manage resources for organizations
 - [auth0 protection](https://auth0.github.io/auth0-cli/auth0_protection.html) - Manage resources for attack protection
 - [auth0 quickstarts](https://auth0.github.io/auth0-cli/auth0_quickstarts.html) - Quickstart support for getting bootstrapped
+- [auth0 refresh-tokens](https://auth0.github.io/auth0-cli/auth0_refresh-tokens.html) - Manage resources for refresh tokens
 - [auth0 roles](https://auth0.github.io/auth0-cli/auth0_roles.html) - Manage resources for roles
 - [auth0 rules](https://auth0.github.io/auth0-cli/auth0_rules.html) - Manage resources for rules
+- [auth0 sessions](https://auth0.github.io/auth0-cli/auth0_sessions.html) - Manage resources for sessions
 - [auth0 tenants](https://auth0.github.io/auth0-cli/auth0_tenants.html) - Manage configured tenants
 - [auth0 test](https://auth0.github.io/auth0-cli/auth0_test.html) - Try your Universal Login box or get a token
 - [auth0 terraform generate](https://auth0.github.io/auth0-cli/auth0_terraform_generate.html) - Generate terraform configuration for your Auth0 Tenant
@@ -375,6 +378,16 @@ cp -r agent-skills/plugins/auth0/skills/auth0 ~/.openclaw/skills/
 ```
 
 > **Note:** The `auth0` binary must be installed and available on your `$PATH` for agents to use the CLI guidance in this skill.
+
+### Agent Mode
+
+For AI agents and automation, **agent mode** makes output machine-friendly: structured JSON, no interactive prompts, and no color codes.
+
+- **Env var:** `AUTH0_AGENT_MODE=true`
+- **Flag:** `--agent-mode`
+- **Auto-enabled** when a known agent (Claude Code, Cursor, Codex, Gemini, etc.) is detected.
+
+Precedence: `--agent-mode` flag > `AUTH0_AGENT_MODE` env var > auto-detection (set `--agent-mode=false` to opt out). Destructive commands still require `--force`; without it (and with prompts disabled) they fail with an error rather than proceeding.
 
 ## Anonymized Analytics Disclosure
 

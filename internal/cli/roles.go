@@ -87,6 +87,9 @@ func listRolesCmd(cli *cli) *cobra.Command {
 					if err != nil {
 						return nil, false, err
 					}
+					if roleList == nil {
+						return result, false, nil
+					}
 
 					for _, role := range roleList.Roles {
 						result = append(result, role)
@@ -312,6 +315,10 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
 				ids = args
 			}
 
+			if !cli.force && cli.agentMode {
+				return errDestructiveNoConfirm
+			}
+
 			if !cli.force && canPrompt(cmd) {
 				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
 					return nil
@@ -345,6 +352,10 @@ func (c *cli) rolePickerOptions(ctx context.Context) (pickerOptions, error) {
 	}
 
 	var opts pickerOptions
+
+	if list == nil {
+		return nil, errors.New("there are currently no roles to choose from. Create one by running: `auth0 roles create`")
+	}
 
 	for _, c := range list.Roles {
 		value := c.GetID()

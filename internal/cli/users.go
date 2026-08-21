@@ -173,6 +173,8 @@ func usersCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(openUserCmd(cli))
 	cmd.AddCommand(userBlocksCmd(cli))
 	cmd.AddCommand(importUsersCmd(cli))
+	cmd.AddCommand(userSessionsCmd(cli))
+	cmd.AddCommand(userRefreshTokensCmd(cli))
 
 	return cmd
 }
@@ -644,6 +646,10 @@ func deleteUserCmd(cli *cli) *cobra.Command {
 				ids = append(ids, id)
 			} else {
 				ids = args
+			}
+
+			if !cli.force && cli.agentMode {
+				return errDestructiveNoConfirm
 			}
 
 			if !cli.force && canPrompt(cmd) {

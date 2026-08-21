@@ -1,0 +1,38 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  001 - users sessions list empty:
+    command: auth0 users sessions list $(./test/integration/scripts/get-user-id.sh)
+    exit-code: 0
+    stderr:
+      contains:
+        - No sessions available. This user has no active sessions
+
+  002 - users sessions list empty (json):
+    command: auth0 users sessions list $(./test/integration/scripts/get-user-id.sh) --json
+    exit-code: 0
+    stdout:
+      exactly: "[]"
+
+  003 - users sessions list with invalid number:
+    command: auth0 users sessions list $(./test/integration/scripts/get-user-id.sh) --number 1001
+    exit-code: 1
+    stderr:
+      contains:
+        - Number flag invalid, please pass a number between 1 and 1000
+
+  004 - sessions show not found:
+    command: auth0 sessions show does-not-exist
+    exit-code: 1
+    stderr:
+      contains:
+        - Failed to read session with ID "does-not-exist"
+
+  005 - users sessions list rejects json and csv together:
+    command: auth0 users sessions list $(./test/integration/scripts/get-user-id.sh) --json --csv
+    exit-code: 1
+    stderr:
+      contains:
+        - "any flags in the group [json json-compact csv] are set none of the others can be"

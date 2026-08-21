@@ -8,9 +8,7 @@ has_toc: false
 Update an action.
 
 To update interactively, use 'auth0 actions update' with no arguments.
-
 To update non-interactively, supply the action id, name, code, secrets and dependencies through the flags.
-
 ## JSON Input (for agents and automation)
 
 Use '--schema' to print the request payload schema, then '--data' to provide
@@ -36,7 +34,8 @@ auth0 actions update [flags]
   # Flag-based mode
   auth0 actions update <action-id> --runtime node18
   auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)"
-  auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -d "lodash=4.0.0"
+  auth0 actions update <action-id> --module "module_id=mod_123,module_version_id=ver_456" --json
+  auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -d "lodash=4.0.0" --json-compact
 
   # Discover the payload schema (add --json for machine-readable output)
   auth0 actions update --schema
@@ -58,6 +57,7 @@ auth0 actions update [flags]
       --force                       Skip confirmation.
       --json                        Output in json format.
       --json-compact                Output in compact json format.
+  -m, --module stringArray          Action module to associate with the action, as comma-separated key=value pairs matching the API fields: module_id and module_version_id (both required, UUIDs). Can be passed multiple times to associate several modules.
   -n, --name string                 Name of the action.
   -r, --runtime string              Runtime to be used in the action.  Possible values are: node22(recommended), node18, node16, node12
       --schema                      Print the request payload schema for this command and exit. Use with --json for machine-readable output.
@@ -68,6 +68,7 @@ auth0 actions update [flags]
 ## Inherited Flags
 
 ```
+      --agent-mode      Output JSON, disable prompts and colors. Auto-enabled for AI agents; set AUTH0_AGENT_MODE=false to disable.
       --debug           Enable debug mode.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
@@ -82,6 +83,7 @@ auth0 actions update [flags]
 - [auth0 actions deploy](auth0_actions_deploy.md) - Deploy an action
 - [auth0 actions diff](auth0_actions_diff.md) - Show diff between two versions of an Actions
 - [auth0 actions list](auth0_actions_list.md) - List your actions
+- [auth0 actions modules](auth0_actions_modules.md) - Manage action modules
 - [auth0 actions open](auth0_actions_open.md) - Open the settings page of an action
 - [auth0 actions show](auth0_actions_show.md) - Show an action
 - [auth0 actions update](auth0_actions_update.md) - Update an action

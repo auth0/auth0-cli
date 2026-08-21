@@ -16,6 +16,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/prompt"
+	"github.com/auth0/auth0-cli/internal/utils"
 )
 
 var destDirFlag = Flag{
@@ -246,7 +247,7 @@ func handleMissingFiles(cli *cli, missing []string, tempUnzipDir, sourcePrefix, 
 			continue
 		}
 
-		if err := copyFile(srcPath, destPath); err != nil {
+		if err := utils.CopyFile(srcPath, destPath); err != nil {
 			return fmt.Errorf("error copying file %s: %w", baseFile, err)
 		}
 	}
@@ -279,12 +280,12 @@ func backupAndOverwrite(cli *cli, edited []string, sourceRoot, destRoot string) 
 			continue
 		}
 
-		if err := copyFile(destFile, backupFile); err != nil {
+		if err := utils.CopyFile(destFile, backupFile); err != nil {
 			cli.renderer.Warnf("Failed to backup file %s: %v", relPath, err)
 			continue
 		}
 
-		if err := copyFile(sourceFile, destFile); err != nil {
+		if err := utils.CopyFile(sourceFile, destFile); err != nil {
 			cli.renderer.Errorf("Failed to overwrite file %s: %v", relPath, err)
 			continue
 		}

@@ -13,27 +13,27 @@ import (
 
 	"github.com/PuerkitoBio/rehttp"
 	"github.com/auth0/go-auth0/management"
-	managementv2 "github.com/auth0/go-auth0/v2/management/client"
-	"github.com/auth0/go-auth0/v2/management/option"
+	managementv3 "github.com/auth0/go-auth0/v3/management/client"
+	"github.com/auth0/go-auth0/v3/management/option"
 
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 )
 
-func initializeManagementClient(tenantDomain string, accessToken string) (*management.Management, error) {
+func initializeManagementClient(tenantDomain string, accessToken string, invokerMetadata string) (*management.Management, error) {
 	client, err := management.New(
 		tenantDomain,
 		management.WithStaticToken(accessToken),
 		management.WithUserAgent(fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v"))),
 		management.WithAuth0ClientEnvEntry("Auth0-CLI", strings.TrimPrefix(buildinfo.Version, "v")),
 		management.WithNoRetries(),
-		management.WithClient(customClientWithRetries()),
+		management.WithClient(customClientWithRetries(invokerMetadata)),
 	)
 
 	return client, err
 }
 
-func initializeManagementClientV2(tenantDomain string, accessToken string) (*managementv2.Management, error) {
-	client, err := managementv2.New(
+func initializeManagementClientV3(tenantDomain string, accessToken string, invokerMetadata string) (*managementv3.Management, error) {
+	client, err := managementv3.New(
 		tenantDomain,
 		option.WithToken(accessToken),
 		option.WithUserAgent(fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v"))),
@@ -42,18 +42,23 @@ func initializeManagementClientV2(tenantDomain string, accessToken string) (*man
 		// Setting it to 1 to avoid retries from `go-auth0` since we have our own retry logic in the custom HTTP client.
 		// TODO: confirm this assumption, or check if this needs to be excluded like terraform provider.
 		option.WithMaxAttempts(1),
-		option.WithHTTPClient(customClientWithRetries()),
+		option.WithHTTPClient(customClientWithRetries(invokerMetadata)),
 	)
 	return client, err
 }
 
-func customClientWithRetries() *http.Client {
+func customClientWithRetries(invokerMetadata string) *http.Client {
 	client := &http.Client{
-		Transport: rateLimitTransport(
-			retryableErrorTransport(
-				http.DefaultTransport,
+		// The metadata transport wraps the retry transports so the header is stamped
+		// once, before any retry decision, and is preserved across retries.
+		Transport: invokerMetadataTransport{
+			metadata: invokerMetadata,
+			base: rateLimitTransport(
+				retryableErrorTransport(
+					http.DefaultTransport,
+				),
 			),
-		),
+		},
 	}
 
 	return client

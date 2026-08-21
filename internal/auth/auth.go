@@ -123,7 +123,7 @@ func WaitUntilUserLogsIn(ctx context.Context, httpClient *http.Client, state Sta
 var RequiredScopes = []string{
 	"openid",
 	"create:clients", "delete:clients", "read:clients", "update:clients",
-	"create:client_grants", "read:client_grants",
+	"create:client_grants", "read:client_grants", "update:client_grants", "delete:client_grants",
 	"create:resource_servers", "delete:resource_servers", "read:resource_servers", "update:resource_servers",
 	"create:roles", "delete:roles", "read:roles", "update:roles",
 	"create:rules", "delete:rules", "read:rules", "update:rules",
@@ -140,7 +140,7 @@ var RequiredScopes = []string{
 	"read:anomaly_blocks", "delete:anomaly_blocks",
 	"create:log_streams", "delete:log_streams", "read:log_streams", "update:log_streams",
 	"create:actions", "delete:actions", "read:actions", "update:actions",
-	"create:organizations", "delete:organizations", "read:organizations", "update:organizations", "read:organization_members", "read:organization_member_roles", "read:organization_connections",
+	"create:organizations", "delete:organizations", "read:organizations", "update:organizations", "read:organization_members", "read:organization_member_roles", "read:organization_connections", "read:organization_client_grants",
 	"read:prompts", "update:prompts",
 	"read:attack_protection", "update:attack_protection",
 	"read:event_streams", "create:event_streams", "update:event_streams", "delete:event_streams", "read:events",
@@ -148,6 +148,8 @@ var RequiredScopes = []string{
 	"read:token_exchange_profiles", "create:token_exchange_profiles", "update:token_exchange_profiles", "delete:token_exchange_profiles",
 	"read:organization_invitations", "create:organization_invitations", "delete:organization_invitations",
 	"read:organization_discovery_domains", "read:self_service_profiles", "read:user_attribute_profiles",
+	"read:sessions", "update:sessions", "delete:sessions",
+	"read:refresh_tokens", "update:refresh_tokens", "delete:refresh_tokens",
 }
 
 // GetDeviceCode kicks-off the device authentication flow by requesting

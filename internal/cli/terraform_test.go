@@ -462,7 +462,7 @@ func TestCleanOutputDirectory(t *testing.T) {
 
 func TestTerraformInputs_ParseResourceFetchers(t *testing.T) {
 	api := &auth0.API{}
-	apiv2 := &auth0.APIV2{}
+	apiv3 := &auth0.APIV3{}
 
 	var testCases = []struct {
 		name                 string
@@ -485,7 +485,7 @@ func TestTerraformInputs_ParseResourceFetchers(t *testing.T) {
 				Resources: []string{"auth0_phone_notification_template"},
 			},
 			expectedDataFetchers: []resourceDataFetcher{
-				&phoneNotificationTemplateResourceFetcher{apiv2},
+				&phoneNotificationTemplateResourceFetcher{apiv3},
 			},
 		},
 		{
@@ -523,7 +523,7 @@ func TestTerraformInputs_ParseResourceFetchers(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			actual, err := testCase.input.parseResourceFetchers(api, apiv2)
+			actual, err := testCase.input.parseResourceFetchers(api, apiv3)
 
 			if testCase.expectedError != "" {
 				assert.EqualError(t, err, testCase.expectedError)
