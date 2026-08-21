@@ -13,7 +13,7 @@ import (
 // createActionFromJSON creates an action from --data input.
 // The JSON is validated against the OpenAPI schema before the API call.
 func createActionFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
-	handler, err := NewInputJSONHandler(cli)
+	handler, err := NewDataJSONHandler(cli)
 	if err != nil {
 		return fmt.Errorf("failed to initialize JSON handler: %w", err)
 	}
@@ -50,7 +50,7 @@ func createActionFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
 // updateActionFromJSON updates an action from --data input.
 // The JSON is validated against the OpenAPI schema before the API call.
 func updateActionFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
-	handler, err := NewInputJSONHandler(cli)
+	handler, err := NewDataJSONHandler(cli)
 	if err != nil {
 		return fmt.Errorf("failed to initialize JSON handler: %w", err)
 	}

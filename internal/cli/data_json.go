@@ -20,26 +20,26 @@ var (
 	}
 )
 
-// InputJSONHandler handles the --data flag for create/update commands.
-type InputJSONHandler struct {
+// DataJSONHandler handles the --data flag for create/update commands.
+type DataJSONHandler struct {
 	cli     *cli
 	manager *openapi.SchemaManager
 }
 
-// NewInputJSONHandler creates a new input JSON handler.
-func NewInputJSONHandler(c *cli) (*InputJSONHandler, error) {
+// NewDataJSONHandler creates a new data JSON handler.
+func NewDataJSONHandler(c *cli) (*DataJSONHandler, error) {
 	manager, err := openapi.NewSchemaManager()
 	if err != nil {
 		return nil, err
 	}
-	return &InputJSONHandler{
+	return &DataJSONHandler{
 		cli:     c,
 		manager: manager,
 	}, nil
 }
 
 // ParseAndValidate parses JSON input and optionally validates it against the schema.
-func (h *InputJSONHandler) ParseAndValidate(inputStr, method, path string, target interface{}) error {
+func (h *DataJSONHandler) ParseAndValidate(inputStr, method, path string, target interface{}) error {
 	// Read JSON data.
 	jsonData, err := h.readJSONInput(inputStr)
 	if err != nil {
@@ -66,7 +66,7 @@ func (h *InputJSONHandler) ParseAndValidate(inputStr, method, path string, targe
 
 // ParseWithoutValidation parses JSON input without schema validation.
 // Useful when you want to accept any valid JSON.
-func (h *InputJSONHandler) ParseWithoutValidation(inputStr string, target interface{}) error {
+func (h *DataJSONHandler) ParseWithoutValidation(inputStr string, target interface{}) error {
 	jsonData, err := h.readJSONInput(inputStr)
 	if err != nil {
 		return fmt.Errorf("failed to read JSON input: %w", err)
@@ -80,7 +80,7 @@ func (h *InputJSONHandler) ParseWithoutValidation(inputStr string, target interf
 }
 
 // readJSONInput reads JSON from various input sources.
-func (h *InputJSONHandler) readJSONInput(input string) ([]byte, error) {
+func (h *DataJSONHandler) readJSONInput(input string) ([]byte, error) {
 	if input == "" {
 		return nil, fmt.Errorf("no input provided")
 	}
