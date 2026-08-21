@@ -127,6 +127,15 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 			return fmt.Errorf("failed to parse command inputs: %w", err)
 		}
 
+		if suggestion := suggestTypedCommand(inputs.Method, inputs.RawURI); suggestion != "" {
+			cli.renderer.Warnf(
+				"This endpoint has a dedicated command: `%s`. "+
+					"It offers schema discovery (--schema), input validation (--data), and structured output (--json). "+
+					"Running the raw request anyway.",
+				suggestion,
+			)
+		}
+
 		if inputs.Method == http.MethodDelete && !cli.force && cli.agentMode {
 			return errDestructiveNoConfirm
 		}
