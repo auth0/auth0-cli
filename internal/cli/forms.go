@@ -6,19 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
-	"strings"
 
 	managementv3 "github.com/auth0/go-auth0/v3/management"
 	"github.com/auth0/go-auth0/v3/management/core"
-	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/config"
-	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -290,7 +285,7 @@ func createFormCmd(cli *cli) *cobra.Command {
 				return nil
 			}
 
-			body, err := readFormBody(inputs.File)
+			body, err := readBodyInput(inputs.File, "form")
 			if err != nil {
 				return err
 			}
@@ -309,7 +304,7 @@ func createFormCmd(cli *cli) *cobra.Command {
 					if !canPrompt(cmd) {
 						return errors.New("the --edit flag requires an interactive terminal")
 					}
-					if err := editFormJSON(cli, formCreateSkeleton, &rawBody); err != nil {
+					if err := editJSONBody(cli, "form", formCreateSkeleton, &rawBody); err != nil {
 						return err
 					}
 				} else {
@@ -327,7 +322,7 @@ func createFormCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to parse form body: %w", err)
 			}
 
-			name, err := rawFormStringField(rawBody, "name")
+			name, err := rawJSONStringField(rawBody, "name")
 			if err != nil {
 				return fmt.Errorf("failed to parse form body: %w", err)
 			}
@@ -343,7 +338,7 @@ func createFormCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			id, err := rawFormStringField(created, "id")
+			id, err := rawJSONStringField(created, "id")
 			if err != nil {
 				return fmt.Errorf("failed to parse created form: %w", err)
 			}
@@ -394,7 +389,7 @@ func updateFormCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			body, err := readFormBody(inputs.File)
+			body, err := readBodyInput(inputs.File, "form")
 			if err != nil {
 				return err
 			}
@@ -455,7 +450,7 @@ func updateFormCmd(cli *cli) *cobra.Command {
 					return fmt.Errorf("failed to parse form with ID %q: %w", inputs.ID, err)
 				}
 
-				if err := editFormJSON(cli, seed.String(), &rawBody); err != nil {
+				if err := editJSONBody(cli, "form", seed.String(), &rawBody); err != nil {
 					return err
 				}
 			default:
@@ -625,7 +620,7 @@ func importFormCmd(cli *cli) *cobra.Command {
   auth0 forms import --file ./form.json --connection '#CONN-1#=ac_123'
   cat form.json | auth0 forms import -f -`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			body, err := readFormBody(inputs.File)
+			body, err := readBodyInput(inputs.File, "form")
 			if err != nil {
 				return err
 			}
@@ -714,76 +709,10 @@ func openFormCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-// formsBuilderURL is the host for the Auth0 Forms visual builder. Forms live on a
-// dedicated host rather than under the main management dashboard.
-const formsBuilderURL = "https://forms.auth0.com"
-
 // openFormEditURL opens the form's builder page in a browser, or prints the URL
 // when interactivity is disabled.
 func openFormEditURL(cli *cli, id string) {
-	url := formatFormEditURL(cli.Config.DefaultTenant, &cli.Config, id)
-	if url == "" {
-		cli.renderer.Warnf("Failed to format the correct URL, please ensure you have run 'auth0 login' and try again.")
-		return
-	}
-
-	if cli.noInput {
-		cli.renderer.Infof("Open the following URL in a browser: %s", url)
-		return
-	}
-
-	if err := browser.OpenURL(url); err != nil {
-		cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s", url)
-	}
-}
-
-// formatFormEditURL builds the Forms builder URL, deriving the region and tenant
-// name the same way formatManageTenantURL does for the management dashboard.
-func formatFormEditURL(tenant string, cfg *config.Config, id string) string {
-	if len(tenant) == 0 || len(id) == 0 {
-		return ""
-	}
-
-	s := strings.Split(tenant, ".")
-	if len(s) < 3 {
-		return ""
-	}
-
-	region := "us" // A PUS1 tenant looks like dev-tti06f6y.auth0.com (3 parts).
-	if len(s) > 3 {
-		region = s[len(s)-3]
-	}
-
-	tenantName := cfg.Tenants[tenant].Name
-	if len(tenantName) == 0 {
-		return ""
-	}
-
-	return fmt.Sprintf("%s/tenants/%s/%s/forms/%s/edit", formsBuilderURL, region, tenantName, id)
-}
-
-// editFormJSON opens an editor seeded with `seed` and unmarshals the result into
-// `target`. When the buffer is not valid JSON it re-opens the editor with the
-// user's edits intact rather than discarding them, so a typo never costs work.
-func editFormJSON(cli *cli, seed string, target interface{}) error {
-	content := seed
-	for {
-		var edited string
-		if err := openCreateEditor(&edited, content, "form.*.json", nil, nil); err != nil {
-			return err
-		}
-
-		if err := json.Unmarshal([]byte(edited), target); err != nil {
-			cli.renderer.Warnf("The form body is not valid JSON: %s", err)
-			if !prompt.Confirm("Re-open the editor to fix it?") {
-				return errors.New("aborted; the form was not saved")
-			}
-			content = edited
-			continue
-		}
-
-		return nil
-	}
+	openBuilderURL(cli, fmt.Sprintf("forms/%s/edit", id))
 }
 
 // formNextStepsHint prints follow-up commands after a form is created or updated.
@@ -794,30 +723,6 @@ func formNextStepsHint(cli *cli, id string) {
 	}
 	cli.renderer.Infof("Inspect it with: %s", ansi.Faint("auth0 forms show "+id))
 	cli.renderer.Infof("Edit it in the dashboard with: %s", ansi.Faint("auth0 forms open "+id))
-}
-
-// readFormBody resolves a JSON body from an explicit --file, "-"/piped stdin, and
-// returns nil when no such source is available so the caller can decide whether to
-// fall back to an editor or error.
-func readFormBody(filePath string) ([]byte, error) {
-	if filePath == "-" {
-		data, err := io.ReadAll(iostream.Input)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read form body from stdin: %w", err)
-		}
-		return data, nil
-	}
-	if filePath != "" {
-		data, err := os.ReadFile(filePath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read form file %q: %w", filePath, err)
-		}
-		return data, nil
-	}
-	if piped := iostream.PipedInput(); len(piped) > 0 {
-		return piped, nil
-	}
-	return nil, nil
 }
 
 // applyRawFormOverrides applies scalar flag overrides without deserializing the
@@ -870,98 +775,27 @@ func applyRawFormOverrides(body json.RawMessage, name, primary, def string) (jso
 	return json.Marshal(form)
 }
 
-func rawFormStringField(body json.RawMessage, field string) (string, error) {
-	var form map[string]json.RawMessage
-	if err := json.Unmarshal(body, &form); err != nil {
-		return "", err
-	}
-	if form == nil {
-		return "", errors.New("form body must be a JSON object")
-	}
-
-	raw, ok := form[field]
-	if !ok || string(raw) == "null" {
-		return "", nil
-	}
-	var value string
-	if err := json.Unmarshal(raw, &value); err != nil {
-		return "", fmt.Errorf("%s must be a string: %w", field, err)
-	}
-	return value, nil
-}
-
 // formRawGet fetches a form through the v1 client's HTTP layer without using
 // the v3 SDK's lossy form-node unions.
 func (c *cli) formRawGet(ctx context.Context, id string) (json.RawMessage, error) {
-	return c.formRawRequest(ctx, http.MethodGet, c.api.HTTPClient.URI("forms", id), nil)
+	return c.rawJSONRequest(ctx, http.MethodGet, c.api.HTTPClient.URI("forms", id), nil)
 }
 
 // formRawCreate creates a form from raw JSON, preserving node config that the
 // typed CreateFormRequestContent would drop. It returns the created form JSON.
 func (c *cli) formRawCreate(ctx context.Context, body json.RawMessage) (json.RawMessage, error) {
-	return c.formRawRequest(ctx, http.MethodPost, c.api.HTTPClient.URI("forms"), body)
+	return c.rawJSONRequest(ctx, http.MethodPost, c.api.HTTPClient.URI("forms"), body)
 }
 
 // formRawUpdate replaces a form from raw JSON, preserving node config that the
 // typed UpdateFormRequestContent would drop. It returns the updated form JSON.
 func (c *cli) formRawUpdate(ctx context.Context, id string, body json.RawMessage) (json.RawMessage, error) {
-	var form map[string]json.RawMessage
-	if err := json.Unmarshal(body, &form); err != nil {
-		return nil, err
-	}
-	for _, field := range formServerManagedFields {
-		delete(form, field)
-	}
-	cleanBody, err := json.Marshal(form)
+	cleanBody, err := stripRawFields(body, formServerManagedFields)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.formRawRequest(ctx, http.MethodPatch, c.api.HTTPClient.URI("forms", id), cleanBody)
-}
-
-// formRawRequest sends a raw JSON request to the Management API and returns the
-// response body, surfacing API errors the same way the `api` command does.
-func (c *cli) formRawRequest(
-	ctx context.Context,
-	method string,
-	uri string,
-	body json.RawMessage,
-) (json.RawMessage, error) {
-	var payload interface{}
-	if len(body) > 0 {
-		payload = body
-	}
-
-	request, err := c.api.HTTPClient.NewRequest(ctx, method, uri, payload)
-	if err != nil {
-		return nil, err
-	}
-
-	var out json.RawMessage
-	if err := ansi.Waiting(func() error {
-		response, err := c.api.HTTPClient.Do(request)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			_ = response.Body.Close()
-		}()
-
-		data, err := io.ReadAll(response.Body)
-		if err != nil {
-			return err
-		}
-		if response.StatusCode >= http.StatusBadRequest {
-			return newAPIResponseError(response.StatusCode, response.Header, data)
-		}
-		out = data
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-
-	return out, nil
+	return c.rawJSONRequest(ctx, http.MethodPatch, c.api.HTTPClient.URI("forms", id), cleanBody)
 }
 
 // collectForms pages through the forms list, collecting up to `limit` results

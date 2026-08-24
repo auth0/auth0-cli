@@ -5,9 +5,12 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -21,6 +24,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/config"
+	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -467,4 +471,210 @@ func collectV3Pages[C comparable, T any, R any](
 	})
 
 	return items, err
+}
+
+// --- Shared raw-JSON + builder helpers ---.
+//
+// Forms and Flows share a hybrid approach: they use the v3 SDK for list/delete
+// but send create/update/show through the raw HTTP layer, because the typed
+// request bodies drop provider-specific config in their union types. The helpers
+// below are the resource-agnostic pieces of that approach.
+
+// formsBuilderURL is the host for the Auth0 Forms and Flows visual builders. Both
+// live on a dedicated host rather than under the main management dashboard.
+const formsBuilderURL = "https://forms.auth0.com"
+
+// rawJSONRequest sends a raw JSON request to the Management API and returns the
+// response body, surfacing API errors the same way the `api` command does.
+func (c *cli) rawJSONRequest(
+	ctx context.Context,
+	method string,
+	uri string,
+	body json.RawMessage,
+) (json.RawMessage, error) {
+	var payload interface{}
+	if len(body) > 0 {
+		payload = body
+	}
+
+	request, err := c.api.HTTPClient.NewRequest(ctx, method, uri, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	var out json.RawMessage
+	if err := ansi.Waiting(func() error {
+		response, err := c.api.HTTPClient.Do(request)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			_ = response.Body.Close()
+		}()
+
+		data, err := io.ReadAll(response.Body)
+		if err != nil {
+			return err
+		}
+		if response.StatusCode >= http.StatusBadRequest {
+			return newAPIResponseError(response.StatusCode, response.Header, data)
+		}
+		out = data
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
+// readBodyInput resolves a JSON body from an explicit --file, "-"/piped stdin,
+// and returns nil when no such source is available so the caller can decide
+// whether to fall back to an editor or error. `resource` names the object in
+// error messages (e.g. "flow", "form", "vault connection").
+func readBodyInput(filePath, resource string) ([]byte, error) {
+	if filePath == "-" {
+		data, err := io.ReadAll(iostream.Input)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read %s body from stdin: %w", resource, err)
+		}
+		return data, nil
+	}
+	if filePath != "" {
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read %s file %q: %w", resource, filePath, err)
+		}
+		return data, nil
+	}
+	if piped := iostream.PipedInput(); len(piped) > 0 {
+		return piped, nil
+	}
+	return nil, nil
+}
+
+// applyRawNameOverride sets the top-level "name" field when a non-empty override
+// is supplied, without deserializing the rest of the body.
+func applyRawNameOverride(body json.RawMessage, name string) (json.RawMessage, error) {
+	if name == "" {
+		return body, nil
+	}
+
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(body, &obj); err != nil {
+		return nil, err
+	}
+	if obj == nil {
+		return nil, errors.New("body must be a JSON object")
+	}
+
+	encoded, err := json.Marshal(name)
+	if err != nil {
+		return nil, err
+	}
+	obj["name"] = encoded
+
+	return json.Marshal(obj)
+}
+
+// stripRawFields removes the given top-level fields from a JSON object body.
+func stripRawFields(body json.RawMessage, fields []string) (json.RawMessage, error) {
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(body, &obj); err != nil {
+		return nil, err
+	}
+	for _, field := range fields {
+		delete(obj, field)
+	}
+	return json.Marshal(obj)
+}
+
+// rawJSONStringField extracts a top-level string field from a raw JSON object,
+// returning an empty string when the field is absent or null.
+func rawJSONStringField(body json.RawMessage, field string) (string, error) {
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(body, &obj); err != nil {
+		return "", err
+	}
+	if obj == nil {
+		return "", errors.New("body must be a JSON object")
+	}
+
+	raw, ok := obj[field]
+	if !ok || string(raw) == "null" {
+		return "", nil
+	}
+	var value string
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return "", fmt.Errorf("%s must be a string: %w", field, err)
+	}
+	return value, nil
+}
+
+// editJSONBody opens an editor seeded with `seed` and unmarshals the result into
+// `target`, re-opening on invalid JSON so a typo never costs the user's edits.
+// `resource` names the object in prompts and error messages.
+func editJSONBody(cli *cli, resource, seed string, target interface{}) error {
+	content := seed
+	for {
+		var edited string
+		if err := openCreateEditor(&edited, content, resource+".*.json", nil, nil); err != nil {
+			return err
+		}
+
+		if err := json.Unmarshal([]byte(edited), target); err != nil {
+			cli.renderer.Warnf("The %s body is not valid JSON: %s", resource, err)
+			if !prompt.Confirm("Re-open the editor to fix it?") {
+				return fmt.Errorf("aborted; the %s was not saved", resource)
+			}
+			content = edited
+			continue
+		}
+
+		return nil
+	}
+}
+
+// openBuilderURL opens a Forms/Flows builder page in a browser, or prints the URL
+// when interactivity is disabled.
+func openBuilderURL(cli *cli, path string) {
+	url := formatBuilderPageURL(cli.Config.DefaultTenant, &cli.Config, path)
+	if url == "" {
+		cli.renderer.Warnf("Failed to format the correct URL, please ensure you have run 'auth0 login' and try again.")
+		return
+	}
+
+	if cli.noInput {
+		cli.renderer.Infof("Open the following URL in a browser: %s", url)
+		return
+	}
+
+	if err := browser.OpenURL(url); err != nil {
+		cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s", url)
+	}
+}
+
+// formatBuilderPageURL builds a Forms/Flows builder URL for the given path,
+// deriving the region and tenant name from the configured tenant.
+func formatBuilderPageURL(tenant string, cfg *config.Config, path string) string {
+	if len(tenant) == 0 || len(path) == 0 {
+		return ""
+	}
+
+	s := strings.Split(tenant, ".")
+	if len(s) < 3 {
+		return ""
+	}
+
+	region := "us" // A PUS1 tenant looks like dev-tti06f6y.auth0.com (3 parts).
+	if len(s) > 3 {
+		region = s[len(s)-3]
+	}
+
+	tenantName := cfg.Tenants[tenant].Name
+	if len(tenantName) == 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("%s/tenants/%s/%s/%s", formsBuilderURL, region, tenantName, path)
 }

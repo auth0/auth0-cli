@@ -1,0 +1,8 @@
+{
+  "app_id": "HTTP",
+  "name": "integration-test-connection",
+  "setup": {
+    "type": "BEARER",
+    "token": "integration-test-token"
+  }
+}

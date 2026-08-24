@@ -21,7 +21,6 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
-	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/iostream"
 )
@@ -230,20 +229,20 @@ func TestUpdateFormCmdUsesRawClientForRichFile(t *testing.T) {
 	assert.Contains(t, stdout.String(), "1 nodes")
 }
 
-func TestReadFormBody(t *testing.T) {
+func TestReadBodyInput(t *testing.T) {
 	t.Run("reads from a file", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "form.json")
 		want := []byte(`{"name":"My Form"}`)
 		assert.NoError(t, os.WriteFile(path, want, 0600))
 
-		got, err := readFormBody(path)
+		got, err := readBodyInput(path, "form")
 		assert.NoError(t, err)
 		assert.Equal(t, want, got)
 	})
 
 	t.Run("errors on a missing file", func(t *testing.T) {
-		_, err := readFormBody(filepath.Join(t.TempDir(), "missing.json"))
+		_, err := readBodyInput(filepath.Join(t.TempDir(), "missing.json"), "form")
 		assert.ErrorContains(t, err, "failed to read form file")
 	})
 
@@ -261,7 +260,7 @@ func TestReadFormBody(t *testing.T) {
 		iostream.Input = f
 		defer func() { iostream.Input = original }()
 
-		got, err := readFormBody("-")
+		got, err := readBodyInput("-", "form")
 		assert.NoError(t, err)
 		assert.Equal(t, want, got)
 	})
@@ -417,73 +416,6 @@ func TestCollectForms(t *testing.T) {
 		_, err := collectForms(context.Background(), cli, &managementv3.ListFormsRequestParameters{}, 0)
 		assert.EqualError(t, err, "boom")
 	})
-}
-
-func TestFormatFormEditURL(t *testing.T) {
-	cfg := &config.Config{
-		Tenants: config.Tenants{
-			"example.us.auth0.com":   {Name: "example"},
-			"my-tenant.eu.auth0.com": {Name: "my-tenant"},
-			"dev-tti06f6y.auth0.com": {Name: "dev-tti06f6y"},
-			"no-name.us.auth0.com":   {Name: ""},
-		},
-	}
-
-	tests := []struct {
-		name     string
-		tenant   string
-		id       string
-		expected string
-	}{
-		{
-			name:     "derives the region from a four-part domain",
-			tenant:   "example.us.auth0.com",
-			id:       "ap_123",
-			expected: "https://forms.auth0.com/tenants/us/example/forms/ap_123/edit",
-		},
-		{
-			name:     "supports non-us regions",
-			tenant:   "my-tenant.eu.auth0.com",
-			id:       "ap_456",
-			expected: "https://forms.auth0.com/tenants/eu/my-tenant/forms/ap_456/edit",
-		},
-		{
-			name:     "defaults to us for a three-part PUS1 domain",
-			tenant:   "dev-tti06f6y.auth0.com",
-			id:       "ap_789",
-			expected: "https://forms.auth0.com/tenants/us/dev-tti06f6y/forms/ap_789/edit",
-		},
-		{
-			name:     "returns empty when the tenant is unknown",
-			tenant:   "example.us.auth0.com",
-			id:       "",
-			expected: "",
-		},
-		{
-			name:     "returns empty when the tenant is missing",
-			tenant:   "",
-			id:       "ap_123",
-			expected: "",
-		},
-		{
-			name:     "returns empty when the domain has too few parts",
-			tenant:   "invalid",
-			id:       "ap_123",
-			expected: "",
-		},
-		{
-			name:     "returns empty when the tenant name is unknown",
-			tenant:   "no-name.us.auth0.com",
-			id:       "ap_123",
-			expected: "",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.expected, formatFormEditURL(test.tenant, cfg, test.id))
-		})
-	}
 }
 
 type formHTTPClientStub struct {
