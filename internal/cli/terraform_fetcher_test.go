@@ -2448,6 +2448,36 @@ func TestUserAttributeProfileResourceFetcher(t *testing.T) {
 	})
 }
 
+func TestTokenExchangeProfileResourceFetcher(t *testing.T) {
+	t.Run("it successfully generates token exchange profile import data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		tokenExchangeAPI := mock.NewMockTokenExchangeAPI(ctrl)
+
+		tokenExchangeAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).
+			Return(&management.TokenExchangeProfileList{
+				TokenExchangeProfiles: []*management.TokenExchangeProfile{
+					{
+						ID:   auth0.String("tep_123456"),
+						Name: auth0.String("Token Exchange Profile 1"),
+					}}}, nil)
+
+		fetcher := tokenExchangeProfileResourceFetcher{
+			api: &auth0.API{
+				TokenExchange: tokenExchangeAPI,
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 1)
+		assert.Equal(t, data[0].ResourceName, "auth0_token_exchange_profile.token_exchange_profile_1")
+		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
 func Test_promptScreenPartialResourceFetcher_FetchData(t *testing.T) {
 	t.Run("it successfully retrieves screen partial prompts data", func(t *testing.T) {
 		fetcher := promptScreenPartialResourceFetcher{}

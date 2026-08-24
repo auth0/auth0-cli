@@ -129,6 +129,8 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API, apiv3 *auth0.API
 			fetchers = append(fetchers, &triggerActionsResourceFetcher{api})
 		case "auth0_user_attribute_profile":
 			fetchers = append(fetchers, &userAttributeProfilesResourceFetcher{api})
+		case "auth0_token_exchange_profile":
+			fetchers = append(fetchers, &tokenExchangeProfileResourceFetcher{api})
 		default:
 			err = errors.Join(err, fmt.Errorf("unsupported resource type: %s", resource))
 		}

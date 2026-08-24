@@ -19,7 +19,7 @@ var (
 		"auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_log_stream", "auth0_network_acl", "auth0_organization",
 		"auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_prompt_screen_renderer", "auth0_resource_server", "auth0_role",
 		"auth0_self_service_profile", "auth0_tenant", "auth0_trigger_actions", "auth0_user_attribute_profile", "auth0_prompt_screen_partial",
-		"auth0_phone_notification_template",
+		"auth0_phone_notification_template", "auth0_token_exchange_profile",
 	}
 )
 
@@ -137,6 +137,10 @@ type (
 
 	phoneNotificationTemplateResourceFetcher struct {
 		apiv3 *auth0.APIV3
+	}
+
+	tokenExchangeProfileResourceFetcher struct {
+		api *auth0.API
 	}
 )
 
@@ -804,6 +808,33 @@ func (f *userAttributeProfilesResourceFetcher) FetchData(ctx context.Context) (i
 		for _, profile := range profiles.UserAttributeProfiles {
 			data = append(data, importDataItem{
 				ResourceName: "auth0_user_attribute_profile." + sanitizeResourceName(profile.GetName()),
+				ImportID:     profile.GetID(),
+			})
+		}
+
+		if !profiles.HasNext() {
+			break
+		}
+
+		from = profiles.Next
+	}
+
+	return data, nil
+}
+
+func (f *tokenExchangeProfileResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	from := ""
+	for {
+		profiles, err := f.api.TokenExchange.List(ctx, management.From(from))
+		if err != nil {
+			return nil, err
+		}
+
+		for _, profile := range profiles.TokenExchangeProfiles {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_token_exchange_profile." + sanitizeResourceName(profile.GetName()),
 				ImportID:     profile.GetID(),
 			})
 		}

@@ -489,6 +489,15 @@ func TestTerraformInputs_ParseResourceFetchers(t *testing.T) {
 			},
 		},
 		{
+			name: "it can successfully parse resources: auth0_token_exchange_profile",
+			input: terraformInputs{
+				Resources: []string{"auth0_token_exchange_profile"},
+			},
+			expectedDataFetchers: []resourceDataFetcher{
+				&tokenExchangeProfileResourceFetcher{api},
+			},
+		},
+		{
 			name: "it can successfully parse resources: auth0_client, auth0_connection",
 			input: terraformInputs{
 				Resources: []string{"auth0_client", "auth0_connection"},
