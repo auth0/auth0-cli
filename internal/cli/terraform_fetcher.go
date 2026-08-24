@@ -2,11 +2,13 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
 	managementv3 "github.com/auth0/go-auth0/v3/management"
+	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/google/uuid"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -86,7 +88,7 @@ type (
 	}
 
 	formResourceFetcher struct {
-		api *auth0.API
+		apiv3 *auth0.APIV3
 	}
 
 	guardianResourceFetcher  struct{}
@@ -432,16 +434,26 @@ func (f *flowVaultConnectionResourceFetcher) FetchData(ctx context.Context) (imp
 func (f *formResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	var data importDataList
 
-	forms, err := f.api.Form.List(ctx)
+	page, err := f.apiv3.Form.List(ctx, &managementv3.ListFormsRequestParameters{})
 	if err != nil {
 		return data, err
 	}
 
-	for _, form := range forms.Forms {
-		data = append(data, importDataItem{
-			ResourceName: "auth0_form." + sanitizeResourceName(form.GetName()),
-			ImportID:     form.GetID(),
-		})
+	for page != nil {
+		for _, form := range page.Results {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_form." + sanitizeResourceName(form.GetName()),
+				ImportID:     form.GetID(),
+			})
+		}
+
+		page, err = page.GetNextPage(ctx)
+		if errors.Is(err, core.ErrNoPages) {
+			break
+		}
+		if err != nil {
+			return data, err
+		}
 	}
 
 	return data, nil
