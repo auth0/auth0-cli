@@ -53,8 +53,10 @@ func updateActionFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) erro
 		return err
 	}
 
-	// Preserve the existing triggers unless the payload set them.
-	if updatedAction.SupportedTriggers == nil {
+	// Name and SupportedTriggers have no `omitempty`, so leaving them unset would
+	// send "name": null / "supported_triggers": null and clobber the action.
+	// Backfill them from the existing action when the payload omits them.
+	if updatedAction.Name == nil || updatedAction.SupportedTriggers == nil {
 		var oldAction *management.Action
 		if err := ansi.Waiting(func() (err error) {
 			oldAction, err = cli.api.Action.Read(cmd.Context(), id)
@@ -62,7 +64,12 @@ func updateActionFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) erro
 		}); err != nil {
 			return fmt.Errorf("failed to read action with ID %q: %w", id, err)
 		}
-		updatedAction.SupportedTriggers = oldAction.SupportedTriggers
+		if updatedAction.Name == nil {
+			updatedAction.Name = oldAction.Name
+		}
+		if updatedAction.SupportedTriggers == nil {
+			updatedAction.SupportedTriggers = oldAction.SupportedTriggers
+		}
 	}
 
 	if err := ansi.Waiting(func() error {

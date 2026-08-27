@@ -92,16 +92,11 @@ func HasData(cmd *cobra.Command) bool {
 // ResolveData resolves the JSON payload from --data (inline JSON or @file) or
 // piped stdin; provided is false when neither is given. JSON input is a
 // whole-payload alternative to the individual flags and cannot be combined with them.
-func ResolveData(c *cli, cmd *cobra.Command) (payload string, provided bool, err error) {
+func ResolveData(cmd *cobra.Command) (payload string, provided bool, err error) {
+	// --data wins and is used as-is; stdin is not read, so a create/update with
+	// --data never blocks on an open stdin pipe.
 	if HasData(cmd) {
 		flagValue, _ := GetData(cmd)
-		// --data takes precedence over piped stdin.
-		if len(iostream.PipedInput()) > 0 {
-			c.renderer.Warnf(
-				"JSON data was provided via both --data and piped input. " +
-					"The Auth0 CLI will use the data from --data.",
-			)
-		}
 		return flagValue, true, nil
 	}
 

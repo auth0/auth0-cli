@@ -55,14 +55,12 @@ func withPipedStdin(t *testing.T, content string, fn func()) {
 }
 
 func TestResolveData(t *testing.T) {
-	testCLI := &cli{renderer: testRenderer()}
-
 	t.Run("explicit --data flag", func(t *testing.T) {
 		cmd, _ := newDataCommand()
 		require.NoError(t, cmd.ParseFlags([]string{"--data", `{"name":"x"}`}))
 
 		withPipedStdin(t, "", func() {
-			payload, provided, err := ResolveData(testCLI, cmd)
+			payload, provided, err := ResolveData(cmd)
 			require.NoError(t, err)
 			assert.True(t, provided)
 			assert.Equal(t, `{"name":"x"}`, payload)
@@ -75,7 +73,7 @@ func TestResolveData(t *testing.T) {
 		require.NoError(t, cmd.ParseFlags([]string{"--data", `{"name":"from-flag"}`}))
 
 		withPipedStdin(t, `{"name":"from-pipe"}`, func() {
-			payload, provided, err := ResolveData(testCLI, cmd)
+			payload, provided, err := ResolveData(cmd)
 			require.NoError(t, err)
 			assert.True(t, provided)
 			assert.Equal(t, `{"name":"from-flag"}`, payload)
@@ -87,7 +85,7 @@ func TestResolveData(t *testing.T) {
 		require.NoError(t, cmd.ParseFlags([]string{}))
 
 		withPipedStdin(t, `{"name":"from-pipe"}`, func() {
-			payload, provided, err := ResolveData(testCLI, cmd)
+			payload, provided, err := ResolveData(cmd)
 			require.NoError(t, err)
 			assert.True(t, provided)
 			assert.Equal(t, `{"name":"from-pipe"}`, payload)
@@ -102,7 +100,7 @@ func TestResolveData(t *testing.T) {
 		require.NoError(t, cmd.ParseFlags([]string{"--name", "from-flag"}))
 
 		withPipedStdin(t, `{"name":"from-pipe"}`, func() {
-			payload, provided, err := ResolveData(testCLI, cmd)
+			payload, provided, err := ResolveData(cmd)
 			require.Error(t, err)
 			assert.False(t, provided)
 			assert.Empty(t, payload)
@@ -117,7 +115,7 @@ func TestResolveData(t *testing.T) {
 		require.NoError(t, cmd.ParseFlags([]string{"--json"}))
 
 		withPipedStdin(t, `{"name":"from-pipe"}`, func() {
-			payload, provided, err := ResolveData(testCLI, cmd)
+			payload, provided, err := ResolveData(cmd)
 			require.NoError(t, err)
 			assert.True(t, provided)
 			assert.Equal(t, `{"name":"from-pipe"}`, payload)
@@ -129,7 +127,7 @@ func TestResolveData(t *testing.T) {
 		require.NoError(t, cmd.ParseFlags([]string{}))
 
 		withPipedStdin(t, "", func() {
-			payload, provided, err := ResolveData(testCLI, cmd)
+			payload, provided, err := ResolveData(cmd)
 			require.NoError(t, err)
 			assert.False(t, provided)
 			assert.Empty(t, payload)

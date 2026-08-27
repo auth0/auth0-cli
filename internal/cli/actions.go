@@ -260,7 +260,7 @@ The JSON is validated against the OpenAPI schema before sending to the API.`,
 			}
 
 			// JSON input mode (for agents and automation): explicit --data or piped stdin.
-			payload, provided, err := ResolveData(cli, cmd)
+			payload, provided, err := ResolveData(cmd)
 			if err != nil {
 				return err
 			}
@@ -421,7 +421,7 @@ The JSON is validated against the OpenAPI schema before sending to the API.`,
 			}
 
 			// JSON input mode (for agents and automation): explicit --data or piped stdin.
-			payload, provided, err := ResolveData(cli, cmd)
+			payload, provided, err := ResolveData(cmd)
 			if err != nil {
 				return err
 			}

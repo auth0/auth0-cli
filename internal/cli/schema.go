@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -22,7 +24,7 @@ var outputFlags = map[string]bool{
 var schemaFlag = Flag{
 	Name:     "Schema",
 	LongForm: "schema",
-	Help:     "Print the request payload schema for this command and exit. Use with --json for machine-readable output.",
+	Help:     "Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.",
 }
 
 // printOperationSchema prints the request payload schema for an operation, as
@@ -41,10 +43,17 @@ func printOperationSchema(cli *cli, method, path string) error {
 		return fmt.Errorf("failed to get schema for %s %s: %w", method, path, err)
 	}
 
-	if cli.json {
+	if cli.json || cli.jsonCompact {
 		output, err := opSchema.FormatAsJSON()
 		if err != nil {
 			return err
+		}
+		if cli.jsonCompact {
+			var buf bytes.Buffer
+			if err := json.Compact(&buf, []byte(output)); err != nil {
+				return err
+			}
+			output = buf.String()
 		}
 		cli.renderer.Output(output)
 		return nil

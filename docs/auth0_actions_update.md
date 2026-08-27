@@ -60,7 +60,7 @@ auth0 actions update [flags]
   -m, --module stringArray          Action module to associate with the action, as comma-separated key=value pairs matching the API fields: module_id and module_version_id (both required, UUIDs). Can be passed multiple times to associate several modules.
   -n, --name string                 Name of the action.
   -r, --runtime string              Runtime to be used in the action.  Possible values are: node22(recommended), node18, node16, node12
-      --schema                      Print the request payload schema for this command and exit. Use with --json for machine-readable output.
+      --schema                      Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -s, --secret stringToString       Secrets to be used in the action. (default [])
 ```
 

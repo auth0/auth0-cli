@@ -185,7 +185,7 @@ func FindOperation(doc *openapi3.T, method, path string) (*openapi3.Operation, e
 
 // GetRequestSchema returns the request body schema for an operation.
 func GetRequestSchema(operation *openapi3.Operation) *openapi3.SchemaRef {
-	if operation.RequestBody == nil {
+	if operation.RequestBody == nil || operation.RequestBody.Value == nil {
 		return nil
 	}
 
