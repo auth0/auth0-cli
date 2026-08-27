@@ -55,14 +55,31 @@ func withPipedStdin(t *testing.T, content string, fn func()) {
 }
 
 func TestResolveData(t *testing.T) {
+	testCLI := &cli{renderer: testRenderer()}
+
 	t.Run("explicit --data flag", func(t *testing.T) {
 		cmd, _ := newDataCommand()
 		require.NoError(t, cmd.ParseFlags([]string{"--data", `{"name":"x"}`}))
 
-		payload, provided, err := ResolveData(cmd)
-		require.NoError(t, err)
-		assert.True(t, provided)
-		assert.Equal(t, `{"name":"x"}`, payload)
+		withPipedStdin(t, "", func() {
+			payload, provided, err := ResolveData(testCLI, cmd)
+			require.NoError(t, err)
+			assert.True(t, provided)
+			assert.Equal(t, `{"name":"x"}`, payload)
+		})
+	})
+
+	// --data wins over piped stdin (like `auth0 api`); the flag value is used.
+	t.Run("--data flag takes precedence over piped stdin", func(t *testing.T) {
+		cmd, _ := newDataCommand()
+		require.NoError(t, cmd.ParseFlags([]string{"--data", `{"name":"from-flag"}`}))
+
+		withPipedStdin(t, `{"name":"from-pipe"}`, func() {
+			payload, provided, err := ResolveData(testCLI, cmd)
+			require.NoError(t, err)
+			assert.True(t, provided)
+			assert.Equal(t, `{"name":"from-flag"}`, payload)
+		})
 	})
 
 	t.Run("piped stdin, no flags", func(t *testing.T) {
@@ -70,22 +87,22 @@ func TestResolveData(t *testing.T) {
 		require.NoError(t, cmd.ParseFlags([]string{}))
 
 		withPipedStdin(t, `{"name":"from-pipe"}`, func() {
-			payload, provided, err := ResolveData(cmd)
+			payload, provided, err := ResolveData(testCLI, cmd)
 			require.NoError(t, err)
 			assert.True(t, provided)
 			assert.Equal(t, `{"name":"from-pipe"}`, payload)
 		})
 	})
 
-	// The gap: piped payload combined with a granular input flag. The flag-level
-	// MarkFlagsMutuallyExclusive cannot see stdin, so ResolveData must reject this
-	// itself — otherwise the flag is silently ignored and the pipe silently wins.
+	// JSON input replaces the individual flags, so piped JSON combined with a
+	// granular input flag is a clear error. MarkFlagsMutuallyExclusive cannot see
+	// stdin, so ResolveData must reject this itself.
 	t.Run("piped stdin combined with input flag is rejected", func(t *testing.T) {
 		cmd, _ := newDataCommand()
 		require.NoError(t, cmd.ParseFlags([]string{"--name", "from-flag"}))
 
 		withPipedStdin(t, `{"name":"from-pipe"}`, func() {
-			payload, provided, err := ResolveData(cmd)
+			payload, provided, err := ResolveData(testCLI, cmd)
 			require.Error(t, err)
 			assert.False(t, provided)
 			assert.Empty(t, payload)
@@ -100,7 +117,7 @@ func TestResolveData(t *testing.T) {
 		require.NoError(t, cmd.ParseFlags([]string{"--json"}))
 
 		withPipedStdin(t, `{"name":"from-pipe"}`, func() {
-			payload, provided, err := ResolveData(cmd)
+			payload, provided, err := ResolveData(testCLI, cmd)
 			require.NoError(t, err)
 			assert.True(t, provided)
 			assert.Equal(t, `{"name":"from-pipe"}`, payload)
@@ -112,7 +129,7 @@ func TestResolveData(t *testing.T) {
 		require.NoError(t, cmd.ParseFlags([]string{}))
 
 		withPipedStdin(t, "", func() {
-			payload, provided, err := ResolveData(cmd)
+			payload, provided, err := ResolveData(testCLI, cmd)
 			require.NoError(t, err)
 			assert.False(t, provided)
 			assert.Empty(t, payload)

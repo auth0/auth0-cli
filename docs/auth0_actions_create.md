@@ -17,7 +17,7 @@ Use '--schema' to print the request payload schema, then '--data' to provide
 action data as JSON:
   - Inline JSON: --data '{"name":"my-action",...}'
   - From file: --data @action.json
-  - From stdin: pipe data in (e.g. cat action.json | auth0 actions create), or --data -
+  - From stdin: pipe data in (e.g. cat action.json | auth0 actions create)
 
 The JSON is validated against the OpenAPI schema before sending to the API.
 
@@ -54,7 +54,7 @@ auth0 actions create [flags]
 
 ```
   -c, --code string                 Code content for the action.
-      --data string                 JSON payload for the operation. Can be a JSON string, file path (@file.json), or '-' for stdin.
+      --data string                 JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -d, --dependency stringToString   Third party npm module, and its version, that the action depends on. (default [])
       --json                        Output in json format.
       --json-compact                Output in compact json format.

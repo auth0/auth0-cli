@@ -16,7 +16,7 @@ var (
 	dataFlag = Flag{
 		Name:     "Data",
 		LongForm: "data",
-		Help:     "JSON payload for the operation. Can be a JSON string, file path (@file.json), or '-' for stdin.",
+		Help:     "JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.",
 	}
 )
 
@@ -40,13 +40,11 @@ func NewDataJSONHandler(c *cli) (*DataJSONHandler, error) {
 
 // ParseAndValidate parses JSON input and optionally validates it against the schema.
 func (h *DataJSONHandler) ParseAndValidate(inputStr, method, path string, target interface{}) error {
-	// Read JSON data.
 	jsonData, err := h.readJSONInput(inputStr)
 	if err != nil {
 		return fmt.Errorf("failed to read JSON input: %w", err)
 	}
 
-	// Validate against schema.
 	result, err := h.manager.ValidateRequest(method, path, jsonData)
 	if err != nil {
 		return fmt.Errorf("schema validation error: %w", err)
@@ -54,22 +52,6 @@ func (h *DataJSONHandler) ParseAndValidate(inputStr, method, path string, target
 
 	if !result.Valid {
 		return fmt.Errorf("schema validation failed:\n%s", formatValidationErrors(result.Errors))
-	}
-
-	// Unmarshal into target.
-	if err := json.Unmarshal(jsonData, target); err != nil {
-		return fmt.Errorf("failed to parse JSON: %w", err)
-	}
-
-	return nil
-}
-
-// ParseWithoutValidation parses JSON input without schema validation.
-// Useful when you want to accept any valid JSON.
-func (h *DataJSONHandler) ParseWithoutValidation(inputStr string, target interface{}) error {
-	jsonData, err := h.readJSONInput(inputStr)
-	if err != nil {
-		return fmt.Errorf("failed to read JSON input: %w", err)
 	}
 
 	if err := json.Unmarshal(jsonData, target); err != nil {
@@ -85,19 +67,11 @@ func (h *DataJSONHandler) readJSONInput(input string) ([]byte, error) {
 		return nil, fmt.Errorf("no input provided")
 	}
 
-	// Check if it's stdin.
-	if input == "-" {
-		return iostream.PipedInput(), nil
+	if len(input) > 0 && input[0] == '@' { // @file.
+		return os.ReadFile(input[1:])
 	}
 
-	// Check if it's a file path (starts with @).
-	if len(input) > 0 && input[0] == '@' {
-		filePath := input[1:]
-		return os.ReadFile(filePath)
-	}
-
-	// Otherwise, treat it as inline JSON.
-	return []byte(input), nil
+	return []byte(input), nil // Inline JSON.
 }
 
 // formatValidationErrors formats validation errors in a user-friendly way.
@@ -115,11 +89,19 @@ func HasData(cmd *cobra.Command) bool {
 	return flag != nil && flag.Changed
 }
 
-// ResolveData returns the request payload from --data or, failing that, piped
-// stdin; provided is false when neither is present, so the caller can prompt.
-func ResolveData(cmd *cobra.Command) (payload string, provided bool, err error) {
+// ResolveData resolves the JSON payload from --data (inline JSON or @file) or
+// piped stdin; provided is false when neither is given. JSON input is a
+// whole-payload alternative to the individual flags and cannot be combined with them.
+func ResolveData(c *cli, cmd *cobra.Command) (payload string, provided bool, err error) {
 	if HasData(cmd) {
 		flagValue, _ := GetData(cmd)
+		// --data takes precedence over piped stdin.
+		if len(iostream.PipedInput()) > 0 {
+			c.renderer.Warnf(
+				"JSON data was provided via both --data and piped input. " +
+					"The Auth0 CLI will use the data from --data.",
+			)
+		}
 		return flagValue, true, nil
 	}
 
@@ -128,12 +110,11 @@ func ResolveData(cmd *cobra.Command) (payload string, provided bool, err error) 
 		return "", false, nil
 	}
 
-	// A stdin payload obeys the same rule as --data — no granular input flags —
-	// but MarkFlagsMutuallyExclusive can't see stdin, so enforce it here.
+	// Piped JSON is the whole payload; it cannot be combined with input flags.
 	if conflicting := setInputFlagNames(cmd); len(conflicting) > 0 {
 		return "", false, fmt.Errorf(
-			"cannot combine piped JSON input with input flags (%s); "+
-				"provide the whole payload via stdin or use the flags, not both",
+			"cannot combine piped JSON input with individual flags (%s); "+
+				"provide the whole payload as JSON or use the flags, not both",
 			strings.Join(conflicting, ", "),
 		)
 	}

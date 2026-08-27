@@ -4,10 +4,23 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
 )
+
+// sortedPropertyNames returns a schema's property names in deterministic
+// (alphabetical) order. Go randomizes map iteration, so ranging Properties
+// directly would render fields in a different order on every run.
+func sortedPropertyNames(props openapi3.Schemas) []string {
+	names := make([]string, 0, len(props))
+	for name := range props {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
 
 // SchemaManager provides centralized access to OpenAPI schemas.
 // It loads the schema once and provides methods to inspect and validate requests.
@@ -319,6 +332,7 @@ func formatSchema(schema *openapi3.Schema, indent string) string {
 				optionalFields = append(optionalFields, fieldName)
 			}
 		}
+		sort.Strings(optionalFields)
 
 		if len(optionalFields) > 0 {
 			fmt.Fprintf(&sb, "%sOptional fields:\n", indent)
@@ -370,8 +384,8 @@ func formatField(name string, schema *openapi3.Schema, indent string) string {
 	// If field is an object with properties, show nested structure.
 	if schema.Type != nil && schema.Type.Is("object") && len(schema.Properties) > 0 {
 		fmt.Fprintf(&sb, "%s  Properties:\n", indent)
-		for propName, propRef := range schema.Properties {
-			if propRef.Value != nil {
+		for _, propName := range sortedPropertyNames(schema.Properties) {
+			if propRef := schema.Properties[propName]; propRef.Value != nil {
 				sb.WriteString(formatField(propName, propRef.Value, indent+"    "))
 			}
 		}
@@ -382,8 +396,8 @@ func formatField(name string, schema *openapi3.Schema, indent string) string {
 		itemSchema := schema.Items.Value
 		if itemSchema.Type != nil && itemSchema.Type.Is("object") && len(itemSchema.Properties) > 0 {
 			fmt.Fprintf(&sb, "%s  Item properties:\n", indent)
-			for propName, propRef := range itemSchema.Properties {
-				if propRef.Value != nil {
+			for _, propName := range sortedPropertyNames(itemSchema.Properties) {
+				if propRef := itemSchema.Properties[propName]; propRef.Value != nil {
 					sb.WriteString(formatField(propName, propRef.Value, indent+"    "))
 				}
 			}
@@ -391,75 +405,4 @@ func formatField(name string, schema *openapi3.Schema, indent string) string {
 	}
 
 	return sb.String()
-}
-
-// GetResourceOperations returns all operations for a resource (e.g., "actions").
-func (sm *SchemaManager) GetResourceOperations(resource string) ([]*OperationSchema, error) {
-	var operations []*OperationSchema
-
-	// Common resource paths.
-	basePath := fmt.Sprintf("/%s", resource)
-	idPath := fmt.Sprintf("/%s/{id}", resource)
-
-	// Try to find operations.
-	for _, method := range []string{"GET", "POST", "PUT", "PATCH", "DELETE"} {
-		// Try base path.
-		if op, err := sm.GetOperationSchema(method, basePath); err == nil {
-			operations = append(operations, op)
-		}
-
-		// Try ID path.
-		if op, err := sm.GetOperationSchema(method, idPath); err == nil {
-			operations = append(operations, op)
-		}
-	}
-
-	// Special cases for nested resources.
-	specialPaths := []string{
-		fmt.Sprintf("/%s/%s", resource, resource), // E.g., /actions/actions.
-	}
-
-	for _, path := range specialPaths {
-		for _, method := range []string{"GET", "POST", "PUT", "PATCH", "DELETE"} {
-			if op, err := sm.GetOperationSchema(method, path); err == nil {
-				operations = append(operations, op)
-			}
-		}
-	}
-
-	if len(operations) == 0 {
-		return nil, fmt.Errorf("no operations found for resource: %s", resource)
-	}
-
-	return operations, nil
-}
-
-// ListAllOperations returns all operations in the OpenAPI spec.
-func (sm *SchemaManager) ListAllOperations() []OperationInfo {
-	var operations []OperationInfo
-
-	for path, pathItem := range sm.doc.Paths.Map() {
-		for method, operation := range pathItem.Operations() {
-			if operation != nil {
-				operations = append(operations, OperationInfo{
-					Method:      strings.ToUpper(method),
-					Path:        path,
-					OperationID: operation.OperationID,
-					Summary:     operation.Summary,
-					Tags:        operation.Tags,
-				})
-			}
-		}
-	}
-
-	return operations
-}
-
-// OperationInfo contains basic information about an operation.
-type OperationInfo struct {
-	Method      string
-	Path        string
-	OperationID string
-	Summary     string
-	Tags        []string
 }

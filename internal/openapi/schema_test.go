@@ -88,23 +88,6 @@ func TestGetRequestSchema(t *testing.T) {
 	assert.Contains(t, requestSchema.Value.Required, "supported_triggers")
 }
 
-func TestGetResponseSchema(t *testing.T) {
-	doc, err := GetDoc()
-	require.NoError(t, err)
-
-	operation, err := FindOperation(doc, "POST", "/actions/actions")
-	require.NoError(t, err)
-
-	// Test 201 response (success).
-	responseSchema := GetResponseSchema(operation, "201")
-	require.NotNil(t, responseSchema)
-	require.NotNil(t, responseSchema.Value)
-
-	// Test 400 response (may be nil or have no content).
-	responseSchema = GetResponseSchema(operation, "400")
-	_ = responseSchema
-}
-
 func TestExtractPathFromURL(t *testing.T) {
 	tests := []struct {
 		name     string

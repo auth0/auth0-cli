@@ -170,6 +170,24 @@ func TestValidateRequest(t *testing.T) {
 	}
 }
 
+func TestValidateRequestActionUpdatePath(t *testing.T) {
+	manager, err := NewSchemaManager()
+	require.NoError(t, err)
+
+	body := []byte(`{"name": "my-action", "runtime": "node22"}`)
+
+	// Templated path: the operation resolves and the body validates.
+	result, err := manager.ValidateRequest("PATCH", "/actions/actions/{id}", body)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.Valid, "templated path should validate; errors: %v", result.Errors)
+
+	// Concrete-ID path: the operation cannot be found, so ValidateRequest errors.
+	// This is exactly the trap that broke `auth0 actions update --data`.
+	_, err = manager.ValidateRequest("PATCH", "/actions/actions/act_123", body)
+	assert.Error(t, err, "concrete-ID path must not resolve against the templated schema")
+}
+
 func TestValidateRequestErrorsAreResolved(t *testing.T) {
 	manager, err := NewSchemaManager()
 	require.NoError(t, err)
@@ -248,59 +266,6 @@ func TestValidateRequestReportsAllErrors(t *testing.T) {
 	joined := strings.Join(result.Errors, "\n")
 	assert.Contains(t, joined, "name")
 	assert.Contains(t, joined, "supported_triggers")
-}
-
-func TestGetResourceOperations(t *testing.T) {
-	manager, err := NewSchemaManager()
-	require.NoError(t, err)
-
-	// Test for "actions" resource.
-	operations, err := manager.GetResourceOperations("actions")
-	require.NoError(t, err)
-	assert.NotEmpty(t, operations)
-
-	// Verify we got multiple operations.
-	assert.Greater(t, len(operations), 1)
-
-	// Check that we have common operations.
-	operationIDs := make([]string, len(operations))
-	for i, op := range operations {
-		operationIDs[i] = op.OperationID
-	}
-
-	assert.Contains(t, operationIDs, "get_actions")
-	assert.Contains(t, operationIDs, "post_action")
-}
-
-func TestListAllOperations(t *testing.T) {
-	manager, err := NewSchemaManager()
-	require.NoError(t, err)
-
-	operations := manager.ListAllOperations()
-	assert.NotEmpty(t, operations)
-
-	// Should have many operations.
-	assert.Greater(t, len(operations), 50)
-
-	// Verify structure.
-	for _, op := range operations {
-		assert.NotEmpty(t, op.Method)
-		assert.NotEmpty(t, op.Path)
-		assert.NotEmpty(t, op.OperationID)
-		// Summary might be empty for some operations.
-	}
-
-	// Check for specific operations.
-	found := false
-	for _, op := range operations {
-		if op.OperationID == "post_action" {
-			found = true
-			assert.Equal(t, "POST", op.Method)
-			assert.Equal(t, "/actions/actions", op.Path)
-			break
-		}
-	}
-	assert.True(t, found, "Should find post_action operation")
 }
 
 func TestSchemaToMap(t *testing.T) {

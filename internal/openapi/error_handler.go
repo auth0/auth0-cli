@@ -15,30 +15,24 @@ func (sm *SchemaManager) EnhanceError(err error, method, path string) error {
 		return nil
 	}
 
-	// Check if it's a management API error with status code 400.
+	// Only enhance 400 Bad Request errors from the management API.
 	mgmtErr, ok := err.(management.Error)
 	if !ok || mgmtErr.Status() != 400 {
 		return err
 	}
 
-	// Find the operation in the schema.
+	// Return the original error if the schema can't supply a hint.
 	operation, opErr := FindOperation(sm.doc, method, path)
 	if opErr != nil {
-		// If we can't find the operation, return the original error.
 		return err
 	}
-
-	// Get the request schema.
 	requestSchema := GetRequestSchema(operation)
 	if requestSchema == nil {
 		return err
 	}
 
-	// Build the enhanced error message.
 	schemaInfo := formatSchemaInfo(requestSchema.Value, operation)
-	enhancedMsg := fmt.Sprintf("%s\n\n%s", err.Error(), schemaInfo)
-
-	return fmt.Errorf("%s", enhancedMsg)
+	return fmt.Errorf("%s\n\n%s", err.Error(), schemaInfo)
 }
 
 // formatSchemaInfo renders the expected request schema, reusing the shared
@@ -49,7 +43,6 @@ func formatSchemaInfo(schema *openapi3.Schema, operation *openapi3.Operation) st
 	sb.WriteString("Expected Request Schema:\n")
 	sb.WriteString("=======================\n\n")
 
-	// Add operation summary if available.
 	if operation.Summary != "" {
 		fmt.Fprintf(&sb, "Operation: %s\n\n", operation.Summary)
 	}

@@ -6,8 +6,8 @@ import (
 	"github.com/auth0/auth0-cli/internal/openapi"
 )
 
-// enhanceAPIError enhances an API error with schema information if available.
-// This is a best-effort enhancement - if schema loading fails, it returns the original error.
+// enhanceAPIError enriches an API error with the expected schema, best-effort:
+// on any lookup failure it returns the original error unchanged.
 func enhanceAPIError(err error, method, path string) error {
 	if err == nil {
 		return nil
@@ -15,11 +15,9 @@ func enhanceAPIError(err error, method, path string) error {
 
 	manager, managerErr := openapi.NewSchemaManager()
 	if managerErr != nil {
-		// If we can't load the schema, just return the original error.
 		return err
 	}
 
-	// Normalize the path to the API path format.
 	apiPath := normalizeAPIPath(path)
 	if apiPath == "" {
 		return err
@@ -28,19 +26,13 @@ func enhanceAPIError(err error, method, path string) error {
 	return manager.EnhanceError(err, method, apiPath)
 }
 
-// normalizeAPIPath normalizes a path to the OpenAPI format.
-// It handles both full URLs and relative paths.
+// normalizeAPIPath converts a full URL or relative path to the OpenAPI path format.
 func normalizeAPIPath(path string) string {
-	// If it's a full URL, extract the path.
 	if strings.Contains(path, "/api/v2") {
 		return openapi.ExtractPathFromURL(path)
 	}
-
-	// If it's already in the right format, return it.
 	if strings.HasPrefix(path, "/") {
 		return path
 	}
-
-	// Otherwise, add the leading slash.
 	return "/" + path
 }

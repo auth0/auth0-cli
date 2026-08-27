@@ -45,6 +45,28 @@ func TestEnhanceError_400Error(t *testing.T) {
 	assert.Contains(t, enhancedMsg, "supported_triggers")
 }
 
+// TestEnhanceError_ActionUpdatePath strictly guards the regression where the
+// update --data flow passed a concrete-ID path to EnhanceError. The templated
+// path must enhance a 400; the concrete-ID path cannot resolve, so the error is
+// returned unchanged. Unlike TestEnhanceError_MultipleOperations, this asserts
+// enhancement unconditionally so a silent no-op regression fails the test.
+func TestEnhanceError_ActionUpdatePath(t *testing.T) {
+	manager, err := NewSchemaManager()
+	require.NoError(t, err)
+
+	mockErr := &mockError{statusCode: 400, message: "Bad Request: bad update"}
+
+	// Templated path: enhancement fires and appends the schema.
+	enhanced := manager.EnhanceError(mockErr, "PATCH", "/actions/actions/{id}")
+	require.NotEqual(t, mockErr, enhanced, "templated path must enhance the 400 error")
+	assert.Contains(t, enhanced.Error(), "Bad Request: bad update")
+	assert.Contains(t, enhanced.Error(), "Expected Request Schema")
+
+	// Concrete-ID path: operation not found, so the error is returned unchanged.
+	notEnhanced := manager.EnhanceError(mockErr, "PATCH", "/actions/actions/act_123")
+	assert.Equal(t, mockErr, notEnhanced, "concrete-ID path must not resolve, error returned as-is")
+}
+
 func TestEnhanceError_NonManagementError(t *testing.T) {
 	manager, err := NewSchemaManager()
 	require.NoError(t, err)

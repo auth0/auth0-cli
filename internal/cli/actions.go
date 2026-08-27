@@ -232,7 +232,7 @@ Use '--schema' to print the request payload schema, then '--data' to provide
 action data as JSON:
   - Inline JSON: --data '{"name":"my-action",...}'
   - From file: --data @action.json
-  - From stdin: pipe data in (e.g. cat action.json | auth0 actions create), or --data -
+  - From stdin: pipe data in (e.g. cat action.json | auth0 actions create)
 
 The JSON is validated against the OpenAPI schema before sending to the API.`,
 		Example: `  # Interactive mode
@@ -260,7 +260,7 @@ The JSON is validated against the OpenAPI schema before sending to the API.`,
 			}
 
 			// JSON input mode (for agents and automation): explicit --data or piped stdin.
-			payload, provided, err := ResolveData(cmd)
+			payload, provided, err := ResolveData(cli, cmd)
 			if err != nil {
 				return err
 			}
@@ -384,7 +384,7 @@ Use '--schema' to print the request payload schema, then '--data' to provide
 update data as JSON:
   - Inline JSON: --data '{"name":"updated-name","runtime":"node22"}'
   - From file: --data @update.json
-  - From stdin: pipe data in (e.g. cat update.json | auth0 actions update <id>), or --data -
+  - From stdin: pipe data in (e.g. cat update.json | auth0 actions update <id>)
 
 The JSON is validated against the OpenAPI schema before sending to the API.`,
 		Example: `  # Interactive mode
@@ -421,7 +421,7 @@ The JSON is validated against the OpenAPI schema before sending to the API.`,
 			}
 
 			// JSON input mode (for agents and automation): explicit --data or piped stdin.
-			payload, provided, err := ResolveData(cmd)
+			payload, provided, err := ResolveData(cli, cmd)
 			if err != nil {
 				return err
 			}

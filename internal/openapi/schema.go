@@ -1,6 +1,7 @@
 package openapi
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +11,8 @@ import (
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
+
+	"github.com/auth0/auth0-cli/internal/buildinfo"
 )
 
 const (
@@ -18,44 +21,65 @@ const (
 
 	// CacheTTL is how long to cache the schema before re-fetching.
 	CacheTTL = 24 * time.Hour
+
+	// Bound the schema fetch so a slow or unreachable host cannot hang the CLI.
+	schemaHTTPTimeout = 30 * time.Second
 )
+
+// schemaHTTPClient fetches the OpenAPI schema with an explicit timeout, matching
+// the convention used elsewhere for ad-hoc external fetches (see auth0.quickstartHTTPClient).
+var schemaHTTPClient = &http.Client{Timeout: schemaHTTPTimeout}
 
 var (
 	globalDoc *openapi3.T
 	cachedAt  time.Time
 )
 
-// GetDoc returns the cached or freshly fetched OpenAPI document.
+// GetDoc returns the OpenAPI document, serving a fresh copy (in-memory or on-disk,
+// <CacheTTL) without a network call and falling back to a stale copy if a fetch fails.
 func GetDoc() (*openapi3.T, error) {
 	if globalDoc != nil && time.Since(cachedAt) < CacheTTL {
 		return globalDoc, nil
 	}
 
-	// Try to load from disk cache first.
-	if doc, err := loadCachedDoc(); err == nil {
-		globalDoc = doc
-		return globalDoc, nil
+	// A fresh on-disk copy avoids the network; a stale one is kept as a fallback.
+	cachedDoc, fresh, cacheErr := loadCachedDoc()
+	if cacheErr == nil && fresh {
+		return cacheInMemory(cachedDoc), nil
 	}
 
-	// Fetch from network.
 	doc, err := fetchDoc()
 	if err != nil {
-		// If we have a stale cache, return it rather than failing.
+		// Offline fallback: serve a stale copy rather than failing.
 		if globalDoc != nil {
 			return globalDoc, nil
+		}
+		if cacheErr == nil {
+			return cacheInMemory(cachedDoc), nil
 		}
 		return nil, fmt.Errorf("failed to fetch OpenAPI schema: %w", err)
 	}
 
+	_ = saveCachedDoc(doc) // Best effort save.
+	return cacheInMemory(doc), nil
+}
+
+// cacheInMemory stores the document as the process-wide copy and returns it.
+func cacheInMemory(doc *openapi3.T) *openapi3.T {
 	globalDoc = doc
 	cachedAt = time.Now()
-	_ = saveCachedDoc(doc) // Best effort save.
-	return globalDoc, nil
+	return doc
 }
 
 // fetchDoc downloads and parses the OpenAPI schema.
 func fetchDoc() (*openapi3.T, error) {
-	resp, err := http.Get(SchemaURL)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, SchemaURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", fmt.Sprintf("Auth0 CLI/%s", strings.TrimPrefix(buildinfo.Version, "v")))
+
+	resp, err := schemaHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -90,38 +114,35 @@ func getCacheDir() (string, error) {
 	return cacheDir, os.MkdirAll(cacheDir, 0755)
 }
 
-// loadCachedDoc loads the schema from disk cache.
-func loadCachedDoc() (*openapi3.T, error) {
+// loadCachedDoc loads the schema from the disk cache and reports whether it is
+// fresh (<CacheTTL); a stale copy is still returned for use as an offline fallback.
+func loadCachedDoc() (doc *openapi3.T, fresh bool, err error) {
 	cacheDir, err := getCacheDir()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	cachePath := filepath.Join(cacheDir, "openapi-schema.json")
 
-	// Check if cache file exists and is recent.
 	info, err := os.Stat(cachePath)
 	if err != nil {
-		return nil, err
-	}
-
-	if time.Since(info.ModTime()) > CacheTTL {
-		return nil, fmt.Errorf("cache expired")
+		return nil, false, err
 	}
 
 	data, err := os.ReadFile(cachePath)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	loader := openapi3.NewLoader()
-	doc, err := loader.LoadFromData(data)
+	loader.IsExternalRefsAllowed = true // Match fetchDoc so a cached copy always parses.
+	doc, err = loader.LoadFromData(data)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	cachedAt = info.ModTime()
-	return doc, nil
+	fresh = time.Since(info.ModTime()) < CacheTTL
+	return doc, fresh, nil
 }
 
 // saveCachedDoc saves the schema to disk cache.
@@ -133,7 +154,6 @@ func saveCachedDoc(doc *openapi3.T) error {
 
 	cachePath := filepath.Join(cacheDir, "openapi-schema.json")
 
-	// Marshal the document.
 	data, err := doc.MarshalJSON()
 	if err != nil {
 		return err
@@ -183,25 +203,6 @@ func GetRequestSchema(operation *openapi3.Operation) *openapi3.SchemaRef {
 	return nil
 }
 
-// GetResponseSchema returns the response schema for a specific status code.
-func GetResponseSchema(operation *openapi3.Operation, statusCode string) *openapi3.SchemaRef {
-	response := operation.Responses.Status(mustParseInt(statusCode))
-	if response == nil {
-		return nil
-	}
-
-	if response.Value.Content == nil {
-		return nil
-	}
-
-	// Try application/json.
-	if mediaType := response.Value.Content.Get("application/json"); mediaType != nil {
-		return mediaType.Schema
-	}
-
-	return nil
-}
-
 // ExtractPathFromURL extracts the API path from a full URL.
 // Example: "https://tenant.auth0.com/api/v2/actions/actions" -> "/actions/actions".
 func ExtractPathFromURL(fullURL string) string {
@@ -212,11 +213,4 @@ func ExtractPathFromURL(fullURL string) string {
 	}
 	// Take the last part (in case /api/v2 appears multiple times).
 	return parts[len(parts)-1]
-}
-
-// mustParseInt is a helper to parse status codes.
-func mustParseInt(s string) int {
-	var result int
-	fmt.Sscanf(s, "%d", &result)
-	return result
 }
