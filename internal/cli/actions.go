@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -525,6 +526,43 @@ The JSON is validated against the OpenAPI schema before sending to the API.`,
 	markDataExclusive(cmd)
 
 	return cmd
+}
+
+// createActionFromJSON creates an action from a --data JSON payload.
+func createActionFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	action, err := runJSONWrite[management.Action](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/actions/actions",
+		URI:        cli.api.HTTPClient.URI("actions", "actions"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 actions create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create action: %w", err)
+	}
+
+	cli.renderer.ActionCreate(action)
+
+	return nil
+}
+
+// updateActionFromJSON updates an action from a --data JSON payload. The endpoint
+// applies PATCH semantics, so unspecified fields keep their current values.
+func updateActionFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	action, err := runJSONWrite[management.Action](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/actions/actions/{id}",
+		URI:        cli.api.HTTPClient.URI("actions", "actions", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 actions update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update action with ID %q: %w", id, err)
+	}
+
+	cli.renderer.ActionUpdate(action)
+
+	return nil
 }
 
 // hasNonCodeFlagSet reports whether the user set any update flag other than the

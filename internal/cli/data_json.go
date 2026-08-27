@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/auth0/auth0-cli/internal/openapi"
 )
@@ -38,27 +39,25 @@ func NewDataJSONHandler(c *cli) (*DataJSONHandler, error) {
 	}, nil
 }
 
-// ParseAndValidate parses JSON input and optionally validates it against the schema.
-func (h *DataJSONHandler) ParseAndValidate(inputStr, method, path string, target interface{}) error {
+// ReadAndValidate reads the JSON input and validates it against the schema,
+// returning the raw bytes so the caller can send them to the API unchanged
+// (no SDK struct round-trip that would drop fields or apply omitempty).
+func (h *DataJSONHandler) ReadAndValidate(inputStr, method, path string) (json.RawMessage, error) {
 	jsonData, err := h.readJSONInput(inputStr)
 	if err != nil {
-		return fmt.Errorf("failed to read JSON input: %w", err)
+		return nil, fmt.Errorf("failed to read JSON input: %w", err)
 	}
 
 	result, err := h.manager.ValidateRequest(method, path, jsonData)
 	if err != nil {
-		return fmt.Errorf("schema validation error: %w", err)
+		return nil, fmt.Errorf("schema validation error: %w", err)
 	}
 
 	if !result.Valid {
-		return fmt.Errorf("schema validation failed:\n%s", formatValidationErrors(result.Errors))
+		return nil, fmt.Errorf("schema validation failed:\n%s", formatValidationErrors(result.Errors))
 	}
 
-	if err := json.Unmarshal(jsonData, target); err != nil {
-		return fmt.Errorf("failed to parse JSON: %w", err)
-	}
-
-	return nil
+	return json.RawMessage(jsonData), nil
 }
 
 // readJSONInput reads JSON from various input sources.
@@ -67,7 +66,7 @@ func (h *DataJSONHandler) readJSONInput(input string) ([]byte, error) {
 		return nil, fmt.Errorf("no input provided")
 	}
 
-	if len(input) > 0 && input[0] == '@' { // @file.
+	if input[0] == '@' { // @file.
 		return os.ReadFile(input[1:])
 	}
 
@@ -120,4 +119,49 @@ func ResolveData(cmd *cobra.Command) (payload string, provided bool, err error) 
 // GetData gets the value of the --data flag.
 func GetData(cmd *cobra.Command) (string, error) {
 	return cmd.Flags().GetString("data")
+}
+
+// jsonWriteSpec describes a create/update driven by a --data JSON payload.
+//
+// SchemaPath MUST be the OpenAPI-keyed path template (e.g. "/actions/actions/{id}"),
+// never a concrete path. The kin-openapi Paths.Find helper matches templated paths
+// only when their template-variable counts are equal, so "/actions/actions/act_123"
+// (0 vars) would never resolve against the stored "/actions/actions/{id}" (1 var).
+// Build the actual request URL separately in URI (e.g. via cli.api.HTTPClient.URI(...)).
+type jsonWriteSpec struct {
+	Method     string // HTTP method, e.g. http.MethodPost / http.MethodPatch.
+	SchemaPath string // OpenAPI-keyed path template used for validation + error hints.
+	URI        string // Fully-qualified request URL.
+	Data       string // Raw --data value (inline JSON, @file, or piped payload).
+	SchemaCmd  string // Command to suggest in the "--schema" hint, e.g. "auth0 actions create".
+}
+
+// runJSONWrite validates a --data payload against the OpenAPI schema, sends it to
+// the Management API verbatim (no SDK struct round-trip, like `auth0 api`), and
+// returns the response decoded into *T for rendering. New resources reuse this by
+// supplying their spec and the management type; the API's own semantics (e.g. PATCH
+// preserving unspecified fields) apply to the exact bytes sent.
+func runJSONWrite[T any](cli *cli, cmd *cobra.Command, spec jsonWriteSpec) (*T, error) {
+	handler, err := NewDataJSONHandler(cli)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize JSON handler: %w", err)
+	}
+
+	payload, err := handler.ReadAndValidate(spec.Data, spec.Method, spec.SchemaPath)
+	if err != nil {
+		cli.renderer.Infof("Run '%s --schema' to see the expected schema.", spec.SchemaCmd)
+		return nil, err
+	}
+
+	if err := ansi.Waiting(func() error {
+		return cli.api.HTTPClient.Request(cmd.Context(), spec.Method, spec.URI, &payload)
+	}); err != nil {
+		return nil, enhanceAPIError(err, spec.Method, spec.SchemaPath)
+	}
+
+	out := new(T)
+	if err := json.Unmarshal(payload, out); err != nil {
+		return nil, fmt.Errorf("failed to parse API response: %w", err)
+	}
+	return out, nil
 }

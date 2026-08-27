@@ -20,7 +20,7 @@ const (
 	SchemaURL = "https://auth0.com/docs/oas/management/v2/management-api-oas.json"
 
 	// CacheTTL is how long to cache the schema before re-fetching.
-	CacheTTL = 24 * time.Hour
+	CacheTTL = 3 * 24 * time.Hour
 
 	// Bound the schema fetch so a slow or unreachable host cannot hang the CLI.
 	schemaHTTPTimeout = 30 * time.Second
@@ -110,7 +110,7 @@ func getCacheDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	cacheDir := filepath.Join(homeDir, ".auth0", "cache")
+	cacheDir := filepath.Join(homeDir, "config", ".auth0", "cache")
 	return cacheDir, os.MkdirAll(cacheDir, 0755)
 }
 
@@ -135,7 +135,7 @@ func loadCachedDoc() (doc *openapi3.T, fresh bool, err error) {
 	}
 
 	loader := openapi3.NewLoader()
-	loader.IsExternalRefsAllowed = true // Match fetchDoc so a cached copy always parses.
+	loader.IsExternalRefsAllowed = true // Match fetchDoc.
 	doc, err = loader.LoadFromData(data)
 	if err != nil {
 		return nil, false, err
