@@ -7,9 +7,19 @@ has_toc: false
 
 Create a new action.
 
-To create interactively, use `auth0 actions create` with no flags.
+To create interactively, use 'auth0 actions create' with no flags.
 
 To create non-interactively, supply the action name, trigger, code, secrets and dependencies through the flags.
+
+## JSON Input (for agents and automation)
+
+Use '--schema' to print the request payload schema, then '--data' to provide
+action data as JSON:
+  - Inline JSON: --data '{"name":"my-action",...}'
+  - From file: --data @action.json
+  - From stdin: pipe data in (e.g. cat action.json | auth0 actions create)
+
+The JSON is validated against the OpenAPI schema before sending to the API.
 
 ## Usage
 ```
@@ -19,16 +29,24 @@ auth0 actions create [flags]
 ## Examples
 
 ```
+  # Interactive mode
   auth0 actions create
-  auth0 actions create --name myaction
+
+  # Flag-based mode
   auth0 actions create --name myaction --trigger post-login
-  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --runtime node18
-  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
-  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
-  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
   auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --module "module_id=mod_123,module_version_id=ver_456"
-  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json
-  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json-compact
+  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -r node18 --json
+  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -d "lodash=4.0.0" -s "API_KEY=value" --json-compact
+
+  # Discover the payload schema (add --json for machine-readable output)
+  auth0 actions create --schema
+  auth0 actions create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 actions create --data '{"name":"my-action","supported_triggers":[{"id":"post-login","version":"v3"}]}'
+  auth0 actions create --data @action.json
+  cat action.json | auth0 actions create
+  auth0 actions create --data @action.json --json
 ```
 
 
@@ -36,12 +54,14 @@ auth0 actions create [flags]
 
 ```
   -c, --code string                 Code content for the action.
+      --data string                 JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -d, --dependency stringToString   Third party npm module, and its version, that the action depends on. (default [])
       --json                        Output in json format.
       --json-compact                Output in compact json format.
   -m, --module stringArray          Action module to associate with the action, as comma-separated key=value pairs matching the API fields: module_id and module_version_id (both required, UUIDs). Can be passed multiple times to associate several modules.
   -n, --name string                 Name of the action.
   -r, --runtime string              Runtime to be used in the action.  Possible values are: node22(recommended), node18, node16, node12
+      --schema                      Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -s, --secret stringToString       Secrets to be used in the action. (default [])
   -t, --trigger string              Trigger of the action. At this time, an action can only target a single trigger at a time.
 ```
