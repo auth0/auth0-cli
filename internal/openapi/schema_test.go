@@ -88,6 +88,43 @@ func TestGetRequestSchema(t *testing.T) {
 	assert.Contains(t, requestSchema.Value.Required, "supported_triggers")
 }
 
+func TestGetQueryParamSchema(t *testing.T) {
+	doc, err := GetDoc()
+	require.NoError(t, err)
+
+	t.Run("returns schema for operation with query params", func(t *testing.T) {
+		operation, err := FindOperation(doc, "GET", "/actions/actions")
+		require.NoError(t, err)
+
+		schema := GetQueryParamSchema(operation)
+		require.NotNil(t, schema)
+		assert.NotEmpty(t, schema.Properties)
+		assert.True(t, schema.Type.Is("object"))
+	})
+
+	t.Run("returns nil when no query params exist", func(t *testing.T) {
+		// POST /actions/actions has no query params.
+		operation, err := FindOperation(doc, "POST", "/actions/actions")
+		require.NoError(t, err)
+
+		schema := GetQueryParamSchema(operation)
+		assert.Nil(t, schema)
+	})
+
+	t.Run("includes only query params, not path or header params", func(t *testing.T) {
+		operation, err := FindOperation(doc, "GET", "/actions/actions")
+		require.NoError(t, err)
+
+		schema := GetQueryParamSchema(operation)
+		require.NotNil(t, schema)
+
+		for name := range schema.Properties {
+			// Path-level params (like action id) should not appear.
+			assert.NotEqual(t, "id", name)
+		}
+	})
+}
+
 func TestExtractPathFromURL(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -38,7 +38,7 @@ func TestGetOperationSchema(t *testing.T) {
 			method:            "GET",
 			path:              "/actions/actions",
 			expectError:       false,
-			expectRequestBody: false, // GET has no request body.
+			expectRequestBody: true, // Synthesized from query params.
 		},
 		{
 			name:              "PATCH /actions/actions/{id}",
@@ -77,6 +77,57 @@ func TestGetOperationSchema(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetOperationSchema_IsQueryParamSchema(t *testing.T) {
+	manager, err := NewSchemaManager()
+	require.NoError(t, err)
+
+	t.Run("GET sets IsQueryParamSchema and uses query_params_schema key", func(t *testing.T) {
+		opSchema, err := manager.GetOperationSchema("GET", "/actions/actions")
+		require.NoError(t, err)
+
+		assert.True(t, opSchema.IsQueryParamSchema)
+		assert.NotNil(t, opSchema.RequestSchema)
+	})
+
+	t.Run("POST does not set IsQueryParamSchema", func(t *testing.T) {
+		opSchema, err := manager.GetOperationSchema("POST", "/actions/actions")
+		require.NoError(t, err)
+
+		assert.False(t, opSchema.IsQueryParamSchema)
+		assert.NotNil(t, opSchema.RequestSchema)
+	})
+}
+
+func TestFormatAsJSON_QueryParams(t *testing.T) {
+	manager, err := NewSchemaManager()
+	require.NoError(t, err)
+
+	opSchema, err := manager.GetOperationSchema("GET", "/actions/actions")
+	require.NoError(t, err)
+
+	jsonOutput, err := opSchema.FormatAsJSON()
+	require.NoError(t, err)
+
+	assert.Contains(t, jsonOutput, "query_params_schema")
+	assert.NotContains(t, jsonOutput, "request_schema")
+	assert.Contains(t, jsonOutput, "operation_id")
+	assert.Contains(t, jsonOutput, "summary")
+}
+
+func TestFormatAsText_QueryParams(t *testing.T) {
+	manager, err := NewSchemaManager()
+	require.NoError(t, err)
+
+	opSchema, err := manager.GetOperationSchema("GET", "/actions/actions")
+	require.NoError(t, err)
+
+	textOutput := opSchema.FormatAsText()
+
+	assert.Contains(t, textOutput, "Query Parameters:")
+	assert.NotContains(t, textOutput, "Request Payload:")
+	assert.NotContains(t, textOutput, "No request body required")
 }
 
 func TestFormatAsJSON(t *testing.T) {

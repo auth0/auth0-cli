@@ -26,8 +26,7 @@ const (
 	schemaHTTPTimeout = 30 * time.Second
 )
 
-// schemaHTTPClient fetches the OpenAPI schema with an explicit timeout, matching
-// the convention used elsewhere for ad-hoc external fetches (see auth0.quickstartHTTPClient).
+// schemaHTTPClient fetches the OpenAPI schema with an explicit timeout.
 var schemaHTTPClient = &http.Client{Timeout: schemaHTTPTimeout}
 
 var (
@@ -35,8 +34,7 @@ var (
 	cachedAt  time.Time
 )
 
-// GetDoc returns the OpenAPI document, serving a fresh copy (in-memory or on-disk,
-// <CacheTTL) without a network call and falling back to a stale copy if a fetch fails.
+// GetDoc returns the OpenAPI document from cache (in-memory then on-disk) or fetches it; returns a stale copy on failure.
 func GetDoc() (*openapi3.T, error) {
 	if globalDoc != nil && time.Since(cachedAt) < CacheTTL {
 		return globalDoc, nil
@@ -114,8 +112,7 @@ func getCacheDir() (string, error) {
 	return cacheDir, os.MkdirAll(cacheDir, 0755)
 }
 
-// loadCachedDoc loads the schema from the disk cache and reports whether it is
-// fresh (<CacheTTL); a stale copy is still returned for use as an offline fallback.
+// loadCachedDoc loads the schema from disk cache; returns a stale copy as an offline fallback.
 func loadCachedDoc() (doc *openapi3.T, fresh bool, err error) {
 	cacheDir, err := getCacheDir()
 	if err != nil {
@@ -162,8 +159,7 @@ func saveCachedDoc(doc *openapi3.T) error {
 	return os.WriteFile(cachePath, data, 0644)
 }
 
-// FindOperation finds an operation by HTTP method and path.
-// Path should be in the format "/actions/actions" or "actions/actions".
+// FindOperation finds an operation by HTTP method and path ("/actions/actions" or "actions/actions").
 func FindOperation(doc *openapi3.T, method, path string) (*openapi3.Operation, error) {
 	method = strings.ToUpper(method)
 	if !strings.HasPrefix(path, "/") {
@@ -201,6 +197,30 @@ func GetRequestSchema(operation *openapi3.Operation) *openapi3.SchemaRef {
 	}
 
 	return nil
+}
+
+// GetQueryParamSchema builds a synthetic object schema from an operation's query parameters.
+func GetQueryParamSchema(operation *openapi3.Operation) *openapi3.Schema {
+	schema := &openapi3.Schema{
+		Type:       &openapi3.Types{"object"},
+		Properties: make(openapi3.Schemas),
+	}
+	for _, paramRef := range operation.Parameters {
+		if paramRef == nil || paramRef.Value == nil || paramRef.Value.In != openapi3.ParameterInQuery {
+			continue
+		}
+		p := paramRef.Value
+		if p.Schema != nil {
+			schema.Properties[p.Name] = p.Schema
+			if p.Required {
+				schema.Required = append(schema.Required, p.Name)
+			}
+		}
+	}
+	if len(schema.Properties) == 0 {
+		return nil
+	}
+	return schema
 }
 
 // ExtractPathFromURL extracts the API path from a full URL.

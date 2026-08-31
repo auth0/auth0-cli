@@ -22,14 +22,12 @@ func sortedPropertyNames(props openapi3.Schemas) []string {
 	return names
 }
 
-// SchemaManager provides centralized access to OpenAPI schemas.
-// It loads the schema once and provides methods to inspect and validate requests.
+// SchemaManager provides access to OpenAPI operation schemas and request validation.
 type SchemaManager struct {
 	doc *openapi3.T
 }
 
-// NewSchemaManager creates a new schema manager.
-// The schema is loaded once and cached for the lifetime of the manager.
+// NewSchemaManager creates a new schema manager backed by the cached OpenAPI document.
 func NewSchemaManager() (*SchemaManager, error) {
 	doc, err := GetDoc()
 	if err != nil {
@@ -53,37 +51,47 @@ func (sm *SchemaManager) GetOperationSchema(method, path string) (*OperationSche
 		Path:        path,
 	}
 
-	// Get request schema only - agents only need to know what to send.
 	if requestSchema := GetRequestSchema(operation); requestSchema != nil && requestSchema.Value != nil {
 		result.RequestSchema = requestSchema.Value
+	}
+
+	if result.RequestSchema == nil {
+		if qpSchema := GetQueryParamSchema(operation); qpSchema != nil {
+			result.RequestSchema = qpSchema
+			result.IsQueryParamSchema = true
+		}
 	}
 
 	return result, nil
 }
 
 // OperationSchema contains schema information for an API operation.
-// Focus is on request payload - what agents need to send.
 type OperationSchema struct {
-	OperationID   string
-	Summary       string
-	Description   string
-	Method        string
-	Path          string
-	RequestSchema *openapi3.Schema
+	OperationID        string
+	Summary            string
+	Description        string
+	Method             string
+	Path               string
+	RequestSchema      *openapi3.Schema
+	IsQueryParamSchema bool
 }
 
 // FormatAsJSON formats the schema as JSON for display.
-func (os *OperationSchema) FormatAsJSON() (string, error) {
+func (op *OperationSchema) FormatAsJSON() (string, error) {
 	output := map[string]interface{}{
-		"operation_id": os.OperationID,
-		"summary":      os.Summary,
-		"description":  os.Description,
-		"method":       os.Method,
-		"path":         os.Path,
+		"operation_id": op.OperationID,
+		"summary":      op.Summary,
+		"description":  op.Description,
+		"method":       op.Method,
+		"path":         op.Path,
 	}
 
-	if os.RequestSchema != nil {
-		output["request_schema"] = schemaToMap(os.RequestSchema)
+	if op.RequestSchema != nil {
+		key := "request_schema"
+		if op.IsQueryParamSchema {
+			key = "query_params_schema"
+		}
+		output[key] = schemaToMap(op.RequestSchema)
 	}
 
 	data, err := json.MarshalIndent(output, "", "  ")
@@ -94,21 +102,25 @@ func (os *OperationSchema) FormatAsJSON() (string, error) {
 }
 
 // FormatAsText formats the schema as human-readable text.
-func (os *OperationSchema) FormatAsText() string {
+func (op *OperationSchema) FormatAsText() string {
 	var sb strings.Builder
 
-	fmt.Fprintf(&sb, "Operation: %s\n", os.Summary)
-	fmt.Fprintf(&sb, "Endpoint: %s %s\n", os.Method, os.Path)
-	if os.Description != "" {
-		fmt.Fprintf(&sb, "Description: %s\n", os.Description)
+	fmt.Fprintf(&sb, "Operation: %s\n", op.Summary)
+	fmt.Fprintf(&sb, "Endpoint: %s %s\n", op.Method, op.Path)
+	if op.Description != "" {
+		fmt.Fprintf(&sb, "Description: %s\n", op.Description)
 	}
 	sb.WriteString("\n")
 
-	if os.RequestSchema != nil {
-		sb.WriteString("Request Payload:\n")
+	if op.RequestSchema != nil {
+		if op.IsQueryParamSchema {
+			sb.WriteString("Query Parameters:\n")
+		} else {
+			sb.WriteString("Request Payload:\n")
+		}
 		sb.WriteString(strings.Repeat("=", 80))
 		sb.WriteString("\n\n")
-		sb.WriteString(formatSchema(os.RequestSchema, ""))
+		sb.WriteString(formatSchema(op.RequestSchema, ""))
 	} else {
 		sb.WriteString("No request body required for this operation.\n")
 	}

@@ -76,6 +76,13 @@ var (
 		Help:      "Action module to associate with the action, as comma-separated key=value pairs matching the API fields: module_id and module_version_id (both required, UUIDs). Can be passed multiple times to associate several modules.",
 	}
 
+	actionListQuery = Flag{
+		Name:      "Query",
+		LongForm:  "query",
+		ShortForm: "q",
+		Help:      "Filter actions with a JSON object of query parameters (e.g. '{\"triggerId\":\"post-login\"}'). Any API-supported parameter works immediately. Run '--schema' to see documented parameters.",
+	}
+
 	actionTemplates = map[string]string{
 		"post-login":             actionTemplatePostLogin,
 		"credentials-exchange":   actionTemplateCredentialsExchange,
@@ -125,18 +132,41 @@ For more details: https://auth0.com/docs/api/management/v2`,
 }
 
 func listActionsCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		Schema bool
+		Query  string
+	}
+
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your actions",
-		Long:    "List your existing actions. To create one, run: `auth0 actions create`.",
+		Long: `List your existing actions. To create one, run: ` + "`auth0 actions create`" + `.
+
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).`,
 		Example: `  auth0 actions list
   auth0 actions ls
   auth0 actions ls --json
   auth0 actions ls --json-compact
-  auth0 actions ls --csv`,
+  auth0 actions ls --csv
+  auth0 actions list --schema
+  auth0 actions list --schema --json
+  auth0 actions list --query '{"triggerId":"post-login"}'
+  auth0 actions list --query '{"deployed":"true"}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "GET", "/actions/actions")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "actions/actions",
+					SchemaCmd: "auth0 actions list",
+				}, inputs.Query)
+			}
+
 			var list *management.ActionList
 
 			if err := ansi.Waiting(func() (err error) {
@@ -156,6 +186,8 @@ func listActionsCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	actionListQuery.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }
