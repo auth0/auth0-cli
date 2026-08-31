@@ -52,34 +52,6 @@ func TestApplyRawNameOverrideRejectsNonObject(t *testing.T) {
 	assert.ErrorContains(t, err, "cannot unmarshal array")
 }
 
-func TestApplyRawVaultConnectionOverrides(t *testing.T) {
-	body := json.RawMessage(`{"app_id":"HTTP","name":"Original","setup":{"type":"BEARER","token":"secret"}}`)
-
-	got, err := applyRawVaultConnectionOverrides(body, "Renamed", "SLACK")
-	require.NoError(t, err)
-
-	var obj map[string]json.RawMessage
-	require.NoError(t, json.Unmarshal(got, &obj))
-	assert.JSONEq(t, `"Renamed"`, string(obj["name"]))
-	assert.JSONEq(t, `"SLACK"`, string(obj["app_id"]))
-	assert.Contains(t, string(obj["setup"]), `"token"`)
-}
-
-func TestStripRawFields(t *testing.T) {
-	body := json.RawMessage(`{"id":"f1","name":"Flow","created_at":"x","actions":[]}`)
-
-	got, err := stripRawFields(body, flowServerManagedFields)
-	require.NoError(t, err)
-
-	var obj map[string]json.RawMessage
-	require.NoError(t, json.Unmarshal(got, &obj))
-	_, hasID := obj["id"]
-	_, hasCreated := obj["created_at"]
-	assert.False(t, hasID)
-	assert.False(t, hasCreated)
-	assert.Contains(t, string(obj["name"]), "Flow")
-}
-
 func TestFormatBuilderPageURL(t *testing.T) {
 	cfg := &config.Config{
 		Tenants: config.Tenants{
@@ -176,7 +148,7 @@ func TestCreateFlowCmdFromFilePreservesActions(t *testing.T) {
 	c := newRawTestCLI(stub, stdout)
 
 	cmd := createFlowCmd(c)
-	cmd.SetArgs([]string{"--file", path})
+	cmd.SetArgs([]string{"--actions-file", path})
 
 	require.NoError(t, cmd.Execute())
 	assert.Equal(t, http.MethodPost, stub.method)
@@ -200,73 +172,4 @@ func TestUpdateFlowCmdNameOnlyMergePreservesActions(t *testing.T) {
 	require.IsType(t, json.RawMessage{}, stub.payload)
 	// A name-only merge must send only the name so the API preserves the actions graph.
 	assert.JSONEq(t, `{"name":"New Name"}`, string(stub.payload.(json.RawMessage)))
-}
-
-func TestUpdateFlowCmdFileStripsServerManagedFields(t *testing.T) {
-	body := []byte(`{"id":"flow_4","name":"Flow","created_at":"2020-01-01","actions":[]}`)
-	path := filepath.Join(t.TempDir(), "flow.json")
-	require.NoError(t, os.WriteFile(path, body, 0600))
-
-	stub := &formHTTPClientStub{
-		response: json.RawMessage(`{"id":"flow_4","name":"Flow","actions":[]}`),
-	}
-	stdout := &bytes.Buffer{}
-	c := newRawTestCLI(stub, stdout)
-
-	cmd := updateFlowCmd(c)
-	cmd.SetArgs([]string{"flow_4", "--file", path})
-
-	require.NoError(t, cmd.Execute())
-	require.IsType(t, json.RawMessage{}, stub.payload)
-	sent := string(stub.payload.(json.RawMessage))
-	assert.NotContains(t, sent, `"id"`)
-	assert.NotContains(t, sent, `"created_at"`)
-	assert.Contains(t, sent, `"actions"`)
-}
-
-func TestCreateVaultConnectionCmdUsesRawClient(t *testing.T) {
-	body := []byte(`{"app_id":"HTTP","name":"Conn","setup":{"type":"BEARER","token":"secret"}}`)
-	path := filepath.Join(t.TempDir(), "conn.json")
-	require.NoError(t, os.WriteFile(path, body, 0600))
-
-	stub := &formHTTPClientStub{
-		response: json.RawMessage(`{"id":"ac_1","app_id":"HTTP","name":"Renamed","ready":true}`),
-	}
-	stdout := &bytes.Buffer{}
-	c := newRawTestCLI(stub, stdout)
-
-	cmd := createVaultConnectionCmd(c)
-	cmd.SetArgs([]string{"--file", path, "--name", "Renamed"})
-
-	require.NoError(t, cmd.Execute())
-	assert.Equal(t, http.MethodPost, stub.method)
-	require.IsType(t, json.RawMessage{}, stub.payload)
-	sent := string(stub.payload.(json.RawMessage))
-	assert.Contains(t, sent, `"Renamed"`)
-	assert.Contains(t, sent, `"setup"`)
-	// The rendered output must never echo the setup secrets back.
-	assert.NotContains(t, stdout.String(), "secret")
-}
-
-func TestUpdateVaultConnectionCmdStripsServerFields(t *testing.T) {
-	body := []byte(`{"id":"ac_2","name":"Conn","ready":true,"fingerprint":"abc","setup":{"token":"secret"}}`)
-	path := filepath.Join(t.TempDir(), "conn.json")
-	require.NoError(t, os.WriteFile(path, body, 0600))
-
-	stub := &formHTTPClientStub{
-		response: json.RawMessage(`{"id":"ac_2","name":"Conn","ready":true}`),
-	}
-	stdout := &bytes.Buffer{}
-	c := newRawTestCLI(stub, stdout)
-
-	cmd := updateVaultConnectionCmd(c)
-	cmd.SetArgs([]string{"ac_2", "--file", path})
-
-	require.NoError(t, cmd.Execute())
-	require.IsType(t, json.RawMessage{}, stub.payload)
-	sent := string(stub.payload.(json.RawMessage))
-	assert.NotContains(t, sent, `"id"`)
-	assert.NotContains(t, sent, `"ready"`)
-	assert.NotContains(t, sent, `"fingerprint"`)
-	assert.Contains(t, sent, `"setup"`)
 }

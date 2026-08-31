@@ -36,14 +36,17 @@ func AskMultiSelect(message string, response interface{}, options ...string) err
 }
 
 func AskBool(message string, value *bool, defaultValue bool) error {
+	*value = defaultValue
 	prompt := &survey.Confirm{
 		Message: message,
 		Default: defaultValue,
 	}
 
-	err := askOne(prompt, value)
+	if err := askOne(prompt, value); err != nil {
+		*value = defaultValue
+	}
 
-	return err
+	return nil
 }
 
 // Confirm prompts the user with a yes/no question and returns their response.

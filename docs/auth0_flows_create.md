@@ -7,7 +7,7 @@ has_toc: false
 
 Create a new flow.
 
-Interactive behavior: `auth0 flows create` asks only for the name and creates a minimal scaffold; it does not open an editor. Pass `--edit` to open an editor and author the flow actions before it is created, or supply the whole body via `--file` (or piped stdin) with an optional `--name` override. Run `auth0 flows create --example > flow.json` to generate an accepted file payload.
+Asks for the name, then whether to edit the actions graph before creating. Supply the body via `--actions-file` with an optional `--name` override. Run `auth0 flows create --actions-template > flow.json` to generate an actions template.
 
 ## Usage
 ```
@@ -19,22 +19,19 @@ auth0 flows create [flags]
 ```
   auth0 flows create
   auth0 flows create --name "My Flow"
-  auth0 flows create --name "My Flow" --edit
-  auth0 flows create --example > flow.json
-  auth0 flows create --file ./flow.json
-  cat flow.json | auth0 flows create -f -
+  auth0 flows create --actions-template > flow.json
+  auth0 flows create --name "My Flow" --actions-file ./flow.json
 ```
 
 
 ## Flags
 
 ```
-      --edit           Open an editor to author the flow graph after entering the name.
-      --example        Print an example flow JSON body and exit.
-  -f, --file string    Path to a JSON file with the flow body. Use '-' to read from stdin.
-      --json           Output in json format.
-      --json-compact   Output in compact json format.
-      --name string    Name of the Flow.
+  -f, --actions-file string   Path to a JSON file containing the flow actions body. Run with --actions-template to see the expected format.
+      --actions-template      Print the actions template for --actions-file and exit.
+      --json                  Output in json format.
+      --json-compact          Output in compact json format.
+      --name string           Name of the Flow.
 ```
 
 

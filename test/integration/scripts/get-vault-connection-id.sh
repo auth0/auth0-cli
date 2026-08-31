@@ -7,7 +7,7 @@ if [ -f "$FILE" ]; then
 fi
 
 connection=$( auth0 flows vault connections create \
-    --file ./test/integration/fixtures/vault-connection.json \
+    --setup-file ./test/integration/fixtures/vault-connection.json \
     --name "integration-test-connection" \
     --json --no-input )
 

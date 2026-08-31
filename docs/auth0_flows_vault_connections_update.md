@@ -7,7 +7,7 @@ has_toc: false
 
 Update a vault connection.
 
-Passing `--file` (or piped stdin) replaces every top-level field present in the file. Passing only `--name` performs a merge. Server-managed fields such as `id`, `ready`, and `fingerprint` are removed before the request is sent.
+Use `--setup-file` to replace setup credentials, or `--name` to rename. Run `auth0 flows vault connections create --setup-template --app-id <APP_ID>` to see the setup schema.
 
 ## Usage
 ```
@@ -18,18 +18,17 @@ auth0 flows vault connections update [flags]
 
 ```
   auth0 flows vault connections update <connection-id> --name "New Name"
-  auth0 flows vault connections update <connection-id> --file ./connection.json
-  cat connection.json | auth0 flows vault connections update <connection-id> -f -
+  auth0 flows vault connections update <connection-id> --setup-file ./setup.json
 ```
 
 
 ## Flags
 
 ```
-  -f, --file string    Path to a JSON file with the vault connection body (including its setup secrets). Use '-' to read from stdin.
-      --json           Output in json format.
-      --json-compact   Output in compact json format.
-      --name string    Name of the Vault connection.
+      --json                Output in json format.
+      --json-compact        Output in compact json format.
+      --name string         Name of the Vault connection.
+  -f, --setup-file string   Path to a JSON file containing the vault connection setup credentials. Run with --setup-template --app-id <APP_ID> to see the expected setup schema for a given app.
 ```
 
 

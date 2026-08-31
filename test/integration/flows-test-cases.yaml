@@ -23,28 +23,21 @@ tests:
       json:
         name: "integration-test-flow-json"
 
-  004 - it successfully creates a flow from the embedded example:
-    command: auth0 flows create --example | auth0 flows create -f - --name integration-test-flow-example --no-input --json
+  004 - it successfully creates a flow from a fixture file:
+    command: auth0 flows create --actions-file ./test/integration/fixtures/create-flow.json --name integration-test-flow-example --no-input --json
     exit-code: 0
     stdout:
       json:
         name: "integration-test-flow-example"
 
   005 - it fails to create a flow without a name:
-    command: echo '{"actions":[]}' | auth0 flows create -f - --no-input
+    command: auth0 flows create --no-input
     exit-code: 1
     stderr:
       contains:
         - flow name is required
 
-  006 - it fails to create a flow from invalid json:
-    command: echo 'not-json' | auth0 flows create -f - --no-input
-    exit-code: 1
-    stderr:
-      contains:
-        - parse flow body
-
-  007 - it successfully lists all flows with data:
+  006 - it successfully lists all flows with data:
     command: auth0 flows list
     exit-code: 0
     stdout:
@@ -53,7 +46,7 @@ tests:
         - NAME
         - UPDATED
 
-  008 - given a test flow, it successfully shows the flow details:
+  007 - given a test flow, it successfully shows the flow details:
     command: auth0 flows show $(./test/integration/scripts/get-flow-id.sh)
     exit-code: 0
     stdout:
@@ -62,28 +55,28 @@ tests:
         - NAME
         - integration-test-flow
 
-  009 - given a test flow, it successfully shows the flow details (json):
+  008 - given a test flow, it successfully shows the flow details (json):
     command: auth0 flows show $(./test/integration/scripts/get-flow-id.sh) --json
     exit-code: 0
     stdout:
       json:
         name: "integration-test-flow"
 
-  010 - given a test flow, it successfully updates the flow name:
+  009 - given a test flow, it successfully updates the flow name:
     command: auth0 flows update $(./test/integration/scripts/get-flow-id.sh) --name integration-test-flow-updated --json
     exit-code: 0
     stdout:
       json:
         name: "integration-test-flow-updated"
 
-  011 - given a test flow, it successfully updates the flow from a fixture file:
-    command: auth0 flows update $(./test/integration/scripts/get-flow-id.sh) -f ./test/integration/fixtures/update-flow.json --json
+  010 - given a test flow, it successfully updates the flow from a fixture file:
+    command: auth0 flows update $(./test/integration/scripts/get-flow-id.sh) --actions-file ./test/integration/fixtures/update-flow.json --json
     exit-code: 0
     stdout:
       json:
         name: "integration-test-flow-fixture-updated"
 
-  012 - given a test flow, it prints the builder URL for open:
+  011 - given a test flow, it prints the builder URL for open:
     command: auth0 flows open $(./test/integration/scripts/get-flow-id.sh) --no-input
     exit-code: 0
     stderr:
@@ -92,107 +85,15 @@ tests:
         - /flows/
         - /edit
 
-  013 - given a test flow, it successfully lists its executions (json):
+  012 - given a test flow, it successfully lists its executions (json):
     command: auth0 flows executions list $(./test/integration/scripts/get-flow-id.sh) --json
     exit-code: 0
 
-  014 - given a test flow, it successfully lists its executions:
+  013 - given a test flow, it successfully lists its executions:
     command: auth0 flows executions list $(./test/integration/scripts/get-flow-id.sh)
     exit-code: 0
 
-  015 - it successfully lists all vault connections (json):
-    command: auth0 flows vault connections list --json
-    exit-code: 0
-
-  016 - it prints an example vault connection body:
-    command: auth0 flows vault connections create --example
-    exit-code: 0
-    stdout:
-      contains:
-        - '"app_id"'
-        - '"setup"'
-
-  017 - it prints the vault app builder URL for open:
-    command: auth0 flows vault open HTTP --no-input
-    exit-code: 0
-    stderr:
-      contains:
-        - forms.auth0.com
-        - /vault/apps/HTTP/edit
-
-  018 - it fails to create a vault connection without a body:
-    command: auth0 flows vault connections create --no-input
-    exit-code: 1
-    stderr:
-      contains:
-        - vault connection body provided
-
-  019 - it successfully creates a vault connection from a fixture file (json):
-    command: auth0 flows vault connections create --file ./test/integration/fixtures/vault-connection.json --name integration-test-connection-created --no-input --json
-    exit-code: 0
-    stdout:
-      json:
-        name: "integration-test-connection-created"
-
-  020 - it successfully lists all vault connections with data:
-    command: auth0 flows vault connections list
-    exit-code: 0
-    stdout:
-      contains:
-        - ID
-        - NAME
-        - APP
-
-  021 - given a test vault connection, it successfully shows the connection details:
-    command: auth0 flows vault connections show $(./test/integration/scripts/get-vault-connection-id.sh)
-    exit-code: 0
-    stdout:
-      contains:
-        - ID
-        - NAME
-        - integration-test-connection
-
-  022 - given a test vault connection, it does not echo the setup secret on show:
-    command: auth0 flows vault connections show $(./test/integration/scripts/get-vault-connection-id.sh)
-    exit-code: 0
-    stdout:
-      not-contains:
-        - integration-test-token
-
-  023 - given a test vault connection, it successfully shows the connection details (json):
-    command: auth0 flows vault connections show $(./test/integration/scripts/get-vault-connection-id.sh) --json
-    exit-code: 0
-    stdout:
-      json:
-        name: "integration-test-connection"
-
-  024 - given a test vault connection, it successfully updates the connection name:
-    command: auth0 flows vault connections update $(./test/integration/scripts/get-vault-connection-id.sh) --name integration-test-connection-updated --json
-    exit-code: 0
-    stdout:
-      json:
-        name: "integration-test-connection-updated"
-
-  025 - given a test vault connection, it successfully updates the connection from a fixture file:
-    command: auth0 flows vault connections update $(./test/integration/scripts/get-vault-connection-id.sh) -f ./test/integration/fixtures/update-vault-connection.json --json
-    exit-code: 0
-    stdout:
-      json:
-        name: "integration-test-connection-fixture-updated"
-
-  026 - agent mode refuses to delete a vault connection without force:
-    command: AUTH0_AGENT_MODE=true auth0 flows vault connections delete $(./test/integration/scripts/get-vault-connection-id.sh)
-    exit-code: 1
-    stderr:
-      contains:
-        - destructive command
-        - --force
-
-  027 - given a test vault connection, it successfully deletes the connection:
-    command: auth0 flows vault connections delete $(./test/integration/scripts/get-vault-connection-id.sh) --force
-    exit-code: 0
-
-  028 - agent mode refuses to delete a flow without force:
+  014 - agent mode refuses to delete a flow without force:
     command: AUTH0_AGENT_MODE=true auth0 flows delete $(./test/integration/scripts/get-flow-id.sh)
     exit-code: 1
     stderr:
@@ -200,14 +101,10 @@ tests:
         - destructive command
         - --force
 
-  029 - given a test flow, it successfully deletes the flow:
+  015 - given a test flow, it successfully deletes the flow:
     command: auth0 flows delete $(./test/integration/scripts/get-flow-id.sh) --force
     exit-code: 0
 
-  030 - it cleans up all vault connections created by this suite:
-    command: ./test/integration/scripts/cleanup-vault-connections.sh
-    exit-code: 0
-
-  031 - it cleans up all flows created by this suite:
+  016 - it cleans up all flows created by this suite:
     command: ./test/integration/scripts/cleanup-flows.sh
     exit-code: 0

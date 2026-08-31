@@ -7,7 +7,7 @@ has_toc: false
 
 Create a new vault connection.
 
-Interactive behavior: `auth0 flows vault connections create` asks for the name and app id, then opens an editor seeded with a provider-specific `setup` template so you can enter the connection secrets. Alternatively, supply the whole body (including its `setup` secrets) via `--file` (or piped stdin); `--name` and `--app-id` override the corresponding fields after the file is parsed. Run `auth0 flows vault connections create --example` to print a template.
+Prompts for name and app id, then asks whether to add setup credentials. Use `--setup-file` to supply credentials non-interactively. Run `--setup-template --app-id <APP_ID>` to print the setup credentials template for a given app.
 
 ## Usage
 ```
@@ -18,22 +18,21 @@ auth0 flows vault connections create [flags]
 
 ```
   auth0 flows vault connections create
-  auth0 flows vault connections create --file ./connection.json
-  auth0 flows vault connections create --file ./connection.json --name "My Connection"
-  auth0 flows vault connections create --example > connection.json
-  cat connection.json | auth0 flows vault connections create -f -
+  auth0 flows vault connections create --name "My Connection" --app-id SLACK
+  auth0 flows vault connections create --name "My Connection" --app-id SLACK --setup-file ./setup.json
+  auth0 flows vault connections create --setup-template --app-id SLACK > setup.json
 ```
 
 
 ## Flags
 
 ```
-      --app-id string   Identifier of the app the Vault connection integrates with (e.g. HTTP, SLACK).
-      --example         Print an example flow JSON body and exit.
-  -f, --file string     Path to a JSON file with the vault connection body (including its setup secrets). Use '-' to read from stdin.
-      --json            Output in json format.
-      --json-compact    Output in compact json format.
-      --name string     Name of the Vault connection.
+      --app-id string       Identifier of the app the Vault connection integrates with (e.g. HTTP, SLACK).
+      --json                Output in json format.
+      --json-compact        Output in compact json format.
+      --name string         Name of the Vault connection.
+  -f, --setup-file string   Path to a JSON file containing the vault connection setup credentials. Run with --setup-template --app-id <APP_ID> to see the expected setup schema for a given app.
+      --setup-template      Print the setup credentials template for the given --app-id and exit.
 ```
 
 

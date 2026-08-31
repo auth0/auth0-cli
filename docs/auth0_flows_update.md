@@ -7,7 +7,7 @@ has_toc: false
 
 Update a flow.
 
-Passing `--file` (or piped stdin) replaces every top-level field present in the file. Passing only `--name` performs a merge that preserves the flow's actions. Server-managed fields such as `id`, `created_at`, and `updated_at` are removed before the request is sent.
+Passing `--actions-file` replaces the flow's actions graph. Passing only `--name` renames the flow without touching its actions.
 
 ## Usage
 ```
@@ -18,18 +18,17 @@ auth0 flows update [flags]
 
 ```
   auth0 flows update <flow-id> --name "New Name"
-  auth0 flows update <flow-id> --file ./flow.json
-  cat flow.json | auth0 flows update <flow-id> -f -
+  auth0 flows update <flow-id> --actions-file ./flow.json
 ```
 
 
 ## Flags
 
 ```
-  -f, --file string    Path to a JSON file with the flow body. Use '-' to read from stdin.
-      --json           Output in json format.
-      --json-compact   Output in compact json format.
-      --name string    Name of the Flow.
+  -f, --actions-file string   Path to a JSON file containing the flow actions body. Run with --actions-template to see the expected format.
+      --json                  Output in json format.
+      --json-compact          Output in compact json format.
+      --name string           Name of the Flow.
 ```
 
 
