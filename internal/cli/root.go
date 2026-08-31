@@ -26,6 +26,25 @@ import (
 
 const rootShort = "Build, manage and test your Auth0 integrations from the command line."
 
+const rootLong = `Build, manage and test your Auth0 integrations from the command line.
+
+## For Agents and Automation
+
+The Auth0 CLI now includes features for AI agents and automation:
+
+  • Schema Discovery: Use the '--schema' flag on a create/update command to print
+    its request payload schema. Add '--json' for machine-readable output.
+    Example: auth0 actions create --schema --json
+
+  • JSON Input: Use '--data' flag for programmatic resource creation/updates
+    Example: auth0 actions create --data @action.json
+
+  • Schema Validation: JSON inputs are validated locally before API calls
+    Example: auth0 actions create --data '{"name":"my-action",...}'
+
+See 'auth0 <resource> --help' for details on specific resources.
+For agent integration guide, visit: https://github.com/auth0/auth0-cli`
+
 const panicMessage = `
 !!     Uh oh. Something went wrong.
 !!     If this problem keeps happening feel free to report an issue at
@@ -114,7 +133,7 @@ func buildRootCmd(cli *cli) *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Short:         rootShort,
-		Long:          rootShort + "\n" + getLogin(cli),
+		Long:          rootLong + "\n\n" + getLogin(cli),
 		Version:       buildinfo.GetVersionWithCommit(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			cli.executedCommandPath = cmd.CommandPath()
@@ -379,6 +398,7 @@ func commandTrackingProperties(cli *cli) map[string]string {
 		"forced":        boolString(cli.force),
 		"agent_client":  cli.agentClientName(),
 		"is_api":        boolString(isAPICommand(cli.executedCommandPath)),
+		"tenant":        cli.tenant,
 	}
 }
 

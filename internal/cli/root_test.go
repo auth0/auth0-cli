@@ -179,6 +179,20 @@ func TestIsAPICommand(t *testing.T) {
 	}
 }
 
+func TestCommandTrackingProperties(t *testing.T) {
+	t.Run("includes tenant domain when authenticated", func(t *testing.T) {
+		c := &cli{tenant: "example.us.auth0.com", renderer: &display.Renderer{}}
+		props := commandTrackingProperties(c)
+		assert.Equal(t, "example.us.auth0.com", props["tenant"])
+	})
+
+	t.Run("includes empty tenant when unauthenticated", func(t *testing.T) {
+		c := &cli{tenant: "", renderer: &display.Renderer{}}
+		props := commandTrackingProperties(c)
+		assert.Equal(t, "", props["tenant"])
+	})
+}
+
 func TestMergeProperties(t *testing.T) {
 	base := map[string]string{"interactive": "true", "success": "true"}
 	override := map[string]string{"success": "false", "error_class": "auth"}
