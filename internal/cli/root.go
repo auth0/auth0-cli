@@ -379,6 +379,7 @@ func commandTrackingProperties(cli *cli) map[string]string {
 		"forced":        boolString(cli.force),
 		"agent_client":  cli.agentClientName(),
 		"is_api":        boolString(isAPICommand(cli.executedCommandPath)),
+		"tenant":        cli.tenant,
 	}
 }
 
