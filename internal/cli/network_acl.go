@@ -106,30 +106,37 @@ var (
 		LongForm: "auth0-managed",
 		Help:     "Comma-separated list of Auth0-curated blocklists to match (Eg. auth0.icloud_relay_proxy,auth0.low_reputation). (EA only).",
 	}
+
+	networkACLSignatureKeyIDs = Flag{
+		Name:     "SignatureKeyIDs",
+		LongForm: "signature-key-ids",
+		Help:     "Comma-separated list of Network ACL key ids whose HTTP message signature satisfies the rule (Eg. key_abc,key_def). (EA only).",
+	}
 )
 
 // validateAndSetBasicFields handles the common validation and patch building logic for basic fields.
 func validateAndSetBasicFields(inputs *struct {
-	ID           string
-	Description  string
-	Active       bool
-	ActiveStr    string
-	Priority     int
-	RuleJSON     string
-	Action       string
-	RedirectURI  string
-	Scope        string
-	ASNs         []int
-	CountryCodes []string
-	SubdivCodes  []string
-	IPv4CIDRs    []string
-	IPv6CIDRs    []string
-	JA3          []string
-	JA4          []string
-	UserAgents   []string
-	Auth0Managed []string
-	MatchRule    bool
-	NoMatchRule  bool
+	ID              string
+	Description     string
+	Active          bool
+	ActiveStr       string
+	Priority        int
+	RuleJSON        string
+	Action          string
+	RedirectURI     string
+	Scope           string
+	ASNs            []int
+	CountryCodes    []string
+	SubdivCodes     []string
+	IPv4CIDRs       []string
+	IPv6CIDRs       []string
+	JA3             []string
+	JA4             []string
+	UserAgents      []string
+	Auth0Managed    []string
+	SignatureKeyIDs []string
+	MatchRule       bool
+	NoMatchRule     bool
 }, patch *management.NetworkACL, cmd *cobra.Command) error {
 	if cmd.Flags().Changed("description") {
 		if len(inputs.Description) > 255 {
@@ -191,6 +198,7 @@ func selectNetworkACLParams(cmd *cobra.Command) (map[string]bool, error) {
 		"JA4Fingerprints",
 		"User Agents",
 		"Auth0 Managed",
+		"Signature Keys",
 	}
 
 	var selected []string
@@ -218,21 +226,22 @@ func selectNetworkACLParams(cmd *cobra.Command) (map[string]bool, error) {
 
 // ruleDefaults holds default values extracted from current ACL rule.
 type ruleDefaults struct {
-	Scope        string
-	Action       string
-	RedirectURI  string
-	ASNs         []int
-	CountryCodes []string
-	SubdivCodes  []string
-	IPv4CIDRs    []string
-	IPv6CIDRs    []string
-	JA3          []string
-	JA4          []string
-	UserAgents   []string
-	Auth0Managed []string
-	IsMatchRule  bool
-	HasMatchRule bool
-	HasNotMatch  bool
+	Scope           string
+	Action          string
+	RedirectURI     string
+	ASNs            []int
+	CountryCodes    []string
+	SubdivCodes     []string
+	IPv4CIDRs       []string
+	IPv6CIDRs       []string
+	JA3             []string
+	JA4             []string
+	UserAgents      []string
+	Auth0Managed    []string
+	SignatureKeyIDs []string
+	IsMatchRule     bool
+	HasMatchRule    bool
+	HasNotMatch     bool
 }
 
 // extractCurrentRuleDefaults extracts default values from current ACL rule for interactive prompts.
@@ -307,6 +316,13 @@ func extractCurrentRuleDefaults(currentACL *management.NetworkACL) *ruleDefaults
 		if match.Auth0Managed != nil {
 			defaults.Auth0Managed = *match.Auth0Managed
 		}
+		if match.HTTPMessageSignature != nil {
+			for _, k := range match.HTTPMessageSignature.Keys {
+				if k.ID != nil {
+					defaults.SignatureKeyIDs = append(defaults.SignatureKeyIDs, *k.ID)
+				}
+			}
+		}
 	}
 
 	return defaults
@@ -314,21 +330,22 @@ func extractCurrentRuleDefaults(currentACL *management.NetworkACL) *ruleDefaults
 
 // ruleInputs holds user inputs for rule configuration.
 type ruleInputs struct {
-	Scope        string
-	Action       string
-	RedirectURI  string
-	ASNs         []int
-	CountryCodes []string
-	SubdivCodes  []string
-	IPv4CIDRs    []string
-	IPv6CIDRs    []string
-	JA3          []string
-	JA4          []string
-	UserAgents   []string
-	Auth0Managed []string
-	IsMatchRule  bool
-	MatchRule    bool
-	NoMatchRule  bool
+	Scope           string
+	Action          string
+	RedirectURI     string
+	ASNs            []int
+	CountryCodes    []string
+	SubdivCodes     []string
+	IPv4CIDRs       []string
+	IPv6CIDRs       []string
+	JA3             []string
+	JA4             []string
+	UserAgents      []string
+	Auth0Managed    []string
+	SignatureKeyIDs []string
+	IsMatchRule     bool
+	MatchRule       bool
+	NoMatchRule     bool
 }
 
 // promptForRuleDetails handles interactive prompting for rule configuration.
@@ -386,7 +403,7 @@ func promptForRuleDetails(cmd *cobra.Command, cli *cli, defaults *ruleDefaults, 
 		var selectedMatchOption string
 		if err := (&Flag{
 			Name: "What kind of rule do you want to create?",
-			Help: "Match or Not Match rule (ASNs, Country Codes, Subdivision Codes, IPv4 CIDRs, IPv6 CIDRs, JA3/JA4 Fingerprints, User Agents, Auth0 Managed)",
+			Help: "Match or Not Match rule (ASNs, Country Codes, Subdivision Codes, IPv4 CIDRs, IPv6 CIDRs, JA3/JA4 Fingerprints, User Agents, Auth0 Managed, Signature Keys)",
 		}).Select(cmd, &selectedMatchOption, matchOptions, nil); err != nil {
 			return nil, err
 		}
@@ -400,7 +417,7 @@ func promptForRuleDetails(cmd *cobra.Command, cli *cli, defaults *ruleDefaults, 
 	}
 
 	// Ask for values only for selected parameters.
-	if err := promptForMatchCriteria(cmd, selectedParams, inputs, defaults); err != nil {
+	if err := promptForMatchCriteria(cmd, cli, selectedParams, inputs, defaults); err != nil {
 		return nil, err
 	}
 
@@ -408,7 +425,7 @@ func promptForRuleDetails(cmd *cobra.Command, cli *cli, defaults *ruleDefaults, 
 }
 
 // promptForMatchCriteria handles prompting for all match criteria based on selected parameters.
-func promptForMatchCriteria(cmd *cobra.Command, selectedParams map[string]bool, inputs *ruleInputs, defaults *ruleDefaults) error {
+func promptForMatchCriteria(cmd *cobra.Command, cli *cli, selectedParams map[string]bool, inputs *ruleInputs, defaults *ruleDefaults) error {
 	if selectedParams["ASNs"] {
 		if err := networkACLASNs.AskIntSlice(cmd, &inputs.ASNs, &defaults.ASNs); err != nil {
 			return err
@@ -471,7 +488,76 @@ func promptForMatchCriteria(cmd *cobra.Command, selectedParams map[string]bool, 
 		}
 	}
 
+	if selectedParams["Signature Keys"] {
+		ids, err := cli.pickNetworkACLSignatureKeys(cmd, defaults.SignatureKeyIDs)
+		if err != nil {
+			return err
+		}
+		inputs.SignatureKeyIDs = ids
+	}
+
 	return nil
+}
+
+// pickNetworkACLSignatureKeys resolves the http_message_signature key ids for a rule.
+//
+// If --signature-key-ids was passed, those ids are used verbatim. Otherwise it lists the
+// tenant's Network ACL keys (v3 /keys/network-acls) and shows a multi-select of them, with
+// the ids already referenced by the rule (current) pre-selected.
+func (c *cli) pickNetworkACLSignatureKeys(cmd *cobra.Command, current []string) ([]string, error) {
+	if cmd.Flags().Changed("signature-key-ids") {
+		return cmd.Flags().GetStringSlice("signature-key-ids")
+	}
+
+	var options []string
+	labelToID := make(map[string]string)
+	idToLabel := make(map[string]string)
+	if err := ansi.Waiting(func() error {
+		resp, err := c.apiv3.NetworkACLKey.List(cmd.Context())
+		if err != nil {
+			return err
+		}
+		if resp != nil {
+			for _, k := range resp.Keys {
+				id := k.GetID()
+				label := fmt.Sprintf("%s (%s)", k.GetName(), id)
+				options = append(options, label)
+				idToLabel[id] = label
+				labelToID[label] = id
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	if len(options) == 0 {
+		return nil, errors.New("no Network ACL keys exist for this tenant; create a key first, then reference it here")
+	}
+
+	// Pre-select the keys already referenced by the rule.
+	defaults := make([]string, 0, len(current))
+	for _, id := range current {
+		if label, ok := idToLabel[id]; ok {
+			defaults = append(defaults, label)
+		}
+	}
+
+	var selected []string
+	if err := prompt.AskMultiSelectWithDefault(
+		"Select the signing keys whose HTTP message signature satisfies the rule using the spacebar and press Enter to confirm:",
+		&selected,
+		defaults,
+		options...,
+	); err != nil {
+		return nil, err
+	}
+
+	ids := make([]string, 0, len(selected))
+	for _, label := range selected {
+		ids = append(ids, labelToID[label])
+	}
+	return ids, nil
 }
 
 // buildNetworkACLRule creates a NetworkACLRule from the provided inputs.
@@ -532,6 +618,14 @@ func buildNetworkACLRule(inputs *ruleInputs) (*management.NetworkACLRule, error)
 	}
 	if len(inputs.Auth0Managed) > 0 {
 		match.Auth0Managed = &inputs.Auth0Managed
+		matchProvided = true
+	}
+	if len(inputs.SignatureKeyIDs) > 0 {
+		keys := make([]*management.NetworkACLHTTPMessageSignatureKey, len(inputs.SignatureKeyIDs))
+		for i := range inputs.SignatureKeyIDs {
+			keys[i] = &management.NetworkACLHTTPMessageSignatureKey{ID: &inputs.SignatureKeyIDs[i]}
+		}
+		match.HTTPMessageSignature = &management.NetworkACLHTTPMessageSignature{Keys: keys}
 		matchProvided = true
 	}
 
@@ -637,24 +731,25 @@ func showNetworkACLCmd(cli *cli) *cobra.Command {
 
 func createNetworkACLCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Description  string
-		Active       bool
-		ActiveStr    string // Added for handling --active true/false.
-		Priority     int
-		RuleJSON     string
-		Action       string
-		RedirectURI  string
-		ASNs         []int
-		CountryCodes []string
-		SubdivCodes  []string
-		IPv4CIDRs    []string
-		IPv6CIDRs    []string
-		JA3          []string
-		JA4          []string
-		UserAgents   []string
-		Auth0Managed []string
-		Scope        string
-		isMatchRule  bool
+		Description     string
+		Active          bool
+		ActiveStr       string // Added for handling --active true/false.
+		Priority        int
+		RuleJSON        string
+		Action          string
+		RedirectURI     string
+		ASNs            []int
+		CountryCodes    []string
+		SubdivCodes     []string
+		IPv4CIDRs       []string
+		IPv6CIDRs       []string
+		JA3             []string
+		JA4             []string
+		UserAgents      []string
+		Auth0Managed    []string
+		SignatureKeyIDs []string
+		Scope           string
+		isMatchRule     bool
 	}
 
 	cmd := &cobra.Command{
@@ -672,8 +767,9 @@ The --rule parameter is required and must contain a valid JSON object with actio
   auth0 network-acl create -d "Block Bots" -p 4 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"user_agents":["badbot/*","malicious/*"],"ja3_fingerprints":["deadbeef","cafebabe"]}}'
   auth0 network-acl create --description "Complex Rule" --priority 5 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
   
-  # Early Access (auth0_managed match/not_match value):
+  # Early Access (auth0_managed and http_message_signature match/not_match value):
   auth0 network-acl create -d "Curated Blocklist" -p 6 --active true --rule '{"action":{"log":true},"scope":"tenant","not_match":{"auth0_managed":["auth0.vpn","auth0.proxy"]}}'
+  auth0 network-acl create -d "Only Signed" -p 8 --active true --rule '{"action":{"allow":true},"scope":"authentication","match":{"http_message_signature":{"keys":[{"id": "key_123"}]}}}'
   `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Check if we're in non-interactive mode (flags provided) but rule JSON is missing.
@@ -800,6 +896,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 	networkACLJA4Fingerprints.RegisterStringSlice(cmd, &inputs.JA4, nil)
 	networkACLUserAgents.RegisterStringSlice(cmd, &inputs.UserAgents, nil)
 	networkACLAuth0Managed.RegisterStringSlice(cmd, &inputs.Auth0Managed, nil)
+	networkACLSignatureKeyIDs.RegisterStringSlice(cmd, &inputs.SignatureKeyIDs, nil)
 
 	// These flags must be passed in non-interactive mode.
 	cmd.MarkFlagRequired("description")
@@ -811,26 +908,27 @@ The --rule parameter is required and must contain a valid JSON object with actio
 
 func updateNetworkACLCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID           string
-		Description  string
-		Active       bool
-		ActiveStr    string
-		Priority     int
-		RuleJSON     string
-		Action       string
-		RedirectURI  string
-		Scope        string
-		ASNs         []int
-		CountryCodes []string
-		SubdivCodes  []string
-		IPv4CIDRs    []string
-		IPv6CIDRs    []string
-		JA3          []string
-		JA4          []string
-		UserAgents   []string
-		Auth0Managed []string
-		MatchRule    bool
-		NoMatchRule  bool
+		ID              string
+		Description     string
+		Active          bool
+		ActiveStr       string
+		Priority        int
+		RuleJSON        string
+		Action          string
+		RedirectURI     string
+		Scope           string
+		ASNs            []int
+		CountryCodes    []string
+		SubdivCodes     []string
+		IPv4CIDRs       []string
+		IPv6CIDRs       []string
+		JA3             []string
+		JA4             []string
+		UserAgents      []string
+		Auth0Managed    []string
+		SignatureKeyIDs []string
+		MatchRule       bool
+		NoMatchRule     bool
 	}
 
 	cmd := &cobra.Command{
@@ -848,8 +946,9 @@ To update non-interactively, supply the description, active, priority, and rule 
   auth0 network-acl update <id> --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"]}}'
   auth0 network-acl update <id> --description "Complex Rule updated" --priority 1 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
   
-  # Early Access (auth0_managed match/not_match value):
+  # Early Access (auth0_managed and http_message_signature match/not_match value):
   auth0 network-acl update <id> --rule '{"action":{"allow":true},"scope":"tenant","match":{"auth0_managed":["auth0.low_reputation"]}}'
+  auth0 network-acl update <id> --rule '{"action":{"allow":true},"scope":"authentication","match":{"http_message_signature":{"keys":[{"id": "key_123"},{"id": "key_456"}]}}}'
   `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get the network ACL ID.
@@ -961,6 +1060,7 @@ To update non-interactively, supply the description, active, priority, and rule 
 	networkACLJA4Fingerprints.RegisterStringSlice(cmd, &inputs.JA4, nil)
 	networkACLUserAgents.RegisterStringSlice(cmd, &inputs.UserAgents, nil)
 	networkACLAuth0Managed.RegisterStringSlice(cmd, &inputs.Auth0Managed, nil)
+	networkACLSignatureKeyIDs.RegisterStringSlice(cmd, &inputs.SignatureKeyIDs, nil)
 
 	return cmd
 }

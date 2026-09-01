@@ -25,8 +25,9 @@ auth0 network-acl create [flags]
   auth0 network-acl create -d "Block Bots" -p 4 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"user_agents":["badbot/*","malicious/*"],"ja3_fingerprints":["deadbeef","cafebabe"]}}'
   auth0 network-acl create --description "Complex Rule" --priority 5 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
   
-  # Early Access (auth0_managed match/not_match value):
+  # Early Access (auth0_managed and http_message_signature match/not_match value):
   auth0 network-acl create -d "Curated Blocklist" -p 6 --active true --rule '{"action":{"log":true},"scope":"tenant","not_match":{"auth0_managed":["auth0.vpn","auth0.proxy"]}}'
+  auth0 network-acl create -d "Only Signed" -p 8 --active true --rule '{"action":{"allow":true},"scope":"authentication","match":{"http_message_signature":{"keys":[{"id": "key_123"}]}}}'
   
 ```
 
@@ -50,6 +51,7 @@ auth0 network-acl create [flags]
       --redirect-uri string         URI to redirect to when action is redirect
       --rule string                 Network ACL rule configuration in JSON format (required for non-interactive mode)
       --scope string                Scope of the rule (management, authentication, tenant)
+      --signature-key-ids strings   Comma-separated list of Network ACL key ids whose HTTP message signature satisfies the rule (Eg. key_abc,key_def). (EA only).
       --subdivision-codes strings   Comma-separated list of subdivision codes to match (Eg. US-NY,US-CA)
       --user-agents strings         Comma-separated list of user agents to match (Eg. badbot/*,malicious/*)
 ```

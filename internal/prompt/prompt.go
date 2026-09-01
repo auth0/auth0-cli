@@ -35,6 +35,17 @@ func AskMultiSelect(message string, response interface{}, options ...string) err
 	return err
 }
 
+// AskMultiSelectWithDefault is AskMultiSelect with the given default options pre-selected.
+func AskMultiSelectWithDefault(message string, response interface{}, defaults []string, options ...string) error {
+	prompt := &survey.MultiSelect{
+		Message: message,
+		Options: options,
+		Default: defaults,
+	}
+
+	return askOne(prompt, response)
+}
+
 func AskBool(message string, value *bool, defaultValue bool) error {
 	prompt := &survey.Confirm{
 		Message: message,

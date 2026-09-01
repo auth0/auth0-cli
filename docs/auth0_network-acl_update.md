@@ -25,8 +25,9 @@ auth0 network-acl update [flags]
   auth0 network-acl update <id> --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"]}}'
   auth0 network-acl update <id> --description "Complex Rule updated" --priority 1 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
   
-  # Early Access (auth0_managed match/not_match value):
+  # Early Access (auth0_managed and http_message_signature match/not_match value):
   auth0 network-acl update <id> --rule '{"action":{"allow":true},"scope":"tenant","match":{"auth0_managed":["auth0.low_reputation"]}}'
+  auth0 network-acl update <id> --rule '{"action":{"allow":true},"scope":"authentication","match":{"http_message_signature":{"keys":[{"id": "key_123"},{"id": "key_456"}]}}}'
   
 ```
 
@@ -49,6 +50,7 @@ auth0 network-acl update [flags]
       --redirect-uri string         URI to redirect to when action is redirect
       --rule string                 Network ACL rule configuration in JSON format
       --scope string                Scope of the rule (management, authentication, tenant)
+      --signature-key-ids strings   Comma-separated list of Network ACL key ids whose HTTP message signature satisfies the rule (Eg. key_abc,key_def). (EA only).
       --subdivision-codes strings   Comma-separated list of subdivision codes to match (Eg. US-NY,US-CA)
       --user-agents strings         Comma-separated list of user agents to match (Eg. badbot/*,malicious/*)
 ```
