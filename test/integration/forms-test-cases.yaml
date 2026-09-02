@@ -1,0 +1,128 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  001 - it successfully lists all forms (json):
+    command: auth0 forms list --json
+    exit-code: 0
+
+  002 - it successfully creates a form via --name:
+    command: auth0 forms create --name integration-test-form-created --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - ID
+        - NAME
+        - integration-test-form-created
+
+  003 - it successfully creates a form and outputs in json:
+    command: auth0 forms create --name integration-test-form-json --no-input --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-form-json"
+
+  004 - it successfully creates a form from the embedded example:
+    command: auth0 forms create --example | auth0 forms create -f - --name integration-test-form-example --no-input --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-form-example"
+        languages.primary: "en"
+        languages.default: "en"
+
+  005 - it fails to create a form without a name:
+    command: echo '{"start":{},"nodes":[],"ending":{}}' | auth0 forms create -f - --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - form name is required
+
+  006 - it fails to create a form from invalid json:
+    command: echo 'not-json' | auth0 forms create -f - --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - parse form body
+
+  007 - it successfully lists all forms with data:
+    command: auth0 forms list
+    exit-code: 0
+    stdout:
+      contains:
+        - ID
+        - NAME
+        - UPDATED
+
+  008 - given a test form, it successfully shows the form details:
+    command: auth0 forms show $(./test/integration/scripts/get-form-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - ID
+        - NAME
+        - integration-test-form
+
+  009 - given a test form, it successfully shows the form details (json):
+    command: auth0 forms show $(./test/integration/scripts/get-form-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-form"
+
+  010 - given a test form, it successfully updates the form name:
+    command: auth0 forms update $(./test/integration/scripts/get-form-id.sh) --name integration-test-form-updated --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-form-updated"
+
+  011 - given a test form, it successfully updates the form from a fixture file:
+    command: auth0 forms update $(./test/integration/scripts/get-form-id.sh) -f ./test/integration/fixtures/update-form.json --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-form-fixture-updated"
+        languages.primary: "en"
+        languages.default: "en"
+
+  012 - given a test form, it successfully exports the form as an envelope:
+    command: auth0 forms export $(./test/integration/scripts/get-form-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - '"version"'
+        - '"form"'
+        - '"name"'
+
+  013 - given a test form, it successfully round-trips export to import:
+    command: auth0 forms export $(./test/integration/scripts/get-form-id.sh) | auth0 forms import --id $(./test/integration/scripts/get-form-id.sh) -f - --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-form-fixture-updated"
+
+  014 - given a test form, it prints the builder URL for open:
+    command: auth0 forms open $(./test/integration/scripts/get-form-id.sh) --no-input
+    exit-code: 0
+    stderr:
+      contains:
+        - forms.auth0.com
+        - /edit
+
+  015 - agent mode refuses to delete a form without force:
+    command: AUTH0_AGENT_MODE=true auth0 forms delete $(./test/integration/scripts/get-form-id.sh)
+    exit-code: 1
+    stderr:
+      contains:
+        - destructive command
+        - --force
+
+  016 - given a test form, it successfully deletes the form:
+    command: auth0 forms delete $(./test/integration/scripts/get-form-id.sh) --force
+    exit-code: 0
+
+  017 - it cleans up all forms created by this suite:
+    command: ./test/integration/scripts/cleanup-forms.sh
+    exit-code: 0

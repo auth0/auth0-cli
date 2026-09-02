@@ -1076,29 +1076,27 @@ func TestFormResourceFetcher_FetchData(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		formAPI := mock.NewMockFormAPI(ctrl)
+		formAPI := mock.NewMockFormAPIV3(ctrl)
 		formAPI.EXPECT().
 			List(gomock.Any(), gomock.Any()).Return(
-			&management.FormList{
-				List: management.List{
-					Start: 0,
-					Limit: 1,
-					Total: 2,
+			&auth0.FormSummaryPage{
+				Results: []*managementv3.FormSummary{
+					{
+						ID:   "form_id1",
+						Name: "Form 1",
+					},
+					{
+						ID:   "form_id2",
+						Name: "Form 2",
+					},
 				},
-				Forms: []*management.Form{
-					{
-						ID:   auth0.String("form_id1"),
-						Name: auth0.String("Form 1"),
-					},
-					{
-						ID:   auth0.String("form_id2"),
-						Name: auth0.String("Form 2"),
-					},
+				NextPageFunc: func(_ context.Context) (*auth0.FormSummaryPage, error) {
+					return nil, core.ErrNoPages
 				},
 			}, nil)
 
 		fetcher := formResourceFetcher{
-			api: &auth0.API{
+			apiv3: &auth0.APIV3{
 				Form: formAPI,
 			},
 		}
@@ -1123,20 +1121,18 @@ func TestFormResourceFetcher_FetchData(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		formAPI := mock.NewMockFormAPI(ctrl)
+		formAPI := mock.NewMockFormAPIV3(ctrl)
 		formAPI.EXPECT().
 			List(gomock.Any(), gomock.Any()).Return(
-			&management.FormList{
-				List: management.List{
-					Start: 0,
-					Limit: 0,
-					Total: 0,
+			&auth0.FormSummaryPage{
+				Results: []*managementv3.FormSummary{},
+				NextPageFunc: func(_ context.Context) (*auth0.FormSummaryPage, error) {
+					return nil, core.ErrNoPages
 				},
-				Forms: []*management.Form{},
 			}, nil)
 
 		fetcher := formResourceFetcher{
-			api: &auth0.API{
+			apiv3: &auth0.APIV3{
 				Form: formAPI,
 			},
 		}
@@ -1150,13 +1146,13 @@ func TestFormResourceFetcher_FetchData(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		formAPI := mock.NewMockFormAPI(ctrl)
+		formAPI := mock.NewMockFormAPIV3(ctrl)
 		formAPI.EXPECT().
 			List(gomock.Any(), gomock.Any()).
 			Return(nil, fmt.Errorf("failed to read form"))
 
 		fetcher := formResourceFetcher{
-			api: &auth0.API{
+			apiv3: &auth0.APIV3{
 				Form: formAPI,
 			},
 		}
