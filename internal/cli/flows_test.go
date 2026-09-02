@@ -137,7 +137,7 @@ func TestCreateFlowCmdScaffoldFromName(t *testing.T) {
 }
 
 func TestCreateFlowCmdFromFilePreservesActions(t *testing.T) {
-	body := []byte(`{"name":"Rich Flow","actions":[{"id":"a1","type":"HTTP","action":"SEND_REQUEST","params":{"method":"GET","url":"https://x.test"}}]}`)
+	body := []byte(`{"actions":[{"id":"a1","type":"HTTP","action":"SEND_REQUEST","params":{"method":"GET","url":"https://x.test"}}]}`)
 	path := filepath.Join(t.TempDir(), "flow.json")
 	require.NoError(t, os.WriteFile(path, body, 0600))
 
@@ -148,13 +148,45 @@ func TestCreateFlowCmdFromFilePreservesActions(t *testing.T) {
 	c := newRawTestCLI(stub, stdout)
 
 	cmd := createFlowCmd(c)
-	cmd.SetArgs([]string{"--actions-file", path})
+	cmd.SetArgs([]string{"--actions-file", path, "--name", "Rich Flow"})
 
 	require.NoError(t, cmd.Execute())
 	assert.Equal(t, http.MethodPost, stub.method)
 	require.IsType(t, json.RawMessage{}, stub.payload)
 	assert.Contains(t, string(stub.payload.(json.RawMessage)), `"SEND_REQUEST"`)
+	// The name comes from --name and is injected into the body, not read from the file.
+	assert.Contains(t, string(stub.payload.(json.RawMessage)), `"Rich Flow"`)
 	assert.Contains(t, stdout.String(), "1 actions")
+}
+
+func TestCreateFlowCmdRejectsNameInActionsFile(t *testing.T) {
+	body := []byte(`{"name":"Rich Flow","actions":[]}`)
+	path := filepath.Join(t.TempDir(), "flow.json")
+	require.NoError(t, os.WriteFile(path, body, 0600))
+
+	stub := &formHTTPClientStub{}
+	stdout := &bytes.Buffer{}
+	c := newRawTestCLI(stub, stdout)
+
+	cmd := createFlowCmd(c)
+	cmd.SetArgs([]string{"--actions-file", path, "--name", "Rich Flow"})
+
+	err := cmd.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "must not contain a top-level \"name\" field")
+}
+
+func TestCreateFlowCmdRequiresName(t *testing.T) {
+	stub := &formHTTPClientStub{}
+	stdout := &bytes.Buffer{}
+	c := newRawTestCLI(stub, stdout)
+
+	cmd := createFlowCmd(c)
+	cmd.SetArgs([]string{})
+
+	err := cmd.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "flow name is required")
 }
 
 func TestUpdateFlowCmdNameOnlyMergePreservesActions(t *testing.T) {

@@ -215,8 +215,8 @@ func createVaultConnectionCmd(cli *cli) *cobra.Command {
 		Args:  cobra.NoArgs,
 		Short: "Create a new vault connection",
 		Long: "Create a new vault connection.\n\n" +
-			"Prompts for name and app id, then asks whether to add setup credentials. " +
-			"Use `--setup-file` to supply credentials non-interactively. " +
+			"A name is required, supplied with `--name` or the interactive prompt, along with an app id via `--app-id`. " +
+			"Setup credentials are authored interactively or supplied with `--setup-file`; the file must contain only the setup body, not a name. " +
 			"Run `--setup-template --app-id <APP_ID>` to print the setup credentials template for a given app.",
 		Example: `  auth0 flows vault connections create
   auth0 flows vault connections create --name "My Connection" --app-id SLACK
@@ -259,6 +259,9 @@ func createVaultConnectionCmd(cli *cli) *cobra.Command {
 				if err = json.Unmarshal(fileBody, &setupBody); err != nil {
 					return fmt.Errorf("setup file is not valid JSON: %w\n\nRun 'auth0 flows vault connections create --setup-template --app-id <APP_ID>' to see the expected setup schema", err)
 				}
+				if err := rejectRawNameField(setupBody, "setup file"); err != nil {
+					return err
+				}
 			} else {
 				var addSetup bool
 				if err := prompt.AskBool("Do you want to add setup credentials now?", &addSetup, false); err != nil {
@@ -267,6 +270,9 @@ func createVaultConnectionCmd(cli *cli) *cobra.Command {
 
 				if addSetup {
 					if err := editJSONBody(cli, "vault connection", vaultConnectionSeedForApp(inputs.AppID), &setupBody); err != nil {
+						return err
+					}
+					if err := rejectRawNameField(setupBody, "setup body"); err != nil {
 						return err
 					}
 				} else {
@@ -321,7 +327,8 @@ func updateVaultConnectionCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a vault connection",
 		Long: "Update a vault connection.\n\n" +
-			"Use `--setup-file` to replace setup credentials, or `--name` to rename. " +
+			"Passing `--setup-file` replaces the connection's setup credentials; the file must contain only the setup body, not a name. " +
+			"Passing `--name` renames the connection; omit it to keep the current name. " +
 			"Run `auth0 flows vault connections create --setup-template --app-id <APP_ID>` to see the setup schema.",
 		Example: `  auth0 flows vault connections update <connection-id> --name "New Name"
   auth0 flows vault connections update <connection-id> --setup-file ./setup.json`,
@@ -362,6 +369,9 @@ func updateVaultConnectionCmd(cli *cli) *cobra.Command {
 				if err := json.Unmarshal(fileBody, &setupBody); err != nil {
 					return fmt.Errorf("setup file is not valid JSON: %w", err)
 				}
+				if err := rejectRawNameField(setupBody, "setup file"); err != nil {
+					return err
+				}
 				m := make(map[string]json.RawMessage)
 				if err := json.Unmarshal(setupBody, &m); err != nil {
 					return fmt.Errorf("failed to parse setup body: %w", err)
@@ -384,6 +394,9 @@ func updateVaultConnectionCmd(cli *cli) *cobra.Command {
 						return fmt.Errorf("failed to read app_id from vault connection %q: %w", inputs.ID, err)
 					}
 					if err := editJSONBody(cli, "vault connection", vaultConnectionSeedForApp(appID), &rawBody); err != nil {
+						return err
+					}
+					if err := rejectRawNameField(rawBody, "setup body"); err != nil {
 						return err
 					}
 				} else {

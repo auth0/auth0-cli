@@ -199,8 +199,9 @@ func createFlowCmd(cli *cli) *cobra.Command {
 		Args:  cobra.NoArgs,
 		Short: "Create a new flow",
 		Long: "Create a new flow.\n\n" +
-			"Asks for the name, then whether to edit the actions graph before creating. " +
-			"Supply the body via `--actions-file` with an optional `--name` override. " +
+			"A name is required, supplied with `--name` or the interactive prompt. The actions graph " +
+			"is authored interactively or supplied with `--actions-file`; the file must contain only the " +
+			"actions body, not a name. " +
 			"Run `auth0 flows create --actions-template > flow.json` to generate an actions template.",
 		Example: `  auth0 flows create
   auth0 flows create --name "My Flow"
@@ -216,6 +217,9 @@ func createFlowCmd(cli *cli) *cobra.Command {
 			if err := flowName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
+			if inputs.Name == "" {
+				return errors.New("a flow name is required; supply --name")
+			}
 
 			var rawBody json.RawMessage
 			if inputs.File != "" {
@@ -226,6 +230,9 @@ func createFlowCmd(cli *cli) *cobra.Command {
 				if err := json.Unmarshal(fileBody, &rawBody); err != nil {
 					return fmt.Errorf("failed to parse flow body: %w", err)
 				}
+				if err := rejectRawNameField(rawBody, "actions file"); err != nil {
+					return err
+				}
 			} else {
 				var editActions bool
 				if err := prompt.AskBool("Do you want to edit the actions now?", &editActions, false); err != nil {
@@ -233,6 +240,9 @@ func createFlowCmd(cli *cli) *cobra.Command {
 				}
 				if editActions {
 					if err := editJSONBody(cli, "flow", flowCreateSkeleton, &rawBody); err != nil {
+						return err
+					}
+					if err := rejectRawNameField(rawBody, "flow actions"); err != nil {
 						return err
 					}
 				} else {
@@ -243,14 +253,6 @@ func createFlowCmd(cli *cli) *cobra.Command {
 			rawBody, err := applyRawNameOverride(rawBody, inputs.Name)
 			if err != nil {
 				return fmt.Errorf("failed to parse flow body: %w", err)
-			}
-
-			name, err := rawJSONStringField(rawBody, "name")
-			if err != nil {
-				return fmt.Errorf("failed to parse flow body: %w", err)
-			}
-			if name == "" {
-				return errors.New("a flow name is required; set it in the body or with --name")
 			}
 
 			created, err := cli.flowRawCreate(cmd.Context(), rawBody)
@@ -282,8 +284,8 @@ func updateFlowCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a flow",
 		Long: "Update a flow.\n\n" +
-			"Passing `--actions-file` replaces the flow's actions graph. " +
-			"Passing only `--name` renames the flow without touching its actions.",
+			"Passing `--actions-file` replaces the flow's actions graph; the file must contain only the " +
+			"actions body, not a name. Passing `--name` renames the flow; omit it to keep the current name.",
 		Example: `  auth0 flows update <flow-id> --name "New Name"
   auth0 flows update <flow-id> --actions-file ./flow.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -321,6 +323,9 @@ func updateFlowCmd(cli *cli) *cobra.Command {
 				if err := json.Unmarshal(fileBody, &rawBody); err != nil {
 					return fmt.Errorf("failed to parse flow body: %w", err)
 				}
+				if err := rejectRawNameField(rawBody, "actions file"); err != nil {
+					return err
+				}
 			} else {
 				var updateActions bool
 				if err := prompt.AskBool("Do you want to update the actions?", &updateActions, false); err != nil {
@@ -340,6 +345,9 @@ func updateFlowCmd(cli *cli) *cobra.Command {
 						return fmt.Errorf("failed to build flow actions seed: %w", err)
 					}
 					if err := editJSONBody(cli, "flow", string(seedBytes), &rawBody); err != nil {
+						return err
+					}
+					if err := rejectRawNameField(rawBody, "flow actions"); err != nil {
 						return err
 					}
 				} else {

@@ -577,6 +577,26 @@ func applyRawNameOverride(body json.RawMessage, name string) (json.RawMessage, e
 	return json.Marshal(obj)
 }
 
+// rejectRawNameField returns an error when the raw JSON body carries a top-level
+// "name" field. The name is owned by the --name flag, so a name embedded in an
+// actions/setup file is rejected rather than silently ignored. Bodies that are
+// not JSON objects are left for downstream validation to report.
+func rejectRawNameField(body json.RawMessage, source string) error {
+	if len(body) == 0 {
+		return nil
+	}
+
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(body, &obj); err != nil {
+		return nil
+	}
+	if _, ok := obj["name"]; ok {
+		return fmt.Errorf("the %s must not contain a top-level \"name\" field; set the name with --name instead", source)
+	}
+
+	return nil
+}
+
 // stripRawFields removes the given top-level fields from a JSON object body.
 func stripRawFields(body json.RawMessage, fields []string) (json.RawMessage, error) {
 	var obj map[string]json.RawMessage

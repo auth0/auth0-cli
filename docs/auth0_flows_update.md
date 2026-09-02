@@ -7,7 +7,7 @@ has_toc: false
 
 Update a flow.
 
-Passing `--actions-file` replaces the flow's actions graph. Passing only `--name` renames the flow without touching its actions.
+Passing `--actions-file` replaces the flow's actions graph; the file must contain only the actions body, not a name. Passing `--name` renames the flow; omit it to keep the current name.
 
 ## Usage
 ```
