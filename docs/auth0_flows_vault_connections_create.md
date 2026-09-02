@@ -7,7 +7,7 @@ has_toc: false
 
 Create a new vault connection.
 
-Prompts for name and app id, then asks whether to add setup credentials. Use `--setup-file` to supply credentials non-interactively. Run `--setup-template --app-id <APP_ID>` to print the setup credentials template for a given app.
+A name is required, supplied with `--name` or the interactive prompt, along with an app id via `--app-id`. Setup credentials are authored interactively or supplied with `--setup-file`; the file must contain only the setup body, not a name. Run `--setup-template --app-id <APP_ID>` to print the setup credentials template for a given app.
 
 ## Usage
 ```

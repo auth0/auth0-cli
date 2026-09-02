@@ -23,8 +23,8 @@ tests:
         - forms.auth0.com
         - /vault/apps/HTTP/edit
 
-  004 - it fails to create a vault connection without required flags:
-    command: auth0 flows vault connections create --no-input
+  004 - it fails to create a vault connection without an app id:
+    command: auth0 flows vault connections create --name integration-test-connection-noapp --no-input
     exit-code: 1
     stderr:
       contains:
@@ -76,12 +76,12 @@ tests:
       json:
         name: "integration-test-connection-updated"
 
-  011 - given a test vault connection, it successfully updates the connection from a fixture file:
+  011 - given a test vault connection, it successfully updates the connection setup from a fixture file:
     command: auth0 flows vault connections update $(./test/integration/scripts/get-vault-connection-id.sh) -f ./test/integration/fixtures/update-vault-connection.json --json
     exit-code: 0
     stdout:
       json:
-        name: "integration-test-connection-fixture-updated"
+        name: "integration-test-connection-updated"
 
   012 - agent mode refuses to delete a vault connection without force:
     command: AUTH0_AGENT_MODE=true auth0 flows vault connections delete $(./test/integration/scripts/get-vault-connection-id.sh)

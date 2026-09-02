@@ -93,3 +93,20 @@ func TestCreateVaultConnectionCmdUsesRawClient(t *testing.T) {
 	// The rendered output must never echo the setup secrets back.
 	assert.NotContains(t, stdout.String(), "secret")
 }
+
+func TestCreateVaultConnectionCmdRejectsNameInSetupFile(t *testing.T) {
+	body := []byte(`{"name":"Renamed","setup":{"type":"BEARER","token":"secret"}}`)
+	path := filepath.Join(t.TempDir(), "conn.json")
+	require.NoError(t, os.WriteFile(path, body, 0600))
+
+	stub := &rawHTTPClientStub{}
+	stdout := &bytes.Buffer{}
+	c := newRawTestCLI(stub, stdout)
+
+	cmd := createVaultConnectionCmd(c)
+	cmd.SetArgs([]string{"--setup-file", path, "--name", "Renamed", "--app-id", "HTTP"})
+
+	err := cmd.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "must not contain a top-level \"name\" field")
+}

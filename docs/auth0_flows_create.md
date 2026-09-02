@@ -7,7 +7,7 @@ has_toc: false
 
 Create a new flow.
 
-Asks for the name, then whether to edit the actions graph before creating. Supply the body via `--actions-file` with an optional `--name` override. Run `auth0 flows create --actions-template > flow.json` to generate an actions template.
+A name is required, supplied with `--name` or the interactive prompt. The actions graph is authored interactively or supplied with `--actions-file`; the file must contain only the actions body, not a name. Run `auth0 flows create --actions-template > flow.json` to generate an actions template.
 
 ## Usage
 ```

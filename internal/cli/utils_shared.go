@@ -550,6 +550,22 @@ func applyRawNameOverride(body json.RawMessage, name string) (json.RawMessage, e
 	return json.Marshal(obj)
 }
 
+func rejectRawNameField(body json.RawMessage, source string) error {
+	if len(body) == 0 {
+		return nil
+	}
+
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(body, &obj); err != nil {
+		return nil
+	}
+	if _, ok := obj["name"]; ok {
+		return fmt.Errorf("the %s must not contain a top-level \"name\" field; set the name with --name instead", source)
+	}
+
+	return nil
+}
+
 // rawJSONStringField extracts a top-level string field from a raw JSON object,
 // returning an empty string when the field is absent or null.
 func rawJSONStringField(body json.RawMessage, field string) (string, error) {

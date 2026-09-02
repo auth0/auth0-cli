@@ -7,7 +7,7 @@ has_toc: false
 
 Update a vault connection.
 
-Use `--setup-file` to replace setup credentials, or `--name` to rename. Run `auth0 flows vault connections create --setup-template --app-id <APP_ID>` to see the setup schema.
+Passing `--setup-file` replaces the connection's setup credentials; the file must contain only the setup body, not a name. Passing `--name` renames the connection; omit it to keep the current name. Run `auth0 flows vault connections create --setup-template --app-id <APP_ID>` to see the setup schema.
 
 ## Usage
 ```

@@ -69,12 +69,12 @@ tests:
       json:
         name: "integration-test-flow-updated"
 
-  010 - given a test flow, it successfully updates the flow from a fixture file:
+  010 - given a test flow, it successfully updates the flow actions from a fixture file:
     command: auth0 flows update $(./test/integration/scripts/get-flow-id.sh) --actions-file ./test/integration/fixtures/update-flow.json --json
     exit-code: 0
     stdout:
       json:
-        name: "integration-test-flow-fixture-updated"
+        name: "integration-test-flow-updated"
 
   011 - given a test flow, it prints the builder URL for open:
     command: auth0 flows open $(./test/integration/scripts/get-flow-id.sh) --no-input
