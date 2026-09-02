@@ -273,6 +273,7 @@ Select **y** to proceed with your default tenant, or **N** to choose a different
 - [auth0 completion](https://auth0.github.io/auth0-cli/auth0_completion.html) - Setup autocomplete features for this CLI on your terminal
 - [auth0 domains](https://auth0.github.io/auth0-cli/auth0_domains.html) - Manage custom domains
 - [auth0 email](https://auth0.github.io/auth0-cli/auth0_email.html) - Manage email settings
+- [auth0 flows](https://auth0.github.io/auth0-cli/auth0_flows.html) - Manage Flows
 - [auth0 login](https://auth0.github.io/auth0-cli/auth0_login.html) - Authenticate the Auth0 CLI
 - [auth0 logout](https://auth0.github.io/auth0-cli/auth0_logout.html) - Log out of a tenant's session
 - [auth0 logs](https://auth0.github.io/auth0-cli/auth0_logs.html) - View tenant logs
