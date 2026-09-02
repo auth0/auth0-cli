@@ -7,6 +7,9 @@ has_toc: false
 
 List your existing actions. To create one, run: `auth0 actions create`.
 
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).
+
 ## Usage
 ```
 auth0 actions list [flags]
@@ -20,6 +23,10 @@ auth0 actions list [flags]
   auth0 actions ls --json
   auth0 actions ls --json-compact
   auth0 actions ls --csv
+  auth0 actions list --schema
+  auth0 actions list --schema --json
+  auth0 actions list --query '{"triggerId":"post-login"}'
+  auth0 actions list --query '{"deployed":"true"}' --json
 ```
 
 
@@ -29,6 +36,8 @@ auth0 actions list [flags]
       --csv            Output in csv format.
       --json           Output in json format.
       --json-compact   Output in compact json format.
+  -q, --query string   Filter actions with a JSON object of query parameters (e.g. '{"triggerId":"post-login"}'). Any API-supported parameter works immediately. Run '--schema' to see documented parameters.
+      --schema         Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 
