@@ -281,8 +281,8 @@ func TestExtractCurrentRuleDefaults_HTTPMessageSignature(t *testing.T) {
 					Match: &management.NetworkACLRuleMatch{
 						HTTPMessageSignature: &management.NetworkACLHTTPMessageSignature{
 							Keys: []*management.NetworkACLHTTPMessageSignatureKey{
-								{ID: auth0StringPtr("key_abc")},
-								{ID: auth0StringPtr("key_def")},
+								{ID: auth0.String("key_abc")},
+								{ID: auth0.String("key_def")},
 							},
 						},
 					},
@@ -297,7 +297,7 @@ func TestExtractCurrentRuleDefaults_HTTPMessageSignature(t *testing.T) {
 					NotMatch: &management.NetworkACLRuleMatch{
 						HTTPMessageSignature: &management.NetworkACLHTTPMessageSignature{
 							Keys: []*management.NetworkACLHTTPMessageSignatureKey{
-								{ID: auth0StringPtr("key_abc")},
+								{ID: auth0.String("key_abc")},
 							},
 						},
 					},
@@ -325,8 +325,6 @@ func TestExtractCurrentRuleDefaults_HTTPMessageSignature(t *testing.T) {
 		})
 	}
 }
-
-func auth0StringPtr(s string) *string { return &s }
 
 func TestExtractCurrentRuleDefaults_Auth0Managed(t *testing.T) {
 	tests := []struct {
