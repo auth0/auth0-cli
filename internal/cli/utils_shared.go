@@ -478,9 +478,9 @@ func collectV3Pages[C comparable, T any, R any](
 // request bodies drop provider-specific config in their union types. The helpers
 // below are the resource-agnostic pieces of that approach.
 
-// formsBuilderURL is the host for the Auth0 Forms and Flows visual builders. Both
-// live on a dedicated host rather than under the main management dashboard.
-const formsBuilderURL = "https://forms.auth0.com"
+// builderURL is the host for the Auth0 visual builders (Flows and Vault).
+// Both live on a dedicated host rather than under the main management dashboard.
+const builderURL = "https://forms.auth0.com"
 
 // rawJSONRequest sends a raw JSON request to the Management API and returns the
 // response body, surfacing API errors the same way the `api` command does.
@@ -653,5 +653,5 @@ func formatBuilderPageURL(tenant string, cfg *config.Config, path string) string
 		return ""
 	}
 
-	return fmt.Sprintf("%s/tenants/%s/%s/%s", formsBuilderURL, region, tenantName, path)
+	return fmt.Sprintf("%s/tenants/%s/%s/%s", builderURL, region, tenantName, path)
 }

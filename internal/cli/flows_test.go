@@ -2,17 +2,73 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/auth0/go-auth0/management"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/config"
+	"github.com/auth0/auth0-cli/internal/display"
 )
+
+type rawHTTPClientStub struct {
+	method   string
+	payload  interface{}
+	response json.RawMessage
+}
+
+func (s *rawHTTPClientStub) NewRequest(
+	ctx context.Context,
+	method string,
+	uri string,
+	payload interface{},
+	_ ...management.RequestOption,
+) (*http.Request, error) {
+	s.method = method
+	s.payload = payload
+	return http.NewRequestWithContext(ctx, method, uri, nil)
+}
+
+func (s *rawHTTPClientStub) Do(_ *http.Request) (*http.Response, error) {
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body:       io.NopCloser(strings.NewReader(string(s.response))),
+	}, nil
+}
+
+func (s *rawHTTPClientStub) Request(
+	context.Context,
+	string,
+	string,
+	interface{},
+	...management.RequestOption,
+) error {
+	return nil
+}
+
+func (s *rawHTTPClientStub) URI(path ...string) string {
+	return "https://example.test/api/v2/" + strings.Join(path, "/")
+}
+
+func newRawTestCLI(stub *rawHTTPClientStub, stdout *bytes.Buffer) *cli {
+	return &cli{
+		api: &auth0.API{HTTPClient: stub},
+		renderer: &display.Renderer{
+			MessageWriter: io.Discard,
+			ResultWriter:  stdout,
+		},
+	}
+}
 
 func TestApplyRawNameOverride(t *testing.T) {
 	body := json.RawMessage(`{"name":"Original","actions":[{"id":"a1","type":"HTTP"}]}`)
