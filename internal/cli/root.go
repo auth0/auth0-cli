@@ -166,6 +166,7 @@ func buildRootCmd(cli *cli) *cobra.Command {
 
 func commandRequiresAuthentication(invokedCommandName string) bool {
 	commandsWithNoAuthRequired := []string{
+		"auth0 " + cobra.ShellCompRequestCmd,
 		"auth0 commands",
 		"auth0 completion",
 		"auth0 help",
