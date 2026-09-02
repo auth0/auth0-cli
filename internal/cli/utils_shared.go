@@ -10,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -24,7 +23,6 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth/authutil"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/config"
-	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -528,31 +526,6 @@ func (c *cli) rawJSONRequest(
 	return out, nil
 }
 
-// readBodyInput resolves a JSON body from an explicit --file, "-"/piped stdin,
-// and returns nil when no such source is available so the caller can decide
-// whether to fall back to an editor or error. `resource` names the object in
-// error messages (e.g. "flow", "form", "vault connection").
-func readBodyInput(filePath, resource string) ([]byte, error) {
-	if filePath == "-" {
-		data, err := io.ReadAll(iostream.Input)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read %s body from stdin: %w", resource, err)
-		}
-		return data, nil
-	}
-	if filePath != "" {
-		data, err := os.ReadFile(filePath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read %s file %q: %w", resource, filePath, err)
-		}
-		return data, nil
-	}
-	if piped := iostream.PipedInput(); len(piped) > 0 {
-		return piped, nil
-	}
-	return nil, nil
-}
-
 // applyRawNameOverride sets the top-level "name" field when a non-empty override
 // is supplied, without deserializing the rest of the body.
 func applyRawNameOverride(body json.RawMessage, name string) (json.RawMessage, error) {
@@ -574,18 +547,6 @@ func applyRawNameOverride(body json.RawMessage, name string) (json.RawMessage, e
 	}
 	obj["name"] = encoded
 
-	return json.Marshal(obj)
-}
-
-// stripRawFields removes the given top-level fields from a JSON object body.
-func stripRawFields(body json.RawMessage, fields []string) (json.RawMessage, error) {
-	var obj map[string]json.RawMessage
-	if err := json.Unmarshal(body, &obj); err != nil {
-		return nil, err
-	}
-	for _, field := range fields {
-		delete(obj, field)
-	}
 	return json.Marshal(obj)
 }
 

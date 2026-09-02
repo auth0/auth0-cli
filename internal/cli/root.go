@@ -257,6 +257,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	// The order of the commands here matters.
 	// Add new commands in a place that reflect its
 	// relevance or relation with other commands.
+	rootCmd.AddCommand(initCmd(cli))
 	rootCmd.AddCommand(loginCmd(cli))
 	rootCmd.AddCommand(logoutCmd(cli))
 	rootCmd.AddCommand(tenantsCmd(cli))
@@ -280,7 +281,6 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(apiCmd(cli))
 	rootCmd.AddCommand(terraformCmd(cli))
 	rootCmd.AddCommand(eventStreamsCmd(cli))
-	rootCmd.AddCommand(formsCmd(cli))
 	rootCmd.AddCommand(flowsCmd(cli))
 	rootCmd.AddCommand(networkACLCmd(cli))
 	rootCmd.AddCommand(tenantSettingsCmd(cli))

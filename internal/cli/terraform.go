@@ -98,7 +98,7 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API, apiv3 *auth0.API
 		case "auth0_flow_vault_connection":
 			fetchers = append(fetchers, &flowVaultConnectionResourceFetcher{api})
 		case "auth0_form":
-			fetchers = append(fetchers, &formResourceFetcher{apiv3})
+			fetchers = append(fetchers, &formResourceFetcher{api})
 		case "auth0_guardian":
 			fetchers = append(fetchers, &guardianResourceFetcher{})
 		case "auth0_log_stream":

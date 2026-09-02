@@ -374,9 +374,43 @@ func makeFlowVaultConnectionViewFromRaw(raw json.RawMessage) (*flowVaultConnecti
 	}, nil
 }
 
+func boolToPresence(present bool) string {
+	if present {
+		return "set"
+	}
+	return "none"
+}
+
 func boolToReady(ready bool) string {
 	if ready {
 		return "yes"
 	}
 	return "no"
+}
+
+func rawTimeAgo(value time.Time) string {
+	if value.IsZero() {
+		return ""
+	}
+	return timeAgo(value)
+}
+
+func mergeExtraProperties(obj interface{}, extra map[string]interface{}) interface{} {
+	if len(extra) == 0 {
+		return obj
+	}
+	data, err := json.Marshal(obj)
+	if err != nil {
+		return obj
+	}
+	var merged map[string]interface{}
+	if err := json.Unmarshal(data, &merged); err != nil {
+		return obj
+	}
+	for key, value := range extra {
+		if _, ok := merged[key]; !ok {
+			merged[key] = value
+		}
+	}
+	return merged
 }

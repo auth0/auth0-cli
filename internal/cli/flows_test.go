@@ -1,31 +1,14 @@
 package cli
 
 import (
-	"bytes"
 	"encoding/json"
-	"io"
-	"net/http"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/config"
-	"github.com/auth0/auth0-cli/internal/display"
 )
-
-func newRawTestCLI(stub *formHTTPClientStub, stdout *bytes.Buffer) *cli {
-	return &cli{
-		api: &auth0.API{HTTPClient: stub},
-		renderer: &display.Renderer{
-			MessageWriter: io.Discard,
-			ResultWriter:  stdout,
-		},
-	}
-}
 
 func TestApplyRawNameOverride(t *testing.T) {
 	body := json.RawMessage(`{"name":"Original","actions":[{"id":"a1","type":"HTTP"}]}`)
@@ -117,59 +100,4 @@ func TestFormatBuilderPageURL(t *testing.T) {
 			assert.Equal(t, test.expected, formatBuilderPageURL(test.tenant, cfg, test.path))
 		})
 	}
-}
-
-func TestCreateFlowCmdScaffoldFromName(t *testing.T) {
-	stub := &formHTTPClientStub{
-		response: json.RawMessage(`{"id":"flow_1","name":"My Flow","actions":[]}`),
-	}
-	stdout := &bytes.Buffer{}
-	c := newRawTestCLI(stub, stdout)
-
-	cmd := createFlowCmd(c)
-	cmd.SetArgs([]string{"--name", "My Flow"})
-
-	require.NoError(t, cmd.Execute())
-	assert.Equal(t, http.MethodPost, stub.method)
-	require.IsType(t, json.RawMessage{}, stub.payload)
-	assert.JSONEq(t, `{"name":"My Flow","actions":[]}`, string(stub.payload.(json.RawMessage)))
-	assert.Contains(t, stdout.String(), "My Flow")
-}
-
-func TestCreateFlowCmdFromFilePreservesActions(t *testing.T) {
-	body := []byte(`{"name":"Rich Flow","actions":[{"id":"a1","type":"HTTP","action":"SEND_REQUEST","params":{"method":"GET","url":"https://x.test"}}]}`)
-	path := filepath.Join(t.TempDir(), "flow.json")
-	require.NoError(t, os.WriteFile(path, body, 0600))
-
-	stub := &formHTTPClientStub{
-		response: json.RawMessage(`{"id":"flow_2","name":"Rich Flow","actions":[{"id":"a1","type":"HTTP"}]}`),
-	}
-	stdout := &bytes.Buffer{}
-	c := newRawTestCLI(stub, stdout)
-
-	cmd := createFlowCmd(c)
-	cmd.SetArgs([]string{"--actions-file", path})
-
-	require.NoError(t, cmd.Execute())
-	assert.Equal(t, http.MethodPost, stub.method)
-	require.IsType(t, json.RawMessage{}, stub.payload)
-	assert.Contains(t, string(stub.payload.(json.RawMessage)), `"SEND_REQUEST"`)
-	assert.Contains(t, stdout.String(), "1 actions")
-}
-
-func TestUpdateFlowCmdNameOnlyMergePreservesActions(t *testing.T) {
-	stub := &formHTTPClientStub{
-		response: json.RawMessage(`{"id":"flow_3","name":"New Name","actions":[{"id":"a1","type":"HTTP"}]}`),
-	}
-	stdout := &bytes.Buffer{}
-	c := newRawTestCLI(stub, stdout)
-
-	cmd := updateFlowCmd(c)
-	cmd.SetArgs([]string{"flow_3", "--name", "New Name"})
-
-	require.NoError(t, cmd.Execute())
-	assert.Equal(t, http.MethodPatch, stub.method)
-	require.IsType(t, json.RawMessage{}, stub.payload)
-	// A name-only merge must send only the name so the API preserves the actions graph.
-	assert.JSONEq(t, `{"name":"New Name"}`, string(stub.payload.(json.RawMessage)))
 }
