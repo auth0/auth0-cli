@@ -99,10 +99,22 @@ tests:
         rule.action.block: "true"
         rule.not_match.ipv4_cidrs: "[10.0.0.0/8]"
 
-  010 - delete network ACL:
+  010 - create network ACL with match_all deny-all rule:
+    command: auth0 network-acl create --description "Integration Test ACL Match All" --active false --priority 6 --rule '{"action":{"block":true},"scope":"tenant","match_all":true}' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        description: "Integration Test ACL Match All"
+        active: "false"
+        priority: "99"
+        rule.scope: "tenant"
+        rule.action.block: "true"
+        rule.match_all: "true"
+
+  011 - delete network ACL:
     command: auth0 network-acl delete $(./test/integration/scripts/get-network-acl-id.sh) --force --no-input
     exit-code: 0
 
-  011 - delete all network ACLs:
+  012 - delete all network ACLs:
     command: auth0 network-acl delete --all --force --no-input
     exit-code: 0

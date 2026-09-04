@@ -61,6 +61,11 @@ func (v *networkACLView) KeyValues() [][]string {
 			keyValues = append(keyValues, []string{"REDIRECT URI", *acl.Rule.Action.RedirectURI})
 		}
 
+		// Add match_all if set (unconditional rule, mutually exclusive with match/not_match).
+		if acl.Rule.MatchAll != nil && *acl.Rule.MatchAll {
+			keyValues = append(keyValues, []string{"MATCH ALL", "true"})
+		}
+
 		// Add match criteria if present.
 		if acl.Rule.Match != nil {
 			match := acl.Rule.Match
