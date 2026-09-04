@@ -104,6 +104,10 @@ func (v *networkACLView) KeyValues() [][]string {
 			if match.Auth0Managed != nil && len(*match.Auth0Managed) > 0 {
 				keyValues = append(keyValues, []string{"AUTH0 MANAGED", strings.Join(*match.Auth0Managed, ", ")})
 			}
+
+			if ids := httpMessageSignatureKeyIDs(match); len(ids) > 0 {
+				keyValues = append(keyValues, []string{"SIGNATURE KEY IDS", strings.Join(ids, ", ")})
+			}
 		}
 
 		// Add not_match criteria if present.
@@ -149,10 +153,30 @@ func (v *networkACLView) KeyValues() [][]string {
 			if notMatch.Auth0Managed != nil && len(*notMatch.Auth0Managed) > 0 {
 				keyValues = append(keyValues, []string{"NOT AUTH0 MANAGED", strings.Join(*notMatch.Auth0Managed, ", ")})
 			}
+
+			if ids := httpMessageSignatureKeyIDs(notMatch); len(ids) > 0 {
+				keyValues = append(keyValues, []string{"NOT SIGNATURE KEY IDS", strings.Join(ids, ", ")})
+			}
 		}
 	}
 
 	return keyValues
+}
+
+// httpMessageSignatureKeyIDs returns the referenced key ids of a match's
+// http_message_signature signal, or nil when the signal is not set.
+func httpMessageSignatureKeyIDs(match *management.NetworkACLRuleMatch) []string {
+	if match == nil || match.HTTPMessageSignature == nil {
+		return nil
+	}
+
+	ids := make([]string, 0, len(match.HTTPMessageSignature.Keys))
+	for _, k := range match.HTTPMessageSignature.Keys {
+		if k.ID != nil {
+			ids = append(ids, *k.ID)
+		}
+	}
+	return ids
 }
 
 func (v *networkACLView) Object() interface{} {

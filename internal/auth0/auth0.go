@@ -90,6 +90,7 @@ type APIV3 struct {
 	UserRefreshToken             UserRefreshTokenAPIV3
 	ActionModule                 ActionModuleAPIV3
 	ActionModuleVersion          ActionModuleVersionAPIV3
+	NetworkACLKey                NetworkACLKeyAPIV3
 }
 
 func NewAPIV3(m *managementv3.Management) *APIV3 {
@@ -108,6 +109,7 @@ func NewAPIV3(m *managementv3.Management) *APIV3 {
 		UserRefreshToken:             m.Users.RefreshToken,
 		ActionModule:                 m.Actions.Modules,
 		ActionModuleVersion:          m.Actions.Modules.Versions,
+		NetworkACLKey:                m.Keys.NetworkACLs,
 	}
 }
 
