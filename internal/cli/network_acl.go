@@ -106,6 +106,12 @@ var (
 		LongForm: "auth0-managed",
 		Help:     "Comma-separated list of Auth0-curated blocklists to match (Eg. auth0.icloud_relay_proxy,auth0.low_reputation). (EA only).",
 	}
+
+	networkACLMatchAll = Flag{
+		Name:     "MatchAll",
+		LongForm: "match-all",
+		Help:     "Match all traffic unconditionally (Eg. block all). Cannot be combined with match/not_match criteria.",
+	}
 )
 
 // validateAndSetBasicFields handles the common validation and patch building logic for basic fields.
@@ -130,6 +136,7 @@ func validateAndSetBasicFields(inputs *struct {
 	Auth0Managed []string
 	MatchRule    bool
 	NoMatchRule  bool
+	MatchAll     bool
 }, patch *management.NetworkACL, cmd *cobra.Command) error {
 	if cmd.Flags().Changed("description") {
 		if len(inputs.Description) > 255 {
@@ -233,6 +240,7 @@ type ruleDefaults struct {
 	IsMatchRule  bool
 	HasMatchRule bool
 	HasNotMatch  bool
+	MatchAll     bool
 }
 
 // extractCurrentRuleDefaults extracts default values from current ACL rule for interactive prompts.
@@ -265,6 +273,11 @@ func extractCurrentRuleDefaults(currentACL *management.NetworkACL) *ruleDefaults
 				defaults.RedirectURI = *currentACL.Rule.Action.RedirectURI
 			}
 		}
+	}
+
+	// Extract match_all (unconditional rule, mutually exclusive with match/not_match).
+	if currentACL.Rule.MatchAll != nil && *currentACL.Rule.MatchAll {
+		defaults.MatchAll = true
 	}
 
 	// Extract match criteria from either Match or NotMatch.
@@ -329,6 +342,7 @@ type ruleInputs struct {
 	IsMatchRule  bool
 	MatchRule    bool
 	NoMatchRule  bool
+	MatchAll     bool
 }
 
 // promptForRuleDetails handles interactive prompting for rule configuration.
@@ -360,6 +374,16 @@ func promptForRuleDetails(cmd *cobra.Command, cli *cli, defaults *ruleDefaults, 
 		if inputs.RedirectURI == "" {
 			return nil, fmt.Errorf("redirect URI is required when action is redirect")
 		}
+	}
+
+	// Match All is a top-level rule signal, orthogonal to match/not_match and mutually
+	// exclusive with them at the API. Confirm it before the match/not_match flow, and when
+	// it is set, skip the criteria selection entirely (there is nothing more to ask).
+	if err := networkACLMatchAll.AskBool(cmd, &inputs.MatchAll, &defaults.MatchAll); err != nil {
+		return nil, err
+	}
+	if inputs.MatchAll {
+		return inputs, nil
 	}
 
 	// Handle Match/NotMatch rule changes for updates.
@@ -492,6 +516,12 @@ func buildNetworkACLRule(inputs *ruleInputs) (*management.NetworkACLRule, error)
 	case "redirect":
 		rule.Action.Redirect = auth0.Bool(true)
 		rule.Action.RedirectURI = &inputs.RedirectURI
+	}
+
+	// A match_all rule is unconditional and mutually exclusive with match/not_match criteria.
+	if inputs.MatchAll {
+		rule.MatchAll = auth0.Bool(true)
+		return rule, nil
 	}
 
 	// Build match criteria.
@@ -654,6 +684,7 @@ func createNetworkACLCmd(cli *cli) *cobra.Command {
 		UserAgents   []string
 		Auth0Managed []string
 		Scope        string
+		MatchAll     bool
 		isMatchRule  bool
 	}
 
@@ -671,6 +702,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
   auth0 network-acl create --description "Redirect Traffic" --priority 3 --active true --rule '{"action":{"redirect":true,"redirect_uri":"https://example.com"},"scope":"management","match":{"ipv4_cidrs":["192.168.1.0/24"]}}'
   auth0 network-acl create -d "Block Bots" -p 4 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"user_agents":["badbot/*","malicious/*"],"ja3_fingerprints":["deadbeef","cafebabe"]}}'
   auth0 network-acl create --description "Complex Rule" --priority 5 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
+  auth0 network-acl create --description "Deny All" --priority 99 --active true --rule '{"action":{"block":true},"scope":"tenant","match_all":true}'
   
   # Early Access (auth0_managed match/not_match value):
   auth0 network-acl create -d "Curated Blocklist" -p 6 --active true --rule '{"action":{"log":true},"scope":"tenant","not_match":{"auth0_managed":["auth0.vpn","auth0.proxy"]}}'
@@ -800,6 +832,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 	networkACLJA4Fingerprints.RegisterStringSlice(cmd, &inputs.JA4, nil)
 	networkACLUserAgents.RegisterStringSlice(cmd, &inputs.UserAgents, nil)
 	networkACLAuth0Managed.RegisterStringSlice(cmd, &inputs.Auth0Managed, nil)
+	networkACLMatchAll.RegisterBool(cmd, &inputs.MatchAll, false)
 
 	// These flags must be passed in non-interactive mode.
 	cmd.MarkFlagRequired("description")
@@ -831,6 +864,7 @@ func updateNetworkACLCmd(cli *cli) *cobra.Command {
 		Auth0Managed []string
 		MatchRule    bool
 		NoMatchRule  bool
+		MatchAll     bool
 	}
 
 	cmd := &cobra.Command{
@@ -847,6 +881,7 @@ To update non-interactively, supply the description, active, priority, and rule 
   auth0 network-acl update <id> --description "Updated description"
   auth0 network-acl update <id> --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"]}}'
   auth0 network-acl update <id> --description "Complex Rule updated" --priority 1 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
+  auth0 network-acl update <id> --rule '{"action":{"block":true},"scope":"tenant","match_all":true}'
   
   # Early Access (auth0_managed match/not_match value):
   auth0 network-acl update <id> --rule '{"action":{"allow":true},"scope":"tenant","match":{"auth0_managed":["auth0.low_reputation"]}}'
@@ -961,6 +996,7 @@ To update non-interactively, supply the description, active, priority, and rule 
 	networkACLJA4Fingerprints.RegisterStringSlice(cmd, &inputs.JA4, nil)
 	networkACLUserAgents.RegisterStringSlice(cmd, &inputs.UserAgents, nil)
 	networkACLAuth0Managed.RegisterStringSlice(cmd, &inputs.Auth0Managed, nil)
+	networkACLMatchAll.RegisterBool(cmd, &inputs.MatchAll, false)
 
 	return cmd
 }

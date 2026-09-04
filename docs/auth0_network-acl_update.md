@@ -24,6 +24,7 @@ auth0 network-acl update [flags]
   auth0 network-acl update <id> --description "Updated description"
   auth0 network-acl update <id> --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"]}}'
   auth0 network-acl update <id> --description "Complex Rule updated" --priority 1 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
+  auth0 network-acl update <id> --rule '{"action":{"block":true},"scope":"tenant","match_all":true}'
   
   # Early Access (auth0_managed match/not_match value):
   auth0 network-acl update <id> --rule '{"action":{"allow":true},"scope":"tenant","match":{"auth0_managed":["auth0.low_reputation"]}}'
@@ -45,6 +46,7 @@ auth0 network-acl update [flags]
       --ja3-fingerprints strings    Comma-separated list of JA3 fingerprints to match (Eg. deadbeef,cafebabe)
       --ja4-fingerprints strings    Comma-separated list of JA4 fingerprints to match (Eg. t13d1516h2_8daaf6152771)
       --json                        Output in JSON format
+      --match-all                   Match all traffic unconditionally (Eg. block all). Cannot be combined with match/not_match criteria.
   -p, --priority int                Priority of the network ACL (default 1)
       --redirect-uri string         URI to redirect to when action is redirect
       --rule string                 Network ACL rule configuration in JSON format
