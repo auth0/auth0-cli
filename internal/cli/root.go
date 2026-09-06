@@ -170,6 +170,7 @@ func commandRequiresAuthentication(invokedCommandName string) bool {
 		"auth0 commands",
 		"auth0 completion",
 		"auth0 help",
+		"auth0 init",
 		"auth0 login",
 		"auth0 logout",
 		"auth0 tenants use",
@@ -277,6 +278,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	// The order of the commands here matters.
 	// Add new commands in a place that reflect its
 	// relevance or relation with other commands.
+	rootCmd.AddCommand(initCmd(cli))
 	rootCmd.AddCommand(loginCmd(cli))
 	rootCmd.AddCommand(logoutCmd(cli))
 	rootCmd.AddCommand(tenantsCmd(cli))
