@@ -254,20 +254,6 @@ func TestBuildNetworkACLRule_HTTPMessageSignature(t *testing.T) {
 	}
 }
 
-// signatureKeyIDs is a test helper that flattens the referenced key ids of a match.
-func signatureKeyIDs(match *management.NetworkACLRuleMatch) []string {
-	if match == nil || match.HTTPMessageSignature == nil {
-		return nil
-	}
-	ids := make([]string, 0, len(match.HTTPMessageSignature.Keys))
-	for _, k := range match.HTTPMessageSignature.Keys {
-		if k.ID != nil {
-			ids = append(ids, *k.ID)
-		}
-	}
-	return ids
-}
-
 func TestExtractCurrentRuleDefaults_HTTPMessageSignature(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -316,16 +316,25 @@ func extractCurrentRuleDefaults(currentACL *management.NetworkACL) *ruleDefaults
 		if match.Auth0Managed != nil {
 			defaults.Auth0Managed = *match.Auth0Managed
 		}
-		if match.HTTPMessageSignature != nil {
-			for _, k := range match.HTTPMessageSignature.Keys {
-				if k.ID != nil {
-					defaults.SignatureKeyIDs = append(defaults.SignatureKeyIDs, *k.ID)
-				}
-			}
-		}
+		defaults.SignatureKeyIDs = signatureKeyIDs(match)
 	}
 
 	return defaults
+}
+
+// signatureKeyIDs flattens the referenced key ids of a match's
+// http_message_signature signal, or nil when the signal is not set.
+func signatureKeyIDs(match *management.NetworkACLRuleMatch) []string {
+	if match == nil || match.HTTPMessageSignature == nil {
+		return nil
+	}
+	ids := make([]string, 0, len(match.HTTPMessageSignature.Keys))
+	for _, k := range match.HTTPMessageSignature.Keys {
+		if k.ID != nil {
+			ids = append(ids, *k.ID)
+		}
+	}
+	return ids
 }
 
 // ruleInputs holds user inputs for rule configuration.
