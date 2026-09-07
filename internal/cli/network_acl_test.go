@@ -7,6 +7,7 @@ import (
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/golang/mock/gomock"
+	"github.com/spf13/cobra"
 
 	"github.com/stretchr/testify/assert"
 
@@ -232,6 +233,30 @@ func TestBuildNetworkACLRule_MatchAll(t *testing.T) {
 			test.assertRule(t, rule)
 		})
 	}
+}
+
+func TestPromptForRuleDetails_MatchAllFlag(t *testing.T) {
+	// In tests there is no TTY, so canPrompt is false and every interactive prompt is
+	// skipped. This lets us exercise the seeding of MatchAll from an explicitly-set
+	// --match-all flag and confirm it short-circuits before the match criteria prompts.
+	newCmd := func(setMatchAll bool) *cobra.Command {
+		cmd := &cobra.Command{Use: "create"}
+		var matchAll bool
+		networkACLMatchAll.RegisterBool(cmd, &matchAll, false)
+		if setMatchAll {
+			assert.NoError(t, cmd.Flags().Set("match-all", "true"))
+		}
+		return cmd
+	}
+
+	cli := &cli{renderer: testRenderer()}
+	defaults := &ruleDefaults{Scope: "tenant", Action: "block"}
+
+	// With --match-all set, seeding runs and the early return fires before the
+	// match/not_match selection and criteria prompts, so no TTY is needed.
+	inputs, err := promptForRuleDetails(newCmd(true), cli, defaults, false)
+	assert.NoError(t, err)
+	assert.True(t, inputs.MatchAll)
 }
 
 func TestExtractCurrentRuleDefaults_MatchAll(t *testing.T) {

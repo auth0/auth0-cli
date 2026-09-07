@@ -379,6 +379,15 @@ func promptForRuleDetails(cmd *cobra.Command, cli *cli, defaults *ruleDefaults, 
 	// Match All is a top-level rule signal, orthogonal to match/not_match and mutually
 	// exclusive with them at the API. Confirm it before the match/not_match flow, and when
 	// it is set, skip the criteria selection entirely (there is nothing more to ask).
+	// AskBool skips its prompt when --match-all was set explicitly, so seed the value
+	// from the flag first to preserve an explicitly supplied value.
+	if cmd.Flags().Changed("match-all") {
+		matchAll, err := cmd.Flags().GetBool("match-all")
+		if err != nil {
+			return nil, err
+		}
+		inputs.MatchAll = matchAll
+	}
 	if err := networkACLMatchAll.AskBool(cmd, &inputs.MatchAll, &defaults.MatchAll); err != nil {
 		return nil, err
 	}
