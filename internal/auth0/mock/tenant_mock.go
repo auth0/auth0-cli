@@ -9,13 +9,14 @@ import (
 	reflect "reflect"
 
 	management "github.com/auth0/go-auth0/management"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockTenantAPI is a mock of TenantAPI interface.
 type MockTenantAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockTenantAPIMockRecorder
+	isgomock struct{}
 }
 
 // MockTenantAPIMockRecorder is the mock recorder for MockTenantAPI.
@@ -38,7 +39,7 @@ func (m *MockTenantAPI) EXPECT() *MockTenantAPIMockRecorder {
 // Read mocks base method.
 func (m *MockTenantAPI) Read(ctx context.Context, opts ...management.RequestOption) (*management.Tenant, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx}
+	varargs := []any{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -49,16 +50,16 @@ func (m *MockTenantAPI) Read(ctx context.Context, opts ...management.RequestOpti
 }
 
 // Read indicates an expected call of Read.
-func (mr *MockTenantAPIMockRecorder) Read(ctx interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockTenantAPIMockRecorder) Read(ctx any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx}, opts...)
+	varargs := append([]any{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockTenantAPI)(nil).Read), varargs...)
 }
 
 // Update mocks base method.
 func (m *MockTenantAPI) Update(ctx context.Context, t *management.Tenant, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, t}
+	varargs := []any{ctx, t}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -68,8 +69,8 @@ func (m *MockTenantAPI) Update(ctx context.Context, t *management.Tenant, opts .
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockTenantAPIMockRecorder) Update(ctx, t interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockTenantAPIMockRecorder) Update(ctx, t any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, t}, opts...)
+	varargs := append([]any{ctx, t}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockTenantAPI)(nil).Update), varargs...)
 }

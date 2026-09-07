@@ -9,13 +9,14 @@ import (
 	reflect "reflect"
 
 	management "github.com/auth0/go-auth0/management"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockActionAPI is a mock of ActionAPI interface.
 type MockActionAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockActionAPIMockRecorder
+	isgomock struct{}
 }
 
 // MockActionAPIMockRecorder is the mock recorder for MockActionAPI.
@@ -38,7 +39,7 @@ func (m *MockActionAPI) EXPECT() *MockActionAPIMockRecorder {
 // Bindings mocks base method.
 func (m *MockActionAPI) Bindings(ctx context.Context, triggerID string, opts ...management.RequestOption) (*management.ActionBindingList, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, triggerID}
+	varargs := []any{ctx, triggerID}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -49,16 +50,16 @@ func (m *MockActionAPI) Bindings(ctx context.Context, triggerID string, opts ...
 }
 
 // Bindings indicates an expected call of Bindings.
-func (mr *MockActionAPIMockRecorder) Bindings(ctx, triggerID interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockActionAPIMockRecorder) Bindings(ctx, triggerID any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, triggerID}, opts...)
+	varargs := append([]any{ctx, triggerID}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Bindings", reflect.TypeOf((*MockActionAPI)(nil).Bindings), varargs...)
 }
 
 // Create mocks base method.
 func (m *MockActionAPI) Create(ctx context.Context, a *management.Action, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, a}
+	varargs := []any{ctx, a}
 	for _, a_2 := range opts {
 		varargs = append(varargs, a_2)
 	}
@@ -68,16 +69,16 @@ func (m *MockActionAPI) Create(ctx context.Context, a *management.Action, opts .
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockActionAPIMockRecorder) Create(ctx, a interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockActionAPIMockRecorder) Create(ctx, a any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, a}, opts...)
+	varargs := append([]any{ctx, a}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockActionAPI)(nil).Create), varargs...)
 }
 
 // Delete mocks base method.
 func (m *MockActionAPI) Delete(ctx context.Context, id string, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -87,16 +88,16 @@ func (m *MockActionAPI) Delete(ctx context.Context, id string, opts ...managemen
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockActionAPIMockRecorder) Delete(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockActionAPIMockRecorder) Delete(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockActionAPI)(nil).Delete), varargs...)
 }
 
 // Deploy mocks base method.
 func (m *MockActionAPI) Deploy(ctx context.Context, id string, opts ...management.RequestOption) (*management.ActionVersion, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -107,16 +108,16 @@ func (m *MockActionAPI) Deploy(ctx context.Context, id string, opts ...managemen
 }
 
 // Deploy indicates an expected call of Deploy.
-func (mr *MockActionAPIMockRecorder) Deploy(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockActionAPIMockRecorder) Deploy(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockActionAPI)(nil).Deploy), varargs...)
 }
 
 // List mocks base method.
 func (m *MockActionAPI) List(ctx context.Context, opts ...management.RequestOption) (*management.ActionList, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx}
+	varargs := []any{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -127,16 +128,16 @@ func (m *MockActionAPI) List(ctx context.Context, opts ...management.RequestOpti
 }
 
 // List indicates an expected call of List.
-func (mr *MockActionAPIMockRecorder) List(ctx interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockActionAPIMockRecorder) List(ctx any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx}, opts...)
+	varargs := append([]any{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockActionAPI)(nil).List), varargs...)
 }
 
 // Read mocks base method.
 func (m *MockActionAPI) Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.Action, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -147,16 +148,16 @@ func (m *MockActionAPI) Read(ctx context.Context, id string, opts ...management.
 }
 
 // Read indicates an expected call of Read.
-func (mr *MockActionAPIMockRecorder) Read(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockActionAPIMockRecorder) Read(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockActionAPI)(nil).Read), varargs...)
 }
 
 // Triggers mocks base method.
 func (m *MockActionAPI) Triggers(ctx context.Context, opts ...management.RequestOption) (*management.ActionTriggerList, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx}
+	varargs := []any{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -167,16 +168,16 @@ func (m *MockActionAPI) Triggers(ctx context.Context, opts ...management.Request
 }
 
 // Triggers indicates an expected call of Triggers.
-func (mr *MockActionAPIMockRecorder) Triggers(ctx interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockActionAPIMockRecorder) Triggers(ctx any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx}, opts...)
+	varargs := append([]any{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Triggers", reflect.TypeOf((*MockActionAPI)(nil).Triggers), varargs...)
 }
 
 // Update mocks base method.
 func (m *MockActionAPI) Update(ctx context.Context, id string, a *management.Action, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id, a}
+	varargs := []any{ctx, id, a}
 	for _, a_2 := range opts {
 		varargs = append(varargs, a_2)
 	}
@@ -186,16 +187,16 @@ func (m *MockActionAPI) Update(ctx context.Context, id string, a *management.Act
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockActionAPIMockRecorder) Update(ctx, id, a interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockActionAPIMockRecorder) Update(ctx, id, a any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id, a}, opts...)
+	varargs := append([]any{ctx, id, a}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockActionAPI)(nil).Update), varargs...)
 }
 
 // Versions mocks base method.
 func (m *MockActionAPI) Versions(ctx context.Context, id string, opts ...management.RequestOption) (*management.ActionVersionList, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -206,8 +207,8 @@ func (m *MockActionAPI) Versions(ctx context.Context, id string, opts ...managem
 }
 
 // Versions indicates an expected call of Versions.
-func (mr *MockActionAPIMockRecorder) Versions(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockActionAPIMockRecorder) Versions(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Versions", reflect.TypeOf((*MockActionAPI)(nil).Versions), varargs...)
 }

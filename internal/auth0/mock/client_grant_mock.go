@@ -11,13 +11,14 @@ import (
 	auth0 "github.com/auth0/auth0-cli/internal/auth0"
 	management "github.com/auth0/go-auth0/v3/management"
 	option "github.com/auth0/go-auth0/v3/management/option"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockClientGrantAPIV3 is a mock of ClientGrantAPIV3 interface.
 type MockClientGrantAPIV3 struct {
 	ctrl     *gomock.Controller
 	recorder *MockClientGrantAPIV3MockRecorder
+	isgomock struct{}
 }
 
 // MockClientGrantAPIV3MockRecorder is the mock recorder for MockClientGrantAPIV3.
@@ -40,7 +41,7 @@ func (m *MockClientGrantAPIV3) EXPECT() *MockClientGrantAPIV3MockRecorder {
 // Create mocks base method.
 func (m *MockClientGrantAPIV3) Create(ctx context.Context, request *management.CreateClientGrantRequestContent, opts ...option.RequestOption) (*management.CreateClientGrantResponseContent, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, request}
+	varargs := []any{ctx, request}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -51,16 +52,16 @@ func (m *MockClientGrantAPIV3) Create(ctx context.Context, request *management.C
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockClientGrantAPIV3MockRecorder) Create(ctx, request interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockClientGrantAPIV3MockRecorder) Create(ctx, request any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, request}, opts...)
+	varargs := append([]any{ctx, request}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockClientGrantAPIV3)(nil).Create), varargs...)
 }
 
 // Delete mocks base method.
 func (m *MockClientGrantAPIV3) Delete(ctx context.Context, id string, opts ...option.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -70,16 +71,16 @@ func (m *MockClientGrantAPIV3) Delete(ctx context.Context, id string, opts ...op
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockClientGrantAPIV3MockRecorder) Delete(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockClientGrantAPIV3MockRecorder) Delete(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockClientGrantAPIV3)(nil).Delete), varargs...)
 }
 
 // Get mocks base method.
 func (m *MockClientGrantAPIV3) Get(ctx context.Context, id string, opts ...option.RequestOption) (*management.GetClientGrantResponseContent, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -90,16 +91,16 @@ func (m *MockClientGrantAPIV3) Get(ctx context.Context, id string, opts ...optio
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockClientGrantAPIV3MockRecorder) Get(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockClientGrantAPIV3MockRecorder) Get(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockClientGrantAPIV3)(nil).Get), varargs...)
 }
 
 // List mocks base method.
 func (m *MockClientGrantAPIV3) List(ctx context.Context, request *management.ListClientGrantsRequestParameters, opts ...option.RequestOption) (*auth0.ClientGrantPage, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, request}
+	varargs := []any{ctx, request}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -110,16 +111,16 @@ func (m *MockClientGrantAPIV3) List(ctx context.Context, request *management.Lis
 }
 
 // List indicates an expected call of List.
-func (mr *MockClientGrantAPIV3MockRecorder) List(ctx, request interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockClientGrantAPIV3MockRecorder) List(ctx, request any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, request}, opts...)
+	varargs := append([]any{ctx, request}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockClientGrantAPIV3)(nil).List), varargs...)
 }
 
 // Update mocks base method.
 func (m *MockClientGrantAPIV3) Update(ctx context.Context, id string, request *management.UpdateClientGrantRequestContent, opts ...option.RequestOption) (*management.UpdateClientGrantResponseContent, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id, request}
+	varargs := []any{ctx, id, request}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -130,9 +131,9 @@ func (m *MockClientGrantAPIV3) Update(ctx context.Context, id string, request *m
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockClientGrantAPIV3MockRecorder) Update(ctx, id, request interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockClientGrantAPIV3MockRecorder) Update(ctx, id, request any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id, request}, opts...)
+	varargs := append([]any{ctx, id, request}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockClientGrantAPIV3)(nil).Update), varargs...)
 }
 
@@ -140,6 +141,7 @@ func (mr *MockClientGrantAPIV3MockRecorder) Update(ctx, id, request interface{},
 type MockClientGrantOrganizationAPIV3 struct {
 	ctrl     *gomock.Controller
 	recorder *MockClientGrantOrganizationAPIV3MockRecorder
+	isgomock struct{}
 }
 
 // MockClientGrantOrganizationAPIV3MockRecorder is the mock recorder for MockClientGrantOrganizationAPIV3.
@@ -162,7 +164,7 @@ func (m *MockClientGrantOrganizationAPIV3) EXPECT() *MockClientGrantOrganization
 // List mocks base method.
 func (m *MockClientGrantOrganizationAPIV3) List(ctx context.Context, id string, request *management.ListClientGrantOrganizationsRequestParameters, opts ...option.RequestOption) (*auth0.ClientGrantOrganizationPage, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id, request}
+	varargs := []any{ctx, id, request}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -173,8 +175,8 @@ func (m *MockClientGrantOrganizationAPIV3) List(ctx context.Context, id string, 
 }
 
 // List indicates an expected call of List.
-func (mr *MockClientGrantOrganizationAPIV3MockRecorder) List(ctx, id, request interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockClientGrantOrganizationAPIV3MockRecorder) List(ctx, id, request any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id, request}, opts...)
+	varargs := append([]any{ctx, id, request}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockClientGrantOrganizationAPIV3)(nil).List), varargs...)
 }

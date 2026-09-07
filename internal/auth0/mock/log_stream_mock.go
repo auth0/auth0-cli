@@ -9,13 +9,14 @@ import (
 	reflect "reflect"
 
 	management "github.com/auth0/go-auth0/management"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockLogStreamAPI is a mock of LogStreamAPI interface.
 type MockLogStreamAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockLogStreamAPIMockRecorder
+	isgomock struct{}
 }
 
 // MockLogStreamAPIMockRecorder is the mock recorder for MockLogStreamAPI.
@@ -38,7 +39,7 @@ func (m *MockLogStreamAPI) EXPECT() *MockLogStreamAPIMockRecorder {
 // Create mocks base method.
 func (m *MockLogStreamAPI) Create(ctx context.Context, ls *management.LogStream, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, ls}
+	varargs := []any{ctx, ls}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -48,16 +49,16 @@ func (m *MockLogStreamAPI) Create(ctx context.Context, ls *management.LogStream,
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockLogStreamAPIMockRecorder) Create(ctx, ls interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockLogStreamAPIMockRecorder) Create(ctx, ls any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, ls}, opts...)
+	varargs := append([]any{ctx, ls}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockLogStreamAPI)(nil).Create), varargs...)
 }
 
 // Delete mocks base method.
 func (m *MockLogStreamAPI) Delete(ctx context.Context, id string, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -67,16 +68,16 @@ func (m *MockLogStreamAPI) Delete(ctx context.Context, id string, opts ...manage
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockLogStreamAPIMockRecorder) Delete(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockLogStreamAPIMockRecorder) Delete(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockLogStreamAPI)(nil).Delete), varargs...)
 }
 
 // List mocks base method.
 func (m *MockLogStreamAPI) List(ctx context.Context, opts ...management.RequestOption) ([]*management.LogStream, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx}
+	varargs := []any{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -87,16 +88,16 @@ func (m *MockLogStreamAPI) List(ctx context.Context, opts ...management.RequestO
 }
 
 // List indicates an expected call of List.
-func (mr *MockLogStreamAPIMockRecorder) List(ctx interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockLogStreamAPIMockRecorder) List(ctx any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx}, opts...)
+	varargs := append([]any{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockLogStreamAPI)(nil).List), varargs...)
 }
 
 // Read mocks base method.
 func (m *MockLogStreamAPI) Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.LogStream, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -107,16 +108,16 @@ func (m *MockLogStreamAPI) Read(ctx context.Context, id string, opts ...manageme
 }
 
 // Read indicates an expected call of Read.
-func (mr *MockLogStreamAPIMockRecorder) Read(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockLogStreamAPIMockRecorder) Read(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockLogStreamAPI)(nil).Read), varargs...)
 }
 
 // Update mocks base method.
 func (m *MockLogStreamAPI) Update(ctx context.Context, id string, ls *management.LogStream, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id, ls}
+	varargs := []any{ctx, id, ls}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -126,8 +127,8 @@ func (m *MockLogStreamAPI) Update(ctx context.Context, id string, ls *management
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockLogStreamAPIMockRecorder) Update(ctx, id, ls interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockLogStreamAPIMockRecorder) Update(ctx, id, ls any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id, ls}, opts...)
+	varargs := append([]any{ctx, id, ls}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockLogStreamAPI)(nil).Update), varargs...)
 }

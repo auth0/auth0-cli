@@ -9,13 +9,14 @@ import (
 	reflect "reflect"
 
 	management "github.com/auth0/go-auth0/management"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockResourceServerAPI is a mock of ResourceServerAPI interface.
 type MockResourceServerAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockResourceServerAPIMockRecorder
+	isgomock struct{}
 }
 
 // MockResourceServerAPIMockRecorder is the mock recorder for MockResourceServerAPI.
@@ -38,7 +39,7 @@ func (m *MockResourceServerAPI) EXPECT() *MockResourceServerAPIMockRecorder {
 // Create mocks base method.
 func (m *MockResourceServerAPI) Create(ctx context.Context, rs *management.ResourceServer, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, rs}
+	varargs := []any{ctx, rs}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -48,16 +49,16 @@ func (m *MockResourceServerAPI) Create(ctx context.Context, rs *management.Resou
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockResourceServerAPIMockRecorder) Create(ctx, rs interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockResourceServerAPIMockRecorder) Create(ctx, rs any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, rs}, opts...)
+	varargs := append([]any{ctx, rs}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockResourceServerAPI)(nil).Create), varargs...)
 }
 
 // Delete mocks base method.
 func (m *MockResourceServerAPI) Delete(ctx context.Context, id string, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -67,16 +68,16 @@ func (m *MockResourceServerAPI) Delete(ctx context.Context, id string, opts ...m
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockResourceServerAPIMockRecorder) Delete(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockResourceServerAPIMockRecorder) Delete(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockResourceServerAPI)(nil).Delete), varargs...)
 }
 
 // List mocks base method.
 func (m *MockResourceServerAPI) List(ctx context.Context, opts ...management.RequestOption) (*management.ResourceServerList, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx}
+	varargs := []any{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -87,16 +88,16 @@ func (m *MockResourceServerAPI) List(ctx context.Context, opts ...management.Req
 }
 
 // List indicates an expected call of List.
-func (mr *MockResourceServerAPIMockRecorder) List(ctx interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockResourceServerAPIMockRecorder) List(ctx any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx}, opts...)
+	varargs := append([]any{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockResourceServerAPI)(nil).List), varargs...)
 }
 
 // Read mocks base method.
 func (m *MockResourceServerAPI) Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.ResourceServer, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -107,16 +108,16 @@ func (m *MockResourceServerAPI) Read(ctx context.Context, id string, opts ...man
 }
 
 // Read indicates an expected call of Read.
-func (mr *MockResourceServerAPIMockRecorder) Read(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockResourceServerAPIMockRecorder) Read(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockResourceServerAPI)(nil).Read), varargs...)
 }
 
 // Update mocks base method.
 func (m *MockResourceServerAPI) Update(ctx context.Context, id string, rs *management.ResourceServer, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id, rs}
+	varargs := []any{ctx, id, rs}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -126,8 +127,8 @@ func (m *MockResourceServerAPI) Update(ctx context.Context, id string, rs *manag
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockResourceServerAPIMockRecorder) Update(ctx, id, rs interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockResourceServerAPIMockRecorder) Update(ctx, id, rs any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id, rs}, opts...)
+	varargs := append([]any{ctx, id, rs}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockResourceServerAPI)(nil).Update), varargs...)
 }

@@ -10,13 +10,14 @@ import (
 
 	management "github.com/auth0/go-auth0/v3/management"
 	option "github.com/auth0/go-auth0/v3/management/option"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockPhoneNotificationTemplateAPI is a mock of PhoneNotificationTemplateAPI interface.
 type MockPhoneNotificationTemplateAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockPhoneNotificationTemplateAPIMockRecorder
+	isgomock struct{}
 }
 
 // MockPhoneNotificationTemplateAPIMockRecorder is the mock recorder for MockPhoneNotificationTemplateAPI.
@@ -39,7 +40,7 @@ func (m *MockPhoneNotificationTemplateAPI) EXPECT() *MockPhoneNotificationTempla
 // List mocks base method.
 func (m *MockPhoneNotificationTemplateAPI) List(ctx context.Context, request *management.ListPhoneTemplatesRequestParameters, opts ...option.RequestOption) (*management.ListPhoneTemplatesResponseContent, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, request}
+	varargs := []any{ctx, request}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -50,8 +51,8 @@ func (m *MockPhoneNotificationTemplateAPI) List(ctx context.Context, request *ma
 }
 
 // List indicates an expected call of List.
-func (mr *MockPhoneNotificationTemplateAPIMockRecorder) List(ctx, request interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockPhoneNotificationTemplateAPIMockRecorder) List(ctx, request any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, request}, opts...)
+	varargs := append([]any{ctx, request}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockPhoneNotificationTemplateAPI)(nil).List), varargs...)
 }

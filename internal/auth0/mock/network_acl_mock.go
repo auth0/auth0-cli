@@ -9,13 +9,14 @@ import (
 	reflect "reflect"
 
 	management "github.com/auth0/go-auth0/management"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockNetworkACLAPI is a mock of NetworkACLAPI interface.
 type MockNetworkACLAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockNetworkACLAPIMockRecorder
+	isgomock struct{}
 }
 
 // MockNetworkACLAPIMockRecorder is the mock recorder for MockNetworkACLAPI.
@@ -38,7 +39,7 @@ func (m *MockNetworkACLAPI) EXPECT() *MockNetworkACLAPIMockRecorder {
 // Create mocks base method.
 func (m *MockNetworkACLAPI) Create(ctx context.Context, n *management.NetworkACL, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, n}
+	varargs := []any{ctx, n}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -48,16 +49,16 @@ func (m *MockNetworkACLAPI) Create(ctx context.Context, n *management.NetworkACL
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockNetworkACLAPIMockRecorder) Create(ctx, n interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockNetworkACLAPIMockRecorder) Create(ctx, n any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, n}, opts...)
+	varargs := append([]any{ctx, n}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockNetworkACLAPI)(nil).Create), varargs...)
 }
 
 // Delete mocks base method.
 func (m *MockNetworkACLAPI) Delete(ctx context.Context, id string, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -67,16 +68,16 @@ func (m *MockNetworkACLAPI) Delete(ctx context.Context, id string, opts ...manag
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockNetworkACLAPIMockRecorder) Delete(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockNetworkACLAPIMockRecorder) Delete(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNetworkACLAPI)(nil).Delete), varargs...)
 }
 
 // List mocks base method.
 func (m *MockNetworkACLAPI) List(ctx context.Context, opts ...management.RequestOption) ([]*management.NetworkACL, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx}
+	varargs := []any{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -87,16 +88,16 @@ func (m *MockNetworkACLAPI) List(ctx context.Context, opts ...management.Request
 }
 
 // List indicates an expected call of List.
-func (mr *MockNetworkACLAPIMockRecorder) List(ctx interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockNetworkACLAPIMockRecorder) List(ctx any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx}, opts...)
+	varargs := append([]any{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNetworkACLAPI)(nil).List), varargs...)
 }
 
 // Patch mocks base method.
 func (m *MockNetworkACLAPI) Patch(ctx context.Context, id string, n *management.NetworkACL, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id, n}
+	varargs := []any{ctx, id, n}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -106,16 +107,16 @@ func (m *MockNetworkACLAPI) Patch(ctx context.Context, id string, n *management.
 }
 
 // Patch indicates an expected call of Patch.
-func (mr *MockNetworkACLAPIMockRecorder) Patch(ctx, id, n interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockNetworkACLAPIMockRecorder) Patch(ctx, id, n any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id, n}, opts...)
+	varargs := append([]any{ctx, id, n}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockNetworkACLAPI)(nil).Patch), varargs...)
 }
 
 // Read mocks base method.
 func (m *MockNetworkACLAPI) Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.NetworkACL, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -126,16 +127,16 @@ func (m *MockNetworkACLAPI) Read(ctx context.Context, id string, opts ...managem
 }
 
 // Read indicates an expected call of Read.
-func (mr *MockNetworkACLAPIMockRecorder) Read(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockNetworkACLAPIMockRecorder) Read(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockNetworkACLAPI)(nil).Read), varargs...)
 }
 
 // Update mocks base method.
 func (m *MockNetworkACLAPI) Update(ctx context.Context, id string, n *management.NetworkACL, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id, n}
+	varargs := []any{ctx, id, n}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -145,8 +146,8 @@ func (m *MockNetworkACLAPI) Update(ctx context.Context, id string, n *management
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockNetworkACLAPIMockRecorder) Update(ctx, id, n interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockNetworkACLAPIMockRecorder) Update(ctx, id, n any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id, n}, opts...)
+	varargs := append([]any{ctx, id, n}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockNetworkACLAPI)(nil).Update), varargs...)
 }

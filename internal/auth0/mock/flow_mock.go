@@ -9,13 +9,14 @@ import (
 	reflect "reflect"
 
 	management "github.com/auth0/go-auth0/management"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockFlowAPI is a mock of FlowAPI interface.
 type MockFlowAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockFlowAPIMockRecorder
+	isgomock struct{}
 }
 
 // MockFlowAPIMockRecorder is the mock recorder for MockFlowAPI.
@@ -38,7 +39,7 @@ func (m *MockFlowAPI) EXPECT() *MockFlowAPIMockRecorder {
 // Create mocks base method.
 func (m *MockFlowAPI) Create(ctx context.Context, r *management.Flow, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, r}
+	varargs := []any{ctx, r}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -48,16 +49,16 @@ func (m *MockFlowAPI) Create(ctx context.Context, r *management.Flow, opts ...ma
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockFlowAPIMockRecorder) Create(ctx, r interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockFlowAPIMockRecorder) Create(ctx, r any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, r}, opts...)
+	varargs := append([]any{ctx, r}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockFlowAPI)(nil).Create), varargs...)
 }
 
 // Delete mocks base method.
 func (m *MockFlowAPI) Delete(ctx context.Context, id string, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -67,16 +68,16 @@ func (m *MockFlowAPI) Delete(ctx context.Context, id string, opts ...management.
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockFlowAPIMockRecorder) Delete(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockFlowAPIMockRecorder) Delete(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockFlowAPI)(nil).Delete), varargs...)
 }
 
 // List mocks base method.
 func (m *MockFlowAPI) List(ctx context.Context, opts ...management.RequestOption) (*management.FlowList, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx}
+	varargs := []any{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -87,16 +88,16 @@ func (m *MockFlowAPI) List(ctx context.Context, opts ...management.RequestOption
 }
 
 // List indicates an expected call of List.
-func (mr *MockFlowAPIMockRecorder) List(ctx interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockFlowAPIMockRecorder) List(ctx any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx}, opts...)
+	varargs := append([]any{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockFlowAPI)(nil).List), varargs...)
 }
 
 // Read mocks base method.
 func (m *MockFlowAPI) Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.Flow, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -107,16 +108,16 @@ func (m *MockFlowAPI) Read(ctx context.Context, id string, opts ...management.Re
 }
 
 // Read indicates an expected call of Read.
-func (mr *MockFlowAPIMockRecorder) Read(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockFlowAPIMockRecorder) Read(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockFlowAPI)(nil).Read), varargs...)
 }
 
 // Update mocks base method.
 func (m *MockFlowAPI) Update(ctx context.Context, id string, r *management.Flow, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id, r}
+	varargs := []any{ctx, id, r}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -126,9 +127,9 @@ func (m *MockFlowAPI) Update(ctx context.Context, id string, r *management.Flow,
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockFlowAPIMockRecorder) Update(ctx, id, r interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockFlowAPIMockRecorder) Update(ctx, id, r any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id, r}, opts...)
+	varargs := append([]any{ctx, id, r}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockFlowAPI)(nil).Update), varargs...)
 }
 
@@ -136,6 +137,7 @@ func (mr *MockFlowAPIMockRecorder) Update(ctx, id, r interface{}, opts ...interf
 type MockFlowVaultConnectionAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockFlowVaultConnectionAPIMockRecorder
+	isgomock struct{}
 }
 
 // MockFlowVaultConnectionAPIMockRecorder is the mock recorder for MockFlowVaultConnectionAPI.
@@ -158,7 +160,7 @@ func (m *MockFlowVaultConnectionAPI) EXPECT() *MockFlowVaultConnectionAPIMockRec
 // CreateConnection mocks base method.
 func (m *MockFlowVaultConnectionAPI) CreateConnection(ctx context.Context, r *management.FlowVaultConnection, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, r}
+	varargs := []any{ctx, r}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -168,16 +170,16 @@ func (m *MockFlowVaultConnectionAPI) CreateConnection(ctx context.Context, r *ma
 }
 
 // CreateConnection indicates an expected call of CreateConnection.
-func (mr *MockFlowVaultConnectionAPIMockRecorder) CreateConnection(ctx, r interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockFlowVaultConnectionAPIMockRecorder) CreateConnection(ctx, r any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, r}, opts...)
+	varargs := append([]any{ctx, r}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateConnection", reflect.TypeOf((*MockFlowVaultConnectionAPI)(nil).CreateConnection), varargs...)
 }
 
 // DeleteConnection mocks base method.
 func (m *MockFlowVaultConnectionAPI) DeleteConnection(ctx context.Context, id string, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -187,16 +189,16 @@ func (m *MockFlowVaultConnectionAPI) DeleteConnection(ctx context.Context, id st
 }
 
 // DeleteConnection indicates an expected call of DeleteConnection.
-func (mr *MockFlowVaultConnectionAPIMockRecorder) DeleteConnection(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockFlowVaultConnectionAPIMockRecorder) DeleteConnection(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteConnection", reflect.TypeOf((*MockFlowVaultConnectionAPI)(nil).DeleteConnection), varargs...)
 }
 
 // GetConnection mocks base method.
 func (m *MockFlowVaultConnectionAPI) GetConnection(ctx context.Context, id string, opts ...management.RequestOption) (*management.FlowVaultConnection, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -207,16 +209,16 @@ func (m *MockFlowVaultConnectionAPI) GetConnection(ctx context.Context, id strin
 }
 
 // GetConnection indicates an expected call of GetConnection.
-func (mr *MockFlowVaultConnectionAPIMockRecorder) GetConnection(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockFlowVaultConnectionAPIMockRecorder) GetConnection(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConnection", reflect.TypeOf((*MockFlowVaultConnectionAPI)(nil).GetConnection), varargs...)
 }
 
 // GetConnectionList mocks base method.
 func (m *MockFlowVaultConnectionAPI) GetConnectionList(ctx context.Context, opts ...management.RequestOption) (*management.FlowVaultConnectionList, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx}
+	varargs := []any{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -227,16 +229,16 @@ func (m *MockFlowVaultConnectionAPI) GetConnectionList(ctx context.Context, opts
 }
 
 // GetConnectionList indicates an expected call of GetConnectionList.
-func (mr *MockFlowVaultConnectionAPIMockRecorder) GetConnectionList(ctx interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockFlowVaultConnectionAPIMockRecorder) GetConnectionList(ctx any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx}, opts...)
+	varargs := append([]any{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConnectionList", reflect.TypeOf((*MockFlowVaultConnectionAPI)(nil).GetConnectionList), varargs...)
 }
 
 // UpdateConnection mocks base method.
 func (m *MockFlowVaultConnectionAPI) UpdateConnection(ctx context.Context, id string, r *management.FlowVaultConnection, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id, r}
+	varargs := []any{ctx, id, r}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -246,8 +248,8 @@ func (m *MockFlowVaultConnectionAPI) UpdateConnection(ctx context.Context, id st
 }
 
 // UpdateConnection indicates an expected call of UpdateConnection.
-func (mr *MockFlowVaultConnectionAPIMockRecorder) UpdateConnection(ctx, id, r interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockFlowVaultConnectionAPIMockRecorder) UpdateConnection(ctx, id, r any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id, r}, opts...)
+	varargs := append([]any{ctx, id, r}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateConnection", reflect.TypeOf((*MockFlowVaultConnectionAPI)(nil).UpdateConnection), varargs...)
 }

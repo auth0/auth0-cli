@@ -9,13 +9,14 @@ import (
 	reflect "reflect"
 
 	management "github.com/auth0/go-auth0/management"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockEmailTemplateAPI is a mock of EmailTemplateAPI interface.
 type MockEmailTemplateAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockEmailTemplateAPIMockRecorder
+	isgomock struct{}
 }
 
 // MockEmailTemplateAPIMockRecorder is the mock recorder for MockEmailTemplateAPI.
@@ -38,7 +39,7 @@ func (m *MockEmailTemplateAPI) EXPECT() *MockEmailTemplateAPIMockRecorder {
 // Create mocks base method.
 func (m *MockEmailTemplateAPI) Create(ctx context.Context, template *management.EmailTemplate, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, template}
+	varargs := []any{ctx, template}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -48,16 +49,16 @@ func (m *MockEmailTemplateAPI) Create(ctx context.Context, template *management.
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockEmailTemplateAPIMockRecorder) Create(ctx, template interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockEmailTemplateAPIMockRecorder) Create(ctx, template any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, template}, opts...)
+	varargs := append([]any{ctx, template}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockEmailTemplateAPI)(nil).Create), varargs...)
 }
 
 // Read mocks base method.
 func (m *MockEmailTemplateAPI) Read(ctx context.Context, template string, opts ...management.RequestOption) (*management.EmailTemplate, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, template}
+	varargs := []any{ctx, template}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -68,16 +69,16 @@ func (m *MockEmailTemplateAPI) Read(ctx context.Context, template string, opts .
 }
 
 // Read indicates an expected call of Read.
-func (mr *MockEmailTemplateAPIMockRecorder) Read(ctx, template interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockEmailTemplateAPIMockRecorder) Read(ctx, template any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, template}, opts...)
+	varargs := append([]any{ctx, template}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockEmailTemplateAPI)(nil).Read), varargs...)
 }
 
 // Update mocks base method.
 func (m *MockEmailTemplateAPI) Update(ctx context.Context, template string, e *management.EmailTemplate, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, template, e}
+	varargs := []any{ctx, template, e}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -87,8 +88,8 @@ func (m *MockEmailTemplateAPI) Update(ctx context.Context, template string, e *m
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockEmailTemplateAPIMockRecorder) Update(ctx, template, e interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockEmailTemplateAPIMockRecorder) Update(ctx, template, e any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, template, e}, opts...)
+	varargs := append([]any{ctx, template, e}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockEmailTemplateAPI)(nil).Update), varargs...)
 }

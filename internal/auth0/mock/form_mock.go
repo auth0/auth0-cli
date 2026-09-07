@@ -9,13 +9,14 @@ import (
 	reflect "reflect"
 
 	management "github.com/auth0/go-auth0/management"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockFormAPI is a mock of FormAPI interface.
 type MockFormAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockFormAPIMockRecorder
+	isgomock struct{}
 }
 
 // MockFormAPIMockRecorder is the mock recorder for MockFormAPI.
@@ -38,7 +39,7 @@ func (m *MockFormAPI) EXPECT() *MockFormAPIMockRecorder {
 // Create mocks base method.
 func (m *MockFormAPI) Create(ctx context.Context, r *management.Form, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, r}
+	varargs := []any{ctx, r}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -48,16 +49,16 @@ func (m *MockFormAPI) Create(ctx context.Context, r *management.Form, opts ...ma
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockFormAPIMockRecorder) Create(ctx, r interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockFormAPIMockRecorder) Create(ctx, r any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, r}, opts...)
+	varargs := append([]any{ctx, r}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockFormAPI)(nil).Create), varargs...)
 }
 
 // Delete mocks base method.
 func (m *MockFormAPI) Delete(ctx context.Context, id string, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -67,16 +68,16 @@ func (m *MockFormAPI) Delete(ctx context.Context, id string, opts ...management.
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockFormAPIMockRecorder) Delete(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockFormAPIMockRecorder) Delete(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockFormAPI)(nil).Delete), varargs...)
 }
 
 // List mocks base method.
 func (m *MockFormAPI) List(ctx context.Context, opts ...management.RequestOption) (*management.FormList, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx}
+	varargs := []any{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -87,16 +88,16 @@ func (m *MockFormAPI) List(ctx context.Context, opts ...management.RequestOption
 }
 
 // List indicates an expected call of List.
-func (mr *MockFormAPIMockRecorder) List(ctx interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockFormAPIMockRecorder) List(ctx any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx}, opts...)
+	varargs := append([]any{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockFormAPI)(nil).List), varargs...)
 }
 
 // Read mocks base method.
 func (m *MockFormAPI) Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.Form, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -107,16 +108,16 @@ func (m *MockFormAPI) Read(ctx context.Context, id string, opts ...management.Re
 }
 
 // Read indicates an expected call of Read.
-func (mr *MockFormAPIMockRecorder) Read(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockFormAPIMockRecorder) Read(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockFormAPI)(nil).Read), varargs...)
 }
 
 // Update mocks base method.
 func (m *MockFormAPI) Update(ctx context.Context, id string, r *management.Form, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id, r}
+	varargs := []any{ctx, id, r}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -126,8 +127,8 @@ func (m *MockFormAPI) Update(ctx context.Context, id string, r *management.Form,
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockFormAPIMockRecorder) Update(ctx, id, r interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockFormAPIMockRecorder) Update(ctx, id, r any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id, r}, opts...)
+	varargs := append([]any{ctx, id, r}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockFormAPI)(nil).Update), varargs...)
 }

@@ -9,13 +9,14 @@ import (
 	reflect "reflect"
 
 	management "github.com/auth0/go-auth0/management"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockUserAttributeProfilesAPI is a mock of UserAttributeProfilesAPI interface.
 type MockUserAttributeProfilesAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockUserAttributeProfilesAPIMockRecorder
+	isgomock struct{}
 }
 
 // MockUserAttributeProfilesAPIMockRecorder is the mock recorder for MockUserAttributeProfilesAPI.
@@ -38,7 +39,7 @@ func (m *MockUserAttributeProfilesAPI) EXPECT() *MockUserAttributeProfilesAPIMoc
 // Create mocks base method.
 func (m *MockUserAttributeProfilesAPI) Create(ctx context.Context, p *management.UserAttributeProfile, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, p}
+	varargs := []any{ctx, p}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -48,16 +49,16 @@ func (m *MockUserAttributeProfilesAPI) Create(ctx context.Context, p *management
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockUserAttributeProfilesAPIMockRecorder) Create(ctx, p interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockUserAttributeProfilesAPIMockRecorder) Create(ctx, p any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, p}, opts...)
+	varargs := append([]any{ctx, p}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockUserAttributeProfilesAPI)(nil).Create), varargs...)
 }
 
 // Delete mocks base method.
 func (m *MockUserAttributeProfilesAPI) Delete(ctx context.Context, id string, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -67,16 +68,16 @@ func (m *MockUserAttributeProfilesAPI) Delete(ctx context.Context, id string, op
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockUserAttributeProfilesAPIMockRecorder) Delete(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockUserAttributeProfilesAPIMockRecorder) Delete(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockUserAttributeProfilesAPI)(nil).Delete), varargs...)
 }
 
 // GetTemplate mocks base method.
 func (m *MockUserAttributeProfilesAPI) GetTemplate(ctx context.Context, id string, opts ...management.RequestOption) (*management.UserAttributeProfileTemplateItem, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -87,16 +88,16 @@ func (m *MockUserAttributeProfilesAPI) GetTemplate(ctx context.Context, id strin
 }
 
 // GetTemplate indicates an expected call of GetTemplate.
-func (mr *MockUserAttributeProfilesAPIMockRecorder) GetTemplate(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockUserAttributeProfilesAPIMockRecorder) GetTemplate(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplate", reflect.TypeOf((*MockUserAttributeProfilesAPI)(nil).GetTemplate), varargs...)
 }
 
 // List mocks base method.
 func (m *MockUserAttributeProfilesAPI) List(ctx context.Context, opts ...management.RequestOption) (*management.UserAttributeProfileList, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx}
+	varargs := []any{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -107,16 +108,16 @@ func (m *MockUserAttributeProfilesAPI) List(ctx context.Context, opts ...managem
 }
 
 // List indicates an expected call of List.
-func (mr *MockUserAttributeProfilesAPIMockRecorder) List(ctx interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockUserAttributeProfilesAPIMockRecorder) List(ctx any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx}, opts...)
+	varargs := append([]any{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockUserAttributeProfilesAPI)(nil).List), varargs...)
 }
 
 // ListTemplates mocks base method.
 func (m *MockUserAttributeProfilesAPI) ListTemplates(ctx context.Context, opts ...management.RequestOption) (*management.UserAttributeProfileTemplateList, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx}
+	varargs := []any{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -127,16 +128,16 @@ func (m *MockUserAttributeProfilesAPI) ListTemplates(ctx context.Context, opts .
 }
 
 // ListTemplates indicates an expected call of ListTemplates.
-func (mr *MockUserAttributeProfilesAPIMockRecorder) ListTemplates(ctx interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockUserAttributeProfilesAPIMockRecorder) ListTemplates(ctx any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx}, opts...)
+	varargs := append([]any{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTemplates", reflect.TypeOf((*MockUserAttributeProfilesAPI)(nil).ListTemplates), varargs...)
 }
 
 // Read mocks base method.
 func (m *MockUserAttributeProfilesAPI) Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.UserAttributeProfile, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -147,16 +148,16 @@ func (m *MockUserAttributeProfilesAPI) Read(ctx context.Context, id string, opts
 }
 
 // Read indicates an expected call of Read.
-func (mr *MockUserAttributeProfilesAPIMockRecorder) Read(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockUserAttributeProfilesAPIMockRecorder) Read(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockUserAttributeProfilesAPI)(nil).Read), varargs...)
 }
 
 // Update mocks base method.
 func (m *MockUserAttributeProfilesAPI) Update(ctx context.Context, id string, p *management.UserAttributeProfile, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id, p}
+	varargs := []any{ctx, id, p}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -166,8 +167,8 @@ func (m *MockUserAttributeProfilesAPI) Update(ctx context.Context, id string, p 
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockUserAttributeProfilesAPIMockRecorder) Update(ctx, id, p interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockUserAttributeProfilesAPIMockRecorder) Update(ctx, id, p any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id, p}, opts...)
+	varargs := append([]any{ctx, id, p}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockUserAttributeProfilesAPI)(nil).Update), varargs...)
 }

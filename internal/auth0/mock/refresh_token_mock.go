@@ -10,13 +10,14 @@ import (
 
 	management "github.com/auth0/go-auth0/v3/management"
 	option "github.com/auth0/go-auth0/v3/management/option"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockRefreshTokenAPIV3 is a mock of RefreshTokenAPIV3 interface.
 type MockRefreshTokenAPIV3 struct {
 	ctrl     *gomock.Controller
 	recorder *MockRefreshTokenAPIV3MockRecorder
+	isgomock struct{}
 }
 
 // MockRefreshTokenAPIV3MockRecorder is the mock recorder for MockRefreshTokenAPIV3.
@@ -39,7 +40,7 @@ func (m *MockRefreshTokenAPIV3) EXPECT() *MockRefreshTokenAPIV3MockRecorder {
 // Delete mocks base method.
 func (m *MockRefreshTokenAPIV3) Delete(ctx context.Context, id string, opts ...option.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -49,16 +50,16 @@ func (m *MockRefreshTokenAPIV3) Delete(ctx context.Context, id string, opts ...o
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockRefreshTokenAPIV3MockRecorder) Delete(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockRefreshTokenAPIV3MockRecorder) Delete(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockRefreshTokenAPIV3)(nil).Delete), varargs...)
 }
 
 // Get mocks base method.
 func (m *MockRefreshTokenAPIV3) Get(ctx context.Context, id string, opts ...option.RequestOption) (*management.GetRefreshTokenResponseContent, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -69,16 +70,16 @@ func (m *MockRefreshTokenAPIV3) Get(ctx context.Context, id string, opts ...opti
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockRefreshTokenAPIV3MockRecorder) Get(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockRefreshTokenAPIV3MockRecorder) Get(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRefreshTokenAPIV3)(nil).Get), varargs...)
 }
 
 // Revoke mocks base method.
 func (m *MockRefreshTokenAPIV3) Revoke(ctx context.Context, request *management.RevokeRefreshTokensRequestContent, opts ...option.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, request}
+	varargs := []any{ctx, request}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -88,16 +89,16 @@ func (m *MockRefreshTokenAPIV3) Revoke(ctx context.Context, request *management.
 }
 
 // Revoke indicates an expected call of Revoke.
-func (mr *MockRefreshTokenAPIV3MockRecorder) Revoke(ctx, request interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockRefreshTokenAPIV3MockRecorder) Revoke(ctx, request any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, request}, opts...)
+	varargs := append([]any{ctx, request}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Revoke", reflect.TypeOf((*MockRefreshTokenAPIV3)(nil).Revoke), varargs...)
 }
 
 // Update mocks base method.
 func (m *MockRefreshTokenAPIV3) Update(ctx context.Context, id string, request *management.UpdateRefreshTokenRequestContent, opts ...option.RequestOption) (*management.UpdateRefreshTokenResponseContent, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id, request}
+	varargs := []any{ctx, id, request}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -108,8 +109,8 @@ func (m *MockRefreshTokenAPIV3) Update(ctx context.Context, id string, request *
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockRefreshTokenAPIV3MockRecorder) Update(ctx, id, request interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockRefreshTokenAPIV3MockRecorder) Update(ctx, id, request any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id, request}, opts...)
+	varargs := append([]any{ctx, id, request}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockRefreshTokenAPIV3)(nil).Update), varargs...)
 }

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	"github.com/stretchr/testify/assert"
 

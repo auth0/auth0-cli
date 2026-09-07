@@ -9,13 +9,14 @@ import (
 	reflect "reflect"
 
 	management "github.com/auth0/go-auth0/management"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockTokenExchangeAPI is a mock of TokenExchangeAPI interface.
 type MockTokenExchangeAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockTokenExchangeAPIMockRecorder
+	isgomock struct{}
 }
 
 // MockTokenExchangeAPIMockRecorder is the mock recorder for MockTokenExchangeAPI.
@@ -38,7 +39,7 @@ func (m *MockTokenExchangeAPI) EXPECT() *MockTokenExchangeAPIMockRecorder {
 // Create mocks base method.
 func (m *MockTokenExchangeAPI) Create(ctx context.Context, profile *management.TokenExchangeProfile, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, profile}
+	varargs := []any{ctx, profile}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -48,16 +49,16 @@ func (m *MockTokenExchangeAPI) Create(ctx context.Context, profile *management.T
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockTokenExchangeAPIMockRecorder) Create(ctx, profile interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockTokenExchangeAPIMockRecorder) Create(ctx, profile any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, profile}, opts...)
+	varargs := append([]any{ctx, profile}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockTokenExchangeAPI)(nil).Create), varargs...)
 }
 
 // Delete mocks base method.
 func (m *MockTokenExchangeAPI) Delete(ctx context.Context, id string, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -67,16 +68,16 @@ func (m *MockTokenExchangeAPI) Delete(ctx context.Context, id string, opts ...ma
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockTokenExchangeAPIMockRecorder) Delete(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockTokenExchangeAPIMockRecorder) Delete(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockTokenExchangeAPI)(nil).Delete), varargs...)
 }
 
 // List mocks base method.
 func (m *MockTokenExchangeAPI) List(ctx context.Context, opts ...management.RequestOption) (*management.TokenExchangeProfileList, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx}
+	varargs := []any{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -87,16 +88,16 @@ func (m *MockTokenExchangeAPI) List(ctx context.Context, opts ...management.Requ
 }
 
 // List indicates an expected call of List.
-func (mr *MockTokenExchangeAPIMockRecorder) List(ctx interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockTokenExchangeAPIMockRecorder) List(ctx any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx}, opts...)
+	varargs := append([]any{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockTokenExchangeAPI)(nil).List), varargs...)
 }
 
 // Read mocks base method.
 func (m *MockTokenExchangeAPI) Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.TokenExchangeProfile, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -107,16 +108,16 @@ func (m *MockTokenExchangeAPI) Read(ctx context.Context, id string, opts ...mana
 }
 
 // Read indicates an expected call of Read.
-func (mr *MockTokenExchangeAPIMockRecorder) Read(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockTokenExchangeAPIMockRecorder) Read(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockTokenExchangeAPI)(nil).Read), varargs...)
 }
 
 // Update mocks base method.
 func (m *MockTokenExchangeAPI) Update(ctx context.Context, id string, profile *management.TokenExchangeProfile, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id, profile}
+	varargs := []any{ctx, id, profile}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -126,8 +127,8 @@ func (m *MockTokenExchangeAPI) Update(ctx context.Context, id string, profile *m
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockTokenExchangeAPIMockRecorder) Update(ctx, id, profile interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockTokenExchangeAPIMockRecorder) Update(ctx, id, profile any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id, profile}, opts...)
+	varargs := append([]any{ctx, id, profile}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockTokenExchangeAPI)(nil).Update), varargs...)
 }

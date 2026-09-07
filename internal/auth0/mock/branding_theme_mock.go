@@ -9,13 +9,14 @@ import (
 	reflect "reflect"
 
 	management "github.com/auth0/go-auth0/management"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockBrandingThemeAPI is a mock of BrandingThemeAPI interface.
 type MockBrandingThemeAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockBrandingThemeAPIMockRecorder
+	isgomock struct{}
 }
 
 // MockBrandingThemeAPIMockRecorder is the mock recorder for MockBrandingThemeAPI.
@@ -38,7 +39,7 @@ func (m *MockBrandingThemeAPI) EXPECT() *MockBrandingThemeAPIMockRecorder {
 // Create mocks base method.
 func (m *MockBrandingThemeAPI) Create(ctx context.Context, theme *management.BrandingTheme, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, theme}
+	varargs := []any{ctx, theme}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -48,16 +49,16 @@ func (m *MockBrandingThemeAPI) Create(ctx context.Context, theme *management.Bra
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockBrandingThemeAPIMockRecorder) Create(ctx, theme interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockBrandingThemeAPIMockRecorder) Create(ctx, theme any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, theme}, opts...)
+	varargs := append([]any{ctx, theme}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockBrandingThemeAPI)(nil).Create), varargs...)
 }
 
 // Default mocks base method.
 func (m *MockBrandingThemeAPI) Default(ctx context.Context, opts ...management.RequestOption) (*management.BrandingTheme, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx}
+	varargs := []any{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -68,16 +69,16 @@ func (m *MockBrandingThemeAPI) Default(ctx context.Context, opts ...management.R
 }
 
 // Default indicates an expected call of Default.
-func (mr *MockBrandingThemeAPIMockRecorder) Default(ctx interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockBrandingThemeAPIMockRecorder) Default(ctx any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx}, opts...)
+	varargs := append([]any{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Default", reflect.TypeOf((*MockBrandingThemeAPI)(nil).Default), varargs...)
 }
 
 // Delete mocks base method.
 func (m *MockBrandingThemeAPI) Delete(ctx context.Context, id string, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -87,16 +88,16 @@ func (m *MockBrandingThemeAPI) Delete(ctx context.Context, id string, opts ...ma
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockBrandingThemeAPIMockRecorder) Delete(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockBrandingThemeAPIMockRecorder) Delete(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockBrandingThemeAPI)(nil).Delete), varargs...)
 }
 
 // Read mocks base method.
 func (m *MockBrandingThemeAPI) Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.BrandingTheme, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id}
+	varargs := []any{ctx, id}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -107,16 +108,16 @@ func (m *MockBrandingThemeAPI) Read(ctx context.Context, id string, opts ...mana
 }
 
 // Read indicates an expected call of Read.
-func (mr *MockBrandingThemeAPIMockRecorder) Read(ctx, id interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockBrandingThemeAPIMockRecorder) Read(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id}, opts...)
+	varargs := append([]any{ctx, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockBrandingThemeAPI)(nil).Read), varargs...)
 }
 
 // Update mocks base method.
 func (m *MockBrandingThemeAPI) Update(ctx context.Context, id string, theme *management.BrandingTheme, opts ...management.RequestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, id, theme}
+	varargs := []any{ctx, id, theme}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -126,8 +127,8 @@ func (m *MockBrandingThemeAPI) Update(ctx context.Context, id string, theme *man
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockBrandingThemeAPIMockRecorder) Update(ctx, id, theme interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockBrandingThemeAPIMockRecorder) Update(ctx, id, theme any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, id, theme}, opts...)
+	varargs := append([]any{ctx, id, theme}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockBrandingThemeAPI)(nil).Update), varargs...)
 }
