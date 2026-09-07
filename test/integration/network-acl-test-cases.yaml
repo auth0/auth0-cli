@@ -106,7 +106,7 @@ tests:
       json:
         description: "Integration Test ACL Match All"
         active: "false"
-        priority: "99"
+        priority: "6"
         rule.scope: "tenant"
         rule.action.block: "true"
         rule.match_all: "true"
