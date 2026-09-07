@@ -1,0 +1,110 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  001 - it successfully lists all flows (json):
+    command: auth0 flows list --json
+    exit-code: 0
+
+  002 - it successfully creates a flow via --name:
+    command: auth0 flows create --name integration-test-flow-created --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - ID
+        - NAME
+        - integration-test-flow-created
+
+  003 - it successfully creates a flow and outputs in json:
+    command: auth0 flows create --name integration-test-flow-json --no-input --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-flow-json"
+
+  004 - it successfully creates a flow from a fixture file:
+    command: auth0 flows create --actions-file ./test/integration/fixtures/create-flow.json --name integration-test-flow-example --no-input --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-flow-example"
+
+  005 - it fails to create a flow without a name:
+    command: auth0 flows create --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - flow name is required
+
+  006 - it successfully lists all flows with data:
+    command: auth0 flows list
+    exit-code: 0
+    stdout:
+      contains:
+        - ID
+        - NAME
+        - UPDATED
+
+  007 - given a test flow, it successfully shows the flow details:
+    command: auth0 flows show $(./test/integration/scripts/get-flow-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - ID
+        - NAME
+        - integration-test-flow
+
+  008 - given a test flow, it successfully shows the flow details (json):
+    command: auth0 flows show $(./test/integration/scripts/get-flow-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-flow"
+
+  009 - given a test flow, it successfully updates the flow name:
+    command: auth0 flows update $(./test/integration/scripts/get-flow-id.sh) --name integration-test-flow-updated --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-flow-updated"
+
+  010 - given a test flow, it successfully updates the flow actions from a fixture file:
+    command: auth0 flows update $(./test/integration/scripts/get-flow-id.sh) --actions-file ./test/integration/fixtures/update-flow.json --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-flow-updated"
+
+  011 - given a test flow, it prints the builder URL for open:
+    command: auth0 flows open $(./test/integration/scripts/get-flow-id.sh) --no-input
+    exit-code: 0
+    stderr:
+      contains:
+        - forms.auth0.com
+        - /flows/
+        - /edit
+
+  012 - given a test flow, it successfully lists its executions (json):
+    command: auth0 flows executions list $(./test/integration/scripts/get-flow-id.sh) --json
+    exit-code: 0
+
+  013 - given a test flow, it successfully lists its executions:
+    command: auth0 flows executions list $(./test/integration/scripts/get-flow-id.sh)
+    exit-code: 0
+
+  014 - agent mode refuses to delete a flow without force:
+    command: AUTH0_AGENT_MODE=true auth0 flows delete $(./test/integration/scripts/get-flow-id.sh)
+    exit-code: 1
+    stderr:
+      contains:
+        - destructive command
+        - --force
+
+  015 - given a test flow, it successfully deletes the flow:
+    command: auth0 flows delete $(./test/integration/scripts/get-flow-id.sh) --force
+    exit-code: 0
+
+  016 - it cleans up all flows created by this suite:
+    command: ./test/integration/scripts/cleanup-flows.sh
+    exit-code: 0

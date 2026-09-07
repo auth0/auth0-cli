@@ -12,7 +12,7 @@ require (
 	github.com/charmbracelet/glamour v1.0.0
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
 	github.com/fsnotify/fsnotify v1.10.1
-	github.com/getkin/kin-openapi v0.145.0
+	github.com/getkin/kin-openapi v0.149.0
 	github.com/getsentry/sentry-go v0.49.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.7.0
@@ -92,7 +92,7 @@ require (
 	github.com/oasdiff/yaml v0.1.1 // indirect
 	github.com/oasdiff/yaml3 v0.0.14 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/valyala/fastjson v1.6.10 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect

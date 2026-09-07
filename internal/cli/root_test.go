@@ -38,6 +38,7 @@ func TestCommandRequiresAuthentication(t *testing.T) {
 		{"auth0 apps list", true},
 		{"auth0 apps create", true},
 		{"auth0 orgs members list", true},
+		{"auth0 __complete", false},
 		{"auth0 completion", false},
 		{"auth0 help", false},
 		{"auth0 login", false},
