@@ -135,12 +135,6 @@ var (
 		Help:     "Id of an existing Form to replace. When omitted, a new form is created.",
 	}
 
-	formEdit = Flag{
-		Name:     "Edit",
-		LongForm: "edit",
-		Help:     "Open an editor to author the form graph after entering the name.",
-	}
-
 	formExample = Flag{
 		Name:     "Example",
 		LongForm: "example",
@@ -253,7 +247,6 @@ func createFormCmd(cli *cli) *cobra.Command {
 		Data            string
 		LanguagePrimary string
 		LanguageDefault string
-		Edit            bool
 		Example         bool
 		Schema          bool
 	}
@@ -263,9 +256,10 @@ func createFormCmd(cli *cli) *cobra.Command {
 		Args:  cobra.NoArgs,
 		Short: "Create a new form",
 		Long: "Create a new form.\n\n" +
-			"Interactive behavior: `auth0 forms create` asks only for the name and creates a minimal " +
-			"scaffold; it does not open an editor. You can then refine the form in the dashboard builder.\n\n" +
-			"Pass `--edit` to open an editor and author the form graph before it is created, or supply " +
+			"Interactive behavior: `auth0 forms create` asks for the name, then offers to author the " +
+			"form body in an editor. Decline the prompt to create a minimal scaffold and refine it " +
+			"in the dashboard builder instead.\n\n" +
+			"Alternatively, supply " +
 			"the whole body via `--data` as inline JSON, a file (`@form.json`), or piped stdin. Run " +
 			"`auth0 forms create --schema` to print the accepted payload schema and " +
 			"`auth0 forms create --example > form.json` to generate a starter body.\n\n" +
@@ -274,7 +268,6 @@ func createFormCmd(cli *cli) *cobra.Command {
 			"and the form graph itself is validated by the API.",
 		Example: `  auth0 forms create
   auth0 forms create --name "My Form"
-  auth0 forms create --name "My Form" --edit
   auth0 forms create --example > form.json
   auth0 forms create --schema
   auth0 forms create --data '{"name":"My Form"}'
@@ -311,12 +304,17 @@ func createFormCmd(cli *cli) *cobra.Command {
 			}
 
 			rawBody := json.RawMessage(formCreateSkeleton)
-			if inputs.Edit {
-				if !canPrompt(cmd) {
-					return errors.New("the --edit flag requires an interactive terminal")
-				}
-				if err := editFormJSON(cli, formCreateSkeleton, &rawBody); err != nil {
-					return err
+			// When the name was gathered interactively, offer to author the body
+			// now. Declining creates a minimal scaffold to refine in the dashboard
+			// builder later.
+			if canPrompt(cmd) {
+				cli.renderer.Infof("A form body is the JSON graph behind the screen: the fields, " +
+					"buttons and blocks users see, the steps and routing between them, plus languages " +
+					"and styling. You can author it now, or skip and design it visually in the dashboard.")
+				if prompt.ConfirmWithDefault("Do you want to author the form body now?", false) {
+					if err := editFormJSON(cli, formCreateSkeleton, &rawBody); err != nil {
+						return err
+					}
 				}
 			}
 
@@ -351,7 +349,6 @@ func createFormCmd(cli *cli) *cobra.Command {
 	dataFlag.RegisterString(cmd, &inputs.Data, "")
 	formLanguagePrimary.RegisterString(cmd, &inputs.LanguagePrimary, "")
 	formLanguageDefault.RegisterString(cmd, &inputs.LanguageDefault, "")
-	formEdit.RegisterBool(cmd, &inputs.Edit, false)
 	formExample.RegisterBool(cmd, &inputs.Example, false)
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")

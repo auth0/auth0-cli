@@ -7,9 +7,9 @@ has_toc: false
 
 Create a new form.
 
-Interactive behavior: `auth0 forms create` asks only for the name and creates a minimal scaffold; it does not open an editor. You can then refine the form in the dashboard builder.
+Interactive behavior: `auth0 forms create` asks for the name, then offers to author the form body in an editor. Decline the prompt to create a minimal scaffold and refine it in the dashboard builder instead.
 
-Pass `--edit` to open an editor and author the form graph before it is created, or supply the whole body via `--data` as inline JSON, a file (`@form.json`), or piped stdin. Run `auth0 forms create --schema` to print the accepted payload schema and `auth0 forms create --example > form.json` to generate a starter body.
+Alternatively, supply the whole body via `--data` as inline JSON, a file (`@form.json`), or piped stdin. Run `auth0 forms create --schema` to print the accepted payload schema and `auth0 forms create --example > form.json` to generate a starter body.
 
 `--data` provides the whole payload and cannot be combined with `--name` or the `--language-*` flags; it is checked for valid JSON and a form name before it is sent, and the form graph itself is validated by the API.
 
@@ -23,7 +23,6 @@ auth0 forms create [flags]
 ```
   auth0 forms create
   auth0 forms create --name "My Form"
-  auth0 forms create --name "My Form" --edit
   auth0 forms create --example > form.json
   auth0 forms create --schema
   auth0 forms create --data '{"name":"My Form"}'
@@ -36,7 +35,6 @@ auth0 forms create [flags]
 
 ```
       --data string               JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
-      --edit                      Open an editor to author the form graph after entering the name.
       --example                   Print an example form JSON body and exit.
       --json                      Output in json format.
       --json-compact              Output in compact json format.
