@@ -443,11 +443,23 @@ tests:
 
   # ----------------------------------------------------------------------------
   # Restore a sensible baseline for the test tenant.
+  #
+  # The Duo, APNs and FCM secrets configured by the tests above are write-only,
+  # so once set they cannot be read back and there is no API to clear them.
+  # Left enabled, the auth0_guardian resource would export those required
+  # sensitive fields as null, and `auth0 tf generate` (terraform-test-cases,
+  # which runs after this suite) would fail `terraform plan` with "Missing
+  # required argument". Disabling the duo and push-notification factors drops
+  # those sub-blocks and returns auth0_guardian to a terraform-plannable state.
   # ----------------------------------------------------------------------------
   059 - restore otp factor enabled:
     command: auth0 guardian factors set otp --enabled
     exit-code: 0
 
-  060 - restore push provider to guardian:
-    command: auth0 guardian factors push set-provider --provider guardian
+  060 - reset duo factor to a terraform-clean state:
+    command: auth0 guardian factors set duo --enabled=false
+    exit-code: 0
+
+  061 - reset push factor to a terraform-clean state:
+    command: auth0 guardian factors set push-notification --enabled=false
     exit-code: 0
