@@ -17,6 +17,83 @@ import (
 	"github.com/auth0/auth0-cli/internal/display"
 )
 
+func TestActionsListCmd(t *testing.T) {
+	t.Run("it lists actions using the default SDK path", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		actionAPI := mock.NewMockActionAPI(ctrl)
+		actionAPI.EXPECT().
+			List(context.Background(), gomock.Any()).
+			Return(&management.ActionList{
+				Actions: []*management.Action{
+					{
+						ID:   auth0.String("action-1"),
+						Name: auth0.String("my-action"),
+						SupportedTriggers: []management.ActionTrigger{
+							{ID: auth0.String("post-login")},
+						},
+					},
+				},
+			}, nil)
+
+		stdout := &bytes.Buffer{}
+		cli := &cli{
+			renderer: &display.Renderer{
+				MessageWriter: io.Discard,
+				ResultWriter:  stdout,
+			},
+			api: &auth0.API{Action: actionAPI},
+		}
+
+		cmd := listActionsCmd(cli)
+		err := cmd.Execute()
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("it returns error when API fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		actionAPI := mock.NewMockActionAPI(ctrl)
+		actionAPI.EXPECT().
+			List(context.Background(), gomock.Any()).
+			Return(nil, errors.New("connection failed"))
+
+		stdout := &bytes.Buffer{}
+		cli := &cli{
+			renderer: &display.Renderer{
+				MessageWriter: io.Discard,
+				ResultWriter:  stdout,
+			},
+			api: &auth0.API{Action: actionAPI},
+		}
+
+		cmd := listActionsCmd(cli)
+		err := cmd.Execute()
+
+		assert.EqualError(t, err, "failed to list actions: connection failed")
+	})
+
+	t.Run("it returns error for invalid --query JSON", func(t *testing.T) {
+		stdout := &bytes.Buffer{}
+		cli := &cli{
+			renderer: &display.Renderer{
+				MessageWriter: io.Discard,
+				ResultWriter:  stdout,
+			},
+			api: &auth0.API{},
+		}
+
+		cmd := listActionsCmd(cli)
+		cmd.SetArgs([]string{"--query", "not-valid-json"})
+		err := cmd.Execute()
+
+		assert.ErrorContains(t, err, "invalid --query value")
+	})
+}
+
 func TestActionsDeployCmd(t *testing.T) {
 	t.Run("it successfully deploys an action", func(t *testing.T) {
 		actionID := "1221c74c-cfd6-40db-af13-7bc9bb1c38db"

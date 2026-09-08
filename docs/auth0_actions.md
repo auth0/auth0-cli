@@ -5,7 +5,21 @@ has_children: true
 ---
 # auth0 actions
 
-Actions are secure, tenant-specific, versioned functions written in Node.js that execute at certain points within the Auth0 platform. Actions are used to customize and extend Auth0's capabilities with custom logic.
+Actions are secure, tenant-specific, versioned functions written in Node.js that execute
+at certain points within the Auth0 platform. Actions are used to customize and extend Auth0's
+capabilities with custom logic.
+
+## Schema Discovery & JSON Input
+
+Use '--schema' on a command to print its request payload schema, and '--data'
+to provide that payload programmatically (validated against the schema before the call).
+
+Examples:
+  auth0 actions create --schema                    # Show the create payload schema
+  auth0 actions create --data @action.json         # Create from JSON file
+  auth0 actions create --data '{"name":"..."}'     # Create from inline JSON
+
+For more details: https://auth0.com/docs/api/management/v2
 
 ## Commands
 

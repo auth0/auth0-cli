@@ -30,7 +30,7 @@ Build, manage and test your [Auth0](https://auth0.com/) integrations from the co
 - [Available Commands](#available-commands)
 - [Customization](#customization)
 - [Agent Integration](#agent-integration)
-- [Anonymous Analytics](#anonymized-analytics-disclosure)
+- [Usage Analytics](#usage-analytics-disclosure)
 
 ## Installation
 
@@ -273,6 +273,7 @@ Select **y** to proceed with your default tenant, or **N** to choose a different
 - [auth0 completion](https://auth0.github.io/auth0-cli/auth0_completion.html) - Setup autocomplete features for this CLI on your terminal
 - [auth0 domains](https://auth0.github.io/auth0-cli/auth0_domains.html) - Manage custom domains
 - [auth0 email](https://auth0.github.io/auth0-cli/auth0_email.html) - Manage email settings
+- [auth0 flows](https://auth0.github.io/auth0-cli/auth0_flows.html) - Manage Flows
 - [auth0 forms](https://auth0.github.io/auth0-cli/auth0_forms.html) - Manage Forms
 - [auth0 login](https://auth0.github.io/auth0-cli/auth0_login.html) - Authenticate the Auth0 CLI
 - [auth0 logout](https://auth0.github.io/auth0-cli/auth0_logout.html) - Log out of a tenant's session
@@ -390,11 +391,11 @@ For AI agents and automation, **agent mode** makes output machine-friendly: stru
 
 Precedence: `--agent-mode` flag > `AUTH0_AGENT_MODE` env var > auto-detection (set `--agent-mode=false` to opt out). Destructive commands still require `--force`; without it (and with prompts disabled) they fail with an error rather than proceeding.
 
-## Anonymized Analytics Disclosure
+## Usage Analytics Disclosure
 
-Anonymized data points are collected during the use of this CLI. This data includes the CLI version, operating system, timestamp, and other technical details that do not personally identify you.
+Usage data points are collected during use of this CLI. This includes the CLI version, operating system, timestamp, the command executed, whether it was run by a human, a CI system, or an AI agent, and — when you're authenticated — the domain of the tenant you're operating against. Tenant domain can identify your Auth0 account and is not anonymized.
 
-Auth0 uses this data to better understand the usage of this tool to prioritize the features, enhancements and fixes that matter most to our users.
+Auth0 uses this data to understand how the tool is used, to prioritize the features, enhancements and fixes that matter most to our users, and to attribute usage to a tenant for support and product purposes.
 
 To **opt-out** of this collection, set the `AUTH0_CLI_ANALYTICS` environment variable to `false`.
 

@@ -38,6 +38,7 @@ func TestCommandRequiresAuthentication(t *testing.T) {
 		{"auth0 apps list", true},
 		{"auth0 apps create", true},
 		{"auth0 orgs members list", true},
+		{"auth0 __complete", false},
 		{"auth0 completion", false},
 		{"auth0 help", false},
 		{"auth0 login", false},
@@ -177,6 +178,20 @@ func TestIsAPICommand(t *testing.T) {
 			assert.Equal(t, test.expected, isAPICommand(test.commandPath))
 		})
 	}
+}
+
+func TestCommandTrackingProperties(t *testing.T) {
+	t.Run("includes tenant domain when authenticated", func(t *testing.T) {
+		c := &cli{tenant: "example.us.auth0.com", renderer: &display.Renderer{}}
+		props := commandTrackingProperties(c)
+		assert.Equal(t, "example.us.auth0.com", props["tenant"])
+	})
+
+	t.Run("includes empty tenant when unauthenticated", func(t *testing.T) {
+		c := &cli{tenant: "", renderer: &display.Renderer{}}
+		props := commandTrackingProperties(c)
+		assert.Equal(t, "", props["tenant"])
+	})
 }
 
 func TestMergeProperties(t *testing.T) {

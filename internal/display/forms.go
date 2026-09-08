@@ -178,13 +178,6 @@ func rawJSONPresent(raw json.RawMessage) bool {
 	return value != "" && value != "null"
 }
 
-func rawTimeAgo(value time.Time) string {
-	if value.IsZero() {
-		return ""
-	}
-	return timeAgo(value)
-}
-
 // FormExport writes a form body verbatim (uncolored) to the result writer so it
 // stays pipe- and import-friendly.
 func (r *Renderer) FormExport(body string) {
@@ -204,34 +197,3 @@ func formLanguageSummary(primary, def string) string {
 	}
 }
 
-func boolToPresence(present bool) string {
-	if present {
-		return "set"
-	}
-	return "none"
-}
-
-// mergeExtraProperties rebuilds the full API wire object for JSON output. The
-// generated SDK captures fields it does not model (such as flow_count and links
-// on forms) into an extra-properties map that its own MarshalJSON drops, so
-// re-marshaling the typed value alone would silently lose them. Marshaling the
-// typed value and overlaying the extras keeps --json faithful to the API.
-func mergeExtraProperties(obj interface{}, extra map[string]interface{}) interface{} {
-	if len(extra) == 0 {
-		return obj
-	}
-	data, err := json.Marshal(obj)
-	if err != nil {
-		return obj
-	}
-	var merged map[string]interface{}
-	if err := json.Unmarshal(data, &merged); err != nil {
-		return obj
-	}
-	for key, value := range extra {
-		if _, ok := merged[key]; !ok {
-			merged[key] = value
-		}
-	}
-	return merged
-}

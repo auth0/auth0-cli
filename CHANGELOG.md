@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v1.34.0](https://github.com/auth0/auth0-cli/tree/v1.34.0) (September 2, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.33.0...v1.34.0)
+
+### Added
+- Add support for managing flows via `auth0 flows` commands [#1628]
+- Add support for managing flows executions via `auth0 flows executions` commands [#1628]
+- Add support for managing flows vault connections via `auth0 flows vault connections` commands [#1628]
+- Add `--data` flag for JSON payload input in `auth0 actions create` and `auth0 actions update` [#1630]
+- Add `--schema` and `--query` flags to `auth0 actions list` command [#1631]
+- Add terraform export support for `auth0_token_exchange_profile` resource in `auth0 tf generate` [#1627]
+
+### Fixed
+- Fix shell completion command to not require authentication [#1638]
+
 # [v1.33.0](https://github.com/auth0/auth0-cli/tree/v1.33.0) (August 19, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.32.0...v1.33.0)
@@ -778,7 +793,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.33.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.34.0...HEAD
+[#1639]: https://github.com/auth0/auth0-cli/pull/1639
+[#1638]: https://github.com/auth0/auth0-cli/pull/1638
+[#1632]: https://github.com/auth0/auth0-cli/pull/1632
+[#1631]: https://github.com/auth0/auth0-cli/pull/1631
+[#1630]: https://github.com/auth0/auth0-cli/pull/1630
+[#1628]: https://github.com/auth0/auth0-cli/pull/1628
+[#1627]: https://github.com/auth0/auth0-cli/pull/1627
 [#1617]: https://github.com/auth0/auth0-cli/pull/1617
 [#1616]: https://github.com/auth0/auth0-cli/pull/1616
 [#1612]: https://github.com/auth0/auth0-cli/pull/1612

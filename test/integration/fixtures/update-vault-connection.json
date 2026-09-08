@@ -1,0 +1,6 @@
+{
+  "setup": {
+    "type": "BEARER",
+    "token": "integration-test-token-updated"
+  }
+}
