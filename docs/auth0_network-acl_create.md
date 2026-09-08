@@ -34,24 +34,12 @@ auth0 network-acl create [flags]
 ## Flags
 
 ```
-      --action string               Action for the rule (block, allow, log, redirect)
-      --active string               Whether the network ACL is active (required, 'true' or 'false')
-      --asns ints                   Comma-separated list of ASNs to match (Eg. 64496,64497,64498)
-      --auth0-managed strings       Comma-separated list of Auth0-curated blocklists to match (Eg. auth0.icloud_relay_proxy,auth0.low_reputation). (EA only).
-      --country-codes strings       Comma-separated list of country codes to match (Eg. US,CA,MX)
-  -d, --description string          Description of the network ACL (required)
-      --ipv4-cidrs strings          Comma-separated list of IPv4 CIDR ranges (Eg. 192.168.1.0/24,10.0.0.0/8)
-      --ipv6-cidrs strings          Comma-separated list of IPv6 CIDR ranges (Eg. 2001:db8::/32,2001:db8:1234::/48)
-      --ja3-fingerprints strings    Comma-separated list of JA3 fingerprints to match (Eg. deadbeef,cafebabe)
-      --ja4-fingerprints strings    Comma-separated list of JA4 fingerprints to match (Eg. t13d1516h2_8daaf6152771)
-      --json                        Output in json format.
-      --json-compact                Output in compact json format.
-  -p, --priority int                Priority of the network ACL (required)
-      --redirect-uri string         URI to redirect to when action is redirect
-      --rule string                 Network ACL rule configuration in JSON format (required for non-interactive mode)
-      --scope string                Scope of the rule (management, authentication, tenant)
-      --subdivision-codes strings   Comma-separated list of subdivision codes to match (Eg. US-NY,US-CA)
-      --user-agents strings         Comma-separated list of user agents to match (Eg. badbot/*,malicious/*)
+      --active string        Whether the network ACL is active ('true' or 'false').
+  -d, --description string   Description of the network ACL (Eg. "Block suspicious IPs").
+      --json                 Output in json format.
+      --json-compact         Output in compact json format.
+  -p, --priority int         Priority of the network ACL (Eg. 5).
+      --rule string          Network ACL rule configuration in JSON format (required for non-interactive mode).
 ```
 
 
