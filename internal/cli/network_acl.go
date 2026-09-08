@@ -661,7 +661,6 @@ The --rule parameter is required and must contain a valid JSON object with actio
   auth0 network-acl create -d "Curated Blocklist" -p 6 --active true --rule '{"action":{"log":true},"scope":"tenant","not_match":{"auth0_managed":["auth0.vpn","auth0.proxy"]}}'
   `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			// Validate --rule JSON up front, before prompting for other fields, so
 			// an invalid rule fails immediately instead of after the prompts.
 			var rule *management.NetworkACLRule
