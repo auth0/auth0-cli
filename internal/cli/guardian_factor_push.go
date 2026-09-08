@@ -245,7 +245,7 @@ func updateGuardianPushApnsCmd(cli *cli) *cobra.Command {
 			if err := guardianApnsSandbox.AskBoolU(cmd, &inputs.Sandbox, &currentSandbox); err != nil {
 				return err
 			}
-			if err := guardianApnsP12.AskU(cmd, &inputs.P12, nil); err != nil {
+			if err := guardianApnsP12.AskPasswordU(cmd, &inputs.P12); err != nil {
 				return err
 			}
 
@@ -300,7 +300,7 @@ func setGuardianPushFcmCmd(cli *cli) *cobra.Command {
 		Long:    "Replace the Google FCM (legacy) push-notification configuration.",
 		Example: `  auth0 guardian factors push set-fcm --server-key <server-key>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := guardianFcmServerKey.Ask(cmd, &serverKey, nil); err != nil {
+			if err := guardianFcmServerKey.AskPassword(cmd, &serverKey); err != nil {
 				return err
 			}
 
@@ -341,7 +341,7 @@ func updateGuardianPushFcmCmd(cli *cli) *cobra.Command {
 		Long:    "Partially update the Google FCM (legacy) push-notification configuration.",
 		Example: `  auth0 guardian factors push update-fcm --server-key <server-key>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := guardianFcmServerKey.Ask(cmd, &serverKey, nil); err != nil {
+			if err := guardianFcmServerKey.AskPassword(cmd, &serverKey); err != nil {
 				return err
 			}
 
@@ -382,7 +382,7 @@ func setGuardianPushFcmv1Cmd(cli *cli) *cobra.Command {
 		Long:    "Replace the Google FCM v1 push-notification configuration.",
 		Example: `  auth0 guardian factors push set-fcmv1 --server-credentials "$(cat service-account.json)"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := guardianFcmServerCredentials.Ask(cmd, &serverCredentials, nil); err != nil {
+			if err := guardianFcmServerCredentials.AskPassword(cmd, &serverCredentials); err != nil {
 				return err
 			}
 
@@ -423,7 +423,7 @@ func updateGuardianPushFcmv1Cmd(cli *cli) *cobra.Command {
 		Long:    "Partially update the Google FCM v1 push-notification configuration.",
 		Example: `  auth0 guardian factors push update-fcmv1 --server-credentials "$(cat service-account.json)"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := guardianFcmServerCredentials.Ask(cmd, &serverCredentials, nil); err != nil {
+			if err := guardianFcmServerCredentials.AskPassword(cmd, &serverCredentials); err != nil {
 				return err
 			}
 
@@ -606,7 +606,7 @@ func updateGuardianPushSnsCmd(cli *cli) *cobra.Command {
 			if err := guardianSnsAccessKeyID.AskU(cmd, &inputs.AccessKeyID, &currentAccessKeyID); err != nil {
 				return err
 			}
-			if err := guardianSnsSecretAccessKey.AskU(cmd, &inputs.SecretAccessKey, nil); err != nil {
+			if err := guardianSnsSecretAccessKey.AskPasswordU(cmd, &inputs.SecretAccessKey); err != nil {
 				return err
 			}
 			if err := guardianSnsRegion.AskU(cmd, &inputs.Region, &currentRegion); err != nil {

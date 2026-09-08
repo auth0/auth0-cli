@@ -111,6 +111,9 @@ func setGuardianFactorCmd(cli *cli) *cobra.Command {
 			}
 
 			if !guardianFactorEnabled.IsSet(cmd) {
+				if !canPrompt(cmd) {
+					return fmt.Errorf("--enabled is required when running non-interactively (use --enabled or --enabled=false)")
+				}
 				if err := guardianFactorEnabled.AskBool(cmd, &inputs.Enabled, nil); err != nil {
 					return err
 				}

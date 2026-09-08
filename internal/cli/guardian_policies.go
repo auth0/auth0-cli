@@ -100,7 +100,10 @@ func setGuardianPoliciesCmd(cli *cli) *cobra.Command {
   auth0 guardian policies set --policy all-applications --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Interactively pick a policy unless the user passed --policy or --none.
-			if !guardianPolicies.IsSet(cmd) && !inputs.None && canPrompt(cmd) {
+			if !guardianPolicies.IsSet(cmd) && !inputs.None {
+				if !canPrompt(cmd) {
+					return fmt.Errorf("--policy or --none is required when running non-interactively; supported values: all-applications, confidence-score, none")
+				}
 				if err := guardianPolicies.Select(cmd, &inputs.Policy, guardianPolicyOptions, nil); err != nil {
 					return err
 				}

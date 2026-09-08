@@ -417,12 +417,26 @@ tests:
       contains:
         - are all required for set
 
+  057 - guardian policies set rejects an empty invocation:
+    command: auth0 guardian policies set
+    exit-code: 1
+    stderr:
+      contains:
+        - '--policy or --none is required'
+
+  058 - guardian factors set rejects a missing enabled flag:
+    command: auth0 guardian factors set sms
+    exit-code: 1
+    stderr:
+      contains:
+        - '--enabled is required'
+
   # ----------------------------------------------------------------------------
   # Partial update preserves the fields it does not touch and renders the full
   # current state (the PATCH response only echoes changed fields, so the command
   # re-fetches before rendering).
   # ----------------------------------------------------------------------------
-  057 - guardian factors duo settings set full config:
+  059 - guardian factors duo settings set full config:
     command: auth0 guardian factors duo settings set --host api-preserve.duosecurity.com --ikey IKEYPRESERVE --skey skeypreserve
     exit-code: 0
     stdout:
@@ -430,7 +444,7 @@ tests:
         - api-preserve.duosecurity.com
         - IKEYPRESERVE
 
-  058 - guardian factors duo settings update host preserves ikey:
+  060 - guardian factors duo settings update host preserves ikey:
     command: auth0 guardian factors duo settings update --host api-updated2.duosecurity.com
     exit-code: 0
     stdout:
@@ -452,14 +466,14 @@ tests:
   # required argument". Disabling the duo and push-notification factors drops
   # those sub-blocks and returns auth0_guardian to a terraform-plannable state.
   # ----------------------------------------------------------------------------
-  059 - restore otp factor enabled:
+  061 - restore otp factor enabled:
     command: auth0 guardian factors set otp --enabled
     exit-code: 0
 
-  060 - reset duo factor to a terraform-clean state:
+  062 - reset duo factor to a terraform-clean state:
     command: auth0 guardian factors set duo --enabled=false
     exit-code: 0
 
-  061 - reset push factor to a terraform-clean state:
+  063 - reset push factor to a terraform-clean state:
     command: auth0 guardian factors set push-notification --enabled=false
     exit-code: 0

@@ -91,7 +91,7 @@ func setGuardianDuoSettingsCmd(cli *cli) *cobra.Command {
 			if err := guardianDuoIkey.Ask(cmd, &inputs.Ikey, nil); err != nil {
 				return err
 			}
-			if err := guardianDuoSkey.Ask(cmd, &inputs.Skey, nil); err != nil {
+			if err := guardianDuoSkey.AskPassword(cmd, &inputs.Skey); err != nil {
 				return err
 			}
 
@@ -164,7 +164,7 @@ func updateGuardianDuoSettingsCmd(cli *cli) *cobra.Command {
 			if err := guardianDuoIkey.AskU(cmd, &inputs.Ikey, &currentIkey); err != nil {
 				return err
 			}
-			if err := guardianDuoSkey.AskU(cmd, &inputs.Skey, nil); err != nil {
+			if err := guardianDuoSkey.AskPasswordU(cmd, &inputs.Skey); err != nil {
 				return err
 			}
 
