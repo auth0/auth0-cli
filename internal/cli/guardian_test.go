@@ -36,3 +36,19 @@ func TestGuardianLegacyPhoneHint(t *testing.T) {
 		assert.Contains(t, got.Error(), "unified phone experience")
 	})
 }
+
+func TestIsEmptyResponseErr(t *testing.T) {
+	t.Run("false for nil", func(t *testing.T) {
+		assert.False(t, isEmptyResponseErr(nil))
+	})
+
+	t.Run("false for an unrelated error", func(t *testing.T) {
+		assert.False(t, isEmptyResponseErr(errors.New("403 forbidden")))
+	})
+
+	t.Run("true for the go-auth0 empty-body error", func(t *testing.T) {
+		// Matches the SDK caller's wording for a response with no body.
+		err := fmt.Errorf("expected a *management.GetGuardianFactorPhoneTemplatesResponseContent response, but the server responded with nothing")
+		assert.True(t, isEmptyResponseErr(err))
+	})
+}

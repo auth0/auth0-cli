@@ -208,7 +208,11 @@ func showGuardianPhoneTemplatesCmd(cli *cli) *cobra.Command {
 				resp, err = cli.apiv3.GuardianFactorPhone.GetTemplates(cmd.Context())
 				return err
 			}); err != nil {
-				return guardianLegacyPhoneHint(fmt.Errorf("failed to read phone templates: %w", err))
+				if !isEmptyResponseErr(err) {
+					return guardianLegacyPhoneHint(fmt.Errorf("failed to read phone templates: %w", err))
+				}
+				// No templates configured: the endpoint returns an empty body.
+				resp = &managementv3.GetGuardianFactorPhoneTemplatesResponseContent{}
 			}
 
 			cli.renderer.GuardianDetail("phone templates", [][]string{

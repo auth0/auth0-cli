@@ -122,7 +122,11 @@ func showGuardianSmsTemplatesCmd(cli *cli) *cobra.Command {
 				resp, err = cli.apiv3.GuardianFactorSms.GetTemplates(cmd.Context())
 				return err
 			}); err != nil {
-				return guardianLegacyPhoneHint(fmt.Errorf("failed to read SMS templates: %w", err))
+				if !isEmptyResponseErr(err) {
+					return guardianLegacyPhoneHint(fmt.Errorf("failed to read SMS templates: %w", err))
+				}
+				// No templates configured: the endpoint returns an empty body.
+				resp = &managementv3.GetGuardianFactorSmsTemplatesResponseContent{}
 			}
 
 			cli.renderer.GuardianDetail("sms templates", [][]string{

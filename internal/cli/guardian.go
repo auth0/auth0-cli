@@ -33,6 +33,18 @@ func guardianLegacyPhoneHint(err error) error {
 	)
 }
 
+// emptyResponseErrorFragment identifies the go-auth0 SDK error returned when the
+// API responds with an empty body (see the SDK's caller: "expected a %T
+// response, but the server responded with nothing"). The Guardian phone/SMS
+// template endpoints return an empty body when no templates are configured,
+// which is a valid state rather than a failure.
+const emptyResponseErrorFragment = "server responded with nothing"
+
+// isEmptyResponseErr reports whether err is the go-auth0 empty-body error.
+func isEmptyResponseErr(err error) bool {
+	return err != nil && strings.Contains(err.Error(), emptyResponseErrorFragment)
+}
+
 func guardianCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "guardian",
