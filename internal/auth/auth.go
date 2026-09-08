@@ -152,6 +152,9 @@ var RequiredScopes = []string{
 	"read:organization_discovery_domains", "read:self_service_profiles", "read:user_attribute_profiles",
 	"read:sessions", "update:sessions", "delete:sessions",
 	"read:refresh_tokens", "update:refresh_tokens", "delete:refresh_tokens",
+	"read:guardian_factors", "update:guardian_factors",
+	"read:guardian_enrollments", "delete:guardian_enrollments", "create:guardian_enrollment_tickets",
+	"read:mfa_policies", "update:mfa_policies",
 }
 
 // GetDeviceCode kicks-off the device authentication flow by requesting

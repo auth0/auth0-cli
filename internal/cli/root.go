@@ -306,6 +306,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(tokenExchangeCmd(cli))
 	rootCmd.AddCommand(sessionsCmd(cli))
 	rootCmd.AddCommand(refreshTokensCmd(cli))
+	rootCmd.AddCommand(guardianCmd(cli))
 
 	rootCmd.AddCommand(commandsCmd(cli))
 	rootCmd.AddCommand(agentCmd(cli))
