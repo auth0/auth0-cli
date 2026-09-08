@@ -175,9 +175,12 @@ tests:
         - create guardian enrollment ticket for user
 
   # ----------------------------------------------------------------------------
-  # Phone factor: message-types work; provider/templates/twilio are the legacy
-  # MFA endpoints Auth0 deprecated in favour of Tenant Phone Settings, so they
-  # surface a clean 403 with the legacy_mfa_phone_provider_not_allowed code.
+  # Phone factor: message-types are tenant-agnostic and covered here. The legacy
+  # provider/templates/twilio endpoints have tenant-dependent behaviour (403 on
+  # tenants moved to the unified phone experience, success or an empty-body error
+  # on tenants where the legacy provider is still enabled), so they cannot be
+  # asserted deterministically against a single live tenant. The deprecation-hint
+  # logic is covered by a unit test instead (internal/cli/guardian_test.go).
   # ----------------------------------------------------------------------------
   024 - guardian factors phone show-message-types:
     command: auth0 guardian factors phone show-message-types
@@ -210,51 +213,6 @@ tests:
         - MESSAGE TYPES
         - sms
         - voice
-
-  028 - guardian factors phone show-provider is deprecated:
-    command: auth0 guardian factors phone show-provider
-    exit-code: 1
-    stderr:
-      contains:
-        - legacy_mfa_phone_provider_not_allowed
-
-  029 - guardian factors phone show-templates is deprecated:
-    command: auth0 guardian factors phone show-templates
-    exit-code: 1
-    stderr:
-      contains:
-        - legacy_mfa_phone_provider_not_allowed
-
-  030 - guardian factors phone show-twilio is deprecated:
-    command: auth0 guardian factors phone show-twilio
-    exit-code: 1
-    stderr:
-      contains:
-        - legacy_mfa_phone_provider_not_allowed
-
-  # ----------------------------------------------------------------------------
-  # SMS factor: provider/templates/twilio share the same legacy deprecation.
-  # ----------------------------------------------------------------------------
-  031 - guardian factors sms show-provider is deprecated:
-    command: auth0 guardian factors sms show-provider
-    exit-code: 1
-    stderr:
-      contains:
-        - legacy_mfa_phone_provider_not_allowed
-
-  032 - guardian factors sms show-templates is deprecated:
-    command: auth0 guardian factors sms show-templates
-    exit-code: 1
-    stderr:
-      contains:
-        - legacy_mfa_phone_provider_not_allowed
-
-  033 - guardian factors sms show-twilio is deprecated:
-    command: auth0 guardian factors sms show-twilio
-    exit-code: 1
-    stderr:
-      contains:
-        - legacy_mfa_phone_provider_not_allowed
 
   # ----------------------------------------------------------------------------
   # Push factor: provider selection plus APNs, FCM, FCM v1 and SNS config.
