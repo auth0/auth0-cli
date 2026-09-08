@@ -270,7 +270,8 @@ func createFormCmd(cli *cli) *cobra.Command {
 			"`auth0 forms create --schema` to print the accepted payload schema and " +
 			"`auth0 forms create --example > form.json` to generate a starter body.\n\n" +
 			"`--data` provides the whole payload and cannot be combined with `--name` or the " +
-			"`--language-*` flags; the JSON is validated against the OpenAPI schema before it is sent.",
+			"`--language-*` flags; it is checked for valid JSON and a form name before it is sent, " +
+			"and the form graph itself is validated by the API.",
 		Example: `  auth0 forms create
   auth0 forms create --name "My Form"
   auth0 forms create --name "My Form" --edit
@@ -364,10 +365,10 @@ func createFormCmd(cli *cli) *cobra.Command {
 }
 
 // createFormFromJSON creates a form from a --data JSON payload. The body is
-// validated against the OpenAPI schema and then sent verbatim, so node config the
+// checked for valid JSON and a form name, then sent verbatim, so node config the
 // v3 SDK's union types would drop is preserved.
 func (c *cli) createFormFromJSON(cmd *cobra.Command, dataStr string) error {
-	payload, err := validateFormData(c, dataStr, http.MethodPost, "/forms", "auth0 forms create", nil)
+	payload, err := validateFormData(c, dataStr, "auth0 forms create", true, nil)
 	if err != nil {
 		return err
 	}
@@ -442,14 +443,13 @@ func updateFormCmd(cli *cli) *cobra.Command {
 			switch {
 			case provided:
 				// --data / stdin: whole-payload overwrite. Server-managed fields are
-				// stripped before validation so an exported form body round-trips, then
-				// the payload is validated and sent verbatim.
+				// stripped so an exported form body round-trips, then the payload is
+				// checked for valid JSON and sent verbatim.
 				rawBody, err = validateFormData(
 					cli,
 					dataStr,
-					http.MethodPatch,
-					"/forms/{id}",
 					"auth0 forms update",
+					false,
 					stripFormServerManagedFields,
 				)
 				if err != nil {
@@ -820,21 +820,23 @@ func readFormData(cmd *cobra.Command) ([]byte, error) {
 
 // validateFormData reads a --data JSON payload (inline JSON, an @file.json
 // reference, or the resolved stdin string), applies preClean when it is non-nil,
-// validates the result against the operation's OpenAPI schema, and returns the raw
-// bytes to send verbatim. Forms are sent as raw JSON rather than through the v3
-// SDK's lossy union types, so the payload is validated without being deserialized.
-// The preClean hook runs before validation so, for example, an exported form body
-// whose server-managed fields are stripped still satisfies the schema's
-// additionalProperties constraint.
+// and returns the raw bytes to send verbatim.
+//
+// Forms are sent as raw JSON rather than through the v3 SDK's lossy union types,
+// and the published OpenAPI schema likewise cannot faithfully describe a real form
+// graph (for example the reserved "$ending" node pointer trips the schema's
+// non-exclusive oneOf). So we validate only what we can trust locally: the payload
+// is a JSON object and, when requireName is set (create), it carries a non-empty
+// "name". The API validates the node graph server-side. The preClean hook runs
+// first so an exported form body whose server-managed fields are stripped is
+// checked in the same shape it will be sent.
 func validateFormData(
 	cli *cli,
-	dataStr, method, schemaPath, schemaCmd string,
+	dataStr, schemaCmd string,
+	requireName bool,
 	preClean func(json.RawMessage) (json.RawMessage, error),
 ) (json.RawMessage, error) {
-	handler, err := NewDataJSONHandler(cli)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize JSON handler: %w", err)
-	}
+	handler := &DataJSONHandler{cli: cli}
 
 	raw, err := handler.readJSONInput(dataStr)
 	if err != nil {
@@ -848,14 +850,21 @@ func validateFormData(
 		}
 	}
 
-	result, err := handler.manager.ValidateRequest(method, schemaPath, raw)
-	if err != nil {
-		cli.renderer.Infof("Run '%s --schema' to see the expected schema.", schemaCmd)
-		return nil, fmt.Errorf("schema validation error: %w", err)
+	var form map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &form); err != nil {
+		cli.renderer.Infof("Run '%s --schema' to see the accepted schema.", schemaCmd)
+		return nil, fmt.Errorf("invalid JSON: the form payload must be a JSON object: %w", err)
 	}
-	if !result.Valid {
-		cli.renderer.Infof("Run '%s --schema' to see the expected schema.", schemaCmd)
-		return nil, fmt.Errorf("schema validation failed:\n%s", formatValidationErrors(result.Errors))
+
+	if requireName {
+		name, err := rawFormStringField(raw, "name")
+		if err != nil {
+			return nil, err
+		}
+		if name == "" {
+			cli.renderer.Infof("Run '%s --schema' to see the accepted schema.", schemaCmd)
+			return nil, errors.New(`the form payload must include a non-empty "name"`)
+		}
 	}
 
 	return json.RawMessage(raw), nil

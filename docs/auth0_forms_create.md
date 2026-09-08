@@ -11,7 +11,7 @@ Interactive behavior: `auth0 forms create` asks only for the name and creates a 
 
 Pass `--edit` to open an editor and author the form graph before it is created, or supply the whole body via `--data` as inline JSON, a file (`@form.json`), or piped stdin. Run `auth0 forms create --schema` to print the accepted payload schema and `auth0 forms create --example > form.json` to generate a starter body.
 
-`--data` provides the whole payload and cannot be combined with `--name` or the `--language-*` flags; the JSON is validated against the OpenAPI schema before it is sent.
+`--data` provides the whole payload and cannot be combined with `--name` or the `--language-*` flags; it is checked for valid JSON and a form name before it is sent, and the form graph itself is validated by the API.
 
 ## Usage
 ```
