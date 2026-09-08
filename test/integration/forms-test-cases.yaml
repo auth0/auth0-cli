@@ -24,7 +24,7 @@ tests:
         name: "integration-test-form-json"
 
   004 - it successfully creates a form from the embedded example:
-    command: auth0 forms create --example | auth0 forms create -f - --name integration-test-form-example --no-input --json
+    command: auth0 forms create --example | jq '.name="integration-test-form-example"' | auth0 forms create --no-input --json
     exit-code: 0
     stdout:
       json:
@@ -33,18 +33,20 @@ tests:
         languages.default: "en"
 
   005 - it fails to create a form without a name:
-    command: echo '{"start":{},"nodes":[],"ending":{}}' | auth0 forms create -f - --no-input
+    command: echo '{"start":{},"nodes":[],"ending":{}}' | auth0 forms create --no-input
     exit-code: 1
     stderr:
       contains:
-        - form name is required
+        - schema validation failed
+        - name
 
   006 - it fails to create a form from invalid json:
-    command: echo 'not-json' | auth0 forms create -f - --no-input
+    command: echo 'not-json' | auth0 forms create --no-input
     exit-code: 1
     stderr:
       contains:
-        - parse form body
+        - schema validation failed
+        - Invalid JSON
 
   007 - it successfully lists all forms with data:
     command: auth0 forms list
@@ -79,7 +81,7 @@ tests:
         name: "integration-test-form-updated"
 
   011 - given a test form, it successfully updates the form from a fixture file:
-    command: auth0 forms update $(./test/integration/scripts/get-form-id.sh) -f ./test/integration/fixtures/update-form.json --json
+    command: auth0 forms update $(./test/integration/scripts/get-form-id.sh) --data @./test/integration/fixtures/update-form.json --json
     exit-code: 0
     stdout:
       json:
@@ -97,7 +99,7 @@ tests:
         - '"name"'
 
   013 - given a test form, it successfully round-trips export to import:
-    command: auth0 forms export $(./test/integration/scripts/get-form-id.sh) | auth0 forms import --id $(./test/integration/scripts/get-form-id.sh) -f - --json
+    command: auth0 forms export $(./test/integration/scripts/get-form-id.sh) | auth0 forms import --id $(./test/integration/scripts/get-form-id.sh) --json
     exit-code: 0
     stdout:
       json:

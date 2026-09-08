@@ -9,7 +9,9 @@ Create a new form.
 
 Interactive behavior: `auth0 forms create` asks only for the name and creates a minimal scaffold; it does not open an editor. You can then refine the form in the dashboard builder.
 
-Pass `--edit` to open an editor and author the form graph before it is created, or supply the whole body via `--file` (or piped stdin) with optional `--name` and `--language-*` overrides. Run `auth0 forms create --example > form.json` to generate an accepted file payload.
+Pass `--edit` to open an editor and author the form graph before it is created, or supply the whole body via `--data` as inline JSON, a file (`@form.json`), or piped stdin. Run `auth0 forms create --schema` to print the accepted payload schema and `auth0 forms create --example > form.json` to generate a starter body.
+
+`--data` provides the whole payload and cannot be combined with `--name` or the `--language-*` flags; the JSON is validated against the OpenAPI schema before it is sent.
 
 ## Usage
 ```
@@ -23,23 +25,25 @@ auth0 forms create [flags]
   auth0 forms create --name "My Form"
   auth0 forms create --name "My Form" --edit
   auth0 forms create --example > form.json
-  auth0 forms create --file ./form.json
-  auth0 forms create --file ./form.json --name "My Form" --language-primary en
-  cat form.json | auth0 forms create -f -
+  auth0 forms create --schema
+  auth0 forms create --data '{"name":"My Form"}'
+  auth0 forms create --data @form.json
+  cat form.json | auth0 forms create
 ```
 
 
 ## Flags
 
 ```
+      --data string               JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
       --edit                      Open an editor to author the form graph after entering the name.
       --example                   Print an example form JSON body and exit.
-  -f, --file string               Path to a JSON file with the form body. Use '-' to read from stdin.
       --json                      Output in json format.
       --json-compact              Output in compact json format.
       --language-default string   Default language of the Form (e.g. en).
       --language-primary string   Primary language of the Form (e.g. en).
       --name string               Name of the Form.
+      --schema                    Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

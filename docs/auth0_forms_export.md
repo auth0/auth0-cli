@@ -18,7 +18,7 @@ auth0 forms export [flags]
   auth0 forms export <form-id>
   auth0 forms export <form-id> --output ./form.json
   auth0 forms export <form-id> --json-compact
-  auth0 forms export <form-id> | auth0 forms import -f -
+  auth0 forms export <form-id> | auth0 forms import
 ```
 
 

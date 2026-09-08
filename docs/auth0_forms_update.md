@@ -7,7 +7,9 @@ has_toc: false
 
 Update a form.
 
-Passing `--file` (or piped stdin) replaces every top-level field present in the file. Passing only scalar flags such as `--name` performs a merge that preserves the form's graph fields (nodes, style, translations). Server-managed fields such as `id`, `created_at`, and `updated_at` are removed before the update request is sent.
+Passing `--data` as inline JSON, a file (`@form.json`), or piped stdin replaces every top-level field present in the payload, which is validated against the OpenAPI schema before it is sent. Passing only scalar flags such as `--name` performs a merge that preserves the form's graph fields (nodes, style, translations). Server-managed fields such as `id`, `created_at`, and `updated_at` are removed before the update request is sent.
+
+`--data` provides the whole payload and cannot be combined with `--name` or the `--language-*` flags. Run `auth0 forms update --schema` to print the accepted payload schema.
 
 ## Usage
 ```
@@ -18,20 +20,23 @@ auth0 forms update [flags]
 
 ```
   auth0 forms update <form-id> --name "New Name"
-  auth0 forms update <form-id> --file ./form.json
-  cat form.json | auth0 forms update <form-id> -f -
+  auth0 forms update <form-id> --schema
+  auth0 forms update <form-id> --data '{"name":"New Name"}'
+  auth0 forms update <form-id> --data @form.json
+  cat form.json | auth0 forms update <form-id>
 ```
 
 
 ## Flags
 
 ```
-  -f, --file string               Path to a JSON file with the form body. Use '-' to read from stdin.
+      --data string               JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
       --json                      Output in json format.
       --json-compact              Output in compact json format.
       --language-default string   Default language of the Form (e.g. en).
       --language-primary string   Primary language of the Form (e.g. en).
       --name string               Name of the Form.
+      --schema                    Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

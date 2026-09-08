@@ -9,15 +9,12 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strings"
 
 	managementv3 "github.com/auth0/go-auth0/v3/management"
 	"github.com/auth0/go-auth0/v3/management/core"
-	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
-	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
@@ -111,13 +108,6 @@ var (
 		Name:     "Name",
 		LongForm: "name",
 		Help:     "Name of the Form.",
-	}
-
-	formFile = Flag{
-		Name:      "File",
-		LongForm:  "file",
-		ShortForm: "f",
-		Help:      "Path to a JSON file with the form body. Use '-' to read from stdin.",
 	}
 
 	formLanguagePrimary = Flag{
@@ -260,11 +250,12 @@ func showFormCmd(cli *cli) *cobra.Command {
 func createFormCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Name            string
-		File            string
+		Data            string
 		LanguagePrimary string
 		LanguageDefault string
 		Edit            bool
 		Example         bool
+		Schema          bool
 	}
 
 	cmd := &cobra.Command{
@@ -275,45 +266,56 @@ func createFormCmd(cli *cli) *cobra.Command {
 			"Interactive behavior: `auth0 forms create` asks only for the name and creates a minimal " +
 			"scaffold; it does not open an editor. You can then refine the form in the dashboard builder.\n\n" +
 			"Pass `--edit` to open an editor and author the form graph before it is created, or supply " +
-			"the whole body via `--file` (or piped stdin) with optional `--name` and `--language-*` " +
-			"overrides. Run `auth0 forms create --example > form.json` to generate an accepted file payload.",
+			"the whole body via `--data` as inline JSON, a file (`@form.json`), or piped stdin. Run " +
+			"`auth0 forms create --schema` to print the accepted payload schema and " +
+			"`auth0 forms create --example > form.json` to generate a starter body.\n\n" +
+			"`--data` provides the whole payload and cannot be combined with `--name` or the " +
+			"`--language-*` flags; the JSON is validated against the OpenAPI schema before it is sent.",
 		Example: `  auth0 forms create
   auth0 forms create --name "My Form"
   auth0 forms create --name "My Form" --edit
   auth0 forms create --example > form.json
-  auth0 forms create --file ./form.json
-  auth0 forms create --file ./form.json --name "My Form" --language-primary en
-  cat form.json | auth0 forms create -f -`,
+  auth0 forms create --schema
+  auth0 forms create --data '{"name":"My Form"}'
+  auth0 forms create --data @form.json
+  cat form.json | auth0 forms create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Example {
 				cli.renderer.FormExport(formCreateExample)
 				return nil
 			}
 
-			body, err := readFormBody(inputs.File)
+			// Schema discovery mode: print the request payload and exit.
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodPost, "/forms")
+			}
+
+			// JSON input mode (for agents and automation): explicit --data or piped
+			// stdin. The body is sent verbatim so STEP/ROUTER node config is preserved.
+			dataStr, provided, err := ResolveData(cmd)
 			if err != nil {
 				return err
 			}
+			if provided {
+				return cli.createFormFromJSON(cmd, dataStr)
+			}
 
-			rawBody := json.RawMessage(body)
-			if body == nil {
-				// No file or piped body: the name is a required scalar, so prompt for
-				// it explicitly (only when interactive and --name was not supplied).
-				if err := formName.Ask(cmd, &inputs.Name, nil); err != nil {
+			// Interactive: the name is a required scalar, so prompt for it (only when
+			// interactive and --name was not supplied).
+			if err := formName.Ask(cmd, &inputs.Name, nil); err != nil {
+				return err
+			}
+			if inputs.Name == "" {
+				return errors.New("a form name is required; supply --name, --data, or pipe JSON via stdin")
+			}
+
+			rawBody := json.RawMessage(formCreateSkeleton)
+			if inputs.Edit {
+				if !canPrompt(cmd) {
+					return errors.New("the --edit flag requires an interactive terminal")
+				}
+				if err := editFormJSON(cli, formCreateSkeleton, &rawBody); err != nil {
 					return err
-				}
-				if inputs.Name == "" {
-					return errors.New("a form name is required; supply --name, provide --file, or pipe JSON via stdin")
-				}
-				if inputs.Edit {
-					if !canPrompt(cmd) {
-						return errors.New("the --edit flag requires an interactive terminal")
-					}
-					if err := editFormJSON(cli, formCreateSkeleton, &rawBody); err != nil {
-						return err
-					}
-				} else {
-					rawBody = json.RawMessage(formCreateSkeleton)
 				}
 			}
 
@@ -324,15 +326,7 @@ func createFormCmd(cli *cli) *cobra.Command {
 				inputs.LanguageDefault,
 			)
 			if err != nil {
-				return fmt.Errorf("failed to parse form body: %w", err)
-			}
-
-			name, err := rawFormStringField(rawBody, "name")
-			if err != nil {
-				return fmt.Errorf("failed to parse form body: %w", err)
-			}
-			if name == "" {
-				return errors.New("a form name is required; set it in the body or with --name")
+				return fmt.Errorf("failed to build form body: %w", err)
 			}
 
 			created, err := cli.formRawCreate(cmd.Context(), rawBody)
@@ -353,24 +347,55 @@ func createFormCmd(cli *cli) *cobra.Command {
 	}
 
 	formName.RegisterString(cmd, &inputs.Name, "")
-	formFile.RegisterString(cmd, &inputs.File, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
 	formLanguagePrimary.RegisterString(cmd, &inputs.LanguagePrimary, "")
 	formLanguageDefault.RegisterString(cmd, &inputs.LanguageDefault, "")
 	formEdit.RegisterBool(cmd, &inputs.Edit, false)
 	formExample.RegisterBool(cmd, &inputs.Example, false)
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
+	// --data supplies the whole payload, so it cannot be combined with the
+	// granular input flags. Output flags (--json) and --schema are not affected.
+	markDataExclusive(cmd)
+
 	return cmd
+}
+
+// createFormFromJSON creates a form from a --data JSON payload. The body is
+// validated against the OpenAPI schema and then sent verbatim, so node config the
+// v3 SDK's union types would drop is preserved.
+func (c *cli) createFormFromJSON(cmd *cobra.Command, dataStr string) error {
+	payload, err := validateFormData(c, dataStr, http.MethodPost, "/forms", "auth0 forms create", nil)
+	if err != nil {
+		return err
+	}
+
+	created, err := c.formRawCreate(cmd.Context(), payload)
+	if err != nil {
+		return fmt.Errorf("failed to create form: %w", err)
+	}
+	if err := c.renderer.FormCreateRaw(created); err != nil {
+		return err
+	}
+
+	id, err := rawFormStringField(created, "id")
+	if err != nil {
+		return fmt.Errorf("failed to parse created form: %w", err)
+	}
+	formNextStepsHint(c, id)
+	return nil
 }
 
 func updateFormCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ID              string
 		Name            string
-		File            string
+		Data            string
 		LanguagePrimary string
 		LanguageDefault string
+		Schema          bool
 	}
 
 	cmd := &cobra.Command{
@@ -378,14 +403,26 @@ func updateFormCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a form",
 		Long: "Update a form.\n\n" +
-			"Passing `--file` (or piped stdin) replaces every top-level field present in the file. " +
-			"Passing only scalar flags such as `--name` performs a merge that preserves the form's " +
-			"graph fields (nodes, style, translations). Server-managed fields such as `id`, " +
-			"`created_at`, and `updated_at` are removed before the update request is sent.",
+			"Passing `--data` as inline JSON, a file (`@form.json`), or piped stdin replaces every " +
+			"top-level field present in the payload, which is validated against the OpenAPI schema " +
+			"before it is sent. Passing only scalar flags such as `--name` performs a merge that " +
+			"preserves the form's graph fields (nodes, style, translations). Server-managed fields " +
+			"such as `id`, `created_at`, and `updated_at` are removed before the update request is " +
+			"sent.\n\n" +
+			"`--data` provides the whole payload and cannot be combined with `--name` or the " +
+			"`--language-*` flags. Run `auth0 forms update --schema` to print the accepted payload schema.",
 		Example: `  auth0 forms update <form-id> --name "New Name"
-  auth0 forms update <form-id> --file ./form.json
-  cat form.json | auth0 forms update <form-id> -f -`,
+  auth0 forms update <form-id> --schema
+  auth0 forms update <form-id> --data '{"name":"New Name"}'
+  auth0 forms update <form-id> --data @form.json
+  cat form.json | auth0 forms update <form-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Schema discovery mode: print the request payload and exit.
+			// This does not require a form ID.
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodPatch, "/forms/{id}")
+			}
+
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
@@ -394,7 +431,8 @@ func updateFormCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			body, err := readFormBody(inputs.File)
+			// JSON input mode (for agents and automation): explicit --data or piped stdin.
+			dataStr, provided, err := ResolveData(cmd)
 			if err != nil {
 				return err
 			}
@@ -402,16 +440,20 @@ func updateFormCmd(cli *cli) *cobra.Command {
 			var rawBody json.RawMessage
 
 			switch {
-			case body != nil:
-				// File / stdin: whole-file overwrite of present top-level fields.
-				rawBody, err = applyRawFormOverrides(
-					body,
-					inputs.Name,
-					inputs.LanguagePrimary,
-					inputs.LanguageDefault,
+			case provided:
+				// --data / stdin: whole-payload overwrite. Server-managed fields are
+				// stripped before validation so an exported form body round-trips, then
+				// the payload is validated and sent verbatim.
+				rawBody, err = validateFormData(
+					cli,
+					dataStr,
+					http.MethodPatch,
+					"/forms/{id}",
+					"auth0 forms update",
+					stripFormServerManagedFields,
 				)
 				if err != nil {
-					return fmt.Errorf("failed to parse form body: %w", err)
+					return err
 				}
 			case inputs.Name != "" || inputs.LanguagePrimary != "" || inputs.LanguageDefault != "":
 				primary := inputs.LanguagePrimary
@@ -459,7 +501,7 @@ func updateFormCmd(cli *cli) *cobra.Command {
 					return err
 				}
 			default:
-				return errors.New("nothing to update; supply --file, pipe JSON via stdin, or a scalar flag such as --name")
+				return errors.New("nothing to update; supply --data, pipe JSON via stdin, or a scalar flag such as --name")
 			}
 
 			updated, err := cli.formRawUpdate(cmd.Context(), inputs.ID, rawBody)
@@ -475,11 +517,16 @@ func updateFormCmd(cli *cli) *cobra.Command {
 	}
 
 	formName.RegisterStringU(cmd, &inputs.Name, "")
-	formFile.RegisterStringU(cmd, &inputs.File, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
 	formLanguagePrimary.RegisterStringU(cmd, &inputs.LanguagePrimary, "")
 	formLanguageDefault.RegisterStringU(cmd, &inputs.LanguageDefault, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+
+	// --data supplies the whole payload, so it cannot be combined with the
+	// granular input flags. Output flags (--json) and --schema are not affected.
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -554,7 +601,7 @@ func exportFormCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 forms export <form-id>
   auth0 forms export <form-id> --output ./form.json
   auth0 forms export <form-id> --json-compact
-  auth0 forms export <form-id> | auth0 forms import -f -`,
+  auth0 forms export <form-id> | auth0 forms import`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				if err := formID.Pick(cmd, &inputs.ID, cli.formPickerOptions); err != nil {
@@ -606,7 +653,7 @@ func exportFormCmd(cli *cli) *cobra.Command {
 func importFormCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ID          string
-		File        string
+		Data        string
 		Connections map[string]string
 	}
 
@@ -614,23 +661,23 @@ func importFormCmd(cli *cli) *cobra.Command {
 		Use:   "import",
 		Args:  cobra.NoArgs,
 		Short: "Import a form",
-		Long: "Import a form from a JSON file (or piped stdin). Without `--id` a new form is " +
-			"created; with `--id` the existing form is replaced.\n\n" +
+		Long: "Import a form from `--data`, given as inline JSON, a file (`@form.json`), or piped " +
+			"stdin. Without `--id` a new form is created; with `--id` the existing form is replaced.\n\n" +
 			"Both a flat form graph and the Dashboard envelope (`version`, `form`, `flows`, " +
 			"`connections`) are accepted. For an envelope, the bundled flows are created and each " +
 			"`#CONN-N#` connection placeholder is mapped to an existing vault connection, either " +
 			"interactively or with `--connection`.",
-		Example: `  auth0 forms import --file ./form.json
-  auth0 forms import --file ./form.json --id <form-id>
-  auth0 forms import --file ./form.json --connection '#CONN-1#=ac_123'
-  cat form.json | auth0 forms import -f -`,
+		Example: `  auth0 forms import --data @form.json
+  auth0 forms import --data @form.json --id <form-id>
+  auth0 forms import --data @form.json --connection '#CONN-1#=ac_123'
+  auth0 forms export <form-id> | auth0 forms import`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			body, err := readFormBody(inputs.File)
+			body, err := readFormData(cmd)
 			if err != nil {
 				return err
 			}
 			if body == nil {
-				return errors.New("no form body provided; supply --file or pipe JSON via stdin")
+				return errors.New("no form body provided; supply --data or pipe JSON via stdin")
 			}
 
 			if isFormEnvelope(body) {
@@ -673,7 +720,7 @@ func importFormCmd(cli *cli) *cobra.Command {
 		},
 	}
 
-	formFile.RegisterString(cmd, &inputs.File, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
 	formImportID.RegisterString(cmd, &inputs.ID, "")
 	cmd.Flags().StringToStringVar(&inputs.Connections, "connection", nil,
 		"Map an exported connection placeholder to an existing vault connection ID, "+
@@ -705,61 +752,13 @@ func openFormCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			openFormEditURL(cli, inputs.ID)
+			openBuilderURL(cli, fmt.Sprintf("forms/%s/edit", inputs.ID))
 
 			return nil
 		},
 	}
 
 	return cmd
-}
-
-// formsBuilderURL is the host for the Auth0 Forms visual builder. Forms live on a
-// dedicated host rather than under the main management dashboard.
-const formsBuilderURL = "https://forms.auth0.com"
-
-// openFormEditURL opens the form's builder page in a browser, or prints the URL
-// when interactivity is disabled.
-func openFormEditURL(cli *cli, id string) {
-	url := formatFormEditURL(cli.Config.DefaultTenant, &cli.Config, id)
-	if url == "" {
-		cli.renderer.Warnf("Failed to format the correct URL, please ensure you have run 'auth0 login' and try again.")
-		return
-	}
-
-	if cli.noInput {
-		cli.renderer.Infof("Open the following URL in a browser: %s", url)
-		return
-	}
-
-	if err := browser.OpenURL(url); err != nil {
-		cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s", url)
-	}
-}
-
-// formatFormEditURL builds the Forms builder URL, deriving the region and tenant
-// name the same way formatManageTenantURL does for the management dashboard.
-func formatFormEditURL(tenant string, cfg *config.Config, id string) string {
-	if len(tenant) == 0 || len(id) == 0 {
-		return ""
-	}
-
-	s := strings.Split(tenant, ".")
-	if len(s) < 3 {
-		return ""
-	}
-
-	region := "us" // A PUS1 tenant looks like dev-tti06f6y.auth0.com (3 parts).
-	if len(s) > 3 {
-		region = s[len(s)-3]
-	}
-
-	tenantName := cfg.Tenants[tenant].Name
-	if len(tenantName) == 0 {
-		return ""
-	}
-
-	return fmt.Sprintf("%s/tenants/%s/%s/forms/%s/edit", formsBuilderURL, region, tenantName, id)
 }
 
 // editFormJSON opens an editor seeded with `seed` and unmarshals the result into
@@ -796,28 +795,84 @@ func formNextStepsHint(cli *cli, id string) {
 	cli.renderer.Infof("Edit it in the dashboard with: %s", ansi.Faint("auth0 forms open "+id))
 }
 
-// readFormBody resolves a JSON body from an explicit --file, "-"/piped stdin, and
-// returns nil when no such source is available so the caller can decide whether to
-// fall back to an editor or error.
-func readFormBody(filePath string) ([]byte, error) {
-	if filePath == "-" {
-		data, err := io.ReadAll(iostream.Input)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read form body from stdin: %w", err)
+// readFormData resolves a JSON body from --data (inline JSON or an @file.json
+// reference) or piped stdin, returning nil when no such source is available so the
+// caller can decide whether to fall back to an editor or error. Unlike ResolveData
+// it does not reject other set flags, so `import` can combine a body with its
+// --id and --connection modifiers.
+func readFormData(cmd *cobra.Command) ([]byte, error) {
+	if HasData(cmd) {
+		value, _ := GetData(cmd)
+		if value != "" && value[0] == '@' {
+			data, err := os.ReadFile(value[1:])
+			if err != nil {
+				return nil, fmt.Errorf("failed to read form file %q: %w", value[1:], err)
+			}
+			return data, nil
 		}
-		return data, nil
-	}
-	if filePath != "" {
-		data, err := os.ReadFile(filePath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read form file %q: %w", filePath, err)
-		}
-		return data, nil
+		return []byte(value), nil
 	}
 	if piped := iostream.PipedInput(); len(piped) > 0 {
 		return piped, nil
 	}
 	return nil, nil
+}
+
+// validateFormData reads a --data JSON payload (inline JSON, an @file.json
+// reference, or the resolved stdin string), applies preClean when it is non-nil,
+// validates the result against the operation's OpenAPI schema, and returns the raw
+// bytes to send verbatim. Forms are sent as raw JSON rather than through the v3
+// SDK's lossy union types, so the payload is validated without being deserialized.
+// The preClean hook runs before validation so, for example, an exported form body
+// whose server-managed fields are stripped still satisfies the schema's
+// additionalProperties constraint.
+func validateFormData(
+	cli *cli,
+	dataStr, method, schemaPath, schemaCmd string,
+	preClean func(json.RawMessage) (json.RawMessage, error),
+) (json.RawMessage, error) {
+	handler, err := NewDataJSONHandler(cli)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize JSON handler: %w", err)
+	}
+
+	raw, err := handler.readJSONInput(dataStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read JSON input: %w", err)
+	}
+
+	if preClean != nil {
+		raw, err = preClean(raw)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse form body: %w", err)
+		}
+	}
+
+	result, err := handler.manager.ValidateRequest(method, schemaPath, raw)
+	if err != nil {
+		cli.renderer.Infof("Run '%s --schema' to see the expected schema.", schemaCmd)
+		return nil, fmt.Errorf("schema validation error: %w", err)
+	}
+	if !result.Valid {
+		cli.renderer.Infof("Run '%s --schema' to see the expected schema.", schemaCmd)
+		return nil, fmt.Errorf("schema validation failed:\n%s", formatValidationErrors(result.Errors))
+	}
+
+	return json.RawMessage(raw), nil
+}
+
+// stripFormServerManagedFields removes the fields the API sets and rejects on
+// write (id, timestamps, links) so an exported or previously-read form body can be
+// sent back on create or update without a schema-additionalProperties violation.
+func stripFormServerManagedFields(body json.RawMessage) (json.RawMessage, error) {
+	var form map[string]json.RawMessage
+	if err := json.Unmarshal(body, &form); err != nil {
+		return nil, err
+	}
+	for _, field := range formServerManagedFields {
+		delete(form, field)
+	}
+	return json.Marshal(form)
 }
 
 // applyRawFormOverrides applies scalar flag overrides without deserializing the
@@ -905,14 +960,7 @@ func (c *cli) formRawCreate(ctx context.Context, body json.RawMessage) (json.Raw
 // formRawUpdate replaces a form from raw JSON, preserving node config that the
 // typed UpdateFormRequestContent would drop. It returns the updated form JSON.
 func (c *cli) formRawUpdate(ctx context.Context, id string, body json.RawMessage) (json.RawMessage, error) {
-	var form map[string]json.RawMessage
-	if err := json.Unmarshal(body, &form); err != nil {
-		return nil, err
-	}
-	for _, field := range formServerManagedFields {
-		delete(form, field)
-	}
-	cleanBody, err := json.Marshal(form)
+	cleanBody, err := stripFormServerManagedFields(body)
 	if err != nil {
 		return nil, err
 	}

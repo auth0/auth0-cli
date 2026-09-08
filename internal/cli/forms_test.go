@@ -16,12 +16,12 @@ import (
 	managementv3 "github.com/auth0/go-auth0/v3/management"
 	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/golang/mock/gomock"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
-	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/iostream"
 )
@@ -80,13 +80,11 @@ func TestCreateFormCmdUsesRawClientForSimpleScaffold(t *testing.T) {
 	assert.Contains(t, stdout.String(), "Simple Form")
 }
 
-func TestCreateFormCmdUsesRawClientForRichFile(t *testing.T) {
-	body := []byte(`{
+func TestFormRawCreatePreservesNodeConfig(t *testing.T) {
+	body := json.RawMessage(`{
 		"name":"Rich Form",
 		"nodes":[{"id":"step_1","type":"STEP","config":{"components":[{"id":"field_1","category":"FIELD","type":"TEXT"}]}}]
 	}`)
-	path := filepath.Join(t.TempDir(), "form.json")
-	require.NoError(t, os.WriteFile(path, body, 0600))
 
 	httpClient := &formHTTPClientStub{
 		response: json.RawMessage(`{
@@ -95,23 +93,17 @@ func TestCreateFormCmdUsesRawClientForRichFile(t *testing.T) {
 			"nodes":[{"id":"step_1","type":"STEP","config":{"components":[{"id":"field_1","category":"FIELD","type":"TEXT"}]}}]
 		}`),
 	}
-	stdout := &bytes.Buffer{}
-	c := &cli{
-		api: &auth0.API{HTTPClient: httpClient},
-		renderer: &display.Renderer{
-			MessageWriter: io.Discard,
-			ResultWriter:  stdout,
-		},
-	}
+	c := &cli{api: &auth0.API{HTTPClient: httpClient}}
 
-	cmd := createFormCmd(c)
-	cmd.SetArgs([]string{"--file", path})
+	created, err := c.formRawCreate(context.Background(), body)
+	require.NoError(t, err)
 
-	require.NoError(t, cmd.Execute())
 	assert.Equal(t, http.MethodPost, httpClient.method)
 	require.IsType(t, json.RawMessage{}, httpClient.payload)
+	// The body is sent verbatim, so STEP node config the v3 union types would
+	// drop survives the round-trip.
 	assert.Contains(t, string(httpClient.payload.(json.RawMessage)), `"components"`)
-	assert.Contains(t, stdout.String(), "1 nodes")
+	assert.Contains(t, string(created), `"components"`)
 }
 
 func TestShowFormCmdUsesRawClient(t *testing.T) {
@@ -180,8 +172,8 @@ func TestUpdateFormCmdUsesRawClientForScalarUpdate(t *testing.T) {
 	assert.Contains(t, stdout.String(), "Renamed")
 }
 
-func TestUpdateFormCmdUsesRawClientForRichFile(t *testing.T) {
-	body := []byte(`{
+func TestFormRawUpdatePreservesNodeConfigAndStripsServerManagedFields(t *testing.T) {
+	body := json.RawMessage(`{
 		"id":"ap_rich",
 		"name":"Rich Form",
 		"nodes":[{"id":"router_1","type":"ROUTER","config":{"rules":[{"id":"rule_1","condition":{"operator":"AND"}}]}}],
@@ -191,8 +183,6 @@ func TestUpdateFormCmdUsesRawClientForRichFile(t *testing.T) {
 		"flow_count":0,
 		"links":{}
 	}`)
-	path := filepath.Join(t.TempDir(), "form.json")
-	require.NoError(t, os.WriteFile(path, body, 0600))
 
 	httpClient := &formHTTPClientStub{
 		response: json.RawMessage(`{
@@ -202,24 +192,18 @@ func TestUpdateFormCmdUsesRawClientForRichFile(t *testing.T) {
 			"ending":null
 		}`),
 	}
-	stdout := &bytes.Buffer{}
-	c := &cli{
-		api: &auth0.API{HTTPClient: httpClient},
-		renderer: &display.Renderer{
-			MessageWriter: io.Discard,
-			ResultWriter:  stdout,
-		},
-	}
+	c := &cli{api: &auth0.API{HTTPClient: httpClient}}
 
-	cmd := updateFormCmd(c)
-	cmd.SetArgs([]string{"ap_rich", "--file", path})
+	_, err := c.formRawUpdate(context.Background(), "ap_rich", body)
+	require.NoError(t, err)
 
-	require.NoError(t, cmd.Execute())
 	assert.Equal(t, http.MethodPatch, httpClient.method)
 	require.IsType(t, json.RawMessage{}, httpClient.payload)
 	payload := httpClient.payload.(json.RawMessage)
+	// Rich ROUTER config and an explicit null ending survive the raw round-trip.
 	assert.Contains(t, string(payload), `"condition"`)
 	assert.Contains(t, string(payload), `"ending":null`)
+	// Server-managed fields are stripped before the request is sent.
 	var form map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(payload, &form))
 	assert.NotContains(t, form, "id")
@@ -227,27 +211,48 @@ func TestUpdateFormCmdUsesRawClientForRichFile(t *testing.T) {
 	assert.NotContains(t, form, "updated_at")
 	assert.NotContains(t, form, "flow_count")
 	assert.NotContains(t, form, "links")
-	assert.Contains(t, stdout.String(), "1 nodes")
 }
 
-func TestReadFormBody(t *testing.T) {
-	t.Run("reads from a file", func(t *testing.T) {
+func TestReadFormData(t *testing.T) {
+	newCmd := func() *cobra.Command {
+		cmd := &cobra.Command{}
+		var data string
+		dataFlag.RegisterString(cmd, &data, "")
+		return cmd
+	}
+
+	t.Run("reads inline JSON from --data", func(t *testing.T) {
+		cmd := newCmd()
+		require.NoError(t, cmd.Flags().Set("data", `{"name":"My Form"}`))
+
+		got, err := readFormData(cmd)
+		assert.NoError(t, err)
+		assert.Equal(t, []byte(`{"name":"My Form"}`), got)
+	})
+
+	t.Run("reads from an @file reference", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "form.json")
 		want := []byte(`{"name":"My Form"}`)
 		assert.NoError(t, os.WriteFile(path, want, 0600))
 
-		got, err := readFormBody(path)
+		cmd := newCmd()
+		require.NoError(t, cmd.Flags().Set("data", "@"+path))
+
+		got, err := readFormData(cmd)
 		assert.NoError(t, err)
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("errors on a missing file", func(t *testing.T) {
-		_, err := readFormBody(filepath.Join(t.TempDir(), "missing.json"))
+	t.Run("errors on a missing @file", func(t *testing.T) {
+		cmd := newCmd()
+		require.NoError(t, cmd.Flags().Set("data", "@"+filepath.Join(t.TempDir(), "missing.json")))
+
+		_, err := readFormData(cmd)
 		assert.ErrorContains(t, err, "failed to read form file")
 	})
 
-	t.Run("reads from stdin when file is '-'", func(t *testing.T) {
+	t.Run("reads from stdin when --data is not set", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "stdin.json")
 		want := []byte(`{"name":"Piped Form"}`)
@@ -261,9 +266,26 @@ func TestReadFormBody(t *testing.T) {
 		iostream.Input = f
 		defer func() { iostream.Input = original }()
 
-		got, err := readFormBody("-")
+		got, err := readFormData(newCmd())
 		assert.NoError(t, err)
 		assert.Equal(t, want, got)
+	})
+
+	t.Run("returns nil when no source is available", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "empty.json")
+		assert.NoError(t, os.WriteFile(path, nil, 0600))
+
+		f, err := os.Open(path)
+		assert.NoError(t, err)
+		defer f.Close()
+
+		original := iostream.Input
+		iostream.Input = f
+		defer func() { iostream.Input = original }()
+
+		got, err := readFormData(newCmd())
+		assert.NoError(t, err)
+		assert.Nil(t, got)
 	})
 }
 
@@ -417,73 +439,6 @@ func TestCollectForms(t *testing.T) {
 		_, err := collectForms(context.Background(), cli, &managementv3.ListFormsRequestParameters{}, 0)
 		assert.EqualError(t, err, "boom")
 	})
-}
-
-func TestFormatFormEditURL(t *testing.T) {
-	cfg := &config.Config{
-		Tenants: config.Tenants{
-			"example.us.auth0.com":   {Name: "example"},
-			"my-tenant.eu.auth0.com": {Name: "my-tenant"},
-			"dev-tti06f6y.auth0.com": {Name: "dev-tti06f6y"},
-			"no-name.us.auth0.com":   {Name: ""},
-		},
-	}
-
-	tests := []struct {
-		name     string
-		tenant   string
-		id       string
-		expected string
-	}{
-		{
-			name:     "derives the region from a four-part domain",
-			tenant:   "example.us.auth0.com",
-			id:       "ap_123",
-			expected: "https://forms.auth0.com/tenants/us/example/forms/ap_123/edit",
-		},
-		{
-			name:     "supports non-us regions",
-			tenant:   "my-tenant.eu.auth0.com",
-			id:       "ap_456",
-			expected: "https://forms.auth0.com/tenants/eu/my-tenant/forms/ap_456/edit",
-		},
-		{
-			name:     "defaults to us for a three-part PUS1 domain",
-			tenant:   "dev-tti06f6y.auth0.com",
-			id:       "ap_789",
-			expected: "https://forms.auth0.com/tenants/us/dev-tti06f6y/forms/ap_789/edit",
-		},
-		{
-			name:     "returns empty when the tenant is unknown",
-			tenant:   "example.us.auth0.com",
-			id:       "",
-			expected: "",
-		},
-		{
-			name:     "returns empty when the tenant is missing",
-			tenant:   "",
-			id:       "ap_123",
-			expected: "",
-		},
-		{
-			name:     "returns empty when the domain has too few parts",
-			tenant:   "invalid",
-			id:       "ap_123",
-			expected: "",
-		},
-		{
-			name:     "returns empty when the tenant name is unknown",
-			tenant:   "no-name.us.auth0.com",
-			id:       "ap_123",
-			expected: "",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.expected, formatFormEditURL(test.tenant, cfg, test.id))
-		})
-	}
 }
 
 type formHTTPClientStub struct {

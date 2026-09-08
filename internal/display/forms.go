@@ -196,4 +196,3 @@ func formLanguageSummary(primary, def string) string {
 		return fmt.Sprintf("primary: %s, default: %s", primary, def)
 	}
 }
-

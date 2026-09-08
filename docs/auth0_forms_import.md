@@ -5,7 +5,7 @@ has_toc: false
 ---
 # auth0 forms import
 
-Import a form from a JSON file (or piped stdin). Without `--id` a new form is created; with `--id` the existing form is replaced.
+Import a form from `--data`, given as inline JSON, a file (`@form.json`), or piped stdin. Without `--id` a new form is created; with `--id` the existing form is replaced.
 
 Both a flat form graph and the Dashboard envelope (`version`, `form`, `flows`, `connections`) are accepted. For an envelope, the bundled flows are created and each `#CONN-N#` connection placeholder is mapped to an existing vault connection, either interactively or with `--connection`.
 
@@ -17,10 +17,10 @@ auth0 forms import [flags]
 ## Examples
 
 ```
-  auth0 forms import --file ./form.json
-  auth0 forms import --file ./form.json --id <form-id>
-  auth0 forms import --file ./form.json --connection '#CONN-1#=ac_123'
-  cat form.json | auth0 forms import -f -
+  auth0 forms import --data @form.json
+  auth0 forms import --data @form.json --id <form-id>
+  auth0 forms import --data @form.json --connection '#CONN-1#=ac_123'
+  auth0 forms export <form-id> | auth0 forms import
 ```
 
 
@@ -28,7 +28,7 @@ auth0 forms import [flags]
 
 ```
       --connection stringToString   Map an exported connection placeholder to an existing vault connection ID, e.g. --connection '#CONN-1#=ac_123'. Repeatable. (default [])
-  -f, --file string                 Path to a JSON file with the form body. Use '-' to read from stdin.
+      --data string                 JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
       --id string                   Id of an existing Form to replace. When omitted, a new form is created.
       --json                        Output in json format.
       --json-compact                Output in compact json format.
