@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
@@ -22,23 +23,33 @@ var (
 	}
 
 	networkACLDescription = Flag{
-		Name:      "Description",
-		LongForm:  "description",
-		ShortForm: "d",
-		Help:      "Description of the network ACL (Eg. \"Block suspicious IPs\", required)",
+		Name:       "Description",
+		LongForm:   "description",
+		ShortForm:  "d",
+		Help:       "Description of the network ACL (Eg. \"Block suspicious IPs\").",
+		IsRequired: true,
 	}
 
 	networkACLActive = Flag{
-		Name:     "Active",
-		LongForm: "active",
-		Help:     "Whether the network ACL is active (Eg. true, default: false)",
+		Name:       "Active",
+		LongForm:   "active",
+		Help:       "Whether the network ACL is active ('true' or 'false').",
+		IsRequired: true,
 	}
 
 	networkACLPriority = Flag{
-		Name:      "Priority",
-		LongForm:  "priority",
-		ShortForm: "p",
-		Help:      "Priority of the network ACL in number(Eg. 5)",
+		Name:       "Priority",
+		LongForm:   "priority",
+		ShortForm:  "p",
+		Help:       "Priority of the network ACL (Eg. 5).",
+		IsRequired: true,
+	}
+
+	networkACLRule = Flag{
+		Name:       "Rule",
+		LongForm:   "rule",
+		Help:       "Network ACL rule configuration in JSON format (required for non-interactive mode).",
+		IsRequired: true,
 	}
 
 	networkACLRuleAction = Flag{
@@ -51,6 +62,12 @@ var (
 		Name:     "RedirectURI",
 		LongForm: "redirect-uri",
 		Help:     "URI to redirect to when action is redirect (Eg. \"https://example.com/blocked\")",
+	}
+
+	networkACLScope = Flag{
+		Name:     "Scope",
+		LongForm: "scope",
+		Help:     "Scope of the rule (management, authentication, tenant)",
 	}
 
 	networkACLASNs = Flag{
@@ -108,56 +125,50 @@ var (
 	}
 )
 
+// networkACLBasicInputs holds the flag-driven fields shared by create and update.
+type networkACLBasicInputs struct {
+	ID          string
+	Description string
+	Active      bool
+	ActiveStr   string
+	Priority    int
+	RuleJSON    string
+}
+
+// validateNetworkACLDescription ensures the description is non-empty and within the API length limit.
+func validateNetworkACLDescription(description string) error {
+	if len(description) == 0 {
+		return fmt.Errorf("description cannot be empty")
+	}
+	if len(description) > 255 {
+		return fmt.Errorf("description cannot exceed 255 characters")
+	}
+	return nil
+}
+
 // validateAndSetBasicFields handles the common validation and patch building logic for basic fields.
-func validateAndSetBasicFields(inputs *struct {
-	ID           string
-	Description  string
-	Active       bool
-	ActiveStr    string
-	Priority     int
-	RuleJSON     string
-	Action       string
-	RedirectURI  string
-	Scope        string
-	ASNs         []int
-	CountryCodes []string
-	SubdivCodes  []string
-	IPv4CIDRs    []string
-	IPv6CIDRs    []string
-	JA3          []string
-	JA4          []string
-	UserAgents   []string
-	Auth0Managed []string
-	MatchRule    bool
-	NoMatchRule  bool
-}, patch *management.NetworkACL, cmd *cobra.Command) error {
-	if cmd.Flags().Changed("description") {
-		if len(inputs.Description) > 255 {
-			return fmt.Errorf("description cannot exceed 255 characters")
-		}
-		if len(inputs.Description) == 0 {
-			return fmt.Errorf("description cannot be empty")
+func validateAndSetBasicFields(inputs *networkACLBasicInputs, patch *management.NetworkACL, cmd *cobra.Command) error {
+	if networkACLDescription.IsSet(cmd) {
+		if err := validateNetworkACLDescription(inputs.Description); err != nil {
+			return err
 		}
 		patch.Description = &inputs.Description
 	}
 
-	if cmd.Flags().Changed("active") {
-		switch inputs.ActiveStr {
-		case "true":
-			inputs.Active = true
-		case "false":
-			inputs.Active = false
-		default:
+	if networkACLActive.IsSet(cmd) {
+		active, err := strconv.ParseBool(inputs.ActiveStr)
+		if err != nil {
 			return fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr)
 		}
+		inputs.Active = active
 		patch.Active = &inputs.Active
 	}
 
-	if cmd.Flags().Changed("priority") {
+	if networkACLPriority.IsSet(cmd) {
 		patch.Priority = &inputs.Priority
 	}
 
-	if cmd.Flags().Changed("rule") {
+	if networkACLRule.IsSet(cmd) {
 		var rule management.NetworkACLRule
 		if err := json.Unmarshal([]byte(inputs.RuleJSON), &rule); err != nil {
 			return fmt.Errorf("invalid rule JSON: %w", err)
@@ -176,11 +187,10 @@ func applyNetworkACLPatch(ctx context.Context, cli *cli, id string, patch *manag
 		return fmt.Errorf("failed to update network ACL with ID %q: %w", id, err)
 	}
 
-	cli.renderer.NetworkACLUpdate(patch)
-	return nil
+	return cli.renderer.NetworkACLUpdate(patch)
 }
 
-func selectNetworkACLParams(cmd *cobra.Command) (map[string]bool, error) {
+func selectNetworkACLParams() (map[string]bool, error) {
 	options := []string{
 		"ASNs",
 		"Country Codes",
@@ -191,6 +201,7 @@ func selectNetworkACLParams(cmd *cobra.Command) (map[string]bool, error) {
 		"JA4Fingerprints",
 		"User Agents",
 		"Auth0 Managed",
+		"Signature Keys",
 	}
 
 	var selected []string
@@ -218,21 +229,23 @@ func selectNetworkACLParams(cmd *cobra.Command) (map[string]bool, error) {
 
 // ruleDefaults holds default values extracted from current ACL rule.
 type ruleDefaults struct {
-	Scope        string
-	Action       string
-	RedirectURI  string
-	ASNs         []int
-	CountryCodes []string
-	SubdivCodes  []string
-	IPv4CIDRs    []string
-	IPv6CIDRs    []string
-	JA3          []string
-	JA4          []string
-	UserAgents   []string
-	Auth0Managed []string
-	IsMatchRule  bool
-	HasMatchRule bool
-	HasNotMatch  bool
+	Scope           string
+	Action          string
+	RedirectURI     string
+	ASNs            []int
+	CountryCodes    []string
+	SubdivCodes     []string
+	IPv4CIDRs       []string
+	IPv6CIDRs       []string
+	JA3             []string
+	JA4             []string
+	UserAgents      []string
+	Auth0Managed    []string
+	SignatureKeyIDs []string
+	IsMatchRule     bool
+	HasMatchRule    bool
+	HasNotMatch     bool
+	MatchAll        bool
 }
 
 // extractCurrentRuleDefaults extracts default values from current ACL rule for interactive prompts.
@@ -265,6 +278,10 @@ func extractCurrentRuleDefaults(currentACL *management.NetworkACL) *ruleDefaults
 				defaults.RedirectURI = *currentACL.Rule.Action.RedirectURI
 			}
 		}
+	}
+
+	if currentACL.Rule.MatchAll != nil && *currentACL.Rule.MatchAll {
+		defaults.MatchAll = true
 	}
 
 	// Extract match criteria from either Match or NotMatch.
@@ -307,28 +324,46 @@ func extractCurrentRuleDefaults(currentACL *management.NetworkACL) *ruleDefaults
 		if match.Auth0Managed != nil {
 			defaults.Auth0Managed = *match.Auth0Managed
 		}
+		defaults.SignatureKeyIDs = signatureKeyIDs(match)
 	}
 
 	return defaults
 }
 
+// signatureKeyIDs flattens the referenced key ids of a match's
+// http_message_signature signal, or nil when the signal is not set.
+func signatureKeyIDs(match *management.NetworkACLRuleMatch) []string {
+	if match == nil || match.HTTPMessageSignature == nil {
+		return nil
+	}
+	ids := make([]string, 0, len(match.HTTPMessageSignature.Keys))
+	for _, k := range match.HTTPMessageSignature.Keys {
+		if k.ID != nil {
+			ids = append(ids, *k.ID)
+		}
+	}
+	return ids
+}
+
 // ruleInputs holds user inputs for rule configuration.
 type ruleInputs struct {
-	Scope        string
-	Action       string
-	RedirectURI  string
-	ASNs         []int
-	CountryCodes []string
-	SubdivCodes  []string
-	IPv4CIDRs    []string
-	IPv6CIDRs    []string
-	JA3          []string
-	JA4          []string
-	UserAgents   []string
-	Auth0Managed []string
-	IsMatchRule  bool
-	MatchRule    bool
-	NoMatchRule  bool
+	Scope           string
+	Action          string
+	RedirectURI     string
+	ASNs            []int
+	CountryCodes    []string
+	SubdivCodes     []string
+	IPv4CIDRs       []string
+	IPv6CIDRs       []string
+	JA3             []string
+	JA4             []string
+	UserAgents      []string
+	Auth0Managed    []string
+	SignatureKeyIDs []string
+	IsMatchRule     bool
+	MatchRule       bool
+	NoMatchRule     bool
+	MatchAll        bool
 }
 
 // promptForRuleDetails handles interactive prompting for rule configuration.
@@ -348,18 +383,31 @@ func promptForRuleDetails(cmd *cobra.Command, cli *cli, defaults *ruleDefaults, 
 
 	// Ask for action.
 	actions := []string{"block", "allow", "log", "redirect"}
-	if err := networkACLRuleAction.Select(cmd, &inputs.Action, actions, &defaults.Action); err != nil {
+	if err := (&Flag{
+		Name: "Action",
+		Help: "Action for the rule (block, allow, log, redirect)",
+	}).Select(cmd, &inputs.Action, actions, &defaults.Action); err != nil {
 		return nil, err
 	}
 
 	// If action is redirect, ask for redirect URI.
 	if inputs.Action == "redirect" {
-		if err := networkACLRedirectURI.Ask(cmd, &inputs.RedirectURI, &defaults.RedirectURI); err != nil {
+		if err := (&Flag{
+			Name: "RedirectURI",
+			Help: "URI to redirect to when action is redirect (Eg. \"https://example.com/blocked\")",
+		}).Ask(cmd, &inputs.RedirectURI, &defaults.RedirectURI); err != nil {
 			return nil, err
 		}
 		if inputs.RedirectURI == "" {
 			return nil, fmt.Errorf("redirect URI is required when action is redirect")
 		}
+	}
+
+	if err := prompt.AskBool("Match all traffic unconditionally? (Eg. block all). Cannot be combined with match/not_match criteria.", &inputs.MatchAll, defaults.MatchAll); err != nil {
+		return nil, err
+	}
+	if inputs.MatchAll {
+		return inputs, nil
 	}
 
 	// Handle Match/NotMatch rule changes for updates.
@@ -386,7 +434,7 @@ func promptForRuleDetails(cmd *cobra.Command, cli *cli, defaults *ruleDefaults, 
 		var selectedMatchOption string
 		if err := (&Flag{
 			Name: "What kind of rule do you want to create?",
-			Help: "Match or Not Match rule (ASNs, Country Codes, Subdivision Codes, IPv4 CIDRs, IPv6 CIDRs, JA3/JA4 Fingerprints, User Agents, Auth0 Managed)",
+			Help: "Match or Not Match rule (ASNs, Country Codes, Subdivision Codes, IPv4 CIDRs, IPv6 CIDRs, JA3/JA4 Fingerprints, User Agents, Auth0 Managed, Signature Keys)",
 		}).Select(cmd, &selectedMatchOption, matchOptions, nil); err != nil {
 			return nil, err
 		}
@@ -394,13 +442,13 @@ func promptForRuleDetails(cmd *cobra.Command, cli *cli, defaults *ruleDefaults, 
 	}
 
 	// Select which parameters to provide.
-	selectedParams, err := selectNetworkACLParams(cmd)
+	selectedParams, err := selectNetworkACLParams()
 	if err != nil {
 		return nil, err
 	}
 
 	// Ask for values only for selected parameters.
-	if err := promptForMatchCriteria(cmd, selectedParams, inputs, defaults); err != nil {
+	if err := promptForMatchCriteria(cmd, cli, selectedParams, inputs, defaults); err != nil {
 		return nil, err
 	}
 
@@ -408,70 +456,162 @@ func promptForRuleDetails(cmd *cobra.Command, cli *cli, defaults *ruleDefaults, 
 }
 
 // promptForMatchCriteria handles prompting for all match criteria based on selected parameters.
-func promptForMatchCriteria(cmd *cobra.Command, selectedParams map[string]bool, inputs *ruleInputs, defaults *ruleDefaults) error {
+func promptForMatchCriteria(cmd *cobra.Command, cli *cli, selectedParams map[string]bool, inputs *ruleInputs, defaults *ruleDefaults) error {
 	if selectedParams["ASNs"] {
-		if err := networkACLASNs.AskIntSlice(cmd, &inputs.ASNs, &defaults.ASNs); err != nil {
+		if err := (&Flag{
+			Name: "ASNs",
+			Help: "Comma-separated list of ASNs to match (Eg. 64496,64497,64498)",
+		}).AskIntSlice(cmd, &inputs.ASNs, &defaults.ASNs); err != nil {
 			return err
 		}
 	}
 
 	if selectedParams["Country Codes"] {
 		currentCountryCodesStr := strings.Join(defaults.CountryCodes, ",")
-		if err := networkACLCountryCodes.AskMany(cmd, &inputs.CountryCodes, &currentCountryCodesStr); err != nil {
+		if err := (&Flag{
+			Name: "CountryCodes",
+			Help: "Comma-separated list of country codes to match (Eg. US,CA,MX)",
+		}).AskMany(cmd, &inputs.CountryCodes, &currentCountryCodesStr); err != nil {
 			return err
 		}
 	}
 
 	if selectedParams["Subdivision Codes"] {
 		currentSubDivCodesStr := strings.Join(defaults.SubdivCodes, ",")
-		if err := networkACLSubdivisionCodes.AskMany(cmd, &inputs.SubdivCodes, &currentSubDivCodesStr); err != nil {
+		if err := (&Flag{
+			Name: "SubdivisionCodes",
+			Help: "Comma-separated list of subdivision codes to match (Eg. US-NY,US-CA)",
+		}).AskMany(cmd, &inputs.SubdivCodes, &currentSubDivCodesStr); err != nil {
 			return err
 		}
 	}
 
 	if selectedParams["IPv4CIDRs"] {
 		currentIPv4CIDRsStr := strings.Join(defaults.IPv4CIDRs, ",")
-		if err := networkACLIPv4CIDRs.AskMany(cmd, &inputs.IPv4CIDRs, &currentIPv4CIDRsStr); err != nil {
+		if err := (&Flag{
+			Name: "IPv4CIDRs",
+			Help: "Comma-separated list of IPv4 CIDR ranges (Eg. 192.168.1.0/24,10.0.0.0/8)",
+		}).AskMany(cmd, &inputs.IPv4CIDRs, &currentIPv4CIDRsStr); err != nil {
 			return err
 		}
 	}
 
 	if selectedParams["IPv6CIDRs"] {
 		currentIPv6CIDRsStr := strings.Join(defaults.IPv6CIDRs, ",")
-		if err := networkACLIPv6CIDRs.AskMany(cmd, &inputs.IPv6CIDRs, &currentIPv6CIDRsStr); err != nil {
+		if err := (&Flag{
+			Name: "IPv6CIDRs",
+			Help: "Comma-separated list of IPv6 CIDR ranges (Eg. 2001:db8::/32,2001:db8:1234::/48)",
+		}).AskMany(cmd, &inputs.IPv6CIDRs, &currentIPv6CIDRsStr); err != nil {
 			return err
 		}
 	}
 
 	if selectedParams["JA3Fingerprints"] {
 		currentJA3Str := strings.Join(defaults.JA3, ",")
-		if err := networkACLJA3Fingerprints.AskMany(cmd, &inputs.JA3, &currentJA3Str); err != nil {
+		if err := (&Flag{
+			Name: "JA3Fingerprints",
+			Help: "Comma-separated list of JA3 fingerprints to match (Eg. deadbeef,cafebabe)",
+		}).AskMany(cmd, &inputs.JA3, &currentJA3Str); err != nil {
 			return err
 		}
 	}
 
 	if selectedParams["JA4Fingerprints"] {
 		currentJA4Str := strings.Join(defaults.JA4, ",")
-		if err := networkACLJA4Fingerprints.AskMany(cmd, &inputs.JA4, &currentJA4Str); err != nil {
+		if err := (&Flag{
+			Name: "JA4Fingerprints",
+			Help: "Comma-separated list of JA4 fingerprints to match (Eg. t13d1516h2_8daaf6152771)",
+		}).AskMany(cmd, &inputs.JA4, &currentJA4Str); err != nil {
 			return err
 		}
 	}
 
 	if selectedParams["User Agents"] {
 		currentUserAgentsStr := strings.Join(defaults.UserAgents, ",")
-		if err := networkACLUserAgents.AskMany(cmd, &inputs.UserAgents, &currentUserAgentsStr); err != nil {
+		if err := (&Flag{
+			Name: "UserAgents",
+			Help: "Comma-separated list of user agents to match (Eg. badbot/*,malicious/*)",
+		}).AskMany(cmd, &inputs.UserAgents, &currentUserAgentsStr); err != nil {
 			return err
 		}
 	}
 
 	if selectedParams["Auth0 Managed"] {
 		currentAuth0ManagedStr := strings.Join(defaults.Auth0Managed, ",")
-		if err := networkACLAuth0Managed.AskMany(cmd, &inputs.Auth0Managed, &currentAuth0ManagedStr); err != nil {
+		if err := (&Flag{
+			Name: "Auth0Managed",
+			Help: "Comma-separated list of Auth0-curated blocklists to match (Eg. auth0.icloud_relay_proxy,auth0.low_reputation). (EA only).",
+		}).AskMany(cmd, &inputs.Auth0Managed, &currentAuth0ManagedStr); err != nil {
 			return err
 		}
 	}
 
+	if selectedParams["Signature Keys"] {
+		ids, err := cli.pickNetworkACLSignatureKeys(cmd, defaults.SignatureKeyIDs)
+		if err != nil {
+			return err
+		}
+		inputs.SignatureKeyIDs = ids
+	}
+
 	return nil
+}
+
+// pickNetworkACLSignatureKeys resolves the http_message_signature key ids for a rule.
+//
+// It lists the tenant's Network ACL keys (v3 /keys/network-acls) and shows a multi-select
+// of them, with the ids already referenced by the rule (current) pre-selected. Setting the
+// signal non-interactively is done through the full rule JSON passed to --rule.
+func (c *cli) pickNetworkACLSignatureKeys(cmd *cobra.Command, current []string) ([]string, error) {
+	var options []string
+	labelToID := make(map[string]string)
+	idToLabel := make(map[string]string)
+	if err := ansi.Waiting(func() error {
+		resp, err := c.apiv3.NetworkACLKey.List(cmd.Context())
+		if err != nil {
+			return err
+		}
+		if resp != nil {
+			for _, k := range resp.Keys {
+				id := k.GetID()
+				label := fmt.Sprintf("%s (%s)", k.GetName(), id)
+				options = append(options, label)
+				idToLabel[id] = label
+				labelToID[label] = id
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	if len(options) == 0 {
+		return nil, errors.New("no Network ACL keys exist for this tenant; create a key first, then reference it here")
+	}
+
+	// Pre-select the keys already referenced by the rule.
+	defaults := make([]string, 0, len(current))
+	for _, id := range current {
+		if label, ok := idToLabel[id]; ok {
+			defaults = append(defaults, label)
+		}
+	}
+
+	var selected []string
+	if err := prompt.AskMultiSelectWithDefault(
+		"Select the signing keys whose HTTP message signature satisfies the rule using the spacebar and press Enter to confirm:",
+		&selected,
+		defaults,
+		options...,
+	); err != nil {
+		return nil, err
+	}
+
+	ids := make([]string, 0, len(selected))
+	for _, label := range selected {
+		ids = append(ids, labelToID[label])
+	}
+	return ids, nil
 }
 
 // buildNetworkACLRule creates a NetworkACLRule from the provided inputs.
@@ -492,6 +632,11 @@ func buildNetworkACLRule(inputs *ruleInputs) (*management.NetworkACLRule, error)
 	case "redirect":
 		rule.Action.Redirect = auth0.Bool(true)
 		rule.Action.RedirectURI = &inputs.RedirectURI
+	}
+
+	if inputs.MatchAll {
+		rule.MatchAll = auth0.Bool(true)
+		return rule, nil
 	}
 
 	// Build match criteria.
@@ -532,6 +677,14 @@ func buildNetworkACLRule(inputs *ruleInputs) (*management.NetworkACLRule, error)
 	}
 	if len(inputs.Auth0Managed) > 0 {
 		match.Auth0Managed = &inputs.Auth0Managed
+		matchProvided = true
+	}
+	if len(inputs.SignatureKeyIDs) > 0 {
+		keys := make([]*management.NetworkACLHTTPMessageSignatureKey, len(inputs.SignatureKeyIDs))
+		for i := range inputs.SignatureKeyIDs {
+			keys[i] = &management.NetworkACLHTTPMessageSignatureKey{ID: &inputs.SignatureKeyIDs[i]}
+		}
+		match.HTTPMessageSignature = &management.NetworkACLHTTPMessageSignature{Keys: keys}
 		matchProvided = true
 	}
 
@@ -636,26 +789,7 @@ func showNetworkACLCmd(cli *cli) *cobra.Command {
 }
 
 func createNetworkACLCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		Description  string
-		Active       bool
-		ActiveStr    string // Added for handling --active true/false.
-		Priority     int
-		RuleJSON     string
-		Action       string
-		RedirectURI  string
-		ASNs         []int
-		CountryCodes []string
-		SubdivCodes  []string
-		IPv4CIDRs    []string
-		IPv6CIDRs    []string
-		JA3          []string
-		JA4          []string
-		UserAgents   []string
-		Auth0Managed []string
-		Scope        string
-		isMatchRule  bool
-	}
+	var inputs networkACLBasicInputs
 
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -671,71 +805,37 @@ The --rule parameter is required and must contain a valid JSON object with actio
   auth0 network-acl create --description "Redirect Traffic" --priority 3 --active true --rule '{"action":{"redirect":true,"redirect_uri":"https://example.com"},"scope":"management","match":{"ipv4_cidrs":["192.168.1.0/24"]}}'
   auth0 network-acl create -d "Block Bots" -p 4 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"user_agents":["badbot/*","malicious/*"],"ja3_fingerprints":["deadbeef","cafebabe"]}}'
   auth0 network-acl create --description "Complex Rule" --priority 5 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
-  
-  # Early Access (auth0_managed match/not_match value):
+  auth0 network-acl create --description "Deny All" --priority 7 --active true --rule '{"action":{"block":true},"scope":"tenant","match_all":true}'
+
+  # Early Access (auth0_managed and http_message_signature match/not_match value):
   auth0 network-acl create -d "Curated Blocklist" -p 6 --active true --rule '{"action":{"log":true},"scope":"tenant","not_match":{"auth0_managed":["auth0.vpn","auth0.proxy"]}}'
+  auth0 network-acl create -d "Only Signed" -p 8 --active true --rule '{"action":{"allow":true},"scope":"authentication","match":{"http_message_signature":{"keys":[{"id": "key_123"}]}}}'
   `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Check if we're in non-interactive mode (flags provided) but rule JSON is missing.
-			if !canPrompt(cmd) && !cmd.Flags().Changed("rule") {
-				return fmt.Errorf("the --rule parameter is required for non-interactive mode. Please provide a valid JSON rule")
-			}
-
-			// Parse the active flag if provided.
-			if cmd.Flags().Changed("active") {
-				switch inputs.ActiveStr {
-				case "true":
-					inputs.Active = true
-				case "false":
-					inputs.Active = false
-				default:
-					return fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr)
-				}
-			}
-
-			// Check if rule JSON was provided.
-			if cmd.Flags().Changed("rule") {
-				// Parse the rule JSON.
-				var rule map[string]interface{}
-				if err := json.Unmarshal([]byte(inputs.RuleJSON), &rule); err != nil {
+			// Validate --rule JSON up front, before prompting for other fields, so
+			// an invalid rule fails immediately instead of after the prompts.
+			var rule *management.NetworkACLRule
+			if networkACLRule.IsSet(cmd) {
+				rule = &management.NetworkACLRule{}
+				if err := json.Unmarshal([]byte(inputs.RuleJSON), rule); err != nil {
 					return fmt.Errorf("invalid rule JSON: %w", err)
 				}
-
-				// Create the network ACL with the provided rule.
-				acl := &management.NetworkACL{
-					Description: &inputs.Description,
-					Active:      &inputs.Active,
-					Priority:    &inputs.Priority,
-				}
-
-				// Convert the rule map to the appropriate structure.
-				if err := json.Unmarshal([]byte(inputs.RuleJSON), &acl.Rule); err != nil {
-					return fmt.Errorf("failed to parse rule JSON: %w", err)
-				}
-
-				if err := ansi.Waiting(func() error {
-					return cli.api.NetworkACL.Create(cmd.Context(), acl)
-				}); err != nil {
-					return fmt.Errorf("failed to create network ACL: %w", err)
-				}
-
-				cli.renderer.NetworkACLCreate(acl)
-				return nil
 			}
 
-			// Interactive or flag-based creation.
 			if err := networkACLDescription.Ask(cmd, &inputs.Description, nil); err != nil {
 				return err
 			}
-
-			if len(inputs.Description) > 255 {
-				return fmt.Errorf("description cannot exceed 255 characters")
+			if err := validateNetworkACLDescription(inputs.Description); err != nil {
+				return err
 			}
 
-			if len(inputs.Description) == 0 {
-				return fmt.Errorf("description is required")
+			if networkACLActive.IsSet(cmd) {
+				active, err := strconv.ParseBool(inputs.ActiveStr)
+				if err != nil {
+					return fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr)
+				}
+				inputs.Active = active
 			}
-
 			defaultStatus := false
 			if err := networkACLActive.AskBool(cmd, &inputs.Active, &defaultStatus); err != nil {
 				return err
@@ -745,28 +845,30 @@ The --rule parameter is required and must contain a valid JSON object with actio
 				return err
 			}
 
-			// Use helper functions for rule configuration.
-			defaults := &ruleDefaults{
-				Scope:  "tenant",
-				Action: "log",
-			}
-
-			ruleInputs, err := promptForRuleDetails(cmd, cli, defaults, false)
-			if err != nil {
-				return err
-			}
-
-			// Build the network ACL.
 			acl := &management.NetworkACL{
 				Description: &inputs.Description,
 				Active:      &inputs.Active,
 				Priority:    &inputs.Priority,
 			}
 
-			// Build the rule.
-			acl.Rule, err = buildNetworkACLRule(ruleInputs)
-			if err != nil {
-				return err
+			// Use the rule parsed from --rule when provided, otherwise prompt for it.
+			if rule != nil {
+				acl.Rule = rule
+			} else {
+				defaults := &ruleDefaults{
+					Scope:  "tenant",
+					Action: "log",
+				}
+
+				ruleInputs, err := promptForRuleDetails(cmd, cli, defaults, false)
+				if err != nil {
+					return err
+				}
+
+				acl.Rule, err = buildNetworkACLRule(ruleInputs)
+				if err != nil {
+					return err
+				}
 			}
 
 			if err := ansi.Waiting(func() error {
@@ -775,63 +877,23 @@ The --rule parameter is required and must contain a valid JSON object with actio
 				return fmt.Errorf("failed to create network ACL: %w", err)
 			}
 
-			cli.renderer.NetworkACLCreate(acl)
-			return nil
+			return cli.renderer.NetworkACLCreate(acl)
 		},
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
-	cmd.Flags().StringVarP(&inputs.Description, "description", "d", "", "Description of the network ACL (required)")
-	cmd.Flags().StringVar(&inputs.ActiveStr, "active", "", "Whether the network ACL is active (required, 'true' or 'false')")
-	cmd.Flags().IntVarP(&inputs.Priority, "priority", "p", 0, "Priority of the network ACL (required)")
-	cmd.Flags().StringVar(&inputs.RuleJSON, "rule", "", "Network ACL rule configuration in JSON format (required for non-interactive mode)")
-	cmd.Flags().StringVar(&inputs.Action, "action", "", "Action for the rule (block, allow, log, redirect)")
-	cmd.Flags().StringVar(&inputs.RedirectURI, "redirect-uri", "", "URI to redirect to when action is redirect")
-	cmd.Flags().StringVar(&inputs.Scope, "scope", "", "Scope of the rule (management, authentication, tenant)")
+	networkACLDescription.RegisterString(cmd, &inputs.Description, "")
+	networkACLActive.RegisterString(cmd, &inputs.ActiveStr, "")
+	networkACLPriority.RegisterInt(cmd, &inputs.Priority, 0)
+	networkACLRule.RegisterString(cmd, &inputs.RuleJSON, "")
+	registerDeprecatedRuleFlags(cmd)
 
-	// Register the string slice flags.
-	networkACLASNs.RegisterIntSlice(cmd, &inputs.ASNs, nil)
-	networkACLCountryCodes.RegisterStringSlice(cmd, &inputs.CountryCodes, nil)
-	networkACLSubdivisionCodes.RegisterStringSlice(cmd, &inputs.SubdivCodes, nil)
-	networkACLIPv4CIDRs.RegisterStringSlice(cmd, &inputs.IPv4CIDRs, nil)
-	networkACLIPv6CIDRs.RegisterStringSlice(cmd, &inputs.IPv6CIDRs, nil)
-	networkACLJA3Fingerprints.RegisterStringSlice(cmd, &inputs.JA3, nil)
-	networkACLJA4Fingerprints.RegisterStringSlice(cmd, &inputs.JA4, nil)
-	networkACLUserAgents.RegisterStringSlice(cmd, &inputs.UserAgents, nil)
-	networkACLAuth0Managed.RegisterStringSlice(cmd, &inputs.Auth0Managed, nil)
-
-	// These flags must be passed in non-interactive mode.
-	cmd.MarkFlagRequired("description")
-	cmd.MarkFlagRequired("active")
-	cmd.MarkFlagRequired("priority")
-	cmd.MarkFlagRequired("rule")
 	return cmd
 }
 
 func updateNetworkACLCmd(cli *cli) *cobra.Command {
-	var inputs struct {
-		ID           string
-		Description  string
-		Active       bool
-		ActiveStr    string
-		Priority     int
-		RuleJSON     string
-		Action       string
-		RedirectURI  string
-		Scope        string
-		ASNs         []int
-		CountryCodes []string
-		SubdivCodes  []string
-		IPv4CIDRs    []string
-		IPv6CIDRs    []string
-		JA3          []string
-		JA4          []string
-		UserAgents   []string
-		Auth0Managed []string
-		MatchRule    bool
-		NoMatchRule  bool
-	}
+	var inputs networkACLBasicInputs
 
 	cmd := &cobra.Command{
 		Use:   "update",
@@ -842,14 +904,16 @@ To update interactively, use "auth0 network-acl update" with no arguments.
 To update non-interactively, supply the description, active, priority, and rule through flags.
 `,
 		Example: `  auth0 network-acl update <id>
-  auth0 network-acl update <id> --priority 5 
+  auth0 network-acl update <id> --priority 5
   auth0 network-acl update <id> --active true
   auth0 network-acl update <id> --description "Updated description"
   auth0 network-acl update <id> --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"]}}'
   auth0 network-acl update <id> --description "Complex Rule updated" --priority 1 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
-  
-  # Early Access (auth0_managed match/not_match value):
+  auth0 network-acl update <id> --rule '{"action":{"block":true},"scope":"tenant","match_all":true}'
+
+  # Early Access (auth0_managed and http_message_signature match/not_match value):
   auth0 network-acl update <id> --rule '{"action":{"allow":true},"scope":"tenant","match":{"auth0_managed":["auth0.low_reputation"]}}'
+  auth0 network-acl update <id> --rule '{"action":{"allow":true},"scope":"authentication","match":{"http_message_signature":{"keys":[{"id": "key_123"},{"id": "key_456"}]}}}'
   `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get the network ACL ID.
@@ -862,8 +926,8 @@ To update non-interactively, supply the description, active, priority, and rule 
 			}
 
 			// Check if we're in non-interactive mode (any flags provided).
-			flagsProvided := cmd.Flags().Changed("description") || cmd.Flags().Changed("active") ||
-				cmd.Flags().Changed("priority") || cmd.Flags().Changed("rule")
+			flagsProvided := networkACLDescription.IsSet(cmd) || networkACLActive.IsSet(cmd) ||
+				networkACLPriority.IsSet(cmd) || networkACLRule.IsSet(cmd)
 
 			if !canPrompt(cmd) && !flagsProvided {
 				return fmt.Errorf("in non-interactive mode, at least one field must be specified to update")
@@ -872,18 +936,18 @@ To update non-interactively, supply the description, active, priority, and rule 
 			// Build patch object with only the fields that should be updated.
 			patch := &management.NetworkACL{}
 
-			// Non-interactive mode with flags only - no need to read current ACL.
-			if !canPrompt(cmd) && flagsProvided {
-				// Validate and set basic fields from flags.
+			// When flags are provided, update only those fields. This applies in both
+			// interactive and non-interactive mode, so there is no need to read the
+			// current ACL first.
+			if flagsProvided {
 				if err := validateAndSetBasicFields(&inputs, patch, cmd); err != nil {
 					return err
 				}
 
-				// Apply the patch.
 				return applyNetworkACLPatch(cmd.Context(), cli, inputs.ID, patch)
 			}
 
-			// Interactive mode - read current ACL first for defaults.
+			// Full interactive mode - read the current ACL to use its values as defaults.
 			var currentACL *management.NetworkACL
 			err := ansi.Waiting(func() (err error) {
 				currentACL, err = cli.api.NetworkACL.Read(cmd.Context(), inputs.ID)
@@ -893,20 +957,11 @@ To update non-interactively, supply the description, active, priority, and rule 
 				return fmt.Errorf("failed to get network ACL with ID %q: %w", inputs.ID, err)
 			}
 
-			// If some flags were provided in interactive mode, only update those fields.
-			if canPrompt(cmd) && flagsProvided {
-				// Only update the fields that were specified via flags.
-				if err := validateAndSetBasicFields(&inputs, patch, cmd); err != nil {
-					return err
-				}
-
-				// Apply the patch.
-				return applyNetworkACLPatch(cmd.Context(), cli, inputs.ID, patch)
+			// Use current values as defaults for interactive prompts.
+			if err := networkACLDescription.Ask(cmd, &inputs.Description, currentACL.Description); err != nil {
+				return err
 			}
-
-			// Full Interactive mode, use current values as defaults for interactive prompts.
-			currentDescriptionStr := *currentACL.Description
-			if err := networkACLDescription.Ask(cmd, &inputs.Description, &currentDescriptionStr); err != nil {
+			if err := validateNetworkACLDescription(inputs.Description); err != nil {
 				return err
 			}
 			patch.Description = &inputs.Description
@@ -920,17 +975,14 @@ To update non-interactively, supply the description, active, priority, and rule 
 			if err := networkACLPriority.AskInt(cmd, &inputs.Priority, &currentPriorityStr); err != nil {
 				return err
 			}
-
 			patch.Priority = &inputs.Priority
 
 			// Use helper functions for rule configuration.
 			defaults := extractCurrentRuleDefaults(currentACL)
-
 			ruleInputs, err := promptForRuleDetails(cmd, cli, defaults, true)
 			if err != nil {
 				return err
 			}
-
 			// Build the rule for the patch.
 			patch.Rule, err = buildNetworkACLRule(ruleInputs)
 			if err != nil {
@@ -943,24 +995,11 @@ To update non-interactively, supply the description, active, priority, and rule 
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in JSON format")
-	cmd.Flags().StringVarP(&inputs.Description, "description", "d", "", "Description of the network ACL")
-	cmd.Flags().StringVar(&inputs.ActiveStr, "active", "", "Whether the network ACL is active ('true' or 'false')")
-	cmd.Flags().IntVarP(&inputs.Priority, "priority", "p", 1, "Priority of the network ACL")
-	cmd.Flags().StringVar(&inputs.RuleJSON, "rule", "", "Network ACL rule configuration in JSON format")
-	cmd.Flags().StringVar(&inputs.Action, "action", "", "Action for the rule (block, allow, log, redirect)")
-	cmd.Flags().StringVar(&inputs.RedirectURI, "redirect-uri", "", "URI to redirect to when action is redirect")
-	cmd.Flags().StringVar(&inputs.Scope, "scope", "", "Scope of the rule (management, authentication, tenant)")
-
-	// Register the string slice flags.
-	networkACLASNs.RegisterIntSlice(cmd, &inputs.ASNs, nil)
-	networkACLCountryCodes.RegisterStringSlice(cmd, &inputs.CountryCodes, nil)
-	networkACLSubdivisionCodes.RegisterStringSlice(cmd, &inputs.SubdivCodes, nil)
-	networkACLIPv4CIDRs.RegisterStringSlice(cmd, &inputs.IPv4CIDRs, nil)
-	networkACLIPv6CIDRs.RegisterStringSlice(cmd, &inputs.IPv6CIDRs, nil)
-	networkACLJA3Fingerprints.RegisterStringSlice(cmd, &inputs.JA3, nil)
-	networkACLJA4Fingerprints.RegisterStringSlice(cmd, &inputs.JA4, nil)
-	networkACLUserAgents.RegisterStringSlice(cmd, &inputs.UserAgents, nil)
-	networkACLAuth0Managed.RegisterStringSlice(cmd, &inputs.Auth0Managed, nil)
+	networkACLDescription.RegisterStringU(cmd, &inputs.Description, "")
+	networkACLActive.RegisterStringU(cmd, &inputs.ActiveStr, "")
+	networkACLPriority.RegisterIntU(cmd, &inputs.Priority, 1)
+	networkACLRule.RegisterStringU(cmd, &inputs.RuleJSON, "")
+	registerDeprecatedRuleFlags(cmd)
 
 	return cmd
 }
@@ -1079,4 +1118,53 @@ func (c *cli) networkACLPickerOptions(ctx context.Context) (pickerOptions, error
 	}
 
 	return opts, nil
+}
+
+const deprecatedRuleFlagMessage = "use `--rule` flag to set the configuration as JSON."
+
+func registerDeprecatedRuleFlags(cmd *cobra.Command) {
+	var (
+		action       string
+		redirectURI  string
+		scope        string
+		asns         []int
+		countryCodes []string
+		subdivCodes  []string
+		ipv4CIDRs    []string
+		ipv6CIDRs    []string
+		ja3          []string
+		ja4          []string
+		userAgents   []string
+		auth0Managed []string
+	)
+
+	networkACLRuleAction.RegisterString(cmd, &action, "")
+	networkACLRedirectURI.RegisterString(cmd, &redirectURI, "")
+	networkACLScope.RegisterString(cmd, &scope, "")
+	networkACLASNs.RegisterIntSlice(cmd, &asns, nil)
+	networkACLCountryCodes.RegisterStringSlice(cmd, &countryCodes, nil)
+	networkACLSubdivisionCodes.RegisterStringSlice(cmd, &subdivCodes, nil)
+	networkACLIPv4CIDRs.RegisterStringSlice(cmd, &ipv4CIDRs, nil)
+	networkACLIPv6CIDRs.RegisterStringSlice(cmd, &ipv6CIDRs, nil)
+	networkACLJA3Fingerprints.RegisterStringSlice(cmd, &ja3, nil)
+	networkACLJA4Fingerprints.RegisterStringSlice(cmd, &ja4, nil)
+	networkACLUserAgents.RegisterStringSlice(cmd, &userAgents, nil)
+	networkACLAuth0Managed.RegisterStringSlice(cmd, &auth0Managed, nil)
+
+	for _, f := range []*Flag{
+		&networkACLRuleAction,
+		&networkACLRedirectURI,
+		&networkACLScope,
+		&networkACLASNs,
+		&networkACLCountryCodes,
+		&networkACLSubdivisionCodes,
+		&networkACLIPv4CIDRs,
+		&networkACLIPv6CIDRs,
+		&networkACLJA3Fingerprints,
+		&networkACLJA4Fingerprints,
+		&networkACLUserAgents,
+		&networkACLAuth0Managed,
+	} {
+		f.Deprecate(cmd, deprecatedRuleFlagMessage)
+	}
 }
