@@ -57,7 +57,7 @@ func (h *DataJSONHandler) ReadAndValidate(inputStr, method, path string) (json.R
 		return nil, fmt.Errorf("schema validation failed:\n%s", formatValidationErrors(result.Errors))
 	}
 
-	return json.RawMessage(jsonData), nil
+	return jsonData, nil
 }
 
 // readJSONInput reads JSON from various input sources.
