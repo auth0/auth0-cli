@@ -22,7 +22,6 @@ type API struct {
 	EventStream          EventStreamAPI
 	Flow                 FlowAPI
 	FlowVaultConnection  FlowVaultConnectionAPI
-	Form                 FormAPI
 	Log                  LogAPI
 	LogStream            LogStreamAPI
 	Organization         OrganizationAPI
@@ -56,7 +55,6 @@ func NewAPI(m *management.Management) *API {
 		EventStream:          m.EventStream,
 		Flow:                 m.Flow,
 		FlowVaultConnection:  m.Flow.Vault,
-		Form:                 m.Form,
 		Log:                  m.Log,
 		LogStream:            m.LogStream,
 		Organization:         m.Organization,
@@ -80,6 +78,7 @@ type APIV3 struct {
 	ClientGrant                  ClientGrantAPIV3
 	ClientGrantOrganization      ClientGrantOrganizationAPIV3
 	Events                       EventsAPIV3
+	Form                         FormAPIV3
 	Flow                         FlowAPIV3
 	FlowExecution                FlowExecutionAPIV3
 	FlowVaultConnection          FlowVaultConnectionAPIV3
@@ -98,6 +97,7 @@ func NewAPIV3(m *managementv3.Management) *APIV3 {
 		ClientGrant:                  m.ClientGrants,
 		ClientGrantOrganization:      m.ClientGrants.Organizations,
 		Events:                       m.Events,
+		Form:                         m.Forms,
 		Flow:                         m.Flows,
 		FlowExecution:                m.Flows.Executions,
 		FlowVaultConnection:          m.Flows.Vault.Connections,
