@@ -173,6 +173,14 @@ func (f *Flag) RegisterIntSlice(cmd *cobra.Command, value *[]int, defaultValue [
 	registerIntSlice(cmd, f, value, defaultValue, false)
 }
 
+// Deprecate marks an already-registered flag as deprecated,
+// prints message and hides it from help and generated docs.
+func (f *Flag) Deprecate(cmd *cobra.Command, message string) {
+	if err := cmd.Flags().MarkDeprecated(f.LongForm, message); err != nil {
+		panic(auth0.Error(err, fmt.Sprintf("failed to deprecate flag %q", f.LongForm)))
+	}
+}
+
 func (f *Flag) AskIntSlice(cmd *cobra.Command, value *[]int, defaultValue *[]int) error {
 	if shouldAsk(cmd, f, false) {
 		return askIntSlice(f, value, defaultValue)
